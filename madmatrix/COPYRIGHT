@@ -1,0 +1,47 @@
+Copyright (C) 2020-2026 CERN and UCLouvain.
+Licensed under the GNU Lesser General Public License (version 3 or later).
+All rights not expressly granted are reserved.
+
+The copyright and license notice above cover the MadMatrix contributions to the
+MadGraph7 project, for hardware acceleration. The code of MadMatrix can be found
+in the following paths with respect to the root of the repository:
+- madmatrix
+- aloha/template_files/madmatrix
+- madgraph/iolibs/template_files/madmatrix
+
+Originally, this code was developed as the CUDACPP plugin to the
+MadGraph5_aMC@NLO project, at https://github.com/madgraph5/madgraph4gpu
+More details on the CUDACPP plugin copyright notice can be found in the
+"COPYRIGHT" file in the above repository. For the full list of authors and
+collaborators of this work, see the file "AUTHORS" in the same directory as this
+"COPYRIGHT" file.
+
+The "MadGraph7" software is developed by the "MadGraph7" development team and
+contributors, also known as the "MadTeam", who are the owners of its copyright
+and have licensed it as specified in
+https://github.com/MadGraphTeam/MadGraph7/blob/main/LICENSE
+
+CUDACPP is a free software; you can redistribute it and/or modify it under the
+terms of the GNU Lesser General Public License as published by the Free Software
+Foundation, either version 3 or (at your option) any later version.
+
+This work is distributed in the hope that it will be useful, but WITHOUT ANY
+WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
+A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more
+details.
+
+The GNU Lesser General Public License (LGPL) version 3 is copied verbatim in the
+file "COPYING.LESSER" in the same directory as this "COPYRIGHT" file. It is also
+available at <https://www.gnu.org/licenses/lgpl-3.0.txt>.
+
+This version of the GNU Lesser General Public License incorporates the terms and
+conditions of version 3 of the GNU General Public License (GPL), which is copied
+verbatim in the file "COPYING" in the same directory as this "COPYRIGHT" file
+and is also available at <https://www.gnu.org/licenses/gpl-3.0.txt>.
+
+In line with the license above, the authors emphasise the following points. For
+the developers' and authors' protection, the GPL clearly explains that there is
+no warranty for this free software. For both users' and authors' sake, the GPL
+requires that modified versions be marked as changed, so that their problems
+will not be attributed erroneously to authors of previous versions.
+

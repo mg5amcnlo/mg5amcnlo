@@ -1,0 +1,282 @@
+# Copyright (C) 2020-2026 CERN and UCLouvain.
+# Licensed under the GNU Lesser General Public License (version 3 or later).
+# Created originally by: A. Valassi (Oct 2023) for the MG5aMC CUDACPP plugin.
+# Further modified by: A. Valassi (2023-2024).
+# Integrated with the MadGraph7 project in Feb 2026.
+#----------------------------------------------------------------------------------------------------------------------------------
+
+name: Test one process
+
+#----------------------------------------------------------------------------------------------------------------------------------
+
+# See https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#run-name
+run-name: Manually test one process ${{ inputs.process }}
+
+#----------------------------------------------------------------------------------------------------------------------------------
+
+on:
+
+  # Trigger the one-process workflow from the all-processes workflow
+  # See https://stackoverflow.com/a/75337311
+  workflow_call:
+    inputs:
+      process: # this variable is provided by the matrix in testsuite_allprocesses.yml
+        required: true
+        type: string
+
+  # Manually trigger the one-process workflow
+  # (the lines below are adapted rom the default github manual workflow example)
+  workflow_dispatch:
+    inputs:
+      process:
+        description: 'physics process'
+        default: 'gg_tt.mad'
+        required: true
+        type: choice
+        # FIXME? Can the list of supported processes be specified only once in oneprocess.yml or allprocesses.yml?
+        options: [gg_tt.mad, gg_ttg.mad, gg_ttgg.mad, gg_ttggg.mad, ee_mumu.mad, nobm_pp_ttW.mad, susy_gg_tt.mad]
+
+#----------------------------------------------------------------------------------------------------------------------------------
+
+jobs:
+
+  #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+  # See https://github.com/actions/cache/blob/main/tips-and-workarounds.md#force-deletion-of-caches-overriding-default-cache-eviction-policy
+  cleanup:
+    ###if: ${{ false }} # disable the job (comment this out to enable it!)
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write # this is required to delete caches
+      contents: read
+    steps:
+    - name: split_prnum
+      # See https://stackoverflow.com/a/73467112
+      id: split
+      run: echo "prnum=PR${GITHUB_REF_NAME%%/*}" >> $GITHUB_OUTPUT
+    - name: cleanup_cache
+      run: |
+        gh extension install actions/gh-actions-cache
+        REPO=${{ github.repository }}
+        echo "Workflow run_id is ${{ github.run_id }}"
+        echo "Workflow ref_name is ${{ github.ref_name }}"
+        echo "Workflow PR number is ${{ steps.split.outputs.prnum }}"
+        #--- LIST CODEGEN CACHES FOR THIS RUN_ID
+        echo "List codegencache keys for this run_id (start)"
+        gh actions-cache list -R $REPO --sort created-at --order asc --key codegencache-${{ runner.os }}-${{ inputs.process }}-${{ github.run_id }}
+        echo "List codegencache keys for this run_id (end)"
+        cacheKeysCodegen=$(gh actions-cache list -R $REPO --sort created-at --order asc --key codegencache-${{ runner.os }}-${{ inputs.process }}-${{ github.run_id }} | cut -f 1) # delete ALL codegen caches
+        #--- LIST BUILD CACHES FOR THIS PRNUM (d)
+        echo "List buildcacheD keys for this prnum (start)"
+        gh actions-cache list -R $REPO --sort created-at --order asc --key buildcache-${{ runner.os }}-${{ inputs.process }}-d-${{ steps.split.outputs.prnum }}
+        echo "List buildcacheD keys for this prnum (end)"
+        cacheKeysBuildD=$(gh actions-cache list -R $REPO --sort created-at --order asc --key buildcache-${{ runner.os }}-${{ inputs.process }}-d-${{ steps.split.outputs.prnum }} | cut -f 1 | head --lines=-1) # keep only the most recent build cache
+        #--- LIST BUILD CACHES FOR THIS PRNUM (f)
+        echo "List buildcacheF keys for this prnum (start)"
+        gh actions-cache list -R $REPO --sort created-at --order asc --key buildcache-${{ runner.os }}-${{ inputs.process }}-f-${{ steps.split.outputs.prnum }}
+        echo "List buildcacheF keys for this prnum (end)"
+        cacheKeysBuildF=$(gh actions-cache list -R $REPO --sort created-at --order asc --key buildcache-${{ runner.os }}-${{ inputs.process }}-f-${{ steps.split.outputs.prnum }} | cut -f 1 | head --lines=-1) # keep only the most recent build cache
+        #--- LIST BUILD CACHES FOR THIS PRNUM (m)
+        echo "List buildcacheM keys for this prnum (start)"
+        gh actions-cache list -R $REPO --sort created-at --order asc --key buildcache-${{ runner.os }}-${{ inputs.process }}-m-${{ steps.split.outputs.prnum }}
+        echo "List buildcacheM keys for this prnum (end)"
+        cacheKeysBuildF=$(gh actions-cache list -R $REPO --sort created-at --order asc --key buildcache-${{ runner.os }}-${{ inputs.process }}-m-${{ steps.split.outputs.prnum }} | cut -f 1 | head --lines=-1) # keep only the most recent build cache
+        #--- DELETE CODEGEN AND BUILD CACHES
+        set +e # do not fail while deleting cache keys
+        echo "Deleting codegen caches..."
+        for cacheKey in $cacheKeysCodegen; do gh actions-cache delete $cacheKey -R $REPO --confirm; done
+        echo "Deleting codegen caches... done"
+        echo "Deleting build caches..."
+        for cacheKey in $cacheKeysBuildD; do gh actions-cache delete $cacheKey -R $REPO --confirm; done
+        for cacheKey in $cacheKeysBuildF; do gh actions-cache delete $cacheKey -R $REPO --confirm; done
+        echo "Deleting build caches... done"
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+  codegen:
+    ###runs-on: ubuntu-latest
+    # Temporarely dowgrade ubuntu-latest to ubuntu-22.04 in codegen step because clang-format-18 is not yet supported (#1022)
+    # See https://github.com/actions/runner-images/issues/5490
+    # See https://github.com/actions/runner-images/issues/10636
+    runs-on: ubuntu-22.04
+    needs: cleanup
+
+    steps:
+    - # See https://github.com/actions/checkout
+      # (NB actions/checkout needs "Allow owner and select non-owner" and "Allow actions created by github")
+      uses: actions/checkout@v4
+      with:
+        submodules: 'true'
+
+    - name: split_prnum
+      # See https://stackoverflow.com/a/73467112
+      id: split
+      run: echo "prnum=PR${GITHUB_REF_NAME%%/*}" >> $GITHUB_OUTPUT
+
+    - name: HELLO_CODEGEN
+      run: |
+        echo "HELLO_CODEGEN ${{ inputs.process }} $(date)"
+        echo "Workflow run_id is ${{ github.run_id }}"
+        echo "Workflow ref_name is ${{ github.ref_name }}"
+        echo "Workflow PR number is ${{ steps.split.outputs.prnum }}"
+        echo "Current directory is $(pwd)"
+        echo "Current git commit is $(git log --oneline -n1 | cut -d' ' -f1)"
+        echo "=== START git log for current git commit"
+        git log -n1
+        echo "===  END  git log for current git commit"
+        # See https://github.com/actions/cache/blob/main/tips-and-workarounds.md#force-deletion-of-caches-overriding-default-cache-eviction-policy
+        gh extension install actions/gh-actions-cache
+        REPO=${{ github.repository }}
+        echo "List codegencache keys for this run_id (start)"
+        gh actions-cache list -R $REPO --sort created-at --order asc --key codegencache-${{ runner.os }}-${{ inputs.process }}-${{ github.run_id }}
+        echo "List codegencache keys for this run_id (end)"
+      env:
+        GH_TOKEN: ${{ github.token }}
+
+    - name: codegen
+      run: .github/workflows/testsuite_oneprocess.sh codegen ${{ inputs.process }}
+
+    - name: update_codegen_cache # update codegen caches
+      id: codegen-cache-update
+      # See https://github.com/actions/cache
+      uses: actions/cache/save@v4
+      with:
+        path: |
+          epochX/cudacpp/${{ inputs.process }}
+        key: codegencache-${{ runner.os }}-${{ inputs.process }}-${{ github.run_id }}
+
+    - name: GOODBYE_CODEGEN
+      run: |
+        echo "GOODBYE_CODEGEN ${{ inputs.process }} $(date)"
+        echo "Workflow run_id is ${{ github.run_id }}"
+        echo "Workflow ref_name is ${{ github.ref_name }}"
+        echo "Workflow PR number is ${{ steps.split.outputs.prnum }}"
+        echo "Current directory is $(pwd)"
+        echo "Current git commit is $(git log --oneline -n1 | cut -d' ' -f1)"
+        REPO=${{ github.repository }}
+        echo "List codegencache keys for this run_id (start)"
+        gh actions-cache list -R $REPO --sort created-at --order asc --key codegencache-${{ runner.os }}-${{ inputs.process }}-${{ github.run_id }}
+        echo "List codegencache keys for this run_id (end)"
+      env:
+        GH_TOKEN: ${{ github.token }}
+
+  #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+  testsuite:
+    runs-on: ubuntu-latest
+    needs: codegen
+
+    strategy:
+      fail-fast: false # e.g. do not stop 'd' job if 'f' job has failed (fail-fast is true by default)
+      matrix:
+        fptype: [d, f, m]
+
+    env:
+      FPTYPE: ${{ matrix.fptype }}
+
+    steps:
+    - # See https://github.com/actions/checkout
+      # (NB actions/checkout needs "Allow owner and select non-owner" and "Allow actions created by github")
+      uses: actions/checkout@v4
+      with:
+        submodules: 'true'
+
+    - name: split_prnum
+      # See https://stackoverflow.com/a/73467112
+      id: split
+      run: echo "prnum=PR${GITHUB_REF_NAME%%/*}" >> $GITHUB_OUTPUT
+
+    - name: HELLO_TESTSUITE
+      run: |
+        echo "HELLO_TESTSUITE ${{ inputs.process }} FPTYPE=${{ matrix.fptype }} $(date)"
+        echo "Workflow run_id is ${{ github.run_id }}"
+        echo "Workflow ref_name is ${{ github.ref_name }}"
+        echo "Workflow PR number is ${{ steps.split.outputs.prnum }}"
+        echo "Current directory is $(pwd)"
+        echo "Current git commit is $(git log --oneline -n1 | cut -d' ' -f1)"
+        # See https://github.com/actions/cache/blob/main/tips-and-workarounds.md#force-deletion-of-caches-overriding-default-cache-eviction-policy
+        gh extension install actions/gh-actions-cache
+        REPO=${{ github.repository }}
+        echo "List codegencache keys for this run_id (start)"
+        gh actions-cache list -R $REPO --sort created-at --order asc --key codegencache-${{ runner.os }}-${{ inputs.process }}-${{ github.run_id }}
+        echo "List codegencache keys for this run_id (end)"
+        echo "List buildcache keys (start)"
+        gh actions-cache list -R $REPO --sort created-at --order asc --key buildcache-${{ runner.os }}-${{ inputs.process }}-${{ matrix.fptype }}
+        echo "List buildcache keys (end)"
+      env:
+        GH_TOKEN: ${{ github.token }}
+
+    - name: restore_codegen_cache
+      id: codegen-cache-restore
+      # See https://github.com/actions/cache
+      # See https://github.com/actions/cache/blob/main/tips-and-workarounds.md#update-a-cache
+      uses: actions/cache/restore@v4
+      with:
+        path: |
+          epochX/cudacpp/${{ inputs.process }}
+        key: codegencache-${{ runner.os }}-${{ inputs.process }}-${{ github.run_id }}
+        # NB: only restore codegencache from this workflow run
+        restore-keys: |
+          codegencache-${{ runner.os }}-${{ inputs.process }}-${{ github.run_id }}
+
+    - name: restore_build_cache
+      id: build-cache-restore
+      # See https://github.com/actions/cache
+      # See https://github.com/actions/cache/blob/main/tips-and-workarounds.md#update-a-cache
+      uses: actions/cache/restore@v4
+      with:
+        path: |
+          CCACHE_DIR
+          DOWNLOADS
+        key: buildcache-${{ runner.os }}-${{ inputs.process }}-${{ matrix.fptype }}-${{ steps.split.outputs.prnum }}-${{ github.run_id }}
+        restore-keys: |
+          buildcache-${{ runner.os }}-${{ inputs.process }}-${{ matrix.fptype }}-${{ steps.split.outputs.prnum }}
+          buildcache-${{ runner.os }}-${{ inputs.process }}-${{ matrix.fptype }}
+
+    - name: before_build
+      run: .github/workflows/testsuite_oneprocess.sh before_build ${{ inputs.process }}
+ 
+    - name: build
+      run: .github/workflows/testsuite_oneprocess.sh build ${{ inputs.process }}
+
+    - name: after_build
+      run: .github/workflows/testsuite_oneprocess.sh after_build ${{ inputs.process }}
+
+    - name: update_build_cache # update build caches after the builds but before the tests (which may fail even if builds succeed)
+      id: build-cache-update
+      # See https://github.com/actions/cache
+      uses: actions/cache/save@v4
+      with:
+        path: |
+          CCACHE_DIR
+          DOWNLOADS
+          test/googletest
+        key: buildcache-${{ runner.os }}-${{ inputs.process }}-${{ matrix.fptype }}-${{ steps.split.outputs.prnum }}-${{ github.run_id }}
+
+    - name: tput_test
+      run: .github/workflows/testsuite_oneprocess.sh tput_test ${{ inputs.process }}
+
+    - name: tmad_test
+      run: .github/workflows/testsuite_oneprocess.sh tmad_test ${{ inputs.process }}
+
+    - name: GOODBYE_TESTSUITE
+      run: |
+        echo "GOODBYE_TESTSUITE ${{ inputs.process }} FPTYPE=${{ matrix.fptype }} $(date)"
+        echo "Workflow run_id is ${{ github.run_id }}"
+        echo "Workflow ref_name is ${{ github.ref_name }}"
+        echo "Workflow PR number is ${{ steps.split.outputs.prnum }}"
+        echo "Current directory is $(pwd)"
+        echo "Current git commit is $(git log --oneline -n1 | cut -d' ' -f1)"
+        REPO=${{ github.repository }}
+        echo "List codegencache keys for this run_id (start)"
+        gh actions-cache list -R $REPO --sort created-at --order asc --key codegencache-${{ runner.os }}-${{ inputs.process }}-${{ github.run_id }}
+        echo "List codegencache keys for this run_id (end)"
+        echo "List buildcache keys (start)"
+        gh actions-cache list -R $REPO --sort created-at --order asc --key buildcache-${{ runner.os }}-${{ inputs.process }}-${{ matrix.fptype }}
+        echo "List buildcache keys (end)"
+      env:
+        GH_TOKEN: ${{ github.token }}
+
+#----------------------------------------------------------------------------------------------------------------------------------

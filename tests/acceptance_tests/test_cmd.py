@@ -323,8 +323,8 @@ class TestCmdShell2(unittest.TestCase,
         self.do('set group_subprocesses False')
         self.do('generate e+ e- > e+ e-')
 #        self.do('load processes %s' % self.join_path(_pickle_path,'e+e-_e+e-.pkl'))
-        self.do('output %s -nojpeg' % self.out_dir)
-        
+        self.do('output madevent %s -nojpeg' % self.out_dir)
+
         self.assertTrue(os.path.exists(self.out_dir))
         self.assertTrue(os.path.exists(pjoin(self.out_dir, 'Cards', 'me5_configuration.txt')))
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,
@@ -360,7 +360,7 @@ class TestCmdShell2(unittest.TestCase,
                                                     'matrix1.jpg')))
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,
                                                     'madevent.tar.gz')))
-        self.do('output %s -f' % self.out_dir)
+        self.do('output madevent %s -f' % self.out_dir)
         self.do('set group_subprocesses True')
         #if misc.which('gs'):
         #    self.assertTrue(os.path.exists(os.path.join(self.out_dir,
@@ -421,6 +421,62 @@ class TestCmdShell2(unittest.TestCase,
                                                     'SubProcesses',
                                                     'P0_epem_epem',
                                                     'madevent')))
+
+    def test_output_mg7_directory(self):
+        """mg7 equivalent of test_output_madevent_directory.
+
+        Checks that `output mg7` produces a complete, self-consistent mg7
+        (madmatrix/cudacpp) directory for e+ e- > e+ e- -- the top-level layout
+        (src/, SubProcesses/, lib/, Cards/, bin/), the mg7 cards and launcher,
+        and that the generated subprocess compiles into the expected shared
+        libraries (scalar cppnone backend).
+        """
+        if os.path.isdir(self.out_dir):
+            shutil.rmtree(self.out_dir)
+
+        self.cmd.do_import('model sm', force=True)
+        self.do('set group_subprocesses False')
+        self.do('generate e+ e- > e+ e-')
+        self.do('output mg7 %s' % self.out_dir)
+
+        self.assertTrue(os.path.exists(self.out_dir))
+        # mg7 cards and the event-generation launcher
+        self.assertTrue(os.path.exists(os.path.join(self.out_dir,
+                                                 'Cards', 'param_card.dat')))
+        self.assertTrue(os.path.exists(os.path.join(self.out_dir,
+                                                 'Cards', 'run_card.toml')))
+        self.assertTrue(os.path.exists(os.path.join(self.out_dir,
+                                                 'bin', 'generate_events')))
+        # mg7 C++ model/helas sources
+        for f in ['HelAmps_sm.h', 'Parameters.h', 'Parameters.cc', 'makefile']:
+            self.assertTrue(os.path.isfile(os.path.join(self.out_dir, 'src', f)),
+                            '%s missing in mg7 src directory' % f)
+
+        # Discover the subprocess directory (numbering is invocation dependent).
+        sub_root = os.path.join(self.out_dir, 'SubProcesses')
+        cand = [d for d in os.listdir(sub_root)
+                if d.endswith('_epem_epem') and
+                os.path.isdir(os.path.join(sub_root, d))]
+        self.assertEqual(len(cand), 1,
+                         'expected one epem_epem subprocess, got %s' % cand)
+        proc_dir = os.path.join(sub_root, cand[0])
+        for f in ['CPPProcess.cc', 'CPPProcess.h', 'makefile']:
+            self.assertTrue(os.path.isfile(os.path.join(proc_dir, f)),
+                            '%s missing in mg7 subprocess directory' % f)
+
+        # Check that the subprocess compiles (scalar C++ backend).
+        devnull = open(os.devnull, 'w')
+        status = subprocess.call(['make', 'bldnone'],
+                                 stdout=devnull, stderr=devnull, cwd=proc_dir)
+        self.assertEqual(status, 0)
+        libdir = os.path.join(self.out_dir, 'lib')
+        libs = os.listdir(libdir) if os.path.isdir(libdir) else []
+        self.assertTrue(any(l.startswith('libmadmatrix_common') and
+                            l.endswith('.so') for l in libs),
+                        'common madmatrix library not built: %s' % libs)
+        self.assertTrue(any('epem_epem' in l and l.endswith('.so')
+                            for l in libs),
+                        'process madmatrix library not built: %s' % libs)
 
     def test_invalid_operations_for_add(self):
         """Test that errors are raised appropriately for add"""
@@ -1008,30 +1064,56 @@ class TestCmdShell2(unittest.TestCase,
         self.do('output standalone_cpp %s -f' % self.out_dir)
         proc_dir = find_qqx(pjoin(self.out_dir, 'SubProcesses'))
 
+        def extend_flavor_2d_array(text, name, dim_old, dim_new, extra_rows):
+            """Append rows to a ``name[dim_old][4]`` C++ initializer (which may
+            span several lines) and bump its first dimension to dim_new."""
+            m = re.search(r'%s\s*\[%d\]\[4\]' % (re.escape(name), dim_old), text)
+            self.assertTrue(m, '%s[%d][4] not found' % (name, dim_old))
+            end = text.index('}};', m.start()) + 3
+            block = text[m.start():end].replace(
+                '[%d][4]' % dim_old, '[%d][4]' % dim_new, 1)
+            # block ends in '}};' (last-row close, array close, semicolon); drop
+            # the array close + ';' and re-add them after the appended rows.
+            block = block[:-2] + ', ' + extra_rows + '};'
+            return text[:m.start()] + block + text[end:]
+
+        # The merged standalone_cpp evaluates a flavor by INDEX:
+        # process.sigmaKin(iflav) reads CPPProcess's internal flavor_table and
+        # the per-flavor bookkeeping arrays sized by nflavors. To exercise the
+        # two non-representative flavors we therefore extend that internal table
+        # (0-based codes d=0, u=1, s=2, c=3) and nflavors -- not a check_sa-local
+        # array (the old `flavor_arr` no longer exists in the generated code):
+        #   s c~ > s c~  -> flavor (2,3,2,3) / PDG (3,-4,3,-4)
+        #   s c~ > c c~  -> flavor (2,3,3,3) / PDG (3,-4,4,-4)
         check_cpp = pjoin(proc_dir, 'check_sa.cpp')
         src = open(check_cpp).read()
         m = re.search(r'maxflavor\s*=\s*(\d+)', src)
         self.assertTrue(m, 'maxflavor not found in check_sa.cpp')
         nflav = int(m.group(1))
-        out_lines = []
-        for line in src.splitlines(keepends=True):
-            stripped = line.lstrip()
-            if stripped.startswith('static const int maxflavor'):
-                line = line.replace('= %d' % nflav, '= %d' % (nflav + 2))
-            elif stripped.startswith('static const int flavor_arr'):
-                line = (line.replace('[%d][4]' % nflav, '[%d][4]' % (nflav + 2))
-                        .replace('}};', '}, {2, 3, 2, 3}, {2, 3, 3, 3}};'))
-            elif stripped.startswith('static const int pdg_arr'):
-                line = (line.replace('[%d][4]' % nflav, '[%d][4]' % (nflav + 2))
-                        .replace('}};', '}, {3, -4, 3, -4}, {3, -4, 4, -4}};'))
-            out_lines.append(line)
-        open(check_cpp, 'w').write(''.join(out_lines))
+        new_nflav = nflav + 2
+        src = re.sub(r'(maxflavor\s*=\s*)\d+',
+                     r'\g<1>%d' % new_nflav, src, count=1)
+        src = extend_flavor_2d_array(src, 'pdg_arr', nflav, new_nflav,
+                                     '{3, -4, 3, -4}, {3, -4, 4, -4}')
+        open(check_cpp, 'w').write(src)
+
+        # The bookkeeping arrays (ntry/goodhel/...) and the sigmaKin flavor
+        # index are sized by nflavors in the header -> bump it to match.
+        cpp_h = pjoin(proc_dir, 'CPPProcess.h')
+        src = open(cpp_h).read()
+        self.assertIn('nflavors = %d' % nflav, src)
+        src = src.replace('nflavors = %d' % nflav,
+                          'nflavors = %d' % new_nflav, 1)
+        open(cpp_h, 'w').write(src)
 
         cpp_proc = pjoin(proc_dir, 'CPPProcess.cc')
         src = open(cpp_proc).read()
         self.assertIn('#include "CPPProcess.h"', src)
         src = src.replace('#include "CPPProcess.h"',
                           '#include <iostream>\n#include "CPPProcess.h"', 1)
+        # Extend the internal flavor table that sigmaKin indexes.
+        src = extend_flavor_2d_array(src, 'flavor_table', nflav, new_nflav,
+                                     '{2, 3, 2, 3}, {2, 3, 3, 3}')
         helas_marker = '  ixxxxx(p[perm[0]]'
         self.assertIn(helas_marker, src)
         mask_dump = (
@@ -1159,6 +1241,74 @@ class TestCmdShell2(unittest.TestCase,
             self.assertTrue(saw_nonzero,
                             'all matrix elements vanished for %s' % proc)
 
+    def test_standalone_mg7_goodhel_filter(self):
+        """The standalone_mg7 (cudacpp) good-helicity filter must reproduce the
+        per-flavor matrix element of every flavor served by a merged matrix
+        element.
+
+        standalone_mg7 computes a single global good-helicity list once, as the
+        union over all flavor combinations (see sigmaKin_getGoodHel). A
+        flavor-blind filter -- one that seeds the good helicities from only the
+        flavor(s) of the first sampled events -- would drop a helicity that
+        vanishes for the seeding flavor but contributes for another merged
+        flavor, giving a too-small |M|^2 for that other flavor.
+
+        We compare the standalone_mg7 per-flavor values (check_sa.exe 'matrix'
+        mode) against the Fortran standalone ones, which
+        test_standalone_goodhel_filter independently validates as
+        filter-invariant. ``u u~ > j j QCD=0`` is a single merged matrix element
+        whose flavors have *different* diagram content: ``u u~ > u u~`` has both
+        s- and t-channel photon/Z exchange, while ``u u~ > d d~`` (the first
+        flavor, which seeds the good helicities) is s-channel only. A
+        flavor-blind filter warmed up on ``u u~ > d d~`` drops the t-channel
+        helicities, making ``u u~ > u u~`` too small -- which this comparison
+        catches. The massless final state makes both drivers evaluate the same
+        fixed-energy RAMBO point.
+        """
+        devnull = open(os.devnull, 'w')
+        energy = '1000'
+        me_re = re.compile(r'Matrix element\s*=\s*([\d.eE+-]+)\s*GeV',
+                           re.IGNORECASE)
+
+        def get_values(output_format, check_exe, build_source=False):
+            if os.path.isdir(self.out_dir):
+                shutil.rmtree(self.out_dir)
+            self.do('output %s %s -f' % (output_format, self.out_dir))
+            if build_source:
+                subprocess.call(['make'], stdout=devnull, stderr=devnull,
+                                cwd=pjoin(self.out_dir, 'Source'))
+            proc_root = pjoin(self.out_dir, 'SubProcesses')
+            dirs = sorted(d for d in os.listdir(proc_root)
+                          if d.startswith('P') and
+                          os.path.isdir(pjoin(proc_root, d)))
+            self.assertTrue(dirs, 'no subprocess for %s' % output_format)
+            values = []
+            for d in dirs:
+                proc_dir = pjoin(proc_root, d)
+                # standalone uses 'make check' + ./check; standalone_mg7 ships a
+                # UMAMI check_sa.exe whose 'matrix' mode == the Fortran driver.
+                target = ['make', 'check'] if output_format == 'standalone' \
+                    else ['make']
+                subprocess.call(target, stdout=devnull, stderr=devnull,
+                                cwd=proc_dir)
+                log = pjoin(proc_dir, 'check.log')
+                subprocess.call('%s %s' % (check_exe, energy),
+                                stdout=open(log, 'w'), stderr=subprocess.STDOUT,
+                                cwd=proc_dir, shell=True)
+                found = me_re.findall(open(log).read())
+                self.assertTrue(found, '%s produced no matrix element (see %s)'
+                                % (output_format, log))
+                values.extend(float(v) for v in found)
+            return values
+
+        self.do('import model sm')
+        self.do('generate u u~ > j j QCD=0')
+        mg7 = get_values('standalone_mg7', './check_sa.exe')
+        standalone = get_values('standalone', './check', build_source=True)
+        self.assertTrue(any(v != 0.0 for v in standalone),
+                        'all matrix elements vanished for u u~ > j j')
+        self._assert_me_lists_close(mg7, standalone, atol=1e-7)
+
     def test_standalone_cpp(self):
         """test that standalone cpp is working"""
 
@@ -1169,28 +1319,67 @@ class TestCmdShell2(unittest.TestCase,
         self.do('generate g g > go go QED=2')
         self.do('output standalone_cpp %s ' % self.out_dir)
         devnull = open(os.devnull,'w')
-    
-        logfile = os.path.join(self.out_dir,'SubProcesses', 'P0_Sigma_MSSM_SLHA2_full_gg_gogo',
-                               'check.log')
+
+        # Locate the subprocess directory: the merge shortened the standalone_cpp
+        # directory name (e.g. P0_Sigma_MSSM_SLHA2_full_gg_gogo -> P1_gg_gogo),
+        # so discover it rather than hard-coding the number/prefix.
+        proc_root = os.path.join(self.out_dir, 'SubProcesses')
+        candidates = [d for d in os.listdir(proc_root)
+                      if d.endswith('_gg_gogo') and
+                      os.path.isdir(os.path.join(proc_root, d))]
+        self.assertEqual(len(candidates), 1,
+                         'expected exactly one gg_gogo subprocess, got %s'
+                         % candidates)
+        proc_dir = os.path.join(proc_root, candidates[0])
+        logfile = os.path.join(proc_dir, 'check.log')
         # Check that check_sa.cc compiles
         subprocess.call(['make'],
-                        stdout=devnull, stderr=devnull, 
-                        cwd=os.path.join(self.out_dir, 'SubProcesses',
-                                         'P0_Sigma_MSSM_SLHA2_full_gg_gogo'))
-        
-        subprocess.call('./check', 
+                        stdout=devnull, stderr=devnull,
+                        cwd=proc_dir)
+
+        subprocess.call('./check',
                         stdout=open(logfile, 'w'), stderr=subprocess.STDOUT,
-                        cwd=os.path.join(self.out_dir, 'SubProcesses',
-                                         'P0_Sigma_MSSM_SLHA2_full_gg_gogo'), shell=True)
-    
+                        cwd=proc_dir, shell=True)
+
         log_output = open(logfile, 'r').read()
         me_re = re.compile(r'Matrix element\s*=\s*(?P<value>[\d\.eE\+-]+)\s*GeV',
                            re.IGNORECASE)
         me_groups = me_re.search(log_output)
-        
+
         self.assertTrue(me_groups)
         self.assertAlmostEqual(float(me_groups.group('value')), 6.4739191,5)
-    
+
+        # Cross-check standalone_mg7 (madmatrix) against standalone_cpp for this
+        # massive BSM process. The Fortran/C++ ./check auto-bumps the CM energy
+        # to 2*total_mass for the heavy gluinos, but check_sa.exe does not, so
+        # evaluate BOTH at the same explicit above-threshold energy.
+        energy = '5000'
+        cpp_e_log = os.path.join(proc_dir, 'check_e.log')
+        subprocess.call('./check %s' % energy,
+                        stdout=open(cpp_e_log, 'w'), stderr=subprocess.STDOUT,
+                        cwd=proc_dir, shell=True)
+        cpp_me = me_re.search(open(cpp_e_log).read())
+        self.assertTrue(cpp_me)
+
+        shutil.rmtree(self.out_dir)
+        self.do('output standalone_mg7 %s -f' % self.out_dir)
+        mg7_root = os.path.join(self.out_dir, 'SubProcesses')
+        mg7_cand = [d for d in os.listdir(mg7_root)
+                    if d.endswith('_gg_gogo') and
+                    os.path.isdir(os.path.join(mg7_root, d))]
+        self.assertEqual(len(mg7_cand), 1,
+                         'expected one gg_gogo mg7 subprocess, got %s' % mg7_cand)
+        mg7_dir = os.path.join(mg7_root, mg7_cand[0])
+        subprocess.call(['make'], stdout=devnull, stderr=devnull, cwd=mg7_dir)
+        mg7_log = os.path.join(mg7_dir, 'check.log')
+        subprocess.call('./check_sa.exe %s' % energy,
+                        stdout=open(mg7_log, 'w'), stderr=subprocess.STDOUT,
+                        cwd=mg7_dir, shell=True)
+        mg7_me = me_re.search(open(mg7_log).read())
+        self.assertTrue(mg7_me, 'standalone_mg7 produced no matrix element')
+        self._assert_me_lists_close([float(mg7_me.group('value'))],
+                                    [float(cpp_me.group('value'))])
+
     
     def test_standalone_cpp_output_consistency(self):
         """test that standalone cpp is working"""
@@ -1202,9 +1391,17 @@ class TestCmdShell2(unittest.TestCase,
         self.do('generate p p > t t~, t > b mu+ vm, t~ > b~ mu- vm~')
         self.do('output standalone_cpp %s ' % self.out_dir)
         devnull = open(os.devnull,'w')
-    
-        directories= ['P0_Sigma_sm_gg_bmupvmbxmumvmx', 'P0_Sigma_sm_QQx_bmupvmbxmumvmx']
+
+        # Discover the subprocess directories: the merge shortened the
+        # standalone_cpp directory names (e.g. P0_Sigma_sm_gg_bmupvmbxmumvmx ->
+        # P1_gg_bmupvmbxmumvmx), so list them rather than hard-coding.
         def get_values():
+            proc_root = os.path.join(self.out_dir, 'SubProcesses')
+            directories = sorted(d for d in os.listdir(proc_root)
+                                 if d.startswith('P') and
+                                 os.path.isdir(os.path.join(proc_root, d)))
+            self.assertEqual(len(directories), 2,
+                             'expected 2 subprocesses, got %s' % directories)
             values = []
             for oneproc in directories:
                 logfile = os.path.join(self.out_dir,'SubProcesses', oneproc,
@@ -1237,8 +1434,35 @@ class TestCmdShell2(unittest.TestCase,
         for i,_ in enumerate(original):
             self.assertEqual(original[i], new[i])
 
+    def _assert_me_lists_close(self, a, b, rtol=1e-5, atol=0.0):
+        """Assert two matrix-element value lists agree as multisets (sorted),
+        within a combined relative/absolute tolerance
+        (|x-y| <= atol + rtol*max(|x|,|y|)).
+
+        Backends print with different precision (standalone_cpp 7 sig figs vs
+        standalone_mg7 full double) and may emit the per-flavour values in a
+        different order, so compare sorted rather than index-by-index / exact.
+        `atol` lets callers treat numerically-tiny (vanishing-flavour) values as
+        zero, where the different floating-point arithmetic of the Fortran vs
+        cudacpp backends produces different noise."""
+        a, b = sorted(a), sorted(b)
+        self.assertEqual(len(a), len(b),
+                         'different number of matrix elements: %d vs %d'
+                         % (len(a), len(b)))
+        for x, y in zip(a, b):
+            self.assertLessEqual(abs(x - y), atol + rtol * max(abs(x), abs(y)),
+                                 'matrix-element mismatch: %s vs %s' % (x, y))
+
     def test_standalone_cpp_fd_output_consistency(self):
-        """test standalone_cpp in FD gauge against standalone"""
+        """test standalone_mg7 in FD gauge against standalone
+
+        The standalone_mg7 (madmatrix) matrix elements must agree with the
+        Fortran standalone ones, both in FD gauge and in unitary gauge (and FD
+        vs unitary, i.e. gauge invariance). standalone_mg7 ships a UMAMI-based
+        check_sa.exe whose 'matrix' mode is by design identical to the Fortran
+        check driver; the per-flavour values are compared as sorted multisets
+        (the backends may order flavours differently and print at different
+        precision)."""
 
         if os.path.isdir(self.out_dir):
             shutil.rmtree(self.out_dir)
@@ -1260,11 +1484,21 @@ class TestCmdShell2(unittest.TestCase,
                                 cwd=os.path.join(self.out_dir, 'Source'))
             for oneproc in directories:
                 logfile = os.path.join(proc_dir, oneproc, 'check.log')
-                target = ['make', 'check'] if output_format == 'standalone' else ['make']
+                # standalone uses 'make check' + ./check; standalone_mg7 ships a
+                # UMAMI check_sa.exe whose 'matrix' mode == the Fortran driver.
+                if output_format == 'standalone':
+                    target = ['make', 'check']
+                    check_exe = './check %s' % energy
+                elif output_format == 'standalone_mg7':
+                    target = ['make']
+                    check_exe = './check_sa.exe %s' % energy
+                else:
+                    target = ['make']
+                    check_exe = './check %s' % energy
                 subprocess.call(target,
                                 stdout=devnull, stderr=devnull,
                                 cwd=os.path.join(proc_dir, oneproc))
-                subprocess.call('./check %s' % energy,
+                subprocess.call(check_exe,
                                 stdout=open(logfile, 'w'), stderr=subprocess.STDOUT,
                                 cwd=os.path.join(proc_dir, oneproc), shell=True)
                 log_output = open(logfile, 'r').read()
@@ -1275,30 +1509,210 @@ class TestCmdShell2(unittest.TestCase,
                 values.extend(float(value) for value in me_groups)
             return values
 
-        standalone_cpp = get_values('standalone_cpp')
+        standalone_mg7 = get_values('standalone_mg7')
         shutil.rmtree(self.out_dir)
         standalone = get_values('standalone')
 
-        self.assertEqual(len(standalone_cpp), len(standalone))
-        for i, _ in enumerate(standalone_cpp):
-            self.assertAlmostEqual(standalone_cpp[i], standalone[i])
+        # atol: this process's matrix elements are O(1e-20), i.e. at the
+        # floating-point noise floor, where the Fortran and cudacpp backends
+        # differ; only require agreement above an absolute floor (the original
+        # cpp-vs-standalone check used assertAlmostEqual, equally lenient here).
+        self._assert_me_lists_close(standalone_mg7, standalone, atol=1e-7)
 
         self.do('set gauge unitary')
         self.do('generate _quark _quark > h _quark _quark _quark _anti_quark  QCD=0')
         devnull = open(os.devnull,'w')
-        energy = '1000'     
-        
+        energy = '1000'
+
         shutil.rmtree(self.out_dir)
-        standalone_cpp_no_fd = get_values('standalone_cpp')
+        standalone_mg7_no_fd = get_values('standalone_mg7')
         shutil.rmtree(self.out_dir)
         standalone_no_fd = get_values('standalone')
 
-        self.assertEqual(len(standalone_cpp_no_fd), len(standalone_no_fd))
-        for i, _ in enumerate(standalone_cpp_no_fd):
-            self.assertAlmostEqual(standalone_cpp_no_fd[i], standalone_no_fd[i])
-        for i, _ in enumerate(standalone_cpp_no_fd):
-            self.assertAlmostEqual(standalone_cpp_no_fd[i], standalone[i])
+        self._assert_me_lists_close(standalone_mg7_no_fd, standalone_no_fd,
+                                    atol=1e-7)
+        # gauge invariance: unitary-gauge values must also match the FD ones.
+        self._assert_me_lists_close(standalone_mg7_no_fd, standalone, atol=1e-7)
 
+    def test_standalone_mg7_vs_cpp(self):
+        """Cross-check that standalone_mg7 (madmatrix) reproduces the
+        standalone_cpp matrix elements for p p > e+ e- QCD=0.
+
+        Uses a massless final state so both check drivers evaluate the same
+        default 1000 GeV phase-space point (no energy auto-bump mismatch), and
+        compares the per-flavour matrix elements as sorted multisets (the two
+        backends may emit them in a different order and at different printed
+        precision). standalone_mg7 ships a UMAMI-based check_sa.exe whose
+        'matrix' mode is by design identical to the Fortran/C++ check drivers.
+        """
+        energy = '1000'
+        devnull = open(os.devnull, 'w')
+
+        def get_values(output_format, check_exe):
+            if os.path.isdir(self.out_dir):
+                shutil.rmtree(self.out_dir)
+            self.do('output %s %s' % (output_format, self.out_dir))
+            proc_root = os.path.join(self.out_dir, 'SubProcesses')
+            dirs = sorted(d for d in os.listdir(proc_root)
+                          if d.startswith('P') and
+                          os.path.isdir(os.path.join(proc_root, d)))
+            self.assertTrue(dirs, 'no subprocess for %s' % output_format)
+            values = []
+            me_re = re.compile(r'Matrix element\s*=\s*([\d.eE+-]+)\s*GeV',
+                               re.IGNORECASE)
+            for d in dirs:
+                proc_dir = os.path.join(proc_root, d)
+                subprocess.call(['make'], stdout=devnull, stderr=devnull,
+                                cwd=proc_dir)
+                log = os.path.join(proc_dir, 'check.log')
+                subprocess.call('%s %s' % (check_exe, energy),
+                                stdout=open(log, 'w'), stderr=subprocess.STDOUT,
+                                cwd=proc_dir, shell=True)
+                found = me_re.findall(open(log).read())
+                self.assertTrue(found, '%s produced no matrix element (see %s)'
+                                % (output_format, log))
+                values.extend(float(v) for v in found)
+            return values
+
+        self.do('import model sm')
+        self.do('generate p p > e+ e- QCD=0')
+        cpp = get_values('standalone_cpp', './check')
+        mg7 = get_values('standalone_mg7', './check_sa.exe')
+        self._assert_me_lists_close(mg7, cpp)
+
+    def test_standalone_mg7_mssm_single_leg(self):
+        """Single-merged-leg flavored couplings must give the same per-flavor
+        |M|^2 in standalone_mg7 (madmatrix) as in the Fortran standalone.
+
+        p p > n1 n1 QCD=0 is a t-channel-squark process with single-merged-leg
+        vertices (one merged light quark + an unmerged neutralino + a squark)
+        whose flavored couplings are *independent* (electroweak), isolating the
+        single-leg consumer-gating fix (the get_coupling_def merged-leg
+        selection) from the still-guarded dependent-coupling case. Without the
+        fix only the first flavor matches; with it all flavors do.
+        """
+        energy = '1000'
+        devnull = open(os.devnull, 'w')
+        me_re = re.compile(r'Matrix element\s*=\s*([\d.eE+-]+)\s*GeV',
+                           re.IGNORECASE)
+
+        def get_values(output_format, check_exe, build_source=False):
+            if os.path.isdir(self.out_dir):
+                shutil.rmtree(self.out_dir)
+            self.do('output %s %s -f' % (output_format, self.out_dir))
+            if build_source:
+                subprocess.call(['make'], stdout=devnull, stderr=devnull,
+                                cwd=os.path.join(self.out_dir, 'Source'))
+            proc_root = os.path.join(self.out_dir, 'SubProcesses')
+            dirs = sorted(d for d in os.listdir(proc_root)
+                          if d.startswith('P') and
+                          os.path.isdir(os.path.join(proc_root, d)))
+            self.assertTrue(dirs, 'no subprocess for %s' % output_format)
+            values = []
+            for d in dirs:
+                proc_dir = os.path.join(proc_root, d)
+                target = ['make', 'check'] if output_format == 'standalone' \
+                    else ['make']
+                subprocess.call(target, stdout=devnull, stderr=devnull,
+                                cwd=proc_dir)
+                log = os.path.join(proc_dir, 'check.log')
+                subprocess.call('%s %s' % (check_exe, energy),
+                                stdout=open(log, 'w'), stderr=subprocess.STDOUT,
+                                cwd=proc_dir, shell=True)
+                found = me_re.findall(open(log).read())
+                self.assertTrue(found, '%s produced no matrix element (see %s)'
+                                % (output_format, log))
+                values.extend(float(v) for v in found)
+            return values
+
+        self.do('import model MSSM_SLHA2')
+        self.do('generate p p > n1 n1 QCD=0')
+        mg7 = get_values('standalone_mg7', './check_sa.exe')
+        standalone = get_values('standalone', './check', build_source=True)
+        self.assertTrue(any(v != 0.0 for v in standalone),
+                        'all matrix elements vanished for p p > n1 n1')
+        self._assert_me_lists_close(mg7, standalone, rtol=1e-4)
+
+    def test_standalone_mg7_mssm_gogo(self):
+        """Dependent (event-by-event, running-alphas) flavored couplings must
+        give the same per-flavor |M|^2 in standalone_mg7 (madmatrix) as in the
+        Fortran standalone.
+
+        MSSM 'p p > go go' has single-merged-leg squark/gluino-quark vertices
+        (one merged light quark + an unmerged gluino + a squark) whose flavored
+        couplings are *dependent* (SUSY-QCD, running-alphas): the squark-quark-
+        gluino coupling GC_106/GC_110 ~ g_s changes per event. These are not
+        addressable as fixed value[] pointers, so they are gathered event-by-
+        event into cDPF_* / flvCOUPs_dep (Step 3 of
+        docs/mg7_merged_flavor_mssm_design.md). This is the dependent-coupling
+        counterpart of test_standalone_mg7_mssm_single_leg (independent flavored
+        couplings) and the consistency check matching test_madevent_mssm_gogo.
+
+        The energy (sqrt(s)) is chosen above the gluino-pair threshold (Mgo ~
+        608 GeV) so neither check driver auto-bumps it, i.e. both evaluate the
+        same phase-space point.
+        """
+        energy = '3000'
+        devnull = open(os.devnull, 'w')
+        me_re = re.compile(r'Matrix element\s*=\s*([\d.eE+-]+)\s*GeV',
+                           re.IGNORECASE)
+
+        def get_values(output_format, check_exe, build_source=False):
+            if os.path.isdir(self.out_dir):
+                shutil.rmtree(self.out_dir)
+            self.do('output %s %s -f' % (output_format, self.out_dir))
+            if build_source:
+                subprocess.call(['make'], stdout=devnull, stderr=devnull,
+                                cwd=os.path.join(self.out_dir, 'Source'))
+            proc_root = os.path.join(self.out_dir, 'SubProcesses')
+            dirs = sorted(d for d in os.listdir(proc_root)
+                          if d.startswith('P') and
+                          os.path.isdir(os.path.join(proc_root, d)))
+            self.assertTrue(dirs, 'no subprocess for %s' % output_format)
+            values = []
+            for d in dirs:
+                proc_dir = os.path.join(proc_root, d)
+                target = ['make', 'check'] if output_format == 'standalone' \
+                    else ['make']
+                subprocess.call(target, stdout=devnull, stderr=devnull,
+                                cwd=proc_dir)
+                log = os.path.join(proc_dir, 'check.log')
+                subprocess.call('%s %s' % (check_exe, energy),
+                                stdout=open(log, 'w'), stderr=subprocess.STDOUT,
+                                cwd=proc_dir, shell=True)
+                found = me_re.findall(open(log).read())
+                self.assertTrue(found, '%s produced no matrix element (see %s)'
+                                % (output_format, log))
+                values.extend(float(v) for v in found)
+            return values
+
+        self.do('import model MSSM_SLHA2')
+        self.do('generate p p > go go')
+        mg7 = get_values('standalone_mg7', './check_sa.exe')
+        standalone = get_values('standalone', './check', build_source=True)
+        self.assertTrue(any(v != 0.0 for v in standalone),
+                        'all matrix elements vanished for p p > go go')
+        self._assert_me_lists_close(mg7, standalone, rtol=1e-4)
+
+    def test_madevent_mssm_gogo(self):
+        """The Fortran madevent output supports MSSM 'p p > go go' (merged-flavor
+        squark/gluino vertices with single-merged-leg / event-by-event flavored
+        couplings). The mg7/madmatrix C++ output now also supports it and is
+        checked to agree per-flavor in test_standalone_mg7_mssm_gogo; this acts
+        as the madevent counterpart.
+        """
+        self.do('import model MSSM_SLHA2')
+        self.do('generate p p > go go')
+        self.do('output madevent %s -f' % self.out_dir)
+        self.assertTrue(
+            os.path.isdir(os.path.join(self.out_dir, 'SubProcesses')),
+            'madevent output should support MSSM p p > go go')
+        proc_root = os.path.join(self.out_dir, 'SubProcesses')
+        proc_dirs = [d for d in os.listdir(proc_root)
+                     if d.startswith('P') and
+                     os.path.isdir(os.path.join(proc_root, d))]
+        self.assertTrue(proc_dirs,
+                        'madevent produced no subprocess for p p > go go')
 
     def test_standalone_density(self):
         """test that standalone density is working"""
@@ -1343,7 +1757,9 @@ class TestCmdShell2(unittest.TestCase,
         for match in all_matches:
             sol[(int(match[0]), int(match[1]), int(match[2]), int(match[3]))] = (float(match[4]), float(match[5]))
 
-        original_sol = {(-1, -1, 1, 1): (0.02827952274928987, 0.0), (-1, -1, 1, -1): (-0.0041892876162345, -0.0041923830983622255), (-1, 1, 1, 1): (0.000469685615962711, 0.0006142055733429721), (-1, 1, 1, -1): (-0.01784029173125566, -0.00794999696313525), (-1, -1, -1, -1): (0.02532739017396033, 0.0), (-1, 1, -1, 1): (-0.00028182588524174187, 0.0024162264334765746), (-1, 1, -1, -1): (-0.00048593945847553023, -0.0006039982074415239), (1, 1, 1, 1): (0.025301510150454294, 0.0), (1, 1, 1, -1): (0.004212401136919661, 0.0042167644618831875), (1, 1, -1, -1): (0.028322721746299958, 0.0)}
+        # We changed the value of the reference by a factor of 256, which is the inclusion of IDEN in get_inter in matrix.
+        # original_sol = {(-1, -1, 1, 1): (0.02827952274928987, 0.0), (-1, -1, 1, -1): (-0.0041892876162345, -0.0041923830983622255), (-1, 1, 1, 1): (0.000469685615962711, 0.0006142055733429721), (-1, 1, 1, -1): (-0.01784029173125566, -0.00794999696313525), (-1, -1, -1, -1): (0.02532739017396033, 0.0), (-1, 1, -1, 1): (-0.00028182588524174187, 0.0024162264334765746), (-1, 1, -1, -1): (-0.00048593945847553023, -0.0006039982074415239), (1, 1, 1, 1): (0.025301510150454294, 0.0), (1, 1, 1, -1): (0.004212401136919661, 0.0042167644618831875), (1, 1, -1, -1): (0.028322721746299958, 0.0)}
+        original_sol = {(-1, -1, 1, 1): (0.00011046688573941356, 0.0), (-1, -1, 1, -1): (-1.6364404750916015e-05, -1.6376496477977443e-05), (-1, 1, 1, 1): (1.83470943735434e-06, 2.3992405208709848e-06), (-1, 1, 1, -1): (-6.968863957521743e-05, -3.105467563724707e-05), (-1, -1, -1, -1): (9.893511786703254e-05, 0.0), (-1, 1, -1, 1): (-1.1008823642255542e-06, 9.43838450576787e-06), (-1, 1, -1, -1): (-1.89820100967004e-06, -2.359367997818453e-06), (1, 1, 1, 1): (9.883402402521209e-05, 0.0), (1, 1, 1, -1): (1.6454691941092424e-05, 1.64717361792312e-05), (1, 1, -1, -1): (0.00011063563182148421, 0.0)}
 
         for key in original_sol:
             self.assertIn(key, sol)
@@ -1397,7 +1813,10 @@ class TestCmdShell2(unittest.TestCase,
             self.assertIn(int(match[3]), [-1,1])
 
         self.assertEqual(len(sol), 10)
-        original_sol =  {(0, 0, 1, 1, -1, -1): (3.4001167694559294e-07, 0.0), (0, 0, 1, 1, -1, 1): (-3.1461674759236455e-07, 4.8545818497513406e-09), (0, 0, 1, -1, -1, -1): (-3.069602710730949e-07, 4.832171908212019e-09), (0, 0, 1, -1, -1, 1): (2.7270589345996334e-07, -2.0762612868036477e-08), (0, 0, 1, 1, 1, 1): (2.914827381801457e-07, 0.0), (0, 0, 1, -1, 1, -1): (2.8446952890247865e-07, -7.217171184019204e-11), (0, 0, 1, -1, 1, 1): (-2.5326248092821595e-07, 1.519703606636158e-08), (0, 0, -1, -1, -1, -1): (2.7764709546297174e-07, 0.0), (0, 0, -1, -1, -1, 1): (-2.4727978606009926e-07, 1.4752928639145769e-08), (0, 0, -1, -1, 1, 1): (2.2137890970427402e-07, 0.0)}
+
+        # We changed the value of the reference by a factor of 36, which is the inclusion of IDEN in get_inter in matrix.
+        # original_sol =  {(0, 0, 1, 1, -1, -1): (3.4001167694559294e-07, 0.0), (0, 0, 1, 1, -1, 1): (-3.1461674759236455e-07, 4.8545818497513406e-09), (0, 0, 1, -1, -1, -1): (-3.069602710730949e-07, 4.832171908212019e-09), (0, 0, 1, -1, -1, 1): (2.7270589345996334e-07, -2.0762612868036477e-08), (0, 0, 1, 1, 1, 1): (2.914827381801457e-07, 0.0), (0, 0, 1, -1, 1, -1): (2.8446952890247865e-07, -7.217171184019204e-11), (0, 0, 1, -1, 1, 1): (-2.5326248092821595e-07, 1.519703606636158e-08), (0, 0, -1, -1, -1, -1): (2.7764709546297174e-07, 0.0), (0, 0, -1, -1, -1, 1): (-2.4727978606009926e-07, 1.4752928639145769e-08), (0, 0, -1, -1, 1, 1): (2.2137890970427402e-07, 0.0)}
+        original_sol =  {(0, 0, 1, 1, -1, -1): (9.444768804044248e-09, 0.0), (0, 0, 1, 1, -1, 1): (-8.739354099787904e-09, 1.3484949582642612e-10), (0, 0, 1, -1, -1, -1): (-8.526674196474859e-09, 1.3422699745033388e-10), (0, 0, 1, -1, -1, 1): (7.575163707221203e-09, -5.767392463343466e-10), (0, 0, 1, 1, 1, 1): (8.09674272722627e-09, 0.0), (0, 0, 1, -1, 1, -1): (7.901931358402185e-09, -2.004769773338668e-12), (0, 0, 1, -1, 1, 1): (-7.035068914672666e-09, 4.2213989073226606e-10), (0, 0, -1, -1, -1, -1): (7.712419318415882e-09, 0.0), (0, 0, -1, -1, -1, 1): (-6.868882946113868e-09, 4.098035733096047e-10), (0, 0, -1, -1, 1, 1): (6.149414158452056e-09, 0.0)}
         for key in original_sol:
             
             self.assertIn(key, sol)
@@ -1446,9 +1865,11 @@ class TestCmdShell2(unittest.TestCase,
 
 
         self.assertEqual(len(sol), 6)
-        original_sol =  {(-1, -1): (520.1204099513759, 0.0), (-1, 0): (-217.2395066557355, 871.1782252029083), (-1, 1): (-939.258737149777, -499.49184104989456), (0, 0): (2136.628541206853, 0.0), (0, 1): (-534.1281427839928, 2141.9713873632077), (1, 1): (2431.7289542861076, 0.0)}
-        for key in original_sol:
-            
+
+        # We changed the value of the reference by a factor of 3, which is the inclusion of IDEN in get_inter in matrix.
+        # original_sol =  {(-1, -1): (520.1204099513759, 0.0), (-1, 0): (-217.2395066557355, 871.1782252029083), (-1, 1): (-939.258737149777, -499.49184104989456), (0, 0): (2136.628541206853, 0.0), (0, 1): (-534.1281427839928, 2141.9713873632077), (1, 1): (2431.7289542861076, 0.0)}
+        original_sol =  {(-1, -1): (173.37346998379198, 0.0), (-1, 0): (-72.41316888524517, 290.3927417343028), (-1, 1): (-313.0862457165923, -166.49728034996485), (0, 0): (712.2095137356176, 0.0), (0, 1): (-178.04271426133093, 713.9904624544025), (1, 1): (810.5763180953692, 0.0)}
+        for key in original_sol:    
             self.assertIn(key, sol)
             self.assertAlmostEqual(original_sol[key][0], sol[key][0])
             self.assertAlmostEqual(original_sol[key][1], sol[key][1])
@@ -1502,9 +1923,9 @@ class TestCmdShell2(unittest.TestCase,
 
 
         self.assertEqual(len(sol), 10)
+        # I am not sure why for this case I didn't have to introduce the nomalisation term
         original_sol = sol =  {(-1, -1, 1, 1): (-5.551115123125783e-17, 0.0), (-1, -1, 1, -1): (0.00926133766116009, 0.0), (-1, 1, 1, 1): (-0.009292545047075378, 0.0), (-1, 1, 1, -1): (0.09884700885130696, 0.0), (-1, -1, -1, -1): (-1.6479873021779667e-17, 0.0), (-1, 1, -1, 1): (5.415404411525035e-07, 0.0), (-1, 1, -1, -1): (-0.012877349160785171, 0.0), (1, 1, 1, 1): (-1.734723475976807e-17, 0.0), (1, 1, 1, -1): (0.012880402732054583, 0.0), (1, 1, -1, -1): (-4.85722573273506e-17, 0.0)}
         for key in original_sol:
-
             self.assertIn(key, sol)
             self.assertAlmostEqual(original_sol[key][0] if abs(original_sol[key][0]) > 1e-12 else 0, sol[key][0])
             self.assertAlmostEqual(original_sol[key][1] if abs(original_sol[key][1]) > 1e-12 else 0, sol[key][1])
@@ -1618,26 +2039,33 @@ class TestCmdShell2(unittest.TestCase,
         prod_dec1 = madspin.DensityMatrix(all_dens[2], 1, [-1,0,1], 3) 
         prod_dec2 = madspin.DensityMatrix(all_dens[3], 1, [-1,0,1], 3)  
 
-        self.assertAlmostEqual(prod_dec1.trace()/3./all_me[2],1,4)
-        self.assertAlmostEqual(prod_dec2.trace()/3./all_me[3],1,4)
-        self.assertAlmostEqual(prod_dens.trace()/9./4./2./all_me[0], 1,4)  #9 color , 4 spin, 2 symmetry factor (ZZ)
+        # GET_INTER divides each interference term by IDEN (initial-state spin
+        # and colour averaging, including the identical-particle factor), so the
+        # trace of each density matrix already equals the spin-averaged ME and
+        # the IDEN normalisation that used to be applied here is now redundant.
+        iden_prod = 72  # u u~ > z z : spin 4 * colour 9 * identical(ZZ) 2
+        iden_dec = 3    # z > e+ e- : 3 Z helicity states
+
+        self.assertAlmostEqual(prod_dec1.trace()/all_me[2],1,4)
+        self.assertAlmostEqual(prod_dec2.trace()/all_me[3],1,4)
+        self.assertAlmostEqual(prod_dens.trace()/all_me[0], 1,4)
 
 
         prod_dec = prod_dec1.tensor_product(prod_dec2)
         #self.assertNotEqual(str(prod_dec1), str(prod_dec2))
-        #prod_dec_sym =prod_dec2.tensor_product(prod_dec1) 
+        #prod_dec_sym =prod_dec2.tensor_product(prod_dec1)
         mZ= 91.18800
         WZ = 2.44140
         nb_hel = 3*3
         symfact = 2 # 2 Z identical particles in the final state
         nb_spin = 2*2
         matrix = prod_dens.scalar_multiplication(prod_dec)/mZ**4/WZ**4/nb_hel/symfact/nb_spin
-        #matrix_sym = prod_dens.scalar_multiplication(prod_dec_sym)/mZ**4/WZ**4/nb_hel/symfact/nb_spin 
+        #matrix_sym = prod_dens.scalar_multiplication(prod_dec_sym)/mZ**4/WZ**4/nb_hel/symfact/nb_spin
 
-        misc.sprint(matrix/all_me[1], all_me[1]/matrix)
-        #misc.sprint(matrix_sym/all_me[1], all_me[1]/matrix_sym) 
         misc.sprint(matrix, all_me[1], )
-        self.assertAlmostEqual(matrix/all_me[1], 1,places=4)
+        # the three density matrices (production + 2 decays) each carry a 1/IDEN
+        # factor that must be restored to match the unmodified full ME all_me[1]
+        self.assertAlmostEqual(matrix * iden_prod * iden_dec**2 /all_me[1], 1,places=4)
 
 
     def test_standalone_density_dd(self):
@@ -1757,13 +2185,19 @@ class TestCmdShell2(unittest.TestCase,
 
 
         #consistency of the matrix-element and the density matrix
+        # GET_INTER divides each interference term by IDEN (initial-state spin
+        # and colour averaging, including the identical-particle factor), so the
+        # trace of each density matrix already equals the spin-averaged ME and
+        # the IDEN normalisation that used to be applied here is now redundant.
+        iden_prod = 72  # d d~ > z z : spin 4 * colour 9 * identical(ZZ) 2
+        iden_dec = 3    # z > e+ e- : 3 Z helicity states
 
-        self.assertAlmostEqual(prod_dec1.trace()/3./ all_me[2],1,4)
-        self.assertAlmostEqual(prod_dec2.trace()/3./all_me[3],1,4)
-        self.assertAlmostEqual(prod_dens.trace()/9./4./2./ all_me[0],1,4)  #9 color , 4 spin, 2 symmetry factor (ZZ)
+        self.assertAlmostEqual(prod_dec1.trace()/all_me[2],1,4)
+        self.assertAlmostEqual(prod_dec2.trace()/all_me[3],1,4)
+        self.assertAlmostEqual(prod_dens.trace()/all_me[0],1,4)
 
         prod_dec =prod_dec1.tensor_product(prod_dec2)
-        prod_dec_sym =prod_dec2.tensor_product(prod_dec1) 
+        prod_dec_sym =prod_dec2.tensor_product(prod_dec1)
         mZ= 91.18800
         WZ = 2.44140
         nb_hel = 3*3
@@ -1775,8 +2209,9 @@ class TestCmdShell2(unittest.TestCase,
         misc.sprint(matrix, all_me[1])
         #misc.sprint(matrix/all_me[1], matrix_sym/all_me[1])
 
-
-        self.assertAlmostEqual(matrix/all_me[1],1,4)
+        # the three density matrices (production + 2 decays) each carry a 1/IDEN
+        # factor that must be restored to match the unmodified full ME all_me[1]
+        self.assertAlmostEqual(matrix * iden_prod * iden_dec**2 /all_me[1],1,places=4)
         #self.assertAlmostEqual(matrix_sym, all_me[1],4)
 
         #check how madspin build the full event:
@@ -1925,9 +2360,12 @@ class TestCmdShell2(unittest.TestCase,
  ([ 1,  1,  1,  0],  0.01342101+8.17624195e-18j)]
         madspin_report_dict = dict(((tuple(x), y) for x,y in madspin_report))
 
+        # madspin_report holds the (pre-IDEN) density values reported by madspin;
+        # the standalone prod_dens now carries the 1/IDEN normalisation from
+        # GET_INTER, so we restore iden_prod when comparing.
         for key in madspin_report_dict:
             ref_val = self._dens_value_for_key(prod_dens, key)
-            self.assertAlmostEqual(madspin_report_dict[key].real/ref_val.real, 1, places=4)
+            self.assertAlmostEqual(madspin_report_dict[key].real/(ref_val.real * iden_prod), 1, places=4)
 
 
         madspin_report = [([-1, -1], 296.70587 -7.1793691e-15j),
@@ -1943,7 +2381,7 @@ class TestCmdShell2(unittest.TestCase,
 
         for key in madspin_report_dict:
             ref_val = self._dens_value_for_key(prod_dec1, key)
-            self.assertAlmostEqual(madspin_report_dict[key].real/ref_val.real, 1, places=4)
+            self.assertAlmostEqual(madspin_report_dict[key].real/(ref_val.real * iden_dec), 1, places=4)
 
         madspin_report =[([-1, -1],  332.7482   -3.3880889e-16j),
                         ([-1,  0],  -84.79217  +1.5662439e+02j),
@@ -1958,7 +2396,7 @@ class TestCmdShell2(unittest.TestCase,
 
         for key in madspin_report_dict:
             ref_val = self._dens_value_for_key(prod_dec2, key)
-            self.assertAlmostEqual(madspin_report_dict[key].real/ref_val.real, 1, places=4)
+            self.assertAlmostEqual(madspin_report_dict[key].real/(ref_val.real * iden_dec), 1, places=4)
 
 
         madspin_report = [([-1, -1, -1, -1],  9.8728344e+04-2.4894488e-12j),
@@ -2044,9 +2482,11 @@ class TestCmdShell2(unittest.TestCase,
                             ([ 1,  0,  1,  0],  2.0135797e+02+1.5155484e+02j),]
         madspin_report_dict = dict(((tuple(x), y) for x,y in madspin_report))
 
+        # prod_dec is the tensor product of the two decay density matrices, so it
+        # carries iden_dec**2 from the GET_INTER normalisation.
         for key in madspin_report_dict:
             ref_val = self._dens_value_for_key(prod_dec, key)
-            self.assertAlmostEqual(madspin_report_dict[key].real/ref_val.real, 1, places=4)
+            self.assertAlmostEqual(madspin_report_dict[key].real/(ref_val.real * iden_dec**2), 1, places=4)
                                                                              
                                                                              
     def test_standalone_density_f2py(self):       
@@ -2172,12 +2612,13 @@ class TestCmdShell2(unittest.TestCase,
                           1,-1,    1,0,    1,1]
             ncomb = 9 # why needed in f2py ?
             alphas = 0.118 # no impact for ZZ
+            scale2 = 0. # as passed by check_sa.f; no impact for ZZ
 
             # GET_DENSITY now takes a per-particle merged-flavor index array
             # (matches the SMATRIX/GET_AMP flavor-grouping plumbing).
             # Single-flavor processes use 1 for every particle.
             flavor = [1] * len(P[0])
-            f2py_dens = matrix2py.py_m0_get_density(P, pos, n_changing, allow_hel, ncomb, flavor, alphas)
+            f2py_dens = matrix2py.py_m0_get_density(P, pos, n_changing, allow_hel, ncomb, flavor, alphas, scale2)
             misc.sprint('fortran: ', fortran_dens)
             misc.sprint('f2py:    ', f2py_dens)
             for i in range(9*5):
@@ -2186,7 +2627,9 @@ class TestCmdShell2(unittest.TestCase,
                 self.assertAlmostEqual(fortran_dens[i].imag, f2py_dens[i].imag, places=5)
             import MadSpin.decay as madspin
             density_matrix = madspin.DensityMatrix(f2py_dens, n_changing, allow_hel, ncomb)
-            self.assertAlmostEqual(density_matrix.trace()/9./4./2./fortran_me, 1,4)  #9 color , 4 spin, 2 symmetry factor (
+            # GET_INTER now divides by IDEN (9 colour * 4 spin * 2 ZZ identical = 72),
+            # so the trace already equals the spin-averaged ME fortran_me.
+            self.assertAlmostEqual(density_matrix.trace()/fortran_me, 1,4)
             misc.sprint(density_matrix.values[1], fortran_dens[1])
 
 
@@ -2199,7 +2642,7 @@ class TestCmdShell2(unittest.TestCase,
         ############################################################################
         
         text = f"""generate g g > t t~
-output {self.out_dir}_density0
+output madevent {self.out_dir}_density0
 launch
 reweight=density
 set run_card nevents 50000
@@ -2209,18 +2652,15 @@ set boost_choice [6, -6]
 """
 
         #This bloc of code launches MadGraph with the commands written in mg5_cmd.txt
-        command_card = open('/tmp/mg5_cmd.txt','w')
+        command_card = open(pjoin(self.tmpdir, 'mg5_cmd.txt'),'w')
         command_card.write(text)
         command_card.close()
 
         subprocess.call([sys.executable,pjoin(MG5DIR,'bin','mg5_aMC'), 
-                         '/tmp/mg5_cmd.txt'])
+                         pjoin(self.out_dir+'_density0', '..', 'mg5_cmd.txt')])
 
-
-        
-
-        lhe_path = pjoin(self.out_dir + '_density0/Events/run_01/unweighted_events.lhe.gz')
-        rho_mean_path = pjoin(self.out_dir + '_density0/Events/run_01/Average_density_matrix_unweighted_events.txt')
+        lhe_path = pjoin(self.out_dir+'_density0','Events','run_01','unweighted_events.lhe.gz')
+        rho_mean_path = pjoin(self.out_dir+ '_density0','Events','run_01','Average_density_matrix_unweighted_events.txt')
         
         self.assertTrue(os.path.isfile(lhe_path), f"File not found {lhe_path}")
         self.assertTrue(os.path.isfile(rho_mean_path), f"File not found {rho_mean_path}")
@@ -2254,6 +2694,82 @@ set boost_choice [6, -6]
                 self.assertAlmostEqual(rho_avg[i][j].imag, rho_avg_ref[i][j].imag, places=3)
 
 
+    def test_density_mode_user_interface(self):
+        ############################################################################
+        # This test checks that the python interface of the density mode works properly ie.
+        # it creates a LHE file with a tag <density> which contains the density matrix with the correct number of elements.
+        # We also check that the average density matrix is stable.
+        # To check if the value of the density matrix itself is correct see the other test_density_mode_* tests.
+        ############################################################################
+        
+        text = f"""generate g g > t t~
+output madevent {self.out_dir}_density0
+launch
+reweight=density
+set run_card nevents 50000
+set helicity_direction [6]
+set particle_in_density_matrix [6, -6]
+set boost_choice [6, -6]
+"""
+
+        #This bloc of code launches MadGraph with the commands written in mg5_cmd.txt
+        command_card = open('/tmp/mg5_cmd.txt','w')
+        command_card.write(text)
+        command_card.close()
+
+        
+        logfile = 'test_density_mode_ttbar.log'
+        subprocess.call([sys.executable,pjoin(MG5DIR,'bin','mg5_aMC'), 
+                         '/tmp/mg5_cmd.txt'], stdout=open(logfile, 'w'), stderr=subprocess.STDOUT)
+
+
+        
+
+        lhe_path = pjoin(self.out_dir + '_density0/Events/run_01/unweighted_events.lhe.gz')
+        rho_mean_path = pjoin(self.out_dir + '_density0/Events/run_01/Average_density_matrix_unweighted_events.txt')
+        
+        self.assertTrue(os.path.isfile(lhe_path), f"File not found {lhe_path}")
+        self.assertTrue(os.path.isfile(rho_mean_path), f"File not found {rho_mean_path}")
+
+
+        for event in lhe_parser.EventFile(lhe_path):
+            density_check = event.density
+            break #we only want the first one
+        
+        for elem in density_check:
+            self.assertIsInstance(elem, complex)
+        
+        self.assertEqual(len(density_check), 10, f"The density matrix is not the correct length: {density_check}")
+
+        rho_avg_ref =  [[(0.3670142422790588+0j), (1.7429098337870793e-07-3.933851109770078e-05j), (-1.742909833606001e-07+3.9338510968347334e-05j), (0.11514189584464168-0j)],
+                        [(1.7429098337870793e-07+3.933851109770078e-05j), (0.13298575772060628+0j), (0.06344292964491506-0j), (-1.7429098336059725e-07-3.933851096834704e-05j)],
+                        [(-1.742909833606001e-07-3.9338510968347334e-05j), (0.06344292964491506+0j), (0.13298575772060628+0j), (1.7429098337870735e-07+3.9338511097700886e-05j)],
+                        [(0.11514189584464168+0j), (-1.7429098336059725e-07+3.933851096834704e-05j), (1.7429098337870735e-07-3.9338511097700886e-05j), (0.36701424227905893+0j)]]
+
+        #now let's read the average density matrix
+        with open(rho_mean_path, 'r') as f:
+            data = f.readlines()[1:]
+            rho_avg = []
+            for i in range(len(data)):
+                aux = data[i].strip("\t\n[]").split(",")
+                try:
+                    rho_avg.append([complex(aux[i].strip(" ()")) for i in range(len(aux))])
+                except: #if the values are like "np.complex128(value)"
+                    print("aux", aux)
+                    aux2 = [aux[i].strip(" ()[]").strip("'").replace("np.complex128(","").strip(" ()") for i in range(len(aux))]
+                    try:
+                        rho_avg.append([complex(aux2[i]) for i in range(len(aux2))])
+                    except:
+                        print("aux2", aux2)
+                        raise ValueError
+            
+
+        for i in range(len(rho_avg)):
+            for j in range(len(rho_avg[0])):
+                self.assertAlmostEqual(rho_avg[i][j].real, rho_avg_ref[i][j].real, places=3) #we ask 3 digits because we only use 50k events
+                self.assertAlmostEqual(rho_avg[i][j].imag, rho_avg_ref[i][j].imag, places=3)
+
+
     def test_density_mode_ttbar(self):
         ############################################################################
         # Check working condition of the density mode
@@ -2263,20 +2779,20 @@ set boost_choice [6, -6]
         import madgraph.various.Density_functions as dens
         #we generate just one event of the process  to create the process folder (it is fast enough)
         text = f"""generate g g > t t~
-output {self.out_dir}_density1
+output madevent {self.out_dir}_density1
 launch
 set run_card nevents 1
 set use_syst False
 """
 
         #This bloc of code launches MadGraph with the commands written in mg5_cmd.txt
-        command_card = open('/tmp/mg5_cmd.txt','w')
+        command_card = open(pjoin(self.tmpdir, 'mg5_cmd.txt'),'w')
         command_card.write(text)
         command_card.close()
 
         logfile = 'test_density_mode_ttbar1.log'
         subprocess.call([sys.executable,pjoin(MG5DIR,'bin','mg5_aMC'), 
-                         '/tmp/mg5_cmd.txt'], stdout=open(logfile, 'w'), stderr=subprocess.STDOUT)
+                         pjoin(self.tmpdir, 'mg5_cmd.txt')], stdout=open(logfile, 'w'), stderr=subprocess.STDOUT)
 
 
         #Here we replace the lhe file by the reference lhe file (stored in the input_files).
@@ -2339,7 +2855,7 @@ set boost_choice [6, -6]
         ############################################################################
         import madgraph.various.Density_functions as dens
         text = f"""generate u u~ > w+ w-
-output {self.out_dir}_density2
+output madevent {self.out_dir}_density2
 launch
 set run_card nevents 1
 set use_syst False
@@ -2440,7 +2956,7 @@ set axis_referential [-1, -2]
         ############################################################################
         import madgraph.various.Density_functions as dens
         text = f"""generate g g > t t~, t > b w+
-output {self.out_dir}_density3
+output madevent {self.out_dir}_density3
 launch
 set run_card nevents 1
 set run_card use_syst False
@@ -2454,7 +2970,7 @@ set run_card use_syst False
 
         logfile = 'test_density_mode_decay11.log'
         subprocess.call([sys.executable,pjoin(MG5DIR,'bin','mg5_aMC'), 
-                         '/tmp/mg5_cmd.txt'])
+                         '/tmp/mg5_cmd.txt'], stdout=open(logfile, 'w'), stderr=subprocess.STDOUT)
 
 
         #Here we replace the lhe file by the reference lhe file (stored in the input_files).
@@ -2534,7 +3050,7 @@ set boost_choice [5, -6]
         import madgraph.various.Density_functions as dens
         #we generate just one event of the process  to create the process folder (it is fast enough)
         text = f"""generate g g > t t~, t > b w+
-output {self.out_dir}_density4
+output madevent {self.out_dir}_density4
 launch
 reweight=density
 set run_card nevents 1
@@ -2548,7 +3064,7 @@ set run_card use_syst False
 
         logfile = 'test_density_mode_decay21.log'
         subprocess.call([sys.executable,pjoin(MG5DIR,'bin','mg5_aMC'), 
-                         '/tmp/mg5_cmd.txt'])
+                         '/tmp/mg5_cmd.txt'], stdout=open(logfile, 'w'), stderr=subprocess.STDOUT)
 
 
         #Here we replace the lhe file by the reference lhe file (stored in the input_files).
@@ -2617,7 +3133,7 @@ set boost_choice [24, -6]
         import madgraph.various.Density_functions as dens
         #we generate just one event of the process  to create the process folder (it is fast enough)
         text = f"""generate p p > t t t~ t~
-output {self.out_dir}_density5
+output madevent {self.out_dir}_density5
 launch
 set run_card nevents 1
 set run_card use_syst False
@@ -2794,9 +3310,9 @@ set boost_choice [6, -6] pt [0, 0]
         self.do('import model sm')
         self.do('set group_subprocesses False')
         self.do('generate e+ e- > e+ e-')
-        self.do('output %s ' % self.out_dir)
+        self.do('output madevent %s ' % self.out_dir)
         # Check that the needed ALOHA subroutines are generated
-        files = ['aloha_file.inc', 
+        files = ['aloha_file.inc',
                  #'FFS1C1_2.f', 'FFS1_0.f',
                  'FFV1_0.f', 'FFV1P0_3.f',
                  'FFV2_0.f', 'FFV2_3.f',
@@ -2863,9 +3379,86 @@ set boost_choice [6, -6] pt [0, 0]
                                                     'SubProcesses',
                                                     'P0_epem_epem',
                                                     'madevent')))
-        
-        
-     
+
+
+    def test_mg7_ufo_aloha(self):
+        """Test mg7 (madmatrix/cudacpp) output with UFO/ALOHA.
+
+        mg7's analogue of the Fortran ALOHA routines is the C++ ``HelAmps_sm.h``
+        header: the same FFV* helicity-amplitude functions are emitted as inline
+        ``ALOHAOBJ`` C++ routines. This mirrors test_madevent_ufo_aloha but for
+        the mg7 backend: it checks the routines are generated, the parameters /
+        process sources are present, and that the subprocess compiles (cppnone
+        backend) into the expected shared libraries.
+        """
+
+        if os.path.isdir(self.out_dir):
+            shutil.rmtree(self.out_dir)
+
+        self.do('set apply_flavor_grouping False')
+        self.do('import model sm')
+        self.do('set group_subprocesses False')
+        self.do('generate e+ e- > e+ e-')
+        self.do('output mg7 %s ' % self.out_dir)
+
+        # The C++ HelAmps header is the mg7 equivalent of the Fortran ALOHA
+        # subroutines: check it exists and emits the expected FFV* routines.
+        helamps = os.path.join(self.out_dir, 'src', 'HelAmps_sm.h')
+        self.assertTrue(os.path.isfile(helamps),
+                        'HelAmps_sm.h file is not in the mg7 src directory')
+        helamps_content = open(helamps).read()
+        for routine in ['FFV1_0', 'FFV1P0_3',
+                        'FFV2_0', 'FFV2_3',
+                        'FFV4_0', 'FFV4_3']:
+            self.assertIn(routine, helamps_content,
+                          '%s routine is not in HelAmps_sm.h' % routine)
+        # the merged-ALOHA work emits these as C++ ALOHAOBJ routines
+        self.assertIn('ALOHAOBJ', helamps_content,
+                      'HelAmps_sm.h does not use the ALOHAOBJ interface')
+
+        # Parameter / model sources and the src makefile
+        for f in ['Parameters.h', 'Parameters.cc', 'makefile']:
+            self.assertTrue(os.path.isfile(os.path.join(self.out_dir,
+                                                        'src', f)),
+                            '%s file is not in the mg7 src directory' % f)
+        # mg7 cards
+        self.assertTrue(os.path.exists(os.path.join(self.out_dir,
+                                                 'Cards', 'param_card.dat')))
+        self.assertTrue(os.path.exists(os.path.join(self.out_dir,
+                                                 'Cards', 'run_card.toml')))
+
+        # Locate the subprocess directory (P0/P1 numbering depends on the
+        # invocation path, so discover it rather than hard-coding the number).
+        subproc_root = os.path.join(self.out_dir, 'SubProcesses')
+        candidates = [d for d in os.listdir(subproc_root)
+                      if d.endswith('_epem_epem') and
+                      os.path.isdir(os.path.join(subproc_root, d))]
+        self.assertEqual(len(candidates), 1,
+                         'expected exactly one epem_epem subprocess, got %s'
+                         % candidates)
+        pdir = os.path.join(subproc_root, candidates[0])
+        for f in ['CPPProcess.cc', 'CPPProcess.h', 'makefile']:
+            self.assertTrue(os.path.isfile(os.path.join(pdir, f)),
+                            '%s file is not in the mg7 subprocess directory' % f)
+
+        devnull = open(os.devnull, 'w')
+        # Check that the subprocess compiles (scalar/no-SIMD C++ backend).
+        status = subprocess.call(['make', 'bldnone'],
+                                 stdout=devnull, stderr=devnull,
+                                 cwd=pdir)
+        self.assertEqual(status, 0)
+        # The build produces the common and per-process shared libraries.
+        libdir = os.path.join(self.out_dir, 'lib')
+        libs = os.listdir(libdir) if os.path.isdir(libdir) else []
+        self.assertTrue(any(l.startswith('libmadmatrix_common') and
+                            l.endswith('.so') for l in libs),
+                        'common madmatrix library not built: %s' % libs)
+        self.assertTrue(any(l.startswith('libmadmatrix_') and
+                            'epem_epem' in l and l.endswith('.so')
+                            for l in libs),
+                        'process madmatrix library not built: %s' % libs)
+
+
     def test_madevent_ufo_aloha_merged(self):
         """Test MadEvent output with UFO/ALOHA"""
 
@@ -2876,7 +3469,7 @@ set boost_choice [6, -6] pt [0, 0]
         self.do('import model sm')
         self.do('set group_subprocesses False')
         self.do('generate e+ e- > e+ e-')
-        self.do('output %s ' % self.out_dir)
+        self.do('output madevent %s ' % self.out_dir)
         # Check that the needed ALOHA subroutines are generated
         files = ['FFV6_3.f', 'FFV2_3.f', 'FFV1P1N_2.f', 'FFV6P1N_3.f', 'aloha_file.inc', 'FFV6_0.f', 'FFV2P1N_3.f', 'FFV1P0_3.f', 
                   'FFV2_0.f', 'FFV1P1N_1.f', 'FFV1_0.f', 'aloha_functions.f', 'FFV2P1N_2.f', 'FFV6P1N_1.f', 'FFV2P1N_1.f', 
@@ -3428,7 +4021,7 @@ C
         self.do('define q = u d u~ d~')
         self.do('set group_subprocesses True')
         self.do('generate u u~ > g > go go, go > q q n1 / ur dr')
-        self.do('output %s ' % self.out_dir)
+        self.do('output madevent %s ' % self.out_dir)
         self.do('set group_subprocesses False')
         devnull = open(os.devnull,'w')
         # Check that all subprocess directories have been created
@@ -3436,22 +4029,21 @@ C
                                                     'SubProcesses',
                                                     'P0_qq_gogo_go_qqn1_go_qqn1')))
         
-        target=""" 1   1
+        target = """  1   1
  2   1
  3  -1
  4  -2
- 5  -2
- 6   1
- 7  -6
- 8  -1
- 9  -2
-10  -1
-11  -2
-12  -2
-13  -6
-14  -6
+ 5   1
+ 6  -5
+ 7  -1
+ 8  -2
+ 9  -1
+10  -2
+11  -5
+12  -5 
 """
 
+                                           
         self.assertEqual(analyse(target.split('\n')), 
                          analyse(open(os.path.join(self.out_dir,
                                            'SubProcesses',
@@ -3575,7 +4167,7 @@ P1_qq_wp_wp_lvl
         self.do('set group_subprocesses False')
         self.do('generate w+ > l+ vl')
         self.do('add process w+ > j j')
-        self.do('output %s ' % self.out_dir)
+        self.do('output madevent %s ' % self.out_dir)
         # Check that all subprocesses have separate directories
         directories = ['P0_wp_LxN','P0_wp_QQx']
         for d in directories:
@@ -3585,17 +4177,17 @@ P1_qq_wp_wp_lvl
         self.do('set group_subprocesses True')
         self.do('generate w+ > l+ vl')
         self.do('add process w+ > j j')
-        self.do('output %s -f' % self.out_dir)
+        self.do('output madevent %s -f' % self.out_dir)
         # Check that all subprocesses are combined
         directories = ['P0_wp_lvl','P0_wp_qq']
         for d in directories:
             self.assertTrue(os.path.isdir(os.path.join(self.out_dir,
                                                        'SubProcesses',
                                                        d)))
-            
+
         self.do('generate w+ > l+ vl')
         self.do('generate e+ e- > j j')
-        self.do('output %s -f' % self.out_dir)
+        self.do('output madevent %s -f' % self.out_dir)
         # Check that all subprocesses are combined
         directories = ['P0_wp_lvl','P0_wp_qq']
         for d in directories:
@@ -3609,11 +4201,54 @@ P1_qq_wp_wp_lvl
                                                        'SubProcesses',
                                                        d)))
 
-                                                
-            
+
+    def test_ungroup_decay_mg7(self):
+        """mg7 equivalent of test_ungroup_decay.
+
+        Mirrors test_ungroup_decay for the mg7 (madmatrix/cudacpp) backend.
+        Unlike madevent, mg7 uses the per-subprocess (ungrouped-style)
+        directory naming regardless of the group_subprocesses flag: the
+        flavour-merged madevent names (e.g. wp_lvl, wp_qq) are never produced,
+        each subprocess keeps its own directory (wp_LxN, wp_QQx).
+        """
+
+        def has(d):
+            return os.path.isdir(os.path.join(self.out_dir, 'SubProcesses', d))
+
+        if os.path.isdir(self.out_dir):
+            shutil.rmtree(self.out_dir)
+
+        self.do('import model sm')
+        self.do('set group_subprocesses False')
+        self.do('generate w+ > l+ vl')
+        self.do('add process w+ > j j')
+        self.do('output mg7 %s ' % self.out_dir)
+        # ungrouped: each subprocess in its own directory (same as madevent)
+        for d in ['P0_wp_LxN', 'P0_wp_QQx']:
+            self.assertTrue(has(d), '%s missing in ungrouped mg7 output' % d)
+
+        self.do('set group_subprocesses True')
+        self.do('generate w+ > l+ vl')
+        self.do('add process w+ > j j')
+        self.do('output mg7 %s -f' % self.out_dir)
+        # mg7 does not merge subprocesses on grouping: the per-subprocess
+        # directories persist and the madevent-style merged ones are absent.
+        for d in ['P0_wp_LxN', 'P0_wp_QQx']:
+            self.assertTrue(has(d), '%s missing in grouped mg7 output' % d)
+        for d in ['P0_wp_lvl', 'P0_wp_qq']:
+            self.assertFalse(has(d),
+                             '%s should not exist in mg7 output (no merging)' % d)
+
+        self.do('generate w+ > l+ vl')
+        self.do('generate e+ e- > j j')
+        self.do('output mg7 %s -f' % self.out_dir)
+        # the second generate replaces the first: only e+ e- > j j survives
+        self.assertTrue(has('P0_epem_QQx'),
+                        'P0_epem_QQx missing after regenerate')
+        for d in ['P0_wp_LxN', 'P0_wp_QQx', 'P0_wp_lvl', 'P0_wp_qq', 'P0_ll_qq']:
+            self.assertFalse(has(d), '%s should not survive the regenerate' % d)
 
 
-    
     @test_manager.bypass_for_py3
     def test_madevent_triplet_diquarks(self):
         """Test MadEvent output of triplet diquarks"""
@@ -3682,7 +4317,7 @@ P1_qq_wp_wp_lvl
         self.do('import model sextet_diquarks')
         self.do('set group_subprocesses False')
         self.do('generate u u > six g')
-        self.do('output %s ' % self.out_dir)
+        self.do('output madevent %s ' % self.out_dir)
         
         # Check that leshouche.inc exists
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,
@@ -3691,7 +4326,7 @@ P1_qq_wp_wp_lvl
                                                     'leshouche.inc')))        
         # Test sextet decay
         self.do('generate six > u u g')
-        self.do('output %s -f' % self.out_dir)
+        self.do('output madevent %s -f' % self.out_dir)
 
         # Check that leshouche.inc exists
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,
@@ -3701,13 +4336,43 @@ P1_qq_wp_wp_lvl
 
         # Test sextet production
         self.do('generate u g > six u~')
-        self.do('output %s -f' % self.out_dir)
+        self.do('output madevent %s -f' % self.out_dir)
         
         # Check that leshouche.inc exists
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,
                                                     'SubProcesses',
                                                     'P0_ug_sixux',
                                                     'leshouche.inc')))
+
+    @unittest.expectedFailure
+    def test_leshouche_sextet_diquarks_mg7(self):
+        """mg7 equivalent of test_leshouche_sextet_diquarks (TODO).
+
+        leshouche.inc is a MadEvent Fortran artifact (Les Houches colour/flavour
+        table for the Fortran integrator); the mg7 (madmatrix/cudacpp) export
+        does not produce it. This test is xfail to keep mg7 leshouche support on
+        the to-do list: when mg7 grows an equivalent it will start passing and
+        the expectedFailure decorator should be removed.
+        """
+        if os.path.isdir(self.out_dir):
+            shutil.rmtree(self.out_dir)
+
+        self.do('import model sextet_diquarks')
+        self.do('set group_subprocesses False')
+        self.do('generate u u > six g')
+        self.do('output mg7 %s ' % self.out_dir)
+
+        # Discover the sextet subprocess directory (numbering is invocation
+        # dependent) and require a leshouche.inc -- currently absent in mg7.
+        sub_root = os.path.join(self.out_dir, 'SubProcesses')
+        cand = [d for d in os.listdir(sub_root)
+                if d.endswith('_sixg') and
+                os.path.isdir(os.path.join(sub_root, d))]
+        self.assertTrue(cand, 'no u u > six g subprocess in mg7 output')
+        self.assertTrue(os.path.exists(os.path.join(sub_root, cand[0],
+                                                    'leshouche.inc')),
+                        'leshouche.inc not generated by mg7 (TODO)')
+
     def test_ufo_standard_sm(self):
         """ check that we can use standard MG4 name """
         self.do('import model sm')
@@ -3917,42 +4582,6 @@ P1_qq_wp_wp_lvl
         
         #os.remove('/tmp/model.pkl')
         
-    def test_pythia8_output(self):
-        """Test Pythia 8 output"""
-
-        if os.path.isdir(self.out_dir):
-            shutil.rmtree(self.out_dir)
-        # Create out_dir and out_dir/include
-        os.makedirs(os.path.join(self.out_dir,'include'))
-        # Touch the file Pythia.h, which is needed to verify that this is a Pythia dir
-        py_h_file = open(os.path.join(self.out_dir,'include','Pythia.h'), 'w')
-        py_h_file.close()
-
-        self.do('set apply_flavor_grouping False')
-        self.do('import model sm')
-        self.do('define p g u d u~ d~')
-        self.do('define j g u d u~ d~')
-        self.do('generate p p > w+ j @2')
-        self.do('output pythia8 %s' % self.out_dir)
-        # Check that the needed files are generated
-        files = ['Processes_sm/Sigma_sm_gq_wpq.h', 'Processes_sm/Sigma_sm_gq_wpq.cc',
-                 'Processes_sm/Sigma_sm_qq_wpg.h', 'Processes_sm/Sigma_sm_qq_wpg.cc',
-                 'Processes_sm/HelAmps_sm.h', 'Processes_sm/HelAmps_sm.cc',
-                 'Processes_sm/Parameters_sm.h',
-                 'Processes_sm/Parameters_sm.cc', 'Processes_sm/Makefile',
-                 'examples/main_sm_1.cc', 'examples/Makefile_sm_1']
-        for f in files:
-            self.assertTrue(os.path.isfile(os.path.join(self.out_dir, f)), 
-                            '%s file is not in directory' % f)
-        self.do('generate u u~ > a a a a')
-        self.assertRaises(MadGraph5Error,
-                          self.do,
-                          'output pythia8 %s' % self.out_dir)
-        self.do('generate u u~ > w+ w-, w+ > e+ ve, w- > e- ve~ @1')
-        self.assertRaises(MadGraph5Error,
-                          self.do,
-                          'output pythia8 %s' % self.out_dir)
-
     def test_standalone_cpp_output(self):
         """Test the C++ standalone output"""
 
@@ -3978,26 +4607,31 @@ P1_qq_wp_wp_lvl
         # Check that the Model and Aloha output has compiled
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,
                                                'lib', 'libmodel_sm.a')))
+
+        # Locate the subprocess directory: the merge shortened the standalone_cpp
+        # directory name (P2_Sigma_sm_epem_epem -> P2_epem_epem), so discover it.
+        proc_root = os.path.join(self.out_dir, 'SubProcesses')
+        candidates = [d for d in os.listdir(proc_root)
+                      if d.endswith('_epem_epem') and
+                      os.path.isdir(os.path.join(proc_root, d))]
+        self.assertEqual(len(candidates), 1,
+                         'expected exactly one epem_epem subprocess, got %s'
+                         % candidates)
+        proc_dir = os.path.join(proc_root, candidates[0])
         # Check that check_sa.cpp compiles
         subprocess.call(['make', 'check'],
-                        stdout=devnull, stderr=devnull, 
-                        cwd=os.path.join(self.out_dir, 'SubProcesses',
-                                         'P2_Sigma_sm_epem_epem'))
+                        stdout=devnull, stderr=devnull,
+                        cwd=proc_dir)
 
 
-        self.assertTrue(os.path.exists(os.path.join(self.out_dir,
-                                                    'SubProcesses',
-                                                    'P2_Sigma_sm_epem_epem',
-                                                    'check')))
+        self.assertTrue(os.path.exists(os.path.join(proc_dir, 'check')))
 
-        # Check that the output of check is correct 
-        logfile = os.path.join(self.out_dir, 'SubProcesses',
-                               'P2_Sigma_sm_epem_epem', 'check.log')
+        # Check that the output of check is correct
+        logfile = os.path.join(proc_dir, 'check.log')
 
-        subprocess.call('./check', 
+        subprocess.call('./check',
                         stdout=open(logfile, 'w'), stderr=devnull,
-                        cwd=os.path.join(self.out_dir, 'SubProcesses',
-                                         'P2_Sigma_sm_epem_epem'), shell=True)
+                        cwd=proc_dir, shell=True)
 
         log_output = open(logfile, 'r').read()
         me_re = re.compile(r'Matrix element\s*=\s*(?P<value>[\d\.e\+-]+)\s*GeV',

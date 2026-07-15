@@ -15,9 +15,9 @@ p_ME_*
 tests/status
 input/default_run_card_lo.dat
 input/default_run_card_nlo.dat
+input/default_run_card_mg7.toml
 input/mg5_configuration.txt
 TEST_MW_*
-.pre-commit-config.yaml
 .vscode/
 HEPTools/*
 MG5/*
@@ -63,6 +63,7 @@ additional_command
 input/mg5_configuration.txt
 input/default_run_card_lo.dat
 input/default_run_card_nlo.dat
+input/default_run_card_mg7.toml
 models/*/*.pkl
 py.py
 vendor/CutTools/includects/
@@ -74,5 +75,7 @@ check_sa_born_splitOrders.f
 models/*.tgz
 tests/status
 nsqso_born.inc
+# Sphinx documentation
+docs/build/
 tests/input_files/IOTestsComparison_BackUp/
 tests/input_files/IOTestsComparison/**/*.BackUp

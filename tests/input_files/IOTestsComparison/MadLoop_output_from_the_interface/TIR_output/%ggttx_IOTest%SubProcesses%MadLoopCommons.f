@@ -661,81 +661,78 @@ C     ---
         IF (X(I) < MINIMUM) THEN  !   if x(i) less than the min?
           MINIMUM  = X(I)  !      Yes, a new minimum found
           LOCATION = I  !      record its position
-          END IF
-          END DO
-          FINDMINIMUM = LOCATION  ! return the position
-          END FUNCTION  FINDMINIMUM
+        END IF
+      END DO
+      FINDMINIMUM = LOCATION  ! return the position
+      END FUNCTION  FINDMINIMUM
 
-C         -------------------------------------------------------------
-C         -------
-C         SUBROUTINE  Swap():
-C         This subroutine swaps the values of its two formal arguments.
-C         -------------------------------------------------------------
-C         -------
+C     -----------------------------------------------------------------
+C     ---
+C     SUBROUTINE  Swap():
+C     This subroutine swaps the values of its two formal arguments.
+C     -----------------------------------------------------------------
+C     ---
 
-          SUBROUTINE  SWAP(A, B)
-          IMPLICIT  NONE
-          REAL*8,  INTENT(INOUT) :: A, B
-          REAL*8                 :: TEMP
+      SUBROUTINE  SWAP(A, B)
+      IMPLICIT  NONE
+      REAL*8,  INTENT(INOUT) :: A, B
+      REAL*8                 :: TEMP
 
-          TEMP = A
-          A    = B
-          B    = TEMP
-          END SUBROUTINE  SWAP
+      TEMP = A
+      A    = B
+      B    = TEMP
+      END SUBROUTINE  SWAP
 
-C         -------------------------------------------------------------
-C         -------
-C         SUBROUTINE  Sort():
-C         This subroutine receives an array x() and sorts it into
-C          ascending
-C         order.
-C         -------------------------------------------------------------
-C         -------
+C     -----------------------------------------------------------------
+C     ---
+C     SUBROUTINE  Sort():
+C     This subroutine receives an array x() and sorts it into ascending
+C     order.
+C     -----------------------------------------------------------------
+C     ---
 
-          SUBROUTINE  SORT(X, MSIZE)
-          IMPLICIT  NONE
-          INTEGER MAXNREF_EVALS
-          PARAMETER (MAXNREF_EVALS=100)
-          REAL*8, DIMENSION(MAXNREF_EVALS), INTENT(INOUT)  :: X
-          INTEGER, INTENT(IN)							   :: MSIZE
-          INTEGER										   :: I
-          INTEGER										   :: LOCATION
-          INTEGER 										   :: FINDMINIMUM
-          DO I = 1, MSIZE-1  ! except for the last
-            LOCATION = FINDMINIMUM(X, I, MSIZE)  ! find min from this to last
-            CALL  SWAP(X(I), X(LOCATION))  ! swap this and the minimum
-            END DO
-            END SUBROUTINE  SORT
+      SUBROUTINE  SORT(X, MSIZE)
+      IMPLICIT  NONE
+      INTEGER MAXNREF_EVALS
+      PARAMETER (MAXNREF_EVALS=100)
+      REAL*8, DIMENSION(MAXNREF_EVALS), INTENT(INOUT)  :: X
+      INTEGER, INTENT(IN)							   :: MSIZE
+      INTEGER										   :: I
+      INTEGER										   :: LOCATION
+      INTEGER 										   :: FINDMINIMUM
+      DO I = 1, MSIZE-1  ! except for the last
+        LOCATION = FINDMINIMUM(X, I, MSIZE)  ! find min from this to last
+        CALL  SWAP(X(I), X(LOCATION))  ! swap this and the minimum
+      END DO
+      END SUBROUTINE  SORT
 
-C           -----------------------------------------------------------
-C           ---------
-C           REAL*8 FUNCTION  Median() :
-C           This function receives an array X of N entries, copies its
-C            value
-C           to a local array Temp(), sorts Temp() and computes the
-C            median.
-C           The returned value is of REAL type.
-C           -----------------------------------------------------------
-C           ---------
+C     -----------------------------------------------------------------
+C     ---
+C     REAL*8 FUNCTION  Median() :
+C     This function receives an array X of N entries, copies its value
+C     to a local array Temp(), sorts Temp() and computes the median.
+C     The returned value is of REAL type.
+C     -----------------------------------------------------------------
+C     ---
 
-            REAL*8 FUNCTION  MEDIAN(X, N)
-            IMPLICIT  NONE
-            INTEGER MAXNREF_EVALS
-            PARAMETER (MAXNREF_EVALS=100)
-            REAL*8, DIMENSION(MAXNREF_EVALS), INTENT(IN)  :: X
-            INTEGER, INTENT(IN)                			  :: N
-            REAL*8, DIMENSION(MAXNREF_EVALS)              :: TEMP
-            INTEGER                                         :: I
+      REAL*8 FUNCTION  MEDIAN(X, N)
+      IMPLICIT  NONE
+      INTEGER MAXNREF_EVALS
+      PARAMETER (MAXNREF_EVALS=100)
+      REAL*8, DIMENSION(MAXNREF_EVALS), INTENT(IN)  :: X
+      INTEGER, INTENT(IN)                			  :: N
+      REAL*8, DIMENSION(MAXNREF_EVALS)              :: TEMP
+      INTEGER                                         :: I
 
-            DO I = 1, N  ! make a copy
-              TEMP(I) = X(I)
-              END DO
-              CALL  SORT(TEMP, N)  ! sort the copy
-              IF (MOD(N,2) == 0) THEN  ! compute the median
-                MEDIAN = (TEMP(N/2) + TEMP(N/2+1)) / 2.0D0
-              ELSE
-                MEDIAN = TEMP(N/2+1)
-                END IF
-                END FUNCTION  MEDIAN
+      DO I = 1, N  ! make a copy
+        TEMP(I) = X(I)
+      END DO
+      CALL  SORT(TEMP, N)  ! sort the copy
+      IF (MOD(N,2) == 0) THEN  ! compute the median
+        MEDIAN = (TEMP(N/2) + TEMP(N/2+1)) / 2.0D0
+      ELSE
+        MEDIAN = TEMP(N/2+1)
+      END IF
+      END FUNCTION  MEDIAN
 
 

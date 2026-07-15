@@ -516,7 +516,8 @@ CF2PY INTENT(IN) :: JAMP_2
       PARAMETER (NCOLOR=1)
       INTEGER CF_INDEX
       INTEGER ML5_0_CF(NCOLOR*(NCOLOR+1)/2)
-      INTEGER ML5_0_DENOM
+      INTEGER ML5_0_DENOM, IDEN
+      DATA IDEN/36/
       COMMON /ML5_0_COLOR_MATRIX/ ML5_0_CF,ML5_0_DENOM
       COMPLEX*16 JAMP_1(NCOLOR),JAMP_2(NCOLOR),INTER
 
@@ -533,21 +534,21 @@ C       ZTEMP = DCONJG(JAMP_2(I))
      $      DCONJG(JAMP_2(I)) +JAMP_1(I) * DCONJG(JAMP_2(J)))
         ENDDO
       ENDDO
-      INTER = INTER/ (2D0*ML5_0_DENOM)
+      INTER = INTER/ (2D0*ML5_0_DENOM*IDEN)
 
       END
 
 
 
       SUBROUTINE  ML5_0_GET_DENSITY(P, POS, N_CHANGING, ALLOW_HEL,
-     $  N_COMB, FLAVOR, ALPHAS, INTER)
+     $  N_COMB, FLAVOR, ALPHAS, SCALE2, INTER)
 C     P momenta
 C     NHEL base of helicity that are not changing
 C     POS(N_CHNGING): position of the changing helicity
 C     n_changing: number of changing helicity
 C     ALLOW_HEL(NCOMB, N_CHANGING): combination of helicity to
 C      consider (all jamp computed)
-C     INTER((NCOMB*NCOMB+1)/2: all interference term (not the
+C     INTER(NCOMB*(NCOMB+1)/2): all interference term (not the
 C      symmetric one)
       USE MODEL_OBJECT
       IMPLICIT NONE
@@ -558,7 +559,10 @@ CF2PY INTENT(IN) :: ALLOW_HEL(N_CHANGING*N_COMB)
 CF2PY INTENT(IN) :: N_COMB
 CF2PY INTENT(IN) :: FLAVOR(5)
 CF2PY INTENT(IN) :: ALPHAS
+CF2PY INTENT(IN) :: SCALE2
 CF2PY INTENT(OUT) :: INTER(N_COMB*(N_COMB+1)/2)
+C     SCALE2 is a dummy argument added to have the same syntax as in
+C      loop-induced
 C     
 C     
 C     ARGUMENTS
@@ -571,7 +575,7 @@ C
       INTEGER POS(*)
       INTEGER ALLOW_HEL(*)
       INTEGER FLAVOR(NEXTERNAL)
-      DOUBLE PRECISION ALPHAS
+      DOUBLE PRECISION ALPHAS, SCALE2
       DOUBLE COMPLEX INTER(*)
       INTEGER NINTER
       INTEGER NB_NHEL
@@ -581,7 +585,7 @@ C     LOCAL
       INTEGER I,IHEL,IPART
       DOUBLE PRECISION PI
 C     
-      INTEGER NHEL(NEXTERNAL,NB_NHEL),NTRY
+      INTEGER NHEL(NEXTERNAL,NB_NHEL)
 C     put in common block to expose this variable to python interface
       COMMON/ML5_0_PROCESS_NHEL/NHEL
 C     

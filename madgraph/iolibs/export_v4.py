@@ -2457,10 +2457,10 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                     return "%id0/%id0" % (frac.numerator, frac.denominator)
             elif frac.real == frac:
                 #misc.sprint(frac.real, frac)
-                return ('%.15e' % frac.real).replace('e','d')
+                return ('%.15e' % (frac.real + 0.0)).replace('e','d')
                 #str(float(frac.real)).replace('e','d')
             else:
-                return ('(%.15e,%.15e)' % (frac.real, frac.imag)).replace('e','d')
+                return ('(%.15e,%.15e)' % (frac.real + 0.0, frac.imag + 0.0)).replace('e','d')
                 #str(frac).replace('e','d').replace('j','*imag1')
                 
         
@@ -3692,7 +3692,7 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
                           'nhel': all_nhel,
                           'f2py_prefix': f2py_prefix,
                           'idens_value': all_iden,
-                          'density_splitter': '\n'.join(text) % {'fct_name': 'GET_DENSITY(P, POS, N_CHANGING, ALLOW_HEL, N_COMB, FLAVOR, ALPHAS, INTER)'},
+                          'density_splitter': '\n'.join(text) % {'fct_name': 'GET_DENSITY(P, POS, N_CHANGING, ALLOW_HEL, N_COMB, FLAVOR, ALPHAS, SCALE2, INTER)'},
                           
                           }
 
@@ -4730,13 +4730,18 @@ class ProcessExporterFortranMW(ProcessExporterFortran):
                                    self.dir_path+'/bin/internal/banner.py')
         cp(_file_path+'/various/shower_card.py', 
                                    self.dir_path+'/bin/internal/shower_card.py')
-        cp(_file_path+'/various/cluster.py', 
-                                       self.dir_path+'/bin/internal/cluster.py') 
-        
+        cp(_file_path+'/various/cluster.py',
+                                       self.dir_path+'/bin/internal/cluster.py')
+        # citation tracking (module + bibliography database)
+        cp(_file_path+'/various/citation.py',
+                                      self.dir_path+'/bin/internal/citation.py')
+        cp(_file_path+'/various/citations.bib',
+                                     self.dir_path+'/bin/internal/citations.bib')
+
         # logging configuration
-        cp(_file_path+'/interface/.mg5_logging.conf', 
-                                 self.dir_path+'/bin/internal/me5_logging.conf') 
-        cp(_file_path+'/interface/coloring_logging.py', 
+        cp(_file_path+'/interface/.mg5_logging.conf',
+                                 self.dir_path+'/bin/internal/me5_logging.conf')
+        cp(_file_path+'/interface/coloring_logging.py',
                                  self.dir_path+'/bin/internal/coloring_logging.py')
 
 
@@ -5560,9 +5565,14 @@ class ProcessExporterFortranME(ProcessExporterFortran):
                                    self.dir_path+'/bin/internal/plot_djrs.py')
         cp(_file_path+'/various/systematics.py', self.dir_path+'/bin/internal/systematics.py')        
 
-        cp(_file_path+'/various/cluster.py', 
-                                       self.dir_path+'/bin/internal/cluster.py') 
-        cp(_file_path+'/madevent/combine_runs.py', 
+        cp(_file_path+'/various/cluster.py',
+                                       self.dir_path+'/bin/internal/cluster.py')
+        # citation tracking (module + bibliography database)
+        cp(_file_path+'/various/citation.py',
+                                      self.dir_path+'/bin/internal/citation.py')
+        cp(_file_path+'/various/citations.bib',
+                                     self.dir_path+'/bin/internal/citations.bib')
+        cp(_file_path+'/madevent/combine_runs.py',
                                        self.dir_path+'/bin/internal/combine_runs.py')
         # logging configuration
         cp(_file_path+'/interface/.mg5_logging.conf', 
@@ -11536,7 +11546,18 @@ def ExportV4Factory(cmd, noclean, output_type='default', group_subprocesses=True
             amcatnlo_options['export_format']='FKS5_optimized'
         return ExporterClass(cmd._export_dir, amcatnlo_options)
 
-    # Then treat the EW sudakov Standalone output     
+    # Then the FKS Born building-block standalone output (output ... --fks)
+    elif output_type=='amcatnlo_sa':
+        import madgraph.iolibs.export_fks as export_fks
+        amcatnlo_options = dict(opt)
+        amcatnlo_options.update(MadLoop_SA_options)
+        amcatnlo_options['running'] = cmd._curr_model.get('running_elements')
+        amcatnlo_options['mp'] = len(cmd._fks_multi_proc.get_virt_amplitudes()) > 0
+        logger.info("Writing out the FKS Born building blocks in a standalone format")
+        amcatnlo_options['export_format']='FKS5_optimized'
+        return export_fks.ProcessExporterFortranFKS_SA(cmd._export_dir, amcatnlo_options)
+
+    # Then treat the EW sudakov Standalone output
     elif output_type=='ewsudsa':
         import madgraph.iolibs.export_fks as export_fks
         ExporterClass=None

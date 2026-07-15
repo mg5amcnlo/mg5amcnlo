@@ -5251,3 +5251,199 @@ class ProcessExporterEWSudakovSA(ProcessOptimizedExporterFortranFKS):
         self.dirstopdg.extend([(borndir, [l.get('id') for l in pp['legs']], [l.get('state') for l in pp['legs']].count(False)) for pp in matrix_element.born_me['processes']])
 
         return calls, amp_split_orders
+
+
+class ProcessExporterFortranFKS_SA(ProcessOptimizedExporterFortranFKS):
+    """FKS Born building-block standalone output ('output ... --fks').
+
+    The full optimized FKS directory is generated as usual (so the Born,
+    color/charge-linked Born and spin-correlated Born code is byte-for-byte
+    the production one). On top of that, each born subprocess directory gets
+    a self-contained driver (check_sa_fks.f) and the link-topology file
+    (born_links.dat) so that 'launch' can build and run a lightweight
+    Born-only 'check_fks' executable printing, for one phase-space point,
+    the Born B, the spin-correlated Born BORNTILDE and the linked Borns B_ij.
+    """
+
+    def generate_directories_fks(self, matrix_element, fortran_model, me_number,
+                                 me_ntot, path=os.getcwd(), OLP='MadLoop'):
+        """Run the regular FKS generation, then drop in the standalone
+        Born driver and its data files."""
+        result = super(ProcessExporterFortranFKS_SA, self).\
+            generate_directories_fks(matrix_element, fortran_model, me_number,
+                                     me_ntot, path, OLP)
+
+        borndir = "P%s" % \
+            matrix_element.born_me.get('processes')[0].shell_string()
+        born_path = os.path.join(path, borndir)
+
+        # masses of the born external legs (used by the driver to build the
+        # phase-space point with RAMBO)
+        self.write_pmass_file(
+            writers.FortranWriter(os.path.join(born_path, 'born_pmass.inc')),
+            matrix_element.born_me)
+
+        # the color/charge link topology
+        self.write_born_links_file(
+            os.path.join(born_path, 'born_links.dat'), matrix_element)
+
+        # the electric charges of the born legs (used by sborn_sf's charge
+        # branch for a [QED] correction)
+        self.write_born_charges_file(
+            os.path.join(born_path, 'born_charges.inc'), matrix_element)
+
+        # the (process-independent) standalone driver
+        shutil.copy(
+            os.path.join(_file_path, 'iolibs/template_files/check_sa_fks.f'),
+            os.path.join(born_path, 'check_sa_fks.f'))
+
+        # strip the Born directory down to just what 'check_fks' needs
+        self.trim_born_dir(born_path)
+
+        return result
+
+    # the source files linked into the 'check_fks' executable, i.e. the FKSSA
+    # target of the P* makefile. Kept in sync with the makefile template;
+    # b_sf_*.f is globbed because the count is process dependent (a pure [QED]
+    # Born has none) and check_sa_fks.f is the driver we just copied in.
+    check_fks_sources = ('check_sa_fks.f', 'born.f', 'sborn_sf.f',
+                         'splitorders_stuff.f', 'orderstags_glob.f')
+    # the build file plus the run-time inputs the driver reads (the
+    # param_card.dat symlink and the link-topology data file), and the files
+    # the 'launch' flow itself touches in each P* directory. born_leshouche.inc
+    # is one such file: building libmodel runs 'aMCatNLO treatcards param',
+    # whose get_pid_final_initial_states() reads born_leshouche.inc from every
+    # P* directory to force the final-state widths to zero.
+    check_fks_runtime = ('makefile', 'param_card.dat', 'born_links.dat',
+                         'born_leshouche.inc')
+
+    def trim_born_dir(self, born_path):
+        """Delete every file in born_path that 'check_fks' does not need.
+
+        The Born-only check links only the FKSSA objects (born, sborn_sf, the
+        b_sf_* color/charge links, ...) and nothing else, so the rest of the
+        full FKS directory -- the one-loop virtuals (V*/MadLoop), the
+        real-emission matrix elements (matrix_*.f), and the whole
+        integration/shower/analysis driver chain -- is dead weight here and,
+        the virtuals especially, very heavy to compile. Keep only the compiled
+        sources, the transitive closure of the includes they pull in, the
+        makefile and the run-time data files; remove all the rest.
+        """
+        keep = set(self.check_fks_sources) | set(self.check_fks_runtime)
+        keep |= set(os.path.basename(f)
+                    for f in glob.glob(os.path.join(born_path, 'b_sf_*.f')))
+        # follow the 'include' statements of the compiled sources so that no
+        # needed .inc is dropped (a missed one would only surface as a build
+        # failure, which the acceptance suite would catch, but be safe here)
+        inc_re = re.compile(r"^\s*include\s+['\"]([^'\"]+)['\"]", re.IGNORECASE)
+        queue = [f for f in keep if f.endswith('.f')]
+        while queue:
+            src = os.path.join(born_path, queue.pop())
+            if not os.path.isfile(src):
+                continue
+            for line in open(src, errors='replace'):
+                m = inc_re.match(line)
+                if m and m.group(1) not in keep:
+                    keep.add(m.group(1))
+                    queue.append(m.group(1))
+        for name in os.listdir(born_path):
+            if name in keep:
+                continue
+            full = os.path.join(born_path, name)
+            if os.path.isdir(full) and not os.path.islink(full):
+                shutil.rmtree(full, ignore_errors=True)
+            else:
+                os.remove(full)
+
+    def write_born_links_file(self, filename, matrix_element):
+        """Write born_links.dat: the soft-link topology of the Born.
+
+        Format (flat, so a flavour-merging test can diff topology on its own):
+            line 1 : number of links
+            then    : 'm n pdg_m pdg_n col_m col_n itype' per link
+        where (m,n) are the born leg positions exactly as used by sborn_sf.f,
+        pdg/col come from the born legs, and itype is 0 (color) or 1 (charge).
+
+        For a [QCD] correction the links are the colour links between the
+        coloured Born legs (itype=0, the ones the b_sf_*.f files encode); for
+        a [QED] correction they are the charge links between every pair of
+        charged Born legs (itype=1). sborn_sf dispatches on the run-time
+        need_color_links/need_charge_links flags. The two cases use different
+        sources on purpose: the colour case must match the colour-basis
+        ordering of the b_sf files, whereas the charge case is a plain
+        enumeration of charged pairs (the colour-basis insertion drops the
+        colourless legs, e.g. the W bosons, which still carry charge links).
+
+        Whether this Born is colour- or charge-linked is taken from the first
+        FKS configuration's fks_info, the very one the driver selects with
+        NFKSPROCESS=1 (need_*_links_d(1)). This is the authoritative source:
+        the FKSProcess.perturbation attribute is unreliable here because it
+        keeps its 'QCD' default when the process is built from an amplitude.
+        """
+        model = matrix_element.born_me.get('base_amplitude').\
+            get('process').get('model')
+        born_legs = matrix_element.born_me.get('processes')[0].get('legs')
+        fks_legs = fks_common.to_fks_legs(born_legs, model)
+        pdg, col = {}, {}
+        for i, leg in enumerate(fks_legs):
+            pdg[i + 1] = leg.get('id')
+            col[i + 1] = leg.get('color')
+
+        # config 1 (NFKSPROCESS=1) decides the link type, matching the driver
+        fks_info = matrix_element.get_fks_info_list()[0]['fks_info']
+        lines = []
+        if fks_info['need_charge_links']:
+            for c_link in fks_common.find_color_links(fks_legs, symm=True,
+                                                      pert='QED'):
+                m = c_link['legs'][0].get('number')
+                n = c_link['legs'][1].get('number')
+                lines.append("%d %d %d %d %d %d %d" %
+                             (m, n, pdg[m], pdg[n], col[m], col[n], 1))
+        else:
+            for c_link in matrix_element.color_links:
+                m, n = c_link['link']
+                lines.append("%d %d %d %d %d %d %d" %
+                             (m, n, pdg[m], pdg[n], col[m], col[n], 0))
+
+        out = open(filename, 'w')
+        out.write("%d\n" % len(lines))
+        out.write("\n".join(lines))
+        out.write("\n")
+        out.close()
+
+    def write_born_charges_file(self, filename, matrix_element):
+        """Write born_charges.inc: fixed-form assignments filling the
+        /c_charges_born/ common with the electric charge of each Born leg.
+
+        sborn_sf's charge ([QED]) branch builds the charge-linked Born as
+        born * charges_born(m) * charges_born(n) * gal**2, so the driver needs
+        these charges; the colour ([QCD]) branch ignores them."""
+        model = matrix_element.born_me.get('base_amplitude').\
+            get('process').get('model')
+        born_legs = matrix_element.born_me.get('processes')[0].get('legs')
+        fks_legs = fks_common.to_fks_legs(born_legs, model)
+        lines = []
+        for i, leg in enumerate(fks_legs):
+            lines.append("      particle_charge_born(%d) = %19.15fd0" %
+                         (i + 1, leg.get('charge')))
+        out = open(filename, 'w')
+        out.write("\n".join(lines))
+        out.write("\n")
+        out.close()
+
+    def finalize(self, matrix_elements, history, mg5options, flaglist):
+        """Regular FKS finalize, plus a marker file so that 'launch' routes
+        to the lightweight Born 'check_fks' build/run instead of the full
+        aMC@NLO integration."""
+        result = super(ProcessExporterFortranFKS_SA, self).\
+            finalize(matrix_elements, history, mg5options, flaglist)
+        subproc = os.path.join(self.dir_path, 'SubProcesses')
+        open(os.path.join(subproc, 'check_sa_fks_mode'), 'w').write('1\n')
+        # the P*/makefile 'include's these run-time option files; the Born
+        # 'check_fks' target does not use their content, so empty stubs are
+        # enough to let make resolve the includes without a full run setup
+        for stub in ('analyse_opts', 'pythia8_opts'):
+            stub_path = os.path.join(subproc, stub)
+            if not os.path.isfile(stub_path):
+                open(stub_path, 'w').write('')
+        return result

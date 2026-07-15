@@ -1,0 +1,21 @@
+# *********************************************************************
+#                       MadGraph5_aMC@NLO
+#
+#                     run_card.toml  (mg7 / madnis)
+#
+#  This file allows to overwrite the default values written in
+#  Cards/run_card.toml when it is generated for a dedicated process
+#  (i.e. when the "output" command is used).
+#  When you run the code, the value in Cards/run_card.toml is always used.
+#
+#  It must be valid TOML: uncomment a "[section]" header together with
+#  the entries you want to change.
+# *********************************************************************
+#
+#  Example (uncomment to apply):
+#
+#  [generation]
+#  events = 50000
+#
+#  [phasespace]
+#  sde_strategy = "denominators"

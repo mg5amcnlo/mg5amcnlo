@@ -825,31 +825,34 @@ class AskRun(cmd.ControlSwitch):
 #   MADSPIN handling
 #
     def get_allowed_madspin(self):
-        """ ON|OFF|onshell """
+        """ ON|OFF|onshell|madspin|full|PA|none """
         
         if hasattr(self, 'allowed_madspin'):
             return self.allowed_madspin
         
         self.allowed_madspin = []
         if 'MadSpin'  in self.available_module:
-            self.allowed_madspin = ['OFF',"ON",'onshell',"full", "PA"]
+            self.allowed_madspin = ['OFF', 'ON', 'onshell', 'madspin',
+                                    'full', 'PA', 'none',
+                                    'madspin_v1', 'onshell_v1']
         return self.allowed_madspin
     
     def check_value_madspin(self, value):
         """handle alias and valid option not present in get_allowed_madspin"""
         
         if value.upper() in self.get_allowed_madspin():
-            return True
+            if value == value.upper():
+                return True
+            else:
+                return value.upper()
         elif value.lower() in self.get_allowed_madspin():
-            return True
+            if value == value.lower():
+                return True
+            else:
+                return value.lower()
         
         if 'MadSpin' not in self.available_module:
             return False
-             
-        if value.lower() in ['madspin', 'full']:
-            return 'full'
-        elif value.lower() in ['none']:
-            return 'none'
         
     
     def set_default_madspin(self):
@@ -866,10 +869,9 @@ class AskRun(cmd.ControlSwitch):
     def get_cardcmd_for_madspin(self, value):
         """set some command to run before allowing the user to modify the cards."""
         
-        if value in  ['onshell', 'none', 'density']:
+        if value in ['onshell', 'madspin', 'full', 'PA', 'none',
+                     'madspin_v1', 'onshell_v1']:
             return ["edit madspin_card --replace_line='set spinmode' --before_line='decay' set spinmode %s" % value ]
-        elif value in ['full', 'madspin']:
-            return ["edit madspin_card --replace_line='set spinmode' --before_line='decay' set spinmode full"]
         else:
             return []
         
@@ -2429,12 +2431,31 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
                 self.set_run_name(self.find_available_run_name(self.me_dir), None, 'parton')
             else:
                 self.set_run_name(args[0], None, 'parton', True)
-                args.pop(0) 
+                args.pop(0)
 
-        
+        self.setup_citation_tracking()
+        cite = common_run.citation
+        if cite is not None:
+            cite.cite('Alwall:2014hca',
+                'core matrix-element generation (MadGraph5_aMC@NLO)')
+            if self.proc_characteristics['loop_induced']:
+                cite.cite('Hirschi:2015iia', 'loop-induced process generation')
+            try:
+                if int(run_card['ickkw']) == 1:
+                    cite.cite('Alwall:2007fs',
+                        'MLM matrix-element/parton-shower merging')
+            except (KeyError, ValueError, TypeError):
+                pass
+            try:
+                self.run_card.add_citation(cite.cite)
+            except Exception:
+                pass
+
         self.run_generate_events(switch_mode, args)
 
         self.postprocessing()
+
+        self.finalize_citation_tracking()
 
 
     # postprocessing : runs after all the event generation has been done
@@ -2478,6 +2499,10 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
         if postprocess_CONTUR:
 
             self.update_status("Starting postprocess contur", level="rivet")
+
+            if common_run.citation is not None:
+                common_run.citation.cite('CONTUR:2025yis',
+                    'limit setting with Contur')
 
             set_env = "#!{0}\n".format(misc.which('bash' if misc.get_shell_type() in ['bash',None] else 'tcsh'))
             rivet_path = self.options['rivet_path']
@@ -4556,6 +4581,11 @@ already exists and is not a fifo file."""%fifo_path)
                 logger.info("No user-defined value for Pythia8 parameter "+
             "'JetMatching:nJetMax'. Setting it automatically to %d."%nJetMax)
                 PY8_Card.MadGraphSet('JetMatching:nJetMax',nJetMax, force=True)
+            # cite the shower-kt MLM scheme only when it is actually enabled
+            if common_run.citation is not None and \
+               PY8_Card['JetMatching:doShowerKt'.lower()]:
+                common_run.citation.cite('Alwall:2008qv',
+                    'shower-kt MLM merging scheme')
         # We use the positivity of 'ktdurham' cut as a CKKWl marker.
         elif run_type=='CKKW':
 

@@ -4,9 +4,14 @@ description: Restores lhapdf from cache and sets MG5 accordingly
 runs:
   using: composite
   steps:
-    # setup other environment 
+    # setup other environment
     - run: |
         cd $GITHUB_WORKSPACE
         cp input/.mg5_configuration_default.txt input/mg5_configuration.txt
         cp Template/LO/Source/.make_opts Template/LO/Source/make_opts
       shell: bash
+
+    # madspace is no longer installed here. It is only needed by the mg7
+    # workflow, which builds it once per run (build_madspace job) and installs
+    # the cached wheel via the install_madspace composite action. Any other
+    # workflow that turns out to need madspace should adopt the same pattern.

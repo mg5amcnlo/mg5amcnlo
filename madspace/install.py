@@ -1,0 +1,696 @@
+#!/usr/bin/env python3
+"""Install madspace either using pre-compiled binaries or built from source.
+
+Interactive usage (no arguments):  python install.py
+Non-interactive examples:
+  python install.py --bin
+  python install.py --source
+  python install.py --source --cuda --cuda-arch "75;80;86"
+  python install.py --source --cuda --hip --simd --debug
+"""
+
+import argparse
+import json
+import os
+import platform
+import re
+import shutil
+import subprocess
+import sys
+import tomllib
+from pathlib import Path
+
+SCRIPT_DIR = Path(__file__).parent.resolve()
+INSTALL_DIR = SCRIPT_DIR / "install"
+SETTINGS_FILE = SCRIPT_DIR / "build" / "install_settings.json"
+
+PACKAGE_NAME = "madspace"
+
+DEFAULT_CUDA_ARCH = "75"
+DEFAULT_HIP_ARCH = "gfx900"
+
+# Platform-aware defaults for source-build options (mirrors CMakeLists.txt logic)
+_IS_APPLE = platform.system() == "Darwin"
+_PLATFORM_SOURCE_DEFAULTS: dict = {
+    "cuda": False,
+    "hip": False,
+    "openblas": not _IS_APPLE,
+    "simd": False,
+    "build_type": "Release",
+}
+
+
+# Interactive helpers
+#
+# Prompts are routed through MadGraph's cmd.ask when it is importable, so that
+# non-interactive / scripted runs behave consistently with the rest of MG5
+# (piped stdin, the launcher's -f flag, input command files): the default is
+# taken without blocking instead of hanging on input(). When madgraph is not
+# importable (truly standalone use) we fall back to input(), still honouring
+# the non-interactive flag.
+
+_NONINTERACTIVE = (not sys.stdin.isatty()) or any(
+    a in ("-y", "--yes") for a in sys.argv[1:]
+)
+
+
+def _set_noninteractive(flag: bool) -> None:
+    """Force non-interactive mode (called from main once args are parsed)."""
+    global _NONINTERACTIVE
+    if flag:
+        _NONINTERACTIVE = True
+
+
+class _Prompter:
+    """Ask a question through MG5's cmd.ask when available, else input()."""
+
+    _cmd = False  # False = not tried yet, None = unavailable
+
+    @classmethod
+    def _get_cmd(cls):
+        if cls._cmd is False:
+            try:
+                from madgraph.interface.extended_cmd import Cmd
+                cls._cmd = Cmd()
+            except Exception:
+                cls._cmd = None
+        return cls._cmd
+
+    @classmethod
+    def ask(cls, question: str, default: str, choices=None) -> str:
+        default = str(default)
+        cmd = cls._get_cmd()
+        if cmd is not None:
+            try:
+                ans = cmd.ask(
+                    question, default, choices=list(choices or []),
+                    timeout=0, force=_NONINTERACTIVE,
+                )
+                return default if ans is None else str(ans)
+            except Exception:
+                pass
+        # standalone fallback (no madgraph on path)
+        if _NONINTERACTIVE:
+            return default
+        try:
+            raw = input(f"{question} [{default}]: ").strip()
+        except EOFError:
+            return default
+        return raw if raw else default
+
+
+def _ask(question, default, choices=None) -> str:
+    return _Prompter.ask(question, default, choices)
+
+
+def ask_yes_no(prompt: str, default: bool = True) -> bool:
+    default_s = "y" if default else "n"
+    while True:
+        raw = _ask(prompt, default_s, choices=["y", "n"]).strip().lower()
+        if not raw:
+            return default
+        if raw in ("y", "yes"):
+            return True
+        if raw in ("n", "no"):
+            return False
+        if _NONINTERACTIVE:
+            return default
+        print("  Please enter 'y' or 'n'.")
+
+
+def ask_string(prompt: str, default: str) -> str:
+    raw = _ask(prompt, default).strip()
+    return raw if raw else default
+
+
+def ask_compile_options(
+    saved: dict | None = None, from_saved: bool = False
+) -> dict[str, bool]:
+    """Multi-select menu for compile options; returns {output_key: bool}.
+
+    Each entry is (menu_key, label, output_key, invert).  When invert=True,
+    selecting the item sets output_key=False; not selecting it sets it True.
+    This lets the BLAS item be opt-in on Apple ("build OpenBLAS") and opt-out
+    on Linux ("use system BLAS") while the default behavior of pressing Enter
+    always matches the platform default.
+
+    *from_saved* controls the Enter hint wording.
+    """
+    saved = saved or {}
+
+    if _IS_APPLE:
+        blas_entry = (
+            "openblas",
+            "Build OpenBLAS from source (system BLAS used by default)",
+            "openblas",
+            False,
+        )
+    else:
+        blas_entry = (
+            "system_blas",
+            "Use system BLAS library (default: build OpenBLAS from source)",
+            "openblas",
+            True,
+        )
+
+    # (menu_key, label, output_key, invert)
+    all_entries = [
+        ("cuda", "Build CUDA backend", "cuda", False),
+        ("hip", "Build HIP/ROCm backend", "hip", False),
+        blas_entry,
+        (
+            "simd",
+            "Build SIMD backend (experimental — not required to run SIMD matrix elements)",
+            "simd",
+            False,
+        ),
+    ]
+    # CUDA and HIP are not available on Apple; hide them in interactive mode
+    entries = [e for e in all_entries if not (_IS_APPLE and e[0] in ("cuda", "hip"))]
+
+    # Derive the checkbox state for each menu item from the saved output values.
+    # For normal items: checked = saved output value.
+    # For inverted items: checked = NOT saved output value
+    #   (e.g. if openblas=True was saved, "use system BLAS" should be unchecked).
+    def _checked(output_key, invert):
+        val = saved.get(output_key, False)
+        return (not val) if invert else val
+
+    prev = {mk: _checked(ok, inv) for mk, _, ok, inv in entries}
+    has_any = any(prev.values())
+
+    print()
+    print("Compile options:")
+    for i, (mk, label, _, _) in enumerate(entries, 1):
+        marker = " [*]" if prev[mk] else ""
+        print(f"  {i}. {label}{marker}")
+
+    if from_saved:
+        hint = "Enter to keep previous selection"
+    elif has_any:
+        hint = "Enter to keep defaults"
+    else:
+        hint = "Enter for none"
+
+    def _defaults():
+        # Convert checkbox state back to output values
+        return {ok: (prev[mk] != inv) for mk, _, ok, inv in entries}
+
+    while True:
+        raw = _ask(
+            f"Enter numbers separated by commas/spaces, or press Enter ({hint})", ""
+        ).strip()
+        if not raw:
+            return _defaults()
+        try:
+            chosen = {int(x) for x in raw.replace(",", " ").split()}
+        except ValueError:
+            if _NONINTERACTIVE:
+                return _defaults()
+            print("  Invalid input — please enter numbers, e.g. 1,3 or 1 3")
+            continue
+        if not all(1 <= c <= len(entries) for c in chosen):
+            if _NONINTERACTIVE:
+                return _defaults()
+            print(f"  Numbers must be between 1 and {len(entries)}.")
+            continue
+        return {
+            ok: ((idx in chosen) != inv)
+            for idx, (mk, _, ok, inv) in enumerate(entries, 1)
+        }
+
+
+def _saved_build_type(saved: dict) -> str:
+    """Return the saved CMake build type, migrating the legacy 'debug' boolean if needed."""
+    if "build_type" in saved:
+        return saved["build_type"]
+    return "RelWithDebInfo" if saved.get("debug", False) else "Release"
+
+
+def ask_build_type(saved: dict) -> str:
+    """Interactive single-select for CMake build type; returns one of the CMAKE_BUILD_TYPE strings."""
+    options = [
+        ("Release", "Optimized build, no debug symbols (default)"),
+        ("RelWithDebInfo", "Optimized with debug symbols"),
+        ("Debug", "Debug build, no optimization"),
+    ]
+    current = _saved_build_type(saved)
+    print()
+    print("Build type:")
+    for i, (key, label) in enumerate(options, 1):
+        marker = " [*]" if key == current else ""
+        print(f"  {i}. {label}{marker}")
+    hint = f"keep {current}" if current != "Release" else "Release"
+    while True:
+        raw = _ask(f"Choose (1-{len(options)}), or press Enter ({hint})", "").strip()
+        if not raw:
+            return current
+        try:
+            idx = int(raw)
+        except ValueError:
+            if _NONINTERACTIVE:
+                return current
+            print(f"  Please enter a number between 1 and {len(options)}.")
+            continue
+        if not 1 <= idx <= len(options):
+            if _NONINTERACTIVE:
+                return current
+            print(f"  Please enter a number between 1 and {len(options)}.")
+            continue
+        return options[idx - 1][0]
+
+
+# CMake discovery
+#
+# The source build (scikit-build-core) needs cmake >= 3.15 on PATH. When it is
+# missing (or too old) we fall back to a cmake installed through MadGraph's
+# HEPTools installer (`install cmake` in MG5), which lives next to this package
+# under <MG5>/HEPTools. An explicit MADGRAPH_CMAKE / CMAKE env var wins.
+
+CMAKE_MIN_VERSION = (3, 15)
+
+
+def _cmake_version_ok(path, minimum=CMAKE_MIN_VERSION) -> bool:
+    try:
+        out = subprocess.run(
+            [str(path), "--version"], capture_output=True, text=True, timeout=30
+        ).stdout
+    except Exception:
+        return False
+    m = re.search(r"(\d+)\.(\d+)", out)
+    return bool(m) and (int(m.group(1)), int(m.group(2))) >= minimum
+
+
+def _heptools_dir_from_config() -> str | None:
+    """Read heptools_install_dir from the MG5 configuration files (same
+    locations MG5 itself uses), so the value is available even when the
+    installer is run directly rather than launched from MG5."""
+    home = os.environ.get("HOME") or os.path.expanduser("~")
+    candidates = []
+    if home:
+        candidates.append(os.path.join(home, ".mg5", "mg5_configuration.txt"))
+        xdg = os.environ.get("XDG_CONFIG_HOME", os.path.join(home, ".config"))
+        candidates.append(os.path.join(xdg, "mg5_configuration.txt"))
+    candidates.append(str(SCRIPT_DIR.parent / "input" / "mg5_configuration.txt"))
+    for cfg in candidates:
+        try:
+            with open(cfg) as f:
+                for line in f:
+                    line = line.split("#", 1)[0].strip()
+                    if line.startswith("heptools_install_dir"):
+                        val = line.partition("=")[2].strip()
+                        if val:
+                            if not os.path.isabs(val):
+                                val = os.path.join(str(SCRIPT_DIR.parent), val)
+                            return val
+        except OSError:
+            continue
+    return None
+
+
+def find_cmake() -> str | None:
+    """Return a path to a cmake >= CMAKE_MIN_VERSION, or None."""
+    # 1. explicit override
+    for var in ("MADGRAPH_CMAKE", "CMAKE"):
+        p = os.environ.get(var)
+        if p and _cmake_version_ok(p):
+            return p
+    # 2. system cmake on PATH (ignored if too old)
+    p = shutil.which("cmake")
+    if p and _cmake_version_ok(p):
+        return p
+    # 3. cmake installed via MadGraph's HEPTools installer. The HEPTools
+    #    location is configurable in MG5 (heptools_install_dir); MG5 passes it
+    #    down as MADGRAPH_HEPTOOLS_DIR. Fall back to the default <MG5>/HEPTools.
+    hep_dirs = []
+    env_hep = os.environ.get("MADGRAPH_HEPTOOLS_DIR")
+    if env_hep:
+        hep_dirs.append(Path(env_hep))
+    cfg_hep = _heptools_dir_from_config()
+    if cfg_hep:
+        hep_dirs.append(Path(cfg_hep))
+    hep_dirs.append(SCRIPT_DIR.parent / "HEPTools")
+    seen = set()
+    for heptools in hep_dirs:
+        for pattern in ("cmake/bin/cmake", "bin/cmake", "cmake",
+                        "cmake*/bin/cmake", "*/bin/cmake"):
+            for cand in sorted(heptools.glob(pattern)):
+                cand = cand.resolve()
+                if cand in seen:
+                    continue
+                seen.add(cand)
+                if cand.is_file() and _cmake_version_ok(cand):
+                    return str(cand)
+    return None
+
+
+def add_cmake_to_path(env: dict) -> dict:
+    """Ensure a suitable cmake (and co-located tools such as ninja) is on the
+    PATH of the build environment."""
+    cmake = find_cmake()
+    if cmake:
+        cmake_dir = os.path.dirname(os.path.abspath(cmake))
+        parts = [cmake_dir]
+        if existing := env.get("PATH"):
+            parts.append(existing)
+        env["PATH"] = os.pathsep.join(parts)
+        print(f"Using cmake: {cmake}")
+    else:
+        print(
+            "WARNING: no cmake >= %d.%d found. The source build will likely fail.\n"
+            "  Install one with MG5 ('install cmake'), via your package manager,\n"
+            "  or point to it with MADGRAPH_CMAKE=/path/to/cmake."
+            % CMAKE_MIN_VERSION
+        )
+    return env
+
+
+# Command execution
+
+
+def run(cmd: list, env: dict | None = None) -> None:
+    display = " ".join(str(c) for c in cmd)
+    print(f"\n$ {display}\n")
+    result = subprocess.run(cmd, cwd=SCRIPT_DIR, env=env)
+    if result.returncode != 0:
+        sys.exit(result.returncode)
+
+
+def install_build_deps(system: bool = False) -> dict:
+    """Install build-system dependencies and return an updated env.
+
+    When *system* is False (default) deps are installed into INSTALL_DIR and
+    PYTHONPATH is set so the subsequent pip invocation picks them up.
+    When *system* is True deps go to the default site-packages and PYTHONPATH
+    is left unchanged.
+    """
+    pyproject_path = SCRIPT_DIR / "pyproject.toml"
+    with open(pyproject_path, "rb") as f:
+        config = tomllib.load(f)
+
+    requires = config.get("build-system", {}).get("requires", [])
+    if requires:
+        print()
+        print("Installing build dependencies...")
+        cmd = [sys.executable, "-m", "pip", "install", "--upgrade", *requires]
+        if not system:
+            cmd.append(f"--target={INSTALL_DIR}")
+        run(cmd)
+
+    env = os.environ.copy()
+    if not system:
+        pythonpath_parts = [str(INSTALL_DIR)]
+        if existing := env.get("PYTHONPATH"):
+            pythonpath_parts.append(existing)
+        env["PYTHONPATH"] = os.pathsep.join(pythonpath_parts)
+    # make sure the source build can find a recent-enough cmake
+    env = add_cmake_to_path(env)
+    return env
+
+
+def load_settings() -> dict:
+    try:
+        with open(SETTINGS_FILE) as f:
+            return json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError):
+        return {}
+
+
+def save_settings(settings: dict) -> None:
+    SETTINGS_FILE.parent.mkdir(exist_ok=True)
+    with open(SETTINGS_FILE, "w") as f:
+        json.dump(settings, f, indent=2)
+
+
+# Main
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(
+        description=__doc__,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+
+    # Install mode
+    mode = parser.add_mutually_exclusive_group()
+    mode.add_argument(
+        "--bin",
+        action="store_true",
+        default=False,
+        help="Install pre-compiled package (default when interactive).",
+    )
+    mode.add_argument(
+        "--source",
+        action="store_true",
+        default=False,
+        help="Build and install from source.",
+    )
+
+    parser.add_argument(
+        "-y",
+        "--yes",
+        action="store_true",
+        default=False,
+        help="Non-interactive: accept defaults / reuse saved settings, no prompts. "
+        "Combine with --source/--bin to force the install mode.",
+    )
+    parser.add_argument(
+        "--system",
+        action="store_true",
+        default=False,
+        help="Install system-wide instead of into the local install/ directory.",
+    )
+
+    # Compile option flags (each defaults to None = not specified via CLI)
+    cuda_grp = parser.add_mutually_exclusive_group()
+    cuda_grp.add_argument(
+        "--cuda", dest="cuda", action="store_true", help="Enable CUDA backend."
+    )
+    cuda_grp.add_argument(
+        "--no-cuda", dest="cuda", action="store_false", help="Disable CUDA backend."
+    )
+
+    hip_grp = parser.add_mutually_exclusive_group()
+    hip_grp.add_argument(
+        "--hip", dest="hip", action="store_true", help="Enable HIP/ROCm backend."
+    )
+    hip_grp.add_argument(
+        "--no-hip", dest="hip", action="store_false", help="Disable HIP backend."
+    )
+
+    openblas_grp = parser.add_mutually_exclusive_group()
+    openblas_grp.add_argument(
+        "--openblas",
+        dest="openblas",
+        action="store_true",
+        help="Build OpenBLAS from source (default on Linux/Windows).",
+    )
+    openblas_grp.add_argument(
+        "--no-openblas",
+        dest="openblas",
+        action="store_false",
+        help="Use system BLAS library (default on Apple).",
+    )
+
+    simd_grp = parser.add_mutually_exclusive_group()
+    simd_grp.add_argument(
+        "--simd",
+        dest="simd",
+        action="store_true",
+        help="Enable SIMD backend (experimental).",
+    )
+    simd_grp.add_argument(
+        "--no-simd", dest="simd", action="store_false", help="Disable SIMD backend."
+    )
+
+    debug_grp = parser.add_mutually_exclusive_group()
+    debug_grp.add_argument(
+        "--debug",
+        dest="build_type",
+        action="store_const",
+        const="RelWithDebInfo",
+        help="Build optimized with debug symbols (RelWithDebInfo).",
+    )
+    debug_grp.add_argument(
+        "--full-debug",
+        dest="build_type",
+        action="store_const",
+        const="Debug",
+        help="Full debug build, no optimization (Debug).",
+    )
+    debug_grp.add_argument(
+        "--no-debug",
+        dest="build_type",
+        action="store_const",
+        const="Release",
+        help="Optimized build without debug symbols (Release, default).",
+    )
+
+    # Architecture overrides
+    parser.add_argument(
+        "--cuda-arch",
+        default=None,
+        metavar="ARCHS",
+        help=f"Semicolon-separated CUDA compute capabilities (default: {DEFAULT_CUDA_ARCH}). "
+        'Example: "75;80;86".',
+    )
+    parser.add_argument(
+        "--hip-arch",
+        default=None,
+        metavar="ARCHS",
+        help=f"Semicolon-separated HIP GPU architectures (default: {DEFAULT_HIP_ARCH}). "
+        'Example: "gfx900;gfx906;gfx1100".',
+    )
+
+    # None = not provided by user; overridden by set_defaults below
+    parser.set_defaults(cuda=None, hip=None, openblas=None, simd=None, build_type=None)
+    args = parser.parse_args()
+    _set_noninteractive(args.yes)
+
+    # Load saved settings when a previous installation is present
+    saved = load_settings() if (INSTALL_DIR / "madspace").is_dir() else {}
+
+    # Determine install mode. An explicit --bin/--source always wins; --yes
+    # alone reuses the saved mode (built-in default otherwise).
+    if args.bin:
+        from_source = False
+    elif args.source:
+        from_source = True
+    elif args.yes:
+        from_source = saved.get("mode", "bin") == "source"
+    else:
+        print("Welcome to the MadSpace interactive installer")
+        print()
+        # commented out the option to use the pre-compiled binaries
+        # TODO: add this again once we build release build
+        # default_is_bin = saved.get("mode", "bin") != "source"
+        # from_source = not ask_yes_no(
+        #     "Install pre-compiled package? (recommended)", default=default_is_bin
+        # )
+        from_source = True
+
+    # PyPI installation
+    if not from_source:
+        pip_cmd = [sys.executable, "-m", "pip", "install", PACKAGE_NAME]
+        if not args.system:
+            pip_cmd.append(f"--target={INSTALL_DIR}")
+        run(pip_cmd)
+        save_settings({"mode": "bin"})
+        if args.system:
+            print("\nInstalled system-wide.")
+        else:
+            print(f"\nInstalled to: {INSTALL_DIR}")
+        return
+
+    # Source build — compile options
+    compile_flags_given = any(
+        getattr(args, attr) is not None
+        for attr in ("cuda", "hip", "openblas", "simd", "build_type")
+    )
+
+    if args.yes:
+        enable_cuda = saved.get("cuda", _PLATFORM_SOURCE_DEFAULTS["cuda"])
+        enable_hip = saved.get("hip", _PLATFORM_SOURCE_DEFAULTS["hip"])
+        enable_openblas = saved.get("openblas", _PLATFORM_SOURCE_DEFAULTS["openblas"])
+        enable_simd = saved.get("simd", _PLATFORM_SOURCE_DEFAULTS["simd"])
+        build_type = _saved_build_type(saved)
+    elif compile_flags_given:
+        enable_cuda = bool(args.cuda)
+        enable_hip = bool(args.hip)
+        enable_openblas = (
+            bool(args.openblas)
+            if args.openblas is not None
+            else _PLATFORM_SOURCE_DEFAULTS["openblas"]
+        )
+        enable_simd = bool(args.simd)
+        build_type = args.build_type or "Release"
+    else:
+        # Show saved source settings if available, else platform-appropriate defaults
+        from_saved = saved.get("mode") == "source"
+        menu_defaults = saved if from_saved else _PLATFORM_SOURCE_DEFAULTS
+        opts = ask_compile_options(menu_defaults, from_saved=from_saved)
+        enable_cuda = opts.get("cuda", menu_defaults.get("cuda", False))
+        enable_hip = opts.get("hip", menu_defaults.get("hip", False))
+        enable_openblas = opts["openblas"]
+        enable_simd = opts["simd"]
+        build_type = ask_build_type(menu_defaults)
+
+    # Compute capability prompts
+    cuda_arch = saved.get("cuda_arch", DEFAULT_CUDA_ARCH)
+    hip_arch = saved.get("hip_arch", DEFAULT_HIP_ARCH)
+
+    if enable_cuda:
+        if args.yes:
+            cuda_arch = saved.get("cuda_arch", DEFAULT_CUDA_ARCH)
+        elif args.cuda_arch is not None:
+            cuda_arch = args.cuda_arch
+        else:
+            print()
+            cuda_arch = ask_string(
+                "CUDA compute capabilities (semicolon-separated, e.g. 75;80;86)",
+                default=cuda_arch,
+            )
+
+    if enable_hip:
+        if args.yes:
+            hip_arch = saved.get("hip_arch", DEFAULT_HIP_ARCH)
+        elif args.hip_arch is not None:
+            hip_arch = args.hip_arch
+        else:
+            print()
+            hip_arch = ask_string(
+                "HIP GPU architectures (semicolon-separated, e.g. gfx900;gfx906;gfx1100)",
+                default=hip_arch,
+            )
+
+    # Assemble pip command
+    cmd = [
+        sys.executable,
+        "-m",
+        "pip",
+        "install",
+        "--no-build-isolation",
+        "--upgrade",
+        "-Cbuild-dir=build",
+        ".",
+    ]
+    if not args.system:
+        cmd.append(f"--target={INSTALL_DIR}")
+
+    if enable_cuda:
+        cmd += [
+            "-Ccmake.define.ENABLE_CUDA=ON",
+            f"-Ccmake.define.CMAKE_CUDA_ARCHITECTURES={cuda_arch}",
+        ]
+    if enable_hip:
+        cmd += [
+            "-Ccmake.define.ENABLE_HIP=ON",
+            f"-Ccmake.define.CMAKE_HIP_ARCHITECTURES={hip_arch}",
+        ]
+    cmd.append(f"-Ccmake.define.ENABLE_OPENBLAS={'ON' if enable_openblas else 'OFF'}")
+    if enable_simd:
+        cmd.append("-Ccmake.define.ENABLE_SIMD=ON")
+    cmd.append(f"-Ccmake.build-type={build_type}")
+
+    env = install_build_deps(system=args.system)
+    run(cmd, env=env)
+    save_settings(
+        {
+            "mode": "source",
+            "cuda": enable_cuda,
+            "cuda_arch": cuda_arch,
+            "hip": enable_hip,
+            "hip_arch": hip_arch,
+            "openblas": enable_openblas,
+            "simd": enable_simd,
+            "build_type": build_type,
+        }
+    )
+    if args.system:
+        print("\nInstalled system-wide.")
+    else:
+        print(f"\nInstalled to: {INSTALL_DIR}")
+
+
+if __name__ == "__main__":
+    main()

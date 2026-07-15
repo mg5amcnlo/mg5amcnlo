@@ -1,0 +1,15 @@
+BasedOnStyle: LLVM
+IndentWidth: 4
+ColumnLimit: 88
+PointerAlignment: Left
+AlignAfterOpenBracket: BlockIndent
+BinPackArguments: false
+BinPackLongBracedList: false
+BinPackParameters: false
+BreakConstructorInitializers: AfterColon
+PackConstructorInitializers: NextLine
+AccessModifierOffset: -4
+BreakTemplateDeclarations: Yes
+InsertBraces: true
+AlignOperands: DontAlign
+PenaltyIndentedWhitespace: 10

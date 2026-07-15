@@ -33,7 +33,7 @@ jobs:
 
   # IOTest framework self-tests (from unittest_2)
   IOtest_iotest_examples:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5
       - name: test IOTest framework examples
@@ -44,7 +44,7 @@ jobs:
 
   # MadWeight IOTest (from unittest_0 and test_additional_unittest)
   IOtest_modification_to_cuts:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5
       - name: test testIO_modification_to_cuts
@@ -55,7 +55,7 @@ jobs:
 
   # FKS exporter IOTests (from unittest_18_1 and unittest_18_2)
   IOtest_fks:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5
       - name: test FKS IO tests
@@ -66,7 +66,7 @@ jobs:
 
   # C++ exporter IOTests (from unittest_20)
   IOtest_cpp_write:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5
       - name: test C++ write IO tests
@@ -77,7 +77,7 @@ jobs:
 
   # Export v4 and Python matrix element IOTests (from unittest_21, unittest_22, unittest_23)
   IOtest_export:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5
       - name: test export IO tests
@@ -89,7 +89,7 @@ jobs:
 
   # Loop unit proc output IOTest (from unittest_28)
   IOtest_unit_proc:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5
       - name: test unit proc output IO test
@@ -101,7 +101,7 @@ jobs:
 
   # Loop squared-order IOTest – needs UFO model cache (from unittest_29)
   IOtest_loop_sqso:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5
       - uses: ./.github/actions/restore_ufomodel
@@ -114,7 +114,7 @@ jobs:
 
   # EW Sudakov IOTests (from unittest_33)
   IOtest_ewsudakov:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5
       - name: test EW Sudakov IO tests
@@ -129,7 +129,7 @@ jobs:
 
   # Acceptance and unit proc output IOTests (from acceptancetest_0)
   IOtest_acceptance_proc:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/checkout_mg5
@@ -143,7 +143,7 @@ jobs:
 
   # TIR output IOTest (from acceptancetest_70)
   IOtest_TIR:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/checkout_mg5
@@ -157,7 +157,7 @@ jobs:
 
   # MatchBox output IOTest (from acceptancetest_77)
   IOtest_matchbox:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/checkout_mg5
@@ -171,7 +171,7 @@ jobs:
 
   # Gnuplot histogram output IOTest (from acceptancetest_100)
   IOtest_gnuplot:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/checkout_mg5

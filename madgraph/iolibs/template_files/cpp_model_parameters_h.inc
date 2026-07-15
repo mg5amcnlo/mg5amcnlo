@@ -22,8 +22,6 @@ class Parameters_%(model_name)s
 {
 public:
 
-static Parameters_%(model_name)s* getInstance();
-
 // Define "zero"
 double zero, ZERO;
 %(independent_parameters)s
@@ -50,10 +48,6 @@ void printIndependentCouplings();
 void printDependentParameters();
 // Print couplings that are changed event by event
 void printDependentCouplings();
-
-
-  private:
-    static Parameters_%(model_name)s* instance;
 };
 
 #endif // Parameters_%(model_name)s_H

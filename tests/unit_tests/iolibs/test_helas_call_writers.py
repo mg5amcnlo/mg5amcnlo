@@ -876,12 +876,12 @@ class UFOHELASCallWriterTest(unittest.TestCase):
                    'vxxxxx(p[perm[2]],mME[2],hel[2],+1,w[2]);',
                    'vxxxxx(p[perm[3]],mME[3],hel[3],+1,w[3]);',
                    'vxxxxx(p[perm[4]],mME[4],hel[4],+1,w[4]);',
-                   'VVVV1_4(w[0],w[2],w[1],pars->GC_51,pars->wmas,pars->wwid,w[5]);',
+                   'VVVV1_4(w[0],w[2],w[1],pars.GC_51,pars.wmas,pars.wwid,w[5]);',
                    '# Amplitude(s) for diagram number 1',
-                   'VVV1_0(w[5],w[3],w[4],pars->GC_12,amp[0]);',
-                   'VVVV1_3(w[0],w[2],w[3],pars->GC_51,pars->wmas,pars->wwid,w[5]);',
+                   'VVV1_0(w[5],w[3],w[4],pars.GC_12,amp[0]);',
+                   'VVVV1_3(w[0],w[2],w[3],pars.GC_51,pars.wmas,pars.wwid,w[5]);',
                    '# Amplitude(s) for diagram number 2',
-                   'VVV1_0(w[1],w[5],w[4],pars->GC_12,amp[1]);']
+                   'VVV1_0(w[1],w[5],w[4],pars.GC_12,amp[1]);']
         
         for i, line in enumerate(solution):
             self.assertEqual(line, result[i])
@@ -1081,40 +1081,40 @@ vxxxxx(p[perm[1]],mME[1],hel[1],-1,w[1]);
 vxxxxx(p[perm[2]],mME[2],hel[2],+1,w[2]);
 vxxxxx(p[perm[3]],mME[3],hel[3],+1,w[3]);
 vxxxxx(p[perm[4]],mME[4],hel[4],+1,w[4]);
-VVV1_3(w[0],w[1],pars->GC_4,pars->CMASS_mdl_MW,w[5]);
-VVV1_2(w[2],w[3],pars->GC_4,pars->CMASS_mdl_MW,w[6]);
+VVV1_3(w[0],w[1],pars.GC_4,pars.CMASS_mdl_MW,w[5]);
+VVV1_2(w[2],w[3],pars.GC_4,pars.CMASS_mdl_MW,w[6]);
 # Amplitude(s) for diagram number 1
-VVV1_0(w[5],w[6],w[4],pars->GC_53,amp[0]);
-VVV1_1(w[3],w[4],pars->GC_53,pars->CMASS_mdl_MW,w[7]);
+VVV1_0(w[5],w[6],w[4],pars.GC_53,amp[0]);
+VVV1_1(w[3],w[4],pars.GC_53,pars.CMASS_mdl_MW,w[7]);
 # Amplitude(s) for diagram number 2
-VVV1_0(w[2],w[5],w[7],pars->GC_4,amp[1]);
+VVV1_0(w[2],w[5],w[7],pars.GC_4,amp[1]);
 # Amplitude(s) for diagram number 3
-VVVV5_0(w[2],w[5],w[3],w[4],pars->GC_57,amp[2]);
-VVV1_2(w[0],w[3],pars->GC_4,pars->CMASS_mdl_MW,w[5]);
-VVV1_3(w[2],w[1],pars->GC_4,pars->CMASS_mdl_MW,w[8]);
+VVVV5_0(w[2],w[5],w[3],w[4],pars.GC_57,amp[2]);
+VVV1_2(w[0],w[3],pars.GC_4,pars.CMASS_mdl_MW,w[5]);
+VVV1_3(w[2],w[1],pars.GC_4,pars.CMASS_mdl_MW,w[8]);
 # Amplitude(s) for diagram number 4
-VVV1_0(w[8],w[5],w[4],pars->GC_53,amp[3]);
-VVV1_2(w[1],w[4],pars->GC_53,pars->CMASS_mdl_MW,w[9]);
+VVV1_0(w[8],w[5],w[4],pars.GC_53,amp[3]);
+VVV1_2(w[1],w[4],pars.GC_53,pars.CMASS_mdl_MW,w[9]);
 # Amplitude(s) for diagram number 5
-VVV1_0(w[2],w[9],w[5],pars->GC_4,amp[4]);
+VVV1_0(w[2],w[9],w[5],pars.GC_4,amp[4]);
 # Amplitude(s) for diagram number 6
-VVVV5_0(w[2],w[1],w[5],w[4],pars->GC_57,amp[5]);
+VVVV5_0(w[2],w[1],w[5],w[4],pars.GC_57,amp[5]);
 # Amplitude(s) for diagram number 7
-VVV1_0(w[0],w[8],w[7],pars->GC_4,amp[6]);
+VVV1_0(w[0],w[8],w[7],pars.GC_4,amp[6]);
 # Amplitude(s) for diagram number 8
-VVV1_0(w[0],w[9],w[6],pars->GC_4,amp[7]);
-VVVV2_4(w[0],w[2],w[1],pars->GC_5,pars->CMASS_mdl_MW,w[9]);
+VVV1_0(w[0],w[9],w[6],pars.GC_4,amp[7]);
+VVVV2_4(w[0],w[2],w[1],pars.GC_5,pars.CMASS_mdl_MW,w[9]);
 # Amplitude(s) for diagram number 9
-VVV1_0(w[9],w[3],w[4],pars->GC_53,amp[8]);
-VVVV5_3(w[0],w[1],w[4],pars->GC_57,pars->CMASS_mdl_MW,w[9]);
+VVV1_0(w[9],w[3],w[4],pars.GC_53,amp[8]);
+VVVV5_3(w[0],w[1],w[4],pars.GC_57,pars.CMASS_mdl_MW,w[9]);
 # Amplitude(s) for diagram number 10
-VVV1_0(w[2],w[9],w[3],pars->GC_4,amp[9]);
-VVVV2_3(w[0],w[2],w[3],pars->GC_5,pars->CMASS_mdl_MW,w[9]);
+VVV1_0(w[2],w[9],w[3],pars.GC_4,amp[9]);
+VVVV2_3(w[0],w[2],w[3],pars.GC_5,pars.CMASS_mdl_MW,w[9]);
 # Amplitude(s) for diagram number 11
-VVV1_0(w[1],w[9],w[4],pars->GC_53,amp[10]);
-VVVV5_2(w[0],w[3],w[4],pars->GC_57,pars->CMASS_mdl_MW,w[9]);
+VVV1_0(w[1],w[9],w[4],pars.GC_53,amp[10]);
+VVVV5_2(w[0],w[3],w[4],pars.GC_57,pars.CMASS_mdl_MW,w[9]);
 # Amplitude(s) for diagram number 12
-VVV1_0(w[2],w[1],w[9],pars->GC_4,amp[11]);"""
+VVV1_0(w[2],w[1],w[9],pars.GC_4,amp[11]);"""
 
         self.assertEqual(solution.split('\n'), result)
         

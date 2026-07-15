@@ -211,7 +211,16 @@ class MadLoopLauncher(ExtLauncher):
                                                              dir_path=curr_path)
                 # We use mu_r=-1.0 to use the one defined by the user in the
                 # param_card.dat
-                me_cmd.MadLoopInitializer.fix_PSPoint_in_check(sub_path, 
+                # Note: we must target the subprocess directory currently being
+                # run (curr_path) and not the SubProcesses directory (sub_path).
+                # Otherwise fix_PSPoint_in_check edits the first P* directory it
+                # finds instead of this one, leaving curr_path's check_sa.f with
+                # the NPSPOINTS value left over from the initialization. The
+                # phase-space point written would then be the (NPSPOINTS)-th
+                # RAMBO point instead of the first, making the kinematics depend
+                # on the initialization (and hence on the other subprocesses
+                # generated) rather than only on this process.
+                me_cmd.MadLoopInitializer.fix_PSPoint_in_check(curr_path,
                   read_ps = os.path.isfile(os.path.join(curr_path, 'PS.input')),
                   npoints = 1, mu_r=-1.0)
                 
@@ -222,7 +231,21 @@ class MadLoopLauncher(ExtLauncher):
                 bu_helicity_filter_value = MadLoopparam['DoubleCheckHelicityFilter']
                 MadLoopparam.set('DoubleCheckHelicityFilter', False)
                 MadLoopparam.write(os.path.join(self.card_dir, 'MadLoopParams.dat'))
-                
+
+                #This is not optimal at all but I don't think I have access to the command options here. The code only passes here for standalone mode
+                UseDensity = False
+                with open(os.path.join(self.card_dir, 'proc_card_mg5.dat'), 'r') as proc_card:
+                    for line in proc_card:
+                        if '--density' in line:
+                            UseDensity = True
+                            break
+
+                #for the density mode, we use HelicityFilterLevel = 0 because the use of symmetry of HelicityFilterLevel = 2 does not work for JAMP interferences
+                if UseDensity:
+                    MadLoopparam.set('HelicityFilterLevel', 0)
+                    MadLoopparam.write(os.path.join(self.card_dir, 'MadLoopParams.dat'))
+                    logger.warning("WARNING: With the density mode, HelicityFilterLevel must be set to 0. It is currently set to 0.")
+
                 # check
                 t1, t2, ram_usage = me_cmd.MadLoopInitializer.make_and_run(curr_path)
                 
@@ -384,7 +407,24 @@ class MadLoopLauncher(ExtLauncher):
                     str_lines.append('|    Single pole = %s'%\
                                    special_float_format(lso_contrib[1]['1EPS']))
                     str_lines.append('|    Double pole = %s'%\
-                                   special_float_format(lso_contrib[1]['2EPS']))              
+                                   special_float_format(lso_contrib[1]['2EPS']))    
+        if res['RMatrix']:
+            str_lines.append('|')
+            str_lines.append(('|| Density matrix (non-normalised):',main_color))
+
+            n = int((-1 + (1 + 8*len(res['RMatrix']))**.5)/2)
+            if n%1 != 0:
+                    raise ValueError("Problem in the dimension of the density matrix.")
+            rho_square = [[0. for o in range(n)] for _ in range(n)]
+            for i in range(n):
+                    for k in range(n):
+                            if k > i:
+                                    rho_square[i][k] = res['RMatrix'][i*n + k - i*(i + 1)//2].conjugate()
+                            elif k == i:
+                                    rho_square[i][k] = res['RMatrix'][i*n + k - i*(i + 1)//2] #this line is just here because the diagonal elements should not be conjugated (they are real anyway)
+                            else:
+                                    rho_square[i][k] = rho_square[k][i].conjugate()
+                    str_lines.append(('|  ' + str(rho_square[i]), main_color))          
         str_lines.extend([ASCII_bar,'\n'])
 
         return str_lines
@@ -545,10 +585,91 @@ class SALauncher(ExtLauncher):
             return None
 
 
+class FKSSALauncher(ExtLauncher):
+    """Launch the FKS Born building-block standalone check ('check_fks').
+
+    Produced by 'output standalone --fks'. ExtLauncher.run() first offers to
+    edit the param_card (bypassed with -f); launch_program() then compiles the
+    Source libraries, builds 'check_fks' in every born subprocess directory and
+    runs it, echoing the Born, spin-correlated Born and color/charge-linked
+    Borns for one phase-space point. The --energy / --timings / --nb_run
+    options are honoured.
+    """
+
+    def __init__(self, cmd_int, running_dir, **options):
+        """initialize the FKS standalone version"""
+        ExtLauncher.__init__(self, cmd_int, running_dir, './Cards', **options)
+        self.cards = ['param_card.dat']
+
+    def launch_program(self):
+        """compile and run check_fks in each born subprocess directory."""
+        me_dir = self.running_dir
+        logger.info(
+            'Compiling Source libraries for the FKS standalone check...')
+        misc.compile(cwd=pjoin(me_dir, 'Source'))
+
+        sub_path = pjoin(me_dir, 'SubProcesses')
+        born_dirs = sorted(pjoin(sub_path, p) for p in os.listdir(sub_path)
+                           if p.startswith('P') and os.path.isfile(
+                               pjoin(sub_path, p, 'check_sa_fks.f')))
+        if not born_dirs:
+            logger.error(
+                'No FKS standalone born directory found in %s' % sub_path)
+            return
+
+        energy = float(getattr(self, 'energy', 0) or 0)
+        timings = int(getattr(self, 'timings', 0) or 0)
+        nb_run = int(getattr(self, 'nb_run', 1) or 1)
+
+        for born_path in born_dirs:
+            pdir = os.path.basename(born_path)
+            logger.info('Building check_fks in %s ...' % pdir)
+            misc.compile(['check_fks'], cwd=born_path)
+            logger.info('==== %s ====' % pdir)
+            # print the building-block values once (honouring --energy)
+            output = subprocess.Popen(
+                ['./check_fks', self._energy_arg(energy)],
+                stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                cwd=born_path).communicate()[0]
+            if isinstance(output, bytes):
+                output = output.decode('utf-8', errors='replace')
+            logger.info(output)
+            if timings > 0:
+                self._run_with_timings(born_path, energy, timings, nb_run)
+
+    @staticmethod
+    def _energy_arg(energy):
+        """command-line sqrt(s) for check_fks; '0' means built-in default."""
+        return ('%.16g' % energy) if energy and energy > 0 else '0'
+
+    def _run_with_timings(self, born_path, energy, nb_try, nb_run):
+        """time nb_try Born re-evaluations, averaged over nb_run repetitions."""
+        run_times = []
+        for _ in range(nb_run):
+            t0 = time.time()
+            subprocess.call(
+                ['./check_fks', self._energy_arg(energy), str(nb_try)],
+                cwd=born_path, stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL)
+            run_times.append(time.time() - t0)
+        avg = sum(run_times) / len(run_times)
+        if len(run_times) > 1:
+            sigma = math.sqrt(sum((t - avg) ** 2 for t in run_times)
+                              / (len(run_times) - 1))
+        else:
+            sigma = 0.0
+        sep = '=' * 60
+        print('\n' + sep)
+        print('Timing summary (%s): %d Born evaluation(s)/run, %d run(s)'
+              % (os.path.basename(born_path), nb_try, nb_run))
+        print('  wall time per run: %.6f +/- %.6f s' % (avg, sigma))
+        print(sep + '\n')
+
+
 class MWLauncher(ExtLauncher):
     """ A class to launch a simple Standalone test """
-    
-    
+
+
     def __init__(self, cmd_int, running_dir, **options):
         """ initialize the StandAlone Version"""
         ExtLauncher.__init__(self, cmd_int, running_dir, './Cards', **options)

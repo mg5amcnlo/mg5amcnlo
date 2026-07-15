@@ -1,0 +1,24 @@
+LIBDIR=../../lib
+INCDIR=../../src
+MODELLIB=model_%(model)s
+CXXFLAGS= -O3 -ffast-math -I$(INCDIR) -I. -fPIC
+LIBFLAGS= -L$(LIBDIR) -l$(MODELLIB)
+CXX=%(cpp_compiler)s
+main=api.so
+
+all: $(main)
+
+objects=CPPProcess.o api.o
+
+$(main): $(objects) $(LIBDIR)/lib$(MODELLIB).a
+	$(CXX) -shared -o $@ $(objects) $(LIBFLAGS)
+
+$(LIBDIR)/lib$(MODELLIB).a:
+	cd ../../src
+	make
+
+.PHONY: clean
+
+clean:
+	rm -f $(target)
+	rm -f $(objects)

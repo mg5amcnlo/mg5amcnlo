@@ -187,7 +187,7 @@ CF2PY INTENT(IN) :: PATH
       end
 
       SUBROUTINE PY_MG5_0_GET_DENSITY(P, POS, N_CHANGING,
-     &     ALLOW_HEL, N_COMB, FLAVOR, ALPHAS, INTER)
+     &     ALLOW_HEL, N_COMB, FLAVOR, ALPHAS, SCALE2, INTER)
 C     F2PY wrapper around MG5_0_GET_DENSITY so the density-matrix
 C     computation is exposed in the standalone matrix2py module.
 C     The CF2PY directives mirror the working pattern used by the
@@ -202,6 +202,7 @@ CF2PY integer, intent(in), dimension(N_CHANGING*N_COMB) :: ALLOW_HEL
 CF2PY integer, intent(in) :: N_COMB
 CF2PY integer, intent(in), dimension(4) :: FLAVOR
 CF2PY double precision, intent(in) :: ALPHAS
+CF2PY double precision, intent(in) :: SCALE2
 CF2PY double complex, intent(out), dimension(N_COMB*(N_COMB+1)/2) :: INTER
 C     ARGUMENTS
       INTEGER    NEXTERNAL
@@ -211,10 +212,16 @@ C     ARGUMENTS
       INTEGER POS(*)
       INTEGER ALLOW_HEL(*)
       INTEGER FLAVOR(NEXTERNAL)
-      DOUBLE PRECISION ALPHAS
-      DOUBLE COMPLEX INTER(*)
+      DOUBLE PRECISION ALPHAS, SCALE2
+C     INTER must be declared with its explicit size (not INTER(*)): f2py reads
+C     this Fortran declaration to size the intent(out) array, and an assumed-size
+C     (*) makes it allocate a zero-length buffer, corrupting memory at runtime.
+      DOUBLE COMPLEX INTER(N_COMB*(N_COMB+1)/2)
+C     GET_DENSITY takes (..., ALPHAS, SCALE2, INTER): SCALE2 must be passed,
+C     otherwise INTER lands on the SCALE2 slot and the real INTER pointer is
+C     undefined, corrupting memory when the density matrix is written.
       CALL MG5_0_GET_DENSITY(P, POS, N_CHANGING, ALLOW_HEL,
-     &     N_COMB, FLAVOR, ALPHAS, INTER)
+     &     N_COMB, FLAVOR, ALPHAS, SCALE2, INTER)
       RETURN
       END
 

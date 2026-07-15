@@ -7,17 +7,6 @@
 #include <iomanip>
 #include "Parameters_%(model_name)s.h"
 
-    // Initialize static instance
-    Parameters_%(model_name)s* Parameters_%(model_name)s::instance = 0;
-
-    // Function to get static instance - only one instance per program
-    Parameters_%(model_name)s* Parameters_%(model_name)s::getInstance(){
-	if (instance == 0)
-	    instance = new Parameters_%(model_name)s();
-
-	return instance;
-    }
-
     void Parameters_%(model_name)s::setIndependentParameters(SLHAReader& slha){
 	// Define "zero"
 	zero=0;

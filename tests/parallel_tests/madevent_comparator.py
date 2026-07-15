@@ -21,6 +21,7 @@ from __future__ import absolute_import
 import datetime
 import glob
 import itertools
+import json
 import logging
 import os
 import re
@@ -423,6 +424,10 @@ class MG5Runner(MadEventRunner):
     mg5_path = ""
     name = 'MadGraph v5'
     type = 'v5'
+    # Output mode passed to the ``output`` command. Pinned to the Fortran
+    # madevent exporter here; subclasses may override to exercise another
+    # exporter (e.g. the current default 'mg7').
+    output_format = 'madevent'
         
 
     def setup(self, mg5_path, temp_dir=None):
@@ -494,8 +499,12 @@ class MG5Runner(MadEventRunner):
             v5_string += 'add process ' + proc + ' ' + couplings + \
                          '@%i' % i + '\n'
 
-        v5_string += "output %s -f\n" % \
-                     os.path.join(self.mg5_path, self.temp_dir_name)
+        # Force the Fortran madevent exporter: this runner drives the output
+        # through ``launch -i`` and parses madevent cross-sections, so it must
+        # not use MadGraph7's default output mode (now 'mg7').
+        v5_string += "output %s %s -f\n" % \
+                     (self.output_format,
+                      os.path.join(self.mg5_path, self.temp_dir_name))
         v5_string += "launch -i --multicore\n"
         v5_string += " set automatic_html_opening False\n"
         v5_string += "edit_cards\n"
@@ -570,6 +579,231 @@ class MG5Runner(MadEventRunner):
 
         
         return output
+
+
+class MG7Runner(MG5Runner):
+    """Runner object for the MadGraph7 default ('mg7') exporter.
+
+    Unlike :class:`MG5Runner` (which produces a Fortran madevent directory and
+    integrates through ``launch -i``), this runner exercises the current
+    default output mode of MadGraph7: it generates an ``mg7`` directory and
+    drives its ``bin/generate_events`` survey, then reads the total
+    cross-section from the madspace status file ``Events/<run>_NN/info.json``
+    (key ``process.mean`` -- see madspace EventGenerator::write_status).
+
+    The result dictionary only carries the integrated cross-section under the
+    key ``cross`` (the mg7 output layout has no per-subprocess Fortran
+    ``results.dat`` to mirror the madevent key scheme).
+    """
+
+    name = 'MadGraph7 mg7'
+    type = 'mg7'
+    output_format = 'mg7'
+
+    @staticmethod
+    def resolve_lhapdf_data_path(lhapdf_config=None):
+        """Return a usable LHAPDF data dir, or None.
+
+        Tries, in order: the ``LHAPDF_DATA_PATH`` env var, the explicitly given
+        ``lhapdf-config`` (e.g. the one MG5 is configured with), and finally a
+        ``lhapdf-config`` found on PATH. A candidate is only accepted if the
+        directory exists and is non-empty (the PATH lhapdf-config sometimes
+        points at an empty share dir).
+        """
+        if os.environ.get('LHAPDF_DATA_PATH'):
+            return os.environ['LHAPDF_DATA_PATH']
+        candidates = []
+        if lhapdf_config and lhapdf_config not in ('lhapdf-config', None):
+            candidates.append(lhapdf_config)
+        on_path = misc.which('lhapdf-config')
+        if on_path:
+            candidates.append(on_path)
+        for lc in candidates:
+            try:
+                datadir = subprocess.check_output(
+                    [lc, '--datadir']).decode().strip()
+            except Exception:
+                continue
+            if datadir and os.path.isdir(datadir) and os.listdir(datadir):
+                return datadir
+        return None
+
+    @classmethod
+    def is_available(cls):
+        """True if the mg7 runtime stack can plausibly run here.
+
+        Requires the madspace python module with the API the mg7 launcher uses
+        (``ChannelEventGenerator``), and a resolvable LHAPDF data path for
+        hadronic PDFs.
+        """
+        try:
+            import madspace
+        except ImportError:
+            return False
+        if not hasattr(madspace, 'ChannelEventGenerator'):
+            return False
+        return cls.resolve_lhapdf_data_path() is not None
+
+    def format_mg5_proc_card(self, proc_list, model, orders):
+        """proc_card that only *generates* the mg7 directory (no madevent launch)."""
+        if model != 'mssm':
+            v5_string = "import model %s\n" % os.path.join(self.model_dir, model)
+        else:
+            v5_string = "import model %s\n" % model
+        v5_string += "set automatic_html_opening False\n"
+        couplings = ' ' if orders == {} else \
+            me_comparator.MERunner.get_coupling_definitions(orders)
+        for i, proc in enumerate(proc_list):
+            v5_string += 'add process ' + proc + ' ' + couplings + '@%i' % i + '\n'
+        v5_string += "output %s %s -f\n" % \
+                     (self.output_format,
+                      os.path.join(self.mg5_path, self.temp_dir_name))
+        return v5_string
+
+    def run(self, proc_list, model, orders={}):
+        """Generate the mg7 directory, run its survey, return the cross-section."""
+        self.res_list = []
+        self.proc_list = proc_list
+        self.model = model
+        self.orders = orders
+
+        dir_name = os.path.join(self.mg5_path, self.temp_dir_name)
+        proc_card_location = os.path.join(self.mg5_path,
+                                          'proc_card_%s.dat' % self.temp_dir_name)
+        with open(proc_card_location, 'w') as f:
+            f.write(self.format_mg5_proc_card(proc_list, model, orders))
+
+        cmd = cmd_interface.MasterCmd()
+        cmd.no_notification()
+        cmd.exec_cmd('import command %s' % proc_card_location)
+        os.remove(proc_card_location)
+
+        # Use the dynamical HT/2 scale (= madevent dynamical_scale_choice=3) so
+        # the result is comparable with the madevent reference: the mg7
+        # run_card.toml already lists dynamical_scale_choice="half_transverse_mass"
+        # but ships with fixed_(ren|fact)_scale=true, so flip those off.
+        self._patch_run_card_toml(os.path.join(dir_name, 'Cards', 'run_card.toml'))
+
+        # Drive the mg7 survey directly (bin/generate_events), with a resolved
+        # LHAPDF data path so hadronic PDFs load without the python lhapdf
+        # module. Prefer the lhapdf-config MG5 is configured with.
+        env = dict(os.environ)
+        mg5_lhapdf = None
+        try:
+            mg5_lhapdf = cmd.options.get('lhapdf')
+        except Exception:
+            mg5_lhapdf = None
+        datadir = self.resolve_lhapdf_data_path(mg5_lhapdf)
+        if datadir:
+            env['LHAPDF_DATA_PATH'] = datadir
+        # Run the full pipeline (survey + integration): the aggregated,
+        # converged cross-section ends up in process.mean of info.json. The
+        # survey-only estimate is far too biased to use here.
+        gen = os.path.join(dir_name, 'bin', 'generate_events')
+        log_path = os.path.join(dir_name, 'mg7_survey.log')
+        with open(log_path, 'w') as logf:
+            ret = subprocess.call([sys.executable, gen, '-f'],
+                                  cwd=dir_name, env=env,
+                                  stdout=logf, stderr=subprocess.STDOUT)
+        if ret != 0:
+            raise self.MERunnerException(
+                'mg7 generate_events failed (see %s)' % log_path)
+
+        values = self.get_values()
+        self.res_list.append(values)
+        return values
+
+    # Reduced event target so the full survey+generation converges quickly
+    # (the survey-only estimate is too biased to use as a cross-section).
+    n_events = 2000
+
+    def _patch_run_card_toml(self, toml_path):
+        """Switch the mg7 run_card.toml to the dynamical HT/2 scale and trim the
+        event count for a fast but converged integration."""
+        if not os.path.exists(toml_path):
+            return
+        with open(toml_path) as f:
+            text = f.read()
+        text = text.replace('fixed_ren_scale = true', 'fixed_ren_scale = false')
+        text = text.replace('fixed_fact_scale = true', 'fixed_fact_scale = false')
+        text = re.sub(r'events = \d+', 'events = %d' % self.n_events, text)
+        with open(toml_path, 'w') as f:
+            f.write(text)
+
+    def get_values(self):
+        """Read the converged cross-section (process.mean) from info.json."""
+        dir_name = os.path.join(self.mg5_path, self.temp_dir_name)
+        info_files = sorted(glob.glob(
+            os.path.join(dir_name, 'Events', '*', 'info.json')))
+        if not info_files:
+            raise self.MERunnerException(
+                'no mg7 info.json produced under %s/Events' % dir_name)
+        with open(info_files[-1]) as f:
+            info = json.load(f)
+        cross = info.get('process', {}).get('mean') or 0.0
+        return {'cross': repr(float(cross))}
+
+
+class MG5RunnerMG7Aligned(MG5Runner):
+    """Fortran madevent runner whose run_card is aligned with the mg7
+    run_card.toml defaults, so its cross-section is directly comparable with
+    :class:`MG7Runner`.
+
+    Matched settings: e_cm = 13 TeV (ebeam 6500 each), PDF NNPDF23_lo_as_0130_qed
+    (lhaid 247000), the dynamical HT/2 scale (dynamical_scale_choice=3, which is
+    the madevent equivalent of mg7's ``half_transverse_mass``), and the mg7 jet
+    cuts (pt>20, |eta|<5, dR>0.4).  Returns the total cross-section under the
+    'cross' key so the comparison is total-to-total.
+    """
+
+    name = 'MadGraph madevent (mg7-aligned)'
+    type = 'v5_mg7aligned'
+    # lhaid for NNPDF23_lo_as_0130_qed (the mg7 run_card.toml default PDF), so
+    # both sides use exactly the same LHAPDF set.
+    lhaid = 247000
+
+    def format_mg5_proc_card(self, proc_list, model, orders):
+        if model != 'mssm':
+            v5_string = "import model %s\n" % os.path.join(self.model_dir, model)
+        else:
+            v5_string = "import model %s\n" % model
+        v5_string += "set automatic_html_opening False\n"
+        couplings = ' ' if orders == {} else \
+            me_comparator.MERunner.get_coupling_definitions(orders)
+        for i, proc in enumerate(proc_list):
+            v5_string += 'add process ' + proc + ' ' + couplings + '@%i' % i + '\n'
+        v5_string += "output %s %s -f\n" % \
+                     (self.output_format,
+                      os.path.join(self.mg5_path, self.temp_dir_name))
+        v5_string += "launch -i --multicore\n"
+        v5_string += " set automatic_html_opening False\n"
+        v5_string += "edit_cards\n"
+        # --- align with the mg7 run_card.toml -------------------------------
+        v5_string += "set ebeam1 6500\n"
+        v5_string += "set ebeam2 6500\n"
+        # Use exactly the mg7 run_card.toml PDF (NNPDF23_lo_as_0130_qed) via
+        # LHAPDF, now that the AlphaS_FlavorScheme metadata hotfix patches the
+        # source set in pdfsets_dir.
+        v5_string += "set pdlabel lhapdf\n"
+        v5_string += "set lhaid %d\n" % self.lhaid
+        v5_string += "set dynamical_scale_choice 3\n"   # HT/2 (= half_transverse_mass)
+        v5_string += "set auto_ptj_mjj False\n"
+        v5_string += "set ptj 20.0\n"
+        v5_string += "set etaj 5.0\n"
+        v5_string += "set drjj 0.4\n"
+        v5_string += "set cut_decays True\n"
+        v5_string += "set ickkw 0\n"
+        v5_string += "set xqcut 0\n"
+        v5_string += "survey run_01; refine 0.01; refine 0.01\n"
+        return v5_string
+
+    def get_values(self):
+        """Return the total cross-section (summed over subprocesses)."""
+        values = super().get_values()
+        total = sum(float(v) for k, v in values.items()
+                    if k.startswith('cross_'))
+        return {'cross': repr(total)}
+
 
 class MG5OldRunner(MG5Runner):
     """Runner object for the MG5 Matrix Element generator."""
@@ -654,8 +888,12 @@ class MG5gaugeRunner(MG5Runner):
         for i, proc in enumerate(proc_list):
             v5_string += 'add process ' + proc + ' ' + couplings + \
                          '@%i' % i + '\n'
-        v5_string += "output %s -f\n" % \
-                     os.path.join(self.mg5_path, self.temp_dir_name)
+        # Force the Fortran madevent exporter (see MG5Runner.output_format):
+        # this runner drives 'launch' and parses madevent cross-sections, so it
+        # must not use MadGraph7's default output mode (now 'mg7').
+        v5_string += "output %s %s -f\n" % \
+                     (self.output_format,
+                      os.path.join(self.mg5_path, self.temp_dir_name))
         v5_string += "launch \n"
         v5_string += "set SDE_strategy 1\n"
         v5_string += "set nevents 1k\n"

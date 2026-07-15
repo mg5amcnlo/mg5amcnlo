@@ -492,24 +492,35 @@ class Switcher(object):
     def do_launch(self, line, *argss, **opts):
         args = cmd.Cmd.split_arg(line)
         # check if a path is given
-        if len(args) >=1:
+        path = None
+        if args and not args[0].startswith('-'):
             if os.path.isdir(args[0]):
                 path = os.path.realpath(args[0])
             elif os.path.isdir(pjoin(MG5DIR,args[0])):
                 path = pjoin(MG5DIR,args[0])
             elif  MG4DIR and os.path.isdir(pjoin(MG4DIR,args[0])):
                 path = pjoin(MG4DIR,args[0])
-            else:
-                path=None
+        if not path and not any(not a.startswith('-') for a in args) \
+                                            and getattr(self, '_done_export', None):
+            # no directory on the line: reuse the directory of the last output
+            # and inject it as an explicit path, so the principal command is
+            # selected from the actual output type. Without this, a bare
+            # 'launch' after 'output standalone --fks' keeps the aMC@NLO run
+            # interface (the principal command set by the [QCD] generation) and
+            # wrongly prompts for the MC@NLO/shower run configuration instead of
+            # building/running the lightweight FKS 'check_fks'.
+            path = self._done_export[0]
+            line = ('%s %s' % (path, line)).strip()
         # if there is a path, find what output has been done
-            if path:
-                type = self.cmd.find_output_type(self, path) 
-                if type in ['standalone', 'standalone_cpp', 'pythia8', 'madevent']:
-                    self.change_principal_cmd('MadGraph')
-                elif type == 'aMC@NLO':
-                    self.change_principal_cmd('aMC@NLO')
-                elif type == 'MadLoop':
-                    self.change_principal_cmd('MadLoop')
+        if path:
+            type = self.cmd.find_output_type(self, path)
+            if type in ['standalone', 'standalone_cpp', 'pythia8', 'madevent',
+                        'amcatnlo_fks_sa']:
+                self.change_principal_cmd('MadGraph')
+            elif type == 'aMC@NLO':
+                self.change_principal_cmd('aMC@NLO')
+            elif type == 'MadLoop':
+                self.change_principal_cmd('MadLoop')
 
         return self.cmd.do_launch(self, line, *argss, **opts)
         

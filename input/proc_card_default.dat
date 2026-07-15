@@ -20,8 +20,8 @@
 #************************************************************
 import model sm
 # Define multiparticle labels
-define p = g u c d s u~ c~ d~ s~
-define j = g u c d s u~ c~ d~ s~
+define p = g _quark _anti_quark
+define j = g _quark _anti_quark
 define l+ = e+ mu+
 define l- = e- mu-
 define vl = ve vm vt

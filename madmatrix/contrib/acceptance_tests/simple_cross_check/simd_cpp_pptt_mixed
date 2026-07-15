@@ -1,0 +1,10 @@
+#title check ggtt within mixed mode
+import model sm
+                 set automatic_html_opening False --no_save
+                 set notification_center False --no_save
+                 generate p p > t t~
+                 output madevent_simd %s -f -nojpeg
+                 launch
+                 set nevents 100
+                 set floating_type m
+#check run_01 505.5 2.749 100

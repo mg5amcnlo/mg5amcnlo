@@ -1,66 +1,52 @@
 // Local variables and constants
-const int ncomb = %(ncomb)d;
-%(cpp_goodhel_decl)s
 std::complex<double> **wfs;
-double t[nprocesses];
 // Helicities for the process
 %(helicity_matrix)s
 // Denominators: spins, colors and identical particles
-const int denominators[nprocesses] = {%(den_factors)s};
+const int denominator = %(den_factors)s;
+// Flavor lookup table
+%(flavor_table)s
 
-%(cpp_flav_idx_compute)sntry[flav_idx]=ntry[flav_idx]+1;
+const int* flavor = &flavor_table[flavor_id][0];
 
-// Reset the matrix elements
-for(int i = 0; i < nprocesses; i++){
-    matrix_element[i] = 0.;
-}
+ntry[flavor_id]++;
+
 // Define permutation
 int perm[nexternal];
 for(int i = 0; i < nexternal; i++){
-  perm[i]=i;
+    perm[i]=i;
 }
 
-if (sum_hel[flav_idx] == 0 || ntry[flav_idx] < 10){
-// Calculate the matrix element for all helicities
-  for(int ihel = 0; ihel < ncomb; ihel ++){
-    if (goodhel[flav_idx][ihel] || ntry[flav_idx] < 2){
-      calculate_wavefunctions(perm, helicities[ihel], flavor);
-      %(get_matrix_t_lines)s
-%(get_mirror_matrix_lines)s
-      double tsum = 0;
-      for(int iproc = 0;iproc < nprocesses; iproc++){
-         matrix_element[iproc]+=t[iproc];
-         tsum += t[iproc];
-      }
-      // Store which helicities give non-zero result
-      if (tsum != 0. && !goodhel[flav_idx][ihel]){
-	goodhel[flav_idx][ihel]=true;
-	ngood[flav_idx] ++;
-	igood[flav_idx][ngood[flav_idx]] = ihel;
-      }
+double matrix_element = 0.;
+
+if (sum_hel[flavor_id] == 0 || ntry[flavor_id] < 10){
+    // Calculate the matrix element for all helicities
+    for(int ihel = 0; ihel < ncomb; ihel ++){
+        if (goodhel[flavor_id][ihel] || ntry[flavor_id] < 2){
+            calculate_wavefunctions(perm, helicities[ihel], flavor);
+            %(get_matrix_t_lines)s
+            matrix_element += t;
+            // Store which helicities give non-zero result
+            if (t != 0. && !goodhel[flavor_id][ihel]){
+                goodhel[flavor_id][ihel]=true;
+                ngood[flavor_id] ++;
+                igood[flavor_id][ngood[flavor_id]] = ihel;
+            }
+        }
     }
-  }
-  jhel[flav_idx] = 0;
-  sum_hel[flav_idx]=min(sum_hel[flav_idx], ngood[flav_idx]);
-}
-else              
-{
-// Only use the "good" helicities
-  for(int j=0; j < sum_hel[flav_idx]; j++){
-    jhel[flav_idx]++;
-    if (jhel[flav_idx] >= ngood[flav_idx]) jhel[flav_idx]=0;
-    double hwgt = double(ngood[flav_idx])/double(sum_hel[flav_idx]);
-    int ihel = igood[flav_idx][jhel[flav_idx]];
-    calculate_wavefunctions(perm, helicities[ihel], flavor);
-    %(get_matrix_t_lines)s
-%(get_mirror_matrix_lines)s
-    for(int iproc = 0;iproc < nprocesses; iproc++){
-      matrix_element[iproc]+=t[iproc]*hwgt;
+    jhel[flavor_id] = 0;
+    sum_hel[flavor_id]=min(sum_hel[flavor_id], ngood[flavor_id]);
+} else {
+    // Only use the "good" helicities
+    for(int j=0; j < sum_hel[flavor_id]; j++){
+        jhel[flavor_id]++;
+        if (jhel[flavor_id] >= ngood[flavor_id]) jhel[flavor_id]=0;
+        double hwgt = double(ngood[flavor_id])/double(sum_hel[flavor_id]);
+        int ihel = igood[flavor_id][jhel[flavor_id]];
+        calculate_wavefunctions(perm, helicities[ihel], flavor);
+        %(get_matrix_t_lines)s
+        matrix_element += t*hwgt;
     }
-  }
 }
 
-for (int i=0;i < nprocesses; i++)
-    matrix_element[i] = matrix_element[i] * broken_sym(flavor) / denominators[i];
-
-
+return matrix_element * broken_sym(flavor) / denominator;

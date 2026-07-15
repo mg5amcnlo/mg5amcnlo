@@ -1809,15 +1809,15 @@ class CPPUFOHelasCallWriter(UFOHelasCallWriter):
                                             '%s' % l[0], l[1:], outgoing, flag,True),
                    'wf': ("w[%%(%d)d]," * len(argument.get('mothers'))) % \
                                       tuple(range(len(argument.get('mothers')))),
-                    'coup': ("pars->%%(coup%d)s," * len(argument.get('coupling'))) % \
+                    'coup': ("pars.%%(coup%d)s," * len(argument.get('coupling'))) % \
                                      tuple(range(len(argument.get('coupling'))))           
                    } 
             if isinstance(argument, helas_objects.HelasWavefunction):
                 arg['out'] = 'w[%(out)d]'
                 if aloha.complex_mass:
-                    arg['mass'] = "pars->%(CM)s,%(bwcutoff)s"
+                    arg['mass'] = "pars.%(CM)s,%(bwcutoff)s"
                 else:
-                    arg['mass'] = "pars->%(M)s,pars->%(W)s,%(bwcutoff)s"
+                    arg['mass'] = "pars.%(M)s,pars.%(W)s,%(bwcutoff)s"
             else:        
                 arg['out'] = 'amp[%(out)d]'
                 arg['mass'] = ''
@@ -1837,7 +1837,7 @@ class CPPUFOHelasCallWriter(UFOHelasCallWriter):
     def format_coupling(call):
         """Format the coupling so any minus signs are put in front"""
 
-        return call.replace('pars->-', '-pars->')
+        return call.replace('pars.-', '-pars.')
         
 
 
@@ -1857,7 +1857,7 @@ class GPUFOHelasCallWriter(CPPUFOHelasCallWriter):
             
         for coup in re.findall(self.findcoupling, call):
             if coup == 'ZERO':
-                call = call.replace('pars->ZERO', '0.')
+                call = call.replace('pars.ZERO', '0.')
                 continue
             sign = '' 
             if coup.startswith('-'):
@@ -1878,10 +1878,10 @@ class GPUFOHelasCallWriter(CPPUFOHelasCallWriter):
             if coup not in alias:
                 alias[coup] = len(alias)
             if name == "cIPD":
-                call = call.replace('pars->%s%s' % (sign, coup), 
+                call = call.replace('pars.%s%s' % (sign, coup), 
                                     '%s%s[%s]' % (sign, name, alias[coup]))
             else:
-                call = call.replace('pars->%s%s' % (sign, coup), 
+                call = call.replace('pars.%s%s' % (sign, coup), 
                                     '%scxtype(cIPC[%s],cIPC[%s])' % 
                                     (sign, 2*alias[coup],2*alias[coup]+1))
 
@@ -1915,9 +1915,9 @@ class GPUFOHelasCallWriter(CPPUFOHelasCallWriter):
             call = call + "(allmomenta,"
             if argument.get('spin') != 1:
                 # For non-scalars, need mass and helicity
-                call = call + "pars->%s, cHel[ihel][%d],"
+                call = call + "pars.%s, cHel[ihel][%d],"
             else:
-                call = call + "pars->%s,"
+                call = call + "pars.%s,"
             call = call + "%+d,w[%d], %d);"
             if argument.get('spin') == 1:
                 return call % \
@@ -2032,15 +2032,15 @@ class GPUFOHelasCallWriter(CPPUFOHelasCallWriter):
                                             '%s' % l[0], l[1:], outgoing, flag,True),
                    'wf': ("w[%%(%d)d]," * len(argument.get('mothers'))) % \
                                       tuple(range(len(argument.get('mothers')))),
-                    'coup': ("pars->%%(coup%d)s," * len(argument.get('coupling'))) % \
+                    'coup': ("pars.%%(coup%d)s," * len(argument.get('coupling'))) % \
                                      tuple(range(len(argument.get('coupling'))))           
                    } 
             if isinstance(argument, helas_objects.HelasWavefunction):
                 arg['out'] = 'w[%(out)d]'
                 if aloha.complex_mass:
-                    arg['mass'] = "pars->%(CM)s,"
+                    arg['mass'] = "pars.%(CM)s,"
                 else:
-                    arg['mass'] = "pars->%(M)s,pars->%(W)s,"
+                    arg['mass'] = "pars.%(M)s,pars.%(W)s,"
             else:    
                 if self.usepointerforvertex:    
                     arg['out'] = '&amp[%(out)d]'

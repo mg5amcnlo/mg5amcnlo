@@ -327,7 +327,7 @@ def generate_process(run_dir, process, model, defines, apply_fg, group_subproces
         mg_cmd.exec_cmd('define %s' % define_str)
 
     mg_cmd.exec_cmd('generate %s' % process)
-    mg_cmd.exec_cmd('output %s' % run_dir)
+    mg_cmd.exec_cmd('output madevent %s' % run_dir)
 
     return run_dir
 

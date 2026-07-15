@@ -202,14 +202,11 @@ C---  integer nexternal ! number particles (incoming+outgoing) in the me
 c      density matrix helicity index value for particle
        ALLOW_HEL(1) = +1 
        ALLOW_HEL(2) = -1
-c        ALLOW_HEL(3) = +1
-c        ALLOW_HEL(4) = -1
-c        ALLOW_HEL(5) = -1
-c        ALLOW_HEL(6) = +1
-c        ALLOW_HEL(7) = -1
-c        ALLOW_HEL(8) = -1
-c     (last zero avoid to update as, otherwise new value for as can be  provided
-       call GET_DENSITY(P,  POS, N_CHANGING, ALLOW_HEL, N_COMB, FLAVOR, 0d0, INTER)
+
+
+c     The value of alphas is 0 to keep the value of the param_card
+c     The value of mu_r2 is set to 0 but it is a dummy variable at tree-level anyway
+       call GET_DENSITY(P,  POS, N_CHANGING, ALLOW_HEL, N_COMB, FLAVOR, 0d0, 0d0, INTER)
        
        SOL=0
        DO I=1, N_COMB

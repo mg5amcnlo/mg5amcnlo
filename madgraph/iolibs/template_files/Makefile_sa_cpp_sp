@@ -1,7 +1,7 @@
 LIBDIR=../../lib
 INCDIR=../../src
 MODELLIB=model_%(model)s
-CXXFLAGS= -Ofast -I$(INCDIR) -I.
+CXXFLAGS= -O3 -ffast-math -I$(INCDIR) -I. -fPIC
 LIBFLAGS= -L$(LIBDIR) -l$(MODELLIB)
 CXX=%(cpp_compiler)s
 main=check

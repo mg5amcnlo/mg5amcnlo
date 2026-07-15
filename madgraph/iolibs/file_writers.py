@@ -185,9 +185,9 @@ class FortranWriter(FileWriter):
         pass
 
     # Parameters defining the output of the Fortran writer
-    keyword_pairs = {r'^if.+then\s*$': ('^endif', 2),
-                     r'^type(?!\s*\()\s*.+\s*$': ('^endtype', 2),
-                     r'^do(?!\s+\d+)\s+': (r'^enddo\s*$', 2),
+    keyword_pairs = {r'^if.+then\s*$': ('^end\s*if', 2),
+                     r'^type(?!\s\()\s.+\s*$': ('^endtype', 2),
+                     r'^do(?!\s+\d+)\s+': (r'^end\s*do\s*$', 2),
                      '^subroutine': (r'^end\s*$', 0),
                      '^module': (r'^end\s*$', 0),
                      'function': (r'^end\s*$', 0),

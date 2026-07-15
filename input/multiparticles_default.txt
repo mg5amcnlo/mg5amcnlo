@@ -12,7 +12,7 @@
 #
 ################################################################################
 # Syntax: label = particles (separated by spaces)
-p = g u c d s u~ c~ d~ s~
+p = g u c d s u~ c~ d~ s~ 
 j = g u c d s u~ c~ d~ s~
 l+ = e+ mu+
 l- = e- mu-
