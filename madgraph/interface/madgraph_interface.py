@@ -7877,7 +7877,6 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
         options = options.__dict__
         # args is now MODE PATH
 
-<<<<<<< HEAD
         if args[0] == 'amcatnlo_fks_sa':
             # the FKS Born building-block check: ExtLauncher.run() first offers
             # to edit the param_card (skipped under -f), then launch_program()
@@ -7892,10 +7891,6 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                 self.options[key] = value
             return
 
-        if args[0].startswith('standalone'):
-||||||| b9413c95d
-        if args[0].startswith('standalone'):
-=======
         if args[0] == 'standalone_mg7':
             class ext_program:
                 @staticmethod
@@ -7907,7 +7902,6 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                         pass
 
         elif args[0].startswith('standalone'):
->>>>>>> main
             if os.path.isfile(os.path.join(os.getcwd(),args[1],'Cards',\
               'MadLoopParams.dat')) and not os.path.isfile(os.path.join(\
               os.getcwd(),args[1],'SubProcesses','check_poles.f')):
@@ -10836,15 +10830,10 @@ _launch_parser.add_option("-M", "--madspin", default=False, action='store_true',
 _launch_parser.add_option("", "--timings", default=0, type='int',
                             help="[standalone] Number of SMATRIX calls per flavor per run for timing analysis (0=disabled)")
 _launch_parser.add_option("", "--nb_run", default=1, type='int',
-<<<<<<< HEAD
-                            help="[standalone] Number of timing repetitions for statistics (used with --timings)")
+                            help="[standalone] Number of timing repetitions for statistics (used with --timings); 0 = good-helicity check (print matrix-element values instead of a timing table)")
 _launch_parser.add_option("", "--energy", default=0, type='float',
                             help="[FKS standalone] sqrt(s) of the phase-space point (0=built-in default)")
-||||||| b9413c95d
-                            help="[standalone] Number of timing repetitions for statistics (used with --timings)")
-=======
-                            help="[standalone] Number of timing repetitions for statistics (used with --timings); 0 = good-helicity check (print matrix-element values instead of a timing table)")
->>>>>>> main
+                           
 
 #===============================================================================
 # Interface for customize question.
