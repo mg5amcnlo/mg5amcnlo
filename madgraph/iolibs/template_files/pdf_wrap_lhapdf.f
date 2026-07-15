@@ -57,9 +57,9 @@ c     initialize the pdf set
          nloop=nloop+1
 
       else
-          write(*,*) 'Unknown PDLABEL', pdlabel
-          write(*,*) 'Unknown PDLABEL1', pdsublabel(1)
-          write(*,*) 'Unknown PDLABEL2', pdsublabel(2)
+          write(*,*) 'Unknown PDLABEL  ', pdlabel
+          write(*,*) 'Unknown PDLABEL1 ', pdsublabel(1)
+          write(*,*) 'Unknown PDLABEL2 ', pdsublabel(2)
           stop 1
       endif
       

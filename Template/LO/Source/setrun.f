@@ -193,7 +193,7 @@ C       Fill common block for Les Houches init info
       enddo
       ebmup(1)=ebeam(1)
       ebmup(2)=ebeam(2)
-      call get_pdfup(pdlabel,pdfgup,pdfsup,lhaid,lhasubid)
+      call get_pdfup(pdsublabel,pdfgup,pdfsup,lhasubid)
 
       return
  99   write(*,*) 'error in reading'
@@ -205,12 +205,13 @@ C   GET_PDFUP
 C   Convert MadEvent pdf name to LHAPDF number
 C-------------------------------------------------
 
-      subroutine get_pdfup(pdfin,pdfgup,pdfsup,lhaid,lhasubid)
+      subroutine get_pdfup(pdfin,pdfgup,pdfsup,lhasubid)
       implicit none
 
-      character*(*) pdfin
+      character*(*) pdfin(2)
+      character*7 tmppdf
       integer mpdf
-      integer npdfs,i,pdfgup(2),pdfsup(2),lhaid,lhasubid(2)
+      integer npdfs,i,kk,pdfgup(2),pdfsup(2),lhasubid(2)
 
       parameter (npdfs=21)
       character*7 pdflabs(npdfs)
@@ -261,35 +262,41 @@ C-------------------------------------------------
      $   244800/
 
 
-      if(pdfin.eq."lhapdf") then
-        write(*,*)'using LHAPDF'
-        do i=1,2
-           pdfgup(i)=0
-           pdfsup(i)=lhasubid(i)
-        enddo
-        return
+      do kk=1,2 ! for each beam
+      pdfgup(kk)=0
+      tmppdf = pdfin(kk)
+
+      ! check if using lhapdf
+      if(tmppdf.eq."lhapdf") then
+        pdfsup(kk) = lhasubid(kk)
+        write(*,*)'Using LHAPDF for beam ',kk,
+     $            '. Setting pdfsup(beam)=',pdfsup(kk)
+        cycle ! next beam
       endif
 
-      
+      ! check if using default setup
       mpdf=-1
       do i=1,npdfs
-        if(pdfin(1:len_trim(pdfin)) .eq. pdflabs(i))then
+        if(tmppdf(1:len_trim(tmppdf)).eq.pdflabs(i)) then
           mpdf=numspdf(i)
+          pdfsup(kk)=mpdf
+          exit
         endif
       enddo
-
-      if(mpdf.eq.-1) then
-        write(*,*)'pdf ',pdfin,' not implemented in get_pdfup.'
-        write(*,*)'known pdfs are'
-        write(*,*) pdflabs
-        write(*,*)'using ',pdflabs(12)
-        mpdf=numspdf(12)
+      if(mpdf.gt.-1) then
+        write(*,*)'Using built-in function for beam ',kk,
+     $            '. Setting pdfsup(beam)=',pdfsup(kk)
+        cycle ! next beam
       endif
 
-      do i=1,2
-        pdfgup(i)=0
-        pdfsup(i)=mpdf
-      enddo
+      ! use default setup if cannot find anything
+      write(*,*)'pdf ',tmppdf,' not implemented in get_pdfup.'
+      write(*,*)'known pdfs are'
+      write(*,*) pdflabs
+      write(*,*)'Setting pdfsup(beam) =',numspdf(12),' (',pdflabs(12),')'
+      pdfsup(kk)=numspdf(12)
+
+      enddo ! for each beam
 
       return
       end

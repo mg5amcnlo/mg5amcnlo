@@ -4141,6 +4141,8 @@ class PDLabelBlock(RunBlock):
             card.user_set.remove('pdlabel1')
         if 'pdlabel2' in card.user_set:
             card.user_set.remove('pdlabel2')
+        dict.__setitem__(card, 'pdlabel1', card['pdlabel'])
+        dict.__setitem__(card, 'pdlabel2', card['pdlabel'])
 
     @staticmethod
     def post_set(card, value, change_userdefine, raiseerror, name="unknown", **opt):
@@ -4186,11 +4188,11 @@ class LHALabelBlock(RunBlock):
             dict.__setitem__(card, 'lhaid2', card['lhaid'])
 
             # update pdlabel if needed
-            if card['pdlabel'] != 'lhapdf':
+            if card['pdlabel'] != 'lhapdf' and value > 0:
                 dict.__setitem__(card,'pdlabel','lhapdf')
-            if card['pdlabel1'] != 'lhapdf':
+            if card['pdlabel1'] != 'lhapdf' and value > 0:
                 dict.__setitem__(card,'pdlabel1','lhapdf')
-            if card['pdlabel2'] != 'lhapdf':
+            if card['pdlabel2'] != 'lhapdf' and value > 0:
                 dict.__setitem__(card,'pdlabel2','lhapdf')
 
         # if called internally, only do something if nothing ever set
@@ -4204,12 +4206,18 @@ class LHALabelBlock(RunBlock):
         """call if lhaid1 or lhaid2 is set --do not know which one--"""
 
         # check if missing other lhaidX
-        if name == 'lhaid1' and 'lhaid2' not in card.user_set:
-            card.user_set.add('lhaid2')
-            dict.__setitem__(card, 'lhaid2', card['lhaid'])
-        if name == 'lhaid2' and 'lhaid1' not in card.user_set:
-            card.user_set.add('lhaid1')
-            dict.__setitem__(card, 'lhaid1', card['lhaid'])
+        if name == 'lhaid1':
+            if card['pdlabel1'] != 'lhapdf' and value > 0:
+                dict.__setitem__(card,'pdlabel1','lhapdf')
+            if 'lhaid2' not in card.user_set:
+                card.user_set.add('lhaid2')
+                dict.__setitem__(card, 'lhaid2', card['lhaid'])
+        if name == 'lhaid2':
+            if card['pdlabel2'] != 'lhapdf' and value > 0:
+                dict.__setitem__(card,'pdlabel2','lhapdf')
+            if 'lhaid1' not in card.user_set:
+                card.user_set.add('lhaid1')
+                dict.__setitem__(card, 'lhaid1', card['lhaid'])
 
         # let lhaidX supersede lhaid
         if 'lhaid' in card.user_set:
@@ -4669,9 +4677,11 @@ class RunCardLO(RunCard):
                 'please run with pdlabel=lhapdf, not pdlabel1(2) = %s (%s). '\
                 'Trying to recover...' % (self['pdlabel1'],self['pdlabel2']))
                 try:
-                    self.set('pdlabel','lhapdf')
+                    # get lhaids from pdlabelX before resetting pdlabelX
                     self.set('lhaid1', self.allowed_had_densities[self['pdlabel1']])
                     self.set('lhaid2', self.allowed_had_densities[self['pdlabel2']])
+                    self.set('pdlabel1','lhapdf')
+                    self.set('pdlabel2','lhapdf')
                     logger.warning('Recovered. Now running with pdlabel=lhapdf and lhaid1(2) = %s (%s)' % (self['lhaid1'],self['lhaid2']))
                     mod = True
                 except KeyError as err:
@@ -4679,23 +4689,22 @@ class RunCardLO(RunCard):
 
         mod = False
         for i in [1,2]:
-            lhaidX = 'lhaid%i' % i
-            if self[lhaidX] == 'lhapdf' or self['pdlabel'] == 'lhapdf':
-                if self[lhaidX] < 1:
-                    logger.warning('Since lhaid%i<1, changing to default value in run_card' % (i,self[lhaidX]))
-                    self.get_default(lhaidX, log_level=20)
-
-        mod = False
-        for i in [1,2]:
             lpp = 'lpp%i' %i 
             pdlabelX = 'pdlabel%i' % i
+            lhaidX = 'lhaid%i' % i
             if self[lpp] == 0: # nopdf
                 if self[pdlabelX] != 'none':
+                    self.set(lhaidX, 0)
                     self.set(pdlabelX, 'none')
                     mod = True
             elif abs(self[lpp]) == 1: # PDF from PDF library
                 if self[pdlabelX] in ['eva', 'iww', 'edff','chff','none']:
                     raise InvalidRunCard("%s \'%s\' not compatible with %s \'%s\'" % (lpp, self[lpp], pdlabelX, self[pdlabelX]))
+                if self[pdlabelX] == 'lhapdf':
+                    idThreshold=1
+                    if self[lhaidX] < idThreshold:
+                        logger.warning('Since lhaid%i=%i<%i, changing to default value in run_card' % (i,self[lhaidX],idThreshold))
+                        self.get_default(lhaidX, log_level=20)
             elif abs(self[lpp]) in [3,4]: # PDF from PDF library
                 if self[pdlabelX] not in ['none','eva', 'iww'] + sum(self.allowed_lep_densities.values(),[]):
                     logger.warning("%s \'%s\' not compatible with %s \'%s\'. Change %s to eva" % (lpp, self[lpp], pdlabelX, self[pdlabelX], pdlabelX))
