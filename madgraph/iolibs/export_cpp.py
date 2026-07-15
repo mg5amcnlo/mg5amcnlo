@@ -31,6 +31,7 @@ import json
 import madgraph.core.base_objects as base_objects
 import madgraph.core.color_algebra as color
 import madgraph.core.helas_objects as helas_objects
+import madgraph.iolibs.group_subprocs as group_subprocs
 import madgraph.iolibs.drawing_eps as draw
 import madgraph.iolibs.drawing_svg as draw_svg
 import madgraph.iolibs.files as files
@@ -306,8 +307,10 @@ class UFOModelConverterCPP(object):
                                self.write_set_parameters(self.params_dep)
         replace_dict['set_dependent_couplings'] = \
                                self.write_set_parameters(list(self.coups_dep.values()))
+        # Only independent flavored couplings use the FLV_COUPLING value[] pointer mechanism;
+        # dependent (running-alphas) ones are gathered event-by-event (see model_handling / Step 3).
         replace_dict['set_flv_couplings'] = \
-                                self.write_flv_couplings(self.coups_flv_dep+self.coups_flv_indep)    
+                                self.write_flv_couplings(self.coups_flv_indep)
 
         replace_dict['print_independent_parameters'] = \
                                self.write_print_parameters(self.params_indep)
@@ -373,17 +376,57 @@ class UFOModelConverterCPP(object):
 
         return "\n".join(res_strings)
 
+    def _assert_flv_couplings_supported(self, params):
+        """Refuse, with a clear and actionable message, the merged-flavor
+        coupling structures the C++ (mg7/standalone_mg7) backend cannot yet
+        generate correctly, instead of crashing or emitting wrong/uncompilable
+        code.
+
+        Supported: one- and two-merged-leg "partner" vertices, with either
+        flavor-*independent* or *dependent* (event-by-event, running-alphas)
+        couplings. Single-merged-leg vertices (one merged fermion + an unmerged
+        partner, e.g. the electroweak MSSM squark-quark-neutralino vertices) are
+        serialized like the Fortran side (the unmerged partner is given flavor
+        index 1) and gated by the merged leg (see get_coupling_def). Dependent
+        flavored couplings (e.g. the SUSY-QCD MSSM gluino-squark-quark vertices)
+        are gathered event-by-event into cDPF_* / flvCOUPs_dep (Step 3).
+
+        Not yet supported (raises):
+
+          * a vertex with more than two merged-flavor legs (never seen so far).
+
+        The Fortran 'madevent'/'standalone' output supports the remaining cases.
+        See docs/mg7_merged_flavor_mssm_design.md.
+        """
+        for coupl in params:
+            for key in coupl.flavors:
+                nb_merged = len([i for i in key if i != 0])
+                if nb_merged in (1, 2):
+                    continue
+                raise InvalidCmd(
+                    "merged-flavor C++ output (mg7/standalone_mg7) does not yet "
+                    "support this process: flavor coupling %s connects %d "
+                    "merged-flavor legs; only one or two are supported. Use "
+                    "'output madevent' or 'output standalone' for this process. "
+                    "See docs/mg7_merged_flavor_mssm_design.md for details."
+                    % (coupl.name, nb_merged))
+
     def write_flv_couplings(self, params):
         """Write out the lines of independent parameters"""
 
+        self._assert_flv_couplings_supported(params)
         def_flv = []
         # For each parameter, write name = expr;
         for coupl in params:
             for key, c in coupl.flavors.items():
-                # get first/second index
-                k1, k2 = [i for i in key if i!=0]
+                nonzero = [i for i in key if i != 0]
+                if len(nonzero) == 2:
+                    k1, k2 = nonzero
+                else:
+                    # single merged leg: unmerged partner has flavor index 1
+                    k1 = nonzero[0]; k2 = 1
                 def_flv.append('%(name)s.partner[%(in)i] = %(out)i;' % {'name': coupl.name,'in': k1-1, 'out': k2-1})
-                def_flv.append('%(name)s.partner2[%(out)i] = %(in)i;' % {'name': coupl.name,'in': k1-1, 'out': k2-1}) 
+                def_flv.append('%(name)s.partner2[%(out)i] = %(in)i;' % {'name': coupl.name,'in': k1-1, 'out': k2-1})
                 def_flv.append('%(name)s.val[%(in)i]  =  &%(coupl)s;' % {'name': coupl.name,'in': k1-1, 'coupl': c})
 
         return "\n".join(def_flv)
@@ -3139,9 +3182,12 @@ class ProcessExporterMG7(ProcessExporterCPP):
     # 'check' driver)
     template_Sub_make = pjoin(_file_path, 'iolibs', 'template_files',
                               'Makefile_sa_cpp_sp_api')
+    # NB: Cards/run_card.toml is NOT copied verbatim here; it is generated in
+    # finalize() from the run_card.toml template via banner.RunCardMG7, so that
+    # process-dependent defaults are filled in (see create_run_card).
     from_template = {'src': [s+'read_slha.h', s+'read_slha.cc', s+'mg7/api.h'],
                      'SubProcesses': [s+'mg7/api.cpp'],
-                     'Cards': [s+'mg7/run_card.toml']}
+                     'Cards': []}
     #from_template_simd = [
     #    s+"mg7/api.h",
     #    s+"mg7/simd/api_simd.cpp",
@@ -3213,14 +3259,63 @@ class ProcessExporterMG7(ProcessExporterCPP):
                 )
             os.chmod(madnis_bin, 0o755)
 
-    def finalize(self, *args, **kwargs):
+    def finalize(self, matrix_elements=None, history='', *args, **kwargs):
         file_name = os.path.normpath(os.path.join(
             self.dir_path, "SubProcesses", "subprocesses.json"
         ))
         with open(file_name, 'w') as f:
             json.dump(self.process_info, f)
+
+        # Generate Cards/run_card.toml from the template, filling in
+        # process-dependent defaults (mirrors the LO run_card.dat logic).
+        self.create_run_card(matrix_elements, history)
+
         # we don't call super().finalize() since it would call ProcessExporterCPP.finalize()
         # which would compile the model in src/, and we don't want that
+
+    def create_run_card(self, matrix_elements, history):
+        """Write Cards/run_card.toml from the run_card.toml template via
+        banner.RunCardMG7, applying process-dependent defaults."""
+
+        run_card = banner_mod.RunCardMG7()
+
+        processes = None
+        try:
+            if isinstance(matrix_elements, group_subprocs.SubProcessGroupList):
+                processes = [me.get('processes') for megroup in matrix_elements
+                             for me in megroup['matrix_elements']]
+            elif matrix_elements:
+                processes = [me.get('processes')
+                             for me in matrix_elements['matrix_elements']]
+        except (KeyError, TypeError):
+            processes = None
+
+        if processes:
+            run_card.create_default_for_process(self.proc_characteristic,
+                                                history, processes)
+            # persist the model so the runtime can compute widths set to 'auto'
+            # in the param_card (and recompute them at each scan point). A hash
+            # of the model's python source is stored on the second line so the
+            # runtime can detect a model that changed since output.
+            try:
+                model = processes[0][0].get('model')
+                model_path = model.get('modelpath')
+                model_ref = model_path or model.get('name')
+                if model_ref:
+                    model_hash = misc.hash_model_files(model_path) if model_path else None
+                    with open(pjoin(self.dir_path, 'SubProcesses', 'model.txt'), 'w') as f:
+                        f.write(model_ref + '\n' + (model_hash or '') + '\n')
+            except Exception:
+                pass
+
+        template = pjoin(_file_path, 'iolibs', 'template_files',
+                         'mg7', 'run_card.toml')
+        run_card.write(pjoin(self.dir_path, 'Cards', 'run_card.toml'),
+                       template=template)
+        # Also write a concrete default card so the interactive card editor
+        # can offer "set <param> default" (mirrors run_card_default.dat at LO).
+        run_card.write(pjoin(self.dir_path, 'Cards', 'run_card_default.toml'),
+                       template=template)
 
 def ExportCPPFactory(cmd, group_subprocesses=False, cmd_options={}):
     """ Determine which Export class is required. cmd is the command 

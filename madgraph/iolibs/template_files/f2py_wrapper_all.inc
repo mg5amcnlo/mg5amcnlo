@@ -23,33 +23,27 @@ CF2PY double precision, intent(in) :: SCALE2
       RETURN
       END
 
-      SUBROUTINE %(f2py_prefix)sPY_GET_DENSITY(PDGS, PROCID, NPDG, P, POS, N_CHANGING,  ALLOW_HEL, N_COMB, ALPHAS, INTER)
-C     P momenta
-C     NHEL base of helicity that are not changing
-C     POS(N_CHNGING): position of the changing helicity
-C     n_changing: number of changing helicity
-C     ALLOW_HEL(NCOMB, N_CHANGING): combination of helicity to
-C     consider (all jamp computed)
-C     INTER((NCOMB*NCOMB+1)/2: all interference term (not the
-C     symmetric one)
-
-CF2PY double precision, intent(in), dimension(0:3,npdg) :: p
-CF2PY integer, intent(in), dimension(npdg) :: pdgs
-CF2PY integer, intent(in):: procid
-CF2PY integer, intent(in), dimension(*):: pos
-CF2PY integer, intent(in) :: npdg
-CF2PY integer, intent(in), optional, depend(pos) :: n_changing=len(pos)
+      SUBROUTINE %(f2py_prefix)sPY_GET_DENSITY(PDGS, PROCID, P, POS, ALLOW_HEL, ALPHAS, SCALE2, INTER, N_CHANGING, N_COMB, NPDG)
+      IMPLICIT NONE
+CF2PY double precision, intent(in) :: p
+CF2PY integer, intent(in) :: pdgs
+CF2PY integer, intent(in) :: procid
 CF2PY integer, INTENT(IN) :: ALLOW_HEL(N_CHANGING*N_COMB)
-CF2PY integer INTENT(IN) :: N_COMB
+CF2PY integer, INTENT(IN) :: POS(N_CHANGING)
 CF2PY double precision INTENT(IN) :: ALPHAS
-CF2PY double complex INTENT(OUT) :: INTER(N_COMB*(N_COMB+1)/2)
-      INTEGER PDGS(*)
-      INTEGER NPDG, PROCID, N_CHANGING, N_COMB
-      INTEGER POS(*)
-      DOUBLE PRECISION ALPHAS
-      INTEGER ALLOW_HEL(*)
-      DOUBLE COMPLEX INTER(*)
-      call f77_density(PDGS, PROCID, NPDG, P, POS, N_CHANGING,  ALLOW_HEL, N_COMB, ALPHAS, INTER)
+CF2PY double precision INTENT(IN) :: SCALE2
+CF2PY double complex INTENT(OUT), dimension(N_COMB*(N_COMB+1)/2) :: INTER
+CF2PY integer, intent(hide), depend(allow_hel, pos) :: N_COMB = len(ALLOW_HEL)/len(pos)
+CF2PY integer, intent(hide), depend(pos) :: N_CHANGING = len(pos)
+CF2PY integer, intent(hide), depend(PDGS) :: NPDG = len(PDGS)
+
+      INTEGER PDGS(NPDG)
+      INTEGER PROCID, N_CHANGING, N_COMB, NPDG
+      INTEGER POS(N_CHANGING)
+      DOUBLE PRECISION ALPHAS, SCALE2, P(0:3,*)
+      INTEGER ALLOW_HEL(N_CHANGING*N_COMB)
+      DOUBLE COMPLEX INTER(N_COMB*(N_COMB+1)/2)
+      call %(f2py_prefix)sf77_density(PDGS, NPDG, PROCID, P, POS, N_CHANGING, ALLOW_HEL, N_COMB, ALPHAS, SCALE2, INTER)
 
       return 
       end

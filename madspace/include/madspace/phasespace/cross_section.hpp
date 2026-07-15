@@ -20,12 +20,10 @@ public:
         const nested_vector2<me_int_t>& pid_options = {},
         const std::variant<std::monostate, PdfGrid, CachedPdf>& pdf1 = std::monostate{},
         const std::variant<std::monostate, PdfGrid, CachedPdf>& pdf2 = std::monostate{},
-        bool has_mirror = false,
         bool input_momentum_fraction = true
     );
 
     const nested_vector2<me_int_t>& pid_options() const { return _pid_options; }
-    bool has_mirror() const { return _has_mirror; }
     bool has_pdf(std::size_t pdf_index) const { return _has_pdf.at(pdf_index); }
     const MatrixElement& matrix_element() const { return _matrix_element; }
     const std::optional<RunningCoupling>& running_coupling() const {
@@ -44,7 +42,6 @@ private:
     std::optional<RunningCoupling> _running_coupling;
     double _e_cm;
     std::variant<std::monostate, EnergyScale, CachedScale> _energy_scale;
-    bool _has_mirror;
     bool _input_momentum_fraction;
 };
 

@@ -220,6 +220,14 @@ class TestMatrixElementChecker(unittest.TestCase):
             cmd.exec_cmd('import model sm')
             cmd.exec_cmd('generate %s' % process_line)
             me = helas_objects.HelasMatrixElement(cmd._curr_amps[0])
+            # The SM is imported with flavor grouping, so the light quarks are
+            # merged.  Evaluate at an explicit, valid flavor assignment (all-up:
+            # index 2 for each merged-quark leg, 1 for the non-merged W bosons);
+            # without it the merged-flavor vertices stay unresolved (flavor -1)
+            # and the amplitude is identically zero in every gauge.
+            for leg, flv in zip(me.get('processes')[0].get('legs'),
+                                (2, 2, 1, 1, 2, 2)):
+                leg.set('flavor', [flv])
             evaluator = process_checks.MatrixElementEvaluator(cmd._curr_model, cmd=cmd, reuse=False)
             for particle in evaluator.full_model.get('particles'):
                 if particle.get('width') != 'ZERO':

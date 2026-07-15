@@ -1734,6 +1734,32 @@ def mmin(iter, default=None):
 
 
 ################################################################################
+# MODEL FINGERPRINT
+################################################################################
+def hash_model_files(model_path):
+    """Return an md5 hex digest of the UFO model's python source (the ``*.py``
+    files in ``model_path``). Used to detect that the model on disk still
+    matches the one a process was generated with. Returns None if the path has
+    no python file (or cannot be read)."""
+    import hashlib
+    try:
+        pyfiles = sorted(f for f in os.listdir(model_path) if f.endswith('.py'))
+    except OSError:
+        return None
+    if not pyfiles:
+        return None
+    h = hashlib.md5()
+    for name in pyfiles:
+        h.update(name.encode('utf-8'))
+        try:
+            with open(os.path.join(model_path, name), 'rb') as f:
+                h.update(f.read())
+        except OSError:
+            return None
+    return h.hexdigest()
+
+
+################################################################################
 # TAIL FUNCTION
 ################################################################################
 class digest:

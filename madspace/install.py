@@ -13,6 +13,8 @@ import argparse
 import json
 import os
 import platform
+import re
+import shutil
 import subprocess
 import sys
 import tomllib
@@ -39,23 +41,85 @@ _PLATFORM_SOURCE_DEFAULTS: dict = {
 
 
 # Interactive helpers
+#
+# Prompts are routed through MadGraph's cmd.ask when it is importable, so that
+# non-interactive / scripted runs behave consistently with the rest of MG5
+# (piped stdin, the launcher's -f flag, input command files): the default is
+# taken without blocking instead of hanging on input(). When madgraph is not
+# importable (truly standalone use) we fall back to input(), still honouring
+# the non-interactive flag.
+
+_NONINTERACTIVE = (not sys.stdin.isatty()) or any(
+    a in ("-y", "--yes") for a in sys.argv[1:]
+)
+
+
+def _set_noninteractive(flag: bool) -> None:
+    """Force non-interactive mode (called from main once args are parsed)."""
+    global _NONINTERACTIVE
+    if flag:
+        _NONINTERACTIVE = True
+
+
+class _Prompter:
+    """Ask a question through MG5's cmd.ask when available, else input()."""
+
+    _cmd = False  # False = not tried yet, None = unavailable
+
+    @classmethod
+    def _get_cmd(cls):
+        if cls._cmd is False:
+            try:
+                from madgraph.interface.extended_cmd import Cmd
+                cls._cmd = Cmd()
+            except Exception:
+                cls._cmd = None
+        return cls._cmd
+
+    @classmethod
+    def ask(cls, question: str, default: str, choices=None) -> str:
+        default = str(default)
+        cmd = cls._get_cmd()
+        if cmd is not None:
+            try:
+                ans = cmd.ask(
+                    question, default, choices=list(choices or []),
+                    timeout=0, force=_NONINTERACTIVE,
+                )
+                return default if ans is None else str(ans)
+            except Exception:
+                pass
+        # standalone fallback (no madgraph on path)
+        if _NONINTERACTIVE:
+            return default
+        try:
+            raw = input(f"{question} [{default}]: ").strip()
+        except EOFError:
+            return default
+        return raw if raw else default
+
+
+def _ask(question, default, choices=None) -> str:
+    return _Prompter.ask(question, default, choices)
 
 
 def ask_yes_no(prompt: str, default: bool = True) -> bool:
-    hint = "Y/n" if default else "y/N"
+    default_s = "y" if default else "n"
     while True:
-        raw = input(f"{prompt} [{hint}]: ").strip().lower()
+        raw = _ask(prompt, default_s, choices=["y", "n"]).strip().lower()
         if not raw:
             return default
         if raw in ("y", "yes"):
             return True
         if raw in ("n", "no"):
             return False
+        if _NONINTERACTIVE:
+            return default
         print("  Please enter 'y' or 'n'.")
 
 
 def ask_string(prompt: str, default: str) -> str:
-    raw = input(f"{prompt} [default: {default}]: ").strip()
+    raw = _ask(prompt, default).strip()
     return raw if raw else default
 
 
@@ -128,19 +192,26 @@ def ask_compile_options(
     else:
         hint = "Enter for none"
 
+    def _defaults():
+        # Convert checkbox state back to output values
+        return {ok: (prev[mk] != inv) for mk, _, ok, inv in entries}
+
     while True:
-        raw = input(
-            f"Enter numbers separated by commas/spaces, or press {hint}: "
+        raw = _ask(
+            f"Enter numbers separated by commas/spaces, or press Enter ({hint})", ""
         ).strip()
         if not raw:
-            # Convert checkbox state back to output values
-            return {ok: (prev[mk] != inv) for mk, _, ok, inv in entries}
+            return _defaults()
         try:
             chosen = {int(x) for x in raw.replace(",", " ").split()}
         except ValueError:
+            if _NONINTERACTIVE:
+                return _defaults()
             print("  Invalid input — please enter numbers, e.g. 1,3 or 1 3")
             continue
         if not all(1 <= c <= len(entries) for c in chosen):
+            if _NONINTERACTIVE:
+                return _defaults()
             print(f"  Numbers must be between 1 and {len(entries)}.")
             continue
         return {
@@ -169,20 +240,129 @@ def ask_build_type(saved: dict) -> str:
     for i, (key, label) in enumerate(options, 1):
         marker = " [*]" if key == current else ""
         print(f"  {i}. {label}{marker}")
-    hint = f"Enter to keep {current}" if current != "Release" else "Enter for Release"
+    hint = f"keep {current}" if current != "Release" else "Release"
     while True:
-        raw = input(f"Choose (1-{len(options)}), or press {hint}: ").strip()
+        raw = _ask(f"Choose (1-{len(options)}), or press Enter ({hint})", "").strip()
         if not raw:
             return current
         try:
             idx = int(raw)
         except ValueError:
+            if _NONINTERACTIVE:
+                return current
             print(f"  Please enter a number between 1 and {len(options)}.")
             continue
         if not 1 <= idx <= len(options):
+            if _NONINTERACTIVE:
+                return current
             print(f"  Please enter a number between 1 and {len(options)}.")
             continue
         return options[idx - 1][0]
+
+
+# CMake discovery
+#
+# The source build (scikit-build-core) needs cmake >= 3.15 on PATH. When it is
+# missing (or too old) we fall back to a cmake installed through MadGraph's
+# HEPTools installer (`install cmake` in MG5), which lives next to this package
+# under <MG5>/HEPTools. An explicit MADGRAPH_CMAKE / CMAKE env var wins.
+
+CMAKE_MIN_VERSION = (3, 15)
+
+
+def _cmake_version_ok(path, minimum=CMAKE_MIN_VERSION) -> bool:
+    try:
+        out = subprocess.run(
+            [str(path), "--version"], capture_output=True, text=True, timeout=30
+        ).stdout
+    except Exception:
+        return False
+    m = re.search(r"(\d+)\.(\d+)", out)
+    return bool(m) and (int(m.group(1)), int(m.group(2))) >= minimum
+
+
+def _heptools_dir_from_config() -> str | None:
+    """Read heptools_install_dir from the MG5 configuration files (same
+    locations MG5 itself uses), so the value is available even when the
+    installer is run directly rather than launched from MG5."""
+    home = os.environ.get("HOME") or os.path.expanduser("~")
+    candidates = []
+    if home:
+        candidates.append(os.path.join(home, ".mg5", "mg5_configuration.txt"))
+        xdg = os.environ.get("XDG_CONFIG_HOME", os.path.join(home, ".config"))
+        candidates.append(os.path.join(xdg, "mg5_configuration.txt"))
+    candidates.append(str(SCRIPT_DIR.parent / "input" / "mg5_configuration.txt"))
+    for cfg in candidates:
+        try:
+            with open(cfg) as f:
+                for line in f:
+                    line = line.split("#", 1)[0].strip()
+                    if line.startswith("heptools_install_dir"):
+                        val = line.partition("=")[2].strip()
+                        if val:
+                            if not os.path.isabs(val):
+                                val = os.path.join(str(SCRIPT_DIR.parent), val)
+                            return val
+        except OSError:
+            continue
+    return None
+
+
+def find_cmake() -> str | None:
+    """Return a path to a cmake >= CMAKE_MIN_VERSION, or None."""
+    # 1. explicit override
+    for var in ("MADGRAPH_CMAKE", "CMAKE"):
+        p = os.environ.get(var)
+        if p and _cmake_version_ok(p):
+            return p
+    # 2. system cmake on PATH (ignored if too old)
+    p = shutil.which("cmake")
+    if p and _cmake_version_ok(p):
+        return p
+    # 3. cmake installed via MadGraph's HEPTools installer. The HEPTools
+    #    location is configurable in MG5 (heptools_install_dir); MG5 passes it
+    #    down as MADGRAPH_HEPTOOLS_DIR. Fall back to the default <MG5>/HEPTools.
+    hep_dirs = []
+    env_hep = os.environ.get("MADGRAPH_HEPTOOLS_DIR")
+    if env_hep:
+        hep_dirs.append(Path(env_hep))
+    cfg_hep = _heptools_dir_from_config()
+    if cfg_hep:
+        hep_dirs.append(Path(cfg_hep))
+    hep_dirs.append(SCRIPT_DIR.parent / "HEPTools")
+    seen = set()
+    for heptools in hep_dirs:
+        for pattern in ("cmake/bin/cmake", "bin/cmake", "cmake",
+                        "cmake*/bin/cmake", "*/bin/cmake"):
+            for cand in sorted(heptools.glob(pattern)):
+                cand = cand.resolve()
+                if cand in seen:
+                    continue
+                seen.add(cand)
+                if cand.is_file() and _cmake_version_ok(cand):
+                    return str(cand)
+    return None
+
+
+def add_cmake_to_path(env: dict) -> dict:
+    """Ensure a suitable cmake (and co-located tools such as ninja) is on the
+    PATH of the build environment."""
+    cmake = find_cmake()
+    if cmake:
+        cmake_dir = os.path.dirname(os.path.abspath(cmake))
+        parts = [cmake_dir]
+        if existing := env.get("PATH"):
+            parts.append(existing)
+        env["PATH"] = os.pathsep.join(parts)
+        print(f"Using cmake: {cmake}")
+    else:
+        print(
+            "WARNING: no cmake >= %d.%d found. The source build will likely fail.\n"
+            "  Install one with MG5 ('install cmake'), via your package manager,\n"
+            "  or point to it with MADGRAPH_CMAKE=/path/to/cmake."
+            % CMAKE_MIN_VERSION
+        )
+    return env
 
 
 # Command execution
@@ -223,6 +403,8 @@ def install_build_deps(system: bool = False) -> dict:
         if existing := env.get("PYTHONPATH"):
             pythonpath_parts.append(existing)
         env["PYTHONPATH"] = os.pathsep.join(pythonpath_parts)
+    # make sure the source build can find a recent-enough cmake
+    env = add_cmake_to_path(env)
     return env
 
 
@@ -269,7 +451,8 @@ def main() -> None:
         "--yes",
         action="store_true",
         default=False,
-        help="Re-install non-interactively using saved settings; falls back to built-in defaults.",
+        help="Non-interactive: accept defaults / reuse saved settings, no prompts. "
+        "Combine with --source/--bin to force the install mode.",
     )
     parser.add_argument(
         "--system",
@@ -362,17 +545,19 @@ def main() -> None:
     # None = not provided by user; overridden by set_defaults below
     parser.set_defaults(cuda=None, hip=None, openblas=None, simd=None, build_type=None)
     args = parser.parse_args()
+    _set_noninteractive(args.yes)
 
     # Load saved settings when a previous installation is present
     saved = load_settings() if (INSTALL_DIR / "madspace").is_dir() else {}
 
-    # Determine install mode
-    if args.yes:
-        from_source = saved.get("mode", "bin") == "source"
-    elif args.bin:
+    # Determine install mode. An explicit --bin/--source always wins; --yes
+    # alone reuses the saved mode (built-in default otherwise).
+    if args.bin:
         from_source = False
     elif args.source:
         from_source = True
+    elif args.yes:
+        from_source = saved.get("mode", "bin") == "source"
     else:
         print("Welcome to the MadSpace interactive installer")
         print()

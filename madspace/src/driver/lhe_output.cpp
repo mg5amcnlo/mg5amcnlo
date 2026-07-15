@@ -36,7 +36,7 @@ void LHEEvent::format_to(std::string& buffer) const {
     for (auto particle : particles) {
         std::format_to(
             insert_iter,
-            "{:4} {:4} {:4} {:4} {:4} {:4} {:+.10e} {:+.10e} {:+.10e} {:.10e} {:.10e} "
+            "{:4} {:4} {:4} {:4} {:4} {:4} {:+.16e} {:+.16e} {:+.16e} {:.16e} {:.16e} "
             "{:.4e} {:+.4e}\n",
             particle.pdg_id,
             particle.status_code,
@@ -206,7 +206,13 @@ LHECompleter::LHECompleter(
                             .mass = decay.mass,
                             .width = decay.width,
                         });
-                        int color_type = args.pdg_color_types.at(decay.pdg_id);
+                        int color_type;
+                        if (auto search = args.pdg_color_types.find(decay.pdg_id);
+                            search != args.pdg_color_types.end()) {
+                            color_type = search->second;
+                        } else {
+                            color_type = 1;
+                        }
                         for (std::size_t i = 0; std::size_t color_index : colors) {
                             decay_colors.clear();
                             decay_anti_colors.clear();

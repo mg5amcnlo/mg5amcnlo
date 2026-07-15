@@ -325,6 +325,7 @@ def sfdxxx(p,nss):
 
     sc[0] = complex(p[0]*nss,p[3]*nss)
     sc[1] = complex(p[1]*nss,p[2]*nss)
+    sc.momenta = [p[0]*nss, p[1]*nss, p[2]*nss, p[3]*nss]
     sc[6] = complex(1.,0.)
     return sc
 
@@ -354,20 +355,45 @@ def multiply_propagator_factor(win, m):
     """apply the FD gauge propagator projector"""
 
     wout = WaveFunction(size=7)
-    wout[0] = win[0]
-    wout[1] = win[1]
+
+    # Resolve the four-momentum of the incoming (off-shell) wavefunction.
+    # The two momentum representations are populated inconsistently across
+    # ALOHA routines: external FD wavefunctions (vfdxxxx / sfdxxx) fill the
+    # packed complex slots win[0]/win[1] but leave .momenta at zero, whereas
+    # off-shell ALOHA outputs (FFV.../VVV... routines) fill .momenta but leave
+    # the packed slots at zero.  Reading only the packed slots therefore gave
+    # q == 0 (hence n.q == 0 and a ZeroDivisionError) for every
+    # internally-produced wavefunction -- in particular the null wavefunction a
+    # merged-particle (M) routine returns on an invalid / unresolved flavor
+    # combination.  Fall back between the two representations so the propagator
+    # always sees the real momentum.
+    if any(win.momenta):
+        mom = list(win.momenta)
+    else:
+        mom = [win[0].real, win[1].real, win[1].imag, win[0].imag]
 
     q = [0j] * 5
-    q[0] = complex(-win[0].real, 0.)
-    q[1] = complex(-win[1].real, 0.)
-    q[2] = complex(-win[1].imag, 0.)
-    q[3] = complex(-win[0].imag, 0.)
+    q[0] = complex(-mom[0], 0.)
+    q[1] = complex(-mom[1], 0.)
+    q[2] = complex(-mom[2], 0.)
+    q[3] = complex(-mom[3], 0.)
     q[4] = -1j * m
+
+    # Propagate the momentum (in both representations) and the flavor to the
+    # output so downstream propagators / .momenta consumers keep working.
+    wout.momenta = mom
+    wout[0] = complex(mom[0], mom[3])
+    wout[1] = complex(mom[1], mom[2])
+    wout.flavor = win.flavor
 
     n = define_gauge_dir(q)
     w0 = list(win[2:7])
 
     nq = n[0] * q[0].real - n[1] * q[1].real - n[2] * q[2].real - n[3] * q[3].real
+    if nq == 0:
+        # Genuinely zero momentum (never a real propagator); nothing to project.
+        return wout
+
     js1 = (n[0] * w0[0] - n[1] * w0[1] - n[2] * w0[2] - n[3] * w0[3]) / nq
     js2 = (q[0] * w0[0] - q[1] * w0[1] - q[2] * w0[2] - q[3] * w0[3] - q[4].conjugate() * w0[4]) / nq
 
@@ -384,6 +410,11 @@ def vfdxxxx(p,vmass,nhel,nsv):
 
     for i in range(6):
         vcfd[i] = vc[i]
+    # vxxxxx sets .momenta but the size-6 -> size-7 copy above only carries the
+    # packed slots; propagate .momenta too so routines that read it (e.g. the
+    # massless propagator denominator built from summed .momenta) get the real
+    # momentum instead of zero.
+    vcfd.momenta = list(vc.momenta)
 
     if vmass != 0.:
         pt2 = p[1]**2 + p[2]**2

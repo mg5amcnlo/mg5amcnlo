@@ -506,6 +506,7 @@ jobs:
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v5
+      - uses: ./.github/actions/restore_ufomodel
 
       # Runs a set of commands using the runners shell
       - name: test one of the test test_generate_helas_diagrams_WWWWA test_generate_helas_diagrams_WWZA test_generate_helas_diagrams_ea_ae test_generate_helas_diagrams_enu_enu test_generate_helas_diagrams_epem_elpelmepem test_generate_helas_diagrams_gb_t1go_tttxn1x1m test_generate_helas_diagrams_gg_gg test_generate_helas_diagrams_gg_gogo test_generate_helas_diagrams_uu_susu test_generate_helas_diagrams_uu_susug test_generate_helas_diagrams_uux_gepem_no_optimization test_generate_helas_diagrams_uux_uuxuux test_generate_helas_diagrams_zz_n1n1 test_generate_ufo_helas_diagrams_gg_gogo test_get_color_pdg_antipdg test_helas_diagrams_gg_gogo_go_tt1x_t_wpb test_majorana_conjugate_process test_matrix_4g_decay_chain_process test_matrix_multistage_decay_chain_process test_multiple_lorentz_structures test_multiple_lorentz_structures_with_decay_chain test_multiple_lorentz_structures_with_decay_chain_and_fermion_flow test_multiple_lorentz_structures_with_fermion_flow_clash test_vector_clash_majorana_process test_madevent_template_uses_decay_aware_broken_symmetry_metadata
@@ -623,6 +624,27 @@ jobs:
             ./tests/test_manager.py test_level_with_flipping_triangle test_loop_convert_diagram test_loadingLoopToyModel test_get_aloha_input test_get_analytic_info test_helas_diagrams_ddx_uux test_helas_diagrams_dxd_gz test_helas_diagrams_gd_gd test_helas_diagrams_gd_ggd test_helas_diagrams_gg_gg test_helas_diagrams_gg_ggg test_helas_diagrams_gg_wpwmttx test_helas_diagrams_ud_ggdu test_startfromalpha0_attribute -t0
 
 
+
+  unittest_density_29:
+    # The type of runner that the job will run on
+    runs-on: ubuntu-24.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/restore-pip-cache
+
+      # Runs a set of commands using the runners shell
+      - name: test one of the test test_utilities test_DensityMatrixObservables test_DensityMatrixObservables22 test_DensityMatrixObservables23 test_DensityMatrixObservables33
+        run: |
+            cd $GITHUB_WORKSPACE
+            sudo pip install scipy
+            ./tests/test_manager.py test_DensityMatrixObservables test_DensityMatrixObservables22 test_DensityMatrixObservables23 test_DensityMatrixObservables33 test_utilities -t0
+
+
+
   unittest_new_coverage:
     # New unit tests added in 3.7.1: q_polynomial and hepmc_parser
     runs-on: ubuntu-24.04
@@ -682,7 +704,7 @@ jobs:
       - name: process_checks unit tests not previously covered
         run: |
             cd $GITHUB_WORKSPACE
-            ./tests/test_manager.py test_check_flavor_qqbar_to_tt test_check_flavor_qqbar_to_zg test_check_language_function_epem_aa test_check_language_gg_ttx_cpp_ps_point test_check_language_proclist_merged_expansion test_output_flavor_summary test_parse_sa_output_flavor_selection test_python_vs_cpp_epem_aa test_python_vs_fortran_epem_aa -t0
+            ./tests/test_manager.py test_check_flavor_qqbar_to_tt test_check_flavor_qqbar_to_zg test_check_language_function_epem_aa test_check_language_gg_ttx_cpp_ps_point test_check_language_proclist_merged_expansion test_fd_python_value_matches_unitary_fixed_point test_output_flavor_summary test_parse_sa_output_flavor_selection test_python_vs_cpp_epem_aa test_python_vs_fortran_epem_aa -t0
 
 
   unittest_32:

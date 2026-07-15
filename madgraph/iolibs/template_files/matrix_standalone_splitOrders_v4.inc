@@ -501,7 +501,8 @@ CF2PY INTENT(IN) :: JAMP_2(NCOLOR,NAMPSO)
        PARAMETER (NCOLOR=%(ncolor)d)
        INTEGER CF_INDEX
        INTEGER %(proc_prefix)sCF(NCOLOR*(NCOLOR+1)/2)
-       INTEGER %(proc_prefix)sDENOM
+       INTEGER %(proc_prefix)sDENOM, IDEN
+       %(den_factor_line)s
        common /%(proc_prefix)scolor_matrix/ %(proc_prefix)sCF,%(proc_prefix)sDENOM
        COMPLEX*16 JAMP_1(NCOLOR,NAMPSO),JAMP_2(NCOLOR,NAMPSO),ZTEMP,INTER(NSQAMPSO)
 C
@@ -523,11 +524,11 @@ C
            ENDDO
         ENDDO
       ENDDO
-      INTER(:) = INTER(:)/(2d0*%(proc_prefix)sDENOM)
+      INTER(:) = INTER(:)/(2d0*%(proc_prefix)sDENOM*IDEN)
       RETURN
       END
 
-     SUBROUTINE  %(proc_prefix)sGET_DENSITY(P, POS, N_CHANGING, ALLOW_HEL, N_COMB, FLAVOR, ALPHAS, INTER_SUM)
+     SUBROUTINE  %(proc_prefix)sGET_DENSITY(P, POS, N_CHANGING, ALLOW_HEL, N_COMB, FLAVOR, ALPHAS, MU_R2, INTER_SUM)
 c     P momenta
 c     NHEL base of helicity that are not changing
 c     POS(N_CHNGING): position of the changing helicity
@@ -563,7 +564,7 @@ C
       INTEGER ALLOW_HEL(*)
       INTEGER FLAVOR(NEXTERNAL)
       DOUBLE COMPLEX, ALLOCATABLE :: TMP_INTER(:,:)
-      DOUBLE PRECISION ALPHAS
+      DOUBLE PRECISION ALPHAS, MU_R2
       DOUBLE COMPLEX INTER_SUM(*)
 c LOCAL
       INTEGER I,IHEL,IPART

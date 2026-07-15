@@ -50,6 +50,7 @@ public:
     const NamedVector<Type>& output_types() const { return _output_types; }
     const NamedVector<Type>& condition_types() const { return _condition_types; }
     const std::string& name() const { return _name; }
+    virtual std::size_t discrete_dim() const { return 0; }
 
 protected:
     // TODO: make parameters const ref

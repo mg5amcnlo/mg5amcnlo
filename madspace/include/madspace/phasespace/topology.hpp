@@ -73,6 +73,7 @@ public:
         double e_max;
         int pdg_id;
         bool on_shell;
+        bool on_shell_boundary;
     };
 
     static std::vector<Topology> topologies(const Diagram& diagram);
@@ -99,6 +100,7 @@ public:
     const std::vector<double>& outgoing_masses() const { return _outgoing_masses; }
     std::vector<std::tuple<std::vector<int>, double, double>>
     propagator_momentum_terms(bool only_decays = false) const;
+    std::string to_string() const;
 
 private:
     Topology() = default;

@@ -4,8 +4,25 @@
 
 using namespace madspace;
 
+double TPropagatorMapping::pt2(std::size_t i) const {
+    double p = (i < _pt_min.size()) ? _pt_min.at(i) : 0.0;
+    return p * p;
+}
+
+// Only engage the cut kernel when there is an actual pt cut.
+static bool has_pt_cut(const std::vector<double>& pt_min) {
+    for (double p : pt_min) {
+        if (p > 0.0) {
+            return true;
+        }
+    }
+    return false;
+}
+
 TPropagatorMapping::TPropagatorMapping(
-    const std::vector<std::size_t>& integration_order, double invariant_power
+    const std::vector<std::size_t>& integration_order,
+    double invariant_power,
+    const std::vector<double>& pt_min
 ) :
     Mapping(
         "TPropagatorMapping",
@@ -32,8 +49,10 @@ TPropagatorMapping::TPropagatorMapping(
         }()
     ),
     _integration_order(integration_order),
-    _com_scattering(true, invariant_power),
-    _lab_scattering(false, invariant_power) {
+    _pt_min(pt_min),
+    _has_cut(has_pt_cut(pt_min)),
+    _com_scattering(true, invariant_power, 0., 0., has_pt_cut(pt_min)),
+    _lab_scattering(false, invariant_power, 0., 0., has_pt_cut(pt_min)) {
     std::size_t next_index_low = 0;
     std::size_t next_index_high = integration_order.size() - 1;
     for (std::size_t index : integration_order) {
@@ -99,6 +118,17 @@ Mapping::Result TPropagatorMapping::build_forward_impl(
     p_ext.at(1) = p2;
     auto p1_rest = p1, p2_rest = p2;
 
+    auto etmin_particle = [&](std::size_t j) {
+        return fb.sqrt(fb.add(fb.square(m_out.at(j)), Value(pt2(j))));
+    };
+    Value total_etmin = Value(0.0), running_etmin = Value(0.0);
+    if (_has_cut) {
+        total_etmin = etmin_particle(0);
+        for (std::size_t j = 1; j < m_out.size(); ++j) {
+            total_etmin = fb.add(total_etmin, etmin_particle(j));
+        }
+    }
+
     // sample t-invariants and build momenta of t-channel part of the diagram
     Value k_rest;
     bool first = true;
@@ -108,10 +138,15 @@ Mapping::Result TPropagatorMapping::build_forward_impl(
         first = false;
         std::size_t sampled_index = index + side;
         auto mass = m_out.at(sampled_index);
+        ValueVec cond{side ? p1_rest : p2_rest, side ? p2_rest : p1_rest};
+        if (_has_cut) {
+            Value etmin_peeled = etmin_particle(sampled_index);
+            running_etmin = fb.add(running_etmin, etmin_peeled);
+            cond.push_back(fb.sub(total_etmin, running_etmin)); // etmin_1 (recoil)
+            cond.push_back(etmin_peeled);                       // etmin_2 (peeled)
+        }
         auto ks = scattering.build_forward(
-            fb,
-            {next_random(), next_random(), mass_sum, mass},
-            {side ? p1_rest : p2_rest, side ? p2_rest : p1_rest}
+            fb, {next_random(), next_random(), mass_sum, mass}, cond
         );
         k_rest = ks.at(0);
         auto k = ks.at(1);
@@ -181,6 +216,18 @@ Mapping::Result TPropagatorMapping::build_inverse_impl(
         }
     }
 
+    // ETmin per particle (see forward); Only built when cuts are active.
+    auto etmin_particle = [&](std::size_t j) {
+        return fb.sqrt(fb.add(fb.square(m_out.at(j)), Value(pt2(j))));
+    };
+    Value total_etmin = Value(0.0), running_etmin = Value(0.0);
+    if (_has_cut) {
+        total_etmin = etmin_particle(0);
+        for (std::size_t j = 1; j < m_out.size(); ++j) {
+            total_etmin = fb.add(total_etmin, etmin_particle(j));
+        }
+    }
+
     // sample t-invariants and build momenta of t-channel part of the diagram
     Value k_rest = fb.add(inputs.at(0), inputs.at(1));
     Value p1_rest = inputs.at(0), p2_rest = inputs.at(1);
@@ -192,9 +239,14 @@ Mapping::Result TPropagatorMapping::build_inverse_impl(
         auto mass = m_out.at(sampled_index);
         auto k = inputs.at(sampled_index + 2);
         k_rest = fb.sub(k_rest, k);
-        auto rs = scattering.build_inverse(
-            fb, {k_rest, k}, {side ? p1_rest : p2_rest, side ? p2_rest : p1_rest}
-        );
+        ValueVec cond{side ? p1_rest : p2_rest, side ? p2_rest : p1_rest};
+        if (_has_cut) {
+            Value etmin_peeled = etmin_particle(sampled_index);
+            running_etmin = fb.add(running_etmin, etmin_peeled);
+            cond.push_back(fb.sub(total_etmin, running_etmin)); // etmin_1 (recoil)
+            cond.push_back(etmin_peeled);                       // etmin_2 (peeled)
+        }
+        auto rs = scattering.build_inverse(fb, {k_rest, k}, cond);
         random_out.push_back(rs.at(0));
         random_out.push_back(rs.at(1));
         dets.push_back(rs["det"]);

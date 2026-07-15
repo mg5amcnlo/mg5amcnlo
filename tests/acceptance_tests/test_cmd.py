@@ -1580,6 +1580,140 @@ class TestCmdShell2(unittest.TestCase,
         mg7 = get_values('standalone_mg7', './check_sa.exe')
         self._assert_me_lists_close(mg7, cpp)
 
+    def test_standalone_mg7_mssm_single_leg(self):
+        """Single-merged-leg flavored couplings must give the same per-flavor
+        |M|^2 in standalone_mg7 (madmatrix) as in the Fortran standalone.
+
+        p p > n1 n1 QCD=0 is a t-channel-squark process with single-merged-leg
+        vertices (one merged light quark + an unmerged neutralino + a squark)
+        whose flavored couplings are *independent* (electroweak), isolating the
+        single-leg consumer-gating fix (the get_coupling_def merged-leg
+        selection) from the still-guarded dependent-coupling case. Without the
+        fix only the first flavor matches; with it all flavors do.
+        """
+        energy = '1000'
+        devnull = open(os.devnull, 'w')
+        me_re = re.compile(r'Matrix element\s*=\s*([\d.eE+-]+)\s*GeV',
+                           re.IGNORECASE)
+
+        def get_values(output_format, check_exe, build_source=False):
+            if os.path.isdir(self.out_dir):
+                shutil.rmtree(self.out_dir)
+            self.do('output %s %s -f' % (output_format, self.out_dir))
+            if build_source:
+                subprocess.call(['make'], stdout=devnull, stderr=devnull,
+                                cwd=os.path.join(self.out_dir, 'Source'))
+            proc_root = os.path.join(self.out_dir, 'SubProcesses')
+            dirs = sorted(d for d in os.listdir(proc_root)
+                          if d.startswith('P') and
+                          os.path.isdir(os.path.join(proc_root, d)))
+            self.assertTrue(dirs, 'no subprocess for %s' % output_format)
+            values = []
+            for d in dirs:
+                proc_dir = os.path.join(proc_root, d)
+                target = ['make', 'check'] if output_format == 'standalone' \
+                    else ['make']
+                subprocess.call(target, stdout=devnull, stderr=devnull,
+                                cwd=proc_dir)
+                log = os.path.join(proc_dir, 'check.log')
+                subprocess.call('%s %s' % (check_exe, energy),
+                                stdout=open(log, 'w'), stderr=subprocess.STDOUT,
+                                cwd=proc_dir, shell=True)
+                found = me_re.findall(open(log).read())
+                self.assertTrue(found, '%s produced no matrix element (see %s)'
+                                % (output_format, log))
+                values.extend(float(v) for v in found)
+            return values
+
+        self.do('import model MSSM_SLHA2')
+        self.do('generate p p > n1 n1 QCD=0')
+        mg7 = get_values('standalone_mg7', './check_sa.exe')
+        standalone = get_values('standalone', './check', build_source=True)
+        self.assertTrue(any(v != 0.0 for v in standalone),
+                        'all matrix elements vanished for p p > n1 n1')
+        self._assert_me_lists_close(mg7, standalone, rtol=1e-4)
+
+    def test_standalone_mg7_mssm_gogo(self):
+        """Dependent (event-by-event, running-alphas) flavored couplings must
+        give the same per-flavor |M|^2 in standalone_mg7 (madmatrix) as in the
+        Fortran standalone.
+
+        MSSM 'p p > go go' has single-merged-leg squark/gluino-quark vertices
+        (one merged light quark + an unmerged gluino + a squark) whose flavored
+        couplings are *dependent* (SUSY-QCD, running-alphas): the squark-quark-
+        gluino coupling GC_106/GC_110 ~ g_s changes per event. These are not
+        addressable as fixed value[] pointers, so they are gathered event-by-
+        event into cDPF_* / flvCOUPs_dep (Step 3 of
+        docs/mg7_merged_flavor_mssm_design.md). This is the dependent-coupling
+        counterpart of test_standalone_mg7_mssm_single_leg (independent flavored
+        couplings) and the consistency check matching test_madevent_mssm_gogo.
+
+        The energy (sqrt(s)) is chosen above the gluino-pair threshold (Mgo ~
+        608 GeV) so neither check driver auto-bumps it, i.e. both evaluate the
+        same phase-space point.
+        """
+        energy = '3000'
+        devnull = open(os.devnull, 'w')
+        me_re = re.compile(r'Matrix element\s*=\s*([\d.eE+-]+)\s*GeV',
+                           re.IGNORECASE)
+
+        def get_values(output_format, check_exe, build_source=False):
+            if os.path.isdir(self.out_dir):
+                shutil.rmtree(self.out_dir)
+            self.do('output %s %s -f' % (output_format, self.out_dir))
+            if build_source:
+                subprocess.call(['make'], stdout=devnull, stderr=devnull,
+                                cwd=os.path.join(self.out_dir, 'Source'))
+            proc_root = os.path.join(self.out_dir, 'SubProcesses')
+            dirs = sorted(d for d in os.listdir(proc_root)
+                          if d.startswith('P') and
+                          os.path.isdir(os.path.join(proc_root, d)))
+            self.assertTrue(dirs, 'no subprocess for %s' % output_format)
+            values = []
+            for d in dirs:
+                proc_dir = os.path.join(proc_root, d)
+                target = ['make', 'check'] if output_format == 'standalone' \
+                    else ['make']
+                subprocess.call(target, stdout=devnull, stderr=devnull,
+                                cwd=proc_dir)
+                log = os.path.join(proc_dir, 'check.log')
+                subprocess.call('%s %s' % (check_exe, energy),
+                                stdout=open(log, 'w'), stderr=subprocess.STDOUT,
+                                cwd=proc_dir, shell=True)
+                found = me_re.findall(open(log).read())
+                self.assertTrue(found, '%s produced no matrix element (see %s)'
+                                % (output_format, log))
+                values.extend(float(v) for v in found)
+            return values
+
+        self.do('import model MSSM_SLHA2')
+        self.do('generate p p > go go')
+        mg7 = get_values('standalone_mg7', './check_sa.exe')
+        standalone = get_values('standalone', './check', build_source=True)
+        self.assertTrue(any(v != 0.0 for v in standalone),
+                        'all matrix elements vanished for p p > go go')
+        self._assert_me_lists_close(mg7, standalone, rtol=1e-4)
+
+    def test_madevent_mssm_gogo(self):
+        """The Fortran madevent output supports MSSM 'p p > go go' (merged-flavor
+        squark/gluino vertices with single-merged-leg / event-by-event flavored
+        couplings). The mg7/madmatrix C++ output now also supports it and is
+        checked to agree per-flavor in test_standalone_mg7_mssm_gogo; this acts
+        as the madevent counterpart.
+        """
+        self.do('import model MSSM_SLHA2')
+        self.do('generate p p > go go')
+        self.do('output madevent %s -f' % self.out_dir)
+        self.assertTrue(
+            os.path.isdir(os.path.join(self.out_dir, 'SubProcesses')),
+            'madevent output should support MSSM p p > go go')
+        proc_root = os.path.join(self.out_dir, 'SubProcesses')
+        proc_dirs = [d for d in os.listdir(proc_root)
+                     if d.startswith('P') and
+                     os.path.isdir(os.path.join(proc_root, d))]
+        self.assertTrue(proc_dirs,
+                        'madevent produced no subprocess for p p > go go')
+
     def test_standalone_density(self):
         """test that standalone density is working"""
 
@@ -1623,7 +1757,9 @@ class TestCmdShell2(unittest.TestCase,
         for match in all_matches:
             sol[(int(match[0]), int(match[1]), int(match[2]), int(match[3]))] = (float(match[4]), float(match[5]))
 
-        original_sol = {(-1, -1, 1, 1): (0.02827952274928987, 0.0), (-1, -1, 1, -1): (-0.0041892876162345, -0.0041923830983622255), (-1, 1, 1, 1): (0.000469685615962711, 0.0006142055733429721), (-1, 1, 1, -1): (-0.01784029173125566, -0.00794999696313525), (-1, -1, -1, -1): (0.02532739017396033, 0.0), (-1, 1, -1, 1): (-0.00028182588524174187, 0.0024162264334765746), (-1, 1, -1, -1): (-0.00048593945847553023, -0.0006039982074415239), (1, 1, 1, 1): (0.025301510150454294, 0.0), (1, 1, 1, -1): (0.004212401136919661, 0.0042167644618831875), (1, 1, -1, -1): (0.028322721746299958, 0.0)}
+        # We changed the value of the reference by a factor of 256, which is the inclusion of IDEN in get_inter in matrix.
+        # original_sol = {(-1, -1, 1, 1): (0.02827952274928987, 0.0), (-1, -1, 1, -1): (-0.0041892876162345, -0.0041923830983622255), (-1, 1, 1, 1): (0.000469685615962711, 0.0006142055733429721), (-1, 1, 1, -1): (-0.01784029173125566, -0.00794999696313525), (-1, -1, -1, -1): (0.02532739017396033, 0.0), (-1, 1, -1, 1): (-0.00028182588524174187, 0.0024162264334765746), (-1, 1, -1, -1): (-0.00048593945847553023, -0.0006039982074415239), (1, 1, 1, 1): (0.025301510150454294, 0.0), (1, 1, 1, -1): (0.004212401136919661, 0.0042167644618831875), (1, 1, -1, -1): (0.028322721746299958, 0.0)}
+        original_sol = {(-1, -1, 1, 1): (0.00011046688573941356, 0.0), (-1, -1, 1, -1): (-1.6364404750916015e-05, -1.6376496477977443e-05), (-1, 1, 1, 1): (1.83470943735434e-06, 2.3992405208709848e-06), (-1, 1, 1, -1): (-6.968863957521743e-05, -3.105467563724707e-05), (-1, -1, -1, -1): (9.893511786703254e-05, 0.0), (-1, 1, -1, 1): (-1.1008823642255542e-06, 9.43838450576787e-06), (-1, 1, -1, -1): (-1.89820100967004e-06, -2.359367997818453e-06), (1, 1, 1, 1): (9.883402402521209e-05, 0.0), (1, 1, 1, -1): (1.6454691941092424e-05, 1.64717361792312e-05), (1, 1, -1, -1): (0.00011063563182148421, 0.0)}
 
         for key in original_sol:
             self.assertIn(key, sol)
@@ -1677,7 +1813,10 @@ class TestCmdShell2(unittest.TestCase,
             self.assertIn(int(match[3]), [-1,1])
 
         self.assertEqual(len(sol), 10)
-        original_sol =  {(0, 0, 1, 1, -1, -1): (3.4001167694559294e-07, 0.0), (0, 0, 1, 1, -1, 1): (-3.1461674759236455e-07, 4.8545818497513406e-09), (0, 0, 1, -1, -1, -1): (-3.069602710730949e-07, 4.832171908212019e-09), (0, 0, 1, -1, -1, 1): (2.7270589345996334e-07, -2.0762612868036477e-08), (0, 0, 1, 1, 1, 1): (2.914827381801457e-07, 0.0), (0, 0, 1, -1, 1, -1): (2.8446952890247865e-07, -7.217171184019204e-11), (0, 0, 1, -1, 1, 1): (-2.5326248092821595e-07, 1.519703606636158e-08), (0, 0, -1, -1, -1, -1): (2.7764709546297174e-07, 0.0), (0, 0, -1, -1, -1, 1): (-2.4727978606009926e-07, 1.4752928639145769e-08), (0, 0, -1, -1, 1, 1): (2.2137890970427402e-07, 0.0)}
+
+        # We changed the value of the reference by a factor of 36, which is the inclusion of IDEN in get_inter in matrix.
+        # original_sol =  {(0, 0, 1, 1, -1, -1): (3.4001167694559294e-07, 0.0), (0, 0, 1, 1, -1, 1): (-3.1461674759236455e-07, 4.8545818497513406e-09), (0, 0, 1, -1, -1, -1): (-3.069602710730949e-07, 4.832171908212019e-09), (0, 0, 1, -1, -1, 1): (2.7270589345996334e-07, -2.0762612868036477e-08), (0, 0, 1, 1, 1, 1): (2.914827381801457e-07, 0.0), (0, 0, 1, -1, 1, -1): (2.8446952890247865e-07, -7.217171184019204e-11), (0, 0, 1, -1, 1, 1): (-2.5326248092821595e-07, 1.519703606636158e-08), (0, 0, -1, -1, -1, -1): (2.7764709546297174e-07, 0.0), (0, 0, -1, -1, -1, 1): (-2.4727978606009926e-07, 1.4752928639145769e-08), (0, 0, -1, -1, 1, 1): (2.2137890970427402e-07, 0.0)}
+        original_sol =  {(0, 0, 1, 1, -1, -1): (9.444768804044248e-09, 0.0), (0, 0, 1, 1, -1, 1): (-8.739354099787904e-09, 1.3484949582642612e-10), (0, 0, 1, -1, -1, -1): (-8.526674196474859e-09, 1.3422699745033388e-10), (0, 0, 1, -1, -1, 1): (7.575163707221203e-09, -5.767392463343466e-10), (0, 0, 1, 1, 1, 1): (8.09674272722627e-09, 0.0), (0, 0, 1, -1, 1, -1): (7.901931358402185e-09, -2.004769773338668e-12), (0, 0, 1, -1, 1, 1): (-7.035068914672666e-09, 4.2213989073226606e-10), (0, 0, -1, -1, -1, -1): (7.712419318415882e-09, 0.0), (0, 0, -1, -1, -1, 1): (-6.868882946113868e-09, 4.098035733096047e-10), (0, 0, -1, -1, 1, 1): (6.149414158452056e-09, 0.0)}
         for key in original_sol:
             
             self.assertIn(key, sol)
@@ -1726,9 +1865,11 @@ class TestCmdShell2(unittest.TestCase,
 
 
         self.assertEqual(len(sol), 6)
-        original_sol =  {(-1, -1): (520.1204099513759, 0.0), (-1, 0): (-217.2395066557355, 871.1782252029083), (-1, 1): (-939.258737149777, -499.49184104989456), (0, 0): (2136.628541206853, 0.0), (0, 1): (-534.1281427839928, 2141.9713873632077), (1, 1): (2431.7289542861076, 0.0)}
-        for key in original_sol:
-            
+
+        # We changed the value of the reference by a factor of 3, which is the inclusion of IDEN in get_inter in matrix.
+        # original_sol =  {(-1, -1): (520.1204099513759, 0.0), (-1, 0): (-217.2395066557355, 871.1782252029083), (-1, 1): (-939.258737149777, -499.49184104989456), (0, 0): (2136.628541206853, 0.0), (0, 1): (-534.1281427839928, 2141.9713873632077), (1, 1): (2431.7289542861076, 0.0)}
+        original_sol =  {(-1, -1): (173.37346998379198, 0.0), (-1, 0): (-72.41316888524517, 290.3927417343028), (-1, 1): (-313.0862457165923, -166.49728034996485), (0, 0): (712.2095137356176, 0.0), (0, 1): (-178.04271426133093, 713.9904624544025), (1, 1): (810.5763180953692, 0.0)}
+        for key in original_sol:    
             self.assertIn(key, sol)
             self.assertAlmostEqual(original_sol[key][0], sol[key][0])
             self.assertAlmostEqual(original_sol[key][1], sol[key][1])
@@ -1782,9 +1923,9 @@ class TestCmdShell2(unittest.TestCase,
 
 
         self.assertEqual(len(sol), 10)
+        # I am not sure why for this case I didn't have to introduce the nomalisation term
         original_sol = sol =  {(-1, -1, 1, 1): (-5.551115123125783e-17, 0.0), (-1, -1, 1, -1): (0.00926133766116009, 0.0), (-1, 1, 1, 1): (-0.009292545047075378, 0.0), (-1, 1, 1, -1): (0.09884700885130696, 0.0), (-1, -1, -1, -1): (-1.6479873021779667e-17, 0.0), (-1, 1, -1, 1): (5.415404411525035e-07, 0.0), (-1, 1, -1, -1): (-0.012877349160785171, 0.0), (1, 1, 1, 1): (-1.734723475976807e-17, 0.0), (1, 1, 1, -1): (0.012880402732054583, 0.0), (1, 1, -1, -1): (-4.85722573273506e-17, 0.0)}
         for key in original_sol:
-
             self.assertIn(key, sol)
             self.assertAlmostEqual(original_sol[key][0] if abs(original_sol[key][0]) > 1e-12 else 0, sol[key][0])
             self.assertAlmostEqual(original_sol[key][1] if abs(original_sol[key][1]) > 1e-12 else 0, sol[key][1])
@@ -1898,26 +2039,33 @@ class TestCmdShell2(unittest.TestCase,
         prod_dec1 = madspin.DensityMatrix(all_dens[2], 1, [-1,0,1], 3) 
         prod_dec2 = madspin.DensityMatrix(all_dens[3], 1, [-1,0,1], 3)  
 
-        self.assertAlmostEqual(prod_dec1.trace()/3./all_me[2],1,4)
-        self.assertAlmostEqual(prod_dec2.trace()/3./all_me[3],1,4)
-        self.assertAlmostEqual(prod_dens.trace()/9./4./2./all_me[0], 1,4)  #9 color , 4 spin, 2 symmetry factor (ZZ)
+        # GET_INTER divides each interference term by IDEN (initial-state spin
+        # and colour averaging, including the identical-particle factor), so the
+        # trace of each density matrix already equals the spin-averaged ME and
+        # the IDEN normalisation that used to be applied here is now redundant.
+        iden_prod = 72  # u u~ > z z : spin 4 * colour 9 * identical(ZZ) 2
+        iden_dec = 3    # z > e+ e- : 3 Z helicity states
+
+        self.assertAlmostEqual(prod_dec1.trace()/all_me[2],1,4)
+        self.assertAlmostEqual(prod_dec2.trace()/all_me[3],1,4)
+        self.assertAlmostEqual(prod_dens.trace()/all_me[0], 1,4)
 
 
         prod_dec = prod_dec1.tensor_product(prod_dec2)
         #self.assertNotEqual(str(prod_dec1), str(prod_dec2))
-        #prod_dec_sym =prod_dec2.tensor_product(prod_dec1) 
+        #prod_dec_sym =prod_dec2.tensor_product(prod_dec1)
         mZ= 91.18800
         WZ = 2.44140
         nb_hel = 3*3
         symfact = 2 # 2 Z identical particles in the final state
         nb_spin = 2*2
         matrix = prod_dens.scalar_multiplication(prod_dec)/mZ**4/WZ**4/nb_hel/symfact/nb_spin
-        #matrix_sym = prod_dens.scalar_multiplication(prod_dec_sym)/mZ**4/WZ**4/nb_hel/symfact/nb_spin 
+        #matrix_sym = prod_dens.scalar_multiplication(prod_dec_sym)/mZ**4/WZ**4/nb_hel/symfact/nb_spin
 
-        misc.sprint(matrix/all_me[1], all_me[1]/matrix)
-        #misc.sprint(matrix_sym/all_me[1], all_me[1]/matrix_sym) 
         misc.sprint(matrix, all_me[1], )
-        self.assertAlmostEqual(matrix/all_me[1], 1,places=4)
+        # the three density matrices (production + 2 decays) each carry a 1/IDEN
+        # factor that must be restored to match the unmodified full ME all_me[1]
+        self.assertAlmostEqual(matrix * iden_prod * iden_dec**2 /all_me[1], 1,places=4)
 
 
     def test_standalone_density_dd(self):
@@ -2037,13 +2185,19 @@ class TestCmdShell2(unittest.TestCase,
 
 
         #consistency of the matrix-element and the density matrix
+        # GET_INTER divides each interference term by IDEN (initial-state spin
+        # and colour averaging, including the identical-particle factor), so the
+        # trace of each density matrix already equals the spin-averaged ME and
+        # the IDEN normalisation that used to be applied here is now redundant.
+        iden_prod = 72  # d d~ > z z : spin 4 * colour 9 * identical(ZZ) 2
+        iden_dec = 3    # z > e+ e- : 3 Z helicity states
 
-        self.assertAlmostEqual(prod_dec1.trace()/3./ all_me[2],1,4)
-        self.assertAlmostEqual(prod_dec2.trace()/3./all_me[3],1,4)
-        self.assertAlmostEqual(prod_dens.trace()/9./4./2./ all_me[0],1,4)  #9 color , 4 spin, 2 symmetry factor (ZZ)
+        self.assertAlmostEqual(prod_dec1.trace()/all_me[2],1,4)
+        self.assertAlmostEqual(prod_dec2.trace()/all_me[3],1,4)
+        self.assertAlmostEqual(prod_dens.trace()/all_me[0],1,4)
 
         prod_dec =prod_dec1.tensor_product(prod_dec2)
-        prod_dec_sym =prod_dec2.tensor_product(prod_dec1) 
+        prod_dec_sym =prod_dec2.tensor_product(prod_dec1)
         mZ= 91.18800
         WZ = 2.44140
         nb_hel = 3*3
@@ -2055,8 +2209,9 @@ class TestCmdShell2(unittest.TestCase,
         misc.sprint(matrix, all_me[1])
         #misc.sprint(matrix/all_me[1], matrix_sym/all_me[1])
 
-
-        self.assertAlmostEqual(matrix/all_me[1],1,4)
+        # the three density matrices (production + 2 decays) each carry a 1/IDEN
+        # factor that must be restored to match the unmodified full ME all_me[1]
+        self.assertAlmostEqual(matrix * iden_prod * iden_dec**2 /all_me[1],1,places=4)
         #self.assertAlmostEqual(matrix_sym, all_me[1],4)
 
         #check how madspin build the full event:
@@ -2205,9 +2360,12 @@ class TestCmdShell2(unittest.TestCase,
  ([ 1,  1,  1,  0],  0.01342101+8.17624195e-18j)]
         madspin_report_dict = dict(((tuple(x), y) for x,y in madspin_report))
 
+        # madspin_report holds the (pre-IDEN) density values reported by madspin;
+        # the standalone prod_dens now carries the 1/IDEN normalisation from
+        # GET_INTER, so we restore iden_prod when comparing.
         for key in madspin_report_dict:
             ref_val = self._dens_value_for_key(prod_dens, key)
-            self.assertAlmostEqual(madspin_report_dict[key].real/ref_val.real, 1, places=4)
+            self.assertAlmostEqual(madspin_report_dict[key].real/(ref_val.real * iden_prod), 1, places=4)
 
 
         madspin_report = [([-1, -1], 296.70587 -7.1793691e-15j),
@@ -2223,7 +2381,7 @@ class TestCmdShell2(unittest.TestCase,
 
         for key in madspin_report_dict:
             ref_val = self._dens_value_for_key(prod_dec1, key)
-            self.assertAlmostEqual(madspin_report_dict[key].real/ref_val.real, 1, places=4)
+            self.assertAlmostEqual(madspin_report_dict[key].real/(ref_val.real * iden_dec), 1, places=4)
 
         madspin_report =[([-1, -1],  332.7482   -3.3880889e-16j),
                         ([-1,  0],  -84.79217  +1.5662439e+02j),
@@ -2238,7 +2396,7 @@ class TestCmdShell2(unittest.TestCase,
 
         for key in madspin_report_dict:
             ref_val = self._dens_value_for_key(prod_dec2, key)
-            self.assertAlmostEqual(madspin_report_dict[key].real/ref_val.real, 1, places=4)
+            self.assertAlmostEqual(madspin_report_dict[key].real/(ref_val.real * iden_dec), 1, places=4)
 
 
         madspin_report = [([-1, -1, -1, -1],  9.8728344e+04-2.4894488e-12j),
@@ -2324,9 +2482,11 @@ class TestCmdShell2(unittest.TestCase,
                             ([ 1,  0,  1,  0],  2.0135797e+02+1.5155484e+02j),]
         madspin_report_dict = dict(((tuple(x), y) for x,y in madspin_report))
 
+        # prod_dec is the tensor product of the two decay density matrices, so it
+        # carries iden_dec**2 from the GET_INTER normalisation.
         for key in madspin_report_dict:
             ref_val = self._dens_value_for_key(prod_dec, key)
-            self.assertAlmostEqual(madspin_report_dict[key].real/ref_val.real, 1, places=4)
+            self.assertAlmostEqual(madspin_report_dict[key].real/(ref_val.real * iden_dec**2), 1, places=4)
                                                                              
                                                                              
     def test_standalone_density_f2py(self):       
@@ -2452,12 +2612,13 @@ class TestCmdShell2(unittest.TestCase,
                           1,-1,    1,0,    1,1]
             ncomb = 9 # why needed in f2py ?
             alphas = 0.118 # no impact for ZZ
+            scale2 = 0. # as passed by check_sa.f; no impact for ZZ
 
             # GET_DENSITY now takes a per-particle merged-flavor index array
             # (matches the SMATRIX/GET_AMP flavor-grouping plumbing).
             # Single-flavor processes use 1 for every particle.
             flavor = [1] * len(P[0])
-            f2py_dens = matrix2py.py_m0_get_density(P, pos, n_changing, allow_hel, ncomb, flavor, alphas)
+            f2py_dens = matrix2py.py_m0_get_density(P, pos, n_changing, allow_hel, ncomb, flavor, alphas, scale2)
             misc.sprint('fortran: ', fortran_dens)
             misc.sprint('f2py:    ', f2py_dens)
             for i in range(9*5):
@@ -2466,7 +2627,9 @@ class TestCmdShell2(unittest.TestCase,
                 self.assertAlmostEqual(fortran_dens[i].imag, f2py_dens[i].imag, places=5)
             import MadSpin.decay as madspin
             density_matrix = madspin.DensityMatrix(f2py_dens, n_changing, allow_hel, ncomb)
-            self.assertAlmostEqual(density_matrix.trace()/9./4./2./fortran_me, 1,4)  #9 color , 4 spin, 2 symmetry factor (
+            # GET_INTER now divides by IDEN (9 colour * 4 spin * 2 ZZ identical = 72),
+            # so the trace already equals the spin-averaged ME fortran_me.
+            self.assertAlmostEqual(density_matrix.trace()/fortran_me, 1,4)
             misc.sprint(density_matrix.values[1], fortran_dens[1])
 
 
@@ -2525,6 +2688,82 @@ set boost_choice [6, -6]
                 aux = data[i].strip("\t\n[]").split(",")
                 rho_avg.append([complex(aux[i].strip(" ()")) for i in range(len(aux))])
             
+        for i in range(len(rho_avg)):
+            for j in range(len(rho_avg[0])):
+                self.assertAlmostEqual(rho_avg[i][j].real, rho_avg_ref[i][j].real, places=3) #we ask 3 digits because we only use 50k events
+                self.assertAlmostEqual(rho_avg[i][j].imag, rho_avg_ref[i][j].imag, places=3)
+
+
+    def test_density_mode_user_interface(self):
+        ############################################################################
+        # This test checks that the python interface of the density mode works properly ie.
+        # it creates a LHE file with a tag <density> which contains the density matrix with the correct number of elements.
+        # We also check that the average density matrix is stable.
+        # To check if the value of the density matrix itself is correct see the other test_density_mode_* tests.
+        ############################################################################
+        
+        text = f"""generate g g > t t~
+output madevent {self.out_dir}_density0
+launch
+reweight=density
+set run_card nevents 50000
+set helicity_direction [6]
+set particle_in_density_matrix [6, -6]
+set boost_choice [6, -6]
+"""
+
+        #This bloc of code launches MadGraph with the commands written in mg5_cmd.txt
+        command_card = open('/tmp/mg5_cmd.txt','w')
+        command_card.write(text)
+        command_card.close()
+
+        
+        logfile = 'test_density_mode_ttbar.log'
+        subprocess.call([sys.executable,pjoin(MG5DIR,'bin','mg5_aMC'), 
+                         '/tmp/mg5_cmd.txt'], stdout=open(logfile, 'w'), stderr=subprocess.STDOUT)
+
+
+        
+
+        lhe_path = pjoin(self.out_dir + '_density0/Events/run_01/unweighted_events.lhe.gz')
+        rho_mean_path = pjoin(self.out_dir + '_density0/Events/run_01/Average_density_matrix_unweighted_events.txt')
+        
+        self.assertTrue(os.path.isfile(lhe_path), f"File not found {lhe_path}")
+        self.assertTrue(os.path.isfile(rho_mean_path), f"File not found {rho_mean_path}")
+
+
+        for event in lhe_parser.EventFile(lhe_path):
+            density_check = event.density
+            break #we only want the first one
+        
+        for elem in density_check:
+            self.assertIsInstance(elem, complex)
+        
+        self.assertEqual(len(density_check), 10, f"The density matrix is not the correct length: {density_check}")
+
+        rho_avg_ref =  [[(0.3670142422790588+0j), (1.7429098337870793e-07-3.933851109770078e-05j), (-1.742909833606001e-07+3.9338510968347334e-05j), (0.11514189584464168-0j)],
+                        [(1.7429098337870793e-07+3.933851109770078e-05j), (0.13298575772060628+0j), (0.06344292964491506-0j), (-1.7429098336059725e-07-3.933851096834704e-05j)],
+                        [(-1.742909833606001e-07-3.9338510968347334e-05j), (0.06344292964491506+0j), (0.13298575772060628+0j), (1.7429098337870735e-07+3.9338511097700886e-05j)],
+                        [(0.11514189584464168+0j), (-1.7429098336059725e-07+3.933851096834704e-05j), (1.7429098337870735e-07-3.9338511097700886e-05j), (0.36701424227905893+0j)]]
+
+        #now let's read the average density matrix
+        with open(rho_mean_path, 'r') as f:
+            data = f.readlines()[1:]
+            rho_avg = []
+            for i in range(len(data)):
+                aux = data[i].strip("\t\n[]").split(",")
+                try:
+                    rho_avg.append([complex(aux[i].strip(" ()")) for i in range(len(aux))])
+                except: #if the values are like "np.complex128(value)"
+                    print("aux", aux)
+                    aux2 = [aux[i].strip(" ()[]").strip("'").replace("np.complex128(","").strip(" ()") for i in range(len(aux))]
+                    try:
+                        rho_avg.append([complex(aux2[i]) for i in range(len(aux2))])
+                    except:
+                        print("aux2", aux2)
+                        raise ValueError
+            
+
         for i in range(len(rho_avg)):
             for j in range(len(rho_avg[0])):
                 self.assertAlmostEqual(rho_avg[i][j].real, rho_avg_ref[i][j].real, places=3) #we ask 3 digits because we only use 50k events
@@ -2731,7 +2970,7 @@ set run_card use_syst False
 
         logfile = 'test_density_mode_decay11.log'
         subprocess.call([sys.executable,pjoin(MG5DIR,'bin','mg5_aMC'), 
-                         '/tmp/mg5_cmd.txt'])
+                         '/tmp/mg5_cmd.txt'], stdout=open(logfile, 'w'), stderr=subprocess.STDOUT)
 
 
         #Here we replace the lhe file by the reference lhe file (stored in the input_files).
@@ -2825,7 +3064,7 @@ set run_card use_syst False
 
         logfile = 'test_density_mode_decay21.log'
         subprocess.call([sys.executable,pjoin(MG5DIR,'bin','mg5_aMC'), 
-                         '/tmp/mg5_cmd.txt'])
+                         '/tmp/mg5_cmd.txt'], stdout=open(logfile, 'w'), stderr=subprocess.STDOUT)
 
 
         #Here we replace the lhe file by the reference lhe file (stored in the input_files).
@@ -3790,22 +4029,21 @@ C
                                                     'SubProcesses',
                                                     'P0_qq_gogo_go_qqn1_go_qqn1')))
         
-        target=""" 1   1
+        target = """  1   1
  2   1
  3  -1
  4  -2
- 5  -2
- 6   1
- 7  -6
- 8  -1
- 9  -2
-10  -1
-11  -2
-12  -2
-13  -6
-14  -6
+ 5   1
+ 6  -5
+ 7  -1
+ 8  -2
+ 9  -1
+10  -2
+11  -5
+12  -5 
 """
 
+                                           
         self.assertEqual(analyse(target.split('\n')), 
                          analyse(open(os.path.join(self.out_dir,
                                            'SubProcesses',

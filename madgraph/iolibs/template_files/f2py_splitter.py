@@ -1,4 +1,5 @@
-%(python_information)s
+C this is a f2py wrapper for reweight mode at tree level
+
   subroutine %(f2py_prefix)sf77_smatrixhel(pdgs, procid, npdg, p, ALPHAS, SCALE2, nhel, ANS)
   use model_object
   use aloha_object
@@ -36,26 +37,30 @@ CF2PY double precision, intent(in) :: SCALE2
       return
       end
   
-  subroutine %(f2py_prefix)sf77_density(pdgs, procid, npdg, P, POS, N_CHANGING, ALLOW_HEL, N_COMB, ALPHAS, INTER)
+  subroutine %(f2py_prefix)sf77_density(pdgs, npdg, procid, P, POS, N_CHANGING, ALLOW_HEL, N_COMB, ALPHAS, SCALE2, INTER)
   IMPLICIT NONE
-C     P momenta
-C     NHEL base of helicity that are not changing
-C     POS(N_CHNGING): position of the changing helicity
-C     n_changing: number of changing helicity
-C     ALLOW_HEL(NCOMB, N_CHANGING): combination of helicity to
-C      consider (all jamp computed)
-C     INTER((NCOMB*NCOMB+1)/2: all interference term (not the
-C      symmetric one)
+CF2PY double precision, intent(in) :: p
+CF2PY integer, intent(in) :: pdgs
+CF2PY integer, intent(in) :: procid
+CF2PY integer, intent(in) :: pos
+CF2PY integer, INTENT(IN) :: ALLOW_HEL
+CF2PY double precision INTENT(IN) :: ALPHAS
+CF2PY double precision INTENT(IN) :: SCALE2
+CF2PY double complex INTENT(OUT), dimension(N_COMB*(N_COMB+1)/2) :: INTER
+CF2PY integer, intent(in) :: N_COMB
+CF2PY integer, intent(in) :: N_CHANGING
+CF2PY integer, intent(in) :: NPDG
+C     scale is a dummy argument added to have the same syntax as in loop-induced
+C
+C     Some variables seem unused but they are necessary for density_splitter
+C
 
-  integer pdgs(*)
-  integer npdg, nhel, procid
-  integer n_comb
-  double precision p(*)
-  double precision ANS, ALPHAS, PI,SCALE2
-  integer n_changing
-  INTEGER POS(*)
-  INTEGER ALLOW_HEL(*)
-  DOUBLE COMPLEX INTER(*)
+  integer pdgs(*), procid, n_changing, n_comb, npdg
+  double precision p(0:3,*)
+  double precision ALPHAS, SCALE2
+  INTEGER POS(n_changing)
+  INTEGER ALLOW_HEL(n_changing*n_comb)
+  DOUBLE COMPLEX INTER(n_comb*(n_comb+1)/2)
   integer flavor(%(maxpart)i),I
 C     Update is done insider the direct density call functions
 

@@ -5212,5 +5212,673 @@ class TestIdentifyMETagFKS(unittest.TestCase):
         self.assertNotEqual(tags1, tags2)
 
 
+#===============================================================================
+# TestDiagramFlavorCheck
+#===============================================================================
+class TestDiagramFlavorCheck(unittest.TestCase):
+    """Regression test for HelasDiagram.check_flavor on the t-channel gluon
+    diagram of d d~ > d d~.
+
+    Context: a colleague reported that for ``_quark _anti_quark > d d~`` the
+    t-channel diagram had ``check_flavor((1, 1, 1, 1))`` return False even
+    though that flavor combination (d d~ > d d~) is valid for the t-channel
+    gluon exchange.
+
+    With flavor grouping enabled the light quarks are merged into the ``_quark``
+    particle (PDG 81).  Entering ``_quark _anti_quark > d d~`` therefore does
+    *not* build a mixed merged/unmerged process (that generates no diagrams);
+    instead the parser keeps the merged PDG 81 on every leg and records the
+    requested individual flavor as a *per-leg flavor restriction* on the final
+    state -- i.e. the legs are ``[(81, []), (-81, []), (81, [1]), (-81, [-1])]``
+    (verified against madgraph_interface's own parsing).  This is the code path
+    the colleague suspected: the flavor filtering lives on the final-state legs.
+
+    ``check_flavor`` then maps a tuple of per-leg flavor indices (1 == d, the
+    first quark of the merged group) onto each diagram and decides whether the
+    diagram survives for that flavor assignment.
+
+    This test pins down the correct behaviour: the t-channel gluon diagram is
+    valid for d d~ > d d~ (so the colleague's report is the symptom of a bug to
+    be fixed, not the intended behaviour), while still being correctly rejected
+    for flavor-changing combinations the t-channel gluon cannot produce.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        # Flavor grouping merges the light quarks into the _quark (PDG 81) and
+        # _anti_quark (PDG -81) multiparticles; this is what enables the
+        # diagram-level check_flavor machinery.
+        cls.model = import_ufo.import_model(
+            'sm', options={'apply_flavor_grouping': True})
+
+    def setUp(self):
+        # _quark _anti_quark > d d~, restricted to pure QCD so we get exactly
+        # the two gluon diagrams (s-channel annihilation and t-channel
+        # exchange).  This mirrors what the command-line parser produces for
+        # that input: merged PDG 81 on every leg, with the requested individual
+        # flavor recorded as a per-leg restriction on the *final* state
+        # (flavor=[1] for d, [-1] for d~).
+        q_id = 81
+        proc = base_objects.Process({
+            'legs': base_objects.LegList([
+                base_objects.Leg({'id': q_id,  'number': 1,
+                                   'state': False, 'flavor': []}),
+                base_objects.Leg({'id': -q_id, 'number': 2,
+                                   'state': False, 'flavor': []}),
+                base_objects.Leg({'id': q_id,  'number': 3,
+                                   'state': True,  'flavor': [1]}),
+                base_objects.Leg({'id': -q_id, 'number': 4,
+                                   'state': True,  'flavor': [-1]}),
+            ]),
+            'model': self.model,
+            'orders': {'QED': 0},
+        })
+        amplitude = diagram_generation.Amplitude(proc)
+        self.assertTrue(amplitude.get('diagrams'),
+                        "_quark _anti_quark > d d~ generated no diagrams")
+        self.me = helas_objects.HelasMatrixElement(amplitude, gen_color=True)
+        self.diagrams = self.me.get('diagrams')
+
+    def _is_gluon_propagator(self, diagram):
+        """True if every internal wavefunction of the diagram is a gluon."""
+        internal = [wf.get('pdg_code') for wf in diagram.get('wavefunctions')
+                    if len(wf.get('mothers')) > 0]
+        return bool(internal) and all(pdg == 21 for pdg in internal)
+
+    def test_two_gluon_diagrams_generated(self):
+        """The pure-QCD process has exactly an s-channel and a t-channel gluon
+        diagram."""
+        self.assertEqual(len(self.diagrams), 2)
+        nb_t = sorted(d.get_nb_t_channel() for d in self.diagrams)
+        self.assertEqual(nb_t, [0, 1])
+        for diagram in self.diagrams:
+            self.assertTrue(self._is_gluon_propagator(diagram))
+
+    def test_t_channel_gluon_valid_for_dd(self):
+        """The reported case: the t-channel gluon diagram MUST be valid for
+        d d~ > d d~, i.e. check_flavor((1, 1, 1, 1)) is True."""
+        t_diagrams = [d for d in self.diagrams if d.get_nb_t_channel() == 1]
+        self.assertEqual(len(t_diagrams), 1,
+                         "expected exactly one t-channel gluon diagram")
+        t_diagram = t_diagrams[0]
+        self.assertTrue(self._is_gluon_propagator(t_diagram),
+                        "the t-channel diagram should exchange a gluon")
+        self.assertTrue(
+            t_diagram.check_flavor((1, 1, 1, 1), self.model),
+            "t-channel gluon diagram must be valid for d d~ > d d~ "
+            "(check_flavor((1,1,1,1)) should return True)")
+
+    def test_t_channel_gluon_flavor_discrimination(self):
+        """check_flavor genuinely discriminates: the t-channel gluon diagram is
+        valid for same-flavor combinations but rejects flavor-changing ones a
+        single gluon exchange cannot produce."""
+        t_diagram = [d for d in self.diagrams
+                     if d.get_nb_t_channel() == 1][0]
+        # d d~ > d d~ and u u~ > u u~ : valid t-channel gluon exchange.
+        self.assertTrue(t_diagram.check_flavor((1, 1, 1, 1), self.model))
+        self.assertTrue(t_diagram.check_flavor((2, 2, 2, 2), self.model))
+        # d d~ > u u~ / u u~ > d d~ : impossible via a flavor-diagonal gluon
+        # in the t-channel.
+        self.assertFalse(t_diagram.check_flavor((1, 1, 2, 2), self.model))
+        self.assertFalse(t_diagram.check_flavor((2, 2, 1, 1), self.model))
+
+    def test_s_channel_gluon_flavor_discrimination(self):
+        """Sanity counterpart: the s-channel (annihilation) gluon diagram
+        allows the flavor-changing final states that the t-channel rejects, and
+        rejects the t-channel-only assignment."""
+        s_diagram = [d for d in self.diagrams
+                     if d.get_nb_t_channel() == 0][0]
+        # Annihilation to a gluon then back to any quark pair.
+        self.assertTrue(s_diagram.check_flavor((1, 1, 1, 1), self.model))
+        self.assertTrue(s_diagram.check_flavor((1, 1, 2, 2), self.model))
+        # d s~ > d s~ cannot proceed through s-channel annihilation.
+        self.assertFalse(s_diagram.check_flavor((1, 2, 1, 2), self.model))
+
+
+def _me_accepts_flavor(matrix_element, flavor, model):
+    """Matrix-element-level flavor check: True iff at least one diagram is
+    compatible with the given external-flavor assignment.  Recomputed directly
+    from the diagrams (via HelasDiagram.check_flavor), so tests using it
+    cross-check the flavor logic independently of the cached valid_flavors
+    store rather than reading the store back."""
+    return any(diag.check_flavor(flavor, model)
+               for diag in matrix_element.get('diagrams'))
+
+
+#===============================================================================
+# TestDiagramFlavorCheckQQG
+#===============================================================================
+class TestDiagramFlavorCheckQQG(unittest.TestCase):
+    """Regression test for HelasDiagram.check_flavor on the t-channel gluon
+    diagrams of _quark _quark > g _quark _quark (q q > q q g).
+
+    Follow-up to the colleague's report on this process: the diagrams of
+    interest are those where a t-channel gluon links an initial-state quark line
+    to a final-state quark line, with the external gluon radiated off one of the
+    final-state quarks.  These are exactly the diagrams with a single t-channel
+    propagator (``get_nb_t_channel() == 1``).
+
+    The legs are ``_quark _quark > g _quark _quark`` -> indices
+    ``(1, 2 = IS quarks, 3 = gluon, 4, 5 = FS quarks)``.  A flavor tuple gives
+    the real PDG for each leg (1 == d, 2 == u, 21 == g).  A t-channel gluon is
+    flavor diagonal, so each fermion line must keep its flavor end-to-end; the
+    final-state gluon emission does not change the line's flavor.
+
+    This pins down the correct behaviour:
+    * every such t-channel diagram is valid for a same-flavor assignment
+      (e.g. d d > g d d) -- the colleague's "the diagram should be valid" case;
+    * for a mixed-flavor assignment (e.g. d u > g d u) the diagrams correctly
+      split into the subset whose fermion-line flavor routing matches and the
+      subset that does not;
+    * the matrix-element-level check accepts every flavor-conserving assignment
+      and rejects flavor-violating ones.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        cls.model = import_ufo.import_model(
+            'sm', options={'apply_flavor_grouping': True})
+
+    def setUp(self):
+        q_id = 81
+        proc_def = base_objects.ProcessDefinition({
+            'legs': base_objects.MultiLegList([
+                base_objects.MultiLeg({'ids': [q_id], 'state': False}),
+                base_objects.MultiLeg({'ids': [q_id], 'state': False}),
+                base_objects.MultiLeg({'ids': [21],   'state': True}),
+                base_objects.MultiLeg({'ids': [q_id], 'state': True}),
+                base_objects.MultiLeg({'ids': [q_id], 'state': True}),
+            ]),
+            'model': self.model,
+            'orders': {'QCD': 3, 'QED': 0},
+        })
+        multiprocess = diagram_generation.MultiProcess(
+            {'process_definitions':
+             base_objects.ProcessDefinitionList([proc_def])})
+        matrix_elements = \
+            helas_objects.HelasMultiProcess(multiprocess).get('matrix_elements')
+        self.assertEqual(len(matrix_elements), 1)
+        self.me = matrix_elements[0]
+        self.diagrams = self.me.get('diagrams')
+        # The colleague's topology: a single t-channel gluon propagator.
+        self.t_diagrams = [d for d in self.diagrams
+                           if d.get_nb_t_channel() == 1]
+
+    def test_process_generates_t_channel_diagrams(self):
+        """q q > q q g produces diagrams, several of which have the single
+        t-channel gluon topology of interest."""
+        self.assertTrue(self.diagrams,
+                        "_quark _quark > g _quark _quark generated no diagrams")
+        self.assertGreaterEqual(
+            len(self.t_diagrams), 2,
+            "expected several t-channel gluon diagrams for q q > q q g")
+
+    def test_t_channel_gluon_valid_for_same_flavor(self):
+        """The reported case: every t-channel gluon diagram MUST be valid for a
+        same-flavor assignment (d d > g d d and u u > g u u)."""
+        for diagram in self.t_diagrams:
+            self.assertTrue(
+                diagram.check_flavor((1, 1, 21, 1, 1), self.model),
+                "t-channel gluon diagram must be valid for d d > g d d")
+            self.assertTrue(
+                diagram.check_flavor((2, 2, 21, 2, 2), self.model),
+                "t-channel gluon diagram must be valid for u u > g u u")
+
+    def test_t_channel_gluon_flavor_discrimination(self):
+        """For a mixed-flavor assignment the t-channel diagrams genuinely
+        discriminate: some match the fermion-line flavor routing and some do
+        not, depending on which IS quark pairs with which FS quark."""
+        # d u > g d u : flavor d on one line, u on the other.
+        #for diag in self.diagrams:
+        #    diag.check_flavor((1, 2, 21, 1, 2), self.model)
+        pattern_a = [d.check_flavor((1, 2, 21, 1, 2), self.model)
+                     for d in self.t_diagrams]
+        #for diag in self.diagrams:
+        #    diag.check_flavor((1, 2, 21, 1, 2), self.model)        
+        pattern_b = [d.check_flavor((1, 2, 21, 2, 1), self.model)
+                     for d in self.t_diagrams]
+        # Each mixed assignment is accepted by at least one t-channel diagram
+        # and rejected by at least one (so check_flavor is doing real work).
+        self.assertTrue(any(pattern_a) and not all(pattern_a),
+                        "d u > g d u (routing 1) should split the t-channel "
+                        "diagrams, got %r" % pattern_a)
+        self.assertTrue(any(pattern_b) and not all(pattern_b),
+                        "d u > g d u (routing 2) should split the t-channel "
+                        "diagrams, got %r" % pattern_b)
+        # The two routings are complementary on each diagram (a diagram valid
+        # for one routing is invalid for the other).
+        for a, b in zip(pattern_a, pattern_b):
+            self.assertNotEqual(a, b,
+                                "a t-channel diagram cannot be valid for both "
+                                "flavor routings of d u > g d u")
+
+
+
+
+
+    def test_matrix_element_flavor_conservation(self):
+        """The matrix-element-level check accepts every flavor-conserving
+        assignment and rejects flavor-violating ones."""
+        # Flavor-conserving (physical) assignments.
+        for flv in [(1, 1, 21, 1, 1), (2, 2, 21, 2, 2),
+                    (1, 2, 21, 1, 2), (1, 2, 21, 2, 1)]:
+            self.assertTrue(_me_accepts_flavor(self.me, flv, self.model),
+                            "q q > q q g should be valid for %r" % (flv,))
+        # Flavor-violating assignments (net quark flavor not conserved).
+        for flv in [(1, 2, 21, 2, 2), (1, 1, 21, 1, 2)]:
+            self.assertFalse(_me_accepts_flavor(self.me, flv, self.model),
+                             "q q > q q g must reject %r" % (flv,))
+
+
+#===============================================================================
+# TestDiagramFlavorCheckQQbarG
+#===============================================================================
+class TestDiagramFlavorCheckQQbarG(unittest.TestCase):
+    """Same regression as TestDiagramFlavorCheckQQG, for the quark/anti-quark
+    variant _quark _anti_quark > g _quark _anti_quark (q q~ > q q~ g).
+
+    This is the topology the colleague phrased as "a t-channel gluon linking the
+    initial state and one of the final quark/anti-quark emitting the gluon".
+    Like the q q channel, several diagrams (``get_nb_t_channel() == 1``) reuse
+    their internal t-channel gluon and quark wavefunctions from earlier
+    diagrams, so they exercise the shared-wavefunction stale-flavortag bug in
+    HelasDiagram.check_flavor.
+
+    Legs: ``(1 = q IS, 2 = q~ IS, 3 = gluon, 4 = q FS, 5 = q~ FS)``.  A flavor
+    tuple gives the real PDG per leg (1 == d, 2 == u, 21 == g); the index is
+    applied to the absolute value, so e.g. ``(1, 1, 21, 1, 1)`` is
+    d d~ > g d d~ and ``(1, 2, 21, 1, 2)`` is d s~ > g d s~.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        cls.model = import_ufo.import_model(
+            'sm', options={'apply_flavor_grouping': True})
+
+    def setUp(self):
+        q_id = 81
+        proc_def = base_objects.ProcessDefinition({
+            'legs': base_objects.MultiLegList([
+                base_objects.MultiLeg({'ids': [q_id],  'state': False}),
+                base_objects.MultiLeg({'ids': [-q_id], 'state': False}),
+                base_objects.MultiLeg({'ids': [21],    'state': True}),
+                base_objects.MultiLeg({'ids': [q_id],  'state': True}),
+                base_objects.MultiLeg({'ids': [-q_id], 'state': True}),
+            ]),
+            'model': self.model,
+            'orders': {'QCD': 3, 'QED': 0},
+        })
+        multiprocess = diagram_generation.MultiProcess(
+            {'process_definitions':
+             base_objects.ProcessDefinitionList([proc_def])})
+        matrix_elements = \
+            helas_objects.HelasMultiProcess(multiprocess).get('matrix_elements')
+        self.assertEqual(len(matrix_elements), 1)
+        self.me = matrix_elements[0]
+        self.diagrams = self.me.get('diagrams')
+        self.t_diagrams = [d for d in self.diagrams
+                           if d.get_nb_t_channel() == 1]
+
+    def test_process_generates_t_channel_diagrams(self):
+        """q q~ > q q~ g produces diagrams, several of which have the single
+        t-channel gluon topology of interest."""
+        self.assertTrue(
+            self.diagrams,
+            "_quark _anti_quark > g _quark _anti_quark generated no diagrams")
+        self.assertGreaterEqual(
+            len(self.t_diagrams), 2,
+            "expected several t-channel gluon diagrams for q q~ > q q~ g")
+
+    def test_t_channel_gluon_valid_for_same_flavor(self):
+        """The reported case: every t-channel gluon diagram MUST be valid for a
+        same-flavor assignment (d d~ > g d d~ and u u~ > g u u~)."""
+        for diagram in self.t_diagrams:
+            self.assertTrue(
+                diagram.check_flavor((1, 1, 21, 1, 1), self.model),
+                "t-channel gluon diagram must be valid for d d~ > g d d~")
+            self.assertTrue(
+                diagram.check_flavor((2, 2, 21, 2, 2), self.model),
+                "t-channel gluon diagram must be valid for u u~ > g u u~")
+
+    def test_t_channel_gluon_flavor_discrimination(self):
+        """For a mixed-flavor assignment (d s~ > g d s~) the t-channel diagrams
+        genuinely discriminate: some match the fermion-line flavor routing and
+        some do not."""
+        pattern = [d.check_flavor((1, 2, 21, 1, 2), self.model)
+                   for d in self.t_diagrams]
+        self.assertTrue(any(pattern) and not all(pattern),
+                        "d s~ > g d s~ should split the t-channel diagrams, "
+                        "got %r" % pattern)
+
+    def test_matrix_element_flavor_conservation(self):
+        """The matrix-element-level check accepts every flavor-conserving
+        assignment and rejects flavor-violating ones."""
+        # Flavor-conserving (physical) assignments.  Note d d~ > g u u~ is
+        # allowed through s-channel gluon annihilation.
+        for flv in [(1, 1, 21, 1, 1), (2, 2, 21, 2, 2),
+                    (1, 2, 21, 1, 2), (1, 1, 21, 2, 2)]:
+            self.assertTrue(_me_accepts_flavor(self.me, flv, self.model),
+                            "q q~ > q q~ g should be valid for %r" % (flv,))
+        # Flavor-violating assignments (net quark flavor not conserved).
+        for flv in [(1, 2, 21, 2, 1), (1, 2, 21, 2, 2)]:
+            self.assertFalse(_me_accepts_flavor(self.me, flv, self.model),
+                             "q q~ > q q~ g must reject %r" % (flv,))
+
+
+#===============================================================================
+# TestExternalFlavorsQGTTXQG
+#===============================================================================
+class TestExternalFlavorsQGTTXQG(unittest.TestCase):
+    """Regression test for the flavor grouping of _quark g > t t~ _quark g.
+
+    With flavor grouping (the u/d/s/c quarks merged into ``_quark``, pdg 81),
+    a t-channel/s-channel gluon exchange conserves the quark flavor along the
+    fermion line: the incoming and outgoing merged quark MUST carry the same
+    flavor.  The only physical external-flavor assignments are therefore the
+    four diagonal ones (u g > t t~ u g, d g > t t~ d g, ...):
+
+        (1, 1, 1, 1, 1, 1), (2, 1, 1, 1, 2, 1),
+        (3, 1, 1, 1, 3, 1), (4, 1, 1, 1, 4, 1)
+
+    where the tuple indexes the six external legs
+    ``(_quark, g, t, t~, _quark, g)`` (a value of 1 for the gluon/top legs, and
+    the merged-quark flavor index 1..4 for the two ``_quark`` legs).
+
+    All of these share the same coupling structure, so
+    ``get_external_flavors_with_iden`` must collapse them into a SINGLE group.
+    The bug this pins down is a spurious second group made of the
+    flavor-violating assignments (e.g. u g > t t~ d g), which must never appear.
+    """
+
+    # The single physically-allowed group (incoming and outgoing quark share
+    # their flavor); every entry is flavor-conserving.
+    EXPECTED_GROUP = [(1, 1, 1, 1, 1, 1), (2, 1, 1, 1, 2, 1),
+                      (3, 1, 1, 1, 3, 1), (4, 1, 1, 1, 4, 1)]
+
+    @classmethod
+    def setUpClass(cls):
+        cls.model = import_ufo.import_model(
+            'sm', options={'apply_flavor_grouping': True})
+
+    def setUp(self):
+        q_id = 81
+        proc_def = base_objects.ProcessDefinition({
+            'legs': base_objects.MultiLegList([
+                base_objects.MultiLeg({'ids': [q_id], 'state': False}),
+                base_objects.MultiLeg({'ids': [21],   'state': False}),
+                base_objects.MultiLeg({'ids': [6],    'state': True}),
+                base_objects.MultiLeg({'ids': [-6],   'state': True}),
+                base_objects.MultiLeg({'ids': [q_id], 'state': True}),
+                base_objects.MultiLeg({'ids': [21],   'state': True}),
+            ]),
+            'model': self.model,
+            'orders': {'QCD': 4, 'QED': 0},
+        })
+        multiprocess = diagram_generation.MultiProcess(
+            {'process_definitions':
+             base_objects.ProcessDefinitionList([proc_def])})
+        matrix_elements = \
+            helas_objects.HelasMultiProcess(multiprocess).get('matrix_elements')
+        self.assertEqual(len(matrix_elements), 1)
+        self.me = matrix_elements[0]
+
+    def test_external_flavors_are_flavor_conserving(self):
+        """get_external_flavors must return exactly the four diagonal
+        (flavor-conserving) assignments and no flavor-violating ones."""
+        flavors = sorted(self.me.get_external_flavors())
+        self.assertEqual(flavors, sorted(self.EXPECTED_GROUP),
+            "_quark g > t t~ _quark g must only allow same-flavor quark "
+            "assignments, got %r" % flavors)
+
+    def test_external_flavors_with_iden_single_group(self):
+        """get_external_flavors_with_iden must collapse the four diagonal
+        assignments into a SINGLE coupling group.  The unphysical
+        flavor-violating assignments (e.g. u g > t t~ d g) must not create a
+        spurious second group."""
+        self.assertTrue(_me_accepts_flavor(self.me, (1, 1, 1, 1, 1, 1), self.model))
+        self.assertFalse(_me_accepts_flavor(self.me, (3, 1, 1, 1, 4, 1), self.model))
+        groups = list(self.me.get_external_flavors_with_iden())
+        self.assertEqual(len(groups), 1,
+            "expected a single flavor group for _quark g > t t~ _quark g, got "
+            "%d groups: %r" % (len(groups), groups))
+        self.assertEqual(sorted(groups[0]), sorted(self.EXPECTED_GROUP),
+            "the single flavor group must be the four same-flavor assignments, "
+            "got %r" % (groups[0],))
+        
+        for diag in self.me.get('diagrams'):
+            for flv in self.EXPECTED_GROUP:
+                self.assertTrue(diag.check_flavor(flv, self.model),
+                                "diagram %s must accept flavor %r" %
+                                (diag, flv))
+            for flv in [(1, 1, 1, 1, 2, 1), (3, 1, 1, 1, 4, 1)]:
+                self.assertFalse(diag.check_flavor(flv, self.model),
+                                 "diagram %s must reject flavor %r" %
+                                 (diag, flv))
+
+
+#===============================================================================
+# TestFlavorStore  (the precomputed has_flavor() store)
+#===============================================================================
+class TestFlavorStore(unittest.TestCase):
+    """Tests for the per-diagram flavor store (valid_flavors / has_flavor) that
+    is populated eagerly at generation time and read back by flavor_mask,
+    trimming and the exporters.
+
+    Process: _quark _anti_quark > _quark _anti_quark in pure QCD.  With flavor
+    grouping the light quarks are merged (pdg 81), and the s-channel
+    (annihilation) and t-channel (exchange) gluon diagrams are valid for
+    *different* flavor assignments, which gives a genuinely non-trivial flavor
+    mask -- the ideal fixture to pin down store/mask consistency.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        cls.model = import_ufo.import_model(
+            'sm', options={'apply_flavor_grouping': True})
+
+    def setUp(self):
+        q = 81
+        proc_def = base_objects.ProcessDefinition({
+            'legs': base_objects.MultiLegList([
+                base_objects.MultiLeg({'ids': [q],  'state': False}),
+                base_objects.MultiLeg({'ids': [-q], 'state': False}),
+                base_objects.MultiLeg({'ids': [q],  'state': True}),
+                base_objects.MultiLeg({'ids': [-q], 'state': True}),
+            ]),
+            'model': self.model,
+            'orders': {'QCD': 2, 'QED': 0},
+        })
+        multiprocess = diagram_generation.MultiProcess(
+            {'process_definitions':
+             base_objects.ProcessDefinitionList([proc_def])})
+        matrix_elements = \
+            helas_objects.HelasMultiProcess(multiprocess).get('matrix_elements')
+        self.assertEqual(len(matrix_elements), 1)
+        self.me = matrix_elements[0]
+
+    def test_store_populated_at_generation(self):
+        """The flavor store must be filled by the generation step itself, before
+        any get_external_flavors()/compute_flavor_masks() call."""
+        # The eager populate hook ran inside generate_helas_diagrams.
+        self.assertTrue(getattr(self.me, '_flavor_populated', False),
+                        "populate_flavor_validity() should have run at generation")
+        # allowed_flavors is cached directly (no lazy accessor needed).
+        allowed = self.me['allowed_flavors']
+        self.assertTrue(allowed, "no allowed flavors were computed at generation")
+        # Every diagram carries a non-empty set that is a subset of allowed.
+        allowed_set = set(allowed)
+        for diag in self.me.get('diagrams'):
+            self.assertTrue(diag.valid_flavors,
+                            "diagram %s has an empty flavor store" % diag)
+            self.assertTrue(diag.valid_flavors <= allowed_set,
+                            "diagram store %r is not a subset of allowed %r"
+                            % (diag.valid_flavors, allowed_set))
+
+    def test_has_flavor_matches_check_flavor(self):
+        """has_flavor() must agree with a fresh check_flavor() for every allowed
+        flavor and for clearly-invalid ones."""
+        allowed = self.me.get_external_flavors()
+        for diag in self.me.get('diagrams'):
+            for flv in allowed:
+                self.assertEqual(
+                    diag.has_flavor(flv),
+                    diag.check_flavor(flv, self.model),
+                    "has_flavor/check_flavor disagree for %r on %s"
+                    % (flv, diag))
+        # A flavor-changing assignment that neither gluon diagram can produce
+        # (u u~ > d s~) must be rejected by both APIs on every diagram.
+        for diag in self.me.get('diagrams'):
+            self.assertFalse(diag.has_flavor((1, 1, 2, 3)))
+            self.assertFalse(diag.check_flavor((1, 1, 2, 3), self.model))
+
+    def test_flavor_mask_derived_from_store(self):
+        """compute_flavor_masks() must produce, for every diagram, exactly the
+        bitmask implied by has_flavor() over the allowed-flavor order -- and the
+        mask must be non-trivial for this fixture (proving the test bites)."""
+        self.me.compute_flavor_masks()
+        allowed = self.me.get_external_flavors()
+        for diag in self.me.get('diagrams'):
+            expected = 0
+            for i, flv in enumerate(allowed):
+                if diag.has_flavor(flv):
+                    expected |= (1 << i)
+            self.assertEqual(diag['flavor_mask'], expected,
+                             "flavor_mask out of sync with the store on %s"
+                             % diag)
+        self.assertFalse(self.me.flavor_mask_is_trivial(),
+                         "q q~ > q q~ should have a non-trivial flavor mask "
+                         "(s- and t-channel differ), otherwise this test is moot")
+
+    def test_amplitude_and_wavefunction_has_flavor(self):
+        """After compute_flavor_masks(), amplitudes share their diagram's
+        validity and wavefunction has_flavor() is consistent with its mask."""
+        self.me.compute_flavor_masks()
+        allowed = self.me.get_external_flavors()
+        for diag in self.me.get('diagrams'):
+            for amp in diag.get('amplitudes'):
+                for flv in allowed:
+                    self.assertEqual(amp.has_flavor(flv), diag.has_flavor(flv),
+                                     "amplitude/diagram flavor mismatch")
+        for wf in self.me.get_all_wavefunctions():
+            mask = wf['flavor_mask'] if 'flavor_mask' in wf else 0
+            for i, flv in enumerate(allowed):
+                self.assertEqual(bool(wf.has_flavor(flv)), bool(mask & (1 << i)),
+                                 "wavefunction has_flavor out of sync with mask")
+
+
+#===============================================================================
+# TestFlavorStoreNoMerged  (single-flavor fast-path guard)
+#===============================================================================
+class TestFlavorStoreNoMerged(unittest.TestCase):
+    """When the model has no merged particles there is a single external-flavor
+    assignment (the identity).  This pins the behaviour the no-merged fast path
+    must preserve: the store still answers has_flavor() for that identity flavor.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        # Explicitly disable flavor grouping: in this branch import_model('sm')
+        # groups the light quarks by default, which would populate
+        # merged_particles and defeat the point of this fixture.
+        cls.model = import_ufo.import_model(
+            'sm', options={'apply_flavor_grouping': False})
+
+    def setUp(self):
+        proc_def = base_objects.ProcessDefinition({
+            'legs': base_objects.MultiLegList([
+                base_objects.MultiLeg({'ids': [2],   'state': False}),
+                base_objects.MultiLeg({'ids': [-2],  'state': False}),
+                base_objects.MultiLeg({'ids': [21],  'state': True}),
+                base_objects.MultiLeg({'ids': [21],  'state': True}),
+            ]),
+            'model': self.model,
+            'orders': {'QCD': 2, 'QED': 0},
+        })
+        multiprocess = diagram_generation.MultiProcess(
+            {'process_definitions':
+             base_objects.ProcessDefinitionList([proc_def])})
+        matrix_elements = \
+            helas_objects.HelasMultiProcess(multiprocess).get('matrix_elements')
+        self.assertEqual(len(matrix_elements), 1)
+        self.me = matrix_elements[0]
+
+    def test_single_identity_flavor(self):
+        """Exactly one allowed flavor (all-ones), and every diagram is valid for
+        it while rejecting any other assignment."""
+        self.assertFalse(self.model.get('merged_particles'))
+        allowed = self.me.get_external_flavors()
+        self.assertEqual(len(allowed), 1)
+        identity = allowed[0]
+        self.assertEqual(identity, (1, 1, 1, 1))
+        for diag in self.me.get('diagrams'):
+            self.assertTrue(diag.has_flavor(identity))
+            self.assertFalse(diag.has_flavor((2, 1, 1, 1)))
+
+    def test_store_populated_at_generation(self):
+        """The store is populated at generation even without merged particles."""
+        self.assertTrue(getattr(self.me, '_flavor_populated', False))
+        for diag in self.me.get('diagrams'):
+            self.assertTrue(diag.has_flavor((1, 1, 1, 1)))
+
+
+#===============================================================================
+# TestFlavorStoreDecayChain  (post-insert_decay_chains populate hook)
+#===============================================================================
+class TestFlavorStoreDecayChain(unittest.TestCase):
+    """The flavor store for a decay-chain ME must be (re)populated *after*
+    insert_decay_chains rewrites the diagram structure.  Fixture:
+    _quark _anti_quark > z, z > _quark _anti_quark with flavor grouping, whose
+    external quark flavors are merged.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        cls.model = import_ufo.import_model(
+            'sm', options={'apply_flavor_grouping': True})
+
+    def setUp(self):
+        q = 81
+        core = base_objects.Process({
+            'legs': base_objects.LegList([
+                base_objects.Leg({'id': q,  'number': 1, 'state': False}),
+                base_objects.Leg({'id': -q, 'number': 2, 'state': False}),
+                base_objects.Leg({'id': 23, 'number': 3, 'state': True}),
+            ]),
+            'model': self.model,
+            'orders': {'QED': 1, 'QCD': 0},
+        })
+        decay = base_objects.Process({
+            'legs': base_objects.LegList([
+                base_objects.Leg({'id': 23, 'number': 1, 'state': False}),
+                base_objects.Leg({'id': q,  'number': 2, 'state': True}),
+                base_objects.Leg({'id': -q, 'number': 3, 'state': True}),
+            ]),
+            'model': self.model,
+            'orders': {'QED': 1, 'QCD': 0},
+        })
+        core.set('decay_chains', base_objects.ProcessList([decay]))
+        amp = diagram_generation.DecayChainAmplitude(core)
+        self.me = helas_objects.HelasDecayChainProcess(amp).\
+            combine_decay_chain_processes()[0]
+
+    def test_decay_chain_store_populated_and_consistent(self):
+        """The post-decay populate hook must have run, and has_flavor() must
+        agree with check_flavor() for every allowed flavor of the full chain."""
+        self.assertTrue(self.me.get('processes')[0].get('decay_chains'),
+                        "expected a decay-chain matrix element")
+        self.assertTrue(getattr(self.me, '_flavor_populated', False),
+                        "populate_flavor_validity() should run after "
+                        "insert_decay_chains()")
+        allowed = self.me.get_external_flavors()
+        self.assertTrue(allowed, "decay-chain ME produced no allowed flavors")
+        self.assertTrue(any(diag.valid_flavors
+                            for diag in self.me.get('diagrams')))
+        for diag in self.me.get('diagrams'):
+            for flv in allowed:
+                self.assertEqual(
+                    diag.has_flavor(flv),
+                    diag.check_flavor(flv, self.model),
+                    "has_flavor/check_flavor disagree for %r on a decay "
+                    "diagram" % (flv,))
 
 

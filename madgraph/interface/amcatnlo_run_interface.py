@@ -1321,7 +1321,7 @@ class AskRunNLO(cmd.ControlSwitch):
             if 'QED' in self.proc_characteristics['splitting_types']:
                 self.allowed_madspin = ['OFF']
             else:
-                self.allowed_madspin = ['OFF', 'ON', 'onshell']
+                self.allowed_madspin = ['OFF', 'ON','full', 'onshell', 'PA','madspin_v1', 'onshell_v1']
             return  self.allowed_madspin
         
     def check_value_madspin(self, value):
@@ -1360,15 +1360,11 @@ class AskRunNLO(cmd.ControlSwitch):
             
     def get_cardcmd_for_madspin(self, value):
         """set some command to run before allowing the user to modify the cards."""
-        
-        if value == 'onshell':
-            return ["edit madspin_card --replace_line='set spinmode' --before_line='decay' set spinmode onshell"]
-        elif value in ['full', 'madspin']:
-            return ["edit madspin_card --replace_line='set spinmode' --before_line='decay' set spinmode madspin"]
-        elif value == 'none':
-            return ["edit madspin_card --replace_line='set spinmode' --before_line='decay' set spinmode none"]
-        else:
-            return []            
+
+        if value in ['onshell', 'none', 'full', 'madspin', 'onshell_v1', 'madspin_v1']:
+            return ["edit madspin_card --replace_line='set spinmode' --before_line='decay' set spinmode %s" % value]
+
+        return []            
         
 #
 #   reweight
@@ -5460,7 +5456,10 @@ PYTHIA8LINKLIBS=%(pythia8_prefix)s/lib/libpythia8.a -lz -ldl"""%{'pythia8_prefix
     def compile(self, mode, options):
         """compiles aMC@NLO to compute either NLO or NLO matched to shower, as
         specified in mode"""
-        os.mkdir(pjoin(self.me_dir, 'Events', self.run_name))
+        # the run directory may already exist (e.g. created by
+        # setup_citation_tracking for Events/<run>/citations)
+        if not os.path.exists(pjoin(self.me_dir, 'Events', self.run_name)):
+            os.mkdir(pjoin(self.me_dir, 'Events', self.run_name))
 
         self.banner.write(pjoin(self.me_dir, 'Events', self.run_name, 
                           '%s_%s_banner.txt' % (self.run_name, self.run_tag)))
@@ -6189,4 +6188,3 @@ if '__main__' == __name__:
     except KeyboardInterrupt:
         print('quit on KeyboardInterrupt')
         pass
-

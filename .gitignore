@@ -15,6 +15,7 @@ p_ME_*
 tests/status
 input/default_run_card_lo.dat
 input/default_run_card_nlo.dat
+input/default_run_card_mg7.toml
 input/mg5_configuration.txt
 TEST_MW_*
 .vscode/
@@ -62,6 +63,7 @@ additional_command
 input/mg5_configuration.txt
 input/default_run_card_lo.dat
 input/default_run_card_nlo.dat
+input/default_run_card_mg7.toml
 models/*/*.pkl
 py.py
 vendor/CutTools/includects/

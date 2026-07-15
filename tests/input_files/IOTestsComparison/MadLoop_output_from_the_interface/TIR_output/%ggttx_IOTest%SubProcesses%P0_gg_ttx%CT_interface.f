@@ -66,6 +66,7 @@ C     INITIALIZE CUTTOOLS IF NEEDED
       IF (CTINIT) THEN
         CTINIT=.FALSE.
         CALL ML5_0_INITCT()
+        CALL CITE('Ossola:2007ax','one-loop reduction with CutTools')
       ENDIF
 
 C     YOU CAN FIND THE DETAILS ABOUT THE DIFFERENT CTMODE AT THE
@@ -432,6 +433,9 @@ C     INITIALIZE NINJA IF NEEDED
       IF (NINJAINIT) THEN
         NINJAINIT=.FALSE.
         CALL ML5_0_INITNINJA()
+        CALL CITE('Peraro:2014cba','one-loop reduction with Ninja')
+        CALL CITE('Hirschi:2016mdz','one-loop reduction with Ninja'
+     $   //' (MadLoop interface)')
       ENDIF
 
 C     CONVERT THE MASSES TO BE COMPLEX

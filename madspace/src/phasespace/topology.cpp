@@ -143,6 +143,61 @@ void build_decays(
     }
 }
 
+std::string decay_label(
+    const Topology::Decay& decay,
+    const std::unordered_map<std::size_t, std::size_t>& decay_order,
+    const std::unordered_map<std::size_t, std::size_t>& outgoing_of_decay
+) {
+    if (decay.child_indices.empty()) {
+        return std::format(
+            "outgoing: index={}, mass={}", outgoing_of_decay.at(decay.index), decay.mass
+        );
+    }
+    return std::format(
+        "decay: order={}, mass={}, width={}, e_min={}, e_max={}, pdg_id={}, "
+        "on_shell={}, on_shell_boundary={}",
+        decay_order.at(decay.index),
+        decay.mass,
+        decay.width,
+        decay.e_min,
+        decay.e_max,
+        decay.pdg_id,
+        decay.on_shell,
+        decay.on_shell_boundary
+    );
+}
+
+void format_topology_node(
+    std::back_insert_iterator<std::string> out,
+    const std::vector<Topology::Decay>& decays,
+    std::size_t decay_index,
+    const std::string& prefix,
+    bool is_last,
+    const std::unordered_map<std::size_t, std::size_t>& decay_order,
+    const std::unordered_map<std::size_t, std::size_t>& outgoing_of_decay
+) {
+    auto& decay = decays.at(decay_index);
+    std::format_to(
+        out,
+        "{}{}{}\n",
+        prefix,
+        is_last ? "└── " : "├── ",
+        decay_label(decay, decay_order, outgoing_of_decay)
+    );
+    std::string child_prefix = prefix + (is_last ? "    " : "│   ");
+    for (std::size_t i = 0; i < decay.child_indices.size(); ++i) {
+        format_topology_node(
+            out,
+            decays,
+            decay.child_indices.at(i),
+            child_prefix,
+            i + 1 == decay.child_indices.size(),
+            decay_order,
+            outgoing_of_decay
+        );
+    }
+}
+
 } // namespace
 
 Diagram::LineRef::LineRef(std::string str) {
@@ -332,9 +387,11 @@ std::vector<Topology> Topology::topologies(const Diagram& diagram) {
                 continue;
             }
             if ((i >> j) & 1) {
-                if (e_min_item >= decay.mass) {
+                if (e_min_item > decay.mass) {
                     possible = false;
                     break;
+                } else if (e_min_item == decay.mass) {
+                    decay.on_shell_boundary = true;
                 } else {
                     decay.on_shell = true;
                     e_min_item = decay.mass;
@@ -350,7 +407,8 @@ std::vector<Topology> Topology::topologies(const Diagram& diagram) {
         for (auto& other_topo : topos) {
             bool subset = true;
             for (auto [this_decay, other_decay] : zip(decays, other_topo.decays())) {
-                if (this_decay.on_shell > other_decay.on_shell) {
+                if ((this_decay.on_shell || this_decay.on_shell_boundary) >
+                    (other_decay.on_shell || other_decay.on_shell_boundary)) {
                     subset = false;
                     break;
                 }
@@ -465,4 +523,63 @@ Topology::propagator_momentum_terms(bool only_decays) const {
         ++child_count;
     }
     return ret;
+}
+
+std::string Topology::to_string() const {
+    std::string buffer;
+    auto out = std::back_inserter(buffer);
+
+    std::unordered_map<std::size_t, std::size_t> outgoing_of_decay;
+    for (std::size_t out_index = 0; out_index < _outgoing_indices.size(); ++out_index) {
+        outgoing_of_decay[_outgoing_indices.at(out_index)] = out_index;
+    }
+
+    bool has_t_channel = _t_integration_order.size() > 0;
+    std::unordered_map<std::size_t, std::size_t> decay_order;
+    for (std::size_t order = 0; std::size_t decay_index : _decay_integration_order) {
+        if (decay_index == 0 && has_t_channel) {
+            continue;
+        }
+        decay_order[decay_index] = order++;
+    }
+
+    for (std::size_t index = 0; index < _incoming_masses.size(); ++index) {
+        std::format_to(
+            out, "├── incoming: index={}, mass={}\n", index, _incoming_masses.at(index)
+        );
+    }
+
+    if (has_t_channel) {
+        std::string t_channel_items;
+        auto t_out = std::back_inserter(t_channel_items);
+        for (std::size_t order = 0; order < _t_integration_order.size(); ++order) {
+            std::size_t index = _t_integration_order.at(order);
+            std::format_to(
+                t_out,
+                "{}(order={}, mass={}, width={})",
+                order == 0 ? "" : ", ",
+                order,
+                _t_propagator_masses.at(index),
+                _t_propagator_widths.at(index)
+            );
+        }
+        std::format_to(out, "└── t-channel: {}\n", t_channel_items);
+
+        auto& root_children = _decays.at(0).child_indices;
+        for (std::size_t i = 0; i < root_children.size(); ++i) {
+            format_topology_node(
+                out,
+                _decays,
+                root_children.at(i),
+                "    ",
+                i + 1 == root_children.size(),
+                decay_order,
+                outgoing_of_decay
+            );
+        }
+    } else {
+        format_topology_node(out, _decays, 0, "", true, decay_order, outgoing_of_decay);
+    }
+
+    return buffer;
 }
