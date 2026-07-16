@@ -815,17 +815,38 @@ class EventFile(object):
             if self.eventgroup:
                 self.write('</eventgroup>\n')
     
-    def unweight(self, outputpath, get_wgt=None, max_wgt=0, trunc_error=0, 
+    @staticmethod
+    def unweight_output_paths(outputpath, nb_output=1):
+        """List of the files the unweighting writes. For nb_output==1 this is
+        just [outputpath] (historical behaviour); for more, an index is inserted
+        before the extension, e.g. unweighted_events.lhe.gz ->
+        unweighted_events_0.lhe.gz, unweighted_events_1.lhe.gz, ..."""
+        if nb_output <= 1:
+            return [outputpath]
+        base, suffix = outputpath, ''
+        for ext in ('.lhe.gz', '.lhe'):
+            if base.endswith(ext):
+                base, suffix = base[:-len(ext)], ext
+                break
+        return ['%s_%d%s' % (base, i, suffix) for i in range(nb_output)]
+
+    def unweight(self, outputpath, get_wgt=None, max_wgt=0, trunc_error=0,
                  event_target=0, log_level=logging.INFO, normalization='average',
-                 keep_overshoot=False):
+                 keep_overshoot=False, nb_output=1):
         """unweight the current file according to wgt information wgt.
         which can either be a fct of the event or a tag in the rwgt list.
         max_wgt allow to do partial unweighting. 
         trunc_error allow for dynamical partial unweighting
         event_target reweight for that many event with maximal trunc_error.
         (stop to write event when target is reached but if keep_overshoot is True)
+        nb_output allows to spread the surviving events over that many files
+        (round-robin) instead of a single one -- useful when they are going to be
+        read back by that many parallel consumers, since each then reads only its
+        own file. nb_output=1 (the default) keeps the historical single file.
         """
         self.parsing = 'wgt_only'
+        nb_output = max(1, int(nb_output))
+        outpaths = self.unweight_output_paths(outputpath, nb_output) if outputpath else []
 
         if not get_wgt:
             def weight(event):
@@ -938,11 +959,12 @@ class EventFile(object):
 
             #create output file (here since we are sure that we have to rewrite it)
             if outputpath:
-                outfile = EventFile(outputpath, "w")
+                outfiles = [EventFile(path, "w") for path in outpaths]
             # need to write banner information
             # need to see what to do with rwgt information!
             if self.banner and outputpath:
-                banner.write(outfile, close_tag=False)
+                for outfile in outfiles:
+                    banner.write(outfile, close_tag=False)
 
             # scan the file
             nb_keep = 0
@@ -959,12 +981,12 @@ class EventFile(object):
                         if outputpath and (event_target == 0 or keep_overshoot or nb_keep <= event_target):
                             final_wgt = written_weight(max(wgt, max_wgt))
                             try:
-                                outfile.write(self._rewrite_raw_event_weight(raw_event, final_wgt, header_meta))
+                                outfiles[nb_keep % nb_output].write(self._rewrite_raw_event_weight(raw_event, final_wgt, header_meta))
                             except Exception:
                                 # Per-event fallback preserves behavior on malformed blocks.
                                 event = Event(raw_event, parse_momenta=False)
                                 event.wgt = final_wgt
-                                outfile.write(str(event))
+                                outfiles[nb_keep % nb_output].write(str(event))
                     elif wgt < 0:
                         nb_keep += 1
                         if abs(wgt) > max_wgt:
@@ -972,12 +994,12 @@ class EventFile(object):
                         if outputpath and (event_target == 0 or keep_overshoot or nb_keep <= event_target):
                             final_wgt = -1 * written_weight(max(abs(wgt), max_wgt))
                             try:
-                                outfile.write(self._rewrite_raw_event_weight(raw_event, final_wgt, header_meta))
+                                outfiles[nb_keep % nb_output].write(self._rewrite_raw_event_weight(raw_event, final_wgt, header_meta))
                             except Exception:
                                 # Per-event fallback preserves behavior on malformed blocks.
                                 event = Event(raw_event, parse_momenta=False)
                                 event.wgt = final_wgt
-                                outfile.write(str(event))
+                                outfiles[nb_keep % nb_output].write(str(event))
             else:
                 for event in self:
                     r = random.random()
@@ -991,7 +1013,7 @@ class EventFile(object):
                             trunc_cross += abs(wgt) - max_wgt 
                         if event_target ==0 or keep_overshoot or nb_keep <= event_target:
                             if outputpath:                         
-                                outfile.write(str(event))
+                                outfiles[nb_keep % nb_output].write(str(event))
 
                     elif wgt < 0:
                         nb_keep += 1
@@ -999,29 +1021,33 @@ class EventFile(object):
                         if abs(wgt) > max_wgt:
                             trunc_cross += abs(wgt) - max_wgt
                         if outputpath and (event_target ==0 or keep_overshoot or nb_keep <= event_target):
-                            outfile.write(str(event))
+                            outfiles[nb_keep % nb_output].write(str(event))
             
             if event_target and nb_keep > event_target:
                 if not outputpath:
                     #no outputpath define -> wants only the nb of unweighted events
                     continue
                 elif event_target and i != nb_try-1 and nb_keep >= event_target *1.05:
-                    outfile.write("</LesHouchesEvents>\n")
-                    outfile.close()
+                    for outfile in outfiles:
+                        outfile.write("</LesHouchesEvents>\n")
+                        outfile.close()
                     #logger.log(log_level, "Found Too much event %s. Try to reduce truncation" % nb_keep)
                     continue
                 else:
-                    outfile.write("</LesHouchesEvents>\n")
-                    outfile.close()
+                    for outfile in outfiles:
+                        outfile.write("</LesHouchesEvents>\n")
+                        outfile.close()
                 break
             elif event_target == 0:
                 if outputpath:
-                    outfile.write("</LesHouchesEvents>\n")
-                    outfile.close()
+                    for outfile in outfiles:
+                        outfile.write("</LesHouchesEvents>\n")
+                        outfile.close()
                 break                    
             elif outputpath:
-                outfile.write("</LesHouchesEvents>\n")
-                outfile.close()
+                for outfile in outfiles:
+                    outfile.write("</LesHouchesEvents>\n")
+                    outfile.close()
 #                logger.log(log_level, "Found only %s event. Reduce max_wgt" % nb_keep)
             
         else:
@@ -1043,17 +1069,18 @@ class EventFile(object):
         #correct the weight in the file if not the correct number of event
         if nb_keep != event_target and hasattr(self, "written_weight") and strategy !=4:
             written_weight = lambda x: math.copysign(self.written_weight*event_target/nb_keep, float(x))
-            startfile = EventFile(outputpath)
-            tmpname = pjoin(os.path.dirname(outputpath), "wgtcorrected_"+ os.path.basename(outputpath))
-            outfile = EventFile(tmpname, "w")
-            outfile.write(startfile.banner)
-            for event in startfile:
-                event.wgt = written_weight(event.wgt)
-                outfile.write(str(event))
-            outfile.write("</LesHouchesEvents>\n")
-            startfile.close()
-            outfile.close()
-            shutil.move(tmpname, outputpath)
+            for path in outpaths:
+                startfile = EventFile(path)
+                tmpname = pjoin(os.path.dirname(path), "wgtcorrected_"+ os.path.basename(path))
+                outfile = EventFile(tmpname, "w")
+                outfile.write(startfile.banner)
+                for event in startfile:
+                    event.wgt = written_weight(event.wgt)
+                    outfile.write(str(event))
+                outfile.write("</LesHouchesEvents>\n")
+                startfile.close()
+                outfile.close()
+                shutil.move(tmpname, path)
             
         
         

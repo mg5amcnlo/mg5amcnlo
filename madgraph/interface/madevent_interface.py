@@ -3799,7 +3799,25 @@ Beware that this can be dangerous for local multicore runs.""")
             
 
       
-    ############################################################################ 
+    ############################################################################
+    def zip_unweighted_output(self, outputpath, start=None):
+        """gzip the file(s) the final unweighting produced, unless the run_card
+        asks not to (``zip_unweighted_events``) -- compressing them is a pure
+        waste when they are consumed straight away. Handles the split output of
+        ``nb_unweight_output`` transparently."""
+        paths = lhe_parser.EventFile.unweight_output_paths(
+                            outputpath, self.run_card['nb_unweight_output'])
+        if not self.run_card['zip_unweighted_events']:
+            logger.debug("unweight done, skipping the zipping (zip_unweighted_events=False)")
+            return paths
+        if start is not None:
+            logger.debug("unweight done. start zipping after %.1f s", time.time()-start)
+        for path in paths:
+            if os.path.exists(path):
+                misc.gzip(path)
+        return paths
+
+    ############################################################################
     def do_combine_events(self, line):
         """Advanced commands: Launch combine events"""
         start=time.time()
@@ -3934,10 +3952,11 @@ Beware that this can be dangerous for local multicore runs.""")
                           get_wgt, trunc_error=1e-2, event_target=self.run_card['nevents'],
                           log_level=logging.DEBUG, normalization=self.run_card['event_norm'],
                           proc_charac=self.proc_characteristic,
-                          keep_overshoot=self.run_card['allow_overshoot_events'])
-            logger.debug("unweight done. start zipping after %.1f s", time.time()-start)
-            misc.gzip(pjoin(self.me_dir, "Events", self.run_name, "unweighted_events.lhe"))
-            
+                          keep_overshoot=self.run_card['allow_overshoot_events'],
+                          nb_output=self.run_card['nb_unweight_output'])
+            self.zip_unweighted_output(pjoin(self.me_dir, "Events", self.run_name,
+                                             "unweighted_events.lhe"), start)
+
             #cleaning
             for data in partials_info:
                 path = data[0]
@@ -3976,9 +3995,10 @@ Beware that this can be dangerous for local multicore runs.""")
                                 get_wgt, trunc_error=1e-2, event_target=self.run_card['nevents'],
                                 log_level=logging.DEBUG, normalization=self.run_card['event_norm'],
                                 proc_charac=self.proc_characteristic,
-                                keep_overshoot=self.run_card['allow_overshoot_events'])
-                logger.debug("unweight done. start zipping after %.1f s", time.time()-start)
-                misc.gzip(pjoin(self.me_dir, "Events", self.run_name, "unweighted_events.lhe"))
+                                keep_overshoot=self.run_card['allow_overshoot_events'],
+                                nb_output=self.run_card['nb_unweight_output'])
+                self.zip_unweighted_output(pjoin(self.me_dir, "Events", self.run_name,
+                                                 "unweighted_events.lhe"), start)
 
         if nb_event < self.run_card['nevents']:
             logger.warning("failed to generate enough events. Please follow one of the following suggestions to fix the issue:")
