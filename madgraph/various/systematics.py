@@ -163,8 +163,9 @@ class Systematics(object):
             #self.b1 = beam1//2212
             isEVAxDIS=True
         # none, chff, edff
-        if(self.banner.run_card['pdlabel'] in ['none','chff','edff']):
-            raise SystematicsError('Systematics not supported for pdlabel=none,chff,edff')
+        pdList=['none','chff','edff']
+        if(self.banner.run_card['pdlabel'] in pdList):
+            raise SystematicsError('Systematics not supported for pdlabel in ',pdList)
 
         self.orig_ion_pdf = False
         self.ion_scaling = ion_scaling
@@ -651,7 +652,6 @@ class Systematics(object):
         pindex = max(0,self.multiID[0]-1)
 
         default = self.args[0]
-        got_weightgroup_name=False # needed for multiID!=0
         for arg in self.args[1:]:
             mur, muf, alps, dyn, pdf = arg[:5]
             if pdf == self.orig_pdf and alps ==1 and (mur!=1 or muf!=1 or dyn!=-1):
@@ -674,33 +674,36 @@ class Systematics(object):
                 in_alps=False
             
             if mur == muf == 1 and dyn==-1 and alps ==1 and  self.banner.run_card['pdlabel']!='eva':
-                if (pdf[0].lhapdfID in self.pdfsets or pdf[-1].lhapdfID in self.pdfsets) and not got_weightgroup_name:
+                if pdf[0].lhapdfID in self.pdfsets and pdf[-1].lhapdfID in self.pdfsets:
                     if in_pdf:
                         text += "</weightgroup> # PDFSET to PDFSET\n"
-
                     wgtGrpName = ['','']
-                    print(f"{pdf=}")
                     for kk,pset in enumerate(pdf):
                         pdfset = self.pdfsets[pset.lhapdfID]
                         descrip = pdfset.description.replace('=>',';').replace('>','.gt.').replace('<','.lt.')
                         wgtGrpName[0] += 'name%s=\"%s\" combine%s=\"%s\" ' % (kk+1,pdfset.name,kk+1,pdfset.errorType)
                         wgtGrpName[1] += '# %s: %s ' % (pdfset.lhapdfID, descrip)
                         in_pdf=pset.lhapdfID
-
                     text +="<weightgroup %s> %s\n" % (wgtGrpName[0],wgtGrpName[1])
-                    got_weightgroup_name=True
 
-                elif pdf[pindex].memberID == 0 and (pdf[pindex].lhapdfID - pdf[pindex].memberID) in self.pdfsets:
+                elif pdf[ 0].memberID == 0 and (pdf[ 0].lhapdfID - pdf[ 0].memberID) in self.pdfsets and\
+                     pdf[-1].memberID == 0 and (pdf[-1].lhapdfID - pdf[-1].memberID) in self.pdfsets:
                     if in_pdf:
                         text += "</weightgroup> # PDFSET to PDFSET\n"
-                    pdfset = self.pdfsets[pdf[pindex].lhapdfID - 1]
-                    descrip = pdfset.description.replace('=>',';').replace('>','.gt.').replace('<','.lt.')
-                    text +="<weightgroup name=\"%s\" combine=\"%s\"> # %s: %s\n" %\
-                            (pdfset.name, pdfset.errorType,pdfset.lhapdfID, descrip)
-                    in_pdf=pdfset.lhapdfID 
-                elif in_pdf and pdf[pindex].lhapdfID - pdf[pindex].memberID != in_pdf:
+                    wgtGrpName = ['','']
+                    for kk,pset in enumerate(pdf):
+                        pdfset = self.pdfsets[pset.lhapdfID - 1]
+                        descrip = pdfset.description.replace('=>',';').replace('>','.gt.').replace('<','.lt.')
+                        wgtGrpName[0] += 'name%s=\"%s\" combine%s=\"%s\" ' % (kk+1,pdfset.name,kk+1,pdfset.errorType)
+                        wgtGrpName[1] += '# %s: %s ' % (pdfset.lhapdfID, descrip)
+                        in_pdf=pdfset.lhapdfID
+                    text +="<weightgroup %s> %s\n" % (wgtGrpName[0],wgtGrpName[1])
+
+                elif in_pdf and (pdf[ 0].lhapdfID - pdf[ 0].memberID != in_pdf) and\
+                                (pdf[-1].lhapdfID - pdf[-1].memberID != in_pdf):
                     text += "</weightgroup> # PDFSET to PDF\n"
                     in_pdf = False 
+
             elif in_pdf:
                 text += "</weightgroup> PDF \n"
                 in_pdf=False                
@@ -869,10 +872,15 @@ class Systematics(object):
                 for name,value in zip(one_block, together):
                     new_args[pos[name]] = value
                 all_args.append(new_args)
+
         for name in pos:
+            # case 1/3
             if name in done:
                 continue
+
+            # case 2/3
             if name == 'pdf':
+                done.add('pdf')
                 # note:
                 # self.pdfsets [dict-type] is the collection of *sets* used
                 #       in the original  calculation and its variations.
@@ -882,7 +890,7 @@ class Systematics(object):
                 #       hidden options in the run card, len(...) >= 2
                 # get original pdfs in run_card (always two, even if hidden)
 
-                # how many replica pdf sets do we have? ('pdfsets' is dict-type)
+                # collect replica pdfs for each beam
                 nrSets = []
                 beam1PDFsets = []
                 beam2PDFsets = []
@@ -892,6 +900,7 @@ class Systematics(object):
                     beam1PDFsets = [self.pdf[0]]
                     beam2PDFsets = [self.pdf[1]]
                 else:
+                    # how many replica pdf sets do we have? ('pdfsets' is dict-type)
                     for kk, key in enumerate(self.pdfsets):
                         nrSets.append(self.pdfsets[key].size)
                     # split 'pdf' into two:
@@ -906,13 +915,14 @@ class Systematics(object):
                                 beam1PDFsets.append(value)
                             else:
                                 beam2PDFsets.append(value)
+                # sanity check
                 try:
-                    assert (nrSets[0]+nrSets[-1]) == len(beam1PDFsets+beam2PDFsets) # sanity check
+                    assert (nrSets[0]+nrSets[-1]) == len(beam1PDFsets+beam2PDFsets)
                 except AssertionError as err:
                     self.log('AssertionError when checking number of PDF sets in variation')
                     nrSets = [1,1]
-                    beam1PDFsets = [getattr(self,'pdf')[0]]
-                    beam2PDFsets = [getattr(self,'pdf')[0]]
+                    beam1PDFsets = [self.pdf[0]]
+                    beam2PDFsets = [self.pdf[0]]
                     self.log('Restricting PDF variation to %s' % beam1PDFsets)
 
                 # build pairs of pdfs for pdf variation
@@ -923,26 +933,36 @@ class Systematics(object):
                 # note: pairs_of_lhaids must be converted into lists to match self.orig_pdf
                 if self.multiID[0] == -1:
                     # vary 1 and 2 separately
+                    # drop default configuration; keep only replicas
+                    if len(beam1PDFsets) > 1: beam1PDFsets.pop(0)
+                    if len(beam2PDFsets) > 1: beam2PDFsets.pop(0)
                     pairs_of_lhaids = list(list(tup) for tup in itertools.product(beam1PDFsets,beam2PDFsets))
-                    noS = '' if len(pairs_of_lhaids)==1 else 's'
-                    self.log("# Preparing %s independent variation%s of PDF(beam1) and PDF(beam2)" % (len(pairs_of_lhaids),noS))
+                    nrS = '' if len(pairs_of_lhaids)==1 else 's'
+                    self.log("# Preparing %s independent variation%s of PDF(beam1) and PDF(beam2)" % (len(pairs_of_lhaids),nrS))
                 elif self.multiID[0] == 1:
                     # vary 1, fix 2
+                    # drop default configuration; keep only replicas
+                    if len(beam1PDFsets) > 1: beam1PDFsets.pop(0)
                     pairs_of_lhaids = list(list(tup) for tup in itertools.product(beam1PDFsets,beam2PDFsets[:1]))
-                    noS = '' if len(pairs_of_lhaids)==1 else 's'
-                    self.log("# Preparing %s variation%s from PDF(beam1) while fixing PDF(beam2)" % (len(pairs_of_lhaids),noS))
+                    nrS = '' if len(pairs_of_lhaids)==1 else 's'
+                    self.log("# Preparing %s variation%s from PDF(beam1) while fixing PDF(beam2)" % (len(pairs_of_lhaids),nrS))
                 elif self.multiID[0] == 2:
                     # fix 1, vary 2
+                    # drop default configuration; keep only replicas
+                    if len(beam2PDFsets) > 1: beam2PDFsets.pop(0)
                     pairs_of_lhaids = list(list(tup) for tup in itertools.product(beam1PDFsets[:1],beam2PDFsets))
-                    noS = '' if len(pairs_of_lhaids)==1 else 's'
-                    self.log("# Preparing %s variation%s from PDF(beam2) while fixing PDF(beam1)" % (len(pairs_of_lhaids),noS))
+                    nrS = '' if len(pairs_of_lhaids)==1 else 's'
+                    self.log("# Preparing %s variation%s from PDF(beam2) while fixing PDF(beam1)" % (len(pairs_of_lhaids),nrS))
                 else:
                     # default, vary 1 and 2 together
+                    # drop default configuration; keep only replicas
+                    if len(beam1PDFsets) > 1: beam1PDFsets.pop(0)
+                    if len(beam2PDFsets) > 1: beam2PDFsets.pop(0)
                     #minmax = min(len(beam1PDFsets),len(beam2PDFsets),USERSET?)
                     minmax = min(len(beam1PDFsets),len(beam2PDFsets))
                     pairs_of_lhaids = list([beam1PDFsets[kk],beam2PDFsets[kk]] for kk in range(0,minmax))
-                    noS = '' if len(pairs_of_lhaids)==1 else 's'
-                    self.log("# Preparing %s simultaneous variation%s of PDF(beam1) and PDF(beam2)" % (len(pairs_of_lhaids),noS))
+                    nrS = '' if len(pairs_of_lhaids)==1 else 's'
+                    self.log("# Preparing %s simultaneous variation%s of PDF(beam1) and PDF(beam2)" % (len(pairs_of_lhaids),nrS))
 
                 # add sets of (mur,muf,alps,dyn,pdf) configurations
                 for lhaid_pairs in pairs_of_lhaids:
@@ -950,9 +970,9 @@ class Systematics(object):
                     new_args[pos['pdf']] = lhaid_pairs
                     all_args.append(new_args)
 
-                done.add('pdf')
                 continue
 
+            # case 3/3
             for value in getattr(self, name):
                 new_args = list(default)
                 new_args[pos[name]] = value
@@ -963,16 +983,16 @@ class Systematics(object):
         # add the default before the pdf scan to have a full grouping
         # search for lhapdfID+1, then insert default before lhapdfID+1
         if self.banner.run_card['pdlabel'] not in ['eva']:
-            match self.multiID[0]:
-                    case 1: # vary 1, fix 2
-                        pdf1plusone = [pdf for pdf in beam1PDFsets if pdf.lhapdfID == self.orig_pdf[0].lhapdfID+1]
-                        pdf2plusone = [pdf for pdf in beam2PDFsets if pdf.lhapdfID == self.orig_pdf[1].lhapdfID]
-                    case 2: # fix 1, vary 2
-                        pdf1plusone = [pdf for pdf in beam1PDFsets if pdf.lhapdfID == self.orig_pdf[0].lhapdfID]
-                        pdf2plusone = [pdf for pdf in beam2PDFsets if pdf.lhapdfID == self.orig_pdf[1].lhapdfID+1]
-                    case _: # default, vary 1 and 2
-                        pdf1plusone = [pdf for pdf in beam1PDFsets if pdf.lhapdfID == self.orig_pdf[0].lhapdfID+1]
-                        pdf2plusone = [pdf for pdf in beam2PDFsets if pdf.lhapdfID == self.orig_pdf[1].lhapdfID+1]
+            if self.multiID[0] == 1: # vary 1, fix 2
+                pdf1plusone = [pdf for pdf in beam1PDFsets if pdf.lhapdfID == self.orig_pdf[0].lhapdfID+1]
+                pdf2plusone = [pdf for pdf in beam2PDFsets if pdf.lhapdfID == self.orig_pdf[1].lhapdfID]
+            elif self.multiID[0] == 2: # fix 1, vary 2
+                pdf1plusone = [pdf for pdf in beam1PDFsets if pdf.lhapdfID == self.orig_pdf[0].lhapdfID]
+                pdf2plusone = [pdf for pdf in beam2PDFsets if pdf.lhapdfID == self.orig_pdf[1].lhapdfID+1]
+            else: # default, vary 1 and 2
+                pdf1plusone = [pdf for pdf in beam1PDFsets if pdf.lhapdfID == self.orig_pdf[0].lhapdfID+1]
+                pdf2plusone = [pdf for pdf in beam2PDFsets if pdf.lhapdfID == self.orig_pdf[1].lhapdfID+1]
+
             if pdf1plusone and pdf2plusone:
                 pdfplusone  = [[pdf1plusone[0],pdf2plusone[0]]]
                 pdfplusone = default[:-1] + [pdfplusone[0]] 
