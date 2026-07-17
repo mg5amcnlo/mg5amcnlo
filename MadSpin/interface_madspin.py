@@ -2961,6 +2961,45 @@ class MadSpinInterface(extended_cmd.Cmd):
         return base_max_weight
 
             
+    def _slot_identity(self, hel):
+        """The I/n a slot contributes while its decay has not been drawn yet.
+        Depends only on the helicity list, so cache it per basis."""
+        key = tuple(hel)
+        try:
+            cache = self._slot_identity_cache
+        except AttributeError:
+            cache = self._slot_identity_cache = {}
+        if key not in cache:
+            cache[key] = madspin.DensityMatrix.identity(1, list(hel), len(hel))
+        return cache[key]
+
+    def _partial_density_contraction(self, density_prod, helicities, slot_densities):
+        """N_k: the production density matrix contracted with the normalised
+        decay density matrix (Dhat = D/Tr D) of every slot drawn so far, the
+        slots still to be drawn contributing I/n -- the average of a decay
+        density matrix over its full phase space.
+
+        ``slot_densities`` maps slot index -> DensityMatrix as get_density
+        returns it (un-normalised); slots absent from it are the undrawn ones.
+
+        The tensor product is built in *slot* order, which is what the
+        production density matrix's helicity index follows. The accept/reject
+        ordering only decides which slot gets filled next -- it must never
+        permute the tensor. See MADSPIN_SEQUENTIAL_PLAN.md.
+        """
+        density_dec = None
+        for slot, hel in enumerate(helicities):
+            density = slot_densities.get(slot)
+            if density is None:
+                density = self._slot_identity(hel)
+            else:
+                density = density.normalized()
+            if density_dec is None:
+                density_dec = density
+            else:
+                density_dec = density_dec.tensor_product(density)
+        return density_dec.scalar_multiplication(density_prod)
+
     def _draw_offshell_mass(self, pdg, dec, budget):
         """Sample one resonance virtuality from its Breit-Wigner. Returns the
         budget left and that draw's jacobian.

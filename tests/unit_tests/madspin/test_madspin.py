@@ -842,3 +842,103 @@ class TestDrawOffshellMass(unittest.TestCase):
         pole, width, min_mass, max_mass = dec[0].reshuffle_info
         self.assertAlmostEqual(min_mass, 173.0 - 2 * 1.5)
         self.assertAlmostEqual(max_mass, 173.0 + 2 * 1.5)
+
+
+class TestPartialDensityContraction(unittest.TestCase):
+    """_partial_density_contraction: N_k, the production density matrix
+    contracted with the decays drawn so far, the rest replaced by I/n.
+
+    This is the heart of the per-particle accept/reject, so it is pinned against
+    the two endpoints it has to reproduce and against the telescoping identity
+    the method's exactness rests on.
+    """
+
+    class _Stub(object):
+        _slot_identity = interface_madspin.MadSpinInterface._slot_identity
+        _partial_density_contraction = \
+            interface_madspin.MadSpinInterface._partial_density_contraction
+
+    def _density(self, hel, seed):
+        """A density matrix on a single-particle basis, packed as Fortran gives it."""
+        import numpy as np
+        rng = np.random.default_rng(seed)
+        n = len(hel)
+        arr = (rng.normal(size=n * (n + 1) // 2)
+               + 1j * rng.normal(size=n * (n + 1) // 2)).astype('complex64')
+        for i in range(n):
+            arr[i * (2 * n - i + 1) // 2] = abs(arr[i * (2 * n - i + 1) // 2])
+        return madspin.DensityMatrix(arr, 1, hel, n)
+
+    def _production(self, hels, seed=7):
+        """A production density matrix over the joint helicity index."""
+        import numpy as np
+        import itertools
+        dim = 1
+        for h in hels:
+            dim *= len(h)
+        allowed = []
+        for combo in itertools.product(*hels):
+            allowed.extend(combo)
+        rng = np.random.default_rng(seed)
+        arr = (rng.normal(size=dim * (dim + 1) // 2)
+               + 1j * rng.normal(size=dim * (dim + 1) // 2)).astype('complex64')
+        for i in range(dim):
+            arr[i * (2 * dim - i + 1) // 2] = abs(arr[i * (2 * dim - i + 1) // 2])
+        return madspin.DensityMatrix(arr, len(hels), allowed, dim), dim
+
+    CASES = [[[1, -1], [1, -1]],            # t t~
+             [[-1, 0, 1], [-1, 0, 1]],      # W W
+             [[1, -1], [0]],                # fermion + scalar
+             [[1, -1], [-1, 0, 1], [0]]]    # fermion + vector + scalar
+
+    def test_nothing_drawn_is_the_trace(self):
+        """N_0 = Tr(rho) / prod n_i: every slot contributes I/n."""
+        import numpy as np
+        for hels in self.CASES:
+            rho, dim = self._production(hels)
+            got = self._Stub()._partial_density_contraction(rho, hels, {})
+            self.assertTrue(np.allclose(got, rho.trace() / dim))
+
+    def test_everything_drawn_is_the_joint_contraction(self):
+        """N_n = <rho, (x)_i Dhat_i>: the weight the joint accept/reject uses."""
+        import numpy as np
+        for hels in self.CASES:
+            rho, _ = self._production(hels)
+            densities = {i: self._density(h, 10 + i) for i, h in enumerate(hels)}
+            got = self._Stub()._partial_density_contraction(rho, hels, densities)
+            joint = None
+            for i, h in enumerate(hels):
+                d = densities[i].normalized()
+                joint = d if joint is None else joint.tensor_product(d)
+            self.assertTrue(np.allclose(got, joint.scalar_multiplication(rho)))
+
+    def test_ratios_telescope_whatever_the_fill_order(self):
+        """prod_k N_k/N_{k-1} == N_n/N_0 -- why the per-slot test targets the
+        same distribution as the joint one, for any decay ordering."""
+        import numpy as np
+        hels = [[1, -1], [-1, 0, 1], [0]]
+        rho, _ = self._production(hels, seed=3)
+        densities = {i: self._density(h, 20 + i) for i, h in enumerate(hels)}
+        stub = self._Stub()
+        n_0 = stub._partial_density_contraction(rho, hels, {})
+        n_n = stub._partial_density_contraction(rho, hels, densities)
+        for order in ([0, 1, 2], [2, 1, 0], [1, 0, 2]):
+            filled, previous, product = {}, n_0, 1.0
+            for slot in order:
+                filled[slot] = densities[slot]
+                current = stub._partial_density_contraction(rho, hels, filled)
+                product *= current / previous
+                previous = current
+            self.assertTrue(np.allclose(product, n_n / n_0))
+
+    def test_scalar_slot_cannot_be_rejected(self):
+        """Filling a spin-0 slot leaves N_k untouched: its ratio is exactly 1."""
+        import numpy as np
+        hels = [[1, -1], [-1, 0, 1], [0]]
+        rho, _ = self._production(hels, seed=3)
+        densities = {i: self._density(h, 20 + i) for i, h in enumerate(hels)}
+        stub = self._Stub()
+        without = stub._partial_density_contraction(rho, hels, {0: densities[0],
+                                                                1: densities[1]})
+        with_scalar = stub._partial_density_contraction(rho, hels, densities)
+        self.assertTrue(np.allclose(with_scalar / without, 1.0))
