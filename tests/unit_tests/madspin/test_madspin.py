@@ -1008,3 +1008,195 @@ class TestSequentialSlots(unittest.TestCase):
         particles, slots = interface._sequential_slots(production, decays_key)
         self.assertEqual(slots, [0, 2, 1])
         self.assertEqual([p.pid for p in particles], [6, -6, 6, 21])
+
+
+class TestProductionJacobianForSlots(unittest.TestCase):
+    """_production_jacobian_for: J_k, the production jacobian with the slots
+    drawn so far offshell and the rest nominal. Each slot carries J_k/J_{k-1}.
+    """
+
+    EVENT = """ <event>
+ 12      1 +4.8368719e+02 1.76709900e+02 7.54677100e-03 1.17102600e-01
+         2 -1    0    0  502    0 +0.0000000000e+00 +0.0000000000e+00 +1.6801959055e+02 1.6801959055e+02 0.0000000000e+00  0.0000e+00 1.0000e+00
+        -2 -1    0    0    0  501 -0.0000000000e+00 -0.0000000000e+00 -3.6057100553e+02 3.6057100553e+02 0.0000000000e+00  0.0000e+00 -1.0000e+00
+         6  2    1    2  502    0 -1.0742571918e+01 -3.4379861756e+01 -2.8025420328e+02 3.3131374285e+02 1.7300000000e+02  0.0000e+00 9.0000e+00
+        -6  1    1    2    0  501 +1.0742571918e+01 +3.4379861756e+01 +8.7702788293e+01 1.9727685323e+02 1.7300000000e+02  0.0000e+00 9.0000e+00
+         5  1    3    3  502    0 -6.3369583864e+00 +5.5362090397e+01 -7.6229914475e+01 9.4542096209e+01 4.7000000000e+00  0.0000e+00 -1.0000e+00
+        24  1    3    3    0    0 -4.4056135319e+00 -8.9741952154e+01 -2.0402428881e+02 2.3677164665e+02 7.9761361725e+01  0.0000e+00 9.0000e+00
+        </event>"""
+
+    INFO = (173.0, 1.5, 150.0, 200.0)
+
+    def _production(self):
+        evt = lhe_parser.Event()
+        evt.parse(self.EVENT)
+        return evt
+
+    def test_nothing_offshell_is_unit_jacobian(self):
+        """J_0: no mass moved, so the reshuffling is the identity."""
+        jac = interface_madspin.MadSpinInterface._production_jacobian_for(
+                        self._production(), {0: 0}, {})
+        self.assertAlmostEqual(jac, 1.0, places=6)
+
+    def test_leaves_the_production_untouched(self):
+        """J_k is needed at every slot; the reshuffling happens once, later."""
+        production = self._production()
+        before = str(production)
+        interface_madspin.MadSpinInterface._production_jacobian_for(
+                        production, {0: 0}, {0: (180.0, self.INFO)})
+        self.assertEqual(str(production), before)
+
+    def test_offshell_slot_changes_the_jacobian(self):
+        """J_1 != J_0 once a virtuality is sampled -- the ratio is what the slot
+        carries in its accept/reject weight."""
+        interface = interface_madspin.MadSpinInterface
+        j_0 = interface._production_jacobian_for(self._production(), {0: 0}, {})
+        j_1 = interface._production_jacobian_for(self._production(), {0: 0},
+                                                {0: (180.0, self.INFO)})
+        self.assertNotAlmostEqual(j_1, j_0, places=3)
+        self.assertTrue(0 < j_1 / j_0 < 2)
+
+    def test_impossible_mass_set_is_reported(self):
+        """The production-side kinematic failure: the caller trashes the set."""
+        jac = interface_madspin.MadSpinInterface._production_jacobian_for(
+                        self._production(), {0: 0},
+                        {0: (1e6, (173.0, 1.5, 150.0, 2e6))})
+        self.assertEqual(jac, -1)
+
+
+class TestSequentialAcceptReject(unittest.TestCase):
+    """sequential_accept_reject: accepting one decaying particle at a time must
+    sample the *same* distribution as the joint accept/reject, i.e. p(decays)
+    proportional to N_n.
+
+    Driven with synthetic density matrices so no matrix element is needed. The
+    decay pool has to be physical for the claim to hold: Dhat = (I + a n.sigma)/2
+    for a spin-1/2 parent, and antipodal directions so the pool average is
+    exactly I/2 -- the trace property the method rests on. (With a pool that
+    violates it the method is genuinely biased; that is the caveat the opt-out
+    flag exists for.)
+    """
+
+    POOL = 4
+    HELS = [[1, -1], [1, -1]]      # t t~
+
+    class _Part(object):
+        def __init__(self, pid, status=1):
+            self.pid = pid
+            self.pdg = pid
+            self.status = status
+
+    class _Prod(list):
+        sqrts = 1000.0
+
+    def _fermion_decay(self, nhat, alpha=0.9):
+        import numpy as np
+        nx, ny, nz = nhat
+        matrix = 0.5 * np.array([[1 + alpha * nz, alpha * (nx - 1j * ny)],
+                                 [alpha * (nx + 1j * ny), 1 - alpha * nz]],
+                                dtype=complex)
+        arr = np.array([matrix[0, 0], matrix[0, 1], matrix[1, 1]],
+                       dtype='complex64')
+        return madspin.DensityMatrix(arr, 1, [1, -1], 2)
+
+    def _pool(self, seed):
+        import numpy as np
+        rng = np.random.default_rng(seed)
+        out = []
+        for _ in range(self.POOL // 2):
+            vec = rng.normal(size=3)
+            vec /= np.linalg.norm(vec)
+            out.append(self._fermion_decay(vec))
+            out.append(self._fermion_decay(-vec))
+        return out
+
+    def _production_density(self, seed=11, rank=3, dim=4):
+        import numpy as np
+        import itertools
+        rng = np.random.default_rng(seed)
+        matrix = np.zeros((dim, dim), dtype=complex)
+        for _ in range(rank):
+            vec = rng.normal(size=dim) + 1j * rng.normal(size=dim)
+            matrix += np.outer(vec, vec.conj())
+        arr = np.array([matrix[i, j] for i in range(dim) for j in range(i, dim)],
+                       dtype='complex64')
+        allowed = []
+        for combo in itertools.product(*self.HELS):
+            allowed.extend(combo)
+        return madspin.DensityMatrix(arr, 2, allowed, dim)
+
+    def _stub(self, rho, pools):
+        interface = interface_madspin.MadSpinInterface
+        hels = self.HELS
+        pool = self.POOL
+
+        class Stub(object):
+            _decaying_pdgs = staticmethod(interface._decaying_pdgs)
+            _sequential_slots = staticmethod(interface._sequential_slots)
+            _slot_identity = interface._slot_identity
+            _partial_density_contraction = interface._partial_density_contraction
+            _sequential_spin_order = interface._sequential_spin_order
+            _decay_slot_order = interface._decay_slot_order
+            sequential_accept_reject = interface.sequential_accept_reject
+            def __init__(self):
+                self.options = {'spinmode': 'onshell',
+                                'sequential_spin_order': '2 3 1'}
+            def _density_basis(self, production, decays_key):
+                particles, slots = interface._sequential_slots(production, decays_key)
+                return {'decays_key': decays_key, 'helicities': hels,
+                        'init_part': [particles[i] for i in slots],
+                        'decaying_spins': [2, 2], 'position': [1, 2],
+                        'allowed_hel': [], 'ncomb': 0, 'dimension': 4}
+            def get_density(self, *args, **opts):
+                return rho
+            def _draw_one_decay(self, particle, index, ids, evt_decayfile, nb_remain):
+                import random
+                return ('cand', self._slot_of[index], random.randrange(pool))
+            def _slot_density(self, decay, parent, hel):
+                return pools[decay[1]][decay[2]]
+        return Stub()
+
+    def test_pool_average_is_the_identity(self):
+        """The property the method needs from the decay sample."""
+        import numpy as np
+        for seed in (100, 200):
+            pool = self._pool(seed)
+            average = sum(np.array([[d.values[0], d.values[1]],
+                                    [np.conj(d.values[1]), d.values[2]]])
+                          for d in pool) / self.POOL
+            self.assertTrue(np.allclose(average, np.eye(2) / 2))
+
+    def test_reproduces_the_joint_distribution(self):
+        """The whole claim: p(decays) proportional to N_n, i.e. the same target
+        the joint accept/reject samples -- while only ever redrawing one
+        particle at a time."""
+        import random
+        rho = self._production_density()
+        pools = {0: self._pool(100), 1: self._pool(200)}
+        stub = self._stub(rho, pools)
+        production = self._Prod([self._Part(2, -1), self._Part(-2, -1),
+                                 self._Part(6), self._Part(-6)])
+        evt_decayfile = {6: {0: 'f'}, -6: {0: 'f'}}
+        particles, slots = interface_madspin.MadSpinInterface._sequential_slots(
+                                                    production, (6, -6))
+        stub._slot_of = {index: slot for slot, index in enumerate(slots)}
+
+        exact = {(a, b): stub._partial_density_contraction(
+                            rho, self.HELS, {0: pools[0][a], 1: pools[1][b]}).real
+                 for a in range(self.POOL) for b in range(self.POOL)}
+        total = sum(exact.values())
+        exact = {k: v / total for k, v in exact.items()}
+        self.assertTrue(all(v > 0 for v in exact.values()))
+
+        random.seed(0)
+        counts = collections.Counter()
+        nb_run = 20000
+        for _ in range(nb_run):
+            decays = stub.sequential_accept_reject(production, evt_decayfile,
+                                                   [4.0, 4.0], 10)
+            counts[(decays[6][0][2], decays[-6][0][2])] += 1
+
+        for combo, want in exact.items():
+            got = counts[combo] / float(nb_run)
+            self.assertLess(abs(got / want - 1), 0.15,
+                            'combo %s: got %.4f, expected %.4f' % (combo, got, want))

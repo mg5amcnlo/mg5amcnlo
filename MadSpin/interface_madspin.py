@@ -3061,6 +3061,30 @@ class MadSpinInterface(extended_cmd.Cmd):
                     slot_to_index.append(i)
         return particles, slot_to_index
 
+    @staticmethod
+    def _production_jacobian_for(production, slot_to_index, slot_masses):
+        """J_k: the production reshuffling jacobian with the slots drawn so far
+        carrying their sampled virtuality and the rest still at their nominal
+        mass. Returns -1 (or 0) when that mass set cannot be reshuffled.
+
+        ``slot_masses`` maps slot -> (new_mass, reshuffle_info).
+
+        The masses are placed by slot identity rather than through
+        ``add_decays``, which attaches a pdg's decays to its particles in
+        production order: with a pdg owning several slots and only some of them
+        drawn, that would hand a mass to the wrong particle. Resonance handling
+        is left to reshuffle_production, which is why this is not a function of
+        the top-level masses alone.
+        """
+        probe = lhe_parser.Event(str(production))
+        finals = [p for p in probe if int(p.status) == 1]
+        for slot, (new_mass, info) in slot_masses.items():
+            particle = finals[slot_to_index[slot]]
+            particle.new_mass = new_mass
+            if info is not None:
+                particle.reshuffle_info = info
+        return probe.reshuffle_production(_allow_retry=False)
+
     def _slot_identity(self, hel):
         """The I/n a slot contributes while its decay has not been drawn yet.
         Depends only on the helicity list, so cache it per basis."""
@@ -3100,6 +3124,29 @@ class MadSpinInterface(extended_cmd.Cmd):
                 density_dec = density_dec.tensor_product(density)
         return density_dec.scalar_multiplication(density_prod)
 
+    def _decay_mass_is_feasible(self, decay):
+        """Can this decay's products be put on the virtuality just sampled for
+        it? ``t > b j j`` with a top below MW+Mb cannot.
+
+        Probed on a copy: the real reshuffling of the decay still happens once,
+        with the production, exactly as it does today. This only decides whether
+        the sampled mass has to be drawn again."""
+        probe = lhe_parser.Event(str(decay))
+        probe[0].new_mass = decay[0].new_mass
+        probe[0].reshuffle_info = decay[0].reshuffle_info
+        try:
+            return bool(probe.reshuffle_decayevt())
+        except Exception:
+            return False
+
+    def _slot_density(self, decay, parent, hel):
+        """The decay density matrix of one slot, in the lab frame of its parent."""
+        boost = -1 * lhe_parser.FourMomentum(parent)
+        boost.E *= -1
+        decay.boost(boost)
+        return self.get_density(decay, position=[1], allow_hel=hel,
+                                ncomb=len(hel), dimension=len(hel))
+
     def _draw_offshell_mass(self, pdg, dec, budget):
         """Sample one resonance virtuality from its Breit-Wigner. Returns the
         budget left and that draw's jacobian.
@@ -3130,6 +3177,129 @@ class MadSpinInterface(extended_cmd.Cmd):
         gap = math.atan((pole**2-min_mass**2)/pole*width)
         gap += math.atan((max_mass**2-pole**2)/pole*width)
         return budget, gap/math.pi
+
+    def sequential_accept_reject(self, production, evt_decayfile, maxwgts,
+                                 nb_remain, stats=None):
+        """Accept/reject one decaying particle at a time, in density mode.
+
+        Returns the accepted ``decays`` dict (pdg -> list of decay events, in
+        the order add_decays expects), or None if the production event has
+        nothing to decay.
+
+        Exactness: slot k is accepted with probability w_k / C_k where
+
+            w_k = (N_k / N_{k-1}) * jac_k^decay * (J_k / J_{k-1})
+
+        and every factor telescopes over the chain, so the product reproduces
+        the joint weight. On a reject only *that* slot is redrawn; the slots
+        already accepted are kept. See MADSPIN_SEQUENTIAL_PLAN.md.
+
+        Failure handling follows the scope of the failure: a mass its own decay
+        products cannot accommodate is redrawn on the spot, while a mass *set*
+        the production cannot reshuffle is only knowable once every slot has a
+        mass, so it trashes the whole set and restarts the chain.
+        """
+        decays_key = self._decaying_pdgs(production, evt_decayfile)
+        if not decays_key:
+            return None
+        prod_static = getattr(production, '_ms_density_static', None)
+        if not prod_static or prod_static.get('decays_key') != decays_key:
+            prod_static = self._density_basis(production, decays_key)
+            production._ms_density_static = prod_static
+
+        helicities = prod_static['helicities']
+        init_part = prod_static['init_part']
+        order = self._decay_slot_order(prod_static['decaying_spins'])
+        particles, slot_to_index = self._sequential_slots(production, decays_key)
+        ids = [p.pid for p in particles]
+
+        # the production density matrix is the same for every slot and every
+        # retry of this production event
+        density_prod = getattr(production, '_ms_density_prod', None)
+        if density_prod is None:
+            density_prod = self.get_density(production, prod_static['position'],
+                                            prod_static['allowed_hel'],
+                                            prod_static['ncomb'],
+                                            prod_static['dimension'])
+            production._ms_density_prod = density_prod
+
+        # PA samples a virtuality per resonance; onshell does not. 2 -> 1
+        # production has no recoil phase space for RAMBO to redistribute.
+        nb_prod_final = sum(1 for p in production if int(p.status) == 1)
+        draw_mass = (self.options['spinmode'] == 'PA' and nb_prod_final > 1)
+
+        if stats is None:
+            stats = collections.defaultdict(int)
+
+        while True:     # restart point: an impossible production mass set
+            slot_densities = {}
+            slot_decays = {}
+            slot_masses = {}
+            n_prev = self._partial_density_contraction(density_prod, helicities, {})
+            j_prev = 1.0
+            budget = production.sqrts
+            restart = False
+
+            for position, slot in enumerate(order):
+                index = slot_to_index[slot]
+                particle = particles[index]
+                maxwgt = maxwgts[position] if position < len(maxwgts) else maxwgts[-1]
+                while True:
+                    stats['nb_try_%d' % position] += 1
+                    decay = self._draw_one_decay(particle, index, ids,
+                                                 evt_decayfile, nb_remain)
+                    jac_dec = 1.0
+                    new_budget = budget
+                    if draw_mass:
+                        # decay-side failure is local to this slot: redraw its
+                        # mass, keep every slot already accepted
+                        while True:
+                            new_budget, jac_dec = self._draw_offshell_mass(
+                                                particle.pdg, decay, budget)
+                            if self._decay_mass_is_feasible(decay):
+                                break
+                            stats['nb_mass_redraw_%d' % position] += 1
+                        slot_masses[slot] = (decay[0].new_mass,
+                                             getattr(decay[0], 'reshuffle_info', None))
+
+                    j_k = j_prev
+                    if draw_mass:
+                        j_k = self._production_jacobian_for(production,
+                                                            slot_to_index,
+                                                            slot_masses)
+                        if j_k in (0, -1):
+                            # this mass *set* cannot be reshuffled: nothing to
+                            # redraw locally, trash everything and start over
+                            stats['nb_production_restart'] += 1
+                            restart = True
+                            break
+
+                    slot_densities[slot] = self._slot_density(
+                                    decay, init_part[slot], helicities[slot])
+                    n_k = self._partial_density_contraction(density_prod, helicities,
+                                                            slot_densities)
+                    wgt = (n_k / n_prev).real * jac_dec * (j_k / j_prev)
+                    if wgt > maxwgt:
+                        stats['nb_overflow_%d' % position] += 1
+                        logger.debug('sequential: slot %s weight %s above its '
+                                     'max %s', position, wgt, maxwgt)
+                    if random.random() * maxwgt < wgt:
+                        slot_decays[slot] = decay
+                        n_prev, j_prev, budget = n_k, j_k, new_budget
+                        break
+                    # rejected: this slot only, drop what it contributed
+                    slot_densities.pop(slot, None)
+                    slot_masses.pop(slot, None)
+                if restart:
+                    break
+            if not restart:
+                break
+
+        # back to the pdg -> list layout add_decays consumes, in slot order
+        decays = collections.defaultdict(list)
+        for slot in range(len(order)):
+            decays[particles[slot_to_index[slot]].pid].append(slot_decays[slot])
+        return decays
 
     def get_onshell_evt_and_wgt(self, production, decays, decay_dict, prod_density_cached=None, build_event=True):
         """ return the onshell wgt for the production event associated to the decays
