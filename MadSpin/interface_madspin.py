@@ -239,6 +239,10 @@ class _ChainedEvents(object):
             try:
                 return next(self._current)
             except StopIteration:
+                try:
+                    self._current.close()
+                except Exception:
+                    pass
                 self._current = None
     next = __next__
 
@@ -2011,9 +2015,10 @@ class MadSpinInterface(extended_cmd.Cmd):
         env = os.environ.copy()
         # 1. python3 shim so `env python3` == the MadSpin interpreter, regardless
         #    of whether dirname(sys.executable) even contains a bare `python3`.
-        if not getattr(self, '_py3_shim_dir', None):
             import tempfile
+            import atexit
             shim = tempfile.mkdtemp(prefix='ms_py3shim_')
+            atexit.register(shutil.rmtree, shim, ignore_errors=True)
             link = pjoin(shim, 'python3')
             target = os.path.abspath(sys.executable)
             try:

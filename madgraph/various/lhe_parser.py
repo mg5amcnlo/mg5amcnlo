@@ -841,15 +841,16 @@ class EventFile(object):
             for i, path in enumerate(paths):
                 in_banner = (i != 0)
                 opener = gzip.open if path.endswith('.gz') else open
-                for line in opener(path, 'rt'):
-                    if in_banner:
-                        # everything before the first event is the banner
-                        if not line.startswith('<event'):
+                with opener(path, 'rt') as infile:
+                    for line in infile:
+                        if in_banner:
+                            # everything before the first event is the banner
+                            if not line.startswith('<event'):
+                                continue
+                            in_banner = False
+                        if line.startswith('</LesHouchesEvents>'):
                             continue
-                        in_banner = False
-                    if line.startswith('</LesHouchesEvents>'):
-                        continue
-                    outfile.write(line)
+                        outfile.write(line)
             outfile.write('</LesHouchesEvents>\n')
         return outputpath
 
