@@ -155,16 +155,36 @@ real constraint:
    e.g. a resonance decaying to two tops whose sampled masses sum above the
    resonance mass. This is a property of the whole mass *set*: it cannot be
    attributed to a slot, and can only be established once every slot has a mass.
-   **Do the production reshuffling once, at the last stage.** Where it is needed
-   and possible, carry its jacobian at each step, but do not perform the
-   reshuffling per slot. If that final reshuffling turns out to be impossible,
-   **trash the full set of decay events** and restart the chain from the first
-   decay (keeping the production event).
+   **Do the production reshuffling once, at the last stage.** Carry its
+   *jacobian* at each step (below), but never perform the reshuffling itself per
+   slot. If that final reshuffling turns out to be impossible, **trash the full
+   set of decay events** and restart the chain from the first decay (keeping the
+   production event).
 
    Neither retry touches the decay *angles* -- both reject on masses only -- so
    (1) is untouched: the solid-angle integral at fixed mass is still
    proportional to I, and reshaping the mass mixture is exactly what
    `E[Dhat_k] = I/n_k` is insensitive to.
+
+4. **The production jacobian telescopes, exactly like N_k.** Write `J_k` for the
+   production jacobian with the first k decays (in the ordering) put offshell,
+   `J_0` being nothing offshell. Then:
+
+   - slot 1 carries `J_1` -- which is precisely what the code computes today
+     when a single decay is offshell;
+   - slot k carries the **ratio** `J_k / J_{k-1}`.
+
+   The chain multiplies out to `J_n / J_0`, the full production jacobian, so the
+   per-slot weights telescope to the joint weight just as `N_k/N_{k-1}` does.
+   The complete weight at slot k is therefore
+
+       w_k = (N_k / N_{k-1}) * jac_k^decay * (J_k / J_{k-1})
+
+   and `prod_k w_k` reproduces the joint weight, which is what makes the whole
+   scheme exact. `J_k` is the jacobian only -- the production reshuffling itself
+   still happens once, at the end, so this needs a way to evaluate `J_k` without
+   reshuffling (it is a phase-space volume factor of the masses; confirm against
+   `reshuffle_production` when implementing).
 
 ### Mass ownership: what phase 4 has to untangle first
 
