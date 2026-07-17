@@ -16,6 +16,16 @@ runs:
     - run: |
         echo "PYTHONPATH=$PYTHONPATH:$HOME/.cache/pip-packages" >> $GITHUB_ENV
         echo "$HOME/.cache/pip-packages/bin" >> $GITHUB_PATH
+        # Install meson+ninja if missing (numpy 2.x f2py requires meson as build backend).
+        # --upgrade is needed so pip writes scripts into the existing bin/ directory;
+        # it only affects meson/ninja since numpy is not listed here.
+        if [ ! -x "$HOME/.cache/pip-packages/bin/meson" ]; then
+          pip install --target "$HOME/.cache/pip-packages" --upgrade meson ninja
+        fi
         cd $GITHUB_WORKSPACE
-        echo "f2py_compiler = $(which f2py)" >> input/mg5_configuration.txt
+        # Use direct path because GITHUB_PATH additions don't take effect in the same step
+        F2PY_BIN="$HOME/.cache/pip-packages/bin/f2py"
+        if [ -x "$F2PY_BIN" ]; then
+          echo "f2py_compiler = $F2PY_BIN" >> input/mg5_configuration.txt
+        fi
       shell: bash
