@@ -3492,11 +3492,7 @@ class MadSpinInterface(extended_cmd.Cmd):
             slot_densities = {}
             slot_decays = {}
             slot_masses = {}
-            # tensor product of the accepted slots' normalised densities, with
-            # I/n in the slots not yet accepted -- grown one tensor_product per
-            # acceptance instead of rebuilt from scratch each slot
-            accepted_product = self._all_identity(helicities)
-            n_prev = accepted_product.scalar_multiplication(density_prod)
+            n_prev = self._partial_density_contraction(density_prod, helicities, {})
             j_prev = 1.0
             budget = production.sqrts
             restart = False
@@ -3544,10 +3540,12 @@ class MadSpinInterface(extended_cmd.Cmd):
                             break
                         j_k = j_probe
 
-                    density = self._slot_density(
+                    # accepted slots reuse their stored (already normalised)
+                    # density; only this slot's decay is evaluated here
+                    slot_densities[slot] = self._slot_density(
                                     decay, init_part[slot], helicities[slot])
-                    n_k = self._contract_with_extra(density_prod, helicities,
-                                                    accepted_product, slot, density)
+                    n_k = self._partial_density_contraction(density_prod, helicities,
+                                                            slot_densities)
                     wgt = (n_k / n_prev).real * jac_dec * (j_k / j_prev)
                     if probe is not None:
                         probe.append(wgt)
@@ -3562,12 +3560,10 @@ class MadSpinInterface(extended_cmd.Cmd):
                         accept = random.random() * maxwgt < wgt
                     if accept:
                         slot_decays[slot] = decay
-                        slot_densities[slot] = density
-                        accepted_product = self._tensor_extra(accepted_product,
-                                                              density)
                         n_prev, j_prev, budget = n_k, j_k, new_budget
                         break
                     # rejected: this slot only, drop what it contributed
+                    slot_densities.pop(slot, None)
                     slot_masses.pop(slot, None)
                 if restart:
                     break

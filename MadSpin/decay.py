@@ -4935,11 +4935,19 @@ class DensityMatrix:
 
     def normalized(self):
         """Same matrix divided by its trace (Dhat = D / Tr D), i.e. on the same
-        footing as ``identity``. Returns self unchanged if the trace vanishes."""
+        footing as ``identity``. Returns self unchanged if the trace vanishes.
+
+        Cached: a density matrix does not change after construction, and the
+        sequential accept/reject normalises each accepted slot once per later
+        slot -- O(n^2) times for n decaying particles otherwise."""
+        cached = getattr(self, '_normalized_cache', None)
+        if cached is not None:
+            return cached
         tr = self.trace()
         if tr == 0:
+            self._normalized_cache = self
             return self
-        return DensityMatrix.from_components(
+        out = DensityMatrix.from_components(
             self.helicities,
             self.values / tr,
             self.nchanging,
@@ -4947,6 +4955,8 @@ class DensityMatrix:
             self.dimension,
             basis_id=self._basis_id,
         )
+        self._normalized_cache = out
+        return out
 
     def trace(self):
         """
