@@ -3800,6 +3800,39 @@ Beware that this can be dangerous for local multicore runs.""")
 
       
     ############################################################################
+    def auto_split_unweighted_output(self):
+        """When systematics runs right after the unweighting, it splits the work
+        over ``nb_core`` jobs which each read their own slice of the (single)
+        event file -- every job therefore has to parse its way to that slice.
+        Writing one file per job instead removes that scan, and zipping them is
+        then a pure waste since systematics reads them back immediately.
+        An explicit choice in the run_card (user_set) is left alone."""
+        if 'nb_unweight_output' not in self.run_card:
+            return
+        if self.run_card.user_set & set(['nb_unweight_output',
+                                         'zip_unweighted_events']):
+            return
+        if self.run_card['systematics_program'] != 'systematics' or \
+                                                not self.run_card['use_syst']:
+            return
+        if self.options['run_mode'] != 2:
+            # only the multicore mode splits systematics over nb_core
+            return
+        try:
+            nb_core = int(self.options['nb_core'])
+        except (TypeError, ValueError):
+            return
+        # mirror do_systematics: it uses that same number of jobs, so the split
+        # matches its job count exactly (one file per job).
+        nb_split = min(nb_core, self.run_card['nevents']//2500)
+        if nb_split <= 1:
+            return
+        self.run_card['nb_unweight_output'] = nb_split
+        self.run_card['zip_unweighted_events'] = False
+        logger.debug("systematics will run on %s core: writing the unweighted "
+                     "events as %s files so that each job reads its own.",
+                     nb_core, nb_split)
+
     def zip_unweighted_output(self, outputpath, start=None):
         """gzip the file(s) the final unweighting produced, unless the run_card
         asks not to (``zip_unweighted_events``) -- compressing them is a pure
@@ -3831,7 +3864,8 @@ Beware that this can be dangerous for local multicore runs.""")
         if self.run_card['gridpack'] and isinstance(self, GridPackCmd):
             return GridPackCmd.do_combine_events(self, line)
 
-    
+        self.auto_split_unweighted_output()
+
         # Define The Banner
         tag = self.run_card['run_tag']
         # Update the banner with the pythia card
@@ -5878,6 +5912,18 @@ tar -czf split_$1.tar.gz split_$1
         self.update_status('storing files of previous run', level=None,\
                                                      error=True)
         if 'event' in self.to_store:
+            # systematics consumes the files the unweighting split and merges
+            # them back. If it did not run (no lhapdf, ...) they are still here
+            # and the run must not be left as N files.
+            if 'nb_unweight_output' in self.run_card and \
+                    'nb_unweight_output' not in self.run_card.user_set:
+                nominal = pjoin(self.me_dir, 'Events', self.run_name,
+                                'unweighted_events.lhe')
+                orphans = self.get_split_unweighted_files(nominal)
+                if orphans:
+                    logger.debug('systematics did not run: merging back the %s '
+                                 'split event files', len(orphans))
+                    self.merge_split_unweighted_files(orphans, nominal)
             if not os.path.exists(pjoin(self.me_dir, 'Events',self.run_name, 'unweighted_events.lhe.gz')) and\
                os.path.exists(pjoin(self.me_dir, 'Events',self.run_name, 'unweighted_events.lhe')):
                 logger.info("gzipping output file: unweighted_events.lhe")

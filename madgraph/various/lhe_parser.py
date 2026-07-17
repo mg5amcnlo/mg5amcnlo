@@ -830,6 +830,29 @@ class EventFile(object):
                 break
         return ['%s_%d%s' % (base, i, suffix) for i in range(nb_output)]
 
+    @staticmethod
+    def merge_unweight_output(paths, outputpath):
+        """Concatenate files written by ``unweight(..., nb_output=N)`` back into
+        a single valid LHE file: each of them carries a full banner and closing
+        tag, so keep only the banner of the first and one closing tag at the end.
+        The events keep the order they have inside each file, but not the order
+        they had before the (round-robin) split."""
+        with open(outputpath, 'w') as outfile:
+            for i, path in enumerate(paths):
+                in_banner = (i != 0)
+                opener = gzip.open if path.endswith('.gz') else open
+                for line in opener(path, 'rt'):
+                    if in_banner:
+                        # everything before the first event is the banner
+                        if not line.startswith('<event'):
+                            continue
+                        in_banner = False
+                    if line.startswith('</LesHouchesEvents>'):
+                        continue
+                    outfile.write(line)
+            outfile.write('</LesHouchesEvents>\n')
+        return outputpath
+
     def unweight(self, outputpath, get_wgt=None, max_wgt=0, trunc_error=0,
                  event_target=0, log_level=logging.INFO, normalization='average',
                  keep_overshoot=False, nb_output=1):
