@@ -73,7 +73,7 @@ MULTICORE_NB = int(os.environ.get('MADSPIN_TEST_NB_CORE', '8'))
 # (400) alone unless explicitly overridden -- the CI tests want trustworthy
 # unweighting.
 _MAX_WEIGHT_PS_POINT = os.environ.get('MADSPIN_MAX_WEIGHT_PS_POINT', '')
-EXTRA_MADSPIN_SETTINGS = {}
+EXTRA_MADSPIN_SETTINGS = {'sequential_decay': False}
 if _MAX_WEIGHT_PS_POINT:
     EXTRA_MADSPIN_SETTINGS['max_weight_ps_point'] = _MAX_WEIGHT_PS_POINT
 
