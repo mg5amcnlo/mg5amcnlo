@@ -183,8 +183,43 @@ real constraint:
    and `prod_k w_k` reproduces the joint weight, which is what makes the whole
    scheme exact. `J_k` is the jacobian only -- the production reshuffling itself
    still happens once, at the end, so this needs a way to evaluate `J_k` without
-   reshuffling (it is a phase-space volume factor of the masses; confirm against
-   `reshuffle_production` when implementing).
+   reshuffling. That is possible, but not currently exposed; see below.
+
+### Evaluating `J_k` without reshuffling (dedicated step)
+
+**Checked: the jacobian can be had without touching the event, but no entry
+point offers it.** `Event.reshuffle_production` (lhe_parser.py:3151) takes its
+jacobian from `Event.mass_shuffle(old_momenta, sqrts, new_masses)`
+(lhe_parser.py:2929), a *staticmethod* returning `(new_momenta, jac)`. It
+mutates only the momenta list handed to it, and `reshuffle_production` hands it
+`old_momenta = [FourMomentum(p) for p in production if p.status != -1]` -- a
+fresh list of copies -- so the event's particles are never touched. The event is
+mutated afterwards, by `reshuffle_production` itself.
+
+So `J_k` is reachable, but `reshuffle_production` entangles it with three things
+the sequential scheme must not inherit:
+
+1. it applies `new_mom` to the event's particles;
+2. it folds in the decay reshuffling (`jac *= self.reshuffle_decay(...)`), which
+   in our scheme is `jac_k^decay` and belongs to the slot that drew the mass;
+3. on `jac in [0, -1]` it *resamples the masses and recurses* -- its own retry
+   policy, which would collide with the per-slot / whole-set rules.
+
+**Dedicated step, before the loop:** add a jacobian-only entry point, e.g.
+`Event.production_jacobian(new_masses)` (or
+`reshuffle_production(jacobian_only=True)`), which
+
+- does the `split_event_by_onshell_propagator` / `old_momenta` setup;
+- returns 1 for the 2 -> 1 case (no phase space for RAMBO to redistribute);
+- reports failure when `sum(new_masses) > sqrts`. This *is* the production-side
+  kinematic test ("two tops summing above their resonance"), and it is cheap:
+  no reshuffling is needed to know a mass set is impossible;
+- otherwise returns `mass_shuffle`'s `jac` alone, discarding `new_momenta`,
+  without the `reshuffle_decay` factor and without the retry recursion --
+  `jac in [0, -1]` is a failure to report to the caller, not to retry here.
+
+`reshuffle_production` should then be re-expressed in terms of it, so that the
+two cannot drift apart.
 
 ### Mass ownership: what phase 4 has to untangle first
 
@@ -430,9 +465,12 @@ The whole point of the flag is A/B, so the plan is measurement-first:
    (No behaviour change: joint path untouched.)
 2. `_draw_one_decay` refactor + unit test that the joint path is unchanged.
 3. Options, ordering, ladder (+ tests 3).
-4. Untangle the mass ownership first (section 1, "Mass ownership"): the draw
-   moves into the per-slot loop and the basis setup comes out from under the
-   `prod_static` cache guard. Then `_sequential_accept_reject` + per-slot max
+4. Two preparatory steps first: untangle the mass ownership (section 1, "Mass
+   ownership") -- the draw moves into the per-slot loop, the basis setup comes
+   out from under the `prod_static` cache guard -- and add the jacobian-only
+   production entry point (section 1, "Evaluating J_k"), with a test that it
+   returns the same jacobian as `reshuffle_production` while leaving the event
+   untouched. Then `_sequential_accept_reject` + per-slot max
    weights + per-slot efficiency, for `spinmode` in PA/onshell (`fixed_order`
    falls back). PA draws slot k's Breit-Wigner mass inside slot k's
    accept/reject, weight `(N_k/N_{k-1}) * jac_k`, reshuffles that decay there
