@@ -4911,6 +4911,43 @@ class DensityMatrix:
             basis_id=basis_id,
         )
 
+    @classmethod
+    def identity(cls, nchanging, all_helicity_combinations, dimension):
+        """The density matrix a decay averages to over its *full* phase space:
+        delta_{hh'} / n.
+
+        Integrating a decay density matrix over the whole solid angle kills the
+        off-diagonal (interference) entries by rotational invariance in the
+        parent rest frame, and leaves the diagonal flat. So a particle whose
+        decay has not been drawn yet contributes exactly this to the production
+        contraction -- which is what lets the accept/reject be done one particle
+        at a time (see MADSPIN_SEQUENTIAL_PLAN.md).
+
+        Built through the normal constructor, so it shares the cached helicity
+        map with the real density matrices of the same basis and keeps the
+        scalar_multiplication fast path available.
+        """
+        array = np.zeros(dimension * (dimension + 1) // 2, dtype=np.complex64)
+        # diagonal entries in the packed upper-triangular storage
+        diag = [i * (2 * dimension - i + 1) // 2 for i in range(dimension)]
+        array[diag] = 1.0 / dimension
+        return cls(array, nchanging, all_helicity_combinations, dimension)
+
+    def normalized(self):
+        """Same matrix divided by its trace (Dhat = D / Tr D), i.e. on the same
+        footing as ``identity``. Returns self unchanged if the trace vanishes."""
+        tr = self.trace()
+        if tr == 0:
+            return self
+        return DensityMatrix.from_components(
+            self.helicities,
+            self.values / tr,
+            self.nchanging,
+            self.all_helicity_combinations,
+            self.dimension,
+            basis_id=self._basis_id,
+        )
+
     def trace(self):
         """
         Order-independent trace.

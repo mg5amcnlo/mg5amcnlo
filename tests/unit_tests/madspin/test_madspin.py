@@ -504,3 +504,78 @@ class TestStridedEvents(unittest.TestCase):
         strided = interface_madspin._StridedEvents(src, 3, 4)
         self.assertEqual(self._drain(strided), [])
 
+
+
+class TestDensityIdentity(unittest.TestCase):
+    """DensityMatrix.identity / normalized: the primitives that let the
+    accept/reject be done one decaying particle at a time.
+
+    A particle whose decay has not been drawn yet contributes the average of its
+    decay density matrix over the full decay phase space. Rotational invariance
+    in the parent rest frame makes that average delta_{hh'}/n, so contracting
+    the production density matrix against it must give exactly Tr(rho)/n."""
+
+    # the helicity bases MadSpin builds (hel_dict, MG5 2S+1 convention)
+    BASES = {1: [0], 2: [1, -1], 3: [-1, 0, 1]}
+
+    def _random_density(self, hel, seed=0):
+        """A hermitian-looking density matrix on that basis, in the packed
+        upper-triangular storage the Fortran side produces."""
+        import numpy as np
+        rng = np.random.default_rng(seed)
+        n = len(hel)
+        arr = (rng.normal(size=n * (n + 1) // 2)
+               + 1j * rng.normal(size=n * (n + 1) // 2)).astype('complex64')
+        for i in range(n):  # a real diagonal, as a physical density matrix has
+            arr[i * (2 * n - i + 1) // 2] = abs(arr[i * (2 * n - i + 1) // 2])
+        return madspin.DensityMatrix(arr, 1, hel, n)
+
+    def test_identity_is_flat_diagonal_of_unit_trace(self):
+        """delta_{hh'}/n: unit trace, nothing off-diagonal."""
+        import numpy as np
+        for spin, hel in self.BASES.items():
+            n = len(hel)
+            I = madspin.DensityMatrix.identity(1, hel, n)
+            self.assertAlmostEqual(I.trace().real, 1.0, places=6)
+            self.assertEqual(int(np.count_nonzero(I._diag_mask)), n)
+            self.assertTrue(np.allclose(I.values[~I._diag_mask], 0))
+            self.assertTrue(np.allclose(I.values[I._diag_mask], 1.0 / n))
+
+    def test_contraction_with_identity_is_the_trace(self):
+        """The load-bearing property: <rho, I/n> == Tr(rho)/n."""
+        import numpy as np
+        for spin, hel in self.BASES.items():
+            rho = self._random_density(hel, seed=spin)
+            I = madspin.DensityMatrix.identity(1, hel, len(hel))
+            self.assertTrue(np.allclose(I.scalar_multiplication(rho),
+                                        rho.trace() / len(hel)))
+
+    def test_identity_shares_the_cached_map(self):
+        """Built like a real density matrix, so the scalar_multiplication fast
+        path stays available instead of falling back to sorted alignment."""
+        for spin, hel in self.BASES.items():
+            rho = self._random_density(hel, seed=spin)
+            I = madspin.DensityMatrix.identity(1, hel, len(hel))
+            self.assertIsNotNone(I.map_density_matrix_ind)
+            self.assertIs(I.map_density_matrix_ind, rho.map_density_matrix_ind)
+
+    def test_normalized_has_unit_trace_and_keeps_direction(self):
+        """Dhat = D/Tr(D) puts a drawn decay on the same footing as identity."""
+        import numpy as np
+        for spin, hel in self.BASES.items():
+            rho = self._random_density(hel, seed=spin + 10)
+            D = rho.normalized()
+            self.assertAlmostEqual(D.trace().real, 1.0, places=5)
+            # same matrix up to the scale
+            self.assertTrue(np.allclose(D.values * rho.trace(), rho.values,
+                                        rtol=1e-4, atol=1e-6))
+
+    def test_scalar_parent_identity_equals_its_density(self):
+        """A spin-0 parent has a 1x1 density matrix: normalized() and identity()
+        coincide, so its accept/reject ratio is identically 1 -- it can never be
+        rejected. This is why the pool ladder must not charge scalars."""
+        import numpy as np
+        hel = self.BASES[1]
+        rho = self._random_density(hel, seed=3)
+        I = madspin.DensityMatrix.identity(1, hel, 1)
+        self.assertTrue(np.allclose(rho.normalized().values, I.values))
