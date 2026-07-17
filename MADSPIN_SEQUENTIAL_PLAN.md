@@ -141,20 +141,58 @@ real constraint:
    Breit-Wigner jacobian is already part of the accept/reject weight.
 
 3. **Kinematically impossible mass sets are the real failure mode, and they
-   fail in the *reshuffling*, not the jacobian.** Two ways:
-   - *in the decay*: `t > b j j` with a sampled top mass below `MW + Mb`;
-   - *in the production*: a resonance decaying to two tops where the two
-     sampled top masses sum to more than the resonance mass.
+   fail in the *reshuffling*, not the jacobian.** They come in two kinds, with
+   different scope and therefore different handling:
 
-   **Rule: on a reshuffling failure, restart from the first decay** -- redraw
-   the whole chain (all slots, in the ordering), keeping the production event.
-   A partial redraw is not enough: the failure is a property of the *set* of
-   masses, not of any single slot.
+   *Decay side* -- the sampled mass cannot accommodate the decay products, e.g.
+   `t > b j j` with a top mass below `MW + Mb`. This is local to one slot.
+   **Do the decay reshuffling as part of drawing slot k**, right after its mass
+   is sampled, so the failure surfaces where it can be retried cheaply: on
+   failure **redraw the mass for that decay only, keeping the slots already
+   accepted**, and use the jacobian of the draw that succeeds.
 
-   Note this restart is a rejection on the masses only, never on the decay
-   angles, so it does not disturb (1): the solid-angle integral at fixed mass is
-   still proportional to I, and the restart merely reshapes the mass mixture,
-   which `E[Dhat_k] = I/n_k` is insensitive to.
+   *Production side* -- the drawn masses do not fit the production kinematics,
+   e.g. a resonance decaying to two tops whose sampled masses sum above the
+   resonance mass. This is a property of the whole mass *set*: it cannot be
+   attributed to a slot, and can only be established once every slot has a mass.
+   **Do the production reshuffling once, at the last stage.** Where it is needed
+   and possible, carry its jacobian at each step, but do not perform the
+   reshuffling per slot. If that final reshuffling turns out to be impossible,
+   **trash the full set of decay events** and restart the chain from the first
+   decay (keeping the production event).
+
+   Neither retry touches the decay *angles* -- both reject on masses only -- so
+   (1) is untouched: the solid-angle integral at fixed mass is still
+   proportional to I, and reshaping the mass mixture is exactly what
+   `E[Dhat_k] = I/n_k` is insensitive to.
+
+### Mass ownership: what phase 4 has to untangle first
+
+The mass logic is currently spread over three places which do not compose once
+the draw has to happen per slot:
+
+1. **The draw** is in `get_onshell_evt_and_wgt` (:2949-2965). It runs on every
+   trial, walks `decays` in a single pass, depletes a shared `full_dqrts` and
+   accumulates `jac` over all of them at once.
+2. **The copy onto the production particles** (`particle.new_mass = ...`) is in
+   `calculate_matrix_element_from_density`, *inside* the `prod_static` cache
+   guard (:3133). For PA that guard only fires on the first trial (it reads
+   `not prod_static or prod_static.get('decays_key') != decays_key`), so on a
+   retry the decays carry freshly drawn masses while the production particles
+   still hold trial 1's. This looks benign today only because acceptance
+   rebuilds the event with `lhe_parser.Event(str(production))`, which drops the
+   python attribute -- it must not be inherited by a per-slot rewrite.
+3. **The reshuffle** then runs on that rebuilt event, after acceptance for PA,
+   with its jacobian discarded.
+
+Phase 4 has to give each mass a single owner: the slot that draws it.
+Concretely: lift the draw out of `get_onshell_evt_and_wgt` into the per-slot
+loop; take the basis setup out from under the `prod_static` cache guard (it
+depends only on the production event and on *which* pdgs decay -- not on the
+decay events -- so it can be computed once per production event and reused
+across every slot and retry); and make `new_mass` flow
+decays -> production -> rebuilt event explicitly, rather than through an
+attribute set on the first trial and silently dropped later.
 
 ---
 
@@ -372,9 +410,12 @@ The whole point of the flag is A/B, so the plan is measurement-first:
    (No behaviour change: joint path untouched.)
 2. `_draw_one_decay` refactor + unit test that the joint path is unchanged.
 3. Options, ordering, ladder (+ tests 3).
-4. `_sequential_accept_reject` + per-slot max weights + per-slot efficiency,
-   for `spinmode` in PA/onshell (`fixed_order` falls back). PA draws slot k's
-   Breit-Wigner mass inside slot k's accept/reject, weight
-   `(N_k/N_{k-1}) * jac_k`, and restarts the whole chain on a reshuffling
-   failure (section 1).
+4. Untangle the mass ownership first (section 1, "Mass ownership"): the draw
+   moves into the per-slot loop and the basis setup comes out from under the
+   `prod_static` cache guard. Then `_sequential_accept_reject` + per-slot max
+   weights + per-slot efficiency, for `spinmode` in PA/onshell (`fixed_order`
+   falls back). PA draws slot k's Breit-Wigner mass inside slot k's
+   accept/reject, weight `(N_k/N_{k-1}) * jac_k`, reshuffles that decay there
+   and redraws its mass on failure; the production reshuffling happens once at
+   the end and, if impossible, trashes the whole set of decays (section 1).
 5. A/B campaign (8). Only then the partial-contraction optimisation.
