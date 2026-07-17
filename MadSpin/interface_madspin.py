@@ -3016,6 +3016,51 @@ class MadSpinInterface(extended_cmd.Cmd):
             'dimension': math.prod(len(i) for i in helicities),
         }
 
+    @staticmethod
+    def _decaying_pdgs(production, evt_decayfile):
+        """The pdgs that decay, in order of first appearance among the
+        production's final-state particles.
+
+        That is the order ``get_decay_from_file`` fills its dict in, hence the
+        order ``_density_basis`` lays the density matrix slots out in. The
+        sequential accept/reject needs it *before* drawing anything, to build
+        the basis, so it is derived from the pools rather than from a draw. The
+        "does this particle decay" test must stay identical to
+        ``_draw_one_decay``'s.
+        """
+        out = []
+        for particle in production:
+            if int(particle.status) != 1:
+                continue
+            if particle.pdg not in evt_decayfile:
+                continue
+            if not len(evt_decayfile[particle.pdg]):
+                continue
+            if particle.pdg not in out:
+                out.append(particle.pdg)
+        return tuple(out)
+
+    @staticmethod
+    def _sequential_slots(production, decays_key):
+        """Map each density matrix slot to the production final-state particle
+        it belongs to.
+
+        Returns (particles, slot_to_index): ``particles`` is the final state in
+        production order (what ``_draw_one_decay`` indexes into), and
+        ``slot_to_index[s]`` is the position in it of slot s's particle. The
+        slot order mirrors ``_density_basis``'s ``init_part`` -- for pdg in
+        decays_key, in production order -- which is the order the tensor product
+        is built in. The decay *ordering* permutes which slot is filled next; it
+        must never permute this.
+        """
+        particles = [p for p in production if int(p.status) == 1]
+        slot_to_index = []
+        for pdg in decays_key:
+            for i, particle in enumerate(particles):
+                if particle.pid == pdg:
+                    slot_to_index.append(i)
+        return particles, slot_to_index
+
     def _slot_identity(self, hel):
         """The I/n a slot contributes while its decay has not been drawn yet.
         Depends only on the helicity list, so cache it per basis."""

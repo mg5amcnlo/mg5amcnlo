@@ -942,3 +942,69 @@ class TestPartialDensityContraction(unittest.TestCase):
                                                                 1: densities[1]})
         with_scalar = stub._partial_density_contraction(rho, hels, densities)
         self.assertTrue(np.allclose(with_scalar / without, 1.0))
+
+
+class TestSequentialSlots(unittest.TestCase):
+    """_decaying_pdgs / _sequential_slots: which density matrix slot belongs to
+    which production particle.
+
+    The sequential accept/reject must know this *before* drawing anything (it
+    needs the basis to build N_0), and it must agree exactly with the slot order
+    _density_basis lays out -- for pdg in decays_key, in production order -- or
+    the tensor product and the production helicity index stop lining up.
+    """
+
+    class _Part(object):
+        def __init__(self, pid, status=1):
+            self.pid = pid
+            self.pdg = pid
+            self.status = status
+
+    def _production(self):
+        # t t~ t plus a gluon spectator, off an initial state
+        return [self._Part(2, -1), self._Part(-2, -1), self._Part(6),
+                self._Part(-6), self._Part(6), self._Part(21)]
+
+    def _pools(self):
+        # two files for the tops, one for the anti-top; 23 never appears
+        return {6: {0: 'f', 1: 'f'}, -6: {0: 'f'}, 23: {0: 'f'}}
+
+    def test_decays_key_is_first_appearance_order(self):
+        """The order get_decay_from_file fills its dict in."""
+        got = interface_madspin.MadSpinInterface._decaying_pdgs(
+                        self._production(), self._pools())
+        self.assertEqual(got, (6, -6))
+
+    def test_pdg_without_a_pool_is_not_a_slot(self):
+        """Same 'does this particle decay' test as _draw_one_decay."""
+        production = self._production()
+        interface = interface_madspin.MadSpinInterface
+        self.assertEqual(interface._decaying_pdgs(production, {6: {}, -6: {0: 'f'}}),
+                         (-6,))
+        self.assertEqual(interface._decaying_pdgs(production, {}), ())
+
+    def test_slots_match_the_basis_init_part(self):
+        """The mapping must resolve to exactly the particles _density_basis
+        puts in init_part, in the same order and as the same objects -- they are
+        the parents the decays get boosted to."""
+        production = self._production()
+        interface = interface_madspin.MadSpinInterface
+        decays_key = interface._decaying_pdgs(production, self._pools())
+        particles, slots = interface._sequential_slots(production, decays_key)
+
+        init_part = [part for pdg in decays_key for part in production
+                     if part.pid == pdg and part.status == 1]
+        self.assertEqual([particles[i].pid for i in slots],
+                         [p.pid for p in init_part])
+        for slot, index in enumerate(slots):
+            self.assertIs(particles[index], init_part[slot])
+
+    def test_slots_are_grouped_by_pdg_not_production_order(self):
+        """t t~ t -> slots are (t, t, t~): grouped by pdg, production order
+        inside a group. The indices therefore are not sorted."""
+        production = self._production()
+        interface = interface_madspin.MadSpinInterface
+        decays_key = interface._decaying_pdgs(production, self._pools())
+        particles, slots = interface._sequential_slots(production, decays_key)
+        self.assertEqual(slots, [0, 2, 1])
+        self.assertEqual([p.pid for p in particles], [6, -6, 6, 21])
