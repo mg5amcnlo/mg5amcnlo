@@ -3477,6 +3477,13 @@ class MadSpinInterface(extended_cmd.Cmd):
         # production has no recoil phase space for RAMBO to redistribute.
         nb_prod_final = sum(1 for p in production if int(p.status) == 1)
         draw_mass = (self.options['spinmode'] == 'PA' and nb_prod_final > 1)
+        # Whether the production reshuffling jacobian enters the accept/reject
+        # weight. Follows the joint path (interface_madspin.py, get_onshell PA
+        # block): off by default -- the reshuffle is then a post-acceptance
+        # kinematic dressing and only the Breit-Wigner sampling jacobian is in
+        # the weight. The feasibility of the mass set is still checked either
+        # way, to trigger the whole-set restart.
+        keep_jac = draw_mass and self.options['density_keep_jacobian']
 
         if stats is None:
             stats = collections.defaultdict(int)
@@ -3518,15 +3525,17 @@ class MadSpinInterface(extended_cmd.Cmd):
 
                     j_k = j_prev
                     if draw_mass:
-                        j_k = self._production_jacobian_for(production,
-                                                            slot_to_index,
-                                                            slot_masses)
-                        if j_k in (0, -1):
+                        j_probe = self._production_jacobian_for(production,
+                                                               slot_to_index,
+                                                               slot_masses)
+                        if j_probe in (0, -1):
                             # this mass *set* cannot be reshuffled: nothing to
                             # redraw locally, trash everything and start over
                             stats['nb_production_restart'] += 1
                             restart = True
                             break
+                        if keep_jac:
+                            j_k = j_probe
 
                     slot_densities[slot] = self._slot_density(
                                     decay, init_part[slot], helicities[slot])
