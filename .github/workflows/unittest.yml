@@ -660,3 +660,21 @@ jobs:
             ./tests/test_manager.py test_q_polynomial test_hepmc_parser -t0
 
 
+
+
+  unittest_madspin_sequential:
+    # MadSpin density primitives and decay/mass drawing (sequential accept/reject),
+    # plus the lhe_parser split/merge of the unweighted output. These modules were
+    # not covered by any workflow.
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
+
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/restore-pip-cache
+
+      - name: test the madspin and lhe_parser unit tests
+        run: |
+            cd $GITHUB_WORKSPACE
+            sudo pip install numpy
+            ./tests/test_manager.py test_madspin test_lhe_parser -t0
