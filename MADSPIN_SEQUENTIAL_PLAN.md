@@ -105,17 +105,56 @@ Not fact (b) (shared, see above). The real exposure is:
    `full_dqrts -= dec[0].new_mass`, so particle k's mass range depends on the
    earlier draws and `jac` accumulates across particles. In PA (default)
    `density_pole_approximation` is True; the block runs when
-   `density_do_reshuffle` (`spinmode == 'PA'`). The jacobian must then be
-   attributed to the slot that draws it. This is a genuine coupling between
-   slots and the reason phase 1 stays on `spinmode = onshell`.
+   `density_do_reshuffle` (`spinmode == 'PA'`). The jacobian is attributed to
+   the slot that draws the mass; the coupling between slots is real but
+   benign -- see "PA: mass sampling, jacobian, and kinematic failures" below,
+   where it reduces to the restart rule.
 4. `fixed_order` counter-events.
 5. `density_debug` compares against the full ME and is only meaningful for a
    complete set.
 
-**Recommendation:** phase 1 supports `spinmode = onshell` (PA without
-reshuffling, ratio uncontaminated by `jac`) and refuses / falls back for
-`fixed_order`. `spinmode = PA` with mass sampling is phase 2, once the
-per-slot jacobian attribution is settled.
+**Scope: `spinmode = PA` (the default, banner.py `add_param('spinmode', "PA")`)
+is in.** An `onshell`-only feature would be inert for essentially every user.
+`fixed_order` still falls back to the joint test.
+
+### PA: mass sampling, jacobian, and kinematic failures
+
+In PA `density_do_reshuffle` is True, so `get_onshell_evt_and_wgt`
+(interface_madspin.py:2949-2965) draws each resonance mass from its
+Breit-Wigner, depleting a shared budget (`full_dqrts -= dec[0].new_mass`), and
+folds the sampling jacobian into the weight the accept/reject uses. Sequential
+therefore has to deal with it. Three separate points, and only the third is a
+real constraint:
+
+1. **The trace property survives the mass sampling.** At a fixed mass,
+   `Integral dOmega D_k` is proportional to I by rotational invariance, so any
+   mass mixture stays proportional to I; and `Tr(Dhat_k) = 1` by construction,
+   hence `E[Dhat_k] = I/n_k` *exactly*, whatever the mass distribution and even
+   though the budget makes slot k's mass range depend on the earlier draws.
+   Fact (b) is safe.
+
+2. **The jacobian is a non-issue in practice.** The mass is generated
+   *according to* the Breit-Wigner, so `jac_k` is small and quite flat across
+   the phase space -- the effect washes out. Slot k's mass is drawn inside slot
+   k's own accept/reject, so `jac_k` attributes to that slot naturally, and the
+   per-slot weight is `(N_k/N_{k-1}) * jac_k` -- matching PA today, where the
+   Breit-Wigner jacobian is already part of the accept/reject weight.
+
+3. **Kinematically impossible mass sets are the real failure mode, and they
+   fail in the *reshuffling*, not the jacobian.** Two ways:
+   - *in the decay*: `t > b j j` with a sampled top mass below `MW + Mb`;
+   - *in the production*: a resonance decaying to two tops where the two
+     sampled top masses sum to more than the resonance mass.
+
+   **Rule: on a reshuffling failure, restart from the first decay** -- redraw
+   the whole chain (all slots, in the ordering), keeping the production event.
+   A partial redraw is not enough: the failure is a property of the *set* of
+   masses, not of any single slot.
+
+   Note this restart is a rejection on the masses only, never on the decay
+   angles, so it does not disturb (1): the solid-angle integral at fixed mass is
+   still proportional to I, and the restart merely reshapes the mass mixture,
+   which `E[Dhat_k] = I/n_k` is insensitive to.
 
 ---
 
@@ -334,6 +373,8 @@ The whole point of the flag is A/B, so the plan is measurement-first:
 2. `_draw_one_decay` refactor + unit test that the joint path is unchanged.
 3. Options, ordering, ladder (+ tests 3).
 4. `_sequential_accept_reject` + per-slot max weights + per-slot efficiency,
-   `spinmode = onshell` only, `fixed_order` falls back.
-5. A/B campaign (4-5). Only then consider `spinmode = PA` mass sampling
-   (jacobian attribution) and the phase-3 partial contraction.
+   for `spinmode` in PA/onshell (`fixed_order` falls back). PA draws slot k's
+   Breit-Wigner mass inside slot k's accept/reject, weight
+   `(N_k/N_{k-1}) * jac_k`, and restarts the whole chain on a reshuffling
+   failure (section 1).
+5. A/B campaign (8). Only then the partial-contraction optimisation.
