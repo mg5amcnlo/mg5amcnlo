@@ -3513,30 +3513,40 @@ class MadSpinInterface(extended_cmd.Cmd):
                     new_budget = budget
                     if draw_mass:
                         # decay-side failure is local to this slot: redraw its
-                        # mass, keep every slot already accepted
+                        # mass, keeping every slot already accepted. Skipped when
+                        # only probing for the maximum weight -- like the joint
+                        # scan, which samples masses freely and lets the final
+                        # reshuffling resample; an infeasible (far off-shell)
+                        # mass carries a small Breit-Wigner jacobian, so it does
+                        # not drive the maximum anyway.
                         while True:
                             new_budget, jac_dec = self._draw_offshell_mass(
                                                 particle.pdg, decay, budget)
-                            if self._decay_mass_is_feasible(decay):
+                            if probe is not None or self._decay_mass_is_feasible(decay):
                                 break
                             stats['nb_mass_redraw_%d' % position] += 1
                         slot_masses[slot] = (decay[0].new_mass,
                                              getattr(decay[0], 'reshuffle_info', None))
 
+                    # The production reshuffling jacobian only enters the
+                    # weight under density_keep_jacobian; then it is needed per
+                    # trial. Otherwise its sole use is spotting a mass set the
+                    # production cannot reshuffle, and that depends on the whole
+                    # set, so it is checked once after the chain is complete --
+                    # not here, where the reshuffle-on-a-copy dominated the cost.
                     j_k = j_prev
-                    if draw_mass:
+                    if keep_jac:
                         j_probe = self._production_jacobian_for(production,
                                                                slot_to_index,
                                                                slot_masses)
                         if j_probe in (0, -1):
-                            # this mass *set* cannot be reshuffled: nothing to
-                            # redraw locally, trash everything and start over
                             stats['nb_production_restart'] += 1
                             restart = True
                             break
-                        if keep_jac:
-                            j_k = j_probe
+                        j_k = j_probe
 
+                    # accepted slots reuse their stored density (no ME recompute);
+                    # only this slot's decay is evaluated here
                     slot_densities[slot] = self._slot_density(
                                     decay, init_part[slot], helicities[slot])
                     n_k = self._partial_density_contraction(density_prod, helicities,
@@ -3562,6 +3572,13 @@ class MadSpinInterface(extended_cmd.Cmd):
                     slot_masses.pop(slot, None)
                 if restart:
                     break
+            if not restart and draw_mass and not keep_jac and probe is None:
+                # feasibility of the complete mass set: one reshuffle for the
+                # whole chain instead of one per trial
+                if self._production_jacobian_for(production, slot_to_index,
+                                                 slot_masses) in (0, -1):
+                    stats['nb_production_restart'] += 1
+                    restart = True
             if not restart:
                 break
 
