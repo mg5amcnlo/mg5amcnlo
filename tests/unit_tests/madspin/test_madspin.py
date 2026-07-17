@@ -35,10 +35,12 @@ import madgraph.various.banner as banner
 import copy
 import array
 import collections
+import math
 
 import madgraph.core.base_objects as MG
 import madgraph.various.misc as misc
 import MadSpin.decay as madspin
+import madgraph.various.lhe_parser as lhe_parser
 import MadSpin.interface_madspin as interface_madspin
 import models.import_ufo as import_ufo
 
@@ -740,3 +742,103 @@ class TestDrawOneDecay(unittest.TestCase):
                     raise Exception
             out[particle.pdg].append(next(decay_file))
         return out
+
+
+class TestDrawOffshellMass(unittest.TestCase):
+    """_draw_offshell_mass: one resonance virtuality, owned by the decay that
+    carries it.
+
+    The draw used to be a single pass over every decay, closing over a shared
+    sqrt(shat) budget. The sequential accept/reject needs to draw one slot at a
+    time and redraw a single mass on a reshuffling failure, so the budget is now
+    passed in and out and the caller owns the order.
+    """
+
+    class _Val(object):
+        def __init__(self, value):
+            self.value = value
+
+    class _Banner(object):
+        def get(self, card, kind, pdg):
+            return TestDrawOffshellMass._Val(173.0 if kind == 'mass' else 1.5)
+
+    class _Dec(object):
+        pass
+
+    class _Stub(object):
+        _draw_offshell_mass = interface_madspin.MadSpinInterface._draw_offshell_mass
+        def __init__(self, bw_cut=-1):
+            self.banner = TestDrawOffshellMass._Banner()
+            self.options = {'BW_cut': bw_cut}
+
+    def _reference(self, pdg, dec, budget, banner, options):
+        """The block exactly as it was before the extraction."""
+        pole = banner.get('param', 'mass', abs(pdg)).value
+        width = banner.get('param', 'decay', abs(pdg)).value
+        if options['BW_cut'] < 0:
+            bw_cut = 15
+        else:
+            bw_cut = options['BW_cut']
+        min_mass = pole - bw_cut * width
+        max_mass = min(pole + bw_cut * width, budget)
+        dec[0].new_mass = lhe_parser.Event.generate_random_mass(
+                                    pole, width, min_mass, max_mass)
+        dec[0].reshuffle_info = (pole, width, min_mass, max_mass)
+        budget -= dec[0].new_mass
+        gap = math.atan((pole ** 2 - min_mass ** 2) / pole * width)
+        gap += math.atan((max_mass ** 2 - pole ** 2) / pole * width)
+        return budget, gap / math.pi
+
+    def test_identical_to_the_previous_inline_draw(self):
+        """Same masses, same jacobians, same budget, same random sequence."""
+        import random
+        stub = self._Stub()
+        for seed in range(50):
+            random.seed(seed)
+            budget, got = 500.0, []
+            for _ in range(2):   # two resonances off one shared budget, as t t~
+                dec = [self._Dec()]
+                budget, jac = stub._draw_offshell_mass(6, dec, budget)
+                got.append((dec[0].new_mass, jac, dec[0].reshuffle_info))
+            random.seed(seed)
+            ref_budget, want = 500.0, []
+            for _ in range(2):
+                dec = [self._Dec()]
+                ref_budget, jac = self._reference(6, dec, ref_budget,
+                                                  stub.banner, stub.options)
+                want.append((dec[0].new_mass, jac, dec[0].reshuffle_info))
+            self.assertEqual(got, want)
+            self.assertEqual(budget, ref_budget)
+
+    def test_mass_and_resample_info_land_on_the_decay(self):
+        """The decay owns its mass: new_mass plus what is needed to redraw it."""
+        import random
+        random.seed(0)
+        dec = [self._Dec()]
+        _, jac = self._Stub()._draw_offshell_mass(6, dec, 500.0)
+        self.assertTrue(hasattr(dec[0], 'new_mass'))
+        pole, width, min_mass, max_mass = dec[0].reshuffle_info
+        self.assertEqual((pole, width), (173.0, 1.5))
+        self.assertTrue(min_mass <= dec[0].new_mass <= max_mass)
+        self.assertTrue(jac > 0)
+
+    def test_budget_shrinks_so_the_draw_is_order_dependent(self):
+        """Each resonance eats into what the next one may take -- which is why
+        the slot has to own the draw rather than inherit one pass over all."""
+        import random
+        random.seed(1)
+        stub = self._Stub()
+        dec = [self._Dec()]
+        left, _ = stub._draw_offshell_mass(6, dec, 500.0)
+        self.assertAlmostEqual(left, 500.0 - dec[0].new_mass)
+        self.assertLess(left, 500.0)
+
+    def test_bw_cut_option_is_honoured(self):
+        """BW_cut < 0 means the default 15 widths; otherwise the option wins."""
+        import random
+        random.seed(2)
+        dec = [self._Dec()]
+        self._Stub(bw_cut=2)._draw_offshell_mass(6, dec, 500.0)
+        pole, width, min_mass, max_mass = dec[0].reshuffle_info
+        self.assertAlmostEqual(min_mass, 173.0 - 2 * 1.5)
+        self.assertAlmostEqual(max_mass, 173.0 + 2 * 1.5)

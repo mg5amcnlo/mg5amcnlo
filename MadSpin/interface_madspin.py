@@ -2961,6 +2961,37 @@ class MadSpinInterface(extended_cmd.Cmd):
         return base_max_weight
 
             
+    def _draw_offshell_mass(self, pdg, dec, budget):
+        """Sample one resonance virtuality from its Breit-Wigner. Returns the
+        budget left and that draw's jacobian.
+
+        The mass belongs to the decay event that carries it: ``dec[0]`` gets the
+        ``new_mass`` and the ``reshuffle_info`` needed to resample it later.
+
+        ``budget`` is what is left of sqrt(shat) once the resonances drawn
+        before this one are paid for, so the draw is order dependent and the
+        caller owns that order. Passing it in and out, rather than closing over
+        a loop variable, is what lets the sequential accept/reject draw one slot
+        at a time and redraw a single mass on a reshuffling failure -- see
+        MADSPIN_SEQUENTIAL_PLAN.md, "Mass ownership".
+        """
+        pole = self.banner.get('param', 'mass', abs(pdg)).value
+        width = self.banner.get('param', 'decay', abs(pdg)).value
+        if self.options['BW_cut'] < 0:
+            bw_cut = 15
+        else:
+            bw_cut = self.options['BW_cut']
+        min_mass = pole - bw_cut * width
+        max_mass = min(pole + bw_cut * width, budget)
+        dec[0].new_mass = lhe_parser.Event.generate_random_mass(
+                                    pole, width, min_mass, max_mass)
+        dec[0].reshuffle_info = (pole, width, min_mass, max_mass)
+
+        budget -= dec[0].new_mass
+        gap = math.atan((pole**2-min_mass**2)/pole*width)
+        gap += math.atan((max_mass**2-pole**2)/pole*width)
+        return budget, gap/math.pi
+
     def get_onshell_evt_and_wgt(self, production, decays, decay_dict, prod_density_cached=None, build_event=True):
         """ return the onshell wgt for the production event associated to the decays
             return also the full event with decay. 
@@ -3017,21 +3048,9 @@ class MadSpinInterface(extended_cmd.Cmd):
                     density_do_reshuffle):
                 for pdg in decays:
                     for dec in decays[pdg]:
-                        pole = self.banner.get('param', 'mass', abs(pdg)).value
-                        width = self.banner.get('param', 'decay', abs(pdg)).value 
-                        if self.options['BW_cut'] <0: 
-                           bw_cut = 15
-                        else:
-                           bw_cut = self.options['BW_cut']     
-                        min_mass = pole - bw_cut * width
-                        max_mass = min(pole + bw_cut * width,full_dqrts) 
-                        dec[0].new_mass = lhe_parser.Event.generate_random_mass(pole, width, min_mass, max_mass)
-                        dec[0].reshuffle_info = (pole, width, min_mass, max_mass)
-
-                        full_dqrts -= dec[0].new_mass
-                        gap = math.atan((pole**2-min_mass**2)/pole*width)
-                        gap += math.atan((max_mass**2-pole**2)/pole*width)
-                        jac *= gap/math.pi 
+                        full_dqrts, jac_dec = self._draw_offshell_mass(
+                                                    pdg, dec, full_dqrts)
+                        jac *= jac_dec
             if prod_density_cached is None:
                 full_me, prod_density_cached, prod_diag, dec_diag = self.calculate_matrix_element_from_density(production, decays, decay_dict)
             else:                
