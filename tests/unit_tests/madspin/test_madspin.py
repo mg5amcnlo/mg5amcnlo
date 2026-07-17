@@ -579,3 +579,52 @@ class TestDensityIdentity(unittest.TestCase):
         rho = self._random_density(hel, seed=3)
         I = madspin.DensityMatrix.identity(1, hel, 1)
         self.assertTrue(np.allclose(rho.normalized().values, I.values))
+
+
+class TestSequentialOrdering(unittest.TestCase):
+    """Ordering and pool sizing for the per-particle accept/reject.
+
+    Spins are in the MG5 2S+1 convention: 1 = scalar, 2 = fermion, 3 = vector.
+    """
+
+    class _Stub(object):
+        _sequential_spin_order = interface_madspin.MadSpinInterface._sequential_spin_order
+        _decay_slot_order = interface_madspin.MadSpinInterface._decay_slot_order
+        def __init__(self, order='2 3 1'):
+            self.options = {'sequential_spin_order': order}
+
+    def test_default_order_is_fermions_vectors_scalars(self):
+        s = self._Stub()
+        # slots: scalar, vector, fermion, fermion -> fermions, vector, scalar
+        self.assertEqual(s._decay_slot_order([1, 3, 2, 2]), [2, 3, 1, 0])
+        # scalar last even when it comes first in slot order
+        self.assertEqual(s._decay_slot_order([1, 2]), [1, 0])
+
+    def test_ties_broken_by_slot_index(self):
+        """Same spin -> keep slot order, so a run is reproducible."""
+        s = self._Stub()
+        self.assertEqual(s._decay_slot_order([2, 2]), [0, 1])
+        self.assertEqual(s._decay_slot_order([3, 3, 3]), [0, 1, 2])
+
+    def test_order_is_configurable(self):
+        """The hidden option allows A/B testing the ordering per process."""
+        s = self._Stub('3 2 1')  # vectors first
+        self.assertEqual(s._decay_slot_order([2, 3, 1]), [1, 0, 2])
+
+    def test_unlisted_spin_goes_last_and_garbage_falls_back(self):
+        self.assertEqual(self._Stub('2')._decay_slot_order([3, 2, 1]), [1, 0, 2])
+        self.assertEqual(self._Stub('garbage')._decay_slot_order([2, 1, 3]), [0, 2, 1])
+        self.assertEqual(self._Stub('')._sequential_spin_order(), [2, 3, 1])
+
+    def test_ladder_grows_with_position(self):
+        """1/eff_k: each slot sees a more polarised parent than the last."""
+        ladder = interface_madspin.MadSpinInterface._decay_pool_ladder
+        self.assertEqual([ladder(k, 2) for k in range(4)], [1.5, 2.0, 2.5, 3.0])
+        self.assertEqual([ladder(k, 3) for k in range(4)], [1.5, 2.0, 2.5, 3.0])
+
+    def test_scalar_is_never_charged_the_ladder(self):
+        """A spin-0 parent can never be rejected (1x1 density matrix), so it
+        burns exactly one decay event wherever it sits in the ordering."""
+        ladder = interface_madspin.MadSpinInterface._decay_pool_ladder
+        for position in range(4):
+            self.assertEqual(ladder(position, 1), 1.1)

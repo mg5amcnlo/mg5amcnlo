@@ -81,6 +81,8 @@ class MadSpinOptions(banner.ConfigFile):
         self.add_param('decay_event_mult', 1E0, comment='Produce more events than needed so that MadSpin does not have to regenerate decay events')
         self.add_param('nb_core', 0, comment='Number of cores for the MadSpin parallel unweighting (0 = use the global MG5 nb_core). nb_core>1 enables the process-parallel unweighting path.')
         self.add_param('density_keep_jacobian', False, comment='keep track of the phase-space volume change related to the offshell reshuffling')
+        self.add_param('sequential_decay', True, comment='accept/reject one decaying particle at a time instead of the full set at once (density mode). Exact and much cheaper when several particles decay; set to False for the historical joint accept/reject.')
+        self.add_param('sequential_spin_order', '2 3 1', comment='spin order (MG5 2S+1 convention) deciding which particle is accept/rejected first in sequential_decay: default fermions, then vectors, then scalars (which can never be rejected).')
 
     ############################################################################
     ##  Special post-processing of the options                                ## 
@@ -2056,6 +2058,52 @@ class MadSpinInterface(extended_cmd.Cmd):
         """In how many files the decay pool should be written: one per parallel
         unweighting worker (1 = single pool, historical behaviour)."""
         return self._resolve_nb_core()
+
+    def _sequential_spin_order(self):
+        """The spin order (MG5 2S+1 convention) driving which particle is
+        accept/rejected first. Unlisted spins go last, in their natural slot
+        order."""
+        try:
+            order = [int(x) for x in
+                     str(self.options['sequential_spin_order']).replace(',', ' ').split()]
+        except (ValueError, TypeError):
+            order = []
+        return order or [2, 3, 1]
+
+    def _decay_slot_order(self, decaying_spins):
+        """Order in which the slots are accept/rejected.
+
+        Sorted by ``sequential_spin_order`` (default: fermions, then vectors,
+        then scalars), ties broken by slot index so a run stays reproducible and
+        independent of dict ordering. Only decides *which slot is filled next* --
+        the tensor product itself must stay in slot order, see
+        MADSPIN_SEQUENTIAL_PLAN.md."""
+        pref = self._sequential_spin_order()
+        def key(slot):
+            spin = decaying_spins[slot]
+            rank = pref.index(spin) if spin in pref else len(pref)
+            return (rank, slot)
+        return sorted(range(len(decaying_spins)), key=key)
+
+    @staticmethod
+    def _decay_pool_ladder(position, spin):
+        """Expected number of decay events one production event burns on the
+        slot sitting at ``position`` of the accept/reject ordering.
+
+        Each slot is redrawn until accepted, so it burns 1/eff_k events from its
+        own pool. The first slot sees a production density matrix traced over
+        everything else -- close to unpolarised, so mild modulation and a high
+        acceptance; each subsequent one sees a more conditioned, more polarised
+        parent, hence a wider weight spread and a lower acceptance. Hence the
+        ladder 1.5, 2, 2.5, 3, ...
+
+        A spin-0 parent (MG5 spin==1) has a 1x1 decay density matrix, so its
+        ratio is identically 1: it can never be rejected and burns exactly one
+        event wherever it sits. Charging it the ladder would just generate
+        decays nobody consumes."""
+        if spin == 1:
+            return 1.1
+        return 1.5 + 0.5 * position
 
     @staticmethod
     def _decay_dir(path_me, pdg, decay_file_nb):
