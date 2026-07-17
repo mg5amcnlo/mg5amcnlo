@@ -2669,13 +2669,23 @@ Beware that MG5aMC now changes your runtime options to a multi-core mode with on
                         to_use = 'none'
                         
                     if to_use == 'systematics':
-                        if self.run_card['systematics_arguments'] != ['']:
-                            self.exec_cmd('systematics %s %s ' % (self.run_name,
-                                          ' '.join(self.run_card['systematics_arguments'])),                  
-                                          postcmd=False, printcmd=False)
-                        else:
-                            self.exec_cmd('systematics %s --from_card' % self.run_name,
-                                           postcmd=False,printcmd=False)    
+                        # The unweighting may have written one file per
+                        # systematics job (auto_split_unweighted_output), which
+                        # systematics consumes and merges back. It can also fail
+                        # outright -- and it aborts this command when it does, so
+                        # store_events would never run. Merge in a finally: a
+                        # failing systematics must leave exactly the events it
+                        # would have left without the split.
+                        try:
+                            if self.run_card['systematics_arguments'] != ['']:
+                                self.exec_cmd('systematics %s %s ' % (self.run_name,
+                                              ' '.join(self.run_card['systematics_arguments'])),
+                                              postcmd=False, printcmd=False)
+                            else:
+                                self.exec_cmd('systematics %s --from_card' % self.run_name,
+                                               postcmd=False,printcmd=False)
+                        finally:
+                            self.finalize_split_unweighted_output()
                     elif to_use == 'syscalc':
                         self.run_syscalc('parton')
                 
@@ -4256,6 +4266,12 @@ Beware that this can be dangerous for local multicore runs.""")
         # 4) Move the Files present in Events directory
         E_path = pjoin(self.me_dir, 'Events')
         O_path = pjoin(self.me_dir, 'Events', run)
+
+        # Backstop for the entry points that do not go through
+        # run_generate_events' systematics block (a bare 'combine_events' then
+        # 'store_events'): the run must never be left as N split files. No-op
+        # when they were already merged.
+        self.finalize_split_unweighted_output()
         
         # The events file
         for name in ['events.lhe', 'unweighted_events.lhe']:
@@ -5912,18 +5928,6 @@ tar -czf split_$1.tar.gz split_$1
         self.update_status('storing files of previous run', level=None,\
                                                      error=True)
         if 'event' in self.to_store:
-            # systematics consumes the files the unweighting split and merges
-            # them back. If it did not run (no lhapdf, ...) they are still here
-            # and the run must not be left as N files.
-            if 'nb_unweight_output' in self.run_card and \
-                    'nb_unweight_output' not in self.run_card.user_set:
-                nominal = pjoin(self.me_dir, 'Events', self.run_name,
-                                'unweighted_events.lhe')
-                orphans = self.get_split_unweighted_files(nominal)
-                if orphans:
-                    logger.debug('systematics did not run: merging back the %s '
-                                 'split event files', len(orphans))
-                    self.merge_split_unweighted_files(orphans, nominal)
             # zip_unweighted_events=False means the events are consumed straight
             # away: do not gzip them back here, that would defeat the purpose.
             zip_events = ('zip_unweighted_events' not in self.run_card or

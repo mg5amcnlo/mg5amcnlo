@@ -1814,6 +1814,32 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         self.split_unweighted_consumed(split_inputs)
         return nominal
 
+    def finalize_split_unweighted_output(self):
+        """Leave the run with exactly the events it would have had if we had
+        never split: a single, gzipped unweighted_events.lhe.
+
+        Splitting is only ever our own doing, to feed systematics one file per
+        job. systematics normally consumes the files and merges them back, but
+        it may also be bypassed or fail outright (it aborts the whole command
+        when it does), so this has to hold whatever happened. Idempotent, and a
+        no-op when the user asked for the split themselves."""
+        if 'nb_unweight_output' not in self.run_card or \
+                'nb_unweight_output' in self.run_card.user_set:
+            return
+        nominal = pjoin(self.me_dir, 'Events', self.run_name,
+                        'unweighted_events.lhe')
+        orphans = self.get_split_unweighted_files(nominal)
+        if orphans:
+            logger.debug('merging back the %s split event files', len(orphans))
+            self.merge_split_unweighted_files(orphans, nominal)
+        # zip_unweighted_events was switched off only because systematics was
+        # about to read the files straight back; the user did not ask for it, so
+        # the events must end up gzipped like any other run.
+        if 'zip_unweighted_events' not in self.run_card.user_set and \
+                os.path.exists(nominal) and \
+                not os.path.exists('%s.gz' % nominal):
+            misc.gzip(nominal)
+
     def do_systematics(self, line):
         """ syntax is 'systematics [INPUT [OUTPUT]] OPTIONS'
             --mur=0.5,1,2
