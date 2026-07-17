@@ -79,8 +79,7 @@ class MadSpinOptions(banner.ConfigFile):
         self.add_param('density_debug', False, comment='Turn on check against full ME calculation')
         self.add_param('density_tolerance', 1E-4, comment='Tolerance for deviation between density and full ME')
         self.add_param('decay_event_mult', 1E0, comment='Produce more events than needed so that MadSpin does not have to regenerate decay events')
-        self.add_param('decay_events_per_job', 5000, comment='Target number of unweighted events per gridpack generation job when the decay pool is produced multi-core (run.sh -p). Larger values mean fewer, bigger jobs (less setup overhead); passed as run.sh -m.')
-        self.add_param('nb_core', 0, comment='Number of cores for MadSpin parallel unweighting/decay generation (0 = use the global MG5 nb_core). nb_core>1 enables the process-parallel unweighting path.')
+        self.add_param('nb_core', 0, comment='Number of cores for the MadSpin parallel unweighting (0 = use the global MG5 nb_core). nb_core>1 enables the process-parallel unweighting path.')
         self.add_param('density_keep_jacobian', False, comment='keep track of the phase-space volume change related to the offshell reshuffling')
 
     ############################################################################
@@ -207,6 +206,49 @@ class _StridedEvents(object):
     @property
     def name(self):
         return self.f.name
+
+
+class _ChainedEvents(object):
+    """Reader over a decay pool that the unweighting wrote as several files
+    (run_card ``nb_unweight_output``).
+
+    The parent (max-weight estimation, serial unweighting) consumes it as a
+    single stream. ``paths`` is kept public so that each parallel worker can
+    instead open just *its* file: that is what removes the need to stride, i.e.
+    to have every worker scan the whole pool to pick one event out of nb_core.
+    Only the attributes get_decay_from_file reads are exposed (``cross`` for the
+    cross-section weighted channel choice, ``name``).
+    """
+
+    def __init__(self, paths):
+        self.paths = list(paths)
+        self._idx = -1
+        self._current = None
+        self._first = lhe_parser.EventFile(self.paths[0])
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        while True:
+            if self._current is None:
+                self._idx += 1
+                if self._idx >= len(self.paths):
+                    raise StopIteration
+                self._current = lhe_parser.EventFile(self.paths[self._idx])
+            try:
+                return next(self._current)
+            except StopIteration:
+                self._current = None
+    next = __next__
+
+    @property
+    def cross(self):
+        return self._first.cross
+
+    @property
+    def name(self):
+        return self.paths[0]
 
 
 class MadSpinInterface(extended_cmd.Cmd):
@@ -1424,11 +1466,13 @@ class MadSpinInterface(extended_cmd.Cmd):
         self.mg5cmd.process_model()
 
     def generate_events(self, pdg, nb_event, mg5, restrict_file=None, cumul=False,
-                        output_width=False):
+                        output_width=False, run_name='run_01'):
         """generate new events for this particle
            restrict_file allow to only generate a subset of the definition
            cumul allow to merge all the definition in one run (add process)
                  to generate events according to cross-section
+           run_name allow a refill to write to its own run directory instead of
+                 overwriting the pool that is currently being read
         """
         if not hasattr(self, 'me_int'):
             self.me_int = {}
@@ -1436,15 +1480,13 @@ class MadSpinInterface(extended_cmd.Cmd):
         
         
         nb_event = int(nb_event) # in case of hepmc request the nb_event is not an integer
-        # Use gridpack-based decay generation (build the integration grid ONCE,
-        # then generate events with run.sh -- a plain, fork-safe subprocess)
-        # whenever we persist a gridpack (ms_dir) OR run the unweighting in
-        # parallel (nb_core>1). This is REQUIRED for parallel safety: the
-        # alternative MadEventCmdShell generation path spins up Fortran/thread/
-        # subprocess state that is not fork-safe and segfaults when a forked
-        # unweighting worker tries to (re)generate decay events. It also lets
-        # the initial pool be generated multi-core (run.sh -p nb_core).
-        use_gridpack = bool(self.options['ms_dir']) or self._resolve_nb_core() > 1
+        # Gridpack-based decay generation is only used when we persist a gridpack
+        # across runs (ms_dir). Building/packaging a gridpack and then generating
+        # through run.sh is markedly slower (and uses the cores less densely)
+        # than the direct MadEventCmdShell generation below, so the parallel
+        # unweighting (nb_core>1) does NOT use it: the parent pre-generates the
+        # whole decay pool here, once, with the fast native path.
+        use_gridpack = bool(self.options['ms_dir'])
         if cumul:
             width = 0.
         else:   
@@ -1462,12 +1504,6 @@ class MadSpinInterface(extended_cmd.Cmd):
             if restrict_file and i not in restrict_file:
                 continue
             decay_dir = pjoin(self.path_me, "decay_%s_%s" %(str(pdg).replace("-","x"),i))
-            # In a forked unweighting worker (``self._shard_tag`` set) the
-            # gridpack in ``decay_dir`` was already built AND frozen read-only by
-            # the parent (see _freeze_decay_gridpacks): the build below is skipped
-            # (dir exists) and the run.sh generation further down runs from a
-            # shard-private empty directory against this shared read-only
-            # gridpack. No per-worker copy of the gridpack is made.
             if not os.path.exists(decay_dir):
                 if cumul:
                     mg5.exec_cmd("generate %s" % proc)
@@ -1536,8 +1572,14 @@ class MadSpinInterface(extended_cmd.Cmd):
                 if decay_dir in self.me_int:
                         me5_cmd = self.me_int[decay_dir]
                 else:
+                    # ``_gen_nb_core`` caps the cores this generation may use, so
+                    # that several decay generations running at the same time
+                    # (see _generate_decays) never oversubscribe the machine.
+                    gen_options = dict(mg5.options)
+                    if getattr(self, '_gen_nb_core', None):
+                        gen_options['nb_core'] = self._gen_nb_core
                     me5_cmd = madevent_interface.MadEventCmdShell(me_dir=os.path.realpath(\
-                                                    decay_dir), options=mg5.options)
+                                                    decay_dir), options=gen_options)
                     me5_cmd.options["automatic_html_opening"] = False
                     me5_cmd.options["automatic_html_opening"] = False
                     me5_cmd.options["madanalysis5_path"] = None
@@ -1572,13 +1614,23 @@ class MadSpinInterface(extended_cmd.Cmd):
                 run_card["iseed"] = self.seed
                 run_card["systematics_program"] = 'None'
                 run_card['use_syst'] = False
+                # Under the parallel unweighting, have the final unweighting hand
+                # us one file per worker instead of a single pool: each worker
+                # then reads only its own file. And do not gzip them -- they are
+                # read back immediately, compressing them is pure overhead.
+                nb_split = self._decay_pool_split()
+                if nb_split > 1:
+                    run_card.__setitem__('nb_unweight_output', nb_split,
+                                         change_userdefine=True)
+                    run_card.__setitem__('zip_unweighted_events', False,
+                                         change_userdefine=True)
                 run_card.write(pjoin(decay_dir, "Cards", "run_card.dat"))
                 param_card = self.banner['slha']
                 open(pjoin(decay_dir, "Cards", "param_card.dat"),"w").write(param_card)
                 self.seed += 1
-                me5_cmd.exec_cmd("generate_events run_01 -f")
+                me5_cmd.exec_cmd("generate_events %s -f" % run_name)
                 if output_width:
-                    if cumul:    
+                    if cumul:
                         width += me5_cmd.results.current['cross']
                     else:
                         width *= me5_cmd.results.current['cross']
@@ -1586,7 +1638,12 @@ class MadSpinInterface(extended_cmd.Cmd):
                     logger.critical('The number of event generated is only %s/%s. This typically indicates that you need specify cut on the decay process.',me5_cmd.results.current['nb_event'], run_card["nevents"])
                     logger.critical('We strongly suggest that you cancel/discard this run.')
                 me5_cmd.exec_cmd("exit")
-                out[i] = lhe_parser.EventFile(pjoin(decay_dir, "Events", 'run_01', 'unweighted_events.lhe.gz'))        
+                if nb_split > 1:
+                    out[i] = _ChainedEvents(lhe_parser.EventFile.unweight_output_paths(
+                        pjoin(decay_dir, "Events", run_name, 'unweighted_events.lhe'),
+                        nb_split))
+                else:
+                    out[i] = lhe_parser.EventFile(pjoin(decay_dir, "Events", run_name, 'unweighted_events.lhe.gz'))
             else:
                 if not self.seed:
                     if hasattr(self, 'mother'):
@@ -1598,52 +1655,18 @@ class MadSpinInterface(extended_cmd.Cmd):
                 if self.seed > 30081*30081:
                     self.seed -= 30081*30081
                 logger.info('Will use seed %s' % (self.seed))
-                shard_tag = getattr(self, '_shard_tag', None)
-                if shard_tag is None:
-                    # Parent, pre-fork, single instance: the gridpack is still
-                    # writable, so generate in place with run.sh -p nb_core
-                    # (multi-core). With -p, gridrun does NOT combine channels
-                    # and splits any channel needing more than 'maxevts' events
-                    # into separate jobs (nb_split = ceil(needed/maxevts)). The
-                    # run.sh default (2500) fragments the dominant channels into
-                    # many small, setup-dominated jobs; raise the per-job target
-                    # so each job does more work and the cores are used
-                    # efficiently.
-                    rc, log = self._run_gridpack(
-                        [pjoin(decay_dir, 'run.sh'), str(int(1.2*nb_event)),
-                         str(self.seed), '-p', str(self._resolve_nb_core()),
-                         '-m', str(self.options['decay_events_per_job'])],
-                        cwd=decay_dir)
-                    events_path = pjoin(decay_dir, 'events.lhe.gz')
-                    if not os.path.exists(events_path):
-                        raise Exception(
-                            "Gridpack decay generation failed (rc=%s): %s was "
-                            "not produced by run.sh/gridrun.\n"
-                            "--- last run.sh/gridrun output ---\n%s"
-                            % (rc, events_path, log))
-                    out[i] = lhe_parser.EventFile(events_path)
-                else:
-                    # Forked worker: the gridpack was frozen read-only
-                    # (restore_data default + chmod 555). Per the supported
-                    # concurrent-gridpack recipe, invoke run.sh by absolute path
-                    # from a FRESH EMPTY directory so all transient run data is
-                    # written to cwd (not into the shared read-only gridpack),
-                    # and single-core -- parallelism comes from the many workers
-                    # generating simultaneously, one per core.
-                    run_dir = "%s_shard%s" % (decay_dir, shard_tag)
-                    if not os.path.exists(run_dir):
-                        os.makedirs(run_dir)
-                    rc, log = self._run_gridpack(
-                        [pjoin(decay_dir, 'run.sh'),
-                         str(int(1.2*nb_event)), str(self.seed)], cwd=run_dir)
-                    events_path = pjoin(run_dir, 'events.lhe.gz')
-                    if not os.path.exists(events_path):
-                        raise Exception(
-                            "Gridpack decay generation failed in worker (rc=%s): "
-                            "%s was not produced by run.sh/gridrun.\n"
-                            "--- last run.sh/gridrun output ---\n%s"
-                            % (rc, events_path, log))
-                    out[i] = lhe_parser.EventFile(events_path)
+                rc, log = self._run_gridpack(
+                    [pjoin(decay_dir, 'run.sh'), str(int(1.2*nb_event)),
+                     str(self.seed), '-p', str(self._resolve_nb_core())],
+                    cwd=decay_dir)
+                events_path = pjoin(decay_dir, 'events.lhe.gz')
+                if not os.path.exists(events_path):
+                    raise Exception(
+                        "Gridpack decay generation failed (rc=%s): %s was "
+                        "not produced by run.sh/gridrun.\n"
+                        "--- last run.sh/gridrun output ---\n%s"
+                        % (rc, events_path, log))
+                out[i] = lhe_parser.EventFile(events_path)
             if cumul:
                 break
         time_gen_dec = time.time()-time_gen_dec
@@ -1766,6 +1789,11 @@ class MadSpinInterface(extended_cmd.Cmd):
             # else-branch below and consumed after the loop to compute the
             # per-pdg drop probability that equalizes BRs across productions.
             mixed_pdgs_br = {}
+            # 1) Decide what has to be generated for each decaying particle.
+            #    Nothing is generated yet: the generations are launched together
+            #    below so they overlap instead of running one particle after the
+            #    other.
+            gen_jobs = collections.OrderedDict()
             for pdg, nb_needed in to_decay.items():
                 # muliply by expected effeciency of generation
                 spin = self.model.get_particle(pdg).get('spin')
@@ -1773,40 +1801,30 @@ class MadSpinInterface(extended_cmd.Cmd):
                     efficiency = 1.1
                 else:
                     efficiency = 2.0
-              
+
                 totwidth = self.banner.get('param_card', 'decay', abs(pdg)).value
-				
+
                 #check if a splitting is needed
                 if nb_needed == nb_event:
-                    nb_needed = (int(efficiency*nb_needed) + nevents_for_max)*self.options['decay_event_mult']
-                    evt_decayfile[pdg], pwidth = self.generate_events(pdg, nb_needed, mg5, output_width=True, cumul=True)
-                    if pwidth > 1.01*totwidth:
-                        logger.warning('partial width (%s) larger than total width (%s) --from param_card--', pwidth, totwidth)
-                    elif pwidth > totwidth:
-                        pwidth = totwidth
-                    br *= pwidth / totwidth
+                    gen_jobs[pdg] = {'kind': 'simple', 'totwidth': totwidth,
+                        'cumul': True,
+                        'nb_gen': (int(efficiency*nb_needed) + nevents_for_max)
+                                  * self.options['decay_event_mult']}
                 elif nb_needed %  nb_event == 0:
                     nb_mult = nb_needed // nb_event
-                    nb_needed = (int(efficiency*nb_needed) + nevents_for_max*nb_mult)*self.options['decay_event_mult']
+                    nb_cumul = (int(efficiency*nb_needed) + nevents_for_max*nb_mult) \
+                                * self.options['decay_event_mult']
                     part = self.model.get_particle(pdg)
                     name = part.get_name()
                     if name not in self.list_branches:
                         continue
                     elif len(self.list_branches[name]) == nb_mult:
-                        evt_decayfile[pdg], pwidth = self.generate_events(pdg, nb_event*self.options['decay_event_mult'], mg5, output_width=True)
-                        if pwidth > 1.01*totwidth:
-                            logger.warning('partial width (%s) larger than total width (%s) --from param_card--')
-                        elif pwidth > totwidth:
-                            pwidth = totwidth
-                        br *= pwidth / totwidth**nb_mult
-                        br *= math.factorial(nb_mult)
+                        gen_jobs[pdg] = {'kind': 'mult_split', 'totwidth': totwidth,
+                            'nb_mult': nb_mult, 'cumul': False,
+                            'nb_gen': nb_event * self.options['decay_event_mult']}
                     else:
-                        evt_decayfile[pdg],pwidth = self.generate_events(pdg, nb_needed, mg5, cumul=True, output_width=True)
-                        if pwidth > 1.01*totwidth:
-                            logger.warning('partial width (%s) larger than total width (%s) --from param_card--')
-                        elif pwidth > totwidth:
-                            pwidth = totwidth
-                        br *= (pwidth / totwidth)**nb_mult                      
+                        gen_jobs[pdg] = {'kind': 'mult_cumul', 'totwidth': totwidth,
+                            'nb_mult': nb_mult, 'cumul': True, 'nb_gen': nb_cumul}
                 else:
                     # Mixed case: events do not all share the same final-state
                     # particles to be decayed. We collect this pdg here and, once
@@ -1817,14 +1835,30 @@ class MadSpinInterface(extended_cmd.Cmd):
                     name = part.get_name()
                     if name not in self.list_branches or len(self.list_branches[name]) == 0:
                         continue
-                    nb_gen = (int(efficiency*nb_needed) + nevents_for_max) \
-                                * self.options['decay_event_mult']
-                    evt_decayfile[pdg], pwidth = self.generate_events(
-                        pdg, nb_gen, mg5, cumul=True, output_width=True)
-                    if pwidth > 1.01*totwidth:
-                        logger.warning('partial width (%s) larger than total width (%s) --from param_card--', pwidth, totwidth)
-                    elif pwidth > totwidth:
-                        pwidth = totwidth
+                    gen_jobs[pdg] = {'kind': 'mixed', 'totwidth': totwidth,
+                        'cumul': True,
+                        'nb_gen': (int(efficiency*nb_needed) + nevents_for_max)
+                                  * self.options['decay_event_mult']}
+
+            # 2) Generate every particle's decay events at the same time.
+            gen_results = self._generate_decays(gen_jobs, mg5)
+
+            # 3) Fold the measured partial widths into the branching ratio.
+            for pdg, job in gen_jobs.items():
+                evt_decayfile[pdg], pwidth = gen_results[pdg]
+                totwidth = job['totwidth']
+                if pwidth > 1.01*totwidth:
+                    logger.warning('partial width (%s) larger than total width (%s) --from param_card--', pwidth, totwidth)
+                elif pwidth > totwidth:
+                    pwidth = totwidth
+                if job['kind'] == 'simple':
+                    br *= pwidth / totwidth
+                elif job['kind'] == 'mult_split':
+                    br *= pwidth / totwidth**job['nb_mult']
+                    br *= math.factorial(job['nb_mult'])
+                elif job['kind'] == 'mult_cumul':
+                    br *= (pwidth / totwidth)**job['nb_mult']
+                else:
                     mixed_pdgs_br[pdg] = pwidth / totwidth
 
         # Equalize branching ratios across mixed productions (legacy
@@ -1938,8 +1972,6 @@ class MadSpinInterface(extended_cmd.Cmd):
             self._apply_accounting(base_out, [stats])
         else:
             logger.info("MadSpin: unweighting %s events on %s cores", nb_event, nb_core)
-            # freeze the decay gridpacks for safe concurrent read-only refills
-            self._freeze_decay_gridpacks()
             self._run_onshell_parallel(orig_lhe, nb_event, nb_core,
                                        evt_decayfile, base_out, ctx)
         logger.critical(f"Time for decay = {time.time()-start:.2f} sec")
@@ -2020,30 +2052,225 @@ class MadSpinInterface(extended_cmd.Cmd):
         proc.wait()
         return proc.returncode, '\n'.join(tail)
 
-    def _freeze_decay_gridpacks(self):
-        """Prepare every built decay gridpack for safe concurrent read-only use
-        by the forked workers, following the supported recipe: restore the grid
-        to its pristine ``default`` state, then make the ``madevent`` tree
-        read-only (chmod 555). After this the parent must NOT generate into these
-        gridpacks any more; workers run run.sh from their own empty directories.
-        Called once, after the (writable, parent-side) max-weight estimation and
-        before forking."""
-        for decay_dir in misc.glob("decay_*", self.path_me):
-            me_dir = pjoin(decay_dir, 'madevent')
-            if not os.path.isdir(me_dir):
-                continue
-            restore = pjoin(me_dir, 'bin', 'internal', 'restore_data')
-            if os.path.exists(restore):
-                try:
-                    misc.call([restore, 'default'], cwd=me_dir)
-                except Exception as exc:
-                    logger.warning('restore_data failed for %s: %s', decay_dir, exc)
-            # make the gridpack read-only so gridrun writes transient data to the
-            # worker's cwd instead of into the shared gridpack (concurrent-safe)
+    def _decay_pool_split(self):
+        """In how many files the decay pool should be written: one per parallel
+        unweighting worker (1 = single pool, historical behaviour)."""
+        return self._resolve_nb_core()
+
+    @staticmethod
+    def _decay_dir(path_me, pdg, decay_file_nb):
+        return pjoin(path_me,
+                     "decay_%s_%s" % (str(pdg).replace("-", "x"), decay_file_nb))
+
+    def _regenerate_events(self, pdg, decay_file_nb, needed, run_name):
+        """Produce ``needed`` extra decay events for a channel that has already
+        been generated once, into a run of its own. Returns the reader over the
+        events produced (already split per worker when running in parallel)."""
+        decay_dir = self._decay_dir(self.path_me, pdg, decay_file_nb)
+        # Never let the generation land on an existing run: madevent then asks
+        # "do you wish to overwrite?", the non-interactive answer is 'n', and it
+        # silently produces nothing -- which used to make every worker retry the
+        # same doomed generation in turn.
+        stale = pjoin(decay_dir, 'Events', run_name)
+        if os.path.exists(stale):
+            _force_rmtree(stale)
+        # RunWeb is madevent's "this directory is busy" marker and makes
+        # MadEventCmd refuse to start (AlreadyRunning). The generation that
+        # created the pool does not always clean it up. The caller holds the
+        # exclusive refill lock, so no other madevent can be running here: any
+        # RunWeb we find is stale and removing it is safe.
+        runweb = pjoin(decay_dir, 'RunWeb')
+        if os.path.exists(runweb):
+            logger.debug("removing stale RunWeb in %s before the refill", decay_dir)
             try:
-                misc.call(['chmod', '-R', '555', 'madevent'], cwd=decay_dir)
-            except Exception as exc:
-                logger.warning('chmod of gridpack %s failed: %s', decay_dir, exc)
+                os.remove(runweb)
+            except OSError:
+                pass
+        with misc.MuteLogger(["madgraph", "madevent", "ALOHA", "cmdprint"],
+                             [50, 50, 50, 50]):
+            out = self.generate_events(pdg, needed, self.mg5cmd,
+                                       [decay_file_nb], run_name=run_name)
+        reader = out[decay_file_nb]
+        if not os.path.exists(reader.name):
+            raise Exception(
+                "MadSpin: decay-event refill for pdg %s produced no events "
+                "(expected %s)." % (pdg, reader.name))
+        return reader
+
+    @staticmethod
+    def _reader_paths(reader):
+        """Every file behind a decay-pool reader (one per worker when split)."""
+        return list(getattr(reader, 'paths', None) or [reader.name])
+
+    @staticmethod
+    def _reader_from_paths(paths):
+        """Rebuild a decay-pool reader from the paths marshalled across a fork."""
+        if len(paths) > 1:
+            return _ChainedEvents(paths)
+        return lhe_parser.EventFile(paths[0])
+
+    def _generate_decay_entry(self, pdg, job, nb_core, seed_offset, res_path):
+        """Generate the decay events of one particle inside a forked process
+        (see :meth:`_generate_decays`). The produced EventFile objects cannot
+        cross the process boundary, so report their paths (and the partial
+        width) through a small JSON file."""
+        import json
+        try:
+            # cap the cores this generation may use, use a seed of our own, and
+            # never reuse a MadEventCmdShell inherited through fork
+            self._gen_nb_core = nb_core
+            self.seed = (int(self.seed) + 1000003 * seed_offset) % (30081 * 30081)
+            self.options['seed'] = self.seed
+            self.me_int = {}
+            out, width = self.generate_events(pdg, job['nb_gen'], self.mg5cmd,
+                                              cumul=job['cumul'], output_width=True)
+            with open(res_path, 'w') as fp:
+                # send back every file of each channel: when the pool is split
+                # per worker (nb_unweight_output) reporting only the first one
+                # would silently shrink the pool to a single slice.
+                json.dump({'files': dict((str(k), self._reader_paths(v))
+                                         for k, v in out.items()),
+                           'width': width}, fp)
+        except Exception as exc:
+            import traceback
+            try:
+                with open(res_path, 'w') as fp:
+                    json.dump({'error': str(exc), 'tb': traceback.format_exc()}, fp)
+            except Exception:
+                pass
+
+    def _generate_decays(self, gen_jobs, mg5):
+        """Generate the decay events for every decaying particle; returns
+        ``{pdg: ({file_nb: EventFile}, partial_width)}``.
+
+        The generations are independent (each particle has its own
+        ``decay_<pdg>_<i>`` directory) and a single MadEvent generation only
+        keeps every core busy for a short while before tailing off to a single
+        job, so run them concurrently -- one forked process per particle -- and
+        split the core budget between them so their *sum* never oversubscribes
+        the machine.
+        """
+        if len(gen_jobs) <= 1:
+            return dict((pdg, self.generate_events(pdg, job['nb_gen'], mg5,
+                                                   cumul=job['cumul'],
+                                                   output_width=True))
+                        for pdg, job in gen_jobs.items())
+
+        import multiprocessing as mp
+        import json
+        budget = self._resolve_nb_core()
+        try:
+            budget = min(budget, mp.cpu_count())
+        except NotImplementedError:
+            pass
+        per = max(1, 2 * budget // len(gen_jobs))
+        logger.info("MadSpin: generating the decay events of %s particles at "
+                    "once, %s core(s) each", len(gen_jobs), per)
+
+        mpctx = mp.get_context('fork')
+        procs = []
+        for offset, (pdg, job) in enumerate(gen_jobs.items()):
+            res = pjoin(self.path_me, 'ms_gen_%s.json' % str(pdg).replace('-', 'x'))
+            p = mpctx.Process(target=self._generate_decay_entry,
+                              args=(pdg, job, per, offset + 1, res))
+            p.start()
+            procs.append((pdg, p, res))
+        for pdg, p, res in procs:
+            p.join()
+
+        out = {}
+        for pdg, p, res in procs:
+            if not os.path.exists(res):
+                raise Exception("MadSpin: the decay generation of pdg %s produced "
+                                "no result (crashed?)." % pdg)
+            with open(res) as fp:
+                data = json.load(fp)
+            os.remove(res)
+            if 'error' in data:
+                raise Exception("MadSpin: the decay generation of pdg %s failed:\n%s"
+                                % (pdg, data.get('tb', data['error'])))
+            out[pdg] = (dict((int(k), self._reader_from_paths(v))
+                             for k, v in data['files'].items()),
+                        data['width'])
+        return out
+
+    def _refill_pool_path(self, decay_dir, gen):
+        """This worker's own file of the refill pool ``gen``. The refill asks the
+        unweighting for one file per worker, so a worker never reads (nor even
+        parses) the events that belong to the others."""
+        base = pjoin(decay_dir, 'Events', 'ms_refill_%d' % gen,
+                     'unweighted_events.lhe')
+        paths = lhe_parser.EventFile.unweight_output_paths(base, self._shard_nb_core)
+        path = paths[self._shard_tag] if len(paths) > 1 else paths[0]
+        if not os.path.exists(path):
+            raise Exception("MadSpin: refill pool %s is missing for worker %s"
+                            % (path, self._shard_tag))
+        return path
+
+    def _worker_refill(self, pdg, decay_file_nb, needed):
+        """Centralised, cross-process-safe decay-event refill for the forked
+        unweighting workers. Returns the path of the pool to (re)open.
+
+        Decay-event generation is not fork-safe and must never run
+        concurrently. So the first worker to run out of decay events takes an
+        exclusive lock and generates ONE pool big enough for *every* worker
+        (``needed`` is already scaled by nb_core by the caller); any other
+        worker that runs out meanwhile simply blocks on that lock and then picks
+        up the pool the first one produced -- the generation counter is
+        re-checked under the lock, so nobody ever regenerates needlessly.
+
+        Each generation writes to its own run/pool file, so the pool the other
+        workers are still reading is never overwritten underneath them.
+        """
+        import fcntl
+        decay_dir = pjoin(self.path_me,
+                          "decay_%s_%s" % (str(pdg).replace("-", "x"), decay_file_nb))
+        key = (pdg, decay_file_nb)
+        my_gen = self._pool_gen.get(key, 0)
+        gen_file = pjoin(decay_dir, 'ms_refill.gen')
+
+        logger.debug("MadSpin worker %s: waiting for the refill lock of pdg %s",
+                     self._shard_tag, pdg)
+        with open(pjoin(decay_dir, 'ms_refill.lock'), 'w') as lock:
+            fcntl.flock(lock, fcntl.LOCK_EX)   # the other workers queue up here
+            try:
+                current = 0
+                if os.path.exists(gen_file):
+                    try:
+                        current = int(open(gen_file).read().strip())
+                    except (ValueError, IOError):
+                        current = 0
+                if current > my_gen:
+                    # somebody refilled while we were waiting: just use it
+                    logger.info("MadSpin worker %s: reusing the pool (gen %s) that "
+                                "another worker generated for pdg %s",
+                                self._shard_tag, current, pdg)
+                    self._pool_gen[key] = current
+                    return self._refill_pool_path(decay_dir, current)
+
+                new_gen = current + 1
+                logger.info("MadSpin worker %s: decay pool for pdg %s exhausted, "
+                            "generating %s events for all %s workers",
+                            self._shard_tag, pdg, needed, self._shard_nb_core)
+                # Use a *fresh* MadEventCmdShell: never reuse the one inherited
+                # from the parent through fork. The generation writes to a run of
+                # its own (so the pool the other workers still read stays intact)
+                # and splits its output one file per worker.
+                self.me_int = {}
+                shard_tag, self._shard_tag = self._shard_tag, None
+                try:
+                    self._regenerate_events(pdg, decay_file_nb, needed,
+                                            'ms_refill_%d' % new_gen)
+                finally:
+                    self._shard_tag = shard_tag
+
+                # publish only once every file is complete on disk
+                with open(gen_file, 'w') as fp:
+                    fp.write('%d\n' % new_gen)
+                self._pool_gen[key] = new_gen
+                return self._refill_pool_path(decay_dir, new_gen)
+            finally:
+                fcntl.flock(lock, fcntl.LOCK_UN)
 
     def _unweight_range(self, prod_source, evt_decayfile, output_lhe, ctx):
         """Decay + accept/reject over every production event in ``prod_source``,
@@ -2277,33 +2504,42 @@ class MadSpinInterface(extended_cmd.Cmd):
         return [p for p, _ in keep], [c for _, c in keep]
 
     def _reopen_decay_pool(self, evt_decayfile, shard_id, nb_core):
-        """Return a per-worker striped view of the decay pools. Each channel
-        EventFile is reopened on this worker's own file descriptor (independent
-        offset -- separate process) and wrapped in ``_StridedEvents`` so this
-        worker consumes only every ``nb_core``-th decay event. Cross-sections are
-        proxied unchanged, so channel selection in ``get_decay_from_file`` is
-        identical to serial."""
+        """Return this worker's private view of the decay pools.
+
+        The unweighting already wrote one file per worker
+        (``nb_unweight_output``), so a worker simply opens *its* file: no two
+        workers ever read the same event and none of them has to scan the whole
+        pool. If the pool happens to be a single file (e.g. it was produced
+        before this was in place) fall back to striding it, which is correct but
+        makes every worker parse everything."""
         local = {}
         for pdg, channels in evt_decayfile.items():
             local[pdg] = {}
             for file_nb, evtfile in channels.items():
-                fresh = lhe_parser.EventFile(evtfile.name)
-                local[pdg][file_nb] = _StridedEvents(fresh, shard_id, nb_core)
+                paths = getattr(evtfile, 'paths', None)
+                if paths and len(paths) == nb_core:
+                    local[pdg][file_nb] = lhe_parser.EventFile(paths[shard_id])
+                else:
+                    fresh = lhe_parser.EventFile(evtfile.name)
+                    local[pdg][file_nb] = _StridedEvents(fresh, shard_id, nb_core)
         return local
 
     def _unweight_shard_entry(self, shard_id, nb_core, shard_path, out_path,
                               evt_decayfile, ctx, stats_path):
-        """Worker entry point (runs in a forked child process). Owns its RNG,
-        its refill decay dirs (via ``self._shard_tag``), its f2py COMMON blocks
-        (independent address space after fork), and its output fragment. Writes a
-        JSON stats file the parent reads back; on failure writes the traceback
-        there instead of raising into the parent (which only sees exit codes)."""
+        """Worker entry point (runs in a forked child process). Owns its RNG, its
+        f2py COMMON blocks (independent address space after fork), and its output
+        fragment. Writes a JSON stats file the parent reads back; on failure
+        writes the traceback there instead of raising into the parent (which only
+        sees exit codes)."""
         import json
         try:
             # distinct RNG streams per shard (channel selection + accept/reject)
             random.seed(ctx['base_seed'] + 7919 * (shard_id + 1))
-            # distinct refill seeds + shard-private refill decay dirs
+            # marks this process as a forked worker: any decay-event refill must
+            # go through the centralised, locked _worker_refill
             self._shard_tag = shard_id
+            self._shard_nb_core = nb_core
+            self._pool_gen = {}
             self.options['seed'] = (ctx['base_seed'] + 100003 * (shard_id + 1)) % (30081 * 30081)
             self.seed = self.options['seed']
             self.efficiency = 1.0
@@ -2414,16 +2650,6 @@ class MadSpinInterface(extended_cmd.Cmd):
             try:
                 os.remove(pth)
             except OSError:
-                pass
-
-        # drop the per-worker run directories and restore write permissions on
-        # the frozen gridpacks so downstream (plain rmtree) cleanup succeeds
-        for run_dir in misc.glob("decay_*_shard*", self.path_me):
-            _force_rmtree(run_dir)
-        for decay_dir in misc.glob("decay_*", self.path_me):
-            try:
-                misc.call(['chmod', '-R', 'u+w', decay_dir])
-            except Exception:
                 pass
 
         self._apply_accounting(base_out, stats_list)
@@ -2549,10 +2775,31 @@ class MadSpinInterface(extended_cmd.Cmd):
                     else:
                         burn = max(1.0, float(same_pdg) / float(nb_decay))
                     needed = int(math.ceil(1.10 * burn * nb_remain / eff))
+                    # Statistical-fluctuation security: the number of events we
+                    # actually get back fluctuates like sqrt(N), so ask for
+                    # sqrt(target) more than the bare target -- running short
+                    # would cost a whole extra refill.
+                    needed += int(math.ceil(math.sqrt(needed)))
                     needed = min(200000, max(needed, 1000))
-                    with misc.MuteLogger(["madgraph", "madevent", "ALOHA", "cmdprint"], [50,50,50,50]):
-                        new_file = self.generate_events(particle.pdg, needed, self.mg5cmd, [decay_file_nb])
-                    evt_decayfile[particle.pdg].update(new_file)
+                    if getattr(self, '_shard_tag', None) is not None:
+                        # Parallel unweighting: generation is not fork-safe and
+                        # must not run concurrently, so one worker generates a
+                        # pool for everybody (nb_core * nb_remaining / eff) while
+                        # the others block. _worker_refill returns the path of
+                        # this worker's own file of that pool.
+                        pool = self._worker_refill(
+                            particle.pdg, decay_file_nb,
+                            needed * self._shard_nb_core)
+                        evt_decayfile[particle.pdg][decay_file_nb] = \
+                            lhe_parser.EventFile(pool)
+                    else:
+                        # serial: _regenerate_events already returns the reader
+                        # over the events it produced
+                        self._refill_nb = getattr(self, '_refill_nb', 0) + 1
+                        evt_decayfile[particle.pdg][decay_file_nb] = \
+                            self._regenerate_events(
+                                particle.pdg, decay_file_nb, needed,
+                                'ms_refill_%d' % self._refill_nb)
                     decay_file = evt_decayfile[particle.pdg][decay_file_nb]
                     continue
             out[particle.pdg].append(decay)

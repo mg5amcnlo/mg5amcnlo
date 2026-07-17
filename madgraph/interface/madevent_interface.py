@@ -5924,7 +5924,12 @@ tar -czf split_$1.tar.gz split_$1
                     logger.debug('systematics did not run: merging back the %s '
                                  'split event files', len(orphans))
                     self.merge_split_unweighted_files(orphans, nominal)
-            if not os.path.exists(pjoin(self.me_dir, 'Events',self.run_name, 'unweighted_events.lhe.gz')) and\
+            # zip_unweighted_events=False means the events are consumed straight
+            # away: do not gzip them back here, that would defeat the purpose.
+            zip_events = ('zip_unweighted_events' not in self.run_card or
+                          self.run_card['zip_unweighted_events'])
+            if zip_events and \
+               not os.path.exists(pjoin(self.me_dir, 'Events',self.run_name, 'unweighted_events.lhe.gz')) and\
                os.path.exists(pjoin(self.me_dir, 'Events',self.run_name, 'unweighted_events.lhe')):
                 logger.info("gzipping output file: unweighted_events.lhe")
                 misc.gzip(pjoin(self.me_dir,'Events',self.run_name,"unweighted_events.lhe"))
