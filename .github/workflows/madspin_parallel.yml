@@ -50,15 +50,8 @@ jobs:
           - test_short_madspin_multicore
     steps:
       - uses: actions/checkout@v4
-
-      - name: Configure
-        run: |
-          cd "$GITHUB_WORKSPACE"
-          cp input/.mg5_configuration_default.txt input/mg5_configuration.txt
-          sudo pip install numpy
-          which f2py
-          echo "f2py_compiler = $(which f2py)" >> input/mg5_configuration.txt
-          cp Template/LO/Source/.make_opts Template/LO/Source/make_opts
+      - uses: ./.github/actions/checkout_mg5
+      - uses: ./.github/actions/restore-pip-cache
 
       - name: Run ${{ matrix.test }}
         run: |
