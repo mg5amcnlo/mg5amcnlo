@@ -3451,6 +3451,7 @@ class MadSpinInterface(extended_cmd.Cmd):
         decays_key = self._decaying_pdgs(production, evt_decayfile)
         if not decays_key:
             return None
+        self._ensure_f2py_module()
         prod_static = getattr(production, '_ms_density_static', None)
         if not prod_static or prod_static.get('decays_key') != decays_key:
             prod_static = self._density_basis(production, decays_key)
@@ -3680,35 +3681,42 @@ class MadSpinInterface(extended_cmd.Cmd):
         return full_event, full_me/(production_me*decay_me)*jac, prod_density_cached
 
            
+    def _ensure_f2py_module(self):
+        """Load the density-matrix f2py extension and build the pdg -> prefix
+        map, once. Both the matrix-element evaluation and get_density / get_pdir
+        need it, so the sequential accept/reject -- which calls get_density
+        directly, without going through calculate_matrix_element_from_density --
+        must be able to trigger the same setup.
+        """
+        if hasattr(self, 'f2py_module'):
+            return
+        sp_path = pjoin(self.path_me, self.ms_me_subdir, 'SubProcesses')
+        if sys.path[0] != sp_path:
+            sys.path.insert(0, sp_path)
+
+        mymod = self._load_f2py_matrix_module(sp_path)
+        self.f2py_module = mymod
+
+        all_prefix = self.f2py_module.get_prefix()
+        all_pdg, all_procid = self.f2py_module.get_pdg_order()
+        self.pdg2prefix = {}
+        for i, pdg in enumerate(all_pdg):
+            pdg = tuple([x for x in pdg if x != 0])
+            self.pdg2prefix[pdg] = (str(all_prefix[i].decode()).strip(), i)
+
+        if self.model_init:
+            self.model_init = False
+            with misc.chdir(sp_path):
+                if (not os.path.exists(pjoin(self.path_me, 'Cards', 'param_card.dat'))
+                        and os.path.exists(pjoin(self.path_me, 'param_card.dat'))):
+                    mymod.initialise(pjoin(self.path_me, 'param_card.dat'))
+                else:
+                    mymod.initialise(pjoin(self.path_me, 'Cards', 'param_card.dat'))
+
     def calculate_matrix_element_from_density(self, production, decays, decay_dict, prod_density_cached=None):
         """routine to return the matrix element from density matrices"""
 
-        # ------------------------------------------------------------------
-        # Load f2py module and build pdg2prefix map if needed (unchanged logic)
-        # ------------------------------------------------------------------
-        if not hasattr(self, 'f2py_module'):
-            sp_path = pjoin(self.path_me, self.ms_me_subdir, 'SubProcesses')
-            if sys.path[0] != sp_path:
-                sys.path.insert(0, sp_path)
-
-            mymod = self._load_f2py_matrix_module(sp_path)
-            self.f2py_module = mymod
-
-            all_prefix = self.f2py_module.get_prefix()
-            all_pdg, all_procid = self.f2py_module.get_pdg_order()
-            self.pdg2prefix = {}
-            for i, pdg in enumerate(all_pdg):
-                pdg = tuple([x for x in pdg if x != 0])
-                self.pdg2prefix[pdg] = (str(all_prefix[i].decode()).strip(), i)
-
-            if self.model_init:
-                self.model_init = False
-                with misc.chdir(sp_path):
-                    if (not os.path.exists(pjoin(self.path_me, 'Cards', 'param_card.dat'))
-                            and os.path.exists(pjoin(self.path_me, 'param_card.dat'))):
-                        mymod.initialise(pjoin(self.path_me, 'param_card.dat'))
-                    else:
-                        mymod.initialise(pjoin(self.path_me, 'Cards', 'param_card.dat'))
+        self._ensure_f2py_module()
 
         # ------------------------------------------------------------------
         # Cache production-only metadata reused across rejection retries

@@ -1147,6 +1147,8 @@ class TestSequentialAcceptReject(unittest.TestCase):
                         'init_part': [particles[i] for i in slots],
                         'decaying_spins': [2, 2], 'position': [1, 2],
                         'allowed_hel': [], 'ncomb': 0, 'dimension': 4}
+            def _ensure_f2py_module(self):
+                pass
             def get_density(self, *args, **opts):
                 return rho
             def _draw_one_decay(self, particle, index, ids, evt_decayfile, nb_remain):
