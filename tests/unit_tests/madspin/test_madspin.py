@@ -34,6 +34,7 @@ import madgraph.various.banner as banner
 
 import copy
 import array
+import collections
 
 import madgraph.core.base_objects as MG
 import madgraph.various.misc as misc
@@ -628,3 +629,114 @@ class TestSequentialOrdering(unittest.TestCase):
         ladder = interface_madspin.MadSpinInterface._decay_pool_ladder
         for position in range(4):
             self.assertEqual(ladder(position, 1), 1.1)
+
+
+class TestDrawOneDecay(unittest.TestCase):
+    """_draw_one_decay: drawing a single particle's decay, so the sequential
+    accept/reject can redraw one particle without touching the others.
+
+    get_decay_from_file is now a loop over it and must behave exactly as before.
+    """
+
+    class _Part(object):
+        def __init__(self, pid):
+            self.pid = pid
+            self.pdg = pid
+            self.status = 1
+
+    class _Pool(object):
+        """Stands in for an lhe_parser.EventFile of decay events."""
+        def __init__(self, tag, n=50, cross=1.0):
+            self.tag = tag
+            self._it = iter(range(n))
+            self.cross = cross
+        def __next__(self):
+            return '%s:%s' % (self.tag, next(self._it))
+
+    class _Stub(object):
+        get_decay_from_file = interface_madspin.MadSpinInterface.get_decay_from_file
+        _draw_all_decays = interface_madspin.MadSpinInterface._draw_all_decays
+        _draw_one_decay = interface_madspin.MadSpinInterface._draw_one_decay
+        efficiency = 0.5
+
+    def _setup(self):
+        # t t~ t plus a gluon that never decays; two decay files for each pdg so
+        # both the one-file-per-parent and the cross-section-weighted branches
+        # are exercised.
+        production = [self._Part(6), self._Part(-6), self._Part(6), self._Part(21)]
+        evt_decayfile = {6: {0: self._Pool('t0'), 1: self._Pool('t1')},
+                         -6: {0: self._Pool('tx0', cross=2.0),
+                              1: self._Pool('tx1', cross=3.0)}}
+        return production, evt_decayfile
+
+    def test_non_decaying_particle_gives_none(self):
+        production, evt_decayfile = self._setup()
+        gluon = production[3]
+        self.assertIsNone(self._Stub()._draw_one_decay(
+            gluon, 3, [p.pid for p in production], evt_decayfile, 10))
+
+    def test_empty_pool_dict_gives_none(self):
+        production, evt_decayfile = self._setup()
+        evt_decayfile[6] = {}
+        self.assertIsNone(self._Stub()._draw_one_decay(
+            production[0], 0, [p.pid for p in production], evt_decayfile, 10))
+
+    def test_slots_come_in_production_order(self):
+        """The density matrix slots are built in production order, so the draw
+        must walk the particles in that same order."""
+        production, evt_decayfile = self._setup()
+        got = [(i, part.pid) for i, part, _ in
+               self._Stub()._draw_all_decays(production, evt_decayfile, 10)]
+        self.assertEqual(got, [(0, 6), (1, -6), (2, 6)])
+
+    def test_identical_parents_read_their_own_file(self):
+        """Two tops with two decay files: one file each, in order."""
+        production, evt_decayfile = self._setup()
+        out = self._Stub().get_decay_from_file(production, evt_decayfile, 10)
+        self.assertEqual(out[6], ['t0:0', 't1:0'])
+
+    def test_joint_path_is_unchanged(self):
+        """get_decay_from_file must still consume the RNG in the same order and
+        return the same draws as before the refactor."""
+        import random
+        for seed in range(50):
+            random.seed(seed)
+            production, evt_decayfile = self._setup()
+            got = dict(self._Stub().get_decay_from_file(production, evt_decayfile, 10))
+            random.seed(seed)
+            production, evt_decayfile = self._setup()
+            want = dict(self._reference(production, evt_decayfile))
+            self.assertEqual(got, want)
+
+    @staticmethod
+    def _reference(production, evt_decayfile):
+        """The implementation as it was before _draw_one_decay was extracted."""
+        import random
+        out = collections.defaultdict(list)
+        particles = [p for p in production if int(p.status) == 1.0]
+        ids = [particle.pid for particle in particles]
+        for i, particle in enumerate(particles):
+            if particle.pdg not in evt_decayfile:
+                continue
+            nb_decay = len(evt_decayfile[particle.pdg])
+            if nb_decay == 0:
+                continue
+            if nb_decay == 1:
+                decay_file = evt_decayfile[particle.pdg][0]
+            elif ids.count(particle.pdg) == nb_decay:
+                decay_file = evt_decayfile[particle.pdg][ids[:i].count(particle.pdg)]
+            else:
+                r = random.random()
+                tot = sum(evt_decayfile[particle.pdg][k].cross
+                          for k in evt_decayfile[particle.pdg])
+                r = r * tot
+                cumul = 0
+                for j, events in evt_decayfile[particle.pdg].items():
+                    cumul += events.cross
+                    if r < cumul:
+                        decay_file = events
+                        break
+                else:
+                    raise Exception
+            out[particle.pdg].append(next(decay_file))
+        return out

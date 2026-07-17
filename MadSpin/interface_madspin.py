@@ -2767,92 +2767,112 @@ class MadSpinInterface(extended_cmd.Cmd):
 
     def get_decay_from_file(self,production, evt_decayfile, nb_remain):
         """return a dictionary PDG -> list of associated decay"""
-        
+
         out = collections.defaultdict(list)
+        for i, particle, decay in self._draw_all_decays(production, evt_decayfile,
+                                                        nb_remain):
+            out[particle.pdg].append(decay)
+        return out
+
+    def _draw_all_decays(self, production, evt_decayfile, nb_remain):
+        """Yield (slot_index, particle, decay) for every decaying particle of the
+        production event, in production order -- which is the order the density
+        matrix slots are built in."""
         particles = [p for p in production if int(p.status) == 1.0]
         ids = [particle.pid for particle in particles]
-        for i,particle in enumerate(particles):
-            # check if we need to decay the particle 
-            if particle.pdg not in evt_decayfile:
-                continue # nothing to do for this particle
-            # check how the decay need to be done
-            nb_decay = len(evt_decayfile[particle.pdg])
-            if nb_decay == 0:
-                continue #nothing to do for this particle
-            # Determine the file to read in order to get the decay [decay_file]
-            if nb_decay == 1:
-                decay_file = evt_decayfile[particle.pdg][0]
-                decay_file_nb = 0
-            elif ids.count(particle.pdg) == nb_decay:
-                decay_file = evt_decayfile[particle.pdg][ids[:i].count(particle.pdg)]
-                decay_file_nb = ids[:i].count(particle.pdg)
-            else:
-                #need to select the file according to the associate cross-section
-                r = random.random()
-                tot = sum(evt_decayfile[particle.pdg][key].cross for key in evt_decayfile[particle.pdg])
-                r = r * tot
-                cumul = 0
-                for j,events in evt_decayfile[particle.pdg].items():
+        for i, particle in enumerate(particles):
+            decay = self._draw_one_decay(particle, i, ids, evt_decayfile, nb_remain)
+            if decay is not None:
+                yield i, particle, decay
+
+    def _draw_one_decay(self, particle, i, ids, evt_decayfile, nb_remain):
+        """Draw one decay event for ``particle`` -- the i-th final-state particle
+        of the production event, ``ids`` being the pdgs of all of them -- and
+        refill its pool if it runs out. Returns None when that particle does not
+        decay.
+
+        Factored out of get_decay_from_file so that the sequential accept/reject
+        can redraw a single particle without touching the ones already accepted.
+        """
+        # check if we need to decay the particle
+        if particle.pdg not in evt_decayfile:
+            return None # nothing to do for this particle
+        # check how the decay need to be done
+        nb_decay = len(evt_decayfile[particle.pdg])
+        if nb_decay == 0:
+            return None #nothing to do for this particle
+        # Determine the file to read in order to get the decay [decay_file]
+        if nb_decay == 1:
+            decay_file = evt_decayfile[particle.pdg][0]
+            decay_file_nb = 0
+        elif ids.count(particle.pdg) == nb_decay:
+            decay_file = evt_decayfile[particle.pdg][ids[:i].count(particle.pdg)]
+            decay_file_nb = ids[:i].count(particle.pdg)
+        else:
+            #need to select the file according to the associate cross-section
+            r = random.random()
+            tot = sum(evt_decayfile[particle.pdg][key].cross for key in evt_decayfile[particle.pdg])
+            r = r * tot
+            cumul = 0
+            for j,events in evt_decayfile[particle.pdg].items():
                     
-                    cumul += events.cross
-                    if r < cumul:
-                        decay_file = events
-                        decay_file_nb = j
-                        break
-                    else:
-                        continue
-                else:
-                    raise Exception
-            # So now we know which file to read. Do it and re-generate events for that 
-            # file if needed.
-            while 1:
-                try:
-                    decay = next(decay_file)
+                cumul += events.cross
+                if r < cumul:
+                    decay_file = events
+                    decay_file_nb = j
                     break
-                except StopIteration:
-                    # Estimate refill size from remaining production events
-                    # efficiency and per-trial consumption if decaying particles
-                    # Take into account identical parents
-                    # Oversample by 10% to reduce refill frequency; cap to limit one refill cost.
-                    eff = max(self.efficiency, 1e-12)
-                    same_pdg = ids.count(particle.pdg)
-                    if nb_decay == 1:
-                        burn = same_pdg
-                    elif nb_decay == same_pdg:
-                        burn = 1.0
-                    else:
-                        burn = max(1.0, float(same_pdg) / float(nb_decay))
-                    needed = int(math.ceil(1.10 * burn * nb_remain / eff))
-                    # Statistical-fluctuation security: the number of events we
-                    # actually get back fluctuates like sqrt(N), so ask for
-                    # sqrt(target) more than the bare target -- running short
-                    # would cost a whole extra refill.
-                    needed += int(math.ceil(math.sqrt(needed)))
-                    needed = min(200000, max(needed, 1000))
-                    if getattr(self, '_shard_tag', None) is not None:
-                        # Parallel unweighting: generation is not fork-safe and
-                        # must not run concurrently, so one worker generates a
-                        # pool for everybody (nb_core * nb_remaining / eff) while
-                        # the others block. _worker_refill returns the path of
-                        # this worker's own file of that pool.
-                        pool = self._worker_refill(
-                            particle.pdg, decay_file_nb,
-                            needed * self._shard_nb_core)
-                        evt_decayfile[particle.pdg][decay_file_nb] = \
-                            lhe_parser.EventFile(pool)
-                    else:
-                        # serial: _regenerate_events already returns the reader
-                        # over the events it produced
-                        self._refill_nb = getattr(self, '_refill_nb', 0) + 1
-                        evt_decayfile[particle.pdg][decay_file_nb] = \
-                            self._regenerate_events(
-                                particle.pdg, decay_file_nb, needed,
-                                'ms_refill_%d' % self._refill_nb)
-                    decay_file = evt_decayfile[particle.pdg][decay_file_nb]
+                else:
                     continue
-            out[particle.pdg].append(decay)
-                        
-        return out
+            else:
+                raise Exception
+        # So now we know which file to read. Do it and re-generate events for that 
+        # file if needed.
+        while 1:
+            try:
+                decay = next(decay_file)
+                break
+            except StopIteration:
+                # Estimate refill size from remaining production events
+                # efficiency and per-trial consumption if decaying particles
+                # Take into account identical parents
+                # Oversample by 10% to reduce refill frequency; cap to limit one refill cost.
+                eff = max(self.efficiency, 1e-12)
+                same_pdg = ids.count(particle.pdg)
+                if nb_decay == 1:
+                    burn = same_pdg
+                elif nb_decay == same_pdg:
+                    burn = 1.0
+                else:
+                    burn = max(1.0, float(same_pdg) / float(nb_decay))
+                needed = int(math.ceil(1.10 * burn * nb_remain / eff))
+                # Statistical-fluctuation security: the number of events we
+                # actually get back fluctuates like sqrt(N), so ask for
+                # sqrt(target) more than the bare target -- running short
+                # would cost a whole extra refill.
+                needed += int(math.ceil(math.sqrt(needed)))
+                needed = min(200000, max(needed, 1000))
+                if getattr(self, '_shard_tag', None) is not None:
+                    # Parallel unweighting: generation is not fork-safe and
+                    # must not run concurrently, so one worker generates a
+                    # pool for everybody (nb_core * nb_remaining / eff) while
+                    # the others block. _worker_refill returns the path of
+                    # this worker's own file of that pool.
+                    pool = self._worker_refill(
+                        particle.pdg, decay_file_nb,
+                        needed * self._shard_nb_core)
+                    evt_decayfile[particle.pdg][decay_file_nb] = \
+                        lhe_parser.EventFile(pool)
+                else:
+                    # serial: _regenerate_events already returns the reader
+                    # over the events it produced
+                    self._refill_nb = getattr(self, '_refill_nb', 0) + 1
+                    evt_decayfile[particle.pdg][decay_file_nb] = \
+                        self._regenerate_events(
+                            particle.pdg, decay_file_nb, needed,
+                            'ms_refill_%d' % self._refill_nb)
+                decay_file = evt_decayfile[particle.pdg][decay_file_nb]
+                continue
+        return decay
         
     
     def get_maxwgt_for_onshell(self, orig_lhe, evt_decayfile, decay_dict):
