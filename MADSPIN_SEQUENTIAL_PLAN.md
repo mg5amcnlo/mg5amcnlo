@@ -240,14 +240,40 @@ the draw has to happen per slot:
 3. **The reshuffle** then runs on that rebuilt event, after acceptance for PA,
    with its jacobian discarded.
 
-Phase 4 has to give each mass a single owner: the slot that draws it.
-Concretely: lift the draw out of `get_onshell_evt_and_wgt` into the per-slot
-loop; take the basis setup out from under the `prod_static` cache guard (it
-depends only on the production event and on *which* pdgs decay -- not on the
-decay events -- so it can be computed once per production event and reused
-across every slot and retry); and make `new_mass` flow
-decays -> production -> rebuilt event explicitly, rather than through an
-attribute set on the first trial and silently dropped later.
+**Resolved: in PA the decays already own their masses, and (2) is dead code.**
+`add_decay_to_particle` (lhe_parser.py:2358) copies `new_mass` and
+`reshuffle_info` from the decay event onto the production particle it attaches
+it to:
+
+    if hasattr(decay_particle, 'new_mass'):
+        this_particle.new_mass = decay_particle.new_mass
+        this_particle.reshuffle_info = decay_particle.reshuffle_info
+
+So on acceptance the masses reach `reshuffle_production` through
+`Event(str(production)).add_decays(decays)` -- carried by the *decays*, not by
+the `production` object. The copy in (2) is therefore:
+
+- **dead** for PA: nothing reads `production`'s `new_mass`, which is why its
+  staleness on a retry never showed up;
+- **load-bearing** for non-PA only, where `calculate_matrix_element_from_density`
+  calls `production.reshuffle_production()` on the production event itself --
+  and there the guard is always true, so it already runs on every trial.
+
+Consequences for phase 4, all favourable:
+
+- the mass ownership PA needs is **already correct**: `_draw_offshell_mass`
+  leaves `new_mass` on `dec[0]`, `add_decays` carries it to the merged event,
+  and `reshuffle_production` / `production_jacobian` read it there. Nothing has
+  to be re-plumbed; the copy just must not be extended to the sequential path;
+- the basis setup can be split out (or left alone) purely on readability
+  grounds. It is **not a blocker and not an optimisation** -- for PA the guard
+  already computes it once per production event and reuses it across retries,
+  and `production._ms_density_static` is readable by the loop as it stands;
+- **`J_k` falls out for free**: `Event(str(production)).add_decays(decays_so_far)`
+  has exactly the first k resonances carrying a `new_mass` and the rest at their
+  nominal mass, so `production_jacobian()` on it *is* "the production jacobian
+  with the first k decays put offshell". That is the definition `J_k / J_{k-1}`
+  needs, with no extra bookkeeping.
 
 ---
 
