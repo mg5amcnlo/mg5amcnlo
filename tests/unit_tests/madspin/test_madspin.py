@@ -1138,6 +1138,7 @@ class TestSequentialAcceptReject(unittest.TestCase):
             _sequential_spin_order = interface._sequential_spin_order
             _decay_slot_order = interface._decay_slot_order
             sequential_accept_reject = interface.sequential_accept_reject
+            _scan_maxwgt_range = interface._scan_maxwgt_range
             def __init__(self):
                 self.options = {'spinmode': 'onshell',
                                 'sequential_spin_order': '2 3 1'}
@@ -1278,3 +1279,49 @@ class TestSequentialPoolLadder(unittest.TestCase):
         self.assertFalse(stub._sequential_active(False))  # not density mode
         # onshell is supported just like PA
         self.assertTrue(self._stub({6: 2}, spinmode='onshell')._sequential_active(True))
+
+
+class TestScanMaxwgtDecomposition(unittest.TestCase):
+    """The parallel max-weight scan splits the probe events across workers and
+    concatenates their per-event vectors. That is only valid if scanning a range
+    of events, then another, gives exactly the per-event vectors of scanning the
+    whole -- which is what _scan_maxwgt_parallel relies on. Tested here without
+    fork, on the synthetic densities of TestSequentialAcceptReject.
+    """
+
+    def _fixture(self):
+        base = TestSequentialAcceptReject()
+        rho = base._production_density()
+        pools = {0: base._pool(100), 1: base._pool(200)}
+        stub = base._stub(rho, pools)
+        production = base._Prod([base._Part(2, -1), base._Part(-2, -1),
+                                 base._Part(6), base._Part(-6)])
+        _, slots = interface_madspin.MadSpinInterface._sequential_slots(
+                                                    production, (6, -6))
+        stub._slot_of = {index: slot for slot, index in enumerate(slots)}
+        return stub, [production] * 6, {6: {0: 'f'}, -6: {0: 'f'}}
+
+    def test_range_split_matches_the_whole(self):
+        """scan[0:6] == scan[0:2] + scan[2:6], event for event, at fixed seed."""
+        import random
+        stub, events, evt_decayfile = self._fixture()
+
+        random.seed(5)
+        whole = stub._scan_maxwgt_range(events, 0, 6, evt_decayfile, 6, 30)
+
+        random.seed(5)
+        first = stub._scan_maxwgt_range(events, 0, 2, evt_decayfile, 6, 30)
+        second = stub._scan_maxwgt_range(events, 2, 6, evt_decayfile, 6, 30)
+
+        self.assertEqual(len(whole), 6)
+        self.assertEqual(first + second, whole)
+
+    def test_one_vector_per_event_one_entry_per_slot(self):
+        stub, events, evt_decayfile = self._fixture()
+        import random
+        random.seed(1)
+        per_event = stub._scan_maxwgt_range(events, 0, 6, evt_decayfile, 6, 20)
+        self.assertEqual(len(per_event), 6)
+        for vec in per_event:
+            self.assertEqual(len(vec), 2)          # two decaying particles
+            self.assertTrue(all(w >= 0 for w in vec))

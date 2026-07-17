@@ -3109,6 +3109,114 @@ class MadSpinInterface(extended_cmd.Cmd):
             open(pjoin(self.options['ms_dir'], 'max_wgt'),'w').write(str(base_max_weight))
         return base_max_weight
 
+    def _scan_maxwgt_range(self, events, start, stop, evt_decayfile,
+                           nevents, nb_ps_point):
+        """Per-event maximum-weight vectors for ``events[start:stop]``: one
+        vector per event holding, for each ordering position, the largest w_k
+        seen over ``nb_ps_point`` probe chains. Returns None as soon as a
+        production event turns out to have nothing to decay (the caller then
+        falls back to the joint bound)."""
+        self.efficiency = 1. / nb_ps_point
+        t0 = time.time()
+        per_event = []
+        for i in range(start, stop):
+            if (i - start) % 5 == 1:
+                logger.info("Event %s/%s :  %2fs" % (i, stop, time.time()-t0))
+            base_event = events[i]
+            best = None
+            for _ in range(nb_ps_point):
+                probe = []
+                out = self.sequential_accept_reject(base_event, evt_decayfile,
+                                                    None, nevents - i, probe=probe)
+                if out is None:
+                    return None
+                if best is None:
+                    best = list(probe)
+                else:
+                    best = [max(old, new) for old, new in zip(best, probe)]
+            if best:
+                per_event.append(best)
+        return per_event
+
+    def _scan_maxwgt_shard_entry(self, shard_id, nb_core, events, start, stop,
+                                 evt_decayfile, nevents, nb_ps_point, out_path):
+        """Worker entry (forked child): scan its slice of the probe events and
+        write the per-event vectors as JSON, mirroring _unweight_shard_entry --
+        its own RNG stream, its own reopened decay pools, failures reported in
+        the JSON rather than raised into the parent."""
+        import json
+        try:
+            random.seed((int(self.seed) if self.seed else 0)
+                        + 7919 * (shard_id + 1))
+            self._shard_tag = shard_id
+            self._shard_nb_core = nb_core
+            self._pool_gen = {}
+            local_pool = self._reopen_decay_pool(evt_decayfile, shard_id, nb_core)
+            per_event = self._scan_maxwgt_range(events, start, stop, local_pool,
+                                                nevents, nb_ps_point)
+            with open(out_path, 'w') as f:
+                json.dump({'per_event': per_event}, f)
+        except Exception as exc:
+            import traceback
+            try:
+                with open(out_path, 'w') as f:
+                    json.dump({'error': str(exc),
+                               'tb': traceback.format_exc()}, f)
+            except Exception:
+                pass
+
+    def _scan_maxwgt_parallel(self, orig_lhe, events, evt_decayfile, nb_core,
+                              nevents, nb_ps_point):
+        """Fork one worker per contiguous slice of the probe events; each returns
+        its per-event vectors through a JSON file. Concatenating them is order
+        independent -- _combine_maxwgt takes the max/spread over all events -- so
+        the result matches the serial scan up to which decays each draw pulls."""
+        import multiprocessing as mp
+        import json
+        base = '%s.maxwgt' % orig_lhe.name
+        chunk = int(math.ceil(len(events) / float(nb_core)))
+        # contiguous slices; the last cores get nothing if events < nb_core
+        ranges = [(sid * chunk, min((sid + 1) * chunk, len(events)))
+                  for sid in range(nb_core)]
+        ranges = [(a, b) for (a, b) in ranges if a < b]
+        nb_core = len(ranges)   # the count every worker stripes the pool by
+
+        mpctx = mp.get_context('fork')
+        procs, out_paths = [], []
+        for sid, (start, stop) in enumerate(ranges):
+            outp = '%s.shard%d.json' % (base, sid)
+            p = mpctx.Process(
+                target=self._scan_maxwgt_shard_entry,
+                args=(sid, nb_core, events, start, stop, evt_decayfile,
+                      nevents, nb_ps_point, outp))
+            p.start()
+            procs.append(p)
+            out_paths.append(outp)
+        for p in procs:
+            p.join()
+
+        per_event = []
+        result = per_event
+        for sid, outp in enumerate(out_paths):
+            if not os.path.exists(outp):
+                raise Exception("MadSpin max-weight worker %s produced no result "
+                                "(crashed). Re-run with nb_core=1 to debug." % sid)
+            with open(outp) as f:
+                r = json.load(f)
+            if 'error' in r:
+                raise Exception("MadSpin max-weight worker %s failed:\n%s"
+                                % (sid, r.get('tb', r['error'])))
+            if r['per_event'] is None:
+                result = None   # nothing to decay: fall back to the joint bound
+            elif result is not None:
+                result.extend(r['per_event'])
+        for outp in out_paths:
+            try:
+                os.remove(outp)
+            except OSError:
+                pass
+        return result
+
     def get_sequential_maxwgt(self, orig_lhe, evt_decayfile):
         """One bound C_k per position of the decay ordering, for the sequential
         accept/reject. Returns [] when nothing decays.
@@ -3140,35 +3248,33 @@ class MadSpinInterface(extended_cmd.Cmd):
         logger.info("*****************************")
         logger.info("Probing the first %s events with %s phase space points"
                     % (nevents, nb_ps_point))
-        self.efficiency = 1. / nb_ps_point
-        start = time.time()
-
+        # sequential_decay never reaches here with fixed_order (it falls back to
+        # the joint accept/reject), so the events are plain, not event-groups.
         orig_lhe.seek(0)
-        per_event = []
-        for i in range(nevents):
-            if i % 5 == 1:
-                logger.info("Event %s/%s :  %2fs" % (i, nevents, time.time()-start))
+        events = []
+        for _ in range(nevents):
             try:
-                base_event = next(orig_lhe)
+                events.append(next(orig_lhe))
             except StopIteration:
                 break
-            if self.options['fixed_order']:
-                base_event = base_event[0]
-            best = None
-            for _ in range(nb_ps_point):
-                probe = []
-                out = self.sequential_accept_reject(base_event, evt_decayfile,
-                                                    None, nevents - i,
-                                                    probe=probe)
-                if out is None:
-                    return []   # nothing to decay in this production event
-                if best is None:
-                    best = list(probe)
-                else:
-                    best = [max(old, new) for old, new in zip(best, probe)]
-            if best:
-                per_event.append(best)
+        if not events:
+            return []
 
+        # The probe events are independent, exactly like the unweighting, so the
+        # scan forks the same way -- each worker owns a slice of the events and
+        # its own view of the decay pools.
+        nb_core = self._resolve_nb_core()
+        nb_core = max(1, min(nb_core, len(events)))
+        if nb_core == 1:
+            per_event = self._scan_maxwgt_range(events, 0, len(events),
+                                                evt_decayfile, nevents, nb_ps_point)
+        else:
+            logger.info("MadSpin: probing the maximum weight on %s cores", nb_core)
+            per_event = self._scan_maxwgt_parallel(orig_lhe, events, evt_decayfile,
+                                                   nb_core, nevents, nb_ps_point)
+
+        if per_event is None:
+            return []   # a production event had nothing to decay
         if len(per_event) < 2:
             # _combine_maxwgt needs a spread to work with
             return []
@@ -3548,7 +3654,9 @@ class MadSpinInterface(extended_cmd.Cmd):
                                                             slot_densities)
                     wgt = (n_k / n_prev).real * jac_dec * (j_k / j_prev)
                     if probe is not None:
-                        probe.append(wgt)
+                        # python float: these are marshalled as JSON when the
+                        # scan runs across forked workers
+                        probe.append(float(wgt))
                         accept = True
                     else:
                         if wgt > maxwgt:
