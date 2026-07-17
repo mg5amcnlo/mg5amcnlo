@@ -3148,8 +3148,41 @@ class Event(list):
 
     nb_reshuffle_issue=0
     _warned_2to1_reshuffle = False
-    def reshuffle_production(self):
+    def production_jacobian(self):
+        """The jacobian ``reshuffle_production`` would return for the current
+        ``new_mass`` assignment -- without touching this event, and without its
+        mass-resampling retry.
+
+        Returns -1 (or 0) when the mass set is kinematically impossible. For the
+        sequential accept/reject that is a failure to *report*: the caller owns
+        the retry policy (redraw one decay's mass, or trash the whole set), so
+        the resampling recursion inside reshuffle_production must not fire here.
+        See MADSPIN_SEQUENTIAL_PLAN.md.
+
+        Resonance aware, by construction: it runs the real code on a copy. In a
+        production like ``p p > t t~ j`` where an onshell resonance decays into
+        the two tops, only the resonance sits at top level -- the tops are in a
+        sub-decay -- so both the threshold and the jacobian are the resonance's,
+        and the tops' own masses enter through ``reshuffle_decay``. That differs
+        from the same final state without the resonance, which is why the
+        jacobian cannot be re-derived from the top-level masses alone.
+        """
+        probe = Event(str(self))
+        # a string round-trip drops python attributes: carry the sampled masses
+        # (and their Breit-Wigner info, needed if a retry is ever allowed) over.
+        for orig, copy in zip(self, probe):
+            if hasattr(orig, 'new_mass'):
+                copy.new_mass = orig.new_mass
+            if hasattr(orig, 'reshuffle_info'):
+                copy.reshuffle_info = orig.reshuffle_info
+        return probe.reshuffle_production(_allow_retry=False)
+
+    def reshuffle_production(self, _allow_retry=True):
         """ particle that need new mass have the "new_mass" attribute
+
+        _allow_retry: on a kinematically impossible mass set, resample the
+        masses and try again (the historical behaviour). production_jacobian
+        turns it off so the failure is reported to a caller that owns the retry.
         """
 
         # create a nice data structure for the reshuffling
@@ -3192,15 +3225,19 @@ class Event(list):
         #    sum_mom = sum([FourMomentum(p) for p in new_mom], FourMomentum())
         #    sum_old = sum([FourMomentum(p) for p in old_momenta], FourMomentum()) 
         #    sum2 = FourMomentum(production[0]) + FourMomentum(production[1])
-        if jac in [0,-1]: 
-            #reshuffle momenta if 
+        if jac in [0,-1]:
+            if not _allow_retry:
+                # the caller owns the retry policy: report the impossible mass
+                # set instead of resampling it away here.
+                return jac
+            #reshuffle momenta if
             for p in production:
                 if p.status !=-1 and hasattr(p, 'new_mass'):
                     p.new_mass = Event.generate_random_mass(*p.reshuffle_info)
-            Event.nb_reshuffle_issue +=1 
+            Event.nb_reshuffle_issue +=1
             if jac != -1:
                 misc.sprint('jac was 0 -> retry', Event.nb_reshuffle_issue)
-            return self.reshuffle_production()
+            return self.reshuffle_production(_allow_retry=_allow_retry)
 
         
         #modify the momenta of the particles:
