@@ -2433,7 +2433,11 @@ class MadSpinInterface(extended_cmd.Cmd):
         for curr_event, production in enumerate(prod_source):
             if fixed_order:
                 production, counterevt = production[0], production[1:]
-            if curr_event and curr_event % 10 == 0 and float(str(curr_event)[1:]) == 0:
+            if (curr_event and curr_event % 10 == 0
+                    and float(str(curr_event)[1:]) == 0
+                    and getattr(self, '_shard_tag', None) in (None, 0)):
+                # only one worker prints progress -- the others would just
+                # interleave the same lines
                 if sequential and sequential_stats:
                     # per-particle unweighting cost: how many decay events each
                     # decaying particle burned per accepted event. Clearer than a
@@ -3136,7 +3140,8 @@ class MadSpinInterface(extended_cmd.Cmd):
         t0 = time.time()
         per_event = []
         for i in range(start, stop):
-            if (i - start) % 5 == 1:
+            if (i - start) % 5 == 1 and getattr(self, '_shard_tag', None) in (None, 0):
+                # only one worker prints scan progress
                 logger.info("Event %s/%s :  %2fs" % (i, stop, time.time()-t0))
             base_event = events[i]
             best = None
