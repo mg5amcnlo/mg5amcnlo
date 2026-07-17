@@ -1200,3 +1200,79 @@ class TestSequentialAcceptReject(unittest.TestCase):
             got = counts[combo] / float(nb_run)
             self.assertLess(abs(got / want - 1), 0.15,
                             'combo %s: got %.4f, expected %.4f' % (combo, got, want))
+
+
+class TestSequentialPoolLadder(unittest.TestCase):
+    """_sequential_pool_ladder / _sequential_active: how many decay events a
+    production event burns per pdg once the accept/reject is per particle, and
+    when that regime applies at all.
+    """
+
+    class _Part(object):
+        def __init__(self, spin):
+            self._spin = spin
+        def get(self, key):
+            return self._spin
+
+    class _Model(object):
+        def __init__(self, spins):
+            self.spins = spins
+        def get_particle(self, pdg):
+            return TestSequentialPoolLadder._Part(self.spins[pdg])
+
+    def _stub(self, spins, **options):
+        interface = interface_madspin.MadSpinInterface
+        class Stub(object):
+            _sequential_pool_ladder = interface._sequential_pool_ladder
+            _sequential_active = interface._sequential_active
+            _sequential_spin_order = interface._sequential_spin_order
+            _decay_pool_ladder = staticmethod(interface._decay_pool_ladder)
+        stub = Stub()
+        stub.model = self._Model(spins)
+        stub.options = {'sequential_decay': True, 'fixed_order': False,
+                        'spinmode': 'PA', 'sequential_spin_order': '2 3 1'}
+        stub.options.update(options)
+        return stub
+
+    NB = 1000
+
+    def test_ladder_follows_the_ordering_and_spares_scalars(self):
+        """t, t~ take the first two rungs; the higgs is last and stays at 1.1
+        because it can never be rejected."""
+        stub = self._stub({6: 2, -6: 2, 25: 1})
+        got = stub._sequential_pool_ladder({6: self.NB, -6: self.NB, 25: self.NB},
+                                           self.NB, True)
+        self.assertEqual(got, {-6: 1.5, 6: 2.0, 25: 1.1})
+
+    def test_identical_parents_share_a_pool_at_their_largest_rung(self):
+        """Two tops occupy slots 0 and 1 but read the same pool, so it must be
+        sized for the hungrier of the two; the vector follows at slot 2."""
+        stub = self._stub({6: 2, 24: 3})
+        got = stub._sequential_pool_ladder({6: 2 * self.NB, 24: self.NB},
+                                           self.NB, True)
+        self.assertEqual(got, {6: 2.0, 24: 2.5})
+
+    def test_no_ladder_when_the_joint_test_is_used(self):
+        """Empty dict -> the caller keeps the historical 1.1 / 2.0."""
+        interface = interface_madspin.MadSpinInterface
+        spins = {6: 2, -6: 2}
+        pools = {6: self.NB, -6: self.NB}
+        # opted out
+        self.assertEqual(self._stub(spins, sequential_decay=False)
+                             ._sequential_pool_ladder(pools, self.NB, True), {})
+        # not density mode
+        self.assertEqual(self._stub(spins)
+                             ._sequential_pool_ladder(pools, self.NB, False), {})
+        # fixed_order keeps the joint test
+        self.assertEqual(self._stub(spins, fixed_order=True)
+                             ._sequential_pool_ladder(pools, self.NB, True), {})
+        # a spinmode whose factorisation is not established
+        self.assertEqual(self._stub(spins, spinmode='madspin')
+                             ._sequential_pool_ladder(pools, self.NB, True), {})
+
+    def test_sequential_active_gate(self):
+        stub = self._stub({6: 2})
+        self.assertTrue(stub._sequential_active(True))
+        self.assertFalse(stub._sequential_active(False))  # not density mode
+        # onshell is supported just like PA
+        self.assertTrue(self._stub({6: 2}, spinmode='onshell')._sequential_active(True))
