@@ -2433,8 +2433,24 @@ class MadSpinInterface(extended_cmd.Cmd):
         for curr_event, production in enumerate(prod_source):
             if fixed_order:
                 production, counterevt = production[0], production[1:]
-            if curr_event and self.efficiency and curr_event % 10 == 0 and float(str(curr_event)[1:]) == 0:
-                logger.info("decaying event number %s. Efficiency: %s [%s s]" % (curr_event, 1/self.efficiency, time.time()-start))
+            if curr_event and curr_event % 10 == 0 and float(str(curr_event)[1:]) == 0:
+                if sequential and sequential_stats:
+                    # per-particle unweighting cost: how many decay events each
+                    # decaying particle burned per accepted event. Clearer than a
+                    # single number, and it is the sum of these -- and reported
+                    # once per event, i.e. gated on the slot-0 pass, not per slot.
+                    positions = sorted(int(k.rsplit('_', 1)[1]) for k in
+                                       sequential_stats if k.startswith('nb_try_'))
+                    per = ' '.join(
+                        'p%d=%.2f' % (k, sequential_stats['nb_try_%d' % k]
+                                      / float(curr_event + 1)) for k in positions)
+                    logger.info("decaying event number %s. Decay events per "
+                                "accepted event, per particle: %s [%s s]"
+                                % (curr_event, per, time.time()-start))
+                elif self.efficiency:
+                    logger.info("decaying event number %s. Trials per event: "
+                                "%.4g [%s s]" % (curr_event, 1/self.efficiency,
+                                                 time.time()-start))
 
             # BR-equalization: drop this event with probability
             # 1 - br_pdg / max_br when this production process has a smaller
