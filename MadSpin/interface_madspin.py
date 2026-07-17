@@ -2961,6 +2961,61 @@ class MadSpinInterface(extended_cmd.Cmd):
         return base_max_weight
 
             
+    def _density_basis(self, production, decays_key):
+        """Helicity-basis bookkeeping for the production density matrix: which
+        particles decay, where they sit (``position``, ``init_part``), their
+        helicity bases (``helicities``, and the ``allowed_hel``/``ncomb``/
+        ``dimension`` the Fortran side needs), plus the averaging and identical
+        final-state symmetry factors.
+
+        It depends only on the production event and on *which* pdgs decay --
+        not on the decay events, and not on any sampled mass -- so it is
+        computed once per production event and reused across every retry, and
+        across every slot of the sequential accept/reject.
+        """
+        # Production averaging factor (spin/color initial state) from standalone
+        iden_p = self.get_iden(production)
+
+        # Symmetry factor for identical final states in production
+        final_pdgs = [int(p.pid) for p in production if getattr(p, "status", None) == 1]
+        counts_final = collections.Counter(final_pdgs)
+        sym_factor_prod_ident = 1
+        for n in counts_final.values():
+            if n > 1:
+                sym_factor_prod_ident *= math.factorial(n)
+
+        # Find particles that should decay (status==1 and pid in decays keys)
+        init_part = [part for pdg in decays_key for part in production
+                     if part.pid == pdg and part.status == 1]
+        nchanging = len(init_part)
+
+        # Allowed helicities per spin
+        hel_dict = {1: [0], 2: [1, -1], 3: [-1, 0, 1]}
+
+        # Decaying-particle positions (+1 for Fortran), spins, helicities
+        position = [i + 1 for pdg in decays_key
+                    for i in range(len(production))
+                    if production[i].pid == pdg and production[i].status == 1]
+        decaying_pdg = [int(production[i - 1].pid) for i in position]
+        decaying_spins = [self.model.get_particle(i).get('spin') for i in decaying_pdg]
+        helicities = [hel_dict[i] for i in decaying_spins]
+
+        allowed_hel_pairs, allowed_hel = self.get_allowed_hel(helicities)
+
+        return {
+            'decays_key': decays_key,
+            'iden_p': iden_p,
+            'sym_factor_prod_ident': sym_factor_prod_ident,
+            'init_part': init_part,
+            'nchanging': nchanging,
+            'position': position,
+            'helicities': helicities,
+            'decaying_spins': decaying_spins,
+            'allowed_hel': allowed_hel,
+            'ncomb': len(allowed_hel_pairs),
+            'dimension': math.prod(len(i) for i in helicities),
+        }
+
     def _slot_identity(self, hel):
         """The I/n a slot contributes while its decay has not been drawn yet.
         Depends only on the helicity list, so cache it per basis."""
@@ -3190,32 +3245,8 @@ class MadSpinInterface(extended_cmd.Cmd):
         density_do_reshuffle = self.options['spinmode'] == 'PA'
         if not density_pole_approximation or \
             (not prod_static or prod_static.get('decays_key') != decays_key):
-            # Production averaging factor (spin/color initial state) from standalone
-            iden_p = self.get_iden(production)
-
-            # Symmetry factor for identical final states in production
-            final_pdgs = [int(p.pid) for p in production if getattr(p, "status", None) == 1]
-            counts_final = collections.Counter(final_pdgs)
-            sym_factor_prod_ident = 1
-            for n in counts_final.values():
-                if n > 1:
-                    sym_factor_prod_ident *= math.factorial(n)
-
-            # Find particles that should decay (status==1 and pid in decays keys)
-            init_part = [part for pdg in decays_key for part in production
-                         if part.pid == pdg and part.status == 1]
-            nchanging = len(init_part)
-
-            # Allowed helicities per spin
-            hel_dict = {1: [0], 2: [1, -1], 3: [-1, 0, 1]}
-
-            # Decaying-particle positions (+1 for Fortran), spins, helicities
-            position = [i + 1 for pdg in decays_key
-                        for i in range(len(production))
-                        if production[i].pid == pdg and production[i].status == 1]
-            decaying_pdg = [int(production[i - 1].pid) for i in position]
-            decaying_spins = [self.model.get_particle(i).get('spin') for i in decaying_pdg]
-            helicities = [hel_dict[i] for i in decaying_spins]
+            prod_static = self._density_basis(production, decays_key)
+            production._ms_density_static = prod_static
 
             use_new_mass = (
                 not density_pole_approximation or
@@ -3281,22 +3312,6 @@ class MadSpinInterface(extended_cmd.Cmd):
                         jac *= dec.reshuffle_decayevt()
                 if jac == 0:
                     raise Exception
-
-            allowed_hel_pairs, allowed_hel = self.get_allowed_hel(helicities)
-
-            prod_static = {
-                'decays_key': decays_key,
-                'iden_p': iden_p,
-                'sym_factor_prod_ident': sym_factor_prod_ident,
-                'init_part': init_part,
-                'nchanging': nchanging,
-                'position': position,
-                'helicities': helicities,
-                'allowed_hel': allowed_hel,
-                'ncomb': len(allowed_hel_pairs),
-                'dimension': math.prod(len(i) for i in helicities),
-            }
-            production._ms_density_static = prod_static
 
         iden_p = prod_static['iden_p']
         sym_factor_prod_ident = prod_static['sym_factor_prod_ident']
