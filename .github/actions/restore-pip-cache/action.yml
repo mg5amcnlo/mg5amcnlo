@@ -28,6 +28,7 @@ runs:
         if [ -x "$F2PY_BIN" ]; then
           echo "f2py_compiler = $F2PY_BIN" >> input/mg5_configuration.txt
         else
-          pip install --upgrade numpy
+          pip install --target "$HOME/.cache/pip-packages" --upgrade numpy
+          echo "f2py_compiler = $F2PY_BIN" >> input/mg5_configuration.txt
         fi
       shell: bash
