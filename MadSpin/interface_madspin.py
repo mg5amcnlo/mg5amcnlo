@@ -2015,6 +2015,7 @@ class MadSpinInterface(extended_cmd.Cmd):
         env = os.environ.copy()
         # 1. python3 shim so `env python3` == the MadSpin interpreter, regardless
         #    of whether dirname(sys.executable) even contains a bare `python3`.
+        if not getattr(self, '_py3_shim_dir', None):
             import tempfile
             import atexit
             shim = tempfile.mkdtemp(prefix='ms_py3shim_')
