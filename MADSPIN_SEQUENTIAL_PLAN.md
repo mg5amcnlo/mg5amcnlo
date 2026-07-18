@@ -597,11 +597,29 @@ distribution is the true physical marginal `Integral physical(m,Omega) dOmega`
 -- even though the mass is fixed for the chain and only the decay angles are
 accept/rejected.
 
-### Gating and validation
+### Status: implemented, gated OFF -- efficiency blocker
 
-`_sequential_active` currently returns False for spinmode not in
-['PA','onshell']. Extending to 'madspin' is the last step. Because ttbar tops
-are nearly onshell, a normalisation slip could hide there (as J~0.98 hid the
-production-jacobian discrepancy until the spin observable exposed it): A/B
-against joint madspin on a **genuinely offshell** process (large width) before
-enabling.
+The offshell path IS implemented: `_offshell_production` (up-front mass draw +
+reshuffle of a copy + fixed rho) and the `offshell` branch of
+`sequential_accept_reject` (offshell density on a copy of the decay so the
+drawn decay stays onshell for the final add_decays + reshuffle; weight
+`(N_k/N_{k-1}) * jac_bw_k * Tr(D_k^off)/|M_k|^2_on`, with `jac_reshuffle` on slot
+0). It runs end to end and produces kinematically valid events (no crash).
+
+But `_sequential_active` still returns False for madspin/full, because it is
+**slower than the joint test on ttbar**: ~340 decay-ME evaluations per event
+(slot 0 ~313, slot 1 ~27) against joint madspin's ~122 (61 trials x 2 decays).
+The cause: madspin is inherently peaked (joint itself needs 61 trials/event),
+and the per-mass-set production reshuffling jacobian `jac_reshuffle` plus the
+offshell weight tail land in **slot 0's per-angle accept/reject**. Since the
+mass is fixed per chain, an unlucky mass draw cannot be escaped by redrawing
+angles, so slot 0's bound (max weight ~322) is huge and its acceptance ~1/313.
+
+To make it worthwhile the mass set has to be accept/rejected at the
+**mass-set level** (a step before the per-angle loop, carrying `jac_reshuffle`
+and the production-density scale), so the per-angle loop sees only the
+angle-dependent tail. That restructure -- plus an A/B against joint madspin on a
+**genuinely offshell** process (large width), since ttbar's near-onshell tops
+could hide a normalisation slip -- is what remains before enabling. Physics
+correctness is currently **unverified** (no completed A/B: the run is too slow
+at ~340 trials/event to finish quickly).

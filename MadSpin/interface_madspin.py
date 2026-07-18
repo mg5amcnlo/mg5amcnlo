@@ -2134,9 +2134,14 @@ class MadSpinInterface(extended_cmd.Cmd):
                         "accept/reject (sequential_decay ignored)")
             return False
         if self.options['spinmode'] not in ['PA', 'onshell']:
-            # 'madspin'/'full' reshuffle the production before the accept/reject
-            # and fold that jacobian into the weight; the per-slot factorisation
-            # has not been established there.
+            # The offshell path (madspin/full) is implemented
+            # (sequential_accept_reject, offshell branch) and produces valid
+            # events, but it is not enabled: on ttbar it needs more trials than
+            # the joint test (~340 vs ~122 decay-ME evaluations per event),
+            # because the per-mass-set production reshuffling jacobian and the
+            # offshell weight tail land in slot 0's per-angle accept/reject.
+            # Enable once that is restructured (mass-set-level accept/reject) and
+            # A/B'd against joint madspin. See MADSPIN_SEQUENTIAL_PLAN.md sec 10.
             logger.info("MadSpin: spinmode=%s keeps the joint accept/reject "
                         "(sequential_decay ignored)", self.options['spinmode'])
             return False
@@ -3518,20 +3523,11 @@ class MadSpinInterface(extended_cmd.Cmd):
         return self.get_density(decay, position=[1], allow_hel=hel,
                                 ncomb=len(hel), dimension=len(hel))
 
-    def _draw_offshell_mass(self, pdg, dec, budget):
-        """Sample one resonance virtuality from its Breit-Wigner. Returns the
-        budget left and that draw's jacobian.
-
-        The mass belongs to the decay event that carries it: ``dec[0]`` gets the
-        ``new_mass`` and the ``reshuffle_info`` needed to resample it later.
-
-        ``budget`` is what is left of sqrt(shat) once the resonances drawn
-        before this one are paid for, so the draw is order dependent and the
-        caller owns that order. Passing it in and out, rather than closing over
-        a loop variable, is what lets the sequential accept/reject draw one slot
-        at a time and redraw a single mass on a reshuffling failure -- see
-        MADSPIN_SEQUENTIAL_PLAN.md, "Mass ownership".
-        """
+    def _draw_mass_value(self, pdg, budget):
+        """Sample one resonance virtuality from its Breit-Wigner, capped at the
+        remaining ``budget`` (what is left of sqrt(shat)). Returns
+        ``(mass, reshuffle_info, jac_bw)`` where jac_bw is the Breit-Wigner
+        sampling jacobian (gap/pi)."""
         pole = self.banner.get('param', 'mass', abs(pdg)).value
         width = self.banner.get('param', 'decay', abs(pdg)).value
         if self.options['BW_cut'] < 0:
@@ -3540,14 +3536,69 @@ class MadSpinInterface(extended_cmd.Cmd):
             bw_cut = self.options['BW_cut']
         min_mass = pole - bw_cut * width
         max_mass = min(pole + bw_cut * width, budget)
-        dec[0].new_mass = lhe_parser.Event.generate_random_mass(
-                                    pole, width, min_mass, max_mass)
-        dec[0].reshuffle_info = (pole, width, min_mass, max_mass)
-
-        budget -= dec[0].new_mass
+        mass = lhe_parser.Event.generate_random_mass(pole, width, min_mass, max_mass)
+        info = (pole, width, min_mass, max_mass)
         gap = math.atan((pole**2-min_mass**2)/pole*width)
         gap += math.atan((max_mass**2-pole**2)/pole*width)
-        return budget, gap/math.pi
+        return mass, info, gap/math.pi
+
+    def _draw_offshell_mass(self, pdg, dec, budget):
+        """Sample one resonance virtuality and store it on the decay event that
+        carries it: ``dec[0]`` gets ``new_mass`` and ``reshuffle_info``. Returns
+        the budget left and that draw's jacobian.
+
+        ``budget`` is what is left of sqrt(shat) once the resonances drawn
+        before this one are paid for, so the draw is order dependent and the
+        caller owns that order (used by the PA per-slot draw).
+        """
+        mass, info, jac = self._draw_mass_value(pdg, budget)
+        dec[0].new_mass = mass
+        dec[0].reshuffle_info = info
+        return budget - mass, jac
+
+    def _offshell_production(self, production, order, particles, slot_to_index,
+                             prod_static):
+        """Set up the offshell (madspin/full) production for one chain attempt.
+
+        Draws a virtuality for every decaying particle up front, reshuffles a
+        *copy* of the production to that mass set (leaving the shared event
+        untouched), and evaluates the production density there. Because every
+        mass is fixed before the per-particle loop, that density (rho) is fixed
+        for the whole chain -- which is what the per-particle decomposition needs
+        and what madspin does not give for free (see MADSPIN_SEQUENTIAL_PLAN.md
+        section 10).
+
+        Returns ``(rho_off, jac_reshuffle, slot_mass, parents)`` or None if the
+        mass set cannot be reshuffled (the caller redraws the whole set):
+        - ``slot_mass[slot]`` = (mass, reshuffle_info, jac_bw);
+        - ``parents[slot]``   = the reshuffled (offshell) production particle to
+          boost that slot's decay to.
+        """
+        budget = production.sqrts
+        slot_mass = {}
+        for slot in order:
+            pdg = particles[slot_to_index[slot]].pid
+            mass, info, jac_bw = self._draw_mass_value(pdg, budget)
+            slot_mass[slot] = (mass, info, jac_bw)
+            budget -= mass
+
+        prod_off = lhe_parser.Event(str(production))
+        finals = [p for p in prod_off if int(p.status) == 1]
+        for slot, (mass, info, _) in slot_mass.items():
+            part = finals[slot_to_index[slot]]
+            part.new_mass = mass
+            part.reshuffle_info = info
+        # _allow_retry=False so the drawn masses stay put (a retry would resample
+        # them and diverge from the masses we reshuffle each decay to); an
+        # impossible set is reported as -1 and the caller restarts.
+        jac_reshuffle = prod_off.reshuffle_production(_allow_retry=False)
+        if jac_reshuffle in (0, -1):
+            return None
+        rho_off = self.get_density(prod_off, prod_static['position'],
+                                   prod_static['allowed_hel'],
+                                   prod_static['ncomb'], prod_static['dimension'])
+        parents = {slot: finals[slot_to_index[slot]] for slot in order}
+        return rho_off, jac_reshuffle, slot_mass, parents
 
     def sequential_accept_reject(self, production, evt_decayfile, maxwgts,
                                  nb_remain, stats=None, probe=None):
@@ -3590,15 +3641,20 @@ class MadSpinInterface(extended_cmd.Cmd):
         particles, slot_to_index = self._sequential_slots(production, decays_key)
         ids = [p.pid for p in particles]
 
-        # the production density matrix is the same for every slot and every
-        # retry of this production event
-        density_prod = getattr(production, '_ms_density_prod', None)
-        if density_prod is None:
-            density_prod = self.get_density(production, prod_static['position'],
-                                            prod_static['allowed_hel'],
-                                            prod_static['ncomb'],
-                                            prod_static['dimension'])
-            production._ms_density_prod = density_prod
+        # madspin/full evaluate the production density at reshuffled (offshell)
+        # momenta that couple all decay masses, so rho is drawn per chain (after
+        # the up-front reshuffle) rather than once at onshell. PA/onshell keep a
+        # fixed onshell rho, cached on the production event.
+        offshell = self.options['spinmode'] not in ['PA', 'onshell']
+        density_prod = None
+        if not offshell:
+            density_prod = getattr(production, '_ms_density_prod', None)
+            if density_prod is None:
+                density_prod = self.get_density(production, prod_static['position'],
+                                                prod_static['allowed_hel'],
+                                                prod_static['ncomb'],
+                                                prod_static['dimension'])
+                production._ms_density_prod = density_prod
 
         # PA samples a virtuality per resonance; onshell does not. 2 -> 1
         # production has no recoil phase space for RAMBO to redistribute.
@@ -3616,6 +3672,18 @@ class MadSpinInterface(extended_cmd.Cmd):
             stats = collections.defaultdict(int)
 
         while True:     # restart point: an impossible production mass set
+            parents = init_part
+            jac_reshuffle = 1.0
+            slot_mass = {}
+            if offshell:
+                # draw every virtuality, reshuffle the production once, fix rho
+                setup = self._offshell_production(production, order, particles,
+                                                  slot_to_index, prod_static)
+                if setup is None:
+                    stats['nb_production_restart'] += 1
+                    continue
+                density_prod, jac_reshuffle, slot_mass, parents = setup
+
             slot_densities = {}
             slot_decays = {}
             slot_masses = {}
@@ -3636,6 +3704,59 @@ class MadSpinInterface(extended_cmd.Cmd):
                     stats['nb_try_%d' % position] += 1
                     decay = self._draw_one_decay(particle, index, ids,
                                                  evt_decayfile, nb_remain)
+
+                    if offshell:
+                        # madspin/full: offshell numerator over onshell
+                        # denominator. The mass was drawn up front, so the
+                        # decay is reshuffled to it; on failure the whole set
+                        # restarts (the mass cannot be redrawn for one slot
+                        # without invalidating the fixed rho).
+                        me_on = self.calculate_matrix_element(decay)   # |M_dec|^2_on
+                        decay[0].new_mass, decay[0].reshuffle_info = \
+                            slot_mass[slot][0], slot_mass[slot][1]
+                        # The offshell density is taken on a copy: the drawn
+                        # decay must stay in its onshell rest frame (only tagged
+                        # with new_mass) so the final add_decays + a single
+                        # reshuffle_production rebuild consistent kinematics.
+                        # Reshuffling/boosting it in place leaves it on the
+                        # offshell parent and add_decays then rejects it.
+                        dcopy = lhe_parser.Event(str(decay))
+                        dcopy[0].new_mass = slot_mass[slot][0]
+                        dcopy[0].reshuffle_info = slot_mass[slot][1]
+                        if dcopy.reshuffle_decayevt() in (0, -1):
+                            stats['nb_production_restart'] += 1
+                            restart = True
+                            break
+                        density = self._slot_density(dcopy, parents[slot],
+                                                     helicities[slot])
+                        slot_densities[slot] = density
+                        n_k = self._partial_density_contraction(
+                                        density_prod, helicities, slot_densities)
+                        # (N_k/N_{k-1}) * jac_bw * Tr(D_off)/|M_dec|^2_on, and the
+                        # per-chain production reshuffling jacobian on slot 0.
+                        extra = slot_mass[slot][2] * (density.trace().real / me_on)
+                        if position == 0:
+                            extra *= jac_reshuffle
+                        wgt = (n_k / n_prev).real * extra
+                        j_k, new_budget = j_prev, budget
+                        if probe is not None:
+                            probe.append(float(wgt))
+                            accept = True
+                        elif maxwgt is None:
+                            accept = True
+                        else:
+                            if wgt > maxwgt:
+                                stats['nb_overflow_%d' % position] += 1
+                                logger.debug('sequential: slot %s weight %s above'
+                                             ' its max %s', position, wgt, maxwgt)
+                            accept = random.random() * maxwgt < wgt
+                        if accept:
+                            slot_decays[slot] = decay
+                            n_prev = n_k
+                            break
+                        slot_densities.pop(slot, None)
+                        continue
+
                     jac_dec = 1.0
                     new_budget = budget
                     if draw_mass:

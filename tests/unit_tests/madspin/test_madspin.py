@@ -766,6 +766,7 @@ class TestDrawOffshellMass(unittest.TestCase):
         pass
 
     class _Stub(object):
+        _draw_mass_value = interface_madspin.MadSpinInterface._draw_mass_value
         _draw_offshell_mass = interface_madspin.MadSpinInterface._draw_offshell_mass
         def __init__(self, bw_cut=-1):
             self.banner = TestDrawOffshellMass._Banner()
@@ -1269,8 +1270,8 @@ class TestSequentialPoolLadder(unittest.TestCase):
         # fixed_order keeps the joint test
         self.assertEqual(self._stub(spins, fixed_order=True)
                              ._sequential_pool_ladder(pools, self.NB, True), {})
-        # a spinmode whose factorisation is not established
-        self.assertEqual(self._stub(spins, spinmode='madspin')
+        # a spinmode outside the supported set keeps the joint test
+        self.assertEqual(self._stub(spins, spinmode='none')
                              ._sequential_pool_ladder(pools, self.NB, True), {})
 
     def test_sequential_active_gate(self):
