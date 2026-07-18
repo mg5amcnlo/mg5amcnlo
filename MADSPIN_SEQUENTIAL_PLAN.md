@@ -503,3 +503,81 @@ The whole point of the flag is A/B, so the plan is measurement-first:
    and redraws its mass on failure; the production reshuffling happens once at
    the end and, if impossible, trashes the whole set of decays (section 1).
 5. A/B campaign (8). Only then the partial-contraction optimisation.
+
+---
+
+## 10. Extending to spinmode = madspin (full offshell) -- DESIGN, not yet built
+
+Status: `onshell` and `PA` are implemented and validated end-to-end (ttbar
+A/B: cross section 0.008%, dilepton Delta-phi within ~1 sigma). `madspin` still
+falls back to the joint accept/reject. This section records how to lift it.
+
+### Why madspin is different
+
+For `PA`/`onshell` the production density rho is evaluated at the *onshell*
+production momenta -- fixed per production event -- and any reshuffling is a
+separate kinematic dressing. That fixed rho is what the per-particle
+decomposition needs.
+
+`madspin` (density_pole_approximation = False) instead, in
+`calculate_matrix_element_from_density` (interface_madspin.py ~3915):
+1. computes the denominators |M_prod|^2 and Prod |M_dec|^2 at **onshell**;
+2. `production.reshuffle_production()` -- redistributes **all** production
+   momenta to fit the sampled masses;
+3. reshuffles each decay to its (possibly resampled) mass;
+4. computes the numerator density rho at the **reshuffled (offshell)** momenta.
+
+So rho depends on the whole set of decay masses jointly -> not fixed while the
+chain is built -> the decomposition does not apply as-is.
+
+### Fix (Olivier): draw all masses up front
+
+Draw the invariant mass of every decaying particle **before** the per-particle
+loop, then reshuffle the production once, up front, and reuse the resulting
+fixed offshell rho for the whole chain. Concretely, per production event:
+
+1. For each decaying particle, sample its virtuality from its Breit-Wigner.
+2. Reshuffle the production with that full mass set.
+   - **Production infeasible** (sum of masses > sqrt(shat), reshuffle returns
+     -1): restart from step 1 (redraw the whole set). This validity check now
+     happens *early*, before any decay is drawn -- an advantage over PA, where
+     it is deferred to the end.
+3. Compute rho once at the reshuffled momenta (fixed for the chain).
+4. Per-particle accept/reject loop, exactly as onshell but: each drawn decay
+   event is reshuffled to its particle's pre-drawn mass before its density is
+   taken, and boosted to the offshell parent.
+   - **Decay infeasible** (the drawn mass cannot accommodate that decay's
+     products): the mass is fixed before the loop, so it cannot be redrawn for
+     one slot without invalidating the pre-computed reshuffle/rho -> **restart
+     from step 1** (redraw the whole set). This is the cost of the fixed-rho
+     simplification.
+
+With rho fixed, the loop and its telescoping are the onshell case again.
+
+### The remaining subtlety: onshell denominators vs offshell numerator
+
+Not resolved by fixing rho. Joint madspin's weight is
+
+    <rho_off, (x) D_off> * jac / ( |M_prod|^2_on * Prod |M_dec|^2_on )
+
+-- offshell **numerator**, onshell **denominators**. The per-particle method
+normalises each slot by `Dhat = D / Tr(D)`, i.e. by the **offshell** trace
+Tr(D_off), and rho by Tr(rho_off) = N_0. Since Tr(D_off) != |M_dec|^2_on and
+Tr(rho_off) != |M_prod|^2_on in general, the naive sequential weight targets a
+*different* distribution than joint madspin.
+
+To match, each slot's factor has to be the offshell density over the **onshell**
+decay ME, `D_off,k / |M_dec,k|^2_on`, and the production factor rho_off over
+|M_prod|^2_on -- i.e. compute the onshell decay ME (un-reshuffled decay) as the
+normaliser in addition to the offshell density. That is one extra ME evaluation
+per decay and per production, and the telescoping must be re-derived with these
+mixed normalisers before trusting it. This is the piece to get right (and A/B
+against joint madspin) when implementing; do not ship madspin sequential without
+that check.
+
+### Gating
+
+`_sequential_active` currently returns False for spinmode not in
+['PA','onshell']. Extending to 'madspin' is the last step, after the
+normalisation above is implemented and the ttbar (and a genuinely offshell,
+e.g. large-width) A/B against joint madspin passes.
