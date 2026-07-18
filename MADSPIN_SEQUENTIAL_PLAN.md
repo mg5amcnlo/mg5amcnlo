@@ -554,30 +554,54 @@ fixed offshell rho for the whole chain. Concretely, per production event:
 
 With rho fixed, the loop and its telescoping are the onshell case again.
 
-### The remaining subtlety: onshell denominators vs offshell numerator
+### Normalisation: onshell denominators with an offshell numerator (resolved)
 
-Not resolved by fixing rho. Joint madspin's weight is
+Fixing rho alone is not enough: joint madspin's weight is
 
     <rho_off, (x) D_off> * jac / ( |M_prod|^2_on * Prod |M_dec|^2_on )
 
--- offshell **numerator**, onshell **denominators**. The per-particle method
-normalises each slot by `Dhat = D / Tr(D)`, i.e. by the **offshell** trace
-Tr(D_off), and rho by Tr(rho_off) = N_0. Since Tr(D_off) != |M_dec|^2_on and
-Tr(rho_off) != |M_prod|^2_on in general, the naive sequential weight targets a
-*different* distribution than joint madspin.
+-- offshell **numerator**, onshell **denominators**. The per-particle test must
+divide by the onshell decay ME, not the offshell trace. Olivier's telescoping
+does exactly that. Define the partial weight after k particles
 
-To match, each slot's factor has to be the offshell density over the **onshell**
-decay ME, `D_off,k / |M_dec,k|^2_on`, and the production factor rho_off over
-|M_prod|^2_on -- i.e. compute the onshell decay ME (un-reshuffled decay) as the
-normaliser in addition to the offshell density. That is one extra ME evaluation
-per decay and per production, and the telescoping must be re-derived with these
-mixed normalisers before trusting it. This is the piece to get right (and A/B
-against joint madspin) when implementing; do not ship madspin sequential without
-that check.
+    W_k = <rho_off, D1_off (x) ... (x) Dk_off (x) I (x) ... (x) I> *
+          (jac_prod jac_1 ... jac_k) / ( |M_prod|^2_on |M_1,dec|^2_on ... |M_k,dec|^2_on )
 
-### Gating
+and accept slot k with probability proportional to W_k / W_{k-1}. The product
+telescopes to W_n / W_0; W_n is the joint madspin weight and W_0 is a per-event
+constant, so the chain samples the joint distribution -- exact.
+
+In the ratio W_k/W_{k-1} the `|M_prod|^2_on`, `jac_prod` and the slots < k all
+cancel, leaving
+
+    W_k/W_{k-1} = [ P_k / P_{k-1} ] * jac_dec_k / |M_k,dec|^2_on,
+    P_k = <rho_off, D1_off (x) ... (x) Dk_off (x) I (x) ... (x) I>
+
+i.e. the existing N_k/N_{k-1} contraction evaluated with **offshell** rho and
+Dk, times the decay-reshuffle jacobian over the **onshell** decay ME. This
+unifies with what is built:
+
+    onshell / PA:  Dhat_k = D_k^on  / Tr(D_k^on)
+    madspin:       Dhat_k = D_k^off / Tr(D_k^on)   -- same denominator, offshell top
+
+So the only extra cost is one ME evaluation per decay: `D_k^off` (numerator,
+after the reshuffle) and `Tr(D_k^on) = |M_k,dec|^2_on` (denominator, before it).
+The un-drawn-slot identity keeps whatever per-particle constant (the
+offshell/onshell rate ratio) it carries; that is absorbed into `C_k`, so plain
+`I` is correct there.
+
+Why the up-front mass draw is exact, not an approximation: the mass is drawn
+from its Breit-Wigner, and the BW sampling jacobian sits in the weight (jac_k),
+so the BW *prior* cancels the BW *jacobian* and the accepted events' mass
+distribution is the true physical marginal `Integral physical(m,Omega) dOmega`
+-- even though the mass is fixed for the chain and only the decay angles are
+accept/rejected.
+
+### Gating and validation
 
 `_sequential_active` currently returns False for spinmode not in
-['PA','onshell']. Extending to 'madspin' is the last step, after the
-normalisation above is implemented and the ttbar (and a genuinely offshell,
-e.g. large-width) A/B against joint madspin passes.
+['PA','onshell']. Extending to 'madspin' is the last step. Because ttbar tops
+are nearly onshell, a normalisation slip could hide there (as J~0.98 hid the
+production-jacobian discrepancy until the spin observable exposed it): A/B
+against joint madspin on a **genuinely offshell** process (large width) before
+enabling.
