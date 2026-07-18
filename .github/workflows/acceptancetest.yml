@@ -1699,8 +1699,6 @@ jobs:
       - uses: ./.github/actions/restore-pip-cache
       - name: check f2py
         run: |
-            f2py --version
-            which f2py
             cat input/mg5_configuration.txt
       # Runs a set of commands using the runners shell
       - name: test one of the test test_madspin_ON_and_onshell_atNLO
