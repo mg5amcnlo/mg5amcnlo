@@ -49,17 +49,16 @@ jobs:
           - test_short_madspin_zz
           - test_short_madspin_multicore
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: ./.github/actions/checkout_mg5
       - uses: ./.github/actions/restore-pip-cache
 
 
-#      - name: Breakpoint
-#        uses: namespacelabs/breakpoint-action@v0
-#        with:
-#          duration: 30m
-#          authorized-users: oliviermattelaer
-      # Runs a set of commands using the runners shell
+      - name: Breakpoint
+        uses: namespacelabs/breakpoint-action@v0
+        with:
+          duration: 30m
+          authorized-users: oliviermattelaer
 
       - name: Run ${{ matrix.test }}
         run: |
