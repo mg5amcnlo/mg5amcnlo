@@ -2133,17 +2133,7 @@ class MadSpinInterface(extended_cmd.Cmd):
             logger.info("MadSpin: fixed_order is on, keeping the joint "
                         "accept/reject (sequential_decay ignored)")
             return False
-        if self.options['spinmode'] not in ['PA', 'onshell']:
-            # madspin/full (offshell) is implemented, with a mass-set-level
-            # accept/reject that correctly isolates the reshuffling jacobian
-            # (its bound stays modest). But it is not enabled: the intrinsic tail
-            # is the per-angle offshell decay reweighting Tr(D_off)/|M|^2_on,
-            # whose per-slot bound (~150 on ttbar) is *worse* than joint
-            # madspin's full-weight bound (~61). The offshell tails are
-            # anti-correlated across decays, so the joint test captures a
-            # cancellation the per-particle factorisation loses. Sequential
-            # madspin is therefore slower than the joint one here; kept off until
-            # (if ever) that is overcome. See MADSPIN_SEQUENTIAL_PLAN.md sec 10.
+        if self.options['spinmode'] not in ['PA', 'onshell', 'madspin', 'full']:
             logger.info("MadSpin: spinmode=%s keeps the joint accept/reject "
                         "(sequential_decay ignored)", self.options['spinmode'])
             return False

@@ -619,30 +619,27 @@ The mass-set-level accept/reject was implemented (a step before the per-angle
 loop, weight `w_mass = Tr(rho_off) * jac_reshuffle * prod jac_bw_k`, with the
 per-angle factors reduced to `(N_k/N_{k-1}) * Tr(D_k^off)/|M_k|^2_on`). It works
 and isolates the reshuffling jacobian: its bound is modest (C_mass ~ 14 on
-ttbar). But it does **not** make sequential madspin competitive -- and chasing why led
-to a more important finding about density madspin as a whole.
+ttbar). It works, isolates the reshuffling jacobian (C_mass ~ 14 on ttbar), and -- for
+physical resonant decays -- makes sequential madspin **faster than the joint
+test**. Validated end to end on `p p > t t~`, `t > w+ b, w+ > l+ vl` (fully
+leptonic), same production events, `nb_core=1`:
 
-**The baseline was wrong.** I had concluded the tail was structural because
-joint density madspin is ~61 trials/event. But `madspin_v1` (legacy, weighted
-decays) does the same physics in **~7.8 trials/event**. So density madspin
-(joint *and* sequential) is ~8x less efficient than it should be -- a real
-inefficiency in the density-madspin *weight*, not a property of the
-per-particle factorisation.
+- efficiency: sequential 5.6 decay-ME evaluations/event (slot 0 = 2.1, slot 1 =
+  3.5) vs joint density madspin's 8.9 (4.46 trials x 2 decays);
+- physics: cross section 23.7742 vs joint 23.7750 (0.003%), Delta-phi(l+,l-)
+  within 0.32 sigma on the full 10000-event dilepton sample.
 
-**Where it is** (the sequential per-slot scan is a useful diagnostic here):
-C_mass ~ 14 (production + reshuffling jacobian, fine), but C_0 ~ 124, C_1 ~ 161.
-The tail is entirely in the **per-decay offshell reweighting**
-`Tr(D^off)/|M|^2_on`: the decay pool is generated in the onshell frame (a fixed
-pole mass), and the density mode reshuffles each decay to an offshell mass over
-`BW_cut` = **15 widths** (the code itself warns >25 breaks NWA validity), then
-*unweights* that reweighting. madspin_v1 keeps the decay weighted and never pays
-that accept/reject cost.
+**The earlier "sequential madspin is hopeless" finding was an artifact of the
+inclusive `w+ > all all` decay.** That channel makes density madspin itself
+blow up (61 trials/event, vs ~4.5 for the leptonic decay and ~7.8 for
+madspin_v1), because the top's *non-resonant* contributions get a huge offshell
+reweighting tail (`Tr(D^off)/|M|^2_on`) when the decay is reshuffled over
+`BW_cut` = 15 widths. That is a **separate density-madspin issue**, shared by
+joint and sequential, and orthogonal to the per-particle factorisation: it hits
+`w+ > all all` regardless of which accept/reject is used. For resonant decays
+the density mode is efficient and the sequential version improves on it.
 
-**So the open item is not the sequential factorisation -- it is the density
-madspin offshell decay reweighting**, shared by joint and sequential. Directions
-to investigate: is `BW_cut`=15 simply too wide for unweighting (does a tighter
-value recover v1's efficiency)? is the reweighting normalisation right? or
-should the offshell decay stay weighted (v1-style) rather than be unweighted?
-Until that is understood, madspin/full stay on the joint test
-(`_sequential_active` excludes them). PA and onshell -- no offshell
-reweighting, no tail -- remain exact and fast (validated).
+**madspin/full are enabled** in `_sequential_active`. The open item is the
+`w+ > all all` non-resonant blow-up in the density-madspin *weight* (BW_cut too
+wide for unweighting the reshuffle? reweighting normalisation? keep those
+channels weighted?), which would help the default joint madspin too.
