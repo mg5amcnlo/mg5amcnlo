@@ -54,12 +54,6 @@ jobs:
       - uses: ./.github/actions/restore-pip-cache
 
 
-      - name: Breakpoint
-        uses: namespacelabs/breakpoint-action@v0
-        with:
-          duration: 30m
-          authorized-users: oliviermattelaer
-
       - name: Run ${{ matrix.test }}
         run: |
           cd "$GITHUB_WORKSPACE"
