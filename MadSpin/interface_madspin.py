@@ -2134,14 +2134,16 @@ class MadSpinInterface(extended_cmd.Cmd):
                         "accept/reject (sequential_decay ignored)")
             return False
         if self.options['spinmode'] not in ['PA', 'onshell']:
-            # The offshell path (madspin/full) is implemented
-            # (sequential_accept_reject, offshell branch) and produces valid
-            # events, but it is not enabled: on ttbar it needs more trials than
-            # the joint test (~340 vs ~122 decay-ME evaluations per event),
-            # because the per-mass-set production reshuffling jacobian and the
-            # offshell weight tail land in slot 0's per-angle accept/reject.
-            # Enable once that is restructured (mass-set-level accept/reject) and
-            # A/B'd against joint madspin. See MADSPIN_SEQUENTIAL_PLAN.md sec 10.
+            # madspin/full (offshell) is implemented, with a mass-set-level
+            # accept/reject that correctly isolates the reshuffling jacobian
+            # (its bound stays modest). But it is not enabled: the intrinsic tail
+            # is the per-angle offshell decay reweighting Tr(D_off)/|M|^2_on,
+            # whose per-slot bound (~150 on ttbar) is *worse* than joint
+            # madspin's full-weight bound (~61). The offshell tails are
+            # anti-correlated across decays, so the joint test captures a
+            # cancellation the per-particle factorisation loses. Sequential
+            # madspin is therefore slower than the joint one here; kept off until
+            # (if ever) that is overcome. See MADSPIN_SEQUENTIAL_PLAN.md sec 10.
             logger.info("MadSpin: spinmode=%s keeps the joint accept/reject "
                         "(sequential_decay ignored)", self.options['spinmode'])
             return False
@@ -3671,7 +3673,7 @@ class MadSpinInterface(extended_cmd.Cmd):
         if stats is None:
             stats = collections.defaultdict(int)
 
-        while True:     # restart point: an impossible production mass set
+        while True:     # restart point: an impossible/rejected production mass set
             parents = init_part
             jac_reshuffle = 1.0
             slot_mass = {}
@@ -3684,6 +3686,25 @@ class MadSpinInterface(extended_cmd.Cmd):
                     continue
                 density_prod, jac_reshuffle, slot_mass, parents = setup
 
+                # Mass-set accept/reject, before the per-angle loop. All the
+                # factors that depend on the mass set but not the decay angles --
+                # the production reshuffling jacobian, the Breit-Wigner sampling
+                # jacobians, and the offshell production trace -- go here, so the
+                # per-angle loop no longer carries them (that bundling made slot
+                # 0's acceptance ~1/300). See MADSPIN_SEQUENTIAL_PLAN.md sec 10.
+                w_mass = density_prod.trace().real * jac_reshuffle
+                for s in order:
+                    w_mass *= slot_mass[s][2]
+                if probe is not None:
+                    del probe[:]            # start this chain's probe vector
+                    probe.append(float(w_mass))
+                elif maxwgts:
+                    if w_mass > maxwgts[0]:
+                        stats['nb_overflow_mass'] += 1
+                    if random.random() * maxwgts[0] >= w_mass:
+                        stats['nb_mass_reject'] += 1
+                        continue            # redraw the whole mass set
+
             slot_densities = {}
             slot_decays = {}
             slot_masses = {}
@@ -3695,9 +3716,12 @@ class MadSpinInterface(extended_cmd.Cmd):
             for position, slot in enumerate(order):
                 index = slot_to_index[slot]
                 particle = particles[index]
+                # offshell reserves maxwgts[0] for the mass set, so the per-slot
+                # bounds start at index 1
+                wpos = position + 1 if offshell else position
                 if maxwgts:
-                    maxwgt = maxwgts[position] if position < len(maxwgts) \
-                                               else maxwgts[-1]
+                    maxwgt = maxwgts[wpos] if wpos < len(maxwgts) \
+                                           else maxwgts[-1]
                 else:
                     maxwgt = None
                 while True:
@@ -3732,12 +3756,9 @@ class MadSpinInterface(extended_cmd.Cmd):
                         slot_densities[slot] = density
                         n_k = self._partial_density_contraction(
                                         density_prod, helicities, slot_densities)
-                        # (N_k/N_{k-1}) * jac_bw * Tr(D_off)/|M_dec|^2_on, and the
-                        # per-chain production reshuffling jacobian on slot 0.
-                        extra = slot_mass[slot][2] * (density.trace().real / me_on)
-                        if position == 0:
-                            extra *= jac_reshuffle
-                        wgt = (n_k / n_prev).real * extra
+                        # per-angle factor only: (N_k/N_{k-1}) * Tr(D_off)/
+                        # |M_dec|^2_on. jac_bw and jac_reshuffle are in w_mass.
+                        wgt = (n_k / n_prev).real * (density.trace().real / me_on)
                         j_k, new_budget = j_prev, budget
                         if probe is not None:
                             probe.append(float(wgt))
@@ -3824,6 +3845,10 @@ class MadSpinInterface(extended_cmd.Cmd):
                                                  slot_masses) in (0, -1):
                     stats['nb_production_restart'] += 1
                     restart = True
+            if restart and probe is not None:
+                # a partial probe vector was appended for this chain; drop it so
+                # the next attempt records a clean [w_mass, w_0, ...] vector
+                del probe[:]
             if not restart:
                 break
 

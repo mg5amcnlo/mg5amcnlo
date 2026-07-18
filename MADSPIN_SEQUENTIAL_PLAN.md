@@ -615,11 +615,29 @@ offshell weight tail land in **slot 0's per-angle accept/reject**. Since the
 mass is fixed per chain, an unlucky mass draw cannot be escaped by redrawing
 angles, so slot 0's bound (max weight ~322) is huge and its acceptance ~1/313.
 
-To make it worthwhile the mass set has to be accept/rejected at the
-**mass-set level** (a step before the per-angle loop, carrying `jac_reshuffle`
-and the production-density scale), so the per-angle loop sees only the
-angle-dependent tail. That restructure -- plus an A/B against joint madspin on a
-**genuinely offshell** process (large width), since ttbar's near-onshell tops
-could hide a normalisation slip -- is what remains before enabling. Physics
-correctness is currently **unverified** (no completed A/B: the run is too slow
-at ~340 trials/event to finish quickly).
+The mass-set-level accept/reject was implemented (a step before the per-angle
+loop, weight `w_mass = Tr(rho_off) * jac_reshuffle * prod jac_bw_k`, with the
+per-angle factors reduced to `(N_k/N_{k-1}) * Tr(D_k^off)/|M_k|^2_on`). It works
+and isolates the reshuffling jacobian: its bound is modest (C_mass ~ 14 on
+ttbar). But it does **not** make sequential madspin competitive, and the reason
+is fundamental:
+
+- the intrinsic tail is the **per-angle offshell decay reweighting**
+  `Tr(D^off)/|M|^2_on` -- reweighting a pool decay (generated ~|M_on|^2) to the
+  offshell mass. Its per-slot bound on ttbar is C_0 ~ 124, C_1 ~ 161;
+- joint madspin's *full-weight* bound is ~61 (61 trials/event). Each sequential
+  slot is *more* peaked than the whole joint weight. So the offshell tails are
+  **anti-correlated** across decays (the shared sqrt(shat) budget / production
+  density couples them), and the joint test captures a cancellation the
+  per-particle factorisation cannot.
+
+Result: sequential madspin needs ~280 decay-ME evaluations/event on ttbar vs the
+joint ~122 -- slower, for a structural reason, not a bug or a tuning issue.
+Physics correctness was not confirmed (the run is too slow to complete an A/B).
+
+**Left gated off** (`_sequential_active` excludes madspin/full). PA and onshell
+remain exact and validated. The implementation (`_offshell_production`, the
+offshell branch of `sequential_accept_reject`, the mass-set accept/reject) is
+kept as the correct foundation should a way to beat the anti-correlated offshell
+tail ever be found -- but it is a genuinely hard problem, and the joint test is
+the right choice for madspin today.
