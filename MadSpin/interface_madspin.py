@@ -2456,8 +2456,8 @@ class MadSpinInterface(extended_cmd.Cmd):
                                 "accepted event, per particle: %s [%s s]"
                                 % (curr_event, nb_event, per, time.time()-start))
                 elif self.efficiency:
-                    logger.info("decaying event number %s. Trials per event: "
-                                "%.4g [%s s]" % (curr_event, 1/self.efficiency,
+                    logger.info("decaying event number %s/%s. Trials per event: "
+                                "%.4g [%s s]" % (curr_event, nb_event, 1/self.efficiency,
                                                  time.time()-start))
 
             # BR-equalization: drop this event with probability
@@ -2584,7 +2584,13 @@ class MadSpinInterface(extended_cmd.Cmd):
 
             output_lhe.write_events(full_evt)
 
-        logger.info("thread done. [%s s]" % (time.time()-start))
+        worker = getattr(self, '_shard_tag', None)
+        if worker is None:
+            logger.info("decay unweighting done. [%.1f s]" % (time.time()-start))
+        else:
+            logger.info("worker %s of %s done. [%.1f s]"
+                        % (worker, getattr(self, '_shard_nb_core', '?'),
+                           time.time()-start))
         n_processed = curr_event + 1
         return dict(n_processed=n_processed,
                     n_written=n_processed - nb_loose_skip,
