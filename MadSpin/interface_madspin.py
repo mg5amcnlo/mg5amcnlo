@@ -2753,6 +2753,12 @@ class MadSpinInterface(extended_cmd.Cmd):
                 paths = getattr(evtfile, 'paths', None)
                 if paths and len(paths) == nb_core:
                     local[pdg][file_nb] = lhe_parser.EventFile(paths[shard_id])
+                elif paths:
+                    # split, but not into exactly nb_core files: stride the WHOLE
+                    # chained pool. ``evtfile.name`` is only its first file, so
+                    # striding that would strand every other file's events.
+                    local[pdg][file_nb] = _StridedEvents(
+                        _ChainedEvents(paths), shard_id, nb_core)
                 else:
                     fresh = lhe_parser.EventFile(evtfile.name)
                     local[pdg][file_nb] = _StridedEvents(fresh, shard_id, nb_core)
@@ -3210,7 +3216,13 @@ class MadSpinInterface(extended_cmd.Cmd):
         ranges = [(sid * chunk, min((sid + 1) * chunk, len(events)))
                   for sid in range(nb_core)]
         ranges = [(a, b) for (a, b) in ranges if a < b]
-        nb_core = len(ranges)   # the count every worker stripes the pool by
+        # Keep the ORIGINAL nb_core as the pool-addressing count: the decay pool
+        # was split into nb_core files, and each worker must address it with that
+        # same count so it opens *its* file (paths[shard_id]). Reducing it to the
+        # number of non-empty ranges made len(paths) != nb_core, which dropped
+        # every worker onto the striding fallback -- reading only the first file.
+        # Trailing empty shards are simply not launched (their files go unused by
+        # the scan, which is fine -- the pool is generated uniformly).
 
         mpctx = mp.get_context('fork')
         procs, out_paths = [], []
