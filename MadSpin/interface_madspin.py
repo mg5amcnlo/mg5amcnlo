@@ -1779,10 +1779,11 @@ class MadSpinInterface(extended_cmd.Cmd):
             nevents_for_max = 75
         nevents_for_max *= self.options['max_weight_ps_point']
         # Security margin on the decays reserved for the maximum-weight scan.
-        # The scan draws nevents_for_max decays *per slot*, and the sequential
-        # offshell scan draws a few extra on each restart (a mass set a decay
-        # cannot reach), so the bare reservation runs short and forces a slow
-        # mid-scan pool refill. A 50% margin keeps the scan inside its pool.
+        # The scan draws exactly nevents_for_max decays *per slot* (measured: no
+        # restarts for tops), but the parallel scan stripes the pool across the
+        # workers, and dividing the bare reservation leaves each worker's slice
+        # only just big enough -- an uneven split then exhausts one worker and
+        # forces a mid-scan refill. A 50% margin absorbs that unevenness.
         nevents_for_max = int(1.5 * nevents_for_max)
         
         with misc.MuteLogger(["madgraph", "madevent", "ALOHA", "cmdprint"], [50,50,50,50]):
@@ -3147,11 +3148,17 @@ class MadSpinInterface(extended_cmd.Cmd):
                 # only one worker prints scan progress
                 logger.info("Event %s/%s :  %2fs" % (i, stop, time.time()-t0))
             base_event = events[i]
+            # events left in *this* range (the worker's shard), not the global
+            # nevents - i. It only feeds the decay-pool refill sizing, and the
+            # refill already multiplies by nb_core to share the pool across
+            # workers -- so passing the global count made a forked scan worker
+            # refill nb_core times too many decays (900k instead of ~60k).
+            nb_remain = stop - i
             best = None
             for _ in range(nb_ps_point):
                 probe = []
                 out = self.sequential_accept_reject(base_event, evt_decayfile,
-                                                    None, nevents - i, probe=probe)
+                                                    None, nb_remain, probe=probe)
                 if out is None:
                     return None
                 if best is None:
