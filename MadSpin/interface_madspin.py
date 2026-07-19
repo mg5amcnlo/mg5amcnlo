@@ -1778,6 +1778,12 @@ class MadSpinInterface(extended_cmd.Cmd):
         if nevents_for_max == 0 :
             nevents_for_max = 75
         nevents_for_max *= self.options['max_weight_ps_point']
+        # Security margin on the decays reserved for the maximum-weight scan.
+        # The scan draws nevents_for_max decays *per slot*, and the sequential
+        # offshell scan draws a few extra on each restart (a mass set a decay
+        # cannot reach), so the bare reservation runs short and forces a slow
+        # mid-scan pool refill. A 50% margin keeps the scan inside its pool.
+        nevents_for_max = int(1.5 * nevents_for_max)
         
         with misc.MuteLogger(["madgraph", "madevent", "ALOHA", "cmdprint"], [50,50,50,50]):
             mg5 = self.mg5cmd
@@ -3307,25 +3313,30 @@ class MadSpinInterface(extended_cmd.Cmd):
 
     def _combine_maxwgt(self, all_maxwgt):
         """Turn the per-production-event maxima of a probe into the bound the
-        accept/reject uses: mean + nb_sigma*sd with a 5% margin, refined on the
-        largest ones and never below the second largest seen.
+        accept/reject uses: mean + nb_sigma*sd with a safety margin, refined on
+        the largest ones and never below the second largest seen.
 
         Shared by the joint bound and by each slot's bound in sequential mode.
+        The sequential accept/reject has no way to carry a per-slot overweight
+        forward (redraw-until-accept, not staged unweighting), so a weight above
+        the bound biases the sample directly -- hence a 10% margin rather than
+        the historical 5%.
         """
+        margin = 1.10
         all_maxwgt.sort(reverse=True)
         assert all_maxwgt[0] >= all_maxwgt[1], "ERROR: "
         decay_tools=madspin.decay_misc()
         ave_weight, std_weight = decay_tools.get_mean_sd(all_maxwgt)
-        base_max_weight = 1.05 * (ave_weight+self.options['nb_sigma']*std_weight)
+        base_max_weight = margin * (ave_weight+self.options['nb_sigma']*std_weight)
 
         for i in [20, 30, 40, 50]:
             if len(all_maxwgt) < i:
                 break
             ave_weight, std_weight = decay_tools.get_mean_sd(all_maxwgt[:i])
-            base_max_weight = max(base_max_weight, 1.05 * (ave_weight+self.options['nb_sigma']*std_weight))
+            base_max_weight = max(base_max_weight, margin * (ave_weight+self.options['nb_sigma']*std_weight))
 
             if all_maxwgt[1] > base_max_weight:
-                base_max_weight = 1.05 * all_maxwgt[1]
+                base_max_weight = margin * all_maxwgt[1]
         return base_max_weight
 
             
