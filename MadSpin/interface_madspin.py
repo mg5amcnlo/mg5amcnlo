@@ -58,7 +58,7 @@ class MadSpinOptions(banner.ConfigFile):
         self.add_param("max_weight", -1)
         self.add_param('curr_dir', os.path.realpath(os.getcwd()))
         self.add_param('Nevents_for_max_weight', 0)
-        self.add_param("max_weight_ps_point", 400)
+        self.add_param("max_weight_ps_point", 500)
         self.add_param('BW_cut', -1)
         self.add_param('nb_sigma', 0.)
         self.add_param('ms_dir', '')
@@ -2452,9 +2452,9 @@ class MadSpinInterface(extended_cmd.Cmd):
                     per = ' '.join(
                         'p%d=%.2f' % (k, sequential_stats['nb_try_%d' % k]
                                       / float(curr_event + 1)) for k in positions)
-                    logger.info("decaying event number %s. Decay events per "
+                    logger.info("decaying event number %s/%s. Decay events per "
                                 "accepted event, per particle: %s [%s s]"
-                                % (curr_event, per, time.time()-start))
+                                % (curr_event, nb_event, per, time.time()-start))
                 elif self.efficiency:
                     logger.info("decaying event number %s. Trials per event: "
                                 "%.4g [%s s]" % (curr_event, 1/self.efficiency,
@@ -2584,6 +2584,7 @@ class MadSpinInterface(extended_cmd.Cmd):
 
             output_lhe.write_events(full_evt)
 
+        logger.info("thread done. [%s s]" % (time.time()-start))
         n_processed = curr_event + 1
         return dict(n_processed=n_processed,
                     n_written=n_processed - nb_loose_skip,
@@ -3074,66 +3075,52 @@ class MadSpinInterface(extended_cmd.Cmd):
                 
         if self.options['ms_dir'] and os.path.exists(pjoin(self.options['ms_dir'], 'max_wgt')):
             return float(open(pjoin(self.options['ms_dir'], 'max_wgt'),'r').read())
-        
+
         nevents = self.options['Nevents_for_max_weight']
         if nevents == 0 :
             nevents = 75
-        
-        all_maxwgt = []
+        nb_ps_point = self.options['max_weight_ps_point']
+
+        # Same even-split rounding as the sequential scan: round the probe events
+        # up to a multiple of nb_core and reduce nb_ps_point to keep the sampling
+        # budget, so the forked scan splits evenly across the workers.
+        nb_core = self._resolve_nb_core()
+        if nb_core > 1 and nevents % nb_core:
+            budget = nevents * nb_ps_point
+            nevents = int(math.ceil(nevents / float(nb_core))) * nb_core
+            nb_ps_point = max(1, int(round(budget / float(nevents))))
+
         logger.info("Estimating the maximum weight")
         logger.info("*****************************")
-        logger.info("Probing the first %s events with %s phase space points" % (nevents, self.options['max_weight_ps_point']))
-
-        self.efficiency = 1. / self.options['max_weight_ps_point']
-        start = time.time()
+        logger.info("Probing the first %s events with %s phase space points"
+                    % (nevents, nb_ps_point))
 
         orig_lhe.seek(0)
-        
-        # Loop over production events
-        for i in range(nevents):
-            if i % 5 ==1:
-                logger.info( "Event %s/%s :  %2fs" % (i, nevents, time.time()-start))
-            maxwgt = 0
+        if self.options['fixed_order']:
+            orig_lhe.eventgroup = True
+        events = []
+        for _ in range(nevents):
             try:
-                base_event = next(orig_lhe)
+                events.append(next(orig_lhe))
             except StopIteration:
                 break
-            if self.options['fixed_order']:
-                base_event = base_event[0]
-            # Cache production density matrix
-            density_matrix_prod = None
-            # Loop over decays
-            for j in range(self.options['max_weight_ps_point']):
-                decays = self.get_decay_from_file(base_event, evt_decayfile, nevents-i)   
-                #carefull base_event is modified by the following function 
-                if density_matrix_prod is None:
-                    _, wgt, density_matrix_prod = self.get_onshell_evt_and_wgt(
-                        base_event, decays, decay_dict, build_event=False)
-                    #print(f"wgt1 = {wgt}")
-                else:
-                    wgt = self.get_onshell_evt_and_wgt(
-                        base_event, decays, decay_dict, density_matrix_prod, build_event=False)[1]
-                    #print(f"wgt2 = {wgt}")
-                #print(f"Event {i} , PS point {j}, wgt for max = {wgt}")
-                jac = 1
-                # Mirror the accept/reject loop: include the reshuffling jacobian
-                # in the max-weight estimate whenever the reshuffle is applied
-                # *before* accept/reject (full/madspin offshell, or PA with
-                # jacobian tracking). PA-after-acceptance keeps jac = 1 here.
-                density_pole_approximation = self.options['spinmode'] in ['PA', 'onshell']
-                density_do_reshuffle = self.options['spinmode'] == 'PA'
-                density_needs_reshuffle = (
-                    self.generate_all.mode == 'density'
-                    and (not density_pole_approximation
-                         or density_do_reshuffle))
-                if density_needs_reshuffle and (
-                        not density_pole_approximation
-                        or self.options['density_keep_jacobian']):
-                    full_evt = lhe_parser.Event(str(base_event))
-                    full_evt = full_evt.add_decays(decays)
-                    jac = full_evt.reshuffle_production()
-                maxwgt = max(wgt*jac, maxwgt)
-            all_maxwgt.append(maxwgt.real)
+        if not events:
+            return 0.0
+
+        # The probe events are independent, so the scan forks the same way as
+        # the sequential one -- each worker owns a slice of the events and its
+        # own view of the decay pools.
+        nb_core = max(1, min(nb_core, len(events)))
+        if nb_core == 1:
+            all_maxwgt = self._joint_maxwgt_range(events, 0, len(events),
+                                                  evt_decayfile, decay_dict,
+                                                  nevents, nb_ps_point)
+        else:
+            logger.info("MadSpin: probing the maximum weight on %s cores", nb_core)
+            all_maxwgt = self._scan_maxwgt_parallel(
+                orig_lhe, events, evt_decayfile, nb_core,
+                self._joint_maxwgt_shard_entry, (decay_dict, nevents, nb_ps_point))
+
         base_max_weight = self._combine_maxwgt(all_maxwgt)
         if self.options['ms_dir']:
             open(pjoin(self.options['ms_dir'], 'max_wgt'),'w').write(str(base_max_weight))
@@ -3202,12 +3189,87 @@ class MadSpinInterface(extended_cmd.Cmd):
             except Exception:
                 pass
 
+    def _joint_maxwgt_range(self, events, start, stop, evt_decayfile, decay_dict,
+                            nevents, nb_ps_point):
+        """Per-event maximum weight for the *joint* accept/reject, over
+        ``events[start:stop]``: for each production event, the largest
+        full_me/(prod*dec)*jac seen over nb_ps_point decay draws. The serial body
+        of get_maxwgt_for_onshell, factored so it can also run in a forked
+        worker."""
+        self.efficiency = 1. / nb_ps_point
+        t0 = time.time()
+        density_pole_approximation = self.options['spinmode'] in ['PA', 'onshell']
+        density_do_reshuffle = self.options['spinmode'] == 'PA'
+        density_needs_reshuffle = (
+            self.generate_all.mode == 'density'
+            and (not density_pole_approximation or density_do_reshuffle))
+        per_event = []
+        for i in range(start, stop):
+            if (i - start) % 5 == 1 and getattr(self, '_shard_tag', None) in (None, 0):
+                logger.info("Event %s/%s :  %2fs" % (i, stop, time.time()-t0))
+            base_event = events[i]
+            if self.options['fixed_order']:
+                base_event = base_event[0]
+            maxwgt = 0
+            density_matrix_prod = None
+            for j in range(nb_ps_point):
+                # stop - i (this worker's remaining events) sizes the pool refill
+                decays = self.get_decay_from_file(base_event, evt_decayfile, stop - i)
+                if density_matrix_prod is None:
+                    _, wgt, density_matrix_prod = self.get_onshell_evt_and_wgt(
+                        base_event, decays, decay_dict, build_event=False)
+                else:
+                    wgt = self.get_onshell_evt_and_wgt(
+                        base_event, decays, decay_dict, density_matrix_prod,
+                        build_event=False)[1]
+                jac = 1
+                if density_needs_reshuffle and (
+                        not density_pole_approximation
+                        or self.options['density_keep_jacobian']):
+                    full_evt = lhe_parser.Event(str(base_event))
+                    full_evt = full_evt.add_decays(decays)
+                    jac = full_evt.reshuffle_production()
+                maxwgt = max(wgt*jac, maxwgt)
+            per_event.append(float(getattr(maxwgt, 'real', maxwgt)))
+        return per_event
+
+    def _joint_maxwgt_shard_entry(self, shard_id, nb_core, events, start, stop,
+                                  evt_decayfile, decay_dict, nevents, nb_ps_point,
+                                  out_path):
+        """Worker entry (forked child) for the joint max-weight scan. Mirrors
+        _scan_maxwgt_shard_entry: own RNG stream, own reopened decay pools,
+        failures reported in the JSON."""
+        import json
+        try:
+            random.seed((int(self.seed) if self.seed else 0)
+                        + 7919 * (shard_id + 1))
+            self._shard_tag = shard_id
+            self._shard_nb_core = nb_core
+            self._pool_gen = {}
+            local_pool = self._reopen_decay_pool(evt_decayfile, shard_id, nb_core)
+            per_event = self._joint_maxwgt_range(events, start, stop, local_pool,
+                                                 decay_dict, nevents, nb_ps_point)
+            with open(out_path, 'w') as f:
+                json.dump({'per_event': per_event}, f)
+        except Exception as exc:
+            import traceback
+            try:
+                with open(out_path, 'w') as f:
+                    json.dump({'error': str(exc),
+                               'tb': traceback.format_exc()}, f)
+            except Exception:
+                pass
+
     def _scan_maxwgt_parallel(self, orig_lhe, events, evt_decayfile, nb_core,
-                              nevents, nb_ps_point):
-        """Fork one worker per contiguous slice of the probe events; each returns
-        its per-event vectors through a JSON file. Concatenating them is order
-        independent -- _combine_maxwgt takes the max/spread over all events -- so
-        the result matches the serial scan up to which decays each draw pulls."""
+                              shard_entry, extra):
+        """Fork one worker per contiguous slice of the probe events; each runs
+        ``shard_entry`` and returns its per-event data through a JSON file.
+        Concatenating them is order independent -- _combine_maxwgt takes the
+        max/spread over all events -- so the result matches the serial scan up to
+        which decays each draw pulls. ``extra`` is the tuple of arguments the
+        shard entry needs after ``evt_decayfile`` (the joint and sequential scans
+        pass different ones). Used by both get_maxwgt_for_onshell and
+        get_sequential_maxwgt."""
         import multiprocessing as mp
         import json
         base = '%s.maxwgt' % orig_lhe.name
@@ -3229,9 +3291,9 @@ class MadSpinInterface(extended_cmd.Cmd):
         for sid, (start, stop) in enumerate(ranges):
             outp = '%s.shard%d.json' % (base, sid)
             p = mpctx.Process(
-                target=self._scan_maxwgt_shard_entry,
-                args=(sid, nb_core, events, start, stop, evt_decayfile,
-                      nevents, nb_ps_point, outp))
+                target=shard_entry,
+                args=(sid, nb_core, events, start, stop, evt_decayfile)
+                     + tuple(extra) + (outp,))
             p.start()
             procs.append(p)
             out_paths.append(outp)
@@ -3324,8 +3386,9 @@ class MadSpinInterface(extended_cmd.Cmd):
                                                 evt_decayfile, nevents, nb_ps_point)
         else:
             logger.info("MadSpin: probing the maximum weight on %s cores", nb_core)
-            per_event = self._scan_maxwgt_parallel(orig_lhe, events, evt_decayfile,
-                                                   nb_core, nevents, nb_ps_point)
+            per_event = self._scan_maxwgt_parallel(
+                orig_lhe, events, evt_decayfile, nb_core,
+                self._scan_maxwgt_shard_entry, (nevents, nb_ps_point))
 
         if per_event is None:
             return []   # a production event had nothing to decay
