@@ -3287,6 +3287,17 @@ class MadSpinInterface(extended_cmd.Cmd):
             nevents = 75
         nb_ps_point = self.options['max_weight_ps_point']
 
+        # Round the number of probe events up to a multiple of nb_core so the
+        # parallel scan splits evenly -- every worker gets the same number of
+        # events, no worker is the odd one out with an extra event whose pool
+        # slice runs short. Reduce nb_ps_point to keep the total decays drawn
+        # (nevents * nb_ps_point, the sampling budget) roughly unchanged.
+        nb_core = self._resolve_nb_core()
+        if nb_core > 1 and nevents % nb_core:
+            budget = nevents * nb_ps_point
+            nevents = int(math.ceil(nevents / float(nb_core))) * nb_core
+            nb_ps_point = max(1, int(round(budget / float(nevents))))
+
         logger.info("Estimating the maximum weight of each decaying particle")
         logger.info("*****************************")
         logger.info("Probing the first %s events with %s phase space points"
