@@ -3640,8 +3640,8 @@ class MadSpinInterface(extended_cmd.Cmd):
         max_mass = min(pole + bw_cut * width, budget)
         mass = lhe_parser.Event.generate_random_mass(pole, width, min_mass, max_mass)
         info = (pole, width, min_mass, max_mass)
-        gap = math.atan((pole**2-min_mass**2)/pole*width)
-        gap += math.atan((max_mass**2-pole**2)/pole*width)
+        gap = math.atan((pole**2-min_mass**2)/pole/width)
+        gap += math.atan((max_mass**2-pole**2)/pole/width)
         return mass, info, gap/math.pi
 
     def _draw_offshell_mass(self, pdg, dec, budget):
