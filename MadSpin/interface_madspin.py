@@ -58,7 +58,7 @@ class MadSpinOptions(banner.ConfigFile):
         self.add_param("max_weight", -1)
         self.add_param('curr_dir', os.path.realpath(os.getcwd()))
         self.add_param('Nevents_for_max_weight', 0)
-        self.add_param("max_weight_ps_point", 400)
+        self.add_param("max_weight_ps_point", 500)
         self.add_param('BW_cut', -1)
         self.add_param('nb_sigma', 0.)
         self.add_param('ms_dir', '')
@@ -80,7 +80,9 @@ class MadSpinOptions(banner.ConfigFile):
         self.add_param('density_tolerance', 1E-4, comment='Tolerance for deviation between density and full ME')
         self.add_param('decay_event_mult', 1E0, comment='Produce more events than needed so that MadSpin does not have to regenerate decay events')
         self.add_param('nb_core', 0, comment='Number of cores for the MadSpin parallel unweighting (0 = use the global MG5 nb_core). nb_core>1 enables the process-parallel unweighting path.')
-        self.add_param('density_keep_jacobian', False, comment='keep track of the phase-space volume change related to the offshell reshuffling')
+        self.add_param('density_keep_jacobian', False, comment='PA spinmode only: fold the offshell-reshuffling phase-space jacobian into the accept/reject weight instead of applying the reshuffle as a post-acceptance kinematic dressing. Ignored by the madspin/full spinmodes, which always include that jacobian.')
+        self.add_param('sequential_decay', False, comment='accept/reject one decaying particle at a time instead of the full set at once (density mode). Exact and much cheaper when several particles decay; set to False for the historical joint accept/reject.')
+        self.add_param('sequential_spin_order', '2 3 1', comment='spin order (MG5 2S+1 convention) deciding which particle is accept/rejected first in sequential_decay: default fermions, then vectors, then scalars (which can never be rejected).')
 
     ############################################################################
     ##  Special post-processing of the options                                ## 
@@ -1780,6 +1782,13 @@ class MadSpinInterface(extended_cmd.Cmd):
         if nevents_for_max == 0 :
             nevents_for_max = 75
         nevents_for_max *= self.options['max_weight_ps_point']
+        # Security margin on the decays reserved for the maximum-weight scan.
+        # The scan draws exactly nevents_for_max decays *per slot* (measured: no
+        # restarts for tops), but the parallel scan stripes the pool across the
+        # workers, and dividing the bare reservation leaves each worker's slice
+        # only just big enough -- an uneven split then exhausts one worker and
+        # forces a mid-scan refill. A 50% margin absorbs that unevenness.
+        nevents_for_max = int(1.5 * nevents_for_max)
         
         with misc.MuteLogger(["madgraph", "madevent", "ALOHA", "cmdprint"], [50,50,50,50]):
             mg5 = self.mg5cmd
@@ -1798,10 +1807,19 @@ class MadSpinInterface(extended_cmd.Cmd):
             #    below so they overlap instead of running one particle after the
             #    other.
             gen_jobs = collections.OrderedDict()
+            # How many decay events one production event burns per decaying
+            # particle. The joint accept/reject redraws the whole set on a
+            # reject, so every pool is consumed at the same rate; the sequential
+            # one redraws a single particle, so each pool is consumed at its own
+            # slot's rate -- the ladder of _decay_pool_ladder.
+            seq_ladder = self._sequential_pool_ladder(to_decay, nb_event,
+                                                      density_method)
             for pdg, nb_needed in to_decay.items():
                 # muliply by expected effeciency of generation
                 spin = self.model.get_particle(pdg).get('spin')
-                if spin == 1:
+                if pdg in seq_ladder:
+                    efficiency = seq_ladder[pdg]
+                elif spin == 1:
                     efficiency = 1.1
                 else:
                     efficiency = 2.0
@@ -1925,7 +1943,20 @@ class MadSpinInterface(extended_cmd.Cmd):
 	
 	    #4. determine the maxwgt
         #print(f"Spyros decay file: {evt_decayfile}")
-        maxwgt = self.get_maxwgt_for_onshell(orig_lhe, evt_decayfile, decay_dict)
+        # Sequential mode tests one decaying particle at a time and so needs one
+        # bound per slot of the ordering; it falls back to the joint bound if the
+        # probe cannot produce them (nothing decays, too few events to spread).
+        sequential = self._sequential_active(density_method)
+        maxwgts = []
+        if sequential:
+            maxwgts = self.get_sequential_maxwgt(orig_lhe, evt_decayfile)
+            if not maxwgts:
+                logger.info("MadSpin: no per-particle maximum weight could be "
+                            "estimated, using the joint accept/reject")
+                sequential = False
+        maxwgt = None
+        if not sequential:
+            maxwgt = self.get_maxwgt_for_onshell(orig_lhe, evt_decayfile, decay_dict)
 
         #5. generate the decay (for each production event)
         # The per-event unweighting loop is embarrassingly parallel (events are
@@ -1946,6 +1977,8 @@ class MadSpinInterface(extended_cmd.Cmd):
 
         ctx = dict(
             maxwgt=maxwgt,
+            maxwgts=maxwgts,
+            sequential=sequential,
             decay_dict=decay_dict,
             drop_prob_per_pdg=drop_prob_per_pdg,
             mixed_pdgs_set=mixed_pdgs_set,
@@ -2062,6 +2095,108 @@ class MadSpinInterface(extended_cmd.Cmd):
         """In how many files the decay pool should be written: one per parallel
         unweighting worker (1 = single pool, historical behaviour)."""
         return self._resolve_nb_core()
+
+    def _sequential_pool_ladder(self, to_decay, nb_event, density_method):
+        """pdg -> how many decay events one production event burns on it, when
+        the accept/reject is done one particle at a time. Empty when it is not.
+
+        Each slot is redrawn until accepted, so it burns 1/eff_k events from its
+        own pool, and eff_k drops along the ordering (_decay_pool_ladder). The
+        pools are per pdg while the ladder is per slot: identical parents share
+        a pool and take consecutive slots, so charge that pdg the largest of
+        them.
+        """
+        if not self._sequential_active(density_method):
+            return {}
+        spins = {}
+        for pdg in to_decay:
+            try:
+                spins[pdg] = self.model.get_particle(pdg).get('spin')
+            except Exception:
+                return {}
+        preference = self._sequential_spin_order()
+        def rank(pdg):
+            spin = spins[pdg]
+            return (preference.index(spin) if spin in preference
+                    else len(preference), abs(pdg), pdg)
+        ladder = {}
+        position = 0
+        for pdg in sorted(to_decay, key=rank):
+            multiplicity = 1
+            if nb_event:
+                multiplicity = max(1, int(to_decay[pdg]) // int(nb_event))
+            ladder[pdg] = self._decay_pool_ladder(position + multiplicity - 1,
+                                                  spins[pdg])
+            position += multiplicity
+        return ladder
+
+    def _sequential_active(self, density_method):
+        """Whether to accept/reject one decaying particle at a time.
+
+        Density mode only -- the whole scheme is expressed in terms of the
+        production density matrix. ``fixed_order`` keeps the joint test: its
+        counter-events ride along with the decays and have not been thought
+        through here. ``sequential_decay`` is the opt-out.
+        """
+        if not density_method:
+            return False
+        if not self.options['sequential_decay']:
+            return False
+        if self.options['fixed_order']:
+            logger.info("MadSpin: fixed_order is on, keeping the joint "
+                        "accept/reject (sequential_decay ignored)")
+            return False
+        if self.options['spinmode'] not in ['PA', 'onshell', 'madspin', 'full']:
+            logger.info("MadSpin: spinmode=%s keeps the joint accept/reject "
+                        "(sequential_decay ignored)", self.options['spinmode'])
+            return False
+        return True
+
+    def _sequential_spin_order(self):
+        """The spin order (MG5 2S+1 convention) driving which particle is
+        accept/rejected first. Unlisted spins go last, in their natural slot
+        order."""
+        try:
+            order = [int(x) for x in
+                     str(self.options['sequential_spin_order']).replace(',', ' ').split()]
+        except (ValueError, TypeError):
+            order = []
+        return order or [2, 3, 1]
+
+    def _decay_slot_order(self, decaying_spins):
+        """Order in which the slots are accept/rejected.
+
+        Sorted by ``sequential_spin_order`` (default: fermions, then vectors,
+        then scalars), ties broken by slot index so a run stays reproducible and
+        independent of dict ordering. Only decides *which slot is filled next* --
+        the tensor product itself must stay in slot order, see
+        MADSPIN_SEQUENTIAL_PLAN.md."""
+        pref = self._sequential_spin_order()
+        def key(slot):
+            spin = decaying_spins[slot]
+            rank = pref.index(spin) if spin in pref else len(pref)
+            return (rank, slot)
+        return sorted(range(len(decaying_spins)), key=key)
+
+    @staticmethod
+    def _decay_pool_ladder(position, spin):
+        """Expected number of decay events one production event burns on the
+        slot sitting at ``position`` of the accept/reject ordering.
+
+        Each slot is redrawn until accepted, so it burns 1/eff_k events from its
+        own pool. The first slot sees a production density matrix traced over
+        everything else -- close to unpolarised, so mild modulation and a high
+        acceptance; each subsequent one sees a more conditioned, more polarised
+        parent, hence a wider weight spread and a lower acceptance. Hence the
+        ladder 1.5, 2, 2.5, 3, ...
+
+        A spin-0 parent (MG5 spin==1) has a 1x1 decay density matrix, so its
+        ratio is identically 1: it can never be rejected and burns exactly one
+        event wherever it sits. Charging it the ladder would just generate
+        decays nobody consumes."""
+        if spin == 1:
+            return 1.1
+        return 1.5 + 0.5 * position
 
     @staticmethod
     def _decay_dir(path_me, pdg, decay_file_nb):
@@ -2289,6 +2424,8 @@ class MadSpinInterface(extended_cmd.Cmd):
         plus per-instance state that is private after ``fork`` (``self.efficiency``,
         ``self.branching_ratio``, the RNG, and the f2py module)."""
         maxwgt = ctx['maxwgt']
+        maxwgts = ctx.get('maxwgts') or []
+        sequential = ctx.get('sequential', False)
         decay_dict = ctx['decay_dict']
         drop_prob_per_pdg = ctx['drop_prob_per_pdg']
         mixed_pdgs_set = ctx['mixed_pdgs_set']
@@ -2300,13 +2437,34 @@ class MadSpinInterface(extended_cmd.Cmd):
 
         nb_try = 0
         nb_loose_skip = 0  # events dropped to equalize BRs (fake-decay path)
+        sequential_stats = collections.defaultdict(int)
         curr_event = -1    # guard: an (over-sharded) empty range leaves it unset
         start = time.time()
         for curr_event, production in enumerate(prod_source):
             if fixed_order:
                 production, counterevt = production[0], production[1:]
-            if curr_event and self.efficiency and curr_event % 10 == 0 and float(str(curr_event)[1:]) == 0:
-                logger.info("decaying event number %s. Efficiency: %s [%s s]" % (curr_event, 1/self.efficiency, time.time()-start))
+            if (curr_event and curr_event % 10 == 0
+                    and float(str(curr_event)[1:]) == 0
+                    and getattr(self, '_shard_tag', None) in (None, 0)):
+                # only one worker prints progress -- the others would just
+                # interleave the same lines
+                if sequential and sequential_stats:
+                    # per-particle unweighting cost: how many decay events each
+                    # decaying particle burned per accepted event. Clearer than a
+                    # single number, and it is the sum of these -- and reported
+                    # once per event, i.e. gated on the slot-0 pass, not per slot.
+                    positions = sorted(int(k.rsplit('_', 1)[1]) for k in
+                                       sequential_stats if k.startswith('nb_try_'))
+                    per = ' '.join(
+                        'p%d=%.2f' % (k, sequential_stats['nb_try_%d' % k]
+                                      / float(curr_event + 1)) for k in positions)
+                    logger.info("decaying event number %s/%s. Decay events per "
+                                "accepted event, per particle: %s [%s s]"
+                                % (curr_event, nb_event, per, time.time()-start))
+                elif self.efficiency:
+                    logger.info("decaying event number %s/%s. Trials per event: "
+                                "%.4g [%s s]" % (curr_event, nb_event, 1/self.efficiency,
+                                                 time.time()-start))
 
             # BR-equalization: drop this event with probability
             # 1 - br_pdg / max_br when this production process has a smaller
@@ -2327,6 +2485,37 @@ class MadSpinInterface(extended_cmd.Cmd):
                         "(event %d has pdgs=%s). Please report this case." %
                         (curr_event, evt_mixed_pdgs))
 
+            if sequential:
+                # Accept/reject one decaying particle at a time. Every
+                # production event yields a set (each slot is redrawn until it
+                # is accepted), so there is no outer rejection loop here.
+                seq_stats = collections.defaultdict(int)
+                decays = self.sequential_accept_reject(
+                                production, evt_decayfile, maxwgts,
+                                nb_event - curr_event, stats=seq_stats)
+                if decays is None:
+                    # nothing to decay in this production event
+                    output_lhe.write_events(production)
+                    continue
+                for key, value in seq_stats.items():
+                    sequential_stats[key] += value
+                nb_try += sum(v for k, v in seq_stats.items()
+                              if k.startswith('nb_try_'))
+                full_evt = lhe_parser.Event(str(production))
+                full_evt = full_evt.add_decays(decays)
+                if density_needs_reshuffle:
+                    # the decays already carry their sampled virtualities; this
+                    # is the single production reshuffling of the chain, which
+                    # sequential_accept_reject has already checked is possible
+                    full_evt.reshuffle_production()
+                self.efficiency = float(curr_event + 1) / nb_try if nb_try else 1.0
+                full_evt.wgt *= self.branching_ratio
+                wgts = full_evt.parse_reweight()
+                for key in wgts:
+                    wgts[key] *= self.branching_ratio
+                output_lhe.write_events(full_evt)
+                continue
+
             # Per-production-event cache reused across rejection retries.
             prod_density_cached = None
 
@@ -2336,28 +2525,46 @@ class MadSpinInterface(extended_cmd.Cmd):
                 # In density mode do not do full event construction before accept/reject
                 build_event = (not density_method) or self.options['fixed_order']
 
+                # Offshell (madspin/full) density: the reshuffle of the chain
+                # happens INSIDE get_onshell_evt_and_wgt (its jacobian is folded
+                # into wgt there). It mutates the production event in place, so pass
+                # a per-trial onshell copy -- otherwise a rejected trial's offshell
+                # kinematics leak into the next trial's denominator ME and reshuffle
+                # jacobian (mass_shuffle's chi telescopes, so the kinematics are
+                # unchanged, but the jacobian and MEdenom_prod are not).
+                offshell_density = density_method and not density_pole_approximation
+                prod_trial = lhe_parser.Event(str(production)) if offshell_density else production
+
                 if prod_density_cached is None or not density_pole_approximation:
                     full_evt, wgt, prod_density_cached = self.get_onshell_evt_and_wgt(
-                        production, decays, decay_dict, build_event=build_event)
+                        prod_trial, decays, decay_dict, build_event=build_event)
                 else:
                     full_evt, wgt, _ = self.get_onshell_evt_and_wgt(
-                        production, decays, decay_dict, prod_density_cached, build_event=build_event)
+                        prod_trial, decays, decay_dict, prod_density_cached, build_event=build_event)
                 jac = 1
-                if density_needs_reshuffle and (
-                        not density_pole_approximation
-                        or self.options['density_keep_jacobian']):
-                    # Reshuffle BEFORE accept/reject so the reshuffling jacobian
-                    # enters the accept/reject weight (wgt*jac). This is the
-                    # full/madspin offshell mode (PA=False), or PA with explicit
-                    # jacobian tracking. Build on a fresh copy because this runs
-                    # on every trial, including rejected ones (must not mutate the
-                    # shared production event).
+                if (density_needs_reshuffle and not offshell_density
+                        and self.options['density_keep_jacobian']):
+                    # PA with explicit jacobian tracking: reshuffle BEFORE
+                    # accept/reject so the reshuffling jacobian enters the weight
+                    # (wgt*jac). Build on a fresh copy because this runs on every
+                    # trial, including rejected ones (must not mutate the shared
+                    # production event). The offshell/madspin path does NOT enter
+                    # here: its reshuffle jacobian is already inside wgt.
                     full_evt = lhe_parser.Event(str(production))
                     full_evt = full_evt.add_decays(decays)
                     jac = full_evt.reshuffle_production()
 
                 if random.random()*maxwgt < wgt*jac:
-                    if (density_needs_reshuffle
+                    if offshell_density:
+                        # prod_trial has already been reshuffled internally (its
+                        # jacobian is in wgt); build the event to write out from the
+                        # reshuffled copy, without reshuffling a second time. If
+                        # get_onshell already built it (fixed_order / density_debug),
+                        # reuse that event -- decays were consumed there.
+                        if full_evt is None:
+                            full_evt = lhe_parser.Event(str(prod_trial))
+                            full_evt = full_evt.add_decays(decays)
+                    elif (density_needs_reshuffle
                             and density_pole_approximation
                             and not self.options['density_keep_jacobian']):
                         # PA (default): reshuffle AFTER acceptance. The reshuffle is
@@ -2401,11 +2608,62 @@ class MadSpinInterface(extended_cmd.Cmd):
 
             output_lhe.write_events(full_evt)
 
+        worker = getattr(self, '_shard_tag', None)
+        if worker is None:
+            logger.info("decay unweighting done. [%.1f s]" % (time.time()-start))
+        else:
+            logger.info("worker %s of %s done. [%.1f s]"
+                        % (worker, getattr(self, '_shard_nb_core', '?'),
+                           time.time()-start))
         n_processed = curr_event + 1
         return dict(n_processed=n_processed,
                     n_written=n_processed - nb_loose_skip,
                     nb_try=nb_try,
-                    nb_loose_skip=nb_loose_skip)
+                    nb_loose_skip=nb_loose_skip,
+                    sequential_stats=dict(sequential_stats))
+
+    def _report_sequential_stats(self, stats_list, n_written):
+        """Per-slot report of the sequential accept/reject.
+
+        The per-slot acceptance is what the pool ladder is meant to predict, and
+        the overflow count is the safety net: a weight above its slot's maximum
+        means the bound was under-estimated, which biases the sample silently,
+        so it is reported loudly rather than left in a debug line.
+        """
+        merged = collections.defaultdict(int)
+        for stats in stats_list:
+            for key, value in (stats.get('sequential_stats') or {}).items():
+                merged[key] += value
+        if not merged:
+            return
+        positions = sorted(int(k.rsplit('_', 1)[1]) for k in merged
+                           if k.startswith('nb_try_'))
+        for position in positions:
+            tries = merged['nb_try_%d' % position]
+            extra = []
+            redraws = merged.get('nb_mass_redraw_%d' % position, 0)
+            if redraws:
+                extra.append('%d mass redraws' % redraws)
+            overflows = merged.get('nb_overflow_%d' % position, 0)
+            if overflows:
+                extra.append('%d ABOVE the maximum weight' % overflows)
+            logger.info(
+                "MadSpin sequential slot %d: %.2f decay events per accepted one"
+                " (%d drawn)%s", position,
+                float(tries) / n_written if n_written else float('inf'), tries,
+                (' [%s]' % ', '.join(extra)) if extra else '')
+        restarts = merged.get('nb_production_restart', 0)
+        if restarts:
+            logger.info("MadSpin sequential: %d chains restarted on a mass set "
+                        "the production could not reshuffle", restarts)
+        total_overflow = sum(v for k, v in merged.items()
+                             if k.startswith('nb_overflow_'))
+        if total_overflow:
+            logger.critical(
+                "MadSpin sequential: %d weights exceeded their per-particle "
+                "maximum. That bound is under-estimated and the sample is "
+                "biased: raise nb_sigma or Nevents_for_max_weight, or set "
+                "sequential_decay = False.", total_overflow)
 
     def _apply_accounting(self, base_out, stats_list):
         """Post-loop accounting shared by the serial and parallel paths: the
@@ -2424,6 +2682,7 @@ class MadSpinInterface(extended_cmd.Cmd):
             "MadSpin unweight efficiency: %.4f (%d written / %d trials, %.2f trials/event)",
             eff, n_written, nb_try, (1.0 / eff if eff else float("inf"))
         )
+        self._report_sequential_stats(stats_list, n_written)
         if nb_loose_skip > 0:
             # Rewrite the banner with the corrected cross-section so it
             # matches the actual sum of kept-event weights. Each kept event
@@ -2525,6 +2784,12 @@ class MadSpinInterface(extended_cmd.Cmd):
                 paths = getattr(evtfile, 'paths', None)
                 if paths and len(paths) == nb_core:
                     local[pdg][file_nb] = lhe_parser.EventFile(paths[shard_id])
+                elif paths:
+                    # split, but not into exactly nb_core files: stride the WHOLE
+                    # chained pool. ``evtfile.name`` is only its first file, so
+                    # striding that would strand every other file's events.
+                    local[pdg][file_nb] = _StridedEvents(
+                        _ChainedEvents(paths), shard_id, nb_core)
                 else:
                     fresh = lhe_parser.EventFile(evtfile.name)
                     local[pdg][file_nb] = _StridedEvents(fresh, shard_id, nb_core)
@@ -2725,92 +2990,112 @@ class MadSpinInterface(extended_cmd.Cmd):
 
     def get_decay_from_file(self,production, evt_decayfile, nb_remain):
         """return a dictionary PDG -> list of associated decay"""
-        
+
         out = collections.defaultdict(list)
+        for i, particle, decay in self._draw_all_decays(production, evt_decayfile,
+                                                        nb_remain):
+            out[particle.pdg].append(decay)
+        return out
+
+    def _draw_all_decays(self, production, evt_decayfile, nb_remain):
+        """Yield (slot_index, particle, decay) for every decaying particle of the
+        production event, in production order -- which is the order the density
+        matrix slots are built in."""
         particles = [p for p in production if int(p.status) == 1.0]
         ids = [particle.pid for particle in particles]
-        for i,particle in enumerate(particles):
-            # check if we need to decay the particle 
-            if particle.pdg not in evt_decayfile:
-                continue # nothing to do for this particle
-            # check how the decay need to be done
-            nb_decay = len(evt_decayfile[particle.pdg])
-            if nb_decay == 0:
-                continue #nothing to do for this particle
-            # Determine the file to read in order to get the decay [decay_file]
-            if nb_decay == 1:
-                decay_file = evt_decayfile[particle.pdg][0]
-                decay_file_nb = 0
-            elif ids.count(particle.pdg) == nb_decay:
-                decay_file = evt_decayfile[particle.pdg][ids[:i].count(particle.pdg)]
-                decay_file_nb = ids[:i].count(particle.pdg)
-            else:
-                #need to select the file according to the associate cross-section
-                r = random.random()
-                tot = sum(evt_decayfile[particle.pdg][key].cross for key in evt_decayfile[particle.pdg])
-                r = r * tot
-                cumul = 0
-                for j,events in evt_decayfile[particle.pdg].items():
+        for i, particle in enumerate(particles):
+            decay = self._draw_one_decay(particle, i, ids, evt_decayfile, nb_remain)
+            if decay is not None:
+                yield i, particle, decay
+
+    def _draw_one_decay(self, particle, i, ids, evt_decayfile, nb_remain):
+        """Draw one decay event for ``particle`` -- the i-th final-state particle
+        of the production event, ``ids`` being the pdgs of all of them -- and
+        refill its pool if it runs out. Returns None when that particle does not
+        decay.
+
+        Factored out of get_decay_from_file so that the sequential accept/reject
+        can redraw a single particle without touching the ones already accepted.
+        """
+        # check if we need to decay the particle
+        if particle.pdg not in evt_decayfile:
+            return None # nothing to do for this particle
+        # check how the decay need to be done
+        nb_decay = len(evt_decayfile[particle.pdg])
+        if nb_decay == 0:
+            return None #nothing to do for this particle
+        # Determine the file to read in order to get the decay [decay_file]
+        if nb_decay == 1:
+            decay_file = evt_decayfile[particle.pdg][0]
+            decay_file_nb = 0
+        elif ids.count(particle.pdg) == nb_decay:
+            decay_file = evt_decayfile[particle.pdg][ids[:i].count(particle.pdg)]
+            decay_file_nb = ids[:i].count(particle.pdg)
+        else:
+            #need to select the file according to the associate cross-section
+            r = random.random()
+            tot = sum(evt_decayfile[particle.pdg][key].cross for key in evt_decayfile[particle.pdg])
+            r = r * tot
+            cumul = 0
+            for j,events in evt_decayfile[particle.pdg].items():
                     
-                    cumul += events.cross
-                    if r < cumul:
-                        decay_file = events
-                        decay_file_nb = j
-                        break
-                    else:
-                        continue
-                else:
-                    raise Exception
-            # So now we know which file to read. Do it and re-generate events for that 
-            # file if needed.
-            while 1:
-                try:
-                    decay = next(decay_file)
+                cumul += events.cross
+                if r < cumul:
+                    decay_file = events
+                    decay_file_nb = j
                     break
-                except StopIteration:
-                    # Estimate refill size from remaining production events
-                    # efficiency and per-trial consumption if decaying particles
-                    # Take into account identical parents
-                    # Oversample by 10% to reduce refill frequency; cap to limit one refill cost.
-                    eff = max(self.efficiency, 1e-12)
-                    same_pdg = ids.count(particle.pdg)
-                    if nb_decay == 1:
-                        burn = same_pdg
-                    elif nb_decay == same_pdg:
-                        burn = 1.0
-                    else:
-                        burn = max(1.0, float(same_pdg) / float(nb_decay))
-                    needed = int(math.ceil(1.10 * burn * nb_remain / eff))
-                    # Statistical-fluctuation security: the number of events we
-                    # actually get back fluctuates like sqrt(N), so ask for
-                    # sqrt(target) more than the bare target -- running short
-                    # would cost a whole extra refill.
-                    needed += int(math.ceil(math.sqrt(needed)))
-                    needed = min(200000, max(needed, 1000))
-                    if getattr(self, '_shard_tag', None) is not None:
-                        # Parallel unweighting: generation is not fork-safe and
-                        # must not run concurrently, so one worker generates a
-                        # pool for everybody (nb_core * nb_remaining / eff) while
-                        # the others block. _worker_refill returns the path of
-                        # this worker's own file of that pool.
-                        pool = self._worker_refill(
-                            particle.pdg, decay_file_nb,
-                            needed * self._shard_nb_core)
-                        evt_decayfile[particle.pdg][decay_file_nb] = \
-                            lhe_parser.EventFile(pool)
-                    else:
-                        # serial: _regenerate_events already returns the reader
-                        # over the events it produced
-                        self._refill_nb = getattr(self, '_refill_nb', 0) + 1
-                        evt_decayfile[particle.pdg][decay_file_nb] = \
-                            self._regenerate_events(
-                                particle.pdg, decay_file_nb, needed,
-                                'ms_refill_%d' % self._refill_nb)
-                    decay_file = evt_decayfile[particle.pdg][decay_file_nb]
+                else:
                     continue
-            out[particle.pdg].append(decay)
-                        
-        return out
+            else:
+                raise Exception
+        # So now we know which file to read. Do it and re-generate events for that 
+        # file if needed.
+        while 1:
+            try:
+                decay = next(decay_file)
+                break
+            except StopIteration:
+                # Estimate refill size from remaining production events
+                # efficiency and per-trial consumption if decaying particles
+                # Take into account identical parents
+                # Oversample by 10% to reduce refill frequency; cap to limit one refill cost.
+                eff = max(self.efficiency, 1e-12)
+                same_pdg = ids.count(particle.pdg)
+                if nb_decay == 1:
+                    burn = same_pdg
+                elif nb_decay == same_pdg:
+                    burn = 1.0
+                else:
+                    burn = max(1.0, float(same_pdg) / float(nb_decay))
+                needed = int(math.ceil(1.10 * burn * nb_remain / eff))
+                # Statistical-fluctuation security: the number of events we
+                # actually get back fluctuates like sqrt(N), so ask for
+                # sqrt(target) more than the bare target -- running short
+                # would cost a whole extra refill.
+                needed += int(math.ceil(math.sqrt(needed)))
+                needed = min(200000, max(needed, 1000))
+                if getattr(self, '_shard_tag', None) is not None:
+                    # Parallel unweighting: generation is not fork-safe and
+                    # must not run concurrently, so one worker generates a
+                    # pool for everybody (nb_core * nb_remaining / eff) while
+                    # the others block. _worker_refill returns the path of
+                    # this worker's own file of that pool.
+                    pool = self._worker_refill(
+                        particle.pdg, decay_file_nb,
+                        needed * self._shard_nb_core)
+                    evt_decayfile[particle.pdg][decay_file_nb] = \
+                        lhe_parser.EventFile(pool)
+                else:
+                    # serial: _regenerate_events already returns the reader
+                    # over the events it produced
+                    self._refill_nb = getattr(self, '_refill_nb', 0) + 1
+                    evt_decayfile[particle.pdg][decay_file_nb] = \
+                        self._regenerate_events(
+                            particle.pdg, decay_file_nb, needed,
+                            'ms_refill_%d' % self._refill_nb)
+                decay_file = evt_decayfile[particle.pdg][decay_file_nb]
+                continue
+        return decay
         
     
     def get_maxwgt_for_onshell(self, orig_lhe, evt_decayfile, decay_dict):
@@ -2820,85 +3105,892 @@ class MadSpinInterface(extended_cmd.Cmd):
                 
         if self.options['ms_dir'] and os.path.exists(pjoin(self.options['ms_dir'], 'max_wgt')):
             return float(open(pjoin(self.options['ms_dir'], 'max_wgt'),'r').read())
-        
+
         nevents = self.options['Nevents_for_max_weight']
         if nevents == 0 :
             nevents = 75
-        
-        all_maxwgt = []
+        nb_ps_point = self.options['max_weight_ps_point']
+
+        # Same even-split rounding as the sequential scan: round the probe events
+        # up to a multiple of nb_core and reduce nb_ps_point to keep the sampling
+        # budget, so the forked scan splits evenly across the workers.
+        nb_core = self._resolve_nb_core()
+        if nb_core > 1 and nevents % nb_core:
+            budget = nevents * nb_ps_point
+            nevents = int(math.ceil(nevents / float(nb_core))) * nb_core
+            nb_ps_point = max(1, int(round(budget / float(nevents))))
+
         logger.info("Estimating the maximum weight")
         logger.info("*****************************")
-        logger.info("Probing the first %s events with %s phase space points" % (nevents, self.options['max_weight_ps_point']))
-
-        self.efficiency = 1. / self.options['max_weight_ps_point']
-        start = time.time()
+        logger.info("Probing the first %s events with %s phase space points"
+                    % (nevents, nb_ps_point))
 
         orig_lhe.seek(0)
-        
-        # Loop over production events
-        for i in range(nevents):
-            if i % 5 ==1:
-                logger.info( "Event %s/%s :  %2fs" % (i, nevents, time.time()-start))
-            maxwgt = 0
+        if self.options['fixed_order']:
+            orig_lhe.eventgroup = True
+        events = []
+        for _ in range(nevents):
             try:
-                base_event = next(orig_lhe)
+                events.append(next(orig_lhe))
             except StopIteration:
                 break
+        if not events:
+            return 0.0
+
+        # The probe events are independent, so the scan forks the same way as
+        # the sequential one -- each worker owns a slice of the events and its
+        # own view of the decay pools.
+        nb_core = max(1, min(nb_core, len(events)))
+        if nb_core == 1:
+            all_maxwgt = self._joint_maxwgt_range(events, 0, len(events),
+                                                  evt_decayfile, decay_dict,
+                                                  nevents, nb_ps_point)
+        else:
+            logger.info("MadSpin: probing the maximum weight on %s cores", nb_core)
+            all_maxwgt = self._scan_maxwgt_parallel(
+                orig_lhe, events, evt_decayfile, nb_core,
+                self._joint_maxwgt_shard_entry, (decay_dict, nevents, nb_ps_point))
+
+        base_max_weight = self._combine_maxwgt(all_maxwgt)
+        if self.options['ms_dir']:
+            open(pjoin(self.options['ms_dir'], 'max_wgt'),'w').write(str(base_max_weight))
+        return base_max_weight
+
+    def _scan_maxwgt_range(self, events, start, stop, evt_decayfile,
+                           nevents, nb_ps_point):
+        """Per-event maximum-weight vectors for ``events[start:stop]``: one
+        vector per event holding, for each ordering position, the largest w_k
+        seen over ``nb_ps_point`` probe chains. Returns None as soon as a
+        production event turns out to have nothing to decay (the caller then
+        falls back to the joint bound)."""
+        self.efficiency = 1. / nb_ps_point
+        t0 = time.time()
+        per_event = []
+        for i in range(start, stop):
+            if (i - start) % 5 == 1 and getattr(self, '_shard_tag', None) in (None, 0):
+                # only one worker prints scan progress
+                logger.info("Event %s/%s :  %2fs" % (i, stop, time.time()-t0))
+            base_event = events[i]
+            # events left in *this* range (the worker's shard), not the global
+            # nevents - i. It only feeds the decay-pool refill sizing, and the
+            # refill already multiplies by nb_core to share the pool across
+            # workers -- so passing the global count made a forked scan worker
+            # refill nb_core times too many decays (900k instead of ~60k).
+            nb_remain = stop - i
+            best = None
+            for _ in range(nb_ps_point):
+                probe = []
+                out = self.sequential_accept_reject(base_event, evt_decayfile,
+                                                    None, nb_remain, probe=probe)
+                if out is None:
+                    return None
+                if best is None:
+                    best = list(probe)
+                else:
+                    best = [max(old, new) for old, new in zip(best, probe)]
+            if best:
+                per_event.append(best)
+        return per_event
+
+    def _scan_maxwgt_shard_entry(self, shard_id, nb_core, events, start, stop,
+                                 evt_decayfile, nevents, nb_ps_point, out_path):
+        """Worker entry (forked child): scan its slice of the probe events and
+        write the per-event vectors as JSON, mirroring _unweight_shard_entry --
+        its own RNG stream, its own reopened decay pools, failures reported in
+        the JSON rather than raised into the parent."""
+        import json
+        try:
+            random.seed((int(self.seed) if self.seed else 0)
+                        + 7919 * (shard_id + 1))
+            self._shard_tag = shard_id
+            self._shard_nb_core = nb_core
+            self._pool_gen = {}
+            local_pool = self._reopen_decay_pool(evt_decayfile, shard_id, nb_core)
+            per_event = self._scan_maxwgt_range(events, start, stop, local_pool,
+                                                nevents, nb_ps_point)
+            with open(out_path, 'w') as f:
+                json.dump({'per_event': per_event}, f)
+        except Exception as exc:
+            import traceback
+            try:
+                with open(out_path, 'w') as f:
+                    json.dump({'error': str(exc),
+                               'tb': traceback.format_exc()}, f)
+            except Exception:
+                pass
+
+    def _joint_maxwgt_range(self, events, start, stop, evt_decayfile, decay_dict,
+                            nevents, nb_ps_point):
+        """Per-event maximum weight for the *joint* accept/reject, over
+        ``events[start:stop]``: for each production event, the largest
+        full_me/(prod*dec)*jac seen over nb_ps_point decay draws. The serial body
+        of get_maxwgt_for_onshell, factored so it can also run in a forked
+        worker."""
+        self.efficiency = 1. / nb_ps_point
+        t0 = time.time()
+        density_pole_approximation = self.options['spinmode'] in ['PA', 'onshell']
+        density_do_reshuffle = self.options['spinmode'] == 'PA'
+        density_needs_reshuffle = (
+            self.generate_all.mode == 'density'
+            and (not density_pole_approximation or density_do_reshuffle))
+        per_event = []
+        for i in range(start, stop):
+            if (i - start) % 5 == 1 and getattr(self, '_shard_tag', None) in (None, 0):
+                logger.info("Event %s/%s :  %2fs" % (i, stop, time.time()-t0))
+            base_event = events[i]
             if self.options['fixed_order']:
                 base_event = base_event[0]
-            # Cache production density matrix
+            maxwgt = 0
             density_matrix_prod = None
-            # Loop over decays
-            for j in range(self.options['max_weight_ps_point']):
-                decays = self.get_decay_from_file(base_event, evt_decayfile, nevents-i)   
-                #carefull base_event is modified by the following function 
+            offshell_density = (self.generate_all.mode == 'density'
+                                and not density_pole_approximation)
+            for j in range(nb_ps_point):
+                # stop - i (this worker's remaining events) sizes the pool refill
+                decays = self.get_decay_from_file(base_event, evt_decayfile, stop - i)
+                # offshell/madspin reshuffles the production event in place; use a
+                # per-draw onshell copy so repeated draws don't compound and so the
+                # reshuffle jacobian (now folded into wgt) is taken from the onshell
+                # reference each draw.
+                prod_draw = lhe_parser.Event(str(base_event)) if offshell_density else base_event
                 if density_matrix_prod is None:
                     _, wgt, density_matrix_prod = self.get_onshell_evt_and_wgt(
-                        base_event, decays, decay_dict, build_event=False)
-                    #print(f"wgt1 = {wgt}")
+                        prod_draw, decays, decay_dict, build_event=False)
                 else:
                     wgt = self.get_onshell_evt_and_wgt(
-                        base_event, decays, decay_dict, density_matrix_prod, build_event=False)[1]
-                    #print(f"wgt2 = {wgt}")
-                #print(f"Event {i} , PS point {j}, wgt for max = {wgt}")
+                        prod_draw, decays, decay_dict, density_matrix_prod,
+                        build_event=False)[1]
                 jac = 1
-                # Mirror the accept/reject loop: include the reshuffling jacobian
-                # in the max-weight estimate whenever the reshuffle is applied
-                # *before* accept/reject (full/madspin offshell, or PA with
-                # jacobian tracking). PA-after-acceptance keeps jac = 1 here.
-                density_pole_approximation = self.options['spinmode'] in ['PA', 'onshell']
-                density_do_reshuffle = self.options['spinmode'] == 'PA'
-                density_needs_reshuffle = (
-                    self.generate_all.mode == 'density'
-                    and (not density_pole_approximation
-                         or density_do_reshuffle))
-                if density_needs_reshuffle and (
-                        not density_pole_approximation
-                        or self.options['density_keep_jacobian']):
+                if (density_needs_reshuffle and not offshell_density
+                        and self.options['density_keep_jacobian']):
+                    # PA with explicit jacobian tracking: reshuffle to expose the
+                    # jacobian in the max weight. Offshell/madspin does NOT enter
+                    # here -- its reshuffle jacobian is already inside wgt.
                     full_evt = lhe_parser.Event(str(base_event))
                     full_evt = full_evt.add_decays(decays)
                     jac = full_evt.reshuffle_production()
                 maxwgt = max(wgt*jac, maxwgt)
-            all_maxwgt.append(maxwgt.real)
+            per_event.append(float(getattr(maxwgt, 'real', maxwgt)))
+        return per_event
+
+    def _joint_maxwgt_shard_entry(self, shard_id, nb_core, events, start, stop,
+                                  evt_decayfile, decay_dict, nevents, nb_ps_point,
+                                  out_path):
+        """Worker entry (forked child) for the joint max-weight scan. Mirrors
+        _scan_maxwgt_shard_entry: own RNG stream, own reopened decay pools,
+        failures reported in the JSON."""
+        import json
+        try:
+            random.seed((int(self.seed) if self.seed else 0)
+                        + 7919 * (shard_id + 1))
+            self._shard_tag = shard_id
+            self._shard_nb_core = nb_core
+            self._pool_gen = {}
+            local_pool = self._reopen_decay_pool(evt_decayfile, shard_id, nb_core)
+            per_event = self._joint_maxwgt_range(events, start, stop, local_pool,
+                                                 decay_dict, nevents, nb_ps_point)
+            with open(out_path, 'w') as f:
+                json.dump({'per_event': per_event}, f)
+        except Exception as exc:
+            import traceback
+            try:
+                with open(out_path, 'w') as f:
+                    json.dump({'error': str(exc),
+                               'tb': traceback.format_exc()}, f)
+            except Exception:
+                pass
+
+    def _scan_maxwgt_parallel(self, orig_lhe, events, evt_decayfile, nb_core,
+                              shard_entry, extra):
+        """Fork one worker per contiguous slice of the probe events; each runs
+        ``shard_entry`` and returns its per-event data through a JSON file.
+        Concatenating them is order independent -- _combine_maxwgt takes the
+        max/spread over all events -- so the result matches the serial scan up to
+        which decays each draw pulls. ``extra`` is the tuple of arguments the
+        shard entry needs after ``evt_decayfile`` (the joint and sequential scans
+        pass different ones). Used by both get_maxwgt_for_onshell and
+        get_sequential_maxwgt."""
+        import multiprocessing as mp
+        import json
+        base = '%s.maxwgt' % orig_lhe.name
+        chunk = int(math.ceil(len(events) / float(nb_core)))
+        # contiguous slices; the last cores get nothing if events < nb_core
+        ranges = [(sid * chunk, min((sid + 1) * chunk, len(events)))
+                  for sid in range(nb_core)]
+        ranges = [(a, b) for (a, b) in ranges if a < b]
+        # Keep the ORIGINAL nb_core as the pool-addressing count: the decay pool
+        # was split into nb_core files, and each worker must address it with that
+        # same count so it opens *its* file (paths[shard_id]). Reducing it to the
+        # number of non-empty ranges made len(paths) != nb_core, which dropped
+        # every worker onto the striding fallback -- reading only the first file.
+        # Trailing empty shards are simply not launched (their files go unused by
+        # the scan, which is fine -- the pool is generated uniformly).
+
+        mpctx = mp.get_context('fork')
+        procs, out_paths = [], []
+        for sid, (start, stop) in enumerate(ranges):
+            outp = '%s.shard%d.json' % (base, sid)
+            p = mpctx.Process(
+                target=shard_entry,
+                args=(sid, nb_core, events, start, stop, evt_decayfile)
+                     + tuple(extra) + (outp,))
+            p.start()
+            procs.append(p)
+            out_paths.append(outp)
+        for p in procs:
+            p.join()
+
+        per_event = []
+        result = per_event
+        for sid, outp in enumerate(out_paths):
+            if not os.path.exists(outp):
+                raise Exception("MadSpin max-weight worker %s produced no result "
+                                "(crashed). Re-run with nb_core=1 to debug." % sid)
+            with open(outp) as f:
+                r = json.load(f)
+            if 'error' in r:
+                raise Exception("MadSpin max-weight worker %s failed:\n%s"
+                                % (sid, r.get('tb', r['error'])))
+            if r['per_event'] is None:
+                result = None   # nothing to decay: fall back to the joint bound
+            elif result is not None:
+                result.extend(r['per_event'])
+        for outp in out_paths:
+            try:
+                os.remove(outp)
+            except OSError:
+                pass
+        return result
+
+    def get_sequential_maxwgt(self, orig_lhe, evt_decayfile):
+        """One bound C_k per position of the decay ordering, for the sequential
+        accept/reject. Returns [] when nothing decays.
+
+        Same probe as the joint scan -- the first Nevents_for_max_weight
+        production events, max_weight_ps_point sets of decays each, the largest
+        weight per production event, then mean + nb_sigma*sd -- but applied to
+        each slot's own weight.
+
+        The probe draws every slot from the pool uniformly whereas the real
+        chain draws slot k conditioned on the decays it has accepted. The
+        support is the same, so this estimates the same bound; only the density
+        with which the tail is explored differs, which is why the margins are
+        kept and the accept/reject counts its overflows.
+        """
+        cache = None
+        if self.options['ms_dir']:
+            # a distinct name: the joint bound is a single float, this is a list
+            cache = pjoin(self.options['ms_dir'], 'max_wgt_sequential')
+            if os.path.exists(cache):
+                return [float(x) for x in open(cache).read().split()]
+
+        nevents = self.options['Nevents_for_max_weight']
+        if nevents == 0:
+            nevents = 75
+        nb_ps_point = self.options['max_weight_ps_point']
+
+        # Round the number of probe events up to a multiple of nb_core so the
+        # parallel scan splits evenly -- every worker gets the same number of
+        # events, no worker is the odd one out with an extra event whose pool
+        # slice runs short. Reduce nb_ps_point to keep the total decays drawn
+        # (nevents * nb_ps_point, the sampling budget) roughly unchanged.
+        nb_core = self._resolve_nb_core()
+        if nb_core > 1 and nevents % nb_core:
+            budget = nevents * nb_ps_point
+            nevents = int(math.ceil(nevents / float(nb_core))) * nb_core
+            nb_ps_point = max(1, int(round(budget / float(nevents))))
+
+        logger.info("Estimating the maximum weight of each decaying particle")
+        logger.info("*****************************")
+        logger.info("Probing the first %s events with %s phase space points"
+                    % (nevents, nb_ps_point))
+        # sequential_decay never reaches here with fixed_order (it falls back to
+        # the joint accept/reject), so the events are plain, not event-groups.
+        orig_lhe.seek(0)
+        events = []
+        for _ in range(nevents):
+            try:
+                events.append(next(orig_lhe))
+            except StopIteration:
+                break
+        if not events:
+            return []
+
+        # The probe events are independent, exactly like the unweighting, so the
+        # scan forks the same way -- each worker owns a slice of the events and
+        # its own view of the decay pools.
+        nb_core = self._resolve_nb_core()
+        nb_core = max(1, min(nb_core, len(events)))
+        if nb_core == 1:
+            per_event = self._scan_maxwgt_range(events, 0, len(events),
+                                                evt_decayfile, nevents, nb_ps_point)
+        else:
+            logger.info("MadSpin: probing the maximum weight on %s cores", nb_core)
+            per_event = self._scan_maxwgt_parallel(
+                orig_lhe, events, evt_decayfile, nb_core,
+                self._scan_maxwgt_shard_entry, (nevents, nb_ps_point))
+
+        if per_event is None:
+            return []   # a production event had nothing to decay
+        if len(per_event) < 2:
+            # _combine_maxwgt needs a spread to work with
+            return []
+
+        maxwgts = [self._combine_maxwgt([event[slot] for event in per_event])
+                   for slot in range(len(per_event[0]))]
+        logger.info("Sequential maximum weights: %s",
+                    ' '.join('%.4g' % w for w in maxwgts))
+        if cache:
+            open(cache, 'w').write(' '.join(repr(w) for w in maxwgts))
+        return maxwgts
+
+    def _combine_maxwgt(self, all_maxwgt):
+        """Turn the per-production-event maxima of a probe into the bound the
+        accept/reject uses: mean + nb_sigma*sd with a safety margin, refined on
+        the largest ones and never below the second largest seen.
+
+        Shared by the joint bound and by each slot's bound in sequential mode.
+        The sequential accept/reject has no way to carry a per-slot overweight
+        forward (redraw-until-accept, not staged unweighting), so a weight above
+        the bound biases the sample directly -- hence a 10% margin rather than
+        the historical 5%.
+        """
+        margin = 1.10
         all_maxwgt.sort(reverse=True)
         assert all_maxwgt[0] >= all_maxwgt[1], "ERROR: "
         decay_tools=madspin.decay_misc()
         ave_weight, std_weight = decay_tools.get_mean_sd(all_maxwgt)
-        base_max_weight = 1.05 * (ave_weight+self.options['nb_sigma']*std_weight)
+        base_max_weight = margin * (ave_weight+self.options['nb_sigma']*std_weight)
 
         for i in [20, 30, 40, 50]:
             if len(all_maxwgt) < i:
                 break
             ave_weight, std_weight = decay_tools.get_mean_sd(all_maxwgt[:i])
-            base_max_weight = max(base_max_weight, 1.05 * (ave_weight+self.options['nb_sigma']*std_weight))
-                
+            base_max_weight = max(base_max_weight, margin * (ave_weight+self.options['nb_sigma']*std_weight))
+
             if all_maxwgt[1] > base_max_weight:
-                base_max_weight = 1.05 * all_maxwgt[1]
-        if self.options['ms_dir']:
-            open(pjoin(self.options['ms_dir'], 'max_wgt'),'w').write(str(base_max_weight))
+                base_max_weight = margin * all_maxwgt[1]
         return base_max_weight
 
             
+    def _density_basis(self, production, decays_key):
+        """Helicity-basis bookkeeping for the production density matrix: which
+        particles decay, where they sit (``position``, ``init_part``), their
+        helicity bases (``helicities``, and the ``allowed_hel``/``ncomb``/
+        ``dimension`` the Fortran side needs), plus the averaging and identical
+        final-state symmetry factors.
+
+        It depends only on the production event and on *which* pdgs decay --
+        not on the decay events, and not on any sampled mass -- so it is
+        computed once per production event and reused across every retry, and
+        across every slot of the sequential accept/reject.
+        """
+        # Production averaging factor (spin/color initial state) from standalone
+        iden_p = self.get_iden(production)
+
+        # Symmetry factor for identical final states in production
+        final_pdgs = [int(p.pid) for p in production if getattr(p, "status", None) == 1]
+        counts_final = collections.Counter(final_pdgs)
+        sym_factor_prod_ident = 1
+        for n in counts_final.values():
+            if n > 1:
+                sym_factor_prod_ident *= math.factorial(n)
+
+        # Find particles that should decay (status==1 and pid in decays keys)
+        init_part = [part for pdg in decays_key for part in production
+                     if part.pid == pdg and part.status == 1]
+        nchanging = len(init_part)
+
+        # Allowed helicities per spin
+        hel_dict = {1: [0], 2: [1, -1], 3: [-1, 0, 1]}
+
+        # Decaying-particle positions (+1 for Fortran), spins, helicities
+        position = [i + 1 for pdg in decays_key
+                    for i in range(len(production))
+                    if production[i].pid == pdg and production[i].status == 1]
+        decaying_pdg = [int(production[i - 1].pid) for i in position]
+        decaying_spins = [self.model.get_particle(i).get('spin') for i in decaying_pdg]
+        helicities = [hel_dict[i] for i in decaying_spins]
+
+        allowed_hel_pairs, allowed_hel = self.get_allowed_hel(helicities)
+
+        return {
+            'decays_key': decays_key,
+            'iden_p': iden_p,
+            'sym_factor_prod_ident': sym_factor_prod_ident,
+            'init_part': init_part,
+            'nchanging': nchanging,
+            'position': position,
+            'helicities': helicities,
+            'decaying_spins': decaying_spins,
+            'allowed_hel': allowed_hel,
+            'ncomb': len(allowed_hel_pairs),
+            'dimension': math.prod(len(i) for i in helicities),
+        }
+
+    @staticmethod
+    def _decaying_pdgs(production, evt_decayfile):
+        """The pdgs that decay, in order of first appearance among the
+        production's final-state particles.
+
+        That is the order ``get_decay_from_file`` fills its dict in, hence the
+        order ``_density_basis`` lays the density matrix slots out in. The
+        sequential accept/reject needs it *before* drawing anything, to build
+        the basis, so it is derived from the pools rather than from a draw. The
+        "does this particle decay" test must stay identical to
+        ``_draw_one_decay``'s.
+        """
+        out = []
+        for particle in production:
+            if int(particle.status) != 1:
+                continue
+            if particle.pdg not in evt_decayfile:
+                continue
+            if not len(evt_decayfile[particle.pdg]):
+                continue
+            if particle.pdg not in out:
+                out.append(particle.pdg)
+        return tuple(out)
+
+    @staticmethod
+    def _sequential_slots(production, decays_key):
+        """Map each density matrix slot to the production final-state particle
+        it belongs to.
+
+        Returns (particles, slot_to_index): ``particles`` is the final state in
+        production order (what ``_draw_one_decay`` indexes into), and
+        ``slot_to_index[s]`` is the position in it of slot s's particle. The
+        slot order mirrors ``_density_basis``'s ``init_part`` -- for pdg in
+        decays_key, in production order -- which is the order the tensor product
+        is built in. The decay *ordering* permutes which slot is filled next; it
+        must never permute this.
+        """
+        particles = [p for p in production if int(p.status) == 1]
+        slot_to_index = []
+        for pdg in decays_key:
+            for i, particle in enumerate(particles):
+                if particle.pid == pdg:
+                    slot_to_index.append(i)
+        return particles, slot_to_index
+
+    @staticmethod
+    def _production_jacobian_for(production, slot_to_index, slot_masses):
+        """J_k: the production reshuffling jacobian with the slots drawn so far
+        carrying their sampled virtuality and the rest still at their nominal
+        mass. Returns -1 (or 0) when that mass set cannot be reshuffled.
+
+        ``slot_masses`` maps slot -> (new_mass, reshuffle_info).
+
+        The masses are placed by slot identity rather than through
+        ``add_decays``, which attaches a pdg's decays to its particles in
+        production order: with a pdg owning several slots and only some of them
+        drawn, that would hand a mass to the wrong particle. Resonance handling
+        is left to reshuffle_production, which is why this is not a function of
+        the top-level masses alone.
+        """
+        probe = lhe_parser.Event(str(production))
+        finals = [p for p in probe if int(p.status) == 1]
+        for slot, (new_mass, info) in slot_masses.items():
+            particle = finals[slot_to_index[slot]]
+            particle.new_mass = new_mass
+            if info is not None:
+                particle.reshuffle_info = info
+        return probe.reshuffle_production(_allow_retry=False)
+
+    def _slot_identity(self, hel):
+        """The I/n a slot contributes while its decay has not been drawn yet.
+        Depends only on the helicity list, so cache it per basis."""
+        key = tuple(hel)
+        try:
+            cache = self._slot_identity_cache
+        except AttributeError:
+            cache = self._slot_identity_cache = {}
+        if key not in cache:
+            cache[key] = madspin.DensityMatrix.identity(1, list(hel), len(hel))
+        return cache[key]
+
+    def _partial_density_contraction(self, density_prod, helicities, slot_densities):
+        """N_k: the production density matrix contracted with the normalised
+        decay density matrix (Dhat = D/Tr D) of every slot drawn so far, the
+        slots still to be drawn contributing I/n -- the average of a decay
+        density matrix over its full phase space.
+
+        ``slot_densities`` maps slot index -> DensityMatrix as get_density
+        returns it (un-normalised); slots absent from it are the undrawn ones.
+
+        The tensor product is built in *slot* order, which is what the
+        production density matrix's helicity index follows. The accept/reject
+        ordering only decides which slot gets filled next -- it must never
+        permute the tensor. See MADSPIN_SEQUENTIAL_PLAN.md.
+        """
+        density_dec = None
+        for slot, hel in enumerate(helicities):
+            density = slot_densities.get(slot)
+            if density is None:
+                density = self._slot_identity(hel)
+            else:
+                density = density.normalized()
+            if density_dec is None:
+                density_dec = density
+            else:
+                density_dec = density_dec.tensor_product(density)
+        return density_dec.scalar_multiplication(density_prod)
+
+    def _decay_mass_is_feasible(self, decay):
+        """Can this decay's products be put on the virtuality just sampled for
+        it? ``t > b j j`` with a top below MW+Mb cannot.
+
+        Probed on a copy: the real reshuffling of the decay still happens once,
+        with the production, exactly as it does today. This only decides whether
+        the sampled mass has to be drawn again."""
+        probe = lhe_parser.Event(str(decay))
+        probe[0].new_mass = decay[0].new_mass
+        probe[0].reshuffle_info = decay[0].reshuffle_info
+        try:
+            return bool(probe.reshuffle_decayevt())
+        except Exception:
+            return False
+
+    def _slot_density(self, decay, parent, hel):
+        """The decay density matrix of one slot, in the lab frame of its parent."""
+        boost = -1 * lhe_parser.FourMomentum(parent)
+        boost.E *= -1
+        decay.boost(boost)
+        return self.get_density(decay, position=[1], allow_hel=hel,
+                                ncomb=len(hel), dimension=len(hel))
+
+    def _draw_mass_value(self, pdg, budget):
+        """Sample one resonance virtuality from its Breit-Wigner, capped at the
+        remaining ``budget`` (what is left of sqrt(shat)). Returns
+        ``(mass, reshuffle_info, jac_bw)`` where jac_bw is the Breit-Wigner
+        sampling jacobian (gap/pi)."""
+        pole = self.banner.get('param', 'mass', abs(pdg)).value
+        width = self.banner.get('param', 'decay', abs(pdg)).value
+        if self.options['BW_cut'] < 0:
+            bw_cut = 15
+        else:
+            bw_cut = self.options['BW_cut']
+        min_mass = pole - bw_cut * width
+        max_mass = min(pole + bw_cut * width, budget)
+        mass = lhe_parser.Event.generate_random_mass(pole, width, min_mass, max_mass)
+        info = (pole, width, min_mass, max_mass)
+        gap = math.atan((pole**2-min_mass**2)/pole/width)
+        gap += math.atan((max_mass**2-pole**2)/pole/width)
+        return mass, info, gap/math.pi
+
+    def _draw_offshell_mass(self, pdg, dec, budget):
+        """Sample one resonance virtuality and store it on the decay event that
+        carries it: ``dec[0]`` gets ``new_mass`` and ``reshuffle_info``. Returns
+        the budget left and that draw's jacobian.
+
+        ``budget`` is what is left of sqrt(shat) once the resonances drawn
+        before this one are paid for, so the draw is order dependent and the
+        caller owns that order (used by the PA per-slot draw).
+        """
+        mass, info, jac = self._draw_mass_value(pdg, budget)
+        dec[0].new_mass = mass
+        dec[0].reshuffle_info = info
+        return budget - mass, jac
+
+    def _offshell_production(self, production, order, particles, slot_to_index,
+                             prod_static):
+        """Set up the offshell (madspin/full) production for one chain attempt.
+
+        Draws a virtuality for every decaying particle up front, reshuffles a
+        *copy* of the production to that mass set (leaving the shared event
+        untouched), and evaluates the production density there. Because every
+        mass is fixed before the per-particle loop, that density (rho) is fixed
+        for the whole chain -- which is what the per-particle decomposition needs
+        and what madspin does not give for free (see MADSPIN_SEQUENTIAL_PLAN.md
+        section 10).
+
+        Returns ``(rho_off, jac_reshuffle, slot_mass, parents)`` or None if the
+        mass set cannot be reshuffled (the caller redraws the whole set):
+        - ``slot_mass[slot]`` = (mass, reshuffle_info, jac_bw);
+        - ``parents[slot]``   = the reshuffled (offshell) production particle to
+          boost that slot's decay to.
+        """
+        budget = production.sqrts
+        slot_mass = {}
+        for slot in order:
+            pdg = particles[slot_to_index[slot]].pid
+            mass, info, jac_bw = self._draw_mass_value(pdg, budget)
+            slot_mass[slot] = (mass, info, jac_bw)
+            budget -= mass
+
+        prod_off = lhe_parser.Event(str(production))
+        finals = [p for p in prod_off if int(p.status) == 1]
+        for slot, (mass, info, _) in slot_mass.items():
+            part = finals[slot_to_index[slot]]
+            part.new_mass = mass
+            part.reshuffle_info = info
+        # _allow_retry=False so the drawn masses stay put (a retry would resample
+        # them and diverge from the masses we reshuffle each decay to); an
+        # impossible set is reported as -1 and the caller restarts.
+        jac_reshuffle = prod_off.reshuffle_production(_allow_retry=False)
+        if jac_reshuffle in (0, -1):
+            return None
+        rho_off = self.get_density(prod_off, prod_static['position'],
+                                   prod_static['allowed_hel'],
+                                   prod_static['ncomb'], prod_static['dimension'])
+        parents = {slot: finals[slot_to_index[slot]] for slot in order}
+        return rho_off, jac_reshuffle, slot_mass, parents
+
+    def sequential_accept_reject(self, production, evt_decayfile, maxwgts,
+                                 nb_remain, stats=None, probe=None):
+        """Accept/reject one decaying particle at a time, in density mode.
+
+        Returns the accepted ``decays`` dict (pdg -> list of decay events, in
+        the order add_decays expects), or None if the production event has
+        nothing to decay.
+
+        Exactness: slot k is accepted with probability w_k / C_k where
+
+            w_k = (N_k / N_{k-1}) * jac_k^decay * (J_k / J_{k-1})
+
+        and every factor telescopes over the chain, so the product reproduces
+        the joint weight. On a reject only *that* slot is redrawn; the slots
+        already accepted are kept. See MADSPIN_SEQUENTIAL_PLAN.md.
+
+        Failure handling follows the scope of the failure: a mass its own decay
+        products cannot accommodate is redrawn on the spot, while a mass *set*
+        the production cannot reshuffle is only knowable once every slot has a
+        mass, so it trashes the whole set and restarts the chain.
+
+        ``probe``: when a list is given nothing is ever rejected and each slot's
+        w_k is appended to it instead. That is how the max-weight scan measures
+        the bounds -- on exactly the weights this loop will later test, since it
+        is this same code computing them.
+        """
+        decays_key = self._decaying_pdgs(production, evt_decayfile)
+        if not decays_key:
+            return None
+        self._ensure_f2py_module()
+        prod_static = getattr(production, '_ms_density_static', None)
+        if not prod_static or prod_static.get('decays_key') != decays_key:
+            prod_static = self._density_basis(production, decays_key)
+            production._ms_density_static = prod_static
+
+        helicities = prod_static['helicities']
+        init_part = prod_static['init_part']
+        order = self._decay_slot_order(prod_static['decaying_spins'])
+        particles, slot_to_index = self._sequential_slots(production, decays_key)
+        ids = [p.pid for p in particles]
+
+        # madspin/full evaluate the production density at reshuffled (offshell)
+        # momenta that couple all decay masses, so rho is drawn per chain (after
+        # the up-front reshuffle) rather than once at onshell. PA/onshell keep a
+        # fixed onshell rho, cached on the production event.
+        offshell = self.options['spinmode'] not in ['PA', 'onshell']
+        density_prod = None
+        if not offshell:
+            density_prod = getattr(production, '_ms_density_prod', None)
+            if density_prod is None:
+                density_prod = self.get_density(production, prod_static['position'],
+                                                prod_static['allowed_hel'],
+                                                prod_static['ncomb'],
+                                                prod_static['dimension'])
+                production._ms_density_prod = density_prod
+
+        # PA samples a virtuality per resonance; onshell does not. 2 -> 1
+        # production has no recoil phase space for RAMBO to redistribute.
+        nb_prod_final = sum(1 for p in production if int(p.status) == 1)
+        draw_mass = (self.options['spinmode'] == 'PA' and nb_prod_final > 1)
+        # Whether the production reshuffling jacobian enters the accept/reject
+        # weight. Follows the joint path (interface_madspin.py, get_onshell PA
+        # block): off by default -- the reshuffle is then a post-acceptance
+        # kinematic dressing and only the Breit-Wigner sampling jacobian is in
+        # the weight. The feasibility of the mass set is still checked either
+        # way, to trigger the whole-set restart.
+        keep_jac = draw_mass and self.options['density_keep_jacobian']
+
+        if stats is None:
+            stats = collections.defaultdict(int)
+
+        while True:     # restart point: an impossible/rejected production mass set
+            parents = init_part
+            jac_reshuffle = 1.0
+            slot_mass = {}
+            if offshell:
+                # draw every virtuality, reshuffle the production once, fix rho
+                setup = self._offshell_production(production, order, particles,
+                                                  slot_to_index, prod_static)
+                if setup is None:
+                    stats['nb_production_restart'] += 1
+                    continue
+                density_prod, jac_reshuffle, slot_mass, parents = setup
+
+                # Mass-set accept/reject, before the per-angle loop. All the
+                # factors that depend on the mass set but not the decay angles --
+                # the production reshuffling jacobian, the Breit-Wigner sampling
+                # jacobians, and the offshell production trace -- go here, so the
+                # per-angle loop no longer carries them (that bundling made slot
+                # 0's acceptance ~1/300). See MADSPIN_SEQUENTIAL_PLAN.md sec 10.
+                w_mass = density_prod.trace().real * jac_reshuffle
+                for s in order:
+                    w_mass *= slot_mass[s][2]
+                if probe is not None:
+                    del probe[:]            # start this chain's probe vector
+                    probe.append(float(w_mass))
+                elif maxwgts:
+                    if w_mass > maxwgts[0]:
+                        stats['nb_overflow_mass'] += 1
+                    if random.random() * maxwgts[0] >= w_mass:
+                        stats['nb_mass_reject'] += 1
+                        continue            # redraw the whole mass set
+
+            slot_densities = {}
+            slot_decays = {}
+            slot_masses = {}
+            n_prev = self._partial_density_contraction(density_prod, helicities, {})
+            j_prev = 1.0
+            budget = production.sqrts
+            restart = False
+
+            for position, slot in enumerate(order):
+                index = slot_to_index[slot]
+                particle = particles[index]
+                # offshell reserves maxwgts[0] for the mass set, so the per-slot
+                # bounds start at index 1
+                wpos = position + 1 if offshell else position
+                if maxwgts:
+                    maxwgt = maxwgts[wpos] if wpos < len(maxwgts) \
+                                           else maxwgts[-1]
+                else:
+                    maxwgt = None
+                while True:
+                    stats['nb_try_%d' % position] += 1
+                    decay = self._draw_one_decay(particle, index, ids,
+                                                 evt_decayfile, nb_remain)
+
+                    if offshell:
+                        # madspin/full: offshell numerator over onshell
+                        # denominator. The mass was drawn up front, so the
+                        # decay is reshuffled to it; on failure the whole set
+                        # restarts (the mass cannot be redrawn for one slot
+                        # without invalidating the fixed rho).
+                        me_on = self.calculate_matrix_element(decay)   # |M_dec|^2_on
+                        decay[0].new_mass, decay[0].reshuffle_info = \
+                            slot_mass[slot][0], slot_mass[slot][1]
+                        # The offshell density is taken on a copy: the drawn
+                        # decay must stay in its onshell rest frame (only tagged
+                        # with new_mass) so the final add_decays + a single
+                        # reshuffle_production rebuild consistent kinematics.
+                        # Reshuffling/boosting it in place leaves it on the
+                        # offshell parent and add_decays then rejects it.
+                        dcopy = lhe_parser.Event(str(decay))
+                        dcopy[0].new_mass = slot_mass[slot][0]
+                        dcopy[0].reshuffle_info = slot_mass[slot][1]
+                        if dcopy.reshuffle_decayevt() in (0, -1):
+                            stats['nb_production_restart'] += 1
+                            restart = True
+                            break
+                        density = self._slot_density(dcopy, parents[slot],
+                                                     helicities[slot])
+                        slot_densities[slot] = density
+                        n_k = self._partial_density_contraction(
+                                        density_prod, helicities, slot_densities)
+                        # per-angle factor only: (N_k/N_{k-1}) * Tr(D_off)/
+                        # |M_dec|^2_on. jac_bw and jac_reshuffle are in w_mass.
+                        wgt = (n_k / n_prev).real * (density.trace().real / me_on)
+                        j_k, new_budget = j_prev, budget
+                        if probe is not None:
+                            probe.append(float(wgt))
+                            accept = True
+                        elif maxwgt is None:
+                            accept = True
+                        else:
+                            if wgt > maxwgt:
+                                stats['nb_overflow_%d' % position] += 1
+                                logger.debug('sequential: slot %s weight %s above'
+                                             ' its max %s', position, wgt, maxwgt)
+                            accept = random.random() * maxwgt < wgt
+                        if accept:
+                            slot_decays[slot] = decay
+                            n_prev = n_k
+                            break
+                        slot_densities.pop(slot, None)
+                        continue
+
+                    jac_dec = 1.0
+                    new_budget = budget
+                    if draw_mass:
+                        # decay-side failure is local to this slot: redraw its
+                        # mass, keep every slot already accepted
+                        while True:
+                            new_budget, jac_dec = self._draw_offshell_mass(
+                                                particle.pdg, decay, budget)
+                            if self._decay_mass_is_feasible(decay):
+                                break
+                            stats['nb_mass_redraw_%d' % position] += 1
+                        slot_masses[slot] = (decay[0].new_mass,
+                                             getattr(decay[0], 'reshuffle_info', None))
+
+                    # The production reshuffling jacobian only enters the
+                    # weight under density_keep_jacobian; then it is needed per
+                    # trial. Otherwise its sole use is spotting a mass set the
+                    # production cannot reshuffle, and that depends on the whole
+                    # set, so it is checked once after the chain is complete --
+                    # not here, where the reshuffle-on-a-copy dominated the cost.
+                    j_k = j_prev
+                    if keep_jac:
+                        j_probe = self._production_jacobian_for(production,
+                                                               slot_to_index,
+                                                               slot_masses)
+                        if j_probe in (0, -1):
+                            stats['nb_production_restart'] += 1
+                            restart = True
+                            break
+                        j_k = j_probe
+
+                    # accepted slots reuse their stored (already normalised)
+                    # density; only this slot's decay is evaluated here
+                    slot_densities[slot] = self._slot_density(
+                                    decay, init_part[slot], helicities[slot])
+                    n_k = self._partial_density_contraction(density_prod, helicities,
+                                                            slot_densities)
+                    wgt = (n_k / n_prev).real * jac_dec * (j_k / j_prev)
+                    if probe is not None:
+                        # python float: these are marshalled as JSON when the
+                        # scan runs across forked workers
+                        probe.append(float(wgt))
+                        accept = True
+                    else:
+                        if wgt > maxwgt:
+                            # the bound was under-estimated: this biases
+                            # silently, so it has to be visible
+                            stats['nb_overflow_%d' % position] += 1
+                            logger.debug('sequential: slot %s weight %s above '
+                                         'its max %s', position, wgt, maxwgt)
+                        accept = random.random() * maxwgt < wgt
+                    if accept:
+                        slot_decays[slot] = decay
+                        n_prev, j_prev, budget = n_k, j_k, new_budget
+                        break
+                    # rejected: this slot only, drop what it contributed
+                    slot_densities.pop(slot, None)
+                    slot_masses.pop(slot, None)
+                if restart:
+                    break
+            if not restart and draw_mass and not keep_jac and probe is None:
+                # feasibility of the complete mass set: one reshuffle for the
+                # whole chain instead of one per trial
+                if self._production_jacobian_for(production, slot_to_index,
+                                                 slot_masses) in (0, -1):
+                    stats['nb_production_restart'] += 1
+                    restart = True
+            if restart and probe is not None:
+                # a partial probe vector was appended for this chain; drop it so
+                # the next attempt records a clean [w_mass, w_0, ...] vector
+                del probe[:]
+            if not restart:
+                break
+
+        # back to the pdg -> list layout add_decays consumes, in slot order
+        decays = collections.defaultdict(list)
+        for slot in range(len(order)):
+            decays[particles[slot_to_index[slot]].pid].append(slot_decays[slot])
+        return decays
+
     def get_onshell_evt_and_wgt(self, production, decays, decay_dict, prod_density_cached=None, build_event=True):
         """ return the onshell wgt for the production event associated to the decays
             return also the full event with decay. 
@@ -2955,25 +4047,17 @@ class MadSpinInterface(extended_cmd.Cmd):
                     density_do_reshuffle):
                 for pdg in decays:
                     for dec in decays[pdg]:
-                        pole = self.banner.get('param', 'mass', abs(pdg)).value
-                        width = self.banner.get('param', 'decay', abs(pdg)).value 
-                        if self.options['BW_cut'] <0: 
-                           bw_cut = 15
-                        else:
-                           bw_cut = self.options['BW_cut']     
-                        min_mass = pole - bw_cut * width
-                        max_mass = min(pole + bw_cut * width,full_dqrts) 
-                        dec[0].new_mass = lhe_parser.Event.generate_random_mass(pole, width, min_mass, max_mass)
-                        dec[0].reshuffle_info = (pole, width, min_mass, max_mass)
-
-                        full_dqrts -= dec[0].new_mass
-                        gap = math.atan((pole**2-min_mass**2)/pole*width)
-                        gap += math.atan((max_mass**2-pole**2)/pole*width)
-                        jac *= gap/math.pi 
+                        full_dqrts, jac_dec = self._draw_offshell_mass(
+                                                    pdg, dec, full_dqrts)
+                        jac *= jac_dec
             if prod_density_cached is None:
-                full_me, prod_density_cached, prod_diag, dec_diag = self.calculate_matrix_element_from_density(production, decays, decay_dict)
-            else:                
-                full_me, _, prod_diag, dec_diag = self.calculate_matrix_element_from_density(production, decays, decay_dict, prod_density_cached)
+                full_me, prod_density_cached, prod_diag, dec_diag, jac_reshuffle = self.calculate_matrix_element_from_density(production, decays, decay_dict)
+            else:
+                full_me, _, prod_diag, dec_diag, jac_reshuffle = self.calculate_matrix_element_from_density(production, decays, decay_dict, prod_density_cached)
+            # The internal reshuffle (offshell/madspin) is the reshuffle of the
+            # chain; fold its jacobian into the weight here so the caller does not
+            # reshuffle the already-offshell event a second time.
+            jac *= jac_reshuffle
             #print(f"full_me from density = {full_me}")
    
             full_event = None
@@ -3030,72 +4114,61 @@ class MadSpinInterface(extended_cmd.Cmd):
         return full_event, full_me/(production_me*decay_me)*jac, prod_density_cached
 
            
+    def _ensure_f2py_module(self):
+        """Load the density-matrix f2py extension and build the pdg -> prefix
+        map, once. Both the matrix-element evaluation and get_density / get_pdir
+        need it, so the sequential accept/reject -- which calls get_density
+        directly, without going through calculate_matrix_element_from_density --
+        must be able to trigger the same setup.
+        """
+        if hasattr(self, 'f2py_module'):
+            return
+        sp_path = pjoin(self.path_me, self.ms_me_subdir, 'SubProcesses')
+        if sys.path[0] != sp_path:
+            sys.path.insert(0, sp_path)
+
+        mymod = self._load_f2py_matrix_module(sp_path)
+        self.f2py_module = mymod
+
+        all_prefix = self.f2py_module.get_prefix()
+        all_pdg, all_procid = self.f2py_module.get_pdg_order()
+        self.pdg2prefix = {}
+        for i, pdg in enumerate(all_pdg):
+            pdg = tuple([x for x in pdg if x != 0])
+            self.pdg2prefix[pdg] = (str(all_prefix[i].decode()).strip(), i)
+
+        if self.model_init:
+            self.model_init = False
+            with misc.chdir(sp_path):
+                if (not os.path.exists(pjoin(self.path_me, 'Cards', 'param_card.dat'))
+                        and os.path.exists(pjoin(self.path_me, 'param_card.dat'))):
+                    mymod.initialise(pjoin(self.path_me, 'param_card.dat'))
+                else:
+                    mymod.initialise(pjoin(self.path_me, 'Cards', 'param_card.dat'))
+
     def calculate_matrix_element_from_density(self, production, decays, decay_dict, prod_density_cached=None):
         """routine to return the matrix element from density matrices"""
 
-        # ------------------------------------------------------------------
-        # Load f2py module and build pdg2prefix map if needed (unchanged logic)
-        # ------------------------------------------------------------------
-        if not hasattr(self, 'f2py_module'):
-            sp_path = pjoin(self.path_me, self.ms_me_subdir, 'SubProcesses')
-            if sys.path[0] != sp_path:
-                sys.path.insert(0, sp_path)
-
-            mymod = self._load_f2py_matrix_module(sp_path)
-            self.f2py_module = mymod
-
-            all_prefix = self.f2py_module.get_prefix()
-            all_pdg, all_procid = self.f2py_module.get_pdg_order()
-            self.pdg2prefix = {}
-            for i, pdg in enumerate(all_pdg):
-                pdg = tuple([x for x in pdg if x != 0])
-                self.pdg2prefix[pdg] = (str(all_prefix[i].decode()).strip(), i)
-
-            if self.model_init:
-                self.model_init = False
-                with misc.chdir(sp_path):
-                    if (not os.path.exists(pjoin(self.path_me, 'Cards', 'param_card.dat'))
-                            and os.path.exists(pjoin(self.path_me, 'param_card.dat'))):
-                        mymod.initialise(pjoin(self.path_me, 'param_card.dat'))
-                    else:
-                        mymod.initialise(pjoin(self.path_me, 'Cards', 'param_card.dat'))
+        self._ensure_f2py_module()
 
         # ------------------------------------------------------------------
         # Cache production-only metadata reused across rejection retries
         # ------------------------------------------------------------------
         decays_key = tuple(decays.keys())
         MEdenom_prod, MEdenom_decay = None, None
+        # Reshuffling jacobian of the internal (offshell/madspin) reshuffle. This
+        # is THE reshuffle of the chain: the caller must fold it into the weight
+        # rather than reshuffling the already-offshell event a second time. It
+        # stays 1.0 for the pole-approximation path (which reshuffles later, after
+        # acceptance) and for 2 -> 1 production (no phase space to redistribute).
+        jac_reshuffle = 1.0
         prod_static = getattr(production, '_ms_density_static', None)
         density_pole_approximation = self.options['spinmode'] in ['PA', 'onshell']
         density_do_reshuffle = self.options['spinmode'] == 'PA'
         if not density_pole_approximation or \
             (not prod_static or prod_static.get('decays_key') != decays_key):
-            # Production averaging factor (spin/color initial state) from standalone
-            iden_p = self.get_iden(production)
-
-            # Symmetry factor for identical final states in production
-            final_pdgs = [int(p.pid) for p in production if getattr(p, "status", None) == 1]
-            counts_final = collections.Counter(final_pdgs)
-            sym_factor_prod_ident = 1
-            for n in counts_final.values():
-                if n > 1:
-                    sym_factor_prod_ident *= math.factorial(n)
-
-            # Find particles that should decay (status==1 and pid in decays keys)
-            init_part = [part for pdg in decays_key for part in production
-                         if part.pid == pdg and part.status == 1]
-            nchanging = len(init_part)
-
-            # Allowed helicities per spin
-            hel_dict = {1: [0], 2: [1, -1], 3: [-1, 0, 1]}
-
-            # Decaying-particle positions (+1 for Fortran), spins, helicities
-            position = [i + 1 for pdg in decays_key
-                        for i in range(len(production))
-                        if production[i].pid == pdg and production[i].status == 1]
-            decaying_pdg = [int(production[i - 1].pid) for i in position]
-            decaying_spins = [self.model.get_particle(i).get('spin') for i in decaying_pdg]
-            helicities = [hel_dict[i] for i in decaying_spins]
+            prod_static = self._density_basis(production, decays_key)
+            production._ms_density_static = prod_static
 
             use_new_mass = (
                 not density_pole_approximation or
@@ -3161,22 +4234,9 @@ class MadSpinInterface(extended_cmd.Cmd):
                         jac *= dec.reshuffle_decayevt()
                 if jac == 0:
                     raise Exception
-
-            allowed_hel_pairs, allowed_hel = self.get_allowed_hel(helicities)
-
-            prod_static = {
-                'decays_key': decays_key,
-                'iden_p': iden_p,
-                'sym_factor_prod_ident': sym_factor_prod_ident,
-                'init_part': init_part,
-                'nchanging': nchanging,
-                'position': position,
-                'helicities': helicities,
-                'allowed_hel': allowed_hel,
-                'ncomb': len(allowed_hel_pairs),
-                'dimension': math.prod(len(i) for i in helicities),
-            }
-            production._ms_density_static = prod_static
+                # hand the reshuffling jacobian back to the caller (folded into
+                # the accept/reject weight) instead of discarding it.
+                jac_reshuffle = jac
 
         iden_p = prod_static['iden_p']
         sym_factor_prod_ident = prod_static['sym_factor_prod_ident']
@@ -3303,8 +4363,8 @@ class MadSpinInterface(extended_cmd.Cmd):
             prod_diag = MEdenom_prod
         prod_diag /= (iden_p * sym_factor_prod_ident)
         if MEdenom_decay is not None:
-            dec_diag *= MEdenom_decay 
-        return me, density_prod, prod_diag, dec_diag
+            dec_diag *= MEdenom_decay
+        return me, density_prod, prod_diag, dec_diag, jac_reshuffle
 
 
     def get_density_matrix_indices(self, nhel_decay):
