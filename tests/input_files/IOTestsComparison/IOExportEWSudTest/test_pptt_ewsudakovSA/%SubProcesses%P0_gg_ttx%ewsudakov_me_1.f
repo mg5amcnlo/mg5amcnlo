@@ -209,7 +209,7 @@ C     Amplitude(s) for diagram number 3
 C     JAMPs contributing to orders QCD=2 QED=0
       JAMP1(1,1) = ((0.000000000000000D+00,1.000000000000000D+00))
      $ *AMP1(1)+(-1.000000000000000D+00)*AMP1(2)
-      JAMP1(2,1) = ((0.000000000000000D+00,-1.000000000000000D+00))
+      JAMP1(2,1) = ((-0.000000000000000D+00,-1.000000000000000D+00))
      $ *AMP1(1)+(-1.000000000000000D+00)*AMP1(3)
 
       ANS(:) = (0D0,0D0)
@@ -245,7 +245,7 @@ C     Amplitude(s) for diagram number 3
 C     JAMPs contributing to orders QCD=2 QED=0
       JAMP2(1,1) = ((0.000000000000000D+00,1.000000000000000D+00))
      $ *AMP2(1)+(-1.000000000000000D+00)*AMP2(2)
-      JAMP2(2,1) = ((0.000000000000000D+00,-1.000000000000000D+00))
+      JAMP2(2,1) = ((-0.000000000000000D+00,-1.000000000000000D+00))
      $ *AMP2(1)+(-1.000000000000000D+00)*AMP2(3)
 
 C     Finally interfere the two sets of color-stripped amplitudes
