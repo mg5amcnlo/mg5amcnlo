@@ -80,7 +80,7 @@ class MadSpinOptions(banner.ConfigFile):
         self.add_param('density_tolerance', 1E-4, comment='Tolerance for deviation between density and full ME')
         self.add_param('decay_event_mult', 1E0, comment='Produce more events than needed so that MadSpin does not have to regenerate decay events')
         self.add_param('nb_core', 0, comment='Number of cores for the MadSpin parallel unweighting (0 = use the global MG5 nb_core). nb_core>1 enables the process-parallel unweighting path.')
-        self.add_param('density_keep_jacobian', False, comment='keep track of the phase-space volume change related to the offshell reshuffling')
+        self.add_param('density_keep_jacobian', False, comment='PA spinmode only: fold the offshell-reshuffling phase-space jacobian into the accept/reject weight instead of applying the reshuffle as a post-acceptance kinematic dressing. Ignored by the madspin/full spinmodes, which always include that jacobian.')
         self.add_param('sequential_decay', False, comment='accept/reject one decaying particle at a time instead of the full set at once (density mode). Exact and much cheaper when several particles decay; set to False for the historical joint accept/reject.')
         self.add_param('sequential_spin_order', '2 3 1', comment='spin order (MG5 2S+1 convention) deciding which particle is accept/rejected first in sequential_decay: default fermions, then vectors, then scalars (which can never be rejected).')
 
