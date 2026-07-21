@@ -2519,28 +2519,46 @@ class MadSpinInterface(extended_cmd.Cmd):
                 # In density mode do not do full event construction before accept/reject
                 build_event = (not density_method) or self.options['fixed_order']
 
+                # Offshell (madspin/full) density: the reshuffle of the chain
+                # happens INSIDE get_onshell_evt_and_wgt (its jacobian is folded
+                # into wgt there). It mutates the production event in place, so pass
+                # a per-trial onshell copy -- otherwise a rejected trial's offshell
+                # kinematics leak into the next trial's denominator ME and reshuffle
+                # jacobian (mass_shuffle's chi telescopes, so the kinematics are
+                # unchanged, but the jacobian and MEdenom_prod are not).
+                offshell_density = density_method and not density_pole_approximation
+                prod_trial = lhe_parser.Event(str(production)) if offshell_density else production
+
                 if prod_density_cached is None or not density_pole_approximation:
                     full_evt, wgt, prod_density_cached = self.get_onshell_evt_and_wgt(
-                        production, decays, decay_dict, build_event=build_event)
+                        prod_trial, decays, decay_dict, build_event=build_event)
                 else:
                     full_evt, wgt, _ = self.get_onshell_evt_and_wgt(
-                        production, decays, decay_dict, prod_density_cached, build_event=build_event)
+                        prod_trial, decays, decay_dict, prod_density_cached, build_event=build_event)
                 jac = 1
-                if density_needs_reshuffle and (
-                        not density_pole_approximation
-                        or self.options['density_keep_jacobian']):
-                    # Reshuffle BEFORE accept/reject so the reshuffling jacobian
-                    # enters the accept/reject weight (wgt*jac). This is the
-                    # full/madspin offshell mode (PA=False), or PA with explicit
-                    # jacobian tracking. Build on a fresh copy because this runs
-                    # on every trial, including rejected ones (must not mutate the
-                    # shared production event).
+                if (density_needs_reshuffle and not offshell_density
+                        and self.options['density_keep_jacobian']):
+                    # PA with explicit jacobian tracking: reshuffle BEFORE
+                    # accept/reject so the reshuffling jacobian enters the weight
+                    # (wgt*jac). Build on a fresh copy because this runs on every
+                    # trial, including rejected ones (must not mutate the shared
+                    # production event). The offshell/madspin path does NOT enter
+                    # here: its reshuffle jacobian is already inside wgt.
                     full_evt = lhe_parser.Event(str(production))
                     full_evt = full_evt.add_decays(decays)
                     jac = full_evt.reshuffle_production()
 
                 if random.random()*maxwgt < wgt*jac:
-                    if (density_needs_reshuffle
+                    if offshell_density:
+                        # prod_trial has already been reshuffled internally (its
+                        # jacobian is in wgt); build the event to write out from the
+                        # reshuffled copy, without reshuffling a second time. If
+                        # get_onshell already built it (fixed_order / density_debug),
+                        # reuse that event -- decays were consumed there.
+                        if full_evt is None:
+                            full_evt = lhe_parser.Event(str(prod_trial))
+                            full_evt = full_evt.add_decays(decays)
+                    elif (density_needs_reshuffle
                             and density_pole_approximation
                             and not self.options['density_keep_jacobian']):
                         # PA (default): reshuffle AFTER acceptance. The reshuffle is
@@ -3218,20 +3236,29 @@ class MadSpinInterface(extended_cmd.Cmd):
                 base_event = base_event[0]
             maxwgt = 0
             density_matrix_prod = None
+            offshell_density = (self.generate_all.mode == 'density'
+                                and not density_pole_approximation)
             for j in range(nb_ps_point):
                 # stop - i (this worker's remaining events) sizes the pool refill
                 decays = self.get_decay_from_file(base_event, evt_decayfile, stop - i)
+                # offshell/madspin reshuffles the production event in place; use a
+                # per-draw onshell copy so repeated draws don't compound and so the
+                # reshuffle jacobian (now folded into wgt) is taken from the onshell
+                # reference each draw.
+                prod_draw = lhe_parser.Event(str(base_event)) if offshell_density else base_event
                 if density_matrix_prod is None:
                     _, wgt, density_matrix_prod = self.get_onshell_evt_and_wgt(
-                        base_event, decays, decay_dict, build_event=False)
+                        prod_draw, decays, decay_dict, build_event=False)
                 else:
                     wgt = self.get_onshell_evt_and_wgt(
-                        base_event, decays, decay_dict, density_matrix_prod,
+                        prod_draw, decays, decay_dict, density_matrix_prod,
                         build_event=False)[1]
                 jac = 1
-                if density_needs_reshuffle and (
-                        not density_pole_approximation
-                        or self.options['density_keep_jacobian']):
+                if (density_needs_reshuffle and not offshell_density
+                        and self.options['density_keep_jacobian']):
+                    # PA with explicit jacobian tracking: reshuffle to expose the
+                    # jacobian in the max weight. Offshell/madspin does NOT enter
+                    # here -- its reshuffle jacobian is already inside wgt.
                     full_evt = lhe_parser.Event(str(base_event))
                     full_evt = full_evt.add_decays(decays)
                     jac = full_evt.reshuffle_production()
@@ -4018,9 +4045,13 @@ class MadSpinInterface(extended_cmd.Cmd):
                                                     pdg, dec, full_dqrts)
                         jac *= jac_dec
             if prod_density_cached is None:
-                full_me, prod_density_cached, prod_diag, dec_diag = self.calculate_matrix_element_from_density(production, decays, decay_dict)
-            else:                
-                full_me, _, prod_diag, dec_diag = self.calculate_matrix_element_from_density(production, decays, decay_dict, prod_density_cached)
+                full_me, prod_density_cached, prod_diag, dec_diag, jac_reshuffle = self.calculate_matrix_element_from_density(production, decays, decay_dict)
+            else:
+                full_me, _, prod_diag, dec_diag, jac_reshuffle = self.calculate_matrix_element_from_density(production, decays, decay_dict, prod_density_cached)
+            # The internal reshuffle (offshell/madspin) is the reshuffle of the
+            # chain; fold its jacobian into the weight here so the caller does not
+            # reshuffle the already-offshell event a second time.
+            jac *= jac_reshuffle
             #print(f"full_me from density = {full_me}")
    
             full_event = None
@@ -4119,6 +4150,12 @@ class MadSpinInterface(extended_cmd.Cmd):
         # ------------------------------------------------------------------
         decays_key = tuple(decays.keys())
         MEdenom_prod, MEdenom_decay = None, None
+        # Reshuffling jacobian of the internal (offshell/madspin) reshuffle. This
+        # is THE reshuffle of the chain: the caller must fold it into the weight
+        # rather than reshuffling the already-offshell event a second time. It
+        # stays 1.0 for the pole-approximation path (which reshuffles later, after
+        # acceptance) and for 2 -> 1 production (no phase space to redistribute).
+        jac_reshuffle = 1.0
         prod_static = getattr(production, '_ms_density_static', None)
         density_pole_approximation = self.options['spinmode'] in ['PA', 'onshell']
         density_do_reshuffle = self.options['spinmode'] == 'PA'
@@ -4191,6 +4228,9 @@ class MadSpinInterface(extended_cmd.Cmd):
                         jac *= dec.reshuffle_decayevt()
                 if jac == 0:
                     raise Exception
+                # hand the reshuffling jacobian back to the caller (folded into
+                # the accept/reject weight) instead of discarding it.
+                jac_reshuffle = jac
 
         iden_p = prod_static['iden_p']
         sym_factor_prod_ident = prod_static['sym_factor_prod_ident']
@@ -4317,8 +4357,8 @@ class MadSpinInterface(extended_cmd.Cmd):
             prod_diag = MEdenom_prod
         prod_diag /= (iden_p * sym_factor_prod_ident)
         if MEdenom_decay is not None:
-            dec_diag *= MEdenom_decay 
-        return me, density_prod, prod_diag, dec_diag
+            dec_diag *= MEdenom_decay
+        return me, density_prod, prod_diag, dec_diag, jac_reshuffle
 
 
     def get_density_matrix_indices(self, nhel_decay):

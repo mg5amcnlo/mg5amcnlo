@@ -773,7 +773,9 @@ class TestDrawOffshellMass(unittest.TestCase):
             self.options = {'BW_cut': bw_cut}
 
     def _reference(self, pdg, dec, budget, banner, options):
-        """The block exactly as it was before the extraction."""
+        """The inline draw block, mirroring the extracted _draw_mass_value: the
+        Breit-Wigner sampling jacobian gap/pi with the atan argument divided by
+        the width (not multiplied)."""
         pole = banner.get('param', 'mass', abs(pdg)).value
         width = banner.get('param', 'decay', abs(pdg)).value
         if options['BW_cut'] < 0:
@@ -786,8 +788,8 @@ class TestDrawOffshellMass(unittest.TestCase):
                                     pole, width, min_mass, max_mass)
         dec[0].reshuffle_info = (pole, width, min_mass, max_mass)
         budget -= dec[0].new_mass
-        gap = math.atan((pole ** 2 - min_mass ** 2) / pole * width)
-        gap += math.atan((max_mass ** 2 - pole ** 2) / pole * width)
+        gap = math.atan((pole ** 2 - min_mass ** 2) / pole / width)
+        gap += math.atan((max_mass ** 2 - pole ** 2) / pole / width)
         return budget, gap / math.pi
 
     def test_identical_to_the_previous_inline_draw(self):
