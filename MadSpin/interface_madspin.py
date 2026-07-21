@@ -64,7 +64,7 @@ class MadSpinOptions(banner.ConfigFile):
         self.add_param('ms_dir', '')
         self.add_param('max_running_process', 100)
         self.add_param('onlyhelicity', False)
-        self.add_param('spinmode', "PA", allowed=['full', 'madspin', 'none', 'onshell', 'PA', 'madspin_v1', 'onshell_v1'])
+        self.add_param('spinmode', "madspin", allowed=['full', 'madspin', 'none', 'onshell', 'PA', 'madspin_v1', 'onshell_v1'])
         self.add_param('use_old_dir', False, comment='should be use only for faster debugging')
         self.add_param('run_card', '' , comment='define cut for decay_events (in onshell frame). Path to run_card to use')
         self.add_param('fixed_order', False, comment='to activate fixed order handling of counter-event')
@@ -80,8 +80,11 @@ class MadSpinOptions(banner.ConfigFile):
         self.add_param('density_tolerance', 1E-4, comment='Tolerance for deviation between density and full ME')
         self.add_param('decay_event_mult', 1E0, comment='Produce more events than needed so that MadSpin does not have to regenerate decay events')
         self.add_param('nb_core', 0, comment='Number of cores for the MadSpin parallel unweighting (0 = use the global MG5 nb_core). nb_core>1 enables the process-parallel unweighting path.')
-        self.add_param('density_keep_jacobian', False, comment='PA spinmode only: fold the offshell-reshuffling phase-space jacobian into the accept/reject weight instead of applying the reshuffle as a post-acceptance kinematic dressing. Ignored by the madspin/full spinmodes, which always include that jacobian.')
-        self.add_param('sequential_decay', False, comment='accept/reject one decaying particle at a time instead of the full set at once (density mode). Exact and much cheaper when several particles decay; set to False for the historical joint accept/reject.')
+        self.add_param('density_keep_jacobian', True, comment='PA spinmode only: fold the offshell-reshuffling phase-space jacobian into the accept/reject weight (default) instead of applying the reshuffle as a post-acceptance kinematic dressing (False). Ignored by the madspin/full spinmodes, which always include that jacobian.')
+        self.add_param('sequential_decay', False, comment='accept/reject one decaying particle at a time instead of the full set at once (density mode). Exact and much cheaper when several particles decay. Default is auto: True for the PA/onshell spinmodes, False (joint accept/reject) for madspin/full.')
+        # default is 'auto': resolved at run time by _sequential_active --
+        # sequential for PA/onshell, joint for madspin/full
+        self.auto_set.add('sequential_decay')
         self.add_param('sequential_spin_order', '2 3 1', comment='spin order (MG5 2S+1 convention) deciding which particle is accept/rejected first in sequential_decay: default fermions, then vectors, then scalars (which can never be rejected).')
 
     ############################################################################
@@ -2136,11 +2139,15 @@ class MadSpinInterface(extended_cmd.Cmd):
         Density mode only -- the whole scheme is expressed in terms of the
         production density matrix. ``fixed_order`` keeps the joint test: its
         counter-events ride along with the decays and have not been thought
-        through here. ``sequential_decay`` is the opt-out.
+        through here. ``sequential_decay`` defaults to 'auto': sequential for
+        the PA/onshell pole approximations, joint for madspin/full.
         """
         if not density_method:
             return False
-        if not self.options['sequential_decay']:
+        sequential = self.options['sequential_decay']
+        if sequential == 'auto':
+            sequential = self.options['spinmode'] in ['PA', 'onshell']
+        if not sequential:
             return False
         if self.options['fixed_order']:
             logger.info("MadSpin: fixed_order is on, keeping the joint "
@@ -3797,7 +3804,7 @@ class MadSpinInterface(extended_cmd.Cmd):
         draw_mass = (self.options['spinmode'] == 'PA' and nb_prod_final > 1)
         # Whether the production reshuffling jacobian enters the accept/reject
         # weight. Follows the joint path (interface_madspin.py, get_onshell PA
-        # block): off by default -- the reshuffle is then a post-acceptance
+        # block): on by default -- when off the reshuffle is a post-acceptance
         # kinematic dressing and only the Breit-Wigner sampling jacobian is in
         # the weight. The feasibility of the mass set is still checked either
         # way, to trigger the whole-set restart.
