@@ -771,26 +771,41 @@ def collect_result(cmd, folder_names=[], jobs=None, main_dir=None):
 def make_all_html_results(cmd, folder_names = [], jobs=[], get_attr=None):
     """ folder_names and jobs have been added for the amcatnlo runs """
     run = cmd.results.current['run_name']
-    if not os.path.exists(pjoin(cmd.me_dir, 'HTML', run)):
+    # A read-only gridpack (concurrent event generation) cannot write into
+    # me_dir: the HTML / results.dat output produced here is only bookkeeping
+    # for an interactive run, so skip every me_dir write and just compute and
+    # return the requested quantity (refine4grid calls this only for axsec).
+    # Guarding on cmd.readonly keeps normal runs byte-for-byte unchanged.
+    readonly = getattr(cmd, 'readonly', False)
+    if not readonly and not os.path.exists(pjoin(cmd.me_dir, 'HTML', run)):
         os.mkdir(pjoin(cmd.me_dir, 'HTML', run))
-    
+
     unit = cmd.results.unit
-    P_text = ""      
-    Presults = collect_result(cmd, folder_names=folder_names, jobs=jobs)
-    
+    P_text = ""
+    # In a read-only gridpack the freshly-created local P dirs only hold
+    # symfact.dat (GridPackCmd.prepare_local_dir); the per-channel grid
+    # results.dat live in the (read-only) gridpack, so read them from there --
+    # the same main_dir convention gen_ximprove_gridpack already uses.
+    if readonly:
+        Presults = collect_result(cmd, folder_names=folder_names, jobs=jobs,
+                                  main_dir=pjoin(cmd.me_dir, 'SubProcesses'))
+    else:
+        Presults = collect_result(cmd, folder_names=folder_names, jobs=jobs)
+
     for P_comb in Presults:
-        P_text += P_comb.get_html(run, unit, cmd.me_dir) 
+        P_text += P_comb.get_html(run, unit, cmd.me_dir)
         P_comb.compute_values()
-        if cmd.proc_characteristics['ninitial'] == 1:
+        if not readonly and cmd.proc_characteristics['ninitial'] == 1:
             P_comb.write_results_dat(pjoin(cmd.me_dir, 'SubProcesses', P_comb.name,
                                            '%s_results.dat' % run))
-    
-    Presults.write_results_dat(pjoin(cmd.me_dir,'SubProcesses', 'results.dat'))   
-    
-    fsock = open(pjoin(cmd.me_dir, 'HTML', run, 'results.html'),'w')
-    fsock.write(results_header)
-    fsock.write('%s <dl>' % Presults.get_html(run, unit, cmd.me_dir))
-    fsock.write('%s </dl></body>' % P_text)
+
+    if not readonly:
+        Presults.write_results_dat(pjoin(cmd.me_dir,'SubProcesses', 'results.dat'))
+
+        fsock = open(pjoin(cmd.me_dir, 'HTML', run, 'results.html'),'w')
+        fsock.write(results_header)
+        fsock.write('%s <dl>' % Presults.get_html(run, unit, cmd.me_dir))
+        fsock.write('%s </dl></body>' % P_text)
 
     if not get_attr:
         return Presults.xsec, Presults.xerru

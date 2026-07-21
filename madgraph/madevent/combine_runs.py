@@ -64,20 +64,29 @@ def get_inc_file(path):
 
 class CombineRuns(object):
     
-    def __init__(self, me_dir, subproc=None):
-        
+    def __init__(self, me_dir, subproc=None, readonly=False):
+
         self.me_dir = me_dir
-        
+        # Read-only (concurrent) gridpack: metadata (subproc.mg, maxparticles.inc)
+        # is read from the shared read-only gridpack (me_dir), but the per-channel
+        # P dirs to combine live directly in the worker's cwd (no SubProcesses
+        # layer -- see GridPackCmd.prepare_local_dir), and their events/results
+        # are written there.
+        self.readonly = readonly
+
         if not subproc:
-            subproc = [l.strip() for l in open(pjoin(self.me_dir,'SubProcesses', 
+            subproc = [l.strip() for l in open(pjoin(self.me_dir,'SubProcesses',
                                                                  'subproc.mg'))]
         self.subproc = subproc
         maxpart = get_inc_file(pjoin(me_dir, 'Source', 'maxparticles.inc'))
         self.maxparticles = maxpart['max_particles']
-    
-    
+
+
         for procname in self.subproc:
-            path = pjoin(self.me_dir,'SubProcesses', procname)
+            if readonly:
+                path = procname
+            else:
+                path = pjoin(self.me_dir,'SubProcesses', procname)
             channels = self.get_channels(path)
             for channel in channels:
                 self.sum_multichannel(channel)

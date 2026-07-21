@@ -23,10 +23,15 @@ on:
         description: 'Relative tolerance for the efficiency-pair checks'
         required: false
         default: '0.15'
+      nb_core:
+        description: 'Cores for test_short_madspin_multicore (parallel unweighting)'
+        required: false
+        default: '8'
 
 env:
   MADSPIN_TEST_NEVENTS: ${{ github.event.inputs.nevents || '10000' }}
   MADSPIN_TEST_EFF_TOL: ${{ github.event.inputs.eff_tol || '0.15' }}
+  MADSPIN_TEST_NB_CORE: ${{ github.event.inputs.nb_core || '8' }}
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -42,17 +47,12 @@ jobs:
           - test_short_madspin_ttbar
           - test_short_madspin_singletop
           - test_short_madspin_zz
+          - test_short_madspin_multicore
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/checkout_mg5
+      - uses: ./.github/actions/restore-pip-cache
 
-      - name: Configure
-        run: |
-          cd "$GITHUB_WORKSPACE"
-          cp input/.mg5_configuration_default.txt input/mg5_configuration.txt
-          sudo pip install numpy
-          which f2py
-          echo "f2py_compiler = $(which f2py)" >> input/mg5_configuration.txt
-          cp Template/LO/Source/.make_opts Template/LO/Source/make_opts
 
       - name: Run ${{ matrix.test }}
         run: |
