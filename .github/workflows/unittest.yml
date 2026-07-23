@@ -623,7 +623,8 @@ jobs:
 
   unittest_uncovered:
     # unit tests that were not listed in any workflow (CI coverage audit).
-    # test_fks_ppzz_in_RS is left out: the RS UFO model is still python2 only.
+    # test_fks_ppzz_in_RS auto-downloads the RS UFO model (python2 only) which
+    # is now converted to python3 on the fly at download time.
     runs-on: ubuntu-latest
     if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
 
@@ -633,7 +634,7 @@ jobs:
       - name: run the previously untriggered unit tests
         run: |
             cd $GITHUB_WORKSPACE
-            ./tests/test_manager.py test_CF_simple test_cf_computation test_generate_ewsud_ttbar test_generate_ewsud_ww test_generate_ewsud_zz testIO_test_pptt_ewsudakovSA testIO_test_ppzz_ewsudakov testIO_test_ppw_fksall testIO_Loop_sqso_uux_ddx test_check_import_model test_schedular test_dummy_fcts test_UFO_Python_helas_call_writer_fd test_get_symmetric_color test_get_symmetric_lorentz test_remove_interactions2 test_remove_interactions3 test_fd_python_value_matches_unitary_fixed_point test_shower_card_write -t0
+            ./tests/test_manager.py test_CF_simple test_cf_computation test_generate_ewsud_ttbar test_generate_ewsud_ww test_generate_ewsud_zz testIO_test_pptt_ewsudakovSA testIO_test_ppzz_ewsudakov testIO_test_ppw_fksall testIO_Loop_sqso_uux_ddx test_check_import_model test_schedular test_dummy_fcts test_UFO_Python_helas_call_writer_fd test_get_symmetric_color test_get_symmetric_lorentz test_remove_interactions2 test_remove_interactions3 test_fd_python_value_matches_unitary_fixed_point test_shower_card_write test_fks_ppzz_in_RS -t0
 
 
   unittest_write_model:
