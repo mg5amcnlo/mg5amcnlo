@@ -217,7 +217,10 @@ def convert_model_py2_to_py3(model_dir, force=False):
     text = open(obj_lib).read()
     if not force and '.iteritems()' not in text and not py2_raise_pattern.search(text):
         return False
-    logger.info("model %s is python2 only. Converting it to be python3 compatible (in place)", model_dir)
+    if force:
+        logger.info("Applying in-place py2→py3 compatibility transforms to model %s", model_dir)
+    else:
+        logger.info("model %s is python2 only. Converting it to be python3 compatible (in place)", model_dir)
 
     #Object_library
     #(.iteritems() -> .items())
