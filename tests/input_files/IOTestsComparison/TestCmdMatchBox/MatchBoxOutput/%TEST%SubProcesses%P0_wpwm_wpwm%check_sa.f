@@ -176,6 +176,12 @@ c     The value of mu_r2 is set to 0 but it is a dummy variable at tree-level an
           ENDDO
        ENDDO
 
+c     The value of the density matrix is written in a file to be more easily accessible
+       OPEN(1, file="Density_matrix.dat", action="write")
+         write(1, *) "Non-normalised density matrix in line format:"
+         write(1, *) INTER
+       CLOSE(1)
+
        return
        END 
       
