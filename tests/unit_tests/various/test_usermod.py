@@ -358,7 +358,11 @@ class TestModUFO(unittest.TestCase):
         # implicit relative imports (import particles) inside __init__.py
         sys.path.insert(0, os.path.dirname(output))
         sys.path.insert(0, output)
-        import usrmod
+        try:
+            import usrmod
+        finally:
+            sys.path.remove(os.path.dirname(output))
+            sys.path.remove(output)
 
 
     def compare(self, text1, text2, optional=[], default={}):
