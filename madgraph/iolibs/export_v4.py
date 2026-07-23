@@ -1687,10 +1687,11 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                     return "%id0/%id0" % (frac.numerator, frac.denominator)
             elif frac.real == frac:
                 #misc.sprint(frac.real, frac)
-                return ('%.15e' % frac.real).replace('e','d')
+                # +0.0 drops the sign of negative zeros, which depends on the python version
+                return ('%.15e' % (frac.real + 0.0)).replace('e','d')
                 #str(float(frac.real)).replace('e','d')
             else:
-                return ('(%.15e,%.15e)' % (frac.real, frac.imag)).replace('e','d')
+                return ('(%.15e,%.15e)' % (frac.real + 0.0, frac.imag + 0.0)).replace('e','d')
                 #str(frac).replace('e','d').replace('j','*imag1')
                 
         
