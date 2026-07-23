@@ -600,11 +600,12 @@ extern "C" {
 
   /// Set PDF data path
   void setpdfpath_(const char* s, size_t len) {
-    /// @todo Works? Need to check C-string copying, null termination
-    char s2[1024];
-    s2[len] = '\0';
-    strncpy(s2, s, len);
-    LHAPDF::pathsPrepend(s2);
+    // The trailing blank padding of the Fortran string must be stripped:
+    // a padded path never matches an existing directory, so LHAPDF would
+    // silently ignore it and fall back to its global data directory.
+    const string path = fstr_to_ccstr(s, len);
+    if (path.empty()) return;
+    LHAPDF::pathsPrepend(path);
   }
 
   /// Get PDF data path (colon-separated if there is more than one element)

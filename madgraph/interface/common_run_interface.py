@@ -4691,7 +4691,11 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                         f.write('\n')
                     f.write('\n'.join(extra) + '\n')
             except (OSError, IOError) as e:
-                logger.debug('Could not patch %s: %s', path, e)
+                logger.warning('Could not add %s to %s (%s). '
+                    'Recent LHAPDF versions can refuse to load this set '
+                    '(MetadataError). If this happens, add those keys to that '
+                    'file manually.',
+                    ', '.join(e2.split(':')[0] for e2 in extra), path, e)
 
 
     def copy_lhapdf_set(self, lhaid_list, pdfsets_dir, require_local=True):
@@ -4761,6 +4765,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
     
                 os.environ["LHAPATH"] = [d for d in lhapdf_cluster_possibilities if os.path.exists(pjoin(d, pdfset))][0]
                 os.environ["CLUSTER_LHAPATH"] = os.environ["LHAPATH"]
+                self.patch_lhapdf_info_file(pjoin(os.environ["LHAPATH"], pdfset))
                 # no need to copy it
                 if os.path.exists(pjoin(pdfsets_dir, pdfset)):
                     try:
@@ -4772,6 +4777,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                         logger.debug('%s', error)
             if not require_local and (os.path.exists(pjoin(pdfsets_dir, pdfset)) or \
                                     os.path.isdir(pjoin(pdfsets_dir, pdfset))):
+                self.patch_lhapdf_info_file(pjoin(pdfsets_dir, pdfset))
                 continue
             if not require_local:
                 if 'LHAPDF_DATA_PATH' in os.environ:
@@ -4782,19 +4788,27 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                             found =True
                             break
                     if found:
+                        self.patch_lhapdf_info_file(pjoin(path, pdfset))
                         continue
-                    
-                    
+
+            # ensure that the set used at run time has the metadata required
+            # by recent LHAPDF versions: the code can read the global copy
+            # (in particular if the local one is not picked up), and the
+            # local copy is created from it.
+            self.patch_lhapdf_info_file(pjoin(pdfsets_dir, pdfset))
+
             #check that the pdfset is not already there
             if not os.path.exists(pjoin(self.me_dir, 'lib', 'PDFsets', pdfset)) and \
                not os.path.isdir(pjoin(self.me_dir, 'lib', 'PDFsets', pdfset)):
-    
+
                 if pdfset and not os.path.exists(pjoin(pdfsets_dir, pdfset)):
                     self.install_lhapdf_pdfset(pdfsets_dir, pdfset)
-    
+                    self.patch_lhapdf_info_file(pjoin(pdfsets_dir, pdfset))
+
                 if os.path.exists(pjoin(pdfsets_dir, pdfset)):
                     files.cp(pjoin(pdfsets_dir, pdfset), pjoin(self.me_dir, 'lib', 'PDFsets'))
                 elif os.path.exists(pjoin(os.path.dirname(pdfsets_dir), pdfset)):
+                    self.patch_lhapdf_info_file(pjoin(os.path.dirname(pdfsets_dir), pdfset))
                     files.cp(pjoin(os.path.dirname(pdfsets_dir), pdfset), pjoin(self.me_dir, 'lib', 'PDFsets'))
 
             self.patch_lhapdf_info_file(pjoin(self.me_dir, 'lib', 'PDFsets', pdfset))

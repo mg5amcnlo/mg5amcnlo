@@ -2319,7 +2319,9 @@ def import_python_lhapdf(lhapdfconfig):
                         import lhapdf
                         use_lhapdf=True
                         break
-                    except ImportError as  error:
+                    except (ImportError, SystemError) as  error:
+                        # SystemError: compiled lhapdf module incompatible
+                        # with the running python interpreter
                         sys.path.pop(0)
                         continue
             else:
@@ -2342,7 +2344,7 @@ def import_python_lhapdf(lhapdfconfig):
                         import lhapdf
                         use_lhapdf=True
                         break
-                    except ImportError as error:
+                    except (ImportError, SystemError) as error:
                         sys.path.pop(0)
                         continue
             else:
@@ -2352,7 +2354,7 @@ def import_python_lhapdf(lhapdfconfig):
             try:
                 import lhapdf
                 use_lhapdf=True
-            except ImportError:
+            except (ImportError, SystemError):
                 print('fail')
                 logger.warning("Failed to access python version of LHAPDF: "\
                                    "If the python interface to LHAPDF is available on your system, try "\
