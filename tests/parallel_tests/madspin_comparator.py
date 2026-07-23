@@ -80,8 +80,8 @@ SpinModeConfig = collections.namedtuple(
 #  - madspin_v1 : old default, mass smearing, no 3-body, identical part. only
 #  - onshell_v1 : traditional onshell decay chain
 #  - onshell    : "PA without reshuffling" (pure onshell kinematics, density ME)
-#  - madspin    : off-shell ME + density (BW shape from ME)
-#  - PA         : PA reshuffling with BW + density ME (new MadSpin default)
+#  - madspin    : off-shell ME + density (BW shape from ME) (new MadSpin default)
+#  - PA         : PA reshuffling with BW + density ME
 DEFAULT_MODES = [
     SpinModeConfig('full_decay_chain',    'madspin_v1'),  
     SpinModeConfig('onshell_decay_chain', 'onshell_v1'),

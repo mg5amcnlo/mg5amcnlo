@@ -283,7 +283,7 @@ class MadSpinFactoryTest(unittest.TestCase):
                             'vl': 've vm'},
             extra_run_card={'ebeam1': 6500, 'ebeam2': 6500},
         )
-        # Same default (PA) mode, same production events, serial vs multi-core.
+        # Same (PA) mode, same production events, serial vs multi-core.
         cfg = SpinModeConfig('PA_density', 'PA')
         serial = factory.run_mode(cfg, extra_settings={'nb_core': 1},
                                   run_tag='serial')

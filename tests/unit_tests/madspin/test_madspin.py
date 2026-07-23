@@ -1283,6 +1283,31 @@ class TestSequentialPoolLadder(unittest.TestCase):
         # onshell is supported just like PA
         self.assertTrue(self._stub({6: 2}, spinmode='onshell')._sequential_active(True))
 
+    def test_sequential_active_auto(self):
+        """'auto' (the default) resolves per spinmode: sequential for the
+        PA/onshell pole approximations, joint for madspin/full."""
+        for mode, expected in [('PA', True), ('onshell', True),
+                               ('madspin', False), ('full', False),
+                               ('none', False)]:
+            stub = self._stub({6: 2}, sequential_decay='auto', spinmode=mode)
+            self.assertEqual(stub._sequential_active(True), expected,
+                             'auto + spinmode=%s' % mode)
+        # fixed_order still forces the joint test
+        stub = self._stub({6: 2}, sequential_decay='auto', fixed_order=True)
+        self.assertFalse(stub._sequential_active(True))
+
+    def test_madspin_option_defaults(self):
+        """The shipped defaults: spinmode=madspin, jacobian in the weight,
+        sequential_decay on auto (and switchable off/back by the user)."""
+        options = interface_madspin.MadSpinOptions()
+        self.assertEqual(options['spinmode'], 'madspin')
+        self.assertEqual(options['density_keep_jacobian'], True)
+        self.assertEqual(options['sequential_decay'], 'auto')
+        options['sequential_decay'] = 'False'
+        self.assertEqual(options['sequential_decay'], False)
+        options['sequential_decay'] = 'auto'
+        self.assertEqual(options['sequential_decay'], 'auto')
+
 
 class TestScanMaxwgtDecomposition(unittest.TestCase):
     """The parallel max-weight scan splits the probe events across workers and
