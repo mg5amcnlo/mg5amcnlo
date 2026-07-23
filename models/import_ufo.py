@@ -196,6 +196,53 @@ def import_model_from_db(model_name, local_dir=False):
             proc = misc.call('tar -xzpvf tmp.tgz', shell=True, cwd=target)#, stdout=devnull, stderr=devnull)
     if proc:
         raise Exception("Impossible to unpack the model. Please install it manually")
+
+    # some models of the database are still written for python2 only.
+    # convert them (in place) such that the model can be loaded directly.
+    model_dir = pjoin(target, model_name)
+    if os.path.isdir(model_dir):
+        convert_model_py2_to_py3(model_dir)
+    return True
+
+py2_raise_pattern = re.compile('raise (\\w+)\\s*,\\s*["\']([^"]+)["\']')
+def convert_model_py2_to_py3(model_dir, force=False):
+    """modify (in place) a python2-only UFO model to make it compatible with
+    both python2 and python3. Returns True if the model was modified.
+    Without the force option, models which look already python3 compatible
+    are left untouched."""
+
+    obj_lib = pjoin(model_dir, 'object_library.py')
+    if not os.path.exists(obj_lib):
+        return False
+    text = open(obj_lib).read()
+    if not force and '.iteritems()' not in text and not py2_raise_pattern.search(text):
+        return False
+    logger.info("model %s is python2 only. Converting it to be python3 compatible (in place)", model_dir)
+
+    #Object_library
+    #(.iteritems() -> .items())
+    text = text.replace('.iteritems()', '.items()')
+    # raise UFOError, "" -> raise UFOError("")
+    text = py2_raise_pattern.sub(r'raise \g<1>("\g<2>")', text)
+    open(obj_lib, 'w').write(text)
+
+    # write_param_card.dat -> copy the one of the sm model
+    files.cp(pjoin(MG5DIR, 'models','sm','write_param_card.py'),
+             pjoin(model_dir, 'write_param_card.py'))
+
+    # __init__.py check that function_library and object_library are imported
+    text = open(pjoin(model_dir, '__init__.py')).read()
+    mod = False
+    # import function_library
+    # from . import function_library
+    to_check =  ['object_library', 'function_library']
+    for lib in to_check:
+        if 'import %s' % lib in text:
+            continue
+        mod = True
+        text = "import %s \n" % lib + text
+    if mod:
+        open(pjoin(model_dir, '__init__.py'),'w').write(text)
     return True
 
 def get_path_restrict(model_name, restrict=True):
