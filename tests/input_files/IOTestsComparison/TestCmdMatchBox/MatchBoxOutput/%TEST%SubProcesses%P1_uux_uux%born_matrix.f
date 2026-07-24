@@ -230,7 +230,8 @@ C     LOCAL VARIABLES
 C     
       INTEGER I,J,M,N
       COMPLEX*16 ZTEMP
-      REAL*8 CF(NCOLOR,NCOLOR)
+      INTEGER CF(NCOLOR*(NCOLOR+1))
+      INTEGER CF_INDEX, DENOM
       COMPLEX*16 AMP(NGRAPHS)
       COMPLEX*16 JAMP(NCOLOR,NAMPSO), LNJAMP(NCOLOR,NAMPSO)
       COMPLEX*16 TMP_JAMP(0)
@@ -249,11 +250,10 @@ C
 C     
 C     COLOR DATA
 C     
-      DATA (CF(I,  1),I=  1,  2) /9.000000000000000D+00
-     $ ,3.000000000000000D+00/
+      DATA DENOM/1/
+      DATA (CF(I),I=  1,  2) /9,6/
 C     1 T(2,1) T(3,4)
-      DATA (CF(I,  2),I=  1,  2) /3.000000000000000D+00
-     $ ,9.000000000000000D+00/
+      DATA (CF(I),I=  3,  3) /9/
 C     1 T(2,4) T(3,1)
 C     ----------
 C     BEGIN CODE
@@ -276,12 +276,14 @@ C     JAMPs contributing to orders QCD=2
       LNJAMP(1,1) = (5.000000000000000D-01)*AMP(2)
       LNJAMP(2,1) = (-5.000000000000000D-01)*AMP(1)
 
-      RES = 0.D0
+      RES(:) = 0.D0
       DO M = 1, NAMPSO
+        CF_INDEX = 0
         DO I = 1, NCOLOR
           ZTEMP = (0.D0,0.D0)
-          DO J = 1, NCOLOR
-            ZTEMP = ZTEMP + CF(J,I)*JAMP(J,M)
+          DO J = I, NCOLOR
+            CF_INDEX = CF_INDEX +1
+            ZTEMP = ZTEMP + CF(CF_INDEX)*JAMP(J,M)
           ENDDO
           DO N = 1, NAMPSO
             RES(MG5_1_SQSOINDEX(M,N)) = RES(MG5_1_SQSOINDEX(M,N)) +
@@ -289,7 +291,7 @@ C     JAMPs contributing to orders QCD=2
           ENDDO
         ENDDO
       ENDDO
-
+      RES(:) = RES(:)/DENOM
       END
 
 
@@ -362,7 +364,7 @@ C     LOCAL VARIABLES
 C     
       INTEGER I,J,M,N
       COMPLEX*16 ZTEMP
-      REAL*8 CF(NCOLOR,NCOLOR)
+C     REAL*8 CF(NCOLOR,NCOLOR)
       COMPLEX*16 AMP(NGRAPHS)
       COMPLEX*16 JAMP(NCOLOR,NAMPSO), LNJAMP(NCOLOR,NAMPSO)
       COMMON/MG5_1_JAMP/JAMP,LNJAMP
@@ -377,11 +379,10 @@ C
 C     
 C     COLOR DATA
 C     
-      DATA (CF(I,  1),I=  1,  2) /9.000000000000000D+00
-     $ ,3.000000000000000D+00/
+      DATA DENOM/1/
+      DATA (CF(I),I=  1,  2) /9,6/
 C     1 T(2,1) T(3,4)
-      DATA (CF(I,  2),I=  1,  2) /3.000000000000000D+00
-     $ ,9.000000000000000D+00/
+      DATA (CF(I),I=  3,  3) /9/
 C     1 T(2,4) T(3,1)
 C     ----------
 C     BEGIN CODE
@@ -411,31 +412,29 @@ C     JAMPs contributing to orders QCD=2
 
       END
 
-      SUBROUTINE MG5_1_GET_JAMP(NJAMP, ONEJAMP)
+      SUBROUTINE MG5_1_GET_JAMP(NJAMP, SOINDEX, ONEJAMP)
 
-      INTEGER     NCOLOR, NJAMP
-      PARAMETER (NCOLOR=2)
-      INTEGER NAMPSO
-      PARAMETER (NAMPSO=1)
-      COMPLEX*16  JAMP(NCOLOR,NAMPSO), ONEJAMP
-      COMMON/MG5_1_JAMP/JAMP,LNJAMP
-
-      ONEJAMP = JAMP(NJAMP+1,1)  ! +1 since njamp start at zero (c convention)
-      END
-
-      SUBROUTINE MG5_1_GET_LNJAMP(NJAMP, ONEJAMP)
-
-      INTEGER     NCOLOR, NJAMP
+      INTEGER     NCOLOR, NJAMP, SOINDEX
       PARAMETER (NCOLOR=2)
       INTEGER NAMPSO
       PARAMETER (NAMPSO=1)
       COMPLEX*16  JAMP(NCOLOR,NAMPSO), LNJAMP(NCOLOR,NAMPSO), ONEJAMP
       COMMON/MG5_1_JAMP/JAMP,LNJAMP
 
-      ONEJAMP = LNJAMP(NJAMP+1,1)  ! +1 since njamp start at zero (c convention)
+      ONEJAMP = JAMP(NJAMP+1, SOINDEX)  ! +1 since njamp start at zero (c convention)
       END
 
+      SUBROUTINE MG5_1_GET_LNJAMP(NJAMP, SOINDEX, ONEJAMP)
 
+      INTEGER     NCOLOR, NJAMP, SOINDEX
+      PARAMETER (NCOLOR=2)
+      INTEGER NAMPSO
+      PARAMETER (NAMPSO=1)
+      COMPLEX*16  JAMP(NCOLOR,NAMPSO), LNJAMP(NCOLOR,NAMPSO), ONEJAMP
+      COMMON/MG5_1_JAMP/JAMP,LNJAMP
+
+      ONEJAMP = LNJAMP(NJAMP+1,SOINDEX)  ! +1 since njamp start at zero (c convention)
+      END
 
 
       SUBROUTINE MG5_1_GET_NCOLOR(IN1, IN2, OUT)
@@ -500,38 +499,25 @@ C     JAMPs contributing to orders QCD=2
       RETURN
       END
 
+      SUBROUTINE MG5_1_GET_MAXSOINDEX(OUT)
 
+      INTEGER OUT
+      OUT  = 1
+      RETURN
+      END
 
+      SUBROUTINE MG5_1__GET_CHOSEN_SO_CONFIG(M,N, OUT)
 
+      INTEGER M, N
+      LOGICAL OUT
+      PARAMETER (NSQAMPSO=1)
+      LOGICAL CHOSEN_SO_CONFIGS(NSQAMPSO)
+      DATA CHOSEN_SO_CONFIGS/.TRUE./
+      COMMON/MG5_1_CHOSEN_BORN_SQSO/CHOSEN_SO_CONFIGS
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+      OUT  = CHOSEN_SO_CONFIGS(MG5_1_SQSOINDEX(M,N))
+      RETURN
+      END
 
 
 

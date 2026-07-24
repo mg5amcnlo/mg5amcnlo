@@ -2,7 +2,6 @@
 
 
 from __future__ import absolute_import
-from six.moves import range
 try:
     import madgraph.madweight.blob_solution as blob_solution
 except ImportError:

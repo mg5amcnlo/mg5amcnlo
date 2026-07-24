@@ -42,7 +42,7 @@ $frame
 # PDF CHOICE: this automatically fixes alpha_s and its evol.         *
 # pdlabel: lhapdf=LHAPDF (installation needed) [1412.7420]           *
 #          iww=Improved Weizsaecker-Williams Approx.[hep-ph/9310350] *
-#          eva=Effective W/Z/A Approx.       [2111.02442]            *
+#          eva=Effective W/Z/A Approx.       [2111.02442, 2502.07878]*
 #          edff=EDFF in gamma-UPC            [eq.(11) in 2207.03012] *
 #          chff=ChFF in gamma-UPC            [eq.(13) in 2207.03012] *
 #          edf<y>n<z>n and chf<y>n<z>n for forward neutron tagging   *
@@ -61,6 +61,7 @@ $frame
 $pdlabel
      %(lhaid)s    = lhaid     ! if pdlabel=lhapdf, this is the lhapdf number
 $ion_pdf
+$eva_pdf
 #*********************************************************************
 # Renormalization and factorization scales                           *
 #*********************************************************************
@@ -72,7 +73,6 @@ $fixed_fact_scale
  %(dynamical_scale_choice)s = dynamical_scale_choice ! Choose one of the preselected dynamical choices
  %(scalefact)s  = scalefact        ! scale factor for event-by-event scales
 $RUNNING
- $eva_scale
 #*********************************************************************
 # Type and output format
 #*********************************************************************
@@ -101,6 +101,7 @@ $psoptim
 # Parton level cuts definition *
 #*******************************
   %(dsqrt_shat)s  = dsqrt_shat ! minimal shat for full process
+  %(dsqrt_shatmax)s  = dsqrt_shatmax ! maximum shat for full process
 #                                                                    
 #
 #*********************************************************************
@@ -140,7 +141,7 @@ $ecut
  %(etajmin)s  = etajmin ! min rap for the jets
  %(etabmin)s  = etabmin ! min rap for the b
  %(etaamin)s  = etaamin ! min rap for the photons
- %(etalmin)s  = etalmin ! main rap for the charged leptons
+ %(etalmin)s  = etalmin ! min rap for the charged leptons
  %(eta_min_pdg)s = eta_min_pdg ! rap cut for other particles (use pdg code). Applied on particle and anti-particle
  %(eta_max_pdg)s = eta_max_pdg ! rap cut for other particles (syntax e.g. {6: 2.5, 23: 5})
 #*********************************************************************

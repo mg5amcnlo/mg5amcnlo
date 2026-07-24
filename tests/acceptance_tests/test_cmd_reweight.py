@@ -24,8 +24,6 @@ import sys
 import logging
 import time
 import tempfile   
-from six.moves import zip
-
 logger = logging.getLogger('test_cmd')
 
 import tests.unit_tests.iolibs.test_file_writers as test_file_writers
@@ -177,7 +175,8 @@ class TestMECmdRWGT(unittest.TestCase):
 
         #check that initial file is untouched!        
         lhe = lhe_parser.EventFile(pjoin(self.run_dir,'Events','run_01', 'unweighted_events.lhe.gz'))
-        for i,event in enumerate(lhe):      
+        for i,event in enumerate(lhe):
+            #if i==0: misc.sprint(event)      
             rwgt_data = event.parse_reweight()
             for part in event:
                 if part.status ==1: #final state
@@ -198,6 +197,7 @@ class TestMECmdRWGT(unittest.TestCase):
             self.assertNotIn('rwgt_1', rwgt_data)
             self.assertTrue(misc.equal(event.wgt, solutions[i]))
         #misc.sprint(solutions)
+        #raise Exception('stop here')
         
     def test_nlo_reweighting(self):
         """ check identical re-weighting in ttbar 

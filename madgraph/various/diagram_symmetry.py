@@ -57,9 +57,6 @@ import models.model_reader as model_reader
 import aloha.template_files.wavefunctions as wavefunctions
 from aloha.template_files.wavefunctions import \
      ixxxxx, oxxxxx, vxxxxx, sxxxxx
-from six.moves import range
-from six.moves import zip
-
 #===============================================================================
 # Logger for process_checks
 #===============================================================================

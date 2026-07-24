@@ -37,9 +37,6 @@ import madgraph.loop.loop_color_amp as loop_color_amp
 import madgraph.core.color_algebra as color
 import madgraph.core.helas_objects as helas_objects
 import madgraph.various.misc as misc
-from six.moves import range
-from six.moves import zip
-
 #===============================================================================
 # 
 #===============================================================================

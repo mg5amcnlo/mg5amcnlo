@@ -17,9 +17,6 @@ from __future__ import absolute_import
 import madgraph.various.rambo as rambo
 import aloha.template_files.wavefunctions as wavefunctions
 import tests.unit_tests as unittest
-from six.moves import range
-
-
 class test_rambo(unittest.TestCase):
     """ Test the Rambo module """
     

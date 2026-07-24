@@ -22,15 +22,19 @@ C
 C ARGUMENTS 
 C 
       REAL*8 P(0:3,NEXTERNAL-1)
+      double precision ans_summed
 C
 C VARIABLES
 C
       INTEGER I,J,K
+      include 'has_ewsudakov.inc'
+      integer nord_integrated_born
       include 'orders.inc'
-      double precision ans_summed
       COMPLEX*16 ANS(2,0:NSQAMPSO), ANS_CNT(2, NSPLITORDERS)
       LOGICAL KEEP_ORDER(NSQAMPSO), KEEP_ORDER_CNT(NSPLITORDERS, NSQAMPSO), FIRSTTIME
       data keep_order / NSQAMPSO * .TRUE. /
+      logical keep_order_born(NSQAMPSO)
+      common /c_keep_order_B/ keep_order_born
       common /c_keep_order_cnt/ keep_order_cnt 
       common /c_born_cnt/ ans_cnt
       integer ord_subtract
@@ -48,6 +52,8 @@ C
       common/to_amps/  amp2,       jamp2
       logical split_type_used(nsplitorders)
       common/to_split_type_used/split_type_used
+      logical force_ijglu_zero
+      common /to_force_ijglu/ force_ijglu_zero
 C
 C     FUNCTIONS
 C
@@ -58,6 +64,8 @@ C BEGIN CODE
 C
 C look for orders which match the born order constraint 
 
+force_ijglu_zero = .false.
+
 if (firsttime) then
  do i = 1, nsqampso
 C this is for the orders of the born to integrate
@@ -67,6 +75,7 @@ C this is for the orders of the born to integrate
     EXIT 
    endif
   enddo
+  keep_order_born = keep_order
 
 C this is for the orders of the counterterms
   do j = 1, nsplitorders
@@ -83,12 +92,21 @@ C this is for the orders of the counterterms
     endif
    enddo
   enddo
+
+  nord_integrated_born = 0
   if (keep_order(i)) then
-   write(*,*) 'BORN: keeping split order ', i
-  else
-   write(*,*) 'BORN: not keeping split order ', i
+   nord_integrated_born = nord_integrated_born + 1
+   !write(*,*) 'BORN: keeping split order ', i
+  !else
+   !write(*,*) 'BORN: not keeping split order ', i
   endif
  enddo
+
+C check that, if one include the sudakov corrections, there is at most one contribution to be integrated at LO
+if (has_ewsudakov.and.nord_integrated_born.gt.1) then
+ write(*,*) 'ERROR in born.f, cannot compute Sudakov EW corrections with more than one Born coupling combination to be integrated.Found', nord_integrated_born
+ stop 1
+endif
 
  do j = 1, nsplitorders
   write(*,*) 'counterterm S.O', j, ordernames(j)
@@ -171,6 +189,126 @@ enddo
 
  999   return
 END
+
+
+
+
+
+      SUBROUTINE SBORN_ONEHEL(P,NHEL,HELL,ANS_SUMMED)
+C  
+%(info_lines)s
+C
+C
+C     Return the sum of the split orders which are required in orders.inc (BORN_ORDERS)
+C     It works for a single set of helicities, passed by NHEL
+C     Also the values needed for the counterterms are stored in the C_BORN_CNT common block
+C  
+C  
+%(process_lines)s
+C
+C  
+C CONSTANTS
+C 
+      implicit none
+      include 'nexternal.inc'
+      INTEGER NAMPSO, NSQAMPSO
+      PARAMETER (NAMPSO=%(nAmpSplitOrders)d, NSQAMPSO=%(nSqAmpSplitOrders)d)
+      INTEGER NGRAPHS
+      PARAMETER (NGRAPHS=   %(ngraphs)d)
+C  
+C ARGUMENTS 
+C 
+      REAL*8 P(0:3,NEXTERNAL-1)
+      INTEGER NHEL(NEXTERNAL-1)
+      integer HELL
+      double precision ans_summed
+C
+C VARIABLES
+C
+      INTEGER I,J,K
+      include 'orders.inc'
+      COMPLEX*16 ANS(2,NSQAMPSO)
+      REAL*8 borns(2,0:NSQAMPSO)
+      LOGICAL KEEP_ORDER(NSQAMPSO)
+      common /c_keep_order_B/ keep_order
+
+      LOGICAL KEEP_ORDER_CNT(NSPLITORDERS, NSQAMPSO)
+      common /c_keep_order_cnt/ keep_order_cnt 
+
+      integer amp_orders(nsplitorders)
+      double precision tiny
+      parameter (tiny = 1d-12)
+      double precision max_val
+      include 'ewsudakov_haslo.inc'
+      double complex amp_split_ewsud(amp_split_size)
+      common /to_amp_split_ewsud/ amp_split_ewsud
+      double complex amp_split_ewsud_LO2(amp_split_size)
+      common /to_amp_split_ewsud_LO2/ amp_split_ewsud_LO2
+      integer iden
+      logical force_ijglu_zero
+      common /to_force_ijglu/ force_ijglu_zero
+      %(den_factor_lines)s
+      integer nfksprocess
+      common/c_nfksprocess/nfksprocess
+C
+C     FUNCTIONS
+C
+      integer GETORDPOWFROMINDEX_B
+      integer orders_to_amp_split_pos
+C
+C     stuff for the LO2
+      integer lo2_orders(nsplitorders)
+      logical orders_equal
+      external orders_equal
+C
+C BEGIN CODE
+C
+C look for orders which match the born order constraint 
+
+      iden=iden_values(nfksprocess)
+force_ijglu_zero = .true.
+
+CALL BORN(P,NHEL,HELL,ANS,borns)
+
+ans_summed = 0d0
+max_val = 0d0
+
+C reset the amp_split array
+amp_split_ewsud(1:amp_split_size) = dcmplx(0d0,0d0)
+amp_split_ewsud_lo2(1:amp_split_size) = dcmplx(0d0,0d0)
+
+do i = 1, nsqampso
+ max_val = max(max_val, abs(ans(1,I)))
+enddo
+
+call get_lo2_orders(lo2_orders)
+
+do i = 1, nsqampso
+    if (keep_order(i)) then
+     ANS_SUMMED = ans_summed + ANS(1,I) / iden
+     do j = 1, nsplitorders
+      amp_orders(j) = GETORDPOWFROMINDEX_B(j, i)
+     enddo
+     !amp_split_ewsud(orders_to_amp_split_pos(amp_orders)) = ans(1,I)
+     if(abs(ans(1,i)).gt.max_val*tiny) amp_split_ewsud(orders_to_amp_split_pos(amp_orders)) = ans(1,i) / iden
+    endif
+C the following is for the LO2
+    if (has_lo2) then
+     do j = 1, nsplitorders
+      amp_orders(j) = GETORDPOWFROMINDEX_B(j, i)
+     enddo
+     if (orders_equal(amp_orders, lo2_orders)) then
+      if(abs(ans(1,i)).gt.max_val*tiny) amp_split_ewsud_lo2(orders_to_amp_split_pos(amp_orders)) = ans(1,i) / iden
+     endif
+    endif
+enddo
+
+C this is to avoid fake non-zero contributions 
+if (abs(ans_summed).lt.max_val*tiny) ans_summed=0d0
+
+  return
+END
+
 
 
 
@@ -356,7 +494,8 @@ C
       INTEGER IC(NEXTERNAL-1),nmo
       parameter (nmo=nexternal-1)
       data ic /nmo*1/
-      REAL*8 CF(NCOLOR,NCOLOR)
+      INTEGER CF(NCOLOR*(NCOLOR+1)/2)
+      INTEGER CF_INDEX, DENOM   
       COMPLEX*16 ZTEMP, AMP(NGRAPHS), JAMP(NCOLOR,NAMPSO), W(%(wavefunctionsize)d,NWAVEFUNCS), jamph(2, ncolor,nampso)
       COMPLEX*16 TMP_JAMP(%(nb_temp_jamp)i)
 C  
@@ -375,6 +514,8 @@ C
       common/c_nfksprocess/nfksprocess
       integer step_hel
       logical cond_ij
+      logical force_ijglu_zero
+      common /to_force_ijglu/ force_ijglu_zero
 
 C
 C FUNCTION
@@ -390,15 +531,11 @@ C ----------
 C BEGIN CODE
 C ----------
       jamp(:,:) = (0d0,0d0)
+      borns(:,:) =0d0
+      ans(:,:) = (0d0, 0d0)
+
       glu_ij = ij_values(nfksprocess)
-      DO I = 1, NSQAMPSO
-        ANS(1,I)=0D0
-        ANS(2,I)=0D0
-        borns(1,I)=0d0
-        borns(2,I)=0d0
-      ENDDO
-      borns(1,0)=0d0
-      borns(2,0)=0d0
+      if (force_ijglu_zero) glu_ij = 0
       if (glu_ij.ne.0) then
         back_hel = nhel(glu_ij)
         if (back_hel.ne.0) then
@@ -446,16 +583,18 @@ C ----------
         endif
 %(jamp_lines)s
 	DO M = 1, NAMPSO
+        CF_INDEX = 0
         DO I = 1, NCOLOR
           ZTEMP = (0.D0,0.D0)
-          DO J = 1, NCOLOR
-            ZTEMP = ZTEMP + CF(J,I)*JAMP(J,M)
+          DO J = I, NCOLOR
+            CF_INDEX = CF_INDEX + 1
+            ZTEMP = ZTEMP + CF(CF_INDEX)*JAMP(J,M)
           ENDDO
-	  DO N = 1, NAMPSO
+	      DO N = 1, NAMPSO
               BORNS(2-(1+back_hel*ihel)/2,SQSOINDEXB(M,N))=BORNS(2-(1+back_hel*ihel)/2,SQSOINDEXB(M,N))+ZTEMP*DCONJG(JAMP(I,N))   
           ENDDO
         ENDDO
-        ENDDO
+    ENDDO
         Do I = 1, NGRAPHS
           amp2(i)=amp2(i)+amp(i)*dconjg(amp(i))
         Enddo
@@ -467,22 +606,26 @@ C ----------
         ENDDO
       endif
       Enddo
+      borns(:,:) = borns(:,:)/DENOM
       do i = 1, nsqampso
       borns(1,0)=borns(1,0)+borns(1,i)
       borns(2,0)=borns(2,0)+borns(2,i)
-      ans(1,i) = borns(1,i) + borns(2,i) 
+      ans(1,i) = borns(1,i) + borns(2,i)
       enddo
       DO M = 1, NAMPSO
+      CF_INDEX = 0
       DO I = 1, NCOLOR
         ZTEMP = (0.D0,0.D0)
-        DO J = 1, NCOLOR
-          ZTEMP = ZTEMP + CF(J,I)*JAMPH(2,J,M)
-        ENDDO
-	DO N = 1, NAMPSO
-        ANS(2,SQSOINDEXB(M,N))= ANS(2,SQSOINDEXB(M,N)) + ZTEMP*DCONJG(JAMPH(1,I,N))
+        DO J = I, NCOLOR
+          CF_INDEX = CF_INDEX +1
+          DO  N = 1, NAMPSO
+             ANS(2,SQSOINDEXB(M,N))= ANS(2,SQSOINDEXB(M,N)) + CF(CF_INDEX)*(JAMPH(2,J,M)*DCONJG(JAMPH(1,I,N))+JAMPH(2,I,M)*DCONJG(JAMPH(1,J,N)))
+          ENDDO
         ENDDO
       ENDDO
+
       ENDDO
+      ANS(2,:) = ANS(2,:)/(2d0*DENOM)
       if (glu_ij.ne.0) nhel(glu_ij) = back_hel
       END
        

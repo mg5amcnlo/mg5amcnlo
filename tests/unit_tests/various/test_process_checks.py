@@ -28,8 +28,6 @@ import madgraph.various.process_checks as process_checks
 import madgraph.various.misc as misc
 import models.import_ufo as import_ufo
 import models.model_reader as model_reader
-from six.moves import range
-
 _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0]
 
 #===============================================================================
@@ -195,6 +193,40 @@ class TestMatrixElementChecker(unittest.TestCase):
                 nb_fail = process_checks.output_lorentz_inv([comparison], 
                                                             output='fail')
                 self.assertEqual(0, nb_fail)
+
+    def test_fd_python_value_matches_unitary_fixed_point(self):
+        """FD Python evaluation should stay close to Unitary at a fixed point."""
+
+        import madgraph.interface.master_interface as interface
+        import madgraph.core.helas_objects as helas_objects
+
+        process_line = 'u u > w+ w- u u QCD=0'
+        p = [
+            [500.0, 0.0, 0.0, 500.0],
+            [500.0, 0.0, 0.0, -500.0],
+            [401.01469431414546, 32.49828279011273, -244.71617101372763, 305.6197414460834],
+            [260.789910425083, 5.193462736487908, -64.91667713260222, -239.38048040727654],
+            [35.78415077155445, 20.545542318439836, 24.517065174688458, 16.04056272400125],
+            [302.41124448921704, -58.237287845040406, 285.11578297164135, -82.27982376280812]
+        ]
+
+        values = {}
+        for gauge in ['unitary', 'FD']:
+            cmd = interface.MasterCmd()
+            cmd.no_notification()
+            cmd.exec_cmd('set gauge %s' % gauge)
+            cmd.exec_cmd('import model sm')
+            cmd.exec_cmd('generate %s' % process_line)
+            me = helas_objects.HelasMatrixElement(cmd._curr_amps[0])
+            evaluator = process_checks.MatrixElementEvaluator(cmd._curr_model, cmd=cmd, reuse=False)
+            for particle in evaluator.full_model.get('particles'):
+                if particle.get('width') != 'ZERO':
+                    evaluator.full_model.get('parameter_dict')[particle.get('width')] = 0.
+            values[gauge], _ = evaluator.evaluate_matrix_element(me, p=p)
+
+        relative_difference = abs(values['unitary'] - values['FD']) / \
+            max(abs(values['unitary']), abs(values['FD']))
+        self.assertLess(relative_difference, 5e-2)
 
     def test_failed_process(self):
         """Test that check process fails for wrong color-Lorentz."""

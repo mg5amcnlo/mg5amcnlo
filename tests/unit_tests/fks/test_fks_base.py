@@ -18,8 +18,6 @@
 from __future__ import absolute_import
 import sys
 import os
-from six.moves import range
-from six.moves import zip
 root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
 sys.path.insert(0, os.path.join(root_path,'..','..'))
 
@@ -34,9 +32,6 @@ import madgraph.various.misc as misc
 import models.import_ufo as import_ufo
 import copy
 import array
-import six
-
-
 class TestFKSProcess(unittest.TestCase):
     """a class to test FKS Processes"""
 
@@ -1443,7 +1438,7 @@ class TestFKSProcess(unittest.TestCase):
                          [len(real) for real in target])                
         for i in range(len(fksproc.reals)):
             for j in range(len(fksproc.reals[i])):
-                if six.PY3:
+                if True:
                     for k in range(len(fksproc.reals[i])):
                         if fksproc.reals[i][j]['leglist'] ==  target[i][k]:
                             break
@@ -1453,7 +1448,7 @@ class TestFKSProcess(unittest.TestCase):
                     self.assertEqual(fksproc.reals[i][j]['leglist'], target[i][j])
         for i in range(len(fksproc_qed.reals)):
             for j in range(len(fksproc_qed.reals[i])):
-                if six.PY3:
+                if True:
                     for k in range(len(fksproc_qed.reals[i])):
                         if fksproc_qed.reals[i][j]['leglist'] ==  target[i][k]:
                             break

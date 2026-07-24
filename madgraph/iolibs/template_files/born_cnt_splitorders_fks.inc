@@ -59,7 +59,7 @@ C this is for the orders of the counterterms
  enddo
 
  do j = 1, nsplitorders
-  write(*,*) 'counterterm S.O', j, ordernames(j)
+  !write(*,*) 'counterterm S.O', j, ordernames(j)
   do i = 1, nsqampso
    if (keep_order_cnt(j,i)) then
     write(*,*) 'CNT%(proc_prefix)s: keeping split order', i
@@ -259,7 +259,8 @@ C
       INTEGER IC(NEXTERNAL-1),nmo
       parameter (nmo=nexternal-1)
       data ic /nmo*1/
-      REAL*8  CF(NCOLOR,NCOLOR)
+      INTEGER  CF(NCOLOR*(NCOLOR+1)/2)
+      INTEGER CF_INDEX, DENOM
       COMPLEX*16 ZTEMP, AMP(NGRAPHS), JAMP(NCOLOR,NAMPSO), W(%(wavefunctionsize)d,NWAVEFUNCS), jamph(2, ncolor,nampso)
       COMPLEX*16 TMP_JAMP(%(nb_temp_jamp)i)
 C  
@@ -313,16 +314,21 @@ C don't chache for extra counterterms
         endif
 %(jamp_lines)s
 	DO M = 1, NAMPSO
+        CF_INDEX = 0
         DO I = 1, NCOLOR
           ZTEMP = (0.D0,0.D0)
-          DO J = 1, NCOLOR
-            ZTEMP = ZTEMP + CF(J,I)*JAMP(J,M)
+          DO J = I, NCOLOR
+            CF_INDEX = CF_INDEX +1
+            ZTEMP = ZTEMP + CF(CF_INDEX)*JAMP(J,M)
           ENDDO
-	  DO N = 1, NAMPSO
+	      DO N = 1, NAMPSO
               BORNS(2-(1-ihel)/2,SQSOINDEXB_CNT%(proc_prefix)s(M,N))=BORNS(2-(1-ihel)/2,SQSOINDEXB_CNT%(proc_prefix)s(M,N))+ZTEMP*DCONJG(JAMP(I,N))   
           ENDDO
         ENDDO
         ENDDO
+        BORNS(:,:)=BORNS(:,:)/DENOM
+
+
 c        Do I = 1, NGRAPHS
 c          amp2(i)=amp2(i)+amp(i)*dconjg(amp(i))
 c        Enddo
@@ -338,16 +344,18 @@ c          Jamp2(i,J)=Jamp2(i,J)+Jamp(i,J)*dconjg(Jamp(i,J))
       ans(1,i) = borns(1,i) + borns(2,i) 
       enddo
       DO M = 1, NAMPSO
+      CF_INDEX = 0 
       DO I = 1, NCOLOR
         ZTEMP = (0.D0,0.D0)
-        DO J = 1, NCOLOR
-          ZTEMP = ZTEMP + CF(J,I)*JAMPH(2,J,M)
-        ENDDO
-	DO N = 1, NAMPSO
-        ANS(2,SQSOINDEXB_CNT%(proc_prefix)s(M,N))= ANS(2,SQSOINDEXB_CNT%(proc_prefix)s(M,N)) + ZTEMP*DCONJG(JAMPH(1,I,N))
+        DO J = I, NCOLOR
+          CF_INDEX = CF_INDEX + 1
+          DO N = 1, NAMPSO
+             ANS(2,SQSOINDEXB_CNT%(proc_prefix)s(M,N))= ANS(2,SQSOINDEXB_CNT%(proc_prefix)s(M,N)) + CF(CF_INDEX)*JAMPH(2,J,M)*DCONJG(JAMPH(1,I,N))+CF(CF_INDEX)*JAMPH(2,I,M)*DCONJG(JAMPH(1,J,N))
+          ENDDO
         ENDDO
       ENDDO
       ENDDO
+      ANS(2,:) = ANS(2,:) / (2d0*DENOM)
       nhel(glu_ij) = back_hel
       END
        

@@ -31,7 +31,9 @@ import signal
 import tempfile
 import itertools
 import os
-import six.moves.cPickle
+import pickle
+cPickle = pickle # alias in case
+import re
 
 
 import madgraph
@@ -56,8 +58,6 @@ import madgraph.core.helas_objects as helas_objects
 import madgraph.various.cluster as cluster
 import madgraph.various.misc as misc
 import madgraph.various.banner as banner_mod
-from six.moves import range
-
 #usefull shortcut
 pjoin = os.path.join
 
@@ -80,7 +80,7 @@ def generate_directories_fks_async(i):
     olpopts = arglist[6]
     
     infile = open(mefile,'rb')
-    me = six.moves.cPickle.load(infile)
+    me = pickle.load(infile)
     infile.close()      
     
     calls, splitorders = curr_exporter.generate_directories_fks(me, curr_fortran_model, ime, nme, path, olpopts)
@@ -96,10 +96,7 @@ def generate_directories_fks_async(i):
     max_loop_vertex_rank = -99
     if me.virt_matrix_element:
         max_loop_vertex_rank = me.virt_matrix_element.get_max_loop_vertex_rank()  
-    if six.PY2:
-        return [calls, curr_exporter.fksdirs, max_loop_vertex_rank, ninitial, nexternal, processes, max_n_matched_jets, splitting_types, splitorders]
-    else:
-        return [calls, curr_exporter.fksdirs, max_loop_vertex_rank, ninitial, nexternal, None,max_n_matched_jets, splitting_types, splitorders]
+    return [calls, curr_exporter.fksdirs, max_loop_vertex_rank, ninitial, nexternal, None,max_n_matched_jets, splitting_types, splitorders]
 
 class CheckFKS(mg_interface.CheckValidForCmd):
 
@@ -119,6 +116,13 @@ class CheckFKS(mg_interface.CheckValidForCmd):
                 args[1] = 'loop' 
 
     def check_add(self, args):
+
+        if "--ewsudakov" in args:
+            self.ewsudakov = True
+            # this is for the Sudakov approximation of EW corrections
+            logger.warning('Generating a process including the Sudakov approximation of EW corrections.\n' + \
+                           'Please cite arxiv:2110.03714, arxiv:2309.00452')
+            args.remove('--ewsudakov')
         
         super(CheckFKS, self).check_add(args)        
         if '$' in args:
@@ -135,7 +139,12 @@ class CheckFKS(mg_interface.CheckValidForCmd):
     def check_output(self, args):
         """ check the validity of the line"""
                   
-        self._export_format = 'NLO'
+        if args and args[0] == 'ewsudakovsa':
+            self._export_format = 'ewsudsa'
+            args.pop(0)
+        else:
+            self._export_format = 'NLO'
+
         forbidden_formats = ['madevent', 'standalone']
         
 
@@ -444,6 +453,8 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
         
         args = self.split_arg(line)
         # Check the validity of the arguments
+        self.ewsudakov = False
+
         self.check_add(args)
 
         if args[0] == 'model':
@@ -459,6 +470,10 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
                         break
 
             line = ' '.join(args[1:])
+
+        # convert the single $ to $$ automatically
+        if re.search(r"\b\$\b", line):
+            raise MadGraph5Error("Single $ syntax is not supported at NLO, please use $$")
 
         proc_type=self.extract_process_type(line)
         if proc_type[1] not in ['real', 'LOonly']:
@@ -486,6 +501,15 @@ Please also cite ref. 'arXiv:1804.10017' when using results from this code.
 
 
         geninfo = self._generate_info
+
+        # this warning is to remind us that for the moment adding EW sudakov
+        # corrections lacks the LO2 contributions unless EW corrections are
+        # also computed
+        if self.ewsudakov and not 'QED' in proc_type[2]:
+            logger.warning('The EW Sudakov corrections might be incomplete.' + \
+                           'They will not include contributions of QCD origin ' + \
+                           'stemming from the LO2, if it exists.')
+
         self.validate_model(proc_type[1], coupling_type=proc_type[2])
         self._generate_info = geninfo
 
@@ -540,7 +564,12 @@ Please also cite ref. 'arXiv:1804.10017' when using results from this code.
                 # set all the other coupling to zero
                 for o in myprocdef['model'].get_coupling_orders():
                     if o not in ['QED', 'QCD']:
-                        orders[o] = 0
+                        if self._curr_model.get('order_hierarchy')[o] == self._curr_model.get('order_hierarchy')['QCD']:
+                            orders[o] = 2*qcd
+                        elif self._curr_model.get('order_hierarchy')[o] == self._curr_model.get('order_hierarchy')['QED']:
+                            orders[o] = 2*qed
+                        else:
+                            orders[o] = 0
 
                 myprocdef.set('squared_orders', orders)
                 # warn the user of what happened
@@ -548,14 +577,24 @@ Please also cite ref. 'arXiv:1804.10017' when using results from this code.
                                 'If this is not what you need, please regenerate with the correct orders.'), 
                                 ' '.join(['%s^2<=%s' %(k,v) if v else '%s=%s' % (k,v) for k,v in myprocdef['squared_orders'].items()]), 
                                 '$MG:BOLD')
-            else:
+            else: 
                 orders = {'QED': qed, 'QCD': qcd}
                 sqorders = {'QED': 2*qed, 'QCD': 2*qcd}
                 # set all the other coupling to zero
                 for o in myprocdef['model'].get_coupling_orders():
                     if o not in ['QED', 'QCD']:
-                        orders[o] = 0
-                        sqorders[o] = 0
+                        if self._curr_model.get('order_hierarchy')[o] == self._curr_model.get('order_hierarchy')['QCD']:
+                            orders[o] = qcd
+                            sqorders[o] = 2*qcd
+                        elif self._curr_model.get('order_hierarchy')[o] == self._curr_model.get('order_hierarchy')['QED']:
+                            orders[o] = qed
+                            sqorders[o] = 2*qed
+                        elif o in self._curr_model.get('expansion_order') and self._curr_model.get('expansion_order')[o]<50:
+                            orders[o] = self._curr_model.get('expansion_order')[o]
+                            sqorders[o] = 2*self._curr_model.get('expansion_order')[o]
+                        else:
+                            orders[o] = 0
+                            sqorders[o] = 0
 
                 myprocdef.set('orders', orders)
                 myprocdef.set('squared_orders', sqorders)
@@ -664,6 +703,7 @@ Please also cite ref. 'arXiv:1804.10017' when using results from this code.
                        'ignore_six_quark_processes': self.options['ignore_six_quark_processes'],
                        'init_lep_split': self.options['include_lepton_initiated_processes'],
                        'ncores_for_proc_gen': self.ncores_for_proc_gen,
+                       'ewsudakov': self.ewsudakov,
                        'nlo_mixed_expansion': self.options['nlo_mixed_expansion'],
                        'loop_filter':self._fks_multi_proc['loop_filter'] if hasattr(self, '_fks_multi_proc') else None}
 
@@ -716,15 +756,17 @@ Please also cite ref. 'arXiv:1804.10017' when using results from this code.
         # For NLO, the group_subprocesses is automatically set to false
         group_processes = False
         # initialize the writer
-        if self._export_format in ['NLO']:
+        if self._export_format in ['NLO','ewsudsa']:
+            output_type_dict = {'NLO': 'amcatnlo', 'ewsudsa': 'ewsudsa'}
             self._curr_exporter = export_v4.ExportV4Factory(self, noclean, 
-                      output_type='amcatnlo',group_subprocesses=group_processes)
+                      output_type=output_type_dict[self._export_format],
+                      group_subprocesses=group_processes)
             
             self._curr_exporter.pass_information_from_cmd(self)
 
         # check if a dir with the same name already exists
         if not force and not noclean and os.path.isdir(self._export_dir)\
-               and self._export_format in ['NLO']:
+               and self._export_format in ['NLO', 'ewsudsa']:
             # Don't ask if user already specified force or noclean
             logger.info('INFO: directory %s already exists.' % self._export_dir)
             logger.info('If you continue this directory will be deleted and replaced.')
@@ -739,7 +781,7 @@ Please also cite ref. 'arXiv:1804.10017' when using results from this code.
             shutil.rmtree(self._export_dir)
 
         # Make a Template Copy
-        if self._export_format in ['NLO']:
+        if self._export_format in ['NLO', 'ewsudsa']:
             self._curr_exporter.copy_fkstemplate(self._curr_model)
 
         # Reset _done_export, since we have new directory
@@ -846,7 +888,7 @@ Please also cite ref. 'arXiv:1804.10017' when using results from this code.
 
         path = self._export_dir
 
-        if self._export_format in ['NLO']:
+        if self._export_format in ['NLO', 'ewsudsa']:
             path = os.path.join(path, 'SubProcesses')
 
             #_curr_matrix_element is a FKSHelasMultiProcess Object 
@@ -886,10 +928,7 @@ Please also cite ref. 'arXiv:1804.10017' when using results from this code.
             if self.options['low_mem_multicore_nlo_generation']:
                 # start the pool instance with a signal instance to catch ctr+c
                 logger.info('Writing directories...')
-                if six.PY3:
-                    ctx = multiprocessing.get_context('fork') # spawn is default for 3.8 and does not work
-                else:
-                    ctx = multiprocessing
+                ctx = multiprocessing.get_context('fork') # spawn is default for 3.8 and does not work
                 original_sigint_handler = signal.signal(signal.SIGINT, signal.SIG_IGN)
                 if self.ncores_for_proc_gen < 0: # use all cores
                     pool = ctx.Pool(maxtasksperchild=1)
@@ -939,9 +978,6 @@ Please also cite ref. 'arXiv:1804.10017' when using results from this code.
                     splitorders += [so for so in diroutput[8] if so not in splitorders]
                     self._fks_directories.extend(diroutput[1])
                     max_loop_vertex_ranks.append(diroutput[2])
-                    if six.PY2:
-                        self.born_processes.extend(diroutput[5])
-                        self.born_processes_for_olp.append(diroutput[5][0])
 
                 # transform proc_charac['splitting_types'] back to a list
                 proc_charac['splitting_types'] = list(splitting_types)

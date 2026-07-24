@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # finds out architecture name, defines system files, and construct
 # the relevant directory for run, if not present. If the architecture
 # cannot be figured out, defines ./Run as working directory, and use 
@@ -307,7 +307,7 @@ fi
 
 runfile="MCATNLO_"$MCMODE
   # create executable if eveything is ok
-  echo "#!/bin/bash" > $thisdir/$EXEC_NAMEFF
+  echo "#!/usr/bin/env bash" > $thisdir/$EXEC_NAMEFF
   echo "./$HWEXE read MCATNLO_"$MCMODE"_input" >> $thisdir/$EXEC_NAMEFF
   echo "./$HWEXE run -N "$NEVENTS" "$runfile".run" >> $thisdir/$EXEC_NAMEFF
   chmod +x $thisdir/$EXEC_NAMEFF

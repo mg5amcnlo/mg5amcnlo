@@ -3,9 +3,6 @@
 #Extension
 from __future__ import absolute_import
 import string,os,sys,re,time,stat,filecmp
-from six.moves import range
-from six.moves import input
-
 try: 
     import madgraph.madweight.mod_file as mod_file
     import madgraph.madweight.change_tf as change_tf

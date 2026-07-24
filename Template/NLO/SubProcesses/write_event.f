@@ -1,4 +1,4 @@
-      subroutine finalize_event(xx,weight,lunlhe,putonshell)
+      subroutine finalize_event(xx,weight,lunlhe,putonshell,p_label)
       use mint_module
       implicit none
       include 'nexternal.inc'
@@ -8,7 +8,7 @@
       include 'timing_variables.inc'
       logical Hevents
       common/SHevents/Hevents
-      integer i,j,lunlhe
+      integer i,j,lunlhe,p_label
       real*8 xx(ndimmax),weight,evnt_wgt
       logical putonshell
       double precision wgt
@@ -83,7 +83,7 @@ c Put the Hevent info in a common block
 
 c Write-out the events
       call write_events_lhe(pb(0,1),evnt_wgt,jpart(1,1),npart,lunlhe
-     $     ,shower_scale,shower_scale_a,ickkw)
+     $     ,shower_scale,shower_scale_a,ickkw,p_label)
       
       call cpu_time(tAfter)
       t_write=t_write+(tAfter-tBefore)
@@ -117,36 +117,10 @@ c Scales
       lunlhe=ifile
 c get info on beam and PDFs
       call setrun
-      XSECUP(1)=inter
-      XERRUP(1)=uncer
-      XMAXUP(1)=absint/ievents
-      LPRUP(1)=66
-      if (event_norm(1:5).eq.'unity'.or.event_norm(1:3).eq.'sum') then
-         IDWTUP=-3
-      else
-         IDWTUP=-4
-      endif
-      NPRUP=1
-
-      write(lunlhe,'(a)')'<LesHouchesEvents version="3.0">'
-      write(lunlhe,'(a)')'  <!--'
-      write(lunlhe,'(a)')'  <scalesfunctionalform>'
-      write(lunlhe,'(2a)')'    muR  ',muR_id_str(1:len_trim(muR_id_str))
-      write(lunlhe,'(2a)')'    muF1 ',muF1_id_str(1:len_trim(muF1_id_str))
-      write(lunlhe,'(2a)')'    muF2 ',muF2_id_str(1:len_trim(muF2_id_str))
-      write(lunlhe,'(2a)')'    QES  ',QES_id_str(1:len_trim(QES_id_str))
-      write(lunlhe,'(a)')'  </scalesfunctionalform>'
-      write(lunlhe,'(a)')MonteCarlo
-      write(lunlhe,'(a)')'  -->'
-      write(lunlhe,'(a)')'  <header>'
-      write(lunlhe,250)ievents
-      write(lunlhe,'(a)')'  </header>'
-      write(lunlhe,'(a)')'  <init>'
-      write(lunlhe,501)IDBMUP(1),IDBMUP(2),EBMUP(1),EBMUP(2),
-     #                PDFGUP(1),PDFGUP(2),PDFSUP(1),PDFSUP(2),
-     #                IDWTUP,NPRUP
-      write(lunlhe,502)XSECUP(1),XERRUP(1),XMAXUP(1),LPRUP(1)
-      write(lunlhe,'(a)')'  </init>'
+      call write_lhef_header(lunlhe,ievents,MonteCarlo)
+      call write_lhef_init(lunlhe,
+     #  IDBMUP,EBMUP,PDFGUP,PDFSUP,IDWTUP,NPRUP,
+     #  XSECUP,XERRUP,XMAXUP,LPRUP)
  250  format(1x,i8)
  501  format(2(1x,i6),2(1x,d14.8),2(1x,i2),2(1x,i8),1x,i2,1x,i3)
  502  format(3(1x,d14.8),1x,i6)
@@ -155,18 +129,18 @@ c get info on beam and PDFs
       end
 
       subroutine write_events_lhe(p,wgt,ic,npart,lunlhe,shower_scale
-     $     ,shower_scale_a,ickkw)
+     $     ,shower_scale_a,ickkw,p_label)
       use extra_weights
       implicit none
       include "nexternal.inc"
       include "coupl.inc"
       include "madfks_mcatnlo.inc"
       double precision p(0:4,2*nexternal-3),wgt
-      integer ic(7,2*nexternal-3),npart,lunlhe,kwgtinfo,ickkw
+      integer ic(7,2*nexternal-3),npart,lunlhe,kwgtinfo,ickkw,p_label
       double precision pi,zero
       parameter (pi=3.1415926535897932385d0)
       parameter (zero=0.d0)
-      integer ievent,izero
+      integer izero
       parameter (izero=0)
       double precision aqcd,aqed,scale
       character*1000 buff
@@ -232,7 +206,6 @@ c alpha_s to the one in the param_card.dat (without any running).
          call write_header_init
          firsttime=.false.
       endif
-      ievent=66
 c
       if(AddInfoLHE)then
         if(.not.doreweight)then
@@ -269,7 +242,7 @@ c     ic(6,*) = ISTUP   -1=initial state +1=final  +2=decayed
 c     ic(7,*) = Helicity
 c********************************************************************
       NUP=npart
-      IDPRUP=ievent
+      IDPRUP=p_label
       XWGTUP=wgt
       AQEDUP=aqed
       AQCDUP=aqcd

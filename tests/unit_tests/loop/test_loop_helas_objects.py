@@ -23,8 +23,6 @@ import logging
 import math
 import os
 import sys
-from six.moves import range
-
 root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
 sys.path.append(os.path.join(root_path, os.path.pardir, os.path.pardir))
 

@@ -59,8 +59,9 @@
    20	    continue
 	    sprec = precx
 	    precx = precc
-	    call ffxb2(cb2p,cb2d,cb1,cb0,ca0i,rp,rm1,rm2,rpiDpj,
-     +	    	ier)
+                    stop 2
+C	    call ffxb2(cb2p,cb2d,cb1,cb0,ca0i,rp,rm1,rm2,rpiDpj,
+C     +	    	ier)
 	    precx = sprec
 	    return
 	endif
@@ -176,8 +177,9 @@
    20	    continue
 	    sprec = precx
 	    precx = precc
-	    call ffxb2a(cb2p,cb2d,cb1,cb0,ca0i,rp,rm1,rm2,rm1p,rm2p,
-     +	    	rm1m2,rpiDpj,ier)
+                    stop 2
+C	    call ffxb2a(cb2p,cb2d,cb1,cb0,ca0i,rp,rm1,rm2,rm1p,rm2p,
+C     +	    	rm1m2,rpiDpj,ier)
 	    precx = sprec
 	    return
 	endif

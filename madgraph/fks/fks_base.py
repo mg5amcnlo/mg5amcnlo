@@ -24,13 +24,12 @@ import madgraph.core.color_amp as color_amp
 import madgraph.core.color_algebra as color_algebra
 import madgraph.loop.loop_diagram_generation as loop_diagram_generation
 import madgraph.fks.fks_common as fks_common
+import madgraph.fks.sudakov as sudakov
 import copy
 import logging
 import array
 import madgraph.various.misc as misc
 from madgraph import InvalidCmd
-from six.moves import range
-
 logger = logging.getLogger('madgraph.fks_base')
 
 if madgraph.ordering:
@@ -54,6 +53,7 @@ class FKSMultiProcess(diagram_generation.MultiProcess): #test written
         self['real_amplitudes'] = diagram_generation.AmplitudeList()
         self['pdgs'] = []
         self['born_processes'] = FKSProcessList()
+        self['ewsudakov'] = False
 
         if not 'OLP' in list(self.keys()):
             self['OLP'] = 'MadLoop'
@@ -65,7 +65,7 @@ class FKSMultiProcess(diagram_generation.MultiProcess): #test written
         """Return particle property names as a nicely sorted list."""
         keys = super(FKSMultiProcess, self).get_sorted_keys()
         keys += ['born_processes', 'real_amplitudes', 'real_pdgs', 'has_isr', 
-                 'has_fsr', 'spltting_types', 'OLP', 'ncores_for_proc_gen', 
+                 'has_fsr', 'spltting_types', 'OLP', 'ncores_for_proc_gen', 'ewsudakov',
                  'loop_filter']
         return keys
 
@@ -153,16 +153,23 @@ class FKSMultiProcess(diagram_generation.MultiProcess): #test written
             olp = options['OLP']
             del options['OLP']
 
+        # EW sudakov
+        ewsudakov = False
+        if 'ewsudakov' in list(options.keys()):
+            ewsudakov = options['ewsudakov']
+            del options['ewsudakov']
+
+        # leptons in initial state
         self['init_lep_split']=False
         if 'init_lep_split' in list(options.keys()):
             self['init_lep_split']=options['init_lep_split']
             del options['init_lep_split']
 
-        ncores_for_proc_gen = 0
         # ncores_for_proc_gen has the following meaning
         #   0 : do things the old way
         #   > 0 use ncores_for_proc_gen
         #   -1 : use all cores
+        ncores_for_proc_gen = 0
         if 'ncores_for_proc_gen' in list(options.keys()):
             ncores_for_proc_gen = options['ncores_for_proc_gen']
             del options['ncores_for_proc_gen']
@@ -181,6 +188,7 @@ class FKSMultiProcess(diagram_generation.MultiProcess): #test written
                " For this, use the 'virt=' mode, without multiparticle labels.")
 
         self['OLP'] = olp
+        self['ewsudakov'] = ewsudakov 
         self['ncores_for_proc_gen'] = ncores_for_proc_gen
 
         #check process definition(s):
@@ -233,12 +241,18 @@ class FKSMultiProcess(diagram_generation.MultiProcess): #test written
                              amp.get('process').nice_string().replace('Process', ''))
                 continue
 
+            # skip amplitudes with two initial particles not being photons for UPC processes
+            if [l['id'] not in [22] and l['is_tagged'] for l in [ll for ll in amp.get('process').get('legs') if not ll['state'] and 'is_tagged'in ll]]==[True, True]:
+                logger.info(('Discarding process%s in UPCs.')%amp.get('process').nice_string().replace('Process', ''))
+                continue
+
             logger.info("Generating FKS-subtracted matrix elements for born process%s (%d / %d)" \
                 % (amp['process'].nice_string(print_weighted=False, print_perturbated=False).replace('Process', ''),
                    i + 1, len(amps)))
 
             born = FKSProcess(amp, ncores_for_proc_gen = self['ncores_for_proc_gen'], \
-                                   init_lep_split=self['init_lep_split'])
+                                   init_lep_split=self['init_lep_split'], \
+                                   ewsudakov = self['ewsudakov'])
             self['born_processes'].append(born)
 
             born.generate_reals(self['pdgs'], self['real_amplitudes'], combine = False)
@@ -299,6 +313,8 @@ class FKSMultiProcess(diagram_generation.MultiProcess): #test written
         self['has_fsr'] = self['has_fsr'] or other['has_fsr']
         self['OLP'] = other['OLP']
         self['ncores_for_proc_gen'] = other['ncores_for_proc_gen']
+        self['ewsudakov'] = self['ewsudakov'] or other['ewsudakov']
+
 
 
     def get_born_amplitudes(self):
@@ -357,7 +373,14 @@ class FKSMultiProcess(diagram_generation.MultiProcess): #test written
             elif not myproc['orders']:
                     myproc['perturbation_couplings'] = myproc['model']['coupling_orders']
             # take the orders that are actually used bu the matrix element
+            upc = [[l['is_tagged'], l['id'] in [22]] for l in [ll for ll in myproc.get('legs') if not ll['state'] and 'is_tagged'in ll]]
             myproc['legs'] = fks_common.to_legs(copy.copy(myproc['legs']))
+            # skip virtual amplitudes with both initial particles not being photons for UPC processes
+            if [item[0] for item in upc]==[True,True] and [item[1] for item in upc]!=[True,True]:
+                logger.info(('Discarding virtual process%s in UPCs.')%myproc.nice_string(print_weighted= False,\
+                                                                    print_perturbated= False).replace('Process', ''))
+                born.virt_amp = None
+                continue
             logger.info('Generating virtual matrix element with MadLoop for process%s (%d / %d)' \
                     % (myproc.nice_string(print_weighted= False, print_perturbated= False).replace(\
                                                              'Process', ''),
@@ -553,7 +576,7 @@ class FKSProcess(object):
 
 ###############################################################################
     
-    def __init__(self, start_proc = None, remove_reals = True, ncores_for_proc_gen=0, init_lep_split = False):
+    def __init__(self, start_proc = None, remove_reals = True, ncores_for_proc_gen=0, init_lep_split = False, ewsudakov = False):
         """initialization: starts either from an amplitude or a process,
         then init the needed variables.
         remove_borns tells if the borns not needed for integration will be removed
@@ -575,6 +598,7 @@ class FKSProcess(object):
         self.born_amp = diagram_generation.Amplitude()
         self.extra_cnt_amp_list = diagram_generation.AmplitudeList()
         self.ncores_for_proc_gen = ncores_for_proc_gen
+        self.sudakov_amps = []
 
         if not remove_reals in [True, False]:
             raise fks_common.FKSProcessError(\
@@ -617,6 +641,11 @@ class FKSProcess(object):
             # e.g. to be used in merged sampels at high multiplicities
             if self.born_amp['process']['NLO_mode'] != 'LOonly':
                 self.find_reals()
+
+            # if ewsudakov is true, then look for the corresponding matrix elements
+            self.ewsudakov = ewsudakov
+            if ewsudakov:
+                self.sudakov_amps = sudakov.get_sudakov_amps(self.born_amp)
 
 
     def generate_real_amplitudes(self, pdg_list, real_amp_list):
@@ -870,6 +899,10 @@ class FKSProcess(object):
         # count the number of initial-state leptons
         ninit_lep = [l['id'] in model.get_lepton_pdgs() and not l['state'] for l in leglist].count(True)
 
+        # count the number of initial-state photons and tagged initial-state particles
+        ninit_ph = [l['id'] in [22] and not l['state'] for l in leglist].count(True)
+        ninit_tag = [not l['state'] and l['is_tagged'] for l in leglist].count(True)
+
         for i in leglist:
             i_i = i['number'] - 1
             self.reals.append([])
@@ -887,6 +920,12 @@ class FKSProcess(object):
                 # only split initial state leptons; do nothing for any other particle
                 elif not self.init_lep_split and ninit_lep >= 1 and \
                   (i['state'] or i['id'] not in model.get_lepton_pdgs()):
+                    splittings=[]
+                # UPC: 1.) final-state splitting is forbidded if not both initial-state particles are photons
+                #      2.) initial-state photons are not allowed to split
+                #      3.) initial-state fermions are not allowed to undergo a QCD splitting
+                elif ninit_tag > 0 and ((i['state'] and ninit_ph < 2) or \
+                  (not i['state'] and i['id'] == 22) or (not i['state'] and pert_order == 'QCD')):
                     splittings=[]
                 else:
                     splittings = fks_common.find_splittings( \

@@ -256,6 +256,8 @@ C  the fill_plot subroutine of fks_singular.f
          ibody=2 ! n-body
       elseif(itype.eq.20)then
          ibody=3 ! Born
+      elseif(itype.ge.100.and.itype.le.102)then
+         ibody=10+itype-100 ! EW sudakov
       else
          write(*,*)'Error in outfun: unknown itype',itype
          stop

@@ -108,12 +108,12 @@ extern "C" void appl_init_()
     // vector "grid_obs".
     std::size_t const index = grid_obs.size();
 
-    int lo_power = 9999;
-    int nlo_power = 0;
+    uint32_t lo_power = 9999;
+    uint32_t nlo_power = 0;
 
     for (int i = 0; i != appl_common_fixed_.amp_split_size; ++i)
     {
-        int sum = appl_common_fixed_.qcdpower[i] + appl_common_fixed_.qedpower[i];
+        uint32_t sum = appl_common_fixed_.qcdpower[i] + appl_common_fixed_.qedpower[i];
 
         lo_power = std::min(lo_power, sum);
         nlo_power = std::max(nlo_power, sum);
@@ -131,9 +131,9 @@ extern "C" void appl_init_()
 
     for (int i = 0; i != appl_common_fixed_.amp_split_size; ++i)
     {
-        int const qcd = appl_common_fixed_.qcdpower[i];
-        int const qed = appl_common_fixed_.qedpower[i];
-        int const sum = qcd + qed;
+        uint32_t const qcd = appl_common_fixed_.qcdpower[i];
+        uint32_t const qed = appl_common_fixed_.qedpower[i];
+        uint32_t const sum = qcd + qed;
 
         translation_tables.back().push_back(subgrid_params.size() / 4);
 

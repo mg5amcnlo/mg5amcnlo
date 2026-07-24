@@ -28,9 +28,6 @@ import madgraph.core.diagram_generation as diagram_generation
 import madgraph.core.base_objects as base_objects
 import madgraph.various.misc as misc
 from madgraph import MadGraph5Error, MG5DIR
-from six.moves import range
-from six.moves import zip
-
 logger = logging.getLogger('madgraph.loop_base_objects')
 
 #===============================================================================
@@ -1006,7 +1003,7 @@ class LoopDiagram(base_objects.Diagram):
         self['vertices'] = loopVertexList    
     
     def construct_FDStructure(self, fromVert, fromPos, currLeg, FDStruct):
-        """ Construct iteratively a Feynman Diagram structure attached to a Loop, 
+        r""" Construct iteratively a Feynman Diagram structure attached to a Loop, 
         given at each step a vertex and the position of the leg this function is 
         called from. At the same time, it constructs a canonical representation 
         of the structure which is a tuple with each element corresponding to 

@@ -91,7 +91,7 @@ import internal.madevent_interface as cmd_interface
 
 
 try:
-    cmd_line = cmd_interface.GridPackCmd(me_dir=root_path, nb_event=args[0], seed=args[1], gran=args[2])            
+    cmd_line = cmd_interface.GridPackCmd(me_dir=root_path, nb_event=args[0], seed=args[1], gran=args[2], nprocs=args[3], maxevts=args[4])
 except KeyboardInterrupt:
     print('Quit on KeyboardInterrupt') 
 

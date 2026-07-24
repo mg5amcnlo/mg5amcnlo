@@ -1,4 +1,3 @@
-################################################################################
 #
 # Copyright (c) 2009 The MadGraph5_aMC@NLO Development team and Contributors
 #
@@ -56,11 +55,6 @@ import madgraph.iolibs.helas_call_writers as helas_call_writers
 import models.check_param_card as check_param_card
 from madgraph.loop.loop_base_objects import LoopDiagram
 from madgraph.loop.MadLoopBannerStyles import MadLoopBannerStyles
-from six.moves import range
-from six.moves import zip
-
-
-
 pjoin = os.path.join
 
 import aloha.create_aloha as create_aloha
@@ -92,7 +86,8 @@ class LoopExporterFortran(object):
                         'SubProc_prefix': 'P',
                         'output_dependencies': 'external',
                         'compute_color_flows': False,
-                        'mode':''})
+                        'mode':'',
+                        'vector_size':0})
 
     include_names    = {'ninja' : 'mninja.mod',
                         'golem' : 'generic_function_1p.mod',
@@ -182,14 +177,18 @@ class LoopExporterFortran(object):
             # his environmental paths
             CTlib = misc.which_lib('libcts.a')
             CTmod = misc.which_lib('mpmodule.mod')
-            if not CTlib is None and not CTmod is None:
+            if CTlib is None:
+                raise InvalidCmd("Could not find the location of the file"+\
+                    " libcts.a in your environment paths.")
+            elif CTmod is None:
+                raise InvalidCmd("Could not find the location of the file"+\
+                    " mpmodule.mod in your environment paths.")
+            else:
                 logger.info('MG5_aMC is using CutTools installation found at %s.'%\
-                                                         os.path.dirname(CTlib)) 
+                                                         os.path.dirname(CTlib))
                 ln(os.path.join(CTlib),os.path.join(targetPath,'lib'),abspath=True)
                 ln(os.path.join(CTmod),os.path.join(targetPath,'lib'),abspath=True)
-            else:
-                raise InvalidCmd("Could not find the location of the files"+\
-                    " libcts.a and mp_module.mod in you environment paths.")
+
     
     def get_aloha_model(self, model):
         """ Caches the aloha model created here as an attribute of the loop 
@@ -293,104 +292,16 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
         os.chmod(output_path, os.stat(output_path).st_mode | stat.S_IEXEC)
        
     
+    f2py_matrix_splitter_template = pjoin(os.pardir,"loop", "f2py_wrapper_subproccesses.f")
+    all_matrix_template = pjoin(os.pardir, "loop", "all_matrix.f")
     def write_f2py_splitter(self):
         """write a function to call the correct matrix element"""
-        
-        template = """
-%(python_information)s
 
-      SUBROUTINE INITIALISE(PATH)
-C     ROUTINE FOR F2PY to read the benchmark point.
-      IMPLICIT NONE
-      CHARACTER*512 PATH
-CF2PY INTENT(IN) :: PATH
-      CALL SETPARA(PATH)  !first call to setup the paramaters
-      RETURN
-      END
+        template_matrix = open(os.path.join(self.template_dir,
+                                            self.all_matrix_template)).read()
+        template_f2py = open(os.path.join(self.template_dir,
+                                         self.f2py_matrix_splitter_template)).read()
 
-      subroutine CHANGE_PARA(name, value)
-      implicit none
-CF2PY intent(in) :: name
-CF2PY intent(in) :: value
-
-      character*512 name
-      double precision value
-
-      include '../Source/MODEL/input.inc'
-      include '../Source/MODEL/coupl.inc'
-      include '../Source/MODEL/mp_coupl.inc'
-      include '../Source/MODEL/mp_input.inc'
-      
-      SELECT CASE (name)   
-         %(parameter_setup)s
-         CASE DEFAULT
-            write(*,*) 'no parameter matching', name
-      END SELECT
-
-      return
-      end
-      
-    subroutine update_all_coup()
-    implicit none
-     call coup()
-     call printout()
-    return 
-    end
-
-
-      SUBROUTINE SET_MADLOOP_PATH(PATH)
-C     Routine to set the path of the folder 'MadLoop5_resources' to MadLoop
-        CHARACTER(512) PATH
-CF2PY intent(in)::path
-        CALL SETMADLOOPPATH(PATH)
-      END
-
-  subroutine smatrixhel(pdgs, procid, npdg, p, ALPHAS, SCALES2, nhel, ANS, RETURNCODE)
-  IMPLICIT NONE
-
-CF2PY double precision, intent(in), dimension(0:3,npdg) :: p
-CF2PY integer, intent(in), dimension(npdg) :: pdgs
-CF2PY integer, intent(in):: procid
-CF2PY integer, intent(in) :: npdg
-CF2PY double precision, intent(out) :: ANS
-CF2PY integer, intent(out) :: RETURNCODE
-CF2PY double precision, intent(in) :: ALPHAS
-CF2PY double precision, intent(in) :: SCALES2
-
-  integer pdgs(*)
-  integer npdg, nhel, RETURNCODE, procid
-  double precision p(*)
-  double precision ANS, ALPHAS, PI,SCALES2
- 1 continue
-%(smatrixhel)s
-
-      return
-      end
-  
-  subroutine get_pdg_order(OUT, ALLPROC)
-  IMPLICIT NONE
-CF2PY INTEGER, intent(out) :: OUT(%(nb_me)i,%(maxpart)i)  
-CF2PY INTEGER, intent(out) :: ALLPROC(%(nb_me)i)
-  INTEGER OUT(%(nb_me)i,%(maxpart)i), PDGS(%(nb_me)i,%(maxpart)i)
-  INTEGER ALLPROC(%(nb_me)i),PIDs(%(nb_me)i)
-  DATA PDGS/ %(pdgs)s /
-  DATA PIDS/ %(pids)s /
-  OUT=PDGS
-  ALLPROC = PIDS
-  RETURN
-  END
-  
-  subroutine get_prefix(PREFIX)
-  IMPLICIT NONE
-CF2PY CHARACTER*20, intent(out) :: PREFIX(%(nb_me)i)
-  character*20 PREFIX(%(nb_me)i),PREF(%(nb_me)i)
-  DATA PREF / '%(prefix)s'/
-  PREFIX = PREF
-  RETURN
-  END 
-  
-        """
-         
         allids = list(self.prefix_info.keys())
         allprefix = [self.prefix_info[key][0] for key in allids]
         min_nexternal = min([len(ids[0]) for ids in allids])
@@ -450,12 +361,15 @@ CF2PY CHARACTER*20, intent(out) :: PREFIX(%(nb_me)i)
                       }
     
     
-        text = template % formatting
+        text = template_matrix % formatting
         fsock = writers.FortranWriter(pjoin(self.dir_path, 'SubProcesses', 'all_matrix.f'),'w')
         fsock.writelines(text)
         fsock.close()
         
-    
+        text = template_f2py % formatting
+        fsock = writers.FortranWriter(pjoin(self.dir_path, 'SubProcesses', 'f2py_wrapper.f'),'w')
+        fsock.writelines(text)
+        fsock.close()
     
     def loop_additional_template_setup(self, copy_Source_makefile = True):
         """ Perform additional actions specific for this class when setting
@@ -504,18 +418,14 @@ CF2PY CHARACTER*20, intent(out) :: PREFIX(%(nb_me)i)
         writer.close()
         
         # Copy the whole MadLoop5_resources directory (empty at this stage)
-        if not os.path.exists(pjoin(self.dir_path,'SubProcesses',
-                                                        'MadLoop5_resources')):
-            cp(pjoin(self.loop_dir,'StandAlone','SubProcesses',
-                    'MadLoop5_resources'),pjoin(self.dir_path,'SubProcesses'))
+        ml_path = pjoin(self.dir_path,'SubProcesses', 'MadLoop5_resources')
+        if not os.path.exists(ml_path):
+            os.mkdir(ml_path)
 
         # Link relevant cards from Cards inside the MadLoop5_resources
-        ln(pjoin(self.dir_path,'SubProcesses','MadLoopParams.dat'), 
-                      pjoin(self.dir_path,'SubProcesses','MadLoop5_resources'))
-        ln(pjoin(self.dir_path,'Cards','param_card.dat'),
-                      pjoin(self.dir_path,'SubProcesses','MadLoop5_resources'))
-        ln(pjoin(self.dir_path,'Cards','ident_card.dat'), 
-                      pjoin(self.dir_path,'SubProcesses','MadLoop5_resources'))
+        ln(pjoin(self.dir_path,'SubProcesses','MadLoopParams.dat'), ml_path)
+        ln(pjoin(self.dir_path,'Cards','param_card.dat'), ml_path)
+        ln(pjoin(self.dir_path,'Cards','ident_card.dat'), ml_path) 
 
         # And remove check_sa in the SubProcess folder since now there is a
         # check_sa tailored to each subprocess.
@@ -551,11 +461,20 @@ CF2PY CHARACTER*20, intent(out) :: PREFIX(%(nb_me)i)
         replace_dict={}
         replace_dict['link_tir_libs']=' '.join(link_tir_libs)
         replace_dict['tir_libs']=' '.join(tir_libs)
+        tir_libs = tir_libs[:]
+        tir_libs = [lib for lib in tir_libs if 'iregi' not in lib.lower()]
+        dylibs =' '.join(tir_libs).replace('ninja.$(libext)', 'ninja.$(dylibext)') 
+        dylibs = dylibs.replace('collier.$(libext)', 'collier.$(dylibext)')
+        replace_dict['tir_dylibs'] = dylibs
         replace_dict['dotf']='%.f'
-        replace_dict['prefix']= self.SubProc_prefix
-        replace_dict['doto']='%.o'
-        replace_dict['tir_include']=' '.join(tir_include)
-        file=file%replace_dict
+        replace_dict['prefix'] = self.SubProc_prefix
+        replace_dict['doto'] = '%.o'
+        replace_dict['tir_include'] = ' '.join(tir_include)
+        replace_dict['rpaths_libs'] = ''
+        for lib in tir_libs:
+            replace_dict['rpaths_libs'] += '-Wl,-rpath,%s '%os.path.dirname(lib)    
+
+        file = file % replace_dict
         if writer:
             writer.writelines(file)
         else:
@@ -1258,10 +1177,11 @@ PARAMETER(MAX_SPIN_EXTERNAL_PARTICLE=%(max_spin_external_particle)d)
 
         writer.writelines(proc_include)
                                 
-    def generate_subprocess_directory(self, matrix_element, fortran_model):
+    def generate_subprocess_directory(self, matrix_element, fortran_model, second_exporter=None):
         """ To overload the default name for this function such that the correct
         function is used when called from the command interface """
         
+        assert second_exporter is None
         self.unique_id +=1
         return self.generate_loop_subprocess(matrix_element,fortran_model,
                                                             unique_id=self.unique_id)
@@ -1282,6 +1202,10 @@ PARAMETER(MAX_SPIN_EXTERNAL_PARTICLE=%(max_spin_external_particle)d)
         else:
             file = open(os.path.join(self.template_dir,\
                                           'check_sa_loop_induced.inc')).read()
+            if self.opt['vector_size']:
+                replace_dict["include_vector"] = "include '../../Source/vector.inc'"
+            else:
+               replace_dict["include_vector"] = '' 
         file=file%replace_dict
         writer.writelines(file)
          
@@ -1339,9 +1263,15 @@ p= [[None,]*4]*%d"""%len(curr_proc.get('legs'))
         replace_dict['masses_def']='\n'.join(['MASSES(%(i)d)=%(prefix)s%(m)s'\
                             %{'i':i+1,'m':m, 'prefix':mp_variable_prefix} for \
                                                   i, m in enumerate(mass_list)])
+        
+        if self.opt['vector_size']:
+            replace_dict['include_vector'] = "include '../../Source/vector.inc'"
+        else:
+            replace_dict['include_vector'] = '' 
+
         file_mp = open(os.path.join(self.template_dir,'improve_ps.inc')).read()
         file_mp=file_mp%replace_dict
-        #
+        
         writer.writelines(file_mp)
 
     def write_loop_num(self, writer, matrix_element,fortran_model):
@@ -1400,6 +1330,10 @@ p= [[None,]*4]*%d"""%len(curr_proc.get('legs'))
 
         # First write CT_interface which interfaces MG5 with CutTools.
         replace_dict=copy.copy(matrix_element.rep_dict)
+        if self.opt['vector_size']:
+            replace_dict['include_vector'] = "include '../../Source/vector.inc'"
+        else:
+            replace_dict['include_vector'] = '' 
         
         # We finalize CT result differently wether we used the built-in 
         # squaring against the born.
@@ -2328,7 +2262,10 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
                      ','.join(['.TRUE.' if l else '.FALSE.' for l in 
                                            has_HEFT_vertex[k:k + chunk_size]])))
         replace_dict['has_HEFT_list'] = '\n'.join(has_HEFT_list)
-
+        if self.opt['vector_size']:
+            replace_dict['include_vector'] = "include '../../Source/vector.inc'"
+        else:
+            replace_dict['include_vector'] = ''
         file = file % replace_dict
         
         FPR = q_polynomial.FortranPolynomialRoutines(
@@ -2370,7 +2307,12 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
                  ','.join('%2r'%ind for ind in indices_list[k:k + chunk_size])))
 
         replace_dict['collier_coefmap'] = '\n'.join(map_definition) 
- 
+
+        if self.opt['vector_size']:
+            replace_dict['include_vector'] = "include '../../Source/vector.inc'"
+        else:
+            replace_dict['include_vector'] = ''
+
         file = file % replace_dict
         
         if writer:
@@ -2392,6 +2334,12 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
             replace_dict['loop_induced_sqsoindex']=',SQSOINDEX'
         else:
             replace_dict['loop_induced_sqsoindex']=''
+
+
+        if self.opt['vector_size']:
+            replace_dict['include_vector'] = "include '../../Source/vector.inc'"
+        else:
+            replace_dict['include_vector'] = '' 
             
         file = open(os.path.join(self.template_dir,'GOLEM_interface.inc')).read()
  
@@ -2534,6 +2482,11 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
 
         replace_dict = copy.copy(matrix_element.rep_dict)                 
 
+        if self.opt['vector_size']:
+            replace_dict['include_vector'] = "include '../../Source/vector.inc'"
+        else:
+            replace_dict['include_vector'] = ''
+
         # Extract helas calls
         squared_orders = matrix_element.get_squared_order_contribs()
         split_orders = matrix_element.get('processes')[0].get('split_orders')
@@ -2581,6 +2534,11 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
                 context=context)
 
         replace_dict['mp_coef_merging']='\n'.join(coef_merging)
+
+        if self.opt['vector_size']:
+            replace_dict['include_vector'] = "include '../../Source/vector.inc'"
+        else:
+            replace_dict['include_vector'] = ''
                     
         file = file % replace_dict
  
@@ -2904,6 +2862,7 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         writers.FortranWriter('nsquaredSO.inc').writelines(
 """INTEGER NSQUAREDSO
 PARAMETER (NSQUAREDSO=%d)"""%matrix_element.rep_dict['nSquaredSO'])
+        files.cp('nsquaredSO.inc', '..')
         
         replace_dict = copy.copy(matrix_element.rep_dict)
         # Build the general array mapping the split orders indices to their
@@ -2963,6 +2922,11 @@ PARAMETER (NSQUAREDSO=%d)"""%matrix_element.rep_dict['nSquaredSO'])
         replace_dict['hel_avg_factor'] = matrix_element.get_hel_avg_factor()
         replace_dict['beamone_helavgfactor'], replace_dict['beamtwo_helavgfactor'] =\
                                        matrix_element.get_beams_hel_avg_factor()
+        
+        if self.opt['vector_size']:
+            replace_dict['include_vector'] = "include '../../Source/vector.inc'"
+        else:
+            replace_dict['include_vector'] = ''
 
         if write_auxiliary_files:
             # Write out the color matrix
@@ -3037,6 +3001,10 @@ PARAMETER (NSQUAREDSO=%d)"""%matrix_element.rep_dict['nSquaredSO'])
         matrix_element.rep_dict['coef_construction']=replace_dict['coef_construction']            
         
         replace_dict['coef_merging']='\n'.join(coef_merging)
+        if self.opt['vector_size']:
+            replace_dict['include_vector'] = "include '../../Source/vector.inc'"
+        else:
+            replace_dict['include_vector'] = '' 
         file = file % replace_dict
         number_of_calls = len([call for call in loop_CT_calls if call.find('CALL LOOP') != 0])   
         if writer:
@@ -3055,12 +3023,10 @@ class LoopProcessExporterFortranMatchBox(LoopProcessOptimizedExporterFortranSA,
     """Class to take care of exporting a set of loop matrix elements in the
        Fortran format."""
 
-    default_opt = {'clean': False, 'complex_mass':False,
-                        'export_format':'madloop_matchbox', 'mp':True,
-                        'loop_dir':'', 'cuttools_dir':'', 
-                        'fortran_compiler':'gfortran',
-                        'output_dependencies':'external',
-                        'sa_symmetry':True}
+    default_opt = dict(LoopProcessOptimizedExporterFortranSA.default_opt)
+    default_opt['export_format'] = 'madloop_matchbox'
+    default_opt['sa_symmetry'] = True
+    
 
 
 
@@ -3106,6 +3072,9 @@ class LoopInducedExporterME(LoopProcessOptimizedExporterFortranSA):
                                        't_strategy' in self.opt['output_options']:
             self.opt['t_strategy'] = banner_mod.ConfigFile.format_variable(
                   self.opt['output_options']['t_strategy'], int, 't_strategy')
+            
+        self.opt['vector_size'] = 1 
+
     
     def get_context(self,*args,**opts):
         """ Make sure that the contextual variable MadEventOutput is set to
@@ -3327,17 +3296,28 @@ class LoopInducedExporterMEGroup(LoopInducedExporterME,
         self.proc_characteristic['loop_induced'] = True
         
         export_v4.ProcessExporterFortranMEGroup.finalize(self,*args,**opts)
+
+        # special handling for loop-induced processes for the template files
+        #since some function are duplicated...
+        text = open(pjoin(self.dir_path,'Source','setrun.f'), 'r').read()
+        import madgraph.iolibs.file_writers as file_writers
+        fsock = file_writers.FortranWriter(pjoin(self.dir_path,'Source', 'setrun.f'),'w')
+        fsock.remove_routine(text, 'DDILOG')
+        fsock.close()
+
         
         # And the finilize from LoopInducedExporterME which essentially takes
         # care of MadLoop virtuals initialization
         LoopInducedExporterME.finalize(self,*args,**opts)
         
     def generate_subprocess_directory(self, subproc_group,
-                                                    fortran_model,group_number):
+                                                    fortran_model,group_number,
+                                                    second_exporter=None,
+                                                    second_helas=None):
         """Generate the Pn directory for a subprocess group in MadEvent,
         including the necessary matrix_N.f files, configs.inc and various
         other helper files"""
-        
+        assert second_exporter is None
         # Generate the MadLoop files
         calls = 0
         matrix_elements = subproc_group.get('matrix_elements')
@@ -3350,6 +3330,7 @@ class LoopInducedExporterMEGroup(LoopInducedExporterME,
                             unique_id=self.unique_id)
         
         # Then generate the MadEvent files
+        self.opt['vector_size'] =1 
         export_v4.ProcessExporterFortranMEGroup.generate_subprocess_directory(
                                  self, subproc_group,fortran_model,group_number)
         

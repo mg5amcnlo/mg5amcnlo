@@ -242,6 +242,7 @@ C GLOBAL VARIABLES
 C 
       include 'process_info.inc'
       include 'unique_id.inc'
+      %(include_vector)s
       include 'coupl.inc'
 	  include 'mp_coupl.inc'
 	  include 'MadLoopParams.inc'

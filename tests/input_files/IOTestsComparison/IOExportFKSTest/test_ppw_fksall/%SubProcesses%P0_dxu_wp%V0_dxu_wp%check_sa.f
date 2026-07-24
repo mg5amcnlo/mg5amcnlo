@@ -466,7 +466,7 @@ C     write (*,*) e1+e2,mom
         P(2,2)=0D0
         P(3,2)=-MOM
 
-        CALL RAMBO(NEXTERNAL-2,ENERGY,PMASS(3),PRAMBO,WGT)
+        CALL RAMBO(NEXTERNAL-2,ENERGY,PMASS(NINCOMING+1),PRAMBO,WGT)
         DO I=3, NEXTERNAL
           P(0,I)=PRAMBO(4,I-2)
           P(1,I)=PRAMBO(1,I-2)

@@ -7,6 +7,13 @@ c to the list of weights using the add_wgt subroutine
       include 'coupl.inc'
       include 'timing_variables.inc'
       include 'orders.inc'
+      include 'run.inc'
+      include 'genps.inc'
+      integer i
+      integer idup(nexternal,maxproc)
+      integer mothup(2,nexternal,maxproc)
+      integer icolup(2,nexternal,maxflow)
+      include 'born_leshouche.inc'
       integer orders(nsplitorders)
       integer iamp
 
@@ -37,6 +44,12 @@ c to the list of weights using the add_wgt subroutine
         orders_tag=get_orders_tag(orders)
         amp_pos=iamp
         wgt1=amp_split(iamp)*f_b/g**(qcd_power)
+c     For UPC processes, we only need to fill the Born contribution for
+c     photon-photon initial state
+        if ((abs(lpp(1)).eq.2 .and. abs(lpp(2)).eq.2) 
+     &   .and. .not. (idup(1,1).eq.22 .and. idup(2,1).eq.22)) then
+          cycle
+        endif
         call add_wgt(2,orders,wgt1,0d0,0d0)
       enddo
 
@@ -140,6 +153,124 @@ C      gluon in the initial state
         endif
       enddo
 
+      return
+      end
+
+
+      subroutine compute_ewsudakov
+c This subroutine computes the NLO EW corrections in the Sudakov
+c   approximation
+      use extra_weights
+      implicit none
+      include 'nexternal.inc'
+      include 'coupl.inc'
+      include 'timing_variables.inc'
+      include 'orders.inc'
+      include 'has_ewsudakov.inc'
+      integer orders_qcd(nsplitorders), orders_ew(nsplitorders)
+      integer iamp
+
+      double precision wgt_c
+      double precision wgt1
+      double precision p_born(0:3,nexternal-1)
+      common /pborn/   p_born
+      double precision   xiimax_cnt(-2:2)
+      common /cxiimaxcnt/xiimax_cnt
+      double precision  xi_i_hat_ev,xi_i_hat_cnt(-2:2)
+      common /cxi_i_hat/xi_i_hat_ev,xi_i_hat_cnt
+      double precision      f_b,f_nb
+      common /factor_nbody/ f_b,f_nb
+      double precision     xiScut_used,xiBSVcut_used
+      common /cxiScut_used/xiScut_used,xiBSVcut_used
+      double precision g22
+      integer get_orders_tag
+
+      double complex amp_split_ewsud_lsc(amp_split_size)
+      common /to_amp_ewsud_lsc/amp_split_ewsud_lsc
+      double complex amp_split_ewsud_ssc(amp_split_size)
+      common /to_amp_ewsud_ssc/amp_split_ewsud_ssc
+      double complex amp_split_ewsud_xxc(amp_split_size)
+      common /to_amp_ewsud_xxc/amp_split_ewsud_xxc
+      double complex amp_split_ewsud_par(amp_split_size)
+      common /to_amp_ewsud_par/amp_split_ewsud_par
+      double complex amp_split_ewsud_qcd(amp_split_size)
+      common /to_amp_ewsud_qcd/amp_split_ewsud_qcd
+      double complex amp_split_ewsud_parqcd(amp_split_size)
+      common /to_amp_ewsud_parqcd/amp_split_ewsud_parqcd
+      ! sudakov mode
+      integer sud_mod
+      common /to_sud_mod/ sud_mod
+      include 'ewsudakov_haslo.inc' 
+
+      if (.not.has_ewsudakov) return
+
+      call cpu_time(tBefore)
+      if (f_b.eq.0d0) return
+      if (xi_i_hat_ev*xiimax_cnt(0) .gt. xiBSVcut_used) return
+
+      if (cpower_pos.gt.0) then
+          write(*,*)'Error, cannot compute EW sudakov with Cpower >0'
+          stop 1
+      endif
+
+      ! sud_mod = 0
+      do sud_mod = 0,1
+
+       call sborn(p_born,wgt_c)
+       call sudakov_wrapper(p_born)
+       do iamp=1, amp_split_size
+        if (amp_split_ewsud_lsc(iamp).eq.0d0.and.
+     $      amp_split_ewsud_ssc(iamp).eq.0d0.and.
+     $      amp_split_ewsud_xxc(iamp).eq.0d0.and.
+     $      amp_split_ewsud_par(iamp).eq.0d0.and.
+     $      AMP_SPLIT_EWSUD_QCD(iamp).eq.0d0) cycle
+        call amp_split_pos_to_orders(iamp, orders_ew)
+        orders_qcd(:) = orders_ew(:)
+        ! we have two arrays of orders, one for the contributions
+        ! of EW origin (from LO1) and one for those of QCD origin
+        ! (from LO2)
+
+        !!!! first the contribution of EW origin
+        ! increase the EW-coupling of 2, since until here
+        ! the EW sudakov amp_split has the same positions of 
+        ! those for the Born
+        if (has_lo1) then
+          orders_ew(qed_pos)=orders_ew(qed_pos)+2
+          QCD_power=orders_ew(qcd_pos)
+          wgtcpower=0d0
+          !!!!if (cpower_pos.gt.0) wgtcpower=dble(orders(cpower_pos))
+          orders_tag=get_orders_tag(orders_ew)
+          wgt1=(amp_split_ewsud_lsc(iamp)+
+     $        amp_split_ewsud_ssc(iamp)+
+     $        amp_split_ewsud_xxc(iamp)+
+     $        amp_split_ewsud_par(iamp))
+     $         *f_b/g**(qcd_power)
+          wgt1=wgt1*2d0 ! missing factor in the sudakov correction
+          ! the type will be 20+the value of the sudakov mode
+          call add_wgt(20+sud_mod,orders_ew,wgt1,0d0,0d0)
+        endif
+
+        !!!! then the contribution of QCD origin
+        ! increase the QCD-coupling of 2, since until here
+        ! the EW sudakov amp_split has the same positions of 
+        ! those for the Born, and for QCD this is LO2
+        if (has_lo2) then
+          orders_qcd(qcd_pos)=orders_qcd(qcd_pos)+2
+          QCD_power=orders_qcd(qcd_pos)
+          !!wgtcpower=0d0
+          !!if (cpower_pos.gt.0) wgtcpower=dble(orders(cpower_pos))
+          orders_tag=get_orders_tag(orders_qcd)
+          wgt1=(amp_split_ewsud_qcd(iamp)+
+     $        amp_split_ewsud_parqcd(iamp))
+     $         *f_b/g**(qcd_power)
+          wgt1=wgt1*2d0 ! missing factor in the sudakov correction
+          ! the type will be 20+the value of the sudakov mode
+          call add_wgt(20+sud_mod,orders_qcd,wgt1,0d0,0d0)
+        endif
+       enddo
+      enddo
+      call cpu_time(tAfter)
+      t_ewsud=t_ewsud+(tAfter-tBefore)
       return
       end
 
@@ -1052,6 +1183,8 @@ c     iterm= -3 : only restore scales for n+1-body w/o recomputing
      $                     FxFx_fac_scale(2)
       common/c_FxFx_scales/FxFx_ren_scales,nFxFx_ren_scales,
      $                     FxFx_fac_scale
+      integer            i_fks,j_fks
+      common/fks_indices/i_fks,j_fks
       INTEGER              NFKSPROCESS
       COMMON/C_NFKSPROCESS/NFKSPROCESS
       save rewgt_mohdr_calculated,rewgt_izero_calculated,p_last_izero
@@ -1061,7 +1194,9 @@ c     iterm= -3 : only restore scales for n+1-body w/o recomputing
      &     ,nfxfx_ren_scales_izero ,nfxfx_ren_scales_mohdr
       integer need_matching(nexternal),need_matching_izero(nexternal)
       integer need_matching_S(nexternal),need_matching_H(nexternal)
+     $     ,need_matching_cuts(nexternal)
       common /c_need_matching/ need_matching_S,need_matching_H
+     $     ,need_matching_cuts
       save need_matching_izero
       double precision shower_S_scale(fks_configs*2)
      &     ,shower_H_scale(fks_configs*2),ref_H_scale(fks_configs*2)
@@ -1094,7 +1229,10 @@ c n-body momenta FxFx Sudakov factor (i.e. for S-events)
             rewgt_izero=min(rewgt_izero,1d0)
             fxfx_exp_rewgt=min(rewgt_exp_izero,0d0)
             need_matching_S(1:nexternal)=need_matching(1:nexternal)
-            need_matching_izero(1:nexternal)=need_matching_S(1:nexternal)
+            need_matching_cuts(1:nexternal)=[need_matching_S(1:i_fks-1)
+     $           ,1,need_matching_S(i_fks:nexternal-1)]
+            need_matching_izero(1:nexternal)=
+     $           need_matching_S(1:nexternal)
 c Update shower starting scale to be the scale down to which the MINLO
 c Sudakov factors are included.
             shower_S_scale(nFKSprocess*2-1)=
@@ -1151,6 +1289,7 @@ c n+1-body momenta FxFx Sudakov factor (i.e. for H-events)
             fxfx_fac_scale(2)=fxfx_fac_scale(1)
             rewgt_mohdr=min(rewgt_mohdr,1d0)
             need_matching_H(1:nexternal)=need_matching(1:nexternal)
+            need_matching_cuts(1:nexternal)=need_matching_H(1:nexternal)
 c Update shower starting scale
             pthardness=ref_H_scale(nFKSprocess*2)-
      $           shower_H_scale(nFKSprocess*2)
@@ -1189,6 +1328,8 @@ c Update shower starting scale
          return
       elseif (iterm.eq.-1 .or. iterm.eq.-2) then
 c Restore scales for the n-body FxFx terms
+         need_matching_cuts(1:nexternal)=[need_matching_S(1:i_fks-1),1,
+     $        need_matching_S(i_fks:nexternal-1)]
          nFxFx_ren_scales=nFxFx_ren_scales_izero
          do i=0,nexternal
             FxFx_ren_scales(i)=FxFx_ren_scales_izero(i)
@@ -1198,6 +1339,7 @@ c Restore scales for the n-body FxFx terms
          enddo
       elseif (iterm.eq.-3) then
 c Restore scales for the n+1-body FxFx terms
+         need_matching_cuts(1:nexternal)=need_matching_H(1:nexternal)
          nFxFx_ren_scales=nFxFx_ren_scales_mohdr
          do i=0,nexternal
             FxFx_ren_scales(i)=FxFx_ren_scales_mohdr(i)
@@ -1661,6 +1803,7 @@ c     type=12: MC subtraction with n-body kin.
 c     type=13: MC subtraction with n+1-body kin.
 c     type=14: virtual corrections
 c     type=15: virt-trick: average born contribution
+c     type=20+x: EW sudakov, x=sud_mod
 c     wgt1 : weight of the contribution not multiplying a scale log
 c     wgt2 : coefficient of the weight multiplying the log[mu_R^2/Q^2]
 c     wgt3 : coefficient of the weight multiplying the log[mu_F^2/Q^2]
@@ -1763,7 +1906,9 @@ c        contribution
       double precision       wgt_ME_born,wgt_ME_real
       common /c_wgt_ME_tree/ wgt_ME_born,wgt_ME_real
       integer need_matching_S(nexternal),need_matching_H(nexternal)
+     $     ,need_matching_cuts(nexternal)
       common /c_need_matching/ need_matching_S,need_matching_H
+     $     ,need_matching_cuts
       integer     fold,ifold_counter
       common /cfl/fold,ifold_counter
       integer ntagph
@@ -1855,6 +2000,10 @@ C schemes; it is needed when there are tagged photons around
       scales2(1,icontr)=QES2
       scales2(2,icontr)=scale**2
       scales2(3,icontr)=q2fact(1)
+C for UPC processes set scale to Ellis-Sexton scale      
+      if (abs(lpp(1)).eq.2 .and. abs(lpp(2)).eq.2) then
+        scales2(3,icontr)=QES2
+      endif
       g_strong(icontr)=g
       nFKS(icontr)=nFKSprocess
       y_bst(icontr)=ybst_til_tolab
@@ -1906,7 +2055,8 @@ c subtr term
          H_event(icontr)=.true.
          need_match(1:nexternal,icontr)=need_matching_H(1:nexternal)
       elseif(type.ge.2 .and. type.le.7 .or. type.eq.11 .or. type.eq.12
-     $        .or. type.eq.14 .or. type.eq.15)then
+     $        .or. type.eq.14 .or. type.eq.15
+     $        .or. (type.ge.20 .and. type.le.22)) then
 c Born, counter term, soft-virtual, or n-body kin. contributions to real
 c and MC subtraction terms.
          do i=1,nexternal
@@ -1961,6 +2111,7 @@ c or to fill histograms.
       include 'timing_variables.inc'
       include 'genps.inc'
       include 'orders.inc'
+      include 'q_es.inc'
       integer orders(nsplitorders)
       integer i,j,k,iamp,icontr_orig
       logical virt_found
@@ -1992,6 +2143,11 @@ c call to separate_flavour_config().
          mu2_f=scales2(3,i)
          q2fact(1)=mu2_f
          q2fact(2)=mu2_f
+c for UPC processes set scale to Ellis-Sexton scale      
+         if (abs(lpp(1)).eq.2 .and. abs(lpp(2)).eq.2) then
+            q2fact(1)=QES2
+            q2fact(2)=QES2
+         endif
 c call the PDFs
          xlum = dlum()
 c iwgt=1 is the central value (i.e. no scale/PDF reweighting).
@@ -2025,6 +2181,8 @@ c overwrite the relevant information.]
 c Special for the soft-virtual needed for the virt-tricks. The
 c *_wgt_mint variable should be directly passed to the mint-integrator
 c and not be part of the plots nor computation of the cross section.
+            if (flavour_bias(2).ne.1) 
+     $           call recompute_xlum_for_wgt_mint(i,xlum)
             virt_wgt_mint(0)=virt_wgt_mint(0)*xlum
      &           *rwgt_muR_dep_fac(sqrt(mu2_r),sqrt(mu2_r),cpower(i))
             born_wgt_mint(0)=born_wgt_mint(0)*xlum
@@ -2046,6 +2204,36 @@ c and not be part of the plots nor computation of the cross section.
       return
       end
 
+      subroutine recompute_xlum_for_wgt_mint(i,xlum)
+      use weight_lines
+      implicit none
+      include 'nexternal.inc'
+      include 'run.inc'
+      include 'genps.inc'
+      double precision xlum,conv
+      parameter (conv=389379660d0) ! conversion to picobarns
+      integer i,j,iproc
+      DOUBLE PRECISION PD(0:MAXPROC)
+      COMMON /SUBPROC/ PD, IPROC
+      xlum=0d0
+      do j=1,iproc
+         if (any(abs(parton_pdg_uborn(1:nexternal-1,j
+     $        ,i)).eq.Flavour_Bias(1))) then
+            if (nincoming.eq.2) then
+               xlum=xlum+pd(j)*conv*dble(Flavour_Bias(2))
+            else
+               xlum=xlum+pd(j)*dble(Flavour_Bias(2))
+            endif
+         else
+            if (nincoming.eq.2) then
+               xlum=xlum+pd(j)*conv
+            else
+               xlum=xlum+pd(j)
+            endif
+         endif
+      enddo
+      end
+      
       subroutine include_bias_wgt
 c Include the weight from the bias_wgt_function to all the contributions
 c in icontr. This only changes the weight of the central value (after
@@ -2058,7 +2246,9 @@ c coefficients for PDF and scale computations.
       use weight_lines
       use mint_module
       implicit none
+      include 'nexternal.inc'
       include 'orders.inc'
+      include 'run.inc'
       integer orders(nsplitorders)
       integer i,j,iamp
       logical virt_found
@@ -2088,12 +2278,27 @@ c loop over all contributions
          endif
          bias_wgt(i)=bias
 c Update the weights:
-         wgts(1,i)=wgts(1,i)*bias_wgt(i)
          do j=1,niproc(i)
             parton_iproc(j,i)=parton_iproc(j,i)*bias_wgt(i)
+            if (Flavour_bias(2).ne.1) then ! non-trivial flavour bias in the run_card.
+               if (H_event(i)) then
+                  if (any(abs(parton_pdg(1:nexternal,j
+     $                 ,i)).eq.Flavour_Bias(1))) parton_iproc(j,i)
+     $                 =parton_iproc(j,i)*dble(Flavour_Bias(2))
+               else
+                  if (any(abs(parton_pdg_uborn(1:nexternal-1,j
+     $                 ,i)).eq.Flavour_Bias(1))) parton_iproc(j,i)
+     $                 =parton_iproc(j,i)*dble(Flavour_Bias(2))
+               endif
+            endif
          enddo
+         wgts(1,i)=sum(parton_iproc(1:niproc(i),i))
          do j=1,3
             wgt(j,i)=wgt(j,i)*bias_wgt(i)
+            ! Do not update the wgt() with the Flavour_Bias here; only
+            ! do it once the iproc_picked has been set (i.e., only for
+            ! the events that are written out). In practice, we can do
+            ! it in the include_inverse_bias_wgt() subroutine.
          enddo
          if (itype(i).eq.14 .and. .not.virt_found) then
             virt_found=.true.
@@ -2115,9 +2320,11 @@ c the rwgt_lines is NOT updated.
       use weight_lines
       use extra_weights
       implicit none
+      include 'nexternal.inc'
       include 'genps.inc'
       include 'nFKSconfigs.inc'
-      integer i,ict,ipro,ii
+      include 'run.inc'
+      integer i,ict,ipro,ii,flavour_bias_consistency
       double precision wgt_num,wgt_denom,inv_bias
       character*7 event_norm
       common /event_normalisation/event_norm
@@ -2132,6 +2339,7 @@ c the rwgt_lines is NOT updated.
       endif
       wgt_num=0d0
       wgt_denom=0d0
+      flavour_bias_consistency=0
       do i=1,icontr_sum(0,icontr_picked)
          ict=icontr_sum(i,icontr_picked)
          if (bias_wgt(ict).eq.0d0) then
@@ -2148,13 +2356,50 @@ c keeps its contribution from the bias_wgt.
                if (eto(ii,nFKS(ict)).ne.ipro) cycle
                wgt_denom=wgt_denom+parton_iproc(ii,ict)
                wgt_num=wgt_num+parton_iproc(ii,ict)/bias_wgt(ict)
+               if (Flavour_Bias(2).ne.1) then ! non-trivial Flavour bias. Check consistency of flavour configuration
+                  if (any(abs(parton_pdg_uborn(1:nexternal-1,ii
+     $                 ,ict)).eq.Flavour_Bias(1))) then
+                     if (flavour_bias_consistency .ge. 0) then
+                        flavour_bias_consistency=1
+                     else
+                        write (*,*) 'Inconsistent Flavour Bias #1'
+                        stop 1
+                     endif
+                  else
+                     if (flavour_bias_consistency .le. 0) then
+                        flavour_bias_consistency=-1
+                     else
+                        write (*,*) 'Inconsistent Flavour Bias #2'
+                        stop 1
+                     endif
+                  endif
+               endif
             enddo
          else
             ipro=iproc_picked
             wgt_denom=wgt_denom+parton_iproc(ipro,ict)
             wgt_num=wgt_num+parton_iproc(ipro,ict)/bias_wgt(ict)
+            if (Flavour_Bias(2).ne.1) then ! non-trivial Flavour bias. Check consistency of flavour configuration
+               if (any(abs(parton_pdg(1:nexternal,ipro,ict)) .eq.
+     $              Flavour_Bias(1))) then
+                  if (flavour_bias_consistency .ge. 0) then
+                     flavour_bias_consistency=1
+                  else
+                     write (*,*) 'Inconsistent Flavour Bias #3'
+                     stop 1
+                  endif
+               else
+                  if (flavour_bias_consistency .le. 0) then
+                     flavour_bias_consistency=-1
+                  else
+                     write (*,*) 'Inconsistent Flavour Bias #4'
+                     stop 1
+                  endif
+               endif
+            endif
          endif
       enddo
+      wgtref=unwgt(iproc_picked,icontr_picked)
       if (abs((wgtref-wgt_denom)/(wgtref+wgt_denom)).gt.1d-10) then
          write (*,*) "ERROR in include_inverse_bias_wgt: "/
      $        /"reference weight not equal to recomputed weight",wgtref
@@ -2163,6 +2408,14 @@ c keeps its contribution from the bias_wgt.
       endif
 c update the event weight to be written in the file
       inv_bias=wgt_num/wgt_denom
+      if (flavour_bias_consistency.eq.1) then
+         inv_bias=inv_bias/dble(Flavour_Bias(2))
+         do i=1,icontr_sum(0,icontr_picked)
+            ict=icontr_sum(i,icontr_picked)
+            wgt(1:3,ict)=wgt(1:3,ict)*dble(Flavour_Bias(2))
+            bias_wgt(ict)=bias_wgt(ict)*dble(Flavour_Bias(2))
+         enddo
+      endif
       return
       end
       
@@ -2679,6 +2932,9 @@ c     soft-collinear counter
             appl_QES2(4)=scales2(1,i)
             appl_muR2(4)=scales2(2,i)
             appl_muF2(4)=scales2(3,i)
+         else
+            write(*,*) 'ERROR in fill_applgrid_weights', itype(i)
+            stop 1
          endif
       enddo
       return
@@ -2716,7 +2972,8 @@ c excluding the nbody contributions.
       if (icontr.eq.0) return
       do i=1,icontr
          if (itype(i).ne.2 .and. itype(i).ne.3 .and. itype(i).ne.14
-     &        .and. itype(i).ne.7 .and. itype(i).ne.15) then
+     &        .and. itype(i).ne.7 .and. itype(i).ne.15.and.itype(i).lt.20) then
+             ! MZ <20 is needed to exclude the ew sudakov 
             sig=sig+wgts(1,i)
          endif
       enddo
@@ -2773,6 +3030,8 @@ c the momenta are identical.
             plot_id(i)=13 ! collinear counter term
          elseif(itype(i).eq.6) then
             plot_id(i)=14 ! soft collinear counter term
+         elseif(itype(i).ge.20.and.itype(i).le.22) then
+             plot_id(i)=100+itype(i)-20    ! EW sudakov (100-102)
          else
             plot_id(i)=12 ! soft-virtual and soft counter term
          endif
@@ -4819,6 +5078,11 @@ C the first entry in xkk is for QCD splittings, the second QED
       parameter (vca=3.d0)
       parameter (xnc=3.d0)
 
+      integer i_fks, j_fks
+      common/fks_indices/i_fks, j_fks
+      include "run.inc"
+      include "q_es.inc"
+
       include "coupl.inc"
 c
       if (PDFscheme.eq.0) then
@@ -4884,9 +5148,21 @@ c
         elseif((abs(col1).eq.8.and.col2.eq.3) .or. 
      $         (dabs(ch1).eq.0d0.and.dabs(ch2).gt.0d0))then ! gq / game
           xkk(1)=vcf*(1-x)*(1+(1-x)**2)/x*(2*dlog(x)+1)
-          xkk(2)=ch1**2*(1-x)*(1+(1-x)**2)/x*(2*dlog(x)+1)
+          xkk(2)=ch2**2*(1-x)*(1+(1-x)**2)/x*(2*dlog(x)+1)
         else
           xkk(:) = 0d0
+        endif
+      else if (PDFscheme.eq.7) then
+        ! scheme for UPC photons (need to multiply 1-x in addition)
+        if (j_fks.gt.2) then
+          write(6,*)'Error in xkplus: wrong j_fks', j_fks
+          stop
+        endif
+        xkk(1)=0d0
+        if(dabs(ch1).gt.0d0.and.dabs(ch2).gt.0d0
+     $      .and.dabs(ch1).eq.dabs(ch2)) then ! gamma -> f^* (ch1) fbar (ch2)
+          xkk(2)=-abs(col1)*ch1**2*(1d0-x)*(x**2+(1d0-x)**2)
+     $        *dlog(QES2*xiAI(j_fks)**2*RAI(j_fks)**2)
         endif
       else
         write(6,*)'Error in xkplus: wrong PDF scheme', PDFscheme
@@ -4986,6 +5262,9 @@ c
         else
           xkk(:) = 0d0
         endif
+      elseif(PDFscheme.eq.7)then
+        ! scheme for UPC photons (NO need to multiply 1-x in addition)
+        xkk(:)=0d0
       else
         write(6,*)'Error in xklog: wrong PDF scheme', PDFscheme
         stop
@@ -5083,6 +5362,9 @@ c
         else
           xkk(:) = 0d0
         endif
+      elseif(PDFscheme.eq.7) then
+        ! scheme for UPC photons
+        xkk(:)=0d0
       else
         write(6,*)'Error in xkdelta: wrong PDF scheme', PDFscheme
         stop
@@ -5649,6 +5931,7 @@ C keep track of each split orders
       ! 4 -> mixed (leptonic)
       ! 5 -> nobeta (leptonic)
       ! 6 -> delta (leptonic)
+      ! 7 -> UPC
       if(firsttime_pdf) then
         write(*,*) 'PDFscheme' , pdfscheme
         firsttime_pdf = .false.
@@ -5832,7 +6115,7 @@ c       y(k)_lab = y(k)_tilde - ybst_til_tolab
 c where y(k)_lab and y(k)_tilde are the rapidities computed with a generic
 c four-momentum k, in the lab frame and in the \tilde{k}_1+\tilde{k}_2 
 c c.m. frame respectively
-      ybst_til_tolab=-ycm_cnt(0)
+      ybst_til_tolab=-ycm_cnt(0)-0.5d0*log(ebeam(1)/ebeam(2))
       if(icountevts.eq.-100)then
 c set Bjorken x's in run.inc for the computation of PDFs in auto_dsig
         xbk(1)=xbjrk_ev(1)
@@ -7127,7 +7410,12 @@ c 1+2+3+4
           arg2=arg1*betai
           arg3=Ej
           arg4=arg3*betaj
+          if(vij.lt.1d0)then
           xi0=1/vij*log((1+vij)/(1-vij))
+          else
+             xi0=dlog(4d0*kikj**2/(xmi2*xmj2))
+          endif
+c          xi0=1/vij*log((1+vij)/(1-vij))
           xi1a=kikj**2*(1+vij)/xmi2*( xj1a(arg1,arg2,tHVv,tHVvl)-
      #                                xj1a(arg3,arg4,tHVv,tHVvl) )
 

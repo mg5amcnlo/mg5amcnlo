@@ -37,10 +37,12 @@ all: %(libraries)s
 $(LIBDIR)libdsample.$(libext): $(DSAMPLE)
 	$(call CREATELIB, $@, $^)
 $(LIBDIR)libgeneric.$(libext): $(GENERIC)
+	rm -f $@ 2>/dev/null
 	$(call CREATELIB, $@, $^)
+	rm -f $(alfas_to_clean) 2>/dev/null
 $(LIBDIR)libdhelas.$(libext): DHELAS
 	cd DHELAS; make; cd ..
-$(LIBDIR)libpdf.$(libext): PDF make_opts
+$(LIBDIR)libpdf.$(libext): PDF $(alfas_functions).o
 	cd PDF; make; cd ..
 ifneq (,$(filter edff chff edpf edmf chpf chmf edfinin chfinin edfinxn chfinxn edfin0n chfin0n edfin1n chfin1n edfin2n chfin2n edfin3n chfin3n edfin4n chfin4n edfxnin chfxnin edfxnxn chfxnxn edfxn0n chfxn0n edfxn1n chfxn1n edfxn2n chfxn2n edfxn3n chfxn3n edfxn4n chfxn4n edf0nin chf0nin edf0nxn chf0nxn edf0n0n chf0n0n edf0n1n chf0n1n edf0n2n chf0n2n edf0n3n chf0n3n edf0n4n chf0n4n edf1nin chf1nin edf1nxn chf1nxn edf1n0n chf1n0n edf1n1n chf1n1n edf1n2n chf1n2n edf1n3n chf1n3n edf1n4n chf1n4n edf2nin chf2nin edf2nxn chf2nxn edf2n0n chf2n0n edf2n1n chf2n1n edf2n2n chf2n2n edf2n3n chf2n3n edf2n4n chf2n4n edf3nin chf3nin edf3nxn chf3nxn edf3n0n chf3n0n edf3n1n chf3n1n edf3n2n chf3n2n edf3n3n chf3n3n edf3n4n chf3n4n edf4nin chf4nin edf4nxn chf4nxn edf4n0n chf4n0n edf4n1n chf4n1n edf4n2n chf4n2n edf4n3n chf4n3n edf4n4n chf4n4n edpinin edpinxn edpin0n edpin1n edpin2n edpin3n edpin4n edpxnin edpxnxn edpxn0n edpxn1n edpxn2n edpxn3n edpxn4n edp0nin edp0nxn edp0n0n edp0n1n edp0n2n edp0n3n edp0n4n edp1nin edp1nxn edp1n0n edp1n1n edp1n2n edp1n3n edp1n4n edp2nin edp2nxn edp2n0n edp2n1n edp2n2n edp2n3n edp2n4n edp3nin edp3nxn edp3n0n edp3n1n edp3n2n edp3n3n edp3n4n edp4nin edp4nxn edp4n0n edp4n1n edp4n2n edp4n3n edp4n4n edminin edminxn edmin0n edmin1n edmin2n edmin3n edmin4n edmxnin edmxnxn edmxn0n edmxn1n edmxn2n edmxn3n edmxn4n edm0nin edm0nxn edm0n0n edm0n1n edm0n2n edm0n3n edm0n4n edm1nin edm1nxn edm1n0n edm1n1n edm1n2n edm1n3n edm1n4n edm2nin edm2nxn edm2n0n edm2n1n edm2n2n edm2n3n edm2n4n edm3nin edm3nxn edm3n0n edm3n1n edm3n2n edm3n3n edm3n4n edm4nin edm4nxn edm4n0n edm4n1n edm4n2n edm4n3n edm4n4n chpinin chpinxn chpin0n chpin1n chpin2n chpin3n chpin4n chpxnin chpxnxn chpxn0n chpxn1n chpxn2n chpxn3n chpxn4n chp0nin chp0nxn chp0n0n chp0n1n chp0n2n chp0n3n chp0n4n chp1nin chp1nxn chp1n0n chp1n1n chp1n2n chp1n3n chp1n4n chp2nin chp2nxn chp2n0n chp2n1n chp2n2n chp2n3n chp2n4n chp3nin chp3nxn chp3n0n chp3n1n chp3n2n chp3n3n chp3n4n chp4nin chp4nxn chp4n0n chp4n1n chp4n2n chp4n3n chp4n4n chminin chminxn chmin0n chmin1n chmin2n chmin3n chmin4n chmxnin chmxnxn chmxn0n chmxn1n chmxn2n chmxn3n chmxn4n chm0nin chm0nxn chm0n0n chm0n1n chm0n2n chm0n3n chm0n4n chm1nin chm1nxn chm1n0n chm1n1n chm1n2n chm1n3n chm1n4n chm2nin chm2nxn chm2n0n chm2n1n chm2n2n chm2n3n chm2n4n chm3nin chm3nxn chm3n0n chm3n1n chm3n2n chm3n3n chm3n4n chm4nin chm4nxn chm4n0n chm4n1n chm4n2n chm4n3n chm4n4n, $(pdlabel1) $(pdlabel2)))
 $(LIBDIR)libgammaUPC.$(libext): PDF/gammaUPC
@@ -68,15 +70,15 @@ $(BINDIR)gensudgrid: $(GENSUDGRID) $(LIBDIR)libpdf.$(libext) $(LIBDIR)libgammaUP
 
 # Dependencies
 
-dsample.o: DiscreteSampler.o dsample.f genps.inc StringCast.o
+dsample.o: DiscreteSampler.o dsample.f genps.inc StringCast.o vector.inc
+pawgraph.o: vector.inc
 DiscreteSampler.o: StringCast.o
 invarients.o: invarients.f genps.inc
-setrun.o: setrun.f nexternal.inc leshouche.inc genps.inc
-gen_ximprove.o: gen_ximprove.f run_config.inc run_card.inc
+gen_ximprove.o: gen_ximprove.f run_config.inc run_card.inc 
 #combine_events.o: combine_events.f run_config.inc run_card.inc
 combine_runs.o: combine_runs.f run_config.inc run_card.inc
 select_events.o: select_events.f run_config.inc
-setrun.o: setrun.f nexternal.inc leshouche.inc run_card.inc run_config.inc
+setrun.o: setrun.f nexternal.inc leshouche.inc run_card.inc run_config.inc genps.inc vector.inc
 rw_events.o: rw_events.f run_config.inc
 %(additional_dependencies)s
 run_card.inc: ../Cards/run_card.dat
@@ -116,7 +118,7 @@ $(LIBDIR)libiregi.a: $(IREGIDIR)
 	cd $(IREGIDIR); make
 	ln -sf ../Source/$(IREGIDIR)libiregi.a $(LIBDIR)libiregi.a
 
-clean:
+cleanSource: # Clean builds: fortran in this Source
 	$(RM) *.o $(LIBRARIES) $(BINARIES)
 	cd PDF; make clean; cd ..
 	cd PDF/gammaUPC; make clean; cd ../../
@@ -128,4 +130,8 @@ clean:
 	cd BIAS/ptj_bias; make clean; cd ../..
 	if [ -d $(CUTTOOLSDIR) ]; then cd $(CUTTOOLSDIR); make clean; cd ..; fi
 	if [ -d $(IREGIDIR) ]; then cd $(IREGIDIR); make clean; cd ..; fi
+
+clean: cleanSource # Clean builds: fortran in this Source and in all P*
 	for i in `ls -d ../SubProcesses/P*`; do cd $$i; make clean; cd -; done;
+
+%(additional_clean)s

@@ -19,8 +19,6 @@ from __future__ import absolute_import
 import sys
 import operator
 import os
-from six.moves import range
-from six.moves import zip
 pjoin = os.path.join
 root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
 sys.path.insert(0, os.path.join(root_path,'..','..'))
@@ -95,8 +93,8 @@ class TestFKSCommon(unittest.TestCase):
                               'color':1,
                               'mass':'zero',
                               'width':'zero',
-                              'texname':'\gamma',
-                              'antitexname':'\gamma',
+                              'texname':r'\gamma',
+                              'antitexname':r'\gamma',
                               'line':'wavy',
                               'charge':0.,
                               'pdg_code':22,

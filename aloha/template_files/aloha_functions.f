@@ -1201,7 +1201,7 @@ c       real    prot(0:3)      : four-momentum p in the rotated frame
 c
       implicit none
       double precision p(0:3),q(0:3),prot(0:3),qt2,qt,psgn,qq,p1
-
+      volatile qt, p1, qq ! prevent optimizations with -O3 (workaround for SIGFPE crashes in rotxxx: madgraph5/madgraph4gpu#855)
       double precision rZero, rOne
       parameter( rZero = 0.0d0, rOne = 1.0d0 )
 
@@ -2022,6 +2022,21 @@ c spin-3/2 fermion wavefunction
       end
 
 
+      complex*16 function THETA_FUNCTIONR(cond, out_true, out_false)
+
+      double precision cond
+      double precision  out_true, out_false
+
+      if (cond.ge.0d0) then
+        THETA_FUNCTIONR = out_true
+      else
+        THETA_FUNCTIONR = out_false
+      endif
+
+      return
+
+
+      end
       complex*16 function THETA_FUNCTION(cond, out_true, out_false)
 
       double precision cond
@@ -2054,7 +2069,7 @@ c     local variable
       enddo
       return
       end
-      
+     
       subroutine CombineAmpS(nb, ihels, iwfcts, W1, Wall, Amp)
 
       integer nb ! size of the vectors

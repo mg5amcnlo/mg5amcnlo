@@ -233,6 +233,7 @@ C
 C     
 C     GLOBAL VARIABLES
 C     
+
       INCLUDE 'mp_coupl.inc'
 
       MASSES(1)=MP__ZERO
@@ -542,6 +543,7 @@ C     PT STANDS FOR PTOT
 C     
 C     GLOBAL VARIABLES
 C     
+
       INCLUDE 'mp_coupl.inc'
 
       MASSES(1)=MP__ZERO
@@ -711,6 +713,7 @@ C
 C     
 C     GLOBAL VARIABLES
 C     
+
       INCLUDE 'mp_coupl.inc'
 
 C     ----------
@@ -957,6 +960,7 @@ C
 C     
 C     GLOBAL VARIABLES
 C     
+
       INCLUDE 'mp_coupl.inc'
 
 C     ----------

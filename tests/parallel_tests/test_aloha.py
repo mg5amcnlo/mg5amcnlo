@@ -33,10 +33,6 @@ import aloha.aloha_writers as aloha_writers
 #import models.sm.object_library as object_library
 import tests.unit_tests as unittest
 import madgraph.various.misc as misc
-from six.moves import range
-from six.moves import zip
-
-
 set_global = misc.set_global
 
 
@@ -3315,7 +3311,7 @@ P1(3) = -dimag(V1(1))
     V1(4)= denom*S3(3)*(-CI*(V2(4))+CI*(P1(1)*OM1*TMP0))
     V1(5)= denom*S3(3)*(-CI*(V2(5))+CI*(P1(2)*OM1*TMP0))
     V1(6)= denom*S3(3)*(-CI*(V2(6))+CI*(P1(3)*OM1*TMP0))
-end
+ end
 
 
 
@@ -3342,7 +3338,7 @@ entry VVS1_2_2(V2, S3, COUP1, COUP2, M1, W1,V1)
  do i = 3, 6
         V1(i) = V1(i) + Vtmp(i)
  enddo
-end
+ end
 
 """
         self.assertEqual(text.split('\n'),goal.split('\n')) 
@@ -3352,22 +3348,22 @@ end
 #define VVS1_1_guard
 #include <complex>
 
-void VVS1_1(std::complex<double> V2[], std::complex<double> S3[], std::complex<double> COUP, double M1, double W1,std::complex<double> V1[]);
-void VVS1_2(std::complex<double> V2[], std::complex<double> S3[], std::complex<double> COUP, double M1, double W1,std::complex<double> V1[]);
+ void VVS1_1(std::complex<double> V2[], std::complex<double> S3[], std::complex<double> COUP, double M1, double W1,std::complex<double>  V1[]);
+ void VVS1_2(std::complex<double> V2[], std::complex<double> S3[], std::complex<double> COUP, double M1, double W1,std::complex<double>  V1[]);
 #endif
 
 #ifndef VVS1_2_1_guard
 #define VVS1_2_1_guard
 #include <complex>
 
-void VVS1_2_1(std::complex<double> V2[], std::complex<double> S3[], std::complex<double> COUP1, std::complex<double> COUP2, double M1, double W1,std::complex<double> V1[]);
-void VVS1_2_2(std::complex<double> V2[], std::complex<double> S3[], std::complex<double> COUP1, std::complex<double> COUP2, double M1, double W1,std::complex<double> V1[]);
+ void VVS1_2_1(std::complex<double> V2[], std::complex<double> S3[], std::complex<double> COUP1, std::complex<double> COUP2, double M1, double W1,std::complex<double>  V1[]);
+ void VVS1_2_2(std::complex<double> V2[], std::complex<double> S3[], std::complex<double> COUP1, std::complex<double> COUP2, double M1, double W1,std::complex<double>  V1[]);
 #endif
 
 """
         goal_cpp = """#include "VVS1_1.h"
 
-void VVS1_1(std::complex<double> V2[], std::complex<double> S3[], std::complex<double> COUP, double M1, double W1,std::complex<double> V1[])
+ void VVS1_1(std::complex<double> V2[], std::complex<double> S3[], std::complex<double> COUP, double M1, double W1,std::complex<double>  V1[])
 {
 static std::complex<double> cI = std::complex<double>(0.,1.);
  double  OM1;
@@ -3391,12 +3387,12 @@ P1[3] = -V1[0].imag();
     V1[5]= denom*S3[2]*(-cI*(V2[5])+cI*(P1[3]*OM1*TMP0));
 }
 
-void VVS1_2(std::complex<double> V2[], std::complex<double> S3[], std::complex<double> COUP, double M1, double W1,std::complex<double> V1[])
+ void VVS1_2(std::complex<double> V2[], std::complex<double> S3[], std::complex<double> COUP, double M1, double W1,std::complex<double>  V1[])
 {
 
  VVS1_1(V2,S3,COUP,M1,W1,V1);
 }
-void VVS1_2_1(std::complex<double> V2[], std::complex<double> S3[], std::complex<double> COUP1, std::complex<double> COUP2, double M1, double W1,std::complex<double> V1[])
+ void VVS1_2_1(std::complex<double> V2[], std::complex<double> S3[], std::complex<double> COUP1, std::complex<double> COUP2, double M1, double W1,std::complex<double>  V1[])
 {
  std::complex<double>  Vtmp[6];
  int  i;
@@ -3409,7 +3405,7 @@ while (i < 6)
  i++;
 }
 }
-void VVS1_2_2(std::complex<double> V2[], std::complex<double> S3[], std::complex<double> COUP1, std::complex<double> COUP2, double M1, double W1,std::complex<double> V1[])
+ void VVS1_2_2(std::complex<double> V2[], std::complex<double> S3[], std::complex<double> COUP1, std::complex<double> COUP2, double M1, double W1,std::complex<double>  V1[])
 {
  std::complex<double>  Vtmp[6];
  int  i;
@@ -3809,6 +3805,15 @@ class UFOLorentz(object):
         self.name = name
         self.spins=spins
         self.structure = structure
+
+class UFOPropagator(object):
+    """ simple UFO propagator OBJECT """
+
+    def __init__(self, name='', numerator='1', denominator = "(P('mu', id) * P('mu', id) - Mass(id) * Mass(id) + complex(0,1) * Mass(id) * Width(id))"):
+        self.name = name
+        self.numerator = numerator
+        self.denominator = denominator
+
         
 class AbstractRoutineBuilder(create_aloha.AbstractRoutineBuilder):
     
@@ -4326,7 +4331,7 @@ P2(3) = -dimag(F2(1))
     F2(4)= denom*CI * S3(3)*(P2(0)*(R1(4)+R1(16)-R1(7)+CI*(R1(11)))+(P2(1)*(-1d0)*(-R1(3)+R1(8)+R1(15)+CI*(R1(12)))+(P2(2)*(-CI*(R1(3))+CI*(R1(8)+R1(15))-R1(12))-P2(3)*(R1(4)+R1(16)-R1(7)+CI*(R1(11))))))
     F2(5)= denom*CI * M2*S3(3)*(-R1(3)+R1(8)+R1(15)+CI*(R1(12)))
     F2(6)= denom*(-CI )* M2*S3(3)*(R1(4)+R1(16)-R1(7)+CI*(R1(11)))
-end
+ end
 
 
 """
@@ -4360,7 +4365,7 @@ implicit none
  complex*16 vertex
  TMP0 = (F2(5)*(-R1(3)+R1(8)+R1(15)+CI*(R1(12)))-F2(6)*(R1(4)+R1(16)-R1(7)+CI*(R1(11))))
  vertex = COUP*(-CI * TMP0*S3(3))
-end
+ end
     
     
 """
@@ -4414,7 +4419,7 @@ P1(3) = -dimag(R1(1))
     R1(16)= denom*1d0/3d0 * CI * M1*S3(3)*(OM1*(P1(3)*(F2(5)*(M1*M1*OM1*(P1(1)+CI*(P1(2)))+(-P1(1)-CI*(P1(2))))+F2(6)*(M1*-M1*OM1*(P1(0)+P1(3))+(P1(0)+2d0*(P1(3)))))+F2(6)*(P1(1)*P1(1)+P1(2)*P1(2)-P1(0)*P1(0)))+F2(6))
     R1(17)= denom*CI * S3(3)*(F2(5)*(OM1*(P1(3)*(M1*M1*(OM1*(-1d0/3d0)*(-P1(0)*P1(0)+P1(3)*P1(3)+P1(1)*P1(1)+P1(2)*P1(2))+ -5d0/3d0)+(-P1(0)*P1(0)+P1(3)*P1(3)+P1(1)*P1(1)+P1(2)*P1(2)))+1d0/3d0*(P1(0)*M1*M1))+(-1d0/3d0*(P1(0))+7d0/3d0*(P1(3))))+F2(6)*(M1*1d0/3d0 * M1*OM1*(-P1(1)+CI*(P1(2)))+(+1d0/3d0*(P1(1))-1d0/3d0 * CI*(P1(2)))))
     R1(18)= denom*CI * S3(3)*(F2(6)*(OM1*(P1(3)*(M1*M1*(OM1*(-1d0/3d0)*(P1(1)*P1(1)+P1(2)*P1(2)+P1(3)*P1(3)-P1(0)*P1(0))+ -5d0/3d0)+(P1(1)*P1(1)+P1(2)*P1(2)+P1(3)*P1(3)-P1(0)*P1(0)))-1d0/3d0*(P1(0)*M1*M1))+(+1d0/3d0*(P1(0))+7d0/3d0*(P1(3))))+F2(5)*(M1*1d0/3d0 * M1*OM1*(P1(1)+CI*(P1(2)))+(-1d0/3d0*(P1(1))-1d0/3d0 * CI*(P1(2)))))
-end
+ end
 
 
 """
@@ -4875,7 +4880,7 @@ P2(3) = -dimag(F2(1))
     F2(4)= denom*CI * FCT0*(F1(3)*(P2(0)*(-V3(4)+CI*(V3(5)))+(P2(1)*(V3(3)-V3(6))+(P2(2)*(-CI*(V3(3))+CI*(V3(6)))+P2(3)*(V3(4)-CI*(V3(5))))))+(F1(4)*(P2(0)*(V3(3)+V3(6))+(P2(1)*(-1d0)*(V3(4)+CI*(V3(5)))+(P2(2)*(+CI*(V3(4))-V3(5))-P2(3)*(V3(3)+V3(6)))))+M2*(F1(5)*(-V3(4)+CI*(V3(5)))+F1(6)*(-V3(3)+V3(6)))))
     F2(5)= denom*CI * FCT0*(F1(5)*(P2(0)*(V3(3)+V3(6))+(P2(1)*(-V3(4)+CI*(V3(5)))+(P2(2)*(-1d0)*(+CI*(V3(4))+V3(5))-P2(3)*(V3(3)+V3(6)))))+(F1(6)*(P2(0)*(V3(4)+CI*(V3(5)))+(P2(1)*(-V3(3)+V3(6))+(P2(2)*(-CI*(V3(3))+CI*(V3(6)))-P2(3)*(V3(4)+CI*(V3(5))))))+M2*(F1(3)*(-V3(3)+V3(6))+F1(4)*(V3(4)+CI*(V3(5))))))
     F2(6)= denom*(-CI )* FCT0*(F1(5)*(P2(0)*(-V3(4)+CI*(V3(5)))+(P2(1)*(V3(3)+V3(6))+(P2(2)*(-1d0)*(+CI*(V3(3)+V3(6)))+P2(3)*(-V3(4)+CI*(V3(5))))))+(F1(6)*(P2(0)*(-V3(3)+V3(6))+(P2(1)*(V3(4)+CI*(V3(5)))+(P2(2)*(-CI*(V3(4))+V3(5))+P2(3)*(-V3(3)+V3(6)))))+M2*(F1(3)*(-V3(4)+CI*(V3(5)))+F1(4)*(V3(3)+V3(6)))))
-end
+ end
 
 
 """        
@@ -4926,7 +4931,7 @@ P2(3) = -dimag(F2(1))
     F2(4)= denom*CI * FCT1*(F1(3)*(P2(0)*(-V3(4)+CI*(V3(5)))+(P2(1)*(V3(3)-V3(6))+(P2(2)*(-CI*(V3(3))+CI*(V3(6)))+P2(3)*(V3(4)-CI*(V3(5))))))+(F1(4)*(P2(0)*(V3(3)+V3(6))+(P2(1)*(-1d0)*(V3(4)+CI*(V3(5)))+(P2(2)*(+CI*(V3(4))-V3(5))-P2(3)*(V3(3)+V3(6)))))+M2*(F1(5)*(-V3(4)+CI*(V3(5)))+F1(6)*(-V3(3)+V3(6)))))
     F2(5)= denom*CI * FCT1*(F1(5)*(P2(0)*(V3(3)+V3(6))+(P2(1)*(-V3(4)+CI*(V3(5)))+(P2(2)*(-1d0)*(+CI*(V3(4))+V3(5))-P2(3)*(V3(3)+V3(6)))))+(F1(6)*(P2(0)*(V3(4)+CI*(V3(5)))+(P2(1)*(-V3(3)+V3(6))+(P2(2)*(-CI*(V3(3))+CI*(V3(6)))-P2(3)*(V3(4)+CI*(V3(5))))))+M2*(F1(3)*(-V3(3)+V3(6))+F1(4)*(V3(4)+CI*(V3(5))))))
     F2(6)= denom*(-CI )* FCT1*(F1(5)*(P2(0)*(-V3(4)+CI*(V3(5)))+(P2(1)*(V3(3)+V3(6))+(P2(2)*(-1d0)*(+CI*(V3(3)+V3(6)))+P2(3)*(-V3(4)+CI*(V3(5))))))+(F1(6)*(P2(0)*(-V3(3)+V3(6))+(P2(1)*(V3(4)+CI*(V3(5)))+(P2(2)*(-CI*(V3(4))+V3(5))+P2(3)*(-V3(3)+V3(6)))))+M2*(F1(3)*(-V3(4)+CI*(V3(5)))+F1(4)*(V3(3)+V3(6)))))
-end
+ end
 
 
 """        
@@ -4941,6 +4946,95 @@ end
         split_routine = routine.split('\n')[18:]
         self.assertEqual(split_solution, split_routine)
         self.assertEqual(len(split_routine), len(split_solution))
+
+
+    def test_short_fortranwriter_drop_fct(self):
+        """test a case where a ratio is present in the lorentz but not needed in the 
+           writer. Issue reported here: https://answers.launchpad.net/mg5amcnlo/+question/818531"""
+        
+        solution = """
+subroutine VVS4PZ1_2(V1, S3, COUP, M2, W2,V2)
+implicit none
+ include "../MODEL/input.inc"
+ include "../MODEL/coupl.inc"
+ complex*16 CI
+ parameter (CI=(0d0,1d0))
+ complex*16 COUP
+ complex*16 FCT1
+ real*8 M2
+ real*8 P1(0:3)
+ real*8 P2(0:3)
+ complex*16 S3(*)
+ complex*16 TMP0
+ complex*16 TMP1
+ complex*16 TMP2
+ complex*16 V1(*)
+ complex*16 V2(6)
+ real*8 W2
+ complex*16 denom
+P1(0) = dble(V1(1))
+P1(1) = dble(V1(2))
+P1(2) = dimag(V1(2))
+P1(3) = dimag(V1(1))
+    V2(1) = +V1(1)+S3(1)
+    V2(2) = +V1(2)+S3(2)
+P2(0) = -dble(V2(1))
+P2(1) = -dble(V2(2))
+P2(2) = -dimag(V2(2))
+P2(3) = -dimag(V2(1))
+ TMP0 = (P2(0)*P2(0)-P2(1)*P2(1)-P2(2)*P2(2)-P2(3)*P2(3))
+ TMP1 = (P2(0)*V1(3)-P2(1)*V1(4)-P2(2)*V1(5)-P2(3)*V1(6))
+ TMP2 = (P2(0)*P1(0)-P2(1)*P1(1)-P2(2)*P1(2)-P2(3)*P1(3))
+ FCT1 = ((M2*(-M2+CI*(W2))+TMP0))**(2d0)
+    denom = COUP/(FCT1)
+    V2(3)= denom*M2*S3(3)*mdl_dWZ*(-P1(0)*TMP1+V1(3)*TMP2)
+    V2(4)= denom*M2*S3(3)*mdl_dWZ*(-P1(1)*TMP1+V1(4)*TMP2)
+    V2(5)= denom*M2*S3(3)*mdl_dWZ*(-P1(2)*TMP1+V1(5)*TMP2)
+    V2(6)= denom*M2*S3(3)*mdl_dWZ*(-P1(3)*TMP1+V1(6)*TMP2)
+ end
+"""
+        FFV = UFOLorentz(name = 'VVS4',
+                 spins = [ 3, 3, 1 ],
+                 structure = 'P(1,2)*P(2,1) - P(-1,1)*P(-1,2)*Metric(1,2)')       
+
+        class Propagators:
+            # propagators with width corrections
+            numV = "(- Metric(1, 2) + Metric(1,'mu')* P('mu', id) * P(2, id) / Mass(id)**2) "
+            denominator = "(P('mu', id) * P('mu', id) - Mass(id) * Mass(id) + complex(0,1) * Mass(id) * Width(id))"
+            denominatorSq = denominator + "**2"
+            Z1 =  UFOPropagator(name = "Z1",
+                   numerator = "-" +  numV + "* complex(0,1) * Mass(id) * dWZ",
+                   denominator = denominatorSq
+                  )
+
+        class model:
+            propagators = Propagators()
+
+
+        builder = create_aloha.AbstractRoutineBuilder(FFV)
+        builder.model = model()
+        #builder.apply_conjugation()
+        amp = builder.compute_routine(2, tag=['PZ1'] )
+        routine = amp.write(output_dir=None, language='Fortran')
+
+        #dedicated point of attention
+        self.assertNotIn('FCT0', routine)
+        self.assertIn('complex*16 FCT1', routine) 
+        self.assertIn('FCT1 = ', routine)
+        self.assertIn('/(FCT1', routine) 
+        self.assertIn('complex*16 TMP2', routine) 
+        self.assertIn('TMP2 =', routine)
+        self.assertIn('*TMP2', routine)
+        self.assertIn('complex*16 TMP0', routine) 
+        self.assertIn('TMP0 =', routine)
+        self.assertIn('+TMP0', routine)
+        self.assertIn('complex*16 TMP1', routine) 
+        self.assertIn('TMP1 =', routine)
+        self.assertIn('*TMP1', routine)
+        #full check
+        self.assertEqual(solution.strip(), routine.strip())
+
+
 
 
 
@@ -4970,7 +5064,7 @@ P2(3) = -dimag(F2(1))
     F2(4)= denom*CI*(F1(3)*(P2(0)*(-V3(4)+CI*(V3(5)))+(P2(1)*(V3(3)-V3(6))+(P2(2)*(-CI*(V3(3))+CI*(V3(6)))+P2(3)*(V3(4)-CI*(V3(5))))))+(F1(4)*(P2(0)*(V3(3)+V3(6))+(P2(1)*(-1d0)*(V3(4)+CI*(V3(5)))+(P2(2)*(+CI*(V3(4))-V3(5))-P2(3)*(V3(3)+V3(6)))))+M2*(F1(5)*(-V3(4)+CI*(V3(5)))+F1(6)*(-V3(3)+V3(6)))))
     F2(5)= denom*CI*(F1(5)*(P2(0)*(V3(3)+V3(6))+(P2(1)*(-V3(4)+CI*(V3(5)))+(P2(2)*(-1d0)*(+CI*(V3(4))+V3(5))-P2(3)*(V3(3)+V3(6)))))+(F1(6)*(P2(0)*(V3(4)+CI*(V3(5)))+(P2(1)*(-V3(3)+V3(6))+(P2(2)*(-CI*(V3(3))+CI*(V3(6)))-P2(3)*(V3(4)+CI*(V3(5))))))+M2*(F1(3)*(-V3(3)+V3(6))+F1(4)*(V3(4)+CI*(V3(5))))))
     F2(6)= denom*(-CI)*(F1(5)*(P2(0)*(-V3(4)+CI*(V3(5)))+(P2(1)*(V3(3)+V3(6))+(P2(2)*(-1d0)*(+CI*(V3(3)+V3(6)))+P2(3)*(-V3(4)+CI*(V3(5))))))+(F1(6)*(P2(0)*(-V3(3)+V3(6))+(P2(1)*(V3(4)+CI*(V3(5)))+(P2(2)*(-CI*(V3(4))+V3(5))+P2(3)*(-V3(3)+V3(6)))))+M2*(F1(3)*(-V3(4)+CI*(V3(5)))+F1(4)*(V3(3)+V3(6)))))
-end
+ end
 
 
 """        
@@ -5013,7 +5107,7 @@ P1(3) = -dimag(F1(1))
     F1(4)= denom*CI*(F2(3)*(P1(0)*(-1d0)*(V3(4)+CI*(V3(5)))+(P1(1)*(V3(3)+V3(6))+(P1(2)*(+CI*(V3(3)+V3(6)))-P1(3)*(V3(4)+CI*(V3(5))))))+(F2(4)*(P1(0)*(-V3(3)+V3(6))+(P1(1)*(V3(4)-CI*(V3(5)))+(P1(2)*(+CI*(V3(4))+V3(5))+P1(3)*(-V3(3)+V3(6)))))+M1*(F2(5)*(V3(4)+CI*(V3(5)))-F2(6)*(V3(3)+V3(6)))))
     F1(5)= denom*CI*(F2(5)*(P1(0)*(-V3(3)+V3(6))+(P1(1)*(V3(4)+CI*(V3(5)))+(P1(2)*(-CI*(V3(4))+V3(5))+P1(3)*(-V3(3)+V3(6)))))+(F2(6)*(P1(0)*(V3(4)-CI*(V3(5)))+(P1(1)*(-1d0)*(V3(3)+V3(6))+(P1(2)*(+CI*(V3(3)+V3(6)))+P1(3)*(V3(4)-CI*(V3(5))))))+M1*(F2(3)*(-1d0)*(V3(3)+V3(6))+F2(4)*(-V3(4)+CI*(V3(5))))))
     F1(6)= denom*(-CI)*(F2(5)*(P1(0)*(-1d0)*(V3(4)+CI*(V3(5)))+(P1(1)*(V3(3)-V3(6))+(P1(2)*(+CI*(V3(3))-CI*(V3(6)))+P1(3)*(V3(4)+CI*(V3(5))))))+(F2(6)*(P1(0)*(V3(3)+V3(6))+(P1(1)*(-V3(4)+CI*(V3(5)))+(P1(2)*(-1d0)*(+CI*(V3(4))+V3(5))-P1(3)*(V3(3)+V3(6)))))+M1*(F2(3)*(V3(4)+CI*(V3(5)))+F2(4)*(V3(3)-V3(6)))))
-end
+ end
 
 
 """
@@ -5028,18 +5122,17 @@ end
     def test_short_Cppwriter_C(self):
         """ test that python writer works """
 
- 
         solution_h = """#ifndef FFV1C1_1_guard
 #define FFV1C1_1_guard
 #include <complex>
 
-void FFV1C1_1(std::complex<double> F1[], std::complex<double> V3[], std::complex<double> COUP, double M2, double W2,std::complex<double> F2[]);
+ void FFV1C1_1(std::complex<double> F1[], std::complex<double> V3[], std::complex<double> COUP, double M2, double W2,std::complex<double>  F2[]);
 #endif
 
 """
         solution_c="""#include "FFV1C1_1.h"
 
-void FFV1C1_1(std::complex<double> F1[], std::complex<double> V3[], std::complex<double> COUP, double M2, double W2,std::complex<double> F2[])
+ void FFV1C1_1(std::complex<double> F1[], std::complex<double> V3[], std::complex<double> COUP, double M2, double W2,std::complex<double>  F2[])
 {
 static std::complex<double> cI = std::complex<double>(0.,1.);
  double  P2[4];
@@ -5070,6 +5163,9 @@ P2[3] = -F2[0].imag();
         
         split_solution = solution_h.split('\n')
         split_routine = routine[0].split('\n')
+
+
+        
         self.assertEqual(split_solution, split_routine)
         self.assertEqual(len(split_routine), len(split_solution))
         
@@ -5088,14 +5184,14 @@ P2[3] = -F2[0].imag();
 #define FFV1C1_2_guard
 #include <complex>
 
-void FFV1C1_2(std::complex<double> F2[], std::complex<double> V3[], std::complex<double> COUP, double M1, double W1,std::complex<double> F1[]);
+ void FFV1C1_2(std::complex<double> F2[], std::complex<double> V3[], std::complex<double> COUP, double M1, double W1,std::complex<double>  F1[]);
 #endif
 
 """
 
         solution_c = """#include "FFV1C1_2.h"
 
-void FFV1C1_2(std::complex<double> F2[], std::complex<double> V3[], std::complex<double> COUP, double M1, double W1,std::complex<double> F1[])
+ void FFV1C1_2(std::complex<double> F2[], std::complex<double> V3[], std::complex<double> COUP, double M1, double W1,std::complex<double>  F1[])
 {
 static std::complex<double> cI = std::complex<double>(0.,1.);
  double  P1[4];
@@ -5205,7 +5301,7 @@ P1(2) = -dimag(S1(2))
 P1(3) = -dimag(S1(1))
     denom = COUP/(P1(0)**2-P1(1)**2-P1(2)**2-P1(3)**2 - M1**2)
     S1(3)= denom*CI * S3(3)*S2(3)
-end
+ end
 
 
 
@@ -5237,9 +5333,9 @@ end
 #define SSS1_1_guard
 #include <complex>
 
-void SSS1_1(std::complex<double> S2[], std::complex<double> S3[], std::complex<double> COUP, std::complex<double> M1,std::complex<double> S1[]);
-void SSS1_2(std::complex<double> S2[], std::complex<double> S3[], std::complex<double> COUP, std::complex<double> M1,std::complex<double> S1[]);
-void SSS1_3(std::complex<double> S2[], std::complex<double> S3[], std::complex<double> COUP, std::complex<double> M1,std::complex<double> S1[]);
+ void SSS1_1(std::complex<double> S2[], std::complex<double> S3[], std::complex<double> COUP, std::complex<double> M1,std::complex<double>  S1[]);
+ void SSS1_2(std::complex<double> S2[], std::complex<double> S3[], std::complex<double> COUP, std::complex<double> M1,std::complex<double>  S1[]);
+ void SSS1_3(std::complex<double> S2[], std::complex<double> S3[], std::complex<double> COUP, std::complex<double> M1,std::complex<double>  S1[]);
 #endif
 
 """     
@@ -5260,7 +5356,7 @@ void SSS1_3(std::complex<double> S2[], std::complex<double> S3[], std::complex<d
 
         solution_c = """#include "SSS1_1.h"
 
-void SSS1_1(std::complex<double> S2[], std::complex<double> S3[], std::complex<double> COUP, std::complex<double> M1,std::complex<double> S1[])
+ void SSS1_1(std::complex<double> S2[], std::complex<double> S3[], std::complex<double> COUP, std::complex<double> M1,std::complex<double>  S1[])
 {
 static std::complex<double> cI = std::complex<double>(0.,1.);
  double  P1[4];
@@ -5275,12 +5371,12 @@ P1[3] = -S1[0].imag();
     S1[2]= denom*cI * S3[2]*S2[2];
 }
 
-void SSS1_2(std::complex<double> S2[], std::complex<double> S3[], std::complex<double> COUP, std::complex<double> M1,std::complex<double> S1[])
+ void SSS1_2(std::complex<double> S2[], std::complex<double> S3[], std::complex<double> COUP, std::complex<double> M1,std::complex<double>  S1[])
 {
 
  SSS1_1(S2,S3,COUP,M1,S1);
 }
-void SSS1_3(std::complex<double> S2[], std::complex<double> S3[], std::complex<double> COUP, std::complex<double> M1,std::complex<double> S1[])
+ void SSS1_3(std::complex<double> S2[], std::complex<double> S3[], std::complex<double> COUP, std::complex<double> M1,std::complex<double>  S1[])
 {
 
  SSS1_1(S2,S3,COUP,M1,S1);
@@ -5318,7 +5414,7 @@ P3(3) = -dimag(V3(1))
     V3(4)= denom*(-CI)*(F2(4)*F1(5)+F2(3)*F1(6)-F2(6)*F1(3)-F2(5)*F1(4))
     V3(5)= denom*(-CI)*(-CI*(F2(6)*F1(3)+F2(3)*F1(6))+CI*(F2(5)*F1(4)+F2(4)*F1(5)))
     V3(6)= denom*(-CI)*(F2(6)*F1(4)+F2(3)*F1(5)-F2(5)*F1(3)-F2(4)*F1(6))
-end
+ end
 
 
 """
@@ -5345,7 +5441,7 @@ P3(3) = -dimag(V3(1))
     V3(4)= denom*(-CI)*(-F2(6)*F1(3)-F2(5)*F1(4)+F2(4)*F1(5)+F2(3)*F1(6))
     V3(5)= denom*(-CI)*(-CI*(F2(6)*F1(3)+F2(3)*F1(6))+CI*(F2(5)*F1(4)+F2(4)*F1(5)))
     V3(6)= denom*(-CI)*(-F2(5)*F1(3)-F2(4)*F1(6)+F2(6)*F1(4)+F2(3)*F1(5))
-end
+ end
 
 
 """

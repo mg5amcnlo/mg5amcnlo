@@ -90,7 +90,8 @@ C LOCAL VARIABLES
 C  
       INTEGER I,J
       COMPLEX*16 ZTEMP
-      REAL*8  CF(NCOLOR,NCOLOR)
+      INTEGER  CF(NCOLOR*(NCOLOR+1)/2)
+      INTEGER CF_INDEX, DENOM
       COMPLEX*16 AMP(NGRAPHS), JAMP(NCOLOR)
       COMPLEX*16 W(18,NWAVEFUNCS)
       COMPLEX*16 DUM0,DUM1
@@ -109,12 +110,15 @@ C ----------
 %(helas_calls)s
 %(jamp_lines)s
 
-      MATRIX%(proc_id)s = 0.D0 
+      MATRIX%(proc_id)s = 0.D0
+      CF_INDEX = 0 
       DO I = 1, NCOLOR
           ZTEMP = (0.D0,0.D0)
-          DO J = 1, NCOLOR
-              ZTEMP = ZTEMP + CF(J,I)*JAMP(J)
+          DO J = I, NCOLOR
+              CF_INDEX = CF_INDEX +1
+              ZTEMP = ZTEMP + CF(CF_INDEX)*JAMP(J)
           ENDDO
           MATRIX%(proc_id)s = MATRIX%(proc_id)s+ZTEMP*DCONJG(JAMP(I))   
       ENDDO
+      MATRIX%(proc_id)s = MATRIX%(proc_id)s/DENOM
       END

@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 if [[ $1 == "0" ]] ; then
     mint_mode=_MINT0

@@ -3,9 +3,6 @@
 from __future__ import division
 from __future__ import absolute_import
 from madgraph.interface import reweight_interface
-from six.moves import map
-from six.moves import range
-from six.moves import zip
 import pickle
 
 ################################################################################
@@ -1052,7 +1049,7 @@ class AllMatrixElement(dict):
                 continue
             pid =  leg.get('id')
             nb = leg.get('number')
-            if pid in to_decay:
+            if pid in to_decay and leg.get('state'):
                 i, proc = to_decay[pid].pop()
                 decay_struct[nb] = dc_branch_from_me(proc)
                 identical = [me.get('decay_chains')[i] for me in me_list[1:]]
@@ -1605,12 +1602,16 @@ class width_estimate(object):
         # since compute_width cannot be used for particle with pid<0
         
         particle_set = set()
-        for part in resonances:
+        for i, part in enumerate(resonances[:]):
             if part in mgcmd._multiparticles:
                 for pid in mgcmd._multiparticles[part]:
                     particle_set.add(abs(pid))
                 continue
-            pid_part = abs(label2pid[part]) 
+            try:
+                pid_part = abs(label2pid[part])
+            except KeyError:
+                pid_part = abs(label2pid[part.lower()]) 
+                resonances[i] = part.lower()
             particle_set.add(abs(pid_part))  
 
         particle_set = list(particle_set)
@@ -2559,6 +2560,12 @@ class decay_all_events(object):
                 part_for_curr_evt=event_map[part-1]+1 # index for curr event
                 pid=self.curr_event.particle[part_for_curr_evt]['pid']
                 self.curr_event.particle[part_for_curr_evt]['helicity']=helicities[part-1]
+        for index in self.curr_event.resonance:
+            #part=self.curr_event.event2mg[index]       # index for production ME
+            #part_for_curr_evt=event_map[part-1]+1 # index for curr event
+            self.curr_event.resonance[index]['helicity']=9 
+            #part['helicity'] = 9    
+
 
     def get_mom(self,momenta):
         """ input: list of momenta in a string format 
@@ -2765,7 +2772,7 @@ class decay_all_events(object):
         processes = [line[9:].strip() for line in self.banner.proc_card
                      if line.startswith('generate')]
         processes += [' '.join(line.split()[2:]) for line in self.banner.proc_card
-                      if re.search('^\s*add\s+process', line)]
+                      if re.search(r'^\s*add\s+process', line)]
         
         mgcmd = self.mgcmd
         modelpath = self.model.get('modelpath+restriction')
@@ -2782,9 +2789,11 @@ class decay_all_events(object):
                 if name == 'all':
                     continue
                 #self.banner.get('proc_card').get('multiparticles'):
-                mgcmd.do_define("%s = %s" % (name, ' '.join(repr(i) for i in pdgs)))
-            
-        
+                try:
+                    mgcmd.do_define("%s = %s" % (name, ' '.join(repr(i) for i in pdgs)))
+                except Exception as e:
+                    pass
+
         mgcmd.exec_cmd("set group_subprocesses False")
         logger.info('generating the production square matrix element')
         start = time.time()
@@ -3165,9 +3174,13 @@ class decay_all_events(object):
         need_param_card_modif = False
         
         # now extract the width of the resonances:
-        for particle_label in resonances:
+        for i,particle_label in enumerate(copy.copy(resonances)):
             try:
-                part=abs(self.pid2label[particle_label])
+                try:
+                    part=abs(self.pid2label[particle_label])
+                except KeyError as error:
+                    part=abs(self.pid2label[particle_label.lower()])
+                    resonances[i] = particle_label.lower()
                 #mass = self.banner.get('param_card','mass', abs(part))
                 width = self.banner.get('param_card','decay', abs(part))
             except ValueError as error:
@@ -3743,7 +3756,6 @@ class decay_all_events(object):
                 else:
                     # now we need to write the decay products in the event
                     # follow the decay chain order, so that we can easily keep track of the mother index
-                       
                     map_to_part_number={}
                     for res in range(-1,-len(list(decay_struct[part]["tree"].keys()))-1,-1):
                         index_res_for_mom=decay_struct[part]['mg_tree'][-res-1][0]
@@ -3759,7 +3771,7 @@ class decay_all_events(object):
                             decay_struct[part]["tree"][res]["colup1"]=colup1
                             decay_struct[part]["tree"][res]["colup2"]=colup2
                             mass=mom.m
-                            helicity=0.
+                            helicity=9.
                             decayed_event.particle[part_number]={"pid":pid,\
                                 "istup":istup,"mothup1":mothup1,"mothup2":mothup2,\
                                 "colup1":colup1,"colup2":colup2,"momentum":mom,\
@@ -4184,7 +4196,7 @@ class decay_all_events(object):
 class decay_all_events_onshell(decay_all_events):
     """special mode for onshell production"""
 
-    @misc.mute_logger()
+    #@misc.mute_logger()
     @misc.set_global()
     def generate_all_matrix_element(self):
         """generate the full series of matrix element needed by Madspin.
@@ -4214,7 +4226,7 @@ class decay_all_events_onshell(decay_all_events):
         processes = [line[9:].strip() for line in self.banner.proc_card
                      if line.startswith('generate')]
         processes += [' '.join(line.split()[2:]) for line in self.banner.proc_card
-                      if re.search('^\s*add\s+process', line)]
+                      if re.search(r'^\s*add\s+process', line)]
         
         mgcmd = self.mgcmd
         modelpath = self.model.get('modelpath+restriction')
@@ -4320,7 +4332,8 @@ class decay_all_events_onshell(decay_all_events):
         # remove decay with 0 branching ratio.
         #mgcmd.remove_pointless_decay(self.banner.param_card)
         #
-        commandline = 'output standalone %s' % pjoin(path_me,'madspin_me')
+        misc.sprint("generating directory *****************************************************************************")
+        commandline = 'output standalone %s --prefix=int' % pjoin(path_me,'madspin_me')
         logger.info(commandline)
         mgcmd.exec_cmd(commandline, precmd=True)
         logger.info('Done %.4g' % (time.time()-start))  
@@ -4349,7 +4362,7 @@ class decay_all_events_onshell(decay_all_events):
         #os.environ["GFORTRAN_UNBUFFERED_ALL"] = "y"
         misc.compile(cwd=pjoin(self.path_me,'madspin_me', 'Source'),
                      nb_core=self.mgcmd.options['nb_core'])        
-        misc.compile(['all'],cwd=pjoin(self.path_me,'madspin_me', 'SubProcesses'),
+        misc.compile(['all_matrix2py.so'],cwd=pjoin(self.path_me,'madspin_me', 'SubProcesses'),
                      nb_core=self.mgcmd.options['nb_core'])
 
     def save_to_file(self, *args):

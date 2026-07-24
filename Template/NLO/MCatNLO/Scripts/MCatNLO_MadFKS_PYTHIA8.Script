@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # finds out architecture name, defines system files, and construct
 # the relevant directory for run, if not present. If the architecture
 # cannot be figured out, defines ./Run as working directory, and use 
@@ -228,20 +228,20 @@ export PYTHIA8LOCATION=$PY8PATH
 
 # check the PYTHIA8 version by the position of certain files
 
-if [ ! -d $PYTHIA8LOCATION/xmldoc ]
+if [ ! -d "$PYTHIA8LOCATION/xmldoc" ]
 then
-  if [ -f $PYTHIA8LOCATION/share/Pythia8/xmldoc/Version.xml ]
+  if [ -f "$PYTHIA8LOCATION/share/Pythia8/xmldoc/Version.xml" ]
   then
     while read line; do
     if [[ $line == *"Pythia:versionNumber"*"8.2"* ]]; then PY8VER="8.2" ; echo ' USING PYTHIA 8.2xy' ; fi
     if [[ $line == *"Pythia:versionNumber"*"8.3"* ]]; then PY8VER="8.3" ; echo ' USING PYTHIA 8.3xy' ; fi
-    done < $PYTHIA8LOCATION/share/Pythia8/xmldoc/Version.xml
+    done < "$PYTHIA8LOCATION/share/Pythia8/xmldoc/Version.xml"
   else
     echo "Cannot determine Pythia8 version, stopping run"
     exit -1
   fi
-  chmod +x $PYTHIA8LOCATION/bin/pythia8-config
-  read HEPMCINCLIB <<< $($PYTHIA8LOCATION/bin/pythia8-config --hepmc2)
+  [ -x "$PYTHIA8LOCATION/bin/pythia8-config" ] || chmod +x "$PYTHIA8LOCATION/bin/pythia8-config"
+  read HEPMCINCLIB <<< $("$PYTHIA8LOCATION/bin/pythia8-config" --hepmc2)
 else
   PY8VER="8.1"
   echo ' USING PYTHIA 8.1xy'
@@ -321,7 +321,7 @@ elif [ $BEAM1 == 0 ]; then iA=-11; elif [ $BEAM1 == 3 ]; then iA=-11; elif [ $BE
 elif [ $BEAM1 == -2 ]; then iA=-2112; else echo "Unrecognized incoming beam 1";
 exit 1; fi
 if [ $BEAM2 == 1 ]; then iB=2212; elif [ $BEAM2 == -1 ]; then iB=-2212;
-elif [ $BEAM2 == 0 ]; then iB=11; elif [ $BEAM2 == 3 ]; then iB=11; elif [ $BEAM1 == 4 ]; then iA=13; elif [ $BEAM2 == 2 ]; then iB=2112;
+elif [ $BEAM2 == 0 ]; then iB=11; elif [ $BEAM2 == 3 ]; then iB=11; elif [ $BEAM2 == 4 ]; then iB=13; elif [ $BEAM2 == 2 ]; then iB=2112;
 elif [ $BEAM2 == -2 ]; then iB=-2112; else echo "Unrecognized incoming beam 2";
 exit 1; fi
 # Check the previous!
@@ -374,12 +374,29 @@ Next:numberShowEvent = $MAXPR_PY8     ! print event record n times
 Stat:showProcessLevel = on            ! Process statistics
 Stat:showErrors = on                  ! Error statistics
 Check:epTolErr = 0.001                ! Momentum-conservation tolerance 
+EOF
+
+if [ $BEAM1 = 2 ] && [ $BEAM2 = 2 ]
+then
+cat <<EOF >> $ifile
+Check:event = off
+EOF
+fi
+
+cat <<EOF >> $ifile
 
 ! 3) Beam-parameter settings.
 Beams:frameType = 4                ! LHE initialization
 Beams:LHEF = events.lhe            ! Input LHE file
-Beams:setProductionScalesFromLHEF=on ! Identify the Weak Jets
 EOF
+
+if [ $BEAM1 = 2 ] && [ $BEAM2 = 2 ]
+then
+cat <<EOF >> $ifile
+BeamRemnants:unresolvedHadron = 3  ! Beam settings for UPC processes
+PartonLevel:Remnants = off         ! No beam remnants in UPC processes
+EOF
+fi
 
 # set tune for ee
 #if [ $TUNE_EE -lt -1 ]
@@ -543,10 +560,18 @@ TimeShower:QEDshowerByL = $QEDSHOWER      ! Prevent leptons from radiating photo
 TimeShower:QEDshowerByGamma = $QEDSHOWER  ! Prevent photons from branching
 TimeShower:alphaSuseCMW = false    ! Use the CMW prescription in FSR
 TimeShower:weightGluonToQuark = 1  ! Use normal Altarelli-Parisi kernels for g -> q qbar
-TimeShower:pTminChgQ = 0.01
-TimeShower:pTminChgL = 0.00001
 
 ! 6) Initial-state shower.
+EOF
+
+if [ $BEAM1 = 2 ] && [ $BEAM2 = 2 ]
+then
+cat <<EOF >> $ifile
+PartonLevel:ISR = off              ! No initial-state radiation for UPC processes
+EOF
+fi
+
+cat <<EOF >> $ifile
 SpaceShower:pTmaxMatch = 1         ! Use scalup (re-check)
 SpaceShower:pTmaxFudge = 1.        ! Factor changing the max scale
 SpaceShower:alphaSvalue = 0.118    ! Alpha_s(MZ) in final-state shower
@@ -556,8 +581,6 @@ SpaceShower:QEDshowerByQ = $QEDSHOWER     ! Prevent quarks from radiating photon
 SpaceShower:QEDshowerByL = $QEDSHOWER     ! Prevent leptons from radiating photons
 SpaceShower:rapidityorder = off    ! Do not order branchings in rapidity
 SpaceShower:alphaSuseCMW = false   ! Use the CMW prescription in ISR
-SpaceShower:pTminChgQ = 0.01
-SpaceShower:pTminChgL = 0.00001
 
 ! 7) Non-perturbative stuff.
 BeamRemnants:primordialKT = $PKT    ! off = no primordial kT
@@ -605,6 +628,7 @@ JetMatching:etaJetMax = 1000.0    ! max jet rapidity definition
 JetMatching:nJetMax = $NJMAX      ! max multiplicity
 JetMatching:scheme = 1            ! MadGraph MLM-type merging
 JetMatching:setMad = off          ! Don't read from LHE in MG5LO format
+Beams:setProductionScalesFromLHEF = on ! Identify the Weak Jets
 
 EOF
 fi
@@ -613,7 +637,7 @@ cat <<EOF >> $ifile
 ! 10) Matrix-element corrections.
 EOF
 
-if [ $space_shower_me_corrections = ".TRUE." ]
+if [ $SPACE_SHOWER_ME_CORRECTIONS = ".TRUE." ]
 then
 cat <<EOF >> $ifile
 SpaceShower:MEcorrections = on     ! MECs for ISR
@@ -624,7 +648,7 @@ SpaceShower:MEcorrections = off     ! no MECs for ISR
 EOF
 fi
 
-if [ $time_shower_me_corrections = ".TRUE." ]
+if [ $TIME_SHOWER_ME_CORRECTIONS = ".TRUE." ]
 then
 cat <<EOF >> $ifile
 TimeShower:MEcorrections = on     ! MECs for FSR
@@ -635,7 +659,7 @@ TimeShower:MEcorrections = off     ! no MECs for FSR
 EOF
 fi
 
-if [ $time_shower_me_extended = ".TRUE." ]
+if [ $TIME_SHOWER_ME_EXTENDED = ".TRUE." ]
 then
 cat <<EOF >> $ifile
 TimeShower:MEextended = on     ! Extended MECs for FSR
@@ -646,7 +670,7 @@ TimeShower:MEextended = off     ! no extended MECs for FSR
 EOF
 fi
 
-if [ $time_shower_me_after_first = ".TRUE." ]
+if [ $TIME_SHOWER_ME_AFTER_FIRST = ".TRUE." ]
 then
 cat <<EOF >> $ifile
 TimeShower:MEafterFirst = on     ! MECs after frst FSR
@@ -885,4 +909,3 @@ fi
 #                                   ! it is already off if MEcorrections = off
 #SpaceShower:MEafterFirst = off     ! No Matrix-element corrections after first emission
 #                                   ! it is already off if MEcorrections = off
-

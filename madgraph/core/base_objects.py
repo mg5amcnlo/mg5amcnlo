@@ -23,16 +23,12 @@ import math
 import numbers
 import os
 import re
-import six
-StringIO = six
-
+import io
 import madgraph
 import madgraph.core.color_algebra as color
 import collections
 from madgraph import MadGraph5Error, MG5DIR, InvalidCmd
 import madgraph.various.misc as misc 
-from six.moves import range
-from six.moves import zip
 from functools import reduce
 
 
@@ -972,6 +968,7 @@ class Interaction(PhysicsObject):
         '%s_%s_%s'%(self['color'][k[0]],self['lorentz'][k[1]],self['couplings'][k]))
 
 
+
 #===============================================================================
 # InteractionList
 #===============================================================================
@@ -1102,6 +1099,7 @@ class Model(PhysicsObject):
         self['allow_pickle'] = True
         self['limitations'] = [] # MLM means that the model can sometimes have issue with MLM/default scale. 
                                  # fix_scale means that the model should use fix_scale computation.
+        self['startfromalpha0'] = False
         # attribute which might be define if needed
         #self['name2pdg'] = {'name': pdg}
         
@@ -1162,7 +1160,7 @@ class Model(PhysicsObject):
             if not (isinstance(value, list)):
                 raise self.PhysicsObjectError("Object of type %s is not a list" % type(value))
 
-        elif name == 'case_sensitive':
+        elif name in ['case_sensitive', 'startfromalpha0']:
             if not value in [True ,False]:
                 raise self.PhysicsObjectError("Object of type %s is not a boolean" % type(value))
             
@@ -1218,29 +1216,36 @@ class Model(PhysicsObject):
             if self['interactions']:
                 self['interaction_dict'] = self['interactions'].generate_dict()
 
-        if (name == 'got_majoranas') and self[name] == None:
+        elif (name == 'got_majoranas') and self[name] == None:
             if self['particles']:
                 self['got_majoranas'] = self.check_majoranas()
 
-        if (name == 'coupling_orders') and self[name] == None:
+        elif (name == 'coupling_orders') and self[name] == None:
             if self['interactions']:
                 self['coupling_orders'] = self.get_coupling_orders()
 
-        if (name == 'order_hierarchy') and not self[name]:
+        elif (name == 'order_hierarchy') and not self[name]:
             if self['interactions']:
                 self['order_hierarchy'] = self.get_order_hierarchy()    
 
-        if (name == 'expansion_order') and self[name] == None:
+        elif (name == 'expansion_order') and self[name] == None:
             if self['interactions']:
                 self['expansion_order'] = \
                    dict([(order, -1) for order in self.get('coupling_orders')])
                    
-        if (name == 'name2pdg') and 'name2pdg' not in self:
+        elif (name == 'name2pdg') and 'name2pdg' not in self:
             self['name2pdg'] = {}
             for p in self.get('particles'):
                 self['name2pdg'][p.get('antiname')] = -1*p.get('pdg_code')
                 self['name2pdg'][p.get('name')] =  p.get('pdg_code')
-                
+        
+        elif (name == 'coupling_dep' and 'coupling_dep' not in self):
+            self['coupling_dep'] = {}
+            if self.get('couplings'):
+                for key, couplings in self.get('couplings').items():
+                    for coup in couplings:
+                        self['coupling_dep'][coup.name] = key
+
         return Model.__bases__[0].get(self, name) # call the mother routine
 
     def set(self, name, value, force = False):
@@ -1511,7 +1516,28 @@ class Model(PhysicsObject):
         
         return correlated   
 
+    def get_all_running_coupling(self):
+        """ return the list of all coupling which are running for this model """
+
+        all_running_coupling = []
+        all_running_type = ['aS'] + self.get_running()
+        not_running_index = [] # to allow to add at the end of the list the non running one
+        for type_coup, coup_list in self.get('couplings').items():
+            if any([c in all_running_type for c in type_coup]):
+                all_running_coupling += coup_list
+        return all_running_coupling
+    
+    def is_running_coupling(self, name, reset_cache=False):
+        """check if a coupling runs or not"""
+
+        if reset_cache or not hasattr(self, 'cache_running_coupling'):
+            self.cache_running_coupling = self.get_all_running_coupling()
         
+        if name.startswith('-'):
+            name = name[1:]
+        return name in self.cache_running_coupling
+
+
 
     def check_majoranas(self):
         """Return True if there is fermion flow violation, False otherwise"""
@@ -1721,7 +1747,7 @@ class Model(PhysicsObject):
         
         import models.write_param_card as writer
         if not filepath:
-            out = StringIO.StringIO() # it's suppose to be written in a file
+            out = io.StringIO() # it's suppose to be written in a file
         else:
             out = filepath
         param = writer.ParamCardWriter(self, filepath=out)
@@ -2066,6 +2092,11 @@ class Leg(PhysicsObject):
     """Leg object: id (Particle), number, I/F state, flag from_group
     """
 
+    # List of allowed helicity polarizations for a fermion or vector boson.
+    # See [arXiv:1912.01725] for definitions (fermions,vectors) and
+    # [arXiv:2512.10015] for extensions (vectors)
+    list_of_allowed_polarizations = [-1, 1, 2,-2, 3,-3, 0, 4, 5, 6, 7, 9, 99]
+
     def default_setup(self):
         """Default values for all properties"""
 
@@ -2114,7 +2145,7 @@ class Leg(PhysicsObject):
                 raise self.PhysicsObjectError( \
                         "%s is not a valid list" % str(value))
             for i in value:
-                if i not in [-1, 1, 2,-2, 3,-3, 0, 99]:
+                if i not in self.list_of_allowed_polarizations:
                     raise self.PhysicsObjectError( \
                           "%s is not a valid polarization" % str(value))
                                                                     
@@ -2301,7 +2332,7 @@ class MultiLeg(PhysicsObject):
                 raise self.PhysicsObjectError( \
                         "%s is not a valid list" % str(value))
             for i in value:
-                if i not in [-1, 1,  2, -2, 3, -3, 0, 99]:
+                if i not in Leg.list_of_allowed_polarizations:
                     raise self.PhysicsObjectError( \
                           "%s is not a valid polarization" % str(value))
 

@@ -15,7 +15,6 @@
 
 from __future__ import absolute_import
 import random
-from six.moves import range
 if __name__=='__main__':
     # Make sure paths are accessible
     import os

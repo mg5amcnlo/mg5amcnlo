@@ -339,8 +339,9 @@
 *
 *	GJ reduction:
 *
-	call ffxe2(ce2ij,cexi(2),cexi(1),cd1ij,cd0i,xpi,fpij5,
-     +          del3ij,del4i,fdel4,ier)
+        stop 2
+C	call ffxe2(ce2ij,cexi(2),cexi(1),cd1ij,cd0i,xpi,fpij5,
+C     +          del3ij,del4i,fdel4,ier)
 	if ( atest ) then
 *
 *	PV-reduction
@@ -455,8 +456,9 @@
 *
 *	FF function
 *
-	call ffxe3(ce3ijk,ce2ij,cexi(2),cexi(1), cd2ijk,cd2i,cd1ij,cd0i,
-     +		xpi,fpij5, del3ij,del4i,fdel4, ier)
+                stop 2
+C	call ffxe3(ce3ijk,ce2ij,cexi(2),cexi(1), cd2ijk,cd2i,cd1ij,cd0i,
+C     +		xpi,fpij5, del3ij,del4i,fdel4, ier)
 *
 *	copy FF structs to AA
 *

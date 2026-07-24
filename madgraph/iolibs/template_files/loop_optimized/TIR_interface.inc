@@ -67,6 +67,7 @@ C
 C GLOBAL VARIABLES
 C
       include 'MadLoopParams.inc'
+      %(include_vector)s
       include 'coupl.inc'
 	  INTEGER CTMODE
 	  %(real_dp_format)s LSCALE

@@ -1,29 +1,4 @@
 C some functions which deal with the splitorders
-      subroutine fill_needed_splittings()
-      ! loop over the FKS configurations and fill the split_type_used
-      ! common blocks
-      implicit none
-      include "nexternal.inc"
-      include "nFKSconfigs.inc"
-      include "fks_info.inc"
-      include "orders.inc"
-      logical split_type_used(nsplitorders)
-      common/to_split_type_used/split_type_used
-      integer i, j
-      do j = 1, nsplitorders
-        split_type_used(j)=.false.
-      enddo
-      do i = 1, fks_configs
-        do j = 1, nsplitorders
-          split_type_used(j)=split_type_used(j).or.
-     %      split_type_d(i,j)
-        enddo
-      enddo
-      write(*,*) 'SPLIT TYPE USED:', split_type_used
-      return
-      end
-
-
       integer function get_orders_tag(ord)
 C a function that assigns to a given order
 C array an integer number
@@ -198,5 +173,18 @@ C Also, print on screen a summary of the orders in amp_split
       return
       end
 
+      
+      logical function orders_equal(orders1, orders2)
+      implicit none
+      include 'orders.inc'
+      integer orders1(nsplitorders), orders2(nsplitorders)
+      integer i
 
+      orders_equal = .true.
+      do i = 1, nsplitorders
+         orders_equal = orders_equal.and.orders1(i).eq.orders2(i)
+      enddo
+
+      return
+      end
 

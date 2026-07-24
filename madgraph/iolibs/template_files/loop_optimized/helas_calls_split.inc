@@ -46,6 +46,7 @@ C
 C  
 C GLOBAL VARIABLES
 C  
+      %(include_vector)s
       include 'coupl.inc'
 	  include 'mp_coupl.inc'
 

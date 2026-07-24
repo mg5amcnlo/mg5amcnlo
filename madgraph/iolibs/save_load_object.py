@@ -17,10 +17,9 @@
 
 from __future__ import absolute_import
 import pickle
-import six.moves.cPickle
+cPickle = pickle
 
 from . import files as files
-import six
 import os
 
 class SaveObjectError(Exception):
@@ -31,7 +30,7 @@ class SaveObjectError(Exception):
 def save_to_file(filename, object, log=True, allow_fail=True):
     """Save any Python object to file filename"""
 
-    if not isinstance(filename, six.string_types):
+    if not isinstance(filename, str):
         raise SaveObjectError("filename must be a string")
 
     files.write_to_file(filename, pickle_object, object, log=log, binary=True,
@@ -50,7 +49,7 @@ def pickle_object(fsock, object, bypass_error=False, **opts):
     """Helper routine to pickle an object to file socket fsock"""
 
     try:
-        six.moves.cPickle.dump(object, fsock, protocol=2)
+        pickle.dump(object, fsock, protocol=2)
     except Exception as error:
         if bypass_error:
             return

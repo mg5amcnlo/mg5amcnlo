@@ -25,13 +25,8 @@ import signal
 import subprocess
 import sys
 import traceback
-import six
-if six.PY3:
-    import io
-    file = io.IOBase
-from six.moves import map
-from six.moves import range
-from six.moves import input
+import io
+file = io.IOBase
 try:
     import readline
     GNU_SPLITTING = ('GNU' in readline.__doc__)
@@ -343,17 +338,44 @@ class OriginalCmd(object):
             names = names + dir(aclass)
         return names
 
-    def complete_help(self, *args):
-        return self.completenames(*args)
+    def complete_help(self, text, line, begidx, endidx):
+
+        full_arg = self.split_arg(line[0:begidx])
+        #print("full_arg:", full_arg , text, line, begidx, endidx)
+        # Format
+        if len(full_arg) < 1:
+            return self.completenames(text, line, begidx, endidx)
+        elif len(full_arg) == 2 :
+            options = [name[5:] for name in dir(self) if name.startswith('%s2_' % full_arg[1])]
+            return self.list_completion(text, options)
+        else:
+            return
+
+        #return self.completenames(text, line, begidx, endidx)
 
     def do_help(self, arg):
-        if arg:
+        sarg = arg.strip().split()
+        if len(sarg) ==1:
             # XXX check arg syntax
             try:
                 func = getattr(self, 'help_' + arg)
             except AttributeError:
                 try:
                     doc=getattr(self, 'do_' + arg).__doc__
+                    if doc:
+                        self.stdout.write("%s\n"%str(doc))
+                        return
+                except AttributeError:
+                    pass
+                self.stdout.write("%s\n"%str(self.nohelp % (arg,)))
+                return
+            func()
+        elif len(sarg) == 2:
+            try:
+                func = getattr(self, 'help_' + sarg[0]+ '2_' + sarg[1])
+            except AttributeError:
+                try:
+                    doc=getattr(self, '%s2_%s'  % (sarg[0], sarg[1])).__doc__
                     if doc:
                         self.stdout.write("%s\n"%str(doc))
                         return
@@ -624,12 +646,12 @@ class BasicCmd(OriginalCmd):
                 compfunc = self.completenames
 
             # correct wrong splittion with '\ '
-            if line and begidx > 2 and line[begidx-2:begidx] == '\ ':
+            if line and begidx > 2 and line[begidx-2:begidx] == r'\ ':
                 Ntext = line.split(os.path.sep)[-1]
-                self.completion_prefix = Ntext.rsplit('\ ', 1)[0] + '\ '
+                self.completion_prefix = Ntext.rsplit(r'\ ', 1)[0] + r'\ '
                 to_rm = len(self.completion_prefix) - 1
                 Nbegidx = len(line.rsplit(os.path.sep, 1)[0]) + 1
-                data = compfunc(Ntext.replace('\ ', ' '), line, Nbegidx, endidx)
+                data = compfunc(Ntext.replace(r'\ ', ' '), line, Nbegidx, endidx)
                 self.completion_matches = [p[to_rm:] for p in data 
                                               if len(p)>to_rm]                
             # correct wrong splitting with '-'/"="
@@ -742,7 +764,7 @@ class BasicCmd(OriginalCmd):
             completion += [prefix + f for f in ['.'+os.path.sep, '..'+os.path.sep] if \
                        f.startswith(text) and not prefix.startswith('.')]
         
-        completion = [a.replace(' ','\ ') for a in completion]
+        completion = [a.replace(' ',r'\ ') for a in completion]
         return completion
 
 
@@ -1253,7 +1275,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
                 return possibility[0]
         if '=' in line and ' ' in line.strip():
             leninit = len(line)
-            line,n = re.subn('\s*=\s*','=', line)
+            line,n = re.subn(r'\s*=\s*','=', line)
             if n and len(line) != leninit:
                 return self.check_answer_in_input_file(question_instance, default, path=path, line=line)
             
@@ -1311,12 +1333,14 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         if os.path.exists(self.debug_output):
             os.remove(self.debug_output)
         try:
-            super(Cmd,self).onecmd('history %s' % self.debug_output.replace(' ', '\ '))
+            super(Cmd,self).onecmd('history %s' % self.debug_output.replace(' ', r'\ '))
         except Exception as error:
             logger.error(error)
 
         debug_file = open(self.debug_output, 'a')
         traceback.print_exc(file=debug_file)
+        if __debug__:
+            traceback.print_exc()
         if hasattr(error, 'filename'):
             debug_file.write("Related File: %s\n" % error.filename)
         # Create a nice error output
@@ -1753,7 +1777,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         signal.signal(signal.SIGALRM, handle_alarm)
     
         if fct is None:
-            fct = six.moves.input
+            fct = input
         
         if timeout:
             signal.alarm(timeout)
@@ -1928,7 +1952,8 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             for i, name in enumerate(split):
                 try:
                     __import__('.'.join(split[:i+1]))                    
-                    exec('%s=sys.modules[\'%s\']' % (split[i], '.'.join(split[:i+1])))
+                    tmp = {}
+                    exec('%s=sys.modules[\'%s\']' % (split[i], '.'.join(split[:i+1])), globals(),tmp)
                 except ImportError:
                     try:
                         var = eval(args[1])
@@ -1939,7 +1964,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
                         outstr += 'EXTERNAL:\n'
                         outstr += misc.nice_representation(var, nb_space=4)                        
                 else:
-                    var = eval(args[1])
+                    var = eval(args[1], globals(), tmp)
                     outstr += 'EXTERNAL:\n'
                     outstr += misc.nice_representation(var, nb_space=4)                        
             
@@ -2031,7 +2056,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
                 to_write.remove(key)
             except Exception:
                 pass
-            if '_path' in key:       
+            if '_path' in key or '-config' in key or key in ['fastjet', 'lhapdf', 'lhapdf_py3', 'f2py_compiler', 'f2py_compiler_py3']:       
                 # special case need to update path
                 # check if absolute path
                 if not os.path.isabs(value):
@@ -2200,7 +2225,7 @@ class SmartQuestion(BasicCmd):
                 raise
             
     def reask(self, reprint_opt=True):
-        pat = re.compile('\[(\d*)s to answer\]')
+        pat = re.compile(r'\[(\d*)s to answer\]')
         prev_timer = signal.alarm(0) # avoid timer if any
         
         if prev_timer:     
@@ -3001,7 +3026,7 @@ class ControlSwitch(SmartQuestion):
                                   lpotential_switch=0,
                                   lnb_key=0,
                                   key=None):
-        """should return four lines:
+        r"""should return four lines:
         1. The upper band (typically /========\ 
         2. The lower band (typically \========/
         3. The line without conflict | %(nb)2d. %(descrip)-20s %(name)5s = %(switch)-10s |
@@ -3249,13 +3274,13 @@ class ControlSwitch(SmartQuestion):
                 data_to_format['conflict_switch'] = self.color_for_value(key,self.inconsistent_keys[key], consistency=False)
                 
                 if hidden_line: 
-                    f2 = re.sub('%(\((?:name|descrip|add_info)\)-?)(\d+)s', 
+                    f2 = re.sub(r'%(\((?:name|descrip|add_info)\)-?)(\d+)s', 
                                 lambda x: '%%%s%ds' % (x.group(1),int(x.group(2))+9),
                                  f2)
                 text.append(f2 % data_to_format)
             elif hidden_line:
                 if not f3:
-                    f3 = re.sub('%(\((?:name|descrip|add_info)\)-?)(\d+)s', 
+                    f3 = re.sub(r'%(\((?:name|descrip|add_info)\)-?)(\d+)s', 
                                 lambda x: '%%%s%ds' % (x.group(1),int(x.group(2))+9),
                                  f1)
                 text.append(f3 % data_to_format)

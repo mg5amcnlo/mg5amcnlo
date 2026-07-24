@@ -254,8 +254,10 @@ C LOCAL VARIABLES
 C  
       INTEGER I,J,M,N
       COMPLEX*16 ZTEMP
-      REAL*8 CF(NCOLOR,NCOLOR)
+      INTEGER DENOM
+      INTEGER CF(NCOLOR*(NCOLOR+1)/2)
       COMPLEX*16 AMP(NGRAPHS)
+      INTEGER CF_INDEX
 	  COMPLEX*16 JAMP(NCOLOR,NAMPSO)
 	  COMPLEX*16 TMP_JAMP(%(nb_temp_jamp)i)
       COMPLEX*16 W(20,NWAVEFUNCS)
@@ -279,19 +281,21 @@ C ----------
 %(helas_calls)s
 %(jamp_lines)s
 
-      RES = 0.D0 
+      RES(:) = 0.D0 
 	  DO M = 1, NAMPSO
+        CF_INDEX= 0
         DO I = 1, NCOLOR
           ZTEMP = (0.D0,0.D0)
-          DO J = 1, NCOLOR
-              ZTEMP = ZTEMP + CF(J,I)*JAMP(J,M)
+          DO J = I, NCOLOR
+              CF_INDEX = CF_INDEX +1
+              ZTEMP = ZTEMP + CF(CF_INDEX)*JAMP(J,M)
           ENDDO
 		  DO N = 1, NAMPSO
-            RES(%(proc_prefix)sSQSOINDEX(M,N)) = RES(%(proc_prefix)sSQSOINDEX(M,N)) + ZTEMP*DCONJG(JAMP(I,N))
+            RES(%(proc_prefix)sSQSOINDEX(M,N)) = RES(%(proc_prefix)sSQSOINDEX(M,N)) + REAL(ZTEMP*DCONJG(JAMP(I,N)))
 		  ENDDO
         ENDDO
 	  ENDDO
-
+      RES(:) = RES(:)/DENOM
       END
 
       SUBROUTINE %(proc_prefix)sGET_value(P, ALPHAS, NHEL ,ANS)

@@ -22,9 +22,6 @@ import madgraph
 import madgraph.core.base_objects as base_objects
 import madgraph.core.color_algebra as color
 import tests.unit_tests as unittest
-from six.moves import range
-from six.moves import zip
-
 #===============================================================================
 # ParticleTest
 #===============================================================================
@@ -664,8 +661,8 @@ class ModelTest(unittest.TestCase):
                   'color':0,
                   'mass':'zero',
                   'width':'zero',
-                  'texname':'\gamma',
-                  'antitexname':'\gamma',
+                  'texname':r'\gamma',
+                  'antitexname':r'\gamma',
                   'line':'wavy',
                   'charge':0.,
                   'pdg_code':22,

@@ -1,25 +1,27 @@
       subroutine addmothers(ip,jpart,pb,isym,jsym,rscale,aqcd,aqed,buff,
-     $                      npart,numproc,flip)
+     $                      npart,numproc,flip, icol, ivec)
 
       implicit none
       include 'genps.inc'
-      include 'maxconfigs.inc'
       include 'nexternal.inc'
-      include 'coupl.inc'
       include 'maxamps.inc'
-      include 'cluster.inc'
+c     include 'vector.inc' ! defines VECSIZE_MEMMAX
+      include 'cluster.inc' ! includes vector.inc that defines VECSIZE_MEMMAX
+      include 'coupl.inc' ! needs VECSIZE_MEMMAX (defined in vector.inc)
       include 'message.inc'
       include 'run.inc'
 
+      integer ivec
       integer jpart(7,-nexternal+3:2*nexternal-3),npart,ip,numproc
       double precision pb(0:4,-nexternal+3:2*nexternal-3)
       double precision rscale,aqcd,aqed,targetamp(maxflow)
       character*1000 buff
       character*20 cform
-      logical flip ! If .true., initial state is mirrored
+      logical flip              ! If .true., initial state is mirrored
+      integer icol ! color selected
 
       integer isym(nexternal,99), jsym
-      integer i,j,k,ida(2),ns,nres,ires,icl,ito2,idenpart,nc,ic
+      integer i,j,k,ida(2),ns,nres,ires,icl,ito2,idenpart,ic
       integer mo_color,da_color(2),itmp
       integer ito(-nexternal+3:nexternal),iseed,maxcolor,maxorg
       integer icolalt(2,-nexternal+2:2*nexternal-3)
@@ -44,9 +46,6 @@ c     Variables for combination of color indices (including multipart. vert)
       logical first_time,tchannel
       save prmass,prwidth,pow
       data first_time /.true./
-
-      Double Precision amp2(maxamps), jamp2(0:maxflow)
-      common/to_amps/  amp2,       jamp2
 
       integer           mincfig, maxcfig
       common/to_configs/mincfig, maxcfig
@@ -106,74 +105,42 @@ c
 c   
 c   Choose the config (diagram) which was actually used to produce the event
 c   
-c   ...unless the diagram is passed in igraphs(1); then use that diagram
-      lconfig=iconfig
+c     ...unless the diagram is passed in igraphs(1); then use that diagram
+      lconfig = iconfig
       if (ickkw.gt.0) then
          if (btest(mlevel,3)) then
             write(*,*)'unwgt.f: write out diagram ',igraphs(1)
          endif
-         lconfig=igraphs(1)
+         lconfig = vec_igraph(ivec)
+         if (lconfig.eq.0.and.igraphs(1).ne.i.and.ivec.eq.1) lconfig = igraphs(1)
       endif
-      
+      is_LC=.true.
+      maxcolor=0
 c
 c    Choose a color flow which is certain to work with the propagator
 c    structure of the chosen diagram and use that as an alternative
 c   
-
-      nc = int(jamp2(0))
-      is_LC = .true.
-      maxcolor=0
-      if(nc.gt.0)then
-      if(icolamp(1,%(iconfig)s,iproc)) then
-        targetamp(1)=jamp2(1)
-c        print *,'Color flow 1 allowed for config ',lconfig
-      else
-        targetamp(1)=0d0
-      endif
-      do ic =2,nc
-        if(icolamp(ic,%(iconfig)s,iproc))then
-          targetamp(ic) = jamp2(ic)+targetamp(ic-1)
-c          print *,'Color flow ',ic,' allowed for config ',lconfig,targetamp(ic)
-        else
-          targetamp(ic)=targetamp(ic-1)
-        endif
-      enddo
-c     ensure that at least one leading color is different of zero if not allow
-c     all subleading color. 
-      if (targetamp(nc).eq.0)then
-       is_LC = .false.
-       targetamp(1)=jamp2(1)
-       do ic =2,nc
-           targetamp(ic) = jamp2(ic)+targetamp(ic-1)
-       enddo
-      endif
-
-
-      xtarget=ran1(iseed)*targetamp(nc)
-
-      ic = 1
-      do while (targetamp(ic) .lt. xtarget .and. ic .lt. nc)
-         ic=ic+1
-      enddo
-      if(targetamp(nc).eq.0) ic=0
-c      print *,'Chose color flow ',ic
-      do i=1,nexternal
-         if(ic.gt.0) then
-            icolalt(1,isym(i,jsym))=icolup(1,i,ic,numproc)
-            icolalt(2,isym(i,jsym))=icolup(2,i,ic,numproc)
-c            write(*,*) i, icolalt(1,isym(i,jsym)), icolalt(2,isym(i,jsym))
-            if (abs(icolup(1,i,ic, numproc)).gt.maxcolor) maxcolor=icolup(1,i,ic, numproc)
-            if (abs(icolup(2,i,ic, numproc)).gt.maxcolor) maxcolor=icolup(2,i,ic, numproc)
-         endif
-      enddo
-      else ! nc.gt.0
-
+      if (icol.eq.0) then
       do i=1,nexternal
          icolalt(1,i)=0
          icolalt(2,i)=0
       enddo
+      else
+         if(icol.lt.0)then
+         is_LC = .false.
+         icol = abs(icol)
+      endif
+      do i=1,nexternal
+         icolalt(1,isym(i,jsym))=icolup(1,i,icol,numproc)
+         icolalt(2,isym(i,jsym))=icolup(2,i,icol,numproc)
+c     write(*,*) i, icolalt(1,isym(i,jsym)), icolalt(2,isym(i,jsym))
+         if (abs(icolup(1,i,icol, numproc)).gt.maxcolor) maxcolor=icolup(1,i,icol, numproc)
+         if (abs(icolup(2,i,icol, numproc)).gt.maxcolor) maxcolor=icolup(2,i,icol, numproc)
+      enddo
+      endif
 
-      endif ! nc.gt.0
+
+
 
 c     Store original maxcolor to know if we have epsilon vertices
         maxorg=maxcolor
@@ -255,7 +222,7 @@ c            Reverse colors of t-channels to get right color ordering
                 ncolmp=0
              endif
              if(mo_color.gt.1.and.
-     $            mo_color.ne.3.and.mo_color.ne.8)then
+     $            mo_color.ne.3.and.mo_color.ne.8.and.mo_color.ne.6)then
                 da_color(1)=get_color(jpart(1,ida(1)))
                 da_color(2)=get_color(jpart(1,ida(2)))
                 call write_error(da_color(1), da_color(2), mo_color)
@@ -361,8 +328,8 @@ c          print *,'colors: ',((icolmp(j,k),j=1,2),k=1,ncolmp)
           endif
          endif !end of check on LC
 
-c       Just zero helicity info for intermediate states
-          jpart(7,i) = 0
+c       Just No helicity info for intermediate states
+          jpart(7,i) = 9
         enddo                   ! do i
  100    continue
         if (is_LC) call check_pure_internal_flow(icolalt,jpart, maxcolor)
@@ -407,27 +374,27 @@ c
 c
 c     Set correct mother number for clustering info
 c
-        if (icluster(1,1).ne.0) then
+        if (icluster(1,1,ivec).ne.0) then
            do i=1,nexternal-2
-              if(icluster(4,i).gt.0)then
-                 icluster(4,i)=ito(icluster(4,i))
+              if(icluster(4,i,ivec).gt.0)then
+                 icluster(4,i,ivec)=ito(icluster(4,i,ivec))
               else
-                 icluster(4,i)=-1
+                 icluster(4,i,ivec)=-1
               endif
-              if(icluster(3,i).eq.0)then
-                 icluster(3,i)=-1
+              if(icluster(3,i,ivec).eq.0)then
+                 icluster(3,i,ivec)=-1
               endif
-              if(ito(icluster(1,i)).gt.0)
-     $             icluster(1,i)=ito(icluster(1,i))
-              if(ito(icluster(2,i)).gt.0)
-     $             icluster(2,i)=ito(icluster(2,i))
+              if(ito(icluster(1,i,ivec)).gt.0)
+     $             icluster(1,i,ivec)=ito(icluster(1,i,ivec))
+              if(ito(icluster(2,i,ivec)).gt.0)
+     $             icluster(2,i,ivec)=ito(icluster(2,i,ivec))
               if(flip)then
-                 if(icluster(1,i).le.2)
-     $             icluster(1,i)=3-icluster(1,i)
-                 if(icluster(2,i).le.2)
-     $             icluster(2,i)=3-icluster(2,i)
-                 if(icluster(3,i).ge.1.and.icluster(3,i).le.2)
-     $             icluster(3,i)=3-icluster(3,i)
+                 if(icluster(1,i,ivec).le.2)
+     $             icluster(1,i,ivec)=3-icluster(1,i,ivec)
+                 if(icluster(2,i,ivec).le.2)
+     $             icluster(2,i,ivec)=3-icluster(2,i,ivec)
+                 if(icluster(3,i,ivec).ge.1.and.icluster(3,i,ivec).le.2)
+     $             icluster(3,i,ivec)=3-icluster(3,i,ivec)
               endif
            enddo
         endif
@@ -621,13 +588,13 @@ c     indices remain
             i3=i3+1
 c           color for t-channels needs to be reversed
             if(i3.eq.1) icol(2,ires)=icolmp(1,i)
-            if(i3.eq.2) icol(1,ires)=-icolmp(1,i)
+            if(i3.eq.2.and.icol(1,ires).eq.0) icol(1,ires)=-icolmp(1,i)
          endif
          if(icolmp(2,i).gt.0)then
             i3bar=i3bar+1
 c           color for t-channels needs to be reversed
             if(i3bar.eq.1) icol(1,ires)=icolmp(2,i)
-            if(i3bar.eq.2) icol(2,ires)=-icolmp(2,i)
+            if(i3bar.eq.2.and.icol(2,ires).eq.0) icol(2,ires)=-icolmp(2,i)
          endif
       enddo
 
@@ -662,6 +629,8 @@ c     Replace the maximum index with the minimum one everywhere
             do j=1,2
                if(icol(j,i).eq.maxcol)
      $              icol(j,i)=mincol
+               if(icol(j,i).eq.-maxcol)
+     $              icol(j,i)=-mincol
             enddo
          enddo
 c         print *,'Replaced ',maxcol,' by ',mincol
@@ -717,6 +686,8 @@ c     Actually we know if one of the index is repeated (we do not want to replac
             do j=1,2
                if(icol(j,i).eq.maxcol)
      $              icol(j,i)=mincol
+               if(icol(j,i).eq.-maxcol)
+     $              icol(j,i)=-mincol
             enddo
          enddo
 
@@ -762,6 +733,8 @@ c            print *,'Replaced ',maxcol,' by ',mincol
                do j=1,2
                   if(icol(j,i).eq.maxcol)
      $                 icol(j,i)=mincol
+                  if(icol(j,i).eq.-maxcol)
+     $                 icol(j,i)=-mincol
                enddo
             enddo
          else
@@ -799,6 +772,14 @@ c         print *,'Replaced ',maxcol,' by ',mincol
             endif
          endif
 c     print *,'Set mother color for ',ires,' to ',(icol(j,ires),j=1,2)
+      elseif(mo_color.eq.6.and.i3.eq.0.and.i3bar.eq.2)then
+c         correct
+c         might consider to undo the identical final state for epsilon/epsilonbar 
+          continue
+      elseif(mo_color.eq.6.and.i3.eq.2.and.i3bar.eq.0)then
+c         correct
+c         might consider to undo the identical final state for epsilon/epsilonbar 
+          continue
       else
 c     Don't know how to deal with this
          call write_error(i3,i3bar,mo_color)
@@ -849,12 +830,12 @@ c     indices remain
          if(icolmp(1,i).gt.0)then
             i3=i3+1
             if(i3.eq.1) icol(1,ires)=icolmp(1,i)
-            if(i3.eq.2) icol(2,ires)=-icolmp(1,i)
+            if(i3.eq.2.and.icol(2,ires).eq.0) icol(2,ires)=-icolmp(1,i)
          endif
          if(icolmp(2,i).gt.0)then
             i3bar=i3bar+1
             if(i3bar.eq.1) icol(2,ires)=icolmp(2,i)
-            if(i3bar.eq.2) icol(1,ires)=-icolmp(2,i)
+            if(i3bar.eq.2.and.icol(1,ires).eq.0) icol(1,ires)=-icolmp(2,i)
          endif
       enddo
 
@@ -865,21 +846,31 @@ c      print *,'icol(1,ires),icol(2,ires): ',icol(1,ires),icol(2,ires)
       if(n3.le.1.and.n3bar.eq.0) icol(2,ires)=0
 
       if(i3.ne.n3.or.i3bar.ne.n3bar) then
-         if(n3.gt.0.and.n3bar.eq.0.and.mod(i3bar+n3,3).eq.0.and.i3.eq.0)then
+         if(n3.gt.0.and.n3bar.eq.0.and.mod(i3bar+n3,3).eq.i3)then
 c        This is an epsilon index interaction
 c            write(*,*) i3, n3, i3bar, n3bar, ires
-            maxcolor=maxcolor+1
-            icol(1,ires)=maxcolor
+            if(i3.eq.0) then
+               maxcolor=maxcolor+1
+               icol(1,ires)=maxcolor
+           endif
             if(n3.eq.2)then
                maxcolor=maxcolor+1
                icol(2,ires)=-maxcolor
+           elseif(n3bar.eq.2)then
+               maxcolor=maxcolor+1
+               icol(2,ires)=-maxcolor
             endif
-         elseif(n3bar.gt.0.and.n3.eq.0.and.mod(i3+n3bar,3).eq.0.and.i3bar.eq.0)then
+         elseif(n3bar.gt.0.and.n3.eq.0.and.mod(i3+n3bar,3).eq.i3bar)then
 c        This is an epsilonbar index interaction
 c            write(*,*) i3, n3, i3bar, n3bar, ires
-            maxcolor=maxcolor+1
-            icol(2,ires)=maxcolor
+            if(i3bar.eq.0)then
+                maxcolor=maxcolor+1
+                icol(2,ires)=maxcolor
+            endif
             if(n3.eq.2)then
+               maxcolor=maxcolor+1
+               icol(1,ires)=-maxcolor
+           elseif(n3bar.eq.2)then
                maxcolor=maxcolor+1
                icol(1,ires)=-maxcolor
             endif
@@ -996,6 +987,12 @@ c         print *,'Replaced ',maxcol,' with ',mincol
             if(n3.eq.1) icol(1,ires)=max_n3
             if(n3bar.eq.1) icol(2,ires)=min_n3bar
          endif
+          do i=ires,-1
+               if (icol(1,i).eq.maxcol) icol(1,i)=mincol
+               if (icol(1,i).eq.-maxcol) icol(1,i)=-mincol
+               if (icol(2,i).eq.maxcol) icol(2,i)=mincol
+               if (icol(2,i).eq.-maxcol) icol(2,i)=-mincol
+          enddo         
 c         print *,'Set mother color for ',ires,' to ',(icol(j,ires),j=1,2)
       endif
       else
@@ -1057,6 +1054,7 @@ c
       integer k,l
       integer potential_index(2)
       integer epsilon_index(4)
+      integer epsilon_type ! 1 anti-color and 2 color (correspond to the colummn in lhef)
       integer mothers(2*nexternal-3)
       logical to_change
 
@@ -1066,6 +1064,11 @@ C        the index of the non summed indices do not repeat each other
          do i=-nexternal+3,2*nexternal-3
             if (icol(1,i).eq.mincol.or.icol(2,i).eq.mincol)then
                potential_index(1)=0
+               if (icol(1,i).eq.mincol)then
+                   epsilon_type = 1
+               else
+                   epsilon_type = 2
+               endif
 c               write(*,*) "particle",i,"has color index", mincol
                k=0 !index to see how many child we found so far
                do j=-nexternal+3,2*nexternal-3
@@ -1077,6 +1080,12 @@ c                        write(*,*) "the color", mincol,
 c     &       "is pass to one of the children ->no epsilon at this stage"
 c                       the color flow is pass to a child so no need to do anything for this part/junction                        
                         goto 10 ! break
+                     elseif(icol(1,j).ne.0.and.icol(2,j).ne.0)then
+                         ! sextet involve use epsilon_type to guess the correct
+                         ! index involved in the epsilon
+                         k = k+1
+                         potential_index(k) = icol(epsilon_type,j)
+                         mothers(1) = i 
                      elseif(icol(1,j).ne.0) then
 c             write(*,*) "child has not colour", mincol, "add", icol(1,j)
                         k = k+1

@@ -1,4 +1,6 @@
 from __future__ import absolute_import
+from . import function_library 
+from . import object_library 
 from . import particles
 from . import couplings
 from . import lorentz

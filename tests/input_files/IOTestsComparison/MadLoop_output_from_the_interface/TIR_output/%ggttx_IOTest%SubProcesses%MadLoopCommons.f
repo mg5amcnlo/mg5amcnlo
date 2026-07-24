@@ -637,11 +637,13 @@ C     ----------
 C     Now some sorting related routines. Only to be used for small 
 C     arrays since these are not the most optimized sorting algorithms.
 
-        ! --------------------------------------------------------------------
-        ! INTEGER FUNCTION  FindMinimum():
-        !    This function returns the location of the minimum in the section
-        ! between Start and End.
-        ! --------------------------------------------------------------------
+C     -----------------------------------------------------------------
+C     ---
+C     INTEGER FUNCTION  FindMinimum():
+C     This function returns the location of the minimum in the section
+C     between Start and End.
+C     -----------------------------------------------------------------
+C     ---
 
       INTEGER FUNCTION  FINDMINIMUM(X, MSTART, MEND)
       IMPLICIT  NONE
@@ -664,10 +666,12 @@ C     arrays since these are not the most optimized sorting algorithms.
           FINDMINIMUM = LOCATION  ! return the position
           END FUNCTION  FINDMINIMUM
 
-            ! --------------------------------------------------------------------
-            ! SUBROUTINE  Swap():
-            !    This subroutine swaps the values of its two formal arguments.
-            ! --------------------------------------------------------------------
+C         -------------------------------------------------------------
+C         -------
+C         SUBROUTINE  Swap():
+C         This subroutine swaps the values of its two formal arguments.
+C         -------------------------------------------------------------
+C         -------
 
           SUBROUTINE  SWAP(A, B)
           IMPLICIT  NONE
@@ -679,11 +683,14 @@ C     arrays since these are not the most optimized sorting algorithms.
           B    = TEMP
           END SUBROUTINE  SWAP
 
-            ! --------------------------------------------------------------------
-            ! SUBROUTINE  Sort():
-            !    This subroutine receives an array x() and sorts it into ascending
-            ! order.
-            ! --------------------------------------------------------------------
+C         -------------------------------------------------------------
+C         -------
+C         SUBROUTINE  Sort():
+C         This subroutine receives an array x() and sorts it into
+C          ascending
+C         order.
+C         -------------------------------------------------------------
+C         -------
 
           SUBROUTINE  SORT(X, MSIZE)
           IMPLICIT  NONE
@@ -700,12 +707,16 @@ C     arrays since these are not the most optimized sorting algorithms.
             END DO
             END SUBROUTINE  SORT
 
-              ! --------------------------------------------------------------------
-              ! REAL*8 FUNCTION  Median() :
-              !    This function receives an array X of N entries, copies its value
-              ! to a local array Temp(), sorts Temp() and computes the median.
-              !    The returned value is of REAL type.
-              ! --------------------------------------------------------------------
+C           -----------------------------------------------------------
+C           ---------
+C           REAL*8 FUNCTION  Median() :
+C           This function receives an array X of N entries, copies its
+C            value
+C           to a local array Temp(), sorts Temp() and computes the
+C            median.
+C           The returned value is of REAL type.
+C           -----------------------------------------------------------
+C           ---------
 
             REAL*8 FUNCTION  MEDIAN(X, N)
             IMPLICIT  NONE

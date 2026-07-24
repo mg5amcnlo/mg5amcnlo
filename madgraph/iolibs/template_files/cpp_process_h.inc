@@ -8,6 +8,7 @@
 
 #include <complex>
 #include <vector>
+%(include_for_complex)s
 
 #include "Parameters_%(model_name)s.h"
 

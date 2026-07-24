@@ -111,34 +111,34 @@ set label front 'MadGraph5\_aMC\@NLO' font "Courier,11" rotate by 90 at graph 1.
 #-- rendering subhistograms 'NLO and LO results'
 
 set format y '10^{%%T}'
+set logscale y
 set yrange [6.8850e+00:1.6262e+04]
 set origin 0.0000e+00, 5.0000e-01
 set size 1.0000e+00, 4.0000e-01
 set mytics 10
 set ytics auto
 set format x ''
-set logscale y
 set ylabel "{/Symbol s} per bin [pb]"
 
 plot \
  "<perl -pe 's/^\\s*(?<x1>[\\+|-]?\\d+(\\.\\d*)?([EeDd][\\+|-]?\\d+)?)\\s*(?<x2>[\\+|-]?\\d+(\\.\\d*)?([EeDd][\\+|-]?\\d+)?)(?<rest>.*)\\n/ $+{x1} $+{x2} $+{rest}\\n$+{x2} $+{x1} $+{rest}\\n/g' HistoOut.HwU" index 1 using 1:6:7 with filledcurve ls 12 fs transparent solid 0.2 title 'LO, scale variation',\
  "<perl -pe 's/^\\s*(?<x1>[\\+|-]?\\d+(\\.\\d*)?([EeDd][\\+|-]?\\d+)?)\\s*(?<x2>[\\+|-]?\\d+(\\.\\d*)?([EeDd][\\+|-]?\\d+)?)(?<rest>.*)\\n/ $+{x1} $+{x2} $+{rest}\\n$+{x2} $+{x1} $+{rest}\\n/g' HistoOut.HwU" index 0 using 1:6:7 with filledcurve ls 11 fs transparent solid 0.2 title 'NLO, scale variation',\
-sqrt(-1) ls 22 title 'LO, PDF variation',\
-sqrt(-1) ls 21 title 'NLO, PDF variation',\
-'HistoOut.HwU' index 1 using (($1+$2)/2):($3 >= 0 ? sqrt(-1) : abs($3)) ls 102 title '',\
-'HistoOut.HwU' index 1 using (($1+$2)/2):($3 < 0 ? sqrt(-1) : $3) ls 2 title 'LO, central value',\
-'HistoOut.HwU' index 0 using (($1+$2)/2):($3 >= 0 ? sqrt(-1) : abs($3)) ls 101 title '',\
-'HistoOut.HwU' index 0 using (($1+$2)/2):($3 < 0 ? sqrt(-1) : $3) ls 1 title 'NLO, central value'
+1/0 ls 22 title 'LO, PDF variation',\
+1/0 ls 21 title 'NLO, PDF variation',\
+'HistoOut.HwU' index 1 using (($1+$2)/2):($3 >= 0 ? 1/0 : abs($3)) ls 102 title '',\
+'HistoOut.HwU' index 1 using (($1+$2)/2):($3 < 0 ? 1/0 : $3) ls 2 title 'LO, central value',\
+'HistoOut.HwU' index 0 using (($1+$2)/2):($3 >= 0 ? 1/0 : abs($3)) ls 101 title '',\
+'HistoOut.HwU' index 0 using (($1+$2)/2):($3 < 0 ? 1/0 : $3) ls 1 title 'NLO, central value'
 #-- rendering subhistograms 'Relative scale and PDF uncertainty'
 unset label
 unset format
+unset logscale y
 set yrange [-4.6811e-01:5.7853e-01]
 set origin 0.0000e+00, 3.5000e-01
 set size 1.0000e+00, 1.5000e-01
 set mytics 2
 set ytics auto
 set format x ''
-unset logscale y
 set ylabel "NLO rel.unc."
 set label "Relative uncertainties w.r.t. central values" font ",9" front at graph 0.03, graph 0.13
 plot \
@@ -152,13 +152,13 @@ plot \
 #-- rendering subhistograms '(LO)/(NLO central value) ratio'
 unset label
 unset format
+unset logscale y
 set yrange [7.4371e-02:1.1353e-01]
 set origin 0.0000e+00, 2.0000e-01
 set size 1.0000e+00, 1.5000e-01
 set mytics 2
 set ytics auto
 set format x
-unset logscale y
 set ylabel "ratio w.r.t. NLO"
 set label "(LO)/(NLO central value)" font ",9" at graph 0.03, graph 0.13
 plot \
@@ -191,30 +191,30 @@ set label front 'MadGraph5\_aMC\@NLO' font "Courier,11" rotate by 90 at graph 1.
 #-- rendering subhistograms 'single diagram output'
 
 set format y '10^{%%T}'
+set logscale y
 set yrange [8.3263e+00:1.3597e+02]
 set origin 0.0000e+00, 5.0000e-01
 set size 1.0000e+00, 4.0000e-01
 set mytics 10
 set ytics auto
 set format x ''
-set logscale y
 set ylabel "{/Symbol s} per bin [pb]"
 
 plot \
  "<perl -pe 's/^\\s*(?<x1>[\\+|-]?\\d+(\\.\\d*)?([EeDd][\\+|-]?\\d+)?)\\s*(?<x2>[\\+|-]?\\d+(\\.\\d*)?([EeDd][\\+|-]?\\d+)?)(?<rest>.*)\\n/ $+{x1} $+{x2} $+{rest}\\n$+{x2} $+{x1} $+{rest}\\n/g' HistoOut.HwU" index 3 using 1:6:7 with filledcurve ls 11 fs transparent solid 0.2 title 'NLO, scale variation',\
-sqrt(-1) ls 21 title 'NLO, PDF variation',\
-'HistoOut.HwU' index 3 using (($1+$2)/2):($3 >= 0 ? sqrt(-1) : abs($3)) ls 101 title '',\
-'HistoOut.HwU' index 3 using (($1+$2)/2):($3 < 0 ? sqrt(-1) : $3) ls 1 title 'NLO, central value'
+1/0 ls 21 title 'NLO, PDF variation',\
+'HistoOut.HwU' index 3 using (($1+$2)/2):($3 >= 0 ? 1/0 : abs($3)) ls 101 title '',\
+'HistoOut.HwU' index 3 using (($1+$2)/2):($3 < 0 ? 1/0 : $3) ls 1 title 'NLO, central value'
 #-- rendering subhistograms 'Relative scale and PDF uncertainty'
 unset label
 unset format
+unset logscale y
 set yrange [-2.0081e-01:2.1998e-01]
 set origin 0.0000e+00, 3.5000e-01
 set size 1.0000e+00, 1.5000e-01
 set mytics 2
 set ytics auto
 set format x
-unset logscale y
 set ylabel "NLO rel.unc."
 set label "Relative uncertainties w.r.t. central value" font ",9" front at graph 0.03, graph 0.13
 plot \
@@ -246,34 +246,34 @@ set label front 'MadGraph5\_aMC\@NLO' font "Courier,11" rotate by 90 at graph 1.
 #-- rendering subhistograms 'NLO and LO results'
 
 set format y '10^{%%T}'
+set logscale y
 set yrange [6.4357e-02:4.9724e+04]
 set origin 0.0000e+00, 5.0000e-01
 set size 1.0000e+00, 4.0000e-01
 set mytics 10
 set ytics auto
 set format x ''
-set logscale y
 set ylabel "{/Symbol s} per bin [pb]"
 
 plot \
  "<perl -pe 's/^\\s*(?<x1>[\\+|-]?\\d+(\\.\\d*)?([EeDd][\\+|-]?\\d+)?)\\s*(?<x2>[\\+|-]?\\d+(\\.\\d*)?([EeDd][\\+|-]?\\d+)?)(?<rest>.*)\\n/ $+{x1} $+{x2} $+{rest}\\n$+{x2} $+{x1} $+{rest}\\n/g' HistoOut.HwU" index 5 using 1:6:7 with filledcurve ls 12 fs transparent solid 0.2 title 'LO, scale variation',\
  "<perl -pe 's/^\\s*(?<x1>[\\+|-]?\\d+(\\.\\d*)?([EeDd][\\+|-]?\\d+)?)\\s*(?<x2>[\\+|-]?\\d+(\\.\\d*)?([EeDd][\\+|-]?\\d+)?)(?<rest>.*)\\n/ $+{x1} $+{x2} $+{rest}\\n$+{x2} $+{x1} $+{rest}\\n/g' HistoOut.HwU" index 4 using 1:6:7 with filledcurve ls 11 fs transparent solid 0.2 title 'NLO, scale variation',\
-sqrt(-1) ls 22 title 'LO, PDF variation',\
-sqrt(-1) ls 21 title 'NLO, PDF variation',\
-'HistoOut.HwU' index 5 using (($1+$2)/2):($3 >= 0 ? sqrt(-1) : abs($3)) ls 102 title '',\
-'HistoOut.HwU' index 5 using (($1+$2)/2):($3 < 0 ? sqrt(-1) : $3) ls 2 title 'LO, central value',\
-'HistoOut.HwU' index 4 using (($1+$2)/2):($3 >= 0 ? sqrt(-1) : abs($3)) ls 101 title '',\
-'HistoOut.HwU' index 4 using (($1+$2)/2):($3 < 0 ? sqrt(-1) : $3) ls 1 title 'NLO, central value'
+1/0 ls 22 title 'LO, PDF variation',\
+1/0 ls 21 title 'NLO, PDF variation',\
+'HistoOut.HwU' index 5 using (($1+$2)/2):($3 >= 0 ? 1/0 : abs($3)) ls 102 title '',\
+'HistoOut.HwU' index 5 using (($1+$2)/2):($3 < 0 ? 1/0 : $3) ls 2 title 'LO, central value',\
+'HistoOut.HwU' index 4 using (($1+$2)/2):($3 >= 0 ? 1/0 : abs($3)) ls 101 title '',\
+'HistoOut.HwU' index 4 using (($1+$2)/2):($3 < 0 ? 1/0 : $3) ls 1 title 'NLO, central value'
 #-- rendering subhistograms 'Relative scale and PDF uncertainty'
 unset label
 unset format
+unset logscale y
 set yrange [-4.4785e-01:4.4966e-01]
 set origin 0.0000e+00, 3.5000e-01
 set size 1.0000e+00, 1.5000e-01
 set mytics 2
 set ytics auto
 set format x ''
-unset logscale y
 set ylabel "NLO rel.unc."
 set label "Relative uncertainties w.r.t. central values" font ",9" front at graph 0.03, graph 0.13
 plot \
@@ -287,13 +287,13 @@ plot \
 #-- rendering subhistograms '(LO)/(NLO central value) ratio'
 unset label
 unset format
+unset logscale y
 set yrange [-8.3219e-01:9.2131e-01]
 set origin 0.0000e+00, 2.0000e-01
 set size 1.0000e+00, 1.5000e-01
 set mytics 2
 set ytics auto
 set format x
-unset logscale y
 set ylabel "ratio w.r.t. NLO"
 set label "(LO)/(NLO central value)" font ",9" at graph 0.03, graph 0.13
 plot \
@@ -326,30 +326,30 @@ set label front 'MadGraph5\_aMC\@NLO' font "Courier,11" rotate by 90 at graph 1.
 #-- rendering subhistograms 'single diagram output'
 
 set format y '10^{%%T}'
+set logscale y
 set yrange [7.2996e-01:7.2184e+02]
 set origin 0.0000e+00, 5.0000e-01
 set size 1.0000e+00, 4.0000e-01
 set mytics 10
 set ytics auto
 set format x ''
-set logscale y
 set ylabel "{/Symbol s} per bin [pb]"
 
 plot \
  "<perl -pe 's/^\\s*(?<x1>[\\+|-]?\\d+(\\.\\d*)?([EeDd][\\+|-]?\\d+)?)\\s*(?<x2>[\\+|-]?\\d+(\\.\\d*)?([EeDd][\\+|-]?\\d+)?)(?<rest>.*)\\n/ $+{x1} $+{x2} $+{rest}\\n$+{x2} $+{x1} $+{rest}\\n/g' HistoOut.HwU" index 7 using 1:6:7 with filledcurve ls 11 fs transparent solid 0.2 title 'NLO, scale variation',\
-sqrt(-1) ls 21 title 'NLO, PDF variation',\
-'HistoOut.HwU' index 7 using (($1+$2)/2):($3 >= 0 ? sqrt(-1) : abs($3)) ls 101 title '',\
-'HistoOut.HwU' index 7 using (($1+$2)/2):($3 < 0 ? sqrt(-1) : $3) ls 1 title 'NLO, central value'
+1/0 ls 21 title 'NLO, PDF variation',\
+'HistoOut.HwU' index 7 using (($1+$2)/2):($3 >= 0 ? 1/0 : abs($3)) ls 101 title '',\
+'HistoOut.HwU' index 7 using (($1+$2)/2):($3 < 0 ? 1/0 : $3) ls 1 title 'NLO, central value'
 #-- rendering subhistograms 'Relative scale and PDF uncertainty'
 unset label
 unset format
+unset logscale y
 set yrange [-4.4561e-01:3.2176e-01]
 set origin 0.0000e+00, 3.5000e-01
 set size 1.0000e+00, 1.5000e-01
 set mytics 2
 set ytics auto
 set format x
-unset logscale y
 set ylabel "NLO rel.unc."
 set label "Relative uncertainties w.r.t. central value" font ",9" front at graph 0.03, graph 0.13
 plot \
@@ -381,34 +381,34 @@ set label front 'MadGraph5\_aMC\@NLO' font "Courier,11" rotate by 90 at graph 1.
 #-- rendering subhistograms 'NLO and LO results'
 
 set format y '10^{%%T}'
+set logscale y
 set yrange [6.4357e-02:4.9724e+04]
 set origin 0.0000e+00, 5.0000e-01
 set size 1.0000e+00, 4.0000e-01
 set mytics 10
 set ytics auto
 set format x ''
-set logscale y
 set ylabel "{/Symbol s} per bin [pb]"
 
 plot \
  "<perl -pe 's/^\\s*(?<x1>[\\+|-]?\\d+(\\.\\d*)?([EeDd][\\+|-]?\\d+)?)\\s*(?<x2>[\\+|-]?\\d+(\\.\\d*)?([EeDd][\\+|-]?\\d+)?)(?<rest>.*)\\n/ $+{x1} $+{x2} $+{rest}\\n$+{x2} $+{x1} $+{rest}\\n/g' HistoOut.HwU" index 9 using 1:6:7 with filledcurve ls 12 fs transparent solid 0.2 title 'LO, scale variation',\
  "<perl -pe 's/^\\s*(?<x1>[\\+|-]?\\d+(\\.\\d*)?([EeDd][\\+|-]?\\d+)?)\\s*(?<x2>[\\+|-]?\\d+(\\.\\d*)?([EeDd][\\+|-]?\\d+)?)(?<rest>.*)\\n/ $+{x1} $+{x2} $+{rest}\\n$+{x2} $+{x1} $+{rest}\\n/g' HistoOut.HwU" index 8 using 1:6:7 with filledcurve ls 11 fs transparent solid 0.2 title 'NLO, scale variation',\
-sqrt(-1) ls 22 title 'LO, PDF variation',\
-sqrt(-1) ls 21 title 'NLO, PDF variation',\
-'HistoOut.HwU' index 9 using (($1+$2)/2):($3 >= 0 ? sqrt(-1) : abs($3)) ls 102 title '',\
-'HistoOut.HwU' index 9 using (($1+$2)/2):($3 < 0 ? sqrt(-1) : $3) ls 2 title 'LO, central value',\
-'HistoOut.HwU' index 8 using (($1+$2)/2):($3 >= 0 ? sqrt(-1) : abs($3)) ls 101 title '',\
-'HistoOut.HwU' index 8 using (($1+$2)/2):($3 < 0 ? sqrt(-1) : $3) ls 1 title 'NLO, central value'
+1/0 ls 22 title 'LO, PDF variation',\
+1/0 ls 21 title 'NLO, PDF variation',\
+'HistoOut.HwU' index 9 using (($1+$2)/2):($3 >= 0 ? 1/0 : abs($3)) ls 102 title '',\
+'HistoOut.HwU' index 9 using (($1+$2)/2):($3 < 0 ? 1/0 : $3) ls 2 title 'LO, central value',\
+'HistoOut.HwU' index 8 using (($1+$2)/2):($3 >= 0 ? 1/0 : abs($3)) ls 101 title '',\
+'HistoOut.HwU' index 8 using (($1+$2)/2):($3 < 0 ? 1/0 : $3) ls 1 title 'NLO, central value'
 #-- rendering subhistograms 'Relative scale and PDF uncertainty'
 unset label
 unset format
+unset logscale y
 set yrange [-4.4785e-01:4.4966e-01]
 set origin 0.0000e+00, 3.5000e-01
 set size 1.0000e+00, 1.5000e-01
 set mytics 2
 set ytics auto
 set format x ''
-unset logscale y
 set ylabel "NLO rel.unc."
 set label "Relative uncertainties w.r.t. central values" font ",9" front at graph 0.03, graph 0.13
 plot \
@@ -422,13 +422,13 @@ plot \
 #-- rendering subhistograms '(LO)/(NLO central value) ratio'
 unset label
 unset format
+unset logscale y
 set yrange [-3.1770e-01:1.7407e+00]
 set origin 0.0000e+00, 2.0000e-01
 set size 1.0000e+00, 1.5000e-01
 set mytics 2
 set ytics auto
 set format x
-unset logscale y
 set ylabel "ratio w.r.t. NLO"
 set label "(LO)/(NLO central value)" font ",9" at graph 0.03, graph 0.13
 plot \
@@ -461,30 +461,30 @@ set label front 'MadGraph5\_aMC\@NLO' font "Courier,11" rotate by 90 at graph 1.
 #-- rendering subhistograms 'single diagram output'
 
 set format y '10^{%%T}'
+set logscale y
 set yrange [6.1863e-01:4.3364e+02]
 set origin 0.0000e+00, 5.0000e-01
 set size 1.0000e+00, 4.0000e-01
 set mytics 10
 set ytics auto
 set format x ''
-set logscale y
 set ylabel "{/Symbol s} per bin [pb]"
 
 plot \
  "<perl -pe 's/^\\s*(?<x1>[\\+|-]?\\d+(\\.\\d*)?([EeDd][\\+|-]?\\d+)?)\\s*(?<x2>[\\+|-]?\\d+(\\.\\d*)?([EeDd][\\+|-]?\\d+)?)(?<rest>.*)\\n/ $+{x1} $+{x2} $+{rest}\\n$+{x2} $+{x1} $+{rest}\\n/g' HistoOut.HwU" index 11 using 1:6:7 with filledcurve ls 11 fs transparent solid 0.2 title 'NLO, scale variation',\
-sqrt(-1) ls 21 title 'NLO, PDF variation',\
-'HistoOut.HwU' index 11 using (($1+$2)/2):($3 >= 0 ? sqrt(-1) : abs($3)) ls 101 title '',\
-'HistoOut.HwU' index 11 using (($1+$2)/2):($3 < 0 ? sqrt(-1) : $3) ls 1 title 'NLO, central value'
+1/0 ls 21 title 'NLO, PDF variation',\
+'HistoOut.HwU' index 11 using (($1+$2)/2):($3 >= 0 ? 1/0 : abs($3)) ls 101 title '',\
+'HistoOut.HwU' index 11 using (($1+$2)/2):($3 < 0 ? 1/0 : $3) ls 1 title 'NLO, central value'
 #-- rendering subhistograms 'Relative scale and PDF uncertainty'
 unset label
 unset format
+unset logscale y
 set yrange [-5.7446e-01:3.4844e-01]
 set origin 0.0000e+00, 3.5000e-01
 set size 1.0000e+00, 1.5000e-01
 set mytics 2
 set ytics auto
 set format x
-unset logscale y
 set ylabel "NLO rel.unc."
 set label "Relative uncertainties w.r.t. central value" font ",9" front at graph 0.03, graph 0.13
 plot \
@@ -516,34 +516,34 @@ set label front 'MadGraph5\_aMC\@NLO' font "Courier,11" rotate by 90 at graph 1.
 #-- rendering subhistograms 'NLO and LO results'
 
 set format y '10^{%%T}'
+set logscale y
 set yrange [2.3054e+01:9.7409e+03]
 set origin 0.0000e+00, 5.0000e-01
 set size 1.0000e+00, 4.0000e-01
 set mytics 10
 set ytics auto
 set format x ''
-set logscale y
 set ylabel "{/Symbol s} per bin [pb]"
 
 plot \
  "<perl -pe 's/^\\s*(?<x1>[\\+|-]?\\d+(\\.\\d*)?([EeDd][\\+|-]?\\d+)?)\\s*(?<x2>[\\+|-]?\\d+(\\.\\d*)?([EeDd][\\+|-]?\\d+)?)(?<rest>.*)\\n/ $+{x1} $+{x2} $+{rest}\\n$+{x2} $+{x1} $+{rest}\\n/g' HistoOut.HwU" index 13 using 1:6:7 with filledcurve ls 12 fs transparent solid 0.2 title 'LO, scale variation',\
  "<perl -pe 's/^\\s*(?<x1>[\\+|-]?\\d+(\\.\\d*)?([EeDd][\\+|-]?\\d+)?)\\s*(?<x2>[\\+|-]?\\d+(\\.\\d*)?([EeDd][\\+|-]?\\d+)?)(?<rest>.*)\\n/ $+{x1} $+{x2} $+{rest}\\n$+{x2} $+{x1} $+{rest}\\n/g' HistoOut.HwU" index 12 using 1:6:7 with filledcurve ls 11 fs transparent solid 0.2 title 'NLO, scale variation',\
-sqrt(-1) ls 22 title 'LO, PDF variation',\
-sqrt(-1) ls 21 title 'NLO, PDF variation',\
-'HistoOut.HwU' index 13 using (($1+$2)/2):($3 >= 0 ? sqrt(-1) : abs($3)) ls 102 title '',\
-'HistoOut.HwU' index 13 using (($1+$2)/2):($3 < 0 ? sqrt(-1) : $3) ls 2 title 'LO, central value',\
-'HistoOut.HwU' index 12 using (($1+$2)/2):($3 >= 0 ? sqrt(-1) : abs($3)) ls 101 title '',\
-'HistoOut.HwU' index 12 using (($1+$2)/2):($3 < 0 ? sqrt(-1) : $3) ls 1 title 'NLO, central value'
+1/0 ls 22 title 'LO, PDF variation',\
+1/0 ls 21 title 'NLO, PDF variation',\
+'HistoOut.HwU' index 13 using (($1+$2)/2):($3 >= 0 ? 1/0 : abs($3)) ls 102 title '',\
+'HistoOut.HwU' index 13 using (($1+$2)/2):($3 < 0 ? 1/0 : $3) ls 2 title 'LO, central value',\
+'HistoOut.HwU' index 12 using (($1+$2)/2):($3 >= 0 ? 1/0 : abs($3)) ls 101 title '',\
+'HistoOut.HwU' index 12 using (($1+$2)/2):($3 < 0 ? 1/0 : $3) ls 1 title 'NLO, central value'
 #-- rendering subhistograms 'Relative scale and PDF uncertainty'
 unset label
 unset format
+unset logscale y
 set yrange [-3.0376e-01:2.8057e-01]
 set origin 0.0000e+00, 3.5000e-01
 set size 1.0000e+00, 1.5000e-01
 set mytics 2
 set ytics auto
 set format x ''
-unset logscale y
 set ylabel "NLO rel.unc."
 set label "Relative uncertainties w.r.t. central values" font ",9" front at graph 0.03, graph 0.13
 plot \
@@ -557,13 +557,13 @@ plot \
 #-- rendering subhistograms '(LO)/(NLO central value) ratio'
 unset label
 unset format
+unset logscale y
 set yrange [3.8636e-01:1.1202e+00]
 set origin 0.0000e+00, 2.0000e-01
 set size 1.0000e+00, 1.5000e-01
 set mytics 2
 set ytics auto
 set format x
-unset logscale y
 set ylabel "ratio w.r.t. NLO"
 set label "(LO)/(NLO central value)" font ",9" at graph 0.03, graph 0.13
 plot \
@@ -596,30 +596,30 @@ set label front 'MadGraph5\_aMC\@NLO' font "Courier,11" rotate by 90 at graph 1.
 #-- rendering subhistograms 'single diagram output'
 
 set format y '10^{%%T}'
+set logscale y
 set yrange [8.8388e-01:2.1626e+01]
 set origin 0.0000e+00, 5.0000e-01
 set size 1.0000e+00, 4.0000e-01
 set mytics 10
 set ytics auto
 set format x ''
-set logscale y
 set ylabel "{/Symbol s} per bin [pb]"
 
 plot \
  "<perl -pe 's/^\\s*(?<x1>[\\+|-]?\\d+(\\.\\d*)?([EeDd][\\+|-]?\\d+)?)\\s*(?<x2>[\\+|-]?\\d+(\\.\\d*)?([EeDd][\\+|-]?\\d+)?)(?<rest>.*)\\n/ $+{x1} $+{x2} $+{rest}\\n$+{x2} $+{x1} $+{rest}\\n/g' HistoOut.HwU" index 15 using 1:6:7 with filledcurve ls 11 fs transparent solid 0.2 title 'NLO, scale variation',\
-sqrt(-1) ls 21 title 'NLO, PDF variation',\
-'HistoOut.HwU' index 15 using (($1+$2)/2):($3 >= 0 ? sqrt(-1) : abs($3)) ls 101 title '',\
-'HistoOut.HwU' index 15 using (($1+$2)/2):($3 < 0 ? sqrt(-1) : $3) ls 1 title 'NLO, central value'
+1/0 ls 21 title 'NLO, PDF variation',\
+'HistoOut.HwU' index 15 using (($1+$2)/2):($3 >= 0 ? 1/0 : abs($3)) ls 101 title '',\
+'HistoOut.HwU' index 15 using (($1+$2)/2):($3 < 0 ? 1/0 : $3) ls 1 title 'NLO, central value'
 #-- rendering subhistograms 'Relative scale and PDF uncertainty'
 unset label
 unset format
+unset logscale y
 set yrange [-2.7513e-01:2.9749e-01]
 set origin 0.0000e+00, 3.5000e-01
 set size 1.0000e+00, 1.5000e-01
 set mytics 2
 set ytics auto
 set format x
-unset logscale y
 set ylabel "NLO rel.unc."
 set label "Relative uncertainties w.r.t. central value" font ",9" front at graph 0.03, graph 0.13
 plot \
@@ -651,34 +651,34 @@ set label front 'MadGraph5\_aMC\@NLO' font "Courier,11" rotate by 90 at graph 1.
 #-- rendering subhistograms 'NLO and LO results'
 
 set format y '10^{%%T}'
+set logscale y
 set yrange [5.6798e+03:1.2504e+05]
 set origin 0.0000e+00, 5.0000e-01
 set size 1.0000e+00, 4.0000e-01
 set mytics 10
 set ytics auto
 set format x ''
-set logscale y
 set ylabel "{/Symbol s} per bin [pb]"
 
 plot \
  "<perl -pe 's/^\\s*(?<x1>[\\+|-]?\\d+(\\.\\d*)?([EeDd][\\+|-]?\\d+)?)\\s*(?<x2>[\\+|-]?\\d+(\\.\\d*)?([EeDd][\\+|-]?\\d+)?)(?<rest>.*)\\n/ $+{x1} $+{x2} $+{rest}\\n$+{x2} $+{x1} $+{rest}\\n/g' HistoOut.HwU" index 17 using 1:6:7 with filledcurve ls 12 fs transparent solid 0.2 title 'LO, scale variation',\
  "<perl -pe 's/^\\s*(?<x1>[\\+|-]?\\d+(\\.\\d*)?([EeDd][\\+|-]?\\d+)?)\\s*(?<x2>[\\+|-]?\\d+(\\.\\d*)?([EeDd][\\+|-]?\\d+)?)(?<rest>.*)\\n/ $+{x1} $+{x2} $+{rest}\\n$+{x2} $+{x1} $+{rest}\\n/g' HistoOut.HwU" index 16 using 1:6:7 with filledcurve ls 11 fs transparent solid 0.2 title 'NLO, scale variation',\
-sqrt(-1) ls 22 title 'LO, PDF variation',\
-sqrt(-1) ls 21 title 'NLO, PDF variation',\
-'HistoOut.HwU' index 17 using (($1+$2)/2):($3 >= 0 ? sqrt(-1) : abs($3)) ls 102 title '',\
-'HistoOut.HwU' index 17 using (($1+$2)/2):($3 < 0 ? sqrt(-1) : $3) ls 2 title 'LO, central value',\
-'HistoOut.HwU' index 16 using (($1+$2)/2):($3 >= 0 ? sqrt(-1) : abs($3)) ls 101 title '',\
-'HistoOut.HwU' index 16 using (($1+$2)/2):($3 < 0 ? sqrt(-1) : $3) ls 1 title 'NLO, central value'
+1/0 ls 22 title 'LO, PDF variation',\
+1/0 ls 21 title 'NLO, PDF variation',\
+'HistoOut.HwU' index 17 using (($1+$2)/2):($3 >= 0 ? 1/0 : abs($3)) ls 102 title '',\
+'HistoOut.HwU' index 17 using (($1+$2)/2):($3 < 0 ? 1/0 : $3) ls 2 title 'LO, central value',\
+'HistoOut.HwU' index 16 using (($1+$2)/2):($3 >= 0 ? 1/0 : abs($3)) ls 101 title '',\
+'HistoOut.HwU' index 16 using (($1+$2)/2):($3 < 0 ? 1/0 : $3) ls 1 title 'NLO, central value'
 #-- rendering subhistograms 'Relative scale and PDF uncertainty'
 unset label
 unset format
+unset logscale y
 set yrange [-2.6796e-01:2.4545e-01]
 set origin 0.0000e+00, 3.5000e-01
 set size 1.0000e+00, 1.5000e-01
 set mytics 2
 set ytics auto
 set format x ''
-unset logscale y
 set ylabel "NLO rel.unc."
 set label "Relative uncertainties w.r.t. central values" font ",9" front at graph 0.03, graph 0.13
 plot \
@@ -692,13 +692,13 @@ plot \
 #-- rendering subhistograms '(LO)/(NLO central value) ratio'
 unset label
 unset format
+unset logscale y
 set yrange [5.6282e-01:8.6343e-01]
 set origin 0.0000e+00, 2.0000e-01
 set size 1.0000e+00, 1.5000e-01
 set mytics 2
 set ytics auto
 set format x
-unset logscale y
 set ylabel "ratio w.r.t. NLO"
 set label "(LO)/(NLO central value)" font ",9" at graph 0.03, graph 0.13
 plot \
@@ -731,30 +731,30 @@ set label front 'MadGraph5\_aMC\@NLO' font "Courier,11" rotate by 90 at graph 1.
 #-- rendering subhistograms 'single diagram output'
 
 set format y '10^{%%T}'
+set logscale y
 set yrange [1.0953e+00:1.7947e+01]
 set origin 0.0000e+00, 5.0000e-01
 set size 1.0000e+00, 4.0000e-01
 set mytics 10
 set ytics auto
 set format x ''
-set logscale y
 set ylabel "{/Symbol s} per bin [pb]"
 
 plot \
  "<perl -pe 's/^\\s*(?<x1>[\\+|-]?\\d+(\\.\\d*)?([EeDd][\\+|-]?\\d+)?)\\s*(?<x2>[\\+|-]?\\d+(\\.\\d*)?([EeDd][\\+|-]?\\d+)?)(?<rest>.*)\\n/ $+{x1} $+{x2} $+{rest}\\n$+{x2} $+{x1} $+{rest}\\n/g' HistoOut.HwU" index 19 using 1:6:7 with filledcurve ls 11 fs transparent solid 0.2 title 'NLO, scale variation',\
-sqrt(-1) ls 21 title 'NLO, PDF variation',\
-'HistoOut.HwU' index 19 using (($1+$2)/2):($3 >= 0 ? sqrt(-1) : abs($3)) ls 101 title '',\
-'HistoOut.HwU' index 19 using (($1+$2)/2):($3 < 0 ? sqrt(-1) : $3) ls 1 title 'NLO, central value'
+1/0 ls 21 title 'NLO, PDF variation',\
+'HistoOut.HwU' index 19 using (($1+$2)/2):($3 >= 0 ? 1/0 : abs($3)) ls 101 title '',\
+'HistoOut.HwU' index 19 using (($1+$2)/2):($3 < 0 ? 1/0 : $3) ls 1 title 'NLO, central value'
 #-- rendering subhistograms 'Relative scale and PDF uncertainty'
 unset label
 unset format
+unset logscale y
 set yrange [-1.9712e-01:2.3171e-01]
 set origin 0.0000e+00, 3.5000e-01
 set size 1.0000e+00, 1.5000e-01
 set mytics 2
 set ytics auto
 set format x
-unset logscale y
 set ylabel "NLO rel.unc."
 set label "Relative uncertainties w.r.t. central value" font ",9" front at graph 0.03, graph 0.13
 plot \
@@ -786,34 +786,34 @@ set label front 'MadGraph5\_aMC\@NLO' font "Courier,11" rotate by 90 at graph 1.
 #-- rendering subhistograms 'NLO and LO results'
 
 set format y '10^{%%T}'
+set logscale y
 set yrange [1.0896e-02:2.3105e+04]
 set origin 0.0000e+00, 5.0000e-01
 set size 1.0000e+00, 4.0000e-01
 set mytics 10
 set ytics auto
 set format x ''
-set logscale y
 set ylabel "{/Symbol s} per bin [pb]"
 
 plot \
  "<perl -pe 's/^\\s*(?<x1>[\\+|-]?\\d+(\\.\\d*)?([EeDd][\\+|-]?\\d+)?)\\s*(?<x2>[\\+|-]?\\d+(\\.\\d*)?([EeDd][\\+|-]?\\d+)?)(?<rest>.*)\\n/ $+{x1} $+{x2} $+{rest}\\n$+{x2} $+{x1} $+{rest}\\n/g' HistoOut.HwU" index 21 using 1:6:7 with filledcurve ls 12 fs transparent solid 0.2 title 'LO, scale variation',\
  "<perl -pe 's/^\\s*(?<x1>[\\+|-]?\\d+(\\.\\d*)?([EeDd][\\+|-]?\\d+)?)\\s*(?<x2>[\\+|-]?\\d+(\\.\\d*)?([EeDd][\\+|-]?\\d+)?)(?<rest>.*)\\n/ $+{x1} $+{x2} $+{rest}\\n$+{x2} $+{x1} $+{rest}\\n/g' HistoOut.HwU" index 20 using 1:6:7 with filledcurve ls 11 fs transparent solid 0.2 title 'NLO, scale variation',\
-sqrt(-1) ls 22 title 'LO, PDF variation',\
-sqrt(-1) ls 21 title 'NLO, PDF variation',\
-'HistoOut.HwU' index 21 using (($1+$2)/2):($3 >= 0 ? sqrt(-1) : abs($3)) ls 102 title '',\
-'HistoOut.HwU' index 21 using (($1+$2)/2):($3 < 0 ? sqrt(-1) : $3) ls 2 title 'LO, central value',\
-'HistoOut.HwU' index 20 using (($1+$2)/2):($3 >= 0 ? sqrt(-1) : abs($3)) ls 101 title '',\
-'HistoOut.HwU' index 20 using (($1+$2)/2):($3 < 0 ? sqrt(-1) : $3) ls 1 title 'NLO, central value'
+1/0 ls 22 title 'LO, PDF variation',\
+1/0 ls 21 title 'NLO, PDF variation',\
+'HistoOut.HwU' index 21 using (($1+$2)/2):($3 >= 0 ? 1/0 : abs($3)) ls 102 title '',\
+'HistoOut.HwU' index 21 using (($1+$2)/2):($3 < 0 ? 1/0 : $3) ls 2 title 'LO, central value',\
+'HistoOut.HwU' index 20 using (($1+$2)/2):($3 >= 0 ? 1/0 : abs($3)) ls 101 title '',\
+'HistoOut.HwU' index 20 using (($1+$2)/2):($3 < 0 ? 1/0 : $3) ls 1 title 'NLO, central value'
 #-- rendering subhistograms 'Relative scale and PDF uncertainty'
 unset label
 unset format
+unset logscale y
 set yrange [-2.3544e-01:1.9535e-01]
 set origin 0.0000e+00, 3.5000e-01
 set size 1.0000e+00, 1.5000e-01
 set mytics 2
 set ytics auto
 set format x ''
-unset logscale y
 set ylabel "NLO rel.unc."
 set label "Relative uncertainties w.r.t. central values" font ",9" front at graph 0.03, graph 0.13
 plot \
@@ -827,13 +827,13 @@ plot \
 #-- rendering subhistograms '(LO)/(NLO central value) ratio'
 unset label
 unset format
+unset logscale y
 set yrange [-5.6296e-01:3.6369e+00]
 set origin 0.0000e+00, 2.0000e-01
 set size 1.0000e+00, 1.5000e-01
 set mytics 2
 set ytics auto
 set format x
-unset logscale y
 set ylabel "ratio w.r.t. NLO"
 set label "(LO)/(NLO central value)" font ",9" at graph 0.03, graph 0.13
 plot \
@@ -866,30 +866,30 @@ set label front 'MadGraph5\_aMC\@NLO' font "Courier,11" rotate by 90 at graph 1.
 #-- rendering subhistograms 'single diagram output'
 
 set format y '10^{%%T}'
+set logscale y
 set yrange [2.3685e-02:3.1413e+01]
 set origin 0.0000e+00, 5.0000e-01
 set size 1.0000e+00, 4.0000e-01
 set mytics 10
 set ytics auto
 set format x ''
-set logscale y
 set ylabel "{/Symbol s} per bin [pb]"
 
 plot \
  "<perl -pe 's/^\\s*(?<x1>[\\+|-]?\\d+(\\.\\d*)?([EeDd][\\+|-]?\\d+)?)\\s*(?<x2>[\\+|-]?\\d+(\\.\\d*)?([EeDd][\\+|-]?\\d+)?)(?<rest>.*)\\n/ $+{x1} $+{x2} $+{rest}\\n$+{x2} $+{x1} $+{rest}\\n/g' HistoOut.HwU" index 23 using 1:6:7 with filledcurve ls 11 fs transparent solid 0.2 title 'NLO, scale variation',\
-sqrt(-1) ls 21 title 'NLO, PDF variation',\
-'HistoOut.HwU' index 23 using (($1+$2)/2):($3 >= 0 ? sqrt(-1) : abs($3)) ls 101 title '',\
-'HistoOut.HwU' index 23 using (($1+$2)/2):($3 < 0 ? sqrt(-1) : $3) ls 1 title 'NLO, central value'
+1/0 ls 21 title 'NLO, PDF variation',\
+'HistoOut.HwU' index 23 using (($1+$2)/2):($3 >= 0 ? 1/0 : abs($3)) ls 101 title '',\
+'HistoOut.HwU' index 23 using (($1+$2)/2):($3 < 0 ? 1/0 : $3) ls 1 title 'NLO, central value'
 #-- rendering subhistograms 'Relative scale and PDF uncertainty'
 unset label
 unset format
+unset logscale y
 set yrange [-2.2353e-01:2.7241e-01]
 set origin 0.0000e+00, 3.5000e-01
 set size 1.0000e+00, 1.5000e-01
 set mytics 2
 set ytics auto
 set format x
-unset logscale y
 set ylabel "NLO rel.unc."
 set label "Relative uncertainties w.r.t. central value" font ",9" front at graph 0.03, graph 0.13
 plot \
@@ -921,34 +921,34 @@ set label front 'MadGraph5\_aMC\@NLO' font "Courier,11" rotate by 90 at graph 1.
 #-- rendering subhistograms 'NLO and LO results'
 
 set format y '10^{%%T}'
+set logscale y
 set yrange [2.3067e+00:9.9691e+04]
 set origin 0.0000e+00, 5.0000e-01
 set size 1.0000e+00, 4.0000e-01
 set mytics 10
 set ytics auto
 set format x ''
-set logscale y
 set ylabel "{/Symbol s} per bin [pb]"
 
 plot \
  "<perl -pe 's/^\\s*(?<x1>[\\+|-]?\\d+(\\.\\d*)?([EeDd][\\+|-]?\\d+)?)\\s*(?<x2>[\\+|-]?\\d+(\\.\\d*)?([EeDd][\\+|-]?\\d+)?)(?<rest>.*)\\n/ $+{x1} $+{x2} $+{rest}\\n$+{x2} $+{x1} $+{rest}\\n/g' HistoOut.HwU" index 25 using 1:6:7 with filledcurve ls 12 fs transparent solid 0.2 title 'LO, scale variation',\
  "<perl -pe 's/^\\s*(?<x1>[\\+|-]?\\d+(\\.\\d*)?([EeDd][\\+|-]?\\d+)?)\\s*(?<x2>[\\+|-]?\\d+(\\.\\d*)?([EeDd][\\+|-]?\\d+)?)(?<rest>.*)\\n/ $+{x1} $+{x2} $+{rest}\\n$+{x2} $+{x1} $+{rest}\\n/g' HistoOut.HwU" index 24 using 1:6:7 with filledcurve ls 11 fs transparent solid 0.2 title 'NLO, scale variation',\
-sqrt(-1) ls 22 title 'LO, PDF variation',\
-sqrt(-1) ls 21 title 'NLO, PDF variation',\
-'HistoOut.HwU' index 25 using (($1+$2)/2):($3 >= 0 ? sqrt(-1) : abs($3)) ls 102 title '',\
-'HistoOut.HwU' index 25 using (($1+$2)/2):($3 < 0 ? sqrt(-1) : $3) ls 2 title 'LO, central value',\
-'HistoOut.HwU' index 24 using (($1+$2)/2):($3 >= 0 ? sqrt(-1) : abs($3)) ls 101 title '',\
-'HistoOut.HwU' index 24 using (($1+$2)/2):($3 < 0 ? sqrt(-1) : $3) ls 1 title 'NLO, central value'
+1/0 ls 22 title 'LO, PDF variation',\
+1/0 ls 21 title 'NLO, PDF variation',\
+'HistoOut.HwU' index 25 using (($1+$2)/2):($3 >= 0 ? 1/0 : abs($3)) ls 102 title '',\
+'HistoOut.HwU' index 25 using (($1+$2)/2):($3 < 0 ? 1/0 : $3) ls 2 title 'LO, central value',\
+'HistoOut.HwU' index 24 using (($1+$2)/2):($3 >= 0 ? 1/0 : abs($3)) ls 101 title '',\
+'HistoOut.HwU' index 24 using (($1+$2)/2):($3 < 0 ? 1/0 : $3) ls 1 title 'NLO, central value'
 #-- rendering subhistograms 'Relative scale and PDF uncertainty'
 unset label
 unset format
+unset logscale y
 set yrange [-3.6492e-01:3.8950e-01]
 set origin 0.0000e+00, 3.5000e-01
 set size 1.0000e+00, 1.5000e-01
 set mytics 2
 set ytics auto
 set format x ''
-unset logscale y
 set ylabel "NLO rel.unc."
 set label "Relative uncertainties w.r.t. central values" font ",9" front at graph 0.03, graph 0.13
 plot \
@@ -962,13 +962,13 @@ plot \
 #-- rendering subhistograms '(LO)/(NLO central value) ratio'
 unset label
 unset format
+unset logscale y
 set yrange [9.2557e-01:1.7009e+00]
 set origin 0.0000e+00, 2.0000e-01
 set size 1.0000e+00, 1.5000e-01
 set mytics 2
 set ytics auto
 set format x
-unset logscale y
 set ylabel "ratio w.r.t. NLO"
 set label "(LO)/(NLO central value)" font ",9" at graph 0.03, graph 0.13
 plot \
@@ -1001,30 +1001,30 @@ set label front 'MadGraph5\_aMC\@NLO' font "Courier,11" rotate by 90 at graph 1.
 #-- rendering subhistograms 'single diagram output'
 
 set format y '10^{%%T}'
+set logscale y
 set yrange [5.6491e-01:1.0429e+01]
 set origin 0.0000e+00, 5.0000e-01
 set size 1.0000e+00, 4.0000e-01
 set mytics 10
 set ytics auto
 set format x ''
-set logscale y
 set ylabel "{/Symbol s} per bin [pb]"
 
 plot \
  "<perl -pe 's/^\\s*(?<x1>[\\+|-]?\\d+(\\.\\d*)?([EeDd][\\+|-]?\\d+)?)\\s*(?<x2>[\\+|-]?\\d+(\\.\\d*)?([EeDd][\\+|-]?\\d+)?)(?<rest>.*)\\n/ $+{x1} $+{x2} $+{rest}\\n$+{x2} $+{x1} $+{rest}\\n/g' HistoOut.HwU" index 27 using 1:6:7 with filledcurve ls 11 fs transparent solid 0.2 title 'NLO, scale variation',\
-sqrt(-1) ls 21 title 'NLO, PDF variation',\
-'HistoOut.HwU' index 27 using (($1+$2)/2):($3 >= 0 ? sqrt(-1) : abs($3)) ls 101 title '',\
-'HistoOut.HwU' index 27 using (($1+$2)/2):($3 < 0 ? sqrt(-1) : $3) ls 1 title 'NLO, central value'
+1/0 ls 21 title 'NLO, PDF variation',\
+'HistoOut.HwU' index 27 using (($1+$2)/2):($3 >= 0 ? 1/0 : abs($3)) ls 101 title '',\
+'HistoOut.HwU' index 27 using (($1+$2)/2):($3 < 0 ? 1/0 : $3) ls 1 title 'NLO, central value'
 #-- rendering subhistograms 'Relative scale and PDF uncertainty'
 unset label
 unset format
+unset logscale y
 set yrange [-3.1760e-01:2.5399e-01]
 set origin 0.0000e+00, 3.5000e-01
 set size 1.0000e+00, 1.5000e-01
 set mytics 2
 set ytics auto
 set format x
-unset logscale y
 set ylabel "NLO rel.unc."
 set label "Relative uncertainties w.r.t. central value" font ",9" front at graph 0.03, graph 0.13
 plot \
@@ -1056,34 +1056,34 @@ set label front 'MadGraph5\_aMC\@NLO' font "Courier,11" rotate by 90 at graph 1.
 #-- rendering subhistograms 'NLO and LO results'
 
 set format y '10^{%%T}'
+set logscale y
 set yrange [2.5977e+01:8.4886e+03]
 set origin 0.0000e+00, 5.0000e-01
 set size 1.0000e+00, 4.0000e-01
 set mytics 10
 set ytics auto
 set format x ''
-set logscale y
 set ylabel "{/Symbol s} per bin [pb]"
 
 plot \
  "<perl -pe 's/^\\s*(?<x1>[\\+|-]?\\d+(\\.\\d*)?([EeDd][\\+|-]?\\d+)?)\\s*(?<x2>[\\+|-]?\\d+(\\.\\d*)?([EeDd][\\+|-]?\\d+)?)(?<rest>.*)\\n/ $+{x1} $+{x2} $+{rest}\\n$+{x2} $+{x1} $+{rest}\\n/g' HistoOut.HwU" index 29 using 1:6:7 with filledcurve ls 12 fs transparent solid 0.2 title 'LO, scale variation',\
  "<perl -pe 's/^\\s*(?<x1>[\\+|-]?\\d+(\\.\\d*)?([EeDd][\\+|-]?\\d+)?)\\s*(?<x2>[\\+|-]?\\d+(\\.\\d*)?([EeDd][\\+|-]?\\d+)?)(?<rest>.*)\\n/ $+{x1} $+{x2} $+{rest}\\n$+{x2} $+{x1} $+{rest}\\n/g' HistoOut.HwU" index 28 using 1:6:7 with filledcurve ls 11 fs transparent solid 0.2 title 'NLO, scale variation',\
-sqrt(-1) ls 22 title 'LO, PDF variation',\
-sqrt(-1) ls 21 title 'NLO, PDF variation',\
-'HistoOut.HwU' index 29 using (($1+$2)/2):($3 >= 0 ? sqrt(-1) : abs($3)) ls 102 title '',\
-'HistoOut.HwU' index 29 using (($1+$2)/2):($3 < 0 ? sqrt(-1) : $3) ls 2 title 'LO, central value',\
-'HistoOut.HwU' index 28 using (($1+$2)/2):($3 >= 0 ? sqrt(-1) : abs($3)) ls 101 title '',\
-'HistoOut.HwU' index 28 using (($1+$2)/2):($3 < 0 ? sqrt(-1) : $3) ls 1 title 'NLO, central value'
+1/0 ls 22 title 'LO, PDF variation',\
+1/0 ls 21 title 'NLO, PDF variation',\
+'HistoOut.HwU' index 29 using (($1+$2)/2):($3 >= 0 ? 1/0 : abs($3)) ls 102 title '',\
+'HistoOut.HwU' index 29 using (($1+$2)/2):($3 < 0 ? 1/0 : $3) ls 2 title 'LO, central value',\
+'HistoOut.HwU' index 28 using (($1+$2)/2):($3 >= 0 ? 1/0 : abs($3)) ls 101 title '',\
+'HistoOut.HwU' index 28 using (($1+$2)/2):($3 < 0 ? 1/0 : $3) ls 1 title 'NLO, central value'
 #-- rendering subhistograms 'Relative scale and PDF uncertainty'
 unset label
 unset format
+unset logscale y
 set yrange [-3.1285e-01:2.8969e-01]
 set origin 0.0000e+00, 3.5000e-01
 set size 1.0000e+00, 1.5000e-01
 set mytics 2
 set ytics auto
 set format x ''
-unset logscale y
 set ylabel "NLO rel.unc."
 set label "Relative uncertainties w.r.t. central values" font ",9" front at graph 0.03, graph 0.13
 plot \
@@ -1097,13 +1097,13 @@ plot \
 #-- rendering subhistograms '(LO)/(NLO central value) ratio'
 unset label
 unset format
+unset logscale y
 set yrange [3.8790e-01:1.3698e+00]
 set origin 0.0000e+00, 2.0000e-01
 set size 1.0000e+00, 1.5000e-01
 set mytics 2
 set ytics auto
 set format x
-unset logscale y
 set ylabel "ratio w.r.t. NLO"
 set label "(LO)/(NLO central value)" font ",9" at graph 0.03, graph 0.13
 plot \
@@ -1136,30 +1136,30 @@ set label front 'MadGraph5\_aMC\@NLO' font "Courier,11" rotate by 90 at graph 1.
 #-- rendering subhistograms 'single diagram output'
 
 set format y '10^{%%T}'
+set logscale y
 set yrange [7.2966e-01:1.9944e+01]
 set origin 0.0000e+00, 5.0000e-01
 set size 1.0000e+00, 4.0000e-01
 set mytics 10
 set ytics auto
 set format x ''
-set logscale y
 set ylabel "{/Symbol s} per bin [pb]"
 
 plot \
  "<perl -pe 's/^\\s*(?<x1>[\\+|-]?\\d+(\\.\\d*)?([EeDd][\\+|-]?\\d+)?)\\s*(?<x2>[\\+|-]?\\d+(\\.\\d*)?([EeDd][\\+|-]?\\d+)?)(?<rest>.*)\\n/ $+{x1} $+{x2} $+{rest}\\n$+{x2} $+{x1} $+{rest}\\n/g' HistoOut.HwU" index 31 using 1:6:7 with filledcurve ls 11 fs transparent solid 0.2 title 'NLO, scale variation',\
-sqrt(-1) ls 21 title 'NLO, PDF variation',\
-'HistoOut.HwU' index 31 using (($1+$2)/2):($3 >= 0 ? sqrt(-1) : abs($3)) ls 101 title '',\
-'HistoOut.HwU' index 31 using (($1+$2)/2):($3 < 0 ? sqrt(-1) : $3) ls 1 title 'NLO, central value'
+1/0 ls 21 title 'NLO, PDF variation',\
+'HistoOut.HwU' index 31 using (($1+$2)/2):($3 >= 0 ? 1/0 : abs($3)) ls 101 title '',\
+'HistoOut.HwU' index 31 using (($1+$2)/2):($3 < 0 ? 1/0 : $3) ls 1 title 'NLO, central value'
 #-- rendering subhistograms 'Relative scale and PDF uncertainty'
 unset label
 unset format
+unset logscale y
 set yrange [-2.6403e-01:3.2176e-01]
 set origin 0.0000e+00, 3.5000e-01
 set size 1.0000e+00, 1.5000e-01
 set mytics 2
 set ytics auto
 set format x
-unset logscale y
 set ylabel "NLO rel.unc."
 set label "Relative uncertainties w.r.t. central value" font ",9" front at graph 0.03, graph 0.13
 plot \

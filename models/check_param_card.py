@@ -11,10 +11,7 @@ import re
 import shutil
 import logging
 import random
-import six
-StringIO = six
-from six.moves import range
-
+import io
 logger = logging.getLogger('madgraph.models') # -> stdout
 
 try:
@@ -138,7 +135,7 @@ class Parameter (object):
         
         self.comment = self.comment.strip()
         if format == 'float':
-            if self.lhablock == 'decay' and not isinstance(self.value,six.string_types):
+            if self.lhablock == 'decay' and not isinstance(self.value,str):
                 return 'DECAY %s %.{0}e # %s'.format(precision) % (' '.join([str(d) for d in self.lhacode]), self.value, self.comment)
             elif self.lhablock == 'decay':
                 return 'DECAY %s Auto # %s' % (' '.join([str(d) for d in self.lhacode]), self.comment)
@@ -343,7 +340,7 @@ class ParamCard(dict):
 
         if isinstance(input_path, str):
             if '\n' in input_path:
-                input = StringIO.StringIO(input_path)
+                input = io.StringIO(input_path)
             else:
                 input = open(input_path)
         else:
@@ -649,7 +646,7 @@ class ParamCard(dict):
         #check if we need to write the value of scale for some block
         if os.path.exists(input_inc):
             text = open(input_inc).read()
-            scales = list(set(re.findall('mdl__(\w*)__scale', text, re.I)))
+            scales = list(set(re.findall(r'mdl__(\w*)__scale', text, re.I)))
         else: 
             scales = []
 
@@ -1000,10 +997,12 @@ class ParamCardIterator(ParamCard):
                 self.param_order.append("%s#%s" % (param.lhablock, '_'.join(repr(i) for i in param.lhacode)))
         # do the loop
         lengths = [list(range(len(all_iterators[key][0][1]))) for key in keys]
-        for positions in itertools.product(*lengths):
+        from functools import reduce
+        total = reduce((lambda x, y: x * y),[len(x) for x in lengths])
+        for i,positions in enumerate(itertools.product(*lengths)):
             self.itertag = []
             if self.logging:
-                logger.info("Create the next param_card in the scan definition", '$MG:BOLD')
+                logger.info("Create the next param_card in the scan definition (%s/%s)" % (i+1,total), '$MG:BOLD')
             for i, pos in enumerate(positions):
                 key = keys[i]
                 for param, values in all_iterators[key]:
@@ -1048,7 +1047,7 @@ class ParamCardIterator(ParamCard):
             identLines = identCard.readlines()
             identCard.close()
         else:
-            ff = StringIO.StringIO()        
+            ff = io.StringIO()        
         if order:
             keys = order
         else:
@@ -1090,11 +1089,11 @@ class ParamCardIterator(ParamCard):
             to_print = self.cross[-1:]
         for info in to_print:
             name = info['run_name']
-            bench = info['bench']
+            bench = [float(x) for x in info['bench']]
             data = []
             for k in keys:
                 if k in info:
-                    data.append(info[k])
+                    data.append(float(info[k]))
                 else:
                     data.append(0.)
             ff.write(formatting % tuple([name] + bench + data))

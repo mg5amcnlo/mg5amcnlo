@@ -573,7 +573,7 @@ c     Set mother info for daughters
             jpart(3,ida(j)) = i
          enddo
 c     Just zero helicity info for intermediate states
-         jpart(7,i) = 0
+         jpart(7,i) = 9 
       enddo                     ! do i (loop over internal propagators)
       
 c     Remove non-resonant mothers, set position of particles

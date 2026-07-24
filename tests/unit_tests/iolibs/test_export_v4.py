@@ -16,14 +16,10 @@
 """Unit test library for the export v4 format routines"""
 
 from __future__ import absolute_import
-import six
-StringIO = six
 import copy
 import fractions
 import os 
 import sys
-from six.moves import range
-
 root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
 sys.path.append(os.path.join(root_path, os.path.pardir, os.path.pardir))
 
@@ -108,8 +104,8 @@ class IOExportV4IOTest(IOTests.IOTestManager,
                       'color':1,
                       'mass':'zero',
                       'width':'zero',
-                      'texname':'\gamma',
-                      'antitexname':'\gamma',
+                      'texname':r'\gamma',
+                      'antitexname':r'\gamma',
                       'line':'wavy',
                       'charge':0.,
                       'pdg_code':22,
@@ -253,8 +249,8 @@ class IOExportV4IOTest(IOTests.IOTestManager,
                       'color':1,
                       'mass':'zero',
                       'width':'zero',
-                      'texname':'\gamma',
-                      'antitexname':'\gamma',
+                      'texname':r'\gamma',
+                      'antitexname':r'\gamma',
                       'line':'wavy',
                       'charge':0.,
                       'pdg_code':22,
@@ -598,8 +594,8 @@ class IOExportV4IOTest(IOTests.IOTestManager,
                       'color':1,
                       'mass':'zero',
                       'width':'zero',
-                      'texname':'\gamma',
-                      'antitexname':'\gamma',
+                      'texname':r'\gamma',
+                      'antitexname':r'\gamma',
                       'line':'wavy',
                       'charge':0.,
                       'pdg_code':22,
@@ -866,8 +862,8 @@ class ExportV4IOTest(unittest.TestCase,
                       'color':1,
                       'mass':'zero',
                       'width':'zero',
-                      'texname':'\gamma',
-                      'antitexname':'\gamma',
+                      'texname':r'\gamma',
+                      'antitexname':r'\gamma',
                       'line':'wavy',
                       'charge':0.,
                       'pdg_code':22,
@@ -1369,6 +1365,8 @@ C     Diagram 8
       DATA (SPROP(I,-6,8),I=1,2)/0,0/
 C     Number of configs
       DATA MAPCONFIG(0)/8/
+C     used fake id
+      DATA FAKE_ID/3/
 """)
 
         # Test config_subproc_map.inc
@@ -1565,8 +1563,8 @@ mirror  d~ d > d d~ g d d~ g"""
                       'color':1,
                       'mass':'MN1',
                       'width':'zero',
-                      'texname':'\gamma',
-                      'antitexname':'\gamma',
+                      'texname':r'\gamma',
+                      'antitexname':r'\gamma',
                       'line':'wavy',
                       'charge':0.,
                       'pdg_code':1000022,
@@ -2036,6 +2034,8 @@ C     Diagram 12
       DATA TPRID(-5,12)/0/
 C     Number of configs
       DATA MAPCONFIG(0)/12/
+C     used fake id
+      DATA FAKE_ID/3/
 """)
 
 
@@ -2330,6 +2330,8 @@ C     Diagram 6
       DATA (SPROP(I,-5,6),I=1,1)/0/
 C     Number of configs
       DATA MAPCONFIG(0)/6/
+C     used fake id
+      DATA FAKE_ID/1/
 """)
 
         symmetry, perms, ident_perms = \
@@ -2463,7 +2465,7 @@ class FullHelasOutputIOTest(IOTests.IOTestManager,
 
     @IOTests.createIOTest(groupName='SquaredOrder_IOTest')
     def testIO_sqso_uux_uuxuuxx(self):
-        """ target: [matrix(.*)\.f]
+        r""" target: [matrix(.*)\.f]
         """
     
         myleglist = base_objects.LegList()
@@ -2840,7 +2842,7 @@ CALL IOVXXX(W(1,14),W(1,2),W(1,12),GG,AMP(42))""".split('\n'))
                      [3,    9,    9,   27,    3,    9],
                      [3,    9,    9,    3,   27,    9],
                      [9,    3,    3,    9,    9,   27]]
-        denom = [1]*6
+        denom = 1
 
         i = 0
         for data in exporter.get_color_data_lines(\
@@ -2848,10 +2850,16 @@ CALL IOVXXX(W(1,14),W(1,2),W(1,12),GG,AMP(42))""".split('\n'))
             #misc.sprint(data)
             if 'DATA' not in data:
                 continue
-            _, data, _ = data.split('/') 
-            number = [float(n.replace('d','e')) for n in data.split(',') ]
+            if 'denom' in data.lower():
+                _, data, _ = data.split('/')
+                self.assertEqual(int(data), denom) 
+                continue 
+            else:   
+                _, data, _ = data.split('/') 
+                number = [int(n) for n in data.split(',') ]
             for j,val in enumerate(number):
-                self.assertAlmostEqual((1.*numerator[i][j])/denom[i], val)
+                coeff = 1 if j ==0 else 2 # symmetry factor
+                self.assertAlmostEqual((coeff*numerator[i][i+j]), val)
             i+=1 
 
 
@@ -2860,7 +2868,7 @@ CALL IOVXXX(W(1,14),W(1,2),W(1,12),GG,AMP(42))""".split('\n'))
         self.assertEqual(nb,55)
 
         # Test JAMP (color amplitude) output
-        if six.PY3:
+        if True:
             self.assertEqual(out, [' TMP_JAMP(39) = AMP(39) +  AMP(40) ! used 3 times', ' TMP_JAMP(38) = AMP(37) +  AMP(38) ! used 3 times', ' TMP_JAMP(37) = AMP(35) +  AMP(36) ! used 3 times', ' TMP_JAMP(36) = AMP(29) +  AMP(37) ! used 3 times', ' TMP_JAMP(35) = AMP(29) +  AMP(30) ! used 3 times', ' TMP_JAMP(34) = AMP(28) +  AMP(36) ! used 3 times', ' TMP_JAMP(33) = AMP(27) +  AMP(35) ! used 3 times', ' TMP_JAMP(32) = AMP(27) +  AMP(28) ! used 3 times', ' TMP_JAMP(31) = AMP(25) +  AMP(35) ! used 3 times', ' TMP_JAMP(30) = AMP(25) +  AMP(27) ! used 3 times', ' TMP_JAMP(29) = AMP(24) +  AMP(25) ! used 3 times', ' TMP_JAMP(28) = AMP(21) +  AMP(22) ! used 3 times', ' TMP_JAMP(27) = AMP(20) +  AMP(34) ! used 3 times', ' TMP_JAMP(26) = AMP(14) +  AMP(22) ! used 3 times', ' TMP_JAMP(25) = AMP(14) +  AMP(15) ! used 3 times', ' TMP_JAMP(24) = AMP(11) +  AMP(34) ! used 3 times', ' TMP_JAMP(23) = AMP(11) +  AMP(20) ! used 3 times', ' TMP_JAMP(22) = AMP(5) +  AMP(8) ! used 3 times', ' TMP_JAMP(21) = AMP(1) +  AMP(2) ! used 3 times', ' TMP_JAMP(20) = AMP(41) +  AMP(42) ! used 3 times', ' TMP_JAMP(19) = AMP(30) +  AMP(32) ! used 3 times', ' TMP_JAMP(18) = AMP(24) +  AMP(41) ! used 3 times', ' TMP_JAMP(17) = AMP(21) +  AMP(32) ! used 3 times', ' TMP_JAMP(16) = AMP(19) +  AMP(20) ! used 3 times', ' TMP_JAMP(15) = AMP(18) +  AMP(38) ! used 3 times', ' TMP_JAMP(14) = AMP(15) +  AMP(18) ! used 3 times', ' TMP_JAMP(13) = AMP(14) +  AMP(17) ! used 3 times', ' TMP_JAMP(12) = AMP(12) +  AMP(25) ! used 3 times', ' TMP_JAMP(11) = AMP(11) +  AMP(12) ! used 3 times', ' TMP_JAMP(10) = AMP(7) +  AMP(8) ! used 3 times', ' TMP_JAMP(9) = AMP(2) +  AMP(9) ! used 3 times', ' TMP_JAMP(8) = AMP(22) +  AMP(31) ! used 3 times', ' TMP_JAMP(7) = AMP(12) +  AMP(33) ! used 3 times', ' TMP_JAMP(6) = AMP(4) +  AMP(5) ! used 3 times', ' TMP_JAMP(5) = AMP(1) +  AMP(10) ! used 3 times', ' TMP_JAMP(4) = AMP(19) +  AMP(33) ! used 3 times', ' TMP_JAMP(3) = AMP(17) +  AMP(31) ! used 3 times', ' TMP_JAMP(2) = AMP(9) +  AMP(10) ! used 3 times', ' TMP_JAMP(1) = AMP(4) +  AMP(7) ! used 3 times', ' TMP_JAMP(52) = TMP_JAMP(38) + (3.000000000000000d+00) * AMP(42) ! used 2 times', ' TMP_JAMP(51) = TMP_JAMP(37) +  TMP_JAMP(32) ! used 2 times', ' TMP_JAMP(50) = TMP_JAMP(36) + (3.333333333333333d-01) * TMP_JAMP(22) ! used 2 times', ' TMP_JAMP(49) = TMP_JAMP(35) + (3.000000000000000d+00) * AMP(42) ! used 2 times', ' TMP_JAMP(48) = TMP_JAMP(27) + (3.000000000000000d+00) * TMP_JAMP(26) ! used 2 times', ' TMP_JAMP(47) = TMP_JAMP(22) + (3.333333333333333d-01) * TMP_JAMP(21) ! used 2 times', ' TMP_JAMP(46) = TMP_JAMP(18) + (3.333333333333333d-01) * TMP_JAMP(14) ! used 2 times', ' TMP_JAMP(45) = TMP_JAMP(18) + (3.333333333333333d-01) * TMP_JAMP(17) ! used 2 times', ' TMP_JAMP(44) = TMP_JAMP(17) + (3.333333333333333d-01) * TMP_JAMP(11) ! used 2 times', ' TMP_JAMP(43) = TMP_JAMP(4) + (3.000000000000000d+00) * TMP_JAMP(3) ! used 2 times', ' TMP_JAMP(42) = TMP_JAMP(4) + (3.333333333333333d-01) * TMP_JAMP(2) ! used 2 times', ' TMP_JAMP(41) = TMP_JAMP(3) + (3.333333333333333d-01) * TMP_JAMP(1) ! used 2 times', ' TMP_JAMP(40) = TMP_JAMP(2) + (3.000000000000000d+00) * TMP_JAMP(1) ! used 2 times', ' TMP_JAMP(55) = TMP_JAMP(48) +  TMP_JAMP(43) ! used 2 times', ' TMP_JAMP(54) = TMP_JAMP(47) + (3.333333333333333d-01) * TMP_JAMP(39) ! used 2 times', ' TMP_JAMP(53) = TMP_JAMP(40) +  TMP_JAMP(39) ! used 2 times', ' JAMP(1) = (-2.500000000000000d-01)*AMP(16)+(-2.500000000000000d-01)*AMP(23)+(2.500000000000000d-01)*TMP_JAMP(36)+(8.333333333333333d-02)*TMP_JAMP(47)+(8.333333333333333d-02)*TMP_JAMP(51)+(2.777777777777778d-02)*TMP_JAMP(53)+(8.333333333333333d-02)*TMP_JAMP(55)', ' JAMP(2) = (2.500000000000000d-01)*AMP(13)+(2.500000000000000d-01)*AMP(26)+(-2.500000000000000d-01)*TMP_JAMP(12)+(-8.333333333333333d-02)*TMP_JAMP(15)+(-8.333333333333333d-02)*TMP_JAMP(19)+(-2.777777777777778d-02)*TMP_JAMP(20)+(-8.333333333333333d-02)*TMP_JAMP(21)+(-2.500000000000000d-01)*TMP_JAMP(33)+(-8.333333333333333d-02)*TMP_JAMP(41)+(-2.500000000000000d-01)*TMP_JAMP(42)+(-8.333333333333333d-02)*TMP_JAMP(50)', ' JAMP(3) = (2.500000000000000d-01)*AMP(6)+(-2.500000000000000d-01)*AMP(26)+(-2.500000000000000d-01)*TMP_JAMP(34)+(-8.333333333333333d-02)*TMP_JAMP(44)+(-2.500000000000000d-01)*TMP_JAMP(46)+(-8.333333333333333d-02)*TMP_JAMP(53)+(-2.777777777777778d-02)*TMP_JAMP(55)', ' JAMP(4) = (2.500000000000000d-01)*AMP(3)+(2.500000000000000d-01)*AMP(16)+(8.333333333333333d-02)*AMP(28)+(2.500000000000000d-01)*AMP(38)+(2.500000000000000d-01)*AMP(40)+(2.500000000000000d-01)*TMP_JAMP(5)+(8.333333333333333d-02)*TMP_JAMP(6)+(8.333333333333333d-02)*TMP_JAMP(7)+(2.777777777777778d-02)*TMP_JAMP(8)+(2.500000000000000d-01)*TMP_JAMP(14)+(8.333333333333333d-02)*TMP_JAMP(24)+(8.333333333333333d-02)*TMP_JAMP(30)+(8.333333333333333d-02)*TMP_JAMP(45)+(2.777777777777778d-02)*TMP_JAMP(49)', ' JAMP(5) = (-2.500000000000000d-01)*AMP(3)+(2.500000000000000d-01)*AMP(23)+(2.500000000000000d-01)*AMP(30)+(8.333333333333333d-02)*AMP(36)+(2.500000000000000d-01)*AMP(39)+(2.500000000000000d-01)*TMP_JAMP(9)+(8.333333333333333d-02)*TMP_JAMP(10)+(2.777777777777778d-02)*TMP_JAMP(13)+(8.333333333333333d-02)*TMP_JAMP(16)+(8.333333333333333d-02)*TMP_JAMP(31)+(2.500000000000000d-01)*TMP_JAMP(44)+(8.333333333333333d-02)*TMP_JAMP(46)+(2.777777777777778d-02)*TMP_JAMP(52)', ' JAMP(6) = (-2.500000000000000d-01)*AMP(6)+(-2.500000000000000d-01)*AMP(13)+(-2.500000000000000d-01)*AMP(34)+(-2.500000000000000d-01)*TMP_JAMP(23)+(-8.333333333333333d-02)*TMP_JAMP(25)+(-8.333333333333333d-02)*TMP_JAMP(28)+(-2.777777777777778d-02)*TMP_JAMP(29)+(-8.333333333333333d-02)*TMP_JAMP(38)+(-8.333333333333333d-02)*TMP_JAMP(49)+(-2.777777777777778d-02)*TMP_JAMP(51)+(-2.500000000000000d-01)*TMP_JAMP(54)']
             )
             
@@ -3476,6 +3484,8 @@ C     Diagram 42
       DATA (SPROP(I,-4,42),I=1,1)/0/
 C     Number of configs
       DATA MAPCONFIG(0)/42/
+C     used fake id
+      DATA FAKE_ID/1/
 """)
 
         # Test dummy config_subproc_map.inc file
@@ -3765,19 +3775,28 @@ CALL VVVXXX(W(1,2),W(1,3),W(1,5),GG,AMP(6))""")
                      [-2,    4,   -2,   19,   -2,   -2],
                      [-2,   -2,    4,   -2,   19,   -2],
                      [4,   -2,   -2,   -2,   -2,   19]]
-        denom = [6,6,6,6,6,6]
+        denom = 6
 
         i = 0
         for data in exporter.get_color_data_lines(\
                          matrix_element):
-            #misc.sprint(data)
+
             if 'DATA' not in data:
                 continue
-            _, data, _ = data.split('/') 
-            number = [float(n.replace('d','e')) for n in data.split(',') ]
-            for j,val in enumerate(number):
-                self.assertAlmostEqual((1.*numerator[i][j])/denom[i], val)
-            i+=1 
+            if 'denom' in data.lower():
+                _, data, _ = data.split('/') 
+                self.assertEqual(int(data), denom) 
+                continue
+            else:
+                _, data, _ = data.split('/') 
+                number = [int(n) for n in data.split(',') ]
+                for j,val in enumerate(number):
+                    if j ==0: 
+                        self.assertEqual((numerator[i][i+j]), val)
+                    else:
+                       # factor 2 due to symmetry
+                       self.assertEqual((2*numerator[i][i+j]), val) 
+                i+=1 
 
         # Test JAMP (color amplitude) output
         out, nb = exporter.get_JAMP_lines(matrix_element)
@@ -3828,6 +3847,8 @@ C     Diagram 4
       DATA (SPROP(I,-2,3),I=1,1)/0/
 C     Number of configs
       DATA MAPCONFIG(0)/3/
+C     used fake id
+      DATA FAKE_ID/1/
 """)
 
         # Test dummy config_subproc_map.inc file
@@ -4290,8 +4311,8 @@ CALL IOSXXX(W(1,6),W(1,3),W(1,9),GT1GOP,AMP(6))""".split('\n'))
                       'color':1,
                       'mass':'Mneu1',
                       'width':'Wneu1',
-                      'texname':'\chi_0^1',
-                      'antitexname':'\chi_0^1',
+                      'texname':r'\chi_0^1',
+                      'antitexname':r'\chi_0^1',
                       'line':'straight',
                       'charge':0.,
                       'pdg_code':1000022,
@@ -4640,8 +4661,8 @@ CALL IOVXXX(W(1,4),W(1,3),W(1,5),MGVX27,AMP(1))""")
                       'color':1,
                       'mass':'zero',
                       'width':'zero',
-                      'texname':'\gamma',
-                      'antitexname':'\gamma',
+                      'texname':r'\gamma',
+                      'antitexname':r'\gamma',
                       'line':'wavy',
                       'charge':0.,
                       'pdg_code':22,
@@ -4785,8 +4806,8 @@ CALL VVVXXX(W(1,2),W(1,4),W(1,5),MGVX5,AMP(5))""")
                       'color':1,
                       'mass':'zero',
                       'width':'zero',
-                      'texname':'\gamma',
-                      'antitexname':'\gamma',
+                      'texname':r'\gamma',
+                      'antitexname':r'\gamma',
                       'line':'wavy',
                       'charge':0.,
                       'pdg_code':22,
@@ -4961,8 +4982,8 @@ CALL VVVXXX(W(1,5),W(1,2),W(1,3),MGVX5,AMP(3))""")
                       'color':1,
                       'mass':'zero',
                       'width':'zero',
-                      'texname':'\gamma',
-                      'antitexname':'\gamma',
+                      'texname':r'\gamma',
+                      'antitexname':r'\gamma',
                       'line':'wavy',
                       'charge':0.,
                       'pdg_code':22,
@@ -5554,6 +5575,8 @@ C     Diagram 3
       DATA (SPROP(I,-2,3),I=1,1)/0/
 C     Number of configs
       DATA MAPCONFIG(0)/3/
+C     used fake id
+      DATA FAKE_ID/1/
 """)
 
     def test_multiple_lorentz_structures_with_fermion_flow_clash(self):
@@ -5968,6 +5991,8 @@ C     Diagram 4
       DATA (SPROP(I,-3,4),I=1,1)/0/
 C     Number of configs
       DATA MAPCONFIG(0)/4/
+C     used fake id
+      DATA FAKE_ID/1/
 """)
 
         writer = writers.FortranWriter(self.give_pos('test'))
@@ -6503,8 +6528,8 @@ CALL FFS3_4C1_0(W(1,2),W(1,1),W(1,5),GC_108,GC_111,AMP(1))""".split('\n')
                       'color':1,
                       'mass':'zero',
                       'width':'zero',
-                      'texname':'\mu^+',
-                      'antitexname':'\mu^-',
+                      'texname':r'\mu^+',
+                      'antitexname':r'\mu^-',
                       'line':'straight',
                       'charge':-1.,
                       'pdg_code':13,
@@ -6522,8 +6547,8 @@ CALL FFS3_4C1_0(W(1,2),W(1,1),W(1,5),GC_108,GC_111,AMP(1))""".split('\n')
                       'color':1,
                       'mass':'zero',
                       'width':'zero',
-                      'texname':'\gamma',
-                      'antitexname':'\gamma',
+                      'texname':r'\gamma',
+                      'antitexname':r'\gamma',
                       'line':'wavy',
                       'charge':0.,
                       'pdg_code':22,
@@ -7201,8 +7226,8 @@ CALL VVVXXX(W(1,2),W(1,17),W(1,14),GG,AMP(216))""".split('\n'))
                       'color':1,
                       'mass':'MN1',
                       'width':'WN1',
-                      'texname':'\chi_0^2',
-                      'antitexname':'\chi_0^2',
+                      'texname':r'\chi_0^2',
+                      'antitexname':r'\chi_0^2',
                       'line':'straight',
                       'charge':0.,
                       'pdg_code':1000022,
@@ -7363,8 +7388,8 @@ CALL IOVXXX(W(1,3),W(1,5),W(1,2),GWX1N1,AMP(2))""")
                       'color':1,
                       'mass':'Mneu1',
                       'width':'Wneu1',
-                      'texname':'\chi_0^1',
-                      'antitexname':'\chi_0^1',
+                      'texname':r'\chi_0^1',
+                      'antitexname':r'\chi_0^1',
                       'line':'straight',
                       'charge':0.,
                       'pdg_code':1000022,
@@ -7380,8 +7405,8 @@ CALL IOVXXX(W(1,3),W(1,5),W(1,2),GWX1N1,AMP(2))""")
                       'color':1,
                       'mass':'zero',
                       'width':'zero',
-                      'texname':'\gamma',
-                      'antitexname':'\gamma',
+                      'texname':r'\gamma',
+                      'antitexname':r'\gamma',
                       'line':'wavy',
                       'charge':0.,
                       'pdg_code':22,
@@ -7838,6 +7863,8 @@ C     Diagram 8
       DATA (SPROP(I,-6,8),I=1,1)/0/
 C     Number of configs
       DATA MAPCONFIG(0)/8/
+C     used fake id
+      DATA FAKE_ID/1/
 """)
 
         writer = writers.FortranWriter(self.give_pos('test'))
@@ -8216,8 +8243,8 @@ CALL IOSXXX(W(1,3),W(1,2),W(1,6),MGVX350,AMP(2))""".split('\n'))
                       'color':1,
                       'mass':'mn1',
                       'width':'zero',
-                      'texname':'\chi_0^1',
-                      'antitexname':'\chi_0^1',
+                      'texname':r'\chi_0^1',
+                      'antitexname':r'\chi_0^1',
                       'line':'straight',
                       'charge':0.,
                       'pdg_code':1000022,
@@ -8232,8 +8259,8 @@ CALL IOSXXX(W(1,3),W(1,2),W(1,6),MGVX350,AMP(2))""".split('\n'))
                       'color':1,
                       'mass':'mn2',
                       'width':'wn2',
-                      'texname':'\chi_0^2',
-                      'antitexname':'\chi_0^2',
+                      'texname':r'\chi_0^2',
+                      'antitexname':r'\chi_0^2',
                       'line':'straight',
                       'charge':0.,
                       'pdg_code':1000023,
@@ -8249,8 +8276,8 @@ CALL IOSXXX(W(1,3),W(1,2),W(1,6),MGVX350,AMP(2))""".split('\n'))
                       'color':1,
                       'mass':'zmass',
                       'width':'zwidth',
-                      'texname':'\gamma',
-                      'antitexname':'\gamma',
+                      'texname':r'\gamma',
+                      'antitexname':r'\gamma',
                       'line':'wavy',
                       'charge':0.,
                       'pdg_code':23,
@@ -8479,8 +8506,8 @@ CALL IOSXXX(W(1,4),W(1,2),W(1,8),GELN2P,AMP(9))""".split('\n')
                       'spin':3,
                       'mass':'zmass',
                       'width':'zwidth',
-                      'texname':'\gamma',
-                      'antitexname':'\gamma',
+                      'texname':r'\gamma',
+                      'antitexname':r'\gamma',
                       'line':'wavy',
                       'charge':0.,
                       'pdg_code':23,
@@ -8802,8 +8829,8 @@ CALL FFV1_0(W(1,3),W(1,5),W(1,2),GGI,AMP(3))""".split('\n')
                       'color':1,
                       'mass':'mn1',
                       'width':'zero',
-                      'texname':'\chi_0^1',
-                      'antitexname':'\chi_0^1',
+                      'texname':r'\chi_0^1',
+                      'antitexname':r'\chi_0^1',
                       'line':'straight',
                       'charge':0.,
                       'pdg_code':1000022,
@@ -8818,8 +8845,8 @@ CALL FFV1_0(W(1,3),W(1,5),W(1,2),GGI,AMP(3))""".split('\n')
                       'color':1,
                       'mass':'mn2',
                       'width':'wn2',
-                      'texname':'\chi_0^2',
-                      'antitexname':'\chi_0^2',
+                      'texname':r'\chi_0^2',
+                      'antitexname':r'\chi_0^2',
                       'line':'straight',
                       'charge':0.,
                       'pdg_code':1000023,
@@ -8835,8 +8862,8 @@ CALL FFV1_0(W(1,3),W(1,5),W(1,2),GGI,AMP(3))""".split('\n')
                       'color':1,
                       'mass':'zmass',
                       'width':'zwidth',
-                      'texname':'\gamma',
-                      'antitexname':'\gamma',
+                      'texname':r'\gamma',
+                      'antitexname':r'\gamma',
                       'line':'wavy',
                       'charge':0.,
                       'pdg_code':23,
@@ -9035,8 +9062,8 @@ CALL FFS1C1_0(W(1,2),W(1,9),W(1,4),GELN1P,AMP(12))""".split('\n')
                       'spin':3,
                       'mass':'zmass',
                       'width':'zwidth',
-                      'texname':'\gamma',
-                      'antitexname':'\gamma',
+                      'texname':r'\gamma',
+                      'antitexname':r'\gamma',
                       'line':'wavy',
                       'charge':0.,
                       'pdg_code':23,
@@ -9280,6 +9307,8 @@ C     Diagram 10
       DATA (SPROP(I,-4,10),I=1,1)/0/
 C     Number of configs
       DATA MAPCONFIG(0)/10/
+C     used fake id
+      DATA FAKE_ID/1/
 """)
         
         # Test maxconfigs.inc
@@ -9502,6 +9531,8 @@ C     Number of configs
       DATA TPRID(-7,1)/0/
 C     Number of configs
       DATA MAPCONFIG(0)/1/
+C     used fake id
+      DATA FAKE_ID/1/
 """)
         
     def test_configs_long_decay(self):
@@ -9554,8 +9585,8 @@ C     Number of configs
                       'spin':3,
                       'mass':'wmass',
                       'width':'wwidth',
-                      'texname':'\gamma',
-                      'antitexname':'\gamma',
+                      'texname':r'\gamma',
+                      'antitexname':r'\gamma',
                       'line':'wavy',
                       'charge':1.,
                       'pdg_code':24,
@@ -9737,6 +9768,8 @@ C     Diagram 6
       DATA TPRID(-3,6)/0/
 C     Number of configs
       DATA MAPCONFIG(0)/6/
+C     used fake id
+      DATA FAKE_ID/1/
 """)
 
     def test_configs_8fs(self):
@@ -9849,8 +9882,8 @@ C     Number of configs
                       'color':1,
                       'mass':'zero',
                       'width':'zero',
-                      'texname':'\gamma',
-                      'antitexname':'\gamma',
+                      'texname':r'\gamma',
+                      'antitexname':r'\gamma',
                       'line':'wavy',
                       'charge':0.,
                       'pdg_code':22,
@@ -9939,6 +9972,8 @@ C     Number of configs
       DATA (SPROP(I,-2,1),I=1,1)/0/
 C     Number of configs
       DATA MAPCONFIG(0)/1/
+C     used fake id
+      DATA FAKE_ID/1/
 """)
         
         # Test get_color.f output

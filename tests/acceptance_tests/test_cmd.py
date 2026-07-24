@@ -55,7 +55,7 @@ class TestCmdShell1(unittest.TestCase):
         """join path and treat spaces"""   
 
         combine = os.path.join(*path)
-        return combine.replace(' ','\ ')        
+        return combine.replace(' ',r'\ ')        
     
     def do(self, line):
         """ exec a line in the cmd under test """        
@@ -167,7 +167,11 @@ class TestCmdShell1(unittest.TestCase):
                     'td_path': './td', 
                     'delphes_path': './Delphes', 
                     'default_unset_couplings': 99,
+                    'checkpointing': False,
                     'cluster_type': 'condor', 
+                    'cluster_requirement': None,
+                    'cluster_vacatetime': '120',
+                    'enforce_shared_disk': False,
                     'cluster_status_update': (600, 30),
                     'madanalysis_path': './MadAnalysis', 
                     'cluster_temp_path': None, 
@@ -183,6 +187,7 @@ class TestCmdShell1(unittest.TestCase):
                     'complex_mass_scheme': False,
                     'gauge': 'unitary',
                     'output_dependencies': 'external',
+                    'dmtcp': None,
                     'lhapdf': 'lhapdf-config',
                     'lhapdf_py2': None,
                     'lhapdf_py3': None,  
@@ -216,14 +221,23 @@ class TestCmdShell1(unittest.TestCase):
                     'samurai': None,
                     'max_t_for_channel': 99,
                     'zerowidth_tchannel': True,
-                     'auto_convert_model': True,
-                     'nlo_mixed_expansion': True,
-                     'acknowledged_v3.1_syntax': False,
-                     'contur_path': './HEPTools/contur',
-                     'rivet_path': './HEPTools/rivet',
-                     'yoda_path':'./HEPTools/yoda',
-                      'eMELA': 'eMELA-config',
-                    }
+                    'auto_convert_model': True,
+                    'nlo_mixed_expansion': True,
+                    'acknowledged_v3.1_syntax': True,
+                    'contur_path': './HEPTools/contur',
+                    'rivet_path': './HEPTools/rivet',
+                    'yoda_path':'./HEPTools/yoda',
+                    'eMELA': 'eMELA-config',
+                    'cluster_walltime': None,
+                    'use_pigz': None,
+                    'checkpointing': False,
+                    'cluster_requirement': None,
+                    'cluster_vacatetime': '120',
+                    'enforce_shared_disk': False,
+                    'heptools_install_dir': './HEPTools',
+                    'nb_core_pythia8': None,
+                    'nb_core_delphes': None,
+                        }
 
         self.assertEqual(config, expected)
         
@@ -265,10 +279,13 @@ class TestCmdShell2(unittest.TestCase,
     
     join_path = TestCmdShell1.join_path
 
-    def do(self, line):
-        """ exec a line in the cmd under test """        
-        self.cmd.exec_cmd(line)
-    
+    def do(self, line, force=False):
+        """ exec a line in the cmd under te
+        st """
+        if force:        
+            self.cmd.exec_cmd(line, force=force)
+        else:   
+           self.cmd.exec_cmd(line) 
     
     def test_output_madevent_directory(self):
         """Test outputting a MadEvent directory"""
@@ -276,7 +293,7 @@ class TestCmdShell2(unittest.TestCase,
         if os.path.isdir(self.out_dir):
             shutil.rmtree(self.out_dir)
         
-        self.do('import model_v4 sm')
+        self.cmd.do_import('model_v4 sm', force=True)
         self.do('set group_subprocesses False')
         self.do('generate e+ e- > e+ e-')
 #        self.do('load processes %s' % self.join_path(_pickle_path,'e+e-_e+e-.pkl'))
@@ -521,7 +538,7 @@ class TestCmdShell2(unittest.TestCase,
 
         #log_output = open(logfile, 'r').read()
         #misc.sprint(log_output)
-        me_re = re.compile('Matrix element\s*=\s*(?P<value>[\d\.eE\+-]+)\s*GeV',
+        me_re = re.compile(r'Matrix element\s*=\s*(?P<value>[\d\.eE\+-]+)\s*GeV',
                            re.IGNORECASE)
         me_groups = me_re.search(log_output)
         self.assertTrue(me_groups)
@@ -585,7 +602,7 @@ class TestCmdShell2(unittest.TestCase,
                                          'P0_epem_epem'), shell=True)
         (log_output, err) = p.communicate()
         log_output = log_output.decode()
-        me_re = re.compile('Matrix element\s*=\s*(?P<value>[\d\.eE\+-]+)\s*GeV',
+        me_re = re.compile(r'Matrix element\s*=\s*(?P<value>[\d\.eE\+-]+)\s*GeV',
                            re.IGNORECASE)
         me_groups = me_re.search(log_output)
         self.assertTrue(me_groups)
@@ -616,7 +633,7 @@ class TestCmdShell2(unittest.TestCase,
                                          'P0_Sigma_MSSM_SLHA2_full_gg_gogo'), shell=True)
     
         log_output = open(logfile, 'r').read()
-        me_re = re.compile('Matrix element\s*=\s*(?P<value>[\d\.eE\+-]+)\s*GeV',
+        me_re = re.compile(r'Matrix element\s*=\s*(?P<value>[\d\.eE\+-]+)\s*GeV',
                            re.IGNORECASE)
         me_groups = me_re.search(log_output)
         
@@ -652,7 +669,7 @@ class TestCmdShell2(unittest.TestCase,
                                                  oneproc), shell=True)
             
                 log_output = open(logfile, 'r').read()
-                me_re = re.compile('Matrix element\s*=\s*(?P<value>[\d\.eE\+-]+)\s*GeV',
+                me_re = re.compile(r'Matrix element\s*=\s*(?P<value>[\d\.eE\+-]+)\s*GeV',
                                    re.IGNORECASE)
                 me_groups = me_re.search(log_output)
                 self.assertTrue(me_groups)
@@ -677,7 +694,7 @@ class TestCmdShell2(unittest.TestCase,
         if os.path.isdir(self.out_dir):
             shutil.rmtree(self.out_dir)
 
-        self.do('import model_v4 heft')
+        self.do('import model_v4 heft', force=True)
         self.do('generate g g > h g g')
         self.do('output standalone %s ' % self.out_dir)
 
@@ -707,7 +724,7 @@ class TestCmdShell2(unittest.TestCase,
                                          'P0_gg_hgg'), shell=True)
         (log_output, err) = p.communicate()                                         
         log_output =log_output.decode()
-        me_re = re.compile('Matrix element\s*=\s*(?P<value>[\d\.eE\+-]+)\s*GeV',
+        me_re = re.compile(r'Matrix element\s*=\s*(?P<value>[\d\.eE\+-]+)\s*GeV',
                            re.IGNORECASE)
         me_groups = me_re.search(log_output)
         
@@ -1052,7 +1069,51 @@ C
             if part.get('pdg_code') in [250, 251]:
                 nb_goldstone += 1
         self.assertEqual(nb_goldstone, 2)
-        
+
+    def test_check_gauge_epem_vevex_wpwm(self):
+        """Test `check gauge e+ e- > ve ve~ w+ w-` includes axial and succeeds."""
+
+        self.do('import model sm')
+        with self.assertLogs('madgraph.check_cmd', level='INFO') as cm:
+            self.do('check gauge e+ e- > ve ve~ w+ w-')
+
+        log = '\n'.join(cm.output)
+        self.assertIn('Gauge results (switching between Unitary/Feynman/Axial/FD gauge):', log)
+        self.assertIn('Summary: 1/1 passed, 0/1 failed', log)
+
+    def test_check_pp_wpwm(self):
+        """Test `check p p > w+ w-` runs and gauge check succeeds."""
+
+        self.do('import model sm')
+        with self.assertLogs('madgraph.check_cmd', level='DEBUG') as cm:
+            self.do('check p p > w+ w-')
+
+        log = '\n'.join(cm.output)
+        self.assertIn('Gauge results (switching between Unitary/Feynman/Axial/FD gauge):', log)
+        self.assertIn('Summary: 4/4 passed, 0/4 failed', log)
+
+    def test_check_gauge_pp_wpwm(self):
+        """Test `check gauge p p > w+ w-` includes axial and succeeds."""
+
+        self.do('import model sm')
+        with self.assertLogs('madgraph.check_cmd', level='INFO') as cm:
+            self.do('check gauge p p > w+ w-')
+
+        log = '\n'.join(cm.output)
+        self.assertIn('Gauge results (switching between Unitary/Feynman/Axial/FD gauge):', log)
+        self.assertIn('Summary: 4/4 passed, 0/4 failed', log)
+
+    def test_check_gauge_epem_aa_includes_axial(self):
+        """Test `check gauge e+ e- > a a` includes axial gauge and succeeds."""
+
+        self.do('import model sm')
+        with self.assertLogs('madgraph.check_cmd', level='INFO') as cm:
+            self.do('check gauge e+ e- > a a')
+
+        log = '\n'.join(cm.output)
+        self.assertIn('Gauge results (switching between Unitary/Feynman/Axial/FD gauge):', log)
+        self.assertIn('Summary: 1/1 passed, 0/1 failed', log)
+         
 
     def test_madevent_subproc_group(self):
         """Test MadEvent output using the SubProcess group functionality"""
@@ -1454,6 +1515,20 @@ P1_qq_wp_wp_lvl
         self.do('import model sm')
         self.do('generate mu+ mu- > ta+ ta-')       
 
+    def test_decay_chain_identical_particle_outoforder(self):
+        """ check that we can use standard MG4 name """
+        
+        self.do('import model sm')
+        self.do('generate e+ e- > z z h, h > b b~, z > u u~, z > e+ e-')
+        self.assertEqual(len(self.cmd._curr_amps), 1)
+        self.do('output madevent %s ' % self.out_dir)
+        Pdir = os.listdir(pjoin(self.out_dir, 'SubProcesses')) 
+        self.assertNotIn('P0_ll_zzh_z_ll_z_ll_h_bbx',  Pdir)
+
+
+
+
+
     def test_save_load(self):
         """ check that we can use standard MG4 name """
         
@@ -1563,7 +1638,7 @@ P1_qq_wp_wp_lvl
                                          'P2_Sigma_sm_epem_epem'), shell=True)
 
         log_output = open(logfile, 'r').read()
-        me_re = re.compile('Matrix element\s*=\s*(?P<value>[\d\.e\+-]+)\s*GeV',
+        me_re = re.compile(r'Matrix element\s*=\s*(?P<value>[\d\.e\+-]+)\s*GeV',
                            re.IGNORECASE)
         me_groups = me_re.search(log_output)
         self.assertTrue(me_groups)

@@ -41,9 +41,6 @@ import madgraph.core.color_algebra as color
 import madgraph.various.misc as misc
 
 from madgraph import InvalidCmd, MadGraph5Error
-import six
-from six.moves import range
-from six.moves import zip
 from functools import reduce
 
 if madgraph.ordering:
@@ -566,8 +563,8 @@ class HelasWavefunction(base_objects.PhysicsObject):
         sizes = {1:1,2:4,3:4,4:16,5:16}
         try:
             return sizes[abs(spin)]
-        except KeyError:
-            raise MadGraph5Error("L-cut particle has spin %d which is not supported."%spin)
+        except KeyError as err:
+            raise MadGraph5Error("L-cut particle has spin %d which is not supported."%spin) from err
 
     def default_setup(self):
         """Default values for all properties"""
@@ -600,6 +597,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
         self['inter_color'] = None
         self['lorentz'] = []
         self['coupling'] = ['none']
+        self['coup_deps'] = [] # check which type of dependencies for running for each coupling
         # The color index used in this wavefunction
         self['color_key'] = 0
         # Properties relating to the leg/vertex
@@ -839,7 +837,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
                 raise self.PhysicsObjectError( \
                         "%s is not a valid list" % str(value))
             for i in value:
-                if i not in [-1, 1, 2, -2, 3, -3, 0, 99]:
+                if i not in base_objects.Leg.list_of_allowed_polarizations:
                     raise self.PhysicsObjectError( \
                       "%s is not a valid polarization" % str(value))
 
@@ -892,6 +890,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
                isinstance(value, int) and \
                isinstance(arguments[2], base_objects.Model):
             model = arguments[2]
+            self.model = model
             if name == 'interaction_id':
                 self.set('interaction_id', value)
                 if value > 0:
@@ -908,6 +907,10 @@ class HelasWavefunction(base_objects.PhysicsObject):
                         self.set('lorentz', [inter.get('lorentz')[0]])
                     if inter.get('couplings'):
                         self.set('coupling', [list(inter.get('couplings').values())[0]])
+                        #self.set('coup_deps', [model.get('coupling_dep')[c[1:]] if c.startswith('-') else model.get('coupling_dep')[c] for c in self.get('coupling')])
+                        #misc.sprint(self.get('coupling'), self.get('coup_deps'))
+                        
+
                 return True
             elif name == 'particle':
                 self.set('particle', model.get('particle_dict')[value])
@@ -918,7 +921,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
                     self.set('antiparticle', model.get('particle_dict')[-value])
                 return True
             else:
-                six.reraise(self.PhysicsObjectError("%s not allowed name for 3-argument set", name))
+                raise self.PhysicsObjectError("%s not allowed name for 3-argument set" % name)
         else:
             return super(HelasWavefunction, self).set(name, value)
 
@@ -1567,6 +1570,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
                     output['WF%d'%i]=output['WF%d'%i]+')'
                     
         #fixed argument
+        coupling_dep = self.model.get('coupling_dep')
         for i, coup in enumerate(self.get_with_flow('coupling')):
             # We do not include the - sign in front of the coupling of loop
             # wavefunctions (only the loop ones, the tree ones are treated normally)
@@ -1576,10 +1580,25 @@ class HelasWavefunction(base_objects.PhysicsObject):
                 output['coup%d'%i] = coup[1:] if coup.startswith('-') else coup  
             else:
                 output['coup%d'%i] = coup
+            c = output['coup%d'%i]
+            if c.startswith('-'):
+                c = c[1:]
+            if c in coupling_dep and 'aS' in coupling_dep[c]:
+                output['vec%d'%i] = "(ivec)"
+            else:
+                output['vec%d'%i] = ""
               
         output['out'] = self.get('me_id') - flip
         output['M'] = self.get('mass')
+        #if self.get('onshell') is False:
+        #    output['W'] = '%s*BWCUTOFF' % self.get('width')
+        #else:
         output['W'] = self.get('width')
+        if self.get('onshell') is False:
+            output['bwcutoff'] = 'BWCUTOFF,'
+        else:
+            output['bwcutoff'] = ''
+
         output['propa'] = self.get('particle').get('propagator')
         if output['propa'] not in ['', None]:
             output['propa'] = 'P%s' % output['propa']
@@ -1588,26 +1607,51 @@ class HelasWavefunction(base_objects.PhysicsObject):
         elif self.get('polarization'):
             if self.get('polarization') == [0]:
                 if self.get('spin') != 3:
-                    raise InvalidCmd( 'polarization not handle for decay particle')
+                    raise InvalidCmd( 'polarization not supported for decay particle')
                 output['propa'] = 'P1L' 
-            elif self.get('polarization') == [1,-1]:
+            elif sorted(self.get('polarization')) == [-1,1]:
                 if self.get('spin') != 3:
-                    raise InvalidCmd( 'polarization not handle for decay particle')
+                    raise InvalidCmd( 'polarization not supported for decay particle')
                 output['propa'] = 'P1T'
             elif self.get('polarization') == [99]:
                 if self.get('spin') != 3:
-                    raise InvalidCmd('polarization not handle for decay particle')
+                    raise InvalidCmd('polarization not supported for decay particle')
                 output['propa'] = 'P1A'
+            elif sorted(self.get('polarization')) == [0,9]:
+                if self.get('spin') != 3:
+                    raise InvalidCmd( 'polarization not supported for decay particle')
+                output['propa'] = 'P1LS'
+            elif self.get('polarization') == [4]:
+                if self.get('spin') != 3:
+                    raise InvalidCmd( 'polarization not supported for decay particle')
+                output['propa'] = 'P1G'
+            elif self.get('polarization') == [5]:
+                if self.get('spin') != 3:
+                    raise InvalidCmd( 'polarization not supported for decay particle')
+                output['propa'] = 'P1H'
+            elif self.get('polarization') == [6]:
+                if self.get('spin') != 3:
+                    raise InvalidCmd( 'polarization not supported for decay particle')
+                output['propa'] = 'P1Q'
+            elif self.get('polarization') == [7]:
+                if self.get('spin') != 3:
+                    raise InvalidCmd( 'polarization not supported for decay particle')
+                output['propa'] = 'P1W'
+            elif self.get('polarization') == [9]:
+                if self.get('spin') != 3:
+                    raise InvalidCmd( 'polarization not supported for decay particle')
+                output['propa'] = 'P1S'
+
             elif self.get('polarization') == [1]:
                 if self.get('spin') != 2:
-                    raise InvalidCmd( 'polarization not handle for decay particle')
+                    raise InvalidCmd( 'polarization not supported for decay particle')
                 output['propa'] = 'P1P'
             elif self.get('polarization') == [-1]:
                 if self.get('spin') != 2:
-                    raise InvalidCmd( 'Left polarization not handle for decay particle for spin (2s+1=%s) particles' % self.get('spin')) 
+                    raise InvalidCmd( 'Left polarization not supported for decay particle for spin (2s+1=%s) particles' % self.get('spin')) 
                 output['propa'] = 'P1M'
             else:            
-                raise InvalidCmd( 'polarization not handle for decay particle')
+                raise InvalidCmd( 'polarization not supported for decay particle')
             
         # optimization
         if aloha.complex_mass: 
@@ -1692,6 +1736,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
                 res.append(self.get('is_part'))
 
         res.append(tuple(self.get('polarization')) )
+        res.append(self.get('onshell'))
 
         # Check if we need to append a charge conjugation flag
         if self.needs_hermitian_conjugate():
@@ -1825,7 +1870,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
         elif self.get('polarization'):
             if self.get('polarization') == [0]:
                 tags.append('P1L') 
-            elif self.get('polarization') == [1,-1]:
+            elif sorted(self.get('polarization')) == [-1,1]: # = 4+5
                 tags.append('P1T')
             elif self.get('polarization') == [99]:
                 tags.append('P1A')
@@ -1833,8 +1878,26 @@ class HelasWavefunction(base_objects.PhysicsObject):
                 tags.append('P1P')
             elif self.get('polarization') == [-1]:
                 tags.append('P1M')
+            elif sorted(self.get('polarization')) == [0,9]: # = 0+9
+                tags.append('P1LS')
+            elif self.get('polarization') == [4]: # = T-5
+                tags.append('P1G')
+            elif self.get('polarization') == [5]: # = T-4
+                tags.append('P1H')
+            elif self.get('polarization') == [6]: # = 0-5
+                tags.append('P1Q')
+            elif self.get('polarization') == [7]: # = full + width
+                tags.append('P1W')
+            elif self.get('polarization') == [9]: # = 99 + width
+                tags.append('P1S')
+
+
+
             else:
                 raise InvalidCmd( 'polarization not handle for decay particle')
+        if self.get('onshell') is False:
+            tags.append('P1D') # D is for DOLLAR
+            #misc.sprint(self.get('onshell'), )
 
         return (tuple(self.get('lorentz')),tuple(tags),self.find_outgoing_number())
 
@@ -2030,9 +2093,9 @@ class HelasWavefunction(base_objects.PhysicsObject):
         try:
             loop_wf_index=\
                        [wf['is_loop'] for wf in self.get('mothers')].index(True)
-        except ValueError:
+        except ValueError as err:
             raise MadGraph5Error("The loop wavefunctions should have exactly"+\
-                                                " one loop wavefunction mother.")
+                                                " one loop wavefunction mother.") from err
 
         if self.find_outgoing_number()-1<=loop_wf_index:
             # If the incoming loop leg is placed after the outgoing one we
@@ -2538,6 +2601,7 @@ class HelasAmplitude(base_objects.PhysicsObject):
         self['inter_color'] = None
         self['lorentz'] = []
         self['coupling'] = ['none']
+        self['coup_deps'] = []
         # The Lorentz and color index used in this amplitude
         self['color_key'] = 0
         # Properties relating to the vertex
@@ -2759,9 +2823,12 @@ class HelasAmplitude(base_objects.PhysicsObject):
                         self.set('lorentz', [inter.get('lorentz')[0]])
                     if inter.get('couplings'):
                         self.set('coupling', [list(inter.get('couplings').values())[0]])
+                        self.model = arguments[2]
+                        
+                        
                 return True
             else:
-                six.reraise(self.PhysicsObjectError( "%s not allowed name for 3-argument set", name))
+                raise self.PhysicsObjectError("%s not allowed name for 3-argument set" % name)
         else:
             return super(HelasAmplitude, self).set(name, value)
 
@@ -3182,11 +3249,22 @@ class HelasAmplitude(base_objects.PhysicsObject):
                     output['WF%d' % i ] = '(1,WE(%d))'%nb                    
                 
         #fixed argument
+        coupling_dep = self.model.get('coupling_dep')
         for i, coup in enumerate(self.get('coupling')):
             output['coup%d'%i] = str(coup)
+            c = output['coup%d'%i]
+            if c.startswith('-'):
+                c = c[1:]
+
+            if coupling_dep and 'aS' in coupling_dep[c]:
+                output['vec%d'%i] = "(ivec)"
+            else:
+                output['vec%d'%i] = ""
+
 
         output['out'] = self.get('number') - flip
         output['propa'] = ''
+        output['bwcutoff'] = ''
         output.update(opt)
         return output
 
@@ -3788,7 +3866,8 @@ class HelasMatrixElement(base_objects.PhysicsObject):
     def reuse_outdated_wavefunctions(self, helas_diagrams):
         """change the wavefunctions id used in the writer to minimize the 
            memory used by the wavefunctions."""
-           
+        
+
         if not self.optimization:
             for diag in helas_diagrams:
                 for wf in diag['wavefunctions']:
@@ -5018,7 +5097,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         for wa in self.get_all_wavefunctions() + self.get_all_amplitudes():
             if wa.get('interaction_id') in [0,-1]:
                 continue
-            output.append(wa.get_aloha_info());
+            output.append(wa.get_aloha_info())
 
         return output
 
@@ -5437,6 +5516,15 @@ class HelasDecayChainProcess(base_objects.PhysicsObject):
                     for index in fs_indices[fs_id]:
                         chains.append([me for me in decay_elements[index] if me.get('processes')[0].\
                                              get_initial_ids()[0] == fs_id])
+                elif (len(fs_legs) == len(decay_elements) and \
+                     all(len(d)==1 for d in decay_is_ids) and \
+                     sorted(fs_ids) == sorted([d[0] for d in decay_is_ids])):
+                    # this cover the out of order case where only one particle is decaying in each
+                    for index in range(len(decay_elements)):
+                        out = [me for me in decay_elements[index] if me.get('processes')[0].\
+                                             get_initial_ids()[0] == fs_id]
+                        if out:
+                            chains.append(out)
 
                 if len(fs_legs) != len(decay_elements) or not chains or not chains[0]:
                     # In second case, or no chains are found
@@ -5459,7 +5547,6 @@ class HelasDecayChainProcess(base_objects.PhysicsObject):
                         combine = False
 
                 red_decay_chains = []
-
                 for prod in itertools.product(*chains):
                     # Now, need to ensure that we don't append
                     # duplicate chain combinations, e.g. (a>bc, a>de) and

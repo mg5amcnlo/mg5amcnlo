@@ -21,8 +21,7 @@ import madgraph.various.banner as bannermod
 import madgraph.various.misc as misc
 import os
 import models
-import six
-StringIO = six
+import io
 import sys
 from madgraph import MG5DIR
 
@@ -162,8 +161,8 @@ class TestConfigFileCase(unittest.TestCase):
         self.assertEqual(self.config['list_s'], ['1'])
         self.config['list_s'] = " 1 2, 3, 5d1 "
         self.assertEqual(self.config['list_s'],['1','2','3', '5d1'])
-        self.config['list_s'] = " 1\ 2, 3, 5d1 "
-        self.assertEqual(self.config['list_s'],['1\ 2','3', '5d1']) 
+        self.config['list_s'] = r" 1\ 2, 3, 5d1 "
+        self.assertEqual(self.config['list_s'],[r'1\ 2','3', '5d1']) 
 
         self.config['list_s'] = "['--pdf=central', '--mur=1,2,3']"
         self.assertEqual(self.config['list_s'],['--pdf=central', '--mur=1,2,3']) 
@@ -386,7 +385,7 @@ class TestMadAnalysis5Card(unittest.TestCase):
         
         MG5aMCtag = bannermod.MadAnalysis5Card._MG5aMC_escape_tag
         
-        input = StringIO.StringIO(
+        input = io.StringIO(
 """%(MG5aMCtag)s inputs = *.hepmc *.stdhep
 %(MG5aMCtag)s stdout_lvl=20
 %(MG5aMCtag)s reconstruction_name = reco1
@@ -433,7 +432,7 @@ etc..."""%{'MG5aMCtag':MG5aMCtag})
         
         myMA5Card = bannermod.MadAnalysis5Card(input)
         input.seek(0)
-        output = StringIO.StringIO()
+        output = io.StringIO()
         myMA5Card.write(output)
         output.seek(0)
         self.assertEqual(myMA5Card,bannermod.MadAnalysis5Card(output))
@@ -453,7 +452,7 @@ class TestPythia8Card(unittest.TestCase):
         """ Basic consistency check of a read-write of the default card."""
         
         pythia8_card_out = bannermod.PY8Card()
-        out = StringIO.StringIO()
+        out = io.StringIO()
         pythia8_card_out.write(out,self.basic_PY8_template)
         #       misc.sprint('WRITTEN:',out.getvalue())
         
@@ -476,10 +475,10 @@ class TestPythia8Card(unittest.TestCase):
               set([k.lower() for k in pythia8_card_read.subruns[subrunID].keys()])
         # ==========
               
-        out = StringIO.StringIO()
+        out = io.StringIO()
         pythia8_card_read.write(out,self.basic_PY8_template)       
         misc.sprint('READ:',out.getvalue())
-        out = StringIO.StringIO()
+        out = io.StringIO()
         pythia8_card_read.write(out,self.basic_PY8_template,print_only_visible=True)       
         misc.sprint('Only visible:',out.getvalue())
 
@@ -521,7 +520,7 @@ Beams:LHEF='events_ouaf.lhe.gz'
         self.assertEqual(default_PY8Card, modified_PY8Card)
 
         # Now write the card
-        out = StringIO.StringIO()
+        out = io.StringIO()
         modified_PY8Card.write(out,self.basic_PY8_template)
         out.seek(0)
         read_PY8Card=bannermod.PY8Card(out)
@@ -534,7 +533,7 @@ Beams:LHEF='events_ouaf.lhe.gz'
         for subrunID in modified_PY8Card.subruns.keys():
             modified_PY8Card.subruns[subrunID].system_set = \
               set([k.lower() for k in modified_PY8Card.subruns[subrunID].keys()])
-        out = StringIO.StringIO()
+        out = io.StringIO()
         modified_PY8Card.write(out,self.basic_PY8_template)
         out.seek(0)        
         read_PY8Card=bannermod.PY8Card(out)
@@ -611,8 +610,6 @@ class TestRunCard(unittest.TestCase):
         run_card2 = bannermod.RunCard(fsock.name)
       
         for key in run_card:
-            if key == 'hel_recycling' and six.PY2:
-                continue 
             if key in ['pdlabel1', 'pdlabel2']:
                 continue
             self.assertEqual(run_card[key], run_card2[key], '%s element does not match %s, %s' %(key, run_card[key], run_card2[key]))
@@ -757,7 +754,7 @@ class TestRunCard(unittest.TestCase):
         fct = run_card.add_unknown_entry
 
         # simple one 
-        input = ("STR_INCLUDE_PDF", "True ")
+        input = ("STR_INCLUDE_PDF", "True ", False)
         fct(*input)
         # check value and that parameter is hidden by default and in autodef
         name = "INCLUDE_PDF" 
@@ -766,7 +763,7 @@ class TestRunCard(unittest.TestCase):
         self.assertIn(name.lower(), run_card.definition_path[True])
 
         # complex case: list + metadata
-        input = ("test_data<cut=True><include=False><fortran_name=input_2>", "[1,2,3,4,5]")
+        input = ("test_data<cut=True><include=False><fortran_name=input_2>", "[1,2,3,4,5]", False)
         fct(*input)
         # check value and that parameter is hidden by default and in autodef
         name = "test_data"
@@ -783,7 +780,7 @@ class TestRunCard(unittest.TestCase):
 
 
         # complex case: dictionary 
-        input = ("test_dict", "{'__type__':1.0, '6':3.0}")
+        input = ("test_dict", "{'__type__':1.0, '6':3.0}", False)
         fct(*input)
         # check value and that parameter is hidden by default and in autodef
         name = "test_dict"
@@ -794,14 +791,14 @@ class TestRunCard(unittest.TestCase):
         self.assertNotIn(name, run_card.includepath[True])
 
         # check that one can overwritte hidden 
-        input = ("max_data<hidden=False>", "3.0")
+        input = ("max_data<hidden=False>", "3.0", False)
         fct(*input)
         name = "max_data"
         self.assertEqual(run_card[name], 3.0)
         self.assertNotIn(name.lower(), run_card.hidden_param)
 
         # check that one can overwritte autodef
-        input = ("max_data2<autodef=False>", "3")
+        input = ("max_data2<autodef=False>", "3", False)
         fct(*input)
         name = "max_data2"
         self.assertEqual(run_card[name], 3.0)
@@ -810,7 +807,7 @@ class TestRunCard(unittest.TestCase):
 
         # check that one can overwritte include to False but autodef to True
         # check that one can overwritte autodef
-        input = ("data3<autodef=True><include=False>", "True")
+        input = ("data3<autodef=True><include=False>", "True", False)
         fct(*input)
         name = "data3"
         self.assertEqual(run_card[name], 1.0)
@@ -824,23 +821,23 @@ class TestRunCard(unittest.TestCase):
         """
 
         run_card = bannermod.RunCardLO()
-        run_card.add_unknown_entry("STR_INCLUDE_PDF", "True ")
-        f = StringIO.StringIO()
+        run_card.add_unknown_entry("STR_INCLUDE_PDF", "True ", unknow_warning=False)
+        f = io.StringIO()
         f.write("c .   this is a comment to test feature of missing end line ")
         run_card.write_autodef(None,output_file=f)
         self.assertIn("CHARACTER INCLUDE_PDF(0:100)", f.getvalue())
-        self.assertIn("C START USER COMMON BLOCK", f.getvalue())
-        self.assertIn("C STOP USER COMMON BLOCK", f.getvalue())
+        self.assertIn("C     START USER COMMON BLOCK", f.getvalue())
+        self.assertIn("C     STOP USER COMMON BLOCK", f.getvalue())
         self.assertIn("COMMON/USER_CUSTOM_RUN/", f.getvalue())
         self.assertIn("COMMON/USER_CUSTOM_RUN/include_pdf", f.getvalue()) #no automatic formatting due to iostring for unittest
 
         # adding a second in place
-        run_card.add_unknown_entry("BOOL_INCLUDE_PDF2", "True ")
+        run_card.add_unknown_entry("BOOL_INCLUDE_PDF2", "True ", unknow_warning=False)
         run_card.write_autodef(None,output_file=f)
         self.assertIn("CHARACTER INCLUDE_PDF(0:100)", f.getvalue())
         self.assertIn("LOGICAL INCLUDE_PDF2", f.getvalue())
-        self.assertIn("C START USER COMMON BLOCK", f.getvalue())
-        self.assertIn("C STOP USER COMMON BLOCK", f.getvalue())
+        self.assertIn("C     START USER COMMON BLOCK", f.getvalue())
+        self.assertIn("C     STOP USER COMMON BLOCK", f.getvalue())
         self.assertIn("COMMON/USER_CUSTOM_RUN/", f.getvalue())
         # order of the two variable within the common block is not important
         if "COMMON/USER_CUSTOM_RUN/include_pdf," in f.getvalue():
@@ -850,15 +847,15 @@ class TestRunCard(unittest.TestCase):
 
         # reset, keep one , remove one and add a new one (keep same stream)
         run_card = bannermod.RunCardLO()
-        run_card.add_unknown_entry("BOOL_INCLUDE_PDF2", "True ")
-        run_card.add_unknown_entry("test_list", "[1,2,3,4,5]")
+        run_card.add_unknown_entry("BOOL_INCLUDE_PDF2", "True ", unknow_warning=False)
+        run_card.add_unknown_entry("test_list", "[1,2,3,4,5]", unknow_warning=False)
         run_card.write_autodef(None,output_file=f)
         self.assertNotIn("CHARACTER INCLUDE_PDF(0:100)", f.getvalue())
         self.assertIn("LOGICAL INCLUDE_PDF2", f.getvalue())
         self.assertIn("INTEGER TEST_LIST(0:5)", f.getvalue())
         # check common block part
-        self.assertIn("C START USER COMMON BLOCK", f.getvalue())
-        self.assertIn("C STOP USER COMMON BLOCK", f.getvalue())
+        self.assertIn("C     START USER COMMON BLOCK", f.getvalue())
+        self.assertIn("C     STOP USER COMMON BLOCK", f.getvalue())
         self.assertIn("COMMON/USER_CUSTOM_RUN/", f.getvalue())
         if "COMMON/USER_CUSTOM_RUN/include_pdf2," in f.getvalue():
             self.assertIn("COMMON/USER_CUSTOM_RUN/include_pdf2,test_list", f.getvalue())
@@ -873,8 +870,8 @@ class TestRunCard(unittest.TestCase):
         self.assertNotIn("INTEGER TEST_LIST(0:5)", f.getvalue())
         self.assertIn("INTEGER TEST_LIST(0:7)", f.getvalue())
         # check common block part
-        self.assertIn("C START USER COMMON BLOCK", f.getvalue())
-        self.assertIn("C STOP USER COMMON BLOCK", f.getvalue())
+        self.assertIn("C     START USER COMMON BLOCK", f.getvalue())
+        self.assertIn("C     STOP USER COMMON BLOCK", f.getvalue())
         self.assertIn("COMMON/USER_CUSTOM_RUN/", f.getvalue())
         if "COMMON/USER_CUSTOM_RUN/include_pdf2," in f.getvalue():
             self.assertIn("COMMON/USER_CUSTOM_RUN/include_pdf2,test_list", f.getvalue())
@@ -889,8 +886,8 @@ class TestRunCard(unittest.TestCase):
         self.assertNotIn("INTEGER TEST_LIST(0:5)", f.getvalue())
         self.assertNotIn("INTEGER TEST_LIST(0:7)", f.getvalue())
         # check common block part
-        self.assertNotIn("C START USER COMMON BLOCK", f.getvalue())
-        self.assertNotIn("C STOP USER COMMON BLOCK", f.getvalue())
+        self.assertNotIn("C     START USER COMMON BLOCK", f.getvalue())
+        self.assertNotIn("C     STOP USER COMMON BLOCK", f.getvalue())
         self.assertNotIn("COMMON/USER_CUSTOM_RUN/", f.getvalue())
 
     def test_autodef_nomissmatch(self):
@@ -900,8 +897,8 @@ class TestRunCard(unittest.TestCase):
         
         LO = bannermod.RunCardLO()
         NLO = bannermod.RunCardNLO()
-        flo = StringIO.StringIO()
-        fnlo = StringIO.StringIO()
+        flo = io.StringIO()
+        fnlo = io.StringIO()
         LO.write(flo)
         NLO.write(fnlo)
         loinput = flo.getvalue().split('\n')
@@ -1082,8 +1079,9 @@ c
         self.assertNotEqual(run_card['pdlabel'], 'xxx')
 
         # dressed electron check list of valid dressed pdf is working
-        self.assertEqual(len(run_card.allowed_lep_densities), 1)
-        self.assertEqual(len(run_card.allowed_lep_densities[(-11,11)]), 6)
+        self.assertEqual(len(run_card.allowed_lep_densities), 2)
+        self.assertEqual(len(run_card.allowed_lep_densities[(-11,11)]), 7)
+        self.assertEqual(len(run_card.allowed_lep_densities[(-13,13)]), 1)
 
         # Dressed lepton
         run_card = bannermod.RunCardLO()
@@ -1097,7 +1095,7 @@ c
         self.assertEqual(run_card['pdlabel2'], 'isronlyll')
         # check that at fortran pdlabel is passed to generic value "dressed"
         # but that invidual value are kept 
-        f = StringIO.StringIO()
+        f = io.StringIO()
         run_card.write_include_file(None,output_file=f)
         self.assertIn("pdlabel = 'dressed'", f.getvalue())
         self.assertIn("pdsublabel(1) = 'isronlyll'", f.getvalue())
@@ -1110,16 +1108,130 @@ c
         run_card = bannermod.RunCardLO()
         run_card['dsqrt_q2fact1'] = 10
         run_card['dsqrt_q2fact2'] = 20
+        self.assertNotIn('fixed_fact_scale', run_card.display_block)
+        self.assertTrue(bannermod.fixedfacscale.status(run_card))
+
 
         run_card.set('fixed_fac_scale', True, user=True)
-        #self.assertNotIn('fixed_fact_scale', run_card.display_block)
-        self.assertEqual(run_card['fixed_fac_scale2'], False) #check that this is default value
+        self.assertEqual(run_card['fixed_fac_scale1'], True)
+        self.assertEqual(run_card['fixed_fac_scale2'], True)
+        self.assertIn('fixed_fac_scale', run_card.user_set)
+        self.assertNotIn('fixed_fac_scale1', run_card.user_set)
+        self.assertNotIn('fixed_fac_scale2', run_card.user_set)
+        self.assertTrue(bannermod.fixedfacscale.status(run_card))
+        f = io.StringIO()
+        run_card.write(output_file=f)
+        self.assertIn("True = fixed_fac_scale ", f.getvalue())
+
+
+        f = io.StringIO()
+        run_card.write_include_file(None,output_file=f)
+        self.assertIn("fixed_fac_scale1 = .true.", f.getvalue())
+        self.assertIn("fixed_fac_scale2 = .true.", f.getvalue())
+
+
 
         run_card.set('fixed_fac_scale1', False, user=True)
-        #self.assertIn('fixed_fact_scale', run_card.display_)
-        self.assertEqual(run_card['fixed_fac_scale2'], True)
+        self.assertFalse(bannermod.fixedfacscale.status(run_card))
         self.assertNotIn('fixed_fac_scale', run_card.user_set)
         self.assertNotIn('fixed_fac_scale2', run_card.user_set)    
+        self.assertNotIn('fixed_fact_scale', run_card.display_block)
+
+        f = io.StringIO()
+        run_card.write(output_file=f)
+        self.assertNotIn("True = fixed_fac_scale ", f.getvalue())
+        self.assertIn("False = fixed_fac_scale1", f.getvalue())
+        self.assertIn("True = fixed_fac_scale2", f.getvalue())
+
+        # check that if  'fixed_fact_scale' is set within display_block
+        # the mode is to keep the value of fixed_fac_scale1/2 within the card even if
+        # both are identical
+        run_card.display_block.append('fixed_fact_scale')
+        self.assertFalse(bannermod.fixedfacscale.status(run_card))
+        run_card.set('fixed_fac_scale', True, user=True)
+        self.assertFalse(bannermod.fixedfacscale.status(run_card)) 
+
+        f = io.StringIO()
+        run_card.write_include_file(None,output_file=f)
+        self.assertIn("fixed_fac_scale1 = .true.", f.getvalue())
+        self.assertIn("fixed_fac_scale2 = .true.", f.getvalue())
+
+        f = io.StringIO()
+        run_card.write(output_file=f)
+        self.assertNotIn("True = fixed_fac_scale ", f.getvalue())
+        self.assertIn("True = fixed_fac_scale1", f.getvalue())
+        self.assertIn("True = fixed_fac_scale2", f.getvalue())
+
+
+    def test_negative_iseed(self):
+        """Check that a negative iseed is preserved on disk across runs but
+        exported as its absolute value to the Fortran include file. This is
+        verified for both LO and NLO run cards, and for the
+        `reset_iseed_in_run_card` helper used at run time.
+        """
+        import madgraph.interface.common_run_interface as common_run
+
+        for run_card_class in (bannermod.RunCardLO, bannermod.RunCardNLO):
+            # 1. write_include_file must export abs(iseed)
+            run_card = run_card_class()
+            run_card.set('iseed', -42, user=True)
+            f = io.StringIO()
+            run_card.write_include_file(None, output_file=f)
+            content = f.getvalue()
+            self.assertIn("iseed = 42", content)
+            self.assertNotIn("iseed = -42", content)
+
+            # positive value is unchanged
+            run_card = run_card_class()
+            run_card.set('iseed', 7, user=True)
+            f = io.StringIO()
+            run_card.write_include_file(None, output_file=f)
+            self.assertIn("iseed = 7", content := f.getvalue())
+            self.assertNotIn("iseed = -7", content)
+
+            # 2. reset_iseed_in_run_card preserves negative iseed on disk
+            #    but resets a positive iseed to 0
+            me_dir = tempfile.mkdtemp(prefix='amc_iseed_')
+            os.mkdir(pjoin(me_dir, 'Cards'))
+            try:
+                # negative case: must NOT be reset to 0
+                run_card = run_card_class()
+                run_card.set('iseed', -42, user=True)
+                run_card.write(pjoin(me_dir, 'Cards', 'run_card.dat'))
+
+                class FakeCmd:
+                    pass
+                fake = FakeCmd()
+                fake.run_card = run_card
+                fake.me_dir = me_dir
+
+                common_run.CommonRunCmd.reset_iseed_in_run_card(fake)
+                self.assertEqual(run_card['iseed'], -42)
+                # also check the on-disk value
+                reloaded = bannermod.RunCard(pjoin(me_dir, 'Cards', 'run_card.dat'))
+                self.assertEqual(reloaded['iseed'], -42)
+
+                # positive case: must be reset to 0
+                run_card = run_card_class()
+                run_card.set('iseed', 7, user=True)
+                run_card.write(pjoin(me_dir, 'Cards', 'run_card.dat'))
+                fake.run_card = run_card
+                common_run.CommonRunCmd.reset_iseed_in_run_card(fake)
+                self.assertEqual(run_card['iseed'], 0)
+                reloaded = bannermod.RunCard(pjoin(me_dir, 'Cards', 'run_card.dat'))
+                self.assertEqual(reloaded['iseed'], 0)
+
+                # zero case: nothing happens, stays at zero
+                run_card = run_card_class()
+                run_card.set('iseed', 0, user=True)
+                run_card.write(pjoin(me_dir, 'Cards', 'run_card.dat'))
+                fake.run_card = run_card
+                common_run.CommonRunCmd.reset_iseed_in_run_card(fake)
+                self.assertEqual(run_card['iseed'], 0)
+            finally:
+                import shutil
+                shutil.rmtree(me_dir)
+
 
 MadLoopParam = bannermod.MadLoopParam
 class TestMadLoopParam(unittest.TestCase):
@@ -1197,7 +1309,7 @@ class TestMadLoopParam(unittest.TestCase):
         param1 = MadLoopParam(pjoin(MG5DIR,"Template", "loop_material","StandAlone",
                                       "Cards","MadLoopParams.dat"))
         
-        textio = StringIO.StringIO()
+        textio = io.StringIO()
         param1.write(textio)
         text=textio.getvalue()
         

@@ -23,8 +23,6 @@ import sys
 import logging
 import tempfile
 import time
-from six.moves import map
-
 logger = logging.getLogger('test_cmd')
 
 import tests.unit_tests.iolibs.test_file_writers as test_file_writers

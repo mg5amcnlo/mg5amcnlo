@@ -5,8 +5,8 @@ c gfortran -ffixed-line-length-132 -fno-automatic -I../SubProcesses/P0_<anydir> 
 c select_events select_events.f handling_lhe_events.f fill_MC_mshell.f
       implicit none
       integer maxevt,ifile,ofile,i,npart,nevmin,nevmax,nevmin0,nevmax0
-      integer IDBMUP(2),PDFGUP(2),PDFSUP(2),IDWTUP,NPRUP,LPRUP
-      double precision EBMUP(2),XSECUP,XERRUP,XMAXUP
+      integer IDBMUP(2),PDFGUP(2),PDFSUP(2),IDWTUP,NPRUP,LPRUP(100)
+      double precision EBMUP(2),XSECUP(100),XERRUP(100),XMAXUP(100)
       INTEGER MAXNUP
       PARAMETER (MAXNUP=500)
       INTEGER NUP,IDPRUP,IDUP(MAXNUP),ISTUP(MAXNUP),

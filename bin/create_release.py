@@ -31,9 +31,6 @@ following actions:
 
 from __future__ import absolute_import
 import sys
-from six.moves import range
-from six.moves import input
-
 if sys.version_info < (3, 7):
     sys.exit('MadGraph5_aMC@NLO works only with python 3.7 or later.\n\
                Please upgrate your version of python.')
@@ -49,7 +46,7 @@ import os.path as path
 import re
 import shutil
 import subprocess
-import six.moves.urllib.request, six.moves.urllib.parse, six.moves.urllib.error
+import urllib.request, urllib.parse, urllib.error
 
 from datetime import date
 
@@ -120,8 +117,11 @@ auto_update = True
 # check that we are in the correct branch (note this file does not handle LTS)
 p = subprocess.Popen("git branch --show-current", stdout=subprocess.PIPE, shell=True)
 MG_branch = p.stdout.read().decode().strip()
-if MG_branch not in  ['3.x']:
-    print("cannot create tarball with auto-update outside of the main branch, detected branch (%s)" % branch)
+if MG_branch == 'LTS_2':
+    print("no auto-update as long as not the main version")
+    auto_update = False
+elif MG_branch not in  ['3.x', 'LTS']:
+    print("cannot create tarball with auto-update outside of the main branch, detected branch (%s)" % MG_branch)
     answer = input('Do you want to continue anyway? (y/n)')
     if answer != 'y':
         exit()
@@ -181,9 +181,9 @@ if auto_update:
             ctx = ssl.create_default_context()
             ctx.check_hostname = False
             ctx.verify_mode = ssl.CERT_NONE
-            filetext = six.moves.urllib.request.urlopen('https://madgraph.mi.infn.it/mg5amc_build_nb', context=ctx)
+            filetext = urllib.request.urlopen('https://madgraph.mi.infn.it/mg5amc_build_nb', context=ctx)
         elif MG_branch == '3.x':
-            filetext = six.moves.urllib.request.urlopen('http://madgraph.phys.ucl.ac.be/mg5amc3_build_nb')
+            filetext = urllib.request.urlopen('http://madgraph.phys.ucl.ac.be/mg5amc3_build_nb')
         text = filetext.read().decode().split('\n')
         web_version = int(text[0].strip())
         if text[1]:
@@ -257,8 +257,8 @@ for data in glob.glob(path.join(filepath, 'bin', '*')):
         else:
             os.rename(data, data.replace('compile.py','.compile.py'))
 
-os.remove(path.join(filepath, 'README.developer'))
-shutil.move(path.join(filepath, 'README.release'), path.join(filepath, 'README'))
+#os.remove(path.join(filepath, 'README.developer'))
+#shutil.move(path.join(filepath, 'README.release'), path.join(filepath, 'README'))
 
 
 # 1. Add information for the auto-update
@@ -273,6 +273,7 @@ if rev_nb and auto_update:
         p = subprocess.call("git tag  'L%s' " % int(rev_nb), shell=True)
     elif MG_branch == '3.x':
         p = subprocess.call("git tag  'r%s' " % int(rev_nb), shell=True)
+if (rev_nb and auto_update) or MG_branch == "LTS_2":
     p = subprocess.call("git tag  'v%s' " % misc.get_pkg_info()['version'], shell=True)
     print('new tag added')
     answer = input('Do you want to push commit and tag? (y/n)')
@@ -343,9 +344,11 @@ rm -rf download-temp;
 """ % filepath
 os.system(install_str)
 
-collier_link = "http://collier.hepforge.org/collier-latest.tar.gz" 
+sys.path.append(pjoin(root_path, '..'))
+from HEPToolsInstallers.HEPToolInstaller import _HepTools
+collier_link = _HepTools['collier']['tarball'][1] % _HepTools['collier']
+ninja_link = _HepTools['ninja']['tarball'][1] % _HepTools['ninja']
 misc.wget(collier_link, os.path.join(filepath, 'vendor', 'collier.tar.gz'))
-ninja_link = "https://bitbucket.org/peraro/ninja/downloads/ninja-latest.tar.gz"
 misc.wget(ninja_link, os.path.join(filepath, 'vendor', 'ninja.tar.gz'))
 
 # Add the tarball for SMWidth
@@ -376,7 +379,6 @@ except:
     logging.warning("Call to gpg to create signature file failed. " +\
                     "Please install and run\n" + \
                     "gpg --armor --sign --detach-sig " + filename)
-
 
 
 logging.info("Running tests on directory %s", filepath)

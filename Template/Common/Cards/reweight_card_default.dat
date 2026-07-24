@@ -19,8 +19,16 @@
 
 change mode NLO    # Define type of Reweighting. For LO sample this command
                    # has no effect since only "LO" mode is allowed.
+
+#uncomment if you do not want to overwrite the reweight file of Sudakov in rw_me
+#change rwgt_dir /PATH_MG5_BRANCH/NAME_FOLDER
+
+#uncomment if you want to use Sudakov Reweight
+#change include_sudakov True
+
                    
 launch
+
 #  SPECIFY A PATH OR USE THE SET COMMAND LIKE THIS:
 # set sminputs 1 130 # modify 1/alpha_EW
 

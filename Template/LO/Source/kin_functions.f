@@ -110,6 +110,7 @@ c
 c     Global
 c
       include 'maxparticles.inc'
+      include 'vector.inc'
       include 'run.inc'
 
       double precision cm_rap
@@ -150,6 +151,7 @@ c
 c     Global
 c
       include 'maxparticles.inc'
+      include 'vector.inc'
       include 'run.inc'
 c-----
 c  Begin Code
@@ -247,6 +249,7 @@ c     Local
 c
 
       include 'maxparticles.inc'
+      include 'vector.inc'
       include 'run.inc'
       include 'cuts.inc'
 
@@ -356,6 +359,7 @@ c     Local
 c
 
       include 'maxparticles.inc'
+      include 'vector.inc'
       include 'run.inc'
 
       double precision pt1,pt2,ptm1,eta1,eta2,phi1,phi2,p1a,p2a,costh
@@ -409,6 +413,7 @@ c     Local
 c
       double precision pm1
       include 'maxparticles.inc'
+      include 'vector.inc'
       include 'run.inc'
 
 c-----
