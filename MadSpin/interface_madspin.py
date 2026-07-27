@@ -4260,6 +4260,13 @@ class MadSpinInterface(extended_cmd.Cmd):
         dec_diag = 1.0
         prod_color = 1
         prod_denominators = 1
+        # GET_INTER returns each density matrix with the standalone matrix
+        # element's IDEN division already applied.  The density
+        # contraction below predates applies its own normalization, 
+        # so restore one IDEN factor per matrix before
+        # using that denominator.
+        density_iden_prod = iden_p * sym_factor_prod_ident
+        density_iden_decay = 1
 
         density_prod = self.get_density(production,
                                         position,
@@ -4340,10 +4347,9 @@ class MadSpinInterface(extended_cmd.Cmd):
                 else:
                     density_dec = density_dec.tensor_product(density_dec_tmp)
 
-                # keep your normalization updates
                 if MEdenom_decay is None:
                     dec_diag *= density_dec_tmp.trace().real
-                dec_diag /= (color * spin)
+                density_iden_decay *= color * spin
                 prod_color *= color
                 D = complex(0, mass * width)
                 prod_denominators *= (D * D.conjugate())
@@ -4355,6 +4361,7 @@ class MadSpinInterface(extended_cmd.Cmd):
         # Contract production and decay density matrices
         # ------------------------------------------------------------------
         me = density_dec.scalar_multiplication(density_prod)
+        me *= density_iden_prod * density_iden_decay
 
         # ------------------------------------------------------------------
         # include production identical-final-state symmetry factor
@@ -4368,7 +4375,6 @@ class MadSpinInterface(extended_cmd.Cmd):
             prod_diag = density_prod.trace().real 
         else: 
             prod_diag = MEdenom_prod
-        prod_diag /= (iden_p * sym_factor_prod_ident)
         if MEdenom_decay is not None:
             dec_diag *= MEdenom_decay
         return me, density_prod, prod_diag, dec_diag, jac_reshuffle
