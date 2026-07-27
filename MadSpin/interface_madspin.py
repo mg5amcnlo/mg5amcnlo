@@ -260,6 +260,42 @@ class _ChainedEvents(object):
         return self.paths[0]
 
 
+class _LimitedEvents(object):
+    """Reader that yields at most ``limit`` events from ``evtfile`` then raises
+    StopIteration, as if the file were that much shorter.
+
+    Used to make a channel's *owner* worker (see MadSpinInterface._channel_owner)
+    run its slice of the decay pool out ~10% before the other workers do. The
+    owner is the only worker allowed to (re)generate that channel, so having it
+    reach the refill point first means the pool is usually ready by the time the
+    others need it -- they rarely have to block. Only the attributes
+    get_decay_from_file reads (``cross``, ``name``) are proxied."""
+
+    def __init__(self, evtfile, limit):
+        self.f = evtfile
+        self.limit = max(0, int(limit))
+        self._n = 0
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        if self._n >= self.limit:
+            raise StopIteration
+        ev = next(self.f)
+        self._n += 1
+        return ev
+    next = __next__
+
+    @property
+    def cross(self):
+        return self.f.cross
+
+    @property
+    def name(self):
+        return self.f.name
+
+
 class MadSpinInterface(extended_cmd.Cmd):
     """Basic interface for madspin"""
 
@@ -2355,70 +2391,275 @@ class MadSpinInterface(extended_cmd.Cmd):
                             % (path, self._shard_tag))
         return path
 
-    def _worker_refill(self, pdg, decay_file_nb, needed):
-        """Centralised, cross-process-safe decay-event refill for the forked
-        unweighting workers. Returns the path of the pool to (re)open.
+    @staticmethod
+    def _count_lhe_events(path):
+        """Number of ``<event`` records in an LHE file (plain or gzip). Used to
+        size the owner's ~10% shortfall -- a cheap line scan, no parsing."""
+        try:
+            if path.endswith('.gz'):
+                import gzip
+                opener = lambda p: gzip.open(p, 'rt', errors='ignore')
+            else:
+                opener = lambda p: open(p, 'r', errors='ignore')
+            n = 0
+            with opener(path) as fh:
+                for line in fh:
+                    if '<event' in line:
+                        n += 1
+            return n
+        except (IOError, OSError):
+            return 0
 
-        Decay-event generation is not fork-safe and must never run
-        concurrently. So the first worker to run out of decay events takes an
-        exclusive lock and generates ONE pool big enough for *every* worker
-        (``needed`` is already scaled by nb_core by the caller); any other
-        worker that runs out meanwhile simply blocks on that lock and then picks
-        up the pool the first one produced -- the generation counter is
-        re-checked under the lock, so nobody ever regenerates needlessly.
+    def _channel_owner(self, pdg, decay_file_nb):
+        """The single worker that is the sole (re)generator of this decay
+        channel. Channels are numbered in a fixed sorted order and dealt out to
+        the workers round-robin, so the owner is a deterministic function of the
+        channel alone -- never of run-time timing. Fixing the generator this way
+        is what makes the refilled pool (and thus the decayed sample)
+        reproducible: contrast the old "whoever ran out first generates", whose
+        winner was a lock race."""
+        keys = getattr(self, '_channel_keys', None) or []
+        try:
+            idx = keys.index((pdg, decay_file_nb))
+        except ValueError:
+            idx = 0
+        return idx % max(1, int(self._shard_nb_core))
 
-        Each generation writes to its own run/pool file, so the pool the other
-        workers are still reading is never overwritten underneath them.
-        """
-        import fcntl
-        decay_dir = pjoin(self.path_me,
-                          "decay_%s_%s" % (str(pdg).replace("-", "x"), decay_file_nb))
-        key = (pdg, decay_file_nb)
-        my_gen = self._pool_gen.get(key, 0)
+    def _open_refill_slice(self, decay_dir, gen, owner):
+        """This worker's reader over refill pool ``gen``; the owner's slice is
+        cut ~10% short (see _LimitedEvents) so the owner runs out first."""
+        path = self._refill_pool_path(decay_dir, gen)
+        reader = lhe_parser.EventFile(path)
+        if self._shard_tag == owner:
+            frac = float(getattr(self, '_owner_undersize', 0.10) or 0.0)
+            if frac > 0:
+                n = self._count_lhe_events(path)
+                reader = _LimitedEvents(reader,
+                                        int(math.floor((1.0 - frac) * n)))
+        return reader
+
+    @staticmethod
+    def _published_gen(decay_dir):
+        """Highest refill generation published on disk for this channel (0 if
+        none). The single source of truth both the owner and the waiters read."""
         gen_file = pjoin(decay_dir, 'ms_refill.gen')
+        if not os.path.exists(gen_file):
+            return 0
+        try:
+            return int(open(gen_file).read().strip())
+        except (ValueError, IOError):
+            return 0
 
-        logger.debug("MadSpin worker %s: waiting for the refill lock of pdg %s",
-                     self._shard_tag, pdg)
+    def _owner_generate(self, pdg, decay_file_nb, target_gen, needed):
+        """Generate this channel's pool up to ``target_gen`` under the channel
+        lock, then publish the gen counter. Idempotent: if the gen is already on
+        disk the while-loop is skipped.
+
+        The madevent seed is keyed on the channel and the gen number with a base
+        shared by every worker, so gen N gets the SAME seed no matter who
+        generates it. The size follows the caller's efficiency-based ``needed``.
+        In normal operation only the fixed owner calls this (its ``needed`` is
+        deterministic, so the pool is reproducible); the deadlock fail-safe in
+        _worker_refill may also call it from a non-owner, whose ``needed`` differs
+        -- that (rare) refill is intentionally not guaranteed reproducible."""
+        import fcntl
+        decay_dir = self._decay_dir(self.path_me, pdg, decay_file_nb)
+        gen_file = pjoin(decay_dir, 'ms_refill.gen')
         with open(pjoin(decay_dir, 'ms_refill.lock'), 'w') as lock:
-            fcntl.flock(lock, fcntl.LOCK_EX)   # the other workers queue up here
+            fcntl.flock(lock, fcntl.LOCK_EX)
             try:
-                current = 0
-                if os.path.exists(gen_file):
+                current = self._published_gen(decay_dir)
+                while current < target_gen:
+                    new_gen = current + 1
+                    seed_base = getattr(self, '_refill_seed_base', None)
+                    if seed_base is None:
+                        seed_base = int(self.seed) if self.seed else 0
+                    # sign-aware pdg term so a particle and its antiparticle
+                    # channel do not collide onto the same iseed
+                    det_seed = 1 + ((int(seed_base)
+                                     + 1000003 * ((int(pdg) % 998244353) + 1)
+                                     + 101 * (int(decay_file_nb) + 1)
+                                     + 100003 * new_gen) % (30081 * 30081))
+                    self.seed = det_seed
+                    self.options['seed'] = det_seed
+                    det_needed = min(200000, max(1000, int(math.ceil(
+                        needed / float(self._shard_nb_core))))) \
+                        * self._shard_nb_core
+                    logger.info("MadSpin worker %s OWNS pdg %s: generating gen %s "
+                                "(%s events, seed %s) for all %s workers",
+                                self._shard_tag, pdg, new_gen, det_needed,
+                                det_seed, self._shard_nb_core)
+                    # The generation runs a full madevent IN THIS PROCESS and
+                    # reseeds / consumes Python's global ``random`` (combine +
+                    # unweight). Snapshot and restore it so the generation never
+                    # perturbs this worker's accept/reject stream. Use a *fresh*
+                    # MadEventCmdShell (never the fork-inherited one); it writes a
+                    # run of its own and splits one file per worker.
+                    rng_state = random.getstate()
+                    self.me_int = {}
+                    stag, self._shard_tag = self._shard_tag, None
                     try:
-                        current = int(open(gen_file).read().strip())
-                    except (ValueError, IOError):
-                        current = 0
-                if current > my_gen:
-                    # somebody refilled while we were waiting: just use it
-                    logger.info("MadSpin worker %s: reusing the pool (gen %s) that "
-                                "another worker generated for pdg %s",
-                                self._shard_tag, current, pdg)
-                    self._pool_gen[key] = current
-                    return self._refill_pool_path(decay_dir, current)
-
-                new_gen = current + 1
-                logger.info("MadSpin worker %s: decay pool for pdg %s exhausted, "
-                            "generating %s events for all %s workers",
-                            self._shard_tag, pdg, needed, self._shard_nb_core)
-                # Use a *fresh* MadEventCmdShell: never reuse the one inherited
-                # from the parent through fork. The generation writes to a run of
-                # its own (so the pool the other workers still read stays intact)
-                # and splits its output one file per worker.
-                self.me_int = {}
-                shard_tag, self._shard_tag = self._shard_tag, None
-                try:
-                    self._regenerate_events(pdg, decay_file_nb, needed,
-                                            'ms_refill_%d' % new_gen)
-                finally:
-                    self._shard_tag = shard_tag
-
-                # publish only once every file is complete on disk
-                with open(gen_file, 'w') as fp:
-                    fp.write('%d\n' % new_gen)
-                self._pool_gen[key] = new_gen
-                return self._refill_pool_path(decay_dir, new_gen)
+                        self._regenerate_events(pdg, decay_file_nb, det_needed,
+                                                'ms_refill_%d' % new_gen)
+                    finally:
+                        self._shard_tag = stag
+                        random.setstate(rng_state)
+                    # publish only once every file is complete on disk
+                    with open(gen_file, 'w') as fp:
+                        fp.write('%d\n' % new_gen)
+                    current = new_gen
             finally:
                 fcntl.flock(lock, fcntl.LOCK_UN)
+
+    # ---- cross-process worker status, for the deadlock fail-safe -------------
+    # Each forked worker publishes a one-line status file others can read:
+    #   'R'          running (making progress)
+    #   'G'          generating a decay pool
+    #   'W <id>'     blocked, waiting for worker <id> to generate a pool
+    # so a blocked owner can walk the wait-for chain and spot a cycle.
+    def _status_path(self, worker_id):
+        return pjoin(self.path_me, 'ms_wstatus_%d' % worker_id)
+
+    def _clear_worker_status(self, nb_core):
+        """Remove stale per-worker status files before forking a phase, so a
+        'D'(one) left by the previous phase's worker of the same id can't be
+        misread as this phase's worker being done. Called by the parent."""
+        for wid in range(int(nb_core)):
+            try:
+                os.remove(self._status_path(wid))
+            except OSError:
+                pass
+
+    def _set_status(self, state, target=None):
+        tag = getattr(self, '_shard_tag', None)
+        if tag is None:
+            return
+        try:
+            with open(self._status_path(tag), 'w') as f:
+                f.write(state if target is None else '%s %d' % (state, target))
+        except (IOError, OSError):
+            pass
+
+    def _read_worker_status(self, worker_id):
+        """(state, [target]) tuple for ``worker_id``, or None if unreadable."""
+        try:
+            parts = open(self._status_path(worker_id)).read().split()
+        except (IOError, OSError):
+            return None
+        if not parts:
+            return None
+        if parts[0] == 'W' and len(parts) >= 2:
+            try:
+                return ('W', int(parts[1]))
+            except ValueError:
+                return None
+        return (parts[0],)
+
+    def _wait_cycle_to_self(self, first_target):
+        """True if the wait-for chain that starts at ``first_target`` leads back
+        to this worker -- a deadlock cycle only I can break. A worker on the path
+        that is running or generating (not 'W') means the chain is making
+        progress, so there is no deadlock through it."""
+        cur = first_target
+        for _ in range(int(self._shard_nb_core) + 1):
+            if cur == self._shard_tag:
+                return True
+            st = self._read_worker_status(cur)
+            if not st or st[0] != 'W':
+                return False
+            cur = st[1]
+        return False
+
+    def _worker_refill(self, pdg, decay_file_nb, needed):
+        """Owner-based decay-event refill for the forked workers. Returns the
+        reader this worker should continue from.
+
+        Each channel has one deterministic OWNER worker (:meth:`_channel_owner`).
+        In normal operation only the owner (re)generates that channel's pool;
+        any other worker that runs out BLOCKS until the owner has published the
+        generation it needs, then opens its own slice. Because the generator is
+        fixed rather than "whoever ran out first", the regenerated pool -- and
+        hence the decayed sample -- is identical from one run to the next. The
+        owner's slice is deliberately ~10% short (:meth:`_open_refill_slice`) so
+        it reaches the refill point first and the others rarely wait.
+
+        Deadlock fail-safe: while blocked, a worker publishes that it is waiting
+        for the owner and walks the wait-for chain (:meth:`_wait_cycle_to_self`).
+        If the chain loops back to itself -- a circular wait no owner can clear
+        on its own -- the worker generates the channel itself to break it. That
+        abandons the fixed-owner rule for this one refill, so its size (and thus
+        the sample) is not guaranteed reproducible -- an accepted trade to avoid
+        a hang. Generation runs on all cores."""
+        decay_dir = self._decay_dir(self.path_me, pdg, decay_file_nb)
+        key = (pdg, decay_file_nb)
+        my_gen = self._pool_gen.get(key, 0)
+        target_gen = my_gen + 1
+        owner = self._channel_owner(pdg, decay_file_nb)
+
+        if self._shard_tag == owner:
+            self._set_status('G')
+            try:
+                self._owner_generate(pdg, decay_file_nb, target_gen, needed)
+            finally:
+                self._set_status('R')
+            self._pool_gen[key] = target_gen
+            return self._open_refill_slice(decay_dir, target_gen, owner)
+
+        # Not my channel: wait for the owner, advertising who I wait for so the
+        # deadlock detection can see me. A cycle back to myself has to persist a
+        # few consecutive checks (statuses update asynchronously) before I act,
+        # to avoid tripping on a transient state.
+        timeout = float(os.environ.get('MADSPIN_REFILL_WAIT', '3600'))
+        try:
+            need_hits = int(os.environ.get('MADSPIN_DEADLOCK_HITS', '10'))
+        except (TypeError, ValueError):
+            need_hits = 10
+        self._set_status('W', owner)
+        waited = 0.0
+        cycle_hits = 0
+        try:
+            while self._published_gen(decay_dir) < target_gen:
+                reason = None
+                if self._read_worker_status(owner) == ('D',):
+                    # The owner has finished (or died) without producing this
+                    # generation and never will -- e.g. in the max-weight scan an
+                    # owner may exhaust its short probe slice before it ever runs
+                    # its owned channel dry. I must generate it myself.
+                    reason = ("owner %s is DONE but never produced" % owner)
+                elif self._wait_cycle_to_self(owner):
+                    cycle_hits += 1
+                    if cycle_hits >= need_hits:
+                        reason = ("deadlock wait-cycle (chain from owner %s "
+                                  "loops back to me)" % owner)
+                else:
+                    cycle_hits = 0
+                if reason is not None:
+                    # Fail-safe: break the stall by generating the channel here,
+                    # abandoning the fixed-owner rule. The size is this worker's
+                    # own (efficiency-based), so this one refill's reproducibility
+                    # is not guaranteed -- an accepted trade against a hang.
+                    logger.warning(
+                        "MadSpin worker %s: %s; generating gen %s of pdg %s "
+                        "(decay file %s) myself. Seed reproducibility is NOT "
+                        "guaranteed for this refill.", self._shard_tag, reason,
+                        target_gen, pdg, decay_file_nb)
+                    self._set_status('G')
+                    self._owner_generate(pdg, decay_file_nb, target_gen, needed)
+                    break
+                time.sleep(0.1)
+                waited += 0.1
+                if waited > timeout:
+                    raise Exception(
+                        "MadSpin worker %s waited %.0fs for owner worker %s to "
+                        "generate gen %s of channel pdg %s (decay file %s) and "
+                        "gave up. Raise the owner undersize fraction "
+                        "(MADSPIN_OWNER_UNDERSIZE) or lower nb_core."
+                        % (self._shard_tag, waited, owner, target_gen, pdg,
+                           decay_file_nb))
+        finally:
+            self._set_status('R')
+        self._pool_gen[key] = target_gen
+        return self._open_refill_slice(decay_dir, target_gen, owner)
 
     def _unweight_range(self, prod_source, evt_decayfile, output_lhe, ctx):
         """Decay + accept/reject over every production event in ``prod_source``,
@@ -2789,18 +3030,48 @@ class MadSpinInterface(extended_cmd.Cmd):
             local[pdg] = {}
             for file_nb, evtfile in channels.items():
                 paths = getattr(evtfile, 'paths', None)
-                if paths and len(paths) == nb_core:
-                    local[pdg][file_nb] = lhe_parser.EventFile(paths[shard_id])
+                own_file = bool(paths and len(paths) == nb_core)
+                if own_file:
+                    reader = lhe_parser.EventFile(paths[shard_id])
                 elif paths:
                     # split, but not into exactly nb_core files: stride the WHOLE
                     # chained pool. ``evtfile.name`` is only its first file, so
                     # striding that would strand every other file's events.
-                    local[pdg][file_nb] = _StridedEvents(
-                        _ChainedEvents(paths), shard_id, nb_core)
+                    reader = _StridedEvents(_ChainedEvents(paths), shard_id, nb_core)
                 else:
                     fresh = lhe_parser.EventFile(evtfile.name)
-                    local[pdg][file_nb] = _StridedEvents(fresh, shard_id, nb_core)
+                    reader = _StridedEvents(fresh, shard_id, nb_core)
+                # The worker that OWNS this channel reads its slice ~10% short so
+                # it runs out (and, being the sole generator, regenerates) before
+                # the others do -- keeping their wait for the refill minimal.
+                # Only meaningful on the own-file fast path where the count of
+                # this worker's slice is well defined.
+                if own_file and self._channel_owner(pdg, file_nb) == shard_id:
+                    frac = float(getattr(self, '_owner_undersize', 0.10) or 0.0)
+                    if frac > 0:
+                        n = self._count_lhe_events(paths[shard_id])
+                        reader = _LimitedEvents(reader,
+                                                int(math.floor((1.0 - frac) * n)))
+                local[pdg][file_nb] = reader
         return local
+
+    def _init_owner_refill(self, evt_decayfile, seed_base):
+        """Per-worker set-up for the owner-based refill. Must run in every forked
+        worker (unweighting and both max-weight scans) before its decay pools are
+        opened, so :meth:`_channel_owner` sees the same channel ordering
+        everywhere. Sets: the fixed sorted channel list, the shard-independent
+        seed base for the deterministic generation seed, and the owner undersize
+        fraction (``MADSPIN_OWNER_UNDERSIZE``, default 0.10). Also publishes the
+        initial 'running' worker status for the deadlock detection."""
+        self._channel_keys = sorted(
+            (pdg, fnb) for pdg, chans in evt_decayfile.items() for fnb in chans)
+        self._refill_seed_base = int(seed_base) if seed_base else 0
+        try:
+            self._owner_undersize = float(
+                os.environ.get('MADSPIN_OWNER_UNDERSIZE', '0.10'))
+        except (TypeError, ValueError):
+            self._owner_undersize = 0.10
+        self._set_status('R')
 
     def _unweight_shard_entry(self, shard_id, nb_core, shard_path, out_path,
                               evt_decayfile, ctx, stats_path):
@@ -2822,6 +3093,7 @@ class MadSpinInterface(extended_cmd.Cmd):
             self.seed = self.options['seed']
             self.efficiency = 1.0
             self.branching_ratio = ctx['branching_ratio']
+            self._init_owner_refill(evt_decayfile, ctx['base_seed'])
 
             prod = lhe_parser.EventFile(shard_path)
             if self.options['fixed_order']:
@@ -2845,6 +3117,11 @@ class MadSpinInterface(extended_cmd.Cmd):
                     json.dump({'error': str(exc), 'tb': traceback.format_exc()}, f)
             except Exception:
                 pass
+        finally:
+            # tell any worker still blocked on a channel I own that I am gone, so
+            # it stops waiting for a generation that will never come and produces
+            # it itself (deadlock fail-safe).
+            self._set_status('D')
 
     def _run_onshell_parallel(self, orig_lhe, nb_event, nb_core, evt_decayfile,
                               base_out, ctx):
@@ -2876,6 +3153,7 @@ class MadSpinInterface(extended_cmd.Cmd):
                                                    nb_try=0, nb_loose_skip=0)])
             return
 
+        self._clear_worker_status(nb_core)   # fresh status board for this phase
         mpctx = mp.get_context('fork')
         procs, frag_paths, stats_paths = [], [], []
         for sid in range(nb_core):
@@ -3082,16 +3360,16 @@ class MadSpinInterface(extended_cmd.Cmd):
                 needed += int(math.ceil(math.sqrt(needed)))
                 needed = min(200000, max(needed, 1000))
                 if getattr(self, '_shard_tag', None) is not None:
-                    # Parallel unweighting: generation is not fork-safe and
-                    # must not run concurrently, so one worker generates a
-                    # pool for everybody (nb_core * nb_remaining / eff) while
-                    # the others block. _worker_refill returns the path of
-                    # this worker's own file of that pool.
-                    pool = self._worker_refill(
-                        particle.pdg, decay_file_nb,
-                        needed * self._shard_nb_core)
+                    # Parallel unweighting: generation is not fork-safe and must
+                    # not run concurrently. Each channel has a fixed OWNER worker
+                    # that generates a pool for everybody (nb_core * remaining /
+                    # eff); the others block until it is ready. _worker_refill
+                    # returns this worker's own reader over that pool (the owner's
+                    # is ~10% short so it runs out -- and regenerates -- first).
                     evt_decayfile[particle.pdg][decay_file_nb] = \
-                        lhe_parser.EventFile(pool)
+                        self._worker_refill(
+                            particle.pdg, decay_file_nb,
+                            needed * self._shard_nb_core)
                 else:
                     # serial: _regenerate_events already returns the reader
                     # over the events it produced
@@ -3212,6 +3490,7 @@ class MadSpinInterface(extended_cmd.Cmd):
             self._shard_tag = shard_id
             self._shard_nb_core = nb_core
             self._pool_gen = {}
+            self._init_owner_refill(evt_decayfile, self.seed)
             local_pool = self._reopen_decay_pool(evt_decayfile, shard_id, nb_core)
             per_event = self._scan_maxwgt_range(events, start, stop, local_pool,
                                                 nevents, nb_ps_point)
@@ -3225,6 +3504,8 @@ class MadSpinInterface(extended_cmd.Cmd):
                                'tb': traceback.format_exc()}, f)
             except Exception:
                 pass
+        finally:
+            self._set_status('D')   # release any worker blocked on a channel I own
 
     def _joint_maxwgt_range(self, events, start, stop, evt_decayfile, decay_dict,
                             nevents, nb_ps_point):
@@ -3292,6 +3573,7 @@ class MadSpinInterface(extended_cmd.Cmd):
             self._shard_tag = shard_id
             self._shard_nb_core = nb_core
             self._pool_gen = {}
+            self._init_owner_refill(evt_decayfile, self.seed)
             local_pool = self._reopen_decay_pool(evt_decayfile, shard_id, nb_core)
             per_event = self._joint_maxwgt_range(events, start, stop, local_pool,
                                                  decay_dict, nevents, nb_ps_point)
@@ -3305,6 +3587,8 @@ class MadSpinInterface(extended_cmd.Cmd):
                                'tb': traceback.format_exc()}, f)
             except Exception:
                 pass
+        finally:
+            self._set_status('D')   # release any worker blocked on a channel I own
 
     def _scan_maxwgt_parallel(self, orig_lhe, events, evt_decayfile, nb_core,
                               shard_entry, extra):
@@ -3332,6 +3616,7 @@ class MadSpinInterface(extended_cmd.Cmd):
         # Trailing empty shards are simply not launched (their files go unused by
         # the scan, which is fine -- the pool is generated uniformly).
 
+        self._clear_worker_status(nb_core)   # fresh status board for this phase
         mpctx = mp.get_context('fork')
         procs, out_paths = [], []
         for sid, (start, stop) in enumerate(ranges):
