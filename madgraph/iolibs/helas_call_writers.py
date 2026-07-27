@@ -1114,15 +1114,21 @@ class FortranUFOHelasCallWriter(UFOHelasCallWriter):
         if not call:
             return call
         prefix = self._flavor_mask_prefix(amplitude, 'amp')
+        if self.unrolhel:
+            # The amplitude fills the shared SCRATCH buffer, then a DO loop
+            # remaps SCRATCH into AMP over all NCOMB combinations.  If a
+            # diagram's runtime cartesian product is smaller than NCOMB (a
+            # mother wavefunction flavor-filtered to %N=0, or an early return),
+            # only part of SCRATCH is written but the remap reads all NCOMB
+            # entries -- pulling stale values from a previous diagram or call
+            # into AMP (correct only on the first, zero-initialised evaluation).
+            # Zero SCRATCH first so unfilled slots contribute nothing.
+            call = '      SCRATCH(:) = (0D0,0D0)\n' + call
+            if prefix:
+                return '%sTHEN\n%s\n      ENDIF' % (prefix, call)
+            return call
         if not prefix:
             return call
-        if self.unrolhel:
-            # In unrolhel the amplitude "call" is a multi-line block (CALL into
-            # SCRATCH followed by a remap of SCRATCH into AMP). A plain
-            # statement prefix would guard only the CALL and let the remap copy
-            # garbage SCRATCH into AMP. Guard the whole block instead; a masked
-            # amplitude then leaves the (pre-zeroed) AMP column at zero.
-            return '%sTHEN\n%s\n      ENDIF' % (prefix, call)
         return prefix + call
         
 

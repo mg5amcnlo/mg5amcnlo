@@ -52,10 +52,10 @@ def _sanitize_process_name(process):
 
 
 def unrolhel_consistency_test_factory(process, model='sm', tolerance=1e-9,
-                                      unrol_opts=''):
+                                      unrol_opts='', defines=()):
     def test(self):
         self.check_process(process, model=model, tolerance=tolerance,
-                           unrol_opts=unrol_opts)
+                           unrol_opts=unrol_opts, defines=defines)
     test.__name__ = 'test_%s' % _sanitize_process_name(process)
     test.__doc__ = 'Check --unrolhel and standard standalone |M|^2 agree for %s.' % process
     return test
@@ -87,10 +87,13 @@ class StandaloneUnrolhelConsistency(unittest.TestCase):
     def do(self, line):
         self.cmd.exec_cmd(line)
 
-    def check_process(self, process, model='sm', tolerance=1e-9, unrol_opts=''):
+    def check_process(self, process, model='sm', tolerance=1e-9, unrol_opts='',
+                      defines=()):
         self.do('set automatic_html_opening False')
         self.do('set group_subprocesses False')
         self.do('import model %s' % model)
+        for definition in defines:
+            self.do('define %s' % definition)
         self.do('generate %s' % process)
         self.do('output standalone %s -f' % self.std_dir)
         self.do('output standalone %s --unrolhel=True %s -f'
@@ -219,8 +222,15 @@ class TestStandaloneUnrolhelConsistency(StandaloneUnrolhelConsistency):
     # wavefunction chain -- exercises the good-helicity warmup/masking and the
     # per-wavefunction cartesian indexing at scale, well beyond the 2 -> 4 cases
     # above.  Single-flavor (no merge), so it must agree bit-for-bit.
-    # NOTE: the *merged*-flavor 2 -> 5 case (e.g. q q > w+ w- q q g with a
-    # multi-flavor q) currently disagrees with the standard standalone by ~1-4%;
-    # that is a separate, pre-existing bug and is intentionally NOT covered here.
     test_unrolhel_uu_wpwmuug = unrolhel_consistency_test_factory(
         'u u > w+ w- u u g', model='sm')
+
+    # merged-flavor 2 -> 5: regression test for the shared-SCRATCH staleness bug.
+    # When a diagram's runtime cartesian product shrinks (a mother wavefunction
+    # flavor-filtered to %N=0), only part of SCRATCH was written but the
+    # SCRATCH->AMP remap read all NCOMB entries, leaking stale values from a
+    # previous diagram/call into AMP.  The result was correct only on the first
+    # (zero-initialised) evaluation and wrong (up to ~4x) afterwards, so the
+    # per-flavor loop in check_sa (which re-evaluates many times) exposes it.
+    test_unrolhel_qq_wpwmqqg = unrolhel_consistency_test_factory(
+        'q q > w+ w- q q g', model='sm', defines=['q = u d u~ d~'])
