@@ -704,7 +704,7 @@ DO I=1,NLOOPFLOWS
 ## if(not LoopInduced){
   DO J=1,NBORNFLOWS
 ## } else {
-  DO J=1,NLOOPFLOWS
+  DO J=I,NLOOPFLOWS
 ## }
     COLOR_COEF=DCMPLX(LoopColorFlowMatrix(I,J)%%Num/DBLE(ABS(LoopColorFlowMatrix(I,J)%%Denom)),0.0d0)
     IF (LoopColorFlowMatrix(I,J)%%Denom.LT.0) COLOR_COEF=COLOR_COEF*IMAG1
@@ -725,21 +725,19 @@ C Same for contributions of split order index N by the Born amps
 ## }
          ISQSO = %(proc_prefix)sML5SQSOINDEX(M,N)
 ## if(LoopInduced){
-C We force DOUBLEFACT=1 and make the loop over J to start to 1 indead of I. It could be improved by changing the formulae of TEMP(I), taking into account that the 2 JAMP are not identical
-c        IF(J.ne.I) THEN
-c          DOUBLEFACT=2 
-c        ELSEIF (M.ne.N) THEN
-c          DOUBLEFACT=2
-c        ELSE
-c          DOUBLEFACT=1
-c        ENDIF
-      DOUBLEFACT=1
-C I have removed the conversion to real because JAMPL1 and JAMPL2 are now different. The conversion to dble is done later in COMPUTE_RES_FROM_JAMP if we only want the matrix element
-        TEMP(1) = DOUBLEFACT*HEL_MULT*(COLOR_COEF*(JAMPL1(1,I,M)*DCONJG(JAMPL2(1,J,N))))
+        IF(J.ne.I) THEN
+          DOUBLEFACT=2
+        ELSEIF (M.ne.N) THEN
+          DOUBLEFACT=2
+        ELSE
+          DOUBLEFACT=1
+        ENDIF
+C The conversion to real has been removed because JAMPL1 and JAMPL2 are now different. The conversion to dble is done later in COMPUTE_RES_FROM_JAMP if we only want the matrix element
+        TEMP(1) = DOUBLEFACT*HEL_MULT*(COLOR_COEF*(JAMPL1(1,I,M)*DCONJG(JAMPL2(1,J,N)) + JAMPL1(1,J,M)*DCONJG(JAMPL2(1,I,N))))
 C Computing the quantities below is not strictly necessary since the result should be finite
 C It is however a good cross-check.
-        TEMP(2) = DOUBLEFACT*HEL_MULT*(COLOR_COEF*(JAMPL1(2,I,M)*DCONJG(JAMPL2(1,J,N)) + JAMPL1(1,I,M)*DCONJG(JAMPL2(2,J,N))))
-        TEMP(3) = DOUBLEFACT*HEL_MULT*(COLOR_COEF*(JAMPL1(3,I,M)*DCONJG(JAMPL2(1,J,N)) + JAMPL1(1,I,M)*DCONJG(JAMPL2(3,J,N))+JAMPL1(2,I,M)*DCONJG(JAMPL2(2,J,N))))
+        TEMP(2) = DOUBLEFACT*HEL_MULT*(COLOR_COEF*(JAMPL1(2,I,M)*DCONJG(JAMPL2(1,J,N))+JAMPL1(2,J,M)*DCONJG(JAMPL2(1,I,N)) + JAMPL1(1,I,M)*DCONJG(JAMPL2(2,J,N))+JAMPL1(1,J,M)*DCONJG(JAMPL2(2,I,N))))
+        TEMP(3) = DOUBLEFACT*HEL_MULT*(COLOR_COEF*(JAMPL1(3,I,M)*DCONJG(JAMPL2(1,J,N))+JAMPL1(3,J,M)*DCONJG(JAMPL2(1,I,N)) + JAMPL1(1,I,M)*DCONJG(JAMPL2(3,J,N))+JAMPL1(1,J,M)*DCONJG(JAMPL2(3,I,N)) + JAMPL1(2,I,M)*DCONJG(JAMPL2(2,J,N))+JAMPL1(2,J,M)*DCONJG(JAMPL2(2,I,N))))
 ## if(MadEventOutput) {
         DO config_i=1,nconfigs
           DO K=1,3
