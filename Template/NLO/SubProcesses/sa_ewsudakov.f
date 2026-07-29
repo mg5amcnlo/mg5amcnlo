@@ -18,7 +18,7 @@ c**************************************************************************
       enddo
 
       call cpu_time(t0)
-      call ewsudakov(p, gs, res)
+      call ewsudakov_f77(p, gs, res)
       call cpu_time(t1)
       write(*,*) "RES", res
       write(*,*) "TIME", t1-t0
