@@ -31,6 +31,7 @@ C
       REAL*8 SQRTS,MATELEM           ! sqrt(s)= center of mass energy 
       REAL*8 PIN(0:3), POUT(0:3)
       CHARACTER*120 BUFF(NEXTERNAL)
+      LOGICAL READPS
 C     
 C     EXTERNAL
 C     
@@ -73,7 +74,21 @@ c
 
       call printout()
 
-      CALL GET_MOMENTA(SQRTS,PMASS,P)   
+C     If the file PS.input is present in the folder, take the momenta from it, else, generate them with GET_MOMENTA
+      inquire(FILE='PS.input', EXIST=READPS)
+      IF (READPS) THEN
+        OPEN(5, FILE='PS.input', ERR=6, STATUS='OLD',ACTION='READ')
+        DO I=1,NEXTERNAL
+          READ(5,*,END=7) P(0,I),P(1,I),P(2,I),P(3,I)
+        ENDDO
+        GOTO 7
+ 6      CONTINUE
+        STOP 'Could not read the PS.input phase-space point.'
+ 7      CONTINUE
+        CLOSE(5)
+      ELSE
+        CALL GET_MOMENTA(SQRTS,PMASS,P)
+      ENDIF
 c
 c     write the information on the four momenta 
 c
@@ -158,7 +173,7 @@ c      density matrix helicity index value for particle
 
 c     The value of alphas is 0 to keep the value of the param_card
 c     The value of mu_r2 is set to 0 but it is a dummy variable at tree-level anyway
-       call %(prefix)sGET_DENSITY(P,  POS, N_CHANGING, ALLOW_HEL, N_COMB, 0d0, 0d0, INTER)
+       call %(prefix)sGET_DENSITY(P, POS, N_CHANGING, ALLOW_HEL, N_COMB, 0d0, 0d0, INTER)
        
        SOL=0
        DO I=1, N_COMB
