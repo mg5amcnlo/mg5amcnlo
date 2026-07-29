@@ -2188,7 +2188,11 @@ c$$$
 c$$$
       if(abs(icountevts).eq.2.or.abs(icountevts).eq.1)then
          y_ij_fks=dble(sign(1,icountevts))
-         xjac=xjac*2d0*x(2)*2d0
+         if (.not. colltest) then
+            xjac=xjac*2d0*x(2)*2d0
+         else
+            continue ! do not include jacobian for y in tests
+         endif
       elseif (colltest) then
          y_ij_fks = y_ij_fks_fix
          xjac=xjac*2d0*sqrt((1d0-y_ij_fks)/2d0)*2d0 ! compute x(2) from y_ij_fks
@@ -2249,7 +2253,11 @@ c$$$      xjac=xjac*2d0*x(1)
 c$$$
       if(abs(icountevts).eq.2.or.icountevts.eq.0)then
          xi_i_fks=0d0
-         xjac=xjac*2d0*x(1)
+         if (.not.softtest) then
+            xjac=xjac*2d0*x(1)
+         else
+            continue ! no jacobian for xi in tests
+         endif
       elseif (softtest) then
          xi_i_fks=xi_i_fks_fix*xiimax
          xjac=xjac*2d0*sqrt(xi_i_fks_fix) ! compute x(1) from xi
@@ -2479,11 +2487,9 @@ c$$$c importance sampling towards collinear singularity
 c$$$      xjac=xjac*2d0*x(2)*2d0
 
       if(abs(icountevts).eq.2.or.abs(icountevts).eq.1)then
-         y_ij_fks=dble(sign(1,icountevts))
          write (*,*) 'Massive j_fks: should have no '/
      $        /'(soft-)collinear contribution'
          stop 1
-         xjac=xjac*2d0*x(2)*2d0
       elseif (colltest) then
          y_ij_fks = y_ij_fks_fix
          write (*,*) 'Massive j_fks: should not do collinear tests'
@@ -2599,7 +2605,7 @@ c
       if(icountevts.eq.0)then
          xi_i_fks=0d0
          isolsign=1
-         if (x(1).le.rat_xi) xjac=xjac*2d0*x(1)/rat_xi
+         if (x(1).le.rat_xi .and. (.not.softtest)) xjac=xjac*2d0*x(1)/rat_xi
       elseif (softtest) then
          if(xi_i_fks_fix.gt.xiimax)then
             xjac=-102
@@ -2618,7 +2624,7 @@ c convenient to choose A=rat_xi
             xi_i_hat=(sstiny+(1-sstiny)*x(1)**2)/rat_xi
             xi_i_fks=xinorm*xi_i_hat
             isolsign=1
-            xjac=xjac*2d0*x(1)/rat_xi
+            if (.not.softtest) xjac=xjac*2d0*x(1)/rat_xi
          else
             xi_i_hat=sstiny+(1-sstiny)*x(1)
             xi_i_fks=-xinorm*xi_i_hat+2*xiimax

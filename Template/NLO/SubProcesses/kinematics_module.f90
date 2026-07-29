@@ -447,9 +447,6 @@ contains
   subroutine fill_invariants_ileg3(xi_i_fks,y_ij_fks)
     implicit none
     double precision :: xi_i_fks,y_ij_fks
-!!$
-!!$    write (*,*) 'ileg3',kn,'B',sqrt(shat_n1)/2*xi_i_fks,sqrt(shat_n1)/2,xi_i_fks
-!!$    
     xm12=jmass**2
     xm22=dot(pp_rec,pp_rec)
     xtk=-2d0*dot(xp1,xk3)

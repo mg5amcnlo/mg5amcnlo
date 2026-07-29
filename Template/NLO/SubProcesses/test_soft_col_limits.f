@@ -451,7 +451,7 @@ c dump momenta in a fort.80 file
       include 'fks_info.inc'
       logical include_gfun
       integer iFKS,k_fks,l_fks,n_connect,iconnect,iamp,nFKSprocess_save
-     $     ,ii,jj
+     $     ,ii,jj,i
       double precision p(0:3,nexternal),xi,y,z(2),born_flow_factor
      $     ,amp_split_gfunc(amp_split_size),dummy
      $     ,amp_split_xmcxsec(amp_split_size,2),p_cms(0:3,nexternal)
@@ -511,6 +511,7 @@ c dump momenta in a fort.80 file
             do jj=1,nexternal
                if (ii.eq.jj) cycle
                if (j_fks.le.nincoming .and. j_fks.ne.jj) cycle
+               if (jj.le.nincoming .and. j_fks.ne.jj) cycle
                if (pdg_type_d(nFKSprocess_save,jj).ne.
      &              pdg_type_d(nFKSprocess_save,j_fks)) cycle
                if (pdg_type_d(nFKSprocess_save,ii).eq.
@@ -537,6 +538,7 @@ c dump momenta in a fort.80 file
 !     outputs are: xx,jac (also updates pborn common block)
                call generate_lab_momenta_inverse(ndim,iconfig,jac,xx
      $              ,p_lab_flipped)
+               if (jac.le.0d0) cycle
                CalculatedBorn=.false.
                ! include_gfun must be .false., because we do not want to
                ! update gfactsf
