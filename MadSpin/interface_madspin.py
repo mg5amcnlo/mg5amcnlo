@@ -114,11 +114,9 @@ class MadSpinOptions(banner.ConfigFile):
         elif os.path.isfile(value):
             self.run_card = banner.RunCard(value)
         else:
-            misc.sprint(value)
             args = value.split()
             if  len(args) >1:
                 if not hasattr(self, 'run_card'):
-                    misc.sprint("init run_card")
                     self.run_card =  banner.RunCardLO()
                     self.run_card.remove_all_cut()
                 self.run_card[args[0]] = ' '.join(args[1:])
@@ -830,15 +828,15 @@ class MadSpinInterface(extended_cmd.Cmd):
         """ """
         try:
             return self.mg5cmd.complete_define(*args)
-        except Exception as error:
-            misc.sprint(error)
+        except Exception:
+            pass
             
     def complete_decay(self, *args):
         """ """
         try:
             return self.mg5cmd.complete_generate(*args)
-        except Exception as error:
-            misc.sprint(error)
+        except Exception:
+            pass
             
     def check_launch(self, args):
         """check the validity of the launch command"""
@@ -893,8 +891,6 @@ class MadSpinInterface(extended_cmd.Cmd):
             self.me_run_name = options.name # Only use by MG5aMC
         else:
             self.me_run_name = ''
-
-        misc.sprint(self.options['onlyhelicity'], self.options['spinmode'])
 
         try:
             if 'noborn' in self.banner.get_detail('proc_card', 'generate'):
@@ -1001,7 +997,7 @@ class MadSpinInterface(extended_cmd.Cmd):
         self.update_status('generating Madspin matrix element')
         generate_all = madspin.decay_all_events(self, self.banner, self.events_file, 
                                                     self.options)
-        logger.critical(f"Time for ME: {time.time()-time_me_generation:.2f} sec")        
+        logger.info(f"Time for ME: {time.time()-time_me_generation:.2f} sec")        
         self.update_status('running MadSpin')
         generate_all.run()
                         
@@ -1578,13 +1574,11 @@ class MadSpinInterface(extended_cmd.Cmd):
                 if cumul:
                     mg5.exec_cmd("generate %s" % proc)
                     for j,proc2 in enumerate(self.list_branches[name][1:]):
-                        misc.sprint(proc2)
                         if restrict_file and j not in restrict_file:
                             raise Exception # Do not see how this can happen
                         mg5.exec_cmd("add process %s" % proc2)
                     mg5.exec_cmd("output %s -f" % decay_dir)
                 else:
-                    misc.sprint(proc)
                     mg5.exec_cmd("generate %s" % proc)
                     mg5.exec_cmd("output %s -f" % decay_dir)
                 
@@ -1740,7 +1734,7 @@ class MadSpinInterface(extended_cmd.Cmd):
             if cumul:
                 break
         time_gen_dec = time.time()-time_gen_dec
-        logger.critical(f"Time for decay event generation = {time_gen_dec:.1f} sec")
+        logger.info(f"Time for decay event generation = {time_gen_dec:.1f} sec")
         if not output_width:
             return out
         else:
@@ -2003,7 +1997,7 @@ class MadSpinInterface(extended_cmd.Cmd):
         self.all_density = {}
         self.all_matrix = {}
         time_me_generation = time.time() - time_me_generation
-        logger.critical(f"Time ME generation: {time_me_generation:.2f} sec")         
+        logger.info(f"Time ME generation: {time_me_generation:.2f} sec")         
 	
 	    #4. determine the maxwgt
         #print(f"Spyros decay file: {evt_decayfile}")
@@ -2075,7 +2069,7 @@ class MadSpinInterface(extended_cmd.Cmd):
             logger.info("MadSpin: unweighting %s events on %s cores", nb_event, nb_core)
             self._run_onshell_parallel(orig_lhe, nb_event, nb_core,
                                        evt_decayfile, base_out, ctx)
-        logger.critical(f"Time for decay = {time.time()-start:.2f} sec")
+        logger.info(f"Time for decay = {time.time()-start:.2f} sec")
 
     def _resolve_nb_core(self):
         """Number of worker processes for the parallel unweighting / gridpack
@@ -2951,7 +2945,7 @@ class MadSpinInterface(extended_cmd.Cmd):
         nb_loose_skip = sum(s['nb_loose_skip'] for s in stats_list)
 
         eff = float(n_written) / nb_try if nb_try else 0.0
-        logger.critical(
+        logger.info(
             "MadSpin unweight efficiency: %.4f (%d written / %d trials, %.2f trials/event)",
             eff, n_written, nb_try, (1.0 / eff if eff else float("inf"))
         )
@@ -3201,8 +3195,9 @@ class MadSpinInterface(extended_cmd.Cmd):
         stats_list = []
         for sid, stp in enumerate(stats_paths):
             if not os.path.exists(stp):
-                raise Exception("MadSpin worker %s produced no result (crashed). "
-                                "Re-run with nb_core=1 to reproduce/debug." % sid)
+                raise Exception("MadSpin worker %s produced no result (crashed, exitcode=%s). "
+                                "Re-run with nb_core=1 to reproduce/debug."
+                                % (sid, procs[sid].exitcode))
             with open(stp) as f:
                 s = json.load(f)
             if 'error' in s:
@@ -4465,7 +4460,19 @@ class MadSpinInterface(extended_cmd.Cmd):
                 MLCard.set("HelicityFilterLevel", 0) # HelicityFilterLevel is set to 0 because the computation of density matrices loop-induced requires it.
                 MLCard.set("MLStabThres", 0.001)
 
-                MLCard.write(pjoin(MadLoopCardPath, 'MadLoopParams.dat'))                     
+                # Every forked unweighting worker runs this lazily, so N workers
+                # rewrite this one shared file while sibling workers' MadLoop
+                # Fortran init is reading it. An in-place write lets a reader see
+                # a truncated card: MLReductionLib stays all-zero and MadLoop
+                # answers with STOP "No available loop reduction lib ...", which
+                # (a Fortran STOP) kills the worker with exit code 0, bypassing
+                # every Python handler. Write to a private temp file and rename,
+                # so a concurrent reader sees either the old or the new card,
+                # never a partial one.
+                _ml_dat = pjoin(MadLoopCardPath, 'MadLoopParams.dat')
+                _ml_tmp = '%s.tmp%d' % (_ml_dat, os.getpid())
+                MLCard.write(_ml_tmp)
+                os.replace(_ml_tmp, _ml_dat)
                 mymod.set_madloop_path(MadLoopCardPath)
 
 

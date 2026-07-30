@@ -2469,7 +2469,7 @@ class decay_all_events(object):
                 logger.warning(error)  
         
         
-        logger.critical(f"Time for decay: {time.time() - time_dec:.2f} sec")
+        logger.info(f"Time for decay: {time.time() - time_dec:.2f} sec")
         logger.info('Total number of events written: %s/%s ' % (event_nb, event_nb+nb_skip))
         logger.info('Average number of trial points per production event: '\
             +str(float(trial_nb_all_events)/float(event_nb)))
@@ -3476,20 +3476,20 @@ class decay_all_events(object):
             #misc.sprint(error)
             try:
                 external.stdin.close()
-            except Exception as  error:
-                misc.sprint(error, cond=self.nb_load<=250)
+            except Exception:
+                pass
             try:
                 external.stdout.close()
-            except Exception as error:
-                misc.sprint(error, cond=self.nb_load<=250)
+            except Exception:
+                pass
             try:
                 external.stderr.close()
-            except Exception as error:
-                misc.sprint(error, cond=self.nb_load<=250)
+            except Exception:
+                pass
             try:
                 external.terminate()
-            except Exception as error:
-                misc.sprint(error, cond=self.nb_load<=250)
+            except Exception:
+                pass
 
             del self.calculator[('full',path,)]
             return self.loadfortran(mode, path, stdin_text, first=False)
@@ -4159,13 +4159,11 @@ class decay_all_events(object):
                     external = self.calculator[(mode, path)]
                     try:
                         external.stdin.close()
-                    except Exception as  error:
-                        misc.sprint(error)
+                    except Exception:
                         continue
                     try:
                         external.stdout.close()
-                    except Exception as error:
-                        misc.sprint(error)
+                    except Exception:
                         continue
                     external.terminate()
                     del external
@@ -4186,16 +4184,16 @@ class decay_all_events(object):
                     ranmar.close()
                     try:
                         external.stdin.close()
-                    except Exception as  error:
-                        misc.sprint(error)
+                    except Exception:
+                        pass
                     try:
                         external.stdout.close()
-                    except Exception as error:
-                        misc.sprint(error)                   
+                    except Exception:
+                        pass
                     external.terminate()
                     del external
                 else:
-                    misc.sprint('not closed', mode, type(mode))
+                    pass
         else:
             try:
                 external = self.calculator[('full', path_to_decay)]
@@ -4598,7 +4596,6 @@ class decay_all_events_density(decay_all_events_onshell):
                 else:
                     new_particle.append(p)
             out.append("%s > %s %s;" % (init, ' '.join(new_particle), final))
-        misc.sprint(' '.join(out))
         return ' '.join(out)
 
     
@@ -4625,7 +4622,6 @@ class decay_all_events_density(decay_all_events_onshell):
 
     def save_to_file(self, *args):
 
-        misc.sprint(args)
         import sys
         with misc.stdchannel_redirected(sys.stdout, os.devnull):
             return super(decay_all_events_onshell,self).save_to_file(*args) 
