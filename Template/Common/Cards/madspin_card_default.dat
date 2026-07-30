@@ -18,19 +18,20 @@
 # set BW_cut 15                 # cut on how far the particle can be off-shell
 # set spinmode XXXXX      # Use one of the madspin special modes
 #         allowed spinmode:
-#         - PA : Default: Pole approximation -- onshell matrix-element + reshuffling.
-#         - madspin/full: density method with offshell matrix-elements.
+#         - PA : Pole approximation -- onshell matrix-element + reshuffling.
+#         - madspin/full: Default: density method with offshell matrix-elements.
 #         - onshell : not breit-wigner reshuffling
 #         - none : no spin correlation and no finite width effect
 #         legacy modes:
 #         - madspin_v1 and onshell_v1
  set max_weight_ps_point 400  # number of PS to estimate the maximum for each event
 
+define light = 1 2 3 4 5 -1 -2 -3 -4 -5 11 12 13 14 15 16 -11 -12 -13 -14 -15 -16
 # specify the decay for the final state particles
-decay t > w+ b, w+ > all all
-decay t~ > w- b~, w- > all all
-decay w+ > all all
-decay w- > all all
-decay z > all all
+decay t > w+ b, w+ > light light
+decay t~ > w- b~, w- > light light
+decay w+ > light light
+decay w- > light light
+decay z > light light
 # running the actual code
 launch

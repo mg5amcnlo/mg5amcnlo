@@ -2669,13 +2669,23 @@ Beware that MG5aMC now changes your runtime options to a multi-core mode with on
                         to_use = 'none'
                         
                     if to_use == 'systematics':
-                        if self.run_card['systematics_arguments'] != ['']:
-                            self.exec_cmd('systematics %s %s ' % (self.run_name,
-                                          ' '.join(self.run_card['systematics_arguments'])),                  
-                                          postcmd=False, printcmd=False)
-                        else:
-                            self.exec_cmd('systematics %s --from_card' % self.run_name,
-                                           postcmd=False,printcmd=False)    
+                        # The unweighting may have written one file per
+                        # systematics job (auto_split_unweighted_output), which
+                        # systematics consumes and merges back. It can also fail
+                        # outright -- and it aborts this command when it does, so
+                        # store_events would never run. Merge in a finally: a
+                        # failing systematics must leave exactly the events it
+                        # would have left without the split.
+                        try:
+                            if self.run_card['systematics_arguments'] != ['']:
+                                self.exec_cmd('systematics %s %s ' % (self.run_name,
+                                              ' '.join(self.run_card['systematics_arguments'])),
+                                              postcmd=False, printcmd=False)
+                            else:
+                                self.exec_cmd('systematics %s --from_card' % self.run_name,
+                                               postcmd=False,printcmd=False)
+                        finally:
+                            self.finalize_split_unweighted_output()
                     elif to_use == 'syscalc':
                         self.run_syscalc('parton')
                 
@@ -3799,7 +3809,58 @@ Beware that this can be dangerous for local multicore runs.""")
             
 
       
-    ############################################################################ 
+    ############################################################################
+    def auto_split_unweighted_output(self):
+        """When systematics runs right after the unweighting, it splits the work
+        over ``nb_core`` jobs which each read their own slice of the (single)
+        event file -- every job therefore has to parse its way to that slice.
+        Writing one file per job instead removes that scan, and zipping them is
+        then a pure waste since systematics reads them back immediately.
+        An explicit choice in the run_card (user_set) is left alone."""
+        if 'nb_unweight_output' not in self.run_card:
+            return
+        if self.run_card.user_set & set(['nb_unweight_output',
+                                         'zip_unweighted_events']):
+            return
+        if self.run_card['systematics_program'] != 'systematics' or \
+                                                not self.run_card['use_syst']:
+            return
+        if self.options['run_mode'] != 2:
+            # only the multicore mode splits systematics over nb_core
+            return
+        try:
+            nb_core = int(self.options['nb_core'])
+        except (TypeError, ValueError):
+            return
+        # mirror do_systematics: it uses that same number of jobs, so the split
+        # matches its job count exactly (one file per job).
+        nb_split = min(nb_core, self.run_card['nevents']//2500)
+        if nb_split <= 1:
+            return
+        self.run_card['nb_unweight_output'] = nb_split
+        self.run_card['zip_unweighted_events'] = False
+        logger.debug("systematics will run on %s core: writing the unweighted "
+                     "events as %s files so that each job reads its own.",
+                     nb_core, nb_split)
+
+    def zip_unweighted_output(self, outputpath, start=None):
+        """gzip the file(s) the final unweighting produced, unless the run_card
+        asks not to (``zip_unweighted_events``) -- compressing them is a pure
+        waste when they are consumed straight away. Handles the split output of
+        ``nb_unweight_output`` transparently."""
+        paths = lhe_parser.EventFile.unweight_output_paths(
+                            outputpath, self.run_card['nb_unweight_output'])
+        if not self.run_card['zip_unweighted_events']:
+            logger.debug("unweight done, skipping the zipping (zip_unweighted_events=False)")
+            return paths
+        if start is not None:
+            logger.debug("unweight done. start zipping after %.1f s", time.time()-start)
+        for path in paths:
+            if os.path.exists(path):
+                misc.gzip(path)
+        return paths
+
+    ############################################################################
     def do_combine_events(self, line):
         """Advanced commands: Launch combine events"""
         start=time.time()
@@ -3813,7 +3874,8 @@ Beware that this can be dangerous for local multicore runs.""")
         if self.run_card['gridpack'] and isinstance(self, GridPackCmd):
             return GridPackCmd.do_combine_events(self, line)
 
-    
+        self.auto_split_unweighted_output()
+
         # Define The Banner
         tag = self.run_card['run_tag']
         # Update the banner with the pythia card
@@ -3934,10 +3996,11 @@ Beware that this can be dangerous for local multicore runs.""")
                           get_wgt, trunc_error=1e-2, event_target=self.run_card['nevents'],
                           log_level=logging.DEBUG, normalization=self.run_card['event_norm'],
                           proc_charac=self.proc_characteristic,
-                          keep_overshoot=self.run_card['allow_overshoot_events'])
-            logger.debug("unweight done. start zipping after %.1f s", time.time()-start)
-            misc.gzip(pjoin(self.me_dir, "Events", self.run_name, "unweighted_events.lhe"))
-            
+                          keep_overshoot=self.run_card['allow_overshoot_events'],
+                          nb_output=self.run_card['nb_unweight_output'])
+            self.zip_unweighted_output(pjoin(self.me_dir, "Events", self.run_name,
+                                             "unweighted_events.lhe"), start)
+
             #cleaning
             for data in partials_info:
                 path = data[0]
@@ -3976,9 +4039,10 @@ Beware that this can be dangerous for local multicore runs.""")
                                 get_wgt, trunc_error=1e-2, event_target=self.run_card['nevents'],
                                 log_level=logging.DEBUG, normalization=self.run_card['event_norm'],
                                 proc_charac=self.proc_characteristic,
-                                keep_overshoot=self.run_card['allow_overshoot_events'])
-                logger.debug("unweight done. start zipping after %.1f s", time.time()-start)
-                misc.gzip(pjoin(self.me_dir, "Events", self.run_name, "unweighted_events.lhe"))
+                                keep_overshoot=self.run_card['allow_overshoot_events'],
+                                nb_output=self.run_card['nb_unweight_output'])
+                self.zip_unweighted_output(pjoin(self.me_dir, "Events", self.run_name,
+                                                 "unweighted_events.lhe"), start)
 
         if nb_event < self.run_card['nevents']:
             logger.warning("failed to generate enough events. Please follow one of the following suggestions to fix the issue:")
@@ -4202,6 +4266,12 @@ Beware that this can be dangerous for local multicore runs.""")
         # 4) Move the Files present in Events directory
         E_path = pjoin(self.me_dir, 'Events')
         O_path = pjoin(self.me_dir, 'Events', run)
+
+        # Backstop for the entry points that do not go through
+        # run_generate_events' systematics block (a bare 'combine_events' then
+        # 'store_events'): the run must never be left as N split files. No-op
+        # when they were already merged.
+        self.finalize_split_unweighted_output()
         
         # The events file
         for name in ['events.lhe', 'unweighted_events.lhe']:
@@ -5858,7 +5928,12 @@ tar -czf split_$1.tar.gz split_$1
         self.update_status('storing files of previous run', level=None,\
                                                      error=True)
         if 'event' in self.to_store:
-            if not os.path.exists(pjoin(self.me_dir, 'Events',self.run_name, 'unweighted_events.lhe.gz')) and\
+            # zip_unweighted_events=False means the events are consumed straight
+            # away: do not gzip them back here, that would defeat the purpose.
+            zip_events = ('zip_unweighted_events' not in self.run_card or
+                          self.run_card['zip_unweighted_events'])
+            if zip_events and \
+               not os.path.exists(pjoin(self.me_dir, 'Events',self.run_name, 'unweighted_events.lhe.gz')) and\
                os.path.exists(pjoin(self.me_dir, 'Events',self.run_name, 'unweighted_events.lhe')):
                 logger.info("gzipping output file: unweighted_events.lhe")
                 misc.gzip(pjoin(self.me_dir,'Events',self.run_name,"unweighted_events.lhe"))

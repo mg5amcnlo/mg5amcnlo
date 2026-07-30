@@ -1140,31 +1140,37 @@ class gen_ximprove(object):
         
 
         run = self.cmd.results.current['run_name']
-        if not os.path.exists(pjoin(self.cmd.me_dir, 'HTML', run)):
+        # A read-only gridpack (concurrent generation) cannot write into me_dir;
+        # the HTML / results.dat output here is only interactive bookkeeping, so
+        # skip those writes when readonly (the post-refinement results already
+        # live in the worker's cwd and are read from there as usual).
+        readonly = getattr(self.cmd, 'readonly', False)
+        if not readonly and not os.path.exists(pjoin(self.cmd.me_dir, 'HTML', run)):
             os.mkdir(pjoin(self.cmd.me_dir, 'HTML', run))
-        
+
         unit = self.cmd.results.unit
-        P_text = "" 
-        if self.results:     
-            Presults = self.results 
+        P_text = ""
+        if self.results:
+            Presults = self.results
         else:
             self.results = sum_html.collect_result(self.cmd, None)
             Presults = self.results
-                
+
         for P_comb in Presults:
-            P_text += P_comb.get_html(run, unit, self.cmd.me_dir) 
-        
-        Presults.write_results_dat(pjoin(self.cmd.me_dir,'SubProcesses', 'results.dat'))   
-        
-        fsock = open(pjoin(self.cmd.me_dir, 'HTML', run, 'results.html'),'w')
-        fsock.write(sum_html.results_header)
-        fsock.write('%s <dl>' % Presults.get_html(run, unit, self.cmd.me_dir))
-        fsock.write('%s </dl></body>' % P_text)         
-        
+            P_text += P_comb.get_html(run, unit, self.cmd.me_dir)
+
+        if not readonly:
+            Presults.write_results_dat(pjoin(self.cmd.me_dir,'SubProcesses', 'results.dat'))
+
+            fsock = open(pjoin(self.cmd.me_dir, 'HTML', run, 'results.html'),'w')
+            fsock.write(sum_html.results_header)
+            fsock.write('%s <dl>' % Presults.get_html(run, unit, self.cmd.me_dir))
+            fsock.write('%s </dl></body>' % P_text)
+
         self.cmd.results.add_detail('cross', Presults.xsec)
-        self.cmd.results.add_detail('error', Presults.xerru) 
-        
-        return Presults.xsec, Presults.xerru   
+        self.cmd.results.add_detail('error', Presults.xerru)
+
+        return Presults.xsec, Presults.xerru
 
     
 class gen_ximprove_v4(gen_ximprove):
@@ -1190,19 +1196,30 @@ class gen_ximprove_v4(gen_ximprove):
             self.increase_precision(cmd._survey_options['accuracy'][1]/cmd.opts['accuracy'])
 
     def reset_multijob(self):
-
-        for path in misc.glob(pjoin('*', '*','multijob.dat'), pjoin(self.me_dir, 'SubProcesses')):
+        # In a read-only gridpack the jobs run from the worker's cwd (see the
+        # write_dir='.' handling in gen_ximprove_gridpack.get_job_for_event), so
+        # the multijob.dat files live under cwd, not the read-only me_dir.
+        base = '.' if getattr(self, 'readonly', False) else pjoin(self.me_dir, 'SubProcesses')
+        for path in misc.glob(pjoin('*', '*','multijob.dat'), base):
             open(path,'w').write('0\n')
-            
+
     def write_multijob(self, Channel, nb_split):
         """ """
+        base = '.' if getattr(self, 'readonly', False) else pjoin(self.me_dir, 'SubProcesses')
+        path = pjoin(base, Channel.get('name'), 'multijob.dat')
         if nb_split <=1:
             try:
-                os.remove(pjoin(self.me_dir, 'SubProcesses', Channel.get('name'), 'multijob.dat'))
+                os.remove(path)
             except OSError:
                 pass
             return
-        f = open(pjoin(self.me_dir, 'SubProcesses', Channel.get('name'), 'multijob.dat'), 'w')
+        # under readonly, prepare_local_dir only created the local P dirs (with
+        # symfact.dat); make the G subdir before writing into it.
+        if getattr(self, 'readonly', False):
+            gdir = os.path.dirname(path)
+            if not os.path.exists(gdir):
+                os.makedirs(gdir)
+        f = open(path, 'w')
         f.write('%i\n' % nb_split)
         f.close()
     
@@ -1489,31 +1506,37 @@ class gen_ximprove_v4(gen_ximprove):
         
 
         run = self.cmd.results.current['run_name']
-        if not os.path.exists(pjoin(self.cmd.me_dir, 'HTML', run)):
+        # A read-only gridpack (concurrent generation) cannot write into me_dir;
+        # the HTML / results.dat output here is only interactive bookkeeping, so
+        # skip those writes when readonly (the post-refinement results already
+        # live in the worker's cwd and are read from there as usual).
+        readonly = getattr(self.cmd, 'readonly', False)
+        if not readonly and not os.path.exists(pjoin(self.cmd.me_dir, 'HTML', run)):
             os.mkdir(pjoin(self.cmd.me_dir, 'HTML', run))
-        
+
         unit = self.cmd.results.unit
-        P_text = "" 
-        if self.results:     
-            Presults = self.results 
+        P_text = ""
+        if self.results:
+            Presults = self.results
         else:
             self.results = sum_html.collect_result(self.cmd, None)
             Presults = self.results
-                
+
         for P_comb in Presults:
-            P_text += P_comb.get_html(run, unit, self.cmd.me_dir) 
-        
-        Presults.write_results_dat(pjoin(self.cmd.me_dir,'SubProcesses', 'results.dat'))   
-        
-        fsock = open(pjoin(self.cmd.me_dir, 'HTML', run, 'results.html'),'w')
-        fsock.write(sum_html.results_header)
-        fsock.write('%s <dl>' % Presults.get_html(run, unit, self.cmd.me_dir))
-        fsock.write('%s </dl></body>' % P_text)         
-        
+            P_text += P_comb.get_html(run, unit, self.cmd.me_dir)
+
+        if not readonly:
+            Presults.write_results_dat(pjoin(self.cmd.me_dir,'SubProcesses', 'results.dat'))
+
+            fsock = open(pjoin(self.cmd.me_dir, 'HTML', run, 'results.html'),'w')
+            fsock.write(sum_html.results_header)
+            fsock.write('%s <dl>' % Presults.get_html(run, unit, self.cmd.me_dir))
+            fsock.write('%s </dl></body>' % P_text)
+
         self.cmd.results.add_detail('cross', Presults.xsec)
-        self.cmd.results.add_detail('error', Presults.xerru) 
-        
-        return Presults.xsec, Presults.xerru          
+        self.cmd.results.add_detail('error', Presults.xerru)
+
+        return Presults.xsec, Presults.xerru       
 
 
 
@@ -2007,7 +2030,9 @@ class gen_ximprove_gridpack(gen_ximprove_v4):
             nprocs_cluster.wait(self.me_dir, gridpack_wait_monitoring)
 
         if self.readonly:
-            combine_runs.CombineRuns(write_dir)
+            # metadata from the read-only gridpack (me_dir); P/G dirs to combine
+            # are in the worker's cwd
+            combine_runs.CombineRuns(self.me_dir, readonly=True)
         else:
             combine_runs.CombineRuns(self.me_dir)
         self.check_events(goal_lum, to_refine, jobs, write_dir)

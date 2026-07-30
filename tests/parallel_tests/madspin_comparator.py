@@ -80,8 +80,8 @@ SpinModeConfig = collections.namedtuple(
 #  - madspin_v1 : old default, mass smearing, no 3-body, identical part. only
 #  - onshell_v1 : traditional onshell decay chain
 #  - onshell    : "PA without reshuffling" (pure onshell kinematics, density ME)
-#  - madspin    : off-shell ME + density (BW shape from ME)
-#  - PA         : PA reshuffling with BW + density ME (new MadSpin default)
+#  - madspin    : off-shell ME + density (BW shape from ME) (new MadSpin default)
+#  - PA         : PA reshuffling with BW + density ME
 DEFAULT_MODES = [
     SpinModeConfig('full_decay_chain',    'madspin_v1'),  
     SpinModeConfig('onshell_decay_chain', 'onshell_v1'),
@@ -349,13 +349,16 @@ class MadSpinFactory(object):
     # ------------------------------------------------------------------
     # Per-mode MadSpin execution.
     # ------------------------------------------------------------------
-    def _write_madspin_card(self, card_path, evt_path, config):
+    def _write_madspin_card(self, card_path, evt_path, config, extra_settings=None):
         lines = [
             'set spinmode %s' % config.spinmode,
             'set seed %d' % self.seed,
             'set max_running_process 4',
         ]
-        for key, val in self.extra_madspin_settings.items():
+        merged = dict(self.extra_madspin_settings)
+        if extra_settings:
+            merged.update(extra_settings)
+        for key, val in merged.items():
             lines.append('set %s %s' % (key, val))
         for mp_name, mp_def in self.multiparticles.items():
             lines.append('define %s = %s' % (mp_name, mp_def))
@@ -369,13 +372,21 @@ class MadSpinFactory(object):
         with open(card_path, 'w') as fp:
             fp.write('\n'.join(lines) + '\n')
 
-    def run_mode(self, config):
-        """Run MadSpin once for the given :class:`SpinModeConfig`."""
-        if config.label in self._results:
-            return self._results[config.label]
+    def run_mode(self, config, extra_settings=None, run_tag=None):
+        """Run MadSpin once for the given :class:`SpinModeConfig`.
+
+        ``extra_settings`` -- optional ``{key: val}`` merged over the factory's
+        default ``set`` lines for this run only (e.g. ``{'nb_core': 8}`` to
+        exercise the process-parallel unweighting path).
+        ``run_tag`` -- optional suffix so the *same* config can be run more than
+        once into distinct run dirs / result keys (defaults to ``config.label``).
+        """
+        key = config.label if not run_tag else '%s_%s' % (config.label, run_tag)
+        if key in self._results:
+            return self._results[key]
         self.produce_events()
 
-        run_dir = pjoin(self.base_dir, 'mode_%s' % config.label)
+        run_dir = pjoin(self.base_dir, 'mode_%s' % key)
         if os.path.exists(run_dir):
             shutil.rmtree(run_dir)
         os.makedirs(run_dir)
@@ -386,7 +397,7 @@ class MadSpinFactory(object):
         files.cp(self.events_file, evt_path)
 
         card_path = pjoin(run_dir, 'madspin_card.dat')
-        self._write_madspin_card(card_path, evt_path, config)
+        self._write_madspin_card(card_path, evt_path, config, extra_settings)
 
         log_path = pjoin(run_dir, 'madspin.log')
         _logger.info('%s[%s]: running MadSpin (log: %s)',
@@ -448,7 +459,7 @@ class MadSpinFactory(object):
             cross_out=cross_out,
             cross_in=getattr(self, 'cross_in', None),
         )
-        self._results[config.label] = result
+        self._results[key] = result
         return result
 
     def run_modes(self, configs):

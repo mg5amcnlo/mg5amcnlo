@@ -1285,3 +1285,60 @@ class TESTLHEParserNLO(unittest.TestCase):
 
         for cevent in evt3.nloweight.cevents:
             self.assertIn(len(cevent), (4,5))
+
+class TestProductionJacobian(unittest.TestCase):
+    """Event.production_jacobian: the production reshuffling jacobian without
+    performing the reshuffling, for the sequential (per-particle) accept/reject
+    in MadSpin, which needs J_k at each step but only reshuffles once at the end.
+    """
+
+    # a top decaying to b W: at top level the top is a *resonance*, its decay
+    # products sit in a sub-decay reached through reshuffle_decay -- so the
+    # jacobian is not a function of the top-level masses alone.
+    EVENT = """ <event>
+ 12      1 +4.8368719e+02 1.76709900e+02 7.54677100e-03 1.17102600e-01
+         2 -1    0    0  502    0 +0.0000000000e+00 +0.0000000000e+00 +1.6801959055e+02 1.6801959055e+02 0.0000000000e+00  0.0000e+00 1.0000e+00
+        -2 -1    0    0    0  501 -0.0000000000e+00 -0.0000000000e+00 -3.6057100553e+02 3.6057100553e+02 0.0000000000e+00  0.0000e+00 -1.0000e+00
+         6  2    1    2  502    0 -1.0742571918e+01 -3.4379861756e+01 -2.8025420328e+02 3.3131374285e+02 1.7300000000e+02  0.0000e+00 9.0000e+00
+        -6  1    1    2    0  501 +1.0742571918e+01 +3.4379861756e+01 +8.7702788293e+01 1.9727685323e+02 1.7300000000e+02  0.0000e+00 9.0000e+00
+         5  1    3    3  502    0 -6.3369583864e+00 +5.5362090397e+01 -7.6229914475e+01 9.4542096209e+01 4.7000000000e+00  0.0000e+00 -1.0000e+00
+        24  1    3    3    0    0 -4.4056135319e+00 -8.9741952154e+01 -2.0402428881e+02 2.3677164665e+02 7.9761361725e+01  0.0000e+00 9.0000e+00
+        </event>"""
+
+    def _event(self, new_mass=180):
+        evt = lhe_parser.Event()
+        evt.parse(self.EVENT)
+        evt[2].new_mass = new_mass
+        return evt
+
+    def test_matches_reshuffle_production(self):
+        """Same number reshuffle_production returns -- it must be the real
+        jacobian, resonance sub-decay included, not a re-derivation."""
+        probe = self._event()
+        reference = self._event()
+        self.assertAlmostEqual(probe.production_jacobian(),
+                               reference.reshuffle_production(), places=10)
+
+    def test_leaves_the_event_untouched(self):
+        """The whole point: J_k is needed per slot, the reshuffling happens once
+        at the end."""
+        probe = self._event()
+        before = str(probe)
+        probe.production_jacobian()
+        self.assertEqual(str(probe), before)
+        self.assertAlmostEqual(probe[2].mass, 173.0)   # not moved to new_mass
+        self.assertEqual(probe[2].new_mass, 180)       # but the request survives
+
+    def test_reshuffle_production_still_mutates(self):
+        """Guard for the test above: the reference really does move the top."""
+        reference = self._event()
+        reference.reshuffle_production()
+        self.assertAlmostEqual(reference[2].mass, 180)
+
+    def test_impossible_mass_set_is_reported_not_retried(self):
+        """A mass set above sqrt(shat) is the production-side kinematic failure.
+        The sequential caller owns the retry (trash the whole set), so the
+        resampling recursion inside reshuffle_production must not fire."""
+        evt = self._event(new_mass=1e6)
+        self.assertEqual(evt.production_jacobian(), -1)
+        self.assertEqual(evt[2].new_mass, 1e6)  # not resampled behind our back

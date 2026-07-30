@@ -1946,7 +1946,17 @@ class decay_misc:
         return mean, sd
 
 class decay_all_events(object):
-    
+
+    # The legacy (madspin_v1) path evaluates matrix elements through a Fortran
+    # helper communicating over a stdin/stdout pipe, so Fortran output has to be
+    # UNbuffered or the ME values never reach the Python side (see __init__).
+    # The density/onshell subclasses evaluate MEs in-process via f2py and do NOT
+    # need this. Forcing GFORTRAN_UNBUFFERED_ALL there turns every LesHouches
+    # event write into an immediate write() syscall; under a many-core decay
+    # event (re)generation that storms the filesystem (APFS write-transaction
+    # contention -> large "system" CPU). So gate it on the mode.
+    _need_unbuffered_fortran_io = True
+
     def __init__(self, ms_interface, banner, inputfile, options):
         """Store all the component and organize special variable"""
     
@@ -1970,9 +1980,11 @@ class decay_all_events(object):
         # dictionary to fortan evaluator
         self.calculator = {}
         self.calculator_nbcall = {}
-        # need to unbuffer all I/O in fortran, otherwise
-        # the values of matrix elements are not passed to the Python script
-        os.environ['GFORTRAN_UNBUFFERED_ALL']='y'  
+        # need to unbuffer all I/O in fortran, otherwise the values of matrix
+        # elements are not passed to the Python script (madspin_v1 pipe path).
+        # Only the pipe-based modes need this -- see _need_unbuffered_fortran_io.
+        if self._need_unbuffered_fortran_io:
+            os.environ['GFORTRAN_UNBUFFERED_ALL']='y'
     
         # Remove old stuff from previous runs
         # so that the current run is not confused
@@ -4217,6 +4229,11 @@ class decay_all_events_onshell(decay_all_events):
     """special mode for onshell production"""
 
     mode = "onshell"
+    # density/onshell evaluate MEs in-process via f2py, not through the Fortran
+    # stdin/stdout pipe, so they must NOT force unbuffered Fortran I/O (which
+    # would flush every event write and storm the filesystem during the
+    # many-core decay-event generation/refill). Inherited by decay_all_events_density.
+    _need_unbuffered_fortran_io = False
  
     #@misc.mute_logger()
     
@@ -4961,6 +4978,53 @@ class DensityMatrix:
             self.dimension,
             basis_id=basis_id,
         )
+
+    @classmethod
+    def identity(cls, nchanging, all_helicity_combinations, dimension):
+        """The density matrix a decay averages to over its *full* phase space:
+        delta_{hh'} / n.
+
+        Integrating a decay density matrix over the whole solid angle kills the
+        off-diagonal (interference) entries by rotational invariance in the
+        parent rest frame, and leaves the diagonal flat. So a particle whose
+        decay has not been drawn yet contributes exactly this to the production
+        contraction -- which is what lets the accept/reject be done one particle
+        at a time (see MADSPIN_SEQUENTIAL_PLAN.md).
+
+        Built through the normal constructor, so it shares the cached helicity
+        map with the real density matrices of the same basis and keeps the
+        scalar_multiplication fast path available.
+        """
+        array = np.zeros(dimension * (dimension + 1) // 2, dtype=np.complex64)
+        # diagonal entries in the packed upper-triangular storage
+        diag = [i * (2 * dimension - i + 1) // 2 for i in range(dimension)]
+        array[diag] = 1.0 / dimension
+        return cls(array, nchanging, all_helicity_combinations, dimension)
+
+    def normalized(self):
+        """Same matrix divided by its trace (Dhat = D / Tr D), i.e. on the same
+        footing as ``identity``. Returns self unchanged if the trace vanishes.
+
+        Cached: a density matrix does not change after construction, and the
+        sequential accept/reject normalises each accepted slot once per later
+        slot -- O(n^2) times for n decaying particles otherwise."""
+        cached = getattr(self, '_normalized_cache', None)
+        if cached is not None:
+            return cached
+        tr = self.trace()
+        if tr == 0:
+            self._normalized_cache = self
+            return self
+        out = DensityMatrix.from_components(
+            self.helicities,
+            self.values / tr,
+            self.nchanging,
+            self.all_helicity_combinations,
+            self.dimension,
+            basis_id=self._basis_id,
+        )
+        self._normalized_cache = out
+        return out
 
     def trace(self):
         """
