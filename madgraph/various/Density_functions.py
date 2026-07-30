@@ -111,7 +111,7 @@ def plot_hist(x:list[float], y:list[float], z:list[float], limitx:list[float], l
     binsx = np.linspace(limitx[0], limitx[1], n_binx + 1)
     binsy = np.linspace(limity[0], limity[1], n_biny + 1)
 
-    if isinstance(z[0], float) or isinstance(z[0], int) or isinstance(z[0], complex):
+    if isinstance(z[0], (float, int, complex, np.number)) or isinstance(z[0], np.generic):
         Map = np.zeros((n_biny, n_binx))
     elif isinstance(z[0], np.ndarray): #if the object is a density matrix
         Map = np.zeros((n_biny, n_binx), dtype=object)
