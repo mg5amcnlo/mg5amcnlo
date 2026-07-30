@@ -3476,20 +3476,20 @@ class decay_all_events(object):
             #misc.sprint(error)
             try:
                 external.stdin.close()
-            except Exception:
-                pass
+            except Exception as  error:
+                misc.sprint(error, cond=self.nb_load<=250)
             try:
                 external.stdout.close()
-            except Exception:
-                pass
+            except Exception as error:
+                misc.sprint(error, cond=self.nb_load<=250)
             try:
                 external.stderr.close()
-            except Exception:
-                pass
+            except Exception as error:
+                misc.sprint(error, cond=self.nb_load<=250)
             try:
                 external.terminate()
-            except Exception:
-                pass
+            except Exception as error:
+                misc.sprint(error, cond=self.nb_load<=250)
 
             del self.calculator[('full',path,)]
             return self.loadfortran(mode, path, stdin_text, first=False)
@@ -4159,11 +4159,13 @@ class decay_all_events(object):
                     external = self.calculator[(mode, path)]
                     try:
                         external.stdin.close()
-                    except Exception:
+                    except Exception as  error:
+                        misc.sprint(error)
                         continue
                     try:
                         external.stdout.close()
-                    except Exception:
+                    except Exception as error:
+                        misc.sprint(error)
                         continue
                     external.terminate()
                     del external
@@ -4184,16 +4186,16 @@ class decay_all_events(object):
                     ranmar.close()
                     try:
                         external.stdin.close()
-                    except Exception:
-                        pass
+                    except Exception as  error:
+                        misc.sprint(error)
                     try:
                         external.stdout.close()
-                    except Exception:
-                        pass
+                    except Exception as error:
+                        misc.sprint(error)
                     external.terminate()
                     del external
                 else:
-                    pass
+                    misc.sprint('not closed', mode, type(mode))
         else:
             try:
                 external = self.calculator[('full', path_to_decay)]

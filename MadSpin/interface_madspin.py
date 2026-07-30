@@ -828,15 +828,15 @@ class MadSpinInterface(extended_cmd.Cmd):
         """ """
         try:
             return self.mg5cmd.complete_define(*args)
-        except Exception:
-            pass
+        except Exception as error:
+            misc.sprint(error)
             
     def complete_decay(self, *args):
         """ """
         try:
             return self.mg5cmd.complete_generate(*args)
-        except Exception:
-            pass
+        except Exception as error:
+            misc.sprint(error)
             
     def check_launch(self, args):
         """check the validity of the launch command"""
