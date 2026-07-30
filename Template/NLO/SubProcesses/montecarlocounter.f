@@ -626,8 +626,8 @@ c$$$
       include 'orders.inc'
       integer k_fks,l_fks,i
       logical lzone(2)
-      double precision p(0:3,nexternal),p_born(0:3,nexternal-1),xi,y,mass ,z(2)
-     $     ,amp_split_xmcxsec(1:amp_split_size,2),probne
+      double precision p(0:3,nexternal),p_born(0:3,nexternal-1),xi,y
+     $     ,mass,z(2),amp_split_xmcxsec(1:amp_split_size,2),probne
      $     ,bogus_probne_fun,p_cm(0:3,nexternal)
       external bogus_probne_fun
       double precision pmass(nexternal)
@@ -638,6 +638,8 @@ c$$$
       logical include_gfun
       logical softtest,colltest
       common/sctests/softtest,colltest
+      double precision alsf,besf
+      common/cgfunsfp/alsf,besf
       mass=pmass(l_fks)
       veckn_ev=rho(p_cm(0,l_fks))
       veckbarn_ev=rho(p_born(0,min(k_fks,l_fks)))
@@ -646,7 +648,7 @@ c$$$
       call fill_kinematics_module(p_cm,k_fks,l_fks,xi,y,mass
      $     ,include_gfun)
 !     compute MC subtraction term for the 'kl' configuration
-
+      
 !     find to which particle(s) fksfather connects in the colour flow
       call find_color_connectors(born_flow_picked,fksfather,n_connect
      $     ,i_connect)
@@ -655,9 +657,22 @@ c$$$
 !     fks-father.
       do iconnect=1,n_connect
          call xmcsubt_connection(p,xi,y,p_born,i_connect(iconnect)
-     $        ,include_gfun,lzone(iconnect),z(iconnect)
-     $        ,amp_split_xmcxsec(1,iconnect))
+     $        ,lzone(iconnect),z(iconnect),amp_split_xmcxsec(1
+     $        ,iconnect))
       enddo
+      if (.not.any(lzone(1:n_connect)) .and. include_gfun) then
+! include_gfun is only .true. if kl==ij. If we are in the
+! deadzone, we do not want to include the MC counter terms (and
+! therefore also not the gfun contributions).
+! Exception: we are in a soft-wide-angle configuration, there the shower
+! might be 'incorrect', and the g-function should be included.
+         if (xi.gt.abs(besf)/2d0) then ! besf=0.1 by default
+            include_gfun=.false.
+            gfactsf=1d0
+            gfactcl=1d0
+            gfactazi=0d0
+         endif
+      endif
 
 !     TODO: "check_positivity_MCxsec" at some point?
       if (any(lzone(1:n_connect))) then
@@ -905,7 +920,7 @@ c     positivity check
 c Main routine for MC counterterms. Now to be called inside a loop
 c over colour partners
       subroutine xmcsubt_connection(pp,xi_i_fks,y_ij_fks,p_born
-     $     ,i_connect,include_gfun,lzone,z,amp_split_xmcxsec)
+     $     ,i_connect,lzone,z,amp_split_xmcxsec)
       use process_module
       use kinematics_module
       use scale_module
@@ -921,7 +936,7 @@ c over colour partners
      $     ,bornbars(max_bcol ,nsplitorders),bornbarstilde(max_bcol
      $     ,nsplitorders),amp_split_xmcxsec(1:amp_split_size)
       integer i_connect,ione,iord,iord_val
-      logical lzone,include_gfun
+      logical lzone
 !     local
       double precision ztmp,xitmp,xjactmp,qMC,delta,E0sq
      $     ,PY6PTweight,pmass(nexternal),xi,xjac
@@ -1009,13 +1024,6 @@ c     Compute MC subtraction terms
       else
          xkern(1:2)=0d0
          xkernazi(1:2)=0d0
-         ! include_gfun is only .true. if kl==ij. If we are in the
-         ! deadzone, we do not want to include the MC counter terms (and
-         ! therefore also not the gfun contributions)
-         include_gfun=.false.
-         gfactsf=1d0
-         gfactcl=1d0
-         gfactazi=0d0
       endif
 c     
       if (shower_mc_mod(1:9).eq.'PYTHIA6PT') then
@@ -3985,7 +3993,6 @@ c
 
 ! If the relative pT of the splitting is larger then the maximum shower
 ! scale, we are in the deadzone
-
       if (qMC.gt.max_scale) lzone=.false.
 
       return

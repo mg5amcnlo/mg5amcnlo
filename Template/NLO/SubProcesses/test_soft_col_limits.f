@@ -475,6 +475,7 @@ c dump momenta in a fort.80 file
       call compute_MCsubtraction_kl(i_fks,j_fks,xi,y,p
      $     ,p_cms,p_born,include_gfun,z,n_connect
      $     ,amp_split_xmcxsec)
+      
       ! include_gfun will be false here if in dead zone.
       do iconnect=1,n_connect
          amp_split_mc(1:amp_split_size) =
@@ -488,6 +489,7 @@ c dump momenta in a fort.80 file
      $        + amp_split_gfunc(1:amp_split_size) * born_flow_factor
       endif
       include_gfun=.false.
+
       
       nFKSprocess_save=nFKSprocess
 
@@ -765,18 +767,13 @@ c
          bs_max=iconfig_in
       endif
 
-      ! If one of the FKS configuration with the same i-fks and j-fks as
-      ! the current one, but it has a soft singularity,
-      ! soft_limit_is_zero should be set to false.
-      soft_limit_is_zero=.True.
-      do ifks=1,fks_configs
-         if (fks_i_d(ifks).ne.i_fks) cycle
-         if (fks_j_d(ifks).ne.j_fks) cycle
-         soft_limit_is_zero=soft_limit_is_zero .and.
-     $        (.not.(need_color_links_D(ifks) .or.
-     $               need_charge_links_D(ifks)))
-      enddo
-      
+      ! Check if soft-limit diverges
+      if (need_color_links_D(nFKSprocess) .or.
+     $     need_charge_links_D(nFKSprocess)) then
+         soft_limit_is_zero=.False.
+      else
+         soft_limit_is_zero=.True.
+      endif
       end
 
       subroutine set_ebeam()

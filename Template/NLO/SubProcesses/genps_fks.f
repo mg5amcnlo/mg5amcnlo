@@ -2195,7 +2195,7 @@ c$$$
          endif
       elseif (colltest) then
          y_ij_fks = y_ij_fks_fix
-         xjac=xjac*2d0*sqrt((1d0-y_ij_fks)/2d0)*2d0 ! compute x(2) from y_ij_fks
+c$$$         xjac=xjac*2d0*sqrt((1d0-y_ij_fks)/2d0)*2d0 ! compute x(2) from y_ij_fks
       else
          y_ij_fks = -2d0*(cctiny+(1-cctiny)*x(2)**2)+1d0
          xjac=xjac*2d0*x(2)*2d0
@@ -2260,7 +2260,7 @@ c$$$
          endif
       elseif (softtest) then
          xi_i_fks=xi_i_fks_fix*xiimax
-         xjac=xjac*2d0*sqrt(xi_i_fks_fix) ! compute x(1) from xi
+c$$$         xjac=xjac*2d0*sqrt(xi_i_fks_fix) ! compute x(1) from xi
       else
          xi_i_hat=sstiny+(1-sstiny)*x(1)**2
          xi_i_fks=xi_i_hat*xiimax
@@ -2615,7 +2615,7 @@ c
          xi_i_fks=xi_i_fks_fix
          isolsign=1
          x1=sqrt(xi_i_fks/xinorm*rat_xi) ! compute x(1) from xi
-         if (x1.le.rat_xi) xjac=xjac*2d0*x1/rat_xi
+c$$$         if (x1.le.rat_xi) xjac=xjac*2d0*x1/rat_xi
       else
 c Map regions (0,A) and (A,1) in xitmp1 onto regions (0,rat_xi) and (rat_xi,1)
 c in xi_i_hat respectively. The parameter A is free, but it appears to be 
@@ -2962,8 +2962,8 @@ c$$$      xjac=xjac*(y_ij_fks_upp-y_ij_fks_low)*x(2)*2d0
             pass=.false.
             return
          endif
-         xjac=xjac*sqrt((y_ij_fks_upp-y_ij_fks)*
-     &        (y_ij_fks_upp-y_ij_fks_low))*2d0 ! compute x(2) from y
+c$$$         xjac=xjac*sqrt((y_ij_fks_upp-y_ij_fks)*
+c$$$     &        (y_ij_fks_upp-y_ij_fks_low))*2d0 ! compute x(2) from y
       else
          y_ij_fks = y_ij_fks_upp -
      &        (y_ij_fks_upp-y_ij_fks_low)*(cctiny+(1-cctiny)*x(2)**2)
@@ -3147,7 +3147,7 @@ c$$$      xjac=xjac*2d0*x(1)
             pass=.false.
             return
          endif
-         xjac=xjac*2d0*sqrt((xi_i_fks-xiimin)/(xiimax-xiimin)) ! compute x(1) from xi
+c$$$         xjac=xjac*2d0*sqrt((xi_i_fks-xiimin)/(xiimax-xiimin)) ! compute x(1) from xi
       else
          xi_i_hat=sstiny+(1-sstiny)*x(1)**2
          xi_i_fks=xiimin+(xiimax-xiimin)*xi_i_hat
@@ -4734,9 +4734,9 @@ C dressed lepton stuff
       jac=xjac0
       return
  222  continue
-      write (*,*) 'WARNING in inverse phase-space:'/
-     $     /' point could not be inverted'
-      write (*,*) pass,xjac0
+c$$$      write (*,*) 'WARNING in inverse phase-space:'/
+c$$$     $     /' point could not be inverted'
+c$$$      write (*,*) pass,xjac0
       jac=-222
       return
       end
@@ -5663,8 +5663,8 @@ c
      &        pb(0,ibranch),xjac0)
 c
          if (t .lt. tmin .or. t .gt. tmax) then
-            write (*,*) "WARNING #35 in genps_fks.f (inverse)",t,tmin
-     $           ,tmax
+c$$$            write (*,*) "WARNING #35 in genps_fks.f (inverse)",t,tmin
+c$$$     $           ,tmax
             xjac0=-3d0
             pass=.false.
             return
