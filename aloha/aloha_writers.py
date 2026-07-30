@@ -654,7 +654,7 @@ class ALOHAWriterForFortran(WriteALOHA):
             if self.declaration.is_used('P%s' % self.outgoing):
                 self.get_one_momenta_def(self.outgoing, out)
 
-            if "P1T" in self.tag or "P1L" in self.tag:
+            if any(t in self.tag for t in ("P1T","P1TR","P1TL","P1L")):
                 for i in range(1,4):
                     P = "P%s" % (self.outgoing)
                     value = ["1d-30", "0d0", "1d-15"]
@@ -2419,12 +2419,21 @@ class ALOHAWriterForPython(WriteALOHA):
                                              ''.join(p) % dict_energy))
             
             self.get_one_momenta_def(self.outgoing, out)
-            if "P1T" in self.tag or "P1L" in self.tag:
+            if any(t in self.tag for t in ("P1T","P1TR","P1TL","P1L")):
                 for i, value in zip(range(1,4), ("1e-30", "0.0", "1e-15")):
                     out.write("    if abs(P%(P)s[0])*1e-10 > abs(P%(P)s[%(i)s]): P%(P)s[%(i)s] = %(val)s\n"
                               % {"P": self.outgoing, "i": i, "val": value})
 
-               
+            i = self.outgoing
+            if self.declaration.is_used('Tnorm%s' % i):
+                out.write("    Tnorm{0} = (P{0}[1]*P{0}[1]+P{0}[2]*P{0}[2]+P{0}[3]*P{0}[3])**0.5\n".format(i))
+            if self.declaration.is_used('TnormZ%s' % i):
+                out.write("    TnormZ{0} = Tnorm{0} - P{0}[3]\n".format(i))
+            if self.declaration.is_used('FWP%s' % i):
+                out.write("    FWP{0} = (-P{0}[0] + Tnorm{0})**0.5\n".format(i))
+            if self.declaration.is_used('FWM%s' % i):
+                out.write("    FWM{0} = (-P{0}[0] - Tnorm{0})**0.5\n".format(i))
+
         # Returning result
         return out.getvalue()
 
