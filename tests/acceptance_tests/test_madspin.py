@@ -270,12 +270,18 @@ class TestMadSpin(unittest.TestCase):
             stdout=devnull
             stderr=devnull
 
-        subprocess.call([pjoin(MG5DIR, 'MadSpin', 'madspin'),
+        returncode = subprocess.call([pjoin(MG5DIR, 'MadSpin', 'madspin'),
                         pjoin(self.path, name_scipt_file)],
                         cwd=pjoin(self.path),
                         stdout=stdout,stderr=stderr)
 
-        self.assertTrue(os.path.exists(pjoin(self.path, name_file_decayed)))
+        # check the exit status first: a crashed MadSpin can still leave partial
+        # output behind, and then the assertions below report a confusing
+        # symptom instead of the actual failure.
+        self.assertEqual(returncode, 0,
+                         'MadSpin exited with %s for %s' % (returncode, name_scipt_file))
+        self.assertTrue(os.path.exists(pjoin(self.path, name_file_decayed)),
+                        'no decayed file produced for %s' % name_scipt_file)
         
         
         lhe = lhe_parser.EventFile(pjoin(self.path, name_file_decayed))
@@ -290,10 +296,9 @@ class TestMadSpin(unittest.TestCase):
             self.assertEqual(event.nexternal, len(event))
             for particle in event:
                 if particle.pid in particle_to_decay:
-                    try:
-                        self.assertEqual(particle.status, 2)
-                    except:
-                        misc.sprint(name_scipt_file)
+                    self.assertEqual(particle.status, 2,
+                                     'pdg %s not marked as decayed for %s'
+                                     % (particle.pid, name_scipt_file))
 
     def test_madspin_loop_induced(self):
         """ Tests that that the differrent mode of madspin work for loop-induced processes.

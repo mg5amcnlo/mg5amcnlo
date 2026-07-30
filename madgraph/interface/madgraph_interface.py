@@ -1211,12 +1211,13 @@ class CheckValidForCmd(cmd.CheckCmd):
 #                raise self.InvalidCmd('Polarization restriction can not be used for generic NLO computations')
 
             def check(p):
-                if p.get('color') != 1:
-                    pass
-                    # raise self.InvalidCmd('Polarization restriction can not be used for color charged particles')
-                    # Polarisation restriction can now be used for color charged particles
-                elif p.get('mass') != 'ZERO':
-                    raise self.InvalidCmd('Polarization restriction can not be used for massive particles') 
+                # Polarisation restriction can now be used for color charged
+                # particles, so there is no longer a color check here. The mass
+                # restriction is independent of the color one and must stay
+                # outside it -- keeping it in an "elif" would have silently
+                # exempted massive color-charged particles.
+                if p.get('mass') != 'ZERO':
+                    raise self.InvalidCmd('Polarization restriction can not be used for massive particles')
  
 
 
