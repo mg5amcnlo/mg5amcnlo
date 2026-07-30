@@ -4092,7 +4092,10 @@ class MadSpinInterface(extended_cmd.Cmd):
 
             sp_path_prod = pjoin(self.path_me, self.ms_me_subdir, 'SubProcesses')
             self.create_f2py_module(sp_path_prod, 'prod', all_prefix, all_pdg, all_procid)
-            ##Here we do not create a module for the decay part because we do not need the decay density matrix
+            # legacy options 'onshell_v1' and 'madspin_v1' store both the production and the decay in a single folder
+            if self.options['spinmode'] not in ['onshell_v1', 'madspin_v1']:
+                sp_path_decay = pjoin(self.path_me, self.ms_me_decay_subdir, 'SubProcesses')
+                self.create_f2py_module(sp_path_decay, 'decay', all_prefix, all_pdg, all_procid)
 
         prod_static = getattr(production, '_ms_density_static', None)
         if not prod_static or prod_static.get('decays_key') != decays_key:
