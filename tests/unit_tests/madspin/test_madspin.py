@@ -1151,7 +1151,7 @@ class TestSequentialAcceptReject(unittest.TestCase):
                         'init_part': [particles[i] for i in slots],
                         'decaying_spins': [2, 2], 'position': [1, 2],
                         'allowed_hel': [], 'ncomb': 0, 'dimension': 4}
-            def _ensure_f2py_module(self):
+            def create_and_initialise_f2py_modules(self, all_prefix, all_pdg, all_procid):
                 pass
             def get_density(self, *args, **opts):
                 return rho
@@ -1348,6 +1348,7 @@ class TestScanMaxwgtDecomposition(unittest.TestCase):
         stub, events, evt_decayfile = self._fixture()
         import random
         random.seed(1)
+        #Ignore the message "Error while creating the f2py modules for the production/decay part"
         per_event = stub._scan_maxwgt_range(events, 0, 6, evt_decayfile, 6, 20)
         self.assertEqual(len(per_event), 6)
         for vec in per_event:

@@ -4090,12 +4090,7 @@ class MadSpinInterface(extended_cmd.Cmd):
             all_pdg = [0, 0]
             all_procid = [0, 0]
 
-            sp_path_prod = pjoin(self.path_me, self.ms_me_subdir, 'SubProcesses')
-            self.create_f2py_module(sp_path_prod, 'prod', all_prefix, all_pdg, all_procid)
-            # legacy options 'onshell_v1' and 'madspin_v1' store both the production and the decay in a single folder
-            if self.options['spinmode'] not in ['onshell_v1', 'madspin_v1']:
-                sp_path_decay = pjoin(self.path_me, self.ms_me_decay_subdir, 'SubProcesses')
-                self.create_f2py_module(sp_path_decay, 'decay', all_prefix, all_pdg, all_procid)
+            self.create_and_initialise_f2py_modules(all_prefix, all_pdg, all_procid)
 
         prod_static = getattr(production, '_ms_density_static', None)
         if not prod_static or prod_static.get('decays_key') != decays_key:
@@ -4473,6 +4468,7 @@ class MadSpinInterface(extended_cmd.Cmd):
                 MLCard.write(pjoin(MadLoopCardPath, 'MadLoopParams.dat'))                     
                 mymod.set_madloop_path(MadLoopCardPath)
 
+
     def create_f2py_module(self, sp_path, prod_or_decay, all_prefix, all_pdg, all_procid):
         """ Load the density-matrix f2py extensions and build the pdg -> prefix
             map, once. Both the matrix-element evaluation and get_density / get_pdir
@@ -4517,6 +4513,26 @@ class MadSpinInterface(extended_cmd.Cmd):
             self.initialise_f2py_module(mymod, sp_path, prod_or_decay='decay')
 
 
+    def create_and_initialise_f2py_modules(self, all_prefix, all_pdg, all_procid):
+        """ Routine to create the f2py modules and to initialise them. It separates production and decay.
+            It also fills all_prefix, all_pdg, all_procid which are lists of 2 elements. 
+            The first element is the value for the production part, the second element is for the decay part.
+        """
+        try:
+            sp_path_prod = pjoin(self.path_me, self.ms_me_subdir, 'SubProcesses')
+            self.create_f2py_module(sp_path_prod, 'prod', all_prefix, all_pdg, all_procid)
+        except:
+            logger.critical("Error while creating the f2py modules for the production part.")
+
+        # legacy options 'onshell_v1' and 'madspin_v1' store both the production and the decay in a single folder
+        if self.options['spinmode'] not in ['onshell_v1', 'madspin_v1']:
+            try:
+                sp_path_decay = pjoin(self.path_me, self.ms_me_decay_subdir, 'SubProcesses')
+                self.create_f2py_module(sp_path_decay, 'decay', all_prefix, all_pdg, all_procid)
+            except:
+                logger.critical("Error while creating the f2py modules for the decay part.")
+
+
     def calculate_matrix_element_from_density(self, production, decays, decay_dict, prod_density_cached=None):
         """routine to return the matrix element from density matrices"""
 
@@ -4532,13 +4548,9 @@ class MadSpinInterface(extended_cmd.Cmd):
             all_pdg = [0, 0]
             all_procid = [0, 0]
 
-            sp_path_prod = pjoin(self.path_me, self.ms_me_subdir, 'SubProcesses')
-            self.create_f2py_module(sp_path_prod, 'prod', all_prefix, all_pdg, all_procid)
+            self.create_and_initialise_f2py_modules(all_prefix, all_pdg, all_procid)
 
-            # legacy options 'onshell_v1' and 'madspin_v1' store both the production and the decay in a single folder
-            if self.options['spinmode'] not in ['onshell_v1', 'madspin_v1']:
-                sp_path_decay = pjoin(self.path_me, self.ms_me_decay_subdir, 'SubProcesses')
-                self.create_f2py_module(sp_path_decay, 'decay', all_prefix, all_pdg, all_procid)
+
         # ------------------------------------------------------------------
         # Cache production-only metadata reused across rejection retries
         # ------------------------------------------------------------------
