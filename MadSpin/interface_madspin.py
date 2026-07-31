@@ -2302,6 +2302,18 @@ class MadSpinInterface(extended_cmd.Cmd):
         try:
             # cap the cores this generation may use, use a seed of our own, and
             # never reuse a MadEventCmdShell inherited through fork
+            # multiprocessing reseeds Python's global RNG from OS entropy in
+            # every forked child (BaseProcess._bootstrap), so a child that does
+            # not re-seed it deterministically is NOT reproducible. That matters
+            # here because the tail of the generation is pure Python
+            # accept/reject on that RNG (combine_runs.copy_events and
+            # EventFile.unweight): left unseeded, the very same iseed gives a
+            # decay pool of a different size and content on every run, and the
+            # decayed sample diverges with it. Key it on the same offset as the
+            # madevent seed so the two particles keep distinct streams, with a
+            # multiplier of its own so a generation child can never land on the
+            # stream of an unweighting/max-weight worker (those use 7919).
+            random.seed((int(self.seed) if self.seed else 0) + 104729 * seed_offset)
             self._gen_nb_core = nb_core
             self.seed = (int(self.seed) + 1000003 * seed_offset) % (30081 * 30081)
             self.options['seed'] = self.seed
