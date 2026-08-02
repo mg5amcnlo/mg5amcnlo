@@ -1841,14 +1841,17 @@ CONTAINS
     INTEGER::ilog10x1,ilog10x2
     ! nseg for 10**(-n-1) to 10**(-n)
     INTEGER,PARAMETER::nseg=10
+    INTEGER,PARAMETER::n_interp=6
     INTEGER::MX,MY,I,J,K,L
     INTEGER::MX_save=0,MY_save=0
     SAVE MX_save,MY_save
     REAL(KIND(1d0)),DIMENSION(:),ALLOCATABLE::XD_1D,YD_1D
     REAL(KIND(1d0)),DIMENSION(:,:),ALLOCATABLE::ZD,ZD_save
     SAVE MX,MY,XD_1D,YD_1D,ZD,ZD_save
-    REAL(KIND(1d0)),DIMENSION(nseg+1)::XD2_1D,YD2_1D
-    REAL(KIND(1d0)),DIMENSION(nseg+1,nseg+1)::ZD2
+    !REAL(KIND(1d0)),DIMENSION(nseg+1)::XD2_1D,YD2_1D
+    !REAL(KIND(1d0)),DIMENSION(nseg+1,nseg+1)::ZD2
+    REAL(KIND(1d0)),DIMENSION(n_interp)::XD2_1D,YD2_1D
+    REAL(KIND(1d0)),DIMENSION(n_interp,n_interp)::ZD2
     REAL(KIND(1d0))::xx1,xx2
     REAL(KIND(1d0)),DIMENSION(1)::XI,YI,ZI
     REAL(KIND(1d0))::pnohadval
@@ -1993,20 +1996,59 @@ CONTAINS
           ELSE
              ilog10x2=FLOOR(YI(1))
           ENDIF
+          !K=nseg*(-ilog10x1-1)
+          !DO I=1,nseg+1
+          !   XD2_1D(I)=XD_1D(K+I)
+          !ENDDO
+          !L=nseg*(-ilog10x2-1)
+          !DO I=1,nseg+1
+          !   YD2_1D(I)=YD_1D(L+I)
+          !ENDDO
+          !DO I=1,nseg+1
+          !   DO J=1,nseg+1
+          !      ZD2(I,J)=ZD(K+I,L+J)
+          !   ENDDO
+          !ENDDO
+          !CALL lagrange_interp_2d(nseg,nseg,XD2_1D,YD2_1D,ZD2,1,XI,YI,ZI)
           K=nseg*(-ilog10x1-1)
-          DO I=1,nseg+1
-             XD2_1D(I)=XD_1D(K+I)
+          DO I=K+1,K+nseg+1
+             if(XD_1D(I).LE.XI(1))EXIT
           ENDDO
+          IF(I-n_interp/2.GE.1.AND.I-n_interp/2-1+n_interp.LE.MX_save+1)THEN
+             K=I-n_interp/2-1
+          ELSEIF(I-n_interp/2.LT.1)THEN
+             K=0
+          ELSEIF(I-n_interp/2-1+n_interp.GT.MX_save+1)THEN
+             K=MX_save+1-n_interp
+          ELSE
+             WRITE(*,*)"Error: you cannot reach here #1 !"
+             STOP
+          ENDIF
           L=nseg*(-ilog10x2-1)
-          DO I=1,nseg+1
+          DO I=L+1,L+nseg+1
+             if(YD_1D(I).LE.YI(1))EXIT
+          ENDDO
+          IF(I-n_interp/2.GE.1.AND.I-n_interp/2-1+n_interp.LE.MY_save+1)THEN
+             L=I-n_interp/2-1
+          ELSEIF(I-n_interp/2.LT.1)THEN
+             L=0
+          ELSEIF(I-n_interp/2-1+n_interp.GT.MY_save+1)THEN
+             L=MY_save+1-n_interp
+          ELSE
+             WRITE(*,*)"Error: you cannot reach here #2 !"
+             STOP
+          ENDIF
+          DO I=1,n_interp
+             XD2_1D(I)=XD_1D(K+I)
              YD2_1D(I)=YD_1D(L+I)
           ENDDO
-          DO I=1,nseg+1
-             DO J=1,nseg+1
+          DO I=1,n_interp
+             DO J=1,n_interp
                 ZD2(I,J)=ZD(K+I,L+J)
              ENDDO
           ENDDO
-          CALL lagrange_interp_2d(nseg,nseg,XD2_1D,YD2_1D,ZD2,1,XI,YI,ZI)
+          CALL lagrange_interp_2d(n_interp-1,n_interp-1,XD2_1D,&
+               YD2_1D,ZD2,1,XI,YI,ZI)
        ELSE
           ZI(1)=PhotonPhotonFlux_pp_eval(x1,x2)
        ENDIF
@@ -2240,6 +2282,7 @@ CONTAINS
     INTEGER::ilog10x1,ilog10x2
     ! nseg for 10**(-n-1) to 10**(-n)
     INTEGER,PARAMETER::nseg=10
+    INTEGER,PARAMETER::n_interp=6
     INTEGER::MX,MY,I,J,K,L
     INTEGER,DIMENSION(2)::MX_save=(/0,0/),MY_save=(/0,0/)
     SAVE MX_save,MY_save
@@ -2247,8 +2290,10 @@ CONTAINS
     REAL(KIND(1d0)),DIMENSION(:,:,:),ALLOCATABLE::ZD
     REAL(KIND(1d0)),DIMENSION(:,:),ALLOCATABLE::ZD1_save,ZD2_save
     SAVE MX,MY,XD_1D,YD_1D,ZD,ZD1_save,ZD2_save
-    REAL(KIND(1d0)),DIMENSION(nseg+1)::XD2_1D,YD2_1D
-    REAL(KIND(1d0)),DIMENSION(nseg+1,nseg+1)::ZD2
+    !REAL(KIND(1d0)),DIMENSION(nseg+1)::XD2_1D,YD2_1D
+    !REAL(KIND(1d0)),DIMENSION(nseg+1,nseg+1)::ZD2
+    REAL(KIND(1d0)),DIMENSION(n_interp)::XD2_1D,YD2_1D
+    REAL(KIND(1d0)),DIMENSION(n_interp,n_interp)::ZD2
     REAL(KIND(1d0))::xx1,xx2
     REAL(KIND(1d0)),DIMENSION(1)::XI,YI,ZI
     REAL(KIND(1d0))::pnohadval
@@ -2426,20 +2471,59 @@ CONTAINS
        ELSE
           ilog10x2=FLOOR(YI(1))
        ENDIF
+       !K=nseg*(-ilog10x1-1)
+       !DO I=1,nseg+1
+       !   XD2_1D(I)=XD_1D(K+I)
+       !ENDDO
+       !L=nseg*(-ilog10x2-1)
+       !DO I=1,nseg+1
+       !   YD2_1D(I)=YD_1D(L+I)
+       !ENDDO
+       !DO I=1,nseg+1
+       !   DO J=1,nseg+1
+       !      ZD2(I,J)=ZD(igrid,K+I,L+J)
+       !   ENDDO
+       !ENDDO
+       !CALL lagrange_interp_2d(nseg,nseg,XD2_1D,YD2_1D,ZD2,1,XI,YI,ZI)
        K=nseg*(-ilog10x1-1)
-       DO I=1,nseg+1
-          XD2_1D(I)=XD_1D(K+I)
+       DO I=K+1,K+nseg+1
+          if(XD_1D(I).LE.XI(1))EXIT
        ENDDO
+       IF(I-n_interp/2.GE.1.AND.I-n_interp/2-1+n_interp.LE.MX_save(igrid)+1)THEN
+          K=I-n_interp/2-1
+       ELSEIF(I-n_interp/2.LT.1)THEN
+          K=0
+       ELSEIF(I-n_interp/2-1+n_interp.GT.MX_save(igrid)+1)THEN
+          K=MX_save(igrid)+1-n_interp
+       ELSE
+          WRITE(*,*)"Error: you cannot reach here #1 !"
+          STOP
+       ENDIF
        L=nseg*(-ilog10x2-1)
-       DO I=1,nseg+1
+       DO I=L+1,L+nseg+1
+          if(YD_1D(I).LE.YI(1))EXIT
+       ENDDO
+       IF(I-n_interp/2.GE.1.AND.I-n_interp/2-1+n_interp.LE.MY_save(igrid)+1)THEN
+          L=I-n_interp/2-1
+       ELSEIF(I-n_interp/2.LT.1)THEN
+          L=0
+       ELSEIF(I-n_interp/2-1+n_interp.GT.MY_save(igrid)+1)THEN
+          L=MY_save(igrid)+1-n_interp
+       ELSE
+          WRITE(*,*)"Error: you cannot reach here #2 !"
+          STOP
+       ENDIF
+       DO I=1,n_interp
+          XD2_1D(I)=XD_1D(K+I)
           YD2_1D(I)=YD_1D(L+I)
        ENDDO
-       DO I=1,nseg+1
-          DO J=1,nseg+1
+       DO I=1,n_interp
+          DO J=1,n_interp
              ZD2(I,J)=ZD(igrid,K+I,L+J)
           ENDDO
        ENDDO
-       CALL lagrange_interp_2d(nseg,nseg,XD2_1D,YD2_1D,ZD2,1,XI,YI,ZI)
+       CALL lagrange_interp_2d(n_interp-1,n_interp-1,XD2_1D,&
+             YD2_1D,ZD2,1,XI,YI,ZI)
        IF(ISNAN(ZI(1)).OR.ZI(1).LT.0d0)THEN
           PhotonPhotonDeltaB_pp=0d0
        ELSE
@@ -2692,18 +2776,22 @@ CONTAINS
     INTEGER::ilog10x1,ilog10x2
     ! nseg for 10**(-n-1) to 10**(-n)
     INTEGER,PARAMETER::nseg=10
+    INTEGER,PARAMETER::n_interp=6
     INTEGER::MX,MY,I,J,K,L
     INTEGER::MX_save=0,MY_save=0
     SAVE MX_save,MY_save
     REAL(KIND(1d0)),DIMENSION(:),ALLOCATABLE::XD_1D,YD_1D
     REAL(KIND(1d0)),DIMENSION(:,:),ALLOCATABLE::ZD,ZD_save
     SAVE MX,MY,XD_1D,YD_1D,ZD,ZD_save
-    REAL(KIND(1d0)),DIMENSION(nseg+1)::XD2_1D,YD2_1D
-    REAL(KIND(1d0)),DIMENSION(nseg+1,nseg+1)::ZD2
+    !REAL(KIND(1d0)),DIMENSION(nseg+1)::XD2_1D,YD2_1D
+    !REAL(KIND(1d0)),DIMENSION(nseg+1,nseg+1)::ZD2
+    REAL(KIND(1d0)),DIMENSION(n_interp)::XD2_1D,YD2_1D
+    REAL(KIND(1d0)),DIMENSION(n_interp,n_interp)::ZD2
     REAL(KIND(1d0))::xx1,xx2
     REAL(KIND(1d0)),DIMENSION(1)::XI,YI,ZI
     REAL(KIND(1d0))::pnohadval
     LOGICAL::force_pnohad1
+    include 'run90.inc'
     IF(.NOT.print_banner)THEN
        WRITE(*,*)"==============================================================="
        WRITE(*,*)"|                                                             |"
@@ -2840,20 +2928,59 @@ CONTAINS
           ELSE
              ilog10x2=FLOOR(YI(1))
           ENDIF
+          !K=nseg*(-ilog10x1-1)
+          !DO I=1,nseg+1
+          !   XD2_1D(I)=XD_1D(K+I)
+          !ENDDO
+          !L=nseg*(-ilog10x2-1)
+          !DO I=1,nseg+1
+          !   YD2_1D(I)=YD_1D(L+I)
+          !ENDDO
+          !DO I=1,nseg+1
+          !   DO J=1,nseg+1
+          !      ZD2(I,J)=ZD(K+I,L+J)
+          !   ENDDO
+          !ENDDO
+          !CALL lagrange_interp_2d(nseg,nseg,XD2_1D,YD2_1D,ZD2,1,XI,YI,ZI)
           K=nseg*(-ilog10x1-1)
-          DO I=1,nseg+1
-             XD2_1D(I)=XD_1D(K+I)
+          DO I=K+1,K+nseg+1
+             if(XD_1D(I).LE.XI(1))EXIT
           ENDDO
+          IF(I-n_interp/2.GE.1.AND.I-n_interp/2-1+n_interp.LE.MX_save+1)THEN
+             K=I-n_interp/2-1
+          ELSEIF(I-n_interp/2.LT.1)THEN
+             K=0
+          ELSEIF(I-n_interp/2-1+n_interp.GT.MX_save+1)THEN
+             K=MX_save+1-n_interp
+          ELSE
+             WRITE(*,*)"Error: you cannot reach here #1 !"
+             STOP
+          ENDIF
           L=nseg*(-ilog10x2-1)
-          DO I=1,nseg+1
+          DO I=L+1,L+nseg+1
+             if(YD_1D(I).LE.YI(1))EXIT
+          ENDDO
+          IF(I-n_interp/2.GE.1.AND.I-n_interp/2-1+n_interp.LE.MY_save+1)THEN
+             L=I-n_interp/2-1
+          ELSEIF(I-n_interp/2.LT.1)THEN
+             L=0
+          ELSEIF(I-n_interp/2-1+n_interp.GT.MY_save+1)THEN
+             L=MY_save+1-n_interp
+          ELSE
+             WRITE(*,*)"Error: you cannot reach here #2 !"
+             STOP
+          ENDIF
+          DO I=1,n_interp
+             XD2_1D(I)=XD_1D(K+I)
              YD2_1D(I)=YD_1D(L+I)
           ENDDO
-          DO I=1,nseg+1
-             DO J=1,nseg+1
+          DO I=1,n_interp
+             DO J=1,n_interp
                 ZD2(I,J)=ZD(K+I,L+J)
              ENDDO
           ENDDO
-          CALL lagrange_interp_2d(nseg,nseg,XD2_1D,YD2_1D,ZD2,1,XI,YI,ZI)
+          CALL lagrange_interp_2d(n_interp-1,n_interp-1,XD2_1D,&
+               YD2_1D,ZD2,1,XI,YI,ZI)
        ELSE
           ZI(1)=PhotonPhotonFlux_pA_hardsphere_eval(x1,x2)
        ENDIF
@@ -2863,7 +2990,9 @@ CONTAINS
     IF(.NOT.force_pnohad1)THEN
        IF(ISNAN(pnohadval).OR.pnohadval.EQ.0d0)THEN
           PhotonPhotonFlux_pA_hardsphere=0d0
-       ELSEIF(ISNAN(ZI(1)).OR.ZI(1).LT.0d0.OR.DABS(ZI(1)/pnohadval).GT.1D2)THEN
+       ELSEIF(ISNAN(ZI(1)).OR.ZI(1).LT.0d0.OR.(DABS(ZI(1)/pnohadval).GT.1D2.AND.&
+            ((nuclearA_beam1.GE.2.AND.neutron_tagging(1).EQ.-2).OR.&
+            (nuclearA_beam2.GE.2.AND.neutron_tagging(2).EQ.-2))))THEN
           PhotonPhotonFlux_pA_hardsphere=pnohadval
        ELSE
           PhotonPhotonFlux_pA_hardsphere=ZI(1)
@@ -3106,18 +3235,22 @@ CONTAINS
     INTEGER::ilog10x1,ilog10x2
     ! nseg for 10**(-n-1) to 10**(-n)
     INTEGER,PARAMETER::nseg=10
+    INTEGER,PARAMETER::n_interp=6
     INTEGER::MX,MY,I,J,K,L
     INTEGER::MX_save=0,MY_save=0
     SAVE MX_save,MY_save
     REAL(KIND(1d0)),DIMENSION(:),ALLOCATABLE::XD_1D,YD_1D
     REAL(KIND(1d0)),DIMENSION(:,:),ALLOCATABLE::ZD,ZD_save
     SAVE MX,MY,XD_1D,YD_1D,ZD,ZD_save
-    REAL(KIND(1d0)),DIMENSION(nseg+1)::XD2_1D,YD2_1D
-    REAL(KIND(1d0)),DIMENSION(nseg+1,nseg+1)::ZD2
+    !REAL(KIND(1d0)),DIMENSION(nseg+1)::XD2_1D,YD2_1D
+    !REAL(KIND(1d0)),DIMENSION(nseg+1,nseg+1)::ZD2
+    REAL(KIND(1d0)),DIMENSION(n_interp)::XD2_1D,YD2_1D
+    REAL(KIND(1d0)),DIMENSION(n_interp,n_interp)::ZD2
     REAL(KIND(1d0))::xx1,xx2
     REAL(KIND(1d0)),DIMENSION(1)::XI,YI,ZI
     REAL(KIND(1d0))::pnohadval
     LOGICAL::force_pnohad1
+    include 'run90.inc'
     IF(.NOT.print_banner)THEN
        WRITE(*,*)"==============================================================="
        WRITE(*,*)"|                                                             |"
@@ -3251,20 +3384,59 @@ CONTAINS
           ELSE
              ilog10x2=FLOOR(YI(1))
           ENDIF
+          !K=nseg*(-ilog10x1-1)
+          !DO I=1,nseg+1
+          !   XD2_1D(I)=XD_1D(K+I)
+          !ENDDO
+          !L=nseg*(-ilog10x2-1)
+          !DO I=1,nseg+1
+          !   YD2_1D(I)=YD_1D(L+I)
+          !ENDDO
+          !DO I=1,nseg+1
+          !   DO J=1,nseg+1
+          !      ZD2(I,J)=ZD(K+I,L+J)
+          !   ENDDO
+          !ENDDO
+          !CALL lagrange_interp_2d(nseg,nseg,XD2_1D,YD2_1D,ZD2,1,XI,YI,ZI)
           K=nseg*(-ilog10x1-1)
-          DO I=1,nseg+1
-             XD2_1D(I)=XD_1D(K+I)
+          DO I=K+1,K+nseg+1
+             if(XD_1D(I).LE.XI(1))EXIT
           ENDDO
+          IF(I-n_interp/2.GE.1.AND.I-n_interp/2-1+n_interp.LE.MX_save+1)THEN
+             K=I-n_interp/2-1
+          ELSEIF(I-n_interp/2.LT.1)THEN
+             K=0
+          ELSEIF(I-n_interp/2-1+n_interp.GT.MX_save+1)THEN
+             K=MX_save+1-n_interp
+          ELSE
+             WRITE(*,*)"Error: you cannot reach here #1 !"
+             STOP
+          ENDIF
           L=nseg*(-ilog10x2-1)
-          DO I=1,nseg+1
+          DO I=L+1,L+nseg+1
+             if(YD_1D(I).LE.YI(1))EXIT
+          ENDDO
+          IF(I-n_interp/2.GE.1.AND.I-n_interp/2-1+n_interp.LE.MY_save+1)THEN
+             L=I-n_interp/2-1
+          ELSEIF(I-n_interp/2.LT.1)THEN
+             L=0
+          ELSEIF(I-n_interp/2-1+n_interp.GT.MY_save+1)THEN
+             L=MY_save+1-n_interp
+          ELSE
+             WRITE(*,*)"Error: you cannot reach here #2 !"
+             STOP
+          ENDIF
+          DO I=1,n_interp
+             XD2_1D(I)=XD_1D(K+I)
              YD2_1D(I)=YD_1D(L+I)
           ENDDO
-          DO I=1,nseg+1
-             DO J=1,nseg+1
+          DO I=1,n_interp
+             DO J=1,n_interp
                 ZD2(I,J)=ZD(K+I,L+J)
              ENDDO
           ENDDO
-          CALL lagrange_interp_2d(nseg,nseg,XD2_1D,YD2_1D,ZD2,1,XI,YI,ZI)
+          CALL lagrange_interp_2d(n_interp-1,n_interp-1,XD2_1D,&
+               YD2_1D,ZD2,1,XI,YI,ZI)
        ELSE
           ZI(1)=PhotonPhotonFlux_pA_WoodsSaxon_eval(x1,x2)
        ENDIF
@@ -3274,7 +3446,9 @@ CONTAINS
     IF(.NOT.force_pnohad1)THEN
        IF(ISNAN(pnohadval).OR.pnohadval.EQ.0d0)THEN
           PhotonPhotonFlux_pA_WoodsSaxon=0d0
-       ELSEIF(ISNAN(ZI(1)).OR.ZI(1).LT.0d0.OR.DABS(ZI(1)/pnohadval).GT.1D2)THEN
+       ELSEIF(ISNAN(ZI(1)).OR.ZI(1).LT.0d0.OR.(DABS(ZI(1)/pnohadval).GT.1D2.AND.&
+            ((nuclearA_beam1.GE.2.AND.neutron_tagging(1).EQ.-2).OR.&
+            (nuclearA_beam2.GE.2.AND.neutron_tagging(2).EQ.-2))))THEN
           PhotonPhotonFlux_pA_WoodsSaxon=pnohadval
        ELSE
           PhotonPhotonFlux_pA_WoodsSaxon=ZI(1)
@@ -3540,6 +3714,7 @@ CONTAINS
     INTEGER::ilog10x1,ilog10x2
     ! nseg for 10**(-n-1) to 10**(-n)
     INTEGER,PARAMETER::nseg=10
+    INTEGER,PARAMETER::n_interp=6
     INTEGER::MX,MY,I,J,K,L
     INTEGER,DIMENSION(2)::MX_save=(/0,0/),MY_save=(/0,0/)
     SAVE MX_save,MY_save
@@ -3547,8 +3722,10 @@ CONTAINS
     REAL(KIND(1d0)),DIMENSION(:,:,:),ALLOCATABLE::ZD
     REAL(KIND(1d0)),DIMENSION(:,:),ALLOCATABLE::ZD1_save,ZD2_save
     SAVE MX,MY,XD_1D,YD_1D,ZD,ZD1_save,ZD2_save
-    REAL(KIND(1d0)),DIMENSION(nseg+1)::XD2_1D,YD2_1D
-    REAL(KIND(1d0)),DIMENSION(nseg+1,nseg+1)::ZD2
+    !REAL(KIND(1d0)),DIMENSION(nseg+1)::XD2_1D,YD2_1D
+    !REAL(KIND(1d0)),DIMENSION(nseg+1,nseg+1)::ZD2
+    REAL(KIND(1d0)),DIMENSION(n_interp)::XD2_1D,YD2_1D
+    REAL(KIND(1d0)),DIMENSION(n_interp,n_interp)::ZD2
     REAL(KIND(1d0))::xx1,xx2
     REAL(KIND(1d0)),DIMENSION(1)::XI,YI,ZI
     REAL(KIND(1d0))::pnohadval
@@ -3725,20 +3902,59 @@ CONTAINS
        ELSE
           ilog10x2=FLOOR(YI(1))
        ENDIF
+       !K=nseg*(-ilog10x1-1)
+       !DO I=1,nseg+1
+       !   XD2_1D(I)=XD_1D(K+I)
+       !ENDDO
+       !L=nseg*(-ilog10x2-1)
+       !DO I=1,nseg+1
+       !   YD2_1D(I)=YD_1D(L+I)
+       !ENDDO
+       !DO I=1,nseg+1
+       !   DO J=1,nseg+1
+       !      ZD2(I,J)=ZD(igrid,K+I,L+J)
+       !   ENDDO
+       !ENDDO
+       !CALL lagrange_interp_2d(nseg,nseg,XD2_1D,YD2_1D,ZD2,1,XI,YI,ZI)
        K=nseg*(-ilog10x1-1)
-       DO I=1,nseg+1
-          XD2_1D(I)=XD_1D(K+I)
+       DO I=K+1,K+nseg+1
+          if(XD_1D(I).LE.XI(1))EXIT
        ENDDO
+       IF(I-n_interp/2.GE.1.AND.I-n_interp/2-1+n_interp.LE.MX_save(igrid)+1)THEN
+          K=I-n_interp/2-1
+       ELSEIF(I-n_interp/2.LT.1)THEN
+          K=0
+       ELSEIF(I-n_interp/2-1+n_interp.GT.MX_save(igrid)+1)THEN
+          K=MX_save(igrid)+1-n_interp
+       ELSE
+          WRITE(*,*)"Error: you cannot reach here #1 !"
+          STOP
+       ENDIF
        L=nseg*(-ilog10x2-1)
-       DO I=1,nseg+1
+       DO I=L+1,L+nseg+1
+          if(YD_1D(I).LE.YI(1))EXIT
+       ENDDO
+       IF(I-n_interp/2.GE.1.AND.I-n_interp/2-1+n_interp.LE.MY_save(igrid)+1)THEN
+          L=I-n_interp/2-1
+       ELSEIF(I-n_interp/2.LT.1)THEN
+          L=0
+       ELSEIF(I-n_interp/2-1+n_interp.GT.MY_save(igrid)+1)THEN
+          L=MY_save(igrid)+1-n_interp
+       ELSE
+          WRITE(*,*)"Error: you cannot reach here #2 !"
+          STOP
+       ENDIF
+       DO I=1,n_interp
+          XD2_1D(I)=XD_1D(K+I)
           YD2_1D(I)=YD_1D(L+I)
        ENDDO
-       DO I=1,nseg+1
-          DO J=1,nseg+1
+       DO I=1,n_interp
+          DO J=1,n_interp
              ZD2(I,J)=ZD(igrid,K+I,L+J)
           ENDDO
        ENDDO
-       CALL lagrange_interp_2d(nseg,nseg,XD2_1D,YD2_1D,ZD2,1,XI,YI,ZI)
+       CALL lagrange_interp_2d(n_interp-1,n_interp-1,XD2_1D,&
+            YD2_1D,ZD2,1,XI,YI,ZI)
        IF(ISNAN(ZI(1)).OR.ZI(1).LT.0d0)THEN
           PhotonPhotonDeltaB_pA_WoodsSaxon=0d0
        ELSE
@@ -4061,14 +4277,17 @@ CONTAINS
     INTEGER::ilog10x1,ilog10x2
     ! nseg for 10**(-n-1) to 10**(-n)
     INTEGER,PARAMETER::nseg=10
+    INTEGER,PARAMETER::n_interp=6
     INTEGER::MX,MY,I,J,K,L
     INTEGER::MX_save=0,MY_save=0
     SAVE MX_save,MY_save
     REAL(KIND(1d0)),DIMENSION(:),ALLOCATABLE::XD_1D,YD_1D
     REAL(KIND(1d0)),DIMENSION(:,:),ALLOCATABLE::ZD,ZD_save
     SAVE MX,MY,XD_1D,YD_1D,ZD,ZD_save
-    REAL(KIND(1d0)),DIMENSION(nseg+1)::XD2_1D,YD2_1D
-    REAL(KIND(1d0)),DIMENSION(nseg+1,nseg+1)::ZD2
+    !REAL(KIND(1d0)),DIMENSION(nseg+1)::XD2_1D,YD2_1D
+    !REAL(KIND(1d0)),DIMENSION(nseg+1,nseg+1)::ZD2
+    REAL(KIND(1d0)),DIMENSION(n_interp)::XD2_1D,YD2_1D
+    REAL(KIND(1d0)),DIMENSION(n_interp,n_interp)::ZD2
     REAL(KIND(1d0))::xx1,xx2
     REAL(KIND(1d0)),DIMENSION(1)::XI,YI,ZI
     REAL(KIND(1d0))::pnohadval
@@ -4209,20 +4428,59 @@ CONTAINS
           ELSE
              ilog10x2=FLOOR(YI(1))
           ENDIF
+          !K=nseg*(-ilog10x1-1)
+          !DO I=1,nseg+1
+          !   XD2_1D(I)=XD_1D(K+I)
+          !ENDDO
+          !L=nseg*(-ilog10x2-1)
+          !DO I=1,nseg+1
+          !   YD2_1D(I)=YD_1D(L+I)
+          !ENDDO
+          !DO I=1,nseg+1
+          !   DO J=1,nseg+1
+          !      ZD2(I,J)=ZD(K+I,L+J)
+          !   ENDDO
+          !ENDDO
+          !CALL lagrange_interp_2d(nseg,nseg,XD2_1D,YD2_1D,ZD2,1,XI,YI,ZI)
           K=nseg*(-ilog10x1-1)
-          DO I=1,nseg+1
-             XD2_1D(I)=XD_1D(K+I)
+          DO I=K+1,K+nseg+1
+             if(XD_1D(I).LE.XI(1))EXIT
           ENDDO
+          IF(I-n_interp/2.GE.1.AND.I-n_interp/2-1+n_interp.LE.MX_save+1)THEN
+             K=I-n_interp/2-1
+          ELSEIF(I-n_interp/2.LT.1)THEN
+             K=0
+          ELSEIF(I-n_interp/2-1+n_interp.GT.MX_save+1)THEN
+             K=MX_save+1-n_interp
+          ELSE
+             WRITE(*,*)"Error: you cannot reach here #1 !"
+             STOP
+          ENDIF
           L=nseg*(-ilog10x2-1)
-          DO I=1,nseg+1
+          DO I=L+1,L+nseg+1
+             if(YD_1D(I).LE.YI(1))EXIT
+          ENDDO
+          IF(I-n_interp/2.GE.1.AND.I-n_interp/2-1+n_interp.LE.MY_save+1)THEN
+             L=I-n_interp/2-1
+          ELSEIF(I-n_interp/2.LT.1)THEN
+             L=0
+          ELSEIF(I-n_interp/2-1+n_interp.GT.MY_save+1)THEN
+             L=MY_save+1-n_interp
+          ELSE
+             WRITE(*,*)"Error: you cannot reach here #2 !"
+             STOP
+          ENDIF
+          DO I=1,n_interp
+             XD2_1D(I)=XD_1D(K+I)
              YD2_1D(I)=YD_1D(L+I)
           ENDDO
-          DO I=1,nseg+1
-             DO J=1,nseg+1
+          DO I=1,n_interp
+             DO J=1,n_interp
                 ZD2(I,J)=ZD(K+I,L+J)
              ENDDO
           ENDDO
-          CALL lagrange_interp_2d(nseg,nseg,XD2_1D,YD2_1D,ZD2,1,XI,YI,ZI)
+          CALL lagrange_interp_2d(n_interp-1,n_interp-1,XD2_1D,&
+               YD2_1D,ZD2,1,XI,YI,ZI)
        ELSE
           ZI(1)=PhotonPhotonFlux_AB_hardsphere_eval(x1,x2)
        ENDIF
@@ -4232,7 +4490,8 @@ CONTAINS
     IF(.NOT.force_pnohad1)THEN
        IF(ISNAN(pnohadval).OR.pnohadval.EQ.0d0)THEN
           PhotonPhotonFlux_AB_hardsphere=0d0
-       ELSEIF(ISNAN(ZI(1)).OR.ZI(1).LT.0d0.OR.DABS(ZI(1)/pnohadval).GT.1D2)THEN
+       ELSEIF(ISNAN(ZI(1)).OR.ZI(1).LT.0d0.OR.(DABS(ZI(1)/pnohadval).GT.1D2.AND.&
+            neutron_tagging(1).EQ.-2.AND.neutron_tagging(2).EQ.-2))THEN
           PhotonPhotonFlux_AB_hardsphere=pnohadval
        ELSE
           PhotonPhotonFlux_AB_hardsphere=ZI(1)
@@ -4464,14 +4723,17 @@ CONTAINS
     INTEGER::ilog10x1,ilog10x2
     ! nseg for 10**(-n-1) to 10**(-n)
     INTEGER,PARAMETER::nseg=10
+    INTEGER,PARAMETER::n_interp=6
     INTEGER::MX,MY,I,J,K,L
     INTEGER::MX_save=0,MY_save=0
     SAVE MX_save,MY_save
     REAL(KIND(1d0)),DIMENSION(:),ALLOCATABLE::XD_1D,YD_1D
     REAL(KIND(1d0)),DIMENSION(:,:),ALLOCATABLE::ZD,ZD_save
     SAVE MX,MY,XD_1D,YD_1D,ZD,ZD_save
-    REAL(KIND(1d0)),DIMENSION(nseg+1)::XD2_1D,YD2_1D
-    REAL(KIND(1d0)),DIMENSION(nseg+1,nseg+1)::ZD2
+    !REAL(KIND(1d0)),DIMENSION(nseg+1)::XD2_1D,YD2_1D
+    !REAL(KIND(1d0)),DIMENSION(nseg+1,nseg+1)::ZD2
+    REAL(KIND(1d0)),DIMENSION(n_interp)::XD2_1D,YD2_1D
+    REAL(KIND(1d0)),DIMENSION(n_interp,n_interp)::ZD2
     REAL(KIND(1d0))::xx1,xx2
     REAL(KIND(1d0)),DIMENSION(1)::XI,YI,ZI
     REAL(KIND(1d0))::pnohadval
@@ -4613,20 +4875,59 @@ CONTAINS
           ELSE
              ilog10x2=FLOOR(YI(1))
           ENDIF
+          !K=nseg*(-ilog10x1-1)
+          !DO I=1,nseg+1
+          !   XD2_1D(I)=XD_1D(K+I)
+          !ENDDO
+          !L=nseg*(-ilog10x2-1)
+          !DO I=1,nseg+1
+          !   YD2_1D(I)=YD_1D(L+I)
+          !ENDDO
+          !DO I=1,nseg+1
+          !   DO J=1,nseg+1
+          !      ZD2(I,J)=ZD(K+I,L+J)
+          !   ENDDO
+          !ENDDO
+          !CALL lagrange_interp_2d(nseg,nseg,XD2_1D,YD2_1D,ZD2,1,XI,YI,ZI)
           K=nseg*(-ilog10x1-1)
-          DO I=1,nseg+1
-             XD2_1D(I)=XD_1D(K+I)
+          DO I=K+1,K+nseg+1
+             if(XD_1D(I).LE.XI(1))EXIT
           ENDDO
+          IF(I-n_interp/2.GE.1.AND.I-n_interp/2-1+n_interp.LE.MX_save+1)THEN
+             K=I-n_interp/2-1
+          ELSEIF(I-n_interp/2.LT.1)THEN
+             K=0
+          ELSEIF(I-n_interp/2-1+n_interp.GT.MX_save+1)THEN
+             K=MX_save+1-n_interp
+          ELSE
+             WRITE(*,*)"Error: you cannot reach here #1 !"
+             STOP
+          ENDIF
           L=nseg*(-ilog10x2-1)
-          DO I=1,nseg+1
+          DO I=L+1,L+nseg+1
+             if(YD_1D(I).LE.YI(1))EXIT
+          ENDDO
+          IF(I-n_interp/2.GE.1.AND.I-n_interp/2-1+n_interp.LE.MY_save+1)THEN
+             L=I-n_interp/2-1
+          ELSEIF(I-n_interp/2.LT.1)THEN
+             L=0
+          ELSEIF(I-n_interp/2-1+n_interp.GT.MY_save+1)THEN
+             L=MY_save+1-n_interp
+          ELSE
+             WRITE(*,*)"Error: you cannot reach here #2 !"
+             STOP
+          ENDIF
+          DO I=1,n_interp
+             XD2_1D(I)=XD_1D(K+I)
              YD2_1D(I)=YD_1D(L+I)
           ENDDO
-          DO I=1,nseg+1
-             DO J=1,nseg+1
+          DO I=1,n_interp
+             DO J=1,n_interp
                 ZD2(I,J)=ZD(K+I,L+J)
              ENDDO
           ENDDO
-          CALL lagrange_interp_2d(nseg,nseg,XD2_1D,YD2_1D,ZD2,1,XI,YI,ZI)
+          CALL lagrange_interp_2d(n_interp-1,n_interp-1,XD2_1D,&
+               YD2_1D,ZD2,1,XI,YI,ZI)
        ELSE
           ZI(1)=PhotonPhotonFlux_AB_WoodsSaxon_eval(x1,x2)
        ENDIF
@@ -4636,7 +4937,8 @@ CONTAINS
     IF(.NOT.force_pnohad1)THEN
        IF(ISNAN(pnohadval).OR.pnohadval.EQ.0d0)THEN
           PhotonPhotonFlux_AB_WoodsSaxon=0d0
-       ELSEIF(ISNAN(ZI(1)).OR.ZI(1).LT.0d0.OR.DABS(ZI(1)/pnohadval).GT.1D2)THEN
+       ELSEIF(ISNAN(ZI(1)).OR.ZI(1).LT.0d0.OR.(DABS(ZI(1)/pnohadval).GT.1D2.AND.&
+            neutron_tagging(1).EQ.-2.AND.neutron_tagging(2).EQ.-2))THEN
           PhotonPhotonFlux_AB_WoodsSaxon=pnohadval
        ELSE
           !IF(DABS(ZI(1)/pnohadval).GT.1D2.OR.(DABS(ZI(1)/pnohadval).LT.1D-2))THEN
@@ -4905,6 +5207,7 @@ CONTAINS
     INTEGER::ilog10x1,ilog10x2
     ! nseg for 10**(-n-1) to 10**(-n)
     INTEGER,PARAMETER::nseg=10
+    INTEGER,PARAMETER::n_interp=6
     INTEGER::MX,MY,I,J,K,L
     INTEGER,DIMENSION(2)::MX_save=(/0,0/),MY_save=(/0,0/)
     SAVE MX_save,MY_save
@@ -4912,8 +5215,10 @@ CONTAINS
     REAL(KIND(1d0)),DIMENSION(:,:,:),ALLOCATABLE::ZD
     REAL(KIND(1d0)),DIMENSION(:,:),ALLOCATABLE::ZD1_save,ZD2_save
     SAVE MX,MY,XD_1D,YD_1D,ZD,ZD1_save,ZD2_save
-    REAL(KIND(1d0)),DIMENSION(nseg+1)::XD2_1D,YD2_1D
-    REAL(KIND(1d0)),DIMENSION(nseg+1,nseg+1)::ZD2
+    !REAL(KIND(1d0)),DIMENSION(nseg+1)::XD2_1D,YD2_1D
+    !REAL(KIND(1d0)),DIMENSION(nseg+1,nseg+1)::ZD2
+    REAL(KIND(1d0)),DIMENSION(n_interp)::XD2_1D,YD2_1D
+    REAL(KIND(1d0)),DIMENSION(n_interp,n_interp)::ZD2
     REAL(KIND(1d0))::xx1,xx2
     REAL(KIND(1d0)),DIMENSION(1)::XI,YI,ZI
     REAL(KIND(1d0))::pnohadval
@@ -5095,20 +5400,59 @@ CONTAINS
        ELSE
           ilog10x2=FLOOR(YI(1))
        ENDIF
+       !K=nseg*(-ilog10x1-1)
+       !DO I=1,nseg+1
+       !   XD2_1D(I)=XD_1D(K+I)
+       !ENDDO
+       !L=nseg*(-ilog10x2-1)
+       !DO I=1,nseg+1
+       !   YD2_1D(I)=YD_1D(L+I)
+       !ENDDO
+       !DO I=1,nseg+1
+       !   DO J=1,nseg+1
+       !      ZD2(I,J)=ZD(igrid,K+I,L+J)
+       !   ENDDO
+       !ENDDO
+       !CALL lagrange_interp_2d(nseg,nseg,XD2_1D,YD2_1D,ZD2,1,XI,YI,ZI)
        K=nseg*(-ilog10x1-1)
-       DO I=1,nseg+1
-          XD2_1D(I)=XD_1D(K+I)
+       DO I=K+1,K+nseg+1
+          if(XD_1D(I).LE.XI(1))EXIT
        ENDDO
+       IF(I-n_interp/2.GE.1.AND.I-n_interp/2-1+n_interp.LE.MX_save(igrid)+1)THEN
+          K=I-n_interp/2-1
+       ELSEIF(I-n_interp/2.LT.1)THEN
+          K=0
+       ELSEIF(I-n_interp/2-1+n_interp.GT.MX_save(igrid)+1)THEN
+          K=MX_save(igrid)+1-n_interp
+       ELSE
+          WRITE(*,*)"Error: you cannot reach here #1 !"
+          STOP
+       ENDIF
        L=nseg*(-ilog10x2-1)
-       DO I=1,nseg+1
+       DO I=L+1,L+nseg+1
+          if(YD_1D(I).LE.YI(1))EXIT
+       ENDDO
+       IF(I-n_interp/2.GE.1.AND.I-n_interp/2-1+n_interp.LE.MY_save(igrid)+1)THEN
+          L=I-n_interp/2-1
+       ELSEIF(I-n_interp/2.LT.1)THEN
+          L=0
+       ELSEIF(I-n_interp/2-1+n_interp.GT.MY_save(igrid)+1)THEN
+          L=MY_save(igrid)+1-n_interp
+       ELSE
+          WRITE(*,*)"Error: you cannot reach here #2 !"
+          STOP
+       ENDIF
+       DO I=1,n_interp
+          XD2_1D(I)=XD_1D(K+I)
           YD2_1D(I)=YD_1D(L+I)
        ENDDO
-       DO I=1,nseg+1
-          DO J=1,nseg+1
+       DO I=1,n_interp
+          DO J=1,n_interp
              ZD2(I,J)=ZD(igrid,K+I,L+J)
           ENDDO
        ENDDO
-       CALL lagrange_interp_2d(nseg,nseg,XD2_1D,YD2_1D,ZD2,1,XI,YI,ZI)
+       CALL lagrange_interp_2d(n_interp-1,n_interp-1,XD2_1D,&
+            YD2_1D,ZD2,1,XI,YI,ZI)
        IF(ISNAN(ZI(1)).OR.ZI(1).LT.0d0)THEN
           PhotonPhotonDeltaB_AB_WoodsSaxon=0d0
        ELSE
