@@ -2791,7 +2791,6 @@ CONTAINS
     REAL(KIND(1d0)),DIMENSION(1)::XI,YI,ZI
     REAL(KIND(1d0))::pnohadval
     LOGICAL::force_pnohad1
-    include 'run90.inc'
     IF(.NOT.print_banner)THEN
        WRITE(*,*)"==============================================================="
        WRITE(*,*)"|                                                             |"
@@ -2990,9 +2989,7 @@ CONTAINS
     IF(.NOT.force_pnohad1)THEN
        IF(ISNAN(pnohadval).OR.pnohadval.EQ.0d0)THEN
           PhotonPhotonFlux_pA_hardsphere=0d0
-       ELSEIF(ISNAN(ZI(1)).OR.ZI(1).LT.0d0.OR.(DABS(ZI(1)/pnohadval).GT.1D2.AND.&
-            ((nuclearA_beam1.GE.2.AND.neutron_tagging(1).EQ.-2).OR.&
-            (nuclearA_beam2.GE.2.AND.neutron_tagging(2).EQ.-2))))THEN
+       ELSEIF(ISNAN(ZI(1)).OR.ZI(1).LT.0d0.OR.DABS(ZI(1)/pnohadval).GT.1D2)THEN
           PhotonPhotonFlux_pA_hardsphere=pnohadval
        ELSE
           PhotonPhotonFlux_pA_hardsphere=ZI(1)
@@ -3250,7 +3247,6 @@ CONTAINS
     REAL(KIND(1d0)),DIMENSION(1)::XI,YI,ZI
     REAL(KIND(1d0))::pnohadval
     LOGICAL::force_pnohad1
-    include 'run90.inc'
     IF(.NOT.print_banner)THEN
        WRITE(*,*)"==============================================================="
        WRITE(*,*)"|                                                             |"
@@ -3446,9 +3442,7 @@ CONTAINS
     IF(.NOT.force_pnohad1)THEN
        IF(ISNAN(pnohadval).OR.pnohadval.EQ.0d0)THEN
           PhotonPhotonFlux_pA_WoodsSaxon=0d0
-       ELSEIF(ISNAN(ZI(1)).OR.ZI(1).LT.0d0.OR.(DABS(ZI(1)/pnohadval).GT.1D2.AND.&
-            ((nuclearA_beam1.GE.2.AND.neutron_tagging(1).EQ.-2).OR.&
-            (nuclearA_beam2.GE.2.AND.neutron_tagging(2).EQ.-2))))THEN
+       ELSEIF(ISNAN(ZI(1)).OR.ZI(1).LT.0d0.OR.DABS(ZI(1)/pnohadval).GT.1D2)THEN
           PhotonPhotonFlux_pA_WoodsSaxon=pnohadval
        ELSE
           PhotonPhotonFlux_pA_WoodsSaxon=ZI(1)
@@ -4490,8 +4484,7 @@ CONTAINS
     IF(.NOT.force_pnohad1)THEN
        IF(ISNAN(pnohadval).OR.pnohadval.EQ.0d0)THEN
           PhotonPhotonFlux_AB_hardsphere=0d0
-       ELSEIF(ISNAN(ZI(1)).OR.ZI(1).LT.0d0.OR.(DABS(ZI(1)/pnohadval).GT.1D2.AND.&
-            neutron_tagging(1).EQ.-2.AND.neutron_tagging(2).EQ.-2))THEN
+       ELSEIF(ISNAN(ZI(1)).OR.ZI(1).LT.0d0.OR.DABS(ZI(1)/pnohadval).GT.1D2)THEN
           PhotonPhotonFlux_AB_hardsphere=pnohadval
        ELSE
           PhotonPhotonFlux_AB_hardsphere=ZI(1)
@@ -4937,8 +4930,7 @@ CONTAINS
     IF(.NOT.force_pnohad1)THEN
        IF(ISNAN(pnohadval).OR.pnohadval.EQ.0d0)THEN
           PhotonPhotonFlux_AB_WoodsSaxon=0d0
-       ELSEIF(ISNAN(ZI(1)).OR.ZI(1).LT.0d0.OR.(DABS(ZI(1)/pnohadval).GT.1D2.AND.&
-            neutron_tagging(1).EQ.-2.AND.neutron_tagging(2).EQ.-2))THEN
+       ELSEIF(ISNAN(ZI(1)).OR.ZI(1).LT.0d0.OR.DABS(ZI(1)/pnohadval).GT.1D2)THEN
           PhotonPhotonFlux_AB_WoodsSaxon=pnohadval
        ELSE
           !IF(DABS(ZI(1)/pnohadval).GT.1D2.OR.(DABS(ZI(1)/pnohadval).LT.1D-2))THEN
