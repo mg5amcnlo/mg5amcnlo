@@ -1157,8 +1157,10 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
         lines.append("PARAMETER (NPWAVE=%d)"%npwave)
         lines.append("PARAMETER (DER_ORDER=%d)"%der_order)
 
-        lines.append(f"INTEGER, PARAMETER :: ND_MAX({len(nd_list)}) = (/{",".join(str(int(i)) for i in nd_list)}/)")
-        lines.append(f"INTEGER, PARAMETER :: BN_ARRAY({len(bn_list)}) = (/{",".join(str(int(i)) for i in bn_list)}/)")
+        nd_max_str = ",".join(str(int(i)) for i in nd_list)
+        bn_array_str = ",".join(str(int(i)) for i in bn_list)
+        lines.append(f"INTEGER, PARAMETER :: ND_MAX({len(nd_list)}) = (/{nd_max_str}/)")
+        lines.append(f"INTEGER, PARAMETER :: BN_ARRAY({len(bn_list)}) = (/{bn_array_str}/)")
         lines.append(f"INTEGER :: SN_ARRAY(NPWAVE,NPWAVE)")
         lines.append(f"INTEGER :: SPLIT(1:2**NPWAVE-1,{max(bn_list)},NPWAVE)")
         lines.append(f"INTEGER :: FALLFACT_INT(-4:6,NPWAVE)")
@@ -1167,22 +1169,29 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
         lines.append("")
         lines.append("INTEGER    SN, FF")
         for i in range(1,npwave+1):
-            lines.append(f"DATA (SN_ARRAY({i}, SN), SN = 1, {npwave}) /{",".join(str(int(j)) for j in sn_list[i-1])}/")
+            sn_array_str = ",".join(str(int(j)) for j in sn_list[i-1])
+            lines.append(f"DATA (SN_ARRAY({i}, SN), SN = 1, {npwave}) /{sn_array_str}/")
 
         for i in range(2**npwave-1):
             bn = 0
             for j in range(len(split_part_list[i])):
                 bn+=1
-                lines.append(f"DATA (SPLIT({i+1}, {bn}, SN), SN = 1, {len(split_part_list[i][j])}) /{",".join(str(int(n)) for n in split_part_list[i][j])}/")
+                split_str = ",".join(str(int(n)) for n in split_part_list[i][j])
+                lines.append(f"DATA (SPLIT({i+1}, {bn}, SN), SN = 1, {len(split_part_list[i][j])}) /{split_str}/")
 
 
         lines.append("")
         for i in range(len(ffi_list)):
-            lines.append(f"DATA (FALLFACT_INT({-4+i}, FF), FF = 1, {npwave}) /{",".join(str(int(j)) for j in ffi_list[i])}/")
+            fallfac_str = ",".join(str(int(j)) for j in ffi_list[i])
+            lines.append(f"DATA (FALLFACT_INT({-4+i}, FF), FF = 1, {npwave}) /{fallfac_str}/")
 
         for i in range(len(ffr_list)):
-            if i == 0: lines.append(f"DATA (FALLFACT_REAL({-1+i}, FF), FF = 1, {npwave}) /{",".join(str(j) for j in ffr_list[i])}/!POW = {-1.5+i}")
-            else: lines.append(f"DATA (FALLFACT_REAL({-1+i}, FF), FF = 1, {npwave}) /{",".join(str(j) for j in ffr_list[i])}/\t!POW = {-1.5+i}")
+            if i == 0:
+                fallfac_str = ",".join(str(j) for j in ffr_list[i])
+                lines.append(f"DATA (FALLFACT_REAL({-1+i}, FF), FF = 1, {npwave}) /{fallfac_str}/!POW = {-1.5+i}")
+            else:
+                fallfac_str = ",".join(str(j) for j in ffr_list[i])
+                lines.append(f"DATA (FALLFACT_REAL({-1+i}, FF), FF = 1, {npwave}) /{fallfac_str}/\t!POW = {-1.5+i}")
 
         # Write the file
         writer.writelines(lines)
