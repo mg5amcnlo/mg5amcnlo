@@ -116,11 +116,11 @@ c           LM:: the limit has to be reviewed
             fi(5) = sfomeg(1)*chi(im) 
      &            + (p(1) - nh*ci*p(2))*oHsqm(0)*chi(ip)
             fi(6) = sfomeg(1)*chi(ip) 
-     &            + (p(1) - nh*ci*p(2))*oHsqm(0)*chi(im)
+     &            - (p(1) - nh*ci*p(2))*oHsqm(0)*chi(im)
             fi(7) = sfomeg(2)*chi(im) 
      &            + (p(1) - nh*ci*p(2))*oHsqm(1)*chi(ip)
             fi(8) = sfomeg(2)*chi(ip) 
-     &            + (p(1) - nh*ci*p(2))*oHsqm(1)*chi(im)
+     &            - (p(1) - nh*ci*p(2))*oHsqm(1)*chi(im)
          endif
 
       else
@@ -380,11 +380,11 @@ c           LM:: the limit has to be reviewed
             fo(5) = sfomeg(2)*chi(im)
      &            + (p(1) + nh*ci*p(2))*oHsqm(1)*chi(ip)
             fo(6) = sfomeg(2)*chi(ip)
-     &            + (p(1) + nh*ci*p(2))*oHsqm(1)*chi(im)
+     &            - (p(1) + nh*ci*p(2))*oHsqm(1)*chi(im)
             fo(7) = sfomeg(1)*chi(im)
      &            + (p(1) + nh*ci*p(2))*oHsqm(0)*chi(ip)
             fo(8) = sfomeg(1)*chi(ip)
-     &            + (p(1) + nh*ci*p(2))*oHsqm(0)*chi(im)
+     &            - (p(1) + nh*ci*p(2))*oHsqm(0)*chi(im)
          endif
 
       else
