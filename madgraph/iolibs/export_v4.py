@@ -714,6 +714,7 @@ C
     def make_model_symbolic_link(self):
         """Make the copy/symbolic links"""
         model_path = self.dir_path + '/Source/MODEL/'
+        open(pjoin(model_path, 'ldme.inc'), 'w')
         if os.path.exists(pjoin(model_path, 'ident_card.dat')):
             mv(model_path + '/ident_card.dat', self.dir_path + '/Cards')
         if os.path.exists(pjoin(model_path, 'particles.dat')):
@@ -723,6 +724,7 @@ C
         mv(model_path + '/param_card.dat', self.dir_path + '/Cards/param_card_default.dat')
         ln(model_path + '/coupl.inc', self.dir_path + '/Source')
         ln(model_path + '/coupl.inc', self.dir_path + '/SubProcesses')
+        ln(model_path + 'ldme.inc', self.dir_path + '/Source')
         self.make_source_links()
 
     def make_source_links(self):
@@ -3706,11 +3708,12 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
         set_of_lib = '$(LIBDIR)libdhelas.$(libext) $(LIBDIR)libmodel.$(libext)'
         dual_libs = ''
         dhelas_dual = ''
-        for npwave in aloha.npwave:
-            if npwave > 0:
-                dual_libs += ' $(LIBDIR)libdhelas%i.$(libext)'%npwave
-                dhelas_dual += '\n$(LIBDIR)libdhelas%i.$(libext): DHELAS%i\n'%(npwave,npwave)
-                dhelas_dual += '\tcd DHELAS%i; make; cd ..'%npwave
+        if hasattr(aloha, "npwave"):
+            for npwave in aloha.npwave:
+                if npwave > 0:
+                    dual_libs += ' $(LIBDIR)libdhelas%i.$(libext)'%npwave
+                    dhelas_dual += '\n$(LIBDIR)libdhelas%i.$(libext): DHELAS%i\n'%(npwave,npwave)
+                    dhelas_dual += '\tcd DHELAS%i; make; cd ..'%npwave
         model_line='''$(LIBDIR)libmodel.$(libext): MODEL\n\t cd MODEL; make\n'''
 
         if model['running_elements']:
