@@ -2693,6 +2693,7 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
             filename = pjoin(self.dir_path, 'Source', 'MODEL', 'ldme.inc')
             self.write_ldme_file(writers.FortranWriter(filename),
                          [])
+            ln(filename, self.dir_path + '/Source')
 
             filename = pjoin(self.dir_path, 'Source', 'MODEL', 'onia_read.inc')
             self.write_onia_read(writers.FortranWriter(filename),
