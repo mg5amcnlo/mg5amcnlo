@@ -23,16 +23,12 @@ import math
 import numbers
 import os
 import re
-import six
-StringIO = six
-
+import io
 import madgraph
 import madgraph.core.color_algebra as color
 import collections
 from madgraph import MadGraph5Error, MG5DIR, InvalidCmd
 import madgraph.various.misc as misc 
-from six.moves import range
-from six.moves import zip
 from functools import reduce
 
 
@@ -1756,7 +1752,7 @@ class Model(PhysicsObject):
         
         import models.write_param_card as writer
         if not filepath:
-            out = StringIO.StringIO() # it's suppose to be written in a file
+            out = io.StringIO() # it's suppose to be written in a file
         else:
             out = filepath
         param = writer.ParamCardWriter(self, filepath=out)
@@ -2101,6 +2097,11 @@ class Leg(PhysicsObject):
     """Leg object: id (Particle), number, I/F state, flag from_group
     """
 
+    # List of allowed helicity polarizations for a fermion or vector boson.
+    # See [arXiv:1912.01725] for definitions (fermions,vectors) and
+    # [arXiv:2512.10015] for extensions (vectors)
+    list_of_allowed_polarizations = [-1, 1, 2,-2, 3,-3, 0, 4, 5, 6, 7, 9, 99]
+
     def default_setup(self):
         """Default values for all properties"""
 
@@ -2151,7 +2152,7 @@ class Leg(PhysicsObject):
                 raise self.PhysicsObjectError( \
                         "%s is not a valid list" % str(value))
             for i in value:
-                if i not in [-1, 1, 2,-2, 3,-3, 0, 99]:
+                if i not in self.list_of_allowed_polarizations:
                     raise self.PhysicsObjectError( \
                           "%s is not a valid polarization" % str(value))
 
@@ -2360,7 +2361,7 @@ class MultiLeg(PhysicsObject):
                 raise self.PhysicsObjectError( \
                         "%s is not a valid list" % str(value))
             for i in value:
-                if i not in [-1, 1,  2, -2, 3, -3, 0, 99]:
+                if i not in Leg.list_of_allowed_polarizations:
                     raise self.PhysicsObjectError( \
                           "%s is not a valid polarization" % str(value))
 

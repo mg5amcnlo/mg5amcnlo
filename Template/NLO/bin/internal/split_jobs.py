@@ -4,9 +4,6 @@ from __future__ import absolute_import
 import os
 import sys
 import tarfile
-from six.moves import range
-from six.moves import input
-
 class SplitJobsError(Exception):
     pass
 

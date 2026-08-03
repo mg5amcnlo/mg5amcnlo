@@ -792,7 +792,8 @@ C     FOR A PROCESS
 C     Input:
 C     pp    4 momentum of external particles
 C     wgt   weight from Monte Carlo
-C     imode 0 run, 1 init, 2 reweight, 3 finalize
+C     imode 0 run, 1 init, 2 reweight, 3 finalize, 4: PDF only, 5: ME
+C      only
 C     Output:
 C     Amplitude squared and summed
 C     ****************************************************
@@ -893,8 +894,9 @@ C     stop 1
 C     endif
 
 C     set the running scale 
-C     and update the couplings accordingly
-      IF (VECSIZE_MEMMAX.LE.1) THEN  ! no-vector (NB not VECSIZE_USED!)
+C     and update the couplings accordingly (but deactivate for
+C      discrete sampler(imode=5) and 
+      IF (VECSIZE_MEMMAX.LE.1.AND.IMODE.NE.5) THEN  ! no-vector (NB not VECSIZE_USED!)
         CALL UPDATE_SCALE_COUPLING(PP, WGT)
       ENDIF
 
@@ -1209,7 +1211,7 @@ C
       END
 
 
-      SUBROUTINE SELECT_COLOR(RCOL, JAMP2, ICONFIG, IPROC, ICOL)
+      SUBROUTINE SELECT_COLOR(RCOL, JAMP2, ICONFIG, IPROC, ICOL, IVEC)
       IMPLICIT NONE
       INCLUDE 'nexternal.inc'
       INCLUDE 'maxamps.inc'  ! for the definition of maxflow
@@ -1224,24 +1226,36 @@ C
       DOUBLE PRECISION JAMP2(0:MAXFLOW)
       INTEGER ICONFIG  ! amplitude selected
       INTEGER IPROC  ! matrix element selected
+      INTEGER IVEC
 C     
 C     argument OUT
 C     
       INTEGER ICOL
+      INTEGER IGRAPH(VECSIZE_MEMMAX)
+      COMMON/VEC_IGRAPH/IGRAPH
 C     
 C     local
 C     
       INTEGER NC  ! number of assigned color in jamp2
       LOGICAL IS_LC
+      INTEGER CCONFIG
       INTEGER MAXCOLOR
       DOUBLE PRECISION TARGETAMP(0:MAXFLOW)
       INTEGER I,J
       DOUBLE PRECISION XTARGET
 
+      CCONFIG = ICONFIG
       IF (ICKKW.GT.0) THEN
-        ICONFIG = IGRAPHS(1)
+        IF (VECSIZE_MEMMAX.EQ.1.AND.IGRAPHS(1).NE.0) THEN
+          CCONFIG = IGRAPHS(1)
+        ELSE
+          CCONFIG = VEC_IGRAPH(IVEC)
+          IF(CCONFIG.EQ.0)THEN
+            ICOL =0
+            RETURN
+          ENDIF
+        ENDIF
       ENDIF
-
 
       NC = INT(JAMP2(0))
       IS_LC = .TRUE.
@@ -1252,7 +1266,7 @@ C
         RETURN
       ENDIF
       DO I=1,NC
-        IF(ICOLAMP(I,ICONFIG,IPROC))THEN
+        IF(ICOLAMP(I,CCONFIG,IPROC))THEN
           TARGETAMP(I) = TARGETAMP(I-1) + JAMP2(I)
         ELSE
           TARGETAMP(I) = TARGETAMP(I-1)

@@ -28,8 +28,6 @@ import madgraph.various.misc as misc
 
 from madgraph import MadGraph5Error
 from madgraph import InvalidCmd
-from six.moves import range
-from six.moves import zip
 logger = logging.getLogger('madgraph.loop_diagram_generation')
 
 def ldg_debug_info(msg,val, force=False):

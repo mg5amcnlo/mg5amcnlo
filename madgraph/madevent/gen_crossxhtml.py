@@ -23,9 +23,6 @@ import pickle
 import re
 import glob
 import logging
-import six
-from six.moves import range
-
 try:
     import madgraph
 except ImportError:
@@ -1613,7 +1610,7 @@ class OneTagResults(dict):
                                   
         if self.debug is KeyboardInterrupt:
             debug = '<br><font color=red>Interrupted</font>'
-        elif isinstance(self.debug, six.string_types):
+        elif isinstance(self.debug, str):
             if not os.path.isabs(self.debug) and not self.debug.startswith('./'):
                 self.debug = './' + self.debug
             elif os.path.isabs(self.debug):

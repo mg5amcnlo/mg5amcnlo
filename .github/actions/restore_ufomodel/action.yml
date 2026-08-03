@@ -1,0 +1,39 @@
+name: Restore ufo cache
+description: Restores numpy from cache and sets PYTHONPATH
+runs:
+  using: composite
+  steps:
+    - name: Checkout UFO model db (sparse)
+      uses: actions/checkout@v6
+      with:
+        sparse-checkout: |
+          2HDM.tgz
+          DY_SM.tgz
+          heft.tgz
+          loop_qcd_qed_sm.tgz
+          loop_qcd_qed_sm_Gmu.tgz
+          sm_v4.tgz
+          uutt_sch_4fermion.tgz
+          uutt_tch_scalar.tgz
+          TopEffTh.tgz
+        sparse-checkout-cone-mode: false
+        repository: mg5amcnlo/UFOmodeldb
+        path: ufomodeldb   # sibling dir, still under /home/runner/work/mg5amcnlo/
+
+    - name: Move and extract UFO models
+      shell: bash
+      run: |
+        mv "$GITHUB_WORKSPACE/ufomodeldb/"*.tgz "$GITHUB_WORKSPACE/models/"
+        cd "$GITHUB_WORKSPACE/models"
+        for f in *.tgz; do tar -xzf "$f"; done
+
+    - uses: actions/cache/restore@v5
+      with:
+        path: ~/.cache/UFOMODEL
+        key: ufomodel 
+
+    - run: |
+        echo "PYTHONPATH=$PYTHONPATH:$HOME/.cache/UFOMODEL" >> $GITHUB_ENV
+        cp -r $HOME/.cache/UFOMODEL/* $GITHUB_WORKSPACE/models
+        ls $GITHUB_WORKSPACE/models
+      shell: bash

@@ -38,9 +38,6 @@ import re
 import sys
 import time
 import math
-from six.moves import range
-from six.moves import input
-
 try: 
     import madgraph.madweight.diagram_class as diagram_class
     import madgraph.madweight.substructure_class as substructure_class

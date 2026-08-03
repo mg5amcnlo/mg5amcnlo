@@ -943,12 +943,13 @@ class AskLoopInstaller(cmd.OneLinePathCompletion):
     
     def __init__(self, question, *args, **opts):
 
-        import six.moves.urllib.request, six.moves.urllib.error, six.moves.urllib.parse
-        try:
-            response=six.moves.urllib.request.urlopen('http://madgraph.phys.ucl.ac.be/F1.html', timeout=3)
-            self.online=True
-        except six.moves.urllib.error.URLError as err: 
-            self.online=False        
+        import urllib.request, urllib.error, urllib.parse
+        #try:
+        #    response=urllib.request.urlopen('http://madgraph.phys.ucl.ac.be/F1.html', timeout=3)
+        #    self.online=True
+        #except urllib.error.URLError as err: 
+        #    self.online=False              
+        self.online = True # We assume that the user is online, but we will adapt the question if it is not the case.
         
         self.code = {'ninja': 'install',
                      'collier': 'install',
@@ -965,7 +966,7 @@ class AskLoopInstaller(cmd.OneLinePathCompletion):
         #check if some partial installation is already done.  
         if 'mother_interface' in opts:
             mother = opts['mother_interface']
-            if  'heptools_install_dir' in mother.options:
+            if mother.options['heptools_install_dir']:
                 install_dir1 = mother.options['heptools_install_dir'] 
                 install_dir2 = mother.options['heptools_install_dir']
                 if os.path.exists(pjoin(install_dir1, 'CutTools')):

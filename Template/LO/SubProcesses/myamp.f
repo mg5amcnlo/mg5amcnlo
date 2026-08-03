@@ -139,7 +139,7 @@ c
      $            gForceBW(i,iconfig).eq.1))
             if(onshell)then
 c     Remove on-shell forbidden s-channels (gForceBW=2) (JA 2/10/11)
-              if(gForceBW(i,iconfig).eq.2) then
+              if(gForceBW(i,iconfig).eq.2.and.sde_strat.eq.1) then
                  cut_bw = .true.
                  return               
               endif
@@ -300,7 +300,7 @@ C
       COMMON /TO_SPECISA/IS_A_J,IS_A_A,IS_A_L,IS_A_B,IS_A_NU,IS_HEAVY,
      . IS_A_ONIUM,DO_CUTS
       integer njet
-
+      logical dynscale_cut
 
 
 c
@@ -542,6 +542,18 @@ c     Perform setting for shat (PDF BW or 1/s)
 c     Set minimum based on: 1) required energy 2) resonances 3) 1/10000 of sqrt(s)
          i = max(1,3*(nexternal-2) - 4 + 1)
          xo = max(min(etot**2/stot, 1d0-1d-8),1d0/stot)
+         if (xo.eq.1d0/stot) then
+             dynscale_cut =  (dynamical_scale_choice.eq.-1.and.
+     $        .not.(FIXED_REN_SCALE.and.FIXED_FAC_SCALE1.and.FIXED_FAC_SCALE2))
+             if (dynscale_cut.and.Smin.gt.0)then
+                 xo = max(4d0/stot, Smin/stot)
+             elseif (dynscale_cut)then
+                 xo = 4d0/stot
+             elseif (Smin.gt.0) then
+                xo = .5*min(Smin/stot,xo)
+             endif
+         endif
+
 c        Take into account special cuts
 c        already done in smin
 c     Include mass scale from BWs

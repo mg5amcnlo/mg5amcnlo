@@ -740,7 +740,7 @@ C     FOR A PROCESS
 C     Input:
 C     pp    4 momentum of external particles
 C     wgt   weight from Monte Carlo
-C     imode 0 run, 1 init, 2 reweight, 3 finalize
+C     imode 0 run, 1 init, 2 reweight, 3 finalize, 4: PDF only, 5: ME only
 C     Output:
 C     Amplitude squared and summed
 C     ****************************************************
@@ -837,9 +837,9 @@ c       stop 1
 c     endif
 
 c     set the running scale 
-c     and update the couplings accordingly
-      IF (VECSIZE_MEMMAX.LE.1) THEN ! no-vector (NB not VECSIZE_USED!)
-      call update_scale_coupling(pp, wgt)
+c     and update the couplings accordingly (but deactivate for discrete sampler(imode=5) and 
+      IF (VECSIZE_MEMMAX.LE.1.and.imode.ne.5) THEN ! no-vector (NB not VECSIZE_USED!)
+            call update_scale_coupling(pp, wgt)
       endif
 
 
@@ -1084,7 +1084,7 @@ C
       end
 
 
-    subroutine select_color(rcol, jamp2, iconfig, iproc, icol)
+    subroutine select_color(rcol, jamp2, iconfig, iproc, icol, ivec)
     implicit none
     include 'nexternal.inc'
     include 'maxamps.inc' ! for the definition of maxflow
@@ -1099,24 +1099,36 @@ c
 	double precision jamp2(0:maxflow)
 	integer iconfig ! amplitude selected
 	integer iproc ! matrix element selected
+    integer ivec
 c	
 c   argument OUT
 c
        integer icol
+	   integer igraph(VECSIZE_MEMMAX)
+	   common/vec_igraph/igraph       
 c
 c    local
 c
 	integer nc ! number of assigned color in jamp2
 	logical is_LC
+    integer cconfig 
 	integer maxcolor
 	double precision targetamp(0:maxflow)
 	integer i,j
 	double precision xtarget
 
+    cconfig = iconfig
     if (ickkw.gt.0) then
-        iconfig = igraphs(1)
+        if (VECSIZE_MEMMAX.eq.1.and.igraphs(1).ne.0) then
+            cconfig = igraphs(1)
+        else
+            cconfig = vec_igraph(ivec)
+            if(cconfig.eq.0)then
+              icol =0 
+              return
+            endif
+        endif
     endif   
-
 
       nc = int(jamp2(0))
       is_LC = .true.
@@ -1127,7 +1139,7 @@ c
       return
       endif
       do i=1,nc
-      	  if(icolamp(i,iconfig,iproc))then
+      	  if(icolamp(i,cconfig,iproc))then
         	  targetamp(i) = targetamp(i-1) + jamp2(i)
           else	       
         	  targetamp(i) = targetamp(i-1)

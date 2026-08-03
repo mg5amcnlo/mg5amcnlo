@@ -36,12 +36,11 @@ import array
 import multiprocessing
 import signal
 import tempfile
-import six
-import six.moves.cPickle as cPickle
+import pickle 
+cPickle = pickle # alias in case
 import itertools
 import os
 import sys
-from six.moves import zip
 from madgraph import MG5DIR
 pjoin = os.path.join
 logger = logging.getLogger('madgraph.fks_helas_objects')
@@ -90,7 +89,7 @@ def async_generate_real(args):
 
     output = tempfile.NamedTemporaryFile(delete = False)
 
-    six.moves.cPickle.dump(outdata,output,protocol=2)
+    pickle.dump(outdata,output,protocol=2)
     output.close()
     
     return [output.name,helasreal.get_num_configs(),helasreal.get_nexternal_ninitial()[0]]
@@ -165,7 +164,7 @@ def async_generate_born(args):
     outdata = helasfull
     
     output = tempfile.NamedTemporaryFile(delete = False)  
-    six.moves.cPickle.dump(outdata,output,protocol=2)
+    pickle.dump(outdata,output,protocol=2)
     output.close()
     
     return [output.name,metag,has_loops,processes,helasfull.born_me.get_num_configs(),helasfull.get_nexternal_ninitial()[0]]
@@ -178,7 +177,7 @@ def async_finalize_matrix_elements(args):
     duplist = args[2]
     
     infile = open(mefile,'rb')
-    me = six.moves.cPickle.load(infile)
+    me = pickle.load(infile)
     infile.close()    
 
     #set unique id based on position in unique me list
@@ -202,7 +201,7 @@ def async_finalize_matrix_elements(args):
     
     for iother,othermefile in enumerate(duplist):
         infileother = open(othermefile,'rb')
-        otherme = six.moves.cPickle.load(infileother)
+        otherme = pickle.load(infileother)
         infileother.close()
         # before entering this function, only the born
         # processes were compared. Now compare the
@@ -229,7 +228,7 @@ def async_finalize_matrix_elements(args):
     outdata = me
 
     output = tempfile.NamedTemporaryFile(delete = False)
-    six.moves.cPickle.dump(outdata,output,protocol=2)
+    pickle.dump(outdata,output,protocol=2)
     output.close()
     
     #data to be returned to parent process (filename plus small objects only)
@@ -317,10 +316,7 @@ class FKSHelasMultiProcess(helas_objects.HelasMultiProcess):
 
             # start the pool instance with a signal instance to catch ctr+c
             original_sigint_handler = signal.signal(signal.SIGINT, signal.SIG_IGN)
-            if six.PY3:
-                ctx = multiprocessing.get_context('fork')
-            else:
-                ctx = multiprocessing
+            ctx = multiprocessing.get_context('fork')
             if fksmulti['ncores_for_proc_gen'] < 0: # use all cores
                 pool = ctx.Pool(maxtasksperchild=1)
             else:

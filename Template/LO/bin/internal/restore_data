@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #
 #   Routine to copy all of the necessary results.dat files
 #   into the appropriate location so gen_grid_jobs has necessary

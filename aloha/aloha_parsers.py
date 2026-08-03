@@ -25,10 +25,6 @@ import numbers
 import os
 import re
 import sys
-from six.moves import input
-from six.moves import range
-
-
 root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
 sys.path.append(os.path.join(root_path))
 

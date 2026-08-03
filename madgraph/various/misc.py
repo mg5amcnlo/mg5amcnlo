@@ -30,15 +30,8 @@ import shutil
 import stat
 import traceback
 import gzip as ziplib
-import six
-from six.moves import zip_longest
-from six.moves import range
-from six.moves import zip
-from six.moves import input
-StringIO = six
-if six.PY3:
-    import io
-    file = io.IOBase
+import io
+from itertools import zip_longest
 try:
     # Use in MadGraph
     import madgraph
@@ -129,7 +122,7 @@ def get_pkg_info(info_str=None):
     global PACKAGE_INFO
 
     if info_str:
-        info_dict = parse_info_str(StringIO.StringIO(info_str))
+        info_dict = parse_info_str(io.StringIO(info_str))
         return info_dict
 
     if PACKAGE_INFO:
@@ -177,10 +170,10 @@ def is_MA5_compatible_with_this_MG5(ma5path):
     why it is so."""
 
     class version:
-        def __init__(input):
+        def __init__(self, input):
             self.info = input.split('.')
 
-        def __lt__(input):
+        def __lt__(self, input):
             if isinstance(input, str):
                 input = version(input)
             
@@ -214,12 +207,24 @@ def is_MA5_compatible_with_this_MG5(ma5path):
 
     ma5_version = None
     try:
-        for line in open(pjoin(ma5path,'version.txt'),'r').read().split('\n'):
-            if line.startswith('MA5 version :'):
-                ma5_version=LooseVersion(line[13:].strip())
-                break
-    except:
+        text = open(pjoin(ma5path,'bin', 'ma5'),'r').read()
+        pattern = re.compile(r'\s*version\s*=\s*["\'](.*)["\']\s*')
+        ma5_version = pattern.findall(text)[0]
+        ma5_version=LooseVersion(ma5_version)
+    except Exception as error:
+        misc.sprint(error)   
         ma5_version = None
+    # fallback to version.txt if the above method fails.
+    # for the transition period where that file still exists (from HEPinstaller)
+    if not ma5_version and os.path.exists(pjoin(ma5path,'version.txt')):
+        try:
+            for line in open(pjoin(ma5path,'version.txt'),'r').read().split('\n'):
+                if line.startswith('MA5 version :'):
+                    ma5_version=LooseVersion(line[13:].strip())
+                    break
+        except Exception:
+            ma5_version = None
+
 
     if ma5_version is None:
         reason = "No MadAnalysis5 version number could be read from the path supplied '%s'."%ma5path
@@ -237,13 +242,13 @@ def is_MA5_compatible_with_this_MG5(ma5path):
     if not mg5_version:
         return None
     
-    if mg5_version < LooseVersion("2.6.1") and ma5_version >= LooseVersion("1.6.32"):
+    if mg5_version < LooseVersion("2.6.1") and ma5_version > LooseVersion("1.6.31"):
         reason =  "This active MG5aMC version is too old (v%s) for your selected version of MadAnalysis5 (v%s)"%(mg5_version,ma5_version)
         reason += "\nUpgrade MG5aMC or re-install MA5 from within MG5aMC to fix this compatibility issue."
         reason += "\nThe specified version of MadAnalysis5 will not be active in your session."
         return reason
 
-    if mg5_version >= LooseVersion("2.6.1") and ma5_version < LooseVersion("1.6.32"):
+    if mg5_version > LooseVersion("2.6.0") and ma5_version < LooseVersion("1.6.32"):
         reason = "Your selected version of MadAnalysis5 (v%s) is too old for this active version of MG5aMC (v%s)."%(ma5_version,mg5_version)
         reason += "\nRe-install MA5 from within MG5aMC to fix this compatibility issue."
         reason += "\nThe specified version of MadAnalysis5 will not be active in your session."
@@ -409,7 +414,7 @@ def which_lib(lib):
             return lib
     else:
         locations = sum([os.environ[env_path].split(os.pathsep) for env_path in
-           ["DYLD_LIBRARY_PATH","LD_LIBRARY_PATH","LIBRARY_PATH","PATH"] 
+           ["MG5_LIBRARY_PATH", "DYLD_LIBRARY_PATH","LD_LIBRARY_PATH","LIBRARY_PATH","PATH"] 
                                                   if env_path in os.environ],[])
         for path in locations:
             lib_file = os.path.join(path, lib)
@@ -797,7 +802,8 @@ def stdchannel_redirected(stdchannel, dest_filename):
             logger.debug('no stdout/stderr redirection due to debug level')
             yield
         finally:
-            return
+            pass
+        return
         
         
 def get_open_fds():
@@ -1475,8 +1481,8 @@ class open_file(object):
             if not background:
                 subprocess.call(arguments)
             else:
-                import six.moves._thread
-                six.moves._thread.start_new_thread(subprocess.call,(arguments,))
+                import _thread
+                _thread.start_new_thread(subprocess.call,(arguments,))
         else:
             logger.warning('Not able to open file %s since no program configured.' % file_path + \
                                 'Please set one in ./input/mg5_configuration.txt')
@@ -1697,10 +1703,7 @@ def timeout(func, args=(), kwargs={}, timeout_duration=1, default=None):
 
 def mmin(iter, default=None):
     
-    if six.PY3:
-        return min(iter, default=default)
-    else:
-        return min(iter, default)
+    return min(iter, default=default)
 
 
 ################################################################################
@@ -1977,11 +1980,25 @@ class EasterEgg(object):
         "*                                                          *\n" + \
         "*     https://en.wikipedia.org/wiki/Z_comme_Zorglub        *\n"    
 
+    towel_day_banner = "*      .---------.                                         *\n" + \
+        "*      |  DON'T  |    The Guide: you're reading it.        *\n" + \
+        "*      |  PANIC  |    Type 'help' for in-line help.        *\n" + \
+        "*      '---------'                                         *\n" + \
+        "*                                                          *\n" + \
+        "*      .---------.                                         *\n" + \
+        "*      |~~~~~~~~~|    The Towel: useful for wrapping       *\n" + \
+        "*      |~ TOWEL ~|    your phase space cuts, or just       *\n" + \
+        "*      |~~~~~~~~~|    crying when your job crashes.        *\n" + \
+        "*      '---------'                                         *\n" + \
+        "*                                                          *\n" + \
+        "*         ) ) )                                            *\n" + \
+        "*        ( ( (        A cup of tea: feed its Brownian      *\n" + \
+        "*      .-------.-.    motion to The Infinite Improbability *\n" + \
+        "*      |  tea  |-'    Drive (the Monte Carlo integration)  *\n" + \
+        "*      '-------'      to obtain cross sections (probably). *\n"
 
 
-
-
-    special_banner = {(4,5): May4_banner, (14,10): Zcommezorglub}
+    special_banner = {(4,5): May4_banner, (25,5): towel_day_banner, (14,10): Zcommezorglub}
 
     
     def __init__(self, msgtype):
@@ -2205,10 +2222,7 @@ def set_global(loop=False, unitary=True, mp=False, cms=False):
 def plugin_import(module, error_msg, fcts=[]):
     """convenient way to import a plugin file/function"""
     
-    if six.PY2:
-        level = -1
-    else:
-        level = 0
+    level = 0
 
     try:
         _temp = __import__('PLUGIN.%s' % module, globals(), locals(), fcts, level)
@@ -2392,13 +2406,12 @@ def make_unique(input, keepordering=None):
     else:
         return list(dict.fromkeys(input)) 
 
-if six.PY3:
-    try:
-        from collections import MutableSet
-    except ImportError: # this is for python3.10
-        from collections.abc import  MutableSet
+try:
+    from collections import MutableSet
+except ImportError: # this is for python3.10
+    from collections.abc import  MutableSet
     
-    class OrderedSet(collections.OrderedDict, MutableSet):
+class OrderedSet(collections.OrderedDict, MutableSet):
 
         def __init__(self, arg=None):
             super( OrderedSet, self).__init__()
@@ -2459,8 +2472,7 @@ if six.PY3:
         symmetric_difference = property(lambda self: self.__xor__)
         symmetric_difference_update = property(lambda self: self.__ixor__)
         union = property(lambda self: self.__or__)
-else:
-    OrderedSet = set
+
 
 
 def cmp_to_key(mycmp):
@@ -2509,9 +2521,7 @@ def dict_cmp(A, B, level=1):
         return (a > b) - (a < b)
         #return cmp(A[adiff], B[bdiff])
 
-if six.PY3:
-    import io
-    file = io.FileIO
+file = io.FileIO
         
 class BackRead(file):
     """read a file returning the lines in reverse order for each call of readline()

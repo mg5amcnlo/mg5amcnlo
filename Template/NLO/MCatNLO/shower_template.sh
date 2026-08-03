@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 SHOWER=$1
 #HEP-> hepmc/stdhep

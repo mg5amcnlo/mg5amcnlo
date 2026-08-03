@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 export PATH="$DMTCP_PATH/bin:$PATH"
 export LD_LIBRARY_PATH="$DMTCP_PATH/lib:$LD_LIBRARY_PATH"
@@ -71,7 +71,7 @@ trap "timeout" SIGTERM
 
 if [[ -e "$DMTCP_CHECKPOINT_DIR/dmtcp_restart_script.sh" ]]; then
     echo "$(date) - Resuming from checkpoint. Restart: ${CONDOR_RESTART_COUNT}" | tee -a $out
-    script -qfc "/bin/bash $DMTCP_CHECKPOINT_DIR/dmtcp_restart_script.sh \
+    script -qfc "/usr/bin/env bash $DMTCP_CHECKPOINT_DIR/dmtcp_restart_script.sh \
         -d $DMTCP_CHECKPOINT_DIR -h $DMTCP_COORD_HOST -p $DMTCP_COORD_PORT" | tee -a $out 2>&1 &
 else
     export EXECUTE="dmtcp_launch --allow-file-overwrite $@"

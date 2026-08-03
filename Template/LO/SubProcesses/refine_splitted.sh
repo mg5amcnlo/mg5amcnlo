@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # For support of LHAPATH in cluster mode
 if [ $CLUSTER_LHAPATH ]; then

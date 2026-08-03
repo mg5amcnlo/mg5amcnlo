@@ -1,5 +1,45 @@
     Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
+ANNOUNCEMENT: 
+   2.9.X version has a LONG TERM STABLE IS now an end of life for bug fixing/support since december 2025.
+   A new LTS (based on current 3.5.X) is starting now and will act as stable release for the coming years.
+
+3.7.2 (07/07/26):
+    MZ: negative seed are now allowed and strictly pin (so no automatic reset to 0 for the following run).
+        negative seed are identical to positive one (both produce exactly same sample)
+    RF: Fixed the writing of LHE files in fixed-order computations that was broken since previous release (3.7.1).
+    OM: Ensure that goldstone are merged with SM coupling for FD gauge. 
+        Note that FD needs model that are built such that the renormalization does not induced a shift of the SM values
+    OM: Allow the possibility to run Delphes in multicore. Compatible with the hepmc mode of pythia8 of autoremove
+        to avoid the costly merging of hepmc file.
+    OM: introduce two options nb_core_pythia8 nb_core_delphes
+    OM: Fix systematics.py for pdf variation for pdf set different than the original (thanks to Z. Marschall)
+    OM: (Try) to automatically update pdf set if pdf set have missing keys (like AlphaS_NumFlavors)
+    Team: include all bug fix from 3.5.16 (see below)
+
+3.7.1 (29/04/26):
+    OM: Change the handling of seed at NLO, after a run with a given seed, the seed is reset in the run_card 
+        to 0 (automatic) meaning that the next run in the directory will be with a different seed. 
+        Note that this was the behavior at LO already.
+    OM: Allow easier syntax in the run_card. 
+        You can now use "set lpp1 e-" instead of "set lpp1 3"
+        You can now use "set fixed_scale mz" instead of "set fixed_scale 91.1880"
+        You can now use "set dynamical_scale_choice ht/2" instead of "set dynamical_scale_choice 3"
+    OM: Change the implementation of the "$" syntax such that the implementation moves at the amplitude level
+        This means that the syntax is now also supported at standalone level (bwcutoff hardcoded to 15)
+        This has no impact if sde_strategy=1 but avoids issue with sde_strategy=2.
+        We still recommend sde_strategy=1 when using $ syntax since you can have spurious writting of resonances
+        in the lhef with sde_strategy=2.
+    RF: Refactored the code that collects all the events from the various channels
+        into a single event file at the end of an MC@NLO run.
+    OM: Remove the dependency to the six package
+    MZ+LJ: Bug fix in ew_sudkavov (one in the color matrix and one in the value for alphas)
+    OM: Fix a couple of issue with the linking of the heptools library (especially on ubuntu)
+    RR: Extended propagator support for polarised boson (https://arxiv.org/abs/2512.10015)
+        See https://github.com/mg5amcnlo/mg5amcnlo/pull/215 for simple instructions
+    OM: Cleaner version on how MLM select color for events
+    Team: include all bug fix from 3.5.14 (see below)
+        Note slightly different handling of default parameter when a parameter is not within the run_card
 
 3.7.0 (05/01/26):
     RR: When carrying out parameter scans in MadGraph/MadEvent or MG5aMC@NLO with systematics (use_syst True or reweight_scale/pdf True), then the uncertain information is also recorded in the scan summary.
@@ -78,6 +118,32 @@
           Those modes need to install the cudacpp plugin (can be done via the command "install cudacpp")
           This feature also add OpenMP support for LO process (deactivated by default and which does not need the plugin).
       OM+JK+KM+KH+YJZ: implementation of the FD gauge via "set gauge FD" [2203.10440, 2405.01256]
+
+
+||||||| 304bb0093
+=======
+3.5.16 (3/7/26):
+  OM: fix a crash with systematics when original pdf was not detected
+  OM: fix some loop-induced compilation issue
+  OM: avoid new Python syntax warning
+
+>>>>>>> LTS_2
+3.5.15 (17/4/26):
+  OM: revert a change of 3.5.14 on the grid handling to be more secure on the change
+  OM: Additional fix related to the matchbox template
+
+3.5.14 (10/4/26):
+  OM: Fix issue on how Sextet where written within lhef output
+  OM: Small change in the way default value are taken if some parameter are not present within the run_card
+      Now the default value will be taken first from the run_card_default.dat (which is process specific) 
+      rather than using the an hardcoded default. This is required to correctly takes sde_strategy=1 when
+      a process uses $ syntax (which is not compatible with sde_strategy=2). Note that 3.7.1, do change the
+      "$" handling to avoid such type of issue in a cleaner way.
+  OM: Fixing various small issue related to linking to HEPTools
+  OM: Change some API for the matchbox output (for intereference case)
+  OM: Handle UFO model which are not python3.13 compatible (in the write_param_card.py script)
+  OM: Change in how madgraph setup the grid for shat to better handle process at high energy and very soft cut
+      This also better handle p p case since the grid is now aware of the implicit cut related to the CKKW merging scheme
 
 3.5.13 (05/01/26):
   VD: fixing issue with custom functions that moving back to no custom functions was not correctly recompiling the code.

@@ -53,9 +53,6 @@ import models.write_param_card as write_param_card
 import models.check_param_card as check_param_card
 from madgraph import MadGraph5Error, MG5DIR, InvalidCmd
 from madgraph.iolibs.files import cp, ln, mv
-from six.moves import range
-from six.moves import zip
-
 pjoin = os.path.join
 
 _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0] + '/'
@@ -320,6 +317,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
           pjoin('various','cluster.py'),
           pjoin('various','systematics.py'),          
           pjoin('various','lhe_parser.py'),
+          pjoin('various','collect_events.py'),
           pjoin('madevent','sum_html.py'),
           pjoin('madevent','gen_crossxhtml.py'),          
           pjoin('iolibs','files.py'),

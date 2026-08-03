@@ -53,9 +53,6 @@ sys.path.insert(0, root_path)
 #root_path = os.path.split(os.path.dirname(os.path.realpath(sys.argv[0])))[0]
 #sys.path.append(root_path)
 
-import six
-from six.moves import map
-
 import tests.IOTests
 import aloha
 import aloha.aloha_lib as aloha_lib
@@ -172,7 +169,22 @@ class MyTextTestRunner(unittest.TextTestRunner):
         #    self.stream.writeln(" ".join(self.bypassed))
         return result 
 
+def find_test_in_file(path):
 
+    all = []
+    import re
+    regex = r"\./tests/test_manager\.py\s+(.*)"
+
+    text = open(path).read()
+
+    for line in text.splitlines():
+        m = re.search(regex, line)
+        if m:
+            for arg in m.group(1).split():
+                if arg.startswith('-'):
+                    continue
+                all.append(arg)
+    return all
             
 #===============================================================================
 # run
@@ -191,8 +203,22 @@ def run(expression='', re_opt=0, package='./tests/unit_tests', verbosity=1,
     TestSuiteModified.time_limit =  float(timelimit[1])
     TestSuiteModified.mintime_limit =  float(timelimit[0])
 
+    if options.exclude:
+        exclude = misc.make_unique(options.exclude[:])
+        for path in options.exclude:
+            if os.path.exists(path):
+                exclude.remove(path)
+                exclude += find_test_in_file(path)
+        exclude = misc.make_unique(exclude)
+        for expr in expression:
+            if expr in exclude:
+                exclude.remove(expr)
+    else:
+        exclude = []
+
+
     for test_fct in TestFinder(package=package, expression=expression, \
-                                   re_opt=re_opt, excluded=options.exclude):
+                                   re_opt=re_opt, excluded=exclude):
         data = collect.loadTestsFromName(test_fct)        
         assert(isinstance(data,unittest.TestSuite))        
         data.__class__ = TestSuiteModified
@@ -733,7 +759,7 @@ class TestFinder(list):
 
         if isinstance(expression, list):
             pass
-        elif isinstance(expression, six.string_types):
+        elif isinstance(expression, str):
             if expression in '':
                 expression = ['.*'] #made an re authorizing all regular name
             else:
@@ -753,7 +779,7 @@ class TestFinder(list):
     def check_valid(self, name):
         """ check if the name correspond to the rule """
 
-        if not isinstance(name, six.string_types):
+        if not isinstance(name, str):
             raise self.TestFinderError('check valid take a string argument')
 
         if self.check_invalid(name):
@@ -768,7 +794,7 @@ class TestFinder(list):
     def check_invalid(self, name):
         """ check if the name correspond to the rule """
 
-        if not isinstance(name, six.string_types):
+        if not isinstance(name, str):
             raise self.TestFinderError('check valid take a string argument')
 
         if any(forbid in name for forbid in self.excluded):
@@ -789,7 +815,7 @@ class TestFinder(list):
     def passin_pyformat(cls, name):
         """ transform a relative position in a python import format """
 
-        if not isinstance(name, six.string_types):
+        if not isinstance(name, str):
             raise cls.TestFinderError('collect_file takes a file position')
 
         name = name.replace('//', '/') #sanity
@@ -923,7 +949,7 @@ class IOTestFinder(TestFinder):
 
 def bypass_for_py3(fct):
 
-    if six.PY3:
+    if True:
         to_bypass.append((fct.__name__, fct.__doc__))
         #global BYPASS
     

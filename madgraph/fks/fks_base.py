@@ -30,8 +30,6 @@ import logging
 import array
 import madgraph.various.misc as misc
 from madgraph import InvalidCmd
-from six.moves import range
-
 logger = logging.getLogger('madgraph.fks_base')
 
 if madgraph.ordering:

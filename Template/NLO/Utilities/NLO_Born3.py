@@ -1,7 +1,6 @@
 #! /usr/bin/env python3
 
 from __future__ import absolute_import
-from six.moves import range
 inp = open('./MADatNLO.top', 'r')
 out = open('./MADatNLO_combined.top', 'w')
 

@@ -20,8 +20,6 @@ Fortran, C++, etc."""
 from __future__ import absolute_import
 import re
 import collections
-from six.moves import range
-import six
 import io
 
 try:

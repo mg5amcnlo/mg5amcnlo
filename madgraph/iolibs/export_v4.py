@@ -14,15 +14,12 @@
 ################################################################################
 from __future__ import absolute_import, division
 from madgraph.iolibs.helas_call_writers import HelasCallWriter
-from six.moves import range
-from six.moves import zip
-import six
 from madgraph.core import base_objects
 """Methods and classes to export matrix elements to v4 format."""
 
 import copy
 import math, cmath
-from six import StringIO
+from io import StringIO
 import itertools
 import fractions
 import glob
@@ -1836,11 +1833,8 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
             # Mutliply by -1 for those which have an imaginary coefficient.
             ampnumbers_list=[coefficient[1]*(-1 if coefficient[0][2] else 1) \
                               for coefficient in coeff_list]
-            # Find the common denominator.
-            if six.PY2:
-                commondenom=abs(reduce(fractions.gcd, coefs_list).denominator)
-            else:
-                commondenom=abs(reduce(math.gcd, coefs_list).denominator)
+            # Find the common denominator.  
+            commondenom=abs(reduce(math.gcd, coefs_list).denominator)
             num_list=[(coefficient*commondenom).numerator \
                       for coefficient in coefs_list]
             res_list.append("DATA NCONTRIBAMPS%s(%i)/%i/"%(tag_letter,\
@@ -3844,9 +3838,14 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
                     [amp_order[0] for amp_order in amp_orders],'AMPSPLITORDERS')
             sqamp_so = self.get_split_orders_lines(squared_orders,'SQSPLITORDERS')
             replace_dict['ampsplitorders']='\n'.join(amp_so)
-            replace_dict['sqsplitorders']='\n'.join(sqamp_so)
-            jamp_lines, nb_tmp_jamp = self.get_JAMP_lines_split_order(\
-                       matrix_element,amp_orders,split_order_names=split_orders)
+            replace_dict['sqsplitorders']='\n'.join(sqamp_so)           
+            # standalone_msP/msF templates declare JAMP as a 1D array and cannot
+            # handle split-order JAMP; fall back to the non-split-order generator.
+            if self.opt['export_format'] in ['standalone_msP', 'standalone_msF']:
+                jamp_lines, nb_tmp_jamp = self.get_JAMP_lines(matrix_element)
+            else:
+                jamp_lines, nb_tmp_jamp = self.get_JAMP_lines_split_order(\
+                           matrix_element,amp_orders,split_order_names=split_orders)
             replace_dict['nb_temp_jamp'] = nb_tmp_jamp
             # Now setup the array specifying what squared split order is chosen
             replace_dict['chosen_so_configs']=self.set_chosen_SO_index(
@@ -3856,9 +3855,10 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
             # that explicitely writes out the contribution from each squared order.
             # The original driver still works and is compiled with 'make' while
             # the splitOrders one is compiled with 'make check_sa_born_splitOrders'
-            check_sa_writer=writers.FortranWriter('check_sa_born_splitOrders.f')
-            self.write_check_sa_splitOrders(squared_orders,split_orders,
-              nexternal,ninitial,proc_prefix,check_sa_writer)
+            if self.opt['export_format'] not in ['standalone_msP', 'standalone_msF']:
+                check_sa_writer=writers.FortranWriter('check_sa_born_splitOrders.f')
+                self.write_check_sa_splitOrders(squared_orders,split_orders,
+                  nexternal,ninitial,proc_prefix,check_sa_writer)
 
         if write:
             writers.FortranWriter('nsqso_born.inc').writelines(
@@ -3897,7 +3897,7 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
                 logger.debug("Warning: The export format %s is not "+\
                   " available for individual ME evaluation of given coupl. orders."+\
                   " Only the total ME will be computed.", self.opt['export_format'])
-            elif  self.opt['export_format'] in ['madloop_matchbox']:
+            elif  self.opt['export_format'] in ['madloop_matchbox', 'matchbox']:
                 replace_dict["color_information"] = self.get_color_string_lines(matrix_element)
                 matrix_template = "matrix_standalone_matchbox_splitOrders_v4.inc"
             else:
@@ -8302,7 +8302,7 @@ C
             if c_list:
                 fsock.writelines('double complex '+', '.join(c_list)+'\n')
 
-        if self.vector_size:
+        if self.vector_size and not self.opt['loop_induced']:
             c_list = ['%s(%s)' %(coupl.name, "VECSIZE_MEMMAX") for coupl in self.coups_dep]
         else:
             c_list = [coupl.name for coupl in self.coups_dep]
@@ -9358,6 +9358,9 @@ C
         filename and subroutine name.
         """
 
+        if self.opt['loop_induced']:
+            vec = False
+        
         fsock = self.open('%scouplings%s.f' %('mp_' if mp and not dp else '',
                                                      nb_file), format='fortran')
         fsock.writelines("""subroutine %(mp)scoup%(nb_file)s( %(args)s)

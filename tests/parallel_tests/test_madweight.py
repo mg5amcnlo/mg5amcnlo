@@ -29,8 +29,6 @@ import subprocess
 import sys
 import time
 import unittest
-from six.moves import map
-
 pjoin = os.path.join
 # Get the grand parent directory (mg5 root) of the module real path 
 # (tests/acceptance_tests) and add it to the current PYTHONPATH to allow

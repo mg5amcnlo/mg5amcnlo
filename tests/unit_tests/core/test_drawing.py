@@ -33,7 +33,6 @@ import madgraph.iolibs.import_v4 as import_v4
 import madgraph.iolibs.files as files
 
 import tests.unit_tests as unittest
-from six.moves import range
 _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0]
 _model = None
 

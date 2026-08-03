@@ -25,14 +25,11 @@ import operator
 import re
 import array
 import math
-import six
-
 import madgraph
 import madgraph.core.color_algebra as color_algebra
 import madgraph.core.diagram_generation as diagram_generation
 import madgraph.core.base_objects as base_objects
 import madgraph.various.misc as misc
-from six.moves import range
 from functools import reduce
 
 if madgraph.ordering:
@@ -773,12 +770,12 @@ class ColorMatrix(dict):
         appearing in struct1. Assumes internal summed indices are negative."""
 
         # First, determines what is the smallest index appearing in struct1
-        #list2 = reduce(operator.add,[list(elem[1]) for elem in struct1])
-        list2 = sum((list(elem[1]) for elem in struct1),[])
-        if not list2:
+        list1 = sum((list(elem[1]) for elem in struct1),[])
+        list2 = sum((list(elem[1]) for elem in struct2),[])
+        if not list1:
             min_index = -1
         else:
-           min_index = min(list2) - 1
+           min_index = min(list1) - 1
 
         # Second, determines the summed indices in struct2 and create a
         # replacement dictionary
@@ -806,10 +803,7 @@ class ColorMatrix(dict):
     @staticmethod
     def lcm(a, b):
         """Return lowest common multiple."""
-        if six.PY2:
-            return a * b // fractions.gcd(a, b)
-        else:
-            return a * b // math.gcd(a, b)
+        return a * b // math.gcd(a, b)
         
     @staticmethod
     def lcmm(*args):

@@ -22,7 +22,6 @@
 #########################################################################################################
 from __future__ import absolute_import
 import sys
-from six.moves import input
 sys.path.append('./Source/MadWeight/Python')
 import filecmp
 import unittest

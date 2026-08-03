@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 usage(){
   echo "Usage (GUI analysis): $0 [-cc] [-l label] [-p #blocks #threads #iterations]"

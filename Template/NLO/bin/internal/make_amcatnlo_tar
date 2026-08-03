@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 FILES="Cards HTML SubProcesses bin lib Source Events index.html README TemplateVersion.txt MGMEVersion.txt"
 

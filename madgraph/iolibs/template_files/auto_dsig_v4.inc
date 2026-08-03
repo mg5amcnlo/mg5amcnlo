@@ -88,6 +88,7 @@ c     local
 c
 	   double precision P1(0:3, nexternal)
       integer channel
+      double precision rwgt_value
 C  
 C DATA
 C  
@@ -139,17 +140,7 @@ C     Continue only if IMODE is 0, 4 or 5
      channel = %(get_channel)s
 	 call ranmar(RHEL)
 	 call ranmar(RCOL)
-         CALL SMATRIX%(proc_id)s(P1,RHEL, RCOL,channel,1, DSIGUU, selected_hel(1), selected_col(1))
-
-
-		 IF (IMODE.EQ.5) THEN
-            IF (DSIGUU.LT.1D199) THEN		 
-		      DSIG%(proc_id)s = DSIGUU*CONV
-			else
-		      DSIG%(proc_id)s = 0.0d0
-			endif
-			RETURN
-		 ENDIF
+     if (IMODE.eq.0) then
 C     Select a flavor combination (need to do here for right sign)
          CALL RANMAR(R)
          IPSEL=0
@@ -158,7 +149,22 @@ C     Select a flavor combination (need to do here for right sign)
             R=R-DABS(PD(IPSEL))/PD(0)
          ENDDO
 	 
-         DSIGUU=DSIGUU*REWGT(PP,1)
+         rwgt_value=REWGT(PP,1)
+      else
+         rwgt_value=1d0
+      endif
+C                                                      1 argument is for IVEC=1
+         CALL SMATRIX%(proc_id)s(P1,RHEL, RCOL,channel,1, DSIGUU, selected_hel(1), selected_col(1))
+
+         DSIGUU = DSIGUU* rwgt_value
+		 IF (IMODE.EQ.5) THEN
+            IF (DSIGUU.LT.1D199) THEN		 
+		      DSIG%(proc_id)s = DSIGUU*CONV
+			else
+		      DSIG%(proc_id)s = 0.0d0
+			endif
+			RETURN
+		 ENDIF
 
 C        Apply the bias weight specified in the run card (default is 1.0)
          DSIGUU=DSIGUU*CUSTOM_BIAS(PP,DSIGUU,%(numproc)d,1)
@@ -304,6 +310,9 @@ c
 	   double precision P1(0:3, nexternal)
 	   integer ivec, curr_warp, iwarp, NB_WARP_USED
 	   integer channels(VECSIZE_MEMMAX)
+C     Per-event MLM graph: igraphs(1) from REWGT (0 = no MLM)
+	   integer igraph(VECSIZE_MEMMAX)
+	   common/vec_igraph/igraph
 C  
 C DATA
 C  
@@ -368,7 +377,7 @@ C     Select a flavor combination (need to do here for right sign)
 	 CALL RANMAR(col_rand(IVEC))
 	 ENDDO ! end loop on IWARP/IVEC	 
 	 ENDDO ! end loop on the CURR_WARP
-         call SMATRIX%(proc_id)s_MULTI(p_multi, hel_rand, col_rand, channels, ALL_OUT , selected_hel, selected_col, VECSIZE_USED)
+         call SMATRIX%(proc_id)s_MULTI(p_multi, hel_rand, col_rand, channels, igraph, ALL_OUT , selected_hel, selected_col, VECSIZE_USED)
 
 
 	 DO CURR_WARP=1, NB_WARP_USED
@@ -437,19 +446,21 @@ C       Call UNWGT to unweight and store events
      end
 
 
-     SUBROUTINE SMATRIX%(proc_id)s_MULTI(p_multi, hel_rand, col_rand, channels, out, selected_hel, selected_col, VECSIZE_USED)
+     SUBROUTINE SMATRIX%(proc_id)s_MULTI(p_multi, hel_rand, col_rand, channels, igraph, out, selected_hel, selected_col, VECSIZE_USED)
 %(OMP_LIB)s
      implicit none
 
      include 'nexternal.inc'
-     include '../../Source/vector.inc' ! defines VECSIZE_MEMMAX
      include 'maxamps.inc'
+     include 'cluster.inc'  ! for IGRAPHS common block (MLM per-event color selection); also defines VECSIZE_MEMMAX via vector.inc
      INTEGER                 NCOMB
      PARAMETER (             NCOMB=%(ncomb)d)
      double precision p_multi(0:3, nexternal, VECSIZE_MEMMAX)
      double precision hel_rand(VECSIZE_MEMMAX)
      double precision col_rand(VECSIZE_MEMMAX)
      integer channels(VECSIZE_MEMMAX)
+C    Per-event MLM graph: igraphs(1) from REWGT (0 = no MLM)
+     integer igraph(VECSIZE_MEMMAX)
      double precision out(VECSIZE_MEMMAX)
      integer selected_hel(VECSIZE_MEMMAX)
      integer selected_col(VECSIZE_MEMMAX)

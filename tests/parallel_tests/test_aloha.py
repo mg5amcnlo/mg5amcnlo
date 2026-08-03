@@ -33,10 +33,6 @@ import aloha.aloha_writers as aloha_writers
 #import models.sm.object_library as object_library
 import tests.unit_tests as unittest
 import madgraph.various.misc as misc
-from six.moves import range
-from six.moves import zip
-
-
 set_global = misc.set_global
 
 

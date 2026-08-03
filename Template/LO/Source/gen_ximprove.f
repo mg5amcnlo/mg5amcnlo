@@ -418,7 +418,7 @@ c     Write ic with correct number of digits
 
       write(*,*) 'Opening file ',fname
       open (unit=26, file = fname, status='unknown')
-      write(26,15) '#!/bin/bash'
+      write(26,15) '#!/usr/bin/env bash'
 c      write(26,15) '#PBS -q ' // PBS_QUE
 c      write(26,15) '#PBS -o /dev/null'
 c      write(26,15) '#PBS -e /dev/null'

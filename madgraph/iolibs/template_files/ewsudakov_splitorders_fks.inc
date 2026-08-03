@@ -200,6 +200,9 @@ C Finally interfere the two sets of color-stripped amplitudes
           DO J = 1, NCOLOR2
               ZTEMP = ZTEMP + CF(j,i)*JAMP2(J,M)
           ENDDO
+          DO N = 1, NAMPSO
+            ANS(SQSOINDEXB(M,N))=ANS(SQSOINDEXB(M,N))+ZTEMP*DCONJG(JAMP1(I,N))
+          ENDDO
       ENDDO
     ENDDO
     ANS(:) = ANS(:) /DENOM

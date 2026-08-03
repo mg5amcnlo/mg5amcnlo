@@ -25,8 +25,6 @@ import sys
 import logging
 import time
 import tests.IOTests as IOTests
-from six.moves import range
-
 logger = logging.getLogger('test_cmd')
 
 import tests.unit_tests.iolibs.test_file_writers as test_file_writers

@@ -22,10 +22,6 @@ import copy
 import fractions
 import itertools
 import madgraph.various.misc as misc
-from six.moves import map
-from six.moves import range
-from six.moves import zip
-
 import madgraph
 if madgraph.ordering:
     set = misc.OrderedSet

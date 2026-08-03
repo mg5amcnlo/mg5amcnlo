@@ -352,76 +352,60 @@ C ----------
 
       END
 
-      SUBROUTINE %(proc_prefix)sGET_JAMP(njamp, ONEJAMP)
+      SUBROUTINE %(proc_prefix)sGET_JAMP(njamp, SOINDEX, ONEJAMP)
 
-      INTEGER     NCOLOR, NJAMP
-      PARAMETER (NCOLOR=%(ncolor)d) 
-      INTEGER NAMPSO
-      PARAMETER (NAMPSO=%(nAmpSplitOrders)d)
-      COMPLEX*16  JAMP(NCOLOR,NAMPSO), ONEJAMP
-      COMMON/%(proc_prefix)sJAMP/JAMP,LNJAMP
-	
-	ONEJAMP = JAMP(njamp+1,1) ! +1 since njamp start at zero (c convention)
-	END
-
-       SUBROUTINE %(proc_prefix)sGET_LNJAMP(njamp, ONEJAMP)
-
-      INTEGER     NCOLOR, NJAMP
+      INTEGER     NCOLOR, NJAMP, SOINDEX
       PARAMETER (NCOLOR=%(ncolor)d) 
       INTEGER NAMPSO
       PARAMETER (NAMPSO=%(nAmpSplitOrders)d)
       COMPLEX*16  JAMP(NCOLOR,NAMPSO), LNJAMP(NCOLOR,NAMPSO), ONEJAMP
       COMMON/%(proc_prefix)sJAMP/JAMP,LNJAMP
 	
-	ONEJAMP = LNJAMP(njamp+1,1) ! +1 since njamp start at zero (c convention)
-	END
+	  ONEJAMP = JAMP(njamp+1, SOINDEX) ! +1 since njamp start at zero (c convention)
+	  END
+
+       SUBROUTINE %(proc_prefix)sGET_LNJAMP(njamp, SOINDEX, ONEJAMP)
+
+      INTEGER     NCOLOR, NJAMP, SOINDEX
+      PARAMETER (NCOLOR=%(ncolor)d) 
+      INTEGER NAMPSO
+      PARAMETER (NAMPSO=%(nAmpSplitOrders)d)
+      COMPLEX*16  JAMP(NCOLOR,NAMPSO), LNJAMP(NCOLOR,NAMPSO), ONEJAMP
+      COMMON/%(proc_prefix)sJAMP/JAMP,LNJAMP
 	
+	  ONEJAMP = LNJAMP(njamp+1,SOINDEX) ! +1 since njamp start at zero (c convention)
+	  END
 	
-	
-	
+
      SUBROUTINE %(proc_prefix)sGET_NCOLOR(in1, in2, out)
 
 	integer in1, in2, out
 	%(color_information)s
      END
 
-     SUBROUTINE %(proc_prefix)sGET_NCOL(ncol)
+    SUBROUTINE %(proc_prefix)sGET_NCOL(ncol)
 	integer ncol
 	ncol = %(ncolor)d
 	return
 	end      
       
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
+    SUBROUTINE %(proc_prefix)sGET_MAXSOINDEX(out)
+    
+    integer out
+    out  = %(nAmpSplitOrders)d
+    return 
+    end
+
+    subroutine %(proc_prefix)s_get_chosen_so_config(M,N, out)
+
+    integer M, N
+    logical out
+    PARAMETER (NSQAMPSO=%(nSqAmpSplitOrders)d)
+    LOGICAL CHOSEN_SO_CONFIGS(NSQAMPSO)
+    DATA CHOSEN_SO_CONFIGS/%(chosen_so_configs)s/
+    COMMON/%(proc_prefix)sCHOSEN_BORN_SQSO/CHOSEN_SO_CONFIGS
+
+    out  = CHOSEN_SO_CONFIGS(%(proc_prefix)sSQSOINDEX(M,N))
+    return
+    end
       

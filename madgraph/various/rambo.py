@@ -2,8 +2,6 @@ from __future__ import division
 from __future__ import absolute_import
 import math
 import random
-from six.moves import range
-
 class FortranList(list):
     
     def __init__(self, min, max=None):

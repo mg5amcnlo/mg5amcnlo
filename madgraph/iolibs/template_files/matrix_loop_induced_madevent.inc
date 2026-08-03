@@ -55,6 +55,7 @@ c
 C  
 C LOCAL VARIABLES 
 C  
+    INTEGER IVEC
     INTEGER NHEL(NEXTERNAL,NCOMB)
     REAL*8 T,MATRIX%(proc_id)s
     REAL*8 R,SUMHEL,TS(NCOMB)
@@ -172,6 +173,7 @@ C     This is of course only necessary if the automatic TIR Cache clearing was t
             JAMP2(I)=0D0
         ENDDO
     ANS = 0D0
+    ivec = 1
     WRITE(HEL_BUFF,'(20I5)') (0,I=1,NEXTERNAL)
 
     DO I=1,NCOMB
@@ -297,7 +299,7 @@ c           Include the Jacobian from helicity sampling
        ENDIF
     ENDIF
 
-   call select_color(rcol, jamp2, iconfig,%(proc_id)s,  icol)
+   call select_color(rcol, jamp2, iconfig,%(proc_id)s,  icol, ivec)
 
    IF (MULTI_CHANNEL) THEN
         XTOT=0D0

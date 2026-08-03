@@ -572,6 +572,12 @@ class Switcher(object):
         
     def help_output(self, *args, **opts):
         return self.cmd.help_output(self, *args, **opts)
+
+    def help_polarization(self, *args, **opts):
+        return self.cmd.help_polarization(self, *args, **opts)
+
+    def help_polarisation(self, *args, **opts):
+        return self.cmd.help_polarisation(self, *args, **opts)
         
     def help_quit(self, *args, **opts):
         return self.cmd.help_quit(self, *args, **opts)

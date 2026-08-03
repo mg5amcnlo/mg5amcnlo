@@ -77,7 +77,7 @@ OLP_POLYNOMIAL = $(patsubst $(DOTF),$(DOTO),$(wildcard $(LOOP_PREFIX)*/polynomia
 
 
 
-$(PROG): check_sa.o $(PROCESS) makefile $(LIBS)
+$(PROG): check_sa.o $(PROCESS) makefile $(LIBS) libcollier.$(dylibext)
 	$(FC) $(FFLAGS) -o $(PROG) check_sa.o $(PROCESS) $(LINKLIBS)
 
 $(STABCHECKDRIVER):  StabilityCheckDriver.o $(PROCESS) makefile $(LIBS)
@@ -111,7 +111,7 @@ $(DOTO) : $(DOTF) $(POLYNOMIAL) $(OLP_POLYNOMIAL)
 $(DOTO) : $(DOTF)
 	$(FC) $(FFLAGS) -c $< -o $@ $(LOOP_INCLUDE)
 
-$(OLP): $(OLP_PROCESS) $(LIBS)
+$(OLP): $(OLP_PROCESS) $(LIBS) 
 	$(FC) -shared $(OLP_PROCESS) -o libMadLoop.$(dylibext) $(LINKLIBS)
 
 $(OLP)_static: $(OLP_PROCESS)
@@ -161,21 +161,22 @@ else
   LD_F2PY=-lgfortran -lquadmath
 endif
 
+ifeq ($(origin MENUM),undefined)
+  MENUM=2
+endif
 
 liball$(ROOTNAME)_$(MENUM)me.$(dylibext): all_matrix.o libMadLoop.$(dylibext) $(WRAPPER_OBJS) $(LIBS)  $(OLP) 
 	$(CXX) $(DYNLIBFLAG)  $(LIBALLME_DYNFLAG)  $(STDLIB_FLAG)  -o liball$(ROOTNAME)_$(MENUM)me.$(dylibext) all_matrix.o */f2py_wrapper.o ../Source/DHELAS/*.o ../Source/MODEL/*.o $(STAT_LIB) $(RPATH_LIBS) $(LINK_LOOP_LIBS) $(ALL_DOTO) $(STDLIB) $(LINK_LOOP_LIBS) 
 
 
 
-
+libcollier.$(dylibext):
+	ln -s $(LIBDIR)/collier_lib/libcollier.$(dylibext) || echo "libcolier already linked" 
 
 
 
 shared: liball$(ROOTNAME)_$(MENUM)me.$(dylibext)
 
-ifeq ($(origin MENUM),undefined)
-  MENUM=2
-endif
 
 
 

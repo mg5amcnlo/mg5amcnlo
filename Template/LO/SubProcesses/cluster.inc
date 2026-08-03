@@ -43,5 +43,5 @@ c     parameters for sudakovs
       integer iipdg,iimode
       common/gamma_args/Q1,iipdg,iimode
 
-      integer vec_igraph1(VECSIZE_MEMMAX)
-      common/vec_igraph/vec_igraph1
+      integer vec_igraph(VECSIZE_MEMMAX)
+      common/vec_igraph/vec_igraph

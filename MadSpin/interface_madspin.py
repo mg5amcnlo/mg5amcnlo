@@ -25,10 +25,6 @@ import shutil
 import sys
 import time
 import glob
-import six
-from six.moves import range
-
-
 pjoin = os.path.join
 if '__main__' == __name__:
     import sys

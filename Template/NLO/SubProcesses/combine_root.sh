@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Main driver for the combination. 
 # To be executed in ./SubProcesses; the upper-level command
 # (the only one to be executed) is:

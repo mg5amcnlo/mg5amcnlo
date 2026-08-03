@@ -29,9 +29,6 @@ import copy
 import logging
 import array
 import fractions
-import six
-from six.moves import range
-    
 if madgraph.ordering:
     set = misc.OrderedSet    
     
@@ -884,13 +881,13 @@ class FKSLeg(MG.Leg):
                                                         % str(value))
         if name in ['color', 'spin']:
             if not isinstance(value, int):
-                six.reraise(self.PhysicsObjectError, "%s is not a valid leg %s flag" % \
-                                                 str(value), name)
+                raise self.PhysicsObjectError("%s is not a valid leg %s flag" % \
+                                                 (str(value), name))
                                                  
         if name in ['massless','is_tagged','self_antipart','is_part']:
             if not isinstance(value, bool):
-                six.reraise(self.PhysicsObjectError, "%s is not a valid boolean for leg flag %s" % \
-                                                                    str(value), name)
+                raise self.PhysicsObjectError("%s is not a valid boolean for leg flag %s" % \
+                                                                    (str(value), name))
         if name == 'charge':
             if not isinstance(value, float):
                 raise self.PhysicsObjectError("%s is not a valid float for leg flag charge" \

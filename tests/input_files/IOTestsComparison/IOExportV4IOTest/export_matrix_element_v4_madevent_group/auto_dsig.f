@@ -93,6 +93,7 @@ C     local
 C     
       DOUBLE PRECISION P1(0:3, NEXTERNAL)
       INTEGER CHANNEL
+      DOUBLE PRECISION RWGT_VALUE
 C     
 C     DATA
 C     
@@ -166,10 +167,24 @@ C       LP=SIGN(1,LPP(IB(2)))
       CHANNEL = SUBDIAG(1)
       CALL RANMAR(RHEL)
       CALL RANMAR(RCOL)
+      IF (IMODE.EQ.0) THEN
+C       Select a flavor combination (need to do here for right sign)
+        CALL RANMAR(R)
+        IPSEL=0
+        DO WHILE (R.GE.0D0 .AND. IPSEL.LT.IPROC)
+          IPSEL=IPSEL+1
+          R=R-DABS(PD(IPSEL))/PD(0)
+        ENDDO
+
+        RWGT_VALUE=REWGT(PP,1)
+      ELSE
+        RWGT_VALUE=1D0
+      ENDIF
+C     1 argument is for IVEC=1
       CALL SMATRIX1(P1,RHEL, RCOL,CHANNEL,1, DSIGUU, SELECTED_HEL(1),
      $  SELECTED_COL(1))
 
-
+      DSIGUU = DSIGUU* RWGT_VALUE
       IF (IMODE.EQ.5) THEN
         IF (DSIGUU.LT.1D199) THEN
           DSIG1 = DSIGUU*CONV
@@ -178,15 +193,6 @@ C       LP=SIGN(1,LPP(IB(2)))
         ENDIF
         RETURN
       ENDIF
-C     Select a flavor combination (need to do here for right sign)
-      CALL RANMAR(R)
-      IPSEL=0
-      DO WHILE (R.GE.0D0 .AND. IPSEL.LT.IPROC)
-        IPSEL=IPSEL+1
-        R=R-DABS(PD(IPSEL))/PD(0)
-      ENDDO
-
-      DSIGUU=DSIGUU*REWGT(PP,1)
 
 C     Apply the bias weight specified in the run card (default is 1.0)
       DSIGUU=DSIGUU*CUSTOM_BIAS(PP,DSIGUU,1,1)
@@ -337,6 +343,9 @@ C
       DOUBLE PRECISION P1(0:3, NEXTERNAL)
       INTEGER IVEC, CURR_WARP, IWARP, NB_WARP_USED
       INTEGER CHANNELS(VECSIZE_MEMMAX)
+C     Per-event MLM graph: igraphs(1) from REWGT (0 = no MLM)
+      INTEGER IGRAPH(VECSIZE_MEMMAX)
+      COMMON/VEC_IGRAPH/IGRAPH
 C     
 C     DATA
 C     
@@ -443,7 +452,7 @@ C         Select a flavor combination (need to do here for right sign)
         ENDDO  ! end loop on IWARP/IVEC	 
       ENDDO  ! end loop on the CURR_WARP
       CALL SMATRIX1_MULTI(P_MULTI, HEL_RAND, COL_RAND, CHANNELS,
-     $  ALL_OUT , SELECTED_HEL, SELECTED_COL, VECSIZE_USED)
+     $  IGRAPH, ALL_OUT , SELECTED_HEL, SELECTED_COL, VECSIZE_USED)
 
 
       DO CURR_WARP=1, NB_WARP_USED
@@ -516,19 +525,21 @@ C           Call UNWGT to unweight and store events
 
 
       SUBROUTINE SMATRIX1_MULTI(P_MULTI, HEL_RAND, COL_RAND, CHANNELS,
-     $  OUT, SELECTED_HEL, SELECTED_COL, VECSIZE_USED)
+     $  IGRAPH, OUT, SELECTED_HEL, SELECTED_COL, VECSIZE_USED)
       USE OMP_LIB
       IMPLICIT NONE
 
       INCLUDE 'nexternal.inc'
-      INCLUDE '../../Source/vector.inc'  ! defines VECSIZE_MEMMAX
       INCLUDE 'maxamps.inc'
+      INCLUDE 'cluster.inc'  ! for IGRAPHS common block (MLM per-event color selection); also defines VECSIZE_MEMMAX via vector.inc
       INTEGER                 NCOMB
       PARAMETER (             NCOMB=16)
       DOUBLE PRECISION P_MULTI(0:3, NEXTERNAL, VECSIZE_MEMMAX)
       DOUBLE PRECISION HEL_RAND(VECSIZE_MEMMAX)
       DOUBLE PRECISION COL_RAND(VECSIZE_MEMMAX)
       INTEGER CHANNELS(VECSIZE_MEMMAX)
+C     Per-event MLM graph: igraphs(1) from REWGT (0 = no MLM)
+      INTEGER IGRAPH(VECSIZE_MEMMAX)
       DOUBLE PRECISION OUT(VECSIZE_MEMMAX)
       INTEGER SELECTED_HEL(VECSIZE_MEMMAX)
       INTEGER SELECTED_COL(VECSIZE_MEMMAX)

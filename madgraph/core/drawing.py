@@ -48,9 +48,6 @@ import math
 import madgraph.core.base_objects as base_objects
 import madgraph.loop.loop_base_objects as loop_objects
 import madgraph.various.misc as misc
-import six
-from six.moves import range
-
 #===============================================================================
 # FeynmanLine
 #===============================================================================
@@ -1660,7 +1657,7 @@ class DiagramDrawer(object):
         #No need to test Diagram class, it will be tested before using it anyway
         try:
             assert(not model or isinstance(model, base_objects.Model))
-            assert(not filename or isinstance(filename, six.string_types))
+            assert(not filename or isinstance(filename, str))
         except AssertionError:
             raise self.DrawDiagramError('No valid model provide to convert ' + \
                                         'diagram in appropriate format')

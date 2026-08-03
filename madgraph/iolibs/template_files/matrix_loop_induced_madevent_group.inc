@@ -60,6 +60,7 @@ C LOCAL VARIABLES
 C  
         INTEGER NHEL(NEXTERNAL,NCOMB)
 		INTEGER I, II, J ,JJ
+        INTEGER IVEC
         INTEGER ISHEL
         REAL*8 R,SUMHEL,TS(NCOMB), T
 		REAL*8 HWGT,XTOT
@@ -178,6 +179,7 @@ C     This is of course only necessary if the automatic TIR Cache clearing was t
 
 
     ANS = 0D0
+    IVEC= 1
 
     DO I=1,NCOMB
        TS(I)=0d0
@@ -307,7 +309,7 @@ c         Set right sign for ANS, based on sign of chosen helicity
       ENDIF
     ENDIF
 
-    call select_color(rcol, jamp2, iconfig,%(proc_id)s,  icol)
+    call select_color(rcol, jamp2, iconfig,%(proc_id)s,  icol, ivec)
 
     IF (MULTI_CHANNEL) THEN
         XTOT=0D0

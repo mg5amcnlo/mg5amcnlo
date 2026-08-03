@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #
 #  This runs Delphes 3 on the pythia_events.hep
 #

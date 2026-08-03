@@ -11,10 +11,8 @@ C events requested in the splits.
       integer i,j,tot_evts,nevts(max_split),idummy,njobs
       double precision Xsect,wgt_fact(max_split)
       character*10 MonteCarlo
-      integer IDBMUP(2),PDFGUP(2),PDFSUP(2),IDWTUP,NPRUP,LPRUP
-      double precision EBMUP(2),XSECUP,XERRUP,XMAXUP
-      integer IDBMUP1(2),PDFGUP1(2),PDFSUP1(2),IDWTUP1,NPRUP1,LPRUP1
-      double precision EBMUP1(2),XSECUP1,XERRUP1,XMAXUP1
+      integer IDBMUP(2),PDFGUP(2),PDFSUP(2),IDWTUP,NPRUP,LPRUP(100)
+      double precision EBMUP(2),XSECUP(100),XERRUP(100),XMAXUP(100)
       INTEGER MAXNUP
       PARAMETER (MAXNUP=500)
       INTEGER NUP,IDPRUP,IDUP(MAXNUP),ISTUP(MAXNUP),

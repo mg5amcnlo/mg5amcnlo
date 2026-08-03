@@ -20,7 +20,6 @@ import os
 import pydoc
 import subprocess
 import time
-from six.moves import range
 start=time.time()
 import madgraph.iolibs.files as files
 import madgraph.interface.madevent_interface as me_cmd

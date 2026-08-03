@@ -25,7 +25,7 @@ import tempfile
 import glob
 import shutil
 import subprocess
-import six.moves.urllib.request, six.moves.urllib.parse, six.moves.urllib.error
+import urllib.request, urllib.parse, urllib.error
 
 root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
 sys.path.append(os.path.join(root_path, os.path.pardir))
@@ -74,12 +74,12 @@ class TestMG5aMCDistribution(unittest.TestCase):
 #                            pjoin(tmp_path,'OfflineHEPToolsInstaller.tar.gz'))    
 #                subprocess.call('tar -xzf OfflineHEPToolsInstaller.tar.gz', cwd=tmp_path, shell=True)
 #                shutil.move(pjoin(tmp_path,'HEPToolsInstallers'),pjoin(tmp_path,'OFFLINE_VERSION'))
-                online_path = dict(tuple(line.decode().split()[:2]) for line in six.moves.urllib.request.urlopen(
+                online_path = dict(tuple(line.decode().split()[:2]) for line in urllib.request.urlopen(
                       'http://madgraph.phys.ucl.ac.be/package_info.dat'))['HEPToolsInstaller']
                 subprocess.call('tar -xzf %s'%TestMG5aMCDistribution.get_data(online_path,tmp_path), 
                                                                             cwd=tmp_path, shell=True)                
                 shutil.move(pjoin(tmp_path,'HEPToolsInstallers'),pjoin(tmp_path,'ONLINE_VERSION_UCL'))
-                online_path = dict(tuple(line.decode().split()[:2]) for line in six.moves.urllib.request.urlopen(
+                online_path = dict(tuple(line.decode().split()[:2]) for line in urllib.request.urlopen(
                       'https://madgraph.mi.infn.it//package_info.dat'))['HEPToolsInstaller']
                 subprocess.call('tar -xzf %s'%TestMG5aMCDistribution.get_data(online_path,tmp_path), 
                                                                             cwd=tmp_path, shell=True)                

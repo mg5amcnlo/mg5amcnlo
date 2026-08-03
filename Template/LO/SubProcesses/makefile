@@ -58,7 +58,10 @@ $(PROG): $(PROCESS) auto_dsig.o $(LIBS) $(MATRIX)
 $(PROG)_forhel: $(PROCESS) auto_dsig.o $(LIBS) $(MATRIX_HEL)
 	$(FC) -o $(PROG)_forhel $(PROCESS) $(MATRIX_HEL) $(LINKLIBS) $(LDFLAGS) $(BIASDEPENDENCIES) -fopenmp
 
-gensym: $(SYMMETRY) configs.inc $(LIBS)
+libcollier.$(dylibext):
+	ln -s $(LIBDIR)/collier_lib/libcollier.$(dylibext) || echo 'already done'
+
+gensym: $(SYMMETRY) configs.inc $(LIBS) libcollier.$(dylibext)
 	$(FC) -o gensym $(SYMMETRY) -L../../lib/ $(LINKLIBS) $(LDFLAGS)
 
 $(LIBDIR)libmodel.$(libext): ../../Cards/param_card.dat

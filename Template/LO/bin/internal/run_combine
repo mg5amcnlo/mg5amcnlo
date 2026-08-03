@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 rm fail_combine.log &> /dev/null
 for((try=1;try<=16;try+=1)); 

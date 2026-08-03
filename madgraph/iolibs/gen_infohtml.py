@@ -21,8 +21,6 @@ import re
 import sys
 
 import madgraph.various.misc as misc
-from six.moves import range
-
 template_text= string.Template("""
 <HTML> 
 <HEAD> 

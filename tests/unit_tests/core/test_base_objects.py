@@ -22,9 +22,6 @@ import madgraph
 import madgraph.core.base_objects as base_objects
 import madgraph.core.color_algebra as color
 import tests.unit_tests as unittest
-from six.moves import range
-from six.moves import zip
-
 #===============================================================================
 # ParticleTest
 #===============================================================================

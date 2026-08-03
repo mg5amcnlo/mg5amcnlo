@@ -3,9 +3,6 @@
 from __future__ import division
 from __future__ import absolute_import
 from madgraph.interface import reweight_interface
-from six.moves import map
-from six.moves import range
-from six.moves import zip
 import pickle
 
 ################################################################################
@@ -2792,9 +2789,11 @@ class decay_all_events(object):
                 if name == 'all':
                     continue
                 #self.banner.get('proc_card').get('multiparticles'):
-                mgcmd.do_define("%s = %s" % (name, ' '.join(repr(i) for i in pdgs)))
-            
-        
+                try:
+                    mgcmd.do_define("%s = %s" % (name, ' '.join(repr(i) for i in pdgs)))
+                except Exception as e:
+                    pass
+
         mgcmd.exec_cmd("set group_subprocesses False")
         logger.info('generating the production square matrix element')
         start = time.time()

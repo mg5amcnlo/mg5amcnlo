@@ -22,6 +22,8 @@ c
          include "MCmasses_PYTHIA6PT.inc"
       elseif(MonteCarlo(1:7).eq.'PYTHIA8')then
          include "MCmasses_PYTHIA8.inc"
+      elseif(MonteCarlo(1:2).eq.'FO')then
+         mcmass(-16:21)=0d0
       else
          write (*,*) 'Wrong MC ', MonteCarlo, ' in fill_MC_mshell'
          stop

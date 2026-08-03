@@ -101,8 +101,6 @@
 
 from __future__ import absolute_import
 import os,re,sys
-from six.moves import range
-from six.moves import input
 sys.path+=['../'*i+'./Source/MadWeight/Python' for i in range(1,6)]
 import MW_param
 

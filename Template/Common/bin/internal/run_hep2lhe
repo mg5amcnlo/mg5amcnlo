@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #
 #  This runs hep2lhe on the unweighted_events.dat
 #

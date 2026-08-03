@@ -24,7 +24,6 @@ import aloha.aloha_writers as aloha_writers
 import aloha
 from madgraph import MadGraph5Error
 import madgraph.various.misc as misc
-from six.moves import range
 if madgraph.ordering:
     set	= misc.OrderedSet
 
@@ -608,6 +607,18 @@ class FortranHelasCallWriter(HelasCallWriter):
 
         if val:
             return val
+        
+        #fallback to case without offshell/onshell distinction
+        if isinstance(wavefunction, helas_objects.HelasWavefunction):
+            key = wavefunction.get_call_key()
+
+            if key[0][-1] in [None,True]:
+                #misc.sprint(key)
+                new_key = (key[0][:-1], key[1])
+                if new_key in self['wavefunctions']:
+                    return self['wavefunctions'][new_key](wavefunction)
+            #else:
+            #    misc.sprint(key)
 
         # If function not already existing, try to generate it.
 
@@ -1170,8 +1181,10 @@ class FortranUFOHelasCallWriter(UFOHelasCallWriter):
            argument.get('type')=='loop')):
             flag.insert(0,"L")
 
+        if isinstance(argument, helas_objects.HelasWavefunction) and argument.get('onshell') is False:
+            flag.append('P1D') # D is for $ syntax -> offshell propagator only
         # Creating line formatting:
-        call = 'CALL %(routine_name)s(%(wf)s%(coup)s%(mass)s%(out)s)'
+        call = 'CALL %(routine_name)s(%(wf)s%(coup)s%(mass)s%(extra)s%(out)s)'
 
         arg = {'routine_name': aloha_writers.combine_name(\
                                         '%s' % l[0], l[1:], outgoing, flag, True),
@@ -1228,6 +1241,7 @@ class FortranUFOHelasCallWriter(UFOHelasCallWriter):
                  # add a second line to take into account the multiplicative factor                 
                  call += "\n %(second_line)s "
                  arg['second_line'] = ampl+"="+ampl+"*(%(uvct)s)"           
+        arg['extra'] = '%(bwcutoff)s'
 
         # ALL ARGUMENT FORMATTED ###############################################
         call, arg = HelasCallWriter.customize_argument_for_all_other_helas_object(call, arg)
@@ -1682,7 +1696,9 @@ class CPPUFOHelasCallWriter(UFOHelasCallWriter):
             flag = [] 
             if argument.needs_hermitian_conjugate():
                 flag = ['C%d' % i for i in argument.get_conjugate_index()]
-                
+            
+            if isinstance(argument, helas_objects.HelasWavefunction) and argument.get('onshell') is False:
+                flag.append('P1D') # D is for $ syntax -> offshell propagator only
                 
             # Creating line formatting:
             call = '%(routine_name)s(%(wf)s%(coup)s%(mass)s%(out)s);'
@@ -1697,9 +1713,9 @@ class CPPUFOHelasCallWriter(UFOHelasCallWriter):
             if isinstance(argument, helas_objects.HelasWavefunction):
                 arg['out'] = 'w[%(out)d]'
                 if aloha.complex_mass:
-                    arg['mass'] = "pars->%(CM)s,"
+                    arg['mass'] = "pars->%(CM)s,%(bwcutoff)s"
                 else:
-                    arg['mass'] = "pars->%(M)s,pars->%(W)s,"
+                    arg['mass'] = "pars->%(M)s,pars->%(W)s,%(bwcutoff)s"
             else:        
                 arg['out'] = 'amp[%(out)d]'
                 arg['mass'] = ''
@@ -2090,10 +2106,20 @@ class PythonUFOHelasCallWriter(UFOHelasCallWriter):
             # String is just IXXXXX, OXXXXX, VXXXXX or SXXXXX
             call = "w[%d] = "
 
-            call = call + HelasCallWriter.mother_dict[\
+            wf_name = HelasCallWriter.mother_dict[\
                 argument.get_spin_state_number()].lower()
-            # Fill out with X up to 6 positions
-            call = call + 'x' * (14 - len(call))
+            fixed_wf_name = None
+            if aloha.unitary_gauge == 3:
+                if argument.get('spin') == 1:
+                    wf_name = 'sfd'
+                elif argument.get('spin') == 3:
+                    fixed_wf_name = 'vfdxxxx'
+            if fixed_wf_name is None:
+                call = call + wf_name
+                # Fill out with X up to 6 positions
+                call = call + 'x' * (14 - len(call))
+            else:
+                call = call + fixed_wf_name
             call = call + "(p[%d],"
             if argument.get('spin') != 1:
                 # For non-scalars, need mass and helicity

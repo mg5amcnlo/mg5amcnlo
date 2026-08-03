@@ -29,8 +29,6 @@ import unittest
 import subprocess
 
 from madgraph import MG5DIR
-from six.moves import range
-
 pjoin = os.path.join
 _file_path = os.path.dirname(os.path.realpath(__file__))
 _pickle_path = pjoin(_file_path, 'input_files')

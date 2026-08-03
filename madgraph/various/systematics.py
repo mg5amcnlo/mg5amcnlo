@@ -15,8 +15,6 @@
 from __future__ import division
 
 from __future__ import absolute_import
-from six.moves import range
-from six.moves import zip
 if __name__ == "__main__":
     import sys
     import os
@@ -41,7 +39,7 @@ import os
 import re
 import sys
 import time
-from six import StringIO
+from io import StringIO
 
 pjoin = os.path.join
 root = os.path.dirname(__file__)
@@ -273,8 +271,8 @@ class Systematics(object):
             elif p.lhapdfID == self.orig_pdf:
                 self.orig_pdf = p
                 break
-            else:  
-                self.orig_pdf = lhapdf.mkPDF(self.orig_pdf)
+        else:  
+            self.orig_pdf = lhapdf.mkPDF(self.orig_pdf)
         if not self.b1 == 0 == self.b2 and not isEVA and not isEVAxDIS: 
             self.log( "# Events generated with PDF: %s (%s)" %(self.orig_pdf.set().name,self.orig_pdf.lhapdfID ))
         elif isEVAxDIS:

@@ -144,8 +144,6 @@ import re
 import shutil
 import string
 from time import time
-from six.moves import range
-
 # 1 ###############################################################
 def mod_file(mod_file,rule_file='',write='',opt={}):
 
