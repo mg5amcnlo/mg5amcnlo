@@ -668,6 +668,39 @@ class TestMECmdShell(unittest.TestCase):
         self.assertTrue(abs(val1 - target) / err1 < 2., 'large diference between %s and %s +- %s (%s sigma)'%
                         (target, val1, err1, abs(val1 - target) / err1))
 
+    def test_quarkonium_production(self):
+        """check that e e > etab(3S) etab(3S) gives the correct result"""
+
+        mg_cmd = MGCmd.MasterCmd()
+        mg_cmd.no_notification()
+        mg_cmd.exec_cmd('import model sm_onia')
+        mg_cmd.exec_cmd(' generate e+ e- > etab(3s) etab(3S)')
+        mg_cmd.exec_cmd('output %s/'% self.run_dir)
+        self.cmd_line = MECmd.MadEventCmdShell(me_dir=  self.run_dir)
+        self.cmd_line.no_notification()
+        self.cmd_line.exec_cmd('set automatic_html_opening False')
+
+        #check validity of the default run_card
+        run_card = banner.RunCardLO(pjoin(self.run_dir, 'Cards','run_card.dat'))
+        self.assertIn('mom_resh_type', run_card.user_set)
+
+        shutil.copy(os.path.join(_file_path, 'input_files', 'run_card_quarkonium.dat'),
+                    '%s/Cards/run_card.dat' % self.run_dir)
+        shutil.copy(os.path.join(_file_path, 'input_files', 'onia_card_quarkonium.dat'),
+                    '%s/Cards/onia_card.dat' % self.run_dir)
+
+        self.do('generate_events -f')
+        val1 = self.cmd_line.results.current['cross']
+        err1 = self.cmd_line.results.current['error']
+        # 10k value is 6.227e-17 +- 2e-20
+        target = 6.227e-17
+        self.assertLess(
+            abs(val1 - target) / (err1+1.4e-20),
+            2.,
+            'large diference between %s and %s +- %s'%
+                        (target, val1, err1)
+        )
+
 
     def test_customised_madevent_via_run_card(self):
         """checking various advanced functionality of customization
