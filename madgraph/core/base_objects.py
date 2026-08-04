@@ -1100,7 +1100,7 @@ class Model(PhysicsObject):
         self['limitations'] = [] # MLM means that the model can sometimes have issue with MLM/default scale. 
                                  # fix_scale means that the model should use fix_scale computation.
         self['startfromalpha0'] = False
-        self['mass_imbalance'] = False
+        self['dual_mass_scheme'] = False
         # attribute which might be define if needed
         #self['name2pdg'] = {'name': pdg}
         
@@ -1165,7 +1165,7 @@ class Model(PhysicsObject):
             if not value in [True ,False]:
                 raise self.PhysicsObjectError("Object of type %s is not a boolean" % type(value))
 
-        elif name in ['case_sensitive', 'mass_imbalance']:
+        elif name in ['case_sensitive', 'dual_mass_scheme']:
             if not value in [True ,False]:
                 raise self.PhysicsObjectError("Object of type %s is not a boolean" % type(value))
             

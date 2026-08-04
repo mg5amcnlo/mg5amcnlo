@@ -523,11 +523,11 @@ class UFOMG5Converter(object):
         else:
             self.model.set('startfromalpha0', False) 
 
-        if hasattr(model, 'mass_imbalance'):
-            mass_imbalance = bannermod.ConfigFile.format_variable(model.mass_imbalance, bool, name="mass_imbalance")
-            self.model.set('mass_imbalance', mass_imbalance)
+        if hasattr(model, 'dual_mass_scheme'):
+            dual_mass_scheme = bannermod.ConfigFile.format_variable(model.dual_mass_scheme, bool, name="dual_mass_scheme")
+            self.model.set('dual_mass_scheme', dual_mass_scheme)
         else:
-            self.model.set('mass_imbalance', False) 
+            self.model.set('dual_mass_scheme', False)
          
         self.ufomodel = model
         self.checked_lor = set()

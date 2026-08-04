@@ -6133,6 +6133,7 @@ This implies that with decay chains:
         self.add_default_multiparticles()
         self.add_default_fockstates()
         if self._fockstates:
+            logger.warning('The model contains non-relativistic bound states. Please consider citing arXiv:2510.26773 and arXiv:2607.26739 if relevant.')
             self.add_default_boundstates()
 
 

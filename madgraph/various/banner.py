@@ -3975,13 +3975,16 @@ frame_block = RunBlock('frame', template_on=template_on, template_off=template_o
 
 # Momentum reshuffling ------------------------------------------------------------------------------------
 template_on = \
-"""#*********************************************************************
-# Type of momentum reshuffling algorithm                             *
-# This algorithm is currently implemented only for onium states      *
-# [0] for initial-state reshuffling                                  *
-# [1-3] for final-state reshuffling                                  *
+"""
 #*********************************************************************
-  %(mom_resh_type)s  = mom_resh_type  ! variable is not currently implemented. Work in progress.
+# Type of momentum-reshuffling algorithm                             *
+# This algorithm is currently implemented only for onium states      *
+# mom_resh_type:                                                     *
+#  0=initial-state reshuffling                                       *
+#  1=smooth final-state reshuffling        [eq.(3.40) in 2607.26739] *
+#  2=step-function final-state reshuffling [eq.(3.41) in 2607.26739] *
+#*********************************************************************
+  %(mom_resh_type)s  = mom_resh_type  ! momentum-reshuffling strategy
 """
 template_off = ""
 mom_resh_block = RunBlock('mom_resh', template_on=template_on, template_off=template_off)
@@ -5126,7 +5129,7 @@ class RunCardLO(RunCard):
         if model['running_elements']:
             self.display_block.append('RUNNING') 
 
-        if model['mass_imbalance']:
+        if model['dual_mass_scheme']:
           self.display_block.append('mom_resh')
 
         # Read file input/default_run_card_lo.dat
@@ -5622,7 +5625,7 @@ class RunCardNLO(RunCard):
      
     LO = False
     
-    blocks = [heavy_ion_block, running_block_nlo, mom_resh_block]
+    blocks = [heavy_ion_block, running_block_nlo]
 
     dummy_fct_file = {"dummy_cuts": pjoin("SubProcesses","dummy_fct.f"),
                       "user_dynamical_scale": pjoin("SubProcesses","dummy_fct.f"),
@@ -5690,8 +5693,6 @@ class RunCardNLO(RunCard):
         self.add_param('ndnq_run', -1, system=True)
         # w contribution included or not in the running of alpha
         self.add_param('w_run', 1, system=True)
-        #momentum reshuffling
-        self.add_param("mom_resh_type", 1, hidden=True)
         #shower and scale
         self.add_param('parton_shower', 'HERWIG6', fortran_name='shower_mc')        
         self.add_param('shower_scale_factor',1.0)
@@ -6095,9 +6096,6 @@ class RunCardNLO(RunCard):
         model = proc_def[0].get('model')
         if model['running_elements']:
             self.display_block.append('RUNNING') 
-
-        if model['mass_imbalance']:
-          self.display_block.append('mom_resh')
 
         # Check if need matching
         min_particle = 99
