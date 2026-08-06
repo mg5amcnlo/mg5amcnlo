@@ -530,7 +530,7 @@ class TestMECmdShell(unittest.TestCase):
         self.assertLess(
             abs(val1 - target) / (err1+1.7),
             2.,
-            'large diference between %s and %s +- %s'%
+            'large difference between %s and %s +- %s'%
                         (target, val1, err1)
         )
         
@@ -576,7 +576,7 @@ class TestMECmdShell(unittest.TestCase):
         err1 = self.cmd_line.results.current['error']
         
         target = 0.01118182
-        self.assertTrue(abs(val1 - target) / err1 < 2., 'large diference between %s and %s +- %s (%s sigma)'%
+        self.assertTrue(abs(val1 - target) / err1 < 2., 'large difference between %s and %s +- %s (%s sigma)'%
                         (target, val1, err1, abs(val1 - target) / err1))
 
     def test_eva_oldrelease_collision(self):
@@ -620,7 +620,7 @@ class TestMECmdShell(unittest.TestCase):
         err1 = self.cmd_line.results.current['error']
         
         target = 0.02174605
-        self.assertTrue(abs(val1 - target) / err1 < 2., 'large diference between %s and %s +- %s (%s sigma)'%
+        self.assertTrue(abs(val1 - target) / err1 < 2., 'large difference between %s and %s +- %s (%s sigma)'%
                         (target, val1, err1, abs(val1 - target) / err1))    
 
         
@@ -665,8 +665,9 @@ class TestMECmdShell(unittest.TestCase):
         err1 = self.cmd_line.results.current['error']
         
         target = 0.003795
-        self.assertTrue(abs(val1 - target) / err1 < 2., 'large diference between %s and %s +- %s (%s sigma)'%
+        self.assertTrue(abs(val1 - target) / err1 < 2., 'large difference between %s and %s +- %s (%s sigma)'%
                         (target, val1, err1, abs(val1 - target) / err1))
+
 
     def test_quarkonium_production(self):
         """check that e e > etab(3S) etab(3S) gives the correct result"""
@@ -697,7 +698,43 @@ class TestMECmdShell(unittest.TestCase):
         self.assertLess(
             abs(val1 - target) / (err1+1.4e-20),
             2.,
-            'large diference between %s and %s +- %s'%
+            'large difference between %s and %s +- %s'%
+                        (target, val1, err1)
+        )
+
+
+    def test_leptonium_production(self):
+        """check that p p > j mumu(1|3S1) gives the correct result"""
+
+        mg_cmd = MGCmd.MasterCmd()
+        mg_cmd.no_notification()
+        mg_cmd.exec_cmd('import model sm_onia-lepton_masses')
+        mg_cmd.exec_cmd(' define p = g u d s u~ d~ s~')
+        mg_cmd.exec_cmd(' define j = g u d s u~ d~ s~')
+        mg_cmd.exec_cmd(' generate p p > j mumu(1|3S1)')
+        mg_cmd.exec_cmd('output %s/'% self.run_dir)
+        self.cmd_line = MECmd.MadEventCmdShell(me_dir=  self.run_dir)
+        self.cmd_line.no_notification()
+        self.cmd_line.exec_cmd('set automatic_html_opening False')
+
+        #check validity of the default run_card
+        run_card = banner.RunCardLO(pjoin(self.run_dir, 'Cards','run_card.dat'))
+        self.assertIn('mom_resh_type', run_card.user_set)
+
+        shutil.copy(os.path.join(_file_path, 'input_files', 'run_card_leptonium.dat'),
+                    '%s/Cards/run_card.dat' % self.run_dir)
+        shutil.copy(os.path.join(_file_path, 'input_files', 'onia_card_leptonium.dat'),
+                    '%s/Cards/onia_card.dat' % self.run_dir)
+
+        self.do('generate_events -f')
+        val1 = self.cmd_line.results.current['cross']
+        err1 = self.cmd_line.results.current['error']
+        # 1M value is 0.0097945 +- 4.4e-6
+        target = 0.0097945
+        self.assertLess(
+            abs(val1 - target) / (err1+2e-6),
+            2.,
+            'large difference between %s and %s +- %s'%
                         (target, val1, err1)
         )
 
@@ -792,7 +829,7 @@ C
         err1 = self.cmd_line.results.current['error']
 
         target = 361.7 #+- 0.1037 pb
-        self.assertTrue(abs(val1 - target) / (2*err1) < 1., 'large diference between %s and %s +- %s'%
+        self.assertTrue(abs(val1 - target) / (2*err1) < 1., 'large difference between %s and %s +- %s'%
                         (target, val1, err1))
 
         self.assertIn('MY_PARAM', open(pjoin(self.run_dir,'Source','run.inc')).read())
@@ -892,7 +929,7 @@ C
         err1 = self.cmd_line.results.current['error']
 
         target = 361.7 #+- 0.1037 pb
-        self.assertTrue(abs(val1 - target) / (2*err1) < 1., 'large diference between %s and %s +- %s'%
+        self.assertTrue(abs(val1 - target) / (2*err1) < 1., 'large difference between %s and %s +- %s'%
                         (target, val1, err1))
 
         self.assertIn('MY_PARAM', open(pjoin(self.run_dir,'Source','run.inc')).read())
@@ -934,7 +971,7 @@ C
         #target = 166.36114 # value used as reference before changing sde_strategy
         # 100k value is 165.84 +- 0.05
         target = 165.84
-        self.assertTrue(abs(val1 - target) / err1 < 1., 'large diference between %s and %s +- %s'%
+        self.assertTrue(abs(val1 - target) / err1 < 1., 'large difference between %s and %s +- %s'%
                         (target, val1, err1))
 
         
@@ -948,7 +985,7 @@ C
         err1 = self.cmd_line.results.current['error']
         # 100k value is  165.71 +- 0.06
         target = 165.71
-        self.assertTrue(abs(val1 - target) / err1 < 1., 'large diference between %s and %s +- %s'%
+        self.assertTrue(abs(val1 - target) / err1 < 1., 'large difference between %s and %s +- %s'%
                         (target, val1, err1))
 
 

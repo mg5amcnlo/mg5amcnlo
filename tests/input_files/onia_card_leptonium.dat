@@ -1,0 +1,25 @@
+#################################################################################
+##
+## Copyright (c) 2025 The MadGraph5_aMC@NLO Development team and Contributors
+##
+## This file is a part of the MadGraph5_aMC@NLO project, an application which 
+## automatically generates Feynman diagrams and matrix elements for arbitrary
+## high-energy processes in the Standard Model and beyond.
+##
+## It is subject to the MadGraph5_aMC@NLO license which should accompany this 
+## distribution.
+##
+## For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
+##
+#################################################################################
+#
+#*********************************************************************
+# Long distance matrix elements (LDME)                               *
+#*********************************************************************
+Block ldme
+   99033003  1.0000000000000000   # LDME for mumu(1|3S1)
+#*********************************************************************
+# Masses                                                             *
+#*********************************************************************
+Block onium_mass
+   99033003  0.2113200000000000   # mass for mumu(1|3S1)
