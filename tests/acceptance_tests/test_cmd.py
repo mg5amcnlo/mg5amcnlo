@@ -712,7 +712,6 @@ class TestCmdShell2(unittest.TestCase,
             ['u a > Upsilon(1|3S11) u chib2(1|3P21) QCD=99 QED=99', 1.8201029888254178e-20],
         ]
         for process in process_list:
-            print(process)
             mg_cmd.exec_cmd('generate %s ' % process[0])
 
             # --------------------------------------------------
