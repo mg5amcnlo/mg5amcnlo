@@ -706,10 +706,10 @@ class TestCmdShell2(unittest.TestCase,
         mg_cmd.exec_cmd('import model sm_onia-c_mass')
 
         process_list = [
-            ['g g > chic1(1|3P11) chib0(1|3P01)', 3.1324202127332772e-016],
-            ['g g > hc(1|1P11) g', 2.3637477953557693e-12],
-            ['u u~ > a Jpsi(1|3P08) QCD=99 QED=99', 3.665070598907795e-11],
-            ['u a > Upsilon(1|3S11) u chib2(1|3P21) QCD=99 QED=99', 1.8201029888254178e-20],
+            ['g g > chic1(1|3P11) chib0(1|3P01)', 3.132275172481691e-16],
+            ['g g > hc(1|1P11) g', 2.3637208371566567e-12],
+            ['u u~ > a Jpsi(1|3P08) QCD=99 QED=99', 3.6650612158421924e-11],
+            ['u a > Upsilon(1|3S11) u chib2(1|3P21) QCD=99 QED=99', 1.819597262304262e-20],
         ]
         for process in process_list:
             mg_cmd.exec_cmd('generate %s ' % process[0])

@@ -34,6 +34,11 @@ C
       REAL*8 SQRTS,MATELEM           ! sqrt(s)= center of mass energy 
       REAL*8 PIN(0:3), POUT(0:3)
       CHARACTER*120 BUFF(NEXTERNAL)
+C
+C     GLOBAL
+C
+      INTEGER MOM_RESH_TYPE
+      COMMON/TO_MOM_RESH_TYPE/MOM_RESH_TYPE
 C     
 C     EXTERNAL
 C     
@@ -55,6 +60,8 @@ c     in coupl.inc .
       call setpara('param_card.dat')  !first call to setup the paramaters
       call setonia('onia_card.dat')   !first call to setup the LDMEs
       include "pmass.inc"             !set up masses
+
+      MOM_RESH_TYPE = 1
 
       TOTALMASS = 0.0d0
       DO I=1,NEXTERNAL
@@ -108,37 +115,6 @@ c
 
       write (*,*) "Matrix element = ", MATELEM, " GeV^",-(2*nexternal-8)
       write (*,*) "-----------------------------------------------------------------------------"
-
-cc
-cc      Copy down here (or read in) the four momenta as a string. 
-cc      
-cc
-c      buff(1)=" 1   0.5630480E+04  0.0000000E+00  0.0000000E+00  0.5630480E+04"
-c      buff(2)=" 2   0.5630480E+04  0.0000000E+00  0.0000000E+00 -0.5630480E+04"
-c      buff(3)=" 3   0.5466073E+04  0.4443190E+03  0.2446331E+04 -0.4864732E+04"
-c      buff(4)=" 4   0.8785819E+03 -0.2533886E+03  0.2741971E+03  0.7759741E+03"
-c      buff(5)=" 5   0.4916306E+04 -0.1909305E+03 -0.2720528E+04  0.4088757E+04"
-cc
-cc      Here the k,E,px,py,pz are read from the string into the momenta array.
-cc      k=1,2          : incoming
-cc      k=3,nexternal  : outgoing
-cc
-c      do i=1,nexternal
-c         read (buff(i),*) k, P(0,i),P(1,i),P(2,i),P(3,i)
-c      enddo
-c
-cc- print the momenta out
-c
-c      do i=1,nexternal
-c         write (*,'(i2,1x,5e15.7)') i, P(0,i),P(1,i),P(2,i),P(3,i), 
-c     .dsqrt(dabs(DOT(p(0,i),p(0,i))))
-c      enddo
-c
-c      CALL SMATRIX(P,MATELEM)
-c
-c      write (*,*) "-------------------------------------------------"
-c      write (*,*) "Matrix element = ", MATELEM, " GeV^",-(2*nexternal-8)	
-c      write (*,*) "-------------------------------------------------"
 
       end
 	
