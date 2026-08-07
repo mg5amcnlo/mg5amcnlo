@@ -117,9 +117,3 @@ C UPC parameter
 c for biassed generation based on the particle flavours of the processes
       integer flavour_bias(0:2)
       common /c_flavour_bias/ flavour_bias
-
-C
-C     block for onia reshuffling
-C
-      integer mom_resh_type
-      common/to_mom_resh_type/mom_resh_type
