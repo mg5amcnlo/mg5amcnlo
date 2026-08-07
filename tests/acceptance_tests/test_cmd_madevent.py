@@ -729,10 +729,10 @@ class TestMECmdShell(unittest.TestCase):
         self.do('generate_events -f')
         val1 = self.cmd_line.results.current['cross']
         err1 = self.cmd_line.results.current['error']
-        # 1M value is 0.0097945 +- 4.4e-6
-        target = 0.0097945
+        # 1M value is 0.01668020 +- 7.24e-6
+        target = 0.01668020
         self.assertLess(
-            abs(val1 - target) / (err1+2e-6),
+            abs(val1 - target) / (err1+3e-6),
             2.,
             'large difference between %s and %s +- %s'%
                         (target, val1, err1)

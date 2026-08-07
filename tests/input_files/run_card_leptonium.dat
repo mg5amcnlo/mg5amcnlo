@@ -47,9 +47,9 @@
 #          chff=ChFF in gamma-UPC            [eq.(13) in 2207.03012] *
 #          none=No PDF, same as lhapdf with lppx=0                   *
 #*********************************************************************
-     lhapdf    = pdlabel1     ! PDF type for beam #1
-     lhapdf    = pdlabel2     ! PDF type for beam #2
-     320900    = lhaid     ! if pdlabel=lhapdf, this is the lhapdf number
+     nn23lo1 = pdlabel1     ! PDF type for beam #1
+     nn23lo1 = pdlabel2     ! PDF type for beam #2
+     230000  = lhaid     ! if pdlabel=lhapdf, this is the lhapdf number
 # To see heavy ion options: type "update ion_pdf"
 
 #*********************************************************************
