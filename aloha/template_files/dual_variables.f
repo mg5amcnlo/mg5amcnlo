@@ -24,9 +24,6 @@
       ! Printing routine used for constitency checks
       contains
          procedure :: initZERO
-         procedure :: write_formatted
-         generic :: write(formatted) => write_formatted
-         procedure :: pmath
       end type Dual
 
       !=================================================================
@@ -167,53 +164,6 @@
             self%comp(i) = (0d0,0d0)
          enddo
       end subroutine initZERO
-
-
-      ! Printing routine
-      subroutine write_formatted(dtv, unit, iotype, v_list, iostat, 
-     &iomsg)
-         class(Dual), intent(in) :: dtv
-         integer, intent(in) :: unit
-         character(len=*), intent(in) :: iotype
-         integer, intent(in) :: v_list(:)
-         integer, intent(out) :: iostat
-         character(len=*), intent(inout) :: iomsg
-
-         integer :: i
-
-         write(unit,'(A)', advance='no') '{'
-         do i = 0, size(dtv)
-            write(unit,'("(",G0,",",G0,")")', advance='no')
-     &           real(dtv%comp(i)), aimag(dtv%comp(i))
-            if (i < size(dtv)) write(unit,'(A)', advance='no') ', '
-         end do
-         write(unit,'(A)') '}'
-
-         iostat = 0
-      end subroutine write_formatted
-
-      subroutine pmath(self, text)
-         class(Dual), intent(in) :: self
-         integer :: i
-         character(len=*), intent(in), optional :: text
-         real(kind(1d0)) :: re, im
-
-         if (present(text)) write(*,'(1X,A)', advance='no') text
-
-         write(*,'(A)', advance='no') '{'
-         do i = 0, size(self)
-            re = real(self%comp(i))
-            im = aimag(self%comp(i))
-
-            if (im >= 0d0) then
-               write(*,'(G0," + ",G0,"*I")', advance='no') re, im
-            else
-               write(*,'(G0," - ",G0,"*I")', advance='no') re, -im
-            end if
-            if (i < size(self)) write(*,'(A)', advance='no') ', '
-         end do
-         write(*,'(A)') '}'
-      end subroutine pmath
 
       !=================================================================
       ! Addition rules
@@ -446,7 +396,6 @@
                   if (np.le.4) then
                      prefact = prefact*fallfact_int(np,nd)
                   else
-                     !write(*,'(G0," is not part of the saved list")') np
                      prefact = prefact*falling_factorial(np,nd)
                   endif
                   ! The number of entries of each group is given by the
@@ -484,7 +433,6 @@
                   if (np.ge.-4) then
                      prefact = prefact*fallfact_int(np,nd)
                   else
-                     !write(*,'(G0," is not part of the saved list")') np
                      prefact = prefact*falling_factorial(np,nd)
                   endif
                   ! The number of entries of each group is given by the
@@ -542,11 +490,7 @@
                   ! Determing the prefactor (same for all nd entries)
                   if (np.eq.0.5d0 .or. np.eq.1.5d0) then
                      prefact = prefact*fallfact_real(int(np+0.5),nd)
-                  !elseif (np-0.5d0.lt.1d-12 .or. np-1.5d0.lt.1d-12) then
-                  !   write(*,'("Warning: ",G0," assumed being 0.5")') np
-                  !   prefact = prefact*fallfact_real(int(np+0.5),nd)
                   else
-                     !write(*,'(G0," is not part of the saved list")') np
                      prefact = prefact*falling_factorial_r(np,nd)
                   endif
                   ! The number of entries of each group is given by the
@@ -583,11 +527,7 @@
                   ! Determing the prefactor (same for all nd entries)
                   if (np.eq.-0.5d0 .or. np.eq.-1.5d0) then
                      prefact = prefact*fallfact_real(int(np+0.5),nd)
-                  ! elseif (np+0.5d0.lt.1d-12 .or. np+1.5d0.lt.1d-12) then
-                  !    write(*,'("Warning: ",I0," assumed being 0.5")') np
-                  !    prefact = prefact*fallfact_real(int(np+0.5),nd)
                   else
-                     !write(*,'(G0," is not part of the saved list")') np
                      prefact = prefact*falling_factorial_r(np,nd)
                   endif
                   ! The number of entries of each group is given by the
@@ -972,7 +912,6 @@
       !===================================================================
       ! Compute Bell(n) using the Bell triangle (Dobinski’s table)
       ! Works for n ≤ 14 with 64-bit integers.
-      ! Same as BellB[n] in Mathematica
       !===================================================================
       integer(kind=8) function bell(n) result(B)
          implicit none

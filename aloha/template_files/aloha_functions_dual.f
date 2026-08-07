@@ -66,8 +66,7 @@ c     Convention for dual computations (same as loop)
             fi(5)%comp(0) = ip     * sqm(ip)
             fi(6)%comp(0) = im*nsf * sqm(ip)
             fi(7)%comp(0) = ip*nsf * sqm(im)
-            fi(8)%comp(0) = im     * sqm(im)
-c           LM:: the limit has to be reviewed          
+            fi(8)%comp(0) = im     * sqm(im)    
             do i = 1, size(p(0))
                fi(5)%comp(i) = oHsqm(ip)*
      &            (+ip*    (p(0)%comp(i) -    p(3)%comp(i))
@@ -85,6 +84,7 @@ c           LM:: the limit has to be reviewed
      &            (+ip*nsf*(p(1)%comp(i) + ci*p(2)%comp(i))
      &             +im*    (p(0)%comp(i) -    p(3)%comp(i)))
             enddo
+
          else
             ip = (3+nh)/2
             im = (3-nh)/2
@@ -98,10 +98,7 @@ c           LM:: the limit has to be reviewed
 
             pp3 = pp + p(3)
             pp3%comp(0) = max(pp3%comp(0)%re, rZero)
-
-            !if (pp3%comp(0).eq.rZero) then
-c           LM:: the method below should be more numerically safe. 
-c           LM:: the limit has to be reviewed          
+      
             if ((p(1)%comp(0)%re.eq.0d0).and.(p(2)%comp(0)%re.eq.0d0)
      &          .and.(p(3)%comp(0)%re.lt.0d0)) then
                oHsqm(0) = rHalf*sfomeg(1)%comp(0)/pp%comp(0)
@@ -151,7 +148,6 @@ c
 
 
 
-c     LM:: same changes of ixxxxx must be transferred to this function
       subroutine ixxxso(p,fmass,nhel,nsf,fi)
       use dual_variables
 c
@@ -221,6 +217,7 @@ c
      &            (+ip*nsf*(p(1)%comp(i) + ci*p(2)%comp(i))
      &             +im*    (p(0)%comp(i) -    p(3)%comp(i)))
             enddo
+
          else
             ip = (3+nh)/2
             im = (3-nh)/2
@@ -236,18 +233,28 @@ c
             pp3%comp(0) = max(pp3%comp(0)%re, rZero)
 
             chi(1) = sqrt(rHalf*pp3/pp)
-
-            if (pp3%comp(0)%re.eq.rZero) then
+      
+            if ((p(1)%comp(0)%re.eq.0d0).and.(p(2)%comp(0)%re.eq.0d0)
+     &          .and.(p(3)%comp(0)%re.lt.0d0)) then
+               oHsqm(0) = rHalf*sfomeg(1)%comp(0)/pp%comp(0)
+               oHsqm(1) = rHalf*sfomeg(2)%comp(0)/pp%comp(0)
                chi(2)%comp(0) = dcmplx(-nh)
             else
+               oHsqm(0:1) = (/0d0,0d0/)
+               chi(1) = sqrt(rHalf*pp3/pp)
                chi(2) = (dble(nh)*p(1) + ci*p(2))/(sqrt(rTwo*pp*pp3))
             endif
 
-            fi(1) = sfomeg(1)*chi(im)
-            fi(2) = sfomeg(1)*chi(ip)
-            fi(3) = sfomeg(2)*chi(im)
-            fi(4) = sfomeg(2)*chi(ip)
+            fi(1) = sfomeg(1)*chi(im) 
+     &            + (p(1) - nh*ci*p(2))*oHsqm(0)*chi(ip)
+            fi(2) = sfomeg(1)*chi(ip) 
+     &            - (p(1) - nh*ci*p(2))*oHsqm(0)*chi(im)
+            fi(3) = sfomeg(2)*chi(im) 
+     &            + (p(1) - nh*ci*p(2))*oHsqm(1)*chi(ip)
+            fi(4) = sfomeg(2)*chi(ip) 
+     &            - (p(1) - nh*ci*p(2))*oHsqm(1)*chi(im)
          endif
+         
       else
          if((p(1)%comp(0)%re.ne.0d0).or.(p(2)%comp(0)%re.ne.0d0).or.
      &      (p(3)%comp(0)%re.gt.0d0)) then
@@ -330,8 +337,7 @@ c     Convention for dual computations (same as loop)
             fo(5)%comp(0) = im     * sqm(abs(ip))
             fo(6)%comp(0) = ip*nsf * sqm(abs(ip))
             fo(7)%comp(0) = im*nsf * sqm(abs(im))
-            fo(8)%comp(0) = ip     * sqm(abs(im))
-c           LM:: the limit has to be reviewed          
+            fo(8)%comp(0) = ip     * sqm(abs(im))    
             do i = 1, size(p(0))
                fo(5)%comp(i) = oHsqm(abs(ip))*
      &            (+im*    (p(0)%comp(i) +    p(3)%comp(i))
@@ -362,10 +368,7 @@ c           LM:: the limit has to be reviewed
 
             pp3 = pp + p(3)
             pp3%comp(0) = max(pp3%comp(0)%re, rZero)
-         
-            !if (pp3%comp(0)%re.eq.rZero) then
-c           LM:: the method below should be more numerically safe. 
-c           LM:: the limit has to be reviewed                    
+                      
             if ((p(1)%comp(0)%re.eq.0d0).and.(p(2)%comp(0)%re.eq.0d0)
      &          .and.(p(3)%comp(0)%re.lt.0d0)) then
                oHsqm(0) = rHalf*sfomeg(1)%comp(0)/pp%comp(0)
@@ -415,7 +418,6 @@ c
       end subroutine oxxxxx
 
 
-c     LM:: same changes of oxxxxx must be transferred to this function
       subroutine oxxxso(p,fmass,nhel,nsf,fo)
       use dual_variables
 c
@@ -482,7 +484,7 @@ c
 
                fo(4)%comp(i) = oHsqm(abs(im))*
      &            (-im*nsf*(p(1)%comp(i) - ci*p(2)%comp(i))
-     &             +ip*    (p(0)%comp(i) +    p(3)%comp(i)))  
+     &             +ip*    (p(0)%comp(i) +    p(3)%comp(i)))
             enddo  
          else
             ip = (3+nh)/2
@@ -498,19 +500,28 @@ c
             pp3 = pp + p(3)
             pp3%comp(0) = max(pp3%comp(0)%re, rZero)
             chi(1) = sqrt(rHalf*pp3/pp)
-         
-
-            if (pp3%comp(0)%re.eq.rZero) then
+                      
+            if ((p(1)%comp(0)%re.eq.0d0).and.(p(2)%comp(0)%re.eq.0d0)
+     &          .and.(p(3)%comp(0)%re.lt.0d0)) then
+               oHsqm(0) = rHalf*sfomeg(1)%comp(0)/pp%comp(0)
+               oHsqm(1) = rHalf*sfomeg(2)%comp(0)/pp%comp(0)
                chi(2)%comp(0) = dcmplx(-nh)
             else
+               oHsqm(0:1) = (/0d0,0d0/)
+               chi(1) = sqrt(rHalf*pp3/pp)
                chi(2) = (dble(nh)*p(1) - ci*p(2))/(sqrt(rTwo*pp*pp3))
             endif
 
             fo(1) = sfomeg(2)*chi(im)
+     &            + (p(1) + nh*ci*p(2))*oHsqm(1)*chi(ip)
             fo(2) = sfomeg(2)*chi(ip)
+     &            - (p(1) + nh*ci*p(2))*oHsqm(1)*chi(im)
             fo(3) = sfomeg(1)*chi(im)
+     &            + (p(1) + nh*ci*p(2))*oHsqm(0)*chi(ip)
             fo(4) = sfomeg(1)*chi(ip)
+     &            - (p(1) + nh*ci*p(2))*oHsqm(0)*chi(im)
          endif
+
       else
          if((p(1)%comp(0)%re.ne.0d0).or.(p(2)%comp(0)%re.ne.0d0).or.
      &      (p(3)%comp(0)%re.gt.0d0)) then
@@ -965,7 +976,6 @@ c       real    p(0:3)         : four-momentum of bound state
 c       real    m(0:3)         : mass          of bound state
 c       integer sz             : z component of the spin
 c       integer spin           : spin          of the bound state
-c LM:: can I use optional inputs?->      complex vc(1:6)        : polarization vector of physical particle (optional)
 c
 c output:
 c       dual    proj           : value of the projector
