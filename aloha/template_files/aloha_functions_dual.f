@@ -560,7 +560,7 @@ c       integer nhel = -1, 0, 1: helicity      of bector boson
 c       integer nsv  = -1 or 1 : +1 for final, -1 for initial
 c
 c output:
-c       complex vc(6)          : vector wavefunction       epsilon^mu(p)
+c       complex vc(8)          : vector wavefunction       epsilon^mu(p)
 c
       implicit none
       type(Dual)::vc(8)
@@ -581,7 +581,7 @@ c
       pt2 = p(1)**2+p(2)**2
       pp = sqrt(pt2+p(3)**2)
       if ((p(1)%comp(0).ne.(0d0,0d0))
-     $     .and.(p(2)%comp(0).ne.(0d0,0d0))) then
+     $     .or.(p(2)%comp(0).ne.(0d0,0d0))) then
          pt = sqrt(pt2)
       else
          CALL pt%initZERO()
@@ -658,7 +658,7 @@ c       complex    p(0:3)      : four-momentum of scalar boson
 c       integer nss  = -1 or 1 : +1 for final, -1 for initial
 c
 c output:
-c       complex sc(3)          : scalar wavefunction                   s
+c       complex sc(5)          : scalar wavefunction                   s
 c
       implicit none
       type(Dual)::sc(5),p(0:3)
@@ -704,7 +704,7 @@ c                = -2,-1,0,1,2 : (0 is forbidden if tmass=0.0)
 c       integer nst  = -1 or 1 : +1 for final, -1 for initial
 c
 c output:
-c       complex tc(18)         : tensor wavefunction    epsilon^mu^nu(t)
+c       complex tc(20)         : tensor wavefunction    epsilon^mu^nu(t)
 c
       implicit none
       type(Dual)::tc(20),p(0:3)
