@@ -8,22 +8,7 @@ ANNOUNCEMENT:
     OM: BUG FIX (polarisation): LO cross-sections computed with a run_card "me_frame" that selects a
         single particle -- e.g. "me_frame = 3" to work in the Z rest frame, which is the standard way
         to ask for the polarisation of that Z -- were wrong for a fraction of the events.
-        The boost to that frame only put the selected particle at rest up to floating-point rounding,
-        leaving a residual three-momentum of order 1e-14 pointing in a random direction. HELAS treats
-        a massive vector with exactly zero three-momentum differently from one with a tiny non-zero
-        three-momentum: in the first case the quantisation axis is the z axis of the frame (which is
-        what "me_frame" is asking for), in the second it is the direction of that residual momentum,
-        i.e. pure numerical noise. On the events where the rounding did not land exactly on zero the
-        matrix element was therefore evaluated for a different polarisation state altogether.
-        Which events are affected depends on the arithmetic, so this was completely silent: no
-        warning, no instability, no visible symptom in the run -- only a wrong cross-section and
-        wrong distributions. The size of the effect depends on the process and on the cuts and is at
-        the percent level; it was measured at 2.4% (15 sigma) for p p > z{0} j with ptj=30, etaj=4.
-        ANY result obtained with "me_frame" selecting a single particle should be regenerated.
-        Runs using the default "me_frame", or an "me_frame" selecting two or more particles (where it
-        is the sum of the selected momenta that is at rest, and no single particle sits on the
-        problematic point), and all unpolarised runs are unaffected and reproduce bit-for-bit.
-
+        
 3.7.2 (07/07/26):
     MZ: negative seeds are now allowed and are strictly pinned (so no automatic reset to 0 for the following run).
         negative seeds are identical to positive ones (both produce exactly the same sample)
