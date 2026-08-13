@@ -2230,3 +2230,55 @@ jobs:
             cd $GITHUB_WORKSPACE
             ./tests/test_manager.py test_wj_production_with_ms_decay -pA -t0 -l INFO
 
+
+  acceptancetest_density_LI_convolution:
+    # The type of runner that the job will run on
+    runs-on: ubuntu-22.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/checkout_mg5
+      - uses: ./.github/actions/restore-pip-cache
+      - uses: ./.github/actions/restore_heptools
+      # Runs a set of commands using the runners shell
+      - name: test the convolution relation to verify density matrices at loop-induced level
+        run: |
+            cd $GITHUB_WORKSPACE
+            ./tests/test_manager.py test_density_mode_LI_validation -pA -t0 -l INFO
+
+
+  acceptancetest_madspin_tree:
+    # The type of runner that the job will run on
+    runs-on: ubuntu-22.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/checkout_mg5
+      - uses: ./.github/actions/restore-pip-cache
+      # Runs a set of commands using the runners shell
+      - name: test that the different options of madspin do not crash at tree level
+        run: |
+            cd $GITHUB_WORKSPACE
+            ./tests/test_manager.py test_madspin_tree_level -pA -t0 -l INFO
+
+  acceptancetest_madspin_LI:
+    # The type of runner that the job will run on
+    runs-on: ubuntu-22.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/checkout_mg5
+      - uses: ./.github/actions/restore-pip-cache
+      - uses: ./.github/actions/restore_heptools
+      # Runs a set of commands using the runners shell
+      - name: test that the different options of madspin do not crash at loop-induced level
+        run: |
+            cd $GITHUB_WORKSPACE
+            ./tests/test_manager.py test_madspin_loop_induced -pA -t0 -l INFO

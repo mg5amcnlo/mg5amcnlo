@@ -13,6 +13,11 @@ PROCESS=  matrix.o
 CHECK_SA=  check_sa.o
 CHECK_SA_SPLITORDERS=  check_sa_born_splitOrders.o
  
+# For python linking (require f2py part of numpy)
+ifeq ($(origin MENUM),undefined)
+  MENUM=2
+endif
+
 $(PROG): $(PROCESS) $(CHECK_SA) makefile $(LIBS)
 	$(FC) $(FFLAGS) -o $(PROG) $(PROCESS) $(CHECK_SA) $(LINKLIBS)
 
@@ -20,11 +25,6 @@ $(PROG_SPLITORDERS): $(PROCESS) $(CHECK_SA_SPLITORDERS) makefile $(LIBS)
 	$(FC) $(FFLAGS) -o $(PROG) $(PROCESS) $(CHECK_SA_SPLITORDERS) $(LINKLIBS)
 
 driver.f: nexternal.inc pmass.inc ngraphs.inc coupl.inc
-
-# For python linking (require f2py part of numpy)
-ifeq ($(origin MENUM),undefined)
-  MENUM=2
-endif
 
 libme$(PDIR).$(dylibext): $(LIBDIR)/libdhelas.$(dylibext) $(LIBDIR)/libmodel.$(dylibext) matrix.o
 	gfortran $(DYNLIBFLAG) $(RPATHFLAG)libme$(PDIR).$(dylibext) -o libme$(PDIR).$(dylibext) matrix.o ../../Source/DHELAS/*.o ../../Source/MODEL/*.o

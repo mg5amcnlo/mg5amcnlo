@@ -516,7 +516,7 @@ C      consider (all jamp computed)
 C     INTER(NCOMB*(NCOMB+1)/2): all interference term (not the
 C      symmetric one)
       IMPLICIT NONE
-CF2PY INTENT(IN) :: P(0:3,4)
+CF2PY INTENT(IN) :: P(0:3,5)
 CF2PY INTENT(IN) :: POS(N_CHANGING)
 CF2PY INTENT(IN) :: N_CHANGING
 CF2PY INTENT(IN) :: ALLOW_HEL(N_CHANGING*N_COMB)

@@ -499,6 +499,198 @@ class TestCmdLoop(unittest.TestCase):
             raise e
         self.setup_logFile_for_logger('madgraph.check_cmd',restore=True)
 
+
+    def test_density_mode_LI_validation(self):
+        """
+        This tests checks the convolution relation between the full matrix element
+        and the density matrices of the production and the decay:
+        M²_full = 3 · Σ_{λλ'} rho_prod(λ,λ')·rho_dec(λ,λ') / [(Q²-M_Z²)² + M_Z²Γ_Z²]
+        The process is g g > (z > e+ e-) g, where the z is offshell.
+        To check this relation we compute 5 events of g g > z* g that we decay with madspin,
+        we then use the standalone mode to compute the density matrices of the decay and the production
+        as well as the matrix element of the full process.
+        This serves as a verification of the computation of density matrices at loop-induced level
+        """
+
+        import madgraph.various.Density_functions as dens
+        rho_decay, rho_production = [], []
+        matrix_elem_decay, matrix_elem_prod = [], []
+        p2_decay, p2_production = [], []
+        gammaz_decay, gammaz_production = 2.441404e+00, 2.441404e+00 #they are read from the param_card
+        matrix_element_prod_and_decay = []
+
+        ##First part, we need the matrix element of the full process g g > g e+ e-.
+        # We will use the momenta and alphas/mu_r to generate the density matrices in standalone
+        path_input = pjoin(MG5DIR, 'tests', 'input_files', 'madspin', 'unweighted_events_gg_epemg.lhe.gz')
+        lhe = lhe_parser.EventFile(path_input)
+        for event in lhe:
+            momenta_full = []
+            alphas = event.aqcd
+            mu_r = event.scale
+            # for each event we store the momenta of g g > z g into momenta_production
+            momenta_full.append([event[0].E, event[0].px, event[0].py, event[0].pz]) # g
+            momenta_full.append([event[1].E, event[1].px, event[1].py, event[1].pz]) # g
+            momenta_full.append([event[2].E, event[2].px, event[2].py, event[2].pz]) # z
+            momenta_full.append([event[3].E, event[3].px, event[3].py, event[3].pz]) # g
+            momenta_full.append([event[4].E, event[4].px, event[4].py, event[4].pz]) # e+
+            momenta_full.append([event[5].E, event[5].px, event[5].py, event[5].pz]) # e-
+
+            if os.path.isdir(self.out_dir):
+                shutil.rmtree(self.out_dir)
+            self.do('import model loop_sm')
+            self.do('generate g g > e+ e- g / a [sqrvirt=QCD]') ## Photon is removed to have only the z propagator
+            self.run_cmd(f'output standalone {self.out_dir} -f')
+
+            path_PS_card = pjoin(self.out_dir, "SubProcesses/P0_gg_epemg_no_a/PS.input")
+            with open(path_PS_card, 'w') as psinput:
+                psinput.write(str(momenta_full[0]).strip("[],") + "\n") #g
+                psinput.write(str(momenta_full[1]).strip("[],") + "\n") #g
+                psinput.write(str(momenta_full[4]).strip("[],") + "\n") #e+
+                psinput.write(str(momenta_full[5]).strip("[],") + "\n") #e-
+                psinput.write(str(momenta_full[3]).strip("[],") + "\n") #g
+
+            # We cannot do output and launch at the same time because we need to modify PS.input beforehand
+            text = f""" launch {self.out_dir}
+            set param_card mu_r {mu_r}
+            set param_card as {alphas}
+            """
+
+            command_card = open(f'{self.out_dir}/mg5_cmd_full.txt','w')
+            command_card.write(text)
+            command_card.close()
+
+            logfile = 'test_madspin_full.log'
+            subprocess.call([sys.executable,pjoin(MG5DIR,'bin','mg5_aMC'),
+                            f'{self.out_dir}/mg5_cmd_full.txt'], stdout=open(logfile, 'w'), stderr=subprocess.STDOUT)
+
+            with open(pjoin(self.out_dir, "SubProcesses/P0_gg_epemg_no_a/result.dat"), "r") as result:
+                for line in result:
+                    if line.strip()[:3] == 'FIN':
+                        fin = float(line[3:].strip())
+                    if line.strip()[:4] == '1EPS':
+                        eps1 = float(line[4:].strip())
+                    if line.strip()[:4] == '2EPS':
+                        eps2 = float(line[4:].strip())
+
+                matrix_element_prod_and_decay.append(fin + eps1 + eps2) #matrix element of the full process
+
+
+            ##We now have the momenta for all the particles (including the offshell z) as well as alphas and mu_r
+            # We can then compute the density matrices for the production part and the decay part.
+
+            ## Production part, we run the standalone reweight module at loop-induced for the production g g > z* g [sqrvirt=QCD] to compute the production density matrix.
+            momenta_production = [momenta_full[0], momenta_full[1], momenta_full[2], momenta_full[3]] # g g > z g
+
+            p2_production.append(momenta_production[2][0]**2 - momenta_production[2][1]**2 - momenta_production[2][2]**2 - momenta_production[2][3]**2)
+
+            # now that we have the momenta of the event, let us compute the production density matrix with the standalone mode
+            if os.path.isdir(self.out_dir):
+                shutil.rmtree(self.out_dir)
+            self.do('import model loop_sm')
+            self.do('generate g g > z* g  [sqrvirt=QCD]')
+            self.run_cmd(f'output standalone {self.out_dir} --density=3 -f')
+
+            path_PS_card = pjoin(self.out_dir, "SubProcesses/P0_gg_zg/PS.input")
+            with open(path_PS_card, 'w') as psinput:
+                psinput.write(str(momenta_production[0]).strip("[],") + "\n")
+                psinput.write(str(momenta_production[1]).strip("[],") + "\n")
+                psinput.write(str(momenta_production[2]).strip("[],") + "\n")
+                psinput.write(str(momenta_production[3]).strip("[],") + "\n")
+
+            # We cannot do output and launch at the same time because we need to modify PS.input beforehand
+            text = f""" launch {self.out_dir}
+            set param_card mu_r {mu_r}
+            set param_card as {alphas}
+            """
+
+            command_card = open(f'{self.out_dir}/mg5_cmd_prod.txt','w')
+            command_card.write(text)
+            command_card.close()
+
+            logfile = 'test_madspin_convolution.log'
+            subprocess.call([sys.executable,pjoin(MG5DIR,'bin','mg5_aMC'),
+                            f'{self.out_dir}/mg5_cmd_prod.txt'], stdout=open(logfile, 'w'), stderr=subprocess.STDOUT)
+
+
+            with open(pjoin(self.out_dir, "SubProcesses/P0_gg_zg/result.dat"), "r") as result:
+                for line in result:
+                    if line.strip()[:3] == 'RHO':
+                        rho_production_str = line.strip()[3:].strip()
+            #The density matrix is written in the basis [-1, 0, +1] (the default setting)
+
+            rho_production_str = rho_production_str.split()
+            rho_production_float = [0.]*6
+            for i in range(len(rho_production_str)):
+                aux = rho_production_str[i].strip("()").split(",")
+                rho_production_float[i] = float(aux[0]) + float(aux[1])*1j
+            density_prod = dens.DensityMatrixObservables(rho_production_float)
+            rho_production.append(density_prod.square_matrix())
+            matrix_elem_prod.append(density_prod.get_trace())
+
+
+            ### Decay part, we reweight the input_file of the decay z > e+ e- to get the density matrix of the decay
+            momenta_decay = [momenta_full[2], momenta_full[4], momenta_full[5]] # z > e+ e-
+            p2_decay.append(momenta_decay[0][0]**2 - momenta_decay[0][1]**2 - momenta_decay[0][2]**2 - momenta_decay[0][3]**2)
+
+            if os.path.isdir(self.out_dir):
+                shutil.rmtree(self.out_dir)
+
+            self.do('generate z* > e+ e-')
+            self.run_cmd(f'output standalone {self.out_dir} --density=1 -f')
+            path_PS_card = pjoin(self.out_dir, "SubProcesses/P0_z_epem/PS.input")
+            with open(path_PS_card, 'w') as psinput:
+                psinput.write(str(momenta_decay[0]).strip("[],") + "\n")
+                psinput.write(str(momenta_decay[1]).strip("[],") + "\n")
+                psinput.write(str(momenta_decay[2]).strip("[],") + "\n")
+
+            # We cannot do output and launch at the same time because we need to modify PS.input beforehand
+            text = f""" launch {self.out_dir}
+            set param_card as {alphas}
+            """
+
+            command_card = open(f'{self.out_dir}/mg5_cmd_decay.txt','w')
+            command_card.write(text)
+            command_card.close()
+
+            logfile = 'test_madspin_convolution.log'
+            subprocess.call([sys.executable,pjoin(MG5DIR,'bin','mg5_aMC'),
+                            f'{self.out_dir}/mg5_cmd_decay.txt'], stdout=open(logfile, 'w'), stderr=subprocess.STDOUT)
+
+            density_card_path = pjoin(self.out_dir, "SubProcesses/P0_z_epem/Density_matrix.dat")
+
+            with open(density_card_path, "r") as result:
+                density_matrix = []
+                rho_text = result.readlines()[1].split()
+                for i in range(len(rho_text)):
+                    aux = rho_text[i].strip("()").split(",")
+                    density_matrix.append(float(aux[0]) + float(aux[1])*1j)
+            #The density matrix is written in the basis [-1, 0, +1] (the default setting)
+
+            density_decay = dens.DensityMatrixObservables(density_matrix)
+            rho_decay.append(density_decay.square_matrix())
+            matrix_elem_decay.append(density_decay.get_trace())
+
+
+        ###From here we have the density matrix of the production, the density matrix of the decay and the full matrix element, we have everything that we need
+
+        def convolution(rho1, rho2):
+            conv = 0.
+            for i in range(len(rho1)):
+                for j in range(len(rho1[0])):
+                    conv += rho1[i][j] * rho2[i][j]
+            return conv
+
+        def propagator(Q2, mz, gammaz):
+            return 1/((Q2 - mz**2)**2 + mz**2 * gammaz**2)
+
+    #We check that the mass, the decay and the transfered mommentum of the z are the same in the decay and the production for each of the 5 events
+        for i in range(5):
+            self.assertAlmostEqual(p2_decay[i], p2_production[i], places=7)
+            comparison = 3 * propagator(p2_decay[i], 9.118800e+01, gammaz_decay) * convolution(rho_production[i], rho_decay[i])
+            self.assertAlmostEqual(comparison.imag, 0., places=12)
+            self.assertAlmostEqual(matrix_element_prod_and_decay[i], comparison.real)
+
+
     def test_density_mode_loop_induced_standalone1(self):
         """ Testing the density mode in standalone mode for loop induced.
             Process: g g > h [sqrvirt=QCD]
@@ -772,8 +964,6 @@ class TestCmdLoop(unittest.TestCase):
             We generate a single event from the python interface and use the value of alpha_s, mu_r and p to feed to standalone code. 
             We compare the non-normalised density matrices.
         """
-        # short_path = '/tmp/test_density_LI1'
-        # replaced short_path by self.out_dir
 
         if os.path.isdir(self.out_dir):
             shutil.rmtree(self.out_dir)
@@ -782,13 +972,8 @@ class TestCmdLoop(unittest.TestCase):
                     generate g g > w+ w- [noborn=QCD]
                     output {self.out_dir}
                     launch
-                    reweight=density
                     set run_card nevents 1
-                    set run_card iseed 99
                     set run_card use_syst False
-                    set reweight_card particle_in_density_matrix [24, -24]
-                    set reweight_card order_helicities [-1, 1, -1, 0, -1, -1, 0, 1, 0, 0, 0, -1, 1, 1, 1, 0, 1, -1]
-                    set matrix_normalisation False
                 """
 
         #This bloc of code launches MadGraph with the commands written in mg5_cmd.txt
@@ -796,10 +981,31 @@ class TestCmdLoop(unittest.TestCase):
         command_card.write(text)
         command_card.close()
 
-        logfile = 'test_density_vs_LI_standalone1.log'
         subprocess.call([sys.executable,pjoin(MG5DIR,'bin','mg5_aMC'), 
                         '/tmp/mg5_cmd.txt'])
         
+
+        #Here we replace the lhe file by the reference lhe file (stored in the input_files).
+        os.remove(f"{self.out_dir}/Events/run_01/unweighted_events.lhe.gz")
+        shutil.copyfile(pjoin(MG5DIR, "tests/input_files/density_mode/test_density_mode_LIvsSA.lhe.gz"), f"{self.out_dir}/Events/run_01/unweighted_events.lhe.gz")
+
+        #Now we reweight the lhe file through the inline method
+        text_rwgt = f"""launch {self.out_dir} -i
+reweight run_01 --mode=density
+set reweight_card particle_in_density_matrix [24, -24]
+set reweight_card order_helicities [-1, 1, -1, 0, -1, -1, 0, 1, 0, 0, 0, -1, 1, 1, 1, 0, 1, -1]
+set matrix_normalisation False
+"""
+        #This bloc of code launches MadGraph with the commands written in mg5_cmd_rwgt.txt
+        command_card_rwgt = open('/tmp/mg5_cmd_rwgt.txt','w')
+        command_card_rwgt.write(text_rwgt)
+        command_card_rwgt.close()
+
+        logfile = 'test_density_mode_LIvsSA.log'
+        subprocess.call([sys.executable,pjoin(MG5DIR,'bin','mg5_aMC'), 
+                         '/tmp/mg5_cmd_rwgt.txt'], stdout=open(logfile, 'w'), stderr=subprocess.STDOUT)
+
+        # We read the reweighted event with the density matrix computed with the python interface
         lhe_path = pjoin(self.out_dir, "Events/run_01/unweighted_events.lhe.gz")
         p_all = []
         for event in lhe_parser.EventFile(lhe_path):
@@ -809,59 +1015,52 @@ class TestCmdLoop(unittest.TestCase):
             for particle in event:
                 p_all.append([particle.E, particle.px, particle.py, particle.pz])
         
-        #the event is :
-        # p_all =[[1.7161156244e+01, +0.0000000000e+00, +0.0000000000e+00, +1.7161156244e+01],
-        #         [6.2580362598e+02, -0.0000000000e+00, -0.0000000000e+00, -6.2580362598e+02],
-        #         [2.6935060716e+02, -5.6043661480e+01, +2.8570090576e+01, -2.4924965708e+02],
-        #         [3.7361417506e+02, +5.6043661480e+01, -2.8570090576e+01, -3.5939281265e+0]]
-
-        # density = [(7.205908422761971e-06+0j), (-1.5434921382487374e-06+2.179927916809586e-06j), (3.127974858819004e-06-3.033019723344865e-07j), (-3.9808503981386133e-07-1.2133465271473962e-06j), (-1.4035478565819433e-06+1.411486038399882e-07j), (-2.960726048709014e-06+2.6471572900406975e-06j), (8.186969223652609e-06-1.2666920150783218e-06j), (-1.1171833655283137e-06-7.941692063861139e-07j), (6.129377812449666e-06-2.6639138794033913e-08j), (1.1250445934922041e-05+0j), (1.0820862642871047e-05-2.2992631179840125e-07j), (1.9700784820020342e-06-6.737902430642065e-07j), (7.372481165638581e-06+9.565201613409245e-07j), (1.5372570483649945e-05+1.6120588733783455e-06j), (-2.619167805159744e-06-1.3961062964130743e-06j), (1.8339426511428442e-06-1.0061608807092573e-08j), (1.053743835423739e-06-7.732719897210284e-07j), (2.3550031201756676e-05+0j), (3.1247811327445063e-06-1.295596244750579e-06j), (6.377387668266904e-06-4.4343840239595067e-08j), (1.3311917480952208e-05+2.478921014873536e-06j), (-4.273883397050707e-06+1.9130383595467497e-08j), (2.488847005209694e-06-1.4139186882901056e-06j), (8.288777368229982e-06+1.215639393689196e-06j), (2.1443102054285064e-05+0j), (-1.0862488448950334e-05+2.2465448736817294e-07j), (1.8791012886498373e-06-2.2394215405088287e-08j), (-1.3499446042808146e-05+2.39932298056878e-06j), (1.5365886094321808e-05-1.6528325289600213e-06j), (2.9213575361780936e-06+2.6159429815368175e-06j), (1.2622061849450236e-05+0j), (1.0805897325543687e-05+2.60806826992101e-07j), (6.337578162820429e-06+5.366174566026604e-08j), (-7.4198450875720575e-06+9.774913440220636e-07j), (-1.4062658414944795e-06-1.46983831109317e-07j), (2.160535726132623e-05+0j), (-3.136109191338811e-06-1.2763700524900932e-06j), (2.023010672136256e-06+6.917894898987009e-07j), (3.007087075977778e-07-1.2371791569780194e-06j), (2.3190820455906264e-05+0j), (-1.0855600882848617e-05-2.7382097512462966e-07j), (3.054109026077031e-06+2.797177670664281e-07j), (1.130100524113687e-05+0j), (1.4804137552467662e-06+2.2000878667862902e-06j), (7.203776554561844e-06+0j)]
         
+        #Now we want to compute this exact same density matrix with the standalone mode. We clean the directory and do it in here again
+        shutil.rmtree(self.out_dir)
         
-        # temporary comment
-        # short_path2 = '/tmp/test_density_LI2'
-        # if os.path.isdir(short_path2):
-        #     shutil.rmtree(short_path2)
-
-        # self.do('import model loop_sm')
-        # self.do('generate g g > w+ w-  [sqrvirt=QCD]')
-        # self.run_cmd(f'output standalone {short_path2} --density=3,4 -f') # we need run_cmd here, else HelicityFilterLevel is not set to 1.
-        # path_PS_card = pjoin(short_path2, "SubProcesses/P0_gg_wpwm/PS.input")
-        # with open(path_PS_card, 'w') as psinput:
-        #     psinput.write(str(p_all[0]).strip("[],") + "\n")
-        #     psinput.write(str(p_all[1]).strip("[],") + "\n")
-        #     psinput.write(str(p_all[2]).strip("[],") + "\n")
-        #     psinput.write(str(p_all[3]).strip("[],") + "\n")
+        self.do('import model loop_sm')
+        self.do('generate g g > w+ w-  [sqrvirt=QCD]')
+        self.run_cmd(f'output standalone {self.out_dir} --density=3,4 -f')
         
-
-        # text_bis = f""" launch {short_path2}
-        #             set param_card mu_r {mu_r}
-        #             set param_card as {alphas}
-        #             """
+        path_PS_card = pjoin(self.out_dir, "SubProcesses/P0_gg_wpwm/PS.input")
+        with open(path_PS_card, 'w') as psinput:
+            psinput.write(str(p_all[0]).strip("[],") + "\n")
+            psinput.write(str(p_all[1]).strip("[],") + "\n")
+            psinput.write(str(p_all[2]).strip("[],") + "\n")
+            psinput.write(str(p_all[3]).strip("[],") + "\n")
         
-        # command_card_bis = open('/tmp/mg5_cmd_bis.txt','w')
-        # command_card_bis.write(text_bis)
-        # command_card_bis.close()
+        # We cannot do output and launch at the same time because we need to modify PS.input beforehand
+        text_bis = f""" launch {self.out_dir}
+        set param_card mu_r {mu_r}
+        set param_card as {alphas}
+        """
+        
+        command_card_bis = open('/tmp/mg5_cmd_bis.txt','w')
+        command_card_bis.write(text_bis)
+        command_card_bis.close()
 
-        # logfile = 'test_density_vs_LI_standalone.log'
-        # subprocess.call([sys.executable,pjoin(MG5DIR,'bin','mg5_aMC'), 
-        #                 '/tmp/mg5_cmd_bis.txt'], stdout=open(logfile, 'w'), stderr=subprocess.STDOUT)
+        logfile = 'test_density_vs_LI_standalone.log'
+        subprocess.call([sys.executable,pjoin(MG5DIR,'bin','mg5_aMC'), 
+                        '/tmp/mg5_cmd_bis.txt'], stdout=open(logfile, 'w'), stderr=subprocess.STDOUT)
         
 
         # # the two are identical, make the comparison
-        # with open(pjoin(short_path2, "SubProcesses/P0_gg_wpwm/result.dat"), "r") as result:
-        #     for line in result:
-        #         if line.strip()[:3] == 'RHO':
-        #             rho_standalone_str = line.strip()[3:].strip()
+        with open(pjoin(self.out_dir, "SubProcesses/P0_gg_wpwm/result.dat"), "r") as result:
+            for line in result:
+                if line.strip()[:3] == 'RHO':
+                    rho_standalone_str = line.strip()[3:].strip()
         
-        # rho_standalone = rho_standalone_str.split()
-        # for i in range(len(rho_standalone)):
-        #     aux = rho_standalone[i].strip("()").split(",")
-        #     rho_standalone[i] = float(aux[0]) + float(aux[1])*1j
+        rho_standalone = rho_standalone_str.split()
+        for i in range(len(rho_standalone)):
+            aux = rho_standalone[i].strip("()").split(",")
+            rho_standalone[i] = float(aux[0]) + float(aux[1])*1j
+        
+        misc.sprint(rho_standalone)
 
-        # for j in range(45): # 45 to raise error if density_check is an empty array
-        #     self.assertAlmostEqual(density_check[j].real, rho_standalone[j].real, places=7)
-        #     self.assertAlmostEqual(density_check[j].imag, rho_standalone[j].imag, places=7)
+        for j in range(45): # 45 to raise error if density_check is an empty array
+            self.assertAlmostEqual(density_check[j].real, rho_standalone[j].real, places=7)
+            self.assertAlmostEqual(density_check[j].imag, rho_standalone[j].imag, places=7)
 
 
 class TestCmdMatchBox(IOTests.IOTestManager):

@@ -195,7 +195,6 @@ C Initialize the BornColorProjector
 
 ENDIF
 
-c Here we calculate JAMPB
 ## if(not LoopInduced){
 C Start by projecting the Born amplitudes
 DO I=1,NBORNFLOWS
@@ -613,10 +612,8 @@ C
       %(complex_dp_format)s JAMPL2(3,NLOOPFLOWS,NLOOPAMPSO)
 
 ## if(not LoopInduced){
-      %(complex_dp_format)s JAMPB1(NBORNFLOWS,NBORNAMPSO)
-      %(complex_dp_format)s JAMPB2(NBORNFLOWS,NBORNAMPSO)
-C      The common block is broken because there are now 2 JAMP, see how to fix it, Valentin D.
-C      common/%(proc_prefix)sJAMPB/JAMPB
+      %(complex_dp_format)s JAMPB(NBORNFLOWS,NBORNAMPSO)
+	common/%(proc_prefix)sJAMPB/JAMPB
 ## }
 ## if(LoopInduced and MadEventOutput){
       %(real_dp_format)s AMP2_ALL(3,NCONFIGS,0:NSQUAREDSO)    
@@ -675,9 +672,9 @@ DO I=1, NBORNFLOWS
     IF (BornColorFlowMatrix(I,J)%%Denom.LT.0) COLOR_COEF=COLOR_COEF*IMAG1
     DO M=1,NBORNAMPSO
 C It may be that this AmpSO index does not receive contribution by the Born amps (because we put the loop and Born amplitude split orders in a common list)
-      IF (ABS(JAMPB1(I,M)).eq.0.0d0.or.ABS(JAMPB2(I,M)).eq.0.0d0) CYCLE
+      IF (ABS(JAMPB(I,M)).eq.0.0d0) CYCLE
       DO N=1,NBORNAMPSO
-        IF (ABS(JAMPB1(J,N)).eq.0.0d0.or.ABS(JAMPB2(J,N)).eq.0.0d0) CYCLE
+        IF (ABS(JAMPB(J,N)).eq.0.0d0) CYCLE
 C First fetch what orders the split order indices M, N correspond to
         CALL %(proc_prefix)sML5GET_ORDERS_FOR_AMPSOINDEX(M,ORDERS_A)
         CALL %(proc_prefix)sML5GET_ORDERS_FOR_AMPSOINDEX(N,ORDERS_B)
@@ -688,7 +685,7 @@ C Now figure out to which SQSOINDEX these orders together correspond to *in the 
         ELSE 
           DOUBLEFACT=1
         ENDIF
-        TEMP(1) = DOUBLEFACT*HEL_MULT*DBLE(COLOR_COEF*JAMPB1(I,M)*DCONJG(JAMPB2(J,N)))
+        TEMP(1) = DOUBLEFACT*HEL_MULT*DBLE(COLOR_COEF*JAMPB(I,M)*DCONJG(JAMPB(J,N)))
         INTER(0,ISQSO) = INTER(0,ISQSO) + TEMP(1)
         IF((.not.FILTER_SO).or.SQSO_TARGET.eq.-1.or.SQSO_TARGET.eq.ISQSO) THEN
           INTER(0,0) = INTER(0,0) + TEMP(1)
@@ -711,7 +708,7 @@ DO I=1,NLOOPFLOWS
     DO M=1,NLOOPAMPSO
 ## if(not LoopInduced){
 C It may be that this AmpSO index does not receive contribution by the Loop amps (because we put the loop and Born amplitude split orders in a common list)
-      IF((ABS(JAMPL(1,I,M))+ABS(JAMPL(2,I,M))+ABS(JAMPL(3,I,M))).eq.0.0d0) CYCLE
+      IF((ABS(JAMPL1(1,I,M))+ABS(JAMPL1(2,I,M))+ABS(JAMPL1(3,I,M))).eq.0.0d0) CYCLE
       DO N=1,NBORNAMPSO
 C Same for contributions of split order index N by the Born amps
       IF(ABS(JAMPB(J,N)).eq.0.0d0) CYCLE
@@ -726,18 +723,19 @@ C Same for contributions of split order index N by the Born amps
          ISQSO = %(proc_prefix)sML5SQSOINDEX(M,N)
 ## if(LoopInduced){
         IF(J.ne.I) THEN
-          DOUBLEFACT=2 
+          DOUBLEFACT=2
         ELSEIF (M.ne.N) THEN
           DOUBLEFACT=2
         ELSE
           DOUBLEFACT=1
         ENDIF
-C I have removed the conversion to real because JAMPL1 and JAMPL2 are now different. The conversion to dble is done later in COMPUTE_RES_FROM_JAMP if we only want the matrix element
-        TEMP(1) = DOUBLEFACT*HEL_MULT*(COLOR_COEF*(JAMPL1(1,I,M)*DCONJG(JAMPL2(1,J,N))))
+C The conversion to real has been removed because JAMPL1 and JAMPL2 are now different. The conversion to dble is done later in COMPUTE_RES_FROM_JAMP if we only want the matrix element
+C The result is divided by 2 because in the case I=J, we compute the interference 2 times and in the case J>I, the value of DOUBLEFACT introduces a factor 2 that is not needed
+        TEMP(1) = DOUBLEFACT*HEL_MULT*(COLOR_COEF*(JAMPL1(1,I,M)*DCONJG(JAMPL2(1,J,N)) + JAMPL1(1,J,M)*DCONJG(JAMPL2(1,I,N))))/2D0
 C Computing the quantities below is not strictly necessary since the result should be finite
 C It is however a good cross-check.
-        TEMP(2) = DOUBLEFACT*HEL_MULT*(COLOR_COEF*(JAMPL1(2,I,M)*DCONJG(JAMPL2(1,J,N)) + JAMPL1(1,I,M)*DCONJG(JAMPL2(2,J,N))))
-        TEMP(3) = DOUBLEFACT*HEL_MULT*(COLOR_COEF*(JAMPL1(3,I,M)*DCONJG(JAMPL2(1,J,N)) + JAMPL1(1,I,M)*DCONJG(JAMPL2(3,J,N))+JAMPL1(2,I,M)*DCONJG(JAMPL2(2,J,N))))
+        TEMP(2) = DOUBLEFACT*HEL_MULT*(COLOR_COEF*(JAMPL1(2,I,M)*DCONJG(JAMPL2(1,J,N))+JAMPL1(2,J,M)*DCONJG(JAMPL2(1,I,N)) + JAMPL1(1,I,M)*DCONJG(JAMPL2(2,J,N))+JAMPL1(1,J,M)*DCONJG(JAMPL2(2,I,N))))/2D0
+        TEMP(3) = DOUBLEFACT*HEL_MULT*(COLOR_COEF*(JAMPL1(3,I,M)*DCONJG(JAMPL2(1,J,N))+JAMPL1(3,J,M)*DCONJG(JAMPL2(1,I,N)) + JAMPL1(1,I,M)*DCONJG(JAMPL2(3,J,N))+JAMPL1(1,J,M)*DCONJG(JAMPL2(3,I,N)) + JAMPL1(2,I,M)*DCONJG(JAMPL2(2,J,N))+JAMPL1(2,J,M)*DCONJG(JAMPL2(2,I,N))))/2D0
 ## if(MadEventOutput) {
         DO config_i=1,nconfigs
           DO K=1,3
@@ -757,7 +755,12 @@ c          DO config_j=1,nconfigs
 ## }
         DO K=1,3
 ## if(not LoopInduced){      
-          TEMP(K) = 2.0d0*HEL_MULT*DBLE(COLOR_COEF*JAMPL(K,I,M)*DCONJG(JAMPB(J,N)))
+C NOTE: JAMPB is a single-helicity common block (there is no JAMPB_ALL the way
+C there is a JAMPL_ALL), so this Born x Loop interference is only meaningful
+C when JAMPL1 and JAMPL2 hold the same helicity -- i.e. the matrix-element
+C call COMPUTE_RES_FROM_JAMP makes. An off-diagonal (H1 != H2) density matrix
+C for a process with a Born is therefore not supported here.
+          TEMP(K) = 2.0d0*HEL_MULT*DBLE(COLOR_COEF*JAMPL1(K,I,M)*DCONJG(JAMPB(J,N)))
 ## }
           INTER(K,ISQSO) = INTER(K,ISQSO) + TEMP(K)
 ## if(LoopInduced and MadEventOutput){

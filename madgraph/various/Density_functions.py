@@ -110,12 +110,20 @@ def plot_hist(x:list[float], y:list[float], z:list[float], limitx:list[float], l
     """
     binsx = np.linspace(limitx[0], limitx[1], n_binx + 1)
     binsy = np.linspace(limity[0], limity[1], n_biny + 1)
-    if isinstance(z[0], float) or isinstance(z[0], int) or isinstance(z[0], complex):
+
+    if isinstance(z[0], (float, int, complex, np.number)) or isinstance(z[0], np.generic):
         Map = np.zeros((n_biny, n_binx))
-    else: #if the object is a density matrix
+    elif isinstance(z[0], np.ndarray): #if the object is a density matrix
         Map = np.zeros((n_biny, n_binx), dtype=object)
+        shape_input = z[0].shape
+        for i in range(len(Map)):
+            for j in range(len(Map[0])):
+                Map[i][j] = np.zeros(shape_input, dtype=np.complex128)
+    else:
+        raise TypeError("The argument z does not accept lists, please use a numpy array.")
         
     N_Map = np.zeros((n_biny, n_binx))
+    
     for k in range(len(z)):
         for i in range(len(binsx) - 1): #we need the -1 because we added +1 when defining binsx
             if x[k] >= binsx[i] and x[k] < binsx[i + 1]: #this means that the second index of Map is i
@@ -134,7 +142,6 @@ def plot_hist(x:list[float], y:list[float], z:list[float], limitx:list[float], l
                 N_Map[i][j] = N_Map[i][j]/Number_Events
 
     return Map, N_Map
-
 
 class DensityMatrixObservables(list):
     """
@@ -984,14 +991,14 @@ class DensityMatrixObservables22(DensityMatrixObservables):
         Magic = - np.log2(XiNum / XiDenom)
         return Magic.real
 
-    def Get_Discord(self, maxiter=100) -> float:
+    def Get_Discord(self, method="quick", maxiter=100) -> float:
         """
         Algorithm based on formula (3) from [2209.03969]. It computes Discord for a given density matrix rho.
         Input: self -> density matrix
+               method -> "quick" or "basinhopper" for local or global minimisation 
                maxiter -> maximum number of iterations for the minimisation
         Output: float -> Discord
         """
-        from scipy.optimize import minimize
 
         Srho = self.Von_Neumann_entropy() # S(rho)
         rhoB = self.Partial_Trace(1, ['fermion', 'fermion'])
@@ -1024,9 +1031,17 @@ class DensityMatrixObservables22(DensityMatrixObservables):
         x0 = [vec[0][0], vec[1][0], vec[2][0]]
 
         # Perform the optimization
-        result = minimize(objective_function, x0, constraints=constraints, options={'maxiter': maxiter})
-        min_result = result.fun
+        if method == "quick": #gradient-descent based algorithm. Quick but can be stuck in local minima
+            from scipy.optimize import minimize
+            result = minimize(objective_function, x0, constraints=constraints, options={'maxiter': maxiter})
+        elif method == "basinhopper": #global minimiser, slower but is less sensitive to non-convex minimisation
+            from scipy.optimize import basinhopping
+            kwargs = {"constraints": constraints, "options": {'maxiter': maxiter}}
+            result = basinhopping(objective_function, x0, minimizer_kwargs=kwargs)
+        else:
+            raise ValueError("Argument method must be 'quick' or 'basinhopper'")
 
+        min_result = result.fun
         Discord = SrhoB - Srho + min_result
         
         return Discord.real

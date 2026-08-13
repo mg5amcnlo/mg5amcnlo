@@ -304,12 +304,15 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
                                          self.f2py_matrix_splitter_template)).read()
 
         allids = list(self.prefix_info.keys())
+
         allprefix = [self.prefix_info[key][0] for key in allids]
+        allncomb = [self.prefix_info[key][2] for key in allids]
+        alliden = [self.prefix_info[key][3] for key in allids] 
         min_nexternal = min([len(ids[0]) for ids in allids])
         max_nexternal = max([len(ids[0]) for ids in allids])
 
         info = []
-        for (key,pid), (prefix, tag) in self.prefix_info.items():
+        for (key,pid), (prefix, tag, ncomb, iden) in self.prefix_info.items():
             info.append('#PY %s : %s # %s %s' % (tag, key, prefix, pid))
             
 
@@ -361,6 +364,9 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
 
 
         # Build IDENS entries ONCE per ME slot (must align 1-to-1 with get_pdg_order / allids).
+        all_iden = ''
+        for i, iden in enumerate(alliden, start=1):
+            all_iden += ' idens(%s) = %s \n' % (i, iden)
 
         formatting = {'python_information':'\n'.join(info), 
                     #   'smatrixhel': '\n'.join(text) % {'fct_name': 'smatrixhel(p, nhel, ans)'},
@@ -376,6 +382,7 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
                       'helreset_def' : '\n'.join(helreset_def),
                       'helreset_setup' : '\n'.join(helreset_setup),
                       'f2py_prefix': f2py_prefix,
+                      'idens_value': all_iden,
                       'density_splitter': '\n'.join(text) % {'fct_name': 'GET_DENSITY(P, POS, N_CHANGING, ALLOW_HEL, N_COMB, ALPHAS, SCALE2, INTER)'},
                       }
     
@@ -975,6 +982,30 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
         """Generates the entries for the general replacement dictionary used
         for the different output codes for this exporter.The arguments 
         group_number and proc_id are just for the LoopInduced output with MadEvent."""
+
+        # Helper
+        def compute_iden_from_pdgs(ids, ninitial, model):
+            """
+            Helper function to compute denominator factor
+            """
+            def nhel_from_particle(p):
+                spin = int(p.get('spin'))
+                # for massless vectors use 2 helicities not 3
+                mass = p.get('mass')
+                if spin == 3 and (mass == 'ZERO' or str(mass).upper() == 'ZERO'):
+                    return 2
+                return spin
+
+            def color_dim_from_particle(p):
+                # In UFO, color is typically 1, 3, -3, 8, ...
+                return abs(int(p.get('color')))
+
+            incoming = ids[:ninitial]
+            iden = 1
+            for pid in incoming:
+                p = model.get_particle(pid)
+                iden *= nhel_from_particle(p) * color_dim_from_particle(p)
+            return int(iden)
         
         dict={}
         # A general process prefix which appears in front of all MadLooop
@@ -984,10 +1015,14 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
         dict['proc_prefix'] = self.get_ME_identifier(matrix_element,
                        group_number = group_number, group_elem_number = proc_id)
 
+        (nexternal, ninitial) = matrix_element.get_nexternal_ninitial()
+
         if 'prefix' in self.cmd_options and self.cmd_options['prefix'] in ['int','proc']:
+            ncomb = matrix_element.get_helicity_combinations()
             for proc in matrix_element.get('processes'):
                 ids = [l.get('id') for l in proc.get('legs_with_decays')]
-                self.prefix_info[tuple(ids),proc.get('id')] = [dict['proc_prefix'], proc.get_tag()]
+                iden = compute_iden_from_pdgs(ids, ninitial, self.model)
+                self.prefix_info[tuple(ids),proc.get('id')] = [dict['proc_prefix'], proc.get_tag(), ncomb, iden]
 
         # The proc_id is used for MadEvent grouping, so none of our concern here
         # and it is simply set to an empty string.        
@@ -1298,6 +1333,12 @@ p= [[None,]*4]*%d"""%len(curr_proc.get('legs'))
         
         (nexternal,ninitial)=matrix_element.get_nexternal_ninitial()
         replace_dict['ninitial']=ninitial
+
+        # Here we check whether the external particles are on-shell or off-shell
+        base_process_string = matrix_element.get('processes')[0].base_string()
+        particles_process = base_process_string.replace(">", "", 1).split()
+        offshell_or_not = ['.true.' if '*' in elem else '.false.' for elem in particles_process]
+        
         mass_list=matrix_element.get_external_masses()[:-2]
         mp_variable_prefix = check_param_card.ParamCard.mp_prefix
 
@@ -1307,9 +1348,14 @@ p= [[None,]*4]*%d"""%len(curr_proc.get('legs'))
         replace_dict['exp_letter']='e'
         replace_dict['mp_specifier']='_16'
         replace_dict['coupl_inc_name']='mp_coupl.inc'
-        replace_dict['masses_def']='\n'.join(['MASSES(%(i)d)=%(prefix)s%(m)s'\
-                            %{'i':i+1,'m':m, 'prefix':mp_variable_prefix} for \
-                                                  i, m in enumerate(mass_list)])
+        replace_dict['masses_def'] = '\n'
+        for i, m in enumerate(mass_list):
+            if offshell_or_not[i] == '.false.':
+                replace_dict['masses_def'] += f'MASSES({i+1})={mp_variable_prefix}{m}\n'
+            else:
+                replace_dict['masses_def'] += f'MASSES({i+1})=SQRT(ABS(P(0,{i+1})**2-P(1,{i+1})**2-P(2,{i+1})**2-P(3,{i+1})**2))\n'
+        
+        # misc.sprint('\n'.join(['MASSES(%(i)d)=%(prefix)s%(m)s'%{'i':i+1,'m':m, 'prefix':mp_variable_prefix} for i, m in enumerate(mass_list)]))
         
         if self.opt['vector_size']:
             replace_dict['include_vector'] = "include '../../Source/vector.inc'"
@@ -1694,6 +1740,18 @@ C               ENDIF""")%replace_dict
         else:
             replace_dict['born_ct_helas_calls']='\n'.join(born_ct_helas_calls)
             replace_dict[toBeRepaced]='\n'.join(loop_amp_helas_calls)
+
+        #In loop-induced, particles are put onshell to get a better precision on PS points. If we want to study processes with external off-shell particles we need
+        #it to consider the offshell mass m^2 = p^2 to the on-shell mass.
+        #KEEP_OFFSHELL_MASS contains the information based on the generation string of which external particle should be kept off-shell.
+        base_process_string = matrix_element.get('processes')[0].base_string()
+        particles_process = base_process_string.replace(">", "", 1).split()
+        offshell_or_not = ['.true.' if '*' in elem else '.false.' for elem in particles_process]
+        logger.info("Particles with .true. are generated off-shell: " + str(offshell_or_not))
+
+        replace_dict["keep_offshell_mass"] = ""
+        for i in range(len(offshell_or_not)):
+            replace_dict["keep_offshell_mass"] += f"KEEP_OFFSHELL_MASS({i + 1}) = {offshell_or_not[i]}\n"
         
         file = file % replace_dict
 
@@ -3072,6 +3130,19 @@ PARAMETER (NSQUAREDSO=%d)"""%matrix_element.rep_dict['nSquaredSO'])
             replace_dict['include_vector'] = "include '../../Source/vector.inc'"
         else:
             replace_dict['include_vector'] = '' 
+
+        #In loop-induced, particles are put onshell to get a better precision on PS points. If we want to study processes with external off-shell particles we need
+        #it to consider the offshell mass m^2 = p^2 to the on-shell mass.
+        #KEEP_OFFSHELL_MASS contains the information based on the generation string of which external particle should be kept off-shell.
+        base_process_string = matrix_element.get('processes')[0].base_string()
+        particles_process = base_process_string.replace(">", "", 1).split()
+        offshell_or_not = ['.true.' if '*' in elem else '.false.' for elem in particles_process]
+        logger.info("Particles with .true. are generated off-shell: " + str(offshell_or_not))
+
+        replace_dict["keep_offshell_mass"] = ""
+        for i in range(len(offshell_or_not)):
+            replace_dict["keep_offshell_mass"] += f"KEEP_OFFSHELL_MASS({i + 1}) = {offshell_or_not[i]}\n"
+
         file = file % replace_dict
         number_of_calls = len([call for call in loop_CT_calls if call.find('CALL LOOP') != 0])   
         if writer:

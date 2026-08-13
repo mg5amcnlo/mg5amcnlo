@@ -84,7 +84,7 @@ C      CutTools,PJFry++,IREGI,Golem95,Samurai, Ninja and COLLIER
 C     Only CutTools or possibly Ninja (if installed with qp support)
 C      provide QP
       INTEGER QP_NLOOPLIB
-      PARAMETER (QP_NLOOPLIB=2)
+      PARAMETER (QP_NLOOPLIB=1)
       INTEGER MAXSTABILITYLENGTH
       DATA MAXSTABILITYLENGTH/20/
       COMMON/MG5_1_STABILITY_TESTS/MAXSTABILITYLENGTH
@@ -259,7 +259,7 @@ C      loop_library is not available
 C     in which case neither is its quadruple precision version.
       LOGICAL LOOPLIBS_QPAVAILABLE(0:7)
       DATA LOOPLIBS_QPAVAILABLE /.FALSE.,.TRUE.,.FALSE.,.FALSE.
-     $ ,.FALSE.,.FALSE.,.TRUE.,.FALSE./
+     $ ,.FALSE.,.FALSE.,.FALSE.,.FALSE./
 C     PS CAN POSSIBILY BE PASSED THROUGH IMPROVE_PS BUT IS NOT
 C      MODIFIED FOR THE PURPOSE OF THE STABILITY TEST
 C     EVEN THOUGH THEY ARE PUT IN COMMON BLOCK, FOR NOW THEY ARE NOT
@@ -444,9 +444,24 @@ C      requirement.
       INTEGER POLARIZATIONS(0:NEXTERNAL,0:5)
       COMMON/MG5_1_BEAM_POL/POLARIZATIONS
 
+C     This array specifies which external particles' mass should be
+C      kept offshell according to the 'generate' command
+      LOGICAL KEEP_OFFSHELL_MASS(NEXTERNAL)
+
+
 C     ----------
 C     BEGIN CODE
 C     ----------
+
+C     If KEEP_OFFSHELL_MASS is .true., then its mass is computed as
+C      m**2 = p**2
+C     If KEEP_OFFSHELL_MASS is .false., then its mass is taken from
+C      pmass.inc
+      KEEP_OFFSHELL_MASS(1) = .FALSE.
+      KEEP_OFFSHELL_MASS(2) = .FALSE.
+      KEEP_OFFSHELL_MASS(3) = .FALSE.
+      KEEP_OFFSHELL_MASS(4) = .FALSE.
+
 
       IF(ML_INIT) THEN
         ML_INIT = .FALSE.
@@ -841,7 +856,7 @@ C     Now make sure to turn on the global COLLIER cache if applicable
       IF (IMPROVEPSPOINT.GE.0) THEN
 C       Make the input PS more precise (exact onshell and
 C        energy-momentum conservation)
-        CALL MG5_1_IMPROVE_PS_POINT_PRECISION(PS)
+        CALL MG5_1_IMPROVE_PS_POINT_PRECISION(KEEP_OFFSHELL_MASS, PS)
       ENDIF
 
       DO I=1,NEXTERNAL
@@ -2001,13 +2016,22 @@ C      VARIABLES FROM A GIVEN VARIABLE IN DOUBLE PRECISION
       REAL*16 MP_PS(0:3,NEXTERNAL),MP_P(0:3,NEXTERNAL)
       COMMON/MG5_1_MP_PSPOINT/MP_PS,MP_P
       REAL*8 P(0:3,NEXTERNAL)
+      LOGICAL KEEP_OFFSHELL_MASS(NEXTERNAL)
+
+      KEEP_OFFSHELL_MASS(1) = .FALSE.
+      KEEP_OFFSHELL_MASS(2) = .FALSE.
+      KEEP_OFFSHELL_MASS(3) = .FALSE.
+      KEEP_OFFSHELL_MASS(4) = .FALSE.
+
+
 
       DO I=1,NEXTERNAL
         DO J=0,3
           MP_PS(J,I)=P(J,I)
         ENDDO
       ENDDO
-      CALL MG5_1_MP_IMPROVE_PS_POINT_PRECISION(MP_PS)
+      CALL MG5_1_MP_IMPROVE_PS_POINT_PRECISION(KEEP_OFFSHELL_MASS
+     $ ,MP_PS)
       DO I=1,NEXTERNAL
         DO J=0,3
           MP_P(J,I)=MP_PS(J,I)
