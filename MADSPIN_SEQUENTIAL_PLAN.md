@@ -843,22 +843,134 @@ sits at 173.1877 against joint's 173.1853. Cost: one onshell production matrix
 element per production event, cached under `me_wgt` -- the same attribute, and
 the same quantity, the joint path already caches there.
 
-#### Cost: the offshell path is still slower than joint on n = 2
+#### `sequential_joint_angles` (variant A): one bound over all the angles
 
-Decay-phase wall time for the same 10000 events: joint 14.4 s, sequential 19.7
-s, sequential_exact 31.4 s.
+Suggested by Olivier. Keep the mass-set stage, but replace the *per-slot*
+accept/reject by a single test on the product of every slot's weight, redrawing
+the whole angle set on a rejection and **keeping the mass set**:
 
-The "faster than the joint test" claim counted **decay**-ME evaluations only
-(5.6 vs 8.9 per event, and it still holds: 6.3 here). Removing 88% of the
-mass-set draws bought only 31% of the wall time, which locates the rest on the
-**per-decay** side: each draw costs an onshell ME, an `Event(str(decay))` LHE
-round-trip, a reshuffle, a density and a contraction, and sequential does 6.3 of
-those against joint's 8.9 -- so per draw it is doing more work than the joint
-test does. That string round-trip, in both `_offshell_production` and the slot
-loop, is the first thing to profile if this path is to get faster.
+    stage 1   w_mass  = [Tr(rho_off)/|M_prod|^2_on] * jac_reshuffle
+                        * prod_k jac_bw_k * prod_k Z_hat_k(m_k)
+    stage 2   w_angle = prod_k [ (N_k/N_{k-1}) * jac_dec_k
+                                 * Tr(D_k^off)/|M_k,dec|^2_on / Z_hat_k ]
 
-So `sequential_decay = auto` should keep routing madspin/full to the joint
-accept/reject. What this buys is that the offshell path is *correct* when
-switched on explicitly, and a per-slot decomposition that pays off for n >= 3,
-where the joint test's cost grows like n / prod eff_k while neither the mass-set
-stage nor the per-slot draws do.
+This is the same target distribution as the per-slot scheme -- same mass stage,
+same self-normalising angle stage, only the granularity of the test changes --
+and the measurement says so: over four replicas each, variant A gives
+173.1704 +- 0.0101 and the per-slot scheme 173.1703 +- 0.0062, agreeing to
+0.0001 GeV while their replica scatters are 0.010-0.012. It needs `Z_hat` for
+exactly the same reason the per-slot scheme does: stage 2 redraws to acceptance
+and so divides out its own normalisation.
+
+**What it buys is reuse.** With the mass set frozen across angle retries, the
+production reshuffling and the offshell production density are evaluated once
+per *accepted mass set* rather than once per trial -- which the joint test
+cannot do, because a rejection there redraws the virtualities too. Per event on
+ttbar: 3.25 mass sets and 5.74 decay-ME evaluations, against joint's 4.46 trials
+and 8.92.
+
+The `Z_hat` division in stage 2 is not needed for correctness (stage 2 is
+invariant under any rescaling by a function of the masses) but is kept for two
+reasons: it flattens the virtuality dependence out of `C_angle`, and it makes
+the bound estimated by the probe -- which samples masses from the prior, not
+from the accepted mass distribution -- closer to what the run actually tests.
+
+An infeasible decay kills the whole angle set rather than being redrawn in
+place. Redrawing one slot would propose from the *feasible* part of the pool,
+making the normalisation stage 2 divides out `Z_k/(1 - q_k(m))` instead of
+`Z_k` -- a different function of the virtuality than the tabulated one, so the
+mass stage's `Z_hat` would no longer compensate it. The same argument applies to
+`sequential_exact`, and both were fixed together.
+
+#### Variant B (`sequential_joint_angles` + `sequential_exact`): dropped
+
+The same single angle bound, but a rejected angle set trashes the mass set. That
+makes `Z_hat` cancel between the stages and the scheme exact whatever the table
+says, and it costs the reuse above (9.25 mass sets per accepted event instead of
+3.25). It was measured and **dropped**: over four replicas it sits 0.034 GeV
+below joint, which is the *largest* deviation of any scheme tried and in the
+scheme that should have been the most exact. That is not understood. Either the
+error model below is wrong or that implementation is; the combination is
+reachable in the code but should not be used until the weight-identity check
+settles it.
+
+#### How to compare these numbers (measurement notes, learned the hard way)
+
+**Wall clocks are only comparable within one campaign.** The per-slot scheme
+measured 19.74 s in one campaign and 13.33 s in another, with byte-identical
+counters (same bounds, same trial counts, same seed) -- a 48% swing from machine
+load alone. Several cost claims in earlier revisions of this document were built
+on cross-campaign timings and were wrong. Quote the counters (mass sets, decay
+evaluations, acceptances, overflows); quote wall time only from a single
+campaign, with joint as an anchor in it.
+
+**Most of the decay phase is not the accept/reject.** Counter differences of
+30-40% between schemes move the clock by about 10%, so a large per-event fixed
+cost -- reading the production event, `add_decays`, the final
+`reshuffle_production`, writing the LHE -- dominates. A three-point fit put it
+near 1.05 ms/event, but PA's total is *below* that, so the fit is
+ill-conditioned and the figure too high; what survives is the qualitative
+statement. Profile before optimising the accept/reject further.
+
+**Replicas share production events.** Replicas of one scheme (same production
+sample, different MadSpin seed) scatter by 0.005 (joint) to 0.020 (the
+sequential schemes) on `<m_top>` over both resonances, while the naive
+per-run MC error is 0.0225. The replicas are therefore strongly correlated and
+neither error is right for a scheme-to-scheme difference: the naive one is too
+conservative, the replica scatter probably too optimistic. This is unresolved,
+and it is why the residuals below are quoted with both.
+
+#### Speed, measured within one campaign
+
+Decay phase for the same 10000 production events, `p p > t t~`,
+`t > w+ b, w+ > l+ vl`, `nb_core 1`:
+
+    spinmode   scheme                 decay phase   per event
+    PA         joint                     9.17 s     3.14 trials -> 6.28 decay ME
+    PA         sequential (default)     11.19 s     1.88 + 3.13 -> 5.01 decay ME
+    madspin    variant A                13.55 s     3.25 mass sets, 5.74 decay ME
+    madspin    joint                    14.61 s     4.46 trials -> 8.92 decay ME
+
+So full offshell matrix elements with variant A cost about **1.5x PA-joint**,
+where madspin-joint costs 1.6x, and variant A is **7-9% faster than
+madspin-joint** (13.06-13.55 s against 14.43-14.61 s over two campaigns).
+
+Two observations about PA, both independent of this work:
+
+- **PA sequential is 22% slower than PA joint on this process**, despite drawing
+  fewer decay events (5.01 against 6.28). With `density_keep_jacobian` on, every
+  slot trial calls `_production_jacobian_for` -- an `Event(str(production))` copy
+  and a reshuffle -- so 5.01 production reshufflings per event against joint's
+  3.14. The per-slot decomposition is supposed to pay off as n grows; at n = 2 it
+  does not, and `sequential_decay = auto` makes sequential the default for PA.
+- **PA sequential logged 11 weight overflows** (9 at slot 0, 2 at slot 1) against
+  variant A's 1 and joint's 0. Its per-slot bounds are under-estimated here, so
+  that sample is slightly biased. Worth a look on its own.
+
+#### Where the offshell path stands
+
+`sequential_decay = auto` still routes madspin/full to the joint accept/reject.
+Variant A is now faster than joint on n = 2 and correct as far as the statistics
+can tell, so that default is worth revisiting -- but not before the residual
+below is understood.
+
+**Open: all the tabulated schemes sit low.** Over four replicas each, against
+joint at 173.1818 +- 0.0024 (replica scatter):
+
+    variant A            173.1704 +- 0.0101   -0.011   (-1.1 sigma)
+    sequential per-slot  173.1703 +- 0.0062   -0.012   (-1.7 sigma)
+    variant B (dropped)  173.1478 +- 0.0076   -0.034   (-4.3 sigma)
+
+Each is within its errors on the conservative model and marginal on the
+optimistic one, but the sign is the same in all twelve replicas. That is what a
+small `Z_hat` inaccuracy would look like -- and variant A and the per-slot
+scheme are exposed to it, while variant B is not, which makes variant B's
+being the *worst* the thing to explain first.
+
+**Next step: check the weight identity, not more statistics.** For one
+(production, mass set, decay set), `w_mass * prod_k (w_k/Z_hat_k)` must equal
+`prod_i n_i * |M_prod|^2_on * wgt_joint` up to floating point -- the same
+deterministic check that verified the decay-reshuffling jacobian to 1.5e-7. It
+settles exactness for every variant at once, with no error model to argue about,
+and it is the only way to separate a `Z_hat` inaccuracy from an implementation
+bug.

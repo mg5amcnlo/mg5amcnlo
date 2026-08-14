@@ -1388,9 +1388,10 @@ class TestOffshellRateFactor(unittest.TestCase):
         _zhat = interface_madspin.MadSpinInterface._zhat
         _complete_offshell_probe = \
                         interface_madspin.MadSpinInterface._complete_offshell_probe
-        def __init__(self, exact=False):
+        def __init__(self, exact=False, joint_angles=False):
             self.banner = TestOffshellRateFactor._Banner()
-            self.options = {'sequential_exact': exact}
+            self.options = {'sequential_exact': exact,
+                            'sequential_joint_angles': joint_angles}
             self._z_tables = {}
 
     @staticmethod
@@ -1517,6 +1518,24 @@ class TestOffshellRateFactor(unittest.TestCase):
         # order [1, 0]: probe position 0 is slot 1, position 1 is slot 0
         self.assertAlmostEqual(best[1], max(3.0 / z_by_slot[1], 7.0), places=10)
         self.assertAlmostEqual(best[2], max(5.0 / z_by_slot[0], 4.0), places=10)
+
+    def test_probe_completion_collapses_to_two_bounds_when_joint(self):
+        """Variant B tests every angle against one bound, so the probe vector
+        collapses to [C_mass, C_angles] and the second entry is the *product*
+        over slots of w_k/Z_k -- maxed chain by chain, not per slot, since the
+        chain is what is accepted or rejected."""
+        stub = self._Stub(joint_angles=True)
+        stub._z_tables = stub._build_z_tables({'6_0': self._samples(),
+                                               '-6_0': self._samples(seed=9)})
+        z = [stub._zhat('6_0', 160.0), stub._zhat('-6_0', 180.0)]
+        best = stub._complete_offshell_probe(self._probe_event())
+        self.assertEqual(len(best), 2)
+        # chain 1: masses (160, 180), weights w_slot1 = 3.0, w_slot0 = 5.0
+        # chain 2: masses (173, 173) where Z = 1, weights 7.0 and 4.0
+        self.assertAlmostEqual(best[0], max(2.0 * z[0] * z[1], 1.0), places=10)
+        self.assertAlmostEqual(best[1],
+                               max((3.0 / z[1]) * (5.0 / z[0]), 7.0 * 4.0),
+                               places=10)
 
 
 class TestTwoStageMassDistribution(unittest.TestCase):
