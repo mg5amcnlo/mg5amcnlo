@@ -998,10 +998,42 @@ the error bar before any comparison is made -- and the two error models
 Any future claim at the few-hundredths-of-a-GeV level needs either many more
 replicas or, better, the deterministic check below.
 
-**The check worth doing anyway.** For one (production, mass set, decay set),
-`w_mass * prod_k (w_k/Z_hat_k)` must equal
-`prod_i n_i * |M_prod|^2_on * wgt_joint` up to floating point -- the same
-deterministic identity that verified the decay-reshuffling jacobian to 1.5e-7.
-It settles exactness for every variant at once, with no error model to argue
-about, and it is the only way to separate a residual `Z_hat` effect from an
-implementation bug in a scheme like variant B.
+**Done: the weight identity holds (`sequential_debug`).** New option, offshell
+only: on every accepted chain, recompute the joint weight with the joint code --
+on copies, for the same production event, the same virtualities and the same
+decays -- and compare with the product of the stage weights.
+
+The weights compared are the ones taken *before* any `Z_hat` division, since
+`Z_hat` cancels between the mass stage and the angle stage. What is tested is
+therefore the decomposition itself, not the table. And what is tested is
+*proportionality*, not equality: the two differ by a constant -- the number of
+helicity states, and the normalisation the density path applies to the decay
+matrix elements relative to `calculate_matrix_element` -- which the bounds
+absorb. A constant ratio is the identity, whatever its value; a scheme sampling
+the wrong distribution has a ratio that varies chain to chain.
+
+Measured over 2000 accepted chains each:
+
+    variant A            spread 1.71e-07   ratio 1108198261
+    sequential per-slot  spread 1.55e-07   ratio 1108198255
+    variant B            spread 1.54e-07   ratio 1108198258
+
+The spread is float32 epsilon (1.19e-7) -- the density matrices are
+`complex64`, so that is the floor of the arithmetic and not physics -- and the
+three schemes agree on the constant to nine significant figures. The threshold
+is `density_tolerance`, for the same reason `density_debug` uses it: two
+evaluation routes through single-precision matrix elements cannot agree better
+than that.
+
+**What this settles, and what it does not.** It settles the *weight algebra* in
+all three schemes: no missing jacobian, no wrong normalisation, no mis-assigned
+factor. That is the class of bug a lineshape comparison detects only indirectly
+and that no amount of Monte Carlo could have excluded.
+
+It does not settle the *sampling*, which additionally requires that nothing
+self-normalising is left uncompensated -- the `Z_hat ~ Z` requirement for
+variant A and the per-slot scheme (measured at ~0.5%, far inside the ~12%
+tolerance), automatic for the restart schemes. So variant B's -0.034 GeV is not
+a broken weight. With the weights verified and the error models in the state
+described above, the honest summary is: weights correct, deviation unexplained,
+dropped because it is slower than variant A anyway.

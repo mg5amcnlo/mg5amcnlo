@@ -87,6 +87,7 @@ class MadSpinOptions(banner.ConfigFile):
         self.auto_set.add('sequential_decay')
         self.add_param('sequential_spin_order', '2 3 1', comment='spin order (MG5 2S+1 convention) deciding which particle is accept/rejected first in sequential_decay: default fermions, then vectors, then scalars (which can never be rejected).')
         self.add_param('sequential_exact', False, comment='sequential_decay with an offshell spinmode (madspin/full) only: reject the whole mass set when a decay is rejected, instead of redrawing that decay until it is accepted. Makes the scheme exact whatever the accuracy of the tabulated offshell rate factor, at a lower acceptance. Ignored by PA/onshell, which need no such factor.')
+        self.add_param('sequential_debug', False, comment='sequential_decay with an offshell spinmode: on every accepted chain, recompute the joint weight for the same production event, virtualities and decays and check that the product of the stage weights reproduces it (times the number of helicity states). Deterministic check of the decomposition itself -- Z_hat cancels out of it -- at roughly the cost of a joint trial per event. Debugging only.')
         self.add_param('sequential_joint_angles', False, comment='sequential_decay with an offshell spinmode (madspin/full) only: draw every decay and test their weights against a *single* bound instead of one per particle, rejecting the mass set on failure. This is the joint accept/reject with a mass-set stage in front of it: exact, and it trades the per-particle bounds (whose product is looser than one bound on the product) against losing the early exit when an early particle is rejected. Implies sequential_exact.')
 
     ############################################################################
@@ -2773,7 +2774,8 @@ class MadSpinInterface(extended_cmd.Cmd):
                 seq_stats = collections.defaultdict(int)
                 decays = self.sequential_accept_reject(
                                 production, evt_decayfile, maxwgts,
-                                nb_event - curr_event, stats=seq_stats)
+                                nb_event - curr_event, stats=seq_stats,
+                                decay_dict=decay_dict)
                 if decays is None:
                     # nothing to decay in this production event
                     output_lhe.write_events(production)
@@ -2969,6 +2971,29 @@ class MadSpinInterface(extended_cmd.Cmd):
         if restarts:
             logger.info("MadSpin sequential: %d chains restarted on a mass set "
                         "the production could not reshuffle", restarts)
+        checks = merged.get('nb_identity_check', 0)
+        if checks:
+            mean = merged.get('identity_ratio_sum', 0.0) / checks
+            variance = (merged.get('identity_ratio_sqsum', 0.0) / checks
+                        - mean * mean)
+            spread = (math.sqrt(max(0.0, variance)) / abs(mean)
+                      if mean else float('inf'))
+            # density_tolerance, like density_debug: the two routes evaluate the
+            # same matrix elements through different code, and the density
+            # matrices are single precision, so agreement is bounded by float32
+            # epsilon (~1.2e-7) and not by the physics
+            if spread > self.options['density_tolerance']:
+                logger.critical(
+                    "MadSpin sequential: the weight identity FAILED on %d "
+                    "accepted chains -- the chain weight is not proportional "
+                    "to the joint weight (relative spread of the ratio %.3g, "
+                    "mean %.10g). This scheme is not sampling the joint "
+                    "distribution.", checks, spread, mean)
+            else:
+                logger.info("MadSpin sequential: weight identity verified on "
+                            "%d accepted chains -- chain weight / joint weight "
+                            "constant to %.3g (ratio %.10g)",
+                            checks, spread, mean)
         total_overflow = sum(v for k, v in merged.items()
                              if k.startswith('nb_overflow_'))
         if total_overflow:
@@ -4416,9 +4441,68 @@ class MadSpinInterface(extended_cmd.Cmd):
                         len(samples), len(points), 100 * residual)
         return tables
 
+    def _check_weight_identity(self, production, decays, decay_dict, w_seq,
+                               helicities, stats):
+        """sequential_debug: the identity the whole decomposition rests on,
+        checked on the accepted chain instead of inferred from a distribution.
+
+            w_mass_raw * prod_k w_k_raw  ==  prod_i n_i * wgt_joint
+
+        with w_mass_raw the mass-set weight *before* the tabulated Z_hat and
+        w_k_raw each slot's weight before it is divided back out -- Z_hat
+        cancels between the two stages, so this tests the decomposition itself
+        and not the quality of the table. ``wgt_joint`` is recomputed here by the
+        joint code, on copies, for the same production event, the same
+        virtualities and the same decays.
+
+        A statistical A/B can only bound a bias at the level its Monte Carlo
+        error allows, and needs an error model to say even that. This is
+        deterministic: any scheme whose per-chain weight product is not the
+        joint weight is wrong, whatever a lineshape comparison happens to show.
+        """
+        prod_copy = lhe_parser.Event(str(production))
+        decays_copy = collections.defaultdict(list)
+        jac_bw = 1.0
+        for pdg, decay_list in decays.items():
+            for decay in decay_list:
+                copy = lhe_parser.Event(str(decay))
+                copy[0].new_mass = decay[0].new_mass
+                copy[0].reshuffle_info = decay[0].reshuffle_info
+                decays_copy[pdg].append(copy)
+        # the Breit-Wigner sampling jacobians: the joint path folds them in
+        # itself when it draws the masses, and here the masses are given, so
+        # they are recomputed from the same (pole, width, window) the draw used
+        for pdg, decay_list in decays.items():
+            for decay in decay_list:
+                pole, width, min_mass, max_mass = decay[0].reshuffle_info
+                gap = math.atan((pole ** 2 - min_mass ** 2) / pole / width)
+                gap += math.atan((max_mass ** 2 - pole ** 2) / pole / width)
+                jac_bw *= gap / math.pi
+        full_me, _, prod_diag, dec_diag, jac_reshuffle = \
+            self.calculate_matrix_element_from_density(prod_copy, decays_copy,
+                                                       decay_dict)
+        w_joint = full_me / (prod_diag * dec_diag) * jac_reshuffle * jac_bw
+        nb_hel = 1
+        for hel in helicities:
+            nb_hel *= len(hel)
+        if not w_joint:
+            return
+        # What must hold is *proportionality*, not equality: the chain weight and
+        # the joint weight differ by a constant -- the number of helicity states,
+        # and whatever normalisation the density path applies to the decay matrix
+        # elements relative to calculate_matrix_element -- and any constant is
+        # absorbed by the bounds. So accumulate the ratio and let the report look
+        # at its spread: a constant ratio *is* the identity, whatever its value,
+        # while a scheme that samples the wrong distribution has a ratio that
+        # varies chain to chain.
+        ratio = w_seq / (nb_hel * w_joint)
+        stats['nb_identity_check'] += 1
+        stats['identity_ratio_sum'] += ratio
+        stats['identity_ratio_sqsum'] += ratio * ratio
+
     def sequential_accept_reject(self, production, evt_decayfile, maxwgts,
                                  nb_remain, stats=None, probe=None,
-                                 probe_extra=None):
+                                 probe_extra=None, decay_dict=None):
         """Accept/reject one decaying particle at a time, in density mode.
 
         Returns the accepted ``decays`` dict (pdg -> list of decay events, in
@@ -4580,6 +4664,9 @@ class MadSpinInterface(extended_cmd.Cmd):
                 w_mass = density_prod.trace().real / me_prod_on * jac_reshuffle
                 for s in order:
                     w_mass *= slot_mass[s][2]
+                # before Z_hat, which cancels between the two stages:
+                # this is what the weight-identity check compares
+                w_mass_raw = w_mass
                 if probe is not None:
                     del probe[:]            # start this chain's probe vector
                     probe.append(float(w_mass))
@@ -4630,6 +4717,7 @@ class MadSpinInterface(extended_cmd.Cmd):
                 restart = False
                 w_angles = 1.0      # joint_angles: the product tested once, below
                 angle_dead = False  # a zero member: reject the set, stop drawing
+                w_slots = 1.0       # product of the raw per-slot weights
 
                 for position, slot in enumerate(order):
                     index = slot_to_index[slot]
@@ -4731,6 +4819,7 @@ class MadSpinInterface(extended_cmd.Cmd):
                             # reshuffling jacobian are in w_mass.
                             rate = jac_dec * (density.trace().real / me_on)
                             wgt = (n_k / n_prev).real * rate
+                            wgt_raw = wgt        # before any Z_hat division
                             j_k, new_budget = j_prev, budget
                             if probe is not None:
                                 probe.append(float(wgt))
@@ -4765,6 +4854,7 @@ class MadSpinInterface(extended_cmd.Cmd):
                             if accept:
                                 slot_decays[slot] = decay
                                 n_prev = n_k
+                                w_slots *= wgt_raw
                                 break
                             slot_densities.pop(slot, None)
                             if exact:
@@ -4893,6 +4983,10 @@ class MadSpinInterface(extended_cmd.Cmd):
         decays = collections.defaultdict(list)
         for slot in range(len(order)):
             decays[particles[slot_to_index[slot]].pid].append(slot_decays[slot])
+        if (offshell and probe is None and decay_dict
+                and self.options['sequential_debug']):
+            self._check_weight_identity(production, decays, decay_dict,
+                                        w_mass_raw * w_slots, helicities, stats)
         return decays
 
     def get_onshell_evt_and_wgt(self, production, decays, decay_dict, prod_density_cached=None, build_event=True):
