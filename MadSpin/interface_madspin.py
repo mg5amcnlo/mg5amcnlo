@@ -81,14 +81,22 @@ class MadSpinOptions(banner.ConfigFile):
         self.add_param('decay_event_mult', 1E0, comment='Produce more events than needed so that MadSpin does not have to regenerate decay events')
         self.add_param('nb_core', 0, comment='Number of cores for the MadSpin parallel unweighting (0 = use the global MG5 nb_core). nb_core>1 enables the process-parallel unweighting path.')
         self.add_param('density_keep_jacobian', True, comment='PA spinmode only: fold the offshell-reshuffling phase-space jacobian into the accept/reject weight (default) instead of applying the reshuffle as a post-acceptance kinematic dressing (False). Ignored by the madspin/full spinmodes, which always include that jacobian.')
-        self.add_param('sequential_decay', False, comment='accept/reject one decaying particle at a time instead of the full set at once (density mode). Exact and much cheaper when several particles decay. Default is auto: True for the PA/onshell spinmodes, False (joint accept/reject) for madspin/full.')
-        # default is 'auto': resolved at run time by _sequential_active --
-        # sequential for PA/onshell, joint for madspin/full
+        self.add_param('unweighting', 'auto',
+                       allowed=['auto', 'joint', 'two_stage', 'sequential',
+                                'sequential_global_retry'],
+                       comment="how the accept/reject is organised (density modes). "
+                       "joint: one test over the virtualities and every decay at once, the historical scheme. "
+                       "two_stage: unweight the set of virtualities first, then every decay against a single bound, redrawing only the decays on a rejection -- the production reshuffling and its density matrix are then evaluated once per accepted mass set instead of once per trial. "
+                       "sequential: as two_stage but one test per decaying particle, redrawing only the particle that was rejected. "
+                       "sequential_global_retry: as sequential, but a rejected decay redraws the virtualities too. "
+                       "two_stage and sequential need a tabulated running-width factor, measured during the max-weight scan to ~0.5%, which is far inside the pole approximation these modes already assume; sequential_global_retry does without it at 2-3x the cost, and is meant as a cross-check rather than a default. "
+                       "auto: two_stage for up to two decaying particles and sequential from three (one bound over all the angles is tighter, testing each particle as it is drawn skips the decays not yet drawn, and which wins depends on how many there are), or sequential under PA/onshell. "
+                       "two_stage and sequential_global_retry need an offshell spinmode and fall back to sequential elsewhere.")
+        self.add_param('sequential_decay', 'auto',
+                       comment='DEPRECATED, use unweighting: True maps to sequential, False to joint.')
         self.auto_set.add('sequential_decay')
-        self.add_param('sequential_spin_order', '2 3 1', comment='spin order (MG5 2S+1 convention) deciding which particle is accept/rejected first in sequential_decay: default fermions, then vectors, then scalars (which can never be rejected).')
-        self.add_param('sequential_exact', False, comment='sequential_decay with an offshell spinmode (madspin/full) only: reject the whole mass set when a decay is rejected, instead of redrawing that decay until it is accepted. Makes the scheme exact whatever the accuracy of the tabulated offshell rate factor, at a lower acceptance. Ignored by PA/onshell, which need no such factor.')
-        self.add_param('sequential_debug', False, comment='sequential_decay with an offshell spinmode: on every accepted chain, recompute the joint weight for the same production event, virtualities and decays and check that the product of the stage weights reproduces it (times the number of helicity states). Deterministic check of the decomposition itself -- Z_hat cancels out of it -- at roughly the cost of a joint trial per event. Debugging only.')
-        self.add_param('sequential_joint_angles', False, comment='sequential_decay with an offshell spinmode (madspin/full) only: draw every decay and test their weights against a *single* bound instead of one per particle, redrawing the whole set against the same virtualities on failure. The production reshuffling and its density matrix are then evaluated once per accepted mass set instead of once per trial, which the joint accept/reject cannot do. Takes precedence over sequential_exact.')
+        self.add_param('sequential_spin_order', '2 3 1', comment='spin order (MG5 2S+1 convention) deciding which particle is accept/rejected first in the sequential unweighting modes: default fermions, then vectors, then scalars (which can never be rejected).')
+        self.add_param('sequential_debug', False, comment='offshell spinmodes with a non-joint unweighting: on every accepted chain, recompute the joint weight for the same production event, virtualities and decays and check that the product of the stage weights reproduces it (times the number of helicity states). Deterministic check of the decomposition itself -- the tabulated factor cancels out of it -- at roughly the cost of a joint trial per event. Debugging only.')
 
     ############################################################################
     ##  Special post-processing of the options                                ## 
@@ -105,6 +113,20 @@ class MadSpinOptions(banner.ConfigFile):
         if not hasattr(random, 'mg_seedset'):
             random.seed(self['seed'])  
             random.mg_seedset = self['seed']  
+
+    def post_set_sequential_decay(self, value, change_userdefine, raiseerror, *opts):
+        """Deprecated alias for 'unweighting'. True/False were the only values
+        it ever had beyond 'auto', so they map onto the two modes that existed
+        then."""
+        if value in ('auto', None):
+            mode = 'auto'
+        elif value in (True, 'True', 'true', 1, '1'):
+            mode = 'sequential'
+        else:
+            mode = 'joint'
+        logger.warning("MadSpin: 'sequential_decay' is deprecated; "
+                       "use 'set unweighting %s'", mode)
+        self['unweighting'] = mode
 
     ############################################################################        
     def post_set_run_card(self, value, change_userdefine, raiseerror, *opts):
@@ -1812,6 +1834,13 @@ class MadSpinInterface(extended_cmd.Cmd):
                     spin = self.model.get_particle(particle.pdg).get('spin')
                     decay_dict[particle.pdg] = [width, mass, color, spin]
         #print(f"to_decay = {to_decay}")
+        # How many particles decay in one event -- the same multiplicity the
+        # pool ladder counts. It decides which unweighting scheme 'auto' picks,
+        # so it is resolved once here rather than per event: the modes have
+        # different bounds, and a mode that changed event to event would be
+        # testing against somebody else's.
+        self._nb_decaying = sum(max(1, int(nb) // int(nb_event))
+                                for nb in to_decay.values()) if nb_event else 0
                 	
         with misc.MuteLogger(["madgraph", "madevent", "ALOHA", "cmdprint"], [50,50,50,50]):
             mg5 = self.mg5cmd
@@ -2191,31 +2220,91 @@ class MadSpinInterface(extended_cmd.Cmd):
             position += multiplicity
         return ladder
 
-    def _sequential_active(self, density_method):
-        """Whether to accept/reject one decaying particle at a time.
+    def _log_once(self, key, message, *args):
+        """Log a resolution message the first time only: these are decided per
+        production event but say something about the run."""
+        seen = getattr(self, '_logged_once', None)
+        if seen is None:
+            seen = self._logged_once = set()
+        if key not in seen:
+            seen.add(key)
+            logger.info(message, *args)
 
-        Density mode only -- the whole scheme is expressed in terms of the
-        production density matrix. ``fixed_order`` keeps the joint test: its
-        counter-events ride along with the decays and have not been thought
-        through here. ``sequential_decay`` defaults to 'auto': sequential for
-        the PA/onshell pole approximations, joint for madspin/full.
+    def _unweighting_mode(self, density_method=True):
+        """Which accept/reject scheme this run uses: one of 'joint',
+        'two_stage', 'sequential', 'sequential_global_retry'.
+
+        All of them sample the same distribution; they differ in how the test is
+        split and in what a rejection redraws.
+
+          joint                    one test over the virtualities and every
+                                   decay at once -- the historical scheme, and
+                                   the only one available outside density mode.
+          two_stage                the set of virtualities is unweighted first,
+                                   then every decay against a single bound; a
+                                   rejection redraws the decays only, so the
+                                   production reshuffling and its density matrix
+                                   are reused across the retries.
+          sequential               as two_stage, but one test per decaying
+                                   particle, redrawing only the particle that
+                                   was rejected.
+          sequential_global_retry  as sequential, but a rejected decay redraws
+                                   the virtualities as well.
+
+        ``auto`` picks by the number of decaying particles, because the two
+        splits trade off against each other: one bound over all the angles is
+        tighter than the product of per-particle bounds, while testing each
+        particle as it is drawn lets a rejection skip the decays not yet drawn.
+        The first wins while there is little to skip and the second as the
+        chain gets longer, so auto takes ``two_stage`` up to two decaying
+        particles and ``sequential`` from three. Under PA/onshell it is always
+        ``sequential``, the other two needing an offshell spinmode.
+
+        ``fixed_order`` forces joint: its counter-events ride along with the
+        decays and have not been thought through here. ``two_stage`` and
+        ``sequential_global_retry`` need the offshell (madspin/full) spinmodes,
+        where the virtualities are drawn up front; under PA/onshell each slot
+        draws its own mass, there is no mass-set stage to hang them on, and they
+        fall back to ``sequential``.
         """
         if not density_method:
-            return False
-        sequential = self.options['sequential_decay']
-        if sequential == 'auto':
-            sequential = self.options['spinmode'] in ['PA', 'onshell']
-        if not sequential:
-            return False
+            return 'joint'
+        mode = self.options['unweighting']
+        if mode == 'auto':
+            if self.options['spinmode'] in ['PA', 'onshell']:
+                # two_stage and sequential_global_retry need the up-front mass
+                # draw, which these modes do not have
+                mode = 'sequential'
+            elif getattr(self, '_nb_decaying', 2) <= 2:
+                mode = 'two_stage'
+            else:
+                mode = 'sequential'
+        if mode == 'joint':
+            return 'joint'
         if self.options['fixed_order']:
-            logger.info("MadSpin: fixed_order is on, keeping the joint "
-                        "accept/reject (sequential_decay ignored)")
-            return False
+            self._log_once('fixed_order',
+                           "MadSpin: fixed_order is on, keeping the joint "
+                           "accept/reject (unweighting ignored)")
+            return 'joint'
         if self.options['spinmode'] not in ['PA', 'onshell', 'madspin', 'full']:
-            logger.info("MadSpin: spinmode=%s keeps the joint accept/reject "
-                        "(sequential_decay ignored)", self.options['spinmode'])
-            return False
-        return True
+            self._log_once('spinmode',
+                           "MadSpin: spinmode=%s keeps the joint accept/reject "
+                           "(unweighting ignored)", self.options['spinmode'])
+            return 'joint'
+        if (mode in ('two_stage', 'sequential_global_retry')
+                and self.options['spinmode'] in ['PA', 'onshell']):
+            self._log_once('offshell_only',
+                           "MadSpin: unweighting=%s needs an offshell spinmode "
+                           "(it splits the accept/reject at the up-front mass "
+                           "draw, which PA/onshell do not have); using "
+                           "sequential instead", mode)
+            return 'sequential'
+        return mode
+
+    def _sequential_active(self, density_method):
+        """Whether any of the per-particle / two-stage schemes is in use, i.e.
+        anything but the historical joint accept/reject."""
+        return self._unweighting_mode(density_method) != 'joint'
 
     def _sequential_spin_order(self):
         """The spin order (MG5 2S+1 convention) driving which particle is
@@ -2924,7 +3013,7 @@ class MadSpinInterface(extended_cmd.Cmd):
         exact_restarts = merged.get('nb_exact_restart', 0)
         angle_tries = merged.get('nb_angleset_try', 0)
         if angle_tries:
-            # sequential_joint_angles: one bound over all the angles
+            # two_stage: one bound over all the angles
             logger.info("MadSpin sequential angle stage: %.2f angle sets per "
                         "accepted event (%d drawn, %d rejected)",
                         float(angle_tries) / n_written if n_written
@@ -2936,7 +3025,7 @@ class MadSpinInterface(extended_cmd.Cmd):
             # accepted event
             # An angle-set rejection does not cost a mass set: the set is kept
             # and only the decays are drawn again, which is the whole point of
-            # sequential_joint_angles. Counting those here would inflate the
+            # two_stage. Counting those here would inflate the
             # production-side work by the angle-stage rejections.
             drawn = rejects + restarts + exact_restarts + n_written
             logger.info("MadSpin sequential mass stage: %.2f mass sets per "
@@ -2997,7 +3086,7 @@ class MadSpinInterface(extended_cmd.Cmd):
                 "MadSpin sequential: %d weights exceeded their per-particle "
                 "maximum. That bound is under-estimated and the sample is "
                 "biased: raise nb_sigma or Nevents_for_max_weight, or set "
-                "sequential_decay = False.", total_overflow)
+                "unweighting = joint.", total_overflow)
 
     def _apply_accounting(self, base_out, stats_list):
         """Post-loop accounting shared by the serial and parallel paths: the
@@ -3787,15 +3876,11 @@ class MadSpinInterface(extended_cmd.Cmd):
         if self.options['ms_dir']:
             # a distinct name: the joint bound is a single float, this is a list.
             # The offshell bounds come with the Z_k tables and depend on
-            # sequential_exact, so they get a name (and a format) of their own --
+            # the unweighting mode, so they get a name (and a format) of their own --
             # a cache written for one cannot be read back for the other.
             if offshell:
-                if self.options['sequential_joint_angles']:
-                    variant = '_jointangles'
-                elif self.options['sequential_exact']:
-                    variant = '_exact'
-                else:
-                    variant = ''
+                mode = self._unweighting_mode()
+                variant = '' if mode == 'sequential' else '_%s' % mode
                 cache = pjoin(self.options['ms_dir'],
                               'max_wgt_sequential_offshell%s' % variant)
                 cached = self._read_offshell_cache(cache)
@@ -3879,7 +3964,7 @@ class MadSpinInterface(extended_cmd.Cmd):
 
     # Bumped whenever the offshell cache's *meaning* changes: another entry in
     # the bound vector, a different fit variable or degree, another key in a
-    # table. The file name already separates sequential_exact from the default,
+    # table. The file name already separates the unweighting modes,
     # and PA/onshell from both; this separates one version of this code from the
     # next, which a name cannot.
     # 2: the mass-set weight is normalised by |M_prod|^2 on shell, so every
@@ -3931,18 +4016,18 @@ class MadSpinInterface(extended_cmd.Cmd):
         """The per-event maximum-weight vector of the offshell probe, over the
         chains it recorded and with the Z_k factors the loop could not apply
         while they were still being measured: Z_k(m_k) into the mass-set weight,
-        and -- under sequential_exact, where the mass stage pays it and the
+        and -- under sequential_global_retry, where the mass stage pays it and the
         per-angle stage takes it back -- 1/Z_k into that slot's own weight.
         """
         keys, order = event['keys'], event['order']
-        joint_angles = self.options['sequential_joint_angles']
-        # Both restart-on-reject (sequential_exact) and the single angle bound
-        # (sequential_joint_angles) test w_k/Z_hat_k rather than w_k: for the
-        # first because the mass stage has already paid Z_hat and the two must
-        # cancel, for the second because it flattens the virtuality dependence
-        # out of the bound. The probe has to be completed the same way or the
-        # bound and the weight it bounds are different quantities.
-        exact = self.options['sequential_exact'] or joint_angles
+        mode = self._unweighting_mode()
+        joint_angles = mode == 'two_stage'
+        # Both sequential_global_retry and two_stage test w_k/Z_hat_k rather
+        # than w_k: the first because the mass stage has already paid Z_hat and
+        # the two must cancel, the second because it flattens the virtuality
+        # dependence out of the bound. The probe has to be completed the same
+        # way or the bound and the weight it bounds are different quantities.
+        exact = joint_angles or mode == 'sequential_global_retry'
         best = None
         for weights, masses in event['chains']:
             zhat = [self._zhat(key, mass) for key, mass in zip(keys, masses)]
@@ -4290,7 +4375,7 @@ class MadSpinInterface(extended_cmd.Cmd):
     # Z_k whatever weight it is given (rescaling w_k by anything that does not
     # depend on the angles leaves its accepted distribution unchanged), so the
     # residual bias of the tabulated scheme is exactly Z_hat/Z. That is why
-    # sequential_exact exists -- it stops the per-angle stage from normalising at
+    # sequential_global_retry exists -- it stops the per-angle stage normalising at
     # all, and then Z_hat cancels identically and only sets the efficiency.
 
     @staticmethod
@@ -4531,7 +4616,7 @@ class MadSpinInterface(extended_cmd.Cmd):
         Z_k(m), which is a function of the sampled virtuality -- hence the
         tabulated ``_zhat`` factor in the mass-set weight, without which the
         accepted resonance lineshape is the Breit-Wigner one. Under
-        ``sequential_exact`` a rejected decay instead trashes the mass set, the
+        ``sequential_global_retry`` a rejected decay trashes the mass set, the
         per-angle stage stops normalising, and Z_hat cancels from the chain
         (leaving it a pure efficiency preconditioner).
 
@@ -4579,22 +4664,12 @@ class MadSpinInterface(extended_cmd.Cmd):
         # One bound over all the angles instead of one per particle, the mass
         # set paying for a rejection either way: the joint accept/reject with a
         # mass-set stage in front of it. Exact for the same reason
-        # sequential_exact is -- nothing is redrawn in place, so no stage
+        # sequential_global_retry is -- nothing is redrawn in place, so no stage
         # normalises itself -- and it keeps Z_hat only as a preconditioner,
         # since it cancels between the two stages.
-        joint_angles = offshell and self.options['sequential_joint_angles']
-        # The two never combine: testing every angle against one bound *and*
-        # making a rejection cost the mass set was measured (as "variant B") and
-        # dropped -- it throws away the reuse that motivates the single bound,
-        # and it landed further from the joint accept/reject than either
-        # surviving scheme without the weight identity explaining why.
-        exact = offshell and self.options['sequential_exact'] and not joint_angles
-        if (joint_angles and self.options['sequential_exact']
-                and not getattr(self, '_warned_joint_exact', False)):
-            self._warned_joint_exact = True     # once per run, not per event
-            logger.warning("MadSpin: sequential_joint_angles takes precedence "
-                           "over sequential_exact; a rejected angle set is "
-                           "redrawn against the same mass set.")
+        mode = self._unweighting_mode()
+        joint_angles = offshell and mode == 'two_stage'
+        exact = offshell and mode == 'sequential_global_retry'
         zkeys = self._z_slot_keys(particles, slot_to_index) if offshell else None
         # |M_prod|^2 on shell: the denominator the joint offshell weight divides
         # by (calculate_matrix_element_from_density evaluates it *before*
@@ -4706,11 +4781,11 @@ class MadSpinInterface(extended_cmd.Cmd):
             # virtualities first: the joint accept/reject pays a production
             # reshuffling and a production density matrix on every trial,
             # because a rejection there redraws the masses too.
-            #   sequential_joint_angles: a rejected angle set is redrawn
+            #   two_stage: a rejected angle set is redrawn
             #     against the same mass set, so this loop is where the reuse
             #     happens -- and, redrawing to acceptance, it normalises itself,
             #     which is what the Z_hat factor in w_mass compensates.
-            #   sequential_exact: a rejected *decay* costs the mass set, which
+            #   sequential_global_retry: a rejected *decay* costs the mass set, which
             #     makes Z_hat cancel and that scheme exact whatever the table
             #     says, at the price of the reuse.
             while True:

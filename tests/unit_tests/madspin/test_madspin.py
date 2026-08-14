@@ -1143,10 +1143,13 @@ class TestSequentialAcceptReject(unittest.TestCase):
             sequential_accept_reject = interface.sequential_accept_reject
             _scan_maxwgt_range = interface._scan_maxwgt_range
             _sequential_offshell = interface._sequential_offshell
+            _unweighting_mode = interface._unweighting_mode
+            _log_once = interface._log_once
             def __init__(self):
                 self.options = {'spinmode': 'onshell',
                                 'sequential_spin_order': '2 3 1',
-                                'sequential_exact': False}
+                                'unweighting': 'sequential',
+                                'fixed_order': False}
             def _density_basis(self, production, decays_key):
                 particles, slots = interface._sequential_slots(production, decays_key)
                 return {'decays_key': decays_key, 'helicities': hels,
@@ -1233,11 +1236,13 @@ class TestSequentialPoolLadder(unittest.TestCase):
         class Stub(object):
             _sequential_pool_ladder = interface._sequential_pool_ladder
             _sequential_active = interface._sequential_active
+            _unweighting_mode = interface._unweighting_mode
+            _log_once = interface._log_once
             _sequential_spin_order = interface._sequential_spin_order
             _decay_pool_ladder = staticmethod(interface._decay_pool_ladder)
         stub = Stub()
         stub.model = self._Model(spins)
-        stub.options = {'sequential_decay': True, 'fixed_order': False,
+        stub.options = {'unweighting': 'sequential', 'fixed_order': False,
                         'spinmode': 'PA', 'sequential_spin_order': '2 3 1'}
         stub.options.update(options)
         return stub
@@ -1266,7 +1271,7 @@ class TestSequentialPoolLadder(unittest.TestCase):
         spins = {6: 2, -6: 2}
         pools = {6: self.NB, -6: self.NB}
         # opted out
-        self.assertEqual(self._stub(spins, sequential_decay=False)
+        self.assertEqual(self._stub(spins, unweighting='joint')
                              ._sequential_pool_ladder(pools, self.NB, True), {})
         # not density mode
         self.assertEqual(self._stub(spins)
@@ -1286,29 +1291,69 @@ class TestSequentialPoolLadder(unittest.TestCase):
         self.assertTrue(self._stub({6: 2}, spinmode='onshell')._sequential_active(True))
 
     def test_sequential_active_auto(self):
-        """'auto' (the default) resolves per spinmode: sequential for the
-        PA/onshell pole approximations, joint for madspin/full."""
+        """'auto' resolves per spinmode: a per-particle or two-stage scheme
+        everywhere it is supported, joint outside the density modes."""
         for mode, expected in [('PA', True), ('onshell', True),
-                               ('madspin', False), ('full', False),
+                               ('madspin', True), ('full', True),
                                ('none', False)]:
-            stub = self._stub({6: 2}, sequential_decay='auto', spinmode=mode)
+            stub = self._stub({6: 2}, unweighting='auto', spinmode=mode)
             self.assertEqual(stub._sequential_active(True), expected,
                              'auto + spinmode=%s' % mode)
         # fixed_order still forces the joint test
-        stub = self._stub({6: 2}, sequential_decay='auto', fixed_order=True)
+        stub = self._stub({6: 2}, unweighting='auto', fixed_order=True)
         self.assertFalse(stub._sequential_active(True))
+        self.assertEqual(stub._unweighting_mode(True), 'joint')
+
+    def test_auto_picks_the_scheme_by_the_number_of_decays(self):
+        """One bound over all the angles is tighter than the product of
+        per-particle bounds, while a per-particle test lets a rejection skip the
+        decays not yet drawn. The first wins while there is little to skip, so
+        auto takes two_stage up to two decaying particles and sequential from
+        three -- offshell only, since the other modes have no mass-set stage to
+        split at."""
+        for nb, expected in [(1, 'two_stage'), (2, 'two_stage'),
+                             (3, 'sequential'), (6, 'sequential')]:
+            stub = self._stub({6: 2}, unweighting='auto', spinmode='madspin')
+            stub._nb_decaying = nb
+            self.assertEqual(stub._unweighting_mode(True), expected,
+                             '%d decaying particles' % nb)
+        # PA has no up-front mass draw: always per particle, whatever n is
+        for nb in (1, 2, 5):
+            stub = self._stub({6: 2}, unweighting='auto', spinmode='PA')
+            stub._nb_decaying = nb
+            self.assertEqual(stub._unweighting_mode(True), 'sequential')
+
+    def test_offshell_only_modes_fall_back_under_pa(self):
+        """Asked for explicitly under PA/onshell, the two modes that need the
+        up-front mass draw say so and use sequential."""
+        for mode in ('two_stage', 'sequential_global_retry'):
+            stub = self._stub({6: 2}, unweighting=mode, spinmode='PA')
+            self.assertEqual(stub._unweighting_mode(True), 'sequential')
+            stub = self._stub({6: 2}, unweighting=mode, spinmode='madspin')
+            self.assertEqual(stub._unweighting_mode(True), mode)
 
     def test_madspin_option_defaults(self):
         """The shipped defaults: spinmode=madspin, jacobian in the weight,
-        sequential_decay on auto (and switchable off/back by the user)."""
+        unweighting on auto, and the deprecated alias still understood."""
         options = interface_madspin.MadSpinOptions()
         self.assertEqual(options['spinmode'], 'madspin')
         self.assertEqual(options['density_keep_jacobian'], True)
-        self.assertEqual(options['sequential_decay'], 'auto')
+        self.assertEqual(options['unweighting'], 'auto')
+        for value in ('joint', 'two_stage', 'sequential',
+                      'sequential_global_retry'):
+            options['unweighting'] = value
+            self.assertEqual(options['unweighting'], value)
+
+    def test_deprecated_sequential_decay_alias(self):
+        """sequential_decay is gone as a knob but still understood: the two
+        values it ever had map onto the two modes that existed then."""
+        options = interface_madspin.MadSpinOptions()
+        options['sequential_decay'] = 'True'
+        self.assertEqual(options['unweighting'], 'sequential')
         options['sequential_decay'] = 'False'
-        self.assertEqual(options['sequential_decay'], False)
+        self.assertEqual(options['unweighting'], 'joint')
         options['sequential_decay'] = 'auto'
-        self.assertEqual(options['sequential_decay'], 'auto')
+        self.assertEqual(options['unweighting'], 'auto')
 
 
 class TestScanMaxwgtDecomposition(unittest.TestCase):
@@ -1380,6 +1425,8 @@ class TestOffshellRateFactor(unittest.TestCase):
             return TestOffshellRateFactor._Val(173.0)
 
     class _Stub(object):
+        _unweighting_mode = interface_madspin.MadSpinInterface._unweighting_mode
+        _log_once = interface_madspin.MadSpinInterface._log_once
         _build_z_tables = interface_madspin.MadSpinInterface._build_z_tables
         _weighted_polyfit2 = staticmethod(
                         interface_madspin.MadSpinInterface._weighted_polyfit2)
@@ -1390,8 +1437,13 @@ class TestOffshellRateFactor(unittest.TestCase):
                         interface_madspin.MadSpinInterface._complete_offshell_probe
         def __init__(self, exact=False, joint_angles=False):
             self.banner = TestOffshellRateFactor._Banner()
-            self.options = {'sequential_exact': exact,
-                            'sequential_joint_angles': joint_angles}
+            mode = 'sequential'
+            if joint_angles:
+                mode = 'two_stage'
+            elif exact:
+                mode = 'sequential_global_retry'
+            self.options = {'unweighting': mode, 'fixed_order': False,
+                            'spinmode': 'madspin'}
             self._z_tables = {}
 
     @staticmethod
