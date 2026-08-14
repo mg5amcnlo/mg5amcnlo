@@ -90,7 +90,7 @@ class MadSpinOptions(banner.ConfigFile):
                        "sequential: as two_stage but one test per decaying particle, redrawing only the particle that was rejected. "
                        "sequential_global_retry: as sequential, but a rejected decay redraws the virtualities too. "
                        "two_stage and sequential need a tabulated running-width factor, measured during the max-weight scan to ~0.5%, which is far inside the pole approximation these modes already assume; sequential_global_retry does without it at 2-3x the cost, and is meant as a cross-check rather than a default. "
-                       "auto: two_stage for up to two decaying particles and sequential from three (one bound over all the angles is tighter, testing each particle as it is drawn skips the decays not yet drawn, and which wins depends on how many there are), or sequential under PA/onshell. "
+                       "auto: joint when a single particle decays (every split degenerates there), two_stage for two decaying particles and sequential from three (one bound over all the angles is tighter, testing each particle as it is drawn skips the decays not yet drawn, and which wins depends on how many there are), or sequential under PA/onshell. "
                        "two_stage and sequential_global_retry need an offshell spinmode and fall back to sequential elsewhere.")
         self.add_param('sequential_decay', 'auto',
                        comment='DEPRECATED, use unweighting: True maps to sequential, False to joint.')
@@ -2251,8 +2251,11 @@ class MadSpinInterface(extended_cmd.Cmd):
           sequential_global_retry  as sequential, but a rejected decay redraws
                                    the virtualities as well.
 
-        ``auto`` picks by the number of decaying particles, because the two
-        splits trade off against each other: one bound over all the angles is
+        ``auto`` picks by the number of decaying particles. With one, it takes
+        ``joint``: every split degenerates there -- the per-particle test is the
+        joint test, and the mass/angle one only moves the same factors between
+        two stages -- so there is nothing to win and the identity machinery is
+        pure cost. Beyond one, the two splits trade off against each other: one bound over all the angles is
         tighter than the product of per-particle bounds, while testing each
         particle as it is drawn lets a rejection skip the decays not yet drawn.
         The first wins while there is little to skip and the second as the
@@ -2271,11 +2274,18 @@ class MadSpinInterface(extended_cmd.Cmd):
             return 'joint'
         mode = self.options['unweighting']
         if mode == 'auto':
-            if self.options['spinmode'] in ['PA', 'onshell']:
+            nb_decaying = getattr(self, '_nb_decaying', 2)
+            if nb_decaying <= 1:
+                # with a single decaying particle every split degenerates: the
+                # per-particle test *is* the joint test, and the mass/angle one
+                # only moves the same factors between two stages. Nothing to
+                # win, so do not pay for the identity machinery.
+                mode = 'joint'
+            elif self.options['spinmode'] in ['PA', 'onshell']:
                 # two_stage and sequential_global_retry need the up-front mass
                 # draw, which these modes do not have
                 mode = 'sequential'
-            elif getattr(self, '_nb_decaying', 2) <= 2:
+            elif nb_decaying <= 2:
                 mode = 'two_stage'
             else:
                 mode = 'sequential'

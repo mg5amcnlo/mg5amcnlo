@@ -894,6 +894,59 @@ error model below is wrong or that implementation is; the combination is
 reachable in the code but should not be used until the weight-identity check
 settles it.
 
+#### The option: one knob, four schemes
+
+`sequential_decay`, `sequential_exact` and `sequential_joint_angles` are replaced
+by a single enumerated option -- the schemes are mutually exclusive alternatives,
+not independent switches, and after variant B was dropped the three booleans no
+longer spanned a clean 2x2:
+
+    set unweighting auto | joint | two_stage | sequential | sequential_global_retry
+
+    mode                     mass stage   angle test              a rejection redraws
+    joint                    --           everything at once      everything
+    two_stage                yes          all angles, one bound   the angles only
+    sequential               yes          per particle            that particle
+    sequential_global_retry  yes          per particle            the virtualities too
+
+`sequential_decay` survives as a deprecated alias (`True` -> sequential,
+`False` -> joint, warning once), so cards written against the earlier revisions
+of this branch keep working. `sequential_spin_order` and `sequential_debug` keep
+their names: an ordering and a check, not modes.
+
+**`sequential_exact` was renamed, not kept.** "Exact" advertised a distinction of
+~0.001 GeV on the top lineshape -- the tabulated factor is good to ~0.5%, and the
+lineshape sensitivity is 0.25 GeV per unit fractional slope error -- inside a pole
+approximation whose own error is of order `Gamma/m` ~ 0.9%, three orders of
+magnitude larger. The name would have pushed users to a 2-3x slower scheme for a
+difference nobody can measure. `sequential_global_retry` says what the mode does
+and leaves the accuracy statement to the documentation, where it can carry the
+numbers.
+
+**`auto`** resolves once per run, from the number of decaying particles counted
+where `to_decay` is built -- not per event, since the modes carry different
+bounds and one that changed event to event would be testing against the wrong
+ones:
+
+- **one decaying particle -> `joint`**, in every spinmode. Every split
+  degenerates there: the per-particle test *is* the joint test (section 3), and
+  the mass/angle one only moves the same factors between two stages. Nothing to
+  win, so the identity machinery is pure cost.
+- **PA/onshell -> `sequential`**. `two_stage` and `sequential_global_retry` split
+  the accept/reject at the up-front mass draw, which those modes do not have;
+  asked for explicitly they log why and fall back to `sequential`.
+- **madspin/full -> `two_stage` for two, `sequential` from three.** One bound
+  over all the angles is tighter than the product of per-particle bounds, while
+  testing each particle as it is drawn lets a rejection skip the decays not yet
+  drawn. The first wins while there is little to skip, the second as the chain
+  lengthens.
+
+That last line makes `auto` non-joint for madspin/full, where `two_stage` is
+faster than the joint test (3.25 production densities and 5.74 decay MEs per
+event against 4.46 and 8.92) and agrees with it at +0.23 sigma over eight
+replicas. An explicit setting is always honoured, including the degenerate
+single-particle case, so any of the four stays available as a cross-check.
+
 #### How to compare these numbers (measurement notes, learned the hard way)
 
 **Wall clocks are only comparable within one campaign.** The per-slot scheme

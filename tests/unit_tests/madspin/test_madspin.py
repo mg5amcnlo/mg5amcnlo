@@ -1311,17 +1311,32 @@ class TestSequentialPoolLadder(unittest.TestCase):
         auto takes two_stage up to two decaying particles and sequential from
         three -- offshell only, since the other modes have no mass-set stage to
         split at."""
-        for nb, expected in [(1, 'two_stage'), (2, 'two_stage'),
+        for nb, expected in [(1, 'joint'), (2, 'two_stage'),
                              (3, 'sequential'), (6, 'sequential')]:
             stub = self._stub({6: 2}, unweighting='auto', spinmode='madspin')
             stub._nb_decaying = nb
             self.assertEqual(stub._unweighting_mode(True), expected,
                              '%d decaying particles' % nb)
-        # PA has no up-front mass draw: always per particle, whatever n is
-        for nb in (1, 2, 5):
+        # PA has no up-front mass draw: per particle whenever there is a
+        # decomposition to make at all
+        for nb in (2, 5):
             stub = self._stub({6: 2}, unweighting='auto', spinmode='PA')
             stub._nb_decaying = nb
             self.assertEqual(stub._unweighting_mode(True), 'sequential')
+
+    def test_auto_is_joint_for_a_single_decaying_particle(self):
+        """One decaying particle: the per-particle test is the joint test and
+        the mass/angle split only moves the same factors between two stages, so
+        auto pays for neither -- in every spinmode."""
+        for spinmode in ('PA', 'onshell', 'madspin', 'full'):
+            stub = self._stub({6: 1}, unweighting='auto', spinmode=spinmode)
+            stub._nb_decaying = 1
+            self.assertEqual(stub._unweighting_mode(True), 'joint', spinmode)
+            self.assertFalse(stub._sequential_active(True))
+        # asked for explicitly it is still honoured, for cross-checks
+        stub = self._stub({6: 1}, unweighting='sequential', spinmode='madspin')
+        stub._nb_decaying = 1
+        self.assertEqual(stub._unweighting_mode(True), 'sequential')
 
     def test_offshell_only_modes_fall_back_under_pa(self):
         """Asked for explicitly under PA/onshell, the two modes that need the
