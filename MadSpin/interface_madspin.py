@@ -3839,7 +3839,9 @@ class MadSpinInterface(extended_cmd.Cmd):
     # table. The file name already separates sequential_exact from the default,
     # and PA/onshell from both; this separates one version of this code from the
     # next, which a name cannot.
-    _OFFSHELL_CACHE_FORMAT = 1
+    # 2: the mass-set weight is normalised by |M_prod|^2 on shell, so every
+    #    bound in the vector changed scale.
+    _OFFSHELL_CACHE_FORMAT = 2
 
     def _read_offshell_cache(self, path):
         """The cached offshell bounds and Z_k tables, or None if there is
@@ -4461,6 +4463,27 @@ class MadSpinInterface(extended_cmd.Cmd):
         # Z_k discussion above _z_slot_keys.
         exact = offshell and self.options['sequential_exact']
         zkeys = self._z_slot_keys(particles, slot_to_index) if offshell else None
+        # |M_prod|^2 on shell: the denominator the joint offshell weight divides
+        # by (calculate_matrix_element_from_density evaluates it *before*
+        # reshuffle_production and returns it as prod_diag). It depends on the
+        # production event only -- which the chain never redraws -- so leaving it
+        # out would not bias anything, but it would leave the absolute scale of
+        # the production matrix element inside the mass-set weight while its
+        # bound is a single number shared by every production event: the loud
+        # kinematics would set the bound and then overflow it, the quiet ones
+        # would pay for it in acceptance. Cached on the event under the name the
+        # joint path already uses for the same quantity.
+        me_prod_on = 1.0
+        if offshell:
+            me_prod_on = getattr(production, 'me_wgt', None)
+            if not me_prod_on:
+                me_prod_on = self.calculate_matrix_element(production)
+                production.me_wgt = me_prod_on
+            if not me_prod_on:
+                # a production event with no matrix element cannot be normalised
+                # to itself; leave the weight unscaled rather than divide by zero
+                logger.debug('sequential: |M_prod|^2 = 0, mass weight unscaled')
+                me_prod_on = 1.0
         density_prod = None
         if not offshell:
             density_prod = getattr(production, '_ms_density_prod', None)
@@ -4507,7 +4530,12 @@ class MadSpinInterface(extended_cmd.Cmd):
                 # jacobians, and the offshell production trace -- go here, so the
                 # per-angle loop no longer carries them (that bundling made slot
                 # 0's acceptance ~1/300). See MADSPIN_SEQUENTIAL_PLAN.md sec 10.
-                w_mass = density_prod.trace().real * jac_reshuffle
+                # Tr(rho_off)/|M_prod|^2_on -- the offshell production matrix
+                # element over the onshell one, which is what the joint weight
+                # carries. Applied in probe mode too, unlike Z_hat: it is known
+                # before the scan, so the bound is measured on the same quantity
+                # the accept/reject will test.
+                w_mass = density_prod.trace().real / me_prod_on * jac_reshuffle
                 for s in order:
                     w_mass *= slot_mass[s][2]
                 if probe is not None:

@@ -800,24 +800,65 @@ The tabulated `Z` is accurate far beyond what is needed: the fit reports
 under 2%, against the narrow-width `(m/M) Gamma(m)/Gamma(M)` values 0.525 and
 1.704 -- i.e. under 0.5% on the shape, where 12% would do.
 
-#### Cost: the offshell path is *slower* than joint, and always was
+#### The mass weight must be normalised by |M_prod|^2 on shell (Olivier)
 
-Decay-phase wall time for the same 10000 events: joint 14.4 s, sequential 28.7
-s, sequential_exact 83.9 s.
+The mass-set weight above was written `Tr(rho_off) * jac_reshuffle * prod jac_bw`
+-- an offshell production matrix element in the numerator with nothing under it,
+while the joint weight divides by the **onshell** one
+(`calculate_matrix_element_from_density`: `MEdenom_prod` is evaluated before
+`reshuffle_production` and returned as `prod_diag`). The missing denominator is
 
-The earlier "faster than the joint test" claim counted **decay**-ME evaluations
-only (5.6 vs 8.9 per event, and it still holds: 6.3 here). It missed the
-mass-set stage, which draws **26 virtuality sets per accepted event**, each one
-an `Event(str(production))` parse, a production reshuffling and a production
-density evaluation, against the joint test's 4.5 trials. The `Z_hat` factor is
-not the cause: it inflates `C_mass` from ~14 to ~17-19, i.e. about a third of
-the gap. `sequential_exact` costs a further 3x (104 mass sets per accepted
-event) because a rejected decay now throws the mass set away.
+    w_mass = [ Tr(rho_off) / |M_prod|^2_on ] * jac_reshuffle * prod_k jac_bw_k
+                                            * prod_k Z_hat_k(m_k)
+
+**It is not a bias.** `|M_prod|^2_on` depends on the production event alone, and
+the chain never redraws the production event -- the mass stage resamples
+virtualities, nothing else. A factor constant over everything the chain
+resamples cancels between the weight and its bound, and since every production
+event is kept and retried to acceptance it cannot reweight events against each
+other either. Which is why the A/B closed without it.
+
+**It is still wrong**, because `C_mass` is a single number shared by every
+production event. Left out, the absolute scale of `|M_prod|^2` rides inside
+`w_mass` and varies across the sample by orders of magnitude: the bound is set
+by the loudest kinematics, the quiet ones pay for it in acceptance, and the loud
+ones exceed it and are silently truncated. Both of the runs reported above did
+log the overflow CRITICAL -- 10 weights (sequential) and 28 (exact) -- and the
+per-slot lines carry no overflow annotation, so every one of them was at the
+mass stage.
+
+Measured, same 10000 events, before -> after normalising:
+
+    C_mass                       17.1  ->  3.09
+    mass sets / accepted event   26.2  ->  3.20     (sequential)
+                                104.5  -> 12.79     (sequential_exact)
+    weights above their bound      10  ->  1        (sequential)
+                                   28  ->  3        (sequential_exact)
+    decay phase                  28.7s -> 19.7s     (sequential)
+                                 83.9s -> 31.4s     (sequential_exact)
+
+with the lineshape unchanged, as the constancy argument requires: over both
+resonances the sequential mean moves from 173.1641 to 173.17 and the exact one
+sits at 173.1877 against joint's 173.1853. Cost: one onshell production matrix
+element per production event, cached under `me_wgt` -- the same attribute, and
+the same quantity, the joint path already caches there.
+
+#### Cost: the offshell path is still slower than joint on n = 2
+
+Decay-phase wall time for the same 10000 events: joint 14.4 s, sequential 19.7
+s, sequential_exact 31.4 s.
+
+The "faster than the joint test" claim counted **decay**-ME evaluations only
+(5.6 vs 8.9 per event, and it still holds: 6.3 here). Removing 88% of the
+mass-set draws bought only 31% of the wall time, which locates the rest on the
+**per-decay** side: each draw costs an onshell ME, an `Event(str(decay))` LHE
+round-trip, a reshuffle, a density and a contraction, and sequential does 6.3 of
+those against joint's 8.9 -- so per draw it is doing more work than the joint
+test does. That string round-trip, in both `_offshell_production` and the slot
+loop, is the first thing to profile if this path is to get faster.
 
 So `sequential_decay = auto` should keep routing madspin/full to the joint
-accept/reject. What this fix buys is that the offshell path is *correct* when
-switched on explicitly, and a per-slot decomposition that pays off for n >= 3 --
-where the joint test's cost grows like n / prod eff_k while the mass-set stage's
-does not. Making the mass-set stage itself cheaper (its acceptance is 1/26, so
-`C_mass` is ~26x the mean weight -- the production reshuffling jacobian tail) is
-the next thing to look at if that path is to be the default anywhere.
+accept/reject. What this buys is that the offshell path is *correct* when
+switched on explicitly, and a per-slot decomposition that pays off for n >= 3,
+where the joint test's cost grows like n / prod eff_k while neither the mass-set
+stage nor the per-slot draws do.
