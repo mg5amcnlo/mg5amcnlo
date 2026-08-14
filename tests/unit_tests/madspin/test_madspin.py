@@ -1144,6 +1144,7 @@ class TestSequentialAcceptReject(unittest.TestCase):
             _scan_maxwgt_range = interface._scan_maxwgt_range
             _sequential_offshell = interface._sequential_offshell
             _unweighting_mode = interface._unweighting_mode
+            _announce_mode = interface._announce_mode
             _log_once = interface._log_once
             def __init__(self):
                 self.options = {'spinmode': 'onshell',
@@ -1237,6 +1238,7 @@ class TestSequentialPoolLadder(unittest.TestCase):
             _sequential_pool_ladder = interface._sequential_pool_ladder
             _sequential_active = interface._sequential_active
             _unweighting_mode = interface._unweighting_mode
+            _announce_mode = interface._announce_mode
             _log_once = interface._log_once
             _sequential_spin_order = interface._sequential_spin_order
             _decay_pool_ladder = staticmethod(interface._decay_pool_ladder)
@@ -1441,6 +1443,7 @@ class TestOffshellRateFactor(unittest.TestCase):
 
     class _Stub(object):
         _unweighting_mode = interface_madspin.MadSpinInterface._unweighting_mode
+        _announce_mode = interface_madspin.MadSpinInterface._announce_mode
         _log_once = interface_madspin.MadSpinInterface._log_once
         _build_z_tables = interface_madspin.MadSpinInterface._build_z_tables
         _weighted_polyfit2 = staticmethod(

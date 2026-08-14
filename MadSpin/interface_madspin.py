@@ -2272,7 +2272,7 @@ class MadSpinInterface(extended_cmd.Cmd):
         """
         if not density_method:
             return 'joint'
-        mode = self.options['unweighting']
+        asked = mode = self.options['unweighting']
         if mode == 'auto':
             nb_decaying = getattr(self, '_nb_decaying', 2)
             if nb_decaying <= 1:
@@ -2290,17 +2290,17 @@ class MadSpinInterface(extended_cmd.Cmd):
             else:
                 mode = 'sequential'
         if mode == 'joint':
-            return 'joint'
+            return self._announce_mode('joint', asked)
         if self.options['fixed_order']:
             self._log_once('fixed_order',
                            "MadSpin: fixed_order is on, keeping the joint "
                            "accept/reject (unweighting ignored)")
-            return 'joint'
+            return self._announce_mode('joint', asked)
         if self.options['spinmode'] not in ['PA', 'onshell', 'madspin', 'full']:
             self._log_once('spinmode',
                            "MadSpin: spinmode=%s keeps the joint accept/reject "
                            "(unweighting ignored)", self.options['spinmode'])
-            return 'joint'
+            return self._announce_mode('joint', asked)
         if (mode in ('two_stage', 'sequential_global_retry')
                 and self.options['spinmode'] in ['PA', 'onshell']):
             self._log_once('offshell_only',
@@ -2308,7 +2308,16 @@ class MadSpinInterface(extended_cmd.Cmd):
                            "(it splits the accept/reject at the up-front mass "
                            "draw, which PA/onshell do not have); using "
                            "sequential instead", mode)
-            return 'sequential'
+            return self._announce_mode('sequential', asked)
+        return self._announce_mode(mode, asked)
+
+    def _announce_mode(self, mode, asked):
+        """Say once which scheme the run uses. Worth a line because the card no
+        longer answers it: 'auto' resolves on the process."""
+        self._log_once('mode', "MadSpin: unweighting = %s (%s)", mode,
+                       'auto, %s decaying particle(s)'
+                       % getattr(self, '_nb_decaying', '?')
+                       if asked == 'auto' else 'set explicitly')
         return mode
 
     def _sequential_active(self, density_method):
