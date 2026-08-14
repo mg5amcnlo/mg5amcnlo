@@ -1142,9 +1142,11 @@ class TestSequentialAcceptReject(unittest.TestCase):
             _decay_slot_order = interface._decay_slot_order
             sequential_accept_reject = interface.sequential_accept_reject
             _scan_maxwgt_range = interface._scan_maxwgt_range
+            _sequential_offshell = interface._sequential_offshell
             def __init__(self):
                 self.options = {'spinmode': 'onshell',
-                                'sequential_spin_order': '2 3 1'}
+                                'sequential_spin_order': '2 3 1',
+                                'sequential_exact': False}
             def _density_basis(self, production, decays_key):
                 particles, slots = interface._sequential_slots(production, decays_key)
                 return {'decays_key': decays_key, 'helicities': hels,
@@ -1335,11 +1337,11 @@ class TestScanMaxwgtDecomposition(unittest.TestCase):
         stub, events, evt_decayfile = self._fixture()
 
         random.seed(5)
-        whole = stub._scan_maxwgt_range(events, 0, 6, evt_decayfile, 6, 30)
+        whole, _ = stub._scan_maxwgt_range(events, 0, 6, evt_decayfile, 6, 30)
 
         random.seed(5)
-        first = stub._scan_maxwgt_range(events, 0, 2, evt_decayfile, 6, 30)
-        second = stub._scan_maxwgt_range(events, 2, 6, evt_decayfile, 6, 30)
+        first, _ = stub._scan_maxwgt_range(events, 0, 2, evt_decayfile, 6, 30)
+        second, _ = stub._scan_maxwgt_range(events, 2, 6, evt_decayfile, 6, 30)
 
         self.assertEqual(len(whole), 6)
         self.assertEqual(first + second, whole)
@@ -1349,8 +1351,269 @@ class TestScanMaxwgtDecomposition(unittest.TestCase):
         import random
         random.seed(1)
         #Ignore the message "Error while creating the f2py modules for the production/decay part"
-        per_event = stub._scan_maxwgt_range(events, 0, 6, evt_decayfile, 6, 20)
+        per_event, _ = stub._scan_maxwgt_range(events, 0, 6, evt_decayfile, 6, 20)
         self.assertEqual(len(per_event), 6)
         for vec in per_event:
             self.assertEqual(len(vec), 2)          # two decaying particles
             self.assertTrue(all(w >= 0 for w in vec))
+
+
+class TestOffshellRateFactor(unittest.TestCase):
+    """Z_k(m): the normalisation the per-angle stage of the offshell sequential
+    accept/reject divides out, and which therefore has to be put back into the
+    mass-set weight.
+
+    Z_k is the offshell decay rate at the sampled virtuality over the onshell
+    one -- for a two-body decay of a spin-1/2 parent it is (m/M) Gamma(m)/Gamma(M),
+    a smooth function of that slot's virtuality alone. These tests check that the
+    tabulation recovers a known one from the samples the max-weight probe
+    collects, that it interpolates and clips as advertised, and that it lands in
+    the two weights the way sequential_exact needs.
+    """
+
+    class _Val(object):
+        def __init__(self, value):
+            self.value = value
+
+    class _Banner(object):
+        def get(self, card, kind, pdg):
+            return TestOffshellRateFactor._Val(173.0)
+
+    class _Stub(object):
+        _build_z_tables = interface_madspin.MadSpinInterface._build_z_tables
+        _weighted_polyfit2 = staticmethod(
+                        interface_madspin.MadSpinInterface._weighted_polyfit2)
+        _z_slot_keys = staticmethod(
+                        interface_madspin.MadSpinInterface._z_slot_keys)
+        _zhat = interface_madspin.MadSpinInterface._zhat
+        _complete_offshell_probe = \
+                        interface_madspin.MadSpinInterface._complete_offshell_probe
+        def __init__(self, exact=False):
+            self.banner = TestOffshellRateFactor._Banner()
+            self.options = {'sequential_exact': exact}
+            self._z_tables = {}
+
+    @staticmethod
+    def _truth(mass):
+        """A stand-in running width: (m/M) Gamma(m)/Gamma(M) for t > W b."""
+        pole, mw = 173.0, 80.419
+        def rate(m):
+            x = (mw / m) ** 2
+            return m ** 4 * (1 - x) ** 2 * (1 + 2 * x)
+        return rate(mass) / rate(pole)
+
+    def _samples(self, nb=20000, seed=3, spread=1.0, threshold=0.0):
+        """(virtuality, rate factor) pairs as the probe records them: one draw
+        each, the rate factor fluctuating around Z(m) with a large spread -- the
+        table is an average, not a fit through clean points."""
+        import random
+        rng = random.Random(seed)
+        out = []
+        for _ in range(nb):
+            mass = rng.uniform(150.0, 196.0)
+            if mass < threshold:
+                out.append((mass, 0.0))
+                continue
+            # lognormal noise, mean one: E[value | m] = Z(m)
+            noise = math.exp(rng.gauss(0, spread) - 0.5 * spread ** 2)
+            out.append((mass, self._truth(mass) * noise))
+        return out
+
+    def test_polyfit_recovers_a_quadratic(self):
+        xs = [-2.0, -1.0, 0.0, 1.0, 2.0, 3.0]
+        ys = [0.5 - 2 * x + 3 * x ** 2 for x in xs]
+        coeff = self._Stub()._weighted_polyfit2(xs, ys, [1.0] * len(xs))
+        for got, want in zip(coeff, [0.5, -2.0, 3.0]):
+            self.assertAlmostEqual(got, want, places=6)
+
+    def test_polyfit_is_degenerate_below_three_points(self):
+        stub = self._Stub()
+        self.assertIsNone(stub._weighted_polyfit2([1.0, 2.0], [1.0, 2.0], [1, 1]))
+        self.assertIsNone(stub._weighted_polyfit2([1.0] * 4, [1.0] * 4, [1] * 4))
+
+    def test_tabulation_recovers_the_running_width(self):
+        """The whole point: an average over noisy per-draw samples reproduces
+        the underlying Z(m) across the Breit-Wigner range.
+
+        The tolerance that matters is on the *slope* of ln Z -- a fractional
+        error there survives as the same fractional error on the lineshape shift
+        the factor corrects -- so it is checked directly, and much more tightly
+        than the 10% the physics needs.
+        """
+        stub = self._Stub()
+        stub._z_tables = stub._build_z_tables({'6_0': self._samples()})
+        self.assertIn('6_0', stub._z_tables)
+        for mass in (152.0, 160.0, 173.0, 185.0, 195.0):
+            self.assertLess(abs(stub._zhat('6_0', mass) / self._truth(mass) - 1),
+                            0.05, 'Z(%s) off' % mass)
+        slope = ((math.log(stub._zhat('6_0', 190.0) / stub._zhat('6_0', 156.0)))
+                 / (math.log(self._truth(190.0) / self._truth(156.0))))
+        self.assertLess(abs(slope - 1), 0.05)
+
+    def test_normalised_at_the_pole(self):
+        stub = self._Stub()
+        stub._z_tables = stub._build_z_tables({'6_0': self._samples()})
+        self.assertAlmostEqual(stub._zhat('6_0', 173.0), 1.0, places=6)
+
+    def test_held_constant_outside_the_probed_range(self):
+        """Beyond the samples the fit is unconstrained, so it is frozen at the
+        edge rather than extrapolated."""
+        stub = self._Stub()
+        stub._z_tables = stub._build_z_tables({'6_0': self._samples()})
+        self.assertEqual(stub._zhat('6_0', 400.0), stub._zhat('6_0', 196.0))
+        self.assertEqual(stub._zhat('6_0', 100.0), stub._zhat('6_0', 150.0))
+
+    def test_threshold_is_recorded_as_a_hard_zero(self):
+        """Virtualities no decay of the pool can be reshuffled onto give a rate
+        factor of exactly zero, and the mass-set stage must reject them: Z there
+        is 0, not the low edge of the fit."""
+        stub = self._Stub()
+        stub._z_tables = stub._build_z_tables(
+                            {'6_0': self._samples(threshold=165.0)})
+        self.assertEqual(stub._zhat('6_0', 160.0), 0.0)
+        self.assertGreater(stub._zhat('6_0', 180.0), 0.0)
+
+    def test_no_table_is_a_factor_one(self):
+        """The max-weight probe itself runs before any table exists, and every
+        non-offshell mode never builds one."""
+        stub = self._Stub()
+        self.assertEqual(stub._zhat('6_0', 160.0), 1.0)
+        stub._z_tables = stub._build_z_tables({'6_0': self._samples(nb=10)})
+        self.assertEqual(stub._z_tables, {})
+        self.assertEqual(stub._zhat('6_0', 160.0), 1.0)
+
+    def test_slot_keys_separate_identical_parents(self):
+        Part = TestSequentialAcceptReject._Part
+        particles = [Part(6), Part(-6), Part(6)]
+        keys = self._Stub()._z_slot_keys(particles, [0, 2, 1])
+        self.assertEqual(keys, ['6_0', '6_1', '-6_0'])
+
+    def _probe_event(self):
+        return {'keys': ['6_0', '-6_0'], 'order': [1, 0],
+                'chains': [[[2.0, 3.0, 5.0], [160.0, 180.0]],
+                           [[1.0, 7.0, 4.0], [173.0, 173.0]]]}
+
+    def test_probe_completion_puts_z_in_the_mass_weight(self):
+        """The probe records the mass-set weight before Z exists; completing it
+        multiplies in one Z per slot, and leaves the per-angle weights alone."""
+        stub = self._Stub()
+        stub._z_tables = stub._build_z_tables({'6_0': self._samples(),
+                                               '-6_0': self._samples(seed=9)})
+        z0, z1 = stub._zhat('6_0', 160.0), stub._zhat('-6_0', 180.0)
+        best = stub._complete_offshell_probe(self._probe_event())
+        self.assertAlmostEqual(best[0], max(2.0 * z0 * z1, 1.0), places=10)
+        self.assertEqual(best[1], 7.0)      # position 0 = slot 1
+        self.assertEqual(best[2], 5.0)
+
+    def test_probe_completion_divides_z_out_per_slot_when_exact(self):
+        """Under sequential_exact the mass stage pays Z and the slot takes it
+        back, so the bound each slot is tested against is the one of w_k/Z_k --
+        mapped through the ordering, not the slot order."""
+        stub = self._Stub(exact=True)
+        stub._z_tables = stub._build_z_tables({'6_0': self._samples(),
+                                               '-6_0': self._samples(seed=9)})
+        z_by_slot = [stub._zhat('6_0', 160.0), stub._zhat('-6_0', 180.0)]
+        best = stub._complete_offshell_probe(self._probe_event())
+        # order [1, 0]: probe position 0 is slot 1, position 1 is slot 0
+        self.assertAlmostEqual(best[1], max(3.0 / z_by_slot[1], 7.0), places=10)
+        self.assertAlmostEqual(best[2], max(5.0 / z_by_slot[0], 4.0), places=10)
+
+
+class TestTwoStageMassDistribution(unittest.TestCase):
+    """The bias the Z_k factor exists to remove, and the two cures, on a model
+    of the offshell chain small enough to solve exactly.
+
+    The chain is: draw a virtuality m from a prior, accept the mass set with
+    probability w_mass(m) Z_hat(m) / C, then draw decay angles until one is
+    accepted with probability w(m, angle) / C_ang. The target -- what the joint
+    accept/reject samples -- is p(m) w_mass(m) E_angle[w(m, .)]. Because the
+    per-angle stage redraws until it accepts, it divides its own normalisation
+    Z(m) = E_angle[w(m, .)] out again, so with Z_hat = 1 the accepted
+    virtualities come out proportional to p(m) w_mass(m) instead: the
+    Breit-Wigner shape rather than the offshell one. This is the measured
+    ttbar bias in miniature.
+    """
+
+    ANGLES = [0.3, 0.8, 1.6, 2.5]      # the decay "pool"
+    MASSES = [160.0, 170.0, 180.0, 190.0]
+
+    def _w(self, mass, angle):
+        """Per-angle weight; its angle average rises steeply with the mass, as
+        the offshell rate factor does."""
+        return (mass / 170.0) ** 6 * angle
+
+    def _w_mass(self, mass):
+        return 1.0 + (mass - 160.0) / 100.0
+
+    def _z(self, mass):
+        return sum(self._w(mass, a) for a in self.ANGLES) / len(self.ANGLES)
+
+    def _target(self):
+        raw = {m: self._w_mass(m) * self._z(m) for m in self.MASSES}
+        total = sum(raw.values())
+        return {m: v / total for m, v in raw.items()}
+
+    def _run(self, zhat, exact, nb=200000, seed=7):
+        """The two-stage chain, mirroring sequential_accept_reject's offshell
+        branch: mass-set accept/reject, then one slot redrawn to acceptance
+        (or, under ``exact``, a rejected angle killing the mass set)."""
+        import random
+        rng = random.Random(seed)
+        c_mass = max(self._w_mass(m) * zhat(m) for m in self.MASSES) * 1.01
+        c_ang = max(self._w(m, a) / zhat(m)
+                    for m in self.MASSES for a in self.ANGLES) * 1.01
+        counts = collections.Counter()
+        for _ in range(nb):
+            while True:
+                mass = rng.choice(self.MASSES)
+                if rng.random() * c_mass >= self._w_mass(mass) * zhat(mass):
+                    continue
+                restart = False
+                while True:
+                    angle = rng.choice(self.ANGLES)
+                    if rng.random() * c_ang < self._w(mass, angle) / zhat(mass):
+                        break
+                    if exact:
+                        restart = True
+                        break
+                if not restart:
+                    break
+            counts[mass] += 1
+        return {m: counts[m] / float(nb) for m in self.MASSES}
+
+    def _assert_close(self, got, want, tolerance):
+        for mass in self.MASSES:
+            self.assertLess(abs(got[mass] / want[mass] - 1), tolerance,
+                            'mass %s: got %.4f, want %.4f' % (mass, got[mass],
+                                                              want[mass]))
+
+    def test_without_the_factor_the_mass_distribution_is_biased(self):
+        """The bug: the accepted virtualities follow p(m) w_mass(m), the shape
+        the per-angle stage was supposed to reweight."""
+        got = self._run(lambda m: 1.0, exact=False)
+        prior = {m: self._w_mass(m) for m in self.MASSES}
+        total = sum(prior.values())
+        self._assert_close(got, {m: v / total for m, v in prior.items()}, 0.03)
+        self.assertGreater(abs(got[190.0] / self._target()[190.0] - 1), 0.3)
+
+    def test_the_exact_factor_restores_the_target(self):
+        self._assert_close(self._run(self._z, exact=False), self._target(), 0.03)
+
+    def test_a_wrong_factor_biases_by_exactly_its_error(self):
+        """Why the tabulation has to be accurate: the per-angle stage divides
+        out the true Z whatever weight it is given, so the residual bias is
+        Z_hat/Z -- it does not cancel."""
+        skew = lambda m: self._z(m) * (m / 170.0) ** 2
+        got = self._run(skew, exact=False)
+        want = {m: v * (m / 170.0) ** 2 for m, v in self._target().items()}
+        total = sum(want.values())
+        self._assert_close(got, {m: v / total for m, v in want.items()}, 0.03)
+
+    def test_sequential_exact_is_right_for_any_factor(self):
+        """And why the switch exists: rejecting the mass set instead of
+        redrawing the angle stops the per-angle stage from normalising, so
+        Z_hat cancels from the chain and only sets the efficiency."""
+        for zhat in (lambda m: 1.0,
+                     lambda m: self._z(m),
+                     lambda m: self._z(m) * (m / 170.0) ** 2):
+            self._assert_close(self._run(zhat, exact=True), self._target(), 0.03)
