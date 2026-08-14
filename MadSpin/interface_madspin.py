@@ -88,7 +88,7 @@ class MadSpinOptions(banner.ConfigFile):
         self.add_param('sequential_spin_order', '2 3 1', comment='spin order (MG5 2S+1 convention) deciding which particle is accept/rejected first in sequential_decay: default fermions, then vectors, then scalars (which can never be rejected).')
         self.add_param('sequential_exact', False, comment='sequential_decay with an offshell spinmode (madspin/full) only: reject the whole mass set when a decay is rejected, instead of redrawing that decay until it is accepted. Makes the scheme exact whatever the accuracy of the tabulated offshell rate factor, at a lower acceptance. Ignored by PA/onshell, which need no such factor.')
         self.add_param('sequential_debug', False, comment='sequential_decay with an offshell spinmode: on every accepted chain, recompute the joint weight for the same production event, virtualities and decays and check that the product of the stage weights reproduces it (times the number of helicity states). Deterministic check of the decomposition itself -- Z_hat cancels out of it -- at roughly the cost of a joint trial per event. Debugging only.')
-        self.add_param('sequential_joint_angles', False, comment='sequential_decay with an offshell spinmode (madspin/full) only: draw every decay and test their weights against a *single* bound instead of one per particle, rejecting the mass set on failure. This is the joint accept/reject with a mass-set stage in front of it: exact, and it trades the per-particle bounds (whose product is looser than one bound on the product) against losing the early exit when an early particle is rejected. Implies sequential_exact.')
+        self.add_param('sequential_joint_angles', False, comment='sequential_decay with an offshell spinmode (madspin/full) only: draw every decay and test their weights against a *single* bound instead of one per particle, redrawing the whole set against the same virtualities on failure. The production reshuffling and its density matrix are then evaluated once per accepted mass set instead of once per trial, which the joint accept/reject cannot do. Takes precedence over sequential_exact.')
 
     ############################################################################
     ##  Special post-processing of the options                                ## 
@@ -2924,8 +2924,7 @@ class MadSpinInterface(extended_cmd.Cmd):
         exact_restarts = merged.get('nb_exact_restart', 0)
         angle_tries = merged.get('nb_angleset_try', 0)
         if angle_tries:
-            # variant B: one bound over all the angles, a rejection costing the
-            # mass set
+            # sequential_joint_angles: one bound over all the angles
             logger.info("MadSpin sequential angle stage: %.2f angle sets per "
                         "accepted event (%d drawn, %d rejected)",
                         float(angle_tries) / n_written if n_written
@@ -2935,14 +2934,11 @@ class MadSpinInterface(extended_cmd.Cmd):
             # the offshell mass-set stage: how many virtuality sets (each one a
             # production reshuffling and a production density) are drawn per
             # accepted event
-            # An angle-set rejection costs a mass set only under the restart
-            # scheme (variant B); with sequential_joint_angles alone (variant A)
-            # the mass set is kept and only the decays are drawn again, which is
-            # the whole point of that variant -- counting those here would
-            # inflate the production-side work by the angle-stage rejections.
+            # An angle-set rejection does not cost a mass set: the set is kept
+            # and only the decays are drawn again, which is the whole point of
+            # sequential_joint_angles. Counting those here would inflate the
+            # production-side work by the angle-stage rejections.
             drawn = rejects + restarts + exact_restarts + n_written
-            if self.options['sequential_exact']:
-                drawn += merged.get('nb_angle_reject', 0)
             logger.info("MadSpin sequential mass stage: %.2f mass sets per "
                         "accepted event (%d drawn, %d rejected%s)",
                         float(drawn) / n_written if n_written else float('inf'),
@@ -4587,7 +4583,18 @@ class MadSpinInterface(extended_cmd.Cmd):
         # normalises itself -- and it keeps Z_hat only as a preconditioner,
         # since it cancels between the two stages.
         joint_angles = offshell and self.options['sequential_joint_angles']
-        exact = offshell and self.options['sequential_exact']
+        # The two never combine: testing every angle against one bound *and*
+        # making a rejection cost the mass set was measured (as "variant B") and
+        # dropped -- it throws away the reuse that motivates the single bound,
+        # and it landed further from the joint accept/reject than either
+        # surviving scheme without the weight identity explaining why.
+        exact = offshell and self.options['sequential_exact'] and not joint_angles
+        if (joint_angles and self.options['sequential_exact']
+                and not getattr(self, '_warned_joint_exact', False)):
+            self._warned_joint_exact = True     # once per run, not per event
+            logger.warning("MadSpin: sequential_joint_angles takes precedence "
+                           "over sequential_exact; a rejected angle set is "
+                           "redrawn against the same mass set.")
         zkeys = self._z_slot_keys(particles, slot_to_index) if offshell else None
         # |M_prod|^2 on shell: the denominator the joint offshell weight divides
         # by (calculate_matrix_element_from_density evaluates it *before*
@@ -4699,14 +4706,13 @@ class MadSpinInterface(extended_cmd.Cmd):
             # virtualities first: the joint accept/reject pays a production
             # reshuffling and a production density matrix on every trial,
             # because a rejection there redraws the masses too.
-            #   sequential_joint_angles alone (variant A): a rejected angle set
-            #     is redrawn against the same mass set, so this loop is where
-            #     the reuse happens -- and, redrawing to acceptance, it
-            #     normalises itself, which is what the Z_hat factor in w_mass
-            #     compensates.
-            #   with sequential_exact (variant B): a rejected angle set costs
-            #     the mass set, which makes Z_hat cancel and the scheme exact,
-            #     at the price of throwing that reuse away.
+            #   sequential_joint_angles: a rejected angle set is redrawn
+            #     against the same mass set, so this loop is where the reuse
+            #     happens -- and, redrawing to acceptance, it normalises itself,
+            #     which is what the Z_hat factor in w_mass compensates.
+            #   sequential_exact: a rejected *decay* costs the mass set, which
+            #     makes Z_hat cancel and that scheme exact whatever the table
+            #     says, at the price of the reuse.
             while True:
                 slot_densities = {}
                 slot_decays = {}
@@ -4957,13 +4963,10 @@ class MadSpinInterface(extended_cmd.Cmd):
                                      w_angles, c_angles)
                     if random.random() * c_angles >= w_angles:
                         stats['nb_angle_reject'] += 1
-                        if exact:
-                            restart = True      # variant B: the mass set pays
-                        else:
-                            # variant A: keep the mass set, and with it the
-                            # reshuffled production and its density matrix --
-                            # only the decays are drawn again
-                            continue
+                        # keep the mass set, and with it the reshuffled
+                        # production and its density matrix: only the decays are
+                        # drawn again. That reuse is the point of this scheme.
+                        continue
                 break
             if not restart and draw_mass and not keep_jac and probe is None:
                 # feasibility of the complete mass set: one reshuffle for the
