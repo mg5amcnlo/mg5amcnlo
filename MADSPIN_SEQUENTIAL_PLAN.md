@@ -954,23 +954,54 @@ Variant A is now faster than joint on n = 2 and correct as far as the statistics
 can tell, so that default is worth revisiting -- but not before the residual
 below is understood.
 
-**Open: all the tabulated schemes sit low.** Over four replicas each, against
-joint at 173.1818 +- 0.0024 (replica scatter):
+**Resolved: the residual is statistical, and Z_hat is not the limiting factor.**
+Earlier revisions of this section recorded that every tabulated scheme sat below
+joint with the same sign in all twelve replicas, and flagged a possible `Z_hat`
+inaccuracy. Tested directly by raising `max_weight_ps_point` from 500 to 2500,
+i.e. 187500 probe samples per slot instead of 37500:
 
-    variant A            173.1704 +- 0.0101   -0.011   (-1.1 sigma)
-    sequential per-slot  173.1703 +- 0.0062   -0.012   (-1.7 sigma)
-    variant B (dropped)  173.1478 +- 0.0076   -0.034   (-4.3 sigma)
+    Z table         Z(150.6)      Z(195.4)     bin/fit deviation
+    1x probe      0.527 / 0.529  1.705/1.710      1.8% / 0.8%
+    5x probe      0.524 / 0.524  1.707/1.705      0.4% / 0.6%
+    analytic          0.5245        1.7036
 
-Each is within its errors on the conservative model and marginal on the
-optimistic one, but the sign is the same in all twelve replicas. That is what a
-small `Z_hat` inaccuracy would look like -- and variant A and the per-slot
-scheme are exposed to it, while variant B is not, which makes variant B's
-being the *worst* the thing to explain first.
+The table is already converged at the default statistics: five times the samples
+move its endpoints by under 1%, the bin-to-fit deviation falls like 1/sqrt(N)
+(so it was statistical, not a wrong fit form), and the deep table reproduces the
+narrow-width `(m/M) Gamma(m)/Gamma(M)` to 0.1-0.2%. Against a lineshape
+sensitivity of 0.25 GeV per unit fractional error in the slope of `ln Z`, the
+observed residual would have needed a ~4.4% slope error -- an order of magnitude
+more than the table's ~0.5%.
 
-**Next step: check the weight identity, not more statistics.** For one
-(production, mass set, decay set), `w_mass * prod_k (w_k/Z_hat_k)` must equal
+And the lineshape moved the wrong way for a systematic, over four replicas each:
+
+    variant A, 1x probe   173.1704 +- 0.0101    -0.011 +- 0.010   (-1.1 sigma)
+    variant A, 5x probe   173.1985 +- 0.0182    +0.017 +- 0.018   (+0.9 sigma)
+    joint                 173.1818 +- 0.0024
+
+-- it flipped sign rather than shrinking, and three of the four deep-probe
+replicas sit *above* joint, which retires the "same sign every time" pattern.
+Pooling all eight variant A replicas gives **173.1844 +- 0.0110 against joint's
+173.1818, i.e. +0.003 +- 0.011 (+0.23 sigma)**. Variant A agrees with the joint
+accept/reject.
+
+`max_weight_ps_point = 500` is therefore sufficient for the Z table; the deeper
+probe costs 169 s against 76 s per 10000-event run (the probe is fixed setup, so
+it amortises on larger samples) and buys nothing.
+
+**What this leaves open.** Variant B's -0.034 GeV was quoted at "-4.3 sigma" on
+the replica-scatter error model; that significance is not trustworthy. The
+replica scatter itself ranges from 0.005 (joint) to 0.036 (variant A, deep
+probe) across schemes estimated from four points each -- a ~40% uncertainty on
+the error bar before any comparison is made -- and the two error models
+(naive per-run MC error, and replica scatter) disagree by a factor of three.
+Any future claim at the few-hundredths-of-a-GeV level needs either many more
+replicas or, better, the deterministic check below.
+
+**The check worth doing anyway.** For one (production, mass set, decay set),
+`w_mass * prod_k (w_k/Z_hat_k)` must equal
 `prod_i n_i * |M_prod|^2_on * wgt_joint` up to floating point -- the same
-deterministic check that verified the decay-reshuffling jacobian to 1.5e-7. It
-settles exactness for every variant at once, with no error model to argue about,
-and it is the only way to separate a `Z_hat` inaccuracy from an implementation
-bug.
+deterministic identity that verified the decay-reshuffling jacobian to 1.5e-7.
+It settles exactness for every variant at once, with no error model to argue
+about, and it is the only way to separate a residual `Z_hat` effect from an
+implementation bug in a scheme like variant B.
