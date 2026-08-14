@@ -1617,3 +1617,117 @@ class TestTwoStageMassDistribution(unittest.TestCase):
                      lambda m: self._z(m),
                      lambda m: self._z(m) * (m / 170.0) ** 2):
             self._assert_close(self._run(zhat, exact=True), self._target(), 0.03)
+
+
+class TestOffshellCache(unittest.TestCase):
+    """The offshell sequential bounds travel with the Z_k tables that complete
+    them, so the cache holds two coupled objects and must not be read back under
+    a schema it was not written with.  A mismatch is ignored rather than raised
+    on: the scan is reproducible, so re-measuring is always available, whereas a
+    table dereferenced under the wrong schema would either crash inside the
+    accept/reject or silently weight the virtualities with the wrong fit.
+    """
+
+    class _Stub(object):
+        _OFFSHELL_CACHE_FORMAT = \
+            interface_madspin.MadSpinInterface._OFFSHELL_CACHE_FORMAT
+        _read_offshell_cache = \
+            interface_madspin.MadSpinInterface._read_offshell_cache
+
+    def _write(self, payload):
+        import json, tempfile
+        handle, path = tempfile.mkstemp(suffix='.json')
+        with os.fdopen(handle, 'w') as f:
+            json.dump(payload, f)
+        self.addCleanup(os.remove, path)
+        return path
+
+    def _good(self):
+        return {'format': self._Stub._OFFSHELL_CACHE_FORMAT,
+                'maxwgts': [17.0, 2.3, 3.9],
+                'z_tables': {'6_0': {'pole': 173.0, 'coeff': [0.0, 2.0, -1.0],
+                                     'zero_below': 0.0, 'range': [150.0, 195.0]}}}
+
+    def test_round_trip(self):
+        got = self._Stub()._read_offshell_cache(self._write(self._good()))
+        self.assertEqual(got['maxwgts'], [17.0, 2.3, 3.9])
+        self.assertEqual(got['z_tables']['6_0']['pole'], 173.0)
+
+    def test_missing_file_is_not_an_error(self):
+        self.assertIsNone(self._Stub()._read_offshell_cache('/no/such/file'))
+        self.assertIsNone(self._Stub()._read_offshell_cache(''))
+
+    def test_every_malformed_shape_is_ignored(self):
+        """Each of these would otherwise surface as a KeyError, an IndexError or
+        a wrong weight somewhere inside the unweighting loop."""
+        cases = {}
+        cases['no format tag'] = {k: v for k, v in self._good().items()
+                                  if k != 'format'}
+        cases['older format'] = dict(self._good(), format=0)
+        cases['no bounds'] = dict(self._good(), maxwgts=[])
+        cases['no tables'] = {k: v for k, v in self._good().items()
+                              if k != 'z_tables'}
+        short = self._good()
+        short['z_tables']['6_0'].pop('zero_below')
+        cases['table missing a field'] = short
+        degree = self._good()
+        degree['z_tables']['6_0']['coeff'] = [0.0, 2.0, -1.0, 0.5]
+        cases['a cubic fit'] = degree
+        window = self._good()
+        window['z_tables']['6_0']['range'] = [150.0]
+        cases['a malformed range'] = window
+        for name, payload in cases.items():
+            self.assertIsNone(
+                self._Stub()._read_offshell_cache(self._write(payload)), name)
+
+    def test_garbage_is_ignored(self):
+        import tempfile
+        handle, path = tempfile.mkstemp(suffix='.json')
+        with os.fdopen(handle, 'w') as f:
+            f.write('not json at all')
+        self.addCleanup(os.remove, path)
+        self.assertIsNone(self._Stub()._read_offshell_cache(path))
+
+
+class TestPolyfitConditioning(unittest.TestCase):
+    """_weighted_polyfit2 solves the normal equations of a fit in
+    u = ln(m/pole), which spans about +-0.13 over a Breit-Wigner window.  The
+    moments therefore range over four orders of magnitude before any data is
+    seen, which is why the degeneracy test has to be relative to the size of the
+    matrix rather than an absolute floor.
+    """
+
+    def _fit(self, xs, ys, ws=None):
+        return interface_madspin.MadSpinInterface._weighted_polyfit2(
+                        xs, ys, ws or [1.0] * len(xs))
+
+    def _window(self, pole=173.0, lo=150.7, hi=195.4, nb=20):
+        return [math.log((lo + i * (hi - lo) / (nb - 1)) / pole)
+                for i in range(nb)]
+
+    def test_recovers_a_quadratic_on_the_real_fit_variable(self):
+        """Exact data over the actual window, with the actual weights (bin
+        counts in the thousands): the conditioning of this fit is ~3e4, so
+        double precision must return the coefficients essentially exactly."""
+        xs = self._window()
+        ys = [0.3 + 2.0 * x - 1.0 * x ** 2 for x in xs]
+        got = self._fit(xs, ys, [1000.0] * len(xs))
+        for value, want in zip(got, [0.3, 2.0, -1.0]):
+            self.assertAlmostEqual(value, want, places=8)
+
+    def test_all_bins_at_one_virtuality_is_degenerate(self):
+        """The case the tolerance exists for.  An absolute floor of 1e-30 would
+        let this through -- the moments are O(n) -- and return a quadratic
+        fitted to nothing."""
+        self.assertIsNone(self._fit([0.1] * 6, [1.0, 2.0, 1.5, 1.2, 1.8, 1.4]))
+
+    def test_a_needle_narrow_window_is_degenerate(self):
+        """A resonance whose samples all land within rounding of each other:
+        the moments are tiny in absolute terms but the matrix is still
+        singular relative to itself."""
+        xs = [1e-13 * i for i in range(6)]
+        self.assertIsNone(self._fit(xs, [1.0, 2.0, 1.5, 1.2, 1.8, 1.4],
+                                    [1000.0] * 6))
+
+    def test_two_distinct_points_cannot_fix_a_quadratic(self):
+        self.assertIsNone(self._fit([0.0, 0.0, 0.1, 0.1], [1.0, 1.0, 2.0, 2.0]))

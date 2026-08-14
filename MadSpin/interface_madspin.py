@@ -3755,10 +3755,8 @@ class MadSpinInterface(extended_cmd.Cmd):
                 cache = pjoin(self.options['ms_dir'],
                               'max_wgt_sequential_offshell%s'
                               % ('_exact' if self.options['sequential_exact'] else ''))
-                if os.path.exists(cache):
-                    import json
-                    with open(cache) as f:
-                        cached = json.load(f)
+                cached = self._read_offshell_cache(cache)
+                if cached is not None:
                     self._z_tables = cached['z_tables']
                     return cached['maxwgts']
             else:
@@ -3830,10 +3828,59 @@ class MadSpinInterface(extended_cmd.Cmd):
         if cache and offshell:
             import json
             with open(cache, 'w') as f:
-                json.dump({'maxwgts': maxwgts, 'z_tables': self._z_tables}, f)
+                json.dump({'format': self._OFFSHELL_CACHE_FORMAT,
+                           'maxwgts': maxwgts, 'z_tables': self._z_tables}, f)
         elif cache:
             open(cache, 'w').write(' '.join(repr(w) for w in maxwgts))
         return maxwgts
+
+    # Bumped whenever the offshell cache's *meaning* changes: another entry in
+    # the bound vector, a different fit variable or degree, another key in a
+    # table. The file name already separates sequential_exact from the default,
+    # and PA/onshell from both; this separates one version of this code from the
+    # next, which a name cannot.
+    _OFFSHELL_CACHE_FORMAT = 1
+
+    def _read_offshell_cache(self, path):
+        """The cached offshell bounds and Z_k tables, or None if there is
+        nothing usable there.
+
+        A cache that does not match what this code writes is *ignored*, not
+        repaired and not raised on: the scan that produced it is reproducible,
+        so paying for it again is always an option, whereas a table read under
+        the wrong schema would either crash deep inside the accept/reject or --
+        worse -- silently weight the virtualities with somebody else's fit.
+        Hence a format tag, and a structural check of every field the
+        accept/reject will dereference.
+        """
+        if not path or not os.path.exists(path):
+            return None
+        import json
+        try:
+            with open(path) as f:
+                cached = json.load(f)
+            if cached.get('format') != self._OFFSHELL_CACHE_FORMAT:
+                raise ValueError('format %s, expected %s'
+                                 % (cached.get('format'),
+                                    self._OFFSHELL_CACHE_FORMAT))
+            maxwgts = [float(w) for w in cached['maxwgts']]
+            if not maxwgts:
+                raise ValueError('no bounds')
+            tables = cached['z_tables']
+            for key, table in tables.items():
+                missing = {'pole', 'coeff', 'zero_below',
+                           'range'} - set(table)
+                if missing:
+                    raise ValueError('slot %s is missing %s'
+                                     % (key, ', '.join(sorted(missing))))
+                if len(table['coeff']) != 3 or len(table['range']) != 2:
+                    raise ValueError('slot %s has a malformed fit' % key)
+        except Exception as error:
+            logger.warning("MadSpin: ignoring the cached sequential maximum "
+                           "weights in %s (%s); they will be measured again.",
+                           path, error)
+            return None
+        return {'maxwgts': maxwgts, 'z_tables': tables}
 
     def _complete_offshell_probe(self, event):
         """The per-event maximum-weight vector of the offshell probe, over the
@@ -4221,8 +4268,20 @@ class MadSpinInterface(extended_cmd.Cmd):
     @staticmethod
     def _weighted_polyfit2(xs, ys, ws):
         """Weighted least-squares quadratic y = c0 + c1 x + c2 x^2, by the normal
-        equations. Returns None when the system is degenerate (too few distinct
-        points). Small and self contained -- numpy is not imported here."""
+        equations. Returns None when the system is too close to degenerate to
+        solve meaningfully. Small and self contained -- numpy is not imported
+        here, and this runs once per slot at the end of the max-weight scan, so
+        a 3x3 solve in plain python costs nothing worth optimising.
+
+        The pivot tolerance is *relative* to the size of the matrix: the fit
+        variable is ln(m/pole), which spans about +-0.13 over a Breit-Wigner
+        window, so the moments of x^4 are ~1e-4 of the moments of x^0 and an
+        absolute threshold would mean something different for every resonance.
+        A relative one rejects exactly the case that matters -- every bin at the
+        same virtuality, where the quadratic is not determined -- and accepts
+        the normal conditioning of this fit (~3e4, which double precision
+        handles with ten digits to spare).
+        """
         n = len(xs)
         if n < 3:
             return None
@@ -4230,9 +4289,10 @@ class MadSpinInterface(extended_cmd.Cmd):
         moment = [sum(w * x ** k for x, w in zip(xs, ws)) for k in range(5)]
         rhs = [sum(w * y * x ** k for x, y, w in zip(xs, ys, ws)) for k in range(3)]
         mat = [[moment[i + j] for j in range(3)] + [rhs[i]] for i in range(3)]
+        tolerance = 1e-12 * max(abs(value) for row in mat for value in row[:3])
         for col in range(3):       # gaussian elimination with partial pivoting
             pivot = max(range(col, 3), key=lambda r: abs(mat[r][col]))
-            if abs(mat[pivot][col]) < 1e-30:
+            if abs(mat[pivot][col]) <= tolerance:
                 return None
             mat[col], mat[pivot] = mat[pivot], mat[col]
             for row in range(3):
