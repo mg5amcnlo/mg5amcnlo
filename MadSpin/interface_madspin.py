@@ -81,11 +81,22 @@ class MadSpinOptions(banner.ConfigFile):
         self.add_param('decay_event_mult', 1E0, comment='Produce more events than needed so that MadSpin does not have to regenerate decay events')
         self.add_param('nb_core', 0, comment='Number of cores for the MadSpin parallel unweighting (0 = use the global MG5 nb_core). nb_core>1 enables the process-parallel unweighting path.')
         self.add_param('density_keep_jacobian', True, comment='PA spinmode only: fold the offshell-reshuffling phase-space jacobian into the accept/reject weight (default) instead of applying the reshuffle as a post-acceptance kinematic dressing (False). Ignored by the madspin/full spinmodes, which always include that jacobian.')
-        self.add_param('sequential_decay', False, comment='accept/reject one decaying particle at a time instead of the full set at once (density mode). Exact and much cheaper when several particles decay. Default is auto: True for the PA/onshell spinmodes, False (joint accept/reject) for madspin/full.')
-        # default is 'auto': resolved at run time by _sequential_active --
-        # sequential for PA/onshell, joint for madspin/full
+        self.add_param('unweighting', 'auto',
+                       allowed=['auto', 'joint', 'two_stage', 'sequential',
+                                'sequential_global_retry'],
+                       comment="how the accept/reject is organised (density modes). "
+                       "joint: one test over the virtualities and every decay at once, the historical scheme. "
+                       "two_stage: unweight the set of virtualities first, then every decay against a single bound, redrawing only the decays on a rejection -- the production reshuffling and its density matrix are then evaluated once per accepted mass set instead of once per trial. "
+                       "sequential: as two_stage but one test per decaying particle, redrawing only the particle that was rejected. "
+                       "sequential_global_retry: as sequential, but a rejected decay redraws the virtualities too. "
+                       "two_stage and sequential need a tabulated running-width factor, measured during the max-weight scan to ~0.5%, which is far inside the pole approximation these modes already assume; sequential_global_retry does without it at 2-3x the cost, and is meant as a cross-check rather than a default. "
+                       "auto: joint when a single particle decays (every split degenerates there), two_stage for two decaying particles and sequential from three (one bound over all the angles is tighter, testing each particle as it is drawn skips the decays not yet drawn, and which wins depends on how many there are), or sequential under PA/onshell. "
+                       "two_stage and sequential_global_retry need an offshell spinmode and fall back to sequential elsewhere.")
+        self.add_param('sequential_decay', 'auto',
+                       comment='DEPRECATED, use unweighting: True maps to sequential, False to joint.')
         self.auto_set.add('sequential_decay')
-        self.add_param('sequential_spin_order', '2 3 1', comment='spin order (MG5 2S+1 convention) deciding which particle is accept/rejected first in sequential_decay: default fermions, then vectors, then scalars (which can never be rejected).')
+        self.add_param('sequential_spin_order', '2 3 1', comment='spin order (MG5 2S+1 convention) deciding which particle is accept/rejected first in the sequential unweighting modes: default fermions, then vectors, then scalars (which can never be rejected).')
+        self.add_param('sequential_debug', False, comment='offshell spinmodes with a non-joint unweighting: on every accepted chain, recompute the joint weight for the same production event, virtualities and decays and check that the product of the stage weights reproduces it (times the number of helicity states). Deterministic check of the decomposition itself -- the tabulated factor cancels out of it -- at roughly the cost of a joint trial per event. Debugging only.')
 
     ############################################################################
     ##  Special post-processing of the options                                ## 
@@ -102,6 +113,20 @@ class MadSpinOptions(banner.ConfigFile):
         if not hasattr(random, 'mg_seedset'):
             random.seed(self['seed'])  
             random.mg_seedset = self['seed']  
+
+    def post_set_sequential_decay(self, value, change_userdefine, raiseerror, *opts):
+        """Deprecated alias for 'unweighting'. True/False were the only values
+        it ever had beyond 'auto', so they map onto the two modes that existed
+        then."""
+        if value in ('auto', None):
+            mode = 'auto'
+        elif value in (True, 'True', 'true', 1, '1'):
+            mode = 'sequential'
+        else:
+            mode = 'joint'
+        logger.warning("MadSpin: 'sequential_decay' is deprecated; "
+                       "use 'set unweighting %s'", mode)
+        self['unweighting'] = mode
 
     ############################################################################        
     def post_set_run_card(self, value, change_userdefine, raiseerror, *opts):
@@ -1809,6 +1834,13 @@ class MadSpinInterface(extended_cmd.Cmd):
                     spin = self.model.get_particle(particle.pdg).get('spin')
                     decay_dict[particle.pdg] = [width, mass, color, spin]
         #print(f"to_decay = {to_decay}")
+        # How many particles decay in one event -- the same multiplicity the
+        # pool ladder counts. It decides which unweighting scheme 'auto' picks,
+        # so it is resolved once here rather than per event: the modes have
+        # different bounds, and a mode that changed event to event would be
+        # testing against somebody else's.
+        self._nb_decaying = sum(max(1, int(nb) // int(nb_event))
+                                for nb in to_decay.values()) if nb_event else 0
                 	
         with misc.MuteLogger(["madgraph", "madevent", "ALOHA", "cmdprint"], [50,50,50,50]):
             mg5 = self.mg5cmd
@@ -2188,31 +2220,110 @@ class MadSpinInterface(extended_cmd.Cmd):
             position += multiplicity
         return ladder
 
-    def _sequential_active(self, density_method):
-        """Whether to accept/reject one decaying particle at a time.
+    def _log_once(self, key, message, *args):
+        """Log a resolution message the first time only: these are decided per
+        production event but say something about the run."""
+        seen = getattr(self, '_logged_once', None)
+        if seen is None:
+            seen = self._logged_once = set()
+        if key not in seen:
+            seen.add(key)
+            logger.info(message, *args)
 
-        Density mode only -- the whole scheme is expressed in terms of the
-        production density matrix. ``fixed_order`` keeps the joint test: its
-        counter-events ride along with the decays and have not been thought
-        through here. ``sequential_decay`` defaults to 'auto': sequential for
-        the PA/onshell pole approximations, joint for madspin/full.
+    def _unweighting_mode(self, density_method=True):
+        """Which accept/reject scheme this run uses: one of 'joint',
+        'two_stage', 'sequential', 'sequential_global_retry'.
+
+        All of them sample the same distribution; they differ in how the test is
+        split and in what a rejection redraws.
+
+          joint                    one test over the virtualities and every
+                                   decay at once -- the historical scheme, and
+                                   the only one available outside density mode.
+          two_stage                the set of virtualities is unweighted first,
+                                   then every decay against a single bound; a
+                                   rejection redraws the decays only, so the
+                                   production reshuffling and its density matrix
+                                   are reused across the retries.
+          sequential               as two_stage, but one test per decaying
+                                   particle, redrawing only the particle that
+                                   was rejected.
+          sequential_global_retry  as sequential, but a rejected decay redraws
+                                   the virtualities as well.
+
+        ``auto`` picks by the number of decaying particles. With one, it takes
+        ``joint``: every split degenerates there -- the per-particle test is the
+        joint test, and the mass/angle one only moves the same factors between
+        two stages -- so there is nothing to win and the identity machinery is
+        pure cost. Beyond one, the two splits trade off against each other: one bound over all the angles is
+        tighter than the product of per-particle bounds, while testing each
+        particle as it is drawn lets a rejection skip the decays not yet drawn.
+        The first wins while there is little to skip and the second as the
+        chain gets longer, so auto takes ``two_stage`` up to two decaying
+        particles and ``sequential`` from three. Under PA/onshell it is always
+        ``sequential``, the other two needing an offshell spinmode.
+
+        ``fixed_order`` forces joint: its counter-events ride along with the
+        decays and have not been thought through here. ``two_stage`` and
+        ``sequential_global_retry`` need the offshell (madspin/full) spinmodes,
+        where the virtualities are drawn up front; under PA/onshell each slot
+        draws its own mass, there is no mass-set stage to hang them on, and they
+        fall back to ``sequential``.
         """
         if not density_method:
-            return False
-        sequential = self.options['sequential_decay']
-        if sequential == 'auto':
-            sequential = self.options['spinmode'] in ['PA', 'onshell']
-        if not sequential:
-            return False
+            return 'joint'
+        asked = mode = self.options['unweighting']
+        if mode == 'auto':
+            nb_decaying = getattr(self, '_nb_decaying', 2)
+            if nb_decaying <= 1:
+                # with a single decaying particle every split degenerates: the
+                # per-particle test *is* the joint test, and the mass/angle one
+                # only moves the same factors between two stages. Nothing to
+                # win, so do not pay for the identity machinery.
+                mode = 'joint'
+            elif self.options['spinmode'] in ['PA', 'onshell']:
+                # two_stage and sequential_global_retry need the up-front mass
+                # draw, which these modes do not have
+                mode = 'sequential'
+            elif nb_decaying <= 2:
+                mode = 'two_stage'
+            else:
+                mode = 'sequential'
+        if mode == 'joint':
+            return self._announce_mode('joint', asked)
         if self.options['fixed_order']:
-            logger.info("MadSpin: fixed_order is on, keeping the joint "
-                        "accept/reject (sequential_decay ignored)")
-            return False
+            self._log_once('fixed_order',
+                           "MadSpin: fixed_order is on, keeping the joint "
+                           "accept/reject (unweighting ignored)")
+            return self._announce_mode('joint', asked)
         if self.options['spinmode'] not in ['PA', 'onshell', 'madspin', 'full']:
-            logger.info("MadSpin: spinmode=%s keeps the joint accept/reject "
-                        "(sequential_decay ignored)", self.options['spinmode'])
-            return False
-        return True
+            self._log_once('spinmode',
+                           "MadSpin: spinmode=%s keeps the joint accept/reject "
+                           "(unweighting ignored)", self.options['spinmode'])
+            return self._announce_mode('joint', asked)
+        if (mode in ('two_stage', 'sequential_global_retry')
+                and self.options['spinmode'] in ['PA', 'onshell']):
+            self._log_once('offshell_only',
+                           "MadSpin: unweighting=%s needs an offshell spinmode "
+                           "(it splits the accept/reject at the up-front mass "
+                           "draw, which PA/onshell do not have); using "
+                           "sequential instead", mode)
+            return self._announce_mode('sequential', asked)
+        return self._announce_mode(mode, asked)
+
+    def _announce_mode(self, mode, asked):
+        """Say once which scheme the run uses. Worth a line because the card no
+        longer answers it: 'auto' resolves on the process."""
+        self._log_once('mode', "MadSpin: unweighting = %s (%s)", mode,
+                       'auto, %s decaying particle(s)'
+                       % getattr(self, '_nb_decaying', '?')
+                       if asked == 'auto' else 'set explicitly')
+        return mode
+
+    def _sequential_active(self, density_method):
+        """Whether any of the per-particle / two-stage schemes is in use, i.e.
+        anything but the historical joint accept/reject."""
+        return self._unweighting_mode(density_method) != 'joint'
 
     def _sequential_spin_order(self):
         """The spin order (MG5 2S+1 convention) driving which particle is
@@ -2771,7 +2882,8 @@ class MadSpinInterface(extended_cmd.Cmd):
                 seq_stats = collections.defaultdict(int)
                 decays = self.sequential_accept_reject(
                                 production, evt_decayfile, maxwgts,
-                                nb_event - curr_event, stats=seq_stats)
+                                nb_event - curr_event, stats=seq_stats,
+                                decay_dict=decay_dict)
                 if decays is None:
                     # nothing to decay in this production event
                     output_lhe.write_events(production)
@@ -2915,6 +3027,32 @@ class MadSpinInterface(extended_cmd.Cmd):
                 merged[key] += value
         if not merged:
             return
+        rejects = merged.get('nb_mass_reject', 0)
+        restarts = merged.get('nb_production_restart', 0)
+        exact_restarts = merged.get('nb_exact_restart', 0)
+        angle_tries = merged.get('nb_angleset_try', 0)
+        if angle_tries:
+            # two_stage: one bound over all the angles
+            logger.info("MadSpin sequential angle stage: %.2f angle sets per "
+                        "accepted event (%d drawn, %d rejected)",
+                        float(angle_tries) / n_written if n_written
+                        else float('inf'), angle_tries,
+                        merged.get('nb_angle_reject', 0))
+        if rejects or exact_restarts or merged.get("nb_angle_reject", 0):
+            # the offshell mass-set stage: how many virtuality sets (each one a
+            # production reshuffling and a production density) are drawn per
+            # accepted event
+            # An angle-set rejection does not cost a mass set: the set is kept
+            # and only the decays are drawn again, which is the whole point of
+            # two_stage. Counting those here would inflate the
+            # production-side work by the angle-stage rejections.
+            drawn = rejects + restarts + exact_restarts + n_written
+            logger.info("MadSpin sequential mass stage: %.2f mass sets per "
+                        "accepted event (%d drawn, %d rejected%s)",
+                        float(drawn) / n_written if n_written else float('inf'),
+                        drawn, rejects,
+                        ', %d dropped by a rejected decay' % exact_restarts
+                        if exact_restarts else '')
         positions = sorted(int(k.rsplit('_', 1)[1]) for k in merged
                            if k.startswith('nb_try_'))
         for position in positions:
@@ -2923,6 +3061,9 @@ class MadSpinInterface(extended_cmd.Cmd):
             redraws = merged.get('nb_mass_redraw_%d' % position, 0)
             if redraws:
                 extra.append('%d mass redraws' % redraws)
+            infeasible = merged.get('nb_infeasible_%d' % position, 0)
+            if infeasible:
+                extra.append('%d decays that could not be reshuffled' % infeasible)
             overflows = merged.get('nb_overflow_%d' % position, 0)
             if overflows:
                 extra.append('%d ABOVE the maximum weight' % overflows)
@@ -2931,10 +3072,32 @@ class MadSpinInterface(extended_cmd.Cmd):
                 " (%d drawn)%s", position,
                 float(tries) / n_written if n_written else float('inf'), tries,
                 (' [%s]' % ', '.join(extra)) if extra else '')
-        restarts = merged.get('nb_production_restart', 0)
         if restarts:
             logger.info("MadSpin sequential: %d chains restarted on a mass set "
                         "the production could not reshuffle", restarts)
+        checks = merged.get('nb_identity_check', 0)
+        if checks:
+            mean = merged.get('identity_ratio_sum', 0.0) / checks
+            variance = (merged.get('identity_ratio_sqsum', 0.0) / checks
+                        - mean * mean)
+            spread = (math.sqrt(max(0.0, variance)) / abs(mean)
+                      if mean else float('inf'))
+            # density_tolerance, like density_debug: the two routes evaluate the
+            # same matrix elements through different code, and the density
+            # matrices are single precision, so agreement is bounded by float32
+            # epsilon (~1.2e-7) and not by the physics
+            if spread > self.options['density_tolerance']:
+                logger.critical(
+                    "MadSpin sequential: the weight identity FAILED on %d "
+                    "accepted chains -- the chain weight is not proportional "
+                    "to the joint weight (relative spread of the ratio %.3g, "
+                    "mean %.10g). This scheme is not sampling the joint "
+                    "distribution.", checks, spread, mean)
+            else:
+                logger.info("MadSpin sequential: weight identity verified on "
+                            "%d accepted chains -- chain weight / joint weight "
+                            "constant to %.3g (ratio %.10g)",
+                            checks, spread, mean)
         total_overflow = sum(v for k, v in merged.items()
                              if k.startswith('nb_overflow_'))
         if total_overflow:
@@ -2942,7 +3105,7 @@ class MadSpinInterface(extended_cmd.Cmd):
                 "MadSpin sequential: %d weights exceeded their per-particle "
                 "maximum. That bound is under-estimated and the sample is "
                 "biased: raise nb_sigma or Nevents_for_max_weight, or set "
-                "sequential_decay = False.", total_overflow)
+                "unweighting = joint.", total_overflow)
 
     def _apply_accounting(self, base_out, stats_list):
         """Post-loop accounting shared by the serial and parallel paths: the
@@ -3464,7 +3627,7 @@ class MadSpinInterface(extended_cmd.Cmd):
                                                   nevents, nb_ps_point)
         else:
             logger.info("MadSpin: probing the maximum weight on %s cores", nb_core)
-            all_maxwgt = self._scan_maxwgt_parallel(
+            all_maxwgt, _ = self._scan_maxwgt_parallel(
                 orig_lhe, events, evt_decayfile, nb_core,
                 self._joint_maxwgt_shard_entry, (decay_dict, nevents, nb_ps_point))
 
@@ -3475,14 +3638,25 @@ class MadSpinInterface(extended_cmd.Cmd):
 
     def _scan_maxwgt_range(self, events, start, stop, evt_decayfile,
                            nevents, nb_ps_point):
-        """Per-event maximum-weight vectors for ``events[start:stop]``: one
-        vector per event holding, for each ordering position, the largest w_k
-        seen over ``nb_ps_point`` probe chains. Returns None as soon as a
+        """Per-event probe data for ``events[start:stop]``, and the samples of
+        the offshell rate factor collected along the way.
+
+        Returns ``(per_event, z_samples)``, or ``(None, {})`` as soon as a
         production event turns out to have nothing to decay (the caller then
-        falls back to the joint bound)."""
+        falls back to the joint bound).
+
+        For PA/onshell ``per_event`` is one max-weight vector per event, holding
+        for each ordering position the largest w_k over ``nb_ps_point`` chains --
+        all the bound needs. The offshell branch keeps every chain instead: its
+        mass-set weight is only complete once Z_k is known, and Z_k is fitted
+        from ``z_samples``, which this same probe produces. Taking the maximum
+        there is deferred to the caller, over the completed weights.
+        """
         self.efficiency = 1. / nb_ps_point
+        offshell = self._sequential_offshell()
         t0 = time.time()
         per_event = []
+        z_samples = collections.defaultdict(list)
         for i in range(start, stop):
             if (i - start) % 5 == 1 and getattr(self, '_shard_tag', None) in (None, 0):
                 # only one worker prints scan progress
@@ -3495,19 +3669,31 @@ class MadSpinInterface(extended_cmd.Cmd):
             # refill nb_core times too many decays (900k instead of ~60k).
             nb_remain = stop - i
             best = None
+            chains = []
+            extra = {}
             for _ in range(nb_ps_point):
                 probe = []
                 out = self.sequential_accept_reject(base_event, evt_decayfile,
-                                                    None, nb_remain, probe=probe)
+                                                    None, nb_remain, probe=probe,
+                                                    probe_extra=extra)
                 if out is None:
-                    return None
-                if best is None:
+                    return None, {}
+                if offshell:
+                    chains.append([list(probe), list(extra['mass'])])
+                    for key, mass, value in extra.pop('z', ()):
+                        z_samples[key].append((mass, value))
+                elif best is None:
                     best = list(probe)
                 else:
                     best = [max(old, new) for old, new in zip(best, probe)]
-            if best:
+            if offshell:
+                if chains:
+                    per_event.append({'keys': extra['keys'],
+                                      'order': extra['order'],
+                                      'chains': chains})
+            elif best:
                 per_event.append(best)
-        return per_event
+        return per_event, dict(z_samples)
 
     def _scan_maxwgt_shard_entry(self, shard_id, nb_core, events, start, stop,
                                  evt_decayfile, nevents, nb_ps_point, out_path):
@@ -3524,10 +3710,10 @@ class MadSpinInterface(extended_cmd.Cmd):
             self._pool_gen = {}
             self._init_owner_refill(evt_decayfile, self.seed)
             local_pool = self._reopen_decay_pool(evt_decayfile, shard_id, nb_core)
-            per_event = self._scan_maxwgt_range(events, start, stop, local_pool,
-                                                nevents, nb_ps_point)
+            per_event, z_samples = self._scan_maxwgt_range(
+                            events, start, stop, local_pool, nevents, nb_ps_point)
             with open(out_path, 'w') as f:
-                json.dump({'per_event': per_event}, f)
+                json.dump({'per_event': per_event, 'z_samples': z_samples}, f)
         except Exception as exc:
             import traceback
             try:
@@ -3665,6 +3851,7 @@ class MadSpinInterface(extended_cmd.Cmd):
 
         per_event = []
         result = per_event
+        z_samples = collections.defaultdict(list)
         for sid, outp in enumerate(out_paths):
             if not os.path.exists(outp):
                 raise Exception("MadSpin max-weight worker %s produced no result "
@@ -3678,12 +3865,15 @@ class MadSpinInterface(extended_cmd.Cmd):
                 result = None   # nothing to decay: fall back to the joint bound
             elif result is not None:
                 result.extend(r['per_event'])
+            for key, samples in (r.get('z_samples') or {}).items():
+                # json turns the (mass, value) pairs into lists
+                z_samples[key].extend((s[0], s[1]) for s in samples)
         for outp in out_paths:
             try:
                 os.remove(outp)
             except OSError:
                 pass
-        return result
+        return result, dict(z_samples)
 
     def get_sequential_maxwgt(self, orig_lhe, evt_decayfile):
         """One bound C_k per position of the decay ordering, for the sequential
@@ -3700,12 +3890,26 @@ class MadSpinInterface(extended_cmd.Cmd):
         with which the tail is explored differs, which is why the margins are
         kept and the accept/reject counts its overflows.
         """
+        offshell = self._sequential_offshell()
         cache = None
         if self.options['ms_dir']:
-            # a distinct name: the joint bound is a single float, this is a list
-            cache = pjoin(self.options['ms_dir'], 'max_wgt_sequential')
-            if os.path.exists(cache):
-                return [float(x) for x in open(cache).read().split()]
+            # a distinct name: the joint bound is a single float, this is a list.
+            # The offshell bounds come with the Z_k tables and depend on
+            # the unweighting mode, so they get a name (and a format) of their own --
+            # a cache written for one cannot be read back for the other.
+            if offshell:
+                mode = self._unweighting_mode()
+                variant = '' if mode == 'sequential' else '_%s' % mode
+                cache = pjoin(self.options['ms_dir'],
+                              'max_wgt_sequential_offshell%s' % variant)
+                cached = self._read_offshell_cache(cache)
+                if cached is not None:
+                    self._z_tables = cached['z_tables']
+                    return cached['maxwgts']
+            else:
+                cache = pjoin(self.options['ms_dir'], 'max_wgt_sequential')
+                if os.path.exists(cache):
+                    return [float(x) for x in open(cache).read().split()]
 
         nevents = self.options['Nevents_for_max_weight']
         if nevents == 0:
@@ -3745,11 +3949,11 @@ class MadSpinInterface(extended_cmd.Cmd):
         nb_core = self._resolve_nb_core()
         nb_core = max(1, min(nb_core, len(events)))
         if nb_core == 1:
-            per_event = self._scan_maxwgt_range(events, 0, len(events),
-                                                evt_decayfile, nevents, nb_ps_point)
+            per_event, z_samples = self._scan_maxwgt_range(
+                events, 0, len(events), evt_decayfile, nevents, nb_ps_point)
         else:
             logger.info("MadSpin: probing the maximum weight on %s cores", nb_core)
-            per_event = self._scan_maxwgt_parallel(
+            per_event, z_samples = self._scan_maxwgt_parallel(
                 orig_lhe, events, evt_decayfile, nb_core,
                 self._scan_maxwgt_shard_entry, (nevents, nb_ps_point))
 
@@ -3759,13 +3963,109 @@ class MadSpinInterface(extended_cmd.Cmd):
             # _combine_maxwgt needs a spread to work with
             return []
 
+        if offshell:
+            self._z_tables = self._build_z_tables(z_samples)
+            per_event = [self._complete_offshell_probe(event)
+                         for event in per_event]
+
         maxwgts = [self._combine_maxwgt([event[slot] for event in per_event])
                    for slot in range(len(per_event[0]))]
         logger.info("Sequential maximum weights: %s",
                     ' '.join('%.4g' % w for w in maxwgts))
-        if cache:
+        if cache and offshell:
+            import json
+            with open(cache, 'w') as f:
+                json.dump({'format': self._OFFSHELL_CACHE_FORMAT,
+                           'maxwgts': maxwgts, 'z_tables': self._z_tables}, f)
+        elif cache:
             open(cache, 'w').write(' '.join(repr(w) for w in maxwgts))
         return maxwgts
+
+    # Bumped whenever the offshell cache's *meaning* changes: another entry in
+    # the bound vector, a different fit variable or degree, another key in a
+    # table. The file name already separates the unweighting modes,
+    # and PA/onshell from both; this separates one version of this code from the
+    # next, which a name cannot.
+    # 2: the mass-set weight is normalised by |M_prod|^2 on shell, so every
+    #    bound in the vector changed scale.
+    _OFFSHELL_CACHE_FORMAT = 2
+
+    def _read_offshell_cache(self, path):
+        """The cached offshell bounds and Z_k tables, or None if there is
+        nothing usable there.
+
+        A cache that does not match what this code writes is *ignored*, not
+        repaired and not raised on: the scan that produced it is reproducible,
+        so paying for it again is always an option, whereas a table read under
+        the wrong schema would either crash deep inside the accept/reject or --
+        worse -- silently weight the virtualities with somebody else's fit.
+        Hence a format tag, and a structural check of every field the
+        accept/reject will dereference.
+        """
+        if not path or not os.path.exists(path):
+            return None
+        import json
+        try:
+            with open(path) as f:
+                cached = json.load(f)
+            if cached.get('format') != self._OFFSHELL_CACHE_FORMAT:
+                raise ValueError('format %s, expected %s'
+                                 % (cached.get('format'),
+                                    self._OFFSHELL_CACHE_FORMAT))
+            maxwgts = [float(w) for w in cached['maxwgts']]
+            if not maxwgts:
+                raise ValueError('no bounds')
+            tables = cached['z_tables']
+            for key, table in tables.items():
+                missing = {'pole', 'coeff', 'zero_below',
+                           'range'} - set(table)
+                if missing:
+                    raise ValueError('slot %s is missing %s'
+                                     % (key, ', '.join(sorted(missing))))
+                if len(table['coeff']) != 3 or len(table['range']) != 2:
+                    raise ValueError('slot %s has a malformed fit' % key)
+        except Exception as error:
+            logger.warning("MadSpin: ignoring the cached sequential maximum "
+                           "weights in %s (%s); they will be measured again.",
+                           path, error)
+            return None
+        return {'maxwgts': maxwgts, 'z_tables': tables}
+
+    def _complete_offshell_probe(self, event):
+        """The per-event maximum-weight vector of the offshell probe, over the
+        chains it recorded and with the Z_k factors the loop could not apply
+        while they were still being measured: Z_k(m_k) into the mass-set weight,
+        and -- under sequential_global_retry, where the mass stage pays it and the
+        per-angle stage takes it back -- 1/Z_k into that slot's own weight.
+        """
+        keys, order = event['keys'], event['order']
+        mode = self._unweighting_mode()
+        joint_angles = mode == 'two_stage'
+        # Both sequential_global_retry and two_stage test w_k/Z_hat_k rather
+        # than w_k: the first because the mass stage has already paid Z_hat and
+        # the two must cancel, the second because it flattens the virtuality
+        # dependence out of the bound. The probe has to be completed the same
+        # way or the bound and the weight it bounds are different quantities.
+        exact = joint_angles or mode == 'sequential_global_retry'
+        best = None
+        for weights, masses in event['chains']:
+            zhat = [self._zhat(key, mass) for key, mass in zip(keys, masses)]
+            current = list(weights)
+            for z in zhat:
+                current[0] *= z
+            if exact:
+                for position, slot in enumerate(order):
+                    current[position + 1] = (weights[position + 1] / zhat[slot]
+                                             if zhat[slot] > 0 else 0.0)
+            if joint_angles:
+                # one bound over the product, so the vector is [C_mass, C_angles]
+                product = 1.0
+                for value in current[1:]:
+                    product *= value
+                current = [current[0], product]
+            best = current if best is None else \
+                   [max(old, new) for old, new in zip(best, current)]
+        return best
 
     def _combine_maxwgt(self, all_maxwgt):
         """Turn the per-production-event maxima of a probe into the bound the
@@ -3959,20 +4259,26 @@ class MadSpinInterface(extended_cmd.Cmd):
                 density_dec = density_dec.tensor_product(density)
         return density_dec.scalar_multiplication(density_prod)
 
-    def _decay_mass_is_feasible(self, decay):
-        """Can this decay's products be put on the virtuality just sampled for
-        it? ``t > b j j`` with a top below MW+Mb cannot.
+    def _decay_reshuffle_jacobian(self, decay):
+        """jac_dec: the jacobian of mapping this decay onto the virtuality just
+        sampled for its parent. 0 when that is kinematically impossible --
+        ``t > b j j`` with a top below MW+Mb -- which is also what tells the
+        caller to draw the mass again.
 
         Probed on a copy: the real reshuffling of the decay still happens once,
-        with the production, exactly as it does today. This only decides whether
-        the sampled mass has to be drawn again."""
+        with the production, exactly as it does today. The value is the same
+        either way -- ``mass_shuffle`` boosts to the parent rest frame before it
+        builds the jacobian, and ``reshuffle_decay``'s ``new_incoming`` only
+        feeds the Lorentz map applied afterwards -- so this probe is what enters
+        the accept/reject weight and the final ``reshuffle_production`` merely
+        recomputes it."""
         probe = lhe_parser.Event(str(decay))
         probe[0].new_mass = decay[0].new_mass
         probe[0].reshuffle_info = decay[0].reshuffle_info
         try:
-            return bool(probe.reshuffle_decayevt())
+            return probe.reshuffle_decayevt()
         except Exception:
-            return False
+            return 0
 
     def _slot_density(self, decay, parent, hel):
         """The decay density matrix of one slot, in the lab frame of its parent."""
@@ -4059,8 +4365,244 @@ class MadSpinInterface(extended_cmd.Cmd):
         parents = {slot: finals[slot_to_index[slot]] for slot in order}
         return rho_off, jac_reshuffle, slot_mass, parents
 
+    def _sequential_offshell(self):
+        """Whether the sequential accept/reject runs its offshell (madspin/full)
+        branch: the production density is evaluated at reshuffled momenta, so the
+        virtualities are drawn up front and rho is fixed per chain."""
+        return self.options['spinmode'] not in ['PA', 'onshell']
+
+    # ------------------------------------------------------------------
+    # Z_k(m): the offshell rate factor of one slot (madspin/full only)
+    # ------------------------------------------------------------------
+    # The offshell chain is unweighted in two stages -- the mass set first, then
+    # each slot's decay angles -- and the per-angle stage redraws until it
+    # accepts. That divides its own normalisation
+    #
+    #     Z_k(m) = Integral p_pool(Omega) w_k(Omega, m) dOmega
+    #            = Integral dPhi_off(m) |M_dec|^2 / Integral dPhi_on |M_dec|^2
+    #
+    # out of the accepted sample, so without a compensating factor in the
+    # mass-set weight the accepted virtualities follow the Breit-Wigner instead
+    # of the offshell one -- the resonance lineshape comes out PA-shaped. Z_k is
+    # the running partial width (times m/M, there being no 1/2m flux factor
+    # here), a smooth function of that slot's virtuality *alone*: the production
+    # event, the other slots' masses and the angles already accepted all cancel
+    # out of it, which is what makes it tabulable. See MADSPIN_SEQUENTIAL_PLAN.md
+    # section 10.
+    #
+    # A *wrong* Z_hat does not cancel: the per-angle stage divides out the true
+    # Z_k whatever weight it is given (rescaling w_k by anything that does not
+    # depend on the angles leaves its accepted distribution unchanged), so the
+    # residual bias of the tabulated scheme is exactly Z_hat/Z. That is why
+    # sequential_global_retry exists -- it stops the per-angle stage normalising at
+    # all, and then Z_hat cancels identically and only sets the efficiency.
+
+    @staticmethod
+    def _z_slot_keys(particles, slot_to_index):
+        """Table key of each slot: its pdg and which occurrence of that pdg it
+        is. Slots of one pdg are consecutive and in production order, which is
+        also how _draw_one_decay picks a decay file when there is one file per
+        identical parent -- so the two agree on which slot draws from what."""
+        keys = []
+        seen = collections.defaultdict(int)
+        for index in slot_to_index:
+            pdg = particles[index].pid
+            keys.append('%s_%s' % (pdg, seen[pdg]))
+            seen[pdg] += 1
+        return keys
+
+    def _zhat(self, key, mass):
+        """The tabulated Z_k at a sampled virtuality. 1 when no table has been
+        built (the max-weight probe itself, which is what measures it, and every
+        non-offshell mode)."""
+        table = (getattr(self, '_z_tables', None) or {}).get(key)
+        if not table:
+            return 1.0
+        if mass < table['zero_below']:
+            return 0.0
+        lo, hi = table['range']
+        # held constant outside the probed range rather than extrapolated: the
+        # fit is only constrained where the Breit-Wigner put samples
+        u = math.log(min(max(mass, lo), hi) / table['pole'])
+        c = table['coeff']
+        return math.exp(c[0] + u * (c[1] + u * c[2]))
+
+    @staticmethod
+    def _weighted_polyfit2(xs, ys, ws):
+        """Weighted least-squares quadratic y = c0 + c1 x + c2 x^2, by the normal
+        equations. Returns None when the system is too close to degenerate to
+        solve meaningfully. Small and self contained -- numpy is not imported
+        here, and this runs once per slot at the end of the max-weight scan, so
+        a 3x3 solve in plain python costs nothing worth optimising.
+
+        The pivot tolerance is *relative* to the size of the matrix: the fit
+        variable is ln(m/pole), which spans about +-0.13 over a Breit-Wigner
+        window, so the moments of x^4 are ~1e-4 of the moments of x^0 and an
+        absolute threshold would mean something different for every resonance.
+        A relative one rejects exactly the case that matters -- every bin at the
+        same virtuality, where the quadratic is not determined -- and accepts
+        the normal conditioning of this fit (~3e4, which double precision
+        handles with ten digits to spare).
+        """
+        n = len(xs)
+        if n < 3:
+            return None
+        # symmetric 3x3 normal matrix, moments of x up to 4
+        moment = [sum(w * x ** k for x, w in zip(xs, ws)) for k in range(5)]
+        rhs = [sum(w * y * x ** k for x, y, w in zip(xs, ys, ws)) for k in range(3)]
+        mat = [[moment[i + j] for j in range(3)] + [rhs[i]] for i in range(3)]
+        tolerance = 1e-12 * max(abs(value) for row in mat for value in row[:3])
+        for col in range(3):       # gaussian elimination with partial pivoting
+            pivot = max(range(col, 3), key=lambda r: abs(mat[r][col]))
+            if abs(mat[pivot][col]) <= tolerance:
+                return None
+            mat[col], mat[pivot] = mat[pivot], mat[col]
+            for row in range(3):
+                if row == col:
+                    continue
+                factor = mat[row][col] / mat[col][col]
+                for k in range(col, 4):
+                    mat[row][k] -= factor * mat[col][k]
+        return [mat[i][3] / mat[i][i] for i in range(3)]
+
+    def _build_z_tables(self, z_samples, nb_bin=20, min_per_bin=20):
+        """Fit ln Z_k(m) from the (virtuality, rate factor) pairs the max-weight
+        probe collected, one table per slot key.
+
+        The samples are binned in m and *averaged* -- Z_k is an expectation, so
+        the mean of the samples estimates it while their logarithm would not --
+        then a quadratic in ln(m/pole) is fitted through the bin means, weighted
+        by their counts. The fit is what smooths the tails, where the
+        Breit-Wigner leaves few samples; the accepted lineshape is sensitive to
+        the *slope* of ln Z, and a fractional error there survives as the same
+        fractional error on the shift it corrects.
+
+        Bins whose mean is zero sit below the decay threshold (no pool event can
+        be reshuffled onto that virtuality): they are excluded from the fit and
+        recorded as ``zero_below``, which then makes the mass-set stage reject
+        those virtualities outright.
+        """
+        tables = {}
+        for key, samples in sorted(z_samples.items()):
+            if len(samples) < 4 * min_per_bin:
+                logger.warning("MadSpin sequential: only %d probe samples for "
+                               "slot %s, not tabulating its offshell rate "
+                               "factor", len(samples), key)
+                continue
+            pole = self.banner.get('param', 'mass',
+                                   abs(int(key.split('_')[0]))).value
+            samples = sorted(samples)
+            lo, hi = samples[0][0], samples[-1][0]
+            if not pole or hi <= lo:
+                continue
+            width = (hi - lo) / float(nb_bin)
+            bins = [[0, 0.0, 0.0] for _ in range(nb_bin)]   # count, sum m, sum s
+            for mass, value in samples:
+                index = min(nb_bin - 1, int((mass - lo) / width))
+                bins[index][0] += 1
+                bins[index][1] += mass
+                bins[index][2] += value
+            zero_below = 0.0
+            points = []
+            for count, sum_mass, sum_value in bins:
+                if count < min_per_bin:
+                    continue
+                mean_mass = sum_mass / count
+                mean_value = sum_value / count
+                if mean_value <= 0:
+                    # entirely below threshold: everything up to here is dead
+                    zero_below = max(zero_below, mean_mass)
+                    points = []
+                    continue
+                points.append((math.log(mean_mass / pole),
+                               math.log(mean_value), count))
+            coeff = self._weighted_polyfit2([p[0] for p in points],
+                                            [p[1] for p in points],
+                                            [float(p[2]) for p in points])
+            if coeff is None:
+                logger.warning("MadSpin sequential: could not fit the offshell "
+                               "rate factor of slot %s (%d usable bins)",
+                               key, len(points))
+                continue
+            fit = lambda u: math.exp(coeff[0] + u * (coeff[1] + u * coeff[2]))
+            residual = max(abs(math.exp(y) / fit(u) - 1) for u, y, _ in points)
+            # normalise to 1 at the pole: a constant multiplies every mass set
+            # alike, so it is absorbed by the maximum weight, and it makes the
+            # table readable against the running width it estimates
+            coeff[0] = 0.0      # ``fit`` closes over coeff: normalised from here
+            tables[key] = {'pole': pole, 'coeff': coeff,
+                           'zero_below': zero_below,
+                           'range': (max(lo, zero_below), hi)}
+            logger.info("MadSpin sequential: slot %s offshell rate factor "
+                        "Z(%.5g)=%.3f  Z(%.5g)=1  Z(%.5g)=%.3f "
+                        "(%d samples, %d bins, bin/fit deviation up to %.1f%%)",
+                        key, lo, fit(math.log(max(lo, zero_below) / pole)),
+                        pole, hi, fit(math.log(hi / pole)),
+                        len(samples), len(points), 100 * residual)
+        return tables
+
+    def _check_weight_identity(self, production, decays, decay_dict, w_seq,
+                               helicities, stats):
+        """sequential_debug: the identity the whole decomposition rests on,
+        checked on the accepted chain instead of inferred from a distribution.
+
+            w_mass_raw * prod_k w_k_raw  ==  prod_i n_i * wgt_joint
+
+        with w_mass_raw the mass-set weight *before* the tabulated Z_hat and
+        w_k_raw each slot's weight before it is divided back out -- Z_hat
+        cancels between the two stages, so this tests the decomposition itself
+        and not the quality of the table. ``wgt_joint`` is recomputed here by the
+        joint code, on copies, for the same production event, the same
+        virtualities and the same decays.
+
+        A statistical A/B can only bound a bias at the level its Monte Carlo
+        error allows, and needs an error model to say even that. This is
+        deterministic: any scheme whose per-chain weight product is not the
+        joint weight is wrong, whatever a lineshape comparison happens to show.
+        """
+        prod_copy = lhe_parser.Event(str(production))
+        decays_copy = collections.defaultdict(list)
+        jac_bw = 1.0
+        for pdg, decay_list in decays.items():
+            for decay in decay_list:
+                copy = lhe_parser.Event(str(decay))
+                copy[0].new_mass = decay[0].new_mass
+                copy[0].reshuffle_info = decay[0].reshuffle_info
+                decays_copy[pdg].append(copy)
+        # the Breit-Wigner sampling jacobians: the joint path folds them in
+        # itself when it draws the masses, and here the masses are given, so
+        # they are recomputed from the same (pole, width, window) the draw used
+        for pdg, decay_list in decays.items():
+            for decay in decay_list:
+                pole, width, min_mass, max_mass = decay[0].reshuffle_info
+                gap = math.atan((pole ** 2 - min_mass ** 2) / pole / width)
+                gap += math.atan((max_mass ** 2 - pole ** 2) / pole / width)
+                jac_bw *= gap / math.pi
+        full_me, _, prod_diag, dec_diag, jac_reshuffle = \
+            self.calculate_matrix_element_from_density(prod_copy, decays_copy,
+                                                       decay_dict)
+        w_joint = full_me / (prod_diag * dec_diag) * jac_reshuffle * jac_bw
+        nb_hel = 1
+        for hel in helicities:
+            nb_hel *= len(hel)
+        if not w_joint:
+            return
+        # What must hold is *proportionality*, not equality: the chain weight and
+        # the joint weight differ by a constant -- the number of helicity states,
+        # and whatever normalisation the density path applies to the decay matrix
+        # elements relative to calculate_matrix_element -- and any constant is
+        # absorbed by the bounds. So accumulate the ratio and let the report look
+        # at its spread: a constant ratio *is* the identity, whatever its value,
+        # while a scheme that samples the wrong distribution has a ratio that
+        # varies chain to chain.
+        ratio = w_seq / (nb_hel * w_joint)
+        stats['nb_identity_check'] += 1
+        stats['identity_ratio_sum'] += ratio
+        stats['identity_ratio_sqsum'] += ratio * ratio
+
     def sequential_accept_reject(self, production, evt_decayfile, maxwgts,
-                                 nb_remain, stats=None, probe=None):
+                                 nb_remain, stats=None, probe=None,
+                                 probe_extra=None, decay_dict=None):
         """Accept/reject one decaying particle at a time, in density mode.
 
         Returns the accepted ``decays`` dict (pdg -> list of decay events, in
@@ -4069,21 +4611,41 @@ class MadSpinInterface(extended_cmd.Cmd):
 
         Exactness: slot k is accepted with probability w_k / C_k where
 
-            w_k = (N_k / N_{k-1}) * jac_k^decay * (J_k / J_{k-1})
+            w_k = (N_k / N_{k-1}) * jac_bw_k * jac_dec_k * (J_k / J_{k-1})
 
-        and every factor telescopes over the chain, so the product reproduces
-        the joint weight. On a reject only *that* slot is redrawn; the slots
-        already accepted are kept. See MADSPIN_SEQUENTIAL_PLAN.md.
+        with jac_bw_k the Breit-Wigner sampling jacobian of slot k's virtuality,
+        jac_dec_k the jacobian of reshuffling slot k's decay onto it, and J_k the
+        production reshuffling jacobian with the slots drawn so far offshell. The
+        N and J factors telescope and the per-slot ones multiply out, so the
+        product reproduces the joint weight (which gets jac_dec_k from the same
+        reshuffle_production call that gives it J). On a reject only *that* slot
+        is redrawn; the slots already accepted are kept. See
+        MADSPIN_SEQUENTIAL_PLAN.md.
 
-        Failure handling follows the scope of the failure: a mass its own decay
-        products cannot accommodate is redrawn on the spot, while a mass *set*
-        the production cannot reshuffle is only knowable once every slot has a
-        mass, so it trashes the whole set and restarts the chain.
+        Failure handling follows the scope of the failure. In PA, where slot k
+        draws its own mass, a mass its decay products cannot accommodate is
+        redrawn on the spot; a mass *set* the production cannot reshuffle is only
+        knowable once every slot has a mass, so it trashes the whole set and
+        restarts the chain. Offshell the mass set is fixed before the loop, so
+        the same decay-side failure is a rejection of that decay instead.
+
+        The offshell (madspin/full) branch splits this in two: a mass-set
+        accept/reject first, then the per-angle loop above. The per-angle loop
+        redraws until it accepts and so divides out its own normalisation
+        Z_k(m), which is a function of the sampled virtuality -- hence the
+        tabulated ``_zhat`` factor in the mass-set weight, without which the
+        accepted resonance lineshape is the Breit-Wigner one. Under
+        ``sequential_global_retry`` a rejected decay trashes the mass set, the
+        per-angle stage stops normalising, and Z_hat cancels from the chain
+        (leaving it a pure efficiency preconditioner).
 
         ``probe``: when a list is given nothing is ever rejected and each slot's
         w_k is appended to it instead. That is how the max-weight scan measures
         the bounds -- on exactly the weights this loop will later test, since it
-        is this same code computing them.
+        is this same code computing them. The weights are recorded *before*
+        ``_zhat`` is applied (the probe is what measures it, so it does not
+        exist yet); ``probe_extra`` carries the virtualities and the rate-factor
+        samples the scan needs to build it.
         """
         decays_key = self._decaying_pdgs(production, evt_decayfile)
         if not decays_key:
@@ -4114,7 +4676,41 @@ class MadSpinInterface(extended_cmd.Cmd):
         # momenta that couple all decay masses, so rho is drawn per chain (after
         # the up-front reshuffle) rather than once at onshell. PA/onshell keep a
         # fixed onshell rho, cached on the production event.
-        offshell = self.options['spinmode'] not in ['PA', 'onshell']
+        offshell = self._sequential_offshell()
+        # Offshell only: reject the mass set on a rejected decay instead of
+        # redrawing that decay, so the per-angle stage never normalises. See the
+        # Z_k discussion above _z_slot_keys.
+        # One bound over all the angles instead of one per particle, the mass
+        # set paying for a rejection either way: the joint accept/reject with a
+        # mass-set stage in front of it. Exact for the same reason
+        # sequential_global_retry is -- nothing is redrawn in place, so no stage
+        # normalises itself -- and it keeps Z_hat only as a preconditioner,
+        # since it cancels between the two stages.
+        mode = self._unweighting_mode()
+        joint_angles = offshell and mode == 'two_stage'
+        exact = offshell and mode == 'sequential_global_retry'
+        zkeys = self._z_slot_keys(particles, slot_to_index) if offshell else None
+        # |M_prod|^2 on shell: the denominator the joint offshell weight divides
+        # by (calculate_matrix_element_from_density evaluates it *before*
+        # reshuffle_production and returns it as prod_diag). It depends on the
+        # production event only -- which the chain never redraws -- so leaving it
+        # out would not bias anything, but it would leave the absolute scale of
+        # the production matrix element inside the mass-set weight while its
+        # bound is a single number shared by every production event: the loud
+        # kinematics would set the bound and then overflow it, the quiet ones
+        # would pay for it in acceptance. Cached on the event under the name the
+        # joint path already uses for the same quantity.
+        me_prod_on = 1.0
+        if offshell:
+            me_prod_on = getattr(production, 'me_wgt', None)
+            if not me_prod_on:
+                me_prod_on = self.calculate_matrix_element(production)
+                production.me_wgt = me_prod_on
+            if not me_prod_on:
+                # a production event with no matrix element cannot be normalised
+                # to itself; leave the weight unscaled rather than divide by zero
+                logger.debug('sequential: |M_prod|^2 = 0, mass weight unscaled')
+                me_prod_on = 1.0
         density_prod = None
         if not offshell:
             density_prod = getattr(production, '_ms_density_prod', None)
@@ -4139,6 +4735,8 @@ class MadSpinInterface(extended_cmd.Cmd):
 
         if stats is None:
             stats = collections.defaultdict(int)
+        if probe is not None and probe_extra is None:
+            probe_extra = {}
 
         while True:     # restart point: an impossible/rejected production mass set
             parents = init_part
@@ -4159,152 +4757,311 @@ class MadSpinInterface(extended_cmd.Cmd):
                 # jacobians, and the offshell production trace -- go here, so the
                 # per-angle loop no longer carries them (that bundling made slot
                 # 0's acceptance ~1/300). See MADSPIN_SEQUENTIAL_PLAN.md sec 10.
-                w_mass = density_prod.trace().real * jac_reshuffle
+                # Tr(rho_off)/|M_prod|^2_on -- the offshell production matrix
+                # element over the onshell one, which is what the joint weight
+                # carries. Applied in probe mode too, unlike Z_hat: it is known
+                # before the scan, so the bound is measured on the same quantity
+                # the accept/reject will test.
+                w_mass = density_prod.trace().real / me_prod_on * jac_reshuffle
                 for s in order:
                     w_mass *= slot_mass[s][2]
+                # before Z_hat, which cancels between the two stages:
+                # this is what the weight-identity check compares
+                w_mass_raw = w_mass
                 if probe is not None:
                     del probe[:]            # start this chain's probe vector
                     probe.append(float(w_mass))
-                elif maxwgts:
+                    probe_extra['keys'] = zkeys
+                    probe_extra['order'] = list(order)
+                    probe_extra['mass'] = [slot_mass[s][0]
+                                           for s in range(len(order))]
+                    # not reset with the rest: a chain that ends up restarting
+                    # still drew valid (virtuality, rate factor) pairs, and Z_k
+                    # wants every one of them -- including the zeros of a
+                    # virtuality below threshold, which is precisely where
+                    # dropping them would bias the table upwards
+                    probe_extra.setdefault('z', [])
+                else:
+                    # Z_k(m_k): what the per-angle stage will divide out again.
+                    # Without it the accepted virtualities are Breit-Wigner
+                    # distributed instead of offshell distributed.
+                    for s in order:
+                        w_mass *= self._zhat(zkeys[s], slot_mass[s][0])
+                if probe is None and maxwgts:
                     if w_mass > maxwgts[0]:
                         stats['nb_overflow_mass'] += 1
                     if random.random() * maxwgts[0] >= w_mass:
                         stats['nb_mass_reject'] += 1
                         continue            # redraw the whole mass set
 
-            slot_densities = {}
-            slot_decays = {}
-            slot_masses = {}
-            n_prev = self._partial_density_contraction(density_prod, helicities, {})
-            j_prev = 1.0
-            budget = production.sqrts
-            restart = False
+            # Angle stage. The mass set, the offshell production density and
+            # the reshuffled parents are all fixed above and are *reused* by
+            # every pass of this loop -- which is the whole point of drawing the
+            # virtualities first: the joint accept/reject pays a production
+            # reshuffling and a production density matrix on every trial,
+            # because a rejection there redraws the masses too.
+            #   two_stage: a rejected angle set is redrawn
+            #     against the same mass set, so this loop is where the reuse
+            #     happens -- and, redrawing to acceptance, it normalises itself,
+            #     which is what the Z_hat factor in w_mass compensates.
+            #   sequential_global_retry: a rejected *decay* costs the mass set, which
+            #     makes Z_hat cancel and that scheme exact whatever the table
+            #     says, at the price of the reuse.
+            while True:
+                slot_densities = {}
+                slot_decays = {}
+                slot_masses = {}
+                n_prev = self._partial_density_contraction(density_prod, helicities, {})
+                j_prev = 1.0
+                budget = production.sqrts
+                restart = False
+                w_angles = 1.0      # joint_angles: the product tested once, below
+                angle_dead = False  # a zero member: reject the set, stop drawing
+                w_slots = 1.0       # product of the raw per-slot weights
 
-            for position, slot in enumerate(order):
-                index = slot_to_index[slot]
-                particle = particles[index]
-                # offshell reserves maxwgts[0] for the mass set, so the per-slot
-                # bounds start at index 1
-                wpos = position + 1 if offshell else position
-                if maxwgts:
-                    maxwgt = maxwgts[wpos] if wpos < len(maxwgts) \
-                                           else maxwgts[-1]
-                else:
-                    maxwgt = None
-                while True:
-                    stats['nb_try_%d' % position] += 1
-                    decay = self._draw_one_decay(particle, index, ids,
-                                                 evt_decayfile, nb_remain)
+                for position, slot in enumerate(order):
+                    index = slot_to_index[slot]
+                    particle = particles[index]
+                    # offshell reserves maxwgts[0] for the mass set, so the per-slot
+                    # bounds start at index 1
+                    wpos = position + 1 if offshell else position
+                    if joint_angles:
+                        # every slot contributes to the single angle weight, tested
+                        # once the last one has been drawn
+                        maxwgt = None
+                    elif maxwgts:
+                        maxwgt = maxwgts[wpos] if wpos < len(maxwgts) \
+                                               else maxwgts[-1]
+                    else:
+                        maxwgt = None
+                    nb_infeasible = 0
+                    while True:
+                        stats['nb_try_%d' % position] += 1
+                        decay = self._draw_one_decay(particle, index, ids,
+                                                     evt_decayfile, nb_remain)
 
-                    if offshell:
-                        # madspin/full: offshell numerator over onshell
-                        # denominator. The mass was drawn up front, so the
-                        # decay is reshuffled to it; on failure the whole set
-                        # restarts (the mass cannot be redrawn for one slot
-                        # without invalidating the fixed rho).
-                        me_on = self.calculate_matrix_element(decay)   # |M_dec|^2_on
-                        decay[0].new_mass, decay[0].reshuffle_info = \
-                            slot_mass[slot][0], slot_mass[slot][1]
-                        # The offshell density is taken on a copy: the drawn
-                        # decay must stay in its onshell rest frame (only tagged
-                        # with new_mass) so the final add_decays + a single
-                        # reshuffle_production rebuild consistent kinematics.
-                        # Reshuffling/boosting it in place leaves it on the
-                        # offshell parent and add_decays then rejects it.
-                        dcopy = lhe_parser.Event(str(decay))
-                        dcopy[0].new_mass = slot_mass[slot][0]
-                        dcopy[0].reshuffle_info = slot_mass[slot][1]
-                        if dcopy.reshuffle_decayevt() in (0, -1):
-                            stats['nb_production_restart'] += 1
-                            restart = True
-                            break
-                        density = self._slot_density(dcopy, parents[slot],
-                                                     helicities[slot])
-                        slot_densities[slot] = density
-                        n_k = self._partial_density_contraction(
-                                        density_prod, helicities, slot_densities)
-                        # per-angle factor only: (N_k/N_{k-1}) * Tr(D_off)/
-                        # |M_dec|^2_on. jac_bw and jac_reshuffle are in w_mass.
-                        wgt = (n_k / n_prev).real * (density.trace().real / me_on)
-                        j_k, new_budget = j_prev, budget
+                        if offshell:
+                            # madspin/full: offshell numerator over onshell
+                            # denominator. The mass was drawn up front, so the
+                            # decay is reshuffled to it.
+                            me_on = self.calculate_matrix_element(decay)   # |M_dec|^2_on
+                            decay[0].new_mass, decay[0].reshuffle_info = \
+                                slot_mass[slot][0], slot_mass[slot][1]
+                            # The offshell density is taken on a copy: the drawn
+                            # decay must stay in its onshell rest frame (only tagged
+                            # with new_mass) so the final add_decays + a single
+                            # reshuffle_production rebuild consistent kinematics.
+                            # Reshuffling/boosting it in place leaves it on the
+                            # offshell parent and add_decays then rejects it.
+                            dcopy = lhe_parser.Event(str(decay))
+                            dcopy[0].new_mass = slot_mass[slot][0]
+                            dcopy[0].reshuffle_info = slot_mass[slot][1]
+                            # jac_dec_k: the decay reshuffling jacobian. Joint
+                            # madspin has it (calculate_matrix_element_from_density,
+                            # 'jac *= dec.reshuffle_decayevt()'), so it belongs in
+                            # the per-slot weight here -- it depends on this slot's
+                            # decay only, hence no telescoping ratio.
+                            jac_dec = dcopy.reshuffle_decayevt()
+                            if jac_dec in (0, -1):
+                                # This decay cannot be mapped onto the sampled
+                                # virtuality (its products do not fit). That is a
+                                # zero-weight candidate, i.e. an ordinary rejection
+                                # of *this decay*, not of the mass set: a zero is
+                                # part of Z_k, so counting it as a rejection here is
+                                # what makes the tabulated Z_k the exact correction
+                                # near a threshold. It is recorded as such in the
+                                # probe. The fail-safe covers a virtuality no decay
+                                # in the pool can reach -- with the table in place
+                                # the mass stage rejects those outright, since Z_k
+                                # vanishes there.
+                                stats['nb_infeasible_%d' % position] += 1
+                                if probe is not None:
+                                    probe_extra['z'].append(
+                                        (zkeys[slot], slot_mass[slot][0], 0.0))
+                                elif joint_angles:
+                                    # A zero anywhere makes the whole angle set
+                                    # weight zero, so the set is rejected: stop
+                                    # drawing the remaining slots. Redrawing
+                                    # just this slot instead would propose from
+                                    # the *feasible* part of the pool, and the
+                                    # normalisation the mass stage compensates
+                                    # for would become Z_k/(1 - q_k(m)) -- a
+                                    # different function of the virtuality than
+                                    # the tabulated one.
+                                    w_angles = 0.0
+                                    angle_dead = True
+                                    break
+                                elif exact:
+                                    # Same argument for the per-slot restart
+                                    # scheme: a zero-weight decay has to reject
+                                    # the mass set rather than be redrawn here,
+                                    # or the feasible fraction 1 - q_k(m) is
+                                    # divided out of the accepted mass sets --
+                                    # the same class of bias as Z_k itself, and
+                                    # it would survive precisely where Z_k is
+                                    # supposed to vanish.
+                                    stats['nb_exact_restart'] += 1
+                                    restart = True
+                                    break
+                                nb_infeasible += 1
+                                if nb_infeasible < 200:
+                                    continue
+                                stats['nb_production_restart'] += 1
+                                restart = True
+                                break
+                            density = self._slot_density(dcopy, parents[slot],
+                                                         helicities[slot])
+                            slot_densities[slot] = density
+                            n_k = self._partial_density_contraction(
+                                            density_prod, helicities, slot_densities)
+                            # per-angle factor only: (N_k/N_{k-1}) * jac_dec_k *
+                            # Tr(D_off)/|M_dec|^2_on. jac_bw and the *production*
+                            # reshuffling jacobian are in w_mass.
+                            rate = jac_dec * (density.trace().real / me_on)
+                            wgt = (n_k / n_prev).real * rate
+                            wgt_raw = wgt        # before any Z_hat division
+                            j_k, new_budget = j_prev, budget
+                            if probe is not None:
+                                probe.append(float(wgt))
+                                # E[rate | m] = E[w_k | m] = Z_k(m) -- the same
+                                # expectation, without the polarisation modulation
+                                # of the density ratio, so it is the tighter
+                                # estimator of the two.
+                                probe_extra['z'].append(
+                                    (zkeys[slot], slot_mass[slot][0], float(rate)))
+                                accept = True
+                            elif joint_angles:
+                                # no test here: every slot feeds the single angle
+                                # weight, tested once the last decay is drawn
+                                zhat = self._zhat(zkeys[slot], slot_mass[slot][0])
+                                w_angles *= wgt / zhat if zhat > 0 else 0.0
+                                accept = True
+                            elif maxwgt is None:
+                                accept = True
+                            else:
+                                if exact:
+                                    # the mass stage already paid Z_hat_k, so the
+                                    # bound this is tested against is the one of
+                                    # w_k/Z_hat_k -- flat in the virtuality, and the
+                                    # two factors cancel over the chain
+                                    zhat = self._zhat(zkeys[slot], slot_mass[slot][0])
+                                    wgt = wgt / zhat if zhat > 0 else 0.0
+                                if wgt > maxwgt:
+                                    stats['nb_overflow_%d' % position] += 1
+                                    logger.debug('sequential: slot %s weight %s above'
+                                                 ' its max %s', position, wgt, maxwgt)
+                                accept = random.random() * maxwgt < wgt
+                            if accept:
+                                slot_decays[slot] = decay
+                                n_prev = n_k
+                                w_slots *= wgt_raw
+                                break
+                            slot_densities.pop(slot, None)
+                            if exact:
+                                # Redrawing this decay until it is accepted would
+                                # normalise the per-angle stage and divide Z_k(m)
+                                # out of the accepted mass sets. Rejecting the mass
+                                # set instead keeps the chain acceptance
+                                # proportional to the joint weight -- exact whatever
+                                # Z_hat is, at the cost of throwing the slots
+                                # already accepted away.
+                                stats['nb_exact_restart'] += 1
+                                restart = True
+                                break
+                            continue
+
+                        jac_bw = 1.0        # Breit-Wigner *sampling* jacobian
+                        jac_dec = 1.0       # decay *reshuffling* jacobian
+                        new_budget = budget
+                        if draw_mass:
+                            # decay-side failure is local to this slot: redraw its
+                            # mass, keep every slot already accepted
+                            while True:
+                                new_budget, jac_bw = self._draw_offshell_mass(
+                                                    particle.pdg, decay, budget)
+                                jac_dec = self._decay_reshuffle_jacobian(decay)
+                                if jac_dec not in (0, -1):
+                                    break
+                                stats['nb_mass_redraw_%d' % position] += 1
+                            slot_masses[slot] = (decay[0].new_mass,
+                                                 getattr(decay[0], 'reshuffle_info', None))
+                            if not keep_jac:
+                                # joint PA bundles jac_dec with J_prod: both come out
+                                # of the single reshuffle_production, which under
+                                # density_keep_jacobian = False runs only after the
+                                # event is accepted and so enters no weight. Mirror
+                                # that here, or the two schemes stop matching.
+                                jac_dec = 1.0
+
+                        # The production reshuffling jacobian only enters the
+                        # weight under density_keep_jacobian; then it is needed per
+                        # trial. Otherwise its sole use is spotting a mass set the
+                        # production cannot reshuffle, and that depends on the whole
+                        # set, so it is checked once after the chain is complete --
+                        # not here, where the reshuffle-on-a-copy dominated the cost.
+                        j_k = j_prev
+                        if keep_jac:
+                            j_probe = self._production_jacobian_for(production,
+                                                                   slot_to_index,
+                                                                   slot_masses)
+                            if j_probe in (0, -1):
+                                stats['nb_production_restart'] += 1
+                                restart = True
+                                break
+                            j_k = j_probe
+
+                        # accepted slots reuse their stored (already normalised)
+                        # density; only this slot's decay is evaluated here
+                        slot_densities[slot] = self._slot_density(
+                                        decay, init_part[slot], helicities[slot])
+                        n_k = self._partial_density_contraction(density_prod, helicities,
+                                                                slot_densities)
+                        # jac_dec is this slot's own factor (it depends on this
+                        # decay only), so unlike J it enters without a ratio -- the
+                        # product over slots is what the joint reshuffle_production
+                        # multiplies in.
+                        wgt = (n_k / n_prev).real * jac_bw * jac_dec * (j_k / j_prev)
                         if probe is not None:
+                            # python float: these are marshalled as JSON when the
+                            # scan runs across forked workers
                             probe.append(float(wgt))
-                            accept = True
-                        elif maxwgt is None:
                             accept = True
                         else:
                             if wgt > maxwgt:
+                                # the bound was under-estimated: this biases
+                                # silently, so it has to be visible
                                 stats['nb_overflow_%d' % position] += 1
-                                logger.debug('sequential: slot %s weight %s above'
-                                             ' its max %s', position, wgt, maxwgt)
+                                logger.debug('sequential: slot %s weight %s above '
+                                             'its max %s', position, wgt, maxwgt)
                             accept = random.random() * maxwgt < wgt
                         if accept:
                             slot_decays[slot] = decay
-                            n_prev = n_k
+                            n_prev, j_prev, budget = n_k, j_k, new_budget
                             break
+                        # rejected: this slot only, drop what it contributed
                         slot_densities.pop(slot, None)
-                        continue
-
-                    jac_dec = 1.0
-                    new_budget = budget
-                    if draw_mass:
-                        # decay-side failure is local to this slot: redraw its
-                        # mass, keep every slot already accepted
-                        while True:
-                            new_budget, jac_dec = self._draw_offshell_mass(
-                                                particle.pdg, decay, budget)
-                            if self._decay_mass_is_feasible(decay):
-                                break
-                            stats['nb_mass_redraw_%d' % position] += 1
-                        slot_masses[slot] = (decay[0].new_mass,
-                                             getattr(decay[0], 'reshuffle_info', None))
-
-                    # The production reshuffling jacobian only enters the
-                    # weight under density_keep_jacobian; then it is needed per
-                    # trial. Otherwise its sole use is spotting a mass set the
-                    # production cannot reshuffle, and that depends on the whole
-                    # set, so it is checked once after the chain is complete --
-                    # not here, where the reshuffle-on-a-copy dominated the cost.
-                    j_k = j_prev
-                    if keep_jac:
-                        j_probe = self._production_jacobian_for(production,
-                                                               slot_to_index,
-                                                               slot_masses)
-                        if j_probe in (0, -1):
-                            stats['nb_production_restart'] += 1
-                            restart = True
-                            break
-                        j_k = j_probe
-
-                    # accepted slots reuse their stored (already normalised)
-                    # density; only this slot's decay is evaluated here
-                    slot_densities[slot] = self._slot_density(
-                                    decay, init_part[slot], helicities[slot])
-                    n_k = self._partial_density_contraction(density_prod, helicities,
-                                                            slot_densities)
-                    wgt = (n_k / n_prev).real * jac_dec * (j_k / j_prev)
-                    if probe is not None:
-                        # python float: these are marshalled as JSON when the
-                        # scan runs across forked workers
-                        probe.append(float(wgt))
-                        accept = True
-                    else:
-                        if wgt > maxwgt:
-                            # the bound was under-estimated: this biases
-                            # silently, so it has to be visible
-                            stats['nb_overflow_%d' % position] += 1
-                            logger.debug('sequential: slot %s weight %s above '
-                                         'its max %s', position, wgt, maxwgt)
-                        accept = random.random() * maxwgt < wgt
-                    if accept:
-                        slot_decays[slot] = decay
-                        n_prev, j_prev, budget = n_k, j_k, new_budget
+                        slot_masses.pop(slot, None)
+                    if restart or angle_dead:
                         break
-                    # rejected: this slot only, drop what it contributed
-                    slot_densities.pop(slot, None)
-                    slot_masses.pop(slot, None)
-                if restart:
-                    break
+                if joint_angles and not restart and probe is None and maxwgts:
+                    # One bound over the product of every slot's weight, instead
+                    # of one bound per slot: the per-slot bounds' product is
+                    # looser than a single bound on the product, and this buys
+                    # that back at the price of the early exit a per-slot test
+                    # gets when the first particle is rejected.
+                    stats['nb_angleset_try'] += 1
+                    c_angles = maxwgts[1] if len(maxwgts) > 1 else maxwgts[-1]
+                    if w_angles > c_angles:
+                        stats['nb_overflow_angles'] += 1
+                        logger.debug('sequential: angle weight %s above its max %s',
+                                     w_angles, c_angles)
+                    if random.random() * c_angles >= w_angles:
+                        stats['nb_angle_reject'] += 1
+                        # keep the mass set, and with it the reshuffled
+                        # production and its density matrix: only the decays are
+                        # drawn again. That reuse is the point of this scheme.
+                        continue
+                break
             if not restart and draw_mass and not keep_jac and probe is None:
                 # feasibility of the complete mass set: one reshuffle for the
                 # whole chain instead of one per trial
@@ -4323,6 +5080,10 @@ class MadSpinInterface(extended_cmd.Cmd):
         decays = collections.defaultdict(list)
         for slot in range(len(order)):
             decays[particles[slot_to_index[slot]].pid].append(slot_decays[slot])
+        if (offshell and probe is None and decay_dict
+                and self.options['sequential_debug']):
+            self._check_weight_identity(production, decays, decay_dict,
+                                        w_mass_raw * w_slots, helicities, stats)
         return decays
 
     def get_onshell_evt_and_wgt(self, production, decays, decay_dict, prod_density_cached=None, build_event=True):

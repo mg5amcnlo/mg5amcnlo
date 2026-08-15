@@ -481,7 +481,9 @@ The whole point of the flag is A/B, so the plan is measurement-first:
 5. **Efficiency** — log per-slot acceptance and total decay events consumed per
    production event, both modes. That is the number that justifies the feature
    and calibrates the ladder.
-6. `density_debug` must still pass in joint mode (unchanged code path).
+6. ~~`density_debug` must still pass in joint mode (unchanged code path).~~
+   **`density_debug` is itself broken** and cannot be used as a validation
+   instrument -- see the note at the end of section 10.
 
 ---
 
@@ -639,7 +641,454 @@ joint and sequential, and orthogonal to the per-particle factorisation: it hits
 `w+ > all all` regardless of which accept/reject is used. For resonant decays
 the density mode is efficient and the sequential version improves on it.
 
-**madspin/full are enabled** in `_sequential_active`. The open item is the
+**madspin/full are reachable but not the default** in `_sequential_active`:
+`sequential_decay = auto` resolves to sequential for PA/onshell and to the joint
+test for madspin/full, and the wall-time measurement below says it should stay
+that way. The open item is the
 `w+ > all all` non-resonant blow-up in the density-madspin *weight* (BW_cut too
 wide for unweighting the reshuffle? reweighting normalisation? keep those
 channels weighted?), which would help the default joint madspin too.
+
+### Fixed (measured): the mass-set stage missed the per-slot normalisation
+
+The claim above that the un-drawn-slot identity "keeps whatever per-particle
+constant (the offshell/onshell rate ratio) it carries; that is absorbed into
+C_k" is **wrong when that ratio depends on the sampled virtuality**, which is
+the madspin case. The per-angle loop redraws until it accepts, so slot k's
+accepted angles are distributed as `p_pool * w_k / Z_k` with
+
+    Z_k(m) = Integral p_pool(Omega) w_k(Omega, m) dOmega ~ Gamma_k(m)/Gamma_k(on)
+
+Redrawing-until-accept divides `Z_k` out, so the accepted *mass sets* are
+missing `prod_k Z_k(m_k)` relative to the joint weight -- the running-width
+factor. For PA/onshell this cannot happen: fact (b) makes `Z_k == 1`. For
+madspin it is a real bias of the two-stage (mass set, then angles) split.
+
+Measured on `p p > t t~`, `t > w+ b, w+ > l+ vl`, 10000 events (probe-mode dump
+of `E[w_0 | m]`):
+
+    Z(155) = 0.61   Z(165) = 0.81   Z(173) = 1.00   Z(180) = 1.19   Z(190) = 1.49
+
+and the consequence on the reconstructed top lineshape:
+
+    sequential madspin  <m_top> = 172.937 +- 0.022
+    joint madspin       <m_top> = 173.185 +- 0.022     (-7.8 sigma)
+    sequential x Z(m_t)Z(m_tbar) = 173.190 +- 0.023    (closure, 0.14 sigma)
+
+i.e. the whole discrepancy is that one factor -- it is not the decay
+reshuffling jacobian (added since, and verified chain-by-chain: with it the
+sequential product equals `prod(n_i) * |M_prod|^2_on * wgt_joint` to 1.5e-7,
+against a 1.4% rms spread without it), and it is not max-weight truncation
+(doubling `C_mass` via `nb_sigma = 3` leaves the shift at -0.26 GeV). The mass
+distribution sequential madspin produces is the PA/Breit-Wigner one
+(`<m_top>` = 172.916 for PA joint), because the decay-side offshell
+reweighting of the virtuality is exactly what gets normalised away.
+
+#### What Z_k is, and why it can be tabulated
+
+Working the contraction through, the pool sampling density (proportional to
+`|M_dec|^2_on`) cancels the onshell denominator and rotational invariance in the
+parent rest frame turns the angular integral of `D^off` into the identity, so
+
+    Z_k(m) = Integral dPhi_off(m) |M_dec|^2 / Integral dPhi_on |M_dec|^2
+           = (m/M) * Gamma_k(m) / Gamma_k(M)
+
+-- the `m/M` because this ratio carries no `1/2m` flux factor. Three things drop
+out of it: the production event, the other slots' virtualities, and the angles
+already accepted. It is a smooth function of **that slot's virtuality alone**,
+which is what makes a one-dimensional table per slot the right object. The
+narrow-width formula for `t > W b` reproduces the measured values above to 1-2%
+(0.601 / 0.807 / 1 / 1.194 / 1.512 against 0.61 / 0.81 / 1.00 / 1.19 / 1.49).
+
+The same derivation gives a cheaper estimator than `w_k` itself: with
+`s_k = jac_dec * Tr(D^off) / |M_dec|^2_on`, `E[s_k|m] = E[w_k|m] = Z_k(m)`
+exactly -- the density ratio `N_k/N_{k-1}` averages to one at fixed m -- so the
+table is built from `s_k`, which carries no polarisation modulation and hence
+less variance.
+
+#### An imperfect Z_hat does *not* cancel
+
+The per-angle stage is **invariant** under any rescaling of `w_k` by a factor
+that does not depend on the angles: `w_k -> w_k / Z_hat_k` changes its
+normalisation to `Z_k / Z_hat_k` and leaves the accepted angles alone. So
+whatever weight it is given, it still divides out the *true* `Z_k`, and the
+residual bias of a tabulated scheme is exactly `Z_hat / Z`. Accuracy is
+therefore a requirement, not a nicety -- unless the per-angle stage is stopped
+from normalising at all, which is what `sequential_exact` does.
+
+How accurate: the full factor moves `<m_top>` by 0.248 GeV, so a fractional
+error `eps` in the slope of `ln Z` leaves `0.25 * eps` GeV behind. Against the
+0.031 GeV combined MC error of a 10000-event A/B that is `eps < 12%` -- loose,
+and about ten times looser than what the probe delivers.
+
+#### Implementation
+
+`_zhat` / `_build_z_tables` / `_z_slot_keys` (interface_madspin.py). The samples
+are free: the max-weight probe already draws `Nevents_for_max_weight *
+max_weight_ps_point` = 75 * 500 chains, each giving one `(m_k, s_k)` pair per
+slot, so `sequential_accept_reject` records them in probe mode
+(`probe_extra`) and `get_sequential_maxwgt` fits the table before combining the
+bounds. The fit is a weighted quadratic in `ln(m/pole)` through the *bin means*
+(Z is an expectation, so the mean estimates it and the mean of the logarithms
+would not), held constant outside the probed range and reported in the log
+against the running width it estimates. `C_mass` is then derived from the
+completed weights `w_mass * prod_k Z_hat_k` (`_complete_offshell_probe`), which
+is why the probe now keeps its chains instead of maxing them online.
+
+Two related points fell out:
+
+- **`jac_dec == 0` is a rejection, not a restart.** The offshell branch used to
+  trash the whole mass set when a drawn decay could not be reshuffled onto its
+  virtuality. That is a *second* mass-dependent normalisation -- the set then
+  survives slot k with probability `Z_k / (Z_k + q_k C_k)`, not `Z_k` -- which
+  would defeat the correction near a threshold (it is invisible on `t > W b`,
+  where `m_t > M_W + M_b` always). A zero-weight candidate is an ordinary
+  rejection; counting it as one makes `Z_k`, which includes those zeros, the
+  exact correction again. A virtuality no pool decay can reach is killed by the
+  table itself (`zero_below`), with a 200-draw fail-safe behind it.
+- The `max_wgt_sequential` cache splits: the offshell bounds travel with their
+  tables (and depend on `sequential_exact`), so they get their own file name and
+  a JSON format.
+
+#### `sequential_exact`: the escape hatch
+
+New option, offshell spinmodes only. The mass stage pays `Z_hat_k`, each slot
+divides it back out, and a **rejected decay trashes the mass set** instead of
+being redrawn. The chain is then accepted with probability proportional to
+`w_mass * prod_k w_k` -- the joint weight -- so `Z_hat` cancels identically and
+is reduced to an efficiency preconditioner: exact whatever the table says, or
+even with no table at all. The price is that the per-angle stage no longer
+recovers from a rejection, so the acceptance falls back towards the joint one
+and only the early-exit saving survives (worth little at n=2, more at n>=3). Use
+it to bound the residual bias of the tabulated path without needing the joint
+run as the yardstick.
+
+#### A/B after the fix
+
+Same 10000 production events, `p p > t t~`, `t > w+ b, w+ > l+ vl`, seed 42,
+`nb_core 1`, joint madspin as the reference:
+
+                        <m(l+ v b)>          <m(l- v~ b~)>        lineshape
+    joint            173.2024 +- 0.0318   173.1681 +- 0.0318      --
+    sequential + Z   173.1278 +- 0.0319   173.1554 +- 0.0318      chi2/ndf 19.0/22
+    sequential_exact 173.1914 +- 0.0323   173.1906 +- 0.0323      chi2/ndf 10.4/22
+
+Over both resonances that is a shift of -0.044 +- 0.032 GeV for the tabulated
+path and +0.006 +- 0.032 GeV for the exact one, against **-0.248 GeV (-7.8
+sigma)** and chi2/ndf 75.8/22 before the fix. `m(l+ vl)` and `dphi(l+,l-)`, the
+no-regression checks, stay within 0.3-0.6 and 1.0-1.9 sigma.
+
+The -1.66 sigma on `m(l+ v b)` alone is a fluctuation, not a residual. Four
+sequential replicas over the same production events with independent MadSpin
+seeds (42, 43, 44, 45) average both resonances to 173.1416, 173.1527, 173.2167
+and 173.1453 -- 173.1641 +- 0.0177 -- against two joint replicas at 173.1853 and
+173.1867. That is a residual of **-0.022 +- 0.024 GeV**, a tenth of what was
+there before and consistent with zero.
+
+The joint-vs-joint replica is the control that makes the rest readable: it comes
+out at chi2/ndf 21.7/22 on the lineshape and 2.1 sigma on `m(l+ vl)`, i.e. the
+scatter between two runs of the *same* scheme is as large as anything the
+sequential replicas show (14.8, 18.9, 23.1 on the lineshape; 1.2-2.5 sigma on
+`m(l+ vl)`, whose naive standard error is optimistic because the Breit-Wigner
+tail reaches 15 widths). Sequential-vs-joint is now indistinguishable from
+joint-vs-joint.
+
+(Replicating needs a *fresh factory per seed*: MadSpin seeds its RNG on the
+first `set seed` of the card and ignores every later one, so an extra `set seed`
+appended to the card silently reproduces the same run.)
+
+The tabulated `Z` is accurate far beyond what is needed: the fit reports
+`Z(150.7) = 0.53`, `Z(173) = 1`, `Z(195.4) = 1.71` with bin-to-fit deviations
+under 2%, against the narrow-width `(m/M) Gamma(m)/Gamma(M)` values 0.525 and
+1.704 -- i.e. under 0.5% on the shape, where 12% would do.
+
+#### The mass weight must be normalised by |M_prod|^2 on shell (Olivier)
+
+The mass-set weight above was written `Tr(rho_off) * jac_reshuffle * prod jac_bw`
+-- an offshell production matrix element in the numerator with nothing under it,
+while the joint weight divides by the **onshell** one
+(`calculate_matrix_element_from_density`: `MEdenom_prod` is evaluated before
+`reshuffle_production` and returned as `prod_diag`). The missing denominator is
+
+    w_mass = [ Tr(rho_off) / |M_prod|^2_on ] * jac_reshuffle * prod_k jac_bw_k
+                                            * prod_k Z_hat_k(m_k)
+
+**It is not a bias.** `|M_prod|^2_on` depends on the production event alone, and
+the chain never redraws the production event -- the mass stage resamples
+virtualities, nothing else. A factor constant over everything the chain
+resamples cancels between the weight and its bound, and since every production
+event is kept and retried to acceptance it cannot reweight events against each
+other either. Which is why the A/B closed without it.
+
+**It is still wrong**, because `C_mass` is a single number shared by every
+production event. Left out, the absolute scale of `|M_prod|^2` rides inside
+`w_mass` and varies across the sample by orders of magnitude: the bound is set
+by the loudest kinematics, the quiet ones pay for it in acceptance, and the loud
+ones exceed it and are silently truncated. Both of the runs reported above did
+log the overflow CRITICAL -- 10 weights (sequential) and 28 (exact) -- and the
+per-slot lines carry no overflow annotation, so every one of them was at the
+mass stage.
+
+Measured, same 10000 events, before -> after normalising:
+
+    C_mass                       17.1  ->  3.09
+    mass sets / accepted event   26.2  ->  3.20     (sequential)
+                                104.5  -> 12.79     (sequential_exact)
+    weights above their bound      10  ->  1        (sequential)
+                                   28  ->  3        (sequential_exact)
+    decay phase                  28.7s -> 19.7s     (sequential)
+                                 83.9s -> 31.4s     (sequential_exact)
+
+with the lineshape unchanged, as the constancy argument requires: over both
+resonances the sequential mean moves from 173.1641 to 173.17 and the exact one
+sits at 173.1877 against joint's 173.1853. Cost: one onshell production matrix
+element per production event, cached under `me_wgt` -- the same attribute, and
+the same quantity, the joint path already caches there.
+
+#### `sequential_joint_angles` (variant A): one bound over all the angles
+
+Suggested by Olivier. Keep the mass-set stage, but replace the *per-slot*
+accept/reject by a single test on the product of every slot's weight, redrawing
+the whole angle set on a rejection and **keeping the mass set**:
+
+    stage 1   w_mass  = [Tr(rho_off)/|M_prod|^2_on] * jac_reshuffle
+                        * prod_k jac_bw_k * prod_k Z_hat_k(m_k)
+    stage 2   w_angle = prod_k [ (N_k/N_{k-1}) * jac_dec_k
+                                 * Tr(D_k^off)/|M_k,dec|^2_on / Z_hat_k ]
+
+This is the same target distribution as the per-slot scheme -- same mass stage,
+same self-normalising angle stage, only the granularity of the test changes --
+and the measurement says so: over four replicas each, variant A gives
+173.1704 +- 0.0101 and the per-slot scheme 173.1703 +- 0.0062, agreeing to
+0.0001 GeV while their replica scatters are 0.010-0.012. It needs `Z_hat` for
+exactly the same reason the per-slot scheme does: stage 2 redraws to acceptance
+and so divides out its own normalisation.
+
+**What it buys is reuse.** With the mass set frozen across angle retries, the
+production reshuffling and the offshell production density are evaluated once
+per *accepted mass set* rather than once per trial -- which the joint test
+cannot do, because a rejection there redraws the virtualities too. Per event on
+ttbar: 3.25 mass sets and 5.74 decay-ME evaluations, against joint's 4.46 trials
+and 8.92.
+
+The `Z_hat` division in stage 2 is not needed for correctness (stage 2 is
+invariant under any rescaling by a function of the masses) but is kept for two
+reasons: it flattens the virtuality dependence out of `C_angle`, and it makes
+the bound estimated by the probe -- which samples masses from the prior, not
+from the accepted mass distribution -- closer to what the run actually tests.
+
+An infeasible decay kills the whole angle set rather than being redrawn in
+place. Redrawing one slot would propose from the *feasible* part of the pool,
+making the normalisation stage 2 divides out `Z_k/(1 - q_k(m))` instead of
+`Z_k` -- a different function of the virtuality than the tabulated one, so the
+mass stage's `Z_hat` would no longer compensate it. The same argument applies to
+`sequential_exact`, and both were fixed together.
+
+#### Variant B (`sequential_joint_angles` + `sequential_exact`): dropped
+
+The same single angle bound, but a rejected angle set trashes the mass set. That
+makes `Z_hat` cancel between the stages and the scheme exact whatever the table
+says, and it costs the reuse above (9.25 mass sets per accepted event instead of
+3.25). It was measured and **dropped**: over four replicas it sits 0.034 GeV
+below joint, which is the *largest* deviation of any scheme tried and in the
+scheme that should have been the most exact. That is not understood. Either the
+error model below is wrong or that implementation is; the combination is
+reachable in the code but should not be used until the weight-identity check
+settles it.
+
+#### The option: one knob, four schemes
+
+`sequential_decay`, `sequential_exact` and `sequential_joint_angles` are replaced
+by a single enumerated option -- the schemes are mutually exclusive alternatives,
+not independent switches, and after variant B was dropped the three booleans no
+longer spanned a clean 2x2:
+
+    set unweighting auto | joint | two_stage | sequential | sequential_global_retry
+
+    mode                     mass stage   angle test              a rejection redraws
+    joint                    --           everything at once      everything
+    two_stage                yes          all angles, one bound   the angles only
+    sequential               yes          per particle            that particle
+    sequential_global_retry  yes          per particle            the virtualities too
+
+`sequential_decay` survives as a deprecated alias (`True` -> sequential,
+`False` -> joint, warning once), so cards written against the earlier revisions
+of this branch keep working. `sequential_spin_order` and `sequential_debug` keep
+their names: an ordering and a check, not modes.
+
+**`sequential_exact` was renamed, not kept.** "Exact" advertised a distinction of
+~0.001 GeV on the top lineshape -- the tabulated factor is good to ~0.5%, and the
+lineshape sensitivity is 0.25 GeV per unit fractional slope error -- inside a pole
+approximation whose own error is of order `Gamma/m` ~ 0.9%, three orders of
+magnitude larger. The name would have pushed users to a 2-3x slower scheme for a
+difference nobody can measure. `sequential_global_retry` says what the mode does
+and leaves the accuracy statement to the documentation, where it can carry the
+numbers.
+
+**`auto`** resolves once per run, from the number of decaying particles counted
+where `to_decay` is built -- not per event, since the modes carry different
+bounds and one that changed event to event would be testing against the wrong
+ones:
+
+- **one decaying particle -> `joint`**, in every spinmode. Every split
+  degenerates there: the per-particle test *is* the joint test (section 3), and
+  the mass/angle one only moves the same factors between two stages. Nothing to
+  win, so the identity machinery is pure cost.
+- **PA/onshell -> `sequential`**. `two_stage` and `sequential_global_retry` split
+  the accept/reject at the up-front mass draw, which those modes do not have;
+  asked for explicitly they log why and fall back to `sequential`.
+- **madspin/full -> `two_stage` for two, `sequential` from three.** One bound
+  over all the angles is tighter than the product of per-particle bounds, while
+  testing each particle as it is drawn lets a rejection skip the decays not yet
+  drawn. The first wins while there is little to skip, the second as the chain
+  lengthens.
+
+That last line makes `auto` non-joint for madspin/full, where `two_stage` is
+faster than the joint test (3.25 production densities and 5.74 decay MEs per
+event against 4.46 and 8.92) and agrees with it at +0.23 sigma over eight
+replicas. An explicit setting is always honoured, including the degenerate
+single-particle case, so any of the four stays available as a cross-check.
+
+#### How to compare these numbers (measurement notes, learned the hard way)
+
+**Wall clocks are only comparable within one campaign.** The per-slot scheme
+measured 19.74 s in one campaign and 13.33 s in another, with byte-identical
+counters (same bounds, same trial counts, same seed) -- a 48% swing from machine
+load alone. Several cost claims in earlier revisions of this document were built
+on cross-campaign timings and were wrong. Quote the counters (mass sets, decay
+evaluations, acceptances, overflows); quote wall time only from a single
+campaign, with joint as an anchor in it.
+
+**Most of the decay phase is not the accept/reject.** Counter differences of
+30-40% between schemes move the clock by about 10%, so a large per-event fixed
+cost -- reading the production event, `add_decays`, the final
+`reshuffle_production`, writing the LHE -- dominates. A three-point fit put it
+near 1.05 ms/event, but PA's total is *below* that, so the fit is
+ill-conditioned and the figure too high; what survives is the qualitative
+statement. Profile before optimising the accept/reject further.
+
+**Replicas share production events.** Replicas of one scheme (same production
+sample, different MadSpin seed) scatter by 0.005 (joint) to 0.020 (the
+sequential schemes) on `<m_top>` over both resonances, while the naive
+per-run MC error is 0.0225. The replicas are therefore strongly correlated and
+neither error is right for a scheme-to-scheme difference: the naive one is too
+conservative, the replica scatter probably too optimistic. This is unresolved,
+and it is why the residuals below are quoted with both.
+
+#### Speed, measured within one campaign
+
+Decay phase for the same 10000 production events, `p p > t t~`,
+`t > w+ b, w+ > l+ vl`, `nb_core 1`:
+
+    spinmode   scheme                 decay phase   per event
+    PA         joint                     9.17 s     3.14 trials -> 6.28 decay ME
+    PA         sequential (default)     11.19 s     1.88 + 3.13 -> 5.01 decay ME
+    madspin    variant A                13.55 s     3.25 mass sets, 5.74 decay ME
+    madspin    joint                    14.61 s     4.46 trials -> 8.92 decay ME
+
+So full offshell matrix elements with variant A cost about **1.5x PA-joint**,
+where madspin-joint costs 1.6x, and variant A is **7-9% faster than
+madspin-joint** (13.06-13.55 s against 14.43-14.61 s over two campaigns).
+
+Two observations about PA, both independent of this work:
+
+- **PA sequential is 22% slower than PA joint on this process**, despite drawing
+  fewer decay events (5.01 against 6.28). With `density_keep_jacobian` on, every
+  slot trial calls `_production_jacobian_for` -- an `Event(str(production))` copy
+  and a reshuffle -- so 5.01 production reshufflings per event against joint's
+  3.14. The per-slot decomposition is supposed to pay off as n grows; at n = 2 it
+  does not, and `sequential_decay = auto` makes sequential the default for PA.
+- **PA sequential logged 11 weight overflows** (9 at slot 0, 2 at slot 1) against
+  variant A's 1 and joint's 0. Its per-slot bounds are under-estimated here, so
+  that sample is slightly biased. Worth a look on its own.
+
+#### Where the offshell path stands
+
+`sequential_decay = auto` still routes madspin/full to the joint accept/reject.
+Variant A is now faster than joint on n = 2 and correct as far as the statistics
+can tell, so that default is worth revisiting -- but not before the residual
+below is understood.
+
+**Resolved: the residual is statistical, and Z_hat is not the limiting factor.**
+Earlier revisions of this section recorded that every tabulated scheme sat below
+joint with the same sign in all twelve replicas, and flagged a possible `Z_hat`
+inaccuracy. Tested directly by raising `max_weight_ps_point` from 500 to 2500,
+i.e. 187500 probe samples per slot instead of 37500:
+
+    Z table         Z(150.6)      Z(195.4)     bin/fit deviation
+    1x probe      0.527 / 0.529  1.705/1.710      1.8% / 0.8%
+    5x probe      0.524 / 0.524  1.707/1.705      0.4% / 0.6%
+    analytic          0.5245        1.7036
+
+The table is already converged at the default statistics: five times the samples
+move its endpoints by under 1%, the bin-to-fit deviation falls like 1/sqrt(N)
+(so it was statistical, not a wrong fit form), and the deep table reproduces the
+narrow-width `(m/M) Gamma(m)/Gamma(M)` to 0.1-0.2%. Against a lineshape
+sensitivity of 0.25 GeV per unit fractional error in the slope of `ln Z`, the
+observed residual would have needed a ~4.4% slope error -- an order of magnitude
+more than the table's ~0.5%.
+
+And the lineshape moved the wrong way for a systematic, over four replicas each:
+
+    variant A, 1x probe   173.1704 +- 0.0101    -0.011 +- 0.010   (-1.1 sigma)
+    variant A, 5x probe   173.1985 +- 0.0182    +0.017 +- 0.018   (+0.9 sigma)
+    joint                 173.1818 +- 0.0024
+
+-- it flipped sign rather than shrinking, and three of the four deep-probe
+replicas sit *above* joint, which retires the "same sign every time" pattern.
+Pooling all eight variant A replicas gives **173.1844 +- 0.0110 against joint's
+173.1818, i.e. +0.003 +- 0.011 (+0.23 sigma)**. Variant A agrees with the joint
+accept/reject.
+
+`max_weight_ps_point = 500` is therefore sufficient for the Z table; the deeper
+probe costs 169 s against 76 s per 10000-event run (the probe is fixed setup, so
+it amortises on larger samples) and buys nothing.
+
+**What this leaves open.** Variant B's -0.034 GeV was quoted at "-4.3 sigma" on
+the replica-scatter error model; that significance is not trustworthy. The
+replica scatter itself ranges from 0.005 (joint) to 0.036 (variant A, deep
+probe) across schemes estimated from four points each -- a ~40% uncertainty on
+the error bar before any comparison is made -- and the two error models
+(naive per-run MC error, and replica scatter) disagree by a factor of three.
+Any future claim at the few-hundredths-of-a-GeV level needs either many more
+replicas or, better, the deterministic check below.
+
+**Done: the weight identity holds (`sequential_debug`).** New option, offshell
+only: on every accepted chain, recompute the joint weight with the joint code --
+on copies, for the same production event, the same virtualities and the same
+decays -- and compare with the product of the stage weights.
+
+The weights compared are the ones taken *before* any `Z_hat` division, since
+`Z_hat` cancels between the mass stage and the angle stage. What is tested is
+therefore the decomposition itself, not the table. And what is tested is
+*proportionality*, not equality: the two differ by a constant -- the number of
+helicity states, and the normalisation the density path applies to the decay
+matrix elements relative to `calculate_matrix_element` -- which the bounds
+absorb. A constant ratio is the identity, whatever its value; a scheme sampling
+the wrong distribution has a ratio that varies chain to chain.
+
+Measured over 2000 accepted chains each:
+
+    variant A            spread 1.71e-07   ratio 1108198261
+    sequential per-slot  spread 1.55e-07   ratio 1108198255
+    variant B            spread 1.54e-07   ratio 1108198258
+
+The spread is float32 epsilon (1.19e-7) -- the density matrices are
+`complex64`, so that is the floor of the arithmetic and not physics -- and the
+three schemes agree on the constant to nine significant figures. The threshold
+is `density_tolerance`, for the same reason `density_debug` uses it: two
+evaluation routes through single-precision matrix elements cannot agree better
+than that.
+
+**What this settles, and what it does not.** It settles the *weight algebra* in
+all three schemes: no missing jacobian, no wrong normalisation, no mis-assigned
+factor. That is the class of bug a lineshape comparison detects only indirectly
+and that no amount of Monte Carlo could have excluded.
+
+It does not settle the *sampling*, which additionally requires that nothing
+self-normalising is left uncompensated -- the `Z_hat ~ Z` requirement for
+variant A and the per-slot scheme (measured at ~0.5%, far inside the ~12%
+tolerance), automatic for the restart schemes. So variant B's -0.034 GeV is not
+a broken weight. With the weights verified and the error models in the state
+described above, the honest summary is: weights correct, deviation unexplained,
+dropped because it is slower than variant A anyway.

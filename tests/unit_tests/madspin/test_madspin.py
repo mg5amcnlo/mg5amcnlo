@@ -1142,9 +1142,15 @@ class TestSequentialAcceptReject(unittest.TestCase):
             _decay_slot_order = interface._decay_slot_order
             sequential_accept_reject = interface.sequential_accept_reject
             _scan_maxwgt_range = interface._scan_maxwgt_range
+            _sequential_offshell = interface._sequential_offshell
+            _unweighting_mode = interface._unweighting_mode
+            _announce_mode = interface._announce_mode
+            _log_once = interface._log_once
             def __init__(self):
                 self.options = {'spinmode': 'onshell',
-                                'sequential_spin_order': '2 3 1'}
+                                'sequential_spin_order': '2 3 1',
+                                'unweighting': 'sequential',
+                                'fixed_order': False}
             def _density_basis(self, production, decays_key):
                 particles, slots = interface._sequential_slots(production, decays_key)
                 return {'decays_key': decays_key, 'helicities': hels,
@@ -1231,11 +1237,14 @@ class TestSequentialPoolLadder(unittest.TestCase):
         class Stub(object):
             _sequential_pool_ladder = interface._sequential_pool_ladder
             _sequential_active = interface._sequential_active
+            _unweighting_mode = interface._unweighting_mode
+            _announce_mode = interface._announce_mode
+            _log_once = interface._log_once
             _sequential_spin_order = interface._sequential_spin_order
             _decay_pool_ladder = staticmethod(interface._decay_pool_ladder)
         stub = Stub()
         stub.model = self._Model(spins)
-        stub.options = {'sequential_decay': True, 'fixed_order': False,
+        stub.options = {'unweighting': 'sequential', 'fixed_order': False,
                         'spinmode': 'PA', 'sequential_spin_order': '2 3 1'}
         stub.options.update(options)
         return stub
@@ -1264,7 +1273,7 @@ class TestSequentialPoolLadder(unittest.TestCase):
         spins = {6: 2, -6: 2}
         pools = {6: self.NB, -6: self.NB}
         # opted out
-        self.assertEqual(self._stub(spins, sequential_decay=False)
+        self.assertEqual(self._stub(spins, unweighting='joint')
                              ._sequential_pool_ladder(pools, self.NB, True), {})
         # not density mode
         self.assertEqual(self._stub(spins)
@@ -1284,29 +1293,84 @@ class TestSequentialPoolLadder(unittest.TestCase):
         self.assertTrue(self._stub({6: 2}, spinmode='onshell')._sequential_active(True))
 
     def test_sequential_active_auto(self):
-        """'auto' (the default) resolves per spinmode: sequential for the
-        PA/onshell pole approximations, joint for madspin/full."""
+        """'auto' resolves per spinmode: a per-particle or two-stage scheme
+        everywhere it is supported, joint outside the density modes."""
         for mode, expected in [('PA', True), ('onshell', True),
-                               ('madspin', False), ('full', False),
+                               ('madspin', True), ('full', True),
                                ('none', False)]:
-            stub = self._stub({6: 2}, sequential_decay='auto', spinmode=mode)
+            stub = self._stub({6: 2}, unweighting='auto', spinmode=mode)
             self.assertEqual(stub._sequential_active(True), expected,
                              'auto + spinmode=%s' % mode)
         # fixed_order still forces the joint test
-        stub = self._stub({6: 2}, sequential_decay='auto', fixed_order=True)
+        stub = self._stub({6: 2}, unweighting='auto', fixed_order=True)
         self.assertFalse(stub._sequential_active(True))
+        self.assertEqual(stub._unweighting_mode(True), 'joint')
+
+    def test_auto_picks_the_scheme_by_the_number_of_decays(self):
+        """One bound over all the angles is tighter than the product of
+        per-particle bounds, while a per-particle test lets a rejection skip the
+        decays not yet drawn. The first wins while there is little to skip, so
+        auto takes two_stage up to two decaying particles and sequential from
+        three -- offshell only, since the other modes have no mass-set stage to
+        split at."""
+        for nb, expected in [(1, 'joint'), (2, 'two_stage'),
+                             (3, 'sequential'), (6, 'sequential')]:
+            stub = self._stub({6: 2}, unweighting='auto', spinmode='madspin')
+            stub._nb_decaying = nb
+            self.assertEqual(stub._unweighting_mode(True), expected,
+                             '%d decaying particles' % nb)
+        # PA has no up-front mass draw: per particle whenever there is a
+        # decomposition to make at all
+        for nb in (2, 5):
+            stub = self._stub({6: 2}, unweighting='auto', spinmode='PA')
+            stub._nb_decaying = nb
+            self.assertEqual(stub._unweighting_mode(True), 'sequential')
+
+    def test_auto_is_joint_for_a_single_decaying_particle(self):
+        """One decaying particle: the per-particle test is the joint test and
+        the mass/angle split only moves the same factors between two stages, so
+        auto pays for neither -- in every spinmode."""
+        for spinmode in ('PA', 'onshell', 'madspin', 'full'):
+            stub = self._stub({6: 1}, unweighting='auto', spinmode=spinmode)
+            stub._nb_decaying = 1
+            self.assertEqual(stub._unweighting_mode(True), 'joint', spinmode)
+            self.assertFalse(stub._sequential_active(True))
+        # asked for explicitly it is still honoured, for cross-checks
+        stub = self._stub({6: 1}, unweighting='sequential', spinmode='madspin')
+        stub._nb_decaying = 1
+        self.assertEqual(stub._unweighting_mode(True), 'sequential')
+
+    def test_offshell_only_modes_fall_back_under_pa(self):
+        """Asked for explicitly under PA/onshell, the two modes that need the
+        up-front mass draw say so and use sequential."""
+        for mode in ('two_stage', 'sequential_global_retry'):
+            stub = self._stub({6: 2}, unweighting=mode, spinmode='PA')
+            self.assertEqual(stub._unweighting_mode(True), 'sequential')
+            stub = self._stub({6: 2}, unweighting=mode, spinmode='madspin')
+            self.assertEqual(stub._unweighting_mode(True), mode)
 
     def test_madspin_option_defaults(self):
         """The shipped defaults: spinmode=madspin, jacobian in the weight,
-        sequential_decay on auto (and switchable off/back by the user)."""
+        unweighting on auto, and the deprecated alias still understood."""
         options = interface_madspin.MadSpinOptions()
         self.assertEqual(options['spinmode'], 'madspin')
         self.assertEqual(options['density_keep_jacobian'], True)
-        self.assertEqual(options['sequential_decay'], 'auto')
+        self.assertEqual(options['unweighting'], 'auto')
+        for value in ('joint', 'two_stage', 'sequential',
+                      'sequential_global_retry'):
+            options['unweighting'] = value
+            self.assertEqual(options['unweighting'], value)
+
+    def test_deprecated_sequential_decay_alias(self):
+        """sequential_decay is gone as a knob but still understood: the two
+        values it ever had map onto the two modes that existed then."""
+        options = interface_madspin.MadSpinOptions()
+        options['sequential_decay'] = 'True'
+        self.assertEqual(options['unweighting'], 'sequential')
         options['sequential_decay'] = 'False'
-        self.assertEqual(options['sequential_decay'], False)
+        self.assertEqual(options['unweighting'], 'joint')
         options['sequential_decay'] = 'auto'
-        self.assertEqual(options['sequential_decay'], 'auto')
+        self.assertEqual(options['unweighting'], 'auto')
 
 
 class TestScanMaxwgtDecomposition(unittest.TestCase):
@@ -1335,11 +1399,11 @@ class TestScanMaxwgtDecomposition(unittest.TestCase):
         stub, events, evt_decayfile = self._fixture()
 
         random.seed(5)
-        whole = stub._scan_maxwgt_range(events, 0, 6, evt_decayfile, 6, 30)
+        whole, _ = stub._scan_maxwgt_range(events, 0, 6, evt_decayfile, 6, 30)
 
         random.seed(5)
-        first = stub._scan_maxwgt_range(events, 0, 2, evt_decayfile, 6, 30)
-        second = stub._scan_maxwgt_range(events, 2, 6, evt_decayfile, 6, 30)
+        first, _ = stub._scan_maxwgt_range(events, 0, 2, evt_decayfile, 6, 30)
+        second, _ = stub._scan_maxwgt_range(events, 2, 6, evt_decayfile, 6, 30)
 
         self.assertEqual(len(whole), 6)
         self.assertEqual(first + second, whole)
@@ -1349,8 +1413,410 @@ class TestScanMaxwgtDecomposition(unittest.TestCase):
         import random
         random.seed(1)
         #Ignore the message "Error while creating the f2py modules for the production/decay part"
-        per_event = stub._scan_maxwgt_range(events, 0, 6, evt_decayfile, 6, 20)
+        per_event, _ = stub._scan_maxwgt_range(events, 0, 6, evt_decayfile, 6, 20)
         self.assertEqual(len(per_event), 6)
         for vec in per_event:
             self.assertEqual(len(vec), 2)          # two decaying particles
             self.assertTrue(all(w >= 0 for w in vec))
+
+
+class TestOffshellRateFactor(unittest.TestCase):
+    """Z_k(m): the normalisation the per-angle stage of the offshell sequential
+    accept/reject divides out, and which therefore has to be put back into the
+    mass-set weight.
+
+    Z_k is the offshell decay rate at the sampled virtuality over the onshell
+    one -- for a two-body decay of a spin-1/2 parent it is (m/M) Gamma(m)/Gamma(M),
+    a smooth function of that slot's virtuality alone. These tests check that the
+    tabulation recovers a known one from the samples the max-weight probe
+    collects, that it interpolates and clips as advertised, and that it lands in
+    the two weights the way sequential_exact needs.
+    """
+
+    class _Val(object):
+        def __init__(self, value):
+            self.value = value
+
+    class _Banner(object):
+        def get(self, card, kind, pdg):
+            return TestOffshellRateFactor._Val(173.0)
+
+    class _Stub(object):
+        _unweighting_mode = interface_madspin.MadSpinInterface._unweighting_mode
+        _announce_mode = interface_madspin.MadSpinInterface._announce_mode
+        _log_once = interface_madspin.MadSpinInterface._log_once
+        _build_z_tables = interface_madspin.MadSpinInterface._build_z_tables
+        _weighted_polyfit2 = staticmethod(
+                        interface_madspin.MadSpinInterface._weighted_polyfit2)
+        _z_slot_keys = staticmethod(
+                        interface_madspin.MadSpinInterface._z_slot_keys)
+        _zhat = interface_madspin.MadSpinInterface._zhat
+        _complete_offshell_probe = \
+                        interface_madspin.MadSpinInterface._complete_offshell_probe
+        def __init__(self, exact=False, joint_angles=False):
+            self.banner = TestOffshellRateFactor._Banner()
+            mode = 'sequential'
+            if joint_angles:
+                mode = 'two_stage'
+            elif exact:
+                mode = 'sequential_global_retry'
+            self.options = {'unweighting': mode, 'fixed_order': False,
+                            'spinmode': 'madspin'}
+            self._z_tables = {}
+
+    @staticmethod
+    def _truth(mass):
+        """A stand-in running width: (m/M) Gamma(m)/Gamma(M) for t > W b."""
+        pole, mw = 173.0, 80.419
+        def rate(m):
+            x = (mw / m) ** 2
+            return m ** 4 * (1 - x) ** 2 * (1 + 2 * x)
+        return rate(mass) / rate(pole)
+
+    def _samples(self, nb=20000, seed=3, spread=1.0, threshold=0.0):
+        """(virtuality, rate factor) pairs as the probe records them: one draw
+        each, the rate factor fluctuating around Z(m) with a large spread -- the
+        table is an average, not a fit through clean points."""
+        import random
+        rng = random.Random(seed)
+        out = []
+        for _ in range(nb):
+            mass = rng.uniform(150.0, 196.0)
+            if mass < threshold:
+                out.append((mass, 0.0))
+                continue
+            # lognormal noise, mean one: E[value | m] = Z(m)
+            noise = math.exp(rng.gauss(0, spread) - 0.5 * spread ** 2)
+            out.append((mass, self._truth(mass) * noise))
+        return out
+
+    def test_polyfit_recovers_a_quadratic(self):
+        xs = [-2.0, -1.0, 0.0, 1.0, 2.0, 3.0]
+        ys = [0.5 - 2 * x + 3 * x ** 2 for x in xs]
+        coeff = self._Stub()._weighted_polyfit2(xs, ys, [1.0] * len(xs))
+        for got, want in zip(coeff, [0.5, -2.0, 3.0]):
+            self.assertAlmostEqual(got, want, places=6)
+
+    def test_polyfit_is_degenerate_below_three_points(self):
+        stub = self._Stub()
+        self.assertIsNone(stub._weighted_polyfit2([1.0, 2.0], [1.0, 2.0], [1, 1]))
+        self.assertIsNone(stub._weighted_polyfit2([1.0] * 4, [1.0] * 4, [1] * 4))
+
+    def test_tabulation_recovers_the_running_width(self):
+        """The whole point: an average over noisy per-draw samples reproduces
+        the underlying Z(m) across the Breit-Wigner range.
+
+        The tolerance that matters is on the *slope* of ln Z -- a fractional
+        error there survives as the same fractional error on the lineshape shift
+        the factor corrects -- so it is checked directly, and much more tightly
+        than the 10% the physics needs.
+        """
+        stub = self._Stub()
+        stub._z_tables = stub._build_z_tables({'6_0': self._samples()})
+        self.assertIn('6_0', stub._z_tables)
+        for mass in (152.0, 160.0, 173.0, 185.0, 195.0):
+            self.assertLess(abs(stub._zhat('6_0', mass) / self._truth(mass) - 1),
+                            0.05, 'Z(%s) off' % mass)
+        slope = ((math.log(stub._zhat('6_0', 190.0) / stub._zhat('6_0', 156.0)))
+                 / (math.log(self._truth(190.0) / self._truth(156.0))))
+        self.assertLess(abs(slope - 1), 0.05)
+
+    def test_normalised_at_the_pole(self):
+        stub = self._Stub()
+        stub._z_tables = stub._build_z_tables({'6_0': self._samples()})
+        self.assertAlmostEqual(stub._zhat('6_0', 173.0), 1.0, places=6)
+
+    def test_held_constant_outside_the_probed_range(self):
+        """Beyond the samples the fit is unconstrained, so it is frozen at the
+        edge rather than extrapolated."""
+        stub = self._Stub()
+        stub._z_tables = stub._build_z_tables({'6_0': self._samples()})
+        self.assertEqual(stub._zhat('6_0', 400.0), stub._zhat('6_0', 196.0))
+        self.assertEqual(stub._zhat('6_0', 100.0), stub._zhat('6_0', 150.0))
+
+    def test_threshold_is_recorded_as_a_hard_zero(self):
+        """Virtualities no decay of the pool can be reshuffled onto give a rate
+        factor of exactly zero, and the mass-set stage must reject them: Z there
+        is 0, not the low edge of the fit."""
+        stub = self._Stub()
+        stub._z_tables = stub._build_z_tables(
+                            {'6_0': self._samples(threshold=165.0)})
+        self.assertEqual(stub._zhat('6_0', 160.0), 0.0)
+        self.assertGreater(stub._zhat('6_0', 180.0), 0.0)
+
+    def test_no_table_is_a_factor_one(self):
+        """The max-weight probe itself runs before any table exists, and every
+        non-offshell mode never builds one."""
+        stub = self._Stub()
+        self.assertEqual(stub._zhat('6_0', 160.0), 1.0)
+        stub._z_tables = stub._build_z_tables({'6_0': self._samples(nb=10)})
+        self.assertEqual(stub._z_tables, {})
+        self.assertEqual(stub._zhat('6_0', 160.0), 1.0)
+
+    def test_slot_keys_separate_identical_parents(self):
+        Part = TestSequentialAcceptReject._Part
+        particles = [Part(6), Part(-6), Part(6)]
+        keys = self._Stub()._z_slot_keys(particles, [0, 2, 1])
+        self.assertEqual(keys, ['6_0', '6_1', '-6_0'])
+
+    def _probe_event(self):
+        return {'keys': ['6_0', '-6_0'], 'order': [1, 0],
+                'chains': [[[2.0, 3.0, 5.0], [160.0, 180.0]],
+                           [[1.0, 7.0, 4.0], [173.0, 173.0]]]}
+
+    def test_probe_completion_puts_z_in_the_mass_weight(self):
+        """The probe records the mass-set weight before Z exists; completing it
+        multiplies in one Z per slot, and leaves the per-angle weights alone."""
+        stub = self._Stub()
+        stub._z_tables = stub._build_z_tables({'6_0': self._samples(),
+                                               '-6_0': self._samples(seed=9)})
+        z0, z1 = stub._zhat('6_0', 160.0), stub._zhat('-6_0', 180.0)
+        best = stub._complete_offshell_probe(self._probe_event())
+        self.assertAlmostEqual(best[0], max(2.0 * z0 * z1, 1.0), places=10)
+        self.assertEqual(best[1], 7.0)      # position 0 = slot 1
+        self.assertEqual(best[2], 5.0)
+
+    def test_probe_completion_divides_z_out_per_slot_when_exact(self):
+        """Under sequential_exact the mass stage pays Z and the slot takes it
+        back, so the bound each slot is tested against is the one of w_k/Z_k --
+        mapped through the ordering, not the slot order."""
+        stub = self._Stub(exact=True)
+        stub._z_tables = stub._build_z_tables({'6_0': self._samples(),
+                                               '-6_0': self._samples(seed=9)})
+        z_by_slot = [stub._zhat('6_0', 160.0), stub._zhat('-6_0', 180.0)]
+        best = stub._complete_offshell_probe(self._probe_event())
+        # order [1, 0]: probe position 0 is slot 1, position 1 is slot 0
+        self.assertAlmostEqual(best[1], max(3.0 / z_by_slot[1], 7.0), places=10)
+        self.assertAlmostEqual(best[2], max(5.0 / z_by_slot[0], 4.0), places=10)
+
+    def test_probe_completion_collapses_to_two_bounds_when_joint(self):
+        """Variant B tests every angle against one bound, so the probe vector
+        collapses to [C_mass, C_angles] and the second entry is the *product*
+        over slots of w_k/Z_k -- maxed chain by chain, not per slot, since the
+        chain is what is accepted or rejected."""
+        stub = self._Stub(joint_angles=True)
+        stub._z_tables = stub._build_z_tables({'6_0': self._samples(),
+                                               '-6_0': self._samples(seed=9)})
+        z = [stub._zhat('6_0', 160.0), stub._zhat('-6_0', 180.0)]
+        best = stub._complete_offshell_probe(self._probe_event())
+        self.assertEqual(len(best), 2)
+        # chain 1: masses (160, 180), weights w_slot1 = 3.0, w_slot0 = 5.0
+        # chain 2: masses (173, 173) where Z = 1, weights 7.0 and 4.0
+        self.assertAlmostEqual(best[0], max(2.0 * z[0] * z[1], 1.0), places=10)
+        self.assertAlmostEqual(best[1],
+                               max((3.0 / z[1]) * (5.0 / z[0]), 7.0 * 4.0),
+                               places=10)
+
+
+class TestTwoStageMassDistribution(unittest.TestCase):
+    """The bias the Z_k factor exists to remove, and the two cures, on a model
+    of the offshell chain small enough to solve exactly.
+
+    The chain is: draw a virtuality m from a prior, accept the mass set with
+    probability w_mass(m) Z_hat(m) / C, then draw decay angles until one is
+    accepted with probability w(m, angle) / C_ang. The target -- what the joint
+    accept/reject samples -- is p(m) w_mass(m) E_angle[w(m, .)]. Because the
+    per-angle stage redraws until it accepts, it divides its own normalisation
+    Z(m) = E_angle[w(m, .)] out again, so with Z_hat = 1 the accepted
+    virtualities come out proportional to p(m) w_mass(m) instead: the
+    Breit-Wigner shape rather than the offshell one. This is the measured
+    ttbar bias in miniature.
+    """
+
+    ANGLES = [0.3, 0.8, 1.6, 2.5]      # the decay "pool"
+    MASSES = [160.0, 170.0, 180.0, 190.0]
+
+    def _w(self, mass, angle):
+        """Per-angle weight; its angle average rises steeply with the mass, as
+        the offshell rate factor does."""
+        return (mass / 170.0) ** 6 * angle
+
+    def _w_mass(self, mass):
+        return 1.0 + (mass - 160.0) / 100.0
+
+    def _z(self, mass):
+        return sum(self._w(mass, a) for a in self.ANGLES) / len(self.ANGLES)
+
+    def _target(self):
+        raw = {m: self._w_mass(m) * self._z(m) for m in self.MASSES}
+        total = sum(raw.values())
+        return {m: v / total for m, v in raw.items()}
+
+    def _run(self, zhat, exact, nb=200000, seed=7):
+        """The two-stage chain, mirroring sequential_accept_reject's offshell
+        branch: mass-set accept/reject, then one slot redrawn to acceptance
+        (or, under ``exact``, a rejected angle killing the mass set)."""
+        import random
+        rng = random.Random(seed)
+        c_mass = max(self._w_mass(m) * zhat(m) for m in self.MASSES) * 1.01
+        c_ang = max(self._w(m, a) / zhat(m)
+                    for m in self.MASSES for a in self.ANGLES) * 1.01
+        counts = collections.Counter()
+        for _ in range(nb):
+            while True:
+                mass = rng.choice(self.MASSES)
+                if rng.random() * c_mass >= self._w_mass(mass) * zhat(mass):
+                    continue
+                restart = False
+                while True:
+                    angle = rng.choice(self.ANGLES)
+                    if rng.random() * c_ang < self._w(mass, angle) / zhat(mass):
+                        break
+                    if exact:
+                        restart = True
+                        break
+                if not restart:
+                    break
+            counts[mass] += 1
+        return {m: counts[m] / float(nb) for m in self.MASSES}
+
+    def _assert_close(self, got, want, tolerance):
+        for mass in self.MASSES:
+            self.assertLess(abs(got[mass] / want[mass] - 1), tolerance,
+                            'mass %s: got %.4f, want %.4f' % (mass, got[mass],
+                                                              want[mass]))
+
+    def test_without_the_factor_the_mass_distribution_is_biased(self):
+        """The bug: the accepted virtualities follow p(m) w_mass(m), the shape
+        the per-angle stage was supposed to reweight."""
+        got = self._run(lambda m: 1.0, exact=False)
+        prior = {m: self._w_mass(m) for m in self.MASSES}
+        total = sum(prior.values())
+        self._assert_close(got, {m: v / total for m, v in prior.items()}, 0.03)
+        self.assertGreater(abs(got[190.0] / self._target()[190.0] - 1), 0.3)
+
+    def test_the_exact_factor_restores_the_target(self):
+        self._assert_close(self._run(self._z, exact=False), self._target(), 0.03)
+
+    def test_a_wrong_factor_biases_by_exactly_its_error(self):
+        """Why the tabulation has to be accurate: the per-angle stage divides
+        out the true Z whatever weight it is given, so the residual bias is
+        Z_hat/Z -- it does not cancel."""
+        skew = lambda m: self._z(m) * (m / 170.0) ** 2
+        got = self._run(skew, exact=False)
+        want = {m: v * (m / 170.0) ** 2 for m, v in self._target().items()}
+        total = sum(want.values())
+        self._assert_close(got, {m: v / total for m, v in want.items()}, 0.03)
+
+    def test_sequential_exact_is_right_for_any_factor(self):
+        """And why the switch exists: rejecting the mass set instead of
+        redrawing the angle stops the per-angle stage from normalising, so
+        Z_hat cancels from the chain and only sets the efficiency."""
+        for zhat in (lambda m: 1.0,
+                     lambda m: self._z(m),
+                     lambda m: self._z(m) * (m / 170.0) ** 2):
+            self._assert_close(self._run(zhat, exact=True), self._target(), 0.03)
+
+
+class TestOffshellCache(unittest.TestCase):
+    """The offshell sequential bounds travel with the Z_k tables that complete
+    them, so the cache holds two coupled objects and must not be read back under
+    a schema it was not written with.  A mismatch is ignored rather than raised
+    on: the scan is reproducible, so re-measuring is always available, whereas a
+    table dereferenced under the wrong schema would either crash inside the
+    accept/reject or silently weight the virtualities with the wrong fit.
+    """
+
+    class _Stub(object):
+        _OFFSHELL_CACHE_FORMAT = \
+            interface_madspin.MadSpinInterface._OFFSHELL_CACHE_FORMAT
+        _read_offshell_cache = \
+            interface_madspin.MadSpinInterface._read_offshell_cache
+
+    def _write(self, payload):
+        import json, tempfile
+        handle, path = tempfile.mkstemp(suffix='.json')
+        with os.fdopen(handle, 'w') as f:
+            json.dump(payload, f)
+        self.addCleanup(os.remove, path)
+        return path
+
+    def _good(self):
+        return {'format': self._Stub._OFFSHELL_CACHE_FORMAT,
+                'maxwgts': [17.0, 2.3, 3.9],
+                'z_tables': {'6_0': {'pole': 173.0, 'coeff': [0.0, 2.0, -1.0],
+                                     'zero_below': 0.0, 'range': [150.0, 195.0]}}}
+
+    def test_round_trip(self):
+        got = self._Stub()._read_offshell_cache(self._write(self._good()))
+        self.assertEqual(got['maxwgts'], [17.0, 2.3, 3.9])
+        self.assertEqual(got['z_tables']['6_0']['pole'], 173.0)
+
+    def test_missing_file_is_not_an_error(self):
+        self.assertIsNone(self._Stub()._read_offshell_cache('/no/such/file'))
+        self.assertIsNone(self._Stub()._read_offshell_cache(''))
+
+    def test_every_malformed_shape_is_ignored(self):
+        """Each of these would otherwise surface as a KeyError, an IndexError or
+        a wrong weight somewhere inside the unweighting loop."""
+        cases = {}
+        cases['no format tag'] = {k: v for k, v in self._good().items()
+                                  if k != 'format'}
+        cases['older format'] = dict(self._good(), format=0)
+        cases['no bounds'] = dict(self._good(), maxwgts=[])
+        cases['no tables'] = {k: v for k, v in self._good().items()
+                              if k != 'z_tables'}
+        short = self._good()
+        short['z_tables']['6_0'].pop('zero_below')
+        cases['table missing a field'] = short
+        degree = self._good()
+        degree['z_tables']['6_0']['coeff'] = [0.0, 2.0, -1.0, 0.5]
+        cases['a cubic fit'] = degree
+        window = self._good()
+        window['z_tables']['6_0']['range'] = [150.0]
+        cases['a malformed range'] = window
+        for name, payload in cases.items():
+            self.assertIsNone(
+                self._Stub()._read_offshell_cache(self._write(payload)), name)
+
+    def test_garbage_is_ignored(self):
+        import tempfile
+        handle, path = tempfile.mkstemp(suffix='.json')
+        with os.fdopen(handle, 'w') as f:
+            f.write('not json at all')
+        self.addCleanup(os.remove, path)
+        self.assertIsNone(self._Stub()._read_offshell_cache(path))
+
+
+class TestPolyfitConditioning(unittest.TestCase):
+    """_weighted_polyfit2 solves the normal equations of a fit in
+    u = ln(m/pole), which spans about +-0.13 over a Breit-Wigner window.  The
+    moments therefore range over four orders of magnitude before any data is
+    seen, which is why the degeneracy test has to be relative to the size of the
+    matrix rather than an absolute floor.
+    """
+
+    def _fit(self, xs, ys, ws=None):
+        return interface_madspin.MadSpinInterface._weighted_polyfit2(
+                        xs, ys, ws or [1.0] * len(xs))
+
+    def _window(self, pole=173.0, lo=150.7, hi=195.4, nb=20):
+        return [math.log((lo + i * (hi - lo) / (nb - 1)) / pole)
+                for i in range(nb)]
+
+    def test_recovers_a_quadratic_on_the_real_fit_variable(self):
+        """Exact data over the actual window, with the actual weights (bin
+        counts in the thousands): the conditioning of this fit is ~3e4, so
+        double precision must return the coefficients essentially exactly."""
+        xs = self._window()
+        ys = [0.3 + 2.0 * x - 1.0 * x ** 2 for x in xs]
+        got = self._fit(xs, ys, [1000.0] * len(xs))
+        for value, want in zip(got, [0.3, 2.0, -1.0]):
+            self.assertAlmostEqual(value, want, places=8)
+
+    def test_all_bins_at_one_virtuality_is_degenerate(self):
+        """The case the tolerance exists for.  An absolute floor of 1e-30 would
+        let this through -- the moments are O(n) -- and return a quadratic
+        fitted to nothing."""
+        self.assertIsNone(self._fit([0.1] * 6, [1.0, 2.0, 1.5, 1.2, 1.8, 1.4]))
+
+    def test_a_needle_narrow_window_is_degenerate(self):
+        """A resonance whose samples all land within rounding of each other:
+        the moments are tiny in absolute terms but the matrix is still
+        singular relative to itself."""
+        xs = [1e-13 * i for i in range(6)]
+        self.assertIsNone(self._fit(xs, [1.0, 2.0, 1.5, 1.2, 1.8, 1.4],
+                                    [1000.0] * 6))
+
+    def test_two_distinct_points_cannot_fix_a_quadratic(self):
+        self.assertIsNone(self._fit([0.0, 0.0, 0.1, 0.1], [1.0, 1.0, 2.0, 2.0]))
