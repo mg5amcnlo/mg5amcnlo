@@ -481,7 +481,9 @@ The whole point of the flag is A/B, so the plan is measurement-first:
 5. **Efficiency** — log per-slot acceptance and total decay events consumed per
    production event, both modes. That is the number that justifies the feature
    and calibrates the ladder.
-6. `density_debug` must still pass in joint mode (unchanged code path).
+6. ~~`density_debug` must still pass in joint mode (unchanged code path).~~
+   **`density_debug` is itself broken** and cannot be used as a validation
+   instrument -- see the note at the end of section 10.
 
 ---
 
