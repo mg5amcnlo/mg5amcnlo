@@ -908,7 +908,107 @@ class MadSpinInterface(extended_cmd.Cmd):
     # *groups* meant to be used together -- the semi-leptonic ttbar idiom, where
     # only the two charge assignments exist and no fully leptonic or fully
     # hadronic event is produced.
-    _DECAY_GROUP_TAG = re.compile(r'@\s*\d+')
+    #
+    # The tag is kept inside the branch string rather than in a structure of its
+    # own: ``list_branches`` is renamed, pruned and handed to MG5 from several
+    # places, and index i of ``list_branches[name]`` is also the number of the
+    # ``decay_<pdg>_<i>`` pool, so a parallel list would be one more thing to
+    # keep in step. It is split off at the few points that need it.
+    _DECAY_GROUP_TAG = re.compile(r'@\s*(\d+)\s*$')
+
+    @classmethod
+    def _split_group_tag(cls, branch):
+        """``'t > w+ b, w+ > l+ vl @1'`` -> ``('t > w+ b, w+ > l+ vl', '1')``.
+
+        The tag is returned as a string: it names a group, it is not an integer
+        the code ever does arithmetic on. ``(branch, None)`` when untagged.
+        """
+        found = cls._DECAY_GROUP_TAG.search(branch)
+        if not found:
+            return branch, None
+        return branch[:found.start()].rstrip(), found.group(1)
+
+    def _decay_group_layout(self):
+        """Sort the decay lines into groups.
+
+        Returns ``(layout, reason)``. ``layout`` is None when the card declares
+        no group at all (``reason`` None too) or when the tags cannot be honoured
+        (``reason`` says why, for the warning). Otherwise::
+
+            {'tags':  ['1', '2'],                       # first-appearance order
+             'lines': {particle_name: {tag: [index into list_branches[name]]}}}
+
+        An *untagged* line belongs to every group -- the natural way to write a
+        third particle that decays the same way whatever the group is, and what
+        madspin_v1 does (it prepends the untagged branches to each group).
+
+        This is the half of the check that needs only the card. Whether each
+        group covers every decaying particle the right number of times needs the
+        production events too; see :meth:`_validate_decay_groups`.
+        """
+        tags = []
+        parsed = {}
+        for name, branches in self.list_branches.items():
+            parsed[name] = []
+            for branch in branches:
+                stripped, tag = self._split_group_tag(branch)
+                if '@' in stripped:
+                    # an '@' that is not a trailing group tag: refuse rather than
+                    # half-read it, since MG5 would take it as a process number
+                    return None, ("the decay line %r carries an '@' that is not "
+                                  "a group tag at the end of the line" % branch)
+                parsed[name].append(tag)
+                if tag is not None and tag not in tags:
+                    tags.append(tag)
+        if not tags:
+            return None, None
+        lines = {}
+        for name, name_tags in parsed.items():
+            lines[name] = dict((tag, []) for tag in tags)
+            for i, tag in enumerate(name_tags):
+                for target in (tags if tag is None else [tag]):
+                    lines[name][target].append(i)
+        return {'tags': tags, 'lines': lines}, None
+
+    def _validate_decay_groups(self, layout, to_decay, nb_event, name2pdg):
+        """Can this grouping be honoured for these production events?
+
+        Supported shape -- rectangular: every group gives exactly ``n_part``
+        lines for every decaying particle, ``n_part`` being how many of that
+        particle each event carries. ``n_part == 1`` is the semi-leptonic ttbar
+        idiom; ``n_part == 2`` is ``p p > t t~ t~ t``, where the group's two
+        lines for a pdg are handed to its two particles by the existing
+        positional rule.
+
+        Anything else is refused rather than approximated: the group would not
+        be a complete assignment, so neither its rate ``prod_k Gamma_k`` nor the
+        branching ratio is defined.
+
+        ``name2pdg`` maps a decay-line parent name to its pdg, or to None when
+        the name is a multiparticle (refused: one name would own several pools).
+
+        Returns ``(ok, reason)``.
+        """
+        for name, per_tag in layout['lines'].items():
+            pdg = name2pdg(name)
+            if pdg is None:
+                return False, ("%s is a multiparticle: grouping needs one "
+                               "decaying particle per decay line" % name)
+            if pdg not in to_decay or not nb_event:
+                continue            # never appears in the events; ignored anyway
+            if to_decay[pdg] % nb_event:
+                return False, ("the production events do not all carry the same "
+                               "number of %s, and a branching ratio per group "
+                               "cannot be defined then" % name)
+            nb_part = to_decay[pdg] // nb_event
+            for tag in layout['tags']:
+                got = len(per_tag.get(tag, ()))
+                if got != nb_part:
+                    return False, (
+                        "group @%s gives %d decay line(s) for %s but every event "
+                        "carries %d of them -- each group must decay every "
+                        "particle exactly once" % (tag, got, name, nb_part))
+        return True, None
 
     def _warn_ignored_decay_groups(self, spinmode):
         """Warn when the card carries @ grouping tags in a mode that ignores them.
@@ -933,10 +1033,13 @@ class MadSpinInterface(extended_cmd.Cmd):
         tags = []
         for name, branches in self.list_branches.items():
             for branch in branches:
-                found = self._DECAY_GROUP_TAG.search(branch)
-                if found:
-                    tags.append((name, branch,
-                                 found.group(0).replace(' ', '')))
+                stripped, tag = self._split_group_tag(branch)
+                if tag is not None:
+                    tags.append((name, branch, '@%s' % tag))
+                elif '@' in stripped:
+                    # not a trailing tag, so not a group -- but MG5 will still
+                    # read it as a process number, so it is worth the same line
+                    tags.append((name, branch, '@?'))
         if not tags:
             return []
         logger.warning(

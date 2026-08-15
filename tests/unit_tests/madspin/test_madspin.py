@@ -1830,6 +1830,7 @@ class TestDecayGroupTagWarning(unittest.TestCase):
 
     class _Stub(object):
         _DECAY_GROUP_TAG = interface_madspin.MadSpinInterface._DECAY_GROUP_TAG
+        _split_group_tag = interface_madspin.MadSpinInterface._split_group_tag
         _warn_ignored_decay_groups = \
             interface_madspin.MadSpinInterface._warn_ignored_decay_groups
 
@@ -1867,3 +1868,151 @@ class TestDecayGroupTagWarning(unittest.TestCase):
         must not trigger the warning."""
         stub = self._Stub({'t': ['t > w+ b QED=1, w+ > l+ vl']})
         self.assertEqual(stub._warn_ignored_decay_groups('madspin'), [])
+
+
+class TestDecayGroupLayout(unittest.TestCase):
+    """`@` grouping tags: sorting the decay lines into groups, and deciding
+    whether the grouping can be honoured for a given set of production events.
+
+    Supported shape is rectangular -- every group decays every particle exactly
+    once (or n times for n identical parents). Anything else is refused rather
+    than approximated, because the group is then not a complete assignment and
+    neither its rate nor its branching ratio is defined.
+    """
+
+    class _Stub(object):
+        _DECAY_GROUP_TAG = interface_madspin.MadSpinInterface._DECAY_GROUP_TAG
+        _split_group_tag = interface_madspin.MadSpinInterface._split_group_tag
+        _decay_group_layout = \
+            interface_madspin.MadSpinInterface._decay_group_layout
+        _validate_decay_groups = \
+            interface_madspin.MadSpinInterface._validate_decay_groups
+
+        def __init__(self, list_branches):
+            self.list_branches = collections.OrderedDict(list_branches)
+
+    # the semi-leptonic ttbar idiom: one t and one t~ per event, two groups
+    TTBAR = [('t',  ['t > w+ b, w+ > l+ vl @1', 't > w+ b, w+ > j j @2']),
+             ('t~', ['t~ > w- b~, w- > j j @1', 't~ > w- b~, w- > l- vl~ @2'])]
+    NAME2PDG = staticmethod(lambda name: {'t': 6, 't~': -6, 'z': 23,
+                                          'w+': 24}.get(name))
+
+    # ------------------------------------------------------------------ split
+    def test_split_tag(self):
+        self.assertEqual(
+            interface_madspin.MadSpinInterface._split_group_tag(
+                't > w+ b, w+ > l+ vl @1'),
+            ('t > w+ b, w+ > l+ vl', '1'))
+
+    def test_split_tag_tolerates_spacing(self):
+        self.assertEqual(
+            interface_madspin.MadSpinInterface._split_group_tag(
+                't > w+ b @ 12  '),
+            ('t > w+ b', '12'))
+
+    def test_untagged_line_is_left_alone(self):
+        for branch in ('z > e+ e-', 't > w+ b QED=1', 'z > mu+ mu- {T}'):
+            self.assertEqual(
+                interface_madspin.MadSpinInterface._split_group_tag(branch),
+                (branch, None))
+
+    # ----------------------------------------------------------------- layout
+    def test_no_tag_is_not_a_grouping(self):
+        layout, reason = self._Stub([('z', ['z > e+ e-', 'z > u u~'])]) \
+                             ._decay_group_layout()
+        self.assertIsNone(layout)
+        self.assertIsNone(reason)
+
+    def test_layout_of_the_ttbar_idiom(self):
+        layout, reason = self._Stub(self.TTBAR)._decay_group_layout()
+        self.assertIsNone(reason)
+        self.assertEqual(layout['tags'], ['1', '2'])
+        # index i is also the number of the decay_<pdg>_<i> pool
+        self.assertEqual(layout['lines']['t'],  {'1': [0], '2': [1]})
+        self.assertEqual(layout['lines']['t~'], {'1': [0], '2': [1]})
+
+    def test_untagged_line_belongs_to_every_group(self):
+        layout, reason = self._Stub(
+            self.TTBAR + [('z', ['z > e+ e-'])])._decay_group_layout()
+        self.assertIsNone(reason)
+        self.assertEqual(layout['lines']['z'], {'1': [0], '2': [0]})
+
+    def test_stray_at_is_refused_not_half_read(self):
+        layout, reason = self._Stub(
+            [('t', ['t > w+ b @1 QED=1'])])._decay_group_layout()
+        self.assertIsNone(layout)
+        self.assertIn("not a group tag", reason)
+
+    # --------------------------------------------------------------- validate
+    def _validate(self, branches, to_decay, nb_event=100):
+        stub = self._Stub(branches)
+        layout, reason = stub._decay_group_layout()
+        self.assertIsNone(reason)
+        self.assertIsNotNone(layout)
+        return stub._validate_decay_groups(layout, to_decay, nb_event,
+                                           self.NAME2PDG)
+
+    def test_ttbar_is_supported(self):
+        ok, reason = self._validate(self.TTBAR, {6: 100, -6: 100})
+        self.assertTrue(ok, reason)
+
+    def test_four_tops_two_lines_per_group_is_supported(self):
+        """p p > t t t~ t~: a group hands its two lines for a pdg to the two
+        particles of that pdg, by the positional rule."""
+        branches = [
+            ('t',  ['t > w+ b, w+ > l+ vl @1', 't > w+ b, w+ > j j @1',
+                    't > w+ b, w+ > j j @2',   't > w+ b, w+ > j j @2']),
+            ('t~', ['t~ > w- b~, w- > j j @1', 't~ > w- b~, w- > j j @1',
+                    't~ > w- b~, w- > l- vl~ @2', 't~ > w- b~, w- > j j @2']),
+        ]
+        ok, reason = self._validate(branches, {6: 200, -6: 200})
+        self.assertTrue(ok, reason)
+
+    def test_group_missing_a_particle_is_refused(self):
+        branches = [('t',  ['t > w+ b, w+ > l+ vl @1',
+                            't > w+ b, w+ > j j @2']),
+                    ('t~', ['t~ > w- b~, w- > j j @1'])]      # no @2 for t~
+        ok, reason = self._validate(branches, {6: 100, -6: 100})
+        self.assertFalse(ok)
+        self.assertIn('@2', reason)
+        self.assertIn('t~', reason)
+
+    def test_wrong_line_count_for_the_multiplicity_is_refused(self):
+        """two tops per event but only one line per group."""
+        ok, reason = self._validate(self.TTBAR, {6: 200, -6: 200})
+        self.assertFalse(ok)
+        self.assertIn('1 decay line(s)', reason)
+
+    def test_tagged_and_untagged_for_the_same_particle_is_refused(self):
+        """the untagged line joins every group, so that group has two lines for
+        a particle the event carries once."""
+        branches = [('t',  ['t > w+ b, w+ > l+ vl @1',
+                            't > w+ b, w+ > j j @2',
+                            't > w+ b, w+ > ta+ vt']),
+                    ('t~', ['t~ > w- b~, w- > j j @1',
+                            't~ > w- b~, w- > l- vl~ @2'])]
+        ok, reason = self._validate(branches, {6: 100, -6: 100})
+        self.assertFalse(ok)
+        self.assertIn('2 decay line(s)', reason)
+
+    def test_mixed_final_states_are_refused(self):
+        """not every event carries a t, so there is no branching ratio per
+        group to normalise with."""
+        ok, reason = self._validate(self.TTBAR, {6: 150, -6: 150})
+        self.assertFalse(ok)
+        self.assertIn('same number', reason)
+
+    def test_multiparticle_parent_is_refused(self):
+        branches = [('t',  ['t > w+ b, w+ > l+ vl @1',
+                            't > w+ b, w+ > j j @2']),
+                    ('vv', ['vv > e+ e- @1', 'vv > u u~ @2'])]
+        ok, reason = self._validate(branches, {6: 100})   # 'vv' -> None
+        self.assertFalse(ok)
+        self.assertIn('multiparticle', reason)
+
+    def test_a_particle_absent_from_the_events_is_ignored(self):
+        """a decay line for a species that never appears is ignored anyway, so
+        it must not make the grouping unusable."""
+        branches = self.TTBAR + [('z', ['z > e+ e- @1', 'z > u u~ @2'])]
+        ok, reason = self._validate(branches, {6: 100, -6: 100})
+        self.assertTrue(ok, reason)
