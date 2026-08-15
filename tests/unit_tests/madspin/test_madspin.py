@@ -1341,6 +1341,24 @@ class TestSequentialPoolLadder(unittest.TestCase):
         stub._nb_decaying = 1
         self.assertEqual(stub._unweighting_mode(True), 'sequential')
 
+    def test_grouped_decays_force_the_joint_test(self):
+        """'@' grouping forces the joint accept/reject, whatever unweighting
+        asks for. The per-particle and two_stage schemes redraw to acceptance,
+        which divides E[w | group] out of the chain -- and that expectation
+        differs between groups, so the accepted group fractions would come out
+        distorted by its reciprocal. Pinned here because the gate was ported by
+        hand onto the unweighting API it now lives in.
+        """
+        for mode in ('auto', 'sequential', 'two_stage',
+                     'sequential_global_retry'):
+            stub = self._stub({6: 2}, unweighting=mode, spinmode='madspin')
+            stub._nb_decaying = 2
+            stub._decay_groups = None
+            self.assertNotEqual(stub._unweighting_mode(True), 'joint', mode)
+            stub._decay_groups = {'1': {}, '2': {}}
+            self.assertEqual(stub._unweighting_mode(True), 'joint',
+                             '%s with grouped decays' % mode)
+
     def test_offshell_only_modes_fall_back_under_pa(self):
         """Asked for explicitly under PA/onshell, the two modes that need the
         up-front mass draw say so and use sequential."""

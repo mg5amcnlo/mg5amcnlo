@@ -4363,7 +4363,7 @@ class MadSpinInterface(extended_cmd.Cmd):
         logger.info("*****************************")
         logger.info("Probing the first %s events with %s phase space points"
                     % (nevents, nb_ps_point))
-        # sequential_decay never reaches here with fixed_order (it falls back to
+        # a non-joint unweighting never reaches here with fixed_order (it falls back to
         # the joint accept/reject), so the events are plain, not event-groups.
         orig_lhe.seek(0)
         events = []
