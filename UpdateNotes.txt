@@ -5,6 +5,40 @@ ANNOUNCEMENT:
    A new LTS (based on current 3.5.X) is starting now and will act as stable release for the coming years.
 
 3.7.2 (XX/XX/XX):
+    OM: MadSpin: the run_card me_frame and polbeam1/polbeam2 are now honoured by the
+        density-based spinmodes (onshell/PA/madspin/full) and no longer only by the
+        legacy madspin_v1/onshell_v1 paths.
+        - beampol reweights the initial-state helicity sum inside the density matrix,
+          through a new PY_SET_BEAMPOL entry point of the matrix-element library;
+        - me_frame boosts the momenta of the production and of every decay into the
+          selected frame before the matrix element sees them, which is what defines
+          the axis those helicities are quantised along. The boost is skipped for
+          unpolarised beams, so unpolarised runs are unchanged bit-for-bit. Note
+          that -- in the density modes as in the v1 path -- the frame turns out not
+          to change any observable: the initial-state legs are massless, so their
+          helicity labels and each fixed-helicity |M|^2 with them are boost
+          invariant, and so is the reweighted sum. What the boost does change is the
+          basis the individual density-matrix elements are written in, which is why
+          the production and every decay have to be boosted with the same momentum.
+        - "set frame_id"/"set beampol" in the MadSpin card now override the run_card
+          values instead of being silently discarded.
+    OM: Two MadSpin bug fixes in the beam-polarisation support of the legacy
+        madspin_v1/onshell_v1 paths (both since it was added in 3.6.3):
+        - the run_card polbeam1/polbeam2 were converted to the [0,1] left-handed-
+          fraction convention of the EVA PDF and then fed to a matrix-element
+          reweighting that expects madevent's /to_polarization/ convention. As a
+          result an *unpolarised* run (polbeam=0 -> beampol=0.5) applied a spurious
+          factor 0.5 to one initial-state helicity and 1.5 to the other, while a
+          fully polarised beam (polbeam=-100 -> beampol=1) applied nothing at all,
+          and the sign of the polarisation was flipped. The mapping is now
+          sign(1+|polbeam|/100, polbeam), as in setrun.f;
+        - in matrix_standalone_msF_v4.inc the reweighting was applied after the
+          helicity sum rather than before it, so only HELAMP was polarised and the
+          full matrix element -- the numerator of the MadSpin decay weight, and the
+          only place the polarisation can reach the decay angles -- stayed
+          unpolarised. The decay distribution of the v1 path was therefore
+          insensitive to any partial beam polarisation (100% happened to work by
+          accident, through the GOODHEL filter zeroing the disfavoured helicities).
     RF: Fixed the writing of LHE files in fixed-order computations that was broken since previous release (3.7.1).
 
 3.7.1 (29/04/26):

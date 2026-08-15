@@ -243,6 +243,151 @@ class TestDensity(unittest.TestCase):
         nb_false = len([True for key in out if not out[key][0]])
         self.assertEqual(nb_false, 6)
 
+
+class _FrameStub(object):
+    """Just enough of MadSpinInterface for the frame/beampol helpers: they only
+    need the options and the matrix-element ordering of the event."""
+
+    def __init__(self, frame_id, beampol):
+        self.options = {'frame_id': frame_id, 'beampol': beampol}
+
+    def get_pdir(self, event):
+        return None, None, None, None
+
+    _beampol = interface_madspin.MadSpinInterface._beampol
+    _frame_boost = interface_madspin.MadSpinInterface._frame_boost
+    _boost_momenta = staticmethod(interface_madspin.MadSpinInterface._boost_momenta)
+
+
+class _MomentaEvent(object):
+    """Stands in for the production event: get_density/_frame_boost only ever
+    ask it for its momenta in the matrix element's ordering."""
+
+    def __init__(self, momenta):
+        self.momenta = momenta
+
+    def get_momenta(self, orig_order):
+        return self.momenta
+
+
+class TestFrameBoost(unittest.TestCase):
+    """me_frame / frame_id and beampol support in the density modes."""
+
+    # 1 and 2 along +z/-z, 3 and 4 sharing the recoil
+    MOMENTA = [(500., 0., 0., 500.),
+               (200., 0., 0., -200.),
+               (300., 100., 50., -80.),
+               (400., -100., -50., 380.)]
+
+    def _stub(self, frame_id, beampol=(1.8, 1.)):
+        return _FrameStub(frame_id, beampol)
+
+    def test_polbeam_to_beampol(self):
+        """the run_card polbeam -> beampol map has to land on madevent's
+        /to_polarization/ convention, not on the [0,1] left-handed fraction the
+        eva PDF uses"""
+        fct = interface_madspin.MadSpinInterface.polbeam_to_beampol
+        self.assertEqual(fct(0), 1.)
+        self.assertEqual(fct(100), 2.)
+        self.assertEqual(fct(-100), -2.)
+        self.assertEqual(fct(50), 1.5)
+        self.assertEqual(fct(-50), -1.5)
+        # the two branches of the matrix-element reweighting, as written in
+        # matrix_standalone_msP_v4.inc: unpolarised leaves both helicities
+        # alone, +-100%% keeps one and kills the other
+        for polbeam, hel_plus, hel_minus in [(0, 1., 1.),
+                                             (100, 2., 0.),
+                                             (-100, 0., 2.),
+                                             (50, 1.5, 0.5)]:
+            pol = fct(polbeam)
+            if abs(pol) <= 1:
+                got = (1., 1.)
+            elif pol > 0:
+                got = (abs(pol), 2 - abs(pol))
+            else:
+                got = (2 - abs(pol), abs(pol))
+            self.assertEqual(got, (hel_plus, hel_minus))
+
+    def test_frame_inert_without_polarisation(self):
+        """the frame only changes the axis the initial-state helicities are
+        quantised along, so with unpolarised beams there is nothing to do"""
+        stub = self._stub(6, beampol=(1., 1.))
+        self.assertIsNone(stub._frame_boost(_MomentaEvent(self.MOMENTA)))
+
+    def test_frame_id_bitmask(self):
+        """frame_id = sum(2**n over the selected legs), the convention mapid
+        uncompresses with btest(id, i)"""
+        # 6 = 2**1 + 2**2 -> the two initial legs
+        boost = self._stub(6)._frame_boost(_MomentaEvent(self.MOMENTA))
+        self.assertEqual((boost.E, boost.px, boost.py, boost.pz),
+                         (700., 0., 0., 300.))
+        # 24 = 2**3 + 2**4 -> the two final legs; same frame, by momentum
+        # conservation
+        boost = self._stub(24)._frame_boost(_MomentaEvent(self.MOMENTA))
+        self.assertEqual((boost.E, boost.px, boost.py, boost.pz),
+                         (700., 0., 0., 300.))
+        # 8 = 2**3 -> leg 3 alone
+        boost = self._stub(8)._frame_boost(_MomentaEvent(self.MOMENTA))
+        self.assertEqual((boost.E, boost.px, boost.py, boost.pz),
+                         (300., 100., 50., -80.))
+        # a frame_id selecting nothing is not a frame
+        self.assertIsNone(self._stub(1)._frame_boost(_MomentaEvent(self.MOMENTA)))
+        self.assertIsNone(self._stub(0)._frame_boost(_MomentaEvent(self.MOMENTA)))
+
+    def test_boost_to_partonic_cms(self):
+        """frame_id = 6 on back-to-back beams is a pure z boost; check every leg
+        against the closed form"""
+        stub = self._stub(6)
+        boost = stub._frame_boost(_MomentaEvent(self.MOMENTA))
+        out = stub._boost_momenta(self.MOMENTA, boost)
+
+        mass = math.sqrt(700.**2 - 300.**2)
+        gamma, gammabeta = 700. / mass, 300. / mass
+        for mom, new in zip(self.MOMENTA, out):
+            E, px, py, pz = mom
+            self.assertAlmostEqual(new[0], gamma * E - gammabeta * pz, places=9)
+            self.assertAlmostEqual(new[1], px, places=9)
+            self.assertAlmostEqual(new[2], py, places=9)
+            self.assertAlmostEqual(new[3], gamma * pz - gammabeta * E, places=9)
+
+        # the frame is defined by legs 1+2, so their sum is at rest in it
+        self.assertAlmostEqual(out[0][3] + out[1][3], 0., places=9)
+        # and the boost is an invariance of the masses
+        for mom, new in zip(self.MOMENTA, out):
+            m2 = mom[0]**2 - mom[1]**2 - mom[2]**2 - mom[3]**2
+            n2 = new[0]**2 - new[1]**2 - new[2]**2 - new[3]**2
+            self.assertAlmostEqual(m2, n2, delta=1e-6 * abs(mom[0])**2)
+
+    def test_single_leg_frame_is_exactly_at_rest(self):
+        """with one selected leg that leg has to come out at exactly zero
+        three-momentum: vxxxxx branches on pp.eq.rZero and would otherwise pick
+        its quantisation axis from the rounding noise"""
+        stub = self._stub(8)
+        boost = stub._frame_boost(_MomentaEvent(self.MOMENTA))
+        out = stub._boost_momenta(self.MOMENTA, boost)
+        self.assertEqual(out[2][1:], (0., 0., 0.))
+        self.assertAlmostEqual(out[2][0], math.sqrt(300.**2 - 100.**2 - 50.**2 - 80.**2),
+                               places=9)
+        # two selected legs: no leg sits on that branch point, nothing is forced
+        boost = self._stub(6)._frame_boost(_MomentaEvent(self.MOMENTA))
+        self.assertIsNone(boost.rest_leg)
+
+    def test_boost_of_a_system_already_at_rest(self):
+        """A lepton-collider event arrives in the partonic CMS, so frame_id = 6
+        asks for a boost with no spatial part. That is the identity, not an
+        excuse to replace every momentum by the boost (HELAS boostx's
+        qq.eq.rZero branch)."""
+        momenta = [(250., 0., 0., 250.),
+                   (250., 0., 0., -250.),
+                   (250., 100., 50., -80.),
+                   (250., -100., -50., 80.)]
+        stub = _FrameStub(6, (1.8, 1.))
+        boost = stub._frame_boost(_MomentaEvent(momenta))
+        self.assertEqual((boost.E, boost.px, boost.py, boost.pz),
+                         (500., 0., 0., 0.))
+        self.assertEqual(stub._boost_momenta(momenta, boost), momenta)
+
+
 class TestEvent(unittest.TestCase):
     """Test class for the reading of the lhe input file"""
     
@@ -1146,11 +1291,14 @@ class TestSequentialAcceptReject(unittest.TestCase):
             _unweighting_mode = interface._unweighting_mode
             _announce_mode = interface._announce_mode
             _log_once = interface._log_once
+            _beampol = interface._beampol
+            _frame_boost = interface._frame_boost
             def __init__(self):
                 self.options = {'spinmode': 'onshell',
                                 'sequential_spin_order': '2 3 1',
                                 'unweighting': 'sequential',
-                                'fixed_order': False}
+                                'fixed_order': False,
+                                'beampol': [1., 1.], 'frame_id': 6}
             def _density_basis(self, production, decays_key):
                 particles, slots = interface._sequential_slots(production, decays_key)
                 return {'decays_key': decays_key, 'helicities': hels,
@@ -1164,7 +1312,7 @@ class TestSequentialAcceptReject(unittest.TestCase):
             def _draw_one_decay(self, particle, index, ids, evt_decayfile, nb_remain):
                 import random
                 return ('cand', self._slot_of[index], random.randrange(pool))
-            def _slot_density(self, decay, parent, hel):
+            def _slot_density(self, decay, parent, hel, frame_boost=None):
                 return pools[decay[1]][decay[2]]
         return Stub()
 

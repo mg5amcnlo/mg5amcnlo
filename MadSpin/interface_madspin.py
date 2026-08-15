@@ -75,7 +75,7 @@ class MadSpinOptions(banner.ConfigFile):
         self.add_param('frame_id', 6)
         self.add_param('global_order_coupling', '')
         self.add_param('identical_particle_in_prod_and_decay', 'average')
-        self.add_param('beampol', [0.5, 0.5], comment='beam polarization')
+        self.add_param('beampol', [1.0, 1.0], comment='beam polarization, in the /to_polarization/ convention of madevent: 1 is unpolarized, |beampol| grows to 2 for a fully polarized beam and its sign selects the favoured helicity. Set from the run_card polbeam1/polbeam2 when there is one.')
         self.add_param('density_debug', False, comment='Turn on check against full ME calculation')
         self.add_param('density_tolerance', 1E-4, comment='Tolerance for deviation between density and full ME')
         self.add_param('decay_event_mult', 1E0, comment='Produce more events than needed so that MadSpin does not have to regenerate decay events')
@@ -397,6 +397,29 @@ class MadSpinInterface(extended_cmd.Cmd):
         self.prod_branches = ''
         self.final_state = set()
 
+    @staticmethod
+    def polbeam_to_beampol(polbeam):
+        """Map a run_card ``polbeam1``/``polbeam2`` (a polarisation in percent,
+        -100 .. 100) onto the ``beampol`` the matrix elements expect.
+
+        The matrix-element side -- ``/to_beampol/`` in the v1 driver's msP/msF
+        SMATRIX and now in GET_DENSITY -- is a verbatim copy of madevent's
+        ``/to_polarization/`` reweighting, so it wants madevent's convention for
+        the value too (Template/LO/Source/setrun.f)::
+
+            beampol = sign(1 + |polbeam|/100, polbeam)
+
+        i.e. 1 for an unpolarised beam, +2 for a beam fully polarised along +1
+        helicity, -2 for one fully polarised along -1. That is what makes the
+        two branches of the reweighting come out as they should: at |beampol|=1
+        both are 1, and at |beampol|=2 the favoured helicity gets 2 and the
+        other 0.
+        """
+        polbeam = float(polbeam)
+        if not polbeam:
+            return 1.
+        return math.copysign(1 + abs(polbeam) / 100., polbeam)
+
     def _load_f2py_matrix_module(self, sp_path, menum=2):
         """Load the freshly-compiled ``all_matrix<menum>py`` extension under
         ``sp_path``.
@@ -544,14 +567,20 @@ class MadSpinInterface(extended_cmd.Cmd):
             
             if isinstance(run_card, banner.RunCardLO):
                 run_card.update_system_parameter_for_include()
-                self.options['frame_id'] = run_card['frame_id']
-                beampol = [.5,.5]
-                beampol[0] =  (-1./200)* run_card['polbeam1'] + 0.5
-                beampol[1] =  (-1./200)* run_card['polbeam2'] + 0.5
-                self.options['beampol'] = beampol
+                # The run_card of the production is the default source for both,
+                # but an explicit "set frame_id"/"set beampol" in the MadSpin
+                # card wins -- otherwise neither option could be set from the
+                # card the rest of the MadSpin options live in.
+                if 'frame_id' not in self.options.user_set:
+                    self.options['frame_id'] = run_card['frame_id']
+                if 'beampol' not in self.options.user_set:
+                    self.options['beampol'] = [self.polbeam_to_beampol(run_card['polbeam1']),
+                                               self.polbeam_to_beampol(run_card['polbeam2'])]
             else:
-                self.options['frame_id'] = 6
-                self.options['beampol'] = [.5,.5]
+                if 'frame_id' not in self.options.user_set:
+                    self.options['frame_id'] = 6
+                if 'beampol' not in self.options.user_set:
+                    self.options['beampol'] = [1., 1.]
 
         else:
             if not self.options['Nevents_for_max_weight']:
@@ -786,6 +815,10 @@ class MadSpinInterface(extended_cmd.Cmd):
         self.check_set(args)
 
         self.options[args[0]] = ' '.join(args[1:])
+        # ConfigFile only fills user_set through its own set(); record it here
+        # so options that are otherwise taken from the production run_card
+        # (frame_id, beampol) can still be overridden from the MadSpin card.
+        self.options.user_set.add(args[0].strip().lower())
         
 
     def complete_set(self,  text, line, begidx, endidx):
@@ -4280,13 +4313,19 @@ class MadSpinInterface(extended_cmd.Cmd):
         except Exception:
             return 0
 
-    def _slot_density(self, decay, parent, hel):
-        """The decay density matrix of one slot, in the lab frame of its parent."""
+    def _slot_density(self, decay, parent, hel, frame_boost=None):
+        """The decay density matrix of one slot, in the lab frame of its parent
+        (and then in the ``frame_id`` frame, when there is one -- see
+        ``get_density``)."""
+        rest_leg = None
+        if frame_boost is not None:
+            rest_leg = self._decay_frame_rest_leg(parent, frame_boost)
         boost = -1 * lhe_parser.FourMomentum(parent)
         boost.E *= -1
         decay.boost(boost)
         return self.get_density(decay, position=[1], allow_hel=hel,
-                                ncomb=len(hel), dimension=len(hel))
+                                ncomb=len(hel), dimension=len(hel),
+                                frame_boost=frame_boost, frame_rest_leg=rest_leg)
 
     def _draw_mass_value(self, pdg, budget):
         """Sample one resonance virtuality from its Breit-Wigner, capped at the
@@ -4333,7 +4372,7 @@ class MadSpinInterface(extended_cmd.Cmd):
         and what madspin does not give for free (see MADSPIN_SEQUENTIAL_PLAN.md
         section 10).
 
-        Returns ``(rho_off, jac_reshuffle, slot_mass, parents)`` or None if the
+        Returns ``(rho_off, jac_reshuffle, slot_mass, parents, frame_boost)`` or None if the
         mass set cannot be reshuffled (the caller redraws the whole set):
         - ``slot_mass[slot]`` = (mass, reshuffle_info, jac_bw);
         - ``parents[slot]``   = the reshuffled (offshell) production particle to
@@ -4359,11 +4398,16 @@ class MadSpinInterface(extended_cmd.Cmd):
         jac_reshuffle = prod_off.reshuffle_production(_allow_retry=False)
         if jac_reshuffle in (0, -1):
             return None
+        # the frame is derived from the *reshuffled* production, since that is
+        # the event rho_off is evaluated at; the decays are contracted against
+        # it, so they have to be boosted with this same momentum
+        frame_boost = self._frame_boost(prod_off)
         rho_off = self.get_density(prod_off, prod_static['position'],
                                    prod_static['allowed_hel'],
-                                   prod_static['ncomb'], prod_static['dimension'])
+                                   prod_static['ncomb'], prod_static['dimension'],
+                                   frame_boost=frame_boost)
         parents = {slot: finals[slot_to_index[slot]] for slot in order}
-        return rho_off, jac_reshuffle, slot_mass, parents
+        return rho_off, jac_reshuffle, slot_mass, parents, frame_boost
 
     def _sequential_offshell(self):
         """Whether the sequential accept/reject runs its offshell (madspin/full)
@@ -4700,6 +4744,11 @@ class MadSpinInterface(extended_cmd.Cmd):
         # kinematics would set the bound and then overflow it, the quiet ones
         # would pay for it in acceptance. Cached on the event under the name the
         # joint path already uses for the same quantity.
+        # frame the helicity basis is defined in (run_card me_frame), shared by
+        # the production density and by every decay contracted against it. The
+        # offshell branch gets its own from _offshell_production, derived from
+        # the reshuffled production rho is evaluated at.
+        frame_boost = None
         me_prod_on = 1.0
         if offshell:
             me_prod_on = getattr(production, 'me_wgt', None)
@@ -4715,10 +4764,12 @@ class MadSpinInterface(extended_cmd.Cmd):
         if not offshell:
             density_prod = getattr(production, '_ms_density_prod', None)
             if density_prod is None:
+                frame_boost = self._frame_boost(production)
                 density_prod = self.get_density(production, prod_static['position'],
                                                 prod_static['allowed_hel'],
                                                 prod_static['ncomb'],
-                                                prod_static['dimension'])
+                                                prod_static['dimension'],
+                                                frame_boost=frame_boost)
                 production._ms_density_prod = density_prod
 
         # PA samples a virtuality per resonance; onshell does not. 2 -> 1
@@ -4749,7 +4800,7 @@ class MadSpinInterface(extended_cmd.Cmd):
                 if setup is None:
                     stats['nb_production_restart'] += 1
                     continue
-                density_prod, jac_reshuffle, slot_mass, parents = setup
+                density_prod, jac_reshuffle, slot_mass, parents, frame_boost = setup
 
                 # Mass-set accept/reject, before the per-angle loop. All the
                 # factors that depend on the mass set but not the decay angles --
@@ -4910,7 +4961,8 @@ class MadSpinInterface(extended_cmd.Cmd):
                                 restart = True
                                 break
                             density = self._slot_density(dcopy, parents[slot],
-                                                         helicities[slot])
+                                                         helicities[slot],
+                                                         frame_boost=frame_boost)
                             slot_densities[slot] = density
                             n_k = self._partial_density_contraction(
                                             density_prod, helicities, slot_densities)
@@ -5013,7 +5065,8 @@ class MadSpinInterface(extended_cmd.Cmd):
                         # accepted slots reuse their stored (already normalised)
                         # density; only this slot's decay is evaluated here
                         slot_densities[slot] = self._slot_density(
-                                        decay, init_part[slot], helicities[slot])
+                                        decay, init_part[slot], helicities[slot],
+                                        frame_boost=frame_boost)
                         n_k = self._partial_density_contraction(density_prod, helicities,
                                                                 slot_densities)
                         # jac_dec is this slot's own factor (it depends on this
@@ -5248,6 +5301,10 @@ class MadSpinInterface(extended_cmd.Cmd):
                 os.replace(_ml_tmp, _ml_dat)
                 mymod.set_madloop_path(MadLoopCardPath)
 
+        # the beam polarisation is constant over a run, so it is pushed into
+        # the library once per module rather than passed on every call
+        self._set_f2py_beampol(mymod)
+
 
     def create_f2py_module(self, sp_path, prod_or_decay, all_prefix, all_pdg, all_procid):
         """ Load the density-matrix f2py extensions and build the pdg -> prefix
@@ -5442,11 +5499,18 @@ class MadSpinInterface(extended_cmd.Cmd):
         density_iden_prod = iden_p * sym_factor_prod_ident
         density_iden_decay = 1
 
+        # frame the helicity basis is defined in (run_card me_frame); shared by
+        # the production and by every decay, otherwise the two sides of the
+        # contraction below would not be in the same basis. None unless the
+        # beams are polarised -- see the comment above _beampol.
+        frame_boost = self._frame_boost(production)
+
         density_prod = self.get_density(production,
                                         position,
                                         allowed_hel,
                                         ncomb,
-                                        dimension) \
+                                        dimension,
+                                        frame_boost=frame_boost) \
             if prod_density_cached is None else prod_density_cached
 
         # ------------------------------------------------------------------
@@ -5513,7 +5577,10 @@ class MadSpinInterface(extended_cmd.Cmd):
                     position=[1],
                     allow_hel=helicities[decaying_idx + i_decay_event],
                     ncomb=len(helicities[decaying_idx + i_decay_event]),
-                    dimension=len(helicities[decaying_idx + i_decay_event])
+                    dimension=len(helicities[decaying_idx + i_decay_event]),
+                    frame_boost=frame_boost,
+                    frame_rest_leg=None if frame_boost is None
+                                   else self._decay_frame_rest_leg(part, frame_boost)
                 )
 
                 if density_dec is None:
@@ -5587,7 +5654,127 @@ class MadSpinInterface(extended_cmd.Cmd):
         self._allowed_hel_cache[key] = out
         return out  
 
-    def get_density(self, event, position, allow_hel, ncomb, dimension):
+    def _beampol(self):
+        """The (pol1, pol2) actually in force, or None for unpolarised beams.
+
+        |beampol| runs from 1 (unpolarised) to 2 (fully polarised), so anything
+        at or below 1 means no polarisation -- the same test the matrix elements
+        make, so that an out-of-range value cannot switch on the frame boost
+        here while the Fortran ignores it.
+        """
+        beampol = self.options['beampol']
+        if not beampol:
+            return None
+        pol = (float(beampol[0]), float(beampol[1]))
+        if abs(pol[0]) <= 1. and abs(pol[1]) <= 1.:
+            return None
+        return pol
+
+    def _set_f2py_beampol(self, mymod):
+        """Push the beam polarisation into the matrix-element library once per
+        module. The value is constant over a run and ``get_density`` is on the
+        hot path, so this is a setter rather than a per-call argument."""
+        pol = self._beampol()
+        if pol is None:
+            # the library defaults to unpolarised (BLOCK DATA BEAMPOL_DEFAULT)
+            return
+        if not hasattr(mymod, 'py_set_beampol'):
+            logger.warning('The matrix elements of this MadSpin run predate the '
+                           'beam-polarisation support of the density modes; '
+                           'beampol=%s will be ignored. Regenerate the process '
+                           'directory to enable it.', list(pol))
+            return
+        mymod.py_set_beampol(pol[0], pol[1])
+
+    def _frame_boost(self, event):
+        """The 4-momentum whose rest frame ``frame_id`` selects for ``event``,
+        or None when the frame machinery cannot change anything.
+
+        ``frame_id`` is the bitmask the run_card builds as
+        ``sum(2**n for n in me_frame)``, so external leg n (counted from 1, in
+        the matrix element's own ordering) is selected by bit n -- the same
+        convention ``mapid`` uncompresses with ``btest(id, i)``. The returned
+        momentum is the sum of the selected legs, ready to be handed to
+        ``Event.boost`` / ``_boost_momenta``, which negate the spatial part
+        themselves (HELAS ``boostx``, exactly what ``boost_to_frame`` does in
+        driver.f).
+        """
+        if self._beampol() is None:
+            return None
+        frame_id = int(self.options['frame_id'])
+        if frame_id <= 0:
+            return None
+        _, orig_order, _, _ = self.get_pdir(event)
+        momenta = event.get_momenta(orig_order)
+        selected = [n for n in range(1, len(momenta) + 1) if frame_id >> n & 1]
+        if not selected:
+            return None
+        pboost = lhe_parser.FourMomentum()
+        for n in selected:
+            pboost += lhe_parser.FourMomentum(momenta[n - 1])
+        # A single selected leg has to end up exactly at rest: vxxxxx branches
+        # on pp.eq.rZero and takes the frame z axis as quantisation axis there,
+        # so a residual 1d-14 three-momentum left by the boost arithmetic would
+        # silently pick a different polarisation state (see the same fix in
+        # boost_to_frame, Template/LO/SubProcesses/genps.f).
+        if len(selected) == 1:
+            pboost.rest_leg = selected[0]
+            mom = momenta[selected[0] - 1]
+            pboost.rest_leg_mom = (mom[0], mom[1], mom[2], mom[3])
+        else:
+            pboost.rest_leg = None
+            pboost.rest_leg_mom = None
+        return pboost
+
+    @staticmethod
+    def _decay_frame_rest_leg(parent, frame_boost):
+        """1 when ``frame_id`` selects exactly this resonance, so leg 1 of its
+        decay matrix element has to be forced to zero three-momentum; None
+        otherwise. Same rounding argument as in ``_frame_boost``."""
+        rest_mom = getattr(frame_boost, 'rest_leg_mom', None)
+        if rest_mom == (parent.E, parent.px, parent.py, parent.pz):
+            return 1
+        return None
+
+    @staticmethod
+    def _boost_momenta(momenta, pboost, rest_leg=-1):
+        """``boost_to_frame``: every momentum of ``momenta`` into the rest frame
+        of ``pboost``, as (E, px, py, pz) tuples.
+
+        This works on the momenta rather than on the event, so a decay event
+        stays where the rest of MadSpin needs it -- in the lab, which is what
+        ``add_decays`` and the reshuffling assume. ``rest_leg`` (1-based, -1 to
+        take it from ``pboost``) is the leg the frame is built from when it is a
+        single one, forced exactly at rest.
+        """
+        neg = lhe_parser.FourMomentum(pboost.E, -pboost.px, -pboost.py, -pboost.pz)
+        out = []
+        for mom in momenta:
+            new = lhe_parser.FourMomentum(mom).boost(neg)
+            out.append((new.E, new.px, new.py, new.pz))
+        if rest_leg == -1:
+            rest_leg = getattr(pboost, 'rest_leg', None)
+        if rest_leg is not None and rest_leg <= len(out):
+            out[rest_leg - 1] = (out[rest_leg - 1][0], 0., 0., 0.)
+        return out
+
+    def get_density(self, event, position, allow_hel, ncomb, dimension,
+                    frame_boost=None, frame_rest_leg=-1):
+        """``frame_boost`` is the momentum whose rest frame ``frame_id`` picks
+        (see ``_frame_boost``); the momenta are boosted there before the matrix
+        element sees them, which is what defines the axis the initial-state
+        helicities -- the ones ``beampol`` reweights -- are quantised along.
+
+        The *same* momentum is used for the production and for every decay
+        contracted against it. A decay event reaches this point already boosted
+        into the lab (by its parent's momentum), so applying the frame boost to
+        its momenta here composes the two in the right order and leaves both
+        sides of the contraction in one helicity basis. ``frame_rest_leg``
+        names the leg to force exactly at rest; the default takes it from
+        ``frame_boost``, which is right for a production event, and the decay
+        callers pass ``_decay_frame_rest_leg``'s answer instead.
+        """
+
         orig_order = getattr(event, '_ms_orig_order_for_density', None)
         if orig_order is None:
             _, orig_order, _, _, tag = self.get_pdir(event)
@@ -5604,6 +5791,8 @@ class MadSpinInterface(extended_cmd.Cmd):
             all_p = event.get_all_momenta(orig_order)
             assert len(all_p) == 1, "Error: get_density can only be called for a single phase-space point"
             p = all_p[0]
+        if frame_boost is not None:
+            p = self._boost_momenta(p, frame_boost, rest_leg=frame_rest_leg)
         P = rwgt_interface.ReweightInterface.invert_momenta(p) 
         pdgs =list(orig_order[0])+list(orig_order[1])
         n_changing = len(position)

@@ -2505,7 +2505,7 @@ class decay_all_events(object):
         try:
             beampol = self.options['beampol']
         except KeyError:
-            beampol = (0.5,0.5)
+            beampol = (1.0,1.0)
 
         stdin_text=' %s %s %s %s %s %s %s\n' % ('2', self.options['BW_cut'], self.Ecollider, 1.0, frameid, beampol[0], beampol[1])
         stdin_text+=p_str
