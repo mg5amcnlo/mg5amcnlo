@@ -4128,7 +4128,14 @@ class FourMomentum(object):
                            py=self.py + mom.py * lf,
                            pz=self.pz + mom.pz * lf)
         else:
-            return FourMomentum(mom)
+            # ``mom`` has no spatial part, so the transformation is the
+            # identity and the momentum is returned untouched. This is the
+            # ``qq.eq.rZero`` branch of the HELAS boostx this routine copies
+            # (aloha/template_files/aloha_functions.f); returning ``mom`` here
+            # instead would replace every boosted momentum by the boost itself.
+            # It is reached whenever the selected system is already at rest --
+            # e.g. boosting to the partonic CMS of a lepton-collider event.
+            return FourMomentum(self)
 
     def zboost(self, pboost=None, E=0, pz=0):
         """Both momenta should be in the same frame. 
