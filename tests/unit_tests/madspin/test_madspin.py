@@ -659,6 +659,7 @@ class TestDrawOneDecay(unittest.TestCase):
         get_decay_from_file = interface_madspin.MadSpinInterface.get_decay_from_file
         _draw_all_decays = interface_madspin.MadSpinInterface._draw_all_decays
         _draw_one_decay = interface_madspin.MadSpinInterface._draw_one_decay
+        _draw_decay_group = interface_madspin.MadSpinInterface._draw_decay_group
         efficiency = 0.5
 
     def _setup(self):
@@ -2016,3 +2017,152 @@ class TestDecayGroupLayout(unittest.TestCase):
         branches = self.TTBAR + [('z', ['z > e+ e- @1', 'z > u u~ @2'])]
         ok, reason = self._validate(branches, {6: 100, -6: 100})
         self.assertTrue(ok, reason)
+
+
+class TestDecayGroupDraw(unittest.TestCase):
+    """The run-time half of the grouping: a group is drawn once per event, with
+    the probability of its rate, and every particle then takes that group's
+    channel."""
+
+    class _Pool(object):
+        def __init__(self, tag, n=200, cross=1.0):
+            self.tag = tag
+            self._it = iter(range(n))
+            self.cross = cross
+        def __next__(self):
+            return '%s:%s' % (self.tag, next(self._it))
+
+    class _Part(object):
+        def __init__(self, pid):
+            self.pid = pid
+            self.pdg = pid
+            self.status = 1
+
+    class _Model(object):
+        NAMES = {6: 't', -6: 't~'}
+        def get_particle(self, pdg):
+            name = self.NAMES[pdg]
+            return type('P', (), {'get_name': staticmethod(lambda n=name: n)})()
+
+    class _Stub(object):
+        _DECAY_GROUP_TAG = interface_madspin.MadSpinInterface._DECAY_GROUP_TAG
+        _split_group_tag = interface_madspin.MadSpinInterface._split_group_tag
+        _assignment_multiplicity = \
+            interface_madspin.MadSpinInterface._assignment_multiplicity
+        _clamped_partial_width = staticmethod(
+            interface_madspin.MadSpinInterface._clamped_partial_width)
+        _resolve_group_rates = \
+            interface_madspin.MadSpinInterface._resolve_group_rates
+        _draw_decay_group = interface_madspin.MadSpinInterface._draw_decay_group
+        _draw_one_decay = interface_madspin.MadSpinInterface._draw_one_decay
+        _draw_all_decays = interface_madspin.MadSpinInterface._draw_all_decays
+        get_decay_from_file = \
+            interface_madspin.MadSpinInterface.get_decay_from_file
+        efficiency = 0.5
+
+    # ------------------------------------------------- assignment multiplicity
+    def test_multiplicity_counts_distinct_assignments(self):
+        mult = interface_madspin.MadSpinInterface._assignment_multiplicity
+        self.assertEqual(mult(['t > w+ b, w+ > l+ vl']), 1)
+        self.assertEqual(mult(['a > b c', 'a > d e']), 2)
+        self.assertEqual(mult(['a > b c', 'a > b c']), 1)   # NOT 2
+        self.assertEqual(mult(['a > b c', 'a > d e', 'a > f g']), 6)
+        self.assertEqual(mult(['a > b c', 'a > b c', 'a > d e']), 3)
+
+    def test_multiplicity_ignores_the_tag(self):
+        mult = interface_madspin.MadSpinInterface._assignment_multiplicity
+        self.assertEqual(mult(['a > b c @1', 'a > b c @2']), 1)
+
+    # ------------------------------------------------------------- group rates
+    def _ttbar_stub(self, g_lep=2.0, g_had=6.0, totwidth=9.0):
+        stub = self._Stub()
+        stub.model = self._Model()
+        stub.list_branches = {
+            't':  ['t > w+ b, w+ > l+ vl @1', 't > w+ b, w+ > j j @2'],
+            't~': ['t~ > w- b~, w- > j j @1', 't~ > w- b~, w- > l- vl~ @2']}
+        stub._decay_groups = {'tags': ['1', '2'],
+                              'lines': {6:  {'1': [0], '2': [1]},
+                                        -6: {'1': [0], '2': [1]}},
+                              'prob': None}
+        gen_jobs = {6: {'totwidth': totwidth}, -6: {'totwidth': totwidth}}
+        channel_widths = {6:  {0: g_lep, 1: g_had},
+                          -6: {0: g_had, 1: g_lep}}
+        return stub, gen_jobs, channel_widths
+
+    def test_semileptonic_branching_ratio(self):
+        """the tt~ idiom: BR = 2 x BR_lep x BR_had, which is what madspin_v1
+        writes for the same card."""
+        stub, gen_jobs, widths = self._ttbar_stub()
+        br = stub._resolve_group_rates(gen_jobs, widths)
+        self.assertAlmostEqual(br, 2 * (2. / 9.) * (6. / 9.), places=12)
+        self.assertEqual(stub._decay_groups['prob'], [0.5, 0.5])
+
+    def test_group_probability_follows_the_rate(self):
+        """an asymmetric card: group 1 is lep+had, group 2 had+had, so group 2
+        is the more likely of the two in the ratio of their widths."""
+        stub, gen_jobs, widths = self._ttbar_stub()
+        widths[-6] = {0: 6.0, 1: 6.0}          # t~ hadronic in both groups
+        br = stub._resolve_group_rates(gen_jobs, widths)
+        # br_1 = (2/9)(6/9), br_2 = (6/9)(6/9)
+        self.assertAlmostEqual(br, (2 * 6 + 6 * 6) / 81., places=12)
+        self.assertAlmostEqual(stub._decay_groups['prob'][0], 12. / 48.)
+        self.assertAlmostEqual(stub._decay_groups['prob'][1], 36. / 48.)
+
+    def test_zero_rate_everywhere_is_an_error_not_a_silent_zero(self):
+        stub, gen_jobs, widths = self._ttbar_stub()
+        widths[6] = {0: 0.0, 1: 0.0}
+        self.assertRaises(Exception, stub._resolve_group_rates,
+                          gen_jobs, widths)
+
+    # -------------------------------------------------------------- group draw
+    def test_group_is_drawn_with_its_probability(self):
+        import random
+        stub, gen_jobs, widths = self._ttbar_stub()
+        stub._decay_groups['prob'] = [0.25, 0.75]
+        random.seed(7)
+        drawn = collections.Counter(stub._draw_decay_group()
+                                    for _ in range(20000))
+        self.assertAlmostEqual(drawn['1'] / 20000., 0.25, places=2)
+        self.assertAlmostEqual(drawn['2'] / 20000., 0.75, places=2)
+
+    def test_no_group_declared_draws_none(self):
+        stub = self._Stub()
+        stub._decay_groups = None
+        self.assertIsNone(stub._draw_decay_group())
+
+    # ------------------------------------------------- the draw inside a group
+    def test_every_particle_takes_the_drawn_group_channel(self):
+        import random
+        stub, gen_jobs, widths = self._ttbar_stub()
+        stub._resolve_group_rates(gen_jobs, widths)
+        production = [self._Part(6), self._Part(-6)]
+        random.seed(3)
+        seen = collections.Counter()
+        for _ in range(400):
+            evt_decayfile = {6:  {0: self._Pool('t_lep'), 1: self._Pool('t_had')},
+                             -6: {0: self._Pool('tx_had'), 1: self._Pool('tx_lep')}}
+            out = stub.get_decay_from_file(production, evt_decayfile, 10)
+            seen[(out[6][0].split(':')[0], out[-6][0].split(':')[0])] += 1
+        # only the two tagged assignments, never lep+lep or had+had
+        self.assertEqual(set(seen), {('t_lep', 'tx_had'), ('t_had', 'tx_lep')})
+        for count in seen.values():
+            self.assertGreater(count, 150)      # both groups are used
+
+    def test_identical_parents_inside_a_group_are_positional(self):
+        """p p > t t t~ t~: the group's two lines for a pdg go to its two
+        particles in order."""
+        stub = self._Stub()
+        stub.model = self._Model()
+        stub.list_branches = {'t': ['a @1', 'b @1', 'c @2', 'd @2']}
+        stub._decay_groups = {'tags': ['1', '2'],
+                              'lines': {6: {'1': [0, 1], '2': [2, 3]}},
+                              'prob': [1.0, 0.0]}
+        production = [self._Part(6), self._Part(6)]
+        evt_decayfile = {6: dict((i, self._Pool('c%d' % i)) for i in range(4))}
+        out = stub.get_decay_from_file(production, evt_decayfile, 10)
+        self.assertEqual([d.split(':')[0] for d in out[6]], ['c0', 'c1'])
+
+        stub._decay_groups['prob'] = [0.0, 1.0]
+        evt_decayfile = {6: dict((i, self._Pool('c%d' % i)) for i in range(4))}
+        out = stub.get_decay_from_file(production, evt_decayfile, 10)
+        self.assertEqual([d.split(':')[0] for d in out[6]], ['c2', 'c3'])

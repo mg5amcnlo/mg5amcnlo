@@ -4,6 +4,14 @@ Design note. Written against `madspin_density` (275462e52) with an eye on the
 sequential/two-stage unweighting schemes of PR #334
 (`claude/madspin-sequential-offshell-rate-factor`, 6c051b6d4).
 
+> **Status.** Sections 3 and 4.1-4.3 are implemented: the density modes
+> (`PA`, `onshell`, `madspin`/`full`) honour the tags for the rectangular card
+> shape described in section 4.6, and the joint accept/reject is forced while
+> they do. Section 4.4 (per-group bounds and `Z_k` tables, so the sequential and
+> two-stage schemes keep working) is **not** implemented and is what section 5
+> calls structural. Everything outside that shape still warns and falls back to
+> the ungrouped behaviour.
+
 ## 1. What the tags mean and where they work
 
 The semi-leptonic *tt* idiom is
@@ -121,18 +129,26 @@ Two consequences worth stating up front:
 
 ### 4.1 Threading the group (contained)
 
-`_draw_all_decays` gains a per-event group index and passes it to
-`_draw_one_decay`, which uses it instead of the positional/random logic when
-groups are declared. The important consumer is
-`sequential_accept_reject`
-([interface_madspin.py:4603 on PR #334](../MadSpin/interface_madspin.py)), which
-calls `_draw_one_decay` per slot and **redraws single slots** on a rejection:
-those redraws must stay inside the group already chosen for the chain. That is a
-parameter, not a restructuring.
+*Implemented.* `_draw_all_decays` draws the group (`_draw_decay_group`) and
+passes it to `_draw_one_decay`, which restricts the candidate channels to the
+ones that group gives the particle and then applies the existing rules to those,
+unchanged. A group supplies exactly one channel per particle -- or one per
+identical parent, which the positional rule then deals out -- so restricting the
+candidates is the whole of the grouping at run time.
 
-The group must be redrawn at the same point the chain restarts (the
-`while True:` mass-set restart), otherwise a group whose feasibility is
-production-dependent would be over-represented.
+The draw sits at the *top* of `_draw_all_decays` rather than anywhere higher, so
+the group is redrawn on every trial of the joint accept/reject along with the
+decays it selects. That is what keeps the group part of what is being unweighted:
+it is proposed and tested together with the angles, and no stage can normalise it
+away. The joint max-weight scan goes through the same entry point, so the bound
+is measured over the group mixture too.
+
+`sequential_accept_reject` is the one caller that cannot take a group: it redraws
+single slots until they are accepted, which divides `E[w_k | group]` out of the
+chain, and that expectation differs between groups. `_sequential_active` refuses
+the scheme outright when the decays are grouped (logged, like the `fixed_order`
+fallback), and `sequential_accept_reject` raises if it is ever reached anyway.
+Lifting that needs section 4.4.
 
 ### 4.2 Pool sizing (contained, but the refill needs care)
 
@@ -151,10 +167,15 @@ With groups, slot `k` of pdg `p` consumes channel `c(g,p)` only on the fraction
 
     sum over {g : c(g,p) = c}  p_g  x  nb_event x multiplicity / eff_k
 
-with `eff_k` the ladder efficiency from `_sequential_pool_ladder`
-([interface_madspin.py:2189 on PR #334](../MadSpin/interface_madspin.py)). This
-is a per-channel weight in `gen_jobs`, which the ladder does not currently carry
-(it is per pdg). Contained.
+with `eff_k` the ladder efficiency from `_sequential_pool_ladder`.
+
+*Implemented, deliberately cruder.* `p_g` is only known once the partial widths
+have been measured, i.e. once the generation this sizing controls has already
+run. Rather than add a width pre-pass, the new `grouped` job kind sizes every
+channel as if its group were drawn on every event. That over-generates by at most
+a factor `|groups|` -- never under-generates, so no refill is forced -- and
+`decay_event_mult` scales it down for anyone who minds. A cheap analytic width
+estimate would recover the factor later.
 
 The refill machinery is the part that needs attention rather than arithmetic.
 `_channel_owner` deals channels out to workers round-robin and
@@ -242,6 +263,39 @@ This is where the cost is.
   already covers every group; the only cost is acceptance, since the bound is
   set by the loudest group.
 
+### 4.6 The shape that is accepted (implemented)
+
+Rectangular: **every group gives exactly `n_part` decay lines for every decaying
+particle**, `n_part` being how many of that particle each production event
+carries. An untagged line belongs to every group, as in `madspin_v1`.
+
+```
+decay t  > w+ b,  w+ > l+ vl   @1        n_part = 1: the semi-leptonic ttbar idiom
+decay t~ > w- b~, w- > j j     @1
+decay t  > w+ b,  w+ > j j     @2
+decay t~ > w- b~, w- > l- vl~  @2
+
+decay t > ... @1 ; decay t > ... @1      n_part = 2: p p > t t t~ t~, the group's
+decay t > ... @2 ; decay t > ... @2      two lines dealt to the two tops by the
+                                         existing positional rule
+```
+
+That single rule subsumes every refusal without a special case of its own: a
+group missing a particle, a line count that does not match the multiplicity, and
+a particle with both a tagged and an untagged line (the untagged one joins every
+group, so that group ends up with one line too many) are all count mismatches.
+Refused separately: a multiparticle parent (one name would own several pools),
+production events that do not all carry the same particles (`drop_prob_per_pdg`
+is per pdg -- section 4.3), `fixed_order`, and `spinmode` `none` / `onshell_v1`.
+
+A refusal warns with its reason and falls back to the ungrouped behaviour rather
+than raising: a card that merely over-specifies (a tagged line for a species that
+never appears in the events, which MadSpin drops anyway) should not stop a run.
+
+Implemented in `_decay_group_layout` (card only), `_validate_decay_groups`
+(against the production events) and `_resolve_decay_groups` (mode, `fixed_order`,
+and the conversion to pdg keys).
+
 ### 4.5 `fixed_order`
 
 `fixed_order` forces the joint accept/reject and processes event *groups*
@@ -255,13 +309,13 @@ worth an explicit test.
 
 | piece | verdict |
 |---|---|
-| group draw + threading through `_draw_*` and the sequential retry | contained |
-| pool sizing weights | contained; refill margins want re-tuning |
-| BR for the plain (one parent per pdg) case | contained |
-| groups x positional rule for identical parents | needs a syntax decision first |
-| BR equalisation across mixed final states (`drop_prob_per_pdg`) | not contained — different data structure |
-| per-group bounds and `Z_k` tables in sequential/two-stage | **structural** — the tabulated per-slot state multiplies by `\|groups\|` and the probe budget has to be split |
-| `fixed_order` event groups | contained, easy to get wrong |
+| group draw + threading through `_draw_*` | contained — **done** |
+| pool sizing | contained — **done**, at the cost noted in 4.2 |
+| BR for the plain (one parent per pdg) case | contained — **done** |
+| groups x positional rule for identical parents | **done**: inside a group the positional rule applies unchanged, so `p p > t t t~ t~` works |
+| BR equalisation across mixed final states (`drop_prob_per_pdg`) | not contained — **refused**, with a reason |
+| per-group bounds and `Z_k` tables in sequential/two-stage | **structural — not done.** The joint accept/reject is forced instead, and `sequential_accept_reject` raises if it is ever reached with groups |
+| `fixed_order` event groups | contained, easy to get wrong — **refused** for now |
 
 Rough effort: a joint-only implementation (density modes, `unweighting = joint`,
 refusing groups with mixed final states and with several identical parents) is a
@@ -297,6 +351,28 @@ normalisation step is exactly the sort of thing users get wrong silently. The
 strongest argument against is that the same week spent on the sequential
 schemes' per-slot bounds buys more.
 
-Recommendation: ship the warning (done on this branch), document the two-run
-recipe (already in `doc/madspin_options.tex`), and treat full support as
-optional — and if it is taken up, do section 6 first.
+Recommendation as first written: ship the warning, document the two-run recipe,
+and treat full support as optional — and if it is taken up, do section 6 first.
+
+That is what happened. Section 6 is what landed: the density modes honour the
+tags for the rectangular shape of section 4.6 and force the joint accept/reject
+while they do. Measured on `p p > t t~`, 2000 events, the card of section 1:
+
+| mode | BR | (W,W) categories |
+|---|---|---|
+| `madspin` (density), before | 0.7529 | 760 semi-lep, 1116 fully hadronic, 124 fully leptonic |
+| `madspin` (density), after | 0.28283 | **2000 semi-lep**, 1015 / 985 by charge |
+| `PA` (density), after | 0.28283 | **2000 semi-lep**, 1037 / 963 by charge |
+| `madspin_v1` | 0.29635 | 2000 semi-lep, 1001 / 999 by charge |
+
+with the same BR serial (`nb_core 1`) and parallel. It is exactly
+`sum_g prod_k Gamma_k / Gamma_tot^2` on this run's own measured widths
+(`Gamma_lep = 0.32407`, `Gamma_had = 0.97099`, `Gamma_t = 1.4915` → `0.28281`).
+The residual gap to `madspin_v1`'s 0.29635 is not from the grouping: it is the
+pre-existing difference between how the two paths measure the partial widths,
+and it shows in the ungrouped runs too (`0.7529 = (BR_l + BR_h)^2` with the same
+widths).
+
+Section 4.4 remains open, and with it the argument above: two runs plus
+`set cross_section` still produce the same sample, so what this bought is
+ergonomics, not reach.
