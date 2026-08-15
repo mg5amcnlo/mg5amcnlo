@@ -373,6 +373,66 @@ pre-existing difference between how the two paths measure the partial widths,
 and it shows in the ungrouped runs too (`0.7529 = (BR_l + BR_h)^2` with the same
 widths).
 
+### 7.2 The same again with two parents per pdg — `p p > t t~ t t~`
+
+`n_part = 2`, so each group supplies *two* lines for each pdg and the positional
+rule deals them out inside the group:
+
+```
+decay t  > w+ b, w+ > l+ vl  @1        decay t  > w+ b, w+ > j j     @2
+decay t  > w+ b, w+ > j j    @1        decay t  > w+ b, w+ > j j     @2
+decay t~ > w- b~, w- > j j   @1        decay t~ > w- b~, w- > l- vl~ @2
+decay t~ > w- b~, w- > j j   @1        decay t~ > w- b~, w- > j j    @2
+```
+
+Exactly one lepton, from a top in group 1 and from an antitop in group 2. Eight
+pools, four per pdg. Group @1's two `t~` lines are *identical*, which makes this
+card a test of the assignment factor as well.
+
+20000 production events, an independent production seed from section 7.1:
+
+| | sigma (pb) |
+|---|---|
+| dedicated 1 (lepton from a top) | 0.0010721 |
+| dedicated 2 (lepton from an antitop) | 0.0010722 |
+| **sum** | **0.0021442** |
+| grouped, one run | 0.0021416 &nbsp;&nbsp; ratio **0.998801** |
+
+Group shares reported `@1 = 0.5001, @2 = 0.4999` against the 0.49998 the
+dedicated cross sections imply. Every pull against the merged reference is
+within 1.0 sigma -- `cos*_lep` -0.2, `cos*_had` -0.5, `pT(lepton)` -0.9,
+`pT(leptonic top)` -1.0, `m(leptonic top)` +0.3, `HT(4 tops)` 0.0, charge split
+-0.1 -- and two-sample KS over the six distributions gives `p` from 0.20 to 1.00.
+(A first pass at 5000 events had `cos*_lep` at 2.3 sigma, `p = 0.03`; it is
+0.751 here, so that was the fluctuation it looked like.)
+
+Structure, 20000/20000 events in all three samples: exactly one charged lepton;
+the lepton comes from a top 0.4996 of the time in the grouped sample against
+1.0000 and 0.0000 in the two dedicated ones; and **the leptonic parent is always
+the first of its pdg**, which is the positional rule operating inside the group.
+
+The 1.2e-3 on the cross section is again the independent width measurements --
+four factors per group here instead of two, and each MadEvent estimate is good
+to about 0.1%.
+
+#### The assignment factor, against a path that has none
+
+`n!` counts the ways `n` *distinct* channels go to `n` identical parents; with a
+repeated line it counts the same final state twice, so the factor is
+`n!/prod_c m_c!`. Group @1 above repeats its `t~` line, which makes that
+measurable. Writing the same group as a standalone card two ways:
+
+| | sigma (pb) |
+|---|---|
+| `t~` line written **twice** -> `mult_split`, factor `2!/2! = 1` | 0.0010777 |
+| `t~` line written **once** -> `mult_cumul`, which applies no factor at all | 0.0010767 |
+| ratio | **1.000886** |
+
+The old plain `n!` would have put that ratio at 2. Two code paths, one of which
+has no assignment factor in it, agreeing to 9e-4.
+
+## 8. And the honest comparison, still
+
 Section 4.4 remains open, and with it the argument above: two runs plus
 `set cross_section` still produce the same sample, so what this bought is
 ergonomics, not reach.
