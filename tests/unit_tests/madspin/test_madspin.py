@@ -1823,6 +1823,33 @@ class TestPolyfitConditioning(unittest.TestCase):
         self.assertIsNone(self._fit([0.0, 0.0, 0.1, 0.1], [1.0, 1.0, 2.0, 2.0]))
 
 
+class TestClampedPartialWidth(unittest.TestCase):
+    """_clamped_partial_width reconciles a *measured* partial width with the
+    param_card total. The two regimes are deliberate and long-standing, so they
+    are pinned here: a review read the helper as under-clamping, when in fact
+    capping the large-disagreement case is what would be wrong.
+    """
+
+    fct = staticmethod(
+        interface_madspin.MadSpinInterface._clamped_partial_width)
+
+    def test_below_the_total_is_untouched(self):
+        self.assertEqual(self.fct(0.4, 1.0), 0.4)
+        self.assertEqual(self.fct(1.0, 1.0), 1.0)
+
+    def test_a_per_cent_over_is_monte_carlo_noise_and_is_capped(self):
+        """Within 1% the excess is noise in the width measurement; capping keeps
+        the branching ratio at most 1 and costs nothing."""
+        self.assertEqual(self.fct(1.005, 1.0), 1.0)
+        self.assertEqual(self.fct(1.01, 1.0), 1.0)
+
+    def test_a_real_disagreement_is_reported_not_hidden(self):
+        """Past 1% the param_card total genuinely disagrees with what was
+        generated. The measured value is kept: capping would quietly reshape the
+        normalisation to match a card that is wrong, and swallow the evidence.
+        """
+        self.assertEqual(self.fct(1.5, 1.0), 1.5)
+        self.assertEqual(self.fct(20.0, 1.0), 20.0)
 class TestDecayGroupTagWarning(unittest.TestCase):
     """The `@` grouping tags of the semi-leptonic ttbar idiom are implemented
     only in madspin_v1. Everywhere else MG5 reads them as an ordinary process

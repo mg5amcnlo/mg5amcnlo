@@ -1124,10 +1124,23 @@ class MadSpinInterface(extended_cmd.Cmd):
 
     @staticmethod
     def _clamped_partial_width(pwidth, totwidth, pdg=None):
-        """A measured partial width, complained about and capped when it comes
-        out above the total width of the param_card. Only ever applied to *one*
-        channel's width (or to a sum over channels, which is still a width): a
-        product of several is not comparable with a single total."""
+        """A measured partial width, reconciled with the total width of the
+        param_card. Only ever applied to *one* channel's width (or to a sum over
+        channels, which is still a width): a product of several is not
+        comparable with a single total.
+
+        The two regimes are deliberate, and are the long-standing behaviour this
+        helper factors out of run_onshell rather than a new policy:
+
+        - up to 1% above the total, the excess is Monte Carlo noise in the width
+          measurement, so it is capped silently and the branching ratio stays at
+          most 1;
+        - more than 1% above, the param_card's total genuinely disagrees with
+          what was generated. That is warned about and the *measured* value is
+          used, because capping there would quietly reshape the normalisation to
+          match a card that is wrong, and hide the disagreement instead of
+          reporting it.
+        """
         if pwidth > 1.01 * totwidth:
             logger.warning('partial width (%s) larger than total width (%s) '
                            '--from param_card-- for pdg %s',
