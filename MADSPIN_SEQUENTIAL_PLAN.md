@@ -1221,17 +1221,26 @@ at the accepted mass distribution. Four replicas of each scheme over the same
 10000 production events with independent MadSpin seeds (42-45), against a
 four-replica joint reference:
 
-    scheme                <m(top)>, both resonances    vs joint
-    joint                 172.9469 +- 0.0135            --
-    sequential_with_mass  172.9480 +- 0.0104           +0.0011  (+0.06 sigma)
-    sequential            172.9558 +- 0.0068           +0.0089  (+0.59 sigma)
-    Z_hat forced to 1     172.9083 +- 0.0087           -0.0386  (-2.40 sigma)
+    scheme                   <m(top)>, both resonances   vs joint        chi2/ndf
+    joint                    172.9469 +- 0.0135           --              --
+    sequential_with_mass     172.9480 +- 0.0104          +0.0011 (+0.06)  12.6/24
+    sequential               172.9558 +- 0.0068          +0.0089 (+0.59)   9.4/24
+    two_stage                172.9589 +- 0.0067          +0.0119 (+0.79)  11.3/24
+    sequential_global_retry  172.9632 +- 0.0057          +0.0162 (+1.11)  20.3/24
+    sequential, Z_hat = 1    172.9083 +- 0.0087          -0.0386 (-2.40)  12.3/24
 
 (errors are the replica scatter; the naive per-run MC error on the pooled sample
-is 0.0111 and gives the same significances to within 0.05 sigma. Lineshape
-chi2/ndf against joint: 12.6/24, 9.4/24 and 12.3/24.)
+is 0.0111 and gives the same significances to within 0.08 sigma.)
 
-The third row is the point. PA's `Z_k` spans a factor 1.16 where the offshell
+The three up-front schemes sit 0.6 to 1.1 sigma above joint, all on the same
+side. That is not the table: `sequential_global_retry` needs no table at all --
+`Z_hat` cancels identically there -- and it is the *highest* of the three. What
+it is is the joint reference, whose own replica scatter (0.0135) is the largest
+of the six and whose seed-42 replica (172.9161) is a visible low outlier. As in
+section 10, the scatter between two runs of the same scheme is as large as
+anything the scheme-to-scheme differences show.
+
+The last row is the point. PA's `Z_k` spans a factor 1.16 where the offshell
 one spans 3.2, so the bias it protects against is ~0.04 GeV rather than the
 0.25 GeV of section 10 -- at the edge of what a 10000-event A/B can see, which
 would have made a plain "sequential agrees with joint" statement
