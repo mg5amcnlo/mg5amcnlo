@@ -376,3 +376,50 @@ widths).
 Section 4.4 remains open, and with it the argument above: two runs plus
 `set cross_section` still produce the same sample, so what this bought is
 ergonomics, not reach.
+
+### 7.1 The same sample — measured
+
+`p p > t t~`, 20000 production events, decayed four times off the *same*
+production file: the grouped card in one run, each group alone in a dedicated
+run, and the grouped card under `madspin_v1`. The two dedicated runs decayed the
+same events, so the reference is built pairwise — for production event *i*, take
+`dedic1[i]` with probability `p_1 = sigma_1/(sigma_1+sigma_2)` and `dedic2[i]`
+otherwise. That is by construction the mixture the grouped run draws, on
+identical production kinematics, so anything left over is the grouping itself.
+
+| | sigma (pb) |
+|---|---|
+| dedicated 1 (`t > l+ nu`, `t~ > j j`) | 71.26739 |
+| dedicated 2 (`t > j j`, `t~ > l- nu`) | 71.24537 |
+| **sum** | **142.51276** |
+| grouped, one run | 142.54946 &nbsp;&nbsp; ratio **1.000258** |
+| `madspin_v1` | 149.48100 &nbsp;&nbsp; ratio 1.048896 |
+
+The grouped run also reports the group shares as `@1 = 0.4999, @2 = 0.5001`
+against the `0.50008` the two dedicated cross sections imply.
+
+Means, grouped against the merged reference (`cos*` is the child's angle in its
+W rest frame against the W direction in its top's rest frame — the spin
+analyser; `prod` is the ttbar spin-correlation handle):
+
+| | grouped | merged | pull |
+|---|---|---|---|
+| `cos*_lep` | -0.14628 | -0.14162 | -0.9 |
+| `cos*_down` | -0.13923 | -0.14408 | +1.0 |
+| `cos*_lep · cos*_down` | 0.01894 | 0.01972 | -0.3 |
+| `dphi(l, d)` | 1.74943 | 1.75194 | -0.3 |
+| `pT(lepton)` | 51.458 | 51.525 | -0.2 |
+| `pT(leptonic top)` | 120.235 | 120.254 | -0.0 |
+| `m(leptonic top)` | 173.192 | 173.184 | +0.3 |
+| lepton-from-top fraction | 0.4996 | 0.5001 | -0.1 |
+
+Two-sample Kolmogorov-Smirnov on the same seven distributions: `D` between
+0.0027 and 0.0081, `p` between 0.53 and 1.00. Nothing distinguishes them.
+
+The 2.6e-4 on the cross section is the two sides measuring the same partial
+widths in independent MG5 integrations, not a bias. The 4.9% against
+`madspin_v1` is the pre-existing difference already noted above: the density
+path integrates the 3-body `t > b f f'` and gets `Gamma_lep/Gamma_t = 0.21705`
+where the naive `Gamma_t x BR(W)` would give 2/9 = 0.22222, the Breit-Wigner
+being truncated by `bwcutoff` and suppressed below threshold. It is 2.3% per
+leg, hence 4.7% on the product, and it is there in the ungrouped runs too.
