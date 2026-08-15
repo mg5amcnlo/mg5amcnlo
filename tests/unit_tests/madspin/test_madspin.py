@@ -1820,3 +1820,50 @@ class TestPolyfitConditioning(unittest.TestCase):
 
     def test_two_distinct_points_cannot_fix_a_quadratic(self):
         self.assertIsNone(self._fit([0.0, 0.0, 0.1, 0.1], [1.0, 1.0, 2.0, 2.0]))
+
+
+class TestDecayGroupTagWarning(unittest.TestCase):
+    """The `@` grouping tags of the semi-leptonic ttbar idiom are implemented
+    only in madspin_v1. Everywhere else MG5 reads them as an ordinary process
+    number and they change nothing, so MadSpin must say so rather than let the
+    card mean something it does not."""
+
+    class _Stub(object):
+        _DECAY_GROUP_TAG = interface_madspin.MadSpinInterface._DECAY_GROUP_TAG
+        _warn_ignored_decay_groups = \
+            interface_madspin.MadSpinInterface._warn_ignored_decay_groups
+
+        def __init__(self, list_branches):
+            self.list_branches = list_branches
+
+    TAGGED = {'t': ['t > w+ b, w+ > l+ vl @1', 't > w+ b, w+ > j j @2'],
+              't~': ['t~ > w- b~, w- > j j @1', 't~ > w- b~, w- > l- vl~ @2']}
+    UNTAGGED = {'z': ['z > e+ e-', 'z > u u~']}
+
+    def test_tags_are_reported_in_every_density_mode(self):
+        for spinmode in ('madspin', 'full', 'PA', 'onshell', 'onshell_v1',
+                         'none'):
+            stub = self._Stub(self.TAGGED)
+            found = stub._warn_ignored_decay_groups(spinmode)
+            self.assertEqual(len(found), 4, spinmode)
+            self.assertEqual(sorted(set(t[2] for t in found)), ['@1', '@2'])
+
+    def test_madspin_v1_is_silent(self):
+        """v1 implements the grouping, so there is nothing to warn about."""
+        stub = self._Stub(self.TAGGED)
+        self.assertEqual(stub._warn_ignored_decay_groups('madspin_v1'), [])
+
+    def test_untagged_card_is_silent(self):
+        stub = self._Stub(self.UNTAGGED)
+        self.assertEqual(stub._warn_ignored_decay_groups('madspin'), [])
+
+    def test_whitespace_between_at_and_number(self):
+        stub = self._Stub({'t': ['t > w+ b, w+ > l+ vl @ 12']})
+        self.assertEqual([t[2] for t in
+                          stub._warn_ignored_decay_groups('madspin')], ['@12'])
+
+    def test_a_coupling_restriction_is_not_a_group_tag(self):
+        """`@` only tags a group when a number follows it; QED=1 and the like
+        must not trigger the warning."""
+        stub = self._Stub({'t': ['t > w+ b QED=1, w+ > l+ vl']})
+        self.assertEqual(stub._warn_ignored_decay_groups('madspin'), [])

@@ -904,10 +904,59 @@ class MadSpinInterface(extended_cmd.Cmd):
         return self.parser_launch().parse_args(args)
         
 
+    # ``decay t > w+ b, w+ > l+ vl @1``: the @ suffix sorts the decay lines into
+    # *groups* meant to be used together -- the semi-leptonic ttbar idiom, where
+    # only the two charge assignments exist and no fully leptonic or fully
+    # hadronic event is produced.
+    _DECAY_GROUP_TAG = re.compile(r'@\s*\d+')
+
+    def _warn_ignored_decay_groups(self, spinmode):
+        """Warn when the card carries @ grouping tags in a mode that ignores them.
+
+        Only ``madspin_v1`` implements the grouping, and it does so by building
+        one decayed matrix element per group. Everywhere else there is no such
+        object: the decay pools are filled per particle and per channel and each
+        particle draws its channel independently at run time, so a cross-particle
+        correlation has nothing to act on.
+
+        Worse, the tag is swallowed in silence. The decay-matrix-element
+        generation appends an ``@`` process number of its own to every branch, so
+        MG5 sees two of them, binds its own at the top level and absorbs the
+        user's as the process number of the sub-decay. Nothing fails, the matrix
+        element that comes out is the correct *ungrouped* one, and without this
+        the card simply does not mean what it looks like it means.
+
+        Returns the (particle, branch, tag) triples found, for the tests.
+        """
+        if spinmode == 'madspin_v1':
+            return []
+        tags = []
+        for name, branches in self.list_branches.items():
+            for branch in branches:
+                found = self._DECAY_GROUP_TAG.search(branch)
+                if found:
+                    tags.append((name, branch,
+                                 found.group(0).replace(' ', '')))
+        if not tags:
+            return []
+        logger.warning(
+            "The decay lines carry '@' grouping tags (%s) but spinmode=%s does "
+            "not support grouping -- it is implemented only in madspin_v1, "
+            "which generates one decayed matrix element per group. Here every "
+            "particle draws its decay channel independently, so the tags change "
+            "nothing (MG5 reads them as an ordinary process number) and the "
+            "sample will contain EVERY combination of the channels listed, not "
+            "only the tagged ones. Generate one group per MadSpin run and merge "
+            "the outputs -- fixing the normalisation with 'set cross_section' if "
+            "the automatic branching ratio is not what you want -- or switch to "
+            "spinmode = madspin_v1.",
+            ', '.join(sorted(set(t[2] for t in tags))), spinmode)
+        return tags
+
     @misc.mute_logger()
     def do_launch(self, line):
         """end of the configuration launched the code"""
-        
+
         (options, args) = self.parse_launch(line)
         if getattr(lhe_parser, "_ENABLE_LHE_TIMERS", False):
             lhe_parser.reset_lhe_timers()
@@ -940,6 +989,7 @@ class MadSpinInterface(extended_cmd.Cmd):
             self.options['spinmode'] = spinmode
 
         logger.info("Running MadSpin in spinmode %s" % spinmode)
+        self._warn_ignored_decay_groups(spinmode)
 
         if spinmode in ["none"]:
             out = self.run_bridge(line)
