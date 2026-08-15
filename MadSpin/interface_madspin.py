@@ -75,7 +75,7 @@ class MadSpinOptions(banner.ConfigFile):
         self.add_param('frame_id', 6)
         self.add_param('global_order_coupling', '')
         self.add_param('identical_particle_in_prod_and_decay', 'average')
-        self.add_param('beampol', [1.0, 1.0], comment='beam polarization, in the /to_polarization/ convention of madevent: 1 is unpolarized, |beampol| grows to 2 for a fully polarized beam and its sign selects the favoured helicity. Set from the run_card polbeam1/polbeam2 when there is one.')
+        self.add_param('beampol', [0., 0.], comment='beam polarisation of each beam in percent, -100 .. 100, exactly as the run_card polbeam1/polbeam2 (0 is unpolarised). Taken from the run_card of the production when it has one.')
         self.add_param('density_debug', False, comment='Turn on check against full ME calculation')
         self.add_param('density_tolerance', 1E-4, comment='Tolerance for deviation between density and full ME')
         self.add_param('decay_event_mult', 1E0, comment='Produce more events than needed so that MadSpin does not have to regenerate decay events')
@@ -113,6 +113,26 @@ class MadSpinOptions(banner.ConfigFile):
         if not hasattr(random, 'mg_seedset'):
             random.seed(self['seed'])  
             random.mg_seedset = self['seed']  
+
+    def beampol_me(self):
+        """The beam polarisations in the convention the matrix elements use.
+
+        The card and the run_card both speak percent (-100 .. 100, 0 for an
+        unpolarised beam). ``/to_beampol/`` -- the v1 driver's msP/msF SMATRIX
+        and GET_DENSITY -- is a verbatim copy of madevent's
+        ``/to_polarization/`` reweighting, so it wants madevent's *internal*
+        value, ``sign(1 + |polbeam|/100, polbeam)``: 1 unpolarised, +2 fully
+        polarised along +1 helicity, -2 fully polarised along -1. Converting
+        here rather than at parse time keeps the stored option equal to what the
+        user typed, and keeps one convention in the cards and one in Fortran.
+        """
+        pol = self['beampol'] or [0., 0.]
+        out = []
+        for value in (pol[0], pol[1]):
+            value = float(value)
+            out.append(1. if not value
+                       else math.copysign(1 + abs(value) / 100., value))
+        return tuple(out)
 
     def post_set_sequential_decay(self, value, change_userdefine, raiseerror, *opts):
         """Deprecated alias for 'unweighting'. True/False were the only values
@@ -397,29 +417,6 @@ class MadSpinInterface(extended_cmd.Cmd):
         self.prod_branches = ''
         self.final_state = set()
 
-    @staticmethod
-    def polbeam_to_beampol(polbeam):
-        """Map a run_card ``polbeam1``/``polbeam2`` (a polarisation in percent,
-        -100 .. 100) onto the ``beampol`` the matrix elements expect.
-
-        The matrix-element side -- ``/to_beampol/`` in the v1 driver's msP/msF
-        SMATRIX and now in GET_DENSITY -- is a verbatim copy of madevent's
-        ``/to_polarization/`` reweighting, so it wants madevent's convention for
-        the value too (Template/LO/Source/setrun.f)::
-
-            beampol = sign(1 + |polbeam|/100, polbeam)
-
-        i.e. 1 for an unpolarised beam, +2 for a beam fully polarised along +1
-        helicity, -2 for one fully polarised along -1. That is what makes the
-        two branches of the reweighting come out as they should: at |beampol|=1
-        both are 1, and at |beampol|=2 the favoured helicity gets 2 and the
-        other 0.
-        """
-        polbeam = float(polbeam)
-        if not polbeam:
-            return 1.
-        return math.copysign(1 + abs(polbeam) / 100., polbeam)
-
     def _load_f2py_matrix_module(self, sp_path, menum=2):
         """Load the freshly-compiled ``all_matrix<menum>py`` extension under
         ``sp_path``.
@@ -574,13 +571,13 @@ class MadSpinInterface(extended_cmd.Cmd):
                 if 'frame_id' not in self.options.user_set:
                     self.options['frame_id'] = run_card['frame_id']
                 if 'beampol' not in self.options.user_set:
-                    self.options['beampol'] = [self.polbeam_to_beampol(run_card['polbeam1']),
-                                               self.polbeam_to_beampol(run_card['polbeam2'])]
+                    self.options['beampol'] = [run_card['polbeam1'],
+                                               run_card['polbeam2']]
             else:
                 if 'frame_id' not in self.options.user_set:
                     self.options['frame_id'] = 6
                 if 'beampol' not in self.options.user_set:
-                    self.options['beampol'] = [1., 1.]
+                    self.options['beampol'] = [0., 0.]
 
         else:
             if not self.options['Nevents_for_max_weight']:
@@ -5662,10 +5659,7 @@ class MadSpinInterface(extended_cmd.Cmd):
         make, so that an out-of-range value cannot switch on the frame boost
         here while the Fortran ignores it.
         """
-        beampol = self.options['beampol']
-        if not beampol:
-            return None
-        pol = (float(beampol[0]), float(beampol[1]))
+        pol = self.options.beampol_me()
         if abs(pol[0]) <= 1. and abs(pol[1]) <= 1.:
             return None
         return pol

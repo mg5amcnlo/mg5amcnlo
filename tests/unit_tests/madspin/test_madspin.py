@@ -244,12 +244,19 @@ class TestDensity(unittest.TestCase):
         self.assertEqual(nb_false, 6)
 
 
+class _StubOptions(dict):
+    """A plain options dict plus the one method the interface calls on it."""
+    beampol_me = interface_madspin.MadSpinOptions.beampol_me
+
+
 class _FrameStub(object):
     """Just enough of MadSpinInterface for the frame/beampol helpers: they only
     need the options and the matrix-element ordering of the event."""
 
     def __init__(self, frame_id, beampol):
-        self.options = {'frame_id': frame_id, 'beampol': beampol}
+        self.options = interface_madspin.MadSpinOptions()
+        self.options['frame_id'] = frame_id
+        self.options['beampol'] = list(beampol)
 
     def get_pdir(self, event):
         return None, None, None, None
@@ -279,19 +286,26 @@ class TestFrameBoost(unittest.TestCase):
                (300., 100., 50., -80.),
                (400., -100., -50., 380.)]
 
-    def _stub(self, frame_id, beampol=(1.8, 1.)):
+    def _stub(self, frame_id, beampol=(80., 0.)):
         return _FrameStub(frame_id, beampol)
 
     def test_polbeam_to_beampol(self):
-        """the run_card polbeam -> beampol map has to land on madevent's
-        /to_polarization/ convention, not on the [0,1] left-handed fraction the
-        eva PDF uses"""
-        fct = interface_madspin.MadSpinInterface.polbeam_to_beampol
+        """the card speaks percent, like the run_card polbeam1/polbeam2, and
+        beampol_me lands it on madevent's /to_polarization/ convention -- not on
+        the [0,1] left-handed fraction the eva PDF uses"""
+        def fct(polbeam):
+            options = interface_madspin.MadSpinOptions()
+            options['beampol'] = [polbeam, 0.]
+            return options.beampol_me()[0]
         self.assertEqual(fct(0), 1.)
         self.assertEqual(fct(100), 2.)
         self.assertEqual(fct(-100), -2.)
         self.assertEqual(fct(50), 1.5)
         self.assertEqual(fct(-50), -1.5)
+        # an unpolarised beam stays exactly 1, whichever slot it is in
+        options = interface_madspin.MadSpinOptions()
+        options['beampol'] = [60., 0.]
+        self.assertEqual(options.beampol_me(), (1.6, 1.))
         # the two branches of the matrix-element reweighting, as written in
         # matrix_standalone_msP_v4.inc: unpolarised leaves both helicities
         # alone, +-100%% keeps one and kills the other
@@ -311,7 +325,7 @@ class TestFrameBoost(unittest.TestCase):
     def test_frame_inert_without_polarisation(self):
         """the frame only changes the axis the initial-state helicities are
         quantised along, so with unpolarised beams there is nothing to do"""
-        stub = self._stub(6, beampol=(1., 1.))
+        stub = self._stub(6, beampol=(0., 0.))
         self.assertIsNone(stub._frame_boost(_MomentaEvent(self.MOMENTA)))
 
     def test_frame_id_bitmask(self):
@@ -1294,11 +1308,12 @@ class TestSequentialAcceptReject(unittest.TestCase):
             _beampol = interface._beampol
             _frame_boost = interface._frame_boost
             def __init__(self):
-                self.options = {'spinmode': 'onshell',
+                self.options = _StubOptions(
+                               {'spinmode': 'onshell',
                                 'sequential_spin_order': '2 3 1',
                                 'unweighting': 'sequential',
                                 'fixed_order': False,
-                                'beampol': [1., 1.], 'frame_id': 6}
+                                'beampol': [0., 0.], 'frame_id': 6})
             def _density_basis(self, production, decays_key):
                 particles, slots = interface._sequential_slots(production, decays_key)
                 return {'decays_key': decays_key, 'helicities': hels,
