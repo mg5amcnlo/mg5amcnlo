@@ -27,7 +27,7 @@ ANNOUNCEMENT:
         - the run_card polbeam1/polbeam2 were converted to the [0,1] left-handed-
           fraction convention of the EVA PDF and then fed to a matrix-element
           reweighting that expects madevent's /to_polarization/ convention. As a
-          result an *unpolarised* run (polbeam=0 -> beampol=0.5) applied a spurious
+          result, an *unpolarised* run (polbeam=0 -> beampol=0.5) applied a spurious
           factor 0.5 to one initial-state helicity and 1.5 to the other, while a
           fully polarised beam (polbeam=-100 -> beampol=1) applied nothing at all,
           and the sign of the polarisation was flipped. The mapping is now

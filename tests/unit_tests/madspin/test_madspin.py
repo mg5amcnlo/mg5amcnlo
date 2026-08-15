@@ -322,6 +322,17 @@ class TestFrameBoost(unittest.TestCase):
                 got = (2 - abs(pol), abs(pol))
             self.assertEqual(got, (hel_plus, hel_minus))
 
+    def test_beampol_needs_both_beams(self):
+        """One number is ambiguous -- which beam? -- and used to surface only as
+        an IndexError once the run reached a matrix element. It is refused when
+        the card is read instead."""
+        options = interface_madspin.MadSpinOptions()
+        for bad in ('50', '[50]'):
+            self.assertRaises(Exception, options.__setitem__, 'beampol', bad)
+        # unset stays legal and means unpolarised
+        options['beampol'] = '[]'
+        self.assertEqual(options.beampol_me(), (1., 1.))
+
     def test_frame_inert_without_polarisation(self):
         """the frame only changes the axis the initial-state helicities are
         quantised along, so with unpolarised beams there is nothing to do"""

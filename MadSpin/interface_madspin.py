@@ -114,6 +114,16 @@ class MadSpinOptions(banner.ConfigFile):
             random.seed(self['seed'])  
             random.mg_seedset = self['seed']  
 
+    def post_set_beampol(self, value, change_userdefine, raiseerror, *opts):
+        """Two values or none: one number is ambiguous (which beam?) and would
+        otherwise only surface as an IndexError once the run reaches a matrix
+        element, long after the card was read."""
+        if value and len(value) != 2:
+            raise banner.InvalidCmd(
+                "beampol takes the polarisation of *both* beams, in percent: "
+                "'set beampol [%s, 0]' for the first beam only. Got %s value(s)."
+                % (value[0] if value else 0, len(value)))
+
     def beampol_me(self):
         """The beam polarisations in the convention the matrix elements use.
 
@@ -126,7 +136,7 @@ class MadSpinOptions(banner.ConfigFile):
         here rather than at parse time keeps the stored option equal to what the
         user typed, and keeps one convention in the cards and one in Fortran.
         """
-        pol = self['beampol'] or [0., 0.]
+        pol = self['beampol'] or [0., 0.]      # unset / [] is unpolarised
         out = []
         for value in (pol[0], pol[1]):
             value = float(value)
