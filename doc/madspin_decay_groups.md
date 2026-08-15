@@ -431,6 +431,65 @@ measurable. Writing the same group as a standalone card two ways:
 The old plain `n!` would have put that ratio at 2. Two code paths, one of which
 has no assignment factor in it, agreeing to 9e-4.
 
+### 7.3 PA, and `sequential_decay`
+
+Grouping forces the joint accept/reject (section 4.1), so both need checking:
+that the fallback happens, and that it costs nothing but efficiency.
+
+**The fallback fires and is a no-op.** `PA` (whose `sequential_decay` auto
+default is on) and `madspin` with `sequential_decay True` both log
+
+```
+MadSpin: the decay lines are grouped ('@' tags), keeping the joint
+accept/reject (sequential_decay ignored)
+```
+
+and `set sequential_decay True` on a grouped card produces event records
+*byte-identical* to the same card run at the default -- the option is read,
+overridden, and changes nothing.
+
+**PA reproduces the dedicated runs.** Same 20000 `p p > t t~` events, `PA`
+throughout, with the dedicated runs put on the joint test too so both sides use
+the same accept/reject:
+
+| | sigma (pb) |
+|---|---|
+| dedicated 1 + dedicated 2 | 71.26739 + 71.24537 = 142.51276 |
+| grouped, one run | 142.54946 &nbsp;&nbsp; ratio 1.000258 |
+
+Sharper than the merged comparison, and free of its binomial noise: split the
+grouped sample by which group each event came from and compare each half with
+*its* dedicated run. Over 3 MadSpin seeds x 2 groups x 5 observables
+(`pT(lepton)`, `m(top)`, both spin analysers and their product) — 30
+comparisons — three land at 2.0-2.7 sigma and none of them reproduces at another
+seed, which is what statistics looks like and not what a bias looks like. Every
+KS is above 0.01.
+
+**A pre-existing bias in `sequential_decay`, found on the way.** The first
+PA/sequential comparison put `m(top)` at 7.8 sigma, and it is not the grouping.
+Taking one *ungrouped* card, the same production events, and changing nothing
+but the accept/reject:
+
+| `decay t > w+ b, w+ > l+ vl` + `decay t~ > w- b~, w- > j j` | mean `m(top_lep)` |
+|---|---|
+| `sequential_decay False` (joint) | 173.16870 |
+| `sequential_decay True` | 172.94647 |
+| | **7.0 sigma**, KS `p = 0.0000` |
+
+Every angular observable agrees between the two (all within 1.0 sigma); only the
+virtuality moves, and it moves *down*. That is the signature the offshell rate
+factor `Z_k` exists to remove: the per-slot stage redraws each decay to
+acceptance, which divides `E[w_k | m] = Z_k(m)` out of the accepted mass sets, so
+the lineshape relaxes towards the Breit-Wigner instead of the offshell one --
+and since the running width grows with `m`, dropping `Z_k` pulls the mean low.
+`PA` shows the same effect at 2.1 sigma, where there is no `Z_k` to lose but the
+per-slot mass redraw normalises itself the same way.
+
+So on this branch `sequential_decay True` under `madspin` is biased in the top
+lineshape, independent of the grouping, and PR #334's `Z_k` tables are what fix
+it. It is also an argument that forcing joint for grouped cards costs nothing
+here: the joint path is the unbiased one.
+
 ## 8. And the honest comparison, still
 
 Section 4.4 remains open, and with it the argument above: two runs plus
