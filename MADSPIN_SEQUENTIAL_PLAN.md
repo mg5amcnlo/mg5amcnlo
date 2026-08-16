@@ -1176,3 +1176,378 @@ with a real obstacle: offshell, `rho_off` depends on the whole mass set jointly,
 so redrawing one slot's mass invalidates it and every slot already accepted
 against it. That is why `_offshell_production` exists at all. It is chipped out
 separately, with the answer "no, and here is the cost" explicitly allowed.
+
+---
+
+## 12. `sequential_with_mass` for the offshell spinmodes: the answer is no
+
+Section 11 closes by asking whether `sequential_with_mass` should also exist for
+`spinmode = madspin` / `full`, purely so PA and madspin offer the same five
+values of `unweighting`. **No.** Not "no, too slow" -- it is also slow -- but
+**no, not exact**, and the correction that would make it exact is not an object
+that can be tabulated the way `Z_k` is.
+
+This section records the derivation, the size of the effect, the cost, and the
+sentence the manual should carry instead. Nothing was implemented.
+
+### The chain, and what changes
+
+Write the state after `k` slots as `h_k = (P; m_1..m_k; d_1..d_k)` -- the
+production event, the virtualities drawn and the decays accepted. Offshell,
+three objects depend on the *set* of virtualities, not on one of them:
+
+    rho^(k)   the production density at momenta reshuffled to
+              (m_1..m_k, the undrawn slots at their pole masses)
+    J^(k)     the jacobian of that reshuffling
+    p^(k)_j   the reshuffled parent of slot j -- hence D_j^(k), slot j's decay
+              density, which is taken in *that* parent's helicity frame
+
+In every scheme built so far `_offshell_production` draws all `n` virtualities
+before the loop, so `rho^(k) = rho_off`, `J^(k) = J`, `D_j^(k) = D_j` for every
+`k`: the three are constants of the chain. `sequential_with_mass` is exactly the
+proposal to stop that being true.
+
+Define the partial weight in the general case:
+
+    W_k = <rho^(k); D_1^(k) (x) .. (x) D_k^(k) (x) I (x) .. (x) I> * J^(k)
+          * prod_{j<=k} jac_bw_j jac_dec_j
+          / ( |M_prod|^2_on * prod_{j<=k} |M_j,dec|^2_on )
+
+`W_n` is the joint weight and `W_0 = Tr(rho^(0))/|M_prod|^2_on` is a per-
+production-event constant, so `prod_k (W_k/W_{k-1}) = W_n/W_0`.
+
+**The telescoping survives a rho that changes mid-chain.** That much is pure
+algebra and does not care what `rho^(k)` is; it is worth saying because it is the
+first thing one checks, it passes, and it is not the thing that fails.
+
+### What fails: the per-slot normalisation acquires a history
+
+Split the test ratio into a *fresh* part and a *stale* part:
+
+    W_k/W_{k-1} = A_k * [ (N_k/N_{k-1})^(k) * jac_bw_k * jac_dec_k
+                          * Tr(D_k^(k)) / |M_k,dec|^2_on ]
+
+    A_k = <rho^(k);   D_1^(k)   (x) .. (x) D_{k-1}^(k)   (x) I (x) ..>
+          -----------------------------------------------------------  *  J^(k)
+          <rho^(k-1); D_1^(k-1) (x) .. (x) D_{k-1}^(k-1) (x) I (x) ..>     ------
+                                                                          J^(k-1)
+
+The bracket is what the code computes today: same `rho`, same parents on both
+sides of the ratio, slot `k` filled against slot `k` an identity. `A_k` is the
+new object -- *identical slot content on both sides, two different mass sets*.
+It is exactly 1 in every frozen-mass scheme. Under a mid-chain mass redraw it is
+not.
+
+Now the criterion. Slot `k` redraws until it accepts, so the accepted candidate
+is distributed as `prior_k * (W_k/W_{k-1}) / Z_k(h_{k-1})` with
+
+    Z_k(h_{k-1}) = E_{m_k ~ BW} E_{d_k ~ pool} [ W_k / W_{k-1} ]
+
+and the accepted chain density is the joint one divided by `prod_k Z_k(h_{k-1})`.
+**The scheme is exact iff that product is constant over everything the chain
+resamples** -- the same criterion fact (b) meets in section 1, and the same one
+`Z_hat` was introduced to repair in section 10.
+
+Do the angular average first, at fixed `m_k`. It works exactly as it does today,
+because the bracket is entirely at fixed `rho^(k)`: the pool density cancels
+`|M_k,dec|^2_on`, `jac_dec_k` turns `dPhi_on` into `dPhi_off(m_k)`, and
+rotational invariance in the parent rest frame makes the angular integral of
+`D_k^(k)` proportional to the identity, so the `N_{k-1}` in the denominator
+cancels. What is left is
+
+    Z_k(h_{k-1}) = E_{m_k ~ BW} [ jac_bw_k * A_k(m_k; h_{k-1}) * Z_k^angle(m_k) ]
+
+with `Z_k^angle(m) = (m/M) Gamma_k(m)/Gamma_k(M)`, the section-10 factor.
+
+Two things to read off this.
+
+**Good news, and it is real:** integrating `m_k` inside the slot's own
+accept/reject removes the `m_k` dependence. The section-10 `Z_hat` table exists
+only because the mass was frozen and its `Z_k(m)` survived into the accepted
+sample; here it does not. That is precisely section 11's argument for why PA's
+`sequential_with_mass` needs no table, and it carries over.
+
+**The bad news is `A_k`.** It does not come out of the `m_k` integral as a
+constant, because it depends on `h_{k-1}` -- on the production event through
+`rho`, and on the earlier slots' virtualities *and decay angles* through
+`D_1..D_{k-1}`. So `Z_k` is a number, but a different number for every history.
+`Z_1` is harmless (`h_0 = P`, and the production event is never redrawn inside a
+chain -- the argument of "The mass weight must be normalised by |M_prod|^2");
+`Z_2 .. Z_n` are not. The minimal case where it bites is `n = 2`, one factor,
+which is the default `auto` shape for `p p > t t~`.
+
+### The fork, and why there is no third option
+
+`A_k` is required for the weights to telescope and is what makes the slot's
+normalisation history-dependent. You get to choose which one to break:
+
+- **Put `A_k` in the test** (the honest reading of `W_k/W_{k-1}`). The chain
+  weight is the joint weight; `sequential_debug` passes. The *sampling* is biased
+  by `1/prod_k Z_k(h_{k-1})`.
+- **Leave `A_k` out** -- i.e. recompute the denominator against the new `rho^(k)`
+  so both sides of the ratio agree. Then `Z_k` is history-free and the sampling
+  is clean, but the chain weight is short by `prod_k A_k` and `sequential_debug`
+  reports a varying ratio. Same factor, other side of the identity.
+- **Compensate it with a table**, as `Z_hat` does for `Z_k`. This is the one that
+  looks like it should work and does not; see below.
+- **Stop anything normalising** -- a rejected slot trashes the chain. Exact, and
+  it is `sequential_global_retry`; see below.
+
+### Why `A_k` is not tabulable, unlike `Z_k`
+
+`Z_k` is tabulable because of three properties, and `A_k` has none of them.
+
+    property                        Z_k(m)                    A_k
+    ------------------------------  ------------------------  ---------------------
+    domain                          one real variable         (P; m_1..m_{k-1};
+                                    (that slot's virtuality)  d_1..d_{k-1}) -- the
+                                                              full decay angles of
+                                                              every earlier slot,
+                                                              growing with n
+    production event                drops out identically     a ratio of two
+                                                              production densities;
+                                                              cannot drop out
+    where the samples come from     free: the max-weight       would have to sample
+                                    probe already draws        the whole history
+                                    (m, s) pairs per slot      space
+
+And an inaccurate table is not a small error. The theorem of section 10 ("An
+imperfect `Z_hat` does *not* cancel") applies unchanged: a redraw-to-accept stage
+divides out the *true* normalisation whatever weight it is given, so the residual
+bias of a tabulated scheme is exactly `Z_hat/Z`. A table over a space that cannot
+be sampled is not a preconditioner, it is the answer.
+
+### How big it is
+
+Two anchors, both already measured on `p p > t t~`, `t > w+ b, w+ > l+ vl`.
+
+**The size of `A_k` itself.** `prod_k A_k` telescopes to
+`[Tr(rho^(n)) J^(n)] / [Tr(rho^(0)) J^(0)]` times the spin-correlation ratio --
+that is, it *is* the mass-set weight with the Breit-Wigner and `Z_hat` factors
+taken out. `w_mass` was measured at `C_mass = 3.09` against 3.20 mass sets per
+accepted event, i.e. its bound sits 3.2x above its mean; `jac_bw` is flat across
+the window (`gap/pi` is fixed once the window is), and `Z_hat` spans 0.53 to 1.71
+per slot, so what is left over for `prod_k A_k` is the remainder of a factor-3.2
+spread. That is an order-unity factor with a tail, not a small correction, and it
+is what a `sequential_with_mass` chain would divide out uncompensated. Splitting
+it cleanly from `Z_hat` would need a measurement; the point survives without one,
+since `A_k -> 1` only in the limit where the production reshuffling stops
+depending on the mass set at all.
+
+**What an uncompensated factor of this class does.** `Z_k` -- a *strictly
+smaller* object, the decay-side running width alone, with no production trace, no
+reshuffling jacobian and no spin correlation -- moved the reconstructed top mass
+by **-0.248 GeV, -7.8 sigma, chi2/ndf 75.8/22** on 10000 events when it was left
+out. There is no argument that `A_k` would be gentler, and it lands on the same
+observable: the resonance lineshape, which is the one thing the offshell
+spinmodes exist to get right.
+
+**`sequential_debug` would not catch it.** The per-chain weight identity is
+deterministic and it tests the weight algebra; with `A_k` in the test the algebra
+is correct and the check reports a constant ratio. Section 10 already says this
+in the abstract -- "It does not settle the *sampling*, which additionally
+requires that nothing self-normalising is left uncompensated" -- and this is the
+concrete case. The natural validation tool gives this scheme a green light. That
+is the strongest single reason not to build it: it would be a bias that the
+project's best check is structurally blind to.
+
+### What has to be recomputed on a mass redraw, and what can be kept
+
+Per **slot-`k` trial**, not per accepted event:
+
+    must be recomputed                                            count
+    ------------------------------------------------------------  -----
+    Event(str(production)) + reshuffle_production  -> J^(k)          1
+    get_density(prod_off)                          -> rho^(k)        1
+    parents p^(k)_j for every j <= k                                 --
+    re-boost + get_density for every accepted j < k -> D_j^(k)      k-1
+      (each needs a fresh Event copy: _slot_density boosts in place)
+    the full tensor contraction (no longer incremental)              1
+    slot k's own |M_k|^2_on, reshuffle_decayevt, get_density         1
+
+    can be kept
+    ------------------------------------------------------------
+    the drawn decay events themselves (slot_decays already stores them
+      unboosted)
+    |M_j,dec|^2_on for j < k -- frame- and mass-independent, memoisable
+      on the decay (not cached today; it is recomputed per draw)
+    the *decay* reshuffling of slot j < k: reshuffle_decayevt depends on
+      that slot's own virtuality, which did not change. Only the boost to
+      the new parent and the density have to be redone. This is a genuine
+      saving and it is the only one.
+    |M_prod|^2_on (production.me_wgt) and prod_static
+
+The item that decides the cost is that `rho` and the parents are inputs to
+*everything*, so nothing downstream of a mass redraw survives it. `W_{k-1}`
+itself is cached from the previous acceptance -- which is what makes the scheme
+cheap enough to write down at all, and is precisely the staleness `A_k` measures.
+
+### Cost
+
+Per accepted event, with `n` decaying particles, `t_k` trials at slot `k`, `m`
+mass sets and `T` joint trials:
+
+    scheme                   prod reshuffle   prod density   decay ME+density
+    -----------------------  ---------------  -------------  ------------------
+    joint                          T                T              n T
+    two_stage                      m                m            sum_k t_k
+    sequential                     m                m            sum_k t_k
+    sequential_global_retry        m                m            sum_k t_k
+    sequential_with_mass       sum_k t_k        sum_k t_k       sum_k k t_k
+
+Measured on `p p > t t~`, `t > w+ b, w+ > l+ vl`, 10000 events, `nb_core 1`:
+
+    joint                     4.46   4.46   8.92
+    two_stage                 3.25   3.25   5.74
+    sequential                3.20   3.20   ~6.3
+    sequential_global_retry  12.79  12.79     --
+
+(The mass-set counts are the post-`|M_prod|^2_on` ones of "The mass weight must
+be normalised"; the decay counts come from the two_stage subsection and, for
+`sequential`, from the earlier campaign -- that normalisation is a constant
+factor on the mass stage's bound and does not touch the angle stage, so the two
+are comparable in this column. `sequential_global_retry`'s decay count was not
+recorded.)
+
+Projected for `sequential_with_mass` -- a projection from the measured
+components, not a measurement. The scheme was not built, and being inexact it
+would not ship whatever it timed. The mass-stage factors move back inside the
+per-slot tests, so each slot pays its share of the 3.2x tail (~1.8x) *times* its
+angle inefficiency (2.1 and 3.5 draws per slot in the campaign that measured them
+per slot), giving `t_0 ~ 4`, `t_1 ~ 6`, hence about **10 production reshufflings
+and 10 production densities** (against joint's 4.46 and two_stage's 3.25) and
+**~16 decay evaluations** (against 8.92 and 5.74). Roughly 3x joint on the
+production side and 2x on the decay side, at `n = 2`. The one hard statement
+underneath the estimate needs no campaign: the mass-stage factors are tested
+against `n` bounds instead of one, and a product of bounds is looser than a
+bound on the product (the argument that makes `two_stage` beat `sequential` at
+`n = 2`), so `sum_k t_k >= m` for the same physics -- `sequential_with_mass`
+cannot draw fewer production densities than `sequential` does mass sets, and it
+draws one per slot trial rather than per mass set.
+
+**And it scales the wrong way.** The decay-side column is `sum_k k t_k` --
+quadratic in `n`, because every slot trial refreshes all the earlier slots --
+where every existing scheme is linear. Section 1's whole case for per-slot
+schemes is that joint costs `n / prod_k eff_k` (exponential in `n`) and
+sequential costs `sum_k 1/eff_k` (linear), so the gain appears exactly where
+MadSpin is slowest, many decaying particles. `sequential_with_mass` offshell
+gives that back: it puts a production reshuffling *and* a production density on
+every slot trial, which no other scheme does at all. Even if it were exact, it
+would be the wrong scheme for the only regime per-slot schemes exist to serve.
+
+### How much code, and can it share the existing structure
+
+It cannot. `sequential_accept_reject` is ~485 lines carrying three interacting
+axes already -- PA/onshell against offshell, then `two_stage` /
+`sequential_global_retry` / per-slot within offshell, then probe mode across all
+of them -- and every one of those shares one invariant: **`density_prod`,
+`parents` and `slot_mass` are established once, above the loop, and are constant
+inside it.** The `slot_densities` cache keyed by slot, the incremental `n_prev`,
+the reuse that is the entire point of `two_stage` -- all of it rests on that.
+`sequential_with_mass` is the branch that violates it, so it shares the frame of
+the loop and almost nothing inside it.
+
+Concretely:
+
+- a per-slot incremental replacement for `_offshell_production` (draw `m_k`,
+  reshuffle to `m_1..m_k`, `get_density`, rebuild `parents`), ~40 lines -- the
+  existing one draws the whole set and returns a fixed tuple, so it cannot be
+  reused as it stands;
+- a branch inside the slot loop that rebuilds `slot_densities` from scratch on
+  every trial (fresh `Event(str(decay))` copies of the accepted slots, re-boost,
+  re-`get_density`) and recomputes the contraction non-incrementally, ~110-150
+  lines;
+- a third `maxwgts` indexing convention: offshell currently reserves
+  `maxwgts[0]` for the mass stage (`wpos = position + 1 if offshell else
+  position`) and this mode has no mass stage;
+- a fourth path through the probe and the bounds cache -- `probe_extra`,
+  `_complete_offshell_probe`, `_build_z_tables` and the JSON bound file all
+  branch on offshell and assume a mass-set weight exists;
+- `_check_weight_identity` is called with `w_mass_raw * w_slots`, which becomes
+  `w_slots` alone.
+
+That is 200+ lines of genuinely new logic in the function that is already the
+hardest one in the file, to add a mode that is inexact. The structure would have
+to be broken up first, and there is no reason to break it up for this.
+
+### The only exact variant is a scheme that already exists
+
+Make a rejection at slot `k` trash the chain and restart from slot 0. Then no
+stage redraws to acceptance, nothing self-normalises, `prod_k Z_k` never enters,
+and the scheme is exact. But that is not "each slot draws and redraws its own
+virtuality inside its own accept/reject" any more -- it is the joint test
+evaluated incrementally with an early exit, which is what
+`sequential_global_retry` is. The only difference left is *where* the mass draw
+sits, and moving it inside the slot loop makes the production reshuffling and
+the production density per slot-trial instead of per mass set. It would be
+strictly more expensive than `sequential_global_retry`, which at 12.79 mass sets
+per accepted event is already the slowest of the four.
+
+A partial-redraw variant (keep the up-front draw, redraw only the rejected slot's
+mass, then rebuild the chain from slot 0) is exact for the same reason and is
+also `sequential_global_retry` with a cheaper restart. That is worth trying *as
+an optimisation of `sequential_global_retry`*, and it is a different task.
+
+### Consequence for the option table
+
+Once section 11 lands, `unweighting` takes five values under PA/onshell and four
+under madspin/full. The asymmetry does not cancel out -- section 11 gives PA the
+up-front mass draw and therefore `two_stage` and `sequential_global_retry` too,
+so PA ends up with all five and madspin/full one short. It is a real gap and the
+manual has to name it. The honest reason is a better sentence than an unexplained
+hole:
+
+> `sequential_with_mass` is available under `spinmode = PA` and `onshell` only.
+> Offshell (`madspin`, `full`) the production density matrix is evaluated at
+> momenta reshuffled to the whole set of virtualities at once, so one particle's
+> virtuality and the production density are not separable: redrawing one
+> invalidates the other, and with it every decay already accepted against it.
+> The offshell schemes therefore fix the whole set of virtualities before they
+> draw any decay, and unweight that set as a stage of its own.
+
+That reads as a design fact rather than an omission, and it is the same sentence
+that explains why `_offshell_production` exists.
+
+**The guard to add** (owner: the PA task, which introduces the option). In
+`_unweighting_mode`, alongside the existing `offshell_only` block that sends
+`two_stage` / `sequential_global_retry` back to `sequential` under PA/onshell,
+the mirror case: `sequential_with_mass` under `madspin` / `full` logs once and
+falls back to `two_stage` (`n <= 2`) or `sequential`. `auto` never selects it
+offshell, so this only fires on an explicit setting. Do not let it fall through
+silently -- a user who set it and got something else must be told which.
+
+### A note back to the PA task
+
+Section 11 says PA's `sequential_with_mass` "needs no tabulated factor --
+there is no conditional normalisation for a redraw-to-accept stage to divide
+out". For the *density* factor that is exactly right and it is fact (b),
+which section 1 point 1 already confirms survives the mass sampling.
+
+It is worth checking that it covers the other two factors in `w_k`. Fact (b) says
+nothing about `jac_dec_k` or `J_k/J_{k-1}`, and the criterion is
+`prod_k Z_k(h_{k-1})` constant, not `E[Dhat_k] = I/n_k` alone. Running the same
+integral for PA:
+
+    Z_k^PA(h_{k-1}) = E_{m ~ BW}[ jac_bw_k * (J_k/J_{k-1})
+                                  * E_pool[ jac_dec_k * (N_k/N_{k-1}) ] ]
+
+`J_k` is the production jacobian with slots `1..k` offshell, so `J_k/J_{k-1}`
+depends on `m_1..m_{k-1}`; and `jac_bw_k = gap/pi` depends on them too, through
+the budget `sqrt(shat) - sum_{j<k} m_j` that sets slot `k`'s Breit-Wigner window.
+So `Z_k^PA` is a history-dependent constant by the same mechanism, just with a
+scalar jacobian in place of a density contraction.
+
+Section 1 records this as point 3 of "Where it bites" and resolves it as "small
+and quite flat -- the effect washes out", which is a plausible estimate and not a
+proof; the budget term is a pure threshold effect and is genuinely negligible for
+`p p > t t~`, where `sqrt(shat)` never truncates the window. The `J_k/J_{k-1}`
+term is the one to look at, and it is the term `density_keep_jacobian = False`
+removes entirely. Two things follow:
+
+- this is a *sampling* question, so `sequential_debug` will not answer it -- the
+  same blindness as above. The check that would show it is the lineshape, PA
+  `sequential_with_mass` against PA `joint`, with `density_keep_jacobian` on
+  versus off: if the two agree with joint equally well, the term is inert.
+- it does not weaken section 11's plan. Freezing the masses makes PA need
+  `Z_k^PA(m) = E_pool[jac_dec(m, Omega)]` as section 11 says; this is about
+  whether the *unfrozen* scheme it is being compared against is itself exact.
