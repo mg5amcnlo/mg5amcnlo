@@ -1357,3 +1357,122 @@ worth 0.04 GeV, i.e. ~0.0001 GeV of residual. That is three orders of magnitude
 inside the pole approximation's own error, so the case for flipping is strong;
 it is left as a judgement call for whoever owns the branch, and the one-line
 change is in `_unweighting_mode`.
+
+## 12. Which scheme should be the default: a multiplicity scan
+
+Sections 10 and 11 each measured one process with two decaying particles, which
+is exactly the multiplicity at which the schemes are closest. This scans the
+number of decaying particles instead, 50000 events per point, `nb_core 1`, seed
+42, one campaign per process (so the clocks are comparable within a block, not
+across blocks):
+
+    n=1   p p > w+ j        w+ > l+ vl
+    n=2   p p > t t~        t > w+ b, w+ > l+ vl                (both tops)
+    n=3   p p > t t~ z      as above, plus z > l+ l-
+    n=4   p p > t t~ t t~   as above, all four tops
+
+All 24 runs agree on the cross section: identical within a process except for
+the 5e-5 relative offset between the joint runs and the rest, which is the
+Breit-Wigner sampling and not the scheme.
+
+### PA
+
+    n  scheme                decay phase   total wall   decay MEs/ev   mass sets/ev
+    1  joint                    50.3 s       92.9 s         6.12            --
+    1  sequential_with_mass     58.7 s       99.5 s         6.39            --
+    1  sequential               40.4 s       81.8 s         5.09           2.42
+    2  joint                    83.4 s      178.2 s        10.96            --
+    2  sequential_with_mass    127.0 s      231.6 s        12.27            --
+    2  sequential               39.8 s      139.0 s         4.39           3.23
+    3  joint                   186.6 s      292.4 s        24.30            --
+    3  sequential_with_mass     88.7 s      205.4 s         9.78            --
+    3  sequential               66.0 s      177.0 s         7.73           4.48
+    4  joint                   324.3 s      472.4 s        42.56            --
+    4  sequential_with_mass    110.5 s      298.2 s         9.47            --
+    4  sequential               85.5 s      263.9 s         8.79           2.42
+
+**`sequential` wins at every multiplicity**, by 20% at n=1 and by a factor 3.8
+at n=4, and it is never worse than the other two on any counter. The joint
+test's cost grows as n x (trials per event) because a single rejection throws
+away every decay; the per-particle test's grows far more slowly.
+
+`sequential_with_mass` -- today's PA default -- is the *worst* of the three at
+n=1 and n=2 on this campaign, and slower than `sequential` everywhere. Note how
+much worse it looks at 50000 events than at the 10000 of section 11 (n=2: 12.27
+decay MEs per event against 5.01): `nb_sigma` is `max(4.5, log_7.7 N)`, and its
+per-slot weights carry the Breit-Wigner jacobian and the `J_k/J_{k-1}` ratios,
+so they are the broadest and lose the most as the safety margin widens. That is
+the same effect section 11 saw between 10000 and 250000, and it says the
+measured gap is a lower bound on what a production-sized run would see.
+
+### madspin (full offshell)
+
+    n  scheme          decay phase   total wall   decay MEs/ev   mass sets/ev
+    1  joint              65.5 s      112.5 s         6.57            --
+    1  sequential       2534.6 s     2576.7 s         8.11         786.61
+    1  two_stage        2495.1 s     2539.8 s         4.96         787.32
+    2  joint              54.3 s      151.1 s         8.08            --
+    2  sequential         70.1 s      169.6 s         6.73           3.51
+    2  two_stage          59.5 s      162.7 s         6.24           3.50
+    3  joint             231.4 s      338.5 s        25.32            --
+    3  sequential        107.0 s      223.0 s        11.79           3.59
+    3  two_stage         244.7 s      359.4 s        24.94           3.59
+    4  joint             722.4 s      882.7 s        50.60            --
+    4  sequential        167.3 s      365.7 s        13.21           3.23
+    4  two_stage         315.8 s      514.3 s        28.70           3.22
+
+Three separate findings.
+
+**n=1 offshell is a disaster, and it is the mass stage.** 787 mass sets per
+accepted event, `C_mass` = 781.6, a decay phase 38x the joint one. `two_stage`
+gives the same 787, which localises it precisely: not the angle granularity,
+not `Z_k` (the table is clean, bin/fit deviation 0.0%), but the mass-set weight
+`Tr(rho_off)/|M_prod|^2_on`. On `p p > w+ j` the decaying particle carries
+essentially all of the production matrix element's virtuality dependence, so
+that ratio spans orders of magnitude over the 15-width window and no single
+bound can cover it. The PA run of the same process has `C_mass` = 2.37, which
+confirms the diagnosis -- PA evaluates rho on shell, so its mass weight has no
+production matrix element in it at all. `auto` already routes n=1 to joint, so
+nothing is broken; this is why that rule has to stay.
+
+**n=2 offshell still belongs to joint.** 54.3 s against 59.5 (`two_stage`) and
+70.1 (`sequential`), even though both draw *fewer* decay matrix elements (6.24
+and 6.73 against 8.08): each mass set costs a production reshuffle and an
+offshell production density, and at 3.5 mass sets per event that outweighs the
+decays saved. Section 10 measured the opposite at 10000 events (`two_stage`
+13.55 s against joint's 14.61 s); the difference is again `nb_sigma`, 4.51 there
+against 5.60 here, which widens `C_mass` and costs the staged schemes.
+
+**From n=3 `sequential` wins outright**, 2.2x at n=3 and 4.3x at n=4 on the
+decay phase, and `two_stage` is not competitive there: its single bound over the
+product forces every slot to be redrawn together, 8.31 angle sets per event at
+n=3 and 7.17 at n=4, so it draws as many decay matrix elements as the joint test
+while also paying the mass stage.
+
+### What this says about `auto`
+
+The current rule is: 1 -> joint; PA/onshell -> `sequential_with_mass`; 2 ->
+`two_stage`; 3+ -> `sequential`. The scan says two of those four branches are
+wrong and one is unnecessary:
+
+    spinmode         n      current               measured best
+    PA / onshell     any    sequential_with_mass  sequential  (1.2x - 3.8x)
+    madspin / full   1      joint                 joint       (correct)
+    madspin / full   2      two_stage             joint       (1.1x)
+    madspin / full   3+     sequential            sequential  (correct)
+
+`two_stage` is not the fastest scheme at any point measured here, in either
+spinmode: joint beats it at n<=2 and `sequential` beats it at n>=3. It remains
+worth keeping as an option -- it is the one staged scheme whose angle stage is a
+single joint test, which makes it the natural cross-check against joint -- but
+it does not earn a branch in `auto`.
+
+So the recommended rule is two lines instead of four:
+
+    PA / onshell     ->  sequential
+    madspin / full   ->  joint for n <= 2, sequential from n = 3
+
+with the caveat that every number above is one process per multiplicity on one
+machine, and that the n=2 offshell call is a 10% difference that went the other
+way at a smaller sample size. The n=1 offshell and the n>=3 conclusions are not
+close and are safe.
