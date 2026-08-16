@@ -925,7 +925,9 @@ difference nobody can measure. `sequential_global_retry` says what the mode does
 and leaves the accuracy statement to the documentation, where it can carry the
 numbers.
 
-**`auto`** resolves once per run, from the number of decaying particles counted
+**`auto`** (as of this section; **superseded by section 12**, which measured
+the schemes over the decay multiplicity and replaced the four branches below
+with two) resolves once per run, from the number of decaying particles counted
 where `to_decay` is built -- not per event, since the modes carry different
 bounds and one that changed event to event would be testing against the wrong
 ones:
@@ -1347,16 +1349,16 @@ global_retry) is not the asymptotic one; at 250000 it is sequential < two_stage
 < joint < with_mass < global_retry, and the advantage of the up-front draw over
 the scheme PA shipped with is a factor 1.8 on the accept/reject.
 
-**`auto` still takes `sequential_with_mass` under PA.** That is now a
-conservative default rather than the fast one: at 10000 events the gain was
-inside the noise, but at 250000 the up-front `sequential` takes 29% off the
-whole run and the margin grows with N. What it buys against that is exactness
-by construction -- `sequential_with_mass` freezes nothing and needs no table,
-where `sequential` carries a tabulated factor accurate to ~0.2% on something
-worth 0.04 GeV, i.e. ~0.0001 GeV of residual. That is three orders of magnitude
-inside the pole approximation's own error, so the case for flipping is strong;
-it is left as a judgement call for whoever owns the branch, and the one-line
-change is in `_unweighting_mode`.
+**`auto` took `sequential_with_mass` under PA when this section was written,
+and no longer does** -- section 12 scanned the decay multiplicity and switched
+it to `sequential`. At 10000 events the gain was inside the noise; at 250000 the
+up-front draw takes 29% off the whole run, and the margin grows with N. What it
+costs is exactness by construction: `sequential_with_mass` freezes nothing and
+needs no table, where `sequential` carries a tabulated factor accurate to ~0.2%
+on something worth 0.04 GeV, i.e. ~0.0001 GeV of residual -- three orders of
+magnitude inside the pole approximation's own error. `sequential_with_mass`
+remains available, and is the scheme to reach for if that residual ever needs
+to be excluded rather than bounded.
 
 ## 12. Which scheme should be the default: a multiplicity scan
 
@@ -1467,12 +1469,20 @@ worth keeping as an option -- it is the one staged scheme whose angle stage is a
 single joint test, which makes it the natural cross-check against joint -- but
 it does not earn a branch in `auto`.
 
-So the recommended rule is two lines instead of four:
+**`auto` now implements the two-line rule** (`_unweighting_mode`):
 
     PA / onshell     ->  sequential
     madspin / full   ->  joint for n <= 2, sequential from n = 3
 
 with the caveat that every number above is one process per multiplicity on one
 machine, and that the n=2 offshell call is a 10% difference that went the other
-way at a smaller sample size. The n=1 offshell and the n>=3 conclusions are not
-close and are safe.
+way at a smaller sample size -- so that boundary is the one to revisit if a
+process is found where a staged scheme pays off at two decays. The n=1 offshell
+and the n>=3 conclusions are not close and are safe.
+
+What changes for a user who never set `unweighting`: PA and onshell runs move
+from `sequential_with_mass` to `sequential` (faster everywhere measured, at the
+price of the tabulated factor -- section 11 bounds its effect on the top
+lineshape at ~0.0001 GeV); offshell runs with two decaying particles move from
+`two_stage` to `joint`, i.e. back to the historical scheme. Nothing changes for
+offshell runs with one or with three or more decaying particles.

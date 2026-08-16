@@ -1656,47 +1656,57 @@ class TestSequentialPoolLadder(unittest.TestCase):
         self.assertTrue(self._stub({6: 2}, spinmode='onshell')._sequential_active(True))
 
     def test_sequential_active_auto(self):
-        """'auto' resolves per spinmode: a per-particle or two-stage scheme
-        everywhere it is supported, joint outside the density modes."""
+        """'auto' resolves per spinmode: per-particle under PA/onshell, and
+        offshell only once there are enough decays to pay for the mass stage
+        (the default _nb_decaying here is 2, so offshell still takes joint)."""
         for mode, expected in [('PA', True), ('onshell', True),
-                               ('madspin', True), ('full', True),
+                               ('madspin', False), ('full', False),
                                ('none', False)]:
             stub = self._stub({6: 2}, unweighting='auto', spinmode=mode)
             self.assertEqual(stub._sequential_active(True), expected,
                              'auto + spinmode=%s' % mode)
+        for mode in ('madspin', 'full'):
+            stub = self._stub({6: 2}, unweighting='auto', spinmode=mode)
+            stub._nb_decaying = 3
+            self.assertTrue(stub._sequential_active(True), mode)
         # fixed_order still forces the joint test
         stub = self._stub({6: 2}, unweighting='auto', fixed_order=True)
         self.assertFalse(stub._sequential_active(True))
         self.assertEqual(stub._unweighting_mode(True), 'joint')
 
     def test_auto_picks_the_scheme_by_the_number_of_decays(self):
-        """One bound over all the angles is tighter than the product of
-        per-particle bounds, while a per-particle test lets a rejection skip the
-        decays not yet drawn. The first wins while there is little to skip, so
-        auto takes two_stage up to two decaying particles and sequential from
-        three -- offshell only, since PA/onshell keep the scheme they have
-        always used."""
-        for nb, expected in [(1, 'joint'), (2, 'two_stage'),
+        """Offshell, a mass set costs a production reshuffle and a production
+        density, so the staged schemes only pay off once there are enough decays
+        to save: auto takes joint up to two decaying particles and sequential
+        from three. See MADSPIN_SEQUENTIAL_PLAN.md section 12."""
+        for nb, expected in [(1, 'joint'), (2, 'joint'),
                              (3, 'sequential'), (6, 'sequential')]:
-            stub = self._stub({6: 2}, unweighting='auto', spinmode='madspin')
-            stub._nb_decaying = nb
-            self.assertEqual(stub._unweighting_mode(True), expected,
-                             '%d decaying particles' % nb)
-        # PA/onshell: the mass drawn with the angles, which is what they have
-        # always done and still the fastest of the five there
-        for spinmode in ('PA', 'onshell'):
-            for nb in (2, 5):
+            for spinmode in ('madspin', 'full'):
                 stub = self._stub({6: 2}, unweighting='auto', spinmode=spinmode)
                 stub._nb_decaying = nb
-                self.assertEqual(stub._unweighting_mode(True),
-                                 'sequential_with_mass',
+                self.assertEqual(stub._unweighting_mode(True), expected,
                                  '%s, %d decaying particles' % (spinmode, nb))
 
-    def test_auto_is_joint_for_a_single_decaying_particle(self):
-        """One decaying particle: the per-particle test is the joint test and
-        the mass/angle split only moves the same factors between two stages, so
-        auto pays for neither -- in every spinmode."""
-        for spinmode in ('PA', 'onshell', 'madspin', 'full'):
+    def test_auto_is_per_particle_under_pa_at_every_multiplicity(self):
+        """PA/onshell keep rho fixed on shell, so their mass stage costs a
+        reshuffling jacobian and nothing else -- sequential was the fastest of
+        the three at every multiplicity measured, including one decaying
+        particle, where the mass set can still be rejected before any decay is
+        drawn."""
+        for spinmode in ('PA', 'onshell'):
+            for nb in (1, 2, 3, 6):
+                stub = self._stub({6: 2}, unweighting='auto', spinmode=spinmode)
+                stub._nb_decaying = nb
+                self.assertEqual(stub._unweighting_mode(True), 'sequential',
+                                 '%s, %d decaying particles' % (spinmode, nb))
+
+    def test_auto_is_joint_for_a_single_decaying_particle_offshell(self):
+        """One decaying particle offshell is the worst case for a mass stage:
+        the mass-set weight carries Tr(rho_off)/|M_prod|^2_on, and when that one
+        particle carries most of the production matrix element's virtuality
+        dependence the ratio spans orders of magnitude (measured: ~790 mass sets
+        per accepted event on p p > w+ j). auto must not go there."""
+        for spinmode in ('madspin', 'full'):
             stub = self._stub({6: 1}, unweighting='auto', spinmode=spinmode)
             stub._nb_decaying = 1
             self.assertEqual(stub._unweighting_mode(True), 'joint', spinmode)

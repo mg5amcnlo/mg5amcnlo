@@ -92,7 +92,7 @@ class MadSpinOptions(banner.ConfigFile):
                        "sequential_global_retry: as sequential, but a rejected decay redraws the virtualities too. "
                        "sequential_with_mass: one test per decaying particle with that particle's virtuality drawn *inside* its own accept/reject, so nothing is ever frozen and no stage has a conditional normalisation to divide out. Needs a per-particle mass draw, i.e. the PA spinmode; elsewhere it falls back to sequential. "
                        "two_stage, sequential and sequential_global_retry unweight the set of virtualities first; the first two then need a tabulated running-width factor, measured during the max-weight scan to ~0.5%, which is far inside the pole approximation these modes already assume; sequential_global_retry does without it at 2-3x the cost, and is meant as a cross-check rather than a default. "
-                       "auto: joint when a single particle decays (every split degenerates there), sequential_with_mass under PA/onshell, and offshell two_stage for two decaying particles and sequential from three (one bound over all the angles is tighter, testing each particle as it is drawn skips the decays not yet drawn, and which wins depends on how many there are).")
+                       "auto: sequential under PA/onshell, where it was the fastest scheme at every decay multiplicity measured; offshell joint up to two decaying particles and sequential from three, since offshell every mass set costs a production reshuffle and a production density and below three decays there are not enough of them to save to pay for it.")
         self.add_param('sequential_decay', 'auto',
                        comment='DEPRECATED, use unweighting: True maps to sequential, False to joint.')
         self.auto_set.add('sequential_decay')
@@ -2266,19 +2266,36 @@ class MadSpinInterface(extended_cmd.Cmd):
         spinmodes reshuffle the whole production onto the mass set at once, so
         there they fall back to ``sequential``.
 
-        ``auto`` picks by the number of decaying particles. With one, it takes
-        ``joint``: every split degenerates there -- the per-particle test is the
-        joint test, and the mass/angle one only moves the same factors between
-        two stages -- so there is nothing to win and the identity machinery is
-        pure cost. Beyond one it takes ``sequential_with_mass`` under
-        PA/onshell, which is what those modes have always done and what the
-        measurements still favour there. Offshell the two splits trade off
-        against each other: one bound over all the angles is tighter than the
-        product of per-particle bounds, while testing each particle as it is
-        drawn lets a rejection skip the decays not yet drawn. The first wins
-        while there is little to skip and the second as the chain gets longer,
-        so auto takes ``two_stage`` up to two decaying particles and
-        ``sequential`` from three.
+        ``auto`` has two branches, one per spinmode family. They were measured
+        over the number of decaying particles n on `p p > w+ j` (n=1),
+        `p p > t t~` (2), `p p > t t~ z` (3) and `p p > t t~ t t~` (4), 50000
+        events each -- see MADSPIN_SEQUENTIAL_PLAN.md section 12.
+
+        **PA/onshell -> ``sequential``, at every n.** It was the fastest of the
+        three at all four multiplicities, by 1.2x at n=1 rising to 3.8x at n=4.
+        The joint test's cost grows as n x (trials per event), since one
+        rejection throws every decay away, while the per-particle one's grows
+        far more slowly; and the up-front mass draw evaluates the production
+        reshuffling jacobian once per mass set instead of once per slot trial.
+        Even at n=1, where the angle stage degenerates to the joint test, the
+        mass stage still pays for itself: a mass set can be rejected before any
+        decay is drawn.
+
+        **madspin/full -> ``joint`` up to two decaying particles, then
+        ``sequential``.** Offshell, each mass set costs a production reshuffle
+        *and* an offshell production density, which the joint test pays per
+        trial but which a staged scheme pays per mass set -- and below n=3 there
+        are not enough decays to save to cover it. At n=1 it is worse than that:
+        the mass-set weight carries ``Tr(rho_off)/|M_prod|^2_on``, and when the
+        single decaying particle carries most of the production matrix
+        element's virtuality dependence (`p p > w+ j`) that ratio spans orders
+        of magnitude, no bound covers it, and the mass stage needs ~790 sets per
+        accepted event. From n=3 the per-particle test wins by 2.2x and 4.3x.
+
+        ``two_stage`` is not the fastest scheme at any measured point -- joint
+        beats it at n<=2 and ``sequential`` at n>=3 -- so it is reachable but
+        never chosen here. It stays useful as a cross-check, being the one
+        staged scheme whose angle stage is a single joint test.
 
         ``fixed_order`` forces joint: its counter-events ride along with the
         decays and have not been thought through here.
@@ -2288,19 +2305,15 @@ class MadSpinInterface(extended_cmd.Cmd):
         asked = mode = self.options['unweighting']
         if mode == 'auto':
             nb_decaying = getattr(self, '_nb_decaying', 2)
-            if nb_decaying <= 1:
-                # with a single decaying particle every split degenerates: the
-                # per-particle test *is* the joint test, and the mass/angle one
-                # only moves the same factors between two stages. Nothing to
-                # win, so do not pay for the identity machinery.
-                mode = 'joint'
-            elif self.options['spinmode'] in ['PA', 'onshell']:
-                # what PA has always done, and still the fastest of the five
-                # there; the up-front schemes are reachable but are not the
-                # default until a measurement says otherwise
-                mode = 'sequential_with_mass'
+            if self.options['spinmode'] in ['PA', 'onshell']:
+                # fastest at every multiplicity measured; rho is fixed on shell
+                # so the mass stage costs a reshuffling jacobian and nothing else
+                mode = 'sequential'
             elif nb_decaying <= 2:
-                mode = 'two_stage'
+                # offshell a mass set costs a production reshuffle and a
+                # production density, and there are not yet enough decays to
+                # save to pay for it
+                mode = 'joint'
             else:
                 mode = 'sequential'
         if mode == 'joint':
