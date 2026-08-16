@@ -1092,3 +1092,87 @@ tolerance), automatic for the restart schemes. So variant B's -0.034 GeV is not
 a broken weight. With the weights verified and the error models in the state
 described above, the honest summary is: weights correct, deviation unexplained,
 dropped because it is slower than variant A anyway.
+
+---
+
+## 11. Next: give PA the up-front mass draw
+
+Chipped out as its own task. Recorded here because it closes the asymmetry the
+option table currently has, and because it is the fix for the one measurement in
+section 10 that came out the wrong way round.
+
+### The asymmetry
+
+`two_stage` and `sequential_global_retry` need a mass set to unweight before the
+angles. Only the offshell spinmodes have one, in `_offshell_production`. Under
+PA each slot draws its own virtuality *inside* its own accept/reject
+(`_draw_offshell_mass` in the slot loop, guarded by `draw_mass`), so both modes
+are refused for PA and fall back to `sequential`. Half the option table is
+therefore unavailable in the mode that is the pole approximation's home.
+
+### Rename first: `sequential_with_mass`
+
+What PA does today deserves a name of its own rather than being "sequential,
+except different": the mass is drawn *and redrawn together with* that slot's
+angles. Nothing is frozen at any point, which is exactly why it needs no
+tabulated factor -- there is no conditional normalisation for a redraw-to-accept
+stage to divide out. It becomes a fifth value of `unweighting`, stays available
+for PA, and stays what `auto` picks there until measurement says otherwise.
+
+### What PA gains, and it is not what madspin gains
+
+Offshell, the up-front mass set buys a **fixed `rho_off`**, reused across angle
+retries; that reuse is what makes `two_stage` faster than the joint test. In PA
+rho is evaluated at *on-shell* momenta, is already fixed per production event and
+is already cached on it (`production._ms_density_prod`). There is nothing to
+gain there.
+
+What PA gains is the **production reshuffling jacobian**. With
+`density_keep_jacobian` on, `_production_jacobian_for` runs on every slot trial
+-- an `Event(str(production))` copy plus a reshuffle -- and a mass-set stage
+moves it to once per mass set, with the `J_k/J_{k-1}` telescoping disappearing
+entirely. That is the fix for the measurement in section 10 that came out
+backwards: **PA sequential is 22% slower than PA joint** (11.19 s against 9.17 s
+in one campaign), doing 5.01 production reshufflings per event against joint's
+3.14, despite drawing *fewer* decay events (5.01 against 6.28). The per-particle
+decomposition is supposed to beat the joint test and at n = 2 it does not.
+
+### PA needs its own tabulated factor, with a different integrand
+
+This is the part to get right, because it is the same trap as section 10's. PA
+needs no factor today only because nothing is frozen. Freeze the masses up front
+and the angle stage starts dividing out its own conditional normalisation:
+
+    Z_k^PA(m) = E_pool[ jac_dec(m, Omega) ]
+
+the decay-reshuffling jacobian averaged over the pool at that virtuality. It is
+**not** the offshell integrand: PA evaluates its matrix elements on shell, so
+there is no `Tr(D^off)/|M|^2_on` factor, only the phase-space jacobian. The
+machinery is the same -- bin in m, average, fit, multiply into the mass-set
+weight -- and `_build_z_tables` / `_zhat` / `_z_slot_keys` should be extended
+rather than duplicated, the probe already collecting the samples for free.
+
+Omit it and PA reproduces the bug of section 10 exactly: the accepted
+virtualities come out Breit-Wigner shaped instead of PA shaped.
+
+### What has to be shown
+
+- **the rename is inert**: `sequential_with_mass` must produce event records
+  bit-for-bit identical to PA today, same seed and same production events. If
+  not, the rename changed behaviour;
+- **the weight identity, per chain** (`sequential_debug`) on every new PA mode.
+  Deterministic, no error model to argue about, and it is the check that would
+  have caught the original bias at once;
+- **the lineshape** against PA joint, with replicas. `m(l+ vl)` and
+  `dphi(l+,l-)` are blind to this class of bug -- they were blind to the
+  original one -- and the cross section is blind by construction;
+- **speed**, quoted only within a single campaign with joint as an anchor.
+
+### And a matching question for madspin
+
+Whether `sequential_with_mass` should also exist for the offshell modes, purely
+so that PA and madspin offer the same set of options, is a separate question
+with a real obstacle: offshell, `rho_off` depends on the whole mass set jointly,
+so redrawing one slot's mass invalidates it and every slot already accepted
+against it. That is why `_offshell_production` exists at all. It is chipped out
+separately, with the answer "no, and here is the cost" explicitly allowed.
