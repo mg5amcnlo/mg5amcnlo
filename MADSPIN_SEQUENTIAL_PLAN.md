@@ -1312,13 +1312,48 @@ The remaining overflow counts are 11 (`sequential_with_mass`, unchanged), 6
 events -- the "PA sequential logged 11 weight overflows" observation of section
 10 is improved but not removed, and remains worth a look on its own.
 
-**`auto` still takes `sequential_with_mass` under PA.** The counters say the
-up-front `sequential` is the better scheme, and the decay phase agrees, but the
-decay phase is ~12% of the run here (the max-weight probe and the fixed
-per-event cost dominate, as section 10 warns), so the gain on the wall clock is
-inside the noise. Against that, `sequential_with_mass` is exact by construction
-while `sequential` carries a tabulated factor -- an ~0.2% one on a factor that
-is worth 0.04 GeV, so ~0.0001 GeV of residual, but a dependence nonetheless.
-Flipping the default is a judgement call for whoever owns the branch; the
-measurement above is what it should be made on, and the one-line change is in
-`_unweighting_mode`.
+**At 250000 events the ordering changes, and the gap widens.** The run above
+is dominated by costs the scheme does not touch, so it was repeated on a single
+250000-event sample where the decay phase is 51-66% of the wall clock:
+
+    scheme                  decay phase  total wall  decay MEs/ev  prod reshuffles  mass sets  over bound
+    sequential                226.0 s      446.5 s       4.56           2.83          2.83         40
+    two_stage                 285.2 s      507.3 s       6.57           2.83          2.83         42
+    joint                     324.3 s      544.6 s       9.06           4.53           --           0
+    sequential_with_mass      403.7 s      629.8 s       8.07           8.07           --          37
+    sequential_global_retry   436.6 s      660.2 s       7.22          11.15         11.15        180
+
+Against joint: `sequential` is 30% faster in the decay phase and 18% on the
+whole run; against `sequential_with_mass`, which is what `auto` picks, it is
+**44% and 29%**. All five agree on the cross section to 0.003% (23.75487 joint,
+23.755604 for the other four).
+
+Two things move between the two sample sizes, and both favour the up-front
+split as N grows.
+
+- The fixed costs stop hiding it. At 10000 events the decay-pool generation
+  (~35 s) and the probe dwarf a 2 s difference; at 250000 the pool costs ~165 s
+  against a 226-436 s decay phase.
+- `nb_sigma` is `max(4.5, log_7.7 N)`, so it goes from 4.51 to 6.09 and every
+  bound widens. That costs the schemes unequally: `sequential_with_mass`'s
+  per-slot weights carry the Breit-Wigner jacobian and `J_k/J_{k-1}`, so they
+  are the broadest and lose the most (slot 1's bound 5.201, acceptance 1/5.31,
+  against the up-front `sequential`'s 3.287 and 1/3.29). Moving those factors
+  into a mass stage that is bounded once is worth more the wider the margin
+  gets. `two_stage` overtakes `sequential_with_mass` for the same reason.
+
+So the 10000-event ordering (sequential < joint < with_mass < two_stage <
+global_retry) is not the asymptotic one; at 250000 it is sequential < two_stage
+< joint < with_mass < global_retry, and the advantage of the up-front draw over
+the scheme PA shipped with is a factor 1.8 on the accept/reject.
+
+**`auto` still takes `sequential_with_mass` under PA.** That is now a
+conservative default rather than the fast one: at 10000 events the gain was
+inside the noise, but at 250000 the up-front `sequential` takes 29% off the
+whole run and the margin grows with N. What it buys against that is exactness
+by construction -- `sequential_with_mass` freezes nothing and needs no table,
+where `sequential` carries a tabulated factor accurate to ~0.2% on something
+worth 0.04 GeV, i.e. ~0.0001 GeV of residual. That is three orders of magnitude
+inside the pole approximation's own error, so the case for flipping is strong;
+it is left as a judgement call for whoever owns the branch, and the one-line
+change is in `_unweighting_mode`.
