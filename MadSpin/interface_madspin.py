@@ -758,6 +758,23 @@ class MadSpinInterface(extended_cmd.Cmd):
         #if self.model and not self.model['case_sensitive']:
         #    decaybranch = decaybranch.lower()
 
+        if '{' in decaybranch and self._density_spinmode():
+            # The density spin modes contract a production and a decay
+            # spin-density matrix over the decaying particle's helicity. A
+            # polarisation written on the *decay* side would have to project
+            # that decay density matrix, which is not what the {..} braces do
+            # here (they would restrict the decay matrix element that defines
+            # the branching ratio instead), so refuse rather than quietly
+            # produce a wrong answer. The production-side braces ARE supported:
+            # they restrict the convolution (see _production_polarization).
+            raise self.InvalidCmd(
+                "MadSpin: polarization (the {...} braces) is not supported on a "
+                "'decay' line with spinmode=%s. Only the polarization of the "
+                "production process is taken into account by the density spin "
+                "modes (madspin/full/PA/onshell); use spinmode=none or "
+                "spinmode=madspin_v1 for decay-side polarization."
+                % self.options['spinmode'])
+
         if self.options['spinmode'] not in  ['full','madspin', 'madspin_v1'] and '{' in decaybranch:
             if self.options['spinmode'] == 'none':
                 logger.warning("polarization option used with spinmode=none. The polarization definition will be done according to the rest-frame of the decaying particles (which is likely not what you expect).")
@@ -1305,6 +1322,10 @@ class MadSpinInterface(extended_cmd.Cmd):
             self.options['spinmode'] = spinmode
 
         logger.info("Running MadSpin in spinmode %s" % spinmode)
+        if self._density_spinmode():
+            # read (and validate) the production polarisation braces now rather
+            # than on the first event, deep inside a worker process
+            self._production_polarization()
         # The density modes decide about the '@' grouping later, in run_onshell,
         # where the production events say how many of each particle an event
         # carries. These two never can, so say it now rather than after the
@@ -4640,6 +4661,9 @@ class MadSpinInterface(extended_cmd.Cmd):
         decaying_spins = [self.model.get_particle(i).get('spin') for i in decaying_pdg]
         helicities = [hel_dict[i] for i in decaying_spins]
 
+        helicities, hel_restriction = self._apply_production_polarization(
+                                                    decaying_pdg, helicities)
+
         allowed_hel_pairs, allowed_hel = self.get_allowed_hel(helicities)
 
         return {
@@ -4652,9 +4676,136 @@ class MadSpinInterface(extended_cmd.Cmd):
             'helicities': helicities,
             'decaying_spins': decaying_spins,
             'allowed_hel': allowed_hel,
+            'hel_restriction': hel_restriction,
             'ncomb': len(allowed_hel_pairs),
             'dimension': math.prod(len(i) for i in helicities),
         }
+
+    # ------------------------------------------------------------------
+    # Production polarisation ({0}/{+}/{-}/{L}/{R}/{T} on the decaying leg)
+    # ------------------------------------------------------------------
+
+    def _density_spinmode(self):
+        """Whether the current spinmode goes through the density-matrix path.
+        'full' is the user-facing alias of 'madspin' and is only rewritten in
+        do_launch, so both spellings have to be accepted here."""
+        return self.options['spinmode'] in ['madspin', 'full', 'PA', 'onshell']
+
+    def _production_polarization(self):
+        """``pdg -> tuple(allowed helicities)`` from the polarisation braces of
+        the *production* process, e.g. ``p p > t{0} t~``.
+
+        MadSpin regenerates the production matrix element from the banner's
+        proc_card, braces included, so the braces are exactly what MG5 saw. They
+        do NOT however restrict the density matrix: ``GET_DENSITY`` overrides
+        the decaying particle's helicity from ``ALLOW_HEL`` for every entry it
+        builds, so rho_prod comes back fully unpolarised in those indices and
+        the restriction has to be applied here.
+
+        Parsing is delegated to MG5's own process parser so that the brace
+        semantics ({L} -> [-1], {R} -> [1], {T} -> [1,-1], {0} -> [0]) cannot
+        drift away from ``madgraph_interface``'s.
+        """
+        cached = getattr(self, '_production_polarization_cache', None)
+        if cached is not None:
+            return cached
+
+        out = {}
+        try:
+            proc_card = list(self.banner.proc_card)
+        except Exception:
+            proc_card = []
+        lines = [line[9:].strip() for line in proc_card
+                 if line.startswith('generate')]
+        lines += [' '.join(line.split()[2:]) for line in proc_card
+                  if re.search(r'^\s*add\s+process', line)]
+
+        if any('{' in line for line in lines):
+            unpolarized = set()
+            for line in lines:
+                try:
+                    procdef = self.mg5cmd.extract_process(line)
+                except Exception as error:
+                    logger.warning('MadSpin could not re-read the polarisation of '
+                                   'the production process "%s" (%s); the density '
+                                   'matrix convolution is left unrestricted.'
+                                   % (line, error))
+                    continue
+                for leg in procdef.get('legs'):
+                    # initial-state polarisation is the beampol machinery, not this
+                    if not leg.get('state'):
+                        continue
+                    pol = leg.get('polarization')
+                    ids = [int(i) for i in leg.get('ids')]
+                    if not pol:
+                        unpolarized.update(ids)
+                        continue
+                    pol = tuple(sorted(set(int(p) for p in pol)))
+                    for pdg in ids:
+                        if out.setdefault(pdg, pol) != pol:
+                            raise self.InvalidCmd(
+                                'MadSpin: particle %s is produced with two different '
+                                'polarisations (%s and %s) in the production process. '
+                                'The density spin modes cannot tell which one a given '
+                                'final-state particle carries.'
+                                % (pdg, out[pdg], pol))
+            clash = unpolarized.intersection(out)
+            if clash:
+                raise self.InvalidCmd(
+                    'MadSpin: particle(s) %s are polarised in one production process '
+                    'and unpolarised in another. Please use a single, consistent '
+                    'polarisation for the particles MadSpin decays.'
+                    % ', '.join(str(p) for p in sorted(clash)))
+
+        self._production_polarization_cache = out
+        return out
+
+    def _apply_production_polarization(self, decaying_pdg, helicities):
+        """Turn the production polarisation into (helicity bases, restriction).
+
+        Returns the per-particle helicity lists to build the density basis with
+        and the per-particle restriction handed to ``DensityMatrix``.
+
+        Two things happen here:
+
+        * the restriction itself -- the (i,j) entries the polarisation forbids
+          are dropped from the production/decay convolution and from the trace
+          that normalises it (see ``DensityMatrix.set_hel_restriction``);
+
+        * a reordering of the helicity basis. ``GET_DENSITY`` picks the rows of
+          the process' NHEL table by matching them against the *first*
+          combination of ``ALLOW_HEL``; a polarised process has no NHEL row
+          outside its polarisation, so leaving the default order ([1,-1] for a
+          fermion, [-1,0,1] for a vector) would match nothing and hand back an
+          identically zero density matrix for ``{L}``/``{-}``/``{0}``. Putting
+          an allowed helicity first is what makes the spectator helicity sum
+          find its rows. The order is untouched without braces, so nothing
+          moves for unpolarised runs.
+        """
+        pol_map = self._production_polarization()
+        if not pol_map:
+            return helicities, None
+
+        helicities = list(helicities)
+        restriction = []
+        for k, pdg in enumerate(decaying_pdg):
+            allowed = pol_map.get(pdg)
+            basis = list(helicities[k])
+            if not allowed:
+                restriction.append(None)
+                continue
+            unknown = [h for h in allowed if h not in basis]
+            if unknown:
+                raise self.InvalidCmd(
+                    'MadSpin: the polarisation %s requested for particle %s is not '
+                    'expressible in the helicity basis %s used by the density spin '
+                    'modes. Only {0}, {+}/{R}, {-}/{L} and {T} are supported.'
+                    % (list(allowed), pdg, basis))
+            kept = [h for h in basis if h in allowed]
+            restriction.append(tuple(kept))
+            helicities[k] = kept + [h for h in basis if h not in allowed]
+
+        return helicities, madspin.DensityMatrix.normalize_hel_restriction(restriction)
 
     @staticmethod
     def _decaying_pdgs(production, evt_decayfile):
@@ -4921,7 +5072,8 @@ class MadSpinInterface(extended_cmd.Cmd):
         rho_off = self.get_density(prod_off, prod_static['position'],
                                    prod_static['allowed_hel'],
                                    prod_static['ncomb'], prod_static['dimension'],
-                                   frame_boost=frame_boost)
+                                   frame_boost=frame_boost,
+                                   hel_restriction=prod_static.get('hel_restriction'))
         parents = {slot: finals[slot_to_index[slot]] for slot in order}
         return rho_off, jac_reshuffle, slot_mass, parents, frame_boost
 
@@ -5390,7 +5542,8 @@ class MadSpinInterface(extended_cmd.Cmd):
                                                 prod_static['allowed_hel'],
                                                 prod_static['ncomb'],
                                                 prod_static['dimension'],
-                                                frame_boost=frame_boost)
+                                                frame_boost=frame_boost,
+                                                hel_restriction=prod_static.get('hel_restriction'))
                 production._ms_density_prod = density_prod
                 production._ms_frame_boost = frame_boost
             else:
@@ -6199,7 +6352,8 @@ class MadSpinInterface(extended_cmd.Cmd):
                                         allowed_hel,
                                         ncomb,
                                         dimension,
-                                        frame_boost=frame_boost) \
+                                        frame_boost=frame_boost,
+                                        hel_restriction=prod_static.get('hel_restriction')) \
             if prod_density_cached is None else prod_density_cached
 
         # ------------------------------------------------------------------
@@ -6445,7 +6599,7 @@ class MadSpinInterface(extended_cmd.Cmd):
         return out
 
     def get_density(self, event, position, allow_hel, ncomb, dimension,
-                    frame_boost=None, frame_rest_leg=-1):
+                    frame_boost=None, frame_rest_leg=-1, hel_restriction=None):
         """``frame_boost`` is the momentum whose rest frame ``frame_id`` picks
         (see ``_frame_boost``); the momenta are boosted there before the matrix
         element sees them, which is what defines the axis the initial-state
@@ -6512,10 +6666,15 @@ class MadSpinInterface(extended_cmd.Cmd):
 
 
         #print(f"density_array = {density_array}") 
-        density_matrix = madspin.DensityMatrix(density_array, 
-                                               n_changing, 
-                                               allow_hel, 
+        density_matrix = madspin.DensityMatrix(density_array,
+                                               n_changing,
+                                               allow_hel,
                                                dimension)
+        # production polarisation braces: the restriction travels with the
+        # matrix, so every later contraction/trace applies it (see
+        # DensityMatrix.set_hel_restriction). None for the decay densities.
+        if hel_restriction is not None:
+            density_matrix.set_hel_restriction(hel_restriction)
         return density_matrix
 
    

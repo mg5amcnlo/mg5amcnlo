@@ -4613,7 +4613,11 @@ class decay_all_events_density(decay_all_events_onshell):
             particle, final = final[:end], final[end:]
             new_particle = []
             for p in particle.split():
-                if p in to_decay:
+                # a polarised leg is written "t{L}"; the label MadSpin decays is
+                # the part before the brace, and MG5 parses the off-shell star
+                # after it ("t{L}*"), so strip the brace for the lookup only.
+                name = p.split('{', 1)[0]
+                if name in to_decay:
                     new_particle.append('%s*' % p)
                 else:
                     new_particle.append(p)
@@ -4695,6 +4699,10 @@ class DensityMatrix:
     # Cache tensor-product helicity tables by basis_id
     _tp_hel_cache = {}
 
+    # Cache helicity-restriction row masks.
+    # Key: (basis_id, normalised restriction key)
+    _restriction_cache = {}
+
     def __init__(self, array, nchanging, all_helicity_combinations, dimension):
         """
         Parameters
@@ -4730,6 +4738,9 @@ class DensityMatrix:
         # Basis identifier (stable across events) for caching sort permutations and diag masks.
         # For "map-built" matrices, this is fully determined by (allowed_hel, n_changing).
         self._basis_id = ("map", tuple(all_helicity_combinations), self.nchanging)
+
+        # Per-particle helicity restriction (see set_hel_restriction). None = full sum.
+        self.hel_restriction = None
 
         # Lazy per-instance cache
         self._sort_order = None
@@ -4868,6 +4879,7 @@ class DensityMatrix:
         obj.values = values.astype(np.complex64, copy=False)
 
         obj._basis_id = basis_id
+        obj.hel_restriction = None
         obj._sort_order = None
 
         # Diagonal mask is cached per basis_id
@@ -4893,6 +4905,100 @@ class DensityMatrix:
         mask = np.all(h[:, 0::2] == h[:, 1::2], axis=1)
         DensityMatrix._diag_cache[self._basis_id] = mask
         return mask
+
+    # -------------------------------------------------------------------------
+    # Helicity restriction (production polarisation)
+    # -------------------------------------------------------------------------
+
+    @staticmethod
+    def normalize_hel_restriction(restriction):
+        """Canonical, hashable form of a per-particle helicity restriction.
+
+        ``restriction`` is a sequence with one entry per *changing* helicity
+        (i.e. per decaying particle, in the order the density matrix' helicity
+        columns are laid out). Each entry is either
+
+          - ``None`` (or an empty container): that index is summed over its
+            whole basis -- the historical behaviour, and
+
+          - a container of the helicity values that index is allowed to take.
+
+        Returns ``None`` when nothing is restricted, so that the unrestricted
+        code paths stay bit-for-bit identical.
+        """
+        if restriction is None:
+            return None
+        key = []
+        for allowed in restriction:
+            if allowed is None:
+                key.append(None)
+                continue
+            allowed = tuple(sorted(set(int(h) for h in allowed)))
+            key.append(allowed if allowed else None)
+        if all(a is None for a in key):
+            return None
+        return tuple(key)
+
+    def set_hel_restriction(self, restriction):
+        """Attach a per-particle helicity restriction to this matrix.
+
+        The restriction travels with the matrix rather than with the call, so
+        that ``scalar_multiplication`` / ``trace`` pick it up wherever the
+        production density matrix is contracted -- including the sequential
+        accept/reject, which contracts it against partially filled decay
+        tensors. Returns self so it can be chained onto ``get_density``.
+
+        A restricted index is one whose production process carries a
+        polarisation brace: ``{0}``/``{+}``/``{-}`` select a single helicity X
+        and so keep only the diagonal ``rho_prod(X,X) rho_dec(X,X)`` term,
+        ``{T}`` keeps the whole ``-1/+1`` block and drops the ``0`` row and
+        column. The rule is uniform: a matrix element (i,j) of particle k
+        survives iff *both* i and j are allowed for k.
+        """
+        self.hel_restriction = DensityMatrix.normalize_hel_restriction(restriction)
+        return self
+
+    def _restriction_row_mask(self, restriction):
+        """Boolean row mask implementing ``restriction`` on this matrix' labels.
+
+        Depends only on the helicity labels, so it is cached per
+        (basis_id, restriction) and never recomputed per event.
+        """
+        if restriction is None:
+            return None
+        cache_key = (self._basis_id, restriction)
+        cached = DensityMatrix._restriction_cache.get(cache_key)
+        if cached is not None:
+            return cached
+
+        h = self.helicities
+        mask = np.ones(h.shape[0], dtype=np.bool_)
+        for k, allowed in enumerate(restriction):
+            if allowed is None:
+                continue
+            allowed = np.asarray(allowed, dtype=np.int32)
+            # column 2k is the row (bra) helicity of particle k, 2k+1 the column
+            # (ket) one -- see get_map_density_matrix
+            mask &= np.isin(h[:, 2 * k], allowed)
+            mask &= np.isin(h[:, 2 * k + 1], allowed)
+
+        DensityMatrix._restriction_cache[cache_key] = mask
+        return mask
+
+    @staticmethod
+    def _combine_restrictions(a, b):
+        """The restriction in force for a contraction between two matrices.
+
+        Only one side ever carries one (the production density matrix knows the
+        polarisation, the decay side does not), so this is really "whichever is
+        set", with a guard against two contradicting ones.
+        """
+        if a is None:
+            return b
+        if b is None or a == b:
+            return a
+        raise ValueError("Contradicting helicity restrictions between the "
+                         "production and decay spin-density matrices")
 
     # -------------------------------------------------------------------------
     # Cached permutation for alignment by helicity labels
@@ -4925,7 +5031,7 @@ class DensityMatrix:
     # Operations
     # -------------------------------------------------------------------------
 
-    def scalar_multiplication(self, other):
+    def scalar_multiplication(self, other, hel_restriction=None):
         """
         Scalar contraction between two density matrices.
 
@@ -4936,14 +5042,27 @@ class DensityMatrix:
         General path:
         - Align by cached helicity-sort permutations (one per basis_id), then
           dot-product on aligned values.
+
+        ``hel_restriction`` (or, when omitted, the one either operand carries --
+        see ``set_hel_restriction``) drops the (i,j) terms the production
+        polarisation forbids before summing.
         """
         if len(self.values) != len(other.values):
             raise TypeError("Non-compatible dimensions of production and decay spin-density matrices")
 
+        restriction = DensityMatrix._combine_restrictions(
+            self.hel_restriction, other.hel_restriction)
+        if hel_restriction is not None:
+            restriction = DensityMatrix._combine_restrictions(
+                restriction, DensityMatrix.normalize_hel_restriction(hel_restriction))
+        mask = self._restriction_row_mask(restriction)
+
         # Fastest correct path for map-built matrices
         if (self.map_density_matrix_ind is not None and
                 self.map_density_matrix_ind is other.map_density_matrix_ind):
-            return np.sum(self.values * other.values)
+            if mask is None:
+                return np.sum(self.values * other.values)
+            return np.sum(self.values[mask] * other.values[mask])
 
         # Align by cached ordering for each basis
         self._ensure_sorted_view()
@@ -4951,7 +5070,12 @@ class DensityMatrix:
 
         a = self._sort_order
         b = other._sort_order
-        return np.sum(self.values[a] * other.values[b])
+        if mask is None:
+            return np.sum(self.values[a] * other.values[b])
+        # the mask lives on self's rows; permuting it with the same order keeps
+        # it aligned with both sorted views
+        aligned = mask[a]
+        return np.sum(self.values[a][aligned] * other.values[b][aligned])
 
     def tensor_product(self, other):
         """
@@ -4988,14 +5112,21 @@ class DensityMatrix:
         # Often faster than np.kron
         vals = (v1[:, None] * v2[None, :]).ravel().astype(np.complex64, copy=False)
 
-        return DensityMatrix.from_components(
+        out = DensityMatrix.from_components(
             hel,
             vals,
             self.nchanging + other.nchanging,
-            self.all_helicity_combinations,  
+            self.all_helicity_combinations,
             self.dimension,
             basis_id=basis_id,
         )
+        # a restriction is per-index, so the tensor product simply concatenates
+        # the two (the decay side normally carries none, and this stays None)
+        if self.hel_restriction is not None or other.hel_restriction is not None:
+            left = self.hel_restriction or (None,) * self.nchanging
+            right = other.hel_restriction or (None,) * other.nchanging
+            out.set_hel_restriction(tuple(left) + tuple(right))
+        return out
 
     @classmethod
     def identity(cls, nchanging, all_helicity_combinations, dimension):
@@ -5041,14 +5172,29 @@ class DensityMatrix:
             self.dimension,
             basis_id=self._basis_id,
         )
+        out.hel_restriction = self.hel_restriction
         self._normalized_cache = out
         return out
 
-    def trace(self):
+    def trace(self, hel_restriction=None):
         """
         Order-independent trace.
+
+        With a helicity restriction in force (production polarisation) this is
+        the *restricted* trace, sum_{h in allowed} rho(h,h): that is the
+        normalisation the polarised production cross-section actually uses, and
+        keeping it consistent with ``scalar_multiplication`` is what leaves the
+        accept/reject weight averaging to 1/n exactly as in the unrestricted
+        case.
         """
-        return np.sum(self.values[self._diag_mask])
+        restriction = self.hel_restriction
+        if hel_restriction is not None:
+            restriction = DensityMatrix._combine_restrictions(
+                restriction, DensityMatrix.normalize_hel_restriction(hel_restriction))
+        mask = self._restriction_row_mask(restriction)
+        if mask is None:
+            return np.sum(self.values[self._diag_mask])
+        return np.sum(self.values[self._diag_mask & mask])
 
 
     def print_full_matrix(self, precision=6):

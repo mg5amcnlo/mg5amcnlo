@@ -1118,6 +1118,316 @@ class TestPartialDensityContraction(unittest.TestCase):
         self.assertTrue(np.allclose(with_scalar / without, 1.0))
 
 
+class TestDensityPolarizationRestriction(unittest.TestCase):
+    """Restricting the production/decay density-matrix convolution to the
+    polarisation written on the *production* process.
+
+    W = sum_i sum_j rho_prod(i,j) rho_dec(i,j) becomes a sum over the (i,j)
+    block the braces allow: a single-state brace ({0}, {+}/{R}, {-}/{L}) keeps
+    only the diagonal rho(X,X) term, {T} keeps the -1/+1 block and drops the 0
+    row and column, and no brace leaves the full double sum untouched.
+    """
+
+    FERMION = [1, -1]
+    VECTOR = [-1, 0, 1]
+
+    def _packed(self, hel, seed):
+        """A hermitian density matrix on that basis, in the packed
+        upper-triangular storage the Fortran side hands back."""
+        import numpy as np
+        rng = np.random.default_rng(seed)
+        n = len(hel)
+        arr = (rng.normal(size=n * (n + 1) // 2)
+               + 1j * rng.normal(size=n * (n + 1) // 2)).astype('complex64')
+        for i in range(n):
+            arr[i * (2 * n - i + 1) // 2] = abs(arr[i * (2 * n - i + 1) // 2])
+        return arr
+
+    def _density(self, hel, seed, restriction=None):
+        rho = madspin.DensityMatrix(self._packed(hel, seed), 1, hel, len(hel))
+        if restriction is not None:
+            rho.set_hel_restriction(restriction)
+        return rho
+
+    def _brute_force(self, dec, prod, allowed):
+        """Sum_{(i,j) allowed} rho_dec(i,j) rho_prod(i,j), read off the labels
+        rather than the masks -- an independent implementation of what
+        scalar_multiplication must produce."""
+        import numpy as np
+        table = {tuple(int(x) for x in lab): val
+                 for lab, val in zip(prod.helicities, prod.values)}
+        total = 0j
+        for lab, val in zip(dec.helicities, dec.values):
+            lab = tuple(int(x) for x in lab)
+            keep = True
+            for k, ok in enumerate(allowed):
+                if ok is None:
+                    continue
+                if lab[2 * k] not in ok or lab[2 * k + 1] not in ok:
+                    keep = False
+                    break
+            if keep:
+                total += complex(val) * complex(table[lab])
+        return total
+
+    # -- no braces: nothing may move ---------------------------------------
+
+    def test_no_braces_leaves_the_full_double_sum(self):
+        """The behaviour-neutrality requirement: an absent or empty restriction
+        must not touch a single value."""
+        import numpy as np
+        for hel in (self.FERMION, self.VECTOR):
+            prod = self._density(hel, seed=1)
+            dec = self._density(hel, seed=2)
+            reference = dec.scalar_multiplication(prod)
+            for empty in (None, [None], [()], [[]]):
+                other = self._density(hel, seed=1, restriction=empty)
+                self.assertIsNone(other.hel_restriction)
+                self.assertTrue(np.allclose(dec.scalar_multiplication(other),
+                                            reference))
+            self.assertTrue(np.allclose(prod.trace(), self._brute_force(
+                prod, madspin.DensityMatrix.identity(1, hel, len(hel)),
+                [None]) * len(hel)))
+
+    # -- single state -------------------------------------------------------
+
+    def test_single_state_keeps_only_the_diagonal_term(self):
+        """{0}, {+}/{R}, {-}/{L}: one helicity X survives, so the double sum
+        collapses onto rho_prod(X,X) rho_dec(X,X)."""
+        import numpy as np
+        cases = [(self.VECTOR, 0), (self.FERMION, 1), (self.FERMION, -1),
+                 (self.VECTOR, 1), (self.VECTOR, -1)]
+        for hel, x in cases:
+            prod = self._density(hel, seed=11, restriction=[(x,)])
+            dec = self._density(hel, seed=12)
+            got = dec.scalar_multiplication(prod)
+            # rho(X,X) rho(X,X): pick the two entries by label
+            pi = {tuple(int(v) for v in l): c
+                  for l, c in zip(prod.helicities, prod.values)}[(x, x)]
+            di = {tuple(int(v) for v in l): c
+                  for l, c in zip(dec.helicities, dec.values)}[(x, x)]
+            self.assertTrue(np.allclose(got, complex(di) * complex(pi)))
+            self.assertTrue(np.allclose(got, self._brute_force(dec, prod, [(x,)])))
+
+    def test_transverse_drops_the_zero_row_and_column(self):
+        """{T} = [-1,1]: the double sum survives but neither index may be 0."""
+        import numpy as np
+        prod = self._density(self.VECTOR, seed=21, restriction=[(-1, 1)])
+        dec = self._density(self.VECTOR, seed=22)
+        got = dec.scalar_multiplication(prod)
+        self.assertTrue(np.allclose(got,
+                                    self._brute_force(dec, prod, [(-1, 1)])))
+        # strictly between the single-state and the unrestricted answers: four
+        # terms out of nine, and the off-diagonal (-1,1)/(1,-1) pair kept
+        mask = prod._restriction_row_mask(prod.hel_restriction)
+        self.assertEqual(int(mask.sum()), 4)
+        kept = set(tuple(int(v) for v in l)
+                   for l, m in zip(prod.helicities, mask) if m)
+        self.assertEqual(kept, {(-1, -1), (-1, 1), (1, -1), (1, 1)})
+
+    # -- several decaying particles ----------------------------------------
+
+    def test_multi_particle_mask_is_a_per_index_product(self):
+        """t{0} t~{T}-like: the restriction is per decaying particle and the
+        masks combine multiplicatively over the tensor-product structure."""
+        import numpy as np
+        import itertools
+        hels = [self.VECTOR, self.VECTOR]
+        dim = len(hels[0]) * len(hels[1])
+        allowed_hel = [h for combo in itertools.product(*hels) for h in combo]
+        prod = madspin.DensityMatrix(self._packed(list(range(dim)), 31),
+                                     2, allowed_hel, dim)
+        dec = self._density(hels[0], 32).tensor_product(
+              self._density(hels[1], 33))
+
+        for restriction in ([(0,), (-1, 1)], [None, (0,)], [(1,), None],
+                            [(-1, 1), (-1, 1)]):
+            prod.set_hel_restriction(restriction)
+            got = dec.scalar_multiplication(prod)
+            self.assertTrue(np.allclose(
+                got, self._brute_force(dec, prod, restriction)))
+
+        # 1 (the single (0,0) pair) x 4 (the transverse block) of 9 x 9 entries
+        prod.set_hel_restriction([(0,), (-1, 1)])
+        mask = prod._restriction_row_mask(prod.hel_restriction)
+        self.assertEqual(int(mask.sum()), 4)
+        self.assertEqual(len(mask), 81)
+
+    def test_restriction_survives_the_tensor_product(self):
+        """A restricted index keeps its restriction when the matrix is tensored
+        with an unrestricted one -- the per-index masks simply concatenate."""
+        left = self._density(self.FERMION, 41, restriction=[(1,)])
+        right = self._density(self.VECTOR, 42)
+        self.assertEqual(left.tensor_product(right).hel_restriction,
+                         ((1,), None))
+        self.assertEqual(right.tensor_product(left).hel_restriction,
+                         (None, (1,)))
+
+    # -- normalisation ------------------------------------------------------
+
+    def test_trace_follows_the_restriction(self):
+        """Tr rho normalises the convolution, so it has to be restricted too:
+        it is the polarised production cross-section the events were generated
+        with. Getting this wrong would make the accept/reject weight stop
+        averaging to 1/n."""
+        import numpy as np
+        hel = self.VECTOR
+        arr = self._packed(hel, 51)
+        full = madspin.DensityMatrix(arr, 1, hel, 3)
+        diag = [complex(arr[i * (2 * 3 - i + 1) // 2]) for i in range(3)]
+        self.assertTrue(np.allclose(full.trace(), sum(diag)))
+        # labels are ordered as hel: [-1, 0, 1]
+        for x, expected in zip(hel, diag):
+            rho = madspin.DensityMatrix(arr, 1, hel, 3).set_hel_restriction([(x,)])
+            self.assertTrue(np.allclose(rho.trace(), expected))
+        transverse = madspin.DensityMatrix(arr, 1, hel, 3)
+        transverse.set_hel_restriction([(-1, 1)])
+        self.assertTrue(np.allclose(transverse.trace(), diag[0] + diag[2]))
+
+    def test_identity_contraction_still_gives_the_restricted_trace(self):
+        """<rho, I/n> restricted = (restricted Tr rho)/n, so a slot whose decay
+        has not been drawn yet contributes the same 1/n it always did and the
+        sequential accept/reject normalisation is untouched."""
+        import numpy as np
+        for hel in (self.FERMION, self.VECTOR):
+            for allowed in ([(hel[0],)], [tuple(hel[:2])]):
+                rho = self._density(hel, 61, restriction=allowed)
+                I = madspin.DensityMatrix.identity(1, hel, len(hel))
+                self.assertTrue(np.allclose(I.scalar_multiplication(rho),
+                                            rho.trace() / len(hel)))
+
+    def test_mask_is_cached_per_basis(self):
+        """Recomputed once per (basis, restriction), never per event."""
+        hel = self.VECTOR
+        a = self._density(hel, 71, restriction=[(0,)])
+        b = self._density(hel, 72, restriction=[(0,)])
+        self.assertIs(a._restriction_row_mask(a.hel_restriction),
+                      b._restriction_row_mask(b.hel_restriction))
+        self.assertIsNot(a._restriction_row_mask(a.hel_restriction),
+                         a._restriction_row_mask(((-1, 1),)))
+
+    def test_contradicting_restrictions_are_refused(self):
+        hel = self.FERMION
+        a = self._density(hel, 81, restriction=[(1,)])
+        b = self._density(hel, 82, restriction=[(-1,)])
+        self.assertRaises(ValueError, a.scalar_multiplication, b)
+
+    def test_sequential_contraction_sees_the_restriction(self):
+        """_partial_density_contraction contracts through the production matrix,
+        so attaching the restriction there is enough for the sequential
+        accept/reject -- no call site has to pass it along."""
+        import numpy as np
+        import itertools
+        hels = [self.FERMION, self.VECTOR]
+        dim = len(hels[0]) * len(hels[1])
+        allowed_hel = [h for combo in itertools.product(*hels) for h in combo]
+        rho = madspin.DensityMatrix(self._packed(list(range(dim)), 91),
+                                    2, allowed_hel, dim)
+        rho.set_hel_restriction([(1,), (0,)])
+        stub = TestPartialDensityContraction._Stub()
+        got = stub._partial_density_contraction(rho, hels, {})
+        # every slot is I/n, so this is the restricted trace over prod n_i
+        self.assertTrue(np.allclose(got, rho.trace() / dim))
+
+
+class TestProductionPolarizationPlumbing(unittest.TestCase):
+    """Reading the production polarisation and turning it into the basis /
+    restriction the density matrices are built with."""
+
+    class _Stub(object):
+        """Just enough MadSpinInterface for the polarisation helpers."""
+        InvalidCmd = interface_madspin.MadSpinInterface.InvalidCmd
+
+        def __init__(self, pol_map=None, spinmode='madspin'):
+            self._pol = pol_map or {}
+            self.options = {'spinmode': spinmode}
+            self.list_branches = {}
+
+        def _production_polarization(self):
+            return self._pol
+
+        _density_spinmode = interface_madspin.MadSpinInterface._density_spinmode
+        _apply_production_polarization = \
+            interface_madspin.MadSpinInterface._apply_production_polarization
+        do_decay = interface_madspin.MadSpinInterface.do_decay
+
+    HEL = {1: [0], 2: [1, -1], 3: [-1, 0, 1]}
+
+    def test_no_braces_leaves_the_basis_untouched(self):
+        """Nothing may move for an unpolarised production process."""
+        stub = self._Stub()
+        hels = [self.HEL[2], self.HEL[3]]
+        got, restriction = stub._apply_production_polarization([6, 24], hels)
+        self.assertEqual(got, hels)
+        self.assertIsNone(restriction)
+
+    def test_single_state_puts_its_helicity_first(self):
+        """GET_DENSITY matches the process NHEL table against the *first*
+        ALLOW_HEL combination, and a polarised process has no NHEL row outside
+        its polarisation -- so the allowed helicity has to lead, or the whole
+        production density matrix comes back zero."""
+        stub = self._Stub({24: (0,)})
+        got, restriction = stub._apply_production_polarization(
+                                        [24], [list(self.HEL[3])])
+        self.assertEqual(got, [[0, -1, 1]])
+        self.assertEqual(restriction, ((0,),))
+
+        stub = self._Stub({6: (-1,)})
+        got, restriction = stub._apply_production_polarization(
+                                        [6], [list(self.HEL[2])])
+        self.assertEqual(got, [[-1, 1]])
+        self.assertEqual(restriction, ((-1,),))
+
+    def test_transverse_keeps_two_states_and_drops_zero_from_the_front(self):
+        stub = self._Stub({24: (-1, 1)})
+        got, restriction = stub._apply_production_polarization(
+                                        [24], [list(self.HEL[3])])
+        self.assertEqual(got, [[-1, 1, 0]])
+        self.assertEqual(restriction, ((-1, 1),))
+
+    def test_restriction_is_per_particle(self):
+        """t{0} t~{T}: slot 1 collapses onto its diagonal 0 entry, slot 2 keeps
+        the -1/+1 block, and an unpolarised third particle keeps everything."""
+        stub = self._Stub({24: (0,), -24: (-1, 1)})
+        got, restriction = stub._apply_production_polarization(
+                    [24, -24, 6], [list(self.HEL[3]), list(self.HEL[3]),
+                                   list(self.HEL[2])])
+        self.assertEqual(got, [[0, -1, 1], [-1, 1, 0], [1, -1]])
+        self.assertEqual(restriction, ((0,), (-1, 1), None))
+
+    def test_unsupported_polarization_is_refused(self):
+        """{A}, {G}, ... have no place in the -1/0/+1 helicity basis the density
+        matrices are built on."""
+        stub = self._Stub({24: (99,)})
+        self.assertRaises(stub.InvalidCmd,
+                          stub._apply_production_polarization,
+                          [24], [list(self.HEL[3])])
+        # a longitudinal brace on a fermion cannot be honoured either
+        stub = self._Stub({6: (0,)})
+        self.assertRaises(stub.InvalidCmd,
+                          stub._apply_production_polarization,
+                          [6], [list(self.HEL[2])])
+
+    def test_decay_side_polarization_is_an_explicit_error(self):
+        """Polarisation on a 'decay' line is not what the density modes
+        contract, so it must fail loudly rather than be silently ignored."""
+        for spinmode in ('madspin', 'full', 'PA', 'onshell'):
+            stub = self._Stub(spinmode=spinmode)
+            try:
+                stub.do_decay('t > w+{0} b')
+            except stub.InvalidCmd as error:
+                self.assertIn('not supported', str(error))
+                self.assertIn(spinmode, str(error))
+            else:
+                self.fail('decay-side polarization accepted for %s' % spinmode)
+
+    def test_density_spinmode_detection(self):
+        for mode in ('madspin', 'full', 'PA', 'onshell'):
+            self.assertTrue(self._Stub(spinmode=mode)._density_spinmode())
+        for mode in ('none', 'madspin_v1', 'onshell_v1'):
+            self.assertFalse(self._Stub(spinmode=mode)._density_spinmode())
+
+
 class TestSequentialSlots(unittest.TestCase):
     """_decaying_pdgs / _sequential_slots: which density matrix slot belongs to
     which production particle.

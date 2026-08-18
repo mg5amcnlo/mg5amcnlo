@@ -31,6 +31,52 @@ The weight actually used in the accept/reject (interface_madspin.py:3033) is
 (the color / symmetry / `prod_denominators` factors cancel between the numerator
 and the two diagonals).
 
+### Production polarisation restricts the double sum
+
+`<rho, ...>` is `sum_i sum_j rho_prod(i,j) rho_dec(i,j)` over the *full*
+helicity basis. When the production process carries a polarisation brace on a
+particle MadSpin decays (`p p > t{L} t~`, `p p > w+{0} w-{T}`), that particle's
+index is restricted:
+
+- a single-state brace (`{0}`, `{+}`/`{R}`, `{-}`/`{L}`) keeps only the diagonal
+  `rho_prod(X,X) rho_dec(X,X)` term;
+- `{T}` (= `[-1,1]`) keeps the double sum but drops the `0` row and column;
+- no brace leaves that index summed in full -- unrestricted runs are bit-for-bit
+  unchanged.
+
+The restriction is per decaying particle and combines multiplicatively over the
+tensor product, so `t{0} t~{T}` masks index 1 to its `0` diagonal entry and
+index 2 to the `-1/+1` block. It is carried by the production `DensityMatrix`
+itself (`set_hel_restriction`, a bool row mask cached per
+`(basis_id, restriction)`), so every `scalar_multiplication` and every `trace()`
+-- including `N_k` in the sequential accept/reject -- applies it without any
+call site passing it along. `Tr(rho)` is restricted with the same mask, which is
+what keeps `N_0 = Tr(rho)/prod_i n_i` and hence the accept/reject normalisation
+untouched, and matches the polarised `|M_prod|^2` the input events were
+generated with. The *decay* diagonals stay unrestricted: the decay events come
+from the full, unpolarised decay matrix element.
+
+Two things this is NOT:
+
+- it is not a speed-only consistency tweak. `GET_DENSITY`/`GET_ALL_INTER`
+  overwrite the decaying particle's helicity from `ALLOW_HEL` for every entry
+  they build, so `rho_prod` comes back **fully unpolarised** in those indices
+  even for a polarised process -- verified by evaluating `M0_GET_DENSITY`
+  directly for `p p > t{L} t~` and for `p p > t t~`: identical entries,
+  including `rho(+1,+1)`. The restriction therefore changes results.
+- it is not free of a basis reordering. `GET_DENSITY` selects the rows of the
+  process' `NHEL` table by matching them against the *first* `ALLOW_HEL`
+  combination, and a polarised process has no `NHEL` row outside its
+  polarisation. With the default `hel_dict` order (`[1,-1]`, `[-1,0,1]`) a
+  `{L}`/`{-}`/`{0}` production matched nothing and handed back an identically
+  zero density matrix. `_apply_production_polarization` therefore puts an
+  allowed helicity first in that particle's basis; the order is untouched when
+  there is no brace.
+
+Polarisation on a **decay** line is rejected outright in the density spin modes
+(`do_decay`): the braces there would restrict the decay matrix element that
+defines the branching ratio, not the density matrix that is contracted.
+
 ### The partial weight
 
 For a decay ordering sigma, define after k particles are fixed:
