@@ -1075,11 +1075,14 @@ def assert_unweighting_mode(test, result, expected, expected_why=None):
     """The scheme the run *actually used*, as the run itself announced it.
 
     Non-statistical and instant, and it is the guard on the resolution logic:
-    ``auto`` resolves on the process, and several combinations override what
-    the card asked for (``fixed_order`` and unsupported spinmodes force
-    ``joint``; ``two_stage`` and ``sequential_global_retry`` need an offshell
-    spinmode and fall back to ``sequential`` under PA/onshell). Without this a
-    consistency matrix could compare four runs of the same scheme and pass."""
+    ``auto`` resolves on the process (offshell it takes ``joint`` up to two
+    decaying particles and ``sequential`` from three; under PA/onshell it is
+    always ``sequential``), and several combinations override what the card
+    asked for (``fixed_order``, grouped '@' decays and unsupported spinmodes
+    force ``joint``; ``sequential_with_mass`` needs a per-particle mass draw
+    and falls back to ``sequential`` under the offshell spinmodes). Without
+    this a consistency matrix could compare four runs of the same scheme and
+    pass."""
     test.assertIsNotNone(
         result.unweighting_mode,
         "no 'MadSpin: unweighting = ...' line in %s -- the run never announced "
