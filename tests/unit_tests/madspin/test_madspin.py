@@ -253,13 +253,23 @@ class _FrameStub(object):
     """Just enough of MadSpinInterface for the frame/beampol helpers: they only
     need the options and the matrix-element ordering of the event."""
 
-    def __init__(self, frame_id, beampol):
+    def __init__(self, frame_id, beampol, prodpol=None):
         self.options = interface_madspin.MadSpinOptions()
         self.options['frame_id'] = frame_id
         self.options['beampol'] = list(beampol)
+        # what _production_polarization would have parsed out of the banner's
+        # proc_card: {} for a brace-free production process
+        self._production_polarization_cache = prodpol if prodpol else {}
 
     def get_pdir(self, event):
-        return None, None, None, None
+        # the real one returns (pdir, orig_order, prefix, pos, tag) -- five
+        # values.  _frame_boost used to unpack four, so it raised ValueError the
+        # moment it was reached; keep the arity honest here so the tests can see
+        # that again if it comes back.
+        return None, None, None, None, None
+
+    def _production_polarization(self):
+        return self._production_polarization_cache
 
     _beampol = interface_madspin.MadSpinInterface._beampol
     _frame_boost = interface_madspin.MadSpinInterface._frame_boost
@@ -286,8 +296,8 @@ class TestFrameBoost(unittest.TestCase):
                (300., 100., 50., -80.),
                (400., -100., -50., 380.)]
 
-    def _stub(self, frame_id, beampol=(80., 0.)):
-        return _FrameStub(frame_id, beampol)
+    def _stub(self, frame_id, beampol=(80., 0.), prodpol=None):
+        return _FrameStub(frame_id, beampol, prodpol)
 
     def test_polbeam_to_beampol(self):
         """the card speaks percent, like the run_card polbeam1/polbeam2, and
@@ -334,10 +344,31 @@ class TestFrameBoost(unittest.TestCase):
         self.assertEqual(options.beampol_me(), (1., 1.))
 
     def test_frame_inert_without_polarisation(self):
-        """the frame only changes the axis the initial-state helicities are
-        quantised along, so with unpolarised beams there is nothing to do"""
+        """with unpolarised beams and a brace-free production the contraction is
+        a trace: a boost acts on it as a unitary change of basis and cancels
+        between rho_prod and rho_dec, so there is nothing to do"""
         stub = self._stub(6, beampol=(0., 0.))
         self.assertIsNone(stub._frame_boost(_MomentaEvent(self.MOMENTA)))
+
+    def test_frame_follows_a_production_polarisation_brace(self):
+        """a brace on the production (`p p > w+{0} w-`) is applied as a
+        *projection* on rho_prod, and a projection does not commute with the
+        change of basis a boost induces -- so the frame has to be honoured even
+        with unpolarised beams, or MadSpin would restrict a different helicity
+        than the one MadEvent generated the events with"""
+        stub = self._stub(6, beampol=(0., 0.), prodpol={24: (0,)})
+        boost = stub._frame_boost(_MomentaEvent(self.MOMENTA))
+        self.assertIsNotNone(boost)
+        self.assertEqual((boost.E, boost.px, boost.py, boost.pz),
+                         (700., 0., 0., 300.))
+
+    def test_frame_boost_unpacks_get_pdir(self):
+        """get_pdir returns five values; unpacking four raised ValueError the
+        first time the frame was actually used (which no unpolarised run ever
+        did, so it went unnoticed)"""
+        stub = self._stub(6)
+        self.assertEqual(len(stub.get_pdir(None)), 5)
+        self.assertIsNotNone(stub._frame_boost(_MomentaEvent(self.MOMENTA)))
 
     def test_frame_id_bitmask(self):
         """frame_id = sum(2**n over the selected legs), the convention mapid
@@ -1634,6 +1665,7 @@ class TestSequentialAcceptReject(unittest.TestCase):
             _log_once = interface._log_once
             _beampol = interface._beampol
             _frame_boost = interface._frame_boost
+            _production_polarization = staticmethod(lambda: {})
             def __init__(self):
                 self.options = _StubOptions(
                                {'spinmode': 'onshell',
@@ -1832,11 +1864,12 @@ class TestPAUpFrontMass(unittest.TestCase):
             _log_once = interface._log_once
             _beampol = interface._beampol
             _frame_boost = interface._frame_boost
+            _production_polarization = staticmethod(lambda: {})
 
             def __init__(self):
-                # unpolarised beams and no me_frame, so _frame_boost short
-                # circuits to None: this class is about the mass stage, and the
-                # frame machinery has its own tests
+                # unpolarised beams and a brace-free production, so _frame_boost
+                # short circuits to None: this class is about the mass stage,
+                # and the frame machinery has its own tests
                 self.options = _StubOptions(
                                {'spinmode': 'PA',
                                 'sequential_spin_order': '2 3 1',
