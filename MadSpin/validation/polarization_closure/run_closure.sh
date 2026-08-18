@@ -13,13 +13,7 @@ WORK=${1:?usage: run_closure.sh <workdir>}
 SEED=${SEED:-4321}          # MadEvent random seed, identical for all samples
 MSSEED=${MSSEED:-7777}      # MadSpin random seed, identical for all samples
 
-# N proportional to sigma: the like-helicity samples carry twice the cross
-# section of the opposite-helicity ones (and decay ~5x faster in the MadSpin
-# accept/reject), so this keeps the per-event weight nearly uniform across the
-# four samples that get summed.
-N_UNPOL=50000
-N_LIKE=50000                # t{+}t~{+} and t{-}t~{-}
-N_OPP=20000                 # t{+}t~{-} and t{-}t~{+}
+N_EVENTS=50000              # unweighted events, identical for all five samples
 
 mkdir -p "$WORK"
 
@@ -45,7 +39,7 @@ write_cards () {                       # $1 = dir, $2 = nevents
   perl -pi -e "s/^(\s*)\S+(\s*=\s*use_syst\b)/\${1}False\${2}/"  "$1/Cards/run_card.dat"
   cat > "$1/Cards/madspin_card.dat" <<EOF
 set seed $MSSEED
-set spinmode madspin
+set spinmode onshell
 set max_weight_ps_point 400
 set BW_cut 15
 define lp = e+ mu+
@@ -60,11 +54,11 @@ EOF
       >> "$1/Cards/me5_configuration.txt"
 }
 
-write_cards "$WORK/unpol" $N_UNPOL
-write_cards "$WORK/pp"    $N_LIKE
-write_cards "$WORK/mm"    $N_LIKE
-write_cards "$WORK/pm"    $N_OPP
-write_cards "$WORK/mp"    $N_OPP
+write_cards "$WORK/unpol"    $N_EVENTS
+write_cards "$WORK/pp"    $N_EVENTS
+write_cards "$WORK/mm"    $N_EVENTS
+write_cards "$WORK/pm"    $N_EVENTS
+write_cards "$WORK/mp"    $N_EVENTS
 
 for d in unpol pp mm pm mp; do
   ( "$WORK/$d/bin/generate_events" -f closure > "$WORK/log_$d.txt" 2>&1 ) &

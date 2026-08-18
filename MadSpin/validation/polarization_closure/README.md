@@ -1,6 +1,7 @@
 # Closure test of the MadSpin production-polarisation restriction
 
-`p p > t t~` at 13 TeV, LO, dileptonic, MadSpin `spinmode = madspin` (density).
+`p p > t t~` at 13 TeV, LO, dileptonic, MadSpin `spinmode = onshell` (a density
+spinmode -- see "Which spinmode, and why" below).
 
 Validation of PR #349 (`claude/ms-density-pol-restrict`, commit `30e0596f7`,
 which contains #355 -- the polarisation is defined on the `me_frame` axis, i.e.
@@ -55,18 +56,54 @@ expected to be large.
   direction in `me_frame`.
 * `cos theta_k(l-)` is measured against the **antitop** helicity axis (`-k`).
 
+## Which spinmode, and why
+
+`_density_spinmode()` (`MadSpin/interface_madspin.py`) covers `madspin`/`full`,
+`PA` and `onshell`.  All of them go through
+`calculate_matrix_element_from_density`, i.e. through the `set_hel_restriction`
+mask that #349 adds and the `_frame_boost` that #355 fixes.  `onshell` differs
+from `madspin` only in that it does **not** Breit-Wigner-reshuffle the
+virtualities; the spin-density convolution being validated here is identical.
+
+The test uses `onshell` because the offshell mode is unusable for a polarised
+production on this process.  Measured accept/reject cost, same cards, same
+machine:
+
+| production | spinmode | trials per written event |
+|---|---|---|
+| `p p > t t~` (unpolarised) | `madspin` (offshell) | **4.05** |
+| `p p > t{+} t~{+}` | `madspin` | **213** |
+| `p p > t{-} t~{-}` | `madspin` | **204** |
+| `p p > t{-} t~{+}` | `madspin` | **5800 - 6300** (and 1066 in a rerun that differed only in `nevents`) |
+| `p p > t{+} t~{-}` | `onshell` | **4.48** |
+
+Two things are worth separating here.
+
+* Part of the like-helicity penalty is expected: a fully polarised production is
+  a narrower target for an accept/reject whose bound is set on the widest
+  configuration seen in the probe.
+* The opposite-helicity numbers are **not** in that category.  A factor 1400
+  between `madspin` and `onshell` on the *same* production, and a factor ~6
+  between two `madspin` runs of the same process that differ only in `nevents`
+  (i.e. only in the max-weight probe), say the bound is being driven by a long
+  tail rather than by a stable maximum.  The likely mechanism is that the
+  reshuffling recomputes a *polarised* `|M|^2` on displaced momenta, and a
+  polarised matrix element -- unlike the helicity sum -- has no sum rule
+  protecting it against that displacement (the same effect that makes
+  `SMATRIX(lab)/SMATRIX(CM)` run from 0.5 to 7.25 for `w+{0}` while the sum is
+  invariant to 1e-8, see `MADSPIN_SEQUENTIAL_PLAN.md`).
+  This is a **CPU / usability** problem, not a correctness one -- an
+  over-estimated bound is always safe, no overflow warnings were emitted, and
+  the closure results below are unaffected -- but it makes `spinmode=madspin`
+  impractical for polarised `t t~` and is worth a follow-up.
+
 ## Samples
 
-See `run_closure.sh`.  Same run card, same MadEvent seed (`iseed = 4321`), same
-MadSpin seed (`7777`), same MadSpin card for all five.  Each polarised process
-is a separate MadEvent output -- a polarised amplitude cannot be extracted from
-a single unpolarised run.
-
-Event counts are **not** identical across samples, on purpose: the
-opposite-helicity samples carry half the cross section of the like-helicity ones
-and are ~5x slower in the MadSpin accept/reject, so `N` proportional to `sigma`
-(50k / 50k / 20k / 20k) is the optimal allocation and keeps the per-event weight
-nearly uniform across the four samples that get summed.
+See `run_closure.sh`.  Same run card, same number of events (**50 000 unweighted
+events per sample**, 250 000 in total), same MadEvent seed (`iseed = 4321`),
+same MadSpin seed (`7777`), same MadSpin card for all five.  Each polarised
+process is a separate MadEvent output -- a polarised amplitude cannot be
+extracted from a single unpolarised run.
 
 Note that QCD is parity conserving, so `|M(+,+)|^2 = |M(-,-)|^2` and
 `|M(+,-)|^2 = |M(-,+)|^2` point by point.  With one shared seed, MadEvent
