@@ -1349,6 +1349,8 @@ class TestProductionPolarizationPlumbing(unittest.TestCase):
         _density_spinmode = interface_madspin.MadSpinInterface._density_spinmode
         _apply_production_polarization = \
             interface_madspin.MadSpinInterface._apply_production_polarization
+        _format_polarization_sequence = staticmethod(
+            interface_madspin.MadSpinInterface._format_polarization_sequence)
         do_decay = interface_madspin.MadSpinInterface.do_decay
 
     HEL = {1: [0], 2: [1, -1], 3: [-1, 0, 1]}
@@ -1366,20 +1368,20 @@ class TestProductionPolarizationPlumbing(unittest.TestCase):
         ALLOW_HEL combination, and a polarised process has no NHEL row outside
         its polarisation -- so the allowed helicity has to lead, or the whole
         production density matrix comes back zero."""
-        stub = self._Stub({24: (0,)})
+        stub = self._Stub({24: ((0,),)})
         got, restriction = stub._apply_production_polarization(
                                         [24], [list(self.HEL[3])])
         self.assertEqual(got, [[0, -1, 1]])
         self.assertEqual(restriction, ((0,),))
 
-        stub = self._Stub({6: (-1,)})
+        stub = self._Stub({6: ((-1,),)})
         got, restriction = stub._apply_production_polarization(
                                         [6], [list(self.HEL[2])])
         self.assertEqual(got, [[-1, 1]])
         self.assertEqual(restriction, ((-1,),))
 
     def test_transverse_keeps_two_states_and_drops_zero_from_the_front(self):
-        stub = self._Stub({24: (-1, 1)})
+        stub = self._Stub({24: ((-1, 1),)})
         got, restriction = stub._apply_production_polarization(
                                         [24], [list(self.HEL[3])])
         self.assertEqual(got, [[-1, 1, 0]])
@@ -1388,7 +1390,7 @@ class TestProductionPolarizationPlumbing(unittest.TestCase):
     def test_restriction_is_per_particle(self):
         """t{0} t~{T}: slot 1 collapses onto its diagonal 0 entry, slot 2 keeps
         the -1/+1 block, and an unpolarised third particle keeps everything."""
-        stub = self._Stub({24: (0,), -24: (-1, 1)})
+        stub = self._Stub({24: ((0,),), -24: ((-1, 1),)})
         got, restriction = stub._apply_production_polarization(
                     [24, -24, 6], [list(self.HEL[3]), list(self.HEL[3]),
                                    list(self.HEL[2])])
@@ -1398,12 +1400,12 @@ class TestProductionPolarizationPlumbing(unittest.TestCase):
     def test_unsupported_polarization_is_refused(self):
         """{A}, {G}, ... have no place in the -1/0/+1 helicity basis the density
         matrices are built on."""
-        stub = self._Stub({24: (99,)})
+        stub = self._Stub({24: ((99,),)})
         self.assertRaises(stub.InvalidCmd,
                           stub._apply_production_polarization,
                           [24], [list(self.HEL[3])])
         # a longitudinal brace on a fermion cannot be honoured either
-        stub = self._Stub({6: (0,)})
+        stub = self._Stub({6: ((0,),)})
         self.assertRaises(stub.InvalidCmd,
                           stub._apply_production_polarization,
                           [6], [list(self.HEL[2])])
@@ -1426,6 +1428,180 @@ class TestProductionPolarizationPlumbing(unittest.TestCase):
             self.assertTrue(self._Stub(spinmode=mode)._density_spinmode())
         for mode in ('none', 'madspin_v1', 'onshell_v1'):
             self.assertFalse(self._Stub(spinmode=mode)._density_spinmode())
+
+
+class TestSamePdgProductionPolarization(unittest.TestCase):
+    """'p p > w+{0} w+{T}': the same pdg twice with different braces.
+
+    The density basis lays its slots out as 'for pdg in decays_key, in
+    production-event order', so a pdg owns a contiguous block of slots whose
+    k-th entry is the k-th such particle of the event; the k-th brace of that
+    pdg in the process line goes to it.
+    """
+
+    Stub = TestProductionPolarizationPlumbing._Stub
+    HEL = TestProductionPolarizationPlumbing.HEL
+
+    class _Banner(object):
+        def __init__(self, lines):
+            self.proc_card = list(lines)
+
+    class _PolStub(object):
+        """_production_polarization on top of a banner, with the real MG5
+        process parser replaced by a minimal one: the point under test is the
+        bookkeeping, not MG5's brace syntax (which the parser owns)."""
+        InvalidCmd = interface_madspin.MadSpinInterface.InvalidCmd
+        _production_polarization = \
+            interface_madspin.MadSpinInterface._production_polarization
+        _format_polarization_sequence = staticmethod(
+            interface_madspin.MadSpinInterface._format_polarization_sequence)
+
+        POL = {'0': [0], 'T': [1, -1], '+': [1], '-': [-1], 'A': [99]}
+        NAMES = {'w+': [24], 'w-': [-24], 'z': [23], 't': [6], 't~': [-6],
+                 'p': [21, 2, -2], 'j': [21, 2, -2], 'V': [24, -24, 23]}
+
+        class _Leg(dict):
+            def get(self, key):
+                return self[key]
+
+        class _Proc(dict):
+            def get(self, key):
+                return self[key]
+
+        def __init__(self, lines):
+            self.banner = TestSamePdgProductionPolarization._Banner(lines)
+            self.mg5cmd = self
+
+        def extract_process(self, line):
+            legs = []
+            initial, final = line.split('>')
+            for state, part in ([(False, p) for p in initial.split()] +
+                                [(True, p) for p in final.split()]):
+                pol = []
+                if '{' in part:
+                    part, brace = part.split('{')
+                    pol = self.POL[brace.rstrip('}')]
+                legs.append(self._Leg(ids=self.NAMES[part], state=state,
+                                      polarization=pol))
+            return self._Proc(legs=legs)
+
+    def polarization(self, *lines):
+        return self._PolStub(lines)._production_polarization()
+
+    # ------------------------------------------------------------------
+    # reading the process line
+    # ------------------------------------------------------------------
+
+    def test_same_pdg_two_braces_keeps_both_in_order(self):
+        self.assertEqual(self.polarization('generate p p > w+{0} w+{T}'),
+                         {24: ((0,), (-1, 1))})
+        # ... and the order is the process line's, not sorted
+        self.assertEqual(self.polarization('generate p p > w+{T} w+{0}'),
+                         {24: ((-1, 1), (0,))})
+
+    def test_uniform_polarisation_collapses_to_one_entry(self):
+        """Same brace twice is not a positional case: one entry, broadcast to
+        however many of that pdg the event holds."""
+        self.assertEqual(self.polarization('generate p p > z{0} z{0}'),
+                         {23: ((0,),)})
+
+    def test_partially_polarised_same_pdg(self):
+        """'z{0} z': the second Z has no brace and stays summed over."""
+        self.assertEqual(self.polarization('generate p p > z{0} z'),
+                         {23: ((0,), None)})
+
+    def test_broadcast_survives_extra_subprocesses(self):
+        """The multiplicity of a broadcast pdg does not have to match between
+        subprocesses -- this is the common 'generate X; add process X j' case."""
+        self.assertEqual(
+            self.polarization('generate p p > w+{0} w-',
+                              'add process p p > w+{0} w- j'),
+            {24: ((0,),)})
+
+    def test_same_sequence_in_several_subprocesses_is_fine(self):
+        self.assertEqual(
+            self.polarization('generate p p > w+{0} w+{T}',
+                              'add process p p > w+{0} w+{T} j'),
+            {24: ((0,), (-1, 1))})
+
+    def test_subprocesses_that_disagree_are_refused(self):
+        """Two lines with the same final state but different brace patterns
+        produce indistinguishable events -- refuse rather than pick one."""
+        for lines in (('generate p p > w+{0} w+{T}',
+                       'add process p p > w+{T} w+{0}'),
+                      ('generate p p > w+{0} w+{T}',
+                       'add process p p > w+{0} w+{0}'),
+                      ('generate p p > w+{0} w-',
+                       'add process p p > w+ w-')):
+            self.assertRaises(interface_madspin.MadSpinInterface.InvalidCmd,
+                              self.polarization, *lines)
+
+    def test_multiparticle_label_with_mixed_polarisation_is_refused(self):
+        """'p p > V{0} V{T}' with V a multiparticle label: how many of a given
+        pdg an event holds is not fixed by the line, so the n-th brace cannot
+        be pinned to the n-th particle."""
+        self.assertRaises(interface_madspin.MadSpinInterface.InvalidCmd,
+                          self.polarization, 'generate p p > V{0} V{T}')
+        # uniform braces inside a multiparticle label stay fine: no positional
+        # matching is needed there
+        self.assertEqual(self.polarization('generate p p > V{0} V{0}'),
+                         {24: ((0,),), -24: ((0,),), 23: ((0,),)})
+
+    def test_no_braces_gives_an_empty_map(self):
+        self.assertEqual(self.polarization('generate p p > w+ w-'), {})
+
+    # ------------------------------------------------------------------
+    # turning it into the per-slot basis / restriction
+    # ------------------------------------------------------------------
+
+    def test_slots_of_one_pdg_take_the_braces_in_order(self):
+        stub = self.Stub({24: ((0,), (-1, 1))})
+        got, restriction = stub._apply_production_polarization(
+                        [24, 24], [list(self.HEL[3]), list(self.HEL[3])])
+        # the allowed helicity leads each basis: the first ALLOW_HEL
+        # combination is (0, -1), which the polarised NHEL table does contain
+        self.assertEqual(got, [[0, -1, 1], [-1, 1, 0]])
+        self.assertEqual(restriction, ((0,), (-1, 1)))
+
+    def test_the_other_order_gives_the_other_assignment(self):
+        stub = self.Stub({24: ((-1, 1), (0,))})
+        got, restriction = stub._apply_production_polarization(
+                        [24, 24], [list(self.HEL[3]), list(self.HEL[3])])
+        self.assertEqual(got, [[-1, 1, 0], [0, -1, 1]])
+        self.assertEqual(restriction, ((-1, 1), (0,)))
+
+    def test_a_single_entry_is_broadcast_to_every_slot(self):
+        stub = self.Stub({24: ((0,),)})
+        got, restriction = stub._apply_production_polarization(
+                        [24, 24], [list(self.HEL[3]), list(self.HEL[3])])
+        self.assertEqual(got, [[0, -1, 1], [0, -1, 1]])
+        self.assertEqual(restriction, ((0,), (0,)))
+
+    def test_unbraced_occurrence_stays_unrestricted(self):
+        stub = self.Stub({23: ((0,), None)})
+        got, restriction = stub._apply_production_polarization(
+                        [23, 23], [list(self.HEL[3]), list(self.HEL[3])])
+        self.assertEqual(got, [[0, -1, 1], [-1, 0, 1]])
+        self.assertEqual(restriction, ((0,), None))
+
+    def test_two_pdgs_each_with_their_own_sequence(self):
+        """The per-pdg counter must not leak from one pdg block to the next."""
+        stub = self.Stub({24: ((0,), (-1, 1)), 23: ((1,),)})
+        got, restriction = stub._apply_production_polarization(
+                        [24, 24, 23], [list(self.HEL[3])] * 3)
+        self.assertEqual(got, [[0, -1, 1], [-1, 1, 0], [1, -1, 0]])
+        self.assertEqual(restriction, ((0,), (-1, 1), (1,)))
+
+    def test_length_mismatch_is_refused(self):
+        """A positional sequence that does not match the number of that pdg in
+        the event cannot be attached one by one."""
+        stub = self.Stub({24: ((0,), (-1, 1))})
+        self.assertRaises(stub.InvalidCmd,
+                          stub._apply_production_polarization,
+                          [24], [list(self.HEL[3])])
+        self.assertRaises(stub.InvalidCmd,
+                          stub._apply_production_polarization,
+                          [24, 24, 24], [list(self.HEL[3])] * 3)
 
 
 class TestKeepWeightForPolarization(unittest.TestCase):
@@ -1631,6 +1807,32 @@ class TestKeepWeightForPolarization(unittest.TestCase):
         self.assertEqual(got['0'], ((1,), (0,)))
         self.assertEqual(got['T'], ((1,), (-1, 1)))
         self.assertIs(got['-'], False)
+
+    def test_same_pdg_mixed_production_braces_are_intersected_per_slot(self):
+        """p p > w+{0} w+{T}: the two slots carry *different* production
+        restrictions, and keep_weight_for_polarization has to intersect with
+        each of them separately -- '0' survives on slot 0 only, 'T' on slot 1
+        only, and each keeps the other slot at its production value. Only a
+        polarisation impossible for *every* slot gives a zero weight."""
+        stub = self._Stub(['0', 'T', '+', '-'])
+        static = self._static([self.VECTOR, self.VECTOR],
+                              base=((0,), (-1, 1)))
+        got = dict(stub._polarization_restrictions(static))
+        # '0': slot 0 already longitudinal, slot 1 has no 0 left -> impossible
+        self.assertIs(got['0'], False)
+        # 'T': slot 0 has no transverse state left -> impossible
+        self.assertIs(got['T'], False)
+        # '+' / '-' are impossible on the longitudinal slot too
+        self.assertIs(got['+'], False)
+        self.assertIs(got['-'], False)
+
+        # with an *unbraced* second W the picture is the interesting one: the
+        # restriction is honoured slot by slot
+        static = self._static([self.VECTOR, self.VECTOR], base=((0,), None))
+        got = dict(stub._polarization_restrictions(static))
+        self.assertEqual(got['0'], ((0,), (0,)))
+        self.assertIs(got['T'], False)
+        self.assertIs(got['+'], False)
 
     def test_an_impossible_polarisation_weighs_zero(self):
         stub = self._Stub(['-'])

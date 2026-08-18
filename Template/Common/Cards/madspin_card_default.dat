@@ -35,6 +35,16 @@
 #         'p p > t t~ z' the entry '0' restricts the Z only. The ratio is
 #         positive but not bounded by 1 event by event: the interference terms
 #         a polarisation drops can be negative.
+#
+# Polarisation of the PRODUCTION process ('generate p p > w+{0} w-'):
+#         the density spin modes restrict the production/decay convolution to
+#         the polarisation each brace asks for, so the decay products follow
+#         that polarisation. The same particle may appear several times with
+#         different braces -- 'p p > z{0} z{T}' -- in which case the n-th
+#         particle of that pdg in the event follows the n-th brace of the
+#         process line. Braces on a 'decay' line are refused instead (they
+#         would restrict the branching ratio, not the correlation); use
+#         spinmode=none or spinmode=madspin_v1 for those.
  set max_weight_ps_point 400  # number of PS to estimate the maximum for each event
 
 define light = 1 2 3 4 5 -1 -2 -3 -4 -5 11 12 13 14 15 16 -11 -12 -13 -14 -15 -16

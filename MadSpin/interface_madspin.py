@@ -4795,8 +4795,22 @@ class MadSpinInterface(extended_cmd.Cmd):
         return self.options['spinmode'] in ['madspin', 'full', 'PA', 'onshell']
 
     def _production_polarization(self):
-        """``pdg -> tuple(allowed helicities)`` from the polarisation braces of
-        the *production* process, e.g. ``p p > t{0} t~``.
+        """``pdg -> tuple`` of the polarisation braces of the *production*
+        process, one entry per occurrence of that pdg among the final-state
+        legs, in process-line order: ``p p > t{0} t~`` gives
+        ``{6: ((0,),)}`` and ``p p > w+{0} w+{T}`` gives
+        ``{24: ((0,), (-1, 1))}``. An entry is ``None`` for an occurrence
+        that carries no brace.
+
+        A pdg whose occurrences all carry the *same* brace is collapsed to a
+        single entry, which then applies to however many of that pdg the event
+        holds ('broadcast'). That is what keeps a stack of subprocesses with
+        different multiplicities -- ``generate p p > t{0} t~`` plus
+        ``add process p p > t{0} t~ j`` -- working. A pdg with *different*
+        braces on different legs cannot be broadcast: it keeps its full
+        sequence and is matched positionally, the n-th such pdg of the event
+        taking the n-th brace (see ``_apply_production_polarization`` for why
+        that correspondence holds).
 
         MadSpin regenerates the production matrix element from the banner's
         proc_card, braces included, so the braces are exactly what MG5 saw. They
@@ -4824,7 +4838,10 @@ class MadSpinInterface(extended_cmd.Cmd):
                   if re.search(r'^\s*add\s+process', line)]
 
         if any('{' in line for line in lines):
-            unpolarized = set()
+            # pdg -> (canonical sequence, the line it came from), so that a
+            # disagreement between two process lines can name both of them.
+            source = {}
+            multi_id = set()
             for line in lines:
                 try:
                     procdef = self.mg5cmd.extract_process(line)
@@ -4834,34 +4851,60 @@ class MadSpinInterface(extended_cmd.Cmd):
                                    'matrix convolution is left unrestricted.'
                                    % (line, error))
                     continue
+                seq = collections.OrderedDict()
                 for leg in procdef.get('legs'):
                     # initial-state polarisation is the beampol machinery, not this
                     if not leg.get('state'):
                         continue
                     pol = leg.get('polarization')
+                    pol = tuple(sorted(set(int(p) for p in pol))) if pol else None
                     ids = [int(i) for i in leg.get('ids')]
-                    if not pol:
-                        unpolarized.update(ids)
-                        continue
-                    pol = tuple(sorted(set(int(p) for p in pol)))
                     for pdg in ids:
-                        if out.setdefault(pdg, pol) != pol:
-                            raise self.InvalidCmd(
-                                'MadSpin: particle %s is produced with two different '
-                                'polarisations (%s and %s) in the production process. '
-                                'The density spin modes cannot tell which one a given '
-                                'final-state particle carries.'
-                                % (pdg, out[pdg], pol))
-            clash = unpolarized.intersection(out)
-            if clash:
-                raise self.InvalidCmd(
-                    'MadSpin: particle(s) %s are polarised in one production process '
-                    'and unpolarised in another. Please use a single, consistent '
-                    'polarisation for the particles MadSpin decays.'
-                    % ', '.join(str(p) for p in sorted(clash)))
+                        seq.setdefault(pdg, []).append(pol)
+                        if len(ids) > 1:
+                            multi_id.add(pdg)
+                for pdg, pols in seq.items():
+                    # all occurrences agree -> broadcast, the multiplicity of
+                    # the line then does not have to match the event's
+                    canonical = tuple(pols[:1]) if len(set(pols)) == 1 else tuple(pols)
+                    if pdg in source and source[pdg][0] != canonical:
+                        raise self.InvalidCmd(
+                            'MadSpin: particle %s carries the polarisation(s) %s in '
+                            'the production process "%s" and %s in "%s". The density '
+                            'spin modes have no way to tell, event by event, which of '
+                            'the two a given final-state particle follows. Please use '
+                            'one consistent polarisation pattern for the particles '
+                            'MadSpin decays.'
+                            % (pdg, self._format_polarization_sequence(source[pdg][0]),
+                               source[pdg][1],
+                               self._format_polarization_sequence(canonical), line))
+                    source[pdg] = (canonical, line)
+            for pdg, (canonical, line) in source.items():
+                if all(p is None for p in canonical):
+                    continue
+                if len(canonical) > 1 and pdg in multi_id:
+                    # 'p p > V{0} V{T}' with a multiparticle V: how many of a
+                    # given pdg an event holds is not fixed by the process line,
+                    # so the n-th brace cannot be pinned to the n-th particle.
+                    raise self.InvalidCmd(
+                        'MadSpin: particle %s appears with different polarisations '
+                        '(%s) inside a multiparticle label in the production process '
+                        '"%s". The number of %s in an event is then not fixed by the '
+                        'process line, so MadSpin cannot tell which particle carries '
+                        'which polarisation. Please spell the polarised legs out with '
+                        'explicit particle names.'
+                        % (pdg, self._format_polarization_sequence(canonical), line, pdg))
+                out[pdg] = canonical
 
         self._production_polarization_cache = out
         return out
+
+    @staticmethod
+    def _format_polarization_sequence(sequence):
+        """A polarisation sequence as it reads in a process line, for errors."""
+        names = {(0,): '{0}', (1,): '{+}', (-1,): '{-}', (-1, 1): '{T}'}
+        return ' '.join('(none)' if p is None else names.get(p, str(list(p)))
+                        for p in sequence)
 
     def _apply_production_polarization(self, decaying_pdg, helicities):
         """Turn the production polarisation into (helicity bases, restriction).
@@ -4884,15 +4927,62 @@ class MadSpinInterface(extended_cmd.Cmd):
           an allowed helicity first is what makes the spectator helicity sum
           find its rows. The order is untouched without braces, so nothing
           moves for unpolarised runs.
+
+        Same pdg, different braces ('p p > w+{0} w+{T}')
+        ------------------------------------------------
+        ``decaying_pdg`` is in slot order -- for pdg in decays_key, in
+        production-event order within a pdg -- so the slots of one pdg form a
+        contiguous block whose k-th entry is the k-th such particle of the
+        event. The k-th brace of that pdg is handed to that k-th slot, and the
+        correspondence is exact rather than a guess:
+
+        * MG5 keeps the legs of a process in the order they were typed (leg
+          number 1..n), and a leg's polarisation is part of its identity -- two
+          same-pdg legs with different braces have an ``identical_particle_factor``
+          of 1, so no symmetrisation and no momentum permutation is applied to
+          them anywhere between the amplitude and the event file;
+
+        * ``lhe_parser.Event.get_momenta`` maps the event's k-th particle of a
+          pdg onto the k-th slot of that pdg in the matrix element's leg order.
+          The momentum the matrix element sees at leg number ``position[k]`` is
+          therefore the event particle slot k stands for. The brace read off
+          leg ``position[k]`` of the process line and the density matrix
+          computed at ``position[k]`` describe the same object by construction.
+
+        A wrong assignment could not go unnoticed either: ``GET_DENSITY``
+        selects the NHEL rows of the *polarised* process by matching them
+        against the first ``ALLOW_HEL`` combination, which is built from the
+        head of each basis below. Handing '{T}' to the leg MG5 generated as
+        '{0}' asks for a helicity combination the polarised NHEL table does not
+        contain, and the production density matrix comes back identically zero
+        -- a loud failure, not a small bias.
         """
         pol_map = self._production_polarization()
         if not pol_map:
             return helicities, None
 
         helicities = list(helicities)
+        multiplicity = collections.Counter(decaying_pdg)
+        seen = collections.Counter()
         restriction = []
         for k, pdg in enumerate(decaying_pdg):
-            allowed = pol_map.get(pdg)
+            sequence = pol_map.get(pdg)
+            occurrence = seen[pdg]
+            seen[pdg] += 1
+            if not sequence:
+                allowed = None
+            elif len(sequence) == 1:
+                # one brace for every particle of that pdg
+                allowed = sequence[0]
+            elif len(sequence) != multiplicity[pdg]:
+                raise self.InvalidCmd(
+                    'MadSpin: the production process gives %d polarisation(s) (%s) '
+                    'for particle %s but the event holds %d of them. The braces can '
+                    'only be attached to the particles one by one when the two agree.'
+                    % (len(sequence), self._format_polarization_sequence(sequence),
+                       pdg, multiplicity[pdg]))
+            else:
+                allowed = sequence[occurrence]
             basis = list(helicities[k])
             if not allowed:
                 restriction.append(None)
