@@ -3357,6 +3357,11 @@ class MadSpinInterface(extended_cmd.Cmd):
         # See MADSPIN_SEQUENTIAL_PLAN.md section 13.7.
         pure_interference = bool(self._pure_interference())
         nb_pi_reject = 0   # production events that drew a rejected decay set
+        nb_pi_overflow = 0 # |w| above the bound: accepted with probability 1
+                           # instead of |w|/maxwgt, so those events are
+                           # under-represented and S is biased. The z test is
+                           # the most sensitive monitor of that we have, so the
+                           # two are reported together (section 13.8).
         sum_w = 0.0        # signed weight sum, for the zero-cross-section check
         sum_w2 = 0.0       # its second moment: no cancellation, so the MC error
         nb_try = 0
@@ -3489,6 +3494,8 @@ class MadSpinInterface(extended_cmd.Cmd):
                     # output weight instead
                     test = abs(test)
                     wsign = -1.0 if (wgt*jac) < 0 else 1.0
+                    if test > maxwgt:
+                        nb_pi_overflow += 1
                 if random.random()*maxwgt < test:
                     accepted = True
                     if offshell_density:
@@ -3585,6 +3592,7 @@ class MadSpinInterface(extended_cmd.Cmd):
                     # one shard or many gives the identical zero-cross-section
                     # test (section 13.8)
                     nb_pi_reject=nb_pi_reject,
+                    nb_pi_overflow=nb_pi_overflow,
                     sum_w=float(sum_w),
                     sum_w2=float(sum_w2),
                     sequential_stats=dict(sequential_stats))
@@ -3698,8 +3706,16 @@ class MadSpinInterface(extended_cmd.Cmd):
         S = sum(s.get('sum_w', 0.0) for s in stats_list)
         sum_w2 = sum(s.get('sum_w2', 0.0) for s in stats_list)
         nb_pi_reject = sum(s.get('nb_pi_reject', 0) for s in stats_list)
+        overflow = sum(s.get('nb_pi_overflow', 0) for s in stats_list)
         delta = math.sqrt(sum_w2)
         z = (S / delta) if delta else 0.0
+        if overflow:
+            logger.critical(
+                "MadSpin pure_interference: %d trial(s) had |w| ABOVE the "
+                "maximum weight. Those are accepted with probability 1 instead "
+                "of |w|/maxwgt, so they are under-represented and the weight "
+                "sum is biased -- raise nb_sigma or Nevents_for_max_weight. "
+                "Read the z value below with that in mind.", overflow)
 
         keep = float(n_written) / n_processed if n_processed else 0.0
         logger.info(
@@ -3730,6 +3746,7 @@ class MadSpinInterface(extended_cmd.Cmd):
             '#  MC error   sqrt(sum w^2)     : %+.8e' % delta,
             '#  z = S / error                : %+.4f' % z,
             '#  Events written / read        : %d / %d' % (n_written, n_processed),
+            '#  Trials above the max weight  : %d' % overflow,
         ]
         self._rewrite_lhe_banner_cross(base_out, 0.0, n_written=n_written,
                                        note=note, note_tag='MGPureInterference')
@@ -3767,12 +3784,15 @@ class MadSpinInterface(extended_cmd.Cmd):
                 for line in src:
                     stripped = line.strip()
                     lowered = stripped.lower()
-                    if lowered.startswith('<init'):
+                    # '<init>' exactly: '<initrwgt>' also starts with '<init'
+                    # and sits *before* it in the header, so a prefix test
+                    # matches the multi-weight block and reads nothing.
+                    if lowered.startswith('<init>'):
                         in_init = True
                         continue
                     if not in_init:
                         continue
-                    if lowered.startswith('</init'):
+                    if lowered.startswith('</init>'):
                         break
                     parts = stripped.split()
                     if len(parts) == 4:
@@ -4116,12 +4136,16 @@ class MadSpinInterface(extended_cmd.Cmd):
                     dst.write('</%s>\n' % note_tag)
                     dst.write(line)
                     continue
-                if lstripped.startswith('<init'):
+                # '<init>' exactly, not a '<init' prefix: '<initrwgt>' is a
+                # different block, it sits earlier in the header, and its
+                # <weight> lines would otherwise be rescaled as if they were
+                # cross-section rows the moment one of them had four tokens.
+                if lstripped.startswith('<init>'):
                     in_init = True
                     dst.write(line)
                     continue
                 if in_init:
-                    if lstripped.startswith('</init'):
+                    if lstripped.startswith('</init>'):
                         in_init = False
                         dst.write(line)
                         continue

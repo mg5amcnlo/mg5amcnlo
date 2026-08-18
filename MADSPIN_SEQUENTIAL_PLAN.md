@@ -1689,13 +1689,18 @@ offshell runs with one or with three or more decaying particles.
 
 ## 13. Pure-interference mode -- feasibility assessment
 
-**Verdict up front: feasible with caveats, and the caveats are not small.** The
-tensor algebra is clean and is implemented (section 13.9, with unit tests). The
-*mode* -- syntax, signed unweighting, zero cross-section bookkeeping -- is a
-structural change to the accept/reject loop, is incompatible with the
-sequential scheme, and produces an LHE file whose `<init>` cross-section is
-zero, which several downstream tools cannot consume. It is **not** implemented,
-deliberately: see 13.9 for what is in the tree and 13.10 for the plan.
+**Status: implemented and validated end to end** (section 13.12). This section
+was written as a feasibility assessment before the mode existed; it is kept as
+the derivation, because every design decision below is still the one in the
+code. What changed since it was written is that 13.9's "not implemented" list
+is now empty -- see 13.9 for the final state of the tree.
+
+**Verdict as assessed: feasible with caveats, and the caveats are not small.**
+The tensor algebra is clean. The *mode* -- syntax, signed unweighting, zero
+cross-section bookkeeping -- is a structural change to the accept/reject loop,
+is incompatible with the sequential scheme, and produces an LHE file whose
+`<init>` cross-section is zero, which several downstream tools cannot consume.
+All of that held up; the accept/reject rework (13.7b) was indeed the hard part.
 
 The request, verbatim:
 
