@@ -29,18 +29,23 @@ whereas the redraw scheme of every ordinary sample delivers
     sum_events w * O        ->   (sigma / N)          * sum_p Int W O dOmega
                                  / c ,     c = <W>_decay-phase-space
 
-with ``c = 1 / prod_i n_i`` the SAME constant for every production event (this
-is exactly the property that makes redraw-until-accept unbiased; see
+where ``c = <W>`` is the SAME constant for every production event -- exactly the
+property that makes redraw-until-accept unbiased in the first place (see
 MADSPIN_SEQUENTIAL_PLAN.md section 13.7b).  Putting an interference sample on
 the same footing as the diagonal ones therefore needs the single factor
 
     max_weight / c ,
 
 nothing else.  ``max_weight`` is read from the log line this branch adds to
-``get_maxwgt_for_onshell``; ``c`` is *measured*, not assumed, from the
-unpolarised sample run in the ordinary joint scheme, where the unweighting
-efficiency is ``c / max_weight`` -- and is then compared against the analytic
-``1 / (2 * 2) = 0.25`` for two spin-1/2 particles.
+``get_maxwgt_for_onshell``.  ``c`` is *measured*, never assumed: the unpolarised
+reference sample is run in the ordinary joint scheme, where the unweighting
+efficiency is ``c / max_weight``, so ``c = eff * max_weight``.  (Up to the
+overall constant the decay-pool normalisation carries, ``c`` is the identity
+contraction ``1 / prod_i n_i``; that constant is a decay-side quantity -- the
+production density matrix cancels between the restricted contraction and its
+normalising trace -- so the same ``c`` applies to every one of the eleven
+samples.  ``run_c_check.sh`` measures it again on a braced production process
+rather than taking that on trust.)
 """
 
 import gzip
@@ -312,9 +317,9 @@ def main():
     # scheme precisely so that its unweighting efficiency delivers c/max_weight
     nw, nt = meta['unpol']['eff']
     c_meas = meta['unpol']['maxwgt'] * nw / float(nt)
-    c_analytic = 0.25                    # 1 / (n_t * n_tbar), both spin 1/2
-    meta['_c'] = dict(measured=c_meas, analytic=c_analytic,
-                      eff=nw / float(nt), maxwgt=meta['unpol']['maxwgt'])
+    meta['_c'] = dict(measured=c_meas, eff=nw / float(nt),
+                      rel_err=1.0 / math.sqrt(nw),
+                      maxwgt=meta['unpol']['maxwgt'])
 
     # ---- per-written-event normalisation, in pb ---------------------------
     for tag, label, kind in SAMPLES:
@@ -362,8 +367,9 @@ def main():
     with open(os.path.join(out_dir, 'meta.json'), 'w') as f:
         json.dump(clean, f, indent=1, default=str)
 
-    print('c measured = %.6f   (analytic 0.25, ratio %.4f)'
-          % (c_meas, c_meas / c_analytic))
+    print('c measured = %.6e  +- %.2f%%   (eff %.4f * max_weight %.6e)'
+          % (c_meas, 100.0 / math.sqrt(nw), nw / float(nt),
+             meta['unpol']['maxwgt']))
     for tag, label, kind in SAMPLES:
         m = meta[tag]
         extra = ''

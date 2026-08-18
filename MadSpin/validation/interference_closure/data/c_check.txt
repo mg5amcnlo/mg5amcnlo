@@ -1,0 +1,7 @@
+# run_c_check.sh, 10000 events each, ordinary joint mode
+# first pair:  p p > t t~{+}
+# second pair: p p > t{+} t~
+INFO: MadSpin: joint maximum weight = 1.2182289813673009e-09 
+INFO: MadSpin unweight efficiency: 0.1838 (10000 written / 54398 trials, 5.44 trials/event) 
+INFO: MadSpin: joint maximum weight = 1.2820691349321508e-09 
+INFO: MadSpin unweight efficiency: 0.1769 (10000 written / 56519 trials, 5.65 trials/event) 
