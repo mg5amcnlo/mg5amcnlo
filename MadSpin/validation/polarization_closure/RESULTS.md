@@ -196,22 +196,30 @@ the probe size is being set by a long tail, not by a stable maximum.  At
 6 000 trials/event the run needs ~120 M decay-pool events per particle and does
 not finish: this is what forced the switch to `onshell`.
 
-Two separate things are in that column and I could not disentangle them within
-this task: `madspin` is offshell *and* selects `unweighting = joint` for two
-decaying particles, while `onshell` selects `unweighting = sequential`
-(`auto`).  A one-line follow-up -- `spinmode madspin` with
-`set unweighting sequential` on `p p > t{-} t~{+}` -- would tell which of the
-two is responsible.
+Two things differ between those two columns -- `madspin` is offshell *and*
+selects `unweighting = joint` for two decaying particles, while `onshell`
+selects `unweighting = sequential` (both via `auto`).  **It is the unweighting
+scheme, not the offshellness.**  Measured directly, `p p > t{-} t~{+}`,
+2 000 events, `spinmode madspin` (still offshell) with an explicit
+`set unweighting sequential`:
 
-The plausible physics reason for the offshell half of it: the Breit-Wigner
-reshuffling re-evaluates a **polarised** `|M|^2` on displaced momenta, and a
-polarised matrix element has no sum rule protecting it against that
-displacement, unlike the helicity sum.  This is the same asymmetry that makes
-`SMATRIX(lab)/SMATRIX(partonic CM)` run from 0.51 to 7.25 for `w+{0}` while the
-sum over polarisations is invariant to 1.3e-8 (`MADSPIN_SEQUENTIAL_PLAN.md`).
+    MadSpin unweight efficiency: 0.1164 (2000 written / 17177 trials, 8.59 trials/event)
+
+**8.59** against **5800-6300** for the same offshell mode with the joint
+scheme -- a factor ~700 recovered by changing only the accept/reject
+organisation.  The joint bound is one number covering the whole `(mass set) x
+(decay of t) x (decay of t~)` space at once; the sequential scheme bounds each
+decaying particle separately, so a long tail in one factor no longer inflates
+the bound seen by the others.  Restricting `rho_prod` to a single helicity makes
+the joint weight much more sharply peaked, and that is what the joint bound
+cannot follow.
 
 This is a **CPU cost, not a bias**: an over-estimated max-weight bound is always
-safe, no `nb_overflow` warning was emitted in any run, and the analytic
-`<cos> = 0.316 +- 0.011` from the 2 000-event `madspin` polarised run is
-consistent with `1/3`.  But it makes `spinmode=madspin` impractical for
-polarised `t t~` and deserves a follow-up issue.
+safe, and no `nb_overflow` warning was emitted in any run.  The actionable
+follow-up is small and belongs with #349: `unweighting = auto` should prefer
+`sequential` when the production carries a polarisation brace, the way it
+already does under `PA`/`onshell`.
+
+Section 6 repeats the whole closure test in `spinmode madspin` +
+`unweighting sequential`, i.e. in the default offshell density mode, to confirm
+that none of the conclusions depend on the mode.
