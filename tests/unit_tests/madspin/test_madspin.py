@@ -3053,7 +3053,7 @@ class TestSequentialPoolLadder(unittest.TestCase):
         def get_particle(self, pdg):
             return TestSequentialPoolLadder._Part(self.spins[pdg])
 
-    def _stub(self, spins, **options):
+    def _stub(self, spins, polarization=None, **options):
         interface = interface_madspin.MadSpinInterface
         class Stub(object):
             _sequential_pool_ladder = interface._sequential_pool_ladder
@@ -3064,11 +3064,18 @@ class TestSequentialPoolLadder(unittest.TestCase):
             _log_once = interface._log_once
             _sequential_spin_order = interface._sequential_spin_order
             _decay_pool_ladder = staticmethod(interface._decay_pool_ladder)
+            _density_spinmode = interface._density_spinmode
+            _production_polarization = interface._production_polarization
         stub = Stub()
         stub.model = self._Model(spins)
         stub.options = {'unweighting': 'sequential', 'fixed_order': False,
                         'spinmode': 'PA', 'sequential_spin_order': '2 3 1'}
         stub.options.update(options)
+        # Seed _production_polarization's own cache rather than a banner: '{}'
+        # is what it returns for a process line without braces, and a dict of
+        # braces is what it returns for one with them. The parsing that fills
+        # it is covered by its own tests.
+        stub._production_polarization_cache = polarization or {}
         return stub
 
     NB = 1000
@@ -3145,6 +3152,83 @@ class TestSequentialPoolLadder(unittest.TestCase):
                 stub._nb_decaying = nb
                 self.assertEqual(stub._unweighting_mode(True), expected,
                                  '%s, %d decaying particles' % (spinmode, nb))
+
+    # a brace on the production, as _production_polarization returns it:
+    # 'p p > t{+} t~{+}' -> the (1,) helicity kept for both tops.
+    POL = {6: ((1,),), -6: ((1,),)}
+
+    def test_auto_is_per_particle_when_the_production_is_polarised(self):
+        """A production brace restricts the convolution to a polarisation
+        subspace, and the joint weight then sits far below the single bound the
+        max-weight scan hands it. Measured offshell on `p p > t t~` with both
+        tops decayed (500 events, so n=2 and the multiplicity rule alone would
+        say joint): `t{+}t~{+}` 112 trials per accepted event under joint
+        against 9.1 under sequential, `t{+}t~{-}` 162 against 8.4 -- while
+        unpolarised joint is the better of the two at 3.3 against 6.1. At 50000
+        events the joint column of the same three rises to 204-213, 5800-6300
+        and 4.05. So the brace overrides the multiplicity rule, at every n."""
+        for nb in (1, 2, 3, 6):
+            for spinmode in ('madspin', 'full'):
+                stub = self._stub({6: 2}, unweighting='auto', spinmode=spinmode,
+                                  polarization=self.POL)
+                stub._nb_decaying = nb
+                self.assertEqual(stub._unweighting_mode(True), 'sequential',
+                                 'polarised %s, %d decaying particles'
+                                 % (spinmode, nb))
+
+    def test_polarised_auto_leaves_the_unpolarised_resolution_alone(self):
+        """The clause keys on the brace and nothing else: the same stub without
+        one keeps the two-branch rule exactly."""
+        for nb, expected in [(1, 'joint'), (2, 'joint'),
+                             (3, 'sequential'), (6, 'sequential')]:
+            stub = self._stub({6: 2}, unweighting='auto', spinmode='madspin')
+            stub._nb_decaying = nb
+            self.assertEqual(stub._unweighting_mode(True), expected,
+                             'unpolarised, %d decaying particles' % nb)
+
+    def test_polarised_production_does_not_override_an_explicit_joint(self):
+        """Only 'auto' looks at the brace. A user who asks for joint gets joint,
+        slow or not -- it is the cross-check the staged schemes are validated
+        against, and losing it on polarised processes would leave them
+        unvalidated exactly where they matter most."""
+        for spinmode in ('madspin', 'full', 'PA', 'onshell'):
+            stub = self._stub({6: 2}, unweighting='joint', spinmode=spinmode,
+                              polarization=self.POL)
+            self.assertEqual(stub._unweighting_mode(True), 'joint', spinmode)
+            self.assertFalse(stub._sequential_active(True), spinmode)
+        # and the other explicit schemes are untouched too
+        for mode in ('two_stage', 'sequential', 'sequential_global_retry'):
+            stub = self._stub({6: 2}, unweighting=mode, spinmode='madspin',
+                              polarization=self.POL)
+            self.assertEqual(stub._unweighting_mode(True), mode)
+
+    def test_polarised_production_leaves_pa_and_onshell_where_they_were(self):
+        """PA/onshell already resolve to sequential under auto at every
+        multiplicity, so the brace has nothing to change there -- pinned so a
+        later reshuffle of the branches cannot make the polarised case take a
+        different path from the unpolarised one."""
+        for spinmode in ('PA', 'onshell'):
+            for nb in (1, 2, 3, 6):
+                for pol in (None, self.POL):
+                    stub = self._stub({6: 2}, unweighting='auto',
+                                      spinmode=spinmode, polarization=pol)
+                    stub._nb_decaying = nb
+                    self.assertEqual(stub._unweighting_mode(True), 'sequential',
+                                     '%s, %d decaying, pol=%s'
+                                     % (spinmode, nb, bool(pol)))
+
+    def test_polarised_auto_still_yields_to_the_joint_only_gates(self):
+        """fixed_order and '@' grouping force joint whatever auto resolved to;
+        the polarisation clause must not smuggle a staged scheme past them."""
+        stub = self._stub({6: 2}, unweighting='auto', spinmode='madspin',
+                          fixed_order=True, polarization=self.POL)
+        stub._nb_decaying = 2
+        self.assertEqual(stub._unweighting_mode(True), 'joint')
+        stub = self._stub({6: 2}, unweighting='auto', spinmode='madspin',
+                          polarization=self.POL)
+        stub._nb_decaying = 2
+        stub._decay_groups = {'1': {}, '2': {}}
+        self.assertEqual(stub._unweighting_mode(True), 'joint')
 
     def test_auto_is_per_particle_under_pa_at_every_multiplicity(self):
         """PA/onshell keep rho fixed on shell, so their mass stage costs a
