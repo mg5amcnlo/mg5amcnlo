@@ -142,7 +142,9 @@ to sit on the same footing as the diagonal ones.  Nothing else.
   `set unweighting joint`, where the unweighting efficiency is `c / max_weight`,
   so `c = eff * max_weight`.  `c` is a decay-side constant (the production
   density matrix cancels between the contraction and its normalising trace), so
-  it is common to all eleven samples.
+  it is common to all eleven samples -- and `run_c_check.sh` measures it again
+  on two *braced* production processes rather than taking that on trust
+  (agreement to 1%, `RESULTS.md` section 4).
 * the resulting factor is a *prediction*.  `plot_interference.py` also reports
   the best-fit scale `k` of the interference contribution against the
   unpolarised sample; `k = 1` is the prediction, and how close it comes is
@@ -154,6 +156,10 @@ to sit on the same footing as the diagonal ones.  Nothing else.
     bash    MadSpin/validation/interference_closure/run_interference.sh <workdir> 50000
     python3 MadSpin/validation/interference_closure/analyse_interference.py <workdir> data/
     python3 MadSpin/validation/interference_closure/plot_interference.py   data/ plots/
+
+and, for the normalisation cross-check of section 3,
+
+    bash MadSpin/validation/interference_closure/run_c_check.sh <workdir2> 10000
 
 `analyse_interference.py` writes `data/histograms.npz` (bin edges, sum of
 weights, sum of weights squared and raw counts per sample and observable) and
