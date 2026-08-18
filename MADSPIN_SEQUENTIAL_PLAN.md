@@ -63,19 +63,40 @@ Two things this is NOT:
   they build, so `rho_prod` comes back **fully unpolarised** in those indices
   even for a polarised process -- verified by evaluating `M0_GET_DENSITY`
   directly for `p p > t{L} t~` and for `p p > t t~`: identical entries,
-  including `rho(+1,+1)`. The restriction therefore changes results.
+  including `rho(+1,+1)`. End to end, `p p > t{R} t~` before this change gave
+  event blocks *byte-identical* to `p p > t t~`: the brace was ignored outright.
 - it is not free of a basis reordering. `GET_DENSITY` selects the rows of the
   process' `NHEL` table by matching them against the *first* `ALLOW_HEL`
   combination, and a polarised process has no `NHEL` row outside its
   polarisation. With the default `hel_dict` order (`[1,-1]`, `[-1,0,1]`) a
   `{L}`/`{-}`/`{0}` production matched nothing and handed back an identically
-  zero density matrix. `_apply_production_polarization` therefore puts an
+  zero density matrix -- and a zero `rho_prod` rejects *every* accept/reject
+  trial, so MadSpin did not fail, it **looped forever** regenerating decay-event
+  pools (observed: `p p > t{L} t~` and `p p > w+{0} w-` both spin indefinitely
+  on the pre-change code). `_apply_production_polarization` therefore puts an
   allowed helicity first in that particle's basis; the order is untouched when
   there is no brace.
 
 Polarisation on a **decay** line is rejected outright in the density spin modes
 (`do_decay`): the braces there would restrict the decay matrix element that
 defines the branching ratio, not the density matrix that is contracted.
+
+Validated end to end against the analytic decay distributions (`spinmode` in
+parentheses; theta measured in the parent rest frame against the parent's lab
+direction, which is the axis the helicity is quantised along):
+
+| production | observable | measured | expected |
+|---|---|---|---|
+| `p p > t t~` | `<cos>` of e+ from t | +0.015 +- 0.061 | ~0 (unpolarised) |
+| `p p > t{R} t~` (madspin) | idem | +0.409 +- 0.045 | +1/3 |
+| `p p > t{L} t~` (madspin) | idem | -0.352 +- 0.051 | -1/3 |
+| `p p > w+ w-` (madspin) | `<cos^2>` of e+ from W+ | 0.347 +- 0.007 | SM mixture |
+| `p p > w+{T} w-` (madspin / onshell) | idem | 0.393 / 0.398 +- 0.007 | 2/5 |
+| `p p > w+{0} w-` (madspin / PA) | idem | 0.198 / 0.208 +- 0.005 | 1/5 |
+
+In every polarised run the *un*polarised partner in the same event (the `t~`,
+which carries no brace) stayed compatible with zero, confirming the mask is
+per particle. A no-brace run is byte-identical to the pre-change code.
 
 ### The partial weight
 
