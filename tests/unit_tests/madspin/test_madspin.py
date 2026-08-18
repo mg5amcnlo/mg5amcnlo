@@ -2813,3 +2813,283 @@ class TestDecayGroupDraw(unittest.TestCase):
         evt_decayfile = {6: dict((i, self._Pool('c%d' % i)) for i in range(4))}
         out = stub.get_decay_from_file(production, evt_decayfile, 10)
         self.assertEqual([d.split(':')[0] for d in out[6]], ['c2', 'c3'])
+
+
+class TestCheckWeightIdentitySlotPairing(unittest.TestCase):
+    """_check_weight_identity: the PA branch undoes each accepted decay's boost
+    with ``parents[slot]``, and picks the slot with a free-running index over
+    the *grouped* walk of the ``decays`` dict.
+
+    Those two orderings coincide by construction, and this pins that down:
+
+      * ``_sequential_slots`` lays the slots out as "for pdg in decays_key, for
+        particle in production order", so a pdg owns a *contiguous* block of
+        slots and the blocks come in decays_key order;
+      * ``sequential_accept_reject`` builds the returned dict by ascending slot
+        (``for slot in range(len(order))``), never in accept/reject order --
+        ``_decay_slot_order`` decides which slot is *drawn* next and must never
+        permute the layout;
+      * so the dict's keys are in decays_key order, each pdg's list is that
+        pdg's slot block in ascending order, and the flat walk enumerates
+        slots 0 .. n-1.
+
+    A mis-pairing here would undo a boost with another particle's momentum and
+    corrupt the joint weight the check compares against. It is a *debug-only*
+    path (``sequential_debug``), so it could never move a physics result -- but
+    a silently wrong cross-check is worse than none.
+    """
+
+    MT = 173.0
+    MW = 79.8
+
+    # production final states, deliberately interleaved so that slot order and
+    # production order genuinely differ
+    LAYOUTS = {
+        # p p > t t~ t : slots are (t@0, t@2, t~@1) -- slot 1 belongs to the
+        # *third* final-state particle, so a free-running index over the
+        # production would hand it the anti-top
+        'ttxt': [6, -6, 6],
+        # three pdgs, two of them owning two slots each
+        'ttxwtxw': [6, -6, 24, -6, 24],
+        # a single pdg owning every slot
+        'tttt': [6, 6, 6, 6],
+    }
+
+    @staticmethod
+    def _energy(m, px, py, pz):
+        return math.sqrt(m * m + px * px + py * py + pz * pz)
+
+    @staticmethod
+    def _lhe(parts):
+        head = (' %d      1 +1.0000000e+00 1.00000000e+02 7.54677100e-03'
+                ' 1.17102600e-01' % len(parts))
+        lines = [head]
+        for (pid, status, m1, m2, px, py, pz, energy, mass) in parts:
+            lines.append(' %5d %2d %4d %4d    0    0 %+.10e %+.10e %+.10e'
+                         ' %.10e %.10e 0.0000e+00 9.0000e+00'
+                         % (pid, status, m1, m2, px, py, pz, energy, mass))
+        return '<event>\n' + '\n'.join(lines) + '\n</event>'
+
+    def _mass(self, pid):
+        return self.MW if abs(pid) == 24 else self.MT
+
+    def _production(self, pids):
+        """A production event whose final state carries ``pids``, each with its
+        own distinctive momentum so a mis-paired boost cannot go unnoticed."""
+        momenta = [(60.0 + 17 * i, 30.0 - 23 * i, 120.0 - 47 * i)
+                   for i in range(len(pids))]
+        tot_pz = sum(p[2] for p in momenta)
+        tot_e = sum(self._energy(self._mass(pid), *mom)
+                    for pid, mom in zip(pids, momenta))
+        parts = [(2, -1, 0, 0, 0.0, 0.0, (tot_e + tot_pz) / 2,
+                  (tot_e + tot_pz) / 2, 0.0),
+                 (-2, -1, 0, 0, 0.0, 0.0, -(tot_e - tot_pz) / 2,
+                  (tot_e - tot_pz) / 2, 0.0)]
+        for pid, (px, py, pz) in zip(pids, momenta):
+            mass = self._mass(pid)
+            parts.append((pid, 1, 1, 2, px, py, pz,
+                          self._energy(mass, px, py, pz), mass))
+        return lhe_parser.Event(self._lhe(parts))
+
+    def _decay_on(self, parent, channel=0):
+        """A two-body decay of ``parent``, built in its rest frame and then
+        boosted onto it -- which is the frame PA hands its accepted decays back
+        in, and the boost _check_weight_identity has to undo.
+
+        ``channel`` picks a different opening angle, i.e. a different decay
+        channel out of the pool: the pairing must not depend on it.
+        """
+        mass = self._mass(parent.pid)
+        sign = 1 if parent.pid > 0 else -1
+        half = mass / 2.0
+        angle = 0.3 + 0.7 * channel
+        parts = [(parent.pid, -1, 0, 0, 0.0, 0.0, 0.0, mass, mass),
+                 (sign * 5, 1, 1, 1, half * math.sin(angle), 0.0,
+                  half * math.cos(angle), half, 0.0),
+                 (sign * -5, 1, 1, 1, -half * math.sin(angle), 0.0,
+                  -half * math.cos(angle), half, 0.0)]
+        decay = lhe_parser.Event(self._lhe(parts))
+        # rest -> lab: Event.boost takes the event *into* the rest frame of the
+        # momentum it is given (it flips the spatial part), so the momentum
+        # that boosts out of it is the parent with its 3-momentum reversed
+        decay.boost(lhe_parser.FourMomentum(parent.E, -parent.px,
+                                            -parent.py, -parent.pz))
+        return decay
+
+    def _slots(self, production, pools):
+        interface = interface_madspin.MadSpinInterface
+        decays_key = interface._decaying_pdgs(production, pools)
+        particles, slot_to_index = interface._sequential_slots(production,
+                                                               decays_key)
+        # exactly what _density_basis puts in init_part, i.e. what PA hands
+        # _check_weight_identity as ``parents``
+        init_part = [part for pdg in decays_key for part in production
+                     if part.pid == pdg and part.status == 1]
+        return decays_key, particles, slot_to_index, init_part
+
+    @staticmethod
+    def _pools(pids):
+        # two decay channels per pdg: grouped iteration then has something to
+        # group, and the pool multiplicity must not enter the pairing
+        return dict((pid, {0: 'f', 1: 'f'}) for pid in set(pids))
+
+    @staticmethod
+    def _build_decays(particles, slot_to_index, slot_decays):
+        """The dict layout sequential_accept_reject returns -- copied verbatim
+        from its tail, so this test tracks it."""
+        decays = collections.defaultdict(list)
+        for slot in range(len(slot_to_index)):
+            decays[particles[slot_to_index[slot]].pid].append(slot_decays[slot])
+        return decays
+
+    # ------------------------------------------------------------------
+    # the ordering invariant itself
+    # ------------------------------------------------------------------
+
+    def test_grouped_walk_enumerates_the_slots_in_order(self):
+        """The flat index over decays.items() *is* the slot index, for every
+        layout -- including one where slot order and production order differ."""
+        for name, pids in self.LAYOUTS.items():
+            production = self._production(pids)
+            _, particles, slot_to_index, init_part = \
+                            self._slots(production, self._pools(pids))
+            slot_decays = dict((slot, ('slot', slot))
+                               for slot in range(len(slot_to_index)))
+            decays = self._build_decays(particles, slot_to_index, slot_decays)
+
+            index = 0
+            for pdg, decay_list in decays.items():
+                for decay in decay_list:
+                    self.assertEqual(decay[1], index,
+                                     '%s: grouped index %d is slot %d'
+                                     % (name, index, decay[1]))
+                    # and therefore parents[index] is that slot's particle
+                    self.assertIs(init_part[index],
+                                  particles[slot_to_index[decay[1]]])
+                    self.assertEqual(init_part[index].pid, pdg)
+                    index += 1
+            self.assertEqual(index, len(slot_to_index))
+
+    def test_slot_order_really_differs_from_production_order(self):
+        """Guard on the guard: if the layouts stopped being interleaved the
+        test above would pass vacuously."""
+        production = self._production(self.LAYOUTS['ttxt'])
+        _, _, slot_to_index, _ = self._slots(production,
+                                             self._pools(self.LAYOUTS['ttxt']))
+        self.assertEqual(slot_to_index, [0, 2, 1])
+        production = self._production(self.LAYOUTS['ttxwtxw'])
+        _, _, slot_to_index, _ = self._slots(
+                        production, self._pools(self.LAYOUTS['ttxwtxw']))
+        # t t~ W+ t~ W+ -> decays_key is (6, -6, 24), so the slots are
+        # (t@0), (t~@1, t~@3), (W@2, W@4): grouped by pdg, not production order
+        self.assertEqual(slot_to_index, [0, 1, 3, 2, 4])
+
+    def test_every_final_state_layout_pairs_by_slot(self):
+        """Swept over every final state of up to four particles drawn from
+        three pdgs: the invariant is a property of the construction, not of the
+        handful of layouts above."""
+        import itertools
+        interface = interface_madspin.MadSpinInterface
+        for size in range(1, 5):
+            for pids in itertools.product((6, -6, 24), repeat=size):
+                production = self._production(list(pids))
+                _, particles, slot_to_index, init_part = \
+                                self._slots(production, self._pools(pids))
+                slot_decays = dict((slot, slot)
+                                   for slot in range(len(slot_to_index)))
+                decays = self._build_decays(particles, slot_to_index,
+                                            slot_decays)
+                flat = [slot for lst in decays.values() for slot in lst]
+                self.assertEqual(flat, list(range(len(slot_to_index))),
+                                 'layout %s' % (pids,))
+                # the dict keys are decays_key order, i.e. first appearance
+                self.assertEqual(list(decays),
+                                 list(interface._decaying_pdgs(
+                                            production, self._pools(pids))))
+
+    # ------------------------------------------------------------------
+    # and what it buys: the real routine, boosting each decay back
+    # ------------------------------------------------------------------
+
+    class _Stub(object):
+        _check_weight_identity = \
+                interface_madspin.MadSpinInterface._check_weight_identity
+
+        def calculate_matrix_element_from_density(self, prod, decays, dd):
+            self.seen = decays
+            return 1.0, None, 1.0, 1.0, 1.0
+
+    def _run_check(self, production, decays, parents, nslot):
+        stub = self._Stub()
+        stats = collections.defaultdict(int)
+        stub._check_weight_identity(production, decays, {}, 1.0,
+                                    [[1, -1]] * nslot, stats,
+                                    offshell=False, keep_jac=False,
+                                    parents=parents)
+        return stub.seen, stats
+
+    def test_each_decay_is_boosted_by_its_own_slot_parent(self):
+        """The observable consequence: every decay was handed back boosted onto
+        its own parent, so undoing that boost with parents[slot] must leave
+        every mother at rest. Pairing slot k with anything else leaves it
+        moving."""
+        for name, pids in self.LAYOUTS.items():
+            production = self._production(pids)
+            _, particles, slot_to_index, init_part = \
+                            self._slots(production, self._pools(pids))
+            nslot = len(slot_to_index)
+            slot_decays = dict((slot, self._decay_on(init_part[slot],
+                                                     channel=slot % 2))
+                               for slot in range(nslot))
+            decays = self._build_decays(particles, slot_to_index, slot_decays)
+
+            seen, stats = self._run_check(production, decays, init_part, nslot)
+            self.assertEqual(stats['nb_identity_check'], 1)
+            nb = 0
+            for pdg, decay_list in seen.items():
+                for copy_evt in decay_list:
+                    mother = copy_evt[0]
+                    for comp in (mother.px, mother.py, mother.pz):
+                        self.assertAlmostEqual(comp, 0.0, places=5,
+                                               msg='%s: mother not at rest'
+                                                   % name)
+                    self.assertAlmostEqual(mother.E, self._mass(pdg), places=4)
+                    nb += 1
+            self.assertEqual(nb, nslot)
+
+    def test_swapping_two_same_pdg_decays_is_caught(self):
+        """The negative control the test above needs: give slot 0 the decay of
+        slot 1 (both tops, so no pdg tells them apart) and the boost no longer
+        undoes -- which is exactly the corruption a free-running index that did
+        not match the slots would produce."""
+        pids = self.LAYOUTS['ttxt']
+        production = self._production(pids)
+        _, particles, slot_to_index, init_part = \
+                        self._slots(production, self._pools(pids))
+        slot_decays = dict((slot, self._decay_on(init_part[slot]))
+                           for slot in range(len(slot_to_index)))
+        slot_decays[0], slot_decays[1] = slot_decays[1], slot_decays[0]
+        decays = self._build_decays(particles, slot_to_index, slot_decays)
+
+        seen, _ = self._run_check(production, decays, init_part,
+                                  len(slot_to_index))
+        moving = [max(abs(evt[0].px), abs(evt[0].py), abs(evt[0].pz))
+                  for lst in seen.values() for evt in lst]
+        self.assertEqual(sum(1 for m in moving if m > 1e-3), 2)
+
+    def test_production_order_parents_trip_the_assertion(self):
+        """And the cross-pdg case the assertion in _check_weight_identity
+        covers: selecting the parent by a free-running index over the
+        *production* final state instead of by slot hands slot 1 the anti-top.
+        That must be loud, not silently wrong."""
+        pids = self.LAYOUTS['ttxt']
+        production = self._production(pids)
+        _, particles, slot_to_index, init_part = \
+                        self._slots(production, self._pools(pids))
+        self.assertNotEqual([p.pid for p in particles],
+                            [p.pid for p in init_part])
+        slot_decays = dict((slot, self._decay_on(init_part[slot]))
+                           for slot in range(len(slot_to_index)))
+        decays = self._build_decays(particles, slot_to_index, slot_decays)
+        self.assertRaises(AssertionError, self._run_check, production, decays,
+                          particles, len(slot_to_index))
