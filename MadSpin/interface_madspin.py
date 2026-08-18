@@ -16,6 +16,7 @@
 from __future__ import division
 from __future__ import absolute_import
 import collections
+import itertools
 import logging
 import math
 import os
@@ -51,8 +52,91 @@ logger = logging.getLogger('decay.stdout') # -> stdout
 logger_stderr = logging.getLogger('decay.stderr') # ->stderr
 cmd_logger = logging.getLogger('cmdprint2') # -> print
 
+# ---------------------------------------------------------------------------
+# Polarisation labels accepted by keep_weight_for_polarization
+# ---------------------------------------------------------------------------
+# Same spelling and same meaning as MG5's polarisation braces:
+#   {L} -> [-1], {R}/{+} -> [1], {T} -> [-1,1], {0} -> [0]
+# Maps the (case-insensitive, brace-tolerant) user spelling onto
+# (canonical label, helicity values).
+POLARIZATION_ALIASES = {
+    '0': ('0', (0,)),
+    '+': ('+', (1,)),
+    'r': ('+', (1,)),
+    '-': ('-', (-1,)),
+    'l': ('-', (-1,)),
+    't': ('T', (-1, 1)),
+}
+
+
+def parse_polarization_label(label):
+    """(canonical label, helicity values) for one keep_weight_for_polarization
+    entry, or None if it is not one of 0/+/-/T (L and R aliasing - and +)."""
+    key = str(label).strip().lower()
+    if key.startswith('{') and key.endswith('}'):
+        key = key[1:-1].strip()
+    return POLARIZATION_ALIASES.get(key)
+
+
+def decay_density_tensor(slot_identity, helicities, slot_densities):
+    """The decay side of the sequential contraction: the tensor product of every
+    slot's normalised decay density, the slots still to be drawn contributing
+    I/n (``slot_identity``).
+
+    Factored out of ``_partial_density_contraction`` so the polarisation weights
+    can contract that same tensor against a differently masked production matrix
+    without rebuilding it.
+    """
+    density_dec = None
+    for slot, hel in enumerate(helicities):
+        density = slot_densities.get(slot)
+        if density is None:
+            density = slot_identity(hel)
+        else:
+            density = density.normalized()
+        if density_dec is None:
+            density_dec = density
+        else:
+            density_dec = density_dec.tensor_product(density)
+    return density_dec
+
+
+
+class MadSpinDegenerateWeight(madspin.MadSpinError):
+    """The accept/reject cannot ever accept: every trial weight is structurally
+    zero (or not a number), so the unweighting loop would redraw -- and keep
+    regenerating decay-event pools -- forever. Raised instead of looping.
+
+    This is NOT the same thing as a low acceptance: a slow-but-correct run
+    produces small *positive* weights and accepts one eventually. The guards
+    that raise this only trigger on weights that are exactly zero / negative /
+    NaN, i.e. on a numerator that cannot become positive no matter how many
+    decays are drawn."""
+    pass
+
+
+# How many consecutive structurally-dead trials (weight not finite and > 0) a
+# single production event may burn before the accept/reject gives up. Only
+# trials whose *matrix-element* factor is dead are counted, and any single
+# strictly positive weight resets the counter, so a genuinely inefficient but
+# correct run never reaches this bound however bad its acceptance is. Sized so
+# that it is unreachable by chance: with an acceptance as low as 1e-4 the
+# probability of this many consecutive zero *weights* (as opposed to rejected
+# positive weights, which do not count) is nil.
+MS_MAX_DEAD_TRIALS = 20000
+
 class MadSpinOptions(banner.ConfigFile):
-    
+
+    # Unweighting schemes that still work but are no longer offered to the
+    # user: they are kept out of the 'allowed' list above so that they show up
+    # neither in the completion nor in the "allowed values are ..." message,
+    # and are re-admitted one call at a time by __setitem__ below. 'two_stage'
+    # is here because it is not the fastest scheme at any multiplicity measured
+    # (see _unweighting_mode) -- it survives as an internal cross-check, the
+    # one staged scheme whose angle stage is a single joint test, and as such
+    # is still exercised by the parallel tests and the benchmarks.
+    hidden_unweighting_modes = ('two_stage',)
+
     def default_setup(self):
 
         self.add_param("max_weight", -1)
@@ -86,31 +170,98 @@ class MadSpinOptions(banner.ConfigFile):
                        "does not exist in a sample generated with a brace on that leg). The sample "
                        "then has zero total cross-section by construction and its event weights "
                        "carry a sign; see MADSPIN_SEQUENTIAL_PLAN.md section 13.")
+        self.add_param('keep_weight_for_polarization_vector', [], typelist=str,
+                       comment="density spin modes only. Polarisations (0, +, -, T; "
+                       "L/R accepted as aliases of -/+) offered to each decaying "
+                       "SPIN-1 particle. Together with "
+                       "keep_weight_for_polarization_fermion it defines a set of "
+                       "polarisation COMBINATIONS -- one per element of the cartesian "
+                       "product over the decaying particles, each particle drawing "
+                       "from the list of its own species -- and every event then "
+                       "carries one EXTRA weight per combination in its LHEF v3 <rwgt> "
+                       "block, equal to nominal_weight * (density convolution "
+                       "restricted to that combination) / (nominal density "
+                       "convolution). The nominal weight and the cross-section are "
+                       "untouched, and two empty lists (the default) change nothing at "
+                       "all. Example: on 'p p > t t~ z' with vector=[0, T, +, -] and "
+                       "fermion=[+, -] an event carries 2*2*4 = 16 extra weights, "
+                       "named after the per-particle assignment "
+                       "(ms_pol_6:+_-6:-_23:0 and so on, in density-basis slot order). "
+                       "A particle whose species list is empty -- and a scalar, which "
+                       "has no polarisation -- is left summed over its helicities and "
+                       "does not multiply the count; its slot shows up as '*' in the "
+                       "weight id. When the production process itself carries a "
+                       "polarisation brace, each slot's choices are intersected with "
+                       "it (a choice with an empty intersection is dropped) and the "
+                       "denominator is the (already restricted) nominal convolution, "
+                       "so a weight stays the fraction of the sample that is written "
+                       "out.")
+        self.add_param('keep_weight_for_polarization_fermion', [], typelist=str,
+                       comment="as keep_weight_for_polarization_vector, but the list "
+                       "offered to each decaying SPIN-1/2 particle. '0' is unphysical "
+                       "for a fermion and is dropped from its choices; 'T' is its full "
+                       "helicity basis, i.e. that particle summed over.")
+        self.add_param('keep_weight_for_polarization', [], typelist=str,
+                       comment="DEPRECATED spelling of the two options above: it sets "
+                       "both keep_weight_for_polarization_vector and "
+                       "keep_weight_for_polarization_fermion to the same list. Note "
+                       "that the meaning changed: the entries are no longer applied to "
+                       "every decaying particle at once, they are combined, so the "
+                       "number of extra weights is now the product over the decaying "
+                       "particles instead of the length of the list.")
         self.add_param('density_debug', False, comment='Turn on check against full ME calculation')
         self.add_param('density_tolerance', 1E-4, comment='Tolerance for deviation between density and full ME')
         self.add_param('decay_event_mult', 1E0, comment='Produce more events than needed so that MadSpin does not have to regenerate decay events')
         self.add_param('nb_core', 0, comment='Number of cores for the MadSpin parallel unweighting (0 = use the global MG5 nb_core). nb_core>1 enables the process-parallel unweighting path.')
         self.add_param('density_keep_jacobian', True, comment='PA spinmode only: fold the offshell-reshuffling phase-space jacobian into the accept/reject weight (default) instead of applying the reshuffle as a post-acceptance kinematic dressing (False). Ignored by the madspin/full spinmodes, which always include that jacobian.')
         self.add_param('unweighting', 'auto',
-                       allowed=['auto', 'joint', 'two_stage', 'sequential',
+                       allowed=['auto', 'joint', 'sequential',
                                 'sequential_global_retry',
                                 'sequential_with_mass'],
                        comment="how the accept/reject is organised (density modes). "
                        "joint: one test over the virtualities and every decay at once, the historical scheme. "
-                       "two_stage: unweight the set of virtualities first, then every decay against a single bound, redrawing only the decays on a rejection -- the production reshuffling and its density matrix are then evaluated once per accepted mass set instead of once per trial. "
-                       "sequential: as two_stage but one test per decaying particle, redrawing only the particle that was rejected. "
+                       "sequential: unweight the set of virtualities first, then one test per decaying particle, redrawing only the particle that was rejected -- the production reshuffling and its density matrix are then evaluated once per accepted mass set instead of once per trial. "
                        "sequential_global_retry: as sequential, but a rejected decay redraws the virtualities too. "
                        "sequential_with_mass: one test per decaying particle with that particle's virtuality drawn *inside* its own accept/reject, so nothing is ever frozen and no stage has a conditional normalisation to divide out. Needs a per-particle mass draw, i.e. the PA spinmode; elsewhere it falls back to sequential. "
-                       "two_stage, sequential and sequential_global_retry unweight the set of virtualities first; the first two then need a tabulated running-width factor, measured during the max-weight scan to ~0.5%, which is far inside the pole approximation these modes already assume; sequential_global_retry does without it at 2-3x the cost, and is meant as a cross-check rather than a default. "
+                       "sequential and sequential_global_retry unweight the set of virtualities first; the former then needs a tabulated running-width factor, measured during the max-weight scan to ~0.5%, which is far inside the pole approximation these modes already assume; sequential_global_retry does without it at 2-3x the cost, and is meant as a cross-check rather than a default. "
                        "auto: sequential under PA/onshell, where it was the fastest scheme at every decay multiplicity measured; offshell joint up to two decaying particles and sequential from three, since offshell every mass set costs a production reshuffle and a production density and below three decays there are not enough of them to save to pay for it.")
         self.add_param('sequential_decay', 'auto',
                        comment='DEPRECATED, use unweighting: True maps to sequential, False to joint.')
         self.auto_set.add('sequential_decay')
         self.add_param('sequential_spin_order', '2 3 1', comment='spin order (MG5 2S+1 convention) deciding which particle is accept/rejected first in the sequential unweighting modes: default fermions, then vectors, then scalars (which can never be rejected).')
-        self.add_param('sequential_debug', False, comment='the up-front-mass unweighting schemes (two_stage, sequential, sequential_global_retry): on every accepted chain, recompute the joint weight for the same production event, virtualities and decays and check that the product of the stage weights reproduces it (times the number of helicity states). Deterministic check of the decomposition itself -- the tabulated factor cancels out of it -- at roughly the cost of a joint trial per event. Debugging only.')
+        self.add_param('sequential_debug', False, comment='the up-front-mass unweighting schemes (sequential, sequential_global_retry): on every accepted chain, recompute the joint weight for the same production event, virtualities and decays and check that the product of the stage weights reproduces it (times the number of helicity states). Deterministic check of the decomposition itself -- the tabulated factor cancels out of it -- at roughly the cost of a joint trial per event. Debugging only.')
+
+    def __setitem__(self, name, value, change_userdefine=False, raiseerror=False):
+        """Let an old card keep an unweighting scheme we no longer advertise.
+
+        Hiding a scheme means dropping it from 'allowed', and ConfigFile then
+        refuses it outright -- which would turn a card written before the
+        scheme was retired into a warning plus a silent switch back to 'auto'.
+        The code path is untouched, so accept the value instead: widen the
+        allowed list for the duration of this one assignment and note it at
+        debug level, quietly enough not to re-advertise it.
+        """
+        if isinstance(name, str) and isinstance(value, str) and \
+                name.strip().lower() == 'unweighting' and \
+                value.strip().lower() in self.hidden_unweighting_modes:
+            value = value.strip().lower()
+            allowed = getattr(self, 'allowed_value', {}).get('unweighting')
+            if allowed is not None and value not in allowed:
+                logger.debug("MadSpin: unweighting = %s is an internal "
+                             "cross-check scheme, no longer offered in the "
+                             "card; honouring it since it was asked for "
+                             "explicitly.", value)
+                self.allowed_value['unweighting'] = list(allowed) + [value]
+                try:
+                    return super(MadSpinOptions, self).__setitem__(
+                        name, value, change_userdefine, raiseerror)
+                finally:
+                    self.allowed_value['unweighting'] = allowed
+        return super(MadSpinOptions, self).__setitem__(
+            name, value, change_userdefine, raiseerror)
 
     ############################################################################
-    ##  Special post-processing of the options                                ## 
+    ##  Special post-processing of the options                                ##
     ############################################################################
     def post_set_ms_dir(self, value, change_userdefine, raiseerror, *opts):
         """ special handling for set ms_dir """
@@ -134,6 +285,66 @@ class MadSpinOptions(banner.ConfigFile):
                 "beampol takes the polarisation of *both* beams, in percent: "
                 "'set beampol [%s, 0]' for the first beam only. Got %s value(s)."
                 % (value[0] if value else 0, len(value)))
+
+    @staticmethod
+    def _canonical_polarization_list(name, value):
+        """Reject an unknown polarisation label at card-reading time, and return
+        the canonical spelling (so '{l}' and 'L' both become '-'). Anything but
+        0/+/-/T (with L/R as aliases) has no meaning in the helicity bases the
+        density spin modes use."""
+        canonical = []
+        for entry in value:
+            parsed = parse_polarization_label(entry)
+            if parsed is None:
+                raise banner.InvalidCmd(
+                    "%s: '%s' is not a polarisation. "
+                    "Use 0, +, - or T (L and R are accepted as aliases of - and +)."
+                    % (name, entry))
+            if parsed[0] not in canonical:
+                canonical.append(parsed[0])
+        return canonical
+
+    def post_set_keep_weight_for_polarization_vector(self, value,
+                                                     change_userdefine,
+                                                     raiseerror, *opts):
+        if not value:
+            return
+        name = 'keep_weight_for_polarization_vector'
+        canonical = self._canonical_polarization_list(name, value)
+        if canonical != list(value):
+            dict.__setitem__(self, name, canonical)
+
+    def post_set_keep_weight_for_polarization_fermion(self, value,
+                                                      change_userdefine,
+                                                      raiseerror, *opts):
+        if not value:
+            return
+        name = 'keep_weight_for_polarization_fermion'
+        canonical = self._canonical_polarization_list(name, value)
+        if canonical != list(value):
+            dict.__setitem__(self, name, canonical)
+
+    def post_set_keep_weight_for_polarization(self, value, change_userdefine,
+                                              raiseerror, *opts):
+        """Deprecated alias for the two per-species options. The list is handed
+        to both of them; the entries a species has no use for are dropped when
+        the combinations are built ('0' on a fermion), so the old spelling keeps
+        meaning something -- but it now produces the *product* over the decaying
+        particles rather than one weight per entry, which is a different (and
+        much larger) set of weights, so the warning is worth its noise."""
+        if not value:
+            return
+        canonical = self._canonical_polarization_list(
+            'keep_weight_for_polarization', value)
+        logger.warning(
+            "MadSpin: 'keep_weight_for_polarization' is deprecated; use "
+            "'set keep_weight_for_polarization_vector %s' and "
+            "'set keep_weight_for_polarization_fermion %s'. Note that the "
+            "weights are now one per COMBINATION of the per-particle "
+            "polarisations, not one per entry.", canonical, canonical)
+        dict.__setitem__(self, 'keep_weight_for_polarization', canonical)
+        self['keep_weight_for_polarization_vector'] = list(canonical)
+        self['keep_weight_for_polarization_fermion'] = list(canonical)
 
     def beampol_me(self):
         """The beam polarisations in the convention the matrix elements use.
@@ -877,7 +1088,13 @@ class MadSpinInterface(extended_cmd.Cmd):
             return self.path_completion(text, curr_path, only_dirs = True)
         elif args[1] == "spinmode":
             return self.list_completion(text, ["full", "madspin", "none", "onshell", "PA", "madspin_v1", "onshell_v1"], line)
-         
+        elif args[1] == "unweighting":
+            # the advertised schemes only: the hidden ones stay settable but
+            # are not proposed (see MadSpinOptions.hidden_unweighting_modes)
+            return self.list_completion(text,
+                       list(self.options.allowed_value['unweighting']), line)
+
+
     def help_set(self):
         """help the set command"""
         
@@ -1337,6 +1554,14 @@ class MadSpinInterface(extended_cmd.Cmd):
             # than on the first event, deep inside a worker process
             self._production_polarization()
             self._validate_pure_interference()
+            self._polarization_weights_enabled()
+        elif (self.options['keep_weight_for_polarization_vector']
+              or self.options['keep_weight_for_polarization_fermion']):
+            raise self.InvalidCmd(
+                "keep_weight_for_polarization_vector/_fermion need a spin "
+                "density matrix to restrict, so they are only available in the "
+                "density spin modes (madspin/full, PA, onshell). Got "
+                "spinmode=%s." % spinmode)
         # The density modes decide about the '@' grouping later, in run_onshell,
         # where the production events say how many of each particle an event
         # carries. These two never can, so say it now rather than after the
@@ -2233,30 +2458,59 @@ class MadSpinInterface(extended_cmd.Cmd):
         
         # 1. Open input event file and check which particles to decay
         # - count the number of particles to be decayed.
-        to_decay = collections.defaultdict(int)	
+        to_decay = collections.defaultdict(int)
         nb_event = 0
+        # keep_weight_for_polarization_*: the set of topologies (final-state
+        # pdgs to be decayed, in production order) the file holds. The
+        # combinations -- hence the weight ids -- depend on it, and the banner
+        # is written before the first event is decayed, so it is collected here
+        # rather than discovered event by event. Only built when the option is
+        # on, so an unset option does not even allocate.
+        pol_weights = self._polarization_weights_enabled()
+        pol_layouts = set()
+        nb_decaying = 0
         for event in orig_lhe:
             if self.options['fixed_order']:
                 event = event[0]
             nb_event +=1
+            pol_sequence = [] if pol_weights else None
+            nb_this_event = 0
             for particle in event:
                 if particle.status == 1 and particle.pdg in asked_to_decay:
                     # final state and tag as to decay
                     to_decay[particle.pdg] += 1
+                    if pol_weights:
+                        pol_sequence.append(particle.pdg)
+                    nb_this_event += 1
                     # Properties of decaying particle
                     width = self.banner.get('param_card', 'decay', abs(particle.pdg)).value
                     mass = self.banner.get('param_card', 'mass', abs(particle.pdg)).value
                     color = self.model.get_particle(particle.pdg).get('color')
                     spin = self.model.get_particle(particle.pdg).get('spin')
                     decay_dict[particle.pdg] = [width, mass, color, spin]
+            if pol_weights:
+                pol_layouts.add(tuple(pol_sequence))
+            if nb_this_event > nb_decaying:
+                nb_decaying = nb_this_event
+        self._pol_event_layouts = pol_layouts
         #print(f"to_decay = {to_decay}")
         # How many particles decay in one event -- the same multiplicity the
         # pool ladder counts. It decides which unweighting scheme 'auto' picks,
         # so it is resolved once here rather than per event: the modes have
         # different bounds, and a mode that changed event to event would be
         # testing against somebody else's.
-        self._nb_decaying = sum(max(1, int(nb) // int(nb_event))
-                                for nb in to_decay.values()) if nb_event else 0
+        #
+        # Counted *per event* and maximised, not rebuilt from the per-pdg
+        # tally: a sample that mixes subprocesses carrying different decaying
+        # pdgs -- `p p > w+ j` together with `p p > w- j` -- decays exactly one
+        # particle per event, but lists two pdgs, and floor-averaging each of
+        # them to at least one reported two decaying particles. That over-count
+        # is what pushed `p p > w+/- j` onto a staged offshell scheme, which is
+        # precisely the case whose mass-set weight carries
+        # Tr(rho_off)/|M_prod|^2_on over orders of magnitude and that no bound
+        # covers (see _unweighting_mode): the acceptance test measured 1.8e4
+        # for the mass bound and 18e6 mass sets for 1000 events.
+        self._nb_decaying = nb_decaying
                 	
         with misc.MuteLogger(["madgraph", "madevent", "ALOHA", "cmdprint"], [50,50,50,50]):
             mg5 = self.mg5cmd
@@ -2462,13 +2716,8 @@ class MadSpinInterface(extended_cmd.Cmd):
         self.error *= self.branching_ratio
         
 
-        density_pole_approximation = self.options['spinmode'] in ['PA', 'onshell']
-        density_do_reshuffle = self.options['spinmode'] == 'PA'
-        density_needs_reshuffle = (
-            density_method
-            and (not density_pole_approximation
-                 or density_do_reshuffle)
-        )
+        density_pole_approximation = self._density_pole_approximation()
+        density_needs_reshuffle = self._density_needs_reshuffle(density_method)
 
         # 3. generate the various matrix-elements
         time_me_generation = time.time()
@@ -2481,12 +2730,7 @@ class MadSpinInterface(extended_cmd.Cmd):
         self.generate_all.compile()
         self.all_me = self.generate_all.all_me
         self.all_f2py = {}
-        self.all_amp = {}
-        self.all_nhel = {}
-        self.all_jamp = {}
-        self.all_inter = {}
         self.all_density = {}
-        self.all_matrix = {}
         time_me_generation = time.time() - time_me_generation
         logger.info(f"Time ME generation: {time_me_generation:.2f} sec")         
 	
@@ -2537,6 +2781,16 @@ class MadSpinInterface(extended_cmd.Cmd):
             branching_ratio=self.branching_ratio,
             base_seed=int(self.seed) if self.seed else random.randint(0, 30081*30081),
         )
+
+        # keep_weight_for_polarization_*: the extra weights have to be declared
+        # in the header before it is written, here rather than in each writer --
+        # the parallel path forks *after* this point and its workers write
+        # bannerless fragments merged under this same banner. evt_decayfile is
+        # only complete now, and it is what says which of the pdgs the file
+        # holds really end up with a density slot.
+        if self._polarization_weights_enabled():
+            self._declare_polarization_weights(
+                self._polarization_layout_statics(evt_decayfile))
 
         start = time.time()
         logger.info("Start generating decays")
@@ -2679,6 +2933,57 @@ class MadSpinInterface(extended_cmd.Cmd):
             position += multiplicity
         return ladder
 
+    # ------------------------------------------------------------------
+    # The two questions the unweighting branches keep asking
+    # ------------------------------------------------------------------
+    # (a) which *spinmode family* is this -- is the density matrix evaluated at
+    #     onshell momenta (pole approximation) or at the reshuffled ones? -- and
+    # (b) which *accept/reject scheme* is this -- is there a mass-set stage in
+    #     front of the angle stage?
+    # Both are asked from several places, so they get names rather than being
+    # spelled out as spinmode/mode string comparisons at each site.
+
+    def _density_pole_approximation(self):
+        """Whether the density matrix is taken in the pole approximation, i.e.
+        evaluated at onshell momenta (``PA``/``onshell``) rather than at the
+        reshuffled offshell ones (``madspin``/``full``)."""
+        return self.options['spinmode'] in ['PA', 'onshell']
+
+    def _density_do_reshuffle(self):
+        """Whether a pole-approximation run nevertheless reshuffles the
+        production onto the sampled virtualities. Only ``PA`` does: it samples a
+        virtuality per resonance, while ``onshell`` keeps the production
+        kinematics as they are."""
+        return self.options['spinmode'] == 'PA'
+
+    def _density_needs_reshuffle(self, in_density_mode):
+        """Whether the chain reshuffles the production event at all. Offshell it
+        always does -- that is where its density matrix is evaluated -- ``PA``
+        does because it samples virtualities, ``onshell`` never does, and
+        nothing does outside density mode.
+
+        ``in_density_mode`` is the caller's own way of knowing it is in density
+        mode (the ``density_method`` flag before the generation exists, and
+        ``self.generate_all.mode == 'density'`` afterwards)."""
+        return in_density_mode and (not self._density_pole_approximation()
+                                    or self._density_do_reshuffle())
+
+    def _spinmode_has_density(self):
+        """Whether the spinmode carries the density-matrix machinery the staged
+        accept/reject schemes are built on. The v1 spinmodes, ``none`` and
+        ``bridge`` do not, and keep the historical joint test."""
+        return (self._density_pole_approximation()
+                or self.options['spinmode'] in ['madspin', 'full'])
+
+    @staticmethod
+    def _is_upfront_scheme(mode):
+        """Whether ``mode`` draws every virtuality *before* the angles, i.e.
+        whether it has a mass-set accept/reject in front of its angle stage.
+        True for every scheme but ``joint`` -- which tests the virtualities and
+        the angles together -- and ``sequential_with_mass``, which draws each
+        slot's mass inside that slot's own accept/reject."""
+        return mode not in ('joint', 'sequential_with_mass')
+
     def _log_once(self, key, message, *args):
         """Log a resolution message the first time only: these are decided per
         production event but say something about the run."""
@@ -2688,6 +2993,57 @@ class MadSpinInterface(extended_cmd.Cmd):
         if key not in seen:
             seen.add(key)
             logger.info(message, *args)
+
+    def _auto_unweighting_mode(self):
+        """What ``unweighting = auto`` resolves to, before any of the
+        fallbacks: one branch per spinmode family, keyed on the number of
+        decaying particles.
+
+        The two branches were measured over the number of decaying particles n
+        on `p p > w+ j` (n=1), `p p > t t~` (2), `p p > t t~ z` (3) and
+        `p p > t t~ t t~` (4), 50000 events each -- see
+        MADSPIN_SEQUENTIAL_PLAN.md section 12.
+
+        **PA/onshell -> ``sequential``, at every n.** It was the fastest of the
+        three at all four multiplicities, by 1.2x at n=1 rising to 3.8x at n=4.
+        The joint test's cost grows as n x (trials per event), since one
+        rejection throws every decay away, while the per-particle one's grows
+        far more slowly; and the up-front mass draw evaluates the production
+        reshuffling jacobian once per mass set instead of once per slot trial.
+        Even at n=1, where the angle stage degenerates to the joint test, the
+        mass stage still pays for itself: a mass set can be rejected before any
+        decay is drawn.
+
+        **madspin/full -> ``joint`` up to two decaying particles, then
+        ``sequential``.** Offshell, each mass set costs a production reshuffle
+        *and* an offshell production density, which the joint test pays per
+        trial but which a staged scheme pays per mass set -- and below n=3 there
+        are not enough decays to save to cover it. At n=1 it is worse than that:
+        the mass-set weight carries ``Tr(rho_off)/|M_prod|^2_on``, and when the
+        single decaying particle carries most of the production matrix
+        element's virtuality dependence (`p p > w+ j`) that ratio spans orders
+        of magnitude, no bound covers it, and the mass stage needs ~790 sets per
+        accepted event. From n=3 the per-particle test wins by 2.2x and 4.3x.
+
+        ``two_stage`` is not the fastest scheme at any measured point -- joint
+        beats it at n<=2 and ``sequential`` at n>=3 -- so ``auto`` never
+        returns it, and it is no longer offered in the card either (it is not
+        in the advertised ``allowed`` list; see
+        ``MadSpinOptions.hidden_unweighting_modes``, which still honours an
+        explicit request for it). It stays useful as a cross-check, being the
+        one staged scheme whose angle stage is a single joint test, and the
+        code path is unchanged.
+        """
+        if self._density_pole_approximation():
+            # fastest at every multiplicity measured; rho is fixed on shell
+            # so the mass stage costs a reshuffling jacobian and nothing else
+            return 'sequential'
+        if getattr(self, '_nb_decaying', 2) <= 2:
+            # offshell a mass set costs a production reshuffle and a
+            # production density, and there are not yet enough decays to
+            # save to pay for it
+            return 'joint'
+        return 'sequential'
 
     def _unweighting_mode(self, density_method=True):
         """Which accept/reject scheme this run uses: one of 'joint',
@@ -2724,36 +3080,9 @@ class MadSpinInterface(extended_cmd.Cmd):
         spinmodes reshuffle the whole production onto the mass set at once, so
         there they fall back to ``sequential``.
 
-        ``auto`` has two branches, one per spinmode family. They were measured
-        over the number of decaying particles n on `p p > w+ j` (n=1),
-        `p p > t t~` (2), `p p > t t~ z` (3) and `p p > t t~ t t~` (4), 50000
-        events each -- see MADSPIN_SEQUENTIAL_PLAN.md section 12.
-
-        **PA/onshell -> ``sequential``, at every n.** It was the fastest of the
-        three at all four multiplicities, by 1.2x at n=1 rising to 3.8x at n=4.
-        The joint test's cost grows as n x (trials per event), since one
-        rejection throws every decay away, while the per-particle one's grows
-        far more slowly; and the up-front mass draw evaluates the production
-        reshuffling jacobian once per mass set instead of once per slot trial.
-        Even at n=1, where the angle stage degenerates to the joint test, the
-        mass stage still pays for itself: a mass set can be rejected before any
-        decay is drawn.
-
-        **madspin/full -> ``joint`` up to two decaying particles, then
-        ``sequential``.** Offshell, each mass set costs a production reshuffle
-        *and* an offshell production density, which the joint test pays per
-        trial but which a staged scheme pays per mass set -- and below n=3 there
-        are not enough decays to save to cover it. At n=1 it is worse than that:
-        the mass-set weight carries ``Tr(rho_off)/|M_prod|^2_on``, and when the
-        single decaying particle carries most of the production matrix
-        element's virtuality dependence (`p p > w+ j`) that ratio spans orders
-        of magnitude, no bound covers it, and the mass stage needs ~790 sets per
-        accepted event. From n=3 the per-particle test wins by 2.2x and 4.3x.
-
-        ``two_stage`` is not the fastest scheme at any measured point -- joint
-        beats it at n<=2 and ``sequential`` at n>=3 -- so it is reachable but
-        never chosen here. It stays useful as a cross-check, being the one
-        staged scheme whose angle stage is a single joint test.
+        What ``auto`` resolves to, and why, is in ``_auto_unweighting_mode``.
+        Whatever is asked for or resolved to, the fallbacks below can still send
+        the run back to ``joint``.
 
         ``fixed_order`` forces joint: its counter-events ride along with the
         decays and have not been thought through here.
@@ -2773,18 +3102,7 @@ class MadSpinInterface(extended_cmd.Cmd):
             return self._announce_mode('joint', self.options['unweighting'])
         asked = mode = self.options['unweighting']
         if mode == 'auto':
-            nb_decaying = getattr(self, '_nb_decaying', 2)
-            if self.options['spinmode'] in ['PA', 'onshell']:
-                # fastest at every multiplicity measured; rho is fixed on shell
-                # so the mass stage costs a reshuffling jacobian and nothing else
-                mode = 'sequential'
-            elif nb_decaying <= 2:
-                # offshell a mass set costs a production reshuffle and a
-                # production density, and there are not yet enough decays to
-                # save to pay for it
-                mode = 'joint'
-            else:
-                mode = 'sequential'
+            mode = self._auto_unweighting_mode()
         if mode == 'joint':
             return self._announce_mode('joint', asked)
         if self.options['fixed_order']:
@@ -2811,13 +3129,13 @@ class MadSpinInterface(extended_cmd.Cmd):
                            "keeping the joint accept/reject "
                            "(unweighting ignored)")
             return self._announce_mode('joint', asked)
-        if self.options['spinmode'] not in ['PA', 'onshell', 'madspin', 'full']:
+        if not self._spinmode_has_density():
             self._log_once('spinmode',
                            "MadSpin: spinmode=%s keeps the joint accept/reject "
                            "(unweighting ignored)", self.options['spinmode'])
             return self._announce_mode('joint', asked)
         if (mode == 'sequential_with_mass'
-                and self.options['spinmode'] not in ['PA', 'onshell']):
+                and not self._density_pole_approximation()):
             self._log_once('with_mass_pa_only',
                            "MadSpin: unweighting=sequential_with_mass needs a "
                            "per-particle mass draw, which the offshell "
@@ -3443,6 +3761,8 @@ class MadSpinInterface(extended_cmd.Cmd):
                 wgts = full_evt.parse_reweight()
                 for key in wgts:
                     wgts[key] *= self.branching_ratio
+                self._add_polarization_weights(
+                    full_evt, getattr(self, '_pol_weight_ratios', None))
                 output_lhe.write_events(full_evt)
                 continue
 
@@ -3450,6 +3770,14 @@ class MadSpinInterface(extended_cmd.Cmd):
             prod_density_cached = None
             accepted = False
             wsign = 1.0
+            # Consecutive trials whose matrix-element weight was not a finite
+            # positive number. This `while 1` has no other exit than an
+            # acceptance, so without it a structurally zero weight loops for
+            # ever (draining and regenerating the decay pools as it goes). Reset
+            # by the first positive weight, hence blind to a merely low
+            # acceptance. Same code in the forked workers: _unweight_range is
+            # the body of both the nb_core==1 and the nb_core>1 paths.
+            dead_trials = 0
 
             while 1:
                 nb_try += 1
@@ -3496,6 +3824,18 @@ class MadSpinInterface(extended_cmd.Cmd):
                     wsign = -1.0 if (wgt*jac) < 0 else 1.0
                     if test > maxwgt:
                         nb_pi_overflow += 1
+                # ``wgt`` alone, not ``wgt*jac``: a zero/-1 jacobian is an
+                # ordinary rejection (a mass set the production cannot be
+                # reshuffled onto), which is a legitimate, transient state. A
+                # zero ``wgt`` is the matrix element itself being dead.
+                # In the pure-interference mode a negative weight is the normal
+                # case (about half the accepted events carry the sign of
+                # the interference), so only a zero/NaN matrix element can
+                # be structurally dead there.
+                dead_trials = self._dead_trial(
+                    dead_trials, abs(wgt) if pure_interference else wgt,
+                    'the joint accept/reject')
+
                 if random.random()*maxwgt < test:
                     accepted = True
                     if offshell_density:
@@ -3573,6 +3913,8 @@ class MadSpinInterface(extended_cmd.Cmd):
                 if pure_interference:
                     sum_w += full_evt.wgt
                     sum_w2 += full_evt.wgt ** 2
+            self._add_polarization_weights(
+                full_evt, getattr(self, '_pol_weight_ratios', None))
 
             output_lhe.write_events(full_evt)
 
@@ -4476,11 +4818,9 @@ class MadSpinInterface(extended_cmd.Cmd):
         worker."""
         self.efficiency = 1. / nb_ps_point
         t0 = time.time()
-        density_pole_approximation = self.options['spinmode'] in ['PA', 'onshell']
-        density_do_reshuffle = self.options['spinmode'] == 'PA'
-        density_needs_reshuffle = (
-            self.generate_all.mode == 'density'
-            and (not density_pole_approximation or density_do_reshuffle))
+        density_pole_approximation = self._density_pole_approximation()
+        density_needs_reshuffle = self._density_needs_reshuffle(
+            self.generate_all.mode == 'density')
         # pure interference: the weight is signed and its mean is zero, so the
         # bound the accept/reject needs is on |w|. Seeding max() at 0 and
         # comparing the signed value would bound only the positive excursions.
@@ -4645,14 +4985,18 @@ class MadSpinInterface(extended_cmd.Cmd):
             # unweighting mode *and* on the spinmode family (the mass-set weight
             # is a different quantity offshell and under PA), so they get a name
             # (and a format) of their own -- a cache written for one cannot be
-            # read back for the other.
+            # read back for the other. The ``offshell``/``pa`` piece of the file
+            # name names the spinmode family that wrote it, which is still what
+            # it does now that both families take the up-front-mass path; it is
+            # deliberately left alone so that caches already on disk keep being
+            # found.
             if upfront:
                 mode = self._unweighting_mode()
                 variant = '' if mode == 'sequential' else '_%s' % mode
                 cache = pjoin(self.options['ms_dir'],
                               'max_wgt_sequential_%s%s'
                               % ('offshell' if offshell else 'pa', variant))
-                cached = self._read_offshell_cache(cache)
+                cached = self._read_upfront_cache(cache)
                 if cached is not None:
                     self._z_tables = cached['z_tables']
                     return cached['maxwgts']
@@ -4725,7 +5069,7 @@ class MadSpinInterface(extended_cmd.Cmd):
         if cache and upfront:
             import json
             with open(cache, 'w') as f:
-                json.dump({'format': self._OFFSHELL_CACHE_FORMAT,
+                json.dump({'format': self._UPFRONT_CACHE_FORMAT,
                            'maxwgts': maxwgts, 'z_tables': self._z_tables}, f)
         elif cache:
             open(cache, 'w').write(' '.join(repr(w) for w in maxwgts))
@@ -4738,10 +5082,14 @@ class MadSpinInterface(extended_cmd.Cmd):
     # the next, which a name cannot.
     # 2: the mass-set weight is normalised by |M_prod|^2 on shell, so every
     #    bound in the vector changed scale.
-    _OFFSHELL_CACHE_FORMAT = 2
+    # (Renaming this constant from _OFFSHELL_CACHE_FORMAT, when the up-front
+    #  mass draw stopped being offshell-only, is *not* such a change: the
+    #  payload is the same, so the tag stays at 2 and caches already written
+    #  keep being accepted.)
+    _UPFRONT_CACHE_FORMAT = 2
 
-    def _read_offshell_cache(self, path):
-        """The cached offshell bounds and Z_k tables, or None if there is
+    def _read_upfront_cache(self, path):
+        """The cached up-front-mass bounds and Z_k tables, or None if there is
         nothing usable there.
 
         A cache that does not match what this code writes is *ignored*, not
@@ -4758,10 +5106,10 @@ class MadSpinInterface(extended_cmd.Cmd):
         try:
             with open(path) as f:
                 cached = json.load(f)
-            if cached.get('format') != self._OFFSHELL_CACHE_FORMAT:
+            if cached.get('format') != self._UPFRONT_CACHE_FORMAT:
                 raise ValueError('format %s, expected %s'
                                  % (cached.get('format'),
-                                    self._OFFSHELL_CACHE_FORMAT))
+                                    self._UPFRONT_CACHE_FORMAT))
             maxwgts = [float(w) for w in cached['maxwgts']]
             if not maxwgts:
                 raise ValueError('no bounds')
@@ -4829,6 +5177,23 @@ class MadSpinInterface(extended_cmd.Cmd):
         the historical 5%.
         """
         margin = 1.10
+        # A bound that is not a finite positive number cannot ever accept
+        # anything: the accept/reject test is `random()*bound < wgt`, so a
+        # bound of 0 rejects every trial and a NaN bound (which is what a
+        # 0/0 weight produces) rejects it too -- and then the unweighting
+        # loop redraws for ever. Catch it here, where the whole probe is in
+        # hand, instead of after the fact. Note this also replaces the bare
+        # `assert all_maxwgt[0] >= all_maxwgt[1]` below, which a NaN in the
+        # list used to trip with an empty message.
+        if all_maxwgt and (not all(math.isfinite(w) for w in all_maxwgt)
+                           or not max(all_maxwgt) > 0):
+            self._raise_degenerate_weight(
+                "the maximum-weight scan measured no usable bound: every one "
+                "of the %d probed production events gave a weight that is "
+                "zero or not a number (%s)."
+                % (len(all_maxwgt),
+                   ', '.join('%.4g' % w for w in all_maxwgt[:5])
+                   + (', ...' if len(all_maxwgt) > 5 else '')))
         all_maxwgt.sort(reverse=True)
         assert all_maxwgt[0] >= all_maxwgt[1], "ERROR: "
         decay_tools=madspin.decay_misc()
@@ -4845,7 +5210,159 @@ class MadSpinInterface(extended_cmd.Cmd):
                 base_max_weight = margin * all_maxwgt[1]
         return base_max_weight
 
-            
+    # ------------------------------------------------------------------
+    # Guards against an accept/reject that can never accept
+    # ------------------------------------------------------------------
+    # Every weight of the density spinmodes is built from the production spin
+    # density matrix rho_prod: the joint one is <rho_prod, rho_dec> over a
+    # denominator, the sequential one a ratio of such contractions. If rho_prod
+    # is identically zero then so is every numerator, the accept/reject rejects
+    # every trial, the decay-event pools are drained and regenerated, and
+    # MadSpin runs for ever without writing a single event (measured: 600 s and
+    # 131 pool regenerations with no output). The guards below turn that into an
+    # immediate, named failure.
+    #
+    # They are deliberately built so that they cannot fire on a healthy run,
+    # however inefficient it is. A low acceptance means small *positive*
+    # weights: the bound is positive, some trial eventually wins the test, and
+    # the dead-trial counter is reset by the first positive weight it sees.
+    # What is caught here is a weight that is structurally zero -- exactly 0, or
+    # NaN from a 0/0 -- for which no number of extra draws can help.
+
+    def _raise_degenerate_weight(self, what, extra=''):
+        """Abort with an explanation of a MadSpin accept/reject that can never
+        accept, and of what usually causes it."""
+        msg = ("MadSpin cannot decay these events: %s\n"
+               "\n"
+               "The accept/reject weight of the density spin modes is built "
+               "from the production spin-density matrix, so a production "
+               "density matrix that is identically zero makes EVERY trial "
+               "weight zero and EVERY trial rejected (an identically zero "
+               "*decay* density matrix has the same effect). MadSpin would keep "
+               "drawing decays, regenerating decay-event pools and never "
+               "writing an event, so it stops here instead of looping.\n"
+               "\n"
+               "Plausible causes, most likely first:\n"
+               "  * a polarised production process (a '{L}', '{R}', '{0}', "
+               "'{T}', '{+}', '{-}' tag on the generation line). The Fortran "
+               "GET_DENSITY picks the NHEL rows of the standalone matrix "
+               "element by matching them against the ALLOW_HEL helicity "
+               "combinations; a polarised matrix element only keeps the "
+               "polarised rows, so the combination the density matrix is "
+               "indexed on can be missing altogether and the matrix comes back "
+               "all zeros;\n"
+               "  * a mismatch between the event file and the matrix elements "
+               "MadSpin is using -- a stale 'ms_dir'/'use_old_dir' directory, "
+               "or a param_card different from the one the events were "
+               "generated with;\n"
+               "  * a helicity subspace emptied by the beam polarisation "
+               "('beampol') or by the helicity frame ('frame_id').\n"
+               "\n"
+               "'set spinmode none' switches the density matrices off "
+               "altogether and will produce events (without spin "
+               "correlations); 'set density_debug True' compares the density "
+               "matrices against the full matrix element event by event.")
+        raise MadSpinDegenerateWeight(msg % what + (('\n\n' + extra) if extra else ''))
+
+    def _check_production_density(self, event, density_prod, stage=''):
+        """Fail on a production spin-density matrix whose trace vanishes.
+
+        Tr(rho_prod) is the production matrix element squared restricted to the
+        helicity subspace the density matrix is built on -- that identity is
+        exactly what ``density_debug`` checks event by event
+        (``prod_diag``/``prod_me``). So a zero trace means the density matrix
+        carries no matrix element at all, and every weight derived from it is
+        zero (offshell) or NaN (PA/onshell, which divide by that same trace).
+
+        Why fail on the *first* such production event rather than after a
+        bounded number of fruitless pool regenerations: the quantity that is
+        broken belongs to the production event and to the helicity basis, not to
+        the decays being drawn against it, so redrawing decays cannot change it
+        and waiting only costs minutes to hours. The risk that a *legitimate*
+        zero-matrix-element phase-space point aborts a healthy run is removed by
+        cross-checking against the full production matrix element at the very
+        same momenta: if |M_prod|^2 > 0 while Tr(rho_prod) = 0 the two are
+        inconsistent by construction, which no phase-space point can be. (And if
+        |M_prod|^2 vanishes too, the event cannot be decayed by any
+        accept/reject either -- it is reported as its own case.)
+
+        The check itself is a comparison on a number the callers compute anyway,
+        and the extra matrix element is only ever evaluated on the failing
+        branch, so a healthy run pays nothing for it.
+        """
+        try:
+            trace = float(density_prod.trace().real)
+        except Exception:
+            return None       # not a density matrix we know how to inspect
+        if math.isfinite(trace) and trace > 0:
+            return trace
+
+        try:
+            tag, _ = event.get_tag_and_order()
+            process = '%s > %s' % (' '.join(str(p) for p in tag[0]),
+                                   ' '.join(str(p) for p in tag[1]))
+        except Exception:
+            process = 'unknown'
+        try:
+            me_prod = float(self.calculate_matrix_element(event))
+        except Exception:
+            me_prod = None
+
+        where = (' (%s)' % stage) if stage else ''
+        what = ("the production spin-density matrix of process '%s' is "
+                "identically zero%s -- Tr(rho_prod) = %s."
+                % (process, where, trace))
+        if me_prod is not None and me_prod > 0:
+            extra = ("Diagnostic: the *full* production matrix element at the "
+                     "same phase-space point is |M_prod|^2 = %.6g, which is "
+                     "NOT zero. Tr(rho_prod) and |M_prod|^2 must agree (that is "
+                     "what 'density_debug' checks), so this is not a vanishing "
+                     "phase-space point: the helicity basis the density matrix "
+                     "is indexed on does not exist in the generated matrix "
+                     "element." % me_prod)
+        elif me_prod is not None:
+            extra = ("Diagnostic: the full production matrix element vanishes "
+                     "as well (|M_prod|^2 = %.6g), so this production event "
+                     "carries no matrix element at all and cannot be decayed by "
+                     "any accept/reject. Check that the event file really is "
+                     "the one this process/param_card was generated with."
+                     % me_prod)
+        else:
+            extra = ("Diagnostic: the full production matrix element could not "
+                     "be evaluated for a cross-check.")
+        self._raise_degenerate_weight(what, extra)
+
+    def _dead_trial(self, counter, wgt, stage):
+        """Bounded backstop for an accept/reject loop whose weight stays dead.
+
+        ``counter`` is the number of consecutive trials so far whose weight was
+        not a finite positive number; returns the updated counter and raises
+        once it passes ``MS_MAX_DEAD_TRIALS``. Any single positive weight resets
+        it to 0, which is what keeps a legitimately inefficient run -- small but
+        positive weights, occasionally accepted -- from ever reaching the bound.
+        This catches the causes ``_check_production_density`` does not, e.g. a
+        decay density matrix that is structurally zero.
+        """
+        try:
+            ok = math.isfinite(wgt) and wgt > 0
+        except TypeError:
+            ok = False
+        if ok:
+            return 0
+        counter += 1
+        if counter >= MS_MAX_DEAD_TRIALS:
+            self._raise_degenerate_weight(
+                "%s produced %d consecutive trials with a weight that is zero "
+                "or not a number, without a single positive one in between."
+                % (stage, counter),
+                "Diagnostic: this is not a low acceptance (which gives small "
+                "but positive weights, and would have reset this counter); the "
+                "weight is structurally dead, so no number of further decay "
+                "draws or decay-pool regenerations can ever produce an "
+                "accepted event.")
+        return counter
+
+
     def _density_basis(self, production, decays_key):
         """Helicity-basis bookkeeping for the production density matrix: which
         particles decay, where they sit (``position``, ``init_part``), their
@@ -4903,6 +5420,7 @@ class MadSpinInterface(extended_cmd.Cmd):
             'nchanging': nchanging,
             'position': position,
             'helicities': helicities,
+            'decaying_pdg': decaying_pdg,
             'decaying_spins': decaying_spins,
             'allowed_hel': allowed_hel,
             'hel_restriction': hel_restriction,
@@ -4923,8 +5441,22 @@ class MadSpinInterface(extended_cmd.Cmd):
         return self.options['spinmode'] in ['madspin', 'full', 'PA', 'onshell']
 
     def _production_polarization(self):
-        """``pdg -> tuple(allowed helicities)`` from the polarisation braces of
-        the *production* process, e.g. ``p p > t{0} t~``.
+        """``pdg -> tuple`` of the polarisation braces of the *production*
+        process, one entry per occurrence of that pdg among the final-state
+        legs, in process-line order: ``p p > t{0} t~`` gives
+        ``{6: ((0,),)}`` and ``p p > w+{0} w+{T}`` gives
+        ``{24: ((0,), (-1, 1))}``. An entry is ``None`` for an occurrence
+        that carries no brace.
+
+        A pdg whose occurrences all carry the *same* brace is collapsed to a
+        single entry, which then applies to however many of that pdg the event
+        holds ('broadcast'). That is what keeps a stack of subprocesses with
+        different multiplicities -- ``generate p p > t{0} t~`` plus
+        ``add process p p > t{0} t~ j`` -- working. A pdg with *different*
+        braces on different legs cannot be broadcast: it keeps its full
+        sequence and is matched positionally, the n-th such pdg of the event
+        taking the n-th brace (see ``_apply_production_polarization`` for why
+        that correspondence holds).
 
         MadSpin regenerates the production matrix element from the banner's
         proc_card, braces included, so the braces are exactly what MG5 saw. They
@@ -4952,7 +5484,10 @@ class MadSpinInterface(extended_cmd.Cmd):
                   if re.search(r'^\s*add\s+process', line)]
 
         if any('{' in line for line in lines):
-            unpolarized = set()
+            # pdg -> (canonical sequence, the line it came from), so that a
+            # disagreement between two process lines can name both of them.
+            source = {}
+            multi_id = set()
             for line in lines:
                 try:
                     procdef = self.mg5cmd.extract_process(line)
@@ -4962,34 +5497,60 @@ class MadSpinInterface(extended_cmd.Cmd):
                                    'matrix convolution is left unrestricted.'
                                    % (line, error))
                     continue
+                seq = collections.OrderedDict()
                 for leg in procdef.get('legs'):
                     # initial-state polarisation is the beampol machinery, not this
                     if not leg.get('state'):
                         continue
                     pol = leg.get('polarization')
+                    pol = tuple(sorted(set(int(p) for p in pol))) if pol else None
                     ids = [int(i) for i in leg.get('ids')]
-                    if not pol:
-                        unpolarized.update(ids)
-                        continue
-                    pol = tuple(sorted(set(int(p) for p in pol)))
                     for pdg in ids:
-                        if out.setdefault(pdg, pol) != pol:
-                            raise self.InvalidCmd(
-                                'MadSpin: particle %s is produced with two different '
-                                'polarisations (%s and %s) in the production process. '
-                                'The density spin modes cannot tell which one a given '
-                                'final-state particle carries.'
-                                % (pdg, out[pdg], pol))
-            clash = unpolarized.intersection(out)
-            if clash:
-                raise self.InvalidCmd(
-                    'MadSpin: particle(s) %s are polarised in one production process '
-                    'and unpolarised in another. Please use a single, consistent '
-                    'polarisation for the particles MadSpin decays.'
-                    % ', '.join(str(p) for p in sorted(clash)))
+                        seq.setdefault(pdg, []).append(pol)
+                        if len(ids) > 1:
+                            multi_id.add(pdg)
+                for pdg, pols in seq.items():
+                    # all occurrences agree -> broadcast, the multiplicity of
+                    # the line then does not have to match the event's
+                    canonical = tuple(pols[:1]) if len(set(pols)) == 1 else tuple(pols)
+                    if pdg in source and source[pdg][0] != canonical:
+                        raise self.InvalidCmd(
+                            'MadSpin: particle %s carries the polarisation(s) %s in '
+                            'the production process "%s" and %s in "%s". The density '
+                            'spin modes have no way to tell, event by event, which of '
+                            'the two a given final-state particle follows. Please use '
+                            'one consistent polarisation pattern for the particles '
+                            'MadSpin decays.'
+                            % (pdg, self._format_polarization_sequence(source[pdg][0]),
+                               source[pdg][1],
+                               self._format_polarization_sequence(canonical), line))
+                    source[pdg] = (canonical, line)
+            for pdg, (canonical, line) in source.items():
+                if all(p is None for p in canonical):
+                    continue
+                if len(canonical) > 1 and pdg in multi_id:
+                    # 'p p > V{0} V{T}' with a multiparticle V: how many of a
+                    # given pdg an event holds is not fixed by the process line,
+                    # so the n-th brace cannot be pinned to the n-th particle.
+                    raise self.InvalidCmd(
+                        'MadSpin: particle %s appears with different polarisations '
+                        '(%s) inside a multiparticle label in the production process '
+                        '"%s". The number of %s in an event is then not fixed by the '
+                        'process line, so MadSpin cannot tell which particle carries '
+                        'which polarisation. Please spell the polarised legs out with '
+                        'explicit particle names.'
+                        % (pdg, self._format_polarization_sequence(canonical), line, pdg))
+                out[pdg] = canonical
 
         self._production_polarization_cache = out
         return out
+
+    @staticmethod
+    def _format_polarization_sequence(sequence):
+        """A polarisation sequence as it reads in a process line, for errors."""
+        names = {(0,): '{0}', (1,): '{+}', (-1,): '{-}', (-1, 1): '{T}'}
+        return ' '.join('(none)' if p is None else names.get(p, str(list(p)))
+                        for p in sequence)
 
     def _apply_production_polarization(self, decaying_pdg, helicities):
         """Turn the production polarisation into (helicity bases, restriction).
@@ -5012,15 +5573,62 @@ class MadSpinInterface(extended_cmd.Cmd):
           an allowed helicity first is what makes the spectator helicity sum
           find its rows. The order is untouched without braces, so nothing
           moves for unpolarised runs.
+
+        Same pdg, different braces ('p p > w+{0} w+{T}')
+        ------------------------------------------------
+        ``decaying_pdg`` is in slot order -- for pdg in decays_key, in
+        production-event order within a pdg -- so the slots of one pdg form a
+        contiguous block whose k-th entry is the k-th such particle of the
+        event. The k-th brace of that pdg is handed to that k-th slot, and the
+        correspondence is exact rather than a guess:
+
+        * MG5 keeps the legs of a process in the order they were typed (leg
+          number 1..n), and a leg's polarisation is part of its identity -- two
+          same-pdg legs with different braces have an ``identical_particle_factor``
+          of 1, so no symmetrisation and no momentum permutation is applied to
+          them anywhere between the amplitude and the event file;
+
+        * ``lhe_parser.Event.get_momenta`` maps the event's k-th particle of a
+          pdg onto the k-th slot of that pdg in the matrix element's leg order.
+          The momentum the matrix element sees at leg number ``position[k]`` is
+          therefore the event particle slot k stands for. The brace read off
+          leg ``position[k]`` of the process line and the density matrix
+          computed at ``position[k]`` describe the same object by construction.
+
+        A wrong assignment could not go unnoticed either: ``GET_DENSITY``
+        selects the NHEL rows of the *polarised* process by matching them
+        against the first ``ALLOW_HEL`` combination, which is built from the
+        head of each basis below. Handing '{T}' to the leg MG5 generated as
+        '{0}' asks for a helicity combination the polarised NHEL table does not
+        contain, and the production density matrix comes back identically zero
+        -- a loud failure, not a small bias.
         """
         pol_map = self._production_polarization()
         if not pol_map:
             return helicities, None
 
         helicities = list(helicities)
+        multiplicity = collections.Counter(decaying_pdg)
+        seen = collections.Counter()
         restriction = []
         for k, pdg in enumerate(decaying_pdg):
-            allowed = pol_map.get(pdg)
+            sequence = pol_map.get(pdg)
+            occurrence = seen[pdg]
+            seen[pdg] += 1
+            if not sequence:
+                allowed = None
+            elif len(sequence) == 1:
+                # one brace for every particle of that pdg
+                allowed = sequence[0]
+            elif len(sequence) != multiplicity[pdg]:
+                raise self.InvalidCmd(
+                    'MadSpin: the production process gives %d polarisation(s) (%s) '
+                    'for particle %s but the event holds %d of them. The braces can '
+                    'only be attached to the particles one by one when the two agree.'
+                    % (len(sequence), self._format_polarization_sequence(sequence),
+                       pdg, multiplicity[pdg]))
+            else:
+                allowed = sequence[occurrence]
             basis = list(helicities[k])
             if not allowed:
                 restriction.append(None)
@@ -5260,6 +5868,429 @@ class MadSpinInterface(extended_cmd.Cmd):
             return []
         return [pdg for pdg in decays_key if pdg in pure]
 
+    # ------------------------------------------------------------------
+    # keep_weight_for_polarization_vector / _fermion:
+    # extra LHEF v3 weights, one per polarisation COMBINATION
+    # ------------------------------------------------------------------
+    # The card offers a list of polarisations per *species*
+    #
+    #     set keep_weight_for_polarization_vector  [0, T, +, -]
+    #     set keep_weight_for_polarization_fermion [+, -]
+    #
+    # and every decaying particle draws from the list of its own spin. A
+    # combination C is one element of the cartesian product over the density
+    # basis slots -- 'p p > t t~ z' with the lists above has 2*2*4 = 16 of them
+    # -- and the event carries one extra weight per combination,
+    #
+    #     w_C = w_nominal * <rho_dec, rho_prod>_C / <rho_dec, rho_prod>
+    #
+    # i.e. the very same event reweighted to the C fraction of the density
+    # convolution. Both contractions are done on the matrices that were built
+    # for the nominal weight anyway -- only the row mask changes -- so N extra
+    # weights cost N extra masked dot products, not N extra density matrices.
+    #
+    # Why a product and not one weight per label (which is what the first
+    # version of this option did): a single label applied to every particle at
+    # once cannot express 't left-handed *and* Z longitudinal', and it
+    # degenerates to nothing at all on a mixed production such as
+    # 'p p > z{0} z{T}', where no single label is compatible with both slots and
+    # every weight came back exactly 0.
+    #
+    # Slots and ids
+    # -------------
+    # The slot order is the density basis one -- for pdg in decays_key, and
+    # within a pdg in production order (see ``_density_basis``' ``init_part``).
+    # A combination is named after its per-slot assignment, in that order:
+    #
+    #     ms_pol_6:+_-6:-_23:0     t(+) t~(-) z(0)
+    #     ms_pol_23:0_23:T         the first Z longitudinal, the second transverse
+    #
+    # Every slot is always present, so a reader never has to guess which particle
+    # a label belongs to, even when two slots share a pdg. A slot with nothing to
+    # choose from shows up as '*', meaning "summed over its helicities":
+    #
+    #  * a scalar has a 1x1 density matrix and no polarisation, so it contributes
+    #    exactly ONE entry ('*') to the product rather than multiplying the count;
+    #  * so does a particle whose species list is empty (only
+    #    ..._vector set -> the fermions stay summed over), and
+    #  * so does a slot every label of whose list is unphysical for it
+    #    ('0' alone on a fermion).
+    #
+    # A label that is unphysical for a slot is dropped from that slot's choices
+    # rather than silently left unrestricted, so the deprecated
+    # 'keep_weight_for_polarization = [0, T, +, -]' does not emit a '0' and a 'T'
+    # copy of the same fermion weight.
+    #
+    # Production braces (PR #349, #353)
+    # ---------------------------------
+    # Each slot's choices are intersected with the production restriction of that
+    # slot, and a choice whose intersection is empty is dropped -- it is zero for
+    # every event of that topology, so it would only add a column of zeros. If
+    # that empties a slot, the slot falls back to its production restriction and
+    # a '*'. The denominator is always the nominal -- already restricted --
+    # convolution, so w_C/w stays the fraction of what is actually written out.
+    #
+    # Sum rule
+    # --------
+    # The ratio is >= 0 (the numerator of a single-state restriction is a product
+    # of density-matrix diagonals) but is NOT bounded by 1 event by event: the
+    # denominator is the full double sum, and the interference terms a
+    # restriction drops can be negative.
+    #
+    # sum_C w_C = w requires that the combinations partition the (i,j) terms that
+    # contribute, i.e. two conditions:
+    #   (a) every species list partitions its slots' helicity basis -- [+, -] for
+    #       a fermion, [0, +, -] or [0, T] for a vector. [0, T, +, -] does NOT:
+    #       T = {-1,+1} covers the same entries as + and - together, so the
+    #       weights overlap and the sum overshoots;
+    #   (b) the contraction has no off-diagonal (interference) part -- the i != j
+    #       terms of the double sum belong to no single-state block. {T} is the
+    #       exception that keeps its own (-1,+1) block, which is why [0, T] is a
+    #       partition of a vector even with interference in that block.
+    # The product form removed the *third* condition the one-label-per-weight
+    # version had ("only one particle may be restricted"): the mixed (+,-) and
+    # (-,+) assignments are now combinations of their own. See the sum-rule tests.
+
+    #: species name per MG5 spin (2S+1). Only 1/2/3 have a helicity basis in
+    #: ``_density_basis``' ``hel_dict``, so nothing else can reach a slot.
+    POLARIZATION_SPECIES = {1: 'scalar', 2: 'fermion', 3: 'vector'}
+
+    #: emitting more than this many combinations per event is legal but worth a
+    #: warning: it is that many masked contractions and that many <wgt> lines per
+    #: event, and the product grows very fast (four decaying vectors with a
+    #: 4-entry list is 256).
+    POLARIZATION_COMBINATION_WARN = 32
+
+    def _polarization_weight_labels(self, species):
+        """Canonical polarisation labels requested for one species ('vector' /
+        'fermion'), in the order the user typed them. Empty (the default) leaves
+        that species summed over."""
+        cache = getattr(self, '_pol_weight_labels_cache', None)
+        if cache is None:
+            cache = self._pol_weight_labels_cache = {}
+        if species in cache:
+            return cache[species]
+        option = 'keep_weight_for_polarization_%s' % species
+        out = []
+        for entry in self.options.get(option) or []:
+            parsed = parse_polarization_label(entry)
+            if parsed is None:
+                raise self.InvalidCmd(
+                    "%s: '%s' is not a polarisation. "
+                    "Use 0, +, - or T (L and R are accepted as aliases)."
+                    % (option, entry))
+            if parsed[0] not in [l for l, _ in out]:
+                out.append(parsed)
+        cache[species] = out
+        return out
+
+    def _polarization_weights_enabled(self):
+        """True as soon as one species list is non-empty. Both empty (the
+        default) is a complete no-op: no mask, no weight, no banner block."""
+        return bool(self._polarization_weight_labels('vector')
+                    or self._polarization_weight_labels('fermion'))
+
+    # -- which axis the projection is taken on ---------------------------
+
+    def _needs_frame_axis(self):
+        """Whether the density matrices have to be built in the ``frame_id``
+        frame (run_card ``me_frame``, the partonic CM by default) rather than in
+        the lab.
+
+        A polarised matrix element is not Lorentz invariant: the frame decides
+        which helicity ``{0}`` names. That does not matter for the *nominal*
+        weight, because the full contraction sum_ij rho_prod(i,j) rho_dec(i,j)
+        is a trace and a boost is a unitary basis change that cancels between
+        the two matrices. It matters as soon as a helicity index is
+        **projected**, which is what ``set_hel_restriction`` does -- projections
+        do not commute with a change of basis -- so the projection only means
+        what the user asked for on MG5's own quantisation axis.
+
+        Three things apply such a projection, and all three need the frame:
+
+         * polarised beams (``beampol``), which is what the guard in
+           ``_frame_boost`` tests today;
+         * a polarisation brace on the production process (PR #349/#353);
+         * a polarisation-weight request -- this branch. The weights are the
+           same projection, only used to build an extra weight rather than the
+           nominal one, so an unpolarised production with
+           ``keep_weight_for_polarization_vector/_fermion`` set still needs it.
+
+        NOT WIRED IN ON THIS BRANCH. ``_frame_boost`` still opens with the
+        beampol-only guard, and PR #355 (stacked on #349) turns that same line
+        into ``if self._beampol() is None and not self._production_polarization()``.
+        Editing it here would only collide with that. The one-line change to make
+        at merge time, replacing whichever version of the guard is in
+        ``_frame_boost`` by then, is
+
+            if not self._needs_frame_axis():
+                return None
+
+        Until that lands the polarisation weights are taken on the lab axis.
+        """
+        if self._beampol() is not None:
+            return True
+        if self._production_polarization():
+            return True
+        return self._polarization_weights_enabled()
+
+    @staticmethod
+    def _polarization_weight_id(assignment):
+        """LHEF weight id of one combination.
+
+        ``assignment`` is ``[(pdg, label or None), ...]`` in density-basis slot
+        order; ``None`` (written '*') is a slot that stays summed over. Kept
+        human readable and stable -- it is what an analysis has to ask the event
+        file for -- and slot-complete, so 'ms_pol_23:0_23:T' names the two Zs of
+        'p p > z{0} z{T}' unambiguously.
+        """
+        return 'ms_pol_%s' % '_'.join('%d:%s' % (pdg, label or '*')
+                                      for pdg, label in assignment)
+
+    def _polarization_slot_choices(self, prod_static):
+        """``[[(label, restriction), ...], ...]``: the choices each density slot
+        offers, in slot order. One entry per slot, never empty -- a slot with
+        nothing to choose keeps its production restriction under the label
+        ``None``.
+
+        ``restriction`` is the helicity tuple for that slot, already intersected
+        with the production braces (``None`` = the whole basis).
+        """
+        helicities = prod_static['helicities']
+        base = prod_static.get('hel_restriction') or (None,) * len(helicities)
+        spins = prod_static.get('decaying_spins')
+        if spins is None:
+            # only the length of a basis distinguishes the three spins
+            # ``_density_basis``' hel_dict knows about
+            spins = [len(h) for h in helicities]
+
+        out = []
+        for k, basis in enumerate(helicities):
+            species = self.POLARIZATION_SPECIES.get(spins[k])
+            labels = self._polarization_weight_labels(species) if species else []
+            choices = []
+            seen = set()
+            for label, values in labels:
+                allowed = [h for h in values if h in basis]
+                if base[k] is not None:
+                    allowed = [h for h in allowed if h in base[k]]
+                if not allowed:
+                    # unphysical for this spin, or incompatible with the
+                    # production brace: zero for every event of this topology,
+                    # so not worth a column
+                    continue
+                allowed = tuple(sorted(set(allowed)))
+                if allowed in seen:
+                    continue
+                seen.add(allowed)
+                choices.append((label, allowed))
+            if not choices:
+                choices = [(None, base[k])]
+            out.append(choices)
+        return out
+
+    def _polarization_combinations(self, prod_static):
+        """``[(weight_id, restriction), ...]``, one per element of the cartesian
+        product of ``_polarization_slot_choices`` -- what
+        ``DensityMatrix.set_hel_restriction`` wants for each of them.
+
+        Empty when nothing is requested, and also when no slot has a real choice
+        (every particle would be summed over, i.e. the only combination is the
+        nominal weight again).
+
+        Depends on the basis only, so it is memoised on ``prod_static``, which is
+        itself built once per production event.
+        """
+        cached = prod_static.get('pol_weight_combinations')
+        if cached is not None:
+            return cached
+
+        out = []
+        if self._polarization_weights_enabled():
+            choices = self._polarization_slot_choices(prod_static)
+            if any(label is not None for slot in choices for label, _ in slot):
+                pdgs = prod_static.get('decaying_pdg')
+                if pdgs is None:
+                    pdgs = [0] * len(choices)
+                for combo in itertools.product(*choices):
+                    wid = self._polarization_weight_id(
+                        [(pdgs[k], label) for k, (label, _) in enumerate(combo)])
+                    restriction = madspin.DensityMatrix.normalize_hel_restriction(
+                        [allowed for _, allowed in combo])
+                    out.append((wid, restriction))
+
+        prod_static['pol_weight_combinations'] = out
+        return out
+
+    def _polarization_ratios(self, density_prod, density_dec, prod_static,
+                             full=None):
+        """``{weight_id: restricted/full}`` for the accepted chain, cached on
+        self so it does not have to be threaded through every weight return
+        value.
+
+        ``full`` is the nominal contraction when the caller has it already (it
+        always does -- that is the event's weight); it is recomputed otherwise.
+        The restriction rides on ``density_prod`` for the duration of one
+        contraction rather than being passed down, because ``scalar_multiplication``
+        refuses to combine two *different* restrictions and the production matrix
+        may already carry the production-brace one.
+        """
+        if not self._polarization_weights_enabled():
+            self._pol_weight_ratios = None
+            return None
+        combinations = self._polarization_combinations(prod_static)
+        if not combinations:
+            self._pol_weight_ratios = None
+            return None
+
+        if full is None:
+            full = density_dec.scalar_multiplication(density_prod)
+        full = getattr(full, 'real', full)
+
+        out = {}
+        saved = density_prod.hel_restriction
+        try:
+            for wid, restriction in combinations:
+                if not full:
+                    out[wid] = 0.0
+                    continue
+                if restriction == saved:
+                    out[wid] = 1.0
+                    continue
+                density_prod.hel_restriction = restriction
+                value = density_dec.scalar_multiplication(density_prod)
+                out[wid] = float(getattr(value, 'real', value)) / float(full)
+        finally:
+            density_prod.hel_restriction = saved
+
+        self._pol_weight_ratios = out
+        return out
+
+    # -- the banner declaration -----------------------------------------
+    # The combinations depend on the *topology* (which particles decay and how
+    # many of each the event holds), so the ids cannot be listed from the card
+    # alone as they could when there was one weight per label. The set of
+    # topologies is collected while run_onshell scans the input file anyway
+    # (``_pol_event_layouts``) and turned into density-basis slot layouts here.
+
+    @staticmethod
+    def _polarization_slot_layout(sequence, decaying):
+        """The density-basis slot layout of one production event.
+
+        ``sequence`` is that event's final-state pdgs in production order;
+        ``decaying`` the pdgs that actually have decay events. Reproduces
+        ``_decaying_pdgs`` (first appearance) followed by ``_density_basis``'
+        ``init_part`` (for pdg in decays_key, in production order).
+        """
+        key = []
+        for pdg in sequence:
+            if pdg in decaying and pdg not in key:
+                key.append(pdg)
+        return tuple(pdg for pdg in key for other in sequence if other == pdg)
+
+    def _polarization_layout_static(self, slot_pdgs):
+        """A ``prod_static`` stub -- helicity bases, production restriction and
+        pdgs -- for one slot layout, without a production event. Goes through
+        exactly the same ``_apply_production_polarization`` the real basis does,
+        so the declared ids cannot drift away from the emitted ones."""
+        hel_dict = {1: [0], 2: [1, -1], 3: [-1, 0, 1]}
+        spins = [self.model.get_particle(int(pdg)).get('spin')
+                 for pdg in slot_pdgs]
+        helicities = [list(hel_dict[spin]) for spin in spins]
+        helicities, restriction = self._apply_production_polarization(
+            [int(pdg) for pdg in slot_pdgs], helicities)
+        return {'helicities': helicities, 'hel_restriction': restriction,
+                'decaying_pdg': [int(pdg) for pdg in slot_pdgs],
+                'decaying_spins': spins}
+
+    def _polarization_layout_statics(self, evt_decayfile):
+        """One ``_polarization_layout_static`` per topology seen in the input
+        file, sorted so the banner is reproducible run to run."""
+        layouts = getattr(self, '_pol_event_layouts', None) or set()
+        decaying = set(pdg for pdg in evt_decayfile if len(evt_decayfile[pdg]))
+        slot_layouts = set()
+        for sequence in layouts:
+            slots = self._polarization_slot_layout(sequence, decaying)
+            if slots:
+                slot_layouts.add(slots)
+        return [self._polarization_layout_static(slots)
+                for slots in sorted(slot_layouts)]
+
+    def _declare_polarization_weights(self, statics=None):
+        """Declare one <weight> per polarisation combination in the banner's
+        <initrwgt> block, in its own weightgroup, following the convention the
+        reweighting and systematics modules use. No-op when nothing is
+        requested, so an unset option leaves the banner byte-identical."""
+        if not self._polarization_weights_enabled():
+            return
+        if getattr(self, '_pol_weights_declared', False):
+            return
+        if statics is None:
+            statics = []
+
+        entries = collections.OrderedDict()
+        biggest = 0
+        for static in statics:
+            combinations = self._polarization_combinations(dict(static))
+            biggest = max(biggest, len(combinations))
+            pdgs = static['decaying_pdg']
+            for wid, restriction in combinations:
+                if wid in entries:
+                    continue
+                base = restriction or (None,) * len(pdgs)
+                entries[wid] = ' '.join(
+                    '%s(%s)' % (self._polarization_particle_name(pdg),
+                                'sum' if hel is None
+                                else ','.join(str(h) for h in hel))
+                    for pdg, hel in zip(pdgs, base))
+        if not entries:
+            return
+        if biggest > self.POLARIZATION_COMBINATION_WARN:
+            logger.warning(
+                "MadSpin: keep_weight_for_polarization_* asks for %d "
+                "polarisation combinations, i.e. %d extra <wgt> entries and %d "
+                "extra density contractions on every event. Shorten "
+                "keep_weight_for_polarization_vector/_fermion if that is not "
+                "what you meant.", biggest, biggest, biggest)
+
+        text = "\n<weightgroup name='madspin_polarization'>\n"
+        for wid, description in entries.items():
+            text += "<weight id='%s'> MadSpin polarisation %s </weight>\n" % (
+                wid, description)
+        text += "</weightgroup>\n"
+        # dict.get is not available: Banner.get is get_detail, which only knows
+        # about a handful of card tags
+        if 'initrwgt' in self.banner and self.banner['initrwgt']:
+            self.banner['initrwgt'] += text
+        else:
+            self.banner['initrwgt'] = text
+        self._pol_weights_declared = True
+
+    def _polarization_particle_name(self, pdg):
+        """Readable name for the banner description; the pdg is what the id
+        carries, so a model that cannot be queried is not fatal."""
+        try:
+            return self.model.get_particle(int(pdg)).get_name()
+        except Exception:
+            return str(pdg)
+
+    def _add_polarization_weights(self, event, ratios):
+        """Write ``nominal * ratio`` into the event's LHEF v3 <rwgt> block.
+
+        Called *after* the nominal weight has been scaled by the branching
+        ratio, so that the extra weights are consistently normalised to the
+        weight that is actually written out.
+        """
+        if not ratios:
+            return
+        # fixed_order hands over [event] + counter-events; an Event is itself a
+        # list (of Particles), so it cannot be told apart by isinstance(list)
+        events = [event] if isinstance(event, lhe_parser.Event) else event
+        for evt in events:
+            wgts = evt.parse_reweight()
+            for wid, ratio in ratios.items():
+                wgts[wid] = evt.wgt * ratio
+
     @staticmethod
     def _decaying_pdgs(production, evt_decayfile):
         """The pdgs that decay, in order of first appearance among the
@@ -5355,18 +6386,9 @@ class MadSpinInterface(extended_cmd.Cmd):
         ordering only decides which slot gets filled next -- it must never
         permute the tensor. See MADSPIN_SEQUENTIAL_PLAN.md.
         """
-        density_dec = None
-        for slot, hel in enumerate(helicities):
-            density = slot_densities.get(slot)
-            if density is None:
-                density = self._slot_identity(hel)
-            else:
-                density = density.normalized()
-            if density_dec is None:
-                density_dec = density
-            else:
-                density_dec = density_dec.tensor_product(density)
-        return density_dec.scalar_multiplication(density_prod)
+        return decay_density_tensor(self._slot_identity, helicities,
+                                    slot_densities) \
+                   .scalar_multiplication(density_prod)
 
     def _decay_reshuffle_jacobian(self, decay):
         """jac_dec: the jacobian of mapping this decay onto the virtuality just
@@ -5528,6 +6550,11 @@ class MadSpinInterface(extended_cmd.Cmd):
                                    frame_boost=frame_boost,
                                    hel_restriction=prod_static.get('hel_restriction'),
                                    hel_restriction_trace=prod_static.get('hel_restriction_trace'))
+        # Tr(rho_off) is the numerator of the mass-set weight and the
+        # denominator (through n_prev) of every slot weight; zero there is an
+        # accept/reject that can never accept, not an unlucky mass set
+        self._check_production_density(prod_off, rho_off,
+                                       'sequential accept/reject, offshell rho')
         parents = {slot: finals[slot_to_index[slot]] for slot in order}
         return rho_off, jac_reshuffle, slot_mass, parents, frame_boost
 
@@ -5535,24 +6562,21 @@ class MadSpinInterface(extended_cmd.Cmd):
         """Whether the sequential accept/reject runs its offshell (madspin/full)
         branch: the production density is evaluated at reshuffled momenta, so the
         virtualities are drawn up front and rho is fixed per chain."""
-        return self.options['spinmode'] not in ['PA', 'onshell']
+        return not self._density_pole_approximation()
 
     def _sequential_upfront(self, density_method=True):
-        """Whether the chain draws every virtuality *before* the angles, i.e.
-        whether there is a mass-set accept/reject in front of the angle stage.
+        """Whether *this run* draws every virtuality before the angles, i.e.
+        ``_is_upfront_scheme`` of the scheme it resolved to.
 
-        True for every scheme but ``sequential_with_mass``, which draws each
-        slot's mass inside that slot's own accept/reject. What the up-front draw
-        buys differs by spinmode: offshell it fixes rho for the chain (which is
-        what makes the per-particle decomposition possible at all), while under
-        PA rho is already fixed at the onshell momenta and what is frozen
-        instead is the *production reshuffling jacobian* -- one reshuffle per
-        mass set rather than one per slot trial. Either way the angle stage then
-        redraws to acceptance and divides out its own normalisation, which is
-        what the tabulated ``_zhat`` puts back.
+        What the up-front draw buys differs by spinmode: offshell it fixes rho
+        for the chain (which is what makes the per-particle decomposition
+        possible at all), while under PA rho is already fixed at the onshell
+        momenta and what is frozen instead is the *production reshuffling
+        jacobian* -- one reshuffle per mass set rather than one per slot trial.
+        Either way the angle stage then redraws to acceptance and divides out
+        its own normalisation, which is what the tabulated ``_zhat`` puts back.
         """
-        return self._unweighting_mode(density_method) not in \
-                    ('joint', 'sequential_with_mass')
+        return self._is_upfront_scheme(self._unweighting_mode(density_method))
 
     # ------------------------------------------------------------------
     # Z_k(m): the rate factor of one slot, in the up-front-mass schemes
@@ -5766,11 +6790,35 @@ class MadSpinInterface(extended_cmd.Cmd):
         prod_copy = lhe_parser.Event(str(production))
         decays_copy = collections.defaultdict(list)
         jac_bw = 1.0
-        index = 0
+        # ``slot`` below is a free-running index over the grouped walk of
+        # ``decays``, and it *is* the density matrix slot index -- the same one
+        # ``parents`` (PA: prod_static['init_part']) is keyed by in
+        # sequential_accept_reject. That is an invariant of how both sides are
+        # built, not a coincidence to re-derive:
+        #   * slots are laid out "for pdg in decays_key, for particle in
+        #     production order" (_sequential_slots / _density_basis), so a pdg
+        #     owns a *contiguous* block of slots and the blocks come in
+        #     decays_key order;
+        #   * sequential_accept_reject fills the returned dict by ascending
+        #     slot (``for slot in range(len(order))``), never in accept/reject
+        #     order -- _decay_slot_order only decides which slot is drawn next,
+        #     it must never permute the layout;
+        #   * so the dict's key order is decays_key order, each pdg's list is
+        #     that pdg's slot block in ascending order, and walking the groups
+        #     flat enumerates slots 0 .. n-1 exactly.
+        # The assertion below pins it down, so a future change to either side
+        # trips here (under sequential_debug) instead of silently undoing a
+        # boost with another particle's momentum.
+        slot = 0
         for pdg, decay_list in decays.items():
             for decay in decay_list:
                 copy = lhe_parser.Event(str(decay))
                 if not offshell and parents is not None:
+                    assert parents[slot].pid == pdg, \
+                        ('sequential_debug: slot %d of the accepted chain is a '
+                         '%s but the grouped walk over the decays reached it as '
+                         'a %s -- the decays dict is no longer in slot order'
+                         % (slot, parents[slot].pid, pdg))
                     # PA hands back its accepted decays already boosted to the
                     # lab frame -- _slot_density boosts them in place, and that
                     # is the frame add_decays wants -- while
@@ -5778,13 +6826,13 @@ class MadSpinInterface(extended_cmd.Cmd):
                     # itself. Undo it so the joint route starts where it
                     # expects to. (Offshell takes its density on a copy, so
                     # there the drawn decay is still in its rest frame.)
-                    copy.boost(lhe_parser.FourMomentum(parents[index]))
+                    copy.boost(lhe_parser.FourMomentum(parents[slot]))
                 mass = getattr(decay[0], 'new_mass', None)
                 if mass is not None:
                     copy[0].new_mass = mass
                     copy[0].reshuffle_info = decay[0].reshuffle_info
                 decays_copy[pdg].append(copy)
-                index += 1
+                slot += 1
         # the Breit-Wigner sampling jacobians: the joint path folds them in
         # itself when it draws the masses, and here the masses are given, so
         # they are recomputed from the same (pole, width, window) the draw used
@@ -5950,7 +6998,7 @@ class MadSpinInterface(extended_cmd.Cmd):
         # stage normalises itself) and it keeps Z_hat only as a preconditioner,
         # since it cancels between the two stages.
         mode = self._unweighting_mode()
-        upfront = mode not in ('joint', 'sequential_with_mass')
+        upfront = self._is_upfront_scheme(mode)
         joint_angles = upfront and mode == 'two_stage'
         exact = upfront and mode == 'sequential_global_retry'
         zkeys = self._z_slot_keys(particles, slot_to_index) if upfront else None
@@ -5999,6 +7047,10 @@ class MadSpinInterface(extended_cmd.Cmd):
                                                 frame_boost=frame_boost,
                                                 hel_restriction=prod_static.get('hel_restriction'),
                                                 hel_restriction_trace=prod_static.get('hel_restriction_trace'))
+                # a zero trace here would make n_prev == 0 below and every slot
+                # weight a 0/0 NaN, i.e. an accept/reject that never accepts
+                self._check_production_density(production, density_prod,
+                                               'sequential accept/reject, onshell rho')
                 production._ms_density_prod = density_prod
                 production._ms_frame_boost = frame_boost
             else:
@@ -6020,6 +7072,17 @@ class MadSpinInterface(extended_cmd.Cmd):
             stats = collections.defaultdict(int)
         if probe is not None and probe_extra is None:
             probe_extra = {}
+
+        # Consecutive slot draws whose weight was not a finite positive number.
+        # None of the loops below has an exit other than an acceptance, so a
+        # structurally dead weight redraws (and regenerates that slot's decay
+        # pool) for ever. Held at chain scope on purpose: a scheme that restarts
+        # the mass set on a rejection would otherwise reset it every time and
+        # never reach the bound. Only a *positive* weight clears it, which is
+        # what makes it blind to a merely low acceptance -- an infeasible
+        # virtuality never gets here (it is handled, and separately bounded, by
+        # nb_infeasible).
+        dead_trials = 0
 
         while True:     # restart point: an impossible/rejected production mass set
             parents = init_part
@@ -6090,6 +7153,15 @@ class MadSpinInterface(extended_cmd.Cmd):
                     for s in slot_mass:
                         w_mass *= self._zhat(zkeys[s], slot_mass[s][0])
                 if probe is None and maxwgts and slot_mass:
+                    # the mass stage is the other loop with no exit but an
+                    # acceptance: a w_mass that is structurally zero (a
+                    # vanishing offshell production trace, a Z_hat that is zero
+                    # everywhere) redraws mass sets for ever. Same counter as
+                    # the slot loops, so any positive weight anywhere in the
+                    # chain clears it.
+                    dead_trials = self._dead_trial(
+                        dead_trials, w_mass,
+                        'the mass-set stage of the sequential accept/reject')
                     # no virtuality to unweight means w_mass is the constant 1
                     # (onshell, and 2 -> 1 production under PA): testing it
                     # against its bound would only throw chains away
@@ -6260,6 +7332,11 @@ class MadSpinInterface(extended_cmd.Cmd):
                                             density_prod, helicities, slot_densities)
                             wgt = (n_k / n_prev).real * rate
                             wgt_raw = wgt        # before any Z_hat division
+                            if probe is None:
+                                dead_trials = self._dead_trial(
+                                    dead_trials, wgt,
+                                    'slot %d of the sequential accept/reject'
+                                    % position)
                             j_k, new_budget = j_prev, budget
                             # Z_hat_k(m_k), or 1 where there is no virtuality to
                             # condition on (onshell, 2 -> 1 production under PA)
@@ -6366,6 +7443,11 @@ class MadSpinInterface(extended_cmd.Cmd):
                         # product over slots is what the joint reshuffle_production
                         # multiplies in.
                         wgt = (n_k / n_prev).real * jac_bw * jac_dec * (j_k / j_prev)
+                        if probe is None:
+                            dead_trials = self._dead_trial(
+                                dead_trials, wgt,
+                                'slot %d of the sequential accept/reject'
+                                % position)
                         if probe is not None:
                             # python float: these are marshalled as JSON when the
                             # scan runs across forked workers
@@ -6425,7 +7507,14 @@ class MadSpinInterface(extended_cmd.Cmd):
             if not restart:
                 break
 
-        # back to the pdg -> list layout add_decays consumes, in slot order
+        # back to the pdg -> list layout add_decays consumes, in slot order.
+        # ``range(len(order))`` and not ``order``: the accept/reject ordering
+        # says which slot is *drawn* next, it must not permute the layout. A
+        # pdg owns a contiguous block of slots (_sequential_slots), so this
+        # walks each block in ascending slot order and inserts the keys in
+        # decays_key order -- which makes a flat walk over decays.items()
+        # enumerate slots 0 .. n-1. _check_weight_identity relies on that to
+        # pair a decay with parents[slot]; see the invariant spelled out there.
         decays = collections.defaultdict(list)
         for slot in range(len(order)):
             decays[particles[slot_to_index[slot]].pid].append(slot_decays[slot])
@@ -6434,6 +7523,17 @@ class MadSpinInterface(extended_cmd.Cmd):
             self._check_weight_identity(production, decays, decay_dict,
                                         w_mass_raw * w_slots, helicities, stats,
                                         offshell, keep_jac, parents)
+        if probe is None and self._polarization_weights_enabled():
+            # keep_weight_for_polarization_*: one masked contraction per
+            # combination on the accepted chain. The per-slot normalisation of
+            # the decay densities is an overall scalar and cancels in the ratio,
+            # so this is the same number the joint path computes. Skipped in
+            # probe mode (the max-weight scan writes no events).
+            self._polarization_ratios(
+                density_prod,
+                decay_density_tensor(self._slot_identity, helicities,
+                                     slot_densities),
+                prod_static)
         return decays
 
     def get_onshell_evt_and_wgt(self, production, decays, decay_dict, prod_density_cached=None, build_event=True):
@@ -6442,8 +7542,8 @@ class MadSpinInterface(extended_cmd.Cmd):
             Carefull this modifies production event (pass to the full one)
             build_event: if False (density mode) compute weight without building event"""
         #print("\n\n\n\n\n======== debug get_onshell_evt_and_wgt =========")
-        density_pole_approximation = self.options['spinmode'] in ['PA', 'onshell']
-        density_do_reshuffle = self.options['spinmode'] == 'PA'
+        density_pole_approximation = self._density_pole_approximation()
+        density_do_reshuffle = self._density_do_reshuffle()
         decay_me = 1.0
         decay_me_debug = 1.0
         jac = 1.0
@@ -6697,8 +7797,8 @@ class MadSpinInterface(extended_cmd.Cmd):
         # acceptance) and for 2 -> 1 production (no phase space to redistribute).
         jac_reshuffle = 1.0
         prod_static = getattr(production, '_ms_density_static', None)
-        density_pole_approximation = self.options['spinmode'] in ['PA', 'onshell']
-        density_do_reshuffle = self.options['spinmode'] == 'PA'
+        density_pole_approximation = self._density_pole_approximation()
+        density_do_reshuffle = self._density_do_reshuffle()
         if not density_pole_approximation or \
             (not prod_static or prod_static.get('decays_key') != decays_key):
             prod_static = self._density_basis(production, decays_key)
@@ -6802,15 +7902,21 @@ class MadSpinInterface(extended_cmd.Cmd):
         # beams are polarised -- see the comment above _beampol.
         frame_boost = self._frame_boost(production)
 
-        density_prod = self.get_density(production,
-                                        position,
-                                        allowed_hel,
-                                        ncomb,
-                                        dimension,
-                                        frame_boost=frame_boost,
-                                        hel_restriction=prod_static.get('hel_restriction'),
-                                        hel_restriction_trace=prod_static.get('hel_restriction_trace')) \
-            if prod_density_cached is None else prod_density_cached
+        if prod_density_cached is None:
+            density_prod = self.get_density(production,
+                                            position,
+                                            allowed_hel,
+                                            ncomb,
+                                            dimension,
+                                            frame_boost=frame_boost,
+                                            hel_restriction=prod_static.get('hel_restriction'),
+                                            hel_restriction_trace=prod_static.get('hel_restriction_trace'))
+            # Only on a freshly computed matrix: a cached one was already
+            # checked when it was built, and this runs on every joint trial.
+            self._check_production_density(production, density_prod,
+                                           'joint accept/reject')
+        else:
+            density_prod = prod_density_cached
 
         # ------------------------------------------------------------------
         # Symmetry factor:
@@ -6901,6 +8007,15 @@ class MadSpinInterface(extended_cmd.Cmd):
         # Contract production and decay density matrices
         # ------------------------------------------------------------------
         me = density_dec.scalar_multiplication(density_prod)
+        # keep_weight_for_polarization_*: the same contraction with a tighter
+        # row mask, once per combination. Done here, on the matrices that are
+        # still alive, and stashed on self rather than added to the return tuple
+        # (which every caller unpacks positionally). The joint accept/reject
+        # tests the value computed by the last call, so the last ratios are the
+        # accepted chain's.
+        if self._polarization_weights_enabled():
+            self._polarization_ratios(density_prod, density_dec, prod_static,
+                                      full=me)
         me *= density_iden_prod * density_iden_decay
 
         # ------------------------------------------------------------------
@@ -7174,64 +8289,16 @@ class MadSpinInterface(extended_cmd.Cmd):
                 density_matrix.set_hel_restriction_trace(hel_restriction_trace)
         return density_matrix
 
-   
-    def get_inter_value(self,event,nhel):
-        """routine to return all the possible inter for an event"""
-        
-        pdir,orig_order = self.get_pdir(event)
-        	
-        if pdir in self.all_amp:
-            all_p = event.get_all_momenta(orig_order)
-            for p in all_p:
-#                print(pdir,'Momenta=',p)
-                P = rwgt_interface.ReweightInterface.invert_momenta(p)
-#               print("Momenta =",P,"\n")
-                IC = [1]*len(p)
-                amp = []
-                jamp = []
-                inter = []
-           
-                for i,hel in enumerate(nhel):
-                    #print(f"hel = {hel}")		
-                    amp.append(self.all_amp[pdir](P,hel,IC))
-                    jamp.append(self.all_jamp[pdir](amp[i]))
-                #print(f"len(jamp) = {len(jamp)}")
-                for i in range(len(jamp)): 
-                    for j in range(len(jamp)): 
-                        inter.append(self.all_inter[pdir](jamp[i],jamp[j]))
-                return inter
-        else : 
-            self.all_amp[pdir],self.all_jamp[pdir],self.all_inter[pdir],self.all_matrix[pdir]= self.get_mymod(pdir,'INTER')
 
-        return self.get_inter_value(event,nhel) 
-
-
-    def get_nhel(self,event,position):
-
-        pdir,orig_order, prefix, pos, tag = self.get_pdir(event)
-        if pdir in self.all_nhel:
-            iden,NHEL = self.all_nhel[pdir]
-            if position == -1:
-                return iden
-            nhel = rwgt_interface.ReweightInterface.invert_momenta(NHEL)
-            groups = {} 
-            nhel = sorted(nhel) 
-            for item in nhel:
-                a = item.copy()
-                del a[position]
-                t = tuple(a)
-                groups.setdefault(t, []).append(item)
-                grouped = list(groups.values())
-            return grouped,iden
-        else:
-            #transer nhel information from fortran to wrapper
-            getattr(self.f2py_module, '%sget_nhel_entry' % prefix.lower())()
-            #transer now to python dictionary
-            nhel = getattr(getattr(self.f2py_module, '%sprocess_nhel' % prefix.lower()), '%snhel' %prefix.lower())
-            iden = getattr(self.f2py_module, 'get_idens')()[pos]
-            self.all_nhel[pdir] = (iden, nhel)
-            return self.get_nhel(event,position)
-
+    # ``get_inter_value``/``get_nhel``/``get_mymod`` used to live here: the
+    # per-helicity interference loop of the original density prototype. Their
+    # last callers went away in 23409c526 (2024-08, "Caching production and
+    # decay ME using diagonal elements of density matrix") and they were
+    # unreachable ever since -- they assume the pre-e16ac171b single-module
+    # layout (``f2py_module`` a module, ``pdg2prefix`` a flat dict) while
+    # calling ``get_pdir``, which only works with the current two-module one.
+    # Removed rather than left to rot; the interference now comes from
+    # ``py_get_density`` (see ``get_density``).
 
     def get_iden(self, event):
         # DEBUGGING REMOVE
@@ -7259,14 +8326,6 @@ class MadSpinInterface(extended_cmd.Cmd):
 
         #print(f"idens = {idens} , pos = {pos}")
         return idens[pos]
-    
-
-    def get_mymod(self,pdir,MODE): 
-        
-        all_prefix = self.f2py_module.get_prefix()
-        tag = [t for t in self.all_me if self.all_me[t]['pdir'] == pdir][0]
-        return 
-
 
 
     def get_pdir(self,event): 
@@ -7438,7 +8497,7 @@ class MadSpinInterface(extended_cmd.Cmd):
                 try:
                     proc_nb = int(proc_nb)
                 except ValueError:
-                    raise MadSpinError('MadSpin didn\'t allow order restriction after the @ comment: \"%s\" not valid' % proc_nb)
+                    raise madspin.MadSpinError('MadSpin didn\'t allow order restriction after the @ comment: \"%s\" not valid' % proc_nb)
                 proc_nb = '@ %i' % proc_nb 
                 if self.options['global_order_coupling']:
                     proc_nb = '%s %s' % (proc_nb, self.options['global_order_coupling'])
