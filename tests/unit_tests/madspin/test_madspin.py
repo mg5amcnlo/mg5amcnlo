@@ -3327,35 +3327,6 @@ class TestCheckWeightIdentitySlotPairing(unittest.TestCase):
                           particles, len(slot_to_index))
 
 
-class _InterStub(object):
-    """Just enough of MadSpinInterface for ``get_inter_value``: the pdir->callable
-    caches and a ``get_pdir`` with the *real* return arity."""
-
-    PDIR = 'P0_dummy'
-    ORDER = ((1, -1), (3, -3))
-
-    def __init__(self):
-        # the four caches MadSpinInterface.__init__ creates
-        self.all_amp = {self.PDIR: lambda P, hel, IC: float(sum(hel))}
-        self.all_jamp = {self.PDIR: lambda amp: [amp]}
-        self.all_inter = {self.PDIR: lambda ja, jb: ja[0] * jb[0]}
-        self.all_matrix = {}
-
-    def get_pdir(self, event):
-        # mirrors MadSpinInterface.get_pdir: (pdir, orig_order, prefix, pos, tag)
-        return self.PDIR, self.ORDER, 'pref_', 0, self.ORDER
-
-    get_inter_value = interface_madspin.MadSpinInterface.get_inter_value
-
-
-class _InterEvent(object):
-    """``get_inter_value`` only ever asks the event for its momenta."""
-
-    def get_all_momenta(self, orig_order):
-        return [[(1., 0., 0., 1.), (1., 0., 0., -1.),
-                 (1., 0., 1., 0.), (1., 0., -1., 0.)]]
-
-
 class TestGetPdirUnpackArity(unittest.TestCase):
     """``get_pdir`` grew from returning 2 values to 4 (single f2py library) to 5
     (loop-induced production) without every call site following along, and the
@@ -3427,8 +3398,10 @@ class TestGetPdirUnpackArity(unittest.TestCase):
         what get_pdir actually returns"""
         expected = self._return_arity()
         sites = self._call_sites()
-        # the sweep is worthless if the AST walk found nothing
-        self.assertTrue(len(sites) >= 4, 'no get_pdir call site found')
+        # the sweep is worthless if the AST walk found nothing. Three remain:
+        # _frame_boost, get_density and get_iden (get_inter_value/get_nhel were
+        # dead code and have been removed).
+        self.assertTrue(len(sites) >= 3, 'no get_pdir call site found')
         bad = ['%s (line %s) unpacks %s' % (name, line, nb)
                for name, line, nb in sites
                if nb != expected and name not in self.KNOWN_PENDING]
@@ -3436,10 +3409,22 @@ class TestGetPdirUnpackArity(unittest.TestCase):
                          'get_pdir returns %s value(s) but: %s'
                          % (expected, ', '.join(bad)))
 
-    def test_get_inter_value_runs(self):
-        """the regression proper: get_inter_value used to unpack 2 and died with
-        ``ValueError: too many values to unpack`` on its very first statement"""
-        nhel = [[1, -1, 1, -1], [-1, 1, -1, 1]]
-        inter = _InterStub().get_inter_value(_InterEvent(), nhel)
-        # one entry per (jamp_i, jamp_j) pair, i.e. len(nhel)**2
-        self.assertEqual(len(inter), len(nhel) ** 2)
+    def test_dead_f2py_cluster_stays_removed(self):
+        """``get_inter_value``/``get_nhel``/``get_mymod`` were the last users of
+        the pre-e16ac171b single-module f2py layout and had no caller left; they
+        are gone, and so are the caches only they touched."""
+        klass, ast = self._interface_class()
+        methods = set(m.name for m in klass.body
+                      if isinstance(m, ast.FunctionDef))
+        for name in ('get_inter_value', 'get_nhel', 'get_mymod'):
+            self.assertNotIn(name, methods)
+        for cache in ('all_amp', 'all_jamp', 'all_inter', 'all_matrix',
+                      'all_nhel'):
+            self.assertFalse(
+                hasattr(interface_madspin.MadSpinInterface, cache),
+                '%s should not come back as a class attribute' % cache)
+        with open(self.SOURCE) as fsock:
+            source = fsock.read()
+        for cache in ('all_amp', 'all_jamp', 'all_inter', 'all_matrix',
+                      'all_nhel'):
+            self.assertNotIn('self.%s' % cache, source)
