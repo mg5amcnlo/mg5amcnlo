@@ -2647,7 +2647,8 @@ the base branch and against this one. The fully weighted run's event stream is
 byte-identical too (`event_scale` is `None` there, so
 `_rewrite_lhe_banner_cross` does not touch an event).
 
-`tests/test_manager.py test_madspin -t0`: **308 tests, OK** (291 before).
+`tests/test_manager.py test_madspin -t0`: **325 tests, OK** (291 before this
+work, counting 13.18's).
 
 Caveats:
 
@@ -2777,8 +2778,23 @@ generation is the bottleneck. That is why the default stays `unweighted`.
 the same 90 368 979-byte file, SHA-256
 `767da240c5221ecc0d7193a3031044b3304a457f909212158728c2ab7f242855`.
 
-`tests/test_manager.py test_madspin -t0`: **319 tests, OK** (291 before this
+`tests/test_manager.py test_madspin -t0`: **325 tests, OK** (291 before this
 work).
+
+**One regression, and what caught it.** Adding this option replaced
+`_unweight_range`'s exit condition `if pure_interference or
+random.random()*maxwgt < test` by a flag that was true only for the paths
+keeping *every* trial. 13.17's 'unweighted' path does not keep every trial --
+but it has already decided, on `|W|`, further up -- so it fell through to the
+signed test and had every negative weight rejected a second time: 356 events
+instead of 3764, z = +18.9. The condition is "no ordinary joint test is made
+below", which is true for all three paths.
+
+The mode's own `z` check did catch it (far past the 5-sigma
+`logger.critical`, a `RuntimeError` under `density_debug`) -- but only after a
+full run. Six tests now drive the real `_unweight_range` through all three
+shapes with the matrix element stubbed out; two of them fail on the bad
+condition.
 
 Caveats, stated rather than glossed:
 
