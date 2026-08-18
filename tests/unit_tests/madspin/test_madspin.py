@@ -2299,8 +2299,7 @@ class TestPureInterferenceUnweightedOutput(unittest.TestCase):
     # -- <|W|> -------------------------------------------------------------
 
     def test_finalize_turns_the_raw_moments_into_absw_and_its_error(self):
-        """sumsq holds sum(W^2) = sum(|W|^2), so the population variance of
-        |W| comes straight out of it."""
+        """Without per-event blocking it falls back to the trial-level error."""
         stub = self._Stub()
         values = [-1.0, 2.0, -3.0, 4.0]
         stub._pi_absw_stats = {'sum': sum(abs(v) for v in values),
@@ -2309,6 +2308,31 @@ class TestPureInterferenceUnweightedOutput(unittest.TestCase):
         stub._finalize_pi_absw()
         self.assertAlmostEqual(stub._pi_absw, 2.5)
         self.assertAlmostEqual(stub._pi_absw_err, math.sqrt(1.25 / 4.0))
+
+    def test_the_absw_error_is_blocked_by_production_event(self):
+        """The nb_ps_point draws of one production point share its |W| scale,
+        so the trial-level spread is not an error on <|W|>. Measured on
+        p p > t t~: 0.46% trial-level against 5.0% blocked, and the blocked
+        one is the honest number -- the probe's <|W|> came out 9% away from
+        the run's."""
+        stub = self._Stub()
+        # four production events, ten near-identical draws each: the trials
+        # look extremely well determined, the production events do not
+        per_event = [1.0, 2.0, 3.0, 4.0]
+        trials = [m for m in per_event for _ in range(10)]
+        stub._pi_absw_stats = {
+            'sum': sum(trials), 'sumsq': sum(v * v for v in trials),
+            'n': len(trials),
+            'ev_sum': sum(per_event),
+            'ev_sumsq': sum(v * v for v in per_event),
+            'ev_n': len(per_event)}
+        stub._finalize_pi_absw()
+        self.assertAlmostEqual(stub._pi_absw, 2.5)
+        # the blocked error: sd of [1,2,3,4] over sqrt(4)
+        self.assertAlmostEqual(stub._pi_absw_err, math.sqrt(1.25 / 4.0))
+        # ... and it is much larger than the trial-level one would have been
+        naive = math.sqrt((sum(v * v for v in trials) / 40.0 - 6.25) / 40.0)
+        self.assertGreater(stub._pi_absw_err, 3.0 * naive)
 
     def test_a_missing_absw_is_fatal_only_for_the_unweighted_output(self):
         empty = {'sum': 0.0, 'sumsq': 0.0, 'n': 0}
@@ -2406,6 +2430,38 @@ class TestPureInterferenceUnweightedOutput(unittest.TestCase):
         self.assertAlmostEqual(tight, target, delta=0.02 * target)
         self.assertAlmostEqual(loose, target, delta=0.03 * target)
 
+    def test_a_mis_measured_absw_biases_the_result_by_exactly_that_factor(self):
+        """Why the run does not normalise with the maximum-weight probe's
+        <|W|>. Unlike c it is not a decay-side constant, so the probe's
+        handful of production events knows it only to ~10% -- and the
+        estimator is linear in it, so a 10% error is a 10% error on every
+        physics number. Feeding the toy an inflated <|W|> shows the bias is
+        exactly the ratio."""
+        a = [1.0 + 3.0 * (k % 7) / 6.0 for k in range(500)]
+        absw = (sum(a) / len(a)) * 2.0 / math.pi
+        target = 12.0 * ((sum(a) / len(a)) / 2.0) / 0.5
+        got, _, _ = self._toy(11, 1.0, lambda _absw, c: 12.0 * (1.1 * absw) / c)
+        self.assertAlmostEqual(got / target, 1.1, delta=0.03)
+
+    def test_the_realised_keep_rate_normalisation_needs_no_absw_estimate(self):
+        """What the run actually writes. Taking <|W|> = (N_file/N_read) * M
+        from the run itself makes N_file cancel out of the estimator, so the
+        answer is right whatever the probe said and whatever M was. Two very
+        different bounds, and a deliberately wrong probe value, all land on
+        the same physics."""
+        a = [1.0 + 3.0 * (k % 7) / 6.0 for k in range(500)]
+        target = 12.0 * ((sum(a) / len(a)) / 2.0) / 0.5
+        for bound_factor in (1.0, 4.0):
+            # a first pass with a deliberately silly provisional magnitude ...
+            _, n_file, n_read = self._toy(11, bound_factor,
+                                          lambda absw, c: 1.0)
+            # ... and the correction the run applies from its own keep rate
+            absw_run = (n_file / float(n_read)) * max(a) * bound_factor
+            got, n2, _ = self._toy(11, bound_factor,
+                                   lambda absw, c: 12.0 * absw_run / c)
+            self.assertEqual(n2, n_file)
+            self.assertAlmostEqual(got, target, delta=0.02 * target)
+
     def test_the_design_notes_weight_would_be_wrong_per_file_event(self):
         """The superseded proposal ``w = +- sigma*BR*maxwgt/c`` normalises per
         event READ, not per event in the file, so a consumer dividing by
@@ -2417,6 +2473,98 @@ class TestPureInterferenceUnweightedOutput(unittest.TestCase):
         absw = (sum(a) / len(a)) * 2.0 / math.pi
         self.assertAlmostEqual(got / target, max(a) / absw, delta=0.03)
         self.assertGreater(got / target, 1.5)
+
+
+class TestBannerEventWeightRescale(unittest.TestCase):
+    """``_rewrite_lhe_banner_cross(event_scale=...)``: the second pass that
+    replaces the provisional weight magnitude of the 'unweighted'
+    pure-interference output by the one the run realised."""
+
+    LHE = """<LesHouchesEvents version="3.0">
+<header>
+<MGGenerationInfo>
+#  Number of Events        :       2
+#  Integrated weight (pb)   : 7.0
+</MGGenerationInfo>
+</header>
+<init>
+2212 2212 6.5e+03 6.5e+03 0 0 247000 247000 -4 1
+5.0e+02 2.8e-01 5.0e+02 1
+</init>
+<event>
+ 4 1 -3.0000000e+00 1.8e+02 7.5e-03 1.1e-01
+       21 -1    0    0  503  502 +0.0 +0.0 +1.0 1.0 0.0 0.0e+00 1.0e+00
+<rwgt>
+<wgt id='r1'> -6.0000000e+00 </wgt>
+</rwgt>
+</event>
+<event>
+ 4 1 +3.0000000e+00 1.8e+02 7.5e-03 1.1e-01
+       21 -1    0    0  503  502 +0.0 +0.0 +1.0 1.0 0.0 0.0e+00 1.0e+00
+</event>
+</LesHouchesEvents>
+"""
+
+    class _Stub(object):
+        _RWGT_LINE = interface_madspin.MadSpinInterface._RWGT_LINE
+        _rewrite_lhe_banner_cross = \
+            interface_madspin.MadSpinInterface._rewrite_lhe_banner_cross
+
+    def _run(self, **kwargs):
+        import tempfile
+        path = os.path.join(tempfile.mkdtemp(), 'out.lhe')
+        with open(path, 'w') as f:
+            f.write(self.LHE)
+        self._Stub()._rewrite_lhe_banner_cross(path, 0.0, **kwargs)
+        return open(path).read()
+
+    def _weights(self, text):
+        out = []
+        in_event = want = False
+        for line in text.split('\n'):
+            low = line.strip().lower()
+            if low.startswith('<event'):
+                in_event, want = True, True
+                continue
+            if low.startswith('</event'):
+                in_event = False
+                continue
+            if in_event and want and len(line.split()) == 6:
+                want = False
+                out.append(float(line.split()[2]))
+            match = interface_madspin.MadSpinInterface._RWGT_LINE.match(line)
+            if match:
+                out.append(float(match.group(2)))
+        return out
+
+    def test_without_event_scale_the_events_are_untouched(self):
+        """Every other caller passes nothing, so no event may move."""
+        text = self._run()
+        self.assertEqual(self._weights(text), [-3.0, -6.0, 3.0])
+        # the <init> block is still zeroed by ratio, as before
+        self.assertIn('+0.0000000e+00 +0.0000000e+00 +0.0000000e+00 1', text)
+
+    def test_event_scale_multiplies_xwgtup_and_the_rwgt_entries(self):
+        text = self._run(event_scale=0.5)
+        self.assertEqual(self._weights(text), [-1.5, -3.0, 1.5])
+
+    def test_event_scale_leaves_the_particle_lines_and_the_banner_alone(self):
+        """The particle lines have 13 fields, not 6, and nothing outside an
+        <event> is an event at all."""
+        text = self._run(event_scale=0.5)
+        self.assertIn('21 -1    0    0  503  502 +0.0 +0.0 +1.0 1.0 0.0 '
+                      '0.0e+00 1.0e+00', text)
+        self.assertIn('2212 2212 6.5e+03 6.5e+03 0 0 247000 247000 -4 1', text)
+        self.assertEqual(text.count('<event>'), 2)
+        self.assertEqual(text.count('</event>'), 2)
+
+    def test_the_note_block_still_goes_in_with_a_scale(self):
+        text = self._run(event_scale=2.0, note=['#  hello'],
+                         note_tag='MGPureInterference', n_written=7)
+        self.assertIn('<MGPureInterference>\n#  hello\n'
+                      '</MGPureInterference>', text)
+        self.assertIn('#  Number of Events        :       7', text)
+        self.assertEqual(self._weights(text), [-6.0, -12.0, 6.0])
 
 
 class TestProductionPolarizationPlumbing(unittest.TestCase):

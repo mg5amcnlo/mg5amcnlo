@@ -4265,9 +4265,42 @@ class MadSpinInterface(extended_cmd.Cmd):
         sum_w2 = sum(s.get('sum_w2', 0.0) for s in stats_list)
         nb_pi_dead = sum(s.get('nb_pi_dead', 0) for s in stats_list)
         nb_pi_overflow = sum(s.get('nb_pi_overflow', 0) for s in stats_list)
+        nb_loose_skip = sum(s.get('nb_loose_skip', 0) for s in stats_list)
+        unweighted = self._pure_interference_unweighted()
+        absw = getattr(self, '_pi_absw', 0.0) or 0.0
+        max_weight = getattr(self, '_pi_max_weight', 0.0) or 0.0
+
+        # --------------------------------------------------------------
+        # 'unweighted': replace the probe's <|W|> by the one the run itself
+        # realised, which is exact rather than merely well-measured.
+        #
+        # The written magnitude is w0 = sigma_ref*BR*<|W|>/c, and the file
+        # normalises by N_file.  Since N_file = N_drawn*<|W|>/M, putting the
+        # RUN's own <|W|> = (N_file/N_drawn)*M into w0 makes N_file cancel out
+        # of the estimator entirely:
+        #
+        #     (1/N_file) sum w O  =  (M sigma_ref BR / (c N_drawn))
+        #                            * sum_accepted sign(W) O
+        #
+        # whose expectation is sigma_ref*BR*<W O>/c exactly, with no estimate
+        # of <|W|> in it anywhere.  The probe's <|W|> is a poor substitute:
+        # unlike c it is not a decay-side constant, so it is only as good as
+        # the handful of production events the probe sees -- measured 9.5%
+        # spread over the 110 events of the default probe on p p > t t~,
+        # which would be a 9.5% flat error on every weight.  The correction is
+        # a single constant, applied to every event in the pass that writes
+        # the banner note (which rewrites the whole file anyway).
+        n_drawn = n_processed - nb_loose_skip
+        event_scale = None
+        if unweighted and absw and n_drawn:
+            absw_run = (float(n_written) / n_drawn) * max_weight
+            event_scale = absw_run / absw
+            S *= event_scale
+            sum_w2 *= event_scale * event_scale
+        else:
+            absw_run = absw
         delta = math.sqrt(sum_w2)
         z = (S / delta) if delta else 0.0
-        unweighted = self._pure_interference_unweighted()
         if nb_pi_dead:
             logger.critical(
                 "MadSpin pure_interference: %d/%d trial(s) had a non-finite "
@@ -4299,11 +4332,10 @@ class MadSpinInterface(extended_cmd.Cmd):
         c_value = getattr(self, '_pi_c', 0.0) or 0.0
         c_err = getattr(self, '_pi_c_err', 0.0) or 0.0
         analytic_c = getattr(self, '_pi_analytic_c', 0.0) or 0.0
-        max_weight = getattr(self, '_pi_max_weight', 0.0) or 0.0
-        absw = getattr(self, '_pi_absw', 0.0) or 0.0
         absw_err = getattr(self, '_pi_absw_err', 0.0) or 0.0
         n_c = (getattr(self, '_pi_c_stats', None) or {}).get('n', 0)
         n_absw = (getattr(self, '_pi_absw_stats', None) or {}).get('n', 0)
+        n_absw_ev = (getattr(self, '_pi_absw_stats', None) or {}).get('ev_n', 0)
         mean_w = S / n_written if n_written else 0.0
         if unweighted:
             note = [
@@ -4320,13 +4352,16 @@ class MadSpinInterface(extended_cmd.Cmd):
                 '#  unrestricted decay-side constant, both below. One decay draw was',
                 '#  made per production event and kept with probability |W|/max|W|,',
                 '#  so the file holds FEWER events than were read and the local size',
-                '#  of the interference is carried by the keep rate. The bound the',
-                '#  acceptance used cancels out of the weight above, so it is not a',
-                '#  normalisation constant. MG5 writes LHE with IDWTUP = -4, i.e. the',
-                '#  cross-section is the MEAN of the weights, so this sample is',
-                '#  self-normalising: mean(w) = 0 (its rate) and sum_bin(w) / N_file',
-                '#  is the interference contribution to that bin, in pb, with N_file',
-                '#  the number of events WRITTEN (the first number below).',
+                '#  of the interference is carried by the keep rate. <|W|> is taken',
+                '#  from the run itself -- (N_file/N_drawn) * max|W| -- not from the',
+                '#  maximum-weight probe, which sees too few production events to',
+                '#  know it; that also makes the accept/reject bound cancel out of',
+                '#  the weight EXACTLY rather than on average. MG5 writes LHE with',
+                '#  IDWTUP = -4, i.e. the cross-section is the MEAN of the weights,',
+                '#  so this sample is self-normalising: mean(w) = 0 (its rate) and',
+                '#  sum_bin(w) / N_file is the interference contribution to that',
+                '#  bin, in pb, with N_file the number of events WRITTEN (the first',
+                '#  number below).',
             ]
         else:
             note = [
@@ -4359,28 +4394,28 @@ class MadSpinInterface(extended_cmd.Cmd):
                 analytic_c, (c_value / analytic_c) if analytic_c else 0.0),
             '#     (1/(prod_denominators * sym_decay); exact only where the chain',
             '#      carries no reshuffling jacobian -- a cross-check, not the value used)',
-            '#  Mean absolute conv.   <|W|>  : %+.8e  +- %.4f%%' % (
+            '#  <|W|> from the probe         : %+.8e  +- %.4f%%' % (
                 absw, (100 * absw_err / absw) if absw else 0.0),
-            '#     (the decay-phase-space mean of |W|, over %d probe trials.' % n_absw,
-            '#      It normalises the "unweighted" output; for the fully weighted',
-            '#      one it is a diagnostic only)',
+            '#     (the decay-phase-space mean of |W|, over %d trials on %d' % (
+                n_absw, n_absw_ev),
+            '#      production events. The error is the spread over THOSE events,',
+            '#      not over the trials: <|W|> is not a decay-side constant the way',
+            '#      c is, so a handful of production events does not pin it down)',
             '#  Maximum weight max|W| probed : %+.8e' % max_weight,
         ]
         if unweighted:
-            expected_absw = keep * max_weight
             note += [
                 '#     (the bound the accept/reject used. It cancels out of the',
-                '#      weight, but it does bound it: see the overflow count below)',
+                '#      weight exactly, but it does bound it: see the overflow count)',
+                '#  <|W|> the run realised       : %+.8e  (probe x %.4f)' % (
+                    absw_run, event_scale or 1.0),
+                '#     ( = (N_file/N_drawn) * max|W| , over every production event',
+                '#      of this run rather than the probe\'s few. THIS is what the',
+                '#      written weights carry; the probe value above was the',
+                '#      provisional one and has been divided out)',
                 '#  Weight magnitude |w| (pb)    : %+.8e' % (
-                    reference * absw / c_value if c_value else 0.0),
+                    reference * absw_run / c_value if c_value else 0.0),
                 '#     ( = sigma_ref * <|W|> / c ; every event carries +- this)',
-                '#  keep rate x max|W|           : %+.8e  (ratio to <|W|> %.4f)' % (
-                    expected_absw,
-                    (expected_absw / absw) if absw else 0.0),
-                '#     (free consistency check: the realised keep rate is',
-                '#      <|W|>/max|W| by construction, so this must reproduce <|W|>.',
-                '#      A ratio away from 1 means the probe events were not',
-                '#      representative of the full sample)',
                 '#  Trials above max|W|          : %d' % nb_pi_overflow,
                 '#     (accepted with probability 1 instead of |W|/max|W|, which',
                 '#      biases the sample. Non-zero means max_weight is',
@@ -4400,7 +4435,8 @@ class MadSpinInterface(extended_cmd.Cmd):
             '#  Trials with a dead weight    : %d' % nb_pi_dead,
         ]
         self._rewrite_lhe_banner_cross(base_out, 0.0, n_written=n_written,
-                                       note=note, note_tag='MGPureInterference')
+                                       note=note, note_tag='MGPureInterference',
+                                       event_scale=event_scale)
 
         logger.info("MadSpin pure_interference: sum of weights S = %+.6e, "
                     "sqrt(sum w^2) = %.6e, z = %+.3f, mean(w) = %+.6e "
@@ -4408,30 +4444,26 @@ class MadSpinInterface(extended_cmd.Cmd):
                     "recorded in the <MGPureInterference> banner block)",
                     S, delta, z, mean_w, reference, c_value)
         if unweighted:
-            # The keep rate IS <|W|>/max|W| by construction, so this reproduces
-            # the probe's <|W|> for free -- and it is the only in-run handle on
-            # whether the probe's production events were representative, which
-            # is the one extra scale uncertainty this variant carries over the
-            # fully weighted one (<|W|>, unlike c, is not a decay-side
-            # constant).
-            expected = keep * max_weight
-            ratio = (expected / absw) if absw else 0.0
             logger.info(
-                "MadSpin pure_interference: |w| = %.6e pb on every event, and "
-                "the realised keep rate x max|W| = %.6e reproduces the probe's "
-                "<|W|> = %.6e to %.4f -- the accept/reject bound cancels out "
-                "of the normalisation, this is its consistency check.",
-                (reference * absw / c_value) if c_value else 0.0,
-                expected, absw, ratio)
-            if absw and abs(ratio - 1.0) > 0.10:
+                "MadSpin pure_interference: every event carries |w| = %.6e pb, "
+                "from the run's own <|W|> = (N_file/N_drawn) x max|W| = %.6e. "
+                "The maximum-weight probe had said %.6e +- %.1f%%, so the "
+                "written weights were rescaled by %.4f -- the probe sees too "
+                "few production events to normalise with, and using the run's "
+                "own keep rate instead makes the accept/reject bound cancel "
+                "exactly rather than on average.",
+                (reference * absw_run / c_value) if c_value else 0.0,
+                absw_run, absw, 100 * (absw_err / absw if absw else 0.0),
+                event_scale or 1.0)
+            if event_scale and abs(event_scale - 1.0) > 0.25:
                 logger.warning(
-                    "MadSpin pure_interference: the realised keep rate implies "
-                    "<|W|> = %.6e, %.1f%% away from the %.6e the maximum-weight "
-                    "probe measured. <|W|> is a flat scale on every written "
-                    "weight, so the sample is normalised to that accuracy. The "
-                    "probe's production events are not representative of the "
-                    "sample -- raise Nevents_for_max_weight.",
-                    expected, 100 * (ratio - 1.0), absw)
+                    "MadSpin pure_interference: the probe's <|W|> was off by "
+                    "%.0f%%, which is a lot even for a quantity it only sees a "
+                    "handful of production events of. The written weights use "
+                    "the run's own value and are right, but a probe that far "
+                    "out means the maximum weight it produced may be poor too "
+                    "-- check the overweight count and consider raising "
+                    "Nevents_for_max_weight.", 100 * (event_scale - 1.0))
             if nb_pi_overflow:
                 logger.critical(
                     "MadSpin pure_interference: %d trial(s) had |W| above the "
@@ -4800,8 +4832,12 @@ class MadSpinInterface(extended_cmd.Cmd):
 
         self._apply_accounting(base_out, stats_list)
 
+    # <wgt id='...'>value</wgt>, the LHEF v3 multi-weight entry
+    _RWGT_LINE = re.compile(r'^(\s*<wgt\b[^>]*>)\s*([-+0-9.eEdD]+)\s*(</wgt>\s*)$')
+
     def _rewrite_lhe_banner_cross(self, path, ratio, n_written=None,
-                                  note=None, note_tag='MGGenerationInfo'):
+                                  note=None, note_tag='MGGenerationInfo',
+                                  event_scale=None):
         """Rewrite an already-written LHE file, multiplying every <init> line
         cross-section / error / xmax by ``ratio`` and (optionally) replacing
         the ``Number of Events`` entry in the MGGenerationInfo block with
@@ -4811,16 +4847,63 @@ class MadSpinInterface(extended_cmd.Cmd):
         ``note``, when given, is a list of already-formatted comment lines
         inserted as a ``<note_tag>`` block just before ``</header>`` -- the
         pure-interference mode uses it to record the reference normalisation
-        that its zeroed ``<init>`` block no longer carries."""
+        that its zeroed ``<init>`` block no longer carries.
+
+        ``event_scale``, when given, additionally multiplies every event's
+        ``XWGTUP`` and every ``<wgt>`` entry of its ``<rwgt>`` block by that
+        constant. Only the 'unweighted' pure-interference output uses it, and
+        only to replace the maximum-weight probe's estimate of ``<|W|>`` by
+        the one the run itself realised -- a number that is not known until
+        the loop has finished, hence the second pass. ``None`` (the default)
+        leaves every event byte-for-byte as written."""
 
         tmp_path = path + '.tmp_brfix'
         shutil.move(path, tmp_path)
         with open(tmp_path, 'r') as src, open(path, 'w') as dst:
             in_init = False
             in_mggen = False
+            in_event = False
+            want_event_head = False
             for line in src:
                 stripped = line.strip()
                 lstripped = stripped.lower()
+                if event_scale is not None:
+                    if lstripped.startswith('<event'):
+                        in_event = True
+                        want_event_head = True
+                        dst.write(line)
+                        continue
+                    if in_event:
+                        if lstripped.startswith('</event'):
+                            in_event = False
+                            dst.write(line)
+                            continue
+                        if want_event_head:
+                            # NUP IDPRUP XWGTUP SCALUP AQEDUP AQCDUP
+                            parts = stripped.split()
+                            if len(parts) == 6:
+                                try:
+                                    wgt = float(parts[2].replace('d', 'e'))
+                                except ValueError:
+                                    pass
+                                else:
+                                    want_event_head = False
+                                    parts[2] = '%.7e' % (wgt * event_scale)
+                                    dst.write('%s\n' % ' '.join(parts))
+                                    continue
+                        match = self._RWGT_LINE.match(line.rstrip('\n'))
+                        if match:
+                            try:
+                                wgt = float(match.group(2).replace('d', 'e'))
+                            except ValueError:
+                                pass
+                            else:
+                                dst.write('%s%.7e%s\n' % (match.group(1),
+                                                          wgt * event_scale,
+                                                          match.group(3)))
+                                continue
+                        dst.write(line)
+                        continue
                 if note and lstripped.startswith('</header'):
                     dst.write('<%s>\n' % note_tag)
                     for entry in note:
@@ -5180,13 +5263,28 @@ class MadSpinInterface(extended_cmd.Cmd):
                     "this case." % ('zero' if n else 'nothing', n))
             return
         mean = stats['sum'] / n
-        # sumsq holds sum(W^2) = sum(|W|^2), the right second moment for <|W|>
-        var = max(stats['sumsq'] / n - mean * mean, 0.0)
         self._pi_absw = mean
-        self._pi_absw_err = math.sqrt(var / n)
+        # The error is the spread of the PER-PRODUCTION-EVENT means, not of the
+        # individual trials: the nb_ps_point draws of one production point all
+        # carry its own |W| scale, so the trial-level error is not an error on
+        # <|W|> at all. Measured on p p > t t~: 0.46% trial-level against a
+        # 9.5% production-event spread over the 110 probed events. Only the
+        # second number says how well <|W|> is known -- which is why the run
+        # does not trust it for the normalisation (see _report_pure_
+        # interference: the realised keep rate replaces it).
+        ev_n = stats.get('ev_n', 0)
+        if ev_n > 1:
+            ev_mean = stats['ev_sum'] / ev_n
+            ev_var = max(stats['ev_sumsq'] / ev_n - ev_mean * ev_mean, 0.0)
+            self._pi_absw_err = math.sqrt(ev_var / ev_n)
+        else:
+            var = max(stats['sumsq'] / n - mean * mean, 0.0)
+            self._pi_absw_err = math.sqrt(var / n)
         rel = (self._pi_absw_err / mean) if mean else 0.0
         logger.info("MadSpin pure_interference: <|W|> = %.6e +- %.2f%% over %d "
-                    "trials", mean, 100 * rel, n)
+                    "trials on %d production events (the error is the spread "
+                    "over those events, which is what <|W|> is an average of)",
+                    mean, 100 * rel, n, ev_n)
 
     def _write_pi_c_cache(self, path):
         """Persist the c and <|W|> measurements beside ``max_wgt`` in
@@ -5351,6 +5449,16 @@ class MadSpinInterface(extended_cmd.Cmd):
         pi_absw_sum = 0.0
         pi_absw_sumsq = 0.0
         pi_absw_n = 0
+        # ... and the same thing BLOCKED by production event. The nb_ps_point
+        # draws of one production point share its a_p, so treating all
+        # nevents*nb_ps_point trials as independent understates the error on
+        # <|W|> by more than an order of magnitude (measured: 0.46% claimed
+        # against a 9.5% production-event spread). The honest error is the
+        # spread of the per-production-event means over the probe's production
+        # events, which is what these three accumulate.
+        pi_absw_ev_sum = 0.0
+        pi_absw_ev_sumsq = 0.0
+        pi_absw_ev_n = 0
         per_event = []
         for i in range(start, stop):
             if (i - start) % 5 == 1 and getattr(self, '_shard_tag', None) in (None, 0):
@@ -5359,6 +5467,8 @@ class MadSpinInterface(extended_cmd.Cmd):
             if self.options['fixed_order']:
                 base_event = base_event[0]
             maxwgt = 0
+            ev_absw_sum = 0.0     # this production event's own |W| draws
+            ev_absw_n = 0
             density_matrix_prod = None
             offshell_density = (self.generate_all.mode == 'density'
                                 and not density_pole_approximation)
@@ -5394,6 +5504,8 @@ class MadSpinInterface(extended_cmd.Cmd):
                         pi_absw_sum += abs(restricted)
                         pi_absw_sumsq += restricted * restricted
                         pi_absw_n += 1
+                        ev_absw_sum += abs(restricted)
+                        ev_absw_n += 1
                     sample = getattr(self, '_pi_unrestricted_wgt', None)
                     if sample is not None:
                         # the outer jacobian (PA with density_keep_jacobian) is
@@ -5404,6 +5516,11 @@ class MadSpinInterface(extended_cmd.Cmd):
                             pi_c_sum += sample
                             pi_c_sumsq += sample * sample
                             pi_c_n += 1
+            if signed and ev_absw_n:
+                ev_mean = ev_absw_sum / ev_absw_n
+                pi_absw_ev_sum += ev_mean
+                pi_absw_ev_sumsq += ev_mean * ev_mean
+                pi_absw_ev_n += 1
             per_event.append(float(getattr(maxwgt, 'real', maxwgt)))
         if signed:
             self._pi_probe_c = False
@@ -5419,6 +5536,9 @@ class MadSpinInterface(extended_cmd.Cmd):
             astats['sum'] += pi_absw_sum
             astats['sumsq'] += pi_absw_sumsq
             astats['n'] += pi_absw_n
+            astats['ev_sum'] = astats.get('ev_sum', 0.0) + pi_absw_ev_sum
+            astats['ev_sumsq'] = astats.get('ev_sumsq', 0.0) + pi_absw_ev_sumsq
+            astats['ev_n'] = astats.get('ev_n', 0) + pi_absw_ev_n
             self._pi_absw_stats = astats
         return per_event
 
@@ -5527,10 +5647,10 @@ class MadSpinInterface(extended_cmd.Cmd):
                 self._pi_c_stats = merged
             pi_absw = r.get('pi_absw')
             if pi_absw:
-                merged = getattr(self, '_pi_absw_stats', None) or {
-                    'sum': 0.0, 'sumsq': 0.0, 'n': 0}
-                for key in ('sum', 'sumsq', 'n'):
-                    merged[key] += pi_absw.get(key, 0)
+                merged = getattr(self, '_pi_absw_stats', None) or {}
+                for key in ('sum', 'sumsq', 'n',
+                            'ev_sum', 'ev_sumsq', 'ev_n'):
+                    merged[key] = merged.get(key, 0) + pi_absw.get(key, 0)
                 self._pi_absw_stats = merged
             if r.get('pi_analytic_c'):
                 self._pi_analytic_c = r['pi_analytic_c']

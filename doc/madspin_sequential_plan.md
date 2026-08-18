@@ -2503,3 +2503,161 @@ Caveats:
 * the analytic cross-check is confirmed only in the `<jac> = 1` case, which is
   exactly where the derivation says it should hold. It has **not** been checked
   offshell, where the derivation says it should *not* hold.
+
+### 13.17 The unweighted-up-to-a-sign output -- `pure_interference_output`
+
+**Status: implemented and validated end to end.** The fully weighted output of
+13.13 stays the **default**; `set pure_interference_output = unweighted`
+selects the other representation of the same estimator, in which the sample
+carries exactly two weight magnitudes.
+
+**The derivation.** Unweight on `|W|` against any bound `M >= max|W|`, ONE
+decay draw per production event, nothing written on rejection, and give each
+accepted event `w = sign(W) * w0`. Then `N_file = N_read * <|W|>/M` and, for
+any observable `O`,
+
+    sum_written w O = N_read * w0 * <W O> / M         (because |W| sign(W) = W)
+
+    (1/N_file) sum_written w O = w0 * <W O> / <|W|>
+
+The `M` of the acceptance probability cancels against the `M` of the file
+size. Matching the interference contribution `sigma*BR*<W O>/c` -- the same
+target the fully weighted output hits, per read event -- gives
+
+    w0 = sigma_ref * BR * <|W|> / c
+
+with **no `max_weight` in it**. `mean(w) = w0 <W>/<|W|> = 0` still holds,
+because `<W> = 0`, so `XSECUP = 0` remains correct and both variants obey the
+same `IDWTUP = -4` rule: `sum_bin(w) / N_file` is the contribution in pb, with
+`N_file` the number of events *in the file* (which is `N_read` only for the
+fully weighted output).
+
+**The design notes' `w = +- sigma*BR*maxwgt/c` is not wrong physics; it is
+normalised per event READ.** `maxwgt/c = (<|W|>/c) * (N_read/N_file)`, so the
+two differ by exactly `N_read/N_file`. An LHE file carries no `N_read`, and
+`IDWTUP = -4` says the cross-section is the mean of the weights over the file,
+so a consumer that divides by `N_file` -- the only count it has -- would be off
+by `M/<|W|>` (a factor 13 in the run below), and the factor depends on the
+internal bound. That is what made `maxwgt` look load-bearing. It is not.
+
+**`<|W|>` must NOT come from the maximum-weight probe.** This is the one thing
+the derivation does not tell you and the run does. Unlike `c`, `<|W|>` is not
+a decay-side constant -- it is the *local size of the interference* and varies
+from production point to production point, which is the whole content of
+13.7b. The probe sees `Nevents_for_max_weight` production events (112 in the
+run below) and its `max_weight_ps_point` draws on each are all correlated
+through that point's `|W|` scale, so:
+
+* the trial-level error is meaningless here. The probe claimed
+  `<|W|> = 3.168e-11 +- 0.46%`; blocked by production event the error is
+  **5.0%**, and the truth was `2.895e-11`, i.e. the probe was **9.4% high**;
+* it is not an ordering bias -- 2000 random 110-event subsamples of the same
+  file have a 9.5% spread and the probe's value sits 0.8 sigma inside it. It
+  is simply the wrong sample size for the quantity;
+* a 9.4% error on `<|W|>` is a 9.4% error on every physics number the file
+  produces, because the estimator is linear in `w0`.
+
+**The run normalises with its own keep rate instead, which is exact.** Putting
+`<|W|> = (N_file/N_drawn) * M` into `w0` makes `N_file` cancel out of the
+estimator altogether:
+
+    (1/N_file) sum w O = (M sigma_ref BR / (c N_drawn)) sum_accepted sign(W) O
+
+whose expectation is `sigma_ref*BR*<W O>/c` exactly, with no estimate of
+`<|W|>` in it anywhere and no residual `M` dependence even in principle. The
+run therefore writes the probe's provisional magnitude during the loop and
+divides it out afterwards, in the same pass that inserts the
+`<MGPureInterference>` note (`_rewrite_lhe_banner_cross(event_scale=...)`);
+`S`, `sqrt(sum w^2)` and `mean(w)` are rescaled with it and `z` is invariant.
+The probe's `<|W|>`, its blocked error and the correction factor are all in
+the banner block, and a correction beyond 25% warns.
+
+**What comes back that the fully weighted output had lost:** the bound is live
+again -- the acceptance probability clips at 1 when `|W| > M` -- so
+`nb_pi_overflow` and its `logger.critical` are back on this path (and only on
+it). `_dead_trial` is still not on the pure-interference path at all: a
+negative weight is normal here, and `nb_pi_dead` counts the genuinely
+non-finite trials.
+
+**End-to-end validation.** Same setup as 13.16 -- `p p > t t~` at 13 TeV,
+NNPDF23LO, `me_frame = [1,2]`, 50 000 production events (`iseed = 4321`),
+`spinmode = onshell`, `BW_cut = 15`, `max_weight_ps_point = 400`, `l = e, mu`,
+8 cores, the `(I, I)` block -- run four times on the **same** parent file:
+fully weighted, and unweighted against three bounds set by `nb_sigma`.
+
+| | weighted | `nb_sigma = 0` | `nb_sigma = 10` | `nb_sigma = 40` |
+|---|---|---|---|---|
+| `M = max\|W\|` used | (none) | 3.845e-10 | 6.351e-10 (1.65x) | 2.235e-09 (5.81x) |
+| events written / read | 50000 / 50000 | 3764 / 50000 | 2305 / 50000 | 620 / 50000 |
+| distinct \|w\| magnitudes | 49985 | **1** | **1** | **1** |
+| positive / negative | 24921 / 25079 | 1855 / 1909 | 1135 / 1170 | 326 / 294 |
+| `\|w\|` (pb) | -- | 3.05767 | 3.09265 | 2.92710 |
+| `<\|W\|>` realised | 2.928e-11 | 2.895e-11 | 2.928e-11 | 2.771e-11 |
+| `S` | -4.4436e+02 | -1.6511e+02 | -1.0824e+02 | +9.3667e+01 |
+| `sqrt(sum w^2)` | 9.8358e+02 | 1.8759e+02 | 1.4848e+02 | 7.2884e+01 |
+| `z` | **-0.452** | **-0.880** | **-0.729** | **+1.285** |
+| `mean(w)` | -8.887e-03 | -4.387e-02 | -4.696e-02 | +1.511e-01 |
+| trials above `M` | -- | 0 | 0 | 0 |
+
+**`M` cancels.** The three bounds span 5.8x and the files they produce span
+6.1x in size, and the physics is the same:
+
+| observable | weighted | `M` | `1.65 M` | `5.81 M` |
+|---|---|---|---|---|
+| `<C_nn>` | +0.037286 +- 0.000366 | +0.036567 +- 0.000859 | +0.037049 +- 0.001111 | +0.035850 +- 0.002011 |
+| `<C_rr>` | +0.001744 +- 0.000375 | +0.002458 +- 0.000830 | +0.003282 +- 0.001073 | +0.004786 +- 0.001952 |
+| `<C_kk>` | +0.000108 +- 0.000165 | -0.000273 +- 0.000530 | -0.000605 +- 0.000690 | +0.000543 +- 0.001247 |
+| `<cos phi_ll>` | +0.039139 +- 0.000564 | +0.038753 +- 0.001328 | +0.039726 +- 0.001716 | +0.041178 +- 0.003132 |
+| `<Delta phi>` | -0.065226 +- 0.001768 | -0.066889 +- 0.004384 | -0.068263 +- 0.005661 | -0.047423 +- 0.010122 |
+| `<pT(t)>` (null) | +0.04 +- 0.12 | -0.24 +- 0.30 | -0.38 +- 0.39 | +0.40 +- 0.68 |
+
+Every unweighted entry is within one sigma of the fully weighted one on the
+same events (largest pull -0.88, on the `pT(t)` null test). The three
+independent measurements of `<|W|>` the runs realise -- 2.895, 2.928,
+2.771e-11 -- agree to their own 1.6% / 2.1% / 4.0% counting errors, which is
+the same statement one level down.
+
+**The closure.** Against the committed `interference_closure_v2` numbers
+(`RESULTS.md` section 4), for the `nb_sigma = 0` run:
+
+| | closure v2 | closure v1 | this run, unweighted | pull vs v2 | pull vs v1 |
+|---|---|---|---|---|---|
+| `<C_nn>` | +0.03657 +- 0.00059 | +0.03626 +- 0.00090 | **+0.036567 +- 0.000859** | **-0.00** | +0.25 |
+| `<C_rr>` | +0.00104 +- 0.00066 | +0.00247 +- 0.00091 | +0.002458 +- 0.000830 | +1.34 | -0.01 |
+
+**The variance penalty is confirmed at 5.5-6.2x, from the other direction.**
+Same 50 000 production events, ratio of the errors squared, unweighted over
+fully weighted:
+
+| observable | error ratio | variance ratio |
+|---|---|---|
+| `<C_nn>` | 2.35 | **5.5** |
+| `<cos phi_ll>` | 2.35 | **5.5** |
+| `<Delta phi>` | 2.48 | **6.2** |
+| `<C_rr>` | 2.21 | 4.9 |
+
+13.16 measured 5.8 / 5.7 / 6.1 by comparing against a different (5x larger)
+reference; this is a direct like-for-like measurement on identical events and
+it agrees. That is why the default stays `weighted`.
+
+**Unchanged elsewhere.** A run with `pure_interference` unset produces the
+identical 90 368 979-byte file, SHA-256
+`767da240c5221ecc0d7193a3031044b3304a457f909212158728c2ab7f242855`, against
+the base branch and against this one. The fully weighted run's event stream is
+byte-identical too (`event_scale` is `None` there, so
+`_rewrite_lhe_banner_cross` does not touch an event).
+
+`tests/test_manager.py test_madspin -t0`: **308 tests, OK** (291 before).
+
+Caveats:
+
+* only `spinmode = onshell` was exercised for this variant;
+* the normalisation is exact in expectation but `N_file` is itself random, so
+  `w0` carries a `1/sqrt(N_file)` relative error (1.6% at 3764 events). It is
+  a *self-normalisation* error of the ratio estimator, not a bias, and it is
+  small next to the 5.5x variance penalty;
+* an `ms_dir` reused across MadSpin runs gave `branching_ratio = 0` (hence
+  zero weights and a zero reference cross-section) on a card that ran
+  correctly with a fresh `ms_dir`. That is **pre-existing** -- nothing in this
+  work touches the branching-ratio path -- but it was hit while validating and
+  is recorded here.
