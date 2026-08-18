@@ -51,6 +51,55 @@ logger = logging.getLogger('decay.stdout') # -> stdout
 logger_stderr = logging.getLogger('decay.stderr') # ->stderr
 cmd_logger = logging.getLogger('cmdprint2') # -> print
 
+# ---------------------------------------------------------------------------
+# Polarisation labels accepted by keep_weight_for_polarization
+# ---------------------------------------------------------------------------
+# Same spelling and same meaning as MG5's polarisation braces:
+#   {L} -> [-1], {R}/{+} -> [1], {T} -> [-1,1], {0} -> [0]
+# Maps the (case-insensitive, brace-tolerant) user spelling onto
+# (canonical label, helicity values).
+POLARIZATION_ALIASES = {
+    '0': ('0', (0,)),
+    '+': ('+', (1,)),
+    'r': ('+', (1,)),
+    '-': ('-', (-1,)),
+    'l': ('-', (-1,)),
+    't': ('T', (-1, 1)),
+}
+
+
+def parse_polarization_label(label):
+    """(canonical label, helicity values) for one keep_weight_for_polarization
+    entry, or None if it is not one of 0/+/-/T (L and R aliasing - and +)."""
+    key = str(label).strip().lower()
+    if key.startswith('{') and key.endswith('}'):
+        key = key[1:-1].strip()
+    return POLARIZATION_ALIASES.get(key)
+
+
+def decay_density_tensor(slot_identity, helicities, slot_densities):
+    """The decay side of the sequential contraction: the tensor product of every
+    slot's normalised decay density, the slots still to be drawn contributing
+    I/n (``slot_identity``).
+
+    Factored out of ``_partial_density_contraction`` so the polarisation weights
+    can contract that same tensor against a differently masked production matrix
+    without rebuilding it.
+    """
+    density_dec = None
+    for slot, hel in enumerate(helicities):
+        density = slot_densities.get(slot)
+        if density is None:
+            density = slot_identity(hel)
+        else:
+            density = density.normalized()
+        if density_dec is None:
+            density_dec = density
+        else:
+            density_dec = density_dec.tensor_product(density)
+    return density_dec
+
+
 class MadSpinOptions(banner.ConfigFile):
     
     def default_setup(self):
@@ -76,6 +125,23 @@ class MadSpinOptions(banner.ConfigFile):
         self.add_param('global_order_coupling', '')
         self.add_param('identical_particle_in_prod_and_decay', 'average')
         self.add_param('beampol', [0., 0.], comment='beam polarisation of each beam in percent, -100 .. 100, exactly as the run_card polbeam1/polbeam2 (0 is unpolarised). Taken from the run_card of the production when it has one.')
+        self.add_param('keep_weight_for_polarization', [], typelist=str,
+                       comment="density spin modes only. List of polarisations "
+                       "(0, +, -, T; L/R accepted as aliases of -/+) for which an "
+                       "EXTRA weight is written in the LHEF v3 <rwgt> block of every "
+                       "event, equal to nominal_weight * (density convolution "
+                       "restricted to that polarisation) / (nominal density "
+                       "convolution). The nominal weight and the cross-section are "
+                       "untouched, and an empty list (the default) changes nothing. "
+                       "The same entry is applied to EVERY decaying particle at once, "
+                       "and is silently skipped -- i.e. that particle stays summed "
+                       "over its full helicity basis -- for the particles the "
+                       "polarisation is unphysical for, so on 'p p > t t~ z' the entry "
+                       "'0' restricts the Z only. When the production process itself "
+                       "carries a polarisation brace, the restriction is intersected "
+                       "with it and the denominator is the (already restricted) "
+                       "nominal convolution, so the weight stays the fraction of the "
+                       "sample that is written out.")
         self.add_param('density_debug', False, comment='Turn on check against full ME calculation')
         self.add_param('density_tolerance', 1E-4, comment='Tolerance for deviation between density and full ME')
         self.add_param('decay_event_mult', 1E0, comment='Produce more events than needed so that MadSpin does not have to regenerate decay events')
@@ -124,6 +190,27 @@ class MadSpinOptions(banner.ConfigFile):
                 "beampol takes the polarisation of *both* beams, in percent: "
                 "'set beampol [%s, 0]' for the first beam only. Got %s value(s)."
                 % (value[0] if value else 0, len(value)))
+
+    def post_set_keep_weight_for_polarization(self, value, change_userdefine,
+                                              raiseerror, *opts):
+        """Reject an unknown polarisation label at card-reading time, and store
+        the canonical spelling (so '{l}' and 'L' both become '-'). Anything but
+        0/+/-/T (with L/R as aliases) has no meaning in the helicity bases the
+        density spin modes use."""
+        if not value:
+            return
+        canonical = []
+        for entry in value:
+            parsed = parse_polarization_label(entry)
+            if parsed is None:
+                raise banner.InvalidCmd(
+                    "keep_weight_for_polarization: '%s' is not a polarisation. "
+                    "Use 0, +, - or T (L and R are accepted as aliases of - and +)."
+                    % entry)
+            if parsed[0] not in canonical:
+                canonical.append(parsed[0])
+        if canonical != list(value):
+            dict.__setitem__(self, 'keep_weight_for_polarization', canonical)
 
     def beampol_me(self):
         """The beam polarisations in the convention the matrix elements use.
@@ -1326,6 +1413,12 @@ class MadSpinInterface(extended_cmd.Cmd):
             # read (and validate) the production polarisation braces now rather
             # than on the first event, deep inside a worker process
             self._production_polarization()
+            self._polarization_weight_labels()
+        elif self.options['keep_weight_for_polarization']:
+            raise self.InvalidCmd(
+                "keep_weight_for_polarization needs a spin density matrix to "
+                "restrict, so it is only available in the density spin modes "
+                "(madspin/full, PA, onshell). Got spinmode=%s." % spinmode)
         # The density modes decide about the '@' grouping later, in run_onshell,
         # where the production events say how many of each particle an event
         # carries. These two never can, so say it now rather than after the
@@ -2527,6 +2620,12 @@ class MadSpinInterface(extended_cmd.Cmd):
             base_seed=int(self.seed) if self.seed else random.randint(0, 30081*30081),
         )
 
+        # keep_weight_for_polarization: the extra weights have to be declared in
+        # the header before it is written, here rather than in each writer --
+        # the parallel path forks *after* this point and its workers write
+        # bannerless fragments merged under this same banner.
+        self._declare_polarization_weights()
+
         start = time.time()
         logger.info("Start generating decays")
         if nb_core == 1:
@@ -3404,6 +3503,8 @@ class MadSpinInterface(extended_cmd.Cmd):
                 wgts = full_evt.parse_reweight()
                 for key in wgts:
                     wgts[key] *= self.branching_ratio
+                self._add_polarization_weights(
+                    full_evt, getattr(self, '_pol_weight_ratios', None))
                 output_lhe.write_events(full_evt)
                 continue
 
@@ -3496,6 +3597,8 @@ class MadSpinInterface(extended_cmd.Cmd):
                 wgts = full_evt.parse_reweight()
                 for key in wgts:
                     wgts[key] *= self.branching_ratio
+            self._add_polarization_weights(
+                full_evt, getattr(self, '_pol_weight_ratios', None))
 
             output_lhe.write_events(full_evt)
 
@@ -4807,6 +4910,188 @@ class MadSpinInterface(extended_cmd.Cmd):
 
         return helicities, madspin.DensityMatrix.normalize_hel_restriction(restriction)
 
+    # ------------------------------------------------------------------
+    # keep_weight_for_polarization: extra LHEF v3 weights per polarisation
+    # ------------------------------------------------------------------
+    # For each requested polarisation P the event carries an additional weight
+    #
+    #     w_P = w_nominal * <rho_dec, rho_prod>_P / <rho_dec, rho_prod>
+    #
+    # i.e. the very same event reweighted to the P fraction of the density
+    # convolution. Both contractions are done on the matrices that were built
+    # for the nominal weight anyway -- only the row mask changes -- so N extra
+    # weights cost N extra masked dot products, not N extra density matrices.
+    #
+    # Conventions, all of them visible in the option's comment:
+    #  * the entry is applied to every decaying particle at once;
+    #  * a particle the polarisation is unphysical for (hel 0 on a fermion) is
+    #    left UNRESTRICTED rather than zeroed, which is what makes
+    #    'keep_weight_for_polarization = [0, T, +, -]' usable on t t~ z: the '0'
+    #    weight is then the longitudinal fraction of the Z with the tops summed
+    #    over. As a corollary a polarisation that is unphysical for *every*
+    #    decaying particle gives back the nominal weight (ratio 1);
+    #  * with a polarised production (PR #349) the restriction is intersected
+    #    with the production one and the denominator is the nominal -- already
+    #    restricted -- convolution, so w_P/w stays the fraction of what is
+    #    actually written out. An empty intersection ({L} production asked for
+    #    '+') is an impossible polarisation and gives 0.
+    #
+    # The ratio is >= 0 (the numerator of a single-state restriction is a product
+    # of density-matrix diagonals) but is NOT bounded by 1 event by event: the
+    # denominator is the full double sum, and the interference terms a
+    # restriction drops can be negative. Measured on p p > t t~: 4 events in 100
+    # above 1, integrated fractions well inside it. For the same reason
+    # sum_P w_P = w only holds when the contraction has no off-diagonal part and
+    # a single particle is restricted -- see the sum-rule tests.
+
+    def _polarization_weight_labels(self):
+        """Canonical polarisation labels requested in the MadSpin card, in the
+        order the user typed them. Empty (the default) disables everything."""
+        cached = getattr(self, '_pol_weight_labels_cache', None)
+        if cached is not None:
+            return cached
+        out = []
+        for entry in self.options['keep_weight_for_polarization'] or []:
+            parsed = parse_polarization_label(entry)
+            if parsed is None:
+                raise self.InvalidCmd(
+                    "keep_weight_for_polarization: '%s' is not a polarisation. "
+                    "Use 0, +, - or T (L and R are accepted as aliases)." % entry)
+            if parsed[0] not in [l for l, _ in out]:
+                out.append(parsed)
+        self._pol_weight_labels_cache = out
+        return out
+
+    @staticmethod
+    def _polarization_weight_id(label):
+        """LHEF weight id for one polarisation. Kept human readable and stable:
+        it is what an analysis has to ask the event file for."""
+        return 'ms_pol_%s' % label
+
+    def _polarization_restrictions(self, prod_static):
+        """``[(label, restriction), ...]`` for this production event's helicity
+        basis, ``restriction`` being what ``DensityMatrix.set_hel_restriction``
+        wants -- or ``False`` for a polarisation this production can never have
+        (empty intersection with the production braces), whose weight is 0.
+
+        Depends on the basis only, so it is memoised on ``prod_static``, which
+        is itself built once per production event.
+        """
+        cached = prod_static.get('pol_weight_restrictions')
+        if cached is not None:
+            return cached
+
+        labels = self._polarization_weight_labels()
+        helicities = prod_static['helicities']
+        base = prod_static.get('hel_restriction') or (None,) * len(helicities)
+
+        out = []
+        for label, values in labels:
+            restriction = []
+            impossible = False
+            for k, basis in enumerate(helicities):
+                physical = [h for h in values if h in basis]
+                if not physical:
+                    # unphysical for this particle: skip it silently, i.e. leave
+                    # it summed over whatever the production already allows
+                    restriction.append(base[k])
+                    continue
+                if base[k] is not None:
+                    physical = [h for h in physical if h in base[k]]
+                    if not physical:
+                        impossible = True
+                        break
+                restriction.append(tuple(physical))
+            if impossible:
+                out.append((label, False))
+            else:
+                out.append((label,
+                            madspin.DensityMatrix.normalize_hel_restriction(restriction)))
+
+        prod_static['pol_weight_restrictions'] = out
+        return out
+
+    def _polarization_ratios(self, density_prod, density_dec, prod_static,
+                             full=None):
+        """``{label: restricted/full}`` for the accepted chain, cached on self
+        so it does not have to be threaded through every weight return value.
+
+        ``full`` is the nominal contraction when the caller has it already (it
+        always does -- that is the event's weight); it is recomputed otherwise.
+        The restriction rides on ``density_prod`` for the duration of one
+        contraction rather than being passed down, because ``scalar_multiplication``
+        refuses to combine two *different* restrictions and the production matrix
+        may already carry the production-brace one.
+        """
+        if not self._polarization_weight_labels():
+            self._pol_weight_ratios = None
+            return None
+
+        if full is None:
+            full = density_dec.scalar_multiplication(density_prod)
+        full = getattr(full, 'real', full)
+
+        out = {}
+        saved = density_prod.hel_restriction
+        try:
+            for label, restriction in self._polarization_restrictions(prod_static):
+                if restriction is False or not full:
+                    out[label] = 0.0
+                    continue
+                if restriction == saved:
+                    out[label] = 1.0
+                    continue
+                density_prod.hel_restriction = restriction
+                value = density_dec.scalar_multiplication(density_prod)
+                out[label] = float(getattr(value, 'real', value)) / float(full)
+        finally:
+            density_prod.hel_restriction = saved
+
+        self._pol_weight_ratios = out
+        return out
+
+    def _declare_polarization_weights(self):
+        """Declare one <weight> per requested polarisation in the banner's
+        <initrwgt> block, in its own weightgroup, following the convention the
+        reweighting and systematics modules use. No-op when nothing is
+        requested, so an unset option leaves the banner byte-identical."""
+        labels = self._polarization_weight_labels()
+        if not labels:
+            return
+        if getattr(self, '_pol_weights_declared', False):
+            return
+        text = "\n<weightgroup name='madspin_polarization'>\n"
+        for label, values in labels:
+            text += "<weight id='%s'> MadSpin polarisation %s (helicities %s) " \
+                    "of the decaying particles </weight>\n" % (
+                        self._polarization_weight_id(label), label,
+                        ','.join(str(v) for v in values))
+        text += "</weightgroup>\n"
+        # dict.get is not available: Banner.get is get_detail, which only knows
+        # about a handful of card tags
+        if 'initrwgt' in self.banner and self.banner['initrwgt']:
+            self.banner['initrwgt'] += text
+        else:
+            self.banner['initrwgt'] = text
+        self._pol_weights_declared = True
+
+    def _add_polarization_weights(self, event, ratios):
+        """Write ``nominal * ratio`` into the event's LHEF v3 <rwgt> block.
+
+        Called *after* the nominal weight has been scaled by the branching
+        ratio, so that the extra weights are consistently normalised to the
+        weight that is actually written out.
+        """
+        if not ratios:
+            return
+        # fixed_order hands over [event] + counter-events; an Event is itself a
+        # list (of Particles), so it cannot be told apart by isinstance(list)
+        events = [event] if isinstance(event, lhe_parser.Event) else event
+        for evt in events:
+            wgts = evt.parse_reweight()
+            for label, ratio in ratios.items():
+                wgts[self._polarization_weight_id(label)] = evt.wgt * ratio
+
     @staticmethod
     def _decaying_pdgs(production, evt_decayfile):
         """The pdgs that decay, in order of first appearance among the
@@ -4902,18 +5187,9 @@ class MadSpinInterface(extended_cmd.Cmd):
         ordering only decides which slot gets filled next -- it must never
         permute the tensor. See MADSPIN_SEQUENTIAL_PLAN.md.
         """
-        density_dec = None
-        for slot, hel in enumerate(helicities):
-            density = slot_densities.get(slot)
-            if density is None:
-                density = self._slot_identity(hel)
-            else:
-                density = density.normalized()
-            if density_dec is None:
-                density_dec = density
-            else:
-                density_dec = density_dec.tensor_product(density)
-        return density_dec.scalar_multiplication(density_prod)
+        return decay_density_tensor(self._slot_identity, helicities,
+                                    slot_densities) \
+                   .scalar_multiplication(density_prod)
 
     def _decay_reshuffle_jacobian(self, decay):
         """jac_dec: the jacobian of mapping this decay onto the virtuality just
@@ -5979,6 +6255,17 @@ class MadSpinInterface(extended_cmd.Cmd):
             self._check_weight_identity(production, decays, decay_dict,
                                         w_mass_raw * w_slots, helicities, stats,
                                         offshell, keep_jac, parents)
+        if probe is None and self.options.get('keep_weight_for_polarization'):
+            # keep_weight_for_polarization: one masked contraction per requested
+            # polarisation on the accepted chain. The per-slot normalisation of
+            # the decay densities is an overall scalar and cancels in the ratio,
+            # so this is the same number the joint path computes. Skipped in
+            # probe mode (the max-weight scan writes no events).
+            self._polarization_ratios(
+                density_prod,
+                decay_density_tensor(self._slot_identity, helicities,
+                                     slot_densities),
+                prod_static)
         return decays
 
     def get_onshell_evt_and_wgt(self, production, decays, decay_dict, prod_density_cached=None, build_event=True):
@@ -6445,6 +6732,14 @@ class MadSpinInterface(extended_cmd.Cmd):
         # Contract production and decay density matrices
         # ------------------------------------------------------------------
         me = density_dec.scalar_multiplication(density_prod)
+        # keep_weight_for_polarization: the same contraction with a tighter row
+        # mask. Done here, on the matrices that are still alive, and stashed on
+        # self rather than added to the return tuple (which every caller unpacks
+        # positionally). The joint accept/reject tests the value computed by the
+        # last call, so the last ratios are the accepted chain's.
+        if self.options.get('keep_weight_for_polarization'):
+            self._polarization_ratios(density_prod, density_dec, prod_static,
+                                      full=me)
         me *= density_iden_prod * density_iden_decay
 
         # ------------------------------------------------------------------

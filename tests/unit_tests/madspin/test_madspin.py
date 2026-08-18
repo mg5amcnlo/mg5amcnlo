@@ -1428,6 +1428,435 @@ class TestProductionPolarizationPlumbing(unittest.TestCase):
             self.assertFalse(self._Stub(spinmode=mode)._density_spinmode())
 
 
+class TestKeepWeightForPolarization(unittest.TestCase):
+    """keep_weight_for_polarization: one extra LHEF v3 weight per requested
+    polarisation, equal to nominal * (restricted convolution)/(full convolution).
+
+    The restriction machinery itself is PR #349's; what is tested here is the
+    vector that is built out of a *card* entry -- one entry applied to every
+    decaying particle, silently skipped where it is unphysical -- and the fact
+    that the nominal weight never moves.
+    """
+
+    MI = interface_madspin.MadSpinInterface
+
+    FERMION = [1, -1]       # pdg 6
+    VECTOR = [-1, 0, 1]     # pdg 23
+
+    class _Stub(object):
+        """Just enough MadSpinInterface for the polarisation-weight helpers."""
+        InvalidCmd = interface_madspin.MadSpinInterface.InvalidCmd
+        _polarization_weight_labels = \
+            interface_madspin.MadSpinInterface._polarization_weight_labels
+        _polarization_weight_id = staticmethod(
+            interface_madspin.MadSpinInterface._polarization_weight_id)
+        _polarization_restrictions = \
+            interface_madspin.MadSpinInterface._polarization_restrictions
+        _polarization_ratios = \
+            interface_madspin.MadSpinInterface._polarization_ratios
+        _declare_polarization_weights = \
+            interface_madspin.MadSpinInterface._declare_polarization_weights
+        _add_polarization_weights = \
+            interface_madspin.MadSpinInterface._add_polarization_weights
+        _slot_identity = interface_madspin.MadSpinInterface._slot_identity
+
+        def __init__(self, pols=(), banner=None):
+            self.options = {'keep_weight_for_polarization': list(pols)}
+            self.banner = {} if banner is None else banner
+
+    # ------------------------------------------------------------------
+    # matrices
+    # ------------------------------------------------------------------
+
+    def _packed(self, dim, seed):
+        """Hermitian matrix in the packed upper-triangular Fortran storage."""
+        import numpy as np
+        rng = np.random.default_rng(seed)
+        arr = (rng.normal(size=dim * (dim + 1) // 2)
+               + 1j * rng.normal(size=dim * (dim + 1) // 2)).astype('complex64')
+        for i in range(dim):
+            arr[i * (2 * dim - i + 1) // 2] = abs(arr[i * (2 * dim - i + 1) // 2])
+        return arr
+
+    def _joint(self, hels, seed, diagonal_only=False):
+        """A density matrix over the joint helicity index of ``hels``."""
+        import itertools
+        import numpy as np
+        dim = 1
+        for h in hels:
+            dim *= len(h)
+        allowed = []
+        for combo in itertools.product(*hels):
+            allowed.extend(combo)
+        arr = self._packed(dim, seed)
+        rho = madspin.DensityMatrix(arr, len(hels), allowed, dim)
+        if diagonal_only:
+            # kill every interference entry: the only configuration in which the
+            # polarisation sum rule can hold at all (see the sum-rule tests)
+            rho.values = np.where(rho._diag_mask, rho.values, 0).astype('complex64')
+        return rho
+
+    def _brute_force(self, dec, prod, restriction):
+        """sum_{(i,j) allowed} rho_dec(i,j) rho_prod(i,j), read off the helicity
+        labels -- an implementation independent of the cached row masks."""
+        table = {tuple(int(x) for x in lab): val
+                 for lab, val in zip(prod.helicities, prod.values)}
+        total = 0j
+        for lab, val in zip(dec.helicities, dec.values):
+            lab = tuple(int(x) for x in lab)
+            keep = True
+            for k, ok in enumerate(restriction or []):
+                if ok is None:
+                    continue
+                if lab[2 * k] not in ok or lab[2 * k + 1] not in ok:
+                    keep = False
+                    break
+            if keep:
+                total += complex(val) * complex(table[lab])
+        return total
+
+    def _static(self, helicities, base=None):
+        return {'helicities': [list(h) for h in helicities],
+                'hel_restriction': base}
+
+    # ------------------------------------------------------------------
+    # the option itself
+    # ------------------------------------------------------------------
+
+    def test_default_is_empty_and_changes_nothing(self):
+        """The behaviour-neutrality requirement: an unset option must not add a
+        weight, must not touch the banner, and must not even build a mask."""
+        options = interface_madspin.MadSpinOptions()
+        self.assertEqual(options['keep_weight_for_polarization'], [])
+
+        stub = self._Stub()
+        self.assertEqual(stub._polarization_weight_labels(), [])
+        stub._declare_polarization_weights()
+        self.assertEqual(stub.banner, {})
+
+        prod = self._joint([self.VECTOR], 11)
+        dec = self._joint([self.VECTOR], 12)
+        static = self._static([self.VECTOR])
+        self.assertIsNone(stub._polarization_ratios(prod, dec, static))
+        self.assertNotIn('pol_weight_restrictions', static)
+
+        event = self._event()
+        before = str(event)
+        stub._add_polarization_weights(event, None)
+        stub._add_polarization_weights(event, {})
+        self.assertEqual(str(event), before)
+        self.assertNotIn('<rwgt>', str(event))
+
+    def test_card_accepts_the_documented_spellings(self):
+        options = interface_madspin.MadSpinOptions()
+        options['keep_weight_for_polarization'] = '[0, T, +, -]'
+        self.assertEqual(options['keep_weight_for_polarization'],
+                         ['0', 'T', '+', '-'])
+        # L/R alias -/+ exactly as MG5's braces do, and the canonical spelling
+        # is what is stored (so the weight ids do not depend on the typing)
+        options['keep_weight_for_polarization'] = 'L R t'
+        self.assertEqual(options['keep_weight_for_polarization'],
+                         ['-', '+', 'T'])
+        # duplicates collapse rather than emitting the same weight twice
+        options['keep_weight_for_polarization'] = '[+, R, +]'
+        self.assertEqual(options['keep_weight_for_polarization'], ['+'])
+
+    def test_card_refuses_a_non_polarisation(self):
+        options = interface_madspin.MadSpinOptions()
+        self.assertRaises(banner.InvalidCmd, options.__setitem__,
+                          'keep_weight_for_polarization', '[0, A]')
+
+    def test_label_parsing(self):
+        parse = interface_madspin.parse_polarization_label
+        self.assertEqual(parse('0'), ('0', (0,)))
+        self.assertEqual(parse('+'), ('+', (1,)))
+        self.assertEqual(parse('R'), ('+', (1,)))
+        self.assertEqual(parse('-'), ('-', (-1,)))
+        self.assertEqual(parse('l'), ('-', (-1,)))
+        self.assertEqual(parse('T'), ('T', (-1, 1)))
+        self.assertEqual(parse('{T}'), ('T', (-1, 1)))
+        self.assertIsNone(parse('A'))
+        self.assertIsNone(parse(''))
+
+    # ------------------------------------------------------------------
+    # the restriction vector built from one card entry
+    # ------------------------------------------------------------------
+
+    def test_unphysical_states_are_skipped_per_particle(self):
+        """p p > t t~ z with [0, T, +, -]: the same entry goes to every decaying
+        particle, and the ones it is unphysical for stay *unrestricted* rather
+        than making the whole weight zero -- which is what makes '0' mean 'the
+        longitudinal fraction of the Z' on this process."""
+        stub = self._Stub(['0', 'T', '+', '-'])
+        static = self._static([self.FERMION, self.FERMION, self.VECTOR])
+        got = dict(stub._polarization_restrictions(static))
+        self.assertEqual(got['0'], (None, None, (0,)))
+        self.assertEqual(got['T'], ((-1, 1), (-1, 1), (-1, 1)))
+        self.assertEqual(got['+'], ((1,), (1,), (1,)))
+        self.assertEqual(got['-'], ((-1,), (-1,), (-1,)))
+
+    def test_a_polarisation_unphysical_everywhere_is_the_nominal_weight(self):
+        """The corollary of 'skip the particle, do not drop the event': on
+        p p > t t~ the entry '0' restricts nothing, so its weight is the nominal
+        one (ratio exactly 1) rather than 0."""
+        stub = self._Stub(['0'])
+        static = self._static([self.FERMION, self.FERMION])
+        self.assertEqual(dict(stub._polarization_restrictions(static))['0'],
+                         None)
+        prod = self._joint([self.FERMION, self.FERMION], 21)
+        dec = self._joint([self.FERMION, self.FERMION], 22)
+        self.assertEqual(stub._polarization_ratios(prod, dec, static)['0'], 1.0)
+
+    def test_restrictions_are_cached_on_the_production_static(self):
+        stub = self._Stub(['T'])
+        static = self._static([self.VECTOR])
+        first = stub._polarization_restrictions(static)
+        self.assertIs(first, stub._polarization_restrictions(static))
+        self.assertIs(first, static['pol_weight_restrictions'])
+
+    # ------------------------------------------------------------------
+    # interaction with the production polarisation (PR #349)
+    # ------------------------------------------------------------------
+
+    def test_production_braces_are_intersected(self):
+        """p p > t{+} t~ z: the nominal convolution is already restricted to a
+        right-handed top, so the polarisation weights are fractions *of that*
+        sample -- '+' keeps it, '0' leaves the (already restricted) top alone
+        and cuts the Z, and '-' is impossible and gets a zero weight."""
+        stub = self._Stub(['+', '-', '0', 'T'])
+        static = self._static([self.FERMION, self.VECTOR],
+                              base=((1,), None))
+        got = dict(stub._polarization_restrictions(static))
+        self.assertEqual(got['+'], ((1,), (1,)))
+        self.assertEqual(got['0'], ((1,), (0,)))
+        self.assertEqual(got['T'], ((1,), (-1, 1)))
+        self.assertIs(got['-'], False)
+
+    def test_an_impossible_polarisation_weighs_zero(self):
+        stub = self._Stub(['-'])
+        static = self._static([self.FERMION], base=((1,),))
+        prod = self._joint([self.FERMION], 31)
+        prod.set_hel_restriction(((1,),))
+        dec = self._joint([self.FERMION], 32)
+        self.assertEqual(stub._polarization_ratios(prod, dec, static)['-'], 0.0)
+
+    def test_the_denominator_is_the_restricted_convolution(self):
+        """With production braces the ratio must be taken against the nominal --
+        already restricted -- convolution, or it would not be the fraction of
+        what is actually written out."""
+        import numpy as np
+        stub = self._Stub(['0'])
+        hels = [self.FERMION, self.VECTOR]
+        static = self._static(hels, base=((1,), None))
+        prod = self._joint(hels, 41)
+        prod.set_hel_restriction(((1,), None))
+        dec = self._joint(hels, 42)
+        ratio = stub._polarization_ratios(prod, dec, static)['0']
+        num = self._brute_force(dec, prod, ((1,), (0,)))
+        den = self._brute_force(dec, prod, ((1,), None))
+        self.assertTrue(np.allclose(ratio, (num / den).real, atol=1e-5))
+        # and the production matrix comes back exactly as it went in
+        self.assertEqual(prod.hel_restriction, ((1,), None))
+
+    # ------------------------------------------------------------------
+    # the ratio and the emitted weight
+    # ------------------------------------------------------------------
+
+    def test_ratio_matches_an_independent_contraction(self):
+        import numpy as np
+        stub = self._Stub(['0', 'T', '+', '-'])
+        hels = [self.FERMION, self.VECTOR]
+        static = self._static(hels)
+        prod = self._joint(hels, 51)
+        dec = self._joint(hels, 52)
+        ratios = stub._polarization_ratios(prod, dec, static)
+        full = self._brute_force(dec, prod, None)
+        for label, restriction in stub._polarization_restrictions(static):
+            expected = (self._brute_force(dec, prod, restriction) / full).real
+            self.assertTrue(np.allclose(ratios[label], expected, atol=1e-5),
+                            '%s: %s != %s' % (label, ratios[label], expected))
+        # nothing was left attached to the production matrix
+        self.assertIsNone(prod.hel_restriction)
+
+    def test_nominal_contraction_is_untouched(self):
+        """The nominal weight is what the accept/reject and the cross-section
+        are built on: computing the extra weights must not perturb it."""
+        import numpy as np
+        hels = [self.FERMION, self.VECTOR]
+        prod = self._joint(hels, 61)
+        dec = self._joint(hels, 62)
+        before = dec.scalar_multiplication(prod)
+        self._Stub(['0', 'T', '+', '-'])._polarization_ratios(
+            prod, dec, self._static(hels))
+        self.assertTrue(np.allclose(dec.scalar_multiplication(prod), before))
+
+    def test_joint_and_sequential_agree(self):
+        """The joint path contracts the raw decay tensor, the sequential one the
+        tensor of *normalised* per-slot densities (D/Tr D). Those differ by an
+        overall scalar per slot, which cancels in the ratio -- so both paths must
+        hand back the same polarisation weights for the same chain."""
+        import numpy as np
+        hels = [self.FERMION, self.VECTOR]
+        static = self._static(hels)
+        prod = self._joint(hels, 111)
+        slots = {0: self._joint([self.FERMION], 112),
+                 1: self._joint([self.VECTOR], 113)}
+        joint_dec = slots[0].tensor_product(slots[1])
+        seq_dec = interface_madspin.decay_density_tensor(
+            interface_madspin.MadSpinInterface._slot_identity.__get__(
+                TestPartialDensityContraction._Stub()), hels, slots)
+        a = self._Stub(['0', 'T', '+', '-'])._polarization_ratios(
+            prod, joint_dec, dict(static))
+        b = self._Stub(['0', 'T', '+', '-'])._polarization_ratios(
+            prod, seq_dec, dict(static))
+        for label in a:
+            self.assertTrue(np.allclose(a[label], b[label], atol=1e-5),
+                            '%s: %s != %s' % (label, a[label], b[label]))
+
+    def _event(self, wgt=3.5):
+        text = """<event>
+ 4  1 +%.7e 1.00000000e+02 7.54677100e-03 1.30800000e-01
+       -1 -1    0    0  501    0 +0.0000000e+00 +0.0000000e+00 +5.0e+02 5.0e+02 0.0e+00 0.0e+00 1.0
+        1 -1    0    0    0  501 +0.0000000e+00 +0.0000000e+00 -5.0e+02 5.0e+02 0.0e+00 0.0e+00 1.0
+       11  1    1    2    0    0 +1.0000000e+02 +0.0000000e+00 +0.0e+00 1.0e+02 0.0e+00 0.0e+00 1.0
+      -11  1    1    2    0    0 -1.0000000e+02 +0.0000000e+00 +0.0e+00 9.0e+02 0.0e+00 0.0e+00 1.0
+</event>""" % wgt
+        return lhe_parser.Event(text)
+
+    def test_emitted_weight_is_nominal_times_the_ratio(self):
+        """The value that lands in the <rwgt> block, and the fact that the
+        nominal weight of the event is not modified."""
+        import numpy as np
+        stub = self._Stub(['0', '+'])
+        event = self._event(wgt=3.5)
+        stub._add_polarization_weights(event, {'0': 0.25, '+': 0.5})
+        self.assertEqual(event.wgt, 3.5)
+        wgts = event.parse_reweight()
+        self.assertTrue(np.allclose(wgts['ms_pol_0'], 3.5 * 0.25))
+        self.assertTrue(np.allclose(wgts['ms_pol_+'], 3.5 * 0.5))
+        text = str(event)
+        self.assertIn("<wgt id='ms_pol_0'>", text)
+        self.assertIn("<wgt id='ms_pol_+'>", text)
+        # round trip through the parser
+        again = lhe_parser.Event(text).parse_reweight()
+        self.assertTrue(np.allclose(again['ms_pol_0'], 3.5 * 0.25))
+
+    def test_existing_event_weights_are_preserved(self):
+        import numpy as np
+        stub = self._Stub(['0'])
+        event = self._event(wgt=2.0)
+        event.parse_reweight()['1001'] = 7.0
+        stub._add_polarization_weights(event, {'0': 0.5})
+        wgts = lhe_parser.Event(str(event)).parse_reweight()
+        self.assertTrue(np.allclose(wgts['1001'], 7.0))
+        self.assertTrue(np.allclose(wgts['ms_pol_0'], 1.0))
+
+    def test_weights_are_declared_in_the_banner(self):
+        # a real Banner, not a dict: Banner.get is get_detail and knows about a
+        # handful of card tags only, so 'initrwgt' has to be probed with `in`
+        real = banner.Banner()
+        stub = self._Stub(['0', 'T'], banner=real)
+        real['initrwgt'] = "<weightgroup name='other'>\n</weightgroup>\n"
+        stub._declare_polarization_weights()
+        text = real['initrwgt']
+        self.assertIn("<weightgroup name='madspin_polarization'>", text)
+        self.assertIn("<weight id='ms_pol_0'>", text)
+        self.assertIn("<weight id='ms_pol_T'>", text)
+        self.assertIn("name='other'", text)
+        # idempotent: run_onshell may be re-entered, the block must not double
+        stub._declare_polarization_weights()
+        self.assertEqual(text.count("ms_pol_0"),
+                         real['initrwgt'].count("ms_pol_0"))
+
+    def test_weights_are_declared_without_a_pre_existing_block(self):
+        real = banner.Banner()
+        self.assertNotIn('initrwgt', real)
+        stub = self._Stub(['+'], banner=real)
+        stub._declare_polarization_weights()
+        self.assertIn("<weight id='ms_pol_+'>", real['initrwgt'])
+
+    # ------------------------------------------------------------------
+    # the sum rule
+    # ------------------------------------------------------------------
+    # sum_P w_P = w only when the restricted blocks *partition* the (i,j) terms
+    # that actually contribute. {+}, {-} and {0} keep one diagonal entry each, so
+    # two conditions have to hold at once:
+    #   (a) the contraction must have no off-diagonal (interference) piece --
+    #       the double sum's i != j terms belong to no single-state block;
+    #   (b) exactly one particle may be restricted -- with two, the blocks are
+    #       products (+ +) and (- -) and the mixed (+ -) diagonal entries are in
+    #       neither, so even a diagonal contraction loses them.
+    # Both are tested below, in both directions.
+
+    def test_sum_rule_holds_for_one_diagonal_particle(self):
+        import numpy as np
+        # a vector is partitioned by {+}/{-}/{0}, a fermion by {+}/{-} alone --
+        # its '0' entry is unphysical, hence unrestricted, hence a ratio of 1
+        # that must NOT be counted as a member of the partition
+        for hels, labels in (([self.VECTOR], ['+', '-', '0']),
+                             ([self.FERMION], ['+', '-'])):
+            stub = self._Stub(labels)
+            prod = self._joint(hels, 71)
+            dec = self._joint(hels, 72, diagonal_only=True)
+            ratios = stub._polarization_ratios(prod, dec, self._static(hels))
+            self.assertTrue(np.allclose(sum(ratios.values()), 1.0, atol=1e-5),
+                            '%s -> %s' % (hels, ratios))
+        # and the fermion's '0' really is the whole nominal weight
+        stub = self._Stub(['0'])
+        prod = self._joint([self.FERMION], 71)
+        dec = self._joint([self.FERMION], 72, diagonal_only=True)
+        self.assertEqual(stub._polarization_ratios(
+            prod, dec, self._static([self.FERMION]))['0'], 1.0)
+
+    def test_sum_rule_holds_for_transverse_plus_longitudinal(self):
+        """{T} and {0} are the other complete, non-overlapping decomposition of
+        a vector -- and {T} keeps its own off-diagonal (-1,+1) block, so it is
+        a genuinely different partition of the same nine terms."""
+        import numpy as np
+        stub = self._Stub(['T', '0'])
+        prod = self._joint([self.VECTOR], 81)
+        dec = self._joint([self.VECTOR], 82, diagonal_only=True)
+        ratios = stub._polarization_ratios(prod, dec, self._static([self.VECTOR]))
+        self.assertTrue(np.allclose(sum(ratios.values()), 1.0, atol=1e-5))
+
+    def test_sum_rule_fails_on_the_off_diagonal_terms(self):
+        """Condition (a): with interference in the contraction the single-state
+        blocks cover the diagonal only, so the sum falls short of 1. Pinned so
+        the sum rule is not mistaken for an identity."""
+        import numpy as np
+        stub = self._Stub(['+', '-', '0'])
+        prod = self._joint([self.VECTOR], 91)
+        dec = self._joint([self.VECTOR], 92)     # full, interference included
+        ratios = stub._polarization_ratios(prod, dec, self._static([self.VECTOR]))
+        self.assertFalse(np.allclose(sum(ratios.values()), 1.0, atol=1e-3))
+        # what the sum *does* reproduce is the diagonal part of the double sum
+        full = self._brute_force(dec, prod, None)
+        diag = sum(complex(v) * complex(p)
+                   for v, p, d in zip(dec.values, prod.values, dec._diag_mask)
+                   if d)
+        self.assertTrue(np.allclose(sum(ratios.values()),
+                                    (diag / full).real, atol=1e-5))
+
+    def test_sum_rule_fails_for_two_restricted_particles(self):
+        """Condition (b): the entry restricts *both* particles at once, so the
+        mixed (+,-) and (-,+) diagonal entries belong to no block."""
+        import numpy as np
+        stub = self._Stub(['+', '-'])
+        hels = [self.FERMION, self.FERMION]
+        prod = self._joint(hels, 101)
+        dec = self._joint(hels, 102, diagonal_only=True)
+        ratios = stub._polarization_ratios(prod, dec, self._static(hels))
+        self.assertFalse(np.allclose(sum(ratios.values()), 1.0, atol=1e-3))
+        # ... and it comes back as soon as one of the two is left unrestricted,
+        # which is exactly the t t~ z '0' configuration
+        stub = self._Stub(['+', '-'])
+        static = self._static(hels)
+        static['pol_weight_restrictions'] = [('+', ((1,), None)),
+                                             ('-', ((-1,), None))]
+        ratios = stub._polarization_ratios(prod, dec, static)
+        self.assertTrue(np.allclose(sum(ratios.values()), 1.0, atol=1e-5))
+
+
 class TestSequentialSlots(unittest.TestCase):
     """_decaying_pdgs / _sequential_slots: which density matrix slot belongs to
     which production particle.
