@@ -2418,3 +2418,88 @@ two particles' flip directions -- a separate feature, exactly as 13.9 says of it
 "global" cousin -- and it would buy a distinction between two quantities neither
 of which is an observable and both of which are already measurable from the
 single `(I,I)` sample.
+
+### 13.16 End-to-end validation of the fully weighted mode
+
+`p p > t t~` at 13 TeV, NNPDF23LO, `me_frame = [1,2]`, **50 000** production
+events (`iseed = 4321`), `spinmode = onshell`, `BW_cut = 15`,
+`max_weight_ps_point = 400`, `decay t > b w+, w+ > l+ vl` and the conjugate,
+`l = e, mu`, 8 cores. The card uses the accumulating spelling, i.e. the
+`(I, I)` block -- the one the closure test could only reach by subtraction:
+
+    set pure_interference t  = + -
+    set pure_interference t~ = + -
+
+**The weight sum is compatible with zero, and every event is written.**
+
+| | |
+|---|---|
+| events written / read | 50000 / 50000 (the mode no longer rejects) |
+| `<init>` `XSECUP` / `IDWTUP` | `0.0` / `-4` |
+| reference `sigma*BR` | 23.763645 pb |
+| `S = sum w` | `-9.777639e+02` |
+| `sqrt(sum w^2)` | `9.815884e+02` |
+| `z = S / sqrt(sum w^2)` | **`-0.996`** |
+| `mean(w)` | `-1.9555e-02 +- 1.9632e-02`, i.e. `-0.082%` of `sigma_ref` |
+| positive / negative weights | 24918 / 25082 |
+| `mean|w| / sigma_ref` | 0.13007 (0.13011 on an independent 2 000-event run) |
+| trials with a dead weight | 0 |
+
+`mean(w) = 0` is the sample's own cross-section under `IDWTUP = -4`, and it
+agrees with the `XSECUP = 0` written into `<init>`.
+
+**`c` agrees with the analytic form.** Measured `c = 2.258515e-10 +- 0.13%` over
+44 016 probe trials against `1/(prod_denominators * sym_decay) = 2.255914e-10`
+for the default SM card (`m_t = 173.0`, `Gamma_t = 1.4915`, so
+`1/(m_t Gamma_t)^4`): **ratio 1.001153**, i.e. 0.9 sigma of the measurement.
+The independent 2 000-event run gave `2.259903e-10 +- 0.15%`, ratio 1.0018. So
+under `spinmode = onshell` -- where `<jac> = 1` and `sym_factor_decay = 1` --
+the analytic form is confirmed. It is still not what the code uses, because
+`<jac> != 1` under `madspin`/`full` and `PA`; it is recorded in the banner as a
+cross-check.
+
+**The physics closes against the independent closure test.** The interference
+contribution to an observable is `sum_i w_i O_i / N_read`, divided by
+`sigma_ref` to compare with the closure's `<O>` shifts (`RESULTS.md` section 6):
+
+| observable | this run, `(I,I)` alone, 50k | closure, all 5 interference blocks, 5 x 50k | pull |
+|---|---|---|---|
+| `<C_nn>` | **+0.037205 +- 0.000364** | **+0.03626 +- 0.00090** | +0.97 |
+| `<C_rr>` | +0.002246 +- 0.000375 | +0.00247 +- 0.00091 | -0.22 |
+| `<C_kk>` | -0.000085 +- 0.000165 | -0.00034 +- 0.00062 | +0.39 |
+| `<cos phi_ll>` | +0.039366 +- 0.000564 | +0.03839 +- 0.00145 | +0.63 |
+| `<Delta phi>` | -0.066684 +- 0.001761 | -0.07051 +- 0.00491 | +0.73 |
+| `<pT(t)>` (null test) | -0.63 +- 2.86 | +0.267 +- 0.351 | -0.31 |
+
+Every entry agrees within one sigma, `(I,I)` alone reproduces the whole
+interference (13.15 and `RESULTS.md` 6b), and `pT(t)` -- a production-level
+observable, which the interference must not touch -- is flat at zero.
+
+**The statistics are 2.5-2.8x better per observable from one fifth of the
+production events**, i.e. roughly a factor 30-40 in variance per production
+event, which is what dropping the 3-9% accept/reject and carrying `<|W|>` in the
+weight buys.
+
+**A run with `pure_interference` unset is byte-identical.** The same card
+without the option, re-run through `decay_events` on the same 2 000-event parent
+against the implementation and against the pre-change tree (`bdf383554`),
+produces the same 3 633 126-byte file, identical SHA-256
+(`160f0cff56d2f1ad138a9950de607c8a8366df1d69005ef8bf2c1aad8cf71fc3`), banner
+included.
+
+**Both `set` lines accumulate and the `;` spelling fails loudly.** The run above
+logs `pure_interference is ON for particle(s) -6, 6` and the banner block lists
+both pdgs; `set pure_interference t = + - ; t~ = + -` raises `InvalidCmd`.
+
+`tests/test_manager.py test_madspin -t0`: **284 tests, OK** (269 before this
+work).
+
+Caveats:
+
+* only `spinmode = onshell` was exercised end to end here (13.12 exercised
+  `madspin`); `PA` and `fixed_order` were not run;
+* `c` is measured with the probe's own statistics, so it carries a flat scale
+  error on every weight -- 0.13% here, warned about above 5%;
+* the analytic cross-check is confirmed only in the `<jac> = 1` case, which is
+  exactly where the derivation says it should hold. It has **not** been checked
+  offshell, where the derivation says it should *not* hold.

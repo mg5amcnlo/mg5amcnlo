@@ -4777,7 +4777,9 @@ class MadSpinInterface(extended_cmd.Cmd):
             c_cache = pjoin(self.options['ms_dir'], 'pure_interference_c')
             if os.path.exists(c_cache):
                 self._read_pi_c_cache(c_cache)
-                return float(open(pjoin(self.options['ms_dir'], 'max_wgt'),'r').read())
+                cached = float(open(pjoin(self.options['ms_dir'], 'max_wgt'),'r').read())
+                self._pi_max_weight = cached
+                return cached
 
         nevents = self.options['Nevents_for_max_weight']
         if nevents == 0 :
