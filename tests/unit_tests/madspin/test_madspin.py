@@ -56,6 +56,12 @@ def _borrow_decision_helpers(namespace):
     body of any stub that borrows one of those.
 
     getattr_static keeps the staticmethod wrappers intact.
+
+    The list is hand-kept, so a new call added inside the borrowed code hits a
+    method the stub never borrowed. The `__getattr__` installed here turns that
+    into an error naming the method (and where to add it) rather than a bare
+    AttributeError; it still *is* an AttributeError, so `getattr(self, x, d)`
+    and `hasattr` keep behaving as before.
     """
     for name in ('_auto_unweighting_mode', '_density_pole_approximation',
                  '_density_do_reshuffle', '_density_needs_reshuffle',
@@ -67,6 +73,17 @@ def _borrow_decision_helpers(namespace):
                  '_density_spinmode', '_production_polarization'):
         namespace[name] = inspect.getattr_static(
             interface_madspin.MadSpinInterface, name)
+
+    def __getattr__(self, name):
+        try:
+            inspect.getattr_static(interface_madspin.MadSpinInterface, name)
+        except AttributeError:
+            raise AttributeError(name)
+        raise AttributeError(
+            '%s does not borrow MadSpinInterface.%s: add it to the list in'
+            ' _borrow_decision_helpers, or define it on the stub'
+            % (type(self).__name__, name))
+    namespace.setdefault('__getattr__', __getattr__)
     return namespace
 #
 class TestBanner(unittest.TestCase):
@@ -4330,20 +4347,19 @@ class TestUnweightingDecisionTable(unittest.TestCase):
 
     class _Stub(object):
         """The real methods, on the smallest object that can carry them."""
-        for _name in ('_unweighting_mode', '_auto_unweighting_mode',
-                      '_announce_mode', '_log_once', '_sequential_active',
-                      '_sequential_upfront', '_sequential_offshell',
-                      '_sequential_pool_ladder', '_sequential_spin_order',
-                      '_decay_pool_ladder', '_density_pole_approximation',
-                      '_density_do_reshuffle', '_density_needs_reshuffle',
-                      '_spinmode_has_density', '_is_upfront_scheme',
-                      '_density_spinmode', '_production_polarization'):
+        _borrow_decision_helpers(locals())
+        for _name in ('_unweighting_mode', '_announce_mode', '_log_once',
+                      '_sequential_active', '_sequential_upfront',
+                      '_sequential_offshell', '_sequential_pool_ladder',
+                      '_sequential_spin_order', '_decay_pool_ladder'):
             # getattr_static keeps the staticmethod wrappers intact
             locals()[_name] = inspect.getattr_static(
                 interface_madspin.MadSpinInterface, _name)
         del _name
 
-        def __init__(self, spinmode='madspin', unweighting='auto',
+        # keyword-only: a new knob must not be able to shift the meaning of an
+        # existing argument at a call site
+        def __init__(self, *, spinmode='madspin', unweighting='auto',
                      nb_decaying=2, fixed_order=False, decay_groups=None,
                      polarization=None):
             self.options = {'spinmode': spinmode, 'unweighting': unweighting,
@@ -4357,38 +4373,54 @@ class TestUnweightingDecisionTable(unittest.TestCase):
             self.model = TestUnweightingDecisionTable._Model()
             self._logged_once = set()
 
+    # one point of the exhaustive product below. Named, so that adding a
+    # dimension cannot silently reinterpret the existing ones -- which is
+    # exactly what `polarization` would have done as a seventh tuple slot.
+    _Case = collections.namedtuple(
+        '_Case', ('spinmode', 'unweighting', 'nb_decaying', 'fixed_order',
+                  'decay_groups', 'polarization', 'density_method'))
+
     @classmethod
-    def _reference_mode(cls, spinmode, unweighting, nb_decaying, fixed_order,
-                        decay_groups, polarization, density_method):
+    def _reference_mode(cls, case):
         """The rules as documented on the `unweighting` option, restated here
         rather than read off the implementation, so this is a check and not a
         tautology."""
-        if not density_method:
+        if not case.density_method:
             return 'joint'                       # only scheme outside density
-        mode = unweighting
+        mode = case.unweighting
         if mode == 'auto':
-            if spinmode in cls.POLE_APPROXIMATION:
+            if case.spinmode in cls.POLE_APPROXIMATION:
                 mode = 'sequential'              # fastest at every measured n
-            elif polarization and spinmode in cls.DENSITY_SPINMODES:
+            elif case.polarization and case.spinmode in cls.DENSITY_SPINMODES:
                 mode = 'sequential'              # restricted convolution: the
                                                  # joint weight sits orders of
                                                  # magnitude below its bound
-            elif nb_decaying <= 2:
+            elif case.nb_decaying <= 2:
                 mode = 'joint'                   # offshell, too few decays
             else:
                 mode = 'sequential'
         if mode == 'joint':
             return 'joint'
-        if fixed_order:
+        if case.fixed_order:
             return 'joint'                       # counter-events ride along
-        if decay_groups:
+        if case.decay_groups:
             return 'joint'                       # '@' groups self-normalise
-        if spinmode not in ('PA', 'onshell', 'madspin', 'full'):
+        if case.spinmode not in ('PA', 'onshell', 'madspin', 'full'):
             return 'joint'                       # no density matrix to stage
         if (mode == 'sequential_with_mass'
-                and spinmode not in cls.POLE_APPROXIMATION):
+                and case.spinmode not in cls.POLE_APPROXIMATION):
             return 'sequential'                  # needs a per-particle mass
         return mode
+
+    def _case_stub(self, case):
+        """The stub a case describes. `density_method` stays out of it: it is
+        the argument the decision methods take, not stub state."""
+        return self._Stub(spinmode=case.spinmode,
+                          unweighting=case.unweighting,
+                          nb_decaying=case.nb_decaying,
+                          fixed_order=case.fixed_order,
+                          decay_groups=case.decay_groups,
+                          polarization=case.polarization)
 
     def _cases(self):
         for spinmode in self.SPINMODES:
@@ -4398,17 +4430,22 @@ class TestUnweightingDecisionTable(unittest.TestCase):
                         for groups in (None, {'tags': ['1', '2']}):
                             for pol in self.POLARIZATIONS:
                                 for density_method in (True, False):
-                                    yield (spinmode, unweighting, nb_decaying,
-                                           fixed_order, groups, pol,
-                                           density_method)
+                                    yield self._Case(
+                                        spinmode=spinmode,
+                                        unweighting=unweighting,
+                                        nb_decaying=nb_decaying,
+                                        fixed_order=fixed_order,
+                                        decay_groups=groups,
+                                        polarization=pol,
+                                        density_method=density_method)
 
     def test_every_combination_matches_the_documented_rules(self):
         seen = set()
         for case in self._cases():
-            stub = self._Stub(*case[:6])
-            got = stub._unweighting_mode(case[6])
+            stub = self._case_stub(case)
+            got = stub._unweighting_mode(case.density_method)
             seen.add(got)
-            self.assertEqual(got, self._reference_mode(*case), msg=str(case))
+            self.assertEqual(got, self._reference_mode(case), msg=str(case))
         # the table is not degenerate: every scheme is reachable through it
         self.assertEqual(seen, {'joint', 'two_stage', 'sequential',
                                 'sequential_global_retry',
@@ -4422,34 +4459,38 @@ class TestUnweightingDecisionTable(unittest.TestCase):
         pol = self.POLARIZATIONS[1]
         for spinmode in ('madspin', 'full', 'PA', 'onshell'):
             for nb in self.NB_DECAYING:
-                stub = self._Stub(spinmode, 'auto', nb, polarization=pol)
+                stub = self._Stub(spinmode=spinmode, unweighting='auto',
+                                  nb_decaying=nb, polarization=pol)
                 self.assertEqual(stub._auto_unweighting_mode(), 'sequential',
                                  ('polarised', spinmode, nb))
         for spinmode in ('PA', 'onshell'):
             for nb in self.NB_DECAYING:
-                self.assertEqual(
-                    self._Stub(spinmode, 'auto', nb)._auto_unweighting_mode(),
-                    'sequential', (spinmode, nb))
+                stub = self._Stub(spinmode=spinmode, unweighting='auto',
+                                  nb_decaying=nb)
+                self.assertEqual(stub._auto_unweighting_mode(),
+                                 'sequential', (spinmode, nb))
         for spinmode in ('madspin', 'full'):
             for nb, expected in ((0, 'joint'), (1, 'joint'), (2, 'joint'),
                                  (3, 'sequential'), (4, 'sequential'),
                                  (7, 'sequential')):
-                self.assertEqual(
-                    self._Stub(spinmode, 'auto', nb)._auto_unweighting_mode(),
-                    expected, (spinmode, nb))
+                stub = self._Stub(spinmode=spinmode, unweighting='auto',
+                                  nb_decaying=nb)
+                self.assertEqual(stub._auto_unweighting_mode(),
+                                 expected, (spinmode, nb))
 
     def test_auto_without_a_measured_multiplicity_assumes_two(self):
         """`_nb_decaying` is set while the decays are prepared; anything asking
         before that must not crash."""
-        stub = self._Stub('madspin', 'auto')
+        stub = self._Stub(spinmode='madspin', unweighting='auto')
         del stub._nb_decaying
         self.assertEqual(stub._unweighting_mode(), 'joint')
 
     def test_sequential_active_is_exactly_not_joint(self):
         for case in self._cases():
-            stub = self._Stub(*case[:6])
-            self.assertEqual(stub._sequential_active(case[6]),
-                             stub._unweighting_mode(case[6]) != 'joint',
+            stub = self._case_stub(case)
+            self.assertEqual(stub._sequential_active(case.density_method),
+                             stub._unweighting_mode(case.density_method)
+                                != 'joint',
                              msg=str(case))
 
     def test_upfront_is_every_scheme_but_joint_and_with_mass(self):
@@ -4460,10 +4501,10 @@ class TestUnweightingDecisionTable(unittest.TestCase):
             self.assertEqual(self._Stub()._is_upfront_scheme(mode), expected,
                              mode)
         for case in self._cases():
-            stub = self._Stub(*case[:6])
+            stub = self._case_stub(case)
             self.assertEqual(
-                stub._sequential_upfront(case[6]),
-                stub._unweighting_mode(case[6]) not in
+                stub._sequential_upfront(case.density_method),
+                stub._unweighting_mode(case.density_method) not in
                     ('joint', 'sequential_with_mass'),
                 msg=str(case))
 
@@ -4471,17 +4512,19 @@ class TestUnweightingDecisionTable(unittest.TestCase):
         """It needs a per-particle mass draw; the offshell spinmodes reshuffle
         the whole production onto the mass set at once."""
         for spinmode in ('PA', 'onshell'):
-            stub = self._Stub(spinmode, 'sequential_with_mass', 2)
+            stub = self._Stub(spinmode=spinmode, nb_decaying=2,
+                              unweighting='sequential_with_mass')
             self.assertEqual(stub._unweighting_mode(), 'sequential_with_mass')
             self.assertFalse(stub._sequential_upfront())
         for spinmode in ('madspin', 'full'):
-            stub = self._Stub(spinmode, 'sequential_with_mass', 2)
+            stub = self._Stub(spinmode=spinmode, nb_decaying=2,
+                              unweighting='sequential_with_mass')
             self.assertEqual(stub._unweighting_mode(), 'sequential')
             self.assertTrue(stub._sequential_upfront())
 
     def test_the_spinmode_family_predicates(self):
         for spinmode in self.SPINMODES:
-            stub = self._Stub(spinmode)
+            stub = self._Stub(spinmode=spinmode)
             self.assertEqual(stub._density_pole_approximation(),
                              spinmode in ('PA', 'onshell'), spinmode)
             self.assertEqual(stub._density_do_reshuffle(), spinmode == 'PA',
@@ -4495,7 +4538,7 @@ class TestUnweightingDecisionTable(unittest.TestCase):
 
     def test_needs_reshuffle_is_offshell_or_pa_inside_density_mode(self):
         for spinmode in self.SPINMODES:
-            stub = self._Stub(spinmode)
+            stub = self._Stub(spinmode=spinmode)
             self.assertFalse(stub._density_needs_reshuffle(False), spinmode)
             self.assertEqual(bool(stub._density_needs_reshuffle(True)),
                              spinmode != 'onshell', spinmode)
@@ -4503,10 +4546,10 @@ class TestUnweightingDecisionTable(unittest.TestCase):
     def test_pool_ladder_is_empty_unless_a_staged_scheme_is_in_use(self):
         to_decay, nb_event = {6: 100, -6: 100}, 100
         for case in self._cases():
-            stub = self._Stub(*case[:6])
+            stub = self._case_stub(case)
             ladder = stub._sequential_pool_ladder(dict(to_decay), nb_event,
-                                                  case[6])
-            if stub._unweighting_mode(case[6]) == 'joint':
+                                                  case.density_method)
+            if stub._unweighting_mode(case.density_method) == 'joint':
                 self.assertEqual(ladder, {}, msg=str(case))
             else:
                 self.assertEqual(sorted(ladder), [-6, 6], msg=str(case))
@@ -4514,7 +4557,8 @@ class TestUnweightingDecisionTable(unittest.TestCase):
                                  msg=str(case))
 
     def test_pool_ladder_gives_up_on_a_particle_the_model_does_not_know(self):
-        stub = self._Stub('PA', 'sequential', 2)
+        stub = self._Stub(spinmode='PA', unweighting='sequential',
+                          nb_decaying=2)
         self.assertEqual(stub._sequential_pool_ladder({6: 100, 999: 100}, 100,
                                                       True), {})
 
