@@ -472,7 +472,7 @@ def main():
     fig.suptitle('MadSpin production-polarisation closure: sum of '
                  r'$t\{+\}\bar t\{+\},\,t\{+\}\bar t\{-\},\,t\{-\}\bar t\{+\},'
                  r'\,t\{-\}\bar t\{-\}$  vs.  unpolarised $pp\to t\bar t$'
-                 '\n(13 TeV, LO, MadSpin spinmode=onshell, '
+                 '\n(13 TeV, LO, MadSpin density spinmode, '
                  r'$t\to b\,\ell\nu$ both sides)', fontsize=12, y=0.99)
     fig.savefig(os.path.join(out_dir, 'closure_summary.png'), dpi=150,
                 bbox_inches='tight')

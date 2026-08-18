@@ -163,20 +163,25 @@ correlation, not in the one-particle marginal.
 There is **no** deviation that interference does not explain.  Nothing here
 blocks #349.
 
+The whole test was then **repeated in the offshell density mode**
+(`spinmode madspin` + `unweighting sequential`, 5 x 50 000 events) and gives the
+same answer -- section 6.
+
 What was **not** tested:
 
-* only `spinmode = onshell` was run end to end at full statistics.  The other
-  density modes share `calculate_matrix_element_from_density` and
-  `_frame_boost`, so the code under test is the same, but `madspin` (offshell)
-  and `PA` were not closure-tested here.  A 2 000-event `madspin` run of
-  `t{+} t~{+}` did reproduce `<cos theta_k(l+)> = 0.316 +- 0.011` (1.6 sigma
-  from 1/3), consistent but not a closure test.
+* `spinmode = PA` was not closure-tested (it shares
+  `calculate_matrix_element_from_density` and `_frame_boost` with the two modes
+  that were, so the code under test is the same).
+* the default `unweighting = auto` for `spinmode = madspin` with two decaying
+  particles, i.e. `joint`, could not be run to completion at all -- see
+  section 5.  Everything here used `sequential` (`onshell`'s own default, and
+  set explicitly for `madspin`).
 * LO only, one process, no polarised beams, no `{T}`/`{0}` (vector) braces, no
   brace on a particle MadSpin does not decay.
 * statistical precision of the ratio is 2.4-4.9% per bin; a sub-percent
   interference effect in the "closing" observables would not be visible.
 
-## 5. Side finding (does not block #349): offshell density mode is unusable here
+## 5. Side finding (does not block #349): the max-weight bound and polarisation
 
 Accept/reject trials per written event, identical cards otherwise:
 
@@ -223,3 +228,70 @@ already does under `PA`/`onshell`.
 Section 6 repeats the whole closure test in `spinmode madspin` +
 `unweighting sequential`, i.e. in the default offshell density mode, to confirm
 that none of the conclusions depend on the mode.
+
+## 6. The same test in the offshell density mode
+
+`spinmode madspin` with `set unweighting sequential`, 5 x 50 000 events, same
+seeds, same cards otherwise.  Efficiency: 6.67 trials/event unpolarised,
+9.14 / 9.00 / 9.26 / 9.45 for `t{+}t~{+}` / `t{+}t~{-}` / `t{-}t~{+}` /
+`t{-}t~{-}` -- a factor 1.4, not a factor 1000.
+
+Total-rate closure:
+
+| | sum of the four | unpolarised | ratio |
+|---|---|---|---|
+| production | 504.3692 +- 0.1556 pb | 504.3240 +- 0.2830 pb | 1.000090 +- 0.000640 (0.14 sigma) |
+| after MadSpin | 23.74478 +- 0.00732 pb | 23.73997 +- 0.01332 pb | 1.000203 +- 0.000641 (0.32 sigma) |
+
+Per-bin ratio, `chi2` over 20 bins:
+
+| observable | `chi2`/20 | onshell (section 3) |
+|---|---|---|
+| `cos theta_k(l+)` | 28.4 | 24.6 |
+| `cos theta_k(l-)` | 21.2 | 12.1 |
+| `C_kk` | 14.0 | 8.4 |
+| `cos theta_n(l+)` | 15.1 | 23.0 |
+| `C_rr` | 16.3 | 11.4 |
+| **`C_nn`** | **363.8** | **398.4** |
+| **`cos phi_ll`** | **174.0** | **159.4** |
+| **`Delta phi(l+,l-)`** | **192.2** | **245.0** |
+| `pT(t)` (control) | 17.3 | 13.8 |
+| `m(t t~)` (control) | 25.7 | 17.6 |
+
+`<C_nn>` is again removed in full -- `0.00079 +- 0.00111` for the sum against
+`0.03574 +- 0.00149` unpolarised, 18.8 sigma -- and the
+`cos phi = C_kk + C_rr + C_nn` identity again closes to 1e-5:
+
+    sum   0.03783 - 0.00043 + 0.00079 = 0.03819   (measured 0.03819)
+    unpol 0.03852 + 0.00408 + 0.03574 = 0.07834   (measured 0.07834)
+
+Same conclusion, in the mode users get by default.  Plots in `plots_offshell/`,
+numbers in `plots_offshell/closure_numbers.txt`.
+
+### Caveat found in this pass: the sequential bound under-covers for polarised
+
+MadSpin's own diagnostic fired in the *offshell + sequential* runs -- and only
+there:
+
+    p p > t t~        CRITICAL: MadSpin sequential:  2 weights exceeded their per-particle maximum
+    p p > t{+} t~{+}  CRITICAL: MadSpin sequential: 91 weights exceeded ...
+    p p > t{+} t~{-}  CRITICAL: MadSpin sequential: 82 weights exceeded ...
+    p p > t{-} t~{+}  CRITICAL: MadSpin sequential: 86 weights exceeded ...
+    p p > t{-} t~{-}  CRITICAL: MadSpin sequential: 86 weights exceeded ...
+
+out of 50 000 written events each, i.e. **0.17% of events in the polarised
+samples against 0.004% unpolarised** -- a factor 43.  The five `onshell` runs of
+section 3 emitted **no** overflow at all.
+
+This is the *same* underlying observation as section 5, seen from the other
+side: the polarised weight distribution has a longer tail than the unpolarised
+one, and the `mean + nb_sigma*sd` max-weight estimator does not track it.  Under
+the joint scheme it over-covers by a factor 50-1500 (unusable CPU); under the
+sequential scheme it under-covers on ~0.2% of events (small bias, correctly
+flagged).  The size of the resulting bias is bounded by that 0.17% and is
+invisible at the statistics here -- section 6 reproduces section 3 within
+errors on every observable -- but the tuning of `nb_sigma` /
+`Nevents_for_max_weight` for a polarised production is the concrete follow-up
+this test identifies.
+
+The section 3 result, which is the one quoted in the verdict, is free of it.

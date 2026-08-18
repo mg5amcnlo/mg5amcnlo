@@ -119,6 +119,12 @@ then
 `plots/closure_numbers.txt`, plots in `plots/`, overview in
 `plots/closure_summary.png`.
 
+The whole test was run **twice**: once in `spinmode onshell` (`plots/`, the
+quoted result) and once in the default offshell mode, `spinmode madspin` with
+`set unweighting sequential` (`plots_offshell/`).  Both give the same answer;
+section 6 of `RESULTS.md` compares them and records one caveat that only shows
+up in the offshell+sequential pass.
+
 Short version: the total rate closes to 6e-4 (0.00 sigma before the decay,
 -0.38 sigma after); every diagonal observable closes at the 2-4% per-bin
 statistical precision (`chi2/ndf` 1.2, 0.6, 0.4); both controls close
