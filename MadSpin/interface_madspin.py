@@ -6112,14 +6112,17 @@ class MadSpinInterface(extended_cmd.Cmd):
 
         logger.warning(
             "MadSpin: pure_interference is ON for particle(s) %s. The decayed "
-            "sample keeps ONLY the interference between the two polarisations: "
-            "its total cross-section is zero by construction, its event "
-            "weights are SIGNED, and fewer events are written than were read "
-            "(the keep rate is the local interference size and is physics, not "
-            "an inefficiency). The <init> block is written with XSECUP = 0, so "
-            "the file is NOT directly showerable -- see the "
-            "<MGPureInterference> banner block for the reference "
-            "normalisation.",
+            "sample keeps ONLY the interference between the polarisations "
+            "named, so its total cross-section is zero by construction and its "
+            "events are FULLY WEIGHTED with a SIGNED weight, "
+            "w = sigma_ref * BR * W / c. Under MG5's IDWTUP = -4 convention "
+            "(cross-section = mean of the weights) that makes the file "
+            "self-normalising: mean(w) = 0 and sum_bin(w)/N is the "
+            "interference contribution to that bin in pb. The <init> block is "
+            "written with XSECUP = 0, so the file is NOT directly showerable "
+            "and any tool that assumes unit weights will be wrong on it -- see "
+            "the <MGPureInterference> banner block for the reference "
+            "cross-section, c, and the zero-cross-section check.",
             ', '.join(str(p) for p in sorted(pure)))
 
     def _apply_pure_interference(self, decaying_pdg, helicities, restriction):
