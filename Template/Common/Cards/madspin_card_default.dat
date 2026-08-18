@@ -24,17 +24,33 @@
 #         - none : no spin correlation and no finite width effect
 #         legacy modes:
 #         - madspin_v1 and onshell_v1
-# set keep_weight_for_polarization [0, T, +, -]
-#         density spin modes only. Adds one EXTRA weight per listed polarisation
-#         to the LHEF v3 <rwgt> section of every event, equal to
-#         nominal_weight * (density convolution restricted to that polarisation)
+# set keep_weight_for_polarization_vector  [0, T, +, -]
+# set keep_weight_for_polarization_fermion [+, -]
+#         density spin modes only. Each decaying particle draws from the list of
+#         its own spin, and one EXTRA weight is added to the LHEF v3 <rwgt>
+#         section of every event for each COMBINATION -- one per element of the
+#         cartesian product over the decaying particles -- equal to
+#         nominal_weight * (density convolution restricted to that combination)
 #         / (nominal density convolution). The nominal weight and the
-#         cross-section are untouched. The same entry applies to every decaying
-#         particle at once and is silently skipped -- that particle stays summed
-#         over its full helicity basis -- where it is unphysical, so on
-#         'p p > t t~ z' the entry '0' restricts the Z only. The ratio is
-#         positive but not bounded by 1 event by event: the interference terms
-#         a polarisation drops can be negative.
+#         cross-section are untouched, and two empty lists (the default) change
+#         nothing at all.
+#         On 'p p > t t~ z' the two lists above give 2*2*4 = 16 extra weights,
+#         named after the per-particle assignment in density-basis slot order:
+#             <wgt id='ms_pol_6:+_-6:-_23:0'>   t(+) t~(-) z(0)
+#         A particle with an empty list -- and a scalar, which has no
+#         polarisation -- is left summed over and shows up as '*' instead of a
+#         label; it does not multiply the number of weights. A label unphysical
+#         for a particle ('0' on a fermion) is dropped from its choices.
+#         With a polarised production ('p p > z{0} z{T}') each slot's choices
+#         are intersected with its own brace and the impossible ones are
+#         dropped, so the ids that survive are the ones that can be non-zero.
+#         The ratio is positive but not bounded by 1 event by event: the
+#         interference terms a polarisation drops can be negative. sum_C w_C = w
+#         only when each list partitions its helicity basis ([+, -] for a
+#         fermion, [0, +, -] or [0, T] for a vector -- [0, T, +, -] overlaps)
+#         *and* the contraction has no interference part.
+#         'set keep_weight_for_polarization [...]' is the deprecated spelling:
+#         it sets both lists at once.
 #
 # Polarisation of the PRODUCTION process ('generate p p > w+{0} w-'):
 #         the density spin modes restrict the production/decay convolution to
