@@ -2607,6 +2607,154 @@ class TestWeightedDecayOutput(unittest.TestCase):
         self.assertIn('mean(w) / reference          : 1.000000', note)
 
 
+class TestUnweightRangeWeightPaths(unittest.TestCase):
+    """The three shapes ``_unweight_range`` can write, driven through the real
+    loop with the matrix element stubbed out.
+
+    This exists because the interference and weighted paths all leave the
+    ``while 1`` through the same ``if <no ordinary test> or random()*maxwgt <
+    test`` line, and getting that condition wrong is silent: the 'unweighted'
+    interference path, which has already made its own decision on |W|, once
+    fell through to the signed test and had every negative weight rejected a
+    second time. The z check caught it end to end, but only after a run.
+    """
+
+    EVENT = """<event>
+ 4  1 +%.7e 1.00000000e+02 7.54677100e-03 1.30800000e-01
+       -1 -1    0    0  501    0 +0.0000000e+00 +0.0000000e+00 +5.0e+02 5.0e+02 0.0e+00 0.0e+00 1.0
+        1 -1    0    0    0  501 +0.0000000e+00 +0.0000000e+00 -5.0e+02 5.0e+02 0.0e+00 0.0e+00 1.0
+       11  1    1    2    0    0 +1.0000000e+02 +0.0000000e+00 +0.0e+00 1.0e+02 0.0e+00 0.0e+00 1.0
+      -11  1    1    2    0    0 -1.0000000e+02 +0.0000000e+00 +0.0e+00 9.0e+02 0.0e+00 0.0e+00 1.0
+</event>"""
+
+    class _Sink(object):
+        def __init__(self):
+            self.events = []
+
+        def write_events(self, evt):
+            self.events.append(evt)
+
+    class _Stub(object):
+        """Enough MadSpinInterface for the joint branch of _unweight_range."""
+        InvalidCmd = interface_madspin.MadSpinInterface.InvalidCmd
+        _unweight_range = interface_madspin.MadSpinInterface._unweight_range
+        _dead_trial = interface_madspin.MadSpinInterface._dead_trial
+        _POL_TOKENS = interface_madspin.MadSpinInterface._POL_TOKENS
+        _parse_pol_side = interface_madspin.MadSpinInterface._parse_pol_side
+        _pure_interference = \
+            interface_madspin.MadSpinInterface._pure_interference
+
+        def __init__(self, weights, pure_interference=''):
+            self.options = interface_madspin.MadSpinOptions()
+            self.options['pure_interference'] = pure_interference
+            self.model = _PIModelStub()
+            self.options['fixed_order'] = False
+            self.options['density_keep_jacobian'] = False
+            self.branching_ratio = 2.0
+            self.efficiency = 1.0
+            self._weights = list(weights)
+            self._draw = 0
+
+        # -- the pieces the loop calls out to -----------------------------
+        def get_decay_from_file(self, production, evt_decayfile, nb_remain):
+            return {}
+
+        def get_onshell_evt_and_wgt(self, prod, decays, decay_dict,
+                                    cached=None, build_event=False):
+            wgt = self._weights[self._draw % len(self._weights)]
+            self._draw += 1
+            return None, wgt, 'density'
+
+        def _add_polarization_weights(self, evt, ratios):
+            pass
+
+    def _ctx(self, **over):
+        ctx = dict(maxwgt=1.0, maxwgts=[], sequential=False, decay_dict={},
+                   drop_prob_per_pdg={}, mixed_pdgs_set=set(),
+                   density_method=True, density_pole_approximation=True,
+                   density_needs_reshuffle=False, shard_nb_event=10,
+                   branching_ratio=2.0, base_seed=1,
+                   pure_interference_c=0.5, pure_interference_absw=0.25,
+                   pure_interference_unweighted=False, weighted_decay=False)
+        ctx.update(over)
+        return ctx
+
+    def _run(self, stub, ctx, nb_events=4):
+        source = [lhe_parser.Event(self.EVENT % 1.0) for _ in range(nb_events)]
+        sink = self._Sink()
+        stats = stub._unweight_range(source, {}, sink, ctx)
+        return [e.wgt for e in sink.events], stats
+
+    # ------------------------------------------------------------------
+
+    def test_the_ordinary_path_still_accepts_and_rejects(self):
+        """A weight of 0.5 against maxwgt 1.0 keeps roughly half the trials,
+        and every written event carries w_prod * BR with no W on it."""
+        random.seed(7)
+        stub = self._Stub([0.5])
+        wgts, stats = self._run(stub, self._ctx(), nb_events=50)
+        self.assertEqual(len(wgts), 50)          # redraw-until-accept
+        self.assertEqual(set(round(w, 9) for w in wgts), {2.0})
+        self.assertGreater(stats['nb_try'], 60)  # ... and it did redraw
+
+    def test_the_fully_weighted_interference_path_keeps_every_trial(self):
+        random.seed(7)
+        stub = self._Stub([0.5, -0.25], pure_interference='w+ = 0 T')
+        wgts, stats = self._run(stub, self._ctx(), nb_events=4)
+        self.assertEqual(stats['nb_try'], 4)     # one draw per event, no redraw
+        # w = w_prod * BR * W / c, c = 0.5
+        self.assertEqual([round(w, 9) for w in wgts],
+                         [2.0, -1.0, 2.0, -1.0])
+
+    def test_the_weighted_decay_path_keeps_every_trial(self):
+        random.seed(7)
+        stub = self._Stub([0.5, 0.25])
+        wgts, stats = self._run(stub, self._ctx(weighted_decay=True),
+                                nb_events=4)
+        self.assertEqual(stats['nb_try'], 4)
+        self.assertEqual([round(w, 9) for w in wgts], [2.0, 1.0, 2.0, 1.0])
+
+    def test_the_weighted_decay_path_zeroes_a_failed_reshuffle(self):
+        """W <= 0 outside the interference mode means jac <= 0, i.e. a mass
+        set the production could not be reshuffled onto: weight 0, counted."""
+        random.seed(7)
+        stub = self._Stub([0.5, -0.5])
+        wgts, stats = self._run(stub, self._ctx(weighted_decay=True),
+                                nb_events=4)
+        self.assertEqual([round(w, 9) for w in wgts], [2.0, 0.0, 2.0, 0.0])
+        self.assertEqual(stats['nb_pi_dead'], 2)
+
+    def test_the_unweighted_interference_path_does_not_test_twice(self):
+        """THE regression. Every trial here has |W| = maxwgt, so the |W| test
+        accepts all of them; a second, signed test would throw away every
+        negative one. Both signs must survive, with one magnitude."""
+        random.seed(7)
+        stub = self._Stub([1.0, -1.0], pure_interference='w+ = 0 T')
+        wgts, stats = self._run(
+            stub, self._ctx(pure_interference_unweighted=True), nb_events=20)
+        self.assertEqual(len(wgts), 20)
+        # w = +- w_prod * BR * <|W|> / c = +- 2.0 * 0.25/0.5
+        self.assertEqual(sorted(set(round(w, 9) for w in wgts)), [-1.0, 1.0])
+        self.assertEqual(sum(1 for w in wgts if w > 0), 10)
+        self.assertEqual(sum(1 for w in wgts if w < 0), 10)
+        self.assertEqual(stats['nb_pi_reject'], 0)
+
+    def test_the_unweighted_interference_path_drops_on_rejection(self):
+        """|W| = maxwgt/4 keeps about a quarter, and writes nothing for the
+        rest -- one draw, no redraw."""
+        random.seed(11)
+        stub = self._Stub([0.25, -0.25], pure_interference='w+ = 0 T')
+        wgts, stats = self._run(
+            stub, self._ctx(pure_interference_unweighted=True), nb_events=400)
+        self.assertEqual(stats['nb_try'], 400)          # exactly one each
+        self.assertEqual(len(wgts) + stats['nb_pi_reject'], 400)
+        self.assertGreater(len(wgts), 60)
+        self.assertLess(len(wgts), 140)
+        self.assertEqual(sorted(set(round(abs(w), 9) for w in wgts)), [1.0])
+        self.assertTrue(any(w > 0 for w in wgts))
+        self.assertTrue(any(w < 0 for w in wgts))
+
+
 class TestBannerEventWeightRescale(unittest.TestCase):
     """``_rewrite_lhe_banner_cross(event_scale=...)``: the second pass that
     replaces the provisional weight magnitude of the 'unweighted'

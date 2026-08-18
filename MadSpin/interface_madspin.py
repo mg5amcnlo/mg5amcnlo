@@ -3900,9 +3900,12 @@ class MadSpinInterface(extended_cmd.Cmd):
         pure_interference_c = ctx.get('pure_interference_c')
         pi_unweighted = pure_interference and bool(
             ctx.get('pure_interference_unweighted'))
-        # every trial is kept and carries W/c
-        keep_every_trial = weighted_decay or (pure_interference
-                                              and not pi_unweighted)
+        # No ordinary accept/reject is made below in any of these modes: the
+        # two weighted paths keep every trial outright, and the 'unweighted'
+        # interference path has ALREADY made its own decision (on |W|, one
+        # draw) by the time the test is reached, so falling through to the
+        # signed test there would reject every negative weight a second time.
+        no_joint_test = pure_interference or weighted_decay
         if (pure_interference or weighted_decay) and not pure_interference_c:
             raise self.InvalidCmd(
                 "MadSpin: the normalisation constant c = <W> is missing; the "
@@ -4121,7 +4124,7 @@ class MadSpinInterface(extended_cmd.Cmd):
                     dead_trials = self._dead_trial(dead_trials, wgt,
                                                    'the joint accept/reject')
 
-                if keep_every_trial or random.random()*maxwgt < test:
+                if no_joint_test or random.random()*maxwgt < test:
                     if offshell_density:
                         # prod_trial has already been reshuffled internally (its
                         # jacobian is in wgt); build the event to write out from the
