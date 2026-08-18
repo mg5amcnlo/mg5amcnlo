@@ -2719,12 +2719,7 @@ class MadSpinInterface(extended_cmd.Cmd):
         self.generate_all.compile()
         self.all_me = self.generate_all.all_me
         self.all_f2py = {}
-        self.all_amp = {}
-        self.all_nhel = {}
-        self.all_jamp = {}
-        self.all_inter = {}
         self.all_density = {}
-        self.all_matrix = {}
         time_me_generation = time.time() - time_me_generation
         logger.info(f"Time ME generation: {time_me_generation:.2f} sec")         
 	
@@ -7816,66 +7811,16 @@ class MadSpinInterface(extended_cmd.Cmd):
             density_matrix.set_hel_restriction(hel_restriction)
         return density_matrix
 
-   
-    def get_inter_value(self,event,nhel):
-        """routine to return all the possible inter for an event"""
-        
-        # get_pdir returns (pdir, orig_order, prefix, pos, tag); only the first
-        # two are used here.
-        pdir, orig_order, _, _, _ = self.get_pdir(event)
 
-        if pdir in self.all_amp:
-            all_p = event.get_all_momenta(orig_order)
-            for p in all_p:
-#                print(pdir,'Momenta=',p)
-                P = rwgt_interface.ReweightInterface.invert_momenta(p)
-#               print("Momenta =",P,"\n")
-                IC = [1]*len(p)
-                amp = []
-                jamp = []
-                inter = []
-           
-                for i,hel in enumerate(nhel):
-                    #print(f"hel = {hel}")		
-                    amp.append(self.all_amp[pdir](P,hel,IC))
-                    jamp.append(self.all_jamp[pdir](amp[i]))
-                #print(f"len(jamp) = {len(jamp)}")
-                for i in range(len(jamp)): 
-                    for j in range(len(jamp)): 
-                        inter.append(self.all_inter[pdir](jamp[i],jamp[j]))
-                return inter
-        else : 
-            self.all_amp[pdir],self.all_jamp[pdir],self.all_inter[pdir],self.all_matrix[pdir]= self.get_mymod(pdir,'INTER')
-
-        return self.get_inter_value(event,nhel) 
-
-
-    def get_nhel(self,event,position):
-
-        pdir,orig_order, prefix, pos, tag = self.get_pdir(event)
-        if pdir in self.all_nhel:
-            iden,NHEL = self.all_nhel[pdir]
-            if position == -1:
-                return iden
-            nhel = rwgt_interface.ReweightInterface.invert_momenta(NHEL)
-            groups = {} 
-            nhel = sorted(nhel) 
-            for item in nhel:
-                a = item.copy()
-                del a[position]
-                t = tuple(a)
-                groups.setdefault(t, []).append(item)
-                grouped = list(groups.values())
-            return grouped,iden
-        else:
-            #transer nhel information from fortran to wrapper
-            getattr(self.f2py_module, '%sget_nhel_entry' % prefix.lower())()
-            #transer now to python dictionary
-            nhel = getattr(getattr(self.f2py_module, '%sprocess_nhel' % prefix.lower()), '%snhel' %prefix.lower())
-            iden = getattr(self.f2py_module, 'get_idens')()[pos]
-            self.all_nhel[pdir] = (iden, nhel)
-            return self.get_nhel(event,position)
-
+    # ``get_inter_value``/``get_nhel``/``get_mymod`` used to live here: the
+    # per-helicity interference loop of the original density prototype. Their
+    # last callers went away in 23409c526 (2024-08, "Caching production and
+    # decay ME using diagonal elements of density matrix") and they were
+    # unreachable ever since -- they assume the pre-e16ac171b single-module
+    # layout (``f2py_module`` a module, ``pdg2prefix`` a flat dict) while
+    # calling ``get_pdir``, which only works with the current two-module one.
+    # Removed rather than left to rot; the interference now comes from
+    # ``py_get_density`` (see ``get_density``).
 
     def get_iden(self, event):
         # DEBUGGING REMOVE
@@ -7903,14 +7848,6 @@ class MadSpinInterface(extended_cmd.Cmd):
 
         #print(f"idens = {idens} , pos = {pos}")
         return idens[pos]
-    
-
-    def get_mymod(self,pdir,MODE): 
-        
-        all_prefix = self.f2py_module.get_prefix()
-        tag = [t for t in self.all_me if self.all_me[t]['pdir'] == pdir][0]
-        return 
-
 
 
     def get_pdir(self,event): 
