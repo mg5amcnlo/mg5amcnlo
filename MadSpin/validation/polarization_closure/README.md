@@ -69,33 +69,23 @@ The test uses `onshell` because the offshell mode is unusable for a polarised
 production on this process.  Measured accept/reject cost, same cards, same
 machine:
 
-| production | spinmode | trials per written event |
+Accept/reject trials per written event, identical cards otherwise:
+
+| production | `madspin` (offshell, `unweighting=joint`) | `onshell` (`unweighting=sequential`) |
 |---|---|---|
-| `p p > t t~` (unpolarised) | `madspin` (offshell) | **4.05** |
-| `p p > t{+} t~{+}` | `madspin` | **213** |
-| `p p > t{-} t~{-}` | `madspin` | **204** |
-| `p p > t{-} t~{+}` | `madspin` | **5800 - 6300** (and 1066 in a rerun that differed only in `nevents`) |
-| `p p > t{+} t~{-}` | `onshell` | **4.48** |
+| `p p > t t~` (unpolarised) | **4.05** | **4.11** |
+| `p p > t{+} t~{+}` | **213** | **4.43** |
+| `p p > t{-} t~{-}` | **204** | **4.44** |
+| `p p > t{+} t~{-}` | -- | **4.45** |
+| `p p > t{-} t~{+}` | **5800 - 6300** | **4.47** |
 
-Two things are worth separating here.
-
-* Part of the like-helicity penalty is expected: a fully polarised production is
-  a narrower target for an accept/reject whose bound is set on the widest
-  configuration seen in the probe.
-* The opposite-helicity numbers are **not** in that category.  A factor 1400
-  between `madspin` and `onshell` on the *same* production, and a factor ~6
-  between two `madspin` runs of the same process that differ only in `nevents`
-  (i.e. only in the max-weight probe), say the bound is being driven by a long
-  tail rather than by a stable maximum.  The likely mechanism is that the
-  reshuffling recomputes a *polarised* `|M|^2` on displaced momenta, and a
-  polarised matrix element -- unlike the helicity sum -- has no sum rule
-  protecting it against that displacement (the same effect that makes
-  `SMATRIX(lab)/SMATRIX(CM)` run from 0.5 to 7.25 for `w+{0}` while the sum is
-  invariant to 1e-8, see `MADSPIN_SEQUENTIAL_PLAN.md`).
-  This is a **CPU / usability** problem, not a correctness one -- an
-  over-estimated bound is always safe, no overflow warnings were emitted, and
-  the closure results below are unaffected -- but it makes `spinmode=madspin`
-  impractical for polarised `t t~` and is worth a follow-up.
+The `t{-} t~{+}` figure was **1066** in an earlier `madspin` run that differed
+only in `nevents`, i.e. only in the size of the max-weight probe.  A bound that
+moves by a factor 6 with the probe size is set by a long tail, not by a stable
+maximum, and at 6000 trials/event the run does not finish.  See `RESULTS.md`
+section 5 for the full discussion; in short it is a **CPU cost, not a bias**
+(an over-estimated bound is always safe, and no overflow warning was emitted in
+any run), but it is what forced the switch to `onshell`.
 
 ## Samples
 
@@ -125,4 +115,14 @@ then
 
 ## Results
 
-See `RESULTS.md` and `plots/`.
+**`RESULTS.md`** -- the numbers and the verdict.  Raw output in
+`plots/closure_numbers.txt`, plots in `plots/`, overview in
+`plots/closure_summary.png`.
+
+Short version: the total rate closes to 6e-4 (0.00 sigma before the decay,
+-0.38 sigma after); every diagonal observable closes at the 2-4% per-bin
+statistical precision (`chi2/ndf` 1.2, 0.6, 0.4); both controls close
+(`chi2/ndf` 0.7, 0.9); and the only deviations are in the transverse spin
+correlation `C_nn` (removed entirely, 20 sigma) and the two observables that
+inherit it, `cos phi_ll` and `Delta phi(l+,l-)`.  That is the off-diagonal
+interference, and it is quantitatively accounted for.
