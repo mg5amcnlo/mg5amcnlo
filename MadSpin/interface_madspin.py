@@ -6538,13 +6538,37 @@ class MadSpinInterface(extended_cmd.Cmd):
         ``Event.boost`` / ``_boost_momenta``, which negate the spatial part
         themselves (HELAS ``boostx``, exactly what ``boost_to_frame`` does in
         driver.f).
+
+        Two things switch it on, and both are cases where the frame is
+        *observable*:
+
+        - polarised beams. ``beampol`` reweights the initial-state helicity sum
+          and that sum is quantised along the frame's axis.
+        - a polarisation brace on a final-state particle of the production
+          process (``p p > w+{0} w-``). MG5 defines those braces in the
+          ``me_frame`` frame -- MadEvent evaluates the polarised matrix element
+          there (``auto_dsig_v4.inc``, ``boost_to_frame``; the default
+          ``me_frame=[1,2]`` is skipped only because ``genps.f`` already builds
+          its momenta in the partonic CM and ``unwgt.f`` boosts to the lab on
+          the way out), and MadSpin's own v1 driver does the same
+          (``boost_to_frame`` in driver.f, unconditionally). The density modes
+          apply that brace as a *projection* on rho_prod
+          (``set_hel_restriction``), and a projection does not commute with the
+          change of helicity basis a boost induces, so leaving the momenta in
+          the lab would restrict a different helicity than the one the input
+          events were generated with.
+
+        Everything else stays in the lab, which keeps unpolarised density runs
+        bit-for-bit unchanged: there the full double sum
+        ``sum_ij rho_prod(i,j) rho_dec(i,j)`` is a trace, and a boost acts on it
+        as a unitary change of basis that cancels between the two factors.
         """
-        if self._beampol() is None:
+        if self._beampol() is None and not self._production_polarization():
             return None
         frame_id = int(self.options['frame_id'])
         if frame_id <= 0:
             return None
-        _, orig_order, _, _ = self.get_pdir(event)
+        _, orig_order, _, _, _ = self.get_pdir(event)
         momenta = event.get_momenta(orig_order)
         selected = [n for n in range(1, len(momenta) + 1) if frame_id >> n & 1]
         if not selected:

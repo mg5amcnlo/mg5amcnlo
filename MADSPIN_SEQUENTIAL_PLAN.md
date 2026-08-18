@@ -63,19 +63,147 @@ Two things this is NOT:
   they build, so `rho_prod` comes back **fully unpolarised** in those indices
   even for a polarised process -- verified by evaluating `M0_GET_DENSITY`
   directly for `p p > t{L} t~` and for `p p > t t~`: identical entries,
-  including `rho(+1,+1)`. The restriction therefore changes results.
+  including `rho(+1,+1)`. End to end, `p p > t{R} t~` before this change gave
+  event blocks *byte-identical* to `p p > t t~`: the brace was ignored outright.
 - it is not free of a basis reordering. `GET_DENSITY` selects the rows of the
   process' `NHEL` table by matching them against the *first* `ALLOW_HEL`
   combination, and a polarised process has no `NHEL` row outside its
   polarisation. With the default `hel_dict` order (`[1,-1]`, `[-1,0,1]`) a
   `{L}`/`{-}`/`{0}` production matched nothing and handed back an identically
-  zero density matrix. `_apply_production_polarization` therefore puts an
+  zero density matrix -- and a zero `rho_prod` rejects *every* accept/reject
+  trial, so MadSpin did not fail, it **looped forever** regenerating decay-event
+  pools (observed: `p p > t{L} t~` and `p p > w+{0} w-` both spin indefinitely
+  on the pre-change code). `_apply_production_polarization` therefore puts an
   allowed helicity first in that particle's basis; the order is untouched when
   there is no brace.
 
 Polarisation on a **decay** line is rejected outright in the density spin modes
 (`do_decay`): the braces there would restrict the decay matrix element that
 defines the branching ratio, not the density matrix that is contracted.
+
+Validated end to end against the analytic decay distributions (`spinmode` in
+parentheses; theta measured in the parent rest frame against the parent's
+direction **in the `me_frame` frame**, which is the axis the helicity is
+quantised along -- see the next section, which is what fixed that axis):
+
+| production | observable | measured | expected |
+|---|---|---|---|
+| `p p > t t~` | `<cos>` of e+ from t | +0.015 +- 0.061 | ~0 (unpolarised) |
+| `p p > t{R} t~` (madspin) | idem | +0.409 +- 0.045 | +1/3 |
+| `p p > t{L} t~` (madspin) | idem | -0.352 +- 0.051 | -1/3 |
+| `p p > w+ w-` (madspin) | `<cos^2>` of e+ from W+ | 0.347 +- 0.007 | SM mixture |
+| `p p > w+{T} w-` (madspin / onshell) | idem | 0.393 / 0.398 +- 0.007 | 2/5 |
+| `p p > w+{0} w-` (madspin / PA) | idem | 0.198 / 0.208 +- 0.005 | 1/5 |
+
+In every polarised run the *un*polarised partner in the same event (the `t~`,
+which carries no brace) stayed compatible with zero, confirming the mask is
+per particle. A no-brace run is byte-identical to the pre-change code.
+
+Those `w+` rows were measured against the parent's **lab** direction, which at
+the time was also the axis MadSpin quantised on -- self-consistent, and the
+wrong axis. See below.
+
+### Which frame the brace is defined in (`me_frame`)
+
+A polarised matrix element is **not Lorentz invariant**, so `w+{0}` is only a
+statement once a frame is named. MG5 names it in the run_card:
+
+    me_frame = 1, 2      # frame_id = sum(2**n) = 6
+
+Measured, on 200 events of `p p > w+{0} w-` (`SMATRIX` from the library MadSpin
+itself builds, evaluated on the LHE momenta and on the same momenta boosted into
+the partonic CM):
+
+    SMATRIX(lab) / SMATRIX(partonic CM)
+      {0}       min 0.512   max 7.251   mean 1.562
+      {T}       min 0.483   max 1.180   mean 0.892
+      {0}+{T}   min 1.000   max 1.000   mean 1.000   (|ratio-1| <= 1.3e-8)
+
+Each polarised piece moves by up to a factor 7 between the two frames; their sum
+-- the unpolarised `|M|^2`, which *is* invariant -- is unchanged to numerical
+precision. That is the cleanest statement of what is at stake: the frame does
+not change any physics, it changes **which helicity `{0}` names**.
+
+**MadEvent means the `me_frame` frame, and the default is the partonic CM.**
+`auto_dsig_v4.inc:134` calls `boost_to_frame(PP, frame_id, P1)` and skips it
+only for `frame_id.eq.6`, because `genps.f` (`x_to_f_arg`, `mom2cx` on
+`p(0,-nbranch) = (sqrt(shat),0,0,0)`) already builds `PP` in the partonic CM;
+`cm_rap` is carried separately for the rapidity cuts, and `unwgt.f`
+(`zboost_with_beta`) boosts to the lab only on the way out to the LHE file. So
+the momenta the polarised matrix element sees are the partonic-CM ones, and the
+lab momenta in the event file are a *later* z boost. MadSpin's own v1 Fortran
+driver agrees: `driver.f:266` calls `boost_to_frame(pfull, frame_id, P2)`
+unconditionally, and its copy of `boost_to_frame` has no `frame_id.eq.6`
+short-circuit, so it really does boost. Note also that no `me_frame` value can
+name the lab frame -- it selects the rest frame of a subset of the external
+momenta, and the lab is not one of those.
+
+**The density spin modes did not.** `_frame_boost` opened with
+
+    if self._beampol() is None:
+        return None
+
+so with unpolarised beams -- the common case, and every `p p >` run -- the
+production and decay density matrices were both built from **lab** momenta. The
+justification given when that guard was written (b231141fe) was explicit and, at
+the time, correct: *"the frame cannot change an observable here at all"*, because
+the contraction `sum_ij rho_prod(i,j) rho_dec(i,j)` is a trace and a boost acts
+on it as a unitary change of basis that cancels between the two factors.
+
+The previous section is exactly what breaks that argument. `set_hel_restriction`
+is a **projection**, not a change of basis, and a projection does not commute
+with one. The guard was safe before the restriction existed and is a live bug
+after it.
+
+Measured end to end, 10000 unweighted events per row, `p p > w+ w-` at 13 TeV,
+`spinmode madspin`, `decay w+ > e+ ve`, one MadEvent sample per polarisation
+reused by both MadSpin variants (`<|y_boost|>` = 1.57 / 1.48, so the lab and the
+partonic CM are far apart):
+
+| production | MadSpin | `<cos^2>` on the lab axis | `<cos^2>` on the me_frame axis |
+|---|---|---|---|
+| `p p > w+{0} w-` | before | **0.1977 +- 0.0021** | 0.2732 +- 0.0027 |
+| `p p > w+{0} w-` | after  | 0.2738 +- 0.0027 | **0.1974 +- 0.0021** |
+| `p p > w+{T} w-` | before | **0.4017 +- 0.0031** | 0.3783 +- 0.0031 |
+| `p p > w+{T} w-` | after  | 0.3646 +- 0.0031 | **0.4019 +- 0.0031** |
+
+(analytic: 1/5 for a pure `{0}`, 2/5 for a pure `{T}`, 1/3 for flat.)
+
+The two rows of each pair simply swap which axis carries the textbook value. The
+old code was self-consistent -- it put a clean `sin^2(theta)` on the lab axis --
+but the events it was decaying had been generated with `{0}` meaning the
+partonic-CM helicity, so it restricted the wrong one. Reading the "before" line
+as a helicity decomposition on the axis MG5 actually meant, `0.4 - 0.2 f_0`
+gives `f_0 = 0.63` for the nominally 100% longitudinal sample and `f_0 = 0.11`
+for the nominally 0% one: roughly a third of the polarisation purity the user
+asked for, thrown away by the frame alone. This is a live bug for ordinary
+`p p >` runs, not a latent trap.
+
+Two changes, both in `_frame_boost`:
+
+- the guard is now `if self._beampol() is None and not
+  self._production_polarization(): return None`. The frame is honoured when it
+  can change an observable -- polarised beams, or a brace on a final-state
+  particle of the production -- and skipped otherwise, so unpolarised density
+  runs keep the bit-for-bit behaviour b231141fe was careful to preserve. The
+  brace does not have to be on a particle MadSpin decays: a restricted helicity
+  sum over any final-state leg is frame dependent and reshapes `rho_prod`.
+- `_, orig_order, _, _ = self.get_pdir(event)` unpacked **four** values from a
+  `get_pdir` that has returned five (`pdir, orig_order, prefix, pos, tag`) since
+  6ba177c56, i.e. since well before b231141fe. `_frame_boost` therefore raised
+  `ValueError: too many values to unpack (expected 4, got 5)` the first time it
+  was ever reached. Nothing reached it, because the guard above turned it off
+  for unpolarised beams -- so **the whole `me_frame` path in the density modes
+  had never executed**, and `polbeam1`/`polbeam2` in a density spinmode crashed.
+  The unit-test stub `_FrameStub.get_pdir` returned a 4-tuple, which is why the
+  tests were green; it now returns the real 5-tuple.
+
+Cross-checks: the integrated weight is untouched (10.60038 pb for `{0}`,
+54.1049 pb for `{T}`, identical before and after and equal to the production
+cross section -- the restriction enters `N_0 = Tr(rho)` too, so the normalisation
+does not move); an unpolarised run is byte-identical to the pre-change code; and
+a brace on a particle MadSpin does *not* decay (`p p > w+{0} w-` with
+`decay w- > e- ve~`) runs through the newly-live frame path without incident.
 
 ### The partial weight
 
