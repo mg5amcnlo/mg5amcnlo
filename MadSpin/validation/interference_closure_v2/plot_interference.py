@@ -474,6 +474,22 @@ def main():
     L.append('   the signal.)')
     L.append('')
 
+    # -------- the null test, bin by bin -----------------------------------
+    # A production-level observable must get NO contribution from the
+    # interference in ANY bin, so the per-bin pulls are worth seeing and not
+    # just their chi2: a chi2 that sits a little high because of one bin is a
+    # fluctuation, one spread over many bins would be a bias.
+    L.append('null test, bin by bin: pull of the 5 interference blocks against')
+    L.append('  zero, for the two production-level observables')
+    for key in ('pt_t', 'm_tt'):
+        s, e = d.h(INTER, key)
+        pull = np.where(e > 0, s / np.where(e > 0, e, 1), 0.0)
+        L.append('  %-6s %s' % (key, ' '.join('%+.1f' % p for p in pull)))
+        L.append('  %-6s chi2 = %.1f / %d, largest |pull| = %.2f'
+                 % ('', float((pull ** 2).sum()), len(pull),
+                    float(np.abs(pull).max())))
+    L.append('')
+
     # the identity cos phi_ll = C_kk + C_rr + C_nn, term by term
     L.append('identity  <cos phi_ll> = <C_kk> + <C_rr> + <C_nn>')
     for name, tags in (('4 diagonal', DIAG), ('9 blocks', ALL9),

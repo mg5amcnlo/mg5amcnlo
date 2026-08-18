@@ -71,6 +71,13 @@ best-fit scale k of the interference contribution (predicted k = 1, never fitted
    -- pt_t, m_tt -- it must vanish bin by bin; elsewhere a large value IS
    the signal.)
 
+null test, bin by bin: pull of the 5 interference blocks against
+  zero, for the two production-level observables
+  pt_t   -0.3 +0.6 +0.7 -0.0 -2.3 +0.8 -0.0 -0.5 +0.8 +0.3 -1.7 -0.9 -0.2 -0.5 -1.4 +0.1 +0.2 +0.1 -0.7 -0.8
+         chi2 = 14.9 / 20, largest |pull| = 2.27
+  m_tt   +0.2 +0.4 +0.5 -1.7 -0.3 -1.6 -0.5 -0.7 -0.8 -1.0 +3.2 -0.8 +0.8 -2.5 +0.4 -1.8 +0.5 +0.1 +0.8 +0.9
+         chi2 = 31.2 / 20, largest |pull| = 3.21
+
 identity  <cos phi_ll> = <C_kk> + <C_rr> + <C_nn>
   4 diagonal     +0.03584 -0.00045 +0.00018 = +0.03557   (measured +0.03557, diff -1.6e-16)
   9 blocks       +0.03555 +0.00060 +0.03679 = +0.07293   (measured +0.07293, diff -1.7e-16)
