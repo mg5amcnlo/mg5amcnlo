@@ -98,6 +98,33 @@ CF2PY INTENT(IN) :: PATH
       CALL SETPARA(PATH)  !first call to setup the paramaters
       RETURN
       END
+
+
+      BLOCK DATA %(f2py_prefix)sBEAMPOL_DEFAULT
+C     Unpolarised beams unless PY_SET_BEAMPOL says otherwise. This has
+C     to be a default rather than something the caller is trusted to
+C     set: the GET_DENSITY routines read /to_beampol/ unconditionally,
+C     and a zero-filled common block would be read as a fully polarised
+C     beam of the wrong handedness.
+      DOUBLE PRECISION BEAMPOL(2)
+      COMMON/TO_BEAMPOL/BEAMPOL
+      DATA BEAMPOL/1D0,1D0/
+      END
+
+
+      SUBROUTINE %(f2py_prefix)sf77_set_beampol(POL1, POL2)
+C     Fill /to_beampol/ on this side of the shared-library boundary --
+C     the f2py wrapper and the matrix elements do not share common
+C     blocks, which is why the nhel bookkeeping copies rather than
+C     aliases them. See PY_SET_BEAMPOL for the convention.
+      IMPLICIT NONE
+      DOUBLE PRECISION POL1, POL2
+      DOUBLE PRECISION BEAMPOL(2)
+      COMMON/TO_BEAMPOL/BEAMPOL
+      BEAMPOL(1) = POL1
+      BEAMPOL(2) = POL2
+      RETURN
+      END
       
       
       subroutine %(f2py_prefix)sf77_CHANGE_PARA(name, value)

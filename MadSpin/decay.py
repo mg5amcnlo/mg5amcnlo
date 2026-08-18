@@ -2370,7 +2370,7 @@ class decay_all_events(object):
             nb_mc_masses=len(indices_for_mc_masses)
 
             p, p_str=self.curr_event.give_momenta(event_map)
-            stdin_text=' %s %s %s %s %s %s %s \n' % ('2', self.options['BW_cut'], self.Ecollider, decay_me['max_weight'], self.options['frame_id'], self.options['beampol'][0], self.options['beampol'][1]) 
+            stdin_text=' %s %s %s %s %s %s %s \n' % ('2', self.options['BW_cut'], self.Ecollider, decay_me['max_weight'], self.options['frame_id'], self.options.beampol_me()[0], self.options.beampol_me()[1]) 
             stdin_text+=p_str
             # here I also need to specify the Monte Carlo Masses
             stdin_text+=" %s \n" % nb_mc_masses
@@ -2503,9 +2503,9 @@ class decay_all_events(object):
         except KeyError:
             frameid = 6
         try:
-            beampol = self.options['beampol']
+            beampol = self.options.beampol_me()
         except KeyError:
-            beampol = (0.5,0.5)
+            beampol = (1.0,1.0)
 
         stdin_text=' %s %s %s %s %s %s %s\n' % ('2', self.options['BW_cut'], self.Ecollider, 1.0, frameid, beampol[0], beampol[1])
         stdin_text+=p_str
@@ -3447,7 +3447,7 @@ class decay_all_events(object):
         """return the max. weight associated with me decay['path']"""
 
         p, p_str=self.curr_event.give_momenta(event_map)
-        std_in=" %s  %s %s %s %s %s %s \n" % ("1",BWcut, self.Ecollider, nbpoints, self.options['frame_id'], self.options['beampol'][0], self.options['beampol'][1])
+        std_in=" %s  %s %s %s %s %s %s \n" % ("1",BWcut, self.Ecollider, nbpoints, self.options['frame_id'], self.options.beampol_me()[0], self.options.beampol_me()[1])
         std_in+=p_str
         max_weight = self.loadfortran('maxweight',
                                path, std_in)

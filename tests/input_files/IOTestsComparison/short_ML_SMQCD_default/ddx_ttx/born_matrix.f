@@ -72,7 +72,15 @@ C     put in common block to expose this variable to python interface
       COMMON/ML5_0_PROCESS_NHEL/NHEL
       REAL*8 T
       REAL*8 ML5_0_MATRIX
-      INTEGER IHEL,IDEN, I, J
+      INTEGER IHEL,IDEN, I, J, JJ
+C     beam polarisation. Unpolarised unless something fills
+C     /to_beampol/: PY_SET_BEAMPOL for the MadSpin density
+C     modes, the driver's stdin for the v1 path. Convention as
+C     in madevent's /to_polarization/: 1 is unpolarised,
+C     |BEAMPOL| grows to 2 for a fully polarised beam and its
+C     sign gives the favoured helicity.
+      DOUBLE PRECISION BEAMPOL(2)
+      COMMON/TO_BEAMPOL/BEAMPOL
 C     For a 1>N process, them BEAMTWO_HELAVGFACTOR would be set to 1.
       INTEGER BEAMS_HELAVGFACTOR(2)
       DATA (BEAMS_HELAVGFACTOR(I),I=1,2)/2,2/
@@ -163,6 +171,29 @@ C      only three external particles.
             ENDIF
 
             T=ML5_0_MATRIX(P ,NHEL(1,IHEL),JC(1))
+C           Support for polarised beam. Same reweighting of the
+C            initial-state
+C           helicity sum as madevent's matrix.f and as the v1 MadSpin
+C            msP/msF
+C           templates. Inert (and skipped) unless /to_beampol/ has
+C            been filled:
+C           |BEAMPOL| runs from 1 (unpolarised) to 2 (fully
+C            polarised), so
+C           anything at or below 1 -- including a zero-filled common
+C            block --
+C           means "no polarisation". 1 -> N matrix elements are left
+C            alone: their
+C           leg 1 is a decaying resonance, not a beam.
+            IF (NINITIAL.EQ.2) THEN
+              DO JJ=1,NINITIAL
+                IF (ABS(BEAMPOL(JJ)).LE.1D0) CYCLE
+                IF (NHEL(JJ,IHEL).EQ.INT(SIGN(1D0,BEAMPOL(JJ)))) THEN
+                  T=T*ABS(BEAMPOL(JJ))
+                ELSE
+                  T=T*(2D0-ABS(BEAMPOL(JJ)))
+                ENDIF
+              ENDDO
+            ENDIF
             IF(POLARIZATIONS(0,0).EQ.
      $       -1.OR.ML5_0_IS_BORN_HEL_SELECTED(IHEL)) THEN
               ANS=ANS+T
@@ -496,13 +527,23 @@ C
       INTEGER NB_NHEL
       DOUBLE COMPLEX, ALLOCATABLE :: TMP_INTER(:)
       PARAMETER (NB_NHEL=16)
+      INTEGER    NINITIAL
+      PARAMETER (NINITIAL=2)
 C     LOCAL
-      INTEGER I,IHEL,IPART
+      INTEGER I,IHEL,IPART,JJ
       DOUBLE PRECISION PI
+      DOUBLE PRECISION POLFACT
 C     
       INTEGER NHEL(NEXTERNAL,NB_NHEL)
 C     put in common block to expose this variable to python interface
       COMMON/ML5_0_PROCESS_NHEL/NHEL
+C     beam polarisation, filled from python through PY_SET_BEAMPOL.
+C     Same common block and same convention as the v1 MadSpin path
+C     (matrix_standalone_msP_v4.inc / msF): BEAMPOL = 1 is unpolarised
+C     and |BEAMPOL| runs up to 2 for a fully polarised beam, its sign
+C     giving the favoured helicity.
+      DOUBLE PRECISION BEAMPOL(2)
+      COMMON/TO_BEAMPOL/BEAMPOL
 C     
 C     include coupling definition to update the value of alphas
 C     
@@ -529,8 +570,29 @@ C
         TMP_INTER(:) = 0
         CALL  ML5_0_GET_ALL_INTER(P, THISNHEL, POS, N_CHANGING,
      $    ALLOW_HEL, N_COMB, TMP_INTER)
+C       Support for polarised beam: reweight the initial-state helicity
+C       sum exactly as SMATRIX_PROD does in the v1 path. Skipped unless
+C       the process has two incoming legs -- the same shared library
+C       also holds the 1 -> N decay matrix elements, whose leg 1 is the
+C       decaying resonance and not a beam.
+        POLFACT = 1D0
+        IF (NINITIAL.EQ.2) THEN
+          DO JJ=1,NINITIAL
+C           |BEAMPOL| runs from 1 (unpolarised) to 2 (fully
+C           polarised), so anything at or below 1 means "no
+C           polarisation" -- including the zero-filled common
+C           block of an output whose link line does not pull
+C           in BLOCK DATA BEAMPOL_DEFAULT.
+            IF (ABS(BEAMPOL(JJ)).LE.1D0) CYCLE
+            IF (THISNHEL(JJ).EQ.INT(SIGN(1D0,BEAMPOL(JJ)))) THEN
+              POLFACT = POLFACT*ABS(BEAMPOL(JJ))
+            ELSE
+              POLFACT = POLFACT*(2D0-ABS(BEAMPOL(JJ)))
+            ENDIF
+          ENDDO
+        ENDIF
         DO I = 1, N_COMB*(N_COMB+1)/2
-          INTER(I) = INTER(I) + TMP_INTER(I)
+          INTER(I) = INTER(I) + POLFACT*TMP_INTER(I)
         ENDDO
  10   ENDDO
       RETURN

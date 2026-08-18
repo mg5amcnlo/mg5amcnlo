@@ -89,6 +89,23 @@ CF2PY INTENT(IN) :: PATH
       END
 
 
+      SUBROUTINE %(f2py_prefix)sPY_SET_BEAMPOL(POL1, POL2)
+C     ROUTINE FOR F2PY to set the beam polarisation of the density
+C     matrix evaluation. POL1/POL2 follow the convention of the
+C     /to_polarization/ common block of madevent (and of the v1 MadSpin
+C     driver): 1 is an unpolarised beam and |POL| grows to 2 for a fully
+C     polarised one, the sign of POL giving the favoured helicity.
+C     The value is constant over a run, so this is called once at module
+C     initialisation rather than passed to every PY_GET_DENSITY call.
+      IMPLICIT NONE
+CF2PY DOUBLE PRECISION, INTENT(IN) :: POL1
+CF2PY DOUBLE PRECISION, INTENT(IN) :: POL2
+      DOUBLE PRECISION POL1, POL2
+      CALL %(f2py_prefix)sf77_set_beampol(POL1, POL2)
+      RETURN
+      END
+
+
       SUBROUTINE %(f2py_prefix)sCHANGE_PARA(NAME, VALUE)
       IMPLICIT NONE
 CF2PY intent(in) :: name
