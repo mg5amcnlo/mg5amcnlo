@@ -4715,6 +4715,13 @@ class MadSpinInterface(extended_cmd.Cmd):
                 self._joint_maxwgt_shard_entry, (decay_dict, nevents, nb_ps_point))
 
         base_max_weight = self._combine_maxwgt(all_maxwgt)
+        # The sequential scheme already logs its per-slot bounds; the joint one
+        # logged nothing, and the bound is not recoverable from the output
+        # unless ms_dir is set (which switches the decay pool to the gridpack
+        # path). It is needed to normalise a pure-interference sample: there
+        # the accept probability is |w|/max_weight and the redraw that would
+        # divide it out again is exactly what the mode removes.
+        logger.info("MadSpin: joint maximum weight = %r", base_max_weight)
         if self.options['ms_dir']:
             open(pjoin(self.options['ms_dir'], 'max_wgt'),'w').write(str(base_max_weight))
         return base_max_weight
