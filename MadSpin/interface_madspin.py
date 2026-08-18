@@ -402,6 +402,9 @@ class MadSpinInterface(extended_cmd.Cmd):
         self.events_file = None
         self.decay_processes = {}
         self.list_branches = {}
+        # the resolved '@' decay grouping, or None when the card declares none
+        # (or declares one this run cannot honour). See _resolve_decay_groups.
+        self._decay_groups = None
         self.to_decay={}
         self.mg5cmd = master_interface.MasterCmd()
         self.seed = None
@@ -944,10 +947,331 @@ class MadSpinInterface(extended_cmd.Cmd):
         return self.parser_launch().parse_args(args)
         
 
+    # ``decay t > w+ b, w+ > l+ vl @1``: the @ suffix sorts the decay lines into
+    # *groups* meant to be used together -- the semi-leptonic ttbar idiom, where
+    # only the two charge assignments exist and no fully leptonic or fully
+    # hadronic event is produced.
+    #
+    # The tag is kept inside the branch string rather than in a structure of its
+    # own: ``list_branches`` is renamed, pruned and handed to MG5 from several
+    # places, and index i of ``list_branches[name]`` is also the number of the
+    # ``decay_<pdg>_<i>`` pool, so a parallel list would be one more thing to
+    # keep in step. It is split off at the few points that need it.
+    _DECAY_GROUP_TAG = re.compile(r'@\s*(\d+)\s*$')
+
+    @classmethod
+    def _split_group_tag(cls, branch):
+        """``'t > w+ b, w+ > l+ vl @1'`` -> ``('t > w+ b, w+ > l+ vl', '1')``.
+
+        The tag is returned as a string: it names a group, it is not an integer
+        the code ever does arithmetic on. ``(branch, None)`` when untagged.
+        """
+        found = cls._DECAY_GROUP_TAG.search(branch)
+        if not found:
+            return branch, None
+        return branch[:found.start()].rstrip(), found.group(1)
+
+    def _decay_group_layout(self):
+        """Sort the decay lines into groups.
+
+        Returns ``(layout, reason)``. ``layout`` is None when the card declares
+        no group at all (``reason`` None too) or when the tags cannot be honoured
+        (``reason`` says why, for the warning). Otherwise::
+
+            {'tags':  ['1', '2'],                       # first-appearance order
+             'lines': {particle_name: {tag: [index into list_branches[name]]}}}
+
+        An *untagged* line belongs to every group -- the natural way to write a
+        third particle that decays the same way whatever the group is, and what
+        madspin_v1 does (it prepends the untagged branches to each group).
+
+        This is the half of the check that needs only the card. Whether each
+        group covers every decaying particle the right number of times needs the
+        production events too; see :meth:`_validate_decay_groups`.
+        """
+        tags = []
+        parsed = {}
+        for name, branches in self.list_branches.items():
+            parsed[name] = []
+            for branch in branches:
+                stripped, tag = self._split_group_tag(branch)
+                if '@' in stripped:
+                    # an '@' that is not a trailing group tag: refuse rather than
+                    # half-read it, since MG5 would take it as a process number
+                    return None, ("the decay line %r carries an '@' that is not "
+                                  "a group tag at the end of the line" % branch)
+                parsed[name].append(tag)
+                if tag is not None and tag not in tags:
+                    tags.append(tag)
+        if not tags:
+            return None, None
+        lines = {}
+        for name, name_tags in parsed.items():
+            lines[name] = dict((tag, []) for tag in tags)
+            for i, tag in enumerate(name_tags):
+                for target in (tags if tag is None else [tag]):
+                    lines[name][target].append(i)
+        return {'tags': tags, 'lines': lines}, None
+
+    def _validate_decay_groups(self, layout, to_decay, nb_event, name2pdg):
+        """Can this grouping be honoured for these production events?
+
+        Supported shape -- rectangular: every group gives exactly ``n_part``
+        lines for every decaying particle, ``n_part`` being how many of that
+        particle each event carries. ``n_part == 1`` is the semi-leptonic ttbar
+        idiom; ``n_part == 2`` is ``p p > t t~ t~ t``, where the group's two
+        lines for a pdg are handed to its two particles by the existing
+        positional rule.
+
+        Anything else is refused rather than approximated: the group would not
+        be a complete assignment, so neither its rate ``prod_k Gamma_k`` nor the
+        branching ratio is defined.
+
+        ``name2pdg`` maps a decay-line parent name to its pdg, or to None when
+        the name is a multiparticle (refused: one name would own several pools).
+
+        Returns ``(ok, reason)``.
+        """
+        for name, per_tag in layout['lines'].items():
+            pdg = name2pdg(name)
+            if pdg is None:
+                return False, ("%s is a multiparticle: grouping needs one "
+                               "decaying particle per decay line" % name)
+            if pdg not in to_decay or not nb_event:
+                continue            # never appears in the events; ignored anyway
+            if to_decay[pdg] % nb_event:
+                return False, ("the production events do not all carry the same "
+                               "number of %s, and a branching ratio per group "
+                               "cannot be defined then" % name)
+            nb_part = to_decay[pdg] // nb_event
+            for tag in layout['tags']:
+                got = len(per_tag.get(tag, ()))
+                if got != nb_part:
+                    return False, (
+                        "group @%s gives %d decay line(s) for %s but every event "
+                        "carries %d of them -- each group must decay every "
+                        "particle exactly once" % (tag, got, name, nb_part))
+        return True, None
+
+    def _warn_ignored_decay_groups(self, spinmode, reason=None):
+        """Warn when the card carries @ grouping tags this run cannot honour.
+
+        A tag that silently means nothing is the worst outcome: the
+        decay-matrix-element generation appends an ``@`` process number of its
+        own to every branch, so MG5 sees two of them, binds its own at the top
+        level and absorbs the user's as the process number of the sub-decay.
+        Nothing fails, the matrix element that comes out is the correct
+        *ungrouped* one, and without this the card simply does not mean what it
+        looks like it means.
+
+        Returns the (particle, branch, tag) triples found, for the tests.
+        """
+        if spinmode == 'madspin_v1':
+            return []                     # v1 implements the grouping itself
+        tags = []
+        for name, branches in self.list_branches.items():
+            for branch in branches:
+                stripped, tag = self._split_group_tag(branch)
+                if tag is not None:
+                    tags.append((name, branch, '@%s' % tag))
+                elif '@' in stripped:
+                    # not a trailing tag, so not a group -- but MG5 will still
+                    # read it as a process number, so it is worth the same line
+                    tags.append((name, branch, '@?'))
+        if not tags:
+            return []
+        logger.warning(
+            "The decay lines carry '@' grouping tags (%s) but this run cannot "
+            "honour them: %s. The tags therefore change nothing (MG5 reads them "
+            "as an ordinary process number) and the sample will contain EVERY "
+            "combination of the channels listed, not only the tagged ones. "
+            "Generate one group per MadSpin run and merge the outputs -- fixing "
+            "the normalisation with 'set cross_section' if the automatic "
+            "branching ratio is not what you want.",
+            ', '.join(sorted(set(t[2] for t in tags))),
+            reason or ("grouping is available in the density spin modes (PA, "
+                       "onshell, madspin/full) and in madspin_v1, and "
+                       "spinmode=%s is neither" % spinmode))
+        return tags
+
+    # ------------------------------------------------------------------
+    # Resolved grouping: what the run-time draw and the branching ratio use
+    # ------------------------------------------------------------------
+    def _decay_group_pdgs(self):
+        """The pdgs whose decay lines are grouped (empty when they are not)."""
+        groups = getattr(self, '_decay_groups', None)
+        return () if not groups else groups['lines']
+
+    def _resolve_decay_groups(self, to_decay, nb_event, density_method):
+        """Turn the card's '@' tags into the grouping the run will use, or warn
+        and fall back to the ungrouped behaviour.
+
+        Sets (and returns) ``self._decay_groups``::
+
+            {'tags':  ['1', '2'],
+             'lines': {pdg: {tag: [decay pool number]}},
+             'prob':  None}                 # filled by _resolve_group_rates
+
+        None when the card declares no group, or when this run cannot honour the
+        one it declares. Must run before anything is generated: it decides how
+        many pools each particle gets, and it forces the joint accept/reject.
+        """
+        self._decay_groups = None
+        layout, reason = self._decay_group_layout()
+        if layout is None and reason is None:
+            return None                              # no tags at all
+
+        spinmode = self.options['spinmode']
+        if not reason and not density_method:
+            reason = ("spinmode=%s does not fill one decay pool per channel, "
+                      "which is what a group draws from" % spinmode)
+        if not reason and self.options['fixed_order']:
+            reason = ("fixed_order rides the counter-events along with the "
+                      "decays, and a group would have to be drawn once per "
+                      "event group")
+        if not reason:
+            ok, reason = self._validate_decay_groups(
+                layout, to_decay, nb_event, self._decay_parent_pdg)
+        if reason:
+            self._warn_ignored_decay_groups(spinmode, reason)
+            return None
+
+        lines = {}
+        for name, per_tag in layout['lines'].items():
+            pdg = self._decay_parent_pdg(name)
+            if pdg in to_decay:          # a species that never appears in the
+                lines[pdg] = per_tag     # events is dropped anyway
+        if not lines:
+            return None
+        self._decay_groups = {'tags': layout['tags'], 'lines': lines,
+                              'prob': None}
+        logger.info("MadSpin: %s decay groups (@%s); each event draws one group "
+                    "and every particle takes that group's channel",
+                    len(layout['tags']), ', @'.join(layout['tags']))
+        return self._decay_groups
+
+    def _decay_parent_pdg(self, name):
+        """pdg of a decay line's parent, or None when the name stands for more
+        than one particle (a multiparticle owning several pools at once is what
+        the grouping cannot express)."""
+        if name in self.mg5cmd._multiparticles:
+            pdgs = self.mg5cmd._multiparticles[name]
+            return pdgs[0] if len(pdgs) == 1 else None
+        try:
+            return self.mg5cmd._curr_model.get('name2pdg')[name]
+        except KeyError:
+            return None
+
+    @staticmethod
+    def _clamped_partial_width(pwidth, totwidth, pdg=None):
+        """A measured partial width, reconciled with the total width of the
+        param_card. Only ever applied to *one* channel's width (or to a sum over
+        channels, which is still a width): a product of several is not
+        comparable with a single total.
+
+        The two regimes are deliberate, and are the long-standing behaviour this
+        helper factors out of run_onshell rather than a new policy:
+
+        - up to 1% above the total, the excess is Monte Carlo noise in the width
+          measurement, so it is capped silently and the branching ratio stays at
+          most 1;
+        - more than 1% above, the param_card's total genuinely disagrees with
+          what was generated. That is warned about and the *measured* value is
+          used, because capping there would quietly reshape the normalisation to
+          match a card that is wrong, and hide the disagreement instead of
+          reporting it.
+        """
+        if pwidth > 1.01 * totwidth:
+            logger.warning('partial width (%s) larger than total width (%s) '
+                           '--from param_card-- for pdg %s',
+                           pwidth, totwidth, pdg)
+        elif pwidth > totwidth:
+            return totwidth
+        return pwidth
+
+    @classmethod
+    def _assignment_multiplicity(cls, branches):
+        """How many *distinct* ways this multiset of decay lines can be dealt to
+        that many identical parents: ``n! / prod_c m_c!``.
+
+        The positional rule generates one of those assignments and multiplies
+        the rate by their number. A plain ``n!`` is right only while the lines
+        are all different -- with two identical ones it counts the same final
+        state twice.
+        """
+        counts = collections.Counter(cls._split_group_tag(b)[0].strip()
+                                     for b in branches)
+        out = math.factorial(len(branches))
+        for repeat in counts.values():
+            out //= math.factorial(repeat)
+        return out
+
+    def _resolve_group_rates(self, gen_jobs, channel_widths):
+        """Branching ratio of the grouped particles, and each group's share.
+
+        A group is one complete assignment of channels to particles, so its rate
+        is a product over the particles::
+
+            br_g = prod_pdg  mult(g,pdg) * prod_{i in g} Gamma_i / Gamma_tot^n
+
+        with ``mult`` from :meth:`_assignment_multiplicity`. The groups are
+        alternatives, so ``br = sum_g br_g`` -- and the group to use is drawn
+        with ``p_g = br_g / br``, which is exactly the unpolarised factorisation
+        of its rate. Everything the polarisation adds on top is then carried by
+        the accept/reject weight, the same way the per-channel cross-section
+        draw already works for the ungrouped multi-channel case.
+        """
+        rates = []
+        for tag in self._decay_groups['tags']:
+            rate = 1.0
+            for pdg, per_tag in self._decay_groups['lines'].items():
+                if pdg not in gen_jobs:
+                    continue
+                indices = per_tag[tag]
+                widths = channel_widths.get(pdg) or {}
+                branches = self.list_branches[
+                    self.model.get_particle(pdg).get_name()]
+                for i in indices:
+                    rate *= self._clamped_partial_width(
+                        widths.get(i, 0.0), gen_jobs[pdg]['totwidth'], pdg)
+                rate *= self._assignment_multiplicity(
+                    [branches[i] for i in indices])
+                rate /= gen_jobs[pdg]['totwidth'] ** len(indices)
+            rates.append(rate)
+        total = sum(rates)
+        if total <= 0:
+            raise Exception("MadSpin: every decay group has a vanishing rate; "
+                            "check the decay lines and the param_card widths.")
+        self._decay_groups['prob'] = [r / total for r in rates]
+        logger.info("MadSpin: decay group rates %s (BR %.6g)",
+                    ', '.join('@%s=%.4f' % (tag, p) for tag, p in
+                              zip(self._decay_groups['tags'],
+                                  self._decay_groups['prob'])), total)
+        return total
+
+    def _draw_decay_group(self):
+        """The group this chain uses, or None when the card declares none.
+
+        Drawn afresh on every trial -- the caller is the top of the draw, which
+        the joint accept/reject re-enters on each rejection. That is what keeps
+        the group part of what is being unweighted, rather than something a
+        later stage could normalise away.
+        """
+        groups = getattr(self, '_decay_groups', None)
+        if not groups:
+            return None
+        r = random.random()
+        cumul = 0.0
+        for tag, prob in zip(groups['tags'], groups['prob']):
+            cumul += prob
+            if r < cumul:
+                return tag
+        return groups['tags'][-1]
+
     @misc.mute_logger()
     def do_launch(self, line):
         """end of the configuration launched the code"""
-        
+
         (options, args) = self.parse_launch(line)
         if getattr(lhe_parser, "_ENABLE_LHE_TIMERS", False):
             lhe_parser.reset_lhe_timers()
@@ -980,6 +1304,12 @@ class MadSpinInterface(extended_cmd.Cmd):
             self.options['spinmode'] = spinmode
 
         logger.info("Running MadSpin in spinmode %s" % spinmode)
+        # The density modes decide about the '@' grouping later, in run_onshell,
+        # where the production events say how many of each particle an event
+        # carries. These two never can, so say it now rather than after the
+        # generation.
+        if spinmode in ('none', 'onshell_v1'):
+            self._warn_ignored_decay_groups(spinmode)
 
         if spinmode in ["none"]:
             out = self.run_bridge(line)
@@ -1620,8 +1950,14 @@ class MadSpinInterface(extended_cmd.Cmd):
         use_gridpack = bool(self.options['ms_dir'])
         if cumul:
             width = 0.
-        else:   
+        else:
             width = 1.
+        # channel number -> its own partial width. ``width`` above is the product
+        # (or the sum, under cumul) that the branching ratio has always been
+        # built from; the grouping needs each channel on its own, since a group
+        # takes one channel per particle and its rate is the product over *its*
+        # channels only.
+        channel_widths = {}
         part = self.model.get_particle(pdg)
         if not part:
             return {}# this particle is not defined in the current model so ignore it
@@ -1631,7 +1967,11 @@ class MadSpinInterface(extended_cmd.Cmd):
         logger.info("generate %s decay event for particle %s" % (int(nb_event), name))
         if name not in self.list_branches:
             return out
-        for i,proc in enumerate(self.list_branches[name]):
+        for i,tagged_proc in enumerate(self.list_branches[name]):
+            # the '@' grouping tag is MadSpin's own bookkeeping: MG5 would read
+            # it as a process number (and the decay-ME generation appends one of
+            # its own), so it never reaches the generation
+            proc = self._split_group_tag(tagged_proc)[0]
             if restrict_file and i not in restrict_file:
                 continue
             decay_dir = pjoin(self.path_me, "decay_%s_%s" %(str(pdg).replace("-","x"),i))
@@ -1641,7 +1981,8 @@ class MadSpinInterface(extended_cmd.Cmd):
                     for j,proc2 in enumerate(self.list_branches[name][1:]):
                         if restrict_file and j not in restrict_file:
                             raise Exception # Do not see how this can happen
-                        mg5.exec_cmd("add process %s" % proc2)
+                        mg5.exec_cmd("add process %s"
+                                     % self._split_group_tag(proc2)[0])
                     mg5.exec_cmd("output %s -f" % decay_dir)
                 else:
                     mg5.exec_cmd("generate %s" % proc)
@@ -1685,11 +2026,12 @@ class MadSpinInterface(extended_cmd.Cmd):
                     # actually creation
                     me5_cmd.exec_cmd("generate_events run_01 -f")
                     if output_width:
+                        channel_widths[i] = me5_cmd.results.current['cross']
                         if cumul:
                             width += me5_cmd.results.current['cross']
                         else:
                             width *= me5_cmd.results.current['cross']
-                    me5_cmd.exec_cmd("exit")                        
+                    me5_cmd.exec_cmd("exit")
                     #remove pointless informat
                     if not os.path.exists(pjoin(decay_dir, 'run.sh')):
                         devnull = open('/dev/null','w')
@@ -1759,6 +2101,7 @@ class MadSpinInterface(extended_cmd.Cmd):
                 self.seed += 1
                 me5_cmd.exec_cmd("generate_events %s -f" % run_name)
                 if output_width:
+                    channel_widths[i] = me5_cmd.results.current['cross']
                     if cumul:
                         width += me5_cmd.results.current['cross']
                     else:
@@ -1803,7 +2146,7 @@ class MadSpinInterface(extended_cmd.Cmd):
         if not output_width:
             return out
         else:
-            return out, width
+            return out, width, channel_widths
 
     def run_onshell(self, line, density_method=False):
         """Run the onshell Algorithm"""
@@ -1937,6 +2280,11 @@ class MadSpinInterface(extended_cmd.Cmd):
             #    below so they overlap instead of running one particle after the
             #    other.
             gen_jobs = collections.OrderedDict()
+            # '@' grouping tags. Resolved before anything is generated: it
+            # decides how many pools each particle gets, and it forces the joint
+            # accept/reject, which _sequential_pool_ladder below already needs to
+            # know about.
+            self._resolve_decay_groups(to_decay, nb_event, density_method)
             # How many decay events one production event burns per decaying
             # particle. The joint accept/reject redraws the whole set on a
             # reject, so every pool is consumed at the same rate; the sequential
@@ -1957,7 +2305,24 @@ class MadSpinInterface(extended_cmd.Cmd):
                 totwidth = self.banner.get('param_card', 'decay', abs(pdg)).value
 
                 #check if a splitting is needed
-                if nb_needed == nb_event:
+                if pdg in self._decay_group_pdgs():
+                    # Grouped: one pool per decay *line*, whatever the
+                    # multiplicity -- a group hands each of its lines to one
+                    # particle, so a line is never mixed with another one in a
+                    # single pool the way `simple`/`mult_cumul` mix them.
+                    #
+                    # Every pool is sized as if its group were drawn on every
+                    # event. The exact size would be that times the group's
+                    # share p_g, but p_g is only known once the partial widths
+                    # have been measured, i.e. once this generation has run. So
+                    # over-generate by at most a factor |groups| rather than
+                    # under-generate and pay for refills; `decay_event_mult`
+                    # scales it down for anyone who minds.
+                    gen_jobs[pdg] = {'kind': 'grouped', 'totwidth': totwidth,
+                        'nb_mult': nb_needed // nb_event, 'cumul': False,
+                        'nb_gen': (int(efficiency*nb_event) + nevents_for_max)
+                                  * self.options['decay_event_mult']}
+                elif nb_needed == nb_event:
                     gen_jobs[pdg] = {'kind': 'simple', 'totwidth': totwidth,
                         'cumul': True,
                         'nb_gen': (int(efficiency*nb_needed) + nevents_for_max)
@@ -1996,22 +2361,43 @@ class MadSpinInterface(extended_cmd.Cmd):
             gen_results = self._generate_decays(gen_jobs, mg5)
 
             # 3) Fold the measured partial widths into the branching ratio.
+            channel_widths = {}
             for pdg, job in gen_jobs.items():
-                evt_decayfile[pdg], pwidth = gen_results[pdg]
+                evt_decayfile[pdg], pwidth, channel_widths[pdg] = gen_results[pdg]
                 totwidth = job['totwidth']
-                if pwidth > 1.01*totwidth:
-                    logger.warning('partial width (%s) larger than total width (%s) --from param_card--', pwidth, totwidth)
-                elif pwidth > totwidth:
-                    pwidth = totwidth
+                if job['kind'] == 'grouped':
+                    continue        # done together, below: a group's rate is a
+                                    # product over several particles at once
+                if job['kind'] == 'mult_split':
+                    # ``pwidth`` is the *product* of the channels' widths here,
+                    # so measuring it against a single total width is a category
+                    # error -- it fires as soon as totwidth > 1 GeV (two decay
+                    # lines for a top) and the clamp below would then quietly
+                    # wreck the branching ratio. Check each channel instead.
+                    product = 1.0
+                    for i in sorted(channel_widths[pdg]):
+                        product *= self._clamped_partial_width(
+                            channel_widths[pdg][i], totwidth, pdg)
+                    br *= (product / totwidth**job['nb_mult']
+                           * self._assignment_multiplicity(
+                               self.list_branches[self.model.get_particle(pdg)
+                                                  .get_name()]))
+                    continue
+                pwidth = self._clamped_partial_width(pwidth, totwidth, pdg)
                 if job['kind'] == 'simple':
                     br *= pwidth / totwidth
-                elif job['kind'] == 'mult_split':
-                    br *= pwidth / totwidth**job['nb_mult']
-                    br *= math.factorial(job['nb_mult'])
                 elif job['kind'] == 'mult_cumul':
                     br *= (pwidth / totwidth)**job['nb_mult']
                 else:
                     mixed_pdgs_br[pdg] = pwidth / totwidth
+
+            # 3b) The grouped particles' branching ratio, and with it the
+            #     probability of each group. A group is one complete assignment
+            #     of channels to particles, so its rate is the product of its
+            #     own partial widths over every grouped particle -- and the
+            #     groups are alternatives, so they add.
+            if getattr(self, '_decay_groups', None):
+                br *= self._resolve_group_rates(gen_jobs, channel_widths)
 
         # Equalize branching ratios across mixed productions (legacy
         # add_loose_decay mechanism): pick max_br as the global BR factor and
@@ -2336,6 +2722,25 @@ class MadSpinInterface(extended_cmd.Cmd):
                            "MadSpin: fixed_order is on, keeping the joint "
                            "accept/reject (unweighting ignored)")
             return self._announce_mode('joint', asked)
+        if getattr(self, '_decay_groups', None):
+            # The per-particle test redraws one slot until it is accepted, which
+            # divides E[w_k | group] out of the chain -- and that expectation
+            # differs between groups, so the accepted group fractions would come
+            # out distorted by its reciprocal. The joint test redraws the whole
+            # set, group included, so the group stays part of what is being
+            # unweighted. Lifting this needs a bound and a rate factor per
+            # group; see doc/madspin_decay_groups.md.
+            #
+            # two_stage self-normalises the same way (it redraws the angle set
+            # to acceptance), so it falls back too. Whether
+            # sequential_global_retry could be exempted -- a rejection there
+            # throws the whole chain away rather than renormalising -- depends
+            # on whether the group is redrawn with it, and has not been checked.
+            self._log_once('decay_groups',
+                           "MadSpin: the decay lines are grouped ('@' tags), "
+                           "keeping the joint accept/reject "
+                           "(unweighting ignored)")
+            return self._announce_mode('joint', asked)
         if self.options['spinmode'] not in ['PA', 'onshell', 'madspin', 'full']:
             self._log_once('spinmode',
                            "MadSpin: spinmode=%s keeps the joint accept/reject "
@@ -2488,15 +2893,19 @@ class MadSpinInterface(extended_cmd.Cmd):
             self.seed = (int(self.seed) + 1000003 * seed_offset) % (30081 * 30081)
             self.options['seed'] = self.seed
             self.me_int = {}
-            out, width = self.generate_events(pdg, job['nb_gen'], self.mg5cmd,
-                                              cumul=job['cumul'], output_width=True)
+            out, width, channel_widths = self.generate_events(
+                pdg, job['nb_gen'], self.mg5cmd,
+                cumul=job['cumul'], output_width=True)
             with open(res_path, 'w') as fp:
                 # send back every file of each channel: when the pool is split
                 # per worker (nb_unweight_output) reporting only the first one
                 # would silently shrink the pool to a single slice.
                 json.dump({'files': dict((str(k), self._reader_paths(v))
                                          for k, v in out.items()),
-                           'width': width}, fp)
+                           'width': width,
+                           'channel_widths': dict((str(k), v) for k, v
+                                                  in channel_widths.items())},
+                          fp)
         except Exception as exc:
             import traceback
             try:
@@ -2507,7 +2916,7 @@ class MadSpinInterface(extended_cmd.Cmd):
 
     def _generate_decays(self, gen_jobs, mg5):
         """Generate the decay events for every decaying particle; returns
-        ``{pdg: ({file_nb: EventFile}, partial_width)}``.
+        ``{pdg: ({file_nb: EventFile}, partial_width, {file_nb: width})}``.
 
         The generations are independent (each particle has its own
         ``decay_<pdg>_<i>`` directory) and a single MadEvent generation only
@@ -2557,7 +2966,9 @@ class MadSpinInterface(extended_cmd.Cmd):
                                 % (pdg, data.get('tb', data['error'])))
             out[pdg] = (dict((int(k), self._reader_from_paths(v))
                              for k, v in data['files'].items()),
-                        data['width'])
+                        data['width'],
+                        dict((int(k), v) for k, v
+                             in data.get('channel_widths', {}).items()))
         return out
 
     def _refill_pool_path(self, decay_dir, gen):
@@ -3517,18 +3928,26 @@ class MadSpinInterface(extended_cmd.Cmd):
             out[particle.pdg].append(decay)
         return out
 
-    def _draw_all_decays(self, production, evt_decayfile, nb_remain):
+    def _draw_all_decays(self, production, evt_decayfile, nb_remain, group=None):
         """Yield (slot_index, particle, decay) for every decaying particle of the
         production event, in production order -- which is the order the density
-        matrix slots are built in."""
+        matrix slots are built in.
+
+        ``group``: the '@' decay group this draw belongs to. Drawn here when the
+        caller does not impose one, so that it is redrawn on every trial of the
+        joint accept/reject along with the decays it selects."""
         particles = [p for p in production if int(p.status) == 1.0]
         ids = [particle.pid for particle in particles]
+        if group is None:
+            group = self._draw_decay_group()
         for i, particle in enumerate(particles):
-            decay = self._draw_one_decay(particle, i, ids, evt_decayfile, nb_remain)
+            decay = self._draw_one_decay(particle, i, ids, evt_decayfile,
+                                         nb_remain, group)
             if decay is not None:
                 yield i, particle, decay
 
-    def _draw_one_decay(self, particle, i, ids, evt_decayfile, nb_remain):
+    def _draw_one_decay(self, particle, i, ids, evt_decayfile, nb_remain,
+                        group=None):
         """Draw one decay event for ``particle`` -- the i-th final-state particle
         of the production event, ``ids`` being the pdgs of all of them -- and
         refill its pool if it runs out. Returns None when that particle does not
@@ -3536,29 +3955,42 @@ class MadSpinInterface(extended_cmd.Cmd):
 
         Factored out of get_decay_from_file so that the sequential accept/reject
         can redraw a single particle without touching the ones already accepted.
+
+        ``group`` restricts the choice to the channels that group gives this
+        particle; the rules below then apply to those, unchanged. That is the
+        whole of the grouping at run time -- a group supplies exactly one channel
+        per particle (or one per identical parent, which the positional rule then
+        deals out), so restricting the candidates is all it takes.
         """
         # check if we need to decay the particle
         if particle.pdg not in evt_decayfile:
             return None # nothing to do for this particle
+        channels = evt_decayfile[particle.pdg]
+        if group is not None:
+            keys = [k for k in self._decay_groups['lines']
+                                    .get(particle.pdg, {}).get(group, ())
+                    if k in channels]
+        else:
+            keys = sorted(channels)
         # check how the decay need to be done
-        nb_decay = len(evt_decayfile[particle.pdg])
+        nb_decay = len(keys)
         if nb_decay == 0:
             return None #nothing to do for this particle
         # Determine the file to read in order to get the decay [decay_file]
         if nb_decay == 1:
-            decay_file = evt_decayfile[particle.pdg][0]
-            decay_file_nb = 0
+            decay_file_nb = keys[0]
+            decay_file = channels[decay_file_nb]
         elif ids.count(particle.pdg) == nb_decay:
-            decay_file = evt_decayfile[particle.pdg][ids[:i].count(particle.pdg)]
-            decay_file_nb = ids[:i].count(particle.pdg)
+            decay_file_nb = keys[ids[:i].count(particle.pdg)]
+            decay_file = channels[decay_file_nb]
         else:
             #need to select the file according to the associate cross-section
             r = random.random()
-            tot = sum(evt_decayfile[particle.pdg][key].cross for key in evt_decayfile[particle.pdg])
+            tot = sum(channels[key].cross for key in keys)
             r = r * tot
             cumul = 0
-            for j,events in evt_decayfile[particle.pdg].items():
-                    
+            for j in keys:
+                events = channels[j]
                 cumul += events.cross
                 if r < cumul:
                     decay_file = events
@@ -3971,7 +4403,7 @@ class MadSpinInterface(extended_cmd.Cmd):
         logger.info("*****************************")
         logger.info("Probing the first %s events with %s phase space points"
                     % (nevents, nb_ps_point))
-        # sequential_decay never reaches here with fixed_order (it falls back to
+        # a non-joint unweighting never reaches here with fixed_order (it falls back to
         # the joint accept/reject), so the events are plain, not event-groups.
         orig_lhe.seek(0)
         events = []
@@ -4698,6 +5130,16 @@ class MadSpinInterface(extended_cmd.Cmd):
         exist yet); ``probe_extra`` carries the virtualities and the rate-factor
         samples the scan needs to build it.
         """
+        if getattr(self, '_decay_groups', None):
+            # Loud on purpose: this loop redraws one slot until it is accepted,
+            # which would divide E[w_k | group] out of the chain and distort the
+            # group fractions. _sequential_active refuses the whole scheme when
+            # the decays are grouped; if that guard is ever lifted it must come
+            # with a bound and a rate factor per group, not with this loop as it
+            # stands. See doc/madspin_decay_groups.md section 4.4.
+            raise Exception("MadSpin: the per-particle accept/reject cannot "
+                            "honour '@' decay groups; this should have fallen "
+                            "back to the joint one.")
         decays_key = self._decaying_pdgs(production, evt_decayfile)
         if not decays_key:
             return None
