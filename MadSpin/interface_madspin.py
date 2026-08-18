@@ -52,7 +52,17 @@ logger_stderr = logging.getLogger('decay.stderr') # ->stderr
 cmd_logger = logging.getLogger('cmdprint2') # -> print
 
 class MadSpinOptions(banner.ConfigFile):
-    
+
+    # Unweighting schemes that still work but are no longer offered to the
+    # user: they are kept out of the 'allowed' list above so that they show up
+    # neither in the completion nor in the "allowed values are ..." message,
+    # and are re-admitted one call at a time by __setitem__ below. 'two_stage'
+    # is here because it is not the fastest scheme at any multiplicity measured
+    # (see _unweighting_mode) -- it survives as an internal cross-check, the
+    # one staged scheme whose angle stage is a single joint test, and as such
+    # is still exercised by the parallel tests and the benchmarks.
+    hidden_unweighting_modes = ('two_stage',)
+
     def default_setup(self):
 
         self.add_param("max_weight", -1)
@@ -82,25 +92,53 @@ class MadSpinOptions(banner.ConfigFile):
         self.add_param('nb_core', 0, comment='Number of cores for the MadSpin parallel unweighting (0 = use the global MG5 nb_core). nb_core>1 enables the process-parallel unweighting path.')
         self.add_param('density_keep_jacobian', True, comment='PA spinmode only: fold the offshell-reshuffling phase-space jacobian into the accept/reject weight (default) instead of applying the reshuffle as a post-acceptance kinematic dressing (False). Ignored by the madspin/full spinmodes, which always include that jacobian.')
         self.add_param('unweighting', 'auto',
-                       allowed=['auto', 'joint', 'two_stage', 'sequential',
+                       allowed=['auto', 'joint', 'sequential',
                                 'sequential_global_retry',
                                 'sequential_with_mass'],
                        comment="how the accept/reject is organised (density modes). "
                        "joint: one test over the virtualities and every decay at once, the historical scheme. "
-                       "two_stage: unweight the set of virtualities first, then every decay against a single bound, redrawing only the decays on a rejection -- the production reshuffling and its density matrix are then evaluated once per accepted mass set instead of once per trial. "
-                       "sequential: as two_stage but one test per decaying particle, redrawing only the particle that was rejected. "
+                       "sequential: unweight the set of virtualities first, then one test per decaying particle, redrawing only the particle that was rejected -- the production reshuffling and its density matrix are then evaluated once per accepted mass set instead of once per trial. "
                        "sequential_global_retry: as sequential, but a rejected decay redraws the virtualities too. "
                        "sequential_with_mass: one test per decaying particle with that particle's virtuality drawn *inside* its own accept/reject, so nothing is ever frozen and no stage has a conditional normalisation to divide out. Needs a per-particle mass draw, i.e. the PA spinmode; elsewhere it falls back to sequential. "
-                       "two_stage, sequential and sequential_global_retry unweight the set of virtualities first; the first two then need a tabulated running-width factor, measured during the max-weight scan to ~0.5%, which is far inside the pole approximation these modes already assume; sequential_global_retry does without it at 2-3x the cost, and is meant as a cross-check rather than a default. "
+                       "sequential and sequential_global_retry unweight the set of virtualities first; the former then needs a tabulated running-width factor, measured during the max-weight scan to ~0.5%, which is far inside the pole approximation these modes already assume; sequential_global_retry does without it at 2-3x the cost, and is meant as a cross-check rather than a default. "
                        "auto: sequential under PA/onshell, where it was the fastest scheme at every decay multiplicity measured; offshell joint up to two decaying particles and sequential from three, since offshell every mass set costs a production reshuffle and a production density and below three decays there are not enough of them to save to pay for it.")
         self.add_param('sequential_decay', 'auto',
                        comment='DEPRECATED, use unweighting: True maps to sequential, False to joint.')
         self.auto_set.add('sequential_decay')
         self.add_param('sequential_spin_order', '2 3 1', comment='spin order (MG5 2S+1 convention) deciding which particle is accept/rejected first in the sequential unweighting modes: default fermions, then vectors, then scalars (which can never be rejected).')
-        self.add_param('sequential_debug', False, comment='the up-front-mass unweighting schemes (two_stage, sequential, sequential_global_retry): on every accepted chain, recompute the joint weight for the same production event, virtualities and decays and check that the product of the stage weights reproduces it (times the number of helicity states). Deterministic check of the decomposition itself -- the tabulated factor cancels out of it -- at roughly the cost of a joint trial per event. Debugging only.')
+        self.add_param('sequential_debug', False, comment='the up-front-mass unweighting schemes (sequential, sequential_global_retry): on every accepted chain, recompute the joint weight for the same production event, virtualities and decays and check that the product of the stage weights reproduces it (times the number of helicity states). Deterministic check of the decomposition itself -- the tabulated factor cancels out of it -- at roughly the cost of a joint trial per event. Debugging only.')
+
+    def __setitem__(self, name, value, change_userdefine=False, raiseerror=False):
+        """Let an old card keep an unweighting scheme we no longer advertise.
+
+        Hiding a scheme means dropping it from 'allowed', and ConfigFile then
+        refuses it outright -- which would turn a card written before the
+        scheme was retired into a warning plus a silent switch back to 'auto'.
+        The code path is untouched, so accept the value instead: widen the
+        allowed list for the duration of this one assignment and note it at
+        debug level, quietly enough not to re-advertise it.
+        """
+        if isinstance(name, str) and isinstance(value, str) and \
+                name.strip().lower() == 'unweighting' and \
+                value.strip().lower() in self.hidden_unweighting_modes:
+            value = value.strip().lower()
+            allowed = getattr(self, 'allowed_value', {}).get('unweighting')
+            if allowed is not None and value not in allowed:
+                logger.debug("MadSpin: unweighting = %s is an internal "
+                             "cross-check scheme, no longer offered in the "
+                             "card; honouring it since it was asked for "
+                             "explicitly.", value)
+                self.allowed_value['unweighting'] = list(allowed) + [value]
+                try:
+                    return super(MadSpinOptions, self).__setitem__(
+                        name, value, change_userdefine, raiseerror)
+                finally:
+                    self.allowed_value['unweighting'] = allowed
+        return super(MadSpinOptions, self).__setitem__(
+            name, value, change_userdefine, raiseerror)
 
     ############################################################################
-    ##  Special post-processing of the options                                ## 
+    ##  Special post-processing of the options                                ##
     ############################################################################
     def post_set_ms_dir(self, value, change_userdefine, raiseerror, *opts):
         """ special handling for set ms_dir """
@@ -850,7 +888,13 @@ class MadSpinInterface(extended_cmd.Cmd):
             return self.path_completion(text, curr_path, only_dirs = True)
         elif args[1] == "spinmode":
             return self.list_completion(text, ["full", "madspin", "none", "onshell", "PA", "madspin_v1", "onshell_v1"], line)
-         
+        elif args[1] == "unweighting":
+            # the advertised schemes only: the hidden ones stay settable but
+            # are not proposed (see MadSpinOptions.hidden_unweighting_modes)
+            return self.list_completion(text,
+                       list(self.options.allowed_value['unweighting']), line)
+
+
     def help_set(self):
         """help the set command"""
         
@@ -2719,9 +2763,13 @@ class MadSpinInterface(extended_cmd.Cmd):
         accepted event. From n=3 the per-particle test wins by 2.2x and 4.3x.
 
         ``two_stage`` is not the fastest scheme at any measured point -- joint
-        beats it at n<=2 and ``sequential`` at n>=3 -- so it is reachable but
-        never chosen here. It stays useful as a cross-check, being the one
-        staged scheme whose angle stage is a single joint test.
+        beats it at n<=2 and ``sequential`` at n>=3 -- so ``auto`` never
+        returns it, and it is no longer offered in the card either (it is not
+        in the advertised ``allowed`` list; see
+        ``MadSpinOptions.hidden_unweighting_modes``, which still honours an
+        explicit request for it). It stays useful as a cross-check, being the
+        one staged scheme whose angle stage is a single joint test, and the
+        code path below is unchanged.
 
         ``fixed_order`` forces joint: its counter-events ride along with the
         decays and have not been thought through here.
