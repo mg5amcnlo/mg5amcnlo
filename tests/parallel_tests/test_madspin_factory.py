@@ -366,9 +366,10 @@ class MadSpinFactoryTest(_MadSpinFactoryBase):
 # ---------------------------------------------------------------------------
 
 # Fully leptonic ttbar. Two decaying particles at the top level (t and t~), so
-# ``auto`` lands on ``two_stage`` under an offshell spinmode -- and both tops
-# give a reconstructable lineshape while the two leptons give the angular
-# no-regression observable.
+# ``auto`` lands on ``joint`` under an offshell spinmode (offshell it only
+# leaves joint from three decaying particles up) and on ``sequential`` under
+# PA/onshell -- and both tops give a reconstructable lineshape while the two
+# leptons give the angular no-regression observable.
 TTBAR_LEPTONIC = dict(
     production_process='p p > t t~',
     decays=['t > b w+, w+ > l+ vl',
@@ -539,19 +540,38 @@ class MadSpinUnweightingTest(_MadSpinFactoryBase):
 
         Covered here, all off one production sample:
 
-          * ``auto`` + offshell, two decaying particles -> ``two_stage``;
-          * ``auto`` + offshell, *one* decaying particle -> ``joint`` (every
-            split degenerates there). This is the one case that exercises the
-            real ``_nb_decaying`` count against real events;
-          * ``auto`` + PA -> ``sequential`` (PA has no up-front mass draw);
-          * ``two_stage`` / ``sequential_global_retry`` asked for explicitly
-            under PA/onshell -> ``sequential``, the documented fallback;
+          * ``auto`` + offshell, two decaying particles -> ``joint``. Offshell,
+            a mass set costs a production reshuffle *and* a production density,
+            so ``auto`` only leaves joint from three decaying particles up;
+          * ``auto`` + offshell, *one* decaying particle -> ``joint`` as well,
+            by the same branch. Both auto/offshell cases land on the same
+            scheme, so what separates them is the announced count -- and this
+            is the one case that exercises the real ``_nb_decaying`` against
+            real events, since it needs the decay lines to be counted rather
+            than the default assumed;
+          * ``auto`` + PA -> ``sequential``: PA keeps rho fixed on shell, so
+            its mass stage costs a reshuffling jacobian and nothing else, and
+            sequential was the fastest at every multiplicity measured;
+          * ``two_stage`` under PA and ``sequential_global_retry`` under
+            onshell -> themselves. PA has an up-front mass draw of its own, so
+            the up-front-mass schemes are honoured there rather than downgraded
+            -- this is the end-to-end guard on that (``two_stage`` in
+            particular is no longer offered in the card but must still run when
+            asked for by name);
+          * ``sequential_with_mass`` + offshell -> ``sequential``: the one
+            fallback left in the resolution. It draws each slot's virtuality
+            inside that slot's accept/reject, which the offshell spinmodes
+            cannot do -- they reshuffle the whole production onto the mass set
+            at once;
           * ``joint`` asked for explicitly -> ``joint``.
 
-        Not covered: ``fixed_order`` forcing joint, which needs a fixed-order
-        sample this factory does not produce, and the unsupported-spinmode
-        fallback, which is unreachable from a real run (only PA/onshell/madspin
-        reach the resolution at all). Both are unit-tested against a stub.
+        Not covered here: the offshell ``auto`` boundary itself (three decaying
+        particles -> ``sequential``), which would need a third production
+        sample this factory does not build; ``fixed_order`` forcing joint,
+        which needs a fixed-order sample; the decay-group override; and the
+        unsupported-spinmode fallback, which is unreachable from a real run
+        (only PA/onshell/madspin/full reach the resolution at all). All of
+        those are unit-tested against a stub.
         """
         factory = self._unweighting_factory('unweighting_resolution',
                                             IDENTITY_NEVENTS)
@@ -562,15 +582,17 @@ class MadSpinUnweightingTest(_MadSpinFactoryBase):
         # (tag, config, asked, decays, expected mode, expected reason)
         cases = [
             ('auto_offshell', offshell, 'auto', None,
-             'two_stage', 'auto, 2 decaying particle(s)'),
+             'joint', 'auto, 2 decaying particle(s)'),
             ('auto_offshell_single', offshell, 'auto',
              ['t > b w+, w+ > l+ vl'],
              'joint', 'auto, 1 decaying particle(s)'),
             ('auto_pa', pa, 'auto', None,
              'sequential', 'auto, 2 decaying particle(s)'),
             ('two_stage_pa', pa, 'two_stage', None,
-             'sequential', 'set explicitly'),
+             'two_stage', 'set explicitly'),
             ('global_retry_onshell', onshell, 'sequential_global_retry', None,
+             'sequential_global_retry', 'set explicitly'),
+            ('with_mass_offshell', offshell, 'sequential_with_mass', None,
              'sequential', 'set explicitly'),
             ('joint_offshell', offshell, 'joint', None,
              'joint', 'set explicitly'),
