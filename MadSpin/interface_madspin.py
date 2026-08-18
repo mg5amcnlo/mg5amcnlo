@@ -2203,28 +2203,43 @@ class MadSpinInterface(extended_cmd.Cmd):
         # - count the number of particles to be decayed.
         to_decay = collections.defaultdict(int)	
         nb_event = 0
+        nb_decaying = 0
         for event in orig_lhe:
             if self.options['fixed_order']:
                 event = event[0]
             nb_event +=1
+            nb_this_event = 0
             for particle in event:
                 if particle.status == 1 and particle.pdg in asked_to_decay:
                     # final state and tag as to decay
                     to_decay[particle.pdg] += 1
+                    nb_this_event += 1
                     # Properties of decaying particle
                     width = self.banner.get('param_card', 'decay', abs(particle.pdg)).value
                     mass = self.banner.get('param_card', 'mass', abs(particle.pdg)).value
                     color = self.model.get_particle(particle.pdg).get('color')
                     spin = self.model.get_particle(particle.pdg).get('spin')
                     decay_dict[particle.pdg] = [width, mass, color, spin]
+            if nb_this_event > nb_decaying:
+                nb_decaying = nb_this_event
         #print(f"to_decay = {to_decay}")
         # How many particles decay in one event -- the same multiplicity the
         # pool ladder counts. It decides which unweighting scheme 'auto' picks,
         # so it is resolved once here rather than per event: the modes have
         # different bounds, and a mode that changed event to event would be
         # testing against somebody else's.
-        self._nb_decaying = sum(max(1, int(nb) // int(nb_event))
-                                for nb in to_decay.values()) if nb_event else 0
+        #
+        # Counted *per event* and maximised, not rebuilt from the per-pdg
+        # tally: a sample that mixes subprocesses carrying different decaying
+        # pdgs -- `p p > w+ j` together with `p p > w- j` -- decays exactly one
+        # particle per event, but lists two pdgs, and floor-averaging each of
+        # them to at least one reported two decaying particles. That over-count
+        # is what pushed `p p > w+/- j` onto a staged offshell scheme, which is
+        # precisely the case whose mass-set weight carries
+        # Tr(rho_off)/|M_prod|^2_on over orders of magnitude and that no bound
+        # covers (see _unweighting_mode): the acceptance test measured 1.8e4
+        # for the mass bound and 18e6 mass sets for 1000 events.
+        self._nb_decaying = nb_decaying
                 	
         with misc.MuteLogger(["madgraph", "madevent", "ALOHA", "cmdprint"], [50,50,50,50]):
             mg5 = self.mg5cmd
