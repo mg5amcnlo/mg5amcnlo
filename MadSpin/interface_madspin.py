@@ -231,7 +231,7 @@ class MadSpinOptions(banner.ConfigFile):
                        "sequential_global_retry: as sequential, but a rejected decay redraws the virtualities too. "
                        "sequential_with_mass: one test per decaying particle with that particle's virtuality drawn *inside* its own accept/reject, so nothing is ever frozen and no stage has a conditional normalisation to divide out. Needs a per-particle mass draw, i.e. the PA spinmode; elsewhere it falls back to sequential. "
                        "sequential and sequential_global_retry unweight the set of virtualities first; the former then needs a tabulated running-width factor, measured during the max-weight scan to ~0.5%, which is far inside the pole approximation these modes already assume; sequential_global_retry does without it at 2-3x the cost, and is meant as a cross-check rather than a default. "
-                       "auto: sequential under PA/onshell, where it was the fastest scheme at every decay multiplicity measured; offshell joint up to two decaying particles and sequential from three, since offshell every mass set costs a production reshuffle and a production density and below three decays there are not enough of them to save to pay for it.")
+                       "auto: sequential under PA/onshell, where it was the fastest scheme at every decay multiplicity measured; offshell joint up to two decaying particles and sequential from three, since offshell every mass set costs a production reshuffle and a production density and below three decays there are not enough of them to save to pay for it; but sequential at every multiplicity when the production process carries a polarisation brace, since restricting the convolution to a polarisation subspace peaks the joint weight far below the single bound the joint test has -- measured on `p p > t t~` with both tops decayed, 112 trials per accepted event under joint for `t{+}t~{+}` and 162 for `t{+}t~{-}` against 9.1 and 8.4 under sequential, where unpolarised joint takes 3.3 (and at 50000 events, where the max-weight bound is looser still, the polarised joint columns were 204-213 and 5800-6300). An explicit 'set unweighting joint' is still honoured.")
         self.add_param('sequential_decay', 'auto',
                        comment='DEPRECATED, use unweighting: True maps to sequential, False to joint.')
         self.auto_set.add('sequential_decay')
@@ -3073,7 +3073,7 @@ class MadSpinInterface(extended_cmd.Cmd):
     def _auto_unweighting_mode(self):
         """What ``unweighting = auto`` resolves to, before any of the
         fallbacks: one branch per spinmode family, keyed on the number of
-        decaying particles.
+        decaying particles, plus an override for a polarised production.
 
         The two branches were measured over the number of decaying particles n
         on `p p > w+ j` (n=1), `p p > t t~` (2), `p p > t t~ z` (3) and
@@ -3101,6 +3101,46 @@ class MadSpinInterface(extended_cmd.Cmd):
         of magnitude, no bound covers it, and the mass stage needs ~790 sets per
         accepted event. From n=3 the per-particle test wins by 2.2x and 4.3x.
 
+        **A polarised production -> ``sequential``, whatever n.** A brace on the
+        production process (``_production_polarization``) restricts the
+        production/decay convolution to a polarisation subspace, which peaks the
+        joint weight far below the bound the max-weight scan hands it -- and the
+        joint test has no way to recover, since its bound is a single number
+        over the whole chain. Measured offshell on `p p > t t~` (n=2, so the
+        multiplicity rule would say joint) with both tops decayed:
+
+        ==========================  ==============  ==============
+        production                  joint           sequential
+        ==========================  ==============  ==============
+        `t t~` (unpolarised)          3.3             6.1
+        `t{+}t~{+}`                 112               9.1
+        `t{+}t~{-}`                 162               8.4
+        ==========================  ==============  ==============
+
+        in trials per accepted event, 500 events each. The 50000-event
+        validation of all four polarised final states, where the max-weight
+        scan is longer and ``nb_sigma`` larger, saw the joint column rise to
+        4.05 unpolarised, 204-213 like-helicity and 5800-6300
+        opposite-helicity against 8.59 sequential: the gap widens with
+        statistics, because the bound the joint test must clear keeps growing
+        while the bulk of the restricted weight distribution does not.
+        Unpolarised, joint is the better of the two by ~2x and the rule above
+        stands; polarised it loses by one to three orders of magnitude, so
+        ``auto`` gives the brace priority over n.
+
+        The clause fires on any brace in the production line, including one on a
+        particle MadSpin does not decay -- such a brace leaves the restriction
+        handed to ``DensityMatrix`` empty and so cannot be the thing peaking the
+        weight. Two reasons to fire anyway. The asymmetry: taking ``sequential``
+        when joint would have done costs the ~2x above, taking joint when the
+        convolution is restricted costs 30-1500x. And the resolved mode has to
+        be the same at every call site -- it names the max-weight cache files and
+        picks which bound the accept/reject tests against -- while the set of
+        decayed pdgs is not known everywhere ``_unweighting_mode`` is called; a
+        clause that consulted it could resolve two ways in one run.
+        An explicit ``set unweighting joint`` is still honoured: only ``auto``
+        comes through here.
+
         ``two_stage`` is not the fastest scheme at any measured point -- joint
         beats it at n<=2 and ``sequential`` at n>=3 -- so ``auto`` never
         returns it, and it is no longer offered in the card either (it is not
@@ -3113,6 +3153,12 @@ class MadSpinInterface(extended_cmd.Cmd):
         if self._density_pole_approximation():
             # fastest at every multiplicity measured; rho is fixed on shell
             # so the mass stage costs a reshuffling jacobian and nothing else
+            return 'sequential'
+        if self._density_spinmode() and self._production_polarization():
+            # a polarised production restricts the convolution to a
+            # polarisation subspace, and the joint weight then sits orders
+            # of magnitude below its own bound -- see above. The multiplicity
+            # rule does not apply: joint has no way to recover.
             return 'sequential'
         if getattr(self, '_nb_decaying', 2) <= 2:
             # offshell a mass set costs a production reshuffle and a
@@ -6328,31 +6374,29 @@ class MadSpinInterface(extended_cmd.Cmd):
         do not commute with a change of basis -- so the projection only means
         what the user asked for on MG5's own quantisation axis.
 
-        Three things apply such a projection, and all three need the frame:
+        Four things apply such a projection, and all three need the frame:
 
-         * polarised beams (``beampol``), which is what the guard in
-           ``_frame_boost`` tests today;
+         * polarised beams (``beampol``), which reweights the initial-state
+           helicity sum;
          * a polarisation brace on the production process (PR #349/#353);
-         * a polarisation-weight request -- this branch. The weights are the
-           same projection, only used to build an extra weight rather than the
-           nominal one, so an unpolarised production with
-           ``keep_weight_for_polarization_vector/_fermion`` set still needs it.
+         * a polarisation-weight request. The weights are the same projection,
+           only used to build an extra weight rather than the nominal one, so an
+           unpolarised production with
+           ``keep_weight_for_polarization_vector/_fermion`` set still needs it;
+         * the pure-interference mode (``set pure_interference t = 0 T``), whose
+           cross restriction is a projection for the same reason -- and whose
+           production is unpolarised, so no brace switches it on.
 
-        NOT WIRED IN ON THIS BRANCH. ``_frame_boost`` still opens with the
-        beampol-only guard, and PR #355 (stacked on #349) turns that same line
-        into ``if self._beampol() is None and not self._production_polarization()``.
-        Editing it here would only collide with that. The one-line change to make
-        at merge time, replacing whichever version of the guard is in
-        ``_frame_boost`` by then, is
-
-            if not self._needs_frame_axis():
-                return None
-
-        Until that lands the polarisation weights are taken on the lab axis.
+        This is ``_frame_boost``'s guard: it short-circuits to None -- leaving
+        every momentum in the lab -- exactly when this returns False.
         """
         if self._beampol() is not None:
             return True
         if self._production_polarization():
+            return True
+        if self._pure_interference():
+            # the cross restriction is a projection like the others, so the
+            # interference block is named on the me_frame axis too
             return True
         return self._polarization_weights_enabled()
 
@@ -8463,6 +8507,8 @@ class MadSpinInterface(extended_cmd.Cmd):
         themselves (HELAS ``boostx``, exactly what ``boost_to_frame`` does in
         driver.f).
 
+        Three things switch it on -- the three clauses of ``_needs_frame_axis``
+        -- and all of them are cases where the frame is *observable*:
         Three things switch it on, and all are cases where the frame is
         *observable*:
 
@@ -8481,6 +8527,13 @@ class MadSpinInterface(extended_cmd.Cmd):
           change of helicity basis a boost induces, so leaving the momenta in
           the lab would restrict a different helicity than the one the input
           events were generated with.
+        - a polarisation-weight request
+          (``keep_weight_for_polarization_vector`` / ``_fermion``). Those
+          weights go through the very same ``set_hel_restriction`` projection,
+          only to build an extra <wgt> line instead of the nominal weight, so
+          they need the frame for exactly the same reason -- and they can be
+          asked for on a production that carries no brace at all, which is why
+          the two clauses above do not cover them.
         - the pure-interference mode (``set pure_interference t = 0 T``). Its
           cross restriction is a projection for exactly the same reason -- it
           names two helicity sets, which only means something once the axis is
@@ -8493,11 +8546,7 @@ class MadSpinInterface(extended_cmd.Cmd):
         ``sum_ij rho_prod(i,j) rho_dec(i,j)`` is a trace, and a boost acts on it
         as a unitary change of basis that cancels between the two factors.
         """
-        # NOTE (reconciliation): a parallel branch factors this condition into a
-        # _needs_frame_axis() helper; the pure_interference clause below belongs
-        # in that helper when the two are merged.
-        if (self._beampol() is None and not self._production_polarization()
-                and not self._pure_interference()):
+        if not self._needs_frame_axis():
             return None
         frame_id = int(self.options['frame_id'])
         if frame_id <= 0:

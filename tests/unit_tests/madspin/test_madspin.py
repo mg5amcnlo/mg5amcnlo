@@ -56,15 +56,57 @@ def _borrow_decision_helpers(namespace):
     body of any stub that borrows one of those.
 
     getattr_static keeps the staticmethod wrappers intact.
+
+    The list is hand-kept, so a new call added inside the borrowed code hits a
+    method the stub never borrowed. The `__getattr__` installed here turns that
+    into an error naming the method (and where to add it) rather than a bare
+    AttributeError; it still *is* an AttributeError, so `getattr(self, x, d)`
+    and `hasattr` keep behaving as before.
     """
     for name in ('_auto_unweighting_mode', '_density_pole_approximation',
                  '_density_do_reshuffle', '_density_needs_reshuffle',
                  '_spinmode_has_density', '_is_upfront_scheme',
+                 # _auto_unweighting_mode's polarisation branch is built on
+                 # these two; a stub that does not seed
+                 # _production_polarization_cache gets '{}' out of it, since
+                 # there is no banner to read a proc_card from.
+                 '_density_spinmode', '_production_polarization',
                  # _unweighting_mode consults this first: the interference mode
                  # forces joint, so a stub that borrows the resolver needs it
                  '_pure_interference'):
         namespace[name] = inspect.getattr_static(
             interface_madspin.MadSpinInterface, name)
+
+    def __getattr__(self, name):
+        try:
+            inspect.getattr_static(interface_madspin.MadSpinInterface, name)
+        except AttributeError:
+            raise AttributeError(name)
+        raise AttributeError(
+            '%s does not borrow MadSpinInterface.%s: add it to the list in'
+            ' _borrow_decision_helpers, or define it on the stub'
+            % (type(self).__name__, name))
+    namespace.setdefault('__getattr__', __getattr__)
+    return namespace
+
+
+def _borrow_frame_helpers(namespace):
+    """Add ``_frame_boost`` and everything its guard reaches through to a stub
+    class namespace. Call as ``_borrow_frame_helpers(locals())`` from the class
+    body of any stub that borrows ``_frame_boost``.
+
+    The guard is ``_needs_frame_axis``, which asks about the beams, the
+    production braces and the two polarisation-weight lists; going through this
+    helper is what keeps widening it from meaning an edit in every stub. The
+    caller still has to provide ``_production_polarization`` and ``options``,
+    which are what the stub is actually choosing.
+    """
+    for name in ('_beampol', '_frame_boost', '_needs_frame_axis',
+                 '_polarization_weight_labels',
+                 '_polarization_weights_enabled'):
+        namespace[name] = inspect.getattr_static(
+            interface_madspin.MadSpinInterface, name)
+    namespace['InvalidCmd'] = interface_madspin.MadSpinInterface.InvalidCmd
     return namespace
 #
 class TestBanner(unittest.TestCase):
@@ -362,10 +404,13 @@ class _FrameStub(object):
     """Just enough of MadSpinInterface for the frame/beampol helpers: they only
     need the options and the matrix-element ordering of the event."""
 
-    def __init__(self, frame_id, beampol, prodpol=None, pure_interference=''):
+    def __init__(self, frame_id, beampol, prodpol=None, vector=(), fermion=(),
+                 pure_interference=''):
         self.options = interface_madspin.MadSpinOptions()
         self.options['frame_id'] = frame_id
         self.options['beampol'] = list(beampol)
+        self.options['keep_weight_for_polarization_vector'] = list(vector)
+        self.options['keep_weight_for_polarization_fermion'] = list(fermion)
         self.options['pure_interference'] = pure_interference
         self.model = _PIModelStub()
         # what _production_polarization would have parsed out of the banner's
@@ -382,8 +427,7 @@ class _FrameStub(object):
     def _production_polarization(self):
         return self._production_polarization_cache
 
-    _beampol = interface_madspin.MadSpinInterface._beampol
-    _frame_boost = interface_madspin.MadSpinInterface._frame_boost
+    _borrow_frame_helpers(locals())
     _pure_interference = interface_madspin.MadSpinInterface._pure_interference
     _parse_pol_side = interface_madspin.MadSpinInterface._parse_pol_side
     _POL_TOKENS = interface_madspin.MadSpinInterface._POL_TOKENS
@@ -412,8 +456,9 @@ class TestFrameBoost(unittest.TestCase):
                (400., -100., -50., 380.)]
 
     def _stub(self, frame_id, beampol=(80., 0.), prodpol=None,
-              pure_interference=''):
-        return _FrameStub(frame_id, beampol, prodpol, pure_interference)
+              vector=(), fermion=(), pure_interference=''):
+        return _FrameStub(frame_id, beampol, prodpol, vector, fermion,
+                          pure_interference)
 
     def test_polbeam_to_beampol(self):
         """the card speaks percent, like the run_card polbeam1/polbeam2, and
@@ -477,6 +522,39 @@ class TestFrameBoost(unittest.TestCase):
         self.assertIsNotNone(boost)
         self.assertEqual((boost.E, boost.px, boost.py, boost.pz),
                          (700., 0., 0., 300.))
+
+    def test_frame_follows_a_polarization_weight_request(self):
+        """keep_weight_for_polarization_vector/_fermion apply the same
+        set_hel_restriction projection as a production brace, only to build an
+        extra <wgt> line rather than the nominal weight. They can be asked for
+        on a production that carries no brace and with unpolarised beams, so
+        neither of the other two clauses sees them -- and a projection taken on
+        the lab axis restricts a different helicity than the one MG5 names.
+        Each species list switches the frame on by itself."""
+        for kwargs in [dict(vector=['0']), dict(fermion=['+']),
+                       dict(vector=['T'], fermion=['-'])]:
+            stub = self._stub(6, beampol=(0., 0.), **kwargs)
+            boost = stub._frame_boost(_MomentaEvent(self.MOMENTA))
+            self.assertIsNotNone(boost, kwargs)
+            self.assertEqual((boost.E, boost.px, boost.py, boost.pz),
+                             (700., 0., 0., 300.), kwargs)
+
+    def test_frame_boost_matches_needs_frame_axis(self):
+        """_frame_boost's guard *is* _needs_frame_axis: the boost is taken for
+        each of the three triggers on its own and for nothing else. Pinned
+        together so the two cannot drift apart again."""
+        cases = [(dict(), False),
+                 (dict(beampol=(80., 0.)), True),
+                 (dict(prodpol={24: (0,)}), True),
+                 (dict(vector=['0']), True),
+                 (dict(fermion=['+']), True),
+                 (dict(beampol=(80., 0.), vector=['T']), True)]
+        for kwargs, wanted in cases:
+            kwargs.setdefault('beampol', (0., 0.))
+            stub = self._stub(6, **kwargs)
+            self.assertEqual(stub._needs_frame_axis(), wanted, kwargs)
+            self.assertEqual(stub._frame_boost(_MomentaEvent(self.MOMENTA))
+                             is not None, wanted, kwargs)
 
     def test_frame_follows_the_pure_interference_mode(self):
         """The pure-interference cross restriction is a projection too, and it
@@ -2620,11 +2698,16 @@ class TestKeepWeightForPolarization(unittest.TestCase):
         """A helicity *projection* does not commute with a boost, so it only
         means what the user asked for on MG5's quantisation axis (frame_id). The
         polarisation weights are the same projection as a production brace, so
-        the predicate _frame_boost's guard has to become must be true for them
-        too -- see _needs_frame_axis' note about wiring it to PR #355."""
+        the predicate that _frame_boost's guard tests has to be true for them.
+        TestFrameBoost.test_frame_boost_matches_needs_frame_axis pins the guard
+        itself onto this predicate."""
         class Frame(self._Stub):
             _needs_frame_axis = \
                 interface_madspin.MadSpinInterface._needs_frame_axis
+            # the fourth clause: the interference mode is a projection too.
+            # Off by default here; the case below overrides it.
+            def _pure_interference(self):
+                return {}
 
             def __init__(self, beampol=None, braces=None, **kwargs):
                 super(Frame, self).__init__(**kwargs)
@@ -2643,6 +2726,11 @@ class TestKeepWeightForPolarization(unittest.TestCase):
         self.assertTrue(Frame(beampol=(2.0, 1.0))._needs_frame_axis())
         self.assertTrue(Frame(braces={23: ((0,),)})._needs_frame_axis())
         self.assertTrue(Frame(vector=['0'])._needs_frame_axis())
+        class FrameInterference(Frame):
+            def _pure_interference(self):
+                return {6: ((0,), (-1, 1))}
+
+        self.assertTrue(FrameInterference()._needs_frame_axis())
         self.assertTrue(Frame(fermion=['+'])._needs_frame_axis())
 
     def test_the_two_species_lists_are_independent(self):
@@ -3359,8 +3447,7 @@ class TestSequentialAcceptReject(unittest.TestCase):
             _announce_mode = interface._announce_mode
             _log_once = interface._log_once
             _borrow_decision_helpers(locals())
-            _beampol = interface._beampol
-            _frame_boost = interface._frame_boost
+            _borrow_frame_helpers(locals())
             _production_polarization = staticmethod(lambda: {})
             # pure-interference mode off: _frame_boost / _unweighting_mode both
             # ask, and neither stub carries the card option
@@ -3570,8 +3657,7 @@ class TestPAUpFrontMass(unittest.TestCase):
             _announce_mode = interface._announce_mode
             _log_once = interface._log_once
             _borrow_decision_helpers(locals())
-            _beampol = interface._beampol
-            _frame_boost = interface._frame_boost
+            _borrow_frame_helpers(locals())
             _production_polarization = staticmethod(lambda: {})
             # pure-interference mode off: _frame_boost / _unweighting_mode both
             # ask, and neither stub carries the card option
@@ -3830,7 +3916,7 @@ class TestSequentialPoolLadder(unittest.TestCase):
         def get_particle(self, pdg):
             return TestSequentialPoolLadder._Part(self.spins[pdg])
 
-    def _stub(self, spins, **options):
+    def _stub(self, spins, polarization=None, **options):
         interface = interface_madspin.MadSpinInterface
         class Stub(object):
             _sequential_pool_ladder = interface._sequential_pool_ladder
@@ -3848,6 +3934,11 @@ class TestSequentialPoolLadder(unittest.TestCase):
         stub.options = {'unweighting': 'sequential', 'fixed_order': False,
                         'spinmode': 'PA', 'sequential_spin_order': '2 3 1'}
         stub.options.update(options)
+        # Seed _production_polarization's own cache rather than a banner: '{}'
+        # is what it returns for a process line without braces, and a dict of
+        # braces is what it returns for one with them. The parsing that fills
+        # it is covered by its own tests.
+        stub._production_polarization_cache = polarization or {}
         return stub
 
     NB = 1000
@@ -3924,6 +4015,83 @@ class TestSequentialPoolLadder(unittest.TestCase):
                 stub._nb_decaying = nb
                 self.assertEqual(stub._unweighting_mode(True), expected,
                                  '%s, %d decaying particles' % (spinmode, nb))
+
+    # a brace on the production, as _production_polarization returns it:
+    # 'p p > t{+} t~{+}' -> the (1,) helicity kept for both tops.
+    POL = {6: ((1,),), -6: ((1,),)}
+
+    def test_auto_is_per_particle_when_the_production_is_polarised(self):
+        """A production brace restricts the convolution to a polarisation
+        subspace, and the joint weight then sits far below the single bound the
+        max-weight scan hands it. Measured offshell on `p p > t t~` with both
+        tops decayed (500 events, so n=2 and the multiplicity rule alone would
+        say joint): `t{+}t~{+}` 112 trials per accepted event under joint
+        against 9.1 under sequential, `t{+}t~{-}` 162 against 8.4 -- while
+        unpolarised joint is the better of the two at 3.3 against 6.1. At 50000
+        events the joint column of the same three rises to 204-213, 5800-6300
+        and 4.05. So the brace overrides the multiplicity rule, at every n."""
+        for nb in (1, 2, 3, 6):
+            for spinmode in ('madspin', 'full'):
+                stub = self._stub({6: 2}, unweighting='auto', spinmode=spinmode,
+                                  polarization=self.POL)
+                stub._nb_decaying = nb
+                self.assertEqual(stub._unweighting_mode(True), 'sequential',
+                                 'polarised %s, %d decaying particles'
+                                 % (spinmode, nb))
+
+    def test_polarised_auto_leaves_the_unpolarised_resolution_alone(self):
+        """The clause keys on the brace and nothing else: the same stub without
+        one keeps the two-branch rule exactly."""
+        for nb, expected in [(1, 'joint'), (2, 'joint'),
+                             (3, 'sequential'), (6, 'sequential')]:
+            stub = self._stub({6: 2}, unweighting='auto', spinmode='madspin')
+            stub._nb_decaying = nb
+            self.assertEqual(stub._unweighting_mode(True), expected,
+                             'unpolarised, %d decaying particles' % nb)
+
+    def test_polarised_production_does_not_override_an_explicit_joint(self):
+        """Only 'auto' looks at the brace. A user who asks for joint gets joint,
+        slow or not -- it is the cross-check the staged schemes are validated
+        against, and losing it on polarised processes would leave them
+        unvalidated exactly where they matter most."""
+        for spinmode in ('madspin', 'full', 'PA', 'onshell'):
+            stub = self._stub({6: 2}, unweighting='joint', spinmode=spinmode,
+                              polarization=self.POL)
+            self.assertEqual(stub._unweighting_mode(True), 'joint', spinmode)
+            self.assertFalse(stub._sequential_active(True), spinmode)
+        # and the other explicit schemes are untouched too
+        for mode in ('two_stage', 'sequential', 'sequential_global_retry'):
+            stub = self._stub({6: 2}, unweighting=mode, spinmode='madspin',
+                              polarization=self.POL)
+            self.assertEqual(stub._unweighting_mode(True), mode)
+
+    def test_polarised_production_leaves_pa_and_onshell_where_they_were(self):
+        """PA/onshell already resolve to sequential under auto at every
+        multiplicity, so the brace has nothing to change there -- pinned so a
+        later reshuffle of the branches cannot make the polarised case take a
+        different path from the unpolarised one."""
+        for spinmode in ('PA', 'onshell'):
+            for nb in (1, 2, 3, 6):
+                for pol in (None, self.POL):
+                    stub = self._stub({6: 2}, unweighting='auto',
+                                      spinmode=spinmode, polarization=pol)
+                    stub._nb_decaying = nb
+                    self.assertEqual(stub._unweighting_mode(True), 'sequential',
+                                     '%s, %d decaying, pol=%s'
+                                     % (spinmode, nb, bool(pol)))
+
+    def test_polarised_auto_still_yields_to_the_joint_only_gates(self):
+        """fixed_order and '@' grouping force joint whatever auto resolved to;
+        the polarisation clause must not smuggle a staged scheme past them."""
+        stub = self._stub({6: 2}, unweighting='auto', spinmode='madspin',
+                          fixed_order=True, polarization=self.POL)
+        stub._nb_decaying = 2
+        self.assertEqual(stub._unweighting_mode(True), 'joint')
+        stub = self._stub({6: 2}, unweighting='auto', spinmode='madspin',
+                          polarization=self.POL)
+        stub._nb_decaying = 2
+        stub._decay_groups = {'1': {}, '2': {}}
+        self.assertEqual(stub._unweighting_mode(True), 'joint')
 
     def test_auto_is_per_particle_under_pa_at_every_multiplicity(self):
         """PA/onshell keep rho fixed on shell, so their mass stage costs a
@@ -4894,6 +5062,9 @@ class TestUnweightingDecisionTable(unittest.TestCase):
                    'sequential_global_retry', 'sequential_with_mass')
     NB_DECAYING = (0, 1, 2, 3, 4, 7)
     POLE_APPROXIMATION = ('PA', 'onshell')
+    DENSITY_SPINMODES = ('madspin', 'full', 'PA', 'onshell')
+    # 'p p > t{+} t~{+}' as _production_polarization reports it
+    POLARIZATIONS = (None, {6: ((1,),), -6: ((1,),)})
 
     class _Part(object):
         def __init__(self, spin):
@@ -4913,60 +5084,80 @@ class TestUnweightingDecisionTable(unittest.TestCase):
 
     class _Stub(object):
         """The real methods, on the smallest object that can carry them."""
-        for _name in ('_unweighting_mode', '_auto_unweighting_mode',
-                      '_announce_mode', '_log_once', '_sequential_active',
-                      '_sequential_upfront', '_sequential_offshell',
-                      '_sequential_pool_ladder', '_sequential_spin_order',
-                      '_decay_pool_ladder', '_density_pole_approximation',
-                      '_density_do_reshuffle', '_density_needs_reshuffle',
-                      '_spinmode_has_density', '_is_upfront_scheme',
-                      # consulted first by _unweighting_mode: the interference
-                      # mode forces joint. Reads options['pure_interference'],
-                      # which this stub leaves unset, so it resolves to {}.
-                      '_pure_interference'):
+        _borrow_decision_helpers(locals())
+        for _name in ('_unweighting_mode', '_announce_mode', '_log_once',
+                      '_sequential_active', '_sequential_upfront',
+                      '_sequential_offshell', '_sequential_pool_ladder',
+                      '_sequential_spin_order', '_decay_pool_ladder'):
             # getattr_static keeps the staticmethod wrappers intact
             locals()[_name] = inspect.getattr_static(
                 interface_madspin.MadSpinInterface, _name)
         del _name
 
-        def __init__(self, spinmode='madspin', unweighting='auto',
-                     nb_decaying=2, fixed_order=False, decay_groups=None):
+        # keyword-only: a new knob must not be able to shift the meaning of an
+        # existing argument at a call site
+        def __init__(self, *, spinmode='madspin', unweighting='auto',
+                     nb_decaying=2, fixed_order=False, decay_groups=None,
+                     polarization=None):
             self.options = {'spinmode': spinmode, 'unweighting': unweighting,
                             'fixed_order': fixed_order,
                             'sequential_spin_order': '2 3 1'}
             self._nb_decaying = nb_decaying
             self._decay_groups = decay_groups
+            # seed _production_polarization's cache rather than a banner: '{}'
+            # is what it returns for a process line without braces
+            self._production_polarization_cache = polarization or {}
             self.model = TestUnweightingDecisionTable._Model()
             self._logged_once = set()
 
+    # one point of the exhaustive product below. Named, so that adding a
+    # dimension cannot silently reinterpret the existing ones -- which is
+    # exactly what `polarization` would have done as a seventh tuple slot.
+    _Case = collections.namedtuple(
+        '_Case', ('spinmode', 'unweighting', 'nb_decaying', 'fixed_order',
+                  'decay_groups', 'polarization', 'density_method'))
+
     @classmethod
-    def _reference_mode(cls, spinmode, unweighting, nb_decaying, fixed_order,
-                        decay_groups, density_method):
+    def _reference_mode(cls, case):
         """The rules as documented on the `unweighting` option, restated here
         rather than read off the implementation, so this is a check and not a
         tautology."""
-        if not density_method:
+        if not case.density_method:
             return 'joint'                       # only scheme outside density
-        mode = unweighting
+        mode = case.unweighting
         if mode == 'auto':
-            if spinmode in cls.POLE_APPROXIMATION:
+            if case.spinmode in cls.POLE_APPROXIMATION:
                 mode = 'sequential'              # fastest at every measured n
-            elif nb_decaying <= 2:
+            elif case.polarization and case.spinmode in cls.DENSITY_SPINMODES:
+                mode = 'sequential'              # restricted convolution: the
+                                                 # joint weight sits orders of
+                                                 # magnitude below its bound
+            elif case.nb_decaying <= 2:
                 mode = 'joint'                   # offshell, too few decays
             else:
                 mode = 'sequential'
         if mode == 'joint':
             return 'joint'
-        if fixed_order:
+        if case.fixed_order:
             return 'joint'                       # counter-events ride along
-        if decay_groups:
+        if case.decay_groups:
             return 'joint'                       # '@' groups self-normalise
-        if spinmode not in ('PA', 'onshell', 'madspin', 'full'):
+        if case.spinmode not in ('PA', 'onshell', 'madspin', 'full'):
             return 'joint'                       # no density matrix to stage
         if (mode == 'sequential_with_mass'
-                and spinmode not in cls.POLE_APPROXIMATION):
+                and case.spinmode not in cls.POLE_APPROXIMATION):
             return 'sequential'                  # needs a per-particle mass
         return mode
+
+    def _case_stub(self, case):
+        """The stub a case describes. `density_method` stays out of it: it is
+        the argument the decision methods take, not stub state."""
+        return self._Stub(spinmode=case.spinmode,
+                          unweighting=case.unweighting,
+                          nb_decaying=case.nb_decaying,
+                          fixed_order=case.fixed_order,
+                          decay_groups=case.decay_groups,
+                          polarization=case.polarization)
 
     def _cases(self):
         for spinmode in self.SPINMODES:
@@ -4974,17 +5165,24 @@ class TestUnweightingDecisionTable(unittest.TestCase):
                 for nb_decaying in self.NB_DECAYING:
                     for fixed_order in (False, True):
                         for groups in (None, {'tags': ['1', '2']}):
-                            for density_method in (True, False):
-                                yield (spinmode, unweighting, nb_decaying,
-                                       fixed_order, groups, density_method)
+                            for pol in self.POLARIZATIONS:
+                                for density_method in (True, False):
+                                    yield self._Case(
+                                        spinmode=spinmode,
+                                        unweighting=unweighting,
+                                        nb_decaying=nb_decaying,
+                                        fixed_order=fixed_order,
+                                        decay_groups=groups,
+                                        polarization=pol,
+                                        density_method=density_method)
 
     def test_every_combination_matches_the_documented_rules(self):
         seen = set()
         for case in self._cases():
-            stub = self._Stub(*case[:5])
-            got = stub._unweighting_mode(case[5])
+            stub = self._case_stub(case)
+            got = stub._unweighting_mode(case.density_method)
             seen.add(got)
-            self.assertEqual(got, self._reference_mode(*case), msg=str(case))
+            self.assertEqual(got, self._reference_mode(case), msg=str(case))
         # the table is not degenerate: every scheme is reachable through it
         self.assertEqual(seen, {'joint', 'two_stage', 'sequential',
                                 'sequential_global_retry',
@@ -4993,32 +5191,43 @@ class TestUnweightingDecisionTable(unittest.TestCase):
     def test_auto_resolves_on_the_family_then_the_multiplicity(self):
         """Spelled out, since it is the branch a user never sets by hand:
         sequential everywhere under PA/onshell, joint offshell up to two
-        decaying particles and sequential from three."""
+        decaying particles and sequential from three -- and sequential at every
+        multiplicity once the production carries a polarisation brace."""
+        pol = self.POLARIZATIONS[1]
+        for spinmode in ('madspin', 'full', 'PA', 'onshell'):
+            for nb in self.NB_DECAYING:
+                stub = self._Stub(spinmode=spinmode, unweighting='auto',
+                                  nb_decaying=nb, polarization=pol)
+                self.assertEqual(stub._auto_unweighting_mode(), 'sequential',
+                                 ('polarised', spinmode, nb))
         for spinmode in ('PA', 'onshell'):
             for nb in self.NB_DECAYING:
-                self.assertEqual(
-                    self._Stub(spinmode, 'auto', nb)._auto_unweighting_mode(),
-                    'sequential', (spinmode, nb))
+                stub = self._Stub(spinmode=spinmode, unweighting='auto',
+                                  nb_decaying=nb)
+                self.assertEqual(stub._auto_unweighting_mode(),
+                                 'sequential', (spinmode, nb))
         for spinmode in ('madspin', 'full'):
             for nb, expected in ((0, 'joint'), (1, 'joint'), (2, 'joint'),
                                  (3, 'sequential'), (4, 'sequential'),
                                  (7, 'sequential')):
-                self.assertEqual(
-                    self._Stub(spinmode, 'auto', nb)._auto_unweighting_mode(),
-                    expected, (spinmode, nb))
+                stub = self._Stub(spinmode=spinmode, unweighting='auto',
+                                  nb_decaying=nb)
+                self.assertEqual(stub._auto_unweighting_mode(),
+                                 expected, (spinmode, nb))
 
     def test_auto_without_a_measured_multiplicity_assumes_two(self):
         """`_nb_decaying` is set while the decays are prepared; anything asking
         before that must not crash."""
-        stub = self._Stub('madspin', 'auto')
+        stub = self._Stub(spinmode='madspin', unweighting='auto')
         del stub._nb_decaying
         self.assertEqual(stub._unweighting_mode(), 'joint')
 
     def test_sequential_active_is_exactly_not_joint(self):
         for case in self._cases():
-            stub = self._Stub(*case[:5])
-            self.assertEqual(stub._sequential_active(case[5]),
-                             stub._unweighting_mode(case[5]) != 'joint',
+            stub = self._case_stub(case)
+            self.assertEqual(stub._sequential_active(case.density_method),
+                             stub._unweighting_mode(case.density_method)
+                                != 'joint',
                              msg=str(case))
 
     def test_upfront_is_every_scheme_but_joint_and_with_mass(self):
@@ -5029,10 +5238,10 @@ class TestUnweightingDecisionTable(unittest.TestCase):
             self.assertEqual(self._Stub()._is_upfront_scheme(mode), expected,
                              mode)
         for case in self._cases():
-            stub = self._Stub(*case[:5])
+            stub = self._case_stub(case)
             self.assertEqual(
-                stub._sequential_upfront(case[5]),
-                stub._unweighting_mode(case[5]) not in
+                stub._sequential_upfront(case.density_method),
+                stub._unweighting_mode(case.density_method) not in
                     ('joint', 'sequential_with_mass'),
                 msg=str(case))
 
@@ -5040,17 +5249,19 @@ class TestUnweightingDecisionTable(unittest.TestCase):
         """It needs a per-particle mass draw; the offshell spinmodes reshuffle
         the whole production onto the mass set at once."""
         for spinmode in ('PA', 'onshell'):
-            stub = self._Stub(spinmode, 'sequential_with_mass', 2)
+            stub = self._Stub(spinmode=spinmode, nb_decaying=2,
+                              unweighting='sequential_with_mass')
             self.assertEqual(stub._unweighting_mode(), 'sequential_with_mass')
             self.assertFalse(stub._sequential_upfront())
         for spinmode in ('madspin', 'full'):
-            stub = self._Stub(spinmode, 'sequential_with_mass', 2)
+            stub = self._Stub(spinmode=spinmode, nb_decaying=2,
+                              unweighting='sequential_with_mass')
             self.assertEqual(stub._unweighting_mode(), 'sequential')
             self.assertTrue(stub._sequential_upfront())
 
     def test_the_spinmode_family_predicates(self):
         for spinmode in self.SPINMODES:
-            stub = self._Stub(spinmode)
+            stub = self._Stub(spinmode=spinmode)
             self.assertEqual(stub._density_pole_approximation(),
                              spinmode in ('PA', 'onshell'), spinmode)
             self.assertEqual(stub._density_do_reshuffle(), spinmode == 'PA',
@@ -5064,7 +5275,7 @@ class TestUnweightingDecisionTable(unittest.TestCase):
 
     def test_needs_reshuffle_is_offshell_or_pa_inside_density_mode(self):
         for spinmode in self.SPINMODES:
-            stub = self._Stub(spinmode)
+            stub = self._Stub(spinmode=spinmode)
             self.assertFalse(stub._density_needs_reshuffle(False), spinmode)
             self.assertEqual(bool(stub._density_needs_reshuffle(True)),
                              spinmode != 'onshell', spinmode)
@@ -5072,10 +5283,10 @@ class TestUnweightingDecisionTable(unittest.TestCase):
     def test_pool_ladder_is_empty_unless_a_staged_scheme_is_in_use(self):
         to_decay, nb_event = {6: 100, -6: 100}, 100
         for case in self._cases():
-            stub = self._Stub(*case[:5])
+            stub = self._case_stub(case)
             ladder = stub._sequential_pool_ladder(dict(to_decay), nb_event,
-                                                  case[5])
-            if stub._unweighting_mode(case[5]) == 'joint':
+                                                  case.density_method)
+            if stub._unweighting_mode(case.density_method) == 'joint':
                 self.assertEqual(ladder, {}, msg=str(case))
             else:
                 self.assertEqual(sorted(ladder), [-6, 6], msg=str(case))
@@ -5083,7 +5294,8 @@ class TestUnweightingDecisionTable(unittest.TestCase):
                                  msg=str(case))
 
     def test_pool_ladder_gives_up_on_a_particle_the_model_does_not_know(self):
-        stub = self._Stub('PA', 'sequential', 2)
+        stub = self._Stub(spinmode='PA', unweighting='sequential',
+                          nb_decaying=2)
         self.assertEqual(stub._sequential_pool_ladder({6: 100, 999: 100}, 100,
                                                       True), {})
 
@@ -5377,9 +5589,9 @@ class TestGetPdirUnpackArity(unittest.TestCase):
 
     SOURCE = pjoin(MG5DIR, 'MadSpin', 'interface_madspin.py')
 
-    # ``_frame_boost`` still unpacks 4 on this branch; its fix travels with the
-    # frame/beampol PR (#355). Drop this entry once that has landed.
-    KNOWN_PENDING = set(['_frame_boost'])
+    # methods knowingly left behind an arity bump, by name. Empty: every call
+    # site agrees with get_pdir today, and it stays that way.
+    KNOWN_PENDING = set()
 
     def _tree(self):
         import ast
