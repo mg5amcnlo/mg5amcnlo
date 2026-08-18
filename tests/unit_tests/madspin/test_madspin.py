@@ -5173,3 +5173,209 @@ class TestZeroDensityGuard(unittest.TestCase):
         self.assertRaises(interface_madspin.MadSpinDegenerateWeight,
                           stub._combine_maxwgt,
                           [float('nan'), float('nan'), 1.0])
+
+
+class TestReusedMsDirBranchingRatio(unittest.TestCase):
+    """Reusing an ``ms_dir`` must reproduce the branching ratio of the run that
+    built it -- and a branching ratio that cannot be computed must stop the run
+    rather than scale every event to zero.
+
+    Context: ``ms_dir`` selects the gridpack decay-generation path, on which the
+    partial width of a channel is measured once, while the gridpack is being
+    built. A later run finds the ``decay_<pdg>_<i>`` directory already there,
+    skips the whole build block and only *runs* the gridpack -- so nothing
+    re-measures the width, the accumulator keeps its neutral value (0.0 under
+    ``cumul``, the common case) and the branching ratio comes out exactly 0.
+    That zero multiplies every event weight and the <init> cross-section, so
+    the run completes, writes a well-formed LHE file of +/-0.0 and reports
+    success.
+    """
+
+    _INIT_ONLY_LHE = (
+        '<LesHouchesEvents version="1.0">\n'
+        '<header>\n'
+        '</header>\n'
+        '<init>\n'
+        '2212 2212 6.500000e+03 6.500000e+03 0 0 247000 247000 -4 1\n'
+        ' 3.000000e+00 1.000000e-02 3.000000e+00 1\n'
+        '</init>\n'
+        '</LesHouchesEvents>\n'
+    )
+
+    def setUp(self):
+        import tempfile
+        self.tmpdir = tempfile.mkdtemp(prefix='ms_dir_reuse_')
+
+    def tearDown(self):
+        shutil.rmtree(self.tmpdir, ignore_errors=True)
+
+    # ---------------- the reuse path of generate_events ----------------
+
+    class _Particle(object):
+        def __init__(self, name):
+            self._name = name
+        def get_name(self):
+            return self._name
+
+    class _Model(object):
+        def get_particle(self, pdg):
+            return TestReusedMsDirBranchingRatio._Particle('t')
+
+    def _prebuilt_decay_dir(self, stored_width=None, gridpack_cross=True):
+        """An ``ms_dir`` holding one already-built decay directory, exactly as a
+        previous run leaves it: a run.sh, the events its gridpack produces and
+        (unless ``stored_width`` is None) the partial-width record."""
+        import gzip
+        decay_dir = pjoin(self.tmpdir, 'decay_6_0')
+        os.makedirs(decay_dir)
+        open(pjoin(decay_dir, 'run.sh'), 'w').write('#!/bin/sh\n')
+        if gridpack_cross:
+            with gzip.open(pjoin(decay_dir, 'events.lhe.gz'), 'wt') as fsock:
+                fsock.write(self._INIT_ONLY_LHE)
+        else:
+            # a file EventFile cannot get a cross-section out of
+            with gzip.open(pjoin(decay_dir, 'events.lhe.gz'), 'wt') as fsock:
+                fsock.write('<LesHouchesEvents version="1.0">\n'
+                            '</LesHouchesEvents>\n')
+        if stored_width is not None:
+            interface_madspin.MadSpinInterface._store_partial_width(
+                decay_dir, stored_width)
+        return decay_dir
+
+    def _stub(self):
+        interface = interface_madspin.MadSpinInterface
+        class Stub(object):
+            generate_events = interface.generate_events
+            _store_partial_width = interface._store_partial_width
+            _load_partial_width = interface._load_partial_width
+            PARTIAL_WIDTH_FILE = interface.PARTIAL_WIDTH_FILE
+            _DECAY_GROUP_TAG = interface._DECAY_GROUP_TAG
+            _split_group_tag = interface._split_group_tag
+            def _resolve_nb_core(self):
+                return 1
+            def _run_gridpack(self, cmd, cwd):
+                # the gridpack's events are already on disk in these tests
+                return 0, ''
+        stub = Stub()
+        stub.path_me = self.tmpdir
+        stub.options = {'ms_dir': self.tmpdir, 'seed': 7}
+        stub.seed = 7
+        stub.model = self._Model()
+        stub.list_branches = {'t': ['t > w+ b, w+ > all all']}
+        return stub
+
+    def test_reuse_recovers_the_partial_width_that_was_stored(self):
+        """The regression itself: with the record in place the reuse path
+        reports the width the building run measured -- not 0."""
+        self._prebuilt_decay_dir(stored_width=1.4594692)
+        stub = self._stub()
+        out, width, channel_widths = stub.generate_events(
+            6, 100, None, cumul=True, output_width=True)
+        self.assertEqual(width, 1.4594692)
+        self.assertEqual(channel_widths, {0: 1.4594692})
+        self.assertEqual(list(out), [0])
+
+    def test_reuse_without_the_record_falls_back_to_the_generated_events(self):
+        """An ms_dir built by a version that stored nothing must still work:
+        the cross-section of the events the gridpack just produced is the same
+        quantity, measured on this run's sample."""
+        self._prebuilt_decay_dir(stored_width=None)
+        stub = self._stub()
+        out, width, channel_widths = stub.generate_events(
+            6, 100, None, cumul=True, output_width=True)
+        self.assertEqual(width, 3.0)          # the <init> cross of the events
+        self.assertEqual(channel_widths, {0: 3.0})
+
+    def test_reuse_with_no_recoverable_width_raises(self):
+        """Neither source available: fail, never fall back to a default. Any
+        default here is a wrong branching ratio in a well-formed file."""
+        self._prebuilt_decay_dir(stored_width=None, gridpack_cross=False)
+        stub = self._stub()
+        self.assertRaises(interface_madspin.MadSpinUnknownPartialWidth,
+                          lambda: stub.generate_events(6, 100, None,
+                                                       cumul=True,
+                                                       output_width=True))
+
+    def test_the_stored_width_survives_a_round_trip(self):
+        decay_dir = self._prebuilt_decay_dir(stored_width=2.5e-3)
+        self.assertEqual(
+            interface_madspin.MadSpinInterface._load_partial_width(decay_dir),
+            2.5e-3)
+
+    def test_a_corrupt_record_falls_back_instead_of_propagating(self):
+        """A truncated/garbage record must not become the branching ratio."""
+        decay_dir = self._prebuilt_decay_dir(stored_width=1.0)
+        open(pjoin(decay_dir,
+                   interface_madspin.MadSpinInterface.PARTIAL_WIDTH_FILE),
+             'w').write('not a number\n')
+        stub = self._stub()
+        out, width, channel_widths = stub.generate_events(
+            6, 100, None, cumul=True, output_width=True)
+        self.assertEqual(width, 3.0)
+
+    def test_a_zero_record_is_not_trusted_either(self):
+        """0 is exactly the value the bug produced; reading it back from disk
+        must not resurrect it."""
+        decay_dir = self._prebuilt_decay_dir(stored_width=0.0)
+        stub = self._stub()
+        out, width, channel_widths = stub.generate_events(
+            6, 100, None, cumul=True, output_width=True)
+        self.assertEqual(width, 3.0)
+
+    def test_a_fresh_directory_is_untouched_by_the_reuse_branch(self):
+        """The recovery only ever runs for a channel this run did not measure:
+        a width already in ``channel_widths`` must never be added twice."""
+        self._prebuilt_decay_dir(stored_width=1.5)
+        stub = self._stub()
+        out, width, channel_widths = stub.generate_events(
+            6, 100, None, cumul=False, output_width=True)
+        # cumul=False multiplies into a neutral 1.0, so a double fold would
+        # square it
+        self.assertEqual(width, 1.5)
+
+    # ---------------- the branching-ratio guard ----------------
+
+    def test_a_healthy_branching_ratio_passes_through(self):
+        check = interface_madspin.MadSpinInterface._check_branching_ratio
+        self.assertEqual(check(0.543), 0.543)
+
+    def test_a_tiny_branching_ratio_is_healthy(self):
+        """A rare decay is a small BR, not a broken one: the guard keys on zero
+        and on non-finiteness, never on smallness."""
+        check = interface_madspin.MadSpinInterface._check_branching_ratio
+        self.assertEqual(check(1e-12), 1e-12)
+
+    def test_a_zero_branching_ratio_raises_and_names_the_cause(self):
+        check = interface_madspin.MadSpinInterface._check_branching_ratio
+        try:
+            check(0.0, {6: {'kind': 'simple'}})
+        except interface_madspin.MadSpinZeroBranchingRatio as error:
+            msg = str(error)
+        else:
+            self.fail('a zero branching ratio must raise')
+        # what would have happened
+        self.assertIn('every weight is zero', msg)
+        self.assertIn('<init>', msg)
+        # the plausible causes, the first of which is this bug
+        self.assertIn('ms_dir', msg)
+        self.assertIn('use_old_dir', msg)
+        self.assertIn('param_card', msg)
+        self.assertIn('cross_section', msg)
+        # and what the run was actually doing
+        self.assertIn('simple', msg)
+
+    def test_a_non_finite_branching_ratio_raises(self):
+        check = interface_madspin.MadSpinInterface._check_branching_ratio
+        for bad in (float('nan'), float('inf'), -1.0):
+            self.assertRaises(interface_madspin.MadSpinZeroBranchingRatio,
+                              check, bad)
+
+    def test_run_onshell_checks_before_it_decays(self):
+        """The guard has to sit on the branching ratio *before* the events are
+        written, not after; pin the call site so it cannot drift below the
+        decay loop."""
+        source = inspect.getsource(
+            interface_madspin.MadSpinInterface.run_onshell)
+        self.assertIn('_check_branching_ratio(br', source)
+        self.assertLess(source.index('_check_branching_ratio(br'),
+                        source.index('self.branching_ratio = br'))
