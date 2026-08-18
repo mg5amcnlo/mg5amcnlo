@@ -1,0 +1,18 @@
+block-by-block agreement between the two runs, per-bin chi2 / 20 bins
+(both sides in pb, no free parameter anywhere)
+
+  block                                                            cos_k_p    cos_k_m        ckk        cnn        crr    cos_phi    cos_n_p   dphi_lab       pt_t       m_tt
+  (I,D+)   card t~=+ +   vs   brace t~{+}                             19.9       26.5       21.8       25.6       19.7       20.8       30.0       20.8       16.0       24.8
+  (I,D-)   card t~=- -   vs   brace t~{-}                             33.2       37.4       28.2       26.5       25.0       22.5       18.4       20.8       20.3       24.0
+  (D+,I)   card t =+ +   vs   brace t{+}                              26.4       34.1       15.9        9.7        6.9       30.4       16.7       24.5       11.2       13.0
+  (D-,I)   card t =- -   vs   brace t{-}                              20.2       11.5       10.1       11.0       21.1       15.4       13.6       20.9       14.4       17.1
+  (I,I)    named directly   vs   v1 subtraction x_t-(I,D+)-(I,D-)       9.1       22.1       16.4       21.1       24.4       13.9       16.5       19.6       15.0       18.5
+
+  (20 bins each; a value around 20 is agreement)
+
+  block                v2 integral [pb]           v1 integral [pb]
+  i_dp            +0.000602 +- 0.008294       -0.021697 +- 0.016106 
+  i_dm            -0.003393 +- 0.008414       +0.031183 +- 0.016396 
+  dp_i            +0.000870 +- 0.008251       -0.001585 +- 0.016346 
+  dm_i            +0.001841 +- 0.008354       -0.000380 +- 0.015324 
+  ii              -0.023723 +- 0.030634       +0.012773 +- 0.055760 

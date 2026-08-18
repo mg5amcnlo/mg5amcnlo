@@ -1,0 +1,86 @@
+MadSpin interference closure (v2, reworked interface)
+  p p > t t~, 13 TeV, LO, dileptonic
+
+The fully weighted pure-interference mode normalises itself:
+  w = sigma_ref * BR * W / c   and   bin [pb] = sum_bin(w) / N_file
+for every sample in this test, diagonal and interference alike.
+Nothing below is fitted and nothing is read out of a log.
+
+samples
+  tag    kind      N_file     sigma [pb]   mean(w) [pb]     c (banner)        z   dead
+  unpol  ref        50000        23.7651  +2.376511e+01              -        -      -
+  pp     diag       50000        7.93141  +7.931412e+00              -        -      -
+  pm     diag       50000        3.93849  +3.938488e+00              -        -      -
+  mp     diag       50000        3.93862  +3.938618e+00              -        -      -
+  mm     diag       50000        7.94654  +7.946543e+00              -        -      -
+  i_dp   inter      20000              0  +6.020258e-04   2.254096e-10    +0.07      0
+  i_dm   inter      20000              0  -3.392642e-03   2.252648e-10    -0.40      0
+  dp_i   inter      20000              0  +8.695640e-04   2.258415e-10    +0.11      0
+  dm_i   inter      20000              0  +1.841178e-03   2.258074e-10    +0.22      0
+  ii     inter      20000              0  -2.372283e-02   2.248850e-10    -0.77      0
+  c is measured independently in each interference run (the
+  maximum-weight scan): 2.248850e-10 .. 2.258415e-10, spread 0.42% -- it is a
+  decay-side constant, so this is a free consistency check.
+
+total rate
+  sum of the 4 diagonal samples :     23.75506 +- 0.00736 pb
+  unpolarised                   :     23.76511 +- 0.01342 pb
+  ratio                         : 0.999577 +- 0.000644 (-0.66 sigma)
+  production, sum of the 4      :    504.51220 +- 0.15629 pb
+  production, unpolarised       :    504.74900 +- 0.28505 pb
+
+  each interference block, integrated (its own XSECUP is 0):
+    i_dp      +0.000602 +- 0.008294 pb   (+0.07 sigma)
+    i_dm      -0.003393 +- 0.008414 pb   (-0.40 sigma)
+    dp_i      +0.000870 +- 0.008251 pb   (+0.11 sigma)
+    dm_i      +0.001841 +- 0.008354 pb   (+0.22 sigma)
+    ii        -0.023723 +- 0.030634 pb   (-0.77 sigma)
+    all 5     -0.023803 +- 0.034870 pb   (-0.68 sigma)
+  -> the 9-block total is the 4-block one, unchanged: the interference
+     terms carry no cross-section.  0.001 of the 23.77 pb total.
+
+means.  The interference column is the exact shift it produces,
+  <O>_9 - <O>_4 = (sum_int w O) / (sum_4 w), since sum_int w = 0.
+  observable           4 diagonal         interference             9 blocks          unpolarised  pull(4)  pull(9)
+  cos_k_p        -0.00035+-0.00136     -0.00047+-0.00069     -0.00082+-0.00153      0.00024+-0.00257    -0.20    -0.35
+  cos_k_m         0.00162+-0.00136     -0.00030+-0.00070      0.00132+-0.00153     -0.00232+-0.00257     1.36     1.22
+  ckk             0.03584+-0.00077     -0.00032+-0.00033      0.03555+-0.00084      0.03815+-0.00147    -1.40    -1.54
+  cnn             0.00018+-0.00079      0.03657+-0.00059      0.03679+-0.00099      0.03625+-0.00148   -21.52     0.30
+  crr            -0.00045+-0.00079      0.00104+-0.00066      0.00060+-0.00103      0.00393+-0.00150    -2.59    -1.84
+  cos_phi         0.03557+-0.00136      0.03729+-0.00096      0.07293+-0.00167      0.07834+-0.00255   -14.80    -1.77
+  cos_n_p        -0.00058+-0.00136      0.00174+-0.00088      0.00116+-0.00162      0.00232+-0.00258    -1.00    -0.38
+  dphi_lab        1.82465+-0.00213     -0.07712+-0.00313      1.74928+-0.00257      1.74398+-0.00405    17.64     1.11
+  pt_t          120.21194+-0.17385     -0.26972+-0.22262    120.06252+-0.22737    119.86448+-0.34805     0.89     0.48
+  m_tt          526.11515+-0.39982     -0.70176+-0.73453    525.94039+-0.47009    524.99631+-0.78707     1.27     1.03
+
+per-bin chi2 against the unpolarised sample (20 bins), and the
+best-fit scale k of the interference contribution (predicted k = 1, never fitted)
+  observable  chi2 (4 diag) chi2 (9 blocks)                k  chi2 int vs 0  kind
+  cos_k_p         26.5 /20       30.3 /20    -1.268+-0.768       22.5 /20   diagonal
+  cos_k_m         20.5 /20       23.7 /20    -1.464+-0.924       15.4 /20   diagonal
+  ckk             26.4 /20       30.2 /20    -3.320+-1.234       15.9 /20   diagonal
+  cnn            500.3 /20       24.8 /20     0.988+-0.048     4546.6 /20   off-diagonal
+  crr             11.9 /20       13.0 /20     0.237+-0.481       29.2 /20   off-diagonal
+  cos_phi        234.3 /20       14.4 /20     1.137+-0.081     1602.8 /20   off-diagonal
+  cos_n_p         21.4 /20       21.5 /20    -0.094+-0.807       20.1 /20   off-diagonal
+  dphi_lab       339.4 /20       16.0 /20     1.064+-0.062     2996.3 /20   off-diagonal
+  pt_t            15.1 /20       13.1 /20     0.803+-0.929       14.9 /20   control
+  m_tt            12.6 /20       12.7 /20     0.225+-0.804       31.2 /20   control
+  (chi2 int vs 0: the interference integrates to zero over the decay phase
+   space at every production point, so for a production-level observable
+   -- pt_t, m_tt -- it must vanish bin by bin; elsewhere a large value IS
+   the signal.)
+
+identity  <cos phi_ll> = <C_kk> + <C_rr> + <C_nn>
+  4 diagonal     +0.03584 -0.00045 +0.00018 = +0.03557   (measured +0.03557, diff -1.6e-16)
+  9 blocks       +0.03555 +0.00060 +0.03679 = +0.07293   (measured +0.07293, diff -1.7e-16)
+  unpolarised    +0.03815 +0.00393 +0.03625 = +0.07834   (measured +0.07834, diff +6.9e-17)
+
+where the interference lives: the (I,I) block against the four
+single-I blocks, each measured directly (no subtraction)
+  observable   chi2(I,I vs 0)  chi2(4 single-I vs 0)
+  ckk               11.3 /20               13.0 /20 
+  cnn             5421.7 /20               17.2 /20 
+  cos_phi         2021.8 /20               19.7 /20 
+  dphi_lab        2753.9 /20              332.2 /20 
+  pt_t              19.2 /20               16.2 /20 
