@@ -2370,7 +2370,7 @@ class decay_all_events(object):
             nb_mc_masses=len(indices_for_mc_masses)
 
             p, p_str=self.curr_event.give_momenta(event_map)
-            stdin_text=' %s %s %s %s %s %s %s \n' % ('2', self.options['BW_cut'], self.Ecollider, decay_me['max_weight'], self.options['frame_id'], self.options['beampol'][0], self.options['beampol'][1]) 
+            stdin_text=' %s %s %s %s %s %s %s \n' % ('2', self.options['BW_cut'], self.Ecollider, decay_me['max_weight'], self.options['frame_id'], self.options.beampol_me()[0], self.options.beampol_me()[1]) 
             stdin_text+=p_str
             # here I also need to specify the Monte Carlo Masses
             stdin_text+=" %s \n" % nb_mc_masses
@@ -2503,9 +2503,9 @@ class decay_all_events(object):
         except KeyError:
             frameid = 6
         try:
-            beampol = self.options['beampol']
+            beampol = self.options.beampol_me()
         except KeyError:
-            beampol = (0.5,0.5)
+            beampol = (1.0,1.0)
 
         stdin_text=' %s %s %s %s %s %s %s\n' % ('2', self.options['BW_cut'], self.Ecollider, 1.0, frameid, beampol[0], beampol[1])
         stdin_text+=p_str
@@ -3447,7 +3447,7 @@ class decay_all_events(object):
         """return the max. weight associated with me decay['path']"""
 
         p, p_str=self.curr_event.give_momenta(event_map)
-        std_in=" %s  %s %s %s %s %s %s \n" % ("1",BWcut, self.Ecollider, nbpoints, self.options['frame_id'], self.options['beampol'][0], self.options['beampol'][1])
+        std_in=" %s  %s %s %s %s %s %s \n" % ("1",BWcut, self.Ecollider, nbpoints, self.options['frame_id'], self.options.beampol_me()[0], self.options.beampol_me()[1])
         std_in+=p_str
         max_weight = self.loadfortran('maxweight',
                                path, std_in)
@@ -4440,6 +4440,8 @@ class decay_all_events_onshell(decay_all_events):
         decay_text = []
         for decays in self.mscmd.list_branches.values():
             for decay in  decays:
+                # MadSpin's own '@' grouping tag, not something MG5 should see
+                decay = self.mscmd._split_group_tag(decay)[0]
                 if '=' not in decay:
                     decay += ' QCD=99'
                 if ',' in decay:
@@ -4459,6 +4461,8 @@ class decay_all_events_onshell(decay_all_events):
         decay_text = []
         for decays in self.mscmd.list_branches.values():
             for decay in  decays:
+                # MadSpin's own '@' grouping tag, not something MG5 should see
+                decay = self.mscmd._split_group_tag(decay)[0]
                 if '=' not in decay:
                     decay += ' QCD=99'
                 if ',' in decay:
@@ -4467,7 +4471,7 @@ class decay_all_events_onshell(decay_all_events):
                     decay_text.append(decay)
         decay_text = ', '.join(decay_text)
 #        commandline = ''
-        
+
         for proc in processes:
             if not proc.strip().startswith(('add','generate')):
                 proc = 'add process %s' % proc
@@ -4482,10 +4486,18 @@ class decay_all_events_onshell(decay_all_events):
         i=0
         for processes in self.list_branches.values():
             for proc in processes:
+                # Drop MadSpin's own '@' grouping tag first: this line appends a
+                # process number of its own, MG5 binds that at the top level and
+                # would absorb the user's as the process number of the
+                # *sub-decay*. Nothing would fail -- the amplitude is the same --
+                # but the tag is MadSpin bookkeeping and has no business
+                # reaching MG5. (madspin_v1 strips it the same way, decay.py
+                # get_all_ME step 6.)
+                proc = self.mscmd._split_group_tag(proc)[0]
                 newproc = "add process %s @%i --no_warning=duplicate --standalone;" % (proc,i)
-                commandline += self.adapt_decay(newproc) 
+                commandline += self.adapt_decay(newproc)
                 #commandline+="add process %s @%i --no_warning=duplicate --standalone;" % (proc,i)
-                i+=1 
+                i+=1
         return commandline
 
     def compile(self):

@@ -741,6 +741,30 @@ class TestFourMomentum(unittest.TestCase):
         self.assertAlmostEqual(out.py, 0)
         self.assertAlmostEqual(out.pz, 0)
 
+    def test_boost_by_a_momentum_at_rest(self):
+        """boost() is a copy of the HELAS boostx, including its qq.eq.rZero
+        branch: a boost momentum with no spatial part is the identity, and must
+        leave the boosted momentum alone rather than overwrite it with the
+        boost. That branch is reached whenever the system defining the frame is
+        already at rest -- e.g. the initial-state pair of a lepton-collider
+        event, which arrives in the partonic CMS."""
+
+        p = FourMomentum(38.2494167715, 24.8053721987, 27.2397493528, -10.2814127749)
+        at_rest = FourMomentum(500., 0., 0., 0.)
+
+        out = p.boost(at_rest)
+        self.assertAlmostEqual(out.E, p.E)
+        self.assertAlmostEqual(out.px, p.px)
+        self.assertAlmostEqual(out.py, p.py)
+        self.assertAlmostEqual(out.pz, p.pz)
+
+        # and the limit is continuous: a nearly-at-rest boost gives nearly the
+        # same answer, which is what makes the branch the right one
+        almost = FourMomentum(500., 0., 0., 1e-9)
+        out = p.boost(almost)
+        self.assertAlmostEqual(out.E, p.E, places=6)
+        self.assertAlmostEqual(out.pz, p.pz, places=6)
+
     def test_y_eta_massless(self):
         """test that rapidity and pseudorapidity coincide for
         a massless particle. At 45 degrees, they both should be equal to .88"""

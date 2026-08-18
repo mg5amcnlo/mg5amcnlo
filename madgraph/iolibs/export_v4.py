@@ -3930,6 +3930,7 @@ class ProcessExporterFortranMW(ProcessExporterFortran):
         # Extract number of external particles
         (nexternal, ninitial) = matrix_element.get_nexternal_ninitial()
         replace_dict['nexternal'] = nexternal
+        replace_dict['nincoming'] = ninitial
 
         # Extract ncomb
         ncomb = matrix_element.get_helicity_combinations()

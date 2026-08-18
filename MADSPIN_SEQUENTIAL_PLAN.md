@@ -1119,6 +1119,18 @@ accept/reject at a mass draw that did not exist there.
 It stays the `auto` choice for PA and onshell. The bit-for-bit check below is
 what makes the rename safe.
 
+### `sequential_with_mass` offshell: asked, and the answer is no
+
+The planning revision of this section left open whether the offshell spinmodes
+should offer `sequential_with_mass` too, purely so that both families expose the
+same option set. They cannot, and the obstacle is the one that made
+`_upfront_production` exist in the first place: offshell, `rho_off` depends on
+the whole mass set jointly, so redrawing one slot's virtuality invalidates it
+*and* every slot already accepted against it. The scheme is therefore refused
+there and falls back to `sequential`, with a log line saying why
+(`_unweighting_mode`, `with_mass_pa_only`). The symmetry is not free and is not
+worth faking.
+
 ### What PA gains by freezing the masses
 
 Not `rho`, which is cached per production event either way
@@ -1274,6 +1286,18 @@ PA's `draw_mass` flag straight into `_upfront_production`, which under an
 offshell spinmode is False, and skipped the mass draw entirely. Offshell always
 samples -- its rho is only defined at the reshuffled momenta -- and the PA flag
 only ever described the PA draw.)
+
+**One thing the merge with the me_frame work had to fix.** `frame_id` picks the
+frame the helicity basis is defined in, and the production density and every
+decay density contracted against it must be taken in the same one. That boost
+was computed only on a *cache miss* of `production._ms_density_prod` -- so the
+first chain of a production event got it and every later chain got `None`, while
+the cached rho still carried it. The max-weight probe draws 500 chains per
+production event, so 499 of them would have contracted lab-frame decay densities
+against an me_frame production one. It is latent on a default card
+(`_frame_boost` returns None for unpolarised beams) and silent when it is not,
+which is the worst combination. The boost is now cached alongside the density it
+belongs to, as `production._ms_frame_boost`.
 
 ### Speed
 

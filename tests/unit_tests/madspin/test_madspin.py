@@ -243,6 +243,176 @@ class TestDensity(unittest.TestCase):
         nb_false = len([True for key in out if not out[key][0]])
         self.assertEqual(nb_false, 6)
 
+
+class _StubOptions(dict):
+    """A plain options dict plus the one method the interface calls on it."""
+    beampol_me = interface_madspin.MadSpinOptions.beampol_me
+
+
+class _FrameStub(object):
+    """Just enough of MadSpinInterface for the frame/beampol helpers: they only
+    need the options and the matrix-element ordering of the event."""
+
+    def __init__(self, frame_id, beampol):
+        self.options = interface_madspin.MadSpinOptions()
+        self.options['frame_id'] = frame_id
+        self.options['beampol'] = list(beampol)
+
+    def get_pdir(self, event):
+        return None, None, None, None
+
+    _beampol = interface_madspin.MadSpinInterface._beampol
+    _frame_boost = interface_madspin.MadSpinInterface._frame_boost
+    _boost_momenta = staticmethod(interface_madspin.MadSpinInterface._boost_momenta)
+
+
+class _MomentaEvent(object):
+    """Stands in for the production event: get_density/_frame_boost only ever
+    ask it for its momenta in the matrix element's ordering."""
+
+    def __init__(self, momenta):
+        self.momenta = momenta
+
+    def get_momenta(self, orig_order):
+        return self.momenta
+
+
+class TestFrameBoost(unittest.TestCase):
+    """me_frame / frame_id and beampol support in the density modes."""
+
+    # 1 and 2 along +z/-z, 3 and 4 sharing the recoil
+    MOMENTA = [(500., 0., 0., 500.),
+               (200., 0., 0., -200.),
+               (300., 100., 50., -80.),
+               (400., -100., -50., 380.)]
+
+    def _stub(self, frame_id, beampol=(80., 0.)):
+        return _FrameStub(frame_id, beampol)
+
+    def test_polbeam_to_beampol(self):
+        """the card speaks percent, like the run_card polbeam1/polbeam2, and
+        beampol_me lands it on madevent's /to_polarization/ convention -- not on
+        the [0,1] left-handed fraction the eva PDF uses"""
+        def fct(polbeam):
+            options = interface_madspin.MadSpinOptions()
+            options['beampol'] = [polbeam, 0.]
+            return options.beampol_me()[0]
+        self.assertEqual(fct(0), 1.)
+        self.assertEqual(fct(100), 2.)
+        self.assertEqual(fct(-100), -2.)
+        self.assertEqual(fct(50), 1.5)
+        self.assertEqual(fct(-50), -1.5)
+        # an unpolarised beam stays exactly 1, whichever slot it is in
+        options = interface_madspin.MadSpinOptions()
+        options['beampol'] = [60., 0.]
+        self.assertEqual(options.beampol_me(), (1.6, 1.))
+        # the two branches of the matrix-element reweighting, as written in
+        # matrix_standalone_msP_v4.inc: unpolarised leaves both helicities
+        # alone, +-100%% keeps one and kills the other
+        for polbeam, hel_plus, hel_minus in [(0, 1., 1.),
+                                             (100, 2., 0.),
+                                             (-100, 0., 2.),
+                                             (50, 1.5, 0.5)]:
+            pol = fct(polbeam)
+            if abs(pol) <= 1:
+                got = (1., 1.)
+            elif pol > 0:
+                got = (abs(pol), 2 - abs(pol))
+            else:
+                got = (2 - abs(pol), abs(pol))
+            self.assertEqual(got, (hel_plus, hel_minus))
+
+    def test_beampol_needs_both_beams(self):
+        """One number is ambiguous -- which beam? -- and used to surface only as
+        an IndexError once the run reached a matrix element. It is refused when
+        the card is read instead."""
+        options = interface_madspin.MadSpinOptions()
+        for bad in ('50', '[50]'):
+            self.assertRaises(Exception, options.__setitem__, 'beampol', bad)
+        # unset stays legal and means unpolarised
+        options['beampol'] = '[]'
+        self.assertEqual(options.beampol_me(), (1., 1.))
+
+    def test_frame_inert_without_polarisation(self):
+        """the frame only changes the axis the initial-state helicities are
+        quantised along, so with unpolarised beams there is nothing to do"""
+        stub = self._stub(6, beampol=(0., 0.))
+        self.assertIsNone(stub._frame_boost(_MomentaEvent(self.MOMENTA)))
+
+    def test_frame_id_bitmask(self):
+        """frame_id = sum(2**n over the selected legs), the convention mapid
+        uncompresses with btest(id, i)"""
+        # 6 = 2**1 + 2**2 -> the two initial legs
+        boost = self._stub(6)._frame_boost(_MomentaEvent(self.MOMENTA))
+        self.assertEqual((boost.E, boost.px, boost.py, boost.pz),
+                         (700., 0., 0., 300.))
+        # 24 = 2**3 + 2**4 -> the two final legs; same frame, by momentum
+        # conservation
+        boost = self._stub(24)._frame_boost(_MomentaEvent(self.MOMENTA))
+        self.assertEqual((boost.E, boost.px, boost.py, boost.pz),
+                         (700., 0., 0., 300.))
+        # 8 = 2**3 -> leg 3 alone
+        boost = self._stub(8)._frame_boost(_MomentaEvent(self.MOMENTA))
+        self.assertEqual((boost.E, boost.px, boost.py, boost.pz),
+                         (300., 100., 50., -80.))
+        # a frame_id selecting nothing is not a frame
+        self.assertIsNone(self._stub(1)._frame_boost(_MomentaEvent(self.MOMENTA)))
+        self.assertIsNone(self._stub(0)._frame_boost(_MomentaEvent(self.MOMENTA)))
+
+    def test_boost_to_partonic_cms(self):
+        """frame_id = 6 on back-to-back beams is a pure z boost; check every leg
+        against the closed form"""
+        stub = self._stub(6)
+        boost = stub._frame_boost(_MomentaEvent(self.MOMENTA))
+        out = stub._boost_momenta(self.MOMENTA, boost)
+
+        mass = math.sqrt(700.**2 - 300.**2)
+        gamma, gammabeta = 700. / mass, 300. / mass
+        for mom, new in zip(self.MOMENTA, out):
+            E, px, py, pz = mom
+            self.assertAlmostEqual(new[0], gamma * E - gammabeta * pz, places=9)
+            self.assertAlmostEqual(new[1], px, places=9)
+            self.assertAlmostEqual(new[2], py, places=9)
+            self.assertAlmostEqual(new[3], gamma * pz - gammabeta * E, places=9)
+
+        # the frame is defined by legs 1+2, so their sum is at rest in it
+        self.assertAlmostEqual(out[0][3] + out[1][3], 0., places=9)
+        # and the boost is an invariance of the masses
+        for mom, new in zip(self.MOMENTA, out):
+            m2 = mom[0]**2 - mom[1]**2 - mom[2]**2 - mom[3]**2
+            n2 = new[0]**2 - new[1]**2 - new[2]**2 - new[3]**2
+            self.assertAlmostEqual(m2, n2, delta=1e-6 * abs(mom[0])**2)
+
+    def test_single_leg_frame_is_exactly_at_rest(self):
+        """with one selected leg that leg has to come out at exactly zero
+        three-momentum: vxxxxx branches on pp.eq.rZero and would otherwise pick
+        its quantisation axis from the rounding noise"""
+        stub = self._stub(8)
+        boost = stub._frame_boost(_MomentaEvent(self.MOMENTA))
+        out = stub._boost_momenta(self.MOMENTA, boost)
+        self.assertEqual(out[2][1:], (0., 0., 0.))
+        self.assertAlmostEqual(out[2][0], math.sqrt(300.**2 - 100.**2 - 50.**2 - 80.**2),
+                               places=9)
+        # two selected legs: no leg sits on that branch point, nothing is forced
+        boost = self._stub(6)._frame_boost(_MomentaEvent(self.MOMENTA))
+        self.assertIsNone(boost.rest_leg)
+
+    def test_boost_of_a_system_already_at_rest(self):
+        """A lepton-collider event arrives in the partonic CMS, so frame_id = 6
+        asks for a boost with no spatial part. That is the identity, not an
+        excuse to replace every momentum by the boost (HELAS boostx's
+        qq.eq.rZero branch)."""
+        momenta = [(250., 0., 0., 250.),
+                   (250., 0., 0., -250.),
+                   (250., 100., 50., -80.),
+                   (250., -100., -50., 80.)]
+        stub = _FrameStub(6, (1.8, 1.))
+        boost = stub._frame_boost(_MomentaEvent(momenta))
+        self.assertEqual((boost.E, boost.px, boost.py, boost.pz),
+                         (500., 0., 0., 0.))
+        self.assertEqual(stub._boost_momenta(momenta, boost), momenta)
+
+
 class TestEvent(unittest.TestCase):
     """Test class for the reading of the lhe input file"""
     
@@ -659,6 +829,7 @@ class TestDrawOneDecay(unittest.TestCase):
         get_decay_from_file = interface_madspin.MadSpinInterface.get_decay_from_file
         _draw_all_decays = interface_madspin.MadSpinInterface._draw_all_decays
         _draw_one_decay = interface_madspin.MadSpinInterface._draw_one_decay
+        _draw_decay_group = interface_madspin.MadSpinInterface._draw_decay_group
         efficiency = 0.5
 
     def _setup(self):
@@ -1151,12 +1322,16 @@ class TestSequentialAcceptReject(unittest.TestCase):
             _unweighting_mode = interface._unweighting_mode
             _announce_mode = interface._announce_mode
             _log_once = interface._log_once
+            _beampol = interface._beampol
+            _frame_boost = interface._frame_boost
             def __init__(self):
-                self.options = {'spinmode': 'onshell',
+                self.options = _StubOptions(
+                               {'spinmode': 'onshell',
                                 'sequential_spin_order': '2 3 1',
                                 'unweighting': unweighting,
                                 'sequential_debug': False,
-                                'fixed_order': False}
+                                'fixed_order': False,
+                                'beampol': [0., 0.], 'frame_id': 6})
             def _density_basis(self, production, decays_key):
                 particles, slots = interface._sequential_slots(production, decays_key)
                 return {'decays_key': decays_key, 'helicities': hels,
@@ -1170,7 +1345,7 @@ class TestSequentialAcceptReject(unittest.TestCase):
             def _draw_one_decay(self, particle, index, ids, evt_decayfile, nb_remain):
                 import random
                 return ('cand', self._slot_of[index], random.randrange(pool))
-            def _slot_density(self, decay, parent, hel):
+            def _slot_density(self, decay, parent, hel, frame_boost=None):
                 return pools[decay[1]][decay[2]]
         return Stub()
 
@@ -1345,14 +1520,21 @@ class TestPAUpFrontMass(unittest.TestCase):
             _unweighting_mode = interface._unweighting_mode
             _announce_mode = interface._announce_mode
             _log_once = interface._log_once
+            _beampol = interface._beampol
+            _frame_boost = interface._frame_boost
 
             def __init__(self):
-                self.options = {'spinmode': 'PA',
+                # unpolarised beams and no me_frame, so _frame_boost short
+                # circuits to None: this class is about the mass stage, and the
+                # frame machinery has its own tests
+                self.options = _StubOptions(
+                               {'spinmode': 'PA',
                                 'sequential_spin_order': '2 3 1',
                                 'unweighting': unweighting,
                                 'density_keep_jacobian': keep_jac,
                                 'sequential_debug': False,
-                                'fixed_order': False}
+                                'fixed_order': False,
+                                'beampol': [0., 0.], 'frame_id': 6})
                 # Z_k(m) = f(m) = exp(ALPHA * ln(m/pole)) is exactly the
                 # log-quadratic the tabulation fits, so the "perfect table"
                 # can be written down instead of measured
@@ -1400,7 +1582,7 @@ class TestPAUpFrontMass(unittest.TestCase):
                 return TestPAUpFrontMass._Decay(self._slot_of[index],
                                                 random.randrange(outer.POOL))
 
-            def _slot_density(self, decay, parent, hel):
+            def _slot_density(self, decay, parent, hel, frame_boost=None):
                 return pools[decay.slot][decay.index]
 
         return Stub()
@@ -1715,6 +1897,26 @@ class TestSequentialPoolLadder(unittest.TestCase):
         stub = self._stub({6: 1}, unweighting='sequential', spinmode='madspin')
         stub._nb_decaying = 1
         self.assertEqual(stub._unweighting_mode(True), 'sequential')
+
+    def test_grouped_decays_force_the_joint_test(self):
+        """'@' grouping forces the joint accept/reject, whatever unweighting
+        asks for. The per-particle and two_stage schemes redraw to acceptance,
+        which divides E[w | group] out of the chain -- and that expectation
+        differs between groups, so the accepted group fractions would come out
+        distorted by its reciprocal. Pinned here because the gate was ported by
+        hand onto the unweighting API it now lives in.
+        """
+        for mode in ('auto', 'sequential', 'two_stage',
+                     'sequential_global_retry'):
+            stub = self._stub({6: 2}, unweighting=mode, spinmode='madspin')
+            # three decaying particles: offshell `auto` only leaves joint from
+            # three up, so this is where grouping has something to override
+            stub._nb_decaying = 3
+            stub._decay_groups = None
+            self.assertNotEqual(stub._unweighting_mode(True), 'joint', mode)
+            stub._decay_groups = {'1': {}, '2': {}}
+            self.assertEqual(stub._unweighting_mode(True), 'joint',
+                             '%s with grouped decays' % mode)
 
     def test_up_front_mass_modes_are_available_under_pa(self):
         """PA has an up-front mass draw of its own now, so the three schemes
@@ -2239,3 +2441,375 @@ class TestPolyfitConditioning(unittest.TestCase):
 
     def test_two_distinct_points_cannot_fix_a_quadratic(self):
         self.assertIsNone(self._fit([0.0, 0.0, 0.1, 0.1], [1.0, 1.0, 2.0, 2.0]))
+
+
+class TestClampedPartialWidth(unittest.TestCase):
+    """_clamped_partial_width reconciles a *measured* partial width with the
+    param_card total. The two regimes are deliberate and long-standing, so they
+    are pinned here: a review read the helper as under-clamping, when in fact
+    capping the large-disagreement case is what would be wrong.
+    """
+
+    fct = staticmethod(
+        interface_madspin.MadSpinInterface._clamped_partial_width)
+
+    def test_below_the_total_is_untouched(self):
+        self.assertEqual(self.fct(0.4, 1.0), 0.4)
+        self.assertEqual(self.fct(1.0, 1.0), 1.0)
+
+    def test_a_per_cent_over_is_monte_carlo_noise_and_is_capped(self):
+        """Within 1% the excess is noise in the width measurement; capping keeps
+        the branching ratio at most 1 and costs nothing."""
+        self.assertEqual(self.fct(1.005, 1.0), 1.0)
+        self.assertEqual(self.fct(1.01, 1.0), 1.0)
+
+    def test_a_real_disagreement_is_reported_not_hidden(self):
+        """Past 1% the param_card total genuinely disagrees with what was
+        generated. The measured value is kept: capping would quietly reshape the
+        normalisation to match a card that is wrong, and swallow the evidence.
+        """
+        self.assertEqual(self.fct(1.5, 1.0), 1.5)
+        self.assertEqual(self.fct(20.0, 1.0), 20.0)
+class TestDecayGroupTagWarning(unittest.TestCase):
+    """The `@` grouping tags of the semi-leptonic ttbar idiom are implemented
+    only in madspin_v1. Everywhere else MG5 reads them as an ordinary process
+    number and they change nothing, so MadSpin must say so rather than let the
+    card mean something it does not."""
+
+    class _Stub(object):
+        _DECAY_GROUP_TAG = interface_madspin.MadSpinInterface._DECAY_GROUP_TAG
+        _split_group_tag = interface_madspin.MadSpinInterface._split_group_tag
+        _warn_ignored_decay_groups = \
+            interface_madspin.MadSpinInterface._warn_ignored_decay_groups
+
+        def __init__(self, list_branches):
+            self.list_branches = list_branches
+
+    TAGGED = {'t': ['t > w+ b, w+ > l+ vl @1', 't > w+ b, w+ > j j @2'],
+              't~': ['t~ > w- b~, w- > j j @1', 't~ > w- b~, w- > l- vl~ @2']}
+    UNTAGGED = {'z': ['z > e+ e-', 'z > u u~']}
+
+    def test_tags_are_reported_in_every_density_mode(self):
+        for spinmode in ('madspin', 'full', 'PA', 'onshell', 'onshell_v1',
+                         'none'):
+            stub = self._Stub(self.TAGGED)
+            found = stub._warn_ignored_decay_groups(spinmode)
+            self.assertEqual(len(found), 4, spinmode)
+            self.assertEqual(sorted(set(t[2] for t in found)), ['@1', '@2'])
+
+    def test_madspin_v1_is_silent(self):
+        """v1 implements the grouping, so there is nothing to warn about."""
+        stub = self._Stub(self.TAGGED)
+        self.assertEqual(stub._warn_ignored_decay_groups('madspin_v1'), [])
+
+    def test_untagged_card_is_silent(self):
+        stub = self._Stub(self.UNTAGGED)
+        self.assertEqual(stub._warn_ignored_decay_groups('madspin'), [])
+
+    def test_whitespace_between_at_and_number(self):
+        stub = self._Stub({'t': ['t > w+ b, w+ > l+ vl @ 12']})
+        self.assertEqual([t[2] for t in
+                          stub._warn_ignored_decay_groups('madspin')], ['@12'])
+
+    def test_a_coupling_restriction_is_not_a_group_tag(self):
+        """`@` only tags a group when a number follows it; QED=1 and the like
+        must not trigger the warning."""
+        stub = self._Stub({'t': ['t > w+ b QED=1, w+ > l+ vl']})
+        self.assertEqual(stub._warn_ignored_decay_groups('madspin'), [])
+
+
+class TestDecayGroupLayout(unittest.TestCase):
+    """`@` grouping tags: sorting the decay lines into groups, and deciding
+    whether the grouping can be honoured for a given set of production events.
+
+    Supported shape is rectangular -- every group decays every particle exactly
+    once (or n times for n identical parents). Anything else is refused rather
+    than approximated, because the group is then not a complete assignment and
+    neither its rate nor its branching ratio is defined.
+    """
+
+    class _Stub(object):
+        _DECAY_GROUP_TAG = interface_madspin.MadSpinInterface._DECAY_GROUP_TAG
+        _split_group_tag = interface_madspin.MadSpinInterface._split_group_tag
+        _decay_group_layout = \
+            interface_madspin.MadSpinInterface._decay_group_layout
+        _validate_decay_groups = \
+            interface_madspin.MadSpinInterface._validate_decay_groups
+
+        def __init__(self, list_branches):
+            self.list_branches = collections.OrderedDict(list_branches)
+
+    # the semi-leptonic ttbar idiom: one t and one t~ per event, two groups
+    TTBAR = [('t',  ['t > w+ b, w+ > l+ vl @1', 't > w+ b, w+ > j j @2']),
+             ('t~', ['t~ > w- b~, w- > j j @1', 't~ > w- b~, w- > l- vl~ @2'])]
+    NAME2PDG = staticmethod(lambda name: {'t': 6, 't~': -6, 'z': 23,
+                                          'w+': 24}.get(name))
+
+    # ------------------------------------------------------------------ split
+    def test_split_tag(self):
+        self.assertEqual(
+            interface_madspin.MadSpinInterface._split_group_tag(
+                't > w+ b, w+ > l+ vl @1'),
+            ('t > w+ b, w+ > l+ vl', '1'))
+
+    def test_split_tag_tolerates_spacing(self):
+        self.assertEqual(
+            interface_madspin.MadSpinInterface._split_group_tag(
+                't > w+ b @ 12  '),
+            ('t > w+ b', '12'))
+
+    def test_untagged_line_is_left_alone(self):
+        for branch in ('z > e+ e-', 't > w+ b QED=1', 'z > mu+ mu- {T}'):
+            self.assertEqual(
+                interface_madspin.MadSpinInterface._split_group_tag(branch),
+                (branch, None))
+
+    # ----------------------------------------------------------------- layout
+    def test_no_tag_is_not_a_grouping(self):
+        layout, reason = self._Stub([('z', ['z > e+ e-', 'z > u u~'])]) \
+                             ._decay_group_layout()
+        self.assertIsNone(layout)
+        self.assertIsNone(reason)
+
+    def test_layout_of_the_ttbar_idiom(self):
+        layout, reason = self._Stub(self.TTBAR)._decay_group_layout()
+        self.assertIsNone(reason)
+        self.assertEqual(layout['tags'], ['1', '2'])
+        # index i is also the number of the decay_<pdg>_<i> pool
+        self.assertEqual(layout['lines']['t'],  {'1': [0], '2': [1]})
+        self.assertEqual(layout['lines']['t~'], {'1': [0], '2': [1]})
+
+    def test_untagged_line_belongs_to_every_group(self):
+        layout, reason = self._Stub(
+            self.TTBAR + [('z', ['z > e+ e-'])])._decay_group_layout()
+        self.assertIsNone(reason)
+        self.assertEqual(layout['lines']['z'], {'1': [0], '2': [0]})
+
+    def test_stray_at_is_refused_not_half_read(self):
+        layout, reason = self._Stub(
+            [('t', ['t > w+ b @1 QED=1'])])._decay_group_layout()
+        self.assertIsNone(layout)
+        self.assertIn("not a group tag", reason)
+
+    # --------------------------------------------------------------- validate
+    def _validate(self, branches, to_decay, nb_event=100):
+        stub = self._Stub(branches)
+        layout, reason = stub._decay_group_layout()
+        self.assertIsNone(reason)
+        self.assertIsNotNone(layout)
+        return stub._validate_decay_groups(layout, to_decay, nb_event,
+                                           self.NAME2PDG)
+
+    def test_ttbar_is_supported(self):
+        ok, reason = self._validate(self.TTBAR, {6: 100, -6: 100})
+        self.assertTrue(ok, reason)
+
+    def test_four_tops_two_lines_per_group_is_supported(self):
+        """p p > t t t~ t~: a group hands its two lines for a pdg to the two
+        particles of that pdg, by the positional rule."""
+        branches = [
+            ('t',  ['t > w+ b, w+ > l+ vl @1', 't > w+ b, w+ > j j @1',
+                    't > w+ b, w+ > j j @2',   't > w+ b, w+ > j j @2']),
+            ('t~', ['t~ > w- b~, w- > j j @1', 't~ > w- b~, w- > j j @1',
+                    't~ > w- b~, w- > l- vl~ @2', 't~ > w- b~, w- > j j @2']),
+        ]
+        ok, reason = self._validate(branches, {6: 200, -6: 200})
+        self.assertTrue(ok, reason)
+
+    def test_group_missing_a_particle_is_refused(self):
+        branches = [('t',  ['t > w+ b, w+ > l+ vl @1',
+                            't > w+ b, w+ > j j @2']),
+                    ('t~', ['t~ > w- b~, w- > j j @1'])]      # no @2 for t~
+        ok, reason = self._validate(branches, {6: 100, -6: 100})
+        self.assertFalse(ok)
+        self.assertIn('@2', reason)
+        self.assertIn('t~', reason)
+
+    def test_wrong_line_count_for_the_multiplicity_is_refused(self):
+        """two tops per event but only one line per group."""
+        ok, reason = self._validate(self.TTBAR, {6: 200, -6: 200})
+        self.assertFalse(ok)
+        self.assertIn('1 decay line(s)', reason)
+
+    def test_tagged_and_untagged_for_the_same_particle_is_refused(self):
+        """the untagged line joins every group, so that group has two lines for
+        a particle the event carries once."""
+        branches = [('t',  ['t > w+ b, w+ > l+ vl @1',
+                            't > w+ b, w+ > j j @2',
+                            't > w+ b, w+ > ta+ vt']),
+                    ('t~', ['t~ > w- b~, w- > j j @1',
+                            't~ > w- b~, w- > l- vl~ @2'])]
+        ok, reason = self._validate(branches, {6: 100, -6: 100})
+        self.assertFalse(ok)
+        self.assertIn('2 decay line(s)', reason)
+
+    def test_mixed_final_states_are_refused(self):
+        """not every event carries a t, so there is no branching ratio per
+        group to normalise with."""
+        ok, reason = self._validate(self.TTBAR, {6: 150, -6: 150})
+        self.assertFalse(ok)
+        self.assertIn('same number', reason)
+
+    def test_multiparticle_parent_is_refused(self):
+        branches = [('t',  ['t > w+ b, w+ > l+ vl @1',
+                            't > w+ b, w+ > j j @2']),
+                    ('vv', ['vv > e+ e- @1', 'vv > u u~ @2'])]
+        ok, reason = self._validate(branches, {6: 100})   # 'vv' -> None
+        self.assertFalse(ok)
+        self.assertIn('multiparticle', reason)
+
+    def test_a_particle_absent_from_the_events_is_ignored(self):
+        """a decay line for a species that never appears is ignored anyway, so
+        it must not make the grouping unusable."""
+        branches = self.TTBAR + [('z', ['z > e+ e- @1', 'z > u u~ @2'])]
+        ok, reason = self._validate(branches, {6: 100, -6: 100})
+        self.assertTrue(ok, reason)
+
+
+class TestDecayGroupDraw(unittest.TestCase):
+    """The run-time half of the grouping: a group is drawn once per event, with
+    the probability of its rate, and every particle then takes that group's
+    channel."""
+
+    class _Pool(object):
+        def __init__(self, tag, n=200, cross=1.0):
+            self.tag = tag
+            self._it = iter(range(n))
+            self.cross = cross
+        def __next__(self):
+            return '%s:%s' % (self.tag, next(self._it))
+
+    class _Part(object):
+        def __init__(self, pid):
+            self.pid = pid
+            self.pdg = pid
+            self.status = 1
+
+    class _Model(object):
+        NAMES = {6: 't', -6: 't~'}
+        def get_particle(self, pdg):
+            name = self.NAMES[pdg]
+            return type('P', (), {'get_name': staticmethod(lambda n=name: n)})()
+
+    class _Stub(object):
+        _DECAY_GROUP_TAG = interface_madspin.MadSpinInterface._DECAY_GROUP_TAG
+        _split_group_tag = interface_madspin.MadSpinInterface._split_group_tag
+        _assignment_multiplicity = \
+            interface_madspin.MadSpinInterface._assignment_multiplicity
+        _clamped_partial_width = staticmethod(
+            interface_madspin.MadSpinInterface._clamped_partial_width)
+        _resolve_group_rates = \
+            interface_madspin.MadSpinInterface._resolve_group_rates
+        _draw_decay_group = interface_madspin.MadSpinInterface._draw_decay_group
+        _draw_one_decay = interface_madspin.MadSpinInterface._draw_one_decay
+        _draw_all_decays = interface_madspin.MadSpinInterface._draw_all_decays
+        get_decay_from_file = \
+            interface_madspin.MadSpinInterface.get_decay_from_file
+        efficiency = 0.5
+
+    # ------------------------------------------------- assignment multiplicity
+    def test_multiplicity_counts_distinct_assignments(self):
+        mult = interface_madspin.MadSpinInterface._assignment_multiplicity
+        self.assertEqual(mult(['t > w+ b, w+ > l+ vl']), 1)
+        self.assertEqual(mult(['a > b c', 'a > d e']), 2)
+        self.assertEqual(mult(['a > b c', 'a > b c']), 1)   # NOT 2
+        self.assertEqual(mult(['a > b c', 'a > d e', 'a > f g']), 6)
+        self.assertEqual(mult(['a > b c', 'a > b c', 'a > d e']), 3)
+
+    def test_multiplicity_ignores_the_tag(self):
+        mult = interface_madspin.MadSpinInterface._assignment_multiplicity
+        self.assertEqual(mult(['a > b c @1', 'a > b c @2']), 1)
+
+    # ------------------------------------------------------------- group rates
+    def _ttbar_stub(self, g_lep=2.0, g_had=6.0, totwidth=9.0):
+        stub = self._Stub()
+        stub.model = self._Model()
+        stub.list_branches = {
+            't':  ['t > w+ b, w+ > l+ vl @1', 't > w+ b, w+ > j j @2'],
+            't~': ['t~ > w- b~, w- > j j @1', 't~ > w- b~, w- > l- vl~ @2']}
+        stub._decay_groups = {'tags': ['1', '2'],
+                              'lines': {6:  {'1': [0], '2': [1]},
+                                        -6: {'1': [0], '2': [1]}},
+                              'prob': None}
+        gen_jobs = {6: {'totwidth': totwidth}, -6: {'totwidth': totwidth}}
+        channel_widths = {6:  {0: g_lep, 1: g_had},
+                          -6: {0: g_had, 1: g_lep}}
+        return stub, gen_jobs, channel_widths
+
+    def test_semileptonic_branching_ratio(self):
+        """the tt~ idiom: BR = 2 x BR_lep x BR_had, which is what madspin_v1
+        writes for the same card."""
+        stub, gen_jobs, widths = self._ttbar_stub()
+        br = stub._resolve_group_rates(gen_jobs, widths)
+        self.assertAlmostEqual(br, 2 * (2. / 9.) * (6. / 9.), places=12)
+        self.assertEqual(stub._decay_groups['prob'], [0.5, 0.5])
+
+    def test_group_probability_follows_the_rate(self):
+        """an asymmetric card: group 1 is lep+had, group 2 had+had, so group 2
+        is the more likely of the two in the ratio of their widths."""
+        stub, gen_jobs, widths = self._ttbar_stub()
+        widths[-6] = {0: 6.0, 1: 6.0}          # t~ hadronic in both groups
+        br = stub._resolve_group_rates(gen_jobs, widths)
+        # br_1 = (2/9)(6/9), br_2 = (6/9)(6/9)
+        self.assertAlmostEqual(br, (2 * 6 + 6 * 6) / 81., places=12)
+        self.assertAlmostEqual(stub._decay_groups['prob'][0], 12. / 48.)
+        self.assertAlmostEqual(stub._decay_groups['prob'][1], 36. / 48.)
+
+    def test_zero_rate_everywhere_is_an_error_not_a_silent_zero(self):
+        stub, gen_jobs, widths = self._ttbar_stub()
+        widths[6] = {0: 0.0, 1: 0.0}
+        self.assertRaises(Exception, stub._resolve_group_rates,
+                          gen_jobs, widths)
+
+    # -------------------------------------------------------------- group draw
+    def test_group_is_drawn_with_its_probability(self):
+        import random
+        stub, gen_jobs, widths = self._ttbar_stub()
+        stub._decay_groups['prob'] = [0.25, 0.75]
+        random.seed(7)
+        drawn = collections.Counter(stub._draw_decay_group()
+                                    for _ in range(20000))
+        self.assertAlmostEqual(drawn['1'] / 20000., 0.25, places=2)
+        self.assertAlmostEqual(drawn['2'] / 20000., 0.75, places=2)
+
+    def test_no_group_declared_draws_none(self):
+        stub = self._Stub()
+        stub._decay_groups = None
+        self.assertIsNone(stub._draw_decay_group())
+
+    # ------------------------------------------------- the draw inside a group
+    def test_every_particle_takes_the_drawn_group_channel(self):
+        import random
+        stub, gen_jobs, widths = self._ttbar_stub()
+        stub._resolve_group_rates(gen_jobs, widths)
+        production = [self._Part(6), self._Part(-6)]
+        random.seed(3)
+        seen = collections.Counter()
+        for _ in range(400):
+            evt_decayfile = {6:  {0: self._Pool('t_lep'), 1: self._Pool('t_had')},
+                             -6: {0: self._Pool('tx_had'), 1: self._Pool('tx_lep')}}
+            out = stub.get_decay_from_file(production, evt_decayfile, 10)
+            seen[(out[6][0].split(':')[0], out[-6][0].split(':')[0])] += 1
+        # only the two tagged assignments, never lep+lep or had+had
+        self.assertEqual(set(seen), {('t_lep', 'tx_had'), ('t_had', 'tx_lep')})
+        for count in seen.values():
+            self.assertGreater(count, 150)      # both groups are used
+
+    def test_identical_parents_inside_a_group_are_positional(self):
+        """p p > t t t~ t~: the group's two lines for a pdg go to its two
+        particles in order."""
+        stub = self._Stub()
+        stub.model = self._Model()
+        stub.list_branches = {'t': ['a @1', 'b @1', 'c @2', 'd @2']}
+        stub._decay_groups = {'tags': ['1', '2'],
+                              'lines': {6: {'1': [0, 1], '2': [2, 3]}},
+                              'prob': [1.0, 0.0]}
+        production = [self._Part(6), self._Part(6)]
+        evt_decayfile = {6: dict((i, self._Pool('c%d' % i)) for i in range(4))}
+        out = stub.get_decay_from_file(production, evt_decayfile, 10)
+        self.assertEqual([d.split(':')[0] for d in out[6]], ['c0', 'c1'])
+
+        stub._decay_groups['prob'] = [0.0, 1.0]
+        evt_decayfile = {6: dict((i, self._Pool('c%d' % i)) for i in range(4))}
+        out = stub.get_decay_from_file(production, evt_decayfile, 10)
+        self.assertEqual([d.split(':')[0] for d in out[6]], ['c2', 'c3'])
