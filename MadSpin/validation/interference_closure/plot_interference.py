@@ -238,7 +238,78 @@ def one_figure(d, key, label, kind, out):
     c9 = chi2(s9, s9e, u, ue)
     c9b = chi2(s9b, s9be, u, ue)
     k = implied_scale(s4, s4e, it, ite, u, ue)
-    return c4, c9, c9b, k
+    # the interference integrates to zero over the DECAY phase space at every
+    # production point, so its contribution to a purely production-level
+    # observable must vanish bin by bin -- a null test with 20 bins
+    czero = chi2(it, ite, np.zeros_like(it), np.zeros_like(ite))
+    return c4, c9, c9b, k, czero
+
+
+def summary_figure(d, keys, out):
+    """One figure, the three observables the diagonal-only sum failed on."""
+    fig = plt.figure()
+    fig.set_size_inches(7 * 0.75 * len(keys), 5.6)
+    gs = fig.add_gridspec(2, len(keys), height_ratios=[2.5, 1.4],
+                          hspace=0.06, wspace=0.30)
+    for col, key in enumerate(keys):
+        label = dict((k, l) for k, l, _ in OBS)[key]
+        bins = d.bins(key)
+        ctr = 0.5 * (bins[1:] + bins[:-1])
+        wid = bins[1] - bins[0]
+        u, ue = d.h(['unpol'], key)
+        s4, s4e = d.h(DIAG, key)
+        s9, s9e = d.h(ROUTE1, key)
+        it, ite = d.h(['x_t', 'i_tp', 'i_tm'], key)
+
+        ax = fig.add_subplot(gs[0, col])
+        rax = fig.add_subplot(gs[1, col], sharex=ax)
+        for a in (ax, rax):
+            a.yaxis.set_minor_locator(AutoMinorLocator())
+            a.xaxis.set_minor_locator(AutoMinorLocator())
+        ax.errorbar(ctr, u / wid, yerr=ue / wid, fmt='o', ms=4, color=C_UNPOL,
+                    lw=1.0, capsize=2, label='unpolarised')
+        ax.hist(x=ctr, weights=s4 / wid, histtype='step', bins=len(ctr),
+                range=(bins[0], bins[-1]), linewidth=LW, color=C_SUM4,
+                linestyle='dashed', label='4 diagonal blocks')
+        ax.hist(x=ctr, weights=s9 / wid, histtype='step', bins=len(ctr),
+                range=(bins[0], bins[-1]), linewidth=LW, color=C_SUM9,
+                label='all 9 blocks')
+        ax.hist(x=ctr, weights=it / wid, histtype='step', bins=len(ctr),
+                range=(bins[0], bins[-1]), linewidth=LW, color=C_INT,
+                linestyle='dotted', label='interference only')
+        ax.axhline(0.0, color='gray', lw=0.6, linestyle='dashed')
+        ax.set_ylim(min(0.0, np.nanmin(it / wid) * 1.3),
+                    np.nanmax(u / wid) * 1.45)
+        if col == 0:
+            ax.set_ylabel(r'$d\sigma/dX$ [pb]')
+            rax.set_ylabel(r'sum / unpolarised')
+        if col == len(keys) - 1:
+            update_legend(ax, ncol=1, loc='upper right', size=8)
+        plt.setp(ax.get_xticklabels(), visible=False)
+
+        r4, r4e = ratio(s4, s4e, u, ue)
+        r9, r9e = ratio(s9, s9e, u, ue)
+        rax.axhline(1.0, color='gray', lw=0.8, linestyle='dashed')
+        rax.errorbar(ctr - wid / 6, r4, yerr=r4e, fmt='v', ms=4, color=C_SUM4,
+                     lw=1.0, capsize=2, label='4 diagonal')
+        rax.errorbar(ctr + wid / 6, r9, yerr=r9e, fmt='o', ms=4, color=C_SUM9,
+                     lw=1.0, capsize=2, label='9 blocks')
+        ok = np.isfinite(r9e) & (r9e < 0.35) & np.isfinite(r4e) & (r4e < 0.35)
+        if ok.sum() < 4:
+            ok = np.isfinite(r9e) & np.isfinite(r4e)
+        lo = np.nanmin(np.concatenate([(r4 - r4e)[ok], (r9 - r9e)[ok]]))
+        hi = np.nanmax(np.concatenate([(r4 + r4e)[ok], (r9 + r9e)[ok]]))
+        pad = 0.12 * max(hi - lo, 0.05)
+        rax.set_ylim(min(lo - pad, 0.96), max(hi + pad, 1.04))
+        rax.set_xlabel(label)
+        if col == 0:
+            update_legend(rax, ncol=2, loc='best', size=8)
+    fig.suptitle(r'MadSpin interference closure: '
+                 r'$pp\to t\bar t$, 13 TeV, LO, dileptonic', y=0.96)
+    fig.savefig(os.path.join(out, 'closure_summary.pdf'), bbox_inches='tight')
+    fig.savefig(os.path.join(out, 'closure_summary.png'), dpi=150,
+                bbox_inches='tight')
+    plt.close(fig)
 
 
 def blocks_figure(d, key, label, out):
@@ -355,34 +426,62 @@ def main():
     L.append('')
 
     # -------- means --------------------------------------------------------
-    L.append('means')
-    L.append('  %-10s %20s %20s %20s %8s %8s'
-             % ('observable', '4 diagonal', '9 blocks', 'unpolarised',
-                'pull(4)', 'pull(9)'))
+    L.append('means.  The interference column is the exact shift it produces,')
+    L.append('  <O>_9 - <O>_4 = (sum_int w O) / (sum_4 w), since sum_int w = 0.')
+    L.append('  %-10s %20s %20s %20s %20s %8s %8s'
+             % ('observable', '4 diagonal', 'interference', '9 blocks',
+                'unpolarised', 'pull(4)', 'pull(9)'))
     for key, label, kind in OBS:
         m4, s4_ = d.mean(DIAG, key)
         m9, s9_ = d.mean(ROUTE1, key)
         mu, su_ = d.mean(['unpol'], key)
+        norm = d.mom(DIAG, key)[0]
+        swo = d.mom(['x_t', 'i_tp', 'i_tm'], key)[1]
+        sw2o2 = d.mom(['x_t', 'i_tp', 'i_tm'], key)[4]
         p4 = (m4 - mu) / math.sqrt(s4_ ** 2 + su_ ** 2)
         p9 = (m9 - mu) / math.sqrt(s9_ ** 2 + su_ ** 2)
         L.append('  %-10s %12.5f+-%-7.5f %12.5f+-%-7.5f %12.5f+-%-7.5f '
-                 '%8.2f %8.2f'
-                 % (key, m4, s4_, m9, s9_, mu, su_, p4, p9))
+                 '%12.5f+-%-7.5f %8.2f %8.2f'
+                 % (key, m4, s4_, swo / norm, math.sqrt(sw2o2) / norm,
+                    m9, s9_, mu, su_, p4, p9))
     L.append('')
 
     # -------- per-bin chi2 -------------------------------------------------
     L.append('per-bin chi2 against the unpolarised sample (20 bins), and the')
     L.append('best-fit scale k of the interference contribution '
              '(predicted k = 1, never fitted)')
-    L.append('  %-10s %14s %14s %14s %16s  %s'
+    L.append('  %-10s %14s %14s %14s %16s %14s  %s'
              % ('observable', 'chi2 (4 diag)', 'chi2 (9, r1)',
-                'chi2 (9, r2)', 'k', 'kind'))
+                'chi2 (9, r2)', 'k', 'chi2 int vs 0', 'kind'))
     for key, label, kind in OBS:
-        c4, c9, c9b, k = one_figure(d, key, label, kind, out)
-        L.append('  %-10s %9.1f /%-3d %9.1f /%-3d %9.1f /%-3d %8.3f+-%-6.3f  %s'
+        c4, c9, c9b, k, cz = one_figure(d, key, label, kind, out)
+        L.append('  %-10s %9.1f /%-3d %9.1f /%-3d %9.1f /%-3d %8.3f+-%-6.3f '
+                 '%9.1f /%-3d  %s'
                  % (key, c4[0], c4[1], c9[0], c9[1], c9b[0], c9b[1],
-                    k[0], k[1], kind))
+                    k[0], k[1], cz[0], cz[1], kind))
+    L.append('  (chi2 int vs 0: the interference integrates to zero over the '
+             'decay phase')
+    L.append('   space at every production point, so for a production-level '
+             'observable')
+    L.append('   -- pt_t, m_tt -- it must vanish bin by bin; elsewhere a large '
+             'value IS')
+    L.append('   the signal.)')
     L.append('')
+
+    # the identity cos phi_ll = C_kk + C_rr + C_nn, term by term
+    L.append('identity  <cos phi_ll> = <C_kk> + <C_rr> + <C_nn>')
+    for name, tags in (('4 diagonal', DIAG), ('9 blocks (r1)', ROUTE1),
+                       ('9 blocks (r2)', ROUTE2), ('unpolarised', ['unpol'])):
+        kk = d.mean(tags, 'ckk')[0]
+        rr = d.mean(tags, 'crr')[0]
+        nn = d.mean(tags, 'cnn')[0]
+        ph = d.mean(tags, 'cos_phi')[0]
+        L.append('  %-14s %+.5f %+.5f %+.5f = %+.5f   (measured %+.5f, '
+                 'diff %+.1e)' % (name, kk, rr, nn, kk + rr + nn, ph,
+                                  kk + rr + nn - ph))
+    L.append('')
+
+    summary_figure(d, ['cnn', 'cos_phi', 'dphi_lab'], out)
 
     L.append('the (I,I) block from the two routes (must agree bin by bin)')
     L.append('  %-10s %14s' % ('observable', 'chi2 / nbins'))
