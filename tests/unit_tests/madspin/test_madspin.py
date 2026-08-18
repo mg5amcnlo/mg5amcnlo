@@ -1623,7 +1623,7 @@ class TestPureInterferenceRestriction(unittest.TestCase):
     one index restricted to the production-side polarisation P, the other to
     the decay-side one D, with P and D disjoint.
 
-    These tests pin down the algebra section 13 of MADSPIN_SEQUENTIAL_PLAN.md
+    These tests pin down the algebra section 13 of doc/madspin_sequential_plan.md
     argues from; the mode itself (syntax, signed unweighting, zero
     cross-section bookkeeping) is NOT implemented.
     """
@@ -4007,7 +4007,7 @@ class TestSequentialPoolLadder(unittest.TestCase):
         """Offshell, a mass set costs a production reshuffle and a production
         density, so the staged schemes only pay off once there are enough decays
         to save: auto takes joint up to two decaying particles and sequential
-        from three. See MADSPIN_SEQUENTIAL_PLAN.md section 12."""
+        from three. See doc/madspin_sequential_plan.md section 12."""
         for nb, expected in [(1, 'joint'), (2, 'joint'),
                              (3, 'sequential'), (6, 'sequential')]:
             for spinmode in ('madspin', 'full'):

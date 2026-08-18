@@ -176,7 +176,7 @@ class MadSpinOptions(banner.ConfigFile):
                        "polarisations does not exist in a sample generated with a brace on that "
                        "leg). The sample then has zero total cross-section by construction, and "
                        "its event weights are SIGNED and fully weighted, w = sigma*BR*W/c; see "
-                       "MADSPIN_SEQUENTIAL_PLAN.md section 13.")
+                       "doc/madspin_sequential_plan.md section 13.")
         self.add_param('keep_weight_for_polarization_vector', [], typelist=str,
                        comment="density spin modes only. Polarisations (0, +, -, T; "
                        "L/R accepted as aliases of -/+) offered to each decaying "
@@ -3078,7 +3078,7 @@ class MadSpinInterface(extended_cmd.Cmd):
         The two branches were measured over the number of decaying particles n
         on `p p > w+ j` (n=1), `p p > t t~` (2), `p p > t t~ z` (3) and
         `p p > t t~ t t~` (4), 50000 events each -- see
-        MADSPIN_SEQUENTIAL_PLAN.md section 12.
+        doc/madspin_sequential_plan.md section 12.
 
         **PA/onshell -> ``sequential``, at every n.** It was the fastest of the
         three at all four multiplicities, by 1.2x at n=1 rising to 3.8x at n=4.
@@ -3299,7 +3299,7 @@ class MadSpinInterface(extended_cmd.Cmd):
         then scalars), ties broken by slot index so a run stays reproducible and
         independent of dict ordering. Only decides *which slot is filled next* --
         the tensor product itself must stay in slot order, see
-        MADSPIN_SEQUENTIAL_PLAN.md."""
+        doc/madspin_sequential_plan.md."""
         pref = self._sequential_spin_order()
         def key(slot):
             spin = decaying_spins[slot]
@@ -3806,7 +3806,7 @@ class MadSpinInterface(extended_cmd.Cmd):
         # sum_bin(w)/N_file the interference contribution to that bin in pb --
         # i.e. the file normalises itself, max_weight leaves the normalisation
         # entirely, and every production event is used instead of the 3-9% an
-        # accept/reject kept. See MADSPIN_SEQUENTIAL_PLAN.md section 13.13.
+        # accept/reject kept. See doc/madspin_sequential_plan.md section 13.13.
         pure_interference = bool(self._pure_interference())
         pure_interference_c = ctx.get('pure_interference_c')
         if pure_interference and not pure_interference_c:
@@ -5956,7 +5956,7 @@ class MadSpinInterface(extended_cmd.Cmd):
         banner's braces: the mode only means something on a sample that
         contains *both* polarisations, i.e. an unpolarised production, which by
         definition carries no brace to inherit. See
-        MADSPIN_SEQUENTIAL_PLAN.md section 13.5.
+        doc/madspin_sequential_plan.md section 13.5.
 
         Two disjoint sides name the interference block ``I`` of that particle;
         two *identical* sides name its diagonal block ``D_S`` (the normalised
@@ -6750,7 +6750,7 @@ class MadSpinInterface(extended_cmd.Cmd):
         The tensor product is built in *slot* order, which is what the
         production density matrix's helicity index follows. The accept/reject
         ordering only decides which slot gets filled next -- it must never
-        permute the tensor. See MADSPIN_SEQUENTIAL_PLAN.md.
+        permute the tensor. See doc/madspin_sequential_plan.md.
         """
         return decay_density_tensor(self._slot_identity, helicities,
                                     slot_densities) \
@@ -6856,7 +6856,7 @@ class MadSpinInterface(extended_cmd.Cmd):
         of the production is reshuffled here (leaving the shared event
         untouched) and the density is evaluated at those momenta. Fixing rho
         before the loop is what makes the per-particle decomposition possible at
-        all -- see MADSPIN_SEQUENTIAL_PLAN.md section 10.
+        all -- see doc/madspin_sequential_plan.md section 10.
 
         PA: rho is evaluated at the *onshell* momenta and is already fixed per
         production event (cached on it), so there is nothing to gain there. What
@@ -6958,7 +6958,7 @@ class MadSpinInterface(extended_cmd.Cmd):
     # of the physical one. Either way Z_k is a smooth function of that slot's
     # virtuality *alone*: the production event, the other slots' masses and the
     # angles already accepted all cancel out of it, which is what makes it
-    # tabulable. See MADSPIN_SEQUENTIAL_PLAN.md sections 10 and 11.
+    # tabulable. See doc/madspin_sequential_plan.md sections 10 and 11.
     #
     # What sits inside the average is the spinmode's own per-angle weight:
     #
@@ -7278,7 +7278,7 @@ class MadSpinInterface(extended_cmd.Cmd):
         product reproduces the joint weight (which gets jac_dec_k from the same
         reshuffle_production call that gives it J). On a reject only *that* slot
         is redrawn; the slots already accepted are kept. See
-        MADSPIN_SEQUENTIAL_PLAN.md.
+        doc/madspin_sequential_plan.md.
 
         Failure handling follows the scope of the failure. Under
         ``sequential_with_mass``, where slot k draws its own mass, a mass its
@@ -7474,7 +7474,7 @@ class MadSpinInterface(extended_cmd.Cmd):
                 # jacobians, and offshell the production trace -- go here, so the
                 # per-angle loop no longer carries them (that bundling made slot
                 # 0's acceptance ~1/300 offshell, and cost PA one production
-                # reshuffling per slot trial). See MADSPIN_SEQUENTIAL_PLAN.md
+                # reshuffling per slot trial). See doc/madspin_sequential_plan.md
                 # sections 10 and 11.
                 if offshell:
                     # Tr(rho_off)/|M_prod|^2_on -- the offshell production matrix

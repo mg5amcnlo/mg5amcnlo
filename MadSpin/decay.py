@@ -5013,7 +5013,7 @@ class DensityMatrix:
         complex conjugate of the (i,j) one and the pair adds up to
         ``2 Re[rho_prod(i,j) rho_dec(i,j)]``. Summing ``P x D`` *alone* would
         give a complex number and is not a physical weight -- see
-        MADSPIN_SEQUENTIAL_PLAN.md section 13.
+        doc/madspin_sequential_plan.md section 13.
         """
         self.hel_restriction = DensityMatrix.normalize_hel_restriction(restriction)
         return self
@@ -5035,7 +5035,7 @@ class DensityMatrix:
         keeps using the *production* trace, i.e. the symmetric restriction the
         production process' own braces impose (``None``, the full trace, for the
         unpolarised production this mode requires). See
-        MADSPIN_SEQUENTIAL_PLAN.md section 13.4.
+        doc/madspin_sequential_plan.md section 13.4.
         """
         self.hel_restriction_trace = \
             DensityMatrix.normalize_hel_restriction(restriction)
@@ -5289,7 +5289,7 @@ class DensityMatrix:
         parent rest frame, and leaves the diagonal flat. So a particle whose
         decay has not been drawn yet contributes exactly this to the production
         contraction -- which is what lets the accept/reject be done one particle
-        at a time (see MADSPIN_SEQUENTIAL_PLAN.md).
+        at a time (see doc/madspin_sequential_plan.md).
 
         Built through the normal constructor, so it shares the cached helicity
         map with the real density matrices of the same basis and keeps the
