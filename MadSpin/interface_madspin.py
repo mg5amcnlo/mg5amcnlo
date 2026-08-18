@@ -4400,14 +4400,18 @@ class MadSpinInterface(extended_cmd.Cmd):
             # unweighting mode *and* on the spinmode family (the mass-set weight
             # is a different quantity offshell and under PA), so they get a name
             # (and a format) of their own -- a cache written for one cannot be
-            # read back for the other.
+            # read back for the other. The ``offshell``/``pa`` piece of the file
+            # name names the spinmode family that wrote it, which is still what
+            # it does now that both families take the up-front-mass path; it is
+            # deliberately left alone so that caches already on disk keep being
+            # found.
             if upfront:
                 mode = self._unweighting_mode()
                 variant = '' if mode == 'sequential' else '_%s' % mode
                 cache = pjoin(self.options['ms_dir'],
                               'max_wgt_sequential_%s%s'
                               % ('offshell' if offshell else 'pa', variant))
-                cached = self._read_offshell_cache(cache)
+                cached = self._read_upfront_cache(cache)
                 if cached is not None:
                     self._z_tables = cached['z_tables']
                     return cached['maxwgts']
@@ -4480,7 +4484,7 @@ class MadSpinInterface(extended_cmd.Cmd):
         if cache and upfront:
             import json
             with open(cache, 'w') as f:
-                json.dump({'format': self._OFFSHELL_CACHE_FORMAT,
+                json.dump({'format': self._UPFRONT_CACHE_FORMAT,
                            'maxwgts': maxwgts, 'z_tables': self._z_tables}, f)
         elif cache:
             open(cache, 'w').write(' '.join(repr(w) for w in maxwgts))
@@ -4493,10 +4497,14 @@ class MadSpinInterface(extended_cmd.Cmd):
     # the next, which a name cannot.
     # 2: the mass-set weight is normalised by |M_prod|^2 on shell, so every
     #    bound in the vector changed scale.
-    _OFFSHELL_CACHE_FORMAT = 2
+    # (Renaming this constant from _OFFSHELL_CACHE_FORMAT, when the up-front
+    #  mass draw stopped being offshell-only, is *not* such a change: the
+    #  payload is the same, so the tag stays at 2 and caches already written
+    #  keep being accepted.)
+    _UPFRONT_CACHE_FORMAT = 2
 
-    def _read_offshell_cache(self, path):
-        """The cached offshell bounds and Z_k tables, or None if there is
+    def _read_upfront_cache(self, path):
+        """The cached up-front-mass bounds and Z_k tables, or None if there is
         nothing usable there.
 
         A cache that does not match what this code writes is *ignored*, not
@@ -4513,10 +4521,10 @@ class MadSpinInterface(extended_cmd.Cmd):
         try:
             with open(path) as f:
                 cached = json.load(f)
-            if cached.get('format') != self._OFFSHELL_CACHE_FORMAT:
+            if cached.get('format') != self._UPFRONT_CACHE_FORMAT:
                 raise ValueError('format %s, expected %s'
                                  % (cached.get('format'),
-                                    self._OFFSHELL_CACHE_FORMAT))
+                                    self._UPFRONT_CACHE_FORMAT))
             maxwgts = [float(w) for w in cached['maxwgts']]
             if not maxwgts:
                 raise ValueError('no bounds')
