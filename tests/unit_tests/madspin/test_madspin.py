@@ -1832,7 +1832,8 @@ class TestPureInterferenceMode(unittest.TestCase):
         _borrow_decision_helpers(locals())
 
         def __init__(self, spec='', spinmode='madspin', pol_map=None,
-                     branches=('w+', 'w-'), unweighting='sequential'):
+                     branches=('w+', 'w-'), unweighting='sequential',
+                     pol_weights=False):
             self.options = interface_madspin.MadSpinOptions()
             self.options['pure_interference'] = spec
             self.options['spinmode'] = spinmode
@@ -1841,9 +1842,13 @@ class TestPureInterferenceMode(unittest.TestCase):
             self.model = _PIModelStub()
             self.list_branches = dict((name, []) for name in branches)
             self._pol = pol_map or {}
+            self._pol_weights = pol_weights
 
         def _production_polarization(self):
             return self._pol
+
+        def _polarization_weights_enabled(self):
+            return self._pol_weights
 
     # -- syntax ------------------------------------------------------------
 
@@ -1971,6 +1976,191 @@ class TestPureInterferenceMode(unittest.TestCase):
     def test_the_mode_does_not_touch_the_scheme_when_off(self):
         stub = self._Stub('', unweighting='sequential')
         self.assertEqual(stub._unweighting_mode(True), 'sequential')
+
+    # -- diagonal blocks, and what the option may not be -------------------
+
+    def test_identical_sides_name_the_diagonal_block(self):
+        """Two equal sides are not an "overlap" but the diagonal block D_S:
+        normalize_hel_restriction collapses (S, S) back to the symmetric S, so
+        a mixed block such as (I, D-) is expressible from the card alone."""
+        got = self._Stub('w+ = 0 T ; w- = 0 0')._pure_interference()
+        self.assertEqual(got, {24: ((0,), (-1, 1)), -24: ((0,), (0,))})
+        restriction, trace = self._Stub(
+            'w+ = 0 T ; w- = 0 0')._apply_pure_interference(
+                [24, -24], [[-1, 0, 1], [-1, 0, 1]], None)
+        # the cross entry stays a pair; the equal one collapses to the plain
+        # symmetric restriction, i.e. the diagonal block
+        self.assertEqual(restriction, (((0,), (-1, 1)), (0,)))
+        self.assertEqual(trace, None)
+
+    def test_a_partial_overlap_is_still_refused(self):
+        """'T +' is neither an interference block nor a diagonal one: it puts
+        some diagonal entries into an off-diagonal block."""
+        stub = self._Stub('w+ = T +')
+        self.assertRaises(stub.InvalidCmd, stub._pure_interference)
+
+    def test_only_diagonal_entries_are_refused(self):
+        """Nothing interferes, so every piece of the mode -- the zeroed
+        <init>, the signed weights, the separate trace restriction -- is wrong.
+        """
+        stub = self._Stub('w+ = 0 0')
+        self.assertRaises(stub.InvalidCmd, stub._validate_pure_interference)
+
+    def test_polarization_weights_are_refused_with_the_mode(self):
+        """keep_weight_for_polarization_* writes nominal x (diagonal block /
+        full contraction); in this mode the nominal weight is a signed
+        interference weight and the diagonal blocks are exactly what the mode
+        removes, so the product means nothing."""
+        stub = self._Stub('w+ = 0 T', pol_weights=True)
+        self.assertRaises(stub.InvalidCmd, stub._validate_pure_interference)
+        # ... and without the mode the two are unrelated
+        self._Stub('w+ = 0 T', pol_weights=False)._validate_pure_interference()
+
+
+class TestPureInterferenceCardSyntax(unittest.TestCase):
+    """The card spelling of a multi-particle pure_interference request.
+
+    ``extended_cmd.Cmd.precmd`` splits every card line on ';' and dispatches
+    the pieces as separate commands, so the one-line spelling silently loses
+    everything after the first particle. Repeated ``set`` lines are therefore
+    the only spelling that can work, and the ';' one has to fail loudly rather
+    than produce a valid-looking single-particle sample.
+    """
+
+    def _interface(self):
+        return interface_madspin.MadSpinInterface()
+
+    def test_repeated_set_lines_accumulate(self):
+        ms = self._interface()
+        ms.exec_cmd('set pure_interference t = + -', precmd=True)
+        ms.exec_cmd('set pure_interference t~ = + -', precmd=True)
+        self.assertEqual(ms.options['pure_interference'], 't = + - ; t~ = + -')
+
+    def test_a_single_set_line_is_unchanged(self):
+        ms = self._interface()
+        ms.exec_cmd('set pure_interference t = + -', precmd=True)
+        self.assertEqual(ms.options['pure_interference'], 't = + -')
+
+    def test_the_semicolon_spelling_fails_loudly(self):
+        """The failure mode this replaces is silent: 't~ = + -' used to reach
+        Cmd.default, log a generic 'not recognized' warning, and leave a valid
+        single-particle sample behind."""
+        ms = self._interface()
+        self.assertRaises(
+            ms.InvalidCmd,
+            lambda: ms.exec_cmd('set pure_interference t = + - ; t~ = + -',
+                                precmd=True))
+
+    def test_an_orphan_entry_on_its_own_line_also_fails(self):
+        ms = self._interface()
+        self.assertRaises(ms.InvalidCmd,
+                          lambda: ms.exec_cmd('t~ = + -', precmd=True))
+
+    def test_an_ordinary_unknown_command_is_still_only_a_warning(self):
+        """The loud failure is targeted at the entry shape; anything else keeps
+        the historical behaviour."""
+        ms = self._interface()
+        ms.exec_cmd('not_a_command with args', precmd=True)
+
+    def test_other_options_still_overwrite(self):
+        ms = self._interface()
+        ms.exec_cmd('set BW_cut 15', precmd=True)
+        ms.exec_cmd('set BW_cut 25', precmd=True)
+        self.assertEqual(ms.options['BW_cut'], 25)
+
+
+class TestPureInterferenceNormalisation(unittest.TestCase):
+    """``c = <W>``, the decay-side constant the fully weighted output divides
+    by, and the helper that measures it (section 13.13)."""
+
+    def _packed(self, hel, seed):
+        import numpy as np
+        rng = np.random.default_rng(seed)
+        n = len(hel)
+        arr = (rng.normal(size=n * (n + 1) // 2)
+               + 1j * rng.normal(size=n * (n + 1) // 2)).astype('complex64')
+        for i in range(n):
+            arr[i * (2 * n - i + 1) // 2] = abs(arr[i * (2 * n - i + 1) // 2])
+        return arr
+
+    def _density(self, hel, seed):
+        return madspin.DensityMatrix(self._packed(hel, seed), 1, hel, len(hel))
+
+    def test_the_helper_lifts_the_cross_restriction_and_restores_it(self):
+        hel = [-1, 0, 1]
+        prod = self._density(hel, 3)
+        dec = self._density(hel, 11)
+        full = complex(dec.scalar_multiplication(prod))
+
+        prod.set_hel_restriction([((0,), (-1, 1))])
+        prod.set_hel_restriction_trace([None])
+        restricted = complex(dec.scalar_multiplication(prod))
+        self.assertNotAlmostEqual(abs(restricted), abs(full), places=6)
+
+        got = interface_madspin.MadSpinInterface._pi_unrestricted_contraction(
+            prod, dec)
+        self.assertAlmostEqual(complex(got).real, full.real, places=4)
+        self.assertAlmostEqual(complex(got).imag, full.imag, places=4)
+        # and the matrix is left exactly as it was found
+        self.assertEqual(prod.hel_restriction, (((0,), (-1, 1)),))
+        self.assertAlmostEqual(
+            complex(dec.scalar_multiplication(prod)).real, restricted.real,
+            places=6)
+
+    def test_the_helper_uses_the_trace_restriction_not_the_full_sum(self):
+        """With a production brace on another leg the ordinary run's weight is
+        normalised by the *braced* trace, so c must be the braced contraction
+        -- not the unrestricted one."""
+        hel = [-1, 1]
+        prod = self._density(hel, 5)
+        dec = self._density(hel, 9)
+        prod.set_hel_restriction([((-1,), (1,))])
+        prod.set_hel_restriction_trace([(-1, 1)])
+        got = complex(interface_madspin.MadSpinInterface
+                      ._pi_unrestricted_contraction(prod, dec))
+        prod.set_hel_restriction([(-1, 1)])
+        expect = complex(dec.scalar_multiplication(prod))
+        self.assertAlmostEqual(got.real, expect.real, places=5)
+
+    def test_c_against_the_identity_decay_matrix(self):
+        """Substituting the decay-phase-space average I/n for rho_dec is what
+        makes c a constant: the cross block then contracts to exactly zero
+        while the unrestricted one gives trace(rho_prod)/n."""
+        hel = [-1, 0, 1]
+        prod = self._density(hel, 21)
+        dec = madspin.DensityMatrix.identity(1, hel, len(hel))
+        prod.set_hel_restriction([((0,), (-1, 1))])
+        prod.set_hel_restriction_trace([None])
+        self.assertAlmostEqual(
+            abs(complex(dec.scalar_multiplication(prod))), 0.0, places=6)
+        got = complex(interface_madspin.MadSpinInterface
+                      ._pi_unrestricted_contraction(prod, dec))
+        self.assertAlmostEqual(got.real, complex(prod.trace()).real / len(hel),
+                               places=5)
+
+    def test_finalize_turns_the_raw_moments_into_c_and_its_error(self):
+        class _Stub(object):
+            InvalidCmd = interface_madspin.MadSpinInterface.InvalidCmd
+            _finalize_pi_c = interface_madspin.MadSpinInterface._finalize_pi_c
+        stub = _Stub()
+        values = [1.0, 2.0, 3.0, 4.0]
+        stub._pi_c_stats = {'sum': sum(values),
+                            'sumsq': sum(v * v for v in values),
+                            'n': len(values)}
+        stub._finalize_pi_c()
+        self.assertAlmostEqual(stub._pi_c, 2.5)
+        # sd of the population is sqrt(1.25); the error on the mean is /sqrt(n)
+        self.assertAlmostEqual(stub._pi_c_err, math.sqrt(1.25 / 4.0))
+
+    def test_finalize_refuses_an_empty_or_zero_measurement(self):
+        class _Stub(object):
+            InvalidCmd = interface_madspin.MadSpinInterface.InvalidCmd
+            _finalize_pi_c = interface_madspin.MadSpinInterface._finalize_pi_c
+        stub = _Stub()
+        stub._pi_c_stats = {'sum': 0.0, 'sumsq': 0.0, 'n': 0}
+        self.assertRaises(stub.InvalidCmd, stub._finalize_pi_c)
+        stub._pi_c_stats = {'sum': 0.0, 'sumsq': 4.0, 'n': 2}
+        self.assertRaises(stub.InvalidCmd, stub._finalize_pi_c)
 
 
 class TestProductionPolarizationPlumbing(unittest.TestCase):

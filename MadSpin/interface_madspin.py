@@ -164,12 +164,19 @@ class MadSpinOptions(banner.ConfigFile):
                        comment="pure-interference mode: keep ONLY the interference between two "
                        "polarisations of a decaying particle in the production/decay density "
                        "convolution. Syntax 'set pure_interference t = 0 T' (production-side set "
-                       "= decay-side set), several particles separated by ';'. Each side is one or "
-                       "more of 0, +/R, -/L, T and the two sides must be disjoint. The production "
-                       "process must be UNPOLARISED (the interference between two polarisations "
-                       "does not exist in a sample generated with a brace on that leg). The sample "
-                       "then has zero total cross-section by construction and its event weights "
-                       "carry a sign; see MADSPIN_SEQUENTIAL_PLAN.md section 13.")
+                       "= decay-side set); each side is one or more of 0, +/R, -/L, T. Two "
+                       "DISJOINT sides name that particle's interference block I; two IDENTICAL "
+                       "sides name its diagonal block (so 'set pure_interference t~ = - -' is D-), "
+                       "and a partial overlap is refused. Use ONE 'set' line per particle -- "
+                       "repeated lines accumulate; ';' cannot be used because every card line is "
+                       "split on it. A particle the option does not name is left unrestricted, "
+                       "i.e. summed over its whole basis. At least one particle must carry a "
+                       "genuine (disjoint) interference block. The production process must be "
+                       "UNPOLARISED on the legs given an I block (the interference between two "
+                       "polarisations does not exist in a sample generated with a brace on that "
+                       "leg). The sample then has zero total cross-section by construction, and "
+                       "its event weights are SIGNED and fully weighted, w = sigma*BR*W/c; see "
+                       "MADSPIN_SEQUENTIAL_PLAN.md section 13.")
         self.add_param('keep_weight_for_polarization_vector', [], typelist=str,
                        comment="density spin modes only. Polarisations (0, +, -, T; "
                        "L/R accepted as aliases of -/+) offered to each decaying "
@@ -1057,18 +1064,84 @@ class MadSpinInterface(extended_cmd.Cmd):
         elif args[0] == 'Nevents_for_max_weigth':
             args[0] = 'Nevents_for_max_weight'
         
+    # Options whose repeated ``set`` lines ACCUMULATE instead of overwriting.
+    # ``pure_interference`` is a per-particle mapping, and the one-line spelling
+    # for several particles cannot be written: extended_cmd.Cmd.precmd splits
+    # every card line on ';' and dispatches the pieces as separate commands, so
+    #
+    #     set pure_interference t = + - ; t~ = + -
+    #
+    # loses the t~ half. One ``set`` line per particle is the only spelling that
+    # survives, so it has to be the one that works.
+    ACCUMULATING_OPTIONS = ('pure_interference',)
+
     def do_set(self, line):
         """ add one of the options """
         
         args = self.split_arg(line)
         self.check_set(args)
 
-        self.options[args[0]] = ' '.join(args[1:])
+        value = ' '.join(args[1:])
+        if args[0] in self.ACCUMULATING_OPTIONS:
+            previous = (self.options[args[0]] or '').strip()
+            if previous and value.strip():
+                value = '%s ; %s' % (previous, value.strip())
+            # the parsed form is memoised; a second set line has to invalidate it
+            self._pure_interference_cache = None
+        self.options[args[0]] = value
         # ConfigFile only fills user_set through its own set(); record it here
         # so options that are otherwise taken from the production run_card
         # (frame_id, beampol) can still be overridden from the MadSpin card.
         self.options.user_set.add(args[0].strip().lower())
         
+
+    def default(self, line, log=True):
+        """Unrecognised command.
+
+        One case is not a typo but a silently wrong physics result, so it is
+        promoted to an error: the ``;`` spelling of a multi-particle
+        ``pure_interference``. ``extended_cmd.Cmd.precmd`` splits card lines on
+        ``;`` and dispatches the pieces, so
+
+            set pure_interference t = + - ; t~ = + -
+
+        reaches ``do_set`` as ``t = + -`` (a perfectly valid single-particle
+        request) followed by the orphan ``t~ = + -``, which lands here. The run
+        would then produce a different, valid-looking sample with nothing but a
+        generic warning. Refuse instead, and say what to write.
+        """
+        if self._looks_like_pure_interference_entry(line):
+            raise self.InvalidCmd(
+                "MadSpin: '%s' is not a command. It looks like the tail of a "
+                "';'-separated pure_interference specification -- and ';' can "
+                "never work, because every MadSpin card line is split on it "
+                "and the pieces are run as separate commands, so the tail is "
+                "lost and the run would quietly use only the first particle. "
+                "Write one 'set' line per particle instead; repeated lines "
+                "accumulate:\n"
+                "    set pure_interference t  = + -\n"
+                "    set pure_interference t~ = + -" % line.strip())
+        return super(MadSpinInterface, self).default(line, log=log)
+
+    def _looks_like_pure_interference_entry(self, line):
+        """Whether ``line`` parses as a bare ``particle = polA polB`` entry, the
+        shape a ';'-truncated pure_interference specification leaves behind."""
+        text = line.split('#')[0].strip()
+        if not text:
+            return False
+        sep = '=' if '=' in text else (':' if ':' in text else None)
+        if sep is None:
+            return False
+        name, _, sides = text.partition(sep)
+        name = name.strip()
+        if not name or ' ' in name:
+            return False
+        parts = sides.split()
+        if len(parts) != 2:
+            return False
+        tokens = [t.strip().upper()
+                  for part in parts for t in part.replace(',', ' ').split()]
+        return bool(tokens) and all(t in self._POL_TOKENS for t in tokens)
 
     def complete_set(self,  text, line, begidx, endidx):
         
@@ -5836,6 +5909,19 @@ class MadSpinInterface(extended_cmd.Cmd):
         contains *both* polarisations, i.e. an unpolarised production, which by
         definition carries no brace to inherit. See
         MADSPIN_SEQUENTIAL_PLAN.md section 13.5.
+
+        Two disjoint sides name the interference block ``I`` of that particle;
+        two *identical* sides name its diagonal block ``D_S`` (the normalised
+        form collapses ``(S, S)`` back to the symmetric restriction ``S``), so
+        a mixed block such as ``(I, D-)`` of ``t t~`` is written
+
+            set pure_interference t  = + -
+            set pure_interference t~ = - -
+
+        Repeated ``set`` lines accumulate (see ``ACCUMULATING_OPTIONS``); a
+        particle the card does **not** name is left unrestricted, i.e. summed
+        over its whole helicity basis, which is neither ``I`` nor ``D+`` nor
+        ``D-`` but their sum.
         """
         cached = getattr(self, '_pure_interference_cache', None)
         if cached is not None:
@@ -5893,16 +5979,24 @@ class MadSpinInterface(extended_cmd.Cmd):
                     "MadSpin: both sides of the pure_interference entry '%s' "
                     "must be non-empty." % entry)
             overlap = set(prod).intersection(dec)
-            if overlap:
-                # an overlap re-admits diagonal entries, so the restricted
-                # trace stops vanishing and the block stops being "pure
-                # interference" -- refuse rather than warn (section 13.6)
+            if overlap and set(prod) != set(dec):
+                # a *partial* overlap mixes a diagonal piece into an off-diagonal
+                # block: neither an interference term nor a polarised one, and
+                # the restricted trace no longer vanishes. That is what the
+                # disjointness rule was protecting against -- refuse it.
+                # Two EQUAL sides are a different thing: they normalise back to
+                # the plain symmetric restriction (DensityMatrix.
+                # normalize_hel_restriction collapses (S, S) -> S), i.e. the
+                # diagonal block D_S, and that is how the card names the
+                # diagonal factor of a mixed block such as (I, D-).
                 raise self.InvalidCmd(
                     "MadSpin: the two sides of the pure_interference entry "
-                    "'%s' share the helicit%s %s. They must be disjoint: a "
-                    "shared state puts a diagonal entry back into the block, "
-                    "which then carries cross-section and is no longer a pure "
-                    "interference term."
+                    "'%s' overlap in the helicit%s %s without being equal. "
+                    "They must be either disjoint -- an interference (I) block "
+                    "-- or identical -- a diagonal (D) block. A partial "
+                    "overlap is neither: it puts some diagonal entries back "
+                    "into an off-diagonal block, so it carries cross-section "
+                    "and is no longer a pure interference term."
                     % (entry, 'y' if len(overlap) == 1 else 'ies',
                        ', '.join(str(h) for h in sorted(overlap))))
             if pdg in out and out[pdg] != (prod, dec):
@@ -5926,6 +6020,52 @@ class MadSpinInterface(extended_cmd.Cmd):
                 "modes (madspin/full/PA/onshell); spinmode=%s builds no "
                 "spin-density matrix to restrict."
                 % self.options['spinmode'])
+
+        # keep_weight_for_polarization_*: refused, not repaired.
+        #
+        # _polarization_ratios writes ``nominal * restricted/full`` into the
+        # <rwgt> block. In this mode ``full`` is the *interference* contraction:
+        # a signed quantity that passes through zero, so the ratios can be
+        # arbitrarily large and can flip sign, while the numerators are ordinary
+        # symmetric diagonal blocks. Nothing about the product means "the
+        # polarised part of this event".
+        #
+        # Swapping in the unrestricted contraction as the denominator would make
+        # the *ratio* well defined but not the product: ``evt.wgt`` is the signed
+        # interference weight, and multiplying it by the polarised fraction of a
+        # different quantity still is not the polarised part of anything. The
+        # diagonal blocks these weights select are precisely the terms this mode
+        # removes. There is no combination that means something, so the only
+        # option that cannot silently produce garbage is to refuse it.
+        if self._polarization_weights_enabled():
+            raise self.InvalidCmd(
+                "MadSpin: keep_weight_for_polarization_vector/_fermion cannot "
+                "be combined with pure_interference. Those weights are "
+                "'nominal x (polarised block / full contraction)', and in this "
+                "mode the nominal weight is a signed interference weight while "
+                "the polarised blocks are exactly the diagonal terms the mode "
+                "removes -- the product is not the polarised part of anything, "
+                "and with the interference contraction as the denominator the "
+                "ratio also passes through zero. Run the polarised blocks as "
+                "their own samples instead (a production brace, or a diagonal "
+                "pure_interference entry), and drop "
+                "keep_weight_for_polarization_* from this card.")
+
+        # At least one particle must carry a genuine *interference* (disjoint)
+        # pair. A card that names only diagonal blocks selects an ordinary
+        # polarised sub-sample: it has a cross-section, its restricted trace
+        # does not vanish, and every piece of this mode -- the zeroed <init>,
+        # the signed weights, the z test, the separate trace restriction -- is
+        # then wrong. Refuse rather than produce it under this name.
+        if not any(set(prod).isdisjoint(dec) for prod, dec in pure.values()):
+            raise self.InvalidCmd(
+                "MadSpin: every pure_interference entry names a DIAGONAL block "
+                "(the two sides are identical), so nothing interferes. At "
+                "least one particle must be given two disjoint sides, e.g. "
+                "'set pure_interference t = + -'. Diagonal entries are for the "
+                "other legs of a mixed block, such as (I, D-):\n"
+                "    set pure_interference t  = + -\n"
+                "    set pure_interference t~ = - -")
 
         # A particle the card names but that MadSpin never decays would leave
         # the mode silently inert while the signed weights and the zeroed
