@@ -123,7 +123,7 @@ Side note worth one check before anything is built: `c = 2.2457e-10 +- 0.45%`
 and `1/(m_t Gamma_t)^4 = 2.256e-10` for the default SM card (`m_t = 173.0`,
 `Gamma_t = 1.4915`) -- i.e. `c` looks like exactly `1/prod_denominators`, the
 Breit-Wigner constant `calculate_matrix_element_from_density` divides by
-(`interface_madspin.py:~8000`, `D = complex(0, mass*width); prod_denominators *= D*D.conj()`).
+(`interface_madspin.py:8000-8001`, `D = complex(0, mass*width); prod_denominators *= D*D.conjugate()`).
 Agreement is 0.45%, one sigma of the measurement. If that holds, `c` is
 *analytic* and free. It should be verified, not assumed -- see the robust route
 in 1.3.
@@ -194,10 +194,10 @@ a substitute.
 | item | effect |
 |---|---|
 | `<init>` XSECUP / XERRUP / XMAXUP | already zeroed today (`_report_pure_interference` -> `_rewrite_lhe_banner_cross(base_out, 0.0, ...)`, `interface_madspin.py:4093`). Unchanged by either option. |
-| Pythia / showering | already impossible (`XSECUP = 0`); the code warns about it (`interface_madspin.py:5811-5823`). Neither option makes it worse; neither fixes it. The existing `interference_init_cross measured\|zero\|reference` idea from plan 13.7c is the fix for that, orthogonal to this. |
+| Pythia / showering | already impossible (`XSECUP = 0`); the code warns about it (`interface_madspin.py:5816-5826`). Neither option makes it worse; neither fixes it. The existing `interference_init_cross measured\|zero\|reference` idea from plan 13.7c is the fix for that, orthogonal to this. |
 | `sum(w)`-based tooling | `sum(w) ~ 0` either way. Today's magnitude is an active decoy: it reads `sigma*BR`, the *unpolarised* cross-section, which is wrong by `maxwgt/c` (3.09x under (A)) or by `<|W|>/c` (~4x the other way under (B)) and the factor is run-dependent. Both options make the magnitude mean something. |
 | multi-weight `<rwgt>` entries | scaled by the same `br` (`interface_madspin.py:3904-3905`), so they follow automatically under either option. |
-| `keep_weight_for_polarization_*` | **already broken in this mode, independently of this question.** `_polarization_ratios` computes `restricted/full` with `full = me` = the *interference* contraction (`interface_madspin.py:8016-8018`), while the numerators are ordinary symmetric diagonal blocks. The denominator is a signed quantity that passes through zero, so the ratios can be arbitrarily large and sign-flipping, and `_add_polarization_weights` then writes `evt.wgt * ratio` (`interface_madspin.py:6293`). These weights do not mean "the C-polarised fraction of this event" in this mode. Nothing validates the combination. Either refuse the two options together, or define the denominator to be the unrestricted contraction. This is a third issue, smaller than the two known ones but real. |
+| `keep_weight_for_polarization_*` | **already broken in this mode, independently of this question.** `_polarization_ratios` computes `restricted/full` with `full = me` = the *interference* contraction (`interface_madspin.py:8009` and `8017`), while the numerators are ordinary symmetric diagonal blocks. The denominator is a signed quantity that passes through zero, so the ratios can be arbitrarily large and sign-flipping, and `_add_polarization_weights` then writes `evt.wgt * ratio` (`interface_madspin.py:6293`). These weights do not mean "the C-polarised fraction of this event" in this mode. Nothing validates the combination. Either refuse the two options together, or define the denominator to be the unrestricted contraction. This is a third issue, smaller than the two known ones but real. |
 
 ### 1.4 Recommendation for Question 1
 
