@@ -5000,6 +5000,238 @@ class TestGetPdirUnpackArity(unittest.TestCase):
             self.assertNotIn('self.%s' % cache, source)
 
 
+class TestDecayedEventsPath(unittest.TestCase):
+    """The legacy (madspin_v1) decay writes its events to an intermediate
+    ``decayed_events.lhe`` and the interface then gzips that file into
+    ``<events>_decayed.lhe.gz``. Writer and reader used to spell the directory
+    out separately -- ``decay_all_events.decaying_events`` used ``path_me``,
+    ``MadSpinInterface.do_launch``/``run_from_pickle`` used ``curr_dir`` -- and
+    disagreed whenever those two differ.
+
+    They differ exactly when ``ms_dir`` is set *and* ``curr_dir`` is not the
+    ms_dir. That is not exotic: ``post_set_ms_dir`` points ``curr_dir`` at the
+    ms_dir, so a card that says ``set ms_dir`` and *then* imports the event file
+    gets ``curr_dir`` pointed back at the event file's directory by
+    ``do_import``. The whole (expensive) decay then completes -- correct
+    branching ratio, all events written, correct <init> -- and the run dies on
+    the very last step with FileNotFoundError on a file that is sitting in the
+    ms_dir. Without ``ms_dir`` the two coincide by construction (``path_me`` is
+    *defined* as ``realpath(curr_dir)``), which is why this never showed up in
+    the common case.
+
+    ``curr_dir`` is the correct end: it is the run's output directory, whereas
+    ``path_me`` means "where the matrix-element directories live" everywhere
+    else it is used, and under ``ms_dir`` it is a directory built once and
+    reused by later runs.
+
+    These tests pin the two ends *together* rather than each to a literal, so a
+    future edit to either side cannot re-open the gap without failing here. No
+    MadEvent round trip is needed: the disagreement is entirely about paths.
+    """
+
+    NAME = 'decayed_events.lhe'
+
+    def setUp(self):
+        import tempfile
+        self.tmpdir = tempfile.mkdtemp(prefix='ms_decayed_path_')
+        self.evt_dir = pjoin(self.tmpdir, 'events')
+        self.ms_dir = pjoin(self.tmpdir, 'gridpack')
+        os.makedirs(self.evt_dir)
+        os.makedirs(self.ms_dir)
+
+    def tearDown(self):
+        shutil.rmtree(self.tmpdir, ignore_errors=True)
+
+    # ------------------------------------------------------------------
+    # helpers
+    # ------------------------------------------------------------------
+
+    class _Interface(object):
+        """Stands in for the live MadSpinInterface: the accessor only needs its
+        ``options``."""
+        def __init__(self, options):
+            self.options = options
+
+    def _options(self, ms_dir=None, curr_dir=None):
+        """A real MadSpinOptions, driven the way a card drives it -- so the
+        ``set ms_dir`` -> ``import`` interaction that creates the mismatch is
+        reproduced by the production code, not imitated here."""
+        options = interface_madspin.MadSpinOptions()
+        if ms_dir:
+            options['ms_dir'] = ms_dir          # post_set_ms_dir moves curr_dir
+        if curr_dir:
+            options['curr_dir'] = curr_dir      # ...and do_import moves it back
+        return options
+
+    def _writer(self, options):
+        """A ``decay_all_events`` with only what the accessor touches. Built
+        without ``__init__`` on purpose: constructing the real thing needs a
+        banner, a model and a compiled matrix element, none of which has any say
+        in where the output goes."""
+        writer = object.__new__(madspin.decay_all_events)
+        writer.options = options
+        writer.mscmd = self._Interface(options)
+        # path_me exactly as decay_all_events.__init__ computes it
+        writer.path_me = os.path.realpath(options['curr_dir'])
+        if options['ms_dir']:
+            writer.path_me = os.path.realpath(options['ms_dir'])
+        return writer
+
+    @staticmethod
+    def _reader_path(writer):
+        """What the interface gzips. Kept as a named indirection so it is
+        obvious that ``test_both_gzip_call_sites_use_the_accessor`` is what
+        makes this stand for the real read sites."""
+        return writer.decayed_events_path
+
+    # ------------------------------------------------------------------
+    # the two ends agree
+    # ------------------------------------------------------------------
+
+    def test_writer_and_reader_agree_without_ms_dir(self):
+        writer = self._writer(self._options(curr_dir=self.evt_dir))
+        self.assertEqual(os.path.realpath(writer.decayed_events_path),
+                         os.path.realpath(self._reader_path(writer)))
+        self.assertEqual(os.path.realpath(os.path.dirname(
+                             writer.decayed_events_path)),
+                         os.path.realpath(self.evt_dir))
+
+    def test_writer_and_reader_agree_with_ms_dir(self):
+        """The regression: ms_dir set, curr_dir left pointing at the event file
+        (a card that imports after ``set ms_dir``)."""
+        options = self._options(ms_dir=self.ms_dir, curr_dir=self.evt_dir)
+        # the setup really is the mismatching one
+        self.assertNotEqual(os.path.realpath(options['curr_dir']),
+                            os.path.realpath(options['ms_dir']))
+        writer = self._writer(options)
+        self.assertEqual(os.path.realpath(writer.decayed_events_path),
+                         os.path.realpath(self._reader_path(writer)))
+
+    def test_writer_and_reader_agree_when_ms_dir_is_curr_dir(self):
+        """The historically working case -- a card that sets ms_dir and lets
+        post_set_ms_dir carry curr_dir with it -- must stay working."""
+        options = self._options(ms_dir=self.ms_dir)
+        self.assertEqual(os.path.realpath(options['curr_dir']),
+                         os.path.realpath(self.ms_dir))
+        writer = self._writer(options)
+        self.assertEqual(os.path.realpath(writer.decayed_events_path),
+                         os.path.realpath(self._reader_path(writer)))
+        self.assertEqual(os.path.realpath(os.path.dirname(
+                             writer.decayed_events_path)),
+                         os.path.realpath(self.ms_dir))
+
+    # ------------------------------------------------------------------
+    # ...and agree on the *right* directory
+    # ------------------------------------------------------------------
+
+    def test_the_output_goes_to_curr_dir_and_not_into_the_ms_dir(self):
+        """Fixing this at the other end -- teaching the reader to look in
+        path_me -- would also have silenced the traceback, and would have been
+        wrong: it would leave per-run event output inside a gridpack directory
+        that later runs reuse and may share."""
+        writer = self._writer(self._options(ms_dir=self.ms_dir,
+                                            curr_dir=self.evt_dir))
+        self.assertEqual(os.path.realpath(os.path.dirname(
+                             writer.decayed_events_path)),
+                         os.path.realpath(self.evt_dir))
+        self.assertNotEqual(os.path.realpath(writer.decayed_events_path),
+                            os.path.realpath(pjoin(writer.path_me, self.NAME)))
+
+    def test_without_ms_dir_path_me_and_curr_dir_still_coincide(self):
+        """The no-ms_dir case is the one most likely to break if the fix is made
+        at the wrong end, so pin that the file lands where it always did."""
+        writer = self._writer(self._options(curr_dir=self.evt_dir))
+        self.assertEqual(os.path.realpath(writer.decayed_events_path),
+                         os.path.realpath(pjoin(writer.path_me, self.NAME)))
+
+    # ------------------------------------------------------------------
+    # the accessor reads the live run, not the pickled one
+    # ------------------------------------------------------------------
+
+    def test_the_path_follows_the_live_interface_not_the_stored_options(self):
+        """Under ms_dir the writer is restored from ``madspin.pkl``, so its own
+        ``options`` are those of the run that *built* the gridpack -- including
+        that run's curr_dir. ``run_from_pickle`` re-points ``mscmd`` at the live
+        interface, so the accessor must read the location from there."""
+        stale_dir = pjoin(self.tmpdir, 'the_run_that_built_the_gridpack')
+        os.makedirs(stale_dir)
+        writer = self._writer(self._options(ms_dir=self.ms_dir,
+                                            curr_dir=stale_dir))
+        # what run_from_pickle does: hand the restored object the live interface
+        live = self._options(ms_dir=self.ms_dir, curr_dir=self.evt_dir)
+        writer.mscmd = self._Interface(live)
+        self.assertEqual(os.path.realpath(os.path.dirname(
+                             writer.decayed_events_path)),
+                         os.path.realpath(self.evt_dir))
+        self.assertNotIn('the_run_that_built_the_gridpack',
+                         writer.decayed_events_path)
+
+    # ------------------------------------------------------------------
+    # a real write/read round trip
+    # ------------------------------------------------------------------
+
+    def _round_trip(self, options):
+        """Write at the writer's path, gzip from the reader's path, exactly as
+        decaying_events and do_launch do."""
+        writer = self._writer(options)
+        with open(writer.decayed_events_path, 'w') as fsock:
+            fsock.write('<LesHouchesEvents version="1.0">\n'
+                        '</LesHouchesEvents>\n')
+        out = pjoin(self.tmpdir, 'events_decayed.lhe')
+        misc.gzip(self._reader_path(writer), stdout=out)
+        return out + '.gz'
+
+    def test_round_trip_without_ms_dir(self):
+        import gzip as gziplib
+        out = self._round_trip(self._options(curr_dir=self.evt_dir))
+        self.assertTrue(os.path.exists(out))
+        self.assertIn('LesHouchesEvents', gziplib.open(out, 'rt').read())
+
+    def test_round_trip_with_ms_dir(self):
+        """On the buggy code this raised FileNotFoundError -- after the whole
+        decay had already been done."""
+        import gzip as gziplib
+        out = self._round_trip(self._options(ms_dir=self.ms_dir,
+                                             curr_dir=self.evt_dir))
+        self.assertTrue(os.path.exists(out))
+        self.assertIn('LesHouchesEvents', gziplib.open(out, 'rt').read())
+
+    # ------------------------------------------------------------------
+    # nobody rebuilds the path by hand any more
+    # ------------------------------------------------------------------
+
+    def test_the_writer_opens_the_accessor(self):
+        source = inspect.getsource(madspin.decay_all_events.decaying_events)
+        self.assertIn('self.decayed_events_path', source)
+        self.assertNotIn(self.NAME, source)
+
+    def test_both_gzip_call_sites_use_the_accessor(self):
+        """This is what lets the round-trip tests above stand for the real read
+        sites: neither of them may rebuild the path from an option.
+
+        Read from the module file rather than through ``inspect.getsource`` on
+        the methods: ``do_launch`` is wrapped by ``misc.mute_logger`` and
+        getsource returns the decorator's body."""
+        with open(interface_madspin.__file__.replace('.pyc', '.py')) as fsock:
+            source = fsock.read()
+        self.assertEqual(
+            source.count('misc.gzip(generate_all.decayed_events_path'), 2,
+            'do_launch and run_from_pickle must both ask the writer where the '
+            'decayed events are')
+        self.assertNotIn("pjoin(self.options['curr_dir'],'%s')" % self.NAME,
+                         source)
+
+    def test_the_accessor_is_not_derived_from_path_me(self):
+        """path_me is the matrix-element directory; the guard is here because
+        making the traceback go away by pointing the *reader* at path_me is the
+        tempting wrong fix."""
+        source = inspect.getsource(
+            madspin.decay_all_events.decayed_events_path.fget)
+        code = source.split('"""')[-1]
+        self.assertNotIn('path_me', code)
+        self.assertIn("curr_dir", code)
+
+
 class TestZeroDensityGuard(unittest.TestCase):
     """The guards that turn a MadSpin accept/reject which can never accept into
     an immediate, named failure instead of an unbounded retry loop.

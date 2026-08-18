@@ -1659,8 +1659,11 @@ class MadSpinInterface(extended_cmd.Cmd):
             pass
         misc.gzip(evt_path)
         decayed_evt_file=evt_path.replace('.lhe', '_decayed.lhe')
-        misc.gzip(pjoin(self.options['curr_dir'],'decayed_events.lhe'),
-                  stdout=decayed_evt_file)
+        # Ask the writer where it put the file rather than rebuilding the path
+        # here: the two used to be spelled out separately and disagreed as soon
+        # as ms_dir was set and curr_dir was not the ms_dir (see
+        # decay_all_events.decayed_events_path).
+        misc.gzip(generate_all.decayed_events_path, stdout=decayed_evt_file)
         if not self.mother:
             logger.info("Decayed events have been written in %s.gz" % decayed_evt_file)
 
@@ -1775,10 +1778,11 @@ class MadSpinInterface(extended_cmd.Cmd):
             pass
         misc.gzip(evt_path)
         decayed_evt_file=evt_path.replace('.lhe', '_decayed.lhe')
-        misc.gzip(pjoin(self.options['curr_dir'],'decayed_events.lhe'),
-                  stdout=decayed_evt_file)
+        # Same shared accessor as do_launch -- and this path is *only* reachable
+        # with ms_dir set, so it was the one always exposed to the mismatch.
+        misc.gzip(generate_all.decayed_events_path, stdout=decayed_evt_file)
         if not self.mother:
-            logger.info("Decayed events have been written in %s.gz" % decayed_evt_file)    
+            logger.info("Decayed events have been written in %s.gz" % decayed_evt_file)
     
     
 
