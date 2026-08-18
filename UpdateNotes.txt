@@ -5,6 +5,16 @@ ANNOUNCEMENT:
    A new LTS (based on the current 3.5.X) is starting now and will act as the stable release for the coming years.
 
 3.7.3 (XX/XX/XX):
+    OM: BUG FIX (MadSpin): when two or more final-state particles with the same PDG code were decayed
+        via *different* decay lines -- e.g. "p p > z z" with "decay z > e+ e-" and "decay z > u u~" --
+        the two decay branches were paired with the two mothers in reverse order. The spin-correlated
+        weight of a given mother was therefore evaluated with one decay branch while the decay products
+        of the other branch were attached to it. Decay angular distributions were consequently wrong
+        (in p p > z z the lepton/quark helicity angle is off by ~45 sigma on a 200k event sample), while
+        the cross-section, the branching ratios, the decay-plane angle and the spin-correlation
+        observable <cos(theta_1) cos(theta_2)> were left exactly invariant -- which is why this stayed
+        unnoticed. Processes where each decayed particle carries a distinct PDG code (t t~, w+ w-, ...)
+        were never affected.
     OM: BUG FIX (polarisation): LO cross-sections computed with a run_card "me_frame" that selects a
         single particle -- e.g. "me_frame = 3" to work in the Z rest frame, which is the standard way
         to ask for the polarisation of that Z -- were wrong for a fraction of the events.
