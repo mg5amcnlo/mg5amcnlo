@@ -4699,9 +4699,17 @@ class DensityMatrix:
     # Cache tensor-product helicity tables by basis_id
     _tp_hel_cache = {}
 
-    # Cache helicity-restriction row masks.
+    # Cache helicity-restriction row selections.
     # Key: (basis_id, normalised restriction key)
+    # Value: (mask[bool], rows[int64], diag_rows[int64]) -- see _restriction_rows
     _restriction_cache = {}
+
+    # Same, but for the sorted-alignment path: the surviving positions *within*
+    # the cached sort permutation. Filled lazily, since the map-built fast path
+    # never needs a sort order at all.
+    # Key: (basis_id, normalised restriction key)
+    # Value: (keep[int64], sorted_rows[int64])
+    _restriction_sort_cache = {}
 
     def __init__(self, array, nchanging, all_helicity_combinations, dimension):
         """
@@ -4958,14 +4966,24 @@ class DensityMatrix:
         self.hel_restriction = DensityMatrix.normalize_hel_restriction(restriction)
         return self
 
-    def _restriction_row_mask(self, restriction):
-        """Boolean row mask implementing ``restriction`` on this matrix' labels.
+    def _restriction_rows(self, restriction):
+        """(mask, rows, diag_rows) implementing ``restriction`` on this matrix.
 
-        Depends only on the helicity labels, so it is cached per
-        (basis_id, restriction) and never recomputed per event.
+        ``mask`` is the boolean row mask, ``rows`` the indices of the surviving
+        rows and ``diag_rows`` the indices surviving *and* diagonal (what the
+        restricted trace sums). All three depend only on the helicity labels, so
+        they are cached per (basis_id, restriction) and never recomputed per
+        event.
+
+        The contractions use ``rows``/``diag_rows`` rather than ``mask``: a
+        restriction typically keeps a handful of rows out of hundreds, and
+        gathering with a short index array is markedly cheaper than boolean
+        indexing, which has to scan (and count) the full-length array. The rows
+        come out in increasing index order, i.e. exactly the order boolean
+        indexing would have produced, so the sums are bit-for-bit identical.
         """
         if restriction is None:
-            return None
+            return None, None, None
         cache_key = (self._basis_id, restriction)
         cached = DensityMatrix._restriction_cache.get(cache_key)
         if cached is not None:
@@ -4982,8 +5000,34 @@ class DensityMatrix:
             mask &= np.isin(h[:, 2 * k], allowed)
             mask &= np.isin(h[:, 2 * k + 1], allowed)
 
-        DensityMatrix._restriction_cache[cache_key] = mask
-        return mask
+        out = (mask, np.flatnonzero(mask), np.flatnonzero(self._diag_mask & mask))
+        DensityMatrix._restriction_cache[cache_key] = out
+        return out
+
+    def _restriction_row_mask(self, restriction):
+        """Boolean row mask implementing ``restriction`` on this matrix' labels."""
+        return self._restriction_rows(restriction)[0]
+
+    def _restriction_sorted_rows(self, restriction):
+        """(keep, sorted_rows) for the sorted-alignment path.
+
+        ``keep`` are the positions inside the cached sort permutation whose row
+        survives, and ``sorted_rows`` the rows themselves (``sort_order[keep]``).
+        Contracting ``self.values[sorted_rows]`` against
+        ``other.values[other_sort_order[keep]]`` visits exactly the entries, in
+        exactly the order, that masking the two sorted views would have.
+
+        Requires ``_ensure_sorted_view`` to have run.
+        """
+        cache_key = (self._basis_id, restriction)
+        cached = DensityMatrix._restriction_sort_cache.get(cache_key)
+        if cached is not None:
+            return cached
+        order = self._sort_order
+        keep = np.flatnonzero(self._restriction_rows(restriction)[0][order])
+        out = (keep, order[keep])
+        DensityMatrix._restriction_sort_cache[cache_key] = out
+        return out
 
     @staticmethod
     def _combine_restrictions(a, b):
@@ -5055,14 +5099,13 @@ class DensityMatrix:
         if hel_restriction is not None:
             restriction = DensityMatrix._combine_restrictions(
                 restriction, DensityMatrix.normalize_hel_restriction(hel_restriction))
-        mask = self._restriction_row_mask(restriction)
-
         # Fastest correct path for map-built matrices
         if (self.map_density_matrix_ind is not None and
                 self.map_density_matrix_ind is other.map_density_matrix_ind):
-            if mask is None:
+            if restriction is None:
                 return np.sum(self.values * other.values)
-            return np.sum(self.values[mask] * other.values[mask])
+            rows = self._restriction_rows(restriction)[1]
+            return np.sum(self.values[rows] * other.values[rows])
 
         # Align by cached ordering for each basis
         self._ensure_sorted_view()
@@ -5070,12 +5113,13 @@ class DensityMatrix:
 
         a = self._sort_order
         b = other._sort_order
-        if mask is None:
+        if restriction is None:
             return np.sum(self.values[a] * other.values[b])
-        # the mask lives on self's rows; permuting it with the same order keeps
-        # it aligned with both sorted views
-        aligned = mask[a]
-        return np.sum(self.values[a][aligned] * other.values[b][aligned])
+        # the restriction lives on self's rows; the surviving positions inside
+        # the sort permutation are the same on both sides, so one cached gather
+        # does the masking and the alignment at once
+        keep, rows = self._restriction_sorted_rows(restriction)
+        return np.sum(self.values[rows] * other.values[b[keep]])
 
     def tensor_product(self, other):
         """
@@ -5191,10 +5235,9 @@ class DensityMatrix:
         if hel_restriction is not None:
             restriction = DensityMatrix._combine_restrictions(
                 restriction, DensityMatrix.normalize_hel_restriction(hel_restriction))
-        mask = self._restriction_row_mask(restriction)
-        if mask is None:
+        if restriction is None:
             return np.sum(self.values[self._diag_mask])
-        return np.sum(self.values[self._diag_mask & mask])
+        return np.sum(self.values[self._restriction_rows(restriction)[2]])
 
 
     def print_full_matrix(self, precision=6):

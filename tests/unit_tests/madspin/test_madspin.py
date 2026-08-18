@@ -1306,6 +1306,53 @@ class TestDensityPolarizationRestriction(unittest.TestCase):
         self.assertIsNot(a._restriction_row_mask(a.hel_restriction),
                          a._restriction_row_mask(((-1, 1),)))
 
+    def test_restricted_paths_are_bit_identical_to_masking(self):
+        """The contractions gather the surviving rows by index instead of by
+        boolean mask. That is a speed change only: the rows come out in
+        increasing index order either way, so the sums must agree *exactly*,
+        not merely to within a tolerance."""
+        import numpy as np
+        import itertools
+        for hels in ([self.FERMION], [self.VECTOR],
+                     [self.FERMION, self.VECTOR],
+                     [self.VECTOR, self.FERMION, self.VECTOR]):
+            dim = 1
+            for h in hels:
+                dim *= len(h)
+            allowed_hel = [h for combo in itertools.product(*hels) for h in combo]
+            prod = madspin.DensityMatrix(self._packed(list(range(dim)), 101),
+                                         len(hels), allowed_hel, dim)
+            dec = None
+            for i, h in enumerate(hels):
+                d = self._density(h, 102 + i)
+                dec = d if dec is None else dec.tensor_product(d)
+            choices = [[None] + [(x,) for x in h] + [tuple(h[:2])] for h in hels]
+            for restriction in itertools.product(*choices):
+                prod.set_hel_restriction(list(restriction))
+                r = prod.hel_restriction
+                if r is None:
+                    continue
+                mask = prod._restriction_row_mask(r)
+                rows = prod._restriction_rows(r)[1]
+                self.assertTrue(np.array_equal(rows, np.flatnonzero(mask)))
+                # trace: same elements, same order
+                self.assertEqual(prod.trace(),
+                                 np.sum(prod.values[prod._diag_mask & mask]))
+                # contraction, both the map fast path (dec is prod's basis for
+                # one particle) and the sorted-alignment path
+                for lhs, rhs in ((dec, prod), (prod, dec)):
+                    m = lhs._restriction_row_mask(r)
+                    if (lhs.map_density_matrix_ind is not None and
+                            lhs.map_density_matrix_ind is rhs.map_density_matrix_ind):
+                        want = np.sum(lhs.values[m] * rhs.values[m])
+                    else:
+                        lhs._ensure_sorted_view()
+                        rhs._ensure_sorted_view()
+                        a, b = lhs._sort_order, rhs._sort_order
+                        aligned = m[a]
+                        want = np.sum(lhs.values[a][aligned] * rhs.values[b][aligned])
+                    self.assertEqual(lhs.scalar_multiplication(rhs), want)
+
     def test_contradicting_restrictions_are_refused(self):
         hel = self.FERMION
         a = self._density(hel, 81, restriction=[(1,)])
