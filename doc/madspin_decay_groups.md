@@ -250,7 +250,7 @@ This is where the cost is.
   multiplies by `|groups|` — with the same probe-splitting problem, and each fit
   needs enough samples for its quadratic in `ln(m/pole)` to be determined.
 
-* **Cache format.** `_OFFSHELL_CACHE_FORMAT` must be bumped: the bound vector and
+* **Cache format.** `_UPFRONT_CACHE_FORMAT` must be bumped: the bound vector and
   the table keys both change meaning, and an `ms_dir` written by today's code
   must not be read back.
 

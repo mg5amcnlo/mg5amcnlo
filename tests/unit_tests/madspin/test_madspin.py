@@ -35,6 +35,7 @@ import madgraph.various.banner as banner
 import copy
 import array
 import collections
+import inspect
 import math
 
 import madgraph.core.base_objects as MG
@@ -45,7 +46,28 @@ import MadSpin.interface_madspin as interface_madspin
 import models.import_ufo as import_ufo
 
 
-from madgraph import MG5DIR
+from madgraph import MG5DIR, MadGraph5Error
+
+
+def _borrow_decision_helpers(namespace):
+    """Add the small spinmode/scheme predicates that `_unweighting_mode` and
+    `_sequential_upfront`/`_sequential_offshell` are built on to a stub class
+    namespace. Call as ``_borrow_decision_helpers(locals())`` from the class
+    body of any stub that borrows one of those.
+
+    getattr_static keeps the staticmethod wrappers intact.
+    """
+    for name in ('_auto_unweighting_mode', '_density_pole_approximation',
+                 '_density_do_reshuffle', '_density_needs_reshuffle',
+                 '_spinmode_has_density', '_is_upfront_scheme',
+                 # _auto_unweighting_mode's polarisation branch is built on
+                 # these two; a stub that does not seed
+                 # _production_polarization_cache gets '{}' out of it, since
+                 # there is no banner to read a proc_card from.
+                 '_density_spinmode', '_production_polarization'):
+        namespace[name] = inspect.getattr_static(
+            interface_madspin.MadSpinInterface, name)
+    return namespace
 #
 class TestBanner(unittest.TestCase):
     """Test class for the reading of the banner"""
@@ -185,6 +207,85 @@ class TestBanner(unittest.TestCase):
                          out.split(';')[:-1])       
 
           
+
+class _ProcCardBanner(object):
+    """Minimal banner stand-in exposing only the proc_card lines."""
+
+    def __init__(self, proc_card):
+        self.proc_card = proc_card
+
+
+class _ProcCardInterface(object):
+    """Minimal MadSpinInterface stand-in.
+
+    generate_all_matrix_element only reads banner.proc_card, list_branches and
+    options, so a full interface (which needs an event file and a model) is not
+    required to reach the '@' order-restriction check.
+    """
+
+    def __init__(self, proc_card):
+        self.banner = _ProcCardBanner(proc_card)
+        self.list_branches = {}
+        self.options = {'global_order_coupling': ''}
+
+
+class TestOrderRestrictionError(unittest.TestCase):
+    """An invalid order restriction after '@' must report what is wrong.
+
+    interface_madspin.generate_all_matrix_element used to raise a bare
+    'MadSpinError', a name that module never imports.  The int(proc_nb)
+    ValueError therefore led to 'NameError: name MadSpinError is not defined'
+    raised *during* the handling of that ValueError, and the intended
+    diagnostic was lost.
+    """
+
+    bad_line = 'generate p p > t t~ @NLO'
+
+    def test_interface_reports_the_invalid_order_restriction(self):
+        """the interface copy of the check raises MadSpinError, not NameError"""
+
+        cmd = _ProcCardInterface([self.bad_line])
+        gen = interface_madspin.MadSpinInterface.generate_all_matrix_element
+
+        self.assertRaises(madspin.MadSpinError, gen, cmd)
+
+        try:
+            gen(cmd)
+        except madspin.MadSpinError as error:
+            # the offending token has to be in the message, otherwise the user
+            # cannot tell which process line to fix
+            self.assertIn('NLO', str(error))
+            self.assertIn('order restriction after the @ comment', str(error))
+            # raised from inside 'except ValueError', so the int() failure is
+            # the chained context; what matters is that the *raised* error is
+            # the MadSpin one and not a NameError from the handler itself
+            self.assertNotIsInstance(error, NameError)
+            self.assertIsInstance(error, MadGraph5Error)
+
+    def test_decay_path_reports_the_same_error(self):
+        """the decay.py copy of the same check stays consistent with it"""
+
+        # no '[' in the process, so the model is never looked at before the
+        # order-restriction check
+        self.assertRaises(madspin.MadSpinError,
+                          madspin.decay_all_events.get_proc_with_decay,
+                          self.bad_line, 't > w+ b', None)
+
+    def test_valid_order_restriction_passes_the_check(self):
+        """a numeric '@' tag is accepted: the guard does not fire"""
+
+        cmd = _ProcCardInterface(['generate p p > t t~ @1'])
+        gen = interface_madspin.MadSpinInterface.generate_all_matrix_element
+
+        # the method is still unfinished further down, so it raises something
+        # else; the point is that it is no longer the order-restriction error
+        try:
+            gen(cmd)
+        except madspin.MadSpinError as error:
+            self.fail('valid order restriction rejected: %s' % error)
+        except Exception:
+            pass
+
 
 class TestDensity(unittest.TestCase):
     """Test class for the reading of the lhe input file"""
@@ -2583,6 +2684,10 @@ class TestSequentialAcceptReject(unittest.TestCase):
                 interface._polarization_weight_labels
             _polarization_weights_enabled = \
                 interface._polarization_weights_enabled
+            # the zero-density / dead-trial guards live on the same loop
+            _check_production_density = interface._check_production_density
+            _raise_degenerate_weight = interface._raise_degenerate_weight
+            _dead_trial = interface._dead_trial
             _scan_maxwgt_range = interface._scan_maxwgt_range
             _sequential_offshell = interface._sequential_offshell
             _sequential_upfront = interface._sequential_upfront
@@ -2593,6 +2698,7 @@ class TestSequentialAcceptReject(unittest.TestCase):
             _unweighting_mode = interface._unweighting_mode
             _announce_mode = interface._announce_mode
             _log_once = interface._log_once
+            _borrow_decision_helpers(locals())
             _beampol = interface._beampol
             _frame_boost = interface._frame_boost
             _production_polarization = staticmethod(lambda: {})
@@ -2787,6 +2893,10 @@ class TestPAUpFrontMass(unittest.TestCase):
                 interface._polarization_weight_labels
             _polarization_weights_enabled = \
                 interface._polarization_weights_enabled
+            # the zero-density / dead-trial guards live on the same loop
+            _check_production_density = interface._check_production_density
+            _raise_degenerate_weight = interface._raise_degenerate_weight
+            _dead_trial = interface._dead_trial
             _upfront_production = interface._upfront_production
             _sequential_offshell = interface._sequential_offshell
             _sequential_upfront = interface._sequential_upfront
@@ -2796,6 +2906,7 @@ class TestPAUpFrontMass(unittest.TestCase):
             _unweighting_mode = interface._unweighting_mode
             _announce_mode = interface._announce_mode
             _log_once = interface._log_once
+            _borrow_decision_helpers(locals())
             _beampol = interface._beampol
             _frame_boost = interface._frame_boost
             _production_polarization = staticmethod(lambda: {})
@@ -3064,8 +3175,7 @@ class TestSequentialPoolLadder(unittest.TestCase):
             _log_once = interface._log_once
             _sequential_spin_order = interface._sequential_spin_order
             _decay_pool_ladder = staticmethod(interface._decay_pool_ladder)
-            _density_spinmode = interface._density_spinmode
-            _production_polarization = interface._production_polarization
+            _borrow_decision_helpers(locals())
         stub = Stub()
         stub.model = self._Model(spins)
         stub.options = {'unweighting': 'sequential', 'fixed_order': False,
@@ -3427,6 +3537,7 @@ class TestOffshellRateFactor(unittest.TestCase):
         _unweighting_mode = interface_madspin.MadSpinInterface._unweighting_mode
         _announce_mode = interface_madspin.MadSpinInterface._announce_mode
         _log_once = interface_madspin.MadSpinInterface._log_once
+        _borrow_decision_helpers(locals())
         _build_z_tables = interface_madspin.MadSpinInterface._build_z_tables
         _weighted_polyfit2 = staticmethod(
                         interface_madspin.MadSpinInterface._weighted_polyfit2)
@@ -3690,20 +3801,21 @@ class TestTwoStageMassDistribution(unittest.TestCase):
             self._assert_close(self._run(zhat, exact=True), self._target(), 0.03)
 
 
-class TestOffshellCache(unittest.TestCase):
-    """The offshell sequential bounds travel with the Z_k tables that complete
-    them, so the cache holds two coupled objects and must not be read back under
-    a schema it was not written with.  A mismatch is ignored rather than raised
-    on: the scan is reproducible, so re-measuring is always available, whereas a
-    table dereferenced under the wrong schema would either crash inside the
-    accept/reject or silently weight the virtualities with the wrong fit.
+class TestUpfrontCache(unittest.TestCase):
+    """The up-front-mass sequential bounds travel with the Z_k tables that
+    complete them, so the cache holds two coupled objects and must not be read
+    back under a schema it was not written with.  A mismatch is ignored rather
+    than raised on: the scan is reproducible, so re-measuring is always
+    available, whereas a table dereferenced under the wrong schema would either
+    crash inside the accept/reject or silently weight the virtualities with the
+    wrong fit.
     """
 
     class _Stub(object):
-        _OFFSHELL_CACHE_FORMAT = \
-            interface_madspin.MadSpinInterface._OFFSHELL_CACHE_FORMAT
-        _read_offshell_cache = \
-            interface_madspin.MadSpinInterface._read_offshell_cache
+        _UPFRONT_CACHE_FORMAT = \
+            interface_madspin.MadSpinInterface._UPFRONT_CACHE_FORMAT
+        _read_upfront_cache = \
+            interface_madspin.MadSpinInterface._read_upfront_cache
 
     def _write(self, payload):
         import json, tempfile
@@ -3714,19 +3826,19 @@ class TestOffshellCache(unittest.TestCase):
         return path
 
     def _good(self):
-        return {'format': self._Stub._OFFSHELL_CACHE_FORMAT,
+        return {'format': self._Stub._UPFRONT_CACHE_FORMAT,
                 'maxwgts': [17.0, 2.3, 3.9],
                 'z_tables': {'6_0': {'pole': 173.0, 'coeff': [0.0, 2.0, -1.0],
                                      'zero_below': 0.0, 'range': [150.0, 195.0]}}}
 
     def test_round_trip(self):
-        got = self._Stub()._read_offshell_cache(self._write(self._good()))
+        got = self._Stub()._read_upfront_cache(self._write(self._good()))
         self.assertEqual(got['maxwgts'], [17.0, 2.3, 3.9])
         self.assertEqual(got['z_tables']['6_0']['pole'], 173.0)
 
     def test_missing_file_is_not_an_error(self):
-        self.assertIsNone(self._Stub()._read_offshell_cache('/no/such/file'))
-        self.assertIsNone(self._Stub()._read_offshell_cache(''))
+        self.assertIsNone(self._Stub()._read_upfront_cache('/no/such/file'))
+        self.assertIsNone(self._Stub()._read_upfront_cache(''))
 
     def test_every_malformed_shape_is_ignored(self):
         """Each of these would otherwise surface as a KeyError, an IndexError or
@@ -3749,7 +3861,7 @@ class TestOffshellCache(unittest.TestCase):
         cases['a malformed range'] = window
         for name, payload in cases.items():
             self.assertIsNone(
-                self._Stub()._read_offshell_cache(self._write(payload)), name)
+                self._Stub()._read_upfront_cache(self._write(payload)), name)
 
     def test_garbage_is_ignored(self):
         import tempfile
@@ -3757,7 +3869,7 @@ class TestOffshellCache(unittest.TestCase):
         with os.fdopen(handle, 'w') as f:
             f.write('not json at all')
         self.addCleanup(os.remove, path)
-        self.assertIsNone(self._Stub()._read_offshell_cache(path))
+        self.assertIsNone(self._Stub()._read_upfront_cache(path))
 
 
 class TestPolyfitConditioning(unittest.TestCase):
@@ -4174,3 +4286,805 @@ class TestDecayGroupDraw(unittest.TestCase):
         evt_decayfile = {6: dict((i, self._Pool('c%d' % i)) for i in range(4))}
         out = stub.get_decay_from_file(production, evt_decayfile, 10)
         self.assertEqual([d.split(':')[0] for d in out[6]], ['c2', 'c3'])
+
+
+class TestUnweightingDecisionTable(unittest.TestCase):
+    """The upfront / unweighting decision logic, exhaustively.
+
+    `_unweighting_mode` and the predicates built on it (`_sequential_active`,
+    `_sequential_upfront`, `_sequential_offshell`, `_sequential_pool_ladder`)
+    decide, per run, how the accept/reject is organised. The branching is
+    spinmode-specific and layered -- `auto` resolves on the spinmode family and
+    the decay multiplicity, then several fallbacks can still send the run back
+    to the joint test -- so it is pinned here over *every* reachable
+    combination, against the rules restated independently of the implementation
+    (`_reference_mode` below, written from the `unweighting` option comment).
+    """
+
+    # every declared spinmode, plus 'bridge' and a name no branch knows about
+    SPINMODES = ('full', 'madspin', 'none', 'onshell', 'PA', 'madspin_v1',
+                 'onshell_v1', 'bridge', 'not_a_spinmode')
+    UNWEIGHTING = ('auto', 'joint', 'two_stage', 'sequential',
+                   'sequential_global_retry', 'sequential_with_mass')
+    NB_DECAYING = (0, 1, 2, 3, 4, 7)
+    POLE_APPROXIMATION = ('PA', 'onshell')
+    DENSITY_SPINMODES = ('madspin', 'full', 'PA', 'onshell')
+    # 'p p > t{+} t~{+}' as _production_polarization reports it
+    POLARIZATIONS = (None, {6: ((1,),), -6: ((1,),)})
+
+    class _Part(object):
+        def __init__(self, spin):
+            self.spin = spin
+
+        def get(self, key):
+            assert key == 'spin'
+            return self.spin
+
+    class _Model(object):
+        SPINS = {6: 2, -6: 2, 24: 3, 23: 3, 25: 1}
+
+        def get_particle(self, pdg):
+            if pdg not in self.SPINS:
+                raise Exception('unknown particle')
+            return TestUnweightingDecisionTable._Part(self.SPINS[pdg])
+
+    class _Stub(object):
+        """The real methods, on the smallest object that can carry them."""
+        for _name in ('_unweighting_mode', '_auto_unweighting_mode',
+                      '_announce_mode', '_log_once', '_sequential_active',
+                      '_sequential_upfront', '_sequential_offshell',
+                      '_sequential_pool_ladder', '_sequential_spin_order',
+                      '_decay_pool_ladder', '_density_pole_approximation',
+                      '_density_do_reshuffle', '_density_needs_reshuffle',
+                      '_spinmode_has_density', '_is_upfront_scheme',
+                      '_density_spinmode', '_production_polarization'):
+            # getattr_static keeps the staticmethod wrappers intact
+            locals()[_name] = inspect.getattr_static(
+                interface_madspin.MadSpinInterface, _name)
+        del _name
+
+        def __init__(self, spinmode='madspin', unweighting='auto',
+                     nb_decaying=2, fixed_order=False, decay_groups=None,
+                     polarization=None):
+            self.options = {'spinmode': spinmode, 'unweighting': unweighting,
+                            'fixed_order': fixed_order,
+                            'sequential_spin_order': '2 3 1'}
+            self._nb_decaying = nb_decaying
+            self._decay_groups = decay_groups
+            # seed _production_polarization's cache rather than a banner: '{}'
+            # is what it returns for a process line without braces
+            self._production_polarization_cache = polarization or {}
+            self.model = TestUnweightingDecisionTable._Model()
+            self._logged_once = set()
+
+    @classmethod
+    def _reference_mode(cls, spinmode, unweighting, nb_decaying, fixed_order,
+                        decay_groups, polarization, density_method):
+        """The rules as documented on the `unweighting` option, restated here
+        rather than read off the implementation, so this is a check and not a
+        tautology."""
+        if not density_method:
+            return 'joint'                       # only scheme outside density
+        mode = unweighting
+        if mode == 'auto':
+            if spinmode in cls.POLE_APPROXIMATION:
+                mode = 'sequential'              # fastest at every measured n
+            elif polarization and spinmode in cls.DENSITY_SPINMODES:
+                mode = 'sequential'              # restricted convolution: the
+                                                 # joint weight sits orders of
+                                                 # magnitude below its bound
+            elif nb_decaying <= 2:
+                mode = 'joint'                   # offshell, too few decays
+            else:
+                mode = 'sequential'
+        if mode == 'joint':
+            return 'joint'
+        if fixed_order:
+            return 'joint'                       # counter-events ride along
+        if decay_groups:
+            return 'joint'                       # '@' groups self-normalise
+        if spinmode not in ('PA', 'onshell', 'madspin', 'full'):
+            return 'joint'                       # no density matrix to stage
+        if (mode == 'sequential_with_mass'
+                and spinmode not in cls.POLE_APPROXIMATION):
+            return 'sequential'                  # needs a per-particle mass
+        return mode
+
+    def _cases(self):
+        for spinmode in self.SPINMODES:
+            for unweighting in self.UNWEIGHTING:
+                for nb_decaying in self.NB_DECAYING:
+                    for fixed_order in (False, True):
+                        for groups in (None, {'tags': ['1', '2']}):
+                            for pol in self.POLARIZATIONS:
+                                for density_method in (True, False):
+                                    yield (spinmode, unweighting, nb_decaying,
+                                           fixed_order, groups, pol,
+                                           density_method)
+
+    def test_every_combination_matches_the_documented_rules(self):
+        seen = set()
+        for case in self._cases():
+            stub = self._Stub(*case[:6])
+            got = stub._unweighting_mode(case[6])
+            seen.add(got)
+            self.assertEqual(got, self._reference_mode(*case), msg=str(case))
+        # the table is not degenerate: every scheme is reachable through it
+        self.assertEqual(seen, {'joint', 'two_stage', 'sequential',
+                                'sequential_global_retry',
+                                'sequential_with_mass'})
+
+    def test_auto_resolves_on_the_family_then_the_multiplicity(self):
+        """Spelled out, since it is the branch a user never sets by hand:
+        sequential everywhere under PA/onshell, joint offshell up to two
+        decaying particles and sequential from three -- and sequential at every
+        multiplicity once the production carries a polarisation brace."""
+        pol = self.POLARIZATIONS[1]
+        for spinmode in ('madspin', 'full', 'PA', 'onshell'):
+            for nb in self.NB_DECAYING:
+                stub = self._Stub(spinmode, 'auto', nb, polarization=pol)
+                self.assertEqual(stub._auto_unweighting_mode(), 'sequential',
+                                 ('polarised', spinmode, nb))
+        for spinmode in ('PA', 'onshell'):
+            for nb in self.NB_DECAYING:
+                self.assertEqual(
+                    self._Stub(spinmode, 'auto', nb)._auto_unweighting_mode(),
+                    'sequential', (spinmode, nb))
+        for spinmode in ('madspin', 'full'):
+            for nb, expected in ((0, 'joint'), (1, 'joint'), (2, 'joint'),
+                                 (3, 'sequential'), (4, 'sequential'),
+                                 (7, 'sequential')):
+                self.assertEqual(
+                    self._Stub(spinmode, 'auto', nb)._auto_unweighting_mode(),
+                    expected, (spinmode, nb))
+
+    def test_auto_without_a_measured_multiplicity_assumes_two(self):
+        """`_nb_decaying` is set while the decays are prepared; anything asking
+        before that must not crash."""
+        stub = self._Stub('madspin', 'auto')
+        del stub._nb_decaying
+        self.assertEqual(stub._unweighting_mode(), 'joint')
+
+    def test_sequential_active_is_exactly_not_joint(self):
+        for case in self._cases():
+            stub = self._Stub(*case[:6])
+            self.assertEqual(stub._sequential_active(case[6]),
+                             stub._unweighting_mode(case[6]) != 'joint',
+                             msg=str(case))
+
+    def test_upfront_is_every_scheme_but_joint_and_with_mass(self):
+        for mode, expected in (('joint', False), ('two_stage', True),
+                               ('sequential', True),
+                               ('sequential_global_retry', True),
+                               ('sequential_with_mass', False)):
+            self.assertEqual(self._Stub()._is_upfront_scheme(mode), expected,
+                             mode)
+        for case in self._cases():
+            stub = self._Stub(*case[:6])
+            self.assertEqual(
+                stub._sequential_upfront(case[6]),
+                stub._unweighting_mode(case[6]) not in
+                    ('joint', 'sequential_with_mass'),
+                msg=str(case))
+
+    def test_with_mass_falls_back_to_sequential_offshell_only(self):
+        """It needs a per-particle mass draw; the offshell spinmodes reshuffle
+        the whole production onto the mass set at once."""
+        for spinmode in ('PA', 'onshell'):
+            stub = self._Stub(spinmode, 'sequential_with_mass', 2)
+            self.assertEqual(stub._unweighting_mode(), 'sequential_with_mass')
+            self.assertFalse(stub._sequential_upfront())
+        for spinmode in ('madspin', 'full'):
+            stub = self._Stub(spinmode, 'sequential_with_mass', 2)
+            self.assertEqual(stub._unweighting_mode(), 'sequential')
+            self.assertTrue(stub._sequential_upfront())
+
+    def test_the_spinmode_family_predicates(self):
+        for spinmode in self.SPINMODES:
+            stub = self._Stub(spinmode)
+            self.assertEqual(stub._density_pole_approximation(),
+                             spinmode in ('PA', 'onshell'), spinmode)
+            self.assertEqual(stub._density_do_reshuffle(), spinmode == 'PA',
+                             spinmode)
+            self.assertEqual(stub._spinmode_has_density(),
+                             spinmode in ('PA', 'onshell', 'madspin', 'full'),
+                             spinmode)
+            # offshell is exactly the complement of the pole approximation
+            self.assertEqual(stub._sequential_offshell(),
+                             not stub._density_pole_approximation(), spinmode)
+
+    def test_needs_reshuffle_is_offshell_or_pa_inside_density_mode(self):
+        for spinmode in self.SPINMODES:
+            stub = self._Stub(spinmode)
+            self.assertFalse(stub._density_needs_reshuffle(False), spinmode)
+            self.assertEqual(bool(stub._density_needs_reshuffle(True)),
+                             spinmode != 'onshell', spinmode)
+
+    def test_pool_ladder_is_empty_unless_a_staged_scheme_is_in_use(self):
+        to_decay, nb_event = {6: 100, -6: 100}, 100
+        for case in self._cases():
+            stub = self._Stub(*case[:6])
+            ladder = stub._sequential_pool_ladder(dict(to_decay), nb_event,
+                                                  case[6])
+            if stub._unweighting_mode(case[6]) == 'joint':
+                self.assertEqual(ladder, {}, msg=str(case))
+            else:
+                self.assertEqual(sorted(ladder), [-6, 6], msg=str(case))
+                self.assertEqual(sorted(ladder.values()), [1.5, 2.0],
+                                 msg=str(case))
+
+    def test_pool_ladder_gives_up_on_a_particle_the_model_does_not_know(self):
+        stub = self._Stub('PA', 'sequential', 2)
+        self.assertEqual(stub._sequential_pool_ladder({6: 100, 999: 100}, 100,
+                                                      True), {})
+
+
+class TestCheckWeightIdentitySlotPairing(unittest.TestCase):
+    """_check_weight_identity: the PA branch undoes each accepted decay's boost
+    with ``parents[slot]``, and picks the slot with a free-running index over
+    the *grouped* walk of the ``decays`` dict.
+
+    Those two orderings coincide by construction, and this pins that down:
+
+      * ``_sequential_slots`` lays the slots out as "for pdg in decays_key, for
+        particle in production order", so a pdg owns a *contiguous* block of
+        slots and the blocks come in decays_key order;
+      * ``sequential_accept_reject`` builds the returned dict by ascending slot
+        (``for slot in range(len(order))``), never in accept/reject order --
+        ``_decay_slot_order`` decides which slot is *drawn* next and must never
+        permute the layout;
+      * so the dict's keys are in decays_key order, each pdg's list is that
+        pdg's slot block in ascending order, and the flat walk enumerates
+        slots 0 .. n-1.
+
+    A mis-pairing here would undo a boost with another particle's momentum and
+    corrupt the joint weight the check compares against. It is a *debug-only*
+    path (``sequential_debug``), so it could never move a physics result -- but
+    a silently wrong cross-check is worse than none.
+    """
+
+    MT = 173.0
+    MW = 79.8
+
+    # production final states, deliberately interleaved so that slot order and
+    # production order genuinely differ
+    LAYOUTS = {
+        # p p > t t~ t : slots are (t@0, t@2, t~@1) -- slot 1 belongs to the
+        # *third* final-state particle, so a free-running index over the
+        # production would hand it the anti-top
+        'ttxt': [6, -6, 6],
+        # three pdgs, two of them owning two slots each
+        'ttxwtxw': [6, -6, 24, -6, 24],
+        # a single pdg owning every slot
+        'tttt': [6, 6, 6, 6],
+    }
+
+    @staticmethod
+    def _energy(m, px, py, pz):
+        return math.sqrt(m * m + px * px + py * py + pz * pz)
+
+    @staticmethod
+    def _lhe(parts):
+        head = (' %d      1 +1.0000000e+00 1.00000000e+02 7.54677100e-03'
+                ' 1.17102600e-01' % len(parts))
+        lines = [head]
+        for (pid, status, m1, m2, px, py, pz, energy, mass) in parts:
+            lines.append(' %5d %2d %4d %4d    0    0 %+.10e %+.10e %+.10e'
+                         ' %.10e %.10e 0.0000e+00 9.0000e+00'
+                         % (pid, status, m1, m2, px, py, pz, energy, mass))
+        return '<event>\n' + '\n'.join(lines) + '\n</event>'
+
+    def _mass(self, pid):
+        return self.MW if abs(pid) == 24 else self.MT
+
+    def _production(self, pids):
+        """A production event whose final state carries ``pids``, each with its
+        own distinctive momentum so a mis-paired boost cannot go unnoticed."""
+        momenta = [(60.0 + 17 * i, 30.0 - 23 * i, 120.0 - 47 * i)
+                   for i in range(len(pids))]
+        tot_pz = sum(p[2] for p in momenta)
+        tot_e = sum(self._energy(self._mass(pid), *mom)
+                    for pid, mom in zip(pids, momenta))
+        parts = [(2, -1, 0, 0, 0.0, 0.0, (tot_e + tot_pz) / 2,
+                  (tot_e + tot_pz) / 2, 0.0),
+                 (-2, -1, 0, 0, 0.0, 0.0, -(tot_e - tot_pz) / 2,
+                  (tot_e - tot_pz) / 2, 0.0)]
+        for pid, (px, py, pz) in zip(pids, momenta):
+            mass = self._mass(pid)
+            parts.append((pid, 1, 1, 2, px, py, pz,
+                          self._energy(mass, px, py, pz), mass))
+        return lhe_parser.Event(self._lhe(parts))
+
+    def _decay_on(self, parent, channel=0):
+        """A two-body decay of ``parent``, built in its rest frame and then
+        boosted onto it -- which is the frame PA hands its accepted decays back
+        in, and the boost _check_weight_identity has to undo.
+
+        ``channel`` picks a different opening angle, i.e. a different decay
+        channel out of the pool: the pairing must not depend on it.
+        """
+        mass = self._mass(parent.pid)
+        sign = 1 if parent.pid > 0 else -1
+        half = mass / 2.0
+        angle = 0.3 + 0.7 * channel
+        parts = [(parent.pid, -1, 0, 0, 0.0, 0.0, 0.0, mass, mass),
+                 (sign * 5, 1, 1, 1, half * math.sin(angle), 0.0,
+                  half * math.cos(angle), half, 0.0),
+                 (sign * -5, 1, 1, 1, -half * math.sin(angle), 0.0,
+                  -half * math.cos(angle), half, 0.0)]
+        decay = lhe_parser.Event(self._lhe(parts))
+        # rest -> lab: Event.boost takes the event *into* the rest frame of the
+        # momentum it is given (it flips the spatial part), so the momentum
+        # that boosts out of it is the parent with its 3-momentum reversed
+        decay.boost(lhe_parser.FourMomentum(parent.E, -parent.px,
+                                            -parent.py, -parent.pz))
+        return decay
+
+    def _slots(self, production, pools):
+        interface = interface_madspin.MadSpinInterface
+        decays_key = interface._decaying_pdgs(production, pools)
+        particles, slot_to_index = interface._sequential_slots(production,
+                                                               decays_key)
+        # exactly what _density_basis puts in init_part, i.e. what PA hands
+        # _check_weight_identity as ``parents``
+        init_part = [part for pdg in decays_key for part in production
+                     if part.pid == pdg and part.status == 1]
+        return decays_key, particles, slot_to_index, init_part
+
+    @staticmethod
+    def _pools(pids):
+        # two decay channels per pdg: grouped iteration then has something to
+        # group, and the pool multiplicity must not enter the pairing
+        return dict((pid, {0: 'f', 1: 'f'}) for pid in set(pids))
+
+    @staticmethod
+    def _build_decays(particles, slot_to_index, slot_decays):
+        """The dict layout sequential_accept_reject returns -- copied verbatim
+        from its tail, so this test tracks it."""
+        decays = collections.defaultdict(list)
+        for slot in range(len(slot_to_index)):
+            decays[particles[slot_to_index[slot]].pid].append(slot_decays[slot])
+        return decays
+
+    # ------------------------------------------------------------------
+    # the ordering invariant itself
+    # ------------------------------------------------------------------
+
+    def test_grouped_walk_enumerates_the_slots_in_order(self):
+        """The flat index over decays.items() *is* the slot index, for every
+        layout -- including one where slot order and production order differ."""
+        for name, pids in self.LAYOUTS.items():
+            production = self._production(pids)
+            _, particles, slot_to_index, init_part = \
+                            self._slots(production, self._pools(pids))
+            slot_decays = dict((slot, ('slot', slot))
+                               for slot in range(len(slot_to_index)))
+            decays = self._build_decays(particles, slot_to_index, slot_decays)
+
+            index = 0
+            for pdg, decay_list in decays.items():
+                for decay in decay_list:
+                    self.assertEqual(decay[1], index,
+                                     '%s: grouped index %d is slot %d'
+                                     % (name, index, decay[1]))
+                    # and therefore parents[index] is that slot's particle
+                    self.assertIs(init_part[index],
+                                  particles[slot_to_index[decay[1]]])
+                    self.assertEqual(init_part[index].pid, pdg)
+                    index += 1
+            self.assertEqual(index, len(slot_to_index))
+
+    def test_slot_order_really_differs_from_production_order(self):
+        """Guard on the guard: if the layouts stopped being interleaved the
+        test above would pass vacuously."""
+        production = self._production(self.LAYOUTS['ttxt'])
+        _, _, slot_to_index, _ = self._slots(production,
+                                             self._pools(self.LAYOUTS['ttxt']))
+        self.assertEqual(slot_to_index, [0, 2, 1])
+        production = self._production(self.LAYOUTS['ttxwtxw'])
+        _, _, slot_to_index, _ = self._slots(
+                        production, self._pools(self.LAYOUTS['ttxwtxw']))
+        # t t~ W+ t~ W+ -> decays_key is (6, -6, 24), so the slots are
+        # (t@0), (t~@1, t~@3), (W@2, W@4): grouped by pdg, not production order
+        self.assertEqual(slot_to_index, [0, 1, 3, 2, 4])
+
+    def test_every_final_state_layout_pairs_by_slot(self):
+        """Swept over every final state of up to four particles drawn from
+        three pdgs: the invariant is a property of the construction, not of the
+        handful of layouts above."""
+        import itertools
+        interface = interface_madspin.MadSpinInterface
+        for size in range(1, 5):
+            for pids in itertools.product((6, -6, 24), repeat=size):
+                production = self._production(list(pids))
+                _, particles, slot_to_index, init_part = \
+                                self._slots(production, self._pools(pids))
+                slot_decays = dict((slot, slot)
+                                   for slot in range(len(slot_to_index)))
+                decays = self._build_decays(particles, slot_to_index,
+                                            slot_decays)
+                flat = [slot for lst in decays.values() for slot in lst]
+                self.assertEqual(flat, list(range(len(slot_to_index))),
+                                 'layout %s' % (pids,))
+                # the dict keys are decays_key order, i.e. first appearance
+                self.assertEqual(list(decays),
+                                 list(interface._decaying_pdgs(
+                                            production, self._pools(pids))))
+
+    # ------------------------------------------------------------------
+    # and what it buys: the real routine, boosting each decay back
+    # ------------------------------------------------------------------
+
+    class _Stub(object):
+        _check_weight_identity = \
+                interface_madspin.MadSpinInterface._check_weight_identity
+
+        def calculate_matrix_element_from_density(self, prod, decays, dd):
+            self.seen = decays
+            return 1.0, None, 1.0, 1.0, 1.0
+
+    def _run_check(self, production, decays, parents, nslot):
+        stub = self._Stub()
+        stats = collections.defaultdict(int)
+        stub._check_weight_identity(production, decays, {}, 1.0,
+                                    [[1, -1]] * nslot, stats,
+                                    offshell=False, keep_jac=False,
+                                    parents=parents)
+        return stub.seen, stats
+
+    def test_each_decay_is_boosted_by_its_own_slot_parent(self):
+        """The observable consequence: every decay was handed back boosted onto
+        its own parent, so undoing that boost with parents[slot] must leave
+        every mother at rest. Pairing slot k with anything else leaves it
+        moving."""
+        for name, pids in self.LAYOUTS.items():
+            production = self._production(pids)
+            _, particles, slot_to_index, init_part = \
+                            self._slots(production, self._pools(pids))
+            nslot = len(slot_to_index)
+            slot_decays = dict((slot, self._decay_on(init_part[slot],
+                                                     channel=slot % 2))
+                               for slot in range(nslot))
+            decays = self._build_decays(particles, slot_to_index, slot_decays)
+
+            seen, stats = self._run_check(production, decays, init_part, nslot)
+            self.assertEqual(stats['nb_identity_check'], 1)
+            nb = 0
+            for pdg, decay_list in seen.items():
+                for copy_evt in decay_list:
+                    mother = copy_evt[0]
+                    for comp in (mother.px, mother.py, mother.pz):
+                        self.assertAlmostEqual(comp, 0.0, places=5,
+                                               msg='%s: mother not at rest'
+                                                   % name)
+                    self.assertAlmostEqual(mother.E, self._mass(pdg), places=4)
+                    nb += 1
+            self.assertEqual(nb, nslot)
+
+    def test_swapping_two_same_pdg_decays_is_caught(self):
+        """The negative control the test above needs: give slot 0 the decay of
+        slot 1 (both tops, so no pdg tells them apart) and the boost no longer
+        undoes -- which is exactly the corruption a free-running index that did
+        not match the slots would produce."""
+        pids = self.LAYOUTS['ttxt']
+        production = self._production(pids)
+        _, particles, slot_to_index, init_part = \
+                        self._slots(production, self._pools(pids))
+        slot_decays = dict((slot, self._decay_on(init_part[slot]))
+                           for slot in range(len(slot_to_index)))
+        slot_decays[0], slot_decays[1] = slot_decays[1], slot_decays[0]
+        decays = self._build_decays(particles, slot_to_index, slot_decays)
+
+        seen, _ = self._run_check(production, decays, init_part,
+                                  len(slot_to_index))
+        moving = [max(abs(evt[0].px), abs(evt[0].py), abs(evt[0].pz))
+                  for lst in seen.values() for evt in lst]
+        self.assertEqual(sum(1 for m in moving if m > 1e-3), 2)
+
+    def test_production_order_parents_trip_the_assertion(self):
+        """And the cross-pdg case the assertion in _check_weight_identity
+        covers: selecting the parent by a free-running index over the
+        *production* final state instead of by slot hands slot 1 the anti-top.
+        That must be loud, not silently wrong."""
+        pids = self.LAYOUTS['ttxt']
+        production = self._production(pids)
+        _, particles, slot_to_index, init_part = \
+                        self._slots(production, self._pools(pids))
+        self.assertNotEqual([p.pid for p in particles],
+                            [p.pid for p in init_part])
+        slot_decays = dict((slot, self._decay_on(init_part[slot]))
+                           for slot in range(len(slot_to_index)))
+        decays = self._build_decays(particles, slot_to_index, slot_decays)
+        self.assertRaises(AssertionError, self._run_check, production, decays,
+                          particles, len(slot_to_index))
+
+
+class _InterStub(object):
+    """Just enough of MadSpinInterface for ``get_inter_value``: the pdir->callable
+    caches and a ``get_pdir`` with the *real* return arity."""
+
+    PDIR = 'P0_dummy'
+    ORDER = ((1, -1), (3, -3))
+
+    def __init__(self):
+        # the four caches MadSpinInterface.__init__ creates
+        self.all_amp = {self.PDIR: lambda P, hel, IC: float(sum(hel))}
+        self.all_jamp = {self.PDIR: lambda amp: [amp]}
+        self.all_inter = {self.PDIR: lambda ja, jb: ja[0] * jb[0]}
+        self.all_matrix = {}
+
+    def get_pdir(self, event):
+        # mirrors MadSpinInterface.get_pdir: (pdir, orig_order, prefix, pos, tag)
+        return self.PDIR, self.ORDER, 'pref_', 0, self.ORDER
+
+    get_inter_value = interface_madspin.MadSpinInterface.get_inter_value
+
+
+class _InterEvent(object):
+    """``get_inter_value`` only ever asks the event for its momenta."""
+
+    def get_all_momenta(self, orig_order):
+        return [[(1., 0., 0., 1.), (1., 0., 0., -1.),
+                 (1., 0., 1., 0.), (1., 0., -1., 0.)]]
+
+
+class TestGetPdirUnpackArity(unittest.TestCase):
+    """``get_pdir`` grew from returning 2 values to 4 (single f2py library) to 5
+    (loop-induced production) without every call site following along, and the
+    result is a ``ValueError: too many values to unpack`` that only shows up when
+    the call is actually made. These tests turn that into a test failure instead:
+    change ``get_pdir``'s return and the arity check below goes red."""
+
+    SOURCE = pjoin(MG5DIR, 'MadSpin', 'interface_madspin.py')
+
+    # ``_frame_boost`` still unpacks 4 on this branch; its fix travels with the
+    # frame/beampol PR (#355). Drop this entry once that has landed.
+    KNOWN_PENDING = set(['_frame_boost'])
+
+    def _tree(self):
+        import ast
+        with open(self.SOURCE) as fsock:
+            return ast.parse(fsock.read()), ast
+
+    def _interface_class(self):
+        tree, ast = self._tree()
+        for node in tree.body:
+            if isinstance(node, ast.ClassDef) and node.name == 'MadSpinInterface':
+                return node, ast
+        self.fail('MadSpinInterface not found in %s' % self.SOURCE)
+
+    def _return_arity(self):
+        """number of values ``MadSpinInterface.get_pdir`` returns"""
+        klass, ast = self._interface_class()
+        for meth in klass.body:
+            if isinstance(meth, ast.FunctionDef) and meth.name == 'get_pdir':
+                arities = [len(n.value.elts) for n in ast.walk(meth)
+                           if isinstance(n, ast.Return) and n.value is not None
+                           and isinstance(n.value, ast.Tuple)]
+                self.assertTrue(arities, 'get_pdir returns no tuple')
+                self.assertEqual(len(set(arities)), 1,
+                                 'get_pdir returns tuples of differing length: %s'
+                                 % arities)
+                return arities[0]
+        self.fail('MadSpinInterface.get_pdir not found')
+
+    def _call_sites(self):
+        """[(method name, line, number of targets)] for every ``... = self.get_pdir(...)``"""
+        klass, ast = self._interface_class()
+        out = []
+        for meth in klass.body:
+            if not isinstance(meth, ast.FunctionDef):
+                continue
+            for node in ast.walk(meth):
+                if not isinstance(node, ast.Assign):
+                    continue
+                call = node.value
+                if not isinstance(call, ast.Call):
+                    continue
+                fct = call.func
+                if not (isinstance(fct, ast.Attribute) and fct.attr == 'get_pdir'):
+                    continue
+                target = node.targets[0]
+                nb = len(target.elts) if isinstance(target, ast.Tuple) else 1
+                out.append((meth.name, node.lineno, nb))
+        return out
+
+    def test_get_pdir_return_arity(self):
+        """the arity the call sites are checked against -- a bump here is the
+        signal to update them all"""
+        self.assertEqual(self._return_arity(), 5)
+
+    def test_every_call_site_matches(self):
+        """every ``self.get_pdir(...)`` unpack in MadSpinInterface agrees with
+        what get_pdir actually returns"""
+        expected = self._return_arity()
+        sites = self._call_sites()
+        # the sweep is worthless if the AST walk found nothing
+        self.assertTrue(len(sites) >= 4, 'no get_pdir call site found')
+        bad = ['%s (line %s) unpacks %s' % (name, line, nb)
+               for name, line, nb in sites
+               if nb != expected and name not in self.KNOWN_PENDING]
+        self.assertEqual(bad, [],
+                         'get_pdir returns %s value(s) but: %s'
+                         % (expected, ', '.join(bad)))
+
+    def test_get_inter_value_runs(self):
+        """the regression proper: get_inter_value used to unpack 2 and died with
+        ``ValueError: too many values to unpack`` on its very first statement"""
+        nhel = [[1, -1, 1, -1], [-1, 1, -1, 1]]
+        inter = _InterStub().get_inter_value(_InterEvent(), nhel)
+        # one entry per (jamp_i, jamp_j) pair, i.e. len(nhel)**2
+        self.assertEqual(len(inter), len(nhel) ** 2)
+class TestZeroDensityGuard(unittest.TestCase):
+    """The guards that turn a MadSpin accept/reject which can never accept into
+    an immediate, named failure instead of an unbounded retry loop.
+
+    Context: in the density spin modes every trial weight is built from the
+    production spin-density matrix. A rho_prod that is identically zero makes
+    every weight zero (offshell) or NaN (PA/onshell, which divide by its trace),
+    so nothing is ever accepted, the decay pools are drained and regenerated for
+    ever and MadSpin never writes an event. These tests pin both that the guards
+    fire on that state and -- the part that matters just as much -- that they
+    cannot fire on a run that is merely inefficient.
+    """
+
+    class _Trace(object):
+        def __init__(self, value):
+            self.real = value
+
+    class _Density(object):
+        """The bit of MadSpin.decay.DensityMatrix the guard touches."""
+        def __init__(self, trace):
+            self._trace = trace
+        def trace(self):
+            return TestZeroDensityGuard._Trace(self._trace)
+
+    class _Event(object):
+        def get_tag_and_order(self):
+            return ((2, -2), (24, -24)), None
+
+    def _stub(self, me_prod=1.0, nb_sigma=0.):
+        interface = interface_madspin.MadSpinInterface
+        class Stub(object):
+            _check_production_density = interface._check_production_density
+            _raise_degenerate_weight = interface._raise_degenerate_weight
+            _dead_trial = interface._dead_trial
+            _combine_maxwgt = interface._combine_maxwgt
+            def calculate_matrix_element(self, event):
+                if me_prod is None:
+                    raise RuntimeError('no matrix element here')
+                return me_prod
+        stub = Stub()
+        stub.options = {'nb_sigma': nb_sigma}
+        return stub
+
+    # ---------------- the production density check ----------------
+
+    def test_a_healthy_density_is_accepted_and_its_trace_returned(self):
+        """The common case must be a pure pass-through: no exception, and the
+        trace handed back so the caller does not recompute it."""
+        stub = self._stub()
+        self.assertEqual(stub._check_production_density(self._Event(),
+                                                        self._Density(3.5)),
+                         3.5)
+
+    def test_a_tiny_but_positive_trace_is_healthy(self):
+        """A small weight is a slow run, not a broken one: the guard keys on
+        zero, never on smallness."""
+        stub = self._stub()
+        self.assertEqual(stub._check_production_density(self._Event(),
+                                                        self._Density(1e-300)),
+                         1e-300)
+
+    def test_zero_trace_raises_and_names_the_cause(self):
+        stub = self._stub(me_prod=1.7e-3)
+        try:
+            stub._check_production_density(self._Event(), self._Density(0.0),
+                                           'joint accept/reject')
+        except interface_madspin.MadSpinDegenerateWeight as error:
+            msg = str(error)
+        else:
+            self.fail('a zero production density matrix must raise')
+        # what happened
+        self.assertIn('production spin-density matrix', msg)
+        self.assertIn('identically zero', msg)
+        self.assertIn('EVERY trial rejected', msg)
+        self.assertIn('joint accept/reject', msg)
+        # why it is not just an unlucky phase-space point
+        self.assertIn('0.0017', msg)
+        # the plausible causes
+        self.assertIn('polarised', msg)
+        self.assertIn('ALLOW_HEL', msg)
+        self.assertIn('ms_dir', msg)
+        self.assertIn('beampol', msg)
+
+    def test_a_nan_trace_raises_too(self):
+        """PA/onshell divide by the trace, so a broken rho shows up as NaN
+        rather than 0; both are 'can never accept'."""
+        stub = self._stub()
+        self.assertRaises(interface_madspin.MadSpinDegenerateWeight,
+                          stub._check_production_density,
+                          self._Event(), self._Density(float('nan')))
+
+    def test_a_vanishing_full_me_is_reported_as_its_own_case(self):
+        """Tr(rho)=0 *and* |M_prod|^2=0 is a different diagnosis -- the event
+        carries no matrix element at all -- and must not be blamed on the
+        helicity basis."""
+        stub = self._stub(me_prod=0.0)
+        try:
+            stub._check_production_density(self._Event(), self._Density(0.0))
+        except interface_madspin.MadSpinDegenerateWeight as error:
+            msg = str(error)
+        else:
+            self.fail('a zero production density matrix must raise')
+        self.assertIn('vanishes as well', msg)
+        self.assertNotIn('which is NOT zero', ' '.join(msg.split()))
+
+    def test_the_cross_check_may_fail_without_hiding_the_error(self):
+        stub = self._stub(me_prod=None)
+        self.assertRaises(interface_madspin.MadSpinDegenerateWeight,
+                          stub._check_production_density,
+                          self._Event(), self._Density(0.0))
+
+    # ---------------- the bounded dead-trial backstop ----------------
+
+    def test_a_positive_weight_resets_the_dead_trial_counter(self):
+        stub = self._stub()
+        self.assertEqual(stub._dead_trial(17, 1e-12, 'x'), 0)
+
+    def test_dead_trials_accumulate_and_raise_at_the_bound(self):
+        stub = self._stub()
+        limit = interface_madspin.MS_MAX_DEAD_TRIALS
+        self.assertEqual(stub._dead_trial(0, 0.0, 'x'), 1)
+        self.assertEqual(stub._dead_trial(limit - 2, 0.0, 'x'), limit - 1)
+        try:
+            stub._dead_trial(limit - 1, 0.0, 'the joint accept/reject')
+        except interface_madspin.MadSpinDegenerateWeight as error:
+            msg = str(error)
+        else:
+            self.fail('an unbounded run of dead trials must raise')
+        self.assertIn('consecutive trials', msg)
+        self.assertIn('the joint accept/reject', msg)
+        self.assertIn('not a low acceptance', msg)
+
+    def test_negative_and_nan_weights_count_as_dead(self):
+        stub = self._stub()
+        for wgt in (0.0, -1.0, float('nan'), float('inf')):
+            self.assertEqual(stub._dead_trial(0, wgt, 'x'), 1)
+
+    def test_an_atrocious_but_correct_efficiency_never_trips_the_bound(self):
+        """The separation that makes this guard safe. A 1-in-100000 acceptance
+        is a slow *correct* run: it burns a huge number of trials, but each one
+        computes a small POSITIVE weight and is merely rejected by the
+        `random()*maxwgt < wgt` test -- which this counter never sees. Only a
+        weight that is itself zero/NaN is counted. Ten times the bound of such
+        trials, with one in ten of them a legitimate zero (an infeasible
+        virtuality), and nothing raises."""
+        stub = self._stub()
+        counter = 0
+        for i in range(10 * interface_madspin.MS_MAX_DEAD_TRIALS):
+            wgt = 0.0 if i % 10 == 0 else 1e-9
+            counter = stub._dead_trial(counter, wgt, 'x')
+            self.assertTrue(counter < interface_madspin.MS_MAX_DEAD_TRIALS)
+
+    # ---------------- the max-weight bound ----------------
+
+    def test_a_healthy_probe_still_gives_a_bound(self):
+        stub = self._stub()
+        self.assertTrue(stub._combine_maxwgt([1.0, 3.0, 2.0, 0.0]) > 0)
+
+    def test_an_all_zero_probe_is_refused(self):
+        """A bound of 0 rejects every trial for ever: `random()*0 < 0` is never
+        true. Refuse it before the unweighting starts."""
+        stub = self._stub()
+        self.assertRaises(interface_madspin.MadSpinDegenerateWeight,
+                          stub._combine_maxwgt, [0.0, 0.0, 0.0])
+
+    def test_a_nan_in_the_probe_is_refused(self):
+        """0/0 weights used to reach _combine_maxwgt and trip a bare
+        `assert all_maxwgt[0] >= all_maxwgt[1], "ERROR: "` with an empty
+        message."""
+        stub = self._stub()
+        self.assertRaises(interface_madspin.MadSpinDegenerateWeight,
+                          stub._combine_maxwgt,
+                          [float('nan'), float('nan'), 1.0])
