@@ -925,7 +925,9 @@ difference nobody can measure. `sequential_global_retry` says what the mode does
 and leaves the accuracy statement to the documentation, where it can carry the
 numbers.
 
-**`auto`** resolves once per run, from the number of decaying particles counted
+**`auto`** (as of this section; **superseded by section 12**, which measured
+the schemes over the decay multiplicity and replaced the four branches below
+with two) resolves once per run, from the number of decaying particles counted
 where `to_decay` is built -- not per event, since the modes carry different
 bounds and one that changed event to event would be testing against the wrong
 ones:
@@ -1093,86 +1095,418 @@ a broken weight. With the weights verified and the error models in the state
 described above, the honest summary is: weights correct, deviation unexplained,
 dropped because it is slower than variant A anyway.
 
----
+## 11. PA: the up-front mass draw, and `sequential_with_mass`
 
-## 11. Next: give PA the up-front mass draw
+Section 10 built the up-front mass draw for the offshell spinmodes, where it is
+a *necessity*: rho depends on the whole mass set, so it has to be fixed before
+the per-particle loop or the decomposition does not apply. Under PA the same
+split is optional -- rho is evaluated at the onshell momenta and is already
+fixed per production event -- and this section is about doing it anyway,
+because of what else the mass set freezes.
 
-Chipped out as its own task. Recorded here because it closes the asymmetry the
-option table currently has, and because it is the fix for the one measurement in
-section 10 that came out the wrong way round.
+### The scheme PA had is a fifth scheme, not a variant
 
-### The asymmetry
+What PA did before this section is now called **`sequential_with_mass`**: one
+test per decaying particle, with that particle's virtuality drawn *inside* its
+own accept/reject (`_draw_offshell_mass` in the slot loop) and redrawn together
+with its angles. That is a genuinely different scheme, not a flavour of
+`sequential`. Nothing is ever frozen, so no stage redraws-to-acceptance under a
+condition it then divides out, so there is no `Z_k` to tabulate and no
+`Z_hat/Z` residual to argue about. It is also the reason `two_stage` and
+`sequential_global_retry` used to be refused under PA: they split the
+accept/reject at a mass draw that did not exist there.
 
-`two_stage` and `sequential_global_retry` need a mass set to unweight before the
-angles. Only the offshell spinmodes have one, in `_offshell_production`. Under
-PA each slot draws its own virtuality *inside* its own accept/reject
-(`_draw_offshell_mass` in the slot loop, guarded by `draw_mass`), so both modes
-are refused for PA and fall back to `sequential`. Half the option table is
-therefore unavailable in the mode that is the pole approximation's home.
+It stays the `auto` choice for PA and onshell. The bit-for-bit check below is
+what makes the rename safe.
 
-### Rename first: `sequential_with_mass`
+### `sequential_with_mass` offshell: asked, and the answer is no
 
-What PA does today deserves a name of its own rather than being "sequential,
-except different": the mass is drawn *and redrawn together with* that slot's
-angles. Nothing is frozen at any point, which is exactly why it needs no
-tabulated factor -- there is no conditional normalisation for a redraw-to-accept
-stage to divide out. It becomes a fifth value of `unweighting`, stays available
-for PA, and stays what `auto` picks there until measurement says otherwise.
+The planning revision of this section left open whether the offshell spinmodes
+should offer `sequential_with_mass` too, purely so that both families expose the
+same option set. They cannot, and the obstacle is the one that made
+`_upfront_production` exist in the first place: offshell, `rho_off` depends on
+the whole mass set jointly, so redrawing one slot's virtuality invalidates it
+*and* every slot already accepted against it. The scheme is therefore refused
+there and falls back to `sequential`, with a log line saying why
+(`_unweighting_mode`, `with_mass_pa_only`). The symmetry is not free and is not
+worth faking.
 
-### What PA gains, and it is not what madspin gains
+### What PA gains by freezing the masses
 
-Offshell, the up-front mass set buys a **fixed `rho_off`**, reused across angle
-retries; that reuse is what makes `two_stage` faster than the joint test. In PA
-rho is evaluated at *on-shell* momenta, is already fixed per production event and
-is already cached on it (`production._ms_density_prod`). There is nothing to
-gain there.
+Not `rho`, which is cached per production event either way
+(`production._ms_density_prod`). What it gains is the **production reshuffling
+jacobian**. With `density_keep_jacobian` on -- the default -- the per-slot
+scheme needs `J_k`, the jacobian with the slots drawn so far offshell, at
+*every slot trial*: an `Event(str(production))` copy and a `reshuffle_production`
+each time, with the ratios `J_k/J_{k-1}` telescoping over the chain. Freeze the
+mass set and there is one `J` for the whole set, evaluated once, with no
+telescoping at all.
 
-What PA gains is the **production reshuffling jacobian**. With
-`density_keep_jacobian` on, `_production_jacobian_for` runs on every slot trial
--- an `Event(str(production))` copy plus a reshuffle -- and a mass-set stage
-moves it to once per mass set, with the `J_k/J_{k-1}` telescoping disappearing
-entirely. That is the fix for the measurement in section 10 that came out
-backwards: **PA sequential is 22% slower than PA joint** (11.19 s against 9.17 s
-in one campaign), doing 5.01 production reshufflings per event against joint's
-3.14, despite drawing *fewer* decay events (5.01 against 6.28). The per-particle
-decomposition is supposed to beat the joint test and at n = 2 it does not.
+The weight splits the way it does offshell, minus the pieces PA does not have:
 
-### PA needs its own tabulated factor, with a different integrand
+    stage 1   w_mass  = J(m_1..m_n) * prod_k jac_bw_k * prod_k Z_hat_k(m_k)
+    stage 2   w_k     = (N_k/N_{k-1}) * jac_dec_k
 
-This is the part to get right, because it is the same trap as section 10's. PA
-needs no factor today only because nothing is frozen. Freeze the masses up front
-and the angle stage starts dividing out its own conditional normalisation:
+`Tr(rho)` is absent because it cancels between `N_n` and `N_0`, which is also
+why PA needs no `|M_prod|^2_on` normalisation of the mass weight (section 10)
+-- there is no production matrix element in `w_mass` to normalise. The product
+over the chain is `J * prod jac_bw * prod jac_dec * N_n/N_0`, which is the joint
+PA weight: `reshuffle_production` on the *complete* event returns exactly
+`J_RAMBO * prod_k jac_dec_k`, the two pieces the chain computes separately
+through `_production_jacobian_for` and `_decay_reshuffle_jacobian`.
 
-    Z_k^PA(m) = E_pool[ jac_dec(m, Omega) ]
+### Z_k under PA is *not* the running width
 
-the decay-reshuffling jacobian averaged over the pool at that virtuality. It is
-**not** the offshell integrand: PA evaluates its matrix elements on shell, so
-there is no `Tr(D^off)/|M|^2_on` factor, only the phase-space jacobian. The
-machinery is the same -- bin in m, average, fit, multiply into the mass-set
-weight -- and `_build_z_tables` / `_zhat` / `_z_slot_keys` should be extended
-rather than duplicated, the probe already collecting the samples for free.
+Freezing the masses immediately buys the problem section 10 spent itself on: the
+angle stage redraws until it accepts, so it divides out
 
-Omit it and PA reproduces the bug of section 10 exactly: the accepted
-virtualities come out Breit-Wigner shaped instead of PA shaped.
+    Z_k^PA(m) = E_pool[ w_k ] = E_pool[ jac_dec(m, Omega) ]
 
-### What has to be shown
+-- the density ratio `N_k/N_{k-1}` averages to one at fixed m, so what is left
+is the decay reshuffling jacobian alone. This is **not** the offshell
+integrand. Offshell, `w_k` also carries `Tr(D^off)/|M_dec|^2_on` and `Z_k`
+comes out as the running partial width `(m/M) Gamma(m)/Gamma(M)`; PA evaluates
+every matrix element on shell, so there is no offshell reweighting to
+normalise and only the phase-space cost of mapping a pool decay onto the
+sampled virtuality survives.
 
-- **the rename is inert**: `sequential_with_mass` must produce event records
-  bit-for-bit identical to PA today, same seed and same production events. If
-  not, the rename changed behaviour;
-- **the weight identity, per chain** (`sequential_debug`) on every new PA mode.
-  Deterministic, no error model to argue about, and it is the check that would
-  have caught the original bias at once;
-- **the lineshape** against PA joint, with replicas. `m(l+ vl)` and
-  `dphi(l+,l-)` are blind to this class of bug -- they were blind to the
-  original one -- and the cross section is blind by construction;
-- **speed**, quoted only within a single campaign with joint as an anchor.
+That makes it a much gentler function, and the measured table says so. On
+`p p > t t~`, `t > w+ b, w+ > l+ vl`, from the 37500 probe samples per slot the
+scan collects for free:
 
-### And a matching question for madspin
+    slot    Z(150.7)   Z(173)   Z(195.3)   bin/fit deviation
+    6_0       0.913      1        1.059         0.2%
+    -6_0      0.912      1        1.059         0.1%
 
-Whether `sequential_with_mass` should also exist for the offshell modes, purely
-so that PA and madspin offer the same set of options, is a separate question
-with a real obstacle: offshell, `rho_off` depends on the whole mass set jointly,
-so redrawing one slot's mass invalidates it and every slot already accepted
-against it. That is why `_offshell_production` exists at all. It is chipped out
-separately, with the answer "no, and here is the cost" explicitly allowed.
+against the offshell table's 0.53 / 1 / 1.71 over the same window. A factor 1.16
+across the Breit-Wigner window where offshell has a factor 3.2. The machinery is
+the same -- `_z_slot_keys`, `_build_z_tables`, `_zhat`, samples recorded by
+`sequential_accept_reject` in probe mode -- only the quantity averaged differs
+(`rate = jac_dec` instead of `jac_dec * Tr(D^off)/|M_dec|^2_on`).
+
+**It is still needed.** The argument of section 10 does not care how big the
+factor is: the angle stage divides out the *true* `Z_k` whatever weight it is
+given, so omitting the compensation leaves the accepted virtualities
+Breit-Wigner distributed rather than physically distributed, and the residual
+is exactly `Z_hat/Z`. What the small factor does change is the *sensitivity of
+the lineshape test*: see below.
+
+`density_keep_jacobian = False` is the degenerate case. There the reshuffle is a
+post-acceptance dressing and `jac_dec` is in no weight, so `w_k` is the density
+ratio alone and `Z_k(m)` collapses to the fraction of the pool that can reach
+`m` -- still a function of the virtuality, still tabulated by the same code
+(a decay that cannot be reshuffled onto `m` records a zero, exactly as
+offshell), and identically one wherever the whole pool is reachable.
+
+### Validation
+
+**Bit-for-bit, first.** `sequential_with_mass` on 10000 `p p > t t~` events is
+byte-identical to what the branch produced before this section: same seed, same
+production sample, every event record in the decayed LHE the same, and the same
+counters (5.01 decay events per accepted event, 1.88 + 3.13 per slot, 11
+weights above their bound, 17 chains restarted). The only difference anywhere in
+the file is the path of the input LHE echoed in the banner, which is the test
+harness giving each mode its own directory.
+
+**The weight identity, per chain.** `sequential_debug` now covers the PA
+up-front schemes: it rebuilds the joint PA weight for the same production event,
+the same virtualities and the same decays -- `calculate_matrix_element_from_density`
+for the density part (PA leaves the momenta onshell there, so it returns
+`jac_reshuffle = 1`), the Breit-Wigner jacobians recomputed from the sampling
+window, and the reshuffling jacobian from a `reshuffle_production` of the
+*complete* rebuilt event, which is the route the joint path takes and is
+therefore an independent check of the chain's two separate pieces. Over 10000
+accepted chains each:
+
+    sequential                spread 7.91e-08   ratio 1108198227
+    two_stage                 spread 1.23e-07   ratio 1108198225
+    sequential_global_retry   spread 8.54e-08   ratio 1108198230
+
+Float32 epsilon is 1.19e-7 and the density matrices are `complex64`, so that is
+the floor of the arithmetic. Worth noting that the constant is the *same* one
+the offshell schemes report (1108198255-261, section 10) to nine significant
+figures, from a different spinmode and a different set of factors -- the
+number is the helicity/normalisation constant of the density path, as claimed.
+
+**The lineshape, and how to make the test sensitive.** `m(l+ vl b)` is the
+observable the missing factor distorts, and under PA it *is* the sampled
+virtuality (the accepted decay is reshuffled onto it), so this is a direct look
+at the accepted mass distribution. Four replicas of each scheme over the same
+10000 production events with independent MadSpin seeds (42-45), against a
+four-replica joint reference:
+
+    scheme                   <m(top)>, both resonances   vs joint        chi2/ndf
+    joint                    172.9469 +- 0.0135           --              --
+    sequential_with_mass     172.9480 +- 0.0104          +0.0011 (+0.06)  12.6/24
+    sequential               172.9558 +- 0.0068          +0.0089 (+0.59)   9.4/24
+    two_stage                172.9589 +- 0.0067          +0.0119 (+0.79)  11.3/24
+    sequential_global_retry  172.9632 +- 0.0057          +0.0162 (+1.11)  20.3/24
+    sequential, Z_hat = 1    172.9083 +- 0.0087          -0.0386 (-2.40)  12.3/24
+
+(errors are the replica scatter; the naive per-run MC error on the pooled sample
+is 0.0111 and gives the same significances to within 0.08 sigma.)
+
+The three up-front schemes sit 0.6 to 1.1 sigma above joint, all on the same
+side. That is not the table: `sequential_global_retry` needs no table at all --
+`Z_hat` cancels identically there -- and it is the *highest* of the three. What
+it is is the joint reference, whose own replica scatter (0.0135) is the largest
+of the six and whose seed-42 replica (172.9161) is a visible low outlier. As in
+section 10, the scatter between two runs of the same scheme is as large as
+anything the scheme-to-scheme differences show.
+
+The last row is the point. PA's `Z_k` spans a factor 1.16 where the offshell
+one spans 3.2, so the bias it protects against is ~0.04 GeV rather than the
+0.25 GeV of section 10 -- at the edge of what a 10000-event A/B can see, which
+would have made a plain "sequential agrees with joint" statement
+uninformative. Measuring it directly instead, with a scratch build whose
+`_zhat` returns 1, puts the factor at **-0.039 +- 0.016 GeV** (-0.047 +- 0.011
+against `sequential` itself, -4.3 sigma) and in the direction section 10
+predicts: down, towards the Breit-Wigner prior. Restoring it recovers joint to
++0.009 +- 0.015.
+
+The two no-regression observables behave as section 10 says they do -- blind to
+this class of bug. Even with `Z_hat` forced to 1, `m(l+ vl)` moves by -0.17
+sigma and `dphi(l+,l-)` by -0.21 sigma, while the resonance mass is off by 2.4.
+Anyone checking a new unweighting scheme on those two alone would have passed
+this build.
+
+**What the up-front branch must not have disturbed.** The offshell path now
+shares `_upfront_production` and the merged slot body with PA, so it was
+re-run against the base commit: `spinmode = madspin` on the same 10000 events
+gives identical event records, the same Z table to every digit
+(0.527 / 1 / 1.705 and 0.529 / 1 / 1.710), the same bounds (3.09, 2.881) and the
+same 57448 trials. `spinmode = onshell` with an explicit `sequential` -- no
+virtuality anywhere, so the mass stage is the degenerate one -- runs and gives
+3.98 decay events per accepted event with no overflow. `nb_core = 4` reproduces
+the cross section and the counters up to the workers' own RNG streams (2.09
+mass sets per event against 1.95 serial), i.e. the tables survive the fork.
+
+(The offshell re-run earned its place: the first version of this branch passed
+PA's `draw_mass` flag straight into `_upfront_production`, which under an
+offshell spinmode is False, and skipped the mass draw entirely. Offshell always
+samples -- its rho is only defined at the reshuffled momenta -- and the PA flag
+only ever described the PA draw.)
+
+**One thing the merge with the me_frame work had to fix.** `frame_id` picks the
+frame the helicity basis is defined in, and the production density and every
+decay density contracted against it must be taken in the same one. That boost
+was computed only on a *cache miss* of `production._ms_density_prod` -- so the
+first chain of a production event got it and every later chain got `None`, while
+the cached rho still carried it. The max-weight probe draws 500 chains per
+production event, so 499 of them would have contracted lab-frame decay densities
+against an me_frame production one. It is latent on a default card
+(`_frame_boost` returns None for unpolarised beams) and silent when it is not,
+which is the worst combination. The boost is now cached alongside the density it
+belongs to, as `production._ms_frame_boost`.
+
+### Speed
+
+Decay phase and counters for the same 10000 production events,
+`p p > t t~`, `t > w+ b, w+ > l+ vl`, `nb_core 1`, two campaigns with joint as
+the anchor in each. The counters are byte-identical between the two (same
+seed), so the pair of clocks is a read on the machine, not on the schemes:
+
+    scheme                  decay phase   decay MEs/event   mass sets   prod reshuffles
+    joint                   7.6 / 7.6 s   6.28 (3.14 x 2)      --           3.14
+    sequential              7.4 / 7.3 s   4.06 (1.21 + 2.85)  1.95          1.95
+    sequential_with_mass    9.4 / 9.3 s   5.01 (1.88 + 3.13)   --           5.01
+    two_stage              10.4 / 8.9 s   5.73 (2.87 + 2.87)  1.93          1.93
+    sequential_global_retry 12.2 / 12.1 s 6.22 (3.38 + 2.84)  6.61          6.61
+
+(`two_stage`'s 10.4 s is the one entry the second campaign does not reproduce;
+that run also took 38% longer to generate its matrix elements, so it was load.
+Section 10's warning about cross-campaign clocks applies inside a campaign too
+when the difference being read is 10%.)
+
+The observation section 10 closed on -- "PA sequential is 22% slower than PA
+joint on this process ... 5.01 production reshufflings per event against joint's
+3.14" -- is what the up-front draw was built for, and it is fixed: **1.95
+reshufflings per event**, a factor 2.6, and the decay phase goes from 22% above
+joint to level with it. The decay-ME count drops too (4.06 against 5.01),
+because the per-slot bounds no longer have to cover the production jacobian's
+spread: slot 0's bound falls from 1.836 to 1.21 and its acceptance rises from
+1/1.88 to 1/1.21.
+
+`two_stage` loses here, unlike offshell. Its single angle bound (2.865) is
+barely tighter than the product of the per-slot ones (1.21 x 2.863 = 3.46),
+because under PA slot 0's weight is nearly flat, so it pays the lost early exit
+for almost nothing. `sequential_global_retry` costs 3.4x the mass sets, as it
+does offshell, and is a cross-check rather than a candidate.
+
+The remaining overflow counts are 11 (`sequential_with_mass`, unchanged), 6
+(`sequential`), 9 (`two_stage`) and 11 (`sequential_global_retry`) out of 10000
+events -- the "PA sequential logged 11 weight overflows" observation of section
+10 is improved but not removed, and remains worth a look on its own.
+
+**At 250000 events the ordering changes, and the gap widens.** The run above
+is dominated by costs the scheme does not touch, so it was repeated on a single
+250000-event sample where the decay phase is 51-66% of the wall clock:
+
+    scheme                  decay phase  total wall  decay MEs/ev  prod reshuffles  mass sets  over bound
+    sequential                226.0 s      446.5 s       4.56           2.83          2.83         40
+    two_stage                 285.2 s      507.3 s       6.57           2.83          2.83         42
+    joint                     324.3 s      544.6 s       9.06           4.53           --           0
+    sequential_with_mass      403.7 s      629.8 s       8.07           8.07           --          37
+    sequential_global_retry   436.6 s      660.2 s       7.22          11.15         11.15        180
+
+Against joint: `sequential` is 30% faster in the decay phase and 18% on the
+whole run; against `sequential_with_mass`, which is what `auto` picks, it is
+**44% and 29%**. All five agree on the cross section to 0.003% (23.75487 joint,
+23.755604 for the other four).
+
+Two things move between the two sample sizes, and both favour the up-front
+split as N grows.
+
+- The fixed costs stop hiding it. At 10000 events the decay-pool generation
+  (~35 s) and the probe dwarf a 2 s difference; at 250000 the pool costs ~165 s
+  against a 226-436 s decay phase.
+- `nb_sigma` is `max(4.5, log_7.7 N)`, so it goes from 4.51 to 6.09 and every
+  bound widens. That costs the schemes unequally: `sequential_with_mass`'s
+  per-slot weights carry the Breit-Wigner jacobian and `J_k/J_{k-1}`, so they
+  are the broadest and lose the most (slot 1's bound 5.201, acceptance 1/5.31,
+  against the up-front `sequential`'s 3.287 and 1/3.29). Moving those factors
+  into a mass stage that is bounded once is worth more the wider the margin
+  gets. `two_stage` overtakes `sequential_with_mass` for the same reason.
+
+So the 10000-event ordering (sequential < joint < with_mass < two_stage <
+global_retry) is not the asymptotic one; at 250000 it is sequential < two_stage
+< joint < with_mass < global_retry, and the advantage of the up-front draw over
+the scheme PA shipped with is a factor 1.8 on the accept/reject.
+
+**`auto` took `sequential_with_mass` under PA when this section was written,
+and no longer does** -- section 12 scanned the decay multiplicity and switched
+it to `sequential`. At 10000 events the gain was inside the noise; at 250000 the
+up-front draw takes 29% off the whole run, and the margin grows with N. What it
+costs is exactness by construction: `sequential_with_mass` freezes nothing and
+needs no table, where `sequential` carries a tabulated factor accurate to ~0.2%
+on something worth 0.04 GeV, i.e. ~0.0001 GeV of residual -- three orders of
+magnitude inside the pole approximation's own error. `sequential_with_mass`
+remains available, and is the scheme to reach for if that residual ever needs
+to be excluded rather than bounded.
+
+## 12. Which scheme should be the default: a multiplicity scan
+
+Sections 10 and 11 each measured one process with two decaying particles, which
+is exactly the multiplicity at which the schemes are closest. This scans the
+number of decaying particles instead, 50000 events per point, `nb_core 1`, seed
+42, one campaign per process (so the clocks are comparable within a block, not
+across blocks):
+
+    n=1   p p > w+ j        w+ > l+ vl
+    n=2   p p > t t~        t > w+ b, w+ > l+ vl                (both tops)
+    n=3   p p > t t~ z      as above, plus z > l+ l-
+    n=4   p p > t t~ t t~   as above, all four tops
+
+All 24 runs agree on the cross section: identical within a process except for
+the 5e-5 relative offset between the joint runs and the rest, which is the
+Breit-Wigner sampling and not the scheme.
+
+### PA
+
+    n  scheme                decay phase   total wall   decay MEs/ev   mass sets/ev
+    1  joint                    50.3 s       92.9 s         6.12            --
+    1  sequential_with_mass     58.7 s       99.5 s         6.39            --
+    1  sequential               40.4 s       81.8 s         5.09           2.42
+    2  joint                    83.4 s      178.2 s        10.96            --
+    2  sequential_with_mass    127.0 s      231.6 s        12.27            --
+    2  sequential               39.8 s      139.0 s         4.39           3.23
+    3  joint                   186.6 s      292.4 s        24.30            --
+    3  sequential_with_mass     88.7 s      205.4 s         9.78            --
+    3  sequential               66.0 s      177.0 s         7.73           4.48
+    4  joint                   324.3 s      472.4 s        42.56            --
+    4  sequential_with_mass    110.5 s      298.2 s         9.47            --
+    4  sequential               85.5 s      263.9 s         8.79           2.42
+
+**`sequential` wins at every multiplicity**, by 20% at n=1 and by a factor 3.8
+at n=4, and it is never worse than the other two on any counter. The joint
+test's cost grows as n x (trials per event) because a single rejection throws
+away every decay; the per-particle test's grows far more slowly.
+
+`sequential_with_mass` -- today's PA default -- is the *worst* of the three at
+n=1 and n=2 on this campaign, and slower than `sequential` everywhere. Note how
+much worse it looks at 50000 events than at the 10000 of section 11 (n=2: 12.27
+decay MEs per event against 5.01): `nb_sigma` is `max(4.5, log_7.7 N)`, and its
+per-slot weights carry the Breit-Wigner jacobian and the `J_k/J_{k-1}` ratios,
+so they are the broadest and lose the most as the safety margin widens. That is
+the same effect section 11 saw between 10000 and 250000, and it says the
+measured gap is a lower bound on what a production-sized run would see.
+
+### madspin (full offshell)
+
+    n  scheme          decay phase   total wall   decay MEs/ev   mass sets/ev
+    1  joint              65.5 s      112.5 s         6.57            --
+    1  sequential       2534.6 s     2576.7 s         8.11         786.61
+    1  two_stage        2495.1 s     2539.8 s         4.96         787.32
+    2  joint              54.3 s      151.1 s         8.08            --
+    2  sequential         70.1 s      169.6 s         6.73           3.51
+    2  two_stage          59.5 s      162.7 s         6.24           3.50
+    3  joint             231.4 s      338.5 s        25.32            --
+    3  sequential        107.0 s      223.0 s        11.79           3.59
+    3  two_stage         244.7 s      359.4 s        24.94           3.59
+    4  joint             722.4 s      882.7 s        50.60            --
+    4  sequential        167.3 s      365.7 s        13.21           3.23
+    4  two_stage         315.8 s      514.3 s        28.70           3.22
+
+Three separate findings.
+
+**n=1 offshell is a disaster, and it is the mass stage.** 787 mass sets per
+accepted event, `C_mass` = 781.6, a decay phase 38x the joint one. `two_stage`
+gives the same 787, which localises it precisely: not the angle granularity,
+not `Z_k` (the table is clean, bin/fit deviation 0.0%), but the mass-set weight
+`Tr(rho_off)/|M_prod|^2_on`. On `p p > w+ j` the decaying particle carries
+essentially all of the production matrix element's virtuality dependence, so
+that ratio spans orders of magnitude over the 15-width window and no single
+bound can cover it. The PA run of the same process has `C_mass` = 2.37, which
+confirms the diagnosis -- PA evaluates rho on shell, so its mass weight has no
+production matrix element in it at all. `auto` already routes n=1 to joint, so
+nothing is broken; this is why that rule has to stay.
+
+**n=2 offshell still belongs to joint.** 54.3 s against 59.5 (`two_stage`) and
+70.1 (`sequential`), even though both draw *fewer* decay matrix elements (6.24
+and 6.73 against 8.08): each mass set costs a production reshuffle and an
+offshell production density, and at 3.5 mass sets per event that outweighs the
+decays saved. Section 10 measured the opposite at 10000 events (`two_stage`
+13.55 s against joint's 14.61 s); the difference is again `nb_sigma`, 4.51 there
+against 5.60 here, which widens `C_mass` and costs the staged schemes.
+
+**From n=3 `sequential` wins outright**, 2.2x at n=3 and 4.3x at n=4 on the
+decay phase, and `two_stage` is not competitive there: its single bound over the
+product forces every slot to be redrawn together, 8.31 angle sets per event at
+n=3 and 7.17 at n=4, so it draws as many decay matrix elements as the joint test
+while also paying the mass stage.
+
+### What this says about `auto`
+
+The current rule is: 1 -> joint; PA/onshell -> `sequential_with_mass`; 2 ->
+`two_stage`; 3+ -> `sequential`. The scan says two of those four branches are
+wrong and one is unnecessary:
+
+    spinmode         n      current               measured best
+    PA / onshell     any    sequential_with_mass  sequential  (1.2x - 3.8x)
+    madspin / full   1      joint                 joint       (correct)
+    madspin / full   2      two_stage             joint       (1.1x)
+    madspin / full   3+     sequential            sequential  (correct)
+
+`two_stage` is not the fastest scheme at any point measured here, in either
+spinmode: joint beats it at n<=2 and `sequential` beats it at n>=3. It remains
+worth keeping as an option -- it is the one staged scheme whose angle stage is a
+single joint test, which makes it the natural cross-check against joint -- but
+it does not earn a branch in `auto`.
+
+**`auto` now implements the two-line rule** (`_unweighting_mode`):
+
+    PA / onshell     ->  sequential
+    madspin / full   ->  joint for n <= 2, sequential from n = 3
+
+with the caveat that every number above is one process per multiplicity on one
+machine, and that the n=2 offshell call is a 10% difference that went the other
+way at a smaller sample size -- so that boundary is the one to revisit if a
+process is found where a staged scheme pays off at two decays. The n=1 offshell
+and the n>=3 conclusions are not close and are safe.
+
+What changes for a user who never set `unweighting`: PA and onshell runs move
+from `sequential_with_mass` to `sequential` (faster everywhere measured, at the
+price of the tabulated factor -- section 11 bounds its effect on the top
+lineshape at ~0.0001 GeV); offshell runs with two decaying particles move from
+`two_stage` to `joint`, i.e. back to the historical scheme. Nothing changes for
+offshell runs with one or with three or more decaying particles.

@@ -1299,7 +1299,7 @@ class TestSequentialAcceptReject(unittest.TestCase):
             allowed.extend(combo)
         return madspin.DensityMatrix(arr, 2, allowed, dim)
 
-    def _stub(self, rho, pools):
+    def _stub(self, rho, pools, unweighting='sequential_with_mass'):
         interface = interface_madspin.MadSpinInterface
         hels = self.HELS
         pool = self.POOL
@@ -1314,6 +1314,11 @@ class TestSequentialAcceptReject(unittest.TestCase):
             sequential_accept_reject = interface.sequential_accept_reject
             _scan_maxwgt_range = interface._scan_maxwgt_range
             _sequential_offshell = interface._sequential_offshell
+            _sequential_upfront = interface._sequential_upfront
+            _upfront_production = interface._upfront_production
+            _z_slot_keys = staticmethod(interface._z_slot_keys)
+            _zhat = interface._zhat
+            _complete_upfront_probe = interface._complete_upfront_probe
             _unweighting_mode = interface._unweighting_mode
             _announce_mode = interface._announce_mode
             _log_once = interface._log_once
@@ -1323,7 +1328,8 @@ class TestSequentialAcceptReject(unittest.TestCase):
                 self.options = _StubOptions(
                                {'spinmode': 'onshell',
                                 'sequential_spin_order': '2 3 1',
-                                'unweighting': 'sequential',
+                                'unweighting': unweighting,
+                                'sequential_debug': False,
                                 'fixed_order': False,
                                 'beampol': [0., 0.], 'frame_id': 6})
             def _density_basis(self, production, decays_key):
@@ -1353,26 +1359,33 @@ class TestSequentialAcceptReject(unittest.TestCase):
                           for d in pool) / self.POOL
             self.assertTrue(np.allclose(average, np.eye(2) / 2))
 
+    def _target(self, stub, rho, pools):
+        """p(decays) proportional to N_n, normalised -- what every scheme has to
+        sample."""
+        exact = {(a, b): stub._partial_density_contraction(
+                            rho, self.HELS, {0: pools[0][a], 1: pools[1][b]}).real
+                 for a in range(self.POOL) for b in range(self.POOL)}
+        total = sum(exact.values())
+        return {k: v / total for k, v in exact.items()}
+
+    def _fixture(self, unweighting='sequential_with_mass'):
+        rho = self._production_density()
+        pools = {0: self._pool(100), 1: self._pool(200)}
+        stub = self._stub(rho, pools, unweighting=unweighting)
+        production = self._Prod([self._Part(2, -1), self._Part(-2, -1),
+                                 self._Part(6), self._Part(-6)])
+        _, slots = interface_madspin.MadSpinInterface._sequential_slots(
+                                                    production, (6, -6))
+        stub._slot_of = {index: slot for slot, index in enumerate(slots)}
+        return stub, rho, pools, production, {6: {0: 'f'}, -6: {0: 'f'}}
+
     def test_reproduces_the_joint_distribution(self):
         """The whole claim: p(decays) proportional to N_n, i.e. the same target
         the joint accept/reject samples -- while only ever redrawing one
         particle at a time."""
         import random
-        rho = self._production_density()
-        pools = {0: self._pool(100), 1: self._pool(200)}
-        stub = self._stub(rho, pools)
-        production = self._Prod([self._Part(2, -1), self._Part(-2, -1),
-                                 self._Part(6), self._Part(-6)])
-        evt_decayfile = {6: {0: 'f'}, -6: {0: 'f'}}
-        particles, slots = interface_madspin.MadSpinInterface._sequential_slots(
-                                                    production, (6, -6))
-        stub._slot_of = {index: slot for slot, index in enumerate(slots)}
-
-        exact = {(a, b): stub._partial_density_contraction(
-                            rho, self.HELS, {0: pools[0][a], 1: pools[1][b]}).real
-                 for a in range(self.POOL) for b in range(self.POOL)}
-        total = sum(exact.values())
-        exact = {k: v / total for k, v in exact.items()}
+        stub, rho, pools, production, evt_decayfile = self._fixture()
+        exact = self._target(stub, rho, pools)
         self.assertTrue(all(v > 0 for v in exact.values()))
 
         random.seed(0)
@@ -1387,6 +1400,362 @@ class TestSequentialAcceptReject(unittest.TestCase):
             got = counts[combo] / float(nb_run)
             self.assertLess(abs(got / want - 1), 0.15,
                             'combo %s: got %.4f, expected %.4f' % (combo, got, want))
+
+    def test_every_scheme_samples_the_same_target(self):
+        """The up-front-mass schemes must land on that same distribution. There
+        is no virtuality here (onshell), so their mass stage is the degenerate
+        one -- what is exercised is the plumbing the PA up-front draw shares
+        with them: the shifted bound vector, the Z_hat divisions cancelling
+        against a table that does not exist, and the three rejection policies.
+        """
+        import random
+        for mode in ('sequential', 'two_stage', 'sequential_global_retry'):
+            stub, rho, pools, production, evt_decayfile = self._fixture(mode)
+            self.assertTrue(stub._sequential_upfront(True), mode)
+            exact = self._target(stub, rho, pools)
+            # maxwgts[0] bounds the (constant) mass weight; then either one
+            # bound per slot -- C_k over w_k = N_k/N_{k-1} -- or, for two_stage,
+            # a single one over their product N_n/N_0
+            contract = stub._partial_density_contraction
+            n_0 = contract(rho, self.HELS, {}).real
+            n_1 = [contract(rho, self.HELS, {0: pools[0][a]}).real
+                   for a in range(self.POOL)]
+            n_2 = [[contract(rho, self.HELS,
+                             {0: pools[0][a], 1: pools[1][b]}).real
+                    for b in range(self.POOL)] for a in range(self.POOL)]
+            c_0 = 1.01 * max(n_1[a] / n_0 for a in range(self.POOL))
+            c_1 = 1.01 * max(n_2[a][b] / n_1[a]
+                             for a in range(self.POOL)
+                             for b in range(self.POOL))
+            if mode == 'two_stage':
+                maxwgts = [1.1, 1.01 * max(n_2[a][b] / n_0
+                                           for a in range(self.POOL)
+                                           for b in range(self.POOL))]
+            else:
+                maxwgts = [1.1, c_0, c_1]
+
+            random.seed(0)
+            counts = collections.Counter()
+            nb_run = 20000
+            for _ in range(nb_run):
+                decays = stub.sequential_accept_reject(production, evt_decayfile,
+                                                       maxwgts, 10)
+                counts[(decays[6][0][2], decays[-6][0][2])] += 1
+            for combo, want in exact.items():
+                got = counts[combo] / float(nb_run)
+                self.assertLess(abs(got / want - 1), 0.15,
+                                '%s combo %s: got %.4f, expected %.4f'
+                                % (mode, combo, got, want))
+
+
+class TestPAUpFrontMass(unittest.TestCase):
+    """The PA up-front mass draw and the rate factor it makes necessary.
+
+    Freezing the virtualities before the angles buys the production reshuffling
+    jacobian -- one evaluation per mass set instead of one per slot trial -- but
+    it also makes the angle stage self-normalising: redrawing a slot until it
+    accepts divides out
+
+        Z_k(m) = E_pool[ w_k ] = E_pool[ jac_dec(m, Omega) ]
+
+    (the density ratio N_k/N_{k-1} averages to one at fixed m, so only the decay
+    reshuffling jacobian is left). Unless the mass stage pays that factor back,
+    the accepted virtualities come out distributed as the Breit-Wigner prior
+    rather than as the physical lineshape -- exactly the bias the offshell path
+    was fixed for.
+
+    Driven synthetically: a fake ``jac_dec(m, decay) = f(m) g(decay)`` with
+    ``E_pool[g] = 1``, so ``Z_k(m) = f(m)`` exactly and the accepted mass
+    distribution has a closed form to compare against. ``g`` is constant over
+    each antipodal pair of the pool, which is what keeps ``E[g D] = E[g] E[D]``
+    exact and hence the factorisation above.
+    """
+
+    POOL = 4
+    HELS = TestSequentialAcceptReject.HELS
+    MASSES = (160.0, 173.0, 190.0)
+    POLE = 173.0
+    ALPHA = 3.0                     # f(m) = (m/pole)**ALPHA
+
+    def _f(self, mass):
+        return (mass / self.POLE) ** self.ALPHA
+
+    def _g(self, index):
+        # constant over each antipodal pair, mean one over the pool
+        return 0.5 if index < 2 else 1.5
+
+    class _Decay(object):
+        """The minimum a decay event needs to be here: a slot/pool identity and
+        a first particle that can carry new_mass."""
+        class _Head(object):
+            pass
+        def __init__(self, slot, index):
+            self.slot = slot
+            self.index = index
+            self.head = self._Head()
+        def __getitem__(self, position):
+            assert position == 0
+            return self.head
+
+    def _stub(self, rho, pools, z_table=True, keep_jac=True,
+              unweighting='sequential'):
+        interface = interface_madspin.MadSpinInterface
+        outer = self
+        hels = self.HELS
+
+        class Stub(object):
+            _decaying_pdgs = staticmethod(interface._decaying_pdgs)
+            _sequential_slots = staticmethod(interface._sequential_slots)
+            _slot_identity = interface._slot_identity
+            _partial_density_contraction = interface._partial_density_contraction
+            _sequential_spin_order = interface._sequential_spin_order
+            _decay_slot_order = interface._decay_slot_order
+            sequential_accept_reject = interface.sequential_accept_reject
+            _upfront_production = interface._upfront_production
+            _sequential_offshell = interface._sequential_offshell
+            _sequential_upfront = interface._sequential_upfront
+            _z_slot_keys = staticmethod(interface._z_slot_keys)
+            _zhat = interface._zhat
+            _draw_offshell_mass = interface._draw_offshell_mass
+            _unweighting_mode = interface._unweighting_mode
+            _announce_mode = interface._announce_mode
+            _log_once = interface._log_once
+            _beampol = interface._beampol
+            _frame_boost = interface._frame_boost
+
+            def __init__(self):
+                # unpolarised beams and no me_frame, so _frame_boost short
+                # circuits to None: this class is about the mass stage, and the
+                # frame machinery has its own tests
+                self.options = _StubOptions(
+                               {'spinmode': 'PA',
+                                'sequential_spin_order': '2 3 1',
+                                'unweighting': unweighting,
+                                'density_keep_jacobian': keep_jac,
+                                'sequential_debug': False,
+                                'fixed_order': False,
+                                'beampol': [0., 0.], 'frame_id': 6})
+                # Z_k(m) = f(m) = exp(ALPHA * ln(m/pole)) is exactly the
+                # log-quadratic the tabulation fits, so the "perfect table"
+                # can be written down instead of measured
+                self._z_tables = {}
+                if z_table:
+                    for key in ('6_0', '-6_0'):
+                        self._z_tables[key] = {
+                            'pole': outer.POLE,
+                            'coeff': [0.0, outer.ALPHA, 0.0],
+                            'zero_below': 0.0,
+                            'range': (min(outer.MASSES), max(outer.MASSES))}
+
+            def _density_basis(self, production, decays_key):
+                particles, slots = interface._sequential_slots(production,
+                                                               decays_key)
+                return {'decays_key': decays_key, 'helicities': hels,
+                        'init_part': [particles[i] for i in slots],
+                        'decaying_spins': [2, 2], 'position': [1, 2],
+                        'allowed_hel': [], 'ncomb': 0, 'dimension': 4}
+
+            def create_and_initialise_f2py_modules(self, *args):
+                pass
+
+            def get_density(self, *args, **opts):
+                return rho
+
+            def _draw_mass_value(self, pdg, budget):
+                """Discrete and flat, so the prior is uniform and any structure
+                in the accepted virtualities comes from the weights."""
+                import random
+                mass = random.choice(outer.MASSES)
+                return mass, (outer.POLE, 1.5, min(outer.MASSES),
+                              max(outer.MASSES)), 1.0
+
+            def _production_jacobian_for(self, production, slot_to_index,
+                                         slot_masses):
+                return 1.0
+
+            def _decay_reshuffle_jacobian(self, decay):
+                return outer._f(decay[0].new_mass) * outer._g(decay.index)
+
+            def _draw_one_decay(self, particle, index, ids, evt_decayfile,
+                                nb_remain):
+                import random
+                return TestPAUpFrontMass._Decay(self._slot_of[index],
+                                                random.randrange(outer.POOL))
+
+            def _slot_density(self, decay, parent, hel, frame_boost=None):
+                return pools[decay.slot][decay.index]
+
+        return Stub()
+
+    def _fixture(self, **opts):
+        base = TestSequentialAcceptReject()
+        rho = base._production_density()
+        pools = {0: base._pool(100), 1: base._pool(200)}
+        stub = self._stub(rho, pools, **opts)
+        production = base._Prod([base._Part(2, -1), base._Part(-2, -1),
+                                 base._Part(6), base._Part(-6)])
+        _, slots = interface_madspin.MadSpinInterface._sequential_slots(
+                                                    production, (6, -6))
+        stub._slot_of = {index: slot for slot, index in enumerate(slots)}
+        return stub, rho, pools, production, {6: {0: 'f'}, -6: {0: 'f'}}
+
+    def _bounds(self, stub, rho, pools):
+        contract = stub._partial_density_contraction
+        n_0 = contract(rho, self.HELS, {}).real
+        n_1 = [contract(rho, self.HELS, {0: pools[0][a]}).real
+               for a in range(self.POOL)]
+        n_2 = [[contract(rho, self.HELS,
+                         {0: pools[0][a], 1: pools[1][b]}).real
+                for b in range(self.POOL)] for a in range(self.POOL)]
+        top_jac = max(self._f(m) for m in self.MASSES) * \
+                  max(self._g(d) for d in range(self.POOL))
+        c_0 = 1.01 * top_jac * max(n_1[a] / n_0 for a in range(self.POOL))
+        c_1 = 1.01 * top_jac * max(n_2[a][b] / n_1[a]
+                                   for a in range(self.POOL)
+                                   for b in range(self.POOL))
+        c_mass = 1.01 * max(self._f(m) for m in self.MASSES) ** 2
+        return [c_mass, c_0, c_1], n_0, n_1, n_2
+
+    def _run(self, stub, production, evt_decayfile, maxwgts, nb_run=30000,
+             seed=0):
+        import random
+        random.seed(seed)
+        masses = collections.Counter()
+        combos = collections.Counter()
+        for _ in range(nb_run):
+            decays = stub.sequential_accept_reject(production, evt_decayfile,
+                                                   maxwgts, 10)
+            masses[decays[6][0][0].new_mass] += 1
+            combos[(decays[6][0].index, decays[-6][0].index)] += 1
+        return masses, combos
+
+    def test_the_rate_factor_is_the_decay_reshuffling_jacobian(self):
+        """What the probe records for Z_k under PA: the jacobian of mapping the
+        drawn decay onto the sampled virtuality, and nothing else. Offshell that
+        slot also carries Tr(D^off)/|M|^2_on -- PA evaluates on shell, so there
+        is no such ratio to carry."""
+        import random
+        stub, _, _, production, evt_decayfile = self._fixture()
+        random.seed(3)
+        probe, extra = [], {}
+        stub.sequential_accept_reject(production, evt_decayfile, None, 10,
+                                      probe=probe, probe_extra=extra)
+        self.assertEqual(extra['keys'], ['6_0', '-6_0'])
+        self.assertEqual(len(extra['z']), 2)
+        for (key, mass, value), slot in zip(extra['z'], (0, 1)):
+            self.assertIn(mass, self.MASSES)
+            # f(m) g(d) for one of the four pool members
+            self.assertTrue(any(abs(value - self._f(mass) * self._g(d)) < 1e-9
+                                for d in range(self.POOL)),
+                            'slot %s recorded %s at m=%s' % (slot, value, mass))
+
+    def test_no_rate_factor_recorded_when_the_jacobian_is_not_in_the_weight(self):
+        """density_keep_jacobian off: joint PA applies the reshuffle after
+        acceptance, so it is in no weight, and the only mass dependence left in
+        w_k is whether the decay can reach the virtuality at all."""
+        import random
+        stub, _, _, production, evt_decayfile = self._fixture(keep_jac=False)
+        random.seed(3)
+        probe, extra = [], {}
+        stub.sequential_accept_reject(production, evt_decayfile, None, 10,
+                                      probe=probe, probe_extra=extra)
+        self.assertEqual([value for _, _, value in extra['z']], [1.0, 1.0])
+
+    def test_the_accepted_virtualities_follow_the_rate_factor(self):
+        """The closure: with Z_k in the mass weight the accepted virtualities
+        are distributed as prior(m) * f(m), which is what the joint PA
+        accept/reject produces."""
+        stub, rho, pools, production, evt_decayfile = self._fixture()
+        maxwgts, _, _, _ = self._bounds(stub, rho, pools)
+        masses, _ = self._run(stub, production, evt_decayfile, maxwgts)
+
+        total = sum(self._f(m) for m in self.MASSES)
+        nb_run = sum(masses.values())
+        for mass in self.MASSES:
+            want = self._f(mass) / total
+            got = masses[mass] / float(nb_run)
+            self.assertLess(abs(got / want - 1), 0.05,
+                            'm=%s: got %.4f, expected %.4f' % (mass, got, want))
+
+    def test_without_the_rate_factor_the_virtualities_are_the_prior(self):
+        """The bug the factor exists for: the angle stage divides Z_k out
+        whatever the mass stage paid, so leaving it out leaves the accepted
+        virtualities distributed as the Breit-Wigner prior -- here flat --
+        instead of as the physical lineshape."""
+        stub, rho, pools, production, evt_decayfile = self._fixture(
+                                                            z_table=False)
+        maxwgts, _, _, _ = self._bounds(stub, rho, pools)
+        masses, _ = self._run(stub, production, evt_decayfile, maxwgts)
+
+        nb_run = sum(masses.values())
+        for mass in self.MASSES:
+            got = masses[mass] / float(nb_run)
+            self.assertLess(abs(got * len(self.MASSES) - 1), 0.05,
+                            'm=%s: got %.4f, expected the flat prior %.4f'
+                            % (mass, got, 1.0 / len(self.MASSES)))
+        # and that is a real distortion, not a wash: the correct answer is far
+        # outside the tolerance just used
+        total = sum(self._f(m) for m in self.MASSES)
+        self.assertGreater(abs(masses[self.MASSES[-1]] / float(nb_run)
+                               / (self._f(self.MASSES[-1]) / total) - 1), 0.15)
+
+    def test_the_decays_are_unaffected_by_the_table(self):
+        """The angle stage normalises itself, so its accepted decays are the
+        same whatever the mass stage pays -- which is exactly why an inaccurate
+        Z_hat shows up in the virtualities and nowhere else. (Their target is
+        N_n weighted by the decay's own share g of the reshuffling jacobian; the
+        virtuality-dependent share f cancels here.)"""
+        for z_table in (True, False):
+            stub, rho, pools, production, evt_decayfile = self._fixture(
+                                                            z_table=z_table)
+            maxwgts, _, _, n_2 = self._bounds(stub, rho, pools)
+            _, combos = self._run(stub, production, evt_decayfile, maxwgts)
+            nb_run = sum(combos.values())
+            weighted = [[n_2[a][b] * self._g(a) * self._g(b)
+                         for b in range(self.POOL)] for a in range(self.POOL)]
+            total = sum(sum(row) for row in weighted)
+            for a in range(self.POOL):
+                for b in range(self.POOL):
+                    want = weighted[a][b] / total
+                    got = combos[(a, b)] / float(nb_run)
+                    self.assertLess(abs(got / want - 1), 0.15,
+                                    'table=%s combo %s: got %.4f, expected %.4f'
+                                    % (z_table, (a, b), got, want))
+
+    def test_the_production_jacobian_is_evaluated_once_per_mass_set(self):
+        """What the up-front draw buys under PA. The per-slot mass draw calls
+        _production_jacobian_for -- an event copy and a reshuffle -- on every
+        slot trial and telescopes the results; here it is one call per mass
+        set."""
+        import random
+        for unweighting, expected in (('sequential', 'per mass set'),
+                                      ('sequential_with_mass', 'per trial')):
+            stub, rho, pools, production, evt_decayfile = self._fixture(
+                                                    unweighting=unweighting)
+            maxwgts, _, _, _ = self._bounds(stub, rho, pools)
+            counts = collections.Counter()
+
+            def _count(name, wrapped):
+                def counted(*args, **opts):
+                    counts[name] += 1
+                    return wrapped(*args, **opts)
+                return counted
+
+            stub._production_jacobian_for = _count(
+                            'jacobian', stub._production_jacobian_for)
+            stub._draw_one_decay = _count('trial', stub._draw_one_decay)
+            random.seed(7)
+            if unweighting == 'sequential_with_mass':
+                maxwgts = maxwgts[1:]
+            for _ in range(200):
+                stub.sequential_accept_reject(production, evt_decayfile,
+                                              maxwgts, 10)
+            if expected == 'per mass set':
+                # one per mass set, and there are fewer mass sets than trials
+                self.assertLess(counts['jacobian'], counts['trial'])
+                self.assertGreaterEqual(counts['jacobian'], 200)
+            else:
+                self.assertEqual(counts['jacobian'], counts['trial'])
 
 
 class TestSequentialPoolLadder(unittest.TestCase):
@@ -1412,6 +1781,7 @@ class TestSequentialPoolLadder(unittest.TestCase):
         class Stub(object):
             _sequential_pool_ladder = interface._sequential_pool_ladder
             _sequential_active = interface._sequential_active
+            _sequential_upfront = interface._sequential_upfront
             _unweighting_mode = interface._unweighting_mode
             _announce_mode = interface._announce_mode
             _log_once = interface._log_once
@@ -1468,44 +1838,57 @@ class TestSequentialPoolLadder(unittest.TestCase):
         self.assertTrue(self._stub({6: 2}, spinmode='onshell')._sequential_active(True))
 
     def test_sequential_active_auto(self):
-        """'auto' resolves per spinmode: a per-particle or two-stage scheme
-        everywhere it is supported, joint outside the density modes."""
+        """'auto' resolves per spinmode: per-particle under PA/onshell, and
+        offshell only once there are enough decays to pay for the mass stage
+        (the default _nb_decaying here is 2, so offshell still takes joint)."""
         for mode, expected in [('PA', True), ('onshell', True),
-                               ('madspin', True), ('full', True),
+                               ('madspin', False), ('full', False),
                                ('none', False)]:
             stub = self._stub({6: 2}, unweighting='auto', spinmode=mode)
             self.assertEqual(stub._sequential_active(True), expected,
                              'auto + spinmode=%s' % mode)
+        for mode in ('madspin', 'full'):
+            stub = self._stub({6: 2}, unweighting='auto', spinmode=mode)
+            stub._nb_decaying = 3
+            self.assertTrue(stub._sequential_active(True), mode)
         # fixed_order still forces the joint test
         stub = self._stub({6: 2}, unweighting='auto', fixed_order=True)
         self.assertFalse(stub._sequential_active(True))
         self.assertEqual(stub._unweighting_mode(True), 'joint')
 
     def test_auto_picks_the_scheme_by_the_number_of_decays(self):
-        """One bound over all the angles is tighter than the product of
-        per-particle bounds, while a per-particle test lets a rejection skip the
-        decays not yet drawn. The first wins while there is little to skip, so
-        auto takes two_stage up to two decaying particles and sequential from
-        three -- offshell only, since the other modes have no mass-set stage to
-        split at."""
-        for nb, expected in [(1, 'joint'), (2, 'two_stage'),
+        """Offshell, a mass set costs a production reshuffle and a production
+        density, so the staged schemes only pay off once there are enough decays
+        to save: auto takes joint up to two decaying particles and sequential
+        from three. See MADSPIN_SEQUENTIAL_PLAN.md section 12."""
+        for nb, expected in [(1, 'joint'), (2, 'joint'),
                              (3, 'sequential'), (6, 'sequential')]:
-            stub = self._stub({6: 2}, unweighting='auto', spinmode='madspin')
-            stub._nb_decaying = nb
-            self.assertEqual(stub._unweighting_mode(True), expected,
-                             '%d decaying particles' % nb)
-        # PA has no up-front mass draw: per particle whenever there is a
-        # decomposition to make at all
-        for nb in (2, 5):
-            stub = self._stub({6: 2}, unweighting='auto', spinmode='PA')
-            stub._nb_decaying = nb
-            self.assertEqual(stub._unweighting_mode(True), 'sequential')
+            for spinmode in ('madspin', 'full'):
+                stub = self._stub({6: 2}, unweighting='auto', spinmode=spinmode)
+                stub._nb_decaying = nb
+                self.assertEqual(stub._unweighting_mode(True), expected,
+                                 '%s, %d decaying particles' % (spinmode, nb))
 
-    def test_auto_is_joint_for_a_single_decaying_particle(self):
-        """One decaying particle: the per-particle test is the joint test and
-        the mass/angle split only moves the same factors between two stages, so
-        auto pays for neither -- in every spinmode."""
-        for spinmode in ('PA', 'onshell', 'madspin', 'full'):
+    def test_auto_is_per_particle_under_pa_at_every_multiplicity(self):
+        """PA/onshell keep rho fixed on shell, so their mass stage costs a
+        reshuffling jacobian and nothing else -- sequential was the fastest of
+        the three at every multiplicity measured, including one decaying
+        particle, where the mass set can still be rejected before any decay is
+        drawn."""
+        for spinmode in ('PA', 'onshell'):
+            for nb in (1, 2, 3, 6):
+                stub = self._stub({6: 2}, unweighting='auto', spinmode=spinmode)
+                stub._nb_decaying = nb
+                self.assertEqual(stub._unweighting_mode(True), 'sequential',
+                                 '%s, %d decaying particles' % (spinmode, nb))
+
+    def test_auto_is_joint_for_a_single_decaying_particle_offshell(self):
+        """One decaying particle offshell is the worst case for a mass stage:
+        the mass-set weight carries Tr(rho_off)/|M_prod|^2_on, and when that one
+        particle carries most of the production matrix element's virtuality
+        dependence the ratio spans orders of magnitude (measured: ~790 mass sets
+        per accepted event on p p > w+ j). auto must not go there."""
+        for spinmode in ('madspin', 'full'):
             stub = self._stub({6: 1}, unweighting='auto', spinmode=spinmode)
             stub._nb_decaying = 1
             self.assertEqual(stub._unweighting_mode(True), 'joint', spinmode)
@@ -1526,21 +1909,47 @@ class TestSequentialPoolLadder(unittest.TestCase):
         for mode in ('auto', 'sequential', 'two_stage',
                      'sequential_global_retry'):
             stub = self._stub({6: 2}, unweighting=mode, spinmode='madspin')
-            stub._nb_decaying = 2
+            # three decaying particles: offshell `auto` only leaves joint from
+            # three up, so this is where grouping has something to override
+            stub._nb_decaying = 3
             stub._decay_groups = None
             self.assertNotEqual(stub._unweighting_mode(True), 'joint', mode)
             stub._decay_groups = {'1': {}, '2': {}}
             self.assertEqual(stub._unweighting_mode(True), 'joint',
                              '%s with grouped decays' % mode)
 
-    def test_offshell_only_modes_fall_back_under_pa(self):
-        """Asked for explicitly under PA/onshell, the two modes that need the
-        up-front mass draw say so and use sequential."""
-        for mode in ('two_stage', 'sequential_global_retry'):
-            stub = self._stub({6: 2}, unweighting=mode, spinmode='PA')
+    def test_up_front_mass_modes_are_available_under_pa(self):
+        """PA has an up-front mass draw of its own now, so the three schemes
+        that split the accept/reject there are honoured rather than downgraded
+        to the per-slot mass draw."""
+        for mode in ('two_stage', 'sequential', 'sequential_global_retry'):
+            for spinmode in ('PA', 'onshell', 'madspin'):
+                stub = self._stub({6: 2}, unweighting=mode, spinmode=spinmode)
+                self.assertEqual(stub._unweighting_mode(True), mode,
+                                 '%s under %s' % (mode, spinmode))
+                self.assertTrue(stub._sequential_upfront(True))
+
+    def test_with_mass_needs_a_per_particle_mass_draw(self):
+        """sequential_with_mass draws each slot's virtuality inside that slot's
+        accept/reject, which the offshell spinmodes cannot do -- they reshuffle
+        the whole production onto the mass set at once."""
+        stub = self._stub({6: 2}, unweighting='sequential_with_mass',
+                          spinmode='PA')
+        self.assertEqual(stub._unweighting_mode(True), 'sequential_with_mass')
+        self.assertFalse(stub._sequential_upfront(True))
+        for spinmode in ('madspin', 'full'):
+            stub = self._stub({6: 2}, unweighting='sequential_with_mass',
+                              spinmode=spinmode)
             self.assertEqual(stub._unweighting_mode(True), 'sequential')
-            stub = self._stub({6: 2}, unweighting=mode, spinmode='madspin')
-            self.assertEqual(stub._unweighting_mode(True), mode)
+            self.assertTrue(stub._sequential_upfront(True))
+
+    def test_joint_is_not_an_up_front_scheme(self):
+        """_sequential_upfront gates the mass stage, so it must be False
+        wherever there is no sequential accept/reject at all."""
+        stub = self._stub({6: 2}, unweighting='joint', spinmode='PA')
+        self.assertFalse(stub._sequential_upfront(True))
+        stub = self._stub({6: 2}, unweighting='sequential', spinmode='PA')
+        self.assertFalse(stub._sequential_upfront(False))   # not density mode
 
     def test_madspin_option_defaults(self):
         """The shipped defaults: spinmode=madspin, jacobian in the weight,
@@ -1550,7 +1959,7 @@ class TestSequentialPoolLadder(unittest.TestCase):
         self.assertEqual(options['density_keep_jacobian'], True)
         self.assertEqual(options['unweighting'], 'auto')
         for value in ('joint', 'two_stage', 'sequential',
-                      'sequential_global_retry'):
+                      'sequential_global_retry', 'sequential_with_mass'):
             options['unweighting'] = value
             self.assertEqual(options['unweighting'], value)
 
@@ -1574,17 +1983,10 @@ class TestScanMaxwgtDecomposition(unittest.TestCase):
     fork, on the synthetic densities of TestSequentialAcceptReject.
     """
 
-    def _fixture(self):
+    def _fixture(self, unweighting='sequential_with_mass'):
         base = TestSequentialAcceptReject()
-        rho = base._production_density()
-        pools = {0: base._pool(100), 1: base._pool(200)}
-        stub = base._stub(rho, pools)
-        production = base._Prod([base._Part(2, -1), base._Part(-2, -1),
-                                 base._Part(6), base._Part(-6)])
-        _, slots = interface_madspin.MadSpinInterface._sequential_slots(
-                                                    production, (6, -6))
-        stub._slot_of = {index: slot for slot, index in enumerate(slots)}
-        return stub, [production] * 6, {6: {0: 'f'}, -6: {0: 'f'}}
+        stub, _, _, production, evt_decayfile = base._fixture(unweighting)
+        return stub, [production] * 6, evt_decayfile
 
     def test_range_split_matches_the_whole(self):
         """scan[0:6] == scan[0:2] + scan[2:6], event for event, at fixed seed."""
@@ -1611,6 +2013,32 @@ class TestScanMaxwgtDecomposition(unittest.TestCase):
         for vec in per_event:
             self.assertEqual(len(vec), 2)          # two decaying particles
             self.assertTrue(all(w >= 0 for w in vec))
+
+    def test_the_up_front_probe_keeps_its_chains(self):
+        """The up-front-mass schemes cannot max online -- their mass-set weight
+        is only complete once Z_k is known, and Z_k is fitted from this same
+        probe -- so the scan hands every chain back and the bound is taken
+        later, over the completed weights. One entry per chain, and one more
+        entry per vector than there are slots (the mass set takes index 0)."""
+        import random
+        stub, events, evt_decayfile = self._fixture('sequential')
+        random.seed(1)
+        per_event, z_samples = stub._scan_maxwgt_range(events, 0, 6,
+                                                       evt_decayfile, 6, 20)
+        self.assertEqual(len(per_event), 6)
+        for event in per_event:
+            self.assertEqual(event['keys'], ['6_0', '-6_0'])
+            self.assertEqual(len(event['chains']), 20)
+            for weights, masses in event['chains']:
+                self.assertEqual(len(weights), 3)   # mass set + two slots
+                self.assertEqual(len(masses), 2)
+        # onshell samples no virtuality, so there is nothing to tabulate and the
+        # completed vector is the raw one
+        self.assertEqual(z_samples, {})
+        best = stub._complete_upfront_probe(per_event[0])
+        self.assertEqual(best, [max(chain[0][slot]
+                                    for chain in per_event[0]['chains'])
+                                for slot in range(3)])
 
 
 class TestOffshellRateFactor(unittest.TestCase):
@@ -1644,8 +2072,8 @@ class TestOffshellRateFactor(unittest.TestCase):
         _z_slot_keys = staticmethod(
                         interface_madspin.MadSpinInterface._z_slot_keys)
         _zhat = interface_madspin.MadSpinInterface._zhat
-        _complete_offshell_probe = \
-                        interface_madspin.MadSpinInterface._complete_offshell_probe
+        _complete_upfront_probe = \
+                        interface_madspin.MadSpinInterface._complete_upfront_probe
         def __init__(self, exact=False, joint_angles=False):
             self.banner = TestOffshellRateFactor._Banner()
             mode = 'sequential'
@@ -1764,7 +2192,7 @@ class TestOffshellRateFactor(unittest.TestCase):
         stub._z_tables = stub._build_z_tables({'6_0': self._samples(),
                                                '-6_0': self._samples(seed=9)})
         z0, z1 = stub._zhat('6_0', 160.0), stub._zhat('-6_0', 180.0)
-        best = stub._complete_offshell_probe(self._probe_event())
+        best = stub._complete_upfront_probe(self._probe_event())
         self.assertAlmostEqual(best[0], max(2.0 * z0 * z1, 1.0), places=10)
         self.assertEqual(best[1], 7.0)      # position 0 = slot 1
         self.assertEqual(best[2], 5.0)
@@ -1777,7 +2205,7 @@ class TestOffshellRateFactor(unittest.TestCase):
         stub._z_tables = stub._build_z_tables({'6_0': self._samples(),
                                                '-6_0': self._samples(seed=9)})
         z_by_slot = [stub._zhat('6_0', 160.0), stub._zhat('-6_0', 180.0)]
-        best = stub._complete_offshell_probe(self._probe_event())
+        best = stub._complete_upfront_probe(self._probe_event())
         # order [1, 0]: probe position 0 is slot 1, position 1 is slot 0
         self.assertAlmostEqual(best[1], max(3.0 / z_by_slot[1], 7.0), places=10)
         self.assertAlmostEqual(best[2], max(5.0 / z_by_slot[0], 4.0), places=10)
@@ -1791,7 +2219,7 @@ class TestOffshellRateFactor(unittest.TestCase):
         stub._z_tables = stub._build_z_tables({'6_0': self._samples(),
                                                '-6_0': self._samples(seed=9)})
         z = [stub._zhat('6_0', 160.0), stub._zhat('-6_0', 180.0)]
-        best = stub._complete_offshell_probe(self._probe_event())
+        best = stub._complete_upfront_probe(self._probe_event())
         self.assertEqual(len(best), 2)
         # chain 1: masses (160, 180), weights w_slot1 = 3.0, w_slot0 = 5.0
         # chain 2: masses (173, 173) where Z = 1, weights 7.0 and 4.0
