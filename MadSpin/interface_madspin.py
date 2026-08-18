@@ -5216,11 +5216,35 @@ class MadSpinInterface(extended_cmd.Cmd):
         prod_copy = lhe_parser.Event(str(production))
         decays_copy = collections.defaultdict(list)
         jac_bw = 1.0
-        index = 0
+        # ``slot`` below is a free-running index over the grouped walk of
+        # ``decays``, and it *is* the density matrix slot index -- the same one
+        # ``parents`` (PA: prod_static['init_part']) is keyed by in
+        # sequential_accept_reject. That is an invariant of how both sides are
+        # built, not a coincidence to re-derive:
+        #   * slots are laid out "for pdg in decays_key, for particle in
+        #     production order" (_sequential_slots / _density_basis), so a pdg
+        #     owns a *contiguous* block of slots and the blocks come in
+        #     decays_key order;
+        #   * sequential_accept_reject fills the returned dict by ascending
+        #     slot (``for slot in range(len(order))``), never in accept/reject
+        #     order -- _decay_slot_order only decides which slot is drawn next,
+        #     it must never permute the layout;
+        #   * so the dict's key order is decays_key order, each pdg's list is
+        #     that pdg's slot block in ascending order, and walking the groups
+        #     flat enumerates slots 0 .. n-1 exactly.
+        # The assertion below pins it down, so a future change to either side
+        # trips here (under sequential_debug) instead of silently undoing a
+        # boost with another particle's momentum.
+        slot = 0
         for pdg, decay_list in decays.items():
             for decay in decay_list:
                 copy = lhe_parser.Event(str(decay))
                 if not offshell and parents is not None:
+                    assert parents[slot].pid == pdg, \
+                        ('sequential_debug: slot %d of the accepted chain is a '
+                         '%s but the grouped walk over the decays reached it as '
+                         'a %s -- the decays dict is no longer in slot order'
+                         % (slot, parents[slot].pid, pdg))
                     # PA hands back its accepted decays already boosted to the
                     # lab frame -- _slot_density boosts them in place, and that
                     # is the frame add_decays wants -- while
@@ -5228,13 +5252,13 @@ class MadSpinInterface(extended_cmd.Cmd):
                     # itself. Undo it so the joint route starts where it
                     # expects to. (Offshell takes its density on a copy, so
                     # there the drawn decay is still in its rest frame.)
-                    copy.boost(lhe_parser.FourMomentum(parents[index]))
+                    copy.boost(lhe_parser.FourMomentum(parents[slot]))
                 mass = getattr(decay[0], 'new_mass', None)
                 if mass is not None:
                     copy[0].new_mass = mass
                     copy[0].reshuffle_info = decay[0].reshuffle_info
                 decays_copy[pdg].append(copy)
-                index += 1
+                slot += 1
         # the Breit-Wigner sampling jacobians: the joint path folds them in
         # itself when it draws the masses, and here the masses are given, so
         # they are recomputed from the same (pole, width, window) the draw used
@@ -5873,7 +5897,14 @@ class MadSpinInterface(extended_cmd.Cmd):
             if not restart:
                 break
 
-        # back to the pdg -> list layout add_decays consumes, in slot order
+        # back to the pdg -> list layout add_decays consumes, in slot order.
+        # ``range(len(order))`` and not ``order``: the accept/reject ordering
+        # says which slot is *drawn* next, it must not permute the layout. A
+        # pdg owns a contiguous block of slots (_sequential_slots), so this
+        # walks each block in ascending slot order and inserts the keys in
+        # decays_key order -- which makes a flat walk over decays.items()
+        # enumerate slots 0 .. n-1. _check_weight_identity relies on that to
+        # pair a decay with parents[slot]; see the invariant spelled out there.
         decays = collections.defaultdict(list)
         for slot in range(len(order)):
             decays[particles[slot_to_index[slot]].pid].append(slot_decays[slot])
