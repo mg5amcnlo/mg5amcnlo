@@ -279,7 +279,7 @@ def summary_figure(d, keys, out):
                 linestyle='dotted', label='interference only')
         ax.axhline(0.0, color='gray', lw=0.6, linestyle='dashed')
         ax.set_ylim(min(0.0, np.nanmin(it / wid) * 1.3),
-                    np.nanmax(u / wid) * 1.45)
+                    np.nanmax(u / wid) * 1.62)
         if col == 0:
             ax.set_ylabel(r'$d\sigma/dX$ [pb]')
             rax.set_ylabel(r'sum / unpolarised')
@@ -345,7 +345,10 @@ def blocks_figure(d, key, label, out):
             linestyle='dotted', label=r'$(I,I)$')
     ax.axhline(0.0, color='gray', lw=0.6, linestyle='dashed')
     ax.set_ylabel(r'$d\sigma/dX$ [pb]')
-    update_legend(ax, ncol=3, loc='best', size=7)
+    top = max(np.nanmax(d.h([t], key)[0] / wid) for t, _ in named)
+    bot = min(0.0, np.nanmin(s / wid) * 1.25)
+    ax.set_ylim(bot, top * 1.55)
+    update_legend(ax, ncol=3, loc='upper right', size=7)
     plt.setp(ax.get_xticklabels(), visible=False)
 
     ax = axes[1]
