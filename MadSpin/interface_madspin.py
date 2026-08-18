@@ -6927,8 +6927,10 @@ class MadSpinInterface(extended_cmd.Cmd):
     def get_inter_value(self,event,nhel):
         """routine to return all the possible inter for an event"""
         
-        pdir,orig_order = self.get_pdir(event)
-        	
+        # get_pdir returns (pdir, orig_order, prefix, pos, tag); only the first
+        # two are used here.
+        pdir, orig_order, _, _, _ = self.get_pdir(event)
+
         if pdir in self.all_amp:
             all_p = event.get_all_momenta(orig_order)
             for p in all_p:
