@@ -72,9 +72,10 @@ def _borrow_decision_helpers(namespace):
                  # _production_polarization_cache gets '{}' out of it, since
                  # there is no banner to read a proc_card from.
                  '_density_spinmode', '_production_polarization',
-                 # _unweighting_mode consults this first: the interference mode
-                 # forces joint, so a stub that borrows the resolver needs it
-                 '_pure_interference'):
+                 # _unweighting_mode consults these first: the interference
+                 # mode and decay_output = weighted both force joint, so a stub
+                 # that borrows the resolver needs them
+                 '_pure_interference', '_weighted_decay'):
         namespace[name] = inspect.getattr_static(
             interface_madspin.MadSpinInterface, name)
 
@@ -2473,6 +2474,137 @@ class TestPureInterferenceUnweightedOutput(unittest.TestCase):
         absw = (sum(a) / len(a)) * 2.0 / math.pi
         self.assertAlmostEqual(got / target, max(a) / absw, delta=0.03)
         self.assertGreater(got / target, 1.5)
+
+
+class TestWeightedDecayOutput(unittest.TestCase):
+    """``decay_output = weighted``: the option that drops the accept/reject
+    for an ORDINARY (non-interference) run and writes
+    ``w = w_prod * BR * W / c`` instead (section 13.18)."""
+
+    class _Stub(object):
+        InvalidCmd = interface_madspin.MadSpinInterface.InvalidCmd
+        _weighted_decay = interface_madspin.MadSpinInterface._weighted_decay
+        _validate_weighted_decay = \
+            interface_madspin.MadSpinInterface._validate_weighted_decay
+        _weighted_decay_note = \
+            interface_madspin.MadSpinInterface._weighted_decay_note
+        _read_lhe_init_cross = inspect.getattr_static(
+            interface_madspin.MadSpinInterface, '_read_lhe_init_cross')
+        _unweighting_mode = interface_madspin.MadSpinInterface._unweighting_mode
+        _announce_mode = interface_madspin.MadSpinInterface._announce_mode
+        _log_once = interface_madspin.MadSpinInterface._log_once
+        _POL_TOKENS = interface_madspin.MadSpinInterface._POL_TOKENS
+        _parse_pol_side = interface_madspin.MadSpinInterface._parse_pol_side
+        _borrow_decision_helpers(locals())
+
+        def __init__(self, output='unweighted', spinmode='onshell',
+                     pure_interference='', unweighting='auto'):
+            self.options = interface_madspin.MadSpinOptions()
+            self.options['decay_output'] = output
+            self.options['spinmode'] = spinmode
+            self.options['pure_interference'] = pure_interference
+            self.options['unweighting'] = unweighting
+            self.options['fixed_order'] = False
+            self.model = _PIModelStub()
+            self._production_polarization_cache = {}
+
+    # -- the predicate ------------------------------------------------------
+
+    def test_off_by_default(self):
+        stub = self._Stub()
+        self.assertEqual(stub.options['decay_output'], 'unweighted')
+        self.assertFalse(stub._weighted_decay())
+
+    def test_on_when_asked_for_in_a_density_mode(self):
+        for spinmode in ('madspin', 'full', 'PA', 'onshell'):
+            stub = self._Stub(output='weighted', spinmode=spinmode)
+            self.assertTrue(stub._weighted_decay(), spinmode)
+
+    def test_the_two_output_options_do_not_both_apply(self):
+        """pure_interference is always weighted (or unweighted up to a sign)
+        on its own terms, so decay_output steps aside there rather than
+        contradicting pure_interference_output."""
+        stub = self._Stub(output='weighted', pure_interference='t = + -')
+        self.assertFalse(stub._weighted_decay())
+        stub._validate_weighted_decay()          # warns, does not raise
+
+    def test_refused_outside_the_density_modes(self):
+        for spinmode in ('madspin_v1', 'onshell_v1', 'none'):
+            stub = self._Stub(output='weighted', spinmode=spinmode)
+            self.assertFalse(stub._weighted_decay(), spinmode)
+            self.assertRaises(stub.InvalidCmd, stub._validate_weighted_decay)
+
+    def test_an_unweighted_card_validates_silently_everywhere(self):
+        for spinmode in ('madspin', 'PA', 'onshell', 'madspin_v1', 'none'):
+            self._Stub(spinmode=spinmode)._validate_weighted_decay()
+
+    def test_the_option_rejects_an_unknown_value(self):
+        options = interface_madspin.MadSpinOptions()
+        options['decay_output'] = 'weighted'
+        options['decay_output'] = 'signed'
+        self.assertEqual(options['decay_output'], 'weighted')
+
+    # -- it forces the joint path ------------------------------------------
+
+    def test_it_takes_the_joint_path(self):
+        """There is no accept/reject to stage, and the joint branch is the one
+        that carries the weighted path."""
+        for unweighting in ('auto', 'sequential', 'two_stage'):
+            stub = self._Stub(output='weighted', unweighting=unweighting)
+            self.assertEqual(stub._unweighting_mode(True), 'joint', unweighting)
+
+    def test_it_does_not_touch_the_scheme_when_off(self):
+        stub = self._Stub(unweighting='sequential')
+        self.assertNotEqual(stub._unweighting_mode(True), 'joint')
+
+    # -- the banner note and its self-check ---------------------------------
+
+    INIT = """<LesHouchesEvents version="3.0">
+<header>
+</header>
+<init>
+2212 2212 6.5e+03 6.5e+03 0 0 247000 247000 -4 1
+2.0e+01 1.0e-02 2.0e+01 1
+</init>
+</LesHouchesEvents>
+"""
+
+    def _note(self, weights, br_correction=1.0):
+        import tempfile
+        path = os.path.join(tempfile.mkdtemp(), 'out.lhe')
+        with open(path, 'w') as f:
+            f.write(self.INIT)
+        stub = self._Stub(output='weighted')
+        stub._pi_c, stub._pi_c_err = 2.25e-10, 3.0e-13
+        stub._pi_c_stats = {'n': 44016}
+        stats = [{'sum_w': sum(weights),
+                  'sum_w2': sum(w * w for w in weights),
+                  'nb_pi_dead': 0}]
+        return '\n'.join(stub._weighted_decay_note(
+            path, stats, len(weights), br_correction))
+
+    def test_the_note_compares_mean_w_against_the_reference_sigma_br(self):
+        """Under IDWTUP = -4 the cross-section IS the mean of the weights, so
+        mean(w) == sigma*BR is the check that c = <W> was measured right --
+        the exact analogue of the interference mode's z test, with the target
+        at 1 instead of 0."""
+        note = self._note([19.0, 20.0, 21.0])
+        self.assertIn('Reference sigma * BR   (pb)  : +2.00000000e+01', note)
+        self.assertIn('mean(w), the sample XSECUP   : +2.00000000e+01', note)
+        self.assertIn('mean(w) / reference          : 1.000000', note)
+        self.assertIn('Events written               : 3', note)
+        self.assertIn('Normalisation constant     c : +2.25000000e-10', note)
+
+    def test_the_note_reports_a_mis_normalised_sample_as_a_ratio(self):
+        note = self._note([22.0, 22.0, 22.0, 22.0])
+        self.assertIn('mean(w) / reference          : 1.100000', note)
+
+    def test_the_note_follows_a_br_equalization_rescale(self):
+        """<init> is rescaled by the same pass, so the reference the note
+        quotes has to be the post-rescale one."""
+        note = self._note([10.0, 10.0], br_correction=0.5)
+        self.assertIn('Reference sigma * BR   (pb)  : +1.00000000e+01', note)
+        self.assertIn('mean(w) / reference          : 1.000000', note)
 
 
 class TestBannerEventWeightRescale(unittest.TestCase):

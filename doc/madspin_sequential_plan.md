@@ -2661,3 +2661,141 @@ Caveats:
   correctly with a fresh `ms_dir`. That is **pre-existing** -- nothing in this
   work touches the branching-ratio path -- but it was hit while validating and
   is recorded here.
+
+### 13.18 `decay_output = weighted` -- the same trick for an ordinary run
+
+**Status: implemented and validated end to end.** `set decay_output =
+weighted` drops the accept/reject for an ordinary (non-interference) MadSpin
+run: one decay configuration is drawn per production event and kept, with
+
+    w = w_prod * BR * W / c
+
+exactly the fully weighted path of 13.13, only with `W` unrestricted. Default
+`unweighted`, i.e. every existing card is untouched.
+
+**The normalisation needs nothing new.** `c = <W>` is a decay-side constant --
+that is the 13.7b argument, and it is what makes redraw-until-accept unbiased
+in the first place -- so
+
+    mean(w) = sigma_ref * BR * <W> / c = sigma_ref * BR
+
+MG5 writes `IDWTUP = -4`, under which the cross-section *is* the mean of the
+event weights, so `<init>` keeps its ordinary value and nothing downstream has
+to be told a new rule. That is the whole difference from the interference
+mode, where `<W> = 0` forces `XSECUP = 0`.
+
+It also gives the mode a free self-check with no analogue elsewhere: `mean(w)`
+against `sigma_ref * BR` **is** the statement that `c` was measured right,
+because `mean(w)/(sigma*BR) = <W>/c` by construction. It is the exact
+analogue of the interference mode's `z` test, with the target at 1 instead of
+0, and it is reported in the log and in the `<MGWeightedDecay>` banner block,
+`logger.critical` beyond 5 sigma.
+
+**`c` is available on every path this covers**, from the same probe: it is
+measured in `_joint_maxwgt_range` with the cross restriction swapped for
+`hel_restriction_trace`, and outside the interference mode those two are the
+same object, so the swap is a no-op and what comes out is `<W>` itself. The
+probe is *not* skipped when the option is on -- `max_weight` goes unused, but
+`c` does not, and the probe is the only thing that measures it. (`<|W|>` is
+collected on the same draws and is unused here.)
+
+**Scope: the density spin modes only.** `madspin`/`full`, `PA`, `onshell`.
+`madspin_v1`, `onshell_v1` and `spinmode = none` build no density matrix and
+have no `W`; the option raises `InvalidCmd` there rather than being ignored.
+Under `pure_interference` it warns and steps aside -- that mode is always
+weighted on its own terms and answers to `pure_interference_output`, so the
+two never both apply.
+
+**It forces the joint path**, for the plain reason that there is no
+accept/reject left to stage: the sequential and two-stage schemes exist to
+split a test that is not being made.
+
+**Interactions.** `fixed_order`: the counter-event group already rides along
+through the same `br` multiplication, unchanged -- implemented, not validated,
+exactly as in 13.9. `keep_weight_for_polarization_*`: allowed and still
+meaningful, unlike in the interference mode -- the ratios multiply a nominal
+weight that is now weighted, and the ratio itself is untouched. BR
+equalization: unchanged, and it now shares the banner-rewrite pass with the
+note. `_dead_trial` is **not** on this path: it exists to break a `while 1`
+that no longer runs. In its place, a trial with `W <= 0` or non-finite is
+written with **weight 0** and counted. `W < 0` outside the interference mode
+means `jac <= 0`, i.e. a mass set the production could not be reshuffled onto,
+which the accept/reject would have redrawn; there is no redraw here and the
+event would carry the failed reshuffle's kinematics, so it gets the weight
+that region contributes to the integral (zero) rather than the negative one
+that would make the bookkeeping add up on an unphysical event. Zero such
+trials occurred in the run below.
+
+**End-to-end validation.** `p p > t t~` at 13 TeV, 50 000 production events
+(`iseed = 4321`), `spinmode = onshell`, `BW_cut = 15`,
+`max_weight_ps_point = 400`, `decay t > b w+, w+ > l+ vl` and the conjugate,
+`l = e, mu`, 8 cores -- the same parent file as 13.17, run once with the card
+default and once with `set decay_output weighted`.
+
+| | default | `decay_output = weighted` |
+|---|---|---|
+| scheme taken | `sequential` (`auto`) | `joint` (forced) |
+| decay trials per written event | **4.13** (206 289 / 50 000) | **1** |
+| events written | 50 000 | 50 000 |
+| `<init>` XSECUP | 23.779781 | 23.779781 (unchanged) |
+| `sd(w)/mean(w)` | 0.0000 | 0.2779 |
+| `mean(w)` | 23.779781 | **23.783611 +- 0.029563** |
+| `mean(w)` / `sigma_ref*BR` | 1 | **1.000161 (0.13 sigma)** |
+| `c` measured | -- | 2.251356e-10 +- 0.13% |
+| trials with a dead weight | -- | 0 |
+
+`c` is the same 2.251356e-10 the interference runs of 13.17 measured on the
+same parent, which it has to be: it is the unrestricted convolution's mean
+either way.
+
+**The physics is the same and the variance penalty is small.**
+
+| observable | default | weighted | var ratio | pull |
+|---|---|---|---|---|
+| `<C_nn>` | +0.037409 +- 0.001479 | +0.036763 +- 0.001520 | 1.06 | -0.30 |
+| `<C_rr>` | +0.000651 +- 0.001485 | +0.000982 +- 0.001540 | 1.07 | +0.15 |
+| `<C_kk>` | +0.036655 +- 0.001481 | +0.035017 +- 0.001576 | 1.13 | -0.76 |
+| `<cos phi_ll>` | +0.074716 +- 0.002554 | +0.072762 +- 0.002671 | 1.09 | -0.53 |
+| `<Delta phi>` | +1.749616 +- 0.004042 | +1.748802 +- 0.004232 | 1.10 | -0.14 |
+| `<pT(t)>` | 119.864 +- 0.348 | 120.045 +- 0.367 | 1.11 | +0.36 |
+
+**So: 4.13x fewer decay trials for a 6-13% larger variance per production
+event, i.e. roughly a 3.7-3.9x variance reduction per unit of CPU spent in
+the unweighting loop.**
+
+Note this is a *different*, and much smaller, effect than the interference
+mode's ~6x **per production event** (13.17). There the accept/reject discards
+whole production events, so the weighted output buys statistics outright;
+here the accept/reject redraws and every production event yields an output
+event either way, so the weighted output is strictly noisier per event -- it
+is importance sampling against exact sampling -- and the win is entirely in
+CPU. Which of the two matters depends on whether MadSpin or the parent
+generation is the bottleneck. That is why the default stays `unweighted`.
+
+**Byte-identical with the option off.** The same card without
+`decay_output`, run against the base branch and against this one, produces
+the same 90 368 979-byte file, SHA-256
+`767da240c5221ecc0d7193a3031044b3304a457f909212158728c2ab7f242855`.
+
+`tests/test_manager.py test_madspin -t0`: **319 tests, OK** (291 before this
+work).
+
+Caveats, stated rather than glossed:
+
+* only `spinmode = onshell` was exercised end to end; `madspin`/`full` and
+  `PA` go through the same `_unweight_range` and the same `c`, but were not
+  run. `PA` in particular is the one path where the outer reshuffling
+  jacobian is live, i.e. where the `W <= 0` handling above can actually fire,
+  and it has **not** been exercised;
+* `fixed_order` is implemented but unvalidated;
+* **no downstream consumer was checked.** A weighted LHE is not what most
+  tooling expects from MadSpin, and I have not run Pythia8, Delphes or any
+  analysis framework on one of these files. `IDWTUP = -4` with non-constant
+  `XWGTUP` is legal LHEF and Pythia8's reader does take the per-event
+  `XWGTUP`, but I did not verify it, and anything that counts events instead
+  of summing weights will be wrong. The option comment and the banner block
+  both say so;
+* `c` carries a flat scale error on every weight (0.13% here). Unlike the
+  interference mode's `<|W|>`, `c` really is a decay-side constant, so the
+  probe's few production events are enough for it -- and `mean(w)` against
+  `sigma*BR` is the direct measurement of whether that held.
