@@ -5550,25 +5550,16 @@ class MadSpinInterface(extended_cmd.Cmd):
 
         Three things apply such a projection, and all three need the frame:
 
-         * polarised beams (``beampol``), which is what the guard in
-           ``_frame_boost`` tests today;
+         * polarised beams (``beampol``), which reweights the initial-state
+           helicity sum;
          * a polarisation brace on the production process (PR #349/#353);
-         * a polarisation-weight request -- this branch. The weights are the
-           same projection, only used to build an extra weight rather than the
-           nominal one, so an unpolarised production with
+         * a polarisation-weight request. The weights are the same projection,
+           only used to build an extra weight rather than the nominal one, so an
+           unpolarised production with
            ``keep_weight_for_polarization_vector/_fermion`` set still needs it.
 
-        NOT WIRED IN ON THIS BRANCH. ``_frame_boost`` still opens with the
-        beampol-only guard, and PR #355 (stacked on #349) turns that same line
-        into ``if self._beampol() is None and not self._production_polarization()``.
-        Editing it here would only collide with that. The one-line change to make
-        at merge time, replacing whichever version of the guard is in
-        ``_frame_boost`` by then, is
-
-            if not self._needs_frame_axis():
-                return None
-
-        Until that lands the polarisation weights are taken on the lab axis.
+        This is ``_frame_boost``'s guard: it short-circuits to None -- leaving
+        every momentum in the lab -- exactly when this returns False.
         """
         if self._beampol() is not None:
             return True
@@ -7649,8 +7640,8 @@ class MadSpinInterface(extended_cmd.Cmd):
         themselves (HELAS ``boostx``, exactly what ``boost_to_frame`` does in
         driver.f).
 
-        Two things switch it on, and both are cases where the frame is
-        *observable*:
+        Three things switch it on -- the three clauses of ``_needs_frame_axis``
+        -- and all of them are cases where the frame is *observable*:
 
         - polarised beams. ``beampol`` reweights the initial-state helicity sum
           and that sum is quantised along the frame's axis.
@@ -7667,13 +7658,20 @@ class MadSpinInterface(extended_cmd.Cmd):
           change of helicity basis a boost induces, so leaving the momenta in
           the lab would restrict a different helicity than the one the input
           events were generated with.
+        - a polarisation-weight request
+          (``keep_weight_for_polarization_vector`` / ``_fermion``). Those
+          weights go through the very same ``set_hel_restriction`` projection,
+          only to build an extra <wgt> line instead of the nominal weight, so
+          they need the frame for exactly the same reason -- and they can be
+          asked for on a production that carries no brace at all, which is why
+          the two clauses above do not cover them.
 
         Everything else stays in the lab, which keeps unpolarised density runs
         bit-for-bit unchanged: there the full double sum
         ``sum_ij rho_prod(i,j) rho_dec(i,j)`` is a trace, and a boost acts on it
         as a unitary change of basis that cancels between the two factors.
         """
-        if self._beampol() is None and not self._production_polarization():
+        if not self._needs_frame_axis():
             return None
         frame_id = int(self.options['frame_id'])
         if frame_id <= 0:

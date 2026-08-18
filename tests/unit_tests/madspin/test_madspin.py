@@ -63,6 +63,26 @@ def _borrow_decision_helpers(namespace):
         namespace[name] = inspect.getattr_static(
             interface_madspin.MadSpinInterface, name)
     return namespace
+
+
+def _borrow_frame_helpers(namespace):
+    """Add ``_frame_boost`` and everything its guard reaches through to a stub
+    class namespace. Call as ``_borrow_frame_helpers(locals())`` from the class
+    body of any stub that borrows ``_frame_boost``.
+
+    The guard is ``_needs_frame_axis``, which asks about the beams, the
+    production braces and the two polarisation-weight lists; going through this
+    helper is what keeps widening it from meaning an edit in every stub. The
+    caller still has to provide ``_production_polarization`` and ``options``,
+    which are what the stub is actually choosing.
+    """
+    for name in ('_beampol', '_frame_boost', '_needs_frame_axis',
+                 '_polarization_weight_labels',
+                 '_polarization_weights_enabled'):
+        namespace[name] = inspect.getattr_static(
+            interface_madspin.MadSpinInterface, name)
+    namespace['InvalidCmd'] = interface_madspin.MadSpinInterface.InvalidCmd
+    return namespace
 #
 class TestBanner(unittest.TestCase):
     """Test class for the reading of the banner"""
@@ -349,10 +369,12 @@ class _FrameStub(object):
     """Just enough of MadSpinInterface for the frame/beampol helpers: they only
     need the options and the matrix-element ordering of the event."""
 
-    def __init__(self, frame_id, beampol, prodpol=None):
+    def __init__(self, frame_id, beampol, prodpol=None, vector=(), fermion=()):
         self.options = interface_madspin.MadSpinOptions()
         self.options['frame_id'] = frame_id
         self.options['beampol'] = list(beampol)
+        self.options['keep_weight_for_polarization_vector'] = list(vector)
+        self.options['keep_weight_for_polarization_fermion'] = list(fermion)
         # what _production_polarization would have parsed out of the banner's
         # proc_card: {} for a brace-free production process
         self._production_polarization_cache = prodpol if prodpol else {}
@@ -367,8 +389,7 @@ class _FrameStub(object):
     def _production_polarization(self):
         return self._production_polarization_cache
 
-    _beampol = interface_madspin.MadSpinInterface._beampol
-    _frame_boost = interface_madspin.MadSpinInterface._frame_boost
+    _borrow_frame_helpers(locals())
     _boost_momenta = staticmethod(interface_madspin.MadSpinInterface._boost_momenta)
 
 
@@ -392,8 +413,9 @@ class TestFrameBoost(unittest.TestCase):
                (300., 100., 50., -80.),
                (400., -100., -50., 380.)]
 
-    def _stub(self, frame_id, beampol=(80., 0.), prodpol=None):
-        return _FrameStub(frame_id, beampol, prodpol)
+    def _stub(self, frame_id, beampol=(80., 0.), prodpol=None,
+              vector=(), fermion=()):
+        return _FrameStub(frame_id, beampol, prodpol, vector, fermion)
 
     def test_polbeam_to_beampol(self):
         """the card speaks percent, like the run_card polbeam1/polbeam2, and
@@ -457,6 +479,39 @@ class TestFrameBoost(unittest.TestCase):
         self.assertIsNotNone(boost)
         self.assertEqual((boost.E, boost.px, boost.py, boost.pz),
                          (700., 0., 0., 300.))
+
+    def test_frame_follows_a_polarization_weight_request(self):
+        """keep_weight_for_polarization_vector/_fermion apply the same
+        set_hel_restriction projection as a production brace, only to build an
+        extra <wgt> line rather than the nominal weight. They can be asked for
+        on a production that carries no brace and with unpolarised beams, so
+        neither of the other two clauses sees them -- and a projection taken on
+        the lab axis restricts a different helicity than the one MG5 names.
+        Each species list switches the frame on by itself."""
+        for kwargs in [dict(vector=['0']), dict(fermion=['+']),
+                       dict(vector=['T'], fermion=['-'])]:
+            stub = self._stub(6, beampol=(0., 0.), **kwargs)
+            boost = stub._frame_boost(_MomentaEvent(self.MOMENTA))
+            self.assertIsNotNone(boost, kwargs)
+            self.assertEqual((boost.E, boost.px, boost.py, boost.pz),
+                             (700., 0., 0., 300.), kwargs)
+
+    def test_frame_boost_matches_needs_frame_axis(self):
+        """_frame_boost's guard *is* _needs_frame_axis: the boost is taken for
+        each of the three triggers on its own and for nothing else. Pinned
+        together so the two cannot drift apart again."""
+        cases = [(dict(), False),
+                 (dict(beampol=(80., 0.)), True),
+                 (dict(prodpol={24: (0,)}), True),
+                 (dict(vector=['0']), True),
+                 (dict(fermion=['+']), True),
+                 (dict(beampol=(80., 0.), vector=['T']), True)]
+        for kwargs, wanted in cases:
+            kwargs.setdefault('beampol', (0., 0.))
+            stub = self._stub(6, **kwargs)
+            self.assertEqual(stub._needs_frame_axis(), wanted, kwargs)
+            self.assertEqual(stub._frame_boost(_MomentaEvent(self.MOMENTA))
+                             is not None, wanted, kwargs)
 
     def test_frame_boost_unpacks_get_pdir(self):
         """get_pdir returns five values; unpacking four raised ValueError the
@@ -1955,8 +2010,9 @@ class TestKeepWeightForPolarization(unittest.TestCase):
         """A helicity *projection* does not commute with a boost, so it only
         means what the user asked for on MG5's quantisation axis (frame_id). The
         polarisation weights are the same projection as a production brace, so
-        the predicate _frame_boost's guard has to become must be true for them
-        too -- see _needs_frame_axis' note about wiring it to PR #355."""
+        the predicate that _frame_boost's guard tests has to be true for them.
+        TestFrameBoost.test_frame_boost_matches_needs_frame_axis pins the guard
+        itself onto this predicate."""
         class Frame(self._Stub):
             _needs_frame_axis = \
                 interface_madspin.MadSpinInterface._needs_frame_axis
@@ -2694,8 +2750,7 @@ class TestSequentialAcceptReject(unittest.TestCase):
             _announce_mode = interface._announce_mode
             _log_once = interface._log_once
             _borrow_decision_helpers(locals())
-            _beampol = interface._beampol
-            _frame_boost = interface._frame_boost
+            _borrow_frame_helpers(locals())
             _production_polarization = staticmethod(lambda: {})
             def __init__(self):
                 self.options = _StubOptions(
@@ -2902,8 +2957,7 @@ class TestPAUpFrontMass(unittest.TestCase):
             _announce_mode = interface._announce_mode
             _log_once = interface._log_once
             _borrow_decision_helpers(locals())
-            _beampol = interface._beampol
-            _frame_boost = interface._frame_boost
+            _borrow_frame_helpers(locals())
             _production_polarization = staticmethod(lambda: {})
 
             def __init__(self):
@@ -4700,9 +4754,9 @@ class TestGetPdirUnpackArity(unittest.TestCase):
 
     SOURCE = pjoin(MG5DIR, 'MadSpin', 'interface_madspin.py')
 
-    # ``_frame_boost`` still unpacks 4 on this branch; its fix travels with the
-    # frame/beampol PR (#355). Drop this entry once that has landed.
-    KNOWN_PENDING = set(['_frame_boost'])
+    # methods knowingly left behind an arity bump, by name. Empty: every call
+    # site agrees with get_pdir today, and it stays that way.
+    KNOWN_PENDING = set()
 
     def _tree(self):
         import ast
