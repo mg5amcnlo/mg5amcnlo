@@ -1330,6 +1330,226 @@ class TestDensityPolarizationRestriction(unittest.TestCase):
         self.assertTrue(np.allclose(got, rho.trace() / dim))
 
 
+class TestPureInterferenceRestriction(unittest.TestCase):
+    """Proof of concept for the pure-interference ("cross") restriction:
+    one index restricted to the production-side polarisation P, the other to
+    the decay-side one D, with P and D disjoint.
+
+    These tests pin down the algebra section 13 of MADSPIN_SEQUENTIAL_PLAN.md
+    argues from; the mode itself (syntax, signed unweighting, zero
+    cross-section bookkeeping) is NOT implemented.
+    """
+
+    FERMION = TestDensityPolarizationRestriction.FERMION
+    VECTOR = TestDensityPolarizationRestriction.VECTOR
+    _packed = TestDensityPolarizationRestriction._packed
+    _density = TestDensityPolarizationRestriction._density
+    _brute_force = TestDensityPolarizationRestriction._brute_force
+
+    def _cross_brute_force(self, dec, prod, spec):
+        """Sum over the entries a per-particle cross restriction keeps, read
+        off the labels. ``spec`` has one entry per particle: None, a flat set
+        (symmetric), or a (P, D) pair (cross = P x D union D x P)."""
+        table = {tuple(int(x) for x in lab): complex(val)
+                 for lab, val in zip(prod.helicities, prod.values)}
+        total = 0j
+        for lab, val in zip(dec.helicities, dec.values):
+            lab = tuple(int(x) for x in lab)
+            keep = True
+            for k, entry in enumerate(spec):
+                if entry is None:
+                    continue
+                i, j = lab[2 * k], lab[2 * k + 1]
+                if isinstance(entry[0], (list, tuple, set, frozenset)):
+                    p, d = set(entry[0]), set(entry[1])
+                    ok = (i in p and j in d) or (i in d and j in p)
+                else:
+                    ok = i in entry and j in entry
+                if not ok:
+                    keep = False
+                    break
+            if keep:
+                total += complex(val) * table[lab]
+        return total
+
+    # -- normalisation of the new entry form -------------------------------
+
+    def test_cross_entry_normalisation(self):
+        norm = madspin.DensityMatrix.normalize_hel_restriction
+        self.assertEqual(norm([[(0,), (-1, 1)]]), (((0,), (-1, 1)),))
+        # order inside each side is canonicalised, the two sides are not swapped
+        self.assertEqual(norm([[(1, -1), (0,)]]), (((-1, 1), (0,)),))
+        # a cross pair with two identical sides is just the symmetric form
+        self.assertEqual(norm([[(-1, 1), (1, -1)]]), ((-1, 1),))
+        # an empty side would kill everything: fall back to unrestricted
+        self.assertIsNone(norm([[(), (0,)]]))
+        # the historical flat spelling is untouched
+        self.assertEqual(norm([(0,)]), ((0,),))
+        self.assertRaises(ValueError, norm, [[(0,), (1,), (-1,)]])
+
+    # -- the mask itself ----------------------------------------------------
+
+    def test_cross_mask_is_the_off_diagonal_block_and_its_transpose(self):
+        """{0} against {T} on a vector: exactly the four entries (0,+-1) and
+        (+-1,0). No diagonal entry survives."""
+        prod = self._density(self.VECTOR, seed=101,
+                             restriction=[[(0,), (-1, 1)]])
+        mask = prod._restriction_row_mask(prod.hel_restriction)
+        kept = set(tuple(int(v) for v in l)
+                   for l, m in zip(prod.helicities, mask) if m)
+        self.assertEqual(kept, {(0, -1), (0, 1), (-1, 0), (1, 0)})
+        self.assertEqual(int(mask.sum()), 4)
+
+    def test_cross_is_closed_under_transposition(self):
+        """The crux: the kept set must be stable under (i,j) -> (j,i),
+        otherwise the contraction is complex and there is no 'sign of the
+        convolution' to speak of."""
+        for hel, spec in ((self.VECTOR, [[(0,), (-1, 1)]]),
+                          (self.VECTOR, [[(-1,), (0, 1)]]),
+                          (self.FERMION, [[(1,), (-1,)]])):
+            rho = self._density(hel, seed=102, restriction=spec)
+            mask = rho._restriction_row_mask(rho.hel_restriction)
+            kept = set(tuple(int(v) for v in l)
+                       for l, m in zip(rho.helicities, mask) if m)
+            self.assertEqual(kept, set((j, i) for i, j in kept))
+
+    # -- the algebra --------------------------------------------------------
+
+    def test_cross_contraction_is_real_and_is_twice_the_real_part(self):
+        """sum over (P x D) alone is complex; adding its transpose gives
+        2 Re[...], which is what the mask computes."""
+        import numpy as np
+        hel = self.VECTOR
+        prod = self._density(hel, seed=111, restriction=[[(0,), (-1, 1)]])
+        dec = self._density(hel, seed=112)
+        got = dec.scalar_multiplication(prod)
+
+        table = {tuple(int(x) for x in l): complex(v)
+                 for l, v in zip(prod.helicities, prod.values)}
+        half = sum(complex(v) * table[tuple(int(x) for x in l)]
+                   for l, v in zip(dec.helicities, dec.values)
+                   if int(l[0]) == 0 and int(l[1]) in (-1, 1))
+        # the half-sum is genuinely complex: this is why P x D alone is not
+        # a usable weight
+        self.assertGreater(abs(half.imag), 1e-3 * abs(half))
+        self.assertTrue(np.allclose(got, 2 * half.real, atol=1e-5))
+        self.assertLess(abs(complex(got).imag), 1e-5 * abs(complex(got).real))
+        self.assertTrue(np.allclose(
+            got, self._cross_brute_force(dec, prod, [[(0,), (-1, 1)]]),
+            atol=1e-5))
+
+    def test_the_three_blocks_add_up_to_the_full_convolution(self):
+        """<rho_prod, rho_dec> = PP + DD + interference, with P u D the whole
+        basis. The interference block is what this restriction isolates."""
+        import numpy as np
+        hel = self.VECTOR
+        dec = self._density(hel, seed=122)
+        full = dec.scalar_multiplication(self._density(hel, seed=121))
+        pp = dec.scalar_multiplication(
+            self._density(hel, seed=121, restriction=[(0,)]))
+        dd = dec.scalar_multiplication(
+            self._density(hel, seed=121, restriction=[(-1, 1)]))
+        inter = dec.scalar_multiplication(
+            self._density(hel, seed=121, restriction=[[(0,), (-1, 1)]]))
+        self.assertTrue(np.allclose(full, pp + dd + inter, atol=1e-4))
+
+    # -- the two consequences the mode has to live with ---------------------
+
+    def test_cross_restricted_trace_vanishes(self):
+        """No diagonal entry survives, so the restricted trace is exactly 0.
+
+        Physically: the interference term carries no cross-section. Practically:
+        the accept/reject weight must NOT be normalised by this trace -- the
+        denominator has to stay the (unrestricted) production matrix element
+        the input events were generated with."""
+        for hel, spec in ((self.VECTOR, [[(0,), (-1, 1)]]),
+                          (self.FERMION, [[(1,), (-1,)]])):
+            rho = self._density(hel, seed=131, restriction=spec)
+            self.assertEqual(complex(rho.trace()), 0j)
+
+    def test_cross_contraction_against_the_identity_vanishes(self):
+        """A decay slot that has not been drawn yet contributes I/n, which is
+        diagonal, so every partial contraction is identically zero.
+
+        This is both the reason the interference integrates to zero over the
+        decay phase space, and the reason the sequential (per-particle)
+        accept/reject cannot be used in this mode: no prefix ever has a
+        non-zero weight to unweight against."""
+        for hel, spec in ((self.VECTOR, [[(0,), (-1, 1)]]),
+                          (self.FERMION, [[(1,), (-1,)]])):
+            rho = self._density(hel, seed=141, restriction=spec)
+            identity = madspin.DensityMatrix.identity(1, hel, len(hel))
+            self.assertEqual(complex(identity.scalar_multiplication(rho)), 0j)
+
+    # -- several decaying particles ----------------------------------------
+
+    def test_multi_particle_cross_stays_a_per_index_product(self):
+        """Mixing a cross entry with a symmetric one and with None: the mask
+        keeps its per-particle AND structure, and stays transposition-closed
+        (hence real) because each factor separately is."""
+        import numpy as np
+        import itertools
+        hels = [self.VECTOR, self.VECTOR]
+        dim = len(hels[0]) * len(hels[1])
+        allowed_hel = [h for combo in itertools.product(*hels) for h in combo]
+        prod = madspin.DensityMatrix(self._packed(list(range(dim)), 151),
+                                     2, allowed_hel, dim)
+        dec = self._density(hels[0], 152).tensor_product(
+              self._density(hels[1], 153))
+
+        for spec in ([[(0,), (-1, 1)], None],
+                     [[(0,), (-1, 1)], (-1, 1)],
+                     [None, [(-1,), (1,)]],
+                     [[(0,), (-1, 1)], [(-1,), (1,)]]):
+            prod.set_hel_restriction(spec)
+            got = prod.scalar_multiplication(dec)
+            self.assertTrue(np.allclose(
+                got, self._cross_brute_force(dec, prod, spec), atol=1e-4))
+            self.assertLess(abs(complex(got).imag),
+                            1e-4 * max(abs(complex(got).real), 1e-6))
+            mask = prod._restriction_row_mask(prod.hel_restriction)
+            kept = set(tuple(int(v) for v in l)
+                       for l, m in zip(prod.helicities, mask) if m)
+            # transposing the joint index swaps bra and ket of every particle
+            self.assertEqual(kept, set(
+                tuple(x for pair in zip(k[1::2], k[0::2]) for x in pair)
+                for k in kept))
+
+        # 4 (the (0,+-1)/(+-1,0) block) x 4 (the (-1,1)/(1,-1) block) of 81
+        prod.set_hel_restriction([[(0,), (-1, 1)], [(-1,), (1,)]])
+        mask = prod._restriction_row_mask(prod.hel_restriction)
+        self.assertEqual(int(mask.sum()), 8)
+
+    def test_cross_restriction_survives_the_tensor_product(self):
+        left = self._density(self.FERMION, 161, restriction=[[(1,), (-1,)]])
+        right = self._density(self.VECTOR, 162)
+        self.assertEqual(left.tensor_product(right).hel_restriction,
+                         (((1,), (-1,)), None))
+
+    def test_cross_mask_is_cached_per_basis(self):
+        a = self._density(self.VECTOR, 171, restriction=[[(0,), (-1, 1)]])
+        b = self._density(self.VECTOR, 172, restriction=[[(0,), (-1, 1)]])
+        self.assertIs(a._restriction_row_mask(a.hel_restriction),
+                      b._restriction_row_mask(b.hel_restriction))
+        self.assertIsNot(a._restriction_row_mask(a.hel_restriction),
+                         a._restriction_row_mask(((0,),)))
+
+    # -- behaviour neutrality ----------------------------------------------
+
+    def test_symmetric_restrictions_are_untouched(self):
+        """The whole point of the new entry form is that nothing symmetric
+        moves: same normalisation, same mask objects, same answers."""
+        import numpy as np
+        for hel in (self.FERMION, self.VECTOR):
+            dec = self._density(hel, seed=182)
+            for spec in ([None], [(hel[0],)], [tuple(hel[:2])]):
+                prod = self._density(hel, seed=181, restriction=spec)
+                self.assertTrue(np.allclose(
+                    dec.scalar_multiplication(prod),
+                    self._brute_force(dec, prod, [
+                        None if spec == [None] else spec[0]])))
+
+
 class TestProductionPolarizationPlumbing(unittest.TestCase):
     """Reading the production polarisation and turning it into the basis /
     restriction the density matrices are built with."""

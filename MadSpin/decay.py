@@ -4911,6 +4911,14 @@ class DensityMatrix:
     # -------------------------------------------------------------------------
 
     @staticmethod
+    def _is_cross_restriction(entry):
+        """Whether a *normalised* per-particle entry is a cross (interference)
+        one, i.e. a ``(bra_allowed, ket_allowed)`` pair rather than a flat
+        tuple of helicity values."""
+        return (isinstance(entry, tuple) and len(entry) == 2
+                and isinstance(entry[0], tuple))
+
+    @staticmethod
     def normalize_hel_restriction(restriction):
         """Canonical, hashable form of a per-particle helicity restriction.
 
@@ -4919,21 +4927,48 @@ class DensityMatrix:
         columns are laid out). Each entry is either
 
           - ``None`` (or an empty container): that index is summed over its
-            whole basis -- the historical behaviour, and
+            whole basis -- the historical behaviour,
 
-          - a container of the helicity values that index is allowed to take.
+          - a container of the helicity values that index is allowed to take
+            (the *symmetric* form: both the bra and the ket index of that
+            particle must lie in the set), or
+
+          - a pair ``(bra_allowed, ket_allowed)`` of two such containers (the
+            *cross*, or pure-interference, form: see ``set_hel_restriction``).
+            ``(S, S)`` normalises back to the symmetric ``S``.
 
         Returns ``None`` when nothing is restricted, so that the unrestricted
         code paths stay bit-for-bit identical.
         """
         if restriction is None:
             return None
+
+        def _flat(values):
+            return tuple(sorted(set(int(h) for h in values)))
+
         key = []
         for allowed in restriction:
             if allowed is None:
                 key.append(None)
                 continue
-            allowed = tuple(sorted(set(int(h) for h in allowed)))
+            allowed = list(allowed)
+            if allowed and all(isinstance(x, (list, tuple, set, frozenset))
+                               for x in allowed):
+                if len(allowed) != 2:
+                    raise ValueError(
+                        "A cross helicity restriction must be a "
+                        "(bra_allowed, ket_allowed) pair, got %s" % (allowed,))
+                bra, ket = _flat(allowed[0]), _flat(allowed[1])
+                if not bra or not ket:
+                    # an empty side would kill the whole contraction; treat it
+                    # like the unrestricted historical spelling instead
+                    key.append(None)
+                elif bra == ket:
+                    key.append(bra)
+                else:
+                    key.append((bra, ket))
+                continue
+            allowed = _flat(allowed)
             key.append(allowed if allowed else None)
         if all(a is None for a in key):
             return None
@@ -4954,6 +4989,19 @@ class DensityMatrix:
         ``{T}`` keeps the whole ``-1/+1`` block and drops the ``0`` row and
         column. The rule is uniform: a matrix element (i,j) of particle k
         survives iff *both* i and j are allowed for k.
+
+        A per-particle entry may instead be a *cross* pair ``(P, D)``, which
+        keeps the (i,j) entries with ``i in P and j in D`` **together with**
+        their transposes ``i in D and j in P``. With ``P`` and ``D`` disjoint
+        this is the pure-interference block between the two polarisations: it
+        has no diagonal entry, so the restricted ``trace()`` is exactly zero
+        (the interference term carries no cross-section), and it is closed
+        under (i,j) -> (j,i). That closure is what makes the contraction real:
+        rho_prod and rho_dec are both hermitian, so the (j,i) term is the
+        complex conjugate of the (i,j) one and the pair adds up to
+        ``2 Re[rho_prod(i,j) rho_dec(i,j)]``. Summing ``P x D`` *alone* would
+        give a complex number and is not a physical weight -- see
+        MADSPIN_SEQUENTIAL_PLAN.md section 13.
         """
         self.hel_restriction = DensityMatrix.normalize_hel_restriction(restriction)
         return self
@@ -4976,11 +5024,21 @@ class DensityMatrix:
         for k, allowed in enumerate(restriction):
             if allowed is None:
                 continue
-            allowed = np.asarray(allowed, dtype=np.int32)
             # column 2k is the row (bra) helicity of particle k, 2k+1 the column
             # (ket) one -- see get_map_density_matrix
-            mask &= np.isin(h[:, 2 * k], allowed)
-            mask &= np.isin(h[:, 2 * k + 1], allowed)
+            bra, ket = h[:, 2 * k], h[:, 2 * k + 1]
+            if DensityMatrix._is_cross_restriction(allowed):
+                # pure interference: (bra in P and ket in D) or its transpose.
+                # Keeping both orderings is not optional -- it is what makes the
+                # contraction real (see set_hel_restriction).
+                left = np.asarray(allowed[0], dtype=np.int32)
+                right = np.asarray(allowed[1], dtype=np.int32)
+                mask &= ((np.isin(bra, left) & np.isin(ket, right)) |
+                         (np.isin(bra, right) & np.isin(ket, left)))
+                continue
+            allowed = np.asarray(allowed, dtype=np.int32)
+            mask &= np.isin(bra, allowed)
+            mask &= np.isin(ket, allowed)
 
         DensityMatrix._restriction_cache[cache_key] = mask
         return mask
