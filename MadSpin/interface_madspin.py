@@ -2430,13 +2430,8 @@ class MadSpinInterface(extended_cmd.Cmd):
         self.error *= self.branching_ratio
         
 
-        density_pole_approximation = self.options['spinmode'] in ['PA', 'onshell']
-        density_do_reshuffle = self.options['spinmode'] == 'PA'
-        density_needs_reshuffle = (
-            density_method
-            and (not density_pole_approximation
-                 or density_do_reshuffle)
-        )
+        density_pole_approximation = self._density_pole_approximation()
+        density_needs_reshuffle = self._density_needs_reshuffle(density_method)
 
         # 3. generate the various matrix-elements
         time_me_generation = time.time()
@@ -2647,6 +2642,57 @@ class MadSpinInterface(extended_cmd.Cmd):
             position += multiplicity
         return ladder
 
+    # ------------------------------------------------------------------
+    # The two questions the unweighting branches keep asking
+    # ------------------------------------------------------------------
+    # (a) which *spinmode family* is this -- is the density matrix evaluated at
+    #     onshell momenta (pole approximation) or at the reshuffled ones? -- and
+    # (b) which *accept/reject scheme* is this -- is there a mass-set stage in
+    #     front of the angle stage?
+    # Both are asked from several places, so they get names rather than being
+    # spelled out as spinmode/mode string comparisons at each site.
+
+    def _density_pole_approximation(self):
+        """Whether the density matrix is taken in the pole approximation, i.e.
+        evaluated at onshell momenta (``PA``/``onshell``) rather than at the
+        reshuffled offshell ones (``madspin``/``full``)."""
+        return self.options['spinmode'] in ['PA', 'onshell']
+
+    def _density_do_reshuffle(self):
+        """Whether a pole-approximation run nevertheless reshuffles the
+        production onto the sampled virtualities. Only ``PA`` does: it samples a
+        virtuality per resonance, while ``onshell`` keeps the production
+        kinematics as they are."""
+        return self.options['spinmode'] == 'PA'
+
+    def _density_needs_reshuffle(self, in_density_mode):
+        """Whether the chain reshuffles the production event at all. Offshell it
+        always does -- that is where its density matrix is evaluated -- ``PA``
+        does because it samples virtualities, ``onshell`` never does, and
+        nothing does outside density mode.
+
+        ``in_density_mode`` is the caller's own way of knowing it is in density
+        mode (the ``density_method`` flag before the generation exists, and
+        ``self.generate_all.mode == 'density'`` afterwards)."""
+        return in_density_mode and (not self._density_pole_approximation()
+                                    or self._density_do_reshuffle())
+
+    def _spinmode_has_density(self):
+        """Whether the spinmode carries the density-matrix machinery the staged
+        accept/reject schemes are built on. The v1 spinmodes, ``none`` and
+        ``bridge`` do not, and keep the historical joint test."""
+        return (self._density_pole_approximation()
+                or self.options['spinmode'] in ['madspin', 'full'])
+
+    @staticmethod
+    def _is_upfront_scheme(mode):
+        """Whether ``mode`` draws every virtuality *before* the angles, i.e.
+        whether it has a mass-set accept/reject in front of its angle stage.
+        True for every scheme but ``joint`` -- which tests the virtualities and
+        the angles together -- and ``sequential_with_mass``, which draws each
+        slot's mass inside that slot's own accept/reject."""
+        return mode not in ('joint', 'sequential_with_mass')
+
     def _log_once(self, key, message, *args):
         """Log a resolution message the first time only: these are decided per
         production event but say something about the run."""
@@ -2656,6 +2702,53 @@ class MadSpinInterface(extended_cmd.Cmd):
         if key not in seen:
             seen.add(key)
             logger.info(message, *args)
+
+    def _auto_unweighting_mode(self):
+        """What ``unweighting = auto`` resolves to, before any of the
+        fallbacks: one branch per spinmode family, keyed on the number of
+        decaying particles.
+
+        The two branches were measured over the number of decaying particles n
+        on `p p > w+ j` (n=1), `p p > t t~` (2), `p p > t t~ z` (3) and
+        `p p > t t~ t t~` (4), 50000 events each -- see
+        MADSPIN_SEQUENTIAL_PLAN.md section 12.
+
+        **PA/onshell -> ``sequential``, at every n.** It was the fastest of the
+        three at all four multiplicities, by 1.2x at n=1 rising to 3.8x at n=4.
+        The joint test's cost grows as n x (trials per event), since one
+        rejection throws every decay away, while the per-particle one's grows
+        far more slowly; and the up-front mass draw evaluates the production
+        reshuffling jacobian once per mass set instead of once per slot trial.
+        Even at n=1, where the angle stage degenerates to the joint test, the
+        mass stage still pays for itself: a mass set can be rejected before any
+        decay is drawn.
+
+        **madspin/full -> ``joint`` up to two decaying particles, then
+        ``sequential``.** Offshell, each mass set costs a production reshuffle
+        *and* an offshell production density, which the joint test pays per
+        trial but which a staged scheme pays per mass set -- and below n=3 there
+        are not enough decays to save to cover it. At n=1 it is worse than that:
+        the mass-set weight carries ``Tr(rho_off)/|M_prod|^2_on``, and when the
+        single decaying particle carries most of the production matrix
+        element's virtuality dependence (`p p > w+ j`) that ratio spans orders
+        of magnitude, no bound covers it, and the mass stage needs ~790 sets per
+        accepted event. From n=3 the per-particle test wins by 2.2x and 4.3x.
+
+        ``two_stage`` is not the fastest scheme at any measured point -- joint
+        beats it at n<=2 and ``sequential`` at n>=3 -- so it is reachable but
+        never chosen here. It stays useful as a cross-check, being the one
+        staged scheme whose angle stage is a single joint test.
+        """
+        if self._density_pole_approximation():
+            # fastest at every multiplicity measured; rho is fixed on shell
+            # so the mass stage costs a reshuffling jacobian and nothing else
+            return 'sequential'
+        if getattr(self, '_nb_decaying', 2) <= 2:
+            # offshell a mass set costs a production reshuffle and a
+            # production density, and there are not yet enough decays to
+            # save to pay for it
+            return 'joint'
+        return 'sequential'
 
     def _unweighting_mode(self, density_method=True):
         """Which accept/reject scheme this run uses: one of 'joint',
@@ -2692,36 +2785,9 @@ class MadSpinInterface(extended_cmd.Cmd):
         spinmodes reshuffle the whole production onto the mass set at once, so
         there they fall back to ``sequential``.
 
-        ``auto`` has two branches, one per spinmode family. They were measured
-        over the number of decaying particles n on `p p > w+ j` (n=1),
-        `p p > t t~` (2), `p p > t t~ z` (3) and `p p > t t~ t t~` (4), 50000
-        events each -- see MADSPIN_SEQUENTIAL_PLAN.md section 12.
-
-        **PA/onshell -> ``sequential``, at every n.** It was the fastest of the
-        three at all four multiplicities, by 1.2x at n=1 rising to 3.8x at n=4.
-        The joint test's cost grows as n x (trials per event), since one
-        rejection throws every decay away, while the per-particle one's grows
-        far more slowly; and the up-front mass draw evaluates the production
-        reshuffling jacobian once per mass set instead of once per slot trial.
-        Even at n=1, where the angle stage degenerates to the joint test, the
-        mass stage still pays for itself: a mass set can be rejected before any
-        decay is drawn.
-
-        **madspin/full -> ``joint`` up to two decaying particles, then
-        ``sequential``.** Offshell, each mass set costs a production reshuffle
-        *and* an offshell production density, which the joint test pays per
-        trial but which a staged scheme pays per mass set -- and below n=3 there
-        are not enough decays to save to cover it. At n=1 it is worse than that:
-        the mass-set weight carries ``Tr(rho_off)/|M_prod|^2_on``, and when the
-        single decaying particle carries most of the production matrix
-        element's virtuality dependence (`p p > w+ j`) that ratio spans orders
-        of magnitude, no bound covers it, and the mass stage needs ~790 sets per
-        accepted event. From n=3 the per-particle test wins by 2.2x and 4.3x.
-
-        ``two_stage`` is not the fastest scheme at any measured point -- joint
-        beats it at n<=2 and ``sequential`` at n>=3 -- so it is reachable but
-        never chosen here. It stays useful as a cross-check, being the one
-        staged scheme whose angle stage is a single joint test.
+        What ``auto`` resolves to, and why, is in ``_auto_unweighting_mode``.
+        Whatever is asked for or resolved to, the fallbacks below can still send
+        the run back to ``joint``.
 
         ``fixed_order`` forces joint: its counter-events ride along with the
         decays and have not been thought through here.
@@ -2730,18 +2796,7 @@ class MadSpinInterface(extended_cmd.Cmd):
             return 'joint'
         asked = mode = self.options['unweighting']
         if mode == 'auto':
-            nb_decaying = getattr(self, '_nb_decaying', 2)
-            if self.options['spinmode'] in ['PA', 'onshell']:
-                # fastest at every multiplicity measured; rho is fixed on shell
-                # so the mass stage costs a reshuffling jacobian and nothing else
-                mode = 'sequential'
-            elif nb_decaying <= 2:
-                # offshell a mass set costs a production reshuffle and a
-                # production density, and there are not yet enough decays to
-                # save to pay for it
-                mode = 'joint'
-            else:
-                mode = 'sequential'
+            mode = self._auto_unweighting_mode()
         if mode == 'joint':
             return self._announce_mode('joint', asked)
         if self.options['fixed_order']:
@@ -2768,13 +2823,13 @@ class MadSpinInterface(extended_cmd.Cmd):
                            "keeping the joint accept/reject "
                            "(unweighting ignored)")
             return self._announce_mode('joint', asked)
-        if self.options['spinmode'] not in ['PA', 'onshell', 'madspin', 'full']:
+        if not self._spinmode_has_density():
             self._log_once('spinmode',
                            "MadSpin: spinmode=%s keeps the joint accept/reject "
                            "(unweighting ignored)", self.options['spinmode'])
             return self._announce_mode('joint', asked)
         if (mode == 'sequential_with_mass'
-                and self.options['spinmode'] not in ['PA', 'onshell']):
+                and not self._density_pole_approximation()):
             self._log_once('with_mass_pa_only',
                            "MadSpin: unweighting=sequential_with_mass needs a "
                            "per-particle mass draw, which the offshell "
@@ -4235,11 +4290,9 @@ class MadSpinInterface(extended_cmd.Cmd):
         worker."""
         self.efficiency = 1. / nb_ps_point
         t0 = time.time()
-        density_pole_approximation = self.options['spinmode'] in ['PA', 'onshell']
-        density_do_reshuffle = self.options['spinmode'] == 'PA'
-        density_needs_reshuffle = (
-            self.generate_all.mode == 'density'
-            and (not density_pole_approximation or density_do_reshuffle))
+        density_pole_approximation = self._density_pole_approximation()
+        density_needs_reshuffle = self._density_needs_reshuffle(
+            self.generate_all.mode == 'density')
         per_event = []
         for i in range(start, stop):
             if (i - start) % 5 == 1 and getattr(self, '_shard_tag', None) in (None, 0):
@@ -4929,24 +4982,21 @@ class MadSpinInterface(extended_cmd.Cmd):
         """Whether the sequential accept/reject runs its offshell (madspin/full)
         branch: the production density is evaluated at reshuffled momenta, so the
         virtualities are drawn up front and rho is fixed per chain."""
-        return self.options['spinmode'] not in ['PA', 'onshell']
+        return not self._density_pole_approximation()
 
     def _sequential_upfront(self, density_method=True):
-        """Whether the chain draws every virtuality *before* the angles, i.e.
-        whether there is a mass-set accept/reject in front of the angle stage.
+        """Whether *this run* draws every virtuality before the angles, i.e.
+        ``_is_upfront_scheme`` of the scheme it resolved to.
 
-        True for every scheme but ``sequential_with_mass``, which draws each
-        slot's mass inside that slot's own accept/reject. What the up-front draw
-        buys differs by spinmode: offshell it fixes rho for the chain (which is
-        what makes the per-particle decomposition possible at all), while under
-        PA rho is already fixed at the onshell momenta and what is frozen
-        instead is the *production reshuffling jacobian* -- one reshuffle per
-        mass set rather than one per slot trial. Either way the angle stage then
-        redraws to acceptance and divides out its own normalisation, which is
-        what the tabulated ``_zhat`` puts back.
+        What the up-front draw buys differs by spinmode: offshell it fixes rho
+        for the chain (which is what makes the per-particle decomposition
+        possible at all), while under PA rho is already fixed at the onshell
+        momenta and what is frozen instead is the *production reshuffling
+        jacobian* -- one reshuffle per mass set rather than one per slot trial.
+        Either way the angle stage then redraws to acceptance and divides out
+        its own normalisation, which is what the tabulated ``_zhat`` puts back.
         """
-        return self._unweighting_mode(density_method) not in \
-                    ('joint', 'sequential_with_mass')
+        return self._is_upfront_scheme(self._unweighting_mode(density_method))
 
     # ------------------------------------------------------------------
     # Z_k(m): the rate factor of one slot, in the up-front-mass schemes
@@ -5344,7 +5394,7 @@ class MadSpinInterface(extended_cmd.Cmd):
         # stage normalises itself) and it keeps Z_hat only as a preconditioner,
         # since it cancels between the two stages.
         mode = self._unweighting_mode()
-        upfront = mode not in ('joint', 'sequential_with_mass')
+        upfront = self._is_upfront_scheme(mode)
         joint_angles = upfront and mode == 'two_stage'
         exact = upfront and mode == 'sequential_global_retry'
         zkeys = self._z_slot_keys(particles, slot_to_index) if upfront else None
@@ -5834,8 +5884,8 @@ class MadSpinInterface(extended_cmd.Cmd):
             Carefull this modifies production event (pass to the full one)
             build_event: if False (density mode) compute weight without building event"""
         #print("\n\n\n\n\n======== debug get_onshell_evt_and_wgt =========")
-        density_pole_approximation = self.options['spinmode'] in ['PA', 'onshell']
-        density_do_reshuffle = self.options['spinmode'] == 'PA'
+        density_pole_approximation = self._density_pole_approximation()
+        density_do_reshuffle = self._density_do_reshuffle()
         decay_me = 1.0
         decay_me_debug = 1.0
         jac = 1.0
@@ -6089,8 +6139,8 @@ class MadSpinInterface(extended_cmd.Cmd):
         # acceptance) and for 2 -> 1 production (no phase space to redistribute).
         jac_reshuffle = 1.0
         prod_static = getattr(production, '_ms_density_static', None)
-        density_pole_approximation = self.options['spinmode'] in ['PA', 'onshell']
-        density_do_reshuffle = self.options['spinmode'] == 'PA'
+        density_pole_approximation = self._density_pole_approximation()
+        density_do_reshuffle = self._density_do_reshuffle()
         if not density_pole_approximation or \
             (not prod_static or prod_static.get('decays_key') != decays_key):
             prod_static = self._density_basis(production, decays_key)
