@@ -4741,6 +4741,9 @@ class DensityMatrix:
 
         # Per-particle helicity restriction (see set_hel_restriction). None = full sum.
         self.hel_restriction = None
+        # Restriction used by trace()/normalized() when hel_restriction is a
+        # *cross* one (see set_hel_restriction_trace). None = untraced.
+        self.hel_restriction_trace = None
 
         # Lazy per-instance cache
         self._sort_order = None
@@ -4880,6 +4883,7 @@ class DensityMatrix:
 
         obj._basis_id = basis_id
         obj.hel_restriction = None
+        obj.hel_restriction_trace = None
         obj._sort_order = None
 
         # Diagonal mask is cached per basis_id
@@ -5005,6 +5009,44 @@ class DensityMatrix:
         """
         self.hel_restriction = DensityMatrix.normalize_hel_restriction(restriction)
         return self
+
+    def set_hel_restriction_trace(self, restriction):
+        """Attach the restriction ``trace()`` / ``normalized()`` must use when
+        ``hel_restriction`` is a *cross* (pure-interference) one.
+
+        For a symmetric restriction the two are the same object and this is
+        never consulted: the polarised cross-section is normalised by the
+        polarised trace, which is exactly the restriction the contraction uses,
+        and that is what keeps the accept/reject weight averaging to 1/n.
+
+        A cross restriction has no diagonal entry, so its restricted trace is
+        identically zero -- it is the statement that the interference term
+        carries no cross-section. Using it to normalise would divide the weight
+        by zero, so the two restrictions have to part company here: the
+        contraction stays on the interference block while the normalisation
+        keeps using the *production* trace, i.e. the symmetric restriction the
+        production process' own braces impose (``None``, the full trace, for the
+        unpolarised production this mode requires). See
+        MADSPIN_SEQUENTIAL_PLAN.md section 13.4.
+        """
+        self.hel_restriction_trace = \
+            DensityMatrix.normalize_hel_restriction(restriction)
+        return self
+
+    def _trace_restriction(self):
+        """The restriction in force for ``trace()``.
+
+        Symmetric restrictions are returned untouched, so nothing that existed
+        before the interference mode can move; only a cross restriction defers
+        to ``hel_restriction_trace``.
+        """
+        restriction = self.hel_restriction
+        if restriction is None:
+            return None
+        if any(DensityMatrix._is_cross_restriction(entry)
+               for entry in restriction):
+            return self.hel_restriction_trace
+        return restriction
 
     def _restriction_row_mask(self, restriction):
         """Boolean row mask implementing ``restriction`` on this matrix' labels.
@@ -5184,6 +5226,13 @@ class DensityMatrix:
             left = self.hel_restriction or (None,) * self.nchanging
             right = other.hel_restriction or (None,) * other.nchanging
             out.set_hel_restriction(tuple(left) + tuple(right))
+            # the trace restriction is per-index too, and concatenates the same
+            # way; it only differs from the above for a cross restriction
+            if (self.hel_restriction_trace is not None
+                    or other.hel_restriction_trace is not None):
+                left = self.hel_restriction_trace or (None,) * self.nchanging
+                right = other.hel_restriction_trace or (None,) * other.nchanging
+                out.set_hel_restriction_trace(tuple(left) + tuple(right))
         return out
 
     @classmethod
@@ -5231,6 +5280,7 @@ class DensityMatrix:
             basis_id=self._basis_id,
         )
         out.hel_restriction = self.hel_restriction
+        out.hel_restriction_trace = self.hel_restriction_trace
         self._normalized_cache = out
         return out
 
@@ -5245,7 +5295,7 @@ class DensityMatrix:
         accept/reject weight averaging to 1/n exactly as in the unrestricted
         case.
         """
-        restriction = self.hel_restriction
+        restriction = self._trace_restriction()
         if hel_restriction is not None:
             restriction = DensityMatrix._combine_restrictions(
                 restriction, DensityMatrix.normalize_hel_restriction(hel_restriction))

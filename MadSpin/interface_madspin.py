@@ -76,6 +76,16 @@ class MadSpinOptions(banner.ConfigFile):
         self.add_param('global_order_coupling', '')
         self.add_param('identical_particle_in_prod_and_decay', 'average')
         self.add_param('beampol', [0., 0.], comment='beam polarisation of each beam in percent, -100 .. 100, exactly as the run_card polbeam1/polbeam2 (0 is unpolarised). Taken from the run_card of the production when it has one.')
+        self.add_param('pure_interference', '',
+                       comment="pure-interference mode: keep ONLY the interference between two "
+                       "polarisations of a decaying particle in the production/decay density "
+                       "convolution. Syntax 'set pure_interference t = 0 T' (production-side set "
+                       "= decay-side set), several particles separated by ';'. Each side is one or "
+                       "more of 0, +/R, -/L, T and the two sides must be disjoint. The production "
+                       "process must be UNPOLARISED (the interference between two polarisations "
+                       "does not exist in a sample generated with a brace on that leg). The sample "
+                       "then has zero total cross-section by construction and its event weights "
+                       "carry a sign; see MADSPIN_SEQUENTIAL_PLAN.md section 13.")
         self.add_param('density_debug', False, comment='Turn on check against full ME calculation')
         self.add_param('density_tolerance', 1E-4, comment='Tolerance for deviation between density and full ME')
         self.add_param('decay_event_mult', 1E0, comment='Produce more events than needed so that MadSpin does not have to regenerate decay events')
@@ -1326,6 +1336,7 @@ class MadSpinInterface(extended_cmd.Cmd):
             # read (and validate) the production polarisation braces now rather
             # than on the first event, deep inside a worker process
             self._production_polarization()
+            self._validate_pure_interference()
         # The density modes decide about the '@' grouping later, in run_onshell,
         # where the production events say how many of each particle an event
         # carries. These two never can, so say it now rather than after the
@@ -2749,6 +2760,17 @@ class MadSpinInterface(extended_cmd.Cmd):
         """
         if not density_method:
             return 'joint'
+        if self._pure_interference():
+            # Every staged scheme substitutes DensityMatrix.identity for the
+            # decay slots it has not drawn yet, and the interference block has
+            # no diagonal entry, so every partial contraction against the
+            # identity is identically zero: no prefix carries any weight and
+            # there is nothing to unweight against. Section 13.4.
+            self._log_once('pure_interference_joint',
+                           "MadSpin: pure_interference forces the joint "
+                           "accept/reject (every partial weight of a staged "
+                           "scheme is identically zero in this mode)")
+            return self._announce_mode('joint', self.options['unweighting'])
         asked = mode = self.options['unweighting']
         if mode == 'auto':
             nb_decaying = getattr(self, '_nb_decaying', 2)
@@ -3325,6 +3347,18 @@ class MadSpinInterface(extended_cmd.Cmd):
         nb_event = ctx['shard_nb_event']
         fixed_order = self.options['fixed_order']
 
+        # Pure-interference mode: the weight is signed, its mean over the decay
+        # phase space is zero, and what varies from production event to
+        # production event is <|w|> -- the local size of the interference. So
+        # the historical redraw-until-accept, which forces exactly one output
+        # event per production event, is *wrong* here: it would divide that
+        # local size out and leave the interference carried by the sign pattern
+        # alone. One draw, accept on |w|/maxwgt, write nothing on a rejection.
+        # See MADSPIN_SEQUENTIAL_PLAN.md section 13.7.
+        pure_interference = bool(self._pure_interference())
+        nb_pi_reject = 0   # production events that drew a rejected decay set
+        sum_w = 0.0        # signed weight sum, for the zero-cross-section check
+        sum_w2 = 0.0       # its second moment: no cancellation, so the MC error
         nb_try = 0
         nb_loose_skip = 0  # events dropped to equalize BRs (fake-decay path)
         sequential_stats = collections.defaultdict(int)
@@ -3409,6 +3443,8 @@ class MadSpinInterface(extended_cmd.Cmd):
 
             # Per-production-event cache reused across rejection retries.
             prod_density_cached = None
+            accepted = False
+            wsign = 1.0
 
             while 1:
                 nb_try += 1
@@ -3445,7 +3481,16 @@ class MadSpinInterface(extended_cmd.Cmd):
                     full_evt = full_evt.add_decays(decays)
                     jac = full_evt.reshuffle_production()
 
-                if random.random()*maxwgt < wgt*jac:
+                test = wgt*jac
+                if pure_interference:
+                    # the accept/reject runs on |w| (a negative weight would
+                    # never fire the test below and the loop would spin
+                    # forever); the sign of the convolution is carried onto the
+                    # output weight instead
+                    test = abs(test)
+                    wsign = -1.0 if (wgt*jac) < 0 else 1.0
+                if random.random()*maxwgt < test:
+                    accepted = True
                     if offshell_density:
                         # prod_trial has already been reshuffled internally (its
                         # jacobian is in wgt); build the event to write out from the
@@ -3477,25 +3522,50 @@ class MadSpinInterface(extended_cmd.Cmd):
                     if self.options['fixed_order']:
                         full_evt = [full_evt] + [evt.add_decays(decays) for evt in counterevt]
                     break
+                if pure_interference:
+                    # ONE draw per production event: no redraw. The number of
+                    # kept events per production point is then proportional to
+                    # <|w|> there, which is exactly the quantity that must be
+                    # allowed to vary (section 13.7b).
+                    break
                 #else:
                 #    misc.sprint('fail-> retry')
+            if not accepted:
+                # pure-interference rejection: write nothing and move on. The
+                # BR-equalization path above already does this, and
+                # _apply_accounting already copes with n_written < n_processed.
+                nb_pi_reject += 1
+                continue
             # Efficiency = accepted / trials (+1 because current event is already accepted)
             self.efficiency = float(curr_event + 1) / nb_try
             #if density_method:
             #    full_evt.reshuffle_production()
+            # pure interference: the |w| the accept/reject used carries no sign,
+            # so the sign of the convolution is put back here -- on the event
+            # weight and on every entry of the multi-weight block alike. wsign
+            # is 1.0 in every other mode, and the factor is applied through the
+            # same multiplication, so nothing else moves.
+            br = self.branching_ratio * wsign if pure_interference \
+                else self.branching_ratio
             if self.options['fixed_order']:
                 for evt in full_evt:
                     # change the weight associated to the event
-                    evt.wgt *= self.branching_ratio
+                    evt.wgt *= br
                     wgts = evt.parse_reweight()
                     for key in wgts:
-                        wgts[key] *= self.branching_ratio
+                        wgts[key] *= br
+                if pure_interference:
+                    sum_w += full_evt[0].wgt
+                    sum_w2 += full_evt[0].wgt ** 2
             else:
                 # change the weight associated to the event
-                full_evt.wgt *= self.branching_ratio
+                full_evt.wgt *= br
                 wgts = full_evt.parse_reweight()
                 for key in wgts:
-                    wgts[key] *= self.branching_ratio
+                    wgts[key] *= br
+                if pure_interference:
+                    sum_w += full_evt.wgt
+                    sum_w2 += full_evt.wgt ** 2
 
             output_lhe.write_events(full_evt)
 
@@ -3508,9 +3578,15 @@ class MadSpinInterface(extended_cmd.Cmd):
                            time.time()-start))
         n_processed = curr_event + 1
         return dict(n_processed=n_processed,
-                    n_written=n_processed - nb_loose_skip,
+                    n_written=n_processed - nb_loose_skip - nb_pi_reject,
                     nb_try=nb_try,
                     nb_loose_skip=nb_loose_skip,
+                    # picklable and merged additively over the forked shards, so
+                    # one shard or many gives the identical zero-cross-section
+                    # test (section 13.8)
+                    nb_pi_reject=nb_pi_reject,
+                    sum_w=float(sum_w),
+                    sum_w2=float(sum_w2),
                     sequential_stats=dict(sequential_stats))
 
     def _report_sequential_stats(self, stats_list, n_written):
@@ -3607,6 +3683,110 @@ class MadSpinInterface(extended_cmd.Cmd):
                 "biased: raise nb_sigma or Nevents_for_max_weight, or set "
                 "unweighting = joint.", total_overflow)
 
+    def _report_pure_interference(self, base_out, stats_list, n_processed,
+                                  n_written):
+        """The pure-interference post-loop: the zero-cross-section check, the
+        zeroed ``<init>`` block and the reference-normalisation banner note.
+
+        The check is ``z = S / sqrt(sum w^2)``: ``S`` is the sum of the signed
+        weights, which the mode predicts to be zero, and the second moment has
+        no cancellation in it, so its square root is the right scale to compare
+        ``S`` against. Both moments are accumulated in the picklable stats dict
+        and merged additively here, so one shard or many gives an identical
+        answer (section 13.8).
+        """
+        S = sum(s.get('sum_w', 0.0) for s in stats_list)
+        sum_w2 = sum(s.get('sum_w2', 0.0) for s in stats_list)
+        nb_pi_reject = sum(s.get('nb_pi_reject', 0) for s in stats_list)
+        delta = math.sqrt(sum_w2)
+        z = (S / delta) if delta else 0.0
+
+        keep = float(n_written) / n_processed if n_processed else 0.0
+        logger.info(
+            "MadSpin pure_interference: kept %d/%d production events "
+            "(%.4f). The keep rate is the local size of the interference "
+            "term, not an inefficiency: it is what carries the "
+            "production-side shape, so it is *not* unweighted away.",
+            n_written, n_processed, keep)
+
+        # The reference normalisation has to be read before the block is zeroed.
+        reference = self._read_lhe_init_cross(base_out)
+        note = [
+            '#  Pure-interference sample: it keeps ONLY the interference between',
+            '#  the polarisations listed below, so its total cross-section is zero',
+            '#  by construction and <init> is written with XSECUP = 0. That also',
+            '#  zeroes XERRUP/XMAXUP, so the file cannot be showered as-is: a',
+            '#  consumer that normalises events to picobarns through XSECUP/N',
+            '#  needs the reference normalisation given here instead.',
+        ]
+        for pdg, (prod, dec) in sorted(self._pure_interference().items()):
+            note.append('#  interference  pdg %-6s : production %s  x  decay %s'
+                        % (pdg, list(prod), list(dec)))
+        note += [
+            '#  Reference normalisation (pb) : %+.8e' % reference,
+            '#     (the parent sample cross-section times the branching ratio,',
+            '#      i.e. what <init> would have carried without this mode)',
+            '#  Sum of written weights     S : %+.8e' % S,
+            '#  MC error   sqrt(sum w^2)     : %+.8e' % delta,
+            '#  z = S / error                : %+.4f' % z,
+            '#  Events written / read        : %d / %d' % (n_written, n_processed),
+        ]
+        self._rewrite_lhe_banner_cross(base_out, 0.0, n_written=n_written,
+                                       note=note, note_tag='MGPureInterference')
+
+        logger.info("MadSpin pure_interference: sum of weights S = %+.6e, "
+                    "sqrt(sum w^2) = %.6e, z = %+.3f (reference "
+                    "normalisation %.6e pb, recorded in the "
+                    "<MGPureInterference> banner block)", S, delta, z, reference)
+        if abs(z) > 5.0:
+            message = (
+                "MadSpin pure_interference: the sum of the event weights is "
+                "NOT compatible with zero -- S = %+.6e, sqrt(sum w^2) = %.6e, "
+                "z = %+.3f (over 5 sigma). The interference term must "
+                "integrate to zero over the decay phase space, so this is "
+                "either a genuine fluctuation, an under-estimated max_weight "
+                "(raise nb_sigma or Nevents_for_max_weight), or a bug."
+                % (S, delta, z))
+            logger.critical(message)
+            if self.options['density_debug']:
+                raise RuntimeError(message)
+        # A low keep rate here is physics, so the banner cross-section is NOT
+        # rescaled by it (it is zero anyway) and neither is the branching
+        # ratio. The efficiency still has to report the kept fraction, because
+        # downstream sizes nb_event with it and the file really does hold fewer
+        # events than were read.
+        self.efficiency = keep
+
+    @staticmethod
+    def _read_lhe_init_cross(path):
+        """Sum of the XSECUP column of an already-written LHE ``<init>`` block."""
+        total = 0.0
+        try:
+            with open(path) as src:
+                in_init = False
+                for line in src:
+                    stripped = line.strip()
+                    lowered = stripped.lower()
+                    if lowered.startswith('<init'):
+                        in_init = True
+                        continue
+                    if not in_init:
+                        continue
+                    if lowered.startswith('</init'):
+                        break
+                    parts = stripped.split()
+                    if len(parts) == 4:
+                        try:
+                            total += float(parts[0])
+                        except ValueError:
+                            pass
+        except Exception as exc:
+            logger.warning('MadSpin: could not read the <init> cross-section '
+                           'of %s (%s); the reference normalisation of the '
+                           'pure-interference banner note will read 0.',
+                           path, exc)
+        return total
+
     def _apply_accounting(self, base_out, stats_list):
         """Post-loop accounting shared by the serial and parallel paths: the
         unweighting-efficiency log, the BR-equalization banner rewrite, and the
@@ -3625,7 +3805,10 @@ class MadSpinInterface(extended_cmd.Cmd):
             eff, n_written, nb_try, (1.0 / eff if eff else float("inf"))
         )
         self._report_sequential_stats(stats_list, n_written)
-        if nb_loose_skip > 0:
+        if self._pure_interference():
+            self._report_pure_interference(base_out, stats_list,
+                                           n_processed, n_written)
+        elif nb_loose_skip > 0:
             # Rewrite the banner with the corrected cross-section so it
             # matches the actual sum of kept-event weights. Each kept event
             # already has wgt = orig_wgt * max_br; we need the banner to read
@@ -3905,12 +4088,18 @@ class MadSpinInterface(extended_cmd.Cmd):
 
         self._apply_accounting(base_out, stats_list)
 
-    def _rewrite_lhe_banner_cross(self, path, ratio, n_written=None):
+    def _rewrite_lhe_banner_cross(self, path, ratio, n_written=None,
+                                  note=None, note_tag='MGGenerationInfo'):
         """Rewrite an already-written LHE file, multiplying every <init> line
         cross-section / error / xmax by ``ratio`` and (optionally) replacing
         the ``Number of Events`` entry in the MGGenerationInfo block with
         ``n_written``. Mirrors decay_all_events.write_banner_information for
-        the PA-mode (run_onshell) code path."""
+        the PA-mode (run_onshell) code path.
+
+        ``note``, when given, is a list of already-formatted comment lines
+        inserted as a ``<note_tag>`` block just before ``</header>`` -- the
+        pure-interference mode uses it to record the reference normalisation
+        that its zeroed ``<init>`` block no longer carries."""
 
         tmp_path = path + '.tmp_brfix'
         shutil.move(path, tmp_path)
@@ -3920,6 +4109,13 @@ class MadSpinInterface(extended_cmd.Cmd):
             for line in src:
                 stripped = line.strip()
                 lstripped = stripped.lower()
+                if note and lstripped.startswith('</header'):
+                    dst.write('<%s>\n' % note_tag)
+                    for entry in note:
+                        dst.write('%s\n' % entry)
+                    dst.write('</%s>\n' % note_tag)
+                    dst.write(line)
+                    continue
                 if lstripped.startswith('<init'):
                     in_init = True
                     dst.write(line)
@@ -4261,6 +4457,10 @@ class MadSpinInterface(extended_cmd.Cmd):
         density_needs_reshuffle = (
             self.generate_all.mode == 'density'
             and (not density_pole_approximation or density_do_reshuffle))
+        # pure interference: the weight is signed and its mean is zero, so the
+        # bound the accept/reject needs is on |w|. Seeding max() at 0 and
+        # comparing the signed value would bound only the positive excursions.
+        signed = bool(self._pure_interference())
         per_event = []
         for i in range(start, stop):
             if (i - start) % 5 == 1 and getattr(self, '_shard_tag', None) in (None, 0):
@@ -4296,7 +4496,7 @@ class MadSpinInterface(extended_cmd.Cmd):
                     full_evt = lhe_parser.Event(str(base_event))
                     full_evt = full_evt.add_decays(decays)
                     jac = full_evt.reshuffle_production()
-                maxwgt = max(wgt*jac, maxwgt)
+                maxwgt = max(abs(wgt*jac) if signed else wgt*jac, maxwgt)
             per_event.append(float(getattr(maxwgt, 'real', maxwgt)))
         return per_event
 
@@ -4663,6 +4863,11 @@ class MadSpinInterface(extended_cmd.Cmd):
 
         helicities, hel_restriction = self._apply_production_polarization(
                                                     decaying_pdg, helicities)
+        # pure-interference mode replaces the symmetric restriction by a cross
+        # one for the particles the card names, and keeps the symmetric one as
+        # the (separate) normalising trace -- see _apply_pure_interference
+        hel_restriction, hel_restriction_trace = self._apply_pure_interference(
+                                    decaying_pdg, helicities, hel_restriction)
 
         allowed_hel_pairs, allowed_hel = self.get_allowed_hel(helicities)
 
@@ -4677,6 +4882,8 @@ class MadSpinInterface(extended_cmd.Cmd):
             'decaying_spins': decaying_spins,
             'allowed_hel': allowed_hel,
             'hel_restriction': hel_restriction,
+            'hel_restriction_trace': hel_restriction_trace,
+            'pure_interference': bool(self._pure_interference_pdgs(decays_key)),
             'ncomb': len(allowed_hel_pairs),
             'dimension': math.prod(len(i) for i in helicities),
         }
@@ -4806,6 +5013,228 @@ class MadSpinInterface(extended_cmd.Cmd):
             helicities[k] = kept + [h for h in basis if h not in allowed]
 
         return helicities, madspin.DensityMatrix.normalize_hel_restriction(restriction)
+
+    # ------------------------------------------------------------------
+    # Pure-interference mode ('set pure_interference t = 0 T')
+    # ------------------------------------------------------------------
+
+    # The brace vocabulary, spelled out because this option never goes through
+    # a process line and so never reaches MG5's parser. Kept identical to the
+    # semantics _production_polarization inherits from it ({L} -> -1, {R} -> +1,
+    # {T} -> the transverse pair, {0} -> the longitudinal state).
+    _POL_TOKENS = {'0': (0,), '+': (1,), 'R': (1,), '-': (-1,), 'L': (-1,),
+                   'T': (-1, 1)}
+
+    def _parse_pol_side(self, text, entry):
+        """One side of a ``pure_interference`` entry -> a tuple of helicities."""
+        out = set()
+        for token in text.replace(',', ' ').split():
+            key = token.strip().upper()
+            if key not in self._POL_TOKENS:
+                raise self.InvalidCmd(
+                    "MadSpin: '%s' is not a polarisation in the "
+                    "pure_interference entry '%s'. Use one or more of "
+                    "0, +/R, -/L, T." % (token, entry))
+            out.update(self._POL_TOKENS[key])
+        return tuple(sorted(out))
+
+    def _pure_interference(self):
+        """``pdg -> (production_side, decay_side)`` from the card option, or an
+        empty dict when the mode is off.
+
+        Both sets have to come from the MadSpin card rather than from the
+        banner's braces: the mode only means something on a sample that
+        contains *both* polarisations, i.e. an unpolarised production, which by
+        definition carries no brace to inherit. See
+        MADSPIN_SEQUENTIAL_PLAN.md section 13.5.
+        """
+        cached = getattr(self, '_pure_interference_cache', None)
+        if cached is not None:
+            return cached
+
+        try:
+            raw = (self.options['pure_interference'] or '').strip()
+        except (KeyError, TypeError):
+            # option sets built by hand (unit-test stubs, older cards) simply
+            # do not have the mode
+            raw = ''
+        out = {}
+        if not raw:
+            self._pure_interference_cache = out
+            return out
+
+        try:
+            name2pdg = self.model.get('name2pdg')
+        except Exception:
+            name2pdg = {}
+
+        for entry in raw.split(';'):
+            entry = entry.strip()
+            if not entry:
+                continue
+            sep = '=' if '=' in entry else (':' if ':' in entry else None)
+            if sep is None:
+                raise self.InvalidCmd(
+                    "MadSpin: could not read the pure_interference entry '%s'. "
+                    "The syntax is 'set pure_interference t = 0 T' -- particle, "
+                    "'=', the production-side polarisation, then the "
+                    "decay-side one." % entry)
+            name, _, sides = entry.partition(sep)
+            name = name.strip()
+            parts = sides.split()
+            if len(parts) != 2:
+                raise self.InvalidCmd(
+                    "MadSpin: the pure_interference entry '%s' must give "
+                    "exactly two polarisation sets (production then decay), "
+                    "got %d." % (entry, len(parts)))
+            if name in name2pdg:
+                pdg = int(name2pdg[name])
+            else:
+                try:
+                    pdg = int(name)
+                except ValueError:
+                    raise self.InvalidCmd(
+                        "MadSpin: '%s' in the pure_interference entry '%s' is "
+                        "neither a particle of the model nor a pdg code."
+                        % (name, entry))
+            prod = self._parse_pol_side(parts[0], entry)
+            dec = self._parse_pol_side(parts[1], entry)
+            if not prod or not dec:
+                raise self.InvalidCmd(
+                    "MadSpin: both sides of the pure_interference entry '%s' "
+                    "must be non-empty." % entry)
+            overlap = set(prod).intersection(dec)
+            if overlap:
+                # an overlap re-admits diagonal entries, so the restricted
+                # trace stops vanishing and the block stops being "pure
+                # interference" -- refuse rather than warn (section 13.6)
+                raise self.InvalidCmd(
+                    "MadSpin: the two sides of the pure_interference entry "
+                    "'%s' share the helicit%s %s. They must be disjoint: a "
+                    "shared state puts a diagonal entry back into the block, "
+                    "which then carries cross-section and is no longer a pure "
+                    "interference term."
+                    % (entry, 'y' if len(overlap) == 1 else 'ies',
+                       ', '.join(str(h) for h in sorted(overlap))))
+            if pdg in out and out[pdg] != (prod, dec):
+                raise self.InvalidCmd(
+                    "MadSpin: particle %s is given two different "
+                    "pure_interference specifications." % name)
+            out[pdg] = (prod, dec)
+
+        self._pure_interference_cache = out
+        return out
+
+    def _validate_pure_interference(self):
+        """Card-level checks for the pure-interference mode, run once at launch
+        rather than on the first event inside a worker process."""
+        pure = self._pure_interference()
+        if not pure:
+            return
+        if not self._density_spinmode():
+            raise self.InvalidCmd(
+                "MadSpin: pure_interference needs one of the density spin "
+                "modes (madspin/full/PA/onshell); spinmode=%s builds no "
+                "spin-density matrix to restrict."
+                % self.options['spinmode'])
+
+        # A particle the card names but that MadSpin never decays would leave
+        # the mode silently inert while the signed weights and the zeroed
+        # cross-section are still in force -- much worse than an error.
+        decayed = set()
+        for name in self.list_branches:
+            for spelling in (name, name.lower()):
+                try:
+                    decayed.add(int(self.model.get('name2pdg')[spelling]))
+                except (KeyError, TypeError, ValueError):
+                    continue
+                break
+        if decayed:
+            orphan = sorted(set(self._pure_interference()).difference(decayed))
+            if orphan:
+                raise self.InvalidCmd(
+                    "MadSpin: pure_interference names particle(s) %s, but no "
+                    "'decay' line makes MadSpin decay them. The mode restricts "
+                    "the production/decay density convolution, so it only "
+                    "means something for a particle that is actually decayed."
+                    % ', '.join(str(p) for p in orphan))
+
+        # The production sample must contain both polarisations: an interference
+        # between P and D amplitudes simply does not exist in a sample drawn
+        # from |M_P|^2 (section 13.5).
+        pol_map = self._production_polarization()
+        for pdg, (prod, dec) in pure.items():
+            brace = pol_map.get(pdg)
+            if brace is None:
+                continue
+            missing = sorted(set(prod).union(dec).difference(brace))
+            if missing:
+                raise self.InvalidCmd(
+                    "MadSpin: pure_interference asks for the interference "
+                    "between helicities %s and %s of particle %s, but the "
+                    "production process was generated with a polarisation "
+                    "brace keeping only %s. The events carry no amplitude for "
+                    "helicit%s %s, so that interference is not present in the "
+                    "sample. Regenerate the production process without the "
+                    "brace on that leg."
+                    % (list(prod), list(dec), pdg, list(brace),
+                       'y' if len(missing) == 1 else 'ies',
+                       ', '.join(str(h) for h in missing)))
+
+        logger.warning(
+            "MadSpin: pure_interference is ON for particle(s) %s. The decayed "
+            "sample keeps ONLY the interference between the two polarisations: "
+            "its total cross-section is zero by construction, its event "
+            "weights are SIGNED, and fewer events are written than were read "
+            "(the keep rate is the local interference size and is physics, not "
+            "an inefficiency). The <init> block is written with XSECUP = 0, so "
+            "the file is NOT directly showerable -- see the "
+            "<MGPureInterference> banner block for the reference "
+            "normalisation.",
+            ', '.join(str(p) for p in sorted(pure)))
+
+    def _apply_pure_interference(self, decaying_pdg, helicities, restriction):
+        """Overlay the pure-interference cross restriction on the (symmetric)
+        production-polarisation one.
+
+        Returns ``(restriction, trace_restriction)``: the first is what the
+        production/decay convolution contracts over -- a ``(P, D)`` pair for
+        every particle the card names -- and the second is what normalises it.
+        They part company exactly here and nowhere else: the interference block
+        has no diagonal entry, so its trace is identically zero and cannot be
+        the denominator (section 13.4).
+        """
+        pure = self._pure_interference()
+        if not pure:
+            return restriction, None
+
+        symmetric = list(restriction) if restriction else [None] * len(decaying_pdg)
+        cross = list(symmetric)
+        for k, pdg in enumerate(decaying_pdg):
+            spec = pure.get(pdg)
+            if spec is None:
+                continue
+            basis = list(helicities[k])
+            prod, dec = spec
+            unknown = [h for h in list(prod) + list(dec) if h not in basis]
+            if unknown:
+                raise self.InvalidCmd(
+                    "MadSpin: the pure_interference polarisations %s / %s "
+                    "requested for particle %s are not expressible in the "
+                    "helicity basis %s the density spin modes use for it."
+                    % (list(prod), list(dec), pdg, basis))
+            cross[k] = (tuple(prod), tuple(dec))
+
+        return (madspin.DensityMatrix.normalize_hel_restriction(cross),
+                madspin.DensityMatrix.normalize_hel_restriction(symmetric))
+
+    def _pure_interference_pdgs(self, decays_key):
+        """The card-named pdgs that actually decay in this event topology.
+        Empty when the mode is off or names nothing that decays here."""
+        pure = self._pure_interference()
+        if not pure:
+            return []
+        return [pdg for pdg in decays_key if pdg in pure]
 
     @staticmethod
     def _decaying_pdgs(production, evt_decayfile):
@@ -5073,7 +5502,8 @@ class MadSpinInterface(extended_cmd.Cmd):
                                    prod_static['allowed_hel'],
                                    prod_static['ncomb'], prod_static['dimension'],
                                    frame_boost=frame_boost,
-                                   hel_restriction=prod_static.get('hel_restriction'))
+                                   hel_restriction=prod_static.get('hel_restriction'),
+                                   hel_restriction_trace=prod_static.get('hel_restriction_trace'))
         parents = {slot: finals[slot_to_index[slot]] for slot in order}
         return rho_off, jac_reshuffle, slot_mass, parents, frame_boost
 
@@ -5543,7 +5973,8 @@ class MadSpinInterface(extended_cmd.Cmd):
                                                 prod_static['ncomb'],
                                                 prod_static['dimension'],
                                                 frame_boost=frame_boost,
-                                                hel_restriction=prod_static.get('hel_restriction'))
+                                                hel_restriction=prod_static.get('hel_restriction'),
+                                                hel_restriction_trace=prod_static.get('hel_restriction_trace'))
                 production._ms_density_prod = density_prod
                 production._ms_frame_boost = frame_boost
             else:
@@ -6353,7 +6784,8 @@ class MadSpinInterface(extended_cmd.Cmd):
                                         ncomb,
                                         dimension,
                                         frame_boost=frame_boost,
-                                        hel_restriction=prod_static.get('hel_restriction')) \
+                                        hel_restriction=prod_static.get('hel_restriction'),
+                                        hel_restriction_trace=prod_static.get('hel_restriction_trace')) \
             if prod_density_cached is None else prod_density_cached
 
         # ------------------------------------------------------------------
@@ -6539,7 +6971,7 @@ class MadSpinInterface(extended_cmd.Cmd):
         themselves (HELAS ``boostx``, exactly what ``boost_to_frame`` does in
         driver.f).
 
-        Two things switch it on, and both are cases where the frame is
+        Three things switch it on, and all are cases where the frame is
         *observable*:
 
         - polarised beams. ``beampol`` reweights the initial-state helicity sum
@@ -6557,13 +6989,23 @@ class MadSpinInterface(extended_cmd.Cmd):
           change of helicity basis a boost induces, so leaving the momenta in
           the lab would restrict a different helicity than the one the input
           events were generated with.
+        - the pure-interference mode (``set pure_interference t = 0 T``). Its
+          cross restriction is a projection for exactly the same reason -- it
+          names two helicity sets, which only means something once the axis is
+          fixed -- but its production process is *unpolarised*, so the brace
+          test above finds nothing and would leave the momenta in the lab. The
+          mode has to state the axis for itself.
 
         Everything else stays in the lab, which keeps unpolarised density runs
         bit-for-bit unchanged: there the full double sum
         ``sum_ij rho_prod(i,j) rho_dec(i,j)`` is a trace, and a boost acts on it
         as a unitary change of basis that cancels between the two factors.
         """
-        if self._beampol() is None and not self._production_polarization():
+        # NOTE (reconciliation): a parallel branch factors this condition into a
+        # _needs_frame_axis() helper; the pure_interference clause below belongs
+        # in that helper when the two are merged.
+        if (self._beampol() is None and not self._production_polarization()
+                and not self._pure_interference()):
             return None
         frame_id = int(self.options['frame_id'])
         if frame_id <= 0:
@@ -6623,7 +7065,8 @@ class MadSpinInterface(extended_cmd.Cmd):
         return out
 
     def get_density(self, event, position, allow_hel, ncomb, dimension,
-                    frame_boost=None, frame_rest_leg=-1, hel_restriction=None):
+                    frame_boost=None, frame_rest_leg=-1, hel_restriction=None,
+                    hel_restriction_trace=None):
         """``frame_boost`` is the momentum whose rest frame ``frame_id`` picks
         (see ``_frame_boost``); the momenta are boosted there before the matrix
         element sees them, which is what defines the axis the initial-state
@@ -6699,6 +7142,12 @@ class MadSpinInterface(extended_cmd.Cmd):
         # DensityMatrix.set_hel_restriction). None for the decay densities.
         if hel_restriction is not None:
             density_matrix.set_hel_restriction(hel_restriction)
+            # pure-interference mode only: the contraction runs over the
+            # interference block while trace()/normalized() keep using the
+            # production trace, which is the unrestricted one for the
+            # unpolarised production the mode requires (section 13.4).
+            if hel_restriction_trace is not None:
+                density_matrix.set_hel_restriction_trace(hel_restriction_trace)
         return density_matrix
 
    
