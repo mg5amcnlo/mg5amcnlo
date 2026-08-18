@@ -46,7 +46,7 @@ import MadSpin.interface_madspin as interface_madspin
 import models.import_ufo as import_ufo
 
 
-from madgraph import MG5DIR
+from madgraph import MG5DIR, MadGraph5Error
 
 
 def _borrow_decision_helpers(namespace):
@@ -202,6 +202,85 @@ class TestBanner(unittest.TestCase):
                          out.split(';')[:-1])       
 
           
+
+class _ProcCardBanner(object):
+    """Minimal banner stand-in exposing only the proc_card lines."""
+
+    def __init__(self, proc_card):
+        self.proc_card = proc_card
+
+
+class _ProcCardInterface(object):
+    """Minimal MadSpinInterface stand-in.
+
+    generate_all_matrix_element only reads banner.proc_card, list_branches and
+    options, so a full interface (which needs an event file and a model) is not
+    required to reach the '@' order-restriction check.
+    """
+
+    def __init__(self, proc_card):
+        self.banner = _ProcCardBanner(proc_card)
+        self.list_branches = {}
+        self.options = {'global_order_coupling': ''}
+
+
+class TestOrderRestrictionError(unittest.TestCase):
+    """An invalid order restriction after '@' must report what is wrong.
+
+    interface_madspin.generate_all_matrix_element used to raise a bare
+    'MadSpinError', a name that module never imports.  The int(proc_nb)
+    ValueError therefore led to 'NameError: name MadSpinError is not defined'
+    raised *during* the handling of that ValueError, and the intended
+    diagnostic was lost.
+    """
+
+    bad_line = 'generate p p > t t~ @NLO'
+
+    def test_interface_reports_the_invalid_order_restriction(self):
+        """the interface copy of the check raises MadSpinError, not NameError"""
+
+        cmd = _ProcCardInterface([self.bad_line])
+        gen = interface_madspin.MadSpinInterface.generate_all_matrix_element
+
+        self.assertRaises(madspin.MadSpinError, gen, cmd)
+
+        try:
+            gen(cmd)
+        except madspin.MadSpinError as error:
+            # the offending token has to be in the message, otherwise the user
+            # cannot tell which process line to fix
+            self.assertIn('NLO', str(error))
+            self.assertIn('order restriction after the @ comment', str(error))
+            # raised from inside 'except ValueError', so the int() failure is
+            # the chained context; what matters is that the *raised* error is
+            # the MadSpin one and not a NameError from the handler itself
+            self.assertNotIsInstance(error, NameError)
+            self.assertIsInstance(error, MadGraph5Error)
+
+    def test_decay_path_reports_the_same_error(self):
+        """the decay.py copy of the same check stays consistent with it"""
+
+        # no '[' in the process, so the model is never looked at before the
+        # order-restriction check
+        self.assertRaises(madspin.MadSpinError,
+                          madspin.decay_all_events.get_proc_with_decay,
+                          self.bad_line, 't > w+ b', None)
+
+    def test_valid_order_restriction_passes_the_check(self):
+        """a numeric '@' tag is accepted: the guard does not fire"""
+
+        cmd = _ProcCardInterface(['generate p p > t t~ @1'])
+        gen = interface_madspin.MadSpinInterface.generate_all_matrix_element
+
+        # the method is still unfinished further down, so it raises something
+        # else; the point is that it is no longer the order-restriction error
+        try:
+            gen(cmd)
+        except madspin.MadSpinError as error:
+            self.fail('valid order restriction rejected: %s' % error)
+        except Exception:
+            pass
+
 
 class TestDensity(unittest.TestCase):
     """Test class for the reading of the lhe input file"""

@@ -7187,7 +7187,7 @@ class MadSpinInterface(extended_cmd.Cmd):
                 try:
                     proc_nb = int(proc_nb)
                 except ValueError:
-                    raise MadSpinError('MadSpin didn\'t allow order restriction after the @ comment: \"%s\" not valid' % proc_nb)
+                    raise madspin.MadSpinError('MadSpin didn\'t allow order restriction after the @ comment: \"%s\" not valid' % proc_nb)
                 proc_nb = '@ %i' % proc_nb 
                 if self.options['global_order_coupling']:
                     proc_nb = '%s %s' % (proc_nb, self.options['global_order_coupling'])
