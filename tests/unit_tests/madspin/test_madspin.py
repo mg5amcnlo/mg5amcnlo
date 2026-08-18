@@ -1312,6 +1312,10 @@ class TestSequentialAcceptReject(unittest.TestCase):
             _sequential_spin_order = interface._sequential_spin_order
             _decay_slot_order = interface._decay_slot_order
             sequential_accept_reject = interface.sequential_accept_reject
+            # the zero-density / dead-trial guards live on the same loop
+            _check_production_density = interface._check_production_density
+            _raise_degenerate_weight = interface._raise_degenerate_weight
+            _dead_trial = interface._dead_trial
             _scan_maxwgt_range = interface._scan_maxwgt_range
             _sequential_offshell = interface._sequential_offshell
             _sequential_upfront = interface._sequential_upfront
@@ -1511,6 +1515,10 @@ class TestPAUpFrontMass(unittest.TestCase):
             _sequential_spin_order = interface._sequential_spin_order
             _decay_slot_order = interface._decay_slot_order
             sequential_accept_reject = interface.sequential_accept_reject
+            # the zero-density / dead-trial guards live on the same loop
+            _check_production_density = interface._check_production_density
+            _raise_degenerate_weight = interface._raise_degenerate_weight
+            _dead_trial = interface._dead_trial
             _upfront_production = interface._upfront_production
             _sequential_offshell = interface._sequential_offshell
             _sequential_upfront = interface._sequential_upfront
@@ -3094,3 +3102,178 @@ class TestCheckWeightIdentitySlotPairing(unittest.TestCase):
         decays = self._build_decays(particles, slot_to_index, slot_decays)
         self.assertRaises(AssertionError, self._run_check, production, decays,
                           particles, len(slot_to_index))
+
+
+class TestZeroDensityGuard(unittest.TestCase):
+    """The guards that turn a MadSpin accept/reject which can never accept into
+    an immediate, named failure instead of an unbounded retry loop.
+
+    Context: in the density spin modes every trial weight is built from the
+    production spin-density matrix. A rho_prod that is identically zero makes
+    every weight zero (offshell) or NaN (PA/onshell, which divide by its trace),
+    so nothing is ever accepted, the decay pools are drained and regenerated for
+    ever and MadSpin never writes an event. These tests pin both that the guards
+    fire on that state and -- the part that matters just as much -- that they
+    cannot fire on a run that is merely inefficient.
+    """
+
+    class _Trace(object):
+        def __init__(self, value):
+            self.real = value
+
+    class _Density(object):
+        """The bit of MadSpin.decay.DensityMatrix the guard touches."""
+        def __init__(self, trace):
+            self._trace = trace
+        def trace(self):
+            return TestZeroDensityGuard._Trace(self._trace)
+
+    class _Event(object):
+        def get_tag_and_order(self):
+            return ((2, -2), (24, -24)), None
+
+    def _stub(self, me_prod=1.0, nb_sigma=0.):
+        interface = interface_madspin.MadSpinInterface
+        class Stub(object):
+            _check_production_density = interface._check_production_density
+            _raise_degenerate_weight = interface._raise_degenerate_weight
+            _dead_trial = interface._dead_trial
+            _combine_maxwgt = interface._combine_maxwgt
+            def calculate_matrix_element(self, event):
+                if me_prod is None:
+                    raise RuntimeError('no matrix element here')
+                return me_prod
+        stub = Stub()
+        stub.options = {'nb_sigma': nb_sigma}
+        return stub
+
+    # ---------------- the production density check ----------------
+
+    def test_a_healthy_density_is_accepted_and_its_trace_returned(self):
+        """The common case must be a pure pass-through: no exception, and the
+        trace handed back so the caller does not recompute it."""
+        stub = self._stub()
+        self.assertEqual(stub._check_production_density(self._Event(),
+                                                        self._Density(3.5)),
+                         3.5)
+
+    def test_a_tiny_but_positive_trace_is_healthy(self):
+        """A small weight is a slow run, not a broken one: the guard keys on
+        zero, never on smallness."""
+        stub = self._stub()
+        self.assertEqual(stub._check_production_density(self._Event(),
+                                                        self._Density(1e-300)),
+                         1e-300)
+
+    def test_zero_trace_raises_and_names_the_cause(self):
+        stub = self._stub(me_prod=1.7e-3)
+        try:
+            stub._check_production_density(self._Event(), self._Density(0.0),
+                                           'joint accept/reject')
+        except interface_madspin.MadSpinDegenerateWeight as error:
+            msg = str(error)
+        else:
+            self.fail('a zero production density matrix must raise')
+        # what happened
+        self.assertIn('production spin-density matrix', msg)
+        self.assertIn('identically zero', msg)
+        self.assertIn('EVERY trial rejected', msg)
+        self.assertIn('joint accept/reject', msg)
+        # why it is not just an unlucky phase-space point
+        self.assertIn('0.0017', msg)
+        # the plausible causes
+        self.assertIn('polarised', msg)
+        self.assertIn('ALLOW_HEL', msg)
+        self.assertIn('ms_dir', msg)
+        self.assertIn('beampol', msg)
+
+    def test_a_nan_trace_raises_too(self):
+        """PA/onshell divide by the trace, so a broken rho shows up as NaN
+        rather than 0; both are 'can never accept'."""
+        stub = self._stub()
+        self.assertRaises(interface_madspin.MadSpinDegenerateWeight,
+                          stub._check_production_density,
+                          self._Event(), self._Density(float('nan')))
+
+    def test_a_vanishing_full_me_is_reported_as_its_own_case(self):
+        """Tr(rho)=0 *and* |M_prod|^2=0 is a different diagnosis -- the event
+        carries no matrix element at all -- and must not be blamed on the
+        helicity basis."""
+        stub = self._stub(me_prod=0.0)
+        try:
+            stub._check_production_density(self._Event(), self._Density(0.0))
+        except interface_madspin.MadSpinDegenerateWeight as error:
+            msg = str(error)
+        else:
+            self.fail('a zero production density matrix must raise')
+        self.assertIn('vanishes as well', msg)
+        self.assertNotIn('which is NOT zero', ' '.join(msg.split()))
+
+    def test_the_cross_check_may_fail_without_hiding_the_error(self):
+        stub = self._stub(me_prod=None)
+        self.assertRaises(interface_madspin.MadSpinDegenerateWeight,
+                          stub._check_production_density,
+                          self._Event(), self._Density(0.0))
+
+    # ---------------- the bounded dead-trial backstop ----------------
+
+    def test_a_positive_weight_resets_the_dead_trial_counter(self):
+        stub = self._stub()
+        self.assertEqual(stub._dead_trial(17, 1e-12, 'x'), 0)
+
+    def test_dead_trials_accumulate_and_raise_at_the_bound(self):
+        stub = self._stub()
+        limit = interface_madspin.MS_MAX_DEAD_TRIALS
+        self.assertEqual(stub._dead_trial(0, 0.0, 'x'), 1)
+        self.assertEqual(stub._dead_trial(limit - 2, 0.0, 'x'), limit - 1)
+        try:
+            stub._dead_trial(limit - 1, 0.0, 'the joint accept/reject')
+        except interface_madspin.MadSpinDegenerateWeight as error:
+            msg = str(error)
+        else:
+            self.fail('an unbounded run of dead trials must raise')
+        self.assertIn('consecutive trials', msg)
+        self.assertIn('the joint accept/reject', msg)
+        self.assertIn('not a low acceptance', msg)
+
+    def test_negative_and_nan_weights_count_as_dead(self):
+        stub = self._stub()
+        for wgt in (0.0, -1.0, float('nan'), float('inf')):
+            self.assertEqual(stub._dead_trial(0, wgt, 'x'), 1)
+
+    def test_an_atrocious_but_correct_efficiency_never_trips_the_bound(self):
+        """The separation that makes this guard safe. A 1-in-100000 acceptance
+        is a slow *correct* run: it burns a huge number of trials, but each one
+        computes a small POSITIVE weight and is merely rejected by the
+        `random()*maxwgt < wgt` test -- which this counter never sees. Only a
+        weight that is itself zero/NaN is counted. Ten times the bound of such
+        trials, with one in ten of them a legitimate zero (an infeasible
+        virtuality), and nothing raises."""
+        stub = self._stub()
+        counter = 0
+        for i in range(10 * interface_madspin.MS_MAX_DEAD_TRIALS):
+            wgt = 0.0 if i % 10 == 0 else 1e-9
+            counter = stub._dead_trial(counter, wgt, 'x')
+            self.assertTrue(counter < interface_madspin.MS_MAX_DEAD_TRIALS)
+
+    # ---------------- the max-weight bound ----------------
+
+    def test_a_healthy_probe_still_gives_a_bound(self):
+        stub = self._stub()
+        self.assertTrue(stub._combine_maxwgt([1.0, 3.0, 2.0, 0.0]) > 0)
+
+    def test_an_all_zero_probe_is_refused(self):
+        """A bound of 0 rejects every trial for ever: `random()*0 < 0` is never
+        true. Refuse it before the unweighting starts."""
+        stub = self._stub()
+        self.assertRaises(interface_madspin.MadSpinDegenerateWeight,
+                          stub._combine_maxwgt, [0.0, 0.0, 0.0])
+
+    def test_a_nan_in_the_probe_is_refused(self):
+        """0/0 weights used to reach _combine_maxwgt and trip a bare
+        `assert all_maxwgt[0] >= all_maxwgt[1], "ERROR: "` with an empty
+        message."""
+        stub = self._stub()
+        self.assertRaises(interface_madspin.MadSpinDegenerateWeight,
+                          stub._combine_maxwgt,
+                          [float('nan'), float('nan'), 1.0])

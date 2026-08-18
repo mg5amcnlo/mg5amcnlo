@@ -51,6 +51,30 @@ logger = logging.getLogger('decay.stdout') # -> stdout
 logger_stderr = logging.getLogger('decay.stderr') # ->stderr
 cmd_logger = logging.getLogger('cmdprint2') # -> print
 
+
+class MadSpinDegenerateWeight(madspin.MadSpinError):
+    """The accept/reject cannot ever accept: every trial weight is structurally
+    zero (or not a number), so the unweighting loop would redraw -- and keep
+    regenerating decay-event pools -- forever. Raised instead of looping.
+
+    This is NOT the same thing as a low acceptance: a slow-but-correct run
+    produces small *positive* weights and accepts one eventually. The guards
+    that raise this only trigger on weights that are exactly zero / negative /
+    NaN, i.e. on a numerator that cannot become positive no matter how many
+    decays are drawn."""
+    pass
+
+
+# How many consecutive structurally-dead trials (weight not finite and > 0) a
+# single production event may burn before the accept/reject gives up. Only
+# trials whose *matrix-element* factor is dead are counted, and any single
+# strictly positive weight resets the counter, so a genuinely inefficient but
+# correct run never reaches this bound however bad its acceptance is. Sized so
+# that it is unreachable by chance: with an acceptance as low as 1e-4 the
+# probability of this many consecutive zero *weights* (as opposed to rejected
+# positive weights, which do not count) is nil.
+MS_MAX_DEAD_TRIALS = 20000
+
 class MadSpinOptions(banner.ConfigFile):
 
     # Unweighting schemes that still work but are no longer offered to the
@@ -3451,6 +3475,14 @@ class MadSpinInterface(extended_cmd.Cmd):
 
             # Per-production-event cache reused across rejection retries.
             prod_density_cached = None
+            # Consecutive trials whose matrix-element weight was not a finite
+            # positive number. This `while 1` has no other exit than an
+            # acceptance, so without it a structurally zero weight loops for
+            # ever (draining and regenerating the decay pools as it goes). Reset
+            # by the first positive weight, hence blind to a merely low
+            # acceptance. Same code in the forked workers: _unweight_range is
+            # the body of both the nb_core==1 and the nb_core>1 paths.
+            dead_trials = 0
 
             while 1:
                 nb_try += 1
@@ -3486,6 +3518,13 @@ class MadSpinInterface(extended_cmd.Cmd):
                     full_evt = lhe_parser.Event(str(production))
                     full_evt = full_evt.add_decays(decays)
                     jac = full_evt.reshuffle_production()
+
+                # ``wgt`` alone, not ``wgt*jac``: a zero/-1 jacobian is an
+                # ordinary rejection (a mass set the production cannot be
+                # reshuffled onto), which is a legitimate, transient state. A
+                # zero ``wgt`` is the matrix element itself being dead.
+                dead_trials = self._dead_trial(dead_trials, wgt,
+                                               'the joint accept/reject')
 
                 if random.random()*maxwgt < wgt*jac:
                     if offshell_density:
@@ -4655,6 +4694,23 @@ class MadSpinInterface(extended_cmd.Cmd):
         the historical 5%.
         """
         margin = 1.10
+        # A bound that is not a finite positive number cannot ever accept
+        # anything: the accept/reject test is `random()*bound < wgt`, so a
+        # bound of 0 rejects every trial and a NaN bound (which is what a
+        # 0/0 weight produces) rejects it too -- and then the unweighting
+        # loop redraws for ever. Catch it here, where the whole probe is in
+        # hand, instead of after the fact. Note this also replaces the bare
+        # `assert all_maxwgt[0] >= all_maxwgt[1]` below, which a NaN in the
+        # list used to trip with an empty message.
+        if all_maxwgt and (not all(math.isfinite(w) for w in all_maxwgt)
+                           or not max(all_maxwgt) > 0):
+            self._raise_degenerate_weight(
+                "the maximum-weight scan measured no usable bound: every one "
+                "of the %d probed production events gave a weight that is "
+                "zero or not a number (%s)."
+                % (len(all_maxwgt),
+                   ', '.join('%.4g' % w for w in all_maxwgt[:5])
+                   + (', ...' if len(all_maxwgt) > 5 else '')))
         all_maxwgt.sort(reverse=True)
         assert all_maxwgt[0] >= all_maxwgt[1], "ERROR: "
         decay_tools=madspin.decay_misc()
@@ -4671,7 +4727,159 @@ class MadSpinInterface(extended_cmd.Cmd):
                 base_max_weight = margin * all_maxwgt[1]
         return base_max_weight
 
-            
+    # ------------------------------------------------------------------
+    # Guards against an accept/reject that can never accept
+    # ------------------------------------------------------------------
+    # Every weight of the density spinmodes is built from the production spin
+    # density matrix rho_prod: the joint one is <rho_prod, rho_dec> over a
+    # denominator, the sequential one a ratio of such contractions. If rho_prod
+    # is identically zero then so is every numerator, the accept/reject rejects
+    # every trial, the decay-event pools are drained and regenerated, and
+    # MadSpin runs for ever without writing a single event (measured: 600 s and
+    # 131 pool regenerations with no output). The guards below turn that into an
+    # immediate, named failure.
+    #
+    # They are deliberately built so that they cannot fire on a healthy run,
+    # however inefficient it is. A low acceptance means small *positive*
+    # weights: the bound is positive, some trial eventually wins the test, and
+    # the dead-trial counter is reset by the first positive weight it sees.
+    # What is caught here is a weight that is structurally zero -- exactly 0, or
+    # NaN from a 0/0 -- for which no number of extra draws can help.
+
+    def _raise_degenerate_weight(self, what, extra=''):
+        """Abort with an explanation of a MadSpin accept/reject that can never
+        accept, and of what usually causes it."""
+        msg = ("MadSpin cannot decay these events: %s\n"
+               "\n"
+               "The accept/reject weight of the density spin modes is built "
+               "from the production spin-density matrix, so a production "
+               "density matrix that is identically zero makes EVERY trial "
+               "weight zero and EVERY trial rejected (an identically zero "
+               "*decay* density matrix has the same effect). MadSpin would keep "
+               "drawing decays, regenerating decay-event pools and never "
+               "writing an event, so it stops here instead of looping.\n"
+               "\n"
+               "Plausible causes, most likely first:\n"
+               "  * a polarised production process (a '{L}', '{R}', '{0}', "
+               "'{T}', '{+}', '{-}' tag on the generation line). The Fortran "
+               "GET_DENSITY picks the NHEL rows of the standalone matrix "
+               "element by matching them against the ALLOW_HEL helicity "
+               "combinations; a polarised matrix element only keeps the "
+               "polarised rows, so the combination the density matrix is "
+               "indexed on can be missing altogether and the matrix comes back "
+               "all zeros;\n"
+               "  * a mismatch between the event file and the matrix elements "
+               "MadSpin is using -- a stale 'ms_dir'/'use_old_dir' directory, "
+               "or a param_card different from the one the events were "
+               "generated with;\n"
+               "  * a helicity subspace emptied by the beam polarisation "
+               "('beampol') or by the helicity frame ('frame_id').\n"
+               "\n"
+               "'set spinmode none' switches the density matrices off "
+               "altogether and will produce events (without spin "
+               "correlations); 'set density_debug True' compares the density "
+               "matrices against the full matrix element event by event.")
+        raise MadSpinDegenerateWeight(msg % what + (('\n\n' + extra) if extra else ''))
+
+    def _check_production_density(self, event, density_prod, stage=''):
+        """Fail on a production spin-density matrix whose trace vanishes.
+
+        Tr(rho_prod) is the production matrix element squared restricted to the
+        helicity subspace the density matrix is built on -- that identity is
+        exactly what ``density_debug`` checks event by event
+        (``prod_diag``/``prod_me``). So a zero trace means the density matrix
+        carries no matrix element at all, and every weight derived from it is
+        zero (offshell) or NaN (PA/onshell, which divide by that same trace).
+
+        Why fail on the *first* such production event rather than after a
+        bounded number of fruitless pool regenerations: the quantity that is
+        broken belongs to the production event and to the helicity basis, not to
+        the decays being drawn against it, so redrawing decays cannot change it
+        and waiting only costs minutes to hours. The risk that a *legitimate*
+        zero-matrix-element phase-space point aborts a healthy run is removed by
+        cross-checking against the full production matrix element at the very
+        same momenta: if |M_prod|^2 > 0 while Tr(rho_prod) = 0 the two are
+        inconsistent by construction, which no phase-space point can be. (And if
+        |M_prod|^2 vanishes too, the event cannot be decayed by any
+        accept/reject either -- it is reported as its own case.)
+
+        The check itself is a comparison on a number the callers compute anyway,
+        and the extra matrix element is only ever evaluated on the failing
+        branch, so a healthy run pays nothing for it.
+        """
+        try:
+            trace = float(density_prod.trace().real)
+        except Exception:
+            return None       # not a density matrix we know how to inspect
+        if math.isfinite(trace) and trace > 0:
+            return trace
+
+        try:
+            tag, _ = event.get_tag_and_order()
+            process = '%s > %s' % (' '.join(str(p) for p in tag[0]),
+                                   ' '.join(str(p) for p in tag[1]))
+        except Exception:
+            process = 'unknown'
+        try:
+            me_prod = float(self.calculate_matrix_element(event))
+        except Exception:
+            me_prod = None
+
+        where = (' (%s)' % stage) if stage else ''
+        what = ("the production spin-density matrix of process '%s' is "
+                "identically zero%s -- Tr(rho_prod) = %s."
+                % (process, where, trace))
+        if me_prod is not None and me_prod > 0:
+            extra = ("Diagnostic: the *full* production matrix element at the "
+                     "same phase-space point is |M_prod|^2 = %.6g, which is "
+                     "NOT zero. Tr(rho_prod) and |M_prod|^2 must agree (that is "
+                     "what 'density_debug' checks), so this is not a vanishing "
+                     "phase-space point: the helicity basis the density matrix "
+                     "is indexed on does not exist in the generated matrix "
+                     "element." % me_prod)
+        elif me_prod is not None:
+            extra = ("Diagnostic: the full production matrix element vanishes "
+                     "as well (|M_prod|^2 = %.6g), so this production event "
+                     "carries no matrix element at all and cannot be decayed by "
+                     "any accept/reject. Check that the event file really is "
+                     "the one this process/param_card was generated with."
+                     % me_prod)
+        else:
+            extra = ("Diagnostic: the full production matrix element could not "
+                     "be evaluated for a cross-check.")
+        self._raise_degenerate_weight(what, extra)
+
+    def _dead_trial(self, counter, wgt, stage):
+        """Bounded backstop for an accept/reject loop whose weight stays dead.
+
+        ``counter`` is the number of consecutive trials so far whose weight was
+        not a finite positive number; returns the updated counter and raises
+        once it passes ``MS_MAX_DEAD_TRIALS``. Any single positive weight resets
+        it to 0, which is what keeps a legitimately inefficient run -- small but
+        positive weights, occasionally accepted -- from ever reaching the bound.
+        This catches the causes ``_check_production_density`` does not, e.g. a
+        decay density matrix that is structurally zero.
+        """
+        try:
+            ok = math.isfinite(wgt) and wgt > 0
+        except TypeError:
+            ok = False
+        if ok:
+            return 0
+        counter += 1
+        if counter >= MS_MAX_DEAD_TRIALS:
+            self._raise_degenerate_weight(
+                "%s produced %d consecutive trials with a weight that is zero "
+                "or not a number, without a single positive one in between."
+                % (stage, counter),
+                "Diagnostic: this is not a low acceptance (which gives small "
+                "but positive weights, and would have reset this counter); the "
+                "weight is structurally dead, so no number of further decay "
+                "draws or decay-pool regenerations can ever produce an "
+                "accepted event.")
+        return counter
+
+
     def _density_basis(self, production, decays_key):
         """Helicity-basis bookkeeping for the production density matrix: which
         particles decay, where they sit (``position``, ``init_part``), their
@@ -4993,6 +5201,11 @@ class MadSpinInterface(extended_cmd.Cmd):
                                    prod_static['allowed_hel'],
                                    prod_static['ncomb'], prod_static['dimension'],
                                    frame_boost=frame_boost)
+        # Tr(rho_off) is the numerator of the mass-set weight and the
+        # denominator (through n_prev) of every slot weight; zero there is an
+        # accept/reject that can never accept, not an unlucky mass set
+        self._check_production_density(prod_off, rho_off,
+                                       'sequential accept/reject, offshell rho')
         parents = {slot: finals[slot_to_index[slot]] for slot in order}
         return rho_off, jac_reshuffle, slot_mass, parents, frame_boost
 
@@ -5486,6 +5699,10 @@ class MadSpinInterface(extended_cmd.Cmd):
                                                 prod_static['ncomb'],
                                                 prod_static['dimension'],
                                                 frame_boost=frame_boost)
+                # a zero trace here would make n_prev == 0 below and every slot
+                # weight a 0/0 NaN, i.e. an accept/reject that never accepts
+                self._check_production_density(production, density_prod,
+                                               'sequential accept/reject, onshell rho')
                 production._ms_density_prod = density_prod
                 production._ms_frame_boost = frame_boost
             else:
@@ -5507,6 +5724,17 @@ class MadSpinInterface(extended_cmd.Cmd):
             stats = collections.defaultdict(int)
         if probe is not None and probe_extra is None:
             probe_extra = {}
+
+        # Consecutive slot draws whose weight was not a finite positive number.
+        # None of the loops below has an exit other than an acceptance, so a
+        # structurally dead weight redraws (and regenerates that slot's decay
+        # pool) for ever. Held at chain scope on purpose: a scheme that restarts
+        # the mass set on a rejection would otherwise reset it every time and
+        # never reach the bound. Only a *positive* weight clears it, which is
+        # what makes it blind to a merely low acceptance -- an infeasible
+        # virtuality never gets here (it is handled, and separately bounded, by
+        # nb_infeasible).
+        dead_trials = 0
 
         while True:     # restart point: an impossible/rejected production mass set
             parents = init_part
@@ -5577,6 +5805,15 @@ class MadSpinInterface(extended_cmd.Cmd):
                     for s in slot_mass:
                         w_mass *= self._zhat(zkeys[s], slot_mass[s][0])
                 if probe is None and maxwgts and slot_mass:
+                    # the mass stage is the other loop with no exit but an
+                    # acceptance: a w_mass that is structurally zero (a
+                    # vanishing offshell production trace, a Z_hat that is zero
+                    # everywhere) redraws mass sets for ever. Same counter as
+                    # the slot loops, so any positive weight anywhere in the
+                    # chain clears it.
+                    dead_trials = self._dead_trial(
+                        dead_trials, w_mass,
+                        'the mass-set stage of the sequential accept/reject')
                     # no virtuality to unweight means w_mass is the constant 1
                     # (onshell, and 2 -> 1 production under PA): testing it
                     # against its bound would only throw chains away
@@ -5747,6 +5984,11 @@ class MadSpinInterface(extended_cmd.Cmd):
                                             density_prod, helicities, slot_densities)
                             wgt = (n_k / n_prev).real * rate
                             wgt_raw = wgt        # before any Z_hat division
+                            if probe is None:
+                                dead_trials = self._dead_trial(
+                                    dead_trials, wgt,
+                                    'slot %d of the sequential accept/reject'
+                                    % position)
                             j_k, new_budget = j_prev, budget
                             # Z_hat_k(m_k), or 1 where there is no virtuality to
                             # condition on (onshell, 2 -> 1 production under PA)
@@ -5853,6 +6095,11 @@ class MadSpinInterface(extended_cmd.Cmd):
                         # product over slots is what the joint reshuffle_production
                         # multiplies in.
                         wgt = (n_k / n_prev).real * jac_bw * jac_dec * (j_k / j_prev)
+                        if probe is None:
+                            dead_trials = self._dead_trial(
+                                dead_trials, wgt,
+                                'slot %d of the sequential accept/reject'
+                                % position)
                         if probe is not None:
                             # python float: these are marshalled as JSON when the
                             # scan runs across forked workers
@@ -6296,13 +6543,19 @@ class MadSpinInterface(extended_cmd.Cmd):
         # beams are polarised -- see the comment above _beampol.
         frame_boost = self._frame_boost(production)
 
-        density_prod = self.get_density(production,
-                                        position,
-                                        allowed_hel,
-                                        ncomb,
-                                        dimension,
-                                        frame_boost=frame_boost) \
-            if prod_density_cached is None else prod_density_cached
+        if prod_density_cached is None:
+            density_prod = self.get_density(production,
+                                            position,
+                                            allowed_hel,
+                                            ncomb,
+                                            dimension,
+                                            frame_boost=frame_boost)
+            # Only on a freshly computed matrix: a cached one was already
+            # checked when it was built, and this runs on every joint trial.
+            self._check_production_density(production, density_prod,
+                                           'joint accept/reject')
+        else:
+            density_prod = prod_density_cached
 
         # ------------------------------------------------------------------
         # Symmetry factor:
