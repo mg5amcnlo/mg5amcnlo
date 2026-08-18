@@ -1995,9 +1995,9 @@ event-to-event here but *not* across a production sample that itself came from a
 correlated MC (multi-weight / reweighted samples). It is a sanity check, not a
 proof of correctness.
 
-### 13.9 What is implemented in this branch, and what is not
+### 13.9 What is implemented
 
-**Implemented** (`MadSpin/decay.py`, plus 11 tests in
+**The algebra** (`MadSpin/decay.py`, plus 11 tests in
 `tests/unit_tests/madspin/test_madspin.py::TestPureInterferenceRestriction`):
 the cross restriction at the `DensityMatrix` level. A per-particle entry of
 `hel_restriction` may now be a `(P, D)` pair instead of a flat set of allowed
@@ -2028,15 +2028,39 @@ tweak.
 Normalisation rules: `(S, S)` collapses to the symmetric `S`; an empty side
 falls back to `None`; a non-2-element pair raises. Nothing symmetric moves --
 same normalised values, same cached mask objects, same numbers
-(`test_symmetric_restrictions_are_untouched`) -- and no call site constructs a
-cross restriction, so the feature is inert until 13.10 step 3 lands.
+(`test_symmetric_restrictions_are_untouched`).
 
-**Not implemented:** the `pure_interference` card option and its validation, the
-separate trace restriction, the sequential-mode refusal, the signed
-accept/reject and the drop-on-reject loop, the `<init>` zeroing, and the weight
-sum check. These are 13.4-13.8 and they are the majority of the risk.
+**The mode** (`MadSpin/interface_madspin.py`, plus `TestPureInterferenceMode`
+and the frame test `test_frame_follows_the_pure_interference_mode`):
 
-### 13.10 Implementation plan
+* `hel_restriction_trace` on `DensityMatrix`, consulted by `trace()` /
+  `normalized()` **only** when `hel_restriction` is a cross one --
+  `_trace_restriction` returns a symmetric restriction untouched, so no
+  pre-existing path can move. Its value is the symmetric restriction the
+  production braces impose, i.e. `None` (the full trace) for the unpolarised
+  production the mode requires.
+* the `pure_interference` card option, parsed by `_pure_interference` into
+  `pdg -> (P, D)` and validated by `_validate_pure_interference`: density
+  spinmode, disjoint sides, a pdg something actually decays, and a production
+  process that is not braced away from either side.
+* `_apply_pure_interference` overlays the cross restriction on whatever
+  `_apply_production_polarization` produced and returns the trace restriction
+  beside it; `_density_basis` carries both and `get_density` attaches both.
+* `_unweighting_mode` forces `joint`.
+* `_frame_boost` stays on for the mode (see 13.10 step 9).
+* `_joint_maxwgt_range` bounds `|w|`; `_unweight_range` accepts on `|w|/maxwgt`
+  with **one** draw and writes nothing on rejection, carrying `wsign` onto
+  `full_evt.wgt` and onto every entry of `parse_reweight()`.
+* `<init>` zeroing plus the `<MGPureInterference>` banner note, and the
+  `sum_w` / `sum_w2` / overweight counters with the `z` report in
+  `_report_pure_interference`.
+
+**Known boundary:** `fixed_order` is handled (the counter-event group is
+dropped as a unit by the same `continue`, and the sign is applied to every
+member of the group) but is **not validated** -- no fixed-order sample was run
+through the mode.
+
+### 13.10 Implementation plan -- all steps done
 
 1. *(done)* Cross entries in `normalize_hel_restriction` /
    `_restriction_row_mask`, with the algebra tests.
@@ -2060,21 +2084,87 @@ sum check. These are 13.4-13.8 and they are the majority of the risk.
 6. `<init>` zeroing plus the reference-normalisation banner note and warning.
 7. `sum_w` / `sum_w2` in the stats dict and the `z` report.
 8. Validation: steps 1-4 and 7 are unit-testable in-process. Steps 5, 6 and the
-   physics closure test (`W_PP + W_DD + W_int = W_full` on a real `p p > t t~`
-   sample, and `S/delta -> 0`) need a working end-to-end MadSpin run.
+   physics closure test need a working end-to-end MadSpin run -- see 13.12.
+9. **(added during implementation)** The frame boost. #355 established that the
+   polarisation axis must be MG5's `me_frame`, because `set_hel_restriction` is
+   a projection and a projection does not commute with the change of helicity
+   basis a boost induces. Its guard switches the boost on for a polarised beam
+   or a production brace. A cross restriction is a projection for exactly the
+   same reason -- and it names two helicity *sets*, which only mean something
+   once the axis is fixed -- but the mode's production is unpolarised by
+   construction, so that guard would find nothing and leave the momenta in the
+   lab. The clause added is:
 
-### 13.11 Environment limitation
+       if (self._beampol() is None and not self._production_polarization()
+               and not self._pure_interference()):
+           return None
 
-`f2py` cannot build extension modules in the environment this assessment was
-written in, so **no end-to-end MadSpin run was possible** -- neither for the
-existing code nor for the new mask. The failure is not in `f2py` itself: it
-generates the wrappers fine, then dies in the build backend with `meson:
-command not found` (the active pyenv shim has no `meson` on `PATH`, and NumPy
-drops the distutils backend for Python >= 3.12). Installing `meson` and `ninja`
-into the active interpreter would most likely restore it. Everything above the
-`DensityMatrix` API (the f2py-backed
-`get_density`, the unweighting loop, the banner rewrite) is therefore reasoned
-from the source, not measured. The algebra in 13.2-13.4 is verified numerically
-against brute-force reference sums on random hermitian matrices, which is
-independent of f2py; the closure test of 13.10 step 8 against a real sample is
-not, and is the first thing to run in an environment that can.
+   A parallel branch factors the same condition into a `_needs_frame_axis()`
+   helper; the `pure_interference` clause belongs in that helper once the two
+   are merged.
+
+### 13.11 Environment
+
+The assessment was written in an environment where `f2py` could not build
+extension modules -- it generated the wrappers and then died with
+`meson: command not found` (NumPy drops the distutils backend for Python
+>= 3.12). That is fixed: the `mg-3.14` pyenv carries `f2py`, `meson` and
+`ninja`, and everything in 13.12 was measured there, not reasoned from source.
+
+### 13.12 End-to-end validation
+
+Sample: `p p > w+ w-` at 13 TeV, 20k unweighted events (`sigma = 64.66 pb`),
+`spinmode = madspin` (offshell), `decay w+ > e+ ve` / `decay w- > e- ve~`, and
+
+    set pure_interference w+ = 0 T
+
+i.e. the interference between the longitudinal and the transverse W+.
+
+**The weight sum is compatible with zero.** Five independent seeds, each over
+the same 20k production events (`z = S / sqrt(sum w^2)`):
+
+| seed | kept / read | S | sqrt(sum w^2) | z | overweight |
+|---|---|---|---|---|---|
+| 42   | 1166 / 20000 (5.83%) | +73.476 | 27.272 | +2.694 | 0 |
+| 7    | 1218 / 20000 (6.09%) | -20.764 | 27.872 | -0.745 | 0 |
+| 99   | 1314 / 20000 (6.57%) | -59.103 | 28.952 | -2.041 | 0 |
+| 555  | 1180 / 20000 (5.90%) | -8.9e-16 | 27.434 | -0.000 | 0 |
+| 2024 | 1144 / 20000 (5.72%) | -22.361 | 27.012 | -0.828 | 0 |
+
+Combined over the 100k production events: `S = -28.75`, `sqrt(sum w^2) = 61.98`,
+**`z = -0.46`**. The per-seed mean is `-0.18 +- 0.79`. The `+2.69` of seed 42 is
+the reason the threshold is 5 sigma and not 3: a 2-3 sigma excursion turns up
+readily in a handful of runs, and the spread across seeds is what shows it is a
+fluctuation rather than a bias. No trial anywhere exceeded the maximum weight,
+so the one mechanism that *would* have biased `S` was not active.
+
+**The events carry both signs**, in roughly equal numbers, as they must for a
+sample whose integral vanishes: 629+/537- (seed 42), 620+/694- (seed 99).
+
+**`|w|` is the unpolarised magnitude.** Every written event carries exactly one
+value, `|w| = sigma * BR = 0.79865722`, and the unpolarised run of the same seed
+writes that identical number (relative difference `0.000e+00`). Across seeds it
+moves by `4e-5`, which is just the per-run MC estimate of the branching ratio.
+This is the design working as intended: the magnitude is constant and the
+interference is carried entirely by *which* production events survive -- the
+keep rate, ~6% here -- which is exactly what redraw-until-accept would have
+normalised away (13.7b).
+
+**A run with `pure_interference` unset is byte-identical.** The same card
+without the option, run against the pre-implementation tree (`7e35f7780`) and
+against the implementation, produces the same 135,011,930-byte file --
+identical whole-file, banner included, not merely in the event blocks.
+
+`tests/test_manager.py test_madspin -t0`: 184 tests, OK (161 before this work).
+
+Caveats, stated rather than glossed:
+
+* only `spinmode = madspin` was exercised end to end; `PA` / `onshell` go
+  through the same `_unweight_range` and the same restriction, but were not run.
+* `nb_core > 1` was used throughout (18 workers), so the additive merge of
+  `sum_w` / `sum_w2` across shards is exercised; the serial path is not
+  separately measured.
+* `fixed_order` is implemented but unvalidated (13.9).
+* the z test assumes the `w_i` are independent. That is true event to event
+  here, but not across a production sample that itself came from a correlated
+  MC (multi-weight / reweighted samples). It is a sanity check, not a proof.
