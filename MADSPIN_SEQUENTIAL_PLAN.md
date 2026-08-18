@@ -732,7 +732,7 @@ bounds. The fit is a weighted quadratic in `ln(m/pole)` through the *bin means*
 (Z is an expectation, so the mean estimates it and the mean of the logarithms
 would not), held constant outside the probed range and reported in the log
 against the running width it estimates. `C_mass` is then derived from the
-completed weights `w_mass * prod_k Z_hat_k` (`_complete_offshell_probe`), which
+completed weights `w_mass * prod_k Z_hat_k` (`_complete_upfront_probe`), which
 is why the probe now keeps its chains instead of maxing them online.
 
 Two related points fell out:
@@ -746,9 +746,13 @@ Two related points fell out:
   rejection; counting it as one makes `Z_k`, which includes those zeros, the
   exact correction again. A virtuality no pool decay can reach is killed by the
   table itself (`zero_below`), with a 200-draw fail-safe behind it.
-- The `max_wgt_sequential` cache splits: the offshell bounds travel with their
-  tables (and depend on `sequential_exact`), so they get their own file name and
-  a JSON format.
+- The `max_wgt_sequential` cache splits: the up-front-mass bounds travel with
+  their tables (and depend on `sequential_exact`), so they get their own file
+  name and a JSON format (`_read_upfront_cache` / `_UPFRONT_CACHE_FORMAT`). The
+  file name still carries the spinmode family that wrote it
+  (`max_wgt_sequential_offshell...` / `max_wgt_sequential_pa...`), since the
+  mass-set weight is a different quantity in each and neither cache may be read
+  back for the other.
 
 #### `sequential_exact`: the escape hatch
 

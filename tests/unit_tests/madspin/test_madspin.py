@@ -2329,20 +2329,21 @@ class TestTwoStageMassDistribution(unittest.TestCase):
             self._assert_close(self._run(zhat, exact=True), self._target(), 0.03)
 
 
-class TestOffshellCache(unittest.TestCase):
-    """The offshell sequential bounds travel with the Z_k tables that complete
-    them, so the cache holds two coupled objects and must not be read back under
-    a schema it was not written with.  A mismatch is ignored rather than raised
-    on: the scan is reproducible, so re-measuring is always available, whereas a
-    table dereferenced under the wrong schema would either crash inside the
-    accept/reject or silently weight the virtualities with the wrong fit.
+class TestUpfrontCache(unittest.TestCase):
+    """The up-front-mass sequential bounds travel with the Z_k tables that
+    complete them, so the cache holds two coupled objects and must not be read
+    back under a schema it was not written with.  A mismatch is ignored rather
+    than raised on: the scan is reproducible, so re-measuring is always
+    available, whereas a table dereferenced under the wrong schema would either
+    crash inside the accept/reject or silently weight the virtualities with the
+    wrong fit.
     """
 
     class _Stub(object):
-        _OFFSHELL_CACHE_FORMAT = \
-            interface_madspin.MadSpinInterface._OFFSHELL_CACHE_FORMAT
-        _read_offshell_cache = \
-            interface_madspin.MadSpinInterface._read_offshell_cache
+        _UPFRONT_CACHE_FORMAT = \
+            interface_madspin.MadSpinInterface._UPFRONT_CACHE_FORMAT
+        _read_upfront_cache = \
+            interface_madspin.MadSpinInterface._read_upfront_cache
 
     def _write(self, payload):
         import json, tempfile
@@ -2353,19 +2354,19 @@ class TestOffshellCache(unittest.TestCase):
         return path
 
     def _good(self):
-        return {'format': self._Stub._OFFSHELL_CACHE_FORMAT,
+        return {'format': self._Stub._UPFRONT_CACHE_FORMAT,
                 'maxwgts': [17.0, 2.3, 3.9],
                 'z_tables': {'6_0': {'pole': 173.0, 'coeff': [0.0, 2.0, -1.0],
                                      'zero_below': 0.0, 'range': [150.0, 195.0]}}}
 
     def test_round_trip(self):
-        got = self._Stub()._read_offshell_cache(self._write(self._good()))
+        got = self._Stub()._read_upfront_cache(self._write(self._good()))
         self.assertEqual(got['maxwgts'], [17.0, 2.3, 3.9])
         self.assertEqual(got['z_tables']['6_0']['pole'], 173.0)
 
     def test_missing_file_is_not_an_error(self):
-        self.assertIsNone(self._Stub()._read_offshell_cache('/no/such/file'))
-        self.assertIsNone(self._Stub()._read_offshell_cache(''))
+        self.assertIsNone(self._Stub()._read_upfront_cache('/no/such/file'))
+        self.assertIsNone(self._Stub()._read_upfront_cache(''))
 
     def test_every_malformed_shape_is_ignored(self):
         """Each of these would otherwise surface as a KeyError, an IndexError or
@@ -2388,7 +2389,7 @@ class TestOffshellCache(unittest.TestCase):
         cases['a malformed range'] = window
         for name, payload in cases.items():
             self.assertIsNone(
-                self._Stub()._read_offshell_cache(self._write(payload)), name)
+                self._Stub()._read_upfront_cache(self._write(payload)), name)
 
     def test_garbage_is_ignored(self):
         import tempfile
@@ -2396,7 +2397,7 @@ class TestOffshellCache(unittest.TestCase):
         with os.fdopen(handle, 'w') as f:
             f.write('not json at all')
         self.addCleanup(os.remove, path)
-        self.assertIsNone(self._Stub()._read_offshell_cache(path))
+        self.assertIsNone(self._Stub()._read_upfront_cache(path))
 
 
 class TestPolyfitConditioning(unittest.TestCase):
