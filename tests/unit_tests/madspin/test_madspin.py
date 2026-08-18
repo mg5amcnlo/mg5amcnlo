@@ -3325,3 +3325,121 @@ class TestCheckWeightIdentitySlotPairing(unittest.TestCase):
         decays = self._build_decays(particles, slot_to_index, slot_decays)
         self.assertRaises(AssertionError, self._run_check, production, decays,
                           particles, len(slot_to_index))
+
+
+class _InterStub(object):
+    """Just enough of MadSpinInterface for ``get_inter_value``: the pdir->callable
+    caches and a ``get_pdir`` with the *real* return arity."""
+
+    PDIR = 'P0_dummy'
+    ORDER = ((1, -1), (3, -3))
+
+    def __init__(self):
+        # the four caches MadSpinInterface.__init__ creates
+        self.all_amp = {self.PDIR: lambda P, hel, IC: float(sum(hel))}
+        self.all_jamp = {self.PDIR: lambda amp: [amp]}
+        self.all_inter = {self.PDIR: lambda ja, jb: ja[0] * jb[0]}
+        self.all_matrix = {}
+
+    def get_pdir(self, event):
+        # mirrors MadSpinInterface.get_pdir: (pdir, orig_order, prefix, pos, tag)
+        return self.PDIR, self.ORDER, 'pref_', 0, self.ORDER
+
+    get_inter_value = interface_madspin.MadSpinInterface.get_inter_value
+
+
+class _InterEvent(object):
+    """``get_inter_value`` only ever asks the event for its momenta."""
+
+    def get_all_momenta(self, orig_order):
+        return [[(1., 0., 0., 1.), (1., 0., 0., -1.),
+                 (1., 0., 1., 0.), (1., 0., -1., 0.)]]
+
+
+class TestGetPdirUnpackArity(unittest.TestCase):
+    """``get_pdir`` grew from returning 2 values to 4 (single f2py library) to 5
+    (loop-induced production) without every call site following along, and the
+    result is a ``ValueError: too many values to unpack`` that only shows up when
+    the call is actually made. These tests turn that into a test failure instead:
+    change ``get_pdir``'s return and the arity check below goes red."""
+
+    SOURCE = pjoin(MG5DIR, 'MadSpin', 'interface_madspin.py')
+
+    # ``_frame_boost`` still unpacks 4 on this branch; its fix travels with the
+    # frame/beampol PR (#355). Drop this entry once that has landed.
+    KNOWN_PENDING = set(['_frame_boost'])
+
+    def _tree(self):
+        import ast
+        with open(self.SOURCE) as fsock:
+            return ast.parse(fsock.read()), ast
+
+    def _interface_class(self):
+        tree, ast = self._tree()
+        for node in tree.body:
+            if isinstance(node, ast.ClassDef) and node.name == 'MadSpinInterface':
+                return node, ast
+        self.fail('MadSpinInterface not found in %s' % self.SOURCE)
+
+    def _return_arity(self):
+        """number of values ``MadSpinInterface.get_pdir`` returns"""
+        klass, ast = self._interface_class()
+        for meth in klass.body:
+            if isinstance(meth, ast.FunctionDef) and meth.name == 'get_pdir':
+                arities = [len(n.value.elts) for n in ast.walk(meth)
+                           if isinstance(n, ast.Return) and n.value is not None
+                           and isinstance(n.value, ast.Tuple)]
+                self.assertTrue(arities, 'get_pdir returns no tuple')
+                self.assertEqual(len(set(arities)), 1,
+                                 'get_pdir returns tuples of differing length: %s'
+                                 % arities)
+                return arities[0]
+        self.fail('MadSpinInterface.get_pdir not found')
+
+    def _call_sites(self):
+        """[(method name, line, number of targets)] for every ``... = self.get_pdir(...)``"""
+        klass, ast = self._interface_class()
+        out = []
+        for meth in klass.body:
+            if not isinstance(meth, ast.FunctionDef):
+                continue
+            for node in ast.walk(meth):
+                if not isinstance(node, ast.Assign):
+                    continue
+                call = node.value
+                if not isinstance(call, ast.Call):
+                    continue
+                fct = call.func
+                if not (isinstance(fct, ast.Attribute) and fct.attr == 'get_pdir'):
+                    continue
+                target = node.targets[0]
+                nb = len(target.elts) if isinstance(target, ast.Tuple) else 1
+                out.append((meth.name, node.lineno, nb))
+        return out
+
+    def test_get_pdir_return_arity(self):
+        """the arity the call sites are checked against -- a bump here is the
+        signal to update them all"""
+        self.assertEqual(self._return_arity(), 5)
+
+    def test_every_call_site_matches(self):
+        """every ``self.get_pdir(...)`` unpack in MadSpinInterface agrees with
+        what get_pdir actually returns"""
+        expected = self._return_arity()
+        sites = self._call_sites()
+        # the sweep is worthless if the AST walk found nothing
+        self.assertTrue(len(sites) >= 4, 'no get_pdir call site found')
+        bad = ['%s (line %s) unpacks %s' % (name, line, nb)
+               for name, line, nb in sites
+               if nb != expected and name not in self.KNOWN_PENDING]
+        self.assertEqual(bad, [],
+                         'get_pdir returns %s value(s) but: %s'
+                         % (expected, ', '.join(bad)))
+
+    def test_get_inter_value_runs(self):
+        """the regression proper: get_inter_value used to unpack 2 and died with
+        ``ValueError: too many values to unpack`` on its very first statement"""
+        nhel = [[1, -1, 1, -1], [-1, 1, -1, 1]]
+        inter = _InterStub().get_inter_value(_InterEvent(), nhel)
+        # one entry per (jamp_i, jamp_j) pair, i.e. len(nhel)**2
+        self.assertEqual(len(inter), len(nhel) ** 2)
