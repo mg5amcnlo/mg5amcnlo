@@ -37,6 +37,7 @@ import array
 import collections
 import inspect
 import math
+import random
 
 import madgraph.core.base_objects as MG
 import madgraph.various.misc as misc
@@ -1901,6 +1902,8 @@ class TestPureInterferenceMode(unittest.TestCase):
             interface_madspin.MadSpinInterface._apply_pure_interference
         _validate_pure_interference = \
             interface_madspin.MadSpinInterface._validate_pure_interference
+        _pure_interference_unweighted = \
+            interface_madspin.MadSpinInterface._pure_interference_unweighted
         _density_spinmode = interface_madspin.MadSpinInterface._density_spinmode
         _unweighting_mode = interface_madspin.MadSpinInterface._unweighting_mode
         _announce_mode = interface_madspin.MadSpinInterface._announce_mode
@@ -1911,9 +1914,10 @@ class TestPureInterferenceMode(unittest.TestCase):
 
         def __init__(self, spec='', spinmode='madspin', pol_map=None,
                      branches=('w+', 'w-'), unweighting='sequential',
-                     pol_weights=False):
+                     pol_weights=False, output='weighted'):
             self.options = interface_madspin.MadSpinOptions()
             self.options['pure_interference'] = spec
+            self.options['pure_interference_output'] = output
             self.options['spinmode'] = spinmode
             self.options['unweighting'] = unweighting
             self.options['fixed_order'] = False
@@ -2094,6 +2098,38 @@ class TestPureInterferenceMode(unittest.TestCase):
         # ... and without the mode the two are unrelated
         self._Stub('w+ = 0 T', pol_weights=False)._validate_pure_interference()
 
+    # -- pure_interference_output ------------------------------------------
+
+    def test_the_output_option_defaults_to_the_fully_weighted_mode(self):
+        """The fully weighted output stays the default: it uses every
+        production event and measures ~6x less variance per production event
+        (section 13.17)."""
+        stub = self._Stub('w+ = 0 T')
+        self.assertEqual(stub.options['pure_interference_output'], 'weighted')
+        self.assertFalse(stub._pure_interference_unweighted())
+
+    def test_the_output_option_selects_the_unweighted_variant(self):
+        stub = self._Stub('w+ = 0 T', output='unweighted')
+        self.assertTrue(stub._pure_interference_unweighted())
+        stub._validate_pure_interference()
+
+    def test_the_output_option_is_inert_without_the_mode(self):
+        """It only chooses how the interference mode writes its signed
+        weights, so an ordinary run must not be touched by it."""
+        stub = self._Stub('', output='unweighted')
+        self.assertFalse(stub._pure_interference_unweighted())
+        # and validation is a no-op (it only warns)
+        stub._validate_pure_interference()
+
+    def test_the_output_option_rejects_an_unknown_value(self):
+        """ConfigFile keeps the previous value and warns rather than raising,
+        so the check is that an unknown spelling does not silently become the
+        active one."""
+        options = interface_madspin.MadSpinOptions()
+        options['pure_interference_output'] = 'unweighted'
+        options['pure_interference_output'] = 'signed'
+        self.assertEqual(options['pure_interference_output'], 'unweighted')
+
 
 class TestPureInterferenceCardSyntax(unittest.TestCase):
     """The card spelling of a multi-particle pure_interference request.
@@ -2239,6 +2275,148 @@ class TestPureInterferenceNormalisation(unittest.TestCase):
         self.assertRaises(stub.InvalidCmd, stub._finalize_pi_c)
         stub._pi_c_stats = {'sum': 0.0, 'sumsq': 4.0, 'n': 2}
         self.assertRaises(stub.InvalidCmd, stub._finalize_pi_c)
+
+
+class TestPureInterferenceUnweightedOutput(unittest.TestCase):
+    """``pure_interference_output = unweighted``: ``<|W|>``, its plumbing, and
+    the estimator identity that says the accept/reject bound cancels out of
+    the weight (section 13.17)."""
+
+    class _Stub(object):
+        InvalidCmd = interface_madspin.MadSpinInterface.InvalidCmd
+        _finalize_pi_absw = \
+            interface_madspin.MadSpinInterface._finalize_pi_absw
+        _write_pi_c_cache = \
+            interface_madspin.MadSpinInterface._write_pi_c_cache
+        _read_pi_c_cache = interface_madspin.MadSpinInterface._read_pi_c_cache
+
+        def __init__(self, unweighted=False):
+            self._unweighted = unweighted
+
+        def _pure_interference_unweighted(self):
+            return self._unweighted
+
+    # -- <|W|> -------------------------------------------------------------
+
+    def test_finalize_turns_the_raw_moments_into_absw_and_its_error(self):
+        """sumsq holds sum(W^2) = sum(|W|^2), so the population variance of
+        |W| comes straight out of it."""
+        stub = self._Stub()
+        values = [-1.0, 2.0, -3.0, 4.0]
+        stub._pi_absw_stats = {'sum': sum(abs(v) for v in values),
+                               'sumsq': sum(v * v for v in values),
+                               'n': len(values)}
+        stub._finalize_pi_absw()
+        self.assertAlmostEqual(stub._pi_absw, 2.5)
+        self.assertAlmostEqual(stub._pi_absw_err, math.sqrt(1.25 / 4.0))
+
+    def test_a_missing_absw_is_fatal_only_for_the_unweighted_output(self):
+        empty = {'sum': 0.0, 'sumsq': 0.0, 'n': 0}
+        weighted = self._Stub(unweighted=False)
+        weighted._pi_absw_stats = dict(empty)
+        weighted._finalize_pi_absw()          # a diagnostic there, so tolerated
+        self.assertEqual(weighted._pi_absw, 0.0)
+        unweighted = self._Stub(unweighted=True)
+        unweighted._pi_absw_stats = dict(empty)
+        self.assertRaises(unweighted.InvalidCmd, unweighted._finalize_pi_absw)
+
+    # -- the ms_dir cache --------------------------------------------------
+
+    def test_the_cache_round_trips_c_and_absw(self):
+        import tempfile
+        stub = self._Stub()
+        stub._pi_c, stub._pi_c_err = 2.3e-10, 3.1e-13
+        stub._pi_analytic_c = 2.25e-10
+        stub._pi_absw, stub._pi_absw_err = 1.7e-11, 4.0e-14
+        path = os.path.join(tempfile.mkdtemp(), 'pure_interference_c')
+        stub._write_pi_c_cache(path)
+        back = self._Stub(unweighted=True)
+        self.assertTrue(back._read_pi_c_cache(path))
+        self.assertAlmostEqual(back._pi_c, 2.3e-10)
+        self.assertAlmostEqual(back._pi_absw, 1.7e-11)
+        self.assertAlmostEqual(back._pi_absw_err, 4.0e-14)
+
+    def test_a_cache_written_before_absw_is_rejected_when_it_is_needed(self):
+        """A three-field file is one the fully weighted mode wrote. Reusing it
+        for the unweighted output would run on a missing normalisation, so the
+        reader says no and the caller re-scans."""
+        import tempfile
+        path = os.path.join(tempfile.mkdtemp(), 'pure_interference_c')
+        with open(path, 'w') as fsock:
+            fsock.write('2.3e-10 3.1e-13 2.25e-10\n')
+        self.assertFalse(self._Stub(unweighted=True)._read_pi_c_cache(path))
+        # ... but the fully weighted mode does not need it and reads on
+        weighted = self._Stub(unweighted=False)
+        self.assertTrue(weighted._read_pi_c_cache(path))
+        self.assertAlmostEqual(weighted._pi_c, 2.3e-10)
+
+    # -- the estimator identity -------------------------------------------
+
+    def _toy(self, seed, bound_factor, w0_rule):
+        """A pure-python stand-in for the unweighting loop.
+
+        ``W(p, u) = a_p cos(2 pi u)`` with ``u`` uniform, so ``<W> = 0`` for
+        every production point (the defining property of the mode) while
+        ``<|W|>`` varies with ``a_p`` -- the local size of the interference.
+        The observable is ``O(u) = cos(2 pi u)``, so everything is closed form:
+
+            <W O>  = <a> / 2        <|W|> = <a> * 2/pi
+
+        ``w0_rule(absw, c)`` supplies the weight magnitude under test.
+        """
+        rng = random.Random(seed)
+        a = [1.0 + 3.0 * (k % 7) / 6.0 for k in range(500)]   # a_p in [1, 4]
+        c, ref, n = 0.5, 12.0, 400000
+        absw = (sum(a) / len(a)) * 2.0 / math.pi
+        bound = max(a) * bound_factor
+        w0 = w0_rule(absw, c)
+        total, n_file = 0.0, 0
+        for _ in range(n):
+            a_p = a[rng.randrange(len(a))]
+            u = rng.random()
+            obs = math.cos(2 * math.pi * u)
+            W = a_p * obs
+            if rng.random() * bound >= abs(W):
+                continue
+            n_file += 1
+            total += math.copysign(w0, W) * obs
+        return total / n_file, n_file, n
+
+    def test_the_unweighted_weight_reproduces_the_interference_and_M_cancels(self):
+        """The claim being tested, end to end on a toy:
+
+            (1/N_file) sum w O  =  w0 <W O> / <|W|>
+
+        so ``w0 = sigma*BR*<|W|>/c`` makes it the interference contribution
+        ``sigma*BR*<W O>/c`` the fully weighted output writes -- with no
+        ``M`` in it. Two bounds a factor 4 apart must therefore give the same
+        physics from very different file sizes.
+        """
+        a = [1.0 + 3.0 * (k % 7) / 6.0 for k in range(500)]
+        mean_a = sum(a) / len(a)
+        target = 12.0 * (mean_a / 2.0) / 0.5          # ref * <W O> / c
+        rule = lambda absw, c: 12.0 * absw / c        # noqa: E731
+        tight, n_tight, n_read = self._toy(11, 1.0, rule)
+        loose, n_loose, _ = self._toy(11, 4.0, rule)
+        # the two runs keep very different numbers of events ...
+        self.assertGreater(n_tight, 3.0 * n_loose)
+        self.assertAlmostEqual(n_tight / float(n_read),
+                               mean_a * 2.0 / math.pi / max(a), delta=0.01)
+        # ... and agree with each other and with the analytic answer
+        self.assertAlmostEqual(tight, target, delta=0.02 * target)
+        self.assertAlmostEqual(loose, target, delta=0.03 * target)
+
+    def test_the_design_notes_weight_would_be_wrong_per_file_event(self):
+        """The superseded proposal ``w = +- sigma*BR*maxwgt/c`` normalises per
+        event READ, not per event in the file, so a consumer dividing by
+        N_file -- the only count an LHE file carries, and what IDWTUP = -4
+        means -- is off by exactly ``M/<|W|>``, a bound-dependent factor."""
+        a = [1.0 + 3.0 * (k % 7) / 6.0 for k in range(500)]
+        target = 12.0 * ((sum(a) / len(a)) / 2.0) / 0.5
+        got, _, _ = self._toy(11, 1.0, lambda absw, c: 12.0 * max(a) / c)
+        absw = (sum(a) / len(a)) * 2.0 / math.pi
+        self.assertAlmostEqual(got / target, max(a) / absw, delta=0.03)
+        self.assertGreater(got / target, 1.5)
 
 
 class TestProductionPolarizationPlumbing(unittest.TestCase):

@@ -175,8 +175,27 @@ class MadSpinOptions(banner.ConfigFile):
                        "UNPOLARISED on the legs given an I block (the interference between two "
                        "polarisations does not exist in a sample generated with a brace on that "
                        "leg). The sample then has zero total cross-section by construction, and "
-                       "its event weights are SIGNED and fully weighted, w = sigma*BR*W/c; see "
-                       "doc/madspin_sequential_plan.md section 13.")
+                       "its event weights are SIGNED; see pure_interference_output for their "
+                       "value and doc/madspin_sequential_plan.md section 13.")
+        self.add_param('pure_interference_output', 'weighted',
+                       allowed=['weighted', 'unweighted'],
+                       comment="how the pure-interference mode writes its (always signed) event "
+                       "weights. Ignored unless pure_interference is set. 'weighted' (default): "
+                       "no accept/reject at all, every trial is kept and carries the fully "
+                       "weighted w = sigma_ref*BR*W/c, with W the signed convolution of that "
+                       "trial and c = <W> the unrestricted decay-side constant. 'unweighted': "
+                       "unweight on |W| against the probed maximum, ONE draw per production "
+                       "event and nothing written on rejection, and give each accepted event "
+                       "w = +- sigma_ref*BR*<|W|>/c -- i.e. exactly two weight magnitudes, so "
+                       "the sample is unweighted up to a sign. Both give mean(w) = 0 and "
+                       "sum_bin(w)/N_file = the interference contribution to that bin in pb "
+                       "(N_file = the number of events IN THE FILE, which is N_read only for "
+                       "'weighted'), and in neither does the accept/reject bound enter the "
+                       "normalisation. 'weighted' is the default because it uses every "
+                       "production event instead of the few percent an accept/reject keeps: "
+                       "measured ~6x less variance per production event on <C_nn>, "
+                       "<cos phi_ll> and <Delta phi> (section 13.17). Choose 'unweighted' only "
+                       "when a downstream tool needs near-constant |w|.")
         self.add_param('keep_weight_for_polarization_vector', [], typelist=str,
                        comment="density spin modes only. Polarisations (0, +, -, T; "
                        "L/R accepted as aliases of -/+) offered to each decaying "
@@ -2847,6 +2866,10 @@ class MadSpinInterface(extended_cmd.Cmd):
             # pure interference: the decay-side constant every written weight is
             # divided by, measured by the same scan that produced ``maxwgt``
             pure_interference_c=getattr(self, '_pi_c', None),
+            # ... and <|W|>, which normalises the 'unweighted' output. Unused
+            # by the fully weighted default.
+            pure_interference_absw=getattr(self, '_pi_absw', None),
+            pure_interference_unweighted=self._pure_interference_unweighted(),
             sequential=sequential,
             decay_dict=decay_dict,
             drop_prob_per_pdg=drop_prob_per_pdg,
@@ -3807,16 +3830,56 @@ class MadSpinInterface(extended_cmd.Cmd):
         # i.e. the file normalises itself, max_weight leaves the normalisation
         # entirely, and every production event is used instead of the 3-9% an
         # accept/reject kept. See doc/madspin_sequential_plan.md section 13.13.
+        #
+        # ``pure_interference_output = unweighted`` selects the other
+        # representation of the same estimator (section 13.17): keep the
+        # accept/reject, but on |W| and with ONE draw -- nothing is written on
+        # rejection, so the keep rate carries <|W|> -- and give each accepted
+        # event the constant magnitude
+        #
+        #     w = +- sigma_parent * BR * <|W|> / c
+        #
+        # The bound M the acceptance uses cancels between the acceptance
+        # probability |W|/M and the resulting file size N_file = N*<|W|>/M, so
+        # this normalisation contains no max_weight either. It is *not* the
+        # historical redraw-until-accept, which would force one event per
+        # production point and divide <|W|> out altogether.
         pure_interference = bool(self._pure_interference())
         pure_interference_c = ctx.get('pure_interference_c')
+        pi_unweighted = pure_interference and bool(
+            ctx.get('pure_interference_unweighted'))
         if pure_interference and not pure_interference_c:
             raise self.InvalidCmd(
                 "MadSpin: the pure-interference normalisation constant c is "
                 "missing; the weights cannot be normalised. This is an "
                 "internal error -- the maximum-weight scan measures it.")
+        pi_w0_factor = 0.0     # <|W|>/c: the constant |w|/(sigma*BR) of the
+                               # 'unweighted' output
+        if pi_unweighted:
+            absw = ctx.get('pure_interference_absw')
+            if not absw:
+                raise self.InvalidCmd(
+                    "MadSpin: pure_interference_output = unweighted needs "
+                    "<|W|>, the decay-phase-space mean of the absolute "
+                    "convolution, and the maximum-weight scan produced none. "
+                    "This is an internal error -- the scan measures it beside "
+                    "c.")
+            if not maxwgt:
+                raise self.InvalidCmd(
+                    "MadSpin: pure_interference_output = unweighted needs a "
+                    "positive maximum weight to unweight |W| against, and the "
+                    "scan produced %r." % (maxwgt,))
+            pi_w0_factor = absw / pure_interference_c
         nb_pi_dead = 0     # trials whose convolution was not a finite number:
                            # they are written with weight 0, and an all-dead
                            # sample is a bug rather than a physics statement
+        nb_pi_reject = 0   # 'unweighted' only: production events whose single
+                           # decay draw failed the |W|/M test and wrote nothing
+        nb_pi_overflow = 0 # 'unweighted' only: |W| above the bound. Unlike the
+                           # fully weighted output the bound is live again here
+                           # -- the acceptance probability clips at 1 -- so an
+                           # under-estimated max_weight biases the sample and
+                           # has to be counted and reported.
         sum_w = 0.0        # signed weight sum, for the zero-cross-section check
         sum_w2 = 0.0       # its second moment: no cancellation, so the MC error
         nb_try = 0
@@ -3905,7 +3968,10 @@ class MadSpinInterface(extended_cmd.Cmd):
 
             # Per-production-event cache reused across rejection retries.
             prod_density_cached = None
-            pi_factor = 1.0   # W / c in the pure-interference mode, 1 elsewhere
+            pi_factor = 1.0   # W/c ('weighted') or +-<|W|>/c ('unweighted') in
+                              # the pure-interference mode, 1 elsewhere
+            pi_rejected = False  # 'unweighted': the single draw failed, so this
+                                 # production event writes nothing at all
             # Consecutive trials whose matrix-element weight was not a finite
             # positive number. This `while 1` has no other exit than an
             # acceptance, so without it a structurally zero weight loops for
@@ -3952,13 +4018,31 @@ class MadSpinInterface(extended_cmd.Cmd):
 
                 test = wgt*jac
                 if pure_interference:
-                    # no accept/reject: the signed convolution goes onto the
-                    # weight, scaled by the decay-side constant c
                     signed = float(getattr(test, 'real', test))
                     if not math.isfinite(signed):
                         nb_pi_dead += 1
                         signed = 0.0
-                    pi_factor = signed / pure_interference_c
+                    if not pi_unweighted:
+                        # no accept/reject: the signed convolution goes onto
+                        # the weight, scaled by the decay-side constant c
+                        pi_factor = signed / pure_interference_c
+                    else:
+                        # unweighted up to a sign. ONE draw, accepted with
+                        # probability |W|/M; nothing is written on rejection,
+                        # so the keep rate carries <|W|>. The magnitude is the
+                        # same for every accepted event and M cancels out of
+                        # it. A negative weight is normal here, which is why
+                        # the test and the overflow count are both on |W| --
+                        # and why _dead_trial, whose whole premise is that a
+                        # non-positive weight is structurally dead, is not on
+                        # this path at all (nb_pi_dead counts the genuinely
+                        # dead, non-finite trials instead).
+                        if abs(signed) > maxwgt:
+                            nb_pi_overflow += 1
+                        if random.random() * maxwgt >= abs(signed):
+                            pi_rejected = True
+                            break
+                        pi_factor = math.copysign(pi_w0_factor, signed)
                 else:
                     # ``wgt`` alone, not ``wgt*jac``: a zero/-1 jacobian is an
                     # ordinary rejection (a mass set the production cannot be
@@ -4001,6 +4085,14 @@ class MadSpinInterface(extended_cmd.Cmd):
                     break
                 #else:
                 #    misc.sprint('fail-> retry')
+            if pi_rejected:
+                # 'unweighted' pure interference: one draw, and it failed. Write
+                # nothing and move to the next production event -- redrawing
+                # here would force one output per production point and divide
+                # out <|W|>, which is precisely the quantity the keep rate is
+                # carrying (section 13.7b).
+                nb_pi_reject += 1
+                continue
             # Efficiency = accepted / trials (+1 because current event is already accepted)
             self.efficiency = float(curr_event + 1) / nb_try
             #if density_method:
@@ -4044,9 +4136,11 @@ class MadSpinInterface(extended_cmd.Cmd):
                            time.time()-start))
         n_processed = curr_event + 1
         return dict(n_processed=n_processed,
-                    n_written=n_processed - nb_loose_skip,
+                    n_written=n_processed - nb_loose_skip - nb_pi_reject,
                     nb_try=nb_try,
                     nb_loose_skip=nb_loose_skip,
+                    nb_pi_reject=nb_pi_reject,
+                    nb_pi_overflow=nb_pi_overflow,
                     # picklable and merged additively over the forked shards, so
                     # one shard or many gives the identical zero-cross-section
                     # test (section 13.8)
@@ -4170,8 +4264,10 @@ class MadSpinInterface(extended_cmd.Cmd):
         S = sum(s.get('sum_w', 0.0) for s in stats_list)
         sum_w2 = sum(s.get('sum_w2', 0.0) for s in stats_list)
         nb_pi_dead = sum(s.get('nb_pi_dead', 0) for s in stats_list)
+        nb_pi_overflow = sum(s.get('nb_pi_overflow', 0) for s in stats_list)
         delta = math.sqrt(sum_w2)
         z = (S / delta) if delta else 0.0
+        unweighted = self._pure_interference_unweighted()
         if nb_pi_dead:
             logger.critical(
                 "MadSpin pure_interference: %d/%d trial(s) had a non-finite "
@@ -4179,14 +4275,24 @@ class MadSpinInterface(extended_cmd.Cmd):
                 "matrix element, not physics -- the sample is incomplete.",
                 nb_pi_dead, n_processed)
 
-        # Fully weighted: every production event is kept, so this is 1 unless
-        # some *other* mechanism (BR equalization) dropped events.
         keep = float(n_written) / n_processed if n_processed else 0.0
-        logger.info(
-            "MadSpin pure_interference: wrote %d/%d production events "
-            "(%.4f). The mode does not accept/reject: every trial is kept and "
-            "the local size of the interference is carried by the magnitude of "
-            "the signed weight instead.", n_written, n_processed, keep)
+        if unweighted:
+            logger.info(
+                "MadSpin pure_interference: wrote %d/%d production events "
+                "(%.4f). pure_interference_output = unweighted: one decay "
+                "draw per production event, accepted with probability "
+                "|W|/max|W|, so the keep rate -- not the weight magnitude -- "
+                "carries the local size of the interference.",
+                n_written, n_processed, keep)
+        else:
+            # Fully weighted: every production event is kept, so this is 1
+            # unless some *other* mechanism (BR equalization) dropped events.
+            logger.info(
+                "MadSpin pure_interference: wrote %d/%d production events "
+                "(%.4f). The mode does not accept/reject: every trial is kept "
+                "and the local size of the interference is carried by the "
+                "magnitude of the signed weight instead.",
+                n_written, n_processed, keep)
 
         # The reference normalisation has to be read before the block is zeroed.
         reference = self._read_lhe_init_cross(base_out)
@@ -4194,23 +4300,50 @@ class MadSpinInterface(extended_cmd.Cmd):
         c_err = getattr(self, '_pi_c_err', 0.0) or 0.0
         analytic_c = getattr(self, '_pi_analytic_c', 0.0) or 0.0
         max_weight = getattr(self, '_pi_max_weight', 0.0) or 0.0
+        absw = getattr(self, '_pi_absw', 0.0) or 0.0
+        absw_err = getattr(self, '_pi_absw_err', 0.0) or 0.0
         n_c = (getattr(self, '_pi_c_stats', None) or {}).get('n', 0)
+        n_absw = (getattr(self, '_pi_absw_stats', None) or {}).get('n', 0)
         mean_w = S / n_written if n_written else 0.0
-        note = [
-            '#  Pure-interference sample: it keeps ONLY the interference between',
-            '#  the polarisations listed below, so its total cross-section is zero',
-            '#  by construction and <init> is written with XSECUP = 0. That also',
-            '#  zeroes XERRUP/XMAXUP, so the file cannot be showered as-is.',
-            '#',
-            '#  The event weights are SIGNED and fully weighted:',
-            '#      w = sigma_ref * BR * W / c',
-            '#  with W the signed production/decay convolution of this event and',
-            '#  c = <W> the decay-side constant below. MG5 writes LHE with',
-            '#  IDWTUP = -4, i.e. the cross-section is the MEAN of the weights,',
-            '#  so this sample is self-normalising: mean(w) = 0 (its rate) and',
-            '#  sum_bin(w) / N_read is the interference contribution to that',
-            '#  bin, in pb. N_read is the "Events written / read" count below.',
-        ]
+        if unweighted:
+            note = [
+                '#  Pure-interference sample: it keeps ONLY the interference between',
+                '#  the polarisations listed below, so its total cross-section is zero',
+                '#  by construction and <init> is written with XSECUP = 0. That also',
+                '#  zeroes XERRUP/XMAXUP, so the file cannot be showered as-is.',
+                '#',
+                '#  The event weights are SIGNED and unweighted UP TO A SIGN -- the',
+                '#  file holds exactly two weight magnitudes:',
+                '#      w = +- sigma_ref * BR * <|W|> / c',
+                '#  with W the signed production/decay convolution, <|W|> its',
+                '#  decay-phase-space mean absolute value and c = <W> the',
+                '#  unrestricted decay-side constant, both below. One decay draw was',
+                '#  made per production event and kept with probability |W|/max|W|,',
+                '#  so the file holds FEWER events than were read and the local size',
+                '#  of the interference is carried by the keep rate. The bound the',
+                '#  acceptance used cancels out of the weight above, so it is not a',
+                '#  normalisation constant. MG5 writes LHE with IDWTUP = -4, i.e. the',
+                '#  cross-section is the MEAN of the weights, so this sample is',
+                '#  self-normalising: mean(w) = 0 (its rate) and sum_bin(w) / N_file',
+                '#  is the interference contribution to that bin, in pb, with N_file',
+                '#  the number of events WRITTEN (the first number below).',
+            ]
+        else:
+            note = [
+                '#  Pure-interference sample: it keeps ONLY the interference between',
+                '#  the polarisations listed below, so its total cross-section is zero',
+                '#  by construction and <init> is written with XSECUP = 0. That also',
+                '#  zeroes XERRUP/XMAXUP, so the file cannot be showered as-is.',
+                '#',
+                '#  The event weights are SIGNED and fully weighted:',
+                '#      w = sigma_ref * BR * W / c',
+                '#  with W the signed production/decay convolution of this event and',
+                '#  c = <W> the decay-side constant below. MG5 writes LHE with',
+                '#  IDWTUP = -4, i.e. the cross-section is the MEAN of the weights,',
+                '#  so this sample is self-normalising: mean(w) = 0 (its rate) and',
+                '#  sum_bin(w) / N_read is the interference contribution to that',
+                '#  bin, in pb. N_read is the "Events written / read" count below.',
+            ]
         for pdg, (prod, dec) in sorted(self._pure_interference().items()):
             note.append('#  interference  pdg %-6s : production %s  x  decay %s'
                         % (pdg, list(prod), list(dec)))
@@ -4226,9 +4359,39 @@ class MadSpinInterface(extended_cmd.Cmd):
                 analytic_c, (c_value / analytic_c) if analytic_c else 0.0),
             '#     (1/(prod_denominators * sym_decay); exact only where the chain',
             '#      carries no reshuffling jacobian -- a cross-check, not the value used)',
+            '#  Mean absolute conv.   <|W|>  : %+.8e  +- %.4f%%' % (
+                absw, (100 * absw_err / absw) if absw else 0.0),
+            '#     (the decay-phase-space mean of |W|, over %d probe trials.' % n_absw,
+            '#      It normalises the "unweighted" output; for the fully weighted',
+            '#      one it is a diagnostic only)',
             '#  Maximum weight max|W| probed : %+.8e' % max_weight,
-            '#     (diagnostic only: the mode does not accept/reject, so this',
-            '#      number no longer enters the normalisation anywhere)',
+        ]
+        if unweighted:
+            expected_absw = keep * max_weight
+            note += [
+                '#     (the bound the accept/reject used. It cancels out of the',
+                '#      weight, but it does bound it: see the overflow count below)',
+                '#  Weight magnitude |w| (pb)    : %+.8e' % (
+                    reference * absw / c_value if c_value else 0.0),
+                '#     ( = sigma_ref * <|W|> / c ; every event carries +- this)',
+                '#  keep rate x max|W|           : %+.8e  (ratio to <|W|> %.4f)' % (
+                    expected_absw,
+                    (expected_absw / absw) if absw else 0.0),
+                '#     (free consistency check: the realised keep rate is',
+                '#      <|W|>/max|W| by construction, so this must reproduce <|W|>.',
+                '#      A ratio away from 1 means the probe events were not',
+                '#      representative of the full sample)',
+                '#  Trials above max|W|          : %d' % nb_pi_overflow,
+                '#     (accepted with probability 1 instead of |W|/max|W|, which',
+                '#      biases the sample. Non-zero means max_weight is',
+                '#      under-estimated: raise nb_sigma or Nevents_for_max_weight)',
+            ]
+        else:
+            note += [
+                '#     (diagnostic only: the mode does not accept/reject, so this',
+                '#      number no longer enters the normalisation anywhere)',
+            ]
+        note += [
             '#  Sum of written weights     S : %+.8e' % S,
             '#  MC error   sqrt(sum w^2)     : %+.8e' % delta,
             '#  z = S / error                : %+.4f' % z,
@@ -4244,24 +4407,63 @@ class MadSpinInterface(extended_cmd.Cmd):
                     "(reference normalisation %.6e pb, c = %.6e, both "
                     "recorded in the <MGPureInterference> banner block)",
                     S, delta, z, mean_w, reference, c_value)
+        if unweighted:
+            # The keep rate IS <|W|>/max|W| by construction, so this reproduces
+            # the probe's <|W|> for free -- and it is the only in-run handle on
+            # whether the probe's production events were representative, which
+            # is the one extra scale uncertainty this variant carries over the
+            # fully weighted one (<|W|>, unlike c, is not a decay-side
+            # constant).
+            expected = keep * max_weight
+            ratio = (expected / absw) if absw else 0.0
+            logger.info(
+                "MadSpin pure_interference: |w| = %.6e pb on every event, and "
+                "the realised keep rate x max|W| = %.6e reproduces the probe's "
+                "<|W|> = %.6e to %.4f -- the accept/reject bound cancels out "
+                "of the normalisation, this is its consistency check.",
+                (reference * absw / c_value) if c_value else 0.0,
+                expected, absw, ratio)
+            if absw and abs(ratio - 1.0) > 0.10:
+                logger.warning(
+                    "MadSpin pure_interference: the realised keep rate implies "
+                    "<|W|> = %.6e, %.1f%% away from the %.6e the maximum-weight "
+                    "probe measured. <|W|> is a flat scale on every written "
+                    "weight, so the sample is normalised to that accuracy. The "
+                    "probe's production events are not representative of the "
+                    "sample -- raise Nevents_for_max_weight.",
+                    expected, 100 * (ratio - 1.0), absw)
+            if nb_pi_overflow:
+                logger.critical(
+                    "MadSpin pure_interference: %d trial(s) had |W| above the "
+                    "maximum weight and were accepted with probability 1 "
+                    "instead of |W|/max|W|. Unlike the fully weighted output, "
+                    "this variant DOES accept/reject, so that bound is live "
+                    "and an under-estimated one biases the sample. Raise "
+                    "nb_sigma or Nevents_for_max_weight.", nb_pi_overflow)
         if abs(z) > 5.0:
+            cause = (
+                "either a genuine fluctuation, an under-estimated max_weight "
+                "(the overweight count above is the monitor for that), or a bug"
+                if unweighted else
+                "either a genuine fluctuation or a bug (the mode no longer "
+                "accept/rejects, so an under-estimated max_weight can no "
+                "longer be the cause)")
             message = (
                 "MadSpin pure_interference: the sum of the event weights is "
                 "NOT compatible with zero -- S = %+.6e, sqrt(sum w^2) = %.6e, "
                 "z = %+.3f (over 5 sigma). The interference term must "
-                "integrate to zero over the decay phase space, so this is "
-                "either a genuine fluctuation or a bug (the mode no longer "
-                "accept/rejects, so an under-estimated max_weight can no "
-                "longer be the cause)."
-                % (S, delta, z))
+                "integrate to zero over the decay phase space, so this is %s."
+                % (S, delta, z, cause))
             logger.critical(message)
             if self.options['density_debug']:
                 raise RuntimeError(message)
         # The banner cross-section is NOT rescaled (it is zero anyway) and
-        # neither is the branching ratio. Fully weighted, n_written ==
-        # n_processed, so the efficiency downstream sizes nb_event with is 1 --
-        # but it is still taken from the counts rather than hard-coded, so a BR
-        # equalization drop in the same run is still reported honestly.
+        # neither is the branching ratio -- in this mode a low keep rate is
+        # physics, not a correction to undo. The efficiency downstream sizes
+        # nb_event with is taken from the counts: 1 for the fully weighted
+        # output (n_written == n_processed, up to a BR-equalization drop), and
+        # the genuine keep rate for the unweighted one, where the file really
+        # does hold that many fewer events.
         self.efficiency = keep
 
     @staticmethod
@@ -4821,8 +5023,7 @@ class MadSpinInterface(extended_cmd.Cmd):
             if not pure_interference:
                 return float(open(pjoin(self.options['ms_dir'], 'max_wgt'),'r').read())
             c_cache = pjoin(self.options['ms_dir'], 'pure_interference_c')
-            if os.path.exists(c_cache):
-                self._read_pi_c_cache(c_cache)
+            if os.path.exists(c_cache) and self._read_pi_c_cache(c_cache):
                 cached = float(open(pjoin(self.options['ms_dir'], 'max_wgt'),'r').read())
                 self._pi_max_weight = cached
                 return cached
@@ -4875,6 +5076,7 @@ class MadSpinInterface(extended_cmd.Cmd):
         base_max_weight = self._combine_maxwgt(all_maxwgt)
         if pure_interference:
             self._finalize_pi_c()
+            self._finalize_pi_absw()
         if self.options['ms_dir']:
             open(pjoin(self.options['ms_dir'], 'max_wgt'),'w').write(str(base_max_weight))
             if pure_interference:
@@ -4934,25 +5136,93 @@ class MadSpinInterface(extended_cmd.Cmd):
                 "is a flat scale error on every written weight. Raise "
                 "Nevents_for_max_weight or max_weight_ps_point.", 100 * rel)
 
+    def _finalize_pi_absw(self):
+        """Turn the raw sum/sumsq/n of ``|W|`` the max-weight scan collected
+        into ``self._pi_absw`` (the estimate) and ``self._pi_absw_err``.
+
+        ``<|W|>`` is what the 'unweighted' output normalises with:
+
+            w = +- sigma_ref * BR * <|W|> / c
+
+        Derivation (section 13.17). Unweight one draw per production event on
+        ``|W|/M`` for any bound ``M >= max|W|`` and write ``w = sign(W) * w0``.
+        Then ``N_file = N_read * <|W|>/M`` and, for any observable ``O``,
+
+            (1/N_file) sum_written w O = w0 * <W O> / <|W|>
+
+        because ``|W| sign(W) = W``, and the ``M`` of the acceptance
+        probability cancels against the ``M`` of ``N_file``. Matching the
+        interference contribution ``sigma*BR*<W O>/c`` -- the same target the
+        'weighted' output hits per read event -- gives ``w0 = sigma*BR*<|W|>/c``
+        with **no ``M`` in it**: the accept/reject bound leaves the
+        normalisation in this variant too. ``mean(w) = w0 <W>/<|W|> = 0``
+        still, since ``<W> = 0`` for a pure-interference sample.
+
+        Unlike ``c`` this is *not* a decay-side constant -- ``<|W|>`` is the
+        local size of the interference and varies from production point to
+        production point -- so the probe average is over its production events
+        as well, and is only as representative as they are. That is a genuine
+        extra scale uncertainty of this variant over the fully weighted one,
+        and it is why the run cross-checks it against the realised keep rate
+        (``N_file/N_read * M``, see _report_pure_interference).
+        """
+        stats = getattr(self, '_pi_absw_stats', None)
+        n = (stats or {}).get('n', 0)
+        if not n or not stats['sum']:
+            self._pi_absw = 0.0
+            self._pi_absw_err = 0.0
+            if self._pure_interference_unweighted():
+                raise self.InvalidCmd(
+                    "MadSpin: pure_interference_output = unweighted needs "
+                    "<|W|>, the decay-phase-space mean of |W|, and the "
+                    "maximum-weight scan measured %s over %d trials. Raise "
+                    "Nevents_for_max_weight / max_weight_ps_point, or report "
+                    "this case." % ('zero' if n else 'nothing', n))
+            return
+        mean = stats['sum'] / n
+        # sumsq holds sum(W^2) = sum(|W|^2), the right second moment for <|W|>
+        var = max(stats['sumsq'] / n - mean * mean, 0.0)
+        self._pi_absw = mean
+        self._pi_absw_err = math.sqrt(var / n)
+        rel = (self._pi_absw_err / mean) if mean else 0.0
+        logger.info("MadSpin pure_interference: <|W|> = %.6e +- %.2f%% over %d "
+                    "trials", mean, 100 * rel, n)
+
     def _write_pi_c_cache(self, path):
-        """Persist the c measurement beside ``max_wgt`` in ``ms_dir``."""
+        """Persist the c and <|W|> measurements beside ``max_wgt`` in
+        ``ms_dir``. Five fields; a three-field file is one written before
+        <|W|> existed and is rejected by the reader when the run needs it."""
         try:
             with open(path, 'w') as fsock:
-                fsock.write('%r %r %r\n' % (self._pi_c, self._pi_c_err,
-                                            getattr(self, '_pi_analytic_c', 0.0)))
+                fsock.write('%r %r %r %r %r\n' % (
+                    self._pi_c, self._pi_c_err,
+                    getattr(self, '_pi_analytic_c', 0.0) or 0.0,
+                    getattr(self, '_pi_absw', 0.0) or 0.0,
+                    getattr(self, '_pi_absw_err', 0.0) or 0.0))
         except Exception as exc:
             logger.warning('MadSpin: could not cache the pure-interference '
                            'constant c in %s (%s)', path, exc)
 
     def _read_pi_c_cache(self, path):
-        """Read back what ``_write_pi_c_cache`` wrote."""
+        """Read back what ``_write_pi_c_cache`` wrote. Returns False when the
+        cache predates ``<|W|>`` and this run needs it, so the caller can fall
+        through to a fresh scan rather than run on a missing normalisation."""
         values = open(path).read().split()
         self._pi_c = float(values[0])
         self._pi_c_err = float(values[1]) if len(values) > 1 else 0.0
         if len(values) > 2 and float(values[2]):
             self._pi_analytic_c = float(values[2])
+        if len(values) > 4:
+            self._pi_absw = float(values[3])
+            self._pi_absw_err = float(values[4])
+        elif self._pure_interference_unweighted():
+            logger.info("MadSpin pure_interference: the cached constants in %s "
+                        "predate <|W|>, which the 'unweighted' output needs; "
+                        "re-running the maximum-weight scan.", path)
+            return False
         logger.info("MadSpin pure_interference: c = %.6e read from the ms_dir "
                     "cache", self._pi_c)
+        return True
 
     def _scan_maxwgt_range(self, events, start, stop, evt_decayfile,
                            nevents, nb_ps_point):
@@ -5070,6 +5340,17 @@ class MadSpinInterface(extended_cmd.Cmd):
         pi_c_sum = 0.0
         pi_c_sumsq = 0.0
         pi_c_n = 0
+        # ... and, on the same draws, <|W|>: the decay-phase-space mean of the
+        # ABSOLUTE restricted convolution. It is what normalises the
+        # 'unweighted' output (w = +- sigma*BR*<|W|>/c, section 13.17), and a
+        # free diagnostic for the 'weighted' one, so it is always collected
+        # when the mode is on. Unlike c it is not a decay-side constant -- it
+        # varies from production point to production point -- so what the probe
+        # measures is its average over the probe's production events, which is
+        # exactly the global mean the derivation needs.
+        pi_absw_sum = 0.0
+        pi_absw_sumsq = 0.0
+        pi_absw_n = 0
         per_event = []
         for i in range(start, stop):
             if (i - start) % 5 == 1 and getattr(self, '_shard_tag', None) in (None, 0):
@@ -5107,6 +5388,12 @@ class MadSpinInterface(extended_cmd.Cmd):
                     jac = full_evt.reshuffle_production()
                 maxwgt = max(abs(wgt*jac) if signed else wgt*jac, maxwgt)
                 if signed:
+                    restricted = wgt*jac
+                    restricted = float(getattr(restricted, 'real', restricted))
+                    if math.isfinite(restricted):
+                        pi_absw_sum += abs(restricted)
+                        pi_absw_sumsq += restricted * restricted
+                        pi_absw_n += 1
                     sample = getattr(self, '_pi_unrestricted_wgt', None)
                     if sample is not None:
                         # the outer jacobian (PA with density_keep_jacobian) is
@@ -5126,6 +5413,13 @@ class MadSpinInterface(extended_cmd.Cmd):
             stats['sumsq'] += pi_c_sumsq
             stats['n'] += pi_c_n
             self._pi_c_stats = stats
+            astats = getattr(self, '_pi_absw_stats', None) or {'sum': 0.0,
+                                                               'sumsq': 0.0,
+                                                               'n': 0}
+            astats['sum'] += pi_absw_sum
+            astats['sumsq'] += pi_absw_sumsq
+            astats['n'] += pi_absw_n
+            self._pi_absw_stats = astats
         return per_event
 
     def _joint_maxwgt_shard_entry(self, shard_id, nb_core, events, start, stop,
@@ -5151,6 +5445,7 @@ class MadSpinInterface(extended_cmd.Cmd):
                 # so one shard or many gives the identical estimate)
                 json.dump({'per_event': per_event,
                            'pi_c': getattr(self, '_pi_c_stats', None),
+                           'pi_absw': getattr(self, '_pi_absw_stats', None),
                            'pi_analytic_c': getattr(self, '_pi_analytic_c', None)}, f)
         except Exception as exc:
             import traceback
@@ -5230,6 +5525,13 @@ class MadSpinInterface(extended_cmd.Cmd):
                 for key in ('sum', 'sumsq', 'n'):
                     merged[key] += pi_c.get(key, 0)
                 self._pi_c_stats = merged
+            pi_absw = r.get('pi_absw')
+            if pi_absw:
+                merged = getattr(self, '_pi_absw_stats', None) or {
+                    'sum': 0.0, 'sumsq': 0.0, 'n': 0}
+                for key in ('sum', 'sumsq', 'n'):
+                    merged[key] += pi_absw.get(key, 0)
+                self._pi_absw_stats = merged
             if r.get('pi_analytic_c'):
                 self._pi_analytic_c = r['pi_analytic_c']
         for outp in out_paths:
@@ -6056,11 +6358,28 @@ class MadSpinInterface(extended_cmd.Cmd):
         self._pure_interference_cache = out
         return out
 
+    def _pure_interference_unweighted(self):
+        """True when the pure-interference mode must write the 'unweighted'
+        (up to a sign) output instead of the fully weighted default.
+
+        Only meaningful when the mode is on -- ``pure_interference_output`` is
+        ignored otherwise, which ``_validate_pure_interference`` says out loud.
+        """
+        return (bool(self._pure_interference())
+                and self.options['pure_interference_output'] == 'unweighted')
+
     def _validate_pure_interference(self):
         """Card-level checks for the pure-interference mode, run once at launch
         rather than on the first event inside a worker process."""
         pure = self._pure_interference()
         if not pure:
+            if self.options['pure_interference_output'] != 'weighted':
+                logger.warning(
+                    "MadSpin: pure_interference_output = %s has no effect "
+                    "because pure_interference is not set. It only chooses "
+                    "how the pure-interference mode writes its signed "
+                    "weights; ordinary runs are unweighted as always.",
+                    self.options['pure_interference_output'])
             return
         if not self._density_spinmode():
             raise self.InvalidCmd(
@@ -6158,20 +6477,33 @@ class MadSpinInterface(extended_cmd.Cmd):
                        'y' if len(missing) == 1 else 'ies',
                        ', '.join(str(h) for h in missing)))
 
+        if self._pure_interference_unweighted():
+            shape = ("UNWEIGHTED UP TO A SIGN: one decay draw per production "
+                     "event, unweighted on |W| against the probed maximum and "
+                     "dropped on rejection, so the file holds fewer events "
+                     "than it read and each carries "
+                     "w = +- sigma_ref * BR * <|W|> / c -- exactly two weight "
+                     "magnitudes. The accept/reject bound cancels out of that "
+                     "normalisation (section 13.17)")
+        else:
+            shape = ("FULLY WEIGHTED: every trial is kept and carries "
+                     "w = sigma_ref * BR * W / c")
         logger.warning(
             "MadSpin: pure_interference is ON for particle(s) %s. The decayed "
             "sample keeps ONLY the interference between the polarisations "
             "named, so its total cross-section is zero by construction and its "
-            "events are FULLY WEIGHTED with a SIGNED weight, "
-            "w = sigma_ref * BR * W / c. Under MG5's IDWTUP = -4 convention "
-            "(cross-section = mean of the weights) that makes the file "
-            "self-normalising: mean(w) = 0 and sum_bin(w)/N is the "
-            "interference contribution to that bin in pb. The <init> block is "
+            "events carry a SIGNED weight. Output shape "
+            "(pure_interference_output = %s) -- %s. Under MG5's IDWTUP = -4 "
+            "convention (cross-section = mean of the weights) the file is "
+            "self-normalising either way: mean(w) = 0 and sum_bin(w)/N_file is "
+            "the interference contribution to that bin in pb, with N_file the "
+            "number of events IN THE FILE. The <init> block is "
             "written with XSECUP = 0, so the file is NOT directly showerable "
             "and any tool that assumes unit weights will be wrong on it -- see "
             "the <MGPureInterference> banner block for the reference "
-            "cross-section, c, and the zero-cross-section check.",
-            ', '.join(str(p) for p in sorted(pure)))
+            "cross-section, c, <|W|>, and the zero-cross-section check.",
+            ', '.join(str(p) for p in sorted(pure)),
+            self.options['pure_interference_output'], shape)
 
     def _apply_pure_interference(self, decaying_pdg, helicities, restriction):
         """Overlay the pure-interference cross restriction on the (symmetric)
