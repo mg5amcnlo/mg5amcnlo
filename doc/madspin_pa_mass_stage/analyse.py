@@ -239,8 +239,14 @@ def main():
     parser.add_argument('--plots', required=True)
     parser.add_argument('--tag', default='')
     parser.add_argument('--subsample', type=int, default=50000)
+    parser.add_argument('--out', default=None,
+                        help='where summary.json / arrays.npz go '
+                             '(default: the plots directory)')
     args = parser.parse_args()
     os.makedirs(args.plots, exist_ok=True)
+    if args.out is None:
+        args.out = args.plots
+    os.makedirs(args.out, exist_ok=True)
     tag = ('_' + args.tag) if args.tag else ''
 
     data = {}
@@ -291,7 +297,7 @@ def main():
               % (mode, len(w), w.mean(), bound, bound / w.mean(), eps_pred,
                  log.get('eps_m_logged')), flush=True)
 
-    with open(pjoin(args.plots, 'summary%s.json' % tag), 'w') as fp:
+    with open(pjoin(args.out, 'summary%s.json' % tag), 'w') as fp:
         json.dump(summary, fp, indent=2, sort_keys=True)
 
     # Compact raw arrays, so the plots can be redrawn without re-running
@@ -311,7 +317,7 @@ def main():
                 continue
             payload['%s_%s' % (mode, name)] = np.asarray(values,
                                                          dtype=np.float32)[idx]
-    np.savez_compressed(pjoin(args.plots, 'arrays%s.npz' % tag), **payload)
+    np.savez_compressed(pjoin(args.out, 'arrays%s.npz' % tag), **payload)
 
     make_plots(data, summary, args.plots, tag)
 
@@ -417,28 +423,40 @@ def make_plots(data, summary, outdir, tag):
               (r'$\prod_k$ jac$_{\rm BW}\cdot\hat Z$ (the no-jac. weight)',
                pa['w'] / pa['jac'], '#2980b9'),
               (r'$w = J\cdot\prod_k$ jac$_{\rm BW}\hat Z$', pa['w'], '#7f8c8d')]
+    bins = np.logspace(-2, np.log10(20), 200)
     for label, values, color in pieces:
         values = values[np.isfinite(values) & (values > 0)]
-        bins = np.logspace(np.log10(values.min()), np.log10(values.max()), 180)
         ax.hist(values, bins=bins, histtype='step', lw=1.7, color=color,
                 density=True,
                 label='%s\n   mean %.3g, max/mean %.1f'
                       % (label, values.mean(), values.max() / values.mean()))
     ax.set_xscale('log')
     ax.set_yscale('log')
+    ax.set_xlim(1e-2, 20)
     ax.set_xlabel('value')
     ax.set_ylabel('density')
-    ax.legend(fontsize=8)
+    ax.legend(fontsize=8, loc='upper left')
     ax.set_title('which factor carries the spread')
 
+    # An accept/reject only ever sees the UPPER tail: what the bound has to
+    # cover is how far above its own mean each factor can go.
     ax = axes[1]
-    other = pa['w'] / pa['jac']
-    ax.hist2d(np.log10(pa['jac']), np.log10(other), bins=120,
-              norm=matplotlib.colors.LogNorm(), cmap='magma')
-    ax.set_xlabel(r'$\log_{10} J$')
-    ax.set_ylabel(r'$\log_{10}(\prod$ jac$_{\rm BW}\hat Z)$')
-    ax.set_title('the two factors against each other')
-    fig.suptitle('PA mass-set weight, factorised')
+    for label, values, color in pieces:
+        values = values[np.isfinite(values) & (values > 0)]
+        ratio = np.sort(values / values.mean())
+        survival = 1.0 - np.arange(len(ratio)) / len(ratio)
+        ax.plot(ratio, survival, color=color, lw=1.8, label=label)
+    ax.set_xscale('log')
+    ax.set_yscale('log')
+    ax.set_xlim(1, 20)
+    ax.set_ylim(1.0 / len(pa['w']) / 2, 1.5)
+    ax.set_xlabel(r'$x / \langle x\rangle$')
+    ax.set_ylabel(r'$P(x/\langle x\rangle > r)$')
+    ax.set_title('the upper tail only: the no-jacobian weight stops at 1.002, '
+                 '$J$ does not')
+    ax.legend(fontsize=8)
+    fig.suptitle('PA mass-set weight, factorised: the reshuffling jacobian is '
+                 'the whole of the spread')
     fig.tight_layout()
     fig.savefig(pjoin(outdir, 'pa_decomposition%s.png' % tag), dpi=140)
     plt.close(fig)
@@ -449,9 +467,11 @@ def make_plots(data, summary, outdir, tag):
     sqrts = pa['sqrts']
     msum = np.array([sum(r) for r in data['PA']['arr'].get('mass_list', [])]) \
         if 'mass_list' in pa else None
-    ax.hist2d(sqrts, np.log10(pa['jac']), bins=(140, 140),
-              range=[[340, 1400], [-3, np.log10(pa['jac'].max())]],
+    ax.hist2d(sqrts, np.log10(pa['jac']), bins=(160, 160),
+              range=[[344, 700], [-2, np.log10(pa['jac'].max())]],
               norm=matplotlib.colors.LogNorm(), cmap='viridis')
+    ax.axvline(346.0, color='w', lw=1, ls='--')
+    ax.text(348, np.log10(pa['jac'].max()) * .9, r'$2m_t$', color='w')
     ax.set_xlabel(r'production $\sqrt{\hat s}$  [GeV]')
     ax.set_ylabel(r'$\log_{10} J$')
     ax.set_title('the jacobian blows up at the $t\\bar t$ threshold')

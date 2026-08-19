@@ -1,0 +1,134 @@
+************************************************************
+*                                                          *
+*           W E L C O M E  to  M A D S P I N               *
+*                                                          *
+************************************************************
+set spinmode madspin
+set seed 42
+set max_running_process 4
+set nb_core 1
+set unweighting sequential
+set sequential_debug True
+define p = g u d s c u~ d~ s~ c~
+define p = g u d s c u~ d~ s~ c~
+INFO: Restrict model sm with file ../../../../../../../../../Users/omattelaer/Documents/git_workspace/madgraph5/.claude/worktrees/agent-ab60bbda45d5ed01c/models/sm/restrict_default.dat . 
+INFO: Run "set stdout_level DEBUG" before import for more information. 
+INFO: Change particles name to pass to MG5 convention 
+Defined multiparticle p = g u c d s u~ c~ d~ s~
+Defined multiparticle j = g u c d s u~ c~ d~ s~
+Defined multiparticle l+ = e+ mu+
+Defined multiparticle l- = e- mu-
+Defined multiparticle vl = ve vm vt
+Defined multiparticle vl~ = ve~ vm~ vt~
+Defined multiparticle all = g u c d s u~ c~ d~ s~ a ve vm vt e- mu- ve~ vm~ vt~ e+ mu+ t b t~ b~ z w+ h w- ta- ta+
+Defined multiparticle p = g u d s c u~ d~ s~ c~
+define l+ = e+ mu+
+define l+ = e+ mu+
+Defined multiparticle l+ = e+ mu+
+define vl = ve vm
+define vl = ve vm
+Defined multiparticle vl = ve vm
+define l- = e- mu-
+define l- = e- mu-
+Defined multiparticle l- = e- mu-
+define vl~ = ve~ vm~
+define vl~ = ve~ vm~
+Defined multiparticle vl~ = ve~ vm~
+import /private/tmp/claude-503/-Users-omattelaer-Documents-git-workspace-madgraph5--claude-worktrees-stoic-margulis-e3f6ec/cbbd487d-6d4b-45c1-b4cb-c882ba1dd911/scratchpad/work/smoke/probe_madspindebug/events.lhe.gz
+INFO: process: p p > t t~ 
+INFO: options:  
+Set group_subprocesses to Auto
+Note that you need to regenerate all processes
+Complex mass already desactivated.
+set loop optimized output to True
+set loop color flows to False
+INFO: detected model: sm. Loading... 
+INFO: Restrict model sm with file ../../../../../../../../../Users/omattelaer/Documents/git_workspace/madgraph5/.claude/worktrees/agent-ab60bbda45d5ed01c/models/sm/restrict_default.dat . 
+INFO: Run "set stdout_level DEBUG" before import for more information. 
+INFO: Change particles name to pass to MG5 convention 
+Kept definitions of multiparticles p / j / l+ / l- / vl / vl~ unchanged
+Defined multiparticle all = g u c d s u~ c~ d~ s~ a ve vm vt e- mu- ve~ vm~ vt~ e+ mu+ t b t~ b~ z w+ h w- ta- ta+
+Set group_subprocesses to Auto
+Note that you need to regenerate all processes
+Complex mass already desactivated.
+set loop optimized output to True
+set loop color flows to False
+Defined multiparticle p = g u c d s u~ c~ d~ s~
+Defined multiparticle j = g u c d s u~ c~ d~ s~
+Defined multiparticle p = g u d s c u~ d~ s~ c~
+Defined multiparticle l+ = e+ mu+
+Defined multiparticle vl = ve vm
+Defined multiparticle l- = e- mu-
+Defined multiparticle vl~ = ve~ vm~
+decay t > b w+, w+ > l+ vl
+decay t~ > b~ w-, w- > l- vl~
+launch
+INFO: Running MadSpin in spinmode madspin 
+INFO: MadSpin: decay_output = unweighted (auto, ordinary run) 
+INFO: Will use seed 686579303 
+INFO: MadSpin: unweighting = sequential (set explicitly) 
+INFO: MadSpin: generating the decay events of 2 particles at once, 1 core(s) each 
+INFO: generate 60250 decay event for particle t 
+INFO: generate 59250 decay event for particle t~ 
+stty: stdin isn't a terminal
+stty: stdin isn't a terminal
+INFO: Time for decay event generation = 51.6 sec 
+INFO: Time for decay event generation = 51.9 sec 
+INFO: generating the production square matrix element for density 
+INFO: generate p p  > t* t~* ;output standalone /private/tmp/claude-503/-Users-omattelaer-Documents-git-workspace-madgraph5--claude-worktrees-stoic-margulis-e3f6ec/cbbd487d-6d4b-45c1-b4cb-c882ba1dd911/scratchpad/work/smoke/probe_madspindebug/madspin_me --prefix=int --density=1 
+INFO: generate matrix element for decay only (1 - > N). 
+INFO: generate t* >  b w+ , w+ > l+ vl  @0 --no_warning=duplicate --standalone;add process t~* >  b~ w- , w- > l- vl~  @1 --no_warning=duplicate --standalone;output standalone /private/tmp/claude-503/-Users-omattelaer-Documents-git-workspace-madgraph5--claude-worktrees-stoic-margulis-e3f6ec/cbbd487d-6d4b-45c1-b4cb-c882ba1dd911/scratchpad/work/smoke/probe_madspindebug/madspin_decay --prefix=int --density=1 -f 
+INFO: Done 4.479 
+INFO: Compiling code 
+INFO: Compiling code 
+INFO: Time ME generation: 13.07 sec 
+INFO: Estimating the maximum weight of each decaying particle 
+INFO: ***************************** 
+INFO: Probing the first 75 events with 500 phase space points 
+INFO: Event 1/75 :  1.733501s 
+INFO: Event 6/75 :  2.971703s 
+INFO: Event 11/75 :  4.207776s 
+INFO: Event 16/75 :  5.519058s 
+INFO: Event 21/75 :  6.762820s 
+INFO: Event 26/75 :  8.005847s 
+INFO: Event 31/75 :  9.251949s 
+INFO: Event 36/75 :  10.497231s 
+INFO: Event 41/75 :  11.731159s 
+INFO: Event 46/75 :  13.036650s 
+INFO: Event 51/75 :  14.370186s 
+INFO: Event 56/75 :  15.690430s 
+INFO: Event 61/75 :  17.039627s 
+INFO: Event 66/75 :  18.341883s 
+INFO: Event 71/75 :  19.700420s 
+INFO: MadSpin sequential: slot -6_0 rate factor Z(150.75)=0.526  Z(173)=1  Z(195.28)=1.707 (37500 samples, 20 bins, bin/fit deviation up to 1.2%) 
+INFO: MadSpin sequential: slot 6_0 rate factor Z(150.73)=0.524  Z(173)=1  Z(195.37)=1.702 (37500 samples, 20 bins, bin/fit deviation up to 1.2%) 
+INFO: Sequential maximum weights: 2.801 2.334 3.983 
+INFO: Start generating decays 
+INFO: decaying event number 10/2000. Decay events per accepted event, per particle: p0=2.91 p1=2.82 [0.025839805603027344 s] 
+INFO: decaying event number 20/2000. Decay events per accepted event, per particle: p0=2.43 p1=2.52 [0.046811819076538086 s] 
+INFO: decaying event number 30/2000. Decay events per accepted event, per particle: p0=2.45 p1=3.42 [0.073638916015625 s] 
+INFO: decaying event number 40/2000. Decay events per accepted event, per particle: p0=2.56 p1=3.54 [0.10012483596801758 s] 
+INFO: decaying event number 50/2000. Decay events per accepted event, per particle: p0=2.43 p1=3.90 [0.12599873542785645 s] 
+INFO: decaying event number 60/2000. Decay events per accepted event, per particle: p0=2.38 p1=4.20 [0.15113377571105957 s] 
+INFO: decaying event number 70/2000. Decay events per accepted event, per particle: p0=2.20 p1=4.30 [0.1767117977142334 s] 
+INFO: decaying event number 80/2000. Decay events per accepted event, per particle: p0=2.22 p1=4.22 [0.20049095153808594 s] 
+INFO: decaying event number 90/2000. Decay events per accepted event, per particle: p0=2.37 p1=4.20 [0.2258749008178711 s] 
+INFO: decaying event number 100/2000. Decay events per accepted event, per particle: p0=2.44 p1=4.11 [0.25087881088256836 s] 
+INFO: decaying event number 200/2000. Decay events per accepted event, per particle: p0=2.37 p1=4.03 [0.47168874740600586 s] 
+INFO: decaying event number 300/2000. Decay events per accepted event, per particle: p0=2.50 p1=3.89 [0.6906857490539551 s] 
+INFO: decaying event number 400/2000. Decay events per accepted event, per particle: p0=2.42 p1=4.05 [0.909700870513916 s] 
+INFO: decaying event number 500/2000. Decay events per accepted event, per particle: p0=2.42 p1=4.20 [1.1376047134399414 s] 
+INFO: decaying event number 600/2000. Decay events per accepted event, per particle: p0=2.37 p1=4.22 [1.356933832168579 s] 
+INFO: decaying event number 700/2000. Decay events per accepted event, per particle: p0=2.35 p1=4.20 [1.5700898170471191 s] 
+INFO: decaying event number 800/2000. Decay events per accepted event, per particle: p0=2.35 p1=4.14 [1.783174753189087 s] 
+INFO: decaying event number 900/2000. Decay events per accepted event, per particle: p0=2.37 p1=4.14 [2.0028347969055176 s] 
+INFO: decaying event number 1000/2000. Decay events per accepted event, per particle: p0=2.35 p1=4.06 [2.214268922805786 s] 
+INFO: decay unweighting done. [4.8 s] 
+INFO: MadSpin unweight efficiency: 0.1587 (2000 written / 12601 trials, 6.30 trials/event) 
+INFO: MadSpin sequential mass stage: 2.89 mass sets per accepted event (5776 drawn, 3776 rejected) 
+INFO: MadSpin sequential slot 0: 2.28 decay events per accepted one (4554 drawn) 
+INFO: MadSpin sequential slot 1: 4.02 decay events per accepted one (8047 drawn) 
+INFO: MadSpin sequential: weight identity verified on 2000 accepted chains -- chain weight / joint weight constant to 1.5e-07 (ratio 1108198256) 
+INFO: Done so far. output written in /private/tmp/claude-503/-Users-omattelaer-Documents-git-workspace-madgraph5--claude-worktrees-stoic-margulis-e3f6ec/cbbd487d-6d4b-45c1-b4cb-c882ba1dd911/scratchpad/work/smoke/probe_madspindebug/events_decayed.lhe 
+INFO: Time for decay = 5.30 sec 
+quit
