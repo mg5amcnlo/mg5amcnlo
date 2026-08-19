@@ -179,6 +179,35 @@ def hill_tail_index(x, fractions=(0.01, 0.003, 0.001)):
     return out
 
 
+SQRTS_EDGES = [346.0, 350, 355, 360, 370, 400, 450, 500, 600, 800, 1200, 1e9]
+
+
+def sqrts_slices(arr):
+    """The weight and the jacobian sliced in production sqrt(shat).
+
+    The bound is a single global number, so what decides ``eps_m`` is how far
+    the worst slice sits above the typical one.  This is the table that says
+    whether the tail is spread over the sample or concentrated in the events
+    that sit on the t t~ threshold.
+    """
+    out = []
+    total = len(arr['sqrts'])
+    for lo, hi in zip(SQRTS_EDGES[:-1], SQRTS_EDGES[1:]):
+        sel = (arr['sqrts'] >= lo) & (arr['sqrts'] < hi)
+        if sel.sum() < 10:
+            continue
+        out.append({
+            'sqrts_lo': lo, 'sqrts_hi': None if hi > 1e8 else hi,
+            'n': int(sel.sum()),
+            'fraction_of_sample': float(sel.sum() / total),
+            'mean_jac': float(arr['jac'][sel].mean()),
+            'max_jac': float(arr['jac'][sel].max()),
+            'mean_w': float(arr['w'][sel].mean()),
+            'max_w': float(arr['w'][sel].max()),
+        })
+    return out
+
+
 def parse_log(path):
     out = {}
     if not os.path.exists(path):
@@ -209,6 +238,7 @@ def main():
     parser.add_argument('--data', required=True)
     parser.add_argument('--plots', required=True)
     parser.add_argument('--tag', default='')
+    parser.add_argument('--subsample', type=int, default=50000)
     args = parser.parse_args()
     os.makedirs(args.plots, exist_ok=True)
     tag = ('_' + args.tag) if args.tag else ''
@@ -247,6 +277,7 @@ def main():
             'w_over_jac_jbw_z': quantiles(w / (jac * arr['jbw'] * arr['z'])),
             'jac_prod_probe_phase': quantiles(probe['jac']) if probe else {},
             'n_probe_mass_sets': int(len(probe['jac'])) if probe else 0,
+            'by_sqrts_slice': sqrts_slices(arr),
             'tail_index_w': hill_tail_index(w),
             'tail_index_jac_prod': hill_tail_index(jac),
             'eps_m_predicted_bound_over_mean': eps_pred,
@@ -263,12 +294,24 @@ def main():
     with open(pjoin(args.plots, 'summary%s.json' % tag), 'w') as fp:
         json.dump(summary, fp, indent=2, sort_keys=True)
 
-    # compact raw arrays, so the plots can be redrawn without re-running MadSpin
-    np.savez_compressed(
-        pjoin(args.plots, 'arrays%s.npz' % tag),
-        **{'%s_%s' % (mode, name): np.asarray(values, dtype=np.float32)
-           for mode, blob in data.items()
-           for name, values in blob['arr'].items() if name != 'mass'})
+    # Compact raw arrays, so the plots can be redrawn without re-running
+    # MadSpin.  Subsampled: the streams themselves are ~80 MB per mode, and a
+    # uniform subsample keeps every quantile below the very last one while
+    # staying small enough to live in the repository.  summary.json carries the
+    # quantiles of the FULL sample, so nothing that matters is lost here.
+    rng = np.random.default_rng(0)
+    payload = {}
+    for mode, blob in data.items():
+        n = len(blob['arr']['w'])
+        idx = (rng.choice(n, args.subsample, replace=False)
+               if n > args.subsample else np.arange(n))
+        idx.sort()
+        for name, values in blob['arr'].items():
+            if name == 'mass':
+                continue
+            payload['%s_%s' % (mode, name)] = np.asarray(values,
+                                                         dtype=np.float32)[idx]
+    np.savez_compressed(pjoin(args.plots, 'arrays%s.npz' % tag), **payload)
 
     make_plots(data, summary, args.plots, tag)
 
@@ -299,21 +342,32 @@ def make_plots(data, summary, outdir, tag):
     ax.legend()
 
     ax = axes[1]
-    positive = jac[jac > 0]
-    ax.hist(positive, bins=np.logspace(np.log10(positive.min()),
-                                       np.log10(positive.max()), 200),
-            color='#c0392b', alpha=.85)
+    # survival function: a straight line here IS the power law, and its slope
+    # is the index that decides how fast the max-weight bound grows with the
+    # size of the probe
+    ordered = np.sort(jac[jac > 0])
+    survival = 1.0 - np.arange(len(ordered)) / len(ordered)
+    ax.plot(ordered, survival, color='#c0392b', lw=1.8, label=r'$P(J > x)$')
+    ref = np.geomspace(1.2, ordered.max(), 40)
+    hill = hill_tail_index(jac).get('top_0.1%', {}) or {}
+    index = hill.get('index_a') or 3.0
+    scale = np.interp(1.5, ordered, survival)
+    ax.plot(ref, scale * (ref / 1.5) ** (-index), 'k--', lw=1.2,
+            label=r'$x^{-a}$, Hill $a = %.2f$ (top 0.1%%)' % index)
     ax.set_xscale('log')
     ax.set_yscale('log')
-    ax.set_xlabel(r'$J$')
-    ax.set_title('the same, log-log: the tail')
-    for q, style in ((99, ':'), (99.9, '--')):
+    ax.set_xlim(1.0, ordered.max() * 1.4)
+    ax.set_ylim(1.0 / len(ordered) / 2, 1.5)
+    ax.set_xlabel(r'$x$')
+    ax.set_ylabel(r'$P(J > x)$')
+    ax.set_title('the upper tail: a power law with index $a \\approx 3$')
+    for q, style in ((99, ':'), (99.9, '-.')):
         value = np.percentile(jac, q)
         ax.axvline(value, color='k', ls=style, lw=1,
                    label='%g%% = %.2f' % (q, value))
     ax.axvline(jac.max(), color='#e67e22', lw=1.4,
                label='max = %.1f' % jac.max())
-    ax.legend()
+    ax.legend(fontsize=8)
     fig.suptitle('The PA production reshuffling jacobian, %d mass sets '
                  '(p p > t t~, both tops leptonic)' % len(jac))
     fig.tight_layout()
