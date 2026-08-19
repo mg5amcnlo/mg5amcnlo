@@ -2430,9 +2430,22 @@ class Event(list):
                     particle.color2 = color_mapping[particle.color2]                
 
     def add_decays(self, pdg_to_decay):
-        """use auto-recursion"""
+        """use auto-recursion
 
-        pdg_to_decay = dict(pdg_to_decay)
+        Non-destructive: the caller's dictionary -- and the lists inside it --
+        come back untouched, so the same set of decays can be attached to
+        several production events. ``dict(pdg_to_decay)`` alone was not enough:
+        it copies the mapping but shares the lists, which the recursion below
+        then ``pop(0)``s, so the first event consumed the decays and every
+        later one silently got nothing to attach. MadSpin does exactly that in
+        two places -- fixed_order attaches one draw to the born event and to
+        each of its counter-events, and the pole approximation rebuilds the
+        event after ``get_onshell_evt_and_wgt`` has already built one from the
+        same dict.
+        """
+
+        pdg_to_decay = dict((pdg, list(decays))
+                            for pdg, decays in pdg_to_decay.items())
 
         for i,particle in enumerate(self):
             if particle.status != 1:

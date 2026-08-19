@@ -542,6 +542,8 @@ class MadSpinOptions(banner.ConfigFile):
         if value:
             logger.warning('Fix order madspin fails to have the correct scale information. This can bias the results!')
             logger.warning('Not all functionalities of MadSpin handle this mode correctly (only onshell mode so far).')
+            logger.warning('spinmode=PA and spinmode=madspin/full reshuffle the production, which an event group\'s '
+                           'counter-events cannot follow; launch will refuse those combinations.')
 
     ############################################################################
     def post_identical_particle_in_prod_and_decay(self, value, change_userdefine, raiseerror):
@@ -1903,6 +1905,7 @@ class MadSpinInterface(extended_cmd.Cmd):
             self.options['spinmode'] = spinmode
 
         logger.info("Running MadSpin in spinmode %s" % spinmode)
+        self._check_fixed_order_spinmode(spinmode)
         # decay_output is refused outside the density modes too, so it is
         # checked before the branch rather than inside it
         self._validate_weighted_decay()
@@ -3435,6 +3438,45 @@ class MadSpinInterface(extended_cmd.Cmd):
         return in_density_mode and (not self._density_pole_approximation()
                                     or self._density_do_reshuffle())
 
+    # the spinmodes ``fixed_order`` reshuffles the production in, and so cannot
+    # decay an event group in: PA samples a virtuality per resonance,
+    # madspin/full evaluates its density at the reshuffled (offshell) momenta.
+    FIXED_ORDER_RESHUFFLING_SPINMODES = ('PA', 'madspin')
+
+    def _check_fixed_order_spinmode(self, spinmode):
+        """Refuse ``fixed_order`` in a spinmode that reshuffles the production.
+
+        An event group is decayed *once*: the born event's decays are attached
+        to the born event and to every counter-event, unchanged (the 2017
+        design of the option, and the only one under which the subtraction
+        still cancels after the decay -- an independent draw per member would
+        decay the event and the term subtracting it differently).
+
+        That is fine as long as nothing else moves the production kinematics.
+        PA and madspin/full do: they reshuffle the production onto sampled
+        virtualities, and only the born member goes through that reshuffling,
+        so its resonance would sit at the sampled mass while the counter-events
+        subtracting it stay onshell. Reshuffling each member separately is not
+        the answer either -- the members are related by the fixed-order mapping,
+        the jacobians would differ per member, and the reshuffling can fail for
+        one member and succeed for the others.
+
+        Until that is designed, refuse: a group whose members disagree looks
+        like a decayed sample and is not one. ``onshell``/``onshell_v1`` keep
+        the production kinematics and are unaffected.
+        """
+        if not self.options['fixed_order']:
+            return
+        if spinmode not in self.FIXED_ORDER_RESHUFFLING_SPINMODES:
+            return
+        raise self.InvalidCmd(
+            "fixed_order is not available in spinmode=%s: that mode reshuffles "
+            "the production onto sampled virtualities, and how an event "
+            "group's counter-events follow the born event through that "
+            "reshuffling is not defined -- only the born event would be "
+            "reshuffled. Use spinmode=onshell (or onshell_v1), which keeps the "
+            "production kinematics, or turn fixed_order off." % spinmode)
+
     def _spinmode_has_density(self):
         """Whether the spinmode carries the density-matrix machinery the staged
         accept/reject schemes are built on. The v1 spinmodes, ``none`` and
@@ -4462,7 +4504,7 @@ class MadSpinInterface(extended_cmd.Cmd):
                         # jacobian is in wgt); build the event to write out from the
                         # reshuffled copy, without reshuffling a second time. If
                         # get_onshell already built it (fixed_order / density_debug),
-                        # reuse that event -- decays were consumed there.
+                        # reuse that event rather than build the same one twice.
                         if full_evt is None:
                             full_evt = lhe_parser.Event(str(prod_trial))
                             full_evt = full_evt.add_decays(decays)
@@ -8997,7 +9039,10 @@ class MadSpinInterface(extended_cmd.Cmd):
                     full_event = lhe_parser.Event(str(production))
                 else:
                     full_event = production          
-                # CAUTION: the next line removes everything from decays dictionary
+                # add_decays is non-destructive: ``decays`` survives this, which
+                # is what lets the caller rebuild the event (PA reshuffling) and
+                # what lets fixed_order attach the same draw to every member of
+                # the event group.
                 full_event = full_event.add_decays(decays)
             
                 #print(f"full event 2 = {full_event}")
