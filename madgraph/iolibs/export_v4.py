@@ -2622,9 +2622,42 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
         logger.info("Running make for Source directory")
         try:
             misc.compile(cwd=source_dir, mode='fortran')
-        except:
-            misc.compile(arg=['../lib/libdhelas.a'], cwd=source_dir, mode='fortran')
-            misc.compile(arg=['../lib/libmodel.a'], cwd=source_dir, mode='fortran')
+        except Exception as error:
+            # This fallback was added in 129c8386 (May 2022), a few days after
+            # deabc60d switched this method from building the two libraries
+            # explicitly to a plain 'make' (i.e. the 'all' target). It rebuilds
+            # only the two libraries a standalone output strictly needs, and so
+            # it also silently rescues an 'all' target that carries a
+            # prerequisite which cannot be satisfied in this output. That is
+            # how the unconditional libcts.a prerequisite of the MadLoop
+            # standalone Source/makefile stayed unnoticed for years: under the
+            # default output_dependencies='external' the first 'make' failed on
+            # *every* MadLoop standalone output and nobody ever saw it.
+            # Warn instead of hiding it. Note that the bare 'except' this
+            # replaces also swallowed KeyboardInterrupt and SystemExit.
+            logger.warning(
+                "Running 'make' in %s failed; falling back to building "
+                "libdhelas and libmodel individually. This normally indicates "
+                "a problem in Source/makefile and should be reported. The "
+                "failure was:\n%s", source_dir, error)
+            try:
+                misc.compile(arg=['../lib/libdhelas.a'], cwd=source_dir, mode='fortran')
+                misc.compile(arg=['../lib/libmodel.a'], cwd=source_dir, mode='fortran')
+            except Exception as fallback_error:
+                # '../lib/libXXX.a' is only a valid target when the makefile was
+                # configured with the default static libext. When 'dynamic' is
+                # set (make_opts), libext is 'so'/'dylib', the makefile only
+                # knows about '../lib/libdhelas.$(libext)' and these two targets
+                # do not exist at all -- make then stops with
+                #     No rule to make target `../lib/libdhelas.a'
+                # Retry through the libext-agnostic phony targets that both
+                # Source/makefile templates provide before giving up, and
+                # re-raise the original error if that does not help either.
+                try:
+                    misc.compile(arg=['libdhelas'], cwd=source_dir, mode='fortran')
+                    misc.compile(arg=['libmodel'], cwd=source_dir, mode='fortran')
+                except Exception:
+                    raise fallback_error
 
     #===========================================================================
     # Create proc_card_mg5.dat for Standalone directory
