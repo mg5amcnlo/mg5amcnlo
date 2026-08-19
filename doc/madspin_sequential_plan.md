@@ -1,11 +1,18 @@
-# MadSpin: sequential (per-particle) accept/reject in density mode
+# MadSpin: the density-mode unweighting schemes, the polarisation axis, and the pure-interference mode
 
-Plan for replacing the joint accept/reject over all decaying particles by a
-per-particle one, in `density_method` mode (now the default). Opt-out flag so
-each process can be A/B tested.
+Design record for the density spin modes (`PA`, `onshell`, `madspin`/`full`):
+why the per-particle ("sequential") accept/reject is exact, what `unweighting =
+auto` resolves to and on what measurements, which frame the polarisation braces
+are defined in, and how the pure-interference mode works. It is written as a
+record of *why the code is what it is*, not as a plan: everything described here
+is built unless the text says otherwise.
 
-Code references are to the current tree (`MadSpin/interface_madspin.py`,
-`MadSpin/decay.py`).
+Code references are to `MadSpin/interface_madspin.py` and `MadSpin/decay.py`;
+line numbers are indicative and drift.
+
+**Section numbers are stable and are referenced from the code** (`section 12`,
+`sections 13.17 and 13.18`, ...), so sections that were retired leave a gap in
+the numbering rather than being renumbered.
 
 ---
 
@@ -261,7 +268,7 @@ It also explains the ladder of section 5: `1/eff_k` *is* the expected number of
 decay events slot k draws from its own pool, so the requested 1.5 / 2 / 2.5 / 3
 are precisely per-slot consumption estimates.
 
-### Where it bites (why the flag is mandatory)
+### Where it bites
 
 Not fact (b) (shared, see above). The real exposure is:
 
@@ -287,9 +294,9 @@ Not fact (b) (shared, see above). The real exposure is:
 5. `density_debug` compares against the full ME and is only meaningful for a
    complete set.
 
-**Scope: `spinmode = PA` (the default, banner.py `add_param('spinmode', "PA")`)
-is in.** An `onshell`-only feature would be inert for essentially every user.
-`fixed_order` still falls back to the joint test.
+**Scope: every density spin mode** -- `PA`, `onshell` and `madspin`/`full` (the
+card default is `madspin`). An `onshell`-only feature would be inert for
+essentially every user. `fixed_order` still falls back to the joint test.
 
 ### PA: mass sampling, jacobian, and kinematic failures
 
@@ -487,25 +494,27 @@ and it is why the ladder must not charge scalars (section 5).
 
 ---
 
-## 3. New options (MadSpinCard, interface_madspin.py:~58)
+## 3. The options
 
-```python
-self.add_param("sequential_decay", True,
-               comment="accept/reject one decaying particle at a time "
-                       "(density mode). Set to False for the historical "
-                       "joint accept/reject.")
-self.add_param("sequential_spin_order", "2 3 1", hidden=True,
-               comment="spin order (MG5 2S+1 convention) used to decide which "
-                       "particle is decayed first: default fermions, then "
-                       "vectors, then scalars.")
-```
+The scheme is selected by a single enumerated card option, whose values and the
+measurements behind them are in section 10 ("The option: one knob, four
+schemes") and section 12:
 
-- `sequential_decay` defaults to **True** (opt-out, per request); forced False
-  when `density_method` is off, when `fixed_order` is on, and when only one
-  particle decays (then it is identical to the joint test -- fall back rather
-  than pay for the identity machinery).
-- `sequential_spin_order` is hidden and lets the ordering itself be A/B tested
-  per process without a code change.
+    set unweighting auto | joint | sequential | sequential_global_retry
+                         | sequential_with_mass
+
+`auto` is the default and what it resolves to is section 12. Two companions keep
+their own names, being an ordering and a check rather than modes:
+
+- `sequential_spin_order` (default `2 3 1`) decides which particle is
+  accept/rejected first -- section 4;
+- `sequential_debug` recomputes the joint weight on every accepted chain and
+  checks the stage weights against it -- section 10, "the weight identity".
+
+The scheme is forced back to `joint` when the spinmode carries no density
+matrix, when `fixed_order` is on, when the decays are grouped with `@` tags
+(`doc/madspin_decay_groups.md`), under `pure_interference` (13.4) and under
+`decay_output = weighted` (13.18).
 
 ---
 
@@ -523,19 +532,11 @@ acceptance. Scalars never reject, so they are parked at the end.
 
 ---
 
-## 5. Pool sizing ladder (interface_madspin.py:1796-1830)
+## 5. Pool sizing ladder
 
-Today:
-
-```python
-spin = self.model.get_particle(pdg).get('spin')
-if spin == 1:      # MG5 convention: scalar
-    efficiency = 1.1
-else:
-    efficiency = 2.0
-```
-
-Sequential replacement -- **ladder by position, capped by spin** (per decision):
+The joint scheme sizes a pool per pdg from a flat per-spin efficiency guess
+(1.1 for a scalar, 2.0 otherwise). Sequentially each slot burns its own pool at
+its own rate, so the guess becomes a **ladder by position, capped by spin**:
 
 ```python
 # position k (0-based) in the decay ordering
@@ -545,140 +546,46 @@ efficiency = 1.1 if spin == 1 else 1.5 + 0.5 * k     # 1.5, 2.0, 2.5, 3.0, ...
 - scalars keep 1.1 at whatever position they land (their ratio is identically
   1, so a bigger pool would be pure waste);
 - spin 1/2 and spin 1 take the ladder value **at their own index**;
-- beyond 4 particles the formula keeps going (3.5, 4.0, ...); consider a cap
-  once measured.
+- beyond 4 particles the formula keeps going (3.5, 4.0, ...).
 
 The `+ nevents_for_max` term and `decay_event_mult` are unchanged. Note the
 pool is sized per *pdg*, while the ladder is per *slot*: for several identical
 parents (same pdg, several slots) take the max ladder value over that pdg's
 slots -- the same file feeds them.
 
-This is the one part of the plan that is a heuristic rather than a derivation;
-the real efficiencies per slot should be logged (section 8) and the ladder
-revisited against measurement.
+This is the one part of the scheme that is a heuristic rather than a
+derivation. `1/eff_k` *is* the expected number of decay events slot k draws
+from its own pool, so the requested 1.5 / 2 / 2.5 / 3 are per-slot consumption
+estimates and nothing more; the per-slot acceptances the run logs are what
+would recalibrate them.
 
 ---
 
 ## 6. Max weights: one bound per slot
 
-`get_maxwgt_for_onshell` (:2810) currently records one `maxwgt` per production
-event, then combines: `1.05 * (mean + nb_sigma*std)` over the per-event maxima,
-refined over the top 20/30/40/50 and against `all_maxwgt[1]`.
+The joint scan records one `maxwgt` per production event and combines them as
+`1.05 * (mean + nb_sigma*std)` over the per-event maxima, refined over the top
+20/30/40/50. Sequentially there are `n` independent bounds `C_k`, one per slot:
+for each PS point the scan computes the n ratios `N_k/N_{k-1}` for the sampled
+set, tracks the per-event max of **each**, and runs the same statistical
+combination independently per slot.
 
-Generalise to `n` independent bounds `C_k`, one per slot:
+The scan keeps sampling decay sets uniformly from the pool even though the real
+chain conditions on earlier accepted decays: uniform sampling explores the same
+support, so the max over uniform draws remains a valid estimator of the same
+bound. It does change the *sampling density* of the ratio, so the tail estimate
+is not the same quality as the joint one -- which is the argument for keeping
+the `nb_sigma`/`1.05` margins and for the overflow counter.
 
-- during the scan, for each PS point compute the n ratios `N_k/N_{k-1}` for the
-  sampled set and track the per-event max of **each**;
-- `all_maxwgt` becomes a list of n-vectors; run the existing statistical
-  combination independently per slot.
+The cached bound in `ms_dir` is therefore a vector, not a float, and it is
+written under its own file name and format so a stale scalar cache cannot be
+read back as one (the up-front schemes go further and carry their `Z_k` tables
+in the same file -- section 10, "Implementation").
 
-The scan may keep sampling decay sets uniformly from the pool even though the
-real chain conditions on earlier accepted decays: uniform sampling explores the
-same support, so the max over uniform draws remains a valid estimator of the
-same bound. It does change the *sampling density* of the ratio, so the tail
-estimate is not identical -- an argument for keeping `nb_sigma`/`1.05` margins
-and for the overflow counter below.
-
-`ms_dir`'s cached `max_wgt` file holds a single float: bump it to a list
-(and invalidate the old format, e.g. by name `max_wgt_seq`) so a stale cache
-cannot be silently read as a scalar.
-
-Add a per-slot **overflow counter**: count `N_k/N_{k-1} > C_k` and log it at the
-end (the joint path has the same exposure on a single bound, but n bounds mean
-n chances to under-estimate). A non-zero count is the first thing to look at when A/B
-disagrees.
-
----
-
-## 7. Code changes, file by file
-
-**`MadSpin/decay.py`**
-- `DensityMatrix.identity_like(cls, template)` (or `identity_for(helicities)`):
-  same basis / `basis_id`, values = 1 on `_diag_mask`, 0 elsewhere, scaled
-  1/n. Must produce the exact row order of the template so the
-  `scalar_multiplication` fast path (`map_density_matrix_ind is other...`)
-  stays live.
-
-**`MadSpin/interface_madspin.py`**
-- `MadSpinCard`: the two options above (:~58).
-- `get_decay_from_file` (:2720): extract the per-particle body (file choice by
-  cross-section, `next(decay_file)`, the refill/`StopIteration` path) into
-  `_draw_one_decay(particle, i, ids, evt_decayfile, nb_remain)`. The existing
-  function becomes a loop over it -- **the joint path must stay byte-identical**.
-- `calculate_matrix_element_from_density` (:3027): accept an optional
-  `fixed_slots` set; build `density_dec` with `identity_like` for the unfixed
-  slots. Return `N_k` alongside what it returns today. Keep the current
-  signature working (all slots fixed = today's behaviour).
-- new `_sequential_accept_reject(production, ...)`: the loop of section 1,
-  replacing the `while 1:` block in `_run_onshell_loop` (:2325-2385) when the
-  flag is on. Reuses `prod_density_cached` exactly as today (:2324) -- it is
-  computed once per production event and is now reused across *all* slots and
-  retries, which is strictly more valuable than before.
-- `get_maxwgt_for_onshell` (:2810): per-slot bounds (section 6).
-- pool sizing (:1796-1830): the ladder (section 5).
-- `_run_onshell_loop`: efficiency bookkeeping is currently
-  `self.efficiency = (curr_event+1)/nb_try` and feeds the refill estimate in
-  `_draw_one_decay`. Sequential needs **per-slot** efficiency (each slot burns
-  its own pool at its own rate) -- otherwise the refill sizing, which already
-  reasons about `burn` per pdg, will be wrong. This is the subtlest piece of
-  the wiring.
-
-**Interaction with work already committed**
-- The parallel workers (fork) each run their own loop; per-slot efficiency and
-  overflow counters must join the per-shard stats dict already marshalled back
-  (`n_processed`, `n_written`, `nb_try`, `nb_loose_skip`) and be summed in
-  `_apply_accounting`. Keep them order-independent sums, like the existing ones.
-- The BR-equalization drop (`drop_prob_per_pdg`) happens before any ME work and
-  is unaffected.
-
----
-
-## 8. Validation
-
-The whole point of the flag is A/B, so the plan is measurement-first:
-
-1. **Unit** — spin-0 slot: `N_k/N_{k-1} == 1` exactly.
-2. **Unit** — `identity_like`: trace 1, `scalar_multiplication` against a known
-   rho reproduces `Tr(rho)/prod n_i`; all-slots-fixed reproduces today's `wgt`
-   bit-for-bit.
-3. **Unit** — ordering: `_decay_slot_order` for mixed spins, ties stable;
-   ladder values per slot incl. the scalar cap and the several-identical-parents
-   max rule.
-4. **Physics A/B** (the real test) — same seed, same events, `sequential_decay`
-   True/False, compare distributions sensitive to spin correlation:
-   - `t t~` semi-leptonic: lepton angular distribution / `cos(theta*)`, the
-     classic MadSpin observable;
-   - a process with two spin-1/2 and one scalar to exercise ordering;
-   - `W+ W-` (two vectors) for the 3x3 blocks.
-   Compare against the *joint* result, not against theory: they must agree
-   within MC error. Any disagreement points at section 1's "where it bites".
-5. **Efficiency** — log per-slot acceptance and total decay events consumed per
-   production event, both modes. That is the number that justifies the feature
-   and calibrates the ladder.
-6. ~~`density_debug` must still pass in joint mode (unchanged code path).~~
-   **`density_debug` is itself broken** and cannot be used as a validation
-   instrument -- see the note at the end of section 10.
-
----
-
-## 9. Suggested phasing
-
-1. `identity_like` + `fixed_slots` in the contraction + unit tests 1-2.
-   (No behaviour change: joint path untouched.)
-2. `_draw_one_decay` refactor + unit test that the joint path is unchanged.
-3. Options, ordering, ladder (+ tests 3).
-4. Two preparatory steps first: untangle the mass ownership (section 1, "Mass
-   ownership") -- the draw moves into the per-slot loop, the basis setup comes
-   out from under the `prod_static` cache guard -- and add the jacobian-only
-   production entry point (section 1, "Evaluating J_k"), with a test that it
-   returns the same jacobian as `reshuffle_production` while leaving the event
-   untouched. Then `_sequential_accept_reject` + per-slot max
-   weights + per-slot efficiency, for `spinmode` in PA/onshell (`fixed_order`
-   falls back). PA draws slot k's Breit-Wigner mass inside slot k's
-   accept/reject, weight `(N_k/N_{k-1}) * jac_k`, reshuffles that decay there
-   and redraws its mass on failure; the production reshuffling happens once at
-   the end and, if impossible, trashes the whole set of decays (section 1).
-5. A/B campaign (8). Only then the partial-contraction optimisation.
+The per-slot **overflow counter** counts `N_k/N_{k-1} > C_k` and is logged at
+the end: the joint path has the same exposure on a single bound, but n bounds
+mean n chances to under-estimate, and an under-estimated `C_k` biases silently.
+A non-zero count is the first thing to look at when two schemes disagree.
 
 ---
 
