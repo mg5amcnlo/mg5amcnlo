@@ -6131,6 +6131,246 @@ class TestDensityContractionIsReal(unittest.TestCase):
         self.assertIn('math.isfinite(wgt)', source)
 
 
+class TestFixedOrderGroupDecays(unittest.TestCase):
+    """Every member of a ``fixed_order`` event group comes back decayed.
+
+    ``Event.add_decays`` used to copy the *mapping* it is given
+    (``dict(pdg_to_decay)``) but share the lists inside it, which the recursion
+    then ``pop(0)``s. It looks like a defensive copy and is not one: the first
+    production event it is applied to drained the caller's own lists, so every
+    later one silently attached nothing and came back with the bare production
+    particles.
+
+    MadSpin applies one draw to several events in exactly the place where that
+    matters -- ``_unweight_range`` attaches the born event's decays to the born
+    event and then to each of its counter-events
+    (``[full_evt] + [evt.add_decays(decays) for evt in counterevt]``, the 2017
+    design of the option). So no counter-event had ever been decayed, in any
+    spinmode; and under the pole approximation, where
+    ``get_onshell_evt_and_wgt`` builds the event first and the caller then
+    rebuilds it to fold in the reshuffling jacobian, not even the born event
+    was.
+    """
+
+    # ---------------- fixtures ----------------
+
+    PROD = """<event>
+ 4      1 +1.0000000e+00 1.00000000e+02 7.54677160e-03 1.02860750e-01
+       21 -1    0    0  501  502 +0.00000000000e+00 +0.00000000000e+00 +%(E).11e  %(E).11e  0.00000000000e+00 0. 9.
+       21 -1    0    0  503  501 +0.00000000000e+00 +0.00000000000e+00 -%(E).11e  %(E).11e  0.00000000000e+00 0. 9.
+        6  1    1    2  503    0 +%(px).11e +0.00000000000e+00 +0.00000000000e+00  %(E).11e  1.73000000000e+02 0. 9.
+       -6  1    1    2    0  502 -%(px).11e +0.00000000000e+00 +0.00000000000e+00  %(E).11e  1.73000000000e+02 0. 9.
+</event>
+"""
+
+    DECAY = """<event>
+ 3      1 +1.0000000e+00 1.00000000e+02 7.54677160e-03 1.02860750e-01
+     %(pdg)4d -1    0    0  %(c1)3d  %(c2)3d +0.00000000000e+00 +0.00000000000e+00 +0.00000000000e+00  1.73000000000e+02  1.73000000000e+02 0. 9.
+     %(d1)4d  1    1    1  %(c1)3d    0 +0.00000000000e+00 +0.00000000000e+00 +%(E).11e  %(E).11e  0.00000000000e+00 0. 9.
+     %(d2)4d  1    1    1    0  %(c2)3d +0.00000000000e+00 +0.00000000000e+00 -%(E).11e  %(E).11e  0.00000000000e+00 0. 9.
+</event>
+"""
+
+    # 4 production particles + 2 extra per decayed top
+    UNDECAYED = 4
+    DECAYED = 8
+
+    @classmethod
+    def _production(cls, px):
+        """g g > t t~, the tops back to back along x with the given |px|."""
+        E = math.sqrt(173.0 ** 2 + px ** 2)
+        return lhe_parser.Event(cls.PROD % dict(px=px, E=E))
+
+    @classmethod
+    def _decay(cls, pdg, d1, d2, c1, c2):
+        """t > d1 d2 in the top rest frame, the two daughters massless."""
+        return lhe_parser.Event(cls.DECAY % dict(pdg=pdg, d1=d1, d2=d2,
+                                                 c1=c1, c2=c2, E=173.0 / 2))
+
+    @classmethod
+    def _decays(cls):
+        return {6: [cls._decay(6, 5, 24, 601, 0)],
+                -6: [cls._decay(-6, -5, -24, 0, 602)]}
+
+    # ---------------- the contract, at the lhe_parser level ----------------
+
+    def test_the_same_decays_can_be_attached_to_several_events(self):
+        """The bug in one line: three production events, one decays dict."""
+        decays = self._decays()
+        for i in range(3):
+            event = self._production(100.0 + i).add_decays(decays)
+            self.assertEqual(len(event), self.DECAYED,
+                             'event %d came back undecayed -- add_decays '
+                             'drained the caller\'s lists' % i)
+
+    def test_add_decays_leaves_the_callers_dict_untouched(self):
+        decays = self._decays()
+        before = dict((pdg, list(value)) for pdg, value in decays.items())
+        self._production(100.0).add_decays(decays)
+        self.assertEqual(sorted(decays), sorted(before))
+        for pdg in before:
+            self.assertEqual(decays[pdg], before[pdg],
+                             'the %s list was consumed' % pdg)
+
+    def test_the_decay_events_themselves_are_reusable(self):
+        """Not just the lists: the decay *events* are attached by copy, so the
+        second production event gets the same rest-frame decay boosted into its
+        own frame rather than a mutated one."""
+        decays = self._decays()
+        text = str(decays[6][0])
+        self._production(100.0).add_decays(decays)
+        self._production(400.0).add_decays(decays)
+        self.assertEqual(str(decays[6][0]), text)
+
+    # ---------------- the same thing through _unweight_range ----------------
+
+    class _Pool(object):
+        """An inexhaustible decay pool for one channel."""
+        cross = 1.0
+
+        def __init__(self, maker):
+            self.maker = maker
+
+        def __next__(self):
+            return self.maker()
+        next = __next__
+
+    class _Generate(object):
+        def __init__(self, mode):
+            self.mode = mode
+            self.all_me = collections.defaultdict(dict)
+
+    class _Output(object):
+        def __init__(self):
+            self.written = []
+
+        def write_events(self, event):
+            self.written.append(event)
+
+    class _Options(dict):
+        """The knobs _unweight_range reads that this stub does not care about
+        are all falsy; spelling every one of them out would only hide which
+        ones the test actually sets."""
+        def __missing__(self, key):
+            return False
+
+    def _stub(self, spinmode, density_method):
+        stub = interface_madspin.MadSpinInterface.__new__(
+            interface_madspin.MadSpinInterface)
+        stub.options = self._Options({'fixed_order': True,
+                                      'spinmode': spinmode,
+                                      'density_tolerance': 1e-2})
+        stub.generate_all = self._Generate(
+            'density' if density_method else 'onshell')
+        stub.efficiency = 1.0
+        stub.branching_ratio = 1.0
+        stub._shard_tag = None
+        stub._decay_groups = None
+        # the matrix elements are not what is under test: a flat weight makes
+        # the joint accept/reject take the first trial
+        stub.calculate_matrix_element = lambda event, *a, **kw: 1.0
+        stub.calculate_matrix_element_from_density = \
+            lambda production, decays, decay_dict, cached=None: \
+            (1.0, {'cached': True}, 1.0, 1.0, 1.0)
+        return stub
+
+    def _run_group(self, spinmode, density_method, nb_member=3):
+        """Decay one event group of ``nb_member`` members and return the
+        particle count of each member as written out."""
+        stub = self._stub(spinmode, density_method)
+        evt_decayfile = {
+            6: {0: self._Pool(lambda: self._decay(6, 5, 24, 601, 0))},
+            -6: {0: self._Pool(lambda: self._decay(-6, -5, -24, 0, 602))},
+        }
+        group = [self._production(100.0 + 0.1 * k) for k in range(nb_member)]
+        output = self._Output()
+        ctx = {'maxwgt': 1e-9,          # accept the first trial
+               'maxwgts': [], 'sequential': False,
+               'decay_dict': {6: (173.0, 1.5), -6: (173.0, 1.5)},
+               'drop_prob_per_pdg': None, 'mixed_pdgs_set': set(),
+               'density_method': density_method,
+               'density_pole_approximation': stub._density_pole_approximation(),
+               'density_needs_reshuffle':
+                   stub._density_needs_reshuffle(density_method),
+               'shard_nb_event': 1}
+        stub._unweight_range(iter([group]), evt_decayfile, output, ctx)
+        self.assertEqual(len(output.written), 1)
+        return [len(event) for event in output.written[0]]
+
+    def test_every_group_member_is_decayed_in_onshell_v1(self):
+        """spinmode=onshell_v1: no density, no reshuffling."""
+        self.assertEqual(self._run_group('onshell_v1', density_method=False),
+                         [self.DECAYED] * 3)
+
+    def test_every_group_member_is_decayed_in_onshell(self):
+        """spinmode=onshell: density matrices, still no reshuffling -- the
+        combination ``fixed_order`` is documented to support."""
+        self.assertEqual(self._run_group('onshell', density_method=True),
+                         [self.DECAYED] * 3)
+
+    def test_a_lone_born_event_is_still_decayed(self):
+        """A group of one is the degenerate case and must not regress."""
+        self.assertEqual(
+            self._run_group('onshell', density_method=True, nb_member=1),
+            [self.DECAYED])
+
+
+class TestFixedOrderReshufflingSpinmodesRefused(unittest.TestCase):
+    """``fixed_order`` is refused in the spinmodes that reshuffle the
+    production.
+
+    An event group is decayed once and the born event's decays are attached to
+    every member unchanged. PA and madspin/full then reshuffle the production
+    onto the sampled virtualities -- but only the born member goes through that
+    reshuffling, so its resonance sits at the sampled mass while the
+    counter-events subtracting it stay onshell. That is a decayed-looking
+    sample whose members disagree, which is worse than the undecayed output it
+    replaced, so launch refuses instead.
+    """
+
+    def _stub(self, spinmode, fixed_order):
+        stub = interface_madspin.MadSpinInterface.__new__(
+            interface_madspin.MadSpinInterface)
+        stub.options = {'spinmode': spinmode, 'fixed_order': fixed_order}
+        return stub
+
+    def _refuses(self, spinmode):
+        stub = self._stub(spinmode, fixed_order=True)
+        try:
+            stub._check_fixed_order_spinmode(spinmode)
+        except interface_madspin.MadSpinInterface.InvalidCmd as error:
+            return str(error)
+        self.fail('fixed_order + spinmode=%s was accepted' % spinmode)
+
+    def test_pa_is_refused(self):
+        message = self._refuses('PA')
+        self.assertIn('fixed_order', message)
+        self.assertIn('spinmode=PA', message)
+        self.assertIn('onshell', message)   # names the way out
+
+    def test_madspin_is_refused(self):
+        self.assertIn('spinmode=madspin', self._refuses('madspin'))
+
+    def test_the_supported_spinmodes_are_not_refused(self):
+        for spinmode in ('onshell', 'onshell_v1', 'none', 'madspin_v1'):
+            stub = self._stub(spinmode, fixed_order=True)
+            stub._check_fixed_order_spinmode(spinmode)   # must not raise
+
+    def test_nothing_is_refused_when_fixed_order_is_off(self):
+        for spinmode in ('PA', 'madspin', 'onshell'):
+            stub = self._stub(spinmode, fixed_order=False)
+            stub._check_fixed_order_spinmode(spinmode)   # must not raise
+
+    def test_the_refused_set_is_exactly_the_reshuffling_ones(self):
+        """The list is hand-kept; tie it to what actually reshuffles so a new
+        reshuffling spinmode cannot be added without landing here."""
+        for spinmode in ('PA', 'madspin', 'onshell'):
+            stub = self._stub(spinmode, fixed_order=True)
+            reshuffles = stub._density_needs_reshuffle(True)
+            refused = spinmode in stub.FIXED_ORDER_RESHUFFLING_SPINMODES
+            self.assertEqual(refused, reshuffles, spinmode)
+
+
 class _CaptureCritical(object):
     """Collect the CRITICAL records ``ms_density_real`` emits, and reset its
     once-per-site memory so the tests do not shadow one another."""
