@@ -1555,23 +1555,25 @@ while also paying the mass stage.
 
 ### What this says about `auto`
 
-The current rule is: 1 -> joint; PA/onshell -> `sequential_with_mass`; 2 ->
-`two_stage`; 3+ -> `sequential`. The scan says two of those four branches are
-wrong and one is unnecessary:
+The rule the scan replaced was: 1 -> joint; PA/onshell ->
+`sequential_with_mass`; 2 -> `two_stage`; 3+ -> `sequential`. Two of those four
+branches were wrong and one was unnecessary:
 
-    spinmode         n      current               measured best
+    spinmode         n      before                measured best
     PA / onshell     any    sequential_with_mass  sequential  (1.2x - 3.8x)
     madspin / full   1      joint                 joint       (correct)
     madspin / full   2      two_stage             joint       (1.1x)
     madspin / full   3+     sequential            sequential  (correct)
 
 `two_stage` is not the fastest scheme at any point measured here, in either
-spinmode: joint beats it at n<=2 and `sequential` beats it at n>=3. It remains
-worth keeping as an option -- it is the one staged scheme whose angle stage is a
-single joint test, which makes it the natural cross-check against joint -- but
-it does not earn a branch in `auto`.
+spinmode: joint beats it at n<=2 and `sequential` beats it at n>=3. It is worth
+keeping reachable -- it is the one staged scheme whose angle stage is a single
+joint test, which makes it the natural cross-check against joint -- but it does
+not earn a branch in `auto`, and it is no longer offered in the card's
+advertised values either.
 
-**`auto` now implements the two-line rule** (`_unweighting_mode`):
+**The multiplicity rule `auto` implements** (`_auto_unweighting_mode`) is
+therefore two lines:
 
     PA / onshell     ->  sequential
     madspin / full   ->  joint for n <= 2, sequential from n = 3
@@ -1582,29 +1584,58 @@ way at a smaller sample size -- so that boundary is the one to revisit if a
 process is found where a staged scheme pays off at two decays. The n=1 offshell
 and the n>=3 conclusions are not close and are safe.
 
-What changes for a user who never set `unweighting`: PA and onshell runs move
-from `sequential_with_mass` to `sequential` (faster everywhere measured, at the
-price of the tabulated factor -- section 11 bounds its effect on the top
-lineshape at ~0.0001 GeV); offshell runs with two decaying particles move from
-`two_stage` to `joint`, i.e. back to the historical scheme. Nothing changes for
-offshell runs with one or with three or more decaying particles.
+### A polarised production overrides the multiplicity rule
+
+Measured after this scan, and the one branch of `auto` the scan does not
+describe: when the production process carries a polarisation brace
+(`_production_polarization`), `auto` takes `sequential` at **every**
+multiplicity, offshell included.
+
+The brace restricts the production/decay convolution to a polarisation
+subspace, which peaks the joint weight far below the bound the max-weight scan
+hands it -- and the joint test has no way to recover, because its bound is a
+single number over the whole chain. On `p p > t t~` with both tops decayed
+(n = 2, so the rule above would say joint), trials per accepted event over 500
+events:
+
+    production          joint    sequential
+    t t~ (unpolarised)    3.3       6.1
+    t{+}t~{+}           112         9.1
+    t{+}t~{-}           162         8.4
+
+and at 50000 events, where the max-weight scan is longer and `nb_sigma` larger,
+the joint column rises to 4.05 unpolarised, 204-213 like-helicity and 5800-6300
+opposite-helicity against 8.59 sequential. The gap *widens* with statistics,
+because the bound the joint test must clear keeps growing while the bulk of the
+restricted weight distribution does not.
+
+The asymmetry is what decides it: taking `sequential` where joint would have
+done costs the ~2x of the first row, taking joint where the convolution is
+restricted costs 30-1500x. So the clause fires on any brace in the production
+line -- including one on a particle MadSpin does not decay, which cannot be the
+thing peaking the weight. The other reason it must fire unconditionally is that
+the resolved mode has to be the same at every call site (it names the max-weight
+cache files and picks which bound the accept/reject tests against) while the set
+of decayed pdgs is not known everywhere `_unweighting_mode` is called; a clause
+that consulted it could resolve two ways in one run.
+
+An explicit `set unweighting joint` is still honoured: only `auto` comes
+through here.
 
 ---
 
-## 13. Pure-interference mode -- feasibility assessment
+## 13. Pure-interference mode
 
-**Status: implemented and validated end to end** (section 13.12). This section
-was written as a feasibility assessment before the mode existed; it is kept as
-the derivation, because every design decision below is still the one in the
-code. What changed since it was written is that 13.9's "not implemented" list
-is now empty -- see 13.9 for the final state of the tree.
+**Status: implemented and validated end to end** (13.12, 13.16, 13.17). 13.1
+to 13.9 were written as a feasibility assessment before the mode existed and are
+kept as the derivation, because every design decision in them is still the one
+in the code -- the one exception being the *shape of the output*, which 13.13
+and 13.17 replaced and which is flagged where it appears.
 
-**Verdict as assessed: feasible with caveats, and the caveats are not small.**
-The tensor algebra is clean. The *mode* -- syntax, signed unweighting, zero
-cross-section bookkeeping -- is a structural change to the accept/reject loop,
-is incompatible with the sequential scheme, and produces an LHE file whose
-`<init>` cross-section is zero, which several downstream tools cannot consume.
-All of that held up; the accept/reject rework (13.7b) was indeed the hard part.
+The caveats the assessment listed all held up: the mode is a structural change
+to the accept/reject loop, it is incompatible with the sequential schemes, and
+it produces an LHE file whose `<init>` cross-section is zero, which several
+downstream tools cannot consume. The output rework was indeed the hard part.
 
 The request, verbatim:
 
@@ -1714,9 +1745,9 @@ one wanted and one fatal to a feature we just built:
   every decay slot not yet drawn. Every partial weight in this mode is therefore
   *identically zero*, for every prefix, and there is nothing to unweight
   against. `_partial_density_contraction` and `N_k` collapse. **The
-  pure-interference mode must force `unweighting = joint`** and refuse the
-  sequential / two-stage schemes with a clear error rather than silently
-  producing zero weights and hanging in the redraw loop.
+  pure-interference mode therefore forces `unweighting = joint`**, announcing
+  it once in the log, rather than silently producing zero weights and hanging
+  in the redraw loop.
 
 The same zero shows up in `trace()`: the restricted trace of an interference
 block is exactly zero (test `test_cross_restricted_trace_vanishes`). Since the
@@ -1781,7 +1812,7 @@ Two candidate spellings:
    both sides expressible in the basis; the two sides **disjoint** (an overlap
    re-admits diagonal entries, so the trace stops vanishing and the mode stops
    being "pure interference" -- refuse rather than warn); spinmode is a density
-   one; `unweighting` is not a sequential scheme. `do_decay`'s existing
+   one. (`unweighting` is not validated but forced to `joint`, 13.4.) `do_decay`'s existing
    `InvalidCmd` is then left exactly as it is -- no carve-out needed at all,
    which also keeps the diff away from a file other agents are editing.
 
@@ -1821,11 +1852,19 @@ with the production-side shape wrong.
 
 The fix is to stop redrawing: **draw one decay configuration, accept with
 probability `|wgt|/maxwgt`, and on rejection write nothing and move on.** Then
-the number of kept events per production point is proportional to `Int_p`, each
-carries `+- w_p * BR`, and for any observable `O` the sum over kept events of
-`w_p sign(W) O` estimates the integral of `W(Omega) O(Omega)` -- the
-interference distribution, correctly normalised relative to the parent sample.
-The expected weight sum is the integral of `W`, i.e. zero, as required.
+the number of kept events per production point is proportional to `Int_p`, and
+for any observable `O` the sum over kept events of `sign(W) O` estimates the
+integral of `W(Omega) O(Omega)` -- the interference distribution, correctly
+normalised relative to the parent sample. The expected weight sum is the
+integral of `W`, i.e. zero, as required.
+
+*(The argument above is what the code rests on and is unchanged. Its two
+conclusions about the output are not what shipped: the accepted event's weight
+is `sign(W) * sigma_ref*BR*<|W|>/c`, not `+- w_p*BR` -- see 13.17, which
+derives it and explains why the design note's per-read-event normalisation
+would be off by `M/<|W|>` in an LHE file -- and the accept/reject itself is not
+what `auto` picks, 13.13 having replaced it with a fully weighted output that
+carries `<|W|>` in the weight instead of in the keep rate.)*
 
 This is a different control flow from `while 1:` -- but not an unprecedented
 one: the BR-equalization path in `_unweight_range` (interface_madspin.py:3369)
@@ -1862,8 +1901,10 @@ block. The honest engineering answer:
 * log a loud warning that the output is a signed differential sample and is not
   directly showerable without an externally supplied normalisation.
 
-An option (`set interference_init_cross measured|zero|reference`) is cheap
-insurance if a user needs a showerable file; default `zero` per the request.
+That is what the mode does; the banner note it writes is `<MGPureInterference>`
+and 13.13 lists what ended up in it. There is no option to write a non-zero
+`XSECUP` instead -- once the weights carry `W/c` the file normalises itself
+under `IDWTUP = -4` (13.13), so there is nothing for such an option to buy.
 
 ### 13.8 The statistical check
 
@@ -1951,61 +1992,31 @@ and the frame test `test_frame_follows_the_pure_interference_mode`):
   `_apply_production_polarization` produced and returns the trace restriction
   beside it; `_density_basis` carries both and `get_density` attaches both.
 * `_unweighting_mode` forces `joint`.
-* `_frame_boost` stays on for the mode (see 13.10 step 9).
-* `_joint_maxwgt_range` bounds `|w|`; `_unweight_range` accepts on `|w|/maxwgt`
-  with **one** draw and writes nothing on rejection, carrying `wsign` onto
-  `full_evt.wgt` and onto every entry of `parse_reweight()`.
+* **the frame boost stays on for the mode.** The `me_frame` section of section 1
+  established that the polarisation axis must be MG5's, because
+  `set_hel_restriction` is a projection and a projection does not commute with
+  the change of helicity basis a boost induces. A cross restriction is a
+  projection for exactly the same reason -- and it names two helicity *sets*,
+  which only mean something once the axis is fixed -- but the mode's production
+  is unpolarised by construction, so the clauses that switch the boost on for a
+  polarised beam or a production brace would find nothing and leave the momenta
+  in the lab. `pure_interference` is therefore its own clause of
+  `_needs_frame_axis`, beside those two and beside
+  `keep_weight_for_polarization_*`.
+* `_joint_maxwgt_range` bounds `|w|` and measures `c = <W_full>`;
+  `_unweight_range` carries `wsign` onto `full_evt.wgt` and onto every entry of
+  `parse_reweight()`. Which of the two output shapes it writes is
+  `decay_output` (13.13, 13.17, 13.19).
 * `<init>` zeroing plus the `<MGPureInterference>` banner note, and the
   `sum_w` / `sum_w2` / overweight counters with the `z` report in
   `_report_pure_interference`.
 
-**Known boundary:** `fixed_order` is handled (the counter-event group is
-dropped as a unit by the same `continue`, and the sign is applied to every
-member of the group) but is **not validated** -- no fixed-order sample was run
-through the mode.
-
-### 13.10 Implementation plan -- all steps done
-
-1. *(done)* Cross entries in `normalize_hel_restriction` /
-   `_restriction_row_mask`, with the algebra tests.
-2. `hel_restriction_trace` on `DensityMatrix`, defaulting to `hel_restriction`,
-   read by `trace()` and `normalized()`. Behaviour-neutral; one unit test that a
-   cross restriction with a `P u D` trace restriction gives a zero numerator
-   over a non-zero denominator.
-3. `pure_interference` card option, parsing and validation (13.6), feeding
-   `_apply_production_polarization` -> `_density_basis['hel_restriction']` and
-   the new trace restriction. Refuse sequential/two-stage `unweighting`, refuse
-   a non-density spinmode, refuse overlapping sets, cross-check against the
-   banner braces (13.5). Unit-testable with the existing `_Stub` pattern in
-   `TestProductionPolarizationPlumbing` -- no f2py needed.
-4. `abs()` in `_joint_maxwgt_range` and in the accept test, sign carried onto
-   `full_evt.wgt` and onto every entry of `parse_reweight()`. Gated on the mode
-   so unrelated runs are untouched.
-5. Drop-on-reject in `_unweight_range` (13.7b), gated on the mode; suppress the
-   `_apply_accounting` BR rewrite and the `efficiency`-driven `nb_event`
-   rescaling for this mode, since here a low keep-rate is physics, not a
-   correction.
-6. `<init>` zeroing plus the reference-normalisation banner note and warning.
-7. `sum_w` / `sum_w2` in the stats dict and the `z` report.
-8. Validation: steps 1-4 and 7 are unit-testable in-process. Steps 5, 6 and the
-   physics closure test need a working end-to-end MadSpin run -- see 13.12.
-9. **(added during implementation)** The frame boost. #355 established that the
-   polarisation axis must be MG5's `me_frame`, because `set_hel_restriction` is
-   a projection and a projection does not commute with the change of helicity
-   basis a boost induces. Its guard switches the boost on for a polarised beam
-   or a production brace. A cross restriction is a projection for exactly the
-   same reason -- and it names two helicity *sets*, which only mean something
-   once the axis is fixed -- but the mode's production is unpolarised by
-   construction, so that guard would find nothing and leave the momenta in the
-   lab. The clause added is:
-
-       if (self._beampol() is None and not self._production_polarization()
-               and not self._pure_interference()):
-           return None
-
-   A parallel branch factors the same condition into a `_needs_frame_axis()`
-   helper; the `pure_interference` clause belongs in that helper once the two
-   are merged.
+**Known boundary:** `fixed_order` is handled (the sign is applied to every
+member of the counter-event group) but is **not validated** -- no fixed-order
+sample was run through the mode. Note also that `fixed_order` now requires
+`spinmode = onshell` or `onshell_v1`: the modes that reshuffle the production
+onto sampled virtualities refuse it, because only the born member of a group
+would be reshuffled.
 
 ### 13.11 Environment
 
@@ -2406,17 +2417,11 @@ Caveats:
 
 ### 13.17 The unweighted-up-to-a-sign output -- `decay_output = unweighted`
 
-**Status: implemented and validated end to end.** The fully weighted output of
-13.13 stays the **default**; `set decay_output = unweighted` selects the other
-representation of the same estimator, in which the sample carries exactly two
-weight magnitudes.
-
-> **Option name.** This was originally a separate option,
-> `pure_interference_output`, with its own `weighted`/`unweighted` pair. It has
-> been folded into `decay_output` (13.18, 13.19): one option now answers "does
-> MadSpin unweight?" in both modes, and `decay_output = auto` -- the default --
-> resolves to `weighted` here and to `unweighted` for an ordinary run, which is
-> each mode's own historical default.
+**Status: implemented and validated end to end.** `decay_output = auto` -- the
+default -- resolves to the fully weighted output of 13.13 in this mode; `set
+decay_output unweighted` selects the other representation of the same
+estimator, in which the sample carries exactly two weight magnitudes. Why
+`auto` points that way here and the other way for an ordinary run is 13.19.
 
 **The derivation.** Unweight on `|W|` against any bound `M >= max|W|`, ONE
 decay draw per production event, nothing written on rejection, and give each
@@ -2545,7 +2550,7 @@ fully weighted:
 
 13.16 measured 5.8 / 5.7 / 6.1 by comparing against a different (5x larger)
 reference; this is a direct like-for-like measurement on identical events and
-it agrees. That is why the default stays `weighted`.
+it agrees. That is why `auto` resolves to `weighted` in this mode.
 
 **Unchanged elsewhere.** A run with `pure_interference` unset produces the
 identical 90 368 979-byte file, SHA-256
@@ -2578,8 +2583,9 @@ run: one decay configuration is drawn per production event and kept, with
 
     w = w_prod * BR * W / c
 
-exactly the fully weighted path of 13.13, only with `W` unrestricted. Default
-`unweighted`, i.e. every existing card is untouched.
+exactly the fully weighted path of 13.13, only with `W` unrestricted. `auto`
+resolves to `unweighted` outside `pure_interference`, i.e. every existing card
+is untouched.
 
 **The normalisation needs nothing new.** `c = <W>` is a decay-side constant --
 that is the 13.7b argument, and it is what makes redraw-until-accept unbiased
@@ -2680,7 +2686,8 @@ here the accept/reject redraws and every production event yields an output
 event either way, so the weighted output is strictly noisier per event -- it
 is importance sampling against exact sampling -- and the win is entirely in
 CPU. Which of the two matters depends on whether MadSpin or the parent
-generation is the bottleneck. That is why the default stays `unweighted`.
+generation is the bottleneck. That is why `auto` resolves to `unweighted` for
+an ordinary run.
 
 **Byte-identical with the option off.** The same card without
 `decay_output` (i.e. at the default), run against the base branch and against
@@ -2728,29 +2735,18 @@ Caveats, stated rather than glossed:
 
 ### 13.19 One option: `decay_output`, with `auto`
 
-**Status: implemented; behaviour-preserving by construction, checked against
-the base branch.** 13.17 and 13.18 arrived as two options with the same value
-space and the same question behind them -- *does MadSpin unweight?* --
-answered separately for the interference mode (`pure_interference_output`) and
-for an ordinary run (`decay_output`). They are now one.
+13.17 and 13.18 are two answers to the same question -- *does MadSpin
+unweight?* -- one for the interference mode and one for an ordinary run. One
+option asks it:
 
-* `pure_interference_output` is **removed**. Nothing maps onto it and no
-  deprecated spelling survives: none of this has been in a release, so there
-  are no cards in the wild to protect.
-* `decay_output` gains **`auto`**, and `auto` is the default.
-* `auto` resolves to `weighted` when `pure_interference` is set and to
-  `unweighted` otherwise (`_decay_output`).
+    set decay_output auto | unweighted | weighted
 
-**Why those two directions, and why this preserves behaviour exactly.** The
-old defaults were `decay_output = unweighted` and
-`pure_interference_output = weighted`, and each mode saw only its own option
-(`decay_output` warned and stepped aside under `pure_interference`). So the
-pair (ordinary run, interference run) had exactly the resolved defaults
-(`unweighted`, `weighted`) -- which is what `auto` now computes. A card that
-does not mention either option therefore lands on the same path as before, in
-both modes.
+* `auto` is the default, and resolves to `weighted` when `pure_interference` is
+  set and to `unweighted` otherwise (`_decay_output`).
+* an explicit value governs in **both** modes: under `pure_interference` it
+  chooses that mode's output shape (13.17) rather than stepping aside.
 
-They point opposite ways for a reason rather than by accident. The ordinary
+**Why the two directions.** They point opposite ways for a reason. The ordinary
 run writes one event per production event either way and its accept/reject is
 the *exact* sampler, so unweighting is the safe default and the weighted path
 buys CPU at the cost of a weighted file. The interference mode has no exact
@@ -2759,31 +2755,21 @@ zero by construction -- and unweighting on `|W|` there keeps only a few
 percent of the production events, for ~6x the variance on exactly the
 observables the mode exists to measure (13.17).
 
-**The step-aside is gone.** `_validate_weighted_decay` used to warn and return
-under `pure_interference`, on the grounds that the other option governed
-there. There is no other option now, so it governs. What the step-aside was
-avoiding was a *contradiction* between two live options, not a code hazard:
-the two flags reach the worker separately (`weighted_decay` and
-`pure_interference_unweighted` in the run context) and `_weighted_decay` still
-returns False under `pure_interference`, because the interference mode reaches
-the same "keep every trial" branch by its own route, with a signed `W` and a
-zeroed `<init>`. Only the *source* of the interference mode's choice changed.
+Internally the interference mode still reaches the "keep every trial" branch by
+its own route -- with a signed `W` and a zeroed `<init>` -- so `_weighted_decay`
+returns False under `pure_interference`; only the *source* of that mode's
+choice is `decay_output`.
 
 **The two spinmode restrictions compose.** `decay_output = weighted` needs a
 density spinmode (there is no `W` otherwise) and so does `pure_interference`,
 so the constraints never disagree -- but a card that violates both would get
 two refusals in a row, the less useful one first. `_validate_pure_interference`
-is therefore now called *before* `_validate_weighted_decay`, and both are
-called before the `if self._density_spinmode():` branch. `decay_output` is
-then silent under `pure_interference`: the mode announces its own output shape,
-spinmode requirement included.
-
-That reordering fixes a **pre-existing gap** found on the way:
-`_validate_pure_interference` was called only *inside* the density branch, so
-`set spinmode none` together with `set pure_interference ...` reached no
-validation at all and the mode was silently inert while the card asked for it.
-It now raises, which is the error that was always intended (the raise existed;
-it was unreachable).
+is therefore called *before* `_validate_weighted_decay`, and both are called
+before the `if self._density_spinmode():` branch, so that
+`set spinmode none` together with `set pure_interference ...` raises rather
+than leaving the mode silently inert. `decay_output` is then silent under
+`pure_interference`: the mode announces its own output shape, spinmode
+requirement included.
 
 **`auto` announces itself** through `_announce_decay_output`, on the same
 `_log_once` convention as `_announce_mode`:
@@ -2791,20 +2777,3 @@ it was unreachable).
     MadSpin: decay_output = unweighted (auto, ordinary run)
     MadSpin: decay_output = weighted (auto, pure_interference is set)
     MadSpin: decay_output = weighted (set explicitly)
-
-**Removed alongside it**, for the same "not in a release" reason, two other
-deprecated spellings that were pure load-time translations with no run-time
-reader: `sequential_decay` (mapped onto `unweighting`: `True` ->
-`sequential`, `False` -> `joint`) and `keep_weight_for_polarization` (the
-singular alias that set both `keep_weight_for_polarization_vector` and
-`_fermion`). The per-species options and the refusal of
-`keep_weight_for_polarization_*` under `pure_interference` are untouched.
-
-**The one behaviour change, stated rather than glossed.** A card that combined
-`set pure_interference ...` with an *explicit* `set decay_output unweighted`
-used to get the fully weighted interference output (the explicit
-`decay_output` was warned about and ignored, and `pure_interference_output`
-kept its `weighted` default); it now gets the unweighted-up-to-a-sign output.
-That is the intended meaning of the unification -- the option no longer steps
-aside -- and it is the only combination whose resolved behaviour differs. A
-card that does not set `decay_output` is unaffected in either mode.
