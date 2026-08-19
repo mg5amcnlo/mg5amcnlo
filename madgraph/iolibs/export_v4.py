@@ -2623,18 +2623,6 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
         try:
             misc.compile(cwd=source_dir, mode='fortran')
         except Exception as error:
-            # This fallback was added in 129c8386 (May 2022), a few days after
-            # deabc60d switched this method from building the two libraries
-            # explicitly to a plain 'make' (i.e. the 'all' target). It rebuilds
-            # only the two libraries a standalone output strictly needs, and so
-            # it also silently rescues an 'all' target that carries a
-            # prerequisite which cannot be satisfied in this output. That is
-            # how the unconditional libcts.a prerequisite of the MadLoop
-            # standalone Source/makefile stayed unnoticed for years: under the
-            # default output_dependencies='external' the first 'make' failed on
-            # *every* MadLoop standalone output and nobody ever saw it.
-            # Warn instead of hiding it. Note that the bare 'except' this
-            # replaces also swallowed KeyboardInterrupt and SystemExit.
             logger.warning(
                 "Running 'make' in %s failed; falling back to building "
                 "libdhelas and libmodel individually. This normally indicates "
