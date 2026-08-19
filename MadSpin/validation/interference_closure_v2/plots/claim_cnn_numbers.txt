@@ -1,0 +1,103 @@
+==========================================================================
+Part A -- which entries of rho does C_nn touch?  (exact, numeric algebra)
+==========================================================================
+
+rho = 1/4 [1x1 + B+.sigma x 1 + 1 x B-.sigma + C_ij sigma_i x sigma_j],
+helicity basis {++, +-, -+, --} quantised along k, (x,y,z) = (r,n,k),
+so C_ij = Tr[rho sigma_i x sigma_j].
+
+  sigma_n (x) sigma_n, as a 4x4 matrix on {++, +-, -+, --}:
+    ++        0       0       0      -1
+    +-        0       0       1       0
+    -+        0       1       0       0
+    --       -1       0       0       0
+    => C_nn = -1 rho(++,--) +1 rho(+-,-+) +1 rho(-+,+-) -1 rho(--,++)
+    entries touched flip 2 helicity index/indices.
+
+  sigma_k (x) sigma_k, as a 4x4 matrix on {++, +-, -+, --}:
+    ++        1       0       0       0
+    +-        0      -1       0      -0
+    -+        0       0      -1      -0
+    --        0      -0      -0       1
+    => C_kk = +1 rho(++,++) -1 rho(+-,+-) -1 rho(-+,-+) +1 rho(--,--)
+    entries touched flip 0 helicity index/indices.
+
+  sigma_r (x) sigma_r, as a 4x4 matrix on {++, +-, -+, --}:
+    ++        0       0       0       1
+    +-        0       0       1       0
+    -+        0       1       0       0
+    --        1       0       0       0
+    => C_rr = +1 rho(++,--) +1 rho(+-,-+) +1 rho(-+,+-) +1 rho(--,++)
+    entries touched flip 2 helicity index/indices.
+
+  identities of MADSPIN_SEQUENTIAL_PLAN.md 13.15, on 2000 random rho:
+    4 Re rho(++,--) = C_rr - C_nn
+    4 Re rho(+-,-+) = C_rr + C_nn
+    => C_nn = 2 Re rho(+-,-+) - 2 Re rho(++,--)      VERIFIED
+    worst residual over the 2000 draws (incl. Tr rho = 1): 2.22e-16
+
+  a DIAGONAL block, e.g. (D+,D+) = |+ +><+ +|, is a product of helicity
+  eigenstates, so on each leg <sigma_n> = <sigma_r> = 0:
+    (D+,D+): C_kk = +1.0   C_nn = +0.0   C_rr = +0.0   B+_n = +0.0   B-_n = +0.0
+    (D+,D-): C_kk = -1.0   C_nn = +0.0   C_rr = +0.0   B+_n = +0.0   B-_n = +0.0
+    (D-,D+): C_kk = -1.0   C_nn = +0.0   C_rr = +0.0   B+_n = +0.0   B-_n = +0.0
+    (D-,D-): C_kk = +1.0   C_nn = +0.0   C_rr = +0.0   B+_n = +0.0   B-_n = +0.0
+  C_nn vanishes on every diagonal block; C_kk does not.  That is the
+  whole content of "C_nn is a double-helicity-flip quantity".
+
+  BUT: the diagonal blocks still carry a cross section, and
+  d(sigma)/d(cos th_n+ cos th_n-) for them is NOT zero -- only its
+  first moment is.  Part B measures both.
+
+==========================================================================
+Part B -- C_nn: X = cos(th_n,l+) cos(th_n,l-)
+==========================================================================
+
+  block      integral [pb]         +-   contrib to <X>         +-  sigmas
+  (D+,D+)           7.9314     0.0355          0.00029    0.00050    +0.6
+  (D+,D-)           3.9385     0.0176         -0.00035    0.00025    -1.4
+  (D-,D+)           3.9386     0.0176          0.00005    0.00025    +0.2
+  (D-,D-)           7.9465     0.0355          0.00019    0.00050    +0.4
+  (I,D+)            0.0006     0.0083          0.00001    0.00009    +0.1
+  (I,D-)           -0.0034     0.0084         -0.00006    0.00009    -0.7
+  (D+,I)            0.0009     0.0083          0.00006    0.00008    +0.7
+  (D-,I)            0.0018     0.0084          0.00006    0.00009    +0.7
+  (I,I)            -0.0237     0.0306          0.03654    0.00056   +64.9
+
+  4 diagonal   integral =   23.7551 +- 0.0560    contrib to <X> = +0.00018 +- 0.00079  (+0.2 sd)
+  4 single-I   integral =   -0.0001 +- 0.0167    contrib to <X> = +0.00007 +- 0.00017  (+0.4 sd)
+  (I,I)        integral =   -0.0237 +- 0.0306    contrib to <X> = +0.03654 +- 0.00056  (+64.9 sd)
+  all 9 blocks integral =   23.7313 +- 0.0660    contrib to <X> = +0.03679 +- 0.00098  (+37.4 sd)
+  unpolarised  integral =   23.7651              <X> = +0.03625 +- 0.00149
+
+==========================================================================
+Part B -- C_kk: X = cos(th_k,l+) cos(th_k,l-)
+==========================================================================
+
+  block      integral [pb]         +-   contrib to <X>         +-  sigmas
+  (D+,D+)           7.9314     0.0355          0.03616    0.00050   +73.0
+  (D+,D-)           3.9385     0.0176         -0.01874    0.00025   -75.4
+  (D-,D+)           3.9386     0.0176         -0.01820    0.00025   -73.7
+  (D-,D-)           7.9465     0.0355          0.03665    0.00050   +73.6
+  (I,D+)            0.0006     0.0083         -0.00001    0.00010    -0.2
+  (I,D-)           -0.0034     0.0084         -0.00001    0.00010    -0.1
+  (D+,I)            0.0009     0.0083          0.00007    0.00010    +0.7
+  (D-,I)            0.0018     0.0084         -0.00003    0.00010    -0.3
+  (I,I)            -0.0237     0.0306         -0.00033    0.00026    -1.3
+
+  4 diagonal   integral =   23.7551 +- 0.0560    contrib to <X> = +0.03587 +- 0.00079  (+45.7 sd)
+  4 single-I   integral =   -0.0001 +- 0.0167    contrib to <X> = +0.00001 +- 0.00020  (+0.1 sd)
+  (I,I)        integral =   -0.0237 +- 0.0306    contrib to <X> = -0.00033 +- 0.00026  (-1.3 sd)
+  all 9 blocks integral =   23.7313 +- 0.0660    contrib to <X> = +0.03555 +- 0.00085  (+41.8 sd)
+  unpolarised  integral =   23.7651              <X> = +0.03815 +- 0.00148
+
+==========================================================================
+Part B2 -- why the diagonal blocks have a zero first moment but a
+           very non-zero histogram: the histogram is SYMMETRIC in X
+==========================================================================
+
+  (D+,D+)   h(-X) vs h(+X), 10 mirror pairs: chi2 =  10.8 / 10 (peak bin 1.304 pb, zero would be 0.000)
+  (D-,D-)   h(-X) vs h(+X), 10 mirror pairs: chi2 =  15.8 / 10 (peak bin 1.316 pb, zero would be 0.000)
+  (D+,D+)   the SAME block in C_kk is NOT symmetric:  chi2 = 5302.1 / 10
+
+wrote /Users/omattelaer/Documents/git_workspace/madgraph5/.claude/worktrees/agent-a869053fc7be36b29/MadSpin/validation/interference_closure_v2/plots/claim_cnn_vs_ckk.pdf
