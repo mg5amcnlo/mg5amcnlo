@@ -29,6 +29,57 @@ import matplotlib.colors as mcolors
 import matplotlib.lines as mlines
 from matplotlib.ticker import AutoMinorLocator
 
+
+# --- work around a matplotlib bug that eats every minus sign in the PDFs ---
+def _fix_type1_subset_minus():
+    """Stop matplotlib's usetex PDF path from dropping every minus sign.
+
+    ``_type1font.Type1Font.subset`` in matplotlib 3.11.0 ends its encoding
+    filter with an unconditional
+
+        encoding[0] = '.notdef'
+
+    For a text font slot 0 really is ``.notdef``, but TeX's CMSY10 -- the font
+    every math minus comes from -- carries ``minus`` there.  Subsetting a
+    figure's fonts therefore throws the minus away: the glyph walk follows
+    ``.notdef`` instead, so the outline never reaches the embedded font, and
+    the PDF font dictionary comes out as
+
+        /BaseFont /XXXXXX+CMSY10 /Encoding << /Differences [ ] >>
+
+    with no /BaseEncoding.  Viewers fall back to StandardEncoding, which has
+    nothing at code 0, and the sign silently disappears -- no warning, no
+    error, a wrong figure.  Only PDF is affected: the PNGs go through dvipng,
+    which rasterises before any of this happens.
+
+    In these figures that removed every ``D^-`` from the block labels *and*
+    the minus from every negative axis tick label.  Slot 0 becomes a default
+    here rather than an override, which is what upstream should do.
+
+    Guarded on the exact upstream line, so a fixed or restructured matplotlib
+    is left alone.  Returns True if the patch was applied.
+    """
+    import inspect
+    import textwrap
+    from matplotlib import _type1font
+
+    bad = "encoding[0] = '.notdef'"
+    good = "encoding.setdefault(0, '.notdef')"
+    try:
+        src = textwrap.dedent(inspect.getsource(_type1font.Type1Font.subset))
+    except (OSError, TypeError):            # no source available
+        return False
+    if bad not in src:                      # already fixed upstream
+        return False
+    ns = vars(_type1font).copy()
+    exec(compile(src.replace(bad, good), '<type1font-minus-fix>', 'exec'), ns)
+    _type1font.Type1Font.subset = ns['subset']
+    return True
+
+
+MINUS_FIX = _fix_type1_subset_minus()
+
+
 # --- MG7 paper style ------------------------------------------------------
 def _have_latex():
     import shutil
