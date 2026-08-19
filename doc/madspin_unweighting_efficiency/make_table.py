@@ -27,22 +27,31 @@ import math
 import sys
 
 
+# (results.json key, family label for the table, unweighting scheme).  The
+# family label carries the density_keep_jacobian axis: two rows both saying
+# "PA" with different numbers would read as a typo.
 ROW_ORDER = [
-    ('PA', 'joint'),
-    ('PA', 'sequential'),
-    ('PA', 'sequential_global_retry'),
-    ('madspin', 'joint'),
-    ('madspin', 'sequential'),
-    ('madspin', 'sequential_global_retry'),
-    ('onshell', 'joint'),
-    ('onshell', 'sequential'),
+    ('PA_joint', 'PA', 'joint'),
+    ('PA_sequential', 'PA', 'sequential'),
+    ('PA_sequential_global_retry', 'PA', 'sequential_global_retry'),
+    ('PAnojac_joint', 'PA (no jac.)', 'joint'),
+    ('PAnojac_sequential', 'PA (no jac.)', 'sequential'),
+    ('PAnojac_sequential_global_retry', 'PA (no jac.)',
+     'sequential_global_retry'),
+    ('madspin_joint', 'madspin', 'joint'),
+    ('madspin_sequential', 'madspin', 'sequential'),
+    ('madspin_sequential_global_retry', 'madspin', 'sequential_global_retry'),
+    ('onshell_joint', 'onshell', 'joint'),
+    ('onshell_sequential', 'onshell', 'sequential'),
 ]
 
-SCHEME_TEX = {
-    'joint': r'\texttt{joint}',
-    'sequential': r'\texttt{sequential}',
-    'sequential\_global\_retry': r'\texttt{sequential\_global\_retry}',
-}
+# The keep-jacobian twins.  Moving the production-reshuffling jacobian out of
+# the accept/reject changes what is being unweighted against, so these pairs
+# MUST differ; identical numbers would mean the setting never took effect.
+KEEP_JAC_TWINS = [('PA_joint', 'PAnojac_joint'),
+                  ('PA_sequential', 'PAnojac_sequential'),
+                  ('PA_sequential_global_retry',
+                   'PAnojac_sequential_global_retry')]
 
 
 def eps_error(eps, n_written):
@@ -100,19 +109,32 @@ def main():
     nev = None
     lines = []
     errors = []
-    for spinmode, unw in ROW_ORDER:
-        key = '%s_%s' % (spinmode, unw)
+    present = []
+    for key, family, unw in ROW_ORDER:
         run = runs.get(key)
         if run is None:
             continue
+        present.append((key, family, unw))
         assert run['reported_mode'] == unw, (
             '%s: asked for %s, ran %s' % (key, unw, run['reported_mode']))
         assert run['reported_why'] == 'set explicitly', (
             '%s: scheme was not set explicitly (%s)'
             % (key, run['reported_why']))
+        # the density_keep_jacobian axis must be the one the row claims, and
+        # the card line must actually be in the run's own echoed card
+        want_nojac = 'no jac' in family
+        assert (run.get('density_keep_jacobian') == 'False') == want_nojac, (
+            '%s: density_keep_jacobian bookkeeping does not match the row' % key)
+        if want_nojac:
+            assert any(line.replace(' ', '').lower()
+                       == 'setdensity_keep_jacobianfalse'
+                       for line in run.get('card_set_lines', [])), (
+                '%s: the run did not receive "set density_keep_jacobian False"'
+                % key)
         nev = run['n_written'] if nev is None else nev
         eps_m, eps_t, eps_tb, n_dec, joint = row_numbers(run, position_to_pdg)
-        spin_tex = r'\texttt{%s}' % spinmode
+        fam_tex = (r'\texttt{PA} (no jac.)' if want_nojac
+                   else r'\texttt{%s}' % family)
         unw_tex = r'\texttt{%s}' % unw.replace('_', r'\_')
         if joint is not None:
             cells = r'\multicolumn{3}{c}{%s}' % fmt(joint)
@@ -124,7 +146,7 @@ def main():
                 if value is not None:
                     errors.append((key, name, value,
                                    eps_error(value, run['n_written'])))
-        lines.append('%s & %s & %s & %s \\\\' % (spin_tex, unw_tex, cells,
+        lines.append('%s & %s & %s & %s \\\\' % (fam_tex, unw_tex, cells,
                                                  '{:,}'.format(n_dec)
                                                  .replace(',', r'\,')))
 
@@ -133,15 +155,14 @@ def main():
     out.append(r'  \centering')
     out.append(r'  \begin{tabular}{llrrrr}')
     out.append(r'    \toprule')
-    out.append(r'    spinmode & unweighting & $\epsilon_m$ & $\epsilon_t$ '
+    out.append(r'    mode & unweighting & $\epsilon_m$ & $\epsilon_t$ '
                r'& $\epsilon_{\bar t}$ & $N_{\mathrm{dec}}$ \\')
     out.append(r'    \midrule')
     previous = None
-    for (spinmode, unw), line in zip(
-            [g for g in ROW_ORDER if '%s_%s' % g in runs], lines):
-        if previous is not None and spinmode != previous:
+    for (key, family, unw), line in zip(present, lines):
+        if previous is not None and family != previous:
             out.append(r'    \midrule')
-        previous = spinmode
+        previous = family
         out.append('    ' + line)
     out.append(r'    \bottomrule')
     out.append(r'  \end{tabular}')
@@ -161,7 +182,18 @@ def main():
                r'so it yields one efficiency, spanning the three $\epsilon$ '
                r'columns. \texttt{onshell} keeps the production kinematics and '
                r'never samples a virtuality, so it has no mass stage at all and '
-               r'$\epsilon_m$ is not defined there (dash, not~1).}'
+               r'$\epsilon_m$ is not defined there (dash, not~1). '
+               r'The two \texttt{PA} blocks differ only in '
+               r'\texttt{density\_keep\_jacobian}: with the default \texttt{True} '
+               r'the production-reshuffling phase-space jacobian is folded into '
+               r'the accept/reject weight, while ``no jac.'''
+               r"''"
+               r' (\texttt{False}) leaves it out and applies the reshuffle as a '
+               r'post-acceptance kinematic dressing instead. The two therefore '
+               r'unweight against different weights and are expected to have '
+               r'different efficiencies; the option is \texttt{PA}-only and is '
+               r'ignored by \texttt{madspin} (which always carries that '
+               r'jacobian) and by \texttt{onshell} (which never reshuffles).}'
                % '{:,}'.format(nev or 0).replace(',', r'\,'))
     out.append(r'  \label{%s}' % args.label)
     out.append(r'\end{table}')
@@ -171,6 +203,33 @@ def main():
                      % ('run', 'column', 'value', '1sigma'))
     for key, name, value, err in errors:
         sys.stderr.write('%-42s %-9s %8.4f %8.4f\n' % (key, name, value, err))
+    sys.stderr.write('\ndensity_keep_jacobian True vs False (must differ -- '
+                     'identical numbers would mean the setting never took '
+                     'effect):\n')
+    for a, b in KEEP_JAC_TWINS:
+        if a not in runs or b not in runs:
+            continue
+        na = row_numbers(runs[a], position_to_pdg)
+        nb = row_numbers(runs[b], position_to_pdg)
+        same = na[:4] == nb[:4] and na[4] == nb[4]
+        sys.stderr.write('  %-32s %-34s %s\n'
+                         % (a, b, 'IDENTICAL -- INVESTIGATE' if same
+                            else 'differ (expected)'))
+    sys.stderr.write('\nposition -> pdg: %s\n' % position_to_pdg)
+    sys.stderr.write('final-state layouts seen in the production sample: %s\n'
+                     % data['slot_diagnostics']['layouts'])
+    sys.stderr.write('\n%-34s %8s %8s %8s %8s %10s %8s %6s\n'
+                     % ('run', 'written', 'eps_m', 'eps_t', 'eps_tbar',
+                        'N_dec', 'wall_s', 'ovfl'))
+    for key, run in runs.items():
+        eps_m, eps_t, eps_tb, n_dec, joint = row_numbers(run, position_to_pdg)
+        if joint is not None:
+            eps_m = eps_t = eps_tb = joint
+        sys.stderr.write(
+            '%-34s %8d %8s %8s %8s %10d %8.0f %6d\n'
+            % (key, run['n_written'],
+               fmt(eps_m, 4), fmt(eps_t, 4), fmt(eps_tb, 4), n_dec,
+               run['wall_seconds'], run['overflows']))
 
 
 if __name__ == '__main__':

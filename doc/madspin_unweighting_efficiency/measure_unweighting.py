@@ -100,15 +100,37 @@ import madgraph.various.lhe_parser as lhe_parser  # noqa: E402
 #     onshell + sequential_global_retry those "mass sets" are chain restarts with
 #     no mass in them.  Do not read that line as a virtuality count.
 # --------------------------------------------------------------------------
+# ``density_keep_jacobian`` (PA only, default True) is the second axis. With
+# True the production-reshuffling phase-space jacobian is folded into the
+# accept/reject weight; with False the reshuffle becomes a post-acceptance
+# kinematic dressing and only the Breit-Wigner sampling jacobian is in the
+# weight.  So it changes *what is being unweighted against*, and the two PA
+# families are expected to have different efficiencies.
+#
+# It really is PA-only.  In the staged path
+# ``keep_jac = draw_mass and self.options['density_keep_jacobian']`` with
+# ``draw_mass = (spinmode == 'PA' and nb_prod_final > 1)``; in the joint path
+# and in the max-weight scan the two blocks that apply the jacobian are gated on
+# ``density_needs_reshuffle and not offshell_density``, which is again PA alone.
+# onshell never reshuffles and madspin/full always carry the jacobian inside
+# ``wgt``.  Hence no ``density_keep_jacobian = False`` row for those.
+#
+# Entries are (key, spinmode, unweighting, extra ``set`` lines).
 GRID = [
-    ('PA', 'joint'),
-    ('PA', 'sequential'),
-    ('PA', 'sequential_global_retry'),
-    ('madspin', 'joint'),
-    ('madspin', 'sequential'),
-    ('madspin', 'sequential_global_retry'),
-    ('onshell', 'joint'),
-    ('onshell', 'sequential'),
+    ('PA_joint', 'PA', 'joint', {}),
+    ('PA_sequential', 'PA', 'sequential', {}),
+    ('PA_sequential_global_retry', 'PA', 'sequential_global_retry', {}),
+    ('PAnojac_joint', 'PA', 'joint',
+     {'density_keep_jacobian': 'False'}),
+    ('PAnojac_sequential', 'PA', 'sequential',
+     {'density_keep_jacobian': 'False'}),
+    ('PAnojac_sequential_global_retry', 'PA', 'sequential_global_retry',
+     {'density_keep_jacobian': 'False'}),
+    ('madspin_joint', 'madspin', 'joint', {}),
+    ('madspin_sequential', 'madspin', 'sequential', {}),
+    ('madspin_sequential_global_retry', 'madspin', 'sequential_global_retry', {}),
+    ('onshell_joint', 'onshell', 'joint', {}),
+    ('onshell_sequential', 'onshell', 'sequential', {}),
 ]
 
 # Same physics setup as tests/parallel_tests/test_madspin_factory.TTBAR_LEPTONIC,
@@ -265,7 +287,7 @@ def main():
                         help='factory working tree (kept, so it can be reused)')
     parser.add_argument('--nb-core', type=int, default=1)
     parser.add_argument('--only', default=None,
-                        help='comma separated spinmode:unweighting to restrict to')
+                        help='comma separated grid keys to restrict to')
     parser.add_argument('--extra', default=None,
                         help='extra spinmode:unweighting runs appended to the grid')
     args = parser.parse_args()
@@ -279,10 +301,10 @@ def main():
     if args.extra:
         for item in args.extra.split(','):
             spinmode, unw = item.split(':')
-            grid.append((spinmode, unw))
+            grid.append(('%s_%s' % (spinmode, unw), spinmode, unw, {}))
     if args.only:
         keep = set(args.only.split(','))
-        grid = [g for g in grid if '%s:%s' % g in keep]
+        grid = [g for g in grid if g[0] in keep]
 
     factory = MadSpinFactory(
         name='unweighting_grid',
@@ -299,12 +321,13 @@ def main():
     position_to_pdg, slot_diag = slot_map(events_file)
 
     results = collections.OrderedDict()
-    for spinmode, unw in grid:
-        label = '%s_%s' % (spinmode, unw)
+    for label, spinmode, unw, extra in grid:
         config = SpinModeConfig(label, spinmode)
-        print('=== running %s' % label, flush=True)
+        settings = {'unweighting': unw}
+        settings.update(extra)
+        print('=== running %s %s' % (label, extra or ''), flush=True)
         start = time.time()
-        res = factory.run_mode(config, extra_settings={'unweighting': unw})
+        res = factory.run_mode(config, extra_settings=settings)
         wall = time.time() - start
         with open(res.log_path) as fp:
             log_text = fp.read()
@@ -312,6 +335,14 @@ def main():
         parsed = parse_run(log_text)
         parsed['spinmode'] = spinmode
         parsed['unweighting_asked'] = unw
+        parsed['extra_settings'] = dict(extra)
+        # The card MadSpin echoed back, so the raw file can be checked against
+        # what was actually asked for without re-running.
+        parsed['card_set_lines'] = [line.strip() for line in
+                                    log_text.splitlines()
+                                    if line.strip().startswith('set ')]
+        parsed['density_keep_jacobian'] = (
+            'False' if extra.get('density_keep_jacobian') == 'False' else 'True')
         parsed['wall_seconds'] = wall
         parsed['BR'] = res.BR
         parsed['cross_out'] = res.cross_out
