@@ -1,0 +1,19 @@
+ratio y limits chosen per figure (smallest of the user's
+ladder 0.99/0.85/0.75/0.5 that contains every point +- its
+sqrt(sumw2) error; nothing is clipped)
+
+us_closure_cos_k_p   ratio ylim (0.85, 1.15)
+us_closure_cos_k_m   ratio ylim (0.85, 1.15)
+us_closure_ckk       ratio ylim (0.5, 1.5)
+us_closure_cnn       ratio ylim (0.4, 1.6)
+us_blocks_cnn        ratio ylim (0.4, 1.6)
+us_closure_crr       ratio ylim (0.75, 1.25)
+us_closure_cos_phi   ratio ylim (0.75, 1.25)
+us_blocks_cos_phi    ratio ylim (0.75, 1.25)
+us_closure_cos_n_p   ratio ylim (0.85, 1.15)
+us_closure_dphi_lab  ratio ylim (0.75, 1.25)
+us_blocks_dphi_lab   ratio ylim (0.75, 1.25)
+us_closure_pt_t      ratio ylim (0.75, 1.25)
+us_blocks_pt_t       ratio ylim (0.75, 1.25)
+us_closure_m_tt      ratio ylim (0.75, 1.25)
+us_blocks_m_tt       ratio ylim (0.75, 1.25)
