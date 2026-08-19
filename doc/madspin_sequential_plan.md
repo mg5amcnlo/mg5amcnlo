@@ -1688,3 +1688,1130 @@ price of the tabulated factor -- section 11 bounds its effect on the top
 lineshape at ~0.0001 GeV); offshell runs with two decaying particles move from
 `two_stage` to `joint`, i.e. back to the historical scheme. Nothing changes for
 offshell runs with one or with three or more decaying particles.
+
+---
+
+## 13. Pure-interference mode -- feasibility assessment
+
+**Status: implemented and validated end to end** (section 13.12). This section
+was written as a feasibility assessment before the mode existed; it is kept as
+the derivation, because every design decision below is still the one in the
+code. What changed since it was written is that 13.9's "not implemented" list
+is now empty -- see 13.9 for the final state of the tree.
+
+**Verdict as assessed: feasible with caveats, and the caveats are not small.**
+The tensor algebra is clean. The *mode* -- syntax, signed unweighting, zero
+cross-section bookkeeping -- is a structural change to the accept/reject loop,
+is incompatible with the sequential scheme, and produces an LHE file whose
+`<init>` cross-section is zero, which several downstream tools cannot consume.
+All of that held up; the accept/reject rework (13.7b) was indeed the hard part.
+
+The request, verbatim:
+
+> check the possibility to handle pure interference term: that mode should be
+> similar to [the production-polarisation restriction] in term of syntax, but
+> should allow to specify production/decay polarization (and non overlapping
+> ones). In that case the convolution should be for one index done like in the
+> restriction of the production and for the other like the convolution specified
+> by the decay. Full cross-section of the sample should be set to zero, but
+> weight of the events should keep the same absolute value as now but one need
+> to assign the sign of the weight according to the sign of the convolution. A
+> check should assert if the sum of the weight are compatible with a zero
+> cross-section.
+
+### 13.1 Correcting two premises
+
+**(a) The matrices are not stored packed upper-triangular in memory.** The
+*Fortran* `INTER` buffer is (length `n(n+1)/2`), but `get_map_density_matrix`
+builds keys for the conjugate labels too, and `get_map_template`'s `conj_mask`
+conjugates them, so `DensityMatrix.values` holds all `n^2` entries of the full
+hermitian matrix, each labelled by its `(bra, ket)` pair. A row mask can
+therefore select any subset of `(i,j)` pairs, including asymmetric ones -- there
+is no "lower triangle is implied" obstacle. (`diag_elements` / the packed
+indexing survive only in `identity`, which builds a packed array to hand to the
+normal constructor.)
+
+**(b) The existing restriction is symmetric, and that is not an accident.** The
+reading that pure interference needs an asymmetric rule is right -- but an
+asymmetric rule *alone* is not well-defined. The correction is in 13.3.
+
+### 13.2 What the convolution is, and why the full sum is real
+
+`scalar_multiplication` computes, over the joint helicity index,
+
+    W = sum_i sum_j  rho_prod(i,j) rho_dec(i,j)
+
+Both matrices are hermitian: `rho(j,i) = conj(rho(i,j))`. Hence the term at
+`(j,i)` is the complex conjugate of the term at `(i,j)`:
+
+    rho_prod(j,i) rho_dec(j,i) = conj(rho_prod(i,j)) conj(rho_dec(i,j))
+                               = conj( rho_prod(i,j) rho_dec(i,j) )
+
+So **any** index set closed under `(i,j) -> (j,i)` sums to a real number, and
+any set that is not closed does not. The full sum is closed (trivially). The
+existing symmetric restriction -- entry survives iff both `i` and `j` are
+allowed -- is closed, which is why `me.real` in
+`calculate_matrix_element_from_density` (interface_madspin.py:6469) has always
+been a no-op safety rather than a projection.
+
+### 13.3 The crux: `P x D` alone is complex; the mode needs `P x D` u `D x P`
+
+Take a decaying particle with production-side set `P` and decay-side set `D`,
+with `P` and `D` disjoint. The literal reading of the request -- "one index like
+the production restriction, the other like the decay" -- is the set `P x D`,
+i.e. `bra in P and ket in D`. Its transpose is `D x P`, which is *disjoint* from
+it because `P` and `D` are. So `P x D` is **not** closed under transposition and
+
+    sum_{(i,j) in PxD} rho_prod(i,j) rho_dec(i,j)   is in general complex.
+
+Numerically, for a random hermitian pair on the vector basis `[-1,0,1]` with
+`P={0}`, `D={-1,+1}`:
+
+    sum over P x D    = 0.7224 + 0.6042i
+    sum over D x P    = 0.7224 - 0.6042i      (= its conjugate, as required)
+    sum over the union = 1.4448 + 0i          (= 2 Re[P x D])
+
+There is therefore **no "sign of the convolution"** for `P x D` on its own: a
+complex number has no sign. Taking `Re[...]` by hand and calling that the answer
+is not an arbitrary convention either -- it is *exactly* half the union, so the
+two prescriptions agree up to a factor 2. The physically meaningful object is
+the union, and it is real **by construction** rather than by projection:
+
+    W_int = sum_{PxD} + sum_{DxP} = 2 Re sum_{PxD}
+
+This is also the only choice that makes the decomposition close. With `P u D`
+the whole basis,
+
+    W_full = W_PP + W_DD + W_int
+
+verified numerically to float32 precision (test
+`test_the_three_blocks_add_up_to_the_full_convolution`). Under the `Re`-of-half
+convention the three pieces would miss `W_full` by `W_int/2`.
+
+**Conclusion: the mode is well-defined, and it needs no explicit real part --
+provided the restriction keeps both index orderings.** The asymmetric reading is
+correct in substance (bra from the production set, ket from the decay set, hence
+`i != j`) and needs one amendment: the hermitian partner must be kept, which is
+what turns "asymmetric" into "off-diagonal block", and is precisely the
+difference between summing `i<j` and summing `i!=j`.
+
+### 13.4 Zero cross-section, and why the sequential scheme dies
+
+Integrating a decay density matrix over the full solid angle gives `delta_ij/n`
+(`DensityMatrix.identity`, and the rotational-invariance argument in section 1).
+`P x D u D x P` contains **no diagonal entry** when `P` and `D` are disjoint, so
+
+    <rho_prod, I/n>  restricted to the interference block  =  0    exactly
+
+(test `test_cross_contraction_against_the_identity_vanishes`). Two consequences,
+one wanted and one fatal to a feature we just built:
+
+* **Wanted:** the interference term integrates to zero over the decay phase
+  space. That *is* the "full cross-section of the sample should be set to zero"
+  of the request -- it is a theorem, not a convention, and it is what the
+  statistical check of 13.8 is testing.
+* **Fatal:** the sequential accept/reject (sections 1-6) substitutes `I/n` for
+  every decay slot not yet drawn. Every partial weight in this mode is therefore
+  *identically zero*, for every prefix, and there is nothing to unweight
+  against. `_partial_density_contraction` and `N_k` collapse. **The
+  pure-interference mode must force `unweighting = joint`** and refuse the
+  sequential / two-stage schemes with a clear error rather than silently
+  producing zero weights and hanging in the redraw loop.
+
+The same zero shows up in `trace()`: the restricted trace of an interference
+block is exactly zero (test `test_cross_restricted_trace_vanishes`). Since the
+weight is `full_me / (production_me * decay_me)` and `production_me` comes from
+`prod_diag = density_prod.trace().real` (interface_madspin.py:6460), **the
+restriction must not be applied to the normalising trace**. This is the one
+place where PR #349's "the restriction rides on the matrix so every call site
+picks it up" design has to be broken: the contraction restriction and the
+normalisation restriction stop being the same object. Concretely, a second
+attribute (`hel_restriction_trace`, defaulting to the contraction one so nothing
+symmetric moves) read by `trace()` and by `normalized()`. Its value in
+interference mode is the *symmetric* restriction to `P u D` -- i.e. whatever the
+production process' own braces impose, and `None` for an unpolarised production
+process.
+
+### 13.5 Which sample the mode may be run on
+
+The interference between `P` and `D` amplitudes only exists if both are present
+in the sample the events were drawn from. `p p > t{L} t~` events are distributed
+as `|M_L|^2`; reweighting them by an `L`-`T` interference term is meaningless.
+So:
+
+* the production process **must not** carry a brace that excludes either side
+  (`P u D` must be contained in, and should equal, the production polarisation),
+  and normally is fully unpolarised;
+* consequently the production-side set `P` cannot be read from the banner's
+  `proc_card` the way `_production_polarization` does -- **both** sets have to
+  come from the MadSpin card. This is the reason the request says the mode
+  "should allow to specify production/decay polarization": there is no
+  production brace to inherit.
+
+`_production_polarization()` is still needed, but only as a *validation* input:
+if the banner does carry a brace on that pdg, assert `P u D` equals it, and use
+it as the symmetric trace restriction of 13.4.
+
+### 13.6 Syntax
+
+The decay-side brace is refused today (`do_decay`, interface_madspin.py:764-776)
+with an `InvalidCmd` that explains that a brace on a `decay` line would project
+the decay matrix element that defines the branching ratio, which is not what is
+wanted. That reasoning is still right, and it is *not* what this mode does: here
+the decay-side set restricts one index of the **convolution**, and the decay
+matrix element (hence the BR) stays fully inclusive. So a carve-out would be
+principled, not a loophole -- but the mode needs its own spelling anyway,
+because reusing `decay t{T} > ...` would mean the same characters requesting two
+different things depending on a mode flag.
+
+Two candidate spellings:
+
+1. **Two braces on the decay line**, `decay t{0}{T} > w+ b`: closest to
+   "similar in syntax", but `{0}{T}` is not grammar MG5's `extract_process`
+   accepts, so it would need a change in `madgraph_interface`'s process parser
+   -- shared code, wide blast radius, and MadSpin is not its only consumer.
+   Rejected.
+2. **A dedicated MadSpin-card option** (recommended):
+
+       set pure_interference t = 0 T          # or: 6 = 0 T
+
+   a dict-valued parameter `pdg -> (production_pol, decay_pol)`, parsed with the
+   same `{0}/{+}/{R}/{-}/{L}/{T}` vocabulary `_apply_production_polarization`
+   already validates against the `hel_dict` basis. Validation at parse time:
+   both sides expressible in the basis; the two sides **disjoint** (an overlap
+   re-admits diagonal entries, so the trace stops vanishing and the mode stops
+   being "pure interference" -- refuse rather than warn); spinmode is a density
+   one; `unweighting` is not a sequential scheme. `do_decay`'s existing
+   `InvalidCmd` is then left exactly as it is -- no carve-out needed at all,
+   which also keeps the diff away from a file other agents are editing.
+
+Setting the option is what switches the mode on; no separate boolean.
+
+### 13.7 The hard part: signed unweighting
+
+This is where the feature stops being cheap.
+
+**(a) The accept/reject test rejects everything.** interface_madspin.py:3449 is
+
+    if random.random()*maxwgt < wgt*jac:
+
+With `wgt` free to be negative this never fires and `while 1:` spins forever.
+It has to become `< abs(wgt*jac)`, with `sign = math.copysign(1.0, wgt*jac)`
+carried to the output weight. Likewise `_joint_maxwgt_range`
+(interface_madspin.py:4302) accumulates `maxwgt = max(wgt*jac, maxwgt)` from a
+`0` seed, so it currently bounds only the positive excursions: it must bound
+`abs(wgt*jac)`. `_combine_maxwgt`'s mean/sigma statistics are then applied to
+`|w|` and need no further change.
+
+**(b) Redraw-until-accept is statistically wrong here, and this is the real
+blocker.** The current loop draws decay configurations until one is accepted, so
+**every** production event yields exactly one output event of weight
+`w_p * branching_ratio`. That is correct only because
+
+    <wgt>_decay-phase-space = 1 / prod_i n_i
+
+is the *same constant for every production event* -- so forcing one output per
+input does not distort the production-side distribution. In interference mode
+that mean is `0` for every event (13.4), and the quantity that now varies from
+event to event is `Int_p = <|wgt|>`, which is exactly what measures how much
+interference that production point carries. Redraw-until-accept normalises
+`Int_p` away: every production event would contribute `+-w_p` with the same
+magnitude, and the interference would be represented by its sign pattern alone,
+with the production-side shape wrong.
+
+The fix is to stop redrawing: **draw one decay configuration, accept with
+probability `|wgt|/maxwgt`, and on rejection write nothing and move on.** Then
+the number of kept events per production point is proportional to `Int_p`, each
+carries `+- w_p * BR`, and for any observable `O` the sum over kept events of
+`w_p sign(W) O` estimates the integral of `W(Omega) O(Omega)` -- the
+interference distribution, correctly normalised relative to the parent sample.
+The expected weight sum is the integral of `W`, i.e. zero, as required.
+
+This is a different control flow from `while 1:` -- but not an unprecedented
+one: the BR-equalization path in `_unweight_range` (interface_madspin.py:3369)
+already does `nb_loose_skip += 1; continue` without writing, and
+`_apply_accounting` already handles `n_written < n_processed`, rewrites the
+banner cross-section by `n_written/n_processed`, and reports the kept fraction
+as `self.efficiency` for the downstream `nb_event` bookkeeping. So the machinery
+to write fewer events than were read exists and is exercised; what is new is
+that in this mode it is the *normal* path rather than a correction, and that the
+banner rewrite must not be applied (13.7c). It also interacts with `fixed_order`
+(the counter-event group would have to be dropped as a unit) and with the
+`nb_core` sharding (each shard reports its own counts, which already merge
+additively).
+
+**(c) The `<init>` cross-section.** `run_onshell` writes the banner via
+`self.banner.scale_init_cross(self.branching_ratio)`
+(interface_madspin.py:2537), and `scale_init_cross` (banner.py:220) rescales
+`XSECUP`, `XERRUP` and `XMAXUP` per subprocess. "Set the full cross-section to
+zero" means writing `XSECUP = 0` for every subprocess line -- reachable through
+`modify_init_cross({pid: 0.0}, allow_zero=True)`, which sets `ratio = 0` and so
+zeroes `XERRUP` and `XMAXUP` as well.
+
+That is what was asked, and it is also a loaded gun. `get_cross` sums the
+`XSECUP` column, so the banner then reads `sigma = 0`; any downstream consumer
+that normalises "events -> picobarns" by `XSECUP / N` divides by zero, and
+`XMAXUP = 0` is outside the LHE spec's intent for the `IDWTUP` schemes that use
+it. Pythia8 in particular takes the process cross-section from the `<init>`
+block. The honest engineering answer:
+
+* write `XSECUP = 0` (the physics is that this sample has no rate), **and**
+* record the *measured* weight sum and its MC error, plus the parent sample's
+  `sigma * BR` as the reference normalisation, in a `<MGGenerationInfo>`-style
+  banner note and in the log, so a user can renormalise by hand;
+* log a loud warning that the output is a signed differential sample and is not
+  directly showerable without an externally supplied normalisation.
+
+An option (`set interference_init_cross measured|zero|reference`) is cheap
+insurance if a user needs a showerable file; default `zero` per the request.
+
+### 13.8 The statistical check
+
+After the loop, with kept weights `w_i` (each `+- w_p * BR`):
+
+    S     = sum_i w_i
+    delta = sqrt( sum_i w_i^2 )        # MC error on S; there is no cancellation
+                                       # in the second moment, so this is the
+                                       # right scale to compare S against
+    z     = S / delta
+
+Report `z`, and fail the check when `|z| > nb_sigma` (the card already has
+`nb_sigma`, default 3; 5 is the more usual threshold for an automatic assert and
+is the value I would pick, so that a legitimate 3-sigma fluctuation in a large
+run does not cry wolf).
+
+*Where:* accumulate `sum_w` and `sum_w2` into the stats dict `_unweight_range`
+already returns -- it is picklable and merged additively over the forked shards
+in `_apply_accounting`, so one shard or many gives an identical answer. Emit the
+report from `_apply_accounting`, next to the existing unweighting-efficiency
+line.
+
+*On failure:* `logger.critical`, not an exception. A non-zero `z` has three
+possible causes -- a genuine fluctuation, an under-estimated `max_weight` (the
+overweight events bias `S`, and this test would be the most sensitive monitor of
+that we have), or a bug -- and none of them is worth discarding a completed run
+over after the CPU has been spent. The message should print `S`, `delta`, `z`
+and the overweight count so the three are distinguishable. `density_debug` can
+promote it to a `RuntimeError` for the test suite.
+
+Caveat to document: the test assumes the `w_i` are independent, which is true
+event-to-event here but *not* across a production sample that itself came from a
+correlated MC (multi-weight / reweighted samples). It is a sanity check, not a
+proof of correctness.
+
+### 13.9 What is implemented
+
+**The algebra** (`MadSpin/decay.py`, plus 11 tests in
+`tests/unit_tests/madspin/test_madspin.py::TestPureInterferenceRestriction`):
+the cross restriction at the `DensityMatrix` level. A per-particle entry of
+`hel_restriction` may now be a `(P, D)` pair instead of a flat set of allowed
+helicities, and `_restriction_row_mask` builds
+
+    (bra in P and ket in D) or (bra in D and ket in P)
+
+for that particle. Crucially this **keeps the per-particle AND structure** of
+the mask: the union is taken inside one particle's factor, not across particles,
+so `_restriction_row_mask` stays a product of per-index conditions, the
+`(basis_id, restriction)` cache key still works, and `tensor_product` still
+concatenates entries. Each factor is separately closed under
+`bra_k <-> ket_k`, so the product is closed under the global transposition and
+the contraction is real for any mixture of `None`, symmetric and cross entries
+(test `test_multi_particle_cross_stays_a_per_index_product`).
+
+That per-particle union is a deliberate choice over the "global" alternative
+`(all k in P) x (all k in D)` union its transpose. The two coincide whenever
+only one particle carries a `(P, D)` pair -- the dominant, and arguably the only
+physically motivated, use case -- and they differ only in whether mixed terms
+(particle 1 taken production-side, particle 2 decay-side) are kept. The
+per-particle form keeps them, which is what makes the polarised decomposition of
+`W_full` close particle by particle; the global form does not, and would need a
+union-of-two-product-masks in `_restriction_row_mask`, breaking its structure.
+If the global variant is ever wanted it is a separate normalised form, not a
+tweak.
+
+Normalisation rules: `(S, S)` collapses to the symmetric `S`; an empty side
+falls back to `None`; a non-2-element pair raises. Nothing symmetric moves --
+same normalised values, same cached mask objects, same numbers
+(`test_symmetric_restrictions_are_untouched`).
+
+**The mode** (`MadSpin/interface_madspin.py`, plus `TestPureInterferenceMode`
+and the frame test `test_frame_follows_the_pure_interference_mode`):
+
+* `hel_restriction_trace` on `DensityMatrix`, consulted by `trace()` /
+  `normalized()` **only** when `hel_restriction` is a cross one --
+  `_trace_restriction` returns a symmetric restriction untouched, so no
+  pre-existing path can move. Its value is the symmetric restriction the
+  production braces impose, i.e. `None` (the full trace) for the unpolarised
+  production the mode requires.
+* the `pure_interference` card option, parsed by `_pure_interference` into
+  `pdg -> (P, D)` and validated by `_validate_pure_interference`: density
+  spinmode, disjoint sides, a pdg something actually decays, and a production
+  process that is not braced away from either side.
+* `_apply_pure_interference` overlays the cross restriction on whatever
+  `_apply_production_polarization` produced and returns the trace restriction
+  beside it; `_density_basis` carries both and `get_density` attaches both.
+* `_unweighting_mode` forces `joint`.
+* `_frame_boost` stays on for the mode (see 13.10 step 9).
+* `_joint_maxwgt_range` bounds `|w|`; `_unweight_range` accepts on `|w|/maxwgt`
+  with **one** draw and writes nothing on rejection, carrying `wsign` onto
+  `full_evt.wgt` and onto every entry of `parse_reweight()`.
+* `<init>` zeroing plus the `<MGPureInterference>` banner note, and the
+  `sum_w` / `sum_w2` / overweight counters with the `z` report in
+  `_report_pure_interference`.
+
+**Known boundary:** `fixed_order` is handled (the counter-event group is
+dropped as a unit by the same `continue`, and the sign is applied to every
+member of the group) but is **not validated** -- no fixed-order sample was run
+through the mode.
+
+### 13.10 Implementation plan -- all steps done
+
+1. *(done)* Cross entries in `normalize_hel_restriction` /
+   `_restriction_row_mask`, with the algebra tests.
+2. `hel_restriction_trace` on `DensityMatrix`, defaulting to `hel_restriction`,
+   read by `trace()` and `normalized()`. Behaviour-neutral; one unit test that a
+   cross restriction with a `P u D` trace restriction gives a zero numerator
+   over a non-zero denominator.
+3. `pure_interference` card option, parsing and validation (13.6), feeding
+   `_apply_production_polarization` -> `_density_basis['hel_restriction']` and
+   the new trace restriction. Refuse sequential/two-stage `unweighting`, refuse
+   a non-density spinmode, refuse overlapping sets, cross-check against the
+   banner braces (13.5). Unit-testable with the existing `_Stub` pattern in
+   `TestProductionPolarizationPlumbing` -- no f2py needed.
+4. `abs()` in `_joint_maxwgt_range` and in the accept test, sign carried onto
+   `full_evt.wgt` and onto every entry of `parse_reweight()`. Gated on the mode
+   so unrelated runs are untouched.
+5. Drop-on-reject in `_unweight_range` (13.7b), gated on the mode; suppress the
+   `_apply_accounting` BR rewrite and the `efficiency`-driven `nb_event`
+   rescaling for this mode, since here a low keep-rate is physics, not a
+   correction.
+6. `<init>` zeroing plus the reference-normalisation banner note and warning.
+7. `sum_w` / `sum_w2` in the stats dict and the `z` report.
+8. Validation: steps 1-4 and 7 are unit-testable in-process. Steps 5, 6 and the
+   physics closure test need a working end-to-end MadSpin run -- see 13.12.
+9. **(added during implementation)** The frame boost. #355 established that the
+   polarisation axis must be MG5's `me_frame`, because `set_hel_restriction` is
+   a projection and a projection does not commute with the change of helicity
+   basis a boost induces. Its guard switches the boost on for a polarised beam
+   or a production brace. A cross restriction is a projection for exactly the
+   same reason -- and it names two helicity *sets*, which only mean something
+   once the axis is fixed -- but the mode's production is unpolarised by
+   construction, so that guard would find nothing and leave the momenta in the
+   lab. The clause added is:
+
+       if (self._beampol() is None and not self._production_polarization()
+               and not self._pure_interference()):
+           return None
+
+   A parallel branch factors the same condition into a `_needs_frame_axis()`
+   helper; the `pure_interference` clause belongs in that helper once the two
+   are merged.
+
+### 13.11 Environment
+
+The assessment was written in an environment where `f2py` could not build
+extension modules -- it generated the wrappers and then died with
+`meson: command not found` (NumPy drops the distutils backend for Python
+>= 3.12). That is fixed: the `mg-3.14` pyenv carries `f2py`, `meson` and
+`ninja`, and everything in 13.12 was measured there, not reasoned from source.
+
+### 13.12 End-to-end validation
+
+Sample: `p p > w+ w-` at 13 TeV, 20k unweighted events (`sigma = 64.66 pb`),
+`spinmode = madspin` (offshell), `decay w+ > e+ ve` / `decay w- > e- ve~`, and
+
+    set pure_interference w+ = 0 T
+
+i.e. the interference between the longitudinal and the transverse W+.
+
+**The weight sum is compatible with zero.** Five independent seeds, each over
+the same 20k production events (`z = S / sqrt(sum w^2)`):
+
+| seed | kept / read | S | sqrt(sum w^2) | z | overweight |
+|---|---|---|---|---|---|
+| 42   | 1166 / 20000 (5.83%) | +73.476 | 27.272 | +2.694 | 0 |
+| 7    | 1218 / 20000 (6.09%) | -20.764 | 27.872 | -0.745 | 0 |
+| 99   | 1314 / 20000 (6.57%) | -59.103 | 28.952 | -2.041 | 0 |
+| 555  | 1180 / 20000 (5.90%) | -8.9e-16 | 27.434 | -0.000 | 0 |
+| 2024 | 1144 / 20000 (5.72%) | -22.361 | 27.012 | -0.828 | 0 |
+
+Combined over the 100k production events: `S = -28.75`, `sqrt(sum w^2) = 61.98`,
+**`z = -0.46`**. The per-seed mean is `-0.18 +- 0.79`. The `+2.69` of seed 42 is
+the reason the threshold is 5 sigma and not 3: a 2-3 sigma excursion turns up
+readily in a handful of runs, and the spread across seeds is what shows it is a
+fluctuation rather than a bias. No trial anywhere exceeded the maximum weight,
+so the one mechanism that *would* have biased `S` was not active.
+
+**The events carry both signs**, in roughly equal numbers, as they must for a
+sample whose integral vanishes: 629+/537- (seed 42), 620+/694- (seed 99).
+
+**`|w|` is the unpolarised magnitude.** Every written event carries exactly one
+value, `|w| = sigma * BR = 0.79865722`, and the unpolarised run of the same seed
+writes that identical number (relative difference `0.000e+00`). Across seeds it
+moves by `4e-5`, which is just the per-run MC estimate of the branching ratio.
+This is the design working as intended: the magnitude is constant and the
+interference is carried entirely by *which* production events survive -- the
+keep rate, ~6% here -- which is exactly what redraw-until-accept would have
+normalised away (13.7b).
+
+**A run with `pure_interference` unset is byte-identical.** The same card
+without the option, run against the pre-implementation tree (`7e35f7780`) and
+against the implementation, produces the same 135,011,930-byte file --
+identical whole-file, banner included, not merely in the event blocks.
+
+`tests/test_manager.py test_madspin -t0`: 184 tests, OK (161 before this work).
+
+Caveats, stated rather than glossed:
+
+* only `spinmode = madspin` was exercised end to end; `PA` / `onshell` go
+  through the same `_unweight_range` and the same restriction, but were not run.
+* `nb_core > 1` was used throughout (18 workers), so the additive merge of
+  `sum_w` / `sum_w2` across shards is exercised; the serial path is not
+  separately measured.
+* `fixed_order` is implemented but unvalidated (13.9).
+* the z test assumes the `w_i` are independent. That is true event to event
+  here, but not across a production sample that itself came from a correlated
+  MC (multi-weight / reweighted samples). It is a sanity check, not a proof.
+
+### 13.13 The fully weighted output -- what replaced the signed accept/reject
+
+**Status: implemented.** This supersedes the accept/reject of 13.7b and the
+`+- sigma*BR` weight of 13.7c. The algebra of 13.7b is unchanged and is what
+justifies the replacement; only the *representation* of `<|W|>` moves, from the
+keep rate into the weight.
+
+**What is written.** Every production event yields exactly one output event --
+one decay configuration is drawn, and it is kept, with no accept/reject at all:
+
+    w = sigma_parent * BR * W / c
+
+`W = wgt*jac` is the signed convolution of that trial, and
+
+    c = <W_full>_Omega
+
+is the decay-phase-space mean of the **unrestricted** convolution: the same
+quantity, with the cross restriction swapped for the symmetric one that already
+normalises it (`hel_restriction_trace`). `c` is a *decay-side* constant -- the
+production density matrix cancels between the restricted contraction and its
+normalising trace -- which is exactly the constancy that made ordinary
+redraw-until-accept unbiased in the first place (13.7b).
+
+**Why this is the right weight.** MG5 writes LHE files with `IDWTUP = -4`, the
+convention in which the cross-section is the **mean** of the event weights, not
+their sum. (Measured on three sample files in the tree: `ttbar.lhe.gz`,
+`wj_zj.lhe.gz`, `hj_heft.lhe.gz` all carry `XWGTUP = sum(XSECUP)` on every
+event.) Under that convention:
+
+* `mean(w) = sigma*BR*<W>/c = 0` -- the sample's own cross-section, which is
+  correct and consistent with the `XSECUP = 0` the mode writes into `<init>`;
+* `sum_bin(w) / N_file` is the interference contribution to that bin, **in pb**,
+  with `N_file = N_read`. The file is genuinely self-normalising.
+
+The relation to the ordinary scheme is the one derived in 13.7b: for an
+observable `O`,
+
+    S_ord(O) = N_read * sigma*BR * <W_ord O> / c
+
+and writing `w = sigma*BR*W/c` per event makes `sum_events w O` estimate exactly
+the interference part of that. `max_weight` does not appear.
+
+**What this fixes, and what it costs.**
+
+* `max_weight` leaves the normalisation completely. Under the accept/reject the
+  sample's physical normalisation was `sigma*BR*maxwgt/c` per *read* event --
+  i.e. it depended on an internal bound that depends on `nb_sigma`,
+  `Nevents_for_max_weight` and the process, and that was written nowhere. The
+  closure test had to reconstruct it by hand.
+* The overweight-bias channel disappears with the bound: there is no trial that
+  can be "accepted with probability 1 instead of `|w|/maxwgt`", so `nb_pi_overflow`
+  and its critical message are gone, and the `z` test loses its most likely
+  failure mode. The remaining counter is `nb_pi_dead` (a non-finite convolution,
+  written with weight 0 and reported loudly -- a dead matrix element, not
+  physics).
+* All `N` production events are used instead of the 3-9% the accept/reject kept,
+  so the statistics per production event are strictly better.
+* `n_written == n_processed`, so `_apply_accounting`'s efficiency is 1 and
+  nothing downstream is rescaled. (It is still computed from the counts rather
+  than hard-coded, so a BR-equalization drop in the same run is still reported.)
+* The `<rwgt>` entries follow automatically: `W/c` rides on the `br` factor,
+  which is applied to `full_evt.wgt` and to every entry of `parse_reweight()`
+  through the same multiplication.
+* Cost: the output is a **weighted** sample. Tools that assume unit weights
+  break -- but they break on a signed zero-cross-section sample anyway.
+
+**13.7b's objection does not apply.** It argued against *redraw-until-accept*,
+which normalises `<|W|>` away by forcing one same-magnitude event per production
+point. Carrying `W` in the weight preserves `<|W|>` just as well as carrying it
+in the keep rate, with less variance.
+
+**How `c` is obtained.** Inside the existing maximum-weight probe
+(`_joint_maxwgt_range`), one extra contraction per draw with
+`density_prod.hel_restriction` temporarily swapped for
+`density_prod.hel_restriction_trace` -- the same save/swap/contract/restore trick
+`_polarization_ratios` already uses, on matrices that are alive anyway. The
+probe's own statistics (`Nevents_for_max_weight * max_weight_ps_point`, typically
+75 x 400 = 30000 trials) give it to a few tenths of a percent. The sum/sumsq/n
+are merged additively across the forked scan workers, so one shard or many gives
+the identical estimate, and they are cached beside `max_wgt` in `ms_dir` (a
+cached `max_wgt` is only reused when the matching `c` cache is there too).
+
+**The analytic candidate, checked.** Averaging `rho_dec/dec_diag` over the decay
+phase space gives `delta_ij/n` (`DensityMatrix.identity`), and everything else in
+
+    W = me * density_iden_prod * density_iden_decay
+        / (iden_p * sym_prod * prod_color * prod_denominators * sym_decay)
+        / (prod_diag * dec_diag) * jac
+
+cancels -- `prod(spin)/n = 1`, `prod(color)/prod_color = 1`, the trace against
+`prod_diag` -- leaving
+
+    c = <jac> / (prod_denominators * sym_factor_decay)
+
+with `prod_denominators = prod_i (m_i Gamma_i)^2`. So the lead was right in form:
+`c = 1/prod_denominators` **exactly, but only where the chain carries no
+reshuffling jacobian and no decay symmetry factor** -- i.e. `spinmode = onshell`
+with one decay per pdg. Under `madspin`/`full` (offshell) and under `PA` the
+Breit-Wigner sampling jacobian is inside `W` and `<jac> != 1`. The analytic form
+is therefore **not** used: `c` is measured, and `1/(prod_denominators *
+sym_decay)` is computed beside it and reported as a cross-check (the ratio of the
+two is in the log and in the banner block).
+
+**The banner block, kept.** `<MGPureInterference>` is no longer the
+normalisation -- the file normalises itself -- but `XSECUP = 0` deletes the
+reference cross-section from the file and the diagnostics have nowhere else to
+live. It carries the reference `sigma*BR`, `N_read`, `c` and its error, the
+analytic cross-check, the probed `max|W|` (diagnostic only), `S`,
+`sqrt(sum w^2)`, `z`, and `mean(w)`.
+
+### 13.14 Card syntax: what is expressible, and the two things that are not
+
+**Repeated `set` lines accumulate.** `extended_cmd.Cmd.precmd` splits *every*
+card line on `;` and dispatches the pieces as separate commands, so
+
+    set pure_interference t = + - ; t~ = + -
+
+can never work: the `t~` half is dispatched as its own command, lands in
+`Cmd.default`, and used to produce nothing but a generic
+`Command "t~" not recognized` warning while the run continued with a
+valid-looking single-particle sample. That is a silently-wrong-physics failure,
+so two things changed: `do_set` **accumulates** repeated `pure_interference`
+lines (`ACCUMULATING_OPTIONS`), and `MadSpinInterface.default` **raises** when
+the unrecognised line parses as a bare `particle = polA polB` entry. The
+multi-particle spelling is therefore
+
+    set pure_interference t  = + -
+    set pure_interference t~ = + -
+
+**Diagonal blocks are nameable.** Two *disjoint* sides give that particle's
+interference block `I`; two *identical* sides give its diagonal block `D_S`
+(`normalize_hel_restriction` already collapses `(S, S)` back to the symmetric
+`S`). So `(I, D-)` of `t t~` is `t = + -` plus `t~ = - -`, from the card alone,
+on an unpolarised production -- it no longer needs a production brace on the
+other leg the way the closure test did. A **partial** overlap (`T +`) is still
+refused: it is neither block, and it puts diagonal entries into an off-diagonal
+one so the restricted trace stops vanishing. At least one particle must carry a
+genuine interference pair, otherwise the mode's whole apparatus (zeroed `<init>`,
+signed weights, separate trace restriction) is being applied to an ordinary
+polarised sub-sample. A particle the option does **not** name is left
+*unrestricted*, i.e. summed over its whole basis -- which is neither `D+`, nor
+`D-`, nor `I`, but their sum. That is what makes `x_t = (I,D+) + (I,D-) + (I,I)`
+in the closure test.
+
+**Braces are not an option.** `madgraph_interface.py:5151` hard-rejects
+`t{0}{T}` (`rest = '{T}'` -> "A space is required after the "}" symbol"), and a
+leg carries a single flat `Leg['polarization']` list of ints that
+`polarization` appears 221 times across 15 modules under `madgraph/` reasoning
+about. A second, semantically different brace on the same leg has no
+representation in that data model. This is a data-model change in shared code,
+not a grammar accident -- 13.6's "rejected" stands.
+
+**Leg-index keys are not an option either.** Keying the option on the MG5
+process-line leg number (`set pure_interference 3 = + -`) is appealing because
+pdg keys cannot say "the first `t` is `I` and the second `t` is `D+`" -- a pdg
+entry is broadcast to *every* slot of that pdg. It does not work, for three
+independent reasons:
+
+1. **The label carries no physics.** #353's proof that the n-th same-pdg leg
+   maps to the n-th density slot rests on `Process.identical_particle_factor`
+   keying on `(id, polarization)` (`base_objects.py:3757`): two same-pdg legs
+   with *different* braces are not identical to MG5, so nothing permutes them.
+   This mode requires an **unpolarised** production, so that protection is
+   absent: the two `t` of `p p > t t~ t t~` key to the same `(6, ())`, the
+   amplitude is symmetrised, and a `2! 2!` identical-particle factor is applied.
+2. **The event record's ordering is not stable.** In grouped output the momenta
+   written out are permuted per channel
+   (`SWITCHMOM(PP,P1,PERMS(1,MAPCONFIG(ICONFIG)),...)`,
+   `super_auto_dsig_group_v4.inc:805`); in ungrouped output `unwgt.f:582-600`
+   draws an identical-particle permutation uniformly at random *per event*. So
+   "the first `t` in the event record" is set by which channel or which random
+   draw produced the event.
+3. **The spelling is already taken.** `set pure_interference 3 = + -` parses
+   today as *pdg 3* (`pdg = int(name)` when the name is not in `name2pdg`), so an
+   integer key would be ambiguous with the existing pdg-code spelling.
+
+Consequence for `p p > t t~ t t~`: the card can ask for one block per *species*
+(both `t` slots `I`, both `t~` slots `D+`, ...), which is the symmetrised
+statement, and that is the only statement the sample supports. Per-slot
+attribution would need a label the sample does not carry.
+
+### 13.15 Why nine blocks and not ten -- the counting, settled
+
+The question comes up every time someone lists the hermitian terms of the joint
+`4 x 4` matrix for `t t~`, so it is recorded here rather than re-derived.
+
+**Both counts are right; they count different things.** The six distinct
+off-diagonal hermitian *pairs* are
+
+    (++;+-) (++;-+) (++;--) (+-;-+) (+-;--) (-+;--)
+
+so 4 diagonal + 6 pairs = **10 hermitian terms** = `4 + 2*6` = **16 matrix
+entries**. The decomposition the code produces has **9 blocks** covering the same
+16 entries as `4*1 + 4*2 + 1*4`. The whole difference is that the `(I,I)` block
+**bundles two** of the ten terms:
+
+| user term | particle 1 | particle 2 | block |
+|---|---|---|---|
+| `(++;+-)` | `(+,+)` diagonal | `(+,-)` flip | `(D+, I)` |
+| `(++;-+)` | `(+,-)` flip | `(+,+)` diagonal | `(I, D+)` |
+| `(+-;--)` | `(+,-)` flip | `(-,-)` diagonal | `(I, D-)` |
+| `(-+;--)` | `(-,-)` diagonal | `(+,-)` flip | `(D-, I)` |
+| `(++;--)` | `(+,-)` flip | `(+,-)` flip | `(I, I)` |
+| `(+-;-+)` | `(+,-)` flip | `(-,+)` flip | `(I, I)` |
+
+**The bundle cannot be split by any legal restriction.** `_restriction_rows`
+builds the mask as a strict *product of per-particle conditions*: one loop
+iteration per decaying particle, each touching only that particle's own
+`(bra, ket)` columns, combined with `&=`. Keeping only `(++;--)` needs
+`((+,-)&(+,-)) OR ((-,+)&(-,+))` -- a **union of two products**, not a product of
+unions. Any product mask containing both `(+,-)&(+,-)` and `(-,+)&(-,+)` must
+offer `{(+,-),(-,+)}` on *each* particle and therefore also contains
+`(+,-)&(-,+)`. Nor can it be recovered afterwards: the nine blocks are the atoms
+of the lattice of legal (transposition-closed, hence real) product masks, they
+are pairwise disjoint and they tile the 16 entries, so a set that is not a union
+of them is not any signed sum of them either. The `(I,I) = x_t - (I,D+) -
+(I,D-)` subtraction has no analogue one level down.
+
+**And neither half is an observable on its own.** Writing
+`rho = 1/4 [1x1 + B+.sigma x 1 + 1 x B-.sigma + C_ij sigma_i x sigma_j]` in the
+helicity basis with `(x,y,z) = (r,n,k)`,
+
+    4 Re rho(++;--) = C_rr - C_nn
+    4 Re rho(+-;-+) = C_rr + C_nn
+
+so each both-flip term is the half-sum `(C_rr +- C_nn)/2`; `C_nn` is their
+difference and `C_rr` is their sum. Even with a union-of-products
+generalisation there would be no "`C_nn`-only" sample -- only two samples whose
+difference is `C_nn`.
+
+**In practice the bundling costs nothing.** The `(I,I)` sample contracts the
+whole block against the decay density matrix, which supplies the angular
+structure separating `C_nn` from `C_rr` at the *observable* level, and the
+closure measured both from the same events: the interference contributes
+`+0.03626 +- 0.00090` to `<C_nn>` and `+0.00247 +- 0.00091` to `<C_rr>`, and the
+whole `C_nn` effect sits in `(I,I)` while the four singly-interfering blocks are
+flat at zero in it. What the bundling costs is only the ability to attribute a
+given *event* to one of the two terms.
+
+**Decision: do not split `(I,I)`.** It would require a union-of-products
+normalised form in `decay.py` plus card syntax naming the correlation between
+two particles' flip directions -- a separate feature, exactly as 13.9 says of its
+"global" cousin -- and it would buy a distinction between two quantities neither
+of which is an observable and both of which are already measurable from the
+single `(I,I)` sample.
+
+### 13.16 End-to-end validation of the fully weighted mode
+
+`p p > t t~` at 13 TeV, NNPDF23LO, `me_frame = [1,2]`, **50 000** production
+events (`iseed = 4321`), `spinmode = onshell`, `BW_cut = 15`,
+`max_weight_ps_point = 400`, `decay t > b w+, w+ > l+ vl` and the conjugate,
+`l = e, mu`, 8 cores. The card uses the accumulating spelling, i.e. the
+`(I, I)` block -- the one the closure test could only reach by subtraction:
+
+    set pure_interference t  = + -
+    set pure_interference t~ = + -
+
+**The weight sum is compatible with zero, and every event is written.**
+
+| | |
+|---|---|
+| events written / read | 50000 / 50000 (the mode no longer rejects) |
+| `<init>` `XSECUP` / `IDWTUP` | `0.0` / `-4` |
+| reference `sigma*BR` | 23.763645 pb |
+| `S = sum w` | `-9.777639e+02` |
+| `sqrt(sum w^2)` | `9.815884e+02` |
+| `z = S / sqrt(sum w^2)` | **`-0.996`** |
+| `mean(w)` | `-1.9555e-02 +- 1.9632e-02`, i.e. `-0.082%` of `sigma_ref` |
+| positive / negative weights | 24918 / 25082 |
+| `mean|w| / sigma_ref` | 0.13007 (0.13011 on an independent 2 000-event run) |
+| trials with a dead weight | 0 |
+
+`mean(w) = 0` is the sample's own cross-section under `IDWTUP = -4`, and it
+agrees with the `XSECUP = 0` written into `<init>`.
+
+**`c` agrees with the analytic form.** Measured `c = 2.258515e-10 +- 0.13%` over
+44 016 probe trials against `1/(prod_denominators * sym_decay) = 2.255914e-10`
+for the default SM card (`m_t = 173.0`, `Gamma_t = 1.4915`, so
+`1/(m_t Gamma_t)^4`): **ratio 1.001153**, i.e. 0.9 sigma of the measurement.
+The independent 2 000-event run gave `2.259903e-10 +- 0.15%`, ratio 1.0018. So
+under `spinmode = onshell` -- where `<jac> = 1` and `sym_factor_decay = 1` --
+the analytic form is confirmed. It is still not what the code uses, because
+`<jac> != 1` under `madspin`/`full` and `PA`; it is recorded in the banner as a
+cross-check.
+
+**The physics closes against the independent closure test.** The interference
+contribution to an observable is `sum_i w_i O_i / N_read`, divided by
+`sigma_ref` to compare with the closure's `<O>` shifts (`RESULTS.md` section 6):
+
+| observable | this run, `(I,I)` alone, 50k | closure, all 5 interference blocks, 5 x 50k | pull |
+|---|---|---|---|
+| `<C_nn>` | **+0.037205 +- 0.000364** | **+0.03626 +- 0.00090** | +0.97 |
+| `<C_rr>` | +0.002246 +- 0.000375 | +0.00247 +- 0.00091 | -0.22 |
+| `<C_kk>` | -0.000085 +- 0.000165 | -0.00034 +- 0.00062 | +0.39 |
+| `<cos phi_ll>` | +0.039366 +- 0.000564 | +0.03839 +- 0.00145 | +0.63 |
+| `<Delta phi>` | -0.066684 +- 0.001761 | -0.07051 +- 0.00491 | +0.73 |
+| `<pT(t)>` (null test) | -0.63 +- 2.86 | +0.267 +- 0.351 | -0.31 |
+
+Every entry agrees within one sigma, `(I,I)` alone reproduces the whole
+interference (13.15 and `RESULTS.md` 6b), and `pT(t)` -- a production-level
+observable, which the interference must not touch -- is flat at zero.
+
+**The statistics are 2.5-2.8x better per observable from one fifth of the
+production events**, i.e. roughly a factor 30-40 in variance per production
+event, which is what dropping the 3-9% accept/reject and carrying `<|W|>` in the
+weight buys.
+
+**A run with `pure_interference` unset is byte-identical.** The same card
+without the option, re-run through `decay_events` on the same 2 000-event parent
+against the implementation and against the pre-change tree (`bdf383554`),
+produces the same 3 633 126-byte file, identical SHA-256
+(`160f0cff56d2f1ad138a9950de607c8a8366df1d69005ef8bf2c1aad8cf71fc3`), banner
+included.
+
+**Both `set` lines accumulate and the `;` spelling fails loudly.** The run above
+logs `pure_interference is ON for particle(s) -6, 6` and the banner block lists
+both pdgs; `set pure_interference t = + - ; t~ = + -` raises `InvalidCmd`.
+
+`tests/test_manager.py test_madspin -t0`: **284 tests, OK** (269 before this
+work).
+
+Caveats:
+
+* only `spinmode = onshell` was exercised end to end here (13.12 exercised
+  `madspin`); `PA` and `fixed_order` were not run;
+* `c` is measured with the probe's own statistics, so it carries a flat scale
+  error on every weight -- 0.13% here, warned about above 5%;
+* the analytic cross-check is confirmed only in the `<jac> = 1` case, which is
+  exactly where the derivation says it should hold. It has **not** been checked
+  offshell, where the derivation says it should *not* hold.
+
+### 13.17 The unweighted-up-to-a-sign output -- `pure_interference_output`
+
+**Status: implemented and validated end to end.** The fully weighted output of
+13.13 stays the **default**; `set pure_interference_output = unweighted`
+selects the other representation of the same estimator, in which the sample
+carries exactly two weight magnitudes.
+
+**The derivation.** Unweight on `|W|` against any bound `M >= max|W|`, ONE
+decay draw per production event, nothing written on rejection, and give each
+accepted event `w = sign(W) * w0`. Then `N_file = N_read * <|W|>/M` and, for
+any observable `O`,
+
+    sum_written w O = N_read * w0 * <W O> / M         (because |W| sign(W) = W)
+
+    (1/N_file) sum_written w O = w0 * <W O> / <|W|>
+
+The `M` of the acceptance probability cancels against the `M` of the file
+size. Matching the interference contribution `sigma*BR*<W O>/c` -- the same
+target the fully weighted output hits, per read event -- gives
+
+    w0 = sigma_ref * BR * <|W|> / c
+
+with **no `max_weight` in it**. `mean(w) = w0 <W>/<|W|> = 0` still holds,
+because `<W> = 0`, so `XSECUP = 0` remains correct and both variants obey the
+same `IDWTUP = -4` rule: `sum_bin(w) / N_file` is the contribution in pb, with
+`N_file` the number of events *in the file* (which is `N_read` only for the
+fully weighted output).
+
+**The design notes' `w = +- sigma*BR*maxwgt/c` is not wrong physics; it is
+normalised per event READ.** `maxwgt/c = (<|W|>/c) * (N_read/N_file)`, so the
+two differ by exactly `N_read/N_file`. An LHE file carries no `N_read`, and
+`IDWTUP = -4` says the cross-section is the mean of the weights over the file,
+so a consumer that divides by `N_file` -- the only count it has -- would be off
+by `M/<|W|>` (a factor 13 in the run below), and the factor depends on the
+internal bound. That is what made `maxwgt` look load-bearing. It is not.
+
+**`<|W|>` must NOT come from the maximum-weight probe.** This is the one thing
+the derivation does not tell you and the run does. Unlike `c`, `<|W|>` is not
+a decay-side constant -- it is the *local size of the interference* and varies
+from production point to production point, which is the whole content of
+13.7b. The probe sees `Nevents_for_max_weight` production events (112 in the
+run below) and its `max_weight_ps_point` draws on each are all correlated
+through that point's `|W|` scale, so:
+
+* the trial-level error is meaningless here. The probe claimed
+  `<|W|> = 3.168e-11 +- 0.46%`; blocked by production event the error is
+  **5.0%**, and the truth was `2.895e-11`, i.e. the probe was **9.4% high**;
+* it is not an ordering bias -- 2000 random 110-event subsamples of the same
+  file have a 9.5% spread and the probe's value sits 0.8 sigma inside it. It
+  is simply the wrong sample size for the quantity;
+* a 9.4% error on `<|W|>` is a 9.4% error on every physics number the file
+  produces, because the estimator is linear in `w0`.
+
+**The run normalises with its own keep rate instead, which is exact.** Putting
+`<|W|> = (N_file/N_drawn) * M` into `w0` makes `N_file` cancel out of the
+estimator altogether:
+
+    (1/N_file) sum w O = (M sigma_ref BR / (c N_drawn)) sum_accepted sign(W) O
+
+whose expectation is `sigma_ref*BR*<W O>/c` exactly, with no estimate of
+`<|W|>` in it anywhere and no residual `M` dependence even in principle. The
+run therefore writes the probe's provisional magnitude during the loop and
+divides it out afterwards, in the same pass that inserts the
+`<MGPureInterference>` note (`_rewrite_lhe_banner_cross(event_scale=...)`);
+`S`, `sqrt(sum w^2)` and `mean(w)` are rescaled with it and `z` is invariant.
+The probe's `<|W|>`, its blocked error and the correction factor are all in
+the banner block, and a correction beyond 25% warns.
+
+**What comes back that the fully weighted output had lost:** the bound is live
+again -- the acceptance probability clips at 1 when `|W| > M` -- so
+`nb_pi_overflow` and its `logger.critical` are back on this path (and only on
+it). `_dead_trial` is still not on the pure-interference path at all: a
+negative weight is normal here, and `nb_pi_dead` counts the genuinely
+non-finite trials.
+
+**End-to-end validation.** Same setup as 13.16 -- `p p > t t~` at 13 TeV,
+NNPDF23LO, `me_frame = [1,2]`, 50 000 production events (`iseed = 4321`),
+`spinmode = onshell`, `BW_cut = 15`, `max_weight_ps_point = 400`, `l = e, mu`,
+8 cores, the `(I, I)` block -- run four times on the **same** parent file:
+fully weighted, and unweighted against three bounds set by `nb_sigma`.
+
+| | weighted | `nb_sigma = 0` | `nb_sigma = 10` | `nb_sigma = 40` |
+|---|---|---|---|---|
+| `M = max\|W\|` used | (none) | 3.845e-10 | 6.351e-10 (1.65x) | 2.235e-09 (5.81x) |
+| events written / read | 50000 / 50000 | 3764 / 50000 | 2305 / 50000 | 620 / 50000 |
+| distinct \|w\| magnitudes | 49985 | **1** | **1** | **1** |
+| positive / negative | 24921 / 25079 | 1855 / 1909 | 1135 / 1170 | 326 / 294 |
+| `\|w\|` (pb) | -- | 3.05767 | 3.09265 | 2.92710 |
+| `<\|W\|>` realised | 2.928e-11 | 2.895e-11 | 2.928e-11 | 2.771e-11 |
+| `S` | -4.4436e+02 | -1.6511e+02 | -1.0824e+02 | +9.3667e+01 |
+| `sqrt(sum w^2)` | 9.8358e+02 | 1.8759e+02 | 1.4848e+02 | 7.2884e+01 |
+| `z` | **-0.452** | **-0.880** | **-0.729** | **+1.285** |
+| `mean(w)` | -8.887e-03 | -4.387e-02 | -4.696e-02 | +1.511e-01 |
+| trials above `M` | -- | 0 | 0 | 0 |
+
+**`M` cancels.** The three bounds span 5.8x and the files they produce span
+6.1x in size, and the physics is the same:
+
+| observable | weighted | `M` | `1.65 M` | `5.81 M` |
+|---|---|---|---|---|
+| `<C_nn>` | +0.037286 +- 0.000366 | +0.036567 +- 0.000859 | +0.037049 +- 0.001111 | +0.035850 +- 0.002011 |
+| `<C_rr>` | +0.001744 +- 0.000375 | +0.002458 +- 0.000830 | +0.003282 +- 0.001073 | +0.004786 +- 0.001952 |
+| `<C_kk>` | +0.000108 +- 0.000165 | -0.000273 +- 0.000530 | -0.000605 +- 0.000690 | +0.000543 +- 0.001247 |
+| `<cos phi_ll>` | +0.039139 +- 0.000564 | +0.038753 +- 0.001328 | +0.039726 +- 0.001716 | +0.041178 +- 0.003132 |
+| `<Delta phi>` | -0.065226 +- 0.001768 | -0.066889 +- 0.004384 | -0.068263 +- 0.005661 | -0.047423 +- 0.010122 |
+| `<pT(t)>` (null) | +0.04 +- 0.12 | -0.24 +- 0.30 | -0.38 +- 0.39 | +0.40 +- 0.68 |
+
+Every unweighted entry is within one sigma of the fully weighted one on the
+same events (largest pull -0.88, on the `pT(t)` null test). The three
+independent measurements of `<|W|>` the runs realise -- 2.895, 2.928,
+2.771e-11 -- agree to their own 1.6% / 2.1% / 4.0% counting errors, which is
+the same statement one level down.
+
+**The closure.** Against the committed `interference_closure_v2` numbers
+(`RESULTS.md` section 4), for the `nb_sigma = 0` run:
+
+| | closure v2 | closure v1 | this run, unweighted | pull vs v2 | pull vs v1 |
+|---|---|---|---|---|---|
+| `<C_nn>` | +0.03657 +- 0.00059 | +0.03626 +- 0.00090 | **+0.036567 +- 0.000859** | **-0.00** | +0.25 |
+| `<C_rr>` | +0.00104 +- 0.00066 | +0.00247 +- 0.00091 | +0.002458 +- 0.000830 | +1.34 | -0.01 |
+
+**The variance penalty is confirmed at 5.5-6.2x, from the other direction.**
+Same 50 000 production events, ratio of the errors squared, unweighted over
+fully weighted:
+
+| observable | error ratio | variance ratio |
+|---|---|---|
+| `<C_nn>` | 2.35 | **5.5** |
+| `<cos phi_ll>` | 2.35 | **5.5** |
+| `<Delta phi>` | 2.48 | **6.2** |
+| `<C_rr>` | 2.21 | 4.9 |
+
+13.16 measured 5.8 / 5.7 / 6.1 by comparing against a different (5x larger)
+reference; this is a direct like-for-like measurement on identical events and
+it agrees. That is why the default stays `weighted`.
+
+**Unchanged elsewhere.** A run with `pure_interference` unset produces the
+identical 90 368 979-byte file, SHA-256
+`767da240c5221ecc0d7193a3031044b3304a457f909212158728c2ab7f242855`, against
+the base branch and against this one. The fully weighted run's event stream is
+byte-identical too (`event_scale` is `None` there, so
+`_rewrite_lhe_banner_cross` does not touch an event).
+
+`tests/test_manager.py test_madspin -t0`: **325 tests, OK** (291 before this
+work, counting 13.18's).
+
+Caveats:
+
+* only `spinmode = onshell` was exercised for this variant;
+* the normalisation is exact in expectation but `N_file` is itself random, so
+  `w0` carries a `1/sqrt(N_file)` relative error (1.6% at 3764 events). It is
+  a *self-normalisation* error of the ratio estimator, not a bias, and it is
+  small next to the 5.5x variance penalty;
+* an `ms_dir` reused across MadSpin runs gave `branching_ratio = 0` (hence
+  zero weights and a zero reference cross-section) on a card that ran
+  correctly with a fresh `ms_dir`. That is **pre-existing** -- nothing in this
+  work touches the branching-ratio path -- but it was hit while validating and
+  is recorded here.
+
+### 13.18 `decay_output = weighted` -- the same trick for an ordinary run
+
+**Status: implemented and validated end to end.** `set decay_output =
+weighted` drops the accept/reject for an ordinary (non-interference) MadSpin
+run: one decay configuration is drawn per production event and kept, with
+
+    w = w_prod * BR * W / c
+
+exactly the fully weighted path of 13.13, only with `W` unrestricted. Default
+`unweighted`, i.e. every existing card is untouched.
+
+**The normalisation needs nothing new.** `c = <W>` is a decay-side constant --
+that is the 13.7b argument, and it is what makes redraw-until-accept unbiased
+in the first place -- so
+
+    mean(w) = sigma_ref * BR * <W> / c = sigma_ref * BR
+
+MG5 writes `IDWTUP = -4`, under which the cross-section *is* the mean of the
+event weights, so `<init>` keeps its ordinary value and nothing downstream has
+to be told a new rule. That is the whole difference from the interference
+mode, where `<W> = 0` forces `XSECUP = 0`.
+
+It also gives the mode a free self-check with no analogue elsewhere: `mean(w)`
+against `sigma_ref * BR` **is** the statement that `c` was measured right,
+because `mean(w)/(sigma*BR) = <W>/c` by construction. It is the exact
+analogue of the interference mode's `z` test, with the target at 1 instead of
+0, and it is reported in the log and in the `<MGWeightedDecay>` banner block,
+`logger.critical` beyond 5 sigma.
+
+**`c` is available on every path this covers**, from the same probe: it is
+measured in `_joint_maxwgt_range` with the cross restriction swapped for
+`hel_restriction_trace`, and outside the interference mode those two are the
+same object, so the swap is a no-op and what comes out is `<W>` itself. The
+probe is *not* skipped when the option is on -- `max_weight` goes unused, but
+`c` does not, and the probe is the only thing that measures it. (`<|W|>` is
+collected on the same draws and is unused here.)
+
+**Scope: the density spin modes only.** `madspin`/`full`, `PA`, `onshell`.
+`madspin_v1`, `onshell_v1` and `spinmode = none` build no density matrix and
+have no `W`; the option raises `InvalidCmd` there rather than being ignored.
+Under `pure_interference` it warns and steps aside -- that mode is always
+weighted on its own terms and answers to `pure_interference_output`, so the
+two never both apply.
+
+**It forces the joint path**, for the plain reason that there is no
+accept/reject left to stage: the sequential and two-stage schemes exist to
+split a test that is not being made.
+
+**Interactions.** `fixed_order`: the counter-event group already rides along
+through the same `br` multiplication, unchanged -- implemented, not validated,
+exactly as in 13.9. `keep_weight_for_polarization_*`: allowed and still
+meaningful, unlike in the interference mode -- the ratios multiply a nominal
+weight that is now weighted, and the ratio itself is untouched. BR
+equalization: unchanged, and it now shares the banner-rewrite pass with the
+note. `_dead_trial` is **not** on this path: it exists to break a `while 1`
+that no longer runs. In its place, a trial with `W <= 0` or non-finite is
+written with **weight 0** and counted. `W < 0` outside the interference mode
+means `jac <= 0`, i.e. a mass set the production could not be reshuffled onto,
+which the accept/reject would have redrawn; there is no redraw here and the
+event would carry the failed reshuffle's kinematics, so it gets the weight
+that region contributes to the integral (zero) rather than the negative one
+that would make the bookkeeping add up on an unphysical event. Zero such
+trials occurred in the run below.
+
+**End-to-end validation.** `p p > t t~` at 13 TeV, 50 000 production events
+(`iseed = 4321`), `spinmode = onshell`, `BW_cut = 15`,
+`max_weight_ps_point = 400`, `decay t > b w+, w+ > l+ vl` and the conjugate,
+`l = e, mu`, 8 cores -- the same parent file as 13.17, run once with the card
+default and once with `set decay_output weighted`.
+
+| | default | `decay_output = weighted` |
+|---|---|---|
+| scheme taken | `sequential` (`auto`) | `joint` (forced) |
+| decay trials per written event | **4.13** (206 289 / 50 000) | **1** |
+| events written | 50 000 | 50 000 |
+| `<init>` XSECUP | 23.779781 | 23.779781 (unchanged) |
+| `sd(w)/mean(w)` | 0.0000 | 0.2779 |
+| `mean(w)` | 23.779781 | **23.783611 +- 0.029563** |
+| `mean(w)` / `sigma_ref*BR` | 1 | **1.000161 (0.13 sigma)** |
+| `c` measured | -- | 2.251356e-10 +- 0.13% |
+| trials with a dead weight | -- | 0 |
+
+`c` is the same 2.251356e-10 the interference runs of 13.17 measured on the
+same parent, which it has to be: it is the unrestricted convolution's mean
+either way.
+
+**The physics is the same and the variance penalty is small.**
+
+| observable | default | weighted | var ratio | pull |
+|---|---|---|---|---|
+| `<C_nn>` | +0.037409 +- 0.001479 | +0.036763 +- 0.001520 | 1.06 | -0.30 |
+| `<C_rr>` | +0.000651 +- 0.001485 | +0.000982 +- 0.001540 | 1.07 | +0.15 |
+| `<C_kk>` | +0.036655 +- 0.001481 | +0.035017 +- 0.001576 | 1.13 | -0.76 |
+| `<cos phi_ll>` | +0.074716 +- 0.002554 | +0.072762 +- 0.002671 | 1.09 | -0.53 |
+| `<Delta phi>` | +1.749616 +- 0.004042 | +1.748802 +- 0.004232 | 1.10 | -0.14 |
+| `<pT(t)>` | 119.864 +- 0.348 | 120.045 +- 0.367 | 1.11 | +0.36 |
+
+**So: 4.13x fewer decay trials for a 6-13% larger variance per production
+event, i.e. roughly a 3.7-3.9x variance reduction per unit of CPU spent in
+the unweighting loop.**
+
+Note this is a *different*, and much smaller, effect than the interference
+mode's ~6x **per production event** (13.17). There the accept/reject discards
+whole production events, so the weighted output buys statistics outright;
+here the accept/reject redraws and every production event yields an output
+event either way, so the weighted output is strictly noisier per event -- it
+is importance sampling against exact sampling -- and the win is entirely in
+CPU. Which of the two matters depends on whether MadSpin or the parent
+generation is the bottleneck. That is why the default stays `unweighted`.
+
+**Byte-identical with the option off.** The same card without
+`decay_output`, run against the base branch and against this one, produces
+the same 90 368 979-byte file, SHA-256
+`767da240c5221ecc0d7193a3031044b3304a457f909212158728c2ab7f242855`.
+
+`tests/test_manager.py test_madspin -t0`: **325 tests, OK** (291 before this
+work).
+
+**One regression, and what caught it.** Adding this option replaced
+`_unweight_range`'s exit condition `if pure_interference or
+random.random()*maxwgt < test` by a flag that was true only for the paths
+keeping *every* trial. 13.17's 'unweighted' path does not keep every trial --
+but it has already decided, on `|W|`, further up -- so it fell through to the
+signed test and had every negative weight rejected a second time: 356 events
+instead of 3764, z = +18.9. The condition is "no ordinary joint test is made
+below", which is true for all three paths.
+
+The mode's own `z` check did catch it (far past the 5-sigma
+`logger.critical`, a `RuntimeError` under `density_debug`) -- but only after a
+full run. Six tests now drive the real `_unweight_range` through all three
+shapes with the matrix element stubbed out; two of them fail on the bad
+condition.
+
+Caveats, stated rather than glossed:
+
+* only `spinmode = onshell` was exercised end to end; `madspin`/`full` and
+  `PA` go through the same `_unweight_range` and the same `c`, but were not
+  run. `PA` in particular is the one path where the outer reshuffling
+  jacobian is live, i.e. where the `W <= 0` handling above can actually fire,
+  and it has **not** been exercised;
+* `fixed_order` is implemented but unvalidated;
+* **no downstream consumer was checked.** A weighted LHE is not what most
+  tooling expects from MadSpin, and I have not run Pythia8, Delphes or any
+  analysis framework on one of these files. `IDWTUP = -4` with non-constant
+  `XWGTUP` is legal LHEF and Pythia8's reader does take the per-event
+  `XWGTUP`, but I did not verify it, and anything that counts events instead
+  of summing weights will be wrong. The option comment and the banner block
+  both say so;
+* `c` carries a flat scale error on every weight (0.13% here). Unlike the
+  interference mode's `<|W|>`, `c` really is a decay-side constant, so the
+  probe's few production events are enough for it -- and `mean(w)` against
+  `sigma*BR` is the direct measurement of whether that held.

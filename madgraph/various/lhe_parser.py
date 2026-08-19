@@ -3158,7 +3158,7 @@ class Event(list):
         sequential accept/reject that is a failure to *report*: the caller owns
         the retry policy (redraw one decay's mass, or trash the whole set), so
         the resampling recursion inside reshuffle_production must not fire here.
-        See MADSPIN_SEQUENTIAL_PLAN.md.
+        See doc/madspin_sequential_plan.md.
 
         Resonance aware, by construction: it runs the real code on a copy. In a
         production like ``p p > t t~ j`` where an onshell resonance decays into

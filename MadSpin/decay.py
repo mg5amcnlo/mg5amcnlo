@@ -4793,6 +4793,9 @@ class DensityMatrix:
 
         # Per-particle helicity restriction (see set_hel_restriction). None = full sum.
         self.hel_restriction = None
+        # Restriction used by trace()/normalized() when hel_restriction is a
+        # *cross* one (see set_hel_restriction_trace). None = untraced.
+        self.hel_restriction_trace = None
 
         # Lazy per-instance cache
         self._sort_order = None
@@ -4932,6 +4935,7 @@ class DensityMatrix:
 
         obj._basis_id = basis_id
         obj.hel_restriction = None
+        obj.hel_restriction_trace = None
         obj._sort_order = None
 
         # Diagonal mask is cached per basis_id
@@ -4963,6 +4967,14 @@ class DensityMatrix:
     # -------------------------------------------------------------------------
 
     @staticmethod
+    def _is_cross_restriction(entry):
+        """Whether a *normalised* per-particle entry is a cross (interference)
+        one, i.e. a ``(bra_allowed, ket_allowed)`` pair rather than a flat
+        tuple of helicity values."""
+        return (isinstance(entry, tuple) and len(entry) == 2
+                and isinstance(entry[0], tuple))
+
+    @staticmethod
     def normalize_hel_restriction(restriction):
         """Canonical, hashable form of a per-particle helicity restriction.
 
@@ -4971,21 +4983,48 @@ class DensityMatrix:
         columns are laid out). Each entry is either
 
           - ``None`` (or an empty container): that index is summed over its
-            whole basis -- the historical behaviour, and
+            whole basis -- the historical behaviour,
 
-          - a container of the helicity values that index is allowed to take.
+          - a container of the helicity values that index is allowed to take
+            (the *symmetric* form: both the bra and the ket index of that
+            particle must lie in the set), or
+
+          - a pair ``(bra_allowed, ket_allowed)`` of two such containers (the
+            *cross*, or pure-interference, form: see ``set_hel_restriction``).
+            ``(S, S)`` normalises back to the symmetric ``S``.
 
         Returns ``None`` when nothing is restricted, so that the unrestricted
         code paths stay bit-for-bit identical.
         """
         if restriction is None:
             return None
+
+        def _flat(values):
+            return tuple(sorted(set(int(h) for h in values)))
+
         key = []
         for allowed in restriction:
             if allowed is None:
                 key.append(None)
                 continue
-            allowed = tuple(sorted(set(int(h) for h in allowed)))
+            allowed = list(allowed)
+            if allowed and all(isinstance(x, (list, tuple, set, frozenset))
+                               for x in allowed):
+                if len(allowed) != 2:
+                    raise ValueError(
+                        "A cross helicity restriction must be a "
+                        "(bra_allowed, ket_allowed) pair, got %s" % (allowed,))
+                bra, ket = _flat(allowed[0]), _flat(allowed[1])
+                if not bra or not ket:
+                    # an empty side would kill the whole contraction; treat it
+                    # like the unrestricted historical spelling instead
+                    key.append(None)
+                elif bra == ket:
+                    key.append(bra)
+                else:
+                    key.append((bra, ket))
+                continue
+            allowed = _flat(allowed)
             key.append(allowed if allowed else None)
         if all(a is None for a in key):
             return None
@@ -5006,9 +5045,60 @@ class DensityMatrix:
         ``{T}`` keeps the whole ``-1/+1`` block and drops the ``0`` row and
         column. The rule is uniform: a matrix element (i,j) of particle k
         survives iff *both* i and j are allowed for k.
+
+        A per-particle entry may instead be a *cross* pair ``(P, D)``, which
+        keeps the (i,j) entries with ``i in P and j in D`` **together with**
+        their transposes ``i in D and j in P``. With ``P`` and ``D`` disjoint
+        this is the pure-interference block between the two polarisations: it
+        has no diagonal entry, so the restricted ``trace()`` is exactly zero
+        (the interference term carries no cross-section), and it is closed
+        under (i,j) -> (j,i). That closure is what makes the contraction real:
+        rho_prod and rho_dec are both hermitian, so the (j,i) term is the
+        complex conjugate of the (i,j) one and the pair adds up to
+        ``2 Re[rho_prod(i,j) rho_dec(i,j)]``. Summing ``P x D`` *alone* would
+        give a complex number and is not a physical weight -- see
+        doc/madspin_sequential_plan.md section 13.
         """
         self.hel_restriction = DensityMatrix.normalize_hel_restriction(restriction)
         return self
+
+    def set_hel_restriction_trace(self, restriction):
+        """Attach the restriction ``trace()`` / ``normalized()`` must use when
+        ``hel_restriction`` is a *cross* (pure-interference) one.
+
+        For a symmetric restriction the two are the same object and this is
+        never consulted: the polarised cross-section is normalised by the
+        polarised trace, which is exactly the restriction the contraction uses,
+        and that is what keeps the accept/reject weight averaging to 1/n.
+
+        A cross restriction has no diagonal entry, so its restricted trace is
+        identically zero -- it is the statement that the interference term
+        carries no cross-section. Using it to normalise would divide the weight
+        by zero, so the two restrictions have to part company here: the
+        contraction stays on the interference block while the normalisation
+        keeps using the *production* trace, i.e. the symmetric restriction the
+        production process' own braces impose (``None``, the full trace, for the
+        unpolarised production this mode requires). See
+        doc/madspin_sequential_plan.md section 13.4.
+        """
+        self.hel_restriction_trace = \
+            DensityMatrix.normalize_hel_restriction(restriction)
+        return self
+
+    def _trace_restriction(self):
+        """The restriction in force for ``trace()``.
+
+        Symmetric restrictions are returned untouched, so nothing that existed
+        before the interference mode can move; only a cross restriction defers
+        to ``hel_restriction_trace``.
+        """
+        restriction = self.hel_restriction
+        if restriction is None:
+            return None
+        if any(DensityMatrix._is_cross_restriction(entry)
+               for entry in restriction):
+            return self.hel_restriction_trace
+        return restriction
 
     def _restriction_rows(self, restriction):
         """(mask, rows, diag_rows) implementing ``restriction`` on this matrix.
@@ -5038,11 +5128,21 @@ class DensityMatrix:
         for k, allowed in enumerate(restriction):
             if allowed is None:
                 continue
-            allowed = np.asarray(allowed, dtype=np.int32)
             # column 2k is the row (bra) helicity of particle k, 2k+1 the column
             # (ket) one -- see get_map_density_matrix
-            mask &= np.isin(h[:, 2 * k], allowed)
-            mask &= np.isin(h[:, 2 * k + 1], allowed)
+            bra, ket = h[:, 2 * k], h[:, 2 * k + 1]
+            if DensityMatrix._is_cross_restriction(allowed):
+                # pure interference: (bra in P and ket in D) or its transpose.
+                # Keeping both orderings is not optional -- it is what makes the
+                # contraction real (see set_hel_restriction).
+                left = np.asarray(allowed[0], dtype=np.int32)
+                right = np.asarray(allowed[1], dtype=np.int32)
+                mask &= ((np.isin(bra, left) & np.isin(ket, right)) |
+                         (np.isin(bra, right) & np.isin(ket, left)))
+                continue
+            allowed = np.asarray(allowed, dtype=np.int32)
+            mask &= np.isin(bra, allowed)
+            mask &= np.isin(ket, allowed)
 
         out = (mask, np.flatnonzero(mask), np.flatnonzero(self._diag_mask & mask))
         DensityMatrix._restriction_cache[cache_key] = out
@@ -5214,6 +5314,13 @@ class DensityMatrix:
             left = self.hel_restriction or (None,) * self.nchanging
             right = other.hel_restriction or (None,) * other.nchanging
             out.set_hel_restriction(tuple(left) + tuple(right))
+            # the trace restriction is per-index too, and concatenates the same
+            # way; it only differs from the above for a cross restriction
+            if (self.hel_restriction_trace is not None
+                    or other.hel_restriction_trace is not None):
+                left = self.hel_restriction_trace or (None,) * self.nchanging
+                right = other.hel_restriction_trace or (None,) * other.nchanging
+                out.set_hel_restriction_trace(tuple(left) + tuple(right))
         return out
 
     @classmethod
@@ -5226,7 +5333,7 @@ class DensityMatrix:
         parent rest frame, and leaves the diagonal flat. So a particle whose
         decay has not been drawn yet contributes exactly this to the production
         contraction -- which is what lets the accept/reject be done one particle
-        at a time (see MADSPIN_SEQUENTIAL_PLAN.md).
+        at a time (see doc/madspin_sequential_plan.md).
 
         Built through the normal constructor, so it shares the cached helicity
         map with the real density matrices of the same basis and keeps the
@@ -5261,6 +5368,7 @@ class DensityMatrix:
             basis_id=self._basis_id,
         )
         out.hel_restriction = self.hel_restriction
+        out.hel_restriction_trace = self.hel_restriction_trace
         self._normalized_cache = out
         return out
 
@@ -5275,7 +5383,7 @@ class DensityMatrix:
         accept/reject weight averaging to 1/n exactly as in the unrestricted
         case.
         """
-        restriction = self.hel_restriction
+        restriction = self._trace_restriction()
         if hel_restriction is not None:
             restriction = DensityMatrix._combine_restrictions(
                 restriction, DensityMatrix.normalize_hel_restriction(hel_restriction))
