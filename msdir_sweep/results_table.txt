@@ -1,0 +1,68 @@
+| combination                       | exit | out? | init xsec (pb) | BR      | n evt | mean wgt | zero wgt | sec  |
+|-----------------------------------|------|------|----------------|---------|-------|----------|----------|------|
+| PA__import_first__fresh           | 0    | yes  | 5.91077        | 0.01172 | 200   | 5.91077  | 0        | 27.8 |
+| PA__import_first__reuse           | 0    | yes  | 5.91077        | 0.01172 | 200   | 5.91077  | 0        | 12.6 |
+| PA__ms_dir_first__fresh           | 0    | yes  | 5.91077        | 0.01172 | 200   | 5.91077  | 0        | 33.0 |
+| PA__ms_dir_first__reuse           | 0    | yes  | 5.91077        | 0.01172 | 200   | 5.91077  | 0        | 13.4 |
+| PA__noms                          | 0    | yes  | 5.9431         | 0.01178 | 200   | 5.9431   | 0        | 21.6 |
+| full__import_first__fresh         | 0    | yes  | 5.91077        | 0.01172 | 200   | 5.91077  | 0        | 26.3 |
+| full__import_first__reuse         | 0    | yes  | 5.91077        | 0.01172 | 200   | 5.91077  | 0        | 11.4 |
+| full__ms_dir_first__fresh         | 0    | yes  | 5.91077        | 0.01172 | 200   | 5.91077  | 0        | 28.0 |
+| full__ms_dir_first__reuse         | 0    | yes  | 5.91077        | 0.01172 | 200   | 5.91077  | 0        | 11.7 |
+| full__noms                        | 0    | yes  | 5.9431         | 0.01178 | 200   | 5.9431   | 0        | 19.3 |
+| madspin__import_first__fresh      | 0    | yes  | 5.91077        | 0.01172 | 200   | 5.91077  | 0        | 25.2 |
+| madspin__import_first__reuse      | 0    | yes  | 5.91077        | 0.01172 | 200   | 5.91077  | 0        | 11.5 |
+| madspin__ms_dir_first__fresh      | 0    | yes  | 5.91077        | 0.01172 | 200   | 5.91077  | 0        | 26.3 |
+| madspin__ms_dir_first__reuse      | 0    | yes  | 5.91077        | 0.01172 | 200   | 5.91077  | 0        | 11.9 |
+| madspin__noms                     | 0    | yes  | 5.9431         | 0.01178 | 200   | 5.9431   | 0        | 17.6 |
+| madspin__use_old_dir__fresh       | 0    | yes  | 5.9431         | 0.01178 | 200   | 5.9431   | 0        | 20.2 |
+| madspin__use_old_dir__reuse       | 0    | yes  | 5.9431         | 0.01178 | 200   | 5.9431   | 0        | 18.2 |
+| madspin_v1__import_first__fresh   | 0    | yes  | 6.22959        | 0.01235 | 200   | 6.22959  | 0        | 12.6 |
+| madspin_v1__import_first__reuse   | 0    | yes  | 6.22959        | 0.01235 | 200   | 6.22959  | 0        | 0.7  |
+| madspin_v1__ms_dir_first__fresh   | 0    | yes  | 6.22959        | 0.01235 | 200   | 6.22959  | 0        | 11.1 |
+| madspin_v1__ms_dir_first__reuse   | 0    | yes  | 6.22959        | 0.01235 | 200   | 6.22959  | 0        | 0.7  |
+| madspin_v1__noms                  | 0    | yes  | 6.22959        | 0.01235 | 200   | 6.22959  | 0        | 14.5 |
+| madspin_v1__use_old_dir__fresh    | 0    | yes  | 6.22959        | 0.01235 | 200   | 6.22959  | 0        | 10.8 |
+| madspin_v1__use_old_dir__reuse    | 0    | yes  | 6.22959        | 0.01235 | 200   | 6.22959  | 0        | 9.7  |
+| none__import_first__fresh         | 0    | yes  | 5.94052        | 0.01177 | 200   | 5.94052  | 0        | 26.9 |
+| none__import_first__reuse         | 0    | yes  | 5.97103        | 0.01184 | 200   | 5.97103  | 0        | 1.7  |
+| none__ms_dir_first__fresh         | 0    | yes  | 5.94052        | 0.01177 | 200   | 5.94052  | 0        | 21.8 |
+| none__ms_dir_first__reuse         | 0    | yes  | 5.97103        | 0.01184 | 200   | 5.97103  | 0        | 1.4  |
+| none__noms                        | 0    | yes  | 5.95742        | 0.01181 | 200   | 5.95742  | 0        | 17.7 |
+| none__reuse_seed101               | 0    | yes  | 5.93681        | 0.01177 | 200   | 5.93681  | 0        | 1.3  |
+| none__reuse_seed33                | 0    | yes  | 5.97103        | 0.01184 | 200   | 5.97103  | 0        | 1.4  |
+| none__reuse_seed4242              | 0    | yes  | 6.01823        | 0.01193 | 200   | 6.01823  | 0        | 1.3  |
+| none__reuse_seed77                | 0    | yes  | 5.98015        | 0.01185 | 200   | 5.98015  | 0        | 1.5  |
+| onshell__import_first__fresh      | 0    | yes  | 5.91077        | 0.01172 | 200   | 5.91077  | 0        | 28.4 |
+| onshell__import_first__reuse      | 0    | yes  | 5.91077        | 0.01172 | 200   | 5.91077  | 0        | 11.8 |
+| onshell__ms_dir_first__fresh      | 0    | yes  | 5.91077        | 0.01172 | 200   | 5.91077  | 0        | 27.2 |
+| onshell__ms_dir_first__reuse      | 0    | yes  | 5.91077        | 0.01172 | 200   | 5.91077  | 0        | 13.1 |
+| onshell__noms                     | 0    | yes  | 5.9431         | 0.01178 | 200   | 5.9431   | 0        | 22.0 |
+| onshell_v1__import_first__fresh   | 0    | yes  | 5.91077        | 0.01172 | 200   | 5.91077  | 0        | 30.2 |
+| onshell_v1__import_first__reuse   | 0    | yes  | 5.91077        | 0.01172 | 200   | 5.91077  | 0        | 7.9  |
+| onshell_v1__ms_dir_first__fresh   | 0    | yes  | 5.91077        | 0.01172 | 200   | 5.91077  | 0        | 29.8 |
+| onshell_v1__ms_dir_first__reuse   | 0    | yes  | 5.91077        | 0.01172 | 200   | 5.91077  | 0        | 8.3  |
+| onshell_v1__noms                  | 0    | yes  | 5.9431         | 0.01178 | 200   | 5.9431   | 0        | 16.0 |
+| xmode__PA_reusing_onshell         | 0    | yes  | 5.91077        | 0.01172 | 200   | 5.91077  | 0        | 12.0 |
+| xmode__built_by_onshell           | 0    | yes  | 5.91077        | 0.01172 | 200   | 5.91077  | 0        | 25.5 |
+| xmode__madspin_reusing_onshell    | 0    | yes  | 5.91077        | 0.01172 | 200   | 5.91077  | 0        | 12.0 |
+| xmode__madspin_v1_reusing_onshell | 0    | yes  | 6.22959        | 0.01235 | 200   | 6.22959  | 0        | 11.9 |
+| xmode__none_reusing_onshell       | 0    | yes  | 5.96919        | 0.01183 | 200   | 5.96919  | 0        | 1.7  |
+
+fresh vs reuse (identical numbers = the #364 check):
+  PA__import_first                              SAME   fresh=5.91077 reuse=5.91077
+  PA__ms_dir_first                              SAME   fresh=5.91077 reuse=5.91077
+  full__import_first                            SAME   fresh=5.91077 reuse=5.91077
+  full__ms_dir_first                            SAME   fresh=5.91077 reuse=5.91077
+  madspin__import_first                         SAME   fresh=5.91077 reuse=5.91077
+  madspin__ms_dir_first                         SAME   fresh=5.91077 reuse=5.91077
+  madspin__use_old_dir                          SAME   fresh=5.9431 reuse=5.9431
+  madspin_v1__import_first                      SAME   fresh=6.22959 reuse=6.22959
+  madspin_v1__ms_dir_first                      SAME   fresh=6.22959 reuse=6.22959
+  madspin_v1__use_old_dir                       SAME   fresh=6.22959 reuse=6.22959
+  none__import_first                            DIFFERENT   fresh=5.94052 reuse=5.97103
+  none__ms_dir_first                            DIFFERENT   fresh=5.94052 reuse=5.97103
+  onshell__import_first                         SAME   fresh=5.91077 reuse=5.91077
+  onshell__ms_dir_first                         SAME   fresh=5.91077 reuse=5.91077
+  onshell_v1__import_first                      SAME   fresh=5.91077 reuse=5.91077
+  onshell_v1__ms_dir_first                      SAME   fresh=5.91077 reuse=5.91077
