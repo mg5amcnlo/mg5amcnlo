@@ -433,6 +433,13 @@ has no assignment factor in it, agreeing to 9e-4.
 
 ### 7.3 PA, and `sequential_decay`
 
+> **Names, since this was written.** `sequential_decay` was replaced by
+> `unweighting` and then removed outright (see `madspin_sequential_plan.md`
+> 11 and 13.19). Read `sequential_decay True` below as `unweighting
+> sequential` and `sequential_decay False` as `unweighting joint`; the log
+> line now ends `(unweighting ignored)`. The runs recorded here were made with
+> the old spelling and are left as they were.
+
 Grouping forces the joint accept/reject (section 4.1), so both need checking:
 that the fallback happens, and that it costs nothing but efficiency.
 

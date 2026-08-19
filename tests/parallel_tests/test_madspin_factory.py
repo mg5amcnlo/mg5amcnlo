@@ -94,13 +94,13 @@ MULTICORE_NB = int(os.environ.get('MADSPIN_TEST_NB_CORE', '8'))
 # (400) alone unless explicitly overridden -- the CI tests want trustworthy
 # unweighting.
 _MAX_WEIGHT_PS_POINT = os.environ.get('MADSPIN_MAX_WEIGHT_PS_POINT', '')
-EXTRA_MADSPIN_SETTINGS = {'sequential_decay': False}
+EXTRA_MADSPIN_SETTINGS = {'unweighting': 'joint'}
 if _MAX_WEIGHT_PS_POINT:
     EXTRA_MADSPIN_SETTINGS['max_weight_ps_point'] = _MAX_WEIGHT_PS_POINT
 
 # The unweighting tests below drive ``unweighting`` directly, so they must not
-# inherit the deprecated ``sequential_decay`` alias above -- it resolves to a
-# mode of its own and would fight the per-run setting.
+# inherit the ``unweighting = joint`` above -- it would fight the per-run
+# setting.
 UNWEIGHTING_BASE_SETTINGS = {'nb_core': 1}
 if _MAX_WEIGHT_PS_POINT:
     UNWEIGHTING_BASE_SETTINGS['max_weight_ps_point'] = _MAX_WEIGHT_PS_POINT
