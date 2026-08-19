@@ -1089,10 +1089,13 @@ longer spanned a clean 2x2:
     sequential               yes          per particle            that particle
     sequential_global_retry  yes          per particle            the virtualities too
 
-`sequential_decay` survives as a deprecated alias (`True` -> sequential,
-`False` -> joint, warning once), so cards written against the earlier revisions
-of this branch keep working. `sequential_spin_order` and `sequential_debug` keep
-their names: an ordering and a check, not modes.
+`sequential_decay` survived for a while as a deprecated alias (`True` ->
+sequential, `False` -> joint, warning once), so cards written against the
+earlier revisions of this branch kept working. **It has since been removed
+outright** -- see 13.19; nothing on this branch has been in a release, so there
+are no cards in the wild to protect, and it was a load-time translation with no
+run-time reader. Use `unweighting` directly. `sequential_spin_order` and
+`sequential_debug` keep their names: an ordering and a check, not modes.
 
 **`sequential_exact` was renamed, not kept.** "Exact" advertised a distinction of
 ~0.001 GeV on the top lineshape -- the tabulated factor is good to ~0.5%, and the

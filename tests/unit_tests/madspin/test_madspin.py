@@ -3315,7 +3315,6 @@ class TestKeepWeightForPolarization(unittest.TestCase):
         options = interface_madspin.MadSpinOptions()
         self.assertEqual(options['keep_weight_for_polarization_vector'], [])
         self.assertEqual(options['keep_weight_for_polarization_fermion'], [])
-        self.assertEqual(options['keep_weight_for_polarization'], [])
 
         stub = self._Stub()
         self.assertFalse(stub._polarization_weights_enabled())
@@ -3358,8 +3357,6 @@ class TestKeepWeightForPolarization(unittest.TestCase):
                           'keep_weight_for_polarization_vector', '[0, A]')
         self.assertRaises(banner.InvalidCmd, options.__setitem__,
                           'keep_weight_for_polarization_fermion', '[+, A]')
-        self.assertRaises(banner.InvalidCmd, options.__setitem__,
-                          'keep_weight_for_polarization', '[0, A]')
 
     def test_needs_frame_axis_covers_the_three_projections(self):
         """A helicity *projection* does not commute with a boost, so it only
@@ -3408,18 +3405,18 @@ class TestKeepWeightForPolarization(unittest.TestCase):
         self.assertEqual(options['keep_weight_for_polarization_vector'],
                          ['0', 'T'])
 
-    def test_deprecated_option_sets_both_lists(self):
-        """The old spelling is accepted, canonicalised and mapped onto both
-        species -- the name has been in a released PR, and silently ignoring it
-        would change the output of an existing card without saying so."""
+    def test_the_same_list_on_both_species_drops_the_unphysical_entry(self):
+        """A card that gives both species the same list is legal and each side
+        is canonicalised on its own; the '0' is then unphysical for a fermion
+        slot and is dropped when the combinations are built, so it does not emit
+        a duplicate column."""
         options = interface_madspin.MadSpinOptions()
-        options['keep_weight_for_polarization'] = '[0, R, -]'
+        options['keep_weight_for_polarization_vector'] = '[0, R, -]'
+        options['keep_weight_for_polarization_fermion'] = '[0, R, -]'
         self.assertEqual(options['keep_weight_for_polarization_vector'],
                          ['0', '+', '-'])
         self.assertEqual(options['keep_weight_for_polarization_fermion'],
                          ['0', '+', '-'])
-        # ... and the '0' it puts on the fermions is dropped when the
-        # combinations are built, so the alias does not emit a duplicate column
         stub = self._Stub(vector=['0', '+', '-'], fermion=['0', '+', '-'])
         self.assertEqual(
             [wid for wid, _ in stub._polarization_combinations(
@@ -4854,16 +4851,13 @@ class TestSequentialPoolLadder(unittest.TestCase):
             options['unweighting'] = value
             self.assertEqual(options['unweighting'], value)
 
-    def test_deprecated_sequential_decay_alias(self):
-        """sequential_decay is gone as a knob but still understood: the two
-        values it ever had map onto the two modes that existed then."""
+    def test_the_replaced_spellings_no_longer_exist(self):
+        """``sequential_decay`` and the singular
+        ``keep_weight_for_polarization`` were deprecated aliases that only ever
+        translated at load time; they are gone rather than silently accepted."""
         options = interface_madspin.MadSpinOptions()
-        options['sequential_decay'] = 'True'
-        self.assertEqual(options['unweighting'], 'sequential')
-        options['sequential_decay'] = 'False'
-        self.assertEqual(options['unweighting'], 'joint')
-        options['sequential_decay'] = 'auto'
-        self.assertEqual(options['unweighting'], 'auto')
+        self.assertNotIn('sequential_decay', options)
+        self.assertNotIn('keep_weight_for_polarization', options)
 
 
 class TestScanMaxwgtDecomposition(unittest.TestCase):

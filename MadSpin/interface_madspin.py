@@ -53,7 +53,7 @@ logger_stderr = logging.getLogger('decay.stderr') # ->stderr
 cmd_logger = logging.getLogger('cmdprint2') # -> print
 
 # ---------------------------------------------------------------------------
-# Polarisation labels accepted by keep_weight_for_polarization
+# Polarisation labels accepted by keep_weight_for_polarization_*
 # ---------------------------------------------------------------------------
 # Same spelling and same meaning as MG5's polarisation braces:
 #   {L} -> [-1], {R}/{+} -> [1], {T} -> [-1,1], {0} -> [0]
@@ -70,8 +70,9 @@ POLARIZATION_ALIASES = {
 
 
 def parse_polarization_label(label):
-    """(canonical label, helicity values) for one keep_weight_for_polarization
-    entry, or None if it is not one of 0/+/-/T (L and R aliasing - and +)."""
+    """(canonical label, helicity values) for one
+    keep_weight_for_polarization_vector/_fermion entry, or None if it is not
+    one of 0/+/-/T (L and R aliasing - and +)."""
     key = str(label).strip().lower()
     if key.startswith('{') and key.endswith('}'):
         key = key[1:-1].strip()
@@ -323,14 +324,6 @@ class MadSpinOptions(banner.ConfigFile):
                        "offered to each decaying SPIN-1/2 particle. '0' is unphysical "
                        "for a fermion and is dropped from its choices; 'T' is its full "
                        "helicity basis, i.e. that particle summed over.")
-        self.add_param('keep_weight_for_polarization', [], typelist=str,
-                       comment="DEPRECATED spelling of the two options above: it sets "
-                       "both keep_weight_for_polarization_vector and "
-                       "keep_weight_for_polarization_fermion to the same list. Note "
-                       "that the meaning changed: the entries are no longer applied to "
-                       "every decaying particle at once, they are combined, so the "
-                       "number of extra weights is now the product over the decaying "
-                       "particles instead of the length of the list.")
         self.add_param('density_debug', False, comment='Turn on check against full ME calculation')
         self.add_param('density_tolerance', 1E-4, comment='Tolerance for deviation between density and full ME')
         self.add_param('decay_event_mult', 1E0, comment='Produce more events than needed so that MadSpin does not have to regenerate decay events')
@@ -347,9 +340,6 @@ class MadSpinOptions(banner.ConfigFile):
                        "sequential_with_mass: one test per decaying particle with that particle's virtuality drawn *inside* its own accept/reject, so nothing is ever frozen and no stage has a conditional normalisation to divide out. Needs a per-particle mass draw, i.e. the PA spinmode; elsewhere it falls back to sequential. "
                        "sequential and sequential_global_retry unweight the set of virtualities first; the former then needs a tabulated running-width factor, measured during the max-weight scan to ~0.5%, which is far inside the pole approximation these modes already assume; sequential_global_retry does without it at 2-3x the cost, and is meant as a cross-check rather than a default. "
                        "auto: sequential under PA/onshell, where it was the fastest scheme at every decay multiplicity measured; offshell joint up to two decaying particles and sequential from three, since offshell every mass set costs a production reshuffle and a production density and below three decays there are not enough of them to save to pay for it; but sequential at every multiplicity when the production process carries a polarisation brace, since restricting the convolution to a polarisation subspace peaks the joint weight far below the single bound the joint test has -- measured on `p p > t t~` with both tops decayed, 112 trials per accepted event under joint for `t{+}t~{+}` and 162 for `t{+}t~{-}` against 9.1 and 8.4 under sequential, where unpolarised joint takes 3.3 (and at 50000 events, where the max-weight bound is looser still, the polarised joint columns were 204-213 and 5800-6300). An explicit 'set unweighting joint' is still honoured.")
-        self.add_param('sequential_decay', 'auto',
-                       comment='DEPRECATED, use unweighting: True maps to sequential, False to joint.')
-        self.auto_set.add('sequential_decay')
         self.add_param('sequential_spin_order', '2 3 1', comment='spin order (MG5 2S+1 convention) deciding which particle is accept/rejected first in the sequential unweighting modes: default fermions, then vectors, then scalars (which can never be rejected).')
         self.add_param('sequential_debug', False, comment='the up-front-mass unweighting schemes (sequential, sequential_global_retry): on every accepted chain, recompute the joint weight for the same production event, virtualities and decays and check that the product of the stage weights reproduces it (times the number of helicity states). Deterministic check of the decomposition itself -- the tabulated factor cancels out of it -- at roughly the cost of a joint trial per event. Debugging only.')
 
@@ -446,28 +436,6 @@ class MadSpinOptions(banner.ConfigFile):
         if canonical != list(value):
             dict.__setitem__(self, name, canonical)
 
-    def post_set_keep_weight_for_polarization(self, value, change_userdefine,
-                                              raiseerror, *opts):
-        """Deprecated alias for the two per-species options. The list is handed
-        to both of them; the entries a species has no use for are dropped when
-        the combinations are built ('0' on a fermion), so the old spelling keeps
-        meaning something -- but it now produces the *product* over the decaying
-        particles rather than one weight per entry, which is a different (and
-        much larger) set of weights, so the warning is worth its noise."""
-        if not value:
-            return
-        canonical = self._canonical_polarization_list(
-            'keep_weight_for_polarization', value)
-        logger.warning(
-            "MadSpin: 'keep_weight_for_polarization' is deprecated; use "
-            "'set keep_weight_for_polarization_vector %s' and "
-            "'set keep_weight_for_polarization_fermion %s'. Note that the "
-            "weights are now one per COMBINATION of the per-particle "
-            "polarisations, not one per entry.", canonical, canonical)
-        dict.__setitem__(self, 'keep_weight_for_polarization', canonical)
-        self['keep_weight_for_polarization_vector'] = list(canonical)
-        self['keep_weight_for_polarization_fermion'] = list(canonical)
-
     def beampol_me(self):
         """The beam polarisations in the convention the matrix elements use.
 
@@ -487,20 +455,6 @@ class MadSpinOptions(banner.ConfigFile):
             out.append(1. if not value
                        else math.copysign(1 + abs(value) / 100., value))
         return tuple(out)
-
-    def post_set_sequential_decay(self, value, change_userdefine, raiseerror, *opts):
-        """Deprecated alias for 'unweighting'. True/False were the only values
-        it ever had beyond 'auto', so they map onto the two modes that existed
-        then."""
-        if value in ('auto', None):
-            mode = 'auto'
-        elif value in (True, 'True', 'true', 1, '1'):
-            mode = 'sequential'
-        else:
-            mode = 'joint'
-        logger.warning("MadSpin: 'sequential_decay' is deprecated; "
-                       "use 'set unweighting %s'", mode)
-        self['unweighting'] = mode
 
     ############################################################################        
     def post_set_run_card(self, value, change_userdefine, raiseerror, *opts):
@@ -7366,9 +7320,10 @@ class MadSpinInterface(extended_cmd.Cmd):
     #    ('0' alone on a fermion).
     #
     # A label that is unphysical for a slot is dropped from that slot's choices
-    # rather than silently left unrestricted, so the deprecated
-    # 'keep_weight_for_polarization = [0, T, +, -]' does not emit a '0' and a 'T'
-    # copy of the same fermion weight.
+    # rather than silently left unrestricted, so a card that gives both species
+    # the same list -- 'keep_weight_for_polarization_vector = [0, T, +, -]' and
+    # the same for _fermion -- does not emit a '0' and a 'T' copy of the same
+    # fermion weight.
     #
     # Production braces (PR #349, #353)
     # ---------------------------------
