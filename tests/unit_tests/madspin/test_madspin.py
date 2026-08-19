@@ -5904,3 +5904,259 @@ class TestReusedMsDirBranchingRatio(unittest.TestCase):
         self.assertIn('_check_branching_ratio(br', source)
         self.assertLess(source.index('_check_branching_ratio(br'),
                         source.index('self.branching_ratio = br'))
+
+
+
+class TestDensityContractionIsReal(unittest.TestCase):
+    """The accept/reject weight of the density spin modes is a *real* number,
+    and the code now says so.
+
+    Background. Every weight is built from ``rho_dec . rho_prod``, a sum over
+    the packed (h1,h2) index set of products of complex64 entries. That sum is
+    real by construction -- the index set is closed under (h1,h2) -> (h2,h1),
+    both matrices are hermitian, so each term appears together with its own
+    complex conjugate -- and what survives it is float32 rounding. Measured on
+    `p p > t t~` with both tops decayed (53655 contractions, joint unweighting):
+    24% of them had a non-zero imaginary part, and the largest |Im|/|Re| was
+    1.5e-7, i.e. float32 epsilon.
+
+    The weight that reached the accept/reject was nevertheless a *complex*
+    scalar with an exactly zero imaginary part, because the propagator
+    denominator was built as ``complex(0, m*Gamma) * conj(...)`` -- a real
+    number written in complex form -- and that type rode through the division.
+    ``math.isfinite`` in ``_dead_trial`` then coerced it back and emitted
+    "ComplexWarning: Casting complex values to real discards the imaginary
+    part" on every run of every density mode using the joint scheme.
+    """
+
+    # ---------------- the reality check itself ----------------
+
+    def test_a_negligible_imaginary_part_passes_through_as_the_real_part(self):
+        """The physical case: rounding residue of an exact cancellation. The
+        real part comes back unchanged and nothing is reported."""
+        import numpy as np
+        value = np.complex64(complex(43065.3125, -0.00048828125))  # measured
+        with _CaptureCritical() as reported:
+            got = interface_madspin.ms_density_real(value, 'a contraction')
+        self.assertEqual(got, value.real)
+        self.assertFalse(hasattr(got, 'imag') and got.imag)
+        self.assertEqual(reported.messages, [])
+
+    def test_an_exactly_real_value_passes_through(self):
+        with _CaptureCritical() as reported:
+            self.assertEqual(
+                interface_madspin.ms_density_real(complex(2.5, 0.0), 'x'), 2.5)
+        self.assertEqual(reported.messages, [])
+
+    def test_a_plain_float_is_returned_unchanged(self):
+        """The helper has to be safe on the paths whose weight is already real
+        (the sequential stages take their own ``.real``)."""
+        import numpy as np
+        with _CaptureCritical() as reported:
+            self.assertEqual(interface_madspin.ms_density_real(1.25, 'x'), 1.25)
+            self.assertEqual(
+                interface_madspin.ms_density_real(np.float32(0.5), 'x'), 0.5)
+        self.assertEqual(reported.messages, [])
+
+    def test_a_large_imaginary_part_is_reported_loudly(self):
+        """The part that must not be silent. A contraction with a real
+        imaginary part means a non-hermitian density matrix or two sides in
+        different helicity bases -- a bug, not a tolerance to widen."""
+        with _CaptureCritical() as reported:
+            got = interface_madspin.ms_density_real(complex(1.0, 0.5),
+                                                    'the test contraction')
+        self.assertEqual(got, 1.0)
+        self.assertEqual(len(reported.messages), 1)
+        msg = reported.messages[0]
+        self.assertIn('imaginary part', msg)
+        self.assertIn('the test contraction', msg)
+        self.assertIn('real by construction', msg)
+
+    def test_a_reported_imaginary_part_does_not_abort_the_run(self):
+        """Reported, not raised: the run still produces events (they are just
+        not to be trusted), which is what the weight-identity and
+        ``density_debug`` checks in this file do as well."""
+        with _CaptureCritical():
+            interface_madspin.ms_density_real(complex(1.0, 1.0), 'no-raise')
+
+    def test_a_vanishing_real_part_with_an_imaginary_one_is_reported(self):
+        """No ZeroDivisionError on the way to the message: a zero weight is
+        exactly the state the dead-trial guards are watching for, so this path
+        has to survive it."""
+        with _CaptureCritical() as reported:
+            got = interface_madspin.ms_density_real(complex(0.0, 1e-30), 'z')
+        self.assertEqual(got, 0.0)
+        self.assertEqual(len(reported.messages), 1)
+
+    def test_the_tolerance_leaves_room_over_float32_rounding(self):
+        """The measured worst case was 1.5e-7 (float32 epsilon). The bound has
+        to sit far above that and far below anything that means something."""
+        self.assertGreater(interface_madspin.MS_DENSITY_IMAG_TOL, 1e-5)
+        self.assertLess(interface_madspin.MS_DENSITY_IMAG_TOL, 1e-1)
+        with _CaptureCritical() as reported:
+            for exponent in range(7, 12):
+                interface_madspin.ms_density_real(complex(1.0, 10.0 ** -exponent),
+                                                  'tol %d' % exponent)
+        self.assertEqual(reported.messages, [])
+
+    def test_each_site_is_reported_once(self):
+        """A broken basis repeats on every trial of every event; one line, not
+        millions."""
+        with _CaptureCritical() as reported:
+            for _ in range(50):
+                interface_madspin.ms_density_real(complex(1.0, 1.0), 'one site')
+        self.assertEqual(len(reported.messages), 1)
+
+    # ---------------- the propagator denominator ----------------
+
+    def test_the_real_propagator_denominator_is_bit_identical(self):
+        """``prod_denominators`` used to be accumulated as
+        ``complex(0, m*Gamma) * conj(complex(0, m*Gamma))``: the value |D|^2 of
+        a real number written in complex form. Replacing it by ``mw * mw`` is
+        what makes the weight real, and it is only a legitimate replacement if
+        it changes no bit of any weight -- which is why the decayed output of a
+        real run is byte-identical across the change. Pin that.
+
+        ``mw ** 2`` is NOT the same thing: pow() re-rounds and differs from the
+        product in the last bit for roughly one value in 700, which would move
+        weights and so move the accepted events."""
+        import struct
+        bits = lambda x: struct.pack('<d', x)
+        differs_under_pow = 0
+        values = [173.0 * 1.5, 80.379 * 2.085, 91.1876 * 2.4952,
+                  1e-30, 1e12, 4.7, 0.0, 1.0]
+        import random as _random
+        random_ = _random.Random(20250819)
+        values += [random_.uniform(1e-12, 1e6) for _ in range(20000)]
+        for mw in values:
+            old = (complex(0, mw) * complex(0, mw).conjugate())
+            self.assertEqual(old.imag, 0.0)
+            self.assertEqual(bits(old.real), bits(mw * mw))
+            if bits(old.real) != bits(mw ** 2):
+                differs_under_pow += 1
+        self.assertGreater(differs_under_pow, 0,
+                           'if pow() ever becomes exact here the comment above '
+                           'is stale, but mw*mw stays the safe spelling')
+
+    def test_the_denominator_is_no_longer_built_as_a_complex(self):
+        """The single ``complex(...)`` construction in the density weight was
+        the only reason it was ever complex; keep it gone."""
+        source = inspect.getsource(
+            interface_madspin.MadSpinInterface.calculate_matrix_element_from_density)
+        self.assertNotIn('complex(0,', source.replace(' ', ''))
+        self.assertIn('mw * mw', source)
+        self.assertIn('ms_density_real(me', source)
+
+    # ---------------- what _dead_trial accepts ----------------
+
+    def _dead_trial_stub(self):
+        interface = interface_madspin.MadSpinInterface
+        class Stub(object):
+            _dead_trial = interface._dead_trial
+            _raise_degenerate_weight = interface._raise_degenerate_weight
+        return Stub()
+
+    def test_dead_trial_verdicts_are_unchanged_by_the_weight_becoming_real(self):
+        """The invariant the fix must not disturb: exactly the weights that
+        reset the counter before still reset it, and exactly those that were
+        counted as dead still are -- whether they arrive as a python float, as
+        the numpy real scalar the density path now produces, or as the numpy
+        complex scalar with a negligible imaginary part it used to produce."""
+        import numpy as np
+        import warnings
+        stub = self._dead_trial_stub()
+        alive = [1.0, 1e-12, 1e30, 3.5]
+        dead = [0.0, -0.0, -1.0, float('nan'), float('inf'), -float('inf')]
+        # the complex entries below coerce on purpose; that they do is the
+        # subject of the two tests underneath, not noise this one has to print
+        cm = warnings.catch_warnings()
+        cm.__enter__()
+        self.addCleanup(cm.__exit__, None, None, None)
+        warnings.simplefilter('ignore')
+        for value in alive:
+            for wgt in (value, np.float32(value), np.float64(value),
+                        np.complex64(complex(value, 0.0)),
+                        np.complex64(complex(value, 1e-9 * value))):
+                self.assertEqual(stub._dead_trial(17, wgt, 'x'), 0,
+                                 'a positive weight must reset: %r' % (wgt,))
+        for value in dead:
+            for wgt in (value, np.float32(value), np.float64(value),
+                        np.complex64(complex(value, 0.0))):
+                self.assertEqual(stub._dead_trial(0, wgt, 'x'), 1,
+                                 'a dead weight must count: %r' % (wgt,))
+
+    def test_a_python_complex_weight_would_be_counted_as_dead(self):
+        """A sharp edge worth knowing about rather than discovering. A *numpy*
+        complex scalar defines ``__float__`` and so survives ``math.isfinite``
+        (with the ComplexWarning); a plain python ``complex`` does not, the
+        ``except TypeError`` branch takes over, and the trial is scored dead --
+        which after MS_MAX_DEAD_TRIALS in a row would abort a healthy run.
+
+        It is unreachable today, and the fix makes it more so: the weight is
+        built from numpy scalars, so a python complex never wins the mixed
+        arithmetic. Pinned so that a future change which does hand one over is
+        seen for what it is instead of surfacing as a mystery
+        MadSpinDegenerateWeight."""
+        stub = self._dead_trial_stub()
+        self.assertEqual(stub._dead_trial(17, complex(1.0, 0.0), 'x'), 18)
+
+    def test_dead_trial_does_not_coerce_the_weights_the_code_now_produces(self):
+        """The warning the user saw, pinned from the other side: the real
+        scalars the density path hands over must reach ``math.isfinite``
+        without any complex-to-real cast at all."""
+        import warnings
+        import numpy as np
+        stub = self._dead_trial_stub()
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter('always')
+            for wgt in (1.0, np.float32(2.5), np.float64(0.0), -1.0):
+                stub._dead_trial(0, wgt, 'x')
+        self.assertEqual([w for w in caught
+                          if 'ComplexWarning' in w.category.__name__], [])
+
+    def test_dead_trial_still_reports_a_complex_weight_rather_than_hiding_it(self):
+        """``math.isfinite`` was kept on purpose over ``numpy.isfinite`` or an
+        explicit ``.real``: if a complex weight is ever reintroduced upstream,
+        this is the line that says so."""
+        import warnings
+        import numpy as np
+        stub = self._dead_trial_stub()
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter('always')
+            stub._dead_trial(0, np.complex64(complex(1.0, 0.0)), 'x')
+        self.assertTrue([w for w in caught
+                         if 'ComplexWarning' in w.category.__name__],
+                        'a complex weight must not pass in silence')
+        source = inspect.getsource(interface_madspin.MadSpinInterface._dead_trial)
+        self.assertIn('math.isfinite(wgt)', source)
+
+
+class _CaptureCritical(object):
+    """Collect the CRITICAL records ``ms_density_real`` emits, and reset its
+    once-per-site memory so the tests do not shadow one another."""
+
+    def __enter__(self):
+        import logging
+        self.messages = []
+        capture = self
+
+        class _Handler(logging.Handler):
+            def emit(self, record):
+                capture.messages.append(record.getMessage())
+
+        interface_madspin._MS_IMAG_REPORTED.clear()
+        self._handler = _Handler(level=logging.CRITICAL)
+        self._logger = interface_madspin.logger
+        self._level = self._logger.level
+        self._propagate = self._logger.propagate
+        self._logger.addHandler(self._handler)
+        self._logger.setLevel(logging.CRITICAL)
+        self._logger.propagate = False
+        return self
+
+    def __exit__(self, *args):
+        self._logger.removeHandler(self._handler)
+        self._logger.setLevel(self._level)
+        self._logger.propagate = self._propagate
+        interface_madspin._MS_IMAG_REPORTED.clear()
+        return False

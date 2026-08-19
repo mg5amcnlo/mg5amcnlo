@@ -148,6 +148,61 @@ class MadSpinZeroBranchingRatio(madspin.MadSpinError):
 # positive weights, which do not count) is nil.
 MS_MAX_DEAD_TRIALS = 20000
 
+# How large the imaginary part of a density contraction may be, relative to its
+# real part, before it is reported. The contraction is real *by construction*
+# (see ms_density_real), so anything above float32 rounding is a bug and not a
+# tolerance to be widened: the density matrices are complex64, the packed index
+# set is closed under (h1,h2) -> (h2,h1), and the imaginary parts of the two
+# members of each pair are computed by the same operations in the opposite
+# order, so what survives the sum is the residue of an exact cancellation. On
+# `p p > t t~` with both tops decayed (53655 contractions) the largest ratio
+# measured was 1.5e-7, i.e. exactly float32 epsilon; 1e-3 leaves four orders of
+# margin over that and still catches an imaginary part that means anything.
+MS_DENSITY_IMAG_TOL = 1e-3
+
+# Reported once per site: a violation is a property of the setup (a non-hermitian
+# density matrix, a helicity basis mismatched between the two sides of the
+# contraction), so it repeats on every trial of every event once it happens.
+_MS_IMAG_REPORTED = set()
+
+
+def ms_density_real(value, what):
+    """The real part of a spin-density contraction, with its reality checked.
+
+    Contracting two hermitian density matrices over an index set closed under
+    (h1,h2) -> (h2,h1) -- which is what ``DensityMatrix`` stores, and what a
+    polarisation restriction preserves, since it masks the bra *and* the ket
+    helicity with the same set -- pairs every term with its own complex
+    conjugate. The sum is therefore real by construction, and what is discarded
+    here is float32 rounding, not physics.
+
+    That argument is only as good as its premises, so it is checked rather than
+    assumed: an imaginary part above ``MS_DENSITY_IMAG_TOL`` of the real part
+    means one of the two matrices is not hermitian, or the two are not in the
+    same helicity basis, and the number this returns is then not the matrix
+    element. Reported at CRITICAL (once per site) rather than raised, following
+    the weight-identity and ``density_debug`` checks: the run does produce
+    events, they are just not to be trusted, and silently dropping the evidence
+    is the one thing that must not happen.
+    """
+    imag = getattr(value, 'imag', None)
+    if imag is None:
+        return value              # not a number with a real/imaginary split
+    real = value.real             # a float/np.float32 keeps its own value here
+    if abs(imag) > MS_DENSITY_IMAG_TOL * abs(real) and what not in _MS_IMAG_REPORTED:
+        _MS_IMAG_REPORTED.add(what)
+        logger.critical(
+            "MadSpin: %s came out with a significant imaginary part "
+            "(%.6g + %.6gj, |Im|/|Re| = %.3g > %.3g). A contraction of two "
+            "hermitian density matrices in a common helicity basis is real by "
+            "construction, so this is not a rounding effect: the value used as "
+            "the accept/reject weight from here on is its real part only, and "
+            "the decayed events are not reliable.",
+            what, real, imag, abs(imag) / abs(real) if real else float('inf'),
+            MS_DENSITY_IMAG_TOL)
+    return real
+
+
 class MadSpinOptions(banner.ConfigFile):
 
     # Unweighting schemes that still work but are no longer offered to the
@@ -5436,6 +5491,16 @@ class MadSpinInterface(extended_cmd.Cmd):
         positive weights, occasionally accepted -- from ever reaching the bound.
         This catches the causes ``_check_production_density`` does not, e.g. a
         decay density matrix that is structurally zero.
+
+        ``math.isfinite`` and not ``numpy.isfinite``, deliberately: every weight
+        that reaches here is a real scalar (the density contraction has its real
+        part taken by ``ms_density_real``, and the sequential stages take theirs
+        at ``(n_k / n_prev).real``), so the coercion ``math.isfinite`` performs
+        is free -- and if a complex weight is ever reintroduced upstream this is
+        the line that says so, with a ComplexWarning naming the file and the
+        line. ``numpy.isfinite`` would accept it in silence, and ``wgt.real``
+        would discard the imaginary part without anyone finding out; neither is
+        an improvement on being told.
         """
         try:
             ok = math.isfinite(wgt) and wgt > 0
@@ -7850,8 +7915,17 @@ class MadSpinInterface(extended_cmd.Cmd):
                     dec_diag *= density_dec_tmp.trace().real
                 density_iden_decay *= color * spin
                 prod_color *= color
-                D = complex(0, mass * width)
-                prod_denominators *= (D * D.conjugate())
+                # |D|^2 of the propagator denominator D = i*m*Gamma at the pole.
+                # Written as the real number it is: D * conj(D) has the same
+                # value bit for bit, but it is a Python *complex*, and that type
+                # then rides through `denominator` into the accept/reject weight
+                # -- which is the whole reason the weight was ever complex.
+                # Nothing else in the chain introduces one: the density
+                # contraction below has its real part taken explicitly. Note
+                # `mw * mw` and not `mw ** 2`: pow() re-rounds, and the two
+                # differ in the last bit for about one value in 700.
+                mw = mass * width
+                prod_denominators *= mw * mw
             
 
             decaying_idx += N
@@ -7875,7 +7949,15 @@ class MadSpinInterface(extended_cmd.Cmd):
         # include production identical-final-state symmetry factor
         # ------------------------------------------------------------------
         denominator = iden_p * sym_factor_prod_ident * prod_color * prod_denominators * sym_factor_decay
-        me = me.real / denominator
+        # The bare `.real` this replaces was right but silent; ms_density_real
+        # returns the same number and says so if the premise it rests on -- two
+        # hermitian matrices contracted in one helicity basis -- ever fails.
+        # `denominator` is real now, so the weight this feeds is a real scalar
+        # all the way to the accept/reject rather than a complex one every
+        # consumer has to coerce back (which is what emitted the ComplexWarning
+        # from _dead_trial's math.isfinite).
+        me = ms_density_real(me, 'the production/decay density contraction') \
+             / denominator
 
         #print(f"production = {production}")
         #print(f"decays = {decays}")
