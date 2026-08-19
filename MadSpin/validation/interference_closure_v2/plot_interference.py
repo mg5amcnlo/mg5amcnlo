@@ -58,6 +58,30 @@ C_SUM4 = allcolors[0]           # blue   -- the diagonal-only result
 C_SUM9 = allcolors[3]           # red    -- diagonal + interference
 C_INT = allcolors[4]            # purple -- the interference sum
 
+# The four diagonal blocks, when they are shown one by one on top of a closure
+# figure.  Line style encodes the polarisation of the TOP (the first index):
+# solid for the two blocks with the top in D+, dash-dot for the two with the
+# top in D-, so the grouping on the page is the grouping in the physics.
+DIAG_COLOR = {'pp': allcolors[2],       # tab:green
+              'pm': 'tab:orange',
+              'mp': 'tab:brown',
+              'mm': 'tab:cyan'}
+DIAG_LS = {'pp': 'solid', 'pm': 'solid', 'mp': 'dashdot', 'mm': 'dashdot'}
+
+# Observables whose closure figure shows the four diagonal blocks as well.
+# For cos(theta^k) of the l+ the polarisation of the top -- the FIRST index of
+# the block -- fixes the slope, so (D+,D+) and (D+,D-) rise while (D-,D+) and
+# (D-,D-) fall, and the unscaled sum of the four is the flat unpolarised curve.
+AUGMENT_WITH_DIAG_BLOCKS = ('cos_k_p',)
+
+# What the four individual block curves actually are.  Stated on the figure
+# itself, because a rescaled curve next to an unscaled reference is exactly the
+# kind of thing a reader mis-reads.
+BLOCK_NOTE = ('individual blocks scaled by '
+              r'$\sigma_{\mathrm{unpol}}/\sigma_{\mathrm{block}}$'
+              ' -- shape only, they do not add up;' '\n'
+              'the reference and the 4- and 9-block sums are unscaled')
+
 
 # --------------------------------------------------------------------------
 OBS = [
@@ -159,7 +183,20 @@ def update_legend(ax, ncol=1, loc='best', size=9):
               ncol=ncol, loc=loc, handlelength=2.0, columnspacing=1.4)
 
 
-def one_figure(d, key, label, kind, out):
+def one_figure(d, key, label, kind, out, show_diag_blocks=False, name=None):
+    """Closure figure: unpolarised reference vs the 4- and 9-block sums.
+
+    With ``show_diag_blocks`` the upper panel additionally carries the four
+    diagonal blocks one by one.  Their cross sections differ by a factor two
+    (7.93 pb for (D+,D+) and (D-,D-), 3.94 pb for the mixed pair), so drawn raw
+    they would be neither comparable with each other nor with the reference;
+    each is therefore multiplied by sigma_unpol / sigma_block, i.e. rescaled to
+    a common normalisation, and only its SHAPE is on the page.  The factor is
+    written into the legend entry and the panel carries a note, because the
+    rescaled curves deliberately do NOT add up to the '4 diagonal blocks' curve
+    next to them -- that one is the unscaled sum, and it is the sum the ratio
+    panel below tests.
+    """
     bins = d.bins(key)
     ctr = 0.5 * (bins[1:] + bins[:-1])
     wid = bins[1] - bins[0]
@@ -189,6 +226,19 @@ def one_figure(d, key, label, kind, out):
     ax.hist(x=ctr, weights=it / wid, histtype='step', bins=len(ctr),
             range=(bins[0], bins[-1]), linewidth=LW, color=C_INT,
             linestyle='dotted', label=r'5 interference blocks')
+
+    top_extra = 0.0
+    if show_diag_blocks:
+        su = d.meta['unpol']['xsec']
+        for tag in DIAG:
+            s, _e = d.h([tag], key)
+            f = su / d.meta[tag]['xsec']
+            ax.hist(x=ctr, weights=f * s / wid, histtype='step', bins=len(ctr),
+                    range=(bins[0], bins[-1]), linewidth=1.0,
+                    color=DIAG_COLOR[tag], linestyle=DIAG_LS[tag], zorder=1,
+                    label=r'%s $\times\,%.1f$' % (BLOCK_LABEL[tag], f))
+            top_extra = max(top_extra, float(np.nanmax(f * s / wid)))
+
     ax.axhline(0.0, color='gray', lw=0.6, linestyle='dashed')
     ax.set_ylabel(r'$d\sigma/dX$ [pb]')
     if kind == 'control':
@@ -197,8 +247,15 @@ def one_figure(d, key, label, kind, out):
                     top=np.nanmax(u / wid) * 12.0)
     else:
         lo0 = min(0.0, np.nanmin(it / wid) * 1.3)
-        ax.set_ylim(lo0, np.nanmax(u / wid) * 1.42)
-    update_legend(ax, ncol=2, loc='upper right')
+        ax.set_ylim(lo0, max(np.nanmax(u / wid), top_extra)
+                    * (1.55 if show_diag_blocks else 1.42))
+    if show_diag_blocks:
+        # above the frame: the legend already fills the top of the panel, and
+        # this caption must not be something the eye can skip
+        ax.text(0.0, 1.015, BLOCK_NOTE, transform=ax.transAxes, va='bottom',
+                ha='left', fontsize=8, color='dimgray', linespacing=1.4)
+    update_legend(ax, ncol=2, loc='upper right',
+                  size=8 if show_diag_blocks else 9)
     plt.setp(ax.get_xticklabels(), visible=False)
 
     ax = axes[1]
@@ -221,8 +278,9 @@ def one_figure(d, key, label, kind, out):
     pad = 0.12 * max(hi - lo, 0.05)
     ax.set_ylim(min(lo - pad, 0.96), max(hi + pad, 1.04))
     update_legend(ax, ncol=2, loc='best')
-    fig.savefig(os.path.join(out, 'closure_%s.pdf' % key), bbox_inches='tight')
-    fig.savefig(os.path.join(out, 'closure_%s.png' % key), dpi=160,
+    name = name or ('closure_%s' % key)
+    fig.savefig(os.path.join(out, '%s.pdf' % name), bbox_inches='tight')
+    fig.savefig(os.path.join(out, '%s.png' % name), dpi=160,
                 bbox_inches='tight')
     plt.close(fig)
 
@@ -460,7 +518,14 @@ def main():
              % ('observable', 'chi2 (4 diag)', 'chi2 (9 blocks)',
                 'k', 'chi2 int vs 0', 'kind'))
     for key, label, kind in OBS:
-        c4, c9, k, cz = one_figure(d, key, label, kind, out)
+        if key in AUGMENT_WITH_DIAG_BLOCKS:
+            # the figure the write-up shows carries the four diagonal blocks;
+            # the earlier, plain rendering is kept next to it under *_plain
+            one_figure(d, key, label, kind, out, name='closure_%s_plain' % key)
+            c4, c9, k, cz = one_figure(d, key, label, kind, out,
+                                       show_diag_blocks=True)
+        else:
+            c4, c9, k, cz = one_figure(d, key, label, kind, out)
         L.append('  %-10s %9.1f /%-3d %9.1f /%-3d %8.3f+-%-6.3f '
                  '%9.1f /%-3d  %s'
                  % (key, c4[0], c4[1], c9[0], c9[1],
