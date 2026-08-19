@@ -30,9 +30,12 @@ import sys
 import numpy as np
 
 sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)))
-from analyse_pa_madspin import read_lhe, read_pi_block, jac_counters  # noqa: E402
+from analyse_pa_madspin import (read_lhe, read_pi_block, jac_counters,   # noqa: E402
+                                observables, moment)
 
 CASES = [
+    ('ctrl_w',    'pure_interference', 'weighted',   0.0),
+    ('ctrl_u',    'pure_interference', 'unweighted', 0.0),
     ('bad0_w',    'pure_interference', 'weighted',   0.0),
     ('bad0_u',    'pure_interference', 'unweighted', 0.0),
     ('badm1_w',   'pure_interference', 'weighted',  -1.0),
@@ -40,6 +43,10 @@ CASES = [
     ('bad0_dw',   'decay_output',      'weighted',   0.0),
     ('badm1_dw',  'decay_output',      'weighted',  -1.0),
 ]
+
+# what each case is measured against
+CONTROL = {'bad0_w': 'ctrl_w', 'badm1_w': 'ctrl_w',
+           'bad0_u': 'ctrl_u', 'badm1_u': 'ctrl_u'}
 
 
 def read_dead(header):
@@ -80,7 +87,24 @@ def main():
                      z=float(w.sum()) / math.sqrt(sumw2) if sumw2 else 0.0,
                      n_magnitudes=int(len(np.unique(np.round(
                          np.abs(w) / (np.abs(w).max() or 1.0), 9)))))
+            if mode == 'pure_interference':
+                # The z check cannot see a sign flip: W is already signed with
+                # mean zero, so flipping a random subset of signs leaves S at
+                # zero.  What a sign flip DOES move is any observable whose
+                # sign correlates with the kinematics, i.e. the physics.  So
+                # measure that instead.
+                o = observables(ev)
+                val, err = moment(w, o['cnn'], n, banner['ref'])
+                r['cnn'], r['cnn_err'] = val, err
         res[tag] = r
+
+    for tag, ctrl in CONTROL.items():
+        if 'cnn' in res.get(tag, {}) and 'cnn' in res.get(ctrl, {}):
+            a, b = res[tag], res[ctrl]
+            res[tag]['cnn_ratio'] = a['cnn'] / b['cnn'] if b['cnn'] else None
+            res[tag]['cnn_shift_sigma'] = (
+                (a['cnn'] - b['cnn'])
+                / math.sqrt(a['cnn_err'] ** 2 + b['cnn_err'] ** 2))
 
     with open(os.path.join(out_dir, 'badjac.json'), 'w') as f:
         json.dump(res, f, indent=1)
@@ -97,6 +121,19 @@ def main():
         print('%-9s %-17s %-11s %6.1f %8d %8s %8d %8d %8s %+9.2f'
               % (tag, mode, out, jacval, r['jac']['n_forced'], r['n_read'],
                  r['n_file'], r['n_zero_weight'], r['dead'], r['z']))
+
+    print('\n== the physics, which is where a conflated sign actually shows ==')
+    print('%-9s %22s %9s %9s' % ('tag', '<C_nn> interference', 'vs ctrl',
+                                 'sigma'))
+    for tag, mode, out, jacval in CASES:
+        r = res[tag]
+        if 'cnn' not in r:
+            continue
+        print('%-9s %+12.6f +- %.6f %9s %9s'
+              % (tag, r['cnn'], r['cnn_err'],
+                 ('%.3f' % r['cnn_ratio']) if r.get('cnn_ratio') else '-',
+                 ('%+.2f' % r['cnn_shift_sigma'])
+                 if r.get('cnn_shift_sigma') is not None else '-'))
     print('\nwrote', os.path.join(out_dir, 'badjac.json'))
 
 

@@ -40,18 +40,24 @@ NB_CORE=${NB_CORE:-4}
 EVT="$WORK/prod/Events/prod/unweighted_events.lhe.gz"
 [ -f "$EVT" ] || { echo "no production sample at $EVT -- run run_pa_madspin.sh first"; exit 1; }
 
-# tag | pure_interference_output | forced jac | decay_output
+# tag | pure_interference_output | forced jac | decay_output | injection rate
+# ctrl_* inject nothing: they are the same events, the same seed and the same
+# code with p = 0, so the physics shift the injected cases show is measured
+# against them rather than against a differently-sized run.
 CASES=(
-  "bad0_w|weighted|0.0|"
-  "bad0_u|unweighted|0.0|"
-  "badm1_w|weighted|-1.0|"
-  "badm1_u|unweighted|-1.0|"
-  "bad0_dw||0.0|weighted"
-  "badm1_dw||-1.0|weighted"
+  "ctrl_w|weighted|0.0||0.0"
+  "ctrl_u|unweighted|0.0||0.0"
+  "bad0_w|weighted|0.0||"
+  "bad0_u|unweighted|0.0||"
+  "badm1_w|weighted|-1.0||"
+  "badm1_u|unweighted|-1.0||"
+  "bad0_dw||0.0|weighted|"
+  "badm1_dw||-1.0|weighted|"
 )
 
 for c in "${CASES[@]}"; do
-  IFS='|' read -r tag out jac dout <<< "$c"
+  IFS='|' read -r tag out jac dout prob <<< "$c"
+  prob=${prob:-$PROB}
   o="$WORK/badjac_$tag"
   if [ -f "$o/events_decayed.lhe.gz" ]; then echo "skip $tag"; continue; fi
   mkdir -p "$o"
@@ -91,9 +97,9 @@ PY
     echo "decay t~ > b~ w-, w- > lm vlx"
     echo "launch"
   } > "$o/madspin_card.dat"
-  echo "=== $tag (output=${out:-<none>} decay_output=${dout:-<none>} forced jac=$jac p=$PROB)"
+  echo "=== $tag (output=${out:-<none>} decay_output=${dout:-<none>} forced jac=$jac p=$prob)"
   set +e
-  MS_PA_JACLOG="$o/jac" MS_PA_FORCE_BADJAC="$PROB:$jac" \
+  MS_PA_JACLOG="$o/jac" MS_PA_FORCE_BADJAC="$prob:$jac" \
       "$PYTHON" -O "$DRIVER" "$o/madspin_card.dat" > "$o/madspin.log" 2>&1
   rc=$?
   set -e
