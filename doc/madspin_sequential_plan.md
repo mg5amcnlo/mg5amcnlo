@@ -2864,16 +2864,90 @@ removes it. So the counters still warn.
 the number that was missing:
 
     MadSpin overweight safety net: 3/10000 written events (0.03%) carried a
-    non-unit weight because a trial weight exceeded its accept/reject bound;
-    total carried excess 1.28509, i.e. 0.0129% of the sample's normalisation,
-    largest single factor 2.0389. Clipping those to 1 -- what MadSpin did
-    before -- would have silently biased the sample low by that amount.
+    non-unit weight because a trial weight exceeded its accept/reject bound
+    (largest factor 2.0389). Carrying it added +1.53474 to the summed event
+    weight, i.e. +0.0129% of the sample's cross-section (IDWTUP = -4: sigma is
+    the mean weight and the event count does not change, so this is the
+    relative shift). Clipping it -- what MadSpin did before -- would have
+    discarded that silently.
 
-and, when nothing overflowed, says so at INFO rather than staying silent. Under
-`IDWTUP = -4` the cross-section is the *mean* of the weights over the events in
-the file, so `sum(factor - 1) / n_written` is exactly the relative shift the
-sample used to lose. The joint accept/reject gained a counter of its own here
-(`nb_overflow_joint`); it had none before.
+and, when nothing overflowed, says so at INFO rather than staying silent. The
+joint accept/reject gained a counter of its own here (`nb_overflow_joint`); it
+had none before.
+
+**Why the number is a weight and not a count.** Under `IDWTUP = -4` the
+cross-section is the *mean* of the event weights, and carrying changes no event
+count, so what the clipping used to discard is
+
+    d(sum w) / sum w        both over the file as clipping would have written it
+
+with `d(sum w) = sum_over (factor - 1) * w_nominal`. For a sample of identical
+positive weights that is exactly `sum(factor - 1)/n_written`, so an ordinary
+unweighted MadSpin run prints the same number either way. It stops being the
+same as soon as the input carries **MC@NLO counter-events**: a negative event
+whose trial overflowed makes the cross-section *more* negative, so its excess
+subtracts, and a count would have claimed a shift of the wrong sign. Measured on
+a 10 000-event `p p > t t~` sample with 25 % of the weights flipped negative and
+the mass bound forced 30x low: `d(sum w) = +1.48865e6`, `+1252 %` of the clipped
+`sum w`, against `+1250 %` for the count-based number -- close here only because
+the sign and the overflow are uncorrelated in that construction, and not equal
+in general.
+
+**And why `sum w` needs a guard.** It is zero *by construction* under
+`pure_interference`, so it cannot simply be divided by. The test is not a
+magnitude cut but the same `z = S / sqrt(sum w^2)` the mode already uses for its
+zero-cross-section check: `sum w` is used as a denominator only when it is at
+least `_OVERWEIGHT_MIN_Z = 5` of its own Monte Carlo errors from zero. An
+unweighted sample of N events has `z = sqrt(N)` and never trips it; a
+pure-interference sample has `z = O(1)` and always does, and then the shift is
+quoted against `sum |w|` -- which cannot cancel -- with the line saying which
+convention it used:
+
+    MadSpin overweight safety net: 6740/8274 written events (81.5%) carried a
+    non-unit weight because a trial weight exceeded its accept/reject bound
+    (largest factor 29.3165). Carrying it added -389.844 to the summed event
+    weight and +52253.7 to the summed |weight|. The summed weight is -134
+    against a Monte Carlo error of 290.2 (z = 0.46), i.e. consistent with the
+    zero cross-section this sample has by construction, so it is not a usable
+    denominator and the shift is quoted against sum|w| = 2.64e+04 instead:
+    +198%. Clipping it -- what MadSpin did before -- would have discarded that
+    silently.
+
+**Negative weights, twice over.** Two unrelated things make a MadSpin weight
+negative, and the carry is blind to both because it is never built from a signed
+quantity:
+
+* an **MC@NLO counter-event** in the input. The accept/reject tests a
+  matrix-element weight -- a ratio of density contractions times jacobians,
+  positive by construction -- and the event's own LHE weight never enters it, so
+  the factor is unsigned and the event keeps its sign and only grows in
+  magnitude. Measured: over 10 000 events with 25 % counter-events and the mass
+  bound forced low, **0 sign flips**, 2496 of the 2500 counter-events carried a
+  factor, and **0** carried factors below 1;
+* `pure_interference`, where the written weight is signed but the accept/reject
+  tests `|W|/M`. The factor is therefore built from `abs(signed)` -- the same
+  modulus the test used -- and the sign is applied exactly once, by `pi_factor`,
+  inside `br`. Had it been built from the signed `W`, `w > C` would be false for
+  every negative trial and **half the sample would still be silently clipped**.
+  Measured on a forced-low run: of the 6740 carrying events, **3417 are
+  negative** and 3323 positive, matching the 50.3 % negative fraction of the
+  file; **0** factors below 1; and, pairing every output event back onto its
+  input, **0** `<rwgt>` entries whose ratio to the nominal or whose sign differs.
+
+The closure for the interference case is sharp, because the mean magnitude of
+the weight estimates `sigma_ref * BR * E[|W|] / c`, which
+`decay_output = weighted` computes exactly:
+
+| | value (pb) |
+|---|---|
+| forced-low bound, **carried** | 3.29775 +- 0.04628  (+0.2 sd) |
+| forced-low bound, **clipped** (the old behaviour) | 1.10689 +- 0.01217  (**-46 sd**) |
+| shipped bound, no overflow | 3.30300 +- 0.11514  (+0.2 sd) |
+| `decay_output = weighted` (exact reference) | 3.28440 +- 0.04565 |
+
+With the bound 30x too low, clipping under-estimates the size of the
+interference by a factor 3 and says so with a *small* error bar; carrying
+recovers the exact answer, and recovers the correct error bar with it.
 
 **Validation.** With the mass-stage bound forced 30x low so that 99.9 % of the
 10 000 events overflow (mean carried factor 13.5, largest 74.3), the mean of

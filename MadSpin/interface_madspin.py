@@ -4274,10 +4274,38 @@ class MadSpinInterface(extended_cmd.Cmd):
         # the same multiplication -- and it is the *literal* 1.0, never a
         # division, whenever nothing overflowed, so the written weights are
         # bit-identical to the clipping ones on the overwhelmingly common path.
+        #
+        # The factor itself is always > 1 and unsigned: every accept/reject
+        # below tests a MATRIX-ELEMENT weight (a ratio of densities times
+        # jacobians, positive by construction, and in the pure-interference
+        # mode the modulus |W| the test itself uses), never the event's LHE
+        # weight. So a negative production weight -- an MC@NLO counter-event --
+        # keeps its sign and only grows in magnitude, which is the whole point:
+        # the carry says "this event should have counted more", not "this event
+        # is positive".
+        #
+        # The ACCOUNTING, though, cannot be a count. Under IDWTUP = -4 the
+        # cross-section is the mean of the weights, and carrying does not change
+        # the number of events, so the shift it restores is
+        #     d(sum w) / sum w      with sum w over the file as it would have
+        #                           been written WITH clipping ('nominal').
+        # For a unit-weight sample that is exactly sum(factor - 1)/n_written,
+        # the number this used to print; with counter-events in the sample it is
+        # not, because the excess of a negative event subtracts. And sum w can
+        # be zero by construction (pure_interference), so the denominator has to
+        # be tested against its OWN Monte Carlo error sqrt(sum w^2) -- the same
+        # z that _report_pure_interference uses for the zero-cross-section
+        # check -- before it can be normalised against; hence the second moment
+        # here, and sum|w| as the fallback scale that cannot cancel.
         nb_overweight = 0        # written events carrying a non-unit factor
-        sum_overweight_excess = 0.0   # sum of (factor - 1): the normalisation
-                                      # that used to be thrown away
         max_overweight = 1.0     # the largest single factor carried
+        sum_overweight_dw = 0.0     # sum of (factor - 1) * w_nominal: the signed
+                                    # weight the clipping used to throw away
+        sum_overweight_dabs = 0.0   # ... and the same with |w_nominal|, which
+                                    # does not cancel between counter-events
+        sum_nom = 0.0            # sum of the weights clipping WOULD have written
+        sum_abs_nom = 0.0        # ... their absolute values
+        sum_sq_nom = 0.0         # ... and their squares, for the MC error on sum
         sum_w = 0.0        # signed weight sum, for the zero-cross-section check
         sum_w2 = 0.0       # its second moment: no cancellation, so the MC error
         nb_try = 0
@@ -4340,7 +4368,12 @@ class MadSpinInterface(extended_cmd.Cmd):
                                 nb_event - curr_event, stats=seq_stats,
                                 decay_dict=decay_dict)
                 if decays is None:
-                    # nothing to decay in this production event
+                    # nothing to decay in this production event. It still goes
+                    # into the file, so it belongs to the normalisation the
+                    # overweight report divides by.
+                    sum_nom += production.wgt
+                    sum_abs_nom += abs(production.wgt)
+                    sum_sq_nom += production.wgt * production.wgt
                     output_lhe.write_events(production)
                     continue
                 # the accepted chain's carried overweight (mass stage x angle
@@ -4361,14 +4394,27 @@ class MadSpinInterface(extended_cmd.Cmd):
                     full_evt.reshuffle_production()
                 self.efficiency = float(curr_event + 1) / nb_try if nb_try else 1.0
                 br = self.branching_ratio
+                # what this event would have been written with had the excess
+                # been clipped -- taken BEFORE br absorbs the carry, so it needs
+                # no division and keeps its sign. When carry is 1 this is the
+                # identical multiplication the line below performs, so the
+                # written weight is unaffected by its existence.
+                w_nom = full_evt.wgt * br
+                sum_nom += w_nom
+                sum_abs_nom += abs(w_nom)
+                sum_sq_nom += w_nom * w_nom
                 if carry != 1.0:
+                    # the signed difference is what the sample's cross-section
+                    # gains; the unsigned one is the same quantity with the
+                    # counter-events' cancellation taken out.
+                    sum_overweight_dw += w_nom * (carry - 1.0)
+                    sum_overweight_dabs += abs(w_nom) * (carry - 1.0)
                     # exactly one multiplication either way: br is the same
                     # float object as self.branching_ratio when nothing
                     # overflowed, so this branch is the only thing that can
                     # move a written weight.
                     br = br * carry
                     nb_overweight += 1
-                    sum_overweight_excess += carry - 1.0
                     if carry > max_overweight:
                         max_overweight = carry
                 full_evt.wgt *= br
@@ -4563,15 +4609,26 @@ class MadSpinInterface(extended_cmd.Cmd):
             br = self.branching_ratio * pi_factor \
                 if (pure_interference or weighted_decay) \
                 else self.branching_ratio
+            # ``carry`` is unsigned even in the pure-interference mode: the
+            # |W|/M test clips on the MODULUS, so the factor is built from
+            # abs(signed) and the sign is carried exactly once, by pi_factor,
+            # inside br. w_nom is therefore the signed weight this event would
+            # have been written with under clipping.
+            w_nom = (full_evt[0] if self.options['fixed_order']
+                     else full_evt).wgt * br
+            sum_nom += w_nom
+            sum_abs_nom += abs(w_nom)
+            sum_sq_nom += w_nom * w_nom
             if carry != 1.0:
                 # the overweight safety net rides the same hook, for the same
                 # reason: one multiplication that reaches both full_evt.wgt and
                 # every parse_reweight() entry. Guarded so that the no-overflow
                 # path -- which is essentially the whole sample -- performs the
                 # identical arithmetic it did before this existed.
+                sum_overweight_dw += w_nom * (carry - 1.0)
+                sum_overweight_dabs += abs(w_nom) * (carry - 1.0)
                 br = br * carry
                 nb_overweight += 1
-                sum_overweight_excess += carry - 1.0
                 if carry > max_overweight:
                     max_overweight = carry
             if self.options['fixed_order']:
@@ -4620,7 +4677,11 @@ class MadSpinInterface(extended_cmd.Cmd):
                     # or many gives the identical end-of-run number
                     nb_overflow_joint=nb_overflow_joint,
                     nb_overweight=nb_overweight,
-                    sum_overweight_excess=float(sum_overweight_excess),
+                    sum_overweight_dw=float(sum_overweight_dw),
+                    sum_overweight_dabs=float(sum_overweight_dabs),
+                    sum_nom=float(sum_nom),
+                    sum_abs_nom=float(sum_abs_nom),
+                    sum_sq_nom=float(sum_sq_nom),
                     max_overweight=float(max_overweight),
                     sum_w=float(sum_w),
                     sum_w2=float(sum_w2),
@@ -4724,47 +4785,95 @@ class MadSpinInterface(extended_cmd.Cmd):
                 "Nevents_for_max_weight, or set unweighting = joint.",
                 total_overflow)
 
+    # How many Monte Carlo errors the summed weight has to be away from zero
+    # before it may be used as a denominator. sum w = 0 is not a pathology to be
+    # detected by a magnitude cut -- pure_interference produces it BY DESIGN, and
+    # an ordinary sample only ever approaches it by accident -- so the test is
+    # the same z = S / sqrt(sum w^2) that _report_pure_interference already uses
+    # for its zero-cross-section check. An unweighted sample of N events has
+    # z = sqrt(N), so this never fires on one; a pure-interference sample has
+    # z = O(1) and always does.
+    _OVERWEIGHT_MIN_Z = 5.0
+
     def _report_overweight(self, stats_list, n_written):
         """The overweight safety net's end-of-run measurement.
 
-        Section 14 of ``doc/madspin_sequential_plan.md``: every
-        accept/reject in MadSpin stops on a trial with probability
-        ``min(1, w/C)``, so a trial with ``w > C`` is accepted with probability
-        1 and the excess ``w/C - 1`` used to be thrown away silently. It is now
-        written onto the event weight, which is exact because
-        ``min(1,x) * max(1,x) = x``; this turns what was an unquantified bias
-        into a number, and this is that number.
+        Section 14 of ``doc/madspin_sequential_plan.md``: every accept/reject in
+        MadSpin stops on a trial with probability ``min(1, w/C)``, so a trial
+        with ``w > C`` is accepted with probability 1 and the excess
+        ``w/C - 1`` used to be thrown away silently. It is now written onto the
+        event weight, which is exact because ``min(1,x) * max(1,x) = x``; this
+        turns what was an unquantified bias into a number, and this is that
+        number.
 
-        The fraction quoted is ``sum(factor - 1) / n_written``: under MG5's
-        ``IDWTUP = -4`` convention the sample's normalisation is the MEAN of the
-        weights over the events in the file, so a nominal file has mean 1 (times
-        the branching ratio) and the excess is exactly the relative shift. It is
-        the same quantity ``EventFile.unweight`` reports as "truncation", except
-        that there it is discarded and here it is kept.
+        **The number is a weight, not a count.** Under MG5's ``IDWTUP = -4``
+        convention the cross-section is the MEAN of the event weights, and
+        carrying changes no event count, so what the clipping used to discard is
+
+            d(sum w) / sum w        both over the file as clipping would have
+                                    written it
+
+        with ``d(sum w) = sum_over (factor - 1) * w_nominal``. For a sample of
+        identical positive weights that reduces exactly to
+        ``sum(factor - 1) / n_written``, which is what an unweighted MadSpin run
+        prints. It does **not** reduce to that once the input carries
+        counter-events: a negative event whose trial overflowed makes the
+        cross-section *more* negative, so its excess subtracts, and quoting a
+        count would claim a shift that is not there.
+
+        ``sum w`` is also zero by construction under ``pure_interference``, so it
+        is only used as a denominator when it is at least ``_OVERWEIGHT_MIN_Z``
+        of its own Monte Carlo errors away from zero. When it is not, the shift
+        is quoted against ``sum |w|`` -- which cannot cancel -- and the line says
+        which convention it used, so the two are never confused.
         """
         nb = sum(s.get('nb_overweight', 0) for s in stats_list)
-        excess = sum(s.get('sum_overweight_excess', 0.0) for s in stats_list)
+        if not n_written or not nb:
+            if n_written:
+                logger.info(
+                    "MadSpin overweight safety net: 0/%d written events carried "
+                    "a non-unit weight -- no accept/reject bound was exceeded, "
+                    "so nothing was clipped and nothing is biased by it.",
+                    n_written)
+            return
+        d_w = sum(s.get('sum_overweight_dw', 0.0) for s in stats_list)
+        d_abs = sum(s.get('sum_overweight_dabs', 0.0) for s in stats_list)
         biggest = max([s.get('max_overweight', 1.0) for s in stats_list] or [1.0])
         joint = sum(s.get('nb_overflow_joint', 0) for s in stats_list)
-        if not n_written:
-            return
-        if not nb:
-            logger.info(
-                "MadSpin overweight safety net: 0/%d written events carried a "
-                "non-unit weight -- no accept/reject bound was exceeded, so "
-                "the sample is unweighted and unbiased by clipping.",
-                n_written)
-            return
-        logger.warning(
-            "MadSpin overweight safety net: %d/%d written events (%.3g%%) "
-            "carried a non-unit weight because a trial weight exceeded its "
-            "accept/reject bound; total carried excess %.6g, i.e. %.3g%% of "
-            "the sample's normalisation, largest single factor %.4f%s. "
-            "Clipping those to 1 -- what MadSpin did before -- would have "
-            "silently biased the sample low by that amount.",
-            nb, n_written, 100.0 * nb / n_written, excess,
-            100.0 * excess / n_written, biggest,
-            ' (%d of them from the joint accept/reject)' % joint if joint else '')
+        # the file as clipping would have written it
+        sum_w = sum(s.get('sum_nom', 0.0) for s in stats_list)
+        sum_abs = sum(s.get('sum_abs_nom', 0.0) for s in stats_list)
+        sum_sq = sum(s.get('sum_sq_nom', 0.0) for s in stats_list)
+        delta = math.sqrt(sum_sq)
+        z = (abs(sum_w) / delta) if delta else 0.0
+        # Built with % here rather than handed to the logger as a format
+        # string: the head already contains literal per-cent signs.
+        msg = ("MadSpin overweight safety net: %d/%d written events (%.3g%%) "
+               "carried a non-unit weight because a trial weight exceeded its "
+               "accept/reject bound (largest factor %.4f%s). "
+               % (nb, n_written, 100.0 * nb / n_written, biggest,
+                  ', %d of them from the joint accept/reject' % joint
+                  if joint else ''))
+        if z >= self._OVERWEIGHT_MIN_Z:
+            msg += ("Carrying it added %+.6g to the summed event weight, i.e. "
+                    "%+.3g%% of the sample's cross-section (IDWTUP = -4: sigma "
+                    "is the mean weight and the event count does not change, "
+                    "so this is the relative shift). "
+                    % (d_w, 100.0 * d_w / sum_w))
+        else:
+            # pure_interference, or any sample whose weights cancel: the
+            # cross-section is consistent with zero, so it is not a denominator
+            msg += ("Carrying it added %+.6g to the summed event weight and "
+                    "%+.6g to the summed |weight|. The summed weight is %+.4g "
+                    "against a Monte Carlo error of %.4g (z = %.2f), i.e. "
+                    "consistent with the zero cross-section this sample has by "
+                    "construction, so it is not a usable denominator and the "
+                    "shift is quoted against sum|w| = %.4g instead: %+.3g%%. "
+                    % (d_w, d_abs, sum_w, delta, z, sum_abs,
+                       100.0 * d_abs / sum_abs if sum_abs else float('nan')))
+        msg += ("Clipping it -- what MadSpin did before -- would have discarded "
+                "that silently.")
+        logger.warning(msg)
 
     def _report_pure_interference(self, base_out, stats_list, n_processed,
                                   n_written):
