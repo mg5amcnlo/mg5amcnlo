@@ -240,6 +240,8 @@ def main():
 
     outdir = os.path.abspath(args.outdir)
     os.makedirs(pjoin(outdir, 'logs'), exist_ok=True)
+    if args.basedir:
+        os.makedirs(args.basedir, exist_ok=True)
 
     grid = list(GRID)
     if args.extra:
