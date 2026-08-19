@@ -1,0 +1,9 @@
+set automatic_html_opening False
+set notification_center False
+generate p p > t t~
+output msdir_sweep/work/PROC_tt
+launch
+set nevents 200
+set iseed 42
+set lhe_version 3
+done
