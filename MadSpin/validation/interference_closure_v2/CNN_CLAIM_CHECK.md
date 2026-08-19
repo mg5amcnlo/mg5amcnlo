@@ -96,17 +96,18 @@ same events.
 **How a non-zero histogram has a zero mean: symmetry.**  Mirror the `cnn`
 histogram of a diagonal block about `X = 0` and compare bin by bin:
 
-| block | observable | `chi2` of `h(-X)` vs `h(+X)`, 10 pairs |
-|---|---|---|
-| `(D+,D+)` | `C_nn` | 10.8 / 10 |
-| `(D-,D-)` | `C_nn` | 15.8 / 10 |
-| `(D+,D+)` | `C_kk` | **5302.1 / 10** |
+| block | `chi2`, `C_nn` | `chi2`, `C_kk` | peak bin of the `C_nn` curve |
+|---|---|---|---|
+| `(D+,D+)` | 10.8 / 10 | **5302.1 / 10** | 1.304 +- 0.014 pb |
+| `(D+,D-)` | 9.4 / 10 | **5653.8 / 10** | 0.653 +- 0.007 pb |
+| `(D-,D+)` | 9.6 / 10 | **5380.5 / 10** | 0.652 +- 0.007 pb |
+| `(D-,D-)` | 15.8 / 10 | **5382.4 / 10** | 1.316 +- 0.014 pb |
 
-The diagonal blocks are symmetric in `X` for `C_nn` -- large everywhere, zero
-first moment -- and grossly asymmetric for `C_kk`.  This is visible on the
-pages themselves: compare the diagonal curves in `plots/blocks_cnn.pdf` (peaked
-and symmetric about 0) with `plots/blocks_ckk.pdf` (the same blocks, visibly
-skewed).
+All four diagonal blocks are symmetric in `X` for `C_nn` -- large everywhere,
+zero first moment -- and grossly asymmetric for `C_kk`.  Same samples, same
+binning.  This is visible on the pages themselves: compare the diagonal curves
+in `plots/blocks_cnn.pdf` (peaked and symmetric about 0) with
+`plots/blocks_ckk.pdf` (the same blocks, visibly skewed).
 
 ## 3. Why `C_nn` vanishes on a diagonal block -- the algebra
 
@@ -239,6 +240,13 @@ need changing.
 > block of definite helicities still has a cross section, and still populates
 > the full range of `cos theta^n_{l+} cos theta^n_{l-}`.  What vanishes for it
 > is the mean.
+
+(Strictly, the `2 Re rho(+-,-+) - 2 Re rho(++,--)` form also assumes the
+helicity spinors are phased so that `sigma_r = sigma_x` and `sigma_n =
+sigma_y`; see section 5.2.  If that is a distraction in the paper, the
+phase-robust version is `C_rr +- C_nn = 4 Re rho(+-,-+)` and
+`4 Re rho(++,--)`, and the double-flip statement itself needs no convention at
+all.)
 
 If a citation is wanted for that paragraph, Baumgart and Tweedie
 (`arXiv:1212.4888`, Sec. 2) is the published statement of it: they show the

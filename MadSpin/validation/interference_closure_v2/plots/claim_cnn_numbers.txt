@@ -96,9 +96,14 @@ Part B2 -- why the diagonal blocks have a zero first moment but a
            very non-zero histogram: the histogram is SYMMETRIC in X
 ==========================================================================
 
-  (D+,D+)   h(-X) vs h(+X), 10 mirror pairs: chi2 =  10.8 / 10 (peak bin 1.304 pb, zero would be 0.000)
-  (D-,D-)   h(-X) vs h(+X), 10 mirror pairs: chi2 =  15.8 / 10 (peak bin 1.316 pb, zero would be 0.000)
-  (D+,D+)   the SAME block in C_kk is NOT symmetric:  chi2 = 5302.1 / 10
+  block     chi2 h(-X) vs h(+X), C_nn      the same for C_kk  peak bin [pb]
+  (D+,D+)             10.8 / 10            5302.1 / 10       1.304 +- 0.014
+  (D+,D-)              9.4 / 10            5653.8 / 10       0.653 +- 0.007
+  (D-,D+)              9.6 / 10            5380.5 / 10       0.652 +- 0.007
+  (D-,D-)             15.8 / 10            5382.4 / 10       1.316 +- 0.014
+
+  Symmetric in C_nn, grossly asymmetric in C_kk -- the same four samples,
+  the same binning.  Zero mean, very much non-zero distribution.
 
 ==========================================================================
 Part B3 -- the 1/9, calibrated on the four blocks with known C_kk

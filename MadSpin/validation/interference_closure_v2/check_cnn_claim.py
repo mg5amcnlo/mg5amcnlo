@@ -205,25 +205,37 @@ def part_b(z, log):
 
 
 def part_b_symmetry(z, log):
+    """A non-zero histogram with a zero mean is a SYMMETRIC one.
+
+    Mirror each diagonal block's histogram about X = 0 and compare bin by bin.
+    For C_nn the four blocks are symmetric (so: large everywhere, zero first
+    moment); for C_kk the very same blocks are grossly asymmetric.
+    """
     p = log.append
     p('=' * 74)
     p('Part B2 -- why the diagonal blocks have a zero first moment but a')
     p('           very non-zero histogram: the histogram is SYMMETRIC in X')
     p('=' * 74)
     p('')
-    for tag, lab in (('pp', '(D+,D+)'), ('mm', '(D-,D-)')):
-        h, e = z['sumw__%s__cnn' % tag], np.sqrt(z['sumw2__%s__cnn' % tag])
-        chi2 = sum((h[19 - i] - h[i]) ** 2 / (e[i] ** 2 + e[19 - i] ** 2)
-                   for i in range(10))
-        p('  %-9s h(-X) vs h(+X), 10 mirror pairs: chi2 = %5.1f / 10 '
-          '(peak bin %.3f pb, zero would be %.3f)'
-          % (lab, chi2, h.max(), 0.0))
-    for tag, lab in (('pp', '(D+,D+)'),):
-        h, e = z['sumw__%s__ckk' % tag], np.sqrt(z['sumw2__%s__ckk' % tag])
-        chi2 = sum((h[19 - i] - h[i]) ** 2 / (e[i] ** 2 + e[19 - i] ** 2)
-                   for i in range(10))
-        p('  %-9s the SAME block in C_kk is NOT symmetric:  chi2 = %5.1f / 10'
-          % (lab, chi2))
+    p('  %-9s %22s %22s %14s' % ('block', 'chi2 h(-X) vs h(+X), C_nn',
+                                 'the same for C_kk', 'peak bin [pb]'))
+    for tag, lab in TAGS[:4]:
+        c = []
+        for key in ('cnn', 'ckk'):
+            h = z['sumw__%s__%s' % (tag, key)]
+            e = np.sqrt(z['sumw2__%s__%s' % (tag, key)])
+            n = len(h)
+            c.append(sum((h[n - 1 - i] - h[i]) ** 2
+                         / (e[i] ** 2 + e[n - 1 - i] ** 2)
+                         for i in range(n // 2)))
+        h = z['sumw__%s__cnn' % tag]
+        e = np.sqrt(z['sumw2__%s__cnn' % tag])
+        p('  %-9s %14.1f / %-5d %14.1f / %-5d %8.3f +- %.3f'
+          % (lab, c[0], len(h) // 2, c[1], len(h) // 2,
+             h.max(), e[h.argmax()]))
+    p('')
+    p('  Symmetric in C_nn, grossly asymmetric in C_kk -- the same four samples,')
+    p('  the same binning.  Zero mean, very much non-zero distribution.')
     p('')
 
 
