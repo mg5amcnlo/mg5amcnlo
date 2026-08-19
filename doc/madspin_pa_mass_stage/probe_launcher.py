@@ -8,9 +8,10 @@ written to a stream file:
 
   ``U``  one call to ``_upfront_production``: the production reshuffling
          jacobian ``jac_prod`` it settled for that mass set, the per-slot
-         Breit-Wigner sampling jacobians ``jac_bw``, and the drawn virtualities.
-         ``U -`` is a mass set the production could not be reshuffled onto
-         (``_upfront_production`` returned None and the chain restarts).
+         Breit-Wigner sampling jacobians ``jac_bw``, the drawn virtualities, and
+         the production event's sqrt(shat).  ``U - - -`` is a mass set the
+         production could not be reshuffled onto (``_upfront_production``
+         returned None and the chain restarts).
   ``Z``  one call to ``_zhat``: the tabulated conditional normalisation the
          mass-set weight multiplies in, per slot.
   ``W``  the mass-set weight ``w_mass`` at the instant it is tested against
@@ -76,17 +77,25 @@ def _fmt(value):
 _orig_upfront = MS._upfront_production
 
 
-def _upfront_production(self, *args, **kwargs):
-    result = _orig_upfront(self, *args, **kwargs)
+def _upfront_production(self, production, *args, **kwargs):
+    result = _orig_upfront(self, production, *args, **kwargs)
+    # sqrt(shat) of the production event: the reshuffling jacobian is a
+    # function of how much room there is between it and the mass set, so this
+    # is the variable the tail has to be plotted against.
+    try:
+        sqrts = float(production.sqrts)
+    except Exception:
+        sqrts = float('nan')
     if result is None:
-        _OUT.write('U -\n')
+        _OUT.write('U - - - %s\n' % _fmt(sqrts))
         return result
     _, jac_prod, slot_mass, _, _ = result
     slots = sorted(slot_mass)
-    _OUT.write('U %s %s %s\n' % (
+    _OUT.write('U %s %s %s %s\n' % (
         _fmt(jac_prod),
         ','.join(_fmt(slot_mass[s][2]) for s in slots) or '-',
-        ','.join(_fmt(slot_mass[s][0]) for s in slots) or '-'))
+        ','.join(_fmt(slot_mass[s][0]) for s in slots) or '-',
+        _fmt(sqrts)))
     return result
 
 
