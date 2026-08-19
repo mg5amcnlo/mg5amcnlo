@@ -202,7 +202,14 @@ distinguished: only a non-finite `W` is treated as dead (`nb_pi_dead`).  A
 The `_dead_trial` backstop does not cover it either.  In the joint loop
 `_dead_trial` sits in the `else` branch (line 4124) -- the ordinary
 accept/reject -- and is not on the pure-interference path at all, which the
-comment at 4109-4112 states outright.
+comment at 4109-4112 states outright.  There is no
+`abs(wgt) if pure_interference else wgt` form of the guard anywhere on this
+base: the only other `_dead_trial` call sites (`:8205`, `:8379`, `:8490`)
+belong to the sequential schemes, which `pure_interference` forces off.  So on
+the interference path `_dead_trial` simply does not run, and its
+`MS_MAX_DEAD_TRIALS` backstop -- which would fire on a run of zero weights --
+is not available as a monitor either.  `nb_pi_dead` (non-finite only) is the
+whole of it.
 
 ### 6c. So it was measured, then forced
 
