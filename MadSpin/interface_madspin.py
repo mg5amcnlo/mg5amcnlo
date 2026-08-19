@@ -115,6 +115,29 @@ class MadSpinDegenerateWeight(madspin.MadSpinError):
     pass
 
 
+class MadSpinUnknownPartialWidth(madspin.MadSpinError):
+    """A reused decay directory whose partial width can neither be read back
+    nor re-measured. Raised instead of falling back to any default, because
+    every default here is a wrong branching ratio -- i.e. a well-formed event
+    file whose every weight and whose <init> block are wrong."""
+    pass
+
+
+class MadSpinZeroBranchingRatio(madspin.MadSpinError):
+    """The branching ratio MadSpin is about to apply to every event is zero (or
+    not a number). Raised instead of writing the events.
+
+    A branching ratio multiplies every event weight and the <init> cross
+    section, so a zero one turns a completed run into a well-formed LHE file
+    full of +/-0.0 -- the failure mode a user is least likely to notice. It
+    cannot be a legitimate physics configuration either: MadSpin measures each
+    partial width by generating that decay, and a decay channel that is closed
+    makes the *generation* fail (ZeroResult) long before this point. So a zero
+    that reaches here comes from bookkeeping that did not happen, not from the
+    physics that was asked for."""
+    pass
+
+
 # How many consecutive structurally-dead trials (weight not finite and > 0) a
 # single production event may burn before the accept/reject gives up. Only
 # trials whose *matrix-element* factor is dead are counted, and any single
@@ -124,6 +147,61 @@ class MadSpinDegenerateWeight(madspin.MadSpinError):
 # probability of this many consecutive zero *weights* (as opposed to rejected
 # positive weights, which do not count) is nil.
 MS_MAX_DEAD_TRIALS = 20000
+
+# How large the imaginary part of a density contraction may be, relative to its
+# real part, before it is reported. The contraction is real *by construction*
+# (see ms_density_real), so anything above float32 rounding is a bug and not a
+# tolerance to be widened: the density matrices are complex64, the packed index
+# set is closed under (h1,h2) -> (h2,h1), and the imaginary parts of the two
+# members of each pair are computed by the same operations in the opposite
+# order, so what survives the sum is the residue of an exact cancellation. On
+# `p p > t t~` with both tops decayed (53655 contractions) the largest ratio
+# measured was 1.5e-7, i.e. exactly float32 epsilon; 1e-3 leaves four orders of
+# margin over that and still catches an imaginary part that means anything.
+MS_DENSITY_IMAG_TOL = 1e-3
+
+# Reported once per site: a violation is a property of the setup (a non-hermitian
+# density matrix, a helicity basis mismatched between the two sides of the
+# contraction), so it repeats on every trial of every event once it happens.
+_MS_IMAG_REPORTED = set()
+
+
+def ms_density_real(value, what):
+    """The real part of a spin-density contraction, with its reality checked.
+
+    Contracting two hermitian density matrices over an index set closed under
+    (h1,h2) -> (h2,h1) -- which is what ``DensityMatrix`` stores, and what a
+    polarisation restriction preserves, since it masks the bra *and* the ket
+    helicity with the same set -- pairs every term with its own complex
+    conjugate. The sum is therefore real by construction, and what is discarded
+    here is float32 rounding, not physics.
+
+    That argument is only as good as its premises, so it is checked rather than
+    assumed: an imaginary part above ``MS_DENSITY_IMAG_TOL`` of the real part
+    means one of the two matrices is not hermitian, or the two are not in the
+    same helicity basis, and the number this returns is then not the matrix
+    element. Reported at CRITICAL (once per site) rather than raised, following
+    the weight-identity and ``density_debug`` checks: the run does produce
+    events, they are just not to be trusted, and silently dropping the evidence
+    is the one thing that must not happen.
+    """
+    imag = getattr(value, 'imag', None)
+    if imag is None:
+        return value              # not a number with a real/imaginary split
+    real = value.real             # a float/np.float32 keeps its own value here
+    if abs(imag) > MS_DENSITY_IMAG_TOL * abs(real) and what not in _MS_IMAG_REPORTED:
+        _MS_IMAG_REPORTED.add(what)
+        logger.critical(
+            "MadSpin: %s came out with a significant imaginary part "
+            "(%.6g + %.6gj, |Im|/|Re| = %.3g > %.3g). A contraction of two "
+            "hermitian density matrices in a common helicity basis is real by "
+            "construction, so this is not a rounding effect: the value used as "
+            "the accept/reject weight from here on is its real part only, and "
+            "the decayed events are not reliable.",
+            what, real, imag, abs(imag) / abs(real) if real else float('inf'),
+            MS_DENSITY_IMAG_TOL)
+    return real
+
 
 class MadSpinOptions(banner.ConfigFile):
 
@@ -689,7 +767,12 @@ class MadSpinInterface(extended_cmd.Cmd):
         self.err_branching_ratio = 0
         self.me_run_name = "" # Events diretory name where to stotre the events (used by madevent) not use internally
         self.all_iden = {}
-        
+        # The card this run executes, and the directory do_import derives from
+        # the event file. Both are what madspin_card_path archives from; set
+        # before the do_import below, which fills the second one in.
+        self.ms_card_path = None
+        self.event_base_dir = None
+
         if event_path:
             logger.info("Extracting the banner ...")
             self.do_import(event_path)
@@ -797,9 +880,16 @@ class MadSpinInterface(extended_cmd.Cmd):
         # change directory where to write the output
         self.options['curr_dir'] = os.path.realpath(os.path.dirname(inputfile))
         if os.path.basename(os.path.dirname(os.path.dirname(inputfile))) == 'Events':
-            self.options['curr_dir'] = pjoin(self.options['curr_dir'], 
+            self.options['curr_dir'] = pjoin(self.options['curr_dir'],
                                                       os.path.pardir, os.pardir)
-        
+        # Keep that directory -- the process root when the events sit in
+        # Events/<run>/, the event file's own directory otherwise -- under a
+        # name of its own. 'set ms_dir' re-points curr_dir at the gridpack
+        # (post_set_ms_dir), so curr_dir stops answering "where did these
+        # events come from" as soon as a card mentions ms_dir after the import.
+        # See madspin_card_path.
+        self.event_base_dir = self.options['curr_dir']
+
         if not os.path.exists(inputfile):
             if inputfile.endswith('.gz'):
                 if not os.path.exists(inputfile[:-3]):
@@ -1556,6 +1646,55 @@ class MadSpinInterface(extended_cmd.Cmd):
             return totwidth
         return pwidth
 
+    @staticmethod
+    def _check_branching_ratio(br, gen_jobs=None):
+        """Refuse to decay with a branching ratio that is zero or not a number.
+
+        Why this cannot fire on a healthy run, however extreme the physics: the
+        branching ratio is a product of measured-partial-width / total-width
+        ratios, and MadSpin measures each partial width by actually generating
+        that decay with MadEvent. A channel so suppressed that its width
+        underflows to exactly 0 does not reach this point at all -- the
+        generation of that channel raises ZeroResult first. What a 0 (or a NaN)
+        here means is that one of those factors was never measured, i.e. a
+        bookkeeping gap, and the archetype is a reused ``ms_dir``: the decay
+        directories already exist, so nothing re-measures them.
+
+        Why it must not be a warning: this number multiplies every event weight
+        and the <init> cross-section. Left to run, MadSpin writes a complete,
+        well-formed LHE file in which every weight is +/-0.0 and the <init>
+        block is zero -- output that no downstream tool rejects and that a user
+        can easily fail to notice. Compared with that, stopping is cheap.
+        """
+        if math.isfinite(br) and br > 0:
+            return br
+        detail = ''
+        if gen_jobs:
+            detail = ("\nDecaying particles this run measured a width for: %s"
+                      % ', '.join('%s (%s)' % (pdg, job.get('kind'))
+                                  for pdg, job in gen_jobs.items()))
+        raise MadSpinZeroBranchingRatio(
+            "MadSpin computed a branching ratio of %s and will not decay the "
+            "events with it.\n"
+            "\n"
+            "The branching ratio scales every event weight and the <init> "
+            "cross-section, so MadSpin would otherwise write a complete, "
+            "well-formed event file in which every weight is zero (or not a "
+            "number) -- and report success. It stops here instead.\n"
+            "\n"
+            "It is built as a product of (partial width measured by generating "
+            "the decay) / (total width from the param_card), one factor per "
+            "decaying particle. A closed decay channel cannot produce this: "
+            "generating it fails first. A factor that was never *measured* "
+            "can. Plausible causes, most likely first:\n"
+            "  * a reused decay directory ('ms_dir', 'use_old_dir') whose "
+            "partial width could not be read back -- rerun against a fresh "
+            "'ms_dir' to confirm;\n"
+            "  * a total width of 0 in the param_card for a particle being "
+            "decayed, which makes the ratio a 0/0;\n"
+            "  * 'set cross_section' pointing at a zero cross-section.%s"
+            % (br, detail))
+
     @classmethod
     def _assignment_multiplicity(cls, branches):
         """How many *distinct* ways this multiset of decay lines can be dealt to
@@ -1634,6 +1773,99 @@ class MadSpinInterface(extended_cmd.Cmd):
             if r < cumul:
                 return tag
         return groups['tags'][-1]
+
+    ############################################################################
+    ##  Archiving the card that was actually run                              ##
+    ############################################################################
+
+    def import_command_file(self, filepath):
+        """Execute a MadSpin card, remembering which file it came from.
+
+        That file is the record of what this run did, and it is the only thing
+        that knows where the card lives: the card is handed in from outside
+        (MadEvent's ``do_decay_events`` passes
+        ``<me_dir>/Cards/madspin_card.dat``) and is under no obligation to sit
+        anywhere in particular. ``madspin_card_path`` archives it next to the
+        decayed events.
+        """
+        if isinstance(filepath, str):
+            self.ms_card_path = os.path.realpath(filepath)
+        return super(MadSpinInterface, self).import_command_file(filepath)
+
+    @property
+    def madspin_card_path(self):
+        """The MadSpin card this run executed, or None when there is no file to
+        archive (an interactive session types its commands; it has no card).
+
+        This is the single place that answers "which card was run", so that the
+        copy kept beside the events cannot name a different file from the one
+        the interface obeyed. Two sources, in order:
+
+        1. the file handed to :meth:`import_command_file` -- literally the card
+           the user edited for this run, wherever it happens to live. Every
+           driver runs MadSpin this way;
+        2. ``Cards/madspin_card.dat`` under ``event_base_dir``, the directory
+           ``do_import`` derived from the event file -- for a session driven
+           line by line that nonetheless runs inside a process directory.
+
+        What it deliberately does not use is ``self.options['curr_dir']``,
+        which is what the archiving used to be built from. ``curr_dir`` says
+        where this run's *output* goes -- that is its meaning at every other
+        use site, and what #365 pinned it to for the decayed events -- and
+        ``post_set_ms_dir`` re-points it at the gridpack. So
+        ``pjoin(curr_dir, 'Cards', 'madspin_card.dat')`` named the real card
+        only when the card happened to say ``set ms_dir`` *before* importing
+        the events, ``do_import`` then pointing curr_dir back at them. In the
+        other ordering -- the one MadEvent always produces, since it imports
+        the events in the constructor and reads the card afterwards -- it named
+        ``<ms_dir>/Cards/madspin_card.dat``, which MadSpin never creates, and
+        the archiving was skipped without a word. See
+        tests/unit_tests/madspin, class TestMadSpinCardArchive.
+        """
+        if self.ms_card_path and os.path.exists(self.ms_card_path):
+            return self.ms_card_path
+        if self.event_base_dir:
+            path = pjoin(self.event_base_dir, 'Cards', 'madspin_card.dat')
+            if os.path.exists(path):
+                return path
+        return None
+
+    def _archive_madspin_card(self, decayed_evt_file):
+        """Keep the card that produced ``decayed_evt_file`` next to it.
+
+        Shared by ``do_launch`` and ``run_from_pickle`` so that the gridpack
+        path -- the one reached on every rerun against an existing ``ms_dir``,
+        and hence the one where losing the card is most likely -- archives the
+        same file, from the same source, as a fresh run.
+
+        Returns the path written, or None when there was no card to copy.
+        """
+        ms_card_path = self.madspin_card_path
+        if not ms_card_path:
+            return None
+
+        run_dir = os.path.realpath(os.path.dirname(decayed_evt_file))
+        packed = os.path.exists(pjoin(run_dir, 'RunMaterial.tar.gz'))
+        if packed:
+            misc.call(['tar', '-xzpf', 'RunMaterial.tar.gz'], cwd=run_dir)
+            base_path = pjoin(run_dir, 'RunMaterial')
+        else:
+            base_path = run_dir
+
+        evt_name = os.path.basename(decayed_evt_file).replace('.lhe', '')
+        ms_card_to_copy = pjoin(base_path, 'madspin_card_for_%s.dat' % evt_name)
+        count = 0
+        while os.path.exists(ms_card_to_copy):
+            count += 1
+            ms_card_to_copy = pjoin(base_path, 'madspin_card_for_%s_%d.dat' %
+                                                              (evt_name, count))
+        files.cp(str(ms_card_path), str(ms_card_to_copy))
+
+        if packed:
+            misc.call(['tar', '-czpf', 'RunMaterial.tar.gz', 'RunMaterial'],
+                                                                    cwd=run_dir)
+            shutil.rmtree(pjoin(run_dir, 'RunMaterial'))
+        return ms_card_to_copy
 
     @misc.mute_logger()
     def do_launch(self, line):
@@ -1795,34 +2027,16 @@ class MadSpinInterface(extended_cmd.Cmd):
             pass
         misc.gzip(evt_path)
         decayed_evt_file=evt_path.replace('.lhe', '_decayed.lhe')
-        misc.gzip(pjoin(self.options['curr_dir'],'decayed_events.lhe'),
-                  stdout=decayed_evt_file)
+        # Ask the writer where it put the file rather than rebuilding the path
+        # here: the two used to be spelled out separately and disagreed as soon
+        # as ms_dir was set and curr_dir was not the ms_dir (see
+        # decay_all_events.decayed_events_path).
+        misc.gzip(generate_all.decayed_events_path, stdout=decayed_evt_file)
         if not self.mother:
             logger.info("Decayed events have been written in %s.gz" % decayed_evt_file)
 
-        # Now arxiv the shower card used if RunMaterial is present
-        ms_card_path = pjoin(self.options['curr_dir'],'Cards','madspin_card.dat')
-        run_dir = os.path.realpath(os.path.dirname(decayed_evt_file))
-        if os.path.exists(ms_card_path):
-            if os.path.exists(pjoin(run_dir,'RunMaterial.tar.gz')):
-                misc.call(['tar','-xzpf','RunMaterial.tar.gz'], cwd=run_dir)
-                base_path = pjoin(run_dir,'RunMaterial')
-            else:
-                base_path = pjoin(run_dir)
-
-            evt_name = os.path.basename(decayed_evt_file).replace('.lhe', '')
-            ms_card_to_copy = pjoin(base_path,'madspin_card_for_%s.dat'%evt_name)
-            count = 0    
-            while os.path.exists(ms_card_to_copy):
-                count += 1
-                ms_card_to_copy = pjoin(base_path,'madspin_card_for_%s_%d.dat'%\
-                                                               (evt_name,count))
-            files.cp(str(ms_card_path),str(ms_card_to_copy))
-            
-            if os.path.exists(pjoin(run_dir,'RunMaterial.tar.gz')):
-                misc.call(['tar','-czpf','RunMaterial.tar.gz','RunMaterial'], 
-                                                                    cwd=run_dir)
-                shutil.rmtree(pjoin(run_dir,'RunMaterial'))
+        # Now arxiv the madspin card used (inside RunMaterial if present)
+        self._archive_madspin_card(decayed_evt_file)
         self._log_lhe_timers()
 
     def run_from_pickle(self):
@@ -1911,10 +2125,17 @@ class MadSpinInterface(extended_cmd.Cmd):
             pass
         misc.gzip(evt_path)
         decayed_evt_file=evt_path.replace('.lhe', '_decayed.lhe')
-        misc.gzip(pjoin(self.options['curr_dir'],'decayed_events.lhe'),
-                  stdout=decayed_evt_file)
+        # Same shared accessor as do_launch -- and this path is *only* reachable
+        # with ms_dir set, so it was the one always exposed to the mismatch.
+        misc.gzip(generate_all.decayed_events_path, stdout=decayed_evt_file)
         if not self.mother:
-            logger.info("Decayed events have been written in %s.gz" % decayed_evt_file)    
+            logger.info("Decayed events have been written in %s.gz" % decayed_evt_file)
+
+        # ... and the card goes with them here too. Rerunning against an
+        # existing ms_dir is a *rerun*: it produces its own event file, from its
+        # own card, and archived nothing at all before -- do_launch returns here
+        # long before reaching its own copy of this call.
+        self._archive_madspin_card(decayed_evt_file)
     
     
 
@@ -2309,6 +2530,92 @@ class MadSpinInterface(extended_cmd.Cmd):
         self.mg5cmd._curr_model = self.model
         self.mg5cmd.process_model()
 
+    # File in which a decay directory records the partial width that was
+    # measured when it was built. Only the gridpack (ms_dir) path needs it: the
+    # native path regenerates -- and so re-measures -- on every run, while a
+    # gridpack is built once and merely *run* by every later run.
+    PARTIAL_WIDTH_FILE = 'ms_partial_width.dat'
+
+    @classmethod
+    def _store_partial_width(cls, decay_dir, cross):
+        """Record the measured partial width of ``decay_dir`` next to its
+        gridpack. Best effort: a read-only ms_dir must not abort a healthy
+        generation, the reader falls back to the gridpack's own banner."""
+        try:
+            with open(pjoin(decay_dir, cls.PARTIAL_WIDTH_FILE), 'w') as fsock:
+                fsock.write('%.16e\n' % float(cross))
+        except (IOError, OSError, TypeError, ValueError) as error:
+            logger.debug('could not store the partial width of %s: %s',
+                         decay_dir, error)
+
+    @classmethod
+    def _load_partial_width(cls, decay_dir, evt_file=None):
+        """The partial width of a decay directory that this run did not build.
+
+        Two sources, in order:
+
+        1. the value the run that built the gridpack measured and stored
+           (:meth:`_store_partial_width`) -- the same number that run used, so
+           reusing an ms_dir reproduces its branching ratio exactly;
+        2. failing that (an ms_dir built by an older version, which stored
+           nothing), the cross-section in the <init> block of the events the
+           gridpack has just produced. It is the same quantity measured on this
+           run's sample rather than on the grid-setup one, so it agrees to the
+           Monte Carlo error rather than to the last bit -- worth a warning, but
+           far better than the alternative.
+
+        Both failing is not recoverable, and must not be papered over with a
+        default: every "neutral" value here is a wrong branching ratio, and a
+        wrong branching ratio is a silently wrong cross-section in a
+        well-formed file. So it raises.
+        """
+        path = pjoin(decay_dir, cls.PARTIAL_WIDTH_FILE)
+        if os.path.exists(path):
+            try:
+                value = float(open(path).read().split()[0])
+            except (IOError, OSError, IndexError, ValueError) as error:
+                logger.warning('unreadable %s (%s), falling back to the '
+                               'generated events', path, error)
+            else:
+                if math.isfinite(value) and value > 0:
+                    return value
+                logger.warning('%s holds a non-physical partial width (%s), '
+                               'falling back to the generated events',
+                               path, value)
+        value = None
+        if evt_file is not None:
+            try:
+                value = float(evt_file.cross)
+            except Exception as error:
+                logger.debug('no cross-section in the events of %s: %s',
+                             decay_dir, error)
+        if value is None or not math.isfinite(value) or value <= 0:
+            raise MadSpinUnknownPartialWidth(
+                "MadSpin cannot recover the partial width of %s.\n"
+                "\n"
+                "The branching ratio MadSpin applies to every event (and to "
+                "the <init> block) is built from the partial width measured "
+                "when each decay directory was generated. This directory was "
+                "generated by an earlier run -- it is being reused through "
+                "'ms_dir'/'use_old_dir' -- and neither the record that run "
+                "should have left (%s) nor the cross-section of the events "
+                "its gridpack just produced can be read.\n"
+                "\n"
+                "MadSpin stops here rather than continue with a branching "
+                "ratio it cannot compute: that would write a perfectly "
+                "well-formed event file in which every weight is wrong.\n"
+                "\n"
+                "Remove the 'ms_dir' directory (or point 'ms_dir' at a fresh "
+                "one) and rerun: a directory generated from scratch measures "
+                "the partial widths itself."
+                % (decay_dir, cls.PARTIAL_WIDTH_FILE))
+        logger.warning('%s predates the partial-width record; using the '
+                       'cross-section of its generated events (%s) instead. '
+                       'The branching ratio will agree with the run that built '
+                       'it to the Monte Carlo error, not exactly.',
+                       decay_dir, value)
+        return value
+
     def generate_events(self, pdg, nb_event, mg5, restrict_file=None, cumul=False,
                         output_width=False, run_name='run_01'):
         """generate new events for this particle
@@ -2408,6 +2715,14 @@ class MadSpinInterface(extended_cmd.Cmd):
                     self.seed = self.options['seed'] 
                     # actually creation
                     me5_cmd.exec_cmd("generate_events run_01 -f")
+                    # The partial width of this channel is measured HERE and
+                    # only here on the gridpack path -- a later run that finds
+                    # ``decay_dir`` already built skips this whole block. Store
+                    # it beside the gridpack so that run can read it back
+                    # (_load_partial_width); without it the branching ratio of
+                    # every ms_dir-reusing run silently collapses to 0.
+                    self._store_partial_width(decay_dir,
+                                              me5_cmd.results.current['cross'])
                     if output_width:
                         channel_widths[i] = me5_cmd.results.current['cross']
                         if cumul:
@@ -2522,6 +2837,19 @@ class MadSpinInterface(extended_cmd.Cmd):
                         "--- last run.sh/gridrun output ---\n%s"
                         % (rc, events_path, log))
                 out[i] = lhe_parser.EventFile(events_path)
+                if output_width and i not in channel_widths:
+                    # ms_dir reuse: the gridpack was built by an earlier run, so
+                    # the block above (the only place the gridpack path measures
+                    # a partial width) did not run. Recover the width that run
+                    # measured instead of leaving the accumulator at its neutral
+                    # value -- which is 0 under ``cumul``, and would zero the
+                    # branching ratio, the <init> block and every event weight.
+                    measured = self._load_partial_width(decay_dir, out[i])
+                    channel_widths[i] = measured
+                    if cumul:
+                        width += measured
+                    else:
+                        width *= measured
             if cumul:
                 break
         time_gen_dec = time.time()-time_gen_dec
@@ -2833,6 +3161,10 @@ class MadSpinInterface(extended_cmd.Cmd):
                     max_mixed_br,
                 )
         mixed_pdgs_set = set(drop_prob_per_pdg.keys())
+
+        # Last chance to catch a branching ratio that would silently zero (or
+        # NaN) every weight of a run that otherwise completes normally.
+        self._check_branching_ratio(br, gen_jobs)
 
         self.branching_ratio = br
         self.efficiency = 1
@@ -6214,6 +6546,16 @@ class MadSpinInterface(extended_cmd.Cmd):
         positive weights, occasionally accepted -- from ever reaching the bound.
         This catches the causes ``_check_production_density`` does not, e.g. a
         decay density matrix that is structurally zero.
+
+        ``math.isfinite`` and not ``numpy.isfinite``, deliberately: every weight
+        that reaches here is a real scalar (the density contraction has its real
+        part taken by ``ms_density_real``, and the sequential stages take theirs
+        at ``(n_k / n_prev).real``), so the coercion ``math.isfinite`` performs
+        is free -- and if a complex weight is ever reintroduced upstream this is
+        the line that says so, with a ComplexWarning naming the file and the
+        line. ``numpy.isfinite`` would accept it in silence, and ``wgt.real``
+        would discard the imaginary part without anyone finding out; neither is
+        an improvement on being told.
         """
         try:
             ok = math.isfinite(wgt) and wgt > 0
@@ -9050,8 +9392,17 @@ class MadSpinInterface(extended_cmd.Cmd):
                     dec_diag *= density_dec_tmp.trace().real
                 density_iden_decay *= color * spin
                 prod_color *= color
-                D = complex(0, mass * width)
-                prod_denominators *= (D * D.conjugate())
+                # |D|^2 of the propagator denominator D = i*m*Gamma at the pole.
+                # Written as the real number it is: D * conj(D) has the same
+                # value bit for bit, but it is a Python *complex*, and that type
+                # then rides through `denominator` into the accept/reject weight
+                # -- which is the whole reason the weight was ever complex.
+                # Nothing else in the chain introduces one: the density
+                # contraction below has its real part taken explicitly. Note
+                # `mw * mw` and not `mw ** 2`: pow() re-rounds, and the two
+                # differ in the last bit for about one value in 700.
+                mw = mass * width
+                prod_denominators *= mw * mw
             
 
             decaying_idx += N
@@ -9085,7 +9436,7 @@ class MadSpinInterface(extended_cmd.Cmd):
         # include production identical-final-state symmetry factor
         # ------------------------------------------------------------------
         denominator = iden_p * sym_factor_prod_ident * prod_color * prod_denominators * sym_factor_decay
-        me = me.real / denominator
+        me = ms_density_real(me, 'the production/decay density contraction')/ denominator
         if me_unrestricted is not None:
             me_unrestricted = me_unrestricted * density_iden_prod * density_iden_decay
             self._pi_unrestricted_me = float(
