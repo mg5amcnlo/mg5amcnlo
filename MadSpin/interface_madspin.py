@@ -115,6 +115,29 @@ class MadSpinDegenerateWeight(madspin.MadSpinError):
     pass
 
 
+class MadSpinUnknownPartialWidth(madspin.MadSpinError):
+    """A reused decay directory whose partial width can neither be read back
+    nor re-measured. Raised instead of falling back to any default, because
+    every default here is a wrong branching ratio -- i.e. a well-formed event
+    file whose every weight and whose <init> block are wrong."""
+    pass
+
+
+class MadSpinZeroBranchingRatio(madspin.MadSpinError):
+    """The branching ratio MadSpin is about to apply to every event is zero (or
+    not a number). Raised instead of writing the events.
+
+    A branching ratio multiplies every event weight and the <init> cross
+    section, so a zero one turns a completed run into a well-formed LHE file
+    full of +/-0.0 -- the failure mode a user is least likely to notice. It
+    cannot be a legitimate physics configuration either: MadSpin measures each
+    partial width by generating that decay, and a decay channel that is closed
+    makes the *generation* fail (ZeroResult) long before this point. So a zero
+    that reaches here comes from bookkeeping that did not happen, not from the
+    physics that was asked for."""
+    pass
+
+
 # How many consecutive structurally-dead trials (weight not finite and > 0) a
 # single production event may burn before the accept/reject gives up. Only
 # trials whose *matrix-element* factor is dead are counted, and any single
@@ -1424,6 +1447,55 @@ class MadSpinInterface(extended_cmd.Cmd):
             return totwidth
         return pwidth
 
+    @staticmethod
+    def _check_branching_ratio(br, gen_jobs=None):
+        """Refuse to decay with a branching ratio that is zero or not a number.
+
+        Why this cannot fire on a healthy run, however extreme the physics: the
+        branching ratio is a product of measured-partial-width / total-width
+        ratios, and MadSpin measures each partial width by actually generating
+        that decay with MadEvent. A channel so suppressed that its width
+        underflows to exactly 0 does not reach this point at all -- the
+        generation of that channel raises ZeroResult first. What a 0 (or a NaN)
+        here means is that one of those factors was never measured, i.e. a
+        bookkeeping gap, and the archetype is a reused ``ms_dir``: the decay
+        directories already exist, so nothing re-measures them.
+
+        Why it must not be a warning: this number multiplies every event weight
+        and the <init> cross-section. Left to run, MadSpin writes a complete,
+        well-formed LHE file in which every weight is +/-0.0 and the <init>
+        block is zero -- output that no downstream tool rejects and that a user
+        can easily fail to notice. Compared with that, stopping is cheap.
+        """
+        if math.isfinite(br) and br > 0:
+            return br
+        detail = ''
+        if gen_jobs:
+            detail = ("\nDecaying particles this run measured a width for: %s"
+                      % ', '.join('%s (%s)' % (pdg, job.get('kind'))
+                                  for pdg, job in gen_jobs.items()))
+        raise MadSpinZeroBranchingRatio(
+            "MadSpin computed a branching ratio of %s and will not decay the "
+            "events with it.\n"
+            "\n"
+            "The branching ratio scales every event weight and the <init> "
+            "cross-section, so MadSpin would otherwise write a complete, "
+            "well-formed event file in which every weight is zero (or not a "
+            "number) -- and report success. It stops here instead.\n"
+            "\n"
+            "It is built as a product of (partial width measured by generating "
+            "the decay) / (total width from the param_card), one factor per "
+            "decaying particle. A closed decay channel cannot produce this: "
+            "generating it fails first. A factor that was never *measured* "
+            "can. Plausible causes, most likely first:\n"
+            "  * a reused decay directory ('ms_dir', 'use_old_dir') whose "
+            "partial width could not be read back -- rerun against a fresh "
+            "'ms_dir' to confirm;\n"
+            "  * a total width of 0 in the param_card for a particle being "
+            "decayed, which makes the ratio a 0/0;\n"
+            "  * 'set cross_section' pointing at a zero cross-section.%s"
+            % (br, detail))
+
     @classmethod
     def _assignment_multiplicity(cls, branches):
         """How many *distinct* ways this multiset of decay lines can be dealt to
@@ -2177,6 +2249,92 @@ class MadSpinInterface(extended_cmd.Cmd):
         self.mg5cmd._curr_model = self.model
         self.mg5cmd.process_model()
 
+    # File in which a decay directory records the partial width that was
+    # measured when it was built. Only the gridpack (ms_dir) path needs it: the
+    # native path regenerates -- and so re-measures -- on every run, while a
+    # gridpack is built once and merely *run* by every later run.
+    PARTIAL_WIDTH_FILE = 'ms_partial_width.dat'
+
+    @classmethod
+    def _store_partial_width(cls, decay_dir, cross):
+        """Record the measured partial width of ``decay_dir`` next to its
+        gridpack. Best effort: a read-only ms_dir must not abort a healthy
+        generation, the reader falls back to the gridpack's own banner."""
+        try:
+            with open(pjoin(decay_dir, cls.PARTIAL_WIDTH_FILE), 'w') as fsock:
+                fsock.write('%.16e\n' % float(cross))
+        except (IOError, OSError, TypeError, ValueError) as error:
+            logger.debug('could not store the partial width of %s: %s',
+                         decay_dir, error)
+
+    @classmethod
+    def _load_partial_width(cls, decay_dir, evt_file=None):
+        """The partial width of a decay directory that this run did not build.
+
+        Two sources, in order:
+
+        1. the value the run that built the gridpack measured and stored
+           (:meth:`_store_partial_width`) -- the same number that run used, so
+           reusing an ms_dir reproduces its branching ratio exactly;
+        2. failing that (an ms_dir built by an older version, which stored
+           nothing), the cross-section in the <init> block of the events the
+           gridpack has just produced. It is the same quantity measured on this
+           run's sample rather than on the grid-setup one, so it agrees to the
+           Monte Carlo error rather than to the last bit -- worth a warning, but
+           far better than the alternative.
+
+        Both failing is not recoverable, and must not be papered over with a
+        default: every "neutral" value here is a wrong branching ratio, and a
+        wrong branching ratio is a silently wrong cross-section in a
+        well-formed file. So it raises.
+        """
+        path = pjoin(decay_dir, cls.PARTIAL_WIDTH_FILE)
+        if os.path.exists(path):
+            try:
+                value = float(open(path).read().split()[0])
+            except (IOError, OSError, IndexError, ValueError) as error:
+                logger.warning('unreadable %s (%s), falling back to the '
+                               'generated events', path, error)
+            else:
+                if math.isfinite(value) and value > 0:
+                    return value
+                logger.warning('%s holds a non-physical partial width (%s), '
+                               'falling back to the generated events',
+                               path, value)
+        value = None
+        if evt_file is not None:
+            try:
+                value = float(evt_file.cross)
+            except Exception as error:
+                logger.debug('no cross-section in the events of %s: %s',
+                             decay_dir, error)
+        if value is None or not math.isfinite(value) or value <= 0:
+            raise MadSpinUnknownPartialWidth(
+                "MadSpin cannot recover the partial width of %s.\n"
+                "\n"
+                "The branching ratio MadSpin applies to every event (and to "
+                "the <init> block) is built from the partial width measured "
+                "when each decay directory was generated. This directory was "
+                "generated by an earlier run -- it is being reused through "
+                "'ms_dir'/'use_old_dir' -- and neither the record that run "
+                "should have left (%s) nor the cross-section of the events "
+                "its gridpack just produced can be read.\n"
+                "\n"
+                "MadSpin stops here rather than continue with a branching "
+                "ratio it cannot compute: that would write a perfectly "
+                "well-formed event file in which every weight is wrong.\n"
+                "\n"
+                "Remove the 'ms_dir' directory (or point 'ms_dir' at a fresh "
+                "one) and rerun: a directory generated from scratch measures "
+                "the partial widths itself."
+                % (decay_dir, cls.PARTIAL_WIDTH_FILE))
+        logger.warning('%s predates the partial-width record; using the '
+                       'cross-section of its generated events (%s) instead. '
+                       'The branching ratio will agree with the run that built '
+                       'it to the Monte Carlo error, not exactly.',
+                       decay_dir, value)
+        return value
+
     def generate_events(self, pdg, nb_event, mg5, restrict_file=None, cumul=False,
                         output_width=False, run_name='run_01'):
         """generate new events for this particle
@@ -2276,6 +2434,14 @@ class MadSpinInterface(extended_cmd.Cmd):
                     self.seed = self.options['seed'] 
                     # actually creation
                     me5_cmd.exec_cmd("generate_events run_01 -f")
+                    # The partial width of this channel is measured HERE and
+                    # only here on the gridpack path -- a later run that finds
+                    # ``decay_dir`` already built skips this whole block. Store
+                    # it beside the gridpack so that run can read it back
+                    # (_load_partial_width); without it the branching ratio of
+                    # every ms_dir-reusing run silently collapses to 0.
+                    self._store_partial_width(decay_dir,
+                                              me5_cmd.results.current['cross'])
                     if output_width:
                         channel_widths[i] = me5_cmd.results.current['cross']
                         if cumul:
@@ -2390,6 +2556,19 @@ class MadSpinInterface(extended_cmd.Cmd):
                         "--- last run.sh/gridrun output ---\n%s"
                         % (rc, events_path, log))
                 out[i] = lhe_parser.EventFile(events_path)
+                if output_width and i not in channel_widths:
+                    # ms_dir reuse: the gridpack was built by an earlier run, so
+                    # the block above (the only place the gridpack path measures
+                    # a partial width) did not run. Recover the width that run
+                    # measured instead of leaving the accumulator at its neutral
+                    # value -- which is 0 under ``cumul``, and would zero the
+                    # branching ratio, the <init> block and every event weight.
+                    measured = self._load_partial_width(decay_dir, out[i])
+                    channel_widths[i] = measured
+                    if cumul:
+                        width += measured
+                    else:
+                        width *= measured
             if cumul:
                 break
         time_gen_dec = time.time()-time_gen_dec
@@ -2701,6 +2880,10 @@ class MadSpinInterface(extended_cmd.Cmd):
                     max_mixed_br,
                 )
         mixed_pdgs_set = set(drop_prob_per_pdg.keys())
+
+        # Last chance to catch a branching ratio that would silently zero (or
+        # NaN) every weight of a run that otherwise completes normally.
+        self._check_branching_ratio(br, gen_jobs)
 
         self.branching_ratio = br
         self.efficiency = 1

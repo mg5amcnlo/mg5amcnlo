@@ -2356,8 +2356,16 @@ class decay_all_events(object):
         logger.info('Decaying the events... ')
         self.outputfile = open(self.decayed_events_path, 'w')
         self.write_banner_information()
-        
-        
+
+        # Same reasoning as the run_onshell guard (see
+        # MadSpinInterface._check_branching_ratio): this number multiplies every
+        # weight written below, so a zero one would produce a complete LHE file
+        # of +/-0.0 and report success. Skipped in 'onlyhelicity' mode, which
+        # writes the events back without applying any branching ratio.
+        if not self.options['onlyhelicity']:
+            self.mscmd._check_branching_ratio(self.branching_ratio)
+
+
         event_nb, fail_nb = 0, 0
         nb_skip = 0 
         trial_nb_all_events=0
