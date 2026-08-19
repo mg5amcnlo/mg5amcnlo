@@ -203,13 +203,10 @@ def main():
                r'different efficiencies; the option is \texttt{PA}-only and is '
                r'ignored by \texttt{madspin} (which always carries that '
                r'jacobian) and by \texttt{onshell} (which never reshuffles). '
-               r'The statistical uncertainty is at most %s on every entry '
-               r'(%s on all but the largest), so the second decimal is the '
-               r'last meaningful digit.}'
+               r'The statistical uncertainty is at most $\pm%s$ on every '
+               r'entry, so the second decimal is the last meaningful digit.}'
                % ('{:,}'.format(nev or 0).replace(',', r'\,'),
-                  fmt(max([e[3] for e in errors] or [0.0]), 2),
-                  fmt(sorted(e[3] for e in errors)[-2]
-                      if len(errors) > 1 else 0.0, 2)))
+                  fmt(max([e[3] for e in errors] or [0.0]), 2)))
     out.append(r'  \label{%s}' % args.label)
     out.append(r'\end{table}')
     print('\n'.join(out))

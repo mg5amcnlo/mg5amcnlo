@@ -1,0 +1,25 @@
+\begin{table}[htbp]
+  \centering
+  \begin{tabular}{llrrrr}
+    \toprule
+    mode & unweighting & $\epsilon_m$ & $\epsilon_t$ & $\epsilon_{\bar t}$ & $N_{\mathrm{dec}}$ \\
+    \midrule
+    \texttt{PA} & \texttt{joint} & \multicolumn{3}{c}{5.67} & 1\,134\,784 \\
+    \texttt{PA} & \texttt{sequential} & 3.50 & 1.24 & 3.19 & 443\,088 \\
+    \texttt{PA} & \texttt{sequential\_global\_retry} & 13.34 & 3.79 & 3.20 & 699\,192 \\
+    \midrule
+    \texttt{PA} (no jac.) & \texttt{joint} & \multicolumn{3}{c}{3.19} & 637\,820 \\
+    \texttt{PA} (no jac.) & \texttt{sequential} & 1.10 & 1.10 & 3.18 & 428\,383 \\
+    \texttt{PA} (no jac.) & \texttt{sequential\_global\_retry} & 3.88 & 3.52 & 3.19 & 670\,846 \\
+    \midrule
+    \texttt{madspin} & \texttt{joint} & \multicolumn{3}{c}{4.29} & 858\,196 \\
+    \texttt{madspin} & \texttt{sequential} & 3.31 & 2.39 & 4.24 & 662\,516 \\
+    \texttt{madspin} & \texttt{sequential\_global\_retry} & 14.50 & 4.37 & 3.21 & 757\,657 \\
+    \midrule
+    \texttt{onshell} & \texttt{joint} & \multicolumn{3}{c}{3.19} & 638\,504 \\
+    \texttt{onshell} & \texttt{sequential} & -- & 1.10 & 3.19 & 429\,374 \\
+    \bottomrule
+  \end{tabular}
+  \caption{MadSpin unweighting cost per accept/reject stage for $p\,p \to t\bar t$ with both tops decayed ($t \to b\,W^+$, $W^+ \to \ell^+\nu$ and charge conjugate), one production sample of 100\,000 events and one MadSpin seed shared by every row. Each $\epsilon$ is the average number of generated points needed to accept one, so \emph{lower is better and the floor is~1}: $\epsilon_m$ counts virtuality (mass) sets drawn per written event, $\epsilon_t$ and $\epsilon_{\bar t}$ count decay events drawn for the $t$ and $\bar t$ slot per written event, and $N_{\mathrm{dec}}$ is the total number of decay events consumed over the whole run. \texttt{joint} has no separate phases -- it makes a single accept/reject over the virtualities and both decays at once -- so it yields one efficiency, spanning the three $\epsilon$ columns. \texttt{onshell} keeps the production kinematics and never samples a virtuality, so it has no mass stage at all and $\epsilon_m$ is not defined there (dash, not~1). The $t$/$\bar t$ split of the staged schemes is positional rather than physical: the accept/reject fills slot~0 -- $t$, the first final-state particle of every production event here -- against a production density traced over the other slot, which is close to unpolarised and so accepts readily, and slot~1 ($\bar t$) against the fully conditioned parent. The two \texttt{PA} blocks differ only in \texttt{density\_keep\_jacobian}: with the default \texttt{True} the production-reshuffling phase-space jacobian is folded into the accept/reject weight, while ``no jac.'' (\texttt{False}) leaves it out and applies the reshuffle as a post-acceptance kinematic dressing instead. The two therefore unweight against different weights and are expected to have different efficiencies; the option is \texttt{PA}-only and is ignored by \texttt{madspin} (which always carries that jacobian) and by \texttt{onshell} (which never reshuffles). The statistical uncertainty is at most $\pm0.04$ on every entry, so the second decimal is the last meaningful digit.}
+  \label{tab:madspin-unweighting-eps}
+\end{table}

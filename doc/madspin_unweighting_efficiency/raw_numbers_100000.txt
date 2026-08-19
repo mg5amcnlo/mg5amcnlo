@@ -1,0 +1,48 @@
+
+run                                        column       value   1sigma
+PA_joint                                   joint       5.6700   0.0163
+PA_sequential                              eps_m       3.5000   0.0094
+PA_sequential                              eps_t       1.2400   0.0017
+PA_sequential                              eps_tbar    3.1900   0.0084
+PA_sequential_global_retry                 eps_m      13.3400   0.0406
+PA_sequential_global_retry                 eps_t       3.7900   0.0103
+PA_sequential_global_retry                 eps_tbar    3.2000   0.0084
+PAnojac_joint                              joint       3.1900   0.0084
+PAnojac_sequential                         eps_m       1.1000   0.0010
+PAnojac_sequential                         eps_t       1.1000   0.0010
+PAnojac_sequential                         eps_tbar    3.1800   0.0083
+PAnojac_sequential_global_retry            eps_m       3.8800   0.0106
+PAnojac_sequential_global_retry            eps_t       3.5200   0.0094
+PAnojac_sequential_global_retry            eps_tbar    3.1900   0.0084
+madspin_joint                              joint       4.2900   0.0119
+madspin_sequential                         eps_m       3.3100   0.0087
+madspin_sequential                         eps_t       2.3900   0.0058
+madspin_sequential                         eps_tbar    4.2400   0.0117
+madspin_sequential_global_retry            eps_m      14.5000   0.0442
+madspin_sequential_global_retry            eps_t       4.3700   0.0121
+madspin_sequential_global_retry            eps_tbar    3.2100   0.0084
+onshell_joint                              joint       3.1900   0.0084
+onshell_sequential                         eps_t       1.1000   0.0010
+onshell_sequential                         eps_tbar    3.1900   0.0084
+
+density_keep_jacobian True vs False (must differ -- identical numbers would mean the setting never took effect):
+  PA_joint                         PAnojac_joint                      differ (expected)
+  PA_sequential                    PAnojac_sequential                 differ (expected)
+  PA_sequential_global_retry       PAnojac_sequential_global_retry    differ (expected)
+
+position -> pdg: {'0': 6, '1': -6}
+final-state layouts seen in the production sample: {'6/-6': 2000}
+
+run                                 written    eps_m    eps_t eps_tbar      N_dec   wall_s   ovfl
+PA_joint                             100000   5.6700   5.6700   5.6700    1134784      108      0
+PA_sequential                        100000   3.5000   1.2400   3.1900     443088       81     14
+PA_sequential_global_retry           100000  13.3400   3.7900   3.2000     699192       94     49
+PAnojac_joint                        100000   3.1900   3.1900   3.1900     637820       74      0
+PAnojac_sequential                   100000   1.1000   1.1000   3.1800     428383       77      0
+PAnojac_sequential_global_retry      100000   3.8800   3.5200   3.1900     670846       84      0
+madspin_joint                        100000   4.2900   4.2900   4.2900     858196       91      0
+madspin_sequential                   100000   3.3100   2.3900   4.2400     662516       96      5
+madspin_sequential_global_retry      100000  14.5000   4.3700   3.2100     757657      110     21
+onshell_joint                        100000   3.1900   3.1900   3.1900     638504       74      0
+onshell_sequential                   100000       --   1.1000   3.1900     429374       72      0
+onshell_sequential_global_retry      100000   3.5300   3.5300   3.1900     671733       72      0
