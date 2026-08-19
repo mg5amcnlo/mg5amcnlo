@@ -118,23 +118,25 @@ so that ladder, not the signature default, is the operative convention.
    negative; the summed interference here does, and the zero crossing is the
    physics.
 
-6. **chi2 is written into the legend labels.**  The user's script puts no text
-   boxes on its figures, so the legend was the only in-style place to carry the
-   numbers.  `plot_interference.py` uses a text box instead.
+6. **No chi2, and no other statistics, anywhere on a figure.**  The user's
+   script puts no text boxes and no fit numbers on its plots, and neither script
+   here does either: the per-bin chi2 of the 4- and the 9-block sum against the
+   unpolarised reference lives in `RESULTS.md` and in
+   `plots/closure_numbers.txt`, which is where a number that has to be read
+   precisely belongs.  The figures show the comparison; the text reports it.
+   (An earlier revision of this file wrote the chi2 into the legend labels.
+   That is gone from both styles.)
 
-7. **The `cos_k_p` closure figure also carries the four diagonal blocks, each
-   rescaled.**  `(D+,D+)` and `(D-,D-)` are 7.93 pb, `(D+,D-)` and `(D-,D+)`
-   3.94 pb, so drawn raw they are comparable neither with each other nor with
-   the 23.77 pb reference.  Each is multiplied by `sigma_unpol / sigma_block`
-   (x3.0 and x6.0), which puts the four shapes on the reference's own scale.
-   They use the user's plain faint step (`alpha=0.55`, no markers, no error
-   bars) in `C4/C5/C6/C8`, solid where the *top* -- the first block index -- is
-   in `D+` and dash-dot where it is in `D-`, so the line style groups the curves
-   the way the physics does.  The rescaled curves do **not** add up to the
-   `4 diagonal blocks` series next to them: that one is the unscaled sum, and it
-   is the sum the ratio panel tests.  Because that is easy to misread, a
-   two-line 8 pt grey caption sits **above** the frame -- the user's script has
-   no such captions, but `loc='best'` owns the inside of the panel and this
-   statement must not be skippable.  The plain rendering of the same figure is
-   kept alongside as `us_closure_cos_k_p_plain.{png,pdf}`; the MG7-style script
-   does the same thing, under `closure_cos_k_p_plain.{png,pdf}`.
+7. **The `cos_k_p` closure figure also carries the four diagonal blocks.**
+   `(D+,D+)`, `(D+,D-)`, `(D-,D+)`, `(D-,D-)` are drawn one by one at their own
+   cross sections -- **nothing is rescaled**, so the four curves add up bin by
+   bin to the `4 diagonal blocks` series next to them, which is the sum the
+   ratio panel tests, and the figure needs no caveat about what is normalised
+   to what.  They use the user's plain faint step (`alpha=0.55`, no markers, no
+   error bars) in `C4/C5/C6/C8`, solid where the *top* -- the first block index
+   -- is in `D+` and dash-dot where it is in `D-`, so the line style groups the
+   curves the way the physics does: the two solid ones rise with
+   `cos theta^k` of the l+, the two dash-dot ones fall.  The plain rendering of
+   the same figure is kept alongside as `us_closure_cos_k_p_plain.{png,pdf}`;
+   the MG7-style script does the same, under `closure_cos_k_p_plain.{png,pdf}`.
+   The pair differs only by those four curves.

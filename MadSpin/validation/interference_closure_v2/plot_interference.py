@@ -74,14 +74,6 @@ DIAG_LS = {'pp': 'solid', 'pm': 'solid', 'mp': 'dashdot', 'mm': 'dashdot'}
 # (D-,D-) fall, and the unscaled sum of the four is the flat unpolarised curve.
 AUGMENT_WITH_DIAG_BLOCKS = ('cos_k_p',)
 
-# What the four individual block curves actually are.  Stated on the figure
-# itself, because a rescaled curve next to an unscaled reference is exactly the
-# kind of thing a reader mis-reads.
-BLOCK_NOTE = ('individual blocks scaled by '
-              r'$\sigma_{\mathrm{unpol}}/\sigma_{\mathrm{block}}$'
-              ' -- shape only, they do not add up;' '\n'
-              'the reference and the 4- and 9-block sums are unscaled')
-
 
 # --------------------------------------------------------------------------
 OBS = [
@@ -187,15 +179,11 @@ def one_figure(d, key, label, kind, out, show_diag_blocks=False, name=None):
     """Closure figure: unpolarised reference vs the 4- and 9-block sums.
 
     With ``show_diag_blocks`` the upper panel additionally carries the four
-    diagonal blocks one by one.  Their cross sections differ by a factor two
-    (7.93 pb for (D+,D+) and (D-,D-), 3.94 pb for the mixed pair), so drawn raw
-    they would be neither comparable with each other nor with the reference;
-    each is therefore multiplied by sigma_unpol / sigma_block, i.e. rescaled to
-    a common normalisation, and only its SHAPE is on the page.  The factor is
-    written into the legend entry and the panel carries a note, because the
-    rescaled curves deliberately do NOT add up to the '4 diagonal blocks' curve
-    next to them -- that one is the unscaled sum, and it is the sum the ratio
-    panel below tests.
+    diagonal blocks one by one, each at its own cross section -- nothing is
+    rescaled anywhere on this figure, so the four block curves add up, bin by
+    bin, to the '4 diagonal blocks' curve drawn next to them, which is the sum
+    the ratio panel below tests.  Line style encodes the polarisation of the
+    top, the first block index: solid for D+, dash-dot for D-.
     """
     bins = d.bins(key)
     ctr = 0.5 * (bins[1:] + bins[:-1])
@@ -227,17 +215,13 @@ def one_figure(d, key, label, kind, out, show_diag_blocks=False, name=None):
             range=(bins[0], bins[-1]), linewidth=LW, color=C_INT,
             linestyle='dotted', label=r'5 interference blocks')
 
-    top_extra = 0.0
     if show_diag_blocks:
-        su = d.meta['unpol']['xsec']
         for tag in DIAG:
             s, _e = d.h([tag], key)
-            f = su / d.meta[tag]['xsec']
-            ax.hist(x=ctr, weights=f * s / wid, histtype='step', bins=len(ctr),
+            ax.hist(x=ctr, weights=s / wid, histtype='step', bins=len(ctr),
                     range=(bins[0], bins[-1]), linewidth=1.0,
                     color=DIAG_COLOR[tag], linestyle=DIAG_LS[tag], zorder=1,
-                    label=r'%s $\times\,%.1f$' % (BLOCK_LABEL[tag], f))
-            top_extra = max(top_extra, float(np.nanmax(f * s / wid)))
+                    label=BLOCK_LABEL[tag])
 
     ax.axhline(0.0, color='gray', lw=0.6, linestyle='dashed')
     ax.set_ylabel(r'$d\sigma/dX$ [pb]')
@@ -247,13 +231,9 @@ def one_figure(d, key, label, kind, out, show_diag_blocks=False, name=None):
                     top=np.nanmax(u / wid) * 12.0)
     else:
         lo0 = min(0.0, np.nanmin(it / wid) * 1.3)
-        ax.set_ylim(lo0, max(np.nanmax(u / wid), top_extra)
-                    * (1.55 if show_diag_blocks else 1.42))
-    if show_diag_blocks:
-        # above the frame: the legend already fills the top of the panel, and
-        # this caption must not be something the eye can skip
-        ax.text(0.0, 1.015, BLOCK_NOTE, transform=ax.transAxes, va='bottom',
-                ha='left', fontsize=8, color='dimgray', linespacing=1.4)
+        # eight legend entries instead of four when the blocks are shown
+        ax.set_ylim(lo0, np.nanmax(u / wid)
+                    * (1.62 if show_diag_blocks else 1.42))
     update_legend(ax, ncol=2, loc='upper right',
                   size=8 if show_diag_blocks else 9)
     plt.setp(ax.get_xticklabels(), visible=False)

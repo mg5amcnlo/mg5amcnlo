@@ -35,13 +35,15 @@ if _HERE not in sys.path:
     sys.path.insert(0, _HERE)
 
 # Reuse the data loading and the statistics of the existing script rather than
-# rewriting them: same accessors, same chi2, same ratio error propagation.
+# rewriting them: same accessors, same ratio error propagation.  The chi2 the
+# closure test is judged on lives in RESULTS.md and plots/closure_numbers.txt;
+# it is deliberately not written onto any figure, in either style.
 # That module sets the MG7 paper rcParams (serif / usetex) at import time, so
 # the defaults are restored immediately afterwards -- the user's script sets no
 # rcParams at all and therefore draws with stock matplotlib.
 _saved_rc = mpl.rcParams.copy()
 from plot_interference import (            # noqa: E402
-    Data, ratio, chi2, OBS, DIAG, INTER, BLOCK_LABEL, BLOCK_NOTE,
+    Data, ratio, OBS, DIAG, INTER, BLOCK_LABEL,
 )
 mpl.rcParams.update(mpl.rcParamsDefault)
 matplotlib.use('Agg')
@@ -162,12 +164,10 @@ def closure_figure(d, key, label, out, formats, show_diag_blocks=False):
     """Unpolarised reference vs the 4-block and the 9-block sum.
 
     With ``show_diag_blocks`` the upper panel also carries the four diagonal
-    blocks one by one.  Their cross sections differ by a factor two (7.93 pb
-    for (D+,D+) and (D-,D-), 3.94 pb for the mixed pair), so each is drawn
-    multiplied by sigma_unpol / sigma_block -- rescaled to a common
-    normalisation, shape only.  The factor is in the legend entry and the panel
-    carries a note: the rescaled curves do NOT add up to the '4 diagonal
-    blocks' series, which is the unscaled sum the ratio panel tests.
+    blocks one by one, each at its own cross section: nothing is rescaled, so
+    the four add up bin by bin to the '4 diagonal blocks' series, which is the
+    sum the ratio panel tests.  Line style encodes the polarisation of the top,
+    the first block index: solid for D+, dash-dot for D-.
     """
     edges = d.bins(key)
     ctr = 0.5 * (edges[1:] + edges[:-1])
@@ -176,9 +176,6 @@ def closure_figure(d, key, label, out, formats, show_diag_blocks=False):
     s4, s4e = d.h(DIAG, key)
     s9, s9e = d.h(ALL9, key)
 
-    c4, ndf = chi2(s4, s4e, u, ue)
-    c9, _ = chi2(s9, s9e, u, ue)
-
     r4, r4e = ratio(s4, s4e, u, ue)
     r9, r9e = ratio(s9, s9e, u, ue)
     ylim = choose_ratio_ylim([(r4, r4e), (r9, r9e)])
@@ -186,25 +183,15 @@ def closure_figure(d, key, label, out, formats, show_diag_blocks=False):
     fig, ax_main, ax_ratio = _panels()
     _reference(ax_main, edges, u, C_UNPOL, 'unpolarised (reference)')
     if show_diag_blocks:
-        su = d.meta['unpol']['xsec']
         for tag, color in zip(DIAG, C_BLOCKS):
             y, _ye = d.h([tag], key)
-            f = su / d.meta[tag]['xsec']
-            ax_main.step(edges, np.append(f * y, f * y[-1]), where='post',
+            ax_main.step(edges, np.append(y, y[-1]), where='post',
                          color=color, alpha=STEP_ALPHA, linewidth=1.2,
                          linestyle=BLOCK_LS[tag], zorder=1,
-                         label=r'%s $\times %.1f$' % (BLOCK_LABEL[tag], f))
-    _marks(ax_main, ctr, edges, s4, s4e, C_SUM4,
-           r'4 diagonal blocks  ($\chi^2 = %.1f$, %d bins)' % (c4, ndf))
-    _marks(ax_main, ctr, edges, s9, s9e, C_SUM9,
-           r'all 9 blocks  ($\chi^2 = %.1f$, %d bins)' % (c9, ndf),
+                         label=BLOCK_LABEL[tag])
+    _marks(ax_main, ctr, edges, s4, s4e, C_SUM4, '4 diagonal blocks')
+    _marks(ax_main, ctr, edges, s9, s9e, C_SUM9, 'all 9 blocks',
            open_markers=True)
-    if show_diag_blocks:
-        # above the frame: loc='best' puts the legend inside the panel, and
-        # this caption must not be something the eye can skip
-        ax_main.text(0.0, 1.015, BLOCK_NOTE, transform=ax_main.transAxes,
-                     va='bottom', ha='left', fontsize=8, color='dimgray',
-                     linespacing=1.4)
 
     for (r, re, color, opened) in ((r4, r4e, C_SUM4, False),
                                    (r9, r9e, C_SUM9, True)):
@@ -227,9 +214,6 @@ def blocks_figure(d, key, label, out, formats):
     s9, s9e = d.h(ALL9, key)
     si, sie = d.h(INTER, key)
 
-    c4, ndf = chi2(s4, s4e, u, ue)
-    c9, _ = chi2(s9, s9e, u, ue)
-
     r4, r4e = ratio(s4, s4e, u, ue)
     r9, r9e = ratio(s9, s9e, u, ue)
     ylim = choose_ratio_ylim([(r4, r4e), (r9, r9e)])
@@ -247,13 +231,12 @@ def blocks_figure(d, key, label, out, formats):
            open_markers=True)
     ax_main.axhline(0, linestyle=':', color='grey', linewidth=0.8, zorder=0)
 
-    for (r, re, color, opened, lab) in (
-            (r4, r4e, C_SUM4, False, r'4 blocks  ($\chi^2=%.1f$)' % c4),
-            (r9, r9e, C_SUM9, True, r'9 blocks  ($\chi^2=%.1f$)' % c9)):
+    for (r, re, color, opened) in ((r4, r4e, C_SUM4, False),
+                                   (r9, r9e, C_SUM9, True)):
         good = np.isfinite(r)
         style = dict(OPEN, markeredgecolor=color) if opened else {}
         ax_ratio.errorbar(ctr[good], r[good], yerr=re[good], fmt='o', ms=MS,
-                          color=color, label=lab, zorder=2, **style)
+                          color=color, zorder=2, **style)
 
     # seven legend entries here, so more room is needed than on the closure plot
     return _finish(fig, ax_main, ax_ratio, label, ylim, out, formats,
