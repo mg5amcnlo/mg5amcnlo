@@ -646,7 +646,12 @@ class MadSpinInterface(extended_cmd.Cmd):
         self.err_branching_ratio = 0
         self.me_run_name = "" # Events diretory name where to stotre the events (used by madevent) not use internally
         self.all_iden = {}
-        
+        # The card this run executes, and the directory do_import derives from
+        # the event file. Both are what madspin_card_path archives from; set
+        # before the do_import below, which fills the second one in.
+        self.ms_card_path = None
+        self.event_base_dir = None
+
         if event_path:
             logger.info("Extracting the banner ...")
             self.do_import(event_path)
@@ -754,9 +759,16 @@ class MadSpinInterface(extended_cmd.Cmd):
         # change directory where to write the output
         self.options['curr_dir'] = os.path.realpath(os.path.dirname(inputfile))
         if os.path.basename(os.path.dirname(os.path.dirname(inputfile))) == 'Events':
-            self.options['curr_dir'] = pjoin(self.options['curr_dir'], 
+            self.options['curr_dir'] = pjoin(self.options['curr_dir'],
                                                       os.path.pardir, os.pardir)
-        
+        # Keep that directory -- the process root when the events sit in
+        # Events/<run>/, the event file's own directory otherwise -- under a
+        # name of its own. 'set ms_dir' re-points curr_dir at the gridpack
+        # (post_set_ms_dir), so curr_dir stops answering "where did these
+        # events come from" as soon as a card mentions ms_dir after the import.
+        # See madspin_card_path.
+        self.event_base_dir = self.options['curr_dir']
+
         if not os.path.exists(inputfile):
             if inputfile.endswith('.gz'):
                 if not os.path.exists(inputfile[:-3]):
@@ -1575,6 +1587,99 @@ class MadSpinInterface(extended_cmd.Cmd):
                 return tag
         return groups['tags'][-1]
 
+    ############################################################################
+    ##  Archiving the card that was actually run                              ##
+    ############################################################################
+
+    def import_command_file(self, filepath):
+        """Execute a MadSpin card, remembering which file it came from.
+
+        That file is the record of what this run did, and it is the only thing
+        that knows where the card lives: the card is handed in from outside
+        (MadEvent's ``do_decay_events`` passes
+        ``<me_dir>/Cards/madspin_card.dat``) and is under no obligation to sit
+        anywhere in particular. ``madspin_card_path`` archives it next to the
+        decayed events.
+        """
+        if isinstance(filepath, str):
+            self.ms_card_path = os.path.realpath(filepath)
+        return super(MadSpinInterface, self).import_command_file(filepath)
+
+    @property
+    def madspin_card_path(self):
+        """The MadSpin card this run executed, or None when there is no file to
+        archive (an interactive session types its commands; it has no card).
+
+        This is the single place that answers "which card was run", so that the
+        copy kept beside the events cannot name a different file from the one
+        the interface obeyed. Two sources, in order:
+
+        1. the file handed to :meth:`import_command_file` -- literally the card
+           the user edited for this run, wherever it happens to live. Every
+           driver runs MadSpin this way;
+        2. ``Cards/madspin_card.dat`` under ``event_base_dir``, the directory
+           ``do_import`` derived from the event file -- for a session driven
+           line by line that nonetheless runs inside a process directory.
+
+        What it deliberately does not use is ``self.options['curr_dir']``,
+        which is what the archiving used to be built from. ``curr_dir`` says
+        where this run's *output* goes -- that is its meaning at every other
+        use site, and what #365 pinned it to for the decayed events -- and
+        ``post_set_ms_dir`` re-points it at the gridpack. So
+        ``pjoin(curr_dir, 'Cards', 'madspin_card.dat')`` named the real card
+        only when the card happened to say ``set ms_dir`` *before* importing
+        the events, ``do_import`` then pointing curr_dir back at them. In the
+        other ordering -- the one MadEvent always produces, since it imports
+        the events in the constructor and reads the card afterwards -- it named
+        ``<ms_dir>/Cards/madspin_card.dat``, which MadSpin never creates, and
+        the archiving was skipped without a word. See
+        tests/unit_tests/madspin, class TestMadSpinCardArchive.
+        """
+        if self.ms_card_path and os.path.exists(self.ms_card_path):
+            return self.ms_card_path
+        if self.event_base_dir:
+            path = pjoin(self.event_base_dir, 'Cards', 'madspin_card.dat')
+            if os.path.exists(path):
+                return path
+        return None
+
+    def _archive_madspin_card(self, decayed_evt_file):
+        """Keep the card that produced ``decayed_evt_file`` next to it.
+
+        Shared by ``do_launch`` and ``run_from_pickle`` so that the gridpack
+        path -- the one reached on every rerun against an existing ``ms_dir``,
+        and hence the one where losing the card is most likely -- archives the
+        same file, from the same source, as a fresh run.
+
+        Returns the path written, or None when there was no card to copy.
+        """
+        ms_card_path = self.madspin_card_path
+        if not ms_card_path:
+            return None
+
+        run_dir = os.path.realpath(os.path.dirname(decayed_evt_file))
+        packed = os.path.exists(pjoin(run_dir, 'RunMaterial.tar.gz'))
+        if packed:
+            misc.call(['tar', '-xzpf', 'RunMaterial.tar.gz'], cwd=run_dir)
+            base_path = pjoin(run_dir, 'RunMaterial')
+        else:
+            base_path = run_dir
+
+        evt_name = os.path.basename(decayed_evt_file).replace('.lhe', '')
+        ms_card_to_copy = pjoin(base_path, 'madspin_card_for_%s.dat' % evt_name)
+        count = 0
+        while os.path.exists(ms_card_to_copy):
+            count += 1
+            ms_card_to_copy = pjoin(base_path, 'madspin_card_for_%s_%d.dat' %
+                                                              (evt_name, count))
+        files.cp(str(ms_card_path), str(ms_card_to_copy))
+
+        if packed:
+            misc.call(['tar', '-czpf', 'RunMaterial.tar.gz', 'RunMaterial'],
+                                                                    cwd=run_dir)
+            shutil.rmtree(pjoin(run_dir, 'RunMaterial'))
+        return ms_card_to_copy
+
     @misc.mute_logger()
     def do_launch(self, line):
         """end of the configuration launched the code"""
@@ -1731,34 +1836,16 @@ class MadSpinInterface(extended_cmd.Cmd):
             pass
         misc.gzip(evt_path)
         decayed_evt_file=evt_path.replace('.lhe', '_decayed.lhe')
-        misc.gzip(pjoin(self.options['curr_dir'],'decayed_events.lhe'),
-                  stdout=decayed_evt_file)
+        # Ask the writer where it put the file rather than rebuilding the path
+        # here: the two used to be spelled out separately and disagreed as soon
+        # as ms_dir was set and curr_dir was not the ms_dir (see
+        # decay_all_events.decayed_events_path).
+        misc.gzip(generate_all.decayed_events_path, stdout=decayed_evt_file)
         if not self.mother:
             logger.info("Decayed events have been written in %s.gz" % decayed_evt_file)
 
-        # Now arxiv the shower card used if RunMaterial is present
-        ms_card_path = pjoin(self.options['curr_dir'],'Cards','madspin_card.dat')
-        run_dir = os.path.realpath(os.path.dirname(decayed_evt_file))
-        if os.path.exists(ms_card_path):
-            if os.path.exists(pjoin(run_dir,'RunMaterial.tar.gz')):
-                misc.call(['tar','-xzpf','RunMaterial.tar.gz'], cwd=run_dir)
-                base_path = pjoin(run_dir,'RunMaterial')
-            else:
-                base_path = pjoin(run_dir)
-
-            evt_name = os.path.basename(decayed_evt_file).replace('.lhe', '')
-            ms_card_to_copy = pjoin(base_path,'madspin_card_for_%s.dat'%evt_name)
-            count = 0    
-            while os.path.exists(ms_card_to_copy):
-                count += 1
-                ms_card_to_copy = pjoin(base_path,'madspin_card_for_%s_%d.dat'%\
-                                                               (evt_name,count))
-            files.cp(str(ms_card_path),str(ms_card_to_copy))
-            
-            if os.path.exists(pjoin(run_dir,'RunMaterial.tar.gz')):
-                misc.call(['tar','-czpf','RunMaterial.tar.gz','RunMaterial'], 
-                                                                    cwd=run_dir)
-                shutil.rmtree(pjoin(run_dir,'RunMaterial'))
+        # Now arxiv the madspin card used (inside RunMaterial if present)
+        self._archive_madspin_card(decayed_evt_file)
         self._log_lhe_timers()
 
     def run_from_pickle(self):
@@ -1847,10 +1934,17 @@ class MadSpinInterface(extended_cmd.Cmd):
             pass
         misc.gzip(evt_path)
         decayed_evt_file=evt_path.replace('.lhe', '_decayed.lhe')
-        misc.gzip(pjoin(self.options['curr_dir'],'decayed_events.lhe'),
-                  stdout=decayed_evt_file)
+        # Same shared accessor as do_launch -- and this path is *only* reachable
+        # with ms_dir set, so it was the one always exposed to the mismatch.
+        misc.gzip(generate_all.decayed_events_path, stdout=decayed_evt_file)
         if not self.mother:
-            logger.info("Decayed events have been written in %s.gz" % decayed_evt_file)    
+            logger.info("Decayed events have been written in %s.gz" % decayed_evt_file)
+
+        # ... and the card goes with them here too. Rerunning against an
+        # existing ms_dir is a *rerun*: it produces its own event file, from its
+        # own card, and archived nothing at all before -- do_launch returns here
+        # long before reaching its own copy of this call.
+        self._archive_madspin_card(decayed_evt_file)
     
     
 

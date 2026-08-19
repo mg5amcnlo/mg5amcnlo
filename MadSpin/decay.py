@@ -2161,6 +2161,42 @@ class decay_all_events(object):
     
         self.ending_run()
         
+    # Name of the intermediate LHE file the legacy (madspin_v1) decay writes and
+    # that MadSpinInterface then gzips into <events>_decayed.lhe.gz.
+    DECAYED_EVENTS_NAME = 'decayed_events.lhe'
+
+    @property
+    def decayed_events_path(self):
+        """The one place that decides where the decayed events are written.
+
+        Both ends of the write/read pair must go through this property --
+        ``decaying_events`` opens it, ``MadSpinInterface.do_launch`` and
+        ``run_from_pickle`` gzip it -- because they used to compute it
+        separately and disagreed (see tests/unit_tests/madspin, class
+        TestDecayedEventsPath).
+
+        It is ``curr_dir``, the run's output directory, and deliberately *not*
+        ``path_me``:
+
+        * ``path_me`` means "where the matrix-element directories live"
+          everywhere else it is used (production_me/full_me/decay_me,
+          decay_<pdg>_<i>, ms_wstatus_*, param_card.dat). Under ``ms_dir`` it is
+          a directory that is built once and reused -- and possibly shared --
+          by later runs, so per-run event output has no business there.
+        * without ``ms_dir`` the two coincide (``path_me`` is *defined* as
+          ``realpath(curr_dir)``), which is why the mismatch stayed hidden: it
+          only bites when ``ms_dir`` is set *and* ``curr_dir`` is not the
+          ms_dir, i.e. whenever the event file is imported after ``set ms_dir``
+          (``post_set_ms_dir`` points ``curr_dir`` at the ms_dir, and
+          ``do_import`` points it back at the event file's directory).
+
+        The value is read off the *live* interface rather than ``self.options``
+        on purpose: under ``ms_dir`` this object is restored from
+        ``madspin.pkl``, so its own ``options`` -- pickled with the gridpack --
+        still describe the run that *built* it, ``curr_dir`` included.
+        """
+        return pjoin(self.mscmd.options['curr_dir'], self.DECAYED_EVENTS_NAME)
+
     def ending_run(self):
         """launch the unweighting and deal with final information"""    
         # launch the decay and reweighting
@@ -2318,7 +2354,7 @@ class decay_all_events(object):
 
         logger.info(' ' )
         logger.info('Decaying the events... ')
-        self.outputfile = open(pjoin(self.path_me,'decayed_events.lhe'), 'w')
+        self.outputfile = open(self.decayed_events_path, 'w')
         self.write_banner_information()
 
         # Same reasoning as the run_onshell guard (see

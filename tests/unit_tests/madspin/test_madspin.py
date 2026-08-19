@@ -5000,6 +5000,531 @@ class TestGetPdirUnpackArity(unittest.TestCase):
             self.assertNotIn('self.%s' % cache, source)
 
 
+class TestDecayedEventsPath(unittest.TestCase):
+    """The legacy (madspin_v1) decay writes its events to an intermediate
+    ``decayed_events.lhe`` and the interface then gzips that file into
+    ``<events>_decayed.lhe.gz``. Writer and reader used to spell the directory
+    out separately -- ``decay_all_events.decaying_events`` used ``path_me``,
+    ``MadSpinInterface.do_launch``/``run_from_pickle`` used ``curr_dir`` -- and
+    disagreed whenever those two differ.
+
+    They differ exactly when ``ms_dir`` is set *and* ``curr_dir`` is not the
+    ms_dir. That is not exotic: ``post_set_ms_dir`` points ``curr_dir`` at the
+    ms_dir, so a card that says ``set ms_dir`` and *then* imports the event file
+    gets ``curr_dir`` pointed back at the event file's directory by
+    ``do_import``. The whole (expensive) decay then completes -- correct
+    branching ratio, all events written, correct <init> -- and the run dies on
+    the very last step with FileNotFoundError on a file that is sitting in the
+    ms_dir. Without ``ms_dir`` the two coincide by construction (``path_me`` is
+    *defined* as ``realpath(curr_dir)``), which is why this never showed up in
+    the common case.
+
+    ``curr_dir`` is the correct end: it is the run's output directory, whereas
+    ``path_me`` means "where the matrix-element directories live" everywhere
+    else it is used, and under ``ms_dir`` it is a directory built once and
+    reused by later runs.
+
+    These tests pin the two ends *together* rather than each to a literal, so a
+    future edit to either side cannot re-open the gap without failing here. No
+    MadEvent round trip is needed: the disagreement is entirely about paths.
+    """
+
+    NAME = 'decayed_events.lhe'
+
+    def setUp(self):
+        import tempfile
+        self.tmpdir = tempfile.mkdtemp(prefix='ms_decayed_path_')
+        self.evt_dir = pjoin(self.tmpdir, 'events')
+        self.ms_dir = pjoin(self.tmpdir, 'gridpack')
+        os.makedirs(self.evt_dir)
+        os.makedirs(self.ms_dir)
+
+    def tearDown(self):
+        shutil.rmtree(self.tmpdir, ignore_errors=True)
+
+    # ------------------------------------------------------------------
+    # helpers
+    # ------------------------------------------------------------------
+
+    class _Interface(object):
+        """Stands in for the live MadSpinInterface: the accessor only needs its
+        ``options``."""
+        def __init__(self, options):
+            self.options = options
+
+    def _options(self, ms_dir=None, curr_dir=None):
+        """A real MadSpinOptions, driven the way a card drives it -- so the
+        ``set ms_dir`` -> ``import`` interaction that creates the mismatch is
+        reproduced by the production code, not imitated here."""
+        options = interface_madspin.MadSpinOptions()
+        if ms_dir:
+            options['ms_dir'] = ms_dir          # post_set_ms_dir moves curr_dir
+        if curr_dir:
+            options['curr_dir'] = curr_dir      # ...and do_import moves it back
+        return options
+
+    def _writer(self, options):
+        """A ``decay_all_events`` with only what the accessor touches. Built
+        without ``__init__`` on purpose: constructing the real thing needs a
+        banner, a model and a compiled matrix element, none of which has any say
+        in where the output goes."""
+        writer = object.__new__(madspin.decay_all_events)
+        writer.options = options
+        writer.mscmd = self._Interface(options)
+        # path_me exactly as decay_all_events.__init__ computes it
+        writer.path_me = os.path.realpath(options['curr_dir'])
+        if options['ms_dir']:
+            writer.path_me = os.path.realpath(options['ms_dir'])
+        return writer
+
+    @staticmethod
+    def _reader_path(writer):
+        """What the interface gzips. Kept as a named indirection so it is
+        obvious that ``test_both_gzip_call_sites_use_the_accessor`` is what
+        makes this stand for the real read sites."""
+        return writer.decayed_events_path
+
+    # ------------------------------------------------------------------
+    # the two ends agree
+    # ------------------------------------------------------------------
+
+    def test_writer_and_reader_agree_without_ms_dir(self):
+        writer = self._writer(self._options(curr_dir=self.evt_dir))
+        self.assertEqual(os.path.realpath(writer.decayed_events_path),
+                         os.path.realpath(self._reader_path(writer)))
+        self.assertEqual(os.path.realpath(os.path.dirname(
+                             writer.decayed_events_path)),
+                         os.path.realpath(self.evt_dir))
+
+    def test_writer_and_reader_agree_with_ms_dir(self):
+        """The regression: ms_dir set, curr_dir left pointing at the event file
+        (a card that imports after ``set ms_dir``)."""
+        options = self._options(ms_dir=self.ms_dir, curr_dir=self.evt_dir)
+        # the setup really is the mismatching one
+        self.assertNotEqual(os.path.realpath(options['curr_dir']),
+                            os.path.realpath(options['ms_dir']))
+        writer = self._writer(options)
+        self.assertEqual(os.path.realpath(writer.decayed_events_path),
+                         os.path.realpath(self._reader_path(writer)))
+
+    def test_writer_and_reader_agree_when_ms_dir_is_curr_dir(self):
+        """The historically working case -- a card that sets ms_dir and lets
+        post_set_ms_dir carry curr_dir with it -- must stay working."""
+        options = self._options(ms_dir=self.ms_dir)
+        self.assertEqual(os.path.realpath(options['curr_dir']),
+                         os.path.realpath(self.ms_dir))
+        writer = self._writer(options)
+        self.assertEqual(os.path.realpath(writer.decayed_events_path),
+                         os.path.realpath(self._reader_path(writer)))
+        self.assertEqual(os.path.realpath(os.path.dirname(
+                             writer.decayed_events_path)),
+                         os.path.realpath(self.ms_dir))
+
+    # ------------------------------------------------------------------
+    # ...and agree on the *right* directory
+    # ------------------------------------------------------------------
+
+    def test_the_output_goes_to_curr_dir_and_not_into_the_ms_dir(self):
+        """Fixing this at the other end -- teaching the reader to look in
+        path_me -- would also have silenced the traceback, and would have been
+        wrong: it would leave per-run event output inside a gridpack directory
+        that later runs reuse and may share."""
+        writer = self._writer(self._options(ms_dir=self.ms_dir,
+                                            curr_dir=self.evt_dir))
+        self.assertEqual(os.path.realpath(os.path.dirname(
+                             writer.decayed_events_path)),
+                         os.path.realpath(self.evt_dir))
+        self.assertNotEqual(os.path.realpath(writer.decayed_events_path),
+                            os.path.realpath(pjoin(writer.path_me, self.NAME)))
+
+    def test_without_ms_dir_path_me_and_curr_dir_still_coincide(self):
+        """The no-ms_dir case is the one most likely to break if the fix is made
+        at the wrong end, so pin that the file lands where it always did."""
+        writer = self._writer(self._options(curr_dir=self.evt_dir))
+        self.assertEqual(os.path.realpath(writer.decayed_events_path),
+                         os.path.realpath(pjoin(writer.path_me, self.NAME)))
+
+    # ------------------------------------------------------------------
+    # the accessor reads the live run, not the pickled one
+    # ------------------------------------------------------------------
+
+    def test_the_path_follows_the_live_interface_not_the_stored_options(self):
+        """Under ms_dir the writer is restored from ``madspin.pkl``, so its own
+        ``options`` are those of the run that *built* the gridpack -- including
+        that run's curr_dir. ``run_from_pickle`` re-points ``mscmd`` at the live
+        interface, so the accessor must read the location from there."""
+        stale_dir = pjoin(self.tmpdir, 'the_run_that_built_the_gridpack')
+        os.makedirs(stale_dir)
+        writer = self._writer(self._options(ms_dir=self.ms_dir,
+                                            curr_dir=stale_dir))
+        # what run_from_pickle does: hand the restored object the live interface
+        live = self._options(ms_dir=self.ms_dir, curr_dir=self.evt_dir)
+        writer.mscmd = self._Interface(live)
+        self.assertEqual(os.path.realpath(os.path.dirname(
+                             writer.decayed_events_path)),
+                         os.path.realpath(self.evt_dir))
+        self.assertNotIn('the_run_that_built_the_gridpack',
+                         writer.decayed_events_path)
+
+    # ------------------------------------------------------------------
+    # a real write/read round trip
+    # ------------------------------------------------------------------
+
+    def _round_trip(self, options):
+        """Write at the writer's path, gzip from the reader's path, exactly as
+        decaying_events and do_launch do."""
+        writer = self._writer(options)
+        with open(writer.decayed_events_path, 'w') as fsock:
+            fsock.write('<LesHouchesEvents version="1.0">\n'
+                        '</LesHouchesEvents>\n')
+        out = pjoin(self.tmpdir, 'events_decayed.lhe')
+        misc.gzip(self._reader_path(writer), stdout=out)
+        return out + '.gz'
+
+    def test_round_trip_without_ms_dir(self):
+        import gzip as gziplib
+        out = self._round_trip(self._options(curr_dir=self.evt_dir))
+        self.assertTrue(os.path.exists(out))
+        self.assertIn('LesHouchesEvents', gziplib.open(out, 'rt').read())
+
+    def test_round_trip_with_ms_dir(self):
+        """On the buggy code this raised FileNotFoundError -- after the whole
+        decay had already been done."""
+        import gzip as gziplib
+        out = self._round_trip(self._options(ms_dir=self.ms_dir,
+                                             curr_dir=self.evt_dir))
+        self.assertTrue(os.path.exists(out))
+        self.assertIn('LesHouchesEvents', gziplib.open(out, 'rt').read())
+
+    # ------------------------------------------------------------------
+    # nobody rebuilds the path by hand any more
+    # ------------------------------------------------------------------
+
+    def test_the_writer_opens_the_accessor(self):
+        source = inspect.getsource(madspin.decay_all_events.decaying_events)
+        self.assertIn('self.decayed_events_path', source)
+        self.assertNotIn(self.NAME, source)
+
+    def test_both_gzip_call_sites_use_the_accessor(self):
+        """This is what lets the round-trip tests above stand for the real read
+        sites: neither of them may rebuild the path from an option.
+
+        Read from the module file rather than through ``inspect.getsource`` on
+        the methods: ``do_launch`` is wrapped by ``misc.mute_logger`` and
+        getsource returns the decorator's body."""
+        with open(interface_madspin.__file__.replace('.pyc', '.py')) as fsock:
+            source = fsock.read()
+        self.assertEqual(
+            source.count('misc.gzip(generate_all.decayed_events_path'), 2,
+            'do_launch and run_from_pickle must both ask the writer where the '
+            'decayed events are')
+        self.assertNotIn("pjoin(self.options['curr_dir'],'%s')" % self.NAME,
+                         source)
+
+    def test_the_accessor_is_not_derived_from_path_me(self):
+        """path_me is the matrix-element directory; the guard is here because
+        making the traceback go away by pointing the *reader* at path_me is the
+        tempting wrong fix."""
+        source = inspect.getsource(
+            madspin.decay_all_events.decayed_events_path.fget)
+        code = source.split('"""')[-1]
+        self.assertNotIn('path_me', code)
+        self.assertIn("curr_dir", code)
+
+
+class TestMadSpinCardArchive(unittest.TestCase):
+    """MadSpin keeps a copy of the card it ran next to the events it produced
+    (``madspin_card_for_<events>.dat``). That copy is the record of what was
+    actually run, and its absence is only noticed much later, by whoever tries
+    to reproduce the result.
+
+    The source used to be ``pjoin(self.options['curr_dir'], 'Cards',
+    'madspin_card.dat')``, and ``curr_dir`` does not mean that. It is where the
+    run's *output* goes (that is what #365 pinned it to for the decayed
+    events), and ``MadSpinOptions.post_set_ms_dir`` re-points it at the
+    gridpack. ``do_import`` points it back at the event file, so the card
+    *ordering* decided whether the archiving worked:
+
+      set ms_dir ... ; import events   -> curr_dir is the process dir  -> worked
+      import events ; set ms_dir ...   -> curr_dir is the ms_dir       -> silent
+
+    and the second is the ordering MadEvent always produces, because
+    ``do_decay_events`` imports the event file in the ``MadSpinInterface``
+    constructor and only then runs the card. So *every* MadEvent run whose
+    madspin_card.dat says ``set ms_dir`` lost its card, with no warning: the
+    guard was ``if os.path.exists(ms_card_path)``, and MadSpin never creates a
+    ``Cards`` directory inside an ms_dir, so the whole block was skipped.
+
+    The fix is to stop deriving the card from an output directory at all and
+    ask which card was *run* -- ``MadSpinInterface.madspin_card_path``. These
+    tests drive the real ``MadSpinOptions`` and the real ``do_import``, so the
+    ``post_set_ms_dir`` -> ``do_import`` interaction that creates the mismatch
+    is produced by production code rather than imitated here, and they pin the
+    two orderings *to each other* so neither end can drift again.
+    """
+
+    class _Interface(interface_madspin.MadSpinInterface):
+        """A MadSpinInterface carrying only the state the methods under test
+        touch. Subclassed, not faked: ``do_import``, ``import_command_file``,
+        ``madspin_card_path`` and ``_archive_madspin_card`` are the production
+        ones. ``__init__`` is skipped because building the real interface pulls
+        in a MasterCmd and a model, neither of which has any say in which card
+        gets archived."""
+
+        def __init__(self, options):
+            self.options = options
+            self.ms_card_path = None
+            self.event_base_dir = None
+            self.mother = None
+            self.child = None
+            self.stored_line = None
+            self.history = []
+            self.inputfile = None
+            self.use_rawinput = False
+
+    CARD = '# the card this run actually used\nset spinmode madspin_v1\n'
+
+    def setUp(self):
+        import tempfile
+        self.tmpdir = tempfile.mkdtemp(prefix='ms_card_archive_')
+        self.proc = pjoin(self.tmpdir, 'PROC')
+        self.run_dir = pjoin(self.proc, 'Events', 'run_01')
+        self.ms_dir = pjoin(self.tmpdir, 'gridpack')
+        os.makedirs(pjoin(self.proc, 'Cards'))
+        os.makedirs(self.run_dir)
+        os.makedirs(self.ms_dir)
+        self.card = pjoin(self.proc, 'Cards', 'madspin_card.dat')
+        with open(self.card, 'w') as fsock:
+            fsock.write(self.CARD)
+        # the event file need not exist: do_import decides the directories
+        # before it looks at the file (see _import_events)
+        self.events = pjoin(self.run_dir, 'unweighted_events.lhe')
+        self.decayed = pjoin(self.run_dir, 'unweighted_events_decayed.lhe')
+
+    def tearDown(self):
+        shutil.rmtree(self.tmpdir, ignore_errors=True)
+
+    # ------------------------------------------------------------------
+    # helpers -- everything below goes through production code
+    # ------------------------------------------------------------------
+
+    def _interface(self):
+        return self._Interface(interface_madspin.MadSpinOptions())
+
+    def _import_events(self, iface):
+        """Run the *real* ``do_import`` for its directory bookkeeping.
+
+        It sets ``curr_dir``/``event_base_dir`` in its first few lines and only
+        afterwards checks that the file is there, so pointing it at a file that
+        does not exist runs exactly the part under test and stops before the
+        banner and model reading that would need a whole MadEvent output."""
+        self.assertRaises(iface.InvalidCmd, iface.do_import, self.events)
+
+    def _set_ms_dir(self, iface):
+        """`set ms_dir` as a card does it -- post_set_ms_dir carries curr_dir
+        along, which is the whole reason the orderings differ."""
+        iface.options['ms_dir'] = self.ms_dir
+
+    def _ordering_madevent(self):
+        """import first, ms_dir second: the constructor imported the events and
+        the card then says `set ms_dir`. This is what MadEvent always does."""
+        iface = self._interface()
+        self._import_events(iface)
+        self._set_ms_dir(iface)
+        return iface
+
+    def _ordering_card_first(self):
+        """`set ms_dir` first, import second -- the ordering that happened to
+        work, and which must go on working."""
+        iface = self._interface()
+        self._set_ms_dir(iface)
+        self._import_events(iface)
+        return iface
+
+    # ------------------------------------------------------------------
+    # the interaction that made this invisible really is there
+    # ------------------------------------------------------------------
+
+    def test_the_two_orderings_really_do_disagree_about_curr_dir(self):
+        """The premise of everything below, asserted rather than assumed.
+
+        It doubles as the guard against the other tempting wrong fix: making
+        ``post_set_ms_dir`` stop moving ``curr_dir``. That would silence this
+        bug and break the decayed-events path of #365, which needs curr_dir to
+        follow ms_dir when the card sets no event file after it."""
+        after = self._ordering_madevent()
+        before = self._ordering_card_first()
+        self.assertEqual(os.path.realpath(after.options['curr_dir']),
+                         os.path.realpath(self.ms_dir))
+        self.assertEqual(os.path.realpath(before.options['curr_dir']),
+                         os.path.realpath(self.proc))
+        # ...and the old expression is exactly what that breaks
+        self.assertFalse(os.path.exists(
+            pjoin(after.options['curr_dir'], 'Cards', 'madspin_card.dat')))
+
+    # ------------------------------------------------------------------
+    # the card is found whatever the ordering
+    # ------------------------------------------------------------------
+
+    def test_the_card_is_found_in_the_madevent_ordering(self):
+        """The regression: this returned a path inside the gridpack, which does
+        not exist, so nothing was archived and nothing was said."""
+        iface = self._ordering_madevent()
+        self.assertEqual(os.path.realpath(iface.madspin_card_path),
+                         os.path.realpath(self.card))
+
+    def test_the_card_is_found_in_the_card_first_ordering(self):
+        iface = self._ordering_card_first()
+        self.assertEqual(os.path.realpath(iface.madspin_card_path),
+                         os.path.realpath(self.card))
+
+    def test_the_ordering_cannot_change_the_answer(self):
+        """The pin: the two orderings are tied to each other, not each to a
+        literal, so no future edit can re-open the gap on one side only."""
+        self.assertEqual(
+            os.path.realpath(self._ordering_madevent().madspin_card_path),
+            os.path.realpath(self._ordering_card_first().madspin_card_path))
+
+    def test_without_ms_dir_the_card_is_still_found(self):
+        """The case that breaks if the fix is made at the wrong end -- by far
+        the most common way MadSpin is run."""
+        iface = self._interface()
+        self._import_events(iface)
+        self.assertEqual(iface.options['ms_dir'], '')
+        self.assertEqual(os.path.realpath(iface.madspin_card_path),
+                         os.path.realpath(self.card))
+
+    # ------------------------------------------------------------------
+    # ...and it is the card that was *run*
+    # ------------------------------------------------------------------
+
+    def test_import_command_file_records_the_card_it_runs(self):
+        """``import_command_file`` is how every driver hands MadSpin a card,
+        and the path it is given is the only thing that knows where the card
+        lives. Run the real method on an empty card so nothing is executed."""
+        elsewhere = pjoin(self.tmpdir, 'my_own_card.dat')
+        open(elsewhere, 'w').close()
+        iface = self._interface()
+        iface.import_command_file(elsewhere)
+        self.assertEqual(iface.ms_card_path, os.path.realpath(elsewhere))
+
+    def test_a_card_from_elsewhere_wins_over_the_process_directory(self):
+        """MadEvent passes ``<me_dir>/Cards/madspin_card.dat`` so the two agree
+        there, but a card handed in from anywhere else is still *the* card that
+        was run, and is what must be archived."""
+        elsewhere = pjoin(self.tmpdir, 'my_own_card.dat')
+        with open(elsewhere, 'w') as fsock:
+            fsock.write('# a card that lives somewhere else\n')
+        iface = self._ordering_madevent()
+        iface.ms_card_path = os.path.realpath(elsewhere)
+        self.assertEqual(iface.madspin_card_path, os.path.realpath(elsewhere))
+
+    def test_no_card_means_no_archive_rather_than_a_wrong_one(self):
+        """An interactive session types its commands; there is no file to keep.
+        Returning None (and archiving nothing) is the honest answer -- better
+        than reaching for whatever madspin_card.dat happens to be nearby."""
+        iface = self._interface()
+        self._import_events(iface)
+        os.remove(self.card)
+        self.assertIsNone(iface.madspin_card_path)
+        self.assertIsNone(iface._archive_madspin_card(self.decayed))
+        self.assertEqual([f for f in os.listdir(self.run_dir)
+                          if f.startswith('madspin_card_for_')], [])
+
+    # ------------------------------------------------------------------
+    # a real archiving round trip
+    # ------------------------------------------------------------------
+
+    def test_the_archive_holds_the_card_that_was_run(self):
+        """What the user goes looking for months later: the file is there, it
+        is named after the events, and its content is the card."""
+        iface = self._ordering_madevent()
+        written = iface._archive_madspin_card(self.decayed)
+        self.assertEqual(
+            os.path.realpath(written),
+            os.path.realpath(pjoin(
+                self.run_dir,
+                'madspin_card_for_unweighted_events_decayed.dat')))
+        self.assertTrue(os.path.exists(written))
+        self.assertEqual(open(written).read(), self.CARD)
+
+    def test_both_orderings_archive_the_same_bytes(self):
+        first = self._ordering_madevent()._archive_madspin_card(self.decayed)
+        second = self._ordering_card_first()._archive_madspin_card(self.decayed)
+        self.assertNotEqual(first, second)   # the counter kept them apart
+        self.assertEqual(open(first).read(), open(second).read())
+
+    def test_a_second_run_does_not_overwrite_the_first(self):
+        """Rerunning against an existing ms_dir writes a new event file into the
+        same directory; its card must not silently replace the earlier one."""
+        iface = self._ordering_madevent()
+        first = iface._archive_madspin_card(self.decayed)
+        with open(self.card, 'w') as fsock:
+            fsock.write('# a different card, second run\n')
+        second = iface._archive_madspin_card(self.decayed)
+        self.assertTrue(second.endswith(
+            'madspin_card_for_unweighted_events_decayed_1.dat'))
+        self.assertEqual(open(first).read(), self.CARD)
+        self.assertEqual(open(second).read(), '# a different card, second run\n')
+
+    def test_the_archive_goes_inside_RunMaterial_when_there_is_one(self):
+        """aMC@NLO runs keep their cards inside RunMaterial.tar.gz; the copy
+        must end up in the tarball, not loose beside it."""
+        os.makedirs(pjoin(self.run_dir, 'RunMaterial'))
+        misc.call(['tar', '-czpf', 'RunMaterial.tar.gz', 'RunMaterial'],
+                  cwd=self.run_dir)
+        shutil.rmtree(pjoin(self.run_dir, 'RunMaterial'))
+        iface = self._ordering_madevent()
+        iface._archive_madspin_card(self.decayed)
+        self.assertFalse(os.path.exists(pjoin(
+            self.run_dir, 'madspin_card_for_unweighted_events_decayed.dat')))
+        misc.call(['tar', '-xzpf', 'RunMaterial.tar.gz'], cwd=self.run_dir)
+        inside = pjoin(self.run_dir, 'RunMaterial',
+                       'madspin_card_for_unweighted_events_decayed.dat')
+        self.assertTrue(os.path.exists(inside))
+        self.assertEqual(open(inside).read(), self.CARD)
+
+    # ------------------------------------------------------------------
+    # nobody rebuilds the source by hand any more
+    # ------------------------------------------------------------------
+
+    def test_every_call_site_goes_through_the_helper(self):
+        """do_launch archived the card, run_from_pickle -- the path every rerun
+        against an existing ms_dir takes -- did not archive it at all. Both go
+        through one helper now, so they cannot disagree about what to keep or
+        about whether to keep it.
+
+        Read the module file rather than using ``inspect.getsource`` on the
+        methods: ``do_launch`` is wrapped by ``misc.mute_logger`` and getsource
+        returns the decorator's body."""
+        with open(interface_madspin.__file__.replace('.pyc', '.py')) as fsock:
+            source = fsock.read()
+        self.assertEqual(
+            source.count('self._archive_madspin_card(decayed_evt_file)'), 2,
+            'do_launch and run_from_pickle must both archive the card')
+        self.assertNotIn(
+            "pjoin(self.options['curr_dir'],'Cards','madspin_card.dat')",
+            source)
+
+    def test_the_accessor_does_not_look_at_curr_dir(self):
+        """curr_dir is an output directory. Rebuilding the card's location from
+        it is the mistake being fixed, and it is the tempting one because it
+        works in every setup that has no ms_dir."""
+        source = inspect.getsource(
+            interface_madspin.MadSpinInterface.madspin_card_path.fget)
+        code = source.split('"""')[-1]
+        self.assertNotIn('curr_dir', code)
+        self.assertIn('ms_card_path', code)
+        self.assertIn('event_base_dir', code)
+
+    def test_do_import_keeps_the_directory_under_its_own_name(self):
+        """``event_base_dir`` exists so that the answer survives a later
+        ``set ms_dir``; if do_import ever stopped setting it the fallback would
+        quietly go back to finding nothing."""
+        source = inspect.getsource(interface_madspin.MadSpinInterface.do_import)
+        self.assertIn('self.event_base_dir', source)
+
+
 class TestZeroDensityGuard(unittest.TestCase):
     """The guards that turn a MadSpin accept/reject which can never accept into
     an immediate, named failure instead of an unbounded retry loop.
