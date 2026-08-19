@@ -62,11 +62,43 @@ import madgraph.various.lhe_parser as lhe_parser  # noqa: E402
 
 
 # --------------------------------------------------------------------------
-# The grid.  sequential_global_retry is deliberately absent for ``onshell``;
-# see the module docstring of the report and the check_onshell_retry() note
-# below -- onshell draws no virtuality, so the Z_hat factor the scheme exists
-# to cancel is identically 1 there and the scheme degenerates into ``sequential``
-# plus wasted work.
+# The grid.
+#
+# ``sequential_global_retry`` is deliberately absent for ``onshell``.  It is not
+# refused by the code -- ``_unweighting_mode`` announces it as asked and runs it
+# -- but it has nothing to do there, and this is why:
+#
+#   * ``sequential`` redraws slot k until it accepts, which divides the
+#     conditional normalisation Z_k(m_k) = E[w_k | m_k] out of the chain.  When
+#     Z_k depends on a virtuality the chain has frozen, that reweights the
+#     accepted lineshape, and MadSpin puts it back with a tabulated ``_zhat``.
+#     ``sequential_global_retry`` exists solely so that no table is needed: a
+#     rejected decay throws the whole chain away, the per-angle stage stops
+#     normalising, and Z_hat cancels identically
+#     (interface_madspin.py, comment block above ``_z_slot_keys``).
+#
+#   * ``onshell`` keeps the production kinematics and samples no virtuality at
+#     all: ``_density_do_reshuffle`` is False, so ``_upfront_production`` is
+#     called with ``draw_mass=False`` and returns an empty ``slot_mass``.  With
+#     no virtualities there are no ``probe_extra['z']`` samples, so
+#     ``_build_z_tables`` builds nothing and ``_zhat`` returns the constant 1.0
+#     at every slot.  The two schemes therefore test *the same* w_k against
+#     *the same* bound; E[w_k | prefix] = 1 exactly (the pool average of a decay
+#     density matrix is the identity), so ``sequential`` has no normalisation to
+#     divide out and no bias to correct.
+#
+#   * What remains is only the cost: a rejection under
+#     ``sequential_global_retry`` discards the slots already accepted instead of
+#     redrawing the offending one.  So on ``onshell`` it is strictly ``sequential``
+#     plus wasted decay draws.  ``--extra onshell:sequential_global_retry``
+#     measures exactly that, and is reported next to the table rather than in it.
+#
+#   * One reporting wart worth knowing: with ``slot_mass`` empty MadSpin never
+#     makes a mass-set accept/reject, so ``eps_m`` is undefined for onshell (the
+#     table shows a dash).  But ``_report_sequential_stats`` still prints its
+#     "mass stage" line as soon as ``nb_exact_restart`` is non-zero, and under
+#     onshell + sequential_global_retry those "mass sets" are chain restarts with
+#     no mass in them.  Do not read that line as a virtuality count.
 # --------------------------------------------------------------------------
 GRID = [
     ('PA', 'joint'),
