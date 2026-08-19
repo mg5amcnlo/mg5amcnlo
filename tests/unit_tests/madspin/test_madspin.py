@@ -74,8 +74,10 @@ def _borrow_decision_helpers(namespace):
                  '_density_spinmode', '_production_polarization',
                  # _unweighting_mode consults these first: the interference
                  # mode and decay_output = weighted both force joint, so a stub
-                 # that borrows the resolver needs them
-                 '_pure_interference', '_weighted_decay'):
+                 # that borrows the resolver needs them -- and _weighted_decay
+                 # is built on the decay_output resolver
+                 '_pure_interference', '_weighted_decay', '_decay_output',
+                 '_announce_decay_output'):
         namespace[name] = inspect.getattr_static(
             interface_madspin.MadSpinInterface, name)
 
@@ -1915,10 +1917,10 @@ class TestPureInterferenceMode(unittest.TestCase):
 
         def __init__(self, spec='', spinmode='madspin', pol_map=None,
                      branches=('w+', 'w-'), unweighting='sequential',
-                     pol_weights=False, output='weighted'):
+                     pol_weights=False, output='auto'):
             self.options = interface_madspin.MadSpinOptions()
             self.options['pure_interference'] = spec
-            self.options['pure_interference_output'] = output
+            self.options['decay_output'] = output
             self.options['spinmode'] = spinmode
             self.options['unweighting'] = unweighting
             self.options['fixed_order'] = False
@@ -2099,14 +2101,23 @@ class TestPureInterferenceMode(unittest.TestCase):
         # ... and without the mode the two are unrelated
         self._Stub('w+ = 0 T', pol_weights=False)._validate_pure_interference()
 
-    # -- pure_interference_output ------------------------------------------
+    # -- decay_output, which governs this mode's output shape ---------------
 
-    def test_the_output_option_defaults_to_the_fully_weighted_mode(self):
-        """The fully weighted output stays the default: it uses every
-        production event and measures ~6x less variance per production event
-        (section 13.17)."""
+    def test_auto_gives_the_fully_weighted_output(self):
+        """``decay_output = auto`` (the default) resolves to the fully
+        weighted output here: it uses every production event and measures ~6x
+        less variance per production event (section 13.17). That is what the
+        mode has always done."""
         stub = self._Stub('w+ = 0 T')
-        self.assertEqual(stub.options['pure_interference_output'], 'weighted')
+        self.assertEqual(stub.options['decay_output'], 'auto')
+        self.assertEqual(stub._decay_output(), 'weighted')
+        self.assertFalse(stub._pure_interference_unweighted())
+
+    def test_auto_resolves_the_other_way_without_the_mode(self):
+        """The same 'auto' is the ordinary accept/reject outside the mode --
+        that is the whole point of it being one option."""
+        stub = self._Stub('')
+        self.assertEqual(stub._decay_output(), 'unweighted')
         self.assertFalse(stub._pure_interference_unweighted())
 
     def test_the_output_option_selects_the_unweighted_variant(self):
@@ -2114,22 +2125,33 @@ class TestPureInterferenceMode(unittest.TestCase):
         self.assertTrue(stub._pure_interference_unweighted())
         stub._validate_pure_interference()
 
-    def test_the_output_option_is_inert_without_the_mode(self):
-        """It only chooses how the interference mode writes its signed
-        weights, so an ordinary run must not be touched by it."""
+    def test_an_explicit_weighted_matches_what_auto_resolves_to(self):
+        stub = self._Stub('w+ = 0 T', output='weighted')
+        self.assertFalse(stub._pure_interference_unweighted())
+        stub._validate_pure_interference()
+
+    def test_the_unweighted_variant_is_inert_without_the_mode(self):
+        """Outside the mode 'unweighted' is the ordinary accept/reject, not
+        the unweighted-up-to-a-sign interference output."""
         stub = self._Stub('', output='unweighted')
         self.assertFalse(stub._pure_interference_unweighted())
-        # and validation is a no-op (it only warns)
+        # and validation is a no-op
         stub._validate_pure_interference()
+
+    def test_the_replaced_option_no_longer_exists(self):
+        """``pure_interference_output`` was folded into ``decay_output``; the
+        old spelling is gone rather than silently accepted."""
+        options = interface_madspin.MadSpinOptions()
+        self.assertNotIn('pure_interference_output', options)
 
     def test_the_output_option_rejects_an_unknown_value(self):
         """ConfigFile keeps the previous value and warns rather than raising,
         so the check is that an unknown spelling does not silently become the
         active one."""
         options = interface_madspin.MadSpinOptions()
-        options['pure_interference_output'] = 'unweighted'
-        options['pure_interference_output'] = 'signed'
-        self.assertEqual(options['pure_interference_output'], 'unweighted')
+        options['decay_output'] = 'unweighted'
+        options['decay_output'] = 'signed'
+        self.assertEqual(options['decay_output'], 'unweighted')
 
 
 class TestPureInterferenceCardSyntax(unittest.TestCase):
@@ -2484,6 +2506,8 @@ class TestWeightedDecayOutput(unittest.TestCase):
     class _Stub(object):
         InvalidCmd = interface_madspin.MadSpinInterface.InvalidCmd
         _weighted_decay = interface_madspin.MadSpinInterface._weighted_decay
+        _pure_interference_unweighted = \
+            interface_madspin.MadSpinInterface._pure_interference_unweighted
         _validate_weighted_decay = \
             interface_madspin.MadSpinInterface._validate_weighted_decay
         _weighted_decay_note = \
@@ -2497,7 +2521,7 @@ class TestWeightedDecayOutput(unittest.TestCase):
         _parse_pol_side = interface_madspin.MadSpinInterface._parse_pol_side
         _borrow_decision_helpers(locals())
 
-        def __init__(self, output='unweighted', spinmode='onshell',
+        def __init__(self, output='auto', spinmode='onshell',
                      pure_interference='', unweighting='auto'):
             self.options = interface_madspin.MadSpinOptions()
             self.options['decay_output'] = output
@@ -2511,8 +2535,15 @@ class TestWeightedDecayOutput(unittest.TestCase):
     # -- the predicate ------------------------------------------------------
 
     def test_off_by_default(self):
+        """The shipped default is 'auto', which is 'unweighted' for an
+        ordinary run -- what MadSpin has always done."""
         stub = self._Stub()
-        self.assertEqual(stub.options['decay_output'], 'unweighted')
+        self.assertEqual(stub.options['decay_output'], 'auto')
+        self.assertEqual(stub._decay_output(), 'unweighted')
+        self.assertFalse(stub._weighted_decay())
+
+    def test_an_explicit_unweighted_is_the_same_as_the_default(self):
+        stub = self._Stub(output='unweighted')
         self.assertFalse(stub._weighted_decay())
 
     def test_on_when_asked_for_in_a_density_mode(self):
@@ -2520,13 +2551,37 @@ class TestWeightedDecayOutput(unittest.TestCase):
             stub = self._Stub(output='weighted', spinmode=spinmode)
             self.assertTrue(stub._weighted_decay(), spinmode)
 
-    def test_the_two_output_options_do_not_both_apply(self):
-        """pure_interference is always weighted (or unweighted up to a sign)
-        on its own terms, so decay_output steps aside there rather than
-        contradicting pure_interference_output."""
+    def test_it_governs_the_interference_output_instead(self):
+        """Under pure_interference the option does not step aside: it chooses
+        that mode's output shape. The ordinary weighted path stays off -- the
+        interference mode reaches the same 'keep every trial' code by its own
+        route, with a signed W and a zeroed <init>."""
         stub = self._Stub(output='weighted', pure_interference='t = + -')
+        self.assertEqual(stub._decay_output(), 'weighted')
         self.assertFalse(stub._weighted_decay())
-        stub._validate_weighted_decay()          # warns, does not raise
+        self.assertFalse(stub._pure_interference_unweighted())
+        stub._validate_weighted_decay()          # no refusal, no step-aside
+
+        stub = self._Stub(output='unweighted', pure_interference='t = + -')
+        self.assertFalse(stub._weighted_decay())
+        self.assertTrue(stub._pure_interference_unweighted())
+        stub._validate_weighted_decay()
+
+    def test_auto_follows_the_mode(self):
+        """'auto' is 'weighted' under pure_interference and 'unweighted'
+        otherwise, which is each mode's own historical default."""
+        self.assertEqual(self._Stub()._decay_output(), 'unweighted')
+        self.assertEqual(
+            self._Stub(pure_interference='t = + -')._decay_output(),
+            'weighted')
+
+    def test_auto_never_raises_outside_the_density_modes(self):
+        """'weighted' is refused there, so the default must not resolve to it
+        -- an ordinary spinmode=none card has to keep working."""
+        for spinmode in ('madspin_v1', 'onshell_v1', 'none'):
+            stub = self._Stub(spinmode=spinmode)
+            self.assertEqual(stub._decay_output(), 'unweighted')
+            stub._validate_weighted_decay()
 
     def test_refused_outside_the_density_modes(self):
         for spinmode in ('madspin_v1', 'onshell_v1', 'none'):
@@ -2543,6 +2598,12 @@ class TestWeightedDecayOutput(unittest.TestCase):
         options['decay_output'] = 'weighted'
         options['decay_output'] = 'signed'
         self.assertEqual(options['decay_output'], 'weighted')
+
+    def test_the_option_accepts_its_three_spellings(self):
+        options = interface_madspin.MadSpinOptions()
+        for value in ('auto', 'unweighted', 'weighted'):
+            options['decay_output'] = value
+            self.assertEqual(options['decay_output'], value)
 
     # -- it forces the joint path ------------------------------------------
 

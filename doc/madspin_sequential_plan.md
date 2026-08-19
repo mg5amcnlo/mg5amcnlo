@@ -2504,12 +2504,19 @@ Caveats:
   exactly where the derivation says it should hold. It has **not** been checked
   offshell, where the derivation says it should *not* hold.
 
-### 13.17 The unweighted-up-to-a-sign output -- `pure_interference_output`
+### 13.17 The unweighted-up-to-a-sign output -- `decay_output = unweighted`
 
 **Status: implemented and validated end to end.** The fully weighted output of
-13.13 stays the **default**; `set pure_interference_output = unweighted`
-selects the other representation of the same estimator, in which the sample
-carries exactly two weight magnitudes.
+13.13 stays the **default**; `set decay_output = unweighted` selects the other
+representation of the same estimator, in which the sample carries exactly two
+weight magnitudes.
+
+> **Option name.** This was originally a separate option,
+> `pure_interference_output`, with its own `weighted`/`unweighted` pair. It has
+> been folded into `decay_output` (13.18, 13.19): one option now answers "does
+> MadSpin unweight?" in both modes, and `decay_output = auto` -- the default --
+> resolves to `weighted` here and to `unweighted` for an ordinary run, which is
+> each mode's own historical default.
 
 **The derivation.** Unweight on `|W|` against any bound `M >= max|W|`, ONE
 decay draw per production event, nothing written on rejection, and give each
@@ -2703,9 +2710,11 @@ collected on the same draws and is unused here.)
 **Scope: the density spin modes only.** `madspin`/`full`, `PA`, `onshell`.
 `madspin_v1`, `onshell_v1` and `spinmode = none` build no density matrix and
 have no `W`; the option raises `InvalidCmd` there rather than being ignored.
-Under `pure_interference` it warns and steps aside -- that mode is always
-weighted on its own terms and answers to `pure_interference_output`, so the
-two never both apply.
+Under `pure_interference` it does **not** step aside -- it chooses that mode's
+output shape instead (13.17, 13.19). The two constraints compose without
+conflict, because `pure_interference` needs a density spinmode as well;
+`_validate_pure_interference` runs first so the message names the more
+fundamental of the two.
 
 **It forces the joint path**, for the plain reason that there is no
 accept/reject left to stage: the sequential and two-stage schemes exist to
@@ -2774,7 +2783,8 @@ CPU. Which of the two matters depends on whether MadSpin or the parent
 generation is the bottleneck. That is why the default stays `unweighted`.
 
 **Byte-identical with the option off.** The same card without
-`decay_output`, run against the base branch and against this one, produces
+`decay_output` (i.e. at the default), run against the base branch and against
+this one, produces
 the same 90 368 979-byte file, SHA-256
 `767da240c5221ecc0d7193a3031044b3304a457f909212158728c2ab7f242855`.
 
@@ -2815,3 +2825,86 @@ Caveats, stated rather than glossed:
   interference mode's `<|W|>`, `c` really is a decay-side constant, so the
   probe's few production events are enough for it -- and `mean(w)` against
   `sigma*BR` is the direct measurement of whether that held.
+
+### 13.19 One option: `decay_output`, with `auto`
+
+**Status: implemented; behaviour-preserving by construction, checked against
+the base branch.** 13.17 and 13.18 arrived as two options with the same value
+space and the same question behind them -- *does MadSpin unweight?* --
+answered separately for the interference mode (`pure_interference_output`) and
+for an ordinary run (`decay_output`). They are now one.
+
+* `pure_interference_output` is **removed**. Nothing maps onto it and no
+  deprecated spelling survives: none of this has been in a release, so there
+  are no cards in the wild to protect.
+* `decay_output` gains **`auto`**, and `auto` is the default.
+* `auto` resolves to `weighted` when `pure_interference` is set and to
+  `unweighted` otherwise (`_decay_output`).
+
+**Why those two directions, and why this preserves behaviour exactly.** The
+old defaults were `decay_output = unweighted` and
+`pure_interference_output = weighted`, and each mode saw only its own option
+(`decay_output` warned and stepped aside under `pure_interference`). So the
+pair (ordinary run, interference run) had exactly the resolved defaults
+(`unweighted`, `weighted`) -- which is what `auto` now computes. A card that
+does not mention either option therefore lands on the same path as before, in
+both modes.
+
+They point opposite ways for a reason rather than by accident. The ordinary
+run writes one event per production event either way and its accept/reject is
+the *exact* sampler, so unweighting is the safe default and the weighted path
+buys CPU at the cost of a weighted file. The interference mode has no exact
+sampler to fall back on -- its weights are signed and its cross-section is
+zero by construction -- and unweighting on `|W|` there keeps only a few
+percent of the production events, for ~6x the variance on exactly the
+observables the mode exists to measure (13.17).
+
+**The step-aside is gone.** `_validate_weighted_decay` used to warn and return
+under `pure_interference`, on the grounds that the other option governed
+there. There is no other option now, so it governs. What the step-aside was
+avoiding was a *contradiction* between two live options, not a code hazard:
+the two flags reach the worker separately (`weighted_decay` and
+`pure_interference_unweighted` in the run context) and `_weighted_decay` still
+returns False under `pure_interference`, because the interference mode reaches
+the same "keep every trial" branch by its own route, with a signed `W` and a
+zeroed `<init>`. Only the *source* of the interference mode's choice changed.
+
+**The two spinmode restrictions compose.** `decay_output = weighted` needs a
+density spinmode (there is no `W` otherwise) and so does `pure_interference`,
+so the constraints never disagree -- but a card that violates both would get
+two refusals in a row, the less useful one first. `_validate_pure_interference`
+is therefore now called *before* `_validate_weighted_decay`, and both are
+called before the `if self._density_spinmode():` branch. `decay_output` is
+then silent under `pure_interference`: the mode announces its own output shape,
+spinmode requirement included.
+
+That reordering fixes a **pre-existing gap** found on the way:
+`_validate_pure_interference` was called only *inside* the density branch, so
+`set spinmode none` together with `set pure_interference ...` reached no
+validation at all and the mode was silently inert while the card asked for it.
+It now raises, which is the error that was always intended (the raise existed;
+it was unreachable).
+
+**`auto` announces itself** through `_announce_decay_output`, on the same
+`_log_once` convention as `_announce_mode`:
+
+    MadSpin: decay_output = unweighted (auto, ordinary run)
+    MadSpin: decay_output = weighted (auto, pure_interference is set)
+    MadSpin: decay_output = weighted (set explicitly)
+
+**Removed alongside it**, for the same "not in a release" reason, two other
+deprecated spellings that were pure load-time translations with no run-time
+reader: `sequential_decay` (mapped onto `unweighting`: `True` ->
+`sequential`, `False` -> `joint`) and `keep_weight_for_polarization` (the
+singular alias that set both `keep_weight_for_polarization_vector` and
+`_fermion`). The per-species options and the refusal of
+`keep_weight_for_polarization_*` under `pure_interference` are untouched.
+
+**The one behaviour change, stated rather than glossed.** A card that combined
+`set pure_interference ...` with an *explicit* `set decay_output unweighted`
+used to get the fully weighted interference output (the explicit
+`decay_output` was warned about and ignored, and `pure_interference_output`
+kept its `weighted` default); it now gets the unweighted-up-to-a-sign output.
+That is the intended meaning of the unification -- the option no longer steps
+aside -- and it is the only combination whose resolved behaviour differs. A
+card that does not set `decay_output` is unaffected in either mode.

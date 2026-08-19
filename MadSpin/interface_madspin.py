@@ -238,10 +238,14 @@ class MadSpinOptions(banner.ConfigFile):
         self.add_param('global_order_coupling', '')
         self.add_param('identical_particle_in_prod_and_decay', 'average')
         self.add_param('beampol', [0., 0.], comment='beam polarisation of each beam in percent, -100 .. 100, exactly as the run_card polbeam1/polbeam2 (0 is unpolarised). Taken from the run_card of the production when it has one.')
-        self.add_param('decay_output', 'unweighted',
-                       allowed=['unweighted', 'weighted'],
-                       comment="whether MadSpin unweights its decays at all. 'unweighted' "
-                       "(default, and what MadSpin has always done): draw decay "
+        self.add_param('decay_output', 'auto',
+                       allowed=['auto', 'unweighted', 'weighted'],
+                       comment="whether MadSpin unweights its decays at all. 'auto' "
+                       "(default): 'weighted' when pure_interference is set, "
+                       "'unweighted' otherwise -- i.e. each mode's own historical "
+                       "default. The resolved value is announced in the log. "
+                       "'unweighted' (what MadSpin has always done outside "
+                       "pure_interference): draw decay "
                        "configurations until one is accepted, so every production event "
                        "yields exactly one output event and every event of a given "
                        "production process carries the same weight. 'weighted': NO "
@@ -264,10 +268,13 @@ class MadSpinOptions(banner.ConfigFile):
                        "constant weight -- unit-weight event counting, simple histogram "
                        "entry counts -- is wrong on it. Density spin modes only "
                        "(madspin/full, PA, onshell): the v1 modes and spinmode = none "
-                       "build no density matrix and have no W. Ignored under "
-                       "pure_interference, which is always weighted and has its own "
-                       "pure_interference_output. See doc/madspin_sequential_plan.md "
-                       "section 13.18.")
+                       "build no density matrix and have no W. Under "
+                       "pure_interference this option governs that mode's (always "
+                       "signed) output too: 'weighted' keeps every trial with "
+                       "w = sigma_ref*BR*W/c, 'unweighted' unweights on |W| with ONE "
+                       "draw per production event and writes w = +- sigma_ref*BR*<|W|>/c "
+                       "-- exactly two weight magnitudes, i.e. unweighted up to a sign. "
+                       "See doc/madspin_sequential_plan.md sections 13.17 and 13.18.")
         self.add_param('pure_interference', '',
                        comment="pure-interference mode: keep ONLY the interference between two "
                        "polarisations of a decaying particle in the production/decay density "
@@ -283,27 +290,8 @@ class MadSpinOptions(banner.ConfigFile):
                        "UNPOLARISED on the legs given an I block (the interference between two "
                        "polarisations does not exist in a sample generated with a brace on that "
                        "leg). The sample then has zero total cross-section by construction, and "
-                       "its event weights are SIGNED; see pure_interference_output for their "
+                       "its event weights are SIGNED; see decay_output for their "
                        "value and doc/madspin_sequential_plan.md section 13.")
-        self.add_param('pure_interference_output', 'weighted',
-                       allowed=['weighted', 'unweighted'],
-                       comment="how the pure-interference mode writes its (always signed) event "
-                       "weights. Ignored unless pure_interference is set. 'weighted' (default): "
-                       "no accept/reject at all, every trial is kept and carries the fully "
-                       "weighted w = sigma_ref*BR*W/c, with W the signed convolution of that "
-                       "trial and c = <W> the unrestricted decay-side constant. 'unweighted': "
-                       "unweight on |W| against the probed maximum, ONE draw per production "
-                       "event and nothing written on rejection, and give each accepted event "
-                       "w = +- sigma_ref*BR*<|W|>/c -- i.e. exactly two weight magnitudes, so "
-                       "the sample is unweighted up to a sign. Both give mean(w) = 0 and "
-                       "sum_bin(w)/N_file = the interference contribution to that bin in pb "
-                       "(N_file = the number of events IN THE FILE, which is N_read only for "
-                       "'weighted'), and in neither does the accept/reject bound enter the "
-                       "normalisation. 'weighted' is the default because it uses every "
-                       "production event instead of the few percent an accept/reject keeps: "
-                       "measured ~6x less variance per production event on <C_nn>, "
-                       "<cos phi_ll> and <Delta phi> (section 13.17). Choose 'unweighted' only "
-                       "when a downstream tool needs near-constant |w|.")
         self.add_param('keep_weight_for_polarization_vector', [], typelist=str,
                        comment="density spin modes only. Polarisations (0, +, -, T; "
                        "L/R accepted as aliases of -/+) offered to each decaying "
@@ -1906,14 +1894,20 @@ class MadSpinInterface(extended_cmd.Cmd):
 
         logger.info("Running MadSpin in spinmode %s" % spinmode)
         self._check_fixed_order_spinmode(spinmode)
-        # decay_output is refused outside the density modes too, so it is
-        # checked before the branch rather than inside it
+        # Both of these are refused outside the density modes, so they are
+        # checked before the branch rather than inside it. pure_interference
+        # goes first: it is the more fundamental request of the two -- when it
+        # is on, decay_output only chooses the shape of ITS output -- so a card
+        # that gets both wrong should be told about pure_interference rather
+        # than about the option that follows it. (_validate_pure_interference
+        # returns immediately when the mode is off, and everything it touches
+        # beyond the spinmode check is behind that guard.)
+        self._validate_pure_interference()
         self._validate_weighted_decay()
         if self._density_spinmode():
             # read (and validate) the production polarisation braces now rather
             # than on the first event, deep inside a worker process
             self._production_polarization()
-            self._validate_pure_interference()
             self._polarization_weights_enabled()
         elif (self.options['keep_weight_for_polarization_vector']
               or self.options['keep_weight_for_polarization_fermion']):
@@ -4250,7 +4244,7 @@ class MadSpinInterface(extended_cmd.Cmd):
         # entirely, and every production event is used instead of the 3-9% an
         # accept/reject kept. See doc/madspin_sequential_plan.md section 13.13.
         #
-        # ``pure_interference_output = unweighted`` selects the other
+        # ``decay_output = unweighted`` selects the other
         # representation of the same estimator (section 13.17): keep the
         # accept/reject, but on |W| and with ONE draw -- nothing is written on
         # rejection, so the keep rate carries <|W|> -- and give each accepted
@@ -4291,15 +4285,15 @@ class MadSpinInterface(extended_cmd.Cmd):
             absw = ctx.get('pure_interference_absw')
             if not absw:
                 raise self.InvalidCmd(
-                    "MadSpin: pure_interference_output = unweighted needs "
-                    "<|W|>, the decay-phase-space mean of the absolute "
+                    "MadSpin: pure_interference + decay_output = unweighted "
+                    "needs <|W|>, the decay-phase-space mean of the absolute "
                     "convolution, and the maximum-weight scan produced none. "
                     "This is an internal error -- the scan measures it beside "
                     "c.")
             if not maxwgt:
                 raise self.InvalidCmd(
-                    "MadSpin: pure_interference_output = unweighted needs a "
-                    "positive maximum weight to unweight |W| against, and the "
+                    "MadSpin: pure_interference + decay_output = unweighted "
+                    "needs a positive maximum weight to unweight |W| against, and the "
                     "scan produced %r." % (maxwgt,))
             pi_w0_factor = absw / pure_interference_c
         nb_pi_dead = 0     # trials whose convolution was not a finite number:
@@ -4760,7 +4754,7 @@ class MadSpinInterface(extended_cmd.Cmd):
         if unweighted:
             logger.info(
                 "MadSpin pure_interference: wrote %d/%d production events "
-                "(%.4f). pure_interference_output = unweighted: one decay "
+                "(%.4f). decay_output = unweighted: one decay "
                 "draw per production event, accepted with probability "
                 "|W|/max|W|, so the keep rate -- not the weight magnitude -- "
                 "carries the local size of the interference.",
@@ -5796,8 +5790,8 @@ class MadSpinInterface(extended_cmd.Cmd):
             self._pi_absw_err = 0.0
             if self._pure_interference_unweighted():
                 raise self.InvalidCmd(
-                    "MadSpin: pure_interference_output = unweighted needs "
-                    "<|W|>, the decay-phase-space mean of |W|, and the "
+                    "MadSpin: pure_interference + decay_output = unweighted "
+                    "needs <|W|>, the decay-phase-space mean of |W|, and the "
                     "maximum-weight scan measured %s over %d trials. Raise "
                     "Nevents_for_max_weight / max_weight_ps_point, or report "
                     "this case." % ('zero' if n else 'nothing', n))
@@ -7034,41 +7028,74 @@ class MadSpinInterface(extended_cmd.Cmd):
         self._pure_interference_cache = out
         return out
 
+    def _decay_output(self):
+        """``decay_output`` with ``auto`` resolved: 'weighted' or 'unweighted'.
+
+        ``auto`` (the default) is 'weighted' under ``pure_interference`` and
+        'unweighted' otherwise -- each mode's own historical default, so a card
+        that does not mention the option behaves exactly as it always has. The
+        two are opposite for a reason rather than by accident: the ordinary run
+        writes one event per production event either way and the accept/reject
+        is the exact sampler, so unweighting is the safe default there; the
+        interference mode has no exact sampler to fall back on (its weights are
+        signed and its cross-section is zero), and unweighting on ``|W|`` there
+        throws away all but a few percent of the production events for ~6x the
+        variance on the observables that mode exists to measure -- section
+        13.17. Announced by ``_announce_decay_output``.
+        """
+        try:
+            asked = self.options['decay_output']
+        except (KeyError, TypeError):
+            # option sets built by hand (unit-test stubs): the same fallback
+            # _pure_interference makes, and the same reason
+            return 'unweighted'
+        if asked != 'auto':
+            return asked
+        return 'weighted' if self._pure_interference() else 'unweighted'
+
+    def _announce_decay_output(self):
+        """Say once what ``decay_output`` resolved to, and why. Same convention
+        as ``_announce_mode``: ``auto`` decides on the run, so the card no
+        longer answers the question on its own."""
+        try:
+            asked = self.options['decay_output']
+        except (KeyError, TypeError):
+            return
+        if asked == 'auto':
+            why = ('auto, pure_interference is set' if self._pure_interference()
+                   else 'auto, ordinary run')
+        else:
+            why = 'set explicitly'
+        self._log_once('decay_output', "MadSpin: decay_output = %s (%s)",
+                       self._decay_output(), why)
+
     def _weighted_decay(self):
         """True when the ordinary (non-interference) decay output is to be
         written WEIGHTED -- no accept/reject, one draw per production event,
         ``w = w_prod * BR * W / c``.
 
-        False in the pure-interference mode: that mode is always weighted (or
-        unweighted up to a sign) on its own terms and answers to
-        ``pure_interference_output`` instead, so the two options never both
-        apply. Also false outside the density spin modes, where there is no
-        ``W`` -- ``_validate_weighted_decay`` refuses that combination at
-        launch rather than silently ignoring it, so this is belt and braces.
+        False in the pure-interference mode: that mode reaches the same
+        'keep every trial' path by its own route (``pure_interference`` in the
+        worker context), with a signed ``W`` and a zeroed ``<init>``, so it is
+        ``_pure_interference_unweighted`` that reads ``decay_output`` there.
+        Also false outside the density spin modes, where there is no ``W`` --
+        ``_validate_weighted_decay`` refuses that combination at launch rather
+        than silently ignoring it, so this is belt and braces.
         """
-        try:
-            asked = self.options['decay_output']
-        except (KeyError, TypeError):
-            # option sets built by hand (unit-test stubs, older cards): the
-            # same fallback _pure_interference makes, and the same reason
-            return False
-        return (asked == 'weighted'
+        return (self._decay_output() == 'weighted'
                 and not self._pure_interference()
                 and self._density_spinmode())
 
     def _validate_weighted_decay(self):
-        """Card-level checks for ``decay_output = weighted``, run once at
-        launch. Refuses rather than ignores: an option that silently does
-        nothing is how a user ends up quoting statistics they never got."""
-        if self.options['decay_output'] != 'weighted':
+        """Card-level checks for ``decay_output``, run once at launch. Refuses
+        rather than ignores: an option that silently does nothing is how a user
+        ends up quoting statistics they never got."""
+        self._announce_decay_output()
+        if self._decay_output() != 'weighted':
             return
         if self._pure_interference():
-            logger.warning(
-                "MadSpin: decay_output = weighted has no effect under "
-                "pure_interference, which writes a signed sample on its own "
-                "terms. Use pure_interference_output (currently '%s') to "
-                "choose that mode's output shape.",
-                self.options['pure_interference_output'])
+            # the mode announces its own output shape, spinmode requirement
+            # included, in _validate_pure_interference -- which runs first
             return
         if not self._density_spinmode():
             raise self.InvalidCmd(
@@ -7089,26 +7116,19 @@ class MadSpinInterface(extended_cmd.Cmd):
 
     def _pure_interference_unweighted(self):
         """True when the pure-interference mode must write the 'unweighted'
-        (up to a sign) output instead of the fully weighted default.
+        (up to a sign) output instead of its fully weighted default.
 
-        Only meaningful when the mode is on -- ``pure_interference_output`` is
-        ignored otherwise, which ``_validate_pure_interference`` says out loud.
+        Only meaningful when the mode is on: outside it ``decay_output =
+        unweighted`` is the ordinary accept/reject, not this.
         """
         return (bool(self._pure_interference())
-                and self.options['pure_interference_output'] == 'unweighted')
+                and self._decay_output() == 'unweighted')
 
     def _validate_pure_interference(self):
         """Card-level checks for the pure-interference mode, run once at launch
         rather than on the first event inside a worker process."""
         pure = self._pure_interference()
         if not pure:
-            if self.options['pure_interference_output'] != 'weighted':
-                logger.warning(
-                    "MadSpin: pure_interference_output = %s has no effect "
-                    "because pure_interference is not set. It only chooses "
-                    "how the pure-interference mode writes its signed "
-                    "weights; ordinary runs are unweighted as always.",
-                    self.options['pure_interference_output'])
             return
         if not self._density_spinmode():
             raise self.InvalidCmd(
@@ -7222,7 +7242,7 @@ class MadSpinInterface(extended_cmd.Cmd):
             "sample keeps ONLY the interference between the polarisations "
             "named, so its total cross-section is zero by construction and its "
             "events carry a SIGNED weight. Output shape "
-            "(pure_interference_output = %s) -- %s. Under MG5's IDWTUP = -4 "
+            "(decay_output = %s) -- %s. Under MG5's IDWTUP = -4 "
             "convention (cross-section = mean of the weights) the file is "
             "self-normalising either way: mean(w) = 0 and sum_bin(w)/N_file is "
             "the interference contribution to that bin in pb, with N_file the "
@@ -7232,7 +7252,7 @@ class MadSpinInterface(extended_cmd.Cmd):
             "the <MGPureInterference> banner block for the reference "
             "cross-section, c, <|W|>, and the zero-cross-section check.",
             ', '.join(str(p) for p in sorted(pure)),
-            self.options['pure_interference_output'], shape)
+            self._decay_output(), shape)
 
     def _apply_pure_interference(self, decaying_pdg, helicities, restriction):
         """Overlay the pure-interference cross restriction on the (symmetric)
