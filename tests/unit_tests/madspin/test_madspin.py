@@ -2301,9 +2301,9 @@ class TestPureInterferenceNormalisation(unittest.TestCase):
 
 
 class TestPureInterferenceUnweightedOutput(unittest.TestCase):
-    """``pure_interference_output = unweighted``: ``<|W|>``, its plumbing, and
-    the estimator identity that says the accept/reject bound cancels out of
-    the weight (section 13.17)."""
+    """``pure_interference`` + ``decay_output = unweighted``: ``<|W|>``, its
+    plumbing, and the estimator identity that says the accept/reject bound
+    cancels out of the weight (section 13.17)."""
 
     class _Stub(object):
         InvalidCmd = interface_madspin.MadSpinInterface.InvalidCmd
