@@ -1,0 +1,172 @@
+{
+  "A_rel_mad": 0.003002303968458019,
+  "A_rel_max": 1.5122322356214002,
+  "A_rel_min": 0.9381961646789573,
+  "A_rel_sd": 0.009490467806935696,
+  "by_sqrts": [
+    {
+      "A_over_Abar": 0.9827393724626,
+      "events": 30,
+      "feas": 1.0,
+      "fraction": 0.005,
+      "hi": 350,
+      "lo": 346,
+      "mean_J": 1.2207523033857763,
+      "median_eps_analytic": 4.72727440766477,
+      "median_eps_global": 3.55203042571655,
+      "median_eps_per_event": 3.4787872552296126
+    },
+    {
+      "A_over_Abar": 0.9615079215394853,
+      "events": 71,
+      "feas": 1.0,
+      "fraction": 0.011833333333333333,
+      "hi": 355,
+      "lo": 350,
+      "mean_J": 1.006920236216608,
+      "median_eps_analytic": 3.0783396936816096,
+      "median_eps_global": 3.503953856847288,
+      "median_eps_per_event": 2.3645560822371015
+    },
+    {
+      "A_over_Abar": 0.9781789430475663,
+      "events": 93,
+      "feas": 1.0,
+      "fraction": 0.0155,
+      "hi": 360,
+      "lo": 355,
+      "mean_J": 0.9944745605329746,
+      "median_eps_analytic": 2.3886002708085363,
+      "median_eps_global": 3.4440623960499077,
+      "median_eps_per_event": 1.8510883359099037
+    },
+    {
+      "A_over_Abar": 0.9901141481711716,
+      "events": 197,
+      "feas": 1.0,
+      "fraction": 0.03283333333333333,
+      "hi": 370,
+      "lo": 360,
+      "mean_J": 0.9931630485705218,
+      "median_eps_analytic": 1.9790763545599845,
+      "median_eps_global": 3.4036065109070672,
+      "median_eps_per_event": 1.5539310130603303
+    },
+    {
+      "A_over_Abar": 0.9971417231353161,
+      "events": 258,
+      "feas": 1.0,
+      "fraction": 0.043,
+      "hi": 380,
+      "lo": 370,
+      "mean_J": 0.9961877201619076,
+      "median_eps_analytic": 1.6977639781334788,
+      "median_eps_global": 3.380272293888563,
+      "median_eps_per_event": 1.3712200394235357
+    },
+    {
+      "A_over_Abar": 0.9997268791111318,
+      "events": 563,
+      "feas": 1.0,
+      "fraction": 0.09383333333333334,
+      "hi": 400,
+      "lo": 380,
+      "mean_J": 0.9982958173836415,
+      "median_eps_analytic": 1.5154797788723535,
+      "median_eps_global": 3.3712318528993834,
+      "median_eps_per_event": 1.2322845439338335
+    },
+    {
+      "A_over_Abar": 1.0011365626689583,
+      "events": 1276,
+      "feas": 1.0,
+      "fraction": 0.21266666666666667,
+      "hi": 450,
+      "lo": 400,
+      "mean_J": 0.9993553587449359,
+      "median_eps_analytic": 1.3431864941592933,
+      "median_eps_global": 3.3666626873898737,
+      "median_eps_per_event": 1.1338097630757895
+    },
+    {
+      "A_over_Abar": 1.0016636043482157,
+      "events": 964,
+      "feas": 1.0,
+      "fraction": 0.16066666666666668,
+      "hi": 500,
+      "lo": 450,
+      "mean_J": 0.9997271977741773,
+      "median_eps_analytic": 1.245637925597784,
+      "median_eps_global": 3.365158590024392,
+      "median_eps_per_event": 1.1024166557644666
+    },
+    {
+      "A_over_Abar": 1.0018977967576603,
+      "events": 1233,
+      "feas": 1.0,
+      "fraction": 0.2055,
+      "hi": 600,
+      "lo": 500,
+      "mean_J": 0.9998608724015587,
+      "median_eps_analytic": 1.1875525036937626,
+      "median_eps_global": 3.364435544967958,
+      "median_eps_per_event": 1.1150121859567688
+    },
+    {
+      "A_over_Abar": 1.0020331712161605,
+      "events": 907,
+      "feas": 1.0,
+      "fraction": 0.15116666666666667,
+      "hi": 800,
+      "lo": 600,
+      "mean_J": 0.999937469097144,
+      "median_eps_analytic": 1.1466447914743432,
+      "median_eps_global": 3.363963771496359,
+      "median_eps_per_event": 1.1382722409780217
+    },
+    {
+      "A_over_Abar": 1.0021577107606734,
+      "events": 354,
+      "feas": 1.0,
+      "fraction": 0.059,
+      "hi": 1200,
+      "lo": 800,
+      "mean_J": 0.9999651490768753,
+      "median_eps_analytic": 1.1214354374878632,
+      "median_eps_global": 3.3634378930525335,
+      "median_eps_per_event": 1.152529640528428
+    },
+    {
+      "A_over_Abar": 1.0021659654331925,
+      "events": 54,
+      "feas": 1.0,
+      "fraction": 0.009,
+      "hi": null,
+      "lo": 1200,
+      "mean_J": 0.9999874966170632,
+      "median_eps_analytic": 1.1087982848037188,
+      "median_eps_global": 3.3638384500303213,
+      "median_eps_per_event": 1.1601349152967924
+    }
+  ],
+  "eps_analytic_bound_median": 1.2436831207845018,
+  "eps_analytic_bound_overall": 1.3628181944638469,
+  "eps_global_overall": 3.3708128080006916,
+  "eps_per_event_overall": 1.203109942733513,
+  "frac_beyond_1pc": 0.04816666666666667,
+  "frac_beyond_5pc": 0.003833333333333333,
+  "global_mean_A": 0.9552264075555891,
+  "mean_stat_error_rel": 0.000526035312189887,
+  "overweight": {
+    "bound": 3.2198894091288683,
+    "events_with_any_overflow": 11,
+    "fraction_of_events_that_can_overflow": 0.0018333333333333333,
+    "mean_written_weight": 1.0001607484135877,
+    "per_100k_written": 9.856745107241744,
+    "per_100k_written_sd": 4.829692579740379
+  },
+  "plots": [
+    "doc/madspin_pa_mass_stage/plots/per_event_mean_weight.png",
+    "doc/madspin_pa_mass_stage/plots/per_event_bound.png"
+  ]
+}
