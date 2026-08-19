@@ -154,6 +154,72 @@ def analytic_bound(sqrts, pole=MT, width=WT, bw_cut=15):
     return pmag(sqrts, m_lo, m_lo) / denom
 
 
+def _zhat_of(table, mass):
+    """``MadSpinInterface._zhat`` on a plain table dict (no interface needed)."""
+    if not table:
+        return 1.0
+    if mass < table['zero_below']:
+        return 0.0
+    lo, hi = table['range']
+    u = math.log(min(max(mass, lo), hi) / table['pole'])
+    c = table['coeff']
+    return math.exp(c[0] + u * (c[1] + u * c[2]))
+
+
+def _r_of_m(m, pole, width):
+    return math.atan((m * m - pole * pole) / (pole * width))
+
+
+def _m_of_r(r, pole, width):
+    return math.sqrt(pole * pole + pole * width * math.tan(r))
+
+
+def analytic_A(sqrts, tables=(None, None), pole=MT, width=WT, bw_cut=15,
+               nquad=48):
+    """``A_e = E_q[w]`` for a 2 -> 2 production, by quadrature -- no Monte Carlo.
+
+    The sampler draws ``m1`` uniformly in ``R = atan((m^2-pole^2)/(pole*Gamma))``
+    over the window, then ``m2`` the same way with the budget reduced by ``m1``;
+    ``jac_BW = gap/pi`` is exactly that window's width in ``R`` over ``pi``, so
+    the sampling density times the jacobian is ``dR/pi`` and
+
+        A_e = (1/pi^2) int dR1 int dR2  J(m1,m2;s) Zhat(m1) Zhat(m2)
+
+    with ``J = |p'|/|p|`` (exact for 2 -> 2, see ``check_two_to_two``) and the
+    ``R2`` range capped by the remaining budget.  Gauss-Legendre in both.
+
+    This is what a *per-event normalisation* would cost if MadSpin carried one:
+    ~2000 evaluations of a square root, once per production event.
+    """
+    import numpy as np
+    x, wq = np.polynomial.legendre.leggauss(nquad)
+    m_lo = pole - bw_cut * width
+    m_hi1 = min(pole + bw_cut * width, sqrts)
+    denom = pmag(sqrts, pole, pole)
+    if denom <= 0 or m_lo >= m_hi1:
+        return float('nan')
+    r_lo = _r_of_m(m_lo, pole, width)
+    r_hi1 = _r_of_m(m_hi1, pole, width)
+    total = 0.0
+    for xi, wi in zip(x, wq):
+        r1 = 0.5 * (r_hi1 + r_lo) + 0.5 * (r_hi1 - r_lo) * xi
+        m1 = _m_of_r(r1, pole, width)
+        z1 = _zhat_of(tables[0], m1)
+        m_hi2 = min(pole + bw_cut * width, sqrts - m1)
+        if m_hi2 <= m_lo:
+            continue
+        r_hi2 = _r_of_m(m_hi2, pole, width)
+        inner = 0.0
+        for xj, wj in zip(x, wq):
+            r2 = 0.5 * (r_hi2 + r_lo) + 0.5 * (r_hi2 - r_lo) * xj
+            m2 = _m_of_r(r2, pole, width)
+            inner += wj * (pmag(sqrts, m1, m2) / denom) * _zhat_of(tables[1], m2)
+        inner *= 0.5 * (r_hi2 - r_lo)
+        total += wi * z1 * inner
+    total *= 0.5 * (r_hi1 - r_lo)
+    return total / (math.pi ** 2)
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--json', default=None)

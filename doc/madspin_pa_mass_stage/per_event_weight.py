@@ -165,16 +165,26 @@ def main():
     parser.add_argument('--draws', type=int, default=400,
                         help='free mass sets per production event, away from '
                              'threshold (scaled up near it)')
+    parser.add_argument('--bound', type=float, default=None,
+                        help='the global bound C the accept/reject uses; '
+                             'defaults to maxwgts[0] of the --ztables cache. '
+                             'Used for the overflow accounting (design '
+                             'option A)')
     parser.add_argument('--seed', type=int, default=20260819)
     args = parser.parse_args()
     os.makedirs(args.out, exist_ok=True)
     random.seed(args.seed)
 
     z_tables = None
+    bound = args.bound
     if args.ztables:
         with open(args.ztables) as fp:
-            z_tables = json.load(fp)['z_tables']
-        print('Zhat tables: %s' % sorted(z_tables), flush=True)
+            cache = json.load(fp)
+        z_tables = cache['z_tables']
+        if bound is None:
+            bound = float(cache['maxwgts'][0])
+        print('Zhat tables: %s, bound C = %s'
+              % (sorted(z_tables), bound), flush=True)
 
     events, banner, pdgs = load_events(args.events, args.pool)
     bw_cut = float(banner.get_detail('run_card', 'bwcutoff'))
@@ -196,6 +206,13 @@ def main():
         s = s2 = snz = sj = 0.0
         wmax = nzmax = jmax = 0.0
         nfeas = 0
+        # accept/reject accounting against the GLOBAL bound: sum_min is
+        # sum_feasible min(1, w/C), i.e. the relative probability that each
+        # draw is the one the redraw loop stops on, and n_over counts the
+        # draws the bound clips (accepted with probability 1 instead of w/C --
+        # the overweight events design option A would give a weight w/C).
+        sum_min = 0.0
+        n_over = 0
         for _ in range(n):
             out = draw_one(shim, event, slot_to_index, pdgs, zkeys)
             if out is None:
@@ -206,6 +223,12 @@ def main():
             s2 += w * w
             snz += wnz
             sj += jac
+            if bound:
+                if w > bound:
+                    n_over += 1
+                    sum_min += 1.0
+                else:
+                    sum_min += w / bound
             if w > wmax:
                 wmax = w
             if wnz > nzmax:
@@ -222,6 +245,8 @@ def main():
         cols['max_w'].append(wmax)
         cols['max_wnz'].append(nzmax)
         cols['max_jac'].append(jmax)
+        cols['sum_min'].append(sum_min)
+        cols['n_over'].append(n_over)
         if (i + 1) % 500 == 0:
             print('  %5d / %d events, %.0f s' % (i + 1, len(events),
                                                  time.time() - t0), flush=True)
@@ -286,6 +311,27 @@ def main():
             'median_max_w': float(np.median(arr['max_w'][sel])),
         })
     summary['by_sqrts'] = prof
+
+    # Design option A: the overweight events, against the global bound C.
+    # Every production event writes exactly one event, and the draw the redraw
+    # loop stops on is picked with probability proportional to min(1, w/C) --
+    # so the chance that the written event is an overweight one is
+    # n_over / sum_min, and its weight under option A would be w/C > 1.
+    if bound:
+        p_over = arr['n_over'] / np.maximum(arr['sum_min'], 1e-300)
+        summary['overweight'] = {
+            'bound': bound,
+            'events_with_any_overflow': int((arr['n_over'] > 0).sum()),
+            'fraction_of_events_that_can_overflow':
+                float((arr['n_over'] > 0).mean()),
+            'per_100k_written': float(p_over.mean() * 1e5),
+            'per_100k_written_sd': float(p_over.std() / math.sqrt(len(p_over))
+                                         * 1e5),
+            # the mean weight the written sample would carry if the overweight
+            # were kept instead of clipped: sum(w/C) / sum(min(1,w/C))
+            'mean_written_weight':
+                float((arr['sum_w'] / bound).sum() / arr['sum_min'].sum()),
+        }
 
     # what a per-event bound would cost (option B) against the global one
     for sigma in (1.1,):
