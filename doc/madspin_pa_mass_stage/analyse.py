@@ -152,6 +152,33 @@ def quantiles(x):
     }
 
 
+def hill_tail_index(x, fractions=(0.01, 0.003, 0.001)):
+    """Hill estimator of the Pareto index ``a`` in ``P(X > t) ~ t^-a``, on the
+    top ``fraction`` of the sample.  Quoted at several depths because the whole
+    point of a heavy tail is that the answer must not move much with the cut.
+
+    ``a <= 1`` means the mean does not exist, ``a <= 2`` the variance does not,
+    ``a <= 3`` the skewness does not; and the maximum of ``n`` draws grows like
+    ``n**(1/a)``, which is what makes the max-weight bound sample-size
+    dependent.
+    """
+    x = np.sort(np.asarray(x, dtype=float))
+    x = x[x > 0]
+    out = {}
+    for fraction in fractions:
+        k = int(len(x) * fraction)
+        if k < 20:
+            continue
+        tail = x[-k:]
+        out['top_%g%%' % (100 * fraction)] = {
+            'k': k,
+            'threshold': float(tail[0]),
+            'index_a': float(1.0 / np.mean(np.log(tail / tail[0])))
+            if np.mean(np.log(tail / tail[0])) > 0 else None,
+        }
+    return out
+
+
 def parse_log(path):
     out = {}
     if not os.path.exists(path):
@@ -220,6 +247,8 @@ def main():
             'w_over_jac_jbw_z': quantiles(w / (jac * arr['jbw'] * arr['z'])),
             'jac_prod_probe_phase': quantiles(probe['jac']) if probe else {},
             'n_probe_mass_sets': int(len(probe['jac'])) if probe else 0,
+            'tail_index_w': hill_tail_index(w),
+            'tail_index_jac_prod': hill_tail_index(jac),
             'eps_m_predicted_bound_over_mean': eps_pred,
             'bound_over_mean_w': float(bound / w.mean()),
             'fraction_above_bound': float((w > bound).mean()),
@@ -242,6 +271,11 @@ def main():
            for name, values in blob['arr'].items() if name != 'mass'})
 
     make_plots(data, summary, args.plots, tag)
+
+    boot = pjoin(args.data, 'bound_bootstrap.json')
+    if os.path.exists(boot):
+        with open(boot) as fp:
+            plot_bootstrap(json.load(fp), data, args.plots, tag)
 
 
 # --------------------------------------------------------------------------
@@ -388,6 +422,62 @@ def make_plots(data, summary, outdir, tag):
     ax.set_title('mean and max of $J$ per $\\sqrt{\\hat s}$ slice')
     fig.tight_layout()
     fig.savefig(pjoin(outdir, 'jacobian_vs_sqrts%s.png' % tag), dpi=140)
+    plt.close(fig)
+
+
+def plot_bootstrap(boot, data, outdir, tag):
+    """The bound, replayed.  Left: where each replica's bound landed, against
+    the mean of the weight it bounds. Right: the resulting eps_m."""
+    import matplotlib
+    matplotlib.use('Agg')
+    import matplotlib.pyplot as plt
+
+    labels = sorted(boot['replicas'],
+                    key=lambda k: boot['replicas'][k]['Nevents_for_max_weight'])
+    fig, axes = plt.subplots(1, 2, figsize=(13, 5))
+    ax = axes[0]
+    for i, label in enumerate(labels):
+        entry = boot['replicas'][label]
+        values = entry['bounds']
+        ax.scatter([i + 1] * len(values), values, s=18, alpha=.65,
+                   color='#c0392b')
+        ax.plot([i + .75, i + 1.25], [entry['bound_mean']] * 2, color='k', lw=2)
+    ax.axhline(boot['mean_w'], color='#2980b9', lw=1.5, ls='--',
+               label=r'$\langle w\rangle$ = %.3f (the mean the bound divides)'
+                     % boot['mean_w'])
+    if 'PA' in data:
+        ax.axhline(data['PA']['bounds'][0], color='#e67e22', lw=1.5, ls=':',
+                   label='the actual run\'s C = %.2f'
+                         % data['PA']['bounds'][0])
+    ax.set_xticks(range(1, len(labels) + 1))
+    ax.set_xticklabels(['%s\nN=%d, $n_\\sigma$=%.2f'
+                        % (l.replace('nevents=', 'nev '),
+                           boot['replicas'][l]['Nevents_for_max_weight'],
+                           boot['replicas'][l]['nb_sigma']) for l in labels],
+                       fontsize=8)
+    ax.set_ylabel('mass-stage bound $C$ = maxwgts[0]')
+    ax.set_title('%d independent replays of the max-weight scan'
+                 % len(boot['replicas'][labels[0]]['bounds']))
+    ax.legend(fontsize=8)
+
+    ax = axes[1]
+    for i, label in enumerate(labels):
+        entry = boot['replicas'][label]
+        eps = np.array(entry['bounds']) / boot['mean_w']
+        ax.scatter([i + 1] * len(eps), eps, s=18, alpha=.65, color='#c0392b')
+        ax.plot([i + .75, i + 1.25], [eps.mean()] * 2, color='k', lw=2)
+    ax.axhline(1.10, color='#2980b9', lw=1.5, ls='--',
+               label=r'PA (no jac.): $\epsilon_m$ = 1.10, i.e. the 10% margin alone')
+    ax.set_xticks(range(1, len(labels) + 1))
+    ax.set_xticklabels([l.replace('nevents=', 'nev ') for l in labels],
+                       fontsize=8)
+    ax.set_ylabel(r'$\epsilon_m = C/\langle w\rangle$')
+    ax.set_title('the mass-stage cost that bound implies')
+    ax.legend(fontsize=8)
+    fig.suptitle('The PA mass-stage bound is set by a rare excursion, so it '
+                 'moves with the probe')
+    fig.tight_layout()
+    fig.savefig(pjoin(outdir, 'bound_stability%s.png' % tag), dpi=140)
     plt.close(fig)
 
 
