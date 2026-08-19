@@ -227,3 +227,16 @@ The per-trial streams are ~80 MB per mode and are not committed;
 `data/arrays.npz` a 50 000-row uniform subsample per mode.
 No shipped code was modified: `probe_launcher.py` wraps four methods at import
 time and hands over to the same `MadSpinInterface`.
+
+---
+
+## Follow-up
+
+`bound_design.md` (same directory) answers the question this left open -- is
+`<w>` the same constant for every production event? -- and assesses the three
+candidate fixes. Short version: it is **not** constant (flat to 0.1 % over 95 %
+of the sample, `-5.8 %` at 349 GeV, divergent like `1/beta_t` at the `t t~`
+threshold), the reshuffling jacobian is `|p'|/|p|` exactly for a `2 -> 2`
+production so a per-event bound is analytic and free (`eps_m` 3.37 -> 1.36), and
+the non-constancy causes a *between-event* normalisation bias that none of the
+three options addresses.
