@@ -4459,12 +4459,16 @@ class MadSpinInterface(extended_cmd.Cmd):
                     elif (density_needs_reshuffle
                             and density_pole_approximation
                             and not self.options['density_keep_jacobian']):
-                        # PA (default): reshuffle AFTER acceptance. The reshuffle is
-                        # a kinematic dressing of the accepted event; the Breit-Wigner
-                        # sampling jacobian is already folded into wgt, so the
-                        # reshuffling jacobian must not re-enter the accept/reject
-                        # test. For 2 -> 1 production no mass was sampled and
-                        # reshuffle_production short-circuits (NWA-style no-op).
+                        # PA with density_keep_jacobian = False (NOT the default;
+                        # the default is the branch above, which reshuffles before
+                        # the test so the jacobian enters the weight): reshuffle
+                        # AFTER acceptance, so the reshuffle is only a kinematic
+                        # dressing of the accepted event. The Breit-Wigner sampling
+                        # jacobian is already folded into wgt, and this mode
+                        # deliberately keeps the reshuffling jacobian out of the
+                        # accept/reject test. For 2 -> 1 production no mass was
+                        # sampled and reshuffle_production short-circuits
+                        # (NWA-style no-op).
                         full_evt = lhe_parser.Event(str(production))
                         full_evt = full_evt.add_decays(decays)
                         jac = full_evt.reshuffle_production()
