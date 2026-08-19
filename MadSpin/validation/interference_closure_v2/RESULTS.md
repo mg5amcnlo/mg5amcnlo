@@ -126,6 +126,16 @@ The diagonal total is therefore also the nine-block total:
 
 ## 4. The closure -- the deliverable
 
+**Notation, once, for the whole file.**  `C_kk`, `C_nn`, `C_rr` name the
+**per-event products** `cos theta^i(l+) cos theta^j(l-)` -- one number per
+event.  That product is what is histogrammed, what every figure draws and what
+every `chi2` below is computed on.  The spin-correlation **coefficient** is the
+*mean* of it (up to the standard `1/9` of the two leptonic analysing powers),
+i.e. one number per sample; those are the `<...>` rows, and only those.  The
+distinction matters because a block whose coefficient vanishes still has a cross
+section and a perfectly non-zero histogram -- what vanishes for it is the first
+moment.  The figures label the axis `... (mean -> C_ij)` for the same reason.
+
 Per-bin `chi2` of the sum against the unpolarised sample, 20 bins, statistical
 errors only, both samples' errors included.  `k` is the best-fit scale of the
 interference contribution; **`k = 1` is now a prediction with nothing measured

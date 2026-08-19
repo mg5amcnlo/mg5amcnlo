@@ -2,6 +2,14 @@ ratio y limits chosen per figure (smallest of the user's
 ladder 0.99/0.85/0.75/0.5 that contains every point +- its
 sqrt(sumw2) error; nothing is clipped)
 
+ckk, cnn and crr are the PER-EVENT products
+c_ij = cos(theta^i_l+) cos(theta^j_l-); every figure here is
+a histogram of that product.  The spin-correlation
+coefficient C_ij is its MEAN, one number per sample, which is
+why the axis labels read "mean -> C_ij" and not "C_ij".  A
+block with C_ij = 0 still has a cross section and a non-zero
+histogram; what vanishes for it is the first moment.
+
 us_closure_cos_k_p   ratio ylim (0.85, 1.15)
 us_closure_cos_k_m   ratio ylim (0.85, 1.15)
 us_closure_ckk       ratio ylim (0.5, 1.5)

@@ -6,6 +6,17 @@ The fully weighted pure-interference mode normalises itself:
 for every sample in this test, diagonal and interference alike.
 Nothing below is fitted and nothing is read out of a log.
 
+Naming: ckk, cnn, crr are the PER-EVENT products
+  c_ij = cos(theta^i_l+) cos(theta^j_l-),  one number per event.
+  Every histogram and every chi2 below, and every figure, is of
+  that product.  The spin-correlation coefficient C_ij is the
+  MEAN of it (up to the standard 1/9 of the two decay analysing
+  powers), so it is a single number per sample and appears only
+  in the "means" table.  A block whose C_ij vanishes still has a
+  cross section and a perfectly non-zero histogram: what vanishes
+  is the first moment.  The axis labels say "mean -> C_ij" for
+  this reason.
+
 samples
   tag    kind      N_file     sigma [pb]   mean(w) [pb]     c (banner)        z   dead
   unpol  ref        50000        23.7651  +2.376511e+01              -        -      -
@@ -78,7 +89,8 @@ null test, bin by bin: pull of the 5 interference blocks against
   m_tt   +0.2 +0.4 +0.5 -1.7 -0.3 -1.6 -0.5 -0.7 -0.8 -1.0 +3.2 -0.8 +0.8 -2.5 +0.4 -1.8 +0.5 +0.1 +0.8 +0.9
          chi2 = 31.2 / 20, largest |pull| = 3.21
 
-identity  <cos phi_ll> = <C_kk> + <C_rr> + <C_nn>
+identity  <cos phi_ll> = <ckk> + <crr> + <cnn>   (per-event
+  products, whose means give the coefficients C_ij)
   4 diagonal     +0.03584 -0.00045 +0.00018 = +0.03557   (measured +0.03557, diff -1.6e-16)
   9 blocks       +0.03555 +0.00060 +0.03679 = +0.07293   (measured +0.07293, diff -1.7e-16)
   unpolarised    +0.03815 +0.00393 +0.03625 = +0.07834   (measured +0.07834, diff +6.9e-17)

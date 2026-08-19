@@ -127,14 +127,24 @@ AUGMENT_WITH_DIAG_BLOCKS = ('cos_k_p',)
 
 
 # --------------------------------------------------------------------------
+# Axis labels.  Every figure in this directory histograms a PER-EVENT quantity;
+# a spin-correlation coefficient is the MEAN of one of them, never the
+# histogram.  Where the two could be confused the label therefore names the
+# per-event product and points at the coefficient with an arrow that reads
+# "whose mean is", '(mean -> C_ij)' -- and never puts '(C_ij)' next to a curve.
+# The three C_ij panes are the ones that need it; cos_k_p, cos_k_m, cos_n_p,
+# cos_phi, dphi_lab, pt_t and m_tt already name exactly what is drawn.
 OBS = [
     ('cos_k_p',  r'$\cos\theta^{k}_{\ell^+}$', 'diagonal'),
     ('cos_k_m',  r'$\cos\theta^{k}_{\ell^-}$', 'diagonal'),
-    ('ckk',      r'$\cos\theta^{k}_{\ell^+}\cos\theta^{k}_{\ell^-}$   ($C_{kk}$)',
+    ('ckk',      r'$\cos\theta^{k}_{\ell^+}\cos\theta^{k}_{\ell^-}$'
+                 r'   (mean $\to C_{kk}$)',
      'diagonal'),
-    ('cnn',      r'$\cos\theta^{n}_{\ell^+}\cos\theta^{n}_{\ell^-}$   ($C_{nn}$)',
+    ('cnn',      r'$\cos\theta^{n}_{\ell^+}\cos\theta^{n}_{\ell^-}$'
+                 r'   (mean $\to C_{nn}$)',
      'off-diagonal'),
-    ('crr',      r'$\cos\theta^{r}_{\ell^+}\cos\theta^{r}_{\ell^-}$   ($C_{rr}$)',
+    ('crr',      r'$\cos\theta^{r}_{\ell^+}\cos\theta^{r}_{\ell^-}$'
+                 r'   (mean $\to C_{rr}$)',
      'off-diagonal'),
     ('cos_phi',  r'$\cos\varphi_{\ell\ell}$', 'off-diagonal'),
     ('cos_n_p',  r'$\cos\theta^{n}_{\ell^+}$', 'off-diagonal'),
@@ -467,6 +477,17 @@ def main():
     L.append('for every sample in this test, diagonal and interference alike.')
     L.append('Nothing below is fitted and nothing is read out of a log.')
     L.append('')
+    L.append('Naming: ckk, cnn, crr are the PER-EVENT products')
+    L.append('  c_ij = cos(theta^i_l+) cos(theta^j_l-),  one number per event.')
+    L.append('  Every histogram and every chi2 below, and every figure, is of')
+    L.append('  that product.  The spin-correlation coefficient C_ij is the')
+    L.append('  MEAN of it (up to the standard 1/9 of the two decay analysing')
+    L.append('  powers), so it is a single number per sample and appears only')
+    L.append('  in the "means" table.  A block whose C_ij vanishes still has a')
+    L.append('  cross section and a perfectly non-zero histogram: what vanishes')
+    L.append('  is the first moment.  The axis labels say "mean -> C_ij" for')
+    L.append('  this reason.')
+    L.append('')
     L.append('samples')
     L.append('  %-6s %-6s %9s %14s %14s %14s %8s %6s'
              % ('tag', 'kind', 'N_file', 'sigma [pb]', 'mean(w) [pb]',
@@ -586,8 +607,11 @@ def main():
                     float(np.abs(pull).max())))
     L.append('')
 
-    # the identity cos phi_ll = C_kk + C_rr + C_nn, term by term
-    L.append('identity  <cos phi_ll> = <C_kk> + <C_rr> + <C_nn>')
+    # the identity cos phi_ll = c_kk + c_rr + c_nn, term by term.  It is an
+    # identity between the per-event quantities themselves, so it survives the
+    # averaging; the means are what is printed.
+    L.append('identity  <cos phi_ll> = <ckk> + <crr> + <cnn>   (per-event')
+    L.append('  products, whose means give the coefficients C_ij)')
     for name, tags in (('4 diagonal', DIAG), ('9 blocks', ALL9),
                        ('unpolarised', ['unpol'])):
         kk = d.mean(tags, 'ckk')[0]

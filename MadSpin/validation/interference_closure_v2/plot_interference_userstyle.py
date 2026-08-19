@@ -41,6 +41,10 @@ if _HERE not in sys.path:
 # That module sets the MG7 paper rcParams (serif / usetex) at import time, so
 # the defaults are restored immediately afterwards -- the user's script sets no
 # rcParams at all and therefore draws with stock matplotlib.
+# ``OBS`` also carries the axis labels, so both styles share one wording and
+# one convention: what is drawn is always a per-event quantity, and where that
+# quantity's mean is a spin-correlation coefficient the label says so with
+# '(mean -> C_ij)' instead of naming the curve after the coefficient.
 _saved_rc = mpl.rcParams.copy()
 from plot_interference import (            # noqa: E402
     Data, ratio, OBS, DIAG, INTER, BLOCK_LABEL,
@@ -283,7 +287,14 @@ def main():
     with open(log, 'w') as fh:
         fh.write('ratio y limits chosen per figure (smallest of the user\'s\n'
                  'ladder 0.99/0.85/0.75/0.5 that contains every point +- its\n'
-                 'sqrt(sumw2) error; nothing is clipped)\n\n')
+                 'sqrt(sumw2) error; nothing is clipped)\n\n'
+                 'ckk, cnn and crr are the PER-EVENT products\n'
+                 'c_ij = cos(theta^i_l+) cos(theta^j_l-); every figure here is\n'
+                 'a histogram of that product.  The spin-correlation\n'
+                 'coefficient C_ij is its MEAN, one number per sample, which is\n'
+                 'why the axis labels read "mean -> C_ij" and not "C_ij".  A\n'
+                 'block with C_ij = 0 still has a cross section and a non-zero\n'
+                 'histogram; what vanishes for it is the first moment.\n\n')
         fh.write('\n'.join(lines) + '\n')
     produced.append(log)
 
