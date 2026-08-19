@@ -2894,3 +2894,153 @@ sits `+2.9` and `+3.4` sigma away. In the `sqrt(shat) < 360 GeV` threshold slice
 the carried result is `-0.1` / `+0.0` sigma from the two references and the
 clipped one `+3.0` / `+2.6`. A factor 30 in the bound leaves the carried
 physics where it was, which is the whole content of `min(1,x) max(1,x) = x`.
+
+## 15. The mass stage's per-event bound
+
+Section 14 made an under-estimated bound harmless. This makes it impossible, at
+the mass stage, and cheaper at the same time.
+
+### What the bound is
+
+Under `PA`/`onshell` the mass-set weight is
+
+    w_mass = J(m) . prod_s jac_BW_s(m) . prod_s Zhat_s(m_s)
+
+with `J` the RAMBO production reshuffling jacobian, `jac_BW_s = gap/pi` the
+width in `R = atan((m^2-pole^2)/(pole.Gamma))` of slot `s`'s Breit-Wigner
+window, and `Zhat_s` the tabulated rate factor. Every factor is non-negative, so
+a product of per-factor maxima dominates it. All three maxima are exact and cost
+O(n) per production event:
+
+* **`max J` is at the low corner of the windows.** `J` is monotone *decreasing*
+  in every new mass at fixed `sqrt(shat)` and fixed configuration -- proved in
+  the comment above `_mass_stage_bound`, `d ln J/d mu_k <= (5-2n)/(2 E_k' G
+  chi^2) < 0` for `n >= 3`, and the `lambda^(1/2)` ratio for `n = 2`. Checked on
+  1.6e6 directional probes over `n = 2..10` with `|p|` and `m` each spanning
+  eight decades: zero violations.
+* **`jac_BW_s` does not depend on `m_s` at all** -- it is the *window's* width,
+  a function of the budget `sqrt(shat) - sum of the masses drawn before it`. It
+  is increasing in that budget, which is largest at the same low corner. (The
+  earlier design note treated `jac_BW` as a function of the drawn mass and
+  proposed maximising `jac_BW . Zhat` jointly; there is nothing to maximise
+  jointly.)
+* **`max Zhat_s` is a 1-D maximum of `exp` of a quadratic in `ln(m/pole)` over
+  the clamped range** -- endpoint or vertex, `_zhat_max`. Deliberately *not*
+  `1.1 . <jac_BW . Zhat>`: a sample mean is not a bound, and `Zhat` is allowed
+  to have structure.
+
+The window is not a box (`sum m <= sqrt(shat)` couples the slots), but the
+coupled region is a subset of the box that contains the low corner whenever it
+contains anything, so a monotone function's maximum over it is at that corner
+and a scan over the coupled region cannot beat it for `J`.
+
+### Not restricted to `2 -> 2`
+
+`Event.mass_shuffle_jacobian` evaluates RAMBO eqs. (4.3)/(4.9) from the
+per-event data `Event.mass_shuffle_frame` returns -- `(E_i, m_i^2, |p_i|^2)` in
+the reshuffling CM frame, computed once per event -- so a candidate mass set is
+one scalar Newton solve plus O(n) arithmetic, for any `n`. The `2 -> 2` closed
+form `lambda^(1/2)/lambda^(1/2)` is the case where the solve is explicit; it is
+not the only case that is cheap. Against `_production_jacobian_for` (which
+re-parses the event from a string, splits it, boosts it and rebuilds the
+momenta) the kernel agrees to **8.9e-16** at `n = 2` and **6.6e-16 / 6.7e-16 /
+8.8e-16** at `n = 3, 4, 5` on identical inputs, reproduces the `0` and `-1`
+verdicts exactly (7683 such cases), and is 6-7x faster (5.3 vs 33 us at `n = 2`,
+7.8 vs 55 us at `n = 5`). Fed the *untruncated* event it differs from the
+shipped path by up to 4.4e-5, which is the `%.10e` truncation `str(Event)`
+applies -- so the bound builds its frame from the round-tripped event, and sees
+exactly what the accept/reject computes.
+
+### What it is worth
+
+`p p > t t~` at 6.5+6.5 TeV, 20 000 events, `spinmode = PA`,
+`unweighting = sequential`, `BW_cut = 15`, both tops to `e nu b`. Offline probe,
+2500 production events, ~1e6 free mass sets, same slicing as
+`doc/madspin_pa_mass_stage/bound_design.md` section 4B:
+
+| `sqrt(shat)` [GeV] | % of sample | `eps_m` global `C` | `eps_m` per-event `C_e` | overflows global | overflows per-event |
+|---|---|---|---|---|---|
+| 346-350 | 0.40 | 1.96 | 5.50 | 3841 | 0 |
+| 350-355 | 1.20 | 1.89 | 3.26 | 1127 | 0 |
+| 355-360 | 1.64 | 1.86 | 2.46 | 3 | 0 |
+| 360-370 | 3.64 | 1.83 | 2.04 | 0 | 0 |
+| 370-380 | 4.64 | 1.82 | 1.75 | 0 | 0 |
+| 380-400 | 8.68 | 1.82 | 1.56 | 0 | 0 |
+| 400-450 | 19.96 | 1.81 | 1.38 | 0 | 0 |
+| 450-500 | 16.24 | 1.81 | 1.27 | 0 | 0 |
+| 500-600 | 21.32 | 1.81 | 1.22 | 0 | 0 |
+| 600-800 | 15.56 | 1.81 | 1.17 | 0 | 0 |
+| > 800 | 6.72 | 1.81 | 1.14 | 0 | 0 |
+| **all** | 100 | **1.82** | **1.39** | **4971** | **0** |
+
+Same shape as the earlier study: worse than the global bound in the first few
+GeV above threshold, where `J` at the corner is large and the Breit-Wigner
+essentially never goes there, and better everywhere else. The largest
+`max(w)/C_e` seen anywhere in that scan is **0.9635** -- tight, and never
+exceeded.
+
+End to end, against the same sample, the same seed and the *same* `ms_dir`
+cache (so the `Zhat` tables and the global bound are identical):
+
+| run | `eps_m` before | `eps_m` after | overweight events before | after |
+|---|---|---|---|---|
+| `p p > t t~` (2 -> 2) | 1.80 | **1.39** | 20 / 20 000 | **0** |
+| `p p > t t~ j` (2 -> 3) | 2.76 | **1.50** | 0 / 8 000 | **0** |
+| `p p > t t~`, `BW_cut = 70` | 1.74 | **1.68** | 23 / 20 000 | **0** |
+
+The third row is the case where `Zhat` is *not* smooth: with a 70-width window
+the top's `b W` threshold at 85 GeV falls inside it, and the fitted table runs
+`Z(70.3) = 0.002`, `Z(173) = 1`, `Z(275.5) = 0.263` -- a factor 500 across the
+window, with a 35 % bin-to-fit deviation. There the exact `max Zhat` is far
+above the typical `Zhat`, so the bound is barely tighter than the global one.
+It is still a *bound*, which the global one was not: 23 overflows became 0.
+
+### The safety case: the bound cancels
+
+The mass stage redraws until it accepts, so the accepted density is
+proportional to `q_e(m) . min(1, w/C)`, i.e. to `q_e(m) w(m)` for **any**
+`C >= max w`. Changing `C` changes the trial sequence and the cost and nothing
+else. Measured, not asserted -- same production sample, same seed, base bound
+against per-event bound, accepted virtualities of both parents:
+
+| run | pdg | two-sample chi2 / d.o.f. | KS p |
+|---|---|---|---|
+| `t t~` | 6 | 19.3 / 24 | 0.22 |
+| `t t~` | -6 | 14.0 / 24 | 0.71 |
+| `t t~ j` | 6 | 30.1 / 24 | 0.94 |
+| `t t~ j` | -6 | 17.1 / 24 | 0.56 |
+| `t t~`, `BW_cut = 70` | 6 | 23.5 / 22 | 0.32 |
+| `t t~`, `BW_cut = 70` | -6 | 22.3 / 22 | 0.99 |
+
+(The base runs carry a handful of non-unit weights from section 14, worth
+0.03 % of the normalisation; the histograms above ignore weights, which is
+three orders of magnitude below their resolution.)
+
+### Would a scan do better?
+
+Only through `Zhat`. `J` and every `jac_BW` peak at the same corner, so the
+only slack is `prod_s max Zhat_s` against `Zhat` where `w` actually peaks. A
+120x120 grid over the true coupled region measures `C_corner/C_scan` at median
+**1.26** (min 1.10, max 1.35 for `BW_cut = 15`; max 1.40 for `BW_cut = 70`), so
+a scan would buy about 25 % of acceptance for ~14 000 kernel evaluations per
+production event against ~2 -- and a grid maximum is not a bound, so it would
+need a margin back. Not taken.
+
+### Behaviour change, and the fallbacks
+
+`nb_sigma` and `Nevents_for_max_weight` no longer set the **mass** stage's
+bound; they still set every angle stage's. This is logged once per run, not
+silent, and it is what makes the mass stage's cost reproducible -- the
+probe-based bound was measured scattering +-40 % run to run without converging.
+The probe still measures `maxwgts[0]`, and it is still what the mass stage uses
+when the per-event bound does not apply:
+
+* the offshell spinmodes (`madspin`/`full`), whose `w_mass` carries
+  `Tr(rho_off)/|M_prod|^2_on`;
+* a production event with an onshell propagator (status 2), where
+  `reshuffle_production` folds in a `reshuffle_decay` jacobian per sub-decay;
+* a window that does not fit (`sum` of the minima above `sqrt(shat)`, or a
+  budget below a window's own floor);
+* a jacobian that is infeasible or not finite at the corner.
+
+The end-of-run report says how many production events took each path.
