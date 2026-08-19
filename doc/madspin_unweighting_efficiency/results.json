@@ -1,0 +1,497 @@
+{
+  "process": "p p > t t~",
+  "decays": [
+    "t > b w+, w+ > l+ vl",
+    "t~ > b~ w-, w- > l- vl~"
+  ],
+  "nevents_requested": 20000,
+  "seed": 42,
+  "nb_core": 8,
+  "events_file": "/private/tmp/claude-503/-Users-omattelaer-Documents-git-workspace-madgraph5--claude-worktrees-stoic-margulis-e3f6ec/cbbd487d-6d4b-45c1-b4cb-c882ba1dd911/scratchpad/campaign/tree/PROC/Events/run_01/unweighted_events.lhe.gz",
+  "cross_in": 504.416,
+  "production_wall_seconds": 15.2119779586792,
+  "position_to_pdg": {
+    "0": 6,
+    "1": -6
+  },
+  "slot_diagnostics": {
+    "layouts": {
+      "6/-6": 2000
+    },
+    "sequential_spin_order": "2 3 1",
+    "note": "both decaying particles are spin-1/2, so sequential_spin_order cannot reorder them: position k == slot k == the k-th distinct decaying pdg in production-event order"
+  },
+  "runs": {
+    "PA_joint": {
+      "reported_mode": "joint",
+      "reported_why": "set explicitly",
+      "eff": 0.3046,
+      "n_written": 20000,
+      "n_trials": 65670,
+      "trials_per_event": 3.28,
+      "slots": {},
+      "chain_restarts": 0,
+      "overflows": 0,
+      "spinmode": "PA",
+      "unweighting_asked": "joint",
+      "extra_settings": {},
+      "card_set_lines": [
+        "set spinmode PA",
+        "set seed 42",
+        "set max_running_process 4",
+        "set nb_core 8",
+        "set unweighting joint",
+        "set loop optimized output to True",
+        "set loop color flows to False",
+        "set loop optimized output to True",
+        "set loop color flows to False"
+      ],
+      "density_keep_jacobian": "True",
+      "wall_seconds": 34.26582980155945,
+      "BR": 0.047083034638076504,
+      "cross_out": 23.749436
+    },
+    "PA_sequential": {
+      "reported_mode": "sequential",
+      "reported_why": "set explicitly",
+      "eff": 0.2344,
+      "n_written": 20000,
+      "n_trials": 85329,
+      "trials_per_event": 4.27,
+      "mass_stage": {
+        "per_accepted": 2.01,
+        "drawn": 40172,
+        "rejected": 20172,
+        "dropped_by_rejected_decay": 0
+      },
+      "slots": {
+        "0": {
+          "per_accepted": 1.21,
+          "drawn": 24243
+        },
+        "1": {
+          "per_accepted": 3.05,
+          "drawn": 61086
+        }
+      },
+      "chain_restarts": 0,
+      "overflows": 13,
+      "spinmode": "PA",
+      "unweighting_asked": "sequential",
+      "extra_settings": {},
+      "card_set_lines": [
+        "set spinmode PA",
+        "set seed 42",
+        "set max_running_process 4",
+        "set nb_core 8",
+        "set unweighting sequential",
+        "set loop optimized output to True",
+        "set loop color flows to False",
+        "set loop optimized output to True",
+        "set loop color flows to False"
+      ],
+      "density_keep_jacobian": "True",
+      "wall_seconds": 33.56670904159546,
+      "BR": 0.04708594493433991,
+      "cross_out": 23.750904
+    },
+    "PA_sequential_global_retry": {
+      "reported_mode": "sequential_global_retry",
+      "reported_why": "set explicitly",
+      "eff": 0.152,
+      "n_written": 20000,
+      "n_trials": 131543,
+      "trials_per_event": 6.58,
+      "mass_stage": {
+        "per_accepted": 7.14,
+        "drawn": 142846,
+        "rejected": 71942,
+        "dropped_by_rejected_decay": 50904
+      },
+      "slots": {
+        "0": {
+          "per_accepted": 3.55,
+          "drawn": 70904
+        },
+        "1": {
+          "per_accepted": 3.03,
+          "drawn": 60639
+        }
+      },
+      "chain_restarts": 0,
+      "overflows": 42,
+      "spinmode": "PA",
+      "unweighting_asked": "sequential_global_retry",
+      "extra_settings": {},
+      "card_set_lines": [
+        "set spinmode PA",
+        "set seed 42",
+        "set max_running_process 4",
+        "set nb_core 8",
+        "set unweighting sequential_global_retry",
+        "set loop optimized output to True",
+        "set loop color flows to False",
+        "set loop optimized output to True",
+        "set loop color flows to False"
+      ],
+      "density_keep_jacobian": "True",
+      "wall_seconds": 36.852516174316406,
+      "BR": 0.04708594493433991,
+      "cross_out": 23.750904
+    },
+    "PAnojac_joint": {
+      "reported_mode": "joint",
+      "reported_why": "set explicitly",
+      "eff": 0.3245,
+      "n_written": 20000,
+      "n_trials": 61641,
+      "trials_per_event": 3.08,
+      "slots": {},
+      "chain_restarts": 0,
+      "overflows": 0,
+      "spinmode": "PA",
+      "unweighting_asked": "joint",
+      "extra_settings": {
+        "density_keep_jacobian": "False"
+      },
+      "card_set_lines": [
+        "set spinmode PA",
+        "set seed 42",
+        "set max_running_process 4",
+        "set nb_core 8",
+        "set unweighting joint",
+        "set density_keep_jacobian False",
+        "set loop optimized output to True",
+        "set loop color flows to False",
+        "set loop optimized output to True",
+        "set loop color flows to False"
+      ],
+      "density_keep_jacobian": "False",
+      "wall_seconds": 38.906774044036865,
+      "BR": 0.047083034638076504,
+      "cross_out": 23.749436
+    },
+    "PAnojac_sequential": {
+      "reported_mode": "sequential",
+      "reported_why": "set explicitly",
+      "eff": 0.2412,
+      "n_written": 20000,
+      "n_trials": 82909,
+      "trials_per_event": 4.15,
+      "mass_stage": {
+        "per_accepted": 1.1,
+        "drawn": 22083,
+        "rejected": 2083,
+        "dropped_by_rejected_decay": 0
+      },
+      "slots": {
+        "0": {
+          "per_accepted": 1.1,
+          "drawn": 22088
+        },
+        "1": {
+          "per_accepted": 3.04,
+          "drawn": 60821
+        }
+      },
+      "chain_restarts": 0,
+      "overflows": 0,
+      "spinmode": "PA",
+      "unweighting_asked": "sequential",
+      "extra_settings": {
+        "density_keep_jacobian": "False"
+      },
+      "card_set_lines": [
+        "set spinmode PA",
+        "set seed 42",
+        "set max_running_process 4",
+        "set nb_core 8",
+        "set unweighting sequential",
+        "set density_keep_jacobian False",
+        "set loop optimized output to True",
+        "set loop color flows to False",
+        "set loop optimized output to True",
+        "set loop color flows to False"
+      ],
+      "density_keep_jacobian": "False",
+      "wall_seconds": 34.50330376625061,
+      "BR": 0.04708594493433991,
+      "cross_out": 23.750904
+    },
+    "PAnojac_sequential_global_retry": {
+      "reported_mode": "sequential_global_retry",
+      "reported_why": "set explicitly",
+      "eff": 0.1556,
+      "n_written": 20000,
+      "n_trials": 128500,
+      "trials_per_event": 6.42,
+      "mass_stage": {
+        "per_accepted": 3.72,
+        "drawn": 74417,
+        "rejected": 7008,
+        "dropped_by_rejected_decay": 47409
+      },
+      "slots": {
+        "0": {
+          "per_accepted": 3.37,
+          "drawn": 67409
+        },
+        "1": {
+          "per_accepted": 3.05,
+          "drawn": 61091
+        }
+      },
+      "chain_restarts": 0,
+      "overflows": 0,
+      "spinmode": "PA",
+      "unweighting_asked": "sequential_global_retry",
+      "extra_settings": {
+        "density_keep_jacobian": "False"
+      },
+      "card_set_lines": [
+        "set spinmode PA",
+        "set seed 42",
+        "set max_running_process 4",
+        "set nb_core 8",
+        "set unweighting sequential_global_retry",
+        "set density_keep_jacobian False",
+        "set loop optimized output to True",
+        "set loop color flows to False",
+        "set loop optimized output to True",
+        "set loop color flows to False"
+      ],
+      "density_keep_jacobian": "False",
+      "wall_seconds": 37.00175905227661,
+      "BR": 0.04708594493433991,
+      "cross_out": 23.750904
+    },
+    "madspin_joint": {
+      "reported_mode": "joint",
+      "reported_why": "set explicitly",
+      "eff": 0.2822,
+      "n_written": 20000,
+      "n_trials": 70866,
+      "trials_per_event": 3.54,
+      "slots": {},
+      "chain_restarts": 0,
+      "overflows": 0,
+      "spinmode": "madspin",
+      "unweighting_asked": "joint",
+      "extra_settings": {},
+      "card_set_lines": [
+        "set spinmode madspin",
+        "set seed 42",
+        "set max_running_process 4",
+        "set nb_core 8",
+        "set unweighting joint",
+        "set loop optimized output to True",
+        "set loop color flows to False",
+        "set loop optimized output to True",
+        "set loop color flows to False"
+      ],
+      "density_keep_jacobian": "True",
+      "wall_seconds": 36.90149807929993,
+      "BR": 0.047083034638076504,
+      "cross_out": 23.749436
+    },
+    "madspin_sequential": {
+      "reported_mode": "sequential",
+      "reported_why": "set explicitly",
+      "eff": 0.1591,
+      "n_written": 20000,
+      "n_trials": 125674,
+      "trials_per_event": 6.28,
+      "mass_stage": {
+        "per_accepted": 3.01,
+        "drawn": 60296,
+        "rejected": 40296,
+        "dropped_by_rejected_decay": 0
+      },
+      "slots": {
+        "0": {
+          "per_accepted": 2.4,
+          "drawn": 47935
+        },
+        "1": {
+          "per_accepted": 3.89,
+          "drawn": 77739
+        }
+      },
+      "chain_restarts": 0,
+      "overflows": 1,
+      "spinmode": "madspin",
+      "unweighting_asked": "sequential",
+      "extra_settings": {},
+      "card_set_lines": [
+        "set spinmode madspin",
+        "set seed 42",
+        "set max_running_process 4",
+        "set nb_core 8",
+        "set unweighting sequential",
+        "set loop optimized output to True",
+        "set loop color flows to False",
+        "set loop optimized output to True",
+        "set loop color flows to False"
+      ],
+      "density_keep_jacobian": "True",
+      "wall_seconds": 37.138237953186035,
+      "BR": 0.04708594493433991,
+      "cross_out": 23.750904
+    },
+    "madspin_sequential_global_retry": {
+      "reported_mode": "sequential_global_retry",
+      "reported_why": "set explicitly",
+      "eff": 0.137,
+      "n_written": 20000,
+      "n_trials": 145990,
+      "trials_per_event": 7.3,
+      "mass_stage": {
+        "per_accepted": 12.76,
+        "drawn": 255172,
+        "rejected": 170645,
+        "dropped_by_rejected_decay": 64527
+      },
+      "slots": {
+        "0": {
+          "per_accepted": 4.23,
+          "drawn": 84527
+        },
+        "1": {
+          "per_accepted": 3.07,
+          "drawn": 61463
+        }
+      },
+      "chain_restarts": 0,
+      "overflows": 6,
+      "spinmode": "madspin",
+      "unweighting_asked": "sequential_global_retry",
+      "extra_settings": {},
+      "card_set_lines": [
+        "set spinmode madspin",
+        "set seed 42",
+        "set max_running_process 4",
+        "set nb_core 8",
+        "set unweighting sequential_global_retry",
+        "set loop optimized output to True",
+        "set loop color flows to False",
+        "set loop optimized output to True",
+        "set loop color flows to False"
+      ],
+      "density_keep_jacobian": "True",
+      "wall_seconds": 39.80685305595398,
+      "BR": 0.04708594493433991,
+      "cross_out": 23.750904
+    },
+    "onshell_joint": {
+      "reported_mode": "joint",
+      "reported_why": "set explicitly",
+      "eff": 0.3254,
+      "n_written": 20000,
+      "n_trials": 61463,
+      "trials_per_event": 3.07,
+      "slots": {},
+      "chain_restarts": 0,
+      "overflows": 0,
+      "spinmode": "onshell",
+      "unweighting_asked": "joint",
+      "extra_settings": {},
+      "card_set_lines": [
+        "set spinmode onshell",
+        "set seed 42",
+        "set max_running_process 4",
+        "set nb_core 8",
+        "set unweighting joint",
+        "set loop optimized output to True",
+        "set loop color flows to False",
+        "set loop optimized output to True",
+        "set loop color flows to False"
+      ],
+      "density_keep_jacobian": "True",
+      "wall_seconds": 32.131561040878296,
+      "BR": 0.047083034638076504,
+      "cross_out": 23.749436
+    },
+    "onshell_sequential": {
+      "reported_mode": "sequential",
+      "reported_why": "set explicitly",
+      "eff": 0.2401,
+      "n_written": 20000,
+      "n_trials": 83306,
+      "trials_per_event": 4.17,
+      "slots": {
+        "0": {
+          "per_accepted": 1.1,
+          "drawn": 22043
+        },
+        "1": {
+          "per_accepted": 3.06,
+          "drawn": 61263
+        }
+      },
+      "chain_restarts": 0,
+      "overflows": 0,
+      "spinmode": "onshell",
+      "unweighting_asked": "sequential",
+      "extra_settings": {},
+      "card_set_lines": [
+        "set spinmode onshell",
+        "set seed 42",
+        "set max_running_process 4",
+        "set nb_core 8",
+        "set unweighting sequential",
+        "set loop optimized output to True",
+        "set loop color flows to False",
+        "set loop optimized output to True",
+        "set loop color flows to False"
+      ],
+      "density_keep_jacobian": "True",
+      "wall_seconds": 32.42987108230591,
+      "BR": 0.04708594493433991,
+      "cross_out": 23.750904
+    },
+    "onshell_sequential_global_retry": {
+      "reported_mode": "sequential_global_retry",
+      "reported_why": "set explicitly",
+      "eff": 0.156,
+      "n_written": 20000,
+      "n_trials": 128194,
+      "trials_per_event": 6.41,
+      "mass_stage": {
+        "per_accepted": 3.36,
+        "drawn": 67290,
+        "rejected": 0,
+        "dropped_by_rejected_decay": 47290
+      },
+      "slots": {
+        "0": {
+          "per_accepted": 3.36,
+          "drawn": 67290
+        },
+        "1": {
+          "per_accepted": 3.05,
+          "drawn": 60904
+        }
+      },
+      "chain_restarts": 0,
+      "overflows": 0,
+      "spinmode": "onshell",
+      "unweighting_asked": "sequential_global_retry",
+      "extra_settings": {},
+      "card_set_lines": [
+        "set spinmode onshell",
+        "set seed 42",
+        "set max_running_process 4",
+        "set nb_core 8",
+        "set unweighting sequential_global_retry",
+        "set loop optimized output to True",
+        "set loop color flows to False",
+        "set loop optimized output to True",
+        "set loop color flows to False"
+      ],
+      "density_keep_jacobian": "True",
+      "wall_seconds": 33.55737328529358,
+      "BR": 0.04708594493433991,
+      "cross_out": 23.750904
+    }
+  }
+}
