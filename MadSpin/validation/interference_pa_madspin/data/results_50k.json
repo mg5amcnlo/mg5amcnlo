@@ -1,0 +1,695 @@
+{
+ "onshell_w": {
+  "tag": "onshell_w",
+  "spinmode": "onshell",
+  "output": "weighted",
+  "decayed_file": "/private/tmp/claude-503/-Users-omattelaer-Documents-git-workspace-madgraph5--claude-worktrees-stoic-margulis-e3f6ec/cbbd487d-6d4b-45c1-b4cb-c882ba1dd911/scratchpad/pams_adda6168_full/onshell_w/events_decayed.lhe.gz",
+  "decayed_file_exists": true,
+  "exit_code": 0,
+  "wallclock_s": 309,
+  "jac": {
+   "n_calls": 0,
+   "n_bad": 0,
+   "n_zero": 0,
+   "n_negative": 0,
+   "n_nonfinite": 0,
+   "nb_reshuffle_issue": 0,
+   "n_files": 16,
+   "bad_values": [],
+   "n_forced": 0,
+   "probe": {
+    "n_calls": 0,
+    "n_bad": 0,
+    "nb_reshuffle_issue": 0
+   },
+   "unweight": {
+    "n_calls": 0,
+    "n_bad": 0,
+    "nb_reshuffle_issue": 0
+   }
+  },
+  "banner": {
+   "ref": 23.76952,
+   "n_written": 50000,
+   "n_read": 50000,
+   "c": 2.25014147e-10,
+   "c_relerr": 0.134,
+   "analytic_c": 2.25591409e-10,
+   "c_over_analytic": 0.997441,
+   "absw_probe": 3.14773309e-11,
+   "absw_probe_relerr": 4.997,
+   "absw_run": null,
+   "probe_scale": null,
+   "w_magnitude": null,
+   "maxwgt": 3.85963995e-10,
+   "S": -1432.93784,
+   "dS": 981.41295,
+   "z": -1.4601,
+   "mean_w": -0.0286587569,
+   "dead": 0,
+   "overflow": null
+  },
+  "init_xsec": 0.0,
+  "n_file": 50000,
+  "weights": {
+   "n_pos": 24768,
+   "n_neg": 25232,
+   "n_zero": 0,
+   "n_values": 49991,
+   "n_magnitudes": 49983,
+   "signed_values": [
+    -22.898366,
+    -22.59775700679808,
+    -21.856286001981818,
+    -21.044185994766657,
+    -20.957651993429455,
+    -20.863970999893063,
+    -20.780712999084386,
+    -20.757266011133392,
+    -20.687728001382567,
+    -20.216135993324002
+   ],
+   "magnitudes": [
+    3.9476782983999996e-05,
+    6.9931609764e-05,
+    0.000126238691758,
+    0.000157357571152,
+    0.000164478962978,
+    0.000235189117186,
+    0.000280802662258,
+    0.000318218592302,
+    0.000322660875306,
+    0.00032584374818
+   ]
+  },
+  "zero_check": {
+   "S": -1432.9378556439437,
+   "sqrt_sum_w2": 981.4129495689181,
+   "z": -1.460076368743001,
+   "mean_w": -0.028658757112878876,
+   "mean_w_err": 0.01962784054717789,
+   "mean_w_pull": -1.4601074959822546
+  },
+  "observables": {
+   "cnn": {
+    "value": 0.0369636916017677,
+    "error": 0.00032239521261171014,
+    "reference": 0.03657,
+    "reference_error": 0.00059,
+    "pull": 0.5855558913019879
+   },
+   "crr": {
+    "value": 0.0014861612695348464,
+    "error": 0.00037703188922365744,
+    "reference": 0.00104,
+    "reference_error": 0.00066,
+    "pull": 0.5869765421827701
+   },
+   "ckk": {
+    "value": 0.0003760608172407154,
+    "error": 0.00016509771593056443
+   },
+   "cos_phi": {
+    "value": 0.038825913688543254,
+    "error": 0.0005332545771181382
+   },
+   "dphi_lab": {
+    "value": -0.0662558327136629,
+    "error": 0.0017448580648064165
+   },
+   "pt_t": {
+    "value": -0.14783589405584707,
+    "error": 0.12184242345042015
+   }
+  }
+ },
+ "onshell_u": {
+  "tag": "onshell_u",
+  "spinmode": "onshell",
+  "output": "unweighted",
+  "decayed_file": "/private/tmp/claude-503/-Users-omattelaer-Documents-git-workspace-madgraph5--claude-worktrees-stoic-margulis-e3f6ec/cbbd487d-6d4b-45c1-b4cb-c882ba1dd911/scratchpad/pams_adda6168_full/onshell_u/events_decayed.lhe.gz",
+  "decayed_file_exists": true,
+  "exit_code": 0,
+  "wallclock_s": 206,
+  "jac": {
+   "n_calls": 0,
+   "n_bad": 0,
+   "n_zero": 0,
+   "n_negative": 0,
+   "n_nonfinite": 0,
+   "nb_reshuffle_issue": 0,
+   "n_files": 16,
+   "bad_values": [],
+   "n_forced": 0,
+   "probe": {
+    "n_calls": 0,
+    "n_bad": 0,
+    "nb_reshuffle_issue": 0
+   },
+   "unweight": {
+    "n_calls": 0,
+    "n_bad": 0,
+    "nb_reshuffle_issue": 0
+   }
+  },
+  "banner": {
+   "ref": 23.767318,
+   "n_written": 3832,
+   "n_read": 50000,
+   "c": 2.25110148e-10,
+   "c_relerr": 0.1342,
+   "analytic_c": 2.25591409e-10,
+   "c_over_analytic": 0.997867,
+   "absw_probe": 3.17323098e-11,
+   "absw_probe_relerr": 5.0277,
+   "absw_run": 2.99069006e-11,
+   "probe_scale": 0.9425,
+   "w_magnitude": 3.15759562,
+   "maxwgt": 3.90225739e-10,
+   "S": 63.1519119,
+   "dS": 195.465114,
+   "z": 0.3231,
+   "mean_w": 0.016480144,
+   "dead": 0,
+   "overflow": 0
+  },
+  "init_xsec": 0.0,
+  "n_file": 3832,
+  "weights": {
+   "n_pos": 1926,
+   "n_neg": 1906,
+   "n_zero": 0,
+   "n_values": 2,
+   "n_magnitudes": 1,
+   "signed_values": [
+    -3.1575956,
+    3.1575956
+   ],
+   "magnitudes": [
+    3.1575956
+   ]
+  },
+  "zero_check": {
+   "S": 63.15191199999997,
+   "sqrt_sum_w2": 195.46511457820304,
+   "z": 0.323085334875619,
+   "mean_w": 0.016480144050104374,
+   "mean_w_err": 0.05100794684594029,
+   "mean_w_pull": 0.323089735406906
+  },
+  "observables": {
+   "cnn": {
+    "value": 0.03782756750821965,
+    "error": 0.0006437722230463607,
+    "reference": 0.03657,
+    "reference_error": 0.00059,
+    "pull": 1.4401218215922267
+   },
+   "crr": {
+    "value": 0.0021050593706253918,
+    "error": 0.0008621961700370966,
+    "reference": 0.00104,
+    "reference_error": 0.00066,
+    "pull": 0.9808897290753649
+   },
+   "ckk": {
+    "value": -0.0005288532655965536,
+    "error": 0.0005307802200953401
+   },
+   "cos_phi": {
+    "value": 0.039403773613248524,
+    "error": 0.001216308568750563
+   },
+   "dphi_lab": {
+    "value": -0.062014737987991383,
+    "error": 0.0043964375508601695
+   },
+   "pt_t": {
+    "value": 0.11427567880612677,
+    "error": 0.3157543011403929
+   }
+  }
+ },
+ "pa_w": {
+  "tag": "pa_w",
+  "spinmode": "PA",
+  "output": "weighted",
+  "decayed_file": "/private/tmp/claude-503/-Users-omattelaer-Documents-git-workspace-madgraph5--claude-worktrees-stoic-margulis-e3f6ec/cbbd487d-6d4b-45c1-b4cb-c882ba1dd911/scratchpad/pams_adda6168_full/pa_w/events_decayed.lhe.gz",
+  "decayed_file_exists": true,
+  "exit_code": 0,
+  "wallclock_s": 1297,
+  "jac": {
+   "n_calls": 94016,
+   "n_bad": 0,
+   "n_zero": 0,
+   "n_negative": 0,
+   "n_nonfinite": 0,
+   "nb_reshuffle_issue": 0,
+   "n_files": 16,
+   "bad_values": [],
+   "n_forced": 0,
+   "probe": {
+    "n_calls": 44016,
+    "n_bad": 0,
+    "nb_reshuffle_issue": 0
+   },
+   "unweight": {
+    "n_calls": 50000,
+    "n_bad": 0,
+    "nb_reshuffle_issue": 0
+   }
+  },
+  "banner": {
+   "ref": 23.759975,
+   "n_written": 50000,
+   "n_read": 50000,
+   "c": 2.15522913e-10,
+   "c_relerr": 0.1365,
+   "analytic_c": 2.25591409e-10,
+   "c_over_analytic": 0.955368,
+   "absw_probe": 3.01363082e-11,
+   "absw_probe_relerr": 4.9532,
+   "absw_run": null,
+   "probe_scale": null,
+   "w_magnitude": null,
+   "maxwgt": 5.40338253e-10,
+   "S": 125.178924,
+   "dS": 989.976068,
+   "z": 0.1264,
+   "mean_w": 0.00250357848,
+   "dead": 0,
+   "overflow": null
+  },
+  "init_xsec": 0.0,
+  "n_file": 50000,
+  "weights": {
+   "n_pos": 25041,
+   "n_neg": 24959,
+   "n_zero": 0,
+   "n_values": 49988,
+   "n_magnitudes": 49969,
+   "signed_values": [
+    -115.34905,
+    -35.74291194620575,
+    -34.955765991789,
+    -33.323186016358555,
+    -31.5765500537786,
+    -28.0837159936125,
+    -27.89570500119695,
+    -26.557512988374953,
+    -26.35296797848145,
+    -26.27961797898265
+   ],
+   "magnitudes": [
+    8.16671274e-05,
+    0.00010531368265,
+    0.0001372653695,
+    0.00019344035685,
+    0.00022792972279999998,
+    0.0003089047559,
+    0.00038630396845000005,
+    0.00045528270035,
+    0.0004756994822,
+    0.0005015376694
+   ]
+  },
+  "zero_check": {
+   "S": 125.1788907314891,
+   "sqrt_sum_w2": 989.9760680377427,
+   "z": 0.1264463806479781,
+   "mean_w": 0.002503577814629782,
+   "mean_w_err": 0.01979951819507107,
+   "mean_w_pull": 0.1264464008650992
+  },
+  "observables": {
+   "cnn": {
+    "value": 0.03735346433861508,
+    "error": 0.0003352678435655477,
+    "reference": 0.03657,
+    "reference_error": 0.00059,
+    "pull": 1.1545221815207616
+   },
+   "crr": {
+    "value": 0.001499481964390541,
+    "error": 0.00037249821841733475,
+    "reference": 0.00104,
+    "reference_error": 0.00066,
+    "pull": 0.606287054527995
+   },
+   "ckk": {
+    "value": -5.383582553358091e-05,
+    "error": 0.00016449852319861603
+   },
+   "cos_phi": {
+    "value": 0.03879911047747205,
+    "error": 0.0005411539773452752
+   },
+   "dphi_lab": {
+    "value": -0.06437455262992071,
+    "error": 0.0017448370743721124
+   },
+   "pt_t": {
+    "value": 0.11639844679269434,
+    "error": 0.11970177474594515
+   }
+  }
+ },
+ "pa_u": {
+  "tag": "pa_u",
+  "spinmode": "PA",
+  "output": "unweighted",
+  "decayed_file": "/private/tmp/claude-503/-Users-omattelaer-Documents-git-workspace-madgraph5--claude-worktrees-stoic-margulis-e3f6ec/cbbd487d-6d4b-45c1-b4cb-c882ba1dd911/scratchpad/pams_adda6168_full/pa_u/events_decayed.lhe.gz",
+  "decayed_file_exists": true,
+  "exit_code": 0,
+  "wallclock_s": 42,
+  "jac": {
+   "n_calls": 94016,
+   "n_bad": 0,
+   "n_zero": 0,
+   "n_negative": 0,
+   "n_nonfinite": 0,
+   "nb_reshuffle_issue": 0,
+   "n_files": 16,
+   "bad_values": [],
+   "n_forced": 0,
+   "probe": {
+    "n_calls": 44016,
+    "n_bad": 0,
+    "nb_reshuffle_issue": 0
+   },
+   "unweight": {
+    "n_calls": 50000,
+    "n_bad": 0,
+    "nb_reshuffle_issue": 0
+   }
+  },
+  "banner": {
+   "ref": 23.763646,
+   "n_written": 2678,
+   "n_read": 50000,
+   "c": 2.1543309e-10,
+   "c_relerr": 0.1364,
+   "analytic_c": 2.25591409e-10,
+   "c_over_analytic": 0.95497,
+   "absw_probe": 2.99194359e-11,
+   "absw_probe_relerr": 4.9635,
+   "absw_run": 2.76537558e-11,
+   "probe_scale": 0.9243,
+   "w_magnitude": 3.05038591,
+   "maxwgt": 5.16313588e-10,
+   "S": 54.9069468,
+   "dS": 157.85563,
+   "z": 0.3478,
+   "mean_w": 0.0205029675,
+   "dead": 0,
+   "overflow": 0
+  },
+  "init_xsec": 0.0,
+  "n_file": 2678,
+  "weights": {
+   "n_pos": 1348,
+   "n_neg": 1330,
+   "n_zero": 0,
+   "n_values": 2,
+   "n_magnitudes": 1,
+   "signed_values": [
+    -3.0503859,
+    3.0503859
+   ],
+   "magnitudes": [
+    3.0503859
+   ]
+  },
+  "zero_check": {
+   "S": 54.90694619999999,
+   "sqrt_sum_w2": 157.8556282937817,
+   "z": 0.34783014576974003,
+   "mean_w": 0.020502967214339057,
+   "mean_w_err": 0.05894401138105676,
+   "mean_w_pull": 0.3478380031143967
+  },
+  "observables": {
+   "cnn": {
+    "value": 0.036015741833756096,
+    "error": 0.0007254264390870246,
+    "reference": 0.03657,
+    "reference_error": 0.00059,
+    "pull": -0.592749304517028
+   },
+   "crr": {
+    "value": 0.00302042002078597,
+    "error": 0.0009925574451570324,
+    "reference": 0.00104,
+    "reference_error": 0.00066,
+    "pull": 1.6614809872379968
+   },
+   "ckk": {
+    "value": -0.0007687413434235815,
+    "error": 0.0006158043851772042
+   },
+   "cos_phi": {
+    "value": 0.03826742051111847,
+    "error": 0.0013949887023143185
+   },
+   "dphi_lab": {
+    "value": -0.06047608277405552,
+    "error": 0.005072700798041796
+   },
+   "pt_t": {
+    "value": 0.028624813851011705,
+    "error": 0.3498824993905766
+   }
+  }
+ },
+ "ms_w": {
+  "tag": "ms_w",
+  "spinmode": "madspin",
+  "output": "weighted",
+  "decayed_file": "/private/tmp/claude-503/-Users-omattelaer-Documents-git-workspace-madgraph5--claude-worktrees-stoic-margulis-e3f6ec/cbbd487d-6d4b-45c1-b4cb-c882ba1dd911/scratchpad/pams_adda6168_full/ms_w/events_decayed.lhe.gz",
+  "decayed_file_exists": true,
+  "exit_code": 0,
+  "wallclock_s": 51,
+  "jac": {
+   "n_calls": 94016,
+   "n_bad": 0,
+   "n_zero": 0,
+   "n_negative": 0,
+   "n_nonfinite": 0,
+   "nb_reshuffle_issue": 0,
+   "n_files": 16,
+   "bad_values": [],
+   "n_forced": 0,
+   "probe": {
+    "n_calls": 44016,
+    "n_bad": 0,
+    "nb_reshuffle_issue": 0
+   },
+   "unweight": {
+    "n_calls": 50000,
+    "n_bad": 0,
+    "nb_reshuffle_issue": 0
+   }
+  },
+  "banner": {
+   "ref": 23.763644,
+   "n_written": 50000,
+   "n_read": 50000,
+   "c": 2.15743062e-10,
+   "c_relerr": 0.1427,
+   "analytic_c": 2.25591409e-10,
+   "c_over_analytic": 0.956344,
+   "absw_probe": 2.99338835e-11,
+   "absw_probe_relerr": 4.903,
+   "absw_run": null,
+   "probe_scale": null,
+   "w_magnitude": null,
+   "maxwgt": 3.85722674e-10,
+   "S": 1885.69897,
+   "dS": 981.852655,
+   "z": 1.9206,
+   "mean_w": 0.0377139793,
+   "dead": 0,
+   "overflow": null
+  },
+  "init_xsec": 0.0,
+  "n_file": 50000,
+  "weights": {
+   "n_pos": 25092,
+   "n_neg": 24908,
+   "n_zero": 0,
+   "n_values": 49992,
+   "n_magnitudes": 49987,
+   "signed_values": [
+    -50.399247,
+    -39.520757977834535,
+    -38.54395399356925,
+    -30.22403400139298,
+    -29.91073897663977,
+    -28.643085020276487,
+    -26.651666024669105,
+    -25.078232024873543,
+    -22.746588981251392,
+    -22.701679976223335
+   ],
+   "magnitudes": [
+    2.4191638560000002e-06,
+    6.602301357e-06,
+    1.7690135697e-05,
+    4.8030482391e-05,
+    5.2062422151000006e-05,
+    6.0781491882e-05,
+    0.00011848862969700001,
+    0.000129374867049,
+    0.00012952606479,
+    0.00016969426464900003
+   ]
+  },
+  "zero_check": {
+   "S": 1885.6989362585741,
+   "sqrt_sum_w2": 981.852654707705,
+   "z": 1.9205518539031112,
+   "mean_w": 0.03771397872517148,
+   "mean_w_err": 0.019636328764277743,
+   "mean_w_pull": 1.9206226977509389
+  },
+  "observables": {
+   "cnn": {
+    "value": 0.03701722015420546,
+    "error": 0.00032597155398532017,
+    "reference": 0.03657,
+    "reference_error": 0.00059,
+    "pull": 0.6634719067764127
+   },
+   "crr": {
+    "value": 0.0012712913011945668,
+    "error": 0.00037078470339674485,
+    "reference": 0.00104,
+    "reference_error": 0.00066,
+    "pull": 0.3055281160320939
+   },
+   "ckk": {
+    "value": -8.852589905883424e-05,
+    "error": 0.00016552174174982252
+   },
+   "cos_phi": {
+    "value": 0.03819998555634119,
+    "error": 0.00053647227395343
+   },
+   "dphi_lab": {
+    "value": -0.061596460875488604,
+    "error": 0.001739861625227068
+   },
+   "pt_t": {
+    "value": 0.2958651499417283,
+    "error": 0.12336647328998801
+   }
+  }
+ },
+ "ms_u": {
+  "tag": "ms_u",
+  "spinmode": "madspin",
+  "output": "unweighted",
+  "decayed_file": "/private/tmp/claude-503/-Users-omattelaer-Documents-git-workspace-madgraph5--claude-worktrees-stoic-margulis-e3f6ec/cbbd487d-6d4b-45c1-b4cb-c882ba1dd911/scratchpad/pams_adda6168_full/ms_u/events_decayed.lhe.gz",
+  "decayed_file_exists": true,
+  "exit_code": 0,
+  "wallclock_s": 44,
+  "jac": {
+   "n_calls": 94016,
+   "n_bad": 0,
+   "n_zero": 0,
+   "n_negative": 0,
+   "n_nonfinite": 0,
+   "nb_reshuffle_issue": 0,
+   "n_files": 16,
+   "bad_values": [],
+   "n_forced": 0,
+   "probe": {
+    "n_calls": 44016,
+    "n_bad": 0,
+    "nb_reshuffle_issue": 0
+   },
+   "unweight": {
+    "n_calls": 50000,
+    "n_bad": 0,
+    "nb_reshuffle_issue": 0
+   }
+  },
+  "banner": {
+   "ref": 23.763646,
+   "n_written": 3458,
+   "n_read": 50000,
+   "c": 2.15336075e-10,
+   "c_relerr": 0.1435,
+   "analytic_c": 2.25591409e-10,
+   "c_over_analytic": 0.95454,
+   "absw_probe": 3.01930742e-11,
+   "absw_probe_relerr": 4.924,
+   "absw_run": 2.7771018e-11,
+   "probe_scale": 0.9198,
+   "w_magnitude": 3.06470079,
+   "maxwgt": 4.01547397e-10,
+   "S": 312.599484,
+   "dS": 180.219002,
+   "z": 1.7346,
+   "mean_w": 0.0903989254,
+   "dead": 0,
+   "overflow": 0
+  },
+  "init_xsec": 0.0,
+  "n_file": 3458,
+  "weights": {
+   "n_pos": 1780,
+   "n_neg": 1678,
+   "n_zero": 0,
+   "n_values": 2,
+   "n_magnitudes": 1,
+   "signed_values": [
+    -3.0647009,
+    3.0647009
+   ],
+   "magnitudes": [
+    3.0647009
+   ]
+  },
+  "zero_check": {
+   "S": 312.59949179999995,
+   "sqrt_sum_w2": 180.219006142919,
+   "z": 1.734553410821161,
+   "mean_w": 0.09039892764603816,
+   "mean_w_err": 0.05209386587563352,
+   "mean_w_pull": 1.7353084883708259
+  },
+  "observables": {
+   "cnn": {
+    "value": 0.036320478815057525,
+    "error": 0.00065323372089936,
+    "reference": 0.03657,
+    "reference_error": 0.00059,
+    "pull": -0.2834709845297904
+   },
+   "crr": {
+    "value": 0.0017064695763951729,
+    "error": 0.000856397736538743,
+    "reference": 0.00104,
+    "reference_error": 0.00066,
+    "pull": 0.6164103188593569
+   },
+   "ckk": {
+    "value": 0.00038229430653207754,
+    "error": 0.0005499123184869936
+   },
+   "cos_phi": {
+    "value": 0.0384092426979848,
+    "error": 0.001205414177453193
+   },
+   "dphi_lab": {
+    "value": -0.052985130032074446,
+    "error": 0.004489879475554656
+   },
+   "pt_t": {
+    "value": 0.4334849265824946,
+    "error": 0.3159968059580358
+   }
+  }
+ }
+}
