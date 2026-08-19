@@ -3,8 +3,7 @@
 LIBDIR= ../lib/
 BINDIR= ../bin/
 PDFDIR= ./PDF/
-PWD = $(shell pwd)
-CUTTOOLSDIR= $(PWD)/CutTools/
+CUTTOOLSDIR= ./CutTools/
 IREGIDIR= ./IREGI/src/
 
 include make_opts
@@ -22,8 +21,24 @@ COMBINE = combine_events.o  rw_events.o ranmar.o  kin_functions.o open_file.o rw
 GENSUDGRID = gensudgrid.o is-sud.o setrun_gen.o rw_routines.o open_file.o
 
 # Locally compiled libraries
+#
+# CutTools and IREGI are only shipped *inside* this Source directory when
+# MG5aMC is run with output_dependencies='internal' (see
+# LoopExporterFortran.link_CutTools / link_IREGI). For the default
+# 'external' setting -- and for 'environment_paths' -- only the ready-made
+# libraries are symlinked into ../lib and Source/CutTools, Source/IREGI do
+# not exist at all. Requiring them unconditionally here made the default
+# 'make' in this directory abort with
+#     No rule to make target `.../Source/CutTools', needed by `../lib/libcts.a'
+# so only ask for them when they are actually present to be built.
 
-LIBRARIES= $(LIBDIR)libcts.a $(LIBDIR)libiregi.a
+LIBRARIES=
+ifneq ($(wildcard $(CUTTOOLSDIR:%/=%)),)
+LIBRARIES+= $(LIBDIR)libcts.a
+endif
+ifneq ($(wildcard $(IREGIDIR:%/=%)),)
+LIBRARIES+= $(LIBDIR)libiregi.a
+endif
 
 # Compile commands
 

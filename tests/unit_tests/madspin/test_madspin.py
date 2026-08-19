@@ -37,6 +37,7 @@ import array
 import collections
 import inspect
 import math
+import random
 
 import madgraph.core.base_objects as MG
 import madgraph.various.misc as misc
@@ -70,7 +71,11 @@ def _borrow_decision_helpers(namespace):
                  # these two; a stub that does not seed
                  # _production_polarization_cache gets '{}' out of it, since
                  # there is no banner to read a proc_card from.
-                 '_density_spinmode', '_production_polarization'):
+                 '_density_spinmode', '_production_polarization',
+                 # _unweighting_mode consults these first: the interference
+                 # mode and decay_output = weighted both force joint, so a stub
+                 # that borrows the resolver needs them
+                 '_pure_interference', '_weighted_decay'):
         namespace[name] = inspect.getattr_static(
             interface_madspin.MadSpinInterface, name)
 
@@ -387,16 +392,29 @@ class _StubOptions(dict):
     beampol_me = interface_madspin.MadSpinOptions.beampol_me
 
 
+class _PIModelStub(object):
+    """The one thing _pure_interference asks the model for."""
+
+    NAME2PDG = {'w+': 24, 'w-': -24, 't': 6, 't~': -6, 'z': 23}
+
+    def get(self, key):
+        assert key == 'name2pdg'
+        return dict(self.NAME2PDG)
+
+
 class _FrameStub(object):
     """Just enough of MadSpinInterface for the frame/beampol helpers: they only
     need the options and the matrix-element ordering of the event."""
 
-    def __init__(self, frame_id, beampol, prodpol=None, vector=(), fermion=()):
+    def __init__(self, frame_id, beampol, prodpol=None, vector=(), fermion=(),
+                 pure_interference=''):
         self.options = interface_madspin.MadSpinOptions()
         self.options['frame_id'] = frame_id
         self.options['beampol'] = list(beampol)
         self.options['keep_weight_for_polarization_vector'] = list(vector)
         self.options['keep_weight_for_polarization_fermion'] = list(fermion)
+        self.options['pure_interference'] = pure_interference
+        self.model = _PIModelStub()
         # what _production_polarization would have parsed out of the banner's
         # proc_card: {} for a brace-free production process
         self._production_polarization_cache = prodpol if prodpol else {}
@@ -412,6 +430,10 @@ class _FrameStub(object):
         return self._production_polarization_cache
 
     _borrow_frame_helpers(locals())
+    _pure_interference = interface_madspin.MadSpinInterface._pure_interference
+    _parse_pol_side = interface_madspin.MadSpinInterface._parse_pol_side
+    _POL_TOKENS = interface_madspin.MadSpinInterface._POL_TOKENS
+    InvalidCmd = interface_madspin.MadSpinInterface.InvalidCmd
     _boost_momenta = staticmethod(interface_madspin.MadSpinInterface._boost_momenta)
 
 
@@ -436,8 +458,9 @@ class TestFrameBoost(unittest.TestCase):
                (400., -100., -50., 380.)]
 
     def _stub(self, frame_id, beampol=(80., 0.), prodpol=None,
-              vector=(), fermion=()):
-        return _FrameStub(frame_id, beampol, prodpol, vector, fermion)
+              vector=(), fermion=(), pure_interference=''):
+        return _FrameStub(frame_id, beampol, prodpol, vector, fermion,
+                          pure_interference)
 
     def test_polbeam_to_beampol(self):
         """the card speaks percent, like the run_card polbeam1/polbeam2, and
@@ -534,6 +557,22 @@ class TestFrameBoost(unittest.TestCase):
             self.assertEqual(stub._needs_frame_axis(), wanted, kwargs)
             self.assertEqual(stub._frame_boost(_MomentaEvent(self.MOMENTA))
                              is not None, wanted, kwargs)
+
+    def test_frame_follows_the_pure_interference_mode(self):
+        """The pure-interference cross restriction is a projection too, and it
+        names two helicity SETS, which only mean something once the axis is
+        fixed. Its production process is unpolarised by construction, so the
+        production-brace test above finds nothing: the mode has to switch the
+        frame on for itself or the interference would be taken between
+        lab-quantised states while the events were generated in me_frame."""
+        stub = self._stub(6, beampol=(0., 0.), pure_interference='w+ = 0 T')
+        boost = stub._frame_boost(_MomentaEvent(self.MOMENTA))
+        self.assertIsNotNone(boost)
+        self.assertEqual((boost.E, boost.px, boost.py, boost.pz),
+                         (700., 0., 0., 300.))
+        # and it is still inert with the mode off, on the same stub
+        self.assertIsNone(self._stub(6, beampol=(0., 0.))._frame_boost(
+                                            _MomentaEvent(self.MOMENTA)))
 
     def test_frame_boost_unpacks_get_pdir(self):
         """get_pdir returns five values; unpacking four raised ValueError the
@@ -1581,6 +1620,1233 @@ class TestDensityPolarizationRestriction(unittest.TestCase):
         self.assertTrue(np.allclose(got, rho.trace() / dim))
 
 
+class TestPureInterferenceRestriction(unittest.TestCase):
+    """Proof of concept for the pure-interference ("cross") restriction:
+    one index restricted to the production-side polarisation P, the other to
+    the decay-side one D, with P and D disjoint.
+
+    These tests pin down the algebra section 13 of doc/madspin_sequential_plan.md
+    argues from; the mode itself (syntax, signed unweighting, zero
+    cross-section bookkeeping) is NOT implemented.
+    """
+
+    FERMION = TestDensityPolarizationRestriction.FERMION
+    VECTOR = TestDensityPolarizationRestriction.VECTOR
+    _packed = TestDensityPolarizationRestriction._packed
+    _density = TestDensityPolarizationRestriction._density
+    _brute_force = TestDensityPolarizationRestriction._brute_force
+
+    def _cross_brute_force(self, dec, prod, spec):
+        """Sum over the entries a per-particle cross restriction keeps, read
+        off the labels. ``spec`` has one entry per particle: None, a flat set
+        (symmetric), or a (P, D) pair (cross = P x D union D x P)."""
+        table = {tuple(int(x) for x in lab): complex(val)
+                 for lab, val in zip(prod.helicities, prod.values)}
+        total = 0j
+        for lab, val in zip(dec.helicities, dec.values):
+            lab = tuple(int(x) for x in lab)
+            keep = True
+            for k, entry in enumerate(spec):
+                if entry is None:
+                    continue
+                i, j = lab[2 * k], lab[2 * k + 1]
+                if isinstance(entry[0], (list, tuple, set, frozenset)):
+                    p, d = set(entry[0]), set(entry[1])
+                    ok = (i in p and j in d) or (i in d and j in p)
+                else:
+                    ok = i in entry and j in entry
+                if not ok:
+                    keep = False
+                    break
+            if keep:
+                total += complex(val) * table[lab]
+        return total
+
+    # -- normalisation of the new entry form -------------------------------
+
+    def test_cross_entry_normalisation(self):
+        norm = madspin.DensityMatrix.normalize_hel_restriction
+        self.assertEqual(norm([[(0,), (-1, 1)]]), (((0,), (-1, 1)),))
+        # order inside each side is canonicalised, the two sides are not swapped
+        self.assertEqual(norm([[(1, -1), (0,)]]), (((-1, 1), (0,)),))
+        # a cross pair with two identical sides is just the symmetric form
+        self.assertEqual(norm([[(-1, 1), (1, -1)]]), ((-1, 1),))
+        # an empty side would kill everything: fall back to unrestricted
+        self.assertIsNone(norm([[(), (0,)]]))
+        # the historical flat spelling is untouched
+        self.assertEqual(norm([(0,)]), ((0,),))
+        self.assertRaises(ValueError, norm, [[(0,), (1,), (-1,)]])
+
+    # -- the mask itself ----------------------------------------------------
+
+    def test_cross_mask_is_the_off_diagonal_block_and_its_transpose(self):
+        """{0} against {T} on a vector: exactly the four entries (0,+-1) and
+        (+-1,0). No diagonal entry survives."""
+        prod = self._density(self.VECTOR, seed=101,
+                             restriction=[[(0,), (-1, 1)]])
+        mask = prod._restriction_row_mask(prod.hel_restriction)
+        kept = set(tuple(int(v) for v in l)
+                   for l, m in zip(prod.helicities, mask) if m)
+        self.assertEqual(kept, {(0, -1), (0, 1), (-1, 0), (1, 0)})
+        self.assertEqual(int(mask.sum()), 4)
+
+    def test_cross_is_closed_under_transposition(self):
+        """The crux: the kept set must be stable under (i,j) -> (j,i),
+        otherwise the contraction is complex and there is no 'sign of the
+        convolution' to speak of."""
+        for hel, spec in ((self.VECTOR, [[(0,), (-1, 1)]]),
+                          (self.VECTOR, [[(-1,), (0, 1)]]),
+                          (self.FERMION, [[(1,), (-1,)]])):
+            rho = self._density(hel, seed=102, restriction=spec)
+            mask = rho._restriction_row_mask(rho.hel_restriction)
+            kept = set(tuple(int(v) for v in l)
+                       for l, m in zip(rho.helicities, mask) if m)
+            self.assertEqual(kept, set((j, i) for i, j in kept))
+
+    # -- the algebra --------------------------------------------------------
+
+    def test_cross_contraction_is_real_and_is_twice_the_real_part(self):
+        """sum over (P x D) alone is complex; adding its transpose gives
+        2 Re[...], which is what the mask computes."""
+        import numpy as np
+        hel = self.VECTOR
+        prod = self._density(hel, seed=111, restriction=[[(0,), (-1, 1)]])
+        dec = self._density(hel, seed=112)
+        got = dec.scalar_multiplication(prod)
+
+        table = {tuple(int(x) for x in l): complex(v)
+                 for l, v in zip(prod.helicities, prod.values)}
+        half = sum(complex(v) * table[tuple(int(x) for x in l)]
+                   for l, v in zip(dec.helicities, dec.values)
+                   if int(l[0]) == 0 and int(l[1]) in (-1, 1))
+        # the half-sum is genuinely complex: this is why P x D alone is not
+        # a usable weight
+        self.assertGreater(abs(half.imag), 1e-3 * abs(half))
+        self.assertTrue(np.allclose(got, 2 * half.real, atol=1e-5))
+        self.assertLess(abs(complex(got).imag), 1e-5 * abs(complex(got).real))
+        self.assertTrue(np.allclose(
+            got, self._cross_brute_force(dec, prod, [[(0,), (-1, 1)]]),
+            atol=1e-5))
+
+    def test_the_three_blocks_add_up_to_the_full_convolution(self):
+        """<rho_prod, rho_dec> = PP + DD + interference, with P u D the whole
+        basis. The interference block is what this restriction isolates."""
+        import numpy as np
+        hel = self.VECTOR
+        dec = self._density(hel, seed=122)
+        full = dec.scalar_multiplication(self._density(hel, seed=121))
+        pp = dec.scalar_multiplication(
+            self._density(hel, seed=121, restriction=[(0,)]))
+        dd = dec.scalar_multiplication(
+            self._density(hel, seed=121, restriction=[(-1, 1)]))
+        inter = dec.scalar_multiplication(
+            self._density(hel, seed=121, restriction=[[(0,), (-1, 1)]]))
+        self.assertTrue(np.allclose(full, pp + dd + inter, atol=1e-4))
+
+    # -- the two consequences the mode has to live with ---------------------
+
+    def test_cross_restricted_trace_vanishes(self):
+        """No diagonal entry survives, so the cross-restricted trace is 0.
+
+        Physically: the interference term carries no cross-section. Practically:
+        the accept/reject weight must NOT be normalised by this trace -- the
+        denominator has to stay the (unrestricted) production matrix element
+        the input events were generated with, which is what
+        set_hel_restriction_trace is for."""
+        for hel, spec in ((self.VECTOR, [[(0,), (-1, 1)]]),
+                          (self.FERMION, [[(1,), (-1,)]])):
+            rho = self._density(hel, seed=131, restriction=spec)
+            # asked for explicitly, the theorem still holds
+            self.assertEqual(complex(rho.trace(hel_restriction=spec)), 0j)
+
+    def test_cross_restriction_leaves_the_normalising_trace_alone(self):
+        """The contraction restriction and the normalisation restriction are
+        two different objects (section 13.4).
+
+        A cross restriction attached to the matrix restricts the *contraction*
+        but must not reach trace(): with no trace restriction set -- the
+        unpolarised production this mode requires -- trace() is the full,
+        unrestricted trace, i.e. exactly the production matrix element the
+        input events were generated with. So the weight is a zero-mean
+        numerator over a strictly positive denominator, not 0/0."""
+        for hel, spec in ((self.VECTOR, [[(0,), (-1, 1)]]),
+                          (self.FERMION, [[(1,), (-1,)]])):
+            plain = self._density(hel, seed=131)
+            cross = self._density(hel, seed=131, restriction=spec)
+            self.assertEqual(cross.hel_restriction_trace, None)
+            self.assertAlmostEqual(complex(cross.trace()).real,
+                                   complex(plain.trace()).real, places=5)
+            self.assertNotEqual(complex(plain.trace()), 0j)
+
+    def test_cross_numerator_over_a_polarised_production_trace(self):
+        """The trace restriction, when there is one, is the *symmetric* P u D
+        one -- what the production process' own braces impose -- and it does
+        not resurrect the diagonal of the interference block.
+
+        Zero numerator over a non-zero denominator: the weight is well defined
+        and its mean over the decay phase space is zero."""
+        hel, spec = self.VECTOR, [[(0,), (-1, 1)]]
+        rho = self._density(hel, seed=151, restriction=spec)
+        rho.set_hel_restriction_trace([(-1, 0, 1)])
+        identity = madspin.DensityMatrix.identity(1, hel, len(hel))
+        # numerator: the interference block against a not-yet-drawn decay slot
+        self.assertEqual(complex(identity.scalar_multiplication(rho)), 0j)
+        # denominator: the polarised production trace, which is not zero
+        self.assertNotEqual(complex(rho.trace()), 0j)
+
+    def test_symmetric_restriction_still_normalises_by_its_own_trace(self):
+        """Nothing that existed before the interference mode moves: a symmetric
+        restriction is returned untouched by _trace_restriction, so trace()
+        keeps applying it and hel_restriction_trace is never consulted."""
+        hel, spec = [(-1,), (0,), (1,)], [(-1, 1)]
+        rho = self._density(self.VECTOR, seed=161, restriction=spec)
+        self.assertEqual(rho._trace_restriction(), ((-1, 1),))
+        self.assertEqual(complex(rho.trace()),
+                         complex(rho.trace(hel_restriction=spec)))
+
+    def test_cross_contraction_against_the_identity_vanishes(self):
+        """A decay slot that has not been drawn yet contributes I/n, which is
+        diagonal, so every partial contraction is identically zero.
+
+        This is both the reason the interference integrates to zero over the
+        decay phase space, and the reason the sequential (per-particle)
+        accept/reject cannot be used in this mode: no prefix ever has a
+        non-zero weight to unweight against."""
+        for hel, spec in ((self.VECTOR, [[(0,), (-1, 1)]]),
+                          (self.FERMION, [[(1,), (-1,)]])):
+            rho = self._density(hel, seed=141, restriction=spec)
+            identity = madspin.DensityMatrix.identity(1, hel, len(hel))
+            self.assertEqual(complex(identity.scalar_multiplication(rho)), 0j)
+
+    # -- several decaying particles ----------------------------------------
+
+    def test_multi_particle_cross_stays_a_per_index_product(self):
+        """Mixing a cross entry with a symmetric one and with None: the mask
+        keeps its per-particle AND structure, and stays transposition-closed
+        (hence real) because each factor separately is."""
+        import numpy as np
+        import itertools
+        hels = [self.VECTOR, self.VECTOR]
+        dim = len(hels[0]) * len(hels[1])
+        allowed_hel = [h for combo in itertools.product(*hels) for h in combo]
+        prod = madspin.DensityMatrix(self._packed(list(range(dim)), 151),
+                                     2, allowed_hel, dim)
+        dec = self._density(hels[0], 152).tensor_product(
+              self._density(hels[1], 153))
+
+        for spec in ([[(0,), (-1, 1)], None],
+                     [[(0,), (-1, 1)], (-1, 1)],
+                     [None, [(-1,), (1,)]],
+                     [[(0,), (-1, 1)], [(-1,), (1,)]]):
+            prod.set_hel_restriction(spec)
+            got = prod.scalar_multiplication(dec)
+            self.assertTrue(np.allclose(
+                got, self._cross_brute_force(dec, prod, spec), atol=1e-4))
+            self.assertLess(abs(complex(got).imag),
+                            1e-4 * max(abs(complex(got).real), 1e-6))
+            mask = prod._restriction_row_mask(prod.hel_restriction)
+            kept = set(tuple(int(v) for v in l)
+                       for l, m in zip(prod.helicities, mask) if m)
+            # transposing the joint index swaps bra and ket of every particle
+            self.assertEqual(kept, set(
+                tuple(x for pair in zip(k[1::2], k[0::2]) for x in pair)
+                for k in kept))
+
+        # 4 (the (0,+-1)/(+-1,0) block) x 4 (the (-1,1)/(1,-1) block) of 81
+        prod.set_hel_restriction([[(0,), (-1, 1)], [(-1,), (1,)]])
+        mask = prod._restriction_row_mask(prod.hel_restriction)
+        self.assertEqual(int(mask.sum()), 8)
+
+    def test_cross_restriction_survives_the_tensor_product(self):
+        left = self._density(self.FERMION, 161, restriction=[[(1,), (-1,)]])
+        right = self._density(self.VECTOR, 162)
+        self.assertEqual(left.tensor_product(right).hel_restriction,
+                         (((1,), (-1,)), None))
+
+    def test_cross_mask_is_cached_per_basis(self):
+        a = self._density(self.VECTOR, 171, restriction=[[(0,), (-1, 1)]])
+        b = self._density(self.VECTOR, 172, restriction=[[(0,), (-1, 1)]])
+        self.assertIs(a._restriction_row_mask(a.hel_restriction),
+                      b._restriction_row_mask(b.hel_restriction))
+        self.assertIsNot(a._restriction_row_mask(a.hel_restriction),
+                         a._restriction_row_mask(((0,),)))
+
+    # -- behaviour neutrality ----------------------------------------------
+
+    def test_symmetric_restrictions_are_untouched(self):
+        """The whole point of the new entry form is that nothing symmetric
+        moves: same normalisation, same mask objects, same answers."""
+        import numpy as np
+        for hel in (self.FERMION, self.VECTOR):
+            dec = self._density(hel, seed=182)
+            for spec in ([None], [(hel[0],)], [tuple(hel[:2])]):
+                prod = self._density(hel, seed=181, restriction=spec)
+                self.assertTrue(np.allclose(
+                    dec.scalar_multiplication(prod),
+                    self._brute_force(dec, prod, [
+                        None if spec == [None] else spec[0]])))
+
+
+class TestPureInterferenceMode(unittest.TestCase):
+    """The mode itself: card syntax, validation, and the two restrictions it
+    hands the density matrices."""
+
+    class _Stub(object):
+        """Just enough MadSpinInterface for the pure-interference helpers."""
+        InvalidCmd = interface_madspin.MadSpinInterface.InvalidCmd
+        _POL_TOKENS = interface_madspin.MadSpinInterface._POL_TOKENS
+        _parse_pol_side = interface_madspin.MadSpinInterface._parse_pol_side
+        _pure_interference = interface_madspin.MadSpinInterface._pure_interference
+        _pure_interference_pdgs = \
+            interface_madspin.MadSpinInterface._pure_interference_pdgs
+        _apply_pure_interference = \
+            interface_madspin.MadSpinInterface._apply_pure_interference
+        _validate_pure_interference = \
+            interface_madspin.MadSpinInterface._validate_pure_interference
+        _pure_interference_unweighted = \
+            interface_madspin.MadSpinInterface._pure_interference_unweighted
+        _density_spinmode = interface_madspin.MadSpinInterface._density_spinmode
+        _unweighting_mode = interface_madspin.MadSpinInterface._unweighting_mode
+        _announce_mode = interface_madspin.MadSpinInterface._announce_mode
+        _log_once = interface_madspin.MadSpinInterface._log_once
+        # _unweighting_mode is built on the spinmode/scheme predicate family
+        # (#346); borrowing it means borrowing them too
+        _borrow_decision_helpers(locals())
+
+        def __init__(self, spec='', spinmode='madspin', pol_map=None,
+                     branches=('w+', 'w-'), unweighting='sequential',
+                     pol_weights=False, output='weighted'):
+            self.options = interface_madspin.MadSpinOptions()
+            self.options['pure_interference'] = spec
+            self.options['pure_interference_output'] = output
+            self.options['spinmode'] = spinmode
+            self.options['unweighting'] = unweighting
+            self.options['fixed_order'] = False
+            self.model = _PIModelStub()
+            self.list_branches = dict((name, []) for name in branches)
+            self._pol = pol_map or {}
+            self._pol_weights = pol_weights
+
+        def _production_polarization(self):
+            return self._pol
+
+        def _polarization_weights_enabled(self):
+            return self._pol_weights
+
+    # -- syntax ------------------------------------------------------------
+
+    def test_parses_a_single_particle(self):
+        got = self._Stub('w+ = 0 T')._pure_interference()
+        self.assertEqual(got, {24: ((0,), (-1, 1))})
+
+    def test_the_two_sides_are_ordered_production_then_decay(self):
+        """'0 T' and 'T 0' are different specifications: the first index of the
+        kept (i,j) block comes from the production-side set."""
+        self.assertEqual(self._Stub('w+ = T 0')._pure_interference(),
+                         {24: ((-1, 1), (0,))})
+
+    def test_accepts_a_pdg_code_and_several_particles(self):
+        got = self._Stub('t = + - ; -6 = L R',
+                         branches=('t', 't~'))._pure_interference()
+        self.assertEqual(got, {6: ((1,), (-1,)), -6: ((-1,), (1,))})
+
+    def test_the_L_R_T_vocabulary_matches_the_braces(self):
+        stub = self._Stub()
+        self.assertEqual(stub._parse_pol_side('L', 'x'), (-1,))
+        self.assertEqual(stub._parse_pol_side('R', 'x'), (1,))
+        self.assertEqual(stub._parse_pol_side('T', 'x'), (-1, 1))
+        self.assertEqual(stub._parse_pol_side('0', 'x'), (0,))
+        # a side may name several states explicitly
+        self.assertEqual(stub._parse_pol_side('0,+', 'x'), (0, 1))
+
+    def test_unset_is_off(self):
+        self.assertEqual(self._Stub('')._pure_interference(), {})
+        self.assertEqual(self._Stub('   ')._pure_interference(), {})
+
+    def test_overlapping_sides_are_refused(self):
+        """An overlap puts a diagonal entry back in, so the block carries
+        cross-section and stops being a pure interference term."""
+        stub = self._Stub('w+ = T +')
+        self.assertRaises(stub.InvalidCmd, stub._pure_interference)
+
+    def test_malformed_entries_are_refused(self):
+        for spec in ('w+ 0 T',        # no '='
+                     'w+ = 0',        # one side only
+                     'w+ = 0 T X',    # three sides
+                     'w+ = 0 Q',      # not a polarisation
+                     'nosuch = 0 T'): # not a particle
+            stub = self._Stub(spec)
+            self.assertRaises(stub.InvalidCmd, stub._pure_interference)
+
+    # -- validation --------------------------------------------------------
+
+    def test_a_non_density_spinmode_is_refused(self):
+        stub = self._Stub('w+ = 0 T', spinmode='none')
+        self.assertRaises(stub.InvalidCmd, stub._validate_pure_interference)
+
+    def test_a_particle_that_is_never_decayed_is_refused(self):
+        """Otherwise the mode is silently inert while the signed weights and
+        the zeroed cross-section are still in force."""
+        stub = self._Stub('t = + -', branches=('w+', 'w-'))
+        self.assertRaises(stub.InvalidCmd, stub._validate_pure_interference)
+
+    def test_a_braced_production_is_refused(self):
+        """p p > w+{0} w- contains no transverse amplitude, so there is no
+        0-T interference in the sample to project onto (section 13.5)."""
+        stub = self._Stub('w+ = 0 T', pol_map={24: (0,)})
+        self.assertRaises(stub.InvalidCmd, stub._validate_pure_interference)
+
+    def test_an_unpolarised_production_is_accepted(self):
+        self._Stub('w+ = 0 T')._validate_pure_interference()
+
+    def test_a_production_brace_covering_both_sides_is_accepted(self):
+        """A brace that keeps everything the mode names is not a problem: the
+        amplitudes it needs are all there."""
+        self._Stub('w+ = 0 T',
+                   pol_map={24: (-1, 0, 1)})._validate_pure_interference()
+
+    # -- the two restrictions ---------------------------------------------
+
+    def test_builds_a_cross_restriction_and_an_unrestricted_trace(self):
+        stub = self._Stub('w+ = 0 T')
+        restriction, trace = stub._apply_pure_interference(
+                                    [24, -24], [[-1, 0, 1], [-1, 0, 1]], None)
+        self.assertEqual(restriction, (((0,), (-1, 1)), None))
+        # unpolarised production -> the normalising trace stays the full one
+        self.assertEqual(trace, None)
+
+    def test_keeps_the_symmetric_restriction_as_the_trace_one(self):
+        """With a production brace, the contraction moves to the interference
+        block while the normalisation keeps using the polarised trace."""
+        stub = self._Stub('w+ = 0 T')
+        restriction, trace = stub._apply_pure_interference(
+                        [24], [[-1, 0, 1]], ((-1, 0, 1),))
+        self.assertEqual(restriction, (((0,), (-1, 1)),))
+        self.assertEqual(trace, ((-1, 0, 1),))
+
+    def test_is_inert_when_off(self):
+        stub = self._Stub('')
+        self.assertEqual(stub._apply_pure_interference([24], [[-1, 0, 1]], None),
+                         (None, None))
+        self.assertEqual(
+            stub._apply_pure_interference([24], [[-1, 0, 1]], ((0,),)),
+            (((0,),), None))
+
+    def test_a_polarisation_outside_the_basis_is_refused(self):
+        """{0} on a fermion: the density modes use [1,-1] for it."""
+        stub = self._Stub('t = 0 T', branches=('t',))
+        self.assertRaises(stub.InvalidCmd, stub._apply_pure_interference,
+                          [6], [[1, -1]], None)
+
+    def test_only_the_named_particle_is_crossed(self):
+        """The mask keeps its per-particle structure: the partner keeps
+        whatever it had."""
+        stub = self._Stub('w+ = 0 T')
+        restriction, _ = stub._apply_pure_interference(
+                        [24, -24], [[-1, 0, 1], [-1, 0, 1]], (None, (0,)))
+        self.assertEqual(restriction, (((0,), (-1, 1)), (0,)))
+
+    # -- interaction with the rest of the machinery ------------------------
+
+    def test_the_mode_forces_the_joint_accept_reject(self):
+        """Every partial contraction against DensityMatrix.identity is zero in
+        this mode, so no staged scheme has anything to unweight against."""
+        for asked in ('sequential', 'two_stage', 'sequential_global_retry',
+                      'auto'):
+            stub = self._Stub('w+ = 0 T', unweighting=asked)
+            self.assertEqual(stub._unweighting_mode(True), 'joint')
+
+    def test_the_mode_does_not_touch_the_scheme_when_off(self):
+        stub = self._Stub('', unweighting='sequential')
+        self.assertEqual(stub._unweighting_mode(True), 'sequential')
+
+    # -- diagonal blocks, and what the option may not be -------------------
+
+    def test_identical_sides_name_the_diagonal_block(self):
+        """Two equal sides are not an "overlap" but the diagonal block D_S:
+        normalize_hel_restriction collapses (S, S) back to the symmetric S, so
+        a mixed block such as (I, D-) is expressible from the card alone."""
+        got = self._Stub('w+ = 0 T ; w- = 0 0')._pure_interference()
+        self.assertEqual(got, {24: ((0,), (-1, 1)), -24: ((0,), (0,))})
+        restriction, trace = self._Stub(
+            'w+ = 0 T ; w- = 0 0')._apply_pure_interference(
+                [24, -24], [[-1, 0, 1], [-1, 0, 1]], None)
+        # the cross entry stays a pair; the equal one collapses to the plain
+        # symmetric restriction, i.e. the diagonal block
+        self.assertEqual(restriction, (((0,), (-1, 1)), (0,)))
+        self.assertEqual(trace, None)
+
+    def test_a_partial_overlap_is_still_refused(self):
+        """'T +' is neither an interference block nor a diagonal one: it puts
+        some diagonal entries into an off-diagonal block."""
+        stub = self._Stub('w+ = T +')
+        self.assertRaises(stub.InvalidCmd, stub._pure_interference)
+
+    def test_only_diagonal_entries_are_refused(self):
+        """Nothing interferes, so every piece of the mode -- the zeroed
+        <init>, the signed weights, the separate trace restriction -- is wrong.
+        """
+        stub = self._Stub('w+ = 0 0')
+        self.assertRaises(stub.InvalidCmd, stub._validate_pure_interference)
+
+    def test_polarization_weights_are_refused_with_the_mode(self):
+        """keep_weight_for_polarization_* writes nominal x (diagonal block /
+        full contraction); in this mode the nominal weight is a signed
+        interference weight and the diagonal blocks are exactly what the mode
+        removes, so the product means nothing."""
+        stub = self._Stub('w+ = 0 T', pol_weights=True)
+        self.assertRaises(stub.InvalidCmd, stub._validate_pure_interference)
+        # ... and without the mode the two are unrelated
+        self._Stub('w+ = 0 T', pol_weights=False)._validate_pure_interference()
+
+    # -- pure_interference_output ------------------------------------------
+
+    def test_the_output_option_defaults_to_the_fully_weighted_mode(self):
+        """The fully weighted output stays the default: it uses every
+        production event and measures ~6x less variance per production event
+        (section 13.17)."""
+        stub = self._Stub('w+ = 0 T')
+        self.assertEqual(stub.options['pure_interference_output'], 'weighted')
+        self.assertFalse(stub._pure_interference_unweighted())
+
+    def test_the_output_option_selects_the_unweighted_variant(self):
+        stub = self._Stub('w+ = 0 T', output='unweighted')
+        self.assertTrue(stub._pure_interference_unweighted())
+        stub._validate_pure_interference()
+
+    def test_the_output_option_is_inert_without_the_mode(self):
+        """It only chooses how the interference mode writes its signed
+        weights, so an ordinary run must not be touched by it."""
+        stub = self._Stub('', output='unweighted')
+        self.assertFalse(stub._pure_interference_unweighted())
+        # and validation is a no-op (it only warns)
+        stub._validate_pure_interference()
+
+    def test_the_output_option_rejects_an_unknown_value(self):
+        """ConfigFile keeps the previous value and warns rather than raising,
+        so the check is that an unknown spelling does not silently become the
+        active one."""
+        options = interface_madspin.MadSpinOptions()
+        options['pure_interference_output'] = 'unweighted'
+        options['pure_interference_output'] = 'signed'
+        self.assertEqual(options['pure_interference_output'], 'unweighted')
+
+
+class TestPureInterferenceCardSyntax(unittest.TestCase):
+    """The card spelling of a multi-particle pure_interference request.
+
+    ``extended_cmd.Cmd.precmd`` splits every card line on ';' and dispatches
+    the pieces as separate commands, so the one-line spelling silently loses
+    everything after the first particle. Repeated ``set`` lines are therefore
+    the only spelling that can work, and the ';' one has to fail loudly rather
+    than produce a valid-looking single-particle sample.
+    """
+
+    def _interface(self):
+        return interface_madspin.MadSpinInterface()
+
+    def test_repeated_set_lines_accumulate(self):
+        ms = self._interface()
+        ms.exec_cmd('set pure_interference t = + -', precmd=True)
+        ms.exec_cmd('set pure_interference t~ = + -', precmd=True)
+        self.assertEqual(ms.options['pure_interference'], 't = + - ; t~ = + -')
+
+    def test_a_single_set_line_is_unchanged(self):
+        ms = self._interface()
+        ms.exec_cmd('set pure_interference t = + -', precmd=True)
+        self.assertEqual(ms.options['pure_interference'], 't = + -')
+
+    def test_the_semicolon_spelling_fails_loudly(self):
+        """The failure mode this replaces is silent: 't~ = + -' used to reach
+        Cmd.default, log a generic 'not recognized' warning, and leave a valid
+        single-particle sample behind."""
+        ms = self._interface()
+        self.assertRaises(
+            ms.InvalidCmd,
+            lambda: ms.exec_cmd('set pure_interference t = + - ; t~ = + -',
+                                precmd=True))
+
+    def test_an_orphan_entry_on_its_own_line_also_fails(self):
+        ms = self._interface()
+        self.assertRaises(ms.InvalidCmd,
+                          lambda: ms.exec_cmd('t~ = + -', precmd=True))
+
+    def test_an_ordinary_unknown_command_is_still_only_a_warning(self):
+        """The loud failure is targeted at the entry shape; anything else keeps
+        the historical behaviour."""
+        ms = self._interface()
+        ms.exec_cmd('not_a_command with args', precmd=True)
+
+    def test_other_options_still_overwrite(self):
+        ms = self._interface()
+        ms.exec_cmd('set BW_cut 15', precmd=True)
+        ms.exec_cmd('set BW_cut 25', precmd=True)
+        self.assertEqual(ms.options['BW_cut'], 25)
+
+
+class TestPureInterferenceNormalisation(unittest.TestCase):
+    """``c = <W>``, the decay-side constant the fully weighted output divides
+    by, and the helper that measures it (section 13.13)."""
+
+    def _packed(self, hel, seed):
+        import numpy as np
+        rng = np.random.default_rng(seed)
+        n = len(hel)
+        arr = (rng.normal(size=n * (n + 1) // 2)
+               + 1j * rng.normal(size=n * (n + 1) // 2)).astype('complex64')
+        for i in range(n):
+            arr[i * (2 * n - i + 1) // 2] = abs(arr[i * (2 * n - i + 1) // 2])
+        return arr
+
+    def _density(self, hel, seed):
+        return madspin.DensityMatrix(self._packed(hel, seed), 1, hel, len(hel))
+
+    def test_the_helper_lifts_the_cross_restriction_and_restores_it(self):
+        hel = [-1, 0, 1]
+        prod = self._density(hel, 3)
+        dec = self._density(hel, 11)
+        full = complex(dec.scalar_multiplication(prod))
+
+        prod.set_hel_restriction([((0,), (-1, 1))])
+        prod.set_hel_restriction_trace([None])
+        restricted = complex(dec.scalar_multiplication(prod))
+        self.assertNotAlmostEqual(abs(restricted), abs(full), places=6)
+
+        got = interface_madspin.MadSpinInterface._pi_unrestricted_contraction(
+            prod, dec)
+        self.assertAlmostEqual(complex(got).real, full.real, places=4)
+        self.assertAlmostEqual(complex(got).imag, full.imag, places=4)
+        # and the matrix is left exactly as it was found
+        self.assertEqual(prod.hel_restriction, (((0,), (-1, 1)),))
+        self.assertAlmostEqual(
+            complex(dec.scalar_multiplication(prod)).real, restricted.real,
+            places=6)
+
+    def test_the_helper_uses_the_trace_restriction_not_the_full_sum(self):
+        """With a production brace on another leg the ordinary run's weight is
+        normalised by the *braced* trace, so c must be the braced contraction
+        -- not the unrestricted one."""
+        hel = [-1, 1]
+        prod = self._density(hel, 5)
+        dec = self._density(hel, 9)
+        prod.set_hel_restriction([((-1,), (1,))])
+        prod.set_hel_restriction_trace([(-1, 1)])
+        got = complex(interface_madspin.MadSpinInterface
+                      ._pi_unrestricted_contraction(prod, dec))
+        prod.set_hel_restriction([(-1, 1)])
+        expect = complex(dec.scalar_multiplication(prod))
+        self.assertAlmostEqual(got.real, expect.real, places=5)
+
+    def test_c_against_the_identity_decay_matrix(self):
+        """Substituting the decay-phase-space average I/n for rho_dec is what
+        makes c a constant: the cross block then contracts to exactly zero
+        while the unrestricted one gives trace(rho_prod)/n."""
+        hel = [-1, 0, 1]
+        prod = self._density(hel, 21)
+        dec = madspin.DensityMatrix.identity(1, hel, len(hel))
+        prod.set_hel_restriction([((0,), (-1, 1))])
+        prod.set_hel_restriction_trace([None])
+        self.assertAlmostEqual(
+            abs(complex(dec.scalar_multiplication(prod))), 0.0, places=6)
+        got = complex(interface_madspin.MadSpinInterface
+                      ._pi_unrestricted_contraction(prod, dec))
+        self.assertAlmostEqual(got.real, complex(prod.trace()).real / len(hel),
+                               places=5)
+
+    def test_finalize_turns_the_raw_moments_into_c_and_its_error(self):
+        class _Stub(object):
+            InvalidCmd = interface_madspin.MadSpinInterface.InvalidCmd
+            _finalize_pi_c = interface_madspin.MadSpinInterface._finalize_pi_c
+        stub = _Stub()
+        values = [1.0, 2.0, 3.0, 4.0]
+        stub._pi_c_stats = {'sum': sum(values),
+                            'sumsq': sum(v * v for v in values),
+                            'n': len(values)}
+        stub._finalize_pi_c()
+        self.assertAlmostEqual(stub._pi_c, 2.5)
+        # sd of the population is sqrt(1.25); the error on the mean is /sqrt(n)
+        self.assertAlmostEqual(stub._pi_c_err, math.sqrt(1.25 / 4.0))
+
+    def test_finalize_refuses_an_empty_or_zero_measurement(self):
+        class _Stub(object):
+            InvalidCmd = interface_madspin.MadSpinInterface.InvalidCmd
+            _finalize_pi_c = interface_madspin.MadSpinInterface._finalize_pi_c
+        stub = _Stub()
+        stub._pi_c_stats = {'sum': 0.0, 'sumsq': 0.0, 'n': 0}
+        self.assertRaises(stub.InvalidCmd, stub._finalize_pi_c)
+        stub._pi_c_stats = {'sum': 0.0, 'sumsq': 4.0, 'n': 2}
+        self.assertRaises(stub.InvalidCmd, stub._finalize_pi_c)
+
+
+class TestPureInterferenceUnweightedOutput(unittest.TestCase):
+    """``pure_interference_output = unweighted``: ``<|W|>``, its plumbing, and
+    the estimator identity that says the accept/reject bound cancels out of
+    the weight (section 13.17)."""
+
+    class _Stub(object):
+        InvalidCmd = interface_madspin.MadSpinInterface.InvalidCmd
+        _finalize_pi_absw = \
+            interface_madspin.MadSpinInterface._finalize_pi_absw
+        _write_pi_c_cache = \
+            interface_madspin.MadSpinInterface._write_pi_c_cache
+        _read_pi_c_cache = interface_madspin.MadSpinInterface._read_pi_c_cache
+
+        def __init__(self, unweighted=False):
+            self._unweighted = unweighted
+
+        def _pure_interference_unweighted(self):
+            return self._unweighted
+
+    # -- <|W|> -------------------------------------------------------------
+
+    def test_finalize_turns_the_raw_moments_into_absw_and_its_error(self):
+        """Without per-event blocking it falls back to the trial-level error."""
+        stub = self._Stub()
+        values = [-1.0, 2.0, -3.0, 4.0]
+        stub._pi_absw_stats = {'sum': sum(abs(v) for v in values),
+                               'sumsq': sum(v * v for v in values),
+                               'n': len(values)}
+        stub._finalize_pi_absw()
+        self.assertAlmostEqual(stub._pi_absw, 2.5)
+        self.assertAlmostEqual(stub._pi_absw_err, math.sqrt(1.25 / 4.0))
+
+    def test_the_absw_error_is_blocked_by_production_event(self):
+        """The nb_ps_point draws of one production point share its |W| scale,
+        so the trial-level spread is not an error on <|W|>. Measured on
+        p p > t t~: 0.46% trial-level against 5.0% blocked, and the blocked
+        one is the honest number -- the probe's <|W|> came out 9% away from
+        the run's."""
+        stub = self._Stub()
+        # four production events, ten near-identical draws each: the trials
+        # look extremely well determined, the production events do not
+        per_event = [1.0, 2.0, 3.0, 4.0]
+        trials = [m for m in per_event for _ in range(10)]
+        stub._pi_absw_stats = {
+            'sum': sum(trials), 'sumsq': sum(v * v for v in trials),
+            'n': len(trials),
+            'ev_sum': sum(per_event),
+            'ev_sumsq': sum(v * v for v in per_event),
+            'ev_n': len(per_event)}
+        stub._finalize_pi_absw()
+        self.assertAlmostEqual(stub._pi_absw, 2.5)
+        # the blocked error: sd of [1,2,3,4] over sqrt(4)
+        self.assertAlmostEqual(stub._pi_absw_err, math.sqrt(1.25 / 4.0))
+        # ... and it is much larger than the trial-level one would have been
+        naive = math.sqrt((sum(v * v for v in trials) / 40.0 - 6.25) / 40.0)
+        self.assertGreater(stub._pi_absw_err, 3.0 * naive)
+
+    def test_a_missing_absw_is_fatal_only_for_the_unweighted_output(self):
+        empty = {'sum': 0.0, 'sumsq': 0.0, 'n': 0}
+        weighted = self._Stub(unweighted=False)
+        weighted._pi_absw_stats = dict(empty)
+        weighted._finalize_pi_absw()          # a diagnostic there, so tolerated
+        self.assertEqual(weighted._pi_absw, 0.0)
+        unweighted = self._Stub(unweighted=True)
+        unweighted._pi_absw_stats = dict(empty)
+        self.assertRaises(unweighted.InvalidCmd, unweighted._finalize_pi_absw)
+
+    # -- the ms_dir cache --------------------------------------------------
+
+    def test_the_cache_round_trips_c_and_absw(self):
+        import tempfile
+        stub = self._Stub()
+        stub._pi_c, stub._pi_c_err = 2.3e-10, 3.1e-13
+        stub._pi_analytic_c = 2.25e-10
+        stub._pi_absw, stub._pi_absw_err = 1.7e-11, 4.0e-14
+        path = os.path.join(tempfile.mkdtemp(), 'pure_interference_c')
+        stub._write_pi_c_cache(path)
+        back = self._Stub(unweighted=True)
+        self.assertTrue(back._read_pi_c_cache(path))
+        self.assertAlmostEqual(back._pi_c, 2.3e-10)
+        self.assertAlmostEqual(back._pi_absw, 1.7e-11)
+        self.assertAlmostEqual(back._pi_absw_err, 4.0e-14)
+
+    def test_a_cache_written_before_absw_is_rejected_when_it_is_needed(self):
+        """A three-field file is one the fully weighted mode wrote. Reusing it
+        for the unweighted output would run on a missing normalisation, so the
+        reader says no and the caller re-scans."""
+        import tempfile
+        path = os.path.join(tempfile.mkdtemp(), 'pure_interference_c')
+        with open(path, 'w') as fsock:
+            fsock.write('2.3e-10 3.1e-13 2.25e-10\n')
+        self.assertFalse(self._Stub(unweighted=True)._read_pi_c_cache(path))
+        # ... but the fully weighted mode does not need it and reads on
+        weighted = self._Stub(unweighted=False)
+        self.assertTrue(weighted._read_pi_c_cache(path))
+        self.assertAlmostEqual(weighted._pi_c, 2.3e-10)
+
+    # -- the estimator identity -------------------------------------------
+
+    def _toy(self, seed, bound_factor, w0_rule):
+        """A pure-python stand-in for the unweighting loop.
+
+        ``W(p, u) = a_p cos(2 pi u)`` with ``u`` uniform, so ``<W> = 0`` for
+        every production point (the defining property of the mode) while
+        ``<|W|>`` varies with ``a_p`` -- the local size of the interference.
+        The observable is ``O(u) = cos(2 pi u)``, so everything is closed form:
+
+            <W O>  = <a> / 2        <|W|> = <a> * 2/pi
+
+        ``w0_rule(absw, c)`` supplies the weight magnitude under test.
+        """
+        rng = random.Random(seed)
+        a = [1.0 + 3.0 * (k % 7) / 6.0 for k in range(500)]   # a_p in [1, 4]
+        c, ref, n = 0.5, 12.0, 400000
+        absw = (sum(a) / len(a)) * 2.0 / math.pi
+        bound = max(a) * bound_factor
+        w0 = w0_rule(absw, c)
+        total, n_file = 0.0, 0
+        for _ in range(n):
+            a_p = a[rng.randrange(len(a))]
+            u = rng.random()
+            obs = math.cos(2 * math.pi * u)
+            W = a_p * obs
+            if rng.random() * bound >= abs(W):
+                continue
+            n_file += 1
+            total += math.copysign(w0, W) * obs
+        return total / n_file, n_file, n
+
+    def test_the_unweighted_weight_reproduces_the_interference_and_M_cancels(self):
+        """The claim being tested, end to end on a toy:
+
+            (1/N_file) sum w O  =  w0 <W O> / <|W|>
+
+        so ``w0 = sigma*BR*<|W|>/c`` makes it the interference contribution
+        ``sigma*BR*<W O>/c`` the fully weighted output writes -- with no
+        ``M`` in it. Two bounds a factor 4 apart must therefore give the same
+        physics from very different file sizes.
+        """
+        a = [1.0 + 3.0 * (k % 7) / 6.0 for k in range(500)]
+        mean_a = sum(a) / len(a)
+        target = 12.0 * (mean_a / 2.0) / 0.5          # ref * <W O> / c
+        rule = lambda absw, c: 12.0 * absw / c        # noqa: E731
+        tight, n_tight, n_read = self._toy(11, 1.0, rule)
+        loose, n_loose, _ = self._toy(11, 4.0, rule)
+        # the two runs keep very different numbers of events ...
+        self.assertGreater(n_tight, 3.0 * n_loose)
+        self.assertAlmostEqual(n_tight / float(n_read),
+                               mean_a * 2.0 / math.pi / max(a), delta=0.01)
+        # ... and agree with each other and with the analytic answer
+        self.assertAlmostEqual(tight, target, delta=0.02 * target)
+        self.assertAlmostEqual(loose, target, delta=0.03 * target)
+
+    def test_a_mis_measured_absw_biases_the_result_by_exactly_that_factor(self):
+        """Why the run does not normalise with the maximum-weight probe's
+        <|W|>. Unlike c it is not a decay-side constant, so the probe's
+        handful of production events knows it only to ~10% -- and the
+        estimator is linear in it, so a 10% error is a 10% error on every
+        physics number. Feeding the toy an inflated <|W|> shows the bias is
+        exactly the ratio."""
+        a = [1.0 + 3.0 * (k % 7) / 6.0 for k in range(500)]
+        absw = (sum(a) / len(a)) * 2.0 / math.pi
+        target = 12.0 * ((sum(a) / len(a)) / 2.0) / 0.5
+        got, _, _ = self._toy(11, 1.0, lambda _absw, c: 12.0 * (1.1 * absw) / c)
+        self.assertAlmostEqual(got / target, 1.1, delta=0.03)
+
+    def test_the_realised_keep_rate_normalisation_needs_no_absw_estimate(self):
+        """What the run actually writes. Taking <|W|> = (N_file/N_read) * M
+        from the run itself makes N_file cancel out of the estimator, so the
+        answer is right whatever the probe said and whatever M was. Two very
+        different bounds, and a deliberately wrong probe value, all land on
+        the same physics."""
+        a = [1.0 + 3.0 * (k % 7) / 6.0 for k in range(500)]
+        target = 12.0 * ((sum(a) / len(a)) / 2.0) / 0.5
+        for bound_factor in (1.0, 4.0):
+            # a first pass with a deliberately silly provisional magnitude ...
+            _, n_file, n_read = self._toy(11, bound_factor,
+                                          lambda absw, c: 1.0)
+            # ... and the correction the run applies from its own keep rate
+            absw_run = (n_file / float(n_read)) * max(a) * bound_factor
+            got, n2, _ = self._toy(11, bound_factor,
+                                   lambda absw, c: 12.0 * absw_run / c)
+            self.assertEqual(n2, n_file)
+            self.assertAlmostEqual(got, target, delta=0.02 * target)
+
+    def test_the_design_notes_weight_would_be_wrong_per_file_event(self):
+        """The superseded proposal ``w = +- sigma*BR*maxwgt/c`` normalises per
+        event READ, not per event in the file, so a consumer dividing by
+        N_file -- the only count an LHE file carries, and what IDWTUP = -4
+        means -- is off by exactly ``M/<|W|>``, a bound-dependent factor."""
+        a = [1.0 + 3.0 * (k % 7) / 6.0 for k in range(500)]
+        target = 12.0 * ((sum(a) / len(a)) / 2.0) / 0.5
+        got, _, _ = self._toy(11, 1.0, lambda absw, c: 12.0 * max(a) / c)
+        absw = (sum(a) / len(a)) * 2.0 / math.pi
+        self.assertAlmostEqual(got / target, max(a) / absw, delta=0.03)
+        self.assertGreater(got / target, 1.5)
+
+
+class TestWeightedDecayOutput(unittest.TestCase):
+    """``decay_output = weighted``: the option that drops the accept/reject
+    for an ORDINARY (non-interference) run and writes
+    ``w = w_prod * BR * W / c`` instead (section 13.18)."""
+
+    class _Stub(object):
+        InvalidCmd = interface_madspin.MadSpinInterface.InvalidCmd
+        _weighted_decay = interface_madspin.MadSpinInterface._weighted_decay
+        _validate_weighted_decay = \
+            interface_madspin.MadSpinInterface._validate_weighted_decay
+        _weighted_decay_note = \
+            interface_madspin.MadSpinInterface._weighted_decay_note
+        _read_lhe_init_cross = inspect.getattr_static(
+            interface_madspin.MadSpinInterface, '_read_lhe_init_cross')
+        _unweighting_mode = interface_madspin.MadSpinInterface._unweighting_mode
+        _announce_mode = interface_madspin.MadSpinInterface._announce_mode
+        _log_once = interface_madspin.MadSpinInterface._log_once
+        _POL_TOKENS = interface_madspin.MadSpinInterface._POL_TOKENS
+        _parse_pol_side = interface_madspin.MadSpinInterface._parse_pol_side
+        _borrow_decision_helpers(locals())
+
+        def __init__(self, output='unweighted', spinmode='onshell',
+                     pure_interference='', unweighting='auto'):
+            self.options = interface_madspin.MadSpinOptions()
+            self.options['decay_output'] = output
+            self.options['spinmode'] = spinmode
+            self.options['pure_interference'] = pure_interference
+            self.options['unweighting'] = unweighting
+            self.options['fixed_order'] = False
+            self.model = _PIModelStub()
+            self._production_polarization_cache = {}
+
+    # -- the predicate ------------------------------------------------------
+
+    def test_off_by_default(self):
+        stub = self._Stub()
+        self.assertEqual(stub.options['decay_output'], 'unweighted')
+        self.assertFalse(stub._weighted_decay())
+
+    def test_on_when_asked_for_in_a_density_mode(self):
+        for spinmode in ('madspin', 'full', 'PA', 'onshell'):
+            stub = self._Stub(output='weighted', spinmode=spinmode)
+            self.assertTrue(stub._weighted_decay(), spinmode)
+
+    def test_the_two_output_options_do_not_both_apply(self):
+        """pure_interference is always weighted (or unweighted up to a sign)
+        on its own terms, so decay_output steps aside there rather than
+        contradicting pure_interference_output."""
+        stub = self._Stub(output='weighted', pure_interference='t = + -')
+        self.assertFalse(stub._weighted_decay())
+        stub._validate_weighted_decay()          # warns, does not raise
+
+    def test_refused_outside_the_density_modes(self):
+        for spinmode in ('madspin_v1', 'onshell_v1', 'none'):
+            stub = self._Stub(output='weighted', spinmode=spinmode)
+            self.assertFalse(stub._weighted_decay(), spinmode)
+            self.assertRaises(stub.InvalidCmd, stub._validate_weighted_decay)
+
+    def test_an_unweighted_card_validates_silently_everywhere(self):
+        for spinmode in ('madspin', 'PA', 'onshell', 'madspin_v1', 'none'):
+            self._Stub(spinmode=spinmode)._validate_weighted_decay()
+
+    def test_the_option_rejects_an_unknown_value(self):
+        options = interface_madspin.MadSpinOptions()
+        options['decay_output'] = 'weighted'
+        options['decay_output'] = 'signed'
+        self.assertEqual(options['decay_output'], 'weighted')
+
+    # -- it forces the joint path ------------------------------------------
+
+    def test_it_takes_the_joint_path(self):
+        """There is no accept/reject to stage, and the joint branch is the one
+        that carries the weighted path."""
+        for unweighting in ('auto', 'sequential', 'two_stage'):
+            stub = self._Stub(output='weighted', unweighting=unweighting)
+            self.assertEqual(stub._unweighting_mode(True), 'joint', unweighting)
+
+    def test_it_does_not_touch_the_scheme_when_off(self):
+        stub = self._Stub(unweighting='sequential')
+        self.assertNotEqual(stub._unweighting_mode(True), 'joint')
+
+    # -- the banner note and its self-check ---------------------------------
+
+    INIT = """<LesHouchesEvents version="3.0">
+<header>
+</header>
+<init>
+2212 2212 6.5e+03 6.5e+03 0 0 247000 247000 -4 1
+2.0e+01 1.0e-02 2.0e+01 1
+</init>
+</LesHouchesEvents>
+"""
+
+    def _note(self, weights, br_correction=1.0):
+        import tempfile
+        path = os.path.join(tempfile.mkdtemp(), 'out.lhe')
+        with open(path, 'w') as f:
+            f.write(self.INIT)
+        stub = self._Stub(output='weighted')
+        stub._pi_c, stub._pi_c_err = 2.25e-10, 3.0e-13
+        stub._pi_c_stats = {'n': 44016}
+        stats = [{'sum_w': sum(weights),
+                  'sum_w2': sum(w * w for w in weights),
+                  'nb_pi_dead': 0}]
+        return '\n'.join(stub._weighted_decay_note(
+            path, stats, len(weights), br_correction))
+
+    def test_the_note_compares_mean_w_against_the_reference_sigma_br(self):
+        """Under IDWTUP = -4 the cross-section IS the mean of the weights, so
+        mean(w) == sigma*BR is the check that c = <W> was measured right --
+        the exact analogue of the interference mode's z test, with the target
+        at 1 instead of 0."""
+        note = self._note([19.0, 20.0, 21.0])
+        self.assertIn('Reference sigma * BR   (pb)  : +2.00000000e+01', note)
+        self.assertIn('mean(w), the sample XSECUP   : +2.00000000e+01', note)
+        self.assertIn('mean(w) / reference          : 1.000000', note)
+        self.assertIn('Events written               : 3', note)
+        self.assertIn('Normalisation constant     c : +2.25000000e-10', note)
+
+    def test_the_note_reports_a_mis_normalised_sample_as_a_ratio(self):
+        note = self._note([22.0, 22.0, 22.0, 22.0])
+        self.assertIn('mean(w) / reference          : 1.100000', note)
+
+    def test_the_note_follows_a_br_equalization_rescale(self):
+        """<init> is rescaled by the same pass, so the reference the note
+        quotes has to be the post-rescale one."""
+        note = self._note([10.0, 10.0], br_correction=0.5)
+        self.assertIn('Reference sigma * BR   (pb)  : +1.00000000e+01', note)
+        self.assertIn('mean(w) / reference          : 1.000000', note)
+
+
+class TestUnweightRangeWeightPaths(unittest.TestCase):
+    """The three shapes ``_unweight_range`` can write, driven through the real
+    loop with the matrix element stubbed out.
+
+    This exists because the interference and weighted paths all leave the
+    ``while 1`` through the same ``if <no ordinary test> or random()*maxwgt <
+    test`` line, and getting that condition wrong is silent: the 'unweighted'
+    interference path, which has already made its own decision on |W|, once
+    fell through to the signed test and had every negative weight rejected a
+    second time. The z check caught it end to end, but only after a run.
+    """
+
+    EVENT = """<event>
+ 4  1 +%.7e 1.00000000e+02 7.54677100e-03 1.30800000e-01
+       -1 -1    0    0  501    0 +0.0000000e+00 +0.0000000e+00 +5.0e+02 5.0e+02 0.0e+00 0.0e+00 1.0
+        1 -1    0    0    0  501 +0.0000000e+00 +0.0000000e+00 -5.0e+02 5.0e+02 0.0e+00 0.0e+00 1.0
+       11  1    1    2    0    0 +1.0000000e+02 +0.0000000e+00 +0.0e+00 1.0e+02 0.0e+00 0.0e+00 1.0
+      -11  1    1    2    0    0 -1.0000000e+02 +0.0000000e+00 +0.0e+00 9.0e+02 0.0e+00 0.0e+00 1.0
+</event>"""
+
+    class _Sink(object):
+        def __init__(self):
+            self.events = []
+
+        def write_events(self, evt):
+            self.events.append(evt)
+
+    class _Stub(object):
+        """Enough MadSpinInterface for the joint branch of _unweight_range."""
+        InvalidCmd = interface_madspin.MadSpinInterface.InvalidCmd
+        _unweight_range = interface_madspin.MadSpinInterface._unweight_range
+        _dead_trial = interface_madspin.MadSpinInterface._dead_trial
+        _POL_TOKENS = interface_madspin.MadSpinInterface._POL_TOKENS
+        _parse_pol_side = interface_madspin.MadSpinInterface._parse_pol_side
+        _pure_interference = \
+            interface_madspin.MadSpinInterface._pure_interference
+
+        def __init__(self, weights, pure_interference=''):
+            self.options = interface_madspin.MadSpinOptions()
+            self.options['pure_interference'] = pure_interference
+            self.model = _PIModelStub()
+            self.options['fixed_order'] = False
+            self.options['density_keep_jacobian'] = False
+            self.branching_ratio = 2.0
+            self.efficiency = 1.0
+            self._weights = list(weights)
+            self._draw = 0
+
+        # -- the pieces the loop calls out to -----------------------------
+        def get_decay_from_file(self, production, evt_decayfile, nb_remain):
+            return {}
+
+        def get_onshell_evt_and_wgt(self, prod, decays, decay_dict,
+                                    cached=None, build_event=False):
+            wgt = self._weights[self._draw % len(self._weights)]
+            self._draw += 1
+            return None, wgt, 'density'
+
+        def _add_polarization_weights(self, evt, ratios):
+            pass
+
+    def _ctx(self, **over):
+        ctx = dict(maxwgt=1.0, maxwgts=[], sequential=False, decay_dict={},
+                   drop_prob_per_pdg={}, mixed_pdgs_set=set(),
+                   density_method=True, density_pole_approximation=True,
+                   density_needs_reshuffle=False, shard_nb_event=10,
+                   branching_ratio=2.0, base_seed=1,
+                   pure_interference_c=0.5, pure_interference_absw=0.25,
+                   pure_interference_unweighted=False, weighted_decay=False)
+        ctx.update(over)
+        return ctx
+
+    def _run(self, stub, ctx, nb_events=4):
+        source = [lhe_parser.Event(self.EVENT % 1.0) for _ in range(nb_events)]
+        sink = self._Sink()
+        stats = stub._unweight_range(source, {}, sink, ctx)
+        return [e.wgt for e in sink.events], stats
+
+    # ------------------------------------------------------------------
+
+    def test_the_ordinary_path_still_accepts_and_rejects(self):
+        """A weight of 0.5 against maxwgt 1.0 keeps roughly half the trials,
+        and every written event carries w_prod * BR with no W on it."""
+        random.seed(7)
+        stub = self._Stub([0.5])
+        wgts, stats = self._run(stub, self._ctx(), nb_events=50)
+        self.assertEqual(len(wgts), 50)          # redraw-until-accept
+        self.assertEqual(set(round(w, 9) for w in wgts), {2.0})
+        self.assertGreater(stats['nb_try'], 60)  # ... and it did redraw
+
+    def test_the_fully_weighted_interference_path_keeps_every_trial(self):
+        random.seed(7)
+        stub = self._Stub([0.5, -0.25], pure_interference='w+ = 0 T')
+        wgts, stats = self._run(stub, self._ctx(), nb_events=4)
+        self.assertEqual(stats['nb_try'], 4)     # one draw per event, no redraw
+        # w = w_prod * BR * W / c, c = 0.5
+        self.assertEqual([round(w, 9) for w in wgts],
+                         [2.0, -1.0, 2.0, -1.0])
+
+    def test_the_weighted_decay_path_keeps_every_trial(self):
+        random.seed(7)
+        stub = self._Stub([0.5, 0.25])
+        wgts, stats = self._run(stub, self._ctx(weighted_decay=True),
+                                nb_events=4)
+        self.assertEqual(stats['nb_try'], 4)
+        self.assertEqual([round(w, 9) for w in wgts], [2.0, 1.0, 2.0, 1.0])
+
+    def test_the_weighted_decay_path_zeroes_a_failed_reshuffle(self):
+        """W <= 0 outside the interference mode means jac <= 0, i.e. a mass
+        set the production could not be reshuffled onto: weight 0, counted."""
+        random.seed(7)
+        stub = self._Stub([0.5, -0.5])
+        wgts, stats = self._run(stub, self._ctx(weighted_decay=True),
+                                nb_events=4)
+        self.assertEqual([round(w, 9) for w in wgts], [2.0, 0.0, 2.0, 0.0])
+        self.assertEqual(stats['nb_pi_dead'], 2)
+
+    def test_the_unweighted_interference_path_does_not_test_twice(self):
+        """THE regression. Every trial here has |W| = maxwgt, so the |W| test
+        accepts all of them; a second, signed test would throw away every
+        negative one. Both signs must survive, with one magnitude."""
+        random.seed(7)
+        stub = self._Stub([1.0, -1.0], pure_interference='w+ = 0 T')
+        wgts, stats = self._run(
+            stub, self._ctx(pure_interference_unweighted=True), nb_events=20)
+        self.assertEqual(len(wgts), 20)
+        # w = +- w_prod * BR * <|W|> / c = +- 2.0 * 0.25/0.5
+        self.assertEqual(sorted(set(round(w, 9) for w in wgts)), [-1.0, 1.0])
+        self.assertEqual(sum(1 for w in wgts if w > 0), 10)
+        self.assertEqual(sum(1 for w in wgts if w < 0), 10)
+        self.assertEqual(stats['nb_pi_reject'], 0)
+
+    def test_the_unweighted_interference_path_drops_on_rejection(self):
+        """|W| = maxwgt/4 keeps about a quarter, and writes nothing for the
+        rest -- one draw, no redraw."""
+        random.seed(11)
+        stub = self._Stub([0.25, -0.25], pure_interference='w+ = 0 T')
+        wgts, stats = self._run(
+            stub, self._ctx(pure_interference_unweighted=True), nb_events=400)
+        self.assertEqual(stats['nb_try'], 400)          # exactly one each
+        self.assertEqual(len(wgts) + stats['nb_pi_reject'], 400)
+        self.assertGreater(len(wgts), 60)
+        self.assertLess(len(wgts), 140)
+        self.assertEqual(sorted(set(round(abs(w), 9) for w in wgts)), [1.0])
+        self.assertTrue(any(w > 0 for w in wgts))
+        self.assertTrue(any(w < 0 for w in wgts))
+
+
+class TestBannerEventWeightRescale(unittest.TestCase):
+    """``_rewrite_lhe_banner_cross(event_scale=...)``: the second pass that
+    replaces the provisional weight magnitude of the 'unweighted'
+    pure-interference output by the one the run realised."""
+
+    LHE = """<LesHouchesEvents version="3.0">
+<header>
+<MGGenerationInfo>
+#  Number of Events        :       2
+#  Integrated weight (pb)   : 7.0
+</MGGenerationInfo>
+</header>
+<init>
+2212 2212 6.5e+03 6.5e+03 0 0 247000 247000 -4 1
+5.0e+02 2.8e-01 5.0e+02 1
+</init>
+<event>
+ 4 1 -3.0000000e+00 1.8e+02 7.5e-03 1.1e-01
+       21 -1    0    0  503  502 +0.0 +0.0 +1.0 1.0 0.0 0.0e+00 1.0e+00
+<rwgt>
+<wgt id='r1'> -6.0000000e+00 </wgt>
+</rwgt>
+</event>
+<event>
+ 4 1 +3.0000000e+00 1.8e+02 7.5e-03 1.1e-01
+       21 -1    0    0  503  502 +0.0 +0.0 +1.0 1.0 0.0 0.0e+00 1.0e+00
+</event>
+</LesHouchesEvents>
+"""
+
+    class _Stub(object):
+        _RWGT_LINE = interface_madspin.MadSpinInterface._RWGT_LINE
+        _rewrite_lhe_banner_cross = \
+            interface_madspin.MadSpinInterface._rewrite_lhe_banner_cross
+
+    def _run(self, **kwargs):
+        import tempfile
+        path = os.path.join(tempfile.mkdtemp(), 'out.lhe')
+        with open(path, 'w') as f:
+            f.write(self.LHE)
+        self._Stub()._rewrite_lhe_banner_cross(path, 0.0, **kwargs)
+        return open(path).read()
+
+    def _weights(self, text):
+        out = []
+        in_event = want = False
+        for line in text.split('\n'):
+            low = line.strip().lower()
+            if low.startswith('<event'):
+                in_event, want = True, True
+                continue
+            if low.startswith('</event'):
+                in_event = False
+                continue
+            if in_event and want and len(line.split()) == 6:
+                want = False
+                out.append(float(line.split()[2]))
+            match = interface_madspin.MadSpinInterface._RWGT_LINE.match(line)
+            if match:
+                out.append(float(match.group(2)))
+        return out
+
+    def test_without_event_scale_the_events_are_untouched(self):
+        """Every other caller passes nothing, so no event may move."""
+        text = self._run()
+        self.assertEqual(self._weights(text), [-3.0, -6.0, 3.0])
+        # the <init> block is still zeroed by ratio, as before
+        self.assertIn('+0.0000000e+00 +0.0000000e+00 +0.0000000e+00 1', text)
+
+    def test_event_scale_multiplies_xwgtup_and_the_rwgt_entries(self):
+        text = self._run(event_scale=0.5)
+        self.assertEqual(self._weights(text), [-1.5, -3.0, 1.5])
+
+    def test_event_scale_leaves_the_particle_lines_and_the_banner_alone(self):
+        """The particle lines have 13 fields, not 6, and nothing outside an
+        <event> is an event at all."""
+        text = self._run(event_scale=0.5)
+        self.assertIn('21 -1    0    0  503  502 +0.0 +0.0 +1.0 1.0 0.0 '
+                      '0.0e+00 1.0e+00', text)
+        self.assertIn('2212 2212 6.5e+03 6.5e+03 0 0 247000 247000 -4 1', text)
+        self.assertEqual(text.count('<event>'), 2)
+        self.assertEqual(text.count('</event>'), 2)
+
+    def test_the_note_block_still_goes_in_with_a_scale(self):
+        text = self._run(event_scale=2.0, note=['#  hello'],
+                         note_tag='MGPureInterference', n_written=7)
+        self.assertIn('<MGPureInterference>\n#  hello\n'
+                      '</MGPureInterference>', text)
+        self.assertIn('#  Number of Events        :       7', text)
+        self.assertEqual(self._weights(text), [-6.0, -12.0, 6.0])
+
+
 class TestProductionPolarizationPlumbing(unittest.TestCase):
     """Reading the production polarisation and turning it into the basis /
     restriction the density matrices are built with."""
@@ -1603,6 +2869,12 @@ class TestProductionPolarizationPlumbing(unittest.TestCase):
         _format_polarization_sequence = staticmethod(
             interface_madspin.MadSpinInterface._format_polarization_sequence)
         do_decay = interface_madspin.MadSpinInterface.do_decay
+        # this test drives the real _unweighting_mode, which now consults the
+        # interference mode and the spinmode family before resolving
+        _pure_interference = \
+            interface_madspin.MadSpinInterface._pure_interference
+        _spinmode_has_density = \
+            interface_madspin.MadSpinInterface._spinmode_has_density
 
     HEL = {1: [0], 2: [1, -1], 3: [-1, 0, 1]}
 
@@ -2038,6 +3310,10 @@ class TestKeepWeightForPolarization(unittest.TestCase):
         class Frame(self._Stub):
             _needs_frame_axis = \
                 interface_madspin.MadSpinInterface._needs_frame_axis
+            # the fourth clause: the interference mode is a projection too.
+            # Off by default here; the case below overrides it.
+            def _pure_interference(self):
+                return {}
 
             def __init__(self, beampol=None, braces=None, **kwargs):
                 super(Frame, self).__init__(**kwargs)
@@ -2056,6 +3332,11 @@ class TestKeepWeightForPolarization(unittest.TestCase):
         self.assertTrue(Frame(beampol=(2.0, 1.0))._needs_frame_axis())
         self.assertTrue(Frame(braces={23: ((0,),)})._needs_frame_axis())
         self.assertTrue(Frame(vector=['0'])._needs_frame_axis())
+        class FrameInterference(Frame):
+            def _pure_interference(self):
+                return {6: ((0,), (-1, 1))}
+
+        self.assertTrue(FrameInterference()._needs_frame_axis())
         self.assertTrue(Frame(fermion=['+'])._needs_frame_axis())
 
     def test_the_two_species_lists_are_independent(self):
@@ -2774,6 +4055,9 @@ class TestSequentialAcceptReject(unittest.TestCase):
             _borrow_decision_helpers(locals())
             _borrow_frame_helpers(locals())
             _production_polarization = staticmethod(lambda: {})
+            # pure-interference mode off: _frame_boost / _unweighting_mode both
+            # ask, and neither stub carries the card option
+            _pure_interference = staticmethod(lambda: {})
             def __init__(self):
                 self.options = _StubOptions(
                                {'spinmode': 'onshell',
@@ -2981,6 +4265,9 @@ class TestPAUpFrontMass(unittest.TestCase):
             _borrow_decision_helpers(locals())
             _borrow_frame_helpers(locals())
             _production_polarization = staticmethod(lambda: {})
+            # pure-interference mode off: _frame_boost / _unweighting_mode both
+            # ask, and neither stub carries the card option
+            _pure_interference = staticmethod(lambda: {})
 
             def __init__(self):
                 # unpolarised beams and a brace-free production, so _frame_boost
@@ -3242,6 +4529,7 @@ class TestSequentialPoolLadder(unittest.TestCase):
             _sequential_active = interface._sequential_active
             _sequential_upfront = interface._sequential_upfront
             _unweighting_mode = interface._unweighting_mode
+            _pure_interference = staticmethod(lambda: {})
             _announce_mode = interface._announce_mode
             _log_once = interface._log_once
             _sequential_spin_order = interface._sequential_spin_order
@@ -3325,7 +4613,7 @@ class TestSequentialPoolLadder(unittest.TestCase):
         """Offshell, a mass set costs a production reshuffle and a production
         density, so the staged schemes only pay off once there are enough decays
         to save: auto takes joint up to two decaying particles and sequential
-        from three. See MADSPIN_SEQUENTIAL_PLAN.md section 12."""
+        from three. See doc/madspin_sequential_plan.md section 12."""
         for nb, expected in [(1, 'joint'), (2, 'joint'),
                              (3, 'sequential'), (6, 'sequential')]:
             for spinmode in ('madspin', 'full'):
@@ -3606,6 +4894,7 @@ class TestOffshellRateFactor(unittest.TestCase):
 
     class _Stub(object):
         _unweighting_mode = interface_madspin.MadSpinInterface._unweighting_mode
+        _pure_interference = staticmethod(lambda: {})
         _announce_mode = interface_madspin.MadSpinInterface._announce_mode
         _log_once = interface_madspin.MadSpinInterface._log_once
         _borrow_decision_helpers(locals())

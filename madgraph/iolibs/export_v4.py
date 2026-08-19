@@ -2622,9 +2622,30 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
         logger.info("Running make for Source directory")
         try:
             misc.compile(cwd=source_dir, mode='fortran')
-        except:
-            misc.compile(arg=['../lib/libdhelas.a'], cwd=source_dir, mode='fortran')
-            misc.compile(arg=['../lib/libmodel.a'], cwd=source_dir, mode='fortran')
+        except Exception as error:
+            logger.warning(
+                "Running 'make' in %s failed; falling back to building "
+                "libdhelas and libmodel individually. This normally indicates "
+                "a problem in Source/makefile and should be reported. The "
+                "failure was:\n%s", source_dir, error)
+            try:
+                misc.compile(arg=['../lib/libdhelas.a'], cwd=source_dir, mode='fortran')
+                misc.compile(arg=['../lib/libmodel.a'], cwd=source_dir, mode='fortran')
+            except Exception as fallback_error:
+                # '../lib/libXXX.a' is only a valid target when the makefile was
+                # configured with the default static libext. When 'dynamic' is
+                # set (make_opts), libext is 'so'/'dylib', the makefile only
+                # knows about '../lib/libdhelas.$(libext)' and these two targets
+                # do not exist at all -- make then stops with
+                #     No rule to make target `../lib/libdhelas.a'
+                # Retry through the libext-agnostic phony targets that both
+                # Source/makefile templates provide before giving up, and
+                # re-raise the original error if that does not help either.
+                try:
+                    misc.compile(arg=['libdhelas'], cwd=source_dir, mode='fortran')
+                    misc.compile(arg=['libmodel'], cwd=source_dir, mode='fortran')
+                except Exception:
+                    raise fallback_error
 
     #===========================================================================
     # Create proc_card_mg5.dat for Standalone directory
