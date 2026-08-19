@@ -402,10 +402,10 @@ the sequential scheme must not inherit:
 `reshuffle_production` should then be re-expressed in terms of it, so that the
 two cannot drift apart.
 
-### Mass ownership: what phase 4 has to untangle first
+### Mass ownership
 
-The mass logic is currently spread over three places which do not compose once
-the draw has to happen per slot:
+The mass logic sits in three places, which do not obviously compose once the
+draw has to happen per slot:
 
 1. **The draw** is in `get_onshell_evt_and_wgt` (:2949-2965). It runs on every
    trial, walks `decays` in a single pass, depletes a shared `full_dqrts` and
@@ -440,7 +440,7 @@ the `production` object. The copy in (2) is therefore:
   calls `production.reshuffle_production()` on the production event itself --
   and there the guard is always true, so it already runs on every trial.
 
-Consequences for phase 4, all favourable:
+Consequences, all favourable:
 
 - the mass ownership PA needs is **already correct**: `_draw_offshell_mass`
   leaves `new_mass` on `dec[0]`, `add_decays` carries it to the merged event,
@@ -474,10 +474,10 @@ unchanged.
 
 Cost: n contractions per production event instead of 1, but a contraction is
 numpy over a prod_i n_i vector while `get_density` is the f2py ME -- the
-expensive one, whose call count sequential *reduces*. If profiling later shows
-the contraction dominating at large n, phase 3 is a true partial contraction
-(fold fixed indices away so later steps act on a smaller tensor). Not needed
-for a first cut.
+expensive one, whose call count sequential *reduces*. If profiling ever shows
+the contraction dominating at large n, the next step would be a true partial
+contraction (fold fixed indices away so later steps act on a smaller tensor).
+It has not been needed.
 
 **Slot-order constraint (important).** The tensor slot order must remain the
 `position` order (interface_madspin.py:3090) -- the production event's particle
@@ -497,7 +497,7 @@ and it is why the ladder must not charge scalars (section 5).
 ## 3. The options
 
 The scheme is selected by a single enumerated card option, whose values and the
-measurements behind them are in section 10 ("The option: one knob, four
+measurements behind them are in section 10 ("The option: one knob, five
 schemes") and section 12:
 
     set unweighting auto | joint | sequential | sequential_global_retry
@@ -515,6 +515,13 @@ The scheme is forced back to `joint` when the spinmode carries no density
 matrix, when `fixed_order` is on, when the decays are grouped with `@` tags
 (`doc/madspin_decay_groups.md`), under `pure_interference` (13.4) and under
 `decay_output = weighted` (13.18).
+
+The other two options this document is about are
+
+    set decay_output auto | unweighted | weighted    # does MadSpin unweight at
+                                                     # all -- 13.13, 13.17,
+                                                     # 13.18, 13.19
+    set pure_interference t = 0 T                    # section 13
 
 ---
 
@@ -930,9 +937,9 @@ the same quantity, the joint path already caches there.
 
 #### `two_stage`: one bound over all the angles
 
-Suggested by Olivier. Keep the mass-set stage, but replace the *per-slot*
-accept/reject by a single test on the product of every slot's weight, redrawing
-the whole angle set on a rejection and **keeping the mass set**:
+Keep the mass-set stage, but replace the *per-slot* accept/reject by a single
+test on the product of every slot's weight, redrawing the whole angle set on a
+rejection and **keeping the mass set**:
 
     stage 1   w_mass  = [Tr(rho_off)/|M_prod|^2_on] * jac_reshuffle
                         * prod_k jac_bw_k * prod_k Z_hat_k(m_k)
@@ -978,7 +985,7 @@ algebra, so the deviation is a sampling or statistics question and remains
 unexplained -- but the scheme is slower than `two_stage` either way, so it was
 dropped rather than chased, and there is no card spelling for it.
 
-#### The option: one knob, four schemes
+#### The option: one knob, five schemes
 
 The schemes are mutually exclusive alternatives rather than independent
 switches, so they are selected by a single enumerated option:
@@ -1802,7 +1809,7 @@ Two candidate spellings:
    accepts, so it would need a change in `madgraph_interface`'s process parser
    -- shared code, wide blast radius, and MadSpin is not its only consumer.
    Rejected.
-2. **A dedicated MadSpin-card option** (recommended):
+2. **A dedicated MadSpin-card option**, which is what was built:
 
        set pure_interference t = 0 T          # or: 6 = 0 T
 
@@ -1916,10 +1923,9 @@ After the loop, with kept weights `w_i` (each `+- w_p * BR`):
                                        # right scale to compare S against
     z     = S / delta
 
-Report `z`, and fail the check when `|z| > nb_sigma` (the card already has
-`nb_sigma`, default 3; 5 is the more usual threshold for an automatic assert and
-is the value I would pick, so that a legitimate 3-sigma fluctuation in a large
-run does not cry wolf).
+Report `z`, and fail the check when `|z|` exceeds 5 -- not the card's `nb_sigma`
+(default 3), so that a legitimate 3-sigma fluctuation in a large run does not
+cry wolf. 13.12 shows a +2.69 turning up in five seeds, which is why.
 
 *Where:* accumulate `sum_w` and `sum_w2` into the stats dict `_unweight_range`
 already returns -- it is picklable and merged additively over the forked shards

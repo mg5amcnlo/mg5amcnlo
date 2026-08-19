@@ -219,8 +219,8 @@ probability `1 - BR_pdg / BR_max`. Under groups the branching ratio is a propert
 of the **group**, not of a pdg: two groups differing in one line have different
 total BR, and the drop probability would have to become per (final-state class,
 group). That is a different data structure and a different correctness argument,
-and it is the piece I would carve out of a first implementation (refuse groups
-together with mixed final states, and say so).
+and it is carved out of the implementation: groups together with mixed final
+states are refused, with a reason (section 4.6).
 
 ### 4.4 The staged `unweighting` schemes (structural)
 
