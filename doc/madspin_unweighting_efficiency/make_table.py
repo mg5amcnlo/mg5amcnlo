@@ -89,7 +89,10 @@ def row_numbers(run, position_to_pdg):
     return eps_m, pdg_to_eps.get(6), pdg_to_eps.get(-6), n_dec, None
 
 
-def fmt(value, digits=3):
+def fmt(value, digits=2):
+    """Two decimals: MadSpin prints these counters to two decimals itself, and
+    at the event counts used here the statistical error sits in the second
+    decimal, so a third would be invented precision."""
     if value is None:
         return r'--'
     return ('%.' + str(digits) + 'f') % value
@@ -183,6 +186,12 @@ def main():
                r'columns. \texttt{onshell} keeps the production kinematics and '
                r'never samples a virtuality, so it has no mass stage at all and '
                r'$\epsilon_m$ is not defined there (dash, not~1). '
+               r'The $t$/$\bar t$ split of the staged schemes is positional '
+               r'rather than physical: the accept/reject fills slot~0 -- $t$, '
+               r'the first final-state particle of every production event here '
+               r'-- against a production density traced over the other slot, '
+               r'which is close to unpolarised and so accepts readily, and '
+               r'slot~1 ($\bar t$) against the fully conditioned parent. '
                r'The two \texttt{PA} blocks differ only in '
                r'\texttt{density\_keep\_jacobian}: with the default \texttt{True} '
                r'the production-reshuffling phase-space jacobian is folded into '
@@ -193,8 +202,14 @@ def main():
                r'unweight against different weights and are expected to have '
                r'different efficiencies; the option is \texttt{PA}-only and is '
                r'ignored by \texttt{madspin} (which always carries that '
-               r'jacobian) and by \texttt{onshell} (which never reshuffles).}'
-               % '{:,}'.format(nev or 0).replace(',', r'\,'))
+               r'jacobian) and by \texttt{onshell} (which never reshuffles). '
+               r'The statistical uncertainty is at most %s on every entry '
+               r'(%s on all but the largest), so the second decimal is the '
+               r'last meaningful digit.}'
+               % ('{:,}'.format(nev or 0).replace(',', r'\,'),
+                  fmt(max([e[3] for e in errors] or [0.0]), 2),
+                  fmt(sorted(e[3] for e in errors)[-2]
+                      if len(errors) > 1 else 0.0, 2)))
     out.append(r'  \label{%s}' % args.label)
     out.append(r'\end{table}')
     print('\n'.join(out))
