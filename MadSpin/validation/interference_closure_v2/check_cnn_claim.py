@@ -227,6 +227,55 @@ def part_b_symmetry(z, log):
     p('')
 
 
+def part_b_calibration(z, log):
+    """The 1/9 factor, calibrated on the blocks whose coefficients are known.
+
+    A diagonal block is a product of helicity eigenstates, so C_kk = +-1 and
+    B+_k, B-_k have unit magnitude exactly.  Measuring <cos th^k> = 1/3 and
+    <cos th^k_+ cos th^k_-> = +-1/9 on them fixes both the factor and the SIGN
+    convention that relates the plotted mean to the coefficient.
+    """
+    p = log.append
+    p('=' * 74)
+    p('Part B3 -- the 1/9, calibrated on the four blocks with known C_kk')
+    p('=' * 74)
+    p('')
+    p('  %-9s %20s %20s %22s %9s' % ('block', '<cos th^k_l+>',
+                                     '<cos th^k_l-> (own sign)',
+                                     '<cos th^k_l+ cos th^k_l->', 'expected'))
+    mags = []
+    for tag, lab, exp in (('pp', '(D+,D+)', +1), ('pm', '(D+,D-)', -1),
+                          ('mp', '(D-,D+)', -1), ('mm', '(D-,D-)', +1)):
+        vals = []
+        for key in ('cos_k_p', 'cos_k_m', 'ckk'):
+            sw, swo, sw2, sw2o, sw2o2, _n = z['mom__%s__%s' % (tag, key)]
+            m = swo / sw
+            var = (sw2o2 - 2 * m * sw2o + m * m * sw2) / (sw * sw)
+            vals.append((m, math.sqrt(max(var, 0.0))))
+        # cos_k_m is stored as -(u_- . k); print it with its own sign
+        mags.append((abs(vals[2][0]), vals[2][1]))
+        p('  %-9s %11.5f +- %-6.5f %11.5f +- %-6.5f %13.5f +- %-6.5f %+9.5f'
+          % (lab, vals[0][0], vals[0][1], -vals[1][0], vals[1][1],
+             vals[2][0], vals[2][1], exp / 9.0))
+    mean = sum(m for m, _ in mags) / 4.0
+    err = math.sqrt(sum(e * e for _, e in mags)) / 4.0
+    p('')
+    p('  mean of the four magnitudes: %.5f +- %.5f   (1/9 = %.5f, %+.1f sd)'
+      % (mean, err, 1 / 9.0, (mean - 1 / 9.0) / err))
+    p('  => in THIS code\'s convention, C_ij = Tr[rho sigma_i x sigma_j] with')
+    p('     both leptons projected on the SAME (k,n,r) triad,')
+    p('        < cos th^i_l+ cos th^j_l- > = + C_ij / 9 .')
+    for key, name in (('cnn', 'C_nn'), ('ckk', 'C_kk')):
+        sw, swo, sw2, sw2o, sw2o2, _n = z['mom__unpol__%s' % key]
+        m = swo / sw
+        var = (sw2o2 - 2 * m * sw2o + m * m * sw2) / (sw * sw)
+        p('     unpolarised %s = %+.4f +- %.4f' % (name, 9 * m,
+                                                   9 * math.sqrt(max(var, 0))))
+    p('  Several references write the double-differential distribution with')
+    p('  -C_ij cos th^i_+ cos th^j_-; their C_ij is then minus this one.  No')
+    p('  conclusion here depends on that sign.')
+    p('')
+
 # ==========================================================================
 # Part C -- the figure
 # ==========================================================================
@@ -311,6 +360,7 @@ def main():
     part_a(log)
     part_b(z, log)
     part_b_symmetry(z, log)
+    part_b_calibration(z, log)
     fig = part_c(z, out)
     log.append('wrote %s' % fig)
     text = '\n'.join(log)

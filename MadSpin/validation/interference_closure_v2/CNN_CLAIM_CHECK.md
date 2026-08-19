@@ -163,6 +163,37 @@ along the same top direction in the `t tbar` CM frame that
 `analyse_interference.py` uses (`me_frame = [1,2]`).  That was never a free
 parameter of this test, but it is worth knowing it is measured and not assumed.
 
+## 3b. The mean *is* the coefficient, up to the standard 1/9 -- calibrated here
+
+The link between the plotted variable and the coefficient is the standard
+factor `1/9` (`1/3` per leg, from the `(1 + cos)/2` lepton distribution, with
+the leptonic spin-analysing power `kappa_l = 1`).  The four diagonal blocks
+calibrate it directly, because for them the coefficients are known exactly:
+`C_kk = +1, -1, -1, +1` and `B+_k = B-_k` of unit magnitude.
+
+| block | `<cos th^k_{l+}>` | `<cos th^k_{l-}>` (own sign) | `<cos th^k_{l+} cos th^k_{l-}>` | expected |
+|---|---|---|---|---|
+| `(D+,D+)` | +0.33174 +- 0.00211 | +0.32914 +- 0.00211 | +0.10819 +- 0.00140 | `+1/9 = 0.11111` |
+| `(D+,D-)` | +0.33324 +- 0.00211 | -0.33636 +- 0.00211 | -0.11294 +- 0.00141 | `-1/9` |
+| `(D-,D+)` | -0.33090 +- 0.00211 | +0.33163 +- 0.00211 | -0.10964 +- 0.00140 | `-1/9` |
+| `(D-,D-)` | -0.33331 +- 0.00211 | -0.33102 +- 0.00211 | +0.10946 +- 0.00140 | `+1/9` |
+
+Every single-lepton mean is `1/3` and every product is `1/9`, with the sign of
+`C_kk` (mean of the four magnitudes: `0.11006 +- 0.00070`, `1.5 sigma` from
+`1/9`).  So in the convention this code uses -- `C_ij = Tr[rho sigma_i x
+sigma_j]` with **both** lepton directions projected on the **same** `(k,n,r)`
+triad, which is what `analyse_interference.py` does --
+
+    < cos th^i_{l+} cos th^j_{l-} >  =  + C_ij / 9 .
+
+The unpolarised sample then reads `C_nn = +0.326 +- 0.013` and
+`C_kk = +0.343 +- 0.013`, the right size for `p p -> t t~` at 13 TeV.
+**Beware of the sign when comparing with a paper**: several references write the
+double-differential distribution with `- C_ij cos th^i_+ cos th^j_-`, and then
+their `C_ij` is minus this one.  None of the conclusions of this note depend on
+that sign -- they are all statements about *which* entries of `rho` a
+coefficient touches and about whether a contribution is *zero*.
+
 ## 4. Verdict and corrected wording
 
 The plot is correct and should not be touched.  Two sentences of the draft

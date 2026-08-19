@@ -100,4 +100,24 @@ Part B2 -- why the diagonal blocks have a zero first moment but a
   (D-,D-)   h(-X) vs h(+X), 10 mirror pairs: chi2 =  15.8 / 10 (peak bin 1.316 pb, zero would be 0.000)
   (D+,D+)   the SAME block in C_kk is NOT symmetric:  chi2 = 5302.1 / 10
 
+==========================================================================
+Part B3 -- the 1/9, calibrated on the four blocks with known C_kk
+==========================================================================
+
+  block            <cos th^k_l+> <cos th^k_l-> (own sign) <cos th^k_l+ cos th^k_l->  expected
+  (D+,D+)       0.33174 +- 0.00211     0.32914 +- 0.00211       0.10819 +- 0.00140  +0.11111
+  (D+,D-)       0.33324 +- 0.00211    -0.33636 +- 0.00211      -0.11294 +- 0.00141  -0.11111
+  (D-,D+)      -0.33090 +- 0.00211     0.33163 +- 0.00211      -0.10964 +- 0.00140  -0.11111
+  (D-,D-)      -0.33331 +- 0.00211    -0.33102 +- 0.00211       0.10946 +- 0.00140  +0.11111
+
+  mean of the four magnitudes: 0.11006 +- 0.00070   (1/9 = 0.11111, -1.5 sd)
+  => in THIS code's convention, C_ij = Tr[rho sigma_i x sigma_j] with
+     both leptons projected on the SAME (k,n,r) triad,
+        < cos th^i_l+ cos th^j_l- > = + C_ij / 9 .
+     unpolarised C_nn = +0.3263 +- 0.0133
+     unpolarised C_kk = +0.3434 +- 0.0132
+  Several references write the double-differential distribution with
+  -C_ij cos th^i_+ cos th^j_-; their C_ij is then minus this one.  No
+  conclusion here depends on that sign.
+
 wrote /Users/omattelaer/Documents/git_workspace/madgraph5/.claude/worktrees/agent-a869053fc7be36b29/MadSpin/validation/interference_closure_v2/plots/claim_cnn_vs_ckk.pdf
