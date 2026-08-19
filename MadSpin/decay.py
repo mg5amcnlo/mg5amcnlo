@@ -2451,8 +2451,20 @@ class decay_all_events(object):
                 logger.debug('Got a production event with %s failures for the phase-space generation generation ' % failed)
 
             # Treat the case that we ge too many overweight.
+            # ``carry``: the overweight safety net (section 14 of
+            # doc/madspin_sequential_plan.md). The Fortran
+            # accept/reject (MadSpin/src/driver.f, "weight.gt.x*maxweight")
+            # stops on a trial with probability min(1, weight/max_weight), so a
+            # weight above the bound is accepted with probability 1 and the
+            # excess used to be dropped. Writing that event with weight
+            # max(1, weight/max_weight) restores the sampled density exactly,
+            # since min(1,x)*max(1,x) = x. Left as the literal 1.0 when nothing
+            # overflowed, so the written weights are bit-identical to before.
+            carry = 1.0
             if weight > decay_me['max_weight']:
+                carry = weight / decay_me['max_weight']
                 report['over_weight'] += 1
+                report['over_weight_excess'] += carry - 1.0
                 report['%s_f' % (decay['decay_tag'],)] +=1
                 if __debug__:               
                     misc.sprint('''over_weight: %s %s, occurence: %s%%, occurence_channel: %s%%
@@ -2493,7 +2505,11 @@ class decay_all_events(object):
                     raise MadSpinError(error)
                     
              
-            decayed_event.change_wgt(factor= self.branching_ratio) 
+            # the carried overweight rides the branching ratio, so it reaches
+            # both the event weight and every <rwgt> entry through the single
+            # multiplication change_wgt already does
+            decayed_event.change_wgt(factor= self.branching_ratio if carry == 1.0
+                                     else self.branching_ratio * carry)
             #decayed_event.wgt = decayed_event.wgt * self.branching_ratio
                     
             self.outputfile.write(decayed_event.string_event())
@@ -2527,6 +2543,30 @@ class decay_all_events(object):
             +str(float(trial_nb_all_events)/float(event_nb)))
         logger.info('Branching ratio to allowed decays: %g' % self.branching_ratio)
         logger.info('Number of events with weights larger than max_weight: %s' % report['over_weight'])
+        # The overweight safety net's measurement, same line as the density
+        # path's _report_overweight: how many events carry a non-unit weight,
+        # what the carried excess sums to, and what fraction of the sample's
+        # normalisation that is (IDWTUP = -4: sigma is the MEAN of the weights,
+        # so the relative shift is the excess over the number of events).
+        if event_nb:
+            if report['over_weight']:
+                logger.warning(
+                    "MadSpin overweight safety net: %d/%d written events "
+                    "(%.3g%%) carried a non-unit weight because a trial weight "
+                    "exceeded max_weight; total carried excess %.6g, i.e. "
+                    "%.3g%% of the sample's normalisation. Clipping those to 1 "
+                    "-- what MadSpin did before -- would have silently biased "
+                    "the sample low by that amount.",
+                    report['over_weight'], event_nb,
+                    100.0 * report['over_weight'] / event_nb,
+                    report['over_weight_excess'],
+                    100.0 * report['over_weight_excess'] / event_nb)
+            else:
+                logger.info(
+                    "MadSpin overweight safety net: 0/%d written events "
+                    "carried a non-unit weight -- max_weight was never "
+                    "exceeded, so the sample is unweighted and unbiased by "
+                    "clipping.", event_nb)
         logger.info('Number of subprocesses '+str(len(self.calculator)))
         logger.info('Number of failures when restoring the Monte Carlo masses: %s ' % nb_fail_mc_mass)
         if fail_nb:

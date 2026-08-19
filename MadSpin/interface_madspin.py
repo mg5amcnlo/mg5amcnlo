@@ -4260,6 +4260,24 @@ class MadSpinInterface(extended_cmd.Cmd):
                            # -- the acceptance probability clips at 1 -- so an
                            # under-estimated max_weight biases the sample and
                            # has to be counted and reported.
+        nb_overflow_joint = 0  # joint accept/reject trials above ``maxwgt``.
+                           # Same story as nb_pi_overflow, for the ordinary
+                           # (unsigned) joint test, which had no counter at all.
+        # ---- the overweight safety net (doc/madspin_sequential_plan.md,
+        # section 14) ----------------------------------------------------------
+        # Every accept/reject below stops on a trial with probability
+        # min(1, w/C); when w > C that probability clips at 1 and the excess is
+        # silently dropped. Writing such an event with weight max(1, w/C)
+        # restores the correct shape exactly, because min(1,x)*max(1,x) = x. The
+        # carried factor rides on the branching ratio (see ``br`` below), so it
+        # reaches ``full_evt.wgt`` and every ``parse_reweight()`` entry through
+        # the same multiplication -- and it is the *literal* 1.0, never a
+        # division, whenever nothing overflowed, so the written weights are
+        # bit-identical to the clipping ones on the overwhelmingly common path.
+        nb_overweight = 0        # written events carrying a non-unit factor
+        sum_overweight_excess = 0.0   # sum of (factor - 1): the normalisation
+                                      # that used to be thrown away
+        max_overweight = 1.0     # the largest single factor carried
         sum_w = 0.0        # signed weight sum, for the zero-cross-section check
         sum_w2 = 0.0       # its second moment: no cancellation, so the MC error
         nb_try = 0
@@ -4325,6 +4343,11 @@ class MadSpinInterface(extended_cmd.Cmd):
                     # nothing to decay in this production event
                     output_lhe.write_events(production)
                     continue
+                # the accepted chain's carried overweight (mass stage x angle
+                # stages, composed multiplicatively inside the chain -- see
+                # sequential_accept_reject). Popped rather than merged: the
+                # remaining keys are additive counters.
+                carry = seq_stats.pop('overweight_factor', 1.0)
                 for key, value in seq_stats.items():
                     sequential_stats[key] += value
                 nb_try += sum(v for k, v in seq_stats.items()
@@ -4337,10 +4360,21 @@ class MadSpinInterface(extended_cmd.Cmd):
                     # sequential_accept_reject has already checked is possible
                     full_evt.reshuffle_production()
                 self.efficiency = float(curr_event + 1) / nb_try if nb_try else 1.0
-                full_evt.wgt *= self.branching_ratio
+                br = self.branching_ratio
+                if carry != 1.0:
+                    # exactly one multiplication either way: br is the same
+                    # float object as self.branching_ratio when nothing
+                    # overflowed, so this branch is the only thing that can
+                    # move a written weight.
+                    br = br * carry
+                    nb_overweight += 1
+                    sum_overweight_excess += carry - 1.0
+                    if carry > max_overweight:
+                        max_overweight = carry
+                full_evt.wgt *= br
                 wgts = full_evt.parse_reweight()
                 for key in wgts:
-                    wgts[key] *= self.branching_ratio
+                    wgts[key] *= br
                 self._add_polarization_weights(
                     full_evt, getattr(self, '_pol_weight_ratios', None))
                 output_lhe.write_events(full_evt)
@@ -4350,6 +4384,11 @@ class MadSpinInterface(extended_cmd.Cmd):
             prod_density_cached = None
             pi_factor = 1.0   # W/c ('weighted') or +-<|W|>/c ('unweighted') in
                               # the pure-interference mode, 1 elsewhere
+            carry = 1.0       # overweight safety net: max(1, w/C) of the trial
+                              # this production event stops on. SET (never
+                              # accumulated) at the acceptance, because a
+                              # rejected trial is redrawn from scratch and
+                              # contributes nothing to the event that is written.
             pi_rejected = False  # 'unweighted': the single draw failed, so this
                                  # production event writes nothing at all
             # Consecutive trials whose matrix-element weight was not a finite
@@ -4437,6 +4476,16 @@ class MadSpinInterface(extended_cmd.Cmd):
                         if random.random() * maxwgt >= abs(signed):
                             pi_rejected = True
                             break
+                        if abs(signed) > maxwgt:
+                            # the |W|/M test clipped at 1: carry the excess on
+                            # the magnitude instead of dropping it. The 'two
+                            # weight magnitudes' claim of the banner note
+                            # acquires an exception here, which the note says.
+                            # <|W|> = (N_file/N_drawn)*M is unaffected: N_file
+                            # is a COUNT, and the estimator only needs
+                            # E[min(1,x)*max(1,x)] = E[x] -- which is exactly
+                            # what carrying restores.
+                            carry = abs(signed) / maxwgt
                         pi_factor = math.copysign(pi_w0_factor, signed)
                 else:
                     # ``wgt`` alone, not ``wgt*jac``: a zero/-1 jacobian is an
@@ -4447,6 +4496,17 @@ class MadSpinInterface(extended_cmd.Cmd):
                                                    'the joint accept/reject')
 
                 if no_joint_test or random.random()*maxwgt < test:
+                    if not no_joint_test and maxwgt > 0 and test > maxwgt:
+                        # The joint test clipped at probability 1 (it always
+                        # does when test > maxwgt, since random.random() < 1).
+                        # Carry max(1, test/maxwgt) instead of dropping the
+                        # excess. This branch is the ONLY joint-path
+                        # overflow -- there was no counter here at all before.
+                        nb_overflow_joint += 1
+                        carry = test / maxwgt
+                        logger.debug('joint accept/reject: weight %s above its '
+                                     'max %s, carried on the event weight',
+                                     test, maxwgt)
                     if offshell_density:
                         # prod_trial has already been reshuffled internally (its
                         # jacobian is in wgt); build the event to write out from the
@@ -4503,6 +4563,17 @@ class MadSpinInterface(extended_cmd.Cmd):
             br = self.branching_ratio * pi_factor \
                 if (pure_interference or weighted_decay) \
                 else self.branching_ratio
+            if carry != 1.0:
+                # the overweight safety net rides the same hook, for the same
+                # reason: one multiplication that reaches both full_evt.wgt and
+                # every parse_reweight() entry. Guarded so that the no-overflow
+                # path -- which is essentially the whole sample -- performs the
+                # identical arithmetic it did before this existed.
+                br = br * carry
+                nb_overweight += 1
+                sum_overweight_excess += carry - 1.0
+                if carry > max_overweight:
+                    max_overweight = carry
             if self.options['fixed_order']:
                 for evt in full_evt:
                     # change the weight associated to the event
@@ -4545,6 +4616,12 @@ class MadSpinInterface(extended_cmd.Cmd):
                     # one shard or many gives the identical zero-cross-section
                     # test (section 13.8)
                     nb_pi_dead=nb_pi_dead,
+                    # overweight safety net: additive over shards, so one shard
+                    # or many gives the identical end-of-run number
+                    nb_overflow_joint=nb_overflow_joint,
+                    nb_overweight=nb_overweight,
+                    sum_overweight_excess=float(sum_overweight_excess),
+                    max_overweight=float(max_overweight),
                     sum_w=float(sum_w),
                     sum_w2=float(sum_w2),
                     sequential_stats=dict(sequential_stats))
@@ -4637,11 +4714,57 @@ class MadSpinInterface(extended_cmd.Cmd):
         total_overflow = sum(v for k, v in merged.items()
                              if k.startswith('nb_overflow_'))
         if total_overflow:
-            logger.critical(
-                "MadSpin sequential: %d weights exceeded their per-particle "
-                "maximum. That bound is under-estimated and the sample is "
-                "biased: raise nb_sigma or Nevents_for_max_weight, or set "
-                "unweighting = joint.", total_overflow)
+            logger.warning(
+                "MadSpin sequential: %d weights exceeded their stage maximum "
+                "(mass set / angles / per particle). That bound is "
+                "under-estimated; the excess is now CARRIED on the weight of "
+                "the affected events rather than dropped (see the overweight "
+                "line below for how much it is worth). To go back to unit "
+                "weights everywhere, raise nb_sigma or "
+                "Nevents_for_max_weight, or set unweighting = joint.",
+                total_overflow)
+
+    def _report_overweight(self, stats_list, n_written):
+        """The overweight safety net's end-of-run measurement.
+
+        Section 14 of ``doc/madspin_sequential_plan.md``: every
+        accept/reject in MadSpin stops on a trial with probability
+        ``min(1, w/C)``, so a trial with ``w > C`` is accepted with probability
+        1 and the excess ``w/C - 1`` used to be thrown away silently. It is now
+        written onto the event weight, which is exact because
+        ``min(1,x) * max(1,x) = x``; this turns what was an unquantified bias
+        into a number, and this is that number.
+
+        The fraction quoted is ``sum(factor - 1) / n_written``: under MG5's
+        ``IDWTUP = -4`` convention the sample's normalisation is the MEAN of the
+        weights over the events in the file, so a nominal file has mean 1 (times
+        the branching ratio) and the excess is exactly the relative shift. It is
+        the same quantity ``EventFile.unweight`` reports as "truncation", except
+        that there it is discarded and here it is kept.
+        """
+        nb = sum(s.get('nb_overweight', 0) for s in stats_list)
+        excess = sum(s.get('sum_overweight_excess', 0.0) for s in stats_list)
+        biggest = max([s.get('max_overweight', 1.0) for s in stats_list] or [1.0])
+        joint = sum(s.get('nb_overflow_joint', 0) for s in stats_list)
+        if not n_written:
+            return
+        if not nb:
+            logger.info(
+                "MadSpin overweight safety net: 0/%d written events carried a "
+                "non-unit weight -- no accept/reject bound was exceeded, so "
+                "the sample is unweighted and unbiased by clipping.",
+                n_written)
+            return
+        logger.warning(
+            "MadSpin overweight safety net: %d/%d written events (%.3g%%) "
+            "carried a non-unit weight because a trial weight exceeded its "
+            "accept/reject bound; total carried excess %.6g, i.e. %.3g%% of "
+            "the sample's normalisation, largest single factor %.4f%s. "
+            "Clipping those to 1 -- what MadSpin did before -- would have "
+            "silently biased the sample low by that amount.",
+            nb, n_written, 100.0 * nb / n_written, excess,
+            100.0 * excess / n_written, biggest,
+            ' (%d of them from the joint accept/reject)' % joint if joint else '')
 
     def _report_pure_interference(self, base_out, stats_list, n_processed,
                                   n_written):
@@ -4817,9 +4940,14 @@ class MadSpinInterface(extended_cmd.Cmd):
                     reference * absw_run / c_value if c_value else 0.0),
                 '#     ( = sigma_ref * <|W|> / c ; every event carries +- this)',
                 '#  Trials above max|W|          : %d' % nb_pi_overflow,
-                '#     (accepted with probability 1 instead of |W|/max|W|, which',
-                '#      biases the sample. Non-zero means max_weight is',
-                '#      under-estimated: raise nb_sigma or Nevents_for_max_weight)',
+                '#     (accepted with probability 1 instead of |W|/max|W|. Those',
+                '#      events -- and ONLY those -- are written with |w| scaled',
+                '#      by |W|/max|W| > 1 instead of being clipped, so the file',
+                '#      may hold more than two weight magnitudes when this is',
+                '#      non-zero. <|W|> = (N_file/N_drawn) x max|W| is unchanged',
+                '#      by that: N_file is a count, and min(1,x)*max(1,x) = x.',
+                '#      Non-zero still means max_weight is under-estimated:',
+                '#      raise nb_sigma or Nevents_for_max_weight)',
             ]
         else:
             note += [
@@ -5028,6 +5156,7 @@ class MadSpinInterface(extended_cmd.Cmd):
             eff, n_written, nb_try, (1.0 / eff if eff else float("inf"))
         )
         self._report_sequential_stats(stats_list, n_written)
+        self._report_overweight(stats_list, n_written)
         if self._pure_interference():
             self._report_pure_interference(base_out, stats_list,
                                            n_processed, n_written)
@@ -8490,10 +8619,36 @@ class MadSpinInterface(extended_cmd.Cmd):
         # nb_infeasible).
         dead_trials = 0
 
+        # ---- the overweight safety net (section 14 of
+        # doc/madspin_sequential_plan.md) --------------------------------------
+        # Every stage below accepts with probability min(1, w/C) and therefore
+        # clips at 1 when w > C. The chain records max(1, w/C) per stage and the
+        # caller multiplies the product onto the event weight, which restores
+        # the sampled density exactly because min(1,x)*max(1,x) = x.
+        #
+        # Composition. The stages are nested, not sequential, so the two factors
+        # have different lifetimes and each is reset where the quantity it
+        # describes is redrawn:
+        #   carry_mass   -- reset at the top of THIS loop, i.e. whenever a new
+        #                   mass set is drawn (a mass-set rejection, an
+        #                   infeasible set, or an ``exact``/joint-angle restart
+        #                   all come back here);
+        #   carry_angles -- reset at the top of the angle loop, i.e. whenever
+        #                   the whole angle set is redrawn. Inside it the
+        #                   per-slot factors *multiply*, exactly like ``w_slots``
+        #                   multiplies the raw per-slot weights: each slot is
+        #                   accepted once per pass, and a rejected slot trial is
+        #                   simply redrawn and contributes nothing.
+        # Only the accepted chain's factors survive, because both resets happen
+        # on the redraw path. The product is taken once, at the return.
+        carry_mass = 1.0
+        carry_angles = 1.0
+
         while True:     # restart point: an impossible/rejected production mass set
             parents = init_part
             jac_prod = 1.0
             slot_mass = {}
+            carry_mass = 1.0    # a new mass set: the previous one's factor is gone
             if upfront:
                 # draw every virtuality, then settle whatever depends on the
                 # mass set alone: offshell that is the production reshuffle and
@@ -8573,6 +8728,12 @@ class MadSpinInterface(extended_cmd.Cmd):
                     # against its bound would only throw chains away
                     if w_mass > maxwgts[0]:
                         stats['nb_overflow_mass'] += 1
+                        # accepted with probability 1 instead of w/C: carry the
+                        # excess. Set after the test would be equivalent (an
+                        # overflowing weight cannot be rejected, since
+                        # random.random() < 1), but it is set here so the
+                        # counter and the factor stay one statement apart.
+                        carry_mass = w_mass / maxwgts[0]
                     if random.random() * maxwgts[0] >= w_mass:
                         stats['nb_mass_reject'] += 1
                         continue            # redraw the whole mass set
@@ -8601,6 +8762,11 @@ class MadSpinInterface(extended_cmd.Cmd):
                 w_angles = 1.0      # joint_angles: the product tested once, below
                 angle_dead = False  # a zero member: reject the set, stop drawing
                 w_slots = 1.0       # product of the raw per-slot weights
+                carry_angles = 1.0  # overweight safety net: the product of the
+                                    # per-slot (or, under two_stage, the single
+                                    # angle-set) max(1, w/C) factors. Reset with
+                                    # w_slots because it has the same lifetime:
+                                    # a new pass here means a whole new angle set.
 
                 for position, slot in enumerate(order):
                     index = slot_to_index[slot]
@@ -8748,6 +8914,7 @@ class MadSpinInterface(extended_cmd.Cmd):
                             # condition on (onshell, 2 -> 1 production under PA)
                             zhat = self._zhat(zkeys[slot], mass[0]) \
                                    if mass is not None else 1.0
+                            slot_carry = 1.0   # overweight safety net, this trial
                             if probe is not None:
                                 probe.append(float(wgt))
                                 # E[rate | m] = E[w_k | m] = Z_k(m) -- the pool
@@ -8775,6 +8942,7 @@ class MadSpinInterface(extended_cmd.Cmd):
                                     wgt = wgt / zhat if zhat > 0 else 0.0
                                 if wgt > maxwgt:
                                     stats['nb_overflow_%d' % position] += 1
+                                    slot_carry = wgt / maxwgt
                                     logger.debug('sequential: slot %s weight %s above'
                                                  ' its max %s', position, wgt, maxwgt)
                                 accept = random.random() * maxwgt < wgt
@@ -8782,6 +8950,11 @@ class MadSpinInterface(extended_cmd.Cmd):
                                 slot_decays[slot] = decay
                                 n_prev = n_k
                                 w_slots *= wgt_raw
+                                if slot_carry != 1.0:
+                                    # only the ACCEPTED trial of this slot
+                                    # contributes; the slots multiply, like
+                                    # w_slots does
+                                    carry_angles *= slot_carry
                                 break
                             slot_densities.pop(slot, None)
                             if exact:
@@ -8854,6 +9027,7 @@ class MadSpinInterface(extended_cmd.Cmd):
                                 dead_trials, wgt,
                                 'slot %d of the sequential accept/reject'
                                 % position)
+                        slot_carry = 1.0   # overweight safety net, this trial
                         if probe is not None:
                             # python float: these are marshalled as JSON when the
                             # scan runs across forked workers
@@ -8861,15 +9035,19 @@ class MadSpinInterface(extended_cmd.Cmd):
                             accept = True
                         else:
                             if wgt > maxwgt:
-                                # the bound was under-estimated: this biases
-                                # silently, so it has to be visible
+                                # the bound was under-estimated: the excess used
+                                # to be dropped silently, and is now carried on
+                                # the event weight instead (section 14)
                                 stats['nb_overflow_%d' % position] += 1
+                                slot_carry = wgt / maxwgt
                                 logger.debug('sequential: slot %s weight %s above '
                                              'its max %s', position, wgt, maxwgt)
                             accept = random.random() * maxwgt < wgt
                         if accept:
                             slot_decays[slot] = decay
                             n_prev, j_prev, budget = n_k, j_k, new_budget
+                            if slot_carry != 1.0:
+                                carry_angles *= slot_carry
                             break
                         # rejected: this slot only, drop what it contributed
                         slot_densities.pop(slot, None)
@@ -8886,6 +9064,10 @@ class MadSpinInterface(extended_cmd.Cmd):
                     c_angles = maxwgts[1] if len(maxwgts) > 1 else maxwgts[-1]
                     if w_angles > c_angles:
                         stats['nb_overflow_angles'] += 1
+                        # the whole angle set is one test here, so this is the
+                        # only angle-side factor under two_stage (the per-slot
+                        # tests are disabled -- maxwgt is None there)
+                        carry_angles = w_angles / c_angles
                         logger.debug('sequential: angle weight %s above its max %s',
                                      w_angles, c_angles)
                     if random.random() * c_angles >= w_angles:
@@ -8924,6 +9106,14 @@ class MadSpinInterface(extended_cmd.Cmd):
         decays = collections.defaultdict(list)
         for slot in range(len(order)):
             decays[particles[slot_to_index[slot]].pid].append(slot_decays[slot])
+        if probe is None and (carry_mass != 1.0 or carry_angles != 1.0):
+            # The overweight safety net's composed factor for the chain that was
+            # actually accepted. Only set when it is not the identity, so the
+            # caller's ``stats.pop('overweight_factor', 1.0)`` returns the
+            # LITERAL 1.0 in the no-overflow case and the written weight is
+            # bit-identical to the clipping one. Assigned rather than
+            # accumulated: this is a per-event quantity, not a counter.
+            stats['overweight_factor'] = carry_mass * carry_angles
         if (upfront and probe is None and decay_dict
                 and self.options['sequential_debug']):
             self._check_weight_identity(production, decays, decay_dict,

@@ -2783,3 +2783,114 @@ requirement included.
     MadSpin: decay_output = unweighted (auto, ordinary run)
     MadSpin: decay_output = weighted (auto, pure_interference is set)
     MadSpin: decay_output = weighted (set explicitly)
+
+## 14. The overweight safety net: carry the excess instead of clipping it
+
+Every accept/reject in MadSpin -- the joint one, the sequential mass stage,
+each angle stage, and the legacy `spinmode = madspin_v1` Fortran loop -- has
+the same shape:
+
+    accept the trial with probability  min(1, w / C)
+
+with `C` the bound the maximum-weight probe measured. When a trial comes back
+with `w > C` that probability *clips at 1*: the trial is accepted, and the
+factor `w/C - 1` by which it should have counted more than an ordinary
+accepted trial is thrown away. The counters (`nb_overflow_mass`,
+`nb_overflow_<k>`, `nb_overflow_angles`, `report['over_weight']`) have always
+seen this happen; what they could not say is *how much* it was worth, and the
+sample went out silently biased low in exactly the region where the bound is
+too tight -- which for `p p > t t~` under PA is the `t t~` threshold, where the
+reshuffling jacobian goes like `1/beta_t`.
+
+**The fix is one multiplication.** The loop stops on the trial it accepts with
+probability proportional to `min(1, w/C)`, so writing that event with the
+weight `max(1, w/C)` restores the sampled density exactly:
+
+    min(1, x) * max(1, x) = x     identically, for every x > 0
+
+-- the accepted-and-carried density is `q(m) w(m)`, which is the target, and it
+no longer depends on `C` at all. Nothing about the accept/reject changes: the
+same random numbers are drawn, the same trials are accepted, the same events
+are written. Only their weight moves, and only for the events that overflowed.
+
+**Where it is applied.** The factor rides the branching ratio, the hook the
+pure-interference mode already uses (`br = self.branching_ratio * pi_factor`),
+so one multiplication reaches `full_evt.wgt` *and* every `parse_reweight()`
+entry, and the LHEF v3 multiweights stay proportional to the nominal one.
+`decay_all_events.decaying_events` uses `change_wgt(factor=...)`, which does
+the same thing for the legacy path.
+
+**Composition.** A chain can clip in more than one place, and the factors
+*multiply*. `sequential_accept_reject` keeps two of them, each reset where the
+quantity it describes is redrawn:
+
+| | reset at | composed by |
+|---|---|---|
+| `carry_mass` | the top of the mass-set loop | assignment (one mass set per chain) |
+| `carry_angles` | the top of the angle loop, beside `w_slots` | `*=` on each accepted slot (or a single assignment under `two_stage`, whose one bound covers the whole angle set) |
+
+so a rejected trial -- which is redrawn -- contributes nothing, and only the
+accepted chain's factors survive. The product is handed to `_unweight_range`
+through `stats['overweight_factor']`, which is set **only when it is not 1**,
+so the caller's `pop(..., 1.0)` returns the literal `1.0` on the common path.
+
+**Exactness when nothing overflowed.** The factor is never built by a division
+that could return `0.9999999999`: it is the literal `1.0` unless the code took
+an `if w > C` branch, and the multiplication into `br` is skipped entirely in
+that case. Measured on `p p > t t~`, 10 000 events, `spinmode = PA`,
+`unweighting = sequential`, same seed and same cached bounds, against the
+pre-change code: the two decayed LHE files are **byte-identical except for the
+weight field of the three events the log reports as carrying**, whose weights
+are the old ones times `2.038877`, `1.235717` and `1.010500`. Every momentum,
+every other weight, and every `<rwgt>` entry is bit-for-bit the same.
+
+**What it costs, and what it does not fix.** The unit-weight guarantee, for the
+handful of events that overflow -- 3 in 10 000 at the shipped bound above,
+worth 0.013 % of the sample's normalisation. MadSpin prefers dropping events to
+weighting them elsewhere (the BR-equalization path), so this is a deliberate
+exception; `EventFile.unweight` has always done the same thing
+(`written_weight(max(wgt, max_wgt))`, reported as "truncation"), so a
+downstream tool that cannot survive a non-unit weight could not survive an
+ordinary MG5 unweighted sample either. It is **not** a substitute for a bound
+that is high enough: it makes the mass stage exact, but for the *angle* stages
+it only fixes the angular shape. Those stages redraw until they accept and so
+divide out their own conditional normalisation, which the tabulated `Z_hat`
+models as `E[w | m]` -- an identity that itself assumes the bound dominates.
+Carrying restores `p(theta) w` at fixed `m` exactly; the residual `m`-dependence
+of `E[min(1, w/C) | m]` against `Z_hat(m)` survives, and only a larger bound
+removes it. So the counters still warn.
+
+**The end-of-run measurement.** `_report_overweight` turns the counters into
+the number that was missing:
+
+    MadSpin overweight safety net: 3/10000 written events (0.03%) carried a
+    non-unit weight because a trial weight exceeded its accept/reject bound;
+    total carried excess 1.28509, i.e. 0.0129% of the sample's normalisation,
+    largest single factor 2.0389. Clipping those to 1 -- what MadSpin did
+    before -- would have silently biased the sample low by that amount.
+
+and, when nothing overflowed, says so at INFO rather than staying silent. Under
+`IDWTUP = -4` the cross-section is the *mean* of the weights over the events in
+the file, so `sum(factor - 1) / n_written` is exactly the relative shift the
+sample used to lose. The joint accept/reject gained a counter of its own here
+(`nb_overflow_joint`); it had none before.
+
+**Validation.** With the mass-stage bound forced 30x low so that 99.9 % of the
+10 000 events overflow (mean carried factor 13.5, largest 74.3), the mean of
+`m(t) + m(t~)` over the `sqrt(shat) < 400 GeV` slice, where the mass weight
+actually varies:
+
+| | mean `m(t)+m(t~)` [GeV] |
+|---|---|
+| forced-low bound, carried | 345.584 +- 0.095 |
+| forced-low bound, clipped (the old behaviour, same events) | 345.926 +- 0.094 |
+| shipped bound | 345.539 +- 0.094 |
+| `decay_output = weighted` (joint path, fully weighted) | 345.446 +- 0.105 |
+
+The paired carried-minus-clipped difference is `-0.342 +- 0.036` (9.5 sigma):
+clipping does move the spectrum. The carried result sits `+0.3` sigma from the
+shipped-bound run and `+1.0` sigma from the weighted reference; the clipped one
+sits `+2.9` and `+3.4` sigma away. In the `sqrt(shat) < 360 GeV` threshold slice
+the carried result is `-0.1` / `+0.0` sigma from the two references and the
+clipped one `+3.0` / `+2.6`. A factor 30 in the bound leaves the carried
+physics where it was, which is the whole content of `min(1,x) max(1,x) = x`.
