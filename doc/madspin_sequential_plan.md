@@ -1,11 +1,18 @@
-# MadSpin: sequential (per-particle) accept/reject in density mode
+# MadSpin: the density-mode unweighting schemes, the polarisation axis, and the pure-interference mode
 
-Plan for replacing the joint accept/reject over all decaying particles by a
-per-particle one, in `density_method` mode (now the default). Opt-out flag so
-each process can be A/B tested.
+Design record for the density spin modes (`PA`, `onshell`, `madspin`/`full`):
+why the per-particle ("sequential") accept/reject is exact, what `unweighting =
+auto` resolves to and on what measurements, which frame the polarisation braces
+are defined in, and how the pure-interference mode works. It is written as a
+record of *why the code is what it is*, not as a plan: everything described here
+is built unless the text says otherwise.
 
-Code references are to the current tree (`MadSpin/interface_madspin.py`,
-`MadSpin/decay.py`).
+Code references are to `MadSpin/interface_madspin.py` and `MadSpin/decay.py`;
+line numbers are indicative and drift.
+
+**Section numbers are stable and are referenced from the code** (`section 12`,
+`sections 13.17 and 13.18`, ...), so sections that were retired leave a gap in
+the numbering rather than being renumbered.
 
 ---
 
@@ -261,7 +268,7 @@ It also explains the ladder of section 5: `1/eff_k` *is* the expected number of
 decay events slot k draws from its own pool, so the requested 1.5 / 2 / 2.5 / 3
 are precisely per-slot consumption estimates.
 
-### Where it bites (why the flag is mandatory)
+### Where it bites
 
 Not fact (b) (shared, see above). The real exposure is:
 
@@ -287,9 +294,9 @@ Not fact (b) (shared, see above). The real exposure is:
 5. `density_debug` compares against the full ME and is only meaningful for a
    complete set.
 
-**Scope: `spinmode = PA` (the default, banner.py `add_param('spinmode', "PA")`)
-is in.** An `onshell`-only feature would be inert for essentially every user.
-`fixed_order` still falls back to the joint test.
+**Scope: every density spin mode** -- `PA`, `onshell` and `madspin`/`full` (the
+card default is `madspin`). An `onshell`-only feature would be inert for
+essentially every user. `fixed_order` still falls back to the joint test.
 
 ### PA: mass sampling, jacobian, and kinematic failures
 
@@ -395,10 +402,10 @@ the sequential scheme must not inherit:
 `reshuffle_production` should then be re-expressed in terms of it, so that the
 two cannot drift apart.
 
-### Mass ownership: what phase 4 has to untangle first
+### Mass ownership
 
-The mass logic is currently spread over three places which do not compose once
-the draw has to happen per slot:
+The mass logic sits in three places, which do not obviously compose once the
+draw has to happen per slot:
 
 1. **The draw** is in `get_onshell_evt_and_wgt` (:2949-2965). It runs on every
    trial, walks `decays` in a single pass, depletes a shared `full_dqrts` and
@@ -433,7 +440,7 @@ the `production` object. The copy in (2) is therefore:
   calls `production.reshuffle_production()` on the production event itself --
   and there the guard is always true, so it already runs on every trial.
 
-Consequences for phase 4, all favourable:
+Consequences, all favourable:
 
 - the mass ownership PA needs is **already correct**: `_draw_offshell_mass`
   leaves `new_mass` on `dec[0]`, `add_decays` carries it to the merged event,
@@ -467,10 +474,10 @@ unchanged.
 
 Cost: n contractions per production event instead of 1, but a contraction is
 numpy over a prod_i n_i vector while `get_density` is the f2py ME -- the
-expensive one, whose call count sequential *reduces*. If profiling later shows
-the contraction dominating at large n, phase 3 is a true partial contraction
-(fold fixed indices away so later steps act on a smaller tensor). Not needed
-for a first cut.
+expensive one, whose call count sequential *reduces*. If profiling ever shows
+the contraction dominating at large n, the next step would be a true partial
+contraction (fold fixed indices away so later steps act on a smaller tensor).
+It has not been needed.
 
 **Slot-order constraint (important).** The tensor slot order must remain the
 `position` order (interface_madspin.py:3090) -- the production event's particle
@@ -487,25 +494,34 @@ and it is why the ladder must not charge scalars (section 5).
 
 ---
 
-## 3. New options (MadSpinCard, interface_madspin.py:~58)
+## 3. The options
 
-```python
-self.add_param("sequential_decay", True,
-               comment="accept/reject one decaying particle at a time "
-                       "(density mode). Set to False for the historical "
-                       "joint accept/reject.")
-self.add_param("sequential_spin_order", "2 3 1", hidden=True,
-               comment="spin order (MG5 2S+1 convention) used to decide which "
-                       "particle is decayed first: default fermions, then "
-                       "vectors, then scalars.")
-```
+The scheme is selected by a single enumerated card option, whose values and the
+measurements behind them are in section 10 ("The option: one knob, five
+schemes") and section 12:
 
-- `sequential_decay` defaults to **True** (opt-out, per request); forced False
-  when `density_method` is off, when `fixed_order` is on, and when only one
-  particle decays (then it is identical to the joint test -- fall back rather
-  than pay for the identity machinery).
-- `sequential_spin_order` is hidden and lets the ordering itself be A/B tested
-  per process without a code change.
+    set unweighting auto | joint | sequential | sequential_global_retry
+                         | sequential_with_mass
+
+`auto` is the default and what it resolves to is section 12. Two companions keep
+their own names, being an ordering and a check rather than modes:
+
+- `sequential_spin_order` (default `2 3 1`) decides which particle is
+  accept/rejected first -- section 4;
+- `sequential_debug` recomputes the joint weight on every accepted chain and
+  checks the stage weights against it -- section 10, "the weight identity".
+
+The scheme is forced back to `joint` when the spinmode carries no density
+matrix, when `fixed_order` is on, when the decays are grouped with `@` tags
+(`doc/madspin_decay_groups.md`), under `pure_interference` (13.4) and under
+`decay_output = weighted` (13.18).
+
+The other two options this document is about are
+
+    set decay_output auto | unweighted | weighted    # does MadSpin unweight at
+                                                     # all -- 13.13, 13.17,
+                                                     # 13.18, 13.19
+    set pure_interference t = 0 T                    # section 13
 
 ---
 
@@ -523,19 +539,11 @@ acceptance. Scalars never reject, so they are parked at the end.
 
 ---
 
-## 5. Pool sizing ladder (interface_madspin.py:1796-1830)
+## 5. Pool sizing ladder
 
-Today:
-
-```python
-spin = self.model.get_particle(pdg).get('spin')
-if spin == 1:      # MG5 convention: scalar
-    efficiency = 1.1
-else:
-    efficiency = 2.0
-```
-
-Sequential replacement -- **ladder by position, capped by spin** (per decision):
+The joint scheme sizes a pool per pdg from a flat per-spin efficiency guess
+(1.1 for a scalar, 2.0 otherwise). Sequentially each slot burns its own pool at
+its own rate, so the guess becomes a **ladder by position, capped by spin**:
 
 ```python
 # position k (0-based) in the decay ordering
@@ -545,148 +553,56 @@ efficiency = 1.1 if spin == 1 else 1.5 + 0.5 * k     # 1.5, 2.0, 2.5, 3.0, ...
 - scalars keep 1.1 at whatever position they land (their ratio is identically
   1, so a bigger pool would be pure waste);
 - spin 1/2 and spin 1 take the ladder value **at their own index**;
-- beyond 4 particles the formula keeps going (3.5, 4.0, ...); consider a cap
-  once measured.
+- beyond 4 particles the formula keeps going (3.5, 4.0, ...).
 
 The `+ nevents_for_max` term and `decay_event_mult` are unchanged. Note the
 pool is sized per *pdg*, while the ladder is per *slot*: for several identical
 parents (same pdg, several slots) take the max ladder value over that pdg's
 slots -- the same file feeds them.
 
-This is the one part of the plan that is a heuristic rather than a derivation;
-the real efficiencies per slot should be logged (section 8) and the ladder
-revisited against measurement.
+This is the one part of the scheme that is a heuristic rather than a
+derivation. `1/eff_k` *is* the expected number of decay events slot k draws
+from its own pool, so the requested 1.5 / 2 / 2.5 / 3 are per-slot consumption
+estimates and nothing more; the per-slot acceptances the run logs are what
+would recalibrate them.
 
 ---
 
 ## 6. Max weights: one bound per slot
 
-`get_maxwgt_for_onshell` (:2810) currently records one `maxwgt` per production
-event, then combines: `1.05 * (mean + nb_sigma*std)` over the per-event maxima,
-refined over the top 20/30/40/50 and against `all_maxwgt[1]`.
+The joint scan records one `maxwgt` per production event and combines them as
+`1.05 * (mean + nb_sigma*std)` over the per-event maxima, refined over the top
+20/30/40/50. Sequentially there are `n` independent bounds `C_k`, one per slot:
+for each PS point the scan computes the n ratios `N_k/N_{k-1}` for the sampled
+set, tracks the per-event max of **each**, and runs the same statistical
+combination independently per slot.
 
-Generalise to `n` independent bounds `C_k`, one per slot:
+The scan keeps sampling decay sets uniformly from the pool even though the real
+chain conditions on earlier accepted decays: uniform sampling explores the same
+support, so the max over uniform draws remains a valid estimator of the same
+bound. It does change the *sampling density* of the ratio, so the tail estimate
+is not the same quality as the joint one -- which is the argument for keeping
+the `nb_sigma`/`1.05` margins and for the overflow counter.
 
-- during the scan, for each PS point compute the n ratios `N_k/N_{k-1}` for the
-  sampled set and track the per-event max of **each**;
-- `all_maxwgt` becomes a list of n-vectors; run the existing statistical
-  combination independently per slot.
+The cached bound in `ms_dir` is therefore a vector, not a float, and it is
+written under its own file name and format so a stale scalar cache cannot be
+read back as one (the up-front schemes go further and carry their `Z_k` tables
+in the same file -- section 10, "Implementation").
 
-The scan may keep sampling decay sets uniformly from the pool even though the
-real chain conditions on earlier accepted decays: uniform sampling explores the
-same support, so the max over uniform draws remains a valid estimator of the
-same bound. It does change the *sampling density* of the ratio, so the tail
-estimate is not identical -- an argument for keeping `nb_sigma`/`1.05` margins
-and for the overflow counter below.
-
-`ms_dir`'s cached `max_wgt` file holds a single float: bump it to a list
-(and invalidate the old format, e.g. by name `max_wgt_seq`) so a stale cache
-cannot be silently read as a scalar.
-
-Add a per-slot **overflow counter**: count `N_k/N_{k-1} > C_k` and log it at the
-end (the joint path has the same exposure on a single bound, but n bounds mean
-n chances to under-estimate). A non-zero count is the first thing to look at when A/B
-disagrees.
+The per-slot **overflow counter** counts `N_k/N_{k-1} > C_k` and is logged at
+the end: the joint path has the same exposure on a single bound, but n bounds
+mean n chances to under-estimate, and an under-estimated `C_k` biases silently.
+A non-zero count is the first thing to look at when two schemes disagree.
 
 ---
 
-## 7. Code changes, file by file
+## 10. spinmode = madspin (full offshell): the up-front mass draw and `Z_k`
 
-**`MadSpin/decay.py`**
-- `DensityMatrix.identity_like(cls, template)` (or `identity_for(helicities)`):
-  same basis / `basis_id`, values = 1 on `_diag_mask`, 0 elsewhere, scaled
-  1/n. Must produce the exact row order of the template so the
-  `scalar_multiplication` fast path (`map_density_matrix_ind is other...`)
-  stays live.
-
-**`MadSpin/interface_madspin.py`**
-- `MadSpinCard`: the two options above (:~58).
-- `get_decay_from_file` (:2720): extract the per-particle body (file choice by
-  cross-section, `next(decay_file)`, the refill/`StopIteration` path) into
-  `_draw_one_decay(particle, i, ids, evt_decayfile, nb_remain)`. The existing
-  function becomes a loop over it -- **the joint path must stay byte-identical**.
-- `calculate_matrix_element_from_density` (:3027): accept an optional
-  `fixed_slots` set; build `density_dec` with `identity_like` for the unfixed
-  slots. Return `N_k` alongside what it returns today. Keep the current
-  signature working (all slots fixed = today's behaviour).
-- new `_sequential_accept_reject(production, ...)`: the loop of section 1,
-  replacing the `while 1:` block in `_run_onshell_loop` (:2325-2385) when the
-  flag is on. Reuses `prod_density_cached` exactly as today (:2324) -- it is
-  computed once per production event and is now reused across *all* slots and
-  retries, which is strictly more valuable than before.
-- `get_maxwgt_for_onshell` (:2810): per-slot bounds (section 6).
-- pool sizing (:1796-1830): the ladder (section 5).
-- `_run_onshell_loop`: efficiency bookkeeping is currently
-  `self.efficiency = (curr_event+1)/nb_try` and feeds the refill estimate in
-  `_draw_one_decay`. Sequential needs **per-slot** efficiency (each slot burns
-  its own pool at its own rate) -- otherwise the refill sizing, which already
-  reasons about `burn` per pdg, will be wrong. This is the subtlest piece of
-  the wiring.
-
-**Interaction with work already committed**
-- The parallel workers (fork) each run their own loop; per-slot efficiency and
-  overflow counters must join the per-shard stats dict already marshalled back
-  (`n_processed`, `n_written`, `nb_try`, `nb_loose_skip`) and be summed in
-  `_apply_accounting`. Keep them order-independent sums, like the existing ones.
-- The BR-equalization drop (`drop_prob_per_pdg`) happens before any ME work and
-  is unaffected.
-
----
-
-## 8. Validation
-
-The whole point of the flag is A/B, so the plan is measurement-first:
-
-1. **Unit** — spin-0 slot: `N_k/N_{k-1} == 1` exactly.
-2. **Unit** — `identity_like`: trace 1, `scalar_multiplication` against a known
-   rho reproduces `Tr(rho)/prod n_i`; all-slots-fixed reproduces today's `wgt`
-   bit-for-bit.
-3. **Unit** — ordering: `_decay_slot_order` for mixed spins, ties stable;
-   ladder values per slot incl. the scalar cap and the several-identical-parents
-   max rule.
-4. **Physics A/B** (the real test) — same seed, same events, `sequential_decay`
-   True/False, compare distributions sensitive to spin correlation:
-   - `t t~` semi-leptonic: lepton angular distribution / `cos(theta*)`, the
-     classic MadSpin observable;
-   - a process with two spin-1/2 and one scalar to exercise ordering;
-   - `W+ W-` (two vectors) for the 3x3 blocks.
-   Compare against the *joint* result, not against theory: they must agree
-   within MC error. Any disagreement points at section 1's "where it bites".
-5. **Efficiency** — log per-slot acceptance and total decay events consumed per
-   production event, both modes. That is the number that justifies the feature
-   and calibrates the ladder.
-6. ~~`density_debug` must still pass in joint mode (unchanged code path).~~
-   **`density_debug` is itself broken** and cannot be used as a validation
-   instrument -- see the note at the end of section 10.
-
----
-
-## 9. Suggested phasing
-
-1. `identity_like` + `fixed_slots` in the contraction + unit tests 1-2.
-   (No behaviour change: joint path untouched.)
-2. `_draw_one_decay` refactor + unit test that the joint path is unchanged.
-3. Options, ordering, ladder (+ tests 3).
-4. Two preparatory steps first: untangle the mass ownership (section 1, "Mass
-   ownership") -- the draw moves into the per-slot loop, the basis setup comes
-   out from under the `prod_static` cache guard -- and add the jacobian-only
-   production entry point (section 1, "Evaluating J_k"), with a test that it
-   returns the same jacobian as `reshuffle_production` while leaving the event
-   untouched. Then `_sequential_accept_reject` + per-slot max
-   weights + per-slot efficiency, for `spinmode` in PA/onshell (`fixed_order`
-   falls back). PA draws slot k's Breit-Wigner mass inside slot k's
-   accept/reject, weight `(N_k/N_{k-1}) * jac_k`, reshuffles that decay there
-   and redraws its mass on failure; the production reshuffling happens once at
-   the end and, if impossible, trashes the whole set of decays (section 1).
-5. A/B campaign (8). Only then the partial-contraction optimisation.
-
----
-
-## 10. Extending to spinmode = madspin (full offshell) -- DESIGN, not yet built
-
-Status: `onshell` and `PA` are implemented and validated end-to-end (ttbar
-A/B: cross section 0.008%, dilepton Delta-phi within ~1 sigma). `madspin` still
-falls back to the joint accept/reject. This section records how to lift it.
+The per-particle decomposition of sections 1-6 needs a production density that
+is fixed while the chain is built. Offshell it is not, so the offshell schemes
+draw every virtuality up front. This section is the derivation of that split,
+of the running-width factor `Z_k` it makes necessary, and of the measurements
+that fixed the scheme names and the `auto` rule (section 12).
 
 ### Why madspin is different
 
@@ -706,7 +622,7 @@ decomposition needs.
 So rho depends on the whole set of decay masses jointly -> not fixed while the
 chain is built -> the decomposition does not apply as-is.
 
-### Fix (Olivier): draw all masses up front
+### The fix: draw all masses up front
 
 Draw the invariant mass of every decaying particle **before** the per-particle
 loop, then reshuffle the production once, up front, and reuse the resulting
@@ -715,18 +631,16 @@ fixed offshell rho for the whole chain. Concretely, per production event:
 1. For each decaying particle, sample its virtuality from its Breit-Wigner.
 2. Reshuffle the production with that full mass set.
    - **Production infeasible** (sum of masses > sqrt(shat), reshuffle returns
-     -1): restart from step 1 (redraw the whole set). This validity check now
-     happens *early*, before any decay is drawn -- an advantage over PA, where
-     it is deferred to the end.
+     -1): restart from step 1 (redraw the whole set). This validity check
+     happens *early*, before any decay is drawn.
 3. Compute rho once at the reshuffled momenta (fixed for the chain).
 4. Per-particle accept/reject loop, exactly as onshell but: each drawn decay
    event is reshuffled to its particle's pre-drawn mass before its density is
    taken, and boosted to the offshell parent.
    - **Decay infeasible** (the drawn mass cannot accommodate that decay's
-     products): the mass is fixed before the loop, so it cannot be redrawn for
-     one slot without invalidating the pre-computed reshuffle/rho -> **restart
-     from step 1** (redraw the whole set). This is the cost of the fixed-rho
-     simplification.
+     products): the candidate is an ordinary **rejection**, not a restart --
+     see "`jac_dec == 0` is a rejection, not a restart" under Implementation
+     below, which is where the first version of this scheme got it wrong.
 
 With rho fixed, the loop and its telescoping are the onshell case again.
 
@@ -773,32 +687,31 @@ distribution is the true physical marginal `Integral physical(m,Omega) dOmega`
 -- even though the mass is fixed for the chain and only the decay angles are
 accept/rejected.
 
-### Status: implemented, gated OFF -- efficiency blocker
+### Why there is a mass-set stage at all
 
-The offshell path IS implemented: `_offshell_production` (up-front mass draw +
-reshuffle of a copy + fixed rho) and the `offshell` branch of
-`sequential_accept_reject` (offshell density on a copy of the decay so the
-drawn decay stays onshell for the final add_decays + reshuffle; weight
-`(N_k/N_{k-1}) * jac_bw_k * Tr(D_k^off)/|M_k|^2_on`, with `jac_reshuffle` on slot
-0). It runs end to end and produces kinematically valid events (no crash).
+The offshell path is `_upfront_production` (up-front mass draw + reshuffle of a
+copy + fixed rho) plus the `offshell` branch of `sequential_accept_reject`
+(offshell density on a copy of the decay so the drawn decay stays onshell for
+the final add_decays + reshuffle; weight
+`(N_k/N_{k-1}) * jac_bw_k * Tr(D_k^off)/|M_k|^2_on`).
 
-But `_sequential_active` still returns False for madspin/full, because it is
-**slower than the joint test on ttbar**: ~340 decay-ME evaluations per event
-(slot 0 ~313, slot 1 ~27) against joint madspin's ~122 (61 trials x 2 decays).
-The cause: madspin is inherently peaked (joint itself needs 61 trials/event),
-and the per-mass-set production reshuffling jacobian `jac_reshuffle` plus the
-offshell weight tail land in **slot 0's per-angle accept/reject**. Since the
-mass is fixed per chain, an unlucky mass draw cannot be escaped by redrawing
-angles, so slot 0's bound (max weight ~322) is huge and its acceptance ~1/313.
+Without a stage of its own for the mass set, that scheme is **slower than the
+joint test on ttbar**: ~340 decay-ME evaluations per event (slot 0 ~313, slot 1
+~27) against joint madspin's ~122 (61 trials x 2 decays). The cause: madspin is
+inherently peaked (joint itself needs 61 trials/event), and the per-mass-set
+production reshuffling jacobian `jac_reshuffle` plus the offshell weight tail
+land in **slot 0's per-angle accept/reject**. Since the mass is fixed per chain,
+an unlucky mass draw cannot be escaped by redrawing angles, so slot 0's bound
+(max weight ~322) is huge and its acceptance ~1/313.
 
-The mass-set-level accept/reject was implemented (a step before the per-angle
-loop, weight `w_mass = Tr(rho_off) * jac_reshuffle * prod jac_bw_k`, with the
-per-angle factors reduced to `(N_k/N_{k-1}) * Tr(D_k^off)/|M_k|^2_on`). It works
-and isolates the reshuffling jacobian: its bound is modest (C_mass ~ 14 on
-ttbar). It works, isolates the reshuffling jacobian (C_mass ~ 14 on ttbar), and -- for
-physical resonant decays -- makes sequential madspin **faster than the joint
-test**. Validated end to end on `p p > t t~`, `t > w+ b, w+ > l+ vl` (fully
-leptonic), same production events, `nb_core=1`:
+Hence the mass-set-level accept/reject, a step before the per-angle loop with
+weight `w_mass = Tr(rho_off) * jac_reshuffle * prod jac_bw_k` (normalised by
+`|M_prod|^2_on`, see below) and the per-angle factors reduced to
+`(N_k/N_{k-1}) * Tr(D_k^off)/|M_k|^2_on`. It isolates the reshuffling jacobian,
+its bound is modest (`C_mass` ~ 14 on ttbar before the normalisation, ~3 after)
+and -- for physical resonant decays -- it makes sequential madspin **faster
+than the joint test**. Validated end to end on `p p > t t~`,
+`t > w+ b, w+ > l+ vl` (fully leptonic), same production events, `nb_core=1`:
 
 - efficiency: sequential 5.6 decay-ME evaluations/event (slot 0 = 2.1, slot 1 =
   3.5) vs joint density madspin's 8.9 (4.46 trials x 2 decays);
@@ -815,13 +728,12 @@ joint and sequential, and orthogonal to the per-particle factorisation: it hits
 `w+ > all all` regardless of which accept/reject is used. For resonant decays
 the density mode is efficient and the sequential version improves on it.
 
-**madspin/full are reachable but not the default** in `_sequential_active`:
-`sequential_decay = auto` resolves to sequential for PA/onshell and to the joint
-test for madspin/full, and the wall-time measurement below says it should stay
-that way. The open item is the
-`w+ > all all` non-resonant blow-up in the density-madspin *weight* (BW_cut too
-wide for unweighting the reshuffle? reweighting normalisation? keep those
-channels weighted?), which would help the default joint madspin too.
+What `auto` does with madspin/full was settled later, by the multiplicity scan
+of section 12: joint up to two decaying particles, `sequential` from three. The
+open item this subsection leaves is the `w+ > all all` non-resonant blow-up in
+the density-madspin *weight* (BW_cut too wide for unweighting the reshuffle?
+reweighting normalisation? keep those channels weighted?), which would help
+joint madspin too and is not a property of any accept/reject scheme.
 
 ### Fixed (measured): the mass-set stage missed the per-slot normalisation
 
@@ -888,7 +800,7 @@ normalisation to `Z_k / Z_hat_k` and leaves the accepted angles alone. So
 whatever weight it is given, it still divides out the *true* `Z_k`, and the
 residual bias of a tabulated scheme is exactly `Z_hat / Z`. Accuracy is
 therefore a requirement, not a nicety -- unless the per-angle stage is stopped
-from normalising at all, which is what `sequential_exact` does.
+from normalising at all, which is what `sequential_global_retry` does.
 
 How accurate: the full factor moves `<m_top>` by 0.248 GeV, so a fractional
 error `eps` in the slope of `ln Z` leaves `0.25 * eps` GeV behind. Against the
@@ -921,14 +833,14 @@ Two related points fell out:
   exact correction again. A virtuality no pool decay can reach is killed by the
   table itself (`zero_below`), with a 200-draw fail-safe behind it.
 - The `max_wgt_sequential` cache splits: the up-front-mass bounds travel with
-  their tables (and depend on `sequential_exact`), so they get their own file
+  their tables (and depend on `sequential_global_retry`), so they get their own file
   name and a JSON format (`_read_upfront_cache` / `_UPFRONT_CACHE_FORMAT`). The
   file name still carries the spinmode family that wrote it
   (`max_wgt_sequential_offshell...` / `max_wgt_sequential_pa...`), since the
   mass-set weight is a different quantity in each and neither cache may be read
   back for the other.
 
-#### `sequential_exact`: the escape hatch
+#### `sequential_global_retry`: the escape hatch
 
 New option, offshell spinmodes only. The mass stage pays `Z_hat_k`, each slot
 divides it back out, and a **rejected decay trashes the mass set** instead of
@@ -949,7 +861,7 @@ Same 10000 production events, `p p > t t~`, `t > w+ b, w+ > l+ vl`, seed 42,
                         <m(l+ v b)>          <m(l- v~ b~)>        lineshape
     joint            173.2024 +- 0.0318   173.1681 +- 0.0318      --
     sequential + Z   173.1278 +- 0.0319   173.1554 +- 0.0318      chi2/ndf 19.0/22
-    sequential_exact 173.1914 +- 0.0323   173.1906 +- 0.0323      chi2/ndf 10.4/22
+    sequential_global_retry 173.1914 +- 0.0323   173.1906 +- 0.0323      chi2/ndf 10.4/22
 
 Over both resonances that is a shift of -0.044 +- 0.032 GeV for the tabulated
 path and +0.006 +- 0.032 GeV for the exact one, against **-0.248 GeV (-7.8
@@ -1011,11 +923,11 @@ Measured, same 10000 events, before -> after normalising:
 
     C_mass                       17.1  ->  3.09
     mass sets / accepted event   26.2  ->  3.20     (sequential)
-                                104.5  -> 12.79     (sequential_exact)
+                                104.5  -> 12.79     (sequential_global_retry)
     weights above their bound      10  ->  1        (sequential)
-                                   28  ->  3        (sequential_exact)
+                                   28  ->  3        (sequential_global_retry)
     decay phase                  28.7s -> 19.7s     (sequential)
-                                 83.9s -> 31.4s     (sequential_exact)
+                                 83.9s -> 31.4s     (sequential_global_retry)
 
 with the lineshape unchanged, as the constancy argument requires: over both
 resonances the sequential mean moves from 173.1641 to 173.17 and the exact one
@@ -1023,11 +935,11 @@ sits at 173.1877 against joint's 173.1853. Cost: one onshell production matrix
 element per production event, cached under `me_wgt` -- the same attribute, and
 the same quantity, the joint path already caches there.
 
-#### `sequential_joint_angles` (variant A): one bound over all the angles
+#### `two_stage`: one bound over all the angles
 
-Suggested by Olivier. Keep the mass-set stage, but replace the *per-slot*
-accept/reject by a single test on the product of every slot's weight, redrawing
-the whole angle set on a rejection and **keeping the mass set**:
+Keep the mass-set stage, but replace the *per-slot* accept/reject by a single
+test on the product of every slot's weight, redrawing the whole angle set on a
+rejection and **keeping the mass set**:
 
     stage 1   w_mass  = [Tr(rho_off)/|M_prod|^2_on] * jac_reshuffle
                         * prod_k jac_bw_k * prod_k Z_hat_k(m_k)
@@ -1036,7 +948,7 @@ the whole angle set on a rejection and **keeping the mass set**:
 
 This is the same target distribution as the per-slot scheme -- same mass stage,
 same self-normalising angle stage, only the granularity of the test changes --
-and the measurement says so: over four replicas each, variant A gives
+and the measurement says so: over four replicas each, `two_stage` gives
 173.1704 +- 0.0101 and the per-slot scheme 173.1703 +- 0.0062, agreeing to
 0.0001 GeV while their replica scatters are 0.010-0.012. It needs `Z_hat` for
 exactly the same reason the per-slot scheme does: stage 2 redraws to acceptance
@@ -1060,42 +972,45 @@ place. Redrawing one slot would propose from the *feasible* part of the pool,
 making the normalisation stage 2 divides out `Z_k/(1 - q_k(m))` instead of
 `Z_k` -- a different function of the virtuality than the tabulated one, so the
 mass stage's `Z_hat` would no longer compensate it. The same argument applies to
-`sequential_exact`, and both were fixed together.
+`sequential_global_retry`, and both were fixed together.
 
-#### Variant B (`sequential_joint_angles` + `sequential_exact`): dropped
+**A fifth combination was measured and is not offered.** One angle bound *and* a
+mass-set restart on a rejected angle set -- i.e. `two_stage` crossed with
+`sequential_global_retry` -- would make `Z_hat` cancel between the stages and be
+exact whatever the table says. It costs the reuse above (9.25 mass sets per
+accepted event instead of 3.25) and, over four replicas, sat 0.034 GeV below
+joint: the *largest* deviation of any scheme tried, in the one that should have
+been the most exact. The weight-identity check below then cleared its weight
+algebra, so the deviation is a sampling or statistics question and remains
+unexplained -- but the scheme is slower than `two_stage` either way, so it was
+dropped rather than chased, and there is no card spelling for it.
 
-The same single angle bound, but a rejected angle set trashes the mass set. That
-makes `Z_hat` cancel between the stages and the scheme exact whatever the table
-says, and it costs the reuse above (9.25 mass sets per accepted event instead of
-3.25). It was measured and **dropped**: over four replicas it sits 0.034 GeV
-below joint, which is the *largest* deviation of any scheme tried and in the
-scheme that should have been the most exact. That is not understood. Either the
-error model below is wrong or that implementation is; the combination is
-reachable in the code but should not be used until the weight-identity check
-settles it.
+#### The option: one knob, five schemes
 
-#### The option: one knob, four schemes
+The schemes are mutually exclusive alternatives rather than independent
+switches, so they are selected by a single enumerated option:
 
-`sequential_decay`, `sequential_exact` and `sequential_joint_angles` are replaced
-by a single enumerated option -- the schemes are mutually exclusive alternatives,
-not independent switches, and after variant B was dropped the three booleans no
-longer spanned a clean 2x2:
-
-    set unweighting auto | joint | two_stage | sequential | sequential_global_retry
+    set unweighting auto | joint | sequential | sequential_global_retry
+                         | sequential_with_mass
 
     mode                     mass stage   angle test              a rejection redraws
     joint                    --           everything at once      everything
     two_stage                yes          all angles, one bound   the angles only
     sequential               yes          per particle            that particle
     sequential_global_retry  yes          per particle            the virtualities too
+    sequential_with_mass     no           per particle            that particle and its mass
 
-`sequential_decay` survived for a while as a deprecated alias (`True` ->
-sequential, `False` -> joint, warning once), so cards written against the
-earlier revisions of this branch kept working. **It has since been removed
-outright** -- see 13.19; nothing on this branch has been in a release, so there
-are no cards in the wild to protect, and it was a load-time translation with no
-run-time reader. Use `unweighting` directly. `sequential_spin_order` and
-`sequential_debug` keep their names: an ordering and a check, not modes.
+`two_stage` is in the table but **not in the card's advertised values**: section
+12 measured it and it is not the fastest scheme at any multiplicity, so `auto`
+never picks it and it is not offered in the completion or in the "allowed values
+are ..." message (`MadSpinOptions.hidden_unweighting_modes`). An explicit `set
+unweighting two_stage` is still honoured -- it is the one staged scheme whose
+angle stage is a single joint test, which makes it the natural cross-check
+against joint, and the benchmarks and parallel tests still exercise it.
+`sequential_with_mass` is section 11.
+
+`sequential_spin_order` and `sequential_debug` keep their names: an ordering and
+a check, not modes.
 
 **`sequential_exact` was renamed, not kept.** "Exact" advertised a distinction of
 ~0.001 GeV on the top lineshape -- the tabulated factor is good to ~0.5%, and the
@@ -1106,31 +1021,11 @@ difference nobody can measure. `sequential_global_retry` says what the mode does
 and leaves the accuracy statement to the documentation, where it can carry the
 numbers.
 
-**`auto`** (as of this section; **superseded by section 12**, which measured
-the schemes over the decay multiplicity and replaced the four branches below
-with two) resolves once per run, from the number of decaying particles counted
-where `to_decay` is built -- not per event, since the modes carry different
-bounds and one that changed event to event would be testing against the wrong
-ones:
-
-- **one decaying particle -> `joint`**, in every spinmode. Every split
-  degenerates there: the per-particle test *is* the joint test (section 3), and
-  the mass/angle one only moves the same factors between two stages. Nothing to
-  win, so the identity machinery is pure cost.
-- **PA/onshell -> `sequential`**. `two_stage` and `sequential_global_retry` split
-  the accept/reject at the up-front mass draw, which those modes do not have;
-  asked for explicitly they log why and fall back to `sequential`.
-- **madspin/full -> `two_stage` for two, `sequential` from three.** One bound
-  over all the angles is tighter than the product of per-particle bounds, while
-  testing each particle as it is drawn lets a rejection skip the decays not yet
-  drawn. The first wins while there is little to skip, the second as the chain
-  lengthens.
-
-That last line makes `auto` non-joint for madspin/full, where `two_stage` is
-faster than the joint test (3.25 production densities and 5.74 decay MEs per
-event against 4.46 and 8.92) and agrees with it at +0.23 sigma over eight
-replicas. An explicit setting is always honoured, including the degenerate
-single-particle case, so any of the four stays available as a cross-check.
+**`auto` resolves once per run**, not per event: the modes carry different
+bounds, and one that changed event to event would be testing weights against
+the wrong ones. What it resolves *to* is section 12 (measured over the decay
+multiplicity) plus the polarised-production override. An explicit setting is
+always honoured, so any scheme stays available as a cross-check.
 
 #### How to compare these numbers (measurement notes, learned the hard way)
 
@@ -1165,32 +1060,39 @@ Decay phase for the same 10000 production events, `p p > t t~`,
 
     spinmode   scheme                 decay phase   per event
     PA         joint                     9.17 s     3.14 trials -> 6.28 decay ME
-    PA         sequential (default)     11.19 s     1.88 + 3.13 -> 5.01 decay ME
-    madspin    variant A                13.55 s     3.25 mass sets, 5.74 decay ME
+    PA         sequential_with_mass     11.19 s     1.88 + 3.13 -> 5.01 decay ME
+    madspin    two_stage                13.55 s     3.25 mass sets, 5.74 decay ME
     madspin    joint                    14.61 s     4.46 trials -> 8.92 decay ME
 
-So full offshell matrix elements with variant A cost about **1.5x PA-joint**,
-where madspin-joint costs 1.6x, and variant A is **7-9% faster than
+(PA's per-particle scheme was still the one that draws each slot's mass inside
+its own accept/reject when this campaign was run; section 11 named it
+`sequential_with_mass` and built the up-front alternative that replaced it.)
+
+So full offshell matrix elements with `two_stage` cost about **1.5x PA-joint**,
+where madspin-joint costs 1.6x, and `two_stage` is **7-9% faster than
 madspin-joint** (13.06-13.55 s against 14.43-14.61 s over two campaigns).
 
-Two observations about PA, both independent of this work:
+Two observations about PA, both independent of the offshell work:
 
-- **PA sequential is 22% slower than PA joint on this process**, despite drawing
-  fewer decay events (5.01 against 6.28). With `density_keep_jacobian` on, every
-  slot trial calls `_production_jacobian_for` -- an `Event(str(production))` copy
-  and a reshuffle -- so 5.01 production reshufflings per event against joint's
-  3.14. The per-slot decomposition is supposed to pay off as n grows; at n = 2 it
-  does not, and `sequential_decay = auto` makes sequential the default for PA.
-- **PA sequential logged 11 weight overflows** (9 at slot 0, 2 at slot 1) against
-  variant A's 1 and joint's 0. Its per-slot bounds are under-estimated here, so
+- **PA's per-particle scheme is 22% slower than PA joint on this process**,
+  despite drawing fewer decay events (5.01 against 6.28). With
+  `density_keep_jacobian` on, every slot trial calls
+  `_production_jacobian_for` -- an `Event(str(production))` copy and a reshuffle
+  -- so 5.01 production reshufflings per event against joint's 3.14. The
+  per-slot decomposition is supposed to pay off as n grows; at n = 2 it does
+  not. **This is what section 11 fixed**, by giving PA the up-front mass draw:
+  1.95 reshufflings per event, and the decay phase level with joint.
+- **It logged 11 weight overflows** (9 at slot 0, 2 at slot 1) against
+  `two_stage`'s 1 and joint's 0. Its per-slot bounds are under-estimated here, so
   that sample is slightly biased. Worth a look on its own.
 
 #### Where the offshell path stands
 
-`sequential_decay = auto` still routes madspin/full to the joint accept/reject.
-Variant A is now faster than joint on n = 2 and correct as far as the statistics
-can tell, so that default is worth revisiting -- but not before the residual
-below is understood.
+`two_stage` is faster than joint on n = 2 at this sample size and correct as far
+as the statistics can tell. (Section 12 re-measured that at 50000 events, where
+the wider `nb_sigma` margin turns the comparison around and `auto` takes joint
+at n <= 2 offshell; the residual below is what had to be settled first either
+way.)
 
 **Resolved: the residual is statistical, and Z_hat is not the limiting factor.**
 Earlier revisions of this section recorded that every tabulated scheme sat below
@@ -1213,31 +1115,31 @@ more than the table's ~0.5%.
 
 And the lineshape moved the wrong way for a systematic, over four replicas each:
 
-    variant A, 1x probe   173.1704 +- 0.0101    -0.011 +- 0.010   (-1.1 sigma)
-    variant A, 5x probe   173.1985 +- 0.0182    +0.017 +- 0.018   (+0.9 sigma)
+    two_stage, 1x probe   173.1704 +- 0.0101    -0.011 +- 0.010   (-1.1 sigma)
+    two_stage, 5x probe   173.1985 +- 0.0182    +0.017 +- 0.018   (+0.9 sigma)
     joint                 173.1818 +- 0.0024
 
 -- it flipped sign rather than shrinking, and three of the four deep-probe
 replicas sit *above* joint, which retires the "same sign every time" pattern.
-Pooling all eight variant A replicas gives **173.1844 +- 0.0110 against joint's
-173.1818, i.e. +0.003 +- 0.011 (+0.23 sigma)**. Variant A agrees with the joint
+Pooling all eight `two_stage` replicas gives **173.1844 +- 0.0110 against joint's
+173.1818, i.e. +0.003 +- 0.011 (+0.23 sigma)**. `two_stage` agrees with the joint
 accept/reject.
 
 `max_weight_ps_point = 500` is therefore sufficient for the Z table; the deeper
 probe costs 169 s against 76 s per 10000-event run (the probe is fixed setup, so
 it amortises on larger samples) and buys nothing.
 
-**What this leaves open.** Variant B's -0.034 GeV was quoted at "-4.3 sigma" on
-the replica-scatter error model; that significance is not trustworthy. The
-replica scatter itself ranges from 0.005 (joint) to 0.036 (variant A, deep
+**What this leaves open.** The dropped fifth combination's -0.034 GeV was
+quoted at "-4.3 sigma" on the replica-scatter error model; that significance is
+not trustworthy. The
+replica scatter itself ranges from 0.005 (joint) to 0.036 (`two_stage`, deep
 probe) across schemes estimated from four points each -- a ~40% uncertainty on
 the error bar before any comparison is made -- and the two error models
 (naive per-run MC error, and replica scatter) disagree by a factor of three.
 Any future claim at the few-hundredths-of-a-GeV level needs either many more
 replicas or, better, the deterministic check below.
 
-**Done: the weight identity holds (`sequential_debug`).** New option, offshell
-only: on every accepted chain, recompute the joint weight with the joint code --
+**The weight identity holds (`sequential_debug`).** On every accepted chain, recompute the joint weight with the joint code --
 on copies, for the same production event, the same virtualities and the same
 decays -- and compare with the product of the stage weights.
 
@@ -1252,9 +1154,9 @@ the wrong distribution has a ratio that varies chain to chain.
 
 Measured over 2000 accepted chains each:
 
-    variant A            spread 1.71e-07   ratio 1108198261
+    two_stage            spread 1.71e-07   ratio 1108198261
     sequential per-slot  spread 1.55e-07   ratio 1108198255
-    variant B            spread 1.54e-07   ratio 1108198258
+    the dropped fifth    spread 1.54e-07   ratio 1108198258
 
 The spread is float32 epsilon (1.19e-7) -- the density matrices are
 `complex64`, so that is the floor of the arithmetic and not physics -- and the
@@ -1270,11 +1172,11 @@ and that no amount of Monte Carlo could have excluded.
 
 It does not settle the *sampling*, which additionally requires that nothing
 self-normalising is left uncompensated -- the `Z_hat ~ Z` requirement for
-variant A and the per-slot scheme (measured at ~0.5%, far inside the ~12%
-tolerance), automatic for the restart schemes. So variant B's -0.034 GeV is not
-a broken weight. With the weights verified and the error models in the state
+`two_stage` and the per-slot scheme (measured at ~0.5%, far inside the ~12%
+tolerance), automatic for the restart schemes. So the dropped combination's
+-0.034 GeV is not a broken weight. With the weights verified and the error models in the state
 described above, the honest summary is: weights correct, deviation unexplained,
-dropped because it is slower than variant A anyway.
+dropped because it is slower than `two_stage` anyway.
 
 ## 11. PA: the up-front mass draw, and `sequential_with_mass`
 
@@ -1297,12 +1199,14 @@ condition it then divides out, so there is no `Z_k` to tabulate and no
 `sequential_global_retry` used to be refused under PA: they split the
 accept/reject at a mass draw that did not exist there.
 
-It stays the `auto` choice for PA and onshell. The bit-for-bit check below is
-what makes the rename safe.
+It is still available by name, and the bit-for-bit check below is what makes
+the rename safe. It was `auto`'s choice for PA and onshell when this section was
+written; section 12 moved that to `sequential`, for the reasons the end of this
+section gives.
 
 ### `sequential_with_mass` offshell: asked, and the answer is no
 
-The planning revision of this section left open whether the offshell spinmodes
+An earlier revision of this section left open whether the offshell spinmodes
 should offer `sequential_with_mass` too, purely so that both families expose the
 same option set. They cannot, and the obstacle is the one that made
 `_upfront_production` exist in the first place: offshell, `rho_off` depends on
@@ -1658,23 +1562,25 @@ while also paying the mass stage.
 
 ### What this says about `auto`
 
-The current rule is: 1 -> joint; PA/onshell -> `sequential_with_mass`; 2 ->
-`two_stage`; 3+ -> `sequential`. The scan says two of those four branches are
-wrong and one is unnecessary:
+The rule the scan replaced was: 1 -> joint; PA/onshell ->
+`sequential_with_mass`; 2 -> `two_stage`; 3+ -> `sequential`. Two of those four
+branches were wrong and one was unnecessary:
 
-    spinmode         n      current               measured best
+    spinmode         n      before                measured best
     PA / onshell     any    sequential_with_mass  sequential  (1.2x - 3.8x)
     madspin / full   1      joint                 joint       (correct)
     madspin / full   2      two_stage             joint       (1.1x)
     madspin / full   3+     sequential            sequential  (correct)
 
 `two_stage` is not the fastest scheme at any point measured here, in either
-spinmode: joint beats it at n<=2 and `sequential` beats it at n>=3. It remains
-worth keeping as an option -- it is the one staged scheme whose angle stage is a
-single joint test, which makes it the natural cross-check against joint -- but
-it does not earn a branch in `auto`.
+spinmode: joint beats it at n<=2 and `sequential` beats it at n>=3. It is worth
+keeping reachable -- it is the one staged scheme whose angle stage is a single
+joint test, which makes it the natural cross-check against joint -- but it does
+not earn a branch in `auto`, and it is no longer offered in the card's
+advertised values either.
 
-**`auto` now implements the two-line rule** (`_unweighting_mode`):
+**The multiplicity rule `auto` implements** (`_auto_unweighting_mode`) is
+therefore two lines:
 
     PA / onshell     ->  sequential
     madspin / full   ->  joint for n <= 2, sequential from n = 3
@@ -1685,29 +1591,58 @@ way at a smaller sample size -- so that boundary is the one to revisit if a
 process is found where a staged scheme pays off at two decays. The n=1 offshell
 and the n>=3 conclusions are not close and are safe.
 
-What changes for a user who never set `unweighting`: PA and onshell runs move
-from `sequential_with_mass` to `sequential` (faster everywhere measured, at the
-price of the tabulated factor -- section 11 bounds its effect on the top
-lineshape at ~0.0001 GeV); offshell runs with two decaying particles move from
-`two_stage` to `joint`, i.e. back to the historical scheme. Nothing changes for
-offshell runs with one or with three or more decaying particles.
+### A polarised production overrides the multiplicity rule
+
+Measured after this scan, and the one branch of `auto` the scan does not
+describe: when the production process carries a polarisation brace
+(`_production_polarization`), `auto` takes `sequential` at **every**
+multiplicity, offshell included.
+
+The brace restricts the production/decay convolution to a polarisation
+subspace, which peaks the joint weight far below the bound the max-weight scan
+hands it -- and the joint test has no way to recover, because its bound is a
+single number over the whole chain. On `p p > t t~` with both tops decayed
+(n = 2, so the rule above would say joint), trials per accepted event over 500
+events:
+
+    production          joint    sequential
+    t t~ (unpolarised)    3.3       6.1
+    t{+}t~{+}           112         9.1
+    t{+}t~{-}           162         8.4
+
+and at 50000 events, where the max-weight scan is longer and `nb_sigma` larger,
+the joint column rises to 4.05 unpolarised, 204-213 like-helicity and 5800-6300
+opposite-helicity against 8.59 sequential. The gap *widens* with statistics,
+because the bound the joint test must clear keeps growing while the bulk of the
+restricted weight distribution does not.
+
+The asymmetry is what decides it: taking `sequential` where joint would have
+done costs the ~2x of the first row, taking joint where the convolution is
+restricted costs 30-1500x. So the clause fires on any brace in the production
+line -- including one on a particle MadSpin does not decay, which cannot be the
+thing peaking the weight. The other reason it must fire unconditionally is that
+the resolved mode has to be the same at every call site (it names the max-weight
+cache files and picks which bound the accept/reject tests against) while the set
+of decayed pdgs is not known everywhere `_unweighting_mode` is called; a clause
+that consulted it could resolve two ways in one run.
+
+An explicit `set unweighting joint` is still honoured: only `auto` comes
+through here.
 
 ---
 
-## 13. Pure-interference mode -- feasibility assessment
+## 13. Pure-interference mode
 
-**Status: implemented and validated end to end** (section 13.12). This section
-was written as a feasibility assessment before the mode existed; it is kept as
-the derivation, because every design decision below is still the one in the
-code. What changed since it was written is that 13.9's "not implemented" list
-is now empty -- see 13.9 for the final state of the tree.
+**Status: implemented and validated end to end** (13.12, 13.16, 13.17). 13.1
+to 13.9 were written as a feasibility assessment before the mode existed and are
+kept as the derivation, because every design decision in them is still the one
+in the code -- the one exception being the *shape of the output*, which 13.13
+and 13.17 replaced and which is flagged where it appears.
 
-**Verdict as assessed: feasible with caveats, and the caveats are not small.**
-The tensor algebra is clean. The *mode* -- syntax, signed unweighting, zero
-cross-section bookkeeping -- is a structural change to the accept/reject loop,
-is incompatible with the sequential scheme, and produces an LHE file whose
-`<init>` cross-section is zero, which several downstream tools cannot consume.
-All of that held up; the accept/reject rework (13.7b) was indeed the hard part.
+The caveats the assessment listed all held up: the mode is a structural change
+to the accept/reject loop, it is incompatible with the sequential schemes, and
+it produces an LHE file whose `<init>` cross-section is zero, which several
+downstream tools cannot consume. The output rework was indeed the hard part.
 
 The request, verbatim:
 
@@ -1817,9 +1752,9 @@ one wanted and one fatal to a feature we just built:
   every decay slot not yet drawn. Every partial weight in this mode is therefore
   *identically zero*, for every prefix, and there is nothing to unweight
   against. `_partial_density_contraction` and `N_k` collapse. **The
-  pure-interference mode must force `unweighting = joint`** and refuse the
-  sequential / two-stage schemes with a clear error rather than silently
-  producing zero weights and hanging in the redraw loop.
+  pure-interference mode therefore forces `unweighting = joint`**, announcing
+  it once in the log, rather than silently producing zero weights and hanging
+  in the redraw loop.
 
 The same zero shows up in `trace()`: the restricted trace of an interference
 block is exactly zero (test `test_cross_restricted_trace_vanishes`). Since the
@@ -1874,7 +1809,7 @@ Two candidate spellings:
    accepts, so it would need a change in `madgraph_interface`'s process parser
    -- shared code, wide blast radius, and MadSpin is not its only consumer.
    Rejected.
-2. **A dedicated MadSpin-card option** (recommended):
+2. **A dedicated MadSpin-card option**, which is what was built:
 
        set pure_interference t = 0 T          # or: 6 = 0 T
 
@@ -1884,7 +1819,7 @@ Two candidate spellings:
    both sides expressible in the basis; the two sides **disjoint** (an overlap
    re-admits diagonal entries, so the trace stops vanishing and the mode stops
    being "pure interference" -- refuse rather than warn); spinmode is a density
-   one; `unweighting` is not a sequential scheme. `do_decay`'s existing
+   one. (`unweighting` is not validated but forced to `joint`, 13.4.) `do_decay`'s existing
    `InvalidCmd` is then left exactly as it is -- no carve-out needed at all,
    which also keeps the diff away from a file other agents are editing.
 
@@ -1924,11 +1859,19 @@ with the production-side shape wrong.
 
 The fix is to stop redrawing: **draw one decay configuration, accept with
 probability `|wgt|/maxwgt`, and on rejection write nothing and move on.** Then
-the number of kept events per production point is proportional to `Int_p`, each
-carries `+- w_p * BR`, and for any observable `O` the sum over kept events of
-`w_p sign(W) O` estimates the integral of `W(Omega) O(Omega)` -- the
-interference distribution, correctly normalised relative to the parent sample.
-The expected weight sum is the integral of `W`, i.e. zero, as required.
+the number of kept events per production point is proportional to `Int_p`, and
+for any observable `O` the sum over kept events of `sign(W) O` estimates the
+integral of `W(Omega) O(Omega)` -- the interference distribution, correctly
+normalised relative to the parent sample. The expected weight sum is the
+integral of `W`, i.e. zero, as required.
+
+*(The argument above is what the code rests on and is unchanged. Its two
+conclusions about the output are not what shipped: the accepted event's weight
+is `sign(W) * sigma_ref*BR*<|W|>/c`, not `+- w_p*BR` -- see 13.17, which
+derives it and explains why the design note's per-read-event normalisation
+would be off by `M/<|W|>` in an LHE file -- and the accept/reject itself is not
+what `auto` picks, 13.13 having replaced it with a fully weighted output that
+carries `<|W|>` in the weight instead of in the keep rate.)*
 
 This is a different control flow from `while 1:` -- but not an unprecedented
 one: the BR-equalization path in `_unweight_range` (interface_madspin.py:3369)
@@ -1965,8 +1908,10 @@ block. The honest engineering answer:
 * log a loud warning that the output is a signed differential sample and is not
   directly showerable without an externally supplied normalisation.
 
-An option (`set interference_init_cross measured|zero|reference`) is cheap
-insurance if a user needs a showerable file; default `zero` per the request.
+That is what the mode does; the banner note it writes is `<MGPureInterference>`
+and 13.13 lists what ended up in it. There is no option to write a non-zero
+`XSECUP` instead -- once the weights carry `W/c` the file normalises itself
+under `IDWTUP = -4` (13.13), so there is nothing for such an option to buy.
 
 ### 13.8 The statistical check
 
@@ -1978,10 +1923,9 @@ After the loop, with kept weights `w_i` (each `+- w_p * BR`):
                                        # right scale to compare S against
     z     = S / delta
 
-Report `z`, and fail the check when `|z| > nb_sigma` (the card already has
-`nb_sigma`, default 3; 5 is the more usual threshold for an automatic assert and
-is the value I would pick, so that a legitimate 3-sigma fluctuation in a large
-run does not cry wolf).
+Report `z`, and fail the check when `|z|` exceeds 5 -- not the card's `nb_sigma`
+(default 3), so that a legitimate 3-sigma fluctuation in a large run does not
+cry wolf. 13.12 shows a +2.69 turning up in five seeds, which is why.
 
 *Where:* accumulate `sum_w` and `sum_w2` into the stats dict `_unweight_range`
 already returns -- it is picklable and merged additively over the forked shards
@@ -2054,61 +1998,31 @@ and the frame test `test_frame_follows_the_pure_interference_mode`):
   `_apply_production_polarization` produced and returns the trace restriction
   beside it; `_density_basis` carries both and `get_density` attaches both.
 * `_unweighting_mode` forces `joint`.
-* `_frame_boost` stays on for the mode (see 13.10 step 9).
-* `_joint_maxwgt_range` bounds `|w|`; `_unweight_range` accepts on `|w|/maxwgt`
-  with **one** draw and writes nothing on rejection, carrying `wsign` onto
-  `full_evt.wgt` and onto every entry of `parse_reweight()`.
+* **the frame boost stays on for the mode.** The `me_frame` section of section 1
+  established that the polarisation axis must be MG5's, because
+  `set_hel_restriction` is a projection and a projection does not commute with
+  the change of helicity basis a boost induces. A cross restriction is a
+  projection for exactly the same reason -- and it names two helicity *sets*,
+  which only mean something once the axis is fixed -- but the mode's production
+  is unpolarised by construction, so the clauses that switch the boost on for a
+  polarised beam or a production brace would find nothing and leave the momenta
+  in the lab. `pure_interference` is therefore its own clause of
+  `_needs_frame_axis`, beside those two and beside
+  `keep_weight_for_polarization_*`.
+* `_joint_maxwgt_range` bounds `|w|` and measures `c = <W_full>`;
+  `_unweight_range` carries `wsign` onto `full_evt.wgt` and onto every entry of
+  `parse_reweight()`. Which of the two output shapes it writes is
+  `decay_output` (13.13, 13.17, 13.19).
 * `<init>` zeroing plus the `<MGPureInterference>` banner note, and the
   `sum_w` / `sum_w2` / overweight counters with the `z` report in
   `_report_pure_interference`.
 
-**Known boundary:** `fixed_order` is handled (the counter-event group is
-dropped as a unit by the same `continue`, and the sign is applied to every
-member of the group) but is **not validated** -- no fixed-order sample was run
-through the mode.
-
-### 13.10 Implementation plan -- all steps done
-
-1. *(done)* Cross entries in `normalize_hel_restriction` /
-   `_restriction_row_mask`, with the algebra tests.
-2. `hel_restriction_trace` on `DensityMatrix`, defaulting to `hel_restriction`,
-   read by `trace()` and `normalized()`. Behaviour-neutral; one unit test that a
-   cross restriction with a `P u D` trace restriction gives a zero numerator
-   over a non-zero denominator.
-3. `pure_interference` card option, parsing and validation (13.6), feeding
-   `_apply_production_polarization` -> `_density_basis['hel_restriction']` and
-   the new trace restriction. Refuse sequential/two-stage `unweighting`, refuse
-   a non-density spinmode, refuse overlapping sets, cross-check against the
-   banner braces (13.5). Unit-testable with the existing `_Stub` pattern in
-   `TestProductionPolarizationPlumbing` -- no f2py needed.
-4. `abs()` in `_joint_maxwgt_range` and in the accept test, sign carried onto
-   `full_evt.wgt` and onto every entry of `parse_reweight()`. Gated on the mode
-   so unrelated runs are untouched.
-5. Drop-on-reject in `_unweight_range` (13.7b), gated on the mode; suppress the
-   `_apply_accounting` BR rewrite and the `efficiency`-driven `nb_event`
-   rescaling for this mode, since here a low keep-rate is physics, not a
-   correction.
-6. `<init>` zeroing plus the reference-normalisation banner note and warning.
-7. `sum_w` / `sum_w2` in the stats dict and the `z` report.
-8. Validation: steps 1-4 and 7 are unit-testable in-process. Steps 5, 6 and the
-   physics closure test need a working end-to-end MadSpin run -- see 13.12.
-9. **(added during implementation)** The frame boost. #355 established that the
-   polarisation axis must be MG5's `me_frame`, because `set_hel_restriction` is
-   a projection and a projection does not commute with the change of helicity
-   basis a boost induces. Its guard switches the boost on for a polarised beam
-   or a production brace. A cross restriction is a projection for exactly the
-   same reason -- and it names two helicity *sets*, which only mean something
-   once the axis is fixed -- but the mode's production is unpolarised by
-   construction, so that guard would find nothing and leave the momenta in the
-   lab. The clause added is:
-
-       if (self._beampol() is None and not self._production_polarization()
-               and not self._pure_interference()):
-           return None
-
-   A parallel branch factors the same condition into a `_needs_frame_axis()`
-   helper; the `pure_interference` clause belongs in that helper once the two
-   are merged.
+**Known boundary:** `fixed_order` is handled (the sign is applied to every
+member of the counter-event group) but is **not validated** -- no fixed-order
+sample was run through the mode. Note also that `fixed_order` now requires
+`spinmode = onshell` or `onshell_v1`: the modes that reshuffle the production
+onto sampled virtualities refuse it, because only the born member of a group
+would be reshuffled.
 
 ### 13.11 Environment
 
@@ -2445,7 +2359,7 @@ events (`iseed = 4321`), `spinmode = onshell`, `BW_cut = 15`,
 | `z = S / sqrt(sum w^2)` | **`-0.996`** |
 | `mean(w)` | `-1.9555e-02 +- 1.9632e-02`, i.e. `-0.082%` of `sigma_ref` |
 | positive / negative weights | 24918 / 25082 |
-| `mean|w| / sigma_ref` | 0.13007 (0.13011 on an independent 2 000-event run) |
+| `mean\|w\| / sigma_ref` | 0.13007 (0.13011 on an independent 2 000-event run) |
 | trials with a dead weight | 0 |
 
 `mean(w) = 0` is the sample's own cross-section under `IDWTUP = -4`, and it
@@ -2509,17 +2423,11 @@ Caveats:
 
 ### 13.17 The unweighted-up-to-a-sign output -- `decay_output = unweighted`
 
-**Status: implemented and validated end to end.** The fully weighted output of
-13.13 stays the **default**; `set decay_output = unweighted` selects the other
-representation of the same estimator, in which the sample carries exactly two
-weight magnitudes.
-
-> **Option name.** This was originally a separate option,
-> `pure_interference_output`, with its own `weighted`/`unweighted` pair. It has
-> been folded into `decay_output` (13.18, 13.19): one option now answers "does
-> MadSpin unweight?" in both modes, and `decay_output = auto` -- the default --
-> resolves to `weighted` here and to `unweighted` for an ordinary run, which is
-> each mode's own historical default.
+**Status: implemented and validated end to end.** `decay_output = auto` -- the
+default -- resolves to the fully weighted output of 13.13 in this mode; `set
+decay_output unweighted` selects the other representation of the same
+estimator, in which the sample carries exactly two weight magnitudes. Why
+`auto` points that way here and the other way for an ordinary run is 13.19.
 
 **The derivation.** Unweight on `|W|` against any bound `M >= max|W|`, ONE
 decay draw per production event, nothing written on rejection, and give each
@@ -2648,7 +2556,7 @@ fully weighted:
 
 13.16 measured 5.8 / 5.7 / 6.1 by comparing against a different (5x larger)
 reference; this is a direct like-for-like measurement on identical events and
-it agrees. That is why the default stays `weighted`.
+it agrees. That is why `auto` resolves to `weighted` in this mode.
 
 **Unchanged elsewhere.** A run with `pure_interference` unset produces the
 identical 90 368 979-byte file, SHA-256
@@ -2681,8 +2589,9 @@ run: one decay configuration is drawn per production event and kept, with
 
     w = w_prod * BR * W / c
 
-exactly the fully weighted path of 13.13, only with `W` unrestricted. Default
-`unweighted`, i.e. every existing card is untouched.
+exactly the fully weighted path of 13.13, only with `W` unrestricted. `auto`
+resolves to `unweighted` outside `pure_interference`, i.e. every existing card
+is untouched.
 
 **The normalisation needs nothing new.** `c = <W>` is a decay-side constant --
 that is the 13.7b argument, and it is what makes redraw-until-accept unbiased
@@ -2783,7 +2692,8 @@ here the accept/reject redraws and every production event yields an output
 event either way, so the weighted output is strictly noisier per event -- it
 is importance sampling against exact sampling -- and the win is entirely in
 CPU. Which of the two matters depends on whether MadSpin or the parent
-generation is the bottleneck. That is why the default stays `unweighted`.
+generation is the bottleneck. That is why `auto` resolves to `unweighted` for
+an ordinary run.
 
 **Byte-identical with the option off.** The same card without
 `decay_output` (i.e. at the default), run against the base branch and against
@@ -2831,29 +2741,18 @@ Caveats, stated rather than glossed:
 
 ### 13.19 One option: `decay_output`, with `auto`
 
-**Status: implemented; behaviour-preserving by construction, checked against
-the base branch.** 13.17 and 13.18 arrived as two options with the same value
-space and the same question behind them -- *does MadSpin unweight?* --
-answered separately for the interference mode (`pure_interference_output`) and
-for an ordinary run (`decay_output`). They are now one.
+13.17 and 13.18 are two answers to the same question -- *does MadSpin
+unweight?* -- one for the interference mode and one for an ordinary run. One
+option asks it:
 
-* `pure_interference_output` is **removed**. Nothing maps onto it and no
-  deprecated spelling survives: none of this has been in a release, so there
-  are no cards in the wild to protect.
-* `decay_output` gains **`auto`**, and `auto` is the default.
-* `auto` resolves to `weighted` when `pure_interference` is set and to
-  `unweighted` otherwise (`_decay_output`).
+    set decay_output auto | unweighted | weighted
 
-**Why those two directions, and why this preserves behaviour exactly.** The
-old defaults were `decay_output = unweighted` and
-`pure_interference_output = weighted`, and each mode saw only its own option
-(`decay_output` warned and stepped aside under `pure_interference`). So the
-pair (ordinary run, interference run) had exactly the resolved defaults
-(`unweighted`, `weighted`) -- which is what `auto` now computes. A card that
-does not mention either option therefore lands on the same path as before, in
-both modes.
+* `auto` is the default, and resolves to `weighted` when `pure_interference` is
+  set and to `unweighted` otherwise (`_decay_output`).
+* an explicit value governs in **both** modes: under `pure_interference` it
+  chooses that mode's output shape (13.17) rather than stepping aside.
 
-They point opposite ways for a reason rather than by accident. The ordinary
+**Why the two directions.** They point opposite ways for a reason. The ordinary
 run writes one event per production event either way and its accept/reject is
 the *exact* sampler, so unweighting is the safe default and the weighted path
 buys CPU at the cost of a weighted file. The interference mode has no exact
@@ -2862,31 +2761,21 @@ zero by construction -- and unweighting on `|W|` there keeps only a few
 percent of the production events, for ~6x the variance on exactly the
 observables the mode exists to measure (13.17).
 
-**The step-aside is gone.** `_validate_weighted_decay` used to warn and return
-under `pure_interference`, on the grounds that the other option governed
-there. There is no other option now, so it governs. What the step-aside was
-avoiding was a *contradiction* between two live options, not a code hazard:
-the two flags reach the worker separately (`weighted_decay` and
-`pure_interference_unweighted` in the run context) and `_weighted_decay` still
-returns False under `pure_interference`, because the interference mode reaches
-the same "keep every trial" branch by its own route, with a signed `W` and a
-zeroed `<init>`. Only the *source* of the interference mode's choice changed.
+Internally the interference mode still reaches the "keep every trial" branch by
+its own route -- with a signed `W` and a zeroed `<init>` -- so `_weighted_decay`
+returns False under `pure_interference`; only the *source* of that mode's
+choice is `decay_output`.
 
 **The two spinmode restrictions compose.** `decay_output = weighted` needs a
 density spinmode (there is no `W` otherwise) and so does `pure_interference`,
 so the constraints never disagree -- but a card that violates both would get
 two refusals in a row, the less useful one first. `_validate_pure_interference`
-is therefore now called *before* `_validate_weighted_decay`, and both are
-called before the `if self._density_spinmode():` branch. `decay_output` is
-then silent under `pure_interference`: the mode announces its own output shape,
-spinmode requirement included.
-
-That reordering fixes a **pre-existing gap** found on the way:
-`_validate_pure_interference` was called only *inside* the density branch, so
-`set spinmode none` together with `set pure_interference ...` reached no
-validation at all and the mode was silently inert while the card asked for it.
-It now raises, which is the error that was always intended (the raise existed;
-it was unreachable).
+is therefore called *before* `_validate_weighted_decay`, and both are called
+before the `if self._density_spinmode():` branch, so that
+`set spinmode none` together with `set pure_interference ...` raises rather
+than leaving the mode silently inert. `decay_output` is then silent under
+`pure_interference`: the mode announces its own output shape, spinmode
+requirement included.
 
 **`auto` announces itself** through `_announce_decay_output`, on the same
 `_log_once` convention as `_announce_mode`:
@@ -2894,20 +2783,3 @@ it was unreachable).
     MadSpin: decay_output = unweighted (auto, ordinary run)
     MadSpin: decay_output = weighted (auto, pure_interference is set)
     MadSpin: decay_output = weighted (set explicitly)
-
-**Removed alongside it**, for the same "not in a release" reason, two other
-deprecated spellings that were pure load-time translations with no run-time
-reader: `sequential_decay` (mapped onto `unweighting`: `True` ->
-`sequential`, `False` -> `joint`) and `keep_weight_for_polarization` (the
-singular alias that set both `keep_weight_for_polarization_vector` and
-`_fermion`). The per-species options and the refusal of
-`keep_weight_for_polarization_*` under `pure_interference` are untouched.
-
-**The one behaviour change, stated rather than glossed.** A card that combined
-`set pure_interference ...` with an *explicit* `set decay_output unweighted`
-used to get the fully weighted interference output (the explicit
-`decay_output` was warned about and ignored, and `pure_interference_output`
-kept its `weighted` default); it now gets the unweighted-up-to-a-sign output.
-That is the intended meaning of the unification -- the option no longer steps
-aside -- and it is the only combination whose resolved behaviour differs. A
-card that does not set `decay_output` is unaffected in either mode.
