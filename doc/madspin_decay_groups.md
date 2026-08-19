@@ -1,16 +1,15 @@
 # Supporting the `@` grouping tags in the density spin modes
 
-Design note. Written against `madspin_density` (275462e52) with an eye on the
-sequential/two-stage unweighting schemes of PR #334
-(`claude/madspin-sequential-offshell-rate-factor`, 6c051b6d4).
+Design note, written against `madspin_density` with an eye on the staged
+`unweighting` schemes of `doc/madspin_sequential_plan.md`.
 
 > **Status.** Sections 3 and 4.1-4.3 are implemented: the density modes
 > (`PA`, `onshell`, `madspin`/`full`) honour the tags for the rectangular card
 > shape described in section 4.6, and the joint accept/reject is forced while
-> they do. Section 4.4 (per-group bounds and `Z_k` tables, so the sequential and
-> two-stage schemes keep working) is **not** implemented and is what section 5
-> calls structural. Everything outside that shape still warns and falls back to
-> the ungrouped behaviour.
+> they do. Section 4.4 (per-group bounds and `Z_k` tables, so the staged
+> `unweighting` schemes keep working) is **not** implemented and is what
+> section 5 calls structural. Everything outside that shape still warns and
+> falls back to the ungrouped behaviour.
 
 ## 1. What the tags mean and where they work
 
@@ -223,13 +222,12 @@ group). That is a different data structure and a different correctness argument,
 and it is the piece I would carve out of a first implementation (refuse groups
 together with mixed final states, and say so).
 
-### 4.4 The sequential / two-stage unweighting (structural)
+### 4.4 The staged `unweighting` schemes (structural)
 
 This is where the cost is.
 
 * **Per-slot bounds.** `get_sequential_maxwgt`
-  ([interface_madspin.py:3878 on PR #334](../MadSpin/interface_madspin.py))
-  returns a flat `maxwgts` list indexed by position in the decay ordering, built
+  ([interface_madspin.py](../MadSpin/interface_madspin.py)) returns a flat `maxwgts` list indexed by position in the decay ordering, built
   from one probe vector per production event. Under groups each slot's weight
   distribution depends on the group, so the bound vector becomes one per group:
   `|slots| x |groups|` numbers, and `_combine_maxwgt` needs `|groups|` separate
@@ -240,8 +238,8 @@ This is where the cost is.
   group (rather than per event) is a change to the scan loop, not a parameter.
 
 * **`Z_k(m)` tables.** `_z_slot_keys`
-  ([interface_madspin.py:4400 on PR #334](../MadSpin/interface_madspin.py))
-  keys the offshell rate factor by `<pdg>_<occurrence>`, with the docstring's
+  ([interface_madspin.py](../MadSpin/interface_madspin.py)) keys the offshell
+  rate factor by `<pdg>_<occurrence>`, with the docstring's
   justification that "slots of one pdg are consecutive and in production order,
   which is also how `_draw_one_decay` picks a decay file". That justification is
   exactly what groups break: the slot no longer determines the channel, the
@@ -262,6 +260,13 @@ This is where the cost is.
 * **The joint scheme needs none of this.** A single bound over the whole chain
   already covers every group; the only cost is acceptance, since the bound is
   set by the loudest group.
+
+### 4.5 `fixed_order`
+
+`fixed_order` forces the joint accept/reject and processes event *groups*
+(counter-events) that must all decay consistently. A per-event group draw must be
+made once per event group, not once per event. Small, but easy to get wrong and
+worth an explicit test.
 
 ### 4.6 The shape that is accepted (implemented)
 
@@ -296,13 +301,6 @@ Implemented in `_decay_group_layout` (card only), `_validate_decay_groups`
 (against the production events) and `_resolve_decay_groups` (mode, `fixed_order`,
 and the conversion to pdg keys).
 
-### 4.5 `fixed_order`
-
-`fixed_order` forces the joint accept/reject and processes event *groups*
-(counter-events) that must all decay consistently. A per-event group draw must be
-made once per event group, not once per event. Small, but easy to get wrong and
-worth an explicit test.
-
 ## 5. Contained or structural?
 
 **Structural**, with a contained subset.
@@ -314,25 +312,22 @@ worth an explicit test.
 | BR for the plain (one parent per pdg) case | contained — **done** |
 | groups x positional rule for identical parents | **done**: inside a group the positional rule applies unchanged, so `p p > t t t~ t~` works |
 | BR equalisation across mixed final states (`drop_prob_per_pdg`) | not contained — **refused**, with a reason |
-| per-group bounds and `Z_k` tables in sequential/two-stage | **structural — not done.** The joint accept/reject is forced instead, and `sequential_accept_reject` raises if it is ever reached with groups |
+| per-group bounds and `Z_k` tables in the staged schemes | **structural — not done.** The joint accept/reject is forced instead, and `sequential_accept_reject` raises if it is ever reached with groups |
 | `fixed_order` event groups | contained, easy to get wrong — **refused** for now |
 
-Rough effort: a joint-only implementation (density modes, `unweighting = joint`,
-refusing groups with mixed final states and with several identical parents) is a
-few hundred lines plus tests — call it a few days. Extending it to the
-sequential and two-stage schemes roughly doubles that and adds a validation
-campaign, because the bias it can introduce is a badly measured bound for a rare
-group, which is invisible in a cross-section comparison and only shows up in a
-lineshape or in the overflow counter. A week to two, end to end.
+What the remaining row would cost: roughly twice the joint-only
+implementation, plus a validation campaign, because the bias it can introduce is
+a badly measured bound for a rare group -- invisible in a cross-section
+comparison, and visible only in a lineshape or in the overflow counter.
 
-## 6. A cheaper middle option
+## 6. The middle option, which is what landed
 
-Implement groups for the joint scheme only, and have `_unweighting_mode` fall
+Groups are implemented for the joint scheme only, and `_unweighting_mode` falls
 back to `joint` when groups are declared — the same way it already falls back
 for `fixed_order` and for non-density spin modes, and with the same one-line
 announcement. That gets the feature, keeps the tabulated machinery untouched,
-and costs the user only acceptance. It also means the per-group bound question
-can be answered later, with a working feature to measure against.
+and costs the user only acceptance. It also leaves the per-group bound question
+answerable later, with a working feature to measure against.
 
 ## 7. And the honest comparison
 
@@ -345,18 +340,12 @@ this feature — it is the same sample**, up to:
    `prod_k Gamma_{k,g}`), and
 2. having to concatenate two LHE files.
 
-That is worth weighing before spending the week. The strongest argument *for*
-doing the work is not physics reach but ergonomics and error-proneness: the
-normalisation step is exactly the sort of thing users get wrong silently. The
-strongest argument against is that the same week spent on the sequential
-schemes' per-slot bounds buys more.
+So the argument *for* doing the work was never physics reach but ergonomics and
+error-proneness: the normalisation step is exactly the sort of thing users get
+wrong silently.
 
-Recommendation as first written: ship the warning, document the two-run recipe,
-and treat full support as optional — and if it is taken up, do section 6 first.
-
-That is what happened. Section 6 is what landed: the density modes honour the
-tags for the rectangular shape of section 4.6 and force the joint accept/reject
-while they do. Measured on `p p > t t~`, 2000 events, the card of section 1:
+Section 6 is what landed: the density modes honour the tags for the rectangular
+shape of section 4.6 and force the joint accept/reject while they do. Measured on `p p > t t~`, 2000 events, the card of section 1:
 
 | mode | BR | (W,W) categories |
 |---|---|---|
@@ -372,6 +361,53 @@ The residual gap to `madspin_v1`'s 0.29635 is not from the grouping: it is the
 pre-existing difference between how the two paths measure the partial widths,
 and it shows in the ungrouped runs too (`0.7529 = (BR_l + BR_h)^2` with the same
 widths).
+
+### 7.1 The same sample — measured
+
+`p p > t t~`, 20000 production events, decayed four times off the *same*
+production file: the grouped card in one run, each group alone in a dedicated
+run, and the grouped card under `madspin_v1`. The two dedicated runs decayed the
+same events, so the reference is built pairwise — for production event *i*, take
+`dedic1[i]` with probability `p_1 = sigma_1/(sigma_1+sigma_2)` and `dedic2[i]`
+otherwise. That is by construction the mixture the grouped run draws, on
+identical production kinematics, so anything left over is the grouping itself.
+
+| | sigma (pb) |
+|---|---|
+| dedicated 1 (`t > l+ nu`, `t~ > j j`) | 71.26739 |
+| dedicated 2 (`t > j j`, `t~ > l- nu`) | 71.24537 |
+| **sum** | **142.51276** |
+| grouped, one run | 142.54946 &nbsp;&nbsp; ratio **1.000258** |
+| `madspin_v1` | 149.48100 &nbsp;&nbsp; ratio 1.048896 |
+
+The grouped run also reports the group shares as `@1 = 0.4999, @2 = 0.5001`
+against the `0.50008` the two dedicated cross sections imply.
+
+Means, grouped against the merged reference (`cos*` is the child's angle in its
+W rest frame against the W direction in its top's rest frame — the spin
+analyser; `prod` is the ttbar spin-correlation handle):
+
+| | grouped | merged | pull |
+|---|---|---|---|
+| `cos*_lep` | -0.14628 | -0.14162 | -0.9 |
+| `cos*_down` | -0.13923 | -0.14408 | +1.0 |
+| `cos*_lep · cos*_down` | 0.01894 | 0.01972 | -0.3 |
+| `dphi(l, d)` | 1.74943 | 1.75194 | -0.3 |
+| `pT(lepton)` | 51.458 | 51.525 | -0.2 |
+| `pT(leptonic top)` | 120.235 | 120.254 | -0.0 |
+| `m(leptonic top)` | 173.192 | 173.184 | +0.3 |
+| lepton-from-top fraction | 0.4996 | 0.5001 | -0.1 |
+
+Two-sample Kolmogorov-Smirnov on the same seven distributions: `D` between
+0.0027 and 0.0081, `p` between 0.53 and 1.00. Nothing distinguishes them.
+
+The 2.6e-4 on the cross section is the two sides measuring the same partial
+widths in independent MG5 integrations, not a bias. The 4.9% against
+`madspin_v1` is the pre-existing difference already noted above: the density
+path integrates the 3-body `t > b f f'` and gets `Gamma_lep/Gamma_t = 0.21705`
+where the naive `Gamma_t x BR(W)` would give 2/9 = 0.22222, the Breit-Wigner
+being truncated by `bwcutoff` and suppressed below threshold. It is 2.3% per
+leg, hence 4.7% on the product, and it is there in the ungrouped runs too.
 
 ### 7.2 The same again with two parents per pdg — `p p > t t~ t t~`
 
@@ -431,27 +467,21 @@ measurable. Writing the same group as a standalone card two ways:
 The old plain `n!` would have put that ratio at 2. Two code paths, one of which
 has no assignment factor in it, agreeing to 9e-4.
 
-### 7.3 PA, and `sequential_decay`
-
-> **Names, since this was written.** `sequential_decay` was replaced by
-> `unweighting` and then removed outright (see `madspin_sequential_plan.md`
-> 11 and 13.19). Read `sequential_decay True` below as `unweighting
-> sequential` and `sequential_decay False` as `unweighting joint`; the log
-> line now ends `(unweighting ignored)`. The runs recorded here were made with
-> the old spelling and are left as they were.
+### 7.3 PA, and the `unweighting` fallback
 
 Grouping forces the joint accept/reject (section 4.1), so both need checking:
 that the fallback happens, and that it costs nothing but efficiency.
 
-**The fallback fires and is a no-op.** `PA` (whose `sequential_decay` auto
-default is on) and `madspin` with `sequential_decay True` both log
+**The fallback fires and is a no-op.** `PA` (where `unweighting = auto` resolves
+to a per-particle scheme) and `madspin` with an explicit `set unweighting
+sequential` both log
 
 ```
 MadSpin: the decay lines are grouped ('@' tags), keeping the joint
-accept/reject (sequential_decay ignored)
+accept/reject (unweighting ignored)
 ```
 
-and `set sequential_decay True` on a grouped card produces event records
+and `set unweighting sequential` on a grouped card produces event records
 *byte-identical* to the same card run at the default -- the option is read,
 overridden, and changes nothing.
 
@@ -472,80 +502,41 @@ comparisons — three land at 2.0-2.7 sigma and none of them reproduces at anoth
 seed, which is what statistics looks like and not what a bias looks like. Every
 KS is above 0.01.
 
-**A pre-existing bias in `sequential_decay`, found on the way.** The first
-PA/sequential comparison put `m(top)` at 7.8 sigma, and it is not the grouping.
+**A pre-existing lineshape bias, found on the way -- since fixed.** The first
+PA/sequential comparison put `m(top)` at 7.8 sigma, and it was not the grouping.
 Taking one *ungrouped* card, the same production events, and changing nothing
-but the accept/reject:
+but the accept/reject, on the tree as it then stood:
 
 | `decay t > w+ b, w+ > l+ vl` + `decay t~ > w- b~, w- > j j` | mean `m(top_lep)` |
 |---|---|
-| `sequential_decay False` (joint) | 173.16870 |
-| `sequential_decay True` | 172.94647 |
+| `unweighting joint` | 173.16870 |
+| `unweighting sequential` | 172.94647 |
 | | **7.0 sigma**, KS `p = 0.0000` |
 
-Every angular observable agrees between the two (all within 1.0 sigma); only the
-virtuality moves, and it moves *down*. That is the signature the offshell rate
-factor `Z_k` exists to remove: the per-slot stage redraws each decay to
-acceptance, which divides `E[w_k | m] = Z_k(m)` out of the accepted mass sets, so
-the lineshape relaxes towards the Breit-Wigner instead of the offshell one --
-and since the running width grows with `m`, dropping `Z_k` pulls the mean low.
-`PA` shows the same effect at 2.1 sigma, where there is no `Z_k` to lose but the
-per-slot mass redraw normalises itself the same way.
+Every angular observable agreed between the two (all within 1.0 sigma); only the
+virtuality moved, and it moved *down*. That is the signature of the missing
+offshell rate factor `Z_k`: the per-slot stage redraws each decay to acceptance,
+which divides `E[w_k | m] = Z_k(m)` out of the accepted mass sets, so the
+lineshape relaxes towards the Breit-Wigner instead of the offshell one -- and
+since the running width grows with `m`, dropping `Z_k` pulls the mean low. `PA`
+showed the same effect at 2.1 sigma, where there is no running width to lose but
+the per-slot mass redraw normalises itself the same way.
 
-So on this branch `sequential_decay True` under `madspin` is biased in the top
-lineshape, independent of the grouping, and PR #334's `Z_k` tables are what fix
-it. It is also an argument that forcing joint for grouped cards costs nothing
-here: the joint path is the unbiased one.
+**The tabulated `Z_k` closed it**, and the closure is measured in
+`madspin_sequential_plan.md`: section 10 ("A/B after the fix") puts the offshell
+residual at **-0.022 +- 0.024 GeV** against the **-0.248 GeV (-7.8 sigma)** that
+was there before, and section 11 measures the PA factor directly by forcing
+`_zhat` to 1 (**-0.039 +- 0.016 GeV**, recovered to +0.009 +- 0.015 when it is
+restored). So the sequential schemes are no longer biased in the top lineshape,
+and the comparisons above are a record of why the tables exist rather than a
+live caveat.
+
+What it does *not* change is the argument for forcing joint on grouped cards:
+the tables are keyed per slot, not per (slot, group), which is exactly section
+4.4.
 
 ## 8. And the honest comparison, still
 
 Section 4.4 remains open, and with it the argument above: two runs plus
 `set cross_section` still produce the same sample, so what this bought is
 ergonomics, not reach.
-
-### 7.1 The same sample — measured
-
-`p p > t t~`, 20000 production events, decayed four times off the *same*
-production file: the grouped card in one run, each group alone in a dedicated
-run, and the grouped card under `madspin_v1`. The two dedicated runs decayed the
-same events, so the reference is built pairwise — for production event *i*, take
-`dedic1[i]` with probability `p_1 = sigma_1/(sigma_1+sigma_2)` and `dedic2[i]`
-otherwise. That is by construction the mixture the grouped run draws, on
-identical production kinematics, so anything left over is the grouping itself.
-
-| | sigma (pb) |
-|---|---|
-| dedicated 1 (`t > l+ nu`, `t~ > j j`) | 71.26739 |
-| dedicated 2 (`t > j j`, `t~ > l- nu`) | 71.24537 |
-| **sum** | **142.51276** |
-| grouped, one run | 142.54946 &nbsp;&nbsp; ratio **1.000258** |
-| `madspin_v1` | 149.48100 &nbsp;&nbsp; ratio 1.048896 |
-
-The grouped run also reports the group shares as `@1 = 0.4999, @2 = 0.5001`
-against the `0.50008` the two dedicated cross sections imply.
-
-Means, grouped against the merged reference (`cos*` is the child's angle in its
-W rest frame against the W direction in its top's rest frame — the spin
-analyser; `prod` is the ttbar spin-correlation handle):
-
-| | grouped | merged | pull |
-|---|---|---|---|
-| `cos*_lep` | -0.14628 | -0.14162 | -0.9 |
-| `cos*_down` | -0.13923 | -0.14408 | +1.0 |
-| `cos*_lep · cos*_down` | 0.01894 | 0.01972 | -0.3 |
-| `dphi(l, d)` | 1.74943 | 1.75194 | -0.3 |
-| `pT(lepton)` | 51.458 | 51.525 | -0.2 |
-| `pT(leptonic top)` | 120.235 | 120.254 | -0.0 |
-| `m(leptonic top)` | 173.192 | 173.184 | +0.3 |
-| lepton-from-top fraction | 0.4996 | 0.5001 | -0.1 |
-
-Two-sample Kolmogorov-Smirnov on the same seven distributions: `D` between
-0.0027 and 0.0081, `p` between 0.53 and 1.00. Nothing distinguishes them.
-
-The 2.6e-4 on the cross section is the two sides measuring the same partial
-widths in independent MG5 integrations, not a bias. The 4.9% against
-`madspin_v1` is the pre-existing difference already noted above: the density
-path integrates the 3-body `t > b f f'` and gets `Gamma_lep/Gamma_t = 0.21705`
-where the naive `Gamma_t x BR(W)` would give 2/9 = 0.22222, the Breit-Wigner
-being truncated by `bwcutoff` and suppressed below threshold. It is 2.3% per
-leg, hence 4.7% on the product, and it is there in the ungrouped runs too.

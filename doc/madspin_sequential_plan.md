@@ -2353,7 +2353,7 @@ events (`iseed = 4321`), `spinmode = onshell`, `BW_cut = 15`,
 | `z = S / sqrt(sum w^2)` | **`-0.996`** |
 | `mean(w)` | `-1.9555e-02 +- 1.9632e-02`, i.e. `-0.082%` of `sigma_ref` |
 | positive / negative weights | 24918 / 25082 |
-| `mean|w| / sigma_ref` | 0.13007 (0.13011 on an independent 2 000-event run) |
+| `mean\|w\| / sigma_ref` | 0.13007 (0.13011 on an independent 2 000-event run) |
 | trials with a dead weight | 0 |
 
 `mean(w) = 0` is the sample's own cross-section under `IDWTUP = -4`, and it
