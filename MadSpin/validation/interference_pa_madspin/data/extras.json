@@ -1,0 +1,77 @@
+{
+ "integration": {
+  "run_dir_exists": true,
+  "decayed_path": "/private/tmp/claude-503/-Users-omattelaer-Documents-git-workspace-madgraph5--claude-worktrees-stoic-margulis-e3f6ec/cbbd487d-6d4b-45c1-b4cb-c882ba1dd911/scratchpad/pams_adda6168_full/prod/Events/pa_integration_decayed_1/unweighted_events.lhe.gz",
+  "decayed_exists": true,
+  "production_run_untouched": true,
+  "n_events": 2000,
+  "has_pi_block": true,
+  "xsecup": 0.0,
+  "z": "+0.1552",
+  "particles_first_event": 12
+ },
+ "fixedorder": {
+  "spinmode": "PA",
+  "what": "pure_interference ON",
+  "exists": true,
+  "groups": 2000,
+  "members_min": 2,
+  "members_max": 2,
+  "particles_per_position": {
+   "0": [
+    4
+   ],
+   "1": [
+    4
+   ]
+  }
+ },
+ "fo_ctrl_onshell": {
+  "spinmode": "onshell",
+  "what": "pure_interference OFF",
+  "exists": true,
+  "groups": 2000,
+  "members_min": 2,
+  "members_max": 2,
+  "particles_per_position": {
+   "0": [
+    12
+   ],
+   "1": [
+    4
+   ]
+  }
+ },
+ "fo_ctrl_PA": {
+  "spinmode": "PA",
+  "what": "pure_interference OFF",
+  "exists": true,
+  "groups": 2000,
+  "members_min": 2,
+  "members_max": 2,
+  "particles_per_position": {
+   "0": [
+    4
+   ],
+   "1": [
+    4
+   ]
+  }
+ },
+ "fo_ctrl_madspin": {
+  "spinmode": "madspin",
+  "what": "pure_interference OFF",
+  "exists": true,
+  "groups": 2000,
+  "members_min": 2,
+  "members_max": 2,
+  "particles_per_position": {
+   "0": [
+    12
+   ],
+   "1": [
+    4
+   ]
+  }
+ }
+}
