@@ -18,10 +18,11 @@ sample (`data/max_wgt_sequential_pa.json`, `data/logs/`), which logged
 
 ## 0. The answer, in one paragraph
 
-**`<w | production event>` is not a constant.** It is flat to 0.1 % over 95 % of
-the sample and then falls to **-5.8 %** around `sqrt(shat) = 349 GeV` and
-**diverges** as `sqrt(shat) -> 2 m_t`: `+19 %` at 346.5 GeV, `+124 %` at
-346.1 GeV, without bound, like `1/beta_t`. Over 6000 production events the
+**`<w | production event>` is not a constant.** It is flat to within 0.2 % over
+the 80 % of the sample above 400 GeV, and 95 % of production events sit within
+1 % of the global mean -- and then it falls to **-5.8 %** around
+`sqrt(shat) = 349 GeV` and **diverges** as `sqrt(shat) -> 2 m_t`: `+19 %` at
+346.5 GeV, `+124 %` at 346.1 GeV, without bound, like `1/beta_t`. Over 6000 production events the
 event-to-event spread is `0.95 %` rms against a `0.053 %` Monte Carlo error --
 eighteen times the noise -- with 4.8 % of events beyond 1 % and 0.4 % beyond
 5 %. Two independent measurements agree to 0.08 %.
@@ -36,7 +37,7 @@ around. Redraw-until-accept divides `A_e = <w|e>` out whatever bound it uses, so
   the answer to the constancy question is;
 * **neither A nor B nor C fixes the bias that the non-constancy causes**, which
   is a *between-event* normalisation, not a within-event shape. Fixing that
-  needs a fourth thing: carrying `A_e` on the event weight (section 6). For a
+  needs a fourth thing: carrying `A_e` on the event weight (section 5). For a
   `2 -> 2` production `A_e` is an exact two-dimensional quadrature costing
   3.3 ms per event, because the reshuffling jacobian is analytic there
   (section 3).
@@ -123,9 +124,9 @@ The shape, from the quadrature (exact, no Monte Carlo):
 
 So the honest answer has three parts, and the nuance is the point:
 
-1. **Constant to 0.1 % for 90 % of the sample** (everything above ~390 GeV).
-   For those events a single global `<w>` is exactly right, and the earlier
-   probe's global 0.955 is their number.
+1. **Constant to 0.2 % for the 80 % of the sample above 400 GeV** (and to
+   0.06 % above 450). For those events a single global `<w>` is exactly right,
+   and the earlier probe's global 0.955 is their number.
 2. **A 5-6 % deficit** between 348 and 355 GeV (about 2 % of the sample) --
    `A_e` is *smaller* there, so redraw-until-accept *over*-populates those bins.
 3. **An unbounded excess in the last GeV**: `A_e` diverges like `1/beta_t` as
