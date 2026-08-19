@@ -5040,6 +5040,39 @@ class TestPAUpFrontMass(unittest.TestCase):
             else:
                 self.assertEqual(counts['jacobian'], counts['trial'])
 
+    def test_which_events_are_counted_against_the_mass_stage_bound(self):
+        """The end-of-run report's two columns count production events that
+        *have* a mass stage: the up-front schemes, and there whichever family
+        drew a virtuality up front.
+
+        The gate used to be ``draw_mass``, which is the PA half of the
+        condition ``_upfront_production`` actually fills ``slot_mass`` under
+        (``offshell or draw_mass``). That put the offshell spinmodes in neither
+        column -- so an offshell run said nothing at all about which bound its
+        mass stage was using -- and let ``sequential_with_mass``, which is not
+        an up-front scheme and never reads ``mass_bound``, announce one.
+
+        The stub is PA with a stubbed ``_mass_stage_bound`` returning None, so
+        the fallback column is the one that moves; ``TestPerEventMassBound``
+        covers the bound itself.
+        """
+        import random
+        for unweighting, counted in (('sequential', True),
+                                     ('sequential_with_mass', False)):
+            stub, rho, pools, production, evt_decayfile = self._fixture(
+                                                    unweighting=unweighting)
+            maxwgts, _, _, _ = self._bounds(stub, rho, pools)
+            if unweighting == 'sequential_with_mass':
+                maxwgts = maxwgts[1:]
+            random.seed(11)
+            stats = collections.defaultdict(int)
+            for _ in range(5):
+                stub.sequential_accept_reject(production, evt_decayfile,
+                                              maxwgts, 10, stats=stats)
+            got = (stats['nb_mass_bound_global'], stats['nb_mass_bound_event'])
+            self.assertEqual(got, (5, 0) if counted else (0, 0),
+                             '%s counted %s' % (unweighting, (got,)))
+
 
 class TestSequentialPoolLadder(unittest.TestCase):
     """_sequential_pool_ladder / _sequential_active: how many decay events a

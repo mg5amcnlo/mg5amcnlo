@@ -3036,11 +3036,96 @@ The probe still measures `maxwgts[0]`, and it is still what the mass stage uses
 when the per-event bound does not apply:
 
 * the offshell spinmodes (`madspin`/`full`), whose `w_mass` carries
-  `Tr(rho_off)/|M_prod|^2_on`;
+  `Tr(rho_off)/|M_prod|^2_on` -- see the next subsection, which is why it is
+  not a gap waiting to be filled;
 * a production event with an onshell propagator (status 2), where
   `reshuffle_production` folds in a `reshuffle_decay` jacobian per sub-decay;
 * a window that does not fit (`sum` of the minima above `sqrt(shat)`, or a
   budget below a window's own floor);
 * a jacobian that is infeasible or not finite at the corner.
 
-The end-of-run report says how many production events took each path.
+The end-of-run report says how many production events took each path -- for
+every up-front-mass run, offshell included. (Until this was fixed the counters
+and the announcement were gated on `draw_mass`, which is the *PA* half of "this
+event has a mass stage": the offshell spinmodes appeared in neither column and
+said nothing, while `sequential_with_mass` -- not an up-front scheme at all, and
+whose `mass_bound` is dead code -- announced a bound it does not use.)
+
+### The offshell spinmodes: measured, and left alone
+
+`Tr(rho_off)/|M_prod|^2_on` has no cheap maximum, so the exact construction
+above does not extend. The obvious partial bound does:
+
+    C_e  =  J(low corner of the windows)_e  x  max_sample[ everything else ]
+
+per-event and provable in the first factor, run-level in the rest; still a
+bound, since it is a product of maxima over non-negative factors; and tighter
+than today's global bound on every event whose `J_corner` is below the
+sample-wide worst. **It is worth 2 %, and the measurement says so before any of
+it is built.**
+
+`p p > t t~` at 6.5+6.5 TeV, 10 000 production events, both tops to `e nu b`,
+`BW_cut = 15`, `spinmode = madspin`, `unweighting = sequential`. Offline probe
+on the *run's own* production events -- 200-400 **free** mass sets each through
+`_upfront_production`, 3.90e6 in total, the run's own `ms_dir` cache, with the
+weight
+
+    w_mass = R . J . prod_s jac_BW_s . prod_s Zhat_s ,   R = Tr(rho_off)/|M_prod|^2_on
+
+kept factorised. `eps_m = mean_e(C_e/A_e)`, with `A_e` the event's mean weight
+over its free draws (infeasible sets counted as zero, as redraw-until-accept
+does). The estimator reproduces the runs' own log line: it predicts **3.06**
+for the shipped offshell bound and the run reports **3.06**, and **1.400** for
+the shipped PA per-event bound against a reported **1.41**.
+
+| the mass stage's bound | `eps_m` | events whose free draws exceed it |
+|---|---|---|
+| global `maxwgts[0]` -- shipped | **3.06** | 10 / 10 000, worst `w/C` = 1.98 |
+| `J_corner . combine(max R.jac_BW.Zhat)` | **3.00** | 0 |
+| `J_corner . max_sample(R.jac_BW.Zhat)` | 3.26 | 0 |
+| `J_corner . jac_BW_corner . max Zhat . combine(max R)` | 5.00 | 0 |
+| the per-event supremum of `w` (not reachable) | 1.42 | 0 |
+
+The second row is the proposal, with its run-level factor built exactly the way
+`maxwgts[0]` is (`_combine_maxwgt` over the first 75 probe events). The third is
+the same construction with that factor measured honestly, as the sample-wide
+maximum instead of a `mean + 4.5 sd` extrapolation of 75 events -- and it is
+*worse* than the bound it replaces. A 2 % gain that turns negative when the
+estimate it rests on is replaced by the quantity it estimates is not a gain.
+
+**Why, exactly.** Not the offshell ratio. Over 3.90e6 mass sets `R` is
+`1.00000 +- 0.0119`, range `[0.733, 1.314]` -- the factor the fallback is
+*named* after is the flattest thing in the weight. Two other things do the work:
+
+* **`Zhat` is steep offshell and flat under PA.** Same process, same sample,
+  same windows: the fitted table runs `Z(150.6) = 0.522, Z(173) = 1,
+  Z(195.3) = 1.699` offshell against `0.912 / 1 / 1.059` under PA. So the
+  event-independent `jac_BW_corner . max Zhat` over the two resonances is
+  **2.775** offshell and **1.074** under PA. The corner construction multiplies
+  `max jac_BW` (at the *low* end of the window) by `max Zhat` (at the *high*
+  end); under PA that costs 7 %, offshell it costs 190 %, which is the whole
+  difference between `eps_m = 1.40` and `eps_m = 5.00`.
+* **`J` and the rest are anti-correlated across events**, `corr = -0.49`: both
+  are driven by `sqrt(shat)`, `J_corner` blowing up at threshold (median 1.13,
+  mean 1.25, p99 2.9, max 13.2) exactly where the coupled window `sum m <=
+  sqrt(shat)` squeezes `jac_BW . Zhat` down. A maximum *of the product* -- which
+  is what the probe measures -- sees that; a product of maxima throws it away.
+  Over this sample `max_e max_draw(w) / [max_e J_corner . max_e (R.jac_BW.Zhat)]`
+  is **0.176**, i.e. fully factorising costs a factor 5.7.
+
+Under PA the same probe, on the same 10 000 events, gives `eps_m` 2.29 for the
+global bound (with 49 events over it, worst `w/C` = 3.94) against 1.40 for the
+shipped per-event one. That is the shape the offshell case does *not* have.
+
+**And a run-level table for `R`?** Tabulating `max_configurations R` against the
+virtualities the way `Zhat` is tabulated, conservative but free at
+accept/reject time, is the fuller option. It is not worth building either: `R`
+is 1.00 to a percent, a 7x7 table of its maximum in `(ln m_1, ln m_2)` runs
+1.02-1.31 against a single global 1.31, so the whole table is worth at most 25 %
+*of a factor that is already 1* -- and it would cost the probe an extra record
+per free mass set plus a `_UPFRONT_CACHE_FORMAT` bump. The slack offshell is in
+`max Zhat`, and `Zhat` is already tabulated and already exact.
+
+So the offshell spinmodes keep `maxwgts[0]`, section 14 keeps carrying the
+handful of overflows it leaves (1-2 events in 10 000, largest factor 1.38), and
+the fallback is now announced and counted rather than silent.

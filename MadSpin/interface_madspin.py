@@ -8292,7 +8292,15 @@ class MadSpinInterface(extended_cmd.Cmd):
     # What is NOT bounded here, and falls back to the global probe bound:
     #  * the offshell spinmodes (madspin/full), whose w_mass carries the extra
     #    Tr(rho_off)/|M_prod|^2_on -- a matrix-element ratio with no cheap
-    #    maximum. Only PA/onshell is covered;
+    #    maximum. Only PA/onshell is covered. That ratio is not why: measured on
+    #    3.9e6 free mass sets it is 1.0000 +- 0.012. What kills the construction
+    #    offshell is Zhat, whose window spans a factor 3.2 there against 1.16
+    #    under PA, so max_m Zhat sits 2.9x above the typical weight and the
+    #    corner bound comes out LOOSER than the probe's global one (eps_m 5.00
+    #    against 3.06). Even the partial bound J_corner . max_sample(rest) is
+    #    worth 2%, and is a loss once the run-level factor is measured as a
+    #    maximum rather than extrapolated. Section 15 of
+    #    doc/madspin_sequential_plan.md has the numbers;
     #  * a production event carrying an onshell propagator (status 2), where
     #    reshuffle_production multiplies in a reshuffle_decay jacobian per
     #    sub-decay that is not part of this factorisation;
@@ -8333,8 +8341,10 @@ class MadSpinInterface(extended_cmd.Cmd):
             if getattr(self, '_mass_bound_fallback_announced', False):
                 return
             self._mass_bound_fallback_announced = True
-            reason = ('the spinmode is not PA/onshell, so the mass weight '
-                      'carries an offshell production matrix element'
+            reason = ('the spinmode is offshell (madspin/full), where the '
+                      'per-event construction was MEASURED to be looser than '
+                      'this bound, not merely unavailable -- see section 15 of '
+                      'doc/madspin_sequential_plan.md'
                       if offshell else self._MASS_BOUND_UNSUPPORTED)
             logger.info(
                 "MadSpin sequential: the mass stage keeps the probe's global "
@@ -8857,10 +8867,17 @@ class MadSpinInterface(extended_cmd.Cmd):
         # cancels out of it. Changing C therefore changes the trial sequence and
         # the cost, and nothing about the sample.
         mass_bound = None
-        if probe is None and maxwgts and draw_mass and not offshell:
+        if probe is None and maxwgts and upfront and draw_mass and not offshell:
             mass_bound = self._mass_stage_bound(production, order, particles,
                                                 slot_to_index, zkeys, keep_jac)
-        if maxwgts and draw_mass:
+        # Which events *have* a mass stage to bound: the up-front schemes, and
+        # there whichever family draws a virtuality up front. ``_upfront_production``
+        # fills slot_mass under `offshell or draw_mass`, and `draw_mass` alone is
+        # the PA half of that -- so gating on it left the offshell spinmodes
+        # counted in neither column and never announced, and let
+        # sequential_with_mass (which is not an up-front scheme at all, and whose
+        # mass_bound is dead) announce a bound it does not use.
+        if maxwgts and upfront and (offshell or draw_mass):
             # one per chain call, i.e. one per production event reaching the
             # mass stage -- a rejected mass set loops *inside* the chain, so
             # these count events and not draws
