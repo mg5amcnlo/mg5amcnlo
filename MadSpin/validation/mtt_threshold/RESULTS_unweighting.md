@@ -241,8 +241,10 @@ not available from this harvest and would be the cleaner test.
 events), and they differ *only* in whether the tabulated `Z_k` is trusted or
 cancels:
 
-* `PA`: **+0.0025 ± 0.0032 GeV (0.8 σ)** — no residual. Bound |Δ⟨m_top⟩| < 0.0064 GeV at 2 σ.
-* `madspin`: **+0.0015 ± 0.0047 GeV (0.3 σ)** — no residual. Bound |Δ⟨m_top⟩| < 0.0094 GeV at 2 σ.
+* `PA`: **+0.0025 ± 0.0032 GeV (0.8 σ)** — no residual.
+  95 % upper limit |Δ⟨m_top⟩| < 0.0088 GeV (central + 1.96 σ).
+* `madspin`: **+0.0015 ± 0.0047 GeV (0.3 σ)** — no residual.
+  95 % upper limit |Δ⟨m_top⟩| < 0.0107 GeV.
 
 Crucially the `madspin` row is where the table spans a factor of 3.2, so the row
 in which a residual was *predicted* to be visible shows none.
