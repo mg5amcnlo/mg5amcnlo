@@ -1203,6 +1203,7 @@ class TestDrawOffshellMass(unittest.TestCase):
         pass
 
     class _Stub(object):
+        _resolved_bw_cut = interface_madspin.MadSpinInterface._resolved_bw_cut
         _mass_window = interface_madspin.MadSpinInterface._mass_window
         _draw_mass_value = interface_madspin.MadSpinInterface._draw_mass_value
         _draw_offshell_mass = interface_madspin.MadSpinInterface._draw_offshell_mass
@@ -4479,6 +4480,7 @@ class TestPerEventMassBound(unittest.TestCase):
         """The whole dependency surface of the bound and of the three shipped
         functions it has to dominate: a banner, options['BW_cut'] and
         _z_tables."""
+        _resolved_bw_cut = interface_madspin.MadSpinInterface._resolved_bw_cut
         _mass_window = interface_madspin.MadSpinInterface._mass_window
         _draw_mass_value = interface_madspin.MadSpinInterface._draw_mass_value
         _zhat = interface_madspin.MadSpinInterface._zhat
@@ -8910,3 +8912,186 @@ class TestRefillPoolIsCompleteBeforeItIsPublished(unittest.TestCase):
         self.assertEqual(self._tags_of(pool),
                          [float(t) for t in self.pool_tags])
         self.assertFalse(os.path.exists(pool + '.mspool'))
+
+
+class TestBreitWignerTruncation(unittest.TestCase):
+    """The BW_cut window keeps only part of each resonance's Breit-Wigner, and
+    the reported cross-section has to say so.
+
+    Before this, ``sigma`` came out the same number for BW_cut = 15, BW_cut = 1
+    or anything else, because MadSpin normalises with the full width
+    (``sigma_prod * BR``) whatever window it sampled in. Measured against a
+    truth sample that *does* carry the truncation (MG5 rejects out-of-window
+    points, ``myamp.f`` gForceBW branch), the gap was truth/MadSpin = 0.966 for
+    a t t~ pair at BW_cut = 15 -- see MadSpin/validation/mtt_threshold/RESULTS.md.
+    """
+
+    POLE, WIDTH = 173.0, 1.4915
+
+    # ---------------------------------------------- the fraction itself
+
+    def test_it_is_the_samplers_own_normalisation(self):
+        """Not an approximation *of* the sampler: ``_mass_window`` returns this
+        very number as its ``gap/pi`` jacobian, so integrating the density the
+        code draws from over the window it draws in is closed-form and exact.
+        The only difference is the budget cap, which is a kinematic limit and
+        not a BW_cut truncation."""
+        class _Val(object):
+            def __init__(self, value):
+                self.value = value
+
+        class _Banner(object):
+            def get(self, card, kind, pdg):
+                return _Val(TestBreitWignerTruncation.POLE if kind == 'mass'
+                            else TestBreitWignerTruncation.WIDTH)
+
+        class _Stub(object):
+            _resolved_bw_cut = interface_madspin.MadSpinInterface._resolved_bw_cut
+            _mass_window = interface_madspin.MadSpinInterface._mass_window
+
+            def __init__(self, bw_cut):
+                self.banner = _Banner()
+                self.options = {'BW_cut': bw_cut}
+
+        for bw_cut in (0.5, 1, 3, 15, 50):
+            jac_bw = _Stub(bw_cut)._mass_window(6, float('inf'))[-1]
+            self.assertAlmostEqual(
+                jac_bw,
+                madspin.bw_retained_fraction(self.POLE, self.WIDTH, bw_cut),
+                places=14)
+
+    def test_the_linearised_arctan_is_recovered_to_a_hundredth_of_a_percent(self):
+        """``(2/pi) arctan(2N)`` is what the ``m^2 - M^2 ~ 2M(m-M)``
+        substitution gives; the exact form differs by the curvature of that
+        substitution at the window edges. Keeping the exact one costs nothing
+        and removes a systematic, but the two have to agree to the order the
+        approximation claims."""
+        for bw_cut in (1, 5, 15):
+            exact = madspin.bw_retained_fraction(self.POLE, self.WIDTH, bw_cut)
+            linear = 2 * math.atan(2 * bw_cut) / math.pi
+            self.assertLess(abs(exact - linear), 1e-4)
+
+    def test_a_stable_particle_is_not_truncated(self):
+        """No width, no window: a zero-width propagator is a delta function
+        and every bit of it is inside any window."""
+        self.assertEqual(madspin.bw_retained_fraction(173.0, 0.0, 15), 1.0)
+        self.assertEqual(madspin.bw_retained_fraction(173.0, -1.0, 15), 1.0)
+
+    def test_no_cut_keeps_everything(self):
+        """A non-positive BW_cut is 'the caller is not cutting'."""
+        self.assertEqual(madspin.bw_retained_fraction(173.0, 1.5, 0), 1.0)
+        self.assertEqual(madspin.bw_retained_fraction(173.0, 1.5, -1), 1.0)
+
+    def test_it_shrinks_with_the_window_and_tends_to_the_physical_range(self):
+        """Monotone in the window, and the wide-window limit is *not* 1: the
+        floor at m = 0 keeps the lower tail of the Breit-Wigner out of reach, so
+        the widest possible window holds ``(atan(M/Gamma) + pi/2)/pi``. That is
+        0.9972 for a top -- a real 0.3 % that the m^2 sampler cannot draw, and
+        the same number the code's own jacobian carries."""
+        got = [madspin.bw_retained_fraction(self.POLE, self.WIDTH, n)
+               for n in (0.5, 1, 2, 5, 15, 50, 1e9)]
+        self.assertEqual(got, sorted(got))
+        self.assertTrue(all(0 < g < 1 for g in got))
+        self.assertAlmostEqual(
+            got[-1], (math.atan(self.POLE / self.WIDTH) + math.pi / 2) / math.pi,
+            places=12)
+
+    def test_a_very_broad_resonance_is_cut_only_from_above(self):
+        """M - N.Gamma below zero is not a window running backwards: the mass
+        is floored at 0, so only the upper edge cuts. Without the floor the
+        squared lower limit flips sign and the fraction comes out > 1."""
+        frac = madspin.bw_retained_fraction(10.0, 5.0, 15)
+        self.assertLess(frac, 1.0)
+        self.assertGreater(frac, 0.5)
+
+    def test_the_pair_factor_reproduces_the_validation_studys_number(self):
+        """The validation study evaluated this integral four ways for a t t~
+        pair at BW_cut = 15. This form has to land on the row that describes
+        what the samplers actually draw -- the fixed-width relativistic
+        propagator with a flat numerator, 0.95785 -- and not on the linearised
+        0.95802 of the row above it."""
+        pair = madspin.bw_retained_fraction(self.POLE, self.WIDTH, 15) ** 2
+        self.assertAlmostEqual(pair, 0.95785, places=5)
+        self.assertGreater(abs(pair - 0.95802), 1e-4)
+
+    # ---------------------------------------------- which modes get it
+
+    def test_only_the_modes_that_draw_a_virtuality_are_corrected(self):
+        """A mode that samples no virtuality has no truncation, so correcting
+        it would be inventing a loss. ``onshell``/``onshell_v1`` never move the
+        production momenta and ``none`` (bridge) takes MG5's decay event whole;
+        only madspin/full/PA draw."""
+        class _Stub(object):
+            _spinmode_draws_virtuality = \
+                interface_madspin.MadSpinInterface._spinmode_draws_virtuality
+
+            def __init__(self, mode):
+                self.options = {'spinmode': mode}
+
+        for mode in ('madspin', 'full', 'PA'):
+            self.assertTrue(_Stub(mode)._spinmode_draws_virtuality(), mode)
+        for mode in ('onshell', 'onshell_v1', 'none', 'madspin_v1'):
+            self.assertFalse(_Stub(mode)._spinmode_draws_virtuality(), mode)
+
+    def test_bw_cut_resolution_matches_the_launch_time_fallback(self):
+        class _Stub(object):
+            _resolved_bw_cut = interface_madspin.MadSpinInterface._resolved_bw_cut
+
+            def __init__(self, bw_cut):
+                self.options = {'BW_cut': bw_cut}
+
+        self.assertEqual(_Stub(-1)._resolved_bw_cut(), 15)
+        self.assertEqual(_Stub(3.5)._resolved_bw_cut(), 3.5)
+
+    # ---------------------------------------------- the v1 chain
+
+    class _V1(object):
+        """The dependency surface of ``bw_truncation_factor``: a BW_cut, a
+        param card and a decay channel carrying its topology."""
+        bw_truncation_factor = \
+            madspin.decay_all_events.bw_truncation_factor
+
+        def __init__(self, bw_cut, table):
+            self.options = {'BW_cut': bw_cut}
+            self._table = table
+            self.pid2mass = lambda pdg: self._table[abs(pdg)][0]
+            self.pid2width = lambda pdg: self._table[abs(pdg)][1]
+
+    TABLE = {6: (173.0, 1.4915), 24: (80.419, 2.0476), 5: (4.7, 0.0)}
+
+    @staticmethod
+    def _chain(*labels_per_branch):
+        """A decay dict shaped like AllMatrixElement.add_decay's, whose
+        decay_struct holds one dc_branch-like tree per decayed particle."""
+        return {'decay_struct': {
+            nb: {'tree': {-1 - i: {'label': pdg}
+                          for i, pdg in enumerate(labels)}}
+            for nb, labels in enumerate(labels_per_branch)}}
+
+    def test_v1_corrects_every_resonance_of_the_chain(self):
+        """The v1 driver marks every decay-side s-channel invariant free
+        (``keep_inv = .FALSE.`` in merge_itree) and BW-samples each of them, so
+        for ``t > w+ b, w+ > l+ vl`` the W has its own window on top of the
+        top's. Its branching ratio is the param card's, which carries no
+        truncation, so all of them have to be corrected here."""
+        v1 = self._V1(15, self.TABLE)
+        got = v1.bw_truncation_factor(self._chain([6, 24], [-6, -24]))
+        expect = (madspin.bw_retained_fraction(173.0, 1.4915, 15) ** 2
+                  * madspin.bw_retained_fraction(80.419, 2.0476, 15) ** 2)
+        self.assertAlmostEqual(got, expect, places=14)
+        self.assertLess(got, madspin.bw_retained_fraction(173.0, 1.4915, 15) ** 2)
+
+    def test_v1_ignores_stable_daughters_and_tracks_bw_cut(self):
+        v1_15 = self._V1(15, self.TABLE)
+        v1_1 = self._V1(1, self.TABLE)
+        chain = self._chain([6], [-6])
+        self.assertAlmostEqual(
+            v1_15.bw_truncation_factor(chain),
+            madspin.bw_retained_fraction(173.0, 1.4915, 15) ** 2, places=14)
+        self.assertLess(v1_1.bw_truncation_factor(chain),
+                        0.6 * v1_15.bw_truncation_factor(chain))
+
+    def test_v1_resolves_an_unset_bw_cut_the_same_way(self):
+        chain = self._chain([6])
+        self.assertEqual(self._V1(-1, self.TABLE).bw_truncation_factor(chain),
+                         self._V1(15, self.TABLE).bw_truncation_factor(chain))

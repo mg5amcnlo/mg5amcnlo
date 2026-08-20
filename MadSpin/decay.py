@@ -76,6 +76,58 @@ import madgraph.various.misc as misc
 class MadSpinError(MadGraph5Error):
     pass
 
+
+def bw_retained_fraction(pole, width, bw_cut):
+    """The fraction of a resonance's Breit-Wigner that a ``+- bw_cut * width``
+    mass window keeps.
+
+    MadSpin samples a virtuality only inside that window but normalises the
+    sample with the *full* width -- ``sigma_prod * BR`` on the density side, the
+    param-card BR of the whole chain on the v1 side. The events it writes
+    therefore hold only the part of the Breit-Wigner that fits inside the
+    window, while the number it reports is the whole rate; without this factor
+    ``sigma`` comes out identical for every value of ``BW_cut``, which is wrong
+    and measurable (see ``MadSpin/validation/mtt_threshold/RESULTS.md``).
+
+    This is *the sampler's own normalisation*, not an approximation of it. Both
+    generators draw m^2 flat in ``R = atan((m^2 - M^2)/(M.Gamma))``, whose full
+    range is pi -- ``MadSpinInterface._mass_window`` returns exactly this
+    quantity as its ``gap/pi`` jacobian, and ``generate_inv_mass_sch`` in
+    ``src/driver.f`` computes it as ``bwdelf``. Integrating the sampled density
+    over the sampled window is therefore closed-form and exact, so there is no
+    reason to fall back on the linearised ``2/pi * atan(2N)`` that the
+    ``m^2 - M^2 ~ 2M(m-M)`` substitution gives (0.97879 against the 0.97869 here,
+    for a top at ``N = 15``): the difference is the m -> m^2 mapping at the
+    window edges, and this form tracks it.
+
+    What no self-consistent calculation can supply is the *numerator*. The rate
+    integrand is BW(m^2) times the decay matrix element and its phase space, and
+    the retained fraction of the product needs the numerator's integral over the
+    part of the Breit-Wigner that was never sampled. ``m.Gamma(m)/(m_t.Gamma_t)``
+    alone runs 0.52 to 1.71 across a +-15 Gamma window for a top, and putting it
+    in moves the t t~ pair factor from the 0.95785 this returns to 0.96249. (The
+    validation study evaluated the same integral four ways; this form reproduces
+    its fixed-width-relativistic row to the digit, which is the one that matches
+    what the samplers draw.) So this correction
+    carries a residual of a few tenths of a percent -- measured against a truth
+    sample, +0.4 % to +1.0 % for a t t~ pair at ``BW_cut = 15``
+    (``RESULTS.md`` section 1a). It is the propagator part, which is the
+    dominant and the ``BW_cut``-dependent part.
+
+    A stable particle (``width == 0``) has no window and no truncation, so the
+    fraction is 1; ``bw_cut <= 0`` means the caller is not cutting at all.
+    """
+    if not width or width <= 0 or pole <= 0 or bw_cut <= 0:
+        return 1.0
+    # the window is linear in m in both samplers, floored at 0 (a resonance
+    # broad enough that M - N.Gamma goes negative is cut only from above)
+    min_mass = max(pole - bw_cut * width, 0.0)
+    max_mass = pole + bw_cut * width
+    gap = math.atan((pole ** 2 - min_mass ** 2) / pole / width)
+    gap += math.atan((max_mass ** 2 - pole ** 2) / pole / width)
+    return gap / math.pi
+
+
 class Event:
     """ class to read an event, record the information, write down the event in the lhe format.
             This class is used both for production and decayed events"""
@@ -4190,12 +4242,46 @@ class decay_all_events(object):
 
 
 
+    def bw_truncation_factor(self, decay):
+        """The Breit-Wigner truncation of one decay channel of the v1 path.
+
+        Unlike the density path, the v1 driver regenerates the *whole* decay
+        chain's phase space: ``merge_itree`` marks every decay-side s-channel
+        invariant free (``keep_inv(i) = .FALSE.``, only the production ones are
+        frozen) and ``generate_inv_mass_sch`` then draws each of them inside
+        ``+- BW_cut`` widths. So the product runs over every resonance of the
+        chain -- the decaying particle itself *and* every nested one, the W of
+        ``t > w+ b, w+ > l+ vl`` included.
+
+        Correcting all of them is right here and would be double-counting on the
+        density side, because the two paths normalise differently: v1 uses the
+        param-card branching ratio of the full chain (``AllMatrixElement.get_br``,
+        recursive, untruncated), while the density path divides MG5-measured
+        partial widths that already carry the nested resonance's truncation.
+        """
+        bw_cut = self.options['BW_cut']
+        if bw_cut is None or bw_cut < 0:
+            bw_cut = 15
+        factor = 1.0
+        for branch in (decay.get('decay_struct') or {}).values():
+            for res in branch['tree'].values():
+                pdg = abs(res['label'])
+                factor *= bw_retained_fraction(self.pid2mass(pdg),
+                                               self.pid2width(pdg), bw_cut)
+        return factor
+
     def write_banner_information(self, eff=1):
-        
+
         ms_banner = ""
         cross_section = True # tell if possible to write the cross-section in advance
         total_br = []
         self.br_per_id = {}
+        # Breit-Wigner truncation, averaged over the decay channels weighted by
+        # their own branching ratio -- exact whenever the channels share a
+        # resonance content (they normally do: only the final states differ).
+        # The "loose" channels of add_loose_decay are not in the average: they
+        # stand for an event that is dropped, and the drop is already in ``eff``.
+        bw_trunc_num, bw_trunc_den = 0.0, 0.0
         for production in self.all_ME.values():
             one_br = 0
             partial_br = 0
@@ -4205,20 +4291,45 @@ class decay_all_events(object):
                     one_br += decay['br']
                     continue
                 partial_br += decay['br']
+                bw_trunc_num += decay['br'] * self.bw_truncation_factor(decay)
+                bw_trunc_den += decay['br']
                 ms_banner += "# %s\n" % ','.join(decay['decay_tag']).replace('\n',' ')
                 ms_banner += "# BR: %s\n# max_weight: %s\n" % (decay['br'], decay['max_weight'])
                 one_br += decay['br']
-            
+
             if production['Pid'] not in self.br_per_id:
                 self.br_per_id[production['Pid']] = partial_br
             elif self.br_per_id[production['Pid']] != partial_br:
                 self.br_per_id[production['Pid']] = -1
             total_br.append(one_br)
-        
+
         if __debug__:
             for production in self.all_ME.values():
                 assert production['total_br'] - min(total_br) < 1e-4
-        
+
+        # MadSpin samples each virtuality only inside the BW_cut window but
+        # normalises with the full width, so without this the reported cross
+        # section is the same number whatever BW_cut is. Applied to
+        # ``branching_ratio`` and to ``br_per_id``, i.e. to both users of the
+        # rate: the per-subprocess <init> rows below and every event weight
+        # (``change_wgt(factor=self.branching_ratio ...)``), which is what keeps
+        # sigma = mean(w) true under IDWTUP = -4.
+        #
+        # 'onlyhelicity' writes the production events back undecayed -- nothing
+        # is sampled from a truncated window, so nothing is corrected.
+        bw_trunc = 1.0
+        if bw_trunc_den and not self.options['onlyhelicity']:
+            bw_trunc = bw_trunc_num / bw_trunc_den
+        if bw_trunc != 1.0:
+            logger.info(
+                "Breit-Wigner truncation at BW_cut = %g keeps %.5g of the "
+                "cross-section; the reported sigma is scaled by it.",
+                self.options['BW_cut'], bw_trunc)
+            for pid in self.br_per_id:
+                if self.br_per_id[pid] != -1:
+                    self.br_per_id[pid] *= bw_trunc
+            total_br = [br * bw_trunc for br in total_br]
+
         self.branching_ratio = max(total_br) * eff
         #self.banner['madspin'] += ms_banner
         # Update cross-section in the banner

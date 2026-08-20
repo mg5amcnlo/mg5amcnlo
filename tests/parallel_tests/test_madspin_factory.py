@@ -62,6 +62,7 @@ from tests.parallel_tests.madspin_comparator import (
     MadSpinFactory,
     SpinModeConfig,
     assert_branching_ratios_consistent,
+    assert_bw_truncation_matches_spinmode,
     assert_cross_sections_consistent,
     assert_efficiency_close,
     assert_efficiency_ordering,
@@ -177,11 +178,20 @@ class MadSpinFactoryTest(_MadSpinFactoryBase):
                 factory.name, r.label, r.BR, r.cross_out, r.efficiency,
                 r.wall_seconds, r.lhe_path,
             )
+        # Each mode reports the truncation its own sampling implies -- an
+        # off-shell mode a real one, an on-shell mode none. Checked before the
+        # cross-sections, which divide it back out: if the factors were wrong
+        # the comparison below would be dividing by the wrong number and could
+        # still pass.
+        assert_bw_truncation_matches_spinmode(self, results)
         # Physics-observable invariant: every mode in the same BR family
         # must produce the same decayed cross-section (rel_tol=1e-3, strict);
         # cross-family agreement is looser (between_tol=5e-2) because the
         # legacy decay-chain path uses factorised on-shell BRs while the
         # run_onshell paths use MC-integrated partial widths.
+        # Compared with the Breit-Wigner truncation divided out: the modes
+        # sample different windows (or none at all), so sigma_prod x BR and not
+        # the raw banner number is what they still have in common.
         assert_cross_sections_consistent(
             self, results, rel_tol=1e-3,
             families=DEFAULT_FAMILIES, between_tol=5e-2,
