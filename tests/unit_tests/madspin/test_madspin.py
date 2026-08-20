@@ -2681,12 +2681,20 @@ class TestUnweightRangeWeightPaths(unittest.TestCase):
     """
 
     EVENT = """<event>
- 4  1 +%.7e 1.00000000e+02 7.54677100e-03 1.30800000e-01
+ 4  1 %+.7e 1.00000000e+02 7.54677100e-03 1.30800000e-01
        -1 -1    0    0  501    0 +0.0000000e+00 +0.0000000e+00 +5.0e+02 5.0e+02 0.0e+00 0.0e+00 1.0
         1 -1    0    0    0  501 +0.0000000e+00 +0.0000000e+00 -5.0e+02 5.0e+02 0.0e+00 0.0e+00 1.0
        11  1    1    2    0    0 +1.0000000e+02 +0.0000000e+00 +0.0e+00 1.0e+02 0.0e+00 0.0e+00 1.0
       -11  1    1    2    0    0 -1.0000000e+02 +0.0000000e+00 +0.0e+00 9.0e+02 0.0e+00 0.0e+00 1.0
 </event>"""
+
+    # the same event with two multiweights, one of each sign, so that the
+    # carry's effect on the <rwgt> block can be read off
+    EVENT_RWGT = EVENT.replace('</event>', """<rwgt>
+<wgt id='r1'> +3.0000000e+00 </wgt>
+<wgt id='r2'> -5.0000000e+00 </wgt>
+</rwgt>
+</event>""")
 
     class _Sink(object):
         def __init__(self):
@@ -2740,8 +2748,10 @@ class TestUnweightRangeWeightPaths(unittest.TestCase):
         ctx.update(over)
         return ctx
 
-    def _run(self, stub, ctx, nb_events=4):
-        source = [lhe_parser.Event(self.EVENT % 1.0) for _ in range(nb_events)]
+    def _run(self, stub, ctx, nb_events=4, prod_wgts=None):
+        if prod_wgts is None:
+            prod_wgts = [1.0] * nb_events
+        source = [lhe_parser.Event(self.EVENT % w) for w in prod_wgts]
         sink = self._Sink()
         stats = stub._unweight_range(source, {}, sink, ctx)
         return [e.wgt for e in sink.events], stats
@@ -2814,6 +2824,215 @@ class TestUnweightRangeWeightPaths(unittest.TestCase):
         self.assertEqual(sorted(set(round(abs(w), 9) for w in wgts)), [1.0])
         self.assertTrue(any(w > 0 for w in wgts))
         self.assertTrue(any(w < 0 for w in wgts))
+
+    # ------------------------------------------------------------------
+    # The overweight safety net and the SIGN of the weight it rides on.
+    #
+    # Two independent ways a MadSpin weight can be negative, and the carry has
+    # to be blind to both: an MC@NLO counter-event in the INPUT (the event
+    # weight is negative, the accept/reject weight is not), and the
+    # pure-interference mode (the accept/reject tests |W| while the written
+    # weight is signed). In either case the factor must be built from the
+    # unsigned quantity the test itself used -- a factor built from a signed
+    # weight simply never fires on the negative half of the sample, silently.
+    # ------------------------------------------------------------------
+
+    def test_the_joint_carry_is_unsigned_and_keeps_a_counter_event_negative(self):
+        """MC@NLO input: the production weight is negative, the matrix-element
+        weight the accept/reject tests is not. A trial at 2x the bound must be
+        written with 2x the magnitude and the SAME sign."""
+        random.seed(3)
+        stub = self._Stub([2.0])                      # ME weight 2.0, bound 1.0
+        wgts, stats = self._run(stub, self._ctx(), nb_events=6,
+                                prod_wgts=[1.0, -1.0] * 3)
+        # w = w_prod * BR * carry = w_prod * 2.0 * 2.0
+        self.assertEqual([round(w, 9) for w in wgts], [4.0, -4.0] * 3)
+        self.assertEqual(stats['nb_overweight'], 6)
+        self.assertEqual(stats['nb_overflow_joint'], 6)
+        self.assertEqual(round(stats['max_overweight'], 9), 2.0)
+        # the accounting is a WEIGHT: w_nom = w_prod * BR = +-2, and the
+        # excess of each event is w_nom * (carry - 1) = +-2, so the three
+        # counter-events cancel the three ordinary ones exactly
+        self.assertEqual(round(stats['sum_overweight_dw'], 9), 0.0)
+        self.assertEqual(round(stats['sum_overweight_dabs'], 9), 12.0)
+        self.assertEqual(round(stats['sum_nom'], 9), 0.0)
+        self.assertEqual(round(stats['sum_abs_nom'], 9), 12.0)
+
+    def test_a_counter_event_only_sample_gets_a_negative_carried_excess(self):
+        """The excess is signed. If every overflow lands on a counter-event the
+        carry makes the cross-section MORE negative, and a count-based number
+        would have claimed the opposite."""
+        random.seed(3)
+        stub = self._Stub([2.0])
+        wgts, stats = self._run(stub, self._ctx(), nb_events=4,
+                                prod_wgts=[-1.0] * 4)
+        self.assertEqual([round(w, 9) for w in wgts], [-4.0] * 4)
+        self.assertLess(stats['sum_overweight_dw'], 0.0)
+        self.assertGreater(stats['sum_overweight_dabs'], 0.0)
+        self.assertEqual(round(stats['sum_overweight_dw'], 9), -8.0)
+        self.assertEqual(round(stats['sum_overweight_dabs'], 9), 8.0)
+
+    def test_no_overflow_leaves_the_written_weight_and_the_counters_alone(self):
+        """The exactness guarantee, on a negative production weight too: a
+        weight below the bound must go out as w_prod * BR exactly."""
+        random.seed(3)
+        stub = self._Stub([0.5])
+        wgts, stats = self._run(stub, self._ctx(), nb_events=4,
+                                prod_wgts=[1.0, -1.0, 1.0, -1.0])
+        self.assertEqual([round(w, 9) for w in wgts], [2.0, -2.0, 2.0, -2.0])
+        self.assertEqual(stats['nb_overweight'], 0)
+        self.assertEqual(stats['nb_overflow_joint'], 0)
+        self.assertEqual(stats['sum_overweight_dw'], 0.0)
+        self.assertEqual(stats['max_overweight'], 1.0)
+
+    def test_the_interference_carry_is_built_from_the_modulus(self):
+        """THE pure-interference regression. |W| = 2 x the bound with
+        alternating sign: the |W|/M test clips for BOTH signs, so both must
+        carry the factor 2. A carry built from the signed W would leave every
+        negative event at 1 -- half the sample silently still clipped."""
+        random.seed(5)
+        stub = self._Stub([2.0, -2.0], pure_interference='w+ = 0 T')
+        wgts, stats = self._run(
+            stub, self._ctx(pure_interference_unweighted=True), nb_events=20)
+        self.assertEqual(len(wgts), 20)
+        # |w| = w_prod * BR * <|W|>/c * carry = 1 * 2.0 * (0.25/0.5) * 2
+        self.assertEqual(sorted(set(round(w, 9) for w in wgts)), [-2.0, 2.0])
+        self.assertEqual(sum(1 for w in wgts if w > 0), 10)
+        self.assertEqual(sum(1 for w in wgts if w < 0), 10)
+        self.assertEqual(stats['nb_overweight'], 20)       # not 10
+        self.assertEqual(stats['nb_pi_overflow'], 20)
+        self.assertEqual(round(stats['max_overweight'], 9), 2.0)
+        # the interference sample sums to zero: the excess does too
+        self.assertEqual(round(stats['sum_overweight_dw'], 9), 0.0)
+        self.assertEqual(round(stats['sum_overweight_dabs'], 9), 20.0)
+
+    def test_the_interference_sign_is_applied_exactly_once(self):
+        """The sign rides on pi_factor and the carry is a positive scale, so
+        the multiweights come out with the nominal's sign and the nominal's
+        factor -- not the sign twice, and not on the nominal only."""
+        random.seed(5)
+        stub = self._Stub([2.0, -2.0], pure_interference='w+ = 0 T')
+        source = [lhe_parser.Event(self.EVENT_RWGT % 1.0) for _ in range(8)]
+        sink = self._Sink()
+        stub._unweight_range(source, {}, sink,
+                             self._ctx(pure_interference_unweighted=True))
+        self.assertEqual(len(sink.events), 8)
+        seen = set()
+        for evt in sink.events:
+            rw = evt.parse_reweight()
+            # every weight scaled by the SAME signed factor as the nominal
+            self.assertEqual(round(rw['r1'] / 3.0, 9), round(evt.wgt / 1.0, 9))
+            self.assertEqual(round(rw['r2'] / -5.0, 9), round(evt.wgt / 1.0, 9))
+            # ... which means r2 keeps the opposite sign to r1, always
+            self.assertEqual(rw['r1'] > 0, rw['r2'] < 0)
+            # |w| = 2.0: the carry fired, and it fired on both signs
+            self.assertEqual(round(abs(evt.wgt), 9), 2.0)
+            seen.add(evt.wgt > 0)
+        self.assertEqual(seen, {True, False})
+
+
+class _CapturedMadSpinLog(object):
+    """Collect everything MadSpin's logger emits, at any level, without letting
+    it reach the console."""
+
+    def __enter__(self):
+        import logging
+        self.messages = []
+        capture = self
+
+        class _Handler(logging.Handler):
+            def emit(self, record):
+                capture.messages.append(record.getMessage())
+
+        self._handler = _Handler(level=logging.DEBUG)
+        self._logger = interface_madspin.logger
+        self._level = self._logger.level
+        self._propagate = self._logger.propagate
+        self._logger.addHandler(self._handler)
+        self._logger.setLevel(logging.DEBUG)
+        self._logger.propagate = False
+        return self
+
+    def __exit__(self, *args):
+        self._logger.removeHandler(self._handler)
+        self._logger.setLevel(self._level)
+        self._logger.propagate = self._propagate
+        return False
+
+
+class TestOverweightReport(unittest.TestCase):
+    """``_report_overweight``: the end-of-run number, and the denominator it is
+    allowed to use.
+
+    Under IDWTUP = -4 the cross-section is the MEAN of the weights, so the
+    quantity carrying restores is d(sum w)/sum w. That denominator is fine for
+    an ordinary sample and meaningless for one whose weights cancel -- which is
+    exactly what pure_interference produces -- so the report tests it against
+    its own Monte Carlo error before using it.
+    """
+
+    class _Stub(object):
+        _OVERWEIGHT_MIN_Z = \
+            interface_madspin.MadSpinInterface._OVERWEIGHT_MIN_Z
+        _report_overweight = \
+            interface_madspin.MadSpinInterface._report_overweight
+
+    def _log(self, **stats):
+        base = dict(nb_overweight=0, sum_overweight_dw=0.0,
+                    sum_overweight_dabs=0.0, sum_nom=0.0, sum_abs_nom=0.0,
+                    sum_sq_nom=0.0, max_overweight=1.0, nb_overflow_joint=0)
+        base.update(stats)
+        n_written = base.pop('n_written')
+        with _CapturedMadSpinLog() as caught:
+            self._Stub()._report_overweight([base], n_written)
+        return '\n'.join(caught.messages)
+
+    def test_an_unweighted_sample_quotes_the_cross_section_shift(self):
+        """1000 events of weight 1, three of which carried a factor 2: the
+        cross-section moves by 3/1000 -- the number a count would also have
+        given, which is why this stayed right for unweighted samples."""
+        msg = self._log(n_written=1000, nb_overweight=3, max_overweight=2.0,
+                        sum_overweight_dw=3.0, sum_overweight_dabs=3.0,
+                        sum_nom=1000.0, sum_abs_nom=1000.0, sum_sq_nom=1000.0)
+        self.assertIn('3/1000 written events', msg)
+        self.assertIn("of the sample's cross-section", msg)
+        self.assertIn('+0.3%', msg)
+
+    def test_a_counter_event_sample_quotes_the_signed_shift(self):
+        """The same three carried events, but on counter-events: the shift is
+        negative even though the factors are all above 1."""
+        msg = self._log(n_written=1000, nb_overweight=3, max_overweight=2.0,
+                        sum_overweight_dw=-3.0, sum_overweight_dabs=3.0,
+                        sum_nom=500.0, sum_abs_nom=1000.0, sum_sq_nom=1000.0)
+        self.assertIn("of the sample's cross-section", msg)
+        self.assertIn('-0.6%', msg)          # -3/500, and negative
+        self.assertIn('-3', msg)
+
+    def test_a_cancelling_sample_refuses_the_cross_section_as_a_denominator(self):
+        """pure_interference: sum w is zero by construction, so it must not be
+        divided by. z = 20/sqrt(10000) = 0.2 -- consistent with zero."""
+        msg = self._log(n_written=1000, nb_overweight=300, max_overweight=9.0,
+                        sum_overweight_dw=-2.0, sum_overweight_dabs=50.0,
+                        sum_nom=20.0, sum_abs_nom=1000.0, sum_sq_nom=10000.0)
+        self.assertNotIn("of the sample's cross-section", msg)
+        self.assertIn('consistent with the zero cross-section', msg)
+        self.assertIn('z = 0.20', msg)
+        self.assertIn('quoted against sum|w|', msg)
+        self.assertIn('+5%', msg)            # 50/1000
+
+    def test_an_all_zero_sample_does_not_divide_by_zero(self):
+        """Degenerate to the last digit: every written weight is 0."""
+        msg = self._log(n_written=10, nb_overweight=2, max_overweight=3.0,
+                        sum_overweight_dw=0.0, sum_overweight_dabs=0.0,
+                        sum_nom=0.0, sum_abs_nom=0.0, sum_sq_nom=0.0)
+        self.assertIn('quoted against sum|w|', msg)
+        self.assertIn('nan', msg)            # said, not raised
+
+    def test_nothing_carried_says_so_and_stops(self):
+        msg = self._log(n_written=1000, sum_nom=1000.0, sum_abs_nom=1000.0,
+                        sum_sq_nom=1000.0)
+        self.assertIn('0/1000 written events carried a non-unit weight', msg)
+        self.assertNotIn('cross-section', msg)
 
 
 class TestBannerEventWeightRescale(unittest.TestCase):

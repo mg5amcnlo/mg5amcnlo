@@ -2451,8 +2451,30 @@ class decay_all_events(object):
                 logger.debug('Got a production event with %s failures for the phase-space generation generation ' % failed)
 
             # Treat the case that we ge too many overweight.
+            # ``carry``: the overweight safety net (section 14 of
+            # doc/madspin_sequential_plan.md). The Fortran
+            # accept/reject (MadSpin/src/driver.f, "weight.gt.x*maxweight")
+            # stops on a trial with probability min(1, weight/max_weight), so a
+            # weight above the bound is accepted with probability 1 and the
+            # excess used to be dropped. Writing that event with weight
+            # max(1, weight/max_weight) restores the sampled density exactly,
+            # since min(1,x)*max(1,x) = x. Left as the literal 1.0 when nothing
+            # overflowed, so the written weights are bit-identical to before.
+            # ``weight`` is the matrix-element weight the Fortran tested, not
+            # the event's LHE weight, so ``carry`` is always > 1 and unsigned: a
+            # negative production weight (an MC@NLO counter-event) keeps its
+            # sign and only grows in magnitude.
+            carry = 1.0
             if weight > decay_me['max_weight']:
+                carry = weight / decay_me['max_weight']
                 report['over_weight'] += 1
+                # the accounting is on the WEIGHT, not on a count: a
+                # counter-event whose trial overflowed makes the cross-section
+                # more negative, so its excess subtracts. w_nom is what this
+                # event would have been written with under clipping.
+                w_nom = decayed_event.wgt * self.branching_ratio
+                report['over_weight_dw'] += w_nom * (carry - 1.0)
+                report['over_weight_dabs'] += abs(w_nom) * (carry - 1.0)
                 report['%s_f' % (decay['decay_tag'],)] +=1
                 if __debug__:               
                     misc.sprint('''over_weight: %s %s, occurence: %s%%, occurence_channel: %s%%
@@ -2493,9 +2515,20 @@ class decay_all_events(object):
                     raise MadSpinError(error)
                     
              
-            decayed_event.change_wgt(factor= self.branching_ratio) 
+            # the carried overweight rides the branching ratio, so it reaches
+            # both the event weight and every <rwgt> entry through the single
+            # multiplication change_wgt already does
+            decayed_event.change_wgt(factor= self.branching_ratio if carry == 1.0
+                                     else self.branching_ratio * carry)
             #decayed_event.wgt = decayed_event.wgt * self.branching_ratio
-                    
+            # the file as clipping would have written it: needed as the
+            # denominator of the overweight report, and as the scale that says
+            # whether that denominator is distinguishable from zero at all
+            w_nom = decayed_event.wgt if carry == 1.0 else decayed_event.wgt / carry
+            report['sum_nom'] += w_nom
+            report['sum_abs_nom'] += abs(w_nom)
+            report['sum_sq_nom'] += w_nom * w_nom
+
             self.outputfile.write(decayed_event.string_event())
                 #print "number of trials: "+str(trial_nb)
             trial_nb_all_events+=trial_nb
@@ -2527,6 +2560,56 @@ class decay_all_events(object):
             +str(float(trial_nb_all_events)/float(event_nb)))
         logger.info('Branching ratio to allowed decays: %g' % self.branching_ratio)
         logger.info('Number of events with weights larger than max_weight: %s' % report['over_weight'])
+        # The overweight safety net's measurement, the same convention as the
+        # density path's _report_overweight: how many events carry a non-unit
+        # weight, and what the carried excess is worth as a fraction of the
+        # sample's cross-section (IDWTUP = -4: sigma is the MEAN of the
+        # weights, and carrying changes no event count, so d(sum w)/sum w is
+        # the relative shift). The excess is summed WEIGHTED, so a
+        # counter-event's overflow subtracts instead of adding; and sum w is
+        # only used as a denominator when it is not itself ~0.
+        if event_nb:
+            if report['over_weight']:
+                d_w = report['over_weight_dw']
+                d_abs = report['over_weight_dabs']
+                sum_w = report['sum_nom']
+                sum_abs = report['sum_abs_nom']
+                delta = math.sqrt(report['sum_sq_nom'])
+                z = (abs(sum_w) / delta) if delta else 0.0
+                # built with % here, not handed to the logger as a format
+                # string: the head already contains literal per-cent signs
+                msg = ("MadSpin overweight safety net: %d/%d written events "
+                       "(%.3g%%) carried a non-unit weight because a trial "
+                       "weight exceeded max_weight. "
+                       % (report['over_weight'], event_nb,
+                          100.0 * report['over_weight'] / event_nb))
+                # sum w is only a denominator when it is distinguishable
+                # from zero -- 5 of its own Monte Carlo errors, the same test
+                # the density path uses (_OVERWEIGHT_MIN_Z)
+                if z >= 5.0:
+                    msg += ("Carrying it added %+.6g to the summed event "
+                            "weight, i.e. %+.3g%% of the sample's "
+                            "cross-section. " % (d_w, 100.0 * d_w / sum_w))
+                else:
+                    msg += ("Carrying it added %+.6g to the summed event "
+                            "weight and %+.6g to the summed |weight|; the "
+                            "summed weight is %+.4g against a Monte Carlo "
+                            "error of %.4g (z = %.2f), i.e. consistent with "
+                            "zero, so it is not a usable denominator and the "
+                            "shift is quoted against sum|w| = %.4g instead: "
+                            "%+.3g%%. "
+                            % (d_w, d_abs, sum_w, delta, z, sum_abs,
+                               100.0 * d_abs / sum_abs if sum_abs
+                               else float('nan')))
+                msg += ("Clipping it -- what MadSpin did before -- would have "
+                        "discarded that silently.")
+                logger.warning(msg)
+            else:
+                logger.info(
+                    "MadSpin overweight safety net: 0/%d written events "
+                    "carried a non-unit weight -- max_weight was never "
+                    "exceeded, so nothing was clipped and nothing is biased "
+                    "by it.", event_nb)
         logger.info('Number of subprocesses '+str(len(self.calculator)))
         logger.info('Number of failures when restoring the Monte Carlo masses: %s ' % nb_fail_mc_mass)
         if fail_nb:
