@@ -1,0 +1,215 @@
+{
+  "bwcutoff": 15.0,
+  "code_branch": "claude/ms-mtt-threshold",
+  "code_sha": "cfc248ee4df33b39b3a5cb07977a52064f7388f8",
+  "cross_check": {
+    "PA": {
+      "max_abs_diff_GeV": 2.2737367544323206e-13,
+      "nevents": 2000
+    },
+    "madspin": {
+      "max_abs_diff_GeV": 6.252776074688882e-13,
+      "nevents": 2000
+    },
+    "onshell": {
+      "max_abs_diff_GeV": 1.1937117960769683e-12,
+      "nevents": 2000
+    },
+    "truth": {
+      "max_abs_diff_GeV": 0.0,
+      "nevents": 2000
+    }
+  },
+  "delta_mtt": {
+    "PA": {
+      "crossed_down": 1825,
+      "crossed_up": 0,
+      "max_abs": 45.38474160192038,
+      "max_dshat": 0.0,
+      "mean": -0.028263848248462526,
+      "n": 1000000,
+      "n_out": 3,
+      "rms": 2.102229875030261
+    },
+    "madspin": {
+      "crossed_down": 1382,
+      "crossed_up": 0,
+      "max_abs": 44.46890558724192,
+      "max_dshat": 0.0,
+      "mean": 0.13647099407926513,
+      "n": 1000000,
+      "n_out": 1,
+      "rms": 2.1359228543651416
+    },
+    "onshell": {
+      "crossed_down": 0,
+      "crossed_up": 0,
+      "max_abs": 2.582908928161487e-05,
+      "max_dshat": 0.0,
+      "mean": -4.0161985782560806e-10,
+      "n": 1000000,
+      "n_out": 0,
+      "rms": 3.1779410391208783e-07
+    }
+  },
+  "madspin_BW_cut": 15,
+  "madspin_decays": [
+    "t > w+ b",
+    "t~ > w- b~"
+  ],
+  "model": "sm",
+  "mt_pole_assumed": 173.0,
+  "mtt_bins": {
+    "hi": 520.0,
+    "lo": 290.0,
+    "n": 920
+  },
+  "multiparticles": {
+    "j": "g u c d s u~ c~ d~ s~",
+    "p": "g u c d s u~ c~ d~ s~"
+  },
+  "nb_core": 8,
+  "nevents_prod_requested": 1000000,
+  "nevents_truth_requested": 3000000,
+  "observable": "invariant mass of the sum of the four status-1 particles with |pid| in {24, 5}, i.e. (W+ b) + (W- b~)",
+  "param_card_masses": {
+    "MB": 4.7,
+    "MT": 173.0,
+    "WT": 1.4915,
+    "WW": 2.0476
+  },
+  "production_process": "p p > t t~ j",
+  "run_card": {
+    "bwcutoff": 15.0,
+    "dsqrt_q2fact1": 173.0,
+    "dsqrt_q2fact2": 173.0,
+    "ebeam1": 6500,
+    "ebeam2": 6500,
+    "etaj": 5,
+    "fixed_fac_scale": "True",
+    "fixed_ren_scale": "True",
+    "ptj": 20,
+    "scale": 173.0,
+    "use_syst": "False"
+  },
+  "runs": {
+    "PA": {
+      "banner_cross_pb": 674.4446,
+      "madspin_card": "set spinmode PA\nset seed 42\nset max_running_process 4\nset nb_core 5\nset BW_cut 15\ndefine p = g u c d s u~ c~ d~ s~\ndefine j = g u c d s u~ c~ d~ s~\nimport /tmp/mtt_threshold_work/MS/mode_PA/events.lhe.gz\ndecay t > w+ b\ndecay t~ > w- b~\nlaunch\n",
+      "malformed": 0,
+      "nevents": 1000000,
+      "over_n": 443142,
+      "over_w": 298874715.6405361,
+      "path": "/tmp/mtt_threshold_work/MS/mode_PA/events_decayed.lhe.gz",
+      "sumw": 674444569.9921888,
+      "under_n": 0,
+      "under_w": 0.0,
+      "unweighting": "sequential",
+      "unweighting_why": "auto, 2 decaying particle(s)"
+    },
+    "madspin": {
+      "banner_cross_pb": 674.4446,
+      "madspin_card": "set spinmode madspin\nset seed 42\nset max_running_process 4\nset nb_core 5\nset BW_cut 15\ndefine p = g u c d s u~ c~ d~ s~\ndefine j = g u c d s u~ c~ d~ s~\nimport /tmp/mtt_threshold_work/MS/mode_madspin/events.lhe.gz\ndecay t > w+ b\ndecay t~ > w- b~\nlaunch\n",
+      "malformed": 0,
+      "nevents": 1000000,
+      "over_n": 443375,
+      "over_w": 300200762.5561887,
+      "path": "/tmp/mtt_threshold_work/MS/mode_madspin/events_decayed.lhe.gz",
+      "sumw": 676346385.8689023,
+      "under_n": 0,
+      "under_w": 0.0,
+      "unweighting": "joint",
+      "unweighting_why": "auto, 2 decaying particle(s)"
+    },
+    "onshell": {
+      "banner_cross_pb": 674.4446,
+      "madspin_card": "set spinmode onshell\nset seed 42\nset max_running_process 4\nset nb_core 5\nset BW_cut 15\ndefine p = g u c d s u~ c~ d~ s~\ndefine j = g u c d s u~ c~ d~ s~\nimport /tmp/mtt_threshold_work/MS/mode_onshell/events.lhe.gz\ndecay t > w+ b\ndecay t~ > w- b~\nlaunch\n",
+      "malformed": 0,
+      "nevents": 1000000,
+      "over_n": 443048,
+      "over_w": 298811317.85095567,
+      "path": "/tmp/mtt_threshold_work/MS/mode_onshell/events_decayed.lhe.gz",
+      "sumw": 674444569.9921888,
+      "under_n": 0,
+      "under_w": 0.0,
+      "unweighting": "sequential",
+      "unweighting_why": "auto, 2 decaying particle(s)"
+    },
+    "production": {
+      "banner_cross_pb": 674.4446,
+      "malformed": 0,
+      "nevents": 1000000,
+      "over_n": 443048,
+      "over_w": 298811317.85095567,
+      "path": "/tmp/mtt_threshold_work/MS/PROC/Events/run_01/unweighted_events.lhe.gz",
+      "sumw": 674444569.9921888,
+      "under_n": 0,
+      "under_w": 0.0
+    },
+    "truth": {
+      "banner_cross_pb": 651.7627,
+      "malformed": 0,
+      "nevents": 5000000,
+      "over_n": 2220076,
+      "over_w": 1446619675.86798,
+      "path": [
+        "/tmp/mtt_threshold_work/TRUTH/Events/run_01/unweighted_events.lhe.gz",
+        "/tmp/mtt_threshold_work/TRUTH/Events/run_02/unweighted_events.lhe.gz",
+        "/tmp/mtt_threshold_work/TRUTH/Events/run_03/unweighted_events.lhe.gz",
+        "/tmp/mtt_threshold_work/TRUTH/Events/run_04/unweighted_events.lhe.gz",
+        "/tmp/mtt_threshold_work/TRUTH/Events/run_05/unweighted_events.lhe.gz"
+      ],
+      "sumw": 3258040669.9949646,
+      "under_n": 0,
+      "under_w": 0.0
+    }
+  },
+  "seed_madspin": 42,
+  "seed_production": 42,
+  "seed_truth": 4242,
+  "truth_process": "p p > t t~ j, t > w+ b, t~ > w- b~",
+  "truth_runs": [
+    {
+      "malformed": 0,
+      "nevents": 1000000,
+      "over_n": 444096,
+      "path": "/tmp/mtt_threshold_work/TRUTH/Events/run_01/unweighted_events.lhe.gz",
+      "sigma": 651.762670000826,
+      "under_n": 0
+    },
+    {
+      "malformed": 0,
+      "nevents": 1000000,
+      "over_n": 443522,
+      "path": "/tmp/mtt_threshold_work/TRUTH/Events/run_02/unweighted_events.lhe.gz",
+      "sigma": 651.3743199933642,
+      "under_n": 0
+    },
+    {
+      "malformed": 0,
+      "nevents": 1000000,
+      "over_n": 443896,
+      "path": "/tmp/mtt_threshold_work/TRUTH/Events/run_03/unweighted_events.lhe.gz",
+      "sigma": 651.6232800021398,
+      "under_n": 0
+    },
+    {
+      "malformed": 0,
+      "nevents": 1000000,
+      "over_n": 444080,
+      "path": "/tmp/mtt_threshold_work/TRUTH/Events/run_04/unweighted_events.lhe.gz",
+      "sigma": 651.756800006984,
+      "under_n": 0
+    },
+    {
+      "malformed": 0,
+      "nevents": 1000000,
+      "over_n": 444482,
+      "path": "/tmp/mtt_threshold_work/TRUTH/Events/run_05/unweighted_events.lhe.gz",
+      "sigma": 651.5235999916508,
+      "under_n": 0
+    }
+  ],
+  "two_mt": 346.0,
+  "wt_pole_assumed": 1.4915
+}

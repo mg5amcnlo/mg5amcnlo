@@ -1,0 +1,28 @@
+set automatic_html_opening False --no_save
+set nb_core 8
+import model sm
+define p = g u c d s u~ c~ d~ s~
+define j = g u c d s u~ c~ d~ s~
+generate p p > t t~ j
+output /tmp/mtt_threshold_work/MS/PROC
+launch /tmp/mtt_threshold_work/MS/PROC
+madspin=OFF
+shower=OFF
+detector=OFF
+analysis=OFF
+done
+set nevents 1000000
+set iseed 42
+set use_syst False
+set ebeam1 6500
+set ebeam2 6500
+set ptj 20
+set etaj 5
+set bwcutoff 15.0
+set fixed_ren_scale True
+set fixed_fac_scale True
+set scale 173.0
+set dsqrt_q2fact1 173.0
+set dsqrt_q2fact2 173.0
+set use_syst False
+done

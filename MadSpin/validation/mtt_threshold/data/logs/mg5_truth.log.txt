@@ -1,0 +1,738 @@
+Running MG5 in debug mode
+************************************************************
+*                                                          *
+*                     W E L C O M E to                     *
+*              M A D G R A P H 5 _ a M C @ N L O           *
+*                                                          *
+*                                                          *
+*                 *                       *                *
+*                   *        * *        *                  *
+*                     * * * * 5 * * * *                    *
+*                   *        * *        *                  *
+*                 *                       *                *
+*                                                          *
+*         VERSION 3.7.2                 2026-04-28         *
+*         GIT r992-575-gcfc248ee4  claude/ms-mtt-threshold         *
+*                                                          *
+*    The MadGraph5_aMC@NLO Development Team - Find us at   *
+*              http://madgraph.phys.ucl.ac.be/             *
+*                            and                           *
+*            http://amcatnlo.web.cern.ch/amcatnlo/         *
+*                                                          *
+*               Type 'help' for in-line help.              *
+*           Type 'tutorial' to learn how MG5 works         *
+*    Type 'tutorial aMCatNLO' to learn how aMC@NLO works   *
+*    Type 'tutorial MadLoop' to learn how MadLoop works    *
+*                                                          *
+************************************************************
+load MG5 configuration from /Users/omattelaer/.mg5/mg5_configuration.txt 
+[1;32mDEBUG:  set configuration option f2py_compiler to /Users/omattelaer/Documents/git_workspace/version3/py313/.direnv/python-3.13/bin/f2py --python=3.13 [1;30m[madgraph_interface.py at line 7452][0m [0m
+[1;32mDEBUG:  set configuration option f2py_compiler to /Users/omattelaer/Documents/git_workspace/version3/py311/.direnv/python-3.13/bin/f2py --python=3.11 [1;30m[madgraph_interface.py at line 7452][0m [0m
+[1;32mDEBUG:  set configuration option f2py_compiler to /Users/omattelaer/Documents/git_workspace/version3/py312/.direnv/python-3.13/bin/f2py --python=3.12 [1;30m[madgraph_interface.py at line 7452][0m [0m
+[1;32mDEBUG:  set configuration option f2py_compiler to /Users/omattelaer/Documents/git_workspace/version3/py314/.direnv/python-3.13/bin/f2py --python=3.14 [1;30m[madgraph_interface.py at line 7452][0m [0m
+set f2py compiler to /Users/omattelaer/Documents/git_workspace/version3/py314/.direnv/python-3.13/bin/f2py
+[1;32mDEBUG:  set configuration option lhapdf to /Users/omattelaer/Documents/HEPTools/lhapdf6_py312/bin/lhapdf-config --python=3.12 [1;30m[madgraph_interface.py at line 7452][0m [0m
+[1;32mDEBUG:  set configuration option lhapdf to /Users/omattelaer/Documents/HEPTools/lhapdf6_py313/bin/lhapdf-config --python=3.13 [1;30m[madgraph_interface.py at line 7452][0m [0m
+[1;32mDEBUG:  set configuration option lhapdf to /Users/omattelaer/Documents/HEPTools/lhapdf6_py314/bin/lhapdf-config --python=3.14 [1;30m[madgraph_interface.py at line 7452][0m [0m
+/Users/omattelaer/Documents/HEPTools/lhapdf6_py314/bin/lhapdf-config does not seem to correspond to a valid lhapdf-config executable. 
+Please set the 'lhapdf' variable to the (absolute) /PATH/TO/lhapdf-config (including lhapdf-config).
+Note that you can still compile and run aMC@NLO with the built-in PDFs
+ MG5_aMC> set lhapdf /PATH/TO/lhapdf-config
+
+load MG5 configuration from input/mg5_configuration.txt 
+fastjet-config does not seem to correspond to a valid fastjet-config executable (v3+). We will use fjcore instead.
+ Please set the 'fastjet'variable to the full (absolute) /PATH/TO/fastjet-config (including fastjet-config).
+ MG5_aMC> set fastjet /PATH/TO/fastjet-config
+
+/Users/omattelaer/Documents/HEPTools/EMELA/bin/eMELA-config does not seem to correspond to a valid eMELA-config executable.
+ Please set the 'fastjet'variable to the full (absolute) /PATH/TO/eMELA-config (including eMELA-config).
+ MG5_aMC> set eMELA /PATH/TO/eMELA-config
+
+set ninja to /Users/omattelaer/Documents/HEPTools/lib
+set collier to /Users/omattelaer/Documents/HEPTools/lib
+lhapdf-config does not seem to correspond to a valid lhapdf-config executable. 
+Please set the 'lhapdf' variable to the (absolute) /PATH/TO/lhapdf-config (including lhapdf-config).
+Note that you can still compile and run aMC@NLO with the built-in PDFs
+ MG5_aMC> set lhapdf /PATH/TO/lhapdf-config
+
+set lhapdf to /Users/omattelaer/Documents/HEPTools/lhapdf6_py3/bin/lhapdf-config
+[1;34m
+    The current version of MG5_aMC (v3.7.2) is different than the one active when
+    installing the 'mg5amc_py8_interface_path' (which was MG5aMC v3.5.15). 
+    Please consider refreshing the installation of this interface with the command:
+     MG5_aMC>install mg5amc_py8_interface
+    [0m
+Using default gzip "gzip". Set another one in ./input/mg5_configuration.txt
+[1;34mWARNING: launching caffeinate to prevent idle sleep when MG5aMC is running. Run './bin/mg5_aMC -s' to prevent this. [0m
+import /private/tmp/mtt_threshold_work/truth.mg5
+The import format was not given, so we guess it as command
+set automatic_html_opening False --no_save
+set nb_core 9
+This option will be the default in any output that you are going to create in this session.
+In order to keep this changes permanent please run 'save options'
+import model sm
+INFO: Restrict model sm with file models/sm/restrict_default.dat . 
+[1;32mDEBUG: Simplifying conditional expressions [0m
+[1;32mDEBUG: remove interactions: u s w+ at order: QED=1 [0m
+[1;32mDEBUG: remove interactions: u b w+ at order: QED=1 [0m
+[1;32mDEBUG: remove interactions: c d w+ at order: QED=1 [0m
+[1;32mDEBUG: remove interactions: c b w+ at order: QED=1 [0m
+[1;32mDEBUG: remove interactions: t d w+ at order: QED=1 [0m
+[1;32mDEBUG: remove interactions: t s w+ at order: QED=1 [0m
+[1;32mDEBUG: remove interactions: s u w+ at order: QED=1 [0m
+[1;32mDEBUG: remove interactions: b u w+ at order: QED=1 [0m
+[1;32mDEBUG: remove interactions: d c w+ at order: QED=1 [0m
+[1;32mDEBUG: remove interactions: b c w+ at order: QED=1 [0m
+[1;32mDEBUG: remove interactions: d t w+ at order: QED=1 [0m
+[1;32mDEBUG: remove interactions: s t w+ at order: QED=1 [0m
+[1;32mDEBUG: remove interactions: c c h at order: QED=1 [0m
+[1;32mDEBUG: remove interactions: e- e- h at order: QED=1 [0m
+[1;32mDEBUG: remove interactions: mu- mu- h at order: QED=1 [0m
+[1;32mDEBUG:  Fuse the Following coupling (they have the same value): ('GC_100', 1), ('GC_104', 1), ('GC_108', 1), ('GC_40', 1), ('GC_41', 1), ('GC_45', 1), ('GC_49', 1)  [0m
+[1;32mDEBUG:  Fuse the Following coupling (they have the same value): ('GC_21', 1), ('GC_27', -1)  [0m
+[1;32mDEBUG:  Fuse the Following coupling (they have the same value): ('GC_15', 1), ('GC_30', -1)  [0m
+[1;32mDEBUG:  Fuse the Following coupling (they have the same value): ('GC_38', 1), ('GC_39', -1)  [0m
+[1;32mDEBUG:  Fuse the Following coupling (they have the same value): ('GC_3', 1), ('GC_4', -1)  [0m
+[1;32mDEBUG:  Fuse the Following coupling (they have the same value): ('GC_50', 1), ('GC_51', -1)  [0m
+[1;32mDEBUG:  Fuse the Following coupling (they have the same value): ('GC_54', 1), ('GC_56', -1)  [0m
+[1;32mDEBUG:  Fuse the Following coupling (they have the same value): ('GC_66', 1), ('GC_67', -1)  [0m
+[1;32mDEBUG:  Fuse the Following coupling (they have the same value): ('GC_70', 1), ('GC_73', -1)  [0m
+[1;32mDEBUG:  Fuse the Following coupling (they have the same value): ('GC_74', 1), ('GC_75', -1)  [0m
+[1;32mDEBUG:  Fuse the Following coupling (they have the same value): ('GC_77', 1), ('GC_78', -1)  [0m
+[1;32mDEBUG:  Fuse the Following coupling (they have the same value): ('GC_76', 1), ('GC_79', -1)  [0m
+[1;32mDEBUG:  Fuse the Following coupling (they have the same value): ('GC_7', 1), ('GC_9', -1)  [0m
+[1;32mDEBUG:  Fuse the Following coupling (they have the same value): ('GC_96', 1), ('GC_97', -1)  [0m
+[1;32mDEBUG: remove parameters: mdl_lamWS [0m
+[1;32mDEBUG: remove parameters: mdl_AWS [0m
+[1;32mDEBUG: remove parameters: mdl_rhoWS [0m
+[1;32mDEBUG: remove parameters: mdl_etaWS [0m
+[1;32mDEBUG: remove parameters: mdl_ymc [0m
+[1;32mDEBUG: remove parameters: mdl_yme [0m
+[1;32mDEBUG: remove parameters: mdl_ymm [0m
+[1;32mDEBUG: remove parameters: mdl_MC [0m
+[1;32mDEBUG: remove parameters: mdl_Me [0m
+[1;32mDEBUG: remove parameters: mdl_MM [0m
+[1;32mDEBUG: remove parameters: mdl_WTau [0m
+[1;32mDEBUG: remove parameters: mdl_lamWS__exp__2 [0m
+[1;32mDEBUG: remove parameters: mdl_CKM1x2 [0m
+[1;32mDEBUG: remove parameters: mdl_lamWS__exp__3 [0m
+[1;32mDEBUG: remove parameters: mdl_CKM1x3 [0m
+[1;32mDEBUG: remove parameters: mdl_CKM2x1 [0m
+[1;32mDEBUG: remove parameters: mdl_CKM2x3 [0m
+[1;32mDEBUG: remove parameters: mdl_CKM3x1 [0m
+[1;32mDEBUG: remove parameters: mdl_CKM3x2 [0m
+[1;32mDEBUG: remove parameters: mdl_conjg__CKM1x3 [0m
+[1;32mDEBUG: remove parameters: mdl_conjg__CKM2x3 [0m
+[1;32mDEBUG: remove parameters: mdl_conjg__CKM2x1 [0m
+[1;32mDEBUG: remove parameters: mdl_conjg__CKM3x1 [0m
+[1;32mDEBUG: remove parameters: mdl_conjg__CKM3x2 [0m
+[1;32mDEBUG: remove parameters: mdl_conjg__CKM1x2 [0m
+[1;32mDEBUG: remove parameters: mdl_yc [0m
+[1;32mDEBUG: remove parameters: mdl_ye [0m
+[1;32mDEBUG: remove parameters: mdl_ym [0m
+[1;32mDEBUG: remove parameters: mdl_I1x31 [0m
+[1;32mDEBUG: remove parameters: mdl_I1x32 [0m
+[1;32mDEBUG: remove parameters: mdl_I2x12 [0m
+[1;32mDEBUG: remove parameters: mdl_I2x13 [0m
+[1;32mDEBUG: remove parameters: mdl_I2x22 [0m
+[1;32mDEBUG: remove parameters: mdl_I2x23 [0m
+[1;32mDEBUG: remove parameters: mdl_I2x32 [0m
+[1;32mDEBUG: remove parameters: mdl_I3x21 [0m
+[1;32mDEBUG: remove parameters: mdl_I3x22 [0m
+[1;32mDEBUG: remove parameters: mdl_I3x23 [0m
+[1;32mDEBUG: remove parameters: mdl_I3x31 [0m
+[1;32mDEBUG: remove parameters: mdl_I3x32 [0m
+[1;32mDEBUG: remove parameters: mdl_I4x13 [0m
+[1;32mDEBUG: remove parameters: mdl_I4x23 [0m
+[1;32mDEBUG: remove parameters: mdl_CKM1x1 [0m
+[1;32mDEBUG: remove parameters: mdl_CKM2x2 [0m
+[1;32mDEBUG: fix parameter value: mdl_CKM3x3 [0m
+[1;32mDEBUG: fix parameter value: mdl_conjg__CKM3x3 [0m
+[1;32mDEBUG: remove parameters: mdl_conjg__CKM2x2 [0m
+[1;32mDEBUG: fix parameter value: mdl_conjg__CKM1x1 [0m
+INFO: Change particles name to pass to MG5 convention 
+Defined multiparticle p = g u c d s u~ c~ d~ s~
+Defined multiparticle j = g u c d s u~ c~ d~ s~
+Defined multiparticle l+ = e+ mu+
+Defined multiparticle l- = e- mu-
+Defined multiparticle vl = ve vm vt
+Defined multiparticle vl~ = ve~ vm~ vt~
+Defined multiparticle all = g u c d s u~ c~ d~ s~ a ve vm vt e- mu- ve~ vm~ vt~ e+ mu+ t b t~ b~ z w+ h w- ta- ta+
+define p = g u c d s u~ c~ d~ s~
+Defined multiparticle p = g u c d s u~ c~ d~ s~
+define j = g u c d s u~ c~ d~ s~
+Defined multiparticle j = g u c d s u~ c~ d~ s~
+generate p p > t t~ j, t > w+ b, t~ > w- b~
+INFO: Checking for minimal orders which gives processes. 
+INFO: Please specify coupling orders to bypass this step. 
+INFO: Trying coupling order WEIGHTED<=3: WEIGTHED IS QCD+2*QED 
+INFO: Trying process: g g > t t~ g WEIGHTED<=3 @1  
+INFO: Process has 16 diagrams 
+INFO: Trying process: g u > t t~ u WEIGHTED<=3 @1  
+INFO: Process has 5 diagrams 
+INFO: Trying process: g u > t t~ c WEIGHTED<=3 @1  
+INFO: Trying process: g c > t t~ u WEIGHTED<=3 @1  
+INFO: Trying process: g c > t t~ c WEIGHTED<=3 @1  
+INFO: Process has 5 diagrams 
+INFO: Trying process: g d > t t~ d WEIGHTED<=3 @1  
+INFO: Process has 5 diagrams 
+INFO: Trying process: g d > t t~ s WEIGHTED<=3 @1  
+INFO: Trying process: g s > t t~ d WEIGHTED<=3 @1  
+INFO: Trying process: g s > t t~ s WEIGHTED<=3 @1  
+INFO: Process has 5 diagrams 
+INFO: Crossed process found for g u~ > t t~ u~, reuse diagrams. 
+INFO: Crossed process found for g c~ > t t~ c~, reuse diagrams. 
+INFO: Crossed process found for g d~ > t t~ d~, reuse diagrams. 
+INFO: Crossed process found for g s~ > t t~ s~, reuse diagrams. 
+INFO: Process u g > t t~ u added to mirror process g u > t t~ u 
+INFO: Crossed process found for u u~ > t t~ g, reuse diagrams. 
+INFO: Process c g > t t~ c added to mirror process g c > t t~ c 
+INFO: Crossed process found for c c~ > t t~ g, reuse diagrams. 
+INFO: Process d g > t t~ d added to mirror process g d > t t~ d 
+INFO: Crossed process found for d d~ > t t~ g, reuse diagrams. 
+INFO: Process s g > t t~ s added to mirror process g s > t t~ s 
+INFO: Crossed process found for s s~ > t t~ g, reuse diagrams. 
+INFO: Process u~ g > t t~ u~ added to mirror process g u~ > t t~ u~ 
+INFO: Process u~ u > t t~ g added to mirror process u u~ > t t~ g 
+INFO: Process c~ g > t t~ c~ added to mirror process g c~ > t t~ c~ 
+INFO: Process c~ c > t t~ g added to mirror process c c~ > t t~ g 
+INFO: Process d~ g > t t~ d~ added to mirror process g d~ > t t~ d~ 
+INFO: Process d~ d > t t~ g added to mirror process d d~ > t t~ g 
+INFO: Process s~ g > t t~ s~ added to mirror process g s~ > t t~ s~ 
+INFO: Process s~ s > t t~ g added to mirror process s s~ > t t~ g 
+INFO: Checking for minimal orders which gives processes. 
+INFO: Please specify coupling orders to bypass this step. 
+INFO: Trying process: t > w+ b WEIGHTED<=2  
+INFO: Process has 1 diagrams 
+INFO: Checking for minimal orders which gives processes. 
+INFO: Please specify coupling orders to bypass this step. 
+INFO: Trying process: t~ > w- b~ WEIGHTED<=2  
+INFO: Process has 1 diagrams 
+1 processes with 78 diagrams generated in 0.031 s
+Total: 1 processes with 78 diagrams
+output /tmp/mtt_threshold_work/TRUTH
+INFO: initialize a new directory: TRUTH 
+INFO: remove old information in TRUTH 
+INFO: Organizing processes into subprocess groups 
+INFO: Organizing processes into subprocess groups 
+INFO: Generating Helas calls for process: g g > t t~ g WEIGHTED<=3 @1 
+INFO: Generating Helas calls for process: g u > t t~ u WEIGHTED<=3 @1 
+INFO: Combined process g c > t t~ c WEIGHTED<=3 @1 with process g u > t t~ u WEIGHTED<=3 @1 
+INFO: Combined process g d > t t~ d WEIGHTED<=3 @1 with process g u > t t~ u WEIGHTED<=3 @1 
+INFO: Combined process g s > t t~ s WEIGHTED<=3 @1 with process g u > t t~ u WEIGHTED<=3 @1 
+INFO: Generating Helas calls for process: g u~ > t t~ u~ WEIGHTED<=3 @1 
+INFO: Combined process g c~ > t t~ c~ WEIGHTED<=3 @1 with process g u~ > t t~ u~ WEIGHTED<=3 @1 
+INFO: Combined process g d~ > t t~ d~ WEIGHTED<=3 @1 with process g u~ > t t~ u~ WEIGHTED<=3 @1 
+INFO: Combined process g s~ > t t~ s~ WEIGHTED<=3 @1 with process g u~ > t t~ u~ WEIGHTED<=3 @1 
+INFO: Generating Helas calls for process: u u~ > t t~ g WEIGHTED<=3 @1 
+INFO: Combined process c c~ > t t~ g WEIGHTED<=3 @1 with process u u~ > t t~ g WEIGHTED<=3 @1 
+INFO: Combined process d d~ > t t~ g WEIGHTED<=3 @1 with process u u~ > t t~ g WEIGHTED<=3 @1 
+INFO: Combined process s s~ > t t~ g WEIGHTED<=3 @1 with process u u~ > t t~ g WEIGHTED<=3 @1 
+INFO: Generating Helas calls for process: t > w+ b WEIGHTED<=2 
+INFO: Generating Helas calls for process: t~ > w- b~ WEIGHTED<=2 
+INFO: Combine g g > t t~ g WEIGHTED<=3 @1 with decays t > w+ b WEIGHTED<=2, t~ > w- b~ WEIGHTED<=2 
+INFO: Combine g u > t t~ u WEIGHTED<=3 @1 with decays t > w+ b WEIGHTED<=2, t~ > w- b~ WEIGHTED<=2 
+INFO: Combine g u~ > t t~ u~ WEIGHTED<=3 @1 with decays t > w+ b WEIGHTED<=2, t~ > w- b~ WEIGHTED<=2 
+INFO: Combine u u~ > t t~ g WEIGHTED<=3 @1 with decays t > w+ b WEIGHTED<=2, t~ > w- b~ WEIGHTED<=2 
+INFO: Processing color information for process: g g > t t~ g @1
+  Decay: t > w+ b WEIGHTED<=2
+  Decay: t~ > w- b~ WEIGHTED<=2 
+INFO: Processing color information for process: g u > t t~ u @1
+  Decay: t > w+ b WEIGHTED<=2
+  Decay: t~ > w- b~ WEIGHTED<=2 
+INFO: Processing color information for process: g u~ > t t~ u~ @1
+  Decay: t > w+ b WEIGHTED<=2
+  Decay: t~ > w- b~ WEIGHTED<=2 
+INFO: Processing color information for process: u u~ > t t~ g @1
+  Decay: t > w+ b WEIGHTED<=2
+  Decay: t~ > w- b~ WEIGHTED<=2 
+INFO: Creating files in directory P1_gg_ttxg_t_wpb_tx_wmbx 
+[1mINFO: Some T-channel width have been set to zero [new since 2.8.0]
+ if you want to keep this width please set "zerowidth_tchannel" to False [0m
+INFO: Generating Feynman diagrams for Process: g g > t t~ g WEIGHTED<=3 @1
+  Decay: t > w+ b WEIGHTED<=2
+  Decay: t~ > w- b~ WEIGHTED<=2 
+INFO: Finding symmetric diagrams for subprocess group gg_ttxg_t_wpb_tx_wmbx 
+INFO: Creating files in directory P1_gq_ttxq_t_wpb_tx_wmbx 
+INFO: Generating Feynman diagrams for Process: g u > t t~ u WEIGHTED<=3 @1
+  Decay: t > w+ b WEIGHTED<=2
+  Decay: t~ > w- b~ WEIGHTED<=2 
+INFO: Generating Feynman diagrams for Process: g u~ > t t~ u~ WEIGHTED<=3 @1
+  Decay: t > w+ b WEIGHTED<=2
+  Decay: t~ > w- b~ WEIGHTED<=2 
+INFO: Finding symmetric diagrams for subprocess group gq_ttxq_t_wpb_tx_wmbx 
+INFO: Creating files in directory P1_qq_ttxg_t_wpb_tx_wmbx 
+INFO: Generating Feynman diagrams for Process: u u~ > t t~ g WEIGHTED<=3 @1
+  Decay: t > w+ b WEIGHTED<=2
+  Decay: t~ > w- b~ WEIGHTED<=2 
+INFO: Finding symmetric diagrams for subprocess group qq_ttxg_t_wpb_tx_wmbx 
+Generated helas calls for 4 subprocesses (31 diagrams) in 0.050 s
+Wrote files for 100 helas calls in 0.155 s
+ALOHA: aloha starts to compute helicity amplitudes
+ALOHA: aloha creates FFV2 routines[0m
+ALOHA: aloha creates VVV1 routines[0m
+ALOHA: aloha creates FFV1 routines[0m
+ALOHA: aloha creates VVVV1 set of routines with options: P0[0m
+ALOHA: aloha creates VVVV3 set of routines with options: P0[0m
+ALOHA: aloha creates VVVV4 set of routines with options: P0[0m
+ALOHA: aloha creates 6 routines in  0.330 s
+save configuration file to /private/tmp/mtt_threshold_work/TRUTH/Cards/me5_configuration.txt
+INFO: Use Fortran compiler gfortran 
+INFO: Use c++ compiler clang 
+INFO: Generate jpeg diagrams 
+INFO: Generate web pages 
+Output to directory /private/tmp/mtt_threshold_work/TRUTH done.
+Type "launch" to generate events from this process, or see
+/private/tmp/mtt_threshold_work/TRUTH/README
+Run "open index.html" to see more information about this process.
+launch /tmp/mtt_threshold_work/TRUTH
+************************************************************
+*                                                          *
+*                      W E L C O M E to                    *
+*             M A D G R A P H 5 _ a M C @ N L O            *
+*                      M A D E V E N T                     *
+*                                                          *
+*                 *                       *                *
+*                   *        * *        *                  *
+*                     * * * * 5 * * * *                    *
+*                   *        * *        *                  *
+*                 *                       *                *
+*                                                          *
+*         VERSION 3.7.2                 2026-04-28         *
+*                                                          *
+*    The MadGraph5_aMC@NLO Development Team - Find us at   *
+*    https://server06.fynu.ucl.ac.be/projects/madgraph     *
+*                                                          *
+*               Type 'help' for in-line help.              *
+*                                                          *
+************************************************************
+INFO: load configuration from /Users/omattelaer/.mg5/mg5_configuration.txt  
+INFO: load configuration from /private/tmp/mtt_threshold_work/TRUTH/Cards/me5_configuration.txt  
+INFO: load configuration from /private/tmp/t67/input/mg5_configuration.txt  
+INFO: load configuration from /private/tmp/mtt_threshold_work/TRUTH/Cards/me5_configuration.txt  
+INFO: set f2py compiler to /Users/omattelaer/Documents/git_workspace/version3/py314/.direnv/python-3.13/bin/f2py 
+Using default gzip "gzip". Set another one in ./input/mg5_configuration.txt
+generate_events run_01
+stty: stdin isn't a terminal
+The following switches determine which programs are run:
+/=============================================================================\
+1. Choose the shower/hadronization program   [1m  shower[0m = [31mOFF[0m           
+2. Choose the detector simulation program    [1mdetector[0m = [01mNot Avail.[0m    
+3. Choose an analysis package (plot/convert) [1manalysis[0m = [01mNot Avail.[0m    
+4. Decay onshell particles                   [1m madspin[0m = [31mOFF[0m           
+5. Add weights to events for new hypp.       [1mreweight[0m = [31mOFF[0m           
+\=============================================================================/
+Either type the switch number (1 to 5) to change its setting,
+Set any switch explicitly (e.g. type 'shower=Pythia8' at the prompt)
+Type 'help' for the list of all valid option
+Type '0', 'auto', 'done' or just press enter when you are done.
+The following switches determine which programs are run:
+/=============================================================================\
+1. Choose the shower/hadronization program   [1m  shower[0m = [31mOFF[0m           
+2. Choose the detector simulation program    [1mdetector[0m = [01mNot Avail.[0m    
+3. Choose an analysis package (plot/convert) [1manalysis[0m = [01mNot Avail.[0m    
+4. Decay onshell particles                   [1m madspin[0m = [31mOFF[0m           
+5. Add weights to events for new hypp.       [1mreweight[0m = [31mOFF[0m           
+\=============================================================================/
+Either type the switch number (1 to 5) to change its setting,
+Set any switch explicitly (e.g. type 'shower=Pythia8' at the prompt)
+Type 'help' for the list of all valid option
+Type '0', 'auto', 'done' or just press enter when you are done.
+The following switches determine which programs are run:
+/=============================================================================\
+1. Choose the shower/hadronization program   [1m  shower[0m = [31mOFF[0m           
+2. Choose the detector simulation program    [1mdetector[0m = [01mNot Avail.[0m    
+3. Choose an analysis package (plot/convert) [1manalysis[0m = [01mNot Avail.[0m    
+4. Decay onshell particles                   [1m madspin[0m = [31mOFF[0m           
+5. Add weights to events for new hypp.       [1mreweight[0m = [31mOFF[0m           
+\=============================================================================/
+Either type the switch number (1 to 5) to change its setting,
+Set any switch explicitly (e.g. type 'shower=Pythia8' at the prompt)
+Type 'help' for the list of all valid option
+Type '0', 'auto', 'done' or just press enter when you are done.
+The following switches determine which programs are run:
+/=============================================================================\
+1. Choose the shower/hadronization program   [1m  shower[0m = [31mOFF[0m           
+2. Choose the detector simulation program    [1mdetector[0m = [01mNot Avail.[0m    
+3. Choose an analysis package (plot/convert) [1manalysis[0m = [01mNot Avail.[0m    
+4. Decay onshell particles                   [1m madspin[0m = [31mOFF[0m           
+5. Add weights to events for new hypp.       [1mreweight[0m = [31mOFF[0m           
+\=============================================================================/
+Either type the switch number (1 to 5) to change its setting,
+Set any switch explicitly (e.g. type 'shower=Pythia8' at the prompt)
+Type 'help' for the list of all valid option
+Type '0', 'auto', 'done' or just press enter when you are done.
+set nevents 3000000
+[1mINFO: modify parameter nevents of the run_card.dat to 3000000 [0m
+set iseed 4242
+[1mINFO: modify parameter iseed of the run_card.dat to 4242 [0m
+set ebeam1 6500
+[1mINFO: modify parameter ebeam1 of the run_card.dat to 6500.0 [0m
+set ebeam2 6500
+[1mINFO: modify parameter ebeam2 of the run_card.dat to 6500.0 [0m
+set ptj 20
+[1mINFO: modify parameter ptj of the run_card.dat to 20.0 [0m
+set etaj 5
+[1mINFO: modify parameter etaj of the run_card.dat to 5.0 [0m
+set bwcutoff 15.0
+[1mINFO: modify parameter bwcutoff of the run_card.dat to 15.0 [0m
+set fixed_ren_scale True
+[1mINFO: modify parameter fixed_ren_scale of the run_card.dat to True [0m
+set fixed_fac_scale True
+[1mINFO: modify parameter fixed_fac_scale of the run_card.dat to True [0m
+set scale 173.0
+[1mINFO: modify parameter scale of the run_card.dat to 173.0 [0m
+set dsqrt_q2fact1 173.0
+[1mINFO: modify parameter dsqrt_q2fact1 of the run_card.dat to 173.0 [0m
+set dsqrt_q2fact2 173.0
+[1mINFO: modify parameter dsqrt_q2fact2 of the run_card.dat to 173.0 [0m
+set use_syst False
+[1mINFO: modify parameter use_syst of the run_card.dat to False [0m
+[1;32mDEBUG: keep SDE to 1 [0m
+INFO: Update the dependent parameter of the param_card.dat 
+[1;34mWARNING: update the strong coupling value (alpha_s) to the value from the pdf selected: 0.13 [0m
+[1;34mvalue '[]' for entry 'bypass_check' is not valid. Preserving previous value: '[]'.
+allowed values are any list composed of the following entries: partonshower[0m
+Generating 3000000 events with run name run_01
+survey  run_01 
+INFO: compile directory 
+[1;34mAttempting to generate more than 1M events[0m
+[1;34mLimiting number to 1M. Use multi_run for larger statistics.[0m
+[1;32mwrite compile file for card: /private/tmp/mtt_threshold_work/TRUTH/Cards/param_card.dat[0m
+[1;32mrun_card missed argument polbeam1. Takes default: 0.0[0m
+[1;32mrun_card missed argument polbeam2. Takes default: 0.0[0m
+[1;32mrun_card missed argument nb_proton1. Takes default: 1[0m
+[1;32mrun_card missed argument nb_proton2. Takes default: 1[0m
+[1;32mrun_card missed argument nb_neutron1. Takes default: 0[0m
+[1;32mrun_card missed argument nb_neutron2. Takes default: 0[0m
+[1;32mrun_card missed argument mass_ion1. Takes default: -1.0[0m
+[1;32mrun_card missed argument mass_ion2. Takes default: -1.0[0m
+[1;32mrun_card missed argument pdlabel1. Takes default: nn23lo1[0m
+[1;32mrun_card missed argument pdlabel2. Takes default: nn23lo1[0m
+[1;32mrun_card missed argument fixed_fac_scale1. Takes default: True[0m
+[1;32mrun_card missed argument fixed_fac_scale2. Takes default: True[0m
+[1;32mrun_card missed argument fixed_extra_scale. Takes default: False[0m
+[1;32mrun_card missed argument mue_ref_fixed. Takes default: 91.188[0m
+[1;32mrun_card missed argument mue_over_ref. Takes default: 1.0[0m
+[1;32mrun_card missed argument ievo_eva. Takes default: 0[0m
+[1;32mrun_card missed argument evaorder. Takes default: 0[0m
+[1;32mrun_card missed argument eva_xcut. Takes default: 1[0m
+[1;32mrun_card missed argument ickkw. Takes default: 0[0m
+[1;32mrun_card missed argument highestmult. Takes default: 1[0m
+[1;32mrun_card missed argument ktscheme. Takes default: 1[0m
+[1;32mrun_card missed argument alpsfact. Takes default: 1.0[0m
+[1;32mrun_card missed argument chcluster. Takes default: False[0m
+[1;32mrun_card missed argument pdfwgt. Takes default: True[0m
+[1;32mrun_card missed argument asrwgtflavor. Takes default: 5[0m
+[1;32mrun_card missed argument clusinfo. Takes default: True[0m
+[1;32mrun_card missed argument lhe_version. Takes default: 3.0[0m
+[1;32mrun_card missed argument auto_ptj_mjj. Takes default: True[0m
+[1;32mrun_card missed argument limhel. Takes default: 1e-08[0m
+[1;32mrun_card missed argument pta. Takes default: 10.0[0m
+[1;32mrun_card missed argument ptl. Takes default: 10.0[0m
+[1;32mrun_card missed argument misset. Takes default: 0.0[0m
+[1;32mrun_card missed argument ptamax. Takes default: -1.0[0m
+[1;32mrun_card missed argument ptlmax. Takes default: -1.0[0m
+[1;32mrun_card missed argument missetmax. Takes default: -1.0[0m
+[1;32mrun_card missed argument ej. Takes default: 0.0[0m
+[1;32mrun_card missed argument eb. Takes default: 0.0[0m
+[1;32mrun_card missed argument ea. Takes default: 0.0[0m
+[1;32mrun_card missed argument el. Takes default: 0.0[0m
+[1;32mrun_card missed argument ejmax. Takes default: -1.0[0m
+[1;32mrun_card missed argument ebmax. Takes default: -1.0[0m
+[1;32mrun_card missed argument eamax. Takes default: -1.0[0m
+[1;32mrun_card missed argument elmax. Takes default: -1.0[0m
+[1;32mrun_card missed argument etaa. Takes default: 2.5[0m
+[1;32mrun_card missed argument etal. Takes default: 2.5[0m
+[1;32mrun_card missed argument etajmin. Takes default: 0.0[0m
+[1;32mrun_card missed argument etaamin. Takes default: 0.0[0m
+[1;32mrun_card missed argument etalmin. Takes default: 0.0[0m
+[1;32mrun_card missed argument drjj. Takes default: 0.4[0m
+[1;32mrun_card missed argument drll. Takes default: 0.4[0m
+[1;32mrun_card missed argument draa. Takes default: 0.4[0m
+[1;32mrun_card missed argument draj. Takes default: 0.4[0m
+[1;32mrun_card missed argument drjl. Takes default: 0.4[0m
+[1;32mrun_card missed argument drab. Takes default: 0.0[0m
+[1;32mrun_card missed argument drbl. Takes default: 0.0[0m
+[1;32mrun_card missed argument dral. Takes default: 0.4[0m
+[1;32mrun_card missed argument drjjmax. Takes default: -1.0[0m
+[1;32mrun_card missed argument drllmax. Takes default: -1.0[0m
+[1;32mrun_card missed argument draamax. Takes default: -1.0[0m
+[1;32mrun_card missed argument drajmax. Takes default: -1.0[0m
+[1;32mrun_card missed argument drjlmax. Takes default: -1.0[0m
+[1;32mrun_card missed argument drabmax. Takes default: -1.0[0m
+[1;32mrun_card missed argument drblmax. Takes default: -1.0[0m
+[1;32mrun_card missed argument dralmax. Takes default: -1.0[0m
+[1;32mrun_card missed argument mmjj. Takes default: 0.0[0m
+[1;32mrun_card missed argument mmaa. Takes default: 0.0[0m
+[1;32mrun_card missed argument mmll. Takes default: 0.0[0m
+[1;32mrun_card missed argument mmjjmax. Takes default: -1.0[0m
+[1;32mrun_card missed argument mmaamax. Takes default: -1.0[0m
+[1;32mrun_card missed argument mmllmax. Takes default: -1.0[0m
+[1;32mrun_card missed argument mmnl. Takes default: 0.0[0m
+[1;32mrun_card missed argument mmnlmax. Takes default: -1.0[0m
+[1;32mrun_card missed argument ptllmin. Takes default: 0.0[0m
+[1;32mrun_card missed argument ptllmax. Takes default: -1.0[0m
+[1;32mrun_card missed argument xptj. Takes default: 0.0[0m
+[1;32mrun_card missed argument xpta. Takes default: 0.0[0m
+[1;32mrun_card missed argument xptl. Takes default: 0.0[0m
+[1;32mrun_card missed argument ptj1min. Takes default: 0.0[0m
+[1;32mrun_card missed argument ptj1max. Takes default: -1.0[0m
+[1;32mrun_card missed argument ptj2min. Takes default: 0.0[0m
+[1;32mrun_card missed argument ptj2max. Takes default: -1.0[0m
+[1;32mrun_card missed argument ptj3min. Takes default: 0.0[0m
+[1;32mrun_card missed argument ptj3max. Takes default: -1.0[0m
+[1;32mrun_card missed argument ptj4min. Takes default: 0.0[0m
+[1;32mrun_card missed argument ptj4max. Takes default: -1.0[0m
+[1;32mrun_card missed argument cutuse. Takes default: 0[0m
+[1;32mrun_card missed argument ptl1min. Takes default: 0.0[0m
+[1;32mrun_card missed argument ptl1max. Takes default: -1.0[0m
+[1;32mrun_card missed argument ptl2min. Takes default: 0.0[0m
+[1;32mrun_card missed argument ptl2max. Takes default: -1.0[0m
+[1;32mrun_card missed argument ptl3min. Takes default: 0.0[0m
+[1;32mrun_card missed argument ptl3max. Takes default: -1.0[0m
+[1;32mrun_card missed argument ptl4min. Takes default: 0.0[0m
+[1;32mrun_card missed argument ptl4max. Takes default: -1.0[0m
+[1;32mrun_card missed argument htjmin. Takes default: 0.0[0m
+[1;32mrun_card missed argument htjmax. Takes default: -1.0[0m
+[1;32mrun_card missed argument ht4min. Takes default: 0.0[0m
+[1;32mrun_card missed argument ht4max. Takes default: -1.0[0m
+[1;32mrun_card missed argument ptgmin. Takes default: 0.0[0m
+[1;32mrun_card missed argument r0gamma. Takes default: 0.4[0m
+[1;32mrun_card missed argument xn. Takes default: 1.0[0m
+[1;32mrun_card missed argument epsgamma. Takes default: 1.0[0m
+[1;32mrun_card missed argument isoem. Takes default: True[0m
+[1;32mrun_card missed argument xetamin. Takes default: 0.0[0m
+[1;32mrun_card missed argument deltaeta. Takes default: 0.0[0m
+[1;32mrun_card missed argument ktdurham. Takes default: -1.0[0m
+[1;32mrun_card missed argument dparameter. Takes default: 0.4[0m
+[1;32mrun_card missed argument ptlund. Takes default: -1.0[0m
+[1;32mrun_card missed argument pdgs_for_merging_cut. Takes default: [21, 1, 2, 3, 4, 5, 6][0m
+[1;32mrun_card missed argument xqcut. Takes default: 0.0[0m
+[1;32mrun_card missed argument gridrun. Takes default: False[0m
+[1;32mrun_card missed argument fixed_couplings. Takes default: True[0m
+[1;32mrun_card missed argument mc_grouped_subproc. Takes default: True[0m
+[1;32mrun_card missed argument xmtcentral. Takes default: 0.0[0m
+[1;32mrun_card missed argument d. Takes default: 1.0[0m
+[1;32mrun_card missed argument issgridfile. Takes default: [0m
+[1;32mrun_card missed argument tmin_for_channel. Takes default: -1.0[0m
+[1;32mrun_card missed argument small_width_treatment. Takes default: 1e-06[0m
+[1;32mrun_card missed argument bias_parameters. Takes default: {}[0m
+[1;32mrun_card missed argument vector_size. Takes default: 1[0m
+[1;32mrun_card missed argument nb_warp. Takes default: 1[0m
+compile Source Directory
+[1;32mCompiling the bias module 'dummy'[0m
+Using random number seed offset = 4242
+INFO: Running Survey 
+Creating Jobs
+Working on SubProcesses
+INFO: Compiling for process 1/3. 
+INFO:     P1_gg_ttxg_t_wpb_tx_wmbx  
+[1;32mDEBUG: (matrix1_orig.f) nb_hel: 288 zero amp: 0 bad_amps_hel: 0/5184 [0m
+INFO: Compiling for process 2/3. 
+INFO:     P1_gq_ttxq_t_wpb_tx_wmbx  
+[1;32mDEBUG: (matrix1_orig.f) nb_hel: 144 zero amp: 0 bad_amps_hel: 0/720 [0m
+[1;32mDEBUG: (matrix2_orig.f) nb_hel: 144 zero amp: 0 bad_amps_hel: 0/720 [0m
+INFO: Compiling for process 3/3. 
+INFO:     P1_qq_ttxg_t_wpb_tx_wmbx  
+[1;32mDEBUG: (matrix1_orig.f) nb_hel: 144 zero amp: 0 bad_amps_hel: 0/720 [0m
+INFO:     P1_gg_ttxg_t_wpb_tx_wmbx  
+INFO:     P1_gq_ttxq_t_wpb_tx_wmbx  
+INFO:     P1_qq_ttxg_t_wpb_tx_wmbx  
+INFO:  Idle: 1,  Running: 5,  Completed: 5 [ current time: 12h03 ] 
+INFO:  Idle: 0,  Running: 6,  Completed: 5 [ current time: 12h03 ] 
+INFO:  Idle: 0,  Running: 0,  Completed: 11 [  0.94s  ] 
+INFO: End survey 
+refine 1000000
+Creating Jobs
+INFO: Refine results to 1000000 
+INFO: Generating 1000000.0 unweighted events. 
+sum of cpu time of last step: 13 seconds
+INFO: Effective Luminosity 1858.7965711393056 pb^-1 
+[1;32mDEBUG: channel G2.03 need to improve by 1.28 (xsec=0.38565 pb, iter=3) [0m
+[1;32mDEBUG: channel G1 need to improve by 2.81 (xsec=0.66118 pb, iter=3) [0m
+[1;32mDEBUG: channel G6.03 need to improve by 3.09 (xsec=1.1719 pb, iter=3) [0m
+[1;32mDEBUG: channel G13.03 need to improve by 3.16 (xsec=1.1422 pb, iter=3) [0m
+[1;32mDEBUG: channel G2.06 need to improve by 9.89 (xsec=2.5636 pb, iter=3) [0m
+[1;32mDEBUG: channel G2.06 need to improve by 15.89 (xsec=3.0982 pb, iter=3) [0m
+[1;32mDEBUG: channel G4 need to improve by 16.31 (xsec=3.4534 pb, iter=3) [0m
+[1;32mDEBUG: channel G1 need to improve by 32.73 (xsec=10.33 pb, iter=3) [0m
+[1;32mDEBUG: channel G4 need to improve by 33.25 (xsec=10.384 pb, iter=3) [0m
+[1;32mDEBUG: channel G4 need to improve by 33.80 (xsec=10.501 pb, iter=3) [0m
+[1;32mDEBUG: channel G13.06 need to improve by 49.97 (xsec=15.405 pb, iter=3) [0m
+[1;32mDEBUG: channel G6.06 need to improve by 63.88 (xsec=14.858 pb, iter=3) [0m
+[1;32mDEBUG: channel G5 need to improve by 156.20 (xsec=48.917 pb, iter=3) [0m
+[1;32mDEBUG: channel G15 need to improve by 194.03 (xsec=64.014 pb, iter=3) [0m
+[1;32mDEBUG: channel G12 need to improve by 200.95 (xsec=63.326 pb, iter=3) [0m
+[1;32mDEBUG: channel G5 need to improve by 514.90 (xsec=144.2 pb, iter=3) [0m
+[1;32mDEBUG: channel G2 need to improve by 564.98 (xsec=97.097 pb, iter=3) [0m
+[1;32mDEBUG: channel G10 need to improve by 666.24 (xsec=153.6 pb, iter=3) [0m
+INFO: need to improve 18 channels 
+[1;32mDEBUG: G2.03 : need 716.8448976598731 event. Need 1 split job of 1281 points [0m
+[1;32mDEBUG: G1 : need 1228.999116905886 event. Need 2 split job of 1404 points [0m
+[1;32mDEBUG: G6.03 : need 2178.3237017181523 event. Need 3 split job of 1029 points [0m
+[1;32mDEBUG: G13.03 : need 2123.117443555315 event. Need 3 split job of 1054 points [0m
+[1;32mDEBUG: G2.06 : need 4765.210889772724 event. Need 5 split job of 1983 points [0m
+[1;32mDEBUG: G2.06 : need 5758.923536703796 event. Need 6 split job of 2647 points [0m
+[1;32mDEBUG: G4 : need 6419.168078772477 event. Need 7 split job of 2336 points [0m
+[1;32mDEBUG: G1 : need 19201.368579869028 event. Need 20 split job of 1637 points [0m
+[1;32mDEBUG: G4 : need 19301.74359471055 event. Need 20 split job of 1663 points [0m
+[1;32mDEBUG: G4 : need 19519.222793533845 event. Need 20 split job of 1690 points [0m
+[1;32mDEBUG: G13.06 : need 28634.761178401 event. Need 29 split job of 1725 points [0m
+[1;32mDEBUG: G6.06 : need 27617.999453987803 event. Need 28 split job of 2280 points [0m
+[1;32mDEBUG: G5 : need 90926.75187042142 event. Need 91 split job of 1719 points [0m
+[1;32mDEBUG: G15 : need 118989.0037049115 event. Need 119 split job of 1633 points [0m
+[1;32mDEBUG: G12 : need 117710.15166396767 event. Need 118 split job of 1704 points [0m
+[1;32mDEBUG: G5 : need 268038.46555828786 event. Need 130 split job of 3970 points [0m
+[1;32mDEBUG: G2 : need 180483.57066791315 event. Need 130 split job of 4357 points [0m
+[1;32mDEBUG: G10 : need 285511.1533269973 event. Need 130 split job of 5000 points [0m
+- Current estimate of cross-section: 645.578983 +- 4.575334975871698
+    P1_gg_ttxg_t_wpb_tx_wmbx 
+    P1_gq_ttxq_t_wpb_tx_wmbx 
+    P1_qq_ttxg_t_wpb_tx_wmbx 
+INFO:  Idle: 853,  Running: 9,  Completed: 0 [ current time: 12h03 ] 
+INFO:  Idle: 852,  Running: 9,  Completed: 1 [  0.84s  ] 
+INFO:  Idle: 840,  Running: 9,  Completed: 13 [  4s  ] 
+INFO:  Idle: 828,  Running: 9,  Completed: 25 [  7.4s  ] 
+INFO:  Idle: 814,  Running: 9,  Completed: 39 [  10.4s  ] 
+INFO:  Idle: 801,  Running: 9,  Completed: 52 [  13.5s  ] 
+INFO:  Idle: 785,  Running: 9,  Completed: 68 [  17.2s  ] 
+INFO:  Idle: 770,  Running: 9,  Completed: 83 [  20.3s  ] 
+INFO:  Idle: 756,  Running: 9,  Completed: 97 [  23.4s  ] 
+INFO:  Idle: 744,  Running: 9,  Completed: 109 [  26.6s  ] 
+INFO:  Idle: 725,  Running: 9,  Completed: 128 [  29.7s  ] 
+INFO:  Idle: 713,  Running: 9,  Completed: 140 [  33s  ] 
+INFO:  Idle: 696,  Running: 9,  Completed: 157 [  36.3s  ] 
+INFO:  Idle: 682,  Running: 9,  Completed: 171 [  39.4s  ] 
+INFO:  Idle: 669,  Running: 9,  Completed: 184 [  42.6s  ] 
+INFO:  Idle: 655,  Running: 9,  Completed: 198 [  45.8s  ] 
+INFO:  Idle: 643,  Running: 9,  Completed: 210 [  48.9s  ] 
+INFO:  Idle: 628,  Running: 9,  Completed: 225 [  52.1s  ] 
+INFO:  Idle: 614,  Running: 9,  Completed: 239 [  55.1s  ] 
+INFO:  Idle: 602,  Running: 9,  Completed: 251 [  58.2s  ] 
+INFO:  Idle: 587,  Running: 9,  Completed: 266 [  1m 1s  ] 
+INFO:  Idle: 573,  Running: 9,  Completed: 280 [  1m 4s  ] 
+INFO:  Idle: 559,  Running: 9,  Completed: 294 [  1m 8s  ] 
+INFO:  Idle: 546,  Running: 9,  Completed: 307 [  1m 11s  ] 
+INFO:  Idle: 534,  Running: 9,  Completed: 319 [  1m 14s  ] 
+INFO:  Idle: 521,  Running: 9,  Completed: 332 [  1m 17s  ] 
+INFO:  Idle: 508,  Running: 9,  Completed: 345 [  1m 20s  ] 
+INFO:  Idle: 492,  Running: 9,  Completed: 361 [  1m 23s  ] 
+INFO:  Idle: 482,  Running: 9,  Completed: 371 [  1m 26s  ] 
+INFO:  Idle: 470,  Running: 9,  Completed: 383 [  1m 30s  ] 
+INFO:  Idle: 457,  Running: 9,  Completed: 396 [  1m 33s  ] 
+INFO:  Idle: 445,  Running: 9,  Completed: 408 [  1m 36s  ] 
+INFO:  Idle: 436,  Running: 9,  Completed: 417 [  1m 39s  ] 
+INFO:  Idle: 423,  Running: 9,  Completed: 430 [  1m 42s  ] 
+INFO:  Idle: 407,  Running: 9,  Completed: 446 [  1m 46s  ] 
+INFO:  Idle: 395,  Running: 9,  Completed: 458 [  1m 49s  ] 
+INFO:  Idle: 386,  Running: 9,  Completed: 467 [  1m 52s  ] 
+INFO:  Idle: 380,  Running: 9,  Completed: 473 [  1m 55s  ] 
+INFO:  Idle: 373,  Running: 9,  Completed: 480 [  1m 58s  ] 
+INFO:  Idle: 368,  Running: 9,  Completed: 485 [  2m 1s  ] 
+INFO:  Idle: 360,  Running: 9,  Completed: 493 [  2m 4s  ] 
+INFO:  Idle: 352,  Running: 9,  Completed: 501 [  2m 7s  ] 
+INFO:  Idle: 343,  Running: 9,  Completed: 510 [  2m 11s  ] 
+INFO:  Idle: 334,  Running: 9,  Completed: 519 [  2m 16s  ] 
+INFO:  Idle: 326,  Running: 9,  Completed: 527 [  2m 20s  ] 
+INFO:  Idle: 317,  Running: 9,  Completed: 536 [  2m 24s  ] 
+INFO:  Idle: 309,  Running: 9,  Completed: 544 [  2m 27s  ] 
+INFO:  Idle: 301,  Running: 9,  Completed: 552 [  2m 31s  ] 
+INFO:  Idle: 292,  Running: 9,  Completed: 561 [  2m 35s  ] 
+INFO:  Idle: 283,  Running: 9,  Completed: 570 [  2m 39s  ] 
+INFO:  Idle: 274,  Running: 9,  Completed: 579 [  2m 43s  ] 
+INFO:  Idle: 266,  Running: 9,  Completed: 587 [  2m 46s  ] 
+INFO:  Idle: 259,  Running: 9,  Completed: 594 [  2m 50s  ] 
+INFO:  Idle: 252,  Running: 9,  Completed: 601 [  2m 53s  ] 
+INFO:  Idle: 244,  Running: 9,  Completed: 609 [  2m 56s  ] 
+INFO:  Idle: 236,  Running: 9,  Completed: 617 [  3m 0s  ] 
+INFO:  Idle: 227,  Running: 9,  Completed: 626 [  3m 4s  ] 
+INFO:  Idle: 218,  Running: 9,  Completed: 635 [  3m 7s  ] 
+INFO:  Idle: 209,  Running: 9,  Completed: 644 [  3m 11s  ] 
+INFO:  Idle: 201,  Running: 9,  Completed: 652 [  3m 14s  ] 
+INFO:  Idle: 193,  Running: 9,  Completed: 660 [  3m 18s  ] 
+INFO:  Idle: 185,  Running: 9,  Completed: 668 [  3m 21s  ] 
+INFO:  Idle: 179,  Running: 9,  Completed: 674 [  3m 24s  ] 
+INFO:  Idle: 171,  Running: 9,  Completed: 682 [  3m 28s  ] 
+INFO:  Idle: 162,  Running: 9,  Completed: 691 [  3m 31s  ] 
+INFO:  Idle: 156,  Running: 9,  Completed: 697 [  3m 34s  ] 
+INFO:  Idle: 149,  Running: 9,  Completed: 704 [  3m 37s  ] 
+INFO:  Idle: 140,  Running: 9,  Completed: 713 [  3m 42s  ] 
+INFO:  Idle: 132,  Running: 9,  Completed: 721 [  3m 45s  ] 
+INFO:  Idle: 124,  Running: 9,  Completed: 729 [  3m 49s  ] 
+INFO:  Idle: 115,  Running: 9,  Completed: 738 [  3m 52s  ] 
+INFO:  Idle: 108,  Running: 9,  Completed: 745 [  3m 55s  ] 
+INFO:  Idle: 99,  Running: 9,  Completed: 754 [  3m 59s  ] 
+INFO:  Idle: 91,  Running: 9,  Completed: 762 [  4m 2s  ] 
+INFO:  Idle: 82,  Running: 9,  Completed: 771 [  4m 5s  ] 
+INFO:  Idle: 74,  Running: 9,  Completed: 779 [  4m 8s  ] 
+INFO:  Idle: 65,  Running: 9,  Completed: 788 [  4m 12s  ] 
+INFO:  Idle: 58,  Running: 9,  Completed: 795 [  4m 15s  ] 
+INFO:  Idle: 50,  Running: 9,  Completed: 803 [  4m 18s  ] 
+INFO:  Idle: 46,  Running: 9,  Completed: 807 [  4m 21s  ] 
+INFO:  Idle: 39,  Running: 9,  Completed: 814 [  4m 24s  ] 
+INFO:  Idle: 30,  Running: 9,  Completed: 823 [  4m 28s  ] 
+INFO:  Idle: 22,  Running: 9,  Completed: 831 [  4m 31s  ] 
+INFO:  Idle: 13,  Running: 9,  Completed: 840 [  4m 35s  ] 
+INFO:  Idle: 5,  Running: 9,  Completed: 848 [  4m 38s  ] 
+INFO:  Idle: 0,  Running: 7,  Completed: 855 [  4m 41s  ] 
+INFO:  Idle: 0,  Running: 0,  Completed: 862 [  4m 44s  ] 
+INFO: Combining runs 
+[1;32mfind 5 multijob in /private/tmp/mtt_threshold_work/TRUTH/SubProcesses/P1_gg_ttxg_t_wpb_tx_wmbx/G2.06[0m
+[1;32mCombined 5 file generating 5725 events for /private/tmp/mtt_threshold_work/TRUTH/SubProcesses/P1_gg_ttxg_t_wpb_tx_wmbx/G2.06 (98.8%): (0.063080s) [0m
+[1;32mfind 7 multijob in /private/tmp/mtt_threshold_work/TRUTH/SubProcesses/P1_gg_ttxg_t_wpb_tx_wmbx/G4[0m
+[1;32mCombined 7 file generating 7560 events for /private/tmp/mtt_threshold_work/TRUTH/SubProcesses/P1_gg_ttxg_t_wpb_tx_wmbx/G4 (99.8%): (0.068102s) [0m
+[1;32mfind 130 multijob in /private/tmp/mtt_threshold_work/TRUTH/SubProcesses/P1_gg_ttxg_t_wpb_tx_wmbx/G5[0m
+[1;32mCombined 130 file generating 402701 events for /private/tmp/mtt_threshold_work/TRUTH/SubProcesses/P1_gg_ttxg_t_wpb_tx_wmbx/G5 (99.1%): (1.616686s) [0m
+[1;32mfind 3 multijob in /private/tmp/mtt_threshold_work/TRUTH/SubProcesses/P1_gg_ttxg_t_wpb_tx_wmbx/G6.03[0m
+[1;32mCombined 3 file generating 4155 events for /private/tmp/mtt_threshold_work/TRUTH/SubProcesses/P1_gg_ttxg_t_wpb_tx_wmbx/G6.03 (98.9%): (0.014627s) [0m
+[1;32mfind 28 multijob in /private/tmp/mtt_threshold_work/TRUTH/SubProcesses/P1_gg_ttxg_t_wpb_tx_wmbx/G6.06[0m
+[1;32mCombined 28 file generating 36447 events for /private/tmp/mtt_threshold_work/TRUTH/SubProcesses/P1_gg_ttxg_t_wpb_tx_wmbx/G6.06 (99.0%): (0.204582s) [0m
+[1;32mfind 130 multijob in /private/tmp/mtt_threshold_work/TRUTH/SubProcesses/P1_gg_ttxg_t_wpb_tx_wmbx/G10[0m
+[1;32mCombined 130 file generating 390383 events for /private/tmp/mtt_threshold_work/TRUTH/SubProcesses/P1_gg_ttxg_t_wpb_tx_wmbx/G10 (99.0%): (1.321742s) [0m
+[1;32mfind 118 multijob in /private/tmp/mtt_threshold_work/TRUTH/SubProcesses/P1_gg_ttxg_t_wpb_tx_wmbx/G12[0m
+[1;32mCombined 118 file generating 139026 events for /private/tmp/mtt_threshold_work/TRUTH/SubProcesses/P1_gg_ttxg_t_wpb_tx_wmbx/G12 (99.6%): (0.770412s) [0m
+[1;32mfind 3 multijob in /private/tmp/mtt_threshold_work/TRUTH/SubProcesses/P1_gg_ttxg_t_wpb_tx_wmbx/G13.03[0m
+[1;32mCombined 3 file generating 5222 events for /private/tmp/mtt_threshold_work/TRUTH/SubProcesses/P1_gg_ttxg_t_wpb_tx_wmbx/G13.03 (98.8%): (0.014737s) [0m
+[1;32mfind 29 multijob in /private/tmp/mtt_threshold_work/TRUTH/SubProcesses/P1_gg_ttxg_t_wpb_tx_wmbx/G13.06[0m
+[1;32mCombined 29 file generating 56472 events for /private/tmp/mtt_threshold_work/TRUTH/SubProcesses/P1_gg_ttxg_t_wpb_tx_wmbx/G13.06 (99.5%): (0.211366s) [0m
+[1;32mfind 119 multijob in /private/tmp/mtt_threshold_work/TRUTH/SubProcesses/P1_gg_ttxg_t_wpb_tx_wmbx/G15[0m
+[1;32mCombined 119 file generating 154911 events for /private/tmp/mtt_threshold_work/TRUTH/SubProcesses/P1_gg_ttxg_t_wpb_tx_wmbx/G15 (99.6%): (0.610625s) [0m
+[1;32mfind 2 multijob in /private/tmp/mtt_threshold_work/TRUTH/SubProcesses/P1_gq_ttxq_t_wpb_tx_wmbx/G1[0m
+[1;32mCombined 2 file generating 1317 events for /private/tmp/mtt_threshold_work/TRUTH/SubProcesses/P1_gq_ttxq_t_wpb_tx_wmbx/G1 (99.6%): (0.012789s) [0m
+[1;32mfind 130 multijob in /private/tmp/mtt_threshold_work/TRUTH/SubProcesses/P1_gq_ttxq_t_wpb_tx_wmbx/G2[0m
+[1;32mCombined 130 file generating 423430 events for /private/tmp/mtt_threshold_work/TRUTH/SubProcesses/P1_gq_ttxq_t_wpb_tx_wmbx/G2 (99.1%): (1.262941s) [0m
+[1;32mfind 20 multijob in /private/tmp/mtt_threshold_work/TRUTH/SubProcesses/P1_gq_ttxq_t_wpb_tx_wmbx/G4[0m
+[1;32mCombined 20 file generating 20543 events for /private/tmp/mtt_threshold_work/TRUTH/SubProcesses/P1_gq_ttxq_t_wpb_tx_wmbx/G4 (99.6%): (0.100504s) [0m
+[1;32mfind 91 multijob in /private/tmp/mtt_threshold_work/TRUTH/SubProcesses/P1_gq_ttxq_t_wpb_tx_wmbx/G5[0m
+[1;32mCombined 91 file generating 146292 events for /private/tmp/mtt_threshold_work/TRUTH/SubProcesses/P1_gq_ttxq_t_wpb_tx_wmbx/G5 (99.7%): (0.580684s) [0m
+[1;32mfind 20 multijob in /private/tmp/mtt_threshold_work/TRUTH/SubProcesses/P1_qq_ttxg_t_wpb_tx_wmbx/G1[0m
+[1;32mCombined 20 file generating 24738 events for /private/tmp/mtt_threshold_work/TRUTH/SubProcesses/P1_qq_ttxg_t_wpb_tx_wmbx/G1 (99.2%): (0.129425s) [0m
+[1;32mfind 6 multijob in /private/tmp/mtt_threshold_work/TRUTH/SubProcesses/P1_qq_ttxg_t_wpb_tx_wmbx/G2.06[0m
+[1;32mCombined 6 file generating 6873 events for /private/tmp/mtt_threshold_work/TRUTH/SubProcesses/P1_qq_ttxg_t_wpb_tx_wmbx/G2.06 (99.0%): (0.024185s) [0m
+[1;32mfind 20 multijob in /private/tmp/mtt_threshold_work/TRUTH/SubProcesses/P1_qq_ttxg_t_wpb_tx_wmbx/G4[0m
+[1;32mCombined 20 file generating 28242 events for /private/tmp/mtt_threshold_work/TRUTH/SubProcesses/P1_qq_ttxg_t_wpb_tx_wmbx/G4 (99.2%): (0.127746s) [0m
+sum of cpu time of last step: 18m51s
+INFO: finish refine 
+refine 1000000 --treshold=0.9
+No need for second refine due to stability of cross-section
+INFO: Combining Events 
+[1;32mDEBUG: write 1000000 event (efficiency 54 %, truncation 0.13 %) after 2 iteration(s) [0m
+[1;32munweight done. start zipping after 25.4 s[0m
+combination of events done in 46.63925313949585 s 
+  === Results Summary for run: run_01 tag: tag_1 ===
+
+     Cross-section :   651.8 +- 0.2185 pb
+     Nb of events :  1000000
+ 
+store_events
+INFO: Storing parton level results 
+INFO: End Parton 
+reweight --mode=OFF -from_cards
+decay_events -from_cards
+INFO: storing files of previous run 
+INFO: Done 
+quit
+INFO:  
+more information in /private/tmp/mtt_threshold_work/TRUTH/index.html
+quit
