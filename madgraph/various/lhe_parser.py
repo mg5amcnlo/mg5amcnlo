@@ -2940,9 +2940,85 @@ class Event(list):
         return tag, order
     
     @staticmethod
+    def mass_shuffle_frame(momenta, sqrts):
+        """The per-event half of ``mass_shuffle``: everything the RAMBO
+        reshuffling jacobian needs that does *not* depend on the new masses.
+
+        ``mass_shuffle`` boosts the momenta to the frame where their sum is at
+        rest with energy ``sqrts`` and from there on only ever uses, per
+        particle, the three numbers returned here:
+
+            E     the energy in that frame              (eq. 4.2/4.3)
+            m2    ``p.mass_sqr`` **before** the boost   (eq. 4.3's ``oldm``)
+            p2    ``p.norm_sq`` in that frame           (eq. 4.9)
+
+        so a bound that has to evaluate the jacobian for many candidate mass
+        sets of one event pays the boost once, here, and then only arithmetic
+        (``mass_shuffle_jacobian``). Returns ``(E, m2, p2)``, three lists.
+
+        ``m2`` is taken before the boost and ``p2`` after it, exactly as
+        ``mass_shuffle`` does; the two differ from each other by rounding only,
+        but reproducing the shipped path to the last digit is the point.
+        """
+        oldm = [p.mass_sqr for p in momenta]
+        tot_mom = sum(momenta, FourMomentum())
+        lor = tot_mom.get_lorentz_map(FourMomentum(sqrts, 0, 0, 0))
+        boosted = [p.apply_lorentzmap(lor) for p in momenta]
+        return ([p.E for p in boosted], oldm, [p.norm_sq for p in boosted])
+
+    @staticmethod
+    def mass_shuffle_jacobian(frame, new_mass, new_sqrts):
+        """The RAMBO reshuffling jacobian of ``new_mass``, from the per-event
+        data ``mass_shuffle_frame`` returned -- no Event, no FourMomentum, no
+        boost. Same value, and the same 0/-1 verdicts, as
+        ``reshuffle_production`` would give for that mass set.
+
+        RAMBO eqs. (4.3), (4.2) and (4.9), in that order:
+
+            chi solves  new_sqrts = sum_i sqrt(m_i'^2 + chi^2 (E_i^2 - m_i^2))
+            E_i'      = sqrt(m_i'^2 + chi^2 (E_i^2 - m_i^2))
+            jac       = chi^(3n-3) prod_i (E_i/E_i')
+                        . [sum_i |p_i|^2/E_i] / [sum_i |p_i'|^2/E_i']
+
+        Every dependence on the production event is through ``frame``, i.e.
+        through n numbers per particle, so the whole thing is one scalar Newton
+        solve plus O(n) arithmetic per candidate mass set. The 2 -> 2 closed
+        form lambda^(1/2)/lambda^(1/2) is the case where that solve happens to
+        be explicit; nothing here is restricted to n = 2.
+
+        Returns -1 when ``sum(new_mass) > new_sqrts`` (what
+        ``reshuffle_production`` reports for a mass set above threshold) and 0
+        when the Newton solve does not converge -- the two failures the callers
+        test for with ``jac in (0, -1)``.
+        """
+        Es, oldm, normsq = frame
+        if sum(new_mass, 0) > new_sqrts:
+            return -1
+        newm = [m ** 2 for m in new_mass]
+        # a_i = E_i^2 - m_i^2, the only combination eq. 4.3 uses
+        avail = [E ** 2 - m for E, m in zip(Es, oldm)]
+
+        f = lambda chi: new_sqrts - sum(math.sqrt(max(0, M + chi ** 2 * a))
+                                        for M, a in zip(newm, avail))
+        df = lambda chi: -1 * sum(chi * a / math.sqrt(max(0, a * chi ** 2 + M))
+                                  for M, a in zip(newm, avail))
+        try:
+            chi = misc.newtonmethod(f, df, 1.0, error=1e-7, maxiter=1000)
+        except Exception:
+            return 0
+
+        newE = [math.sqrt(M + chi ** 2 * a) for M, a in zip(newm, avail)]
+        jac = chi ** (3 * len(Es) - 3)
+        for E, Ep in zip(Es, newE):
+            jac *= E / Ep
+        jac *= sum(p2 / E for p2, E in zip(normsq, Es))
+        jac /= sum(chi ** 2 * p2 / Ep for p2, Ep in zip(normsq, newE))
+        return jac
+
+    @staticmethod
     def mass_shuffle(momenta, sqrts, new_mass, new_sqrts=None):
         """use the RAMBO method to shuffle the PS. initial sqrts is preserved."""
-        
+
         if not new_sqrts:
             new_sqrts = sqrts
         

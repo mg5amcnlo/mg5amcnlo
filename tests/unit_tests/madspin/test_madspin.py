@@ -94,6 +94,27 @@ def _borrow_decision_helpers(namespace):
     return namespace
 
 
+def _borrow_mass_bound_helpers(namespace):
+    """Add the mass stage's per-event bound and everything it reaches through
+    to a stub class namespace. Call as
+    ``_borrow_mass_bound_helpers(locals())`` from the class body of any stub
+    that borrows ``sequential_accept_reject``.
+
+    The bound is computed from the production event alone -- the Breit-Wigner
+    windows, the RAMBO reshuffling jacobian at their low corner and the exact
+    maximum of each ``Zhat`` -- so a stub that carries a banner and
+    ``_z_tables`` (which every chain stub does) can run it unmodified. It
+    falls back to the probe's global bound on anything it does not cover, so a
+    stub whose production event is unusual still exercises the chain.
+    """
+    for name in ('_mass_stage_bound', '_mass_stage_bound_compute',
+                 '_announce_mass_bound', '_zhat_max', '_mass_window',
+                 '_MASS_BOUND_UNSUPPORTED'):
+        namespace[name] = inspect.getattr_static(
+            interface_madspin.MadSpinInterface, name)
+    return namespace
+
+
 def _borrow_frame_helpers(namespace):
     """Add ``_frame_boost`` and everything its guard reaches through to a stub
     class namespace. Call as ``_borrow_frame_helpers(locals())`` from the class
@@ -1182,6 +1203,7 @@ class TestDrawOffshellMass(unittest.TestCase):
         pass
 
     class _Stub(object):
+        _mass_window = interface_madspin.MadSpinInterface._mass_window
         _draw_mass_value = interface_madspin.MadSpinInterface._draw_mass_value
         _draw_offshell_mass = interface_madspin.MadSpinInterface._draw_offshell_mass
         def __init__(self, bw_cut=-1):
@@ -4237,6 +4259,450 @@ class TestProductionJacobianForSlots(unittest.TestCase):
         self.assertEqual(jac, -1)
 
 
+def _rambo_event(n, sqrts, masses, rng, boost=0.0):
+    """A 2 -> n production event at ``sqrts`` with the given final-state
+    masses, flat in phase space, optionally boosted along z.
+
+    Only used to feed the reshuffling jacobian, which never looks at flavours
+    or colour, so the pdgs are cosmetic.
+    """
+    q = []
+    for _ in range(n):
+        cos = 2 * rng.random() - 1
+        sin = math.sqrt(1 - cos * cos)
+        phi = 2 * math.pi * rng.random()
+        e = -math.log(max(rng.random() * rng.random(), 1e-300))
+        q.append(lhe_parser.FourMomentum(e, e * sin * math.cos(phi),
+                                         e * sin * math.sin(phi), e * cos))
+    tot = sum(q, lhe_parser.FourMomentum())
+    lor = tot.get_lorentz_map(lhe_parser.FourMomentum(tot.mass, 0, 0, 0))
+    scale = sqrts / tot.mass
+    q = [p.apply_lorentzmap(lor) for p in q]
+    q = [lhe_parser.FourMomentum(scale * p.E, scale * p.px, scale * p.py,
+                                 scale * p.pz) for p in q]
+    # RAMBO eq. 4.2/4.3 puts them on the wanted mass shells
+    avail = [p.norm_sq for p in q]
+    newm = [m ** 2 for m in masses]
+    f = lambda chi: sqrts - sum(math.sqrt(M + chi ** 2 * a)
+                                for M, a in zip(newm, avail))
+    df = lambda chi: -1 * sum(chi * a / math.sqrt(a * chi ** 2 + M)
+                              for M, a in zip(newm, avail))
+    chi = misc.newtonmethod(f, df, 1.0, error=1e-11 * sqrts, maxiter=1000)
+    mom = [lhe_parser.FourMomentum(math.sqrt(m ** 2 + chi ** 2 * p.norm_sq),
+                                   chi * p.px, chi * p.py, chi * p.pz)
+           for m, p in zip(masses, q)]
+    init = [lhe_parser.FourMomentum(sqrts / 2, 0, 0, sqrts / 2),
+            lhe_parser.FourMomentum(sqrts / 2, 0, 0, -sqrts / 2)]
+    if boost:
+        gamma, sinh = math.cosh(boost), math.sinh(boost)
+        push = lambda p: lhe_parser.FourMomentum(
+            gamma * p.E + sinh * p.pz, p.px, p.py, sinh * p.E + gamma * p.pz)
+        init, mom = [push(p) for p in init], [push(p) for p in mom]
+    lines = ['%d 1 1.0 100.0 0.0075 0.118' % (n + 2)]
+    for p in init:
+        lines.append('21 -1 0 0 501 502 %.15e %.15e %.15e %.15e 0.0 0. 9.'
+                     % (p.px, p.py, p.pz, p.E))
+    for i, (p, m) in enumerate(zip(mom, masses)):
+        lines.append('%d 1 1 2 501 502 %.15e %.15e %.15e %.15e %.15e 0. 9.'
+                     % (6 if i % 2 == 0 else -6, p.px, p.py, p.pz, p.E, m))
+    evt = lhe_parser.Event()
+    evt.parse('\n'.join(lines))
+    return evt
+
+
+class TestMassShuffleKernel(unittest.TestCase):
+    """Event.mass_shuffle_jacobian / mass_shuffle_frame: the RAMBO reshuffling
+    jacobian evaluated from n numbers per particle, with no Event, no
+    FourMomentum and no boost.
+
+    The claim the mass-stage bound rests on is that J depends on the production
+    event ONLY through the CM-frame (E_i, m_i^2) -- n numbers, computed once per
+    event -- so a candidate mass set costs one scalar Newton solve. That holds
+    for every n; the 2 -> 2 closed form lambda^(1/2)/lambda^(1/2) is just the
+    case where the solve is explicit.
+    """
+
+    POLE, WIDTH = 172.5, 1.4915
+
+    def _frame_of(self, event):
+        """The frame the shipped path sees: _production_jacobian_for re-parses
+        the event from str(), which truncates every momentum to %.10e, so the
+        comparison is only algorithmic if the kernel starts from the same
+        truncated numbers."""
+        probe = lhe_parser.Event(str(event))
+        finals = [p for p in probe if int(p.status) == 1]
+        frame = lhe_parser.Event.mass_shuffle_frame(
+            [lhe_parser.FourMomentum(p) for p in finals], probe.sqrts)
+        return frame, probe.sqrts, [p.mass for p in finals]
+
+    def test_matches_the_shipped_reshuffle(self):
+        """Same number as _production_jacobian_for, for n = 2, 3, 4 and 5, over
+        random configurations and mass sets including the kinematic edge."""
+        rng = random.Random(6491)
+        lo, hi = self.POLE - 15 * self.WIDTH, self.POLE + 15 * self.WIDTH
+        worst = 0.0
+        for n in (2, 3, 4, 5):
+            for _ in range(15):
+                sqrts = n * self.POLE * (1 + 3 * rng.random())
+                masses = [self.POLE * rng.uniform(0.5, 1.0) for _ in range(n)]
+                event = _rambo_event(n, sqrts, masses, rng,
+                                     boost=rng.uniform(-1.5, 1.5))
+                frame, s, _ = self._frame_of(event)
+                slot_to_index = list(range(n))
+                for kind in range(4):
+                    if kind == 0:
+                        cand = [lo] * n                    # the low corner
+                    elif kind == 1:                        # the kinematic edge
+                        cand = [0.999 * s / n] * n
+                    else:
+                        cand = [rng.uniform(lo, hi) for _ in range(n)]
+                    ref = interface_madspin.MadSpinInterface \
+                        ._production_jacobian_for(
+                            event, slot_to_index,
+                            {i: (cand[i], (self.POLE, self.WIDTH, lo, hi))
+                             for i in range(n)})
+                    got = lhe_parser.Event.mass_shuffle_jacobian(frame, cand, s)
+                    if ref in (0, -1) or got in (0, -1):
+                        self.assertEqual(ref, got)     # the same verdict, too
+                        continue
+                    worst = max(worst, abs(got - ref) / abs(ref))
+        self.assertLess(worst, 1e-12)
+
+    def test_reports_the_same_failures(self):
+        """jac in (0, -1) is a verdict the callers test for, so the kernel has
+        to reproduce it and not merely the numbers."""
+        rng = random.Random(11)
+        event = _rambo_event(3, 900.0, [self.POLE] * 3, rng)
+        frame, s, _ = self._frame_of(event)
+        self.assertEqual(
+            lhe_parser.Event.mass_shuffle_jacobian(frame, [s] * 3, s), -1)
+        self.assertEqual(
+            interface_madspin.MadSpinInterface._production_jacobian_for(
+                event, [0, 1, 2],
+                {i: (s, (self.POLE, self.WIDTH, 1.0, 2 * s)) for i in range(3)}),
+            -1)
+
+    def test_the_nominal_mass_set_is_the_identity(self):
+        """chi = 1 and J = 1 when nothing moves -- for every n."""
+        rng = random.Random(77)
+        for n in (2, 3, 4, 5, 6):
+            masses = [self.POLE * rng.uniform(0.4, 1.0) for _ in range(n)]
+            event = _rambo_event(n, n * self.POLE * 2.5, masses, rng)
+            frame, s, nominal = self._frame_of(event)
+            self.assertAlmostEqual(
+                lhe_parser.Event.mass_shuffle_jacobian(frame, nominal, s),
+                1.0, places=6)
+
+    def test_two_body_is_the_two_body_phase_space_ratio(self):
+        """For n = 2 every factor of eq. 4.9 collapses onto chi = |p'|/|p|, the
+        ratio of two-body phase-space volumes. That closed form is what the
+        earlier study used, and it is the n = 2 case of this kernel."""
+        rng = random.Random(303)
+        def lam(s, a, b):
+            return (s - a - b) ** 2 - 4 * a * b
+        for _ in range(20):
+            sqrts = rng.uniform(400.0, 2000.0)
+            masses = [self.POLE, self.POLE]
+            event = _rambo_event(2, sqrts, masses, rng,
+                                 boost=rng.uniform(-1.0, 1.0))
+            frame, s, _ = self._frame_of(event)
+            cand = [rng.uniform(150.0, 195.0) for _ in range(2)]
+            expect = math.sqrt(lam(s * s, cand[0] ** 2, cand[1] ** 2)
+                               / lam(s * s, self.POLE ** 2, self.POLE ** 2))
+            got = lhe_parser.Event.mass_shuffle_jacobian(frame, cand, s)
+            self.assertAlmostEqual(got / expect, 1.0, places=6)
+
+    def test_monotone_decreasing_in_every_mass(self):
+        """The property the bound rests on: J falls when any new mass rises, at
+        fixed sqrt(shat) and fixed configuration. Hence max J over a window is
+        at its low corner, for any n, with no scan.
+
+        Proof sketch (see the comment above _mass_stage_bound): with
+        beta_i = |p_i'|/E_i', 2 E_k' G chi^2 dlnJ/dm_k'^2 = -(3n-5) + beta_k^2
+        + sum beta_i^2 - Q/G - (sum_i E_i' beta_i^2)/E_k', whose last term is at
+        least beta_k^2 and whose Q/G is non-negative, leaving <= 5 - 2n < 0 for
+        n >= 3; n = 2 is the lambda^(1/2) ratio above, which falls in each mass.
+        """
+        rng = random.Random(20260819)
+        for n in (2, 3, 4, 5, 6):
+            for _ in range(8):
+                sqrts = n * self.POLE * (1 + 9 * rng.random())
+                masses = [self.POLE * rng.uniform(0.3, 1.0) for _ in range(n)]
+                event = _rambo_event(n, sqrts, masses, rng,
+                                     boost=rng.uniform(-2.0, 2.0))
+                frame, s, _ = self._frame_of(event)
+                base = [rng.uniform(0.2, 0.8) * s / n for _ in range(n)]
+                j0 = lhe_parser.Event.mass_shuffle_jacobian(frame, base, s)
+                self.assertTrue(j0 > 0)
+                head = s - sum(base)
+                for i in range(n):
+                    for frac in (1e-4, 0.1, 0.9):
+                        up = list(base)
+                        up[i] += frac * head
+                        j1 = lhe_parser.Event.mass_shuffle_jacobian(frame, up, s)
+                        self.assertTrue(0 < j1 <= j0,
+                                        'J rose from %r to %r on mass %d'
+                                        % (j0, j1, i))
+
+
+class TestPerEventMassBound(unittest.TestCase):
+    """_mass_stage_bound: an upper bound on the mass stage's weight built from
+    the production event alone.
+
+        w_mass = J(m) . prod_s jac_bw_s(m) . prod_s Zhat_s(m_s)
+
+    every factor non-negative, J and every jac_bw maximal at the low corner of
+    the Breit-Wigner windows, and Zhat_s a 1-D function whose maximum is exact.
+
+    Its whole safety case is that the bound CANCELS: the mass stage redraws
+    until it accepts, so the accepted density is q_e(m).min(1, w/C) up to
+    normalisation, i.e. proportional to q_e(m) w(m) for any C >= max w. A
+    tighter (but still dominating) bound changes the cost and nothing else --
+    which is what test_the_accepted_spectrum_is_unchanged measures.
+    """
+
+    POLE, WIDTH, BW_CUT = 172.5, 1.4915, 15.0
+
+    class _Val(object):
+        def __init__(self, value):
+            self.value = value
+
+    class _Banner(object):
+        def __init__(self, pole, width):
+            self.pole, self.width = pole, width
+
+        def get(self, card, kind, pdg):
+            return TestPerEventMassBound._Val(
+                self.pole if kind == 'mass' else self.width)
+
+    class _Shim(object):
+        """The whole dependency surface of the bound and of the three shipped
+        functions it has to dominate: a banner, options['BW_cut'] and
+        _z_tables."""
+        _mass_window = interface_madspin.MadSpinInterface._mass_window
+        _draw_mass_value = interface_madspin.MadSpinInterface._draw_mass_value
+        _zhat = interface_madspin.MadSpinInterface._zhat
+        _zhat_max = interface_madspin.MadSpinInterface._zhat_max
+        _mass_stage_bound = interface_madspin.MadSpinInterface._mass_stage_bound
+        _mass_stage_bound_compute = \
+            interface_madspin.MadSpinInterface._mass_stage_bound_compute
+        _MASS_BOUND_UNSUPPORTED = None
+
+        def __init__(self, pole, width, bw_cut, z_tables=None):
+            self.banner = TestPerEventMassBound._Banner(pole, width)
+            self.options = {'BW_cut': bw_cut}
+            self._z_tables = z_tables or {}
+
+    def _tables(self, coeff):
+        lo = self.POLE - self.BW_CUT * self.WIDTH
+        hi = self.POLE + self.BW_CUT * self.WIDTH
+        return {key: {'pole': self.POLE, 'coeff': list(coeff),
+                      'zero_below': 0.0, 'range': (lo, hi)}
+                for key in ('6_0', '-6_0')}
+
+    def _shim(self, coeff=(0.0, 0.0, 0.0)):
+        return self._Shim(self.POLE, self.WIDTH, self.BW_CUT,
+                          self._tables(coeff))
+
+    def _weight(self, shim, event, slot_to_index, pdgs, zkeys, keep_jac=True):
+        """One mass set through the shipped functions, exactly as
+        _upfront_production builds it, returning w_mass or None for a set the
+        production cannot be reshuffled onto."""
+        budget = event.sqrts
+        slot_masses, w = {}, 1.0
+        for slot, pdg in enumerate(pdgs):
+            mass, info, jac_bw = shim._draw_mass_value(pdg, budget)
+            slot_masses[slot] = (mass, info)
+            w *= jac_bw
+            budget -= mass
+        if keep_jac:
+            jac = interface_madspin.MadSpinInterface._production_jacobian_for(
+                event, slot_to_index, slot_masses)
+            if jac in (0, -1):
+                return None
+            w *= jac
+        for slot in slot_masses:
+            w *= shim._zhat(zkeys[slot], slot_masses[slot][0])
+        return w
+
+    def _fixture(self, n=2, sqrts=800.0, coeff=(0.0, 0.0, 0.0), mass=None):
+        rng = random.Random(4242)
+        if mass is None:
+            mass = self.POLE
+        event = _rambo_event(n, sqrts, [mass] * n, rng,
+                             boost=rng.uniform(-1.0, 1.0))
+        particles = [p for p in event if int(p.status) == 1]
+        # every final-state particle decays: slot s is final-state s
+        slot_to_index = list(range(n))
+        zkeys = interface_madspin.MadSpinInterface._z_slot_keys(particles,
+                                                               slot_to_index)
+        return self._shim(coeff), event, particles, slot_to_index, zkeys
+
+    # -- Zhat's exact maximum -----------------------------------------
+
+    def test_zhat_max_is_the_maximum_of_zhat(self):
+        """Exactly, not a sample mean with a margin. Checked against a fine
+        scan for a table that peaks inside its range, one that peaks at each
+        end, and a flat one."""
+        for coeff in [(0.0, 0.0, 0.0), (0.1, 0.6, -4.0), (0.0, 3.0, 1.0),
+                      (0.0, -3.0, 1.0), (-0.2, 0.05, -0.3)]:
+            shim = self._shim(coeff)
+            lo = self.POLE - self.BW_CUT * self.WIDTH
+            hi = self.POLE + self.BW_CUT * self.WIDTH
+            scanned = max(shim._zhat('6_0', lo + (hi - lo) * i / 20000.0)
+                          for i in range(20001))
+            exact = shim._zhat_max('6_0')
+            self.assertGreaterEqual(exact * (1 + 1e-12), scanned)
+            self.assertAlmostEqual(exact / scanned, 1.0, places=6)
+
+    def test_zhat_max_is_one_without_a_table(self):
+        """The probe measures the table, so it runs with Zhat = 1."""
+        shim = self._Shim(self.POLE, self.WIDTH, self.BW_CUT, {})
+        self.assertEqual(shim._zhat_max('6_0'), 1.0)
+
+    # -- the bound dominates ------------------------------------------
+
+    def test_the_bound_dominates_the_weight(self):
+        """The property that makes it a bound: over many draws through the
+        shipped _draw_mass_value / _production_jacobian_for / _zhat, no mass
+        set's weight exceeds it. Run for a 2 -> 2 and for a 2 -> 3 and 2 -> 4
+        production -- the general-n case is the whole point -- and with a Zhat
+        table that has real structure."""
+        for n in (2, 3, 4):
+            for sqrts in (n * self.POLE * 1.02, 800.0, 3000.0):
+                for coeff in [(0.0, 0.0, 0.0), (0.1, 0.6, -4.0),
+                              (0.0, 4.0, 2.0)]:
+                    shim, event, particles, slots, zkeys = self._fixture(
+                        n=n, sqrts=sqrts, coeff=coeff)
+                    pdgs = [p.pid for p in particles]
+                    bound = shim._mass_stage_bound(event, list(range(n)),
+                                                   particles, slots, zkeys,
+                                                   True)
+                    self.assertIsNotNone(bound)
+                    random.seed(9090 + n)
+                    worst = 0.0
+                    for _ in range(400):
+                        w = self._weight(shim, event, slots, pdgs, zkeys)
+                        if w is None:
+                            continue
+                        worst = max(worst, w / bound)
+                    self.assertLessEqual(
+                        worst, 1.0,
+                        'n=%d sqrts=%g coeff=%s: weight reached %.6f of the '
+                        'bound' % (n, sqrts, coeff, worst))
+                    # and it is not absurdly loose either
+                    self.assertGreater(worst, 1e-3)
+
+    def test_the_bound_ignores_the_jacobian_when_the_weight_does(self):
+        """density_keep_jacobian = False: the reshuffle is a post-acceptance
+        dressing and J is not in the weight, so it must not be in the bound
+        either (which would only cost acceptance)."""
+        shim, event, particles, slots, zkeys = self._fixture(n=3)
+        with_jac = shim._mass_stage_bound_compute(event, [0, 1, 2], particles,
+                                                  slots, zkeys, True)
+        event._ms_mass_bound = False        # not cached between the two
+        without = shim._mass_stage_bound_compute(event, [0, 1, 2], particles,
+                                                 slots, zkeys, False)
+        self.assertLess(without, with_jac)
+        pdgs = [p.pid for p in particles]
+        random.seed(31337)
+        for _ in range(400):
+            w = self._weight(shim, event, slots, pdgs, zkeys, keep_jac=False)
+            if w is not None:
+                self.assertLessEqual(w, without)
+
+    def test_it_is_cached_on_the_production_event(self):
+        """The chain re-enters on every rejected mass set; the bound does not
+        depend on the draw."""
+        shim, event, particles, slots, zkeys = self._fixture(n=2)
+        first = shim._mass_stage_bound(event, [0, 1], particles, slots, zkeys,
+                                       True)
+        self.assertIs(shim._mass_stage_bound(event, [0, 1], particles, slots,
+                                             zkeys, True), first)
+        self.assertEqual(event._ms_mass_bound, first)
+
+    # -- the fallbacks -------------------------------------------------
+
+    def test_falls_back_on_an_onshell_propagator(self):
+        """A production carrying a status-2 particle: reshuffle_production also
+        folds in that sub-decay's own jacobian, which is not part of this
+        factorisation."""
+        shim, event, particles, slots, zkeys = self._fixture(n=2)
+        event[2].status = 2
+        event._ms_mass_bound = False
+        self.assertIsNone(shim._mass_stage_bound_compute(
+            event, [0, 1], particles, slots, zkeys, True))
+        self.assertIn('onshell propagator', shim._MASS_BOUND_UNSUPPORTED)
+
+    def test_falls_back_when_the_window_does_not_fit(self):
+        """Below the sum of the window minima nothing is feasible; the global
+        bound (and the existing restart counter) take over. Light final states
+        at a sqrt(shat) that cannot pay for two window minima -- the shape a
+        heavy-resonance window has under a light production."""
+        shim, event, particles, slots, zkeys = self._fixture(
+            n=2, mass=5.0,
+            sqrts=2 * (self.POLE - self.BW_CUT * self.WIDTH) - 10.0)
+        self.assertIsNone(shim._mass_stage_bound_compute(
+            event, [0, 1], particles, slots, zkeys, True))
+
+    # -- the safety case: the bound cancels ----------------------------
+
+    def test_the_accepted_spectrum_is_unchanged(self):
+        """The whole correctness argument, measured rather than asserted.
+
+        The mass stage redraws until it accepts, so the accepted density is
+        proportional to q_e(m) min(1, w/C); for any C >= max w that is
+        q_e(m) w(m) and the bound is gone. Draw the accepted virtuality many
+        times under the per-event bound and under a deliberately much looser
+        one, and the two histograms must agree -- not event by event (the trial
+        sequences differ) but as distributions.
+        """
+        shim, event, particles, slots, zkeys = self._fixture(
+            n=3, sqrts=700.0, coeff=(0.1, 0.6, -4.0))
+        pdgs = [p.pid for p in particles]
+        tight = shim._mass_stage_bound(event, [0, 1, 2], particles, slots,
+                                       zkeys, True)
+        loose = 25.0 * tight
+
+        lo = self.POLE - self.BW_CUT * self.WIDTH
+        hi = self.POLE + self.BW_CUT * self.WIDTH
+        nbin, ndraw = 8, 6000
+
+        def accepted(bound, seed):
+            random.seed(seed)
+            hist = [0] * nbin
+            for _ in range(ndraw):
+                while True:              # redraw until accept, as the chain does
+                    budget = event.sqrts
+                    masses, w = [], 1.0
+                    for pdg in pdgs:
+                        mass, info, jac_bw = shim._draw_mass_value(pdg, budget)
+                        masses.append((mass, info))
+                        w *= jac_bw
+                        budget -= mass
+                    jac = interface_madspin.MadSpinInterface \
+                        ._production_jacobian_for(
+                            event, slots, dict(enumerate(masses)))
+                    if jac in (0, -1):
+                        continue
+                    w *= jac
+                    for slot, (mass, _) in enumerate(masses):
+                        w *= shim._zhat(zkeys[slot], mass)
+                    if random.random() * bound < w:
+                        index = int((masses[0][0] - lo) / (hi - lo) * nbin)
+                        hist[min(max(index, 0), nbin - 1)] += 1
+                        break
+            return hist
+
+        a, b = accepted(tight, 5150), accepted(loose, 5151)
+        self.assertEqual(sum(a), sum(b))
+        # Pearson chi2 between two multinomials of the same size: 7 d.o.f.,
+        # so ~14 at 5%. A bound that clipped would move the shape, not the
+        # statistics.
+        chi2 = sum((x - y) ** 2 / float(x + y) for x, y in zip(a, b) if x + y)
+        self.assertLess(chi2, 30.0, 'accepted spectra differ: %s vs %s' % (a, b))
+
+
 class TestSequentialAcceptReject(unittest.TestCase):
     """sequential_accept_reject: accepting one decaying particle at a time must
     sample the *same* distribution as the joint accept/reject, i.e. p(decays)
@@ -4311,6 +4777,7 @@ class TestSequentialAcceptReject(unittest.TestCase):
             _sequential_spin_order = interface._sequential_spin_order
             _decay_slot_order = interface._decay_slot_order
             sequential_accept_reject = interface.sequential_accept_reject
+            _borrow_mass_bound_helpers(locals())
             _polarization_weight_labels = \
                 interface._polarization_weight_labels
             _polarization_weights_enabled = \
@@ -4509,7 +4976,7 @@ class TestPAUpFrontMass(unittest.TestCase):
             return self.head
 
     def _stub(self, rho, pools, z_table=True, keep_jac=True,
-              unweighting='sequential'):
+              unweighting='sequential', spinmode='PA'):
         interface = interface_madspin.MadSpinInterface
         outer = self
         hels = self.HELS
@@ -4522,6 +4989,7 @@ class TestPAUpFrontMass(unittest.TestCase):
             _sequential_spin_order = interface._sequential_spin_order
             _decay_slot_order = interface._decay_slot_order
             sequential_accept_reject = interface.sequential_accept_reject
+            _borrow_mass_bound_helpers(locals())
             _polarization_weight_labels = \
                 interface._polarization_weight_labels
             _polarization_weights_enabled = \
@@ -4547,11 +5015,12 @@ class TestPAUpFrontMass(unittest.TestCase):
             _pure_interference = staticmethod(lambda: {})
 
             def __init__(self):
+                self.mass_bound_calls = 0
                 # unpolarised beams and a brace-free production, so _frame_boost
                 # short circuits to None: this class is about the mass stage,
                 # and the frame machinery has its own tests
                 self.options = _StubOptions(
-                               {'spinmode': 'PA',
+                               {'spinmode': spinmode,
                                 'sequential_spin_order': '2 3 1',
                                 'unweighting': unweighting,
                                 'density_keep_jacobian': keep_jac,
@@ -4596,6 +5065,24 @@ class TestPAUpFrontMass(unittest.TestCase):
                                          slot_masses):
                 return 1.0
 
+            def _mass_stage_bound(self, *args, **opts):
+                """The global bound, as before. This class replaces the mass
+                stage's physics -- a discrete flat draw with jac_bw = 1 and a
+                constant reshuffling jacobian -- so the shipped per-event
+                bound, which is built from the Breit-Wigner window and the
+                RAMBO kernel on a real production event, is not a bound on
+                *this* weight. The per-event bound has its own tests
+                (TestPerEventMassBound), where it is checked against the
+                shipped weight it actually has to dominate.
+
+                Counted, because *whether it is asked for at all* is the
+                caller's decision and is what
+                test_which_events_are_counted_against_the_mass_stage_bound and
+                test_the_offshell_spinmodes_never_ask_for_a_per_event_bound
+                are about."""
+                self.mass_bound_calls += 1
+                return None
+
             def _decay_reshuffle_jacobian(self, decay):
                 return outer._f(decay[0].new_mass) * outer._g(decay.index)
 
@@ -4621,6 +5108,47 @@ class TestPAUpFrontMass(unittest.TestCase):
                                                     production, (6, -6))
         stub._slot_of = {index: slot for slot, index in enumerate(slots)}
         return stub, rho, pools, production, {6: {0: 'f'}, -6: {0: 'f'}}
+
+    class _NoDecayPool(Exception):
+        """Raised by the offshell fixture's ``_draw_one_decay``: the mass stage
+        has finished, and this class has no offshell decay pool to go on with."""
+
+    def _offshell_fixture(self):
+        """The same chain with ``spinmode = madspin``, up to the point where the
+        angle stage would need decay events.
+
+        Everything the mass stage does offshell runs for real here: the
+        production is a genuine LHE event, so ``_upfront_production`` copies and
+        reshuffles it onto the drawn virtualities, ``rho_off`` is taken at those
+        momenta, and the mass-set accept/reject tests
+        Tr(rho_off)/|M_prod|^2_on . jac_prod against its bound. Only the angle
+        stage is out of reach: offshell it reshuffles each *decay* event onto its
+        slot's virtuality, and the synthetic ``_Decay`` of this class is not an
+        LHE event. So ``_draw_one_decay`` raises instead -- which is exactly one
+        step past everything the caller decided about the mass stage's bound.
+        """
+        base = TestSequentialAcceptReject()
+        rho = base._production_density()
+        pools = {0: base._pool(100), 1: base._pool(200)}
+        stub = self._stub(rho, pools, spinmode='madspin')
+        production = _rambo_event(2, 800.0, [self.POLE, self.POLE],
+                                  random.Random(4242))
+        _, slots = interface_madspin.MadSpinInterface._sequential_slots(
+                                                    production, (6, -6))
+        stub._slot_of = {index: slot for slot, index in enumerate(slots)}
+        # |M_prod|^2 on shell, the denominator of the offshell mass-set weight
+        stub.calculate_matrix_element = lambda *args, **opts: 1.0
+
+        def _no_pool(*args, **opts):
+            raise TestPAUpFrontMass._NoDecayPool()
+        stub._draw_one_decay = _no_pool
+        # C for the mass set: Tr(rho) . max(jac_prod) . max_m Zhat(m)^2, loosely.
+        # It only has to keep the accept/reject moving -- the counters this
+        # fixture is read for are set once, before the loop.
+        c_mass = 1.2 * rho.trace().real * max(self._f(m)
+                                              for m in self.MASSES) ** 2
+        return (stub, production, {6: {0: 'f'}, -6: {0: 'f'}},
+                [c_mass, 1.0, 1.0])
 
     def _bounds(self, stub, rho, pools):
         contract = stub._partial_density_contraction
@@ -4779,6 +5307,96 @@ class TestPAUpFrontMass(unittest.TestCase):
                 self.assertGreaterEqual(counts['jacobian'], 200)
             else:
                 self.assertEqual(counts['jacobian'], counts['trial'])
+
+    def test_which_events_are_counted_against_the_mass_stage_bound(self):
+        """The end-of-run report's two columns count production events that
+        *have* a mass stage: the up-front schemes, and there whichever family
+        drew a virtuality up front.
+
+        The gate used to be ``draw_mass``, which is the PA half of the
+        condition ``_upfront_production`` actually fills ``slot_mass`` under
+        (``offshell or draw_mass``). That put the offshell spinmodes in neither
+        column -- so an offshell run said nothing at all about which bound its
+        mass stage was using -- and let ``sequential_with_mass``, which is not
+        an up-front scheme and never reads ``mass_bound``, announce one.
+
+        The stub is PA with a stubbed ``_mass_stage_bound`` returning None, so
+        the fallback column is the one that moves; ``TestPerEventMassBound``
+        covers the bound itself.
+        """
+        import random
+        for unweighting, counted in (('sequential', True),
+                                     ('sequential_with_mass', False)):
+            stub, rho, pools, production, evt_decayfile = self._fixture(
+                                                    unweighting=unweighting)
+            maxwgts, _, _, _ = self._bounds(stub, rho, pools)
+            if unweighting == 'sequential_with_mass':
+                maxwgts = maxwgts[1:]
+            random.seed(11)
+            stats = collections.defaultdict(int)
+            for _ in range(5):
+                stub.sequential_accept_reject(production, evt_decayfile,
+                                              maxwgts, 10, stats=stats)
+            got = (stats['nb_mass_bound_global'], stats['nb_mass_bound_event'])
+            self.assertEqual(got, (5, 0) if counted else (0, 0),
+                             '%s counted %s' % (unweighting, (got,)))
+            # and the un-counted scheme did not so much as *ask* for a
+            # per-event bound: sequential_with_mass draws each slot's mass
+            # inside that slot's own accept/reject, so it has no mass set to
+            # bound and never reads mass_bound. joint is not covered here
+            # because it never reaches this function at all -- _sequential_active
+            # is `_unweighting_mode() != 'joint'`, and it is what gates the call.
+            self.assertEqual(stub.mass_bound_calls, 5 if counted else 0,
+                             '%s asked for %d per-event bounds'
+                             % (unweighting, stub.mass_bound_calls))
+
+    def test_the_offshell_spinmodes_never_ask_for_a_per_event_bound(self):
+        """madspin/full keep the probe's global maximum weight for the mass
+        stage. Not because the per-event construction is unavailable there but
+        because it was MEASURED to be looser -- eps_m 5.00 against 3.06, and
+        worse than global below 400 GeV; see the fallback list above
+        _MASS_BOUND_UNSUPPORTED and section 15 of the plan.
+
+        So the assertion is on the *caller*: an offshell chain lands in
+        nb_mass_bound_global, and _mass_stage_bound is never even called.
+
+        Two independent things hold that up, which is worth knowing before
+        touching either. The gate says `draw_mass and not offshell`, and
+        `draw_mass` is `spinmode == 'PA'` while `offshell` is
+        `spinmode not in ('PA', 'onshell')` -- so `draw_mass` already implies
+        `not offshell` for every spinmode the card allows, and the clause is
+        belt to its braces. Deleting `not offshell` on its own is therefore a
+        no-op that no test can catch, and widening `draw_mass` on its own is
+        caught by `not offshell` rather than by anything here. What this test
+        catches is either one going *wrong*: the gate widened to match the
+        counter gate one statement below (`offshell or draw_mass`), or
+        `draw_mass` grown to an offshell spinmode with the clause gone with it.
+        Either hands madspin/full a mass-stage bound measured to be 1.6x worse
+        for them.
+        """
+        stub, production, evt_decayfile, maxwgts = self._offshell_fixture()
+        self.assertTrue(stub._sequential_offshell())
+        self.assertTrue(stub._sequential_upfront())
+        random.seed(11)
+        stats = collections.defaultdict(int)
+        for _ in range(5):
+            # not assertRaises: the suite's TestCase overrides it and does not
+            # return the context manager
+            try:
+                stub.sequential_accept_reject(production, evt_decayfile,
+                                              maxwgts, 10, stats=stats)
+            except self._NoDecayPool:
+                pass
+            else:
+                self.fail('the offshell chain reached the angle stage without '
+                          'needing a decay')
+        self.assertEqual(stub.mass_bound_calls, 0)
+        got = (stats['nb_mass_bound_global'], stats['nb_mass_bound_event'])
+        self.assertEqual(got, (5, 0))
+        # the mass stage really ran: a virtuality was drawn, the production was
+        # reshuffled onto it and rho_off taken there, and the angle stage was
+        # reached -- the fallback is a decision, not an early exit
+        self.assertEqual(stats['nb_try_0'], 5)
 
 
 class TestSequentialPoolLadder(unittest.TestCase):

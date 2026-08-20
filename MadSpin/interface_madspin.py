@@ -4899,6 +4899,15 @@ class MadSpinInterface(extended_cmd.Cmd):
                         drawn, rejects,
                         ', %d dropped by a rejected decay' % exact_restarts
                         if exact_restarts else '')
+        per_event = merged.get('nb_mass_bound_event', 0)
+        global_bound = merged.get('nb_mass_bound_global', 0)
+        if per_event or global_bound:
+            logger.info(
+                "MadSpin sequential mass stage: %d/%d production events used "
+                "the per-event bound%s", per_event, per_event + global_bound,
+                '' if not global_bound else
+                ' (%d fell back to the probe\'s global maximum weight)'
+                % global_bound)
         positions = sorted(int(k.rsplit('_', 1)[1]) for k in merged
                            if k.startswith('nb_try_'))
         for position in positions:
@@ -8241,11 +8250,16 @@ class MadSpinInterface(extended_cmd.Cmd):
                                 ncomb=len(hel), dimension=len(hel),
                                 frame_boost=frame_boost, frame_rest_leg=rest_leg)
 
-    def _draw_mass_value(self, pdg, budget):
-        """Sample one resonance virtuality from its Breit-Wigner, capped at the
-        remaining ``budget`` (what is left of sqrt(shat)). Returns
-        ``(mass, reshuffle_info, jac_bw)`` where jac_bw is the Breit-Wigner
-        sampling jacobian (gap/pi)."""
+    def _mass_window(self, pdg, budget):
+        """The Breit-Wigner sampling window of one resonance and its sampling
+        jacobian: ``(pole, width, min_mass, max_mass, jac_bw)``.
+
+        Note ``jac_bw`` is a function of the *window*, not of the mass drawn in
+        it: the sampler is uniform in R = atan((m^2-pole^2)/(pole.Gamma)) and
+        gap/pi is exactly that window's width in R over pi. That is what makes
+        the mass-stage bound of ``_mass_stage_bound`` a maximum over the window
+        corners rather than a scan in m.
+        """
         pole = self.banner.get('param', 'mass', abs(pdg)).value
         width = self.banner.get('param', 'decay', abs(pdg)).value
         if self.options['BW_cut'] < 0:
@@ -8254,11 +8268,19 @@ class MadSpinInterface(extended_cmd.Cmd):
             bw_cut = self.options['BW_cut']
         min_mass = pole - bw_cut * width
         max_mass = min(pole + bw_cut * width, budget)
-        mass = lhe_parser.Event.generate_random_mass(pole, width, min_mass, max_mass)
-        info = (pole, width, min_mass, max_mass)
         gap = math.atan((pole**2-min_mass**2)/pole/width)
         gap += math.atan((max_mass**2-pole**2)/pole/width)
-        return mass, info, gap/math.pi
+        return pole, width, min_mass, max_mass, gap/math.pi
+
+    def _draw_mass_value(self, pdg, budget):
+        """Sample one resonance virtuality from its Breit-Wigner, capped at the
+        remaining ``budget`` (what is left of sqrt(shat)). Returns
+        ``(mass, reshuffle_info, jac_bw)`` where jac_bw is the Breit-Wigner
+        sampling jacobian (gap/pi)."""
+        pole, width, min_mass, max_mass, jac_bw = self._mass_window(pdg, budget)
+        mass = lhe_parser.Event.generate_random_mass(pole, width, min_mass, max_mass)
+        info = (pole, width, min_mass, max_mass)
+        return mass, info, jac_bw
 
     def _draw_offshell_mass(self, pdg, dec, budget):
         """Sample one resonance virtuality and store it on the decay event that
@@ -8468,6 +8490,234 @@ class MadSpinInterface(extended_cmd.Cmd):
         u = math.log(min(max(mass, lo), hi) / table['pole'])
         c = table['coeff']
         return math.exp(c[0] + u * (c[1] + u * c[2]))
+
+    def _zhat_max(self, key):
+        """max_m Zhat(key, m), exactly. ``_zhat`` is exp of a quadratic in
+        u = ln(m/pole) *clamped* to the probed range, so the reachable set of u
+        is the closed interval [ln(lo/pole), ln(hi/pole)] and the maximum of a
+        quadratic over a closed interval is at an endpoint or at its vertex.
+        No scan, no sample mean, no safety margin: this is the supremum.
+
+        Doing it this way rather than as ``margin * <jac_bw . Zhat>`` is the
+        point -- a sample mean is not a bound, and Zhat is allowed to have
+        structure (a decay threshold opening inside the window shows up as
+        ``zero_below`` plus a steep rise just above it, a narrow daughter
+        resonance as curvature). The quadratic fit is what ``_build_z_tables``
+        ships, so its exact maximum is what dominates every value ``_zhat`` can
+        return.
+        """
+        table = (getattr(self, '_z_tables', None) or {}).get(key)
+        if not table:
+            return 1.0
+        lo, hi = table['range']
+        pole = table['pole']
+        c = table['coeff']
+        u_lo, u_hi = math.log(lo / pole), math.log(hi / pole)
+        candidates = [u_lo, u_hi]
+        # c[2] >= 0 opens upwards, so the interior stationary point is a
+        # minimum and the endpoints already win; only a downward parabola can
+        # peak inside
+        if c[2] < 0:
+            vertex = -c[1] / (2 * c[2])
+            if u_lo < vertex < u_hi:
+                candidates.append(vertex)
+        return max(math.exp(c[0] + u * (c[1] + u * c[2])) for u in candidates)
+
+    # ------------------------------------------------------------------
+    # The per-event bound of the mass stage
+    # ------------------------------------------------------------------
+    # The mass-stage weight under PA/onshell is
+    #
+    #     w_mass = J(m) . prod_s jac_bw_s(m) . prod_s Zhat_s(m_s)
+    #
+    # with every factor non-negative, so any product of per-factor maxima
+    # dominates it. All three maxima are exact and cheap per production event:
+    #
+    #  * J is the RAMBO reshuffling jacobian, and it is monotone DECREASING in
+    #    every m_s at fixed sqrt(shat) and fixed production configuration --
+    #    proved below -- so max J over the window is J at the low corner, for
+    #    any n, with no scan;
+    #  * jac_bw_s is the width in R of slot s's Breit-Wigner window, a function
+    #    of the *budget* sqrt(shat) - sum of the masses drawn before it, not of
+    #    m_s. It is increasing in that budget, which is largest when every
+    #    earlier slot sits at its own window minimum -- the same low corner;
+    #  * Zhat_s is a 1-D function of m_s alone, maximised by ``_zhat_max``.
+    #
+    # The low corner therefore maximises J and every jac_bw simultaneously, and
+    # Zhat factorises, so the product of the three maxima is a true bound. The
+    # window is not a box -- sum(m) <= sqrt(shat) couples the slots -- but the
+    # coupled region is a SUBSET of the box that contains the low corner
+    # whenever it contains anything at all, so a monotone function's maximum
+    # over it is still at that corner and a scan cannot do better.
+    #
+    # Proof that J is monotone decreasing. Write a_i = |p_i|^2 in the
+    # reshuffling CM frame, mu_i = m_i'^2, E_i' = sqrt(mu_i + chi^2 a_i),
+    # beta_i = |p_i'|/E_i' and n the number of final-state particles. Eq. (4.9)
+    # is J = const . chi^(3n-5) / (G . prod_i E_i') with G = sum_i a_i/E_i'.
+    # Differentiating the constraint sum_i E_i' = sqrt(shat) gives
+    # d(chi)/d(mu_k) = -1/(2 E_k' chi G) < 0, and then
+    #
+    #   2 E_k' G chi^2 . dlnJ/dmu_k
+    #       = -(3n-5) + beta_k^2 + sum_i beta_i^2
+    #         - (sum_i E_i' beta_i^4)/(sum_i E_i' beta_i^2)
+    #         - (sum_i E_i' beta_i^2)/E_k'      ==  D_k .
+    #
+    # The third term is >= 0 and the fourth is >= beta_k^2 (its k-th summand
+    # alone), so D_k <= -(3n-5) + sum_i beta_i^2 <= -(3n-5) + n = 5 - 2n, which
+    # is <= -1 for every n >= 3. For n = 2 the closed form settles it directly:
+    # J = chi = lambda^(1/2)(s,m_1'^2,m_2'^2)/lambda^(1/2)(s,m_1^2,m_2^2), and
+    # lambda^(1/2) decreases in each mass. Checked numerically as well: 1.6e6
+    # directional probes over n = 2..10, |p| and m each spanning eight decades,
+    # zero violations.
+    #
+    # What is NOT bounded here, and falls back to the global probe bound:
+    #  * the offshell spinmodes (madspin/full), whose w_mass carries the extra
+    #    Tr(rho_off)/|M_prod|^2_on -- a matrix-element ratio with no cheap
+    #    maximum. Only PA/onshell is covered. That ratio is not why: measured on
+    #    3.9e6 free mass sets it is 1.0000 +- 0.012. What kills the construction
+    #    offshell is Zhat, whose window spans a factor 3.2 there against 1.16
+    #    under PA, so max_m Zhat sits 2.9x above the typical weight and the
+    #    corner bound comes out LOOSER than the probe's global one (eps_m 5.00
+    #    against 3.06). Even the partial bound J_corner . max_sample(rest) is
+    #    worth 2%, and is a loss once the run-level factor is measured as a
+    #    maximum rather than extrapolated. Section 15 of
+    #    doc/madspin_sequential_plan.md has the numbers;
+    #  * a production event carrying an onshell propagator (status 2), where
+    #    reshuffle_production multiplies in a reshuffle_decay jacobian per
+    #    sub-decay that is not part of this factorisation;
+    #  * a window whose low corner is already over threshold
+    #    (sum of the window minima > sqrt(shat)), or one that inverts
+    #    (max_mass <= min_mass, i.e. a budget below the window's own floor);
+    #  * a jacobian the kernel reports as infeasible or non-finite at the
+    #    corner.
+
+    _MASS_BOUND_UNSUPPORTED = None      # last fallback reason, for the log
+
+    def _announce_mass_bound(self, mass_bound, offshell, probe):
+        """Say once, per worker, which bound the mass stage is using.
+
+        Loud on purpose. When the per-event bound is in force, ``nb_sigma`` and
+        ``Nevents_for_max_weight`` no longer reach the mass stage -- they still
+        set every angle-stage bound -- and that is a user-visible change in what
+        those knobs do. It is also what finally makes the mass stage's cost
+        reproducible: the probe-based bound was measured to scatter +-40% run to
+        run without converging, because it extrapolates a tail from the first
+        ``Nevents_for_max_weight`` events of the file.
+        """
+        if probe is not None:
+            return
+        if mass_bound is not None:
+            if getattr(self, '_mass_bound_announced', False):
+                return
+            self._mass_bound_announced = True
+            logger.info(
+                "MadSpin sequential: the mass stage now bounds each production "
+                "event separately -- max(J) at the low corner of the "
+                "Breit-Wigner windows, times the exact maximum of "
+                "jac_BW.Zhat per resonance. It is an upper bound by "
+                "construction, so no mass-set weight can overflow it. Note "
+                "nb_sigma and Nevents_for_max_weight no longer set the MASS "
+                "stage's bound (they still set every angle stage's).")
+        else:
+            if getattr(self, '_mass_bound_fallback_announced', False):
+                return
+            self._mass_bound_fallback_announced = True
+            reason = ('the spinmode is offshell (madspin/full), where the '
+                      'per-event construction was MEASURED to be looser than '
+                      'this bound, not merely unavailable -- see section 15 of '
+                      'doc/madspin_sequential_plan.md'
+                      if offshell else self._MASS_BOUND_UNSUPPORTED)
+            logger.info(
+                "MadSpin sequential: the mass stage keeps the probe's global "
+                "maximum weight -- %s.", reason or 'unsupported event')
+
+    def _mass_stage_bound(self, production, order, particles, slot_to_index,
+                          zkeys, keep_jac):
+        """C_e for one production event, or None when the event is one of the
+        unsupported cases listed above (the caller then uses the global bound).
+
+        Cached on the production event: the chain re-enters on every rejected
+        mass set and the bound does not depend on the draw.
+        """
+        cached = getattr(production, '_ms_mass_bound', False)
+        if cached is not False:
+            return cached
+        bound = self._mass_stage_bound_compute(production, order, particles,
+                                               slot_to_index, zkeys, keep_jac)
+        production._ms_mass_bound = bound
+        return bound
+
+    def _mass_stage_bound_compute(self, production, order, particles,
+                                  slot_to_index, zkeys, keep_jac):
+        if any(int(p.status) not in (-1, 1) for p in production):
+            self._MASS_BOUND_UNSUPPORTED = (
+                'the production event carries an onshell propagator, whose '
+                'sub-decay reshuffling jacobian is not part of the bound')
+            return None
+        sqrts = production.sqrts
+        if not sqrts or not (sqrts > 0):
+            self._MASS_BOUND_UNSUPPORTED = 'sqrt(shat) is not usable'
+            return None
+
+        # the low corner of the window, slot by slot, in the order the draw
+        # spends the budget in -- which is what makes each jac_bw maximal
+        budget = sqrts
+        corner = {}
+        bw_max = 1.0
+        for slot in order:
+            pdg = particles[slot_to_index[slot]].pid
+            pole, width, min_mass, max_mass, jac_bw = self._mass_window(pdg, budget)
+            if not (max_mass > min_mass) or not (min_mass > 0):
+                self._MASS_BOUND_UNSUPPORTED = (
+                    'the Breit-Wigner window of pdg %s is empty at this '
+                    'sqrt(shat)' % pdg)
+                return None
+            corner[slot] = min_mass
+            bw_max *= jac_bw
+            budget -= min_mass
+            if budget <= 0:
+                self._MASS_BOUND_UNSUPPORTED = (
+                    'the window minima alone exceed sqrt(shat)')
+                return None
+
+        jac_max = 1.0
+        if keep_jac:
+            frame = getattr(production, '_ms_shuffle_frame', None)
+            if frame is None:
+                # from the *round-tripped* event, because that is what
+                # _production_jacobian_for reshuffles: str() truncates every
+                # momentum to %.10e, and the bound has to dominate the weight
+                # the accept/reject actually computes, not an idealised one.
+                probe = lhe_parser.Event(str(production))
+                finals = [p for p in probe if int(p.status) == 1]
+                frame = lhe_parser.Event.mass_shuffle_frame(
+                    [lhe_parser.FourMomentum(p) for p in finals], probe.sqrts)
+                production._ms_shuffle_frame = frame
+                production._ms_shuffle_sqrts = probe.sqrts
+                # the undrawn slots keep their nominal mass, and it is the
+                # round-tripped one reshuffle_production reads
+                production._ms_shuffle_masses = [p.mass for p in finals]
+            masses = list(production._ms_shuffle_masses)
+            for slot, mass in corner.items():
+                masses[slot_to_index[slot]] = mass
+            jac_max = lhe_parser.Event.mass_shuffle_jacobian(
+                frame, masses, production._ms_shuffle_sqrts)
+            if jac_max in (0, -1) or not math.isfinite(jac_max) \
+                    or not jac_max > 0:
+                self._MASS_BOUND_UNSUPPORTED = (
+                    'the reshuffling jacobian has no value at the window low '
+                    'corner (that mass set is already infeasible)')
+                return None
+
+        z_max = 1.0
+        for slot in order:
+            z_max *= self._zhat_max(zkeys[slot])
+
+        bound = jac_max * bw_max * z_max
+        if not math.isfinite(bound) or not bound > 0:
+            self._MASS_BOUND_UNSUPPORTED = 'the bound is not a positive number'
+            return None
+        return bound
 
     @staticmethod
     def _weighted_polyfit2(xs, ys, ws):
@@ -8886,6 +9136,37 @@ class MadSpinInterface(extended_cmd.Cmd):
 
         if stats is None:
             stats = collections.defaultdict(int)
+
+        # The mass stage's bound. Per production event where that is possible
+        # (see _mass_stage_bound), the probe's global maxwgts[0] otherwise. The
+        # per-event one is a proven upper bound rather than an extrapolation of
+        # the probe's tail, so nothing it tests can overflow -- which is what
+        # the overweight counters at the end of the run report.
+        #
+        # The accepted mass distribution is q_e(m) . min(1, w/C) followed by a
+        # redraw, i.e. proportional to q_e(m) w(m) for ANY C >= max w: the bound
+        # cancels out of it. Changing C therefore changes the trial sequence and
+        # the cost, and nothing about the sample.
+        mass_bound = None
+        if probe is None and maxwgts and upfront and draw_mass and not offshell:
+            mass_bound = self._mass_stage_bound(production, order, particles,
+                                                slot_to_index, zkeys, keep_jac)
+        # Which events *have* a mass stage to bound: the up-front schemes, and
+        # there whichever family draws a virtuality up front. ``_upfront_production``
+        # fills slot_mass under `offshell or draw_mass`, and `draw_mass` alone is
+        # the PA half of that -- so gating on it left the offshell spinmodes
+        # counted in neither column and never announced, and let
+        # sequential_with_mass (which is not an up-front scheme at all, and whose
+        # mass_bound is dead) announce a bound it does not use.
+        if maxwgts and upfront and (offshell or draw_mass):
+            # one per chain call, i.e. one per production event reaching the
+            # mass stage -- a rejected mass set loops *inside* the chain, so
+            # these count events and not draws
+            if mass_bound is None:
+                stats['nb_mass_bound_global'] += 1
+            else:
+                stats['nb_mass_bound_event'] += 1
+            self._announce_mass_bound(mass_bound, offshell, probe)
         if probe is not None and probe_extra is None:
             probe_extra = {}
 
@@ -9007,15 +9288,16 @@ class MadSpinInterface(extended_cmd.Cmd):
                     # no virtuality to unweight means w_mass is the constant 1
                     # (onshell, and 2 -> 1 production under PA): testing it
                     # against its bound would only throw chains away
-                    if w_mass > maxwgts[0]:
+                    cmass = maxwgts[0] if mass_bound is None else mass_bound
+                    if w_mass > cmass:
                         stats['nb_overflow_mass'] += 1
                         # accepted with probability 1 instead of w/C: carry the
                         # excess. Set after the test would be equivalent (an
                         # overflowing weight cannot be rejected, since
                         # random.random() < 1), but it is set here so the
                         # counter and the factor stay one statement apart.
-                        carry_mass = w_mass / maxwgts[0]
-                    if random.random() * maxwgts[0] >= w_mass:
+                        carry_mass = w_mass / cmass
+                    if random.random() * cmass >= w_mass:
                         stats['nb_mass_reject'] += 1
                         continue            # redraw the whole mass set
 
