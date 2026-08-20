@@ -3234,6 +3234,46 @@ The `BW_cut = 1` row is the one that settles it: the old code could not track a
 changing window at all, and reported the same 674.44 pb for a sample it had cut
 in half.
 
+**Reproduced independently**, on a fresh 30 000-event production sample and two
+fresh 30 000-event truth samples at `bwcutoff = 15` and `bwcutoff = 1`
+(`spinmode PA`, so the overweight carry of section 14 is out of the way):
+
+| | truth (pb) | MadSpin before (pb) | truth/MadSpin | MadSpin after (pb) | truth/MadSpin |
+|---|---|---|---|---|---|
+| `BW_cut = 15` | 653.12 +- 1.14 | 674.16 | **0.9688** | 645.741 | **1.0114 +- 0.0024** |
+| `BW_cut = 1`  | 335.11 +- 0.68 | 674.16 | **0.4971** | 334.910 | **1.0006 +- 0.0027** |
+
+and the two reported cross-sections stand in the ratio
+`645.741 / 334.910 = 1.928103` against the `f(15)^2 / f(1)^2 = 1.928102` the
+closed form predicts -- seven digits, because the factor *is* the sampler's
+normalisation and not a fit to it. (`onshell` at both cuts reports the same
+674.1565 pb, unchanged and equal to the production sample's own, which is what
+a mode that draws no virtuality has to do.)
+
+The `BW_cut = 15` residual reads +1.1 % here against +0.5 % in the row above,
+and neither is precise: both truth samples are 30 000-event runs quoting 0.17 %,
+and 653.12 +- 1.14 against 649.35 +- 2.19 is a 1.5 sigma spread about the
+5 000 000-event value RESULTS.md integrates, 651.8 +- 0.22. Folded against that
+one and the high-statistics production 674.4 +- 0.21, the sharpest number
+available is `651.8 / (674.4 * 0.95785) = ` **+0.90 % +- 0.05 %**, inside the
++0.4 %..+1.0 % band the study bounded. The `BW_cut = 1` residual is not
+statistics-limited in the same way, because there the correction is half the
+rate and the residual is a twentieth of the error bar.
+
+**The second `bwcutoff` is what the earlier study said it needed, and it lands
+where the residual's explanation predicts.** RESULTS.md could only bound the
+residual to +0.4 %..+1.0 % because it ran truth at `bwcutoff = 15` only, and it
+attributed the residual to the decay numerator `m.Gamma(m)/(m_t.Gamma_t)`
+running 0.52 to 1.71 across the `+-22.4 GeV` window while the factor holds it
+flat. If that is the cause, then narrowing the window to `+-1.5 GeV` -- where
+the numerator barely moves -- has to collapse the residual, and it does:
+**+1.1 % at `BW_cut = 15`, +0.06 % at `BW_cut = 1`**, the latter statistically
+indistinguishable from zero. So the flat-numerator approximation is not a
+uniform offset to be lived with; it is a window-width effect, and it vanishes
+exactly where the correction itself is largest (50 % of the rate). That is the
+strongest evidence available that the *form* of the factor is right and only its
+numerator is approximate.
+
 ### The factor
 
 `bw_retained_fraction(M, Gamma, N)` in `MadSpin/decay.py`:
@@ -3309,9 +3349,43 @@ per-event product and writes the **mean** over the file. A per-event factor
 would turn an unweighted sample into a weighted one, which is not what an
 unweighted MadSpin file is for.
 
+The two-sided asymmetry above is measured, not argued. Same production sample,
+same `BW_cut = 15`, `decay t > w+ b, w+ > e+ ve` / `decay t~ > w- b~,
+w- > e- ve~` on both paths:
+
+| | reported factor | = |
+|---|---|---|
+| density (`PA`), nested chain | 0.95785 | top^2 only |
+| `madspin_v1`, nested chain | 0.91614 | top^2 . W^2 |
+| `madspin_v1`, `t > w+ b` (no nested resonance) | 0.95785 | top^2, i.e. it agrees with the density path when there is nothing nested to disagree about |
+
+### What it moves in the test suite
+
+One number, and it is worth knowing that it is one. A sweep of every
+cross-section, branching-ratio and event-weight assertion in `tests/`:
+
+* **`tests/acceptance_tests/test_cmd_madevent.py`, `test_complex_mass_scheme`**
+  -- the post-`decay_events` target, `440.779 -> 431.39` (**-2.13 %**, one top
+  at `bw_retained_fraction(173.0, 1.491257, 15) = 0.9786983`). Measured:
+  production 442.887 +- 4.815, decayed 433.4528 +- 4.712, ratio 0.9786983 to
+  seven digits. It did **not** fail -- `4*err1` on a 100-event run is +-4.3 %
+  and swallowed the shift -- which is the reason to update it rather than leave
+  it: a tolerance wide enough to hide a systematic is not a check on it.
+* **The `p p > w+` / `p p > w-` acceptance cross-sections are unmoved**, all
+  six of them, because a 2 -> 1 production draws no virtuality. Had they been
+  2 -> 2 the W factor 0.97799 would have shifted `100521.5` by 2212 pb against
+  an `error` of 800 -- so the 2 -> 1 guard is load-bearing, not decoration.
+* **`test_wj_production_with_ms_decay`** (`p p > w+ j`, `spinmode madspin`) is
+  the one other affected path, but it asserts event counts only; its cross
+  references are already omitted. If they are ever restored they must carry one
+  W factor.
+* Everything else is an on-shell/`none` mode, a stub constant, or a count.
+
 ### What this does not cover
 
-* **The numerator residual**, +0.4 % to +1.0 % for a `t t~` pair -- above.
+* **The numerator residual**, now measured at both ends: **+1.1 % at
+  `BW_cut = 15`, +0.06 % at `BW_cut = 1`** -- a window-width effect, not a
+  uniform offset. See the reproduction table above.
 * **`BW_cut` does not narrow the nested windows on the density side.** The decay
   events are generated by MG5 with the *run_card*'s `bwcutoff`, so an explicit
   `set BW_cut 1` narrows the top's window and not the W's. That is not a new
