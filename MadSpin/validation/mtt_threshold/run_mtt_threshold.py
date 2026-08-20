@@ -26,6 +26,16 @@ RAMBO-invariant and the sub-threshold region really is structurally empty.
 (``_density_do_reshuffle`` is False), so it keeps the production ``m_tt``
 exactly and *is* structurally empty below threshold whatever the multiplicity.
 
+``madspin_v1``, the legacy Fortran path, is a fourth answer and not a variant of
+the first three.  It never calls ``reshuffle_production``: it draws the
+virtualities inside its own Fortran driver and then rebuilds the whole
+phase-space point from the decay-chain topology
+(``generate_momenta_conf`` in ``MadSpin/src/driver.f``), holding ``shat`` and the
+production tree's invariants at the values it extracted from the production
+event (``keep_inv`` / ``fixedinv``).  Whether that moves ``m_tt``, and in which
+direction, is therefore a measurement and not something the code makes obvious;
+the ``Delta m_tt`` moments in ``meta.json`` are the answer.
+
 The truth sample is ``p p > t t~ j, t > w+ b, t~ > w- b~`` generated directly by
 MG5: the decay-chain matrix element carries the tops' Breit-Wigner propagators,
 so the tops go off shell up to ``bwcutoff`` widths each and the sample populates
@@ -122,18 +132,41 @@ SEED_PROD = 42
 SEED_TRUTH = 4242
 SEED_MADSPIN = 42
 
-# The three spinmodes the brief asks for, and what each one does to the
-# virtuality.  ``full`` is not a fourth mode: run_madspin rewrites it to
-# ``madspin`` before anything looks at it.
+# The four spinmodes on the figure, and what each one does to the virtuality.
+# ``full`` is not a fifth mode: run_madspin rewrites it to ``madspin`` before
+# anything looks at it.
+#
+# ``madspin_v1`` is the legacy Fortran path and does not go through
+# ``run_onshell`` at all (``interface_madspin.do_launch`` falls through to
+# ``madspin.decay_all_events``).  Three consequences, all of them real and none
+# of them worked around here:
+#   * ``nb_core`` is ignored -- the legacy decay loop is single-process, so the
+#     ``set nb_core`` line the factory writes into every card has no effect on
+#     this mode.  It is left in the card so the four cards differ only in the
+#     spinmode line.
+#   * the run card is not read (``interface_madspin`` refuses ``set run_card``
+#     edits outside the density modes); nothing here needs it, since the cuts
+#     live in the production sample.
+#   * ``set unweighting`` never reaches ``_unweighting_mode``: that dispatcher
+#     is inside ``run_onshell``.  The legacy path has its own accept/reject --
+#     one ``max_weight`` per decay channel, probed on
+#     ``Nevents_for_max_weight`` x ``max_weight_ps_point`` phase-space points
+#     before the event loop (``decay_all_events.get_max_weight_from_event``),
+#     then a single test of the whole decay chain's weight against that bound,
+#     inside the Fortran driver, per trial -- so the scheme it runs is neither
+#     ``joint`` nor ``sequential`` in the sense the density modes use those
+#     words, and its log carries no ``MadSpin: unweighting = ...`` line at all.
+#     The harvester records ``legacy`` for it, which is the honest answer.
 MODES = [
-    ('madspin', 'madspin'),   # off-shell density; virtuality from the ME
-    ('PA', 'PA'),             # pole approximation; per-particle BW draw
-    ('onshell', 'onshell'),   # no virtuality at all, no reshuffle
+    ('madspin', 'madspin'),        # off-shell density; virtuality from the ME
+    ('PA', 'PA'),                  # pole approximation; per-particle BW draw
+    ('onshell', 'onshell'),        # no virtuality at all, no reshuffle
+    ('madspin_v1', 'madspin_v1'),  # legacy Fortran path; its own virtuality
 ]
 
 # A control, not a curve on the figure.
 #
-# ``unweighting = auto`` does NOT resolve the same way for the three modes:
+# ``unweighting = auto`` does NOT resolve the same way for the density modes:
 # ``_auto_unweighting_mode`` sends PA/onshell to ``sequential`` at every
 # multiplicity but madspin/full to ``joint`` for up to two decaying particles.
 # With two decaying tops that is exactly this setup, so the shipped defaults
@@ -147,6 +180,13 @@ MODES = [
 CONTROLS = [
     ('madspin_seq', 'madspin', {'unweighting': 'sequential'}),
 ]
+
+# Labels whose spinmode bypasses ``run_onshell`` entirely, so no
+# ``MadSpin: unweighting = ...`` line is ever logged for them.
+_SPINMODE_OF = dict(MODES)
+_SPINMODE_OF.update((label, spin) for label, spin, _ in CONTROLS)
+_LEGACY_LABELS = {label for label, spin in _SPINMODE_OF.items()
+                  if spin in ('madspin_v1', 'onshell_v1')}
 
 # Fine, uniform histogram grid.  0.25 GeV bins.  The truth's Breit-Wigner
 # support reaches down to 2 * (m_t - 15 * Gamma_t) ~ 301 GeV, so 290 is below
@@ -321,6 +361,24 @@ def pair_delta(prod_path, dec_path, dbins):
 
     This is the mechanism the whole figure is about: for a ``2 -> 3``
     production the reshuffle rescales the recoil jet too, so ``m_tt`` moves.
+
+    ``n_exact`` and ``n_tiny`` count the events in which ``m_tt`` comes back
+    unchanged -- bit for bit, and to a relative 1e-6 respectively.  **Read
+    n_tiny, not n_exact.**  The LHE writes momenta as decimal text at finite
+    precision, so an event whose momenta were never touched at all still
+    round-trips with a ``m_tt`` that differs in the last digits: ``onshell``,
+    which provably does not touch them, is only 4.45 % bit-exact but 100 % at
+    1e-6, and that 4.45 % is the precision floor rather than a physics number.
+    ``n_tiny`` is above that floor and is the one that means something.
+
+    It is not a rounding statistic for the density modes: their RAMBO
+    mass_shuffle scales every momentum by a common ``chi``, so ``m_tt`` moves in
+    *every* event and both counts collapse (0 % exact, 0.3 % tiny).
+    ``madspin_v1`` regenerates the point from the decay-chain topology holding
+    the production tree's invariants fixed, and when the ``t t~`` invariant is
+    one of the ones it holds, ``m_tt`` cannot move at all.  That fraction is the
+    reason its rms and its threshold-crossing count point in opposite
+    directions, so it is measured rather than inferred.
     """
     hist = np.zeros(len(dbins) - 1, dtype=np.int64)
     lo, hi = float(dbins[0]), float(dbins[-1])
@@ -331,6 +389,8 @@ def pair_delta(prod_path, dec_path, dbins):
     max_dshat = 0.0
     up_cross = down_cross = 0          # events that cross 2 m_t either way
     n_out = 0
+    n_exact = 0                        # |Delta m_tt| < 1e-9 GeV, i.e. identical
+    n_tiny = 0                         # |Delta m_tt| / m_tt < 1e-6
     for (mp, sp), (md, sd) in zip(_stream_mtt_shat(prod_path, {6}),
                                   _stream_mtt_shat(dec_path, {24, 5})):
         d = md - mp
@@ -341,6 +401,11 @@ def pair_delta(prod_path, dec_path, dbins):
             max_abs = abs(d)
         if abs(sd - sp) > max_dshat:
             max_dshat = abs(sd - sp)
+        ad = abs(d)
+        if ad < 1e-9:
+            n_exact += 1
+        if ad < 1e-6 * max(1.0, mp):
+            n_tiny += 1
         if lo <= d < hi:
             hist[int((d - lo) * inv)] += 1
         else:
@@ -352,7 +417,8 @@ def pair_delta(prod_path, dec_path, dbins):
     mean = s1 / n if n else 0.0
     rms = math.sqrt(max(0.0, s2 / n - mean ** 2)) if n else 0.0
     return dict(hist=hist, n=n, mean=mean, rms=rms, max_abs=max_abs,
-                max_dshat=max_dshat, n_out=n_out,
+                max_dshat=max_dshat, n_out=n_out, n_exact=n_exact,
+                n_tiny=n_tiny,
                 crossed_down=down_cross, crossed_up=up_cross)
 
 
@@ -579,9 +645,9 @@ def main():
     ap.add_argument('--cross-check', action='store_true')
     ap.add_argument('--modes', default=None,
                     help='comma-separated subset of the spinmodes to RUN in '
-                         'this invocation.  The three modes are independent '
+                         'this invocation.  The four modes are independent '
                          'runs off one shared production sample, each in its '
-                         'own directory, so they can be launched as three '
+                         'own directory, so they can be launched as four '
                          'concurrent processes; the harvest stage picks up '
                          'whatever is on disk.')
     ap.add_argument('--control-nevents', type=int, default=0,
@@ -812,9 +878,12 @@ def main():
         store['delta_%s' % label] = d.pop('hist')
         meta['delta_mtt'][label] = d
         print('delta %-8s n=%d mean=%+.4f rms=%.4f max|d|=%.3f '
-              'max|dsqrt(shat)|=%.3g crossed down=%d up=%d  (%.0f s)'
+              'max|dsqrt(shat)|=%.3g crossed down=%d up=%d '
+              'exact=%d unchanged<1e-6=%d (%.2f%%)  (%.0f s)'
               % (label, d['n'], d['mean'], d['rms'], d['max_abs'],
                  d['max_dshat'], d['crossed_down'], d['crossed_up'],
+                 d['n_exact'], d['n_tiny'],
+                 100.0 * d['n_tiny'] / max(d['n'], 1),
                  time.time() - t0))
         sys.stdout.flush()
 
@@ -830,6 +899,18 @@ def main():
             with open(log) as fp:
                 text = fp.read()
             mode, why = _parse_unweighting(text)
+            if mode is None and label in _LEGACY_LABELS:
+                # The legacy path never announces a scheme because it never
+                # calls ``_unweighting_mode``. Recording ``None`` here would be
+                # ambiguous with "the log was not parsed"; record what it
+                # actually ran instead.
+                mode = 'legacy'
+                why = ('spinmode=%s does not go through run_onshell, so '
+                       '_unweighting_mode is never called and the card\'s '
+                       '`unweighting` setting is inert; the legacy Fortran '
+                       'driver tests the whole decay chain against one '
+                       'pre-probed max_weight per channel'
+                       % _SPINMODE_OF[label])
             meta['runs'][label]['unweighting'] = mode
             meta['runs'][label]['unweighting_why'] = why
         card = pjoin(run_dir, 'madspin_card.dat')

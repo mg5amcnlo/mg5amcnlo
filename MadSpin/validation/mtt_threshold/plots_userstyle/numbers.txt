@@ -1,7 +1,7 @@
 ==============================================================================
 m_tt near threshold: MadSpin spinmodes vs the doubly-resonant truth
 ==============================================================================
-code            : 4af4acbc367d (claude/ms-mtt-threshold)
+code            : b88b3983190d (claude/ms-mtt-threshold-v1)
 production      : p p > t t~ j
 truth           : p p > t t~ j, t > w+ b, t~ > w- b~
 MadSpin decays  : t > w+ b, t~ > w- b~
@@ -13,7 +13,22 @@ truth            5000000       651.6081       651.7627
 madspin          1000000       676.3464       674.4446
 PA               1000000       674.4446       674.4446
 onshell          1000000       674.4446       674.4446
+madspin_v1       1000000       674.4449       674.4446
 production       1000000       674.4446       674.4446
+
+accept/reject scheme each run ACTUALLY used, from its own log:
+   madspin     joint       (auto, 2 decaying particle(s))
+   PA          sequential  (auto, 2 decaying particle(s))
+   onshell     sequential  (auto, 2 decaying particle(s))
+   madspin_v1  legacy      (spinmode=madspin_v1 does not go through run_onshell, so _unweighting_mode is never called and the card's `unweighting` setting is inert; the legacy Fortran driver tests the whole decay chain against one pre-probed max_weight per channel)
+   madspin_seq sequential  (set explicitly)
+   NB: "legacy" is not one of the four `set unweighting` schemes.
+   spinmode=madspin_v1 never reaches _unweighting_mode -- that
+   dispatcher lives in run_onshell, which the legacy path does not
+   call -- so the card's `unweighting` value is inert for it and the
+   scheme it ran is the legacy one: one max_weight per decay channel,
+   probed before the event loop, then one test of the whole decay
+   chain's weight against it per trial, inside the Fortran driver.
 
 The truth and the MadSpin samples do NOT share a total cross section,
 and the gap is expected.  MG5 truncates each top Breit-Wigner at
@@ -24,24 +39,28 @@ off-shell correction to the rate either.  Measured here:
    truth / madspin   = 0.9634   (BW truncation alone would give 0.9580)
    truth / PA        = 0.9661   (BW truncation alone would give 0.9580)
    truth / onshell   = 0.9661   (BW truncation alone would give 0.9580)
+   truth / madspin_v1 = 0.9661   (BW truncation alone would give 0.9580)
 
 -- below 2 m_t ------------------------------------------------------
 truth       sigma(m_tt < 2m_t) = 1.0753 +- 0.0118 pb   (8251 events, 0.165% +- 0.002% of the truth total 651.608 pb)
 madspin     sigma(m_tt < 2m_t) = 0.9321 +- 0.0251 pb   (1382 events, 0.138% of its own total)   ratio to truth = 0.867 +- 0.025
 PA          sigma(m_tt < 2m_t) = 1.2309 +- 0.0288 pb   (1825 events, 0.183% of its own total)   ratio to truth = 1.145 +- 0.030
 onshell     sigma(m_tt < 2m_t) = 0.0000 +- 0.0000 pb   (0 events, 0.000% of its own total)   ratio to truth = 0 exactly (structurally empty)
+madspin_v1  sigma(m_tt < 2m_t) = 0.3089 +- 0.0144 pb   (458 events, 0.046% of its own total)   ratio to truth = 0.287 +- 0.014
 
 -- m_tt < 2 m_t + 5 GeV  (= 351.0 GeV) -------------------------
 truth       4.6959 +- 0.0247 pb  (36033 events, 0.721% of the truth total)
 madspin     4.5858 +- 0.0556 pb  (6799 events)   -0.1101 +- 0.0609 pb vs truth = -2.3% +- 1.3%
 PA          5.0948 +- 0.0586 pb  (7554 events)   +0.3989 +- 0.0636 pb vs truth = +8.5% +- 1.4%
 onshell     3.9340 +- 0.0515 pb  (5833 events)   -0.7618 +- 0.0571 pb vs truth = -16.2% +- 1.2%
+madspin_v1  4.0979 +- 0.0526 pb  (6076 events)   -0.5980 +- 0.0581 pb vs truth = -12.7% +- 1.2%
 
 -- m_tt < 2 m_t + 10 GeV  (= 356.0 GeV) -------------------------
 truth       11.0944 +- 0.0380 pb  (85131 events, 1.703% of the truth total)
 madspin     11.0334 +- 0.0863 pb  (16357 events)   -0.0610 +- 0.0943 pb vs truth = -0.6% +- 0.8%
 PA          11.6220 +- 0.0885 pb  (17232 events)   +0.5276 +- 0.0964 pb vs truth = +4.8% +- 0.9%
 onshell     10.8343 +- 0.0855 pb  (16064 events)   -0.2601 +- 0.0936 pb vs truth = -2.3% +- 0.8%
+madspin_v1  10.8613 +- 0.0856 pb  (16104 events)   -0.2332 +- 0.0937 pb vs truth = -2.1% +- 0.8%
 
 -- where each spinmode enters agreement with the truth --------------
    scanned downwards from 420 GeV over the plot binning; "strict" uses
@@ -49,6 +68,7 @@ onshell     10.8343 +- 0.0855 pb  (16064 events)   -0.2601 +- 0.0936 pb vs truth
    madspin   normalisation offset over 380-420 GeV: truth/mode = 0.9650 +- 0.0027
    PA        normalisation offset over 380-420 GeV: truth/mode = 0.9685 +- 0.0027
    onshell   normalisation offset over 380-420 GeV: truth/mode = 0.9662 +- 0.0027
+   madspin_v1 normalisation offset over 380-420 GeV: truth/mode = 0.9663 +- 0.0027
 
    -- ABSOLUTE normalisation --
    tolerance 5%:
@@ -58,6 +78,8 @@ onshell     10.8343 +- 0.0855 pb  (16064 events)   -0.2601 +- 0.0936 pb vs truth
                 within errors: m_tt >= 360 GeV  (first bin ratio 1.032 +- 0.015)
       onshell   strict       : m_tt >= 390 GeV  (first bin ratio 1.032 +- 0.008)
                 within errors: m_tt >= 368 GeV  (first bin ratio 1.039 +- 0.014)
+      madspin_v1 strict       : m_tt >= 390 GeV  (first bin ratio 1.030 +- 0.008)
+                within errors: m_tt >= 368 GeV  (first bin ratio 1.038 +- 0.014)
    tolerance 10%:
       madspin   strict       : m_tt >= 345 GeV  (first bin ratio 0.930 +- 0.052)
                 within errors: m_tt >= 345 GeV  (first bin ratio 0.930 +- 0.052)
@@ -65,6 +87,8 @@ onshell     10.8343 +- 0.0855 pb  (16064 events)   -0.2601 +- 0.0936 pb vs truth
                 within errors: m_tt >= 345 GeV  (first bin ratio 1.047 +- 0.055)
       onshell   strict       : m_tt >= 360 GeV  (first bin ratio 1.035 +- 0.015)
                 within errors: m_tt >= 350 GeV  (first bin ratio 1.101 +- 0.030)
+      madspin_v1 strict       : m_tt >= 347 GeV  (first bin ratio 1.002 +- 0.037)
+                within errors: m_tt >= 347 GeV  (first bin ratio 1.002 +- 0.037)
 
    -- SHAPE only (each mode rescaled by its 380-420 GeV offset above) --
    tolerance 5%:
@@ -74,6 +98,8 @@ onshell     10.8343 +- 0.0855 pb  (16064 events)   -0.2601 +- 0.0936 pb vs truth
                 within errors: m_tt >= 345 GeV  (first bin ratio 1.014 +- 0.054)
       onshell   strict       : m_tt >= 360 GeV  (first bin ratio 1.000 +- 0.015)
                 within errors: m_tt >= 360 GeV  (first bin ratio 1.000 +- 0.015)
+      madspin_v1 strict       : m_tt >= 360 GeV  (first bin ratio 0.994 +- 0.015)
+                within errors: m_tt >= 347 GeV  (first bin ratio 0.968 +- 0.036)
    tolerance 10%:
       madspin   strict       : m_tt >= 346 GeV  (first bin ratio 0.940 +- 0.042)
                 within errors: m_tt >= 345 GeV  (first bin ratio 0.898 +- 0.050)
@@ -81,15 +107,28 @@ onshell     10.8343 +- 0.0855 pb  (16064 events)   -0.2601 +- 0.0936 pb vs truth
                 within errors: m_tt >= 336 GeV  (first bin ratio 0.925 +- 0.106)
       onshell   strict       : m_tt >= 350 GeV  (first bin ratio 1.064 +- 0.029)
                 within errors: m_tt >= 347 GeV  (first bin ratio 1.055 +- 0.037)
+      madspin_v1 strict       : m_tt >= 347 GeV  (first bin ratio 0.968 +- 0.036)
+                within errors: m_tt >= 347 GeV  (first bin ratio 0.968 +- 0.036)
 
 -- the mechanism: m_tt(decayed) - m_tt(production), event by event --
    MadSpin writes one decayed event per production event, in order.
    sqrt(shat) is RAMBO-invariant, so max |Delta sqrt(shat)| = 0 is
    what proves the two streams are actually paired.
-   mode            mean        rms     max|d|  max|dsqrt(s)|  down-xing    up-xing
-   madspin      +0.1365     2.1359     44.469              0       1382          0
-   PA           -0.0283     2.1022     45.385              0       1825          0
-   onshell      -0.0000     0.0000      0.000              0          0          0
+   mode             mean      rms    max|d| max|dsqrt(s)| down-xing up-xing  unchanged
+   madspin       +0.1365   2.1359    44.469             0      1382       0      0.29%
+   PA            -0.0283   2.1022    45.385             0      1825       0      0.29%
+   onshell       -0.0000   0.0000     0.000             0         0       0    100.00%
+   madspin_v1    +0.0921   2.6446   140.639             0       458       0     54.22%
+   "unchanged" = |Delta m_tt| / m_tt < 1e-6, i.e. m_tt came back the
+   same to the precision the LHE text carries.  Read that column and
+   not a bit-exact one: onshell provably never touches the momenta
+   and is still only 4.45% bit-exact, because the LHE round-trips
+   the momenta as decimal text.  That is the precision floor; the
+   1e-6 column sits above it.
+   This is the column that explains madspin_v1: its rms is the
+   LARGEST of the four, yet it pushes the FEWEST events across the
+   threshold, because it holds m_tt exactly fixed in half its
+   events and moves the rest further than anything else does.
 
 -- control: madspin_seq ------------------------------------------------
    madspin repeated with the accept/reject scheme forced, so the
@@ -107,45 +146,64 @@ onshell     10.8343 +- 0.0855 pb  (16064 events)   -0.2601 +- 0.0936 pb vs truth
    measured rather than asserted, and it is what makes its zero
    below 2 m_t structural.
 
+-- ratio points outside the figure's clipped pane (0.8, 1.2) -------------
+   madspin      316-326   ratio = 1.294 +- 0.591   (drawn as an arrow at 1.2)
+   madspin      326-331   ratio = 0.771 +- 0.156   (drawn as an arrow at 0.8)
+   madspin      331-336   ratio = 0.622 +- 0.077   (drawn as an arrow at 0.8)
+   madspin      336-338   ratio = 0.724 +- 0.093   (drawn as an arrow at 0.8)
+   PA           326-331   ratio = 1.211 +- 0.203   (drawn as an arrow at 1.2)
+   PA           331-336   ratio = 1.322 +- 0.119   (drawn as an arrow at 1.2)
+   madspin_v1   316-326   ratio = 0.216 +- 0.220   (drawn as an arrow at 0.8)
+   madspin_v1   326-331   ratio = 0.275 +- 0.089   (drawn as an arrow at 0.8)
+   madspin_v1   331-336   ratio = 0.230 +- 0.045   (drawn as an arrow at 0.8)
+   madspin_v1   336-338   ratio = 0.189 +- 0.045   (drawn as an arrow at 0.8)
+   madspin_v1   338-340   ratio = 0.241 +- 0.044   (drawn as an arrow at 0.8)
+   madspin_v1   340-342   ratio = 0.212 +- 0.033   (drawn as an arrow at 0.8)
+   madspin_v1   342-344   ratio = 0.258 +- 0.028   (drawn as an arrow at 0.8)
+   madspin_v1   344-345   ratio = 0.314 +- 0.036   (drawn as an arrow at 0.8)
+   madspin_v1   345-346   ratio = 0.388 +- 0.032   (drawn as an arrow at 0.8)
+   onshell below 2 m_t is NOT in this list: it is an exact structural
+   zero, drawn with its open marker on the lower boundary and no arrow.
+
 -- per-bin table (absolute, pb/GeV) ---------------------------------
-bin [GeV]        truth        +-      madspin       +-    ratio           PA       +-    ratio      onshell       +-    ratio
- 316- 326   0.00031276   6.4e-05   0.00040467  0.00017    1.294   0.00033722  0.00015    1.078            0        -  0 exact
- 326- 331    0.0049003   0.00036    0.0037769  0.00071    0.771    0.0059351  0.00089    1.211            0        -  0 exact
- 331- 336     0.015821   0.00064    0.0098469   0.0012    0.622     0.020908   0.0017    1.322            0        -  0 exact
- 336- 338     0.032124    0.0014     0.023268   0.0028    0.724     0.030687   0.0032    0.955            0        -  0 exact
- 338- 340     0.043462    0.0017     0.042827   0.0038    0.985     0.051932   0.0042    1.195            0        -  0 exact
- 340- 342     0.068483    0.0021     0.063398   0.0046    0.926     0.081945   0.0053    1.197            0        -  0 exact
- 342- 344      0.11384    0.0027     0.098132   0.0058    0.862       0.1332   0.0067    1.170            0        -  0 exact
- 344- 345      0.17633    0.0048       0.1477     0.01    0.838       0.2084    0.012    1.182            0        -  0 exact
- 345- 346      0.27628     0.006      0.25696    0.013    0.930      0.28934    0.014    1.047            0        -  0 exact
- 346- 347      0.41534    0.0074      0.40467    0.017    0.974      0.46604    0.018    1.122      0.35611    0.015    0.857
- 347- 348      0.59662    0.0088      0.58002     0.02    0.972      0.63263    0.021    1.060      0.65151    0.021    1.092
- 348- 349      0.74413    0.0098      0.76033    0.023    1.022      0.78168    0.023    1.050      0.83564    0.024    1.123
- 349- 350      0.86912     0.011      0.88689    0.024    1.020      0.90983    0.025    1.047      0.99481    0.026    1.145
- 350- 351       0.9954     0.011       1.0218    0.026    1.027       1.0737    0.027    1.079        1.096    0.027    1.101
- 351- 352       1.1032     0.012       1.1128    0.027    1.009       1.1236    0.028    1.019       1.2207    0.029    1.107
- 352- 353       1.2059     0.013        1.187    0.028    0.984       1.2295    0.029    1.020       1.2875    0.029    1.068
- 353- 354       1.2584     0.013       1.2781    0.029    1.016       1.3563     0.03    1.078       1.4022    0.031    1.114
- 354- 355       1.3845     0.013       1.4035    0.031    1.014       1.3995    0.031    1.011       1.4689    0.031    1.061
- 355- 356       1.4466     0.014       1.4661    0.031    1.014       1.4184    0.031    0.980       1.5209    0.032    1.051
- 356- 358       1.5401      0.01       1.6301    0.023    1.058       1.6504    0.024    1.072       1.6932    0.024    1.099
- 358- 360       1.6476      0.01       1.7472    0.024    1.060       1.7603    0.024    1.068         1.82    0.025    1.105
- 360- 362       1.7704     0.011       1.8102    0.025    1.022       1.8277    0.025    1.032       1.8328    0.025    1.035
- 362- 364       1.8528     0.011       1.9235    0.025    1.038       1.9336    0.026    1.044       1.9808    0.026    1.069
- 364- 366       1.9538     0.011       2.0582    0.026    1.053       2.0598    0.026    1.054       2.0847    0.027    1.067
- 366- 368       1.9996     0.011       2.0992    0.027    1.050       2.1201    0.027    1.060       2.1414    0.027    1.071
- 368- 370       2.0954     0.012       2.1509    0.027    1.026       2.1444    0.027    1.023       2.1781    0.027    1.039
- 370- 372       2.1646     0.012       2.2191    0.027    1.025       2.2034    0.027    1.018       2.2334    0.027    1.032
- 372- 374        2.201     0.012       2.2991    0.028    1.045       2.2877    0.028    1.039       2.3026    0.028    1.046
- 374- 376       2.2419     0.012       2.3251    0.028    1.037       2.3636    0.028    1.054       2.3761    0.028    1.060
- 376- 378       2.2793     0.012       2.4072    0.029    1.056       2.3697    0.028    1.040       2.3724    0.028    1.041
- 378- 380       2.3056     0.012       2.3973    0.028    1.040       2.4108    0.029    1.046        2.398    0.028    1.040
- 380- 385       2.3775    0.0079         2.49    0.019    1.047       2.4713    0.018    1.039       2.4944    0.018    1.049
- 385- 390       2.4279     0.008       2.5553    0.019    1.052       2.5289    0.018    1.042       2.5529    0.019    1.051
- 390- 395       2.4825     0.008       2.5751    0.019    1.037       2.5655    0.019    1.033       2.5617    0.019    1.032
- 395- 400       2.4998    0.0081       2.5482    0.019    1.019       2.5698    0.019    1.028       2.5649    0.019    1.026
- 400- 405        2.492    0.0081       2.5778    0.019    1.034       2.5838    0.019    1.037       2.5726    0.019    1.032
- 405- 410       2.4998    0.0081       2.5816    0.019    1.033       2.5503    0.019    1.020       2.5648    0.019    1.026
- 410- 415       2.4802     0.008       2.5433    0.019    1.025       2.5406    0.019    1.024       2.5467    0.019    1.027
- 415- 420       2.4686     0.008       2.5729    0.019    1.042       2.5606    0.019    1.037       2.5602    0.019    1.037
+bin [GeV]        truth        +-      madspin       +-    ratio           PA       +-    ratio      onshell       +-    ratio   madspin_v1       +-    ratio
+ 316- 326   0.00031276   6.4e-05   0.00040467  0.00017    1.294   0.00033722  0.00015    1.078            0        -  0 exact   6.7444e-05  6.7e-05    0.216
+ 326- 331    0.0049003   0.00036    0.0037769  0.00071    0.771    0.0059351  0.00089    1.211            0        -  0 exact    0.0013489  0.00043    0.275
+ 331- 336     0.015821   0.00064    0.0098469   0.0012    0.622     0.020908   0.0017    1.322            0        -  0 exact     0.003642   0.0007    0.230
+ 336- 338     0.032124    0.0014     0.023268   0.0028    0.724     0.030687   0.0032    0.955            0        -  0 exact      0.00607   0.0014    0.189
+ 338- 340     0.043462    0.0017     0.042827   0.0038    0.985     0.051932   0.0042    1.195            0        -  0 exact     0.010454   0.0019    0.241
+ 340- 342     0.068483    0.0021     0.063398   0.0046    0.926     0.081945   0.0053    1.197            0        -  0 exact     0.014501   0.0022    0.212
+ 342- 344      0.11384    0.0027     0.098132   0.0058    0.862       0.1332   0.0067    1.170            0        -  0 exact     0.029338   0.0031    0.258
+ 344- 345      0.17633    0.0048       0.1477     0.01    0.838       0.2084    0.012    1.182            0        -  0 exact     0.055304   0.0061    0.314
+ 345- 346      0.27628     0.006      0.25696    0.013    0.930      0.28934    0.014    1.047            0        -  0 exact      0.10724   0.0085    0.388
+ 346- 347      0.41534    0.0074      0.40467    0.017    0.974      0.46604    0.018    1.122      0.35611    0.015    0.857      0.34464    0.015    0.830
+ 347- 348      0.59662    0.0088      0.58002     0.02    0.972      0.63263    0.021    1.060      0.65151    0.021    1.092      0.59756     0.02    1.002
+ 348- 349      0.74413    0.0098      0.76033    0.023    1.022      0.78168    0.023    1.050      0.83564    0.024    1.123      0.81001    0.023    1.089
+ 349- 350      0.86912     0.011      0.88689    0.024    1.020      0.90983    0.025    1.047      0.99481    0.026    1.145      0.95366    0.025    1.097
+ 350- 351       0.9954     0.011       1.0218    0.026    1.027       1.0737    0.027    1.079        1.096    0.027    1.101       1.0832    0.027    1.088
+ 351- 352       1.1032     0.012       1.1128    0.027    1.009       1.1236    0.028    1.019       1.2207    0.029    1.107       1.1911    0.028    1.080
+ 352- 353       1.2059     0.013        1.187    0.028    0.984       1.2295    0.029    1.020       1.2875    0.029    1.068       1.2322    0.029    1.022
+ 353- 354       1.2584     0.013       1.2781    0.029    1.016       1.3563     0.03    1.078       1.4022    0.031    1.114        1.359     0.03    1.080
+ 354- 355       1.3845     0.013       1.4035    0.031    1.014       1.3995    0.031    1.011       1.4689    0.031    1.061        1.413    0.031    1.021
+ 355- 356       1.4466     0.014       1.4661    0.031    1.014       1.4184    0.031    0.980       1.5209    0.032    1.051       1.5681    0.033    1.084
+ 356- 358       1.5401      0.01       1.6301    0.023    1.058       1.6504    0.024    1.072       1.6932    0.024    1.099       1.6639    0.024    1.080
+ 358- 360       1.6476      0.01       1.7472    0.024    1.060       1.7603    0.024    1.068         1.82    0.025    1.105       1.7984    0.025    1.092
+ 360- 362       1.7704     0.011       1.8102    0.025    1.022       1.8277    0.025    1.032       1.8328    0.025    1.035       1.8217    0.025    1.029
+ 362- 364       1.8528     0.011       1.9235    0.025    1.038       1.9336    0.026    1.044       1.9808    0.026    1.069       1.9518    0.026    1.053
+ 364- 366       1.9538     0.011       2.0582    0.026    1.053       2.0598    0.026    1.054       2.0847    0.027    1.067       2.0678    0.026    1.058
+ 366- 368       1.9996     0.011       2.0992    0.027    1.050       2.1201    0.027    1.060       2.1414    0.027    1.071       2.1393    0.027    1.070
+ 368- 370       2.0954     0.012       2.1509    0.027    1.026       2.1444    0.027    1.023       2.1781    0.027    1.039       2.1744    0.027    1.038
+ 370- 372       2.1646     0.012       2.2191    0.027    1.025       2.2034    0.027    1.018       2.2334    0.027    1.032       2.2466    0.028    1.038
+ 372- 374        2.201     0.012       2.2991    0.028    1.045       2.2877    0.028    1.039       2.3026    0.028    1.046       2.2931    0.028    1.042
+ 374- 376       2.2419     0.012       2.3251    0.028    1.037       2.3636    0.028    1.054       2.3761    0.028    1.060       2.3194    0.028    1.035
+ 376- 378       2.2793     0.012       2.4072    0.029    1.056       2.3697    0.028    1.040       2.3724    0.028    1.041       2.3885    0.028    1.048
+ 378- 380       2.3056     0.012       2.3973    0.028    1.040       2.4108    0.029    1.046        2.398    0.028    1.040       2.4213    0.029    1.050
+ 380- 385       2.3775    0.0079         2.49    0.019    1.047       2.4713    0.018    1.039       2.4944    0.018    1.049       2.4909    0.018    1.048
+ 385- 390       2.4279     0.008       2.5553    0.019    1.052       2.5289    0.018    1.042       2.5529    0.019    1.051       2.5613    0.019    1.055
+ 390- 395       2.4825     0.008       2.5751    0.019    1.037       2.5655    0.019    1.033       2.5617    0.019    1.032        2.556    0.019    1.030
+ 395- 400       2.4998    0.0081       2.5482    0.019    1.019       2.5698    0.019    1.028       2.5649    0.019    1.026       2.5623    0.019    1.025
+ 400- 405        2.492    0.0081       2.5778    0.019    1.034       2.5838    0.019    1.037       2.5726    0.019    1.032         2.58    0.019    1.035
+ 405- 410       2.4998    0.0081       2.5816    0.019    1.033       2.5503    0.019    1.020       2.5648    0.019    1.026       2.5609    0.019    1.024
+ 410- 415       2.4802     0.008       2.5433    0.019    1.025       2.5406    0.019    1.024       2.5467    0.019    1.027       2.5448    0.019    1.026
+ 415- 420       2.4686     0.008       2.5729    0.019    1.042       2.5606    0.019    1.037       2.5602    0.019    1.037       2.5605    0.019    1.037
 

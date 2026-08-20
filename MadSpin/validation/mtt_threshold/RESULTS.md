@@ -4,7 +4,7 @@
 `pt > 20 GeV`, `|eta| < 5`. Truth: `p p > t t~ j, t > w+ b, t~ > w- b~` generated
 by MG5 (doubly-resonant, both tops off shell out to `bwcutoff = 15` widths),
 **5 000 000** events. MadSpin: **1 000 000** production events, decayed with
-`t > w+ b` / `t~ > w- b~` and `BW_cut = 15`, once per spinmode, all three off the
+`t > w+ b` / `t~ > w- b~` and `BW_cut = 15`, once per spinmode, all four off the
 same production sample and the same seed. `m_tt` is the mass of
 `(W+ b) + (W- b~)` on both sides.
 
@@ -39,17 +39,42 @@ m_tt^2 (before) = shat - 2 sqrt(shat) *       E_j
 A mass set lighter than the pole needs `chi > 1`, which pushes `m_tt` **down**,
 through `2 m_t` and below. Measured, event by event, on 1 000 000 paired events:
 
-| spinmode | mean `Delta m_tt` | rms | max abs | max abs `Delta sqrt(shat)` | events pushed below `2 m_t` |
-|---|---|---|---|---|---|
-| `madspin` | +0.137 GeV | **2.136 GeV** | 44.5 GeV | **0** | 1382 |
-| `PA` | -0.028 GeV | **2.102 GeV** | 45.4 GeV | **0** | 1825 |
-| `onshell` | 0.000 | **0.000** | **0.000** | **0** | 0 |
+| spinmode | mean `Delta m_tt` | rms | max abs | max abs `Delta sqrt(shat)` | `m_tt` unchanged | events pushed below `2 m_t` |
+|---|---|---|---|---|---|---|
+| `madspin` | +0.137 GeV | **2.136 GeV** | 44.5 GeV | **0** | 0.29 % | 1382 |
+| `PA` | -0.028 GeV | **2.102 GeV** | 45.4 GeV | **0** | 0.29 % | 1825 |
+| `onshell` | 0.000 | **0.000** | **0.000** | **0** | **100 %** | 0 |
+| `madspin_v1` | +0.092 GeV | **2.645 GeV** | **140.6 GeV** | **0** | **54.22 %** | **458** |
 
-`Delta sqrt(shat) = 0` to the last bit in every event of every mode: that is what
-proves the two event streams are really paired (MadSpin writes one decayed event
-per production event, in order), and it is what makes the `Delta m_tt` column
-mean something. So `sqrt(shat)` is preserved exactly, as the brief said -- and
-`m_tt` is *not*, because the jet takes part in the reshuffle.
+`Delta sqrt(shat) = 0` to the last bit in every event of every mode, `madspin_v1`
+included: that is what proves the two event streams are really paired (MadSpin
+writes one decayed event per production event, in order -- 1 000 000/1 000 000
+for every mode), and it is what makes the `Delta m_tt` column mean something. So
+`sqrt(shat)` is preserved exactly, as the brief said -- and `m_tt` is *not*,
+because the jet takes part in the reshuffle.
+
+"`m_tt` unchanged" is `|Delta m_tt| / m_tt < 1e-6`, i.e. `m_tt` came back the same
+to the precision the LHE text carries. That threshold and not a bit-exact one:
+`onshell` provably never touches the momenta and is still only **4.45 %**
+bit-exact, because the LHE round-trips momenta as decimal text. 4.45 % is the
+precision floor; the 1e-6 column sits above it.
+
+**`madspin_v1` is not on the same axis as the other two off-shell modes**, and
+that column is why. It has the **largest** rms of the four and the **longest**
+tail by a factor of three (140.6 GeV against 45), yet it pushes the **fewest**
+events across the threshold -- a third of `madspin`, a quarter of `PA`. The two
+facts are not in tension: it holds `m_tt` **exactly fixed in 54 % of events**
+(25.2 % of them bit for bit, against 0.00 % for `madspin` and `PA`) and moves the
+remainder further than anything else does. The density modes' RAMBO
+`mass_shuffle` scales every momentum by one common `chi`, so `m_tt` moves in
+*every* event by O(1 GeV); the legacy path instead regenerates the phase-space
+point from the decay-chain topology while holding the production tree's
+invariants at the values it extracted from the production event
+(`generate_momenta_conf` / `keep_inv` / `fixedinv` in `MadSpin/src/driver.f`), and
+whenever the `t t~` invariant is one of the ones it holds, `m_tt` **cannot** move
+at all. Half the sample is in that position. It is a narrow core with fat tails,
+where `madspin` and `PA` are a broad single peak, and the threshold-crossing
+count is set by the core.
 
 Only `onshell` behaves as the brief described, and it does so for a different
 reason: it draws no virtuality and `_density_do_reshuffle` is False, so the
@@ -60,9 +85,19 @@ is structural: **0 of 1 000 000 events**, and it would be 0 at any sample size.
 
 The figure therefore has to make two different statements at once, and does:
 below `2 m_t` the `onshell` ratio is drawn *as an exact zero*, with an open
-marker on the axis, while `madspin` and `PA` carry real, measured points with
-error bars. An empty sub-threshold bin of theirs would be a statement about the
-sample size, so it would be drawn as a gap, never as a zero.
+marker on the axis, while `madspin`, `PA` and `madspin_v1` carry real, measured
+points with error bars. An empty sub-threshold bin of theirs would be a
+statement about the sample size, so it would be drawn as a gap, never as a zero.
+
+### The ratio pane is clipped to +-20 %, and nothing vanishes
+
+The lower pane is capped at 0.8-1.2. Fifteen measured points live outside that
+window and each carries an **arrow** at the boundary it left through -- four
+`madspin`, two `PA`, nine `madspin_v1`. `onshell`'s exact zero keeps its **open
+circle** on the lower boundary and carries **no** arrow, so a structural zero and
+a clipped point stay distinguishable. The y-axis label and an in-pane key both
+say the pane is clipped, and `plots/numbers.txt` lists every off-scale ratio with
+its value and its error, so the clipping hides no number.
 
 ---
 
@@ -74,10 +109,10 @@ own 1 sigma.
 
 ### 1a. Absolute normalisation -- the literal answer
 
-| tolerance | `madspin` | `PA` | `onshell` |
-|---|---|---|---|
-| 5 %, strict | `m_tt >= 390 GeV` (1.037 +- 0.008) | `m_tt >= 376 GeV` (1.040 +- 0.014) | `m_tt >= 390 GeV` (1.032 +- 0.008) |
-| 10 %, strict | `m_tt >= 345 GeV` (0.930 +- 0.052) | `m_tt >= 347 GeV` (1.060 +- 0.038) | `m_tt >= 360 GeV` (1.035 +- 0.015) |
+| tolerance | `madspin` | `PA` | `onshell` | `madspin_v1` |
+|---|---|---|---|---|
+| 5 %, strict | `m_tt >= 390 GeV` (1.037 +- 0.008) | `m_tt >= 376 GeV` (1.040 +- 0.014) | `m_tt >= 390 GeV` (1.032 +- 0.008) | `m_tt >= 390 GeV` (1.030 +- 0.008) |
+| 10 %, strict | `m_tt >= 345 GeV` (0.930 +- 0.052) | `m_tt >= 347 GeV` (1.060 +- 0.038) | `m_tt >= 360 GeV` (1.035 +- 0.015) | `m_tt >= 347 GeV` (1.002 +- 0.037) |
 
 **Read the 5 % row with care, because it is not what it looks like.** The two
 samples do not share a total cross section: `truth / onshell = 0.9661`, i.e. the
@@ -93,30 +128,44 @@ truncates each top's Breit-Wigner at `|m - m_t| < 15 Gamma_t` (`myamp.f`:
 `BW_cut` uses, checked, not assumed), which removes 2.12 % per resonance and
 4.20 % for the pair. MadSpin normalises to `sigma_production * BR` and takes no
 such loss and no off-shell correction to the *rate* at all. Predicted
-`truth/MadSpin = 0.9580`, measured **0.9661** for `PA` and `onshell` and
-**0.9634** for `madspin` -- so the truncation explains it, with about +0.8 % of
-genuine off-shell rate effect on top. This is the same normalisation question as
+`truth/MadSpin = 0.9580`, measured **0.9661** for `PA`, `onshell` and
+`madspin_v1` alike and **0.9634** for `madspin` -- so the truncation explains it,
+with about +0.8 % of genuine off-shell rate effect on top. `madspin` is the only
+one off the common value, and section 3 shows that is its `joint` overweights and
+not physics. This is the same normalisation question as
 `doc/madspin_ae_normalisation/assessment.md`, seen from a different observable.
 
 ### 1b. Shape only -- the answer about the reshuffle
 
 Each mode rescaled by its own 380-420 GeV offset (`madspin` 0.9650 +- 0.0027,
-`PA` 0.9685 +- 0.0027, `onshell` 0.9662 +- 0.0027 -- all flat and all consistent
-with the global one, so this really is a normalisation and not a shape).
+`PA` 0.9685 +- 0.0027, `onshell` 0.9662 +- 0.0027, `madspin_v1` 0.9663 +- 0.0027
+-- all flat and all consistent with the global one, so this really is a
+normalisation and not a shape).
 
-| tolerance | `madspin` | `PA` | `onshell` |
-|---|---|---|---|
-| 5 %, strict | **`m_tt >= 353 GeV`** (0.980 +- 0.025) | **`m_tt >= 356 GeV`** (1.038 +- 0.016) | **`m_tt >= 360 GeV`** (1.000 +- 0.015) |
-| 10 %, strict | `m_tt >= 346 GeV` (0.940 +- 0.042) | `m_tt >= 345 GeV` (1.014 +- 0.054) | `m_tt >= 350 GeV` (1.064 +- 0.029) |
+| tolerance | `madspin` | `PA` | `onshell` | `madspin_v1` |
+|---|---|---|---|---|
+| 5 %, strict | **`m_tt >= 353 GeV`** (0.980 +- 0.025) | **`m_tt >= 356 GeV`** (1.038 +- 0.016) | **`m_tt >= 360 GeV`** (1.000 +- 0.015) | **`m_tt >= 360 GeV`** (0.994 +- 0.015) |
+| 10 %, strict | `m_tt >= 346 GeV` (0.940 +- 0.042) | `m_tt >= 345 GeV` (1.014 +- 0.054) | `m_tt >= 350 GeV` (1.064 +- 0.029) | `m_tt >= 347 GeV` (0.968 +- 0.036) |
 
 **The number: shape agreement to 5 % returns at `2 m_t + 7 GeV` for `madspin`,
-`2 m_t + 10 GeV` for `PA` and `2 m_t + 14 GeV` for `onshell`.** To 10 % it
-returns essentially at threshold for the two off-shell modes and at
-`2 m_t + 4 GeV` for `onshell`.
+`2 m_t + 10 GeV` for `PA` and `2 m_t + 14 GeV` for both `onshell` and
+`madspin_v1`.** To 10 % it returns essentially at threshold for the two density
+off-shell modes, at `2 m_t + 1 GeV` for `madspin_v1` and at `2 m_t + 4 GeV` for
+`onshell`.
 
 The ordering is the physics: the mode that samples the virtuality from the
 matrix element recovers first, the mode that samples it from a fixed-width
-Breit-Wigner second, and the mode that does not sample it at all recovers last.
+Breit-Wigner second, and the modes that put little or nothing below threshold
+recover last. **`madspin_v1` recovers with `onshell`, not with the modes it
+shares a virtuality with** -- in shape it is the density modes' equal from
+`2 m_t + 14 GeV` up, and below that it behaves like a mode that barely populates
+the sub-threshold region, which is exactly what section 2 measures it to be.
+
+The 10 % absolute row is the one place `madspin_v1` looks best of the four
+(`m_tt >= 347 GeV`, ratio 1.002 +- 0.037). That is a coincidence of two errors
+cancelling -- its deficit below threshold and the +3.5 % normalisation plateau --
+and not a statement that it models the turn-on better. In shape, where the
+plateau is divided out, it is last.
 
 ---
 
@@ -132,18 +181,62 @@ sub-threshold cross section is **1.0753 +- 0.0118 pb**, which is
 | `madspin` | 0.9321 +- 0.0251 | 1382 | **0.867 +- 0.025** | misses 0.022 % of `sigma` |
 | `PA` | 1.2309 +- 0.0288 | 1825 | **1.145 +- 0.030** | adds 0.024 % of `sigma` |
 | `onshell` | **0 exactly** | **0** | **0** | **misses 0.165 % of `sigma`** |
+| `madspin_v1` | 0.3089 +- 0.0144 | **458** | **0.287 +- 0.014** | misses 0.118 % of `sigma` |
 
 So the honest size of the disagreement below threshold is:
 
 * `onshell` misses **all** of it -- 100 %, structurally, which is 0.165 % of the
   total cross section;
 * `madspin` **undershoots by 13.3 % +- 2.5 %**;
-* `PA` **overshoots by 14.5 % +- 3.0 %**.
+* `PA` **overshoots by 14.5 % +- 3.0 %**;
+* `madspin_v1` **undershoots by 71.3 % +- 1.4 %**.
 
-That the two off-shell modes get the *integrated* sub-threshold rate right to
-about 15 % is not something the framework was designed to do -- it falls out of
-the recoil-jet reshuffle -- and it is a good deal better than "structurally
-absent".
+That the two *density* off-shell modes get the *integrated* sub-threshold rate
+right to about 15 % is not something the framework was designed to do -- it falls
+out of the recoil-jet reshuffle -- and it is a good deal better than
+"structurally absent".
+
+### `madspin_v1` is not between them; it is a fourth answer, and it is the worst
+
+The question this run was set up to ask was whether the legacy path lands nearer
+`madspin` or nearer `PA`. **It lands near neither.** At 0.287 +- 0.014 of the
+truth it is **21.5 sigma** from `madspin`, **28.6 sigma** from `PA` and
+**41.2 sigma** from the truth itself. On the axis that runs from `onshell`'s
+structural 0 to `PA`'s 1.145, `madspin_v1` sits at 0.29 -- a third of the way to
+`madspin`, and much closer to the mode that has *no* virtuality at all than to
+either mode that has one.
+
+That is worth stating plainly because it is the opposite of what the ordering of
+the modes would suggest. `madspin_v1` **does** draw a virtuality -- it is not
+`onshell`, its `Delta m_tt` is non-zero for half the sample and its tail is the
+longest of the four. What it does not do is let that virtuality move the `t t~`
+system: in 54 % of events `m_tt` is held fixed by construction (section 0), and
+an event whose `m_tt` cannot move can never cross the threshold however far off
+shell its tops go. The sub-threshold rate is therefore governed by the reshuffle
+and not by the virtuality model, and the legacy reshuffle is the one that moves
+`m_tt` least often.
+
+The same ordering shows up in the windows just above threshold, where
+`madspin_v1` tracks `onshell` rather than the density off-shell modes:
+
+| window | `madspin` | `PA` | `onshell` | `madspin_v1` |
+|---|---|---|---|---|
+| first GeV above `2 m_t` (346-347) | 0.974 +- 0.043 | 1.122 +- 0.047 | 0.857 +- 0.040 | **0.830 +- 0.039** |
+| `m_tt < 2 m_t + 5 GeV` | -2.3 % +- 1.3 % | +8.5 % +- 1.4 % | -16.2 % +- 1.2 % | **-12.7 % +- 1.2 %** |
+| `m_tt < 2 m_t + 10 GeV` | -0.6 % +- 0.8 % | +4.8 % +- 0.9 % | -2.3 % +- 0.8 % | **-2.1 % +- 0.8 %** |
+
+`madspin_v1`'s turn-on is displaced *further* than `onshell`'s in the first GeV
+above threshold, and by `2 m_t + 10 GeV` the two are indistinguishable
+(-2.1 % vs -2.3 %) while `madspin` is at -0.6 %.
+
+**`madspin_v1`'s normalisation is clean, so none of this is a rate artefact.**
+Its total is 674.4449 pb against a banner 674.4446 pb, and `truth / madspin_v1 =
+0.9661`, on top of `PA` and `onshell`. Its accept/reject emitted **5** overweight
+events in 1 000 000 (0.0005 %), adding **+312 pb-units to the summed weight, i.e.
++4.6e-05 % of the cross section** -- four orders of magnitude smaller than the
++0.282 % the `joint` run put into `madspin` (section 5). Nothing here is
+confounded by an overweight-driven normalisation shift the way the
+`madspin`-vs-`PA` comparison was.
 
 ### The window the brief asked for, `m_tt < 2 m_t + 5 GeV`
 
@@ -154,10 +247,12 @@ Truth: **4.6959 +- 0.0247 pb**, i.e. **0.721 %** of the total cross section.
 | `madspin` | 4.5858 +- 0.0556 | **-2.3 % +- 1.3 %** | -0.017 % |
 | `PA` | 5.0948 +- 0.0586 | **+8.5 % +- 1.4 %** | +0.061 % |
 | `onshell` | 3.9340 +- 0.0515 | **-16.2 % +- 1.2 %** | **-0.117 %** |
+| `madspin_v1` | 4.0979 +- 0.0526 | **-12.7 % +- 1.2 %** | **-0.092 %** |
 
-`onshell` misses 0.117 % of the total cross section in that window; `madspin`
-and `PA` misplace roughly 0.02-0.06 % of it. At `2 m_t + 10 GeV` the numbers are
--0.6 % +- 0.8 %, +4.8 % +- 0.9 % and -2.3 % +- 0.8 % respectively.
+`onshell` misses 0.117 % of the total cross section in that window and
+`madspin_v1` 0.092 %; `madspin` and `PA` misplace roughly 0.02-0.06 % of it. At
+`2 m_t + 10 GeV` the numbers are -0.6 % +- 0.8 %, +4.8 % +- 0.9 %,
+-2.3 % +- 0.8 % and -2.1 % +- 0.8 % respectively.
 
 ---
 
@@ -188,7 +283,13 @@ the available `sqrt(shat)`. The truth says `madspin` is the closer of the two,
 but neither is right.
 
 `onshell` is not a third point on the same axis: it has no virtuality at all and
-sits at exactly zero.
+sits at exactly zero. Neither is `madspin_v1` a fourth point on it: at
+0.287 +- 0.014 it is 21.5 sigma below `madspin` and 28.6 sigma below `PA`, and
+what separates it from both is not the virtuality model but the reshuffle -- it
+holds `m_tt` fixed in 54 % of events where they hold it fixed in 0.3 %
+(section 0). The `madspin`-vs-`PA` split is a virtuality question; the
+`madspin_v1`-vs-both split is a kinematics question, and it is the larger of the
+two by a factor of four.
 
 ### The control: is the `madspin`/`PA` split the spinmode, or the scheme?
 
@@ -227,13 +328,14 @@ of it is physics.
 
 ## 4. Above threshold, briefly
 
-Between `2 m_t` and `2 m_t + 10 GeV` the three modes differ in shape in a way
+Between `2 m_t` and `2 m_t + 10 GeV` the four modes differ in shape in a way
 that mirrors the sub-threshold picture. In the first GeV above threshold
 (346-347 GeV) the ratios to truth are `madspin` 0.974 +- 0.043, `PA`
-1.122 +- 0.047, `onshell` 0.857 +- 0.040: `onshell`'s turn-on is displaced,
-because it has no way to put the pair anywhere but on the on-shell locus. By
-356 GeV all three are within 6-10 % and the residual is the flat normalisation
-offset of section 1a.
+1.122 +- 0.047, `onshell` 0.857 +- 0.040 and `madspin_v1` 0.830 +- 0.039:
+`onshell`'s turn-on is displaced, because it has no way to put the pair anywhere
+but on the on-shell locus, and `madspin_v1`'s is displaced slightly further
+still. By 356 GeV all four are within 6-10 % and the residual is the flat
+normalisation offset of section 1a.
 
 ---
 
@@ -243,7 +345,11 @@ offset of section 1a.
   `madevent_interface.check_nb_events` -- so this is five independent runs with
   consecutive seeds, verified distinct, summed). 8251 of them below `2 m_t`.
 * MadSpin 1 000 000 production events per spinmode, one shared production
-  sample, one seed. 1382 (`madspin`) / 1825 (`PA`) events below `2 m_t`.
+  sample, one seed. 1382 (`madspin`) / 1825 (`PA`) / 458 (`madspin_v1`) events
+  below `2 m_t`. **458 is the number every `madspin_v1` sub-threshold statement
+  rests on**; it is enough for the integral (3.1 % relative error, and the
+  disagreement with `madspin` is 21.5 sigma) but the deepest per-bin ratios of
+  section 2 carry 20-100 % errors and nothing is claimed from them.
 * No bias and no phase-space cut was used to concentrate events near threshold:
   the samples are the plain inclusive process. The sub-threshold region is
   0.165 % of the cross section and the statistics above are what 6M events buy.
@@ -265,7 +371,7 @@ offset of section 1a.
   normalisation difference quoted in section 1a (0.9634 vs 0.9661) -- see the
   control in section 3, where forcing `sequential` puts `madspin` at 0.96613,
   on top of the other two.
-* **`unweighting = auto` does not resolve the same way for the three modes.**
+* **`unweighting = auto` does not resolve the same way for the density modes.**
   `madspin` ran under `joint`, `PA` and `onshell` under `sequential`; that is
   `_auto_unweighting_mode`'s documented rule (PA/onshell -> `sequential` at every
   multiplicity, madspin/full -> `joint` for up to two decaying particles), so
@@ -274,6 +380,28 @@ offset of section 1a.
   events above occurred only in the `joint` run. Controlled for in section 3:
   forcing `madspin` to `sequential` moves the sub-threshold rate by
   0.4 sigma and removes the overweights.
+* **`madspin_v1` ran none of the four schemes, and its card could not have made
+  it.** `set unweighting` never reaches `_unweighting_mode`, because that
+  dispatcher lives inside `run_onshell` and `interface_madspin.do_launch` sends
+  the legacy spinmode straight to `madspin.decay_all_events` instead. Its log
+  carries no `MadSpin: unweighting = ...` line at all; `meta.json` records
+  **`legacy`** for it, which is what it actually ran: one `max_weight` per decay
+  channel, probed on `Nevents_for_max_weight x max_weight_ps_point` phase-space
+  points before the event loop (`get_max_weight_from_event`, 299 points here),
+  then a single test of the whole decay chain's weight against that bound, per
+  trial, inside the Fortran driver. Two further legacy constraints, reported
+  rather than worked around: **`nb_core` is ignored** (the legacy decay loop is
+  single-process -- 4829 s of wall clock on one core against ~600 s on eight for
+  the density modes) and **the run card is not read** (`interface_madspin`
+  refuses `set run_card` under `madspin_v1`; nothing here needs it, the cuts live
+  in the shared production sample). Efficiency 0.0862, i.e. 11.6 trial points per
+  production event.
+* **`madspin_v1`'s overweights are negligible, unlike `madspin`'s.** 5 of
+  1 000 000 written events (0.0005 %) carried a non-unit weight, adding
+  **+4.6e-05 %** to the sample's cross section -- against **+0.282 %** for the
+  `joint` `madspin` run. Its total is 674.4449 pb against a banner 674.4446 pb.
+  So the sub-threshold comparison against it is not confounded by a
+  normalisation shift the way the original `madspin`-vs-`PA` one was.
 
 ---
 
@@ -291,10 +419,23 @@ offset of section 1a.
   `mu_R = mu_F = m_t` was chosen precisely so the two sides could not differ
   through the dynamical-scale definition. Nothing here is a statement about the
   scale uncertainty of the effect.
-* **The accept/reject scheme is not scanned.** Each mode ran the scheme `auto`
-  picks for it (recorded in `data/meta.json`), plus the one control of
+* **The accept/reject scheme is not scanned.** Each density mode ran the scheme
+  `auto` picks for it (recorded in `data/meta.json`), plus the one control of
   section 3. `sequential_global_retry` and `sequential_with_mass` are not
-  exercised; `MadSpin/validation/mt_lineshape/` covers that axis.
+  exercised; `MadSpin/validation/mt_lineshape/` covers that axis. `madspin_v1`
+  cannot be scanned on this axis at all -- the option does not reach it -- so
+  there is no equivalent control for it, and its scheme is confounded with its
+  spinmode by construction. What that does *not* leave open is whether the
+  scheme explains its sub-threshold deficit: the deficit is a statement about
+  which events can move `m_tt` at all (section 0), and an accept/reject scheme
+  cannot make a held-fixed invariant move.
+* **The 54 % held-fixed fraction is measured, not decomposed.** That `m_tt` comes
+  back unchanged in half the events is measured event by event; *which*
+  topologies do it is inferred from `keep_inv`/`fixedinv` in
+  `MadSpin/src/driver.f` and is not broken down per production subprocess or per
+  diagram here. The fraction will depend on the process and on which
+  configuration the legacy path picks per event, and neither dependence is
+  mapped.
 * **The control is at a quarter of the statistics** (250 000 events), so it
   bounds a scheme effect on the sub-threshold rate at about 6 %, not better. It
   rules out the scheme as the explanation of a 32 % difference; it does not
@@ -305,9 +446,10 @@ offset of section 1a.
   move it at all, and there the brief's original premise is exactly right. That
   multiplicity dependence is not measured here.
 * **No replica.** Each spinmode was run once. The `madspin`/`PA` split of
-  section 3 is 6.8 sigma on the *statistical* error, which is large enough that a
-  seed replica would not change the conclusion, but the seed-to-seed noise floor
-  was not measured on this observable.
+  section 3 is 6.8 sigma on the *statistical* error and the `madspin_v1`-vs-both
+  split is 21-29 sigma, which is large enough that a seed replica would not
+  change either conclusion, but the seed-to-seed noise floor was not measured on
+  this observable.
 * **`bwcutoff` is a parameter of the figure, not a background.** It sets where
   the truth stops (`2 (m_t - 15 Gamma_t) ~ 301 GeV`) and it is matched to
   MadSpin's `BW_cut`. A different value moves the sub-threshold normalisation on

@@ -22,9 +22,13 @@ Two deliberate departures, and the reason for each:
   figure -- on a linear axis every curve below 350 GeV collapses onto the
   baseline and the figure says nothing.  The ratio panel is linear, as in the
   user's script.
-* the ratio ladder is extended downwards to include 0.  ``onshell`` is exactly
-  zero below ``2 m_t`` and that zero has to be *on* the panel, drawn as an open
-  marker on the axis, not clipped off the bottom.
+* the ratio ladder is not used at all.  The pane is deliberately clipped to a
+  fixed +-20 % window (``plot_mtt_threshold.RATIO_CLIP``), which is the point of
+  the figure rather than an accident of autoscaling, so choosing a rung from the
+  data would defeat it.  Everything that falls outside the window is marked:
+  a measured point gets an arrow at the boundary it left through, and
+  ``onshell``'s exact zero below ``2 m_t`` keeps its open marker -- a structural
+  zero, not a clipped point, and the two must stay distinguishable.
 
 Usage::
 
@@ -32,7 +36,6 @@ Usage::
 """
 
 import argparse
-import math
 import os
 import sys
 
@@ -53,14 +56,29 @@ if _HERE not in sys.path:
 # restored immediately afterwards -- the user's style sets no rcParams at all.
 from plot_mtt_threshold import (                     # noqa: E402
     Data, ratio, structurally_empty, MODES, REF, CURVES_PLAIN, write_numbers,
-    AGREE_HI,
+    AGREE_HI, RATIO_CLIP, offscale_arrows,
 )
 mpl.rcParams.update(mpl.rcParamsDefault)
 matplotlib.use('Agg')
 
+# The reset above also turns ``text.usetex`` back OFF, and that has one
+# consequence worth spelling out: this figure never goes through matplotlib's
+# usetex Type1 font-subsetting path, so the minus-eating bug that
+# ``plot_mtt_threshold._fix_type1_subset_minus`` works around cannot bite it.
+#
+# Do NOT "check" this PDF with ``plot_mtt_threshold.check_minus``. That function
+# greps the file for ``/minus``, which a non-usetex PDF carries anyway, so it
+# reports True whether or not the workaround is active -- with ``NO_MINUS_FIX=1``
+# included. A check that passes either way is worse than no check. The
+# discriminating one is ``plot_mtt_threshold.py --check-minus`` on the MG7-style
+# PDF, which IS rendered with usetex: True with the fix, False without it.
+assert not mpl.rcParams['text.usetex'], (
+    'the user style renders without usetex; if that ever changes this figure '
+    'becomes exposed to the Type1 subsetting bug and needs its own check')
+
 
 C_REF = 'black'
-COLOR = {'madspin': 'C0', 'PA': 'C1', 'onshell': 'C2'}
+COLOR = {'madspin': 'C0', 'PA': 'C1', 'onshell': 'C2', 'madspin_v1': 'C3'}
 
 FIGSIZE = (6, 6)
 HEIGHT_RATIOS = [3, 1]
@@ -68,32 +86,6 @@ HSPACE = 0.05
 MS = 4
 STEP_ALPHA = 0.55
 DPI = 300
-
-# The user's ladder, with 0-inclusive rungs appended: ``onshell`` sits at
-# exactly 0 below threshold and must not be cropped.
-RATIO_LADDER = [(0.99, 1.01), (0.85, 1.15), (0.75, 1.25), (0.5, 1.5),
-                (-0.08, 1.6), (-0.08, 2.2), (-0.08, 3.2), (-0.08, 4.2),
-                (-0.08, 5.5)]
-
-
-def choose_ratio_ylim(series):
-    """Smallest limit from the ladder that holds every point +- its error."""
-    lo = hi = 1.0
-    for r, re in series:
-        good = np.isfinite(r) & np.isfinite(re)
-        if not good.any():
-            continue
-        lo = min(lo, float((r[good] - re[good]).min()))
-        hi = max(hi, float((r[good] + re[good]).max()))
-    for cand in RATIO_LADDER:
-        if lo >= cand[0] and hi <= cand[1]:
-            return cand
-    # Past the ladder, widen upwards only.  The user's own rungs are symmetric
-    # about 1, but nothing here can go below 0 -- ``onshell`` sits exactly at 0
-    # and everything else is a positive cross section -- so mirroring a large
-    # upward excursion downwards would spend half the panel on empty space and
-    # squash the part that carries the answer.
-    return (-0.1, 1.0 + math.ceil((hi - 1.0) * 10.0) / 10.0)
 
 
 def main():
@@ -135,7 +127,7 @@ def main():
     ax.tick_params(labelbottom=False)
     ax.legend(loc='lower right', fontsize=8.5)
     ymin, ymax = ax.get_ylim()
-    ax.set_ylim(ymin, ymax * 25)
+    ax.set_ylim(ymin, ymax * 45)
     n_on = d.meta['runs']['onshell']['nevents']
     ax.set_title(r'$pp\to t\bar{t}j$, 13 TeV, LO, $\mu_R=\mu_F=m_t$, '
                  r'BW cut $=%g\,\Gamma_t$' % d.meta.get('bwcutoff', 15.0),
@@ -143,8 +135,10 @@ def main():
     ax.text(0.02, 0.965,
             'below $2m_t$: no on-shell $t\\bar{t}$ pair can land here.\n'
             'onshell: 0 of %s events, exactly -- structural, not statistical.\n'
-            'madspin / PA reach it only via the production reshuffle,\n'
-            'which rescales the recoil jet and so moves $m_{t\\bar{t}}$.'
+            'madspin / PA reach it via the production reshuffle, which\n'
+            'rescales the recoil jet and so moves $m_{t\\bar{t}}$.\n'
+            'madspin_v1 reaches it 3x less often: it leaves\n'
+            '$m_{t\\bar{t}}$ unchanged in 54%% of events.'
             % '{:,}'.format(int(n_on)).replace(',', ' '),
             transform=ax.transAxes, ha='left', va='top', fontsize=7.5,
             color='0.25')
@@ -156,14 +150,19 @@ def main():
     rx.axhspan(0.95, 1.05, facecolor='C0', alpha=0.16, zorder=0)
     rx.axhline(1.0, color=C_REF, ls='--', lw=0.9, zorder=2)
 
-    series = []
-    for key in MODES:
+    # Fixed +-20 % window, set before anything is drawn so the step lines that
+    # run outside it cannot drag the autoscale along.
+    rx.set_ylim(*RATIO_CLIP)
+
+    n_out = 0
+    for slot, key in enumerate(MODES):
         y, ye, cnt = d.density(key)
         r, re = ratio(y, ye, den, dene)
         # Same distinction as the MG7-style figure: a structural zero
-        # (``onshell`` below 2 m_t) is drawn AS a zero with an open marker; any
-        # other empty bin is a statement about the sample size and is left as a
-        # gap.
+        # (``onshell`` below 2 m_t) keeps its open marker and gets NO arrow --
+        # it is exactly 0, not a point that ran off the pane.  Any other empty
+        # bin is a statement about the sample size and is left as a gap.  A
+        # measured ratio outside the window gets an arrow at the boundary.
         struct = structurally_empty(d, key) & (dcnt > 0)
         stat = (cnt == 0) & (dcnt > 0) & ~struct
         rr = np.where(struct, 0.0, np.where(stat, np.nan, r))
@@ -174,14 +173,27 @@ def main():
                     yerr=np.where(gone, np.nan, re), fmt='o', ms=MS,
                     color=COLOR[key], zorder=4)
         if struct.any():
-            rx.plot(d.centres[struct], np.zeros(struct.sum()), 'o',
-                    mfc='white', mec=COLOR[key], mew=1.2, ms=MS + 1, zorder=6)
-        series.append((np.where(gone, np.nan, r), np.where(gone, np.nan, re)))
+            rx.plot(d.centres[struct],
+                    np.full(struct.sum(), RATIO_CLIP[0]), 'o',
+                    mfc='white', mec=COLOR[key], mew=1.2, ms=MS + 1,
+                    clip_on=False, zorder=8)
+        nb, na = offscale_arrows(rx, d.centres, np.where(gone, np.nan, r),
+                                 COLOR[key], dx=d.widths, slot=slot,
+                                 nslot=len(MODES), lw=0.9, scale=8)
+        n_out += nb + na
 
-    rx.set_ylim(*choose_ratio_ylim(series))
+    print('ratio pane clipped to %s: %d point(s) outside it, each drawn as an '
+          'arrow at the boundary it left through' % (RATIO_CLIP, n_out))
     rx.text(0.99, 0.92, 'bands: $\\pm5\\%$, $\\pm10\\%$', transform=rx.transAxes,
             ha='right', va='top', fontsize=7, color='C0')
-    rx.set_ylabel('Ratio')
+    # Bottom right: the corner no curve reaches (above 356 GeV every mode sits
+    # on the +3 % normalisation plateau), so the key cannot cover a point.
+    rx.text(0.99, 0.04,
+            'arrow: point outside the pane\n'
+            '$\\circ$: exactly 0 (structural)',
+            transform=rx.transAxes, ha='right', va='bottom', fontsize=7,
+            color='0.30', linespacing=1.3)
+    rx.set_ylabel('Ratio\n(clipped to $\\pm20\\%$)', fontsize=9)
     rx.set_xlabel(r'$m_{t\bar{t}}$ [GeV]   '
                   r'(per-event $m$ of $(W^+b)+(W^-\bar{b})$)')
     rx.set_xlim(lo, hi)
@@ -192,7 +204,8 @@ def main():
     fig.savefig(base + '.pdf')
     fig.savefig(base + '.png', dpi=DPI)
     plt.close(fig)
-    print('wrote %s.pdf / .png' % base)
+    print('wrote %s.pdf / .png  (usetex=False, so the Type1 minus bug does not '
+          'apply to this rendering)' % base)
 
     with open(os.path.join(args.out, 'numbers.txt'), 'w') as fh:
         write_numbers(d, args.out, fh)

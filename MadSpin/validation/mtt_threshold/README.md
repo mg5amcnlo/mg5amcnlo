@@ -1,7 +1,8 @@
 # `m_tt` near the `2 m_t` threshold
 
-`dsigma/dm_tt` for `p p > t t~ j` around `2 m_t`, MadSpin's spinmodes against a
-doubly-resonant off-shell MadGraph truth, in absolute normalisation.
+`dsigma/dm_tt` for `p p > t t~ j` around `2 m_t`, MadSpin's four spinmodes
+(`madspin`, `PA`, `onshell`, `madspin_v1`) against a doubly-resonant off-shell
+MadGraph truth, in absolute normalisation.
 
 The question: **above what `m_tt` does MadSpin agree with the truth, and what
 does it do below that.**
@@ -20,6 +21,13 @@ does it do below that.**
 | `data/logs/` | every MadSpin log and card, and the two MG5 logs and scripts. Copied as `.log.txt` because the repository's `.gitignore` has a blanket `*.log` rule. |
 | `plots/`, `plots_userstyle/` | PDF + PNG + `numbers.txt` for each style. |
 
+`plot_mtt_threshold.py --check-minus` (on by default) re-opens the MG7-style PDF
+and asserts a math minus survived matplotlib's usetex Type1 subsetting. It is
+discriminating -- `NO_MINUS_FIX=1` makes it report `False` -- and that is the
+point of it. It must **not** be pointed at `plots_userstyle/mtt_threshold.pdf`:
+that figure renders without usetex, never goes through the buggy path, and
+carries `/minus` either way, so the check would pass vacuously.
+
 Re-drawing needs nothing but numpy and matplotlib:
 
 ```
@@ -33,18 +41,42 @@ Re-measuring needs an f2py-capable python:
 export PATH="$HOME/.pyenv/versions/mg-3.14/bin:$PATH"
 python3 run_mtt_threshold.py --stage prod    --nevents-prod 1000000 --basedir /tmp/w --nb-core 8
 python3 run_mtt_threshold.py --stage truth   --nevents-truth 1000000 --basedir /tmp/w --nb-core 8
-python3 run_mtt_threshold.py --stage madspin --modes madspin,PA,onshell --basedir /tmp/w --nb-core 8
+python3 run_mtt_threshold.py --stage madspin --modes madspin,PA,onshell,madspin_v1 --basedir /tmp/w --nb-core 8
 python3 run_mtt_threshold.py --stage harvest --basedir /tmp/w --cross-check \
         --truth-lhe <extra truth LHE files, comma separated>
 ```
 
-The three MadSpin modes are independent runs off one shared production sample,
-each in its own directory, so `--modes` can be used to launch them as three
+The four MadSpin modes are independent runs off one shared production sample,
+each in its own directory, so `--modes` can be used to launch them as four
 concurrent processes. `--stage all` does the lot in one go.
+
+### `madspin_v1`, and the three things it does not do
+
+`spinmode = madspin_v1` is the legacy Fortran path. `interface_madspin.do_launch`
+does not send it to `run_onshell` at all -- it falls through to
+`madspin.decay_all_events` -- and three settings therefore behave differently
+for it. They are reported rather than worked around, and the same card is used
+for all four modes so that only the `spinmode` line differs:
+
+* **`nb_core` is ignored.** The legacy decay loop is single-process. The
+  `set nb_core` line the factory writes is inert here, and this mode is the
+  slowest of the four in wall clock for that reason alone.
+* **the run card is not read.** `interface_madspin` refuses `set run_card`
+  edits under `madspin_v1` outright. Nothing in this study needs them: the cuts
+  and the scales live in the production sample, which is shared.
+* **`set unweighting` never reaches `_unweighting_mode`.** That dispatcher is
+  inside `run_onshell`. The legacy path runs its own accept/reject -- one
+  `max_weight` per decay channel, probed on
+  `Nevents_for_max_weight x max_weight_ps_point` phase-space points before the
+  event loop (`decay_all_events.get_max_weight_from_event`), then one test of
+  the whole decay chain's weight against that bound per trial, inside the
+  Fortran driver. Its log carries no `MadSpin: unweighting = ...` line at all,
+  so `meta.json` records `legacy` for it -- **not** one of the four schemes the
+  card can ask for, and not `auto` resolving to one of them.
 
 `--modes madspin_seq` runs the **control**: `spinmode = madspin` with
 `unweighting` forced to `sequential`. It exists because `auto` does *not*
-resolve the same way for the three modes -- `_auto_unweighting_mode` sends
+resolve the same way for the density modes -- `_auto_unweighting_mode` sends
 `PA`/`onshell` to `sequential` at every multiplicity but `madspin`/`full` to
 `joint` for up to two decaying particles, which is exactly this setup. Each
 curve on the figure therefore runs its own shipped default, and the control
@@ -106,8 +138,28 @@ virtuality and never reshuffles, so it inherits the production sample's `m_tt`
 exactly and has **zero** support there -- structurally, for any sample size.
 That zero is drawn as a zero, with an open marker on the ratio axis.
 
-`madspin` and `PA` are **not** in that position, and the figure must not say
-they are. See `RESULTS.md`: for a `2 -> 3` production the reshuffle rescales the
-recoil jet as well as the tops, so `m_tt` moves and the sub-threshold region is
-populated. An empty sub-threshold bin of theirs would be a statement about the
-sample size, so it is drawn as a gap rather than as a zero.
+`madspin`, `PA` and `madspin_v1` are **not** in that position, and the figure
+must not say they are. See `RESULTS.md`: for a `2 -> 3` production the density
+modes' reshuffle rescales the recoil jet as well as the tops, so `m_tt` moves
+and the sub-threshold region is populated; `madspin_v1` gets there by a
+different route, regenerating the whole phase-space point from the decay-chain
+topology with the new off-shell masses while holding `sqrt(shat)` and the
+production tree's invariants fixed. An empty sub-threshold bin of any of the
+three would be a statement about the sample size, so it is drawn as a gap
+rather than as a zero.
+
+## The ratio pane is clipped, and says so
+
+The lower pane is capped at `0.8`-`1.2`. Several points genuinely live outside
+that window, and the figure marks each of them:
+
+* a **measured** ratio outside the window gets an **arrow** at the boundary it
+  left through, pointing that way. A clipped point drawn as an ordinary marker
+  sitting at `1.2` would be worse than not clipping at all.
+* `onshell`'s exact zero below `2 m_t` keeps its **open circle**, on the lower
+  boundary, and carries **no** arrow. It is a structural zero, not a point that
+  ran off the pane, and the two have to stay distinguishable.
+
+The y-axis label and an in-pane key both say the pane is clipped, and
+`plots/numbers.txt` lists every off-scale ratio with its value and error, so
+nothing the clipping hides is lost.

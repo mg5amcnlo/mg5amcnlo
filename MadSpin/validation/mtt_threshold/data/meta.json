@@ -1,7 +1,7 @@
 {
   "bwcutoff": 15.0,
-  "code_branch": "claude/ms-mtt-threshold",
-  "code_sha": "4af4acbc367dd8b962cc9987915813a8c3fce5e1",
+  "code_branch": "claude/ms-mtt-threshold-v1",
+  "code_sha": "b88b3983190db2778800594dd67fe983d49a055d",
   "controls": [
     "madspin_seq"
   ],
@@ -16,6 +16,10 @@
     },
     "madspin_seq": {
       "max_abs_diff_GeV": 7.958078640513122e-13,
+      "nevents": 2000
+    },
+    "madspin_v1": {
+      "max_abs_diff_GeV": 1.8758328224066645e-12,
       "nevents": 2000
     },
     "onshell": {
@@ -35,7 +39,9 @@
       "max_dshat": 0.0,
       "mean": -0.028263848248462526,
       "n": 1000000,
+      "n_exact": 0,
       "n_out": 3,
+      "n_tiny": 2864,
       "rms": 2.102229875030261
     },
     "madspin": {
@@ -45,7 +51,9 @@
       "max_dshat": 0.0,
       "mean": 0.13647099407926513,
       "n": 1000000,
+      "n_exact": 0,
       "n_out": 1,
+      "n_tiny": 2891,
       "rms": 2.1359228543651416
     },
     "madspin_seq": {
@@ -55,8 +63,22 @@
       "max_dshat": 0.0,
       "mean": 0.12940351819004636,
       "n": 250000,
+      "n_exact": 0,
       "n_out": 0,
+      "n_tiny": 633,
       "rms": 2.130934503274039
+    },
+    "madspin_v1": {
+      "crossed_down": 458,
+      "crossed_up": 0,
+      "max_abs": 140.63876170132926,
+      "max_dshat": 0.0,
+      "mean": 0.09213669184048592,
+      "n": 1000000,
+      "n_exact": 251977,
+      "n_out": 399,
+      "n_tiny": 542229,
+      "rms": 2.6446496591337874
     },
     "onshell": {
       "crossed_down": 0,
@@ -65,7 +87,9 @@
       "max_dshat": 0.0,
       "mean": -4.0161985782560806e-10,
       "n": 1000000,
+      "n_exact": 44502,
       "n_out": 0,
+      "n_tiny": 1000000,
       "rms": 3.1779410391208783e-07
     }
   },
@@ -151,6 +175,20 @@
       "under_w": 0.0,
       "unweighting": "sequential",
       "unweighting_why": "set explicitly"
+    },
+    "madspin_v1": {
+      "banner_cross_pb": 674.4446,
+      "madspin_card": "set spinmode madspin_v1\nset seed 42\nset max_running_process 4\nset nb_core 8\nset BW_cut 15\ndefine p = g u c d s u~ c~ d~ s~\ndefine j = g u c d s u~ c~ d~ s~\nimport /tmp/mtt_threshold_work/MS/mode_madspin_v1/events.lhe.gz\ndecay t > w+ b\ndecay t~ > w- b~\nlaunch\n",
+      "malformed": 0,
+      "nevents": 1000000,
+      "over_n": 443237,
+      "over_w": 298939091.2814466,
+      "path": "/tmp/mtt_threshold_work/MS/mode_madspin_v1/events_decayed.lhe.gz",
+      "sumw": 674444882.2404089,
+      "under_n": 0,
+      "under_w": 0.0,
+      "unweighting": "legacy",
+      "unweighting_why": "spinmode=madspin_v1 does not go through run_onshell, so _unweighting_mode is never called and the card's `unweighting` setting is inert; the legacy Fortran driver tests the whole decay chain against one pre-probed max_weight per channel"
     },
     "onshell": {
       "banner_cross_pb": 674.4446,

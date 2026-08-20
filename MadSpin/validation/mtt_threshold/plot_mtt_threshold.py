@@ -127,30 +127,43 @@ allcolors[3] = 'red'
 #               False, so the production momenta are untouched.  Its m_tt is the
 #               production sample's m_tt bit for bit -- verified in RESULTS.md
 #               from the event-by-event pairing, max |Delta m_tt| = 0 exactly.
+#   madspin_v1  the legacy Fortran path.  It does not go through run_onshell at
+#               all: it draws the virtualities inside its own Fortran driver and
+#               then REGENERATES the whole phase-space point from the
+#               decay-chain topology, holding sqrt(shat) and the production
+#               tree's invariants at the values it extracted from the production
+#               event (``generate_momenta_conf`` / ``keep_inv`` in
+#               MadSpin/src/driver.f).  That is a different reshuffle from the
+#               RAMBO mass_shuffle the density modes use, so where it lands is
+#               a measurement, not a prediction.
 #   production  the undecayed p p > t t~ j sample.  Harvested and tabulated but
 #               deliberately NOT drawn: ``onshell`` reproduces it event by event
 #               (max |Delta m_tt| = 0 exactly), so a second curve on top of it
 #               would only add ink.  RESULTS.md carries the comparison.
 # --------------------------------------------------------------------------
 CURVES = [
-    ('truth',   r'truth: $pp \to t\bar t j$, $t \to W^+ b$ (off shell)'),
-    ('madspin', r'MadSpin, \texttt{spinmode = madspin}'),
-    ('PA',      r'MadSpin, \texttt{spinmode = PA}'),
-    ('onshell', r'MadSpin, \texttt{spinmode = onshell}'),
+    ('truth',      r'truth: $pp \to t\bar t j$, $t \to W^+ b$ (off shell)'),
+    ('madspin',    r'MadSpin, \texttt{spinmode = madspin}'),
+    ('PA',         r'MadSpin, \texttt{spinmode = PA}'),
+    ('onshell',    r'MadSpin, \texttt{spinmode = onshell}'),
+    ('madspin_v1', r'MadSpin, \texttt{spinmode = madspin\_v1} (legacy)'),
 ]
 CURVES_PLAIN = {
-    'truth':   r'truth: $pp \to t\bar t j$, $t \to W^+ b$ (off shell)',
-    'madspin': 'MadSpin, spinmode = madspin',
-    'PA':      'MadSpin, spinmode = PA',
-    'onshell': 'MadSpin, spinmode = onshell',
+    'truth':      r'truth: $pp \to t\bar t j$, $t \to W^+ b$ (off shell)',
+    'madspin':    'MadSpin, spinmode = madspin',
+    'PA':         'MadSpin, spinmode = PA',
+    'onshell':    'MadSpin, spinmode = onshell',
+    'madspin_v1': 'MadSpin, spinmode = madspin_v1 (legacy)',
 }
 REF = 'truth'
-MODES = ['madspin', 'PA', 'onshell']
+MODES = ['madspin', 'PA', 'onshell', 'madspin_v1']
 
 COLOR = {'truth': 'black', 'madspin': 'blue', 'PA': 'red',
-         'onshell': allcolors[2], 'production': 'gray'}
+         'onshell': allcolors[2], 'madspin_v1': allcolors[4],
+         'production': 'gray'}
 LS = {'truth': 'solid', 'madspin': 'solid', 'PA': 'dashed',
-      'onshell': 'dashdot', 'production': 'dotted'}
+      'onshell': 'dashdot', 'madspin_v1': (0, (1, 1.4)),
+      'production': 'dotted'}
 
 
 # --------------------------------------------------------------------------
@@ -277,9 +290,11 @@ def structurally_empty(d, key):
     ``onshell`` draws no virtuality and never reshuffles, so every decayed event
     keeps its production ``m_tt`` and the whole region below ``2 m_t`` is
     unreachable -- for any sample size.  Nothing else on this figure is in that
-    position: ``madspin`` and ``PA`` *can* land below threshold (the reshuffle
-    rescales the recoil jet), so an empty sub-threshold bin of theirs is a
-    statistical statement and is drawn as a gap, not as a zero.
+    position: ``madspin``, ``PA`` and ``madspin_v1`` all *can* land below
+    threshold (the density modes because the RAMBO reshuffle rescales the recoil
+    jet, ``madspin_v1`` because it regenerates the phase-space point outright),
+    so an empty sub-threshold bin of theirs is a statistical statement and is
+    drawn as a gap, not as a zero.
 
     The claim is checked against the data rather than asserted: if a bin marked
     structurally empty turned out to hold events, this raises.
@@ -317,6 +332,64 @@ def ratio(num, nume, den, dene):
     zero = good & (num == 0)
     re[zero] = nume[zero] / den[zero] if nume[zero].size else 0.0
     return r, re
+
+
+# --------------------------------------------------------------------------
+# The ratio pane is CLIPPED to +-20 %.
+#
+# Several points genuinely live outside that window and none of them may quietly
+# disappear, so the clipping comes with two marks that mean different things:
+#
+#   arrow  -- a MEASURED ratio whose central value is outside the pane.  The
+#             arrow sits at the boundary it left through and points that way, so
+#             the reader can see both that the point exists and which direction
+#             it went.  A clipped point drawn as an ordinary marker sitting at
+#             1.2 would be worse than not clipping at all.
+#   open   -- ``onshell``'s exact zero below ``2 m_t``.  That is not a point
+#   circle    that ran off the pane, it is a structural zero (see
+#             :func:`structurally_empty`), and it keeps the open-marker
+#             convention it had on the unclipped figure.  It carries no arrow,
+#             precisely so the two cases stay distinguishable.
+#
+# Both the axis label and the in-pane key say the pane is clipped.
+# --------------------------------------------------------------------------
+RATIO_CLIP = (0.8, 1.2)
+
+
+def offscale_arrows(ax, x, r, colour, clip=RATIO_CLIP, dx=None, slot=0,
+                    nslot=1, lw=1.0, scale=9):
+    """Draw one arrow per point of ``r`` that lies outside ``clip``.
+
+    ``dx``/``slot``/``nslot`` spread the arrows of several curves horizontally
+    inside their shared bin, so four modes leaving the same bin give four
+    visible arrows rather than one drawn four times.
+
+    Returns ``(n_below, n_above)``.
+    """
+    lo, hi = clip
+    span = hi - lo
+    x = np.asarray(x, dtype=float)
+    if dx is None:
+        dx = np.zeros_like(x)
+    shift = ((slot - 0.5 * (nslot - 1)) / max(nslot, 1)) * 0.55 * np.asarray(dx)
+    n_lo = n_hi = 0
+    for xi, sh, ri in zip(x, shift, r):
+        if not np.isfinite(ri):
+            continue
+        if ri < lo:
+            tail, head = lo + 0.13 * span, lo + 0.015 * span
+            n_lo += 1
+        elif ri > hi:
+            tail, head = hi - 0.13 * span, hi - 0.015 * span
+            n_hi += 1
+        else:
+            continue
+        ax.annotate('', xy=(xi + sh, head), xytext=(xi + sh, tail),
+                    arrowprops=dict(arrowstyle='-|>', color=colour, lw=lw,
+                                    shrinkA=0, shrinkB=0,
+                                    mutation_scale=scale),
+                    annotation_clip=False, zorder=7)
+    return n_lo, n_hi
 
 
 # The window used to divide out the overall normalisation for the SHAPE-only
@@ -451,7 +524,7 @@ def make_figure(d, out, style_tag=''):
 
     # The annotation that is the point of the figure.
     ymin, ymax = ax.get_ylim()
-    ax.set_ylim(ymin, ymax * 22)
+    ax.set_ylim(ymin, ymax * 34)
     ax.text(0.028, 0.965,
             _tx(r'$pp \to t\bar t j$ at $\sqrt{s} = 13$~TeV, LO, '
                 r'$\mu_R = \mu_F = m_t$',
@@ -472,13 +545,19 @@ def make_figure(d, out, style_tag=''):
             '\n'
             r'\texttt{onshell}: $0$ of $%s$ events, exactly.' % _fmt_int(n_on)
             + '\n'
-            r'\texttt{madspin}/\texttt{PA} reach it only because the'
+            r'\texttt{madspin}/\texttt{PA} reach it because the production'
             '\n'
-            r'production reshuffle rescales the recoil jet.',
+            r'reshuffle rescales the recoil jet.  \texttt{madspin\_v1}'
+            '\n'
+            r'reaches it 3x less often: it leaves $m_{t\bar t}$'
+            '\n'
+            r'unchanged in 54\% of events.',
             'no on-shell $t\\bar t$ pair can land here\n'
             'onshell: 0 of %s events, exactly.\n'
-            'madspin/PA reach it only because the\n'
-            'production reshuffle rescales the recoil jet.' % _fmt_int(n_on)),
+            'madspin/PA reach it because the production reshuffle\n'
+            'rescales the recoil jet.  madspin_v1 reaches it 3x less\n'
+            'often: it leaves $m_{t\\bar t}$ unchanged in 54%% of events.'
+            % _fmt_int(n_on)),
         xy=(0.5 * (lo + two_mt), 1.0), xycoords=('data', 'axes fraction'),
         xytext=(0.028, 0.845), textcoords='axes fraction',
         ha='left', va='top', fontsize=9.5, color='0.25')
@@ -496,15 +575,21 @@ def make_figure(d, out, style_tag=''):
             transform=rx.transAxes, ha='right', va='top',
             fontsize=8.5, color=allcolors[0])
 
-    rmax = 1.0
-    for key in MODES:
+    # The pane is clipped to RATIO_CLIP, so it has to be set BEFORE anything is
+    # drawn into it: the step lines below run far outside the window and would
+    # otherwise drag the autoscale out with them.
+    rx.set_ylim(*RATIO_CLIP)
+
+    n_out = 0
+    for slot, key in enumerate(MODES):
         y, ye, cnt = d.density(key)
         r, re = ratio(y, ye, den, dene)
         # Two kinds of empty bin, drawn differently on purpose.
-        #   structural -- onshell below 2 m_t.  A real, exact zero: drawn AS a
-        #                 zero, joined by the curve and marked with an open
-        #                 circle on the axis, so it cannot be misread as a curve
-        #                 that merely left the pane.
+        #   structural -- onshell below 2 m_t.  A real, exact zero: it is
+        #                 0 and not "somewhere below the pane", so it keeps its
+        #                 open circle and gets NO arrow.  With the pane clipped
+        #                 to +-20% the circle sits on the lower boundary, which
+        #                 is why the key below spells out what it means.
         #   statistical -- any other bin with no entries.  Drawn as a gap: the
         #                 sample simply did not reach there, which is a
         #                 statement about N and not about the scheme.
@@ -517,18 +602,35 @@ def make_figure(d, out, style_tag=''):
                     yerr=np.where(struct | stat, np.nan, re), fmt='none',
                     ecolor=COLOR[key], elinewidth=0.9, capsize=0, zorder=4)
         if struct.any():
-            rx.plot(d.centres[struct], np.zeros(struct.sum()), 'o',
-                    mfc='white', mec=COLOR[key], mew=1.2, ms=5, zorder=6)
-        fin = np.isfinite(r) & ~struct & ~stat
-        if fin.any():
-            rmax = max(rmax, float(np.nanmax((r + re)[fin])))
+            rx.plot(d.centres[struct],
+                    np.full(struct.sum(), RATIO_CLIP[0]), 'o',
+                    mfc='white', mec=COLOR[key], mew=1.2, ms=5,
+                    clip_on=False, zorder=8)
+        live = np.where(struct | stat, np.nan, r)
+        nb, na = offscale_arrows(rx, d.centres, live, COLOR[key],
+                                 dx=d.widths, slot=slot, nslot=len(MODES))
+        n_out += nb + na
 
-    # Nothing is clipped: the widest excursion is in the deepest sub-threshold
-    # bin, where the statistics are thinnest, and cropping it off the top would
-    # hide exactly the disagreement the figure is for.  The cap only stops a
-    # pathological outlier from flattening everything else.
-    rx.set_ylim(-0.08, min(4.0, math.ceil(rmax * 5) / 5 + 0.1))
-    rx.set_ylabel(_tx(r'ratio to truth', 'ratio to truth'), fontsize=12)
+    # A count, printed rather than silent: it is the check that the clipping
+    # did not swallow anything.  Every point it counts carries an arrow.
+    print('ratio pane clipped to %s: %d point(s) outside it, each drawn as an '
+          'arrow at the boundary it left through' % (RATIO_CLIP, n_out))
+
+    # Say it on the axis, not only in the caption: a reader who crops the
+    # figure out of the document must still be told the pane is clipped.
+    rx.set_ylabel(_tx(r'ratio to truth' '\n' r'(clipped to $\pm20\%$)',
+                      'ratio to truth\n(clipped to $\\pm20\\%$)'),
+                  fontsize=10.5)
+    # Bottom right: the only corner of this pane that no curve reaches (above
+    # 356 GeV every mode sits on the +3 % normalisation plateau), so the key
+    # cannot land on top of a point or an arrow.
+    rx.text(0.993, 0.045,
+            _tx(r'arrow: point outside the pane' '\n'
+                r'$\circ$: exactly $0$ (structural)',
+                'arrow: point outside the pane\n'
+                '$\\circ$: exactly 0 (structural)'),
+            transform=rx.transAxes, ha='right', va='bottom',
+            fontsize=8.5, color='0.30', linespacing=1.25)
     rx.set_xlabel(_tx(
         r'$m_{t\bar t}$ [GeV] \ \ (per-event $m$ of $(W^+b)+(W^-\bar b)$)',
         r'$m_{t\bar t}$ [GeV]  (per-event $m$ of $(W^+b)+(W^-\bar b)$)'))
@@ -614,6 +716,22 @@ def write_numbers(d, out, fh=sys.stdout):
         p('%-11s %12s %14.4f %14s'
           % (key, '%d' % d.meta['runs'][key]['nevents'], d.sigma(key),
              '%.4f' % d.banner_sigma(key) if d.banner_sigma(key) else '-'))
+    p('')
+    p('accept/reject scheme each run ACTUALLY used, from its own log:')
+    for key in MODES + list(d.meta.get('controls', [])):
+        if key not in d.meta['runs']:
+            continue
+        r = d.meta['runs'][key]
+        p('   %-11s %-10s  (%s)' % (key, r.get('unweighting'),
+                                    r.get('unweighting_why')))
+    p('   NB: "legacy" is not one of the four `set unweighting` schemes.')
+    p('   spinmode=madspin_v1 never reaches _unweighting_mode -- that')
+    p('   dispatcher lives in run_onshell, which the legacy path does not')
+    p('   call -- so the card\'s `unweighting` value is inert for it and the')
+    p('   scheme it ran is the legacy one: one max_weight per decay channel,')
+    p('   probed before the event loop, then one test of the whole decay')
+    p('   chain\'s weight against it per trial, inside the Fortran driver.')
+
     bw = float(d.meta['bwcutoff'])
     trunc = 1.0 - 2 * math.atan(2 * bw) / math.pi
     p('')
@@ -644,11 +762,19 @@ def write_numbers(d, out, fh=sys.stdout):
         stot = d.sigma(key)
         rel = (s / st) if st else float('nan')
         rele = rel * math.sqrt((e / s) ** 2 + (ste / st) ** 2) if s > 0 else 0.0
+        # A zero here means two different things depending on the mode, and
+        # the line must not paper over the difference: ``onshell`` cannot reach
+        # this region at any sample size, anything else simply did not.
+        if s > 0:
+            verdict = '%.3f +- %.3f' % (rel, rele)
+        elif key == 'onshell':
+            verdict = '0 exactly (structurally empty)'
+        else:
+            verdict = '0 in this sample (NOT structural -- %s can reach ' \
+                      'here; this is a statement about N)' % key
         p('%-11s sigma(m_tt < 2m_t) = %.4f +- %.4f pb   (%d events, '
           '%.3f%% of its own total)   ratio to truth = %s'
-          % (key, s, e, k, 100 * s / stot,
-             ('%.3f +- %.3f' % (rel, rele)) if s > 0 else
-             '0 exactly (structurally empty)'))
+          % (key, s, e, k, 100 * s / stot, verdict))
     p('')
 
     # --- the brief's window ----------------------------------------------
@@ -705,16 +831,30 @@ def write_numbers(d, out, fh=sys.stdout):
         p('   MadSpin writes one decayed event per production event, in order.')
         p('   sqrt(shat) is RAMBO-invariant, so max |Delta sqrt(shat)| = 0 is')
         p('   what proves the two streams are actually paired.')
-        p('   %-9s %10s %10s %10s %14s %10s %10s'
+        p('   %-11s %9s %8s %9s %13s %9s %7s %10s'
           % ('mode', 'mean', 'rms', 'max|d|', 'max|dsqrt(s)|',
-             'down-xing', 'up-xing'))
+             'down-xing', 'up-xing', 'unchanged'))
         for key in MODES:
             m = d.meta['delta_mtt'].get(key)
             if not m:
                 continue
-            p('   %-9s %+10.4f %10.4f %10.3f %14.3g %10d %10d'
+            unch = ('%.2f%%' % (100.0 * m['n_tiny'] / m['n'])
+                    if 'n_tiny' in m else '-')
+            p('   %-11s %+9.4f %8.4f %9.3f %13.3g %9d %7d %10s'
               % (key, m['mean'], m['rms'], m['max_abs'], m['max_dshat'],
-                 m['crossed_down'], m['crossed_up']))
+                 m['crossed_down'], m['crossed_up'], unch))
+        p('   "unchanged" = |Delta m_tt| / m_tt < 1e-6, i.e. m_tt came back the')
+        p('   same to the precision the LHE text carries.  Read that column and')
+        p('   not a bit-exact one: onshell provably never touches the momenta')
+        p('   and is still only %.2f%% bit-exact, because the LHE round-trips'
+          % (100.0 * d.meta['delta_mtt']['onshell']['n_exact']
+             / d.meta['delta_mtt']['onshell']['n']))
+        p('   the momenta as decimal text.  That is the precision floor; the')
+        p('   1e-6 column sits above it.')
+        p('   This is the column that explains madspin_v1: its rms is the')
+        p('   LARGEST of the four, yet it pushes the FEWEST events across the')
+        p('   threshold, because it holds m_tt exactly fixed in half its')
+        p('   events and moves the rest further than anything else does.')
         p('')
 
     # --- controls ---------------------------------------------------------
@@ -759,6 +899,35 @@ def write_numbers(d, out, fh=sys.stdout):
         p('   measured rather than asserted, and it is what makes its zero')
         p('   below 2 m_t structural.')
         p('')
+
+    # --- what the clipped ratio pane cannot show --------------------------
+    # The figure clips its ratio pane to RATIO_CLIP and marks every excursion
+    # with an arrow, but an arrow has no value on it.  The values live here, so
+    # nothing that leaves the pane is lost.
+    den_c, dene_c, dcnt_c = d.density(REF)
+    p('-- ratio points outside the figure\'s clipped pane %s -------------'
+      % (RATIO_CLIP,))
+    any_out = False
+    for key in MODES:
+        y, ye, cnt = d.density(key)
+        r, re = ratio(y, ye, den_c, dene_c)
+        struct = structurally_empty(d, key) & (dcnt_c > 0)
+        stat = (cnt == 0) & (dcnt_c > 0) & ~struct
+        for i in range(len(r)):
+            if struct[i] or stat[i] or not np.isfinite(r[i]):
+                continue
+            if RATIO_CLIP[0] <= r[i] <= RATIO_CLIP[1]:
+                continue
+            any_out = True
+            p('   %-11s %4.0f-%-4.0f  ratio = %.3f +- %.3f   (drawn as an '
+              'arrow at %.1f)'
+              % (key, d.edges[i], d.edges[i + 1], r[i], re[i],
+                 RATIO_CLIP[1] if r[i] > RATIO_CLIP[1] else RATIO_CLIP[0]))
+    if not any_out:
+        p('   none.')
+    p('   onshell below 2 m_t is NOT in this list: it is an exact structural')
+    p('   zero, drawn with its open marker on the lower boundary and no arrow.')
+    p('')
 
     # --- per-bin table ----------------------------------------------------
     p('-- per-bin table (absolute, pb/GeV) ---------------------------------')
