@@ -439,13 +439,34 @@ arithmetic-only path to `Tr(rho_off)`.  Measured directly (section 1.3): 24 draw
 per event cost `+2.06 ms/event` of CPU, i.e. **86 us per offshell free draw**,
 ten times the kernel's.  `k = 8` would be 0.7 ms/event.
 
-Two things this does *not* cover.  `J`'s within-event spread was measured on a
-`2 -> 2` production; for `n >= 3` `J` is not a function of the mass set alone
-(`jacobian_analytic.py` measured a 14 % spread at fixed masses across eight
-three-body configurations), so the *per-event* variance is a property of the
-event and could be larger -- the table above is a `2 -> 2` measurement being used
-as a guide, not an `n >= 3` measurement.  And no `n >= 3` production was run
-end to end here.
+**Measured on a real `n = 3` production.**  `p p > t t~ j` at 6.5+6.5 TeV, 20 000
+production events, 300 of them taken through 800 free draws each on the kernel
+(240 000 mass sets; `Zhat = 1`, since no `n >= 3` MadSpin run was made to build a
+table).  `data/n3_ttj.json`:
+
+| | `t t~` (`n = 2`) | `t t~ j` (`n = 3`) |
+|---|---|---|
+| free draw through the kernel | 9.0 us | **7.3 us** |
+| within-event `sd(w)/A_e`, median | 1.0 % | **2.3 %** |
+| ... 95th percentile | 11.9 % | **10.4 %** |
+| ... max | 100 % | 33 % |
+| event-to-event rel sd of `A_e` | 1.18 % | 0.48 % |
+
+The `2 -> 2` numbers were a fair guide: the within-event spread at `n = 3` is the
+same size, so `k = 16` gives a 0.6 % median estimator noise there, at
+`16 x 7.3 us = 117 us` per event -- **1.4 % of a run's CPU**, against 1.2 ms and
+14 % if the same draws went through `_production_jacobian_for`.  So the answer to
+"does the kernel make enough evaluations affordable" is **yes, and it is the
+kernel that makes it so**.  What is *smaller* at `n = 3` is the thing being
+corrected: `A_e` varies by 0.48 % event to event rather than 1.18 %, because the
+extra jet takes recoil and the two-body threshold no longer pins the whole final
+state.
+
+Two caveats.  The `n = 3` measurement has `Zhat = 1`, so it does not carry the
+running-width factor a real run would (that steepens the integrand and would
+widen the within-event spread, as it does offshell at `n = 2`).  And no `n >= 3`
+production was run end to end -- there is no `t t~ j` decayed sample here and no
+`n >= 3` impact number.
 
 ### 6.2 The joint path
 
@@ -572,10 +593,9 @@ efficiency and trial counts are identical).
 
 ## 9. What this does not cover
 
-* **No `n >= 3` production was run.**  Section 6.1's noise numbers are a `2 -> 2`
-  measurement used as a guide; `J`'s per-event variance for `n >= 3` was not
-  measured, and the 14 % spread at fixed masses that `jacobian_analytic.py` found
-  says it could be larger.
+* **No `n >= 3` production was decayed.**  Section 6.1 measures the estimator's
+  noise and cost on a real `p p > t t~ j` sample, but with `Zhat = 1` and with no
+  MadSpin run behind it, so there is no `n >= 3` spectrum or lineshape number.
 * **The joint path was not measured** (section 6.2), only argued.
 * **One process.**  Everything is `p p > t t~` at one energy with one decay
   chain.  `W W` and `Z Z` have much wider windows relative to their thresholds

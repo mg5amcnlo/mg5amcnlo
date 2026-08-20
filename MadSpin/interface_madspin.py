@@ -8416,6 +8416,22 @@ class MadSpinInterface(extended_cmd.Cmd):
                 "maximum weight -- %s.", reason or 'unsupported event')
 
     @staticmethod
+    def _proto_option(options, name, default):
+        """A PROTOTYPE option's value, defaulting when it is not there.
+
+        ``self.options`` is a ``ConfigFile``, whose ``get`` is a two-argument
+        override and not ``dict.get``; and the unit tests drive the chain with
+        plain dicts built by hand rather than through ``add_param``. Both are
+        reasons not to reach for either idiom directly.  Static, and always
+        named on the class, because those same stubs answer ``__getattr__``
+        with a failure for anything they were not given.
+        """
+        try:
+            return options[name]
+        except (KeyError, TypeError):
+            return default
+
+    @staticmethod
     def _mass_shuffle_data(production):
         """``(frame, sqrts, masses)`` for ``Event.mass_shuffle_jacobian``, from
         the *round-tripped* production event, cached on it.
@@ -8729,15 +8745,13 @@ class MadSpinInterface(extended_cmd.Cmd):
         or the max-weight probe's events -- and that choice is the one piece of
         this that is left open.  See doc/madspin_ae_normalisation/.
         """
-        # .get: PROTOTYPE option, and the unit-test stubs build an options
-        # dict by hand rather than through add_param
-        ref = self.options.get('mass_normalisation', 0)
+        ref = MadSpinInterface._proto_option(self.options, 'mass_normalisation', 0)
         if not ref or ref <= 0:
             return 1.0
         cached = getattr(production, '_ms_ae_factor', None)
         if cached is not None:
             return cached
-        ndraw = self.options.get('mass_normalisation_draws', 0)
+        ndraw = MadSpinInterface._proto_option(self.options, 'mass_normalisation_draws', 0)
         a = None
         if not ndraw and not offshell:
             a = self._mass_normalisation_quad(production, order, particles,
@@ -9194,7 +9208,7 @@ class MadSpinInterface(extended_cmd.Cmd):
         # event and not on the draw, and reported back through ``stats`` the way
         # the overweight safety net is. See _mass_normalisation_factor.
         if probe is None and maxwgts and upfront and (offshell or draw_mass) \
-                and self.options.get('mass_normalisation', 0) > 0:
+                and MadSpinInterface._proto_option(self.options, 'mass_normalisation', 0) > 0:
             factor = self._mass_normalisation_factor(
                 production, order, particles, slot_to_index, zkeys, keep_jac,
                 offshell, prod_static, density_prod, frame_boost, me_prod_on)
