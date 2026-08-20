@@ -1,0 +1,381 @@
+==============================================================================
+m_tt near threshold: the UNWEIGHTING SCHEMES within each off-shell
+spinmode.  Companion of numbers.txt, which varies the spinmode.
+==============================================================================
+code            : b2a3519d79df (claude/ms-mtt-unweighting)
+production      : p p > t t~ j
+truth           : p p > t t~ j, t > w+ b, t~ > w- b~
+events per cell : NOT uniform -- see the table below.  All cells decay the SAME
+                  production events in the same order; the 500k cells decay the
+                  first 500k of them (a front truncation of one file), which is
+                  why they still pair event by event with the 1M cells.
+                  PA_joint         1 000 000 events
+                  PA_seq           1 000 000 events
+                  PA_globalretry   1 000 000 events
+                  PA_withmass      1 000 000 events
+                  ms_joint         1 000 000 events
+                  ms_seq             500 000 events
+                  ms_globalretry     500 000 events
+2 m_t           : 346.0000 GeV  (banner MT = 173.0)
+onshell         : not run -- no virtuality is drawn, _spinmode_has_density is False and _unweighting_mode forces joint whatever the card says -- there is no scheme axis to scan
+
+-- the cells, the scheme each one actually ran, and its overweights --
+   "asked" is the card; "ran" is parsed back out of the log, so a
+   silent fallback cannot masquerade as a measurement.
+cell             spinmode  asked                    ran                      as asked
+PA_joint         PA        joint                    joint                    True
+PA_seq           PA        sequential               sequential               True
+PA_globalretry   PA        sequential_global_retry  sequential_global_retry  True
+PA_withmass      PA        sequential_with_mass     sequential_with_mass     True
+ms_joint         madspin   joint                    joint                    True
+ms_seq           madspin   sequential               sequential               True
+ms_globalretry   madspin   sequential_global_retry  sequential_global_retry  True
+
+   overweight safety net, per cell.  A joint-vs-global_retry difference
+   caused by these is a RATE effect of the accept/reject machinery and
+   must not be read as a Z_k effect.
+cell               carrying         of largest factor  excess sum(w)      shift
+PA_joint                  0    1000000         1.0000              0    0.0000%
+PA_seq                    0    1000000         1.0000              0    0.0000%
+PA_globalretry            0    1000000         1.0000              0    0.0000%
+PA_withmass               0    1000000         1.0000              0    0.0000%
+ms_joint                754    1000000        82.9976    1.99369e+06    0.2960%
+ms_seq                    4     500000         2.2086        1261.61    0.0004%
+ms_globalretry            5     500000         1.3903        776.389    0.0002%
+
+   sigma of each cell from its own event weights, and from its banner.
+   MadSpin normalises to sigma_production * BR, so the banner value is
+   identical across schemes by construction; sum(w)/N is not, and the
+   difference is exactly the overweight carry above.
+cell                sum(w)/N [pb]      banner [pb]        ratio
+PA_joint                674.44457        674.44460     1.000000
+PA_seq                  674.44457        674.44460     1.000000
+PA_globalretry          674.44457        674.44460     1.000000
+PA_withmass             674.44457        674.44460     1.000000
+ms_joint                676.43826        674.44460     1.002956
+ms_seq                  674.44709        674.44460     1.000004
+ms_globalretry          674.44612        674.44460     1.000002
+
+-- the tabulated Z_k, as each run logged it --------------------------
+   Z_k(m) is the fraction of the decay pool that can reach virtuality m,
+   fitted during the max-weight scan.  A cell with NO table did not
+   build one, which is the check that it cannot be biased by one.  The
+   span of Z says how much of the lineshape the table is responsible
+   for; the deviation is the code's own bin-to-fit residual, a floor on
+   Z_hat/Z rather than the whole of it.
+cell             slot     Z(lo) .. Z(pole) .. Z(hi)       span   samples  bin/fit dev
+PA_joint         -                no table built
+PA_seq           -6_0        0.912 .. 1 .. 1.059      1.161    149400         0.1%
+PA_seq           6_0         0.912 .. 1 .. 1.059      1.161    149400         0.1%
+PA_globalretry   -6_0        0.912 .. 1 .. 1.059      1.161    149400         0.1%
+PA_globalretry   6_0         0.912 .. 1 .. 1.059      1.161    149400         0.1%
+PA_withmass      -                no table built
+ms_joint         -                no table built
+ms_seq           -6_0        0.525 .. 1 .. 1.705      3.248    149597         0.2%
+ms_seq           6_0         0.525 .. 1 .. 1.705      3.248    149597         0.2%
+ms_globalretry   -6_0        0.525 .. 1 .. 1.705      3.248    149597         0.2%
+ms_globalretry   6_0         0.525 .. 1 .. 1.705      3.248    149597         0.2%
+
+-- what this measurement can and cannot resolve ----------------------
+   Quoted BEFORE any comparison is read, because an underpowered null
+   reported as agreement is the failure mode of this whole study.  The
+   entry is the relative difference detectable at 1 sigma.
+
+   The two columns answer different questions and the SIZES DIFFER:
+     unpaired  two independent samples of the sizes this pair actually
+               holds, sqrt((1-f)/(f N_a) + (1-f)/(f N_b)).  A 1M cell
+               against a 500k one is worth barely more than 500k v 500k,
+               so this is NOT the same for every pair.
+     paired    what the shared production sample actually bought,
+               sqrt(discordant)/n_a, MEASURED rather than assumed.
+   The paired column is the WORST (largest) over the measured pairs, so
+   it is a bound on the sensitivity and not the luckiest one.
+window                   N_a         N_b 1 sig unpaired   1 sig paired
+   [PA_joint vs PA_globalretry]
+   below 2mt          1 000 000   1 000 000         3.351 %         3.059 %
+   2mt+5              1 000 000   1 000 000         1.624 %         1.040 %
+   2mt+10             1 000 000   1 000 000         1.064 %         0.508 %
+   336-356            1 000 000   1 000 000         1.070 %         0.522 %
+   330-370            1 000 000   1 000 000         0.573 %         0.173 %
+   below 380          1 000 000   1 000 000         0.445 %         0.109 %
+   full 290-520       1 000 000   1 000 000         0.126 %         0.010 %
+   [ms_joint vs ms_globalretry]
+   below 2mt          1 000 000     500 000         4.653 %         4.987 %
+   2mt+5              1 000 000     500 000         2.101 %         1.527 %
+   2mt+10             1 000 000     500 000         1.345 %         0.753 %
+   336-356            1 000 000     500 000         1.350 %         0.768 %
+   330-370            1 000 000     500 000         0.713 %         0.252 %
+   below 380          1 000 000     500 000         0.550 %         0.156 %
+   full 290-520       1 000 000     500 000         0.155 %         0.015 %
+
+   The sub-threshold window holds ~0.165 % of sigma.  Even at 1M per
+   cell that is a ~3.5 % resolution unpaired, while the Z_k residual
+   expected from the shipped table is sub-per-cent -- so the
+   sub-threshold ratio CANNOT support a claim of agreement, in either
+   direction.  Any agreement read off it alone is a statement about the
+   sample size.  The wider windows and, above all, the top virtuality
+   below are where the test has teeth.
+
+-- the top virtuality, m(W b), which is what Z_k distorts directly ---
+   m_tt only sees Z_k after the production reshuffle has smeared it.
+   Both tops of every event enter, so n = 2 N.  The error on the mean
+   is rms/sqrt(n) and is four orders of magnitude below the
+   sub-threshold rate error, which is why this is the sensitive test.
+cell              <m_top> [GeV]     +- [GeV]    rms [GeV]   vs row joint
+PA_joint             172.958803     0.002262     3.199628              -
+PA_seq               172.960721     0.002265     3.203772 +0.001918 +- 0.003202 (0.6 s)
+PA_globalretry       172.958179     0.002265     3.203046 -0.000624 +- 0.003201 (0.2 s)
+PA_withmass          172.954496     0.002263     3.199759 -0.004307 +- 0.003200 (1.3 s)
+ms_joint             173.188281     0.002310     3.267094              -
+ms_seq               173.172570     0.003327     3.326781 -0.015711 +- 0.004050 (3.9 s)
+ms_globalretry       173.171083     0.003323     3.322758 -0.017198 +- 0.004047 (4.2 s)
+
+   CAVEAT on the "vs row joint" column: it is UNPAIRED, and in the
+   madspin row it compares a 1M cell against 500k cells, so its error
+   is the quadrature sum of two unequal errors.  The paired numbers in
+   the next section are the ones to read -- they compare the same
+   production events and are strictly better.
+
+-- unweighted vs weight-weighted <m_top>: the overweight cross-check --
+   The mean above counts every written event ONCE, whatever weight it
+   carries.  That is correct for a unit-weight sample, and the
+   accept/reject schemes are meant to produce one -- but the overweight
+   safety net writes some events with weight > 1 instead of rejecting
+   them.  Where it does, the unweighted mean is not the physical mean,
+   and a joint-vs-global_retry difference driven by THAT is a rate
+   artefact of the accept/reject machinery, not a Z_k effect.
+
+   Both columns are computed on the same binned support, so their
+   difference isolates the weights and nothing else.  A cell with no
+   overweights must show 0 to the last digit; a non-zero entry is the
+   size of the contamination in this observable.
+cell                <m_top> unwtd      <m_top> wtd    wtd - unwtd  sigma(mean)
+PA_joint               172.958805       172.958805      -0.000000     0.002262
+PA_seq                 172.960724       172.960724      -0.000000     0.002265
+PA_globalretry         172.958176       172.958176      -0.000000     0.002265
+PA_withmass            172.954496       172.954496      +0.000000     0.002263
+ms_joint               173.188286       173.163575      -0.024711     0.002310
+ms_seq                 173.172576       173.172538      -0.000038     0.003327
+ms_globalretry         173.171078       173.171065      -0.000013     0.003323
+
+   The weighted mean also costs precision, because a sample with
+   dispersed weights is worth fewer events than it holds.  Kish's
+   design effect deff = N_inrange * sum(w^2) / sum(w)^2 measures that
+   from the sample itself; the error on the weighted mean is the
+   unweighted error times sqrt(deff).  deff = 1 exactly for a
+   unit-weight sample, so this column is a second, independent readout
+   of which cells the safety net actually touched.
+cell                     deff   sqrt(deff)      err unwtd        err wtd
+PA_joint              1.00000      1.00000       0.002262       0.002262
+PA_seq                1.00000      1.00000       0.002265       0.002265
+PA_globalretry        1.00000      1.00000       0.002265       0.002265
+PA_withmass           1.00000      1.00000       0.002263       0.002263
+ms_joint              1.02814      1.01397       0.002310       0.002342
+ms_seq                1.00000      1.00000       0.003327       0.003327
+ms_globalretry        1.00000      1.00000       0.003323       0.003323
+
+   And the comparison REDONE on the weighted means, which are the
+   physical ones.  This is the number to read for any cell the safety
+   net touched; for the others it is identical to the unweighted one.
+   NOTE it is UNPAIRED -- the stored per-event pairing carries no
+   weights, so a paired weighted difference is not available from this
+   harvest.  It therefore has a larger error than the paired numbers
+   below, and where the two disagree it is this one that is unbiased.
+   PA_joint         - PA_globalretry   = +0.000629 +- 0.003201 GeV  (0.20 sigma)
+   PA_seq           - PA_globalretry   = +0.002548 +- 0.003203 GeV  (0.80 sigma)
+   PA_seq           - PA_joint         = +0.001919 +- 0.003202 GeV  (0.60 sigma)
+   PA_withmass      - PA_joint         = -0.004309 +- 0.003200 GeV  (1.35 sigma)
+   ms_joint         - ms_globalretry   = -0.007490 +- 0.004065 GeV  (1.84 sigma)
+   ms_seq           - ms_globalretry   = +0.001473 +- 0.004702 GeV  (0.31 sigma)
+   ms_seq           - ms_joint         = +0.008963 +- 0.004069 GeV  (2.20 sigma)
+
+-- the pairs, window by window ---------------------------------------
+   n_a, n_b are raw event counts; "both" is the number of production
+   events that landed in the window under BOTH schemes.  Every cell
+   decays the same production events in the same order, so the error on
+   the difference is set by the DISCORDANT pairs (McNemar),
+   sqrt(n_a + n_b - 2 both), not by sqrt(n_a + n_b).
+
+   PA_joint vs PA_globalretry
+     neither reads the Z_k table: must agree within statistics
+     pairing check: 1000000 pairs, max |Delta sqrt(shat)| = 0 GeV
+     PAIRED top virtuality: <m_top(a) - m_top(b)> = +0.000624 +- 0.003200 GeV  (0.2 sigma, 2000000 paired tops, per-pair rms 4.5252 GeV)
+     window               n_a       n_b      both    ratio a/b      sigma       pull
+     below 2mt           1778      1743       281      1.02008    0.03121       0.64
+     2mt+5               7523      7430      4417      1.01252    0.01053       1.19
+     2mt+10             17348     17312     13446      1.00208    0.00509       0.41
+     336-356            17180     17150     13144      1.00175    0.00523       0.33
+     330-370            57351     57280     52367      1.00124    0.00174       0.71
+     below 380          91785     91781     86823      1.00004    0.00109       0.04
+     full 290-520      556897    556899    555278      1.00000    0.00010       0.04
+
+   PA_seq vs PA_globalretry
+     tabulated Z_hat against exact cancellation: the residual Z_hat/Z
+     pairing check: 1000000 pairs, max |Delta sqrt(shat)| = 0 GeV
+     PAIRED top virtuality: <m_top(a) - m_top(b)> = +0.002542 +- 0.003201 GeV  (0.8 sigma, 2000000 paired tops, per-pair rms 4.5265 GeV)
+     window               n_a       n_b      both    ratio a/b      sigma       pull
+     below 2mt           1778      1743       292      1.02008    0.03109       0.65
+     2mt+5               7473      7430      4407      1.00579    0.01050       0.55
+     2mt+10             17382     17312     13420      1.00404    0.00512       0.79
+     336-356            17184     17150     13091      1.00198    0.00526       0.38
+     330-370            57266     57280     52284      0.99976    0.00174       0.14
+     below 380          91601     91781     86778      0.99804    0.00108       1.82
+     full 290-520      556880    556899    555295      0.99997    0.00010       0.34
+
+   PA_seq vs PA_joint
+     tabulated Z_hat against a scheme with no mass stage
+     pairing check: 1000000 pairs, max |Delta sqrt(shat)| = 0 GeV
+     PAIRED top virtuality: <m_top(a) - m_top(b)> = +0.001918 +- 0.003200 GeV  (0.6 sigma, 2000000 paired tops, per-pair rms 4.5261 GeV)
+     window               n_a       n_b      both    ratio a/b      sigma       pull
+     below 2mt           1778      1778       267      1.00000    0.03092       0.00
+     2mt+5               7473      7523      4466      0.99335    0.01035       0.64
+     2mt+10             17382     17348     13458      1.00196    0.00510       0.38
+     336-356            17184     17180     13126      1.00023    0.00524       0.04
+     330-370            57266     57351     52402      0.99852    0.00173       0.86
+     below 380          91601     91785     86735      0.99800    0.00108       1.85
+     full 290-520      556880    556897    555252      0.99997    0.00010       0.30
+
+   PA_withmass vs PA_joint
+     mass drawn inside each slot: no Z_k arises at all
+     pairing check: 1000000 pairs, max |Delta sqrt(shat)| = 0 GeV
+     PAIRED top virtuality: <m_top(a) - m_top(b)> = -0.004307 +- 0.003196 GeV  (1.3 sigma, 2000000 paired tops, per-pair rms 4.5205 GeV)
+     window               n_a       n_b      both    ratio a/b      sigma       pull
+     below 2mt           1801      1778       298      1.01294    0.03072       0.42
+     2mt+5               7469      7523      4456      0.99282    0.01036       0.69
+     2mt+10             17403     17348     13510      1.00317    0.00507       0.63
+     336-356            17207     17180     13174      1.00157    0.00522       0.30
+     330-370            57246     57351     52381      0.99817    0.00173       1.06
+     below 380          91773     91785     86859      0.99987    0.00108       0.12
+     full 290-520      556851    556897    555252      0.99992    0.00010       0.81
+
+   ms_joint vs ms_globalretry
+     neither reads the Z_k table: must agree within statistics
+     pairing check: 500000 pairs, max |Delta sqrt(shat)| = 0 GeV
+     PAIRED top virtuality: <m_top(a) - m_top(b)> = +0.017031 +- 0.004655 GeV  (3.7 sigma, 1000000 paired tops, per-pair rms 4.6551 GeV)
+     window               n_a       n_b      both    ratio a/b      sigma       pull
+     below 2mt            692       691        96      1.00145    0.04994       0.03
+     2mt+5               3375      3346      2032      1.00867    0.01541       0.56
+     2mt+10              8162      8179      6282      0.99792    0.00751       0.28
+     336-356             8103      8126      6177      0.99717    0.00766       0.37
+     330-370            27829     27906     25413      0.99724    0.00251       1.10
+     below 380          45108     45096     42618      1.00027    0.00156       0.17
+     full 290-520      277871    277907    277053      0.99987    0.00015       0.88
+
+   ms_seq vs ms_globalretry
+     tabulated Z_hat against exact cancellation: the residual Z_hat/Z
+     pairing check: 500000 pairs, max |Delta sqrt(shat)| = 0 GeV
+     PAIRED top virtuality: <m_top(a) - m_top(b)> = +0.001486 +- 0.004683 GeV  (0.3 sigma, 1000000 paired tops, per-pair rms 4.6831 GeV)
+     window               n_a       n_b      both    ratio a/b      sigma       pull
+     below 2mt            737       691       100      1.06657    0.05071       1.31
+     2mt+5               3397      3346      2042      1.01524    0.01541       0.99
+     2mt+10              8150      8179      6273      0.99645    0.00752       0.47
+     336-356             8095      8126      6177      0.99619    0.00765       0.50
+     330-370            27993     27906     25472      1.00312    0.00252       1.24
+     below 380          45146     45096     42626      1.00111    0.00157       0.71
+     full 290-520      277881    277907    277081      0.99991    0.00015       0.64
+
+   ms_seq vs ms_joint
+     tabulated Z_hat against a scheme with no mass stage
+     pairing check: 500000 pairs, max |Delta sqrt(shat)| = 0 GeV
+     PAIRED top virtuality: <m_top(a) - m_top(b)> = -0.015545 +- 0.004662 GeV  (3.3 sigma, 1000000 paired tops, per-pair rms 4.6623 GeV)
+     window               n_a       n_b      both    ratio a/b      sigma       pull
+     below 2mt            737       692       112      1.06503    0.05016       1.30
+     2mt+5               3397      3375      2024      1.00652    0.01546       0.42
+     2mt+10              8150      8162      6327      0.99853    0.00741       0.20
+     336-356             8095      8103      6225      0.99901    0.00756       0.13
+     330-370            27993     27829     25424      1.00589    0.00253       2.33
+     below 380          45146     45108     42619      1.00084    0.00157       0.54
+     full 290-520      277881    277871    277046      1.00004    0.00015       0.25
+
+-- per-bin SHAPE ratio to truth, PA (UNCLIPPED; the figure clips the pane to +-20%) --
+   Same normalisation as the figure: each curve divided by its own
+   total sigma, so this is a shape ratio and the overweight rate
+   carry is divided out of it.
+   joint = joint,  seq = sequential,  seq_glob_retry = sequential_global_retry,  seq_with_mass = sequential_with_mass
+bin [GeV]        truth          joint            seq seq_glob_retry  seq_with_mass
+ 316- 326   4.7998e-07   1.875+-0.733   1.250+-0.571   1.042+-0.512   1.250+-0.571
+ 326- 331   7.5202e-06   0.824+-0.160   0.957+-0.174   1.117+-0.191   1.516+-0.229
+ 331- 336    2.428e-05   1.054+-0.103   1.277+-0.115   0.947+-0.096   1.096+-0.105
+ 336- 338   4.9299e-05   1.126+-0.118   1.075+-0.115   0.943+-0.107   1.166+-0.121
+ 338- 340   6.6699e-05   1.117+-0.101   1.177+-0.104   1.169+-0.104   1.304+-0.111
+ 340- 342    0.0001051   1.123+-0.081   1.075+-0.079   1.028+-0.077   1.108+-0.080
+ 342- 344    0.0001747   1.070+-0.061   0.999+-0.059   1.108+-0.062   0.976+-0.058
+ 344- 345    0.0002706   1.160+-0.073   1.127+-0.071   1.105+-0.071   1.046+-0.068
+ 345- 346     0.000424   1.005+-0.053   1.031+-0.054   1.014+-0.054   1.083+-0.056
+ 346- 347    0.0006374   1.070+-0.045   1.057+-0.045   1.073+-0.045   1.083+-0.045
+ 347- 348    0.0009156   1.029+-0.037   1.051+-0.037   1.020+-0.037   1.007+-0.036
+ 348- 349     0.001142   1.027+-0.033   0.999+-0.032   1.042+-0.033   1.022+-0.033
+ 349- 350    0.0013338   1.055+-0.031   0.978+-0.030   0.977+-0.030   1.007+-0.030
+ 350- 351    0.0015276   1.009+-0.028   1.057+-0.029   1.032+-0.029   1.012+-0.028
+ 351- 352     0.001693   0.962+-0.026   1.045+-0.027   1.037+-0.027   1.032+-0.027
+ 352- 353    0.0018506   1.013+-0.026   1.009+-0.026   0.999+-0.025   1.001+-0.025
+ 353- 354    0.0019312   1.020+-0.025   1.012+-0.025   1.039+-0.025   1.015+-0.025
+ 354- 355    0.0021248   1.017+-0.024   1.002+-0.024   0.984+-0.024   0.986+-0.024
+ 355- 356      0.00222   0.987+-0.023   0.986+-0.023   0.982+-0.023   1.027+-0.024
+ 356- 358    0.0023636   1.003+-0.016   1.018+-0.016   1.010+-0.016   0.995+-0.016
+ 358- 360    0.0025285   1.032+-0.016   1.014+-0.016   1.031+-0.016   1.029+-0.016
+ 360- 362     0.002717   0.993+-0.015   0.997+-0.015   1.007+-0.015   1.014+-0.015
+ 362- 364    0.0028434   1.024+-0.015   1.019+-0.015   0.995+-0.014   1.010+-0.015
+ 364- 366    0.0029984   1.007+-0.014   1.010+-0.014   1.033+-0.014   1.012+-0.014
+ 366- 368    0.0030687   1.043+-0.014   1.015+-0.014   1.022+-0.014   1.044+-0.014
+ 368- 370    0.0032158   0.997+-0.014   1.007+-0.014   0.998+-0.014   0.973+-0.013
+ 370- 372     0.003322   0.987+-0.013   0.988+-0.013   0.995+-0.013   0.982+-0.013
+ 372- 374    0.0033778   0.996+-0.013   1.006+-0.013   0.988+-0.013   1.020+-0.013
+ 374- 376    0.0034406   1.013+-0.013   1.001+-0.013   1.007+-0.013   1.019+-0.013
+ 376- 378    0.0034979   0.997+-0.013   1.006+-0.013   1.014+-0.013   0.991+-0.013
+ 378- 380    0.0035383   1.013+-0.013   0.990+-0.013   1.012+-0.013   1.006+-0.013
+ 380- 385    0.0036486   1.001+-0.008   1.009+-0.008   1.014+-0.008   1.001+-0.008
+ 385- 390    0.0037261   1.013+-0.008   1.010+-0.008   0.998+-0.008   1.016+-0.008
+ 390- 395    0.0038098   0.991+-0.008   1.001+-0.008   0.999+-0.008   0.996+-0.008
+ 395- 400    0.0038363   1.000+-0.008   0.992+-0.008   0.994+-0.008   1.002+-0.008
+ 400- 405    0.0038244   0.994+-0.008   0.998+-0.008   1.002+-0.008   0.990+-0.008
+ 405- 410    0.0038364   0.998+-0.008   0.984+-0.008   0.982+-0.008   0.984+-0.008
+ 410- 415    0.0038063   0.980+-0.008   0.993+-0.008   0.990+-0.008   0.998+-0.008
+ 415- 420    0.0037885   1.007+-0.008   1.000+-0.008   0.999+-0.008   0.998+-0.008
+
+-- per-bin SHAPE ratio to truth, madspin (UNCLIPPED; the figure clips the pane to +-20%) --
+   Same normalisation as the figure: each curve divided by its own
+   total sigma, so this is a shape ratio and the overweight rate
+   carry is divided out of it.
+   joint = joint,  seq = sequential,  seq_glob_retry = sequential_global_retry
+bin [GeV]        truth          joint            seq seq_glob_retry
+ 316- 326   4.7998e-07   0.208+-0.212              -   1.250+-0.765
+ 326- 331   7.5202e-06   0.849+-0.162   0.532+-0.173   0.426+-0.154
+ 331- 336    2.428e-05   0.698+-0.081   0.741+-0.115   0.692+-0.110
+ 336- 338   4.9299e-05   0.688+-0.089   0.771+-0.130   0.852+-0.137
+ 338- 340   6.6699e-05   0.889+-0.089   0.990+-0.128   1.005+-0.129
+ 340- 342    0.0001051   0.764+-0.065   1.047+-0.105   0.676+-0.083
+ 342- 344    0.0001747   0.845+-0.053   0.813+-0.071   0.721+-0.067
+ 344- 345    0.0002706   0.965+-0.065   0.916+-0.086   1.042+-0.092
+ 345- 346     0.000424   0.887+-0.050   0.953+-0.070   0.901+-0.068
+ 346- 347    0.0006374   0.937+-0.042   0.963+-0.058   1.020+-0.059
+ 347- 348    0.0009156   0.981+-0.036   0.955+-0.048   0.965+-0.048
+ 348- 349     0.001142   0.966+-0.032   0.967+-0.043   0.961+-0.043
+ 349- 350    0.0013338   0.967+-0.029   0.919+-0.039   0.931+-0.039
+ 350- 351    0.0015276   0.977+-0.028   0.983+-0.038   0.940+-0.037
+ 351- 352     0.001693   0.995+-0.027   0.964+-0.035   0.992+-0.036
+ 352- 353    0.0018506   0.988+-0.025   0.982+-0.034   0.981+-0.034
+ 353- 354    0.0019312   1.007+-0.025   0.983+-0.033   0.982+-0.033
+ 354- 355    0.0021248   0.950+-0.023   0.959+-0.031   0.984+-0.032
+ 355- 356      0.00222   0.987+-0.023   0.955+-0.031   0.984+-0.031
+ 356- 358    0.0023636   1.007+-0.016   0.996+-0.022   1.023+-0.022
+ 358- 360    0.0025285   1.001+-0.015   1.007+-0.021   0.971+-0.021
+ 360- 362     0.002717   0.977+-0.015   0.988+-0.020   0.986+-0.020
+ 362- 364    0.0028434   1.020+-0.015   1.010+-0.020   1.015+-0.020
+ 364- 366    0.0029984   1.007+-0.014   1.007+-0.019   1.011+-0.019
+ 366- 368    0.0030687   1.012+-0.014   1.035+-0.019   1.026+-0.019
+ 368- 370    0.0032158   0.989+-0.014   0.995+-0.018   0.969+-0.018
+ 370- 372     0.003322   1.008+-0.013   1.012+-0.018   1.001+-0.018
+ 372- 374    0.0033778   0.999+-0.013   0.953+-0.018   0.994+-0.018
+ 374- 376    0.0034406   1.025+-0.014   0.993+-0.018   0.991+-0.018
+ 376- 378    0.0034979   0.988+-0.013   1.008+-0.018   1.037+-0.018
+ 378- 380    0.0035383   1.000+-0.013   1.023+-0.018   0.979+-0.017
+ 380- 385    0.0036486   1.007+-0.008   0.989+-0.011   0.994+-0.011
+ 385- 390    0.0037261   1.013+-0.008   1.002+-0.011   1.021+-0.011
+ 390- 395    0.0038098   0.989+-0.008   1.007+-0.011   0.985+-0.011
+ 395- 400    0.0038363   0.997+-0.008   0.989+-0.011   0.987+-0.011
+ 400- 405    0.0038244   0.994+-0.008   0.992+-0.011   1.000+-0.011
+ 405- 410    0.0038364   0.992+-0.008   0.991+-0.011   0.991+-0.011
+ 410- 415    0.0038063   0.990+-0.008   0.985+-0.011   0.979+-0.011
+ 415- 420    0.0037885   0.998+-0.008   0.996+-0.011   1.005+-0.011
+

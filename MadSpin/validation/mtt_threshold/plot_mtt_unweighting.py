@@ -60,6 +60,16 @@ from run_mtt_unweighting import (                      # noqa: E402
 
 REF = 'truth'
 
+
+def _fmt_plain(n):
+    """Thousands-separated integer for the TEXT report.
+
+    ``plot_mtt_threshold._fmt_int`` groups with a LaTeX thin space (``\,``),
+    which is right on the figure and wrong in ``numbers.txt`` -- there it just
+    prints the backslashes.  Same grouping, plain space.
+    """
+    return '{:,}'.format(int(n)).replace(',', ' ')
+
 # The ratio pane's clip.  +-20 % is wide enough to hold everything the schemes
 # do to each other above threshold and narrow enough that a per-cent-level
 # difference is visible at all; the deep sub-threshold bins go outside it, and
@@ -116,6 +126,33 @@ class UData(Data):
         self.two_mt = float(self.meta.get('two_mt', 346.0))
         self._groups = self._group_map()
 
+    def shape(self, key):
+        """((1/sigma) dsigma/dm [1/GeV], its error, raw event count).
+
+        The companion figure moved to a self-normalised spectrum and this one
+        follows it.  ``sigma`` is the parent's :meth:`sigma`, the sample's TOTAL
+        cross section over the full ``m_tt`` range (``sum(w)/N`` of the whole
+        file), not the integral of the plotted window -- normalising to the
+        window would divide out part of the region under study and would make
+        the curves depend on the plot limits.
+
+        It is added HERE rather than in ``plot_mtt_threshold`` for the reason
+        the class docstring gives: that file is being changed in parallel on
+        another branch, which is where its own ``shape`` lives.  The definition
+        is copied from it verbatim so the two studies normalise identically.
+
+        The per-cell ``N`` comes from ``meta['runs'][key]['nevents']`` via the
+        parent's :meth:`nevents`, which matters more here than it did there:
+        the cells are NOT all the same size (five hold 1M, ``ms_seq`` and
+        ``ms_globalretry`` hold 500k), so every density on this figure is a
+        per-event quantity by construction and the 2:1 split cannot leak into
+        the normalisation.  It survives only in the error bars, which is where
+        it belongs.
+        """
+        y, ye, cnt = self.density(key)
+        s = self.sigma(key)
+        return y / s, ye / s, cnt
+
     # --- the top-virtuality histogram, which the parent has no notion of ---
     def cells(self, row):
         """The cells of ``row`` that are actually on disk, in scheme order."""
@@ -124,6 +161,60 @@ class UData(Data):
     def mtop_moments(self, key):
         r = self.meta['runs'][key]
         return r['mtop_mean'], r['mtop_mean_err'], r['mtop_rms']
+
+    def mtop_binned_means(self, key):
+        """``(unweighted mean, weight-weighted mean, n)`` off the m_top histogram.
+
+        The harvest's ``mtop_mean`` counts every written event once, ignoring
+        its weight.  That is the right estimator for a sample where every
+        weight is 1, and every cell here is *meant* to be such a sample -- but
+        the overweight safety net writes a handful of events with a weight
+        above 1 rather than rejecting them, and in ``ms_joint`` those carry
+        +0.3 % of the total cross section.  For that cell the unweighted mean
+        and the physical (weight-weighted) mean are not the same number, and a
+        difference between them is a RATE artefact of the accept/reject
+        machinery, not a ``Z_k`` effect.
+
+        Both are computed here on the SAME binned support -- ``mtop_sumw``
+        against ``mtop_cnt``, bin centres, identical truncation at the
+        histogram edges -- so the difference between them isolates the weights
+        and nothing else.  With 2400 bins over ~48 GeV the binning error on
+        either mean is ~1e-5 GeV, an order below the statistical error.
+        """
+        e = self.z['mtop_bins']
+        c = 0.5 * (e[:-1] + e[1:])
+        cnt = self.z['%s_mtop_cnt' % key].astype(float)
+        sw = self.z['%s_mtop_sumw' % key]
+        n = cnt.sum()
+        unw = float((cnt * c).sum() / n) if n else float('nan')
+        w = float((sw * c).sum() / sw.sum()) if sw.sum() else float('nan')
+        return unw, w, int(n)
+
+    def mtop_deff(self, key):
+        """Kish's design effect, ``N * sum(w^2) / sum(w)^2``, from the sample.
+
+        A sample whose weights are dispersed is worth fewer events than it
+        holds, and this measures by how much.  It is computed off the ``m_tt``
+        histogram, which is the only place the harvest kept ``sum(w^2)``; the
+        event set is the same one the top virtualities come from (both tops of
+        an event share its weight), and restricting to the histogram's range
+        divides out of the ratio because numerator and denominator are taken
+        over the same events.
+
+        Exactly 1 for a unit-weight sample, so it doubles as an independent
+        readout of which cells the overweight safety net touched -- one that
+        does not go through the log line at all.
+        """
+        sw = self.z['%s_sumw' % key].sum()
+        sw2 = self.z['%s_sumw2' % key].sum()
+        nin = float(self.z['%s_cnt' % key].sum())
+        if sw <= 0 or nin <= 0:
+            return float('nan')
+        return float(nin * sw2 / (sw * sw))
+
+    def mtop_weighted_err(self, key):
+        """Error on the WEIGHTED <m_top>: the unweighted one times sqrt(deff)."""
+        return self.mtop_moments(key)[1] * math.sqrt(self.mtop_deff(key))
 
 
 # --------------------------------------------------------------------------
@@ -179,7 +270,12 @@ def make_figure(d, row, out, tag=''):
         a.axvspan(lo, two_mt, facecolor='0.90', edgecolor='none', zorder=0)
         a.axvline(two_mt, color='0.35', lw=1.0, ls=(0, (6, 3)), zorder=1)
 
-    den, dene, dcnt = d.density(REF)
+    # Shape comparison: every curve divided by its OWN total cross section, so
+    # a rate difference between the truth and MadSpin cancels and the pane
+    # below is a pure shape ratio.  It also makes the 1M/500k split invisible
+    # here -- ``shape`` is per-event throughout -- leaving it in the error bars
+    # only, which is the honest place for it.
+    den, dene, dcnt = d.shape(REF)
     ax.step(d.edges, np.concatenate([den[:1], den]), where='pre',
             color='black', lw=LW, zorder=5,
             label=_tx(r'truth: $pp \to t\bar t j$, $t \to W^+ b$ (off shell)',
@@ -189,7 +285,7 @@ def make_figure(d, row, out, tag=''):
 
     for key in keys:
         scheme = CELL_SCHEME[key]
-        y, ye, cnt = d.density(key)
+        y, ye, cnt = d.shape(key)
         draw = np.where(cnt > 0, y, np.nan)
         lab = (r'\texttt{unweighting = }' + SCHEME_LABEL[scheme]) if USETEX \
             else 'unweighting = ' + SCHEME_PLAIN[scheme]
@@ -200,51 +296,68 @@ def make_figure(d, row, out, tag=''):
                     capsize=0, zorder=4)
 
     ax.set_yscale('log')
-    ax.set_ylabel(_tx(r'$\mathrm{d}\sigma/\mathrm{d}m_{t\bar t}$ [pb/GeV]',
-                      r'$d\sigma/dm_{t\bar t}$ [pb/GeV]'))
+    ax.set_ylabel(_tx(r'$(1/\sigma)\,\mathrm{d}\sigma/\mathrm{d}m_{t\bar t}$'
+                      r' [1/GeV]',
+                      r'$(1/\sigma)\,d\sigma/dm_{t\bar t}$ [1/GeV]'))
     ax.set_xlim(lo, hi)
     ax.xaxis.set_minor_locator(AutoMinorLocator())
     ax.tick_params(labelbottom=False)
     ax.legend(frameon=False, loc='lower right', fontsize=10,
               handlelength=2.8, borderaxespad=0.8)
 
+    # Setup above the curves, and nothing else in the pane.  The prose that used
+    # to sit here -- that the scheme is the only thing changing between the
+    # coloured curves, and which schemes do and do not read the tabulated Z_k --
+    # is not on the figure any more: it is in numbers.txt and RESULTS.md, where
+    # it carries its errors and its sensitivity.  ``m_tt`` is defined in
+    # RESULTS.md and in this module's docstring, so neither the header nor the
+    # axis caption repeats it.  What stays is what cannot be read off the
+    # curves: the process line, which row this is, and the sample sizes.
     ymin, ymax = ax.get_ylim()
-    ax.set_ylim(ymin, ymax * 26)
-    n_cell = int(d.meta['runs'][keys[0]]['nevents'])
-    ax.text(0.028, 0.968,
+    ax.set_ylim(ymin, ymax * 8.0)
+    # Two short lines rather than one long one: at this figure width a single
+    # line carrying the process, the scales, the BW cut AND the row title runs
+    # off the right edge of the pane.
+    ax.text(0.028, 0.965,
             _tx(r'$pp \to t\bar t j$ at $\sqrt{s} = 13$~TeV, LO, '
-                r'$\mu_R = \mu_F = m_t$ --- \textbf{%s}' % ROW_TITLE[row][0],
+                r'$\mu_R = \mu_F = m_t$, BW cut $=%g\,\Gamma_t$'
+                % d.meta.get('bwcutoff', 15.0),
                 r'$pp \to t\bar t j$ at $\sqrt{s}=13$ TeV, LO, '
-                r'$\mu_R=\mu_F=m_t$ -- %s' % ROW_TITLE[row][1]),
+                r'$\mu_R=\mu_F=m_t$, BW cut = %g $\Gamma_t$'
+                % d.meta.get('bwcutoff', 15.0)),
             transform=ax.transAxes, ha='left', va='top', fontsize=11)
-    ax.text(0.028, 0.912,
-            _tx(r'the accept/reject scheme is the only thing that changes '
-                r'between the coloured curves',
-                'the accept/reject scheme is the only thing that changes '
-                'between the coloured curves'),
-            transform=ax.transAxes, ha='left', va='top', fontsize=9.5,
-            color='0.25')
-    ax.text(0.028, 0.868,
-            _tx(r'same %s production events, same seed, '
-                r'BW cut $=%g\,\Gamma_t$ on both sides'
-                % (_fmt_int(n_cell), d.meta.get('bwcutoff', 15.0)),
-                'same %s production events, same seed, BW cut = %g Gamma_t'
-                % (_fmt_int(n_cell), d.meta.get('bwcutoff', 15.0))),
-            transform=ax.transAxes, ha='left', va='top', fontsize=9.5,
-            color='0.25')
+    ax.text(0.028, 0.917,
+            _tx(r'\textbf{%s}' % ROW_TITLE[row][0], ROW_TITLE[row][1]),
+            transform=ax.transAxes, ha='left', va='top', fontsize=11)
 
-    # The one sentence the figure exists to make testable.
-    ax.text(0.028, 0.824,
-            _tx(r'\texttt{joint} and \texttt{sequential\_global\_retry} '
-                r'do not read the tabulated $Z_k$;'
-                '\n'
-                r'\texttt{sequential} does, and its residual bias is exactly '
-                r'$\hat Z / Z$.',
-                'joint and sequential_global_retry do not read the tabulated '
-                'Z_k;\nsequential does, and its residual bias is exactly '
-                'Zhat/Z.'),
-            transform=ax.transAxes, ha='left', va='top', fontsize=9,
-            color='0.25')
+    # The sample size is setup, not commentary, and it is NOT common to the
+    # row: ``ms_seq`` and ``ms_globalretry`` cost 7050 s and 11679 s and were
+    # run at 500k while the rest ran at 1M.  Saying "same 1M events" over a row
+    # where two curves hold half that would be false, so the line states what
+    # each cell actually holds whenever they differ.
+    counts = {k: int(d.meta['runs'][k]['nevents']) for k in keys}
+    uniq = sorted(set(counts.values()), reverse=True)
+    if len(uniq) == 1:
+        sample = _tx(r'same %s production events, same seed'
+                     % _fmt_int(uniq[0]),
+                     'same %s production events, same seed' % _fmt_int(uniq[0]))
+    else:
+        # Grouped BY SIZE rather than listed per cell: naming all four schemes
+        # with their counts overruns the pane, and the schemes that share a
+        # size are the natural grouping anyway.
+        # SHORT names and no leading clause: the full scheme names here run
+        # the line under the plateau of the curve.  The legend already spells
+        # the schemes out in full, so this line only has to carry the sizes.
+        bits = []
+        for n in uniq:
+            who = ', '.join(SHORT[CELL_SCHEME[k]]
+                            for k in keys if counts[k] == n)
+            bits.append('%s (%s)' % (_fmt_int(n), who))
+        txt = 'same sample and seed; ' + '; '.join(bits)
+        sample = _tx(txt.replace('_', r'\_'), txt)
+    ax.text(0.028, 0.869, sample, transform=ax.transAxes, ha='left', va='top',
+            fontsize=8.5, color='0.25')
+
     ax.annotate(_tx(r'$2m_t$', r'$2m_t$'),
                 xy=(two_mt, 0.03), xycoords=('data', 'axes fraction'),
                 xytext=(3, 0), textcoords='offset points',
@@ -262,7 +375,11 @@ def make_figure(d, row, out, tag=''):
     n_off = 0
     for key in keys:
         scheme = CELL_SCHEME[key]
-        y, ye, cnt = d.density(key)
+        # Both sides self-normalised, so this pane is a SHAPE ratio and sits on
+        # 1 by construction.  Any statement about the rate -- including the
+        # overweight excess that moves ms_joint's sigma by +0.3 % -- has been
+        # divided out here on purpose, and lives in numbers.txt instead.
+        y, ye, cnt = d.shape(key)
         r, re = ratio(y, ye, den, dene)
         # An empty bin here is a statement about the sample size, never a
         # structural zero: every cell on this figure draws a virtuality and
@@ -274,11 +391,11 @@ def make_figure(d, row, out, tag=''):
 
     rx.set_ylim(RCLIP_LO, RCLIP_HI)
     rx.set_yticks([0.8, 0.9, 1.0, 1.1, 1.2])
-    rx.set_ylabel(_tx(r'ratio to truth (clipped $\pm20\%$)',
-                      'ratio to truth (clipped +-20%)'), fontsize=11)
-    rx.set_xlabel(_tx(
-        r'$m_{t\bar t}$ [GeV] \ \ (per-event $m$ of $(W^+b)+(W^-\bar b)$)',
-        r'$m_{t\bar t}$ [GeV]  (per-event $m$ of $(W^+b)+(W^-\bar b)$)'))
+    rx.set_ylabel(_tx(r'shape ratio to truth' '\n' r'(clipped to $\pm20\%$)',
+                      'shape ratio to truth\n(clipped to +-20%)'), fontsize=11)
+    # The variable and its unit, nothing else: the definition of ``m_tt`` moved
+    # to RESULTS.md with the rest of the prose.
+    rx.set_xlabel(_tx(r'$m_{t\bar t}$ [GeV]', r'$m_{t\bar t}$ [GeV]'))
     rx.xaxis.set_minor_locator(AutoMinorLocator())
     rx.yaxis.set_minor_locator(AutoMinorLocator())
     rx.set_xlim(lo, hi)
@@ -326,8 +443,20 @@ def write_numbers(d, out, fh=sys.stdout):
                                      d.meta.get('code_branch')))
     p('production      : %s' % d.meta['production_process'])
     p('truth           : %s' % d.meta['truth_process'])
-    p('events per cell : %s (all cells decay the SAME production events)'
-      % d.meta['nevents_per_cell'])
+    # NOT one number.  Two cells were run at half size because they were the
+    # two slowest, and quoting a single "events per cell" would make every
+    # error bar below look better than it is.
+    p('events per cell : NOT uniform -- see the table below.  All cells decay '
+      'the SAME')
+    p('                  production events in the same order; the 500k cells '
+      'decay the')
+    p('                  first 500k of them (a front truncation of one file), '
+      'which is')
+    p('                  why they still pair event by event with the 1M cells.')
+    for key in [c[0] for c in CELLS]:
+        if key in d.meta['runs']:
+            p('                  %-16s %9s events'
+              % (key, _fmt_plain(int(d.meta['runs'][key]['nevents']))))
     p('2 m_t           : %.4f GeV  (banner MT = %s)'
       % (two_mt, d.meta.get('param_card_masses', {}).get('MT')))
     p('onshell         : not run -- %s' % d.meta['skipped']['onshell'])
@@ -407,41 +536,47 @@ def write_numbers(d, out, fh=sys.stdout):
     p('')
 
     # --- the sensitivity, up front -----------------------------------------
-    n_cell = int(d.meta['nevents_per_cell'])
     p('-- what this measurement can and cannot resolve ----------------------')
-    p('   Computed from the measured spectrum BEFORE the runs, so it is a')
-    p('   design statement and not a post-hoc excuse.  Two cells of %d events'
-      % n_cell)
-    p('   each; the entry is the relative difference detectable at 1 sigma.')
-    p('   Event counts are the first cell\'s; the other cells are within a')
-    p('   per cent of it, so the table is a design statement, not a fit.')
+    p('   Quoted BEFORE any comparison is read, because an underpowered null')
+    p('   reported as agreement is the failure mode of this whole study.  The')
+    p('   entry is the relative difference detectable at 1 sigma.')
+    p('')
+    p('   The two columns answer different questions and the SIZES DIFFER:')
+    p('     unpaired  two independent samples of the sizes this pair actually')
+    p('               holds, sqrt((1-f)/(f N_a) + (1-f)/(f N_b)).  A 1M cell')
+    p('               against a 500k one is worth barely more than 500k v 500k,')
+    p('               so this is NOT the same for every pair.')
+    p('     paired    what the shared production sample actually bought,')
+    p('               sqrt(discordant)/n_a, MEASURED rather than assumed.')
     p('   The paired column is the WORST (largest) over the measured pairs, so')
     p('   it is a bound on the sensitivity and not the luckiest one.')
-    p('%-16s %14s %14s %14s' % ('window', 'events/cell', '1 sigma unpaired',
-                                '1 sigma paired'))
-    ref = d.cells('PA')[0] if d.cells('PA') else d.cells('madspin')[0]
-    for name, lo, hi in WINDOWS:
-        _s, _e, k = d.integral(ref, lo, hi)
-        unp = math.sqrt(2.0 / k) if k else float('nan')
-        # the paired figure comes from the measured discordant counts
-        worst = None
-        for pk, pv in d.meta.get('paired', {}).items():
+    p('%-16s %11s %11s %14s %14s'
+      % ('window', 'N_a', 'N_b', '1 sig unpaired', '1 sig paired'))
+    # Report against the pair the null hypothesis is really about, per row, so
+    # the numbers quoted are the ones the claim rests on.
+    for pk in ('PA_joint vs PA_globalretry', 'ms_joint vs ms_globalretry'):
+        pv = d.meta.get('paired', {}).get(pk)
+        if not pv:
+            continue
+        p('   [%s]' % pk)
+        for name, _lo, _hi in WINDOWS:
             w = pv['windows'].get(name)
             if not w or not w['n_a']:
                 continue
-            disc = w['n_a'] + w['n_b'] - 2 * w['n_both']
-            val = math.sqrt(disc) / w['n_a']
-            worst = val if worst is None else max(worst, val)
-        p('%-16s %14d %13.3f %% %13s'
-          % (name, k, 100 * unp,
-             '%.3f %%' % (100 * worst) if worst is not None else '-'))
+            unp = w.get('sigma_rel_unpaired', float('nan'))
+            pair = w.get('sigma_rel_paired', float('nan'))
+            p('   %-16s %11s %11s %13.3f %% %13.3f %%'
+              % (name, _fmt_plain(pv['n_a_total']),
+                 _fmt_plain(pv['n_b_total']),
+                 100 * unp, 100 * pair))
     p('')
-    p('   The sub-threshold region is 0.165 %% of sigma.  At %d events per'
-      % n_cell)
-    p('   cell a per-cent-level Z_hat/Z residual is FAR below the noise there,')
-    p('   and any "agreement" claimed from that window alone would be a')
-    p('   statement about the sample size.  The wider windows and, above all,')
-    p('   the top virtuality below are where the test has teeth.')
+    p('   The sub-threshold window holds ~0.165 % of sigma.  Even at 1M per')
+    p('   cell that is a ~3.5 % resolution unpaired, while the Z_k residual')
+    p('   expected from the shipped table is sub-per-cent -- so the')
+    p('   sub-threshold ratio CANNOT support a claim of agreement, in either')
+    p('   direction.  Any agreement read off it alone is a statement about the')
+    p('   sample size.  The wider windows and, above all, the top virtuality')
+    p('   below are where the test has teeth.')
     p('')
 
     # --- the direct Z_k observable -----------------------------------------
@@ -466,6 +601,71 @@ def write_numbers(d, out, fh=sys.stdout):
               % (key, m, e, s,
                  '-' if key == base else '%+.6f +- %.6f (%.1f s)'
                  % (dd, de, abs(dd) / de if de else float('nan'))))
+    p('')
+    p('   CAVEAT on the "vs row joint" column: it is UNPAIRED, and in the')
+    p('   madspin row it compares a 1M cell against 500k cells, so its error')
+    p('   is the quadrature sum of two unequal errors.  The paired numbers in')
+    p('   the next section are the ones to read -- they compare the same')
+    p('   production events and are strictly better.')
+    p('')
+
+    # --- is the joint-vs-retry difference a Z_k effect, or the overweights? -
+    p('-- unweighted vs weight-weighted <m_top>: the overweight cross-check --')
+    p('   The mean above counts every written event ONCE, whatever weight it')
+    p('   carries.  That is correct for a unit-weight sample, and the')
+    p('   accept/reject schemes are meant to produce one -- but the overweight')
+    p('   safety net writes some events with weight > 1 instead of rejecting')
+    p('   them.  Where it does, the unweighted mean is not the physical mean,')
+    p('   and a joint-vs-global_retry difference driven by THAT is a rate')
+    p('   artefact of the accept/reject machinery, not a Z_k effect.')
+    p('')
+    p('   Both columns are computed on the same binned support, so their')
+    p('   difference isolates the weights and nothing else.  A cell with no')
+    p('   overweights must show 0 to the last digit; a non-zero entry is the')
+    p('   size of the contamination in this observable.')
+    p('%-16s %16s %16s %14s %12s'
+      % ('cell', '<m_top> unwtd', '<m_top> wtd', 'wtd - unwtd', 'sigma(mean)'))
+    for key in [c[0] for c in CELLS]:
+        if key not in d.meta['runs']:
+            continue
+        unw, wtd, _n = d.mtop_binned_means(key)
+        _m, e, _s = d.mtop_moments(key)
+        p('%-16s %16.6f %16.6f %+14.6f %12.6f'
+          % (key, unw, wtd, wtd - unw, e))
+    p('')
+    p('   The weighted mean also costs precision, because a sample with')
+    p('   dispersed weights is worth fewer events than it holds.  Kish\'s')
+    p('   design effect deff = N_inrange * sum(w^2) / sum(w)^2 measures that')
+    p('   from the sample itself; the error on the weighted mean is the')
+    p('   unweighted error times sqrt(deff).  deff = 1 exactly for a')
+    p('   unit-weight sample, so this column is a second, independent readout')
+    p('   of which cells the safety net actually touched.')
+    p('%-16s %12s %12s %14s %14s'
+      % ('cell', 'deff', 'sqrt(deff)', 'err unwtd', 'err wtd'))
+    for key in [c[0] for c in CELLS]:
+        if key not in d.meta['runs']:
+            continue
+        p('%-16s %12.5f %12.5f %14.6f %14.6f'
+          % (key, d.mtop_deff(key), math.sqrt(d.mtop_deff(key)),
+             d.mtop_moments(key)[1], d.mtop_weighted_err(key)))
+    p('')
+    p('   And the comparison REDONE on the weighted means, which are the')
+    p('   physical ones.  This is the number to read for any cell the safety')
+    p('   net touched; for the others it is identical to the unweighted one.')
+    p('   NOTE it is UNPAIRED -- the stored per-event pairing carries no')
+    p('   weights, so a paired weighted difference is not available from this')
+    p('   harvest.  It therefore has a larger error than the paired numbers')
+    p('   below, and where the two disagree it is this one that is unbiased.')
+    for row in ('PA', 'madspin'):
+        keys = d.cells(row)
+        for a, b, what in NULL_PAIRS:
+            if a not in keys or b not in keys:
+                continue
+            da = d.mtop_binned_means(a)[1] - d.mtop_binned_means(b)[1]
+            er = math.sqrt(d.mtop_weighted_err(a) ** 2
+                           + d.mtop_weighted_err(b) ** 2)
+            p('   %-16s - %-16s = %+.6f +- %.6f GeV  (%.2f sigma)'
+              % (a, b, da, er, abs(da) / er if er else float('nan')))
     p('')
 
     # --- the null hypothesis, window by window -----------------------------
@@ -510,9 +710,12 @@ def write_numbers(d, out, fh=sys.stdout):
         keys = d.cells(row)
         if not keys:
             continue
-        p('-- per-bin ratio to truth, %s (UNCLIPPED; the figure clips the pane '
-          'to +-20%%) --' % row)
-        den, dene, _ = d.density(REF)
+        p('-- per-bin SHAPE ratio to truth, %s (UNCLIPPED; the figure clips '
+          'the pane to +-20%%) --' % row)
+        p('   Same normalisation as the figure: each curve divided by its own')
+        p('   total sigma, so this is a shape ratio and the overweight rate')
+        p('   carry is divided out of it.')
+        den, dene, _ = d.shape(REF)
         p('   %s' % ',  '.join('%s = %s' % (SHORT[CELL_SCHEME[k]],
                                             CELL_SCHEME[k]) for k in keys))
         head = '%9s %12s' % ('bin [GeV]', 'truth')
@@ -521,7 +724,7 @@ def write_numbers(d, out, fh=sys.stdout):
         p(head)
         cols = []
         for key in keys:
-            y, ye, cnt = d.density(key)
+            y, ye, cnt = d.shape(key)
             r, re = ratio(y, ye, den, dene)
             cols.append((r, re, cnt))
         for i in range(len(d.centres)):

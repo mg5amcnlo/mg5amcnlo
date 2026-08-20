@@ -75,14 +75,16 @@ def make_figure(d, row, out):
         a.axvspan(lo, two_mt, facecolor='0.90', edgecolor='none', zorder=0)
         a.axvline(two_mt, color='0.35', lw=1.0, ls='--', zorder=1)
 
-    den, dene, dcnt = d.density(REF)
+    # Shape comparison, matching the MG7-style figure: each curve divided by
+    # its own total cross section over the full m_tt range.
+    den, dene, dcnt = d.shape(REF)
     ax.step(d.edges, np.concatenate([den[:1], den]), where='pre',
             color=C_REF, lw=1.2, zorder=5,
             label='truth: pp -> tt~ j, t -> W+ b (off shell)')
 
     for key in keys:
         scheme = CELL_SCHEME[key]
-        y, ye, cnt = d.density(key)
+        y, ye, cnt = d.shape(key)
         draw = np.where(cnt > 0, y, np.nan)
         ax.step(d.edges, np.concatenate([draw[:1], draw]), where='pre',
                 color=COLOR[scheme], lw=1.0, alpha=STEP_ALPHA, zorder=3)
@@ -91,26 +93,31 @@ def make_figure(d, row, out):
                     label='unweighting = ' + SCHEME_PLAIN[scheme])
 
     ax.set_yscale('log')
-    ax.set_ylabel(r'$d\sigma/dm_{t\bar{t}}$  [pb/GeV]')
+    ax.set_ylabel(r'$(1/\sigma)\,d\sigma/dm_{t\bar{t}}$  [1/GeV]')
     ax.set_xlim(lo, hi)
     ax.tick_params(labelbottom=False)
     ax.legend(loc='lower right', fontsize=8)
     ymin, ymax = ax.get_ylim()
-    ax.set_ylim(ymin, ymax * 30)
-    n_cell = int(d.meta['runs'][keys[0]]['nevents'])
+    ax.set_ylim(ymin, ymax * 3.5)
+    # No prose in the pane.  Which schemes read the tabulated Z_k, and what
+    # the sub-threshold region means, is in numbers.txt and RESULTS.md where it
+    # carries its errors.  The title keeps the setup, which cannot be read off
+    # the curves; the sample sizes go with it because they are NOT common to
+    # the row -- the two slowest cells ran at 500k and the rest at 1M.
+    counts = {k: int(d.meta['runs'][k]['nevents']) for k in keys}
+    uniq = sorted(set(counts.values()), reverse=True)
+    if len(uniq) == 1:
+        size = '%s events/cell' % '{:,}'.format(uniq[0]).replace(',', ' ')
+    else:
+        size = ', '.join(
+            '%s: %s' % (SCHEME_PLAIN[CELL_SCHEME[k]],
+                        '{:,}'.format(counts[k]).replace(',', ' '))
+            for k in keys)
     ax.set_title(r'$pp\to t\bar{t}j$, 13 TeV, LO, $\mu_R=\mu_F=m_t$, '
                  r'BW cut $=%g\,\Gamma_t$ -- %s'
-                 % (d.meta.get('bwcutoff', 15.0), ROW_TITLE[row][1]),
-                 fontsize=10)
-    ax.text(0.02, 0.965,
-            'the accept/reject scheme is the only thing that changes between\n'
-            'the coloured curves: same %s production events, same seed.\n'
-            'joint and sequential_global_retry do not read the tabulated\n'
-            '$Z_k$; sequential does, and its residual bias is exactly '
-            r'$\hat{Z}/Z$.'
-            % '{:,}'.format(n_cell).replace(',', ' '),
-            transform=ax.transAxes, ha='left', va='top', fontsize=7.5,
-            color='0.25')
+                 % (d.meta.get('bwcutoff', 15.0), ROW_TITLE[row][1])
+                 + '\n' + size,
+                 fontsize=9)
     ax.annotate('$2m_t$', xy=(two_mt, 0.02), xycoords=('data', 'axes fraction'),
                 xytext=(3, 0), textcoords='offset points', ha='left',
                 va='bottom', fontsize=9, color='0.35')
@@ -122,7 +129,7 @@ def make_figure(d, row, out):
     n_off = 0
     for key in keys:
         scheme = CELL_SCHEME[key]
-        y, ye, cnt = d.density(key)
+        y, ye, cnt = d.shape(key)
         r, re = ratio(y, ye, den, dene)
         r = np.where((cnt == 0) | (dcnt == 0), np.nan, r)
         inside = np.isfinite(r) & (r >= RCLIP_LO) & (r <= RCLIP_HI)
@@ -149,9 +156,9 @@ def make_figure(d, row, out):
     rx.text(0.99, 0.92, 'bands: $\\pm5\\%$, $\\pm10\\%$',
             transform=rx.transAxes, ha='right', va='top', fontsize=7,
             color='C0')
-    rx.set_ylabel('Ratio (clipped $\\pm20\\%$)')
-    rx.set_xlabel(r'$m_{t\bar{t}}$ [GeV]   '
-                  r'(per-event $m$ of $(W^+b)+(W^-\bar{b})$)')
+    rx.set_ylabel('Shape ratio\n(clipped to $\\pm20\\%$)', fontsize=9)
+    # The variable and its unit, nothing else.
+    rx.set_xlabel(r'$m_{t\bar{t}}$ [GeV]')
     rx.set_xlim(lo, hi)
     # Under the figure, not inside the pane: the pane is exactly where the
     # off-scale points are.

@@ -482,6 +482,28 @@ def sensitivity(n_events, ref_fracs):
 
 
 # --------------------------------------------------------------------------
+def pair_sensitivity(n_a, n_b, frac):
+    """1 sigma on the UNPAIRED ratio between two cells of unequal size.
+
+    ``sensitivity`` above assumes both cells hold the same ``n_events``; five of
+    the seven cells here hold 1M and two hold 500k, so the symmetric
+    ``sqrt(2/(fN))`` is simply wrong for any pair that straddles the split.  The
+    ratio of the two window fractions ``(n_a/N_a)/(n_b/N_b)`` has, binomially,
+
+        sigma_rel = sqrt((1-f)/(f N_a) + (1-f)/(f N_b))
+
+    which reduces to the symmetric form when ``N_a == N_b`` and is dominated by
+    the SMALLER sample otherwise -- a 1M cell compared against a 500k one is
+    worth barely more than 500k against 500k, and the report has to say so
+    rather than quote the 1M number.
+    """
+    if frac <= 0 or n_a <= 0 or n_b <= 0:
+        return float('inf')
+    return math.sqrt((1.0 - frac) / (frac * n_a)
+                     + (1.0 - frac) / (frac * n_b))
+
+
+# --------------------------------------------------------------------------
 def build_factory(args):
     factory = MadSpinFactory(
         'mtt_unweighting',
@@ -609,7 +631,12 @@ def main():
         'seed_production': SEED_PROD,
         'seed_truth': SEED_TRUTH,
         'seed_madspin': SEED_MADSPIN,
-        'nevents_per_cell': args.nevents,
+        # Requested, not delivered.  The cells were NOT all run at the same
+        # size -- ``sequential`` and ``sequential_global_retry`` in the
+        # ``madspin`` row cost 7050 s and 11679 s and were run at 500k, the
+        # other five at 1M -- so the per-cell truth is ``runs[<cell>].nevents``
+        # and every ratio and error bar below reads that, never this.
+        'nevents_requested': args.nevents,
         'nb_core': args.nb_core,
         'mtt_bins': {'lo': MTT_LO, 'hi': MTT_HI, 'n': MTT_NBINS},
         'mtop_bins': {'lo': MTOP_LO, 'hi': MTOP_HI, 'n': MTOP_NBINS},
@@ -741,13 +768,48 @@ def main():
         # ``_stream_event`` and ``harvest_cell`` are two different loops over
         # the same file; the in-range count of the widest window must be the
         # histogram's own entry count, or one of them is wrong.
+        # The cells do NOT all hold the same number of events: the two slowest
+        # ran at 500k off a front-truncated prefix of the same production
+        # sample, the rest at 1M.  ``zip`` therefore pairs only the common
+        # prefix, and the check has to respect that.  For the cell whose whole
+        # file IS the prefix the window count must equal its histogram exactly;
+        # for the longer one it can only be smaller, and it must be, or the
+        # files are not the prefix of one another after all.
         for lab, side in ((a, 'n_a'), (b, 'n_b')):
             got = pr['windows']['full 290-520'][side]
             want = int(store['%s_cnt' % lab].sum())
-            if got != want:
+            n_cell = int(meta['runs'][lab]['nevents'])
+            if n_cell == pr['n_pairs']:
+                if got != want:
+                    raise AssertionError(
+                        '%s: paired stream counts %d events in 290-520 GeV but '
+                        'the histogram holds %d' % (lab, got, want))
+            elif not (got < want and n_cell > pr['n_pairs']):
                 raise AssertionError(
-                    '%s: paired stream counts %d events in 290-520 GeV but the '
-                    'histogram holds %d' % (lab, got, want))
+                    '%s: %d events in the file, %d pairs, window count %d vs '
+                    'histogram %d -- not a prefix'
+                    % (lab, n_cell, pr['n_pairs'], got, want))
+        pr['n_a_total'] = int(meta['runs'][a]['nevents'])
+        pr['n_b_total'] = int(meta['runs'][b]['nevents'])
+        # The sensitivity, per window, computed from what this pair ACTUALLY
+        # holds rather than from the nominal 1M.  Two numbers, because they
+        # answer different questions: ``unpaired`` is what two independent
+        # samples of these sizes could resolve, ``paired`` is what the shared
+        # production sample actually bought, measured from the discordant pairs
+        # rather than assumed.  Every comparison in the write-up is quoted
+        # against these; a null reported without them is an underpowered null.
+        for name, _lo, _hi in WINDOWS:
+            w = pr['windows'][name]
+            f = w['n_a'] / pr['n_pairs'] if pr['n_pairs'] else 0.0
+            disc = w['n_a'] + w['n_b'] - 2 * w['n_both']
+            w['frac'] = f
+            w['discordant'] = disc
+            w['sigma_rel_unpaired'] = pair_sensitivity(
+                pr['n_a_total'], pr['n_b_total'], f)
+            w['sigma_rel_paired'] = (math.sqrt(disc) / w['n_a']
+                                     if w['n_a'] else float('inf'))
+            w['rel_diff'] = ((w['n_a'] - w['n_b']) / w['n_a']
+                             if w['n_a'] else float('nan'))
         meta['paired']['%s vs %s' % (a, b)] = pr
         w = pr['windows']['below 2mt']
         disc = w['n_a'] + w['n_b'] - 2 * w['n_both']

@@ -1,0 +1,12 @@
+set spinmode madspin
+set seed 42
+set max_running_process 4
+set nb_core 7
+set BW_cut 15
+set unweighting sequential_global_retry
+define p = g u c d s u~ c~ d~ s~
+define j = g u c d s u~ c~ d~ s~
+import /tmp/mtt_unweighting_work/MS/mode_ms_globalretry/events.lhe.gz
+decay t > w+ b
+decay t~ > w- b~
+launch

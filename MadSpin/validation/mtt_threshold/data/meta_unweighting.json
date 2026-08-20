@@ -1,0 +1,1255 @@
+{
+  "bwcutoff": 15.0,
+  "cells": {
+    "PA_globalretry": {
+      "present": true,
+      "spinmode": "PA",
+      "unweighting_asked": "sequential_global_retry"
+    },
+    "PA_joint": {
+      "present": true,
+      "spinmode": "PA",
+      "unweighting_asked": "joint"
+    },
+    "PA_seq": {
+      "present": true,
+      "spinmode": "PA",
+      "unweighting_asked": "sequential"
+    },
+    "PA_withmass": {
+      "present": true,
+      "spinmode": "PA",
+      "unweighting_asked": "sequential_with_mass"
+    },
+    "ms_globalretry": {
+      "present": true,
+      "spinmode": "madspin",
+      "unweighting_asked": "sequential_global_retry"
+    },
+    "ms_joint": {
+      "present": true,
+      "spinmode": "madspin",
+      "unweighting_asked": "joint"
+    },
+    "ms_seq": {
+      "present": true,
+      "spinmode": "madspin",
+      "unweighting_asked": "sequential"
+    }
+  },
+  "code_branch": "claude/ms-mtt-unweighting",
+  "code_sha": "b2a3519d79df7cf4a3eee7817c84b9dec1bfbc01",
+  "companion": "run_mtt_threshold.py / histograms.npz (spinmode axis)",
+  "cross_check": {
+    "PA_globalretry": {
+      "matches_run_mtt_threshold_harvest": true,
+      "max_abs_diff_GeV": 1.1368683772161603e-13,
+      "max_sumw_diff": 0.0,
+      "nevents": 2000
+    },
+    "PA_joint": {
+      "matches_run_mtt_threshold_harvest": true,
+      "max_abs_diff_GeV": 6.821210263296962e-13,
+      "max_sumw_diff": 0.0,
+      "nevents": 2000
+    },
+    "PA_seq": {
+      "matches_run_mtt_threshold_harvest": true,
+      "max_abs_diff_GeV": 0.0,
+      "max_sumw_diff": 0.0,
+      "nevents": 2000
+    },
+    "PA_withmass": {
+      "matches_run_mtt_threshold_harvest": true,
+      "max_abs_diff_GeV": 5.684341886080802e-14,
+      "max_sumw_diff": 0.0,
+      "nevents": 2000
+    },
+    "ms_globalretry": {
+      "matches_run_mtt_threshold_harvest": true,
+      "max_abs_diff_GeV": 9.094947017729282e-13,
+      "max_sumw_diff": 0.0,
+      "nevents": 2000
+    },
+    "ms_joint": {
+      "matches_run_mtt_threshold_harvest": true,
+      "max_abs_diff_GeV": 5.115907697472721e-13,
+      "max_sumw_diff": 0.0,
+      "nevents": 2000
+    },
+    "ms_seq": {
+      "matches_run_mtt_threshold_harvest": true,
+      "max_abs_diff_GeV": 1.1368683772161603e-13,
+      "max_sumw_diff": 0.0,
+      "nevents": 2000
+    }
+  },
+  "delta_mtt": {
+    "PA_globalretry": {
+      "crossed_down": 1743,
+      "crossed_up": 0,
+      "max_abs": 40.746965686440944,
+      "max_dshat": 0.0,
+      "mean": -0.03228754397237403,
+      "n": 1000000,
+      "n_out": 3,
+      "rms": 2.0946245014867575
+    },
+    "PA_joint": {
+      "crossed_down": 1778,
+      "crossed_up": 0,
+      "max_abs": 41.20678658177587,
+      "max_dshat": 0.0,
+      "mean": -0.030624007450646373,
+      "n": 1000000,
+      "n_out": 2,
+      "rms": 2.0884139097570755
+    },
+    "PA_seq": {
+      "crossed_down": 1778,
+      "crossed_up": 0,
+      "max_abs": 49.374081873840055,
+      "max_dshat": 0.0,
+      "mean": -0.02885649299185889,
+      "n": 1000000,
+      "n_out": 2,
+      "rms": 2.093890880030396
+    },
+    "PA_withmass": {
+      "crossed_down": 1801,
+      "crossed_up": 0,
+      "max_abs": 45.501571887617956,
+      "max_dshat": 0.0,
+      "mean": -0.036368896887113276,
+      "n": 1000000,
+      "n_out": 4,
+      "rms": 2.0984709952555503
+    },
+    "ms_globalretry": {
+      "crossed_down": 691,
+      "crossed_up": 0,
+      "max_abs": 44.9727757189421,
+      "max_dshat": 0.0,
+      "mean": 0.13272306946833798,
+      "n": 500000,
+      "n_out": 3,
+      "rms": 2.1369322969913163
+    },
+    "ms_joint": {
+      "crossed_down": 1401,
+      "crossed_up": 0,
+      "max_abs": 39.39228852609733,
+      "max_dshat": 0.0,
+      "mean": 0.1301306465520116,
+      "n": 1000000,
+      "n_out": 0,
+      "rms": 2.1292034519674083
+    },
+    "ms_seq": {
+      "crossed_down": 737,
+      "crossed_up": 0,
+      "max_abs": 45.29847147688355,
+      "max_dshat": 0.0,
+      "mean": 0.13005901531535438,
+      "n": 500000,
+      "n_out": 2,
+      "rms": 2.138687044704316
+    }
+  },
+  "madspin_BW_cut": 15,
+  "madspin_decays": [
+    "t > w+ b",
+    "t~ > w- b~"
+  ],
+  "model": "sm",
+  "mt_pole_assumed": 173.0,
+  "mtop_bins": {
+    "hi": 196.864,
+    "lo": 149.136,
+    "n": 2400
+  },
+  "mtt_bins": {
+    "hi": 520.0,
+    "lo": 290.0,
+    "n": 920
+  },
+  "multiparticles": {
+    "j": "g u c d s u~ c~ d~ s~",
+    "p": "g u c d s u~ c~ d~ s~"
+  },
+  "nb_core": 4,
+  "nevents_requested": 1000000,
+  "null_pairs": [
+    {
+      "a": "PA_joint",
+      "b": "PA_globalretry",
+      "what": "neither reads the Z_k table: must agree within statistics"
+    },
+    {
+      "a": "ms_joint",
+      "b": "ms_globalretry",
+      "what": "neither reads the Z_k table: must agree within statistics"
+    },
+    {
+      "a": "PA_seq",
+      "b": "PA_globalretry",
+      "what": "tabulated Z_hat against exact cancellation: the residual Z_hat/Z"
+    },
+    {
+      "a": "ms_seq",
+      "b": "ms_globalretry",
+      "what": "tabulated Z_hat against exact cancellation: the residual Z_hat/Z"
+    },
+    {
+      "a": "PA_seq",
+      "b": "PA_joint",
+      "what": "tabulated Z_hat against a scheme with no mass stage"
+    },
+    {
+      "a": "ms_seq",
+      "b": "ms_joint",
+      "what": "tabulated Z_hat against a scheme with no mass stage"
+    },
+    {
+      "a": "PA_withmass",
+      "b": "PA_joint",
+      "what": "mass drawn inside each slot: no Z_k arises at all"
+    }
+  ],
+  "observable": "m_tt: invariant mass of the sum of the four status-1 particles with |pid| in {24, 5}.  m_top: the same four split by pid sign, i.e. m(W+ b) and m(W- b~), both entered.",
+  "paired": {
+    "PA_joint vs PA_globalretry": {
+      "max_dshat": 0.0,
+      "mtop_dmean": 0.0006238591442392916,
+      "mtop_dmean_err": 0.003199771824135032,
+      "mtop_drms": 4.52516071019106,
+      "mtop_n": 2000000,
+      "n_a_total": 1000000,
+      "n_b_total": 1000000,
+      "n_pairs": 1000000,
+      "what": "neither reads the Z_k table: must agree within statistics",
+      "windows": {
+        "2mt+10": {
+          "discordant": 7768,
+          "frac": 0.017348,
+          "n_a": 17348,
+          "n_b": 17312,
+          "n_both": 13446,
+          "rel_diff": 0.0020751671662439476,
+          "sigma_rel_paired": 0.005080485251678742,
+          "sigma_rel_unpaired": 0.010643639640241979
+        },
+        "2mt+5": {
+          "discordant": 6119,
+          "frac": 0.007523,
+          "n_a": 7523,
+          "n_b": 7430,
+          "n_both": 4417,
+          "rel_diff": 0.012362089591918118,
+          "sigma_rel_paired": 0.010397984477790485,
+          "sigma_rel_unpaired": 0.016243502980376735
+        },
+        "330-370": {
+          "discordant": 9897,
+          "frac": 0.057351,
+          "n_a": 57351,
+          "n_b": 57280,
+          "n_both": 52367,
+          "rel_diff": 0.0012379906191696745,
+          "sigma_rel_paired": 0.0017346457254654951,
+          "sigma_rel_unpaired": 0.005733495895863025
+        },
+        "336-356": {
+          "discordant": 8042,
+          "frac": 0.01718,
+          "n_a": 17180,
+          "n_b": 17150,
+          "n_both": 13144,
+          "rel_diff": 0.0017462165308498253,
+          "sigma_rel_paired": 0.005219860237821969,
+          "sigma_rel_unpaired": 0.01069646836063139
+        },
+        "below 2mt": {
+          "discordant": 2959,
+          "frac": 0.001778,
+          "n_a": 1778,
+          "n_b": 1743,
+          "n_both": 281,
+          "rel_diff": 0.01968503937007874,
+          "sigma_rel_paired": 0.030594314440852973,
+          "sigma_rel_unpaired": 0.03350909417719208
+        },
+        "below 380": {
+          "discordant": 9920,
+          "frac": 0.091785,
+          "n_a": 91785,
+          "n_b": 91781,
+          "n_both": 86823,
+          "rel_diff": 4.358010568175628e-05,
+          "sigma_rel_paired": 0.0010851358804152078,
+          "sigma_rel_unpaired": 0.0044486012229551595
+        },
+        "full 290-520": {
+          "discordant": 3240,
+          "frac": 0.556897,
+          "n_a": 556897,
+          "n_b": 556899,
+          "n_both": 555278,
+          "rel_diff": -3.5913283784972804e-06,
+          "sigma_rel_paired": 0.00010221099751485612,
+          "sigma_rel_unpaired": 0.0012614786476580887
+        }
+      }
+    },
+    "PA_seq vs PA_globalretry": {
+      "max_dshat": 0.0,
+      "mtop_dmean": 0.0025419069785417915,
+      "mtop_dmean_err": 0.003200703514708997,
+      "mtop_drms": 4.526478319636697,
+      "mtop_n": 2000000,
+      "n_a_total": 1000000,
+      "n_b_total": 1000000,
+      "n_pairs": 1000000,
+      "what": "tabulated Z_hat against exact cancellation: the residual Z_hat/Z",
+      "windows": {
+        "2mt+10": {
+          "discordant": 7854,
+          "frac": 0.017382,
+          "n_a": 17382,
+          "n_b": 17312,
+          "n_both": 13420,
+          "rel_diff": 0.004027154527672305,
+          "sigma_rel_paired": 0.005098538497550231,
+          "sigma_rel_unpaired": 0.01063304086014412
+        },
+        "2mt+5": {
+          "discordant": 6089,
+          "frac": 0.007473,
+          "n_a": 7473,
+          "n_b": 7430,
+          "n_both": 4407,
+          "rel_diff": 0.005754047905794192,
+          "sigma_rel_paired": 0.01044186333461764,
+          "sigma_rel_unpaired": 0.01629816355155446
+        },
+        "330-370": {
+          "discordant": 9978,
+          "frac": 0.057266,
+          "n_a": 57266,
+          "n_b": 57280,
+          "n_both": 52284,
+          "rel_diff": -0.00024447316033946847,
+          "sigma_rel_paired": 0.0017443149413850863,
+          "sigma_rel_unpaired": 0.0057380081205373554
+        },
+        "336-356": {
+          "discordant": 8152,
+          "frac": 0.017184,
+          "n_a": 17184,
+          "n_b": 17150,
+          "n_both": 13091,
+          "rel_diff": 0.001978584729981378,
+          "sigma_rel_paired": 0.005254214776673981,
+          "sigma_rel_unpaired": 0.010695201590326763
+        },
+        "below 2mt": {
+          "discordant": 2937,
+          "frac": 0.001778,
+          "n_a": 1778,
+          "n_b": 1743,
+          "n_both": 292,
+          "rel_diff": 0.01968503937007874,
+          "sigma_rel_paired": 0.03048036873979579,
+          "sigma_rel_unpaired": 0.03350909417719208
+        },
+        "below 380": {
+          "discordant": 9826,
+          "frac": 0.091601,
+          "n_a": 91601,
+          "n_b": 91781,
+          "n_both": 86778,
+          "rel_diff": -0.001965044049737448,
+          "sigma_rel_paired": 0.001082151747386711,
+          "sigma_rel_unpaired": 0.004453518022289854
+        },
+        "full 290-520": {
+          "discordant": 3189,
+          "frac": 0.55688,
+          "n_a": 556880,
+          "n_b": 556899,
+          "n_both": 555295,
+          "rel_diff": -3.411866111190921e-05,
+          "sigma_rel_paired": 0.00010140646389524134,
+          "sigma_rel_unpaired": 0.0012615221011856735
+        }
+      }
+    },
+    "PA_seq vs PA_joint": {
+      "max_dshat": 0.0,
+      "mtop_dmean": 0.0019180478343027061,
+      "mtop_dmean_err": 0.003200406108604618,
+      "mtop_drms": 4.526057723890352,
+      "mtop_n": 2000000,
+      "n_a_total": 1000000,
+      "n_b_total": 1000000,
+      "n_pairs": 1000000,
+      "what": "tabulated Z_hat against a scheme with no mass stage",
+      "windows": {
+        "2mt+10": {
+          "discordant": 7814,
+          "frac": 0.017382,
+          "n_a": 17382,
+          "n_b": 17348,
+          "n_both": 13458,
+          "rel_diff": 0.001956046484869405,
+          "sigma_rel_paired": 0.005085538633208968,
+          "sigma_rel_unpaired": 0.01063304086014412
+        },
+        "2mt+5": {
+          "discordant": 6064,
+          "frac": 0.007473,
+          "n_a": 7473,
+          "n_b": 7523,
+          "n_both": 4466,
+          "rel_diff": -0.006690753378830456,
+          "sigma_rel_paired": 0.010420405370765039,
+          "sigma_rel_unpaired": 0.01629816355155446
+        },
+        "330-370": {
+          "discordant": 9813,
+          "frac": 0.057266,
+          "n_a": 57266,
+          "n_b": 57351,
+          "n_both": 52402,
+          "rel_diff": -0.001484301330632487,
+          "sigma_rel_paired": 0.0017298324925954533,
+          "sigma_rel_unpaired": 0.0057380081205373554
+        },
+        "336-356": {
+          "discordant": 8112,
+          "frac": 0.017184,
+          "n_a": 17184,
+          "n_b": 17180,
+          "n_both": 13126,
+          "rel_diff": 0.00023277467411545624,
+          "sigma_rel_paired": 0.005241308309682356,
+          "sigma_rel_unpaired": 0.010695201590326763
+        },
+        "below 2mt": {
+          "discordant": 3022,
+          "frac": 0.001778,
+          "n_a": 1778,
+          "n_b": 1778,
+          "n_both": 267,
+          "rel_diff": 0.0,
+          "sigma_rel_paired": 0.030918290499178294,
+          "sigma_rel_unpaired": 0.03350909417719208
+        },
+        "below 380": {
+          "discordant": 9916,
+          "frac": 0.091601,
+          "n_a": 91601,
+          "n_b": 91785,
+          "n_both": 86735,
+          "rel_diff": -0.0020087116952871692,
+          "sigma_rel_paired": 0.0010870963665902864,
+          "sigma_rel_unpaired": 0.004453518022289854
+        },
+        "full 290-520": {
+          "discordant": 3273,
+          "frac": 0.55688,
+          "n_a": 556880,
+          "n_b": 556897,
+          "n_both": 555252,
+          "rel_diff": -3.0527223100129294e-05,
+          "sigma_rel_paired": 0.00010273333386286312,
+          "sigma_rel_unpaired": 0.0012615221011856735
+        }
+      }
+    },
+    "PA_withmass vs PA_joint": {
+      "max_dshat": 0.0,
+      "mtop_dmean": -0.004307187724738834,
+      "mtop_dmean_err": 0.0031964751112130707,
+      "mtop_drms": 4.520498454065572,
+      "mtop_n": 2000000,
+      "n_a_total": 1000000,
+      "n_b_total": 1000000,
+      "n_pairs": 1000000,
+      "what": "mass drawn inside each slot: no Z_k arises at all",
+      "windows": {
+        "2mt+10": {
+          "discordant": 7731,
+          "frac": 0.017403,
+          "n_a": 17403,
+          "n_b": 17348,
+          "n_both": 13510,
+          "rel_diff": 0.003160374648049187,
+          "sigma_rel_paired": 0.005052353349337303,
+          "sigma_rel_unpaired": 0.010626509985621615
+        },
+        "2mt+5": {
+          "discordant": 6080,
+          "frac": 0.007469,
+          "n_a": 7469,
+          "n_b": 7523,
+          "n_both": 4456,
+          "rel_diff": -0.007229883518543313,
+          "sigma_rel_paired": 0.010439731524765256,
+          "sigma_rel_unpaired": 0.016302560033619025
+        },
+        "330-370": {
+          "discordant": 9835,
+          "frac": 0.057246,
+          "n_a": 57246,
+          "n_b": 57351,
+          "n_both": 52381,
+          "rel_diff": -0.001834189288334556,
+          "sigma_rel_paired": 0.0017323755110628034,
+          "sigma_rel_unpaired": 0.005739071251118958
+        },
+        "336-356": {
+          "discordant": 8039,
+          "frac": 0.017207,
+          "n_a": 17207,
+          "n_b": 17180,
+          "n_both": 13174,
+          "rel_diff": 0.0015691288429127682,
+          "sigma_rel_paired": 0.005210697429286263,
+          "sigma_rel_unpaired": 0.010687926185265621
+        },
+        "below 2mt": {
+          "discordant": 2983,
+          "frac": 0.001801,
+          "n_a": 1801,
+          "n_b": 1778,
+          "n_both": 298,
+          "rel_diff": 0.012770682953914493,
+          "sigma_rel_paired": 0.030325845206932534,
+          "sigma_rel_unpaired": 0.033294056074705106
+        },
+        "below 380": {
+          "discordant": 9840,
+          "frac": 0.091773,
+          "n_a": 91773,
+          "n_b": 91785,
+          "n_both": 86859,
+          "rel_diff": -0.00013075741231081037,
+          "sigma_rel_paired": 0.0010808927913558233,
+          "sigma_rel_unpaired": 0.004448921448149172
+        },
+        "full 290-520": {
+          "discordant": 3244,
+          "frac": 0.556851,
+          "n_a": 556851,
+          "n_b": 556897,
+          "n_both": 555252,
+          "rel_diff": -8.260737612036253e-05,
+          "sigma_rel_paired": 0.0001022825198546695,
+          "sigma_rel_unpaired": 0.0012615962304602115
+        }
+      }
+    },
+    "ms_joint vs ms_globalretry": {
+      "max_dshat": 0.0,
+      "mtop_dmean": 0.01703133850359719,
+      "mtop_dmean_err": 0.004655069742779902,
+      "mtop_drms": 4.655069742779903,
+      "mtop_n": 1000000,
+      "n_a_total": 1000000,
+      "n_b_total": 500000,
+      "n_pairs": 500000,
+      "what": "neither reads the Z_k table: must agree within statistics",
+      "windows": {
+        "2mt+10": {
+          "discordant": 3777,
+          "frac": 0.016324,
+          "n_a": 8162,
+          "n_b": 8179,
+          "n_both": 6282,
+          "rel_diff": -0.0020828228375398185,
+          "sigma_rel_paired": 0.007529686627203849,
+          "sigma_rel_unpaired": 0.013445389011303396
+        },
+        "2mt+5": {
+          "discordant": 2657,
+          "frac": 0.00675,
+          "n_a": 3375,
+          "n_b": 3346,
+          "n_both": 2032,
+          "rel_diff": 0.008592592592592593,
+          "sigma_rel_paired": 0.015272917296426516,
+          "sigma_rel_unpaired": 0.02101057934575923
+        },
+        "330-370": {
+          "discordant": 4909,
+          "frac": 0.055658,
+          "n_a": 27829,
+          "n_b": 27906,
+          "n_both": 25413,
+          "rel_diff": -0.002766897840382335,
+          "sigma_rel_paired": 0.0025176706393479262,
+          "sigma_rel_unpaired": 0.007134466152430422
+        },
+        "336-356": {
+          "discordant": 3875,
+          "frac": 0.016206,
+          "n_a": 8103,
+          "n_b": 8126,
+          "n_both": 6177,
+          "rel_diff": -0.002838454893249414,
+          "sigma_rel_paired": 0.00768227792051631,
+          "sigma_rel_unpaired": 0.013495059224500937
+        },
+        "below 2mt": {
+          "discordant": 1191,
+          "frac": 0.001384,
+          "n_a": 692,
+          "n_b": 691,
+          "n_both": 96,
+          "rel_diff": 0.001445086705202312,
+          "sigma_rel_paired": 0.04987119632005028,
+          "sigma_rel_unpaired": 0.04652558498077663
+        },
+        "below 380": {
+          "discordant": 4968,
+          "frac": 0.090216,
+          "n_a": 45108,
+          "n_b": 45096,
+          "n_both": 42618,
+          "rel_diff": 0.00026602819898909286,
+          "sigma_rel_paired": 0.001562561868112627,
+          "sigma_rel_unpaired": 0.0055003204337235306
+        },
+        "full 290-520": {
+          "discordant": 1672,
+          "frac": 0.555742,
+          "n_a": 277871,
+          "n_b": 277907,
+          "n_both": 277053,
+          "rel_diff": -0.00012955652083160892,
+          "sigma_rel_paired": 0.00014715496255644433,
+          "sigma_rel_unpaired": 0.001548608526382218
+        }
+      }
+    },
+    "ms_seq vs ms_globalretry": {
+      "max_dshat": 0.0,
+      "mtop_dmean": 0.001486240788328789,
+      "mtop_dmean_err": 0.0046831044760627105,
+      "mtop_drms": 4.68310447606271,
+      "mtop_n": 1000000,
+      "n_a_total": 500000,
+      "n_b_total": 500000,
+      "n_pairs": 500000,
+      "what": "tabulated Z_hat against exact cancellation: the residual Z_hat/Z",
+      "windows": {
+        "2mt+10": {
+          "discordant": 3783,
+          "frac": 0.0163,
+          "n_a": 8150,
+          "n_b": 8179,
+          "n_both": 6273,
+          "rel_diff": -0.003558282208588957,
+          "sigma_rel_paired": 0.007546760399843819,
+          "sigma_rel_unpaired": 0.01553701300141488
+        },
+        "2mt+5": {
+          "discordant": 2659,
+          "frac": 0.006794,
+          "n_a": 3397,
+          "n_b": 3346,
+          "n_both": 2042,
+          "rel_diff": 0.015013246982631734,
+          "sigma_rel_paired": 0.015179715142012055,
+          "sigma_rel_unpaired": 0.024181703489055874
+        },
+        "330-370": {
+          "discordant": 4955,
+          "frac": 0.055986,
+          "n_a": 27993,
+          "n_b": 27906,
+          "n_both": 25472,
+          "rel_diff": 0.0031079198371021326,
+          "sigma_rel_paired": 0.0025146201150827805,
+          "sigma_rel_unpaired": 0.008212577733990142
+        },
+        "336-356": {
+          "discordant": 3867,
+          "frac": 0.01619,
+          "n_a": 8095,
+          "n_b": 8126,
+          "n_both": 6177,
+          "rel_diff": -0.003829524397776405,
+          "sigma_rel_paired": 0.007681928010397406,
+          "sigma_rel_unpaired": 0.015590576967486575
+        },
+        "below 2mt": {
+          "discordant": 1228,
+          "frac": 0.001474,
+          "n_a": 737,
+          "n_b": 691,
+          "n_both": 100,
+          "rel_diff": 0.06241519674355495,
+          "sigma_rel_paired": 0.047547938854641064,
+          "sigma_rel_unpaired": 0.05205481924127217
+        },
+        "below 380": {
+          "discordant": 4990,
+          "frac": 0.090292,
+          "n_a": 45146,
+          "n_b": 45096,
+          "n_both": 42626,
+          "rel_diff": 0.0011075178310370798,
+          "sigma_rel_paired": 0.0015646996865679669,
+          "sigma_rel_unpaired": 0.006348284275415145
+        },
+        "full 290-520": {
+          "discordant": 1626,
+          "frac": 0.555762,
+          "n_a": 277881,
+          "n_b": 277907,
+          "n_both": 277081,
+          "rel_diff": -9.356523116010091e-05,
+          "sigma_rel_paired": 0.00014511136172430612,
+          "sigma_rel_unpaired": 0.0017881066729515654
+        }
+      }
+    },
+    "ms_seq vs ms_joint": {
+      "max_dshat": 0.0,
+      "mtop_dmean": -0.015545097715267839,
+      "mtop_dmean_err": 0.004662302005400996,
+      "mtop_drms": 4.662302005400996,
+      "mtop_n": 1000000,
+      "n_a_total": 500000,
+      "n_b_total": 1000000,
+      "n_pairs": 500000,
+      "what": "tabulated Z_hat against a scheme with no mass stage",
+      "windows": {
+        "2mt+10": {
+          "discordant": 3658,
+          "frac": 0.0163,
+          "n_a": 8150,
+          "n_b": 8162,
+          "n_both": 6327,
+          "rel_diff": -0.00147239263803681,
+          "sigma_rel_paired": 0.007421030932533714,
+          "sigma_rel_unpaired": 0.013455447958154393
+        },
+        "2mt+5": {
+          "discordant": 2724,
+          "frac": 0.006794,
+          "n_a": 3397,
+          "n_b": 3375,
+          "n_both": 2024,
+          "rel_diff": 0.006476302619958787,
+          "sigma_rel_paired": 0.01536413111651444,
+          "sigma_rel_unpaired": 0.020941969528305182
+        },
+        "330-370": {
+          "discordant": 4974,
+          "frac": 0.055986,
+          "n_a": 27993,
+          "n_b": 27829,
+          "n_both": 25424,
+          "rel_diff": 0.005858607509020113,
+          "sigma_rel_paired": 0.002519436670954232,
+          "sigma_rel_unpaired": 0.007112300948189902
+        },
+        "336-356": {
+          "discordant": 3748,
+          "frac": 0.01619,
+          "n_a": 8095,
+          "n_b": 8103,
+          "n_both": 6225,
+          "rel_diff": -0.0009882643607164916,
+          "sigma_rel_paired": 0.0075628056158191315,
+          "sigma_rel_unpaired": 0.01350183571349993
+        },
+        "below 2mt": {
+          "discordant": 1205,
+          "frac": 0.001474,
+          "n_a": 737,
+          "n_b": 692,
+          "n_both": 112,
+          "rel_diff": 0.06105834464043419,
+          "sigma_rel_paired": 0.04710055619459914,
+          "sigma_rel_unpaired": 0.0450807958523487
+        },
+        "below 380": {
+          "discordant": 5016,
+          "frac": 0.090292,
+          "n_a": 45146,
+          "n_b": 45108,
+          "n_both": 42619,
+          "rel_diff": 0.0008417135515881805,
+          "sigma_rel_paired": 0.0015687707623821179,
+          "sigma_rel_unpaired": 0.005497775452954803
+        },
+        "full 290-520": {
+          "discordant": 1660,
+          "frac": 0.555762,
+          "n_a": 277881,
+          "n_b": 277871,
+          "n_both": 277046,
+          "rel_diff": 3.598662736926958e-05,
+          "sigma_rel_paired": 0.0001466206670298679,
+          "sigma_rel_unpaired": 0.0015485458034525286
+        }
+      }
+    }
+  },
+  "param_card_masses": {
+    "MB": 4.7,
+    "MT": 173.0,
+    "WT": 1.4915,
+    "WW": 2.0476
+  },
+  "production_process": "p p > t t~ j",
+  "run_card": {
+    "bwcutoff": 15.0,
+    "dsqrt_q2fact1": 173.0,
+    "dsqrt_q2fact2": 173.0,
+    "ebeam1": 6500,
+    "ebeam2": 6500,
+    "etaj": 5,
+    "fixed_fac_scale": "True",
+    "fixed_ren_scale": "True",
+    "ptj": 20,
+    "scale": 173.0,
+    "use_syst": "False"
+  },
+  "runs": {
+    "PA_globalretry": {
+      "banner_cross_pb": 674.4446,
+      "madspin_card": "set spinmode PA\nset seed 42\nset max_running_process 4\nset nb_core 3\nset BW_cut 15\nset unweighting sequential_global_retry\ndefine p = g u c d s u~ c~ d~ s~\ndefine j = g u c d s u~ c~ d~ s~\nimport /tmp/mtt_unweighting_work/MS/mode_PA_globalretry/events.lhe.gz\ndecay t > w+ b\ndecay t~ > w- b~\nlaunch\n",
+      "malformed": 0,
+      "mtop_mean": 172.958178872167,
+      "mtop_mean_err": 0.0022648954698531445,
+      "mtop_n": 2000000,
+      "mtop_out_of_range": 0,
+      "mtop_rms": 3.2030458908237005,
+      "nevents": 1000000,
+      "over_n": 443101,
+      "over_w": 298847063.4131659,
+      "overweights": {
+        "excess_w": 0.0,
+        "found": true,
+        "largest": 1.0,
+        "n": 0,
+        "n_joint": 0,
+        "n_written": 1000000,
+        "percent": 0.0
+      },
+      "path": "/tmp/mtt_unweighting_work/MS/mode_PA_globalretry/events_decayed.lhe.gz",
+      "scheme_as_asked": true,
+      "sumw": 674444569.9921888,
+      "under_n": 0,
+      "under_w": 0.0,
+      "unweighting": "sequential_global_retry",
+      "unweighting_why": "set explicitly",
+      "z_tables": [
+        {
+          "Z_hi": 1.059,
+          "Z_lo": 0.912,
+          "bin_fit_deviation_percent": 0.1,
+          "bins": 20,
+          "hi": 195.36,
+          "lo": 150.63,
+          "pole": 173.0,
+          "samples": 149400,
+          "slot": "-6_0"
+        },
+        {
+          "Z_hi": 1.059,
+          "Z_lo": 0.912,
+          "bin_fit_deviation_percent": 0.1,
+          "bins": 20,
+          "hi": 195.36,
+          "lo": 150.66,
+          "pole": 173.0,
+          "samples": 149400,
+          "slot": "6_0"
+        }
+      ]
+    },
+    "PA_joint": {
+      "banner_cross_pb": 674.4446,
+      "madspin_card": "set spinmode PA\nset seed 42\nset max_running_process 4\nset nb_core 3\nset BW_cut 15\nset unweighting joint\ndefine p = g u c d s u~ c~ d~ s~\ndefine j = g u c d s u~ c~ d~ s~\nimport /tmp/mtt_unweighting_work/MS/mode_PA_joint/events.lhe.gz\ndecay t > w+ b\ndecay t~ > w- b~\nlaunch\n",
+      "malformed": 0,
+      "mtop_mean": 172.95880273131488,
+      "mtop_mean_err": 0.0022624788871462953,
+      "mtop_n": 2000000,
+      "mtop_out_of_range": 0,
+      "mtop_rms": 3.1996283267850782,
+      "nevents": 1000000,
+      "over_n": 443103,
+      "over_w": 298848412.30230594,
+      "overweights": {
+        "excess_w": 0.0,
+        "found": true,
+        "largest": 1.0,
+        "n": 0,
+        "n_joint": 0,
+        "n_written": 1000000,
+        "percent": 0.0
+      },
+      "path": "/tmp/mtt_unweighting_work/MS/mode_PA_joint/events_decayed.lhe.gz",
+      "scheme_as_asked": true,
+      "sumw": 674444569.9921888,
+      "under_n": 0,
+      "under_w": 0.0,
+      "unweighting": "joint",
+      "unweighting_why": "set explicitly",
+      "z_tables": []
+    },
+    "PA_seq": {
+      "banner_cross_pb": 674.4446,
+      "madspin_card": "set spinmode PA\nset seed 42\nset max_running_process 4\nset nb_core 3\nset BW_cut 15\nset unweighting sequential\ndefine p = g u c d s u~ c~ d~ s~\ndefine j = g u c d s u~ c~ d~ s~\nimport /tmp/mtt_unweighting_work/MS/mode_PA_seq/events.lhe.gz\ndecay t > w+ b\ndecay t~ > w- b~\nlaunch\n",
+      "malformed": 0,
+      "mtop_mean": 172.96072077914445,
+      "mtop_mean_err": 0.0022654088309662676,
+      "mtop_n": 2000000,
+      "mtop_out_of_range": 0,
+      "mtop_rms": 3.203771893072274,
+      "nevents": 1000000,
+      "over_n": 443120,
+      "over_w": 298859877.859996,
+      "overweights": {
+        "excess_w": 0.0,
+        "found": true,
+        "largest": 1.0,
+        "n": 0,
+        "n_joint": 0,
+        "n_written": 1000000,
+        "percent": 0.0
+      },
+      "path": "/tmp/mtt_unweighting_work/MS/mode_PA_seq/events_decayed.lhe.gz",
+      "scheme_as_asked": true,
+      "sumw": 674444569.9921888,
+      "under_n": 0,
+      "under_w": 0.0,
+      "unweighting": "sequential",
+      "unweighting_why": "set explicitly",
+      "z_tables": [
+        {
+          "Z_hi": 1.059,
+          "Z_lo": 0.912,
+          "bin_fit_deviation_percent": 0.1,
+          "bins": 20,
+          "hi": 195.36,
+          "lo": 150.63,
+          "pole": 173.0,
+          "samples": 149400,
+          "slot": "-6_0"
+        },
+        {
+          "Z_hi": 1.059,
+          "Z_lo": 0.912,
+          "bin_fit_deviation_percent": 0.1,
+          "bins": 20,
+          "hi": 195.36,
+          "lo": 150.66,
+          "pole": 173.0,
+          "samples": 149400,
+          "slot": "6_0"
+        }
+      ]
+    },
+    "PA_withmass": {
+      "banner_cross_pb": 674.4446,
+      "madspin_card": "set spinmode PA\nset seed 42\nset max_running_process 4\nset nb_core 3\nset BW_cut 15\nset unweighting sequential_with_mass\ndefine p = g u c d s u~ c~ d~ s~\ndefine j = g u c d s u~ c~ d~ s~\nimport /tmp/mtt_unweighting_work/MS/mode_PA_withmass/events.lhe.gz\ndecay t > w+ b\ndecay t~ > w- b~\nlaunch\n",
+      "malformed": 0,
+      "mtop_mean": 172.9544955435917,
+      "mtop_mean_err": 0.0022625715476221517,
+      "mtop_n": 2000000,
+      "mtop_out_of_range": 0,
+      "mtop_rms": 3.19975936848673,
+      "nevents": 1000000,
+      "over_n": 443149,
+      "over_w": 298879436.75252616,
+      "overweights": {
+        "excess_w": 0.0,
+        "found": true,
+        "largest": 1.0,
+        "n": 0,
+        "n_joint": 0,
+        "n_written": 1000000,
+        "percent": 0.0
+      },
+      "path": "/tmp/mtt_unweighting_work/MS/mode_PA_withmass/events_decayed.lhe.gz",
+      "scheme_as_asked": true,
+      "sumw": 674444569.9921888,
+      "under_n": 0,
+      "under_w": 0.0,
+      "unweighting": "sequential_with_mass",
+      "unweighting_why": "set explicitly",
+      "z_tables": []
+    },
+    "ms_globalretry": {
+      "banner_cross_pb": 674.4446,
+      "madspin_card": "set spinmode madspin\nset seed 42\nset max_running_process 4\nset nb_core 7\nset BW_cut 15\nset unweighting sequential_global_retry\ndefine p = g u c d s u~ c~ d~ s~\ndefine j = g u c d s u~ c~ d~ s~\nimport /tmp/mtt_unweighting_work/MS/mode_ms_globalretry/events.lhe.gz\ndecay t > w+ b\ndecay t~ > w- b~\nlaunch\n",
+      "malformed": 0,
+      "mtop_mean": 173.17108343377643,
+      "mtop_mean_err": 0.003322758259616464,
+      "mtop_n": 1000000,
+      "mtop_out_of_range": 0,
+      "mtop_rms": 3.322758259616464,
+      "nevents": 500000,
+      "over_n": 222093,
+      "over_w": 149789987.49120414,
+      "overweights": {
+        "excess_w": 776.389,
+        "found": true,
+        "largest": 1.3903,
+        "n": 5,
+        "n_joint": 0,
+        "n_written": 500000,
+        "percent": 0.00023
+      },
+      "path": "/tmp/mtt_unweighting_work/MS/mode_ms_globalretry/events_decayed.lhe.gz",
+      "scheme_as_asked": true,
+      "sumw": 337223061.390967,
+      "under_n": 0,
+      "under_w": 0.0,
+      "unweighting": "sequential_global_retry",
+      "unweighting_why": "set explicitly",
+      "z_tables": [
+        {
+          "Z_hi": 1.705,
+          "Z_lo": 0.525,
+          "bin_fit_deviation_percent": 0.2,
+          "bins": 20,
+          "hi": 195.36,
+          "lo": 150.63,
+          "pole": 173.0,
+          "samples": 149597,
+          "slot": "-6_0"
+        },
+        {
+          "Z_hi": 1.705,
+          "Z_lo": 0.525,
+          "bin_fit_deviation_percent": 0.2,
+          "bins": 20,
+          "hi": 195.36,
+          "lo": 150.63,
+          "pole": 173.0,
+          "samples": 149597,
+          "slot": "6_0"
+        }
+      ]
+    },
+    "ms_joint": {
+      "banner_cross_pb": 674.4446,
+      "madspin_card": "set spinmode madspin\nset seed 42\nset max_running_process 4\nset nb_core 3\nset BW_cut 15\nset unweighting joint\ndefine p = g u c d s u~ c~ d~ s~\ndefine j = g u c d s u~ c~ d~ s~\nimport /tmp/mtt_unweighting_work/MS/mode_ms_joint/events.lhe.gz\ndecay t > w+ b\ndecay t~ > w- b~\nlaunch\n",
+      "malformed": 0,
+      "mtop_mean": 173.1882809605064,
+      "mtop_mean_err": 0.002310184374023867,
+      "mtop_n": 2000000,
+      "mtop_out_of_range": 0,
+      "mtop_rms": 3.2670940733269513,
+      "nevents": 1000000,
+      "over_n": 443437,
+      "over_w": 300483961.9634881,
+      "overweights": {
+        "excess_w": 1993690.0,
+        "found": true,
+        "largest": 82.9976,
+        "n": 754,
+        "n_joint": 754,
+        "n_written": 1000000,
+        "percent": 0.296
+      },
+      "path": "/tmp/mtt_unweighting_work/MS/mode_ms_joint/events_decayed.lhe.gz",
+      "scheme_as_asked": true,
+      "sumw": 676438264.5459185,
+      "under_n": 0,
+      "under_w": 0.0,
+      "unweighting": "joint",
+      "unweighting_why": "set explicitly",
+      "z_tables": []
+    },
+    "ms_seq": {
+      "banner_cross_pb": 674.4446,
+      "madspin_card": "set spinmode madspin\nset seed 42\nset max_running_process 4\nset nb_core 7\nset BW_cut 15\nset unweighting sequential\ndefine p = g u c d s u~ c~ d~ s~\ndefine j = g u c d s u~ c~ d~ s~\nimport /tmp/mtt_unweighting_work/MS/mode_ms_seq/events.lhe.gz\ndecay t > w+ b\ndecay t~ > w- b~\nlaunch\n",
+      "malformed": 0,
+      "mtop_mean": 173.1725696745719,
+      "mtop_mean_err": 0.0033267814588412237,
+      "mtop_n": 1000000,
+      "mtop_out_of_range": 0,
+      "mtop_rms": 3.3267814588412237,
+      "nevents": 500000,
+      "over_n": 222119,
+      "over_w": 149807960.3835443,
+      "overweights": {
+        "excess_w": 1261.61,
+        "found": true,
+        "largest": 2.2086,
+        "n": 4,
+        "n_joint": 0,
+        "n_written": 500000,
+        "percent": 0.000374
+      },
+      "path": "/tmp/mtt_unweighting_work/MS/mode_ms_seq/events_decayed.lhe.gz",
+      "scheme_as_asked": true,
+      "sumw": 337223546.606817,
+      "under_n": 0,
+      "under_w": 0.0,
+      "unweighting": "sequential",
+      "unweighting_why": "set explicitly",
+      "z_tables": [
+        {
+          "Z_hi": 1.705,
+          "Z_lo": 0.525,
+          "bin_fit_deviation_percent": 0.2,
+          "bins": 20,
+          "hi": 195.36,
+          "lo": 150.63,
+          "pole": 173.0,
+          "samples": 149597,
+          "slot": "-6_0"
+        },
+        {
+          "Z_hi": 1.705,
+          "Z_lo": 0.525,
+          "bin_fit_deviation_percent": 0.2,
+          "bins": 20,
+          "hi": 195.36,
+          "lo": 150.63,
+          "pole": 173.0,
+          "samples": 149597,
+          "slot": "6_0"
+        }
+      ]
+    },
+    "truth": {
+      "banner_cross_pb": 651.7627,
+      "malformed": 0,
+      "nevents": 5000000,
+      "over_n": 2220076,
+      "over_w": 1446619675.86798,
+      "path": [
+        "/tmp/mtt_threshold_work/TRUTH/Events/run_01/unweighted_events.lhe.gz",
+        "/tmp/mtt_threshold_work/TRUTH/Events/run_02/unweighted_events.lhe.gz",
+        "/tmp/mtt_threshold_work/TRUTH/Events/run_03/unweighted_events.lhe.gz",
+        "/tmp/mtt_threshold_work/TRUTH/Events/run_04/unweighted_events.lhe.gz",
+        "/tmp/mtt_threshold_work/TRUTH/Events/run_05/unweighted_events.lhe.gz"
+      ],
+      "sumw": 3258040669.9949646,
+      "under_n": 0,
+      "under_w": 0.0
+    }
+  },
+  "seed_madspin": 42,
+  "seed_production": 42,
+  "seed_truth": 4242,
+  "sensitivity_apriori": {
+    "2mt+10": {
+      "expected_events": 17000.0,
+      "one_sigma_rel_diff": 0.01084652289093281
+    },
+    "2mt+5": {
+      "expected_events": 7200.0,
+      "one_sigma_rel_diff": 0.016666666666666666
+    },
+    "330-370": {
+      "expected_events": 56500.0,
+      "one_sigma_rel_diff": 0.005949641173087296
+    },
+    "below 2mt": {
+      "expected_events": 1650.0,
+      "one_sigma_rel_diff": 0.034815531191139566
+    },
+    "full 290-520": {
+      "expected_events": 556000.0,
+      "one_sigma_rel_diff": 0.0018966081045272039
+    }
+  },
+  "skipped": {
+    "onshell": "no virtuality is drawn, _spinmode_has_density is False and _unweighting_mode forces joint whatever the card says -- there is no scheme axis to scan"
+  },
+  "study": "unweighting schemes within a fixed off-shell spinmode",
+  "truth_process": "p p > t t~ j, t > w+ b, t~ > w- b~",
+  "truth_runs": [
+    {
+      "malformed": 0,
+      "nevents": 1000000,
+      "over_n": 444096,
+      "path": "/tmp/mtt_threshold_work/TRUTH/Events/run_01/unweighted_events.lhe.gz",
+      "sigma": 651.762670000826,
+      "under_n": 0
+    },
+    {
+      "malformed": 0,
+      "nevents": 1000000,
+      "over_n": 443522,
+      "path": "/tmp/mtt_threshold_work/TRUTH/Events/run_02/unweighted_events.lhe.gz",
+      "sigma": 651.3743199933642,
+      "under_n": 0
+    },
+    {
+      "malformed": 0,
+      "nevents": 1000000,
+      "over_n": 443896,
+      "path": "/tmp/mtt_threshold_work/TRUTH/Events/run_03/unweighted_events.lhe.gz",
+      "sigma": 651.6232800021398,
+      "under_n": 0
+    },
+    {
+      "malformed": 0,
+      "nevents": 1000000,
+      "over_n": 444080,
+      "path": "/tmp/mtt_threshold_work/TRUTH/Events/run_04/unweighted_events.lhe.gz",
+      "sigma": 651.756800006984,
+      "under_n": 0
+    },
+    {
+      "malformed": 0,
+      "nevents": 1000000,
+      "over_n": 444482,
+      "path": "/tmp/mtt_threshold_work/TRUTH/Events/run_05/unweighted_events.lhe.gz",
+      "sigma": 651.5235999916508,
+      "under_n": 0
+    }
+  ],
+  "two_mt": 346.0,
+  "windows": [
+    {
+      "hi": 346.0,
+      "lo": 290.0,
+      "name": "below 2mt"
+    },
+    {
+      "hi": 351.0,
+      "lo": 290.0,
+      "name": "2mt+5"
+    },
+    {
+      "hi": 356.0,
+      "lo": 290.0,
+      "name": "2mt+10"
+    },
+    {
+      "hi": 356.0,
+      "lo": 336.0,
+      "name": "336-356"
+    },
+    {
+      "hi": 370.0,
+      "lo": 330.0,
+      "name": "330-370"
+    },
+    {
+      "hi": 380.0,
+      "lo": 290.0,
+      "name": "below 380"
+    },
+    {
+      "hi": 520.0,
+      "lo": 290.0,
+      "name": "full 290-520"
+    }
+  ],
+  "wt_pole_assumed": 1.4915
+}
