@@ -15,9 +15,11 @@ noise floor is the bar used below.
 
 ## 0. The answer in one paragraph
 
-Correcting `A_e` costs **45 microseconds of CPU per event** for a `2 -> 2`
-production -- not the 3.3 ms an earlier measurement reported, and the factor 70
-does not come from PR #377's kernel (section 1).  It changes the `sqrt(shat)`
+Correcting `A_e` costs **77 microseconds of CPU per event** for a `2 -> 2`
+production -- **0.9 % of a MadSpin run**, not the 3.3 ms an earlier measurement
+reported, and the factor 43 does not come from PR #377's kernel (section 1).
+For the offshell spinmodes there is no closed form and it costs **7 % of the run**
+(section 1.3).  It changes the `sqrt(shat)`
 spectrum of the decayed sample by **-5 to -9 % between 348 and 355 GeV** and by
 **+14 to +23 % in the first GeV above threshold**, in all three modes, with the
 `PA (no jac.)` mode the worst at **-38 %** in that first GeV (section 3).  It
@@ -518,9 +520,10 @@ The case for correcting it is real and the size is now known: a
 **5-9 % over-population of 348-355 GeV and a 14-38 % error in the first GeV
 above threshold**, in every mode, deterministic, and sitting exactly where the
 off-shell treatment is the reason to reach for `PA` or `madspin` in the first
-place.  It costs **45 us of CPU per event** for the `2 -> 2` processes that cover
-`t t~`, `W W`, `Z Z` and most of MadSpin's use, which is a rounding error against
-a run, and **0.014 % of the statistics**.
+place.  It costs **77 us of CPU per event -- 0.9 % of a run** -- for the `2 -> 2`
+processes that cover `t t~`, `W W`, `Z Z` and most of MadSpin's use, and
+**0.014 % of the statistics**.  The offshell spinmodes have no closed form and
+pay **7 %** of the run for an eight-draw estimator instead.
 
 The case against making it the default is equally real.  It changes what
 MadSpin's output *is*, in three ways: the sample becomes weighted; the

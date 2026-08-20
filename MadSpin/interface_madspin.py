@@ -8491,7 +8491,9 @@ class MadSpinInterface(extended_cmd.Cmd):
 
         jac_max = 1.0
         if keep_jac:
-            frame = self._mass_shuffle_data(production)[0]
+            # named on the class, not through self: the unit tests drive this
+            # with a shim object that copies in only the methods it needs
+            frame = MadSpinInterface._mass_shuffle_data(production)[0]
             masses = list(production._ms_shuffle_masses)
             for slot, mass in corner.items():
                 masses[slot_to_index[slot]] = mass
@@ -8572,7 +8574,7 @@ class MadSpinInterface(extended_cmd.Cmd):
         except ImportError:
             return None
         sqrts = production.sqrts
-        _, sqrts_rt, masses_rt = self._mass_shuffle_data(production)
+        _, sqrts_rt, masses_rt = MadSpinInterface._mass_shuffle_data(production)
         if not sqrts or not (sqrts > 0):
             return None
 
@@ -8727,13 +8729,15 @@ class MadSpinInterface(extended_cmd.Cmd):
         or the max-weight probe's events -- and that choice is the one piece of
         this that is left open.  See doc/madspin_ae_normalisation/.
         """
-        ref = self.options['mass_normalisation']
+        # .get: PROTOTYPE option, and the unit-test stubs build an options
+        # dict by hand rather than through add_param
+        ref = self.options.get('mass_normalisation', 0)
         if not ref or ref <= 0:
             return 1.0
         cached = getattr(production, '_ms_ae_factor', None)
         if cached is not None:
             return cached
-        ndraw = self.options['mass_normalisation_draws']
+        ndraw = self.options.get('mass_normalisation_draws', 0)
         a = None
         if not ndraw and not offshell:
             a = self._mass_normalisation_quad(production, order, particles,
@@ -9190,7 +9194,7 @@ class MadSpinInterface(extended_cmd.Cmd):
         # event and not on the draw, and reported back through ``stats`` the way
         # the overweight safety net is. See _mass_normalisation_factor.
         if probe is None and maxwgts and upfront and (offshell or draw_mass) \
-                and self.options['mass_normalisation'] > 0:
+                and self.options.get('mass_normalisation', 0) > 0:
             factor = self._mass_normalisation_factor(
                 production, order, particles, slot_to_index, zkeys, keep_jac,
                 offshell, prod_static, density_prod, frame_boost, me_prod_on)
