@@ -1,0 +1,17 @@
+{
+  "A_loop_kernel_ms": 20.08361666618536,
+  "A_loop_pmag_ms": 2.807395129154126,
+  "A_loop_shipped_extrapolated_from": "8 x 8 nodes",
+  "A_loop_shipped_ms": 140.34999534487724,
+  "A_mc_128_ms": 1.1565222327287,
+  "A_mc_32_ms": 0.28818403370678425,
+  "A_mc_512_ms": 4.91991734597832,
+  "A_vec_pmag_ms": 0.061303462522725255,
+  "bw_cut": 15.0,
+  "jac_kernel_us": 7.5921183452010155,
+  "jac_pmag_us": 2.1402425287912292,
+  "jac_shipped_us": 66.9605548804005,
+  "nquad": 48,
+  "pole": 173.0,
+  "width": 1.4915
+}

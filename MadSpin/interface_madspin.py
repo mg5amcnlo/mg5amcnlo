@@ -329,6 +329,8 @@ class MadSpinOptions(banner.ConfigFile):
         self.add_param('decay_event_mult', 1E0, comment='Produce more events than needed so that MadSpin does not have to regenerate decay events')
         self.add_param('nb_core', 0, comment='Number of cores for the MadSpin parallel unweighting (0 = use the global MG5 nb_core). nb_core>1 enables the process-parallel unweighting path.')
         self.add_param('density_keep_jacobian', True, comment='PA spinmode only: fold the offshell-reshuffling phase-space jacobian into the accept/reject weight (default) instead of applying the reshuffle as a post-acceptance kinematic dressing (False). Ignored by the madspin/full spinmodes, which always include that jacobian.')
+        self.add_param('mass_normalisation', 0.0, comment='PROTOTYPE, not a supported option. 0 (default) = off, the shipped behaviour. A POSITIVE value turns on the per-event mass-stage normalisation and IS the <A> the factor is divided by: every written event carries A_e/<A>, where A_e = E_q[w_mass] is the normalisation the mass stage\'s redraw-until-accept otherwise divides out (see doc/madspin_ae_normalisation/). The output sample becomes weighted. Sequential/up-front schemes only.')
+        self.add_param('mass_normalisation_draws', 0, comment='PROTOTYPE. 0 = use the exact quadrature, which exists for a 2 -> 2 production under PA/onshell. A positive value estimates A_e by that many FREE draws through _upfront_production instead -- the only route offshell (madspin/full) or for n >= 3 -- at the cost of that many extra mass sets per production event.')
         self.add_param('unweighting', 'auto',
                        allowed=['auto', 'joint', 'sequential',
                                 'sequential_global_retry',
@@ -4278,6 +4280,12 @@ class MadSpinInterface(extended_cmd.Cmd):
         sum_overweight_excess = 0.0   # sum of (factor - 1): the normalisation
                                       # that used to be thrown away
         max_overweight = 1.0     # the largest single factor carried
+        # PROTOTYPE (mass_normalisation): the A_e/<A> factors actually written
+        nb_ae = 0
+        sum_ae = 0.0
+        sum_ae2 = 0.0
+        min_ae = float('inf')
+        max_ae = 0.0
         sum_w = 0.0        # signed weight sum, for the zero-cross-section check
         sum_w2 = 0.0       # its second moment: no cancellation, so the MC error
         nb_try = 0
@@ -4348,6 +4356,19 @@ class MadSpinInterface(extended_cmd.Cmd):
                 # sequential_accept_reject). Popped rather than merged: the
                 # remaining keys are additive counters.
                 carry = seq_stats.pop('overweight_factor', 1.0)
+                # PROTOTYPE (mass_normalisation): A_e/<A>, the mass stage's
+                # per-event normalisation, which redraw-until-accept otherwise
+                # divides out. Rides the same hook as the overweight factor, so
+                # it reaches full_evt.wgt and every parse_reweight() entry
+                # through the same multiplication.
+                ae = seq_stats.pop('ae_factor', 1.0)
+                if ae != 1.0:
+                    nb_ae += 1
+                    sum_ae += ae
+                    sum_ae2 += ae * ae
+                    min_ae = min(min_ae, ae)
+                    max_ae = max(max_ae, ae)
+                    carry = carry * ae
                 for key, value in seq_stats.items():
                     sequential_stats[key] += value
                 nb_try += sum(v for k, v in seq_stats.items()
@@ -4622,6 +4643,15 @@ class MadSpinInterface(extended_cmd.Cmd):
                     nb_overweight=nb_overweight,
                     sum_overweight_excess=float(sum_overweight_excess),
                     max_overweight=float(max_overweight),
+                    # PROTOTYPE (mass_normalisation), additive over shards
+                    nb_ae=nb_ae,
+                    sum_ae=float(sum_ae),
+                    sum_ae2=float(sum_ae2),
+                    min_ae=float(min_ae if nb_ae else 1.0),
+                    max_ae=float(max_ae if nb_ae else 1.0),
+                    ae_unsupported=int(getattr(self, '_ms_ae_unsupported', 0)),
+                    ae_noise=float(sum(getattr(self, '_ms_ae_noise', []) or [0.0])),
+                    ae_noise_n=int(len(getattr(self, '_ms_ae_noise', []) or [])),
                     sum_w=float(sum_w),
                     sum_w2=float(sum_w2),
                     sequential_stats=dict(sequential_stats))
@@ -4774,6 +4804,40 @@ class MadSpinInterface(extended_cmd.Cmd):
             nb, n_written, 100.0 * nb / n_written, excess,
             100.0 * excess / n_written, biggest,
             ' (%d of them from the joint accept/reject)' % joint if joint else '')
+
+    def _report_ae_normalisation(self, stats_list, n_written):
+        """PROTOTYPE (``mass_normalisation``): what the per-event mass-stage
+        normalisation was worth on this run.
+
+        The mean is the number that matters: it is the factor by which the
+        sample's total normalisation moved, i.e. how far the ``<A>`` handed to
+        the option was from the sample's own mean of ``A_e``. A production
+        implementation has to make that 1 by construction.
+        """
+        nb = sum(s.get('nb_ae', 0) for s in stats_list)
+        if not nb or not n_written:
+            return
+        s1 = sum(s.get('sum_ae', 0.0) for s in stats_list)
+        s2 = sum(s.get('sum_ae2', 0.0) for s in stats_list)
+        lo = min(s.get('min_ae', 1.0) for s in stats_list)
+        hi = max(s.get('max_ae', 1.0) for s in stats_list)
+        unsupported = sum(s.get('ae_unsupported', 0) for s in stats_list)
+        mean = s1 / nb
+        rms = math.sqrt(max(s2 / nb - mean * mean, 0.0))
+        noise_n = sum(s.get('ae_noise_n', 0) for s in stats_list)
+        noise = (sum(s.get('ae_noise', 0.0) for s in stats_list) / noise_n
+                 if noise_n else None)
+        logger.warning(
+            "MadSpin mass_normalisation (PROTOTYPE): %d/%d written events "
+            "carry A_e/<A>; mean %.6f, rms %.4f (%.2f%%), range [%.4f, %.4f]. "
+            "The sample is WEIGHTED. mean-1 = %+.3g is how far the <A> you "
+            "gave is from this sample's own mean of A_e%s%s.",
+            nb, n_written, mean, rms, 100.0 * rms / mean if mean else 0.0,
+            lo, hi, mean - 1.0,
+            '; A_e estimated by Monte Carlo, mean relative noise %.3g'
+            % noise if noise is not None else '',
+            '; %d events could not be normalised and were written unweighted'
+            % unsupported if unsupported else '')
 
     def _report_pure_interference(self, base_out, stats_list, n_processed,
                                   n_written):
@@ -5166,6 +5230,7 @@ class MadSpinInterface(extended_cmd.Cmd):
         )
         self._report_sequential_stats(stats_list, n_written)
         self._report_overweight(stats_list, n_written)
+        self._report_ae_normalisation(stats_list, n_written)
         if self._pure_interference():
             self._report_pure_interference(base_out, stats_list,
                                            n_processed, n_written)
@@ -8350,6 +8415,31 @@ class MadSpinInterface(extended_cmd.Cmd):
                 "MadSpin sequential: the mass stage keeps the probe's global "
                 "maximum weight -- %s.", reason or 'unsupported event')
 
+    @staticmethod
+    def _mass_shuffle_data(production):
+        """``(frame, sqrts, masses)`` for ``Event.mass_shuffle_jacobian``, from
+        the *round-tripped* production event, cached on it.
+
+        Round-tripped because that is what ``_production_jacobian_for``
+        reshuffles: ``str()`` truncates every momentum to %.10e, and anything
+        built from these numbers -- the bound, the per-event normalisation --
+        has to describe the weight the accept/reject actually computes, not an
+        idealised one.
+        """
+        frame = getattr(production, '_ms_shuffle_frame', None)
+        if frame is None:
+            probe = lhe_parser.Event(str(production))
+            finals = [p for p in probe if int(p.status) == 1]
+            frame = lhe_parser.Event.mass_shuffle_frame(
+                [lhe_parser.FourMomentum(p) for p in finals], probe.sqrts)
+            production._ms_shuffle_frame = frame
+            production._ms_shuffle_sqrts = probe.sqrts
+            # the undrawn slots keep their nominal mass, and it is the
+            # round-tripped one reshuffle_production reads
+            production._ms_shuffle_masses = [p.mass for p in finals]
+        return (production._ms_shuffle_frame, production._ms_shuffle_sqrts,
+                production._ms_shuffle_masses)
+
     def _mass_stage_bound(self, production, order, particles, slot_to_index,
                           zkeys, keep_jac):
         """C_e for one production event, or None when the event is one of the
@@ -8401,21 +8491,7 @@ class MadSpinInterface(extended_cmd.Cmd):
 
         jac_max = 1.0
         if keep_jac:
-            frame = getattr(production, '_ms_shuffle_frame', None)
-            if frame is None:
-                # from the *round-tripped* event, because that is what
-                # _production_jacobian_for reshuffles: str() truncates every
-                # momentum to %.10e, and the bound has to dominate the weight
-                # the accept/reject actually computes, not an idealised one.
-                probe = lhe_parser.Event(str(production))
-                finals = [p for p in probe if int(p.status) == 1]
-                frame = lhe_parser.Event.mass_shuffle_frame(
-                    [lhe_parser.FourMomentum(p) for p in finals], probe.sqrts)
-                production._ms_shuffle_frame = frame
-                production._ms_shuffle_sqrts = probe.sqrts
-                # the undrawn slots keep their nominal mass, and it is the
-                # round-tripped one reshuffle_production reads
-                production._ms_shuffle_masses = [p.mass for p in finals]
+            frame = self._mass_shuffle_data(production)[0]
             masses = list(production._ms_shuffle_masses)
             for slot, mass in corner.items():
                 masses[slot_to_index[slot]] = mass
@@ -8437,6 +8513,238 @@ class MadSpinInterface(extended_cmd.Cmd):
             self._MASS_BOUND_UNSUPPORTED = 'the bound is not a positive number'
             return None
         return bound
+
+    # ------------------------------------------------------------------
+    # PROTOTYPE (option ``mass_normalisation``, off by default).  The mass
+    # stage's per-event normalisation A_e, and putting it back on the weight.
+    #
+    # The mass stage draws from q_e, tests w against a bound and redraws until
+    # it accepts, writing exactly ONE event whatever
+    #
+    #     A_e = E_{q_e}[w_mass]
+    #
+    # is.  A_e is therefore divided out, and it is not a constant: it is flat
+    # above 400 GeV, -5.8% at 349 GeV and divergent like 1/beta_t at the t t~
+    # threshold (doc/madspin_pa_mass_stage/bound_design.md section 2 and 5).
+    # The correction is to write the event with weight A_e/<A> instead of 1.
+    #
+    # NOT the same question as the BOUND.  Any C >= max w gives the same
+    # accepted density q_e(m).min(1, w/C) -> q_e w, so the bound cancels and
+    # _mass_stage_bound is unaffected either way.  A_e is a BETWEEN-event
+    # normalisation, and no choice of bound touches it.
+    #
+    # The sampler is uniform in R_s = atan((m_s^2 - pole^2)/(pole.Gamma)) and
+    # jac_bw_s = gap_s/pi is exactly that window's width in R over pi, so
+    # q_e . prod jac_bw is prod dR_s/pi identically and
+    #
+    #     A_e = pi^-n Int dR_1..dR_n [Tr(rho_off)/|M|^2_on] J(m) prod Zhat_s
+    #
+    # over a FIXED domain whose slot-s range is capped by the budget left --
+    # which is the truncation that makes A_e vary in the first place.  Two
+    # evaluators below: an exact quadrature for the case where the integrand is
+    # closed form, and a Monte Carlo estimator for the case where it is not.
+    # ------------------------------------------------------------------
+
+    def _mass_normalisation_quad(self, production, order, particles,
+                                 slot_to_index, zkeys, keep_jac, nquad=48):
+        """A_e by exact 2-D quadrature, for a 2 -> 2 production with both slots
+        drawn.  None when this event is not that case.
+
+        There J = |p'|/|p| = lambda^(1/2)(s,m1'^2,m2'^2)/lambda^(1/2)(s,m1^2,
+        m2^2) exactly (doc/madspin_pa_mass_stage/jacobian_analytic.py), so the
+        whole integrand is two square roots and two exponentials per node and
+        the nquad^2 grid is one numpy outer product.  ~50 us per event at
+        nquad = 48, whose worst-case quadrature error over this sample is
+        1.2e-4 relative (at threshold; the median is 3e-11).
+
+        ``keep_jac = False`` drops J, which is exactly the
+        ``density_keep_jacobian = False`` weight -- and that mode has the
+        variation too, more of it, since it is the truncated Breit-Wigner
+        window and not the jacobian tail that causes it.
+        """
+        finals = [p for p in production if int(p.status) == 1]
+        if len(finals) != 2 or len(order) != 2:
+            return None
+        if any(int(p.status) not in (-1, 1) for p in production):
+            return None
+        try:
+            import numpy as np
+        except ImportError:
+            return None
+        sqrts = production.sqrts
+        _, sqrts_rt, masses_rt = self._mass_shuffle_data(production)
+        if not sqrts or not (sqrts > 0):
+            return None
+
+        first, second = order[0], order[1]
+        pole1, width1, lo1, hi1, _ = self._mass_window(
+            particles[slot_to_index[first]].pid, sqrts)
+        pole2, width2 = pole1, width1
+        pdg2 = particles[slot_to_index[second]].pid
+        pole2 = self.banner.get('param', 'mass', abs(pdg2)).value
+        width2 = self.banner.get('param', 'decay', abs(pdg2)).value
+        bw_cut = 15 if self.options['BW_cut'] < 0 else self.options['BW_cut']
+        lo2 = pole2 - bw_cut * width2
+        if not (hi1 > lo1) or not (lo1 > 0) or not (lo2 > 0):
+            return None
+
+        x, wq = np.polynomial.legendre.leggauss(nquad)
+        r_lo1 = math.atan((lo1 ** 2 - pole1 ** 2) / pole1 / width1)
+        r_hi1 = math.atan((hi1 ** 2 - pole1 ** 2) / pole1 / width1)
+        r1 = 0.5 * (r_hi1 + r_lo1) + 0.5 * (r_hi1 - r_lo1) * x
+        m1 = np.sqrt(pole1 ** 2 + pole1 * width1 * np.tan(r1))
+        # slot 2's window, capped by what is left of sqrt(shat)
+        hi2 = np.minimum(pole2 + bw_cut * width2, sqrts - m1)
+        ok = hi2 > lo2
+        r_lo2 = math.atan((lo2 ** 2 - pole2 ** 2) / pole2 / width2)
+        r_hi2 = np.arctan((np.maximum(hi2, lo2) ** 2 - pole2 ** 2)
+                          / pole2 / width2)
+        r2 = (0.5 * (r_hi2 + r_lo2))[:, None] \
+            + (0.5 * (r_hi2 - r_lo2))[:, None] * x[None, :]
+        m2 = np.sqrt(pole2 ** 2 + pole2 * width2 * np.tan(r2))
+
+        z1 = self._zhat_vec(zkeys[first], m1, np)
+        z2 = self._zhat_vec(zkeys[second], m2, np)
+        if keep_jac:
+            i1, i2 = slot_to_index[first], slot_to_index[second]
+            denom = self._pmag(sqrts_rt, masses_rt[i1], masses_rt[i2])
+            if not denom > 0:
+                return None
+            # lambda^(1/2) is symmetric in the two masses, so which slot is
+            # which does not enter -- only the pair does
+            jac = self._pmag(sqrts_rt, m1[:, None], m2) / denom
+        else:
+            jac = 1.0
+        inner = (wq[None, :] * jac * z2).sum(axis=1) * (0.5 * (r_hi2 - r_lo2))
+        total = float((wq * z1 * np.where(ok, inner, 0.0)).sum()
+                      * 0.5 * (r_hi1 - r_lo1) / math.pi ** 2)
+        return total if math.isfinite(total) and total > 0 else None
+
+    @staticmethod
+    def _pmag(sqrts, m1, m2):
+        """|p| of a two-body final state, on scalars or numpy arrays."""
+        s = sqrts * sqrts
+        lam = (s - (m1 + m2) ** 2) * (s - (m1 - m2) ** 2)
+        try:
+            return (lam.clip(min=0.0) ** 0.5) / (2 * sqrts)
+        except AttributeError:
+            return math.sqrt(max(0.0, lam)) / (2 * sqrts)
+
+    def _zhat_vec(self, key, mass, np):
+        """``_zhat`` on a numpy array, same clamping and same zero_below."""
+        table = (getattr(self, '_z_tables', None) or {}).get(key)
+        if not table:
+            return np.ones_like(mass)
+        lo, hi = table['range']
+        c = table['coeff']
+        u = np.log(np.clip(mass, lo, hi) / table['pole'])
+        return np.where(mass < table['zero_below'], 0.0,
+                        np.exp(c[0] + u * (c[1] + u * c[2])))
+
+    def _mass_normalisation_mc(self, production, order, particles,
+                               slot_to_index, zkeys, keep_jac, offshell,
+                               prod_static, density_prod, frame_boost,
+                               me_prod_on, ndraw):
+        """A_e by ``ndraw`` FREE draws through ``_upfront_production`` -- the
+        general estimator, and the only one available offshell (where the
+        weight carries Tr(rho_off)/|M|^2_on, which has no closed form) or for
+        n >= 3 (where J is not a function of the mass set alone).
+
+        FREE is the load-bearing word: the trials the redraw loop itself makes
+        are a *stopped* sequence whose last member is accepted, so their mean is
+        not A_e.  These draws use their own RNG stream, so they are also
+        independent of the accepted chain -- which is what keeps the estimator's
+        noise from correlating with the event that gets written, and therefore
+        keeps a noisy A_hat unbiased rather than merely imprecise.
+
+        Returns ``(A_hat, sd(A_hat))``, with an infeasible mass set counted as
+        w = 0 (it belongs to the normalisation: ``_upfront_production`` returns
+        None and the chain restarts without reaching the accept/reject).
+        """
+        rng = getattr(self, '_mass_normalisation_rng', None)
+        if rng is None:
+            # its OWN stream, forked once from the run's seed. Two reasons:
+            # the estimator must not consume the draws the accept/reject would
+            # have made (that would change the sample it is only supposed to
+            # reweight), and A_hat must be independent of the accepted chain --
+            # a noisy but INDEPENDENT A_hat leaves the reweighting unbiased and
+            # only inflates its variance, while one built from the very trials
+            # the chain stopped on would correlate with what is written and
+            # bias it.
+            saved = random.getstate()
+            random.seed(20260820)     # PROTOTYPE: a fixed fork, not the seed
+            rng = random.getstate()   # the card asks for
+            random.setstate(saved)
+        state = random.getstate()
+        random.setstate(rng)
+        try:
+            s = s2 = 0.0
+            for _ in range(ndraw):
+                setup = self._upfront_production(
+                    production, order, particles, slot_to_index, prod_static,
+                    offshell, draw_mass=True, density_prod=density_prod,
+                    frame_boost=frame_boost)
+                if setup is None:
+                    w = 0.0
+                else:
+                    rho, jac_prod, slot_mass, _, _ = setup
+                    if offshell:
+                        w = rho.trace().real / me_prod_on * jac_prod
+                    else:
+                        w = jac_prod if keep_jac else 1.0
+                    for sl in slot_mass:
+                        w *= slot_mass[sl][2] * self._zhat(zkeys[sl],
+                                                           slot_mass[sl][0])
+                if not (math.isfinite(w) and w > 0):
+                    w = 0.0
+                s += w
+                s2 += w * w
+        finally:
+            self._mass_normalisation_rng = random.getstate()
+            random.setstate(state)
+        a = s / ndraw
+        var = max(s2 / ndraw - a * a, 0.0)
+        return a, math.sqrt(var / ndraw)
+
+    def _mass_normalisation_factor(self, production, order, particles,
+                                   slot_to_index, zkeys, keep_jac, offshell,
+                                   prod_static, density_prod, frame_boost,
+                                   me_prod_on):
+        """The weight factor A_e/<A> this production event should carry, or
+        1.0 when the option is off or the event is not one this prototype can
+        normalise.  Cached on the production event.
+
+        <A> is NOT measured here: the option's value IS <A>.  A production
+        implementation has to get it from somewhere -- a pre-pass over the
+        input file (the quadrature is ~50 us/event, so ~10 s on 200 000 events)
+        or the max-weight probe's events -- and that choice is the one piece of
+        this that is left open.  See doc/madspin_ae_normalisation/.
+        """
+        ref = self.options['mass_normalisation']
+        if not ref or ref <= 0:
+            return 1.0
+        cached = getattr(production, '_ms_ae_factor', None)
+        if cached is not None:
+            return cached
+        ndraw = self.options['mass_normalisation_draws']
+        a = None
+        if not ndraw and not offshell:
+            a = self._mass_normalisation_quad(production, order, particles,
+                                              slot_to_index, zkeys, keep_jac)
+        if a is None and ndraw:
+            a, sd = self._mass_normalisation_mc(
+                production, order, particles, slot_to_index, zkeys, keep_jac,
+                offshell, prod_static, density_prod, frame_boost, me_prod_on,
+                int(ndraw))
+            self._ms_ae_noise = getattr(self, '_ms_ae_noise', [])
+            if a > 0:
+                self._ms_ae_noise.append(sd / a)
+        if a is None or not (a > 0):
+            self._ms_ae_unsupported = getattr(self, '_ms_ae_unsupported', 0) + 1
+            production._ms_ae_factor = 1.0
+            return 1.0
+        production._ms_ae_factor = a / ref
+        return production._ms_ae_factor
 
     @staticmethod
     def _weighted_polyfit2(xs, ys, ws):
@@ -8870,6 +9178,17 @@ class MadSpinInterface(extended_cmd.Cmd):
         if probe is None and maxwgts and upfront and draw_mass and not offshell:
             mass_bound = self._mass_stage_bound(production, order, particles,
                                                 slot_to_index, zkeys, keep_jac)
+        # PROTOTYPE, off by default: the per-event normalisation A_e the redraw
+        # loop divides out. Computed here because it depends on the production
+        # event and not on the draw, and reported back through ``stats`` the way
+        # the overweight safety net is. See _mass_normalisation_factor.
+        if probe is None and maxwgts and upfront and (offshell or draw_mass) \
+                and self.options['mass_normalisation'] > 0:
+            factor = self._mass_normalisation_factor(
+                production, order, particles, slot_to_index, zkeys, keep_jac,
+                offshell, prod_static, density_prod, frame_boost, me_prod_on)
+            if factor != 1.0:
+                stats['ae_factor'] = factor
         # Which events *have* a mass stage to bound: the up-front schemes, and
         # there whichever family draws a virtuality up front. ``_upfront_production``
         # fills slot_mass under `offshell or draw_mass`, and `draw_mass` alone is
