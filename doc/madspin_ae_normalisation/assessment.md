@@ -435,9 +435,11 @@ the one place PR #377's kernel is load-bearing for this work.**
 
 For the **offshell** weight the kernel does not help at all, because every draw
 needs a production reshuffle *and* a production density matrix -- there is no
-arithmetic-only path to `Tr(rho_off)`.  Measured directly (section 1.3): 24 draws
-per event cost `+2.06 ms/event` of CPU, i.e. **86 us per offshell free draw**,
-ten times the kernel's.  `k = 8` would be 0.7 ms/event.
+arithmetic-only path to `Tr(rho_off)`.  Measured directly, end to end
+(section 1.3): 8 draws cost `+0.70 ms/event` of CPU and 24 draws `+2.24 ms`, i.e.
+**88 and 93 us per offshell free draw** -- ten times the kernel's, and a
+consistent pair, so the estimator really is linear in `k`.  In percentages of the
+run: `k = 8` is **+7.3 %**, `k = 24` is **+23.4 %**.
 
 **Measured on a real `n = 3` production.**  `p p > t t~ j` at 6.5+6.5 TeV, 20 000
 production events, 300 of them taken through 800 free draws each on the kernel
@@ -587,7 +589,7 @@ efficiency and trial counts are identical).
 | the `stats['ae_factor']` hook and `_report_ae_normalisation` | the mechanism is the one PR #375 established and it is sound.  It reaches `full_evt.wgt` and every `parse_reweight()` entry through the same multiplication as the branching ratio. |
 | joint path | **not hooked at all.**  Section 6.2. |
 | `fixed_order`, `pure_interference`, BR equalization | not considered.  The factor rides `carry`, which those paths also use, so it should compose -- untested. |
-| tests | none added.  `tests/unit_tests/madspin/test_madspin.py -t0` was run to confirm nothing existing broke. |
+| tests | **none added.**  `tests/test_manager.py test_madspin -t0` is green, 409 tests -- but that only says nothing existing broke.  The prototype's own correctness rests on the two checks in section 3: byte-identity of the event content, and 2.6e-8 agreement between the in-code factor and the offline quadrature over 3000 events. |
 
 ---
 
