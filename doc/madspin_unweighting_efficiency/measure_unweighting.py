@@ -1,0 +1,429 @@
+#!/usr/bin/env python3
+"""Measure the per-stage MadSpin unweighting cost of every (spinmode,
+unweighting) combination on one production sample.
+
+Process: ``p p > t t~``, both tops decayed (fully leptonic chain), ONE madevent
+production sample and ONE MadSpin seed shared by every configuration, so the
+columns differ only by the accept/reject scheme.
+
+For each configuration we report, straight off the counters MadSpin itself
+prints at the end of a run:
+
+  eps_m     "MadSpin sequential mass stage: X mass sets per accepted event"
+            -- virtuality sets drawn per written event.
+  eps_t     "MadSpin sequential slot P: X decay events per accepted one"
+  eps_tbar  ... same line, the other position. Which position is which particle
+            is resolved from the slot layout, not assumed (see slot_map()).
+  N_dec     total decay events drawn over the whole run
+            = sum over positions of the "(T drawn)" counts for the staged
+              schemes; = (number of decaying particles) x trials for ``joint``,
+              since one joint trial draws one decay for every decaying particle
+              (interface_madspin.get_decay_from_file / _draw_all_decays).
+
+  joint has no stages: it makes one accept/reject over the virtualities and
+  both decays at once, so it yields the single number of
+  "MadSpin unweight efficiency: ... (W written / T trials, R trials/event)".
+
+Every eps here is "generated points per accepted point": LOWER IS BETTER, the
+floor is 1.
+
+Usage:
+    export PATH="$HOME/.pyenv/versions/mg-3.14/bin:$PATH"
+    python3 doc/madspin_unweighting_efficiency/measure_unweighting.py \
+        --nevents 10000 --outdir /some/scratch/dir
+
+Writes results.json (the raw counters) and copies the per-run madspin.log files
+into <outdir>/logs/.  The LaTeX table is a separate step, make_table.py, so the
+measurement and its presentation can be re-run independently of each other.
+"""
+
+from __future__ import absolute_import
+from __future__ import division
+
+import argparse
+import collections
+import json
+import math
+import os
+import re
+import shutil
+import sys
+import time
+
+pjoin = os.path.join
+
+_here = os.path.dirname(os.path.realpath(__file__))
+_root = os.path.split(os.path.split(_here)[0])[0]
+if _root not in sys.path:
+    sys.path.insert(0, _root)
+
+from tests.parallel_tests.madspin_comparator import (  # noqa: E402
+    MadSpinFactory, SpinModeConfig, _parse_unweighting)
+import madgraph.various.lhe_parser as lhe_parser  # noqa: E402
+
+
+# --------------------------------------------------------------------------
+# The grid.
+#
+# ``sequential_global_retry`` is deliberately absent for ``onshell``.  It is not
+# refused by the code -- ``_unweighting_mode`` announces it as asked and runs it
+# -- but it has nothing to do there, and this is why:
+#
+#   * ``sequential`` redraws slot k until it accepts, which divides the
+#     conditional normalisation Z_k(m_k) = E[w_k | m_k] out of the chain.  When
+#     Z_k depends on a virtuality the chain has frozen, that reweights the
+#     accepted lineshape, and MadSpin puts it back with a tabulated ``_zhat``.
+#     ``sequential_global_retry`` exists solely so that no table is needed: a
+#     rejected decay throws the whole chain away, the per-angle stage stops
+#     normalising, and Z_hat cancels identically
+#     (interface_madspin.py, comment block above ``_z_slot_keys``).
+#
+#   * ``onshell`` keeps the production kinematics and samples no virtuality at
+#     all: ``_density_do_reshuffle`` is False, so ``_upfront_production`` is
+#     called with ``draw_mass=False`` and returns an empty ``slot_mass``.  With
+#     no virtualities there are no ``probe_extra['z']`` samples, so
+#     ``_build_z_tables`` builds nothing and ``_zhat`` returns the constant 1.0
+#     at every slot.  The two schemes therefore test *the same* w_k against
+#     *the same* bound; E[w_k | prefix] = 1 exactly (the pool average of a decay
+#     density matrix is the identity), so ``sequential`` has no normalisation to
+#     divide out and no bias to correct.
+#
+#   * What remains is only the cost: a rejection under
+#     ``sequential_global_retry`` discards the slots already accepted instead of
+#     redrawing the offending one.  So on ``onshell`` it is strictly ``sequential``
+#     plus wasted decay draws.  ``--extra onshell:sequential_global_retry``
+#     measures exactly that, and is reported next to the table rather than in it.
+#
+#   * One reporting wart worth knowing: with ``slot_mass`` empty MadSpin never
+#     makes a mass-set accept/reject, so ``eps_m`` is undefined for onshell (the
+#     table shows a dash).  But ``_report_sequential_stats`` still prints its
+#     "mass stage" line as soon as ``nb_exact_restart`` is non-zero, and under
+#     onshell + sequential_global_retry those "mass sets" are chain restarts with
+#     no mass in them.  Do not read that line as a virtuality count.
+# --------------------------------------------------------------------------
+# ``density_keep_jacobian`` (PA only, default True) is the second axis. With
+# True the production-reshuffling phase-space jacobian is folded into the
+# accept/reject weight; with False the reshuffle becomes a post-acceptance
+# kinematic dressing and only the Breit-Wigner sampling jacobian is in the
+# weight.  So it changes *what is being unweighted against*, and the two PA
+# families are expected to have different efficiencies.
+#
+# It really is PA-only.  In the staged path
+# ``keep_jac = draw_mass and self.options['density_keep_jacobian']`` with
+# ``draw_mass = (spinmode == 'PA' and nb_prod_final > 1)``; in the joint path
+# and in the max-weight scan the two blocks that apply the jacobian are gated on
+# ``density_needs_reshuffle and not offshell_density``, which is again PA alone.
+# onshell never reshuffles and madspin/full always carry the jacobian inside
+# ``wgt``.  Hence no ``density_keep_jacobian = False`` row for those.
+#
+# Entries are (key, spinmode, unweighting, extra ``set`` lines).
+GRID = [
+    ('PA_joint', 'PA', 'joint', {}),
+    ('PA_sequential', 'PA', 'sequential', {}),
+    ('PA_sequential_global_retry', 'PA', 'sequential_global_retry', {}),
+    ('PAnojac_joint', 'PA', 'joint',
+     {'density_keep_jacobian': 'False'}),
+    ('PAnojac_sequential', 'PA', 'sequential',
+     {'density_keep_jacobian': 'False'}),
+    ('PAnojac_sequential_global_retry', 'PA', 'sequential_global_retry',
+     {'density_keep_jacobian': 'False'}),
+    ('madspin_joint', 'madspin', 'joint', {}),
+    ('madspin_sequential', 'madspin', 'sequential', {}),
+    ('madspin_sequential_global_retry', 'madspin', 'sequential_global_retry', {}),
+    ('onshell_joint', 'onshell', 'joint', {}),
+    ('onshell_sequential', 'onshell', 'sequential', {}),
+]
+
+# Same physics setup as tests/parallel_tests/test_madspin_factory.TTBAR_LEPTONIC,
+# so these numbers are directly comparable with the campaign the ``unweighting``
+# card comment quotes.
+TTBAR_LEPTONIC = dict(
+    production_process='p p > t t~',
+    decays=['t > b w+, w+ > l+ vl',
+            't~ > b~ w-, w- > l- vl~'],
+    multiparticles={'p': 'g u d s c u~ d~ s~ c~',
+                    'l+': 'e+ mu+', 'vl': 've vm',
+                    'l-': 'e- mu-', 'vl~': 've~ vm~'},
+    extra_run_card={'ebeam1': 6500, 'ebeam2': 6500},
+)
+
+
+# --------------------------------------------------------------------------
+# Log parsing.  Every number below is one MadSpin already computes and prints;
+# nothing here re-derives an efficiency from the event file.
+# --------------------------------------------------------------------------
+_RE_EFF = re.compile(
+    r'MadSpin unweight efficiency:\s*([0-9.eE+\-]+)\s*'
+    r'\((\d+)\s*written\s*/\s*(\d+)\s*trials,\s*([0-9.eE+\-]+)\s*trials/event\)')
+_RE_MASS = re.compile(
+    r'MadSpin sequential mass stage:\s*([0-9.eE+\-]+)\s*mass sets per accepted '
+    r'event\s*\((\d+)\s*drawn,\s*(\d+)\s*rejected(?:,\s*(\d+)\s*dropped by a '
+    r'rejected decay)?\)')
+_RE_SLOT = re.compile(
+    r'MadSpin sequential slot (\d+):\s*([0-9.eE+\-]+)\s*decay events per '
+    r'accepted one\s*\((\d+)\s*drawn\)')
+_RE_ANGLE = re.compile(
+    r'MadSpin sequential angle stage:\s*([0-9.eE+\-]+)\s*angle sets per '
+    r'accepted event\s*\((\d+)\s*drawn,\s*(\d+)\s*rejected\)')
+_RE_RESTART = re.compile(
+    r'MadSpin sequential:\s*(\d+)\s*chains restarted on a mass set')
+_RE_OVERFLOW = re.compile(
+    # The wording of this line changed with the overweight safety net (section
+    # 14 of doc/madspin_sequential_plan.md): before it was "... exceeded their
+    # per-particle maximum", now it is "... exceeded their stage maximum (mass
+    # set / angles / per particle)".  Both spellings are accepted so that a log
+    # from either side of that commit parses to the same counter -- a regex that
+    # silently misses would report 0 overflows, which is exactly the number this
+    # campaign is trying to measure.
+    r'MadSpin sequential:\s*(\d+)\s*weights exceeded their '
+    r'(?:per-particle|stage) maximum')
+# The safety net's end-of-run measurement: how many written events carry a
+# non-unit weight, and what the carried excess is worth.  A bound that
+# dominates gives the "0/N" spelling.
+_RE_OVERWEIGHT_ZERO = re.compile(
+    r'MadSpin overweight safety net:\s*0/(\d+)\s*written events carried a '
+    r'non-unit weight')
+_NUM = r'[-+]?[0-9]*\.?[0-9]+(?:[eE][-+]?[0-9]+)?'
+_RE_OVERWEIGHT = re.compile(
+    # The trailing "largest single factor %.4f" is followed by a full stop (or
+    # by " (N of them from the joint accept/reject)."), so the number pattern
+    # must NOT be allowed to swallow a '.' that is punctuation -- hence _NUM
+    # rather than a character class containing '.'.
+    r'MadSpin overweight safety net:\s*(\d+)/(\d+)\s*written events '
+    r'\(' + _NUM + r'%\)\s*carried a non-unit weight because a trial weight '
+    r'exceeded its accept/reject bound;\s*total carried excess '
+    r'(' + _NUM + r'),\s*i\.e\.\s*(' + _NUM + r')% of the sample\'s '
+    r'normalisation,\s*largest single factor (' + _NUM + r')')
+# Which bound the mass stage used, per production event.  Printed by
+# _announce_mass_bound's companion counter since the per-event mass bound.
+_RE_MASS_BOUND = re.compile(
+    r'MadSpin sequential mass stage:\s*(\d+)/(\d+)\s*production events used '
+    r'the per-event bound(?:\s*\((\d+)\s*fell back to the probe)?')
+
+
+def _flat(text):
+    return re.sub(r'[ \t]+', ' ', text)
+
+
+def parse_run(log_text):
+    """Every counter this measurement needs, out of one MadSpin log."""
+    flat = _flat(log_text)
+    out = {}
+
+    mode, why = _parse_unweighting(log_text)
+    out['reported_mode'] = mode
+    out['reported_why'] = why
+
+    match = None
+    for match in _RE_EFF.finditer(flat):
+        pass
+    if match:
+        out['eff'] = float(match.group(1))
+        out['n_written'] = int(match.group(2))
+        out['n_trials'] = int(match.group(3))
+        out['trials_per_event'] = float(match.group(4))
+
+    match = None
+    for match in _RE_MASS.finditer(flat):
+        pass
+    if match:
+        out['mass_stage'] = {
+            'per_accepted': float(match.group(1)),
+            'drawn': int(match.group(2)),
+            'rejected': int(match.group(3)),
+            'dropped_by_rejected_decay': int(match.group(4) or 0),
+        }
+
+    slots = {}
+    for match in _RE_SLOT.finditer(flat):
+        slots[int(match.group(1))] = {
+            'per_accepted': float(match.group(2)),
+            'drawn': int(match.group(3)),
+        }
+    out['slots'] = slots
+
+    match = None
+    for match in _RE_ANGLE.finditer(flat):
+        pass
+    if match:
+        out['angle_stage'] = {'per_accepted': float(match.group(1)),
+                              'drawn': int(match.group(2)),
+                              'rejected': int(match.group(3))}
+
+    found = _RE_RESTART.search(flat)
+    out['chain_restarts'] = int(found.group(1)) if found else 0
+    found = _RE_OVERFLOW.search(flat)
+    out['overflows'] = int(found.group(1)) if found else 0
+
+    # The overweight safety net.  Absent line -> the run predates it; the
+    # "0/N" line -> the bound dominated on every event.
+    found = _RE_OVERWEIGHT_ZERO.search(flat)
+    if found:
+        out['overweight'] = {'events': 0, 'written': int(found.group(1)),
+                             'excess': 0.0, 'excess_percent': 0.0,
+                             'largest_factor': 1.0}
+    else:
+        found = _RE_OVERWEIGHT.search(flat)
+        if found:
+            out['overweight'] = {
+                'events': int(found.group(1)),
+                'written': int(found.group(2)),
+                'excess': float(found.group(3)),
+                'excess_percent': float(found.group(4)),
+                'largest_factor': float(found.group(5)),
+            }
+
+    found = _RE_MASS_BOUND.search(flat)
+    if found:
+        out['mass_bound'] = {'per_event': int(found.group(1)),
+                             'events': int(found.group(2)),
+                             'global_fallback': int(found.group(3) or 0)}
+    return out
+
+
+# --------------------------------------------------------------------------
+# Slot -> particle mapping.  Never assume the card order: MadSpin lays the
+# density-matrix slots out by _decaying_pdgs (pdgs in order of first appearance
+# among the production final state) and then orders the accept/reject by
+# _decay_slot_order (sequential_spin_order, ties by slot index).  Both tops are
+# spin-1/2 here, so the spin order cannot separate them and the answer is
+# entirely in the production event layout -- which we read off the LHE.
+# --------------------------------------------------------------------------
+def slot_map(events_file, spin_order='2 3 1', nmax=2000):
+    """Return (position -> pdg, diagnostics) for the production sample."""
+    layouts = collections.Counter()
+    lhe = lhe_parser.EventFile(events_file)
+    for i, event in enumerate(lhe):
+        if i >= nmax:
+            break
+        finals = [p.pdg for p in event if int(p.status) == 1]
+        layouts[tuple(p for p in finals if abs(p) == 6)] += 1
+    try:
+        lhe.close()
+    except Exception:
+        pass
+
+    # _decaying_pdgs: pdgs in order of first appearance among the final state
+    # -> slot k.  _decay_slot_order: both spin 2 (2S+1) so the spin ranks tie
+    # and the tie-break is the slot index, i.e. position k == slot k.
+    layout = layouts.most_common(1)[0][0] if layouts else ()
+    position_to_pdg = {k: pdg for k, pdg in enumerate(layout)}
+    return position_to_pdg, {
+        'layouts': {'/'.join(str(x) for x in k): v
+                    for k, v in layouts.items()},
+        'sequential_spin_order': spin_order,
+        'note': ('both decaying particles are spin-1/2, so sequential_spin_order '
+                 'cannot reorder them: position k == slot k == the k-th distinct '
+                 'decaying pdg in production-event order'),
+    }
+
+
+# --------------------------------------------------------------------------
+def eps_error(eps, n_written):
+    """Rough 1-sigma on a trials-per-acceptance ratio.
+
+    The per-event trial count of a redraw-until-accepted loop is geometric with
+    mean eps, hence variance eps*(eps-1); the mean over n_written independent
+    events then has sd sqrt(eps*(eps-1)/n_written).  For a stage that is not a
+    plain geometric (a restart scheme couples the slots) this is indicative
+    only, which is why it is reported separately from the table.
+    """
+    if not n_written or eps is None or eps <= 1:
+        return 0.0
+    return math.sqrt(eps * (eps - 1.0) / n_written)
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--nevents', type=int, default=10000)
+    parser.add_argument('--seed', type=int, default=42)
+    parser.add_argument('--outdir', required=True)
+    parser.add_argument('--basedir', default=None,
+                        help='factory working tree (kept, so it can be reused)')
+    parser.add_argument('--nb-core', type=int, default=1)
+    parser.add_argument('--only', default=None,
+                        help='comma separated grid keys to restrict to')
+    parser.add_argument('--extra', default=None,
+                        help='extra spinmode:unweighting runs appended to the grid')
+    args = parser.parse_args()
+
+    outdir = os.path.abspath(args.outdir)
+    os.makedirs(pjoin(outdir, 'logs'), exist_ok=True)
+    if args.basedir:
+        os.makedirs(args.basedir, exist_ok=True)
+
+    grid = list(GRID)
+    if args.extra:
+        for item in args.extra.split(','):
+            spinmode, unw = item.split(':')
+            grid.append(('%s_%s' % (spinmode, unw), spinmode, unw, {}))
+    if args.only:
+        keep = set(args.only.split(','))
+        grid = [g for g in grid if g[0] in keep]
+
+    factory = MadSpinFactory(
+        name='unweighting_grid',
+        nevents=args.nevents,
+        seed=args.seed,
+        base_dir=args.basedir,
+        extra_madspin_settings={'nb_core': args.nb_core},
+        **TTBAR_LEPTONIC)
+
+    t0 = time.time()
+    events_file = factory.produce_events()
+    production_wall = time.time() - t0
+
+    position_to_pdg, slot_diag = slot_map(events_file)
+
+    results = collections.OrderedDict()
+    for label, spinmode, unw, extra in grid:
+        config = SpinModeConfig(label, spinmode)
+        settings = {'unweighting': unw}
+        settings.update(extra)
+        print('=== running %s %s' % (label, extra or ''), flush=True)
+        start = time.time()
+        res = factory.run_mode(config, extra_settings=settings)
+        wall = time.time() - start
+        with open(res.log_path) as fp:
+            log_text = fp.read()
+        shutil.copy(res.log_path, pjoin(outdir, 'logs', '%s.log' % label))
+        parsed = parse_run(log_text)
+        parsed['spinmode'] = spinmode
+        parsed['unweighting_asked'] = unw
+        parsed['extra_settings'] = dict(extra)
+        # The card MadSpin echoed back, so the raw file can be checked against
+        # what was actually asked for without re-running.
+        parsed['card_set_lines'] = [line.strip() for line in
+                                    log_text.splitlines()
+                                    if line.strip().startswith('set ')]
+        parsed['density_keep_jacobian'] = (
+            'False' if extra.get('density_keep_jacobian') == 'False' else 'True')
+        parsed['wall_seconds'] = wall
+        parsed['BR'] = res.BR
+        parsed['cross_out'] = res.cross_out
+        results[label] = parsed
+        print('    -> mode=%s (%s) written=%s slots=%s [%.0f s]'
+              % (parsed.get('reported_mode'), parsed.get('reported_why'),
+                 parsed.get('n_written'), parsed.get('slots'), wall), flush=True)
+
+    payload = {
+        'process': 'p p > t t~',
+        'decays': TTBAR_LEPTONIC['decays'],
+        'nevents_requested': args.nevents,
+        'seed': args.seed,
+        'nb_core': args.nb_core,
+        'events_file': events_file,
+        'cross_in': getattr(factory, 'cross_in', None),
+        'production_wall_seconds': production_wall,
+        'position_to_pdg': {str(k): v for k, v in position_to_pdg.items()},
+        'slot_diagnostics': slot_diag,
+        'runs': results,
+    }
+    with open(pjoin(outdir, 'results.json'), 'w') as fp:
+        json.dump(payload, fp, indent=2, sort_keys=False)
+    print('wrote %s' % pjoin(outdir, 'results.json'))
+    print('base_dir = %s' % factory.base_dir)
+
+
+if __name__ == '__main__':
+    main()

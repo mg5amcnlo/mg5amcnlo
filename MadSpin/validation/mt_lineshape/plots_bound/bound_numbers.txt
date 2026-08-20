@@ -1,0 +1,244 @@
+The per-event mass-stage bound: does the written lineshape move?
+==========================================================================
+before campaign: data   code a311d2e64278
+after  campaign: data_after_bound   code c68145779aa1
+200000 production events, madevent+MadSpin seed 42, nb_core 8, shared
+production sigma: before 504.449 pb, after 504.449 pb
+pole M = 173.000000 GeV, width Gamma = 1.491500 GeV, support |m-M| < 15 Gamma
+
+1. Cells whose ACCEPTED EVENTS cannot be touched by the bound, checked
+   bin by bin on the raw fine grid.  _mass_stage_bound is reached only
+   under spinmode = PA, an up-front scheme (not joint, not
+   sequential_with_mass) and not offshell -- so every cell below must
+   draw and accept exactly the same events before and after, and a
+   difference in the ENTRY counts here would be a reproducibility
+   failure (a different production sample) and not a lineshape result.
+   Their WEIGHTS may still differ: the two campaigns are separated by
+   the overweight safety net as well as by the bound, and that writes
+   max(1, w/C) instead of 1 on an event whose trial weight exceeded
+   its bound.  The two questions are reported separately.
+   madspin / joint                  same events, 1 bin(s) differ in weight by 3.805 total
+   madspin / sequential             same events, 2 bin(s) differ in weight by 7.103 total
+   madspin / seq. global retry      same events, 1 bin(s) differ in weight by 1.8 total
+   PA / joint                       identical
+   PA / seq. with mass              identical
+   PA no-jac / joint                identical
+   PA no-jac / seq. with mass       identical
+   onshell / joint                  identical
+   onshell / sequential             identical
+   onshell / seq. global retry      identical
+   madspin / joint (replica seed)   same events, 1 bin(s) differ in weight by 1.514 total
+   PA / joint (replica seed)        identical
+   -> 8 bit-identical, 4 same events with carried weights, 0 different events, 0 not run in both
+
+2. Cells the bound DOES touch (PA / PA no-jac, sequential and
+   sequential_global_retry).  These are expected to differ event by
+   event -- a different bound is a different accept/reject sequence --
+   and to agree in distribution, which is what the rest measures.
+   PA / sequential                  *** DIFFERENT EVENTS ***
+   PA / seq. global retry           *** DIFFERENT EVENTS ***
+   PA no-jac / sequential           *** DIFFERENT EVENTS ***
+   PA no-jac / seq. global retry    *** DIFFERENT EVENTS ***
+
+3. Lineshape, per cell and per resonance.
+   "after vs before"   the direct question: did the written sample
+                       move when the bound moved?
+   "vs weighted"       against decay_output = weighted, which makes no
+                       accept/reject at all and is therefore the target
+                       density with no bound in it.  Quoted for BOTH
+                       campaigns, so the two can be read against each
+                       other and against the reference itself.
+                       PA        -> decay_output = weighted, no accept/reject
+                       PAnojac   -> PA no-jac / joint -- NOT a weighted reference, see WEIGHTED in this file
+                       madspin   -> decay_output = weighted, no accept/reject
+   chi2 is on the 70 plot bins, dof = nbins - 1 (both densities are
+   unit-area, one shared linear constraint).  KS is two-sample on the
+   360-bin fine grid with effective sample sizes (sum w)^2/sum w^2.
+   Both statistics ERR TOWARDS AGREEMENT here and neither is evidence
+   on its own: every cell is decayed off the SAME production events, so
+   two cells are positively correlated and an independent-errors chi2
+   is conservative (several baseline rows sit below their dof for that
+   reason), while the KS D is taken on a 360-bin grid and between
+   correlated samples, both of which push its p-value up.  That is why
+   the reference is a MEASURED floor and not a nominal 1.0.
+   Read every chi2/dof against the baseline campaign's measured noise
+   floor -- two replicas of ONE scheme at a second MadSpin seed gave
+   139.2/138 and 135.7/138 combined over the two resonances, i.e.
+   1.009 and 0.983 per dof.  Nothing at or below that is a signal.
+
+   cell                           res   | after/before    KS p |   after/wgt    KS p |  before/wgt    KS p |     d<m> [MeV]
+   ------------------------------------------------------------------------------------------------------------------------
+   PA / sequential                m(t)  |    74.6/69    0.620 |    55.9/69    0.994 |    91.5/69    0.494 |    5.9 +- 10.0 
+   PA / sequential                m(tb) |    82.2/69    0.029 |    69.7/69    0.496 |    82.1/69    0.215 |   18.1 +- 10.1 
+   PA / seq. global retry         m(t)  |    71.8/69    0.521 |    72.3/69    0.941 |    75.5/69    0.213 |   -0.4 +- 10.0 
+   PA / seq. global retry         m(tb) |    49.5/69    0.902 |    56.6/69    0.843 |    54.1/69    0.716 |    7.2 +- 10.1 
+   PA no-jac / sequential         m(t)  |    40.2/69    0.955 |    55.7/69    0.702 |    54.9/69    0.511 |   -1.2 +- 10.1 
+   PA no-jac / sequential         m(tb) |    38.1/69    0.921 |    81.7/69    0.764 |    77.2/69    0.265 |   10.9 +- 10.0 
+   PA no-jac / seq. global retry  m(t)  |    43.1/69    0.885 |    56.9/69    0.668 |    53.7/69    0.806 |    1.6 +- 10.0 
+   PA no-jac / seq. global retry  m(tb) |    47.1/69    0.848 |    75.7/69    0.764 |    72.9/69    0.526 |    4.5 +- 10.1 
+   madspin / joint                m(t)  |     0.0/69    1.000 |    66.3/69    0.130 |    66.3/69    0.130 |   -0.0 +- 10.0 
+   madspin / joint                m(tb) |     0.0/69    1.000 |    73.4/69    0.309 |    73.4/69    0.309 |   -0.0 +- 10.1 
+   madspin / sequential           m(t)  |     0.0/69    1.000 |    67.2/69    0.459 |    67.2/69    0.458 |   -0.0 +- 10.1 
+   madspin / sequential           m(tb) |     0.0/69    1.000 |    65.4/69    0.827 |    65.4/69    0.827 |   -0.0 +- 10.1 
+   madspin / seq. global retry    m(t)  |     0.0/69    1.000 |    69.8/69    0.937 |    69.8/69    0.937 |   -0.0 +- 10.1 
+   madspin / seq. global retry    m(tb) |     0.0/69    1.000 |    58.8/69    0.805 |    58.8/69    0.806 |    0.0 +- 10.1 
+   PA / joint                     m(t)  |     0.0/69    1.000 |    66.9/69    0.085 |    66.9/69    0.085 |    0.0 +- 10.0 
+   PA / joint                     m(tb) |     0.0/69    1.000 |    81.1/69    0.634 |    81.1/69    0.634 |    0.0 +- 10.1 
+   PA / seq. with mass            m(t)  |     0.0/69    1.000 |    63.9/69    0.834 |    63.9/69    0.834 |    0.0 +- 10.0 
+   PA / seq. with mass            m(tb) |     0.0/69    1.000 |    89.9/69    0.285 |    89.9/69    0.285 |    0.0 +- 10.0 
+   PA no-jac / joint              m(t)  |     0.0/69    1.000 |          --      -- |          --      -- |    0.0 +- 10.1 
+   PA no-jac / joint              m(tb) |     0.0/69    1.000 |          --      -- |          --      -- |    0.0 +- 10.1 
+   PA no-jac / seq. with mass     m(t)  |     0.0/69    1.000 |    76.6/69    0.093 |    76.6/69    0.093 |    0.0 +- 10.1 
+   PA no-jac / seq. with mass     m(tb) |     0.0/69    1.000 |    63.7/69    0.183 |    63.7/69    0.183 |    0.0 +- 10.2 
+   madspin / joint (replica seed) m(t)  |     0.0/69    1.000 |    70.4/69    0.245 |    70.4/69    0.245 |   -0.0 +- 10.1 
+   madspin / joint (replica seed) m(tb) |     0.0/69    1.000 |    64.2/69    0.351 |    64.2/69    0.351 |   -0.0 +- 10.1 
+   PA / joint (replica seed)      m(t)  |     0.0/69    1.000 |    76.7/69    0.634 |    76.7/69    0.634 |    0.0 +- 10.0 
+   PA / joint (replica seed)      m(tb) |     0.0/69    1.000 |    76.2/69    0.480 |    76.2/69    0.480 |    0.0 +- 10.0 
+
+   d<m> is after minus before, in MeV, on the per-event virtuality.
+   A real bias moves m(t) and m(tbar) the SAME way: they are two
+   independent virtuality draws in one event, so opposite signs are a
+   fluctuation.  The baseline campaign found single-resonance shifts
+   reaching 4.1 sigma that reverse sign between the two; both columns
+   are therefore quoted and neither is read on its own.
+
+   The same rows combined over the two resonances, which is the form
+   the baseline campaign quotes and the form the replica floor is in.
+   "combined chi2" is m(t) + m(tbar) on 138 dof, so 1 sigma is
+   sqrt(2*138) = 16.6; the replicas sat at 139.2 and 135.7.
+   The last two columns are the decisive ones: how far each campaign
+   sits from the SAME unbounded reference.  A bound that biased the
+   sample would show as the after column being further away.
+   cell                              a/b chi2    a/w chi2    b/w chi2   a-b <m> MeV  a-w, b-w <m>
+   PA / sequential                  156.9/138   125.7/138   173.6/138   +12.0+-7.1    +4.4 /   -7.6
+   PA / seq. global retry           121.3/138   128.9/138   129.6/138    +3.4+-7.1    -0.4 /   -3.8
+   PA no-jac / sequential            78.3/138   137.3/138   132.1/138    +4.9+-7.1    +9.5 /   +4.7
+   PA no-jac / seq. global retry     90.2/138   132.5/138   126.6/138    +3.0+-7.1   +10.1 /   +7.1
+   madspin / joint                    0.0/138   139.8/138   139.7/138    -0.0+-7.1    -7.1 /   -7.1
+   madspin / sequential               0.0/138   132.6/138   132.6/138    -0.0+-7.1    +7.5 /   +7.6
+   madspin / seq. global retry        0.0/138   128.6/138   128.6/138    -0.0+-7.1    -0.4 /   -0.4
+   PA / joint                         0.0/138   148.0/138   148.0/138    +0.0+-7.1    -5.0 /   -5.0
+   PA / seq. with mass                0.0/138   153.8/138   153.8/138    +0.0+-7.1    -9.1 /   -9.1
+   PA no-jac / joint                  0.0/138          --          --    +0.0+-7.1             --
+   PA no-jac / seq. with mass         0.0/138   140.3/138   140.3/138    +0.0+-7.2    +9.9 /   +9.9
+   madspin / joint (replica seed)     0.0/138   134.6/138   134.6/138    -0.0+-7.1    -9.0 /   -9.0
+   PA / joint (replica seed)          0.0/138   152.9/138   152.9/138    +0.0+-7.1    -2.6 /   -2.6
+
+4. Sliced by beta, the top velocity in the t tbar rest frame.
+   The per-event bound is evaluated at the LOW corner of the
+   Breit-Wigner windows and bounds the RAMBO reshuffling jacobian,
+   a ratio of lambda^(1/2) factors -- so the low-beta (near
+   threshold) slice is where the bound and the weight it bounds are
+   furthest apart, and where a bound that failed to dominate would
+   show first.  Slices exist in the after campaign only: the
+   baseline predates the slicing, so the comparison here is against
+   decay_output = weighted, which is the stronger reference anyway.
+   beta in [0.00, 0.50]
+     PA / sequential                m(t)    62.5/69  p=0.698 | m(tb)   68.0/69  p=0.512
+     PA / seq. global retry         m(t)    46.1/69  p=0.985 | m(tb)   50.1/69  p=0.958
+     PA no-jac / sequential         m(t)    92.1/69  p=0.033 | m(tb)   66.8/69  p=0.554
+     PA no-jac / seq. global retry  m(t)    56.5/69  p=0.859 | m(tb)   58.9/69  p=0.802
+     PA / joint                     m(t)    62.7/69  p=0.690 | m(tb)   57.9/69  p=0.828
+     madspin / sequential           m(t)    79.3/69  p=0.186 | m(tb)   89.2/69  p=0.051
+   beta in [0.50, 0.75]
+     PA / sequential                m(t)    55.3/69  p=0.884 | m(tb)   64.1/69  p=0.643
+     PA / seq. global retry         m(t)    82.6/69  p=0.126 | m(tb)   63.7/69  p=0.659
+     PA no-jac / sequential         m(t)    60.9/69  p=0.746 | m(tb)   67.4/69  p=0.532
+     PA no-jac / seq. global retry  m(t)    80.6/69  p=0.160 | m(tb)   68.1/69  p=0.508
+     PA / joint                     m(t)    66.5/69  p=0.562 | m(tb)   73.4/69  p=0.337
+     madspin / sequential           m(t)    57.0/69  p=0.849 | m(tb)   55.7/69  p=0.877
+   beta in [0.75, 1.00]
+     PA / sequential                m(t)    53.9/69  p=0.909 | m(tb)   55.6/69  p=0.878
+     PA / seq. global retry         m(t)    72.4/69  p=0.367 | m(tb)   62.7/69  p=0.692
+     PA no-jac / sequential         m(t)    63.6/69  p=0.662 | m(tb)   83.3/69  p=0.115
+     PA no-jac / seq. global retry  m(t)    73.8/69  p=0.325 | m(tb)   73.1/69  p=0.345
+     PA / joint                     m(t)    54.6/69  p=0.897 | m(tb)   70.7/69  p=0.422
+     madspin / sequential           m(t)    66.4/69  p=0.567 | m(tb)   72.9/69  p=0.351
+
+   share of the sample per slice (weight fraction):
+     PA / sequential                0.202  0.435  0.363   (0 events with no beta)
+     PA / decay_output = weighted   0.200  0.436  0.364   (0 events with no beta)
+     madspin / sequential           0.205  0.434  0.361   (0 events with no beta)
+
+5. Overweight counters (the PR-#375 safety net), per cell.
+   A bound that dominates its weight can never be exceeded, so a
+   per-event bound must read 0.  A NON-zero counter together with a
+   lineshape shift is the signature of a bound that does not dominate;
+   a non-zero counter alone means the excess was carried on the event
+   weight instead of being clipped, which is exact but is still a
+   weighted sample.
+   cell                                 before      after
+   PA / sequential                           0          0
+   PA / seq. global retry                    3          0
+   PA no-jac / sequential                    0          0
+   PA no-jac / seq. global retry             0          0
+   madspin / joint                           0          0
+   madspin / sequential                      2          2
+   madspin / seq. global retry               2          2
+   PA / joint                                0          0
+   PA / seq. with mass                       0          0
+   PA no-jac / joint                         0          0
+   PA no-jac / seq. with mass                0          0
+   onshell / joint                           0          0
+   onshell / sequential                      0          0
+   onshell / seq. global retry               0          0
+   madspin / joint (replica seed)            0          0
+   PA / joint (replica seed)                 0          0
+   NOTE: the baseline campaign parsed this counter with a regex that
+   matched the pre-safety-net wording ("... exceeded their per-particle
+   maximum").  The line now reads "... exceeded their stage maximum",
+   so a BEFORE column of 0 here can mean either zero or unparsed; the
+   baseline's own RESULTS.md, read off the logs, is the authority for
+   the before numbers (madspin/sequential 2, madspin/seq-global 2,
+   PA/seq-global 3, everything else 0 out of 200 000).
+
+6. Figures
+   plots_bound/bound_mt_PA.pdf
+   plots_bound/bound_mt_PA.png
+   plots_bound/bound_mtbar_PA.pdf
+   plots_bound/bound_mtbar_PA.png
+   plots_bound/bound_mt_PAnojac.pdf
+   plots_bound/bound_mt_PAnojac.png
+   plots_bound/bound_mtbar_PAnojac.pdf
+   plots_bound/bound_mtbar_PAnojac.png
+   plots_bound/bound_mt_madspin.pdf
+   plots_bound/bound_mt_madspin.png
+   plots_bound/bound_mtbar_madspin.pdf
+   plots_bound/bound_mtbar_madspin.png
+   plots_bound/bound_mt_beta0.pdf
+   plots_bound/bound_mt_beta0.png
+   plots_bound/bound_mtbar_beta0.pdf
+   plots_bound/bound_mtbar_beta0.png
+   plots_bound/bound_mt_beta1.pdf
+   plots_bound/bound_mt_beta1.png
+   plots_bound/bound_mtbar_beta1.pdf
+   plots_bound/bound_mtbar_beta1.png
+   plots_bound/bound_mt_beta2.pdf
+   plots_bound/bound_mt_beta2.png
+   plots_bound/bound_mtbar_beta2.pdf
+   plots_bound/bound_mtbar_beta2.png
+   plots_bound_userstyle/us_bound_mt_PA.pdf
+   plots_bound_userstyle/us_bound_mt_PA.png
+   plots_bound_userstyle/us_bound_mtbar_PA.pdf
+   plots_bound_userstyle/us_bound_mtbar_PA.png
+   plots_bound_userstyle/us_bound_mt_PAnojac.pdf
+   plots_bound_userstyle/us_bound_mt_PAnojac.png
+   plots_bound_userstyle/us_bound_mtbar_PAnojac.pdf
+   plots_bound_userstyle/us_bound_mtbar_PAnojac.png
+   plots_bound_userstyle/us_bound_mt_madspin.pdf
+   plots_bound_userstyle/us_bound_mt_madspin.png
+   plots_bound_userstyle/us_bound_mtbar_madspin.pdf
+   plots_bound_userstyle/us_bound_mtbar_madspin.png
+   plots_bound_userstyle/us_bound_mt_beta0.pdf
+   plots_bound_userstyle/us_bound_mt_beta0.png
+   plots_bound_userstyle/us_bound_mtbar_beta0.pdf
+   plots_bound_userstyle/us_bound_mtbar_beta0.png
+   plots_bound_userstyle/us_bound_mt_beta1.pdf
+   plots_bound_userstyle/us_bound_mt_beta1.png
+   plots_bound_userstyle/us_bound_mtbar_beta1.pdf
+   plots_bound_userstyle/us_bound_mtbar_beta1.png
+   plots_bound_userstyle/us_bound_mt_beta2.pdf
+   plots_bound_userstyle/us_bound_mt_beta2.png
+   plots_bound_userstyle/us_bound_mtbar_beta2.pdf
+   plots_bound_userstyle/us_bound_mtbar_beta2.png
+

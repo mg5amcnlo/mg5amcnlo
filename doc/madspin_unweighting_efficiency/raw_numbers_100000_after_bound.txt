@@ -1,0 +1,108 @@
+
+run                                        campaign column       value   1sigma
+PA_joint                                   before  joint       5.6700   0.0163
+PA_joint                                   after   joint       5.6700   0.0163
+PA_sequential                              before  eps_m       3.5000   0.0094
+PA_sequential                              before  eps_t       1.2400   0.0017
+PA_sequential                              before  eps_tbar    3.1900   0.0084
+PA_sequential                              after   eps_m       1.4000   0.0024
+PA_sequential                              after   eps_t       1.2400   0.0017
+PA_sequential                              after   eps_tbar    3.2000   0.0084
+PA_sequential_global_retry                 before  eps_m      13.3400   0.0406
+PA_sequential_global_retry                 before  eps_t       3.7900   0.0103
+PA_sequential_global_retry                 before  eps_tbar    3.2000   0.0084
+PA_sequential_global_retry                 after   eps_m       5.2900   0.0151
+PA_sequential_global_retry                 after   eps_t       3.7800   0.0103
+PA_sequential_global_retry                 after   eps_tbar    3.1900   0.0084
+PAnojac_joint                              before  joint       3.1900   0.0084
+PAnojac_joint                              after   joint       3.1900   0.0084
+PAnojac_sequential                         before  eps_m       1.1000   0.0010
+PAnojac_sequential                         before  eps_t       1.1000   0.0010
+PAnojac_sequential                         before  eps_tbar    3.1800   0.0083
+PAnojac_sequential                         after   eps_m       1.0000   0.0000
+PAnojac_sequential                         after   eps_t       1.1000   0.0010
+PAnojac_sequential                         after   eps_tbar    3.1800   0.0083
+PAnojac_sequential_global_retry            before  eps_m       3.8800   0.0106
+PAnojac_sequential_global_retry            before  eps_t       3.5200   0.0094
+PAnojac_sequential_global_retry            before  eps_tbar    3.1900   0.0084
+PAnojac_sequential_global_retry            after   eps_m       3.5300   0.0095
+PAnojac_sequential_global_retry            after   eps_t       3.5200   0.0094
+PAnojac_sequential_global_retry            after   eps_tbar    3.1900   0.0084
+madspin_joint                              before  joint       4.2900   0.0119
+madspin_joint                              after   joint       4.2900   0.0119
+madspin_sequential                         before  eps_m       3.3100   0.0087
+madspin_sequential                         before  eps_t       2.3900   0.0058
+madspin_sequential                         before  eps_tbar    4.2400   0.0117
+madspin_sequential                         after   eps_m       3.3100   0.0087
+madspin_sequential                         after   eps_t       2.3900   0.0058
+madspin_sequential                         after   eps_tbar    4.2400   0.0117
+madspin_sequential_global_retry            before  eps_m      14.5000   0.0442
+madspin_sequential_global_retry            before  eps_t       4.3700   0.0121
+madspin_sequential_global_retry            before  eps_tbar    3.2100   0.0084
+madspin_sequential_global_retry            after   eps_m      14.5000   0.0442
+madspin_sequential_global_retry            after   eps_t       4.3700   0.0121
+madspin_sequential_global_retry            after   eps_tbar    3.2100   0.0084
+onshell_joint                              before  joint       3.1900   0.0084
+onshell_joint                              after   joint       3.1900   0.0084
+onshell_sequential                         before  eps_t       1.1000   0.0010
+onshell_sequential                         before  eps_tbar    3.1900   0.0084
+onshell_sequential                         after   eps_t       1.1000   0.0010
+onshell_sequential                         after   eps_tbar    3.1900   0.0084
+onshell_sequential_global_retry            before  eps_t       3.5300   0.0095
+onshell_sequential_global_retry            before  eps_tbar    3.1900   0.0084
+onshell_sequential_global_retry            after   eps_t       3.5300   0.0095
+onshell_sequential_global_retry            after   eps_tbar    3.1900   0.0084
+
+density_keep_jacobian True vs False (must differ -- identical numbers would mean the setting never took effect):
+  PA_joint                         PAnojac_joint                      differ (expected)
+  PA_sequential                    PAnojac_sequential                 differ (expected)
+  PA_sequential_global_retry       PAnojac_sequential_global_retry    differ (expected)
+
+position -> pdg: {'0': 6, '1': -6}
+final-state layouts seen in the production sample: {'6/-6': 2000}
+production cross section: 504.491 pb
+
+run                                 written    eps_m    eps_t eps_tbar      N_dec   wall_s   ovfl  carried mass bound
+PA_joint                             100000   5.6700   5.6700   5.6700    1134784      156      0       10 --
+PA_sequential                        100000   1.4000   1.2400   3.2000     444598      126      0        0 100000/100000 per-event
+PA_sequential_global_retry           100000   5.2900   3.7800   3.1900     697292      149      0        0 100000/100000 per-event
+PAnojac_joint                        100000   3.1900   3.1900   3.1900     637820      103      0        0 --
+PAnojac_sequential                   100000   1.0000   1.1000   3.1800     428693      139      0        0 100000/100000 per-event
+PAnojac_sequential_global_retry      100000   3.5300   3.5200   3.1900     670504      115      0        0 100000/100000 per-event
+madspin_joint                        100000   4.2900   4.2900   4.2900     858196      192      0        5 --
+madspin_sequential                   100000   3.3100   2.3900   4.2400     662516      212      5        5 0/100000 per-event, 100000 global
+madspin_sequential_global_retry      100000  14.5000   4.3700   3.2100     757657      186     21       10 0/100000 per-event, 100000 global
+onshell_joint                        100000   3.1900   3.1900   3.1900     638504      146      0        0 --
+onshell_sequential                   100000       --   1.1000   3.1900     429374       96      0        0 --
+onshell_sequential_global_retry      100000       --   3.5300   3.1900     671733      104      0        0 --
+
+rows the bound is expected to reach: PA_sequential, PA_sequential_global_retry, PAnojac_sequential, PAnojac_sequential_global_retry
+
+=== before campaign, same diagnostics ===
+
+run                                        campaign column       value   1sigma
+
+density_keep_jacobian True vs False (must differ -- identical numbers would mean the setting never took effect):
+  PA_joint                         PAnojac_joint                      differ (expected)
+  PA_sequential                    PAnojac_sequential                 differ (expected)
+  PA_sequential_global_retry       PAnojac_sequential_global_retry    differ (expected)
+
+position -> pdg: {'0': 6, '1': -6}
+final-state layouts seen in the production sample: {'6/-6': 2000}
+production cross section: 504.491 pb
+
+run                                 written    eps_m    eps_t eps_tbar      N_dec   wall_s   ovfl  carried mass bound
+PA_joint                             100000   5.6700   5.6700   5.6700    1134784      108      0       -- --
+PA_sequential                        100000   3.5000   1.2400   3.1900     443088       81     14       -- --
+PA_sequential_global_retry           100000  13.3400   3.7900   3.2000     699192       94     49       -- --
+PAnojac_joint                        100000   3.1900   3.1900   3.1900     637820       74      0       -- --
+PAnojac_sequential                   100000   1.1000   1.1000   3.1800     428383       77      0       -- --
+PAnojac_sequential_global_retry      100000   3.8800   3.5200   3.1900     670846       84      0       -- --
+madspin_joint                        100000   4.2900   4.2900   4.2900     858196       91      0       -- --
+madspin_sequential                   100000   3.3100   2.3900   4.2400     662516       96      5       -- --
+madspin_sequential_global_retry      100000  14.5000   4.3700   3.2100     757657      110     21       -- --
+onshell_joint                        100000   3.1900   3.1900   3.1900     638504       74      0       -- --
+onshell_sequential                   100000       --   1.1000   3.1900     429374       72      0       -- --
+onshell_sequential_global_retry      100000       --   3.5300   3.1900     671733       72      0       -- --
+
+rows the bound is expected to reach: PA_sequential, PA_sequential_global_retry, PAnojac_sequential, PAnojac_sequential_global_retry
