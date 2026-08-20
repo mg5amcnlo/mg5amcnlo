@@ -111,3 +111,93 @@ they are. See `RESULTS.md`: for a `2 -> 3` production the reshuffle rescales the
 recoil jet as well as the tops, so `m_tt` moves and the sub-threshold region is
 populated. An empty sub-threshold bin of theirs would be a statement about the
 sample size, so it is drawn as a gap rather than as a zero.
+
+---
+
+# The second study: the unweighting schemes, at the same threshold
+
+Everything above varies the **spinmode** and lets `unweighting = auto` pick an
+accept/reject scheme for each. The files below hold the spinmode fixed and vary
+the **scheme**, on the same production events and against the same truth. They
+are additions: nothing above is modified by them.
+
+| file | what |
+|---|---|
+| `run_mtt_unweighting.py` | runs the cells and writes the raw histograms. Imports the physics setup, the binning and the readers from `run_mtt_threshold.py`, so "same truth, same production sample, same observable, same grid" is a property of the code. |
+| `plot_mtt_unweighting.py` | the two figures in the MG7 paper style, plus the full numeric report. |
+| `plot_mtt_unweighting_userstyle.py` | the same two figures in the user's own matplotlib style. |
+| `data/histograms_unweighting.npz` | the raw measurement: the same 0.25 GeV `m_tt` grid, plus a **top-virtuality** grid `m(W b)` and the `Delta m_tt` histograms. |
+| `data/meta_unweighting.json` | cells, resolved schemes, overweight counters, paired coincidence counts, sensitivity. |
+| `data/logs_unweighting/` | every MadSpin log and card, again as `.log.txt`. |
+| `plots_unweighting/`, `plots_unweighting_userstyle/` | PDF + PNG + `numbers.txt`. |
+| `RESULTS_unweighting.md` | the answers and the numbers. |
+
+```
+python3 run_mtt_unweighting.py --stage sensitivity --nevents 1000000   # no MG5 needed
+python3 run_mtt_unweighting.py --stage madspin --cells PA_joint --basedir /tmp/u
+python3 run_mtt_unweighting.py --stage harvest --basedir /tmp/u --cross-check
+python3 plot_mtt_unweighting.py
+python3 plot_mtt_unweighting_userstyle.py
+```
+
+## The cells, and why they are the cells
+
+`Z_k(m)` is the tabulated look-ahead factor the up-front-mass schemes multiply
+into the mass-stage weight. The schemes stand in three different relations to
+it, which is the whole reason to scan them:
+
+* `joint` -- one accept/reject over the virtualities and both decays. No mass
+  stage, so `Z_k` never enters.
+* `sequential_global_retry` -- a rejected decay throws the mass set away and
+  restarts the chain, so the per-angle stage never renormalises and `Z_k`
+  **cancels identically**. It is a pure efficiency preconditioner there.
+* `sequential` -- trusts the tabulated `Z_hat`. The per-angle stage divides out
+  the *true* `Z_k` whatever weight it was handed, so this scheme's residual bias
+  is exactly `Z_hat / Z`.
+* `sequential_with_mass` -- draws each slot's mass *inside* that slot's own
+  accept/reject, so no stage freezes a virtuality and `Z_k` does not arise at
+  all. It needs a per-particle mass draw, i.e. the `PA` spinmode; under
+  `madspin` `_unweighting_mode` silently falls back to `sequential`, so it is a
+  cell of the `PA` row only. The resolved scheme is parsed back out of every log
+  and recorded, so a fallback cannot masquerade as a measurement.
+
+The null hypothesis is therefore sharp: **`joint` and `sequential_global_retry`
+must agree within statistics**, because neither reads the table.
+
+## Why `onshell` is not run
+
+`spinmode = onshell` draws no virtuality at all. `_spinmode_has_density()` is
+False for it, and `_unweighting_mode()` returns `joint` on that branch before it
+ever looks at the card -- so `set unweighting sequential` under `onshell` does
+not run `sequential`, it runs `joint` with a log line saying so. There is no
+scheme axis to scan: the four cells would be one cell run four times. It is also
+the mode with nothing for `Z_k` to bias, since `Z_k` is a factor in a mass-stage
+weight and `onshell` has no mass stage and no mass.
+
+## Two things the figure cannot do on its own
+
+**The sub-threshold window is too small to see a sub-per-cent effect.** It holds
+0.165 % of the cross section, so at 1 000 000 events per cell two cells resolve a
+relative difference of about 3.5 % at 1 sigma there. `run_mtt_unweighting.py
+--stage sensitivity` prints that table for any sample size, and it was computed
+*before* the runs. Reporting an inconclusive sub-threshold ratio as "agreement"
+would be dishonest, so the report quotes wider windows too -- and, above all, the
+**top virtuality** `m(W b)`, harvested in the same pass. `Z_k` distorts the
+virtuality *directly*; `m_tt` only sees it after the production reshuffle has
+smeared it, and the moments of `m(W b)` carry a statistical error four orders of
+magnitude smaller than the sub-threshold rate's.
+
+**The cells are compared paired, not as independent samples.** Every cell decays
+the same production events in the same order, so the production-level
+fluctuation is common to all of them and cancels in a difference: the error on
+`n_A - n_B` is set by the *discordant* pairs (McNemar),
+`sqrt(n_A + n_B - 2 n_AB)`, not by `sqrt(n_A + n_B)`. How much that is actually
+worth here is measured and printed, not assumed.
+
+## The ratio pane is clipped
+
+Both figures clip the ratio pane to **±20 %** (0.8-1.2). A point outside is
+drawn *on* the boundary it left through, as a filled triangle pointing that way,
+with no error bar -- never silently cut off. The count of such points is in the
+caption under the pane, the axis label says the pane is clipped, and every
+unclipped value is in the per-bin table of `numbers.txt`.
