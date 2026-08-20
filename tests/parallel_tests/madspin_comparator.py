@@ -234,7 +234,13 @@ _RE_IDENTITY_FAIL = re.compile(
     r'.*?relative spread of the ratio ([0-9eE.+\-]+), mean ([0-9eE.+\-]+)'
 )
 _RE_OVERFLOW = re.compile(
-    r'MadSpin sequential: (\d+) weights exceeded their per-particle maximum'
+    # Both spellings: the overweight safety net re-worded this line from
+    # "per-particle maximum" to "stage maximum (mass set / angles / per
+    # particle)".  Matching only the old one makes MadSpinResult.overflows read
+    # 0 on every current log, which is indistinguishable from a run in which no
+    # bound was exceeded.
+    r'MadSpin sequential: (\d+) weights exceeded their '
+    r'(?:per-particle|stage) maximum'
 )
 
 
