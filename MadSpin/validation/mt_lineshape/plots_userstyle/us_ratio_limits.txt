@@ -1,0 +1,16 @@
+ratio y limits chosen per figure (smallest of the user's
+ladder 0.99/0.85/0.75/0.5 that contains every point +- its
+sqrt(sumw2) error; nothing is clipped)
+
+What is histogrammed on every figure here is a PER-EVENT
+quantity: the invariant mass sqrt(E^2-|p|^2) of the status-2
+resonance in the decayed LHE, i.e. the virtuality MadSpin
+assigned to that top in that event.  It is not a fitted
+width and not a pole parameter; the mean and rms of it are
+single numbers per cell and live in lineshape_numbers.txt.
+
+us_lineshape_mt_all          ratio ylim (0.19999999999999996, 1.8)
+us_lineshape_mtbar_all       ratio ylim (0.19999999999999996, 1.8)
+us_lineshape_mt_madspin      ratio ylim (0.5, 1.5)
+us_lineshape_mt_PA           ratio ylim (0.5, 1.5)
+us_lineshape_mt_nojac        ratio ylim (0.5, 1.5)

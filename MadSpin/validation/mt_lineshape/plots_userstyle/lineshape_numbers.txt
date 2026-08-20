@@ -1,0 +1,247 @@
+MadSpin m(t) / m(tbar) lineshape across spinmode x unweighting
+  p p > t t~, both tops decayed (fully leptonic), 13 TeV LO
+  t > b w+, w+ > l+ vl; t~ > b~ w-, w- > l- vl~
+  200000 production events, madevent+MadSpin seed 42, code a311d2e64278
+  pole M = 173.000000 GeV, width Gamma = 1.491500 GeV (production banner param_card)
+  Breit-Wigner support |m-M| < 15 Gamma = [150.6275, 195.3725] GeV
+
+OBSERVABLE: the per-event invariant mass sqrt(E^2-|p|^2) of the
+  status-2 resonance in the decayed LHE.  Not a fitted width,
+  not a pole parameter, not a mean -- the means below are means
+  OF this quantity and are single numbers, the histograms are of
+  the quantity itself.
+
+cells that collapse onto another cell (checked bin by bin on the
+  raw fine grid, not asserted from the source)
+  full_joint             == madspin_joint        : IDENTICAL
+      run_madspin rewrites spinmode 'full' to 'madspin' before anything else reads it
+      reported unweighting: joint -> joint
+  madspin_seqwithmass    == madspin_sequential   : IDENTICAL
+      sequential_with_mass needs a per-particle mass draw (PA); the offshell spinmodes fall back to sequential
+      reported unweighting: sequential_with_mass -> sequential
+  madspin_v1_sequential  == madspin_v1_joint     : IDENTICAL
+      madspin_v1 has no density matrix, so the unweighting card entry is inert
+      reported unweighting: sequential -> None
+  none_sequential        == none_joint           : IDENTICAL
+      spinmode=none has no density matrix, so the unweighting card entry is inert
+      reported unweighting: sequential -> None
+
+cells with no lineshape at all: every event at the pole mass
+  onshell_joint          m(t) in [172.9999983181, 173.0000018207]  m(tbar) in [172.9999986020, 173.0000016335]
+  onshell_sequential     m(t) in [172.9999983181, 173.0000018207]  m(tbar) in [172.9999986020, 173.0000016335]
+  onshell_seqglobal      m(t) in [172.9999983181, 173.0000018207]  m(tbar) in [172.9999986020, 173.0000016335]
+  none_joint             m(t) in [172.9999983181, 173.0000018207]  m(tbar) in [172.9999986020, 173.0000016335]
+  -> onshell samples no virtuality (_density_do_reshuffle is
+     False, slot_mass comes back empty) and spinmode=none does
+     not smear the resonance either.  There is nothing to put on
+     a lineshape plot for these four.
+
+=== m(t) ===
+  cell                           N     mean [GeV]  rms [GeV] f(|dm|<G/2)    f(<3G) sigma [pb]
+  madspin_joint             200000 173.1652+-0.0071 3.1731+-0.0143 0.5130+-0.0016 0.9165+-0.0021  23.75099
+  madspin_sequential        200000 173.1923+-0.0072 3.2083+-0.0144 0.5095+-0.0016 0.9149+-0.0021  23.75099
+  madspin_seqglobal         200000 173.1779+-0.0071 3.1859+-0.0142 0.5105+-0.0016 0.9146+-0.0021  23.75099
+  PA_joint                  200000 172.9503+-0.0071 3.1736+-0.0143 0.5137+-0.0016 0.9159+-0.0021  23.75099
+  PA_sequential             200000 172.9512+-0.0071 3.1913+-0.0143 0.5126+-0.0016 0.9142+-0.0021  23.75099
+  PA_seqglobal              200000 172.9637+-0.0071 3.1644+-0.0142 0.5137+-0.0016 0.9158+-0.0021  23.75099
+  PA_seqwithmass            200000 172.9519+-0.0071 3.1711+-0.0143 0.5116+-0.0016 0.9154+-0.0021  23.75099
+  PAnojac_joint             200000 172.9747+-0.0071 3.1892+-0.0143 0.5106+-0.0016 0.9154+-0.0021  23.75099
+  PAnojac_sequential        200000 172.9969+-0.0071 3.1920+-0.0144 0.5098+-0.0016 0.9145+-0.0021  23.75099
+  PAnojac_seqglobal         200000 172.9934+-0.0070 3.1530+-0.0141 0.5104+-0.0016 0.9155+-0.0021  23.75099
+  PAnojac_seqwithmass       200000 173.0165+-0.0071 3.1785+-0.0142 0.5109+-0.0016 0.9141+-0.0021  23.75099
+  madspin_v1_joint          200000 173.1751+-0.0071 3.1756+-0.0144 0.5126+-0.0016 0.9159+-0.0021  24.91514
+  madspin_joint_rep         200000 173.1696+-0.0071 3.1940+-0.0143 0.5117+-0.0016 0.9146+-0.0021  23.75099
+  PA_joint_rep              200000 172.9596+-0.0071 3.1627+-0.0142 0.5127+-0.0016 0.9156+-0.0021  23.75099
+
+  per-bin chi2 on the 70 plot bins.  Both entries of every
+  pair are unit-area densities, so one linear constraint is
+  shared: dof = nbins - 1.  "vs BW" is against the exact
+  truncated Breit-Wigner at the run's own M and Gamma,
+  which is a standard and NOT a prediction: the accepted
+  lineshape is that Breit-Wigner times the decay matrix
+  element and phase space.
+  The two "replica seed" rows are the SAME cell as the row
+  above them, run off the SAME production events with a
+  different MadSpin seed.  They are the noise floor: no
+  chi2/dof at or below theirs means anything.
+  cell                     vs madspin/    vs its own     vs Breit-       family    largest
+                                 joint  family joint        Wigner    reference pull (fam)
+  madspin_joint               0.0 /69       0.0 /69     639.5 /69       madspin  +0.00@nan
+  madspin_sequential         58.3 /69      58.3 /69     823.8 /69       madspin  +2.04@169
+  madspin_seqglobal          53.8 /69      53.8 /69     729.7 /69       madspin  +2.40@171
+  PA_joint                  484.3 /69       0.0 /69     124.7 /69            PA  +0.00@nan
+  PA_sequential             503.0 /69      58.0 /69     125.1 /69            PA  +3.01@161
+  PA_seqglobal              448.9 /69      52.6 /69      99.4 /69            PA  +2.17@175
+  PA_seqwithmass            500.7 /69      52.9 /69     108.3 /69            PA  +2.29@161
+  PAnojac_joint             402.0 /69       0.0 /69      72.8 /69       PAnojac  +0.00@nan
+  PAnojac_sequential        351.5 /69      54.9 /69      66.6 /69       PAnojac  -2.47@164
+  PAnojac_seqglobal         348.5 /69      53.7 /69      90.9 /69       PAnojac  +3.42@184
+  PAnojac_seqwithmass       287.1 /69      76.6 /69      86.9 /69       PAnojac  +2.56@179
+  madspin_v1_joint           55.9 /69      55.9 /69     708.4 /69       madspin  +2.18@174
+  madspin_joint_rep          65.7 /69      65.7 /69     669.4 /69       madspin  +2.76@188
+  PA_joint_rep              482.7 /69      62.5 /69     121.8 /69            PA  +2.58@170
+  sqrt(2*dof) = 11.7, so a chi2 that many above 69 is 1 sigma.
+
+  mean m shifted against the family reference, in MeV.  The
+  quoted error treats the two samples as independent, which
+  they are not (they share the production events), so read
+  it against the replica row rather than against 1 sigma:
+  the replica is the same scheme with a different MadSpin
+  seed, so whatever shift it shows is what a shift costs.
+  For scale, the exact truncated Breit-Wigner has
+  mean = 173.0017 GeV and rms = 3.2066 GeV.
+  cell                   mean-ref [MeV]   family ref    n sigma
+  madspin_sequential         27.2 +- 10.1      madspin       2.7
+  madspin_seqglobal          12.8 +- 10.1      madspin       1.3
+  PA_sequential               0.8 +- 10.1           PA       0.1
+  PA_seqglobal               13.3 +- 10.0           PA       1.3
+  PA_seqwithmass              1.6 +- 10.0           PA       0.2
+  PAnojac_sequential         22.2 +- 10.1      PAnojac       2.2
+  PAnojac_seqglobal          18.7 +- 10.0      PAnojac       1.9
+  PAnojac_seqwithmass        41.7 +- 10.1      PAnojac       4.1
+  madspin_v1_joint            9.9 +- 10.0      madspin       1.0
+  madspin_joint_rep           4.5 +- 10.1      madspin       0.4
+  PA_joint_rep                9.3 +- 10.0           PA       0.9
+
+=== m(tbar) ===
+  cell                           N     mean [GeV]  rms [GeV] f(|dm|<G/2)    f(<3G) sigma [pb]
+  madspin_joint             200000 173.1851+-0.0072 3.2091+-0.0145 0.5136+-0.0016 0.9158+-0.0021  23.75099
+  madspin_sequential        200000 173.1874+-0.0071 3.1817+-0.0143 0.5107+-0.0016 0.9146+-0.0021  23.75099
+  madspin_seqglobal         200000 173.1858+-0.0071 3.1945+-0.0143 0.5084+-0.0016 0.9144+-0.0021  23.75099
+  PA_joint                  200000 172.9624+-0.0071 3.1825+-0.0144 0.5110+-0.0016 0.9161+-0.0021  23.75099
+  PA_sequential             200000 172.9563+-0.0071 3.1710+-0.0143 0.5125+-0.0016 0.9160+-0.0021  23.75099
+  PA_seqglobal              200000 172.9514+-0.0071 3.1830+-0.0143 0.5115+-0.0016 0.9152+-0.0021  23.75099
+  PA_seqwithmass            200000 172.9525+-0.0070 3.1527+-0.0143 0.5121+-0.0016 0.9167+-0.0021  23.75099
+  PAnojac_joint             200000 173.0043+-0.0072 3.1979+-0.0143 0.5123+-0.0016 0.9144+-0.0021  23.75099
+  PAnojac_sequential        200000 172.9914+-0.0071 3.1787+-0.0142 0.5097+-0.0016 0.9144+-0.0021  23.75099
+  PAnojac_seqglobal         200000 172.9998+-0.0072 3.2077+-0.0144 0.5087+-0.0016 0.9144+-0.0021  23.75099
+  PAnojac_seqwithmass       200000 172.9823+-0.0072 3.2330+-0.0145 0.5087+-0.0016 0.9134+-0.0021  23.75099
+  madspin_v1_joint          200000 173.1803+-0.0071 3.1784+-0.0143 0.5152+-0.0016 0.9162+-0.0021  24.91514
+  madspin_joint_rep         200000 173.1769+-0.0071 3.1831+-0.0143 0.5115+-0.0016 0.9148+-0.0021  23.75099
+  PA_joint_rep              200000 172.9579+-0.0071 3.1624+-0.0142 0.5120+-0.0016 0.9156+-0.0021  23.75099
+
+  per-bin chi2 on the 70 plot bins.  Both entries of every
+  pair are unit-area densities, so one linear constraint is
+  shared: dof = nbins - 1.  "vs BW" is against the exact
+  truncated Breit-Wigner at the run's own M and Gamma,
+  which is a standard and NOT a prediction: the accepted
+  lineshape is that Breit-Wigner times the decay matrix
+  element and phase space.
+  The two "replica seed" rows are the SAME cell as the row
+  above them, run off the SAME production events with a
+  different MadSpin seed.  They are the noise floor: no
+  chi2/dof at or below theirs means anything.
+  cell                     vs madspin/    vs its own     vs Breit-       family    largest
+                                 joint  family joint        Wigner    reference pull (fam)
+  madspin_joint               0.0 /69       0.0 /69     772.1 /69       madspin  +0.00@nan
+  madspin_sequential         48.6 /69      48.6 /69     803.3 /69       madspin  -2.06@194
+  madspin_seqglobal          98.4 /69      98.4 /69     795.1 /69       madspin  -2.89@172
+  PA_joint                  517.1 /69       0.0 /69     133.0 /69            PA  +0.00@nan
+  PA_sequential             558.5 /69      59.5 /69     119.6 /69            PA  +2.36@171
+  PA_seqglobal              583.9 /69      77.9 /69     107.7 /69            PA  +2.37@179
+  PA_seqwithmass            596.9 /69      64.9 /69     151.0 /69            PA  -2.76@177
+  PAnojac_joint             379.7 /69       0.0 /69      90.5 /69       PAnojac  +0.00@nan
+  PAnojac_sequential        456.1 /69      77.2 /69      77.3 /69       PAnojac  +3.16@176
+  PAnojac_seqglobal         412.9 /69      72.9 /69      75.8 /69       PAnojac  -2.02@176
+  PAnojac_seqwithmass       472.2 /69      63.7 /69      73.1 /69       PAnojac  -2.98@183
+  madspin_v1_joint           54.0 /69      54.0 /69     781.4 /69       madspin  +1.92@184
+  madspin_joint_rep          73.5 /69      73.5 /69     722.0 /69       madspin  +2.59@167
+  PA_joint_rep              578.7 /69      73.1 /69     107.9 /69            PA  +2.77@179
+  sqrt(2*dof) = 11.7, so a chi2 that many above 69 is 1 sigma.
+
+  mean m shifted against the family reference, in MeV.  The
+  quoted error treats the two samples as independent, which
+  they are not (they share the production events), so read
+  it against the replica row rather than against 1 sigma:
+  the replica is the same scheme with a different MadSpin
+  seed, so whatever shift it shows is what a shift costs.
+  For scale, the exact truncated Breit-Wigner has
+  mean = 173.0017 GeV and rms = 3.2066 GeV.
+  cell                   mean-ref [MeV]   family ref    n sigma
+  madspin_sequential          2.2 +- 10.1      madspin       0.2
+  madspin_seqglobal           0.7 +- 10.1      madspin       0.1
+  PA_sequential              -6.1 +- 10.0           PA      -0.6
+  PA_seqglobal              -11.0 +- 10.1           PA      -1.1
+  PA_seqwithmass             -9.9 +- 10.0           PA      -1.0
+  PAnojac_sequential        -12.8 +- 10.1      PAnojac      -1.3
+  PAnojac_seqglobal          -4.4 +- 10.1      PAnojac      -0.4
+  PAnojac_seqwithmass       -22.0 +- 10.2      PAnojac      -2.2
+  madspin_v1_joint           -4.9 +- 10.1      madspin      -0.5
+  madspin_joint_rep          -8.2 +- 10.1      madspin      -0.8
+  PA_joint_rep               -4.5 +- 10.0           PA      -0.4
+
+mean shift against the family reference, m(t) and m(tbar)
+  separately and combined [MeV].  A scheme that biased the
+  lineshape moves both resonances the same way; a shift in one
+  only is a fluctuation, and with 11 comparisons per resonance
+  there will be some.  The combined column is the one to read.
+  (exact truncated Breit-Wigner mean = 173.0017 GeV)
+  cell                             m(t)        m(tbar)         combined  n sigma
+  madspin_sequential        27.2+-10.1      2.2+-10.1      14.7+-7.1         2.1
+  madspin_seqglobal         12.8+-10.1      0.7+-10.1       6.7+-7.1         0.9
+  PA_sequential              0.8+-10.1     -6.1+-10.0      -2.6+-7.1        -0.4
+  PA_seqglobal              13.3+-10.0    -11.0+-10.1       1.2+-7.1         0.2
+  PA_seqwithmass             1.6+-10.0     -9.9+-10.0      -4.2+-7.1        -0.6
+  PAnojac_sequential        22.2+-10.1    -12.8+-10.1       4.7+-7.1         0.7
+  PAnojac_seqglobal         18.7+-10.0     -4.4+-10.1       7.1+-7.1         1.0
+  PAnojac_seqwithmass       41.7+-10.1    -22.0+-10.2       9.9+-7.2         1.4
+  madspin_v1_joint           9.9+-10.0     -4.9+-10.1       2.5+-7.1         0.4
+  madspin_joint_rep          4.5+-10.1     -8.2+-10.1      -1.9+-7.1        -0.3
+  PA_joint_rep               9.3+-10.0     -4.5+-10.0       2.4+-7.1         0.3
+
+closure chi2 against the family reference, m(t) and m(tbar) and
+  the two summed (140 bins, 138 dof).  Read every row against
+  the replica row of its own family at the bottom: that is the
+  same scheme with a different MadSpin seed, so it is what
+  agreement costs, and 1 sigma on a chi2 of 138 dof is 16.6.
+  cell                           m(t)      m(tbar)         combined   n sigma
+  madspin_sequential        58.3 /69     48.6 /69      106.9 /138       -1.9
+  madspin_seqglobal         53.8 /69     98.4 /69      152.2 /138        0.9
+  PA_sequential             58.0 /69     59.5 /69      117.5 /138       -1.2
+  PA_seqglobal              52.6 /69     77.9 /69      130.5 /138       -0.5
+  PA_seqwithmass            52.9 /69     64.9 /69      117.8 /138       -1.2
+  PAnojac_sequential        54.9 /69     77.2 /69      132.1 /138       -0.4
+  PAnojac_seqglobal         53.7 /69     72.9 /69      126.6 /138       -0.7
+  PAnojac_seqwithmass       76.6 /69     63.7 /69      140.3 /138        0.1
+  madspin_v1_joint          55.9 /69     54.0 /69      109.9 /138       -1.7
+  madspin_joint_rep         65.7 /69     73.5 /69      139.2 /138        0.1
+  PA_joint_rep              62.5 /69     73.1 /69      135.7 /138       -0.1
+
+differences that are a deliberate physics choice, not a closure
+  failure.  Same statistics, same reference machinery as above.
+  cell                   against             combined chi2     mean shift
+  PA_joint               madspin_joint        1001.3 /138   -218.8+-7.1   MeV
+      the pole approximation: PA evaluates the production density at onshell momenta, madspin at the reshuffled offshell ones
+  PAnojac_joint          PA_joint              156.0 /138     33.1+-7.1   MeV
+      density_keep_jacobian = False: the reshuffling jacobian is left out of the accept/reject weight and applied afterwards as a dressing
+  madspin_v1_joint       madspin_joint         109.9 /138      2.5+-7.1   MeV
+      the pre-density implementation: different mass smearing and a factorised on-shell branching ratio
+
+rates (decayed-LHE banner cross section, and the branching ratio
+  MadSpin reports).  These are NOT normalised away on the
+  figures -- the figures show unit-area densities, so a rate
+  difference would not appear there and is quoted here instead.
+  cell                     sigma [pb]           BR  unw. eff. overflows
+  madspin_joint             23.750990   0.04708304     0.0880         0
+  madspin_sequential        23.750990   0.04708304     0.1481         2
+  madspin_seqglobal         23.750990   0.04708304     0.1258         2
+  PA_joint                  23.750990   0.04708304     0.0605         0
+  PA_sequential             23.750990   0.04708304     0.2207         0
+  PA_seqglobal              23.750990   0.04708304     0.1376         3
+  PA_seqwithmass            23.750990   0.04708304     0.0432         0
+  PAnojac_joint             23.750990   0.04708304     0.3058         0
+  PAnojac_sequential        23.750990   0.04708304     0.2287         0
+  PAnojac_seqglobal         23.750990   0.04708304     0.1455         0
+  PAnojac_seqwithmass       23.750990   0.04708304     0.2252         0
+  madspin_v1_joint          24.915137   0.04939080     0.1651         0
+  madspin_joint_rep         23.750990   0.04708304     0.0889         0
+  PA_joint_rep              23.750990   0.04708304     0.0613         0
+  onshell_joint             23.750990   0.04708304     0.3045         0
+  onshell_sequential        23.750990   0.04708304     0.2290         0
+  onshell_seqglobal         23.750990   0.04708304     0.1452         0
+  none_joint                23.759797   0.04710049     0.0000         0
+  sigma(production, banner) = 504.449 pb
+
+out-of-range: events whose virtuality fell outside the +-15 Gamma
+  grid (there should be none: that is the range MadSpin samples)
+  (nothing listed = none, in any cell)
