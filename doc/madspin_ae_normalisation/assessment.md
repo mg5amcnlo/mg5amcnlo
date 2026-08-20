@@ -94,12 +94,40 @@ limiting term; 24x24 would do and 16x16 probably would.
 
 ### 1.3 In context
 
-*(timings, section 1.3, are in `data/timing.json`; the measured deltas are quoted
-in the table at the end of this section)*
+`data/timing.json`.  50 000 production events, `nb_core = 8`, **warm `ms_dir`**
+so no pair differs by a max-weight probe or a first-generation decay pool.  The
+honest denominator is the CPU a run spends per event, not its wall clock -- an
+8-core run divides the wall clock by 8 and would flatter the number.
 
-The honest way to put 45 us in context is against the CPU a MadSpin run actually
-spends per event, not against its wall clock -- an 8-core run divides the wall
-clock by 8 and would flatter the number.
+A MadSpin `PA`/sequential run of this process costs **8.35 ms of CPU per event**
+(417.7 s over 50 000, summed over the eight workers); `madspin`/sequential costs
+**9.55 ms**.
+
+| | added per event | as % of the run's CPU |
+|---|---|---|
+| `PA`, exact quadrature (`2 -> 2`) | **76.9 us** | **0.92 %** |
+| `madspin`, Monte Carlo, 8 draws | 0.70 ms | 7.3 % |
+| `madspin`, Monte Carlo, 24 draws | 2.24 ms | 23.4 % |
+
+The 76.9 us is the shipped method micro-benchmarked on 300 real production
+events with its caches warm -- 16 us above the bare 61 us numpy quadrature, the
+rest being the two `Zhat` evaluations and the window arithmetic.  The two
+`madspin` rows give **90 us per offshell free draw**, which is what a mass set
+costs when its weight carries `Tr(rho_off)` and there is no arithmetic-only path
+to it (section 6.1).
+
+End to end, the two independent `PA` pairs measured **+3.0 %** and **+4.7 %** of
+wall clock and **+4.9 %** and **+8.3 %** of CPU -- both above the 0.92 % the
+quadrature accounts for, which is the run-to-run scatter of this benchmark
+(the two baselines alone differ by 0.7 % of CPU, and the decay pools are redrawn
+between runs).  Take 0.9 % as the cost and a few percent as the noise on
+measuring it.
+
+**One trap worth recording**, because it is exactly the sort of thing that makes
+a 45 us method look like a 450 us one: `numpy.polynomial.legendre.leggauss(48)`
+is a root-find and costs **379 us**, six times the quadrature it sets up.  The
+first `PA` pair above was measured before the nodes were cached and shows it
+(+8.3 % of CPU against +4.9 % after).
 
 ---
 

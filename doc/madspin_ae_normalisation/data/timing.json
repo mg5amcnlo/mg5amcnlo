@@ -1,0 +1,16 @@
+{
+  "setup": "p p > t t~, 50 000 production events, fully leptonic, unweighting sequential, nb_core 8, WARM ms_dir (no probe, no first-generation decay pool) so the only difference between a pair is the correction",
+  "note": "user = CPU seconds summed over the 8 forked workers; real = wall clock",
+  "leggauss_trap_us": 379.0,
+  "quad_in_code_us_per_event": 76.9,
+  "offshell_free_draw_us": 90,
+  "runs": {
+    "PA baseline (rep 1)":            {"real": 111.40, "user": 420.58},
+    "PA + mass_normalisation (rep 1, before the leggauss cache)": {"real": 116.68, "user": 455.54},
+    "PA baseline (rep 2)":            {"real": 112.45, "user": 417.69},
+    "PA + mass_normalisation (rep 2)": {"real": 115.82, "user": 438.19},
+    "madspin baseline":               {"real": 118.15, "user": 477.49},
+    "madspin + mass_normalisation, 8 draws":  {"real": 123.85, "user": 512.53},
+    "madspin + mass_normalisation, 24 draws": {"real": 141.30, "user": 589.39}
+  }
+}

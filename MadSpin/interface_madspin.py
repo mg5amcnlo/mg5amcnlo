@@ -8588,7 +8588,14 @@ class MadSpinInterface(extended_cmd.Cmd):
         if not (hi1 > lo1) or not (lo1 > 0) or not (lo2 > 0):
             return None
 
-        x, wq = np.polynomial.legendre.leggauss(nquad)
+        # cached: leggauss(48) is a root-find and costs 379 us, eight times
+        # the whole rest of this method
+        cache = getattr(self, '_ms_leggauss', None)
+        if cache is None:
+            cache = self._ms_leggauss = {}
+        if nquad not in cache:
+            cache[nquad] = np.polynomial.legendre.leggauss(nquad)
+        x, wq = cache[nquad]
         r_lo1 = math.atan((lo1 ** 2 - pole1 ** 2) / pole1 / width1)
         r_hi1 = math.atan((hi1 ** 2 - pole1 ** 2) / pole1 / width1)
         r1 = 0.5 * (r_hi1 + r_lo1) + 0.5 * (r_hi1 - r_lo1) * x
