@@ -7963,3 +7963,332 @@ class _CaptureCritical(object):
         self._logger.propagate = self._propagate
         interface_madspin._MS_IMAG_REPORTED.clear()
         return False
+
+
+class TestRefillPoolIsCompleteBeforeItIsPublished(unittest.TestCase):
+    """A refill generation must not become observable before the files the
+    other workers will open are there to be opened.
+
+    Context: under the parallel unweighting a channel's decay pool is refilled
+    by one fixed OWNER worker; every other worker blocks until the channel's
+    ``ms_refill.gen`` marker says the generation it needs is published, then
+    opens *its* slice of ``Events/ms_refill_<gen>/``. So the marker is a promise
+    about a set of files, and the owner must only make it once they are all on
+    disk and readable.
+
+    The regression: two generation backends produce those files and they do not
+    agree on where they write. The plain madevent one honours the run name and
+    has the unweighting split its output one file per worker -- the canonical
+    layout. The gridpack one, which EVERY ``ms_dir`` run uses, goes through
+    run.sh: it knows about neither, and writes a single ``events.lhe.gz`` on top
+    of the pool that is still being read. The owner published the generation all
+    the same, and the first worker to act on that promise -- the owner itself,
+    or any waiter -- died on
+
+        MadSpin: refill pool .../ms_refill_1/unweighted_events_0.lhe is missing
+        for worker 0
+    """
+
+    NB_CORE = 4
+
+    _BANNER = (
+        '<LesHouchesEvents version="1.0">\n'
+        '<header>\n'
+        '</header>\n'
+        '<init>\n'
+        '2212 2212 6.500000e+03 6.500000e+03 0 0 247000 247000 -4 1\n'
+        ' 3.000000e+00 1.000000e-02 3.000000e+00 1\n'
+        '</init>\n'
+    )
+
+    @classmethod
+    def _event(cls, tag):
+        """One decay event carrying ``tag`` as its weight, so that an event can
+        be followed from the file it was generated in to the slice it ends up
+        in."""
+        return (
+            '<event>\n'
+            ' 2      1 +%.7e 1.7300000e+02 7.5467711e-03 1.0236800e-01\n'
+            '        5  1    0    0    0    0 '
+            '+0.0000000000e+00 +0.0000000000e+00 '
+            '+6.8000000000e+01 6.8000000000e+01 4.7000000000e+00 '
+            '0.0000e+00 1.0000e+00\n'
+            '       24  1    0    0    0    0 '
+            '+0.0000000000e+00 +0.0000000000e+00 '
+            '-6.8000000000e+01 1.0500000000e+02 8.0419002000e+01 '
+            '0.0000e+00 1.0000e+00\n'
+            '</event>\n' % tag)
+
+    @classmethod
+    def _lhe(cls, tags):
+        return cls._BANNER + ''.join(cls._event(t) for t in tags) \
+            + '</LesHouchesEvents>\n'
+
+    @staticmethod
+    def _tags_of(path):
+        """The weights of the events in ``path``, in file order."""
+        import gzip
+        opener = gzip.open if path.endswith('.gz') else open
+        with opener(path, 'rt') as fsock:
+            lines = fsock.readlines()
+        return [float(lines[i + 1].split()[2])
+                for i, line in enumerate(lines) if line.startswith('<event')]
+
+    def setUp(self):
+        import tempfile
+        self.tmpdir = tempfile.mkdtemp(prefix='ms_refill_')
+        self.decay_dir = pjoin(self.tmpdir, 'decay_6_0')
+        os.makedirs(pjoin(self.decay_dir, 'Events'))
+        with open(pjoin(self.decay_dir, 'run.sh'), 'w') as fsock:
+            fsock.write('#!/bin/sh\n')
+        # the pool the workers of this run are reading right now
+        self.pool_tags = list(range(1, 21))
+        self._write_pool(self.pool_tags)
+
+    def tearDown(self):
+        shutil.rmtree(self.tmpdir, ignore_errors=True)
+
+    def _write_pool(self, tags):
+        import gzip
+        with gzip.open(pjoin(self.decay_dir, 'events.lhe.gz'), 'wt') as fsock:
+            fsock.write(self._lhe(tags))
+
+    # ---------------------------------------------------------------- stubs
+
+    class _Particle(object):
+        def get_name(self):
+            return 't'
+
+    class _Model(object):
+        def get_particle(self, pdg):
+            return TestRefillPoolIsCompleteBeforeItIsPublished._Particle()
+
+    def _stub(self, shard_tag=0, gridpack_tags=None, run_gridpack=None):
+        """A worker of a 4-core parallel unweighting, on an ``ms_dir`` run, with
+        the real refill machinery and a stand-in for run.sh."""
+        test = self
+        interface = interface_madspin.MadSpinInterface
+        if gridpack_tags is None:
+            gridpack_tags = list(range(100, 100 + 4 * self.NB_CORE + 2))
+
+        class Stub(object):
+            # the machinery under test, verbatim
+            generate_events = interface.generate_events
+            _regenerate_events = interface._regenerate_events
+            _generate_refill_pool = interface._generate_refill_pool
+            _materialise_refill_pool = interface._materialise_refill_pool
+            _refill_pool_paths = interface._refill_pool_paths
+            _refill_pool_path = interface._refill_pool_path
+            _open_refill_slice = interface._open_refill_slice
+            _owner_generate = interface._owner_generate
+            _clear_refill_state = interface._clear_refill_state
+            _channel_owner = interface._channel_owner
+            _split_group_tag = interface._split_group_tag
+            _DECAY_GROUP_TAG = interface._DECAY_GROUP_TAG
+            # the static ones have to be re-wrapped: taken off the class they
+            # are plain functions, and a plain function in a class body would
+            # be handed a ``self`` they do not take
+            _refill_pool_dir = staticmethod(interface._refill_pool_dir)
+            _count_lhe_events = staticmethod(interface._count_lhe_events)
+            _published_gen = staticmethod(interface._published_gen)
+            _publish_gen = staticmethod(interface._publish_gen)
+            _decay_dir = staticmethod(interface._decay_dir)
+            _reader_paths = staticmethod(interface._reader_paths)
+            _reader_from_paths = staticmethod(interface._reader_from_paths)
+            _split_pool_round_robin = staticmethod(
+                interface._split_pool_round_robin)
+
+            def _resolve_nb_core(self):
+                return test.NB_CORE
+
+            def _run_gridpack(self, cmd, cwd):
+                """run.sh: writes what it generated to <decay_dir>/events.lhe.gz
+                and knows nothing about run names or per-worker splitting."""
+                if run_gridpack is not None:
+                    return run_gridpack(cwd)
+                test._write_pool(gridpack_tags)
+                return 0, ''
+
+        stub = Stub()
+        stub.path_me = self.tmpdir
+        stub.options = {'ms_dir': self.tmpdir, 'seed': 11, 'run_card': ''}
+        stub.seed = 11
+        stub.mg5cmd = None
+        stub.me_int = {}
+        stub.model = self._Model()
+        stub.list_branches = {'t': ['t > b w+, w+ > l+ vl']}
+        stub._shard_tag = shard_tag
+        stub._shard_nb_core = self.NB_CORE
+        stub._channel_keys = [(6, 0)]
+        stub._refill_seed_base = 42
+        stub._owner_undersize = 0.10
+        return stub
+
+    def _generate(self, stub, gen=1):
+        with _CaptureCritical():
+            stub._owner_generate(6, 0, gen, 1000)
+
+    # ------------------------------------------------------- the regression
+
+    def test_every_worker_finds_its_slice_of_a_gridpack_refill(self):
+        """The regression itself. The owner generates through the gridpack;
+        every worker -- the owner included -- must then find the slice it is
+        about to open, at the canonical path."""
+        self._generate(self._stub())
+        for tag in range(self.NB_CORE):
+            worker = self._stub(shard_tag=tag)
+            path = worker._refill_pool_path(self.decay_dir, 1)
+            self.assertTrue(os.path.exists(path), path)
+            self.assertEqual(os.path.dirname(path),
+                             pjoin(self.decay_dir, 'Events', 'ms_refill_1'))
+
+    def test_the_refilled_pool_holds_each_generated_event_exactly_once(self):
+        """The slices partition the generated events: no worker sees another's
+        event, and none of them is lost on the way."""
+        generated = list(range(100, 126))
+        self._generate(self._stub(gridpack_tags=generated))
+        seen = []
+        for tag in range(self.NB_CORE):
+            worker = self._stub(shard_tag=tag)
+            seen.extend(self._tags_of(worker._refill_pool_path(self.decay_dir, 1)))
+        self.assertEqual(sorted(seen), sorted(float(t) for t in generated))
+
+    def test_the_slices_are_dealt_round_robin(self):
+        """Worker i gets the events at positions i, i+N, ... -- the same stripe
+        it would pick out itself if it had to read the whole pool."""
+        generated = list(range(100, 112))
+        self._generate(self._stub(gridpack_tags=generated))
+        worker = self._stub(shard_tag=2)
+        self.assertEqual(
+            self._tags_of(worker._refill_pool_path(self.decay_dir, 1)),
+            [float(t) for t in generated[2::self.NB_CORE]])
+
+    def test_a_slice_carries_the_banner_so_the_pool_keeps_its_cross_section(self):
+        """Channels of one pdg are picked by cross-section, which is read off
+        the pool's banner -- a slice without one would silently weigh 0."""
+        self._generate(self._stub())
+        worker = self._stub(shard_tag=1)
+        reader = lhe_parser.EventFile(
+            worker._refill_pool_path(self.decay_dir, 1))
+        self.assertEqual(reader.cross, 3.0)
+
+    def test_the_pool_being_read_survives_the_refill(self):
+        """run.sh writes over ``events.lhe.gz`` -- the pool the other workers of
+        this run are still reading. The refill must only ever ADD a generation,
+        so that pool has to be there, unchanged, afterwards."""
+        self._generate(self._stub())
+        self.assertEqual(self._tags_of(pjoin(self.decay_dir, 'events.lhe.gz')),
+                         [float(t) for t in self.pool_tags])
+        self.assertFalse(os.path.exists(
+            pjoin(self.decay_dir, 'events.lhe.gz.mspool')))
+
+    # ------------------------------------------ publish only what is readable
+
+    def test_the_generation_is_published_only_once_the_files_are_readable(self):
+        """The invariant behind the whole failure: at the instant the marker
+        becomes visible, every file a waiter may open is already there."""
+        stub = self._stub()
+        witness = {}
+        publish = stub._publish_gen
+
+        def watched_publish(decay_dir, gen):
+            witness['ready'] = [
+                os.path.exists(p)
+                for p in stub._refill_pool_paths(decay_dir, gen)]
+            return publish(decay_dir, gen)
+
+        stub._publish_gen = watched_publish
+        self._generate(stub)
+        self.assertEqual(witness['ready'], [True] * self.NB_CORE)
+
+    def test_a_generation_that_produced_nothing_is_not_published(self):
+        """A refill that fails must leave the marker where it was: a waiter then
+        keeps waiting (and the deadlock fail-safe eventually generates the pool
+        itself) instead of being sent to open a file that does not exist."""
+        def failed_run(cwd):
+            os.remove(pjoin(cwd, 'events.lhe.gz'))
+            return 1, 'gridrun died'
+        stub = self._stub(run_gridpack=failed_run)
+        with _CaptureCritical():
+            self.assertRaises(Exception, stub._owner_generate, 6, 0, 1, 1000)
+        self.assertEqual(stub._published_gen(self.decay_dir), 0)
+
+    def test_the_marker_is_replaced_atomically_not_truncated_in_place(self):
+        """The marker is the only thing a waiter reads, and it reads it without
+        any lock. Written in place it would be observable empty (or half a
+        number) between the truncation and the write; written to a temporary
+        file and renamed over, a waiter sees either the old generation or the
+        new one. Checked where it is observable: an interrupted publication
+        leaves the previous generation intact."""
+        interface = interface_madspin.MadSpinInterface
+        interface._publish_gen(self.decay_dir, 3)
+        real_replace = os.replace
+
+        def broken_replace(src, dst):
+            os.remove(src)
+            raise OSError('interrupted')
+
+        os.replace = broken_replace
+        try:
+            self.assertRaises(OSError, interface._publish_gen, self.decay_dir, 4)
+        finally:
+            os.replace = real_replace
+        self.assertEqual(interface._published_gen(self.decay_dir), 3)
+
+    def test_publishing_leaves_no_temporary_file_behind(self):
+        interface = interface_madspin.MadSpinInterface
+        interface._publish_gen(self.decay_dir, 2)
+        self.assertEqual(interface._published_gen(self.decay_dir), 2)
+        self.assertEqual(misc.glob('ms_refill.gen.*', self.decay_dir), [])
+
+    # ---------------------------------- the canonical layout is left as it is
+
+    def test_a_pool_already_split_per_worker_is_published_untouched(self):
+        """The madevent backend writes the canonical layout itself. Nothing may
+        be copied, rewritten or moved in that case -- the files the unweighting
+        produced are the pool."""
+        stub = self._stub()
+        targets = stub._refill_pool_paths(self.decay_dir, 1)
+        os.makedirs(os.path.dirname(targets[0]))
+
+        def already_split(pdg, decay_file_nb, needed, run_name):
+            for i, path in enumerate(targets):
+                with open(path, 'w') as fsock:
+                    fsock.write(self._lhe([200 + i]))
+            return interface_madspin._ChainedEvents(targets)
+
+        stub._regenerate_events = already_split
+        self._generate(stub)
+        for i, path in enumerate(targets):
+            self.assertEqual(self._tags_of(path), [float(200 + i)])
+        self.assertEqual(stub._published_gen(self.decay_dir), 1)
+        self.assertEqual(misc.glob('ms_refill_*.part',
+                                   pjoin(self.decay_dir, 'Events')), [])
+
+    # ------------------------------------------ a run's refills are its own
+
+    def test_a_previous_runs_generation_is_not_taken_for_this_ones(self):
+        """``ms_dir`` is reused across runs, and its decay directories keep the
+        marker and the pools of the run that wrote them. This run's workers all
+        start at generation 0, so an inherited marker would send them straight
+        to another run's pool -- sized for its efficiency and split for its
+        nb_core, so the slice they want need not even be there."""
+        stub = self._stub()
+        self._generate(stub)
+        self.assertEqual(stub._published_gen(self.decay_dir), 1)
+        stub._clear_refill_state()
+        self.assertEqual(stub._published_gen(self.decay_dir), 0)
+        self.assertEqual(misc.glob('ms_refill_*',
+                                   pjoin(self.decay_dir, 'Events')), [])
+
+    def test_the_cleanup_puts_back_a_pool_a_crashed_refill_had_stashed(self):
+        """A refill killed between moving the pool aside and regenerating it
+        leaves the run's only copy in the stash; the next run must find its
+        pool, not an empty directory."""
+        pool = pjoin(self.decay_dir, 'events.lhe.gz')
+        os.rename(pool, pool + '.mspool')
+        self._stub()._clear_refill_state()
+        self.assertTrue(os.path.exists(pool))
+        self.assertEqual(self._tags_of(pool),
+                         [float(t) for t in self.pool_tags])
+        self.assertFalse(os.path.exists(pool + '.mspool'))
