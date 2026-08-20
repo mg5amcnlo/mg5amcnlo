@@ -12,6 +12,26 @@ Figure: `plots/mtt_threshold.pdf` (MG7 style), `plots_userstyle/mtt_threshold.pd
 (user style). Full per-bin table: `plots/numbers.txt`. Raw histograms:
 `data/histograms.npz`, provenance `data/meta.json`.
 
+**The figure is a shape comparison.** It plots `1/sigma dsigma/dm_tt`, each
+curve divided by **its own total cross section over the full `m_tt` range** --
+`sum(w)/N` of the whole sample, `meta.json` `runs[key].sumw`, *not* the integral
+of the plotted 316-420 GeV window, which holds a few percent of the rate and
+would define away part of the region under study. The 3.4 % normalisation
+difference of section 1a therefore cancels and the lower pane sits on 1.
+
+Two things follow, and neither is allowed to go quiet:
+
+* **absolute statements cannot be read off the figure any more.** "`onshell`
+  misses 16.2 % of the cross section below `2 m_t + 5 GeV`" is a rate statement;
+  it lives in section 2 below and in `plots/numbers.txt`, which keeps the
+  per-bin table in pb/GeV *and* a second copy in the figure's normalisation, so
+  any drawn point can be checked. The agreement thresholds quoted **for the
+  figure** are the shape ones of section 1b.
+* **`onshell`'s zero below `2 m_t` is still zero.** Dividing by a total cross
+  section cannot make a structural zero non-zero, and the drawing convention
+  survives unchanged: open circle on the lower boundary, and **no** arrow, so it
+  stays distinguishable from a measured point that left the clipped pane.
+
 ---
 
 ## 0. The correction that has to come first
@@ -91,12 +111,18 @@ statement about the sample size, so it would be drawn as a gap, never as a zero.
 
 ### The ratio pane is clipped to +-20 %, and nothing vanishes
 
-The lower pane is capped at 0.8-1.2. Fifteen measured points live outside that
-window and each carries an **arrow** at the boundary it left through -- four
-`madspin`, two `PA`, nine `madspin_v1`. `onshell`'s exact zero keeps its **open
-circle** on the lower boundary and carries **no** arrow, so a structural zero and
-a clipped point stay distinguishable. The y-axis label and an in-pane key both
-say the pane is clipped, and `plots/numbers.txt` lists every off-scale ratio with
+The lower pane is capped at 0.8-1.2. **Fourteen** measured shape ratios live
+outside that window and each carries an **arrow** at the boundary it left
+through -- four `madspin`, one `PA`, nine `madspin_v1`. (It was fifteen when the
+pane was in absolute normalisation, four/two/nine; the `PA` 326-331 GeV bin came
+back inside once the +3.5 % plateau was divided out.) `onshell`'s exact zero
+keeps its **open circle** on the lower boundary and carries **no** arrow, so a
+structural zero and a clipped point stay distinguishable -- and it is still a
+zero under this normalisation, because dividing by a total cross section cannot
+make it anything else. The y-axis label says the pane is clipped and compares
+shapes, an in-pane key says what the two marks mean -- kept deliberately, since
+the axis label can state the clipping but not the difference between an arrow
+and an open circle -- and `plots/numbers.txt` lists every off-scale ratio with
 its value and its error, so the clipping hides no number.
 
 ---
@@ -107,7 +133,11 @@ Scanned downwards from 420 GeV: the lowest bin edge above which **every** bin
 agrees. "strict" uses the central ratio; "within errors" lets each bin spend its
 own 1 sigma.
 
-### 1a. Absolute normalisation -- the literal answer
+### 1a. Absolute normalisation -- the literal answer, **not** the figure's
+
+The figure is normalised to shape (see the header and section 1b); this
+subsection is the absolute answer, kept because the rate difference is itself a
+result and because the numbers below would otherwise exist nowhere.
 
 | tolerance | `madspin` | `PA` | `onshell` | `madspin_v1` |
 |---|---|---|---|---|
@@ -122,30 +152,102 @@ per-bin error falls below 1.5 % -- by the sample size, not by the physics.
 The 10 % row is a physics statement; the 5 % row, in absolute normalisation, is
 half a statistics statement, and saying otherwise would be dishonest.
 
-The offset has a known origin and is quantified: MG5's decay-chain truth
-truncates each top's Breit-Wigner at `|m - m_t| < 15 Gamma_t` (`myamp.f`:
-`abs(xmass - prmass) < bwcutoff * prwidth` -- the same convention MadSpin's
-`BW_cut` uses, checked, not assumed), which removes 2.12 % per resonance and
-4.20 % for the pair. MadSpin normalises to `sigma_production * BR` and takes no
-such loss and no off-shell correction to the *rate* at all. Predicted
-`truth/MadSpin = 0.9580`, measured **0.9661** for `PA`, `onshell` and
-`madspin_v1` alike and **0.9634** for `madspin` -- so the truncation explains it,
-with about +0.8 % of genuine off-shell rate effect on top. `madspin` is the only
-one off the common value, and section 3 shows that is its `joint` overweights and
-not physics. This is the same normalisation question as
-`doc/madspin_ae_normalisation/assessment.md`, seen from a different observable.
+### Where the 3.4 % comes from -- checked, and only partly settled
 
-### 1b. Shape only -- the answer about the reshuffle
+The four measured ratios, each from the sample's own `sum(w)/N`:
 
-Each mode rescaled by its own 380-420 GeV offset (`madspin` 0.9650 +- 0.0027,
-`PA` 0.9685 +- 0.0027, `onshell` 0.9662 +- 0.0027, `madspin_v1` 0.9663 +- 0.0027
--- all flat and all consistent with the global one, so this really is a
-normalisation and not a shape).
+| | `truth/mode` |
+|---|---|
+| `madspin` | 0.96342 |
+| `PA` | 0.96614 |
+| `onshell` | 0.96614 |
+| `madspin_v1` | 0.96614 |
+| `madspin_seq` (control) | 0.96613 |
+
+with totals 651.608 pb (truth, 5M events), 676.346 pb (`madspin`) and
+674.4446 pb (`PA`, `onshell`, `madspin_v1`, and the undecayed production sample,
+all identical). `madspin` is off the common value by its `joint` overweights and
+by nothing else -- forcing `sequential` puts it at 0.96613, on top of the other
+three (section 3) -- so there is **one** number to explain, 0.9661.
+
+**Three things it is not.** It is not statistics: MadEvent quotes
+`651.8 +- 0.2185 pb` for the truth and `674.4 +- 0.2081 pb` for the production
+(0.03 % each, now recorded in `meta.json` as `mg5_integration_pb`) and the five
+truth runs agree to 0.011 %, so 3.4 % is of order 100 sigma. It is not a shape
+effect: the `truth/onshell` ratio in 20 GeV slices from 380 GeV up is flat at
+0.966, and dividing out the global total gives the *same* agreement thresholds
+as dividing out a local 380-420 GeV anchor (both tables are in `numbers.txt`).
+And it is not a branching-ratio mismatch -- the obvious candidate, since MadSpin
+normalises to `sigma_prod * BR` while the truth's propagator is normalised by
+the param card's `WT`: the model's own LO `Gamma(t -> W b)` at `m_t = 173`,
+`m_b = 4.7`, `MW = 80.4185` is **1.49148 GeV** against `WT = 1.4915`, i.e.
+`BR = 0.99998`. 0.002 %, not 0.8 %.
+
+**What it is: the truth's Breit-Wigner truncation, and that is confirmed.**
+MG5's decay-chain generation rejects every phase-space point with
+`|m - m_t| >= 15 Gamma_t` -- `myamp.f`, and specifically the `gForceBW = 1`
+branch, where a failed test is not on-shell *bookkeeping* but `cut_bw = .true.`,
+so the point is thrown away and the truncation is in the integrated cross
+section. Same convention as MadSpin's `BW_cut`, checked in the source rather
+than assumed. MadSpin takes no such loss. The estimate reproduces:
+
+| evaluation of the same NWA-normalised integral | per resonance | pair |
+|---|---|---|
+| non-relativistic BW, flat numerator: `1 - 2 arctan(2*15)/pi` | 0.97879 | **0.95802** |
+| fixed-width relativistic BW (`p^2 - M(M - i Gamma)`, as generated), flat numerator | 0.97870 | **0.95785** |
+| ... plus the decay numerator `m Gamma(m) / (m_t Gamma_t)` | 0.98106 | **0.96249** |
+| ... plus `d ln sigma_prod/dm_t = -1.5 %/GeV` per top (an *input*) | 0.97824 | **0.95695** |
+| **measured** | | **0.96614** |
+
+The 4.20 % / 0.9580 of the original estimate is the first row, and it survives
+one check it might not have: using the relativistic fixed-width propagator MG5
+actually generates changes it by 0.02 %, because the corrections to the two
+tails very nearly cancel inside the arctan. So **the truncation is confirmed as
+the dominant term** -- it removes about 4 % where the whole difference is 3.4 %,
+which leaves no room for anything else to be large.
+
+**The residual is not 0.8 %, or rather, it is not measured.** That number is
+what is left over after an estimate that holds the *numerator* flat across a
+`+-22.4 GeV` window, and the numerator is not flat: the decay side alone,
+`m Gamma(m)/(m_t Gamma_t)`, runs from 0.52 to 1.71 across that window and moves
+the pair prediction from 0.9579 to 0.9625 -- shrinking the residual to +0.4 %.
+The production side pulls the other way, and by a comparable amount: a slope of
+the size `m_t` variations usually show (`-1.5 %/GeV` per top) puts the
+prediction at 0.9570 and the residual at +1.0 %. This study never varied `m_t`,
+so that slope is an input it does not have.
+
+So: **the residual is +0.4 % to +1.0 %, positive in every variant tried, and of
+the right size for a finite-width correction (`Gamma_t/m_t = 0.86 %`).** Calling
+it "about 0.8 % of genuine off-shell rate" was the right ballpark reached by a
+cancellation between two neglected effects of about half a percent each, and it
+should be quoted as a range. Pinning it down needs a truth run at a second
+`bwcutoff`; only 15 was run. **Nothing unaccounted-for is hiding in the 3.4 %**
+-- the truncation dominates it and the three alternative explanations above are
+each excluded at the sub-0.05 % level -- but the last sub-percent of it is
+bounded, not determined.
+
+`plot_mtt_threshold.normalisation_report` computes every number in this
+subsection, so it can be re-run and disagreed with. This is the same
+normalisation question as `doc/madspin_ae_normalisation/assessment.md`, seen from
+a different observable.
+
+### 1b. Shape -- the answer about the reshuffle, and the figure's numbers
+
+**These are the thresholds to quote for the figure**, because this is the
+figure's normalisation: each side divided by its own **total** cross section
+over the full `m_tt` range (`truth/mode` = 0.9634, 0.9661, 0.9661, 0.9661).
 
 | tolerance | `madspin` | `PA` | `onshell` | `madspin_v1` |
 |---|---|---|---|---|
-| 5 %, strict | **`m_tt >= 353 GeV`** (0.980 +- 0.025) | **`m_tt >= 356 GeV`** (1.038 +- 0.016) | **`m_tt >= 360 GeV`** (1.000 +- 0.015) | **`m_tt >= 360 GeV`** (0.994 +- 0.015) |
-| 10 %, strict | `m_tt >= 346 GeV` (0.940 +- 0.042) | `m_tt >= 345 GeV` (1.014 +- 0.054) | `m_tt >= 350 GeV` (1.064 +- 0.029) | `m_tt >= 347 GeV` (0.968 +- 0.036) |
+| 5 %, strict | **`m_tt >= 353 GeV`** (0.978 +- 0.025) | **`m_tt >= 356 GeV`** (1.035 +- 0.016) | **`m_tt >= 360 GeV`** (1.000 +- 0.015) | **`m_tt >= 360 GeV`** (0.994 +- 0.015) |
+| 10 %, strict | `m_tt >= 346 GeV` (0.939 +- 0.042) | `m_tt >= 345 GeV` (1.012 +- 0.054) | `m_tt >= 350 GeV` (1.064 +- 0.029) | `m_tt >= 347 GeV` (0.968 +- 0.036) |
+
+Rescaling instead by each mode's local 380-420 GeV offset (`madspin`
+0.9650 +- 0.0027, `PA` 0.9685 +- 0.0027, `onshell` 0.9662 +- 0.0027,
+`madspin_v1` 0.9663 +- 0.0027) gives **the same edge in all eight cells**, the
+central ratios moving by 0.002 or less. Two independent ways of dividing out the
+offset agreeing edge for edge is the evidence that it really is a flat rate
+offset and not a shape; both tables are in `plots/numbers.txt`.
 
 **The number: shape agreement to 5 % returns at `2 m_t + 7 GeV` for `madspin`,
 `2 m_t + 10 GeV` for `PA` and `2 m_t + 14 GeV` for both `onshell` and
@@ -170,6 +272,11 @@ plateau is divided out, it is last.
 ---
 
 ## 2. Below threshold
+
+**Everything in this section is an absolute rate, and none of it can be read off
+the figure**, which draws shapes. That is the price of the shape normalisation
+and it is paid here rather than hidden: these numbers, and the per-bin table in
+pb/GeV, are in `plots/numbers.txt` too.
 
 `sigma(m_tt < 2 m_t)`, and what each mode does with it. The truth's
 sub-threshold cross section is **1.0753 +- 0.0118 pb**, which is
@@ -454,3 +561,17 @@ normalisation offset of section 1a.
   the truth stops (`2 (m_t - 15 Gamma_t) ~ 301 GeV`) and it is matched to
   MadSpin's `BW_cut`. A different value moves the sub-threshold normalisation on
   both sides and would change the section 2 numbers. Only 15 was run.
+* **The last sub-percent of the 3.4 % rate difference is bounded, not
+  determined.** Section 1a excludes statistics, a shape effect and a
+  branching-ratio mismatch, and confirms the Breit-Wigner truncation as the
+  dominant term; what is left is +0.4 % to +1.0 % depending on
+  `d ln sigma_prod/dm_t`, which this study cannot supply because it never varied
+  `m_t`. Two runs would settle it -- a truth sample at a second `bwcutoff`
+  (which separates the truncation from everything else directly) and a
+  production sample at a shifted `m_t` (which measures the slope) -- and neither
+  was done.
+* **The figure's normalisation is a choice with a cost.** Dividing each curve by
+  its own total cross section makes the turn-on readable and makes the rate
+  difference invisible. The rate difference is real, is section 1a's subject,
+  and is the reason section 2 exists in absolute units. A reader who only sees
+  the figure will not know that MadSpin's total is 3.4 % above the truth's.

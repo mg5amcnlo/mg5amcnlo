@@ -9,11 +9,26 @@ Runs entirely off the committed raw histograms, so nothing here needs MadSpin:
 with ``<data>`` holding ``histograms.npz`` and ``meta.json`` as written by
 ``run_mtt_threshold.py``.
 
-What is drawn is a PER-EVENT quantity and the axes say so: the invariant mass of
-``(W+ b) + (W- b~)``, built from the four status-1 particles with ``|pid|`` in
-``{24, 5}`` of each event, identically on both sides.  The vertical scale is the
-absolute differential cross section in pb/GeV -- no curve is renormalised to any
-other.
+What is drawn is a PER-EVENT quantity: the invariant mass of ``(W+ b) + (W- b~)``,
+built from the four status-1 particles with ``|pid|`` in ``{24, 5}`` of each
+event, identically on both sides.
+
+The vertical scale is ``(1/sigma) dsigma/dm_tt`` in 1/GeV: every curve is
+divided by its OWN total cross section, so the figure is a SHAPE comparison.
+``sigma`` is the sample total over the full ``m_tt`` range (``sum(w)/N`` of the
+whole file, ``meta.json`` ``runs[key].sumw``), NOT the integral of the plotted
+316-420 GeV window -- that window holds only a few percent of the rate and
+normalising to it would define away part of the difference under study.
+
+Why shape and not absolute.  The truth and the MadSpin samples do not share a
+total cross section: ``truth/PA = truth/onshell = truth/madspin_v1 = 0.96614``,
+so an absolute ratio pane plateaus at 1.035 and a +-5 % band around it is mostly
+a statement about the sample size.  That 3.4 % is understood -- MG5's
+decay-chain truth truncates each top Breit-Wigner at ``bwcutoff`` widths and
+MadSpin normalises to ``sigma_prod * BR`` with no such loss; see
+``write_numbers`` and RESULTS.md section 1a -- and it is flat in ``m_tt``, which
+is what makes dividing it out legitimate.  It is NOT hidden by the choice: every
+absolute number stays in ``numbers.txt`` and in RESULTS.md.
 
 Style follows the MG7 paper's ``plotexample/dummyplot.py``: LaTeX text, serif,
 base font size 14, step histograms of line width 1.2, the paper's fixed figure
@@ -55,11 +70,16 @@ def _fix_type1_subset_minus():
     no warning, no error, a wrong figure.  Only PDF is affected (the PNGs go
     through dvipng, which rasterises first).
 
-    This figure carries a minus sign in the ratio ticks and in every
-    ``m_tt - 2 m_t`` label, so the bug would be visible.  Guarded on the exact
-    upstream line, so a fixed matplotlib is left alone.  ``--check-minus``
-    re-opens the written PDF and asserts the sign survived; that check has had
-    to be made twice in this project already.
+    This figure carries a minus sign in every main-pane tick label: the
+    vertical scale is ``(1/sigma) dsigma/dm_tt``, which runs 1e-7 to 1e-2, so
+    the axis is a column of ``10^{-n}`` and the bug would eat all of it.  (It
+    used to be carried by the ratio ticks and the annotation text as well;
+    stripping the annotations and centring the ratio pane on 1 removed those,
+    which is why the premise of the check is restated here rather than assumed.)
+    Guarded on the exact upstream line, so a fixed matplotlib is left alone.
+    ``--check-minus`` re-opens the written PDF and asserts the sign survived;
+    that check has had to be made twice in this project already, and it is
+    verified to still discriminate: ``NO_MINUS_FIX=1`` makes it report False.
     """
     import inspect
     import textwrap
@@ -263,6 +283,26 @@ class Data(object):
         cnt = self._rebin(self.z['%s_cnt' % key])
         return sumw / n / self.widths, np.sqrt(sumw2) / n / self.widths, cnt
 
+    def shape(self, key):
+        """((1/sigma) dsigma/dm [1/GeV], its error, raw event count).
+
+        This is what the figure draws.  ``sigma`` is :meth:`sigma`, the sample's
+        TOTAL cross section over the full ``m_tt`` range -- ``sum(w)/N`` of the
+        whole file -- and deliberately not the integral of the plotted window:
+        316-420 GeV holds a few percent of the rate, so normalising to it would
+        divide out part of the very region under study and would also make the
+        curves depend on the plot limits.
+
+        The error carries the per-bin statistics only.  The relative error on
+        the total is 0.03 % or below on every sample here (five truth runs
+        agreeing to 0.011 %; MadEvent's own quoted integration errors are
+        651.8 +- 0.22 pb and 674.4 +- 0.21 pb), i.e. two orders of magnitude
+        below the per-bin errors near threshold, so it is not propagated.
+        """
+        y, ye, cnt = self.density(key)
+        s = self.sigma(key)
+        return y / s, ye / s, cnt
+
     def fine_density(self, key):
         n = self.nevents(key)
         w = np.diff(self.fine)
@@ -399,23 +439,42 @@ def offscale_arrows(ax, x, r, colour, clip=RATIO_CLIP, dx=None, slot=0,
 ANCHOR = (380.0, 420.0)
 
 
-def anchor_scale(d, key):
-    """``sigma_truth / sigma_key`` over :data:`ANCHOR`, and its relative error.
+def shape_scale(d, key):
+    """``sigma_truth / sigma_key`` on the TOTAL cross sections.
 
-    Why this exists.  The two sides do NOT share a total cross section, and the
-    difference is a real, understood effect rather than a bug: MG5's decay-chain
-    truth truncates each top's Breit-Wigner at ``bwcutoff`` widths in the MASS
-    (``myamp.f``: ``abs(xmass - prmass) < bwcutoff * prwidth``, the same
-    convention MadSpin's ``BW_cut`` uses), which removes
-    ``1 - 2*arctan(2*bwcutoff)/pi`` ~ 2.3 % per resonance, ~4.6 % for the pair;
-    MadSpin's output cross section is ``sigma_production * BR`` and carries no
-    such loss, nor any off-shell correction to the RATE.  So an absolute ratio
-    sits on a plateau that is not 1, and a 5 % tolerance on the absolute ratio
-    is partly a statement about that offset.
+    Multiplying a mode's absolute density by this is identical to dividing both
+    sides by their own total, i.e. it is exactly the ratio the figure's lower
+    pane shows.  It is the figure's normalisation, so the agreement thresholds
+    quoted *for the figure* are the ones computed with it.
+
+    The two sides do NOT share a total cross section and the difference is a
+    real, understood effect rather than a bug: MG5's decay-chain truth truncates
+    each top's Breit-Wigner at ``bwcutoff`` widths in the MASS (``myamp.f``:
+    ``abs(xmass - prmass) < bwcutoff * prwidth`` under ``gForceBW = 1``, the same
+    convention MadSpin's ``BW_cut`` uses), removing
+    ``1 - 2*arctan(2*bwcutoff)/pi`` = 2.12 % per resonance and 4.20 % for the
+    pair, while MadSpin's output cross section is ``sigma_production * BR`` and
+    carries no such loss.  ``write_numbers`` reproduces that estimate and says
+    what it does and does not settle.
 
     Reporting both answers separates the two questions: "is the rate right"
     (it is not, by a known and quantified amount) and "is the SHAPE near
     threshold right" (which is what the reshuffle controls).
+    """
+    st, sk = d.sigma(REF), d.sigma(key)
+    if sk <= 0:
+        return float('nan')
+    return st / sk
+
+
+def anchor_scale(d, key):
+    """``sigma_truth / sigma_key`` over :data:`ANCHOR`, and its relative error.
+
+    A robustness check on :func:`shape_scale`, not the figure's normalisation:
+    if the offset really is a flat rate effect then dividing it out locally, on
+    a window well above the turn-on, must give the same agreement thresholds as
+    dividing out the global total.  It does -- see ``numbers.txt`` -- and that
+    agreement is the evidence that the 3.4 % is a normalisation and not a shape.
     """
     st, ste, _ = d.integral(REF, *ANCHOR)
     sk, ske, _ = d.integral(key, *ANCHOR)
@@ -500,10 +559,14 @@ def make_figure(d, out, style_tag=''):
         a.axvspan(lo, two_mt, facecolor='0.90', edgecolor='none', zorder=0)
         a.axvline(two_mt, color='0.35', lw=1.0, ls=(0, (6, 3)), zorder=1)
 
-    den, dene, dcnt = d.density(REF)
+    # Every curve divided by its OWN total cross section: the figure is a shape
+    # comparison, so the 3.4 % normalisation difference between the truth and
+    # MadSpin cancels and what is left is the turn-on.  The absolute rates are
+    # not lost -- they are in numbers.txt and in RESULTS.md sections 1a and 2.
+    den, dene, dcnt = d.shape(REF)
 
     for key, _lab in CURVES:
-        y, ye, cnt = d.density(key)
+        y, ye, cnt = d.shape(key)
         lab = _lab if USETEX else CURVES_PLAIN[key]
         draw = np.where(cnt > 0, y, np.nan)
         ax.step(d.edges, np.concatenate([draw[:1], draw]), where='pre',
@@ -514,53 +577,33 @@ def make_figure(d, out, style_tag=''):
                     capsize=0, zorder=4)
 
     ax.set_yscale('log')
-    ax.set_ylabel(_tx(r'$\mathrm{d}\sigma/\mathrm{d}m_{t\bar t}$ [pb/GeV]',
-                      r'$d\sigma/dm_{t\bar t}$ [pb/GeV]'))
+    ax.set_ylabel(_tx(r'$(1/\sigma)\,\mathrm{d}\sigma/\mathrm{d}m_{t\bar t}$'
+                      r' [1/GeV]',
+                      r'$(1/\sigma)\,d\sigma/dm_{t\bar t}$ [1/GeV]'))
     ax.set_xlim(lo, hi)
     ax.xaxis.set_minor_locator(AutoMinorLocator())
     ax.tick_params(labelbottom=False)
     ax.legend(frameon=False, loc='lower right', fontsize=10.5,
               handlelength=2.6, borderaxespad=0.8)
 
-    # The annotation that is the point of the figure.
+    # One line of setup above the curves, and nothing else in the pane.  The
+    # prose that used to sit here -- what the shaded region means, how each mode
+    # gets into it, the sub-threshold event counts -- is not on the figure: it
+    # is in numbers.txt and in RESULTS.md, where it can carry its errors.  What
+    # stays is the setup line, which cannot be read off the curves, and the
+    # ``2 m_t`` tag, which names the drawn threshold line rather than commenting
+    # on the physics.  ``m_tt`` is defined in RESULTS.md and in this module's
+    # docstring; the axis names the variable and no more.
     ymin, ymax = ax.get_ylim()
-    ax.set_ylim(ymin, ymax * 34)
+    ax.set_ylim(ymin, ymax * 3.2)
     ax.text(0.028, 0.965,
             _tx(r'$pp \to t\bar t j$ at $\sqrt{s} = 13$~TeV, LO, '
-                r'$\mu_R = \mu_F = m_t$',
-                r'$pp \to t\bar t j$ at $\sqrt{s}=13$ TeV, LO, '
-                r'$\mu_R=\mu_F=m_t$'),
-            transform=ax.transAxes, ha='left', va='top', fontsize=11)
-    ax.text(0.028, 0.905,
-            _tx(r'$m_{t\bar t} \equiv m\big[(W^+b) + (W^-\bar b)\big]$, '
-                r'BW cut $=%g\,\Gamma_t$ on both sides'
+                r'$\mu_R = \mu_F = m_t$, BW cut $=%g\,\Gamma_t$ on both sides'
                 % d.meta.get('bwcutoff', 15.0),
-                r'$m_{t\bar t} = m[(W^+b)+(W^-\bar b)]$, BW cut = %g $\Gamma_t$'
+                r'$pp \to t\bar t j$ at $\sqrt{s}=13$ TeV, LO, '
+                r'$\mu_R=\mu_F=m_t$, BW cut = %g $\Gamma_t$ on both sides'
                 % d.meta.get('bwcutoff', 15.0)),
             transform=ax.transAxes, ha='left', va='top', fontsize=11)
-
-    n_on = d.meta['runs']['onshell']['nevents']
-    ax.annotate(
-        _tx(r'\textbf{no on-shell $t\bar t$ pair can land here}'
-            '\n'
-            r'\texttt{onshell}: $0$ of $%s$ events, exactly.' % _fmt_int(n_on)
-            + '\n'
-            r'\texttt{madspin}/\texttt{PA} reach it because the production'
-            '\n'
-            r'reshuffle rescales the recoil jet.  \texttt{madspin\_v1}'
-            '\n'
-            r'reaches it 3x less often: it leaves $m_{t\bar t}$'
-            '\n'
-            r'unchanged in 54\% of events.',
-            'no on-shell $t\\bar t$ pair can land here\n'
-            'onshell: 0 of %s events, exactly.\n'
-            'madspin/PA reach it because the production reshuffle\n'
-            'rescales the recoil jet.  madspin_v1 reaches it 3x less\n'
-            'often: it leaves $m_{t\\bar t}$ unchanged in 54%% of events.'
-            % _fmt_int(n_on)),
-        xy=(0.5 * (lo + two_mt), 1.0), xycoords=('data', 'axes fraction'),
-        xytext=(0.028, 0.845), textcoords='axes fraction',
-        ha='left', va='top', fontsize=9.5, color='0.25')
     ax.annotate(_tx(r'$2m_t$', r'$2m_t$'),
                 xy=(two_mt, 0.03), xycoords=('data', 'axes fraction'),
                 xytext=(3, 0), textcoords='offset points',
@@ -582,7 +625,13 @@ def make_figure(d, out, style_tag=''):
 
     n_out = 0
     for slot, key in enumerate(MODES):
-        y, ye, cnt = d.density(key)
+        # Both sides already divided by their own total sigma, so this pane is
+        # a ratio of SHAPES and sits on 1 rather than on the 1.035 the absolute
+        # normalisation gave.  Consequence to keep in mind when reading it: an
+        # absolute statement -- "onshell misses 16.2 % of the cross section
+        # below 2 m_t + 5 GeV" -- can no longer be read off this pane.  Those
+        # numbers are in numbers.txt and in RESULTS.md section 2.
+        y, ye, cnt = d.shape(key)
         r, re = ratio(y, ye, den, dene)
         # Two kinds of empty bin, drawn differently on purpose.
         #   structural -- onshell below 2 m_t.  A real, exact zero: it is
@@ -617,13 +666,20 @@ def make_figure(d, out, style_tag=''):
           'arrow at the boundary it left through' % (RATIO_CLIP, n_out))
 
     # Say it on the axis, not only in the caption: a reader who crops the
-    # figure out of the document must still be told the pane is clipped.
-    rx.set_ylabel(_tx(r'ratio to truth' '\n' r'(clipped to $\pm20\%$)',
-                      'ratio to truth\n(clipped to $\\pm20\\%$)'),
+    # figure out of the document must still be told the pane is clipped, and
+    # that what it compares is shapes.
+    rx.set_ylabel(_tx(r'shape ratio to truth' '\n' r'(clipped to $\pm20\%$)',
+                      'shape ratio to truth\n(clipped to $\\pm20\\%$)'),
                   fontsize=10.5)
-    # Bottom right: the only corner of this pane that no curve reaches (above
-    # 356 GeV every mode sits on the +3 % normalisation plateau), so the key
-    # cannot land on top of a point or an arrow.
+    # The one piece of text kept in a pane, and deliberately: it is a key to two
+    # MARKS, not commentary.  The axis label says the pane is clipped, but it
+    # cannot say that an open circle means an exact structural zero while an
+    # arrow means a measured point that left the window -- and that distinction
+    # is the whole reason onshell's sub-threshold zero is drawn at all.  Without
+    # the key the circles are unreadable, so it stays.
+    #
+    # Bottom right: the only corner of this pane that no curve reaches, so the
+    # key cannot land on top of a point or an arrow.
     rx.text(0.993, 0.045,
             _tx(r'arrow: point outside the pane' '\n'
                 r'$\circ$: exactly $0$ (structural)',
@@ -631,9 +687,9 @@ def make_figure(d, out, style_tag=''):
                 '$\\circ$: exactly 0 (structural)'),
             transform=rx.transAxes, ha='right', va='bottom',
             fontsize=8.5, color='0.30', linespacing=1.25)
-    rx.set_xlabel(_tx(
-        r'$m_{t\bar t}$ [GeV] \ \ (per-event $m$ of $(W^+b)+(W^-\bar b)$)',
-        r'$m_{t\bar t}$ [GeV]  (per-event $m$ of $(W^+b)+(W^-\bar b)$)'))
+    # The variable and its unit, and nothing else.  What m_tt is built from is
+    # in RESULTS.md and in meta.json['observable'].
+    rx.set_xlabel(_tx(r'$m_{t\bar t}$ [GeV]', r'$m_{t\bar t}$ [GeV]'))
     rx.xaxis.set_minor_locator(AutoMinorLocator())
     rx.yaxis.set_minor_locator(AutoMinorLocator())
     rx.set_xlim(lo, hi)
@@ -644,16 +700,6 @@ def make_figure(d, out, style_tag=''):
     fig.savefig(base + '.png', dpi=300)
     plt.close(fig)
     return base
-
-
-def _fmt_int(n):
-    s = '%d' % int(n)
-    groups = []
-    while len(s) > 3:
-        groups.insert(0, s[-3:])
-        s = s[:-3]
-    groups.insert(0, s)
-    return (r'\,' if USETEX else ' ').join(groups)
 
 
 def check_minus(pdf_path):
@@ -689,6 +735,187 @@ def check_minus(pdf_path):
         pass
     return False, ('/minus absent from the PDF font encoding -- the usetex '
                    'Type1 subsetting bug has eaten the sign')
+
+
+# --------------------------------------------------------------------------
+# The normalisation difference, verified rather than asserted.
+#
+# truth/PA = truth/onshell = truth/madspin_v1 = 0.9661, and the figure divides
+# it out, so it has to be understood BEFORE it is divided out.  Everything below
+# is computed here, from the model parameters in meta.json, so the estimate can
+# be re-run and disagreed with.
+#
+# MG5 electroweak inputs.  The ``sm`` model takes (Gf, MZ, aEWM1) and DERIVES
+# MW; none of the three is in meta.json, so they are the shipped defaults here.
+# That is not taken on trust: the derived MW feeds the LO t -> W b width below,
+# and that width has to come out equal to the param card's WT, which meta.json
+# does record.  It does, to five digits -- see ``normalisation_report``.
+# --------------------------------------------------------------------------
+SM_GF = 1.166390e-5
+SM_MZ = 91.1876
+SM_AEWM1 = 132.507
+
+
+def _sm_mw():
+    aew = 1.0 / SM_AEWM1
+    return math.sqrt(SM_MZ ** 2 / 2.0
+                     + math.sqrt(SM_MZ ** 4 / 4.0
+                                 - (aew * math.pi * SM_MZ ** 2)
+                                 / (SM_GF * math.sqrt(2))))
+
+
+def top_width_lo(m, mb, mw):
+    """LO ``Gamma(t -> W b)`` at top mass ``m``, keeping ``m_b``.
+
+    Needed at ``m != m_t``: it is the numerator the truth's Breit-Wigner
+    carries, and it is emphatically not constant across a +-15 Gamma window.
+    """
+    xw, xb = (mw / m) ** 2, (mb / m) ** 2
+    lam = 1 + xw * xw + xb * xb - 2 * xw - 2 * xb - 2 * xw * xb
+    if lam <= 0:
+        return 0.0
+    return (SM_GF * m ** 3 / (8 * math.pi * math.sqrt(2)) * math.sqrt(lam)
+            * ((1 - xb) ** 2 + xw * (1 + xb) - 2 * xw * xw))
+
+
+def bw_kept_fraction(mt, gt, mb, mw, bwcut, dlnsig_dm=0.0, decay_numerator=True,
+                     relativistic=True, npt=200001):
+    """Fraction of the NWA rate that survives ``|m - m_t| < bwcut * Gamma_t``.
+
+    The reference is the narrow-width limit, which is what MadSpin's
+    ``sigma_production * BR`` is, so a return of 1 would mean "the truncated
+    off-shell calculation gives the same rate as the NWA".
+
+    ``relativistic=False`` reproduces the non-relativistic (Cauchy) shortcut,
+    ``1 - 2*arctan(2*bwcut)/pi`` removed.  Otherwise the fixed-width propagator
+    MG5 actually generates is used -- ``p^2 - M(M - i*Gamma)``, verified in
+    ``aloha_writers.py`` -- through the substitution ``s = M^2 + M*Gamma*tan(t)``
+    that makes the propagator weight flat in ``t`` and the quadrature exact.
+
+    Two numerator effects, both off by default in the naive estimate and both
+    the size of the residual it leaves:
+
+    * ``decay_numerator`` puts back ``m*Gamma(m)/(M*Gamma(M))``, the decay side
+      of the resonance.  Over a +-15 Gamma_t window that runs 0.52 to 1.71.
+    * ``dlnsig_dm`` is ``d ln sigma_production / d m_t`` PER TOP, which the
+      production side supplies and which pulls the other way.  It is an input,
+      not a measurement: this study never varied m_t, so it cannot be got from
+      the data here.
+    """
+    th_hi = math.atan(((mt + bwcut * gt) ** 2 - mt ** 2) / (mt * gt))
+    th_lo = -math.atan((mt ** 2 - (mt - bwcut * gt) ** 2) / (mt * gt))
+    if not relativistic:
+        th_hi, th_lo = math.atan(2 * bwcut), -math.atan(2 * bwcut)
+        th = np.linspace(th_lo, th_hi, npt)
+        m = mt + 0.5 * gt * np.tan(th)
+    else:
+        th = np.linspace(th_lo, th_hi, npt)
+        m = np.sqrt(np.clip(mt ** 2 + mt * gt * np.tan(th), 1e-9, None))
+    f = np.exp(dlnsig_dm * (m - mt))
+    if decay_numerator:
+        g0 = mt * top_width_lo(mt, mb, mw)
+        f = f * np.array([mm * top_width_lo(mm, mb, mw) for mm in m]) / g0
+    return float(np.trapezoid(f, th) / math.pi)
+
+
+def normalisation_report(d, p):
+    """Why truth/MadSpin is 0.966, how much of it is understood, and how much
+    is not.  Printed into ``numbers.txt``; RESULTS.md section 1a quotes it."""
+    bw = float(d.meta['bwcutoff'])
+    masses = d.meta.get('param_card_masses', {})
+    mt = float(masses.get('MT', 173.0))
+    gt = float(masses.get('WT', 1.4915))
+    mb = float(masses.get('MB', 4.7))
+    mw = _sm_mw()
+
+    p('')
+    p('-- the normalisation difference, and what accounts for it ------------')
+    p('measured, from each sample\'s own sum(w)/N:')
+    for key in MODES:
+        p('   truth / %-11s = %.5f' % (key, d.sigma(REF) / d.sigma(key)))
+    p('   (madspin is the odd one out because of its `joint` overweights;')
+    p('    forcing sequential puts it at %.5f, on top of the other three --'
+      % (d.sigma(REF) / d.sigma('madspin_seq')
+         if 'madspin_seq' in d.meta['runs'] else float('nan')))
+    p('    see the control section below.  So there is ONE number to explain.)')
+    p('')
+    p('   it is a RATE effect, not a shape one: the truth/mode ratio measured')
+    p('   in 20 GeV slices from 380 GeV up is flat at 0.966, and dividing out')
+    p('   the global total gives the same agreement thresholds as dividing out')
+    p('   a local 380-420 GeV anchor (both are listed below).')
+    p('')
+    ig = d.meta.get('mg5_integration_pb', {})
+    if ig:
+        p('   not statistics: MadEvent quotes %.1f +- %.4f pb for the truth and'
+          % (ig['truth']['cross_pb'], ig['truth']['error_pb']))
+        p('   %.1f +- %.4f pb for the production, i.e. 0.03%%, and the five'
+          % (ig['production']['cross_pb'], ig['production']['error_pb']))
+        p('   truth runs agree to 0.011%.  3.4% is ~100 sigma of that.')
+    p('')
+    p('   not a branching-ratio mismatch either.  MadSpin normalises to')
+    p('   sigma_prod * BR and the truth\'s decay-chain propagator is normalised')
+    p('   by the param card\'s WT, so a WT that did not equal the model\'s own')
+    p('   LO Gamma(t -> W b) would show up here as a pure rate offset:')
+    p('      LO Gamma(t -> W b) at m_t = %g, m_b = %g, MW = %.5f : %.5f GeV'
+      % (mt, mb, mw, top_width_lo(mt, mb, mw)))
+    p('      param card WT                                       : %.5f GeV'
+      % gt)
+    p('      implied BR                                          : %.5f'
+      % (top_width_lo(mt, mb, mw) / gt))
+    p('   0.002%.  (This also validates the derived MW the lines below use.)')
+    p('')
+    p('what IS in it: MG5\'s decay-chain truth cuts every phase-space point')
+    p('with |m - m_t| >= %g Gamma_t (myamp.f, the gForceBW=1 branch: not' % bw)
+    p('"onshell" bookkeeping but `cut_bw = .true.`, so the point is rejected')
+    p('and the truncation is in the integrated cross section).  MadSpin takes')
+    p('no such loss.  Four evaluations of the same integral, NWA-normalised:')
+    p('')
+    p('   %-58s %8s %8s' % ('per-resonance kept fraction', 'per res', 'pair'))
+    rows = [
+        ('non-relativistic BW, flat numerator  [1-2*atan(2*%g)/pi]' % bw,
+         bw_kept_fraction(mt, gt, mb, mw, bw, decay_numerator=False,
+                          relativistic=False)),
+        ('fixed-width relativistic BW, flat numerator',
+         bw_kept_fraction(mt, gt, mb, mw, bw, decay_numerator=False)),
+        ('  + the decay numerator m*Gamma(m)/(m_t*Gamma_t)',
+         bw_kept_fraction(mt, gt, mb, mw, bw)),
+        ('  + d ln sigma_prod/dm_t = -1.5%/GeV per top (an INPUT)',
+         bw_kept_fraction(mt, gt, mb, mw, bw, dlnsig_dm=-0.015)),
+    ]
+    for lab, k in rows:
+        p('   %-58s %8.5f %8.5f' % (lab, k, k * k))
+    p('')
+    p('   %-58s %8s %8.5f'
+      % ('MEASURED truth/mode (PA, onshell, madspin_v1)', '',
+         d.sigma(REF) / d.sigma('PA')))
+    p('')
+    p('VERDICT.  The truncation is confirmed and it is the dominant term: it')
+    p('removes about 4% of the rate where the whole difference is 3.4%, so')
+    p('nothing else in this comparison is allowed to be large.  The')
+    p('non-relativistic shortcut is a good approximation to the PROPAGATOR')
+    p('part (%.5f against %.5f for the pair, 0.02%%) -- the relativistic'
+      % (rows[0][1] ** 2, rows[1][1] ** 2))
+    p('corrections to the two tails very nearly cancel in arctan.')
+    p('')
+    p('   What is NOT established is the size of the residual.  The estimate')
+    p('   that leaves "+0.8% of genuine off-shell rate" holds the numerator')
+    p('   flat across a +-%.1f GeV window, and it is not flat: the decay side'
+      % (bw * gt))
+    p('   alone moves the pair prediction from %.4f to %.4f, and a production'
+      % (rows[1][1] ** 2, rows[2][1] ** 2))
+    p('   slope of the size m_t variations usually show (-1.5%/GeV per top)')
+    p('   moves it back to %.4f.  Against a measurement of %.4f the residual'
+      % (rows[3][1] ** 2, d.sigma(REF) / d.sigma('PA')))
+    p('   is therefore anywhere from +%.1f%% to +%.1f%% depending on an input'
+      % (100 * ((d.sigma(REF) / d.sigma('PA')) / rows[2][1] ** 2 - 1),
+         100 * ((d.sigma(REF) / d.sigma('PA')) / rows[3][1] ** 2 - 1)))
+    p('   this study does not have.  It is the right SIZE for a finite-width')
+    p('   correction -- Gamma_t/m_t = %.3f%% -- and its sign is positive in'
+      % (100 * gt / mt))
+    p('   every variant tried, but "0.8%" is a leftover, not a measurement,')
+    p('   and it should be quoted as a range.  Pinning it down needs a truth')
+    p('   run at a second bwcutoff, which was not done: only 15 was run.')
+    p('')
 
 
 # --------------------------------------------------------------------------
@@ -732,20 +959,7 @@ def write_numbers(d, out, fh=sys.stdout):
     p('   probed before the event loop, then one test of the whole decay')
     p('   chain\'s weight against it per trial, inside the Fortran driver.')
 
-    bw = float(d.meta['bwcutoff'])
-    trunc = 1.0 - 2 * math.atan(2 * bw) / math.pi
-    p('')
-    p('The truth and the MadSpin samples do NOT share a total cross section,')
-    p('and the gap is expected.  MG5 truncates each top Breit-Wigner at')
-    p('|m - m_t| < %g Gamma_t (myamp.f, same convention as MadSpin BW_cut),' % bw)
-    p('which removes %.2f%% per resonance and %.2f%% for the pair; MadSpin'
-      % (100 * trunc, 100 * (1 - (1 - trunc) ** 2)))
-    p('normalises to sigma_production * BR and takes no such loss, and no')
-    p('off-shell correction to the rate either.  Measured here:')
-    for key in MODES:
-        p('   truth / %-9s = %.4f   (BW truncation alone would give %.4f)'
-          % (key, d.sigma(REF) / d.sigma(key), (1 - trunc) ** 2))
-    p('')
+    normalisation_report(d, p)
 
     # --- the sub-threshold region ----------------------------------------
     st, ste, stk = d.integral(REF, d.fine[0], two_mt)
@@ -800,29 +1014,53 @@ def write_numbers(d, out, fh=sys.stdout):
     p('   scanned downwards from %g GeV over the plot binning; "strict" uses'
       % AGREE_HI)
     p('   the central ratio, "within errors" allows each bin its own 1 sigma.')
-    scales = {}
-    for key in MODES:
-        sc, rel = anchor_scale(d, key)
-        scales[key] = sc
-        p('   %-9s normalisation offset over %g-%g GeV: truth/mode = %.4f '
-          '+- %.4f' % (key, ANCHOR[0], ANCHOR[1], sc, sc * rel))
     p('')
-    for what, use_scale in (('ABSOLUTE normalisation', False),
-                            ('SHAPE only (each mode rescaled by its %g-%g GeV '
-                             'offset above)' % ANCHOR, True)):
+    p('   Three normalisations.  The FIRST is the figure\'s.')
+    p('     SHAPE, total sigma  -- each side divided by its own total cross')
+    p('                            section over the full m_tt range.  This is')
+    p('                            what the figure draws, so these are the')
+    p('                            thresholds to quote for it.')
+    p('     SHAPE, %g-%g GeV  -- the same idea with a local anchor instead.'
+      % ANCHOR)
+    p('                            A cross-check: it agrees edge for edge with')
+    p('                            the total-sigma version, which is the')
+    p('                            evidence that the 3.4% is a flat rate')
+    p('                            offset and not a shape.')
+    p('     ABSOLUTE            -- no rescaling.  Kept because the rate')
+    p('                            difference is a real result, but a 5% band')
+    p('                            around a plateau at 1.035 is only 1.5%')
+    p('                            wide, so that row is half a statement about')
+    p('                            the sample size.')
+    p('')
+    shape_sc, anchor_sc = {}, {}
+    for key in MODES:
+        shape_sc[key] = shape_scale(d, key)
+        sc, rel = anchor_scale(d, key)
+        anchor_sc[key] = sc
+        p('   %-11s truth/mode: total %.4f   %g-%g GeV %.4f +- %.4f'
+          % (key, shape_sc[key], ANCHOR[0], ANCHOR[1], sc, sc * rel))
+    p('')
+    for what, scales in (
+            ('SHAPE, each side over its own TOTAL sigma  (THE FIGURE)',
+             shape_sc),
+            ('SHAPE, each mode rescaled by its %g-%g GeV anchor (cross-check)'
+             % ANCHOR, anchor_sc),
+            ('ABSOLUTE normalisation', None)):
         p('   -- %s --' % what)
         for tol in (0.05, 0.10):
             p('   tolerance %d%%:' % int(100 * tol))
             for key in MODES:
                 a = agreement_threshold(d, key, tol,
-                                        scales[key] if use_scale else 1.0)
+                                        1.0 if scales is None else scales[key])
                 def fmt(name):
                     if a.get(name) is None:
                         return 'never, up to %g GeV' % AGREE_HI
-                    return ('m_tt >= %.0f GeV  (first bin ratio %.3f +- %.3f)'
-                            % (a[name], a[name + '_ratio'], a[name + '_err']))
-                p('      %-9s strict       : %s' % (key, fmt('strict')))
-                p('      %-9s within errors: %s' % ('', fmt('compat')))
+                    return ('m_tt >= %.0f GeV  (= 2 m_t %+.0f GeV; first bin '
+                            'ratio %.3f +- %.3f)'
+                            % (a[name], a[name] - two_mt,
+                               a[name + '_ratio'], a[name + '_err']))
+                p('      %-11s strict       : %s' % (key, fmt('strict')))
+                p('      %-11s within errors: %s' % ('', fmt('compat')))
         p('')
 
     # --- the mechanism ----------------------------------------------------
@@ -904,12 +1142,15 @@ def write_numbers(d, out, fh=sys.stdout):
     # The figure clips its ratio pane to RATIO_CLIP and marks every excursion
     # with an arrow, but an arrow has no value on it.  The values live here, so
     # nothing that leaves the pane is lost.
-    den_c, dene_c, dcnt_c = d.density(REF)
-    p('-- ratio points outside the figure\'s clipped pane %s -------------'
+    # In the FIGURE's normalisation -- shape ratios, both sides over their own
+    # total sigma -- because this list has to be the list of arrows actually
+    # drawn.  The absolute ratios are in the first per-bin table below.
+    den_c, dene_c, dcnt_c = d.shape(REF)
+    p('-- SHAPE ratio points outside the figure\'s clipped pane %s -------'
       % (RATIO_CLIP,))
     any_out = False
     for key in MODES:
-        y, ye, cnt = d.density(key)
+        y, ye, cnt = d.shape(key)
         r, re = ratio(y, ye, den_c, dene_c)
         struct = structurally_empty(d, key) & (dcnt_c > 0)
         stat = (cnt == 0) & (dcnt_c > 0) & ~struct
@@ -930,7 +1171,10 @@ def write_numbers(d, out, fh=sys.stdout):
     p('')
 
     # --- per-bin table ----------------------------------------------------
-    p('-- per-bin table (absolute, pb/GeV) ---------------------------------')
+    # ABSOLUTE, deliberately: the figure is now a shape comparison, so this is
+    # the only place the rates themselves survive.  The shape ratios the figure
+    # actually draws follow in the second table.
+    p('-- per-bin table (absolute, pb/GeV; ratios are ABSOLUTE) -------------')
     den, dene, dcnt = d.density(REF)
     head = '%9s %12s %9s' % ('bin [GeV]', 'truth', '+-')
     for key in MODES:
@@ -942,6 +1186,32 @@ def write_numbers(d, out, fh=sys.stdout):
         for key in MODES:
             y, ye, cnt = d.density(key)
             r, re = ratio(y, ye, den, dene)
+            if cnt[i] == 0:
+                row += ' %12.5g %8s %8s' % (0.0, '-', '0 exact')
+            else:
+                row += ' %12.5g %8.2g %8s' % (
+                    y[i], ye[i],
+                    '%.3f' % r[i] if np.isfinite(r[i]) else '-')
+        p(row)
+    p('')
+
+    # --- the same table in the figure's own normalisation ------------------
+    # So a point can be checked against the figure without re-deriving the
+    # scaling by hand.  Same bins, same errors; every column is
+    # (1/sigma) dsigma/dm in 1/GeV, sigma being the sample's own TOTAL.
+    p('-- per-bin table in the FIGURE\'s normalisation ((1/sigma) dsigma/dm,')
+    p('   1/GeV; ratios are SHAPE ratios and are what the lower pane draws) --')
+    sden, sdene, _ = d.shape(REF)
+    head = '%9s %12s %9s' % ('bin [GeV]', 'truth', '+-')
+    for key in MODES:
+        head += ' %12s %8s %8s' % (key, '+-', 'ratio')
+    p(head)
+    for i in range(len(d.centres)):
+        row = '%4.0f-%4.0f %12.5g %9.2g' % (d.edges[i], d.edges[i + 1],
+                                            sden[i], sdene[i])
+        for key in MODES:
+            y, ye, cnt = d.shape(key)
+            r, re = ratio(y, ye, sden, sdene)
             if cnt[i] == 0:
                 row += ' %12.5g %8s %8s' % (0.0, '-', '0 exact')
             else:

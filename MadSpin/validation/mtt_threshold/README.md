@@ -1,8 +1,9 @@
 # `m_tt` near the `2 m_t` threshold
 
-`dsigma/dm_tt` for `p p > t t~ j` around `2 m_t`, MadSpin's four spinmodes
-(`madspin`, `PA`, `onshell`, `madspin_v1`) against a doubly-resonant off-shell
-MadGraph truth, in absolute normalisation.
+`1/sigma dsigma/dm_tt` for `p p > t t~ j` around `2 m_t`, MadSpin's four
+spinmodes (`madspin`, `PA`, `onshell`, `madspin_v1`) against a doubly-resonant
+off-shell MadGraph truth, **each curve divided by its own total cross section**
+so the figure compares shapes.
 
 The question: **above what `m_tt` does MadSpin agree with the truth, and what
 does it do below that.**
@@ -14,7 +15,7 @@ does it do below that.**
 | file | what |
 |---|---|
 | `run_mtt_threshold.py` | generates everything and writes the raw histograms. The only file that needs MG5/MadSpin. |
-| `plot_mtt_threshold.py` | the figure in the MG7 paper style, plus the full numeric report. |
+| `plot_mtt_threshold.py` | the figure in the MG7 paper style, plus the full numeric report -- including `normalisation_report`, which computes the Breit-Wigner truncation estimate the shape normalisation divides out. |
 | `plot_mtt_threshold_userstyle.py` | the same figure in the user's own matplotlib style. Same data, same numbers. |
 | `data/histograms.npz` | the raw measurement: a uniform 0.25 GeV grid over 290-520 GeV, one `sumw`/`sumw2`/`cnt` triple per sample, plus the event-by-event `Delta m_tt` histograms. |
 | `data/meta.json` | processes, cards, cuts, seeds, statistics, cross sections, resolved unweighting scheme, code SHA. |
@@ -148,6 +149,33 @@ production tree's invariants fixed. An empty sub-threshold bin of any of the
 three would be a statement about the sample size, so it is drawn as a gap
 rather than as a zero.
 
+## The normalisation, and why it is shape
+
+The two sides do not share a total cross section -- `truth/PA = truth/onshell =
+truth/madspin_v1 = 0.9661` -- so in absolute normalisation the ratio pane
+plateaus at 1.035 and a `+-5 %` band around it is only 1.5 % wide, i.e. mostly a
+statement about the sample size. The 3.4 % is understood (MG5's decay-chain
+truth truncates each top's Breit-Wigner at `bwcutoff` widths and MadSpin does
+not) and is flat in `m_tt`, so it is divided out: every curve is normalised by
+**its own total cross section over the full `m_tt` range**, `sum(w)/N` of the
+whole sample, not the integral of the plotted 316-420 GeV window.
+
+Two consequences, both handled rather than absorbed:
+
+* the ratio pane compares shapes, so absolute statements -- "`onshell` misses
+  16.2 % of the cross section below `2 m_t + 5 GeV`" -- are no longer on the
+  figure. They are in `RESULTS.md` section 2 and in `numbers.txt`, which carries
+  the per-bin table twice: in pb/GeV, and in the figure's own normalisation so
+  any drawn point can be checked.
+* `onshell`'s structural zero below threshold is still zero. No normalisation
+  can change that, and the open-circle-without-arrow convention below is
+  unchanged.
+
+`RESULTS.md` section 1a is the audit of the 3.4 %: what it is (the truncation,
+confirmed and dominant), what it is not (statistics, a shape effect, a
+branching-ratio mismatch -- each excluded below 0.05 %), and what is left
+(+0.4 % to +1.0 %, bounded rather than measured).
+
 ## The ratio pane is clipped, and says so
 
 The lower pane is capped at `0.8`-`1.2`. Several points genuinely live outside
@@ -160,6 +188,20 @@ that window, and the figure marks each of them:
   boundary, and carries **no** arrow. It is a structural zero, not a point that
   ran off the pane, and the two have to stay distinguishable.
 
-The y-axis label and an in-pane key both say the pane is clipped, and
-`plots/numbers.txt` lists every off-scale ratio with its value and error, so
-nothing the clipping hides is lost.
+The y-axis label says the pane is clipped and that it compares shapes; an
+in-pane key says what the two marks mean. The key is the only text kept in a
+pane, and deliberately: an axis label can state the clipping, but it cannot
+state the difference between an arrow and an open circle, and without that the
+circles are unreadable. `plots/numbers.txt` lists every off-scale ratio with its
+value and error, so nothing the clipping hides is lost.
+
+## No prose on the figure
+
+There is no annotation in the plot area. What the shaded region means, how each
+mode reaches it, the sub-threshold event counts -- all of that is in `RESULTS.md`
+and `numbers.txt`, where it can carry its errors. What stays on the figure is
+one setup line above the curves (process, energy, order, scales, `BW cut`), the
+`2 m_t` tag on the threshold line, the legend, and the ratio-pane key. The
+`m_tt` axis names the variable and its unit and nothing else; what `m_tt` is
+built from is in `RESULTS.md`, in `meta.json['observable']` and in the
+"The observable" section above.

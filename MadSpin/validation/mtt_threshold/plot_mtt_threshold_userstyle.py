@@ -108,12 +108,16 @@ def main():
         a.axvspan(lo, two_mt, facecolor='0.90', edgecolor='none', zorder=0)
         a.axvline(two_mt, color='0.35', lw=1.0, ls='--', zorder=1)
 
-    den, dene, dcnt = d.density(REF)
+    # Shape comparison: every curve divided by its OWN total cross section
+    # (the sample total over the full m_tt range, not the plotted window), so
+    # the 3.4 % rate difference between the truth and MadSpin cancels.  Same
+    # accessor as the MG7-style figure, so the two cannot drift apart.
+    den, dene, dcnt = d.shape(REF)
     ax.step(d.edges, np.concatenate([den[:1], den]), where='pre',
             color=C_REF, lw=1.2, label=CURVES_PLAIN['truth'], zorder=5)
 
     for key in MODES:
-        y, ye, cnt = d.density(key)
+        y, ye, cnt = d.shape(key)
         draw = np.where(cnt > 0, y, np.nan)
         ax.step(d.edges, np.concatenate([draw[:1], draw]), where='pre',
                 color=COLOR[key], lw=1.0, alpha=STEP_ALPHA, zorder=3)
@@ -122,26 +126,19 @@ def main():
                     label=CURVES_PLAIN[key], zorder=4)
 
     ax.set_yscale('log')
-    ax.set_ylabel(r'$d\sigma/dm_{t\bar{t}}$  [pb/GeV]')
+    ax.set_ylabel(r'$(1/\sigma)\,d\sigma/dm_{t\bar{t}}$  [1/GeV]')
     ax.set_xlim(lo, hi)
     ax.tick_params(labelbottom=False)
     ax.legend(loc='lower right', fontsize=8.5)
+    # No prose in the pane.  What the shaded region means and how each mode
+    # gets into it is in numbers.txt and RESULTS.md, where it carries its
+    # errors; the title keeps the setup, which cannot be read off the curves.
+    # The headroom is cut back accordingly.
     ymin, ymax = ax.get_ylim()
-    ax.set_ylim(ymin, ymax * 45)
-    n_on = d.meta['runs']['onshell']['nevents']
+    ax.set_ylim(ymin, ymax * 3.5)
     ax.set_title(r'$pp\to t\bar{t}j$, 13 TeV, LO, $\mu_R=\mu_F=m_t$, '
                  r'BW cut $=%g\,\Gamma_t$' % d.meta.get('bwcutoff', 15.0),
                  fontsize=10)
-    ax.text(0.02, 0.965,
-            'below $2m_t$: no on-shell $t\\bar{t}$ pair can land here.\n'
-            'onshell: 0 of %s events, exactly -- structural, not statistical.\n'
-            'madspin / PA reach it via the production reshuffle, which\n'
-            'rescales the recoil jet and so moves $m_{t\\bar{t}}$.\n'
-            'madspin_v1 reaches it 3x less often: it leaves\n'
-            '$m_{t\\bar{t}}$ unchanged in 54%% of events.'
-            % '{:,}'.format(int(n_on)).replace(',', ' '),
-            transform=ax.transAxes, ha='left', va='top', fontsize=7.5,
-            color='0.25')
     ax.annotate('$2m_t$', xy=(two_mt, 0.02), xycoords=('data', 'axes fraction'),
                 xytext=(3, 0), textcoords='offset points', ha='left',
                 va='bottom', fontsize=9, color='0.35')
@@ -156,7 +153,11 @@ def main():
 
     n_out = 0
     for slot, key in enumerate(MODES):
-        y, ye, cnt = d.density(key)
+        # Both sides already self-normalised, so this pane compares SHAPES and
+        # sits on 1.  Absolute statements ("onshell misses 16.2 % of sigma
+        # below 2 m_t + 5 GeV") cannot be read off it any more; they are in
+        # numbers.txt and RESULTS.md section 2.
+        y, ye, cnt = d.shape(key)
         r, re = ratio(y, ye, den, dene)
         # Same distinction as the MG7-style figure: a structural zero
         # (``onshell`` below 2 m_t) keeps its open marker and gets NO arrow --
@@ -186,16 +187,19 @@ def main():
           'arrow at the boundary it left through' % (RATIO_CLIP, n_out))
     rx.text(0.99, 0.92, 'bands: $\\pm5\\%$, $\\pm10\\%$', transform=rx.transAxes,
             ha='right', va='top', fontsize=7, color='C0')
-    # Bottom right: the corner no curve reaches (above 356 GeV every mode sits
-    # on the +3 % normalisation plateau), so the key cannot cover a point.
+    # Kept on purpose: a key to two MARKS, not commentary.  The axis label can
+    # say the pane is clipped but not that an open circle is an exact
+    # structural zero while an arrow is a measured point that left the window,
+    # and that distinction is why onshell's sub-threshold zero is drawn at all.
+    # Bottom right is the corner no curve reaches, so it covers no point.
     rx.text(0.99, 0.04,
             'arrow: point outside the pane\n'
             '$\\circ$: exactly 0 (structural)',
             transform=rx.transAxes, ha='right', va='bottom', fontsize=7,
             color='0.30', linespacing=1.3)
-    rx.set_ylabel('Ratio\n(clipped to $\\pm20\\%$)', fontsize=9)
-    rx.set_xlabel(r'$m_{t\bar{t}}$ [GeV]   '
-                  r'(per-event $m$ of $(W^+b)+(W^-\bar{b})$)')
+    rx.set_ylabel('Shape ratio\n(clipped to $\\pm20\\%$)', fontsize=9)
+    # The variable and its unit, nothing else.
+    rx.set_xlabel(r'$m_{t\bar{t}}$ [GeV]')
     rx.set_xlim(lo, hi)
 
     fig.subplots_adjust(hspace=0.1, left=0.15, right=0.97,

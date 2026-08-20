@@ -927,6 +927,39 @@ def main():
         if os.path.exists(src):
             shutil.copy(src, pjoin(logdir, name))
 
+    # MadEvent's own integration error on each cross section, from the log it
+    # just wrote.  Recorded because the normalisation question this study
+    # answers -- truth/MadSpin = 0.966, and how much of it is the truth's
+    # Breit-Wigner truncation -- needs to know how well each side's sigma is
+    # integrated before any of the 3.4 % can be called physics.  ``sumw/N`` in
+    # ``runs`` is the sample's own realised cross section; this is the
+    # integration that produced it.
+    meta['mg5_integration_pb'] = {}
+    for label, name in (('production', 'mg5_production.log.txt'),
+                        ('truth', 'mg5_truth.log.txt')):
+        src = pjoin(logdir, name)
+        if not os.path.exists(src):
+            continue
+        got = None
+        with open(src) as fp:
+            for line in fp:
+                s = line.strip()
+                if s.startswith('Cross-section :'):
+                    body = s.split(':', 1)[1]
+                    if '+-' in body:
+                        c, e = body.split('+-', 1)
+                        got = {'cross_pb': float(c),
+                               'error_pb': float(e.replace('pb', '').strip())}
+        if got is not None:
+            # The truth is five runs and the copied log carries the LAST
+            # ``Cross-section :`` line in it, so for the truth this is one run
+            # of the five, not the mean.  The five run cross sections are in
+            # ``truth_runs`` and agree to 0.16 pb; this is the size of the
+            # integration error on one of them.
+            got['note'] = ('one MadEvent run; the truth mean is over '
+                           '`truth_runs`') if label == 'truth' else 'the run'
+            meta['mg5_integration_pb'][label] = got
+
     np.savez_compressed(pjoin(args.outdir, 'histograms.npz'), **store)
     with open(pjoin(args.outdir, 'meta.json'), 'w') as fp:
         json.dump(meta, fp, indent=2, sort_keys=True)

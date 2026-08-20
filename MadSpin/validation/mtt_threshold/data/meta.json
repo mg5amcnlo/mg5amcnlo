@@ -98,6 +98,18 @@
     "t > w+ b",
     "t~ > w- b~"
   ],
+  "mg5_integration_pb": {
+    "production": {
+      "cross_pb": 674.4,
+      "error_pb": 0.2081,
+      "note": "the run"
+    },
+    "truth": {
+      "cross_pb": 651.8,
+      "error_pb": 0.2185,
+      "note": "one MadEvent run; the truth mean is over `truth_runs`"
+    }
+  },
   "model": "sm",
   "mt_pole_assumed": 173.0,
   "mtt_bins": {
