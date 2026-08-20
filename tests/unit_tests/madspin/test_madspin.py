@@ -4757,7 +4757,7 @@ class TestPAUpFrontMass(unittest.TestCase):
             return self.head
 
     def _stub(self, rho, pools, z_table=True, keep_jac=True,
-              unweighting='sequential'):
+              unweighting='sequential', spinmode='PA'):
         interface = interface_madspin.MadSpinInterface
         outer = self
         hels = self.HELS
@@ -4796,11 +4796,12 @@ class TestPAUpFrontMass(unittest.TestCase):
             _pure_interference = staticmethod(lambda: {})
 
             def __init__(self):
+                self.mass_bound_calls = 0
                 # unpolarised beams and a brace-free production, so _frame_boost
                 # short circuits to None: this class is about the mass stage,
                 # and the frame machinery has its own tests
                 self.options = _StubOptions(
-                               {'spinmode': 'PA',
+                               {'spinmode': spinmode,
                                 'sequential_spin_order': '2 3 1',
                                 'unweighting': unweighting,
                                 'density_keep_jacobian': keep_jac,
@@ -4853,7 +4854,14 @@ class TestPAUpFrontMass(unittest.TestCase):
                 RAMBO kernel on a real production event, is not a bound on
                 *this* weight. The per-event bound has its own tests
                 (TestPerEventMassBound), where it is checked against the
-                shipped weight it actually has to dominate."""
+                shipped weight it actually has to dominate.
+
+                Counted, because *whether it is asked for at all* is the
+                caller's decision and is what
+                test_which_events_are_counted_against_the_mass_stage_bound and
+                test_the_offshell_spinmodes_never_ask_for_a_per_event_bound
+                are about."""
+                self.mass_bound_calls += 1
                 return None
 
             def _decay_reshuffle_jacobian(self, decay):
@@ -4881,6 +4889,47 @@ class TestPAUpFrontMass(unittest.TestCase):
                                                     production, (6, -6))
         stub._slot_of = {index: slot for slot, index in enumerate(slots)}
         return stub, rho, pools, production, {6: {0: 'f'}, -6: {0: 'f'}}
+
+    class _NoDecayPool(Exception):
+        """Raised by the offshell fixture's ``_draw_one_decay``: the mass stage
+        has finished, and this class has no offshell decay pool to go on with."""
+
+    def _offshell_fixture(self):
+        """The same chain with ``spinmode = madspin``, up to the point where the
+        angle stage would need decay events.
+
+        Everything the mass stage does offshell runs for real here: the
+        production is a genuine LHE event, so ``_upfront_production`` copies and
+        reshuffles it onto the drawn virtualities, ``rho_off`` is taken at those
+        momenta, and the mass-set accept/reject tests
+        Tr(rho_off)/|M_prod|^2_on . jac_prod against its bound. Only the angle
+        stage is out of reach: offshell it reshuffles each *decay* event onto its
+        slot's virtuality, and the synthetic ``_Decay`` of this class is not an
+        LHE event. So ``_draw_one_decay`` raises instead -- which is exactly one
+        step past everything the caller decided about the mass stage's bound.
+        """
+        base = TestSequentialAcceptReject()
+        rho = base._production_density()
+        pools = {0: base._pool(100), 1: base._pool(200)}
+        stub = self._stub(rho, pools, spinmode='madspin')
+        production = _rambo_event(2, 800.0, [self.POLE, self.POLE],
+                                  random.Random(4242))
+        _, slots = interface_madspin.MadSpinInterface._sequential_slots(
+                                                    production, (6, -6))
+        stub._slot_of = {index: slot for slot, index in enumerate(slots)}
+        # |M_prod|^2 on shell, the denominator of the offshell mass-set weight
+        stub.calculate_matrix_element = lambda *args, **opts: 1.0
+
+        def _no_pool(*args, **opts):
+            raise TestPAUpFrontMass._NoDecayPool()
+        stub._draw_one_decay = _no_pool
+        # C for the mass set: Tr(rho) . max(jac_prod) . max_m Zhat(m)^2, loosely.
+        # It only has to keep the accept/reject moving -- the counters this
+        # fixture is read for are set once, before the loop.
+        c_mass = 1.2 * rho.trace().real * max(self._f(m)
+                                              for m in self.MASSES) ** 2
+        return (stub, production, {6: {0: 'f'}, -6: {0: 'f'}},
+                [c_mass, 1.0, 1.0])
 
     def _bounds(self, stub, rho, pools):
         contract = stub._partial_density_contraction
@@ -5072,6 +5121,63 @@ class TestPAUpFrontMass(unittest.TestCase):
             got = (stats['nb_mass_bound_global'], stats['nb_mass_bound_event'])
             self.assertEqual(got, (5, 0) if counted else (0, 0),
                              '%s counted %s' % (unweighting, (got,)))
+            # and the un-counted scheme did not so much as *ask* for a
+            # per-event bound: sequential_with_mass draws each slot's mass
+            # inside that slot's own accept/reject, so it has no mass set to
+            # bound and never reads mass_bound. joint is not covered here
+            # because it never reaches this function at all -- _sequential_active
+            # is `_unweighting_mode() != 'joint'`, and it is what gates the call.
+            self.assertEqual(stub.mass_bound_calls, 5 if counted else 0,
+                             '%s asked for %d per-event bounds'
+                             % (unweighting, stub.mass_bound_calls))
+
+    def test_the_offshell_spinmodes_never_ask_for_a_per_event_bound(self):
+        """madspin/full keep the probe's global maximum weight for the mass
+        stage. Not because the per-event construction is unavailable there but
+        because it was MEASURED to be looser -- eps_m 5.00 against 3.06, and
+        worse than global below 400 GeV; see the fallback list above
+        _MASS_BOUND_UNSUPPORTED and section 15 of the plan.
+
+        So the assertion is on the *caller*: an offshell chain lands in
+        nb_mass_bound_global, and _mass_stage_bound is never even called.
+
+        Two independent things hold that up, which is worth knowing before
+        touching either. The gate says `draw_mass and not offshell`, and
+        `draw_mass` is `spinmode == 'PA'` while `offshell` is
+        `spinmode not in ('PA', 'onshell')` -- so `draw_mass` already implies
+        `not offshell` for every spinmode the card allows, and the clause is
+        belt to its braces. Deleting `not offshell` on its own is therefore a
+        no-op that no test can catch, and widening `draw_mass` on its own is
+        caught by `not offshell` rather than by anything here. What this test
+        catches is either one going *wrong*: the gate widened to match the
+        counter gate one statement below (`offshell or draw_mass`), or
+        `draw_mass` grown to an offshell spinmode with the clause gone with it.
+        Either hands madspin/full a mass-stage bound measured to be 1.6x worse
+        for them.
+        """
+        stub, production, evt_decayfile, maxwgts = self._offshell_fixture()
+        self.assertTrue(stub._sequential_offshell())
+        self.assertTrue(stub._sequential_upfront())
+        random.seed(11)
+        stats = collections.defaultdict(int)
+        for _ in range(5):
+            # not assertRaises: the suite's TestCase overrides it and does not
+            # return the context manager
+            try:
+                stub.sequential_accept_reject(production, evt_decayfile,
+                                              maxwgts, 10, stats=stats)
+            except self._NoDecayPool:
+                pass
+            else:
+                self.fail('the offshell chain reached the angle stage without '
+                          'needing a decay')
+        self.assertEqual(stub.mass_bound_calls, 0)
+        got = (stats['nb_mass_bound_global'], stats['nb_mass_bound_event'])
+        self.assertEqual(got, (5, 0))
+        # the mass stage really ran: a virtuality was drawn, the production was
+        # reshuffled onto it and rho_off taken there, and the angle stage was
+        # reached -- the fallback is a decision, not an early exit
+        self.assertEqual(stats['nb_try_0'], 5)
 
 
 class TestSequentialPoolLadder(unittest.TestCase):
