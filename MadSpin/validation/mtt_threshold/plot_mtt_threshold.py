@@ -178,6 +178,14 @@ CURVES_PLAIN = {
 REF = 'truth'
 MODES = ['madspin', 'PA', 'onshell', 'madspin_v1']
 
+# The production process, as it appears in the setup line above the curves and
+# in the truth curve's legend entry.  A module global so the sibling ``2 -> 2``
+# study can re-point this module at ``p p > t t~`` without a second copy of the
+# figure code -- the style is then shared by construction rather than by
+# somebody remembering to copy a change across.
+PROC_TEX = r'pp \to t\bar t j'
+PROC_PLAIN = r'pp \to t\bar t j'
+
 COLOR = {'truth': 'black', 'madspin': 'blue', 'PA': 'red',
          'onshell': allcolors[2], 'madspin_v1': allcolors[4],
          'production': 'gray'}
@@ -324,31 +332,67 @@ class Data(object):
         return s, e, k
 
 
+# How close ``m_tt`` has to come back for a mode to count as not having moved
+# it.  Two scales bracket the choice and they are four orders of magnitude
+# apart, so nothing hinges on where in between it sits: the LHE writes momenta
+# as decimal text, which puts a floor of ~1e-5 GeV under any mode that provably
+# does not touch them (``onshell`` measures 2.6e-5 GeV in the ``t t~ j`` study),
+# while a mode that does move ``m_tt`` moves it by tens of GeV (38 to 141 GeV
+# there).  1e-3 GeV is above the text-precision floor and 1/1000 of the
+# narrowest plot bin.
+STRUCTURAL_TOL = 1e-3
+
+
+def preserves_mtt(d, key):
+    """Did ``key`` return every event's ``m_tt`` unchanged?
+
+    Answered from the event-by-event pairing ``run_mtt_threshold.pair_delta``
+    measured, not from the mode's name: ``max |Delta m_tt|`` over the whole
+    sample, together with the ``max |Delta sqrt(shat)|`` that proves the two
+    event streams were actually paired.
+
+    Which modes this is true of is a property of the PROCESS, which is why it
+    is measured.  For ``p p > t t~ j`` only ``onshell`` qualifies -- it draws no
+    virtuality and never reshuffles -- while the density modes' RAMBO reshuffle
+    rescales the recoil jet and moves ``m_tt``, and ``madspin_v1`` regenerates
+    the phase-space point outright.  For a ``2 -> 2`` production there is no
+    recoil to rescale, ``m_tt = sqrt(shat)`` is what the reshuffle holds fixed,
+    and every mode qualifies.
+
+    Older data files that predate the ``delta_mtt`` measurement fall back to
+    ``onshell`` alone, which is the one case the code path guarantees without a
+    measurement (``_density_do_reshuffle`` is False).
+    """
+    m = d.meta.get('delta_mtt', {}).get(key)
+    if m is None:
+        return key == 'onshell'
+    return (m['max_abs'] < STRUCTURAL_TOL
+            and m['max_dshat'] < STRUCTURAL_TOL)
+
+
 def structurally_empty(d, key):
     """Bins where ``key`` has no support *by construction*, not by bad luck.
 
-    ``onshell`` draws no virtuality and never reshuffles, so every decayed event
-    keeps its production ``m_tt`` and the whole region below ``2 m_t`` is
-    unreachable -- for any sample size.  Nothing else on this figure is in that
-    position: ``madspin``, ``PA`` and ``madspin_v1`` all *can* land below
-    threshold (the density modes because the RAMBO reshuffle rescales the recoil
-    jet, ``madspin_v1`` because it regenerates the phase-space point outright),
-    so an empty sub-threshold bin of theirs is a statistical statement and is
-    drawn as a gap, not as a zero.
+    The production sample is on-shell ``t t~``, so it has no support at all
+    below ``2 m_t``.  A mode that provably returns each event's ``m_tt``
+    unchanged (:func:`preserves_mtt`) therefore has none either -- for any
+    sample size.  A mode that does move ``m_tt`` *can* land below threshold, so
+    an empty sub-threshold bin of its is a statement about ``N`` and is drawn as
+    a gap rather than as a zero.
 
     The claim is checked against the data rather than asserted: if a bin marked
     structurally empty turned out to hold events, this raises.
     """
     mask = d.centres < d.two_mt
-    if key != 'onshell':
+    if not preserves_mtt(d, key):
         return np.zeros_like(mask)
     _, _, cnt = d.density(key)
     bad = mask & (cnt > 0)
     if bad.any():
         raise AssertionError(
-            'onshell has %d events below 2 m_t -- the "structurally empty" '
+            '%s has %d events below 2 m_t -- the "structurally empty" '
             'claim is false and the figure must not be drawn'
-            % int(cnt[bad].sum()))
+            % (key, int(cnt[bad].sum())))
     return mask
 
 
@@ -550,11 +594,13 @@ def make_figure(d, out, style_tag=''):
 
     # --- the structurally empty region -----------------------------------
     # Shaded on BOTH panes, and labelled for what it is: below 2 m_t the
-    # production sample has no support at all (on-shell tops), and ``onshell``
-    # inherits that exactly.  ``madspin`` and ``PA`` do reach it -- through the
-    # production reshuffle, which rescales the recoil jet and so moves m_tt --
-    # so the shading marks the *on-shell kinematic boundary*, not an empty
-    # region of the figure.
+    # production sample has no support at all (on-shell tops), and any mode
+    # that does not move m_tt inherits that exactly.  Whether the other modes
+    # reach it is a property of the process -- for ``p p > t t~ j`` the
+    # production reshuffle rescales the recoil jet and so moves m_tt, for a
+    # ``2 -> 2`` production there is no recoil to rescale -- so the shading
+    # marks the *on-shell kinematic boundary*, not an empty region of the
+    # figure.
     for a in (ax, rx):
         a.axvspan(lo, two_mt, facecolor='0.90', edgecolor='none', zorder=0)
         a.axvline(two_mt, color='0.35', lw=1.0, ls=(0, (6, 3)), zorder=1)
@@ -597,12 +643,12 @@ def make_figure(d, out, style_tag=''):
     ymin, ymax = ax.get_ylim()
     ax.set_ylim(ymin, ymax * 3.2)
     ax.text(0.028, 0.965,
-            _tx(r'$pp \to t\bar t j$ at $\sqrt{s} = 13$~TeV, LO, '
+            _tx(r'$%s$ at $\sqrt{s} = 13$~TeV, LO, '
                 r'$\mu_R = \mu_F = m_t$, BW cut $=%g\,\Gamma_t$ on both sides'
-                % d.meta.get('bwcutoff', 15.0),
-                r'$pp \to t\bar t j$ at $\sqrt{s}=13$ TeV, LO, '
+                % (PROC_TEX, d.meta.get('bwcutoff', 15.0)),
+                r'$%s$ at $\sqrt{s}=13$ TeV, LO, '
                 r'$\mu_R=\mu_F=m_t$, BW cut = %g $\Gamma_t$ on both sides'
-                % d.meta.get('bwcutoff', 15.0)),
+                % (PROC_PLAIN, d.meta.get('bwcutoff', 15.0))),
             transform=ax.transAxes, ha='left', va='top', fontsize=11)
     ax.annotate(_tx(r'$2m_t$', r'$2m_t$'),
                 xy=(two_mt, 0.03), xycoords=('data', 'axes fraction'),
@@ -623,6 +669,20 @@ def make_figure(d, out, style_tag=''):
     # otherwise drag the autoscale out with them.
     rx.set_ylim(*RATIO_CLIP)
 
+    # Which modes are structurally zero below threshold is a property of the
+    # PROCESS, and it decides how the open circles have to be drawn.  For
+    # ``p p > t t~ j`` only ``onshell`` is, and one circle per bin is the whole
+    # problem.  For a ``2 -> 2`` production every mode is -- they all sit at
+    # exactly the same place, 0, which is the result -- and four white-filled
+    # circles at one x would hide three of themselves.  Nudging them apart
+    # horizontally is not available: the turn-on is binned at 1 GeV, which is
+    # about 4 pt of axis, and four 5 pt markers do not fit in it.  So they are
+    # drawn CONCENTRIC, largest first, and coincidence is what the reader sees.
+    # The one-structural-mode case is untouched by this: the radius ladder
+    # starts at the original ms=5.
+    struct_of = {key: structurally_empty(d, key) & (dcnt > 0) for key in MODES}
+    circled = [key for key in MODES if struct_of[key].any()]
+
     n_out = 0
     for slot, key in enumerate(MODES):
         # Both sides already divided by their own total sigma, so this pane is
@@ -634,15 +694,16 @@ def make_figure(d, out, style_tag=''):
         y, ye, cnt = d.shape(key)
         r, re = ratio(y, ye, den, dene)
         # Two kinds of empty bin, drawn differently on purpose.
-        #   structural -- onshell below 2 m_t.  A real, exact zero: it is
-        #                 0 and not "somewhere below the pane", so it keeps its
-        #                 open circle and gets NO arrow.  With the pane clipped
-        #                 to +-20% the circle sits on the lower boundary, which
-        #                 is why the key below spells out what it means.
+        #   structural -- a mode that provably does not move m_tt, below 2 m_t.
+        #                 A real, exact zero: it is 0 and not "somewhere below
+        #                 the pane", so it keeps its open circle and gets NO
+        #                 arrow.  With the pane clipped to +-20% the circle sits
+        #                 on the lower boundary, which is why the key below
+        #                 spells out what it means.
         #   statistical -- any other bin with no entries.  Drawn as a gap: the
         #                 sample simply did not reach there, which is a
         #                 statement about N and not about the scheme.
-        struct = structurally_empty(d, key) & (dcnt > 0)
+        struct = struct_of[key]
         stat = (cnt == 0) & (dcnt > 0) & ~struct
         rr = np.where(struct, 0.0, np.where(stat, np.nan, r))
         rx.step(d.edges, np.concatenate([rr[:1], rr]), where='pre',
@@ -651,10 +712,13 @@ def make_figure(d, out, style_tag=''):
                     yerr=np.where(struct | stat, np.nan, re), fmt='none',
                     ecolor=COLOR[key], elinewidth=0.9, capsize=0, zorder=4)
         if struct.any():
+            # Largest ring first (lowest zorder), so the white fill of an outer
+            # circle cannot paint over an inner one.
+            ring = circled.index(key)
             rx.plot(d.centres[struct],
                     np.full(struct.sum(), RATIO_CLIP[0]), 'o',
-                    mfc='white', mec=COLOR[key], mew=1.2, ms=5,
-                    clip_on=False, zorder=8)
+                    mfc='white', mec=COLOR[key], mew=1.2, ms=5 + 2.6 * ring,
+                    clip_on=False, zorder=8 + (len(circled) - ring))
         live = np.where(struct | stat, np.nan, r)
         nb, na = offscale_arrows(rx, d.centres, live, COLOR[key],
                                  dx=d.widths, slot=slot, nslot=len(MODES))

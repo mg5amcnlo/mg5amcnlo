@@ -1,0 +1,389 @@
+==============================================================================
+m_tt near threshold, 2 -> 2: MadSpin spinmodes vs the off-shell truth
+==============================================================================
+code            : 721ffc1149ef (claude/ms-mtt-threshold-2to2)
+production      : p p > t t~
+truth           : p p > t t~, t > w+ b, t~ > w- b~
+MadSpin decays  : t > w+ b, t~ > w- b~
+bwcutoff/BW_cut : 15.0 / 15
+2 m_t           : 346.0000 GeV  (param card MT = 173.0)
+observable      : invariant mass of the sum of the four status-1 particles with |pid| in {24, 5}, i.e. (W+ b) + (W- b~)
+
+THE POINT OF THIS STUDY.  For p p > t t~ j the off-shell spinmodes
+populate m_tt < 2 m_t, because reshuffle_production rescales the recoil
+jet and so moves the t t~ four-momentum.  With no jet there is nothing
+to rescale: m_tt = sqrt(shat), which is what the reshuffle holds fixed.
+The prediction is that EVERY spinmode is structurally empty below
+2 m_t.  The two sections marked THE MEASUREMENT and BELOW 2 m_t are
+where that is tested.
+
+sample            events     sigma [pb]    banner [pb]
+truth            5000000       529.8240       529.8350
+madspin          1000000       553.2907       553.2790
+PA               1000000       553.3175       553.2790
+onshell          1000000       553.2790       553.2790
+madspin_v1       1000000       553.2790       553.2790
+production       1000000       553.2790       553.2790
+   truth is 5 independent MG5 runs, pooled: 1000000, 1000000, 1000000, 1000000, 1000000 events each
+   (MG5 caps one generate_events at 1M -- check_nb_events -- so
+    more truth statistics can only come from more runs.)
+
+accept/reject scheme each run ACTUALLY used, from its own log:
+   madspin     joint       (auto, 2 decaying particle(s))
+   PA          sequential  (auto, 2 decaying particle(s))
+   onshell     sequential  (auto, 2 decaying particle(s))
+   madspin_v1  legacy      (spinmode=madspin_v1 does not go through run_onshell, so _unweighting_mode is never called and the card's `unweighting` setting is inert; the legacy Fortran driver tests the whole decay chain against one pre-probed max_weight per channel)
+   NB: "legacy" is not one of the four `set unweighting` schemes.
+   spinmode=madspin_v1 never reaches _unweighting_mode -- that
+   dispatcher lives in run_onshell, which the legacy path does not
+   call -- so the card's `unweighting` value is inert for it.
+
+-- THE MEASUREMENT: m_tt(decayed) - m_tt(production), event by event --
+   MadSpin writes one decayed event per production event, in order.
+   sqrt(shat) is RAMBO-invariant, so max |Delta sqrt(shat)| = 0 is what
+   PROVES the two streams are actually paired -- without it the rest of
+   this table would be a comparison of two unrelated events.
+
+   mode                  N      mean       rms      max|d|  max|dsqrt(s)|  down-xing  up-xing
+   madspin         1000000  +2.1e-08   9.2e-08    3.33e-06              0          0        0
+   PA              1000000  +2.1e-08   9.2e-08    2.84e-06              0          0        0
+   onshell         1000000  +1.2e-10   3.1e-07    1.57e-05              0          0        0
+   madspin_v1      1000000    +4e-11   6.7e-08     2.3e-06              0          0        0
+
+   VERDICT, per mode, from max|d| against a 0.001 GeV bar.  That bar sits
+   between two scales four orders of magnitude apart, so nothing hinges
+   on where in between it is: the LHE writes momenta as decimal text,
+   which puts a ~1e-5 GeV floor under any mode that never touches them,
+   while a mode that DOES move m_tt moves it by tens of GeV (38-141 GeV
+   for the t t~ j study's largest events).
+      madspin     m_tt UNCHANGED  (max|d| = 3.33e-06 GeV, at the text floor)
+      PA          m_tt UNCHANGED  (max|d| = 2.84e-06 GeV, at the text floor)
+      onshell     m_tt UNCHANGED  (max|d| = 1.57e-05 GeV, at the text floor)
+      madspin_v1  m_tt UNCHANGED  (max|d| = 2.3e-06 GeV, at the text floor)
+   No mode moves m_tt.  That is the result: for this production
+   multiplicity the reshuffle holds the observable fixed, so all
+   four modes inherit the production sample's m_tt exactly and all
+   four carry the open-circle structural-zero mark below 2 m_t.
+
+   Mechanism.  reshuffle_production hands every top-level final-state
+   momentum to RAMBO mass_shuffle at fixed sqrt(shat).  Here the tops
+   ARE the final state, so m_tt = sqrt(shat) identically and the
+   reshuffle is holding the observable fixed by construction, whatever
+   virtualities were drawn.  onshell never reshuffles at all.
+   madspin_v1 rebuilds the point from the decay-chain topology holding
+   shat and the production tree's invariants fixed -- and with two
+   final-state particles the t t~ invariant IS shat.  Four different
+   code paths, one kinematic reason.
+
+   "unchanged" fractions, i.e. |Delta m_tt| / m_tt < 1e-6:
+      madspin       100.0000%  of 1000000 events   (bit-exact: 5.0520%)
+      PA            100.0000%  of 1000000 events   (bit-exact: 5.0049%)
+      onshell       100.0000%  of 1000000 events   (bit-exact: 4.5075%)
+      madspin_v1    100.0000%  of 1000000 events   (bit-exact: 18.7154%)
+   Read the 1e-6 column, not the bit-exact one: the bit-exact figure is
+   a statement about how many decimal digits the LHE carries.
+
+-- BELOW 2 m_t ------------------------------------------------------
+The claim is an emptiness, so it is stated as a COUNT and not only
+drawn.  "0 of N" means: N events in the sample, none of them below
+2 m_t, over the full histogram range (290 GeV up).
+
+truth       sigma(m_tt < 2m_t) = 0.9249 +- 0.0099 pb   (8728 of 5000000 events, 0.175% +- 0.002% of the truth total 529.824 pb)
+madspin     sigma(m_tt < 2m_t) = 0 exactly              (0 of 1000000 events)   STRUCTURAL: m_tt is unchanged event by event (see above), and the production sample has no support here
+PA          sigma(m_tt < 2m_t) = 0 exactly              (0 of 1000000 events)   STRUCTURAL: m_tt is unchanged event by event (see above), and the production sample has no support here
+onshell     sigma(m_tt < 2m_t) = 0 exactly              (0 of 1000000 events)   STRUCTURAL: m_tt is unchanged event by event (see above), and the production sample has no support here
+madspin_v1  sigma(m_tt < 2m_t) = 0 exactly              (0 of 1000000 events)   STRUCTURAL: m_tt is unchanged event by event (see above), and the production sample has no support here
+
+   and the production sample itself: 0 of 1000000 events below 2 m_t.
+   That is the on-shell kinematic boundary, and it is the thing all
+   four modes are inheriting.
+
+-- m_tt < 2 m_t + 5 GeV  (= 351.0 GeV) -------------------------
+truth       4.2212 +- 0.0211 pb  (39836 events, 0.797% of the truth total)
+madspin     3.7070 +- 0.0454 pb  (6679 events)   -0.5142 +- 0.0501 pb vs truth = -12.2% +- 1.2%
+PA          3.7338 +- 0.0459 pb  (6679 events)   -0.4874 +- 0.0506 pb vs truth = -11.5% +- 1.2%
+onshell     3.6954 +- 0.0452 pb  (6679 events)   -0.5259 +- 0.0499 pb vs truth = -12.5% +- 1.2%
+madspin_v1  3.6954 +- 0.0452 pb  (6679 events)   -0.5259 +- 0.0499 pb vs truth = -12.5% +- 1.2%
+
+-- m_tt < 2 m_t + 10 GeV  (= 356.0 GeV) -------------------------
+truth       10.1583 +- 0.0328 pb  (95865 events, 1.917% of the truth total)
+madspin     10.2595 +- 0.0754 pb  (18522 events)   +0.1012 +- 0.0822 pb vs truth = +1.0% +- 0.8%
+PA          10.2863 +- 0.0757 pb  (18522 events)   +0.1280 +- 0.0825 pb vs truth = +1.3% +- 0.8%
+onshell     10.2478 +- 0.0753 pb  (18522 events)   +0.0895 +- 0.0821 pb vs truth = +0.9% +- 0.8%
+madspin_v1  10.2478 +- 0.0753 pb  (18522 events)   +0.0895 +- 0.0821 pb vs truth = +0.9% +- 0.8%
+
+
+-- the RAW rate ratios, and what accounts for them -------------------
+The figure never shows these: it divides every curve by its own total
+cross section.  They are recorded because a change in review makes
+MadSpin's reported sigma carry the Breit-Wigner truncation, and this
+branch predates it -- so these are the numbers that change.
+
+   sample           sigma [pb]   truth/sample
+   truth             529.82400              -
+   madspin           553.29068        0.95759
+   PA                553.31747        0.95754
+   onshell           553.27900        0.95761
+   madspin_v1        553.27900        0.95761
+   production        553.27900              -   (undecayed; MadSpin normalises to
+                                                 sigma_prod * BR)
+
+   not statistics: MadEvent quotes 529.8000 +- 0.0505 pb for the truth
+   (one run of 5) and 553.3000 +- 0.0468 pb for the production, i.e.
+   0.010% and 0.008%.
+   the 5 truth runs: 529.8350, 529.8430, 529.7580, 529.8740, 529.8100 pb
+   spread (max-min)/mean = 0.0219%
+
+   not a branching-ratio mismatch either.  MadSpin normalises to
+   sigma_prod * BR and the truth's decay-chain propagator is
+   normalised by the param card's WT, so a WT that did not equal the
+   model's own LO Gamma(t -> W b) would show up here as a pure rate
+   offset:
+      LO Gamma(t -> W b) at m_t = 173, m_b = 4.7, MW = 80.41851 : 1.49148 GeV
+      param card WT                                       : 1.49150 GeV
+      implied BR                                          : 0.99998
+
+what IS in it: MG5's decay-chain truth cuts every phase-space point
+with |m - m_t| >= 15 Gamma_t (myamp.f, the gForceBW=1 branch: the point
+is rejected, so the truncation is in the integrated cross section).
+MadSpin takes no such loss.  The same four evaluations of that integral
+the t t~ j study makes, NWA-normalised -- they depend only on the model
+parameters and on bwcutoff, both of which are the same here, so they
+come out at the same numbers:
+
+   per-resonance kept fraction                                 per res     pair
+   non-relativistic BW, flat numerator  [1-2*atan(2*15)/pi]    0.97879  0.95802
+   fixed-width relativistic BW, flat numerator                 0.97870  0.95785
+     + the decay numerator m*Gamma(m)/(m_t*Gamma_t)            0.98106  0.96249
+     + d ln sigma_prod/dm_t = -1.5%/GeV per top (an INPUT)     0.97824  0.95695
+
+   MEASURED truth/PA                                                    0.95754
+
+   The truncation is again the dominant term: it removes about 4.2% of
+   the rate where the whole measured difference is 4.2%.  What is left
+   over depends on which numerator variant it is measured against --
+   listed below -- and as in the t t~ j study that is a range and not a
+   measurement, because d ln sigma_prod / d m_t is an input this study
+   never varied.  It is however a DIFFERENT
+   production process from the t t~ j one, with a different slope, so
+   the two residuals are not required to agree and the comparison
+   between them is not evidence of anything.
+
+      vs fixed-width relativistic BW, flat numerator             -0.03%
+      vs + the decay numerator m*Gamma(m)/(m_t*Gamma_t)          -0.51%
+      vs + d ln sigma_prod/dm_t = -1.5%/GeV per top (an INPUT)    +0.06%
+
+-- where each spinmode enters agreement with the truth --------------
+   scanned downwards from 420 GeV over the plot binning; "strict" uses
+   the central ratio, "within errors" allows each bin its own 1 sigma.
+
+   Three normalisations.  The FIRST is the figure's.
+     SHAPE, total sigma  -- each side divided by its own total cross
+                            section over the full m_tt range.  This is
+                            what the figure draws.
+     SHAPE, 380-420 GeV  -- the same idea with a local anchor instead;
+                            a cross-check that the rate offset is flat.
+     ABSOLUTE            -- no rescaling at all.
+
+   madspin     truth/mode: total 0.9576   380-420 GeV 0.9517 +- 0.0025
+   PA          truth/mode: total 0.9575   380-420 GeV 0.9517 +- 0.0025
+   onshell     truth/mode: total 0.9576   380-420 GeV 0.9517 +- 0.0025
+   madspin_v1  truth/mode: total 0.9576   380-420 GeV 0.9517 +- 0.0025
+
+   -- SHAPE, each side over its own TOTAL sigma  (THE FIGURE) --
+   tolerance 5%:
+      madspin     strict       : m_tt >= 354 GeV  (= 2 m_t +8 GeV; first bin ratio 1.041 +- 0.023)
+                  within errors: m_tt >= 354 GeV  (= 2 m_t +8 GeV; first bin ratio 1.041 +- 0.023)
+      PA          strict       : m_tt >= 354 GeV  (= 2 m_t +8 GeV; first bin ratio 1.040 +- 0.023)
+                  within errors: m_tt >= 354 GeV  (= 2 m_t +8 GeV; first bin ratio 1.040 +- 0.023)
+      onshell     strict       : m_tt >= 354 GeV  (= 2 m_t +8 GeV; first bin ratio 1.041 +- 0.023)
+                  within errors: m_tt >= 354 GeV  (= 2 m_t +8 GeV; first bin ratio 1.041 +- 0.023)
+      madspin_v1  strict       : m_tt >= 354 GeV  (= 2 m_t +8 GeV; first bin ratio 1.041 +- 0.023)
+                  within errors: m_tt >= 354 GeV  (= 2 m_t +8 GeV; first bin ratio 1.041 +- 0.023)
+   tolerance 10%:
+      madspin     strict       : m_tt >= 350 GeV  (= 2 m_t +4 GeV; first bin ratio 1.095 +- 0.028)
+                  within errors: m_tt >= 347 GeV  (= 2 m_t +1 GeV; first bin ratio 1.097 +- 0.037)
+      PA          strict       : m_tt >= 350 GeV  (= 2 m_t +4 GeV; first bin ratio 1.095 +- 0.028)
+                  within errors: m_tt >= 346 GeV  (= 2 m_t +0 GeV; first bin ratio 0.900 +- 0.042)
+      onshell     strict       : m_tt >= 350 GeV  (= 2 m_t +4 GeV; first bin ratio 1.095 +- 0.028)
+                  within errors: m_tt >= 347 GeV  (= 2 m_t +1 GeV; first bin ratio 1.097 +- 0.037)
+      madspin_v1  strict       : m_tt >= 350 GeV  (= 2 m_t +4 GeV; first bin ratio 1.095 +- 0.028)
+                  within errors: m_tt >= 347 GeV  (= 2 m_t +1 GeV; first bin ratio 1.097 +- 0.037)
+
+   -- SHAPE, each mode rescaled by its 380-420 GeV anchor (cross-check) --
+   tolerance 5%:
+      madspin     strict       : m_tt >= 354 GeV  (= 2 m_t +8 GeV; first bin ratio 1.034 +- 0.023)
+                  within errors: m_tt >= 352 GeV  (= 2 m_t +6 GeV; first bin ratio 1.047 +- 0.024)
+      PA          strict       : m_tt >= 354 GeV  (= 2 m_t +8 GeV; first bin ratio 1.034 +- 0.023)
+                  within errors: m_tt >= 352 GeV  (= 2 m_t +6 GeV; first bin ratio 1.047 +- 0.024)
+      onshell     strict       : m_tt >= 354 GeV  (= 2 m_t +8 GeV; first bin ratio 1.034 +- 0.023)
+                  within errors: m_tt >= 352 GeV  (= 2 m_t +6 GeV; first bin ratio 1.047 +- 0.024)
+      madspin_v1  strict       : m_tt >= 354 GeV  (= 2 m_t +8 GeV; first bin ratio 1.034 +- 0.023)
+                  within errors: m_tt >= 352 GeV  (= 2 m_t +6 GeV; first bin ratio 1.047 +- 0.024)
+   tolerance 10%:
+      madspin     strict       : m_tt >= 350 GeV  (= 2 m_t +4 GeV; first bin ratio 1.088 +- 0.028)
+                  within errors: m_tt >= 347 GeV  (= 2 m_t +1 GeV; first bin ratio 1.091 +- 0.037)
+      PA          strict       : m_tt >= 350 GeV  (= 2 m_t +4 GeV; first bin ratio 1.088 +- 0.028)
+                  within errors: m_tt >= 346 GeV  (= 2 m_t +0 GeV; first bin ratio 0.894 +- 0.042)
+      onshell     strict       : m_tt >= 350 GeV  (= 2 m_t +4 GeV; first bin ratio 1.088 +- 0.028)
+                  within errors: m_tt >= 347 GeV  (= 2 m_t +1 GeV; first bin ratio 1.091 +- 0.037)
+      madspin_v1  strict       : m_tt >= 350 GeV  (= 2 m_t +4 GeV; first bin ratio 1.088 +- 0.028)
+                  within errors: m_tt >= 347 GeV  (= 2 m_t +1 GeV; first bin ratio 1.091 +- 0.037)
+
+   -- ABSOLUTE normalisation --
+   tolerance 5%:
+      madspin     strict       : never, up to 420 GeV
+                  within errors: m_tt >= 390 GeV  (= 2 m_t +44 GeV; first bin ratio 1.045 +- 0.008)
+      PA          strict       : never, up to 420 GeV
+                  within errors: m_tt >= 390 GeV  (= 2 m_t +44 GeV; first bin ratio 1.045 +- 0.008)
+      onshell     strict       : never, up to 420 GeV
+                  within errors: m_tt >= 390 GeV  (= 2 m_t +44 GeV; first bin ratio 1.045 +- 0.008)
+      madspin_v1  strict       : never, up to 420 GeV
+                  within errors: m_tt >= 390 GeV  (= 2 m_t +44 GeV; first bin ratio 1.045 +- 0.008)
+   tolerance 10%:
+      madspin     strict       : m_tt >= 354 GeV  (= 2 m_t +8 GeV; first bin ratio 1.087 +- 0.024)
+                  within errors: m_tt >= 354 GeV  (= 2 m_t +8 GeV; first bin ratio 1.087 +- 0.024)
+      PA          strict       : m_tt >= 354 GeV  (= 2 m_t +8 GeV; first bin ratio 1.087 +- 0.024)
+                  within errors: m_tt >= 354 GeV  (= 2 m_t +8 GeV; first bin ratio 1.087 +- 0.024)
+      onshell     strict       : m_tt >= 354 GeV  (= 2 m_t +8 GeV; first bin ratio 1.087 +- 0.024)
+                  within errors: m_tt >= 354 GeV  (= 2 m_t +8 GeV; first bin ratio 1.087 +- 0.024)
+      madspin_v1  strict       : m_tt >= 354 GeV  (= 2 m_t +8 GeV; first bin ratio 1.087 +- 0.024)
+                  within errors: m_tt >= 354 GeV  (= 2 m_t +8 GeV; first bin ratio 1.087 +- 0.024)
+
+-- each mode against the undecayed production sample ----------------
+   Same fine-grid m_tt histogram, bin for bin?  The production
+   sample is on-shell t t~, so a "yes" is the strongest form of the
+   claim: the mode did not touch m_tt anywhere, not just below
+   threshold.
+   madspin     identical: True   (603908 vs 603908 entries in range, max |difference| = 0)
+   PA          identical: True   (603908 vs 603908 entries in range, max |difference| = 0)
+   onshell     identical: True   (603908 vs 603908 entries in range, max |difference| = 0)
+   madspin_v1  identical: True   (603908 vs 603908 entries in range, max |difference| = 0)
+   A non-zero max |difference| would be a bin-edge effect and
+   nothing else at this max |Delta m_tt|: an event within 1e-5 GeV
+   of a 0.25 GeV boundary can land on either side of it.  What
+   matters for the figure is the 2 m_t boundary, and the
+   down-crossing count in THE MEASUREMENT above speaks to that.
+
+-- what is left to separate the curves: the overweight events --------
+   Every mode reproduces the production sample's event COUNTS bin for
+   bin (above), so the only thing that can move a drawn density is the
+   event WEIGHTS.  An unweighted MadSpin sample has unit weights except
+   where the overweight safety net carried a trial weight that exceeded
+   its accept/reject bound.  In units of one nominal event (553.2790 pb):
+
+   mode        excess [events] of which < 2m_t+1 rel. sigma
+   madspin              21.11          21.11    0.0021%
+   PA                   69.53          62.13    0.0070%
+   onshell               0.00           0.00    0.0000%
+   madspin_v1            0.00           0.00    0.0000%
+
+   That is the whole of the spread visible in the first bin above
+   threshold, and it is an accept/reject artefact rather than a
+   spinmode difference: onshell and madspin_v1 took no overweights at
+   all and are therefore identical to the production sample and to
+   each other, bin for bin AND weight for weight.  The excess is
+   concentrated within ~1 GeV of 2 m_t because that is where the decay
+   weight is hardest to bound: the pair has almost no phase space left
+   for two off-shell tops.  It is carried, not clipped -- see each
+   run's log in data/logs/ -- so it is in both the central values and
+   the errors here.
+
+-- SHAPE ratio points outside the figure's clipped pane (0.8, 1.2) -------
+   none.
+   The sub-threshold zeros are NOT in this list: they are exact
+   structural zeros, drawn with open markers on the lower boundary and
+   no arrow.  Which modes carry one is listed here:
+      madspin     open circles in 9 bin(s)   [preserves m_tt: True]
+      PA          open circles in 9 bin(s)   [preserves m_tt: True]
+      onshell     open circles in 9 bin(s)   [preserves m_tt: True]
+      madspin_v1  open circles in 9 bin(s)   [preserves m_tt: True]
+   They are drawn CONCENTRIC, smallest on top, because they coincide:
+   the turn-on is binned at 1 GeV and four markers cannot be nudged
+   apart inside it.  Coincidence is the result, so it is what is drawn.
+
+-- per-bin table (absolute, pb/GeV; ratios are ABSOLUTE) -------------
+bin [GeV]        truth        +-      madspin       +-    ratio           PA       +-    ratio      onshell       +-    ratio   madspin_v1       +-    ratio
+ 316- 326   0.00033909     6e-05            0        -  0 exact            0        -  0 exact            0        -  0 exact            0        -  0 exact
+ 326- 331     0.004069   0.00029            0        -  0 exact            0        -  0 exact            0        -  0 exact            0        -  0 exact
+ 331- 336     0.012673   0.00052            0        -  0 exact            0        -  0 exact            0        -  0 exact            0        -  0 exact
+ 336- 338     0.024213    0.0011            0        -  0 exact            0        -  0 exact            0        -  0 exact            0        -  0 exact
+ 338- 340     0.036134    0.0014            0        -  0 exact            0        -  0 exact            0        -  0 exact            0        -  0 exact
+ 340- 342     0.058175    0.0018            0        -  0 exact            0        -  0 exact            0        -  0 exact            0        -  0 exact
+ 342- 344     0.096163    0.0023            0        -  0 exact            0        -  0 exact            0        -  0 exact            0        -  0 exact
+ 344- 345      0.16096    0.0041            0        -  0 exact            0        -  0 exact            0        -  0 exact            0        -  0 exact
+ 345- 346      0.24711    0.0051            0        -  0 exact            0        -  0 exact            0        -  0 exact            0        -  0 exact
+ 346- 347      0.37565    0.0063      0.33037    0.014    0.879      0.35306    0.015    0.940      0.31869    0.013    0.848      0.31869    0.013    0.848
+ 347- 348      0.52241    0.0074      0.59865    0.018    1.146      0.60228    0.018    1.153      0.59865    0.018    1.146      0.59865    0.018    1.146
+ 348- 349      0.68496    0.0085      0.79617    0.021    1.162      0.79663    0.021    1.163      0.79617    0.021    1.162      0.79617    0.021    1.162
+ 349- 350      0.80448    0.0092      0.94279    0.023    1.172      0.94279    0.023    1.172      0.94279    0.023    1.172      0.94279    0.023    1.172
+ 350- 351      0.90886    0.0098       1.0391    0.024    1.143       1.0391    0.024    1.143       1.0391    0.024    1.143       1.0391    0.024    1.143
+ 351- 352       1.0209      0.01       1.1619    0.025    1.138       1.1619    0.025    1.138       1.1619    0.025    1.138       1.1619    0.025    1.138
+ 352- 353       1.1176     0.011       1.2294    0.026    1.100       1.2294    0.026    1.100       1.2294    0.026    1.100       1.2294    0.026    1.100
+ 353- 354       1.1944     0.011       1.3467    0.027    1.127       1.3467    0.027    1.127       1.3467    0.027    1.127       1.3467    0.027    1.127
+ 354- 355       1.2623     0.012       1.3716    0.028    1.087       1.3716    0.028    1.087       1.3716    0.028    1.087       1.3716    0.028    1.087
+ 355- 356       1.3419     0.012        1.443    0.028    1.075        1.443    0.028    1.075        1.443    0.028    1.075        1.443    0.028    1.075
+ 356- 358       1.4338    0.0087       1.5461    0.021    1.078       1.5461    0.021    1.078       1.5461    0.021    1.078       1.5461    0.021    1.078
+ 358- 360       1.5629    0.0091       1.6798    0.022    1.075       1.6798    0.022    1.075       1.6798    0.022    1.075       1.6798    0.022    1.075
+ 360- 362       1.6367    0.0093       1.7213    0.022    1.052       1.7213    0.022    1.052       1.7213    0.022    1.052       1.7213    0.022    1.052
+ 362- 364       1.7288    0.0096       1.8128    0.022    1.049       1.8128    0.022    1.049       1.8128    0.022    1.049       1.8128    0.022    1.049
+ 364- 366       1.8087    0.0098       1.8856    0.023    1.043       1.8856    0.023    1.043       1.8856    0.023    1.043       1.8856    0.023    1.043
+ 366- 368       1.8861      0.01        2.004    0.024    1.063        2.004    0.024    1.063        2.004    0.024    1.063        2.004    0.024    1.063
+ 368- 370       1.9251      0.01       2.0369    0.024    1.058       2.0369    0.024    1.058       2.0369    0.024    1.058       2.0369    0.024    1.058
+ 370- 372       1.9582      0.01       2.1072    0.024    1.076       2.1072    0.024    1.076       2.1072    0.024    1.076       2.1072    0.024    1.076
+ 372- 374        2.034      0.01       2.1182    0.024    1.041       2.1182    0.024    1.041       2.1182    0.024    1.041       2.1182    0.024    1.041
+ 374- 376       2.0876     0.011       2.1819    0.025    1.045       2.1819    0.025    1.045       2.1819    0.025    1.045       2.1819    0.025    1.045
+ 376- 378       2.1198     0.011       2.2081    0.025    1.042       2.2081    0.025    1.042       2.2081    0.025    1.042       2.2081    0.025    1.042
+ 378- 380       2.1403     0.011       2.2427    0.025    1.048       2.2427    0.025    1.048       2.2427    0.025    1.048       2.2427    0.025    1.048
+ 380- 385       2.1826    0.0068       2.2755    0.016    1.043       2.2755    0.016    1.043       2.2755    0.016    1.043       2.2755    0.016    1.043
+ 385- 390       2.2237    0.0069       2.3655    0.016    1.064       2.3655    0.016    1.064       2.3655    0.016    1.064       2.3655    0.016    1.064
+ 390- 395       2.2644    0.0069       2.3657    0.016    1.045       2.3657    0.016    1.045       2.3657    0.016    1.045       2.3657    0.016    1.045
+ 395- 400       2.2685    0.0069        2.381    0.016    1.050        2.381    0.016    1.050        2.381    0.016    1.050        2.381    0.016    1.050
+ 400- 405       2.2555    0.0069       2.3747    0.016    1.053       2.3747    0.016    1.053       2.3747    0.016    1.053       2.3747    0.016    1.053
+ 405- 410       2.2614    0.0069       2.3629    0.016    1.045       2.3629    0.016    1.045       2.3629    0.016    1.045       2.3629    0.016    1.045
+ 410- 415         2.23    0.0069       2.3473    0.016    1.053       2.3473    0.016    1.053       2.3473    0.016    1.053       2.3473    0.016    1.053
+ 415- 420       2.2175    0.0069         2.34    0.016    1.055         2.34    0.016    1.055         2.34    0.016    1.055         2.34    0.016    1.055
+
+-- per-bin table in the FIGURE's normalisation ((1/sigma) dsigma/dm,
+   1/GeV; ratios are SHAPE ratios and are what the lower pane draws) --
+bin [GeV]        truth        +-      madspin       +-    ratio           PA       +-    ratio      onshell       +-    ratio   madspin_v1       +-    ratio
+ 316- 326   6.4001e-07   1.1e-07            0        -  0 exact            0        -  0 exact            0        -  0 exact            0        -  0 exact
+ 326- 331     7.68e-06   5.5e-07            0        -  0 exact            0        -  0 exact            0        -  0 exact            0        -  0 exact
+ 331- 336    2.392e-05   9.8e-07            0        -  0 exact            0        -  0 exact            0        -  0 exact            0        -  0 exact
+ 336- 338     4.57e-05   2.1e-06            0        -  0 exact            0        -  0 exact            0        -  0 exact            0        -  0 exact
+ 338- 340     6.82e-05   2.6e-06            0        -  0 exact            0        -  0 exact            0        -  0 exact            0        -  0 exact
+ 340- 342    0.0001098   3.3e-06            0        -  0 exact            0        -  0 exact            0        -  0 exact            0        -  0 exact
+ 342- 344    0.0001815   4.3e-06            0        -  0 exact            0        -  0 exact            0        -  0 exact            0        -  0 exact
+ 344- 345    0.0003038   7.8e-06            0        -  0 exact            0        -  0 exact            0        -  0 exact            0        -  0 exact
+ 345- 346    0.0004664   9.7e-06            0        -  0 exact            0        -  0 exact            0        -  0 exact            0        -  0 exact
+ 346- 347     0.000709   1.2e-05    0.0005971  2.5e-05    0.842   0.00063809  2.8e-05    0.900     0.000576  2.4e-05    0.812     0.000576  2.4e-05    0.812
+ 347- 348     0.000986   1.4e-05     0.001082  3.3e-05    1.097    0.0010885  3.3e-05    1.104     0.001082  3.3e-05    1.097     0.001082  3.3e-05    1.097
+ 348- 349    0.0012928   1.6e-05     0.001439  3.8e-05    1.113    0.0014397  3.8e-05    1.114     0.001439  3.8e-05    1.113     0.001439  3.8e-05    1.113
+ 349- 350    0.0015184   1.7e-05     0.001704  4.1e-05    1.122    0.0017039  4.1e-05    1.122     0.001704  4.1e-05    1.122     0.001704  4.1e-05    1.122
+ 350- 351    0.0017154   1.9e-05     0.001878  4.3e-05    1.095    0.0018779  4.3e-05    1.095     0.001878  4.3e-05    1.095     0.001878  4.3e-05    1.095
+ 351- 352    0.0019268     2e-05       0.0021  4.6e-05    1.090    0.0020999  4.6e-05    1.090       0.0021  4.6e-05    1.090       0.0021  4.6e-05    1.090
+ 352- 353    0.0021094   2.1e-05     0.002222  4.7e-05    1.053    0.0022218  4.7e-05    1.053     0.002222  4.7e-05    1.053     0.002222  4.7e-05    1.053
+ 353- 354    0.0022544   2.1e-05    0.0024339  4.9e-05    1.080    0.0024338  4.9e-05    1.080     0.002434  4.9e-05    1.080     0.002434  4.9e-05    1.080
+ 354- 355    0.0023824   2.2e-05    0.0024789    5e-05    1.041    0.0024788    5e-05    1.040     0.002479    5e-05    1.041     0.002479    5e-05    1.041
+ 355- 356    0.0025328   2.3e-05    0.0026079  5.1e-05    1.030    0.0026078  5.1e-05    1.030     0.002608  5.1e-05    1.030     0.002608  5.1e-05    1.030
+ 356- 358    0.0027062   1.6e-05    0.0027944  3.7e-05    1.033    0.0027943  3.7e-05    1.033    0.0027945  3.7e-05    1.033    0.0027945  3.7e-05    1.033
+ 358- 360    0.0029499   1.7e-05    0.0030359  3.9e-05    1.029    0.0030358  3.9e-05    1.029     0.003036  3.9e-05    1.029     0.003036  3.9e-05    1.029
+ 360- 362    0.0030892   1.8e-05    0.0031109  3.9e-05    1.007    0.0031108  3.9e-05    1.007     0.003111  3.9e-05    1.007     0.003111  3.9e-05    1.007
+ 362- 364     0.003263   1.8e-05    0.0032764    4e-05    1.004    0.0032763    4e-05    1.004    0.0032765    4e-05    1.004    0.0032765    4e-05    1.004
+ 364- 366    0.0034137   1.8e-05    0.0034079  4.1e-05    0.998    0.0034078  4.1e-05    0.998     0.003408  4.1e-05    0.998     0.003408  4.1e-05    0.998
+ 366- 368    0.0035598   1.9e-05    0.0036219  4.3e-05    1.017    0.0036217  4.3e-05    1.017     0.003622  4.3e-05    1.017     0.003622  4.3e-05    1.017
+ 368- 370    0.0036335   1.9e-05    0.0036814  4.3e-05    1.013    0.0036812  4.3e-05    1.013    0.0036815  4.3e-05    1.013    0.0036815  4.3e-05    1.013
+ 370- 372    0.0036959   1.9e-05    0.0038084  4.4e-05    1.030    0.0038082  4.4e-05    1.030    0.0038085  4.4e-05    1.030    0.0038085  4.4e-05    1.030
+ 372- 374     0.003839     2e-05    0.0038284  4.4e-05    0.997    0.0038282  4.4e-05    0.997    0.0038285  4.4e-05    0.997    0.0038285  4.4e-05    0.997
+ 374- 376    0.0039401     2e-05    0.0039434  4.4e-05    1.001    0.0039432  4.4e-05    1.001    0.0039435  4.4e-05    1.001    0.0039435  4.4e-05    1.001
+ 376- 378     0.004001     2e-05    0.0039909  4.5e-05    0.997    0.0039907  4.5e-05    0.997     0.003991  4.5e-05    0.998     0.003991  4.5e-05    0.998
+ 378- 380    0.0040396     2e-05    0.0040534  4.5e-05    1.003    0.0040532  4.5e-05    1.003    0.0040535  4.5e-05    1.003    0.0040535  4.5e-05    1.003
+ 380- 385    0.0041195   1.3e-05    0.0041127  2.9e-05    0.998    0.0041125  2.9e-05    0.998    0.0041128  2.9e-05    0.998    0.0041128  2.9e-05    0.998
+ 385- 390     0.004197   1.3e-05    0.0042753  2.9e-05    1.019    0.0042751  2.9e-05    1.019    0.0042754  2.9e-05    1.019    0.0042754  2.9e-05    1.019
+ 390- 395    0.0042739   1.3e-05    0.0042757  2.9e-05    1.000    0.0042755  2.9e-05    1.000    0.0042758  2.9e-05    1.000    0.0042758  2.9e-05    1.000
+ 395- 400    0.0042816   1.3e-05    0.0043033  2.9e-05    1.005    0.0043031  2.9e-05    1.005    0.0043034  2.9e-05    1.005    0.0043034  2.9e-05    1.005
+ 400- 405    0.0042571   1.3e-05    0.0042919  2.9e-05    1.008    0.0042917  2.9e-05    1.008     0.004292  2.9e-05    1.008     0.004292  2.9e-05    1.008
+ 405- 410    0.0042682   1.3e-05    0.0042707  2.9e-05    1.001    0.0042705  2.9e-05    1.001    0.0042708  2.9e-05    1.001    0.0042708  2.9e-05    1.001
+ 410- 415     0.004209   1.3e-05    0.0042425  2.9e-05    1.008    0.0042423  2.9e-05    1.008    0.0042426  2.9e-05    1.008    0.0042426  2.9e-05    1.008
+ 415- 420    0.0041854   1.3e-05    0.0042293  2.9e-05    1.010    0.0042291  2.9e-05    1.010    0.0042294  2.9e-05    1.011    0.0042294  2.9e-05    1.011
+

@@ -1,0 +1,441 @@
+Running MG5 in debug mode
+************************************************************
+*                                                          *
+*                     W E L C O M E to                     *
+*              M A D G R A P H 5 _ a M C @ N L O           *
+*                                                          *
+*                                                          *
+*                 *                       *                *
+*                   *        * *        *                  *
+*                     * * * * 5 * * * *                    *
+*                   *        * *        *                  *
+*                 *                       *                *
+*                                                          *
+*         VERSION 3.7.2                 2026-04-28         *
+*         GIT r992-579-g721ffc114  claude/ms-mtt-threshold-2to2         *
+*                                                          *
+*    The MadGraph5_aMC@NLO Development Team - Find us at   *
+*              http://madgraph.phys.ucl.ac.be/             *
+*                            and                           *
+*            http://amcatnlo.web.cern.ch/amcatnlo/         *
+*                                                          *
+*               Type 'help' for in-line help.              *
+*           Type 'tutorial' to learn how MG5 works         *
+*    Type 'tutorial aMCatNLO' to learn how aMC@NLO works   *
+*    Type 'tutorial MadLoop' to learn how MadLoop works    *
+*                                                          *
+************************************************************
+load MG5 configuration from /Users/omattelaer/.mg5/mg5_configuration.txt 
+[1;32mDEBUG:  set configuration option f2py_compiler to /Users/omattelaer/Documents/git_workspace/version3/py313/.direnv/python-3.13/bin/f2py --python=3.13 [1;30m[madgraph_interface.py at line 7452][0m [0m
+[1;32mDEBUG:  set configuration option f2py_compiler to /Users/omattelaer/Documents/git_workspace/version3/py311/.direnv/python-3.13/bin/f2py --python=3.11 [1;30m[madgraph_interface.py at line 7452][0m [0m
+[1;32mDEBUG:  set configuration option f2py_compiler to /Users/omattelaer/Documents/git_workspace/version3/py312/.direnv/python-3.13/bin/f2py --python=3.12 [1;30m[madgraph_interface.py at line 7452][0m [0m
+[1;32mDEBUG:  set configuration option f2py_compiler to /Users/omattelaer/Documents/git_workspace/version3/py314/.direnv/python-3.13/bin/f2py --python=3.14 [1;30m[madgraph_interface.py at line 7452][0m [0m
+set f2py compiler to /Users/omattelaer/Documents/git_workspace/version3/py314/.direnv/python-3.13/bin/f2py
+[1;32mDEBUG:  set configuration option lhapdf to /Users/omattelaer/Documents/HEPTools/lhapdf6_py312/bin/lhapdf-config --python=3.12 [1;30m[madgraph_interface.py at line 7452][0m [0m
+[1;32mDEBUG:  set configuration option lhapdf to /Users/omattelaer/Documents/HEPTools/lhapdf6_py313/bin/lhapdf-config --python=3.13 [1;30m[madgraph_interface.py at line 7452][0m [0m
+[1;32mDEBUG:  set configuration option lhapdf to /Users/omattelaer/Documents/HEPTools/lhapdf6_py314/bin/lhapdf-config --python=3.14 [1;30m[madgraph_interface.py at line 7452][0m [0m
+/Users/omattelaer/Documents/HEPTools/lhapdf6_py314/bin/lhapdf-config does not seem to correspond to a valid lhapdf-config executable. 
+Please set the 'lhapdf' variable to the (absolute) /PATH/TO/lhapdf-config (including lhapdf-config).
+Note that you can still compile and run aMC@NLO with the built-in PDFs
+ MG5_aMC> set lhapdf /PATH/TO/lhapdf-config
+
+load MG5 configuration from ../../../input/mg5_configuration.txt 
+fastjet-config does not seem to correspond to a valid fastjet-config executable (v3+). We will use fjcore instead.
+ Please set the 'fastjet'variable to the full (absolute) /PATH/TO/fastjet-config (including fastjet-config).
+ MG5_aMC> set fastjet /PATH/TO/fastjet-config
+
+/Users/omattelaer/Documents/HEPTools/EMELA/bin/eMELA-config does not seem to correspond to a valid eMELA-config executable.
+ Please set the 'fastjet'variable to the full (absolute) /PATH/TO/eMELA-config (including eMELA-config).
+ MG5_aMC> set eMELA /PATH/TO/eMELA-config
+
+set ninja to /Users/omattelaer/Documents/HEPTools/lib
+set collier to /Users/omattelaer/Documents/HEPTools/lib
+lhapdf-config does not seem to correspond to a valid lhapdf-config executable. 
+Please set the 'lhapdf' variable to the (absolute) /PATH/TO/lhapdf-config (including lhapdf-config).
+Note that you can still compile and run aMC@NLO with the built-in PDFs
+ MG5_aMC> set lhapdf /PATH/TO/lhapdf-config
+
+set lhapdf to /Users/omattelaer/Documents/HEPTools/lhapdf6_py3/bin/lhapdf-config
+[1;34m
+    The current version of MG5_aMC (v3.7.2) is different than the one active when
+    installing the 'mg5amc_py8_interface_path' (which was MG5aMC v3.5.15). 
+    Please consider refreshing the installation of this interface with the command:
+     MG5_aMC>install mg5amc_py8_interface
+    [0m
+Using default gzip "gzip". Set another one in ./input/mg5_configuration.txt
+[1;34mWARNING: launching caffeinate to prevent idle sleep when MG5aMC is running. Run './bin/mg5_aMC -s' to prevent this. [0m
+import /private/tmp/mtt_2to2_work/truth_03.mg5
+The import format was not given, so we guess it as command
+set automatic_html_opening False --no_save
+set nb_core 9
+This option will be the default in any output that you are going to create in this session.
+In order to keep this changes permanent please run 'save options'
+launch /tmp/mtt_2to2_work/TRUTH
+************************************************************
+*                                                          *
+*                      W E L C O M E to                    *
+*             M A D G R A P H 5 _ a M C @ N L O            *
+*                      M A D E V E N T                     *
+*                                                          *
+*                 *                       *                *
+*                   *        * *        *                  *
+*                     * * * * 5 * * * *                    *
+*                   *        * *        *                  *
+*                 *                       *                *
+*                                                          *
+*         VERSION 3.7.2                 2026-04-28         *
+*                                                          *
+*    The MadGraph5_aMC@NLO Development Team - Find us at   *
+*    https://server06.fynu.ucl.ac.be/projects/madgraph     *
+*                                                          *
+*               Type 'help' for in-line help.              *
+*                                                          *
+************************************************************
+INFO: load configuration from /Users/omattelaer/.mg5/mg5_configuration.txt  
+INFO: load configuration from /private/tmp/mtt_2to2_work/TRUTH/Cards/me5_configuration.txt  
+INFO: load configuration from /private/tmp/t73/input/mg5_configuration.txt  
+INFO: load configuration from /private/tmp/mtt_2to2_work/TRUTH/Cards/me5_configuration.txt  
+INFO: set f2py compiler to /Users/omattelaer/Documents/git_workspace/version3/py314/.direnv/python-3.13/bin/f2py 
+Using default gzip "gzip". Set another one in ./input/mg5_configuration.txt
+generate_events run_03
+stty: stdin isn't a terminal
+The following switches determine which programs are run:
+/=============================================================================\
+1. Choose the shower/hadronization program   [1m  shower[0m = [31mOFF[0m           
+2. Choose the detector simulation program    [1mdetector[0m = [01mNot Avail.[0m    
+3. Choose an analysis package (plot/convert) [1manalysis[0m = [01mNot Avail.[0m    
+4. Decay onshell particles                   [1m madspin[0m = [31mOFF[0m           
+5. Add weights to events for new hypp.       [1mreweight[0m = [31mOFF[0m           
+\=============================================================================/
+Either type the switch number (1 to 5) to change its setting,
+Set any switch explicitly (e.g. type 'shower=Pythia8' at the prompt)
+Type 'help' for the list of all valid option
+Type '0', 'auto', 'done' or just press enter when you are done.
+The following switches determine which programs are run:
+/=============================================================================\
+1. Choose the shower/hadronization program   [1m  shower[0m = [31mOFF[0m           
+2. Choose the detector simulation program    [1mdetector[0m = [01mNot Avail.[0m    
+3. Choose an analysis package (plot/convert) [1manalysis[0m = [01mNot Avail.[0m    
+4. Decay onshell particles                   [1m madspin[0m = [31mOFF[0m           
+5. Add weights to events for new hypp.       [1mreweight[0m = [31mOFF[0m           
+\=============================================================================/
+Either type the switch number (1 to 5) to change its setting,
+Set any switch explicitly (e.g. type 'shower=Pythia8' at the prompt)
+Type 'help' for the list of all valid option
+Type '0', 'auto', 'done' or just press enter when you are done.
+The following switches determine which programs are run:
+/=============================================================================\
+1. Choose the shower/hadronization program   [1m  shower[0m = [31mOFF[0m           
+2. Choose the detector simulation program    [1mdetector[0m = [01mNot Avail.[0m    
+3. Choose an analysis package (plot/convert) [1manalysis[0m = [01mNot Avail.[0m    
+4. Decay onshell particles                   [1m madspin[0m = [31mOFF[0m           
+5. Add weights to events for new hypp.       [1mreweight[0m = [31mOFF[0m           
+\=============================================================================/
+Either type the switch number (1 to 5) to change its setting,
+Set any switch explicitly (e.g. type 'shower=Pythia8' at the prompt)
+Type 'help' for the list of all valid option
+Type '0', 'auto', 'done' or just press enter when you are done.
+The following switches determine which programs are run:
+/=============================================================================\
+1. Choose the shower/hadronization program   [1m  shower[0m = [31mOFF[0m           
+2. Choose the detector simulation program    [1mdetector[0m = [01mNot Avail.[0m    
+3. Choose an analysis package (plot/convert) [1manalysis[0m = [01mNot Avail.[0m    
+4. Decay onshell particles                   [1m madspin[0m = [31mOFF[0m           
+5. Add weights to events for new hypp.       [1mreweight[0m = [31mOFF[0m           
+\=============================================================================/
+Either type the switch number (1 to 5) to change its setting,
+Set any switch explicitly (e.g. type 'shower=Pythia8' at the prompt)
+Type 'help' for the list of all valid option
+Type '0', 'auto', 'done' or just press enter when you are done.
+set nevents 1000000
+[1mINFO: modify parameter nevents of the run_card.dat to 1000000 [0m
+set iseed 4244
+[1mINFO: modify parameter iseed of the run_card.dat to 4244 [0m
+set ebeam1 6500
+[1mINFO: modify parameter ebeam1 of the run_card.dat to 6500.0 [0m
+set ebeam2 6500
+[1mINFO: modify parameter ebeam2 of the run_card.dat to 6500.0 [0m
+set bwcutoff 15.0
+[1mINFO: modify parameter bwcutoff of the run_card.dat to 15.0 [0m
+set fixed_ren_scale True
+[1mINFO: modify parameter fixed_ren_scale of the run_card.dat to True [0m
+set fixed_fac_scale True
+[1mINFO: modify parameter fixed_fac_scale of the run_card.dat to True [0m
+set scale 173.0
+[1mINFO: modify parameter scale of the run_card.dat to 173.0 [0m
+set dsqrt_q2fact1 173.0
+[1mINFO: modify parameter dsqrt_q2fact1 of the run_card.dat to 173.0 [0m
+set dsqrt_q2fact2 173.0
+[1mINFO: modify parameter dsqrt_q2fact2 of the run_card.dat to 173.0 [0m
+set use_syst False
+[1mINFO: modify parameter use_syst of the run_card.dat to False [0m
+[1;32mDEBUG: keep SDE to 1 [0m
+INFO: Update the dependent parameter of the param_card.dat 
+[1;34mvalue '[]' for entry 'bypass_check' is not valid. Preserving previous value: '[]'.
+allowed values are any list composed of the following entries: partonshower[0m
+Generating 1000000 events with run name run_03
+survey  run_03 
+INFO: compile directory 
+[1;32mwrite compile file for card: /private/tmp/mtt_2to2_work/TRUTH/Cards/param_card.dat[0m
+[1;32mrun_card missed argument polbeam1. Takes default: 0.0[0m
+[1;32mrun_card missed argument polbeam2. Takes default: 0.0[0m
+[1;32mrun_card missed argument nb_proton1. Takes default: 1[0m
+[1;32mrun_card missed argument nb_proton2. Takes default: 1[0m
+[1;32mrun_card missed argument nb_neutron1. Takes default: 0[0m
+[1;32mrun_card missed argument nb_neutron2. Takes default: 0[0m
+[1;32mrun_card missed argument mass_ion1. Takes default: -1.0[0m
+[1;32mrun_card missed argument mass_ion2. Takes default: -1.0[0m
+[1;32mrun_card missed argument pdlabel1. Takes default: nn23lo1[0m
+[1;32mrun_card missed argument pdlabel2. Takes default: nn23lo1[0m
+[1;32mrun_card missed argument fixed_fac_scale1. Takes default: True[0m
+[1;32mrun_card missed argument fixed_fac_scale2. Takes default: True[0m
+[1;32mrun_card missed argument fixed_extra_scale. Takes default: False[0m
+[1;32mrun_card missed argument mue_ref_fixed. Takes default: 91.188[0m
+[1;32mrun_card missed argument mue_over_ref. Takes default: 1.0[0m
+[1;32mrun_card missed argument ievo_eva. Takes default: 0[0m
+[1;32mrun_card missed argument evaorder. Takes default: 0[0m
+[1;32mrun_card missed argument eva_xcut. Takes default: 1[0m
+[1;32mrun_card missed argument ickkw. Takes default: 0[0m
+[1;32mrun_card missed argument highestmult. Takes default: 1[0m
+[1;32mrun_card missed argument ktscheme. Takes default: 1[0m
+[1;32mrun_card missed argument alpsfact. Takes default: 1.0[0m
+[1;32mrun_card missed argument chcluster. Takes default: False[0m
+[1;32mrun_card missed argument pdfwgt. Takes default: True[0m
+[1;32mrun_card missed argument asrwgtflavor. Takes default: 5[0m
+[1;32mrun_card missed argument clusinfo. Takes default: True[0m
+[1;32mrun_card missed argument lhe_version. Takes default: 3.0[0m
+[1;32mrun_card missed argument auto_ptj_mjj. Takes default: True[0m
+[1;32mrun_card missed argument limhel. Takes default: 1e-08[0m
+[1;32mrun_card missed argument ptj. Takes default: 20.0[0m
+[1;32mrun_card missed argument pta. Takes default: 10.0[0m
+[1;32mrun_card missed argument ptl. Takes default: 10.0[0m
+[1;32mrun_card missed argument misset. Takes default: 0.0[0m
+[1;32mrun_card missed argument ptjmax. Takes default: -1.0[0m
+[1;32mrun_card missed argument ptamax. Takes default: -1.0[0m
+[1;32mrun_card missed argument ptlmax. Takes default: -1.0[0m
+[1;32mrun_card missed argument missetmax. Takes default: -1.0[0m
+[1;32mrun_card missed argument ej. Takes default: 0.0[0m
+[1;32mrun_card missed argument eb. Takes default: 0.0[0m
+[1;32mrun_card missed argument ea. Takes default: 0.0[0m
+[1;32mrun_card missed argument el. Takes default: 0.0[0m
+[1;32mrun_card missed argument ejmax. Takes default: -1.0[0m
+[1;32mrun_card missed argument ebmax. Takes default: -1.0[0m
+[1;32mrun_card missed argument eamax. Takes default: -1.0[0m
+[1;32mrun_card missed argument elmax. Takes default: -1.0[0m
+[1;32mrun_card missed argument etaj. Takes default: 5.0[0m
+[1;32mrun_card missed argument etaa. Takes default: 2.5[0m
+[1;32mrun_card missed argument etal. Takes default: 2.5[0m
+[1;32mrun_card missed argument etajmin. Takes default: 0.0[0m
+[1;32mrun_card missed argument etaamin. Takes default: 0.0[0m
+[1;32mrun_card missed argument etalmin. Takes default: 0.0[0m
+[1;32mrun_card missed argument drjj. Takes default: 0.4[0m
+[1;32mrun_card missed argument drll. Takes default: 0.4[0m
+[1;32mrun_card missed argument draa. Takes default: 0.4[0m
+[1;32mrun_card missed argument drbj. Takes default: 0.0[0m
+[1;32mrun_card missed argument draj. Takes default: 0.4[0m
+[1;32mrun_card missed argument drjl. Takes default: 0.4[0m
+[1;32mrun_card missed argument drab. Takes default: 0.0[0m
+[1;32mrun_card missed argument drbl. Takes default: 0.0[0m
+[1;32mrun_card missed argument dral. Takes default: 0.4[0m
+[1;32mrun_card missed argument drjjmax. Takes default: -1.0[0m
+[1;32mrun_card missed argument drllmax. Takes default: -1.0[0m
+[1;32mrun_card missed argument draamax. Takes default: -1.0[0m
+[1;32mrun_card missed argument drbjmax. Takes default: -1.0[0m
+[1;32mrun_card missed argument drajmax. Takes default: -1.0[0m
+[1;32mrun_card missed argument drjlmax. Takes default: -1.0[0m
+[1;32mrun_card missed argument drabmax. Takes default: -1.0[0m
+[1;32mrun_card missed argument drblmax. Takes default: -1.0[0m
+[1;32mrun_card missed argument dralmax. Takes default: -1.0[0m
+[1;32mrun_card missed argument mmjj. Takes default: 0.0[0m
+[1;32mrun_card missed argument mmaa. Takes default: 0.0[0m
+[1;32mrun_card missed argument mmll. Takes default: 0.0[0m
+[1;32mrun_card missed argument mmjjmax. Takes default: -1.0[0m
+[1;32mrun_card missed argument mmaamax. Takes default: -1.0[0m
+[1;32mrun_card missed argument mmllmax. Takes default: -1.0[0m
+[1;32mrun_card missed argument mmnl. Takes default: 0.0[0m
+[1;32mrun_card missed argument mmnlmax. Takes default: -1.0[0m
+[1;32mrun_card missed argument ptllmin. Takes default: 0.0[0m
+[1;32mrun_card missed argument ptllmax. Takes default: -1.0[0m
+[1;32mrun_card missed argument xptj. Takes default: 0.0[0m
+[1;32mrun_card missed argument xpta. Takes default: 0.0[0m
+[1;32mrun_card missed argument xptl. Takes default: 0.0[0m
+[1;32mrun_card missed argument ptj1min. Takes default: 0.0[0m
+[1;32mrun_card missed argument ptj1max. Takes default: -1.0[0m
+[1;32mrun_card missed argument ptj2min. Takes default: 0.0[0m
+[1;32mrun_card missed argument ptj2max. Takes default: -1.0[0m
+[1;32mrun_card missed argument ptj3min. Takes default: 0.0[0m
+[1;32mrun_card missed argument ptj3max. Takes default: -1.0[0m
+[1;32mrun_card missed argument ptj4min. Takes default: 0.0[0m
+[1;32mrun_card missed argument ptj4max. Takes default: -1.0[0m
+[1;32mrun_card missed argument cutuse. Takes default: 0[0m
+[1;32mrun_card missed argument ptl1min. Takes default: 0.0[0m
+[1;32mrun_card missed argument ptl1max. Takes default: -1.0[0m
+[1;32mrun_card missed argument ptl2min. Takes default: 0.0[0m
+[1;32mrun_card missed argument ptl2max. Takes default: -1.0[0m
+[1;32mrun_card missed argument ptl3min. Takes default: 0.0[0m
+[1;32mrun_card missed argument ptl3max. Takes default: -1.0[0m
+[1;32mrun_card missed argument ptl4min. Takes default: 0.0[0m
+[1;32mrun_card missed argument ptl4max. Takes default: -1.0[0m
+[1;32mrun_card missed argument htjmin. Takes default: 0.0[0m
+[1;32mrun_card missed argument htjmax. Takes default: -1.0[0m
+[1;32mrun_card missed argument ht2min. Takes default: 0.0[0m
+[1;32mrun_card missed argument ht3min. Takes default: 0.0[0m
+[1;32mrun_card missed argument ht4min. Takes default: 0.0[0m
+[1;32mrun_card missed argument ht2max. Takes default: -1.0[0m
+[1;32mrun_card missed argument ht3max. Takes default: -1.0[0m
+[1;32mrun_card missed argument ht4max. Takes default: -1.0[0m
+[1;32mrun_card missed argument ptgmin. Takes default: 0.0[0m
+[1;32mrun_card missed argument r0gamma. Takes default: 0.4[0m
+[1;32mrun_card missed argument xn. Takes default: 1.0[0m
+[1;32mrun_card missed argument epsgamma. Takes default: 1.0[0m
+[1;32mrun_card missed argument isoem. Takes default: True[0m
+[1;32mrun_card missed argument xetamin. Takes default: 0.0[0m
+[1;32mrun_card missed argument deltaeta. Takes default: 0.0[0m
+[1;32mrun_card missed argument ktdurham. Takes default: -1.0[0m
+[1;32mrun_card missed argument dparameter. Takes default: 0.4[0m
+[1;32mrun_card missed argument ptlund. Takes default: -1.0[0m
+[1;32mrun_card missed argument pdgs_for_merging_cut. Takes default: [21, 1, 2, 3, 4, 5, 6][0m
+[1;32mrun_card missed argument xqcut. Takes default: 0.0[0m
+[1;32mrun_card missed argument gridrun. Takes default: False[0m
+[1;32mrun_card missed argument fixed_couplings. Takes default: True[0m
+[1;32mrun_card missed argument mc_grouped_subproc. Takes default: True[0m
+[1;32mrun_card missed argument xmtcentral. Takes default: 0.0[0m
+[1;32mrun_card missed argument d. Takes default: 1.0[0m
+[1;32mrun_card missed argument issgridfile. Takes default: [0m
+[1;32mrun_card missed argument tmin_for_channel. Takes default: -1.0[0m
+[1;32mrun_card missed argument small_width_treatment. Takes default: 1e-06[0m
+[1;32mrun_card missed argument bias_parameters. Takes default: {}[0m
+[1;32mrun_card missed argument vector_size. Takes default: 1[0m
+[1;32mrun_card missed argument nb_warp. Takes default: 1[0m
+compile Source Directory
+[1;32mCompiling the bias module 'dummy'[0m
+Using random number seed offset = 4244
+INFO: Running Survey 
+Creating Jobs
+Working on SubProcesses
+INFO: Compiling for process 1/2. 
+INFO:     P1_gg_ttx_t_wpb_tx_wmbx  
+[1;32mDEBUG: (matrix1_orig.f) nb_hel: 144 zero amp: 0 bad_amps_hel: 0/432 [0m
+INFO: Compiling for process 2/2. 
+INFO:     P1_qq_ttx_t_wpb_tx_wmbx  
+[1;32mDEBUG: (matrix1_orig.f) nb_hel: 72 zero amp: 0 bad_amps_hel: 0/72 [0m
+INFO:     P1_gg_ttx_t_wpb_tx_wmbx  
+INFO:     P1_qq_ttx_t_wpb_tx_wmbx  
+INFO:  Idle: 1,  Running: 0,  Completed: 1 [ current time: 22h29 ] 
+INFO:  Idle: 0,  Running: 1,  Completed: 1 [ current time: 22h29 ] 
+INFO:  Idle: 0,  Running: 0,  Completed: 2 [  3.6s  ] 
+INFO:  Idle: 0,  Running: 0,  Completed: 2 [  3.6s  ] 
+INFO: End survey 
+refine 1000000
+Creating Jobs
+INFO: Refine results to 1000000 
+INFO: Generating 1000000.0 unweighted events. 
+sum of cpu time of last step: 1 seconds
+INFO: Effective Luminosity 2273.183631562397 pb^-1 
+[1;32mDEBUG: channel G1 need to improve by 278.24 (xsec=49.551 pb, iter=3) [0m
+[1;32mDEBUG: channel G1 need to improve by 360.82 (xsec=66.363 pb, iter=3) [0m
+[1;32mDEBUG: channel G2 need to improve by 2444.28 (xsec=411.98 pb, iter=3) [0m
+INFO: need to improve 3 channels 
+[1;32mDEBUG: G1 : need 112638.52212754833 event. Need 113 split job of 2464 points [0m
+[1;32mDEBUG: G1 : need 150855.28534137533 event. Need 130 split job of 2779 points [0m
+[1;32mDEBUG: G2 : need 936506.1925310763 event. Need 130 split job of 5000 points [0m
+- Current estimate of cross-section: 527.894 +- 3.6850803627600848
+    P1_gg_ttx_t_wpb_tx_wmbx 
+    P1_qq_ttx_t_wpb_tx_wmbx 
+INFO:  Idle: 364,  Running: 9,  Completed: 0 [ current time: 22h29 ] 
+INFO:  Idle: 363,  Running: 9,  Completed: 1 [  4.1s  ] 
+INFO:  Idle: 358,  Running: 9,  Completed: 6 [  7.2s  ] 
+INFO:  Idle: 354,  Running: 9,  Completed: 10 [  10.6s  ] 
+INFO:  Idle: 346,  Running: 9,  Completed: 18 [  13.9s  ] 
+INFO:  Idle: 344,  Running: 9,  Completed: 20 [  18.1s  ] 
+INFO:  Idle: 336,  Running: 9,  Completed: 28 [  22.7s  ] 
+INFO:  Idle: 328,  Running: 9,  Completed: 36 [  26.6s  ] 
+INFO:  Idle: 323,  Running: 9,  Completed: 41 [  29.8s  ] 
+INFO:  Idle: 319,  Running: 9,  Completed: 45 [  33.8s  ] 
+INFO:  Idle: 310,  Running: 9,  Completed: 54 [  39s  ] 
+INFO:  Idle: 303,  Running: 9,  Completed: 61 [  42.4s  ] 
+INFO:  Idle: 300,  Running: 9,  Completed: 64 [  45.5s  ] 
+INFO:  Idle: 294,  Running: 9,  Completed: 70 [  48.6s  ] 
+INFO:  Idle: 290,  Running: 9,  Completed: 74 [  52.2s  ] 
+INFO:  Idle: 283,  Running: 9,  Completed: 81 [  55.7s  ] 
+INFO:  Idle: 278,  Running: 9,  Completed: 86 [  59.2s  ] 
+INFO:  Idle: 272,  Running: 9,  Completed: 92 [  1m 3s  ] 
+INFO:  Idle: 267,  Running: 9,  Completed: 97 [  1m 7s  ] 
+INFO:  Idle: 263,  Running: 9,  Completed: 101 [  1m 10s  ] 
+INFO:  Idle: 258,  Running: 9,  Completed: 106 [  1m 13s  ] 
+INFO:  Idle: 254,  Running: 9,  Completed: 110 [  1m 17s  ] 
+INFO:  Idle: 251,  Running: 9,  Completed: 113 [  1m 21s  ] 
+INFO:  Idle: 244,  Running: 9,  Completed: 120 [  1m 25s  ] 
+INFO:  Idle: 241,  Running: 9,  Completed: 123 [  1m 28s  ] 
+INFO:  Idle: 236,  Running: 9,  Completed: 128 [  1m 31s  ] 
+INFO:  Idle: 232,  Running: 9,  Completed: 132 [  1m 35s  ] 
+INFO:  Idle: 226,  Running: 9,  Completed: 138 [  1m 38s  ] 
+INFO:  Idle: 223,  Running: 9,  Completed: 141 [  1m 41s  ] 
+INFO:  Idle: 215,  Running: 9,  Completed: 149 [  1m 46s  ] 
+INFO:  Idle: 209,  Running: 9,  Completed: 155 [  1m 51s  ] 
+INFO:  Idle: 205,  Running: 9,  Completed: 159 [  1m 54s  ] 
+INFO:  Idle: 198,  Running: 9,  Completed: 166 [  1m 59s  ] 
+INFO:  Idle: 191,  Running: 9,  Completed: 173 [  2m 3s  ] 
+INFO:  Idle: 188,  Running: 9,  Completed: 176 [  2m 6s  ] 
+INFO:  Idle: 182,  Running: 9,  Completed: 182 [  2m 11s  ] 
+INFO:  Idle: 175,  Running: 9,  Completed: 189 [  2m 15s  ] 
+INFO:  Idle: 169,  Running: 9,  Completed: 195 [  2m 18s  ] 
+INFO:  Idle: 165,  Running: 9,  Completed: 199 [  2m 21s  ] 
+INFO:  Idle: 160,  Running: 9,  Completed: 204 [  2m 24s  ] 
+INFO:  Idle: 154,  Running: 9,  Completed: 210 [  2m 28s  ] 
+INFO:  Idle: 148,  Running: 9,  Completed: 216 [  2m 32s  ] 
+INFO:  Idle: 145,  Running: 9,  Completed: 219 [  2m 36s  ] 
+INFO:  Idle: 139,  Running: 9,  Completed: 225 [  2m 39s  ] 
+INFO:  Idle: 135,  Running: 9,  Completed: 229 [  2m 43s  ] 
+INFO:  Idle: 130,  Running: 9,  Completed: 234 [  2m 46s  ] 
+INFO:  Idle: 127,  Running: 9,  Completed: 237 [  2m 49s  ] 
+INFO:  Idle: 122,  Running: 9,  Completed: 242 [  2m 53s  ] 
+INFO:  Idle: 115,  Running: 9,  Completed: 249 [  2m 56s  ] 
+INFO:  Idle: 111,  Running: 9,  Completed: 253 [  2m 59s  ] 
+INFO:  Idle: 105,  Running: 9,  Completed: 259 [  3m 2s  ] 
+INFO:  Idle: 100,  Running: 9,  Completed: 264 [  3m 6s  ] 
+INFO:  Idle: 95,  Running: 9,  Completed: 269 [  3m 9s  ] 
+INFO:  Idle: 90,  Running: 9,  Completed: 274 [  3m 12s  ] 
+INFO:  Idle: 84,  Running: 9,  Completed: 280 [  3m 16s  ] 
+INFO:  Idle: 79,  Running: 9,  Completed: 285 [  3m 20s  ] 
+INFO:  Idle: 74,  Running: 9,  Completed: 290 [  3m 23s  ] 
+INFO:  Idle: 68,  Running: 9,  Completed: 296 [  3m 26s  ] 
+INFO:  Idle: 62,  Running: 9,  Completed: 302 [  3m 30s  ] 
+INFO:  Idle: 53,  Running: 9,  Completed: 311 [  3m 33s  ] 
+INFO:  Idle: 42,  Running: 9,  Completed: 322 [  3m 37s  ] 
+INFO:  Idle: 30,  Running: 9,  Completed: 334 [  3m 40s  ] 
+INFO:  Idle: 17,  Running: 9,  Completed: 347 [  3m 43s  ] 
+INFO:  Idle: 4,  Running: 9,  Completed: 360 [  3m 46s  ] 
+INFO:  Idle: 0,  Running: 0,  Completed: 373 [  3m 49s  ] 
+INFO:  Idle: 0,  Running: 0,  Completed: 373 [  3m 49s  ] 
+INFO: Combining runs 
+[1;32mfind 113 multijob in /private/tmp/mtt_2to2_work/TRUTH/SubProcesses/P1_gg_ttx_t_wpb_tx_wmbx/G1[0m
+[1;32mCombined 113 file generating 144935 events for /private/tmp/mtt_2to2_work/TRUTH/SubProcesses/P1_gg_ttx_t_wpb_tx_wmbx/G1 (99.9%): (0.478992s) [0m
+[1;32mfind 130 multijob in /private/tmp/mtt_2to2_work/TRUTH/SubProcesses/P1_gg_ttx_t_wpb_tx_wmbx/G2[0m
+[1;32mCombined 130 file generating 1078575 events for /private/tmp/mtt_2to2_work/TRUTH/SubProcesses/P1_gg_ttx_t_wpb_tx_wmbx/G2 (100.0%): (2.187122s) [0m
+[1;32mfind 130 multijob in /private/tmp/mtt_2to2_work/TRUTH/SubProcesses/P1_qq_ttx_t_wpb_tx_wmbx/G1[0m
+[1;32mCombined 130 file generating 271751 events for /private/tmp/mtt_2to2_work/TRUTH/SubProcesses/P1_qq_ttx_t_wpb_tx_wmbx/G1 (99.9%): (0.669811s) [0m
+sum of cpu time of last step: 8m20s
+INFO: finish refine 
+refine 1000000 --treshold=0.9
+No need for second refine due to stability of cross-section
+INFO: Combining Events 
+[1;32mDEBUG: write 1000000 event (efficiency 67 %, truncation 0.002 %) after 1 iteration(s) [0m
+[1;32munweight done. start zipping after 11.9 s[0m
+combination of events done in 32.19131398200989 s 
+  === Results Summary for run: run_03 tag: tag_1 ===
+
+     Cross-section :   529.8 +- 0.05009 pb
+     Nb of events :  1000000
+ 
+store_events
+INFO: Storing parton level results 
+INFO: End Parton 
+reweight --mode=OFF -from_cards
+decay_events -from_cards
+INFO: storing files of previous run 
+INFO: Done 
+quit
+INFO:  
+more information in /private/tmp/mtt_2to2_work/TRUTH/index.html
+quit

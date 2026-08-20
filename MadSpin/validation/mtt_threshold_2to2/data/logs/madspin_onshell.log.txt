@@ -1,0 +1,312 @@
+Running MG5 in debug mode
+using input+file /private/tmp/mtt_2to2_work/MS/mode_onshell/madspin_card.dat
+************************************************************
+*                                                          *
+*           W E L C O M E  to  M A D S P I N               *
+*                                                          *
+************************************************************
+[1;31mCRITICAL:  set configuration option f2py_compiler to /Users/omattelaer/Documents/git_workspace/version3/py313/.direnv/python-3.13/bin/f2py --python=3.13 [1;30m[madgraph_interface.py at line 7452][0m [0m
+[1;31mCRITICAL:  set configuration option f2py_compiler to /Users/omattelaer/Documents/git_workspace/version3/py311/.direnv/python-3.13/bin/f2py --python=3.11 [1;30m[madgraph_interface.py at line 7452][0m [0m
+[1;31mCRITICAL:  set configuration option f2py_compiler to /Users/omattelaer/Documents/git_workspace/version3/py312/.direnv/python-3.13/bin/f2py --python=3.12 [1;30m[madgraph_interface.py at line 7452][0m [0m
+[1;31mCRITICAL:  set configuration option f2py_compiler to /Users/omattelaer/Documents/git_workspace/version3/py314/.direnv/python-3.13/bin/f2py --python=3.14 [1;30m[madgraph_interface.py at line 7452][0m [0m
+[1;31mCRITICAL:  set configuration option lhapdf to /Users/omattelaer/Documents/HEPTools/lhapdf6_py312/bin/lhapdf-config --python=3.12 [1;30m[madgraph_interface.py at line 7452][0m [0m
+[1;31mCRITICAL:  set configuration option lhapdf to /Users/omattelaer/Documents/HEPTools/lhapdf6_py313/bin/lhapdf-config --python=3.13 [1;30m[madgraph_interface.py at line 7452][0m [0m
+[1;31mCRITICAL:  set configuration option lhapdf to /Users/omattelaer/Documents/HEPTools/lhapdf6_py314/bin/lhapdf-config --python=3.14 [1;30m[madgraph_interface.py at line 7452][0m [0m
+set spinmode onshell
+set seed 42
+set max_running_process 4
+set nb_core 3
+set BW_cut 15
+define p = g u c d s u~ c~ d~ s~
+define p = g u c d s u~ c~ d~ s~
+INFO: Restrict model sm with file ../../../t73/models/sm/restrict_default.dat . 
+[1;32mDEBUG: Simplifying conditional expressions [0m
+[1;32mDEBUG: remove interactions: u s w+ at order: QED=1 [0m
+[1;32mDEBUG: remove interactions: u b w+ at order: QED=1 [0m
+[1;32mDEBUG: remove interactions: c d w+ at order: QED=1 [0m
+[1;32mDEBUG: remove interactions: c b w+ at order: QED=1 [0m
+[1;32mDEBUG: remove interactions: t d w+ at order: QED=1 [0m
+[1;32mDEBUG: remove interactions: t s w+ at order: QED=1 [0m
+[1;32mDEBUG: remove interactions: s u w+ at order: QED=1 [0m
+[1;32mDEBUG: remove interactions: b u w+ at order: QED=1 [0m
+[1;32mDEBUG: remove interactions: d c w+ at order: QED=1 [0m
+[1;32mDEBUG: remove interactions: b c w+ at order: QED=1 [0m
+[1;32mDEBUG: remove interactions: d t w+ at order: QED=1 [0m
+[1;32mDEBUG: remove interactions: s t w+ at order: QED=1 [0m
+[1;32mDEBUG: remove interactions: c c h at order: QED=1 [0m
+[1;32mDEBUG: remove interactions: e- e- h at order: QED=1 [0m
+[1;32mDEBUG: remove interactions: mu- mu- h at order: QED=1 [0m
+[1;32mDEBUG:  Fuse the Following coupling (they have the same value): ('GC_100', 1), ('GC_104', 1), ('GC_108', 1), ('GC_40', 1), ('GC_41', 1), ('GC_45', 1), ('GC_49', 1)  [0m
+[1;32mDEBUG:  Fuse the Following coupling (they have the same value): ('GC_21', 1), ('GC_27', -1)  [0m
+[1;32mDEBUG:  Fuse the Following coupling (they have the same value): ('GC_15', 1), ('GC_30', -1)  [0m
+[1;32mDEBUG:  Fuse the Following coupling (they have the same value): ('GC_38', 1), ('GC_39', -1)  [0m
+[1;32mDEBUG:  Fuse the Following coupling (they have the same value): ('GC_3', 1), ('GC_4', -1)  [0m
+[1;32mDEBUG:  Fuse the Following coupling (they have the same value): ('GC_50', 1), ('GC_51', -1)  [0m
+[1;32mDEBUG:  Fuse the Following coupling (they have the same value): ('GC_54', 1), ('GC_56', -1)  [0m
+[1;32mDEBUG:  Fuse the Following coupling (they have the same value): ('GC_66', 1), ('GC_67', -1)  [0m
+[1;32mDEBUG:  Fuse the Following coupling (they have the same value): ('GC_70', 1), ('GC_73', -1)  [0m
+[1;32mDEBUG:  Fuse the Following coupling (they have the same value): ('GC_74', 1), ('GC_75', -1)  [0m
+[1;32mDEBUG:  Fuse the Following coupling (they have the same value): ('GC_77', 1), ('GC_78', -1)  [0m
+[1;32mDEBUG:  Fuse the Following coupling (they have the same value): ('GC_76', 1), ('GC_79', -1)  [0m
+[1;32mDEBUG:  Fuse the Following coupling (they have the same value): ('GC_7', 1), ('GC_9', -1)  [0m
+[1;32mDEBUG:  Fuse the Following coupling (they have the same value): ('GC_96', 1), ('GC_97', -1)  [0m
+[1;32mDEBUG: remove parameters: mdl_lamWS [0m
+[1;32mDEBUG: remove parameters: mdl_AWS [0m
+[1;32mDEBUG: remove parameters: mdl_rhoWS [0m
+[1;32mDEBUG: remove parameters: mdl_etaWS [0m
+[1;32mDEBUG: remove parameters: mdl_ymc [0m
+[1;32mDEBUG: remove parameters: mdl_yme [0m
+[1;32mDEBUG: remove parameters: mdl_ymm [0m
+[1;32mDEBUG: remove parameters: mdl_MC [0m
+[1;32mDEBUG: remove parameters: mdl_Me [0m
+[1;32mDEBUG: remove parameters: mdl_MM [0m
+[1;32mDEBUG: remove parameters: mdl_WTau [0m
+[1;32mDEBUG: remove parameters: mdl_lamWS__exp__2 [0m
+[1;32mDEBUG: remove parameters: mdl_CKM1x2 [0m
+[1;32mDEBUG: remove parameters: mdl_lamWS__exp__3 [0m
+[1;32mDEBUG: remove parameters: mdl_CKM1x3 [0m
+[1;32mDEBUG: remove parameters: mdl_CKM2x1 [0m
+[1;32mDEBUG: remove parameters: mdl_CKM2x3 [0m
+[1;32mDEBUG: remove parameters: mdl_CKM3x1 [0m
+[1;32mDEBUG: remove parameters: mdl_CKM3x2 [0m
+[1;32mDEBUG: remove parameters: mdl_conjg__CKM1x3 [0m
+[1;32mDEBUG: remove parameters: mdl_conjg__CKM2x3 [0m
+[1;32mDEBUG: remove parameters: mdl_conjg__CKM2x1 [0m
+[1;32mDEBUG: remove parameters: mdl_conjg__CKM3x1 [0m
+[1;32mDEBUG: remove parameters: mdl_conjg__CKM3x2 [0m
+[1;32mDEBUG: remove parameters: mdl_conjg__CKM1x2 [0m
+[1;32mDEBUG: remove parameters: mdl_yc [0m
+[1;32mDEBUG: remove parameters: mdl_ye [0m
+[1;32mDEBUG: remove parameters: mdl_ym [0m
+[1;32mDEBUG: remove parameters: mdl_I1x31 [0m
+[1;32mDEBUG: remove parameters: mdl_I1x32 [0m
+[1;32mDEBUG: remove parameters: mdl_I2x12 [0m
+[1;32mDEBUG: remove parameters: mdl_I2x13 [0m
+[1;32mDEBUG: remove parameters: mdl_I2x22 [0m
+[1;32mDEBUG: remove parameters: mdl_I2x23 [0m
+[1;32mDEBUG: remove parameters: mdl_I2x32 [0m
+[1;32mDEBUG: remove parameters: mdl_I3x21 [0m
+[1;32mDEBUG: remove parameters: mdl_I3x22 [0m
+[1;32mDEBUG: remove parameters: mdl_I3x23 [0m
+[1;32mDEBUG: remove parameters: mdl_I3x31 [0m
+[1;32mDEBUG: remove parameters: mdl_I3x32 [0m
+[1;32mDEBUG: remove parameters: mdl_I4x13 [0m
+[1;32mDEBUG: remove parameters: mdl_I4x23 [0m
+[1;32mDEBUG: remove parameters: mdl_CKM1x1 [0m
+[1;32mDEBUG: remove parameters: mdl_CKM2x2 [0m
+[1;32mDEBUG: fix parameter value: mdl_CKM3x3 [0m
+[1;32mDEBUG: fix parameter value: mdl_conjg__CKM3x3 [0m
+[1;32mDEBUG: remove parameters: mdl_conjg__CKM2x2 [0m
+[1;32mDEBUG: fix parameter value: mdl_conjg__CKM1x1 [0m
+INFO: Change particles name to pass to MG5 convention 
+Defined multiparticle p = g u c d s u~ c~ d~ s~
+Defined multiparticle j = g u c d s u~ c~ d~ s~
+Defined multiparticle l+ = e+ mu+
+Defined multiparticle l- = e- mu-
+Defined multiparticle vl = ve vm vt
+Defined multiparticle vl~ = ve~ vm~ vt~
+Defined multiparticle all = g u c d s u~ c~ d~ s~ a ve vm vt e- mu- ve~ vm~ vt~ e+ mu+ t b t~ b~ z w+ h w- ta- ta+
+Defined multiparticle p = g u c d s u~ c~ d~ s~
+define j = g u c d s u~ c~ d~ s~
+define j = g u c d s u~ c~ d~ s~
+Defined multiparticle j = g u c d s u~ c~ d~ s~
+import /tmp/mtt_2to2_work/MS/mode_onshell/events.lhe.gz
+INFO: process: p p > t t~ 
+INFO: options:  
+Set group_subprocesses to Auto
+Note that you need to regenerate all processes
+Complex mass already desactivated.
+set loop optimized output to True
+set loop color flows to False
+INFO: detected model: sm. Loading... 
+INFO: Restrict model sm with file ../../../t73/models/sm/restrict_default.dat . 
+[1;32mDEBUG: Simplifying conditional expressions [0m
+[1;32mDEBUG: remove interactions: u s w+ at order: QED=1 [0m
+[1;32mDEBUG: remove interactions: u b w+ at order: QED=1 [0m
+[1;32mDEBUG: remove interactions: c d w+ at order: QED=1 [0m
+[1;32mDEBUG: remove interactions: c b w+ at order: QED=1 [0m
+[1;32mDEBUG: remove interactions: t d w+ at order: QED=1 [0m
+[1;32mDEBUG: remove interactions: t s w+ at order: QED=1 [0m
+[1;32mDEBUG: remove interactions: s u w+ at order: QED=1 [0m
+[1;32mDEBUG: remove interactions: b u w+ at order: QED=1 [0m
+[1;32mDEBUG: remove interactions: d c w+ at order: QED=1 [0m
+[1;32mDEBUG: remove interactions: b c w+ at order: QED=1 [0m
+[1;32mDEBUG: remove interactions: d t w+ at order: QED=1 [0m
+[1;32mDEBUG: remove interactions: s t w+ at order: QED=1 [0m
+[1;32mDEBUG: remove interactions: c c h at order: QED=1 [0m
+[1;32mDEBUG: remove interactions: e- e- h at order: QED=1 [0m
+[1;32mDEBUG: remove interactions: mu- mu- h at order: QED=1 [0m
+[1;32mDEBUG:  Fuse the Following coupling (they have the same value): ('GC_100', 1), ('GC_104', 1), ('GC_108', 1), ('GC_40', 1), ('GC_41', 1), ('GC_45', 1), ('GC_49', 1)  [0m
+[1;32mDEBUG:  Fuse the Following coupling (they have the same value): ('GC_21', 1), ('GC_27', -1)  [0m
+[1;32mDEBUG:  Fuse the Following coupling (they have the same value): ('GC_15', 1), ('GC_30', -1)  [0m
+[1;32mDEBUG:  Fuse the Following coupling (they have the same value): ('GC_38', 1), ('GC_39', -1)  [0m
+[1;32mDEBUG:  Fuse the Following coupling (they have the same value): ('GC_3', 1), ('GC_4', -1)  [0m
+[1;32mDEBUG:  Fuse the Following coupling (they have the same value): ('GC_50', 1), ('GC_51', -1)  [0m
+[1;32mDEBUG:  Fuse the Following coupling (they have the same value): ('GC_54', 1), ('GC_56', -1)  [0m
+[1;32mDEBUG:  Fuse the Following coupling (they have the same value): ('GC_66', 1), ('GC_67', -1)  [0m
+[1;32mDEBUG:  Fuse the Following coupling (they have the same value): ('GC_70', 1), ('GC_73', -1)  [0m
+[1;32mDEBUG:  Fuse the Following coupling (they have the same value): ('GC_74', 1), ('GC_75', -1)  [0m
+[1;32mDEBUG:  Fuse the Following coupling (they have the same value): ('GC_77', 1), ('GC_78', -1)  [0m
+[1;32mDEBUG:  Fuse the Following coupling (they have the same value): ('GC_76', 1), ('GC_79', -1)  [0m
+[1;32mDEBUG:  Fuse the Following coupling (they have the same value): ('GC_7', 1), ('GC_9', -1)  [0m
+[1;32mDEBUG:  Fuse the Following coupling (they have the same value): ('GC_96', 1), ('GC_97', -1)  [0m
+[1;32mDEBUG: fix parameter value: mdl_lamWS [0m
+[1;32mDEBUG: fix parameter value: mdl_AWS [0m
+[1;32mDEBUG: fix parameter value: mdl_rhoWS [0m
+[1;32mDEBUG: fix parameter value: mdl_etaWS [0m
+[1;32mDEBUG: fix parameter value: mdl_ymc [0m
+[1;32mDEBUG: fix parameter value: mdl_yme [0m
+[1;32mDEBUG: fix parameter value: mdl_ymm [0m
+[1;32mDEBUG: fix parameter value: mdl_MC [0m
+[1;32mDEBUG: fix parameter value: mdl_Me [0m
+[1;32mDEBUG: fix parameter value: mdl_MM [0m
+[1;32mDEBUG: fix parameter value: mdl_WTau [0m
+[1;32mDEBUG: fix parameter value: mdl_lamWS__exp__2 [0m
+[1;32mDEBUG: fix parameter value: mdl_CKM1x2 [0m
+[1;32mDEBUG: fix parameter value: mdl_lamWS__exp__3 [0m
+[1;32mDEBUG: fix parameter value: mdl_CKM1x3 [0m
+[1;32mDEBUG: fix parameter value: mdl_CKM2x1 [0m
+[1;32mDEBUG: fix parameter value: mdl_CKM2x3 [0m
+[1;32mDEBUG: fix parameter value: mdl_CKM3x1 [0m
+[1;32mDEBUG: fix parameter value: mdl_CKM3x2 [0m
+[1;32mDEBUG: fix parameter value: mdl_conjg__CKM1x3 [0m
+[1;32mDEBUG: fix parameter value: mdl_conjg__CKM2x3 [0m
+[1;32mDEBUG: fix parameter value: mdl_conjg__CKM2x1 [0m
+[1;32mDEBUG: fix parameter value: mdl_conjg__CKM3x1 [0m
+[1;32mDEBUG: fix parameter value: mdl_conjg__CKM3x2 [0m
+[1;32mDEBUG: fix parameter value: mdl_conjg__CKM1x2 [0m
+[1;32mDEBUG: fix parameter value: mdl_yc [0m
+[1;32mDEBUG: fix parameter value: mdl_ye [0m
+[1;32mDEBUG: fix parameter value: mdl_ym [0m
+[1;32mDEBUG: fix parameter value: mdl_I1x31 [0m
+[1;32mDEBUG: fix parameter value: mdl_I1x32 [0m
+[1;32mDEBUG: fix parameter value: mdl_I2x12 [0m
+[1;32mDEBUG: fix parameter value: mdl_I2x13 [0m
+[1;32mDEBUG: fix parameter value: mdl_I2x22 [0m
+[1;32mDEBUG: fix parameter value: mdl_I2x23 [0m
+[1;32mDEBUG: fix parameter value: mdl_I2x32 [0m
+[1;32mDEBUG: fix parameter value: mdl_I3x21 [0m
+[1;32mDEBUG: fix parameter value: mdl_I3x22 [0m
+[1;32mDEBUG: fix parameter value: mdl_I3x23 [0m
+[1;32mDEBUG: fix parameter value: mdl_I3x31 [0m
+[1;32mDEBUG: fix parameter value: mdl_I3x32 [0m
+[1;32mDEBUG: fix parameter value: mdl_I4x13 [0m
+[1;32mDEBUG: fix parameter value: mdl_I4x23 [0m
+[1;32mDEBUG: fix parameter value: mdl_CKM1x1 [0m
+[1;32mDEBUG: fix parameter value: mdl_CKM2x2 [0m
+[1;32mDEBUG: fix parameter value: mdl_CKM3x3 [0m
+[1;32mDEBUG: fix parameter value: mdl_conjg__CKM3x3 [0m
+[1;32mDEBUG: fix parameter value: mdl_conjg__CKM2x2 [0m
+[1;32mDEBUG: fix parameter value: mdl_conjg__CKM1x1 [0m
+INFO: Change particles name to pass to MG5 convention 
+Kept definitions of multiparticles p / j / l+ / l- / vl / vl~ unchanged
+Defined multiparticle all = g u c d s u~ c~ d~ s~ a ve vm vt e- mu- ve~ vm~ vt~ e+ mu+ t b t~ b~ z w+ h w- ta- ta+
+Set group_subprocesses to Auto
+Note that you need to regenerate all processes
+Complex mass already desactivated.
+set loop optimized output to True
+set loop color flows to False
+Defined multiparticle l+ = e+ mu+
+Defined multiparticle l- = e- mu-
+Defined multiparticle vl = ve vm vt
+Defined multiparticle vl~ = ve~ vm~ vt~
+Defined multiparticle p = g u c d s u~ c~ d~ s~
+Defined multiparticle j = g u c d s u~ c~ d~ s~
+decay t > w+ b
+decay t~ > w- b~
+launch
+INFO: Running MadSpin in spinmode onshell 
+INFO: MadSpin: decay_output = unweighted (auto, ordinary run) 
+INFO: Will use seed 686579303 
+INFO: MadSpin: unweighting = sequential (auto, 2 decaying particle(s)) 
+INFO: MadSpin: generating the decay events of 2 particles at once, 3 core(s) each 
+INFO: generate 2224250 decay event for particle t 
+INFO: generate 1724250 decay event for particle t~ 
+stty: stdin isn't a terminal
+stty: stdin isn't a terminal
+INFO: Time for decay event generation = 292.3 sec 
+INFO: Time for decay event generation = 293.1 sec 
+INFO: generating the production square matrix element for density 
+INFO: generate p p > t t~ ;output standalone /private/tmp/mtt_2to2_work/MS/mode_onshell/madspin_me --prefix=int --density=1 
+INFO: generate matrix element for decay only (1 - > N). 
+INFO: generate t > w+ b  @0 --no_warning=duplicate --standalone;add process t~ > w- b~  @1 --no_warning=duplicate --standalone;output standalone /private/tmp/mtt_2to2_work/MS/mode_onshell/madspin_decay --prefix=int --density=1 -f 
+INFO: Done 2.783 
+INFO: Compiling code 
+INFO: Compiling code 
+INFO: Time ME generation: 12.64 sec 
+INFO: Estimating the maximum weight of each decaying particle 
+INFO: ***************************** 
+INFO: Probing the first 300 events with 498 phase space points 
+INFO: MadSpin: probing the maximum weight on 3 cores 
+INFO: Event 1/100 :  2.327937s 
+INFO: Event 6/100 :  2.566162s 
+INFO: Event 11/100 :  2.822001s 
+INFO: Event 16/100 :  3.079451s 
+INFO: Event 21/100 :  3.335931s 
+INFO: Event 26/100 :  3.614402s 
+INFO: Event 31/100 :  3.867369s 
+INFO: Event 36/100 :  4.107059s 
+INFO: Event 41/100 :  4.349650s 
+INFO: Event 46/100 :  4.588972s 
+INFO: Event 51/100 :  4.839611s 
+INFO: Event 56/100 :  5.079769s 
+INFO: Event 61/100 :  5.314934s 
+INFO: Event 66/100 :  5.562484s 
+INFO: Event 71/100 :  5.800273s 
+INFO: Event 76/100 :  6.044646s 
+INFO: Event 81/100 :  6.334762s 
+INFO: Event 86/100 :  6.584185s 
+INFO: Event 91/100 :  6.817886s 
+INFO: Event 96/100 :  7.055733s 
+INFO: Sequential maximum weights: 1.1 1.101 1.455 
+INFO: Start generating decays 
+INFO: MadSpin: unweighting 1000000 events on 3 cores 
+INFO: decaying event number 10/333334. Decay events per accepted event, per particle: p0=0.91 p1=1.91 [0.019341230392456055 s] 
+INFO: decaying event number 20/333334. Decay events per accepted event, per particle: p0=1.24 p1=1.76 [0.022140026092529297 s] 
+INFO: decaying event number 30/333334. Decay events per accepted event, per particle: p0=1.16 p1=1.71 [0.024863004684448242 s] 
+INFO: decaying event number 40/333334. Decay events per accepted event, per particle: p0=1.17 p1=1.56 [0.027119874954223633 s] 
+INFO: decaying event number 50/333334. Decay events per accepted event, per particle: p0=1.16 p1=1.45 [0.029341936111450195 s] 
+INFO: decaying event number 60/333334. Decay events per accepted event, per particle: p0=1.16 p1=1.48 [0.032160043716430664 s] 
+INFO: decaying event number 70/333334. Decay events per accepted event, per particle: p0=1.14 p1=1.48 [0.03437304496765137 s] 
+INFO: decaying event number 80/333334. Decay events per accepted event, per particle: p0=1.12 p1=1.46 [0.03674817085266113 s] 
+INFO: decaying event number 90/333334. Decay events per accepted event, per particle: p0=1.12 p1=1.51 [0.04010510444641113 s] 
+INFO: decaying event number 100/333334. Decay events per accepted event, per particle: p0=1.11 p1=1.48 [0.0426790714263916 s] 
+INFO: decaying event number 200/333334. Decay events per accepted event, per particle: p0=1.11 p1=1.44 [0.06928205490112305 s] 
+INFO: decaying event number 300/333334. Decay events per accepted event, per particle: p0=1.11 p1=1.46 [0.09593510627746582 s] 
+INFO: decaying event number 400/333334. Decay events per accepted event, per particle: p0=1.10 p1=1.45 [0.12288904190063477 s] 
+INFO: decaying event number 500/333334. Decay events per accepted event, per particle: p0=1.10 p1=1.46 [0.15005183219909668 s] 
+INFO: decaying event number 600/333334. Decay events per accepted event, per particle: p0=1.10 p1=1.44 [0.1773369312286377 s] 
+INFO: decaying event number 700/333334. Decay events per accepted event, per particle: p0=1.10 p1=1.45 [0.20441293716430664 s] 
+INFO: decaying event number 800/333334. Decay events per accepted event, per particle: p0=1.10 p1=1.45 [0.23075199127197266 s] 
+INFO: decaying event number 900/333334. Decay events per accepted event, per particle: p0=1.10 p1=1.44 [0.25566816329956055 s] 
+INFO: decaying event number 1000/333334. Decay events per accepted event, per particle: p0=1.10 p1=1.44 [0.2828381061553955 s] 
+INFO: decaying event number 2000/333334. Decay events per accepted event, per particle: p0=1.09 p1=1.45 [0.55000901222229 s] 
+INFO: decaying event number 3000/333334. Decay events per accepted event, per particle: p0=1.10 p1=1.44 [0.8219940662384033 s] 
+INFO: decaying event number 4000/333334. Decay events per accepted event, per particle: p0=1.10 p1=1.46 [1.091947078704834 s] 
+INFO: decaying event number 5000/333334. Decay events per accepted event, per particle: p0=1.10 p1=1.45 [1.3673858642578125 s] 
+INFO: decaying event number 6000/333334. Decay events per accepted event, per particle: p0=1.10 p1=1.45 [1.639497995376587 s] 
+INFO: decaying event number 7000/333334. Decay events per accepted event, per particle: p0=1.10 p1=1.45 [1.922018051147461 s] 
+INFO: decaying event number 8000/333334. Decay events per accepted event, per particle: p0=1.10 p1=1.46 [2.2007229328155518 s] 
+INFO: decaying event number 9000/333334. Decay events per accepted event, per particle: p0=1.10 p1=1.45 [2.4793097972869873 s] 
+INFO: decaying event number 10000/333334. Decay events per accepted event, per particle: p0=1.10 p1=1.45 [2.7647979259490967 s] 
+INFO: decaying event number 20000/333334. Decay events per accepted event, per particle: p0=1.10 p1=1.45 [5.482959985733032 s] 
+INFO: decaying event number 30000/333334. Decay events per accepted event, per particle: p0=1.10 p1=1.45 [8.28742790222168 s] 
+INFO: decaying event number 40000/333334. Decay events per accepted event, per particle: p0=1.10 p1=1.46 [11.24214506149292 s] 
+INFO: decaying event number 50000/333334. Decay events per accepted event, per particle: p0=1.10 p1=1.46 [14.525261878967285 s] 
+INFO: decaying event number 60000/333334. Decay events per accepted event, per particle: p0=1.10 p1=1.46 [17.98927116394043 s] 
+INFO: decaying event number 70000/333334. Decay events per accepted event, per particle: p0=1.10 p1=1.46 [21.442376136779785 s] 
+INFO: decaying event number 80000/333334. Decay events per accepted event, per particle: p0=1.10 p1=1.46 [24.823161840438843 s] 
+INFO: decaying event number 90000/333334. Decay events per accepted event, per particle: p0=1.10 p1=1.46 [28.17425799369812 s] 
+INFO: decaying event number 100000/333334. Decay events per accepted event, per particle: p0=1.10 p1=1.46 [31.60714817047119 s] 
+INFO: decaying event number 200000/333334. Decay events per accepted event, per particle: p0=1.10 p1=1.46 [65.75557684898376 s] 
+INFO: decaying event number 300000/333334. Decay events per accepted event, per particle: p0=1.10 p1=1.46 [93.84902691841125 s] 
+INFO: worker 0 of 3 done. [102.9 s] 
+INFO: worker 1 of 3 done. [103.0 s] 
+INFO: worker 2 of 3 done. [104.2 s] 
+INFO: MadSpin unweight efficiency: 0.3910 (1000000 written / 2557262 trials, 2.56 trials/event) 
+INFO: MadSpin sequential slot 0: 1.10 decay events per accepted one (1102061 drawn) 
+INFO: MadSpin sequential slot 1: 1.46 decay events per accepted one (1455201 drawn) 
+INFO: MadSpin overweight safety net: 0/1000000 written events carried a non-unit weight -- no accept/reject bound was exceeded, so nothing was clipped and nothing is biased by it. 
+INFO: Done so far. output written in /private/tmp/mtt_2to2_work/MS/mode_onshell/events_decayed.lhe 
+INFO: Time for decay = 168.28 sec 
+quit

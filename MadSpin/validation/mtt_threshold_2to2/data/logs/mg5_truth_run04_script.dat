@@ -1,0 +1,20 @@
+set automatic_html_opening False --no_save
+set nb_core 9
+launch /tmp/mtt_2to2_work/TRUTH
+madspin=OFF
+shower=OFF
+detector=OFF
+analysis=OFF
+done
+set nevents 1000000
+set iseed 4245
+set ebeam1 6500
+set ebeam2 6500
+set bwcutoff 15.0
+set fixed_ren_scale True
+set fixed_fac_scale True
+set scale 173.0
+set dsqrt_q2fact1 173.0
+set dsqrt_q2fact2 173.0
+set use_syst False
+done

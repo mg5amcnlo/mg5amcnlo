@@ -1,0 +1,11 @@
+set spinmode madspin_v1
+set seed 42
+set max_running_process 4
+set nb_core 3
+set BW_cut 15
+define p = g u c d s u~ c~ d~ s~
+define j = g u c d s u~ c~ d~ s~
+import /tmp/mtt_2to2_work/MS/mode_madspin_v1/events.lhe.gz
+decay t > w+ b
+decay t~ > w- b~
+launch

@@ -1,0 +1,272 @@
+{
+  "bwcutoff": 15.0,
+  "code_branch": "claude/ms-mtt-threshold-2to2",
+  "code_sha": "721ffc1149efe00ae7bc51b18558acff89250ac2",
+  "controls": [],
+  "cross_check": {
+    "PA": {
+      "max_abs_diff_GeV": 2.8421709430404007e-13,
+      "nevents": 2000
+    },
+    "madspin": {
+      "max_abs_diff_GeV": 5.115907697472721e-13,
+      "nevents": 2000
+    },
+    "madspin_v1": {
+      "max_abs_diff_GeV": 6.821210263296962e-13,
+      "nevents": 2000
+    },
+    "onshell": {
+      "max_abs_diff_GeV": 2.8421709430404007e-13,
+      "nevents": 2000
+    },
+    "truth": {
+      "max_abs_diff_GeV": 2.2737367544323206e-13,
+      "nevents": 2000
+    }
+  },
+  "cuts": "none.  The final state is t t~ with no jet, so the ptj/etaj cuts the p p > t t~ j study needs to make the real emission finite have nothing to act on and are not set.  cut_decays is off, so nothing cuts on the top decay products either and the truth sample's acceptance is the production sample's.",
+  "delta_mtt": {
+    "PA": {
+      "crossed_down": 0,
+      "crossed_up": 0,
+      "max_abs": 2.838142165728641e-06,
+      "max_dshat": 0.0,
+      "mean": 2.103864063576566e-08,
+      "n": 1000000,
+      "n_exact": 50049,
+      "n_out": 0,
+      "n_tiny": 1000000,
+      "rms": 9.202365648960409e-08
+    },
+    "madspin": {
+      "crossed_down": 0,
+      "crossed_up": 0,
+      "max_abs": 3.3281988862654543e-06,
+      "max_dshat": 0.0,
+      "mean": 2.1115125161827565e-08,
+      "n": 1000000,
+      "n_exact": 50520,
+      "n_out": 0,
+      "n_tiny": 1000000,
+      "rms": 9.203600767396436e-08
+    },
+    "madspin_v1": {
+      "crossed_down": 0,
+      "crossed_up": 0,
+      "max_abs": 2.300511312114395e-06,
+      "max_dshat": 0.0,
+      "mean": 3.953802882961099e-11,
+      "n": 1000000,
+      "n_exact": 187154,
+      "n_out": 0,
+      "n_tiny": 1000000,
+      "rms": 6.688405855967308e-08
+    },
+    "onshell": {
+      "crossed_down": 0,
+      "crossed_up": 0,
+      "max_abs": 1.572141945871408e-05,
+      "max_dshat": 0.0,
+      "mean": 1.1630835052756083e-10,
+      "n": 1000000,
+      "n_exact": 45075,
+      "n_out": 0,
+      "n_tiny": 1000000,
+      "rms": 3.056426397838499e-07
+    }
+  },
+  "madspin_BW_cut": 15,
+  "madspin_decays": [
+    "t > w+ b",
+    "t~ > w- b~"
+  ],
+  "mg5_integration_pb": {
+    "production": {
+      "cross_pb": 553.3,
+      "error_pb": 0.0468,
+      "note": "the run"
+    },
+    "truth": {
+      "cross_pb": 529.8,
+      "error_pb": 0.05047,
+      "note": "one MadEvent run; the truth mean is over `truth_runs`"
+    }
+  },
+  "model": "sm",
+  "mt_pole_assumed": 173.0,
+  "mtt_bins": {
+    "hi": 520.0,
+    "lo": 290.0,
+    "n": 920
+  },
+  "multiparticles": {
+    "j": "g u c d s u~ c~ d~ s~",
+    "p": "g u c d s u~ c~ d~ s~"
+  },
+  "nb_core": 9,
+  "nevents_prod_requested": 1000000,
+  "nevents_truth_requested": 3000000,
+  "observable": "invariant mass of the sum of the four status-1 particles with |pid| in {24, 5}, i.e. (W+ b) + (W- b~)",
+  "param_card_masses": {
+    "MB": 4.7,
+    "MT": 173.0,
+    "WT": 1.4915,
+    "WW": 2.0476
+  },
+  "production_process": "p p > t t~",
+  "run_card": {
+    "bwcutoff": 15.0,
+    "dsqrt_q2fact1": 173.0,
+    "dsqrt_q2fact2": 173.0,
+    "ebeam1": 6500,
+    "ebeam2": 6500,
+    "fixed_fac_scale": "True",
+    "fixed_ren_scale": "True",
+    "scale": 173.0,
+    "use_syst": "False"
+  },
+  "runs": {
+    "PA": {
+      "banner_cross_pb": 553.279,
+      "madspin_card": "set spinmode PA\nset seed 42\nset max_running_process 4\nset nb_core 3\nset BW_cut 15\ndefine p = g u c d s u~ c~ d~ s~\ndefine j = g u c d s u~ c~ d~ s~\nimport /tmp/mtt_2to2_work/MS/mode_PA/events.lhe.gz\ndecay t > w+ b\ndecay t~ > w- b~\nlaunch\n",
+      "malformed": 0,
+      "nevents": 1000000,
+      "over_n": 396092,
+      "over_w": 219149385.6699708,
+      "path": "/tmp/mtt_2to2_work/MS/mode_PA/events_decayed.lhe.gz",
+      "sumw": 553317469.9666541,
+      "under_n": 0,
+      "under_w": 0.0,
+      "unweighting": "sequential",
+      "unweighting_why": "auto, 2 decaying particle(s)"
+    },
+    "madspin": {
+      "banner_cross_pb": 553.279,
+      "madspin_card": "set spinmode madspin\nset seed 42\nset max_running_process 4\nset nb_core 3\nset BW_cut 15\ndefine p = g u c d s u~ c~ d~ s~\ndefine j = g u c d s u~ c~ d~ s~\nimport /tmp/mtt_2to2_work/MS/mode_madspin/events.lhe.gz\ndecay t > w+ b\ndecay t~ > w- b~\nlaunch\n",
+      "malformed": 0,
+      "nevents": 1000000,
+      "over_n": 396092,
+      "over_w": 219149385.6699708,
+      "path": "/tmp/mtt_2to2_work/MS/mode_madspin/events_decayed.lhe.gz",
+      "sumw": 553290680.6072515,
+      "under_n": 0,
+      "under_w": 0.0,
+      "unweighting": "joint",
+      "unweighting_why": "auto, 2 decaying particle(s)"
+    },
+    "madspin_v1": {
+      "banner_cross_pb": 553.279,
+      "madspin_card": "set spinmode madspin_v1\nset seed 42\nset max_running_process 4\nset nb_core 3\nset BW_cut 15\ndefine p = g u c d s u~ c~ d~ s~\ndefine j = g u c d s u~ c~ d~ s~\nimport /tmp/mtt_2to2_work/MS/mode_madspin_v1/events.lhe.gz\ndecay t > w+ b\ndecay t~ > w- b~\nlaunch\n",
+      "malformed": 0,
+      "nevents": 1000000,
+      "over_n": 396092,
+      "over_w": 219149385.6699708,
+      "path": "/tmp/mtt_2to2_work/MS/mode_madspin_v1/events_decayed.lhe.gz",
+      "sumw": 553278999.9968904,
+      "under_n": 0,
+      "under_w": 0.0,
+      "unweighting": "legacy",
+      "unweighting_why": "spinmode=madspin_v1 does not go through run_onshell, so _unweighting_mode is never called and the card's `unweighting` setting is inert; the legacy Fortran driver tests the whole decay chain against one pre-probed max_weight per channel"
+    },
+    "onshell": {
+      "banner_cross_pb": 553.279,
+      "madspin_card": "set spinmode onshell\nset seed 42\nset max_running_process 4\nset nb_core 3\nset BW_cut 15\ndefine p = g u c d s u~ c~ d~ s~\ndefine j = g u c d s u~ c~ d~ s~\nimport /tmp/mtt_2to2_work/MS/mode_onshell/events.lhe.gz\ndecay t > w+ b\ndecay t~ > w- b~\nlaunch\n",
+      "malformed": 0,
+      "nevents": 1000000,
+      "over_n": 396092,
+      "over_w": 219149385.6699708,
+      "path": "/tmp/mtt_2to2_work/MS/mode_onshell/events_decayed.lhe.gz",
+      "sumw": 553278999.9968904,
+      "under_n": 0,
+      "under_w": 0.0,
+      "unweighting": "sequential",
+      "unweighting_why": "auto, 2 decaying particle(s)"
+    },
+    "production": {
+      "banner_cross_pb": 553.279,
+      "malformed": 0,
+      "nevents": 1000000,
+      "over_n": 396092,
+      "over_w": 219149385.6699708,
+      "path": "/tmp/mtt_2to2_work/MS/PROC/Events/run_01/unweighted_events.lhe.gz",
+      "sumw": 553278999.9968904,
+      "under_n": 0,
+      "under_w": 0.0
+    },
+    "truth": {
+      "banner_cross_pb": 529.835,
+      "malformed": 0,
+      "nevents": 5000000,
+      "over_n": 1984130,
+      "over_w": 1051239718.1597514,
+      "path": [
+        "/tmp/mtt_2to2_work/TRUTH/Events/run_01/unweighted_events.lhe.gz",
+        "/tmp/mtt_2to2_work/TRUTH/Events/run_02/unweighted_events.lhe.gz",
+        "/tmp/mtt_2to2_work/TRUTH/Events/run_03/unweighted_events.lhe.gz",
+        "/tmp/mtt_2to2_work/TRUTH/Events/run_04/unweighted_events.lhe.gz",
+        "/tmp/mtt_2to2_work/TRUTH/Events/run_05/unweighted_events.lhe.gz"
+      ],
+      "sumw": 2649120000.002627,
+      "under_n": 0,
+      "under_w": 0.0
+    }
+  },
+  "seed_madspin": 42,
+  "seed_production": 42,
+  "seed_truth": 4242,
+  "seed_truth_runs": [
+    4242,
+    4243,
+    4244,
+    4245,
+    4246
+  ],
+  "sibling_study": "MadSpin/validation/mtt_threshold -- the same measurement on p p > t t~ j.  This driver imports that one's harvester, binning and pairing code and re-points it at the 2 -> 2 process; the plotting scripts do the same with its figure.",
+  "truth_nruns": 5,
+  "truth_process": "p p > t t~, t > w+ b, t~ > w- b~",
+  "truth_runs": [
+    {
+      "malformed": 0,
+      "nevents": 1000000,
+      "over_n": 396464,
+      "path": "/tmp/mtt_2to2_work/TRUTH/Events/run_01/unweighted_events.lhe.gz",
+      "sigma": 529.8349999907956,
+      "under_n": 0
+    },
+    {
+      "malformed": 0,
+      "nevents": 1000000,
+      "over_n": 397336,
+      "path": "/tmp/mtt_2to2_work/TRUTH/Events/run_02/unweighted_events.lhe.gz",
+      "sigma": 529.8429999955185,
+      "under_n": 0
+    },
+    {
+      "malformed": 0,
+      "nevents": 1000000,
+      "over_n": 396579,
+      "path": "/tmp/mtt_2to2_work/TRUTH/Events/run_03/unweighted_events.lhe.gz",
+      "sigma": 529.7580000048388,
+      "under_n": 0
+    },
+    {
+      "malformed": 0,
+      "nevents": 1000000,
+      "over_n": 396895,
+      "path": "/tmp/mtt_2to2_work/TRUTH/Events/run_04/unweighted_events.lhe.gz",
+      "sigma": 529.8740000092778,
+      "under_n": 0
+    },
+    {
+      "malformed": 0,
+      "nevents": 1000000,
+      "over_n": 396856,
+      "path": "/tmp/mtt_2to2_work/TRUTH/Events/run_05/unweighted_events.lhe.gz",
+      "sigma": 529.810000002196,
+      "under_n": 0
+    }
+  ],
+  "two_mt": 346.0,
+  "wt_pole_assumed": 1.4915
+}
