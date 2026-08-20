@@ -1,7 +1,10 @@
 {
   "bwcutoff": 15.0,
   "code_branch": "claude/ms-mtt-threshold",
-  "code_sha": "cfc248ee4df33b39b3a5cb07977a52064f7388f8",
+  "code_sha": "4af4acbc367dd8b962cc9987915813a8c3fce5e1",
+  "controls": [
+    "madspin_seq"
+  ],
   "cross_check": {
     "PA": {
       "max_abs_diff_GeV": 2.2737367544323206e-13,
@@ -9,6 +12,10 @@
     },
     "madspin": {
       "max_abs_diff_GeV": 6.252776074688882e-13,
+      "nevents": 2000
+    },
+    "madspin_seq": {
+      "max_abs_diff_GeV": 7.958078640513122e-13,
       "nevents": 2000
     },
     "onshell": {
@@ -40,6 +47,16 @@
       "n": 1000000,
       "n_out": 1,
       "rms": 2.1359228543651416
+    },
+    "madspin_seq": {
+      "crossed_down": 353,
+      "crossed_up": 0,
+      "max_abs": 38.422185750323706,
+      "max_dshat": 0.0,
+      "mean": 0.12940351819004636,
+      "n": 250000,
+      "n_out": 0,
+      "rms": 2.130934503274039
     },
     "onshell": {
       "crossed_down": 0,
@@ -120,6 +137,20 @@
       "under_w": 0.0,
       "unweighting": "joint",
       "unweighting_why": "auto, 2 decaying particle(s)"
+    },
+    "madspin_seq": {
+      "banner_cross_pb": 674.4446,
+      "madspin_card": "set spinmode madspin\nset seed 42\nset max_running_process 4\nset nb_core 14\nset BW_cut 15\nset unweighting sequential\ndefine p = g u c d s u~ c~ d~ s~\ndefine j = g u c d s u~ c~ d~ s~\nimport /tmp/mtt_threshold_work/MS/mode_madspin_seq/events.lhe.gz\ndecay t > w+ b\ndecay t~ > w- b~\nlaunch\n",
+      "malformed": 0,
+      "nevents": 250000,
+      "over_n": 111157,
+      "over_w": 74970866.38209617,
+      "path": "/tmp/mtt_threshold_work/MS/mode_madspin_seq/events_decayed.lhe.gz",
+      "sumw": 168612835.68322197,
+      "under_n": 0,
+      "under_w": 0.0,
+      "unweighting": "sequential",
+      "unweighting_why": "set explicitly"
     },
     "onshell": {
       "banner_cross_pb": 674.4446,

@@ -493,6 +493,34 @@ def run_truth(basedir, nevents, nb_core):
     return lhe
 
 
+def _truncate_lhe(src, dest, nevents):
+    """Copy the first ``nevents`` events of ``src`` into ``dest``, banner and all.
+
+    Used only for the CONTROLS.  The truncated file is a prefix of the same
+    unweighted sample, so it is a valid smaller sample of the same process with
+    the same banner cross section -- the events are already in generation order
+    and carry equal weights.
+    """
+    # gzip, because MadSpinFactory copies the sample to ``events.lhe.gz`` by
+    # name and MadSpin then reads it as gzip: a plain-text file under that name
+    # fails at the first read.
+    if not dest.endswith('.gz'):
+        dest += '.gz'
+    if os.path.exists(dest):
+        return dest
+    written = 0
+    with _open(src) as fin, gzip.open(dest, 'wt') as fout:
+        for line in fin:
+            fout.write(line)
+            if line.lstrip().startswith('</event'):
+                written += 1
+                if written >= nevents:
+                    break
+        fout.write('</LesHouchesEvents>\n')
+    print('control: truncated %s to %d events -> %s' % (src, written, dest))
+    return dest
+
+
 def _banner_masses(path):
     """``MT``/``WT``/``MW``/``MB`` as they actually stand in the run's banner.
 
@@ -556,6 +584,15 @@ def main():
                          'own directory, so they can be launched as three '
                          'concurrent processes; the harvest stage picks up '
                          'whatever is on disk.')
+    ap.add_argument('--control-nevents', type=int, default=0,
+                    help='run the CONTROLS on a truncated copy of the '
+                         'production sample (0 = the whole thing).  madspin '
+                         'under a forced sequential scheme is the slow corner '
+                         '_auto_unweighting_mode exists to avoid -- ~8x the '
+                         'trials per event of the joint default -- and the '
+                         'control only has to resolve a scheme effect against '
+                         'a 32%% spinmode effect, so it does not need the full '
+                         'sample.')
     ap.add_argument('--truth-lhe', default=None,
                     help='comma-separated extra truth LHE files to add to the '
                          'truth histogram.  MG5 caps one generate_events at 1M '
@@ -627,6 +664,12 @@ def main():
         for label, spinmode, extra in CONTROLS:
             if label not in wanted:
                 continue
+            full_events = factory.events_file
+            if args.control_nevents:
+                factory.events_file = _truncate_lhe(
+                    full_events,
+                    pjoin(args.basedir, 'control_%d.lhe' % args.control_nevents),
+                    args.control_nevents)
             t0 = time.time()
             res = factory.run_mode(SpinModeConfig(label, spinmode),
                                    extra_settings=extra)
@@ -635,6 +678,7 @@ def main():
                   % (label, time.time() - t0, res.BR, res.efficiency,
                      res.cross_out))
             sys.stdout.flush()
+            factory.events_file = full_events
         for label, spinmode in MODES:
             if label not in wanted:
                 continue

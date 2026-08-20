@@ -190,6 +190,39 @@ but neither is right.
 `onshell` is not a third point on the same axis: it has no virtuality at all and
 sits at exactly zero.
 
+### The control: is the `madspin`/`PA` split the spinmode, or the scheme?
+
+`unweighting = auto` sends `madspin` to `joint` and `PA`/`onshell` to
+`sequential` here (section 5), so the two curves being compared did not run the
+same accept/reject scheme. Every scheme is supposed to sample the same
+distribution; that is an assumption, not a measurement, so `madspin` was rerun
+with `unweighting` forced to `sequential`. 250 000 production events (a prefix
+of the same sample) -- `madspin` under `sequential` is the slow corner
+`_auto_unweighting_mode` exists to avoid, ~11x the CPU per event of the joint
+default here (67 ms/event/core against 5.9, wall clock x cores on the same
+machine, even though its *unweighting efficiency* is the better of the two,
+0.201 against 0.180) -- and the control only has to resolve a scheme effect
+against a 32 % spinmode effect.
+
+```
+sigma(m_tt < 2 m_t)   madspin      (joint,      1M)  0.9321 +- 0.0251 pb
+                      madspin_seq  (sequential, 250k) 0.9523 +- 0.0507 pb
+                      control / default = 1.022 +- 0.061   -> 0.4 sigma
+```
+
+and the mechanism moments agree too: mean `Delta m_tt` +0.129 vs +0.137 GeV,
+rms 2.131 vs 2.136 GeV, 353/250 000 vs 1382/1 000 000 events pushed below
+threshold (1412 vs 1382 per million). **The scheme is not what separates
+`madspin` from `PA`.**
+
+The control does settle one thing, though: `madspin`'s total cross section
+under `sequential` is 674.451 pb against 676.346 pb under `joint`, so
+`truth / madspin_seq = 0.96613` -- identical to `truth / PA = 0.96614` and
+`truth / onshell = 0.96614`, where the `joint` run gave 0.96341. The 0.28 %
+normalisation anomaly of `madspin` in section 1a is **entirely** the overweight
+events the joint accept/reject emits (695 of them, largest factor 127), and none
+of it is physics.
+
 ---
 
 ## 4. Above threshold, briefly
@@ -228,15 +261,19 @@ offset of section 1a.
   banner cross section of 674.44 pb. `PA` and `onshell` had **zero** such events
   and sit at 674.44 pb exactly. Every number here is computed from `sum(w)` and
   `sum(w^2)`, so the overweights are in both the central values and the errors --
-  but the 0.28 % is a *rate* effect on `madspin` alone and is inside the
-  normalisation offset quoted in section 1a (0.9634 vs 0.9661).
+  but the 0.28 % is a *rate* effect on `madspin` alone and is the whole of the
+  normalisation difference quoted in section 1a (0.9634 vs 0.9661) -- see the
+  control in section 3, where forcing `sequential` puts `madspin` at 0.96613,
+  on top of the other two.
 * **`unweighting = auto` does not resolve the same way for the three modes.**
   `madspin` ran under `joint`, `PA` and `onshell` under `sequential`; that is
   `_auto_unweighting_mode`'s documented rule (PA/onshell -> `sequential` at every
   multiplicity, madspin/full -> `joint` for up to two decaying particles), so
   each mode ran its own shipped default -- which is the right thing to compare --
   but it is an uncontrolled difference between the curves and the overweight
-  events above occurred only in the `joint` run. See the control below.
+  events above occurred only in the `joint` run. Controlled for in section 3:
+  forcing `madspin` to `sequential` moves the sub-threshold rate by
+  0.4 sigma and removes the overweights.
 
 ---
 
@@ -255,9 +292,13 @@ offset of section 1a.
   through the dynamical-scale definition. Nothing here is a statement about the
   scale uncertainty of the effect.
 * **The accept/reject scheme is not scanned.** Each mode ran the scheme `auto`
-  picks for it (recorded in `data/meta.json`), plus the one control below.
-  `sequential_global_retry` and `sequential_with_mass` are not exercised;
-  `MadSpin/validation/mt_lineshape/` covers that axis.
+  picks for it (recorded in `data/meta.json`), plus the one control of
+  section 3. `sequential_global_retry` and `sequential_with_mass` are not
+  exercised; `MadSpin/validation/mt_lineshape/` covers that axis.
+* **The control is at a quarter of the statistics** (250 000 events), so it
+  bounds a scheme effect on the sub-threshold rate at about 6 %, not better. It
+  rules out the scheme as the explanation of a 32 % difference; it does not
+  establish scheme agreement to better than 6 % on this observable.
 * **`2 -> 3` only.** The `n >= 3` effect of section 0 is the whole story and it
   scales with how much momentum the reshuffle can take from the recoil. A
   `2 -> 4` production would move `m_tt` more; a `2 -> 2` production would not

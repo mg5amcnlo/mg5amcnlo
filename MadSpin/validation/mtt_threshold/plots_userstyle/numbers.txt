@@ -1,7 +1,7 @@
 ==============================================================================
 m_tt near threshold: MadSpin spinmodes vs the doubly-resonant truth
 ==============================================================================
-code            : cfc248ee4df3 (claude/ms-mtt-threshold)
+code            : 4af4acbc367d (claude/ms-mtt-threshold)
 production      : p p > t t~ j
 truth           : p p > t t~ j, t > w+ b, t~ > w- b~
 MadSpin decays  : t > w+ b, t~ > w- b~
@@ -90,6 +90,16 @@ onshell     10.8343 +- 0.0855 pb  (16064 events)   -0.2601 +- 0.0936 pb vs truth
    madspin      +0.1365     2.1359     44.469              0       1382          0
    PA           -0.0283     2.1022     45.385              0       1825          0
    onshell      -0.0000     0.0000      0.000              0          0          0
+
+-- control: madspin_seq ------------------------------------------------
+   madspin repeated with the accept/reject scheme forced, so the
+   madspin-vs-PA difference can be attributed to the spinmode and not
+   to "auto" resolving to a different scheme for each of them.
+   resolved unweighting: sequential vs joint      for madspin
+   sigma(m_tt < 2m_t): madspin    0.9321 +- 0.0251 pb (1382 events)
+                       madspin_seq 0.9523 +- 0.0507 pb (353 events)
+   control / default = 1.0217 +- 0.0609  (0.4 sigma from 1)
+   total sigma: madspin    676.3464 pb   madspin_seq 674.4513 pb
 
 -- onshell vs the undecayed production sample -----------------------
    Same fine-grid histogram, bin for bin: True (556952 vs 556952 entries in range, max |difference| = 0)
