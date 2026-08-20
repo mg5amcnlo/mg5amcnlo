@@ -3050,6 +3050,7 @@ class MadSpinInterface(extended_cmd.Cmd):
 
             # 2) Generate every particle's decay events at the same time.
             gen_results = self._generate_decays(gen_jobs, mg5)
+            self._clear_refill_state()
 
             # 3) Fold the measured partial widths into the branching ratio.
             channel_widths = {}
@@ -3751,10 +3752,12 @@ class MadSpinInterface(extended_cmd.Cmd):
             out = self.generate_events(pdg, needed, self.mg5cmd,
                                        [decay_file_nb], run_name=run_name)
         reader = out[decay_file_nb]
-        if not os.path.exists(reader.name):
+        missing = [p for p in self._reader_paths(reader)
+                   if not os.path.exists(p)]
+        if missing:
             raise Exception(
                 "MadSpin: decay-event refill for pdg %s produced no events "
-                "(expected %s)." % (pdg, reader.name))
+                "(expected %s)." % (pdg, ', '.join(missing)))
         return reader
 
     @staticmethod
@@ -3872,13 +3875,26 @@ class MadSpinInterface(extended_cmd.Cmd):
                              in data.get('channel_widths', {}).items()))
         return out
 
-    def _refill_pool_path(self, decay_dir, gen):
-        """This worker's own file of the refill pool ``gen``. The refill asks the
-        unweighting for one file per worker, so a worker never reads (nor even
-        parses) the events that belong to the others."""
-        base = pjoin(decay_dir, 'Events', 'ms_refill_%d' % gen,
+    @staticmethod
+    def _refill_pool_dir(decay_dir, gen):
+        """Directory holding refill pool ``gen`` of this channel."""
+        return pjoin(decay_dir, 'Events', 'ms_refill_%d' % gen)
+
+    def _refill_pool_paths(self, decay_dir, gen):
+        """Every per-worker slice of the refill pool ``gen``, in worker order.
+        This layout is the contract between the owner (which puts the files
+        there, see :meth:`_generate_refill_pool`) and the waiters (which open
+        their own one and nothing else)."""
+        base = pjoin(self._refill_pool_dir(decay_dir, gen),
                      'unweighted_events.lhe')
-        paths = lhe_parser.EventFile.unweight_output_paths(base, self._shard_nb_core)
+        return lhe_parser.EventFile.unweight_output_paths(
+            base, self._shard_nb_core)
+
+    def _refill_pool_path(self, decay_dir, gen):
+        """This worker's own file of the refill pool ``gen``. The refill hands
+        each worker one file, so a worker never reads (nor even parses) the
+        events that belong to the others."""
+        paths = self._refill_pool_paths(decay_dir, gen)
         path = paths[self._shard_tag] if len(paths) > 1 else paths[0]
         if not os.path.exists(path):
             raise Exception("MadSpin: refill pool %s is missing for worker %s"
@@ -3933,6 +3949,112 @@ class MadSpinInterface(extended_cmd.Cmd):
         return reader
 
     @staticmethod
+    def _split_pool_round_robin(sources, targets):
+        """Deal the events of the ``sources`` LHE file(s) round-robin into the
+        ``targets`` files, each of which gets the banner of the first source (a
+        decay pool is picked among the channels of a pdg by its cross-section,
+        which is read from that banner). Returns the number of events written.
+
+        Worker i therefore ends up with the events at positions i, i+N, ... of
+        the pool -- exactly the stripe it would otherwise pick out itself, minus
+        having to parse the other workers' events to get there."""
+        first = lhe_parser.EventFile(sources[0])
+        banner = first.banner
+        first.close()
+        outs = [lhe_parser.EventFile(p, 'w') for p in targets]
+        nb_event = 0
+        try:
+            for out in outs:
+                if banner:
+                    out.write(banner)
+            for src in sources:
+                fsock = lhe_parser.EventFile(src)
+                fsock.parsing = False   # raw lines: no need to build Event objects
+                try:
+                    for text in fsock:
+                        outs[nb_event % len(outs)].write(''.join(text))
+                        nb_event += 1
+                finally:
+                    fsock.close()
+        finally:
+            for out in outs:
+                out.write('</LesHouchesEvents>\n')
+                out.close()
+        return nb_event
+
+    def _materialise_refill_pool(self, sources, targets, decay_dir, gen):
+        """Put the events the generation produced at the per-worker paths the
+        waiters will open, when the backend did not write them there itself.
+
+        Built in a sibling temporary directory and renamed into place, so
+        ``Events/ms_refill_<gen>`` never exists half-written -- a waiter that
+        gets as far as looking at it (it should not: it waits for the generation
+        marker, published later still) finds either nothing or the whole pool."""
+        final = self._refill_pool_dir(decay_dir, gen)
+        tmp = final + '.part'
+        if os.path.exists(tmp):
+            _force_rmtree(tmp)
+        os.makedirs(tmp)
+        nb_event = self._split_pool_round_robin(
+            sources, [pjoin(tmp, os.path.basename(p)) for p in targets])
+        if os.path.exists(final):
+            _force_rmtree(final)
+        os.rename(tmp, final)
+        return nb_event
+
+    def _generate_refill_pool(self, pdg, decay_file_nb, needed, gen):
+        """Generate generation ``gen`` of this channel's decay pool and leave it
+        COMPLETE at the per-worker paths of :meth:`_refill_pool_paths`. Returns
+        those paths. Publishing ``gen`` is only allowed once this has returned.
+
+        Two generation backends land here and they do not agree on where they
+        write. The plain madevent one honours ``run_name`` and splits the
+        unweighting one file per worker, i.e. it writes the canonical layout
+        itself. The gridpack one (any ``ms_dir`` run) goes through run.sh, which
+        knows nothing of either: it always writes a single
+        ``<decay_dir>/events.lhe.gz`` -- straight on top of the pool the other
+        workers are still reading. So on that backend, move the pool aside for
+        the duration, split what run.sh produced into the per-worker files, and
+        put the pool back: a refill then only ever *adds* a generation. Renaming
+        is safe for the workers that already hold the pool open -- they keep
+        their inode -- and this whole routine runs under the channel's exclusive
+        refill lock."""
+        decay_dir = self._decay_dir(self.path_me, pdg, decay_file_nb)
+        targets = self._refill_pool_paths(decay_dir, gen)
+        pool = pjoin(decay_dir, 'events.lhe.gz')
+        stash = pool + '.mspool'
+        # mirrors ``use_gridpack`` in generate_events
+        protect = bool(self.options['ms_dir']) and os.path.exists(pool)
+        if protect:
+            if os.path.exists(stash):
+                os.remove(stash)
+            os.rename(pool, stash)
+        try:
+            reader = self._regenerate_events(pdg, decay_file_nb, needed,
+                                             'ms_refill_%d' % gen)
+            sources = self._reader_paths(reader)
+            try:
+                reader.close()
+            except Exception:
+                pass
+            if sources != targets:
+                self._materialise_refill_pool(sources, targets, decay_dir, gen)
+        finally:
+            if protect:
+                try:
+                    os.remove(pool)
+                except OSError:
+                    pass
+                os.rename(stash, pool)
+        missing = [p for p in targets if not os.path.exists(p)]
+        if missing:
+            raise Exception(
+                "MadSpin: the refill of pdg %s (decay file %s) did not produce "
+                "%s; the generation was not published, so no worker will try to "
+                "read it." % (pdg, decay_file_nb, ', '.join(missing)))
+        return targets
+
+    @staticmethod
     def _published_gen(decay_dir):
         """Highest refill generation published on disk for this channel (0 if
         none). The single source of truth both the owner and the waiters read."""
@@ -3943,6 +4065,24 @@ class MadSpinInterface(extended_cmd.Cmd):
             return int(open(gen_file).read().strip())
         except (ValueError, IOError):
             return 0
+
+    @staticmethod
+    def _publish_gen(decay_dir, gen):
+        """Make ``gen`` the published generation of this channel.
+
+        Written to a temporary file and renamed over the marker, so a waiter
+        polling :meth:`_published_gen` reads either the old generation or the
+        new one, never a half-written number. The marker becoming visible IS the
+        promise that every file of that generation is complete and readable, so
+        this must only ever be called once :meth:`_generate_refill_pool` has
+        returned."""
+        gen_file = pjoin(decay_dir, 'ms_refill.gen')
+        tmp = '%s.%s.tmp' % (gen_file, os.getpid())
+        with open(tmp, 'w') as fp:
+            fp.write('%d\n' % gen)
+            fp.flush()
+            os.fsync(fp.fileno())
+        os.replace(tmp, gen_file)
 
     def _owner_generate(self, pdg, decay_file_nb, target_gen, needed):
         """Generate this channel's pool up to ``target_gen`` under the channel
@@ -3958,7 +4098,6 @@ class MadSpinInterface(extended_cmd.Cmd):
         -- that (rare) refill is intentionally not guaranteed reproducible."""
         import fcntl
         decay_dir = self._decay_dir(self.path_me, pdg, decay_file_nb)
-        gen_file = pjoin(decay_dir, 'ms_refill.gen')
         with open(pjoin(decay_dir, 'ms_refill.lock'), 'w') as lock:
             fcntl.flock(lock, fcntl.LOCK_EX)
             try:
@@ -3993,14 +4132,17 @@ class MadSpinInterface(extended_cmd.Cmd):
                     self.me_int = {}
                     stag, self._shard_tag = self._shard_tag, None
                     try:
-                        self._regenerate_events(pdg, decay_file_nb, det_needed,
-                                                'ms_refill_%d' % new_gen)
+                        self._generate_refill_pool(pdg, decay_file_nb,
+                                                   det_needed, new_gen)
                     finally:
                         self._shard_tag = stag
                         random.setstate(rng_state)
-                    # publish only once every file is complete on disk
-                    with open(gen_file, 'w') as fp:
-                        fp.write('%d\n' % new_gen)
+                    # Publish only once every per-worker file of the generation
+                    # is complete on disk: the marker is the ONLY thing a waiter
+                    # looks at before opening its slice, so making it visible any
+                    # earlier is telling that worker to open a file that is not
+                    # there. _generate_refill_pool has checked that they all are.
+                    self._publish_gen(decay_dir, new_gen)
                     current = new_gen
             finally:
                 fcntl.flock(lock, fcntl.LOCK_UN)
@@ -4013,6 +4155,36 @@ class MadSpinInterface(extended_cmd.Cmd):
     # so a blocked owner can walk the wait-for chain and spot a cycle.
     def _status_path(self, worker_id):
         return pjoin(self.path_me, 'ms_wstatus_%d' % worker_id)
+
+    def _clear_refill_state(self):
+        """Drop the refill bookkeeping an earlier run left in the decay
+        directories. Called by the parent, once, after the pools are generated
+        and before any worker is forked.
+
+        A reused ``ms_dir`` still holds the previous run's ``ms_refill.gen`` and
+        ``Events/ms_refill_*``. Every worker of THIS run starts at generation 0,
+        so the first time one runs its pool out it would read that marker,
+        conclude generation 1 is already published, generate nothing and open the
+        *other* run's pool -- which was sized for that run's efficiency and split
+        for its ``nb_core``, so the slice this run's worker wants may not even
+        exist. A run's refills are that run's own."""
+        for decay_dir in misc.glob("decay_*_*", self.path_me):
+            try:
+                os.remove(pjoin(decay_dir, 'ms_refill.gen'))
+            except OSError:
+                pass
+            # a refill interrupted midway leaves the pool stashed aside
+            # (_generate_refill_pool); the run about to start regenerates the
+            # pool anyway, so only put it back when nothing else is there
+            pool = pjoin(decay_dir, 'events.lhe.gz')
+            stash = pool + '.mspool'
+            if os.path.exists(stash):
+                if os.path.exists(pool):
+                    os.remove(stash)
+                else:
+                    os.rename(stash, pool)
+            for stale in misc.glob("ms_refill_*", pjoin(decay_dir, 'Events')):
+                _force_rmtree(stale)
 
     def _clear_worker_status(self, nb_core):
         """Remove stale per-worker status files before forking a phase, so a
