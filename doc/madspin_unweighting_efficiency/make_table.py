@@ -5,8 +5,8 @@
     python3 make_table.py results_after.json --before results_before.json \\
             > table.tex                                    (before and after)
 
-Column definitions -- all four come straight from counters MadSpin prints at
-the end of the run, none is re-derived here:
+Column definitions -- all of them come straight from counters MadSpin prints at
+the end of the run, none is re-derived from the event file:
 
   eps_m     "MadSpin sequential mass stage: X mass sets per accepted event"
   eps_t     "MadSpin sequential slot P: X decay events per accepted one", for
@@ -16,8 +16,17 @@ the end of the run, none is re-derived here:
             trial count of "MadSpin unweight efficiency: ... (W written /
             T trials, R trials/event)", because one joint trial draws exactly
             one decay per decaying particle.
+  N_P_off   offshell PRODUCTION density matrices evaluated in the unweighting
+            loop -- see prod_density_offshell() for where each number comes
+            from.  This is the expensive object in a MadSpin run (~90 us a
+            call against ~8 us for a mass set whose only cost is the
+            reshuffling jacobian), and it is the one thing eps_m does not see:
+            eps_m counts mass sets, which are cheap under PA and are a
+            production density each under madspin/full.
 
 eps is always "generated points per accepted point": lower is better, floor 1.
+N_dec and N_P_off are absolute counts over the whole run: lower is better, no
+floor, and they are the two that translate into wall clock.
 
 With ``--before`` the two campaigns are put side by side.  They must be the same
 process, the same event count and the same seeds, and that is asserted rather
@@ -157,6 +166,68 @@ def row_numbers(run, position_to_pdg, key=None):
     return eps_m, pdg_to_eps.get(6), pdg_to_eps.get(-6), n_dec, None
 
 
+def prod_density_offshell(run):
+    """Offshell production density matrices evaluated in the unweighting loop.
+
+    No new counter was needed for this: every number below is already in the
+    logs the campaign parsed.  Where each comes from, in
+    ``MadSpin/interface_madspin.py``:
+
+    * ``PA`` / ``onshell`` -- ZERO, and not a dash: those spinmodes evaluate the
+      production density at the ONSHELL momenta (``_density_pole_approximation``
+      is True), and they evaluate it exactly ONCE per production event, cached
+      on the event as ``_ms_density_prod`` (line 8825/8839 for the staged path,
+      ``prod_density_cached`` at line 4384/4419 for ``joint``).  So the whole PA
+      and onshell half of the table pays a flat 100\\,000 onshell production
+      densities -- one per production event, whatever the scheme -- and no
+      offshell one at all.  That is why the scheme axis cannot move this column
+      there, and why a "which scheme costs more production densities" question
+      is only a question for ``madspin``/``full``.
+
+    * ``madspin`` / ``full`` + ``joint`` -- the trial count.  ``offshell_density``
+      is True, so line 4419's test ``prod_density_cached is None or not
+      density_pole_approximation`` is satisfied on EVERY trial and
+      ``calculate_matrix_element_from_density`` reshuffles the production (line
+      9741) and then evaluates the density at those momenta (line 9796).  One
+      per trial, no reuse.
+
+    * ``madspin`` / ``full`` + a staged scheme -- the number of mass sets DRAWN,
+      minus the chain restarts.  ``_upfront_production`` reshuffles a copy of the
+      production (line 8097) and, if that succeeded, evaluates the density on it
+      (line 8104); a failed reshuffle returns before the density and is counted
+      as ``nb_production_restart``.  Note "drawn", not "accepted": the density is
+      what the mass-set weight is BUILT from, so a rejected mass set has already
+      paid for it.
+
+    The last bullet is the one place the derivation is not airtight in general.
+    ``nb_production_restart`` merges the up-front failure above (which happens
+    BEFORE the density) with two in-loop failures (which happen after it), so on
+    a run where it is non-zero the subtraction could under-count.  It is zero on
+    every row of both campaigns -- the logs print no "chains restarted on a mass
+    set" line at all -- so here the number is exact, and that is checked below
+    rather than assumed.  A run where it is not zero would want the counter split
+    before this column could be trusted.
+
+    Excluded on purpose: the max-weight probe, which is 75 events x 500
+    phase-space points = 37\\,500 further offshell production densities on the
+    madspin rows.  It is a setup cost, it is the same size on all three of them,
+    and none of the columns beside it counts the probe either.
+    """
+    if run['spinmode'] in ('PA', 'onshell'):
+        return 0
+    if run.get('reported_mode') == 'joint':
+        return run['n_trials']
+    mass = run.get('mass_stage')
+    if not mass:
+        return 0
+    restarts = run.get('chain_restarts', 0)
+    assert restarts == 0, (
+        'nb_production_restart is %d, so "mass sets drawn" no longer counts '
+        'production densities exactly -- split the counter before quoting '
+        'N_P_off for this run' % restarts)
+    return mass['drawn'] - restarts
+
+
 def fmt(value, digits=2):
     """Two decimals: MadSpin prints these counters to two decimals itself, and
     at the event counts used here the statistical error sits in the second
@@ -231,7 +302,63 @@ CAPTION_COMMON = (
     r'against different weights and are expected to have different '
     r'efficiencies; the option is \texttt{PA}-only and is ignored by '
     r'\texttt{madspin} (which always carries that jacobian) and by '
-    r'\texttt{onshell} (which never reshuffles). ')
+    r'\texttt{onshell} (which never reshuffles). '
+    r'$N^P_{\mathrm{off}}$ is the number of \emph{offshell production} density '
+    r'matrices the unweighting loop evaluates, and it is in the table because '
+    r'it is the expensive object of a MadSpin run: an offshell mass set -- a '
+    r'production reshuffle and then this density -- takes about 90\,$\mu$s '
+    r'against about 8\,$\mu$s for a \texttt{PA} one, which reshuffles too but '
+    r'evaluates no density, so nearly the whole difference is the density '
+    r'itself. $\epsilon_m$ counts mass sets and so prices the two the same. '
+    r'$N^P_{\mathrm{off}}$ is exactly zero under \texttt{PA} and '
+    r'\texttt{onshell}: those evaluate their production density at the '
+    r'\emph{onshell} momenta, once per production event and cached on it, so '
+    r'the whole \texttt{PA}/\texttt{onshell} half of the table pays a flat '
+    r'100\,000 (one per production event) whatever the scheme, and none of it '
+    r'offshell. Under \texttt{madspin} it is one per \texttt{joint} trial, and '
+    r'one per mass set \emph{drawn} in the staged schemes -- drawn and not '
+    r'accepted, since the density is what the mass-set weight is built from. '
+    r'It is one column and not two because the per-event bound is reached only '
+    r'under \texttt{PA}, where this count is zero, so it cannot move; that is '
+    r'asserted when the table is built. '
+    r'It is also the column that disagrees with $N_{\mathrm{dec}}$ about which '
+    r'scheme is cheapest, which is the reason to print both. In the '
+    r'\texttt{madspin} block \texttt{sequential\_global\_retry} draws '
+    r'\emph{fewer} decays than \texttt{joint} (757\,657 against 858\,196, 12\,\% '
+    r'fewer) and yet evaluates 3.4 times as many production densities '
+    r'(1\,449\,758 against 429\,098), because a rejected decay there throws the '
+    r'mass set away and every new mass set is a fresh production reshuffle and '
+    r'a fresh density. On the wall clock the production densities win and '
+    r'$N_{\mathrm{dec}}$ is the misleading one: on the \emph{before} campaign '
+    r'that row is the slowest of the twelve, 110\,s against 91\,s for '
+    r'\texttt{madspin}/\texttt{joint} and 96\,s for '
+    # NB double-quoted raw strings: r'...\'...' keeps the backslash, and a
+    # stray \' in LaTeX is the acute-accent command, not an apostrophe.
+    r"\texttt{madspin}/\texttt{sequential} (8 cores). The after campaign's "
+    r'timings are not usable for that check and no timing here is taken from '
+    r'them: its six \texttt{madspin} and \texttt{onshell} rows reproduce the '
+    r"before campaign's counters exactly, to the last unit of every column, "
+    r"and still took 1.4--2.2 times as long, so they measure the machine's "
+    r'load and not the code. ')
+
+
+# The caption goes inside a \parbox, and that is not a styling choice.
+# ``\@makecaption`` measures the caption by typesetting it into a single hbox to
+# see whether it fits on one line, and a caption this long overflows TeX's
+# maximum dimension (16384\,pt) while it is doing so: "! Dimension too large.",
+# no PDF.  The fragment used to sit just under that ceiling by luck -- 4210
+# characters compiled, and the N^P_off paragraph pushed it to 6400 and broke it.
+# A \parbox gives the box a fixed width, so the measurement can no longer run
+# away and the ceiling stops being a length limit on what the caption may say.
+#
+# The width is \linewidth less an allowance for the "Table N: " label, which
+# ``\@makecaption`` sets on the same line as the box.  At \linewidth exactly the
+# caption overruns the right margin by the width of that label (an Overfull
+# \hbox of 38\,pt, and visibly off the page); 4.5\,em covers the label at every
+# usual size.  \dimexpr is e-TeX, so this needs no package the fragment does not
+# already assume.
+CAPTION_PARBOX_OPEN = r'\parbox[t]{\dimexpr\linewidth-4.5em}{'
+CAPTION_PARBOX_CLOSE = r'}}'
 
 
 def uncertainty_sentence(errors):
@@ -276,14 +403,16 @@ def emit_single(data, label):
         fam_tex = (r'\texttt{PA} (no jac.)' if 'no jac' in family
                    else r'\texttt{%s}' % family)
         unw_tex = r'\texttt{%s}' % unw.replace('_', r'\_')
-        lines.append('%s & %s & %s \\\\'
+        lines.append('%s & %s & %s & %s \\\\'
                      % (fam_tex, unw_tex,
-                        cells_for(run, position_to_pdg, key, errors, 'after')))
+                        cells_for(run, position_to_pdg, key, errors, 'after'),
+                        num(prod_density_offshell(run))))
 
-    out = [r'\begin{table}[htbp]', r'  \centering', r'  \begin{tabular}{llrrrr}',
+    out = [r'\begin{table}[htbp]', r'  \centering', r'  \begin{tabular}{llrrrrr}',
            r'    \toprule',
            r'    mode & unweighting & $\epsilon_m$ & $\epsilon_t$ '
-           r'& $\epsilon_{\bar t}$ & $N_{\mathrm{dec}}$ \\',
+           r'& $\epsilon_{\bar t}$ & $N_{\mathrm{dec}}$ '
+           r'& $N^P_{\mathrm{off}}$ \\',
            r'    \midrule']
     previous = None
     for (key, family, unw), line in zip(present, lines):
@@ -292,11 +421,13 @@ def emit_single(data, label):
         previous = family
         out.append('    ' + line)
     out += [r'    \bottomrule', r'  \end{tabular}',
-            r'  \caption{MadSpin unweighting cost per accept/reject stage for '
+            r'  \caption{' + CAPTION_PARBOX_OPEN +
+            r'MadSpin unweighting cost per accept/reject stage for '
             r'$p\,p \to t\bar t$ with both tops decayed ($t \to b\,W^+$, '
             r'$W^+ \to \ell^+\nu$ and charge conjugate), one production sample '
-            r'of %s events and one MadSpin seed shared by every row. %s%s}'
-            % (num(nev or 0), CAPTION_COMMON, uncertainty_sentence(errors)),
+            r'of %s events and one MadSpin seed shared by every row. %s%s'
+            % (num(nev or 0), CAPTION_COMMON, uncertainty_sentence(errors))
+            + CAPTION_PARBOX_CLOSE,
             r'  \label{%s}' % label, r'\end{table}']
     return out, errors, nev
 
@@ -326,18 +457,28 @@ def emit_both(after, before, label):
         unw_tex = r'\texttt{%s}' % unw.replace('_', r'\_')
         cb = cells_for(run_b, position_to_pdg, key, errors, 'before')
         ca = cells_for(run_a, position_to_pdg, key, errors, 'after')
-        lines.append('%s & %s & %s & %s \\\\' % (fam_tex, unw_tex, cb, ca))
+        # One shared N_P_off column rather than one per campaign, and that is a
+        # statement about the change rather than a saving of ink: the per-event
+        # bound is reached only under PA, and PA evaluates no offshell
+        # production density at all, so this column CANNOT move.  Asserted, not
+        # assumed -- if it ever moves, the layout is wrong and so is the claim.
+        npa, npb = prod_density_offshell(run_a), prod_density_offshell(run_b)
+        assert npa == npb, (
+            '%s: N_P_off moved across the campaigns (%d -> %d); it is emitted '
+            'as one shared column on the grounds that it cannot' % (key, npb, npa))
+        lines.append('%s & %s & %s & %s & %s \\\\'
+                     % (fam_tex, unw_tex, cb, ca, num(npa)))
         if cb != ca:
             moved.append(key)
 
     out = [r'\begin{table}[htbp]', r'  \centering', r'  \small',
-           r'  \begin{tabular}{ll rrrr rrrr}', r'    \toprule',
-           r'    & & \multicolumn{4}{c}{before} & \multicolumn{4}{c}{after} \\',
+           r'  \begin{tabular}{ll rrrr rrrr r}', r'    \toprule',
+           r'    & & \multicolumn{4}{c}{before} & \multicolumn{4}{c}{after} & \\',
            r'    \cmidrule(lr){3-6} \cmidrule(lr){7-10}',
            r'    mode & unweighting & $\epsilon_m$ & $\epsilon_t$ '
            r'& $\epsilon_{\bar t}$ & $N_{\mathrm{dec}}$ '
            r'& $\epsilon_m$ & $\epsilon_t$ & $\epsilon_{\bar t}$ '
-           r'& $N_{\mathrm{dec}}$ \\',
+           r'& $N_{\mathrm{dec}}$ & $N^P_{\mathrm{off}}$ \\',
            r'    \midrule']
     previous = None
     for (key, family, unw), line in zip(present, lines):
@@ -347,7 +488,8 @@ def emit_both(after, before, label):
         out.append('    ' + line)
     moved_tex = ', '.join(r'\texttt{%s}' % k.replace('_', r'\_') for k in moved)
     out += [r'    \bottomrule', r'  \end{tabular}',
-            r'  \caption{MadSpin unweighting cost per accept/reject stage for '
+            r'  \caption{' + CAPTION_PARBOX_OPEN +
+            r'MadSpin unweighting cost per accept/reject stage for '
             r'$p\,p \to t\bar t$ with both tops decayed ($t \to b\,W^+$, '
             r'$W^+ \to \ell^+\nu$ and charge conjugate), before and after the '
             r'per-event mass-stage bound. One production sample of %s events '
@@ -369,9 +511,10 @@ def emit_both(after, before, label):
             r'$C \ge \max w$ cancels out of it: the bound sets the cost and not '
             r'the sample, and the lineshape measurement in '
             r'\texttt{MadSpin/validation/mt\_lineshape} is the check that it '
-            r'does.}'
+            r'does.'
             % (num(nev or 0), CAPTION_COMMON, moved_tex or 'none',
-               uncertainty_sentence(errors)),
+               uncertainty_sentence(errors))
+            + CAPTION_PARBOX_CLOSE,
             r'  \label{%s}' % label, r'\end{table}']
     return out, errors, nev
 
@@ -398,9 +541,9 @@ def diagnostics(data, errors, label_of_campaign, runs_extra=None):
     w('final-state layouts seen in the production sample: %s\n'
       % data['slot_diagnostics']['layouts'])
     w('production cross section: %s pb\n' % data.get('cross_in'))
-    w('\n%-34s %8s %8s %8s %8s %10s %8s %6s %8s %s\n'
-      % ('run', 'written', 'eps_m', 'eps_t', 'eps_tbar', 'N_dec', 'wall_s',
-         'ovfl', 'carried', 'mass bound'))
+    w('\n%-34s %8s %8s %8s %8s %10s %10s %8s %6s %8s %s\n'
+      % ('run', 'written', 'eps_m', 'eps_t', 'eps_tbar', 'N_dec', 'N_P_off',
+         'wall_s', 'ovfl', 'carried', 'mass bound'))
     for key, run in runs.items():
         eps_m, eps_t, eps_tb, n_dec, joint = row_numbers(run, position_to_pdg,
                                                          key)
@@ -408,9 +551,10 @@ def diagnostics(data, errors, label_of_campaign, runs_extra=None):
             eps_m = eps_t = eps_tb = joint
         ow = run.get('overweight')
         mb = run.get('mass_bound')
-        w('%-34s %8d %8s %8s %8s %10d %8.0f %6d %8s %s\n'
+        w('%-34s %8d %8s %8s %8s %10d %10d %8.0f %6d %8s %s\n'
           % (key, run['n_written'], fmt(eps_m, 4), fmt(eps_t, 4),
-             fmt(eps_tb, 4), n_dec, run['wall_seconds'], run['overflows'],
+             fmt(eps_tb, 4), n_dec, prod_density_offshell(run),
+             run['wall_seconds'], run['overflows'],
              '--' if ow is None else '%d' % ow['events'],
              '--' if mb is None else
              ('%d/%d per-event' % (mb['per_event'], mb['events'])

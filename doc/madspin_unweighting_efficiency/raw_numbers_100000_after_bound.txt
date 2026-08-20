@@ -62,19 +62,19 @@ position -> pdg: {'0': 6, '1': -6}
 final-state layouts seen in the production sample: {'6/-6': 2000}
 production cross section: 504.491 pb
 
-run                                 written    eps_m    eps_t eps_tbar      N_dec   wall_s   ovfl  carried mass bound
-PA_joint                             100000   5.6700   5.6700   5.6700    1134784      156      0       10 --
-PA_sequential                        100000   1.4000   1.2400   3.2000     444598      126      0        0 100000/100000 per-event
-PA_sequential_global_retry           100000   5.2900   3.7800   3.1900     697292      149      0        0 100000/100000 per-event
-PAnojac_joint                        100000   3.1900   3.1900   3.1900     637820      103      0        0 --
-PAnojac_sequential                   100000   1.0000   1.1000   3.1800     428693      139      0        0 100000/100000 per-event
-PAnojac_sequential_global_retry      100000   3.5300   3.5200   3.1900     670504      115      0        0 100000/100000 per-event
-madspin_joint                        100000   4.2900   4.2900   4.2900     858196      192      0        5 --
-madspin_sequential                   100000   3.3100   2.3900   4.2400     662516      212      5        5 0/100000 per-event, 100000 global
-madspin_sequential_global_retry      100000  14.5000   4.3700   3.2100     757657      186     21       10 0/100000 per-event, 100000 global
-onshell_joint                        100000   3.1900   3.1900   3.1900     638504      146      0        0 --
-onshell_sequential                   100000       --   1.1000   3.1900     429374       96      0        0 --
-onshell_sequential_global_retry      100000       --   3.5300   3.1900     671733      104      0        0 --
+run                                 written    eps_m    eps_t eps_tbar      N_dec    N_P_off   wall_s   ovfl  carried mass bound
+PA_joint                             100000   5.6700   5.6700   5.6700    1134784          0      156      0       10 --
+PA_sequential                        100000   1.4000   1.2400   3.2000     444598          0      126      0        0 100000/100000 per-event
+PA_sequential_global_retry           100000   5.2900   3.7800   3.1900     697292          0      149      0        0 100000/100000 per-event
+PAnojac_joint                        100000   3.1900   3.1900   3.1900     637820          0      103      0        0 --
+PAnojac_sequential                   100000   1.0000   1.1000   3.1800     428693          0      139      0        0 100000/100000 per-event
+PAnojac_sequential_global_retry      100000   3.5300   3.5200   3.1900     670504          0      115      0        0 100000/100000 per-event
+madspin_joint                        100000   4.2900   4.2900   4.2900     858196     429098      192      0        5 --
+madspin_sequential                   100000   3.3100   2.3900   4.2400     662516     331038      212      5        5 0/100000 per-event, 100000 global
+madspin_sequential_global_retry      100000  14.5000   4.3700   3.2100     757657    1449758      186     21       10 0/100000 per-event, 100000 global
+onshell_joint                        100000   3.1900   3.1900   3.1900     638504          0      146      0        0 --
+onshell_sequential                   100000       --   1.1000   3.1900     429374          0       96      0        0 --
+onshell_sequential_global_retry      100000       --   3.5300   3.1900     671733          0      104      0        0 --
 
 rows the bound is expected to reach: PA_sequential, PA_sequential_global_retry, PAnojac_sequential, PAnojac_sequential_global_retry
 
@@ -91,18 +91,18 @@ position -> pdg: {'0': 6, '1': -6}
 final-state layouts seen in the production sample: {'6/-6': 2000}
 production cross section: 504.491 pb
 
-run                                 written    eps_m    eps_t eps_tbar      N_dec   wall_s   ovfl  carried mass bound
-PA_joint                             100000   5.6700   5.6700   5.6700    1134784      108      0       -- --
-PA_sequential                        100000   3.5000   1.2400   3.1900     443088       81     14       -- --
-PA_sequential_global_retry           100000  13.3400   3.7900   3.2000     699192       94     49       -- --
-PAnojac_joint                        100000   3.1900   3.1900   3.1900     637820       74      0       -- --
-PAnojac_sequential                   100000   1.1000   1.1000   3.1800     428383       77      0       -- --
-PAnojac_sequential_global_retry      100000   3.8800   3.5200   3.1900     670846       84      0       -- --
-madspin_joint                        100000   4.2900   4.2900   4.2900     858196       91      0       -- --
-madspin_sequential                   100000   3.3100   2.3900   4.2400     662516       96      5       -- --
-madspin_sequential_global_retry      100000  14.5000   4.3700   3.2100     757657      110     21       -- --
-onshell_joint                        100000   3.1900   3.1900   3.1900     638504       74      0       -- --
-onshell_sequential                   100000       --   1.1000   3.1900     429374       72      0       -- --
-onshell_sequential_global_retry      100000       --   3.5300   3.1900     671733       72      0       -- --
+run                                 written    eps_m    eps_t eps_tbar      N_dec    N_P_off   wall_s   ovfl  carried mass bound
+PA_joint                             100000   5.6700   5.6700   5.6700    1134784          0      108      0       -- --
+PA_sequential                        100000   3.5000   1.2400   3.1900     443088          0       81     14       -- --
+PA_sequential_global_retry           100000  13.3400   3.7900   3.2000     699192          0       94     49       -- --
+PAnojac_joint                        100000   3.1900   3.1900   3.1900     637820          0       74      0       -- --
+PAnojac_sequential                   100000   1.1000   1.1000   3.1800     428383          0       77      0       -- --
+PAnojac_sequential_global_retry      100000   3.8800   3.5200   3.1900     670846          0       84      0       -- --
+madspin_joint                        100000   4.2900   4.2900   4.2900     858196     429098       91      0       -- --
+madspin_sequential                   100000   3.3100   2.3900   4.2400     662516     331038       96      5       -- --
+madspin_sequential_global_retry      100000  14.5000   4.3700   3.2100     757657    1449758      110     21       -- --
+onshell_joint                        100000   3.1900   3.1900   3.1900     638504          0       74      0       -- --
+onshell_sequential                   100000       --   1.1000   3.1900     429374          0       72      0       -- --
+onshell_sequential_global_retry      100000       --   3.5300   3.1900     671733          0       72      0       -- --
 
 rows the bound is expected to reach: PA_sequential, PA_sequential_global_retry, PAnojac_sequential, PAnojac_sequential_global_retry
