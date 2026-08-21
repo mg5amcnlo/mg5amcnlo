@@ -34,6 +34,9 @@ sub-threshold region should be structurally empty for **every** mode, not just
 for `onshell`.
 
 `RESULTS.md` has the answer and the numbers. This file is the how.
+[`BUMP.md`](BUMP.md) answers a separate question about the same figure: what
+the bump just above `2 m_t` is, and whether it compensates the empty region
+below threshold.
 
 ## What is in here
 
@@ -42,6 +45,7 @@ for `onshell`.
 | `run_mtt_threshold.py` | generates everything and writes the raw histograms. Imports the `t t~ j` driver and re-points it; the only file that needs MG5/MadSpin. |
 | `plot_mtt_threshold.py` | the figure in the MG7 paper style, plus the full numeric report. Imports the `t t~ j` figure code and re-points it. |
 | `plot_mtt_threshold_userstyle.py` | the same figure in the user's own matplotlib style. Same data, same numbers. |
+| `analyse_bump.py` | a follow-up reading of the same histograms: what the bump just above `2 m_t` is, and whether it compensates the empty sub-threshold region. Writes `plots*/mtt_bump.pdf` + `.png` and `plots*/bump_numbers.txt`; answer in `BUMP.md`. Generates nothing. |
 | `data/histograms.npz` | the raw measurement: a uniform 0.25 GeV grid over 290-520 GeV, one `sumw`/`sumw2`/`cnt` triple per sample, plus the event-by-event `Delta m_tt` histograms. |
 | `data/meta.json` | processes, cards, cuts, seeds, statistics, cross sections, resolved unweighting scheme, code SHA. |
 | `data/logs/` | every MadSpin log and card, and the MG5 logs and scripts. Copied as `.log.txt` because the repository's `.gitignore` has a blanket `*.log` rule. |
@@ -92,6 +96,7 @@ Re-drawing needs nothing but numpy and matplotlib:
 ```
 python3 plot_mtt_threshold.py            # -> plots/
 python3 plot_mtt_threshold_userstyle.py  # -> plots_userstyle/
+python3 analyse_bump.py                  # -> both, as mtt_bump.* / bump_numbers.txt
 ```
 
 `plot_mtt_threshold.py --check-minus` (on by default) re-opens the MG7-style

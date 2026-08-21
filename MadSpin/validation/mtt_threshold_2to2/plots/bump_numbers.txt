@@ -1,0 +1,298 @@
+==============================================================================
+The bump just above 2 m_t in the 2 -> 2 m_tt figure
+==============================================================================
+code            : 721ffc1149ef (claude/ms-mtt-threshold-2to2)
+reference figure: plots/mtt_threshold.pdf, plots_userstyle/mtt_threshold.pdf
+2 m_t           : 346.0000 GeV
+bwcutoff        : 15 widths   (m_t = 173, Gamma_t = 1.4915)
+
+THE QUESTION.  The figure draws (1/sigma) dsigma/dm_tt.  Every spinmode
+is EXACTLY zero below 2 m_t and the shape ratio to the truth rises to
+about 1.12 just above it.  Is that bump a normalisation artefact of the
+self-normalisation, and does it compensate the empty region below?
+
+-- 1. the two normalisations, and why the answer differs between them --
+
+   sub-threshold rate the modes miss (truth, m_tt < 2 m_t):
+      0.9249 +- 0.0099 pb   = 0.17456% +- 0.00187% of the truth total (529.8240 pb)
+
+   SELF-NORMALISED (what the figure draws).  Each curve is divided by
+   its own total sigma, so each integrates to 1 over the full m_tt
+   range.  A mode with zero sub-threshold rate therefore has its
+   above-threshold curve scaled up by 1/(1 - f_below) relative to the
+   truth SHAPE:
+      1/(1 - 0.0017456) - 1 = +0.17487%   -- a FLAT rescaling, every bin
+   The visible bump is nothing like that size.  Largest drawn shape
+   ratio above threshold, and the flat artefact for comparison:
+      madspin     max shape ratio 1.122 +- 0.030 in 349-350 GeV  =  +12.2%, i.e. 70 x the flat artefact
+      PA          max shape ratio 1.122 +- 0.030 in 349-350 GeV  =  +12.2%, i.e. 70 x the flat artefact
+      onshell     max shape ratio 1.122 +- 0.030 in 349-350 GeV  =  +12.2%, i.e. 70 x the flat artefact
+      madspin_v1  max shape ratio 1.122 +- 0.030 in 349-350 GeV  =  +12.2%, i.e. 70 x the flat artefact
+   => the bump is a REDISTRIBUTION of rate, not the self-normalisation.
+
+   ABSOLUTE pb.  The two sides do NOT have the same total: the truth
+   loses 4.24% to the Breit-Wigner truncation (RESULTS.md section 3),
+   which is a global rate loss and has nothing to do with the threshold.
+      madspin     sigma 553.2907 pb vs truth 529.8240 pb;  above 2 m_t the mode exceeds the truth by +24.392 pb = 26.4 x the 0.9249 pb it misses below
+      PA          sigma 553.3175 pb vs truth 529.8240 pb;  above 2 m_t the mode exceeds the truth by +24.418 pb = 26.4 x the 0.9249 pb it misses below
+      onshell     sigma 553.2790 pb vs truth 529.8240 pb;  above 2 m_t the mode exceeds the truth by +24.380 pb = 26.4 x the 0.9249 pb it misses below
+      madspin_v1  sigma 553.2790 pb vs truth 529.8240 pb;  above 2 m_t the mode exceeds the truth by +24.380 pb = 26.4 x the 0.9249 pb it misses below
+   => in pb the bump compensates NOTHING.  The rate question can only
+      be asked after the totals are matched, which is the third
+      normalisation below.
+
+-- 2. where the excess actually sits ---------------------------------
+
+   plots/numbers.txt records shape ratios of 0.842 / 0.900 / 0.812 /
+   0.812 in the FIRST bin above threshold, 346-347 GeV: the modes are
+   BELOW the truth there.  So the excess is not "MadSpin piles up where
+   the truth spills below".  Disjoint windows, so these add and their
+   errors are independent (fraction of each sample; binomial errors):
+
+   window [GeV]      mode        truth       excess              sigma
+   [346,347)      0.05760%    0.07090%   -0.01330% +- 0.00268%    -5.0
+   [347,352)      0.82030%    0.74394%   +0.07636% +- 0.00980%    +7.8
+   [352,356)      0.97430%    0.92790%   +0.04640% +- 0.01072%    +4.3
+   [356,362)      1.78830%    1.74906%   +0.03924% +- 0.01449%    +2.7
+   [362,370)      2.79760%    2.77400%   +0.02360% +- 0.01805%    +1.3
+   [370,380)      3.92500%    3.90312%   +0.02188% +- 0.02126%    +1.0
+   [380,420)     17.00110%   16.89584%   +0.10526% +- 0.04113%    +2.6
+   [420,470)     18.76130%   18.78202%   -0.02072% +- 0.04277%    -0.5
+   [470,520)     14.26530%   14.29606%   -0.03076% +- 0.03832%    -0.8
+   (onshell, which took no overweights; the four modes agree to 0.007% of sigma -- see section 4.)
+
+   The first bin is a 5 sigma DEFICIT and everything from 347 GeV up is
+   an excess.  The running total crosses zero, on the raw 0.25 GeV
+   grid, at:
+      madspin     348.00 GeV
+      PA          347.50 GeV
+      onshell     348.25 GeV
+      madspin_v1  348.25 GeV
+   The three distinct answers are the overweights of section 4, which
+   all sit inside 1 GeV of threshold; onshell and madspin_v1 (none) are
+   the clean ones.
+
+-- 3. does the excess integrate to the sub-threshold rate? -----------
+
+   Cumulative shape excess F_mode(x) - F_truth(x) from 2 m_t upwards,
+   in units of each sample's own total sigma.  Errors are binomial on
+   the CDF, not a bin-by-bin Poisson sum.
+
+   x [GeV]      onshell             vs f_below     madspin     PA       madspin_v1
+   347       -0.01330% +- 0.00268%   -70.1 sigma   -0.01119% -0.00709% -0.01330%
+   348       -0.00370% +- 0.00447%   -39.9 sigma   -0.00159% +0.00316% -0.00370%
+   350       +0.02948% +- 0.00753%   -19.3 sigma   +0.03158% +0.03640% +0.02948%
+   352       +0.06306% +- 0.01016%   -11.0 sigma   +0.06515% +0.06995% +0.06306%
+   354       +0.09228% +- 0.01254%    -6.6 sigma   +0.09436% +0.09914% +0.09228%
+   356       +0.10946% +- 0.01470%    -4.4 sigma   +0.11153% +0.11628% +0.10946%
+   358       +0.12712% +- 0.01673%    -2.8 sigma   +0.12918% +0.13390% +0.12712%
+   360       +0.14434% +- 0.01867%    -1.6 sigma   +0.14639% +0.15108% +0.14434%
+   362       +0.14870% +- 0.02045%    -1.3 sigma   +0.15073% +0.15540% +0.14870%
+   365       +0.15428% +- 0.02297%    -0.9 sigma   +0.15629% +0.16091% +0.15428%
+   370       +0.17230% +- 0.02683%    -0.1 sigma   +0.17428% +0.17881% +0.17230%
+   375       +0.18508% +- 0.03026%    +0.3 sigma   +0.18702% +0.19145% +0.18508%
+   380       +0.19418% +- 0.03334%    +0.6 sigma   +0.19607% +0.20041% +0.19418%
+   400       +0.24186% +- 0.04281%    +1.6 sigma   +0.24357% +0.24750% +0.24186%
+   420       +0.29944% +- 0.04881%    +2.6 sigma   +0.30097% +0.30449% +0.29944%
+   450       +0.28486% +- 0.05345%    +2.1 sigma   +0.28615% +0.28909% +0.28486%
+   480       +0.29590% +- 0.05477%    +2.2 sigma   +0.29697% +0.29942% +0.29590%
+   520       +0.24796% +- 0.05359%    +1.4 sigma   +0.24880% +0.25071% +0.24796%
+   (f_below = 0.17456% +- 0.00187%.  madspin_v1 is onshell to the last digit: same sample, same weights.)
+
+   THE NUMBER.  Integrated over 2 m_t .. 370 GeV, against the truth's
+   sub-threshold rate, in all three normalisations:
+
+      madspin     SELF-NORMALISED  +0.17428% +- 0.02683%  vs f_below 0.17456% +- 0.00187%   ratio 0.998 +- 0.154
+                  RATE-MATCHED     +0.9234 +- 0.1421 pb  vs 0.9249 +- 0.0099 pb   (mode scaled by sigma_truth/sigma_mode = 0.95759)
+                  ABSOLUTE         +2.4346 pb  vs 0.9249 pb   -- does not balance and cannot: the totals differ by 1 - truth/mode = 4.24% (= +23.467 pb over the whole spectrum, of which +24.392 pb sits above 2 m_t)
+
+      PA          SELF-NORMALISED  +0.17881% +- 0.02683%  vs f_below 0.17456% +- 0.00187%   ratio 1.024 +- 0.154
+                  RATE-MATCHED     +0.9474 +- 0.1421 pb  vs 0.9249 +- 0.0099 pb   (mode scaled by sigma_truth/sigma_mode = 0.95754)
+                  ABSOLUTE         +2.4614 pb  vs 0.9249 pb   -- does not balance and cannot: the totals differ by 1 - truth/mode = 4.25% (= +23.493 pb over the whole spectrum, of which +24.418 pb sits above 2 m_t)
+
+      onshell     SELF-NORMALISED  +0.17230% +- 0.02683%  vs f_below 0.17456% +- 0.00187%   ratio 0.987 +- 0.154
+                  RATE-MATCHED     +0.9129 +- 0.1421 pb  vs 0.9249 +- 0.0099 pb   (mode scaled by sigma_truth/sigma_mode = 0.95761)
+                  ABSOLUTE         +2.4230 pb  vs 0.9249 pb   -- does not balance and cannot: the totals differ by 1 - truth/mode = 4.24% (= +23.455 pb over the whole spectrum, of which +24.380 pb sits above 2 m_t)
+
+      madspin_v1  SELF-NORMALISED  +0.17230% +- 0.02683%  vs f_below 0.17456% +- 0.00187%   ratio 0.987 +- 0.154
+                  RATE-MATCHED     +0.9129 +- 0.1421 pb  vs 0.9249 +- 0.0099 pb   (mode scaled by sigma_truth/sigma_mode = 0.95761)
+                  ABSOLUTE         +2.4230 pb  vs 0.9249 pb   -- does not balance and cannot: the totals differ by 1 - truth/mode = 4.24% (= +23.455 pb over the whole spectrum, of which +24.380 pb sits above 2 m_t)
+
+   THE SYSTEMATIC on that number, and it is not small.  Dividing each
+   side by its own TOTAL sigma is the figure's choice, and it assumes
+   the truth's 4.24% truncation loss is flat in m_tt.  It is not quite:
+   the parent study measures truth/mode = 0.9576 on the totals against
+   0.9517 +- 0.0025 on the 380-420 GeV anchor, a 0.6% difference, and
+   that same 0.6% is visible above as the +0.105% +- 0.041% the
+   cumulative picks up over [380, 420).  Renormalising each mode on the
+   380-420 GeV anchor instead of its total moves the answer to:
+
+      madspin     anchor-normalised  +0.13454% +- 0.02683%   = 0.77 x f_below   (total-normalised: 1.00 x)
+      PA          anchor-normalised  +0.13935% +- 0.02683%   = 0.80 x f_below   (total-normalised: 1.02 x)
+      onshell     anchor-normalised  +0.13244% +- 0.02683%   = 0.76 x f_below   (total-normalised: 0.99 x)
+      madspin_v1  anchor-normalised  +0.13244% +- 0.02683%   = 0.76 x f_below   (total-normalised: 0.99 x)
+
+   So the excess is 0.75 to 1.0 times the sub-threshold rate depending
+   on which of the two defensible normalisations is used, against a
+   statistical error of 0.15.  The normalisation choice, not the
+   statistics, is what limits how sharply the compensation can be
+   stated -- and it is a broad-band effect that the parent study
+   already records, not anything to do with the threshold.
+
+   Above 370 GeV nothing further accumulates:
+      onshell     [370, 520) GeV  +0.07566% +- 0.05460%   (1.4 sigma from zero) -- flat
+
+   CAVEAT, stated because it is what makes the self-normalised answer
+   partly an identity.  Over the FULL m_tt range the self-normalised
+   excess above threshold is forced to equal f_below exactly, because
+   both curves integrate to 1 and the mode has nothing below.  The
+   MEASURED content is not that the total comes out right -- it is
+   WHERE it comes out: all of it inside 2 m_t + 24 GeV, over a window
+   holding 6.27% of the cross section, and flat above.
+   The histogram itself stops at 520 GeV and holds 60.3% of sigma, so
+   the identity is not available to the numbers above as a shortcut.
+
+-- 4. do the overweight events contaminate this? ---------------------
+
+   RESULTS.md section 2: the overweight excess is 21.11 event-
+   equivalents for madspin (joint) and 69.53 for PA (sequential), all
+   of it within ~1 GeV of 2 m_t; onshell and madspin_v1 took none and
+   are the production sample weight for weight.  Measured against
+   onshell, in the same units as section 3:
+
+      madspin     cumulative excess at 370 GeV sits +0.00198% of sigma above onshell's
+                    = 1.1% of the measured excess, 7% of its statistical error
+      PA          cumulative excess at 370 GeV sits +0.00650% of sigma above onshell's
+                    = 3.8% of the measured excess, 24% of its statistical error
+      to compare: the excess being measured is 0.17230% +- 0.02683%
+   => the overweights move the answer by at most 24% of its own
+      statistical error, so they do NOT contaminate it.  The clean
+      modes are onshell and madspin_v1 (zero overweights), and every
+      headline number above is quoted from onshell for that reason.
+   NB the overweights ARE the whole of the visible spread between the
+   four modes in the 346-347 GeV bin (shape ratios 0.812 / 0.842 /
+   0.900), which is why that bin is not used to define anything here,
+   and why the integration window starts at 2 m_t and not inside it.
+
+-- 5. the mechanism, tested and not asserted -------------------------
+
+   HYPOTHESIS.  The truth's m_tt is the on-shell production spectrum
+   smeared by the two top virtualities: at virtualities m1, m2 the pair
+   threshold is m1 + m2, not 2 m_t.  The production spectrum is zero
+   below 2 m_t and rises like sqrt(M - 2 m_t) above it -- CONCAVE -- so
+   smearing it (i) fills the region below threshold, (ii) RAISES the
+   first GeV above it, where the sharp spectrum is still near zero, and
+   (iii) LOWERS the concave rise that follows.  MadSpin's m_tt is the
+   unsmeared spectrum (m_tt = sqrt(shat) at this multiplicity, held
+   fixed by the reshuffle), so mode/truth < 1 in the first bin and > 1
+   over the following ~10 GeV.  That is exactly the measured pattern.
+
+   TEST.  Smear the committed production histogram with the same
+   Breit-Wigner the truth used -- fixed-width relativistic, truncated at
+   15 Gamma_t, times the decay numerator m Gamma(m)/(m_t Gamma_t) -- and
+   compare with the truth.  Two independent approximations:
+      A  threshold shift : M -> M + (m1 + m2 - 2 m_t)
+      B  velocity factor: dsigma_prod/dM / beta_0(M) fitted and
+         extrapolated below 2 m_t, times the exact beta(M; m1, m2)
+   Neither is tuned to the truth.  Model B carries no absolute
+   normalisation of its own and is anchored on the production sample
+   over 380-420 GeV.
+
+   bin [GeV]     truth shape    A/truth   B/truth   MadSpin/truth
+    316- 326      6.400e-07      0.605     0.752      0 exact
+    326- 331      7.680e-06      0.675     0.789      0 exact
+    331- 336      2.392e-05      0.770     0.871      0 exact
+    336- 338      4.570e-05      0.819     0.911      0 exact
+    338- 340      6.820e-05      0.843     0.927      0 exact
+    340- 342      1.098e-04      0.836     0.907      0 exact
+    342- 344      1.815e-04      0.887     0.947      0 exact
+    344- 345      3.038e-04      0.893     0.942      0 exact
+    345- 346      4.664e-04      0.914     0.953      0 exact
+    346- 347      7.090e-04      0.956     0.993      0.812
+    347- 348      9.860e-04      0.987     1.011      1.097
+    348- 349      1.293e-03      0.967     0.984      1.113
+    349- 350      1.518e-03      0.984     0.994      1.122
+    350- 351      1.715e-03      0.995     1.003      1.095
+    351- 352      1.927e-03      0.983     0.990      1.090
+    352- 353      2.109e-03      0.977     0.984      1.053
+    353- 354      2.254e-03      0.981     0.989      1.080
+    354- 355      2.382e-03      0.986     0.996      1.041
+    355- 356      2.533e-03      0.977     0.988      1.030
+    356- 358      2.706e-03      0.981     0.991      1.033
+    358- 360      2.950e-03      0.971     0.980      1.029
+    360- 362      3.089e-03      0.980     0.997      1.007
+    362- 364      3.263e-03      0.976     0.994      1.004
+    364- 366      3.414e-03      0.979     0.993      0.998
+    366- 368      3.560e-03      0.983     0.989      1.017
+    368- 370      3.633e-03      0.996     1.001      1.013
+    370- 372      3.696e-03      1.007     1.012      1.030
+    372- 374      3.839e-03      0.992     0.998      0.997
+    374- 376      3.940e-03      0.987     0.993      1.001
+    376- 378      4.001e-03      0.988     0.995      0.998
+    378- 380      4.040e-03      0.994     1.001      1.003
+    380- 385      4.120e-03      0.996     1.003      0.998
+    385- 390      4.197e-03      1.007     1.006      1.019
+    390- 395      4.274e-03      0.998     1.001      1.000
+    395- 400      4.282e-03      1.000     1.006      1.005
+    400- 405      4.257e-03      1.006     1.012      1.008
+    405- 410      4.268e-03      1.003     1.005      1.001
+    410- 415      4.209e-03      1.009     1.011      1.008
+    415- 420      4.185e-03      1.005     1.004      1.011
+
+   largest |ratio - 1|, by region:
+      region [GeV]          model A   model B   MadSpin
+      deep tail   316-336    39.5%     24.8%     0 exact (no support)
+      below 2m_t  336-346    18.1%      9.3%     0 exact (no support)
+      the bump    346-356     4.4%      1.6%     18.8%
+      recovery    356-380     2.9%      2.0%      3.3%
+      flat        380-420     0.9%      1.2%      1.9%
+   The bump row is the answer: over 346-356 GeV the smeared production
+   sample tracks the truth to 2% (model B) where MadSpin -- which is
+   the SAME production sample, unsmeared -- is off by 19%.  The deep
+   tail is where the model's own approximations break down; it holds
+   0.001% of sigma (32 truth events in the deepest drawn bin) and no
+   claim here rests on it.
+
+   the sub-threshold rate, which is the thing MadSpin misses entirely:
+      truth    0.17456% of sigma
+      model A  0.15155%   = 87% of the truth's
+      model B  0.16228%   = 93% of the truth's
+      MadSpin  0 exactly = 0%
+
+   and the cumulative excess of section 3, recomputed with the model in
+   place of MadSpin -- if the smearing IS the mechanism, the model must
+   not have the excess:
+      x = 352 GeV   MadSpin +0.06306% +- 0.01016%   model A -0.01523%   model B -0.00391%
+      x = 356 GeV   MadSpin +0.10946% +- 0.01470%   model A -0.03345%   model B -0.01359%
+      x = 362 GeV   MadSpin +0.14870% +- 0.02045%   model A -0.07338%   model B -0.03233%
+      x = 370 GeV   MadSpin +0.17230% +- 0.02683%   model A -0.11862%   model B -0.04737%
+      x = 380 GeV   MadSpin +0.19418% +- 0.03334%   model A -0.14427%   model B -0.04847%
+      x = 420 GeV   MadSpin +0.29944% +- 0.04881%   model A -0.09506%   model B +0.05679%
+
+   VERDICT.  The smeared production sample reproduces the truth's
+   turn-on to a few percent bin by bin where MadSpin is off by 19%,
+   and recovers most of the sub-threshold rate where MadSpin has none.
+   The residual of the model is a roughly uniform ~1% normalisation
+   offset against the truth over the whole drawn window, not a failure
+   of the turn-on shape -- so the smearing accounts for the bump and
+   slightly overshoots it.  The model is a leading-order description
+   (the matrix element is taken to depend on the virtualities only
+   through the phase space) and is NOT a substitute for the truth.
+
+-- 6. what this does not settle -------------------------------------
+
+   * The model's ~1% normalisation offset is not resolved into its
+     parts.  Candidates: the 4.24% Breit-Wigner truncation is not
+     perfectly flat in m_tt (the parent study measures truth/mode as
+     0.9576 on the total against 0.9517 +- 0.0025 on the 380-420 GeV
+     anchor, a 0.6% difference), and the model's neglect of the
+     virtuality dependence of the matrix element.  Separating them
+     needs a truth run at a second bwcutoff, which does not exist.
+   * Only bwcutoff = 15 was run, so how far below threshold the truth
+     reaches -- and hence the size of everything measured here -- is a
+     parameter, not a prediction.
+   * Single- and non-resonant W b W b~ diagrams are absent from BOTH
+     sides (the truth is an MG5 decay chain), so nothing here bounds
+     their contribution near threshold.
+   * One seed per mode.  The overweight numbers of section 4 are one
+     draw; the rest does not depend on them.

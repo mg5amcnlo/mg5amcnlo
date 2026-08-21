@@ -12,6 +12,10 @@ Figure: `plots/mtt_threshold.pdf` (MG7 style),
 `plots/numbers.txt`. Raw histograms: `data/histograms.npz`, provenance
 `data/meta.json`.
 
+The bump the figure shows just above `2 m_t` -- and whether it compensates the
+sub-threshold region section 1 measures -- is a separate question, answered from
+these same histograms in [`BUMP.md`](BUMP.md).
+
 This is the control experiment for
 [`../mtt_threshold`](../mtt_threshold/RESULTS.md), which asks the same question
 of `p p > t t~ j`. That study's section 6 says the multiplicity dependence "is
