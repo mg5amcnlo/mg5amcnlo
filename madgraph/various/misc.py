@@ -2179,6 +2179,10 @@ It has been validated for the last time with version: %s""",
         else:
             logger.error("Plugin %s is not supported by this version of MG5aMC." % name)
             plugin_support[name] = False
+        logger.error("plugin is %s"%obj)
+        logger.error("min_ver = %s"%str(min_ver))
+        logger.error("mg5_ver = %s"%str(mg5_ver))
+        logger.error("max_ver = %s"%str(max_ver))
     return plugin_support[name]
     
 
