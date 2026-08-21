@@ -136,7 +136,8 @@ class MadSpinResult(object):
                  BR, BR_err, efficiency, nevents_in,
                  cross_out=None, cross_in=None,
                  unweighting_mode=None, unweighting_why=None,
-                 identity=None, overflows=0, seed=None):
+                 identity=None, overflows=0, seed=None,
+                 bw_truncation=1.0):
         self.config = config
         self.lhe_path = lhe_path
         self.log_path = log_path
@@ -166,8 +167,36 @@ class MadSpinResult(object):
         self.cross_out = cross_out
         # Production cross-section taken from the input LHE banner (pb).
         self.cross_in = cross_in
+        # The fraction of each sampled Breit-Wigner the run's BW_cut window
+        # kept, as the run itself reported it -- 1.0 for a mode that samples no
+        # virtuality (onshell, onshell_v1, none), and it is the *only* reason
+        # those modes and the offshell ones no longer report the same
+        # cross-section. Dividing it out recovers the sigma_prod x BR that every
+        # mode did share, which is what the comparisons below use.
+        self.bw_truncation = bw_truncation
         self._lhe_cache = None
         self._counts_cache = None
+
+    @property
+    def cross_out_untruncated(self):
+        """``cross_out`` with the Breit-Wigner truncation divided back out.
+
+        This is the mode-independent quantity: MadSpin normalises to
+        sigma_prod x BR and then keeps only the part of each resonance's
+        Breit-Wigner that fits inside ``BW_cut`` widths, so two modes that
+        truncate differently *should* report different cross-sections while
+        still agreeing here."""
+        if self.cross_out is None or not self.bw_truncation:
+            return self.cross_out
+        return self.cross_out / self.bw_truncation
+
+    @property
+    def BR_untruncated(self):
+        """``BR`` with the Breit-Wigner truncation divided back out -- the
+        branching ratio proper, before the window throws part of it away."""
+        if self.BR is None or not self.bw_truncation:
+            return self.BR
+        return self.BR / self.bw_truncation
 
     @property
     def label(self):
@@ -232,6 +261,13 @@ _RE_IDENTITY_OK = re.compile(
 _RE_IDENTITY_FAIL = re.compile(
     r'MadSpin sequential: the weight identity FAILED on (\d+) accepted chains'
     r'.*?relative spread of the ratio ([0-9eE.+\-]+), mean ([0-9eE.+\-]+)'
+)
+# The Breit-Wigner truncation factor the run applied to its own cross-section.
+# Only the modes that sample a virtuality (madspin/full/PA, and madspin_v1)
+# log it at all; the others truncate nothing and the factor is 1 by absence.
+_RE_BW_TRUNCATION = re.compile(
+    r'Breit-Wigner truncation at BW_cut = [0-9eE.+\-]+ keeps '
+    r'([0-9eE.+\-]+) of the cross-section'
 )
 _RE_OVERFLOW = re.compile(
     # Both spellings: the overweight safety net re-worded this line from
@@ -569,6 +605,8 @@ class MadSpinFactory(object):
         identity = _parse_identity(log_text)
         overflow_match = _RE_OVERFLOW.search(_flatten(log_text))
         overflows = int(overflow_match.group(1)) if overflow_match else 0
+        bw_match = _RE_BW_TRUNCATION.search(_flatten(log_text))
+        bw_truncation = float(bw_match.group(1)) if bw_match else 1.0
 
         # Always read the decayed banner's cross-section -- this is the
         # physics-observable we want to compare across modes.
@@ -601,6 +639,7 @@ class MadSpinFactory(object):
             identity=identity,
             overflows=overflows,
             seed=self.seed if seed is None else int(seed),
+            bw_truncation=bw_truncation,
         )
         self._results[key] = result
         return result
@@ -643,8 +682,13 @@ def assert_branching_ratios_consistent(test, results, rel_tol=1e-3):
     differ from the run_onshell paths by a symmetry factor when the user
     supplies redundant decay templates. The real physics-observable check is
     :func:`assert_cross_sections_consistent` below; this assertion is here for
-    informational reporting and is intentionally loose."""
-    brs = [(label, r.BR) for label, r in results.items() if r.BR is not None]
+    informational reporting and is intentionally loose.
+
+    Compared with the Breit-Wigner truncation divided back out, for the reason
+    given there: the window is part of what MadSpin reports, not part of the
+    branching ratio, and it differs by spinmode."""
+    brs = [(label, r.BR_untruncated) for label, r in results.items()
+           if r.BR is not None]
     test.assertTrue(brs, 'no BR was parsed from any MadSpin log')
     ref_label, ref = brs[0]
     for label, br in brs[1:]:
@@ -661,6 +705,17 @@ def assert_cross_sections_consistent(test, results, rel_tol=1e-3,
     invariant -- but how strictly modes must agree depends on whether they
     share a BR-computation convention.
 
+    Compared **with the Breit-Wigner truncation divided back out**
+    (``cross_out_untruncated``). MadSpin samples each virtuality only inside
+    ``BW_cut`` widths of the pole and now scales its reported cross-section by
+    the fraction of the Breit-Wigner that leaves, so the raw ``cross_out`` of an
+    off-shell mode is legitimately ~4 % below an on-shell one at the default
+    ``BW_cut = 15`` -- and further below at a tighter cut, without limit.
+    Asserting on the raw numbers would be asserting that the truncation does not
+    happen. ``sigma_prod x BR`` is what every mode still shares, and that is
+    what is compared here; the per-mode factors themselves are checked by
+    :func:`assert_bw_truncation_matches_spinmode`.
+
     With ``families=None`` (default) every mode must agree within ``rel_tol``.
 
     With ``families={'name': (labels,...), ...}`` (e.g. ``DEFAULT_FAMILIES``)
@@ -673,7 +728,7 @@ def assert_cross_sections_consistent(test, results, rel_tol=1e-3,
        legacy factorised-BR path and the run_onshell MC-integrated-BR path
        doesn't trip the test, but a runaway discrepancy still does.
     """
-    crosses = {label: r.cross_out for label, r in results.items()
+    crosses = {label: r.cross_out_untruncated for label, r in results.items()
                if r.cross_out is not None}
     test.assertTrue(crosses, 'no decayed cross-section found in any LHE banner')
 
@@ -727,6 +782,54 @@ def assert_cross_sections_consistent(test, results, rel_tol=1e-3,
                 'Beyond the expected off-shell-BR gap -- '
                 'investigate the BR convention used by each family.'
                 % (fa, fb, la, ca, lb, cb, rel, between_tol))
+
+
+# The spinmodes that sample a resonance virtuality, hence the ones whose
+# reported cross-section carries a Breit-Wigner truncation. ``onshell`` and
+# ``onshell_v1`` never move the production momenta and ``none`` (bridge) takes
+# MG5's decay event whole, so those three truncate nothing.
+TRUNCATING_SPINMODES = ('madspin', 'full', 'PA', 'madspin_v1')
+
+
+def assert_bw_truncation_matches_spinmode(test, results, bw_cut=15.0):
+    """Each mode reports the Breit-Wigner truncation its own sampling implies.
+
+    The bug this guards: before, ``sigma`` was ``sigma_prod x BR`` for every
+    mode and every ``BW_cut``, so it was *identical* whether the window was 15
+    widths or 1 -- while the events produced only ever filled the window. A mode
+    that samples no virtuality must still report 1.0 here, because inventing a
+    loss for it would be the same error with the sign flipped.
+
+    The factor is not asserted to a value (it depends on the resonances of the
+    process under test), only to its side of 1; the value itself is checked
+    against the closed form in the unit tests, and against a truth sample in
+    MadSpin/validation/mtt_threshold/RESULTS.md.
+
+    Assumes the production is 2 -> 2 or wider, which every process the factory
+    runs is. A 2 -> 1 production has its resonance's virtuality fixed by
+    sqrt(shat) and draws nothing, so an off-shell mode legitimately reports 1.0
+    there -- if such a process is ever added, this check has to learn about
+    it rather than the code being changed to satisfy it."""
+    for label, r in results.items():
+        spinmode = r.config.spinmode
+        if spinmode in TRUNCATING_SPINMODES:
+            test.assertLess(
+                r.bw_truncation, 1.0,
+                '%s (spinmode %s) samples virtualities inside +-%g widths but '
+                'reported no Breit-Wigner truncation (%g): its cross-section is '
+                'the untruncated sigma_prod x BR, which is the whole rate for '
+                'only part of the Breit-Wigner.'
+                % (label, spinmode, bw_cut, r.bw_truncation))
+            test.assertGreater(
+                r.bw_truncation, 0.0,
+                '%s reported a non-positive truncation factor %g'
+                % (label, r.bw_truncation))
+        else:
+            test.assertEqual(
+                r.bw_truncation, 1.0,
+                '%s (spinmode %s) samples no virtuality, so nothing of its '
+                'Breit-Wigner is cut away, but it reported a truncation of %g'
+                % (label, spinmode, r.bw_truncation))
 
 
 def assert_multiplicities_consistent(test, results, pdgs, n_sigma=4):

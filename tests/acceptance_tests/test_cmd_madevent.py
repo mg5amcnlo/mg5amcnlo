@@ -966,8 +966,21 @@ C
         self.cmd_line.exec_cmd('decay_events run_01 -f')
         val1 = self.cmd_line.results.current['cross']
         err1 = self.cmd_line.results.current['error']
-        target = 440.779
-        self.assertTrue(misc.equal(target, val1, 4*err1))          
+        # Not the production 440.779 any more. BR(t -> w+ b) is 1 to seven
+        # digits, so the decayed cross-section used to be the production one --
+        # but MadSpin draws the top's virtuality only inside +- BW_cut widths of
+        # the pole and now says so: the reported sigma carries the fraction of
+        # the Breit-Wigner that window keeps. One top is decayed here (t~ is not
+        # in the card and MadSpin does not auto-conjugate), so the factor is a
+        # single bw_retained_fraction(173.0, 1.491257, 15) = 0.9786983 and
+        # 440.779 -> 431.39, i.e. -2.13%.
+        #
+        # The 4*err1 band is +-4.3% on a 100-event run, so the old number still
+        # fitted inside it. That is exactly why it is updated rather than left:
+        # a tolerance wide enough to hide a systematic shift is not a check that
+        # the shift is right.
+        target = 431.39
+        self.assertTrue(misc.equal(target, val1, 4*err1))
              
         
         

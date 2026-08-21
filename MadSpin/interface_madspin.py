@@ -2873,14 +2873,29 @@ class MadSpinInterface(extended_cmd.Cmd):
         pol_weights = self._polarization_weights_enabled()
         pol_layouts = set()
         nb_decaying = 0
+        # Breit-Wigner truncation: the product, over the resonances *this event*
+        # has a virtuality drawn for, of the fraction of each one's
+        # Breit-Wigner that the BW_cut window keeps -- summed here and averaged
+        # below. The multiplicity can differ event to event (and the mixed-pdg
+        # case below equalizes by dropping events), so the mean over the file is
+        # the only thing that can be folded into one banner cross-section; a
+        # per-event factor would turn an unweighted sample into a weighted one.
+        bw_trunc_per_pdg = {}
+        bw_trunc_sum = 0.0
+        bw_trunc_active = self._spinmode_draws_virtuality()
         for event in orig_lhe:
             if self.options['fixed_order']:
                 event = event[0]
             nb_event +=1
             pol_sequence = [] if pol_weights else None
             nb_this_event = 0
+            nb_prod_final = 0
+            event_trunc = 1.0
             for particle in event:
-                if particle.status == 1 and particle.pdg in asked_to_decay:
+                if particle.status != 1:
+                    continue
+                nb_prod_final += 1
+                if particle.pdg in asked_to_decay:
                     # final state and tag as to decay
                     to_decay[particle.pdg] += 1
                     if pol_weights:
@@ -2892,11 +2907,36 @@ class MadSpinInterface(extended_cmd.Cmd):
                     color = self.model.get_particle(particle.pdg).get('color')
                     spin = self.model.get_particle(particle.pdg).get('spin')
                     decay_dict[particle.pdg] = [width, mass, color, spin]
+                    if bw_trunc_active:
+                        if particle.pdg not in bw_trunc_per_pdg:
+                            # Same guard as the gen_jobs loop below: a pdg that
+                            # reached asked_to_decay through a multiparticle but
+                            # has no branch of its own is never generated for,
+                            # never decayed, and never has a virtuality drawn.
+                            name = self.model.get_particle(particle.pdg).get_name()
+                            bw_trunc_per_pdg[particle.pdg] = (
+                                madspin.bw_retained_fraction(
+                                    mass, width, self._resolved_bw_cut())
+                                if name in self.list_branches else 1.0)
+                        event_trunc *= bw_trunc_per_pdg[particle.pdg]
             if pol_weights:
                 pol_layouts.add(tuple(pol_sequence))
             if nb_this_event > nb_decaying:
                 nb_decaying = nb_this_event
+            # 2 -> 1 production: sqrt(shat) fixes the single resonance's
+            # virtuality, so get_onshell_evt_and_wgt draws nothing (same guard,
+            # ``nb_prod_final > 1``) and there is nothing to correct.
+            bw_trunc_sum += event_trunc if nb_prod_final > 1 else 1.0
         self._pol_event_layouts = pol_layouts
+        # Only the *top-level* virtualities appear here, and that is the whole
+        # list: for `t > w+ b, w+ > l+ vl` MadSpin never redraws the W. Its
+        # virtuality comes from the decay events MG5 generated in decay_*_*,
+        # which are only boosted and rotated afterwards (rotateboost_decay), so
+        # its window is that generation's own run_card ``bwcutoff`` -- and the
+        # truncation it causes is already inside the partial width measured
+        # there, which is the numerator of the branching ratio below. Correcting
+        # it here as well would double-count it.
+        self._bw_truncation = bw_trunc_sum / nb_event if nb_event else 1.0
         #print(f"to_decay = {to_decay}")
         # How many particles decay in one event -- the same multiplicity the
         # pool ladder counts. It decides which unweighting scheme 'auto' picks,
@@ -3113,6 +3153,23 @@ class MadSpinInterface(extended_cmd.Cmd):
                     max_mixed_br,
                 )
         mixed_pdgs_set = set(drop_prob_per_pdg.keys())
+
+        # The rate MadSpin actually produces is only the part of each drawn
+        # Breit-Wigner that fits inside the BW_cut window, while sigma_prod * BR
+        # is the whole one. Fold the retained fraction in *here*, before
+        # branching_ratio is read: it is the single number that reaches both the
+        # <init> block (scale_init_cross, below) and every event weight
+        # (_unweight_range), so the file stays self-consistent under the
+        # IDWTUP = -4 convention that sigma is the mean weight. The later
+        # rewrites -- BR equalization, decay_output = weighted -- multiply
+        # branching_ratio again and compose with this by construction.
+        bw_truncation = getattr(self, '_bw_truncation', 1.0)
+        if bw_truncation != 1.0:
+            logger.info(
+                "Breit-Wigner truncation at BW_cut = %g keeps %.5g of the "
+                "cross-section; the reported sigma is scaled by it.",
+                self._resolved_bw_cut(), bw_truncation)
+            br *= bw_truncation
 
         # Last chance to catch a branching ratio that would silently zero (or
         # NaN) every weight of a run that otherwise completes normally.
@@ -8250,6 +8307,29 @@ class MadSpinInterface(extended_cmd.Cmd):
                                 ncomb=len(hel), dimension=len(hel),
                                 frame_boost=frame_boost, frame_rest_leg=rest_leg)
 
+    def _resolved_bw_cut(self):
+        """The number of widths the mass window extends over. ``BW_cut < 0``
+        is the "not set" marker (do_launch normally resolves it from the
+        run_card's ``bwcutoff``); 15 is the value that resolution falls back
+        on, so the two agree when there is no run_card to read."""
+        if self.options['BW_cut'] < 0:
+            return 15
+        return self.options['BW_cut']
+
+    def _spinmode_draws_virtuality(self):
+        """Whether *this* spinmode samples a resonance virtuality at all, i.e.
+        whether ``BW_cut`` truncates anything it produces.
+
+        ``madspin``/``full`` evaluate the density at reshuffled offshell momenta
+        and ``PA`` dresses the accepted event with an offshell mass, so all
+        three draw. ``onshell``/``onshell_v1`` never touch the production
+        momenta (``_density_do_reshuffle`` is False and the draw is skipped in
+        ``get_onshell_evt_and_wgt``), and the bridge (``spinmode none``) takes
+        the decay event exactly as MG5 generated it -- none of those three has a
+        window, so none of them gets a truncation correction.
+        """
+        return self.options['spinmode'] in ('madspin', 'full', 'PA')
+
     def _mass_window(self, pdg, budget):
         """The Breit-Wigner sampling window of one resonance and its sampling
         jacobian: ``(pole, width, min_mass, max_mass, jac_bw)``.
@@ -8262,10 +8342,7 @@ class MadSpinInterface(extended_cmd.Cmd):
         """
         pole = self.banner.get('param', 'mass', abs(pdg)).value
         width = self.banner.get('param', 'decay', abs(pdg)).value
-        if self.options['BW_cut'] < 0:
-            bw_cut = 15
-        else:
-            bw_cut = self.options['BW_cut']
+        bw_cut = self._resolved_bw_cut()
         min_mass = pole - bw_cut * width
         max_mass = min(pole + bw_cut * width, budget)
         gap = math.atan((pole**2-min_mass**2)/pole/width)
