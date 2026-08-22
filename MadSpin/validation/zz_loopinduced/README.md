@@ -1,0 +1,135 @@
+# `g g > z z` (loop induced) + MadSpin, against the full off-shell four-lepton calculation
+
+What is here, and how to re-run it. The findings are in [RESULTS.md](RESULTS.md).
+
+## The comparison
+
+| | |
+|---|---|
+| **sample A** | `generate g g > z z [noborn=QCD]`, then MadSpin with `decay z > e+ e-` and `decay z > mu+ mu-` |
+| **sample B** | `generate g g > e+ e- mu+ mu- / a [noborn=QCD]` — the reference |
+
+Both are loop-induced: there is no Born, the whole rate comes from the quark
+box. Sample A exercises the loop-induced density-matrix path, which is new in
+MG5aMC — MadSpin has to build its spin-density matrix out of a MadLoop
+amplitude rather than a tree one, and `HelicityFilterLevel` is forced to 0 for
+exactly that reason.
+
+MadSpin's four spinmodes are compared: `none`, `madspin`, `onshell`, `PA`.
+`madspin_v1` and `onshell_v1` are *absent on purpose* — MadSpin refuses them for
+a loop-induced process:
+
+> The MadSpin modes 'madspin_v1' and 'onshell_v1' are are not compatible with
+> loop-induced processes. Please choose a mode among 'none', 'PA', 'madspin' or
+> 'onshell'.
+
+## Making the two sides the same physics
+
+Everything in the two run cards is identical except where the final states force
+it apart:
+
+* **fixed scales at `m_Z`** on both sides (`fixed_ren_scale = fixed_fac_scale =
+  True`, `scale = dsqrt_q2fact1 = dsqrt_q2fact2 = 91.1880`), so no dynamical
+  scale can differ between a two-body and a four-body final state;
+* same PDF (`nn23lo1`), same beams (13 TeV), same seed policy, 50 000 events
+  each;
+* `pt(Z) > 1 GeV`. In sample A this is the run card's `ptheavy`, acting on the
+  two `z` directly. Sample B has no `z`, so it is applied to the *reconstructed*
+  `(e+ e-)` and `(mu+ mu-)` systems;
+* `|m_ll - m_Z| < 15 Gamma_Z` on **both** pairs of sample B, matching
+  `BW_cut = 15` in every MadSpin card.
+
+`ptheavy` is "minimum pt for at least one heavy final state", i.e. an OR over
+the heavy particles. At `2 -> 2` the initial state carries no transverse
+momentum, so `pt(Z1) = pt(Z2)` exactly and the OR and the AND are the same cut.
+Measured on the produced events: `max |pt(e+e-) - pt(mu+mu-)| = 9.1e-09 GeV`.
+
+### How sample B's cuts are applied
+
+Through the run card's supported `custom_fcts` hook, which replaces `dummy_cuts`
+in `SubProcesses/dummy_fct.f`. The file is
+[`zz_equivalent_cuts.f`](zz_equivalent_cuts.f) and it **hard-codes no number**:
+it reads `ptheavy` and `bwcutoff` out of this run's own `run_card.dat` (via
+`cuts.inc` / `run.inc`) and `M_Z`, `Gamma_Z` out of its own `param_card.dat`
+(via `coupl.inc`), so the two sides cannot drift apart by someone editing one
+card and not the other. It also re-derives the lepton positions from
+`leshouche.inc` at run time instead of trusting the process ordering, and stops
+the run if it cannot find one each of `e+ e- mu+ mu-`.
+
+Two gotchas that cost time and are worth writing down:
+
+* `ptheavy` is **hidden** from a run card whose process has no heavy final
+  state, so it has to be written into sample B's card explicitly before it can
+  be set. It stays natively inert there (`setcuts.f` flags a particle heavy only
+  above 10 GeV, and every final state is a massless lepton) — which is precisely
+  what makes it safe to reuse as the custom cut's threshold.
+* `custom_fcts` matches function names **case-sensitively** against a lowercase
+  table, so `LOGICAL FUNCTION DUMMY_CUTS` is rejected while
+  `logical function dummy_cuts` is accepted. The rejection message is
+  `function %s is not designed for overwritting` — with a literal, unformatted
+  `%s`.
+
+The run card's own `mmll` / `mmllmax` were **not** used for the mass window. The
+card warns that "for four lepton final state mmll cut require to have different
+lepton masses for each flavor", i.e. with massless `e` and `mu` it cannot tell a
+same-flavour pair from `(e+ mu-)` and would cut the wrong combinations.
+
+Sample B also needs the standard MadEvent lepton cuts turned **off** —
+`ptl = 10`, `etal = 2.5`, `drll = 0.4` are defaults, and sample A has no lepton
+for them to act on. Leaving them in would have compared a cut four-lepton sample
+against an uncut one, and would have looked like a MadSpin discrepancy.
+
+## The decay assignment
+
+Two `z` in the event and two `decay z >` lines is MadSpin's **positional** rule:
+the first `z` takes the first line, the second the second. That gives exactly
+one `e+e-` pair and one `mu+mu-` pair per event, which is what makes sample A
+comparable to sample B, and it is *not* a random draw over the two channels —
+a random draw would produce `4e` and `4mu` events and break the comparison.
+Confirmed on the events rather than assumed; see RESULTS.md.
+
+## Layout
+
+```
+observables.py                     the event-level observables, shared by the
+                                   harvester and both plotting scripts
+zz_equivalent_cuts.f               sample B's custom cuts
+run_zz_loopinduced.py              the driver: prod / madspin / harvest
+plot_zz_loopinduced.py             figures in the MG7 paper style (+ --check-minus)
+plot_zz_loopinduced_userstyle.py   the same figures in the user's own style
+data/histograms.npz                the raw histograms
+data/meta.json                     runs, statistics, seeds, card options, cuts, code SHA
+data/numbers.txt                   the numeric report
+plots/, plots_userstyle/           PDF and PNG
+logs/                              run logs, copied as .log.txt
+RESULTS.md                         the findings
+```
+
+## Re-running
+
+```
+export PATH="$HOME/.pyenv/versions/mg-3.14/bin:$PATH"     # f2py is required
+python3 run_zz_loopinduced.py --stage all --basedir /tmp/zz_work --nb-core 6
+python3 plot_zz_loopinduced.py --check-minus
+python3 plot_zz_loopinduced_userstyle.py
+```
+
+The two plotting scripts need only `data/`; they import neither MadSpin nor
+MadGraph.
+
+Notes for whoever runs it next:
+
+* **f2py is required** (loop-induced *and* MadSpin), and it has to be a working
+  one. The bare `f2py` on a Homebrew PATH has a dead shebang and fails with exit
+  126.
+* The two `output` commands are **serial on purpose**. MG5 compiles
+  CutTools/IREGI inside the *source* tree the first time a loop-induced output is
+  made; two outputs started at once race in that shared directory and one dies
+  with `cp: includects/avh_olo.f90: No such file or directory`.
+* Every mode gets its own `ms_dir`. Reuse across modes saves about 2.5 minutes of
+  MadLoop compilation against a per-mode decay cost of tens of minutes, and
+  `run_from_pickle` restores the *pickled* option object, so a reused directory
+  carries the first run's `spinmode` and `BW_cut` into every lookup that goes
+  through `decay_all_events.options`. Not worth the saving.
+* Logs are copied as `.log.txt`: the repository `.gitignore` carries a blanket
+  `*.log`.

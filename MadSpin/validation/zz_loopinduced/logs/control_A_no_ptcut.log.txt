@@ -1,0 +1,107 @@
+************************************************************
+*                                                          *
+*                      W E L C O M E to                    *
+*             M A D G R A P H 5 _ a M C @ N L O            *
+*                      M A D E V E N T                     *
+*                                                          *
+*                 *                       *                *
+*                   *        * *        *                  *
+*                     * * * * 5 * * * *                    *
+*                   *        * *        *                  *
+*                 *                       *                *
+*                                                          *
+*         VERSION 3.7.2                                    *
+*                                                          *
+*    The MadGraph5_aMC@NLO Development Team - Find us at   *
+*    https://server06.fynu.ucl.ac.be/projects/madgraph     *
+*                                                          *
+*               Type 'help' for in-line help.              *
+*                                                          *
+************************************************************
+INFO: load configuration from /Users/omattelaer/.mg5/mg5_configuration.txt  
+INFO: load configuration from /private/tmp/t75run/ctrl_ggzz_noptcut/Cards/me5_configuration.txt  
+INFO: load configuration from /private/tmp/t75/input/mg5_configuration.txt  
+INFO: load configuration from /private/tmp/t75run/ctrl_ggzz_noptcut/Cards/me5_configuration.txt  
+Using default gzip "gzip". Set another one in ./input/mg5_configuration.txt
+import command /tmp/t75run/ctrlA.cmd
+set run_mode 2
+INFO: This option will be the default in any output that you are going to create in this session. 
+INFO: In order to keep this changes permanent please run 'save options' 
+set nb_core 4
+INFO: This option will be the default in any output that you are going to create in this session. 
+INFO: In order to keep this changes permanent please run 'save options' 
+generate_events prod -f
+stty: stdin isn't a terminal
+[1;34mvalue '[]' for entry 'bypass_check' is not valid. Preserving previous value: '[]'.
+allowed values are any list composed of the following entries: partonshower[0m
+Generating 50000 events with run name prod
+survey  prod 
+INFO: compile directory 
+compile Source Directory
+Using random number seed offset = 4327
+INFO: Running Survey 
+Creating Jobs
+Working on SubProcesses
+INFO:     P0_gg_zz  
+INFO:  Idle: 1,  Running: 3,  Completed: 0 [ current time: 12h11 ] 
+INFO:  Idle: 0,  Running: 3,  Completed: 1 [  2.8s  ] 
+INFO: P0_gg_zz/G1.2 is at 1.71 +- 0.0702 pb. Now submitting iteration #2. 
+INFO: P0_gg_zz/G1.2 is at 1.66 +- 0.025 pb. Now submitting iteration #3. 
+INFO:  Idle: 0,  Running: 3,  Completed: 11 [  8.8s  ] 
+INFO: Survey finished for P0_gg_zz/G1.2 at 1.635 +- 0.0158 pb 
+INFO:  Idle: 0,  Running: 0,  Completed: 15 [  9.2s  ] 
+INFO: End survey 
+refine 50000
+Creating Jobs
+INFO: Refine results to 50000 
+INFO: Generating 50000.0 unweighted events. 
+sum of cpu time of last step: 0 second
+INFO: Effective Luminosity 35174.03804979507 pb^-1 
+INFO: need to improve 1 channels 
+- Current estimate of cross-section: 1.6347 +- 0.015835
+INFO:  Idle: 0,  Running: 4,  Completed: 0 [ current time: 12h11 ] 
+INFO:  Idle: 0,  Running: 3,  Completed: 1 [  39.9s  ] 
+INFO: P0_gg_zz/G1.2 is at 2028/57121 (3.6%) event. Resubmit 10 job at iteration 1. 
+INFO:  Idle: 0,  Running: 9,  Completed: 6 [  1m 28s  ] 
+INFO: P0_gg_zz/G1.2 is at 7219/57355 (13%) event. Resubmit 25 job at iteration 2. 
+INFO:  Idle: 6,  Running: 18,  Completed: 17 [  2m 30s  ] 
+INFO:  Idle: 0,  Running: 6,  Completed: 35 [  3m 13s  ] 
+INFO: P0_gg_zz/G1.2 is at 20092/57295 ('35%') event. Resubmit 37 job at iteration 3. 
+INFO:  Idle: 18,  Running: 18,  Completed: 43 [  4m 15s  ] 
+INFO:  Idle: 2,  Running: 18,  Completed: 59 [  4m 19s  ] 
+INFO:  Idle: 0,  Running: 18,  Completed: 61 [  5m 15s  ] 
+INFO:  Idle: 0,  Running: 3,  Completed: 76 [  5m 19s  ] 
+INFO:  Idle: 1,  Running: 0,  Completed: 79 [  5m 54s  ] 
+INFO: P0_gg_zz/G1.2 is at 39296/57290 ('69%') event. Resubmit 35 job at iteration 4. 
+INFO:  Idle: 16,  Running: 18,  Completed: 81 [  6m 53s  ] 
+INFO:  Idle: 0,  Running: 17,  Completed: 98 [  6m 56s  ] 
+INFO:  Idle: 0,  Running: 16,  Completed: 99 [  7m 47s  ] 
+INFO:  Idle: 0,  Running: 1,  Completed: 114 [  7m 53s  ] 
+INFO: found enough event for P0_gg_zz/G1.2 
+INFO:  Idle: 0,  Running: 0,  Completed: 116 [  7m 53s  ] 
+INFO: Combining runs 
+sum of cpu time of last step: 0 second
+INFO: finish refine 
+refine 50000 --treshold=0.9
+No need for second refine due to stability of cross-section
+INFO: Combining Events 
+combination of events done in 2.081184148788452 s 
+ 
+ 
+ 
+  === Results Summary for run: prod tag: tag_1 ===
+
+     Cumulative sequential time for this run: 1h27m25s
+     Cross-section :   1.629 +- 0.0008527 pb
+     Nb of events :  50000
+ 
+store_events
+INFO: Storing parton level results 
+INFO: End Parton 
+reweight --mode=OFF -from_cards
+decay_events -from_cards
+INFO: storing files of previous run 
+INFO: Done 
+quit
+INFO:  
+launch in debug mode

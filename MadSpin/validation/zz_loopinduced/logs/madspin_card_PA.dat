@@ -1,0 +1,8 @@
+set seed 7777
+set BW_cut 15
+set spinmode PA
+set nb_core 4
+set ms_dir /tmp/t75run/ms_PA/msdir
+decay z > e+ e-
+decay z > mu+ mu-
+launch

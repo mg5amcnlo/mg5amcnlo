@@ -1,0 +1,131 @@
+g g > z z  (loop induced) + MadSpin   against   g g > e+ e- mu+ mu- / a  (loop induced)
+code 178e9542dadcce00f18200528bb6cd9477fddaeb
+m_Z = 91.188 GeV   Gamma_Z = 2.4414 GeV   BW_cut = 15
+mass window on both reconstructed pairs of the truth sample: 54.56694 .. 127.80906 GeV
+
+--- total cross sections, from the event weights (IDWTUP = -4, sigma = mean(w)) ---
+sample           sigma [pb]     MC error            N
+truth           0.003648442     4.68e-06        50000
+madspin         0.003674518     3.22e-06        50000
+PA              0.003674518     3.22e-06        50000
+onshell         0.003842497     3.37e-06        50000
+none            0.003842543     3.37e-06        50000
+
+--- ratio to truth ---
+madspin      1.00715 +- 0.00157   (+0.71 %, 4.6 sigma)
+PA           1.00715 +- 0.00157   (+0.71 %, 4.6 sigma)
+onshell      1.05319 +- 0.00164   (+5.32 %, 32.5 sigma)
+none         1.05320 +- 0.00164   (+5.32 %, 32.5 sigma)
+
+--- what MadSpin itself reported (cmd.cross, cmd.branching_ratio) ---
+madspin      cross = 0.003674518093   BR = 0.002262216397   efficiency = 1
+PA           cross = 0.003674518093   BR = 0.002262216397   efficiency = 1
+onshell      cross = 0.003842496858   BR = 0.002365632493   efficiency = 1
+none         cross = 0.003842542621   BR = 0.002365660667   efficiency = 1
+
+--- the Breit-Wigner truncation ---
+MadSpin.decay.bw_retained_fraction(m_Z, Gamma_Z, 15)
+  f       = 0.977897722284
+  f^2     = 0.956283955248      (two resonances)
+  1/f^2   = 1.045714501966
+This branch carries PR #379, so MadSpin APPLIES this factor to the
+modes that draw a virtuality and not to the ones that do not.  The
+reported branching ratios are the direct check:
+  BR(madspin)/BR(onshell) = 0.956283955247   vs f^2 = 0.956283955248   (difference -4.84e-13)
+  BR(madspin)/BR(none) = 0.956272566305   vs f^2 = 0.956283955248   (difference -1.14e-05)
+  BR(PA)/BR(onshell) = 0.956283955247   vs f^2 = 0.956283955248   (difference -4.84e-13)
+  BR(PA)/BR(none) = 0.956272566305   vs f^2 = 0.956283955248   (difference -1.14e-05)
+
+--- do sample B's cuts actually fire? ---
+  sample A, ptheavy = 1 : 1.624 +- 0.001424 pb
+  sample A, ptheavy = 0 : 1.629 +- 0.0008527 pb
+  the pt(Z) > 1 GeV cut removes 0.307 +- 0.102 % (3.0 sigma from doing nothing)
+
+--- angular moments (weighted mean +- error of the mean) ---
+sample       cos_theta1             cos2_theta1            cos1cos2               cos_phi                cos_2phi               m_epmum               
+truth        +0.00421 +- 0.00275    +0.37767 +- 0.00138    +0.00686 +- 0.00170    -0.00167 +- 0.00317    +0.00264 +- 0.00317    +101.96011 +- 0.33874 
+madspin      +0.00178 +- 0.00275    +0.37839 +- 0.00138    +0.00386 +- 0.00171    -0.00097 +- 0.00317    +0.00359 +- 0.00317    +102.55888 +- 0.34189 
+PA           -0.00180 +- 0.00275    +0.37888 +- 0.00138    +0.00500 +- 0.00171    +0.00108 +- 0.00316    -0.00288 +- 0.00316    +102.35589 +- 0.34306 
+onshell      +0.00137 +- 0.00276    +0.38057 +- 0.00139    +0.00611 +- 0.00170    -0.00192 +- 0.00317    +0.00385 +- 0.00316    +102.56844 +- 0.34448 
+none         +0.00084 +- 0.00259    +0.33577 +- 0.00134    +0.00427 +- 0.00150    -0.00363 +- 0.00317    +0.00436 +- 0.00316    +104.11363 +- 0.33140 
+
+  <cos theta1 . cos theta2> is the strict inter-decay correlation: it
+  is exactly zero for any scheme that decays the two z independently,
+  whatever it does to each z on its own.
+
+--- per-observable agreement over the bins where truth has support ---
+  "rate" is the ratio of INTEGRALS over those bins, sum(mode)/sum(truth).
+  It is deliberately not an inverse-variance weighted mean of the
+  per-bin ratios: the per-bin error is built from the numerator, so a bin
+  that fluctuates low gets a smaller error and more weight, and the mean
+  comes out biased low -- about 5 % on a 2000-event pilot here, which is
+  the size of the effects under study.  The integral ratio has no such
+  bias.  "chi2/ndf" is the SHAPE test: the per-bin ratios against the
+  best-fit flat line (i.e. against "rate"), so a pure normalisation
+  offset does not enter it and only a genuine shape difference does.
+  m(e+ mu-) [GeV]
+    madspin    rate = 1.0063 +- 0.0064 (+0.63 %)   shape chi2/ndf = 87.8/79 = 1.11
+    PA         rate = 1.0063 +- 0.0064 (+0.63 %)   shape chi2/ndf = 69.6/79 = 0.88
+    onshell    rate = 1.0524 +- 0.0067 (+5.24 %)   shape chi2/ndf = 94.1/79 = 1.19
+    none       rate = 1.0533 +- 0.0067 (+5.33 %)   shape chi2/ndf = 322.0/79 = 4.08
+
+  m(e+ mu+) [GeV]
+    madspin    rate = 1.0080 +- 0.0064 (+0.80 %)   shape chi2/ndf = 78.0/79 = 0.99
+    PA         rate = 1.0074 +- 0.0064 (+0.74 %)   shape chi2/ndf = 87.4/79 = 1.11
+    onshell    rate = 1.0535 +- 0.0067 (+5.35 %)   shape chi2/ndf = 86.7/79 = 1.10
+    none       rate = 1.0542 +- 0.0067 (+5.42 %)   shape chi2/ndf = 299.3/79 = 3.79
+
+  Phi between the Z decay planes [rad]
+    madspin    rate = 1.0071 +- 0.0064 (+0.71 %)   shape chi2/ndf = 17.7/31 = 0.57
+    PA         rate = 1.0071 +- 0.0064 (+0.71 %)   shape chi2/ndf = 42.6/31 = 1.38
+    onshell    rate = 1.0532 +- 0.0067 (+5.32 %)   shape chi2/ndf = 38.7/31 = 1.25
+    none       rate = 1.0532 +- 0.0067 (+5.32 %)   shape chi2/ndf = 32.2/31 = 1.04
+
+  cos(theta1) of e+ in the (e+ e-) rest frame
+    madspin    rate = 1.0071 +- 0.0064 (+0.71 %)   shape chi2/ndf = 29.3/39 = 0.75
+    PA         rate = 1.0071 +- 0.0064 (+0.71 %)   shape chi2/ndf = 34.4/39 = 0.88
+    onshell    rate = 1.0532 +- 0.0067 (+5.32 %)   shape chi2/ndf = 31.5/39 = 0.81
+    none       rate = 1.0532 +- 0.0067 (+5.32 %)   shape chi2/ndf = 540.3/39 = 13.85
+
+  cos(theta2) of mu+ in the (mu+ mu-) rest frame
+    madspin    rate = 1.0071 +- 0.0064 (+0.71 %)   shape chi2/ndf = 53.9/39 = 1.38
+    PA         rate = 1.0071 +- 0.0064 (+0.71 %)   shape chi2/ndf = 46.8/39 = 1.20
+    onshell    rate = 1.0532 +- 0.0067 (+5.32 %)   shape chi2/ndf = 28.0/39 = 0.72
+    none       rate = 1.0532 +- 0.0067 (+5.32 %)   shape chi2/ndf = 608.7/39 = 15.61
+
+  cos(theta1) x cos(theta2)  (inter-decay correlation)
+    madspin    rate = 1.0071 +- 0.0064 (+0.71 %)   shape chi2/ndf = 39.4/39 = 1.01
+    PA         rate = 1.0071 +- 0.0064 (+0.71 %)   shape chi2/ndf = 31.2/39 = 0.80
+    onshell    rate = 1.0532 +- 0.0067 (+5.32 %)   shape chi2/ndf = 28.5/39 = 0.73
+    none       rate = 1.0532 +- 0.0067 (+5.32 %)   shape chi2/ndf = 1116.2/39 = 28.62
+
+  Delta phi(e+, mu-) in the lab [rad]
+    madspin    rate = 1.0071 +- 0.0064 (+0.71 %)   shape chi2/ndf = 24.8/31 = 0.80
+    PA         rate = 1.0071 +- 0.0064 (+0.71 %)   shape chi2/ndf = 29.4/31 = 0.95
+    onshell    rate = 1.0532 +- 0.0067 (+5.32 %)   shape chi2/ndf = 27.8/31 = 0.90
+    none       rate = 1.0532 +- 0.0067 (+5.32 %)   shape chi2/ndf = 44.5/31 = 1.44
+
+  m(e+ e-) [GeV]
+    madspin    rate = 1.0071 +- 0.0064 (+0.71 %)   shape chi2/ndf = 262.0/74 = 3.54
+    PA         rate = 1.0071 +- 0.0064 (+0.71 %)   shape chi2/ndf = 383.0/74 = 5.18
+    onshell    rate = 1.0532 +- 0.0067 (+5.32 %)   shape: delta function, 1 bin with support -- no shape test
+    none       rate = 1.0532 +- 0.0067 (+5.32 %)   shape: delta function, 1 bin with support -- no shape test
+
+  m(mu+ mu-) [GeV]
+    madspin    rate = 1.0071 +- 0.0064 (+0.71 %)   shape chi2/ndf = 171.0/74 = 2.31
+    PA         rate = 1.0071 +- 0.0064 (+0.71 %)   shape chi2/ndf = 286.5/74 = 3.87
+    onshell    rate = 1.0532 +- 0.0067 (+5.32 %)   shape: delta function, 1 bin with support -- no shape test
+    none       rate = 1.0532 +- 0.0067 (+5.32 %)   shape: delta function, 1 bin with support -- no shape test
+
+  m(e+ e- mu+ mu-) [GeV]
+    madspin    rate = 1.0079 +- 0.0064 (+0.79 %)   shape chi2/ndf = 79.4/61 = 1.30
+    PA         rate = 1.0079 +- 0.0064 (+0.79 %)   shape chi2/ndf = 79.4/61 = 1.30
+    onshell    rate = 1.0540 +- 0.0067 (+5.40 %)   shape chi2/ndf = 79.4/61 = 1.30
+    none       rate = 1.0540 +- 0.0067 (+5.40 %)   shape chi2/ndf = 79.4/61 = 1.30
+
+  pt(e+ e-) [GeV]
+    madspin    rate = 1.0061 +- 0.0067 (+0.61 %)   shape chi2/ndf = 76.2/69 = 1.10
+    PA         rate = 1.0047 +- 0.0067 (+0.47 %)   shape chi2/ndf = 121.4/69 = 1.76
+    onshell    rate = 1.0510 +- 0.0070 (+5.10 %)   shape chi2/ndf = 75.8/69 = 1.10
+    none       rate = 1.0510 +- 0.0070 (+5.10 %)   shape chi2/ndf = 75.8/69 = 1.10
+

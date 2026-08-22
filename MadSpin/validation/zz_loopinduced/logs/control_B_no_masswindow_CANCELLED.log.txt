@@ -1,0 +1,174 @@
+************************************************************
+*                                                          *
+*                      W E L C O M E to                    *
+*             M A D G R A P H 5 _ a M C @ N L O            *
+*                      M A D E V E N T                     *
+*                                                          *
+*                 *                       *                *
+*                   *        * *        *                  *
+*                     * * * * 5 * * * *                    *
+*                   *        * *        *                  *
+*                 *                       *                *
+*                                                          *
+*         VERSION 3.7.2                                    *
+*                                                          *
+*    The MadGraph5_aMC@NLO Development Team - Find us at   *
+*    https://server06.fynu.ucl.ac.be/projects/madgraph     *
+*                                                          *
+*               Type 'help' for in-line help.              *
+*                                                          *
+************************************************************
+INFO: load configuration from /Users/omattelaer/.mg5/mg5_configuration.txt  
+INFO: load configuration from /private/tmp/t75run/ctrl_gg4l_nowindow/Cards/me5_configuration.txt  
+INFO: load configuration from /private/tmp/t75/input/mg5_configuration.txt  
+INFO: load configuration from /private/tmp/t75run/ctrl_gg4l_nowindow/Cards/me5_configuration.txt  
+Using default gzip "gzip". Set another one in ./input/mg5_configuration.txt
+import command /tmp/t75run/ctrlA.cmd
+set run_mode 2
+INFO: This option will be the default in any output that you are going to create in this session. 
+INFO: In order to keep this changes permanent please run 'save options' 
+set nb_core 4
+INFO: This option will be the default in any output that you are going to create in this session. 
+INFO: In order to keep this changes permanent please run 'save options' 
+generate_events prod -f
+stty: stdin isn't a terminal
+[1;34mvalue '[]' for entry 'bypass_check' is not valid. Preserving previous value: '[]'.
+allowed values are any list composed of the following entries: partonshower[0m
+Generating 20000 events with run name prod
+survey  prod 
+INFO: compile directory 
+compile Source Directory
+Using random number seed offset = 4331
+INFO: Running Survey 
+Creating Jobs
+Working on SubProcesses
+INFO:     P0_gg_llll  
+INFO:  Idle: 26,  Running: 18,  Completed: 0 [ current time: 13h21 ] 
+INFO:  Idle: 25,  Running: 18,  Completed: 1 [  5.8s  ] 
+INFO:  Idle: 11,  Running: 18,  Completed: 19 [  11.6s  ] 
+INFO: P0_gg_llll/G1.05 is at 1.13e-08 +- 2.28e-09 pb. Now submitting iteration #2. 
+INFO: P0_gg_llll/G1.08 is at 1.78e-08 +- 7.86e-09 pb. Now submitting iteration #2. 
+INFO: P0_gg_llll/G5.14 is at 0.000255 +- 1.08e-05 pb. Now submitting iteration #2. 
+INFO: P0_gg_llll/G1.07 is at 0.000294 +- 7.04e-05 pb. Now submitting iteration #2. 
+INFO: P0_gg_llll/G1.04 is at 6.4e-10 +- 1.58e-10 pb. Now submitting iteration #2. 
+INFO: P0_gg_llll/G5.17 is at 0.000137 +- 1.36e-05 pb. Now submitting iteration #2. 
+INFO: P0_gg_llll/G5.16 is at 0.000236 +- 1.15e-05 pb. Now submitting iteration #2. 
+INFO: P0_gg_llll/G5.22 is at 0.00246 +- 0.000122 pb. Now submitting iteration #2. 
+INFO:  Idle: 22,  Running: 18,  Completed: 45 [  17.4s  ] 
+INFO:  Idle: 8,  Running: 18,  Completed: 63 [  25.3s  ] 
+INFO: P0_gg_llll/G5.26 is at 7.06e-08 +- 3.72e-08 pb. Now submitting iteration #2. 
+INFO: P0_gg_llll/G5.23 is at 0.000246 +- 8.63e-05 pb. Now submitting iteration #2. 
+INFO: P0_gg_llll/G5.25 is at 0.000149 +- 3.63e-05 pb. Now submitting iteration #2. 
+INFO: P0_gg_llll/G5.14 is at 0.00025454 +- 2.21e-07 pb. Now submitting iteration #3. 
+INFO: P0_gg_llll/G1.08 is at 1.42e-08 +- 4.37e-09 pb. Now submitting iteration #3. 
+INFO: P0_gg_llll/G1.05 is at 1.14e-08 +- 3.28e-11 pb. Now submitting iteration #3. 
+INFO: P0_gg_llll/G1.07 is at 0.000573 +- 0.000252 pb. Now submitting iteration #3. 
+INFO:  Idle: 16,  Running: 18,  Completed: 88 [  32.3s  ] 
+INFO: Survey finished for P0_gg_llll/G1.04 at 8.52e-10 +- 8.84e-11 pb 
+INFO: P0_gg_llll/G5.16 is at 0.000248 +- 4.32e-06 pb. Now submitting iteration #3. 
+INFO: P0_gg_llll/G5.17 is at 0.000114 +- 6.49e-06 pb. Now submitting iteration #3. 
+INFO: P0_gg_llll/G5.22 is at 0.00272 +- 0.000143 pb. Now submitting iteration #3. 
+INFO: P0_gg_llll/G5.25 is at 0.000137 +- 6.47e-06 pb. Now submitting iteration #3. 
+INFO: P0_gg_llll/G5.23 is at 0.000125 +- 3.6e-05 pb. Now submitting iteration #3. 
+INFO:  Idle: 18,  Running: 18,  Completed: 110 [  44.2s  ] 
+INFO:  Idle: 13,  Running: 18,  Completed: 116 [  47.5s  ] 
+INFO: P0_gg_llll/G5.26 is at 4.77e-08 +- 2.4e-08 pb. Now submitting iteration #3. 
+INFO:  Idle: 9,  Running: 18,  Completed: 127 [  51.2s  ] 
+INFO:  Idle: 7,  Running: 18,  Completed: 129 [  59.9s  ] 
+INFO: Survey finished for P0_gg_llll/G5.14 at 0.0002488 +- 2.44e-06 pb 
+INFO: Survey finished for P0_gg_llll/G1.08 at 3.47e-08 +- 2.4e-08 pb 
+INFO: P0_gg_llll/G1.07 is at 0.000638 +- 0.000184 pb. Now submitting iteration #4. 
+INFO: P0_gg_llll/G5.17 is at 0.000111 +- 2.26e-06 pb. Now submitting iteration #4. 
+INFO: Survey finished for P0_gg_llll/G1.05 at 1.139e-08 +- 1.33e-11 pb 
+INFO: Survey finished for P0_gg_llll/G5.16 at 0.0002472 +- 1.55e-06 pb 
+INFO:  Idle: 0,  Running: 18,  Completed: 147 [  1m 3s  ] 
+INFO: P0_gg_llll/G5.22 is at 0.00272 +- 5.91e-05 pb. Now submitting iteration #4. 
+INFO: Survey finished for P0_gg_llll/G5.25 at 0.000133 +- 1.51e-06 pb 
+INFO:  Idle: 1,  Running: 18,  Completed: 151 [  1m 7s  ] 
+INFO: P0_gg_llll/G5.23 is at 0.000139 +- 1.2e-05 pb. Now submitting iteration #4. 
+INFO:  Idle: 1,  Running: 18,  Completed: 156 [  1m 17s  ] 
+INFO: P0_gg_llll/G5.26 is at 1.7e-07 +- 9.97e-08 pb. Now submitting iteration #4. 
+INFO:  Idle: 1,  Running: 18,  Completed: 161 [  1m 29s  ] 
+INFO: Survey finished for P0_gg_llll/G5.17 at 0.0001109 +- 1.03e-06 pb 
+INFO: P0_gg_llll/G1.07 is at 0.000613 +- 0.000101 pb. Now submitting iteration #5. 
+INFO:  Idle: 0,  Running: 15,  Completed: 171 [  1m 35s  ] 
+INFO: Survey finished for P0_gg_llll/G5.22 at 0.00268 +- 3.23e-05 pb 
+INFO:  Idle: 0,  Running: 9,  Completed: 178 [  1m 44s  ] 
+INFO: P0_gg_llll/G5.23 is at 0.000142 +- 6.29e-06 pb. Now submitting iteration #5. 
+INFO:  Idle: 0,  Running: 9,  Completed: 183 [  1m 53s  ] 
+INFO: P0_gg_llll/G5.26 is at 1.26e-06 +- 8.32e-07 pb. Now submitting iteration #5. 
+INFO:  Idle: 0,  Running: 11,  Completed: 186 [  2m 19s  ] 
+INFO: Survey finished for P0_gg_llll/G1.07 at 0.000666 +- 6.24e-05 pb 
+INFO:  Idle: 0,  Running: 7,  Completed: 191 [  2m 29s  ] 
+INFO: Survey finished for P0_gg_llll/G5.23 at 0.000145 +- 2.82e-06 pb 
+INFO:  Idle: 0,  Running: 3,  Completed: 196 [  2m 35s  ] 
+INFO: Survey finished for P0_gg_llll/G5.26 at 5.16e-06 +- 1.32e-06 pb 
+INFO:  Idle: 0,  Running: 0,  Completed: 200 [  2m 36s  ] 
+INFO: End survey 
+refine 20000
+Creating Jobs
+INFO: Refine results to 20000 
+INFO: Generating 20000.0 unweighted events. 
+sum of cpu time of last step: 0 second
+INFO: Effective Luminosity 5426628.486552322 pb^-1 
+INFO: need to improve 5 channels 
+[1;34mWARNING: Channel G1.07//private/tmp/t75run/ctrl_gg4l_nowindow/SubProcesses/P0_gg_llll has a very low efficiency of unweighting. Might not be possible to reach target [0m
+- Current estimate of cross-section: 0.00423835905793 +- 7.045297824296849e-05
+INFO:  Idle: 0,  Running: 8,  Completed: 0 [ current time: 13h23 ] 
+INFO:  Idle: 1,  Running: 7,  Completed: 1 [  59.3s  ] 
+INFO: P0_gg_llll/G5.26 is at 13/55 (24%) event. Resubmit 2 job at iteration 1. 
+INFO:  Idle: 1,  Running: 8,  Completed: 3 [  1m 9s  ] 
+INFO: P0_gg_llll/G5.25 is at 54/799 (6.8%) event. Resubmit 3 job at iteration 1. 
+INFO:  Idle: 0,  Running: 10,  Completed: 5 [  2m 6s  ] 
+INFO: P0_gg_llll/G5.26 is at 4/64 (6.4%) event. Resubmit 5 job at iteration 2. 
+INFO: P0_gg_llll/G5.23 is at 515/787 (66%) event. Resubmit 1 job at iteration 1. 
+INFO:  Idle: 0,  Running: 13,  Completed: 10 [  2m 28s  ] 
+INFO: P0_gg_llll/G5.25 is at 439/782 (56%) event. Resubmit 3 job at iteration 2. 
+INFO:  Idle: 0,  Running: 13,  Completed: 14 [  3m 19s  ] 
+INFO: P0_gg_llll/G5.26 is at 30/56 ('54%') event. Resubmit 5 job at iteration 3. 
+INFO:  Idle: 0,  Running: 13,  Completed: 20 [  3m 50s  ] 
+INFO: P0_gg_llll/G5.25 is at 466/789 ('59%') event. Resubmit 4 job at iteration 3. 
+INFO:  Idle: 1,  Running: 14,  Completed: 24 [  4m 5s  ] 
+INFO: P0_gg_llll/G5.22 is at 2456/14976 (16%) event. Resubmit 2 job at iteration 1. 
+INFO:  Idle: 0,  Running: 15,  Completed: 26 [  4m 33s  ] 
+INFO: found enough event for P0_gg_llll/G5.23 
+INFO: P0_gg_llll/G5.26 is at 21/57 ('37%') event. Resubmit 7 job at iteration 4. 
+INFO:  Idle: 0,  Running: 16,  Completed: 34 [  5m 28s  ] 
+INFO: P0_gg_llll/G5.25 is at 532/782 ('68%') event. Resubmit 5 job at iteration 4. 
+INFO:  Idle: 0,  Running: 17,  Completed: 39 [  6m 9s  ] 
+INFO:  Idle: 0,  Running: 12,  Completed: 44 [  6m 12s  ] 
+INFO: P0_gg_llll/G5.26 is at 2/58 ('3.5%') event. Resubmit 10 job at iteration 5. 
+INFO:  Idle: 2,  Running: 18,  Completed: 47 [  7m 9s  ] 
+INFO:  Idle: 0,  Running: 18,  Completed: 49 [  7m 12s  ] 
+INFO: found enough event for P0_gg_llll/G5.25 
+INFO:  Idle: 0,  Running: 16,  Completed: 52 [  7m 20s  ] 
+INFO:  Idle: 0,  Running: 15,  Completed: 53 [  7m 38s  ] 
+INFO:  Idle: 0,  Running: 13,  Completed: 55 [  7m 41s  ] 
+INFO:  Idle: 0,  Running: 10,  Completed: 58 [  7m 45s  ] 
+INFO:  Idle: 0,  Running: 8,  Completed: 60 [  8m 21s  ] 
+INFO: P0_gg_llll/G5.26 is at 41/59 ('71%') event. Resubmit 5 job at iteration 6. 
+INFO:  Idle: 0,  Running: 10,  Completed: 64 [  8m 50s  ] 
+INFO: P0_gg_llll/G5.22 is at 7194/14807 (49%) event. Resubmit 4 job at iteration 2. 
+INFO:  Idle: 0,  Running: 12,  Completed: 67 [  9m 27s  ] 
+INFO: P0_gg_llll/G5.26 is at 56/59 ('97%') event. Resubmit 1 job at iteration 7. 
+INFO:  Idle: 1,  Running: 8,  Completed: 73 [  10m 25s  ] 
+INFO: found enough event for P0_gg_llll/G5.26 
+INFO:  Idle: 0,  Running: 7,  Completed: 75 [  10m 30s  ] 
+INFO: P0_gg_llll/G1.07 is at 123/3753 (3.3%) event. Resubmit 10 job at iteration 1. 
+INFO:  Idle: 0,  Running: 13,  Completed: 80 [  12m 52s  ] 
+INFO: found enough event for P0_gg_llll/G5.22 
+INFO:  Idle: 1,  Running: 0,  Completed: 94 [  20m 18s  ] 
+INFO: P0_gg_llll/G1.07 is at 57/3920 (1.5%) event. Resubmit 25 job at iteration 2. 
+INFO:  Idle: 7,  Running: 18,  Completed: 95 [  20m 43s  ] 
+INFO:  Idle: 0,  Running: 7,  Completed: 113 [  34m 58s  ] 
+INFO:  Idle: 1,  Running: 0,  Completed: 120 [  44m 34s  ] 
+INFO: P0_gg_llll/G1.07 is at 41/3932 ('1%') event. Resubmit 37 job at iteration 3. 
+INFO:  Idle: 19,  Running: 18,  Completed: 121 [  45m 55s  ] 
+INFO:  Idle: 1,  Running: 18,  Completed: 139 [  56m 18s  ] 
+INFO:  Idle: 0,  Running: 1,  Completed: 157 [  1h 4m  ] 
+INFO:  Idle: 1,  Running: 0,  Completed: 158 [  1h 10m  ] 
+INFO: P0_gg_llll/G1.07 is at 1133/3892 ('29%') event. Resubmit 55 job at iteration 4. 
+INFO:  Idle: 37,  Running: 18,  Completed: 159 [  1h 12m  ] 
+INFO:  Idle: 19,  Running: 18,  Completed: 177 [  1h 19m  ] 
+INFO:  Idle: 1,  Running: 18,  Completed: 195 [  1h 30m  ] 
+INFO:  Idle: 0,  Running: 1,  Completed: 213 [  1h 39m  ] 

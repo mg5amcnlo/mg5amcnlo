@@ -1,0 +1,415 @@
+Running MG5 in debug mode
+************************************************************
+*                                                          *
+*                     W E L C O M E to                     *
+*              M A D G R A P H 5 _ a M C @ N L O           *
+*                                                          *
+*                                                          *
+*                 *                       *                *
+*                   *        * *        *                  *
+*                     * * * * 5 * * * *                    *
+*                   *        * *        *                  *
+*                 *                       *                *
+*                                                          *
+*         VERSION 3.7.2                 2026-04-28         *
+*         GIT r992-582-g178e9542d  claude/ms-zz-loopinduced         *
+*                                                          *
+*    The MadGraph5_aMC@NLO Development Team - Find us at   *
+*              http://madgraph.phys.ucl.ac.be/             *
+*                            and                           *
+*            http://amcatnlo.web.cern.ch/amcatnlo/         *
+*                                                          *
+*               Type 'help' for in-line help.              *
+*           Type 'tutorial' to learn how MG5 works         *
+*    Type 'tutorial aMCatNLO' to learn how aMC@NLO works   *
+*    Type 'tutorial MadLoop' to learn how MadLoop works    *
+*                                                          *
+************************************************************
+load MG5 configuration from /Users/omattelaer/.mg5/mg5_configuration.txt 
+[1;32mDEBUG:  set configuration option f2py_compiler to /Users/omattelaer/Documents/git_workspace/version3/py313/.direnv/python-3.13/bin/f2py --python=3.13 [1;30m[madgraph_interface.py at line 7452][0m [0m
+[1;32mDEBUG:  set configuration option f2py_compiler to /Users/omattelaer/Documents/git_workspace/version3/py311/.direnv/python-3.13/bin/f2py --python=3.11 [1;30m[madgraph_interface.py at line 7452][0m [0m
+[1;32mDEBUG:  set configuration option f2py_compiler to /Users/omattelaer/Documents/git_workspace/version3/py312/.direnv/python-3.13/bin/f2py --python=3.12 [1;30m[madgraph_interface.py at line 7452][0m [0m
+[1;32mDEBUG:  set configuration option f2py_compiler to /Users/omattelaer/Documents/git_workspace/version3/py314/.direnv/python-3.13/bin/f2py --python=3.14 [1;30m[madgraph_interface.py at line 7452][0m [0m
+set f2py compiler to /Users/omattelaer/Documents/git_workspace/version3/py314/.direnv/python-3.13/bin/f2py
+[1;32mDEBUG:  set configuration option lhapdf to /Users/omattelaer/Documents/HEPTools/lhapdf6_py312/bin/lhapdf-config --python=3.12 [1;30m[madgraph_interface.py at line 7452][0m [0m
+[1;32mDEBUG:  set configuration option lhapdf to /Users/omattelaer/Documents/HEPTools/lhapdf6_py313/bin/lhapdf-config --python=3.13 [1;30m[madgraph_interface.py at line 7452][0m [0m
+[1;32mDEBUG:  set configuration option lhapdf to /Users/omattelaer/Documents/HEPTools/lhapdf6_py314/bin/lhapdf-config --python=3.14 [1;30m[madgraph_interface.py at line 7452][0m [0m
+/Users/omattelaer/Documents/HEPTools/lhapdf6_py314/bin/lhapdf-config does not seem to correspond to a valid lhapdf-config executable. 
+Please set the 'lhapdf' variable to the (absolute) /PATH/TO/lhapdf-config (including lhapdf-config).
+Note that you can still compile and run aMC@NLO with the built-in PDFs
+ MG5_aMC> set lhapdf /PATH/TO/lhapdf-config
+
+load MG5 configuration from input/mg5_configuration.txt 
+fastjet-config does not seem to correspond to a valid fastjet-config executable (v3+). We will use fjcore instead.
+ Please set the 'fastjet'variable to the full (absolute) /PATH/TO/fastjet-config (including fastjet-config).
+ MG5_aMC> set fastjet /PATH/TO/fastjet-config
+
+/Users/omattelaer/Documents/HEPTools/EMELA/bin/eMELA-config does not seem to correspond to a valid eMELA-config executable.
+ Please set the 'fastjet'variable to the full (absolute) /PATH/TO/eMELA-config (including eMELA-config).
+ MG5_aMC> set eMELA /PATH/TO/eMELA-config
+
+set ninja to /Users/omattelaer/Documents/HEPTools/lib
+set collier to /Users/omattelaer/Documents/HEPTools/lib
+lhapdf-config does not seem to correspond to a valid lhapdf-config executable. 
+Please set the 'lhapdf' variable to the (absolute) /PATH/TO/lhapdf-config (including lhapdf-config).
+Note that you can still compile and run aMC@NLO with the built-in PDFs
+ MG5_aMC> set lhapdf /PATH/TO/lhapdf-config
+
+set lhapdf to /Users/omattelaer/Documents/HEPTools/lhapdf6_py3/bin/lhapdf-config
+[1;34m
+    The current version of MG5_aMC (v3.7.2) is different than the one active when
+    installing the 'mg5amc_py8_interface_path' (which was MG5aMC v3.5.15). 
+    Please consider refreshing the installation of this interface with the command:
+     MG5_aMC>install mg5amc_py8_interface
+    [0m
+Using default gzip "gzip". Set another one in ./input/mg5_configuration.txt
+[1;34mWARNING: launching caffeinate to prevent idle sleep when MG5aMC is running. Run './bin/mg5_aMC -s' to prevent this. [0m
+import /private/tmp/t75run/genA.mg5
+The import format was not given, so we guess it as command
+set auto_convert_model T
+save options auto_convert_model
+save configuration file to /private/tmp/t75/input/mg5_configuration.txt
+import model sm
+INFO: Restrict model sm with file models/sm/restrict_default.dat . 
+[1;32mDEBUG: Simplifying conditional expressions [0m
+[1;32mDEBUG: remove interactions: u s w+ at order: QED=1 [0m
+[1;32mDEBUG: remove interactions: u b w+ at order: QED=1 [0m
+[1;32mDEBUG: remove interactions: c d w+ at order: QED=1 [0m
+[1;32mDEBUG: remove interactions: c b w+ at order: QED=1 [0m
+[1;32mDEBUG: remove interactions: t d w+ at order: QED=1 [0m
+[1;32mDEBUG: remove interactions: t s w+ at order: QED=1 [0m
+[1;32mDEBUG: remove interactions: s u w+ at order: QED=1 [0m
+[1;32mDEBUG: remove interactions: b u w+ at order: QED=1 [0m
+[1;32mDEBUG: remove interactions: d c w+ at order: QED=1 [0m
+[1;32mDEBUG: remove interactions: b c w+ at order: QED=1 [0m
+[1;32mDEBUG: remove interactions: d t w+ at order: QED=1 [0m
+[1;32mDEBUG: remove interactions: s t w+ at order: QED=1 [0m
+[1;32mDEBUG: remove interactions: c c h at order: QED=1 [0m
+[1;32mDEBUG: remove interactions: e- e- h at order: QED=1 [0m
+[1;32mDEBUG: remove interactions: mu- mu- h at order: QED=1 [0m
+[1;32mDEBUG:  Fuse the Following coupling (they have the same value): ('GC_100', 1), ('GC_104', 1), ('GC_108', 1), ('GC_40', 1), ('GC_41', 1), ('GC_45', 1), ('GC_49', 1)  [0m
+[1;32mDEBUG:  Fuse the Following coupling (they have the same value): ('GC_21', 1), ('GC_27', -1)  [0m
+[1;32mDEBUG:  Fuse the Following coupling (they have the same value): ('GC_15', 1), ('GC_30', -1)  [0m
+[1;32mDEBUG:  Fuse the Following coupling (they have the same value): ('GC_38', 1), ('GC_39', -1)  [0m
+[1;32mDEBUG:  Fuse the Following coupling (they have the same value): ('GC_3', 1), ('GC_4', -1)  [0m
+[1;32mDEBUG:  Fuse the Following coupling (they have the same value): ('GC_50', 1), ('GC_51', -1)  [0m
+[1;32mDEBUG:  Fuse the Following coupling (they have the same value): ('GC_54', 1), ('GC_56', -1)  [0m
+[1;32mDEBUG:  Fuse the Following coupling (they have the same value): ('GC_66', 1), ('GC_67', -1)  [0m
+[1;32mDEBUG:  Fuse the Following coupling (they have the same value): ('GC_70', 1), ('GC_73', -1)  [0m
+[1;32mDEBUG:  Fuse the Following coupling (they have the same value): ('GC_74', 1), ('GC_75', -1)  [0m
+[1;32mDEBUG:  Fuse the Following coupling (they have the same value): ('GC_77', 1), ('GC_78', -1)  [0m
+[1;32mDEBUG:  Fuse the Following coupling (they have the same value): ('GC_76', 1), ('GC_79', -1)  [0m
+[1;32mDEBUG:  Fuse the Following coupling (they have the same value): ('GC_7', 1), ('GC_9', -1)  [0m
+[1;32mDEBUG:  Fuse the Following coupling (they have the same value): ('GC_96', 1), ('GC_97', -1)  [0m
+[1;32mDEBUG: remove parameters: mdl_lamWS [0m
+[1;32mDEBUG: remove parameters: mdl_AWS [0m
+[1;32mDEBUG: remove parameters: mdl_rhoWS [0m
+[1;32mDEBUG: remove parameters: mdl_etaWS [0m
+[1;32mDEBUG: remove parameters: mdl_ymc [0m
+[1;32mDEBUG: remove parameters: mdl_yme [0m
+[1;32mDEBUG: remove parameters: mdl_ymm [0m
+[1;32mDEBUG: remove parameters: mdl_MC [0m
+[1;32mDEBUG: remove parameters: mdl_Me [0m
+[1;32mDEBUG: remove parameters: mdl_MM [0m
+[1;32mDEBUG: remove parameters: mdl_WTau [0m
+[1;32mDEBUG: remove parameters: mdl_lamWS__exp__2 [0m
+[1;32mDEBUG: remove parameters: mdl_CKM1x2 [0m
+[1;32mDEBUG: remove parameters: mdl_lamWS__exp__3 [0m
+[1;32mDEBUG: remove parameters: mdl_CKM1x3 [0m
+[1;32mDEBUG: remove parameters: mdl_CKM2x1 [0m
+[1;32mDEBUG: remove parameters: mdl_CKM2x3 [0m
+[1;32mDEBUG: remove parameters: mdl_CKM3x1 [0m
+[1;32mDEBUG: remove parameters: mdl_CKM3x2 [0m
+[1;32mDEBUG: remove parameters: mdl_conjg__CKM1x3 [0m
+[1;32mDEBUG: remove parameters: mdl_conjg__CKM2x3 [0m
+[1;32mDEBUG: remove parameters: mdl_conjg__CKM2x1 [0m
+[1;32mDEBUG: remove parameters: mdl_conjg__CKM3x1 [0m
+[1;32mDEBUG: remove parameters: mdl_conjg__CKM3x2 [0m
+[1;32mDEBUG: remove parameters: mdl_conjg__CKM1x2 [0m
+[1;32mDEBUG: remove parameters: mdl_yc [0m
+[1;32mDEBUG: remove parameters: mdl_ye [0m
+[1;32mDEBUG: remove parameters: mdl_ym [0m
+[1;32mDEBUG: remove parameters: mdl_I1x31 [0m
+[1;32mDEBUG: remove parameters: mdl_I1x32 [0m
+[1;32mDEBUG: remove parameters: mdl_I2x12 [0m
+[1;32mDEBUG: remove parameters: mdl_I2x13 [0m
+[1;32mDEBUG: remove parameters: mdl_I2x22 [0m
+[1;32mDEBUG: remove parameters: mdl_I2x23 [0m
+[1;32mDEBUG: remove parameters: mdl_I2x32 [0m
+[1;32mDEBUG: remove parameters: mdl_I3x21 [0m
+[1;32mDEBUG: remove parameters: mdl_I3x22 [0m
+[1;32mDEBUG: remove parameters: mdl_I3x23 [0m
+[1;32mDEBUG: remove parameters: mdl_I3x31 [0m
+[1;32mDEBUG: remove parameters: mdl_I3x32 [0m
+[1;32mDEBUG: remove parameters: mdl_I4x13 [0m
+[1;32mDEBUG: remove parameters: mdl_I4x23 [0m
+[1;32mDEBUG: remove parameters: mdl_CKM1x1 [0m
+[1;32mDEBUG: remove parameters: mdl_CKM2x2 [0m
+[1;32mDEBUG: fix parameter value: mdl_CKM3x3 [0m
+[1;32mDEBUG: fix parameter value: mdl_conjg__CKM3x3 [0m
+[1;32mDEBUG: remove parameters: mdl_conjg__CKM2x2 [0m
+[1;32mDEBUG: fix parameter value: mdl_conjg__CKM1x1 [0m
+INFO: Change particles name to pass to MG5 convention 
+Defined multiparticle p = g u c d s u~ c~ d~ s~
+Defined multiparticle j = g u c d s u~ c~ d~ s~
+Defined multiparticle l+ = e+ mu+
+Defined multiparticle l- = e- mu-
+Defined multiparticle vl = ve vm vt
+Defined multiparticle vl~ = ve~ vm~ vt~
+Defined multiparticle all = g u c d s u~ c~ d~ s~ a ve vm vt e- mu- ve~ vm~ vt~ e+ mu+ t b t~ b~ z w+ h w- ta- ta+
+generate g g > z z [noborn=QCD]
+The current model sm does not allow to generate loop corrections of type ['QCD'].
+MG5_aMC now loads 'loop_sm'.
+ import model loop_sm
+INFO: Restrict model loop_sm with file models/loop_sm/restrict_default.dat . 
+[1;32mDEBUG: Simplifying conditional expressions [0m
+[1;32mDEBUG: remove interactions: s u w+ at order: QED=1 [0m
+[1;32mDEBUG: remove interactions: b u w+ at order: QED=1 [0m
+[1;32mDEBUG: remove interactions: d c w+ at order: QED=1 [0m
+[1;32mDEBUG: remove interactions: b c w+ at order: QED=1 [0m
+[1;32mDEBUG: remove interactions: d t w+ at order: QED=1 [0m
+[1;32mDEBUG: remove interactions: s t w+ at order: QED=1 [0m
+[1;32mDEBUG: remove interactions: c c h at order: QED=1 [0m
+[1;32mDEBUG: remove interactions: e- e- h at order: QED=1 [0m
+[1;32mDEBUG: remove interactions: m- m- h at order: QED=1 [0m
+[1;32mDEBUG: remove interactions: u s w+ at order: QED=1 [0m
+[1;32mDEBUG: remove interactions: u b w+ at order: QED=1 [0m
+[1;32mDEBUG: remove interactions: c d w+ at order: QED=1 [0m
+[1;32mDEBUG: remove interactions: c b w+ at order: QED=1 [0m
+[1;32mDEBUG: remove interactions: t d w+ at order: QED=1 [0m
+[1;32mDEBUG: remove interactions: t s w+ at order: QED=1 [0m
+[1;32mDEBUG: remove interactions: g g h h at order: QCD=2, QED=2 [0m
+[1;32mDEBUG: remove interactions: g g h at order: QCD=2, QED=1 [0m
+[1;32mDEBUG: remove interactions: g g w+ w+ at order: QCD=2, QED=2 [0m
+[1;32mDEBUG: remove interactions: g g w+ w+ at order: QCD=2, QED=2 [0m
+[1;32mDEBUG: remove interactions: g g w+ w+ at order: QCD=2, QED=2 [0m
+[1;32mDEBUG: remove interactions: g g w+ w+ at order: QCD=2, QED=2 [0m
+[1;32mDEBUG: remove interactions: g g w+ w+ at order: QCD=2, QED=2 [0m
+[1;32mDEBUG: remove interactions: g g w+ w+ at order: QCD=2, QED=2 [0m
+[1;32mDEBUG: modify interactions: g g at order: QCD=2 [0m
+[1;32mDEBUG: modify interactions: c c at order: QCD=2 [0m
+[1;32mDEBUG: remove interactions: b c w+ at order: QCD=2, QED=1 [0m
+[1;32mDEBUG: remove interactions: b u w+ at order: QCD=2, QED=1 [0m
+[1;32mDEBUG: remove interactions: c c h at order: QCD=2, QED=1 [0m
+[1;32mDEBUG: remove interactions: c b w+ at order: QCD=2, QED=1 [0m
+[1;32mDEBUG: remove interactions: c d w+ at order: QCD=2, QED=1 [0m
+[1;32mDEBUG: remove interactions: d c w+ at order: QCD=2, QED=1 [0m
+[1;32mDEBUG: remove interactions: d t w+ at order: QCD=2, QED=1 [0m
+[1;32mDEBUG: remove interactions: s t w+ at order: QCD=2, QED=1 [0m
+[1;32mDEBUG: remove interactions: s u w+ at order: QCD=2, QED=1 [0m
+[1;32mDEBUG: remove interactions: t d w+ at order: QCD=2, QED=1 [0m
+[1;32mDEBUG: remove interactions: t s w+ at order: QCD=2, QED=1 [0m
+[1;32mDEBUG: remove interactions: u b w+ at order: QCD=2, QED=1 [0m
+[1;32mDEBUG: remove interactions: u s w+ at order: QCD=2, QED=1 [0m
+[1;32mDEBUG: remove interactions: g g g at order: QCD=3 [0m
+[1;32mDEBUG: remove interactions: g g g g at order: QCD=4 [0m
+[1;32mDEBUG: remove interactions: d d g at order: QCD=3 [0m
+[1;32mDEBUG: remove interactions: u u g at order: QCD=3 [0m
+[1;32mDEBUG: remove interactions: c c g at order: QCD=3 [0m
+[1;32mDEBUG: remove interactions: s s g at order: QCD=3 [0m
+[1;32mDEBUG: remove interactions: b b g at order: QCD=3 [0m
+[1;32mDEBUG: remove interactions: t t g at order: QCD=3 [0m
+[1;32mDEBUG: remove interactions: c c h at order: QED=1, QCD=2 [0m
+[1;32mDEBUG: remove interactions: c c h at order: QED=1, QCD=2 [0m
+[1;32mDEBUG: remove interactions: c c at order: QCD=2 [0m
+[1;32mDEBUG: remove interactions: c c at order: QCD=2 [0m
+[1;32mDEBUG: remove counterterm of particle g with loop particles ((c)) perturbing order QCD [0m
+[1;32mDEBUG: remove counterterm of particle c with loop particles ((c,g)) perturbing order QCD [0m
+[1;32mDEBUG:  Fuse the Following coupling (they have the same value): ('GC_1007', 1), ('GC_1009', -1)  [0m
+[1;32mDEBUG:  Fuse the Following coupling (they have the same value): ('GC_1021', 1), ('GC_1027', -1)  [0m
+[1;32mDEBUG:  Fuse the Following coupling (they have the same value): ('GC_1015', 1), ('GC_1030', -1)  [0m
+[1;32mDEBUG:  Fuse the Following coupling (they have the same value): ('GC_1038', 1), ('GC_1039', -1)  [0m
+[1;32mDEBUG:  Fuse the Following coupling (they have the same value): ('GC_1054', 1), ('GC_1056', -1)  [0m
+[1;32mDEBUG:  Fuse the Following coupling (they have the same value): ('GC_1066', 1), ('GC_1067', -1)  [0m
+[1;32mDEBUG:  Fuse the Following coupling (they have the same value): ('GC_1074', 1), ('GC_1075', -1)  [0m
+[1;32mDEBUG:  Fuse the Following coupling (they have the same value): ('GC_1096', 1), ('GC_1097', -1)  [0m
+[1;32mDEBUG:  Fuse the Following coupling (they have the same value): ('GC_11', 1), ('GC_12', 1), ('GC_16', 1), ('GC_20', 1), ('GC_39', 1), ('GC_43', 1), ('GC_47', 1)  [0m
+[1;32mDEBUG:  Fuse the Following coupling (they have the same value): ('GC_21', 1), ('GC_22', -1)  [0m
+[1;32mDEBUG:  Fuse the Following coupling (they have the same value): ('GC_25', 1), ('GC_3', -1)  [0m
+[1;32mDEBUG:  Fuse the Following coupling (they have the same value): ('GC_R2_1021', 1), ('GC_R2_1027', -1)  [0m
+[1;32mDEBUG:  Fuse the Following coupling (they have the same value): ('GC_R2_1015', 1), ('GC_R2_1030', -1)  [0m
+[1;32mDEBUG:  Fuse the Following coupling (they have the same value): ('GC_UV_1021', 1), ('GC_UV_1027', -1)  [0m
+[1;32mDEBUG:  Fuse the Following coupling (they have the same value): ('GC_UV_1021_1eps', 1), ('GC_UV_1027_1eps', -1)  [0m
+[1;32mDEBUG:  Fuse the Following coupling (they have the same value): ('GC_UV_1015', 1), ('GC_UV_1030', -1)  [0m
+[1;32mDEBUG:  Fuse the Following coupling (they have the same value): ('GC_UV_1015_1eps', 1), ('GC_UV_1030_1eps', -1)  [0m
+[1;32mDEBUG:  Fuse the Following coupling (they have the same value): ('R2GC_137_43', 1), ('R2GC_138_45', -1)  [0m
+[1;32mDEBUG:  Fuse the Following coupling (they have the same value): ('R2GC_137_44', 1), ('R2GC_138_46', -1)  [0m
+[1;32mDEBUG:  Fuse the Following coupling (they have the same value): ('R2GC_141_50', 1), ('R2GC_142_52', -1)  [0m
+[1;32mDEBUG:  Fuse the Following coupling (they have the same value): ('R2GC_141_51', 1), ('R2GC_142_53', -1)  [0m
+[1;32mDEBUG:  Fuse the Following coupling (they have the same value): ('R2_GGGZaxialDown', 1), ('R2_GGGZaxialUp', -1)  [0m
+[1;32mDEBUG:  Fuse the Following coupling (they have the same value): ('R2_GGWWcs', 1), ('R2_GGWWtb', 1), ('R2_GGWWud', 1)  [0m
+[1;32mDEBUG:  Fuse the Following coupling (they have the same value): ('R2_GGZdown', 1), ('R2_GGZup', -1)  [0m
+[1;32mDEBUG:  Fuse the Following coupling (they have the same value): ('R2_DDZ_V2', 1), ('R2_UUZ_V2', -1)  [0m
+[1;32mDEBUG:  Fuse the Following coupling (they have the same value): ('R2_DDZ_V3', 1), ('R2_UUZ_V5', 1)  [0m
+[1;32mDEBUG:  Fuse the Following coupling (they have the same value): ('R2_bxtW', 1), ('R2_cxsW', 1), ('R2_dxuW', 1), ('R2_sxcW', 1), ('R2_txbW', 1), ('R2_uxdW', 1)  [0m
+[1;32mDEBUG:  Fuse the Following coupling (they have the same value): ('UVWfct_G_1_1eps', 1), ('UVWfct_G_2_1eps', 1)  [0m
+[1;32mDEBUG:  Fuse the Following coupling (they have the same value): ('UVWfct_b_0_1eps', 1), ('UVWfct_t_0_1eps', 1)  [0m
+[1;32mDEBUG:  Fuse the Following coupling (they have the same value): ('UV_3Gb_1eps', 1), ('UV_3Gc_1eps', 1), ('UV_3Gq_1eps', 1), ('UV_3Gt_1eps', 1)  [0m
+[1;32mDEBUG:  Fuse the Following coupling (they have the same value): ('UV_4Gb_1eps', 1), ('UV_4Gc_1eps', 1), ('UV_4Ggt_1eps', 1), ('UV_4Gq_1eps', 1)  [0m
+[1;32mDEBUG:  Fuse the Following coupling (they have the same value): ('UV_GQQb_1eps', 1), ('UV_GQQc_1eps', 1), ('UV_GQQq_1eps', 1), ('UV_GQQt_1eps', 1)  [0m
+[1;32mDEBUG: remove parameters: mdl_lamWS [0m
+[1;32mDEBUG: remove parameters: mdl_AWS [0m
+[1;32mDEBUG: remove parameters: mdl_rhoWS [0m
+[1;32mDEBUG: remove parameters: mdl_etaWS [0m
+[1;32mDEBUG: remove parameters: mdl_ymc [0m
+[1;32mDEBUG: remove parameters: mdl_yme [0m
+[1;32mDEBUG: remove parameters: mdl_ymm [0m
+[1;32mDEBUG: remove parameters: mdl_MC [0m
+[1;32mDEBUG: remove parameters: mdl_Me [0m
+[1;32mDEBUG: remove parameters: mdl_MM [0m
+[1;32mDEBUG: remove parameters: mdl_WTau [0m
+[1;32mDEBUG: remove parameters: mdl_lamWS__exp__2 [0m
+[1;32mDEBUG: remove parameters: mdl_CKM12 [0m
+[1;32mDEBUG: remove parameters: mdl_lamWS__exp__3 [0m
+[1;32mDEBUG: remove parameters: mdl_CKM13 [0m
+[1;32mDEBUG: remove parameters: mdl_CKM21 [0m
+[1;32mDEBUG: remove parameters: mdl_CKM23 [0m
+[1;32mDEBUG: remove parameters: mdl_CKM31 [0m
+[1;32mDEBUG: remove parameters: mdl_CKM32 [0m
+[1;32mDEBUG: remove parameters: mdl_CKM1x2 [0m
+[1;32mDEBUG: remove parameters: mdl_CKM1x3 [0m
+[1;32mDEBUG: remove parameters: mdl_CKM2x1 [0m
+[1;32mDEBUG: remove parameters: mdl_CKM2x3 [0m
+[1;32mDEBUG: remove parameters: mdl_CKM3x1 [0m
+[1;32mDEBUG: remove parameters: mdl_CKM3x2 [0m
+[1;32mDEBUG: remove parameters: mdl_conjg__CKM1x3 [0m
+[1;32mDEBUG: remove parameters: mdl_conjg__CKM2x3 [0m
+[1;32mDEBUG: remove parameters: mdl_conjg__CKM2x1 [0m
+[1;32mDEBUG: remove parameters: mdl_conjg__CKM3x1 [0m
+[1;32mDEBUG: remove parameters: mdl_conjg__CKM3x2 [0m
+[1;32mDEBUG: remove parameters: mdl_MC__exp__2 [0m
+[1;32mDEBUG: remove parameters: mdl_conjg__CKM12 [0m
+[1;32mDEBUG: remove parameters: mdl_conjg__CKM13 [0m
+[1;32mDEBUG: remove parameters: mdl_conjg__CKM21 [0m
+[1;32mDEBUG: remove parameters: mdl_conjg__CKM23 [0m
+[1;32mDEBUG: remove parameters: mdl_conjg__CKM31 [0m
+[1;32mDEBUG: remove parameters: mdl_conjg__CKM32 [0m
+[1;32mDEBUG: remove parameters: mdl_yc [0m
+[1;32mDEBUG: remove parameters: mdl_ye [0m
+[1;32mDEBUG: remove parameters: mdl_ym [0m
+[1;32mDEBUG: remove parameters: mdl_I1x31 [0m
+[1;32mDEBUG: remove parameters: mdl_I1x32 [0m
+[1;32mDEBUG: remove parameters: mdl_I2x12 [0m
+[1;32mDEBUG: remove parameters: mdl_I2x13 [0m
+[1;32mDEBUG: remove parameters: mdl_I2x22 [0m
+[1;32mDEBUG: remove parameters: mdl_I2x23 [0m
+[1;32mDEBUG: remove parameters: mdl_I2x32 [0m
+[1;32mDEBUG: remove parameters: mdl_I3x21 [0m
+[1;32mDEBUG: remove parameters: mdl_I3x22 [0m
+[1;32mDEBUG: remove parameters: mdl_I3x23 [0m
+[1;32mDEBUG: remove parameters: mdl_I3x31 [0m
+[1;32mDEBUG: remove parameters: mdl_I3x32 [0m
+[1;32mDEBUG: remove parameters: mdl_I4x13 [0m
+[1;32mDEBUG: remove parameters: mdl_I4x23 [0m
+[1;32mDEBUG: remove parameters: mdl_Vector_ubGp [0m
+[1;32mDEBUG: remove parameters: mdl_Vector_cdGp [0m
+[1;32mDEBUG: remove parameters: mdl_Vector_csGp [0m
+[1;32mDEBUG: remove parameters: mdl_Vector_cbGp [0m
+[1;32mDEBUG: remove parameters: mdl_Vector_tdGp [0m
+[1;32mDEBUG: remove parameters: mdl_Vector_tsGp [0m
+[1;32mDEBUG: remove parameters: mdl_Axial_ubGp [0m
+[1;32mDEBUG: remove parameters: mdl_Axial_cdGp [0m
+[1;32mDEBUG: remove parameters: mdl_Axial_csGp [0m
+[1;32mDEBUG: remove parameters: mdl_Axial_cbGp [0m
+[1;32mDEBUG: remove parameters: mdl_Axial_tdGp [0m
+[1;32mDEBUG: remove parameters: mdl_Axial_tsGp [0m
+[1;32mDEBUG: remove parameters: mdl_Vector_ubGm [0m
+[1;32mDEBUG: remove parameters: mdl_Vector_cdGm [0m
+[1;32mDEBUG: remove parameters: mdl_Vector_csGm [0m
+[1;32mDEBUG: remove parameters: mdl_Vector_cbGm [0m
+[1;32mDEBUG: remove parameters: mdl_Vector_tdGm [0m
+[1;32mDEBUG: remove parameters: mdl_Vector_tsGm [0m
+[1;32mDEBUG: remove parameters: mdl_Axial_ubGm [0m
+[1;32mDEBUG: remove parameters: mdl_Axial_cdGm [0m
+[1;32mDEBUG: remove parameters: mdl_Axial_csGm [0m
+[1;32mDEBUG: remove parameters: mdl_Axial_cbGm [0m
+[1;32mDEBUG: remove parameters: mdl_Axial_tdGm [0m
+[1;32mDEBUG: remove parameters: mdl_Axial_tsGm [0m
+[1;32mDEBUG: remove parameters: mdl_yc__exp__2 [0m
+[1;32mDEBUG: remove parameters: mdl_GWcft_UV_c_1EPS_ [0m
+[1;32mDEBUG: remove parameters: mdl_cWcft_UV_1EPS_ [0m
+[1;32mDEBUG: remove parameters: mdl_cMass_UV_1EPS_ [0m
+[1;32mDEBUG: remove parameters: mdl_G_UVc_FIN_ [0m
+[1;32mDEBUG: remove parameters: mdl_GWcft_UV_c_FIN_ [0m
+[1;32mDEBUG: remove parameters: mdl_cWcft_UV_FIN_ [0m
+[1;32mDEBUG: remove parameters: mdl_cMass_UV_FIN_ [0m
+[1;32mDEBUG: remove parameters: mdl_UV_yuk_c_FIN_ [0m
+[1;32mDEBUG: fix parameter value: mdl_lhv [0m
+[1;32mDEBUG: remove parameters: mdl_CKM11 [0m
+[1;32mDEBUG: fix parameter value: mdl_CKM22 [0m
+[1;32mDEBUG: fix parameter value: mdl_CKM33 [0m
+[1;32mDEBUG: remove parameters: mdl_CKM1x1 [0m
+[1;32mDEBUG: remove parameters: mdl_CKM2x2 [0m
+[1;32mDEBUG: fix parameter value: mdl_CKM3x3 [0m
+[1;32mDEBUG: fix parameter value: mdl_conjg__CKM3x3 [0m
+[1;32mDEBUG: remove parameters: mdl_conjg__CKM2x2 [0m
+[1;32mDEBUG: remove parameters: mdl_conjg__CKM11 [0m
+[1;32mDEBUG: fix parameter value: mdl_conjg__CKM22 [0m
+[1;32mDEBUG: remove parameters: mdl_conjg__CKM33 [0m
+INFO: Change particles name to pass to MG5 convention 
+Kept definitions of multiparticles p / j / l+ / l- / vl / vl~ unchanged
+Defined multiparticle all = g gh gh~ d u s c d~ u~ s~ c~ a ve vm vt e- mu- ve~ vm~ vt~ e+ mu+ b t b~ t~ z w+ h w- ta- ta+
+INFO: Checking for minimal orders which gives processes. 
+INFO: Please specify coupling orders to bypass this step. 
+INFO: Trying coupling order WEIGHTED<=4: WEIGTHED IS QCD+2*QED 
+INFO: Trying coupling order WEIGHTED<=5: WEIGTHED IS QCD+2*QED 
+INFO: Trying coupling order WEIGHTED<=6: WEIGTHED IS QCD+2*QED 
+INFO: Trying coupling order WEIGHTED<=7: WEIGTHED IS QCD+2*QED 
+[1;32mDEBUG: Generating process: g g > z z WEIGHTED<=8 [ noborn = QCD ]  [0m
+[1;32mDEBUG: Born diagrams generation skipped by user request. [0m
+[1;32mDEBUG: Coupling order combinations considered: (QCD,QED,WEIGHTED) [0m
+[1;32mDEBUG:  > No Born contributions for this process. [0m
+[1;32mDEBUG:  > loop : (4,4,W12) [0m
+[1;32mDEBUG: A total of 12 loop diagrams were identified with equivalent ones. [0m
+INFO: Contributing diagrams generated: 0 Born, 28(+12) loops, 8 R2, 0 UV 
+1 processes with 28 diagrams generated in 0.108 s
+Total: 1 processes with 28 diagrams
+output /tmp/t75run/ggzz
+INFO: initialize a new directory: ggzz 
+INFO: remove old information in ggzz 
+INFO: Organizing processes into subprocess groups 
+INFO: Generating Helas calls for process: g g > z z WEIGHTED<=8 [ noborn = QCD ] 
+[1;32mDEBUG: 32 loop wavefunctions have been reused, for a total of 76 ones [0m
+[1;32mDEBUG: Computing the loop color basis [0m
+INFO: Processing color information for loop process: g g > z z [ noborn = QCD ] 
+INFO: Creating color matrix  loop process: g g > z z WEIGHTED<=8 [ noborn = QCD ] 
+INFO: Creating files in directory /private/tmp/t75run/ggzz/SubProcesses/PV0_0_1_gg_zz 
+[1;32mDEBUG: adding in aloha model 2 lorentz struct [0m
+ALOHA: aloha creates FFV1 set of routines with options: L1[0m
+ALOHA: aloha creates FFV2 set of routines with options: L1[0m
+ALOHA: aloha creates FFV3 set of routines with options: L1[0m
+ALOHA: aloha creates FFV1 set of routines with options: L2[0m
+ALOHA: aloha creates FFV2 set of routines with options: L2[0m
+ALOHA: aloha creates FFV3 set of routines with options: L2[0m
+ALOHA: aloha creates FFV5 set of routines with options: L1[0m
+ALOHA: aloha creates FFV5 set of routines with options: L2[0m
+ALOHA: aloha creates FFS1 set of routines with options: L1[0m
+ALOHA: aloha creates FFS1 set of routines with options: L2[0m
+INFO: Computing diagram color coefficients 
+INFO: Particles with .true. are generated off-shell: ['.false.', '.false.', '.false.', '.false.'] 
+INFO: Drawing loop Feynman diagrams for Process: g g > z z WEIGHTED<=8 [ noborn = QCD ] 
+INFO: Creating files in directory P0_gg_zz 
+INFO: Generating Feynman diagrams for Process: g g > z z WEIGHTED<=8 [ noborn = QCD ] 
+INFO: Finding symmetric diagrams for subprocess group gg_zz 
+Generated helas calls for 1 subprocesses (28 diagrams) in 0.021 s
+ALOHA: aloha starts to compute helicity amplitudes
+ALOHA: aloha creates VVS1 routines[0m
+ALOHA: aloha creates FFV1 set of routines with options: L2[0m
+ALOHA: aloha creates FFV2 set of routines with options: L2[0m
+ALOHA: aloha creates FFV3 set of routines with options: L2[0m
+ALOHA: aloha creates FFV5 set of routines with options: L2[0m
+ALOHA: aloha creates FFS1 set of routines with options: L2[0m
+ALOHA: aloha creates R2_GGVV routines[0m
+ALOHA: aloha creates FFV2_3 set of routines with options: L2[0m
+ALOHA: aloha creates FFV2_5 set of routines with options: L2[0m
+ALOHA: aloha creates 19 routines in  0.202 s
+save configuration file to /private/tmp/t75run/ggzz/Cards/me5_configuration.txt
+INFO: Use Fortran compiler gfortran 
+INFO: Use c++ compiler clang 
+INFO: Generate jpeg diagrams 
+INFO: Generate web pages 
+Output to directory /private/tmp/t75run/ggzz done.
+Type "launch" to generate events from this process, or see
+/private/tmp/t75run/ggzz/README
+Run "open index.html" to see more information about this process.
+quit

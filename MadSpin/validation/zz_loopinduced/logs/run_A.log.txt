@@ -1,0 +1,103 @@
+/private/tmp/t75run/ggzz/bin/internal/file_writers.py:188: SyntaxWarning: "\s" is an invalid escape sequence. Such sequences will not work in the future. Did you mean "\\s"? A raw string is also an option.
+  keyword_pairs = {r'^if.+then\s*$': ('^end\s*if', 2),
+************************************************************
+*                                                          *
+*                      W E L C O M E to                    *
+*             M A D G R A P H 5 _ a M C @ N L O            *
+*                      M A D E V E N T                     *
+*                                                          *
+*                 *                       *                *
+*                   *        * *        *                  *
+*                     * * * * 5 * * * *                    *
+*                   *        * *        *                  *
+*                 *                       *                *
+*                                                          *
+*         VERSION 3.7.2                                    *
+*                                                          *
+*    The MadGraph5_aMC@NLO Development Team - Find us at   *
+*    https://server06.fynu.ucl.ac.be/projects/madgraph     *
+*                                                          *
+*               Type 'help' for in-line help.              *
+*                                                          *
+************************************************************
+INFO: load configuration from /Users/omattelaer/.mg5/mg5_configuration.txt  
+INFO: load configuration from /private/tmp/t75run/ggzz/Cards/me5_configuration.txt  
+INFO: load configuration from /private/tmp/t75/input/mg5_configuration.txt  
+INFO: load configuration from /private/tmp/t75run/ggzz/Cards/me5_configuration.txt  
+Using default gzip "gzip". Set another one in ./input/mg5_configuration.txt
+import command /tmp/t75run/runA.cmd
+set run_mode 2
+INFO: This option will be the default in any output that you are going to create in this session. 
+INFO: In order to keep this changes permanent please run 'save options' 
+set nb_core 16
+INFO: This option will be the default in any output that you are going to create in this session. 
+INFO: In order to keep this changes permanent please run 'save options' 
+generate_events prod -f
+stty: stdin isn't a terminal
+[1;34mvalue '[]' for entry 'bypass_check' is not valid. Preserving previous value: '[]'.
+allowed values are any list composed of the following entries: partonshower[0m
+Generating 50000 events with run name prod
+survey  prod 
+INFO: compile directory 
+initMadLoop -r -f
+Initializing MadLoop loop-induced matrix elements (this can take some time)...
+MadLoop initialization finished.
+compile Source Directory
+Using random number seed offset = 4321
+INFO: Running Survey 
+Creating Jobs
+Working on SubProcesses
+INFO:     P0_gg_zz  
+INFO:  Idle: 1,  Running: 3,  Completed: 0 [ current time: 11h15 ] 
+INFO:  Idle: 0,  Running: 3,  Completed: 1 [  2.6s  ] 
+INFO: P0_gg_zz/G1.2 is at 1.53 +- 0.0602 pb. Now submitting iteration #2. 
+INFO: P0_gg_zz/G1.2 is at 1.61 +- 0.0374 pb. Now submitting iteration #3. 
+INFO:  Idle: 0,  Running: 3,  Completed: 11 [  7.2s  ] 
+INFO: Survey finished for P0_gg_zz/G1.2 at 1.621 +- 0.0152 pb 
+INFO:  Idle: 0,  Running: 0,  Completed: 15 [  7.8s  ] 
+INFO: End survey 
+refine 50000
+Creating Jobs
+INFO: Refine results to 50000 
+INFO: Generating 50000.0 unweighted events. 
+sum of cpu time of last step: 0 second
+INFO: Effective Luminosity 35471.31400370142 pb^-1 
+INFO: need to improve 1 channels 
+- Current estimate of cross-section: 1.621 +- 0.015246
+INFO:  Idle: 0,  Running: 16,  Completed: 0 [ current time: 11h15 ] 
+INFO:  Idle: 0,  Running: 15,  Completed: 1 [  10.6s  ] 
+INFO: P0_gg_zz/G1.2 is at 9709/57738 (17%) event. Resubmit 27 job at iteration 1. 
+INFO:  Idle: 8,  Running: 18,  Completed: 18 [  23.1s  ] 
+INFO:  Idle: 0,  Running: 8,  Completed: 36 [  33.3s  ] 
+INFO: P0_gg_zz/G1.2 is at 26071/57693 (45%) event. Resubmit 53 job at iteration 2. 
+INFO:  Idle: 34,  Running: 18,  Completed: 46 [  46.7s  ] 
+INFO:  Idle: 16,  Running: 18,  Completed: 64 [  58.3s  ] 
+INFO:  Idle: 0,  Running: 16,  Completed: 82 [  1m 9s  ] 
+INFO: found enough event for P0_gg_zz/G1.2 
+INFO:  Idle: 0,  Running: 0,  Completed: 99 [  1m 12s  ] 
+INFO: Combining runs 
+sum of cpu time of last step: 0 second
+INFO: finish refine 
+refine 50000 --treshold=0.9
+No need for second refine due to stability of cross-section
+INFO: Combining Events 
+combination of events done in 2.7028748989105225 s 
+ 
+ 
+ 
+  === Results Summary for run: prod tag: tag_1 ===
+
+     Cumulative sequential time for this run: 17m39s
+     Cross-section :   1.624 +- 0.001424 pb
+     Nb of events :  50000
+ 
+store_events
+INFO: Storing parton level results 
+INFO: End Parton 
+reweight --mode=OFF -from_cards
+decay_events -from_cards
+INFO: storing files of previous run 
+INFO: Done 
+quit
+INFO:  
+launch in debug mode

@@ -1,0 +1,154 @@
+************************************************************
+*                                                          *
+*                      W E L C O M E to                    *
+*             M A D G R A P H 5 _ a M C @ N L O            *
+*                      M A D E V E N T                     *
+*                                                          *
+*                 *                       *                *
+*                   *        * *        *                  *
+*                     * * * * 5 * * * *                    *
+*                   *        * *        *                  *
+*                 *                       *                *
+*                                                          *
+*         VERSION 3.7.2                                    *
+*                                                          *
+*    The MadGraph5_aMC@NLO Development Team - Find us at   *
+*    https://server06.fynu.ucl.ac.be/projects/madgraph     *
+*                                                          *
+*               Type 'help' for in-line help.              *
+*                                                          *
+************************************************************
+INFO: load configuration from /Users/omattelaer/.mg5/mg5_configuration.txt  
+INFO: load configuration from /private/tmp/t75run/ctrl_gg4l_defaultcuts/Cards/me5_configuration.txt  
+INFO: load configuration from /private/tmp/t75/input/mg5_configuration.txt  
+INFO: load configuration from /private/tmp/t75run/ctrl_gg4l_defaultcuts/Cards/me5_configuration.txt  
+Using default gzip "gzip". Set another one in ./input/mg5_configuration.txt
+import command /tmp/t75run/ctrlA.cmd
+set run_mode 2
+INFO: This option will be the default in any output that you are going to create in this session. 
+INFO: In order to keep this changes permanent please run 'save options' 
+set nb_core 4
+INFO: This option will be the default in any output that you are going to create in this session. 
+INFO: In order to keep this changes permanent please run 'save options' 
+generate_events prod -f
+stty: stdin isn't a terminal
+[1;34mvalue '[]' for entry 'bypass_check' is not valid. Preserving previous value: '[]'.
+allowed values are any list composed of the following entries: partonshower[0m
+Generating 2000 events with run name prod
+survey  prod 
+INFO: compile directory 
+compile Source Directory
+Using random number seed offset = 4341
+INFO: Running Survey 
+Creating Jobs
+Working on SubProcesses
+INFO:     P0_gg_llll  
+INFO:  Idle: 26,  Running: 18,  Completed: 0 [ current time: 13h51 ] 
+INFO:  Idle: 25,  Running: 18,  Completed: 1 [  8.6s  ] 
+INFO:  Idle: 22,  Running: 18,  Completed: 5 [  12.9s  ] 
+INFO:  Idle: 19,  Running: 18,  Completed: 9 [  20.6s  ] 
+INFO:  Idle: 17,  Running: 18,  Completed: 11 [  26.2s  ] 
+INFO:  Idle: 8,  Running: 18,  Completed: 23 [  36.6s  ] 
+INFO: P0_gg_llll/G1.08 is at 4.16e-06 +- 1.11e-06 pb. Now submitting iteration #2. 
+INFO: Survey finished for P0_gg_llll/G1.05 [0 cross] 
+INFO:  Idle: 5,  Running: 18,  Completed: 32 [  39.7s  ] 
+INFO: P0_gg_llll/G1.07 is at 0.000348 +- 8.8e-05 pb. Now submitting iteration #2. 
+INFO: Survey finished for P0_gg_llll/G1.04 [0 cross] 
+INFO: Survey finished for P0_gg_llll/G5.14 [0 cross] 
+INFO: P0_gg_llll/G5.17 is at 2.98e-06 +- 1.69e-07 pb. Now submitting iteration #2. 
+INFO: P0_gg_llll/G5.22 is at 0.00145 +- 6.7e-05 pb. Now submitting iteration #2. 
+INFO: P0_gg_llll/G5.23 is at 5.44e-05 +- 2.8e-06 pb. Now submitting iteration #2. 
+INFO: Survey finished for P0_gg_llll/G5.16 [0 cross] 
+INFO:  Idle: 5,  Running: 18,  Completed: 51 [  42.8s  ] 
+INFO: P0_gg_llll/G5.25 is at 5.15e-05 +- 2.4e-06 pb. Now submitting iteration #2. 
+INFO:  Idle: 6,  Running: 18,  Completed: 55 [  53.9s  ] 
+INFO: P0_gg_llll/G1.07 is at 0.000378 +- 1.26e-05 pb. Now submitting iteration #3. 
+INFO: P0_gg_llll/G5.26 is at 3.9e-06 +- 1.94e-06 pb. Now submitting iteration #2. 
+INFO: P0_gg_llll/G5.17 is at 2.79e-06 +- 5.97e-08 pb. Now submitting iteration #3. 
+INFO: P0_gg_llll/G5.22 is at 0.00149 +- 2.4e-05 pb. Now submitting iteration #3. 
+INFO: P0_gg_llll/G1.08 is at 1.21e-05 +- 5.05e-06 pb. Now submitting iteration #3. 
+INFO:  Idle: 7,  Running: 18,  Completed: 78 [  1m 8s  ] 
+INFO: P0_gg_llll/G5.23 is at 5.59e-05 +- 7.17e-07 pb. Now submitting iteration #3. 
+INFO:  Idle: 4,  Running: 18,  Completed: 88 [  1m 12s  ] 
+INFO: P0_gg_llll/G5.25 is at 5.86e-05 +- 5.67e-06 pb. Now submitting iteration #3. 
+INFO: P0_gg_llll/G5.26 is at 2.69e-06 +- 2.12e-07 pb. Now submitting iteration #3. 
+INFO:  Idle: 9,  Running: 18,  Completed: 91 [  1m 22s  ] 
+INFO:  Idle: 3,  Running: 18,  Completed: 99 [  1m 34s  ] 
+INFO: P0_gg_llll/G1.07 is at 0.000343 +- 1.28e-05 pb. Now submitting iteration #4. 
+INFO: P0_gg_llll/G1.08 is at 1.41e-05 +- 2.01e-06 pb. Now submitting iteration #4. 
+INFO:  Idle: 1,  Running: 18,  Completed: 107 [  1m 38s  ] 
+INFO: Survey finished for P0_gg_llll/G5.17 at 2.773e-06 +- 2.66e-08 pb 
+INFO: Survey finished for P0_gg_llll/G5.22 at 0.00145 +- 1.87e-05 pb 
+INFO:  Idle: 0,  Running: 17,  Completed: 113 [  1m 49s  ] 
+INFO: Survey finished for P0_gg_llll/G5.23 at 5.74e-05 +- 1.08e-06 pb 
+INFO: P0_gg_llll/G5.25 is at 5.69e-05 +- 2.08e-06 pb. Now submitting iteration #4. 
+INFO:  Idle: 0,  Running: 15,  Completed: 121 [  1m 53s  ] 
+INFO:  Idle: 0,  Running: 13,  Completed: 123 [  2m 0s  ] 
+INFO: P0_gg_llll/G5.26 is at 2.51e-06 +- 8.92e-08 pb. Now submitting iteration #4. 
+INFO:  Idle: 0,  Running: 16,  Completed: 125 [  2m 3s  ] 
+INFO:  Idle: 0,  Running: 15,  Completed: 126 [  2m 26s  ] 
+INFO: P0_gg_llll/G1.07 is at 0.00036 +- 1.23e-05 pb. Now submitting iteration #5. 
+INFO: P0_gg_llll/G1.08 is at 1.42e-05 +- 9.59e-07 pb. Now submitting iteration #5. 
+INFO:  Idle: 0,  Running: 15,  Completed: 136 [  2m 43s  ] 
+INFO: P0_gg_llll/G5.25 is at 5.73e-05 +- 1.69e-06 pb. Now submitting iteration #5. 
+INFO:  Idle: 0,  Running: 15,  Completed: 141 [  2m 55s  ] 
+INFO: P0_gg_llll/G5.26 is at 2.6e-06 +- 6.33e-08 pb. Now submitting iteration #5. 
+INFO:  Idle: 0,  Running: 15,  Completed: 146 [  4m 12s  ] 
+INFO: Survey finished for P0_gg_llll/G1.08 at 1.47e-05 +- 6.7e-07 pb 
+INFO: Survey finished for P0_gg_llll/G1.07 at 0.000351 +- 7.13e-06 pb 
+INFO:  Idle: 0,  Running: 9,  Completed: 154 [  4m 15s  ] 
+INFO:  Idle: 0,  Running: 7,  Completed: 156 [  4m 23s  ] 
+INFO: Survey finished for P0_gg_llll/G5.25 at 5.86e-05 +- 1e-06 pb 
+INFO:  Idle: 0,  Running: 3,  Completed: 161 [  4m 31s  ] 
+INFO: Survey finished for P0_gg_llll/G5.26 at 2.55e-06 +- 3.64e-08 pb 
+INFO:  Idle: 0,  Running: 0,  Completed: 165 [  4m 34s  ] 
+INFO:  Idle: 0,  Running: 0,  Completed: 165 [  4m 34s  ] 
+INFO: End survey 
+refine 2000
+Creating Jobs
+INFO: Refine results to 2000 
+INFO: Generating 2000.0 unweighted events. 
+sum of cpu time of last step: 0 second
+INFO: Effective Luminosity 1185979.902487701 pb^-1 
+INFO: need to improve 2 channels 
+- Current estimate of cross-section: 0.0019393246 +- 2.012025922610524e-05
+INFO:  Idle: 0,  Running: 5,  Completed: 0 [ current time: 13h56 ] 
+INFO:  Idle: 0,  Running: 4,  Completed: 1 [  36.5s  ] 
+INFO: found enough event for P0_gg_llll/G5.22 
+INFO: P0_gg_llll/G1.07 is at 168/401 (42%) event. Resubmit 2 job at iteration 1. 
+INFO:  Idle: 0,  Running: 2,  Completed: 7 [  39.7s  ] 
+INFO:  Idle: 0,  Running: 1,  Completed: 8 [  1m 10s  ] 
+INFO: P0_gg_llll/G1.07 is at 147/409 (36%) event. Resubmit 5 job at iteration 2. 
+INFO:  Idle: 0,  Running: 4,  Completed: 11 [  1m 46s  ] 
+INFO: P0_gg_llll/G1.07 is at 207/419 ('49%') event. Resubmit 7 job at iteration 3. 
+INFO:  Idle: 0,  Running: 6,  Completed: 17 [  2m 23s  ] 
+INFO: P0_gg_llll/G1.07 is at 362/420 ('86%') event. Resubmit 3 job at iteration 4. 
+INFO:  Idle: 0,  Running: 2,  Completed: 25 [  2m 43s  ] 
+INFO: found enough event for P0_gg_llll/G1.07 
+INFO:  Idle: 0,  Running: 0,  Completed: 28 [  2m 43s  ] 
+INFO: Combining runs 
+sum of cpu time of last step: 0 second
+INFO: finish refine 
+refine 2000 --treshold=0.9
+No need for second refine due to stability of cross-section
+INFO: Combining Events 
+combination of events done in 0.48796701431274414 s 
+ 
+ 
+ 
+  === Results Summary for run: prod tag: tag_1 ===
+
+     Cumulative sequential time for this run: 31m12s
+     Cross-section :   0.001967 +- 2.145e-05 pb
+     Nb of events :  2000
+ 
+store_events
+INFO: Storing parton level results 
+INFO: End Parton 
+reweight --mode=OFF -from_cards
+decay_events -from_cards
+INFO: storing files of previous run 
+INFO: Done 
+quit
+INFO:  
+launch in debug mode
