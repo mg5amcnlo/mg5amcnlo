@@ -25,6 +25,7 @@ import argparse
 import gzip
 import heapq
 import mmap
+import os
 import random
 import re
 import shutil
@@ -32,6 +33,14 @@ import struct
 import subprocess
 import sys
 import tempfile
+import threading
+
+try:
+    import resource
+except ImportError:  # non-POSIX
+    resource = None
+
+from collections import OrderedDict
 from contextlib import contextmanager
 from dataclasses import dataclass
 from concurrent.futures import ThreadPoolExecutor
@@ -56,6 +65,13 @@ DEFAULT_MODE = "auto"
 AUTO_MAX_FILES_FOR_MEMORY = 128
 AUTO_MAX_INPUT_BYTES_FOR_MEMORY = 2048 * 1024 * 1024
 EXTERNAL_RUN_RECORD_CAPACITY = 250_000
+
+# Descriptor budget for the shared reader below. macOS ships a soft
+# RLIMIT_NOFILE of 256, which is far too small once several worker threads
+# read from every input file at once, so raise it when we are allowed to.
+FD_SOFT_LIMIT_TARGET = 8192
+FD_POOL_MAX_OPEN = 256
+FD_POOL_RESERVED = 64
 
 PathLike = Union[str, Path]
 
@@ -368,6 +384,128 @@ def build_output_header(
     return open_tag, header_block
 
 # ============================
+# Shared bounded file-descriptor pool
+# ============================
+
+def raise_fd_soft_limit(target: int = FD_SOFT_LIMIT_TARGET) -> Optional[int]:
+    """Raise RLIMIT_NOFILE towards `target`. Return the resulting soft limit.
+
+    macOS ships a soft limit of 256 descriptors, which the event copy can
+    exhaust on a many-core machine. The hard limit is usually far higher, so
+    lifting the soft limit is both safe and enough. Returns None when the
+    limit cannot be inspected at all.
+    """
+    if resource is None:
+        return None
+    try:
+        soft, hard = resource.getrlimit(resource.RLIMIT_NOFILE)
+    except (ValueError, OSError):
+        return None
+    if hard != resource.RLIM_INFINITY:
+        target = min(target, hard)
+    if soft == resource.RLIM_INFINITY or soft >= target:
+        return soft
+    try:
+        resource.setrlimit(resource.RLIMIT_NOFILE, (target, hard))
+    except (ValueError, OSError):
+        return soft
+    return target
+
+def _fd_pool_capacity() -> int:
+    """How many input files the pool may keep open at once."""
+    soft = raise_fd_soft_limit()
+    if soft is None or (resource is not None and soft == resource.RLIM_INFINITY):
+        return FD_POOL_MAX_OPEN
+    return max(8, min(FD_POOL_MAX_OPEN, int(soft) - FD_POOL_RESERVED))
+
+def _pread_exact(fd: int, offset: int, size: int) -> bytes:
+    """Read exactly `size` bytes at `offset` without touching the file offset."""
+    blob = os.pread(fd, size, offset)
+    if len(blob) == size or not blob:
+        return blob
+    chunks = [blob]
+    got = len(blob)
+    while got < size:
+        blob = os.pread(fd, size - got, offset + got)
+        if not blob:
+            break
+        chunks.append(blob)
+        got += len(blob)
+    return b"".join(chunks)
+
+class FDPool:
+    """Thread-safe, size-bounded pool of read-only descriptors.
+
+    A single pool is shared by every copy worker: the workers are threads in
+    one process, so a per-worker cache would multiply the descriptor cost by
+    the worker count and blow past RLIMIT_NOFILE. Reads go through os.pread,
+    which does not use the file offset and therefore lets all threads share
+    one descriptor per file without locking around the read itself.
+    """
+
+    def __init__(self, paths: Sequence[str], max_open: Optional[int] = None) -> None:
+        self._paths = list(paths)
+        self._max_open = max(1, _fd_pool_capacity() if max_open is None else max_open)
+        self._lock = threading.Lock()
+        # file_idx -> [fd, pin_count], in least-recently-used order
+        self._open: "OrderedDict[int, List[int]]" = OrderedDict()
+
+    def _evict_locked(self) -> None:
+        while len(self._open) >= self._max_open:
+            for idx, entry in self._open.items():
+                if entry[1] == 0:
+                    del self._open[idx]
+                    try:
+                        os.close(entry[0])
+                    except OSError:
+                        pass
+                    break
+            else:
+                # every open file is pinned by a concurrent read; exceeding
+                # the cap briefly is better than deadlocking.
+                return
+
+    def _acquire(self, file_idx: int) -> int:
+        with self._lock:
+            entry = self._open.get(file_idx)
+            if entry is not None:
+                self._open.move_to_end(file_idx)
+                entry[1] += 1
+                return entry[0]
+            self._evict_locked()
+            fd = os.open(self._paths[file_idx], os.O_RDONLY)
+            self._open[file_idx] = [fd, 1]
+            return fd
+
+    def _release(self, file_idx: int) -> None:
+        with self._lock:
+            entry = self._open.get(file_idx)
+            if entry is not None:
+                entry[1] -= 1
+
+    def read(self, file_idx: int, start: int, end: int) -> bytes:
+        fd = self._acquire(file_idx)
+        try:
+            return _pread_exact(fd, start, end - start)
+        finally:
+            self._release(file_idx)
+
+    def close(self) -> None:
+        with self._lock:
+            for entry in self._open.values():
+                try:
+                    os.close(entry[0])
+                except OSError:
+                    pass
+            self._open.clear()
+
+    def __enter__(self) -> "FDPool":
+        return self
+
+    def __exit__(self, *exc_info) -> None:
+        self.close()
+
+# ============================
 # In-memory path
 # ============================
 
@@ -386,25 +524,13 @@ def _split_chunks(arr: List[EventRef], k: int) -> List[List[EventRef]]:
         start = end
     return chunks
 
-def _copy_event_refs(input_paths: Sequence[str], refs: Sequence[EventRef], fout) -> None:
-    handles = {}
-    mmaps = {}
-    try:
-        for ref in refs:
-            if ref.file_idx not in mmaps:
-                fh = open(input_paths[ref.file_idx], "rb")
-                handles[ref.file_idx] = fh
-                mmaps[ref.file_idx] = mmap.mmap(fh.fileno(), 0, access=mmap.ACCESS_READ)
-            fout.write(mmaps[ref.file_idx][ref.start:ref.end])
-    finally:
-        for mm in mmaps.values():
-            mm.close()
-        for fh in handles.values():
-            fh.close()
+def _copy_event_refs(pool: FDPool, refs: Sequence[EventRef], fout) -> None:
+    for ref in refs:
+        fout.write(pool.read(ref.file_idx, ref.start, ref.end))
 
-def _write_part(input_paths: Sequence[str], refs: Sequence[EventRef], part_path: str) -> None:
+def _write_part(pool: FDPool, refs: Sequence[EventRef], part_path: str) -> None:
     with open(part_path, "wb") as fout:
-        _copy_event_refs(input_paths, refs, fout)
+        _copy_event_refs(pool, refs, fout)
 
 def write_randomized_events_memory(
     input_paths: Sequence[Path],
@@ -429,12 +555,13 @@ def write_randomized_events_memory(
     str_paths = [str(p) for p in input_paths]
 
     if workers <= 1 or len(shuffled) == 0:
-        with _open_output_stream(output_path, prefer_pigz=prefer_pigz, gzip_level=gzip_level, verbose=verbose) as fout:
-            fout.write(open_tag)
-            fout.write(header_block)
-            fout.write(init_block)
-            _copy_event_refs(str_paths, shuffled, fout)
-            fout.write(b"</LesHouchesEvents>\n")
+        with FDPool(str_paths) as pool:
+            with _open_output_stream(output_path, prefer_pigz=prefer_pigz, gzip_level=gzip_level, verbose=verbose) as fout:
+                fout.write(open_tag)
+                fout.write(header_block)
+                fout.write(init_block)
+                _copy_event_refs(pool, shuffled, fout)
+                fout.write(b"</LesHouchesEvents>\n")
         return
 
     chunks = _split_chunks(shuffled, workers)
@@ -444,10 +571,11 @@ def write_randomized_events_memory(
         print(f"      writing event chunks with {len(chunks)} thread worker(s)")
 
     try:
-        with ThreadPoolExecutor(max_workers=len(chunks)) as executor:
-            futures = [executor.submit(_write_part, str_paths, chunk, str(part)) for chunk, part in zip(chunks, part_paths)]
-            for future in futures:
-                future.result()
+        with FDPool(str_paths) as pool:
+            with ThreadPoolExecutor(max_workers=len(chunks)) as executor:
+                futures = [executor.submit(_write_part, pool, chunk, str(part)) for chunk, part in zip(chunks, part_paths)]
+                for future in futures:
+                    future.result()
 
         with _open_output_stream(output_path, prefer_pigz=prefer_pigz, gzip_level=gzip_level, verbose=verbose) as fout:
             fout.write(open_tag)
@@ -511,24 +639,13 @@ def _copy_record_iter(
     fout,
     limit: Optional[int] = None,
 ) -> int:
-    handles = {}
-    mmaps = {}
     written = 0
-    try:
+    with FDPool(input_paths) as pool:
         for _, file_idx, start, end in records:
             if limit is not None and written >= limit:
                 break
-            if file_idx not in mmaps:
-                fh = open(input_paths[file_idx], "rb")
-                handles[file_idx] = fh
-                mmaps[file_idx] = mmap.mmap(fh.fileno(), 0, access=mmap.ACCESS_READ)
-            fout.write(mmaps[file_idx][start:end])
+            fout.write(pool.read(file_idx, start, end))
             written += 1
-    finally:
-        for mm in mmaps.values():
-            mm.close()
-        for fh in handles.values():
-            fh.close()
     return written
 
 def _build_external_shuffle_runs(
