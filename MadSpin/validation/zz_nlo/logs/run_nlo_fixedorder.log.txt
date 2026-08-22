@@ -1,0 +1,104 @@
+INFO: ************************************************************
+*                                                          *
+*           W E L C O M E  to  M A D G R A P H 5           *
+*                       a M C @ N L O                      *
+*                                                          *
+*                 *                       *                *
+*                   *        * *        *                  *
+*                     * * * * 5 * * * *                    *
+*                   *        * *        *                  *
+*                 *                       *                *
+*                                                          *
+*         VERSION 5.3.7.2                                  *
+*                                                          *
+*    The MadGraph5_aMC@NLO Development Team - Find us at   *
+*                 http://amcatnlo.cern.ch                  *
+*                                                          *
+*               Type 'help' for in-line help.              *
+*                                                          *
+************************************************************ 
+INFO: load configuration from /Users/omattelaer/.mg5/mg5_configuration.txt  
+INFO: load configuration from /private/tmp/zz_nlo_work2/ppzz_nlo/Cards/amcatnlo_configuration.txt  
+INFO: load configuration from /private/tmp/t77/input/mg5_configuration.txt  
+INFO: load configuration from /private/tmp/zz_nlo_work2/ppzz_nlo/Cards/amcatnlo_configuration.txt  
+Using default gzip "gzip". Set another one in ./input/mg5_configuration.txt
+import command /tmp/zz_nlo_work2/run_nlo_fo.cmd
+set run_mode 2
+set nb_core 12
+launch NLO -f -n fixedorder
+stty: stdin isn't a terminal
+stty: stdin isn't a terminal
+INFO: will run in mode: NLO 
+INFO: Starting run 
+INFO: Compiling the code 
+INFO: Using built-in libraries for PDFs 
+[1mINFO: For gauge cancellation, the width of 'Z' has been set to zero. [0m
+INFO: Compiling source... 
+INFO:           ...done, continuing with P* directories 
+INFO: Compiling directories... 
+INFO: Compiling on 12 cores 
+INFO:  Compiling P0_uux_zz... 
+INFO:  Compiling P0_ddx_zz... 
+INFO:  Compiling P0_uxu_zz... 
+INFO:  Compiling P0_dxd_zz... 
+INFO:     P0_ddx_zz done. 
+INFO:     P0_dxd_zz done. 
+INFO:     P0_uux_zz done. 
+INFO:     P0_uxu_zz done. 
+INFO: Checking test output: 
+INFO: P0_uux_zz 
+INFO:  Result for test_ME: 
+INFO:    Passed. 
+INFO:  Result for check_poles: 
+INFO:    Poles successfully cancel for 20 points over 20 (tolerance=1.0e-05) 
+INFO: P0_ddx_zz 
+INFO:  Result for test_ME: 
+INFO:    Passed. 
+INFO:  Result for check_poles: 
+INFO:    Poles successfully cancel for 20 points over 20 (tolerance=1.0e-05) 
+INFO: P0_uxu_zz 
+INFO:  Result for test_ME: 
+INFO:    Passed. 
+INFO:  Result for check_poles: 
+INFO:    Poles successfully cancel for 20 points over 20 (tolerance=1.0e-05) 
+INFO: P0_dxd_zz 
+INFO:  Result for test_ME: 
+INFO:    Passed. 
+INFO:  Result for check_poles: 
+INFO:    Poles successfully cancel for 20 points over 20 (tolerance=1.0e-05) 
+INFO: Starting run 
+INFO: Using 12 cores 
+INFO: Cleaning previous results 
+INFO: Doing fixed order NLO 
+INFO: Setting up grids 
+INFO:  Idle: 0,  Running: 4,  Completed: 0 [ current time: 17h24 ] 
+INFO:  Idle: 0,  Running: 3,  Completed: 1 [  0.16s  ] 
+INFO:  Idle: 0,  Running: 2,  Completed: 2 [  0.57s  ] 
+INFO:  Idle: 0,  Running: 1,  Completed: 3 [  0.78s  ] 
+INFO:  Idle: 0,  Running: 0,  Completed: 4 [  1s  ] 
+sum of cpu time of last step: 0 second
+INFO: 
+      Results after grid setup:
+      Total cross section:      1.258e+01 +- 1.1e-01 pb
+ 
+INFO: Refining results, step 1 
+INFO:  Idle: 0,  Running: 4,  Completed: 0 [ current time: 17h24 ] 
+INFO:  Idle: 0,  Running: 3,  Completed: 1 [  0.12s  ] 
+INFO:  Idle: 0,  Running: 2,  Completed: 2 [  0.12s  ] 
+INFO:  Idle: 0,  Running: 1,  Completed: 3 [  0.14s  ] 
+INFO:  Idle: 0,  Running: 0,  Completed: 4 [  0.14s  ] 
+sum of cpu time of last step: 0 second
+INFO: 
+   --------------------------------------------------------------
+      Final results and run summary:
+      Process p p > z z [QCD]
+      Run at p-p collider (6500.0 + 6500.0 GeV)
+      Total cross section: 1.267e+01 +- 7.6e-02 pb
+   --------------------------------------------------------------
+ 
+INFO: The results of this run and the HwU and GnuPlot files with the plots have been saved in /private/tmp/zz_nlo_work2/ppzz_nlo/Events/fixedorder 
+INFO: Run complete 
+INFO:  
+quit
+INFO:  
+launch in debug mode

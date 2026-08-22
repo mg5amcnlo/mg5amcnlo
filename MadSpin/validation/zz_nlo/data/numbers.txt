@@ -1,0 +1,90 @@
+p p > z z [QCD]  (MC@NLO events)  +  MadSpin, all six spinmodes
+code 36e3a8b781196f5eb81a0d4f2059dee07edb6a5b
+scale: fixed muR = muF = 91.1880 GeV (= m_Z)
+m_Z = 91.188 GeV   Gamma_Z = 2.4414 GeV   BW_cut = 15
+
+reference: the directly generated off-shell four-lepton sample.
+
+--- total cross sections ---
+sample           sigma [pb]  MadSpin err    event err          N     N(w<0)
+truth            0.02863706        6e-05     0.000151        50000       3765
+madspin          0.02874288     0.000139     0.000148        50000       3268
+PA               0.02874279     0.000139     0.000148        50000       3268
+onshell          0.03005676     0.000145     0.000155        50000       3268
+none             0.03005711     0.000145     0.000155        50000       3268
+madspin_v1       0.02873448     0.000139     0.000148        50000       3268
+onshell_v1       0.03005676     0.000145     0.000155        50000       3268
+
+--- ratio to truth ---
+madspin      1.00370 +- 0.00529   (+0.37 %, 0.7 sigma)
+PA           1.00369 +- 0.00529   (+0.37 %, 0.7 sigma)
+onshell      1.04958 +- 0.00553   (+4.96 %, 9.0 sigma)
+none         1.04959 +- 0.00553   (+4.96 %, 9.0 sigma)
+madspin_v1   1.00340 +- 0.00529   (+0.34 %, 0.6 sigma)
+onshell_v1   1.04958 +- 0.00553   (+4.96 %, 9.0 sigma)
+
+--- the production sample MadSpin was given ---
+p p > z z [QCD], 50000 events, sigma = 12.7056 +- 0.061 pb
+negative weights: 3268 of 50000 (6.536 %); sum|w| / sum w = 1.15038
+events with an extra final-state parton (H events): 11094 of 50000
+
+--- did MadSpin preserve the negative weights? ---
+Every decayed sample should carry the SAME number of negative-weight
+events as the production sample: MadSpin multiplies each event weight
+by an unsigned branching-ratio factor, so it can neither create nor
+destroy a sign.
+   madspin      N(w<0) =   3268   MATCHES production
+   PA           N(w<0) =   3268   MATCHES production
+   onshell      N(w<0) =   3268   MATCHES production
+   none         N(w<0) =   3268   MATCHES production
+   madspin_v1   N(w<0) =   3268   MATCHES production
+   onshell_v1   N(w<0) =   3268   MATCHES production
+
+--- what MadSpin itself reported (cmd.cross, cmd.branching_ratio) ---
+madspin      cross = 0.0286457178   BR = 0.002262216397   efficiency = 1
+PA           cross = 0.0286457178   BR = 0.002262216397   efficiency = 1
+onshell      cross = 0.0299552425   BR = 0.002365632493   efficiency = 1
+none         cross = 0.0299555993   BR = 0.002365660667   efficiency = 1
+madspin_v1   cross = 0.0286374307   BR = 0.002261561949   efficiency = 1.0
+onshell_v1   cross = 0.0299552425   BR = 0.002365632493   efficiency = 1
+
+--- angular moments (weighted mean +- error of the mean) ---
+sample                 cos_theta1          cos2_theta1             cos1cos2             cos_2phi              m_epmum
+truth          -0.00594+- 0.00265    0.35241+- 0.00135   -0.00812+- 0.00158    0.00581+- 0.00317  115.07373+- 0.43449
+madspin         0.00187+- 0.00266    0.35315+- 0.00136   -0.00598+- 0.00158    0.00354+- 0.00317  115.25108+- 0.42914
+PA             -0.00261+- 0.00267    0.35521+- 0.00136   -0.00545+- 0.00160    0.01101+- 0.00316  114.94451+- 0.43008
+onshell        -0.00527+- 0.00267    0.35606+- 0.00136   -0.00597+- 0.00159    0.00857+- 0.00315  114.46145+- 0.43612
+none            0.00479+- 0.00258    0.33392+- 0.00134    0.00349+- 0.00150   -0.00136+- 0.00315  116.52554+- 0.42053
+madspin_v1     -0.00305+- 0.00267    0.35621+- 0.00136   -0.00801+- 0.00159    0.00278+- 0.00317  115.20367+- 0.43537
+onshell_v1      0.00083+- 0.00267    0.35656+- 0.00136   -0.00425+- 0.00160    0.00567+- 0.00317  114.82952+- 0.43069
+
+--- the four-lepton mass below the on-shell ZZ threshold (2 m_Z = 182.3760 GeV) ---
+Reachable only by a mode that draws a virtuality, AND only for a
+production event that has recoil to absorb it: the reshuffle conserves
+sqrt(shat), so a 2 -> 2 event's m_4l is its production m(ZZ) and cannot
+move.  onshell / none / onshell_v1 are therefore EXACTLY zero here, which
+is a structural zero and not a measurement.
+sample                N    weight fraction   frac / truth
+truth               644          1.257e-02             --
+madspin              88          1.565e-03         0.1244
+PA                  148          2.209e-03         0.1757
+onshell               0          0.000e+00         0.0000
+none                  0          0.000e+00         0.0000
+madspin_v1           30          5.982e-04         0.0476
+onshell_v1            0          0.000e+00         0.0000
+
+--- binned shape test: chi2/ndf of (mode / truth) against a flat line ---
+(a pure normalisation offset does not enter; only a shape difference does)
+observable          madspin           PA      onshell         none   madspin_v1   onshell_v1
+m_epmum                1.29         1.04         1.34         1.71         1.41         0.98
+m_epmup                0.84         0.92         0.97         1.80         1.08         1.10
+phi_planes             0.94         1.02         1.02         1.16         1.17         0.64
+cos_theta1             1.28         1.10         1.11         3.07         0.95         1.23
+cos_theta2             1.06         1.23         0.71         2.34         1.09         1.19
+cos1cos2               0.75         1.35         0.69         5.11         0.82         0.87
+dphi_epmum             0.96         1.03         0.78         1.25         1.91         0.86
+m_ee                   1.98         4.13     delta fn     delta fn         4.39     delta fn
+m_mumu                 1.90         4.17     delta fn     delta fn         2.68     delta fn
+m_4l                  31.76        14.03         1.60         1.60        88.51         1.60
+pt_ee                  1.25         1.46         0.97         1.03         1.80         0.97
+m_4l >= 2mZ            1.51         1.71         1.57         1.57         1.61         1.57

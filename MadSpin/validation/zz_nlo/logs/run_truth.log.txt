@@ -1,0 +1,181 @@
+/private/tmp/zz_nlo_work2/pp4l_nlo/bin/internal/file_writers.py:188: SyntaxWarning: "\s" is an invalid escape sequence. Such sequences will not work in the future. Did you mean "\\s"? A raw string is also an option.
+  keyword_pairs = {r'^if.+then\s*$': ('^end\s*if', 2),
+INFO: ************************************************************
+*                                                          *
+*           W E L C O M E  to  M A D G R A P H 5           *
+*                       a M C @ N L O                      *
+*                                                          *
+*                 *                       *                *
+*                   *        * *        *                  *
+*                     * * * * 5 * * * *                    *
+*                   *        * *        *                  *
+*                 *                       *                *
+*                                                          *
+*         VERSION 5.3.7.2                                  *
+*                                                          *
+*    The MadGraph5_aMC@NLO Development Team - Find us at   *
+*                 http://amcatnlo.cern.ch                  *
+*                                                          *
+*               Type 'help' for in-line help.              *
+*                                                          *
+************************************************************ 
+INFO: load configuration from /Users/omattelaer/.mg5/mg5_configuration.txt  
+INFO: load configuration from /private/tmp/zz_nlo_work2/pp4l_nlo/Cards/amcatnlo_configuration.txt  
+INFO: load configuration from /private/tmp/t77/input/mg5_configuration.txt  
+INFO: load configuration from /private/tmp/zz_nlo_work2/pp4l_nlo/Cards/amcatnlo_configuration.txt  
+Using default gzip "gzip". Set another one in ./input/mg5_configuration.txt
+import command /tmp/zz_nlo_work2/run_truth.cmd
+set run_mode 2
+set nb_core 14
+launch aMC@NLO -p -f -n prod
+stty: stdin isn't a terminal
+stty: stdin isn't a terminal
+INFO: will run in mode: aMC@NLO 
+INFO: Starting run 
+INFO: Compiling the code 
+INFO: Using built-in libraries for PDFs 
+INFO: Compiling source... 
+INFO:           ...done, continuing with P* directories 
+INFO: Compiling directories... 
+INFO: Compiling on 14 cores 
+INFO:  Compiling P0_uux_mumemepmup_no_a... 
+INFO:  Compiling P0_ddx_mumemepmup_no_a... 
+INFO:  Compiling P0_uxu_mumemepmup_no_a... 
+INFO:  Compiling P0_dxd_mumemepmup_no_a... 
+INFO:     P0_ddx_mumemepmup_no_a done. 
+INFO:     P0_uxu_mumemepmup_no_a done. 
+INFO:     P0_uux_mumemepmup_no_a done. 
+INFO:     P0_dxd_mumemepmup_no_a done. 
+INFO: Checking test output: 
+INFO: P0_uux_mumemepmup_no_a 
+INFO:  Result for test_ME: 
+INFO:    Passed. 
+INFO:  Result for test_MC: 
+INFO:    Passed. 
+INFO:  Result for check_poles: 
+INFO:    Poles successfully cancel for 20 points over 20 (tolerance=1.0e-05) 
+INFO: P0_ddx_mumemepmup_no_a 
+INFO:  Result for test_ME: 
+INFO:    Passed. 
+INFO:  Result for test_MC: 
+INFO:    Passed. 
+INFO:  Result for check_poles: 
+INFO:    Poles successfully cancel for 20 points over 20 (tolerance=1.0e-05) 
+INFO: P0_uxu_mumemepmup_no_a 
+INFO:  Result for test_ME: 
+INFO:    Passed. 
+INFO:  Result for test_MC: 
+INFO:    Passed. 
+INFO:  Result for check_poles: 
+INFO:    Poles successfully cancel for 20 points over 20 (tolerance=1.0e-05) 
+INFO: P0_dxd_mumemepmup_no_a 
+INFO:  Result for test_ME: 
+INFO:    Passed. 
+INFO:  Result for test_MC: 
+INFO:    Passed. 
+INFO:  Result for check_poles: 
+INFO:    Poles successfully cancel for 20 points over 20 (tolerance=1.0e-05) 
+INFO: Starting run 
+INFO: Using 14 cores 
+INFO: Cleaning previous results 
+INFO: Doing NLO matched to parton shower 
+INFO: Setting up grids 
+INFO:  Idle: 10,  Running: 14,  Completed: 0 [ current time: 17h11 ] 
+INFO:  Idle: 9,  Running: 14,  Completed: 1 [  5.3s  ] 
+INFO:  Idle: 8,  Running: 14,  Completed: 2 [  5.4s  ] 
+INFO:  Idle: 7,  Running: 14,  Completed: 3 [  5.6s  ] 
+INFO:  Idle: 6,  Running: 14,  Completed: 4 [  5.6s  ] 
+INFO:  Idle: 5,  Running: 14,  Completed: 5 [  6.1s  ] 
+INFO:  Idle: 4,  Running: 14,  Completed: 6 [  6.4s  ] 
+INFO:  Idle: 3,  Running: 14,  Completed: 7 [  6.4s  ] 
+INFO:  Idle: 2,  Running: 14,  Completed: 8 [  6.5s  ] 
+INFO:  Idle: 1,  Running: 14,  Completed: 9 [  6.6s  ] 
+INFO:  Idle: 0,  Running: 14,  Completed: 10 [  6.6s  ] 
+INFO:  Idle: 0,  Running: 13,  Completed: 11 [  6.8s  ] 
+INFO:  Idle: 0,  Running: 12,  Completed: 12 [  6.8s  ] 
+INFO:  Idle: 0,  Running: 11,  Completed: 13 [  6.9s  ] 
+INFO:  Idle: 0,  Running: 10,  Completed: 14 [  6.9s  ] 
+INFO:  Idle: 0,  Running: 9,  Completed: 15 [  11.4s  ] 
+INFO:  Idle: 0,  Running: 8,  Completed: 16 [  11.6s  ] 
+INFO:  Idle: 0,  Running: 7,  Completed: 17 [  12.1s  ] 
+INFO:  Idle: 0,  Running: 6,  Completed: 18 [  12.2s  ] 
+INFO:  Idle: 0,  Running: 5,  Completed: 19 [  12.4s  ] 
+INFO:  Idle: 0,  Running: 4,  Completed: 20 [  12.4s  ] 
+INFO:  Idle: 0,  Running: 3,  Completed: 21 [  13s  ] 
+INFO:  Idle: 0,  Running: 2,  Completed: 22 [  13.1s  ] 
+INFO:  Idle: 0,  Running: 1,  Completed: 23 [  13.3s  ] 
+INFO:  Idle: 0,  Running: 0,  Completed: 24 [  13.4s  ] 
+sum of cpu time of last step: 0 second
+INFO: Determining the number of unweighted events per channel
+
+      Intermediate results:
+      Random seed: 4321
+      Total cross section:      2.845e-02 +- 1.0e-04 pb
+      Total abs(cross section): 3.230e-02 +- 1.1e-04 pb 
+
+ 
+INFO: Computing upper envelope 
+INFO:  Idle: 10,  Running: 14,  Completed: 0 [ current time: 17h11 ] 
+INFO:  Idle: 9,  Running: 14,  Completed: 1 [  5.9s  ] 
+INFO:  Idle: 8,  Running: 14,  Completed: 2 [  5.9s  ] 
+INFO:  Idle: 7,  Running: 14,  Completed: 3 [  6.2s  ] 
+INFO:  Idle: 6,  Running: 14,  Completed: 4 [  6.2s  ] 
+INFO:  Idle: 5,  Running: 14,  Completed: 5 [  6.6s  ] 
+INFO:  Idle: 4,  Running: 14,  Completed: 6 [  7.7s  ] 
+INFO:  Idle: 3,  Running: 14,  Completed: 7 [  7.9s  ] 
+INFO:  Idle: 2,  Running: 14,  Completed: 8 [  8.1s  ] 
+INFO:  Idle: 1,  Running: 14,  Completed: 9 [  8.2s  ] 
+INFO:  Idle: 0,  Running: 14,  Completed: 10 [  8.2s  ] 
+INFO:  Idle: 0,  Running: 13,  Completed: 11 [  10.8s  ] 
+INFO:  Idle: 0,  Running: 12,  Completed: 12 [  11s  ] 
+INFO:  Idle: 0,  Running: 11,  Completed: 13 [  11s  ] 
+INFO:  Idle: 0,  Running: 10,  Completed: 14 [  11.2s  ] 
+INFO:  Idle: 0,  Running: 9,  Completed: 15 [  13.6s  ] 
+INFO:  Idle: 0,  Running: 8,  Completed: 16 [  14.4s  ] 
+INFO:  Idle: 0,  Running: 7,  Completed: 17 [  14.6s  ] 
+INFO:  Idle: 0,  Running: 6,  Completed: 18 [  16.5s  ] 
+INFO:  Idle: 0,  Running: 5,  Completed: 19 [  16.5s  ] 
+INFO:  Idle: 0,  Running: 4,  Completed: 20 [  17s  ] 
+INFO:  Idle: 0,  Running: 3,  Completed: 21 [  17.3s  ] 
+INFO:  Idle: 0,  Running: 2,  Completed: 22 [  17.5s  ] 
+INFO:  Idle: 0,  Running: 1,  Completed: 23 [  18.9s  ] 
+INFO:  Idle: 0,  Running: 0,  Completed: 24 [  19.1s  ] 
+sum of cpu time of last step: 0 second
+INFO: Updating the number of unweighted events per channel
+
+      Intermediate results:
+      Random seed: 4321
+      Total cross section:      2.860e-02 +- 6.0e-05 pb
+      Total abs(cross section): 3.371e-02 +- 6.2e-05 pb 
+
+ 
+INFO: Generating events 
+INFO:  Idle: 0,  Running: 8,  Completed: 9 [ current time: 17h11 ] 
+INFO:  Idle: 0,  Running: 7,  Completed: 10 [  8.8s  ] 
+INFO:  Idle: 0,  Running: 6,  Completed: 11 [  9.3s  ] 
+INFO:  Idle: 0,  Running: 5,  Completed: 12 [  10.4s  ] 
+INFO:  Idle: 0,  Running: 4,  Completed: 13 [  11.4s  ] 
+INFO:  Idle: 0,  Running: 3,  Completed: 14 [  15.1s  ] 
+INFO:  Idle: 0,  Running: 2,  Completed: 15 [  15.4s  ] 
+INFO:  Idle: 0,  Running: 1,  Completed: 16 [  15.7s  ] 
+INFO:  Idle: 0,  Running: 0,  Completed: 17 [  15.9s  ] 
+sum of cpu time of last step: 0 second
+INFO: Collecting events 
+INFO: 
+   --------------------------------------------------------------
+      Summary:
+      Process p p > e+ e- mu+ mu- / a [QCD]
+      Run at p-p collider (6500.0 + 6500.0 GeV)
+      Number of events generated: 50000
+      Total cross section: 2.859e-02 +- 6.0e-05 pb
+   --------------------------------------------------------------
+ 
+INFO: The /private/tmp/zz_nlo_work2/pp4l_nlo/Events/prod/events.lhe.gz file has been generated.
+ 
+INFO: Events generated 
+reweight -from_cards
+decay_events -from_cards
+INFO:  
+quit
+INFO:  
+launch in debug mode

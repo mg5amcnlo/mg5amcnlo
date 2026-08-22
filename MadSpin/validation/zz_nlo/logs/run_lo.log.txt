@@ -1,0 +1,90 @@
+/private/tmp/zz_nlo_work2/ppzz_lo/bin/internal/file_writers.py:188: SyntaxWarning: "\s" is an invalid escape sequence. Such sequences will not work in the future. Did you mean "\\s"? A raw string is also an option.
+  keyword_pairs = {r'^if.+then\s*$': ('^end\s*if', 2),
+************************************************************
+*                                                          *
+*                      W E L C O M E to                    *
+*             M A D G R A P H 5 _ a M C @ N L O            *
+*                      M A D E V E N T                     *
+*                                                          *
+*                 *                       *                *
+*                   *        * *        *                  *
+*                     * * * * 5 * * * *                    *
+*                   *        * *        *                  *
+*                 *                       *                *
+*                                                          *
+*         VERSION 3.7.2                                    *
+*                                                          *
+*    The MadGraph5_aMC@NLO Development Team - Find us at   *
+*    https://server06.fynu.ucl.ac.be/projects/madgraph     *
+*                                                          *
+*               Type 'help' for in-line help.              *
+*                                                          *
+************************************************************
+INFO: load configuration from /Users/omattelaer/.mg5/mg5_configuration.txt  
+INFO: load configuration from /private/tmp/zz_nlo_work2/ppzz_lo/Cards/me5_configuration.txt  
+INFO: load configuration from /private/tmp/t77/input/mg5_configuration.txt  
+INFO: load configuration from /private/tmp/zz_nlo_work2/ppzz_lo/Cards/me5_configuration.txt  
+Using default gzip "gzip". Set another one in ./input/mg5_configuration.txt
+import command /tmp/zz_nlo_work2/run_lo.cmd
+set run_mode 2
+INFO: This option will be the default in any output that you are going to create in this session. 
+INFO: In order to keep this changes permanent please run 'save options' 
+set nb_core 14
+INFO: This option will be the default in any output that you are going to create in this session. 
+INFO: In order to keep this changes permanent please run 'save options' 
+generate_events prod -f
+stty: stdin isn't a terminal
+[1;34mvalue '[]' for entry 'bypass_check' is not valid. Preserving previous value: '[]'.
+allowed values are any list composed of the following entries: partonshower[0m
+Generating 50000 events with run name prod
+survey  prod 
+INFO: compile directory 
+compile Source Directory
+Using random number seed offset = 4321
+INFO: Running Survey 
+Creating Jobs
+Working on SubProcesses
+INFO: Compiling for process 1/1. 
+INFO:     P1_qq_zz  
+INFO:     P1_qq_zz  
+INFO:  Idle: 1,  Running: 0,  Completed: 0 [ current time: 17h08 ] 
+INFO:  Idle: 0,  Running: 0,  Completed: 1 [  0.56s  ] 
+INFO:  Idle: 0,  Running: 0,  Completed: 1 [  0.56s  ] 
+INFO: End survey 
+refine 50000
+Creating Jobs
+INFO: Refine results to 50000 
+INFO: Generating 50000.0 unweighted events. 
+sum of cpu time of last step: 0 second
+INFO: Effective Luminosity 6363.347120585428 pb^-1 
+INFO: need to improve 1 channels 
+- Current estimate of cross-section: 9.429 +- 0.13336
+    P1_qq_zz 
+INFO:  Idle: 42,  Running: 18,  Completed: 0 [ current time: 17h08 ] 
+INFO:  Idle: 31,  Running: 18,  Completed: 11 [  2.6s  ] 
+INFO:  Idle: 15,  Running: 18,  Completed: 27 [  5.7s  ] 
+INFO:  Idle: 0,  Running: 18,  Completed: 42 [  8.9s  ] 
+INFO:  Idle: 0,  Running: 2,  Completed: 58 [  12s  ] 
+INFO:  Idle: 0,  Running: 0,  Completed: 60 [  12.5s  ] 
+INFO: Combining runs 
+sum of cpu time of last step: 33 seconds
+INFO: finish refine 
+refine 50000 --treshold=0.9
+No need for second refine due to stability of cross-section
+INFO: Combining Events 
+combination of events done in 3.7072370052337646 s 
+  === Results Summary for run: prod tag: tag_1 ===
+
+     Cross-section :   9.269 +- 0.007813 pb
+     Nb of events :  50000
+ 
+store_events
+INFO: Storing parton level results 
+INFO: End Parton 
+reweight --mode=OFF -from_cards
+decay_events -from_cards
+INFO: storing files of previous run 
+INFO: Done 
+quit
+INFO:  
+launch in debug mode

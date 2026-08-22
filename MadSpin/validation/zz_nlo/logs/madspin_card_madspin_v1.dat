@@ -1,0 +1,8 @@
+set seed 7777
+set BW_cut 15
+set spinmode madspin_v1
+set nb_core 3
+set ms_dir /tmp/zz_nlo_work2/ms_madspin_v1/msdir
+decay z > e+ e-
+decay z > mu+ mu-
+launch

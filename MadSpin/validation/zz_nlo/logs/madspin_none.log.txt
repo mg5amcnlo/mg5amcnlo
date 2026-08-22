@@ -1,0 +1,36 @@
+ set configuration option f2py_compiler to /Users/omattelaer/Documents/git_workspace/version3/py313/.direnv/python-3.13/bin/f2py --python=3.13 [1;30m[madgraph_interface.py at line 7452][0m
+ set configuration option f2py_compiler to /Users/omattelaer/Documents/git_workspace/version3/py311/.direnv/python-3.13/bin/f2py --python=3.11 [1;30m[madgraph_interface.py at line 7452][0m
+ set configuration option f2py_compiler to /Users/omattelaer/Documents/git_workspace/version3/py312/.direnv/python-3.13/bin/f2py --python=3.12 [1;30m[madgraph_interface.py at line 7452][0m
+ set configuration option f2py_compiler to /Users/omattelaer/Documents/git_workspace/version3/py314/.direnv/python-3.13/bin/f2py --python=3.14 [1;30m[madgraph_interface.py at line 7452][0m
+ set configuration option lhapdf to /Users/omattelaer/Documents/HEPTools/lhapdf6_py312/bin/lhapdf-config --python=3.12 [1;30m[madgraph_interface.py at line 7452][0m
+ set configuration option lhapdf to /Users/omattelaer/Documents/HEPTools/lhapdf6_py313/bin/lhapdf-config --python=3.13 [1;30m[madgraph_interface.py at line 7452][0m
+ set configuration option lhapdf to /Users/omattelaer/Documents/HEPTools/lhapdf6_py314/bin/lhapdf-config --python=3.14 [1;30m[madgraph_interface.py at line 7452][0m
+stty: stdin isn't a terminal
+P0_z_ll
+Cleaning  SubProcesses. 
+stty: stdin isn't a terminal
+P0_z_ll
+Cleaning  SubProcesses. 
+decaying event number 100 [0.009969234466552734 s]
+decaying event number 200 [0.017704010009765625 s]
+decaying event number 300 [0.02696394920349121 s]
+decaying event number 400 [0.06451201438903809 s]
+decaying event number 500 [0.0730738639831543 s]
+decaying event number 600 [0.08158111572265625 s]
+decaying event number 700 [0.08848309516906738 s]
+decaying event number 800 [0.1279280185699463 s]
+decaying event number 900 [0.13641119003295898 s]
+decaying event number 1000 [0.14460492134094238 s]
+decaying event number 2000 [0.3037891387939453 s]
+decaying event number 3000 [0.4766571521759033 s]
+decaying event number 4000 [0.6484181880950928 s]
+decaying event number 5000 [0.8280320167541504 s]
+decaying event number 6000 [1.000312089920044 s]
+decaying event number 7000 [1.141369104385376 s]
+decaying event number 8000 [1.309615135192871 s]
+decaying event number 9000 [1.4774870872497559 s]
+decaying event number 10000 [1.6054232120513916 s]
+decaying event number 20000 [3.162214994430542 s]
+decaying event number 30000 [4.711831092834473 s]
+decaying event number 40000 [6.410524129867554 s]
+MSRESULT {'efficiency': 1, 'cross': 0.02995559927997553, 'error': 0.0001454384521294481, 'br': 0.0023656606667227524, 'br_err': 0}

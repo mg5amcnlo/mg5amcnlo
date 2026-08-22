@@ -1,0 +1,138 @@
+/private/tmp/zz_nlo_work2/ppzz_nlo/bin/internal/file_writers.py:188: SyntaxWarning: "\s" is an invalid escape sequence. Such sequences will not work in the future. Did you mean "\\s"? A raw string is also an option.
+  keyword_pairs = {r'^if.+then\s*$': ('^end\s*if', 2),
+INFO: ************************************************************
+*                                                          *
+*           W E L C O M E  to  M A D G R A P H 5           *
+*                       a M C @ N L O                      *
+*                                                          *
+*                 *                       *                *
+*                   *        * *        *                  *
+*                     * * * * 5 * * * *                    *
+*                   *        * *        *                  *
+*                 *                       *                *
+*                                                          *
+*         VERSION 5.3.7.2                                  *
+*                                                          *
+*    The MadGraph5_aMC@NLO Development Team - Find us at   *
+*                 http://amcatnlo.cern.ch                  *
+*                                                          *
+*               Type 'help' for in-line help.              *
+*                                                          *
+************************************************************ 
+INFO: load configuration from /Users/omattelaer/.mg5/mg5_configuration.txt  
+INFO: load configuration from /private/tmp/zz_nlo_work2/ppzz_nlo/Cards/amcatnlo_configuration.txt  
+INFO: load configuration from /private/tmp/t77/input/mg5_configuration.txt  
+INFO: load configuration from /private/tmp/zz_nlo_work2/ppzz_nlo/Cards/amcatnlo_configuration.txt  
+Using default gzip "gzip". Set another one in ./input/mg5_configuration.txt
+import command /tmp/zz_nlo_work2/run_nlo.cmd
+set run_mode 2
+set nb_core 14
+launch aMC@NLO -p -f -n prod
+stty: stdin isn't a terminal
+stty: stdin isn't a terminal
+INFO: will run in mode: aMC@NLO 
+INFO: Starting run 
+INFO: Compiling the code 
+INFO: Using built-in libraries for PDFs 
+[1mINFO: For gauge cancellation, the width of 'Z' has been set to zero. [0m
+INFO: Compiling source... 
+INFO:           ...done, continuing with P* directories 
+INFO: Compiling directories... 
+INFO: Compiling on 14 cores 
+INFO:  Compiling P0_uux_zz... 
+INFO:  Compiling P0_uxu_zz... 
+INFO:  Compiling P0_ddx_zz... 
+INFO:  Compiling P0_dxd_zz... 
+INFO:     P0_ddx_zz done. 
+INFO:     P0_uux_zz done. 
+INFO:     P0_uxu_zz done. 
+INFO:     P0_dxd_zz done. 
+INFO: Checking test output: 
+INFO: P0_uux_zz 
+INFO:  Result for test_ME: 
+INFO:    Passed. 
+INFO:  Result for test_MC: 
+INFO:    Passed. 
+INFO:  Result for check_poles: 
+INFO:    Poles successfully cancel for 20 points over 20 (tolerance=1.0e-05) 
+INFO: P0_ddx_zz 
+INFO:  Result for test_ME: 
+INFO:    Passed. 
+INFO:  Result for test_MC: 
+INFO:    Passed. 
+INFO:  Result for check_poles: 
+INFO:    Poles successfully cancel for 20 points over 20 (tolerance=1.0e-05) 
+INFO: P0_uxu_zz 
+INFO:  Result for test_ME: 
+INFO:    Passed. 
+INFO:  Result for test_MC: 
+INFO:    Passed. 
+INFO:  Result for check_poles: 
+INFO:    Poles successfully cancel for 20 points over 20 (tolerance=1.0e-05) 
+INFO: P0_dxd_zz 
+INFO:  Result for test_ME: 
+INFO:    Passed. 
+INFO:  Result for test_MC: 
+INFO:    Passed. 
+INFO:  Result for check_poles: 
+INFO:    Poles successfully cancel for 20 points over 20 (tolerance=1.0e-05) 
+INFO: Starting run 
+INFO: Using 14 cores 
+INFO: Cleaning previous results 
+INFO: Doing NLO matched to parton shower 
+INFO: Setting up grids 
+INFO:  Idle: 0,  Running: 4,  Completed: 0 [ current time: 17h08 ] 
+INFO:  Idle: 0,  Running: 3,  Completed: 1 [  1.4s  ] 
+INFO:  Idle: 0,  Running: 2,  Completed: 2 [  1.6s  ] 
+INFO:  Idle: 0,  Running: 1,  Completed: 3 [  2.1s  ] 
+INFO:  Idle: 0,  Running: 0,  Completed: 4 [  2.2s  ] 
+sum of cpu time of last step: 0 second
+INFO: Determining the number of unweighted events per channel
+
+      Intermediate results:
+      Random seed: 4321
+      Total cross section:      1.269e+01 +- 8.2e-02 pb
+      Total abs(cross section): 1.412e+01 +- 8.6e-02 pb 
+
+ 
+INFO: Computing upper envelope 
+INFO:  Idle: 0,  Running: 4,  Completed: 0 [ current time: 17h08 ] 
+INFO:  Idle: 0,  Running: 3,  Completed: 1 [  1.1s  ] 
+INFO:  Idle: 0,  Running: 2,  Completed: 2 [  1.1s  ] 
+INFO:  Idle: 0,  Running: 1,  Completed: 3 [  1.2s  ] 
+INFO:  Idle: 0,  Running: 0,  Completed: 4 [  1.3s  ] 
+sum of cpu time of last step: 0 second
+INFO: Updating the number of unweighted events per channel
+
+      Intermediate results:
+      Random seed: 4321
+      Total cross section:      1.266e+01 +- 6.1e-02 pb
+      Total abs(cross section): 1.462e+01 +- 6.0e-02 pb 
+
+ 
+INFO: Generating events 
+INFO:  Idle: 0,  Running: 4,  Completed: 0 [ current time: 17h08 ] 
+INFO:  Idle: 0,  Running: 3,  Completed: 1 [  7.3s  ] 
+INFO:  Idle: 0,  Running: 2,  Completed: 2 [  8.9s  ] 
+INFO:  Idle: 0,  Running: 1,  Completed: 3 [  9.9s  ] 
+INFO:  Idle: 0,  Running: 0,  Completed: 4 [  11.3s  ] 
+sum of cpu time of last step: 0 second
+INFO: Collecting events 
+INFO: 
+   --------------------------------------------------------------
+      Summary:
+      Process p p > z z [QCD]
+      Run at p-p collider (6500.0 + 6500.0 GeV)
+      Number of events generated: 50000
+      Total cross section: 1.266e+01 +- 6.1e-02 pb
+   --------------------------------------------------------------
+ 
+INFO: The /private/tmp/zz_nlo_work2/ppzz_nlo/Events/prod/events.lhe.gz file has been generated.
+ 
+INFO: Events generated 
+reweight -from_cards
+decay_events -from_cards
+INFO:  
+quit
+INFO:  
+launch in debug mode
