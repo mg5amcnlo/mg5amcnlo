@@ -2735,6 +2735,14 @@ class TestUnweightRangeWeightPaths(unittest.TestCase):
         _parse_pol_side = interface_madspin.MadSpinInterface._parse_pol_side
         _pure_interference = \
             interface_madspin.MadSpinInterface._pure_interference
+        # asked once per carried overweight. These events decay nothing (
+        # get_decay_from_file returns {}), so the real predicate answers False
+        # without ever reaching for a banner -- which is the point: it must be
+        # able to answer for any event the loop can hand it.
+        _near_nwa_threshold = \
+            interface_madspin.MadSpinInterface._near_nwa_threshold
+        _NWA_THRESHOLD_WIDTHS = \
+            interface_madspin.MadSpinInterface._NWA_THRESHOLD_WIDTHS
 
         def __init__(self, weights, pure_interference=''):
             self.options = interface_madspin.MadSpinOptions()
@@ -2961,11 +2969,16 @@ class _CapturedMadSpinLog(object):
     def __enter__(self):
         import logging
         self.messages = []
+        # the LEVEL each message came out at, in the same order. Some
+        # end-of-run lines choose between info and warning, and "what it said"
+        # is only half of what those tests are checking.
+        self.levels = []
         capture = self
 
         class _Handler(logging.Handler):
             def emit(self, record):
                 capture.messages.append(record.getMessage())
+                capture.levels.append(record.levelno)
 
         self._handler = _Handler(level=logging.DEBUG)
         self._logger = interface_madspin.logger
@@ -2999,6 +3012,14 @@ class TestOverweightReport(unittest.TestCase):
             interface_madspin.MadSpinInterface._OVERWEIGHT_MIN_Z
         _report_overweight = \
             interface_madspin.MadSpinInterface._report_overweight
+        _NWA_THRESHOLD_WIDTHS = \
+            interface_madspin.MadSpinInterface._NWA_THRESHOLD_WIDTHS
+        _nwa_threshold_split = \
+            interface_madspin.MadSpinInterface._nwa_threshold_split
+        _nwa_threshold_note = \
+            interface_madspin.MadSpinInterface._nwa_threshold_note
+        _nwa_threshold_margin = \
+            interface_madspin.MadSpinInterface._nwa_threshold_margin
 
     def _log(self, **stats):
         base = dict(nb_overweight=0, sum_overweight_dw=0.0,
@@ -3057,6 +3078,327 @@ class TestOverweightReport(unittest.TestCase):
         self.assertIn('0/1000 written events carried a non-unit weight', msg)
         self.assertNotIn('cross-section', msg)
 
+
+
+class TestNwaThresholdRegion(unittest.TestCase):
+    """``_near_nwa_threshold`` and the separate reporting of the overweights
+    that fall in it.
+
+    MadSpin evaluates the production side with every resonance ON its pole, so
+    the construction needs the event to have the invariant mass to put them all
+    there. Below ``sum of the poles + _NWA_THRESHOLD_WIDTHS x sum of the
+    widths`` it does not, and an accept/reject weight above its bound there is
+    the approximation running out rather than an under-estimated bound. Since
+    the overweight is now CARRIED and not clipped, that difference is worth a
+    quieter line -- and only a line: nothing here may change a count, a weight,
+    or the total the report quotes.
+    """
+
+    POLE, WIDTH = 173.0, 1.5
+
+    class _Val(object):
+        def __init__(self, value):
+            self.value = value
+
+    class _Banner(object):
+        """``banner.get('param', 'mass'|'decay', |pdg|)``, and a KeyError for
+        anything it was not given -- which is what a model without that
+        parameter does."""
+
+        def __init__(self, table):
+            self.table = dict(table)
+
+        def get(self, card, kind, pdg):
+            return TestNwaThresholdRegion._Val(self.table[(kind, pdg)])
+
+    class _Shim(object):
+        _near_nwa_threshold = \
+            interface_madspin.MadSpinInterface._near_nwa_threshold
+        _NWA_THRESHOLD_WIDTHS = \
+            interface_madspin.MadSpinInterface._NWA_THRESHOLD_WIDTHS
+
+        def __init__(self, banner):
+            self.banner = banner
+
+    def _shim(self, table=None):
+        if table is None:
+            table = {('mass', 6): self.POLE, ('decay', 6): self.WIDTH}
+        return self._Shim(self._Banner(table))
+
+    def _event(self, sqrts, pdgs=(6, -6)):
+        rng = random.Random(11)
+        event = _rambo_event(len(pdgs), sqrts, [self.POLE] * len(pdgs), rng)
+        for particle, pdg in zip([p for p in event if int(p.status) == 1],
+                                 pdgs):
+            particle.pid = pdg
+        return event
+
+    @staticmethod
+    def _pool(*pdgs):
+        """An ``evt_decayfile`` whose pools are non-empty for these pdgs."""
+        return dict((pdg, ['a decay event']) for pdg in pdgs)
+
+    # -- where the boundary is ----------------------------------------
+
+    def test_the_cut_is_the_summed_poles_plus_the_summed_widths(self):
+        """Two tops: 2 x 173 + K x 2 x 1.5. The test is on sqrt(shat), the
+        same quantity ``_upfront_production`` and the joint path both spend as
+        the mass-draw budget."""
+        shim = self._shim()
+        margin = shim._NWA_THRESHOLD_WIDTHS
+        cut = 2 * self.POLE + margin * 2 * self.WIDTH
+        for sqrts, expected in ((cut - 0.5, True), (cut + 0.5, False),
+                                (2 * self.POLE + 0.01, True),
+                                (800.0, False)):
+            self.assertEqual(
+                shim._near_nwa_threshold(self._event(sqrts), self._pool(6, -6)),
+                expected, 'sqrt(shat) = %g against a cut of %g' % (sqrts, cut))
+
+    def test_the_sums_count_every_decaying_particle_not_every_pdg(self):
+        """``t t~`` decayed on both sides costs two poles and two widths. The
+        same event with only ``t`` in the decay pools costs one of each -- and
+        is then nowhere near its threshold."""
+        shim = self._shim()
+        margin = shim._NWA_THRESHOLD_WIDTHS
+        # inside the two-decay cut (2 poles + margin x 2 widths) and far
+        # outside the one-decay cut (1 pole + margin x 1 width)
+        sqrts = 2 * self.POLE + margin * 2 * self.WIDTH - 0.5
+        self.assertTrue(
+            shim._near_nwa_threshold(self._event(sqrts), self._pool(6, -6)))
+        # a fresh event object: the answer is cached per production event
+        self.assertFalse(
+            shim._near_nwa_threshold(self._event(sqrts), self._pool(6)))
+
+    def test_a_pdg_with_an_empty_pool_does_not_count(self):
+        """The 'does this particle decay' test is ``_decaying_pdgs``'s, so a
+        pdg present with an empty pool is not a decay and must not add a pole
+        the event then has to clear."""
+        shim = self._shim()
+        margin = shim._NWA_THRESHOLD_WIDTHS
+        event = self._event(2 * self.POLE + margin * 2 * self.WIDTH - 0.5)
+        self.assertFalse(
+            shim._near_nwa_threshold(event, {6: ['x'], -6: []}))
+
+    def test_an_event_with_nothing_to_decay_is_not_in_the_region(self):
+        shim = self._shim()
+        self.assertFalse(
+            self._shim()._near_nwa_threshold(self._event(350.0), {}))
+
+    # -- it may never break a run -------------------------------------
+
+    def test_a_missing_model_parameter_answers_false_instead_of_raising(self):
+        """This decides how loudly a diagnostic prints. A model with no width
+        entry for the resonance must cost a quiet False, not the run."""
+        shim = self._shim({('mass', 6): self.POLE})     # no ('decay', 6)
+        self.assertFalse(
+            shim._near_nwa_threshold(self._event(347.0), self._pool(6, -6)))
+
+    def test_a_zero_width_resonance_needs_the_poles_themselves(self):
+        """Gamma = 0 is the narrow-width approximation being exact, so the
+        margin collapses onto the poles and only an event that cannot even
+        reach them is flagged."""
+        shim = self._shim({('mass', 6): self.POLE, ('decay', 6): 0.0})
+        self.assertFalse(
+            shim._near_nwa_threshold(self._event(2 * self.POLE + 0.01),
+                                     self._pool(6, -6)))
+
+    def test_the_answer_is_cached_on_the_production_event(self):
+        shim = self._shim()
+        event = self._event(347.0)
+        self.assertTrue(shim._near_nwa_threshold(event, self._pool(6, -6)))
+        # the banner is gone; a second call must not need it
+        shim.banner = None
+        self.assertTrue(shim._near_nwa_threshold(event, self._pool(6, -6)))
+
+
+class TestNwaThresholdReport(unittest.TestCase):
+    """The end-of-run split: what it says, how loudly, and what it must not
+    change."""
+
+    def _log(self, **stats):
+        base = dict(nb_overweight=0, nb_overweight_nwa=0,
+                    sum_overweight_dw=0.0, sum_overweight_dabs=0.0,
+                    sum_nom=0.0, sum_abs_nom=0.0, sum_sq_nom=0.0,
+                    max_overweight=1.0, nb_overflow_joint=0)
+        base.update(stats)
+        n_written = base.pop('n_written')
+        with _CapturedMadSpinLog() as caught:
+            TestOverweightReport._Stub()._report_overweight([base], n_written)
+        return caught
+
+    _SAMPLE = dict(n_written=1000, max_overweight=2.0, sum_overweight_dw=3.0,
+                   sum_overweight_dabs=3.0, sum_nom=1000.0,
+                   sum_abs_nom=1000.0, sum_sq_nom=1000.0)
+
+    def test_all_of_them_at_threshold_is_reported_calmly(self):
+        import logging
+        caught = self._log(nb_overweight=3, nb_overweight_nwa=3,
+                           **self._SAMPLE)
+        msg = '\n'.join(caught.messages)
+        self.assertEqual(caught.levels, [logging.INFO])
+        self.assertIn('invalid by construction', msg)
+        self.assertIn('None of them is outside it', msg)
+        # the TOTAL is still the first number on the line
+        self.assertIn('3/1000 written events', msg)
+
+    def test_one_of_them_away_from_threshold_keeps_the_warning(self):
+        """The whole point of the split: an overweight away from threshold is
+        still a bound that does not dominate for a reason nobody explained, and
+        two others at threshold must not buy it quiet."""
+        import logging
+        caught = self._log(nb_overweight=3, nb_overweight_nwa=2,
+                           **self._SAMPLE)
+        msg = '\n'.join(caught.messages)
+        self.assertEqual(caught.levels, [logging.WARNING])
+        self.assertIn('3/1000 written events', msg)
+        self.assertIn('2 of them are production events within one summed width of', msg)
+        self.assertIn('The other 1 are NOT in that region', msg)
+        self.assertIn('raise nb_sigma', msg)
+
+    def test_none_of_them_at_threshold_says_nothing_extra(self):
+        import logging
+        caught = self._log(nb_overweight=3, nb_overweight_nwa=0,
+                           **self._SAMPLE)
+        msg = '\n'.join(caught.messages)
+        self.assertEqual(caught.levels, [logging.WARNING])
+        self.assertNotIn('invalid by construction', msg)
+        self.assertIn('3/1000 written events', msg)
+
+    def test_the_split_does_not_move_the_cross_section_shift(self):
+        """Tagging is a report, not an accounting change: the number the line
+        quotes is identical with and without the region."""
+        plain = '\n'.join(self._log(nb_overweight=3, nb_overweight_nwa=0,
+                                    **self._SAMPLE).messages)
+        tagged = '\n'.join(self._log(nb_overweight=3, nb_overweight_nwa=3,
+                                     **self._SAMPLE).messages)
+        for piece in ('3/1000 written events', 'largest factor 2.0000',
+                      "+0.3% of the sample's cross-section"):
+            self.assertIn(piece, plain)
+            self.assertIn(piece, tagged)
+
+    def test_a_run_with_no_overweight_at_all_is_unchanged(self):
+        import logging
+        caught = self._log(n_written=1000, sum_nom=1000.0, sum_abs_nom=1000.0,
+                           sum_sq_nom=1000.0)
+        self.assertEqual(caught.levels, [logging.INFO])
+        self.assertIn('0/1000 written events carried a non-unit weight',
+                      '\n'.join(caught.messages))
+        self.assertNotIn('invalid by construction',
+                         '\n'.join(caught.messages))
+
+
+class TestNwaThresholdSequentialReport(unittest.TestCase):
+    """The sequential accept/reject's own stage-exceedance line takes the same
+    split.
+
+    It counts a different thing -- STAGE weights, not written events -- so it
+    may only borrow the split to decide its volume, never to quote it as its
+    own breakdown. The number it prints has to stay the stage count.
+    """
+
+    class _Stub(object):
+        _report_sequential_stats = \
+            interface_madspin.MadSpinInterface._report_sequential_stats
+        _NWA_THRESHOLD_WIDTHS = \
+            interface_madspin.MadSpinInterface._NWA_THRESHOLD_WIDTHS
+        _nwa_threshold_split = \
+            interface_madspin.MadSpinInterface._nwa_threshold_split
+        _nwa_threshold_note = \
+            interface_madspin.MadSpinInterface._nwa_threshold_note
+        _nwa_threshold_margin = \
+            interface_madspin.MadSpinInterface._nwa_threshold_margin
+
+        def __init__(self):
+            self.options = {'density_tolerance': 1e-4}
+
+    def _log(self, nb_overweight, nb_overweight_nwa, overflow=3):
+        stats = dict(nb_overweight=nb_overweight,
+                     nb_overweight_nwa=nb_overweight_nwa,
+                     sequential_stats={'nb_overflow_mass': overflow})
+        with _CapturedMadSpinLog() as caught:
+            self._Stub()._report_sequential_stats([stats], 1000)
+        return caught
+
+    def test_all_at_threshold_drops_the_line_to_info(self):
+        import logging
+        caught = self._log(2, 2)
+        msg = '\n'.join(caught.messages)
+        self.assertIn(logging.INFO, caught.levels)
+        self.assertNotIn(logging.WARNING, caught.levels)
+        self.assertIn('3 weights exceeded their stage maximum', msg)
+        self.assertIn('invalid by construction', msg)
+        self.assertNotIn('raise nb_sigma', msg)
+
+    def test_one_away_from_threshold_keeps_the_warning(self):
+        import logging
+        caught = self._log(2, 1)
+        msg = '\n'.join(caught.messages)
+        self.assertIn(logging.WARNING, caught.levels)
+        self.assertIn('3 weights exceeded their stage maximum', msg)
+        self.assertIn('raise nb_sigma', msg)
+
+    def test_the_stage_count_is_never_replaced_by_the_event_split(self):
+        """The two numbers are in different units. 3 stage exceedances with 2
+        carried events must still print 3."""
+        for nwa in (0, 1, 2):
+            msg = '\n'.join(self._log(2, nwa, overflow=3).messages)
+            self.assertIn('3 weights exceeded their stage maximum', msg)
+
+
+class TestNwaThresholdCounterWiring(unittest.TestCase):
+    """``_unweight_range`` has to increment the region counter on the events
+    that carry an overweight and on no others, through both of its branches,
+    and hand it back additively so a sharded run reports what a serial one
+    would."""
+
+    class _Stub(TestUnweightRangeWeightPaths._Stub):
+        """The joint stub, with the region predicate answering from a list so
+        the wiring can be tested without a banner."""
+
+        def __init__(self, weights, near):
+            TestUnweightRangeWeightPaths._Stub.__init__(self, weights)
+            self._near = list(near)
+            self._asked = 0
+
+        def _near_nwa_threshold(self, production, evt_decayfile):
+            answer = self._near[self._asked % len(self._near)]
+            self._asked += 1
+            return answer
+
+    def _run(self, stub, nb_events):
+        harness = TestUnweightRangeWeightPaths()
+        return harness._run(stub, harness._ctx(), nb_events=nb_events)
+
+    def test_only_the_events_that_carry_one_are_asked_and_counted(self):
+        """Weight 2.0 against a bound of 1.0: every event overflows, and the
+        region answers True, False, True, False."""
+        random.seed(3)
+        stub = self._Stub([2.0], [True, False])
+        wgts, stats = self._run(stub, 4)
+        self.assertEqual(stats['nb_overweight'], 4)
+        self.assertEqual(stats['nb_overweight_nwa'], 2)
+        self.assertEqual(stub._asked, 4)      # asked once per overweight only
+
+    def test_a_run_without_overweights_never_asks_and_reports_zero(self):
+        random.seed(3)
+        stub = self._Stub([0.5], [True])
+        wgts, stats = self._run(stub, 20)
+        self.assertEqual(stats['nb_overweight'], 0)
+        self.assertEqual(stats['nb_overweight_nwa'], 0)
+        self.assertEqual(stub._asked, 0)
+
+    def test_the_counter_is_additive_over_shards(self):
+        """The end-of-run report sums it over the workers' stats dicts, so two
+        shards of 2 must give what one shard of 4 gives."""
+        random.seed(3)
+        _, whole = self._run(self._Stub([2.0], [True, False]), 4)
+        random.seed(3)
+        _, part_a = self._run(self._Stub([2.0], [True, False]), 2)
+        random.seed(3)
+        _, part_b = self._run(self._Stub([2.0], [True, False]), 2)
+        self.assertEqual(
+            part_a['nb_overweight_nwa'] + part_b['nb_overweight_nwa'],
+            whole['nb_overweight_nwa'])
 
 class TestBannerEventWeightRescale(unittest.TestCase):
     """``_rewrite_lhe_banner_cross(event_scale=...)``: the second pass that

@@ -3204,6 +3204,144 @@ So the offshell spinmodes keep `maxwgts[0]`, section 14 keeps carrying the
 handful of overflows it leaves (1-2 events in 10 000, largest factor 1.38), and
 the fallback is now announced and counted rather than silent.
 
+### Where the overflows it leaves actually are
+
+Re-measured on the current tip, because the campaign logs the question was
+first asked of predate sections 15 and 16 and their mass stage ran at 350-860
+mass sets per accepted event against 3.6 today.
+
+**First, which stage.** `spinmode = madspin` with two decaying particles
+resolves `unweighting = auto` to **joint** (section 12), and the joint test has
+no mass stage at all. So the overweights users of the offshell modes actually
+see are `nb_overflow_joint`, not `nb_overflow_mass`; the mass stage only enters
+when `unweighting = sequential*` is asked for explicitly, or from three
+decaying particles up. Both were measured:
+
+| run | overweight events | largest factor |
+|---|---|---|
+| `p p > t t~`, `unweighting = sequential` | 1 / 50 000 | 1.65 |
+| `p p > t t~`, `unweighting = joint` (the default) | 17 / 500 000 | 7.81 |
+| `p p > t t~ j`, `unweighting = joint` (the default) | 265 / 300 000 | 48.9 |
+
+`p p > t t~` at 6.5+6.5 TeV, `BW_cut = 15`, both tops to `e nu b`. The 2 -> 3
+row is 26x the 2 -> 2 rate and six times the tail, and it is the one that
+matters.
+
+**Second, where.** Offline probe on the sequential run's own production events,
+400 **free** mass sets each through `_upfront_production`, 2.0e7 draws in total,
+the estimator of the table above (it predicts `eps_m = 3.58` against the run's
+own reported 3.61):
+
+| | value |
+|---|---|
+| free draws above the shipped bound | 239 / 2.0e7 |
+| production events with at least one | 14 / 50 000 |
+| their `sqrt(shat) - 2 m_t`, largest | **0.70 GeV = 0.24 (Gamma_t + Gamma_t~)** |
+| the sample's own `sqrt(shat) - 2 m_t`, median | 135 GeV = 45 summed widths |
+| `J_corner` on those 14 events | 7.8 to 15.9, against a sample median of 1.12 |
+
+Every one of them, and every one of the 239 draws, sits inside a quarter of a
+summed width of the `2 m_t` threshold -- a region holding **0.036 %** of the
+sample. The single overweight the run itself realised is there too
+(`sqrt(shat) = 346.265`, `S + 0.089 G`). The joint run says the same thing on
+an independent 500 000 events: all **17** of its overflows are at
+`sqrt(shat) - 2 m_t < 0.24` summed widths, the largest (factor 7.81) at
+`S + 0.001 G`.
+
+The mechanism is not the offshell ratio and not `Zhat`: it is `J`, the jacobian
+of the reshuffle that moves the production onto the drawn mass set. At
+threshold there is no recoil momentum left to absorb the change, and `J`
+diverges -- monotonically in the distance to threshold, 15.9 at 0.17 GeV above
+it and 7 at 0.84 GeV.
+
+**Third, and against the hypothesis: `p p > t t~ j` is not this.** Its 265
+overflows are nowhere near threshold and could not be -- the sample's own
+minimum `sqrt(shat)` is 369 GeV, 7.7 summed widths above `2 m_t`. Nor are they
+near it in the invariant mass of the `t t~` system, which is the physics
+variable rather than the code's mass-draw budget: there they are
+*anti*-correlated with the threshold (2.0 % of the overflows inside 10 summed
+widths against 7.6 % of the sample; 25 % inside 50 against 49 %). What they
+have instead is a resonance at the **low corner of its own Breit-Wigner
+window**: 95 % of them have one virtuality in the bottom 2 % of its sampling
+variable (4 % by chance), at `(m - pole)/Gamma = -10.7`. Same divergence of
+`J`, reached by the mass draw rather than by the energy budget -- and reached
+there by design, since that corner is inside `BW_cut` and is sampled on
+purpose.
+
+So the threshold picture is **exact for 2 -> 2 and empty for 2 -> 3**, and the
+population that dominates the overweight count is the second one.
+
+### The per-event constructions, re-measured against overflow removal
+
+The table above ranked them on `eps_m`. Asked instead to *remove* the
+overflows -- speed explicitly not the objective -- the same 50 000 events and
+2.0e7 free draws say:
+
+| the mass stage's bound | `eps_m` | events with a draw over it | worst `w/C` |
+|---|---|---|---|
+| global `maxwgts[0]` -- shipped | **3.58** | 14 / 50 000 | 1.76 |
+| `J_corner . combine(max R.jac_BW.Zhat)` | 3.26 | **4 / 50 000** | 1.04 |
+| `J_corner . max_sample(R.jac_BW.Zhat)` | 3.66 | 0 | 0.92 |
+| `J_corner . jac_BW_corner . max Zhat . combine(max R)` | 4.82 | 0 | 0.70 |
+| `J_corner . jac_BW_corner . max Zhat . max_sample(R)` | 4.94 | 0 | 0.69 |
+| the per-event supremum of `w` (not reachable) | 1.48 | 0 | 1.00 |
+
+**The proposal's zero was zero-by-small-numbers.** At five times the statistics
+`J_corner . combine(max R.jac_BW.Zhat)` overflows on 4 events in 50 000 -- and
+it has to, because `combine` is `mean + nb_sigma . sd` over the first 75 probe
+events, an extrapolation of a tail and not a bound. It buys `3.58 -> 3.26` and
+removes 10 of the 14, which is a different trade from "removes them all".
+
+The two rows that do reach zero replace that extrapolation by the sample-wide
+maximum, and cost `eps_m` 3.66 and 4.94 against 3.58. Their zeros are
+**empirical, not provable**: `R = Tr(rho_off)/|M_prod|^2_on` has no analytic
+maximum, so offshell no per-event construction can be a theorem the way
+`J_corner . jac_BW_corner . max Zhat` is under PA. Making one provable needs a
+bound on `R` over the window, i.e. either a matrix-element evaluation per
+candidate mass set -- which is the whole cost the mass stage exists to avoid --
+or a tabulated `max R(m_1, ..., m_n)` built during the probe. Section 15 priced
+the table: `R` is `1.00000 +- 0.0119` over 3.9e6 draws, a 7x7 grid of its
+maximum runs 1.02-1.31 against a single global 1.31, so the table is worth at
+most 25 % of a factor that is already 1, at the price of an extra probe record
+per free mass set and a `_UPFRONT_CACHE_FORMAT` bump.
+
+And none of it would touch the population that dominates the count, because
+that one is in the joint accept/reject, which has no mass stage.
+
+### What is reported, and how loudly
+
+Since section 14 an overweight is carried on the event weight rather than
+clipped, so none of these is a silent bias any more: what is left to decide is
+how loudly to say it. Near the sum-of-poles threshold there is nothing a user
+could do about it -- the factorisation evaluates the production with every
+resonance ON its pole, and an event that has not got the invariant mass to put
+them there is asking the approximation for something it does not have. Away
+from it, an overweight still says the bound does not dominate for a reason
+nobody has explained, which is worth a warning.
+
+`_near_nwa_threshold` splits them:
+
+    sqrt(shat)  <  sum_r pole_r  +  _NWA_THRESHOLD_WIDTHS * sum_r Gamma_r
+
+over the final-state particles the event actually decays, counted with
+multiplicity. `sqrt(shat)` and not the resonance system's mass, because
+`sqrt(shat)` is the quantity MadSpin itself spends as the mass-draw budget --
+`_upfront_production` and the joint path both start from
+`budget = production.sqrts` -- so this is the condition under which its own
+windows stop being set by `BW_cut`. The margin is in summed **widths**, the
+only scale in the problem that says how far off its pole a resonance may go;
+`_NWA_THRESHOLD_WIDTHS = 1.0` says "this event has not got one width of room to
+share", and the measurement above puts every observed overflow a factor four
+inside it while the region holds 0.31 % of that sample.
+
+The end-of-run line drops from `warning` to `info` only when **every** carried
+overweight is inside the region, and it quotes both halves either way. The
+total stays the first number on the line, and the arithmetic -- the count, the
+largest factor, the cross-section shift -- is untouched: this is a report, not
+an accounting change. On the measured runs that means `p p > t t~` goes quiet
+and `p p > t t~ j` does not, which is the intended behaviour and not a
+side-effect.
+
 ---
 
 ## 16. The Breit-Wigner truncation of the reported cross-section
