@@ -1,0 +1,192 @@
+Shape observables: where the loop-induced g g contribution behaves
+UNLIKE the q q~ one, rather than merely contributing a different amount.
+code 36e3a8b781196f5eb81a0d4f2059dee07edb6a5b   (samples unchanged; nothing was regenerated for this)
+scale: fixed muR = muF = 91.1880 GeV (= m_Z)
+cut:   pt(Z) > 1 GeV on BOTH z, via pt_min_pdg = {23: 1.0}
+
+sigma:  LO 9.2694 +- 0.00781   NLO 12.7056 +- 0.061   LI 1.6253 +- 0.00129  [pb]
+integrated LI/NLO = 0.12792, LI/LO = 0.17534
+
+==============================================================================
+THE DISCRIMINATION, RANKED
+==============================================================================
+
+chi2/ndf of a ratio against its own best-fit FLAT line: a pure
+normalisation offset does not enter, so only a shape difference does.
+
+  LI/NLO   is the number the question asks for.  (LI/LO)/(NLO/LO) is
+           algebraically LI/NLO: the shared LO denominator cancels, which
+           removes a fully correlated term and leaves two INDEPENDENT
+           samples in the ratio.  chi2 = 1 means the two ratio shapes are
+           the same to within the statistics of 50 000 events each.
+  LI/LO    the box against the q q~ TREE, both 2 -> 2, so the extra parton
+           of the NLO sample cannot contaminate it.
+  NLO/LO   the K factor's own shape, for reference.
+  factor   the spread of the normalised LI/NLO across the bins carrying
+           more than 0.2 % of the rate: max/min, so 1.0 = no difference.
+
+#  observable                 LI/NLO      LI/LO     NLO/LO   ndf   factor
+1  max_abs_y_z                390.67     428.26       0.73    17    14.09
+2  dy_zz                      184.59     242.95       1.92    19    14.28
+3  abs_y_z_lead               177.16     234.45       2.11    19     5.53
+4  pt_over_m                  100.20      42.41      22.11    19    18.52
+5  abs_cos_star_mlow           47.52      52.23       1.26     9     1.64
+6  abs_cos_star_mhigh          34.66      42.52       0.79     7     4.02
+7  abs_cos_star_mmid           22.40      30.75       1.14     9     2.09
+8  m_zz_fine                   14.71       8.27       2.20    57     2.85
+9  abs_cos_theta_cs             6.17       5.91       1.06     9     1.17
+
+For scale, the same statistic on the parent study's own inclusive
+|cos theta*| -- the observable it reports as separating nothing:
+   abs_cos_theta_star           4.93       4.97       1.52
+So "6" and "8" are what a non-separating observable scores here, and
+everything above about 20 in the table is a real shape difference.
+
+------------------------------------------------------------------------------
+THE SAME NUMBERS AFTER FORCING EVERY SAMPLE ONTO NLO's m(ZZ) SPECTRUM
+------------------------------------------------------------------------------
+
+A per-event reweighting in m(ZZ) only, normalisation preserved.  What
+survives it is a MATRIX-ELEMENT difference -- the box against the tree at
+the same partonic energy -- and what does not survive was the g g
+luminosity falling faster with x, which the parent study already found in
+m(ZZ) and |y(ZZ)| and which is not new physics about the box.
+
+#  observable                 LI/NLO      LI/LO     NLO/LO   ndf
+1  max_abs_y_z                352.68     398.60       1.21    17
+2  abs_y_z_lead               161.74     214.93       1.93    19
+3  abs_cos_star_mlow           48.95      51.08       1.43     9
+4  abs_cos_star_mhigh          34.08      41.33       0.74     7
+5  pt_over_m                   33.61      45.45      18.04    19
+6  dy_zz                       26.50      42.83       2.00    19
+7  abs_cos_star_mmid           22.24      30.43       1.14     9
+8  abs_cos_theta_cs             6.71       5.65       1.73     9
+9  m_zz_fine                    0.83       0.45       0.79    57
+
+The reweighting is validated on m(ZZ) itself, which must and does
+collapse to ~0 -- it is the variable being matched.
+
+------------------------------------------------------------------------------
+THE WINNER, BIN BY BIN
+------------------------------------------------------------------------------
+
+|cos(theta*_CS)|, m(ZZ) < 300 GeV
+       bin lo     bin hi         LI/NLO                LI/LO               NLO/LO
+        0.000      0.100         0.1262      0.1687+-0.0048      1.3362+-0.0411
+        0.100      0.200         0.1341      0.1748+-0.0049      1.3038+-0.0400
+        0.200      0.300         0.1315      0.1685+-0.0047      1.2814+-0.0390
+        0.300      0.400         0.1269      0.1785+-0.0049      1.4060+-0.0414
+        0.400      0.500         0.1276      0.1634+-0.0043      1.2804+-0.0366
+        0.500      0.600         0.1258      0.1638+-0.0042      1.3023+-0.0359
+        0.600      0.700         0.1224      0.1655+-0.0040      1.3520+-0.0347
+        0.700      0.800         0.1224      0.1649+-0.0037      1.3472+-0.0322
+        0.800      0.900         0.1304      0.1770+-0.0035      1.3574+-0.0290
+        0.900      1.000         0.2002      0.2590+-0.0040      1.2940+-0.0236
+
+|cos(theta*_CS)|, 300 <= m(ZZ) < 450 GeV
+       bin lo     bin hi         LI/NLO                LI/LO               NLO/LO
+        0.000      0.100         0.1767      0.2444+-0.0169      1.3830+-0.1131
+        0.100      0.200         0.1416      0.2238+-0.0158      1.5812+-0.1245
+        0.200      0.300         0.1744      0.2522+-0.0170      1.4461+-0.1136
+        0.300      0.400         0.1410      0.2464+-0.0165      1.7470+-0.1295
+        0.400      0.500         0.1455      0.2222+-0.0141      1.5269+-0.1099
+        0.500      0.600         0.1266      0.2022+-0.0117      1.5967+-0.0994
+        0.600      0.700         0.1204      0.1819+-0.0098      1.5109+-0.0876
+        0.700      0.800         0.1160      0.1679+-0.0079      1.4473+-0.0725
+        0.800      0.900         0.0960      0.1348+-0.0052      1.4037+-0.0544
+        0.900      1.000         0.0844      0.1219+-0.0030      1.4436+-0.0336
+
+|cos(theta*_CS)|, m(ZZ) >= 450 GeV
+       bin lo     bin hi         LI/NLO                LI/LO               NLO/LO
+        0.000      0.125         0.1299      0.2580+-0.0328      1.9862+-0.2771
+        0.125      0.250         0.1294      0.2221+-0.0256      1.7170+-0.2163
+        0.250      0.375         0.1702      0.2585+-0.0286      1.5193+-0.1977
+        0.375      0.500         0.1305      0.1878+-0.0193      1.4390+-0.1638
+        0.500      0.625         0.1337      0.2183+-0.0209      1.6331+-0.1779
+        0.625      0.750         0.1163      0.1952+-0.0165      1.6780+-0.1529
+        0.750      0.875         0.0836      0.1262+-0.0086      1.5093+-0.1030
+        0.875      1.000         0.0423      0.0635+-0.0024      1.5011+-0.0436
+
+|cos(theta*)| of the harder Z, Collins-Soper frame
+       bin lo     bin hi         LI/NLO                LI/LO               NLO/LO
+        0.000      0.100         0.1328      0.1815+-0.0047      1.3662+-0.0387
+        0.100      0.200         0.1353      0.1818+-0.0046      1.3433+-0.0377
+        0.200      0.300         0.1377      0.1811+-0.0046      1.3148+-0.0366
+        0.300      0.400         0.1300      0.1881+-0.0047      1.4477+-0.0389
+        0.400      0.500         0.1303      0.1723+-0.0041      1.3222+-0.0344
+        0.500      0.600         0.1266      0.1724+-0.0040      1.3618+-0.0336
+        0.600      0.700         0.1220      0.1694+-0.0037      1.3886+-0.0319
+        0.700      0.800         0.1200      0.1654+-0.0033      1.3786+-0.0289
+        0.800      0.900         0.1180      0.1633+-0.0028      1.3838+-0.0250
+        0.900      1.000         0.1326      0.1819+-0.0022      1.3722+-0.0177
+
+------------------------------------------------------------------------------
+THE TOP THRESHOLD AT 2 m_t = 346.0 GeV
+------------------------------------------------------------------------------
+
+The g g box runs through a top loop and must have a threshold there; the
+q q~ tree has no analogue, so a step in LI/LO at 2 m_t would be a
+box-specific feature and the strongest a-priori candidate of this study.
+The fine m(ZZ) binning exists to look for it.  Fit over 250-450 GeV:
+
+   LI/LO = a + b (m - 2 m_t) + c theta(m - 2 m_t)
+
+LI/LO:
+   level a         = 0.17048
+   slope b         = -0.000234 per GeV
+   STEP  c         = -0.01277 +- 0.00742   =  -7.5 % +- 4.4 % of the level
+   significance    = 1.72 sigma
+   chi2/ndf with the step 0.61, without it 0.68
+LI/NLO:
+   level a         = 0.11186
+   slope b         = -0.000278 per GeV
+   STEP  c         = +0.00070 +- 0.00537   =  +0.6 % +- 4.8 % of the level
+   significance    = 0.13 sigma
+   chi2/ndf with the step 1.43, without it 1.38
+
+The Higgs triangle IS in the loop-induced sample: MadLoop builds an
+off-shell h from the two z (VVS1_3 with MDL_MH / MDL_WH) and closes it
+with a top or bottom Yukawa loop -- 4 of the 28 loop diagrams are
+triangles, the other 24 boxes.  It cannot produce a peak here: the sample
+has two ON-SHELL z, so m(ZZ) >= 2 m_Z = 182.4 GeV > m_h = 125 GeV and the
+Higgs propagator is off shell at every point of the spectrum.  What is in
+the sample is the smooth, non-resonant box-triangle interference, and
+these samples cannot separate it from the box.
+
+------------------------------------------------------------------------------
+THE OBSERVABLES THAT ARE TRAPS, AND WHY
+------------------------------------------------------------------------------
+
+pt(ZZ) and Delta phi(Z,Z) are EXACTLY 0 and EXACTLY pi on both 2 -> 2
+samples (measured pt(ZZ)_max = 0.0 on LO and 0.0 on LI, against 920.0 on
+NLO).  They separate NLO from LO and LI instantly, for a reason that has
+nothing to do with the box, and a ratio is undefined there.  Not plotted.
+
+pt(Z_lead)/m(ZZ) is the borderline case: it is (beta/2) sin theta* on a
+2 -> 2 sample and therefore bounded by 0.5 (measured maxima 0.4923 on LO,
+0.4950 on LI), while NLO reaches 2.52.  3.66 % of the NLO weight sits above
+the boundary and is off the axis.  Its topmost bins carry that artefact.
+
+------------------------------------------------------------------------------
+THE COLLINS-SOPER FRAME BUYS NOTHING ON A 2 -> 2 SAMPLE
+------------------------------------------------------------------------------
+
+Event-by-event |cos theta*_CS| against the parent study's
+|cos theta*| (harder Z in the ZZ rest frame, against the ZZ lab
+direction):
+
+sample       max |difference|      mean |difference|     pt(ZZ) max
+lo                  2.220e-16              3.506e-17           0.00
+li                  2.220e-16              3.499e-17           0.00
+nlo                 9.950e-01              3.489e-02         920.05
+
+They are the SAME observable on LO and LI, to double precision: a 2 -> 2
+ZZ system has no transverse momentum, so its lab direction is the beam
+axis and the Collins-Soper bisector degenerates onto it.  The CS frame
+changes only the NLO curve, where the recoil tilts the ZZ direction.
+
+Note also that the massless Collins-Soper shortcut
+2(l1+ l2- - l1- l2+)/(Q sqrt(Q^2+qT^2)) is WRONG for two massive Z: it
+returns beta cos theta*, which mixes the m(ZZ) dependence into what is
+meant to be a pure angle and inflates the apparent discrimination by an
+order of magnitude.  This module builds the frame explicitly instead.

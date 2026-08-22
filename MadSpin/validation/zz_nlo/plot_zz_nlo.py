@@ -116,26 +116,36 @@ def structural(data, y, key, obs):
     return base
 
 
-def reference(data):
+def reference(data, probe='m_ee'):
     """Which curve the ratio panes divide by, and whether it is a truth.
 
     Returns ``(key, is_truth)``.  Read off the data, never assumed: an NLO
     four-lepton reference may or may not have been affordable, and the figures
-    have to say which case they are in.
+    have to say which case they are in.  ``probe`` is the observable the
+    presence of a truth curve is tested on -- it defaults to this study's
+    ``m_ee`` and is overridden by the companion shape study, whose npz holds a
+    different set of observables entirely.
     """
-    if 'truth/m_ee/y' in data.z:
+    if 'truth/%s/y' % probe in data.z:
         return 'truth', True
     return 'madspin', False
 
 
 class Data(object):
-    """The committed four-lepton histograms, plus the totals."""
+    """The committed four-lepton histograms, plus the totals.
 
-    def __init__(self, ddir):
+    ``npz`` / ``bins_key`` exist so the companion shape study
+    (``plot_modes_shapes.py``) can point the same class, and therefore the same
+    :func:`draw`, at ``histograms_shapes.npz`` and its own binning.  Both
+    default to this study's own files, so nothing that already called
+    ``Data(ddir)`` changes.
+    """
+
+    def __init__(self, ddir, npz='histograms.npz', bins_key='bins'):
         import json
-        self.z = np.load(os.path.join(ddir, 'histograms.npz'))
+        self.z = np.load(os.path.join(ddir, npz))
         self.meta = json.load(open(os.path.join(ddir, 'meta.json')))
-        self.bins = {k: np.array(v) for k, v in self.meta['bins'].items()}
+        self.bins = {k: np.array(v) for k, v in self.meta[bins_key].items()}
 
     def has(self, key, obs='m_ee'):
         return '%s/%s/y' % (key, obs) in self.z
@@ -175,12 +185,26 @@ class Data(object):
         return self.meta['runs'][key]['nevents']
 
 
-def draw(data, obs, outdir, modes=MODES):
-    ref, is_truth = reference(data)
-    xlab, ylab = OBS.LABELS[obs] if USETEX else (OBS.LABELS_TXT[obs], '')
+def draw(data, obs, outdir, modes=MODES, labels=None, labels_txt=None,
+         logy=None, structural_fn=None):
+    """One mode-comparison figure.
+
+    The four keyword arguments are the seams the companion shape study reuses
+    this function through: a different label dictionary, a different set of
+    log-y observables and a different notion of which bins are structurally
+    empty.  They all default to this study's own, so the existing callers are
+    unaffected -- and the alternative, a second copy of this drawing code, is
+    exactly how two renderings of "the same" figure drift apart.
+    """
+    labels = OBS.LABELS if labels is None else labels
+    labels_txt = OBS.LABELS_TXT if labels_txt is None else labels_txt
+    logy = LOGY if logy is None else logy
+    structural_fn = structural if structural_fn is None else structural_fn
+    ref, is_truth = reference(data, obs)
+    xlab, ylab = labels[obs] if USETEX else (labels_txt[obs], '')
     if not USETEX:
         ylab = ('dsigma/d(%s) [pb per unit]'
-                % OBS.LABELS_TXT[obs].split(' [')[0])
+                % labels_txt[obs].split(' [')[0])
     edges = data.edges(obs)
     x = data.centres(obs)
 
@@ -204,20 +228,20 @@ def draw(data, obs, outdir, modes=MODES):
         rx.stairs(np.clip(r, *RATIO_CLIP), edges, color=COLOR[key],
                   ls=LS[key], lw=LW)
         offscale_arrows(rx, x, r, RATIO_CLIP[0], RATIO_CLIP[1], COLOR[key])
-        empt = structural(data, y, key, obs)
+        empt = structural_fn(data, y, key, obs)
         if empt.any():
             rx.plot(x[empt], np.full(empt.sum(), RATIO_CLIP[0]), 'o',
                     mfc='none', mec=COLOR[key], ms=4, lw=0)
 
-    if obs in LOGY:
+    if obs in logy:
         ax.set_yscale('log')
     ax.set_ylabel(ylab)
     ylo, yhi = ax.get_ylim()
-    ax.set_ylim(ylo, yhi * (18.0 if obs in LOGY else 1.55))
+    ax.set_ylim(ylo, yhi * (18.0 if obs in logy else 1.55))
     ax.legend(frameon=False, fontsize=8,
-              loc='upper left' if obs in LOGY else 'best')
+              loc='upper left' if obs in logy else 'best')
     ax.xaxis.set_minor_locator(AutoMinorLocator())
-    if obs not in LOGY:
+    if obs not in logy:
         ax.yaxis.set_minor_locator(AutoMinorLocator())
     plt.setp(ax.get_xticklabels(), visible=False)
 

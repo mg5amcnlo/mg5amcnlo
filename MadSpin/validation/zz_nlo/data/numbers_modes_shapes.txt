@@ -1,0 +1,72 @@
+MadSpin spinmodes on the NEW (shape-study) four-lepton observables.
+p p > z z [QCD] (MC@NLO) + MadSpin, against the off-shell NLO truth.
+code 36e3a8b781196f5eb81a0d4f2059dee07edb6a5b   (samples unchanged; nothing was regenerated for this)
+
+reference: the directly generated off-shell four-lepton sample.
+
+Every Z-level observable is reconstructed from the two lepton pairs and
+is EXACT: the two Z are flavour tagged (one e+e-, one mu+mu-), so there
+is no combinatorial ambiguity, and each observable is a function of the
+pair four-momenta only.  The exception is the MASS: a reconstructed pair
+is off shell where a produced z was not, so m_4l is not the production
+m(ZZ) event by event -- which is the thing spinmode controls, not a
+defect of the reconstruction.
+
+--- binned shape test: chi2/ndf of (mode / truth) against a flat line ---
+(a pure normalisation offset does not enter; only a shape difference
+does.  Structural zeros are excluded -- see plot_modes_shapes.py.)
+
+observable                    madspin           PA      onshell         none   madspin_v1   onshell_v1
+m_4l_fine                       66.73        36.95         1.98         1.98       167.93         1.98
+min_m_ll                         2.27         4.69     delta fn     delta fn         3.52     delta fn
+abs_cos_theta_cs_4l              0.62         0.64         0.66         0.66         1.14         0.66
+abs_cos_star_4l_mlow             0.98         1.06         1.08         1.08         2.09         1.08
+abs_cos_star_4l_mhigh            1.44         1.48         1.44         1.44         1.40         1.44
+dy_pairs                         1.44         1.31         1.23         1.23         1.49         1.23
+max_abs_y_pair                   0.72         0.76         0.84         0.84         0.65         0.84
+pt_over_m_4l                     1.43         0.92         1.27         1.27         2.37         1.27
+
+worst-mode chi2/ndf, ranked -- how strongly each new observable
+separates the modes at all:
+   m_4l_fine                  167.93
+   min_m_ll                     4.69
+   pt_over_m_4l                 2.37
+   abs_cos_star_4l_mlow         2.09
+   dy_pairs                     1.49
+   abs_cos_star_4l_mhigh        1.48
+   abs_cos_theta_cs_4l          1.14
+   max_abs_y_pair               0.84
+
+--- m_4l below the on-shell threshold 2 m_Z = 182.3760 GeV ---
+The parent study's discriminating variable, re-measured on the 4 GeV
+grid.  Integrals of the drawn curve, so they can be compared with the
+per-event counts in numbers.txt directly.
+
+sample          weight fraction   frac / truth     per-event (meta)
+truth                1.2574e-02             --           1.2574e-02
+madspin              1.5645e-03         0.1244           1.5645e-03
+PA                   2.2087e-03         0.1757           2.2087e-03
+onshell              0.0000e+00         0.0000           0.0000e+00
+none                 0.0000e+00         0.0000           0.0000e+00
+madspin_v1           5.9820e-04         0.0476           5.9820e-04
+onshell_v1           0.0000e+00         0.0000           0.0000e+00
+
+The last two columns are the same quantity measured two ways -- the
+integral of the drawn curve, and the per-event count in meta.json -- and
+agreeing is what says the histogram's lower edge is low enough.
+
+--- min(m(e+e-), m(mu+mu-)): the virtuality handle ---
+Exactly m_Z for every mode that draws no virtuality (onshell, none,
+onshell_v1), so its whole window is a structural zero for those three --
+the same statement the parent study makes about m_ee and m_mumu, made
+again because the minimum of the two is a different observable and picks
+the more off-shell leg of each event.
+
+sample             mean [GeV]   below m_Z frac
+truth                 89.1458           0.6028
+madspin               89.3090           0.5931
+PA                    88.6580           0.6313
+onshell               91.1880           0.0000
+none                  91.1880           0.0000
+madspin_v1            89.3230           0.6040
+onshell_v1            91.1880           0.0000

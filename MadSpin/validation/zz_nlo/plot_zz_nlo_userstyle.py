@@ -75,8 +75,18 @@ def _step(ax, edges, y, **kw):
     ax.step(edges, np.concatenate([y[:1], y]), where='pre', **kw)
 
 
-def draw(d, obs, outdir):
-    ref, is_truth = reference(d)
+def draw(d, obs, outdir, labels=None, logy=None, structural_fn=None,
+         title=None):
+    """One mode-comparison figure in the user's style.
+
+    Same seams as ``plot_zz_nlo.draw``: the companion shape study reuses this
+    function with its own labels, its own log-y set and its own structural
+    zeros rather than keeping a second copy of the drawing code.
+    """
+    labels = OBS.LABELS if labels is None else labels
+    logy = LOGY if logy is None else logy
+    structural_fn = structural if structural_fn is None else structural_fn
+    ref, is_truth = reference(d, obs)
     edges = d.edges(obs)
     x = d.centres(obs)
     order = [m for m in MODES if d.has(m, obs) and (is_truth or m != ref)]
@@ -92,31 +102,32 @@ def draw(d, obs, outdir):
 
     for key in order:
         y, e = d.density(key, obs)
-        shown = np.where(y > 0, y, np.nan) if obs in LOGY else y
+        shown = np.where(y > 0, y, np.nan) if obs in logy else y
         _step(ax, edges, shown, color=COLOR[key], lw=1.0, alpha=STEP_ALPHA,
               zorder=3)
         ax.errorbar(x, shown, yerr=np.where(np.isfinite(shown), e, np.nan),
                     fmt='o', ms=MS, color=COLOR[key], label=CURVES_PLAIN[key],
                     zorder=4)
 
-    if obs in LOGY:
+    if obs in logy:
         ax.set_yscale('log')
-    ax.set_ylabel(OBS.LABELS[obs][1])
+    ax.set_ylabel(labels[obs][1])
     ax.set_xlim(edges[0], edges[-1])
     ax.tick_params(labelbottom=False)
     ymin, ymax = ax.get_ylim()
-    ax.set_ylim(ymin, ymax * (10.0 if obs in LOGY else 1.40))
+    ax.set_ylim(ymin, ymax * (10.0 if obs in logy else 1.40))
     ax.legend(loc='best', fontsize=7.5)
-    ax.set_title('$pp \\to ZZ$ [QCD] (MC@NLO) $\\to e^{+}e^{-}\\mu^{+}\\mu^{-}$'
-                 ', 13 TeV, $\\mu_R=\\mu_F=m_Z$, BW cut $=%g\\,\\Gamma_Z$'
-                 % d.meta['BW_cut'], fontsize=8)
+    ax.set_title(title if title is not None else
+                 ('$pp \\to ZZ$ [QCD] (MC@NLO) $\\to e^{+}e^{-}\\mu^{+}\\mu^{-}$'
+                  ', 13 TeV, $\\mu_R=\\mu_F=m_Z$, BW cut $=%g\\,\\Gamma_Z$'
+                  % d.meta['BW_cut']), fontsize=8)
 
     rx.axhspan(0.9, 1.1, facecolor='C0', alpha=0.10, zorder=0)
     rx.axhspan(0.95, 1.05, facecolor='C0', alpha=0.16, zorder=0)
     rx.axhline(1.0, color=C_REF, ls='--', lw=0.9, zorder=2)
     rx.set_ylim(*RATIO_CLIP)
 
-    struct_of = {k: structural(d, d.density(k, obs)[0], k, obs) & (yref > 0)
+    struct_of = {k: structural_fn(d, d.density(k, obs)[0], k, obs) & (yref > 0)
                  for k in order}
     circled = [k for k in order if struct_of[k].any()]
 
@@ -151,7 +162,7 @@ def draw(d, obs, outdir):
                                             lw=0.9))
                 n_out += 1
 
-    rx.set_xlabel(OBS.LABELS[obs][0])
+    rx.set_xlabel(labels[obs][0])
     rx.set_ylabel('mode / truth' if is_truth else 'mode / madspin', fontsize=9)
     rx.text(0.99, 0.92, 'bands: $\\pm5\\%$, $\\pm10\\%$', transform=rx.transAxes,
             ha='right', va='top', fontsize=7, color='C0')

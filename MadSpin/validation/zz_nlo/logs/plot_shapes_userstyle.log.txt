@@ -1,0 +1,9 @@
+abs_cos_star_mhigh     /private/tmp/t78/MadSpin/validation/zz_nlo/plots_userstyle/shape_abs_cos_star_mhigh
+abs_cos_star_mmid      /private/tmp/t78/MadSpin/validation/zz_nlo/plots_userstyle/shape_abs_cos_star_mmid
+abs_cos_star_mlow      /private/tmp/t78/MadSpin/validation/zz_nlo/plots_userstyle/shape_abs_cos_star_mlow
+abs_cos_theta_cs       /private/tmp/t78/MadSpin/validation/zz_nlo/plots_userstyle/shape_abs_cos_theta_cs
+dy_zz                  /private/tmp/t78/MadSpin/validation/zz_nlo/plots_userstyle/shape_dy_zz
+max_abs_y_z            /private/tmp/t78/MadSpin/validation/zz_nlo/plots_userstyle/shape_max_abs_y_z
+abs_y_z_lead           /private/tmp/t78/MadSpin/validation/zz_nlo/plots_userstyle/shape_abs_y_z_lead
+pt_over_m              /private/tmp/t78/MadSpin/validation/zz_nlo/plots_userstyle/shape_pt_over_m
+m_zz_fine              /private/tmp/t78/MadSpin/validation/zz_nlo/plots_userstyle/shape_m_zz_fine

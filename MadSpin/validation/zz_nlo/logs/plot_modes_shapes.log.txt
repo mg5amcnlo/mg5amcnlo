@@ -1,0 +1,3 @@
+wrote /private/tmp/t78/MadSpin/validation/zz_nlo/data/numbers_modes_shapes.txt
+usetex = True   minus workaround active = True
+8/8 applicable PDFs carry /minus

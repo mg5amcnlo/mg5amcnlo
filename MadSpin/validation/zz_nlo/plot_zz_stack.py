@@ -93,6 +93,29 @@ def window(obs):
     return RATIO_WINDOW.get(obs, RATIO_CLIP)
 
 
+def _drawn_tick_texts(axis, lo, hi):
+    """The tick label strings this axis actually PUTS ON THE PAGE.
+
+    ``axis.get_ticklabels()`` is not that, in two ways that both matter here.
+    It returns a label for every tick the locator produced, including the ones
+    whose location falls outside the current view -- a log axis limited to
+    ``(0.12, 370)`` still owns a ``10^{-1}`` tick at 0.1 and a ``10^{3}`` tick
+    at 1000, and neither is drawn.  And it ignores ``set_visible(False)``,
+    which is how a shared-x upper pane hides its own x labels.  Asking for the
+    drawn text needs both filters.
+    """
+    a, b = (lo, hi) if lo <= hi else (hi, lo)
+    out = []
+    for tick in list(axis.get_major_ticks()) + list(axis.get_minor_ticks()):
+        loc = tick.get_loc()
+        if loc is None or not (a <= loc <= b):
+            continue
+        for lab in (tick.label1, tick.label2):
+            if lab is not None and lab.get_visible() and lab.get_text():
+                out.append(lab.get_text())
+    return out
+
+
 def wants_minus(fig):
     """Does this figure actually contain a minus sign to render?
 
@@ -102,16 +125,29 @@ def wants_minus(fig):
     above 1 -- there is no minus to eat, and reporting that one as a FAILURE
     would be as wrong as reporting a genuinely eaten sign as a pass.  So the
     figure is asked, after it is drawn, whether any of its text carries one.
+
+    "Its text" has to mean the text that reaches the page.  An earlier version
+    of this asked ``get_xticklabels()`` / ``get_yticklabels()`` instead, and
+    those hand back labels for ticks the axis does not draw -- which turned a
+    log pane whose limits happen to start just above ``0.1`` into a figure
+    claiming a ``10^{-1}`` it never renders, and then reported the resulting
+    signless PDF as a FAILURE.  That is precisely the false alarm this function
+    exists to prevent, so it now filters on the view interval and on
+    ``set_visible``; see :func:`_drawn_tick_texts`.
     """
     fig.canvas.draw()
     for ax in fig.axes:
-        texts = list(ax.get_xticklabels()) + list(ax.get_yticklabels())
-        texts += [ax.xaxis.label, ax.yaxis.label, ax.title]
+        texts = _drawn_tick_texts(ax.xaxis, *ax.get_xlim())
+        texts += _drawn_tick_texts(ax.yaxis, *ax.get_ylim())
+        texts = [t for t in texts]
+        for t in (ax.xaxis.label, ax.yaxis.label, ax.title):
+            if t is not None and t.get_visible():
+                texts.append(t.get_text())
         leg = ax.get_legend()
         if leg is not None:
-            texts += leg.get_texts()
-        for t in texts:
-            if '-' in t.get_text() or '\u2212' in t.get_text():
+            texts += [t.get_text() for t in leg.get_texts()]
+        for s in texts:
+            if '-' in s or '\u2212' in s:
                 return True
     return False
 

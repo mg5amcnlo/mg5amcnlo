@@ -1,0 +1,8 @@
+m_4l_fine    ratio pane clipped to (0.5, 1.5): 29 point(s) drawn as arrows; open circles (exact structural zeros): onshell, none, onshell_v1
+min_m_ll     ratio pane clipped to (0.5, 1.5): 57 point(s) drawn as arrows; open circles (exact structural zeros): onshell, none, onshell_v1
+abs_cos_theta_cs_4l ratio pane clipped to (0.5, 1.5): 0 point(s) drawn as arrows; open circles (exact structural zeros): (no modes)
+abs_cos_star_4l_mlow ratio pane clipped to (0.5, 1.5): 0 point(s) drawn as arrows; open circles (exact structural zeros): (no modes)
+abs_cos_star_4l_mhigh ratio pane clipped to (0.5, 1.5): 6 point(s) drawn as arrows; open circles (exact structural zeros): (no modes)
+dy_pairs     ratio pane clipped to (0.5, 1.5): 0 point(s) drawn as arrows; open circles (exact structural zeros): (no modes)
+max_abs_y_pair ratio pane clipped to (0.5, 1.5): 0 point(s) drawn as arrows; open circles (exact structural zeros): (no modes)
+pt_over_m_4l ratio pane clipped to (0.5, 1.5): 0 point(s) drawn as arrows; open circles (exact structural zeros): (no modes)

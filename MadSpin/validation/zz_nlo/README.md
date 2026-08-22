@@ -2,10 +2,11 @@
 
 The NLO continuation of [`../zz_loopinduced`](../zz_loopinduced): the same
 process, the same cuts, the same scale, the same observables, one order higher —
-plus the physics figure the two studies together make possible. Findings are in
-[RESULTS.md](RESULTS.md).
+plus the physics figure the two studies together make possible, and a third part
+that asks whether the `gg` contribution has a different *shape* rather than only
+a different size. Findings are in [RESULTS.md](RESULTS.md).
 
-## The two halves
+## The three parts
 
 **Part 1 — MadSpin at NLO.** `p p > z z [QCD]` MC@NLO events, decayed by MadSpin
 in **all six** spinmodes, against a directly generated, fully off-shell NLO
@@ -37,6 +38,20 @@ identical cuts, scale, PDF and statistics:
 | **LO** | `p p > z z` — the curve both ratio panes divide by |
 
 with two ratio panes, `NLO/LO` and `(NLO+LI)/LO`.
+
+**Part 3 — the shape question.** The same three samples, no new events, one
+different question: is there an observable in which **`LI/LO` and `NLO/LO`
+differ in shape**, i.e. one where the box does something the `q q~` tree does
+not, rather than contributing a different amount? Its figures have **one ratio
+pane, carrying `NLO/LO` and `LI/LO` separately** — the sum of Part 2 is
+dominated by the `q q~` piece and hides exactly what is being looked for. The
+main pane keeps Part 2's conventions, including filling only the `gg` band.
+
+The answer is `|cos theta*|` **in slices of `m(ZZ)`**, and the discrimination is
+quantified rather than eyeballed: the `chi2/ndf` of the double ratio `LI/NLO`
+against a flat line, which is `(LI/LO)/(NLO/LO)` with the shared LO cancelled
+out. §11-§17 of RESULTS.md. Part 3 also repeats the Part 1 spinmode comparison
+on the four-lepton twins of the new observables.
 
 ## Making the samples the same physics
 
@@ -108,22 +123,46 @@ It hard-codes no number: `pt_min_pdg` comes from this run's own `run.inc`,
 observables_zz.py                  the production-level ZZ observables; imports
                                    ../zz_loopinduced/observables.py whole for the
                                    four-lepton ones and the (self-testing) boost
+observables_shapes.py              Part 3's observables, production and 4-lepton,
+                                   plus the discrimination statistic; imports
+                                   observables_zz.py whole
 zz_equivalent_cuts_nlo.f           the truth sample's custom cuts
 run_zz_nlo.py                      the driver: prod / madspin / controls / harvest
+run_shapes.py                      Part 3's harvester -- reads the SAME event
+                                   files, generates nothing
 plot_zz_nlo.py                     Part 1 figures, MG7 paper style (+ --check-minus)
 plot_zz_nlo_userstyle.py           Part 1 figures, the user's own style
 plot_zz_stack.py                   Part 2 figure,  MG7 paper style (+ --check-minus)
 plot_zz_stack_userstyle.py         Part 2 figure,  the user's own style
-data/histograms.npz                the raw histograms, both halves
+plot_zz_shapes.py                  Part 3 production figures, MG7 style
+plot_zz_shapes_userstyle.py        Part 3 production figures, the user's style
+plot_modes_shapes.py               Part 3 spinmode figures, MG7 style
+plot_modes_shapes_userstyle.py     Part 3 spinmode figures, the user's style
+data/histograms.npz                the raw histograms, Parts 1 and 2
+data/histograms_shapes.npz         the raw histograms, Part 3, incl. the
+                                   m(ZZ)-reweighted twins
 data/meta.json                     runs, statistics, seeds, card options, cuts,
-                                   wall times, code SHA
+                                   wall times, code SHA.  Part 3 adds keys
+                                   prefixed `shapes_`
 data/numbers.txt                   the Part 1 numeric report
 data/numbers_stack.txt             the Part 2 numeric report, incl. the
                                    double-counting check
-plots/, plots_userstyle/           PDF and PNG
+data/numbers_shapes.txt            the Part 3 ranking, the reweighted ranking,
+                                   the winner bin by bin, the 2 m_t step fit
+data/numbers_modes_shapes.txt      the Part 3 spinmode report
+plots/, plots_userstyle/           PDF and PNG.  Part 3's production figures are
+                                   the `shape_*` ones
 logs/                              run logs, copied as .log.txt
 RESULTS.md                         the findings
 ```
+
+Part 3's plotting scripts reuse Parts 1 and 2 rather than copying them:
+`plot_zz_shapes.py` imports the stack's colours and the `/minus` applicability
+test, and `plot_modes_shapes.py` calls `plot_zz_nlo.draw` itself, with its own
+labels, log-y set and structural zeros passed in as arguments. `plot_zz_nlo.py`
+and `plot_zz_nlo_userstyle.py` gained those keyword arguments for that; both
+default to Part 1's own values, so Part 1's figures are unchanged pixel for
+pixel.
 
 ## Re-running
 
@@ -135,7 +174,19 @@ python3 run_zz_nlo.py --stage controls --basedir /tmp/zz_nlo_work --nb-core 10
 python3 run_zz_nlo.py --stage harvest  --basedir /tmp/zz_nlo_work
 python3 plot_zz_nlo.py --check-minus ; python3 plot_zz_nlo_userstyle.py
 python3 plot_zz_stack.py --check-minus ; python3 plot_zz_stack_userstyle.py
+
+python3 run_shapes.py                                     # Part 3, no generation
+python3 plot_zz_shapes.py --check-minus ; python3 plot_zz_shapes_userstyle.py
+python3 plot_modes_shapes.py --check-minus ; python3 plot_modes_shapes_userstyle.py
 ```
+
+`run_shapes.py` reads the event files whose paths `meta.json` records and writes
+`data/histograms_shapes.npz`, updating `meta.json` **additively**. It has to run
+*after* `run_zz_nlo.py --stage harvest`, which owns that file and would drop the
+`shapes_` keys. `--basedir` re-roots the recorded paths if the samples moved; a
+missing file is a hard error, because a shape comparison with one sample
+silently absent is worse than none. Part 3 needs no f2py and takes about a
+minute.
 
 The whole thing is about 25 minutes of wall time on an 18-core machine. The four
 plotting scripts need only `data/`; they import neither MadSpin nor MadGraph.

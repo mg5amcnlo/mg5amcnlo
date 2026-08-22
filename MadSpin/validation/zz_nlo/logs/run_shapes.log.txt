@@ -1,0 +1,12 @@
+lo     50000 events from /tmp/zz_nlo_work2/ppzz_lo/Events/prod/unweighted_events.lhe.gz
+nlo    50000 events from /tmp/zz_nlo_work2/ppzz_nlo/Events/prod/events.lhe.gz
+li     50000 events from /tmp/zz_nlo_work2/ggzz_li/Events/prod/unweighted_events.lhe.gz
+truth         50000 events from /tmp/zz_nlo_work2/pp4l_nlo/Events/prod/events.lhe.gz
+madspin       50000 events from /tmp/zz_nlo_work2/ms_madspin/events_decayed.lhe.gz
+PA            50000 events from /tmp/zz_nlo_work2/ms_PA/events_decayed.lhe.gz
+onshell       50000 events from /tmp/zz_nlo_work2/ms_onshell/events_decayed.lhe.gz
+none          50000 events from /tmp/zz_nlo_work2/ms_none/events_decayed.lhe.gz
+madspin_v1    50000 events from /tmp/zz_nlo_work2/ms_madspin_v1/events_decayed.lhe.gz
+onshell_v1    50000 events from /tmp/zz_nlo_work2/ms_onshell_v1/events_decayed.lhe.gz
+wrote /private/tmp/t78/MadSpin/validation/zz_nlo/data/histograms_shapes.npz
+updated /private/tmp/t78/MadSpin/validation/zz_nlo/data/meta.json

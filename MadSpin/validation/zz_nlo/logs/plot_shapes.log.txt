@@ -1,0 +1,9 @@
+wrote /private/tmp/t78/MadSpin/validation/zz_nlo/data/numbers_shapes.txt
+usetex = True   minus workaround active = True
+shape_abs_cos_star_mlow: no minus sign in this figure (every axis positive), check not applicable
+shape_abs_cos_theta_cs: no minus sign in this figure (every axis positive), check not applicable
+shape_dy_zz: no minus sign in this figure (every axis positive), check not applicable
+shape_max_abs_y_z: no minus sign in this figure (every axis positive), check not applicable
+shape_abs_y_z_lead: no minus sign in this figure (every axis positive), check not applicable
+shape_pt_over_m: no minus sign in this figure (every axis positive), check not applicable
+3/3 applicable PDFs carry /minus

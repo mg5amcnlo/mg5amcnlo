@@ -15,8 +15,8 @@ throughout, the reported one, and nothing is corrected by hand.
 
 ## 0. Summary
 
-**Seven things this study found, three of which overturn the framing it started
-from** (the first, the third and the fourth).
+**Ten things this study found, five of which overturn the framing it started
+from** (the first, the third, the fourth, and both of the Part 3 items).
 
 * **An NLO off-shell truth was cheap, not expensive.** `p p > e+ e- mu+ mu- / a
   [QCD]`, 50 000 events, cost **88 s** on 14 cores. It is in the study and every
@@ -42,6 +42,24 @@ from** (the first, the third and the fourth).
   and central rapidity, and it does **not** double count with the NLO real
   emission: neither sample carries a `g g` initial state anywhere near the
   other's. §7, §8.
+* **`|cos θ*|` DOES separate `gg` from `q q~` — in slices of `m(ZZ)`.** §7
+  reports it as flat and separating nothing, and that is right about the
+  inclusive distribution and too strong about the physics: the flatness is a
+  cancellation. Above `m(ZZ) = 450 GeV`, `LI/LO` falls by a factor of **4.1**
+  across `|cos θ*|` while `NLO/LO` stays flat to `chi2/ndf = 0.79`; below
+  300 GeV the effect **reverses sign**. It is a matrix-element effect — a box
+  has no `t`-channel pole to peak on — and it survives a reweighting that
+  removes the `m(ZZ)` spectrum. §13.
+* **The `gg -> h* -> ZZ` triangle is inside the loop-induced sample.** 4 of its
+  28 loop diagrams are Higgs triangles; §10's claim that the `H` interference is
+  outside this study is wrong. It cannot peak (two on-shell `z` put
+  `m(ZZ) ≥ 182.4 GeV > m_h`), and no top threshold at `2 m_t` is visible: a step
+  there is bounded to **4.5 %** of the level. §14.
+* **`m_4l` binned with an edge exactly on `2 m_Z` doubles the mode
+  discrimination** of §6's headline variable, from `chi2/ndf = 32` to `67` for
+  `madspin` and `89` to `168` for `madspin_v1`, with no new events. None of the
+  other new observables separates the modes at all, which is the right answer:
+  they are production observables and MadSpin only decays. §16.
 
 ---
 
@@ -663,3 +681,332 @@ six MadSpin modes run in parallel. Nothing had its statistics reduced.
   loop-induced study gives: `run_from_pickle` restores the pickled option
   object, so a reused directory carries the first run's `spinmode` into every
   lookup through `decay_all_events.options`.
+
+---
+
+# Part 3 — a shape, not an amount: where the `gg` box behaves unlike `q q~`
+
+Everything below reuses the four samples above unchanged. **Nothing was
+regenerated.** Raw numbers are in
+[`data/numbers_shapes.txt`](data/numbers_shapes.txt) (production) and
+[`data/numbers_modes_shapes.txt`](data/numbers_modes_shapes.txt) (spinmodes);
+histograms in [`data/histograms_shapes.npz`](data/histograms_shapes.npz).
+
+§7 asked *how much* the `gg` contribution adds and *where* it sits. This part
+asks a different question: is there an observable in which **`LI/LO` and
+`NLO/LO` differ in shape** — one where the box-mediated `gg` process does
+something the `q q~` tree does not, rather than simply contributing a different
+amount. The figures are new for that reason: **one ratio pane carrying
+`NLO/LO` and `LI/LO` separately**, not the `(NLO+LI)/LO` of §7, because the sum
+is dominated by the `q q~` piece and hides the very thing being looked for.
+
+## 11. The statistic, and why the `LO` cancels out of it
+
+`(LI/LO) / (NLO/LO)` is algebraically `LI/NLO`. So the number that measures
+"do the two ratio shapes differ" is the `chi2/ndf` of the **double ratio
+`LI/NLO` against its own best-fit flat line** — a pure normalisation offset does
+not enter, only shape does. This is worth stating because it also settles the
+error treatment: the shared `LO` denominator would have been **fully correlated**
+between the two ratios, and cancelling it leaves two statistically independent
+50 000-event samples in the ratio. `chi2/ndf = 1` means the two shapes are the
+same to within the statistics available.
+
+`LI/LO` and `NLO/LO` are reported separately as well, because "both ratios flat"
+and "both ratios bending the same way" are different results that the double
+ratio alone cannot tell apart. `LI/LO` is the more interpretable of the two: LO
+and LI are both `2 -> 2` `q q~`-tree-versus-`gg`-box comparisons at the same
+kinematics, with none of the extra-parton contamination the NLO sample carries.
+
+## 12. The ranking
+
+`chi2/ndf` against a flat line, all nine new observables:
+
+| # | observable | `LI/NLO` | `LI/LO` | `NLO/LO` | ndf | factor |
+|---|---|---|---|---|---|---|
+| 1 | `max(\|y(Z1)\|,\|y(Z2)\|)` | **390.7** | 428.3 | 0.73 | 17 | 14.1 |
+| 2 | `\|Δy(Z,Z)\|` | **184.6** | 243.0 | 1.92 | 19 | 14.3 |
+| 3 | `\|y(Z_lead)\|` | **177.2** | 234.5 | 2.11 | 19 | 5.5 |
+| 4 | `pt(Z_lead)/m(ZZ)` | 100.2 | 42.4 | **22.1** | 19 | 18.5 |
+| 5 | `\|cosθ*\|`, `m(ZZ) < 300` | 47.5 | 52.2 | 1.26 | 9 | 1.6 |
+| 6 | `\|cosθ*\|`, `m(ZZ) ≥ 450` | 34.7 | 42.5 | 0.79 | 7 | 4.0 |
+| 7 | `\|cosθ*\|`, `300 ≤ m(ZZ) < 450` | 22.4 | 30.8 | 1.14 | 9 | 2.1 |
+| 8 | `m(ZZ)`, fine, through `2m_t` | 14.7 | 8.3 | 2.20 | 57 | 2.9 |
+| 9 | `\|cosθ*_CS\|`, inclusive | 6.2 | 5.9 | 1.06 | 9 | 1.2 |
+| — | *(parent's inclusive `\|cosθ*\|`)* | *4.9* | *5.0* | *1.52* | *20* | — |
+
+`factor` is the spread of the normalised `LI/NLO` across the bins carrying more
+than 0.2 % of the rate: `1.0` would mean the two ratio shapes are identical.
+The last row is the parent study's own inclusive `|cos θ*|` — the observable §7
+reports as separating nothing — measured with the same statistic, so **5 is what
+"no separation" scores here and anything above about 20 is real**.
+
+### The ranking is not the answer, and this is the sharpest thing in Part 3
+
+**The top three are parton luminosity, not the box.** They are the `|y(ZZ)|`
+effect §7 already found — the gluon luminosity is more central than the quark
+one — read off a single `Z` instead of off the pair. To separate that from a
+matrix-element statement, every sample is reweighted event by event so that its
+`m(ZZ)` spectrum matches NLO's, with the normalisation preserved, and the whole
+table is remeasured:
+
+| observable | `LI/NLO` raw | `LI/NLO` after `m(ZZ)` reweighting |
+|---|---|---|
+| `max\|y(Z)\|` | 390.7 | **352.7** |
+| `\|y(Z_lead)\|` | 177.2 | **161.7** |
+| `\|cosθ*\|`, `m(ZZ) < 300` | 47.5 | **49.0** |
+| `\|cosθ*\|`, `m(ZZ) ≥ 450` | 34.7 | **34.1** |
+| `pt(Z_lead)/m(ZZ)` | 100.2 | 33.6 |
+| `\|Δy(Z,Z)\|` | 184.6 | 26.5 |
+| `\|cosθ*\|`, `300–450` | 22.4 | 22.2 |
+| `\|cosθ*_CS\|` inclusive | 6.2 | 6.7 |
+| `m(ZZ)` fine | 14.7 | **0.83** |
+
+`m(ZZ)` collapsing to `0.83` is the validation — it is the variable being
+matched. `|Δy|` collapsing from 185 to 27 says most of its raw discrimination
+*was* the `m(ZZ)` effect.
+
+The rapidities survive, and that is **not** evidence that they are about the
+box. Reweighting in `m(ZZ)` fixes `ŝ`; it does not fix how `x1` and `x2` shared
+it, and rapidity is precisely the variable that measures the sharing. A
+rapidity observable can therefore never be a matrix-element statement about
+`gg -> ZZ`, however large its `chi2`. That is why the ranking is reported and
+then argued past rather than taken at face value.
+
+What is left, after both filters, is the **production angle at fixed `m(ZZ)`**.
+
+## 13. The answer: `|cos θ*|` in slices of `m(ZZ)`
+
+**`|cos θ*|` inclusively separates nothing, and that flatness is a cancellation
+between two opposite-sign effects. Sliced in `m(ZZ)`, both appear.**
+
+`m(ZZ) ≥ 450 GeV` — the cleanest one, and the figure to look at
+([`plots/shape_abs_cos_star_mhigh.pdf`](plots/shape_abs_cos_star_mhigh.pdf)):
+
+| `\|cos θ*\|` | `LI / LO` | `NLO / LO` |
+|---|---|---|
+| 0.000–0.125 | **0.258 ± 0.033** | 1.99 ± 0.28 |
+| 0.250–0.375 | 0.259 ± 0.029 | 1.52 ± 0.20 |
+| 0.500–0.625 | 0.218 ± 0.021 | 1.63 ± 0.18 |
+| 0.750–0.875 | 0.126 ± 0.009 | 1.51 ± 0.10 |
+| 0.875–1.000 | **0.064 ± 0.002** | 1.50 ± 0.04 |
+
+`LI/LO` falls by a factor of **4.1** across the pane; `NLO/LO` is flat to
+`chi2/ndf = 0.79` over the same bins. That is the requested result in one line:
+a variable in which the two ratios have different shapes, and in which the
+difference is the matrix element rather than the luminosity — it survives the
+`m(ZZ)` reweighting essentially untouched (34.7 -> 34.1).
+
+**The physics.** `q q~ -> ZZ` is a `t`/`u`-channel quark exchange whose
+propagator `1/t ~ 2/(ŝ(1 - cos θ))` sharpens its forward peak as `ŝ` grows.
+`g g -> ZZ` has no `t`-channel tree at all: it is a closed quark box, which at
+high `ŝ` is far more central. So the *ratio* of the two must fall towards
+`|cos θ*| -> 1`, and must do so more steeply the higher `m(ZZ)` is. The three
+slices are exactly that:
+
+| slice | `LI/LO` central | `LI/LO` forward | trend |
+|---|---|---|---|
+| `m(ZZ) < 300` | 0.169 ± 0.005 | **0.259 ± 0.004** | **rises** forward |
+| `300 ≤ m(ZZ) < 450` | 0.244 ± 0.017 | 0.122 ± 0.003 | falls, factor 2.0 |
+| `m(ZZ) ≥ 450` | 0.258 ± 0.033 | 0.064 ± 0.002 | falls, factor 4.1 |
+
+Near threshold the `t`-channel propagator is not singular — `t ≈ m_Z² - ŝ/2` —
+so LO is close to isotropic and the sign of the effect **reverses**: it is the
+box that is the more forward of the two there, by 54 % in the last bin
+(`0.259` against a `0.169` plateau, a 20σ effect on that bin). Integrated over
+`m(ZZ)`, the low-mass rise (which carries most of the rate) and the high-mass
+fall cancel to within 8 % of each other, which is precisely §7's "flat to within
+8 % of itself and separates nothing". **§7's measurement was right and its
+conclusion was too strong: `|cos θ*|` does not separate inclusively because two
+real, opposite shape differences average away, not because there is nothing
+there.**
+
+Both sliced ratios survive the `m(ZZ)` reweighting (47.5 -> 49.0 and
+34.7 -> 34.1), i.e. they are not the 1-D mass effect in disguise. The residual
+`|Δy(Z,Z)|` discrimination (26.5 after reweighting, against 6.7 for the
+inclusive angle) is the same effect seen through a variable that mixes mass and
+angle: matching the 1-D `m(ZZ)` marginal does not match the `(m(ZZ), cos θ*)`
+*correlation*, and it is that correlation which differs.
+
+### The Collins-Soper frame buys nothing here, and that is measured
+
+`|cos θ*_CS|` — polar axis the bisector of beam 1 and reversed beam 2 in the
+`ZZ` rest frame — is **identical to the parent study's `|cos θ*|` on both `2 -> 2`
+samples, to `2.2e-16` event by event**. A `2 -> 2` `ZZ` system has no transverse
+momentum, so its lab direction *is* the beam axis and the bisector degenerates
+onto it. Only the NLO curve changes (mean `|difference| = 0.035`, `pt(ZZ)` up to
+920 GeV). The CS frame is in the study to record that negative result and to
+give the NLO curve a definition that does not degrade when a jet is present.
+
+One trap worth writing down: the textbook massless Collins-Soper shortcut
+`2(l1⁺l2⁻ - l1⁻l2⁺)/(Q√(Q²+q_T²))` is **wrong for two massive `Z`** — it returns
+`β cos θ*`, not `cos θ*`. Using it silently folds the `m(ZZ)` dependence into
+what is meant to be a pure angle and inflated the apparent discrimination of
+this observable from 6 to 190 in a first pass of this analysis. The frame is
+built explicitly instead.
+
+## 14. The top threshold at `2 m_t = 346 GeV`: looked for, not found
+
+This was the strongest *a priori* candidate — the box runs through a top loop and
+must have a threshold there, and `q q~` has no analogue. `m_zz_fine` bins
+`m(ZZ)` in 6 GeV steps from `2 m_Z` to 604 GeV for exactly this
+([`plots/shape_m_zz_fine.pdf`](plots/shape_m_zz_fine.pdf), with `2 m_t` marked).
+
+Fitting `LI/LO = a + b (m - 2m_t) + c·θ(m - 2m_t)` over 250–450 GeV:
+
+| denominator | step `c` / level | significance |
+|---|---|---|
+| `LI / LO` | **−7.5 % ± 4.4 %** | 1.7 σ |
+| `LI / NLO` | **+0.6 % ± 4.8 %** | 0.1 σ |
+
+**No step.** The fluctuation in `LI/LO` happens to sit in the direction a top
+threshold would push it, at 1.7σ, and it disappears entirely when the
+independent NLO sample is the denominator instead — so it is a fluctuation of
+the shared LO curve, not a feature of the box. The result to quote is the
+**sensitivity**: these samples constrain a step at `2 m_t` to below about 4.5 %
+of the level, and a real one is expected to be smaller than that. It is a
+negative result with a number attached, which is the point of having binned
+finely.
+
+### The Higgs triangle **is** in the loop-induced sample
+
+Read off the generated code rather than assumed. `g g > z z [noborn=QCD]`
+generates **28 loop diagrams: 24 boxes and 4 triangles** — 12 with massless
+quarks in the loop, 8 with the `b`, 8 with the top, of which 2 `b` and 2 top are
+the triangles. In `SubProcesses/PV0_0_1_gg_zz`:
+
+```
+helas_calls_ampb_1.f:  CALL VVS1_3(W(1,3),W(1,4),GC_32,MDL_MH,MDL_WH,W(1,5))
+loop_CT_calls_1.f:     CALL ML5_0_0_1_LOOP_3(1,2,5,DCMPLX(MDL_MT), ... )
+```
+
+`VVS1_3` builds an **off-shell Higgs from the two `z`**, carrying `MDL_MH` and
+`MDL_WH`, and `LOOP_3` closes it with a top (or `b`) Yukawa loop against the two
+gluons. So `g g -> h* -> ZZ` and its interference with the box are inside the
+sample, not outside it.
+
+It cannot produce a peak. This sample has two **on-shell** `z`, so
+`m(ZZ) ≥ 2 m_Z = 182.4 GeV`, always above `m_h = 125 GeV`: the Higgs propagator
+is off shell at every point of the spectrum and what is present is the smooth,
+non-resonant box–triangle interference. These samples cannot separate it from
+the box — that would need a second run with the Yukawas set to zero, which is a
+generation and is out of scope here.
+
+**This corrects §10.** That section says "`gg -> ZZ` at NLO, and its
+interference with `gg -> H -> ZZ`, are outside this study entirely". The first
+half stands; the second does not. The `H` interference is *in* the loop-induced
+sample and always was, and every `LI` number in §7 and in Part 3 includes it.
+
+## 15. The observables that are traps
+
+`pt(ZZ)` and `Δφ(Z,Z)` are exactly `0` and exactly `π` for **every** LO and
+**every** loop-induced event — measured `pt(ZZ)_max = 0.0` on both, against
+920 GeV on NLO. They separate NLO from the other two instantly, for a reason
+that has nothing to do with the box, and a ratio is not even defined there.
+Recorded, not plotted, exactly as §7 already decided.
+
+`pt(Z_lead)/m(ZZ)` is the borderline case and is worth its row in the table for
+the lesson rather than the result. It is `(β/2) sin θ*` on a `2 -> 2` sample and
+therefore bounded by `0.5` (measured maxima `0.4923` on LO, `0.4950` on LI),
+while NLO reaches `2.52` and puts **3.66 %** of its weight above the boundary,
+off the axis. Its `NLO/LO` `chi2` of **22.1** — by far the largest in the
+`NLO/LO` column — is that extra parton, not the box. It is the one observable in
+the table whose raw ranking is contaminated by the trap.
+
+## 16. The same new observables on the decayed samples
+
+`plot_modes_shapes.py` runs the six spinmodes against the off-shell NLO truth on
+the four-lepton twins of these observables.
+
+**How the `Z`-level observables are reconstructed, and how exact that is.** Every
+one of them is a function of the two `Z` four-momenta and of nothing else. On a
+decayed sample those are the reconstructed `(e+ e-)` and `(mu+ mu-)` pairs, and
+the reconstruction is **exact**: the two `Z` are flavour tagged — one decays to
+electrons and one to muons — so there is no combinatorial ambiguity at all, and
+four-momentum conservation makes each pair's four-momentum its parent's.
+`|Δy|`, `max|y|`, `|cos θ*_CS|` and `pt/m` therefore carry over without
+approximation. The one thing that does *not* carry over is the **mass**: a
+reconstructed pair is off shell where a produced `z` was not, so `m_4l` is not
+the production `m(ZZ)` event by event. That is a real physical difference — it
+is exactly what `spinmode` controls — and not an approximation in the
+reconstruction. It is why the mass-sliced angles are cut on `m_4l` here and on
+`m(ZZ)` there, and why they are named differently.
+
+`chi2/ndf` of `mode / truth` against a flat line:
+
+| observable | `madspin` | `PA` | `onshell` | `none` | `madspin_v1` | `onshell_v1` |
+|---|---|---|---|---|---|---|
+| **`m_4l` fine** | **66.7** | **37.0** | 1.98 | 1.98 | **167.9** | 1.98 |
+| `min(m_ee, m_μμ)` | 2.27 | 4.69 | delta fn | delta fn | 3.52 | delta fn |
+| `\|cos θ*_CS\|` | 0.62 | 0.64 | 0.66 | 0.66 | 1.14 | 0.66 |
+| `\|cos θ*_CS\|`, `m_4l < 300` | 0.98 | 1.06 | 1.08 | 1.08 | 2.09 | 1.08 |
+| `\|cos θ*_CS\|`, `m_4l ≥ 450` | 1.44 | 1.48 | 1.44 | 1.44 | 1.40 | 1.44 |
+| `\|Δy(ee, μμ)\|` | 1.44 | 1.31 | 1.23 | 1.23 | 1.49 | 1.23 |
+| `max\|y(pair)\|` | 0.72 | 0.76 | 0.84 | 0.84 | 0.65 | 0.84 |
+| `pt(pair)/m_4l` | 1.43 | 0.92 | 1.27 | 1.27 | 2.37 | 1.27 |
+
+**`m_4l` finely binned beats the parent study's `m_4l`, by roughly a factor of
+two on every mode that draws a virtuality**, and it is the only new observable
+that separates at all:
+
+| | `madspin` | `PA` | `madspin_v1` |
+|---|---|---|---|
+| §5's `m_4l`, 10 GeV grid | 31.8 | 14.0 | 88.5 |
+| this `m_4l_fine` | **66.7** | **37.0** | **167.9** |
+
+The gain is entirely binning, and specifically two choices:
+
+* **a bin edge exactly on `2 m_Z = 182.376 GeV`**, with the grid below it built
+  downwards from there in 4 GeV steps. Without it a bin straddles the threshold
+  and part of the sub-threshold rate lands on the wrong side of the count — the
+  integral came out a factor 1.5 to 2 low before this was fixed;
+* **a lower edge at 106.4 GeV**, under the kinematic floor `2 M_LO = 109.13 GeV`
+  the 15-width Breit-Wigner cut imposes. The parent's grid starts at 150 GeV, so
+  its *figure* shows only part of the effect (its quoted fractions are per-event
+  counts and were never affected).
+
+With both in place, the integral of the drawn curve reproduces the per-event
+fraction in `meta.json` to five digits, and §6's numbers come back exactly:
+truth **1.257 %** of its rate below `2 m_Z`; `PA` recovers **17.6 %** of that,
+`madspin` **12.4 %**, `madspin_v1` **4.8 %**, the three on-shell modes **0 %** by
+construction.
+
+**Everything else separates nothing, and that is the expected and correct
+result.** `|Δy|`, `max|y|`, `|cos θ*_CS|` and `pt/m` are *production* observables:
+MadSpin inherits the production kinematics and only decays, so all six modes
+agree with the truth on them to `chi2/ndf ≈ 1`. The winner of Part 3's
+production ranking is therefore, correctly, invisible in the mode comparison —
+a decay-level approximation is not supposed to move a production-level angle,
+and this measures that it does not.
+
+`min(m_ee, m_μμ)` was added as a second virtuality handle — it picks the more
+off-shell leg of each event — and does not beat the parent's `m_ee` (2.3 / 4.7 /
+3.5 here against 2.0 / 4.1 / 4.4 there). For the three on-shell modes it is a
+**delta function at `m_Z`** and is reported as such rather than as a number: a
+mode with no lineshape has no shape `chi2`, and quoting one would be quoting how
+the delta happened to land in the binning. Its window is binned into an **odd**
+number of bins on purpose, because `m_Z` is exactly the midpoint of the
+15-width window and an even count puts it on an edge, splitting the delta across
+two bins — which then looks like a two-bin distribution with a shape and returns
+a `chi2` of 1000-odd that is pure binning noise.
+
+## 17. Part 3 — not covered
+
+* **The `H` interference is present but not isolated.** Separating
+  `gg -> h* -> ZZ` from the box needs a second loop-induced run with the Yukawa
+  couplings switched off, and that is a generation. Every `LI` number here is
+  box + triangle + their interference.
+* **The top threshold limit is statistics-bound.** 4.5 % on a step at `2 m_t`
+  comes from ~700 LI events per 10 GeV bin there. Nothing about the sample size
+  or the scale was varied.
+* **The `m(ZZ)` reweighting is 1-D.** It matches the mass marginal, not the
+  `(m(ZZ), cos θ*)` correlation — which is deliberate, since that correlation is
+  the effect, but it means "survives the reweighting" is a weaker statement than
+  "is independent of the mass spectrum".
+* **The slice boundaries (300, 450 GeV) were not scanned.** They were chosen
+  once, to split the rate roughly 77 / 18 / 5 %, and the sign reversal of the
+  effect is located only to "somewhere between 260 and 300 GeV".
+* **`|cos θ*|` is folded.** The unfolded `cos θ*` and any forward-backward
+  asymmetry were not looked at; with two identical `Z` in the final state the
+  sign convention would need care.
+* **Everything in §10 still applies** — one phase-space point, one seed, no
+  scale or PDF variation, an LO PDF used at NLO, parton level only.
