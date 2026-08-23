@@ -3204,6 +3204,149 @@ So the offshell spinmodes keep `maxwgts[0]`, section 14 keeps carrying the
 handful of overflows it leaves (1-2 events in 10 000, largest factor 1.38), and
 the fallback is now announced and counted rather than silent.
 
+### Where the overflows it leaves actually are
+
+Re-measured on the current tip, because the campaign logs the question was
+first asked of predate sections 15 and 16 and their mass stage ran at 350-860
+mass sets per accepted event against 3.6 today.
+
+**First, which stage.** `spinmode = madspin` with two decaying particles
+resolves `unweighting = auto` to **joint** (section 12), and the joint test has
+no mass stage at all. So the overweights users of the offshell modes actually
+see are `nb_overflow_joint`, not `nb_overflow_mass`; the mass stage only enters
+when `unweighting = sequential*` is asked for explicitly, or from three
+decaying particles up. Both were measured:
+
+| run | overweight events | largest factor |
+|---|---|---|
+| `p p > t t~`, `unweighting = sequential` | 1 / 50 000 | 1.65 |
+| `p p > t t~`, `unweighting = joint` (the default) | 17 / 500 000 | 7.81 |
+| `p p > t t~ j`, `unweighting = joint` (the default) | 265 / 300 000 | 48.9 |
+
+`p p > t t~` at 6.5+6.5 TeV, `BW_cut = 15`, both tops to `e nu b`. The 2 -> 3
+row is 26x the 2 -> 2 rate and six times the tail, and it is the one that
+matters.
+
+**Second, where.** Offline probe on the sequential run's own production events,
+400 **free** mass sets each through `_upfront_production`, 2.0e7 draws in total,
+the estimator of the table above (it predicts `eps_m = 3.58` against the run's
+own reported 3.61):
+
+| | value |
+|---|---|
+| free draws above the shipped bound | 239 / 2.0e7 |
+| production events with at least one | 14 / 50 000 |
+| their `sqrt(shat) - 2 m_t`, largest | **0.70 GeV = 0.24 (Gamma_t + Gamma_t~)** |
+| the sample's own `sqrt(shat) - 2 m_t`, median | 135 GeV = 45 summed widths |
+| `J_corner` on those 14 events | 7.8 to 15.9, against a sample median of 1.12 |
+
+Every one of them, and every one of the 239 draws, sits inside a quarter of a
+summed width of the `2 m_t` threshold -- a region holding **0.036 %** of the
+sample. The single overweight the run itself realised is there too
+(`sqrt(shat) = 346.265`, `S + 0.089 G`). The joint run says the same thing on
+an independent 500 000 events: all **17** of its overflows are at
+`sqrt(shat) - 2 m_t < 0.24` summed widths, the largest (factor 7.81) at
+`S + 0.001 G`.
+
+The mechanism is not the offshell ratio and not `Zhat`: it is `J`, the jacobian
+of the reshuffle that moves the production onto the drawn mass set. At
+threshold there is no recoil momentum left to absorb the change, and `J`
+diverges -- monotonically in the distance to threshold, 15.9 at 0.17 GeV above
+it and 7 at 0.84 GeV.
+
+**Third, and against the hypothesis: `p p > t t~ j` is not this.** Its 265
+overflows are nowhere near threshold and could not be -- the sample's own
+minimum `sqrt(shat)` is 369 GeV, 7.7 summed widths above `2 m_t`. Nor are they
+near it in the invariant mass of the `t t~` system, which is the physics
+variable rather than the code's mass-draw budget: there they are
+*anti*-correlated with the threshold (2.0 % of the overflows inside 10 summed
+widths against 7.6 % of the sample; 25 % inside 50 against 49 %). What they
+have instead is a resonance at the **low corner of its own Breit-Wigner
+window**: 95 % of them have one virtuality in the bottom 2 % of its sampling
+variable (4 % by chance), at `(m - pole)/Gamma = -10.7`.
+
+**This is NOT the same divergence of `J`** -- that sentence stood here and was
+wrong. Measured on the offending trials, `J` is **1.07** on them (0.98 to 2.47)
+against a sample median `J_corner` of 1.22: the reshuffle does nothing. The
+whole factor is the matrix element, and the low corner matters because it is
+what makes the *production* process's own resonance reachable -- section 17,
+which measures it and reruns the `BW_cut` dependence it predicts.
+
+So the threshold picture is **exact for 2 -> 2 and empty for 2 -> 3**, and the
+population that dominates the overweight count is the second one -- whose
+mechanism is section 17.
+
+### The per-event constructions, re-measured against overflow removal
+
+The table above ranked them on `eps_m`. Asked instead to *remove* the
+overflows -- speed explicitly not the objective -- the same 50 000 events and
+2.0e7 free draws say:
+
+| the mass stage's bound | `eps_m` | events with a draw over it | worst `w/C` |
+|---|---|---|---|
+| global `maxwgts[0]` -- shipped | **3.58** | 14 / 50 000 | 1.76 |
+| `J_corner . combine(max R.jac_BW.Zhat)` | 3.26 | **4 / 50 000** | 1.04 |
+| `J_corner . max_sample(R.jac_BW.Zhat)` | 3.66 | 0 | 0.92 |
+| `J_corner . jac_BW_corner . max Zhat . combine(max R)` | 4.82 | 0 | 0.70 |
+| `J_corner . jac_BW_corner . max Zhat . max_sample(R)` | 4.94 | 0 | 0.69 |
+| the per-event supremum of `w` (not reachable) | 1.48 | 0 | 1.00 |
+
+**The proposal's zero was zero-by-small-numbers.** At five times the statistics
+`J_corner . combine(max R.jac_BW.Zhat)` overflows on 4 events in 50 000 -- and
+it has to, because `combine` is `mean + nb_sigma . sd` over the first 75 probe
+events, an extrapolation of a tail and not a bound. It buys `3.58 -> 3.26` and
+removes 10 of the 14, which is a different trade from "removes them all".
+
+The two rows that do reach zero replace that extrapolation by the sample-wide
+maximum, and cost `eps_m` 3.66 and 4.94 against 3.58. Their zeros are
+**empirical, not provable**: `R = Tr(rho_off)/|M_prod|^2_on` has no analytic
+maximum, so offshell no per-event construction can be a theorem the way
+`J_corner . jac_BW_corner . max Zhat` is under PA. Making one provable needs a
+bound on `R` over the window, i.e. either a matrix-element evaluation per
+candidate mass set -- which is the whole cost the mass stage exists to avoid --
+or a tabulated `max R(m_1, ..., m_n)` built during the probe. Section 15 priced
+the table: `R` is `1.00000 +- 0.0119` over 3.9e6 draws, a 7x7 grid of its
+maximum runs 1.02-1.31 against a single global 1.31, so the table is worth at
+most 25 % of a factor that is already 1, at the price of an extra probe record
+per free mass set and a `_UPFRONT_CACHE_FORMAT` bump.
+
+And none of it would touch the population that dominates the count, because
+that one is in the joint accept/reject, which has no mass stage.
+
+### What is reported, and how loudly
+
+Since section 14 an overweight is carried on the event weight rather than
+clipped, so none of these is a silent bias any more: what is left to decide is
+how loudly to say it. Near the sum-of-poles threshold there is nothing a user
+could do about it -- the factorisation evaluates the production with every
+resonance ON its pole, and an event that has not got the invariant mass to put
+them there is asking the approximation for something it does not have. Away
+from it, an overweight still says the bound does not dominate for a reason
+nobody has explained, which is worth a warning.
+
+`_near_nwa_threshold` splits them:
+
+    sqrt(shat)  <  sum_r pole_r  +  _NWA_THRESHOLD_WIDTHS * sum_r Gamma_r
+
+over the final-state particles the event actually decays, counted with
+multiplicity. `sqrt(shat)` and not the resonance system's mass, because
+`sqrt(shat)` is the quantity MadSpin itself spends as the mass-draw budget --
+`_upfront_production` and the joint path both start from
+`budget = production.sqrts` -- so this is the condition under which its own
+windows stop being set by `BW_cut`. The margin is in summed **widths**, the
+only scale in the problem that says how far off its pole a resonance may go;
+`_NWA_THRESHOLD_WIDTHS = 1.0` says "this event has not got one width of room to
+share", and the measurement above puts every observed overflow a factor four
+inside it while the region holds 0.31 % of that sample.
+
+The end-of-run line drops from `warning` to `info` only when **every** carried
+overweight is inside the region, and it quotes both halves either way. The
+total stays the first number on the line, and the arithmetic -- the count, the
+largest factor, the cross-section shift -- is untouched: this is a report, not
+an accounting change. On the measured runs that means `p p > t t~` goes quiet
+and `p p > t t~ j` does not, which is the intended behaviour and not a
+side-effect.
+
 ---
 
 ## 16. The Breit-Wigner truncation of the reported cross-section
@@ -3401,3 +3544,362 @@ cross-section, branching-ratio and event-weight assertion in `tests/`:
   independent, which they are unless the truncation correlates with which events
   the equalization drops -- it cannot, since the drop probability depends only
   on the pdg's total BR.
+
+---
+
+## 17. The joint test's `2 -> 3` overweights: the production's own resonance
+
+Section 15 measured *where* the offshell overweights are and got the `2 -> 2`
+case right and the `2 -> 3` case wrong. It closed with
+
+> What they have instead is a resonance at the low corner of its own
+> Breit-Wigner window ... **Same divergence of `J`**, reached by the mass draw
+> rather than by the energy budget.
+
+The low corner is right. `J` is not. Measured on the offending events, the
+production reshuffling jacobian of the 265 over-bound trials is **1.07**
+(minimum 0.98, maximum 2.47) against a sample-wide `J_corner` median of 1.22 --
+it does nothing at all. The whole factor is in the matrix-element ratio, and
+the reason it is there is a mechanism that does not exist in `2 -> 2`.
+
+### The mechanism
+
+The joint weight of the offshell spinmodes is
+
+    w  =  ME . jac_BW . J^P . prod_k J^D_k ,
+    ME =  <rho_prod, rho_dec>(offshell) / [ prod_r (M_r Gamma_r)^2 ]
+          / [ |M_prod|^2(onshell) . prod_k |M_D_k|^2(pole) ]
+
+with `J^P` the production reshuffle and `J^D_k` the decay reshuffles. Once the
+production process has a final state **besides** the resonances -- a jet -- its
+matrix element contains a propagator of the resonance *itself*, on the line the
+jet is radiated from, at
+
+    (p_r + p_j)^2  =  m_r^2 + 2 p_r.p_j .
+
+With `m_r` **on** its pole that is `>= M_r^2` for any real jet: the singularity
+sits exactly on the boundary of phase space and is unreachable. Sampling `m_r`
+**below** the pole -- which is the whole point of `BW_cut` -- opens it. The
+equation `2 p_r.p_j = M_r^2 - m_r^2` acquires solutions, and on them the
+production matrix element is a Breit-Wigner peak of its own, regulated only by
+`M_r Gamma_r`. Physically the event is `p p > t t~` with a gluon radiated off an
+**on-shell** top, which MadSpin has drawn as `p p > t t~ j` with an off-shell
+one. The weight there is correct. It is simply enormous, and no single
+run-level bound dominates it.
+
+In `2 -> 2` the region does not exist. The only internal resonance line of
+`g g > t t~` is t-channel, `(p_in - p_r)^2 = m_r^2 - 2 p_in.p_r < m_r^2 <=
+M_r^2`, i.e. spacelike whatever the drawn virtuality; `q q~ > t t~` has no top
+propagator at all. **That asymmetry is the whole of the 26x.**
+
+### The measurement
+
+`p p > t t~ (j)` at 6.5+6.5 TeV, `spinmode madspin`, `unweighting joint`,
+`BW_cut = 15`, both tops to `w b`, seed 42. The runs reproduce section 15's
+numbers exactly (265/300 000, largest 48.9071 for `t t~ j`; 17/500 000, largest
+7.8090 for `t t~`), with every joint trial above `0.3 C` recording its own
+factorisation. Medians over the trials that went **over** the bound:
+
+| | `t t~` (2 -> 2), 17 of them | `t t~ j` (2 -> 3), 265 of them |
+|---|---|---|
+| `J^P`, the production reshuffle | **5.35** (4.3 to 34.8) | **1.07** (0.98 to 2.47) |
+| `J^D`, the decay reshuffles | 0.971 | 0.940 |
+| `jac_BW` | 0.924 | 0.958 |
+| `ME`, in units of the bound | 0.268 (0.24-0.32) | **everything else** |
+| `J_corner` of the event | 12.3 (sample 1.12) | 1.19 (sample 1.22) |
+| `sqrt(shat) - 2 m_t`, in summed widths | **0.09** (sample 45.6) | 96.5 (sample 124) |
+| `M(t t~) - 2 m_t`, in summed widths | 0.09 | **83.2** (sample 51.0) |
+
+Two different populations. The `2 -> 2` one is section 15's threshold story and
+is exactly as described there. The `2 -> 3` one is not near threshold in
+`sqrt(shat)` (it cannot be -- the sample's own minimum is 7.7 summed widths
+above `2 m_t`) and is *anti*-correlated with it in `M(t t~)`, which section 15
+already noticed and could not explain.
+
+The explanation is one number. For each over-bound trial, the distance of the
+internal propagator from its pole,
+
+    d  =  |(p_r + p_j)^2 - M_r^2| / (M_r Gamma_r) ,
+
+minimised over the two tops, on the reshuffled momenta the trial actually used:
+
+| | min | p10 | median | p90 | max |
+|---|---|---|---|---|---|
+| the 265 over-bound trials | **0.000** | 0.181 | **0.946** | 2.59 | **5.2** |
+| the 431 trials with `0.3 < w/C < 1` | 0.015 | 1.13 | 3.30 | 6.61 | 20.2 |
+
+**All 265 are inside `d = 5.2`; 51 % inside one.** `corr(ln w/C, ln d) =
+-0.62`. The largest overweight of the run -- factor 48.9 -- sits at `d = 0.12`,
+the second (30.95) at `d = 0.27`, the third (19.46) at `d = 0.94`. Their
+`sqrt(shat)` runs 578 to 1650 GeV -- nowhere near threshold, and what the jet
+has to do is *land* at `2 p_r.p_j = M_r^2 - m_r^2`, not be soft. Over the whole
+population `sqrt(shat)` is mildly *below* the sample's (median 634 against 716);
+the next subsection takes that apart.
+
+### Why the probe misses it, quantified
+
+The joint bound is `_combine_maxwgt` over a probe of `Nevents_for_max_weight`
+production events x `max_weight_ps_point` decay draws -- here 304 x 492 =
+149 568 draws, combined as `1.10 x (mean + 6.18 sd)` of the per-event maxima.
+The region it has to find is narrow in *both* directions:
+
+* the internal pole is reachable at some virtuality inside `BW_cut = 15` for
+  only **3.5 %** of the production events (it needs `2 p_r.p_j <= M_r^2 -
+  m_min^2`, i.e. a jet soft enough or collinear enough relative to the
+  resonance);
+* on those events, the band `d < 1` occupies a fraction **1.5e-3** of the
+  Breit-Wigner sampling variable.
+
+Averaged over all production events that is **5.15e-5 per mass draw** -- so the
+probe expects **7.7** such draws and the run expects **208** in its 4.04e6
+trials, against 265 over-bound trials observed. The probe does land in the
+region; what it cannot do is follow it. Eight draws scattered over eight of the
+304 events, at a random `d`, produce per-event maxima that a `mean + 6.18 sd`
+extrapolation of a *smooth* distribution flattens away -- and the weight is a
+power law in `d`, not a Gaussian tail.
+
+The root's position also matches the corner section 15 saw: the virtuality that
+puts the internal propagator on shell is at `(m - pole)/Gamma` between **-14.4
+and -8.1** (p10-p90, median -11.8), against the `-10.7` section 15 measured for
+the over-bound trials. It is the same thing seen from the other side.
+
+### Is it `shat` near its minimum? Four readings, all refuted
+
+Asked directly, and worth the answer in full because "minimal `shat`" has
+several readings that are not equivalent. Populations: the **265 over-bound**
+trials, the **431 near-bound** ones (`0.3 < w/C < 1`, the control that is also
+heavy), and **40 000 ordinary mass draws** made on the run's own production
+events the way `_draw_mass_value` makes them.
+
+The sharp statistic is the AUC of each variable between over-bound and
+near-bound -- both heavy, so it isolates what makes a heavy trial *overflow* --
+beside the AUC between heavy and ordinary, which is what makes a trial heavy at
+all. `0.500` means the variable says nothing.
+
+| variable | over-bound vs near-bound | heavy vs ordinary draw |
+|---|---|---|
+| `sqrt(shat)` (readings 1 and 3) | 0.523 | 0.388 |
+| `sqrt(shat) - sum m_i'` (reading 2) | 0.525 | 0.408 |
+| `sum m_i' / sqrt(shat)` ("fill"; 1 = infeasible) | 0.474 | 0.575 |
+| `|chi - 1|` (reading 4) | 0.490 | **0.885** |
+| `(min m_i' - pole)/Gamma` | 0.452 | **0.013** |
+| **`d`** | **0.133** | **0.000** |
+
+**(1) and (3), `sqrt(shat)` near the sample or generation boundary.** Refuted,
+and the median alone did not say so -- the over-bound trials are mildly shifted
+*down* in `sqrt(shat)` (median 634 GeV against the sample's 716; 43.8 % below
+600 GeV against 31.9 %), the opposite of what section 17's "hard jet" reading
+suggests. But shifted is not concentrated: their own **minimum is 387.8 GeV**,
+19 GeV above the sample's 368.9, only **1.5 %** are below 400 GeV, and the
+sample's lowest `sqrt(shat)` decile holds 16.2 % of them -- a 1.6x enrichment.
+Against `d`, where 100 % of them are inside 5.2 and an ordinary draw sits at 196.
+The mild enrichment is a *consequence* of the mechanism: the resonance needs
+`2 p_r.p_j <= M_r^2 - m_min^2`, and a lower `sqrt(shat)` gives a softer jet
+more often. Reading 3 is reading 1 shifted by the `ptj = 20` cut and has the
+identical AUC; `sqrt(shat) - (2 m_t + 2 ptj)` is 43 GeV at the over-bound 5th
+percentile and 248 GeV at their median.
+
+**(2), `sqrt(shat)` minimal *given the drawn masses*.** The reading that would
+have been interesting, and it is refuted the hardest -- backwards, in fact:
+
+| | min slack | p1 | p5 | median | max fill |
+|---|---|---|---|---|---|
+| over-bound | **60.9 GeV** | 70.9 | 101.0 | 302.2 | **0.843** |
+| near-bound | 57.5 | 67.5 | 91.4 | 276.6 | 0.852 |
+| ordinary draw | **21.4** | 59.8 | 100.4 | 372.2 | **0.943** |
+
+The over-bound trials never come within 61 GeV of the reshuffle boundary and
+never fill more than 84 % of `sqrt(shat)`, while ordinary draws reach 21 GeV and
+94 %. They are **further** from their own boundary than a random draw is, and
+the AUC against the near-bound control is 0.525.
+
+**(4), the RAMBO solve near its edge.** `|chi - 1|` does separate heavy from
+ordinary strongly (AUC 0.885, median 0.021 against 0.0017) -- but that is the
+same statement as "a mass was drawn low", and it does **not** separate
+over-bound from near-bound (0.490). It is what makes `J^P` 1.07 instead of
+1.00, and 1.07 is not 48.9.
+
+**Does any of it add anything beyond `d`?** No. Spearman `r(ln w/C, d) =
+-0.688` on the 696 recorded trials; the partial correlations given `d` are
+`+0.14` for `sqrt(shat)`, `+0.15` for the slack, `-0.08` for `|chi - 1|`. The
+raw correlations are `+0.04` to `+0.05` before conditioning, so there is barely
+anything for `d` to be a proxy *of*. What residual there is has the **wrong
+sign** for the hypothesis: within quartiles of `d`, higher `sqrt(shat)` gives a
+higher weight (`r = +0.18` to `+0.22`), not a lower one.
+
+**Are "drawn low" and the mechanism two views of one thing?** No, and this is
+the number that settles it. Over ordinary draws, `Spearman(d, min m') = 0.007`
+-- independent. Of the draws that put a resonance more than 8 widths below its
+pole (2.02 % of draws, which is the corner section 15 identified), only
+**0.87 %** land inside `d < 5`. Drawing low is *necessary* -- it is what makes
+`2 p_r.p_j = M_r^2 - m_r^2` solvable at all -- and short of sufficient by a
+factor 115. The extra condition is on the jet, and it is the whole content of
+the mechanism.
+
+### The `BW_cut` prediction, run
+
+If the mechanism is right, closing the window below `~8` widths must close the
+population. Same sample, same seed, only `BW_cut` changed:
+
+| `BW_cut` | events that can reach the internal pole | overweights | largest factor | sigma shift | trials/event |
+|---|---|---|---|---|---|
+| 15 (the default) | 3.49 % | **265** | **48.91** | +0.245 % | 13.47 |
+| 10 | 0.91 % | **97** | 46.56 | +0.0943 % | 6.90 |
+| 5 | 0.03 % | **13** | **6.95** | +0.0052 % | 4.30 |
+
+The count falls by 20x and the *tail* collapses -- 48.9 to 6.9 -- exactly where
+the internal pole leaves the window. The 13 that survive at `BW_cut = 5` are the
+ordinary tail of the weight, not this population. (The full reachability scan,
+per `(resonance, jet)` pair: 0 % at `BW_cut = 3`, 0.05 % at 5, 0.6 % at 8, 1.8 %
+at 10, 6.8 % at 15, 13.8 % at 20, 21.2 % at 25, 30.5 % at 30. It is reachable at
+*some* virtuality for 26 % of the pairs, but usually 40+ widths below the pole.)
+
+### What it actually costs
+
+The overweight is **carried**, not clipped (section 14), so none of this is a
+bias. What it costs is variance and a shape:
+
+| | `t t~ j`, 300 000 events |
+|---|---|
+| cross-section the carry restores | **+0.245 %** |
+| `N_eff = (sum w)^2 / sum w^2` | 292 719 of 300 000, i.e. **-2.43 %** of the statistics |
+| ... of which the single largest event | **-0.77 %** |
+
+and it is not spread evenly. Binned in the *lower* of the two reconstructed top
+virtualities:
+
+| `min(m_t, m_t~)` | events | carried | excess | relative |
+|---|---|---|---|---|
+| 150.6 - 155 | 1283 | 98 | 318.3 | **+24.8 %** |
+| 155 - 160 | 2482 | 108 | 333.4 | **+13.4 %** |
+| 160 - 165 | 5635 | 46 | 73.6 | +1.3 % |
+| 165 - 170 | 25 943 | 13 | 8.4 | +0.03 % |
+| 170 - 176 | 262 811 | 0 | 0 | 0 |
+
+So the pre-#375 clipping was leaving the **low tail of the top lineshape 25 %
+low** on a `2 -> 3` sample, which is the number that says #375 was worth
+building. In `M(t t~)` the effect rises with the jet's hardness, as the
+mechanism says: +0.07 % below 400 GeV, +0.31 % at 500-700, **+0.84 % above
+1 TeV**.
+
+### The options, with their numbers
+
+**Raise the bound.** Zero overflows needs `C' = 48.9 C`, and the joint
+acceptance is `<w>/C` exactly, so the run goes from 13.5 to ~660 trials per
+event -- 352 s becomes ~5 h. Dead.
+
+**A per-event joint bound `C_e = J_corner(e) . K`**, the construction section 15
+built for the mass stage (`J^P` is monotone decreasing in every drawn mass, so
+`J_corner` -- the RAMBO kernel at the window's low corner, one Newton solve --
+dominates it), with `K` the run-level maximum of `w / J^P`. Measured on the
+runs' own trials:
+
+| | `t t~` (2 -> 2) | `t t~ j` (2 -> 3) |
+|---|---|---|
+| `K = max(w / J^P)` | **0.8072 C** | **44.3 C** |
+| `J_corner`: median / mean / max | 1.121 / 1.226 / 97.1 | 1.225 / - / 62.1 |
+| `C_e` median / **mean** | 0.905 C / **0.990 C** | 54.3 C / **62.3 C** |
+| trials over the shipped bound | 17 | 265 |
+| trials over `C_e` | **0** (worst `w/C_e` = 0.949) | 0 (worst 0.895) |
+| trials per accepted event, shipped -> per-event | **3.46 -> 3.43** | 13.5 -> ~840 |
+
+**It fixes the case that does not matter and destroys the one that does.** In
+`2 -> 2` the tail *is* `J^P`, so dividing it out shrinks the run-level factor to
+0.81 C: the per-event bound is **free** -- 3.43 trials per accepted event
+against the 3.46 the shipped bound predicts and the 3.44 the run reports -- and
+all 17 overflows are gone, with the worst weight it ever sees at 0.949 of its
+own bound. That row is measured over **all** 1 702 395 trials of the run, not a
+tail sample. In `2 -> 3` the tail is in `ME` and `J^P` is 1, so dividing by it
+shrinks nothing: `K` stays at the top of the tail and *every* event's bound is
+multiplied by it, a 62x slowdown. (There `K` is measured over the top 0.02 % of
+trials, so it is a lower bound on the true maximum -- which makes the verdict
+stronger, not weaker.)
+
+**A better probe** -- deliberately sampling the low-virtuality corner -- would
+find the region, and then hand back a bound 49x too large. The population is not
+a sampling gap that a bound can absorb; it is a genuine narrow peak of the
+production matrix element inside the sampled region.
+
+**Lower `BW_cut`.** Measured above, and it is the only lever that removes the
+*cause*. It is also a physics choice (it truncates the Breit-Wigner; section 16
+is about exactly that), so it belongs to the user and not to a default.
+
+### What was done
+
+Nothing to the bound. The report was taught the second region, the same way the
+tip of section 15 taught it the first:
+
+`_near_production_resonance(full_evt, production, evt_decayfile)` asks, on the
+event that carried an overweight and only on that event, whether some decayed
+resonance `r` and some other **production-level** final state `k` satisfy
+
+    |m^2(r + k) - M_r^2|  <=  _PRODUCTION_RESONANCE_WIDTHS . M_r Gamma_r
+
+with `_PRODUCTION_RESONANCE_WIDTHS = 10.0` -- twice the measured envelope of
+the whole population (max `d = 5.2`), so it is not fitted to one sample, and
+still specific: the fraction of joint trials that land inside it is 9.2e-4
+(2.9e-4 at a margin of 5, 5.3e-5 at 1) against an overweight rate of 6.6e-5, so
+it cannot silence an overweight by coincidence. It
+reads the *reshuffled* momenta, i.e. the virtuality the event actually carries,
+and it is `O(n^2)` four-vector arithmetic on an event that is already built.
+The first `len(production)` entries of `full_evt` are the production block
+(`add_decay_to_particle` appends decay products after them), so decay products
+cannot pair up with their own parent. It returns False rather than raising, for
+the same reason `_near_nwa_threshold` does: it decides how loudly a diagnostic
+prints.
+
+The end-of-run overweight line now splits three ways -- threshold, production
+resonance, neither, in that order of precedence -- quotes each, and drops from
+`warning` to `info` only when the third is empty.
+
+Verified rather than asserted, on the same sample, same seed, same `nb_core`:
+
+* `p p > t t~ j` tags **265 of 265** and the run's log goes from one WARNING to
+  none. At a margin of 5 it tagged 264 and kept the warning for the one at
+  `d = 5.2` -- which is the same population -- which is why the margin is 10.
+* the 300 000 written events are **byte-identical** to the base tip's (SHA-256
+  over the `<event>` blocks), and every number on the line is unchanged:
+  265/300 000, largest 48.9071, `+473984`, `+0.245 %`, 13.47 trials per event.
+  This is a report and nothing else.
+* `p p > t t~` is untouched: `2 -> 2` returns False at the `len(finals) < 3`
+  line before it looks at anything, so its 17 overweights keep going through
+  the threshold branch.
+* `tests/test_manager.py test_madspin -t0` is green at **473** tests (462 on
+  the base, 11 new: five on the predicate -- the `M Gamma`-in-`s` window, the
+  `2 -> 2` exclusion, an undecayed particle, the production-block slice, a
+  zero-width particle, and that it never raises -- and six on the split,
+  including that it moves no arithmetic).
+
+### What this does not cover
+
+* **`R = Tr(rho_off)/|M_prod|^2_on` in the sequential mass stage.** Section 15
+  measured it at `1.00000 +- 0.0119`, range `[0.733, 1.314]`, and called it
+  "the flattest thing in the weight". That was measured on `p p > t t~`, and
+  `R` is precisely the ratio that carries this resonance -- so on a `2 -> 3`
+  sample it must have the same heavy tail, and the mass-stage constructions
+  section 15 ranked on it would have to be re-ranked there. Not measured here:
+  `auto` sends two decaying particles to `joint`, so the mass stage is only
+  reached on a `2 -> 3` sample by an explicit `set unweighting sequential` or
+  from three decaying particles up.
+* **The residual `sqrt(shat)` dependence.** After conditioning on `d` there is
+  a small positive one (partial `r = +0.14`, `+0.18` to `+0.22` within `d`
+  quartiles): at fixed distance from the internal pole, a harder event gives a
+  bigger weight. Plausibly the resonant diagram's share of the matrix element
+  growing against the non-resonant background, but not measured -- it would
+  need the diagram-level decomposition, which the density path does not expose.
+  It is the wrong sign for a threshold reading either way.
+* **Higher multiplicity.** The mechanism gets *more* available with every extra
+  production-level parton (more `(r, k)` pairs, and pairs of partons as well as
+  single ones). Only `2 -> 3` was measured. The predicate tests pairs only.
+* **The `2 -> 2` per-event joint bound**, which the table above says is free
+  (3.43 trials/event against 3.46) and removes all 17 of its overflows, on the
+  full 1.7e6-trial sample. It is a change to a shipped bound, so it is left as
+  a recommendation and not taken here. Two things it would need before it
+  could be: `K` has to come from the probe rather than from the run (the probe
+  would have to record `w / J^P` per draw, which is one extra float and the
+  jacobian it already computes), and it has to keep the fallbacks
+  `_mass_stage_bound` already has -- an onshell propagator in the production
+  event, an empty window, a jacobian that is infeasible at the corner. Note it
+  is only ever *tighter* than a run-level `K . max_e J_corner`, never a
+  different distribution: redraw-until-accept makes the accepted density
+  independent of `C` for any `C >= max w`, the same argument as #377.
