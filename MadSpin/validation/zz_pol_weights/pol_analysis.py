@@ -1,0 +1,344 @@
+#!/usr/bin/env python3
+"""Everything the figures and ``numbers.txt`` are computed from, in one place.
+
+Runs entirely off ``data/weights.npz`` and ``data/meta.json`` as written by
+``extract_hepmc_pol.py``.  The 14 GB HepMC file is read exactly once, by that
+script; nothing here ever touches it.
+
+Three things this module owns and the plotting scripts do not re-decide.
+
+Which weight is the full
+------------------------
+``"Weight"``.  The evidence, all of it checked in :func:`nominal_evidence` and
+printed into ``numbers.txt``:
+
+* ``"0"`` and ``"Weight"`` are the *same* weight in two normalisations --
+  ``"0" * N_events == "Weight"`` holds to the last bit for every one of the
+  250 000 events.  ``sum("0") == mean("Weight")`` is the cross section, and it
+  reproduces the ``C`` line of the last event to twelve digits.  Every ratio in
+  this study is therefore identical whichever of the two is used, and the
+  question "which is nominal" has no numerical consequence for the ratios --
+  only for the vertical scale of the distributions.
+* The four ``ms_pol_*`` weights are in the ``"Weight"`` normalisation: they are
+  of order 10, not of order 1e-5.  Dividing them by ``"0"`` would inflate every
+  ratio by a factor of 250 000.
+* ``"MUR1.0_MUF1.0"`` is the LHE ``<wgt id='1001'>`` copy of the same nominal,
+  agreeing with ``"Weight"`` to 4e-6 in the sum -- the rounding of the LHE
+  ``rwgt`` block.  It is a re-computation of the nominal, not an independent
+  candidate.
+
+So: ratios use ``"Weight"``; the absolute ``dsigma/dx`` of the distributions
+uses ``"0"``, whose sum over events *is* the cross section in pb.
+
+The ratio errors
+----------------
+Numerator and denominator are sums over the *same events*, and the polarisation
+weight of an event is very strongly correlated with its nominal weight -- for
+the sum of the four it is nearly proportional to it.  Treating them as
+independent samples overstates the error by a factor of two on the sum pane and
+turns a 5-sigma shape into a 2-sigma one.
+
+:func:`ratio` uses the linearised (delta-method) error for a ratio of two sums
+over a common sample::
+
+    R = N / D,   N = sum_i n_i,  D = sum_i d_i
+    dR = (dN - R dD) / D
+    var(R) = sum_i (n_i - R d_i)^2 / D^2
+
+which is algebraically the jackknife over events, and is exactly the naive
+independent-samples formula minus the covariance term.  When ``n_i = c d_i``
+event by event it correctly returns zero error, which the naive formula does
+not.
+
+The selection
+-------------
+See :data:`SEL` and RESULTS.md.  Note that this sample's MadSpin card is
+``decay z > light light`` over *every* fermion but the top -- an inclusive ``Z``
+decay -- so the four-lepton final state the observables want is 0.23 % of the
+events, not all of them.
+"""
+
+import json
+import math
+import os
+
+import numpy as np
+
+_HERE = os.path.dirname(os.path.abspath(__file__))
+
+POL_KEYS = ['LL', 'LT', 'TL', 'TT']
+# The order the ratio panes draw the four in, as asked: the sum leads, then
+# LL, TT, TL, LT.
+PANE_ORDER = ['SUM', 'LL', 'TT', 'TL', 'LT']
+
+# The lepton selection.  pT > 10 GeV and |eta| < 2.5 is the standard
+# four-lepton fiducial and it is the one used here; the reasons it is not
+# looser, given how thin the four-lepton sample already is, are in RESULTS.md.
+# It buys a truth-matched purity of 90 % (four lepton) and 96 % (e+e-);
+# dropping the eta cut would nearly double the four-lepton statistics but the
+# resulting "leptons" reach |eta| = 8 and correspond to no measurement.
+PT_MIN = 10.0
+ETA_MAX = 2.5
+# "a few GeV": the threshold at which a second same-flavour same-sign lepton is
+# counted as making the highest-pT choice a genuine choice.
+AMBIG_PT = 3.0
+
+N_EVENTS_NORM = 250000     # asserted against the file, see ``load``
+
+
+class Data(object):
+    """``weights.npz`` plus the selections and the weight columns."""
+
+    def __init__(self, ddir=None):
+        ddir = ddir or os.path.join(_HERE, 'data')
+        self.z = dict(np.load(os.path.join(ddir, 'weights.npz')))
+        self.meta = json.load(open(os.path.join(ddir, 'meta.json')))
+        self.n = len(self.z['w_Weight'])
+        assert self.n == self.meta['n_events']
+
+        self.full = self.z['w_Weight']
+        # ``"0"`` is ``"Weight" / n_events``: its sum over the sample IS the
+        # cross section in pb, so it is the right column for an absolute
+        # dsigma/dx.  The polarisation weights live in the ``"Weight"``
+        # normalisation and are put on the same footing by the same factor.
+        self.scale_to_pb = 1.0 / self.n
+        pm = self.meta['pol_map']
+        self.pol = {k: self.z['w_' + pm[k]].astype(np.float64) for k in POL_KEYS}
+        self.pol['SUM'] = sum(self.pol[k] for k in POL_KEYS)
+
+        self.sel = {k: v(self) for k, v in SEL.items()}
+
+    # -- the pieces of the "which weight is nominal" argument ----------------
+    def nominal_evidence(self):
+        w0, w, mu = self.z['w_0'], self.z['w_Weight'], self.z['w_MUR1.0_MUF1.0']
+        r = w0 * self.n / w
+        return {
+            'n_events': self.n,
+            'w0_times_N_over_Weight_min': float(r.min()),
+            'w0_times_N_over_Weight_max': float(r.max()),
+            'sum_w0_pb': float(w0.sum()),
+            'mean_Weight_pb': float(w.mean()),
+            'C_line_last_event_pb': self.meta['C_line_last_event'][0],
+            'C_line_first_event_pb': self.meta['C_line_first_event'][0],
+            'sum_MUR1_over_sum_Weight_minus_1':
+                float(mu.sum() / w.sum() - 1.0),
+            'n_negative': int((w < 0).sum()),
+            'frac_negative': float((w < 0).mean()),
+            'distinct_abs_Weight': [float(x) for x in np.unique(np.abs(w))],
+            'pol_over_Weight_order_of_magnitude':
+                float(np.median(np.abs(self.pol['SUM'])) / np.median(np.abs(w))),
+        }
+
+
+def _lep_ok(d, name):
+    """pT and |eta| cuts on one DRESSED lepton, False where it is absent."""
+    pt = d.z['pt_%s_dr' % name]
+    eta = d.z['eta_%s' % name]
+    with np.errstate(invalid='ignore'):
+        return np.nan_to_num(pt, nan=-1.0) > PT_MIN, np.abs(
+            np.nan_to_num(eta, nan=99.0)) < ETA_MAX
+
+
+def _sel(d, names, obs):
+    ok = np.isfinite(d.z[obs])
+    for nm in names:
+        a, b = _lep_ok(d, nm)
+        ok &= a & b
+    return ok
+
+
+SEL = {
+    # M(e+ mu+) needs one lepton from each Z, so all four are required.
+    'm_epmup_dr': lambda d: _sel(d, ('ep', 'em', 'mup', 'mum'), 'm_epmup_dr'),
+    # Delta phi(e+ e-) needs only the Z that went to electrons.
+    'dphi_ee_dr': lambda d: _sel(d, ('ep', 'em'), 'dphi_ee_dr'),
+}
+
+# The two observables, their binning, their labels and their vertical scale.
+OBS = ['m_epmup_dr', 'dphi_ee_dr']
+
+BINS = {
+    # 312 events survive the four-lepton fiducial -- see RESULTS.md for why so
+    # few -- so the binning is coarse on purpose and roughly equal-population
+    # rather than uniform.  Anything finer would be a plot of its own noise.
+    'm_epmup_dr': np.array([0., 45., 70., 95., 125., 175., 260., 450.]),
+    # 12 uniform bins over the full [0, pi] range of the observable.
+    'dphi_ee_dr': np.linspace(0.0, math.pi, 13),
+}
+
+LABELS_TEX = {
+    'm_epmup_dr': (r'$M(e^{+}\mu^{+})$ [GeV]',
+                   r'$\mathrm{d}\sigma/\mathrm{d}M$ [pb/GeV]'),
+    'dphi_ee_dr': (r'$\Delta\phi(e^{+}e^{-})$ [rad]',
+                   r'$\mathrm{d}\sigma/\mathrm{d}\Delta\phi$ [pb/rad]'),
+}
+LABELS_TXT = {
+    'm_epmup_dr': ('M(e+ mu+) [GeV]', 'dsigma/dM [pb/GeV]'),
+    'dphi_ee_dr': ('Delta phi(e+ e-) [rad]', 'dsigma/dDeltaphi [pb/rad]'),
+}
+SHORT = {'m_epmup_dr': 'm_epmup', 'dphi_ee_dr': 'dphi_ee'}
+LOGY = {'m_epmup_dr'}
+
+CURVE_TEX = {
+    'full': r'full (unpolarised), \texttt{Weight}',
+    'LL': r'$Z_{0}Z_{0}$  (\texttt{ms\_pol\_23.0\_23.0})',
+    'TT': r'$Z_{T}Z_{T}$  (\texttt{ms\_pol\_23.T\_23.T})',
+    'TL': r'$Z_{T}Z_{0}$  (\texttt{ms\_pol\_23.T\_23.0})',
+    'LT': r'$Z_{0}Z_{T}$  (\texttt{ms\_pol\_23.0\_23.T})',
+    'SUM': r'$\sum$ = LL + TT + TL + LT',
+}
+CURVE_TXT = {'full': 'full (unpolarised), Weight',
+             'LL': 'Z0 Z0  (ms_pol_23.0_23.0)',
+             'TT': 'ZT ZT  (ms_pol_23.T_23.T)',
+             'TL': 'ZT Z0  (ms_pol_23.T_23.0)',
+             'LT': 'Z0 ZT  (ms_pol_23.0_23.T)',
+             'SUM': 'sum = LL + TT + TL + LT'}
+RATIO_TEX = {'SUM': r'$(\mathrm{LL{+}TT{+}TL{+}LT})/\mathrm{full}$',
+             'LL': r'$\mathrm{LL}/\mathrm{full}$',
+             'TT': r'$\mathrm{TT}/\mathrm{full}$',
+             'TL': r'$\mathrm{TL}/\mathrm{full}$',
+             'LT': r'$\mathrm{LT}/\mathrm{full}$'}
+RATIO_TXT = {'SUM': '(LL+TT+TL+LT) / full', 'LL': 'LL / full',
+             'TT': 'TT / full', 'TL': 'TL / full', 'LT': 'LT / full'}
+
+
+# --------------------------------------------------------------------------
+def ratio(num, den):
+    """``(R, sigma_R)`` for two weight arrays summed over the SAME events.
+
+    See the module docstring: the error is the delta-method / jackknife one,
+    ``var(R) = sum_i (n_i - R d_i)^2 / D^2``, which keeps the covariance
+    between numerator and denominator instead of throwing it away.
+    """
+    D = den.sum()
+    if D == 0 or len(den) == 0:
+        return float('nan'), float('nan')
+    R = num.sum() / D
+    return float(R), float(math.sqrt(np.sum((num - R * den) ** 2)) / abs(D))
+
+
+def naive_ratio_error(num, den):
+    """What a wrong, independent-samples error bar would have been.
+
+    Kept only so that ``numbers.txt`` can print the factor by which the correct
+    treatment shrinks the bar; never used to draw anything.
+    """
+    N, D = num.sum(), den.sum()
+    if N == 0 or D == 0:
+        return float('nan')
+    return float(abs(N / D) * math.sqrt(np.sum(num ** 2) / N ** 2
+                                        + np.sum(den ** 2) / D ** 2))
+
+
+def histogram(x, w, edges):
+    """``(dsigma/dx, error)`` in pb per unit of ``x``."""
+    y, _ = np.histogram(x, bins=edges, weights=w)
+    y2, _ = np.histogram(x, bins=edges, weights=w * w)
+    width = np.diff(edges)
+    return y / width, np.sqrt(y2) / width
+
+
+def binned_ratio(x, num, den, edges):
+    """Per-bin ``num/den`` with the correlated error, plus the bin populations."""
+    idx = np.digitize(x, edges) - 1
+    nb = len(edges) - 1
+    r = np.full(nb, np.nan)
+    e = np.full(nb, np.nan)
+    n = np.zeros(nb, dtype=int)
+    for b in range(nb):
+        m = idx == b
+        n[b] = m.sum()
+        if n[b]:
+            r[b], e[b] = ratio(num[m], den[m])
+    return r, e, n
+
+
+class Curves(object):
+    """One observable's histograms and ratio panes, computed once."""
+
+    def __init__(self, d, obs):
+        self.obs = obs
+        self.edges = BINS[obs]
+        self.x = np.asarray(d.z[obs], dtype=np.float64)
+        self.sel = d.sel[obs]
+        xs = self.x[self.sel]
+        self.xs = xs
+        self.n_sel = int(self.sel.sum())
+        f = d.full[self.sel]
+        s = d.scale_to_pb
+        self.dist = {'full': histogram(xs, f * s, self.edges)}
+        for k in POL_KEYS:
+            self.dist[k] = histogram(xs, d.pol[k][self.sel] * s, self.edges)
+        self.ratios = {}
+        for k in PANE_ORDER:
+            self.ratios[k] = binned_ratio(xs, d.pol[k][self.sel], f, self.edges)
+        self.integrated = {k: ratio(d.pol[k][self.sel], f) for k in PANE_ORDER}
+        self.sigma_pb = float((f * s).sum())
+
+    def centres(self):
+        return 0.5 * (self.edges[:-1] + self.edges[1:])
+
+
+# --------------------------------------------------------------------------
+def diagnostics(d, obs):
+    """How honest the selection is, measured rather than asserted.
+
+    Two separate things, both of which the brief asks to be quoted rather than
+    assumed:
+
+    ``ambiguity``
+        how often the highest-pT choice was a genuine CHOICE -- the fraction of
+        selected events carrying a second same-flavour same-sign lepton above
+        :data:`AMBIG_PT`, per flavour and charge, and above the selection's own
+        pT threshold.  A second lepton at 4 GeV next to a selected one at 45
+        GeV is a choice that was never close; one above 10 GeV is.
+
+    ``purity`` / ``efficiency``
+        against the ``z`` decay channels read out of the event record.  The
+        sample is an INCLUSIVE ``z > light light``, so an event can have an
+        ``e+`` and a ``mu+`` without either ``z`` having decayed to them --
+        ``Z -> tau tau`` and semileptonic ``b`` decays both do it.  Purity is
+        the fraction of selected events whose ``z`` really took the channel the
+        observable assumes; efficiency is the fraction of those events the
+        selection keeps.
+    """
+    z, sel = d.z, d.sel[obs]
+    n = int(sel.sum())
+    flav = ('ep', 'em', 'mup', 'mum') if obs == 'm_epmup_dr' else ('ep', 'em')
+    amb = {}
+    for f in flav:
+        sub = z['sub_pt_%s' % f][sel]
+        amb[f] = (float((sub > AMBIG_PT).mean()), float((sub > PT_MIN).mean()))
+    z1, z2 = z['z1_ch'], z['z2_ch']
+    if obs == 'm_epmup_dr':
+        truth = ((z1 == 11) & (z2 == 13)) | ((z1 == 13) & (z2 == 11))
+        what = 'one z -> e+e- AND the other z -> mu+mu-'
+    else:
+        truth = (z1 == 11) | (z2 == 11)
+        what = 'at least one z -> e+e-'
+    return {
+        'n_selected': n,
+        'ambiguity_above_%g_and_above_%g_GeV' % (AMBIG_PT, PT_MIN): amb,
+        'truth_requirement': what,
+        'n_truth': int(truth.sum()),
+        'frac_truth_of_all': float(truth.mean()),
+        'purity': float((sel & truth).sum() / n) if n else float('nan'),
+        'efficiency': float((sel & truth).sum() / truth.sum()),
+    }
+
+
+def dressing_shift(d, obs):
+    """How much the photon dressing moved the observable, and of what size.
+
+    Reported rather than hidden: the study dresses, and a reader is entitled to
+    know whether that decision mattered.
+    """
+    bare = SHORT[obs]
+    sel = d.sel[obs]
+    a = np.asarray(d.z[bare], dtype=np.float64)[sel]
+    b = np.asarray(d.z[obs], dtype=np.float64)[sel]
+    ok = np.isfinite(a) & np.isfinite(b)
+    dd = b[ok] - a[ok]
+    return {'mean_shift': float(dd.mean()), 'rms_shift': float(dd.std()),
+            'frac_moved_by_more_than_1pct':
+                float((np.abs(dd) > 0.01 * np.abs(a[ok])).mean())}

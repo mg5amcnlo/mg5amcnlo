@@ -1,0 +1,131 @@
+MadSpin polarisation weights on a showered NLO  p p > z z
+==========================================================================
+input      /Users/omattelaer/Documents/git_workspace/LTS/PROCNLO_loop_sm_7/Events/run_02_decayed_1/events_PYTHIA8_0.hepmc
+           14.061 GB, HepMC2 IO_GenEvent (HepMC::Version 2.06.09)
+one pass   34.0 s (0.57 min), 142420114 lines, 250000 events
+code       b0e4472bc189d56871760b4fd54ed8113183b8de
+
+--- the 33 weight names on every N line (asserted, not sampled) ---
+   0                   1010                1011                1012                1013                1014              
+   1015                1016                1017                1018                1019                1020              
+   1021                1022                1023                1024                1025                1026              
+   1027                MUR0.5_MUF0.5       MUR0.5_MUF1.0       MUR0.5_MUF2.0       MUR1.0_MUF0.5       MUR1.0_MUF1.0     
+   MUR1.0_MUF2.0       MUR2.0_MUF0.5       MUR2.0_MUF1.0       MUR2.0_MUF2.0       Weight              ms_pol_23.0_23.0  
+   ms_pol_23.0_23.T    ms_pol_23.T_23.0    ms_pol_23.T_23.T  
+
+--- WHICH WEIGHT IS THE FULL ---
+Answer: "Weight".  "0" is the SAME weight divided by the event count,
+so every ratio below is identical whichever of the two is used; only
+the vertical scale of the distributions distinguishes them.
+
+  "0" * N / "Weight", over all 250000 events: min 1.000000000000000, max 1.000000000000000
+  sum("0")        = 13.115048182696 pb
+  mean("Weight")  = 13.115048182696 pb
+  C line, LAST event = 13.115048182689 pb   <-- agrees with both to 1e-11
+  C line, FIRST event = 5.891066e-05 pb  (the RUNNING Pythia estimate after
+     one event; it is not the sample cross section and must not be used)
+  sum("MUR1.0_MUF1.0")/sum("Weight") - 1 = 4.366e-06  -- the LHE <wgt id=
+     '1001'> copy of the same nominal, to the rwgt block's rounding
+  median|sum of the four ms_pol| / median|"Weight"| = 0.899  -- the
+     polarisation weights are in the "Weight" normalisation, so
+     dividing them by "0" would inflate every ratio by 250000.
+  |Weight| takes 2 distinct values ['14.727665', '15.625049'] (MC@NLO), and 13687 of 250000 events
+     carry a NEGATIVE one (5.475 %).
+
+--- THE SAMPLE IS NOT p p > z z > e+e- mu+mu- ---
+The MadSpin card is  decay z > light light  with
+  define light = 1 2 3 4 5 -1 -2 -3 -4 -5 11 12 13 14 15 16 -11 ... -16
+i.e. every fermion but the top: an INCLUSIVE Z decay.  Read off the
+event record, of the 250 000 events
+     572 (0.2288 %) have one z -> e+e- AND the other z -> mu+mu-
+   17677 (7.071 %) have at least one z -> e+e-
+M(e+ mu+) therefore exists for two events in a thousand, and its figure
+is statistics limited by the decay card and by nothing else.
+
+--- integrated polarisation ratios ---
+Errors are the delta-method ones for a ratio of two sums over the SAME
+events (see pol_analysis.ratio); the naive independent-samples bar is
+printed beside them for the sum, where the correlation is strongest.
+
+sample                       N events        ratio        error   sigma(1)
+all events (no selection)
+  (LL+TT+TL+LT) / full         250000      0.99971      0.00169       0.17   [naive independent error 0.00360, 2.1x too large]
+  LL / full                    250000      0.05840      0.00034         --
+  TT / full                    250000      0.69610      0.00108         --
+  TL / full                    250000      0.12281      0.00056         --
+  LT / full                    250000      0.12240      0.00057         --
+
+m_epmup selection
+  (LL+TT+TL+LT) / full            312      0.99261      0.01252       0.59   [naive independent error 0.08763, 7.0x too large]
+  LL / full                       312      0.06193      0.00578         --
+  TT / full                       312      0.68712      0.01640         --
+  TL / full                       312      0.11774      0.00737         --
+  LT / full                       312      0.12582      0.00747         --
+
+dphi_ee selection
+  (LL+TT+TL+LT) / full          11984      0.99650      0.00429       0.82   [naive independent error 0.01490, 3.5x too large]
+  LL / full                     11984      0.05816      0.00107         --
+  TT / full                     11984      0.69428      0.00357         --
+  TL / full                     11984      0.11969      0.00173         --
+  LT / full                     11984      0.12437      0.00183         --
+
+The sum over ALL events is 1 to within 0.03 % and 0.2 sigma.  That is
+not a null result: the interference between different polarisations of
+the same z is odd in the decay angles and integrates to zero over the
+full angular phase space, so an unrestricted sum MUST come back to 1 and
+the fact that it does is a check on the weights themselves.  The
+interference is visible only differentially, or after a cut that
+restricts the decay angles -- which every lepton selection does.
+
+--- the lepton selection ---
+highest-pT final-state (status 1) lepton per flavour and charge,
+dressed with every final-state photon within Delta R < 0.1 (the run
+card's own rphreco), then pT > 10 GeV and |eta| < 2.5.
+
+m_epmup: 312 events selected
+   truth (one z -> e+e- AND the other z -> mu+mu-): 572 events, selection purity 0.9038, efficiency 0.4930
+   how often the highest-pT choice was a genuine choice --
+   fraction of selected events with a SECOND same-flavour same-sign lepton:
+      ep   above 3 GeV:  0.641 %   above 10 GeV:  0.000 %
+      em   above 3 GeV:  0.000 %   above 10 GeV:  0.000 %
+      mup  above 3 GeV:  0.962 %   above 10 GeV:  0.641 %
+      mum  above 3 GeV:  0.962 %   above 10 GeV:  0.641 %
+   dressing moved the observable by +2.493 on average (rms 9.064); 16.03 % of
+      selected events moved by more than 1 percent.
+
+dphi_ee: 11984 events selected
+   truth (at least one z -> e+e-): 17677 events, selection purity 0.9643, efficiency 0.6537
+   how often the highest-pT choice was a genuine choice --
+   fraction of selected events with a SECOND same-flavour same-sign lepton:
+      ep   above 3 GeV:  4.606 %   above 10 GeV:  2.153 %
+      em   above 3 GeV:  4.347 %   above 10 GeV:  2.245 %
+   dressing moved the observable by -4.753e-05 on average (rms 0.002734); 1.42 % of
+      selected events moved by more than 1 percent.
+
+--- m_epmup: the sum against 1, bin by bin ---
+fiducial cross section 0.0168484 pb
+         bin        N     sum/full      error   sigma(1)           LL          TT          TL          LT
+  0.0- 45.0       55       0.9544     0.0326       1.40       0.0470      0.6784      0.1045      0.1245
+ 45.0- 70.0       62       1.0137     0.0363       0.38       0.0780      0.6549      0.1311      0.1497
+ 70.0- 95.0       61       1.0247     0.0279       0.89       0.0924      0.6435      0.1566      0.1321
+ 95.0-125.0       49       1.0198     0.0233       0.85       0.0929      0.6209      0.1533      0.1527
+125.0-175.0       38       0.9466     0.0334       1.60       0.0309      0.7292      0.0990      0.0876
+175.0-260.0       34       0.9705     0.0198       1.49       0.0135      0.8176      0.0512      0.0881
+260.0-450.0       11       0.9933     0.0516       0.13       0.0039      0.8764      0.0202      0.0928
+
+--- dphi_ee: the sum against 1, bin by bin ---
+fiducial cross section 0.636824 pb
+         bin        N     sum/full      error   sigma(1)           LL          TT          TL          LT
+  0.0-  0.3      399       1.0033     0.0171       0.19       0.0258      0.8166      0.0868      0.0742
+  0.3-  0.5      301       1.0415     0.0225       1.84       0.0205      0.8400      0.0912      0.0898
+  0.5-  0.8      353       1.0223     0.0176       1.27       0.0248      0.8266      0.0917      0.0792
+  0.8-  1.0      509       1.0291     0.0162       1.80       0.0227      0.8140      0.0959      0.0965
+  1.0-  1.3      638       1.0390     0.0191       2.05       0.0285      0.7944      0.0971      0.1190
+  1.3-  1.6      777       0.9987     0.0149       0.08       0.0342      0.7619      0.0948      0.1078
+  1.6-  1.8      940       1.0359     0.0185       1.94       0.0469      0.7690      0.1131      0.1069
+  1.8-  2.1     1217       1.0181     0.0147       1.23       0.0538      0.7431      0.1052      0.1159
+  2.1-  2.4     1362       1.0018     0.0131       0.14       0.0648      0.7175      0.1123      0.1073
+  2.4-  2.6     1668       1.0001     0.0128       0.01       0.0756      0.6824      0.1192      0.1229
+  2.6-  2.9     1902       0.9718     0.0106       2.67       0.0830      0.6158      0.1344      0.1387
+  2.9-  3.1     1918       0.9460     0.0097       5.58       0.0680      0.5409      0.1617      0.1753
+

@@ -1,0 +1,8 @@
+m_epmup      N=312  sum/full = 0.9926 +- 0.0125
+dphi_ee      N=11984  sum/full = 0.9965 +- 0.0043
+wrote /private/tmp/t84/MadSpin/validation/zz_pol_weights/numbers.txt
+usetex = True   minus workaround active = True
+2/2 applicable PDFs carry /minus
+m_epmup      N=312  sum/full = 0.9926 +- 0.0125
+dphi_ee      N=11984  sum/full = 0.9965 +- 0.0043
+wrote /private/tmp/t84/MadSpin/validation/zz_pol_weights/numbers.txt
