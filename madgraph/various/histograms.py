@@ -20,21 +20,47 @@ from __future__ import division
 
 from __future__ import absolute_import
 import array
+import collections
+try:
+    from collections.abc import MutableMapping
+except ImportError:
+    from collections import MutableMapping
 import copy
 import fractions
+import hashlib
 import itertools
 import logging
 import math
+import mmap
 import os
 import pprint
+import random
 import re
 import sys
+import tempfile
 
 import subprocess
 import xml.dom.minidom as minidom
 from xml.parsers.expat import ExpatError as XMLParsingError
 import io
 file = io.IOBase
+
+_NUMPY_NOT_CHECKED = object()
+_numpy_module = _NUMPY_NOT_CHECKED
+
+
+def _optional_numpy():
+    """Load NumPy lazily for large aggregation jobs, with a pure-Python fallback."""
+
+    global _numpy_module
+    if _numpy_module is _NUMPY_NOT_CHECKED:
+        try:
+            import numpy
+        except ImportError:
+            _numpy_module = None
+        else:
+            _numpy_module = numpy
+    return _numpy_module
 
 root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
 sys.path.append(os.path.join(root_path)) 
@@ -133,13 +159,18 @@ class Bin(object):
                         raise MadGraph5Error("Element '%s' of the bin boundaries"+\
                                           " specified must be a float."%str(bound))
         elif name=='wgts':
-            if not isinstance(value, dict):
+            if not isinstance(value, MutableMapping):
                 raise MadGraph5Error("Argument '%s' for bin uncertainty "+\
-                                          "'wgts' must be a dictionary."%str(value))
-            for val in value.values():
-                if not isinstance(val,float):
-                    raise MadGraph5Error("The bin weight value '%s' is not a "+\
-                                                                 "float."%str(val))   
+                       "'wgts' must be a mutable mapping."%str(value))
+            # Dense accumulator views have already validated their backing
+            # storage. Iterating over all their values here would turn each
+            # lightweight bin construction back into an O(number of weights)
+            # operation.
+            if not getattr(value, '_validated_histogram_weights', False):
+                for val in value.values():
+                    if not isinstance(val,float):
+                        raise MadGraph5Error("The bin weight value '%s' is not a "+\
+                                                                     "float."%str(val))
    
         super(Bin, self).__setattr__(name,value)
         
@@ -432,7 +463,19 @@ class Histogram(object):
         res_histogram.dimension = histoA.dimension
     
         for i, bin in enumerate(histoA.bins):
-            res_histogram.bins.append(Bin.combine(bin, histoB.bins[i],func))
+            other_bin = histoB.bins[i]
+            if getattr(bin.wgts, '_lazy_histogram_weights', False) and \
+               getattr(other_bin.wgts, '_lazy_histogram_weights', False) and \
+               LazyCombinedWeightView.supports(func):
+                if bin.boundaries != other_bin.boundaries:
+                    raise MadGraph5Error('The two bins to combine have different '
+                        'boundaries, %s!=%s.'%(str(bin.boundaries),
+                                              str(other_bin.boundaries)))
+                res_histogram.bins.append(Bin(bin.boundaries,
+                    LazyCombinedWeightView(bin.wgts, other_bin.wgts, func,
+                                           histoA.bins.weight_labels)))
+            else:
+                res_histogram.bins.append(Bin.combine(bin, other_bin,func))
         
         # Reorder the weight labels as in the original histogram and add at the
         # end the new ones which resulted from the combination, in a sorted order
@@ -566,8 +609,9 @@ class Histogram(object):
         if isinstance(other, Histogram):
             return self.__class__.combine(self,other,Histogram.ADD)
         elif isinstance(other, int) or isinstance(other, float):
-            self.alter_weights(Histogram.OFFSET(float(other)))
-            return self
+            result = copy.deepcopy(self)
+            result.alter_weights(Histogram.OFFSET(float(other)))
+            return result
         else:
             return NotImplemented, 'Histograms can only be added to other '+\
               ' histograms or scalars.'
@@ -577,8 +621,9 @@ class Histogram(object):
         if isinstance(other, Histogram):
             return self.__class__.combine(self,other,Histogram.SUBTRACT)
         elif isinstance(other, int) or isinstance(other, float):
-            self.alter_weights(Histogram.OFFSET(-float(other)))
-            return self
+            result = copy.deepcopy(self)
+            result.alter_weights(Histogram.OFFSET(-float(other)))
+            return result
         else:
             return NotImplemented, 'Histograms can only be subtracted to other '+\
               ' histograms or scalars.'
@@ -588,8 +633,9 @@ class Histogram(object):
         if isinstance(other, Histogram):
             return self.__class__.combine(self,other,Histogram.MULTIPLY)
         elif isinstance(other, int) or isinstance(other, float):
-            self.alter_weights(Histogram.RESCALE(float(other)))
-            return self
+            result = copy.deepcopy(self)
+            result.alter_weights(Histogram.RESCALE(float(other)))
+            return result
         else:
             return NotImplemented, 'Histograms can only be multiplied to other '+\
               ' histograms or scalars.'
@@ -599,13 +645,154 @@ class Histogram(object):
         if isinstance(other, Histogram):
             return self.__class__.combine(self,other,Histogram.DIVIDE)
         elif isinstance(other, int) or isinstance(other, float):
-            self.alter_weights(Histogram.RESCALE(1.0/float(other)))
-            return self
+            result = copy.deepcopy(self)
+            result.alter_weights(Histogram.RESCALE(1.0/float(other)))
+            return result
         else:
             return NotImplemented, 'Histograms can only be divided with other '+\
               ' histograms or scalars.'
 
     __truediv__ = __div__
+
+
+class LazyCombinedWeightView(MutableMapping):
+    """Compute a derived bin (sum/product/ratio) only when a label is read."""
+
+    _validated_histogram_weights = True
+    _lazy_histogram_weights = True
+
+    def __init__(self, left, right, operation, labels, overlay=None,
+                 deleted=None):
+        self.left = left
+        self.right = right
+        self.operation = operation
+        self.labels = labels
+        self.overlay = {} if overlay is None else overlay
+        self.deleted = set() if deleted is None else deleted
+
+    @staticmethod
+    def supports(operation):
+        return operation in [Histogram.ADD, Histogram.SUBTRACT,
+                             Histogram.MULTIPLY, Histogram.DIVIDE] or \
+               getattr(operation, '_histogram_lazy_operation', None) == \
+                                                    'ratio_no_correlations'
+
+    def _derived_value(self, label):
+        left = self.left
+        right = self.right
+        if self.operation is Histogram.ADD:
+            if label == 'stat_error':
+                return math.sqrt(left[label]**2+right[label]**2)
+            return left[label]+right[label]
+        if self.operation is Histogram.SUBTRACT:
+            if label == 'stat_error':
+                return math.sqrt(left[label]**2+right[label]**2)
+            return left[label]-right[label]
+        if self.operation is Histogram.MULTIPLY:
+            if label == 'stat_error':
+                return math.sqrt((left[label]*right['central'])**2+
+                                 (left['central']*right[label])**2)
+            return left[label]*right[label]
+        if self.operation is Histogram.DIVIDE:
+            if label == 'stat_error':
+                if right['central'] == 0.0:
+                    return 0.0
+                return math.sqrt(left[label]**2+
+                    ((left['central']*right[label])/right['central'])**2)/\
+                    abs(right['central'])
+            if right[label] == 0.0:
+                return 0.0
+            return left[label]/right[label]
+        if getattr(self.operation, '_histogram_lazy_operation', None) == \
+                                                    'ratio_no_correlations':
+            if right['central'] == 0.0:
+                return 0.0
+            return left[label]/right['central']
+        raise KeyError(label)
+
+    def __getitem__(self, label):
+        if label in self.deleted:
+            raise KeyError(label)
+        if label in self.overlay:
+            return self.overlay[label]
+        return float(self._derived_value(label))
+
+    def __setitem__(self, label, value):
+        self.deleted.discard(label)
+        self.overlay[label] = float(value)
+
+    def __delitem__(self, label):
+        if label not in self:
+            raise KeyError(label)
+        self.overlay.pop(label, None)
+        self.deleted.add(label)
+
+    def __iter__(self):
+        for label in self.labels:
+            if label not in self.deleted:
+                yield label
+        for label in self.overlay:
+            if label not in self.deleted and label not in self.labels:
+                yield label
+
+    def __len__(self):
+        return sum(1 for _ in self)
+
+    def __deepcopy__(self, memo):
+        result = self.__class__(copy.deepcopy(self.left, memo),
+            copy.deepcopy(self.right, memo), self.operation, self.labels,
+            copy.deepcopy(self.overlay, memo), copy.deepcopy(self.deleted, memo))
+        memo[id(self)] = result
+        return result
+
+
+class LazyRebinnedWeightView(MutableMapping):
+    """Compute a rebinned weight from source bins without a per-weight dict."""
+
+    _validated_histogram_weights = True
+    _lazy_histogram_weights = True
+
+    def __init__(self, sources, labels, overlay=None, deleted=None):
+        self.sources = sources
+        self.labels = labels
+        self.overlay = {} if overlay is None else overlay
+        self.deleted = set() if deleted is None else deleted
+
+    def __getitem__(self, label):
+        if label in self.deleted:
+            raise KeyError(label)
+        if label in self.overlay:
+            return self.overlay[label]
+        if label == 'stat_error':
+            return math.sqrt(sum(source[label]**2 for source in self.sources))
+        return float(sum(source[label] for source in self.sources))
+
+    def __setitem__(self, label, value):
+        self.deleted.discard(label)
+        self.overlay[label] = float(value)
+
+    def __delitem__(self, label):
+        if label not in self:
+            raise KeyError(label)
+        self.overlay.pop(label, None)
+        self.deleted.add(label)
+
+    def __iter__(self):
+        for label in self.labels:
+            if label not in self.deleted:
+                yield label
+        for label in self.overlay:
+            if label not in self.deleted and label not in self.labels:
+                yield label
+
+    def __len__(self):
+        return sum(1 for _ in self)
+
+    def __deepcopy__(self, memo):
+        result = self.__class__(copy.deepcopy(self.sources, memo), self.labels,
+            copy.deepcopy(self.overlay, memo), copy.deepcopy(self.deleted, memo))
+        memo[id(self)] = result
+        return result
 
 class HwU(Histogram):
     """A concrete implementation of an histogram plots using the HwU format for
@@ -837,8 +1024,30 @@ class HwU(Histogram):
 
         elif mode == 'hessian':
             # For old PDF this is based on the set ordering ->
-            #need to order the pdf sets:
-            pdfs = [(int(re.findall(selector, n)[0]),n) for n in self.bins[0].wgts if re.search(selector,n, re.IGNORECASE)]
+            # need to order the PDF sets.  ``selector`` can be an explicit
+            # list, in which case using it as a regular expression (as the old
+            # code did) raises a TypeError.
+            def get_pdf_number(label):
+                if isinstance(selector, str):
+                    match = re.findall(selector, label, re.IGNORECASE)
+                    if match:
+                        value = match[0]
+                        if isinstance(value, tuple):
+                            value = next((item for item in value if item), '')
+                        try:
+                            return int(value)
+                        except (TypeError, ValueError):
+                            pass
+                match = re.search(r'PDF\s*=\s*(\d+)', str(label), re.IGNORECASE)
+                if match:
+                    return int(match.group(1))
+                numbers = re.findall(r'\d+', str(label))
+                if numbers:
+                    return int(numbers[-1])
+                raise MadGraph5Error("Could not determine the PDF member number "
+                                     "from weight label '%s'."%str(label))
+
+            pdfs = [(get_pdf_number(name), name) for name in selections]
             pdfs.sort()
             
             # check if the central was put or not in this sets:
@@ -846,8 +1055,11 @@ class HwU(Histogram):
                 # adding the central automatically
                 pdf1 = pdfs[0][0]
                 central = pdf1 -1
-                name = pdfs[0][1].replace(str(pdf1), str(central))
-                central = self.get(name)
+                name = str(pdfs[0][1]).replace(str(pdf1), str(central))
+                if name in self.bins[0].wgts:
+                    central = self.get(name)
+                else:
+                    central = self.get('central')
             else:
                 central = self.get(pdfs.pop(0)[1])
             
@@ -855,6 +1067,14 @@ class HwU(Histogram):
             values = []
             for _, name in pdfs:
                 values.append(self.get(name))
+
+            if len(values) < 2:
+                return central, central
+            if len(values) % 2:
+                logger.warning("Ignoring the unpaired final Hessian PDF member '%s'.",
+                               pdfs[-1][1])
+                values.pop()
+                pdfs.pop()
                 
             #Do the computation
             min_value, max_value = [], []
@@ -876,16 +1096,18 @@ class HwU(Histogram):
         
         return min_value, max_value            
     
-    def get_formatted_header(self):
+    def get_formatted_header(self, weight_labels=None):
         """ Return a HwU formatted header for the weight label definition."""
 
         res = '##& xmin & xmax & '
+        weight_labels = self.bins.weight_labels if weight_labels is None \
+                                                        else weight_labels
         
-        if 'central' in self.bins.weight_labels:
+        if 'central' in weight_labels:
             res += 'central value & dy & '
         
         others = []
-        for label in self.bins.weight_labels:
+        for label in weight_labels:
             if label in ['central', 'stat_error']:
                 continue
             label_type = HwU.get_HwU_wgt_label_type(label)
@@ -906,26 +1128,35 @@ class HwU(Histogram):
 
         return res+' & '.join(others)
 
-    def get_HwU_source(self, print_header=True):
-        """ Returns the string representation of this histogram using the
-        HwU standard."""
+    def iter_HwU_source(self, print_header=True, weight_labels=None):
+        """Yield HwU source line by line without retaining a text copy."""
 
-        res = []
+        weight_labels = self.bins.weight_labels if weight_labels is None \
+                                                        else weight_labels
+        if set(weight_labels) != set(self.bins.weight_labels):
+            raise MadGraph5Error("The requested HwU column schema is not "
+                                 "compatible with histogram '%s'."%self.title)
         if print_header:
-            res.append(self.get_formatted_header())
-            res.extend([''])
-        res.append('<histogram> %s "%s"'%(len(self.bins),
-                                     self.get_HwU_histogram_name(format='HwU')))
+            yield self.get_formatted_header(weight_labels=weight_labels)
+            yield ''
+        yield '<histogram> %s "%s"'%(len(self.bins),
+                                     self.get_HwU_histogram_name(format='HwU'))
         for bin in self.bins:
             if 'central' in bin.wgts:
-                res.append(' '.join('%+16.7e'%wgt for wgt in list(bin.boundaries)+
-                                  [bin.wgts['central'],bin.wgts['stat_error']]))
+                line = ' '.join('%+16.7e'%wgt for wgt in list(bin.boundaries)+
+                                  [bin.wgts['central'],bin.wgts['stat_error']])
             else:
-                res.append(' '.join('%+16.7e'%wgt for wgt in list(bin.boundaries)))
-            res[-1] += ' '.join('%+16.7e'%bin.wgts[key] for key in 
-                self.bins.weight_labels if key not in ['central','stat_error'])
-        res.append(r'<\histogram>')
-        return res
+                line = ' '.join('%+16.7e'%wgt for wgt in list(bin.boundaries))
+            line += ' '.join('%+16.7e'%bin.wgts[key] for key in
+                weight_labels if key not in ['central','stat_error'])
+            yield line
+        yield r'<\histogram>'
+
+    def get_HwU_source(self, print_header=True, weight_labels=None):
+        """Return the HwU source as a list (legacy convenience API)."""
+
+        return list(self.iter_HwU_source(print_header=print_header,
+                                         weight_labels=weight_labels))
     
     def output(self, path=None, format='HwU', print_header=True):
         """ Ouput this histogram to a file, stream or string if path is kept to
@@ -1520,6 +1751,15 @@ class HwU(Histogram):
         for bins_to_merge in concat_list:
             if len(bins_to_merge)==0:
                 continue
+            if all(getattr(hist_bin.wgts, '_lazy_histogram_weights', False)
+                   for hist_bin in bins_to_merge):
+                new_bins.append(Bin(
+                    boundaries=(bins_to_merge[0].boundaries[0],
+                                bins_to_merge[-1].boundaries[1]),
+                    wgts=LazyRebinnedWeightView(
+                        [hist_bin.wgts for hist_bin in bins_to_merge],
+                        self.bins.weight_labels)))
+                continue
             new_bins.append(Bin(boundaries=(bins_to_merge[0].boundaries[0],
               bins_to_merge[-1].boundaries[1]),wgts={'central':0.0}))
             for weight in self.bins.weight_labels:
@@ -1543,19 +1783,26 @@ class HwU(Histogram):
         if weight_labels is None:
             weight_labels = histo_list[0].bins.weight_labels
 
-        all_boundaries = sum([ list(bin.boundaries) for histo in histo_list \
-                                                    for bin in histo.bins if \
-             (sum(abs(bin.wgts[label]) for label in weight_labels) > 0.0)]  ,[])
+        x_min = None
+        x_max = None
+        for histo in histo_list:
+            for hist_bin in histo.bins:
+                if not any(hist_bin.wgts[label] != 0.0
+                           for label in weight_labels):
+                    continue
+                for boundary in hist_bin.boundaries:
+                    x_min = boundary if x_min is None else min(x_min, boundary)
+                    x_max = boundary if x_max is None else max(x_max, boundary)
 
-        if len(all_boundaries)==0:
-            all_boundaries = sum([ list(bin.boundaries) for histo in histo_list \
-                                                      for bin in histo.bins],[])
-            if len(all_boundaries)==0:
+        if x_min is None:
+            for histo in histo_list:
+                for hist_bin in histo.bins:
+                    for boundary in hist_bin.boundaries:
+                        x_min = boundary if x_min is None else min(x_min, boundary)
+                        x_max = boundary if x_max is None else max(x_max, boundary)
+            if x_min is None:
                 raise MadGraph5Error("The histograms with title '%s'"\
                                   %histo_list[0].title+" seems to have no bins.")
-                
-        x_min = min(all_boundaries)
-        x_max = max(all_boundaries)
         
         return (x_min, x_max)
     
@@ -1573,7 +1820,31 @@ class HwU(Histogram):
         else:
             weight_labels = labels
         
+        # Keep exact ranges, but cap the values retained for quantiles.  Sorting
+        # every bin value can otherwise dominate memory for very finely binned
+        # plots.  Reservoir sampling is deterministic here so generated plot
+        # ranges remain reproducible.
         all_weights = []
+        sample_limit = 100000
+        sample_random = random.Random(0)
+        n_weights_seen = 0
+        exact_min = None
+        exact_max = None
+
+        def add_weight(value):
+            nonlocal n_weights_seen, exact_min, exact_max
+            n_weights_seen += 1
+            if exact_min is None or value < exact_min:
+                exact_min = value
+            if exact_max is None or value > exact_max:
+                exact_max = value
+            if len(all_weights) < sample_limit:
+                all_weights.append(value)
+            else:
+                position = sample_random.randrange(n_weights_seen)
+                if position < sample_limit:
+                    all_weights[position] = value
+
         for histo in histo_list:
             for bin in histo.bins:
                 for label in weight_labels:
@@ -1582,23 +1853,22 @@ class HwU(Histogram):
                     if Kratio and bin.wgts[label]==0.0:
                         continue
                     if scale!='LOG':
-                        all_weights.append(bin.wgts[label])
+                        add_weight(bin.wgts[label])
                         if label == 'stat_error':
-                            all_weights.append(-bin.wgts[label])  
-                    elif bin.wgts[label]>0.0:
-                        all_weights.append(bin.wgts[label])
+                            add_weight(-bin.wgts[label])
+                    elif bin.wgts[label] != 0.0:
+                        # Logarithmic plots render negative contributions by
+                        # their magnitude using a dashed line, so their range
+                        # must participate in autoscaling as well.
+                        add_weight(abs(bin.wgts[label]))
                         
-        
-        sum([ [bin.wgts[label] for label in weight_labels if \
-                             (scale!='LOG' or bin.wgts[label]!=0.0)] \
-                           for histo in histo_list for bin in histo.bins],  [])
         
         all_weights.sort()
         if len(all_weights)!=0:
             partial_max = all_weights[int(len(all_weights)*0.95)]
             partial_min = all_weights[int(len(all_weights)*0.05)]
-            max         = all_weights[-1]
-            min         = all_weights[0]
+            max         = exact_max
+            min         = exact_min
         else:
             if scale!='LOG':
                 return (0.0,1.0)
@@ -1637,14 +1907,589 @@ class HwU(Histogram):
         # Finally make sure the range has finite length
         if y_min == y_max:
             if max == min:
-                y_min -= 1.0
-                y_max += 1.0
+                if scale == 'LOG' and y_min > 0.0:
+                    y_min /= 10.0
+                    y_max *= 10.0
+                else:
+                    y_min -= 1.0
+                    y_max += 1.0
             else:
                 y_min = min
                 y_max = max         
         
         return ( y_min , y_max )
-    
+
+
+class DenseHistogramRecord(object):
+    """One parsed histogram block in compact, row-major storage.
+
+    Instances are deliberately short lived: the streaming aggregator consumes
+    one and releases it before the parser advances to the next histogram block.
+    """
+
+    __slots__ = ('title', 'type', 'dimension', 'x_axis_mode', 'y_axis_mode',
+                 'has_jetsample', 'jetsample', 'weight_labels', 'boundaries',
+                 'values', 'n_bins')
+
+    def __init__(self, histo, weight_labels, boundaries, values):
+        self.title = histo.title
+        self.type = histo.type
+        self.dimension = histo.dimension
+        self.x_axis_mode = histo.x_axis_mode
+        self.y_axis_mode = histo.y_axis_mode
+        self.has_jetsample = hasattr(histo, 'jetsample')
+        self.jetsample = histo.jetsample if self.has_jetsample else None
+        self.weight_labels = tuple(weight_labels)
+        self.boundaries = boundaries
+        self.values = values
+        self.n_bins = len(boundaries)//2
+
+    @classmethod
+    def from_hwu(cls, histo):
+        """Create a compact record from the non-streaming XML reader."""
+
+        labels = list(histo.bins.weight_labels)
+        boundaries = array.array('d')
+        values = array.array('d')
+        for hist_bin in histo.bins:
+            boundaries.extend(hist_bin.boundaries)
+            values.extend(float(hist_bin.wgts[label]) for label in labels)
+        return cls(histo, labels, boundaries, values)
+
+
+def iter_hwu_dense(file_path, accepted_types_order=None,
+                   consider_reweights='ALL', merging_scale=None,
+                   run_id=None, accepted_titles=None, raw_labels=False):
+    """Yield standard HwU input one histogram block at a time.
+
+    The standard HwU path never constructs per-bin dictionaries.  Pythia8 XML
+    remains supported through the existing parser because its document-level
+    metadata does not follow the block-oriented HwU layout.
+    """
+
+    accepted_types_order = accepted_types_order or []
+    accepted_titles = accepted_titles or []
+    stream = open(file_path, 'r')
+    try:
+        try:
+            prefix = stream.read(512)
+            stream.seek(0)
+            if prefix.lstrip().startswith('<'):
+                raise HwU.ParseError('XML histogram source detected.')
+            weight_header = HwU.parse_weight_header(stream,
+                                                     raw_labels=raw_labels)
+        except HwU.ParseError:
+            stream.seek(0)
+            xml_histograms = HwUList(stream, run_id=run_id,
+                merging_scale=merging_scale,
+                accepted_types_order=accepted_types_order,
+                consider_reweights=consider_reweights,
+                raw_labels=raw_labels)
+            for histo in xml_histograms:
+                if accepted_titles and not any(title in histo.title
+                                                for title in accepted_titles):
+                    continue
+                yield DenseHistogramRecord.from_hwu(histo)
+            return
+
+        selected_central = None
+        if merging_scale is not None:
+            for label in weight_header:
+                if HwU.get_HwU_wgt_label_type(label) == 'merging_scale' and \
+                                               float(label[1]) == merging_scale:
+                    selected_central = label
+                    break
+            if selected_central is None:
+                raise MadGraph5Error("No weight could be found in the input "
+                    "HwU for the selected merging scale '%4.2f'."%merging_scale)
+
+        retained = []
+        for position, label in enumerate(weight_header):
+            if consider_reweights != 'ALL' and not raw_labels and \
+               label not in ['central', 'stat_error', 'boundary_xmin',
+                              'boundary_xmax'] and \
+               HwU.get_HwU_wgt_label_type(label) not in consider_reweights:
+                continue
+            if not raw_labels and isinstance(label, str) and \
+                                                   label.endswith('@aux'):
+                continue
+            retained.append((label, position))
+
+        boundary_positions = {}
+        output_columns = []
+        for label, position in retained:
+            if label in ['boundary_xmin', 'boundary_xmax']:
+                boundary_positions[label] = position
+            else:
+                output_columns.append((label, position))
+        if selected_central is not None:
+            selected_position = weight_header.index(selected_central)
+            output_columns = [(label, selected_position if label == 'central'
+                               else position) for label, position in output_columns]
+
+        output_labels = [label for label, _ in output_columns]
+        if len(set(output_labels)) != len(output_labels):
+            raise HwU.ParseError('The HwU weight header contains duplicate labels.')
+        if 'boundary_xmin' not in boundary_positions or \
+                                      'boundary_xmax' not in boundary_positions:
+            raise HwU.ParseError('The HwU header does not define both bin boundaries.')
+
+        numpy = _optional_numpy()
+        numpy_output_positions = numpy.asarray(
+            [position for _, position in output_columns], dtype=numpy.intp) \
+            if numpy is not None else None
+
+        for line in stream:
+            start = HwU.histo_start_re.match(line)
+            if start is None:
+                continue
+
+            n_bins = int(start.group('n_bins'))
+            metadata = HwU()
+            metadata.process_histogram_name(start.group('histo_name'))
+            boundaries = array.array('d')
+            values = numpy.empty((n_bins, len(output_columns)),
+                                 dtype=numpy.float64) if numpy is not None \
+                     else array.array('d')
+            rows_read = 0
+            while rows_read < n_bins:
+                line_bin = next(stream, None)
+                if line_bin is None:
+                    raise HwU.ParseError("Only %d of %d bins were found for '%s'."%
+                                         (rows_read, n_bins, metadata.title))
+                if not line_bin.strip():
+                    continue
+                if numpy is not None:
+                    parsed = numpy.fromstring(
+                        line_bin.replace('D', 'E').replace('d', 'e'),
+                        dtype=numpy.float64, sep=' ')
+                    if numpy.isnan(parsed).any():
+                        raise HwU.ParseError("A NaN weight was found in '%s'."%
+                                             metadata.title)
+                else:
+                    fields = line_bin.split()
+                    try:
+                        parsed = [float(value.replace('D', 'E').replace('d', 'e'))
+                                  for value in fields]
+                    except ValueError:
+                        parsed = []
+                    if any(math.isnan(value) for value in parsed):
+                        raise HwU.ParseError("A NaN weight was found in '%s'."%
+                                             metadata.title)
+                if len(parsed) == 0:
+                    continue
+                if len(parsed) < len(weight_header):
+                    raise HwU.ParseError("There are only %d columns in bin %d of "
+                        "'%s'; %d were expected."%(len(parsed), rows_read,
+                        metadata.title, len(weight_header)))
+                boundaries.append(float(parsed[boundary_positions['boundary_xmin']]))
+                boundaries.append(float(parsed[boundary_positions['boundary_xmax']]))
+                if numpy is not None:
+                    values[rows_read, :] = parsed[numpy_output_positions]
+                else:
+                    values.extend(float(parsed[position])
+                                  for _, position in output_columns)
+                rows_read += 1
+
+            for end_line in stream:
+                if HwU.histo_end_re.match(end_line):
+                    break
+            else:
+                raise HwU.ParseError("The closing histogram tag for '%s' is missing."%
+                                     metadata.title)
+
+            if metadata.type == 'AUX':
+                continue
+            if accepted_types_order and metadata.type not in accepted_types_order:
+                continue
+            if accepted_titles and not any(title in metadata.title
+                                            for title in accepted_titles):
+                continue
+            if numpy is not None:
+                values = values.reshape(-1)
+            yield DenseHistogramRecord(metadata, output_labels, boundaries, values)
+    finally:
+        stream.close()
+
+
+class _DenseDoubleBuffer(object):
+    """Fixed-size double buffer backed either by RAM or an anonymous mmap."""
+
+    def __init__(self, size, use_mmap=False, numpy=None):
+        self.size = size
+        self.numpy = numpy
+        self._file = None
+        self._mapping = None
+        if use_mmap and size:
+            self._file = tempfile.TemporaryFile()
+            self._file.truncate(size*8)
+            self._mapping = mmap.mmap(self._file.fileno(), size*8)
+            if numpy is not None:
+                self.data = numpy.frombuffer(self._mapping, dtype=numpy.float64,
+                                             count=size)
+            else:
+                self.data = memoryview(self._mapping).cast('d')
+        elif numpy is not None:
+            self.data = numpy.zeros(size, dtype=numpy.float64)
+        else:
+            self.data = array.array('d', [0.0])*size
+
+    def __getitem__(self, index):
+        return self.data[index]
+
+    def __setitem__(self, index, value):
+        self.data[index] = value
+
+    def close(self):
+        if isinstance(self.data, memoryview):
+            self.data.release()
+        elif self.numpy is not None:
+            # Drop the ndarray view before closing its mmap backing.
+            self.data = None
+        if self._mapping is not None:
+            self._mapping.close()
+            self._mapping = None
+        if self._file is not None:
+            self._file.close()
+            self._file = None
+
+
+class DenseWeightView(MutableMapping):
+    """Dictionary-compatible view of one row in a dense accumulator."""
+
+    _validated_histogram_weights = True
+    _lazy_histogram_weights = True
+
+    def __init__(self, accumulator, bin_index, overlay=None, deleted=None):
+        self._accumulator = accumulator
+        self._bin_index = bin_index
+        self._overlay = {} if overlay is None else overlay
+        self._deleted = set() if deleted is None else deleted
+
+    def __getitem__(self, key):
+        if key in self._deleted:
+            raise KeyError(key)
+        if key in self._overlay:
+            return self._overlay[key]
+        return self._accumulator.get_value(self._bin_index, key)
+
+    def __setitem__(self, key, value):
+        if not isinstance(value, float):
+            value = float(value)
+        self._deleted.discard(key)
+        self._overlay[key] = value
+
+    def __delitem__(self, key):
+        if key not in self:
+            raise KeyError(key)
+        self._overlay.pop(key, None)
+        self._deleted.add(key)
+
+    def __iter__(self):
+        for label in self._accumulator.weight_labels:
+            if label not in self._deleted:
+                yield label
+        for label in self._overlay:
+            if label not in self._deleted and \
+                                  label not in self._accumulator.label_positions:
+                yield label
+
+    def __len__(self):
+        return sum(1 for _ in self)
+
+    def __deepcopy__(self, memo):
+        result = self.__class__(self._accumulator, self._bin_index,
+                                copy.deepcopy(self._overlay, memo),
+                                copy.deepcopy(self._deleted, memo))
+        memo[id(self)] = result
+        return result
+
+
+class DenseHistogramAccumulator(object):
+    """Numerically stable dense sum of compatible histogram blocks."""
+
+    def __init__(self, record, allocate, numpy=None):
+        self.title = record.title
+        self.type = record.type
+        self.dimension = record.dimension
+        self.x_axis_mode = record.x_axis_mode
+        self.y_axis_mode = record.y_axis_mode
+        self.has_jetsample = record.has_jetsample
+        self.jetsample = record.jetsample
+        self.weight_labels = record.weight_labels
+        self.label_positions = dict((label, index) for index, label in
+                                    enumerate(self.weight_labels))
+        self.boundaries = array.array('d', record.boundaries)
+        self.n_bins = record.n_bins
+        self.n_weights = len(self.weight_labels)
+        self.numpy = numpy
+        size = self.n_bins*self.n_weights
+        self._sums = allocate(size)
+        self._compensations = allocate(size)
+        self._variances = allocate(self.n_bins)
+        self._variance_compensations = allocate(self.n_bins)
+
+    @staticmethod
+    def _kahan_add(total, compensation, index, value):
+        corrected = value-compensation[index]
+        updated = total[index]+corrected
+        compensation[index] = (updated-total[index])-corrected
+        total[index] = updated
+
+    def add(self, record, factor=1.0):
+        if record.weight_labels != self.weight_labels:
+            if set(record.weight_labels) != set(self.weight_labels):
+                missing = set(self.weight_labels)-set(record.weight_labels)
+                extra = set(record.weight_labels)-set(self.weight_labels)
+                raise MadGraph5Error("Incompatible weights for histogram '%s' "
+                    "(missing: %s; extra: %s)."%(self.title, list(missing),
+                    list(extra)))
+            source_positions = [record.weight_labels.index(label)
+                                for label in self.weight_labels]
+        else:
+            source_positions = list(range(self.n_weights))
+        if record.n_bins != self.n_bins or record.boundaries != self.boundaries:
+            raise MadGraph5Error("Histogram '%s' has incompatible bin boundaries."%
+                                 self.title)
+
+        stat_position = self.label_positions.get('stat_error')
+        if self.numpy is not None:
+            source = self.numpy.frombuffer(record.values,
+                dtype=self.numpy.float64).reshape(self.n_bins, self.n_weights)
+            if source_positions != list(range(self.n_weights)):
+                source = source[:, source_positions]
+            scaled = source*factor
+            if stat_position is not None:
+                errors = scaled[:, stat_position]
+                variance_values = errors*errors
+                variance_correction = (variance_values-
+                                        self._variance_compensations.data)
+                variance_updated = (self._variances.data+
+                                    variance_correction)
+                self._variance_compensations.data[:] = (
+                    variance_updated-self._variances.data)-variance_correction
+                self._variances.data[:] = variance_updated
+                scaled[:, stat_position] = 0.0
+
+            sums = self._sums.data.reshape(self.n_bins, self.n_weights)
+            compensations = self._compensations.data.reshape(
+                                               self.n_bins, self.n_weights)
+            corrected = scaled-compensations
+            updated = sums+corrected
+            compensations[:] = (updated-sums)-corrected
+            sums[:] = updated
+            return
+
+        for bin_index in range(self.n_bins):
+            source_offset = bin_index*self.n_weights
+            target_offset = source_offset
+            for target_position, source_position in enumerate(source_positions):
+                value = record.values[source_offset+source_position]*factor
+                if target_position == stat_position:
+                    self._kahan_add(self._variances,
+                                    self._variance_compensations, bin_index,
+                                    value*value)
+                else:
+                    self._kahan_add(self._sums, self._compensations,
+                                    target_offset+target_position, value)
+
+    def get_value(self, bin_index, label):
+        try:
+            position = self.label_positions[label]
+        except KeyError:
+            raise KeyError(label)
+        if label == 'stat_error':
+            return math.sqrt(max(0.0, self._variances[bin_index]))
+        return float(self._sums[bin_index*self.n_weights+position])
+
+    def to_hwu(self):
+        histo = HwU()
+        histo.title = self.title
+        histo.type = self.type
+        histo.dimension = self.dimension
+        histo.x_axis_mode = self.x_axis_mode
+        histo.y_axis_mode = self.y_axis_mode
+        if self.has_jetsample:
+            histo.jetsample = self.jetsample
+        histo.bins = BinList(weight_labels=list(self.weight_labels))
+        for bin_index in range(self.n_bins):
+            boundaries = (float(self.boundaries[2*bin_index]),
+                          float(self.boundaries[2*bin_index+1]))
+            histo.bins.append(Bin(boundaries,
+                                  DenseWeightView(self, bin_index)))
+        return histo
+
+    def close(self):
+        for buffer_ in (self._sums, self._compensations, self._variances,
+                        self._variance_compensations):
+            buffer_.close()
+
+
+class StreamingHwUAggregator(object):
+    """Aggregate many HwU files with memory independent of the file count."""
+
+    def __init__(self, memory_limit=256*1024*1024):
+        self.memory_limit = max(0, int(memory_limit))
+        self.resident_bytes = 0
+        self.numpy = _optional_numpy()
+        self.accumulators = collections.OrderedDict()
+        self.expected_keys = None
+        self.n_files = 0
+        self.accepted_types_order = []
+
+    def _allocate(self, size):
+        n_bytes = size*8
+        use_mmap = self.resident_bytes+n_bytes > self.memory_limit
+        if not use_mmap:
+            self.resident_bytes += n_bytes
+        return _DenseDoubleBuffer(size, use_mmap=use_mmap, numpy=self.numpy)
+
+    @staticmethod
+    def _identity_base(record):
+        return (record.title, record.type, record.dimension,
+                record.x_axis_mode, record.y_axis_mode,
+                record.has_jetsample, record.jetsample, record.n_bins,
+                hashlib.sha1(record.boundaries).digest(),
+                frozenset(record.weight_labels))
+
+    @classmethod
+    def _identity(cls, record, occurrence):
+        return cls._identity_base(record)+(occurrence,)
+
+    def add_file(self, file_path, factor=1.0, accepted_types_order=None,
+                 consider_reweights='ALL', merging_scale=None, run_id=None,
+                 accepted_titles=None):
+        if self.n_files == 0:
+            self.accepted_types_order = list(accepted_types_order or [])
+        occurrences = collections.defaultdict(int)
+        seen = set()
+        for record in iter_hwu_dense(file_path,
+                accepted_types_order=accepted_types_order,
+                consider_reweights=consider_reweights,
+                merging_scale=merging_scale, run_id=run_id,
+                accepted_titles=accepted_titles):
+            base = self._identity_base(record)
+            occurrence = occurrences[base]
+            occurrences[base] += 1
+            key = self._identity(record, occurrence)
+            if key in seen:
+                raise MadGraph5Error("Histogram identity %s occurs more than once "
+                                     "in '%s'."%(key, file_path))
+            seen.add(key)
+            if self.expected_keys is not None and key not in self.expected_keys:
+                raise MadGraph5Error("Histograms in '%s' are not compatible "
+                    "and cannot be combined: unexpected histogram '%s' "
+                    "(type %s)."%(file_path, record.title, record.type))
+            if key not in self.accumulators:
+                self.accumulators[key] = DenseHistogramAccumulator(record,
+                                            self._allocate, numpy=self.numpy)
+            self.accumulators[key].add(record, factor=factor)
+
+        if self.expected_keys is None:
+            if not seen:
+                raise MadGraph5Error("No histograms were found in '%s'."%file_path)
+            self.expected_keys = set(seen)
+        elif seen != self.expected_keys:
+            missing = self.expected_keys-seen
+            raise MadGraph5Error("Histograms in '%s' are not compatible and "
+                "cannot be combined: %d expected histogram(s) are missing: %s."%
+                (file_path, len(missing), list(missing)[:5]))
+        self.n_files += 1
+
+    def to_hwu_list(self, n_rebin=1):
+        result = HwUList([])
+        for group in self.iter_hwu_groups(n_rebin=n_rebin):
+            result.extend(group)
+        return result
+
+    def _ordered_accumulators(self):
+        accumulators = list(self.accumulators.values())
+        title_order = collections.OrderedDict()
+        for accumulator in accumulators:
+            title_order.setdefault(accumulator.title, len(title_order))
+
+        def ordering_key(accumulator):
+            if self.accepted_types_order:
+                type_position = self.accepted_types_order.index(accumulator.type)
+            else:
+                type_position = {'NLO':1, 'LO':2, None:3, 'AUX':5}.get(
+                                                       accumulator.type, 4)
+            return (title_order[accumulator.title], type_position)
+
+        return sorted(accumulators, key=ordering_key)
+
+    @staticmethod
+    def _accumulator_plot_key(accumulator):
+        boundary_hash = hashlib.sha1(accumulator.boundaries).digest()
+        return (accumulator.title, accumulator.dimension,
+                accumulator.x_axis_mode, accumulator.y_axis_mode,
+                accumulator.n_bins, boundary_hash,
+                frozenset(accumulator.weight_labels))
+
+    def iter_hwu_groups(self, n_rebin=1):
+        """Yield one lightweight plot group at a time."""
+
+        grouped = collections.OrderedDict()
+        for accumulator in self._ordered_accumulators():
+            key = self._accumulator_plot_key(accumulator)
+            grouped.setdefault(key, []).append(accumulator)
+
+        for accumulators in grouped.values():
+            group = HwUList([])
+            for accumulator in accumulators:
+                histo = accumulator.to_hwu()
+                if n_rebin > 1:
+                    histo.rebin(n_rebin)
+                group.append(histo)
+            yield group
+
+    def common_weight_schema(self):
+        accumulators = list(self.accumulators.values())
+        if not accumulators:
+            raise MadGraph5Error('No histograms have been aggregated.')
+        schema = list(accumulators[0].weight_labels)
+        expected = set(schema)
+        for accumulator in accumulators[1:]:
+            if set(accumulator.weight_labels) != expected:
+                raise MadGraph5Error("Histograms written to one HwU file must "
+                    "have the same weight columns; '%s' has a different schema."%
+                    accumulator.title)
+        return schema
+
+    def output(self, path, n_rebin=1, **options):
+        """Render aggregated data without materializing every bin at once."""
+
+        proxy = HwUList([])
+        return proxy.output(path,
+            _histogram_groups=self.iter_hwu_groups(n_rebin=n_rebin),
+            _weight_schema=self.common_weight_schema(), **options)
+
+    def __len__(self):
+        return len(self.accumulators)
+
+    def close(self):
+        for accumulator in self.accumulators.values():
+            accumulator.close()
+        self.accumulators.clear()
+
+
+class _LineStreamSink(object):
+    """List-like line sink which does not retain generated HwU data."""
+
+    def __init__(self, stream):
+        self.stream = stream
+        self.first = True
+
+    def append(self, line):
+        if not self.first:
+            self.stream.write('\n')
+        self.stream.write(str(line))
+        self.first = False
+
+    def extend(self, lines):
+        for line in lines:
+            self.append(line)
+
 class HwUList(histograms_PhysicsObjectList):
     """ A class implementing features related to a list of Hwu Histograms. """
     
@@ -1762,6 +2607,43 @@ class HwUList(histograms_PhysicsObjectList):
         """ return the list of all weights define in each histograms"""
         
         return self[0].bins.weight_labels
+
+    @staticmethod
+    def _plot_group_key(histo):
+        """Return the compatibility key used to group curves in linear time."""
+
+        boundary_hash = hashlib.sha1()
+        for hist_bin in histo.bins:
+            for boundary in hist_bin.boundaries:
+                boundary_hash.update(('%+.17e;'%boundary).encode('ascii'))
+        return (histo.title, histo.dimension, histo.x_axis_mode,
+                histo.y_axis_mode, len(histo.bins), boundary_hash.digest(),
+                frozenset(histo.bins.weight_labels))
+
+    @classmethod
+    def _group_for_output(cls, histograms):
+        """Group compatible histograms without the former quadratic scan."""
+
+        groups = collections.OrderedDict()
+        for histo in histograms:
+            key = cls._plot_group_key(histo)
+            if key not in groups:
+                groups[key] = HwUList([])
+            groups[key].append(histo)
+        return HwUList(groups.values())
+
+    @staticmethod
+    def _common_weight_schema(histograms):
+        """Validate and return the single column schema required by HwU."""
+
+        schema = list(histograms[0].bins.weight_labels)
+        expected = set(schema)
+        for histo in histograms[1:]:
+            if set(histo.bins.weight_labels) != expected:
+                raise MadGraph5Error("Histograms written to one HwU file must "
+                    "have the same weight columns; '%s' has a different schema."%
+                    histo.title)
+        return schema
         
     
     def get(self, name):
@@ -1982,15 +2864,23 @@ class HwUList(histograms_PhysicsObjectList):
             # the PDF used for the Event weight is often unknown but the
             # mu_r and mu_f variational weight specify it. Same story for
             # alpsfact.
+            wgt_label = None
             if variations in [set(['mur_muf_scale']),set(['pdf','mur_muf_scale'])]:
                 wgt_label = ('scale',weight['MUR'],weight['MUF'])
-            if variations in [set(['ALPSFACT']),set(['pdf','ALPSFACT'])]:
+            elif variations in [set(['ALPSFACT']),set(['pdf','ALPSFACT'])]:
                 wgt_label = ('alpsfact',weight['ALPSFACT'])
-            if variations == set(['pdf']):
+            elif variations == set(['pdf']):
                 wgt_label = ('pdf',weight['PDF'])             
-            if variations == set([]):
+            elif variations == set([]):
                 # Unknown weight (might turn out to be taken as a merging variation weight below)
                 wgt_label = format_weight_label(weight)
+
+            # Compound variations are deliberately not part of the diagonal
+            # uncertainty sets.  Previously they accidentally reused the label
+            # from the preceding weight and could ultimately try to hash the
+            # weight dictionary itself.
+            if wgt_label is None:
+                continue
 
             # Make sure the merging scale matches the chosen one
             if weight['MERGING'] != merging_scale_chosen:
@@ -2147,12 +3037,14 @@ class HwUList(histograms_PhysicsObjectList):
           jet_samples_to_keep=None,
           auto_open=True,
           lhapdfconfig='lhapdf-config',
-          assigned_colours=None):
+          assigned_colours=None,
+          _histogram_groups=None,
+          _weight_schema=None):
         """ Ouput this histogram to a file, stream or string if path is kept to
         None. The supported format are for now. Chose whether to print the header
         or not."""
         
-        if len(self)==0:
+        if len(self)==0 and _histogram_groups is None:
             return MadGraph5Error, 'No histograms stored in the list yet.'
         
         if not format in HwU.output_formats_implemented:
@@ -2168,15 +3060,24 @@ class HwUList(histograms_PhysicsObjectList):
             raise MadGraph5Error("The path argument of the output function of"+\
               " the HwUList instance must be file path without its extension.")
 
-        HwU_output_list = []
+        if _histogram_groups is None:
+            weight_schema = self._common_weight_schema(self)
+        else:
+            weight_schema = list(_weight_schema)
+        HwU_output_list = _LineStreamSink(HwU_stream)
         # If the format is just the raw HwU source, then simply write them
         # out all in sequence.
         if format == 'HwU':
-            HwU_output_list.extend(self[0].get_HwU_source(print_header=True))
-            for histo in self[1:]:
-                HwU_output_list.extend(histo.get_HwU_source())
-                HwU_output_list.extend(['',''])
-            HwU_stream.write('\n'.join(HwU_output_list))
+            groups = _histogram_groups if _histogram_groups is not None \
+                                           else [self]
+            histogram_index = 0
+            for group in groups:
+                for histo in group:
+                    HwU_output_list.extend(histo.iter_HwU_source(
+                        print_header=(histogram_index == 0),
+                        weight_labels=weight_schema))
+                    HwU_output_list.extend(['',''])
+                    histogram_index += 1
             HwU_stream.close()
             return
 
@@ -2190,27 +3091,17 @@ class HwUList(histograms_PhysicsObjectList):
                 jet_samples_to_keep=jet_samples_to_keep,
                 auto_open=auto_open,
                 lhapdfconfig=lhapdfconfig,
-                assigned_colours=assigned_colours)
+                assigned_colours=assigned_colours,
+                histogram_groups=_histogram_groups)
             return
         
         # Now we consider that we are attempting a gnuplot output.
         if format == 'gnuplot':
             gnuplot_stream = open(path+'.gnuplot','w')
 
-        # Now group all the identified matching histograms in a list
-        matching_histo_lists = HwUList([HwUList([self[0]])])
-        for histo in self[1:]:
-            matched = False
-            for histo_list in matching_histo_lists:
-                if histo.test_plot_compability(histo_list[0],
-                       consider_type=False, consider_unknown_weight_labels=True):
-                    histo_list.append(histo)
-                    matched = True
-                    break
-            if not matched:
-                matching_histo_lists.append(HwUList([histo]))
-        
-        self[:] = matching_histo_lists
+        # Group compatible curves without changing the source list.
+        matching_histo_lists = _histogram_groups if \
+            _histogram_groups is not None else self._group_for_output(self)
 
         # the histogram colours:
         coli=['col1','col2','col3','col4','col5','col6','col7','col8']
@@ -2437,7 +3328,7 @@ set key invert
         # Now output each group one by one
         # Block position keeps track of the gnuplot data_block index considered
         block_position = 0
-        for histo_group in self:
+        for histo_group in matching_histo_lists:
             # Output this group
             block_position = histo_group.output_group(HwU_output_list, 
                     gnuplot_output_list, block_position,output_base_name+'.HwU',
@@ -2446,7 +3337,8 @@ set key invert
                     use_band = use_band,
                     ratio_correlations = ratio_correlations,
                     jet_samples_to_keep=jet_samples_to_keep,
-                    lhapdfconfig = lhapdfconfig)
+                    lhapdfconfig = lhapdfconfig,
+                    _copy_group=(_histogram_groups is None))
 
         # Now write the tail of the gnuplot command file
         gnuplot_output_list.extend([
@@ -2458,7 +3350,6 @@ set key invert
         
         # Now write result to stream and close it
         gnuplot_stream.write('\n'.join(gnuplot_output_list))
-        HwU_stream.write('\n'.join(HwU_output_list))
         gnuplot_stream.close()
         HwU_stream.close()
 
@@ -2475,19 +3366,13 @@ set key invert
           jet_samples_to_keep=None,
           auto_open=True,
           lhapdfconfig='lhapdf-config',
-          assigned_colours=None):
+          assigned_colours=None,
+          histogram_groups=None):
         """Write HwU data and a standalone Matplotlib rendering script."""
 
-        working_list = copy.deepcopy(self)
-        matching_histo_lists = HwUList([HwUList([working_list[0]])])
-        for histo in working_list[1:]:
-            for histo_list in matching_histo_lists:
-                if histo.test_plot_compability(histo_list[0],
-                       consider_type=False, consider_unknown_weight_labels=True):
-                    histo_list.append(histo)
-                    break
-            else:
-                matching_histo_lists.append(HwUList([histo]))
+        ephemeral_groups = histogram_groups is not None
+        matching_histo_lists = histogram_groups if histogram_groups is not None \
+                                           else self._group_for_output(self)
 
         colours = ['#009e73','#0072b2','#d55e00','#f0e442',
                    '#56b4e9','#cc79a7','#e69f00','black']
@@ -2496,25 +3381,29 @@ set key invert
                 if colour is not None:
                     colours[index] = colour
 
-        hwu_output = []
+        hwu_output = _LineStreamSink(hwu_stream)
         plot_specs = []
         block_position = 0
         try:
             for histo_group in matching_histo_lists:
+                # Plot preparation adds ratios and auxiliary uncertainty
+                # columns.  Copy one group only, keeping the full input list
+                # and all previously completed groups out of working memory.
+                prepared_group = histo_group if ephemeral_groups \
+                                  else copy.deepcopy(histo_group)
                 first_block = block_position
-                block_position = histo_group.output_group(
+                block_position = prepared_group.output_group(
                     hwu_output, [], block_position, output_base_name+'.HwU',
                     number_of_ratios=number_of_ratios,
                     uncertainties=uncertainties,
                     use_band=use_band,
                     ratio_correlations=ratio_correlations,
                     jet_samples_to_keep=jet_samples_to_keep,
-                    lhapdfconfig=lhapdfconfig)
+                    lhapdfconfig=lhapdfconfig,
+                    _copy_group=False)
                 plot_specs.append(self._get_matplotlib_plot_spec(
-                    histo_group, first_block, uncertainties, use_band,
+                    prepared_group, first_block, uncertainties, use_band,
                     jet_samples_to_keep, colours))
-
-            hwu_stream.write('\n'.join(hwu_output))
         finally:
             hwu_stream.close()
 
@@ -2682,11 +3571,22 @@ PLOTS = %s
           use_band = None,
           ratio_correlations = True, 
           jet_samples_to_keep=None,
-          lhapdfconfig='lhapdf-config'):
+          lhapdfconfig='lhapdf-config',
+          _copy_group=True):
         
         """ This functions output a single group of histograms with either one
         histograms untyped (i.e. type=None) or two of type 'NLO' and 'LO' 
         respectively."""
+
+        if _copy_group:
+            self = copy.deepcopy(self)
+        canonical_labels = list(self[0].bins.weight_labels)
+        canonical_set = set(canonical_labels)
+        for histo in self[1:]:
+            if set(histo.bins.weight_labels) != canonical_set:
+                raise MadGraph5Error("Histograms in plot group '%s' have "
+                                     "incompatible weight schemas."%self[0].title)
+            histo.bins.weight_labels = list(canonical_labels)
         
         # This function returns the main central plot line, making sure that
         # negative distribution are displayed in dashed style
@@ -2831,6 +3731,8 @@ PLOTS = %s
                     continue
                 new_wgts[label] = (wgtsA[label]/wgtsB['central'])
             return new_wgts
+        ratio_no_correlations._histogram_lazy_operation = \
+                                                    'ratio_no_correlations'
         
         # First compute the ratio of all the histograms from the second to the
         # number_of_ratios+1 ones in the list to the first histogram.
@@ -2852,13 +3754,13 @@ PLOTS = %s
             else:
                 ratio_histos.append(self[0].__class__.combine(histo, self[0],
                                                          ratio_no_correlations))
-            if self[0].type=='NLO' and self[1].type=='LO':
+            if self[0].type=='NLO' and histo.type=='LO':
                 ratio_histos[-1].title += '1/K-factor'
-            elif self[0].type=='LO' and self[1].type=='NLO':
+            elif self[0].type=='LO' and histo.type=='NLO':
                 ratio_histos[-1].title += 'K-factor'
             else:
                 ratio_histos[-1].title += ' %s/%s'%(
-                              self[1].type if self[1].type else '(%d)'%(i+2),
+                              histo.type if histo.type else '(%d)'%(i+2),
                               self[0].type if self[0].type else '(1)')
             # By setting its type to aux, we make sure this histogram will be
             # filtered out if the .HwU file output here would be re-loaded later.
@@ -2940,7 +3842,7 @@ PLOTS = %s
         # Now output the corresponding HwU histogram data
         for i, histo in enumerate(self):
             # Print the header the first time only
-            HwU_out.extend(histo.get_HwU_source(\
+            HwU_out.extend(histo.iter_HwU_source(\
                                      print_header=(block_position==0 and i==0)))
             HwU_out.extend(['',''])
 
@@ -3006,7 +3908,7 @@ plot \\"""
                 wgts_to_consider.append(self[0].bins.weight_labels[alpsfact_var+1])
                 wgts_to_consider.append(self[0].bins.weight_labels[alpsfact_var+2])
 
-        (xmin, xmax) = HwU.get_x_optimal_range(self[:2],\
+        (xmin, xmax) = HwU.get_x_optimal_range(self[:n_histograms],\
                                                weight_labels = wgts_to_consider)
         replacement_dic['xmin'] = xmin
         replacement_dic['xmax'] = xmax
@@ -3020,15 +3922,12 @@ plot \\"""
         replacement_dic['subhistogram_type'] = '%s and %s results'%(
                  str(self[0].type),str(self[1].type)) if len(self)>1 else \
                                                          'single diagram output'
-        (ymin, ymax) = HwU.get_y_optimal_range(self[:2],
-                   labels = wgts_to_consider, scale=self[0].y_axis_mode)
-
-        # Force a linear scale if the detected range is negative
-        if ymin< 0.0:
-            self[0].y_axis_mode = 'LIN'
+        y_axis_mode = self[0].y_axis_mode
+        (ymin, ymax) = HwU.get_y_optimal_range(self[:n_histograms],
+                   labels = wgts_to_consider, scale=y_axis_mode)
             
         # Already add a margin on upper bound.
-        if self[0].y_axis_mode=='LOG':
+        if y_axis_mode=='LOG':
             ymax += 10.0 * ymax
             ymin -= 0.1 * ymin
         else:
@@ -3047,9 +3946,9 @@ plot \\"""
           (len(self)-n_histograms>0 or not no_uncertainties) else "set format x"
         replacement_dic['set_ylabel'] = 'set ylabel "{/Symbol s} per bin [pb]"' 
         replacement_dic['set_yscale'] = "set logscale y" if \
-                             self[0].y_axis_mode=='LOG' else 'unset logscale y'
+                             y_axis_mode=='LOG' else 'unset logscale y'
         replacement_dic['set_format_y'] = "set format y '10^{%T}'" if \
-                                self[0].y_axis_mode=='LOG' else 'unset format'
+                                y_axis_mode=='LOG' else 'unset format'
                                 
         replacement_dic['set_histo_label'] = ""
         gnuplot_out.append(subhistogram_header%replacement_dic)
@@ -3664,40 +4563,83 @@ def _load_matplotlib():
     return pyplot, PdfPages
 
 
-def _read_hwu_blocks(path):
-    blocks = []
-    current = None
-    with open(path, 'r') as stream:
+def _index_hwu_blocks(path):
+    """Return byte offsets for histogram data without loading any bin values."""
+    offsets = []
+    with open(path, 'rb') as stream:
+        while True:
+            line = stream.readline()
+            if not line:
+                break
+            if line.lstrip().startswith(b'<histogram>'):
+                offsets.append(stream.tell())
+    if not offsets:
+        raise SystemExit("No histogram blocks were found in '%s'." % path)
+    return offsets
+
+
+def _read_hwu_block(path, offset, positions):
+    """Read selected columns of one block into compact column arrays."""
+    positions = sorted(set(positions))
+    columns = dict((position, []) for position in positions)
+    with open(path, 'rb') as stream:
+        stream.seek(offset)
         for line in stream:
             stripped = line.strip()
-            if stripped.startswith('<histogram>'):
-                current = []
-            elif stripped.startswith('<\\histogram>'):
-                if current is not None:
-                    blocks.append(current)
-                current = None
-            elif current is not None and stripped and not stripped.startswith('#'):
-                try:
-                    current.append([
-                        float(value.replace('D', 'E').replace('d', 'e'))
-                        for value in stripped.split()])
-                except ValueError:
-                    continue
-    if not blocks:
-        raise SystemExit("No histogram blocks were found in '%s'." % path)
+            if stripped.startswith(b'<\\histogram>'):
+                break
+            if not stripped or stripped.startswith(b'#'):
+                continue
+            fields = stripped.split()
+            if not fields:
+                continue
+            if positions and positions[-1] >= len(fields):
+                raise SystemExit('Histogram block has %d columns but column %d '
+                                 'was requested.' % (len(fields), positions[-1]))
+            try:
+                for position in positions:
+                    value = fields[position].replace(b'D', b'E').replace(b'd', b'e')
+                    columns[position].append(float(value))
+            except ValueError:
+                continue
+    if not columns.get(0):
+        raise SystemExit('An empty histogram block was encountered.')
+    return {'columns': columns}
+
+
+def _required_columns(plot):
+    """Map each block on one PDF page to the columns it actually uses."""
+    required = {}
+    for curve in plot['main'] + plot['ratios']:
+        positions = required.setdefault(curve['block'], set([0, 1, 2]))
+        if curve['statistical']:
+            positions.add(3)
+        for uncertainty in curve['uncertainties']:
+            positions.update([uncertainty['minimum'], uncertainty['maximum']])
+    return required
+
+
+def _load_plot_blocks(path, offsets, plot):
+    blocks = {}
+    for block_index, positions in _required_columns(plot).items():
+        if block_index >= len(offsets):
+            raise SystemExit('Histogram block %d is missing.' % block_index)
+        blocks[block_index] = _read_hwu_block(
+            path, offsets[block_index], positions)
     return blocks
 
 
-def _column(rows, position):
-    return [row[position] for row in rows]
+def _column(block, position):
+    return block['columns'][position]
 
 
-def _edges(rows):
-    return [row[0] for row in rows] + [rows[-1][1]]
+def _edges(block):
+    return _column(block, 0) + [_column(block, 1)[-1]]
 
 
-def _centres(rows):
-    return [(row[0] + row[1]) / 2.0 for row in rows]
+def _centres(block):
+    return [(lower + upper) / 2.0 for lower, upper in
+            zip(_column(block, 0), _column(block, 1))]
 
 
 def _step_values(values):
@@ -3734,21 +4676,38 @@ def _finish_axis(axis):
 def _draw_main(axis, plot, blocks):
     positive_edges = True
     for curve in plot['main']:
-        rows = blocks[curve['block']]
-        edges = _edges(rows)
-        centres = _centres(rows)
-        central = _column(rows, 2)
+        block = blocks[curve['block']]
+        edges = _edges(block)
+        centres = _centres(block)
+        central = _column(block, 2)
         positive_edges = positive_edges and all(value > 0.0 for value in edges)
-        _draw_step(axis, edges, central, color=curve['color'],
-                   label=curve['label'], linewidth=1.5)
+        if plot['y_axis_mode'] == 'LOG':
+            # Match the gnuplot convention: positive contributions are solid,
+            # while negative contributions are shown by their magnitude using
+            # the same colour and a dashed line.
+            positive = [value if value > 0.0 else float('nan')
+                        for value in central]
+            negative = [abs(value) if value < 0.0 else float('nan')
+                        for value in central]
+            _draw_step(axis, edges, positive, color=curve['color'],
+                       label=curve['label'], linewidth=1.5)
+            if any(value < 0.0 for value in central):
+                _draw_step(axis, edges, negative, color=curve['color'],
+                           linestyle='--', label='_nolegend_', linewidth=1.5)
+            displayed_central = [abs(value) if value else float('nan')
+                                 for value in central]
+        else:
+            _draw_step(axis, edges, central, color=curve['color'],
+                       label=curve['label'], linewidth=1.5)
+            displayed_central = central
         if curve['statistical']:
-            axis.errorbar(centres, central,
-                          yerr=[abs(value) for value in _column(rows, 3)],
+            axis.errorbar(centres, displayed_central,
+                          yerr=[abs(value) for value in _column(block, 3)],
                           fmt='none', color=curve['color'], capsize=1.5,
                           linewidth=0.8)
         for uncertainty in curve['uncertainties']:
-            minimum = _column(rows, uncertainty['minimum'])
-            maximum = _column(rows, uncertainty['maximum'])
+            minimum = _column(block, uncertainty['minimum'])
+            maximum = _column(block, uncertainty['maximum'])
             label = '%s, %s variation' % (curve['label'], uncertainty['label'])
             if uncertainty['band']:
                 _draw_band(axis, edges, minimum, maximum,
@@ -3775,13 +4734,13 @@ def _draw_main(axis, plot, blocks):
 
 def _draw_relative_uncertainties(axis, plot, blocks):
     for curve in plot['main']:
-        rows = blocks[curve['block']]
-        edges = _edges(rows)
-        centres = _centres(rows)
-        central = _column(rows, 2)
+        block = blocks[curve['block']]
+        edges = _edges(block)
+        centres = _centres(block)
+        central = _column(block, 2)
         for uncertainty in curve['uncertainties']:
-            minimum = _relative(_column(rows, uncertainty['minimum']), central)
-            maximum = _relative(_column(rows, uncertainty['maximum']), central)
+            minimum = _relative(_column(block, uncertainty['minimum']), central)
+            maximum = _relative(_column(block, uncertainty['maximum']), central)
             label = '%s, %s' % (curve['label'], uncertainty['label'])
             if uncertainty['band']:
                 _draw_band(axis, edges, minimum, maximum,
@@ -3795,7 +4754,7 @@ def _draw_relative_uncertainties(axis, plot, blocks):
                            label='_nolegend_')
         if curve['statistical']:
             statistical = [(abs(error) / abs(value)) if value else 0.0
-                           for error, value in zip(_column(rows, 3), central)]
+                           for error, value in zip(_column(block, 3), central)]
             axis.errorbar(centres, [0.0] * len(centres), yerr=statistical,
                           fmt='none', color=curve['color'], capsize=1.5,
                           linewidth=0.8)
@@ -3806,20 +4765,20 @@ def _draw_relative_uncertainties(axis, plot, blocks):
 
 def _draw_ratios(axis, plot, blocks):
     for curve in plot['ratios']:
-        rows = blocks[curve['block']]
-        edges = _edges(rows)
-        centres = _centres(rows)
-        central = _column(rows, 2)
+        block = blocks[curve['block']]
+        edges = _edges(block)
+        centres = _centres(block)
+        central = _column(block, 2)
         _draw_step(axis, edges, central, color=curve['color'],
                    label=curve['label'], linewidth=1.3)
         if curve['statistical']:
             axis.errorbar(centres, central,
-                          yerr=[abs(value) for value in _column(rows, 3)],
+                          yerr=[abs(value) for value in _column(block, 3)],
                           fmt='none', color=curve['color'], capsize=1.5,
                           linewidth=0.8)
         for uncertainty in curve['uncertainties']:
-            minimum = _column(rows, uncertainty['minimum'])
-            maximum = _column(rows, uncertainty['maximum'])
+            minimum = _column(block, uncertainty['minimum'])
+            maximum = _column(block, uncertainty['maximum'])
             label = '%s, %s' % (curve['label'], uncertainty['label'])
             if uncertainty['band']:
                 _draw_band(axis, edges, minimum, maximum,
@@ -3857,10 +4816,14 @@ def main(pdf_path=None):
         pdf_path = os.path.join(script_directory, PDF_FILE)
     else:
         pdf_path = os.path.abspath(pdf_path)
-    blocks = _read_hwu_blocks(data_path)
+    block_offsets = _index_hwu_blocks(data_path)
 
     with PdfPages(pdf_path) as pdf:
         for plot in PLOTS:
+            # Load only this page's blocks and only the columns referenced by
+            # its central curves and selected uncertainties.  The data is
+            # released when the loop advances to the next plot.
+            blocks = _load_plot_blocks(data_path, block_offsets, plot)
             row_count = 1 + int(plot['relative_uncertainties']) + \
                         int(bool(plot['ratios']))
             heights = [4.0]
@@ -3925,6 +4888,7 @@ if __name__ == "__main__":
            '--sum'           To sum all identical histograms together
            '--average'       To average over all identical histograms
            '--rebin=<n>'     Rebin the plots by merging n-consecutive bins together.  
+           '--memory_limit=<MiB>' Maximum resident memory used by dense --sum/--average buffers before using temporary mmap storage (default: 256).
            '--assign_types=<type1>,<type2>,...' to assign a type to all histograms of the first, second, etc... files loaded.
            '--multiply=<fact1>,<fact2>,...' to multiply all histograms of the first, second, etc... files by the fact1, fact2, etc...
            '--no_suffix'     Do no add any suffix (like '#1, #2, etc..) to the histograms types.
@@ -3960,7 +4924,7 @@ if __name__ == "__main__":
                       '--no_scale','--no_pdf','--no_stat','--no_merging','--no_alpsfact',
                       '--only_scale','--only_pdf','--only_stat','--only_merging','--only_alpsfact',
                       '--variations','--band','--central_only', '--lhapdf-config','--titles',
-                      '--keep_all_weights','--colours']
+                      '--keep_all_weights','--colours','--memory_limit']
     n_ratios   = -1
     uncertainties = ['scale','pdf','statistical','merging_scale','alpsfact']
     # The list of type of uncertainties for which to use bands. None is a 'smart' default
@@ -4084,6 +5048,28 @@ if __name__ == "__main__":
 
     if '--average' in sys.argv:
         histo_norm = [hist/float(n_files) for hist in histo_norm]
+
+    n_rebin = 1
+    for arg in sys.argv[1:]:
+        if arg.startswith('--rebin='):
+            n_rebin = int(arg[8:])
+
+    try:
+        memory_limit_mib = float(os.environ.get(
+                                      'MG5_HISTOGRAM_MEMORY_MB', '256'))
+    except ValueError:
+        raise MadGraph5Error('MG5_HISTOGRAM_MEMORY_MB must be a number.')
+    for arg in sys.argv[1:]:
+        if arg.startswith('--memory_limit='):
+            memory_limit_mib = float(arg.split('=', 1)[1])
+    if memory_limit_mib < 0.0:
+        raise MadGraph5Error('--memory_limit must be non-negative.')
+
+    streaming_aggregation = any(option in sys.argv
+                                for option in ['--sum', '--average'])
+    dense_aggregator = StreamingHwUAggregator(
+                              memory_limit=int(memory_limit_mib*1024*1024)) \
+                       if streaming_aggregation else None
         
     log("=======")
     histo_list = HwUList([])
@@ -4106,6 +5092,14 @@ if __name__ == "__main__":
             else:
                 log("Unreckognize file option '%s'."%option)
                 sys.exit(1)
+
+        if streaming_aggregation:
+            dense_aggregator.add_file(filename, factor=histo_norm[i],
+                accepted_types_order=accepted_types,
+                consider_reweights=consider_reweights,
+                accepted_titles=accepted_titles, **file_options)
+            continue
+
         new_histo_list = HwUList(filename, accepted_types_order=accepted_types,
                           consider_reweights=consider_reweights, **file_options)
         # We filter now the diagrams whose title doesn't match the constraints
@@ -4149,21 +5143,22 @@ if __name__ == "__main__":
                        " input files are not compatible and cannot be combined.")
                  # Now let the histogram module do the magic and add them.
                  histo_list[j] += hist*histo_norm[i]
-        
-    log("A total of %i histograms were found."%len(histo_list))
+    histogram_count = len(dense_aggregator) if streaming_aggregation \
+                                              else len(histo_list)
+    log("A total of %i histograms were found."%histogram_count)
     log("=======")
-
-    n_rebin = 1
-    for arg in sys.argv[1:]:
-        if arg.startswith('--rebin='):
-            n_rebin = int(arg[8:])
     
-    if n_rebin > 1:
+    if n_rebin > 1 and not streaming_aggregation:
         for hist in histo_list:
             hist.rebin(n_rebin)
 
+    def output_histograms(path, **options):
+        if streaming_aggregation:
+            return dense_aggregator.output(path, n_rebin=n_rebin, **options)
+        return histo_list.output(path, **options)
+
     if '--matplotlib' in sys.argv:
-        histo_list.output(OutName, format='matplotlib',
+        output_histograms(OutName, format='matplotlib',
             number_of_ratios=n_ratios,
             uncertainties=uncertainties,
             ratio_correlations=ratio_correlations,
@@ -4174,7 +5169,7 @@ if __name__ == "__main__":
             lhapdfconfig=lhapdfconfig,
             assigned_colours=assigned_colours)
         log("%d histograms have been output in the matplotlib format at "
-            "'%s.[HwU|py]'."%(len(histo_list), OutName))
+            "'%s.[HwU|py]'."%(histogram_count, OutName))
         if auto_open:
             return_code = subprocess.call([sys.executable, OutName+'.py'])
             if return_code != 0:
@@ -4186,7 +5181,7 @@ if __name__ == "__main__":
     if '--gnuplot' in sys.argv or all(
                          arg not in ['--HwU','--matplotlib'] for arg in sys.argv):
         # Where the magic happens:
-        histo_list.output(OutName, format='gnuplot', 
+        output_histograms(OutName, format='gnuplot',
             number_of_ratios = n_ratios, 
             uncertainties=uncertainties, 
             ratio_correlations=ratio_correlations,
@@ -4197,7 +5192,7 @@ if __name__ == "__main__":
             lhapdfconfig=lhapdfconfig,
             assigned_colours=assigned_colours)
         # Tell the user that everything went for the best
-        log("%d histograms have been output in " % len(histo_list)+\
+        log("%d histograms have been output in " % histogram_count+\
                 "the gnuplot format at '%s.[HwU|gnuplot]'." % OutName)
         if auto_open:
             command = 'gnuplot %s.gnuplot'%OutName
@@ -4212,11 +5207,16 @@ if __name__ == "__main__":
     if '--HwU' in sys.argv:
         log("Histograms data has been output in the HwU format at "+\
                                               "'%s.HwU'."%OutName)
-        histo_list.output(OutName, format='HwU')
+        output_histograms(OutName, format='HwU')
         sys.exit(0)
     
     if '--show_short' in sys.argv or '--show_full' in sys.argv:
-        for i, histo in enumerate(histo_list):
+        if streaming_aggregation:
+            histograms_to_show = itertools.chain.from_iterable(
+                dense_aggregator.iter_hwu_groups(n_rebin=n_rebin))
+        else:
+            histograms_to_show = histo_list
+        for i, histo in enumerate(histograms_to_show):
             if i!=0:
                 log('-------')
             log(histo.nice_string(short=(not '--show_full' in sys.argv)))

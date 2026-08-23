@@ -17,7 +17,9 @@ from __future__ import division
 from __future__ import absolute_import
 import madgraph.various.histograms as histograms
 import inspect
+import io
 import os
+import re
 import subprocess
 import sys
 import unittest
@@ -91,8 +93,10 @@ class TestHistograms(unittest.TestCase):
             one_histo.output(pjoin(tmpdir,'OUT'), format='gnuplot')
             new_histo = histograms.HwUList(pjoin(tmpdir,'OUT.HwU'))
         
-        one_histo = one_histo[0][0]
-        one_histo.trim_auxiliary_weights()
+        # Output preparation must not replace the input with nested groups or
+        # append ratios/auxiliary uncertainty curves to it.
+        self.assertEqual(len(one_histo), 1)
+        one_histo = one_histo[0]
         new_histo = new_histo[0]
         self.assertEqual(one_histo.type, new_histo.type)
         self.assertEqual(one_histo.title,new_histo.title)
@@ -143,6 +147,16 @@ class TestHistogramRegressions(unittest.TestCase):
                               {'central': 2.0, 'stat_error': 0.2})
         self.assertEqual(rescaled['central'], -4.0)
         self.assertEqual(rescaled['stat_error'], 0.4)
+
+    def test_scalar_operations_do_not_mutate_the_left_operand(self):
+        original = self.make_hwu(values=[2.0, 0.2])
+        result = original*3.0
+
+        self.assertIsNot(result, original)
+        self.assertEqual(original.bins[0].wgts['central'], 2.0)
+        self.assertEqual(original.bins[0].wgts['stat_error'], 0.2)
+        self.assertEqual(result.bins[0].wgts['central'], 6.0)
+        self.assertAlmostEqual(result.bins[0].wgts['stat_error'], 0.6)
 
     def test_compatibility_checks_axes_and_bin_count(self):
         reference = self.make_hwu()
@@ -279,7 +293,14 @@ class TestHistogramRegressions(unittest.TestCase):
             self.assertTrue(plot['relative_uncertainties'])
             self.assertTrue(any(uncertainty['band'] for uncertainty in
                                 plot['main'][0]['uncertainties']))
-            self.assertEqual(len(namespace['_read_hwu_blocks'](hwu_path)), 3)
+            offsets = namespace['_index_hwu_blocks'](hwu_path)
+            self.assertEqual(len(offsets), 3)
+            required = namespace['_required_columns'](plot)
+            self.assertEqual(set(required), set([0, 1, 2]))
+            self.assertNotIn('_read_hwu_blocks', namespace)
+            loaded = namespace['_load_plot_blocks'](hwu_path, offsets, plot)
+            for block_index, positions in required.items():
+                self.assertEqual(set(loaded[block_index]['columns']), positions)
 
             # Empty component histograms are common in aMC@NLO output. They
             # must not disable the logarithmic scale requested by Y_AXIS@LOG.
@@ -291,11 +312,29 @@ class TestHistogramRegressions(unittest.TestCase):
                     'label': 'empty component',
                     'color': 'black',
                     'statistical': False,
+                'uncertainties': []}],
+                'x_axis_mode': 'LIN',
+                'y_axis_mode': 'LOG'},
+                {0: {'columns': {
+                    0: [0.0], 1: [1.0], 2: [0.0]}}})
+            axis.set_yscale.assert_called_once_with('log')
+
+            negative_axis = mock.MagicMock()
+            negative_axis.get_legend_handles_labels.return_value = ([], [])
+            namespace['_draw_main'](negative_axis, {
+                'main': [{
+                    'block': 0,
+                    'label': 'signed component',
+                    'color': 'red',
+                    'statistical': False,
                     'uncertainties': []}],
                 'x_axis_mode': 'LIN',
                 'y_axis_mode': 'LOG'},
-                [[[0.0, 1.0, 0.0, 0.0]]])
-            axis.set_yscale.assert_called_once_with('log')
+                {0: {'columns': {
+                    0: [0.0, 1.0], 1: [1.0, 2.0],
+                    2: [-2.0, 3.0]}}})
+            self.assertTrue(any(call.kwargs.get('linestyle') == '--'
+                                for call in negative_axis.step.call_args_list))
 
             cli_base = pjoin(tmpdir, 'cli_matplotlib')
             result = subprocess.run(
@@ -306,6 +345,170 @@ class TestHistogramRegressions(unittest.TestCase):
             self.assertEqual(result.returncode, 0, result.stdout+result.stderr)
             self.assertTrue(os.path.exists(cli_base+'.HwU'))
             self.assertTrue(os.path.exists(cli_base+'.py'))
+
+    def test_dense_streaming_sum_handles_order_schemas_and_mmap(self):
+        labels = ['central', 'stat_error', 'weight_a', 'weight_b']
+        reversed_labels = ['central', 'stat_error', 'weight_b', 'weight_a']
+        first_a = self.make_hwu(labels, [1.0, 0.1, 10.0, 20.0],
+                                title='A', n_bins=2)
+        first_b = self.make_hwu(labels, [4.0, 0.4, 40.0, 50.0],
+                                title='B', n_bins=2)
+        second_a = self.make_hwu(
+            reversed_labels, [2.0, 0.2, 30.0, 25.0],
+            title='A', n_bins=2)
+        second_b = self.make_hwu(
+            reversed_labels, [5.0, 0.5, 60.0, 55.0],
+            title='B', n_bins=2)
+
+        with misc.TMP_directory() as tmpdir:
+            first_base = pjoin(tmpdir, 'first')
+            second_base = pjoin(tmpdir, 'second')
+            histograms.HwUList([first_a, first_b]).output(
+                                                first_base, format='HwU')
+            # Deliberately reverse both histogram and weight-column order.
+            histograms.HwUList([second_b, second_a]).output(
+                                               second_base, format='HwU')
+
+            aggregator = histograms.StreamingHwUAggregator(memory_limit=0)
+            try:
+                aggregator.add_file(first_base+'.HwU')
+                aggregator.add_file(second_base+'.HwU')
+                summed = aggregator.to_hwu_list()
+                by_title = dict((histo.title, histo) for histo in summed)
+
+                self.assertEqual(by_title['A'].bins[0].wgts['central'], 3.0)
+                self.assertEqual(by_title['A'].bins[0].wgts['weight_a'], 35.0)
+                self.assertEqual(by_title['A'].bins[0].wgts['weight_b'], 50.0)
+                self.assertAlmostEqual(
+                    by_title['A'].bins[0].wgts['stat_error'],
+                    (0.1**2+0.2**2)**0.5)
+                self.assertTrue(any(accumulator._sums._mapping is not None
+                                    for accumulator in
+                                    aggregator.accumulators.values()))
+
+                lazy_sum = by_title['A']+by_title['B']
+                self.assertIsInstance(lazy_sum.bins[0].wgts,
+                                      histograms.LazyCombinedWeightView)
+                self.assertEqual(lazy_sum.bins[0].wgts['central'], 12.0)
+                by_title['A'].rebin(2)
+                self.assertIsInstance(by_title['A'].bins[0].wgts,
+                                      histograms.LazyRebinnedWeightView)
+                self.assertEqual(by_title['A'].bins[0].wgts['central'], 6.0)
+
+                output_base = pjoin(tmpdir, 'summed')
+                aggregator.output(output_base, format='HwU')
+                reloaded = histograms.HwUList(output_base+'.HwU')
+                reloaded_a = next(histo for histo in reloaded
+                                  if histo.title == 'A')
+                self.assertEqual(reloaded_a.bins[0].wgts['weight_a'], 35.0)
+                self.assertEqual(reloaded_a.bins[0].wgts['weight_b'], 50.0)
+
+                cli_base = pjoin(tmpdir, 'cli_sum')
+                result = subprocess.run([
+                    sys.executable, histograms.__file__, first_base+'.HwU',
+                    second_base+'.HwU', '--sum', '--HwU', '--no_open',
+                    '--keep_all_weights', '--memory_limit=0',
+                    '--out='+cli_base],
+                    stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                    universal_newlines=True)
+                self.assertEqual(result.returncode, 0,
+                                 result.stdout+result.stderr)
+                cli_sum = histograms.HwUList(cli_base+'.HwU')
+                cli_a = next(histo for histo in cli_sum if histo.title == 'A')
+                self.assertEqual(cli_a.bins[0].wgts['weight_a'], 35.0)
+            finally:
+                aggregator.close()
+
+    def test_output_canonicalizes_weight_order_and_is_repeatable(self):
+        labels = ['central', 'stat_error', 'weight_a', 'weight_b']
+        reversed_labels = ['central', 'stat_error', 'weight_b', 'weight_a']
+        first = self.make_hwu(labels, [1.0, 0.1, 10.0, 20.0])
+        second = self.make_hwu(
+            reversed_labels, [2.0, 0.2, 40.0, 30.0])
+        first.type = 'NLO'
+        second.type = 'LO'
+        source = histograms.HwUList([first, second])
+
+        with misc.TMP_directory() as tmpdir:
+            for name in ['one', 'two']:
+                source.output(pjoin(tmpdir, name), format='gnuplot',
+                              uncertainties=[], number_of_ratios=0,
+                              auto_open=False)
+            reloaded = histograms.HwUList(pjoin(tmpdir, 'one.HwU'))
+
+        self.assertEqual(len(source), 2)
+        self.assertTrue(all(isinstance(item, histograms.HwU)
+                            for item in source))
+        self.assertEqual(reloaded[1].bins[0].wgts['weight_a'], 30.0)
+        self.assertEqual(reloaded[1].bins[0].wgts['weight_b'], 40.0)
+
+    def test_plot_ranges_and_ratio_labels_use_every_curve(self):
+        curves = histograms.HwUList([
+            self.make_hwu(values=[1.0, 0.1]),
+            self.make_hwu(values=[2.0, 0.1]),
+            self.make_hwu(values=[1000.0, 0.1])])
+        curves[0].type = 'NLO'
+        curves[1].type = 'LO'
+        curves[2].type = 'LO1'
+        hwu_output = []
+        gnuplot_output = []
+        curves.output_group(hwu_output, gnuplot_output, 0, 'plots.HwU',
+                            uncertainties=[], number_of_ratios=0)
+        yrange = next(line for line in gnuplot_output
+                      if 'set yrange [' in line and 'rendering subhistograms' in line)
+        upper = float(re.search(r'set yrange \[[^:]+:([^\]]+)\]',
+                                yrange).group(1))
+        self.assertGreater(upper, 1000.0)
+
+        prepared = copy.deepcopy(curves)
+        prepared.output_group([], [], 0, 'plots.HwU', uncertainties=[],
+                              _copy_group=False)
+        ratio_titles = [histo.title for histo in prepared
+                        if histo.type == 'AUX']
+        self.assertTrue(any(title.endswith('1/K-factor')
+                            for title in ratio_titles))
+        self.assertTrue(any(title.endswith('LO1/NLO')
+                            for title in ratio_titles))
+
+    def test_explicit_hessian_weight_list(self):
+        labels = ['central', 'stat_error'] + [
+            'MUF=1_MUR=1_PDF=%d_MERGING=30'%member
+            for member in [1, 2, 3]]
+        histo = self.make_hwu(labels, [10.0, 0.1, 9.0, 12.0, 11.0])
+
+        minimum, maximum = histo.get_uncertainty_band(labels[2:],
+                                                       mode='hessian')
+
+        self.assertEqual(minimum, [9.0])
+        self.assertEqual(maximum, [12.0])
+
+    def test_compound_xml_variations_are_skipped_cleanly(self):
+        xml_source = """<histfile>
+<run id="0" header="xmin;xmax;Weight_PDF=260000_MUR=1_MUF=1_ALPSFACT=1_MERGING=30;WeightError;MUR=2_MUF=1_ALPSFACT=2_PDF=260001_MERGING=30">
+<jethistograms njet="0">
+<histogram name="compound" unit="pb" weight="all">
+0.0 1.0 2.0 0.1 2.5
+</histogram>
+</jethistograms>
+</run>
+</histfile>
+"""
+        parsed = histograms.HwUList(io.StringIO(xml_source))
+
+        self.assertEqual(len(parsed), 1)
+        self.assertEqual(parsed[0].bins.weight_labels,
+                         ['central', 'stat_error'])
+
+    def test_log_range_for_one_value_is_multiplicative(self):
+        histo = self.make_hwu(values=[0.5, 0.0])
+
+        self.assertEqual(histograms.HwU.get_y_optimal_range(
+            [histo], labels=['central'], scale='LOG'), (0.05, 5.0))
+        gnuplot_output = []
+        histograms.HwUList([histo]).output_group(
+            [], gnuplot_output, 0, 'plot.HwU', uncertainties=[])
+        self.assertEqual(histo.y_axis_mode, 'LOG')
+        self.assertIn('set logscale y', '\n'.join(gnuplot_output))
 
     def test_uncertainty_output_defaults_and_missing_merging_weights(self):
         output_default = inspect.signature(histograms.HwUList.output).\
