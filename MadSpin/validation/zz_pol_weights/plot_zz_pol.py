@@ -107,14 +107,22 @@ def draw(d, obs, outdir):
     rlab = PA.RATIO_TEX if USETEX else PA.RATIO_TXT
 
     fig = plt.figure(figsize=(8.0, 11.0))
-    gs = fig.add_gridspec(4, 2, height_ratios=[3.1, 1.7, 1.25, 1.25],
-                          hspace=0.30, wspace=0.26)
-    ax = fig.add_subplot(gs[0, :])
-    axs = fig.add_subplot(gs[1, :], sharex=ax)
-    small = [fig.add_subplot(gs[2, 0], sharex=ax),
-             fig.add_subplot(gs[2, 1], sharex=ax),
-             fig.add_subplot(gs[3, 0], sharex=ax),
-             fig.add_subplot(gs[3, 1], sharex=ax)]
+    # The 2 x 2 breakdown is a separate block from the two full-width panes
+    # above it, so those two carry their own tick labels and axis name rather
+    # than borrowing the ones at the foot of the figure.  That costs two extra
+    # rows of labels inside the stack, which needs a wide gap -- at the old
+    # 0.30 the axis name under the distribution pane landed on the sum pane's
+    # frame.  The gap is bought with a NESTED gridspec rather than by widening
+    # the whole figure's hspace: only the top block has labels to clear, and a
+    # uniform 0.62 would have torn the 2 x 2 apart into two stranded rows.
+    gs = fig.add_gridspec(3, 1, height_ratios=[3.1, 1.7, 2.5], hspace=0.62)
+    sub = gs[2].subgridspec(2, 2, hspace=0.12, wspace=0.26)
+    ax = fig.add_subplot(gs[0])
+    axs = fig.add_subplot(gs[1], sharex=ax)
+    small = [fig.add_subplot(sub[0, 0], sharex=ax),
+             fig.add_subplot(sub[0, 1], sharex=ax),
+             fig.add_subplot(sub[1, 0], sharex=ax),
+             fig.add_subplot(sub[1, 1], sharex=ax)]
 
     # -- tier 1: the distribution, full plus the four components -------------
     y, e = c.dist['full']
@@ -145,7 +153,7 @@ def draw(d, obs, outdir):
     ax.xaxis.set_minor_locator(AutoMinorLocator())
     if obs not in PA.LOGY:
         ax.yaxis.set_minor_locator(AutoMinorLocator())
-    plt.setp(ax.get_xticklabels(), visible=False)
+    ax.set_xlabel(xlab, fontsize=12)
 
     # -- tier 2: the sum, on its own scale -----------------------------------
     r, er, nb = c.ratios['SUM']
@@ -162,10 +170,10 @@ def draw(d, obs, outdir):
     axs.set_ylabel(rlab['SUM'], fontsize=10)
     axs.xaxis.set_minor_locator(AutoMinorLocator())
     axs.yaxis.set_minor_locator(AutoMinorLocator())
-    note = ((r'integrated: $%.4f \pm %.4f$ ($%.1f\sigma$ from 1)'
-             % (Rint, Eint, abs(Rint - 1) / Eint)) if USETEX else
-            ('integrated: %.4f +- %.4f (%.1f sigma from 1)'
-             % (Rint, Eint, abs(Rint - 1) / Eint)))
+    # The value, not its significance: the sigma-from-1 lives in numbers.txt
+    # and RESULTS.md, where it can be read next to the sample it belongs to.
+    note = ((r'integrated: $%.4f \pm %.4f$' % (Rint, Eint)) if USETEX else
+            ('integrated: %.4f +- %.4f' % (Rint, Eint)))
     axs.text(0.015, 0.06, note, transform=axs.transAxes, fontsize=8.5,
              ha='left', va='bottom')
     axs.text(0.985, 0.94,
@@ -173,7 +181,7 @@ def draw(d, obs, outdir):
              else r'\textbf{polarisation interference}',
              transform=axs.transAxes, fontsize=9, ha='right', va='top',
              color=COLOR['SUM'])
-    plt.setp(axs.get_xticklabels(), visible=False)
+    axs.set_xlabel(xlab, fontsize=12)
     for s in axs.spines.values():
         s.set_linewidth(1.5)
 
@@ -181,7 +189,8 @@ def draw(d, obs, outdir):
     for a, k in zip(small, ['LL', 'TT', 'TL', 'LT']):
         rk, ek, _ = c.ratios[k]
         Rk, Ek = c.integrated[k]
-        a.axhline(Rk, color='black', lw=0.9, ls='--')
+        lab = (r'integrated $%.4f$' % Rk) if USETEX else 'integrated %.4f' % Rk
+        a.axhline(Rk, color='black', lw=0.9, ls='--', label=lab)
         a.stairs(rk, edges, color=COLOR[k], ls=LS[k], lw=LW, zorder=4,
                  baseline=None)
         a.errorbar(x, rk, yerr=ek, fmt='o', ms=3.0, color=COLOR[k],
@@ -190,8 +199,11 @@ def draw(d, obs, outdir):
         a.set_ylabel(rlab[k], fontsize=10)
         a.xaxis.set_minor_locator(AutoMinorLocator())
         a.yaxis.set_minor_locator(AutoMinorLocator())
-        a.text(0.5, 0.035, ('%.4f' % Rk) if not USETEX else r'$%.4f$' % Rk,
-               transform=a.transAxes, fontsize=8, ha='center', va='bottom')
+        # A legend rather than a fixed-position text: these panes have no
+        # common shape -- LL rises across Delta phi and falls across the mass,
+        # TT does the opposite -- so any one corner is under the data in some
+        # of them.  ``loc='best'`` picks the empty one per pane.
+        a.legend(loc='best', frameon=False, fontsize=8)
     for a in small[:2]:
         plt.setp(a.get_xticklabels(), visible=False)
     for a in small[2:]:

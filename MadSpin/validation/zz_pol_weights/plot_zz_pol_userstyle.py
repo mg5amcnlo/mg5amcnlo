@@ -74,14 +74,18 @@ def draw(d, obs, outdir):
     xlab, ylab = PA.LABELS_TXT[obs]
 
     fig = plt.figure(figsize=FIGSIZE)
-    gs = fig.add_gridspec(4, 2, height_ratios=[3.0, 1.7, 1.25, 1.25],
-                          hspace=0.32, wspace=0.28)
-    ax = fig.add_subplot(gs[0, :])
-    axs = fig.add_subplot(gs[1, :], sharex=ax)
-    small = [fig.add_subplot(gs[2, 0], sharex=ax),
-             fig.add_subplot(gs[2, 1], sharex=ax),
-             fig.add_subplot(gs[3, 0], sharex=ax),
-             fig.add_subplot(gs[3, 1], sharex=ax)]
+    # See the note in plot_zz_pol.draw: the two full-width panes are their own
+    # block and carry their own x axis, which needs the vertical gap opened --
+    # and a nested gridspec so that opening it does not also tear the 2 x 2
+    # breakdown apart.
+    gs = fig.add_gridspec(3, 1, height_ratios=[3.0, 1.7, 2.5], hspace=0.62)
+    sub = gs[2].subgridspec(2, 2, hspace=0.12, wspace=0.28)
+    ax = fig.add_subplot(gs[0])
+    axs = fig.add_subplot(gs[1], sharex=ax)
+    small = [fig.add_subplot(sub[0, 0], sharex=ax),
+             fig.add_subplot(sub[0, 1], sharex=ax),
+             fig.add_subplot(sub[1, 0], sharex=ax),
+             fig.add_subplot(sub[1, 1], sharex=ax)]
 
     # -- the distribution: the total, with the four components on top of it ---
     y, e = c.dist['full']
@@ -106,7 +110,7 @@ def draw(d, obs, outdir):
     ax.legend(loc='upper left', fontsize=7.5,
               ncol=2 if obs in PA.LOGY else 1)
     ax.set_title(TITLE, fontsize=9)
-    ax.tick_params(labelbottom=False)
+    ax.set_xlabel(xlab, fontsize=10)
 
     # -- the sum: the polarisation interference, on its own scale ------------
     r, er, _ = c.ratios['SUM']
@@ -119,14 +123,14 @@ def draw(d, obs, outdir):
                  zorder=4)
     axs.set_ylim(*_ratio_ylim(r, er, 1.0))
     axs.set_ylabel(PA.RATIO_TXT['SUM'], fontsize=9)
+    # The value, not its significance: the sigma-from-1 lives in numbers.txt
+    # and RESULTS.md.
     axs.text(0.012, 0.05,
-             'integrated: %.4f +- %.4f  (%.1f sigma from 1)\n'
-             'bands: +-2%%, +-5%%'
-             % (Rint, Eint, abs(Rint - 1) / Eint),
+             'integrated: %.4f +- %.4f\nbands: +-2%%, +-5%%' % (Rint, Eint),
              transform=axs.transAxes, fontsize=7.5, ha='left', va='bottom')
     axs.text(0.988, 0.94, 'POLARISATION INTERFERENCE', transform=axs.transAxes,
              fontsize=8.5, ha='right', va='top', color=COLOR['SUM'])
-    axs.tick_params(labelbottom=False)
+    axs.set_xlabel(xlab, fontsize=10)
     for s in axs.spines.values():
         s.set_linewidth(1.6)
 
@@ -134,13 +138,15 @@ def draw(d, obs, outdir):
     for a, k in zip(small, ['LL', 'TT', 'TL', 'LT']):
         rk, ek, _ = c.ratios[k]
         Rk, Ek = c.integrated[k]
-        a.axhline(Rk, color=C_REF, ls='--', lw=0.9, zorder=2)
+        a.axhline(Rk, color=C_REF, ls='--', lw=0.9, zorder=2,
+                  label='integrated %.4f +- %.4f' % (Rk, Ek))
         _step(a, edges, rk, color=COLOR[k], lw=1.0, alpha=STEP_ALPHA, zorder=3)
         a.errorbar(x, rk, yerr=ek, fmt='o', ms=MS, color=COLOR[k], zorder=4)
         a.set_ylim(*_ratio_ylim(rk, ek, Rk))
         a.set_ylabel(PA.RATIO_TXT[k], fontsize=9)
-        a.text(0.5, 0.03, 'integrated %.4f +- %.4f' % (Rk, Ek),
-               transform=a.transAxes, fontsize=7, ha='center', va='bottom')
+        # See the note in plot_zz_pol.draw: no fixed corner is free in every
+        # pane, so the number rides on the reference line's legend entry.
+        a.legend(loc='best', fontsize=7, framealpha=0.75)
     for a in small[:2]:
         a.tick_params(labelbottom=False)
     for a in small[2:]:

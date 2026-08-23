@@ -311,8 +311,16 @@ PDF and PNG. Each figure is three tiers:
 1. the distribution — the full (unpolarised) `dσ/dx` at absolute normalisation
    with `LL`, `TT`, `TL`, `LT` overlaid in the same binning;
 2. a **full-width pane for `(LL+TT+TL+LT)/full`**, on its own vertical scale,
-   with the integrated value and its significance printed in it;
+   with the integrated value printed in it (the significance is quoted here and
+   in `numbers.txt`, not on the figure);
 3. a 2 × 2 breakdown, `LL/full`, `TT/full`, `TL/full`, `LT/full`.
+
+The 2 x 2 block is a separate block from the two full-width panes, so those two
+carry their own x tick labels and axis name rather than borrowing the ones at
+the foot of the figure; the vertical gap between blocks is opened with a nested
+gridspec so that the 2 x 2 itself stays tight.  The nominal curve is labelled
+`full (unpolarised)` -- for what it is, not for the weight column it was summed
+from, which is a fact about the file and belongs above rather than on the plot.
 
 Tier 2 does not share a scale with anything, because it is the physics and a
 shared window would squash it. The four small panes do not share one either,

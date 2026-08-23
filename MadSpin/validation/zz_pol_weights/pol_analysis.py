@@ -179,15 +179,18 @@ LABELS_TXT = {
 SHORT = {'m_epmup_dr': 'm_epmup', 'dphi_ee_dr': 'dphi_ee'}
 LOGY = {'m_epmup_dr'}
 
+# The nominal curve is named for what it is -- the unpolarised total -- and not
+# for the weight column it was summed from.  Which column that is is a fact
+# about the file and belongs in numbers.txt, not on the figure.
 CURVE_TEX = {
-    'full': r'full (unpolarised), \texttt{Weight}',
+    'full': r'full (unpolarised)',
     'LL': r'$Z_{0}Z_{0}$  (\texttt{ms\_pol\_23.0\_23.0})',
     'TT': r'$Z_{T}Z_{T}$  (\texttt{ms\_pol\_23.T\_23.T})',
     'TL': r'$Z_{T}Z_{0}$  (\texttt{ms\_pol\_23.T\_23.0})',
     'LT': r'$Z_{0}Z_{T}$  (\texttt{ms\_pol\_23.0\_23.T})',
     'SUM': r'$\sum$ = LL + TT + TL + LT',
 }
-CURVE_TXT = {'full': 'full (unpolarised), Weight',
+CURVE_TXT = {'full': 'full (unpolarised)',
              'LL': 'Z0 Z0  (ms_pol_23.0_23.0)',
              'TT': 'ZT ZT  (ms_pol_23.T_23.T)',
              'TL': 'ZT Z0  (ms_pol_23.T_23.0)',
