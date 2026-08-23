@@ -315,12 +315,27 @@ PDF and PNG. Each figure is three tiers:
    in `numbers.txt`, not on the figure);
 3. a 2 × 2 breakdown, `LL/full`, `TT/full`, `TL/full`, `LT/full`.
 
-The 2 x 2 block is a separate block from the two full-width panes, so those two
-carry their own x tick labels and axis name rather than borrowing the ones at
-the foot of the figure; the vertical gap between blocks is opened with a nested
-gridspec so that the 2 x 2 itself stays tight.  The nominal curve is labelled
-`full (unpolarised)` -- for what it is, not for the weight column it was summed
-from, which is a fact about the file and belongs above rather than on the plot.
+Tiers 1 and 2 are a stacked **pair** sharing one x axis: the tick labels and
+the axis name go under the sum pane only, with a tight gap between the two. The
+2 x 2 is a separate block with its own labels, set off by a modest gap. Three
+different vertical gaps means three gridspecs rather than one `hspace` -- tight
+enough for the pair leaves the sum pane's axis name sitting on the 2 x 2, and
+wide enough to clear it tears the pair apart.
+
+The curves carry physics names only: `full (unpolarised)` and
+`Z_0 Z_0` / `Z_0 Z_T` / `Z_T Z_0` / `Z_T Z_T`, in the ratio pane labels as well
+as in the legend, so the naming is the same everywhere on the figure. Which
+weight column each of those sums is a fact about the file and lives in
+`numbers.txt` (which prints the mapping table explicitly), in
+`data/meta.json`'s `pol_map`, and in the table below:
+
+| figure name | short key | weight column |
+|---|---|---|
+| `Z_0 Z_0` | LL | `ms_pol_23.0_23.0` |
+| `Z_T Z_T` | TT | `ms_pol_23.T_23.T` |
+| `Z_T Z_0` | TL | `ms_pol_23.T_23.0` |
+| `Z_0 Z_T` | LT | `ms_pol_23.0_23.T` |
+| `full (unpolarised)` | full | `Weight` |
 
 Tier 2 does not share a scale with anything, because it is the physics and a
 shared window would squash it. The four small panes do not share one either,

@@ -107,18 +107,18 @@ def draw(d, obs, outdir):
     rlab = PA.RATIO_TEX if USETEX else PA.RATIO_TXT
 
     fig = plt.figure(figsize=(8.0, 11.0))
-    # The 2 x 2 breakdown is a separate block from the two full-width panes
-    # above it, so those two carry their own tick labels and axis name rather
-    # than borrowing the ones at the foot of the figure.  That costs two extra
-    # rows of labels inside the stack, which needs a wide gap -- at the old
-    # 0.30 the axis name under the distribution pane landed on the sum pane's
-    # frame.  The gap is bought with a NESTED gridspec rather than by widening
-    # the whole figure's hspace: only the top block has labels to clear, and a
-    # uniform 0.62 would have torn the 2 x 2 apart into two stranded rows.
-    gs = fig.add_gridspec(3, 1, height_ratios=[3.1, 1.7, 2.5], hspace=0.62)
-    sub = gs[2].subgridspec(2, 2, hspace=0.12, wspace=0.26)
-    ax = fig.add_subplot(gs[0])
-    axs = fig.add_subplot(gs[1], sharex=ax)
+    # Three vertical rhythms, so three gridspecs rather than one.  The
+    # distribution and the sum pane are a normal stacked PAIR sharing one x
+    # axis -- tick labels and axis name under the sum pane only, and a tight
+    # gap between them.  The 2 x 2 breakdown is a separate block with its own
+    # labels, set off by a modest gap.  A single hspace cannot do all three:
+    # tight enough for the pair leaves the sum pane's axis name on the 2 x 2,
+    # and wide enough to clear it tears the stacked pair apart.
+    gs = fig.add_gridspec(2, 1, height_ratios=[4.8, 2.5], hspace=0.13)
+    top = gs[0].subgridspec(2, 1, height_ratios=[3.1, 1.7], hspace=0.06)
+    sub = gs[1].subgridspec(2, 2, hspace=0.12, wspace=0.26)
+    ax = fig.add_subplot(top[0])
+    axs = fig.add_subplot(top[1], sharex=ax)
     small = [fig.add_subplot(sub[0, 0], sharex=ax),
              fig.add_subplot(sub[0, 1], sharex=ax),
              fig.add_subplot(sub[1, 0], sharex=ax),
@@ -142,18 +142,17 @@ def draw(d, obs, outdir):
         ax.set_yscale('log')
     ax.set_ylabel(ylab)
     lo, hi = ax.get_ylim()
-    # On the log pane the autoscale floor is set by the LL component's last
-    # bin, four decades under the total, so the plain 1.6x headroom that works
-    # on a linear pane leaves the legend sitting on the curves.  Two columns
-    # and a much larger factor, both only where the axis is logarithmic.
-    ax.set_ylim(lo, hi * (120.0 if obs in PA.LOGY else 1.62))
-    ax.legend(frameon=False, fontsize=8.5, loc='upper left',
-              ncol=2 if obs in PA.LOGY else 1)
+    # On the log pane the autoscale floor is set by the Z_0 Z_0 component's
+    # last bin, four decades under the total, so the plain 1.6x headroom that
+    # works on a linear pane leaves the legend sitting on the curves.  One
+    # column throughout now that the labels are short.
+    ax.set_ylim(lo, hi * (60.0 if obs in PA.LOGY else 1.62))
+    ax.legend(frameon=False, fontsize=8.5, loc='upper left')
     ax.set_title(TITLE_TEX if USETEX else TITLE_TXT, fontsize=10)
     ax.xaxis.set_minor_locator(AutoMinorLocator())
     if obs not in PA.LOGY:
         ax.yaxis.set_minor_locator(AutoMinorLocator())
-    ax.set_xlabel(xlab, fontsize=12)
+    plt.setp(ax.get_xticklabels(), visible=False)
 
     # -- tier 2: the sum, on its own scale -----------------------------------
     r, er, nb = c.ratios['SUM']
@@ -167,7 +166,7 @@ def draw(d, obs, outdir):
     axs.errorbar(x, r, yerr=er, fmt='o', ms=3.4, color=COLOR['SUM'],
                  elinewidth=1.0, zorder=5)
     axs.set_ylim(*_ratio_ylim(r, er, 1.0))
-    axs.set_ylabel(rlab['SUM'], fontsize=10)
+    axs.set_ylabel(rlab['SUM'], fontsize=8.5)
     axs.xaxis.set_minor_locator(AutoMinorLocator())
     axs.yaxis.set_minor_locator(AutoMinorLocator())
     # The value, not its significance: the sigma-from-1 lives in numbers.txt
@@ -239,6 +238,15 @@ def write_numbers(d, path):
     for i in range(0, len(m['weight_names']), 6):
         A('   ' + '  '.join('%-18s' % n for n in m['weight_names'][i:i + 6]))
     A('')
+    A('--- what the figures call these weights ---')
+    A('The figures carry the physics name only; this is the mapping back to')
+    A('the weight column each curve sums.  data/meta.json carries it too.')
+    A('   %-22s %-22s %s' % ('short key', 'figure legend', 'weight column'))
+    for k in ['LL', 'TT', 'TL', 'LT']:
+        A('   %-22s %-22s %s'
+          % (k, PA.CURVE_TXT[k], PA.LEGEND_TO_COLUMN[PA.CURVE_TXT[k]]))
+    A('   %-22s %-22s %s' % ('full', PA.CURVE_TXT['full'], 'Weight'))
+    A('')
     A('--- WHICH WEIGHT IS THE FULL ---')
     ev = d.nominal_evidence()
     A('Answer: "Weight".  "0" is the SAME weight divided by the event count,')
@@ -305,7 +313,7 @@ def write_numbers(d, path):
                 extra = ('   [naive independent error %.5f, %.1fx too large]'
                          % (nv, nv / E))
             A('  %-24s %10d %12.5f %12.5f %10s%s'
-              % (PA.RATIO_TXT[k], mask.sum(), R, E,
+              % (PA.RATIO_KEY[k], mask.sum(), R, E,
                  '%.2f' % (abs(R - 1) / E) if k == 'SUM' else '--', extra))
         A('')
     A('The sum over ALL events is 1 to within 0.03 % and 0.2 sigma.  That is')
@@ -349,8 +357,7 @@ def write_numbers(d, path):
         A('fiducial cross section %.6g pb' % c.sigma_pb)
         A('%12s %8s %12s %10s %10s   %s'
           % ('bin', 'N', 'sum/full', 'error', 'sigma(1)',
-             '  '.join('%10s' % PA.RATIO_TXT[k].split('/')[0].strip()
-                       for k in ['LL', 'TT', 'TL', 'LT'])))
+             '  '.join('%10s' % k for k in ['LL', 'TT', 'TL', 'LT'])))
         r, e, n = c.ratios['SUM']
         for b in range(len(n)):
             if not n[b]:

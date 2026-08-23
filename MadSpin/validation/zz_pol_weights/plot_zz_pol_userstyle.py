@@ -74,14 +74,14 @@ def draw(d, obs, outdir):
     xlab, ylab = PA.LABELS_TXT[obs]
 
     fig = plt.figure(figsize=FIGSIZE)
-    # See the note in plot_zz_pol.draw: the two full-width panes are their own
-    # block and carry their own x axis, which needs the vertical gap opened --
-    # and a nested gridspec so that opening it does not also tear the 2 x 2
-    # breakdown apart.
-    gs = fig.add_gridspec(3, 1, height_ratios=[3.0, 1.7, 2.5], hspace=0.62)
-    sub = gs[2].subgridspec(2, 2, hspace=0.12, wspace=0.28)
-    ax = fig.add_subplot(gs[0])
-    axs = fig.add_subplot(gs[1], sharex=ax)
+    # See the note in plot_zz_pol.draw: the distribution and the sum pane are a
+    # stacked PAIR sharing one x axis, the 2 x 2 is a separate block with its
+    # own, and the three gaps that implies cannot come from one hspace.
+    gs = fig.add_gridspec(2, 1, height_ratios=[4.7, 2.5], hspace=0.13)
+    top = gs[0].subgridspec(2, 1, height_ratios=[3.0, 1.7], hspace=0.06)
+    sub = gs[1].subgridspec(2, 2, hspace=0.12, wspace=0.28)
+    ax = fig.add_subplot(top[0])
+    axs = fig.add_subplot(top[1], sharex=ax)
     small = [fig.add_subplot(sub[0, 0], sharex=ax),
              fig.add_subplot(sub[0, 1], sharex=ax),
              fig.add_subplot(sub[1, 0], sharex=ax),
@@ -106,11 +106,14 @@ def draw(d, obs, outdir):
     ax.set_ylabel(ylab)
     ax.set_xlim(edges[0], edges[-1])
     lo, hi = ax.get_ylim()
-    ax.set_ylim(lo, hi * (60.0 if obs in PA.LOGY else 1.45))
-    ax.legend(loc='upper left', fontsize=7.5,
-              ncol=2 if obs in PA.LOGY else 1)
+    # The user style's legend has an opaque frame, so on the log pane it needs
+    # enough headroom to clear the total's peak outright rather than merely to
+    # sit above the autoscale top: at 40x its lower edge landed on the black
+    # step.  Checked on the rendered PNG, not on the axis limits.
+    ax.set_ylim(lo, hi * (400.0 if obs in PA.LOGY else 1.45))
+    ax.legend(loc='upper left', fontsize=8)
     ax.set_title(TITLE, fontsize=9)
-    ax.set_xlabel(xlab, fontsize=10)
+    ax.tick_params(labelbottom=False)
 
     # -- the sum: the polarisation interference, on its own scale ------------
     r, er, _ = c.ratios['SUM']
@@ -122,7 +125,7 @@ def draw(d, obs, outdir):
     axs.errorbar(x, r, yerr=er, fmt='o', ms=MS + 0.5, color=COLOR['SUM'],
                  zorder=4)
     axs.set_ylim(*_ratio_ylim(r, er, 1.0))
-    axs.set_ylabel(PA.RATIO_TXT['SUM'], fontsize=9)
+    axs.set_ylabel(PA.RATIO_TXT['SUM'], fontsize=8)
     # The value, not its significance: the sigma-from-1 lives in numbers.txt
     # and RESULTS.md.
     axs.text(0.012, 0.05,

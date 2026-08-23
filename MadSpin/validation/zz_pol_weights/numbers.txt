@@ -13,6 +13,16 @@ code       b0e4472bc189d56871760b4fd54ed8113183b8de
    MUR1.0_MUF2.0       MUR2.0_MUF0.5       MUR2.0_MUF1.0       MUR2.0_MUF2.0       Weight              ms_pol_23.0_23.0  
    ms_pol_23.0_23.T    ms_pol_23.T_23.0    ms_pol_23.T_23.T  
 
+--- what the figures call these weights ---
+The figures carry the physics name only; this is the mapping back to
+the weight column each curve sums.  data/meta.json carries it too.
+   short key              figure legend          weight column
+   LL                     Z0 Z0                  ms_pol_23.0_23.0
+   TT                     ZT ZT                  ms_pol_23.T_23.T
+   TL                     ZT Z0                  ms_pol_23.T_23.0
+   LT                     Z0 ZT                  ms_pol_23.0_23.T
+   full                   full (unpolarised)     Weight
+
 --- WHICH WEIGHT IS THE FULL ---
 Answer: "Weight".  "0" is the SAME weight divided by the event count,
 so every ratio below is identical whichever of the two is used; only

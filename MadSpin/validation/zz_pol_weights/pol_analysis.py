@@ -182,26 +182,43 @@ LOGY = {'m_epmup_dr'}
 # The nominal curve is named for what it is -- the unpolarised total -- and not
 # for the weight column it was summed from.  Which column that is is a fact
 # about the file and belongs in numbers.txt, not on the figure.
+# The nominal curve is named for what it is -- the unpolarised total -- and not
+# for the weight column it was summed from.  Which column that is is a fact
+# about the file and belongs in numbers.txt, not on the figure; the same goes
+# for the four polarisation curves, which carry only their physics name here.
+# numbers.txt prints the name-to-column mapping so nothing is unrecoverable.
 CURVE_TEX = {
     'full': r'full (unpolarised)',
-    'LL': r'$Z_{0}Z_{0}$  (\texttt{ms\_pol\_23.0\_23.0})',
-    'TT': r'$Z_{T}Z_{T}$  (\texttt{ms\_pol\_23.T\_23.T})',
-    'TL': r'$Z_{T}Z_{0}$  (\texttt{ms\_pol\_23.T\_23.0})',
-    'LT': r'$Z_{0}Z_{T}$  (\texttt{ms\_pol\_23.0\_23.T})',
-    'SUM': r'$\sum$ = LL + TT + TL + LT',
+    'LL': r'$Z_{0}Z_{0}$',
+    'TT': r'$Z_{T}Z_{T}$',
+    'TL': r'$Z_{T}Z_{0}$',
+    'LT': r'$Z_{0}Z_{T}$',
+    'SUM': r'$Z_{0}Z_{0} + Z_{T}Z_{T} + Z_{T}Z_{0} + Z_{0}Z_{T}$',
 }
 CURVE_TXT = {'full': 'full (unpolarised)',
-             'LL': 'Z0 Z0  (ms_pol_23.0_23.0)',
-             'TT': 'ZT ZT  (ms_pol_23.T_23.T)',
-             'TL': 'ZT Z0  (ms_pol_23.T_23.0)',
-             'LT': 'Z0 ZT  (ms_pol_23.0_23.T)',
-             'SUM': 'sum = LL + TT + TL + LT'}
-RATIO_TEX = {'SUM': r'$(\mathrm{LL{+}TT{+}TL{+}LT})/\mathrm{full}$',
-             'LL': r'$\mathrm{LL}/\mathrm{full}$',
-             'TT': r'$\mathrm{TT}/\mathrm{full}$',
-             'TL': r'$\mathrm{TL}/\mathrm{full}$',
-             'LT': r'$\mathrm{LT}/\mathrm{full}$'}
-RATIO_TXT = {'SUM': '(LL+TT+TL+LT) / full', 'LL': 'LL / full',
+             'LL': 'Z0 Z0', 'TT': 'ZT ZT', 'TL': 'ZT Z0', 'LT': 'Z0 ZT',
+             'SUM': 'Z0Z0 + ZTZT + ZTZ0 + Z0ZT'}
+
+# What each figure name is, in terms of the weight column it sums.  Printed
+# into numbers.txt by plot_zz_pol.write_numbers.
+LEGEND_TO_COLUMN = {'Z0 Z0': 'ms_pol_23.0_23.0', 'ZT ZT': 'ms_pol_23.T_23.T',
+                    'ZT Z0': 'ms_pol_23.T_23.0', 'Z0 ZT': 'ms_pol_23.0_23.T',
+                    'full (unpolarised)': 'Weight'}
+
+RATIO_TEX = {
+    'SUM': r'$(Z_{0}Z_{0}{+}Z_{T}Z_{T}{+}Z_{T}Z_{0}{+}Z_{0}Z_{T})/\mathrm{full}$',
+    'LL': r'$Z_{0}Z_{0}/\mathrm{full}$',
+    'TT': r'$Z_{T}Z_{T}/\mathrm{full}$',
+    'TL': r'$Z_{T}Z_{0}/\mathrm{full}$',
+    'LT': r'$Z_{0}Z_{T}/\mathrm{full}$'}
+RATIO_TXT = {'SUM': '(Z0Z0 + ZTZT + ZTZ0 + Z0ZT) / full',
+             'LL': 'Z0Z0 / full', 'TT': 'ZTZT / full',
+             'TL': 'ZTZ0 / full', 'LT': 'Z0ZT / full'}
+
+# numbers.txt keeps the short internal keys instead: its rows are read next to
+# the weight-name list and the mapping table, where LL/TT/TL/LT is the shorter
+# and less ambiguous handle.  Only the FIGURES use the Z_0 Z_T spelling.
+RATIO_KEY = {'SUM': '(LL+TT+TL+LT) / full', 'LL': 'LL / full',
              'TT': 'TT / full', 'TL': 'TL / full', 'LT': 'LT / full'}
 
 
