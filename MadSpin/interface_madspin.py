@@ -5041,10 +5041,7 @@ class MadSpinInterface(extended_cmd.Cmd):
             # breakdown.
             near, res, far = self._nwa_threshold_split(stats_list)
             msg = ("MadSpin sequential: %d weights exceeded their stage "
-                   "maximum (mass set / angles / per particle). The excess is "
-                   "CARRIED on the weight of the affected events rather than "
-                   "dropped (see the overweight line below for how much it is "
-                   "worth). " % total_overflow)
+                   "maximum (mass set / angles / per particle). " % total_overflow)
             if (near or res) and not far:
                 msg += ("Every event that carried one sits within %s of the "
                         "sum-of-poles threshold, or on a resonance of the "
@@ -5296,28 +5293,12 @@ class MadSpinInterface(extended_cmd.Cmd):
         note = ''
         if near:
             note += ("%d of them are production events within %s of "
-                     "the sum-of-poles threshold, where the narrow-width "
-                     "approximation MadSpin factorises with is invalid by "
-                     "construction -- the windows there are cut off by the "
-                     "energy budget rather than by BW_cut, and the production "
-                     "reshuffling jacobian diverges because there is no recoil "
-                     "left. An overweight there is expected and is carried "
-                     "exactly, not clipped. "
+                     "the sum-of-poles threshold, "
                      % (near, self._nwa_threshold_margin()))
         if res:
             note += ("%d of them have a resonance and another production-level "
                      "final state whose invariant mass is within %g widths of "
-                     "that resonance's own pole: there the PRODUCTION matrix "
-                     "element has the same resonance on an internal line -- a "
-                     "region that only exists once the production process has "
-                     "a jet in it, and that a virtuality below the pole is "
-                     "what makes reachable at all. The weight there is a "
-                     "Breit-Wigner peak of the production process itself, it "
-                     "is correct, and it is carried exactly. Lowering BW_cut "
-                     "closes that region (measured on p p > t t~ j: reachable "
-                     "for 3.5%% of the production events at BW_cut = 15, 0.9%% "
-                     "at 10, 0.03%% at 5). "
-                     % (res, self._PRODUCTION_RESONANCE_WIDTHS))
+                     "that resonance's own pole." % (res, self._PRODUCTION_RESONANCE_WIDTHS))
         both = 'either region' if (near and res) else 'that region'
         it = 'those' if (near and res) else 'it'
         if far:
@@ -5385,16 +5366,11 @@ class MadSpinInterface(extended_cmd.Cmd):
         # string: the head already contains literal per-cent signs.
         msg = ("MadSpin overweight safety net: %d/%d written events (%.3g%%) "
                "carried a non-unit weight because a trial weight exceeded its "
-               "accept/reject bound (largest factor %.4f%s). "
-               % (nb, n_written, 100.0 * nb / n_written, biggest,
-                  ', %d of them from the joint accept/reject' % joint
-                  if joint else ''))
+               "accept/reject bound (largest factor %.4f). "
+               % (nb, n_written, 100.0 * nb / n_written, biggest))
         if z >= self._OVERWEIGHT_MIN_Z:
-            msg += ("Carrying it added %+.6g to the summed event weight, i.e. "
-                    "%+.3g%% of the sample's cross-section (IDWTUP = -4: sigma "
-                    "is the mean weight and the event count does not change, "
-                    "so this is the relative shift). "
-                    % (d_w, 100.0 * d_w / sum_w))
+            msg += ("Carrying it added %+.3g%% of the sample's cross-section. "
+                    % (100.0 * d_w / sum_w))
         else:
             # pure_interference, or any sample whose weights cancel: the
             # cross-section is consistent with zero, so it is not a denominator
@@ -5406,14 +5382,17 @@ class MadSpinInterface(extended_cmd.Cmd):
                     "shift is quoted against sum|w| = %.4g instead: %+.3g%%. "
                     % (d_w, d_abs, sum_w, delta, z, sum_abs,
                        100.0 * d_abs / sum_abs if sum_abs else float('nan')))
-        msg += ("Clipping it -- what MadSpin did before -- would have discarded "
-                "that silently. ")
         near, res, far = self._nwa_threshold_split(stats_list)
+        #no need dedicated note when very small
+        if 100.0 * d_w / sum_w < 0.5:
+            logger.info(msg)
+            return 
+            
         msg = (msg + self._nwa_threshold_note(near, res, far)).rstrip()
         # Calmer only when EVERY one of them is in one of the two explained
         # regions: the count in the head of the line is the total either way,
         # so this changes the volume and not the arithmetic.
-        if (near or res) and not far:
+        if ((near or res) and not far):
             logger.info(msg)
         else:
             logger.warning(msg)
