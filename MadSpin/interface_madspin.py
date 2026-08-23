@@ -5067,6 +5067,14 @@ class MadSpinInterface(extended_cmd.Cmd):
     # z = O(1) and always does.
     _OVERWEIGHT_MIN_Z = 5.0
 
+    # How much the carried excess has to be worth, in per-cent of whatever
+    # denominator the overweight line was allowed to quote, before the region
+    # breakdown is printed at all. Below it the head of the line has already
+    # said how many events carried one and what it was worth, and a paragraph
+    # about WHY only buries that; above it the three-way split still decides
+    # both the wording and the volume.
+    _OVERWEIGHT_QUIET_PERCENT = 0.5
+
     # ------------------------------------------------------------------
     # The region where the narrow-width approximation is invalid by
     # construction
@@ -5298,7 +5306,8 @@ class MadSpinInterface(extended_cmd.Cmd):
         if res:
             note += ("%d of them have a resonance and another production-level "
                      "final state whose invariant mass is within %g widths of "
-                     "that resonance's own pole." % (res, self._PRODUCTION_RESONANCE_WIDTHS))
+                     "that resonance's own pole. "
+                     % (res, self._PRODUCTION_RESONANCE_WIDTHS))
         both = 'either region' if (near and res) else 'that region'
         it = 'those' if (near and res) else 'it'
         if far:
@@ -5342,6 +5351,14 @@ class MadSpinInterface(extended_cmd.Cmd):
         of its own Monte Carlo errors away from zero. When it is not, the shift
         is quoted against ``sum |w|`` -- which cannot cancel -- and the line says
         which convention it used, so the two are never confused.
+
+        The line has two volumes. Whatever the regions say, an excess worth
+        less than ``_OVERWEIGHT_QUIET_PERCENT`` of that denominator gets the
+        head of the line and nothing else, at info: the number is already
+        printed and nobody needs a paragraph explaining a per-mille. At or
+        above it the three-way region split decides the wording and the volume
+        as before. Only the volume moves -- the counts and the shift in the
+        head of the line are identical on both sides of the threshold.
         """
         nb = sum(s.get('nb_overweight', 0) for s in stats_list)
         if not n_written or not nb:
@@ -5355,7 +5372,6 @@ class MadSpinInterface(extended_cmd.Cmd):
         d_w = sum(s.get('sum_overweight_dw', 0.0) for s in stats_list)
         d_abs = sum(s.get('sum_overweight_dabs', 0.0) for s in stats_list)
         biggest = max([s.get('max_overweight', 1.0) for s in stats_list] or [1.0])
-        joint = sum(s.get('nb_overflow_joint', 0) for s in stats_list)
         # the file as clipping would have written it
         sum_w = sum(s.get('sum_nom', 0.0) for s in stats_list)
         sum_abs = sum(s.get('sum_abs_nom', 0.0) for s in stats_list)
@@ -5369,25 +5385,36 @@ class MadSpinInterface(extended_cmd.Cmd):
                "accept/reject bound (largest factor %.4f). "
                % (nb, n_written, 100.0 * nb / n_written, biggest))
         if z >= self._OVERWEIGHT_MIN_Z:
+            shift = 100.0 * d_w / sum_w
             msg += ("Carrying it added %+.3g%% of the sample's cross-section. "
-                    % (100.0 * d_w / sum_w))
+                    % shift)
         else:
             # pure_interference, or any sample whose weights cancel: the
             # cross-section is consistent with zero, so it is not a denominator
+            shift = 100.0 * d_abs / sum_abs if sum_abs else float('nan')
             msg += ("Carrying it added %+.6g to the summed event weight and "
                     "%+.6g to the summed |weight|. The summed weight is %+.4g "
                     "against a Monte Carlo error of %.4g (z = %.2f), i.e. "
                     "consistent with the zero cross-section this sample has by "
                     "construction, so it is not a usable denominator and the "
                     "shift is quoted against sum|w| = %.4g instead: %+.3g%%. "
-                    % (d_w, d_abs, sum_w, delta, z, sum_abs,
-                       100.0 * d_abs / sum_abs if sum_abs else float('nan')))
-        near, res, far = self._nwa_threshold_split(stats_list)
-        #no need dedicated note when very small
-        if 100.0 * d_w / sum_w < 0.5:
+                    % (d_w, d_abs, sum_w, delta, z, sum_abs, shift))
+        # No dedicated note when the excess is very small. ``shift`` is the
+        # per-cent the line has just quoted, so the smallness test is made
+        # against whichever denominator was legitimate: ``sum w`` when it is a
+        # usable one, ``sum |w|`` when the weights cancel -- it never divides
+        # by a cross-section that is consistent with zero, and it never calls
+        # a sample quiet on a ratio the line itself refused to print. A sample
+        # with no scale at all (every written weight zero) gives nan, and nan
+        # compares false here, so it keeps the full note rather than being
+        # declared small on an undefined ratio. The test is on the MAGNITUDE:
+        # a large negative shift -- which a sample with counter-events can
+        # have, with every carried factor still above 1 -- is not small.
+        if abs(shift) < self._OVERWEIGHT_QUIET_PERCENT:
             logger.info(msg)
-            return 
-            
+            return
+
+        near, res, far = self._nwa_threshold_split(stats_list)
         msg = (msg + self._nwa_threshold_note(near, res, far)).rstrip()
         # Calmer only when EVERY one of them is in one of the two explained
         # regions: the count in the head of the line is the total either way,
