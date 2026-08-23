@@ -127,7 +127,8 @@ are additions: nothing above is modified by them.
 | `plot_mtt_unweighting.py` | the two figures in the MG7 paper style, plus the full numeric report. |
 | `plot_mtt_unweighting_userstyle.py` | the same two figures in the user's own matplotlib style. |
 | `data/histograms_unweighting.npz` | the raw measurement: the same 0.25 GeV `m_tt` grid, plus a **top-virtuality** grid `m(W b)` and the `Delta m_tt` histograms. |
-| `data/meta_unweighting.json` | cells, resolved schemes, overweight counters, paired coincidence counts, sensitivity. |
+| `data/meta_unweighting.json` | cells, resolved schemes, overweight counters, paired coincidence counts per **window**, sensitivity. |
+| `data/paired_bins_unweighting.json` | paired coincidence counts per **plot bin**, which the ratio pane needs and the per-window ones cannot supply. Written by `--stage paired-bins`, which re-reads the decayed LHE files and runs no MadSpin. |
 | `data/logs_unweighting/` | every MadSpin log and card, again as `.log.txt`. |
 | `plots_unweighting/`, `plots_unweighting_userstyle/` | PDF + PNG + `numbers.txt`. |
 | `RESULTS_unweighting.md` | the answers and the numbers. |
@@ -136,6 +137,7 @@ are additions: nothing above is modified by them.
 python3 run_mtt_unweighting.py --stage sensitivity --nevents 1000000   # no MG5 needed
 python3 run_mtt_unweighting.py --stage madspin --cells PA_joint --basedir /tmp/u
 python3 run_mtt_unweighting.py --stage harvest --basedir /tmp/u --cross-check
+python3 run_mtt_unweighting.py --stage paired-bins   # re-reads the LHE, no MadSpin
 python3 plot_mtt_unweighting.py
 python3 plot_mtt_unweighting_userstyle.py
 ```
@@ -194,10 +196,23 @@ fluctuation is common to all of them and cancels in a difference: the error on
 `sqrt(n_A + n_B - 2 n_AB)`, not by `sqrt(n_A + n_B)`. How much that is actually
 worth here is measured and printed, not assumed.
 
+That applies to the **figures** too, and it is why they have a stage of their
+own. The ratio pane divides each scheme by its row's `joint` cell -- a sibling,
+not the truth -- so its error bars are paired, and a coincidence count summed
+over a physics window cannot supply them: an event can be inside one window
+under both schemes and in a *different bin* under each. `--stage paired-bins`
+therefore re-reads the decayed LHE files (no MadSpin, nothing generated) and
+counts the coincidences on the figure's own grid, asserting its window sums
+against the harvest's stored ones before anything is drawn. `ms_seq` and
+`ms_globalretry` hold a 500k front truncation of `ms_joint`'s 1M, so that row is
+paired over the prefix and `ms_joint`'s unshared half enters as an independent
+error; no pair had to be left unpaired.
+
 ## The ratio pane is clipped
 
 Both figures clip the ratio pane to **±20 %** (0.8-1.2). A point outside is
 drawn *on* the boundary it left through, as a filled triangle pointing that way,
-with no error bar -- never silently cut off. The count of such points is in the
-caption under the pane, the axis label says the pane is clipped, and every
-unclipped value is in the per-bin table of `numbers.txt`.
+with no error bar -- never silently cut off. The clip is not annotated on the
+figure and there is no caption under it: the arrows already say where each point
+went, the script prints the count when it writes the figure, and every unclipped
+value is in the per-bin table of `numbers.txt`, flagged with a `*`.

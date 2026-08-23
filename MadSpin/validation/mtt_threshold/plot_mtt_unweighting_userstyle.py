@@ -2,8 +2,17 @@
 """The unweighting-scheme comparison in the user's personal matplotlib style.
 
 A second, independent rendering of the two figures ``plot_mtt_unweighting.py``
-draws in the MG7-paper style.  Same data, same numbers, same clipping; only the
-styling differs, and neither of the first study's scripts is modified.
+draws in the MG7-paper style.  Same data, same numbers, same clipping, same
+ratio denominator and the same PAIRED errors -- only the styling differs, and
+neither of the first study's scripts is modified.
+
+The lower panel divides by the row's ``joint`` cell, not by the truth, and the
+truth is not drawn in it.  ``joint`` builds no ``Z_k`` table and
+``sequential_global_retry`` cancels ``Z_k`` identically, so those two agreeing
+is the null hypothesis and this panel puts it on the line.  Because the
+denominator is now a *sibling* -- the same production events, decayed again --
+the errors are paired: :meth:`UData.paired_ratio` supplies them, measured on
+these very bins, and this file does not reimplement that.
 
 The style conventions are the ones ``plot_mtt_threshold_userstyle.py`` already
 follows: stock rcParams (no usetex, sans serif), figsize (6, 6), a [3, 1]
@@ -14,8 +23,8 @@ figure and a linear axis flattens it.
 
 The ratio ladder is not used here.  The brief for this figure fixes the ratio
 pane at **+-20 %**, so the ladder's job (pick the smallest rung that holds every
-point) is done for it; points outside are drawn on the boundary as triangles and
-counted in the caption, never silently cut.
+point) is done for it; points outside are drawn on the boundary as triangles,
+never silently cut, and their unclipped values are in ``numbers.txt``.
 
 Usage::
 
@@ -36,7 +45,6 @@ _HERE = os.path.dirname(os.path.abspath(__file__))
 if _HERE not in sys.path:
     sys.path.insert(0, _HERE)
 
-from plot_mtt_threshold import ratio                    # noqa: E402
 from plot_mtt_unweighting import (                      # noqa: E402
     UData, REF, RCLIP_LO, RCLIP_HI, SCHEME_PLAIN, ROW_TITLE, write_numbers,
 )
@@ -77,7 +85,7 @@ def make_figure(d, row, out):
 
     # Shape comparison, matching the MG7-style figure: each curve divided by
     # its own total cross section over the full m_tt range.
-    den, dene, dcnt = d.shape(REF)
+    den, _dene, _dcnt = d.shape(REF)
     ax.step(d.edges, np.concatenate([den[:1], den]), where='pre',
             color=C_REF, lw=1.2, zorder=5,
             label='truth: pp -> tt~ j, t -> W+ b (off shell)')
@@ -99,39 +107,30 @@ def make_figure(d, row, out):
     ax.legend(loc='lower right', fontsize=8)
     ymin, ymax = ax.get_ylim()
     ax.set_ylim(ymin, ymax * 3.5)
-    # No prose in the pane.  Which schemes read the tabulated Z_k, and what
-    # the sub-threshold region means, is in numbers.txt and RESULTS.md where it
-    # carries its errors.  The title keeps the setup, which cannot be read off
-    # the curves; the sample sizes go with it because they are NOT common to
-    # the row -- the two slowest cells ran at 500k and the rest at 1M.
-    counts = {k: int(d.meta['runs'][k]['nevents']) for k in keys}
-    uniq = sorted(set(counts.values()), reverse=True)
-    if len(uniq) == 1:
-        size = '%s events/cell' % '{:,}'.format(uniq[0]).replace(',', ' ')
-    else:
-        size = ', '.join(
-            '%s: %s' % (SCHEME_PLAIN[CELL_SCHEME[k]],
-                        '{:,}'.format(counts[k]).replace(',', ' '))
-            for k in keys)
+    # No prose in the pane, and no sample size either.  Which schemes read the
+    # tabulated Z_k, what the sub-threshold region means, and how many events
+    # each cell holds are all in numbers.txt and RESULTS.md, where they carry
+    # their errors and their measured sensitivity.  The title keeps only the
+    # setup, which cannot be read off the curves.
     ax.set_title(r'$pp\to t\bar{t}j$, 13 TeV, LO, $\mu_R=\mu_F=m_t$, '
                  r'BW cut $=%g\,\Gamma_t$ -- %s'
-                 % (d.meta.get('bwcutoff', 15.0), ROW_TITLE[row][1])
-                 + '\n' + size,
+                 % (d.meta.get('bwcutoff', 15.0), ROW_TITLE[row][1]),
                  fontsize=9)
     ax.annotate('$2m_t$', xy=(two_mt, 0.02), xycoords=('data', 'axes fraction'),
                 xytext=(3, 0), textcoords='offset points', ha='left',
                 va='bottom', fontsize=9, color='0.35')
 
+    # The unity line is ``joint`` itself, drawn in joint's own colour: a black
+    # dashed line here would invite it to be read as the truth, which is the
+    # one curve deliberately absent from this panel.
     rx.axhspan(0.95, 1.05, facecolor='C0', alpha=0.16, zorder=0)
     rx.axhspan(0.9, 1.1, facecolor='C0', alpha=0.10, zorder=0)
-    rx.axhline(1.0, color=C_REF, ls='--', lw=0.9, zorder=2)
 
+    ref = d.ref_of(row)
     n_off = 0
-    for key in keys:
+    for key in [k for k in keys if k != ref]:
         scheme = CELL_SCHEME[key]
-        y, ye, cnt = d.shape(key)
-        r, re = ratio(y, ye, den, dene)
-        r = np.where((cnt == 0) | (dcnt == 0), np.nan, r)
+        r, re = d.paired_ratio(row, key)
         inside = np.isfinite(r) & (r >= RCLIP_LO) & (r <= RCLIP_HI)
         above = np.isfinite(r) & (r > RCLIP_HI)
         below = np.isfinite(r) & (r < RCLIP_LO)
@@ -151,30 +150,33 @@ def make_figure(d, row, out):
                     color=COLOR[scheme], ms=MS + 2, clip_on=False, zorder=6)
         n_off += int(above.sum()) + int(below.sum())
 
+    # The reference, drawn LAST and as a plain step -- which is this style's
+    # convention for the reference of a panel, exactly as the truth is drawn in
+    # the panel above.  Markers on it would be a row of dots on a line that is
+    # 1 by definition, and would sit on top of the points that are being
+    # compared with it.
+    rx.step(d.edges, np.ones(len(d.edges)), where='pre',
+            color=COLOR[CELL_SCHEME[ref]], lw=1.2, zorder=5)
+
     rx.set_ylim(RCLIP_LO, RCLIP_HI)
     rx.set_yticks([0.8, 0.9, 1.0, 1.1, 1.2])
     rx.text(0.99, 0.92, 'bands: $\\pm5\\%$, $\\pm10\\%$',
             transform=rx.transAxes, ha='right', va='top', fontsize=7,
             color='C0')
-    rx.set_ylabel('Shape ratio\n(clipped to $\\pm20\\%$)', fontsize=9)
+    rx.set_ylabel('Shape ratio to joint', fontsize=9)
     # The variable and its unit, nothing else.
     rx.set_xlabel(r'$m_{t\bar{t}}$ [GeV]')
     rx.set_xlim(lo, hi)
-    # Under the figure, not inside the pane: the pane is exactly where the
-    # off-scale points are.
-    fig.text(0.5, 0.012,
-             '%d point%s lie outside +-20%% and are drawn as triangles on the '
-             'boundary, pointing the way they went;\nunclipped values in '
-             'numbers.txt.' % (n_off, '' if n_off == 1 else 's'),
-             ha='center', va='bottom', fontsize=7, color='0.35')
-
+    # No footnote under the figure.  The arrows already say where every
+    # off-scale point went, and numbers.txt carries each one's value and error;
+    # the bottom margin is the x-label's now.
     fig.subplots_adjust(hspace=0.1, left=0.15, right=0.97,
-                        bottom=0.165, top=0.91)
+                        bottom=0.10, top=0.93)
     base = os.path.join(out, 'mtt_unweighting_%s' % row)
     fig.savefig(base + '.pdf')
     fig.savefig(base + '.png', dpi=DPI)
     plt.close(fig)
-    return base
+    return base, n_off
 
 
 def main():
@@ -187,11 +189,14 @@ def main():
 
     d = UData(args.data)
     for row in ('PA', 'madspin'):
-        base = make_figure(d, row, args.out)
-        if base is None:
+        got = make_figure(d, row, args.out)
+        if got is None:
             print('%s: no cells on disk, skipped' % row)
         else:
-            print('wrote %s.pdf / .png' % base)
+            base, n_off = got
+            print('wrote %s.pdf / .png   (%d point%s off the +-20 %% pane, '
+                  'drawn on the boundary)'
+                  % (base, n_off, '' if n_off == 1 else 's'))
 
     with open(os.path.join(args.out, 'numbers.txt'), 'w') as fh:
         write_numbers(d, args.out, fh)

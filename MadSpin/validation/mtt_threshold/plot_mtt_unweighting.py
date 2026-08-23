@@ -19,6 +19,34 @@ a sub-per-cent departure of the third is a question about the sample size, and
 ``numbers_unweighting.txt`` answers it explicitly rather than reporting an
 inconclusive ratio as agreement.
 
+The ratio pane divides by ``joint``, not by the truth
+-----------------------------------------------------
+``joint`` builds no ``Z_k`` table and ``sequential_global_retry`` cancels
+``Z_k`` identically, so *those two agreeing is the null hypothesis* -- and a
+pane that divides both by the truth makes the reader subtract two large,
+common, physical shape differences by eye to see it.  Dividing by ``joint``
+puts the null on the line: ``sequential_global_retry`` flat at 1 is the null
+holding, and ``sequential`` -- the only scheme that trusts the tabulated
+``Z_hat`` -- departing from it is the residual ``Z_hat/Z``.  The truth is not
+drawn in the pane at all; it is still the black curve of the upper pane, where
+the absolute lineshape is the thing being shown.
+
+Changing the denominator from the truth to a *sibling* changes the errors, and
+this is the whole reason the pane is not a relabelling.  The truth is an
+independent sample, so a ratio to it combines two independent errors in
+quadrature.  The cells are **not** independent of each other: every one of them
+decays the SAME production events in the same order (``max |Delta sqrt(shat)|``
+is 0 across a row, checked), so the production-level fluctuation is common and
+largely cancels.  Treating such a ratio as independent overstates its error --
+by a factor 1.7 in the 5 GeV bins above 380 GeV, measured, not assumed.
+
+The pairing is therefore used, on the figure's own bins.  ``run_mtt_unweighting
+--stage paired-bins`` re-reads the decayed LHE files and counts, per plot bin,
+how many production events land in *that* bin under a cell and under its row's
+``joint``; :func:`paired_ratio` turns those into the covariance the ratio's
+error needs.  Per-window coincidences cannot do this: an event can be in one
+window under both schemes and in a different BIN under each.
+
 Two figures, one per spinmode:
 
     plot_mtt_unweighting.py [--data DIR] [--out DIR]
@@ -27,9 +55,9 @@ Two figures, one per spinmode:
          <out>/numbers.txt
 
 The ratio pane is **clipped to +-20 %**.  Points outside are drawn *on* the
-boundary as filled triangles pointing the way they went, never silently cut off,
-and the axis label says so.  The unclipped value of every such point is in the
-per-bin table of ``numbers.txt``.
+boundary as filled triangles pointing the way they went, never silently cut off.
+The unclipped value of every such point is in the per-bin table of
+``numbers.txt``, which is also where the pairing is spelled out curve by curve.
 """
 
 import argparse
@@ -48,8 +76,8 @@ if _HERE not in sys.path:
 # rcParams, the zone binning, the ratio error propagation, the integrals -- is
 # imported.  ``plot_mtt_threshold`` is NOT modified by this file.
 from plot_mtt_threshold import (                       # noqa: E402
-    Data, ratio, zone_edges, check_minus, USETEX, MINUS_FIX, LW, allcolors,
-    ANCHOR, AGREE_HI, _fmt_int, _tx,
+    Data, zone_edges, check_minus, USETEX, MINUS_FIX, LW, allcolors,
+    ANCHOR, AGREE_HI, _tx,
 )
 import matplotlib.pyplot as plt                        # noqa: E402
 from matplotlib.ticker import AutoMinorLocator         # noqa: E402
@@ -116,11 +144,31 @@ class UData(Data):
     """
 
     def __init__(self, ddir, npz='histograms_unweighting.npz',
-                 meta='meta_unweighting.json'):
+                 meta='meta_unweighting.json',
+                 pbins='paired_bins_unweighting.json'):
         self.z = np.load(os.path.join(ddir, npz))
         self.meta = json.load(open(os.path.join(ddir, meta)))
+        p = os.path.join(ddir, pbins)
+        if not os.path.exists(p):
+            raise SystemExit(
+                '%s is missing.  The ratio pane divides one cell by another '
+                'cell of the same production sample, so its errors are PAIRED '
+                'and need the per-bin coincidence counts.  Produce them with\n'
+                '    python3 run_mtt_unweighting.py --stage paired-bins\n'
+                'which re-reads the decayed LHE files and runs no MadSpin.'
+                % p)
+        self.pb = json.load(open(p))
         self.fine = self.z['bins']
         self.edges = zone_edges()
+        # The coincidences are counted on a grid, and the pane is drawn on a
+        # grid.  If the two ever drift apart the ratios would keep their
+        # errors from the wrong bins and nothing would look wrong, so the
+        # agreement is asserted rather than assumed.
+        if not np.allclose(self.pb['edges'], self.edges):
+            raise SystemExit(
+                '%s was counted on a different binning from the one this '
+                'figure draws.  Re-run "run_mtt_unweighting.py --stage '
+                'paired-bins".' % p)
         self.centres = 0.5 * (self.edges[:-1] + self.edges[1:])
         self.widths = np.diff(self.edges)
         self.two_mt = float(self.meta.get('two_mt', 346.0))
@@ -216,6 +264,105 @@ class UData(Data):
         """Error on the WEIGHTED <m_top>: the unweighted one times sqrt(deff)."""
         return self.mtop_moments(key)[1] * math.sqrt(self.mtop_deff(key))
 
+    # --- the ratio pane's denominator, and its pairing ---------------------
+    def ref_of(self, row):
+        """The cell the ratio pane divides by: the row's ``joint``."""
+        return self.pb['rows'][row]['ref']
+
+    def paired_ratio(self, row, key):
+        """Per-bin ``shape(key) / shape(joint)``, with the PAIRED error.
+
+        The value is the shape ratio of the two curves in the pane above, so
+        the pane is exactly ``coloured curve / blue curve`` and nothing is
+        renormalised behind the reader's back.
+
+        The error is where the sibling denominator earns its keep.  Write the
+        plotted quantity as a fraction of each sample, ``q = n / N`` (the
+        self-normalisation divides by ``sum(w)/N`` over the whole file, so the
+        per-event rate is what the pane compares, and ``N`` cancels out of the
+        density).  Then, with ``R = q_a / q_b``,
+
+            var(R)/R^2 = var(n_a)/n_a^2 + var(n_b)/n_b^2
+                         - 2 cov(n_a, n_b)/(n_a n_b)
+
+        and every term is measured:
+
+          ``var(n) = n (1 - n/N)``      binomial, not Poisson: the bin is a
+                                        fraction of a fixed-size sample, and
+                                        the ``(1-f)`` is what makes a curve
+                                        divided by itself come out with zero
+                                        error rather than a spurious one.
+          ``cov    = n_both - n_a^pre n_b^pre / N_pair``
+                                        the coincidences counted on THIS grid
+                                        by ``--stage paired-bins``, over the
+                                        events the two cells actually share.
+
+        The third term is the whole point.  Where the two cells put the same
+        production event in the same bin, the fluctuation is common and drops
+        out; the identity limit ``a == b`` gives exactly 0, and the rare-bin
+        limit reduces to McNemar's ``sqrt(n_a + n_b - 2 n_both) / n``, which is
+        the estimator ``run_mtt_unweighting`` already quotes per window.
+
+        The ``madspin`` row is only *partly* paired and the formula handles it
+        without a special case.  ``ms_seq`` and ``ms_globalretry`` hold 500k
+        events, a front truncation of the 1M ``ms_joint`` decays, so the
+        coincidences exist over that prefix only while ``n_b`` is the full 1M
+        count -- the denominator keeps all its statistics and only the shared
+        half of it is credited as correlated.  In the perfectly-concordant
+        limit the expression then collapses to the variance of ``ms_joint``'s
+        unshared second half, which is the right answer.
+
+        The reference divided by itself is returned as exactly ``(1, 0)``: it
+        is the definition of the pane, and its own statistical error is already
+        inside every other curve's error bar through ``n_b``.
+
+        Counts, not weights, throughout.  These are accept/reject samples and
+        are meant to be unit weight; where the overweight safety net broke that
+        the design effect is 1.0004 at worst (``deff`` in ``numbers.txt``), so
+        the count-based relative error is right to well under a per cent, and
+        it is the only form in which the pairing is available at all.
+        """
+        r = self.pb['rows'][row]
+        ref = r['ref']
+        ya, _, na = self.shape(key)
+        yb, _, nb = self.shape(ref)
+        out = np.full(len(na), np.nan)
+        err = np.full(len(na), np.nan)
+        good = (na > 0) & (nb > 0)
+        out[good] = ya[good] / yb[good]
+        if key == ref:
+            return np.where(good, 1.0, np.nan), np.where(good, 0.0, np.nan)
+        npair = float(r['n_pairs'])
+        apre = np.array(r['cells'][key]['pre'], dtype=float)
+        bpre = np.array(r['cells'][ref]['pre'], dtype=float)
+        both = np.array(r['cells'][key]['both'], dtype=float)
+        na = na.astype(float)
+        nb = nb.astype(float)
+        cov = both - apre * bpre / npair
+        with np.errstate(divide='ignore', invalid='ignore'):
+            var = ((1.0 - na / self.nevents(key)) / na
+                   + (1.0 - nb / self.nevents(ref)) / nb
+                   - 2.0 * cov / (na * nb))
+        err[good] = out[good] * np.sqrt(np.maximum(var[good], 0.0))
+        return out, err
+
+    def unpaired_ratio_err(self, row, key):
+        """The same error with the third term dropped: what pairing bought.
+
+        Reported in ``numbers.txt`` beside the paired one so the gain is a
+        measured number on the page rather than a claim in a docstring.
+        """
+        ref = self.ref_of(row)
+        r, _ = self.paired_ratio(row, key)
+        _, _, na = self.shape(key)
+        _, _, nb = self.shape(ref)
+        na = na.astype(float)
+        nb = nb.astype(float)
+        with np.errstate(divide='ignore', invalid='ignore'):
+            var = ((1.0 - na / self.nevents(key)) / na
+                   + (1.0 - nb / self.nevents(ref)) / nb)
+            return np.where((na > 0) & (nb > 0), r * np.sqrt(var), np.nan)
+
 
 # --------------------------------------------------------------------------
 def _panels():
@@ -275,7 +422,7 @@ def make_figure(d, row, out, tag=''):
     # below is a pure shape ratio.  It also makes the 1M/500k split invisible
     # here -- ``shape`` is per-event throughout -- leaving it in the error bars
     # only, which is the honest place for it.
-    den, dene, dcnt = d.shape(REF)
+    den, dene, _dcnt = d.shape(REF)
     ax.step(d.edges, np.concatenate([den[:1], den]), where='pre',
             color='black', lw=LW, zorder=5,
             label=_tx(r'truth: $pp \to t\bar t j$, $t \to W^+ b$ (off shell)',
@@ -330,96 +477,80 @@ def make_figure(d, row, out, tag=''):
             _tx(r'\textbf{%s}' % ROW_TITLE[row][0], ROW_TITLE[row][1]),
             transform=ax.transAxes, ha='left', va='top', fontsize=11)
 
-    # The sample size is setup, not commentary, and it is NOT common to the
-    # row: ``ms_seq`` and ``ms_globalretry`` cost 7050 s and 11679 s and were
-    # run at 500k while the rest ran at 1M.  Saying "same 1M events" over a row
-    # where two curves hold half that would be false, so the line states what
-    # each cell actually holds whenever they differ.
-    counts = {k: int(d.meta['runs'][k]['nevents']) for k in keys}
-    uniq = sorted(set(counts.values()), reverse=True)
-    if len(uniq) == 1:
-        sample = _tx(r'same %s production events, same seed'
-                     % _fmt_int(uniq[0]),
-                     'same %s production events, same seed' % _fmt_int(uniq[0]))
-    else:
-        # Grouped BY SIZE rather than listed per cell: naming all four schemes
-        # with their counts overruns the pane, and the schemes that share a
-        # size are the natural grouping anyway.
-        # SHORT names and no leading clause: the full scheme names here run
-        # the line under the plateau of the curve.  The legend already spells
-        # the schemes out in full, so this line only has to carry the sizes.
-        bits = []
-        for n in uniq:
-            who = ', '.join(SHORT[CELL_SCHEME[k]]
-                            for k in keys if counts[k] == n)
-            bits.append('%s (%s)' % (_fmt_int(n), who))
-        txt = 'same sample and seed; ' + '; '.join(bits)
-        sample = _tx(txt.replace('_', r'\_'), txt)
-    ax.text(0.028, 0.869, sample, transform=ax.transAxes, ha='left', va='top',
-            fontsize=8.5, color='0.25')
+    # The sample size is NOT on the figure.  It used to be, as a third header
+    # line: the cells are not all the same size (five hold 1M, ``ms_seq`` and
+    # ``ms_globalretry`` hold 500k) and a figure that let the reader assume
+    # otherwise would be misleading about the error bars.  It is off now
+    # because nothing on the figure is read off it -- every curve is a
+    # per-event density and every error bar already carries its own cell's
+    # size -- and ``numbers.txt`` states the count of every cell, and the
+    # windowed sensitivity each count buys, in a table that a header line
+    # could never fit.
 
     ax.annotate(_tx(r'$2m_t$', r'$2m_t$'),
                 xy=(two_mt, 0.03), xycoords=('data', 'axes fraction'),
                 xytext=(3, 0), textcoords='offset points',
                 ha='left', va='bottom', fontsize=11, color='0.35')
 
-    # --- ratio pane, clipped -------------------------------------------
+    # --- ratio pane: each scheme over the row's ``joint`` ----------------
+    #
+    # The denominator is a SIBLING, not the truth.  What that buys, and what it
+    # costs, is in :meth:`UData.paired_ratio`; what it *shows* is the null
+    # hypothesis directly.  The truth is deliberately absent here: it is an
+    # independent sample with a physical shape difference of its own, and
+    # carrying it through this pane would make the reader subtract that by eye
+    # from the sub-per-cent effect the figure is about.
     rx.axhspan(0.95, 1.05, facecolor=allcolors[0], alpha=0.16, zorder=0)
     rx.axhspan(0.9, 1.1, facecolor=allcolors[0], alpha=0.10, zorder=0)
-    rx.axhline(1.0, color='black', lw=0.9, zorder=2)
     rx.text(0.993, 0.93, _tx(r'bands: $\pm5\%$, $\pm10\%$',
                              'bands: +-5%, +-10%'),
             transform=rx.transAxes, ha='right', va='top',
             fontsize=8.5, color=allcolors[0])
 
+    ref = d.ref_of(row)
     n_off = 0
-    for key in keys:
+    # The reference LAST, so its flat line sits on top of the others rather
+    # than under them, and in its own colour and dash from the pane above --
+    # the unity line here IS ``joint``, and drawing it in plain black would
+    # invite it to be read as the truth, which is the one curve not in this
+    # pane.
+    for key in [k for k in keys if k != ref] + [ref]:
         scheme = CELL_SCHEME[key]
-        # Both sides self-normalised, so this pane is a SHAPE ratio and sits on
-        # 1 by construction.  Any statement about the rate -- including the
-        # overweight excess that moves ms_joint's sigma by +0.3 % -- has been
-        # divided out here on purpose, and lives in numbers.txt instead.
-        y, ye, cnt = d.shape(key)
-        r, re = ratio(y, ye, den, dene)
+        # Both sides self-normalised, so this is a SHAPE ratio.  Any statement
+        # about the rate -- including the overweight excess that moves
+        # ms_joint's sigma by +0.3 % -- is divided out here on purpose and
+        # lives in numbers.txt instead.
+        r, re = d.paired_ratio(row, key)
         # An empty bin here is a statement about the sample size, never a
         # structural zero: every cell on this figure draws a virtuality and
-        # reshuffles, so all of them can reach below 2 m_t.  Drawn as a gap.
-        r = np.where((cnt == 0) | (dcnt == 0), np.nan, r)
+        # reshuffles, so all of them can reach below 2 m_t.  Drawn as a gap,
+        # which is why no bin on this figure ever gets the open-circle marker
+        # that the companion uses for ``onshell``'s unreachable region.
         up, dn = draw_clipped_ratio(rx, d.centres, d.edges, r, re,
                                     COLOR[scheme], LS[scheme], LW)
         n_off += up + dn
 
     rx.set_ylim(RCLIP_LO, RCLIP_HI)
     rx.set_yticks([0.8, 0.9, 1.0, 1.1, 1.2])
-    rx.set_ylabel(_tx(r'shape ratio to truth' '\n' r'(clipped to $\pm20\%$)',
-                      'shape ratio to truth\n(clipped to +-20%)'), fontsize=11)
+    rx.set_ylabel(_tx(r'shape ratio to \texttt{joint}',
+                      'shape ratio to joint'), fontsize=11)
     # The variable and its unit, nothing else: the definition of ``m_tt`` moved
     # to RESULTS.md with the rest of the prose.
     rx.set_xlabel(_tx(r'$m_{t\bar t}$ [GeV]', r'$m_{t\bar t}$ [GeV]'))
     rx.xaxis.set_minor_locator(AutoMinorLocator())
     rx.yaxis.set_minor_locator(AutoMinorLocator())
     rx.set_xlim(lo, hi)
-    # The clipping statement goes under the whole figure rather than inside the
-    # pane: the pane is exactly where the off-scale points are, so a caption in
-    # it would sit on top of the thing it is describing.
-    fig.text(0.5, 0.008,
-             _tx(r'ratio pane clipped to $\pm20\%%$: %d point%s outside, drawn '
-                 r'as triangles \emph{on} the boundary, pointing the way they '
-                 r'went.' '\n' r'Unclipped values in \texttt{numbers.txt}.'
-                 % (n_off, '' if n_off == 1 else 's'),
-                 'ratio pane clipped to +-20%%: %d point%s outside, drawn as '
-                 'triangles on the boundary, pointing the way they went.\n'
-                 'Unclipped values in numbers.txt.'
-                 % (n_off, '' if n_off == 1 else 's')),
-             ha='center', va='bottom', fontsize=8, color='0.35',
-             linespacing=1.4)
 
-    fig.subplots_adjust(left=0.135, right=0.975, top=0.985, bottom=0.135)
+    # No footnote.  The clipping used to be stated under the figure; it is a
+    # property of the pane, the arrows say where every off-scale point went,
+    # and ``numbers.txt`` carries each one's unclipped value with its error.
+    # The bottom margin is the x-label's now, not a caption's.
+    fig.subplots_adjust(left=0.135, right=0.975, top=0.985, bottom=0.075)
     base = os.path.join(out, 'mtt_unweighting_%s%s' % (row, tag))
     fig.savefig(base + '.pdf')
     fig.savefig(base + '.png', dpi=300)
     plt.close(fig)
-    return base
+    return base, n_off
 
 
 # --------------------------------------------------------------------------
@@ -705,37 +836,220 @@ def write_numbers(d, out, fh=sys.stdout):
                  abs(r - 1) / sr if sr else float('nan')))
     p('')
 
-    # --- per-bin table, unclipped ------------------------------------------
+    # --- the ratio pane's own numbers, per bin, unclipped ------------------
     for row in ('PA', 'madspin'):
         keys = d.cells(row)
         if not keys:
             continue
-        p('-- per-bin SHAPE ratio to truth, %s (UNCLIPPED; the figure clips '
-          'the pane to +-20%%) --' % row)
-        p('   Same normalisation as the figure: each curve divided by its own')
-        p('   total sigma, so this is a shape ratio and the overweight rate')
-        p('   carry is divided out of it.')
-        den, dene, _ = d.shape(REF)
+        ref = d.ref_of(row)
+        pbr = d.pb['rows'][row]
+        p('=' * 78)
+        p('-- per-bin SHAPE ratio to %s, %s -- THIS IS THE FIGURE\'S RATIO '
+          'PANE --' % (ref, row))
+        p('   UNCLIPPED.  The pane clips to +-20 %; every value outside that')
+        p('   is drawn on the boundary as a triangle and its real value is')
+        p('   here.')
+        p('')
+        p('   Denominator: %s, the row\'s joint cell -- a SIBLING of every'
+          % ref)
+        p('   other column, not the truth.  Both sides are divided by their')
+        p('   own total sigma first, so this is a shape ratio and the')
+        p('   overweight rate carry is divided out of it.')
+        p('')
+        p('   ERRORS ARE PAIRED.  The cells decay the SAME production events')
+        p('   in the same order (max |Delta sqrt(shat)| = %.3g GeV over %s'
+          % (pbr['max_dshat'], _fmt_plain(pbr['n_pairs'])))
+        p('   pairs), so the production fluctuation is common to numerator and')
+        p('   denominator and cancels.  The covariance is MEASURED on these')
+        p('   very bins by "run_mtt_unweighting.py --stage paired-bins", which')
+        p('   counts how many production events land in the SAME bin under')
+        p('   both cells; a per-window coincidence count cannot answer this,')
+        p('   because an event can be in one window under both schemes and in')
+        p('   a different bin under each.')
+        p('   The "unpaired" column drops the covariance term -- it is what an')
+        p('   independent-samples error bar would have been, and the ratio of')
+        p('   the two is what the shared production sample bought, per bin.')
+        p('')
+        pairing = ('%s: every cell holds %s events and pairs with %s over all '
+                   'of them.'
+                   % (row, _fmt_plain(pbr['n_pairs']), ref))
+        if any(int(d.meta['runs'][k]['nevents']) != pbr['n_pairs']
+               for k in keys):
+            pairing = (
+                '%s: PARTLY paired.  %s is decayed from %s production events; '
+                '\n   the other cells hold %s, a FRONT TRUNCATION of the same '
+                'file, so the\n   coincidences exist over that prefix only.  '
+                'The denominator keeps all\n   %s of its events -- only its '
+                'shared half is credited as correlated,\n   and its unshared '
+                'half enters as an independent error, which is why the\n   '
+                'pairing gain is smaller in this row than in PA.'
+                % (row, ref, _fmt_plain(int(d.meta['runs'][ref]['nevents'])),
+                   _fmt_plain(pbr['n_pairs']),
+                   _fmt_plain(int(d.meta['runs'][ref]['nevents']))))
+        p('   %s' % pairing)
+        p('')
         p('   %s' % ',  '.join('%s = %s' % (SHORT[CELL_SCHEME[k]],
                                             CELL_SCHEME[k]) for k in keys))
-        head = '%9s %12s' % ('bin [GeV]', 'truth')
-        for key in keys:
-            head += ' %14s' % SHORT[CELL_SCHEME[key]]
-        p(head)
+        others = [k for k in keys if k != ref]
+        head = '%9s %9s' % ('bin [GeV]', 'n(joint)')
+        for key in others:
+            head += ' %-26s' % SHORT[CELL_SCHEME[key]]
+        p(head.rstrip())
+        p(('%9s %9s' % ('', '') + ''.join(
+            ' %-26s' % 'ratio +- paired (unpaired)' for _ in others)).rstrip())
+        den_of_ref, _, nref = d.shape(ref)
         cols = []
-        for key in keys:
-            y, ye, cnt = d.shape(key)
-            r, re = ratio(y, ye, den, dene)
-            cols.append((r, re, cnt))
+        for key in others:
+            r, re = d.paired_ratio(row, key)
+            cols.append((r, re, d.unpaired_ratio_err(row, key)))
         for i in range(len(d.centres)):
-            line = '%4.0f-%4.0f %12.5g' % (d.edges[i], d.edges[i + 1], den[i])
-            for r, re, cnt in cols:
-                if cnt[i] == 0 or not np.isfinite(r[i]):
-                    line += ' %14s' % '-'
+            line = '%4.0f-%4.0f %9d' % (d.edges[i], d.edges[i + 1], nref[i])
+            for r, re, ru in cols:
+                if not np.isfinite(r[i]):
+                    line += ' %-26s' % '-'
                 else:
-                    line += ' %7.3f+-%.3f' % (r[i], re[i])
-            p(line)
+                    flag = ' *' if not RCLIP_LO <= r[i] <= RCLIP_HI else ''
+                    line += ' %-26s' % ('%.4f +- %.4f (%.4f)%s'
+                                        % (r[i], re[i], ru[i], flag))
+            p(line.rstrip())
+        p('   * = outside the pane\'s +-20 %, drawn there as a boundary '
+          'triangle.')
         p('')
+        # The one-line summary of what the pane is FOR.
+        p('   what the pane says, summed over the plotted range %g-%g GeV:'
+          % (d.edges[0], d.edges[-1]))
+        p('   %-16s %10s %8s %10s %14s'
+          % ('cell', 'chi2', 'ndf', 'chi2/ndf', 'how far off'))
+        for key in others:
+            r, re = d.paired_ratio(row, key)
+            m = np.isfinite(r) & np.isfinite(re) & (re > 0)
+            chi2 = float((((r[m] - 1.0) / re[m]) ** 2).sum())
+            ndf = int(m.sum())
+            # chi2 has mean ndf and variance 2 ndf, so this is how many of its
+            # own sigmas the total sits from the null.  Stated that way rather
+            # than as a p-value, because the off-diagonal covariance below
+            # makes a p-value more precise than the input deserves.
+            p('   %-16s %10.1f %8d %10.3f %+13.1f s'
+              % (key, chi2, ndf, chi2 / ndf if ndf else float('nan'),
+                 (chi2 - ndf) / math.sqrt(2.0 * ndf) if ndf
+                 else float('nan')))
+        p('   The chi2 treats the bins as independent of ONE ANOTHER.  They')
+        p('   are not: a production event that lands in different bins under')
+        p('   the two schemes correlates those two bins, and that off-diagonal')
+        p('   covariance was not harvested.  The EXPECTATION is still ndf --')
+        p('   correlation between bins does not move it, only the diagonal')
+        p('   variance could, and that one is measured -- but the SPREAD is')
+        p('   not sqrt(2 ndf), so "how far off" is an order of magnitude, not')
+        p('   a p-value.  The window table above is the exact statement.')
+        p('   The columns are also correlated WITH EACH OTHER: they share the')
+        p('   denominator, so a fluctuation of %s moves all of them the same'
+          % ref)
+        p('   way.  A deviation common to every column is a statement about')
+        p('   %s; a deviation in one column only is a statement about that'
+          % ref)
+        p('   scheme.  The comparison the figure exists for is the latter.')
+        p('')
+
+        # --- where the pane's zero point actually sits --------------------
+        # The plotted ratio is built from WEIGHTS; the errors from COUNTS.
+        # For a unit-weight cell the two are the same number, and where they
+        # are not, the difference is the overweight safety net and it belongs
+        # on the page rather than in a footnote.
+        nref_c = nref
+        for key in others:
+            ya, _, na_c = d.shape(key)
+            rw = ya / den_of_ref
+            rc = ((na_c / d.nevents(key))
+                  / (nref_c / d.nevents(ref)))
+            g = (na_c > 0) & (nref_c > 0)
+            off = rw[g] / rc[g] - 1.0
+            # The bin that departs furthest from the common offset: that is
+            # where an overweight event actually landed.
+            worst = int(np.flatnonzero(g)[
+                int(np.argmax(np.abs(off - np.median(off))))])
+            p('   %-16s weighted/counted - 1: median %+.5f, range %+.5f .. '
+              '%+.5f (furthest bin %.0f-%.0f GeV)'
+              % (key, float(np.median(off)), float(off.min()),
+                 float(off.max()), d.edges[worst], d.edges[worst + 1]))
+        p('   A cell with no overweights gives 0 in every bin, and the PA')
+        p('   cells do -- they are unit weight to the last digit.')
+        p('   The MEDIAN is a normalisation offset of the whole pane: the')
+        p('   denominator\'s own sigma was moved by weights the safety net')
+        p('   carried, so every curve sits that far off 1 TOGETHER and the')
+        p('   difference between two curves -- which is what this figure is')
+        p('   read for -- is untouched by it.  ms_joint carries +0.296 % of')
+        p('   its sigma in 754 overweight events (largest factor 83), and')
+        p('   +0.00295 is exactly that.')
+        p('   The RANGE is not: where an overweight event lands inside the')
+        p('   plotted window it moves that bin\'s weighted density and not its')
+        p('   count, so those bins carry an extra shift of up to 0.3 % on top')
+        p('   of the offset.  That is a RATE artefact of the accept/reject')
+        p('   machinery, not a Z_k effect, and it is well inside the paired')
+        p('   error of the bins it touches -- but it is why the count-based')
+        p('   error bar and the weight-based central value are not quite the')
+        p('   same measurement in this row, and why section 6\'s caveat about')
+        p('   ms_joint applies to the pane as well.')
+        p('')
+
+    # --- the reading the pane exists for ----------------------------------
+    p('=' * 78)
+    p('-- READING THE PANE: sequential against sequential_global_retry ------')
+    p('=' * 78)
+    p('   The pane divides by joint, and joint is the scheme that builds NO')
+    p('   Z_k table at all.  sequential_global_retry builds one but cancels it')
+    p('   identically.  So the two of them landing on 1 together is the null')
+    p('   hypothesis, and sequential -- the only scheme that trusts the')
+    p('   tabulated Z_hat -- leaving them is the residual Z_hat/Z.  Reading')
+    p('   that off the pane is a comparison of two CURVES, not of a curve with')
+    p('   the line, and that comparison is where the shared denominator\'s own')
+    p('   fluctuation drops out.')
+    p('')
+    p('   Integrated, from the paired window counts (exact; the per-bin chi2')
+    p('   above cannot be turned into a significance because its bins are')
+    p('   correlated).  Every entry is a RATIO and its PAIRED error.')
+    p('')
+    p('   NOTE for the madspin row: these window counts are FULLY paired, so')
+    p('   ms_joint enters them at its shared 500k prefix, while the figure\'s')
+    p('   pane uses all 1M of it in the denominator.  The window numbers are')
+    p('   therefore the stricter comparison and the pane the more precise')
+    p('   one; they are the same measurement to within the error on the half')
+    p('   of ms_joint that the two treat differently.')
+    p('%-34s %-14s %18s %8s' % ('window', 'pair', 'ratio', 'sigma'))
+    for row, seq, ret, jnt in (('PA', 'PA_seq', 'PA_globalretry', 'PA_joint'),
+                               ('madspin', 'ms_seq', 'ms_globalretry',
+                                'ms_joint')):
+        if seq not in d.meta['runs']:
+            continue
+        p('   [%s]' % row)
+        for name, _lo, _hi in WINDOWS:
+            for a, b, tag in ((ret, jnt, 'retry/joint'),
+                              (seq, jnt, 'seq/joint'),
+                              (seq, ret, 'seq/retry')):
+                pv = (d.meta['paired'].get('%s vs %s' % (a, b))
+                      or d.meta['paired'].get('%s vs %s' % (b, a)))
+                if not pv:
+                    continue
+                w = pv['windows'].get(name)
+                if not w or not w['n_a'] or not w['n_b']:
+                    continue
+                # ``rel_diff`` is stored as (n_a - n_b)/n_a for the pair in
+                # the order it was measured; recompute from the raw counts so
+                # the orientation printed here is the one the label says.
+                flip = d.meta['paired'].get('%s vs %s' % (a, b)) is None
+                na, nb = ((w['n_b'], w['n_a']) if flip
+                          else (w['n_a'], w['n_b']))
+                disc = w['n_a'] + w['n_b'] - 2 * w['n_both']
+                r = na / nb
+                sr = math.sqrt(disc) / nb
+                p('   %-31s %-14s %10.5f +- %.5f %7.2f'
+                  % (name, tag, r, sr, abs(r - 1) / sr if sr else
+                     float('nan')))
+        p('')
+    p('   Read the three lines of a window together.  retry/joint consistent')
+    p('   with 1 IS the null holding; seq/retry is then the cleanest form of')
+    p('   the Z_hat/Z question, because neither of its two samples is the one')
+    p('   every other ratio on the figure divides by.')
+    p('')
 
 
 def main():
@@ -748,12 +1062,18 @@ def main():
     os.makedirs(args.out, exist_ok=True)
     d = UData(args.data)
     for row in ('PA', 'madspin'):
-        base = make_figure(d, row, args.out)
-        if base is None:
+        got = make_figure(d, row, args.out)
+        if got is None:
             print('%s: no cells on disk, skipped' % row)
             continue
-        print('wrote %s.pdf / .png   (usetex=%s, minus fix applied=%s)'
-              % (base, USETEX, MINUS_FIX))
+        base, n_off = got
+        # The off-scale count used to be a footnote ON the figure.  It is a
+        # property of the drawing, not of the measurement, so it is reported
+        # to whoever ran the script instead; the values themselves are in
+        # numbers.txt, flagged with a star.
+        print('wrote %s.pdf / .png   (usetex=%s, minus fix applied=%s, '
+              '%d point%s off the +-20 %% pane)'
+              % (base, USETEX, MINUS_FIX, n_off, '' if n_off == 1 else 's'))
         if args.check_minus:
             ok, detail = check_minus(base + '.pdf')
             print('minus-sign check: %s -- %s' % (ok, detail))

@@ -80,6 +80,7 @@ from __future__ import absolute_import
 from __future__ import division
 
 import argparse
+import bisect
 import json
 import math
 import os
@@ -384,6 +385,75 @@ def paired_windows(path_a, path_b, windows):
                         for w, c in zip(windows, counts)}}
 
 
+def paired_bins(paths, ref, edges, windows):
+    """:func:`paired_windows`, but on the FIGURE's bins and for a whole row.
+
+    ``paired_windows`` answers the question the *text* asks -- how many events
+    a scheme puts in a physics window -- and the harvest stores its answer for
+    seven windows.  The ratio pane of the figure asks the same question of
+    every one of its ~40 bins, and a coincidence count summed over a window
+    says nothing about the bins inside it: an event can be in the window under
+    both schemes and in a different BIN under each.  So the coincidences have
+    to be counted on the figure's own grid, and that is what this does.
+
+    Every cell of a row is streamed at once rather than pair by pair, so each
+    file is read once and every cell is aligned to the SAME production event at
+    every step -- ``zip`` over all of them truncates to the shortest, which is
+    exactly the shared prefix.  ``sqrt(shat)`` is compared against the
+    reference cell's on every event, as :func:`paired_windows` does, so the
+    alignment is verified rather than assumed.
+
+    Returns, per cell: ``pre`` (its per-bin counts over the shared prefix) and
+    ``both`` (per bin, the number of production events that land in THAT bin
+    under both this cell and ``ref``).  From those the McNemar variance of the
+    per-bin difference is ``pre[a] + pre[ref] - 2 both[a]``, and the covariance
+    that the ratio's error needs is ``both - pre[a] pre[ref] / n_pairs``.
+
+    The windows are recomputed here as well, on the same pass, purely so the
+    result can be checked against the stored :func:`paired_windows` numbers --
+    a different loop over the same files must give the same coincidences.
+    """
+    labels = [k for k in paths]
+    nb = len(edges) - 1
+    lo, hi = float(edges[0]), float(edges[-1])
+    ed = [float(x) for x in edges]
+    pre = {k: [0] * nb for k in labels}
+    both = {k: [0] * nb for k in labels}
+    wc = {k: [[0, 0, 0] for _ in windows] for k in labels}
+    streams = [_stream_event(paths[k]) for k in labels]
+    iref = labels.index(ref)
+    n = 0
+    max_dshat = 0.0
+    for tup in zip(*streams):
+        n += 1
+        sref = tup[iref][1]
+        bref = bisect.bisect_right(ed, tup[iref][0]) - 1
+        if not (lo <= tup[iref][0] < hi):
+            bref = -1
+        for j, k in enumerate(labels):
+            m, s = tup[j][0], tup[j][1]
+            if abs(s - sref) > max_dshat:
+                max_dshat = abs(s - sref)
+            if lo <= m < hi:
+                b = bisect.bisect_right(ed, m) - 1
+                pre[k][b] += 1
+                if b == bref:
+                    both[k][b] += 1
+            for w, (_nm, wlo, whi) in enumerate(windows):
+                if wlo <= m < whi:
+                    wc[k][w][0] += 1
+                    if wlo <= tup[iref][0] < whi:
+                        wc[k][w][1] += 1
+    return {'ref': ref, 'n_pairs': n, 'max_dshat': max_dshat,
+            'edges': ed,
+            'cells': {k: {'pre': pre[k], 'both': both[k],
+                          'windows': {windows[w][0]:
+                                      {'n_a': wc[k][w][0],
+                                       'n_both': wc[k][w][1]}
+                                      for w in range(len(windows))}}
+                      for k in labels}}
+
+
 # --------------------------------------------------------------------------
 # The overweight safety net's own end-of-run line.
 # --------------------------------------------------------------------------
@@ -534,6 +604,97 @@ def build_factory(args):
     return factory
 
 
+def run_paired_bins(args):
+    """The ``paired-bins`` stage: coincidences on the FIGURE's grid.
+
+    Split off from ``harvest`` rather than folded into it because it is a
+    second, later question asked of the same files.  The harvest already ran;
+    its ``.npz`` and ``.json`` are the measurement and are not rewritten here.
+    This stage re-reads the decayed LHE files that are still on disk -- it
+    generates nothing and runs no MadSpin -- and writes one extra artefact,
+    ``paired_bins_unweighting.json``, holding the per-bin coincidence counts
+    that a ratio *between two cells* needs and that per-window counts cannot
+    supply.
+
+    The reference of each row is its ``joint`` cell, because that is the
+    denominator of the figure's ratio pane.
+
+    Three checks, all against numbers that already exist:
+
+      * ``max |Delta sqrt(shat)|`` must be 0 across the whole row, which is
+        what makes the counts paired at all;
+      * the per-bin counts of a cell whose file IS the shared prefix must sum,
+        over the plotted range, to the same number the harvest histogram holds;
+      * the windows recomputed on this pass must reproduce the stored
+        :func:`paired_windows` coincidences exactly.
+    """
+    # Imported here, not at module scope: this is the only stage that needs the
+    # plotting module, and that module pulls in matplotlib.
+    from plot_mtt_threshold import zone_edges       # noqa: E402
+    meta = json.load(open(pjoin(args.outdir, 'meta_unweighting.json')))
+    z = np.load(pjoin(args.outdir, 'histograms_unweighting.npz'))
+    ed = zone_edges()
+    out = {'edges': [float(x) for x in ed], 'rows': {}}
+    for row, labels in sorted(ROWS.items()):
+        paths = {}
+        for lab in labels:
+            p = meta['runs'].get(lab, {}).get('path')
+            if p and os.path.exists(p):
+                paths[lab] = p
+            elif lab in meta['runs']:
+                raise SystemExit(
+                    '%s: %s is gone.  This stage re-reads the decayed LHE '
+                    'files of a run that already happened; it cannot be '
+                    'reconstructed from the harvested histograms.' % (lab, p))
+        ref = [k for k in labels if CELL_SCHEME[k] == 'joint'][0]
+        if ref not in paths:
+            continue
+        t0 = time.time()
+        r = paired_bins(paths, ref, ed, WINDOWS)
+        if r['max_dshat'] != 0.0:
+            raise AssertionError(
+                '%s: max |Delta sqrt(shat)| = %.3g GeV across the row -- the '
+                'cells are not decaying the same production events, so no '
+                'count here is paired' % (row, r['max_dshat']))
+        fine = z['bins']
+        c = 0.5 * (fine[:-1] + fine[1:])
+        inplot = (c >= ed[0]) & (c < ed[-1])
+        for lab, cell in sorted(r['cells'].items()):
+            got = sum(cell['pre'])
+            want = int(z['%s_cnt' % lab][inplot].sum())
+            n_cell = int(meta['runs'][lab]['nevents'])
+            if n_cell == r['n_pairs']:
+                if got != want:
+                    raise AssertionError(
+                        '%s: %d events in the plotted range on the paired '
+                        'pass, %d in the harvest histogram' % (lab, got, want))
+            elif not (got < want and n_cell > r['n_pairs']):
+                raise AssertionError(
+                    '%s: %d events, %d pairs, %d in range vs %d harvested -- '
+                    'not a prefix' % (lab, n_cell, r['n_pairs'], got, want))
+            # ... and the windows, against the harvest's own coincidences.
+            for a, b in ((lab, ref), (ref, lab)):
+                pv = meta.get('paired', {}).get('%s vs %s' % (a, b))
+                if not pv:
+                    continue
+                for name, _lo, _hi in WINDOWS:
+                    w, mine = pv['windows'][name], cell['windows'][name]
+                    if w['n_both'] != mine['n_both']:
+                        raise AssertionError(
+                            '%s %s %s: %d coincidences here, %d in the stored '
+                            'paired_windows' % (lab, ref, name,
+                                                mine['n_both'], w['n_both']))
+        out['rows'][row] = r
+        print('%-8s ref=%-16s %d pairs, max|Delta sqrt(shat)|=%.3g, '
+              'checks passed (%.0f s)'
+              % (row, ref, r['n_pairs'], r['max_dshat'], time.time() - t0))
+        sys.stdout.flush()
+    dest = pjoin(args.outdir, 'paired_bins_unweighting.json')
+    with open(dest, 'w') as fh:
+        json.dump(out, fh, indent=1, sort_keys=True)
+    print('wrote %s' % dest)
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--basedir', default='/tmp/mtt_unweighting_work')
@@ -556,7 +717,8 @@ def main():
                     help='the FIRST study\'s truth sample, comma separated')
     ap.add_argument('--nb-core', type=int, default=4)
     ap.add_argument('--stage', default='all',
-                    choices=['all', 'madspin', 'harvest', 'sensitivity'])
+                    choices=['all', 'madspin', 'harvest', 'sensitivity',
+                             'paired-bins'])
     ap.add_argument('--cells', default=None,
                     help='comma-separated subset of the cells to RUN in this '
                          'invocation; they are independent, so they can be '
@@ -581,6 +743,10 @@ def main():
             print('  %-14s ~%9.0f events   1 sigma on the ratio = %6.3f %%'
                   % (name, s[name]['expected_events'],
                      100 * s[name]['one_sigma_rel_diff']))
+        return
+
+    if args.stage == 'paired-bins':
+        run_paired_bins(args)
         return
 
     factory = build_factory(args)
