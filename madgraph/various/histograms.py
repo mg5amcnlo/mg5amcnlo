@@ -3732,14 +3732,12 @@ def _finish_axis(axis):
 
 
 def _draw_main(axis, plot, blocks):
-    positive_values = True
     positive_edges = True
     for curve in plot['main']:
         rows = blocks[curve['block']]
         edges = _edges(rows)
         centres = _centres(rows)
         central = _column(rows, 2)
-        positive_values = positive_values and all(value > 0.0 for value in central)
         positive_edges = positive_edges and all(value > 0.0 for value in edges)
         _draw_step(axis, edges, central, color=curve['color'],
                    label=curve['label'], linewidth=1.5)
@@ -3763,7 +3761,9 @@ def _draw_main(axis, plot, blocks):
                            linestyle=linestyle, linewidth=1.0,
                            label='_nolegend_')
 
-    if plot['y_axis_mode'] == 'LOG' and positive_values:
+    # Match gnuplot: the histogram's axis mode, rather than empty bins,
+    # determines whether the main y axis is logarithmic.
+    if plot['y_axis_mode'] == 'LOG':
         axis.set_yscale('log')
     if plot['x_axis_mode'] == 'LOG' and positive_edges:
         axis.set_xscale('log')

@@ -275,10 +275,27 @@ class TestHistogramRegressions(unittest.TestCase):
             plot = namespace['PLOTS'][0]
             self.assertEqual(len(plot['main']), 2)
             self.assertEqual(len(plot['ratios']), 1)
+            self.assertEqual(plot['y_axis_mode'], 'LOG')
             self.assertTrue(plot['relative_uncertainties'])
             self.assertTrue(any(uncertainty['band'] for uncertainty in
                                 plot['main'][0]['uncertainties']))
             self.assertEqual(len(namespace['_read_hwu_blocks'](hwu_path)), 3)
+
+            # Empty component histograms are common in aMC@NLO output. They
+            # must not disable the logarithmic scale requested by Y_AXIS@LOG.
+            axis = mock.MagicMock()
+            axis.get_legend_handles_labels.return_value = ([], [])
+            namespace['_draw_main'](axis, {
+                'main': [{
+                    'block': 0,
+                    'label': 'empty component',
+                    'color': 'black',
+                    'statistical': False,
+                    'uncertainties': []}],
+                'x_axis_mode': 'LIN',
+                'y_axis_mode': 'LOG'},
+                [[[0.0, 1.0, 0.0, 0.0]]])
+            axis.set_yscale.assert_called_once_with('log')
 
             cli_base = pjoin(tmpdir, 'cli_matplotlib')
             result = subprocess.run(
