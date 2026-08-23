@@ -2743,6 +2743,13 @@ class TestUnweightRangeWeightPaths(unittest.TestCase):
             interface_madspin.MadSpinInterface._near_nwa_threshold
         _NWA_THRESHOLD_WIDTHS = \
             interface_madspin.MadSpinInterface._NWA_THRESHOLD_WIDTHS
+        # ... and, when that one says no, the production process's own
+        # resonance. Same contract: it is handed the event the loop built and
+        # must answer for any of them without a banner.
+        _near_production_resonance = \
+            interface_madspin.MadSpinInterface._near_production_resonance
+        _PRODUCTION_RESONANCE_WIDTHS = \
+            interface_madspin.MadSpinInterface._PRODUCTION_RESONANCE_WIDTHS
 
         def __init__(self, weights, pure_interference=''):
             self.options = interface_madspin.MadSpinOptions()
@@ -3010,6 +3017,8 @@ class TestOverweightReport(unittest.TestCase):
     class _Stub(object):
         _OVERWEIGHT_MIN_Z = \
             interface_madspin.MadSpinInterface._OVERWEIGHT_MIN_Z
+        _OVERWEIGHT_QUIET_PERCENT = \
+            interface_madspin.MadSpinInterface._OVERWEIGHT_QUIET_PERCENT
         _report_overweight = \
             interface_madspin.MadSpinInterface._report_overweight
         _NWA_THRESHOLD_WIDTHS = \
@@ -3020,6 +3029,8 @@ class TestOverweightReport(unittest.TestCase):
             interface_madspin.MadSpinInterface._nwa_threshold_note
         _nwa_threshold_margin = \
             interface_madspin.MadSpinInterface._nwa_threshold_margin
+        _PRODUCTION_RESONANCE_WIDTHS = \
+            interface_madspin.MadSpinInterface._PRODUCTION_RESONANCE_WIDTHS
 
     def _log(self, **stats):
         base = dict(nb_overweight=0, sum_overweight_dw=0.0,
@@ -3044,13 +3055,19 @@ class TestOverweightReport(unittest.TestCase):
 
     def test_a_counter_event_sample_quotes_the_signed_shift(self):
         """The same three carried events, but on counter-events: the shift is
-        negative even though the factors are all above 1."""
+        negative even though the factors are all above 1.
+
+        The sign is the whole content of this test, so it is pinned both ways
+        round: the negative number is printed, and the magnitude is not printed
+        in its place.
+        """
         msg = self._log(n_written=1000, nb_overweight=3, max_overweight=2.0,
                         sum_overweight_dw=-3.0, sum_overweight_dabs=3.0,
                         sum_nom=500.0, sum_abs_nom=1000.0, sum_sq_nom=1000.0)
         self.assertIn("of the sample's cross-section", msg)
         self.assertIn('-0.6%', msg)          # -3/500, and negative
-        self.assertIn('-3', msg)
+        self.assertNotIn('+0.6%', msg)       # not the magnitude
+        self.assertIn('3/1000 written events', msg)
 
     def test_a_cancelling_sample_refuses_the_cross_section_as_a_denominator(self):
         """pure_interference: sum w is zero by construction, so it must not be
@@ -3065,12 +3082,21 @@ class TestOverweightReport(unittest.TestCase):
         self.assertIn('+5%', msg)            # 50/1000
 
     def test_an_all_zero_sample_does_not_divide_by_zero(self):
-        """Degenerate to the last digit: every written weight is 0."""
-        msg = self._log(n_written=10, nb_overweight=2, max_overweight=3.0,
+        """Degenerate to the last digit: every written weight is 0.
+
+        Neither the quoted shift nor the test that decides how much to print
+        may divide by that. The ratio is undefined, so it is said and not
+        raised -- and an undefined ratio is not 'small': the line keeps its
+        full note rather than going quiet on a number nobody could compute.
+        """
+        msg = self._log(n_written=10, nb_overweight=2, nb_overweight_nwa=1,
+                        max_overweight=3.0,
                         sum_overweight_dw=0.0, sum_overweight_dabs=0.0,
                         sum_nom=0.0, sum_abs_nom=0.0, sum_sq_nom=0.0)
         self.assertIn('quoted against sum|w|', msg)
         self.assertIn('nan', msg)            # said, not raised
+        # and the region note is still there: an undefined ratio is not small
+        self.assertIn('The other 1 are NOT in that region', msg)
 
     def test_nothing_carried_says_so_and_stops(self):
         msg = self._log(n_written=1000, sum_nom=1000.0, sum_abs_nom=1000.0,
@@ -3213,7 +3239,13 @@ class TestNwaThresholdRegion(unittest.TestCase):
 
 class TestNwaThresholdReport(unittest.TestCase):
     """The end-of-run split: what it says, how loudly, and what it must not
-    change."""
+    change.
+
+    Everything here is the LOUD regime -- an excess big enough to be worth
+    explaining -- so the fixture is built to clear
+    ``_OVERWEIGHT_QUIET_PERCENT``. The other regime is
+    ``TestOverweightQuietBelowThreshold``.
+    """
 
     def _log(self, **stats):
         base = dict(nb_overweight=0, nb_overweight_nwa=0,
@@ -3226,8 +3258,11 @@ class TestNwaThresholdReport(unittest.TestCase):
             TestOverweightReport._Stub()._report_overweight([base], n_written)
         return caught
 
-    _SAMPLE = dict(n_written=1000, max_overweight=2.0, sum_overweight_dw=3.0,
-                   sum_overweight_dabs=3.0, sum_nom=1000.0,
+    # 30/1000 = +3%, comfortably above _OVERWEIGHT_QUIET_PERCENT: below it the
+    # report prints the head of the line and stops, and none of the tests in
+    # this class would be exercising anything.
+    _SAMPLE = dict(n_written=1000, max_overweight=2.0, sum_overweight_dw=30.0,
+                   sum_overweight_dabs=30.0, sum_nom=1000.0,
                    sum_abs_nom=1000.0, sum_sq_nom=1000.0)
 
     def test_all_of_them_at_threshold_is_reported_calmly(self):
@@ -3236,7 +3271,8 @@ class TestNwaThresholdReport(unittest.TestCase):
                            **self._SAMPLE)
         msg = '\n'.join(caught.messages)
         self.assertEqual(caught.levels, [logging.INFO])
-        self.assertIn('invalid by construction', msg)
+        self.assertIn('3 of them are production events within one summed '
+                      'width of the sum-of-poles threshold', msg)
         self.assertIn('None of them is outside it', msg)
         # the TOTAL is still the first number on the line
         self.assertIn('3/1000 written events', msg)
@@ -3261,7 +3297,7 @@ class TestNwaThresholdReport(unittest.TestCase):
                            **self._SAMPLE)
         msg = '\n'.join(caught.messages)
         self.assertEqual(caught.levels, [logging.WARNING])
-        self.assertNotIn('invalid by construction', msg)
+        self.assertNotIn('production events within', msg)
         self.assertIn('3/1000 written events', msg)
 
     def test_the_split_does_not_move_the_cross_section_shift(self):
@@ -3272,7 +3308,7 @@ class TestNwaThresholdReport(unittest.TestCase):
         tagged = '\n'.join(self._log(nb_overweight=3, nb_overweight_nwa=3,
                                      **self._SAMPLE).messages)
         for piece in ('3/1000 written events', 'largest factor 2.0000',
-                      "+0.3% of the sample's cross-section"):
+                      "+3% of the sample's cross-section"):
             self.assertIn(piece, plain)
             self.assertIn(piece, tagged)
 
@@ -3283,8 +3319,486 @@ class TestNwaThresholdReport(unittest.TestCase):
         self.assertEqual(caught.levels, [logging.INFO])
         self.assertIn('0/1000 written events carried a non-unit weight',
                       '\n'.join(caught.messages))
-        self.assertNotIn('invalid by construction',
+        self.assertNotIn('production events within',
                          '\n'.join(caught.messages))
+
+
+class TestProductionResonanceRegion(unittest.TestCase):
+    """``_near_production_resonance``: the second region an overweight can come
+    from, and the one that only exists from ``2 -> 3`` up.
+
+    Once the production process has a final state besides the resonances, its
+    matrix element carries a propagator of the resonance itself on the line the
+    extra parton is radiated from, at ``(p_r + p_j)^2 = m_r^2 + 2 p_r.p_j``.
+    On the pole that is ``>= M_r^2`` for any real parton, so it is unreachable;
+    sampling ``m_r`` below the pole opens it, and there the production matrix
+    element is a Breit-Wigner peak that no single run-level bound dominates.
+    The predicate says whether the accepted event sits on it.
+    """
+
+    POLE, WIDTH = 173.0, 1.5
+
+    class _Shim(object):
+        _near_production_resonance = \
+            interface_madspin.MadSpinInterface._near_production_resonance
+        _PRODUCTION_RESONANCE_WIDTHS = \
+            interface_madspin.MadSpinInterface._PRODUCTION_RESONANCE_WIDTHS
+
+        def __init__(self, banner):
+            self.banner = banner
+
+    def _shim(self, table=None):
+        if table is None:
+            table = {('mass', 6): self.POLE, ('decay', 6): self.WIDTH}
+        return self._Shim(TestNwaThresholdRegion._Banner(table))
+
+    def _event(self, m_res, s_rj, n_final=3, res_status=2):
+        """A production event whose resonance ``r`` (mass ``m_res``, status
+        ``res_status``) and massless parton ``j`` have ``(p_r + p_j)^2 = s_rj``.
+
+        Built in the ``r j`` rest frame -- the predicate only ever reads
+        pairwise invariant masses, so nothing here needs the rest of the event
+        to balance."""
+        M = math.sqrt(s_rj)
+        pstar = (s_rj - m_res ** 2) / (2 * M)
+        r = lhe_parser.FourMomentum(math.sqrt(m_res ** 2 + pstar ** 2),
+                                    0., 0., pstar)
+        j = lhe_parser.FourMomentum(pstar, 0., 0., -pstar)
+        far = lhe_parser.FourMomentum(math.sqrt(self.POLE ** 2 + 4e6),
+                                      0., 2000., 0.)
+        mom = [(6, res_status, m_res, r), (21, 1, 0.0, j)]
+        if n_final > 2:
+            mom.append((-6, 2, self.POLE, far))
+        mom = mom[:n_final]
+        lines = ['%d 1 1.0 100.0 0.0075 0.118' % (len(mom) + 2)]
+        for sign in (1, -1):
+            lines.append('21 -1 0 0 501 502 0. 0. %.15e %.15e 0.0 0. 9.'
+                         % (sign * 1000.0, 1000.0))
+        for pdg, status, mass, q in mom:
+            lines.append('%d %d 1 2 501 502 %.15e %.15e %.15e %.15e %.15e 0. 9.'
+                         % (pdg, status, q.px, q.py, q.pz, q.E, mass))
+        evt = lhe_parser.Event()
+        evt.parse('\n'.join(lines))
+        return evt
+
+    @staticmethod
+    def _pool(*pdgs):
+        return dict((pdg, ['a decay event']) for pdg in pdgs)
+
+    def test_the_window_is_M_times_Gamma_in_the_invariant_MASS_SQUARED(self):
+        """The propagator's own scale: ``|s - M^2| <= N M Gamma``, not
+        ``|m - M| <= N Gamma``. The two differ by a factor 2M."""
+        shim = self._shim()
+        n = shim._PRODUCTION_RESONANCE_WIDTHS
+        half = n * self.POLE * self.WIDTH
+        for delta, expected in ((0.0, True), (0.9 * half, True),
+                                (1.1 * half, False), (50 * half, False)):
+            evt = self._event(160.0, self.POLE ** 2 + delta)
+            self.assertEqual(
+                shim._near_production_resonance(evt, list(evt),
+                                                self._pool(6, -6)),
+                expected, 'delta = %g against a half-window of %g'
+                % (delta, half))
+
+    def test_a_two_to_two_event_can_never_be_in_it(self):
+        """No extra parton, so the only internal resonance line is t-channel
+        and spacelike. Even an event whose two finals happen to reconstruct the
+        pole is rejected, because the region does not exist there."""
+        shim = self._shim()
+        evt = self._event(160.0, self.POLE ** 2, n_final=2)
+        self.assertFalse(
+            shim._near_production_resonance(evt, list(evt), self._pool(6, -6)))
+
+    def test_an_undecayed_particle_is_not_a_resonance_of_this_run(self):
+        """Status 1 (nothing was attached to it) and an empty pool are both
+        'this event does not decay that', so neither can tag."""
+        shim = self._shim()
+        on_pole = self.POLE ** 2
+        self.assertFalse(shim._near_production_resonance(
+            self._event(160.0, on_pole, res_status=1), [0] * 5,
+            self._pool(6, -6)))
+        self.assertFalse(shim._near_production_resonance(
+            self._event(160.0, on_pole), [0] * 5, {6: [], -6: ['x']}))
+
+    def test_it_only_looks_at_the_production_block(self):
+        """The slice is ``len(production)``: decay products appended after it
+        must not be able to pair up with the resonance."""
+        shim = self._shim()
+        evt = self._event(160.0, self.POLE ** 2)
+        # 2 initial + 3 final; cutting the production block to the first four
+        # entries drops the parton the resonance would have paired with
+        self.assertTrue(
+            shim._near_production_resonance(evt, [0] * 5, self._pool(6, -6)))
+        self.assertFalse(
+            shim._near_production_resonance(evt, [0] * 3, self._pool(6, -6)))
+
+    def test_it_never_raises(self):
+        """It decides how loudly a diagnostic prints, so a missing parameter,
+        a missing banner or nonsense must come back False."""
+        evt = self._event(160.0, self.POLE ** 2)
+        self.assertFalse(self._shim({})._near_production_resonance(
+            evt, list(evt), self._pool(6, -6)))
+        broken = TestProductionResonanceRegion._Shim(None)
+        self.assertFalse(broken._near_production_resonance(
+            evt, list(evt), self._pool(6, -6)))
+        self.assertFalse(self._shim()._near_production_resonance(
+            None, [], self._pool(6, -6)))
+
+    def test_a_zero_width_particle_cannot_be_on_its_own_pole(self):
+        """No width, no Breit-Wigner: the propagator is a pole and not a peak,
+        and the phase-space point is measure zero rather than enhanced."""
+        shim = self._shim({('mass', 6): self.POLE, ('decay', 6): 0.0})
+        self.assertFalse(shim._near_production_resonance(
+            self._event(160.0, self.POLE ** 2), [0] * 5, self._pool(6, -6)))
+
+    # ------------------------------------------------------------------
+    # The partner ``k`` is any other production-level final state, status 1
+    # OR status 2. What keeps a second DECAYED resonance from being mistaken
+    # for the radiated parton is not a status test -- `status` only records
+    # whether MadSpin attached a decay -- but the fact that two resonances
+    # are too heavy to put their pair mass on one of their own poles.
+    # ------------------------------------------------------------------
+    Z_POLE, Z_WIDTH = 91.188, 2.44140351     # default MG5 SM param_card
+    W_POLE, W_WIDTH = 80.419, 2.04759951
+
+    @staticmethod
+    def _bw_floor(pole, width, bw_cut):
+        """The lowest mass MadSpin can hand this predicate: decay.py's own
+        ``m_min = max(mpole - BW_cut * w, 0.5)``."""
+        return max(pole - bw_cut * width, 0.5)
+
+    def _pair_event(self, specs, s2):
+        """``specs`` is two ``(pdg, status, mass)`` production-level finals,
+        put back to back with ``(p_0 + p_1)^2 = s2``; a massless parton is
+        parked far away so the event is ``2 -> 3`` and cannot itself pair with
+        anything near a pole."""
+        m0, m1 = specs[0][2], specs[1][2]
+        M = math.sqrt(s2)
+        lam = (s2 - (m0 + m1) ** 2) * (s2 - (m0 - m1) ** 2)
+        pstar = math.sqrt(max(lam, 0.0)) / (2 * M)
+        mom = [lhe_parser.FourMomentum(math.sqrt(m0 ** 2 + pstar ** 2),
+                                       0., 0., pstar),
+               lhe_parser.FourMomentum(math.sqrt(m1 ** 2 + pstar ** 2),
+                                       0., 0., -pstar),
+               lhe_parser.FourMomentum(2000., 0., 2000., 0.)]
+        full = list(specs) + [(21, 1, 0.0)]
+        lines = ['%d 1 1.0 100.0 0.0075 0.118' % (len(full) + 2)]
+        for sign in (1, -1):
+            lines.append('21 -1 0 0 501 502 0. 0. %.15e %.15e 0.0 0. 9.'
+                         % (sign * 5000.0, 5000.0))
+        for (pdg, status, mass), q in zip(full, mom):
+            lines.append('%d %d 1 2 501 502 %.15e %.15e %.15e %.15e %.15e 0. 9.'
+                         % (pdg, status, q.px, q.py, q.pz, q.E, mass))
+        evt = lhe_parser.Event()
+        evt.parse('\n'.join(lines))
+        return evt
+
+    def test_two_decayed_resonances_are_too_heavy_to_fake_the_pole(self):
+        """``s2 = (p_r + p_k)^2 >= (m_r + m_k)^2`` for any two physical
+        momenta, so the window is reachable only when
+
+            m_r + m_k  <=  sqrt(M_r^2 + N M_r Gamma_r) ,
+
+        and a mass MadSpin sampled is never more than ``BW_cut`` widths below
+        its pole. The tightest pair in the SM is ``r = Z`` with ``k = W``, and
+        even with BOTH pushed to the floor of the window it misses at the
+        default ``BW_cut = 15`` -- by 1.6 GeV, which is the whole margin there
+        is, so this is pinned rather than assumed. It opens at ``BW_cut`` about
+        15.4, where MadSpin's own check already calls the narrow-width
+        approximation it factorises with invalid; and there the pairing is the
+        real ``W* -> W Z`` production resonance, so a status test would lose a
+        true positive at exactly the setting where it gains the false one.
+        """
+        shim = self._shim({('mass', 23): self.Z_POLE, ('decay', 23): self.Z_WIDTH,
+                           ('mass', 24): self.W_POLE, ('decay', 24): self.W_WIDTH})
+        top = math.sqrt(self.Z_POLE ** 2 + shim._PRODUCTION_RESONANCE_WIDTHS
+                        * self.Z_POLE * self.Z_WIDTH)
+        for bw_cut, expected in ((5.0, False), (10.0, False), (15.0, False),
+                                 (20.0, True), (25.0, True)):
+            mz = self._bw_floor(self.Z_POLE, self.Z_WIDTH, bw_cut)
+            mw = self._bw_floor(self.W_POLE, self.W_WIDTH, bw_cut)
+            # the single most dangerous point the constraints allow: the pair
+            # mass pushed as close to M_Z^2 as the >= (m_Z + m_W)^2 bound lets it
+            evt = self._pair_event([(23, 2, mz), (24, 2, mw)],
+                                   max((mz + mw) ** 2, self.Z_POLE ** 2))
+            self.assertEqual(
+                shim._near_production_resonance(evt, list(evt),
+                                                self._pool(23, 24)),
+                expected,
+                'BW_cut = %g: m_Z = %.3f + m_W = %.3f = %.3f, against a window '
+                'whose upper edge is at %.3f' % (bw_cut, mz, mw, mz + mw, top))
+
+    def test_a_top_pair_cannot_fake_the_pole_at_any_usable_BW_cut(self):
+        """The same bound on the process the tag was measured on,
+        ``p p > t t~ j``. The window on ``m(t t~)`` is [165.4, 180.3] GeV,
+        while two tops sampled 15 widths low still weigh 303 GeV together: it
+        would take ``BW_cut`` about 55, i.e. a top drawn at 90 GeV, to reach --
+        far past the point where MadSpin refuses the run outright."""
+        shim = self._shim()
+        for bw_cut in (5.0, 10.0, 15.0, 25.0, 50.0):
+            mt = self._bw_floor(self.POLE, self.WIDTH, bw_cut)
+            evt = self._pair_event([(6, 2, mt), (-6, 2, mt)],
+                                   max(4 * mt * mt, self.POLE ** 2))
+            self.assertFalse(
+                shim._near_production_resonance(evt, list(evt),
+                                                self._pool(6, -6)),
+                'BW_cut = %g: 2 * m_t = %.3f against an upper edge at %.3f'
+                % (bw_cut, 2 * mt,
+                   math.sqrt(self.POLE ** 2 + shim._PRODUCTION_RESONANCE_WIDTHS
+                             * self.POLE * self.WIDTH)))
+
+    def test_a_light_decayed_partner_tags_exactly_like_a_parton(self):
+        """Why the pairing must not test ``k``'s status. A light partner --
+        a BSM scalar radiated off the top line, say -- sits on the resonance's
+        own propagator in exactly the way a jet does. The answer may not turn
+        on whether the user happened to put that particle in the decay card."""
+        shim = self._shim({('mass', 6): self.POLE, ('decay', 6): self.WIDTH,
+                           ('mass', 9000006): 2.0, ('decay', 9000006): 1e-3})
+        mt = self._bw_floor(self.POLE, self.WIDTH, 15.0)
+        for status, pool in ((2, self._pool(6, 9000006)), (1, self._pool(6))):
+            evt = self._pair_event([(6, 2, mt), (9000006, status, 2.0)],
+                                   self.POLE ** 2)
+            self.assertTrue(
+                shim._near_production_resonance(evt, list(evt), pool),
+                'the same momenta must tag whether or not the partner was '
+                'decayed (partner status %d)' % status)
+
+
+class TestProductionResonanceReport(unittest.TestCase):
+    """The three-way split of the carried overweights, and what it changes.
+
+    Threshold wins over the production resonance when an event is both, which
+    is the stronger statement; the line drops to info only when EVERY carried
+    overweight is explained by one of the two; and none of it may move an
+    arithmetic number.
+
+    As in ``TestNwaThresholdReport``, this is the loud regime: the fixture is
+    built to clear ``_OVERWEIGHT_QUIET_PERCENT`` so that the split is reached
+    at all.
+    """
+
+    def _log(self, **stats):
+        base = dict(nb_overweight=0, nb_overweight_nwa=0, nb_overweight_res=0,
+                    sum_overweight_dw=0.0, sum_overweight_dabs=0.0,
+                    sum_nom=0.0, sum_abs_nom=0.0, sum_sq_nom=0.0,
+                    max_overweight=1.0, nb_overflow_joint=0)
+        base.update(stats)
+        n_written = base.pop('n_written')
+        with _CapturedMadSpinLog() as caught:
+            TestOverweightReport._Stub()._report_overweight([base], n_written)
+        return caught
+
+    # +3%: see TestNwaThresholdReport._SAMPLE.
+    _SAMPLE = dict(n_written=1000, max_overweight=2.0, sum_overweight_dw=30.0,
+                   sum_overweight_dabs=30.0, sum_nom=1000.0,
+                   sum_abs_nom=1000.0, sum_sq_nom=1000.0)
+
+    def test_all_of_them_on_a_production_resonance_is_reported_calmly(self):
+        import logging
+        caught = self._log(nb_overweight=3, nb_overweight_res=3,
+                           **self._SAMPLE)
+        msg = '\n'.join(caught.messages)
+        self.assertEqual(caught.levels, [logging.INFO])
+        self.assertIn("resonance's own pole", msg)
+        self.assertIn('within 10 widths of', msg)   # the named region width
+        self.assertIn('None of them is outside it', msg)
+        self.assertIn('3/1000 written events', msg)
+
+    def test_one_of_them_in_neither_region_keeps_the_warning(self):
+        import logging
+        caught = self._log(nb_overweight=3, nb_overweight_res=2,
+                           **self._SAMPLE)
+        msg = '\n'.join(caught.messages)
+        self.assertEqual(caught.levels, [logging.WARNING])
+        self.assertIn('The other 1 are NOT in that region', msg)
+        self.assertIn('raise nb_sigma', msg)
+
+    def test_both_regions_are_quoted_and_add_up_to_the_total(self):
+        import logging
+        caught = self._log(nb_overweight=5, nb_overweight_nwa=2,
+                           nb_overweight_res=3, **self._SAMPLE)
+        msg = '\n'.join(caught.messages)
+        self.assertEqual(caught.levels, [logging.INFO])
+        self.assertIn('2 of them are production events within one summed '
+                      'width of', msg)
+        self.assertIn('3 of them have a resonance and another '
+                      'production-level final state', msg)
+        self.assertIn('None of them is outside those', msg)
+        self.assertIn('5/1000 written events', msg)
+
+    def test_both_regions_with_a_leftover_names_both_and_warns(self):
+        import logging
+        caught = self._log(nb_overweight=6, nb_overweight_nwa=2,
+                           nb_overweight_res=3, **self._SAMPLE)
+        msg = '\n'.join(caught.messages)
+        self.assertEqual(caught.levels, [logging.WARNING])
+        self.assertIn('The other 1 are NOT in either region', msg)
+        # the two clauses are still two sentences, not one run together
+        self.assertIn("own pole. The other 1 are NOT", msg)
+
+    def test_the_split_does_not_move_the_cross_section_shift(self):
+        plain = '\n'.join(self._log(nb_overweight=3,
+                                    **self._SAMPLE).messages)
+        tagged = '\n'.join(self._log(nb_overweight=3, nb_overweight_res=3,
+                                     **self._SAMPLE).messages)
+        for piece in ('3/1000 written events', 'largest factor 2.0000',
+                      "+3% of the sample's cross-section"):
+            self.assertIn(piece, plain)
+            self.assertIn(piece, tagged)
+
+
+class TestOverweightQuietBelowThreshold(unittest.TestCase):
+    """The other regime of ``_report_overweight``: below
+    ``_OVERWEIGHT_QUIET_PERCENT`` the line is one short info statement and
+    there is no region breakdown at all.
+
+    The head of the line has already said how many events carried a non-unit
+    weight, what the largest factor was and what the whole thing was worth; a
+    paragraph explaining WHY a per-mille happened only buries that. So the
+    smallness of the shift, not the region split, decides whether the note is
+    printed -- and that is deliberately true even when the overweights are
+    unexplained, which is the one case where the old code always warned. It is
+    pinned here rather than left to be rediscovered in a bug report.
+
+    What may NOT change across the threshold is the arithmetic: the counts and
+    the quoted shift in the head of the line are the same either side of it,
+    and the total is still the first number on the line. Only the volume moves.
+    """
+
+    def _log(self, **stats):
+        base = dict(nb_overweight=0, nb_overweight_nwa=0, nb_overweight_res=0,
+                    sum_overweight_dw=0.0, sum_overweight_dabs=0.0,
+                    sum_nom=0.0, sum_abs_nom=0.0, sum_sq_nom=0.0,
+                    max_overweight=1.0, nb_overflow_joint=0)
+        base.update(stats)
+        n_written = base.pop('n_written')
+        with _CapturedMadSpinLog() as caught:
+            TestOverweightReport._Stub()._report_overweight([base], n_written)
+        return caught
+
+    # 3/1000 = +0.3%, below the threshold. _LOUD is the same sample with the
+    # excess scaled up to +3% and nothing else touched, so the pair isolates
+    # the threshold and only the threshold.
+    _QUIET = dict(n_written=1000, max_overweight=2.0, sum_overweight_dw=3.0,
+                  sum_overweight_dabs=3.0, sum_nom=1000.0,
+                  sum_abs_nom=1000.0, sum_sq_nom=1000.0)
+    _LOUD = dict(_QUIET, sum_overweight_dw=30.0, sum_overweight_dabs=30.0)
+
+    def test_the_fixtures_sit_either_side_of_the_named_threshold(self):
+        """The two regimes are separated by a named constant, not by a number
+        that happens to be spelled the same in the test and in the source."""
+        quiet = interface_madspin.MadSpinInterface._OVERWEIGHT_QUIET_PERCENT
+        self.assertLess(100.0 * self._QUIET['sum_overweight_dw']
+                        / self._QUIET['sum_nom'], quiet)
+        self.assertGreaterEqual(100.0 * self._LOUD['sum_overweight_dw']
+                                / self._LOUD['sum_nom'], quiet)
+
+    def test_a_small_shift_says_one_short_line_and_no_breakdown(self):
+        import logging
+        caught = self._log(nb_overweight=3, nb_overweight_nwa=3,
+                           **self._QUIET)
+        msg = '\n'.join(caught.messages)
+        self.assertEqual(caught.levels, [logging.INFO])
+        self.assertIn('3/1000 written events', msg)
+        self.assertIn("+0.3% of the sample's cross-section", msg)
+        self.assertNotIn('production events within', msg)
+        self.assertNotIn("resonance's own pole", msg)
+        self.assertNotIn('None of them is outside', msg)
+
+    def test_a_small_unexplained_shift_is_quiet_too(self):
+        """Not one of them is in either explained region -- the case that used
+        to be a WARNING with 'raise nb_sigma' on it. It is now an info line
+        with no note, because 0.3% of the cross-section is not worth the
+        paragraph. Deliberate, and pinned so that it is a decision and not a
+        regression.
+        """
+        import logging
+        caught = self._log(nb_overweight=3, nb_overweight_nwa=2, **self._QUIET)
+        msg = '\n'.join(caught.messages)
+        self.assertEqual(caught.levels, [logging.INFO])
+        self.assertIn('3/1000 written events', msg)
+        self.assertNotIn('raise nb_sigma', msg)
+        self.assertNotIn('are NOT in', msg)
+
+    def test_the_same_sample_above_the_threshold_gets_the_breakdown(self):
+        """Same counts, same regions, ten times the excess: the note is back
+        and so is the warning."""
+        import logging
+        caught = self._log(nb_overweight=3, nb_overweight_nwa=2, **self._LOUD)
+        msg = '\n'.join(caught.messages)
+        self.assertEqual(caught.levels, [logging.WARNING])
+        self.assertIn('3/1000 written events', msg)
+        self.assertIn('The other 1 are NOT in that region', msg)
+        self.assertIn('raise nb_sigma', msg)
+
+    def test_exactly_at_the_threshold_gets_the_breakdown(self):
+        """5/1000 = 0.5% exactly. The comparison is strict, so the boundary
+        belongs to the regime that says more."""
+        import logging
+        caught = self._log(nb_overweight=3, nb_overweight_nwa=3,
+                           **dict(self._QUIET, sum_overweight_dw=5.0,
+                                  sum_overweight_dabs=5.0))
+        self.assertEqual(caught.levels, [logging.INFO])
+        self.assertIn('production events within',
+                      '\n'.join(caught.messages))
+
+    def test_a_large_negative_shift_is_not_small(self):
+        """A sample with counter-events can lose 3% of its cross-section with
+        every carried factor still above 1. That is not 'very small' -- the
+        test is on the magnitude of the shift, not on its signed value."""
+        import logging
+        caught = self._log(nb_overweight=3, nb_overweight_nwa=2,
+                           **dict(self._QUIET, sum_overweight_dw=-30.0,
+                                  sum_overweight_dabs=30.0))
+        msg = '\n'.join(caught.messages)
+        self.assertEqual(caught.levels, [logging.WARNING])
+        self.assertIn("-3% of the sample's cross-section", msg)
+        self.assertIn('raise nb_sigma', msg)
+
+    def test_a_cancelling_sample_is_measured_against_the_scale_it_quoted(self):
+        """sum w is consistent with zero here, so the line quotes the shift
+        against sum|w|; the smallness test has to use that same number and
+        must never divide by the cross-section it just refused. 1/1000 of
+        sum|w| is small, so this is one short line."""
+        import logging
+        caught = self._log(n_written=1000, nb_overweight=3,
+                           max_overweight=2.0, sum_overweight_dw=-2.0,
+                           sum_overweight_dabs=1.0, sum_nom=20.0,
+                           sum_abs_nom=1000.0, sum_sq_nom=10000.0)
+        msg = '\n'.join(caught.messages)
+        self.assertEqual(caught.levels, [logging.INFO])
+        self.assertIn('quoted against sum|w|', msg)
+        self.assertIn('+0.1%', msg)
+        self.assertNotIn('are NOT in', msg)
+
+    def test_a_cancelling_sample_with_a_big_excess_still_gets_the_note(self):
+        """Same sample, fifty times the excess: 5% of sum|w| is not small, and
+        the note comes back even though the cross-section was never a usable
+        denominator."""
+        import logging
+        caught = self._log(n_written=1000, nb_overweight=3,
+                           nb_overweight_nwa=2,
+                           max_overweight=2.0, sum_overweight_dw=-2.0,
+                           sum_overweight_dabs=50.0, sum_nom=20.0,
+                           sum_abs_nom=1000.0, sum_sq_nom=10000.0)
+        msg = '\n'.join(caught.messages)
+        self.assertEqual(caught.levels, [logging.WARNING])
+        self.assertIn('quoted against sum|w|', msg)
+        self.assertIn('raise nb_sigma', msg)
+
+    def test_the_head_of_the_line_does_not_move_across_the_threshold(self):
+        """Only the volume changes. Everything the head of the line says about
+        the counts, the largest factor and the denominator is character for
+        character the same, and the total is the first number on it."""
+        quiet = '\n'.join(self._log(nb_overweight=3, nb_overweight_nwa=3,
+                                    **self._QUIET).messages)
+        loud = '\n'.join(self._log(nb_overweight=3, nb_overweight_nwa=3,
+                                   **self._LOUD).messages)
+        head = ('MadSpin overweight safety net: 3/1000 written events (0.3%) '
+                'carried a non-unit weight because a trial weight exceeded '
+                'its accept/reject bound (largest factor 2.0000). ')
+        self.assertTrue(quiet.startswith(head), quiet)
+        self.assertTrue(loud.startswith(head), loud)
 
 
 class TestNwaThresholdSequentialReport(unittest.TestCase):
@@ -3307,6 +3821,8 @@ class TestNwaThresholdSequentialReport(unittest.TestCase):
             interface_madspin.MadSpinInterface._nwa_threshold_note
         _nwa_threshold_margin = \
             interface_madspin.MadSpinInterface._nwa_threshold_margin
+        _PRODUCTION_RESONANCE_WIDTHS = \
+            interface_madspin.MadSpinInterface._PRODUCTION_RESONANCE_WIDTHS
 
         def __init__(self):
             self.options = {'density_tolerance': 1e-4}
