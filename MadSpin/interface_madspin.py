@@ -4530,6 +4530,10 @@ class MadSpinInterface(extended_cmd.Cmd):
         nb_overweight_nwa = 0    # ... of which sat in the region where the
                                  # narrow-width approximation is invalid by
                                  # construction (_near_nwa_threshold)
+        nb_overweight_res = 0    # ... and of which sat on the production
+                                 # matrix element's own resonance
+                                 # (_near_production_resonance). Exclusive with
+                                 # the line above, threshold winning.
         max_overweight = 1.0     # the largest single factor carried
         sum_overweight_dw = 0.0     # sum of (factor - 1) * w_nominal: the signed
                                     # weight the clipping used to throw away
@@ -4649,6 +4653,9 @@ class MadSpinInterface(extended_cmd.Cmd):
                     nb_overweight += 1
                     if self._near_nwa_threshold(production, evt_decayfile):
                         nb_overweight_nwa += 1
+                    elif self._near_production_resonance(full_evt, production,
+                                                         evt_decayfile):
+                        nb_overweight_res += 1
                     if carry > max_overweight:
                         max_overweight = carry
                 full_evt.wgt *= br
@@ -4865,6 +4872,9 @@ class MadSpinInterface(extended_cmd.Cmd):
                 nb_overweight += 1
                 if self._near_nwa_threshold(production, evt_decayfile):
                     nb_overweight_nwa += 1
+                elif self._near_production_resonance(full_evt, production,
+                                                     evt_decayfile):
+                    nb_overweight_res += 1
                 if carry > max_overweight:
                     max_overweight = carry
             if self.options['fixed_order']:
@@ -4914,6 +4924,7 @@ class MadSpinInterface(extended_cmd.Cmd):
                     nb_overflow_joint=nb_overflow_joint,
                     nb_overweight=nb_overweight,
                     nb_overweight_nwa=nb_overweight_nwa,
+                    nb_overweight_res=nb_overweight_res,
                     sum_overweight_dw=float(sum_overweight_dw),
                     sum_overweight_dabs=float(sum_overweight_dabs),
                     sum_nom=float(sum_nom),
@@ -5028,18 +5039,19 @@ class MadSpinInterface(extended_cmd.Cmd):
             # line counts written EVENTS -- so the note is only allowed to
             # decide the volume of this line, never to be read as its
             # breakdown.
-            near, far = self._nwa_threshold_split(stats_list)
+            near, res, far = self._nwa_threshold_split(stats_list)
             msg = ("MadSpin sequential: %d weights exceeded their stage "
                    "maximum (mass set / angles / per particle). The excess is "
                    "CARRIED on the weight of the affected events rather than "
                    "dropped (see the overweight line below for how much it is "
                    "worth). " % total_overflow)
-            if near and not far:
+            if (near or res) and not far:
                 msg += ("Every event that carried one sits within %s of the "
-                        "sum-of-poles threshold, where the narrow-width "
-                        "approximation is invalid by construction and no "
-                        "accept/reject bound built on it can dominate; see the "
-                        "overweight line below."
+                        "sum-of-poles threshold, or on a resonance of the "
+                        "production matrix element itself -- regions where the "
+                        "narrow-width approximation is invalid by "
+                        "construction and no accept/reject bound built on it "
+                        "can dominate; see the overweight line below."
                         % self._nwa_threshold_margin())
                 logger.info(msg)
             else:
@@ -5141,39 +5153,160 @@ class MadSpinInterface(extended_cmd.Cmd):
         production._ms_near_nwa_threshold = answer
         return answer
 
+    # ------------------------------------------------------------------
+    # The second region an overweight can come from: the production matrix
+    # element's OWN resonance
+    # ------------------------------------------------------------------
+    # This one has nothing to do with threshold and does not exist at all in
+    # ``2 -> 2``. Once the production process has a final-state particle
+    # besides the resonances -- a jet -- its matrix element contains a
+    # propagator of the resonance itself, on the line the jet is radiated
+    # from, with virtuality
+    #
+    #     (p_r + p_j)^2  =  m_r^2 + 2 p_r.p_j .
+    #
+    # With ``m_r`` ON its pole that is ``>= M_r^2`` for any real jet, so the
+    # propagator can never go on shell: the singularity sits exactly on the
+    # boundary of phase space and is unreachable. Sampling ``m_r`` BELOW the
+    # pole -- which is what ``BW_cut`` is for -- opens it: the equation
+    # ``2 p_r.p_j = M_r^2 - m_r^2`` now has solutions, and on them the
+    # production matrix element is a Breit-Wigner peak regulated only by
+    # ``M_r Gamma_r``. The weight there is correct; it is simply enormous, and
+    # a single run-level bound cannot dominate it.
+    #
+    # In ``2 -> 2`` the only internal resonance line is t-channel,
+    # ``(p_in - p_r)^2 = m_r^2 - 2 p_in.p_r < m_r^2 <= M_r^2``, so it is
+    # spacelike and this region does not exist. That asymmetry is the whole
+    # reason a ``2 -> 3`` production overweights 26x more often than the same
+    # ``2 -> 2`` one.
+    #
+    # Measured, ``p p > t t~ j`` at 6.5+6.5 TeV, ``spinmode madspin``,
+    # ``unweighting joint``, ``BW_cut = 15``, 300 000 events: **all 265** of
+    # the run's carried overweights have one resonance within 5.2 M_r Gamma_r
+    # of this pole (51 % within one, the largest -- factor 48.9 -- at 0.12),
+    # against 3.30 for the trials that merely came close to the bound. Their
+    # production reshuffling jacobian is 1.07 (max 2.47), i.e. the threshold
+    # mechanism above is not involved. The region is reachable inside
+    # ``BW_cut = 15`` for 3.5 % of the production events and essentially never
+    # below ``BW_cut = 8`` -- see doc/madspin_sequential_plan.md section 17.
+    #
+    # The margin is 10 and not the 5.2 that population happens to fill: twice
+    # the measured envelope, so the tag is not fitted to one sample, and still
+    # specific -- the fraction of joint TRIALS that land inside it is 9.2e-4
+    # (against 2.9e-4 at 5 and 5.3e-5 at 1), i.e. a thousand times rarer than
+    # the tag firing would need to be to silence an overweight by coincidence.
+    _PRODUCTION_RESONANCE_WIDTHS = 10.0
+
+    def _near_production_resonance(self, full_evt, production, evt_decayfile):
+        """Does this accepted event sit on the production process's own
+        resonance, i.e. is there a decayed resonance ``r`` and another
+        production-level final state ``k`` with
+
+            |m^2(r + k) - M_r^2|  <=  _PRODUCTION_RESONANCE_WIDTHS . M_r Gamma_r
+
+        evaluated at the virtuality the event actually carries?
+
+        The first ``len(production)`` entries of ``full_evt`` are the
+        production event's own particles (``add_decay_to_particle`` appends the
+        decay products after them and flips the parent to status 2), so this is
+        a pairwise invariant mass over the production final state, on the
+        reshuffled momenta -- O(n^2) four-vector arithmetic on an event that is
+        already built, and only ever on an event that overflowed.
+
+        False -- never an exception -- when anything it needs is missing: like
+        ``_near_nwa_threshold`` this decides how loudly a diagnostic prints and
+        must not be able to stop a run.
+        """
+        try:
+            # fixed_order hands in the event GROUP (born + counter-events);
+            # they share the draw, so the born one answers for all of them.
+            # Tested on the element and not with isinstance(list): Event is
+            # itself a list of Particle, so that test is always true.
+            if full_evt and isinstance(full_evt[0], lhe_parser.Event):
+                full_evt = full_evt[0]
+            parts = list(full_evt)[:len(production)]
+            finals = [q for q in parts if int(q.status) in (1, 2)]
+            if len(finals) < 3:
+                # 2 -> 2: no jet to radiate the resonance off, so the internal
+                # propagator is t-channel and cannot go on shell
+                return False
+            for r in finals:
+                if int(r.status) != 2:
+                    continue
+                pdg = r.pdg
+                if pdg not in evt_decayfile or not len(evt_decayfile[pdg]):
+                    continue
+                pole = self.banner.get('param', 'mass', abs(pdg)).value
+                width = self.banner.get('param', 'decay', abs(pdg)).value
+                if not pole or not width:
+                    continue
+                qr = lhe_parser.FourMomentum(r)
+                for k in finals:
+                    if k is r:
+                        continue
+                    s2 = (qr + lhe_parser.FourMomentum(k)).mass_sqr
+                    if abs(s2 - pole * pole) <= (
+                            self._PRODUCTION_RESONANCE_WIDTHS * pole * width):
+                        return True
+        except (AttributeError, KeyError, TypeError, ValueError, IndexError):
+            return False
+        return False
+
     def _nwa_threshold_margin(self):
         """``_NWA_THRESHOLD_WIDTHS`` as it is said out loud."""
         return ('one summed width' if self._NWA_THRESHOLD_WIDTHS == 1
                 else '%g summed widths' % self._NWA_THRESHOLD_WIDTHS)
 
     def _nwa_threshold_split(self, stats_list):
-        """(in the region, outside it) over the carried overweights of a run."""
+        """(at threshold, on a production resonance, neither) over the carried
+        overweights of a run. Exclusive, in that order: an event that is both
+        counts as threshold, which is the stronger statement."""
         nb = sum(s.get('nb_overweight', 0) for s in stats_list)
         near = sum(s.get('nb_overweight_nwa', 0) for s in stats_list)
-        return near, nb - near
+        res = sum(s.get('nb_overweight_res', 0) for s in stats_list)
+        return near, res, nb - near - res
 
-    def _nwa_threshold_note(self, near, far):
+    def _nwa_threshold_note(self, near, res, far):
         """The sentence both end-of-run lines append when the split is
-        non-trivial. Always quotes both halves, so the total the head of the
+        non-trivial. Always quotes every part, so the total the head of the
         line gives stays recoverable from it."""
-        if not near:
+        if not near and not res:
             return ''
-        note = ("%d of them are production events within %s of "
-                "the sum-of-poles threshold, where the narrow-width "
-                "approximation MadSpin factorises with is invalid by "
-                "construction -- the windows there are cut off by the energy "
-                "budget rather than by BW_cut, and the production reshuffling "
-                "jacobian diverges because there is no recoil left. An "
-                "overweight there is expected and is carried exactly, not "
-                "clipped. "
-                % (near, self._nwa_threshold_margin()))
+        note = ''
+        if near:
+            note += ("%d of them are production events within %s of "
+                     "the sum-of-poles threshold, where the narrow-width "
+                     "approximation MadSpin factorises with is invalid by "
+                     "construction -- the windows there are cut off by the "
+                     "energy budget rather than by BW_cut, and the production "
+                     "reshuffling jacobian diverges because there is no recoil "
+                     "left. An overweight there is expected and is carried "
+                     "exactly, not clipped. "
+                     % (near, self._nwa_threshold_margin()))
+        if res:
+            note += ("%d of them have a resonance and another production-level "
+                     "final state whose invariant mass is within %g widths of "
+                     "that resonance's own pole: there the PRODUCTION matrix "
+                     "element has the same resonance on an internal line -- a "
+                     "region that only exists once the production process has "
+                     "a jet in it, and that a virtuality below the pole is "
+                     "what makes reachable at all. The weight there is a "
+                     "Breit-Wigner peak of the production process itself, it "
+                     "is correct, and it is carried exactly. Lowering BW_cut "
+                     "closes that region (measured on p p > t t~ j: reachable "
+                     "for 3.5%% of the production events at BW_cut = 15, 0.9%% "
+                     "at 10, 0.03%% at 5). "
+                     % (res, self._PRODUCTION_RESONANCE_WIDTHS))
+        both = 'either region' if (near and res) else 'that region'
+        it = 'those' if (near and res) else 'it'
         if far:
-            note += ("The other %d are NOT in that region, and those do say "
+            note += ("The other %d are NOT in %s, and those do say "
                      "the bound is under-estimated: raise nb_sigma or "
-                     "Nevents_for_max_weight. " % far)
+                     "Nevents_for_max_weight. " % (far, both))
         else:
-            note += ("None of them is outside it, so nothing here says the "
-                     "bound is under-estimated away from threshold. ")
+            note += ("None of them is outside %s, so nothing here says the "
+                     "bound is under-estimated for an unexplained reason. "
+                     % it)
         return note
 
     def _report_overweight(self, stats_list, n_written):
@@ -5254,12 +5387,12 @@ class MadSpinInterface(extended_cmd.Cmd):
                        100.0 * d_abs / sum_abs if sum_abs else float('nan')))
         msg += ("Clipping it -- what MadSpin did before -- would have discarded "
                 "that silently. ")
-        near, far = self._nwa_threshold_split(stats_list)
-        msg = (msg + self._nwa_threshold_note(near, far)).rstrip()
-        # Calmer only when EVERY one of them is in the region: the count in the
-        # head of the line is the total either way, so this changes the volume
-        # and not the arithmetic.
-        if near and not far:
+        near, res, far = self._nwa_threshold_split(stats_list)
+        msg = (msg + self._nwa_threshold_note(near, res, far)).rstrip()
+        # Calmer only when EVERY one of them is in one of the two explained
+        # regions: the count in the head of the line is the total either way,
+        # so this changes the volume and not the arithmetic.
+        if (near or res) and not far:
             logger.info(msg)
         else:
             logger.warning(msg)

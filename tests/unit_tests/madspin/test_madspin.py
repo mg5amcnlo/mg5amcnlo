@@ -2743,6 +2743,13 @@ class TestUnweightRangeWeightPaths(unittest.TestCase):
             interface_madspin.MadSpinInterface._near_nwa_threshold
         _NWA_THRESHOLD_WIDTHS = \
             interface_madspin.MadSpinInterface._NWA_THRESHOLD_WIDTHS
+        # ... and, when that one says no, the production process's own
+        # resonance. Same contract: it is handed the event the loop built and
+        # must answer for any of them without a banner.
+        _near_production_resonance = \
+            interface_madspin.MadSpinInterface._near_production_resonance
+        _PRODUCTION_RESONANCE_WIDTHS = \
+            interface_madspin.MadSpinInterface._PRODUCTION_RESONANCE_WIDTHS
 
         def __init__(self, weights, pure_interference=''):
             self.options = interface_madspin.MadSpinOptions()
@@ -3020,6 +3027,8 @@ class TestOverweightReport(unittest.TestCase):
             interface_madspin.MadSpinInterface._nwa_threshold_note
         _nwa_threshold_margin = \
             interface_madspin.MadSpinInterface._nwa_threshold_margin
+        _PRODUCTION_RESONANCE_WIDTHS = \
+            interface_madspin.MadSpinInterface._PRODUCTION_RESONANCE_WIDTHS
 
     def _log(self, **stats):
         base = dict(nb_overweight=0, sum_overweight_dw=0.0,
@@ -3287,6 +3296,211 @@ class TestNwaThresholdReport(unittest.TestCase):
                          '\n'.join(caught.messages))
 
 
+class TestProductionResonanceRegion(unittest.TestCase):
+    """``_near_production_resonance``: the second region an overweight can come
+    from, and the one that only exists from ``2 -> 3`` up.
+
+    Once the production process has a final state besides the resonances, its
+    matrix element carries a propagator of the resonance itself on the line the
+    extra parton is radiated from, at ``(p_r + p_j)^2 = m_r^2 + 2 p_r.p_j``.
+    On the pole that is ``>= M_r^2`` for any real parton, so it is unreachable;
+    sampling ``m_r`` below the pole opens it, and there the production matrix
+    element is a Breit-Wigner peak that no single run-level bound dominates.
+    The predicate says whether the accepted event sits on it.
+    """
+
+    POLE, WIDTH = 173.0, 1.5
+
+    class _Shim(object):
+        _near_production_resonance = \
+            interface_madspin.MadSpinInterface._near_production_resonance
+        _PRODUCTION_RESONANCE_WIDTHS = \
+            interface_madspin.MadSpinInterface._PRODUCTION_RESONANCE_WIDTHS
+
+        def __init__(self, banner):
+            self.banner = banner
+
+    def _shim(self, table=None):
+        if table is None:
+            table = {('mass', 6): self.POLE, ('decay', 6): self.WIDTH}
+        return self._Shim(TestNwaThresholdRegion._Banner(table))
+
+    def _event(self, m_res, s_rj, n_final=3, res_status=2):
+        """A production event whose resonance ``r`` (mass ``m_res``, status
+        ``res_status``) and massless parton ``j`` have ``(p_r + p_j)^2 = s_rj``.
+
+        Built in the ``r j`` rest frame -- the predicate only ever reads
+        pairwise invariant masses, so nothing here needs the rest of the event
+        to balance."""
+        M = math.sqrt(s_rj)
+        pstar = (s_rj - m_res ** 2) / (2 * M)
+        r = lhe_parser.FourMomentum(math.sqrt(m_res ** 2 + pstar ** 2),
+                                    0., 0., pstar)
+        j = lhe_parser.FourMomentum(pstar, 0., 0., -pstar)
+        far = lhe_parser.FourMomentum(math.sqrt(self.POLE ** 2 + 4e6),
+                                      0., 2000., 0.)
+        mom = [(6, res_status, m_res, r), (21, 1, 0.0, j)]
+        if n_final > 2:
+            mom.append((-6, 2, self.POLE, far))
+        mom = mom[:n_final]
+        lines = ['%d 1 1.0 100.0 0.0075 0.118' % (len(mom) + 2)]
+        for sign in (1, -1):
+            lines.append('21 -1 0 0 501 502 0. 0. %.15e %.15e 0.0 0. 9.'
+                         % (sign * 1000.0, 1000.0))
+        for pdg, status, mass, q in mom:
+            lines.append('%d %d 1 2 501 502 %.15e %.15e %.15e %.15e %.15e 0. 9.'
+                         % (pdg, status, q.px, q.py, q.pz, q.E, mass))
+        evt = lhe_parser.Event()
+        evt.parse('\n'.join(lines))
+        return evt
+
+    @staticmethod
+    def _pool(*pdgs):
+        return dict((pdg, ['a decay event']) for pdg in pdgs)
+
+    def test_the_window_is_M_times_Gamma_in_the_invariant_MASS_SQUARED(self):
+        """The propagator's own scale: ``|s - M^2| <= N M Gamma``, not
+        ``|m - M| <= N Gamma``. The two differ by a factor 2M."""
+        shim = self._shim()
+        n = shim._PRODUCTION_RESONANCE_WIDTHS
+        half = n * self.POLE * self.WIDTH
+        for delta, expected in ((0.0, True), (0.9 * half, True),
+                                (1.1 * half, False), (50 * half, False)):
+            evt = self._event(160.0, self.POLE ** 2 + delta)
+            self.assertEqual(
+                shim._near_production_resonance(evt, list(evt),
+                                                self._pool(6, -6)),
+                expected, 'delta = %g against a half-window of %g'
+                % (delta, half))
+
+    def test_a_two_to_two_event_can_never_be_in_it(self):
+        """No extra parton, so the only internal resonance line is t-channel
+        and spacelike. Even an event whose two finals happen to reconstruct the
+        pole is rejected, because the region does not exist there."""
+        shim = self._shim()
+        evt = self._event(160.0, self.POLE ** 2, n_final=2)
+        self.assertFalse(
+            shim._near_production_resonance(evt, list(evt), self._pool(6, -6)))
+
+    def test_an_undecayed_particle_is_not_a_resonance_of_this_run(self):
+        """Status 1 (nothing was attached to it) and an empty pool are both
+        'this event does not decay that', so neither can tag."""
+        shim = self._shim()
+        on_pole = self.POLE ** 2
+        self.assertFalse(shim._near_production_resonance(
+            self._event(160.0, on_pole, res_status=1), [0] * 5,
+            self._pool(6, -6)))
+        self.assertFalse(shim._near_production_resonance(
+            self._event(160.0, on_pole), [0] * 5, {6: [], -6: ['x']}))
+
+    def test_it_only_looks_at_the_production_block(self):
+        """The slice is ``len(production)``: decay products appended after it
+        must not be able to pair up with the resonance."""
+        shim = self._shim()
+        evt = self._event(160.0, self.POLE ** 2)
+        # 2 initial + 3 final; cutting the production block to the first four
+        # entries drops the parton the resonance would have paired with
+        self.assertTrue(
+            shim._near_production_resonance(evt, [0] * 5, self._pool(6, -6)))
+        self.assertFalse(
+            shim._near_production_resonance(evt, [0] * 3, self._pool(6, -6)))
+
+    def test_it_never_raises(self):
+        """It decides how loudly a diagnostic prints, so a missing parameter,
+        a missing banner or nonsense must come back False."""
+        evt = self._event(160.0, self.POLE ** 2)
+        self.assertFalse(self._shim({})._near_production_resonance(
+            evt, list(evt), self._pool(6, -6)))
+        broken = TestProductionResonanceRegion._Shim(None)
+        self.assertFalse(broken._near_production_resonance(
+            evt, list(evt), self._pool(6, -6)))
+        self.assertFalse(self._shim()._near_production_resonance(
+            None, [], self._pool(6, -6)))
+
+    def test_a_zero_width_particle_cannot_be_on_its_own_pole(self):
+        """No width, no Breit-Wigner: the propagator is a pole and not a peak,
+        and the phase-space point is measure zero rather than enhanced."""
+        shim = self._shim({('mass', 6): self.POLE, ('decay', 6): 0.0})
+        self.assertFalse(shim._near_production_resonance(
+            self._event(160.0, self.POLE ** 2), [0] * 5, self._pool(6, -6)))
+
+
+class TestProductionResonanceReport(unittest.TestCase):
+    """The three-way split of the carried overweights, and what it changes.
+
+    Threshold wins over the production resonance when an event is both, which
+    is the stronger statement; the line drops to info only when EVERY carried
+    overweight is explained by one of the two; and none of it may move an
+    arithmetic number.
+    """
+
+    def _log(self, **stats):
+        base = dict(nb_overweight=0, nb_overweight_nwa=0, nb_overweight_res=0,
+                    sum_overweight_dw=0.0, sum_overweight_dabs=0.0,
+                    sum_nom=0.0, sum_abs_nom=0.0, sum_sq_nom=0.0,
+                    max_overweight=1.0, nb_overflow_joint=0)
+        base.update(stats)
+        n_written = base.pop('n_written')
+        with _CapturedMadSpinLog() as caught:
+            TestOverweightReport._Stub()._report_overweight([base], n_written)
+        return caught
+
+    _SAMPLE = dict(n_written=1000, max_overweight=2.0, sum_overweight_dw=3.0,
+                   sum_overweight_dabs=3.0, sum_nom=1000.0,
+                   sum_abs_nom=1000.0, sum_sq_nom=1000.0)
+
+    def test_all_of_them_on_a_production_resonance_is_reported_calmly(self):
+        import logging
+        caught = self._log(nb_overweight=3, nb_overweight_res=3,
+                           **self._SAMPLE)
+        msg = '\n'.join(caught.messages)
+        self.assertEqual(caught.levels, [logging.INFO])
+        self.assertIn("resonance's own pole", msg)
+        self.assertIn('Lowering BW_cut', msg)
+        self.assertIn('None of them is outside it', msg)
+        self.assertIn('3/1000 written events', msg)
+
+    def test_one_of_them_in_neither_region_keeps_the_warning(self):
+        import logging
+        caught = self._log(nb_overweight=3, nb_overweight_res=2,
+                           **self._SAMPLE)
+        msg = '\n'.join(caught.messages)
+        self.assertEqual(caught.levels, [logging.WARNING])
+        self.assertIn('The other 1 are NOT in that region', msg)
+        self.assertIn('raise nb_sigma', msg)
+
+    def test_both_regions_are_quoted_and_add_up_to_the_total(self):
+        import logging
+        caught = self._log(nb_overweight=5, nb_overweight_nwa=2,
+                           nb_overweight_res=3, **self._SAMPLE)
+        msg = '\n'.join(caught.messages)
+        self.assertEqual(caught.levels, [logging.INFO])
+        self.assertIn('2 of them are production events within one summed '
+                      'width of', msg)
+        self.assertIn('3 of them have a resonance and another '
+                      'production-level final state', msg)
+        self.assertIn('None of them is outside those', msg)
+        self.assertIn('5/1000 written events', msg)
+
+    def test_both_regions_with_a_leftover_names_both_and_warns(self):
+        import logging
+        caught = self._log(nb_overweight=6, nb_overweight_nwa=2,
+                           nb_overweight_res=3, **self._SAMPLE)
+        msg = '\n'.join(caught.messages)
+        self.assertEqual(caught.levels, [logging.WARNING])
+        self.assertIn('The other 1 are NOT in either region', msg)
+
+    def test_the_split_does_not_move_the_cross_section_shift(self):
+        plain = '\n'.join(self._log(nb_overweight=3,
+                                    **self._SAMPLE).messages)
+        tagged = '\n'.join(self._log(nb_overweight=3, nb_overweight_res=3,
+                                     **self._SAMPLE).messages)
+        for piece in ('3/1000 written events', 'largest factor 2.0000',
+                      "+0.3% of the sample's cross-section"):
+            self.assertIn(piece, plain)
+            self.assertIn(piece, tagged)
+
+
 class TestNwaThresholdSequentialReport(unittest.TestCase):
     """The sequential accept/reject's own stage-exceedance line takes the same
     split.
@@ -3307,6 +3521,8 @@ class TestNwaThresholdSequentialReport(unittest.TestCase):
             interface_madspin.MadSpinInterface._nwa_threshold_note
         _nwa_threshold_margin = \
             interface_madspin.MadSpinInterface._nwa_threshold_margin
+        _PRODUCTION_RESONANCE_WIDTHS = \
+            interface_madspin.MadSpinInterface._PRODUCTION_RESONANCE_WIDTHS
 
         def __init__(self):
             self.options = {'density_tolerance': 1e-4}
