@@ -382,9 +382,8 @@ class TestHistogramRegressions(unittest.TestCase):
                 self.assertAlmostEqual(
                     by_title['A'].bins[0].wgts['stat_error'],
                     (0.1**2+0.2**2)**0.5)
-                self.assertTrue(any(accumulator._sums._mapping is not None
-                                    for accumulator in
-                                    aggregator.accumulators.values()))
+                self.assertEqual(len(aggregator._spill_arenas), 1)
+                self.assertIsNotNone(aggregator._spill_arenas[0]._mapping)
 
                 lazy_sum = by_title['A']+by_title['B']
                 self.assertIsInstance(lazy_sum.bins[0].wgts,
@@ -418,6 +417,166 @@ class TestHistogramRegressions(unittest.TestCase):
                 self.assertEqual(cli_a.bins[0].wgts['weight_a'], 35.0)
             finally:
                 aggregator.close()
+
+    def test_dense_parser_rejects_malformed_and_nonfinite_blocks(self):
+        header = '##& xmin & xmax & central value & dy\n\n'
+        opening = '<histogram> 1 "bad |X_AXIS@LIN |Y_AXIS@LOG"\n'
+
+        with misc.TMP_directory() as tmpdir:
+            malformed_header = pjoin(tmpdir, 'malformed_header.HwU')
+            with open(malformed_header, 'w') as stream:
+                stream.write('##& xmin & xmax & central value\n'+opening+
+                             '0 1 2\n<\\histogram>\n')
+            with self.assertRaisesRegex(histograms.HwU.ParseError,
+                                        'mandatory weight names'):
+                list(histograms.iter_hwu_dense(malformed_header))
+
+            bad_rows = [
+                ('nonnumeric', '0 1 2 0.1x\n<\\histogram>\n',
+                 'non-numeric'),
+                ('nonfinite', '0 1 inf 0.1\n<\\histogram>\n',
+                 'non-finite'),
+                ('premature_close', '<\\histogram>\n',
+                 'before its closing tag'),
+                ('decreasing', '1 0 2 0.1\n<\\histogram>\n',
+                 'decreasing boundaries')]
+            for name, body, message in bad_rows:
+                path = pjoin(tmpdir, name+'.HwU')
+                with open(path, 'w') as stream:
+                    stream.write(header+opening+body)
+                with self.subTest(name=name), self.assertRaisesRegex(
+                                      histograms.HwU.ParseError, message):
+                    list(histograms.iter_hwu_dense(path))
+
+            commented = pjoin(tmpdir, 'commented.HwU')
+            with open(commented, 'w') as stream:
+                stream.write(header+opening+
+                             '0 1 2 0.1 # an allowed row comment\n'
+                             '<\\histogram>\n')
+            records = list(histograms.iter_hwu_dense(commented))
+            self.assertEqual(len(records), 1)
+            self.assertEqual(records[0].n_bins, 1)
+
+    def test_streaming_aggregator_fails_closed_and_releases_resources(self):
+        first = histograms.HwUList([
+            self.make_hwu(title='A'), self.make_hwu(title='B')])
+        incomplete = histograms.HwUList([self.make_hwu(title='A')])
+
+        with misc.TMP_directory() as tmpdir:
+            first_path = pjoin(tmpdir, 'first.HwU')
+            incomplete_path = pjoin(tmpdir, 'incomplete.HwU')
+            first.output(pjoin(tmpdir, 'first'), format='HwU')
+            incomplete.output(pjoin(tmpdir, 'incomplete'), format='HwU')
+
+            aggregator = histograms.StreamingHwUAggregator(memory_limit=0)
+            aggregator.add_file(first_path)
+            with self.assertRaisesRegex(histograms.MadGraph5Error,
+                                        'expected histogram.*missing'):
+                aggregator.add_file(incomplete_path)
+            self.assertEqual(aggregator.accumulators, {})
+            with self.assertRaisesRegex(histograms.MadGraph5Error,
+                                        'previous input failed'):
+                aggregator.to_hwu_list()
+            with self.assertRaisesRegex(histograms.MadGraph5Error,
+                                        'previous input failed'):
+                len(aggregator)
+            aggregator.close()
+            aggregator.close()
+
+            with histograms.StreamingHwUAggregator(
+                                             memory_limit=0) as aggregator:
+                with self.assertRaisesRegex(histograms.MadGraph5Error,
+                                            'factors must be finite'):
+                    aggregator.add_file(first_path, factor=float('inf'))
+                aggregator.add_file(first_path)
+                self.assertEqual(len(aggregator), 2)
+
+        with self.assertRaisesRegex(histograms.MadGraph5Error,
+                                    'must be non-negative'):
+            histograms.StreamingHwUAggregator(memory_limit=-1)
+
+        buffer_ = histograms._DenseDoubleBuffer(
+                                      2, use_mmap=True, numpy=None)
+        self.assertIsNone(buffer_._file)
+        buffer_[0] = 1.0
+        buffer_.close()
+        buffer_.close()
+
+    def test_arithmetic_validates_lazy_schemas_and_operand_protocol(self):
+        left = self.make_hwu(['central', 'stat_error'], [1.0, 0.1])
+        right = self.make_hwu(
+            ['central', 'stat_error', 'extra'], [1.0, 0.1, 2.0])
+
+        with self.assertRaisesRegex(histograms.MadGraph5Error,
+                                    'different weight labels'):
+            left+right
+        self.assertIs(left.__add__(object()), NotImplemented)
+        self.assertIs(left.__sub__(object()), NotImplemented)
+        self.assertIs(left.__mul__(object()), NotImplemented)
+        self.assertIs(left.__truediv__(object()), NotImplemented)
+
+        lazy = histograms.LazyCombinedWeightView(
+            {'central': 1.0}, {'central': 2.0}, histograms.Histogram.ADD,
+            ('central',))
+        with self.assertRaises(KeyError):
+            lazy['unknown']
+        with self.assertRaisesRegex(histograms.MadGraph5Error, "Element '1'"):
+            histograms.Bin((0.0, 1))
+        with self.assertRaisesRegex(histograms.MadGraph5Error,
+                                    'title.*must be a string'):
+            histograms.HwU(title=1)
+        with self.assertRaisesRegex(histograms.MadGraph5Error,
+                                    'type.*string or None'):
+            histograms.HwU(type=1)
+
+    def test_failed_streamed_output_preserves_existing_files(self):
+        first = self.make_hwu(title='first')
+        incompatible = self.make_hwu(
+            ['central', 'stat_error', 'extra'], [1.0, 0.1, 2.0],
+            title='second')
+
+        with misc.TMP_directory() as tmpdir:
+            output_base = pjoin(tmpdir, 'atomic')
+            with open(output_base+'.HwU', 'w') as stream:
+                stream.write('existing data')
+            with open(output_base+'.gnuplot', 'w') as stream:
+                stream.write('existing script')
+            groups = iter([
+                histograms.HwUList([first]),
+                histograms.HwUList([incompatible])])
+            with self.assertRaisesRegex(histograms.MadGraph5Error,
+                                        'different base column schema'):
+                histograms.HwUList([]).output(
+                    output_base, format='gnuplot', uncertainties=[],
+                    _histogram_groups=groups,
+                    _weight_schema=['central', 'stat_error'])
+            with open(output_base+'.HwU') as stream:
+                self.assertEqual(stream.read(), 'existing data')
+            with open(output_base+'.gnuplot') as stream:
+                self.assertEqual(stream.read(), 'existing script')
+
+    def test_generated_matplotlib_reader_is_strict(self):
+        script = histograms.HwUList._get_matplotlib_script(
+                                      'strict', [], False, '')
+        namespace = {'__file__': 'strict.py', '__name__': 'strict_reader_test'}
+        exec(compile(script, 'strict.py', 'exec'), namespace)
+
+        with misc.TMP_directory() as tmpdir:
+            cases = [
+                ('nonfinite', 1, '0 1 inf\n<\\histogram>\n',
+                 'non-finite'),
+                ('wrong_count', 2, '0 1 2\n<\\histogram>\n',
+                 'contains 1 rows but declares 2'),
+                ('unclosed', 1, '0 1 2\n', 'missing its closing tag')]
+            for name, n_bins, body, message in cases:
+                path = pjoin(tmpdir, name+'.HwU')
+                with open(path, 'w') as stream:
+                    stream.write('<histogram> %d "bad"\n%s'%(n_bins, body))
+                offsets = namespace['_index_hwu_blocks'](path)
+                with self.subTest(name=name), self.assertRaisesRegex(
+                                                   SystemExit, message):
+                    namespace['_read_hwu_block'](
+                                        path, offsets[0], set([0, 1, 2]))
 
     def test_output_canonicalizes_weight_order_and_is_repeatable(self):
         labels = ['central', 'stat_error', 'weight_a', 'weight_b']
@@ -498,6 +657,14 @@ class TestHistogramRegressions(unittest.TestCase):
         self.assertEqual(len(parsed), 1)
         self.assertEqual(parsed[0].bins.weight_labels,
                          ['central', 'stat_error'])
+        with misc.TMP_directory() as tmpdir:
+            xml_path = pjoin(tmpdir, 'compound.xml')
+            with open(xml_path, 'w') as stream:
+                stream.write(xml_source)
+            dense = list(histograms.iter_hwu_dense(xml_path))
+        self.assertEqual(len(dense), 1)
+        self.assertEqual(dense[0].weight_labels,
+                         ('central', 'stat_error'))
 
     def test_log_range_for_one_value_is_multiplicative(self):
         histo = self.make_hwu(values=[0.5, 0.0])

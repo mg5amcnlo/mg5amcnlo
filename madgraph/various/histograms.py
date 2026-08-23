@@ -21,6 +21,7 @@ from __future__ import division
 from __future__ import absolute_import
 import array
 import collections
+import errno
 try:
     from collections.abc import MutableMapping
 except ImportError:
@@ -146,21 +147,22 @@ class Bin(object):
     def __setattr__(self, name, value):
         if name=='boundaries':
             if not isinstance(value, tuple):
-                raise MadGraph5Error("Argument '%s' for bin property "+\
-                                        "'boundaries' must be a tuple."%str(value))
+                raise MadGraph5Error("Argument '%s' for bin property "
+                    "'boundaries' must be a tuple."%str(value))
             else:
                 for coordinate in value:
                     if isinstance(coordinate, tuple):
                         for dim in coordinate:
                             if not isinstance(dim, float):
-                                raise MadGraph5Error("Coordinate '%s' of the bin"+\
-                                  " boundary '%s' must be a float."%str(dim,value))
+                                raise MadGraph5Error("Coordinate '%s' of the bin "
+                                  "boundary '%s' must be a float."%
+                                  (str(dim), str(value)))
                     elif not isinstance(coordinate, float):
-                        raise MadGraph5Error("Element '%s' of the bin boundaries"+\
-                                          " specified must be a float."%str(bound))
+                        raise MadGraph5Error("Element '%s' of the bin boundaries "
+                                     "specified must be a float."%str(coordinate))
         elif name=='wgts':
             if not isinstance(value, MutableMapping):
-                raise MadGraph5Error("Argument '%s' for bin uncertainty "+\
+                raise MadGraph5Error("Argument '%s' for bin uncertainty "
                        "'wgts' must be a mutable mapping."%str(value))
             # Dense accumulator views have already validated their backing
             # storage. Iterating over all their values here would turn each
@@ -169,8 +171,8 @@ class Bin(object):
             if not getattr(value, '_validated_histogram_weights', False):
                 for val in value.values():
                     if not isinstance(val,float):
-                        raise MadGraph5Error("The bin weight value '%s' is not a "+\
-                                                                     "float."%str(val))
+                        raise MadGraph5Error("The bin weight value '%s' is not a "
+                                             "float."%str(val))
    
         super(Bin, self).__setattr__(name,value)
         
@@ -376,11 +378,11 @@ class Histogram(object):
     def __setattr__(self, name, value):
         if name=='title':
             if not isinstance(value, str):
-                raise MadGraph5Error("Argument '%s' for the histogram property "+\
-                                          "'title' must be a string."%str(value))
+                raise MadGraph5Error("Argument '%s' for the histogram property "
+                                     "'title' must be a string."%str(value))
         elif name=='dimension':
             if not isinstance(value, int):
-                raise MadGraph5Error("Argument '%s' for histogram property "+\
+                raise MadGraph5Error("Argument '%s' for histogram property "
                                     "'dimension' must be an integer."%str(value))
             if self.allowed_dimensions and value not in self.allowed_dimensions:
                 raise MadGraph5Error("%i-Dimensional histograms not supported "\
@@ -388,16 +390,19 @@ class Histogram(object):
                               %(self.__class__.__name__,self.allowed_dimensions))
         elif name=='bins':
             if not isinstance(value, BinList):
-                raise MadGraph5Error("Argument '%s' for histogram property "+\
-                                        "'bins' must be a BinList."%str(value))
+                raise MadGraph5Error("Argument '%s' for histogram property "
+                                     "'bins' must be a BinList."%str(value))
             else:
                 for bin in value:
                     if not isinstance(bin, Bin):
                         raise MadGraph5Error("Element '%s' of the "%str(bin)+\
                                   " histogram bin list specified must be a bin.")
         elif name=='type':
-            if not (value is None or value in self.allowed_types or 
-                                                        self.allowed_types==[]):
+            if value is not None and not isinstance(value, str):
+                raise MadGraph5Error("Argument '%s' for histogram property "
+                                     "'type' must be a string or None."%str(value))
+            if value is not None and self.allowed_types and \
+                                             value not in self.allowed_types:
                 raise MadGraph5Error("Argument '%s' for histogram"%str(value)+\
                              " property 'type' must be a string in %s or None."\
                                          %([str(t) for t in self.allowed_types]))
@@ -461,19 +466,36 @@ class Histogram(object):
             raise MadGraph5Error('The two histograms to combine have a '+\
          'different dimensions, %d!=%d.'%(histoA.dimension,histoB.dimension))            
         res_histogram.dimension = histoA.dimension
+
+        lazy_operation = LazyCombinedWeightView.supports(func)
+        left_labels = list(histoA.bins.weight_labels or [])
+        right_labels = list(histoB.bins.weight_labels or [])
+        if lazy_operation:
+            if len(left_labels) != len(set(left_labels)) or \
+                         len(right_labels) != len(set(right_labels)):
+                raise MadGraph5Error('Histogram weight labels must be unique '
+                                     'before histograms can be combined.')
+            if set(left_labels) != set(right_labels):
+                missing = set(left_labels)-set(right_labels)
+                extra = set(right_labels)-set(left_labels)
+                raise MadGraph5Error('The two histograms to combine have '
+                    'different weight labels (missing: %s; extra: %s).'%
+                    (sorted(missing, key=str), sorted(extra, key=str)))
+        lazy_labels = tuple(left_labels)
+        lazy_label_set = frozenset(lazy_labels)
     
         for i, bin in enumerate(histoA.bins):
             other_bin = histoB.bins[i]
             if getattr(bin.wgts, '_lazy_histogram_weights', False) and \
                getattr(other_bin.wgts, '_lazy_histogram_weights', False) and \
-               LazyCombinedWeightView.supports(func):
+               lazy_operation:
                 if bin.boundaries != other_bin.boundaries:
                     raise MadGraph5Error('The two bins to combine have different '
                         'boundaries, %s!=%s.'%(str(bin.boundaries),
                                               str(other_bin.boundaries)))
                 res_histogram.bins.append(Bin(bin.boundaries,
                     LazyCombinedWeightView(bin.wgts, other_bin.wgts, func,
-                                           histoA.bins.weight_labels)))
+                        lazy_labels, label_set=lazy_label_set)))
             else:
                 res_histogram.bins.append(Bin.combine(bin, other_bin,func))
         
@@ -482,7 +504,7 @@ class Histogram(object):
         res_histogram.bins.weight_labels = [label for label in histoA.bins.\
                 weight_labels if label in res_histogram.bins.weight_labels] + \
                 sorted([label for label in res_histogram.bins.weight_labels if\
-                                       label not in histoA.bins.weight_labels])
+                         label not in histoA.bins.weight_labels], key=str)
                 
         
         return res_histogram
@@ -613,8 +635,7 @@ class Histogram(object):
             result.alter_weights(Histogram.OFFSET(float(other)))
             return result
         else:
-            return NotImplemented, 'Histograms can only be added to other '+\
-              ' histograms or scalars.'
+            return NotImplemented
 
     def __sub__(self, other):
         """ Overload the subtraction function. """
@@ -625,8 +646,7 @@ class Histogram(object):
             result.alter_weights(Histogram.OFFSET(-float(other)))
             return result
         else:
-            return NotImplemented, 'Histograms can only be subtracted to other '+\
-              ' histograms or scalars.'
+            return NotImplemented
     
     def __mul__(self, other):
         """ Overload the multiplication function. """
@@ -637,8 +657,7 @@ class Histogram(object):
             result.alter_weights(Histogram.RESCALE(float(other)))
             return result
         else:
-            return NotImplemented, 'Histograms can only be multiplied to other '+\
-              ' histograms or scalars.'
+            return NotImplemented
 
     def __div__(self, other):
         """ Overload the multiplication function. """
@@ -649,8 +668,7 @@ class Histogram(object):
             result.alter_weights(Histogram.RESCALE(1.0/float(other)))
             return result
         else:
-            return NotImplemented, 'Histograms can only be divided with other '+\
-              ' histograms or scalars.'
+            return NotImplemented
 
     __truediv__ = __div__
 
@@ -662,11 +680,12 @@ class LazyCombinedWeightView(MutableMapping):
     _lazy_histogram_weights = True
 
     def __init__(self, left, right, operation, labels, overlay=None,
-                 deleted=None):
+                 deleted=None, label_set=None):
         self.left = left
         self.right = right
         self.operation = operation
         self.labels = labels
+        self.label_set = frozenset(labels) if label_set is None else label_set
         self.overlay = {} if overlay is None else overlay
         self.deleted = set() if deleted is None else deleted
 
@@ -715,6 +734,8 @@ class LazyCombinedWeightView(MutableMapping):
             raise KeyError(label)
         if label in self.overlay:
             return self.overlay[label]
+        if label not in self.label_set:
+            raise KeyError(label)
         return float(self._derived_value(label))
 
     def __setitem__(self, label, value):
@@ -732,7 +753,7 @@ class LazyCombinedWeightView(MutableMapping):
             if label not in self.deleted:
                 yield label
         for label in self.overlay:
-            if label not in self.deleted and label not in self.labels:
+            if label not in self.deleted and label not in self.label_set:
                 yield label
 
     def __len__(self):
@@ -741,7 +762,8 @@ class LazyCombinedWeightView(MutableMapping):
     def __deepcopy__(self, memo):
         result = self.__class__(copy.deepcopy(self.left, memo),
             copy.deepcopy(self.right, memo), self.operation, self.labels,
-            copy.deepcopy(self.overlay, memo), copy.deepcopy(self.deleted, memo))
+            copy.deepcopy(self.overlay, memo), copy.deepcopy(self.deleted, memo),
+            label_set=self.label_set)
         memo[id(self)] = result
         return result
 
@@ -752,9 +774,11 @@ class LazyRebinnedWeightView(MutableMapping):
     _validated_histogram_weights = True
     _lazy_histogram_weights = True
 
-    def __init__(self, sources, labels, overlay=None, deleted=None):
+    def __init__(self, sources, labels, overlay=None, deleted=None,
+                 label_set=None):
         self.sources = sources
         self.labels = labels
+        self.label_set = frozenset(labels) if label_set is None else label_set
         self.overlay = {} if overlay is None else overlay
         self.deleted = set() if deleted is None else deleted
 
@@ -763,6 +787,8 @@ class LazyRebinnedWeightView(MutableMapping):
             raise KeyError(label)
         if label in self.overlay:
             return self.overlay[label]
+        if label not in self.label_set:
+            raise KeyError(label)
         if label == 'stat_error':
             return math.sqrt(sum(source[label]**2 for source in self.sources))
         return float(sum(source[label] for source in self.sources))
@@ -782,7 +808,7 @@ class LazyRebinnedWeightView(MutableMapping):
             if label not in self.deleted:
                 yield label
         for label in self.overlay:
-            if label not in self.deleted and label not in self.labels:
+            if label not in self.deleted and label not in self.label_set:
                 yield label
 
     def __len__(self):
@@ -790,7 +816,8 @@ class LazyRebinnedWeightView(MutableMapping):
 
     def __deepcopy__(self, memo):
         result = self.__class__(copy.deepcopy(self.sources, memo), self.labels,
-            copy.deepcopy(self.overlay, memo), copy.deepcopy(self.deleted, memo))
+            copy.deepcopy(self.overlay, memo), copy.deepcopy(self.deleted, memo),
+            label_set=self.label_set)
         memo[id(self)] = result
         return result
 
@@ -900,21 +927,21 @@ class HwU(Histogram):
             raise MadGraph5Error("Argument file_path '%s' for HwU init"\
             %str(file_path)+"ialization must be either a file path or a stream.")
 
-        # Attempt to find the weight headers if not specified        
-        if not weight_header:
-            weight_header = HwU.parse_weight_header(stream, raw_labels=raw_labels)
+        try:
+            # Attempt to find the weight headers if not specified.
+            if not weight_header:
+                weight_header = HwU.parse_weight_header(
+                                                  stream, raw_labels=raw_labels)
 
-        if not self.parse_one_histo_from_stream(stream, weight_header,
-                  consider_reweights=consider_reweights, 
-                  selected_central_weight=selected_central_weight,
-                  raw_labels=raw_labels):
-            # Indicate that the initialization of the histogram was unsuccessful
-            # by setting the BinList property to None.
-            super(Histogram,self).__setattr__('bins',None)
-        
-        # Explicitly close the opened stream for clarity.
-        if isinstance(file_path, str):
-            stream.close()
+            if not self.parse_one_histo_from_stream(stream, weight_header,
+                      consider_reweights=consider_reweights,
+                      selected_central_weight=selected_central_weight,
+                      raw_labels=raw_labels):
+                # Mark unsuccessful initialization with an empty bin source.
+                super(Histogram,self).__setattr__('bins',None)
+        finally:
+            if isinstance(file_path, str):
+                stream.close()
 
     def addEvent(self, x_value, weights = 1.0):
         """ Add an event to the current plot. """
@@ -1131,23 +1158,50 @@ class HwU(Histogram):
     def iter_HwU_source(self, print_header=True, weight_labels=None):
         """Yield HwU source line by line without retaining a text copy."""
 
-        weight_labels = self.bins.weight_labels if weight_labels is None \
-                                                        else weight_labels
-        if set(weight_labels) != set(self.bins.weight_labels):
+        registered_labels = list(self.bins.weight_labels)
+        weight_labels = registered_labels if weight_labels is None \
+                                         else list(weight_labels)
+        if len(registered_labels) != len(set(registered_labels)) or \
+                         len(weight_labels) != len(set(weight_labels)):
+            raise MadGraph5Error("Histogram '%s' has duplicate weight columns."%
+                                 self.title)
+        if set(weight_labels) != set(registered_labels):
             raise MadGraph5Error("The requested HwU column schema is not "
                                  "compatible with histogram '%s'."%self.title)
+        if ('central' in registered_labels) != \
+                                      ('stat_error' in registered_labels):
+            raise MadGraph5Error("Histogram '%s' must define central and "
+                                 "statistical-error columns together."%self.title)
         if print_header:
             yield self.get_formatted_header(weight_labels=weight_labels)
             yield ''
         yield '<histogram> %s "%s"'%(len(self.bins),
                                      self.get_HwU_histogram_name(format='HwU'))
-        for bin in self.bins:
-            if 'central' in bin.wgts:
-                line = ' '.join('%+16.7e'%wgt for wgt in list(bin.boundaries)+
-                                  [bin.wgts['central'],bin.wgts['stat_error']])
+        expected_labels = set(registered_labels)
+        for bin_index, hist_bin in enumerate(self.bins):
+            if set(hist_bin.wgts) != expected_labels:
+                raise MadGraph5Error("Bin %d of histogram '%s' does not match "
+                                     "its registered weight columns."%
+                                     (bin_index+1, self.title))
+            boundaries = list(hist_bin.boundaries)
+            if len(boundaries) != 2 or not all(
+                            math.isfinite(value) for value in boundaries):
+                raise MadGraph5Error("Bin %d of histogram '%s' has invalid "
+                                     "boundaries."%(bin_index+1, self.title))
+            if boundaries[0] > boundaries[1]:
+                raise MadGraph5Error("Bin %d of histogram '%s' has decreasing "
+                                     "boundaries."%(bin_index+1, self.title))
+            values = [hist_bin.wgts[label] for label in weight_labels]
+            if not all(math.isfinite(value) for value in values):
+                raise MadGraph5Error("Bin %d of histogram '%s' contains a "
+                                     "non-finite weight."%
+                                     (bin_index+1, self.title))
+            if 'central' in hist_bin.wgts:
+                line = ' '.join('%+16.7e'%wgt for wgt in boundaries+
+                    [hist_bin.wgts['central'], hist_bin.wgts['stat_error']])
             else:
-                line = ' '.join('%+16.7e'%wgt for wgt in list(bin.boundaries))
-            line += ' '.join('%+16.7e'%bin.wgts[key] for key in
+                line = ' '.join('%+16.7e'%wgt for wgt in boundaries)
+            line += ' '.join('%+16.7e'%hist_bin.wgts[key] for key in
                 weight_labels if key not in ['central','stat_error'])
             yield line
         yield r'<\histogram>'
@@ -1168,10 +1222,10 @@ class HwU(Histogram):
                              " is not yet supported. Supported formats are %s."\
                                                  %HwU.output_formats_implemented)
 
-        if format == 'matplotlib':
+        if format in ['gnuplot', 'matplotlib']:
             if not isinstance(path, str):
-                raise MadGraph5Error("A path is required for matplotlib output.")
-            HwUList([copy.deepcopy(self)]).output(path, format='matplotlib')
+                raise MadGraph5Error("A path is required for %s output."%format)
+            HwUList([copy.deepcopy(self)]).output(path, format=format)
             return True
 
         if format == 'HwU':
@@ -1180,9 +1234,13 @@ class HwU(Histogram):
         if path is None:
             return '\n'.join(str_output_list)
         elif isinstance(path, str):
-            stream = open(path,'w')
-            stream.write('\n'.join(str_output_list))
-            stream.close()
+            target = _AtomicTextOutput(path)
+            try:
+                target.stream.write('\n'.join(str_output_list))
+                target.commit()
+            except BaseException:
+                target.abort()
+                raise
         elif isinstance(path, file):
             path.write('\n'.join(str_output_list))
         
@@ -1747,6 +1805,8 @@ class HwU(Histogram):
         
         new_bins = copy.copy(self.bins)
         del new_bins[:]
+        lazy_labels = tuple(self.bins.weight_labels)
+        lazy_label_set = frozenset(lazy_labels)
 
         for bins_to_merge in concat_list:
             if len(bins_to_merge)==0:
@@ -1758,7 +1818,7 @@ class HwU(Histogram):
                                 bins_to_merge[-1].boundaries[1]),
                     wgts=LazyRebinnedWeightView(
                         [hist_bin.wgts for hist_bin in bins_to_merge],
-                        self.bins.weight_labels)))
+                        lazy_labels, label_set=lazy_label_set)))
                 continue
             new_bins.append(Bin(boundaries=(bins_to_merge[0].boundaries[0],
               bins_to_merge[-1].boundaries[1]),wgts={'central':0.0}))
@@ -1932,6 +1992,17 @@ class DenseHistogramRecord(object):
                  'values', 'n_bins')
 
     def __init__(self, histo, weight_labels, boundaries, values):
+        weight_labels = tuple(weight_labels)
+        if len(weight_labels) != len(set(weight_labels)):
+            raise HwU.ParseError("Histogram '%s' has duplicate weight labels."%
+                                 histo.title)
+        if len(boundaries) % 2:
+            raise HwU.ParseError("Histogram '%s' has an incomplete bin boundary."%
+                                 histo.title)
+        n_bins = len(boundaries)//2
+        if len(values) != n_bins*len(weight_labels):
+            raise HwU.ParseError("Histogram '%s' has %d values; %d were expected."%
+                (histo.title, len(values), n_bins*len(weight_labels)))
         self.title = histo.title
         self.type = histo.type
         self.dimension = histo.dimension
@@ -1939,10 +2010,10 @@ class DenseHistogramRecord(object):
         self.y_axis_mode = histo.y_axis_mode
         self.has_jetsample = hasattr(histo, 'jetsample')
         self.jetsample = histo.jetsample if self.has_jetsample else None
-        self.weight_labels = tuple(weight_labels)
+        self.weight_labels = weight_labels
         self.boundaries = boundaries
         self.values = values
-        self.n_bins = len(boundaries)//2
+        self.n_bins = n_bins
 
     @classmethod
     def from_hwu(cls, histo):
@@ -1952,8 +2023,21 @@ class DenseHistogramRecord(object):
         boundaries = array.array('d')
         values = array.array('d')
         for hist_bin in histo.bins:
-            boundaries.extend(hist_bin.boundaries)
-            values.extend(float(hist_bin.wgts[label]) for label in labels)
+            bin_boundaries = [float(value) for value in hist_bin.boundaries]
+            bin_values = [float(hist_bin.wgts[label]) for label in labels]
+            if len(bin_boundaries) != 2:
+                raise HwU.ParseError("Histogram '%s' has a bin with %d boundaries; "
+                                     "2 were expected."%
+                                     (histo.title, len(bin_boundaries)))
+            if not all(math.isfinite(value) for value in
+                                               bin_boundaries+bin_values):
+                raise HwU.ParseError("A non-finite value was found in '%s'."%
+                                     histo.title)
+            if bin_boundaries[0] > bin_boundaries[1]:
+                raise HwU.ParseError("A bin in '%s' has decreasing boundaries."%
+                                     histo.title)
+            boundaries.extend(bin_boundaries)
+            values.extend(bin_values)
         return cls(histo, labels, boundaries, values)
 
 
@@ -1971,15 +2055,12 @@ def iter_hwu_dense(file_path, accepted_types_order=None,
     accepted_titles = accepted_titles or []
     stream = open(file_path, 'r')
     try:
-        try:
-            prefix = stream.read(512)
-            stream.seek(0)
-            if prefix.lstrip().startswith('<'):
-                raise HwU.ParseError('XML histogram source detected.')
-            weight_header = HwU.parse_weight_header(stream,
-                                                     raw_labels=raw_labels)
-        except HwU.ParseError:
-            stream.seek(0)
+        prefix = stream.read(512)
+        stream.seek(0)
+        if prefix.lstrip().startswith('<'):
+            if prefix.lstrip().startswith('<histogram>'):
+                raise HwU.ParseError('The HwU weight header is missing before '
+                                     'the first histogram block.')
             xml_histograms = HwUList(stream, run_id=run_id,
                 merging_scale=merging_scale,
                 accepted_types_order=accepted_types_order,
@@ -1991,6 +2072,10 @@ def iter_hwu_dense(file_path, accepted_types_order=None,
                     continue
                 yield DenseHistogramRecord.from_hwu(histo)
             return
+
+        weight_header = HwU.parse_weight_header(stream, raw_labels=raw_labels)
+        if len(weight_header) != len(set(weight_header)):
+            raise HwU.ParseError('The HwU weight header contains duplicate labels.')
 
         selected_central = None
         if merging_scale is not None:
@@ -2042,6 +2127,9 @@ def iter_hwu_dense(file_path, accepted_types_order=None,
         for line in stream:
             start = HwU.histo_start_re.match(line)
             if start is None:
+                if line.lstrip().startswith('<histogram>'):
+                    raise HwU.ParseError('A malformed histogram opening tag was '
+                                         'found: %s'%line.strip())
                 continue
 
             n_bins = int(start.group('n_bins'))
@@ -2057,33 +2145,55 @@ def iter_hwu_dense(file_path, accepted_types_order=None,
                 if line_bin is None:
                     raise HwU.ParseError("Only %d of %d bins were found for '%s'."%
                                          (rows_read, n_bins, metadata.title))
-                if not line_bin.strip():
+                stripped = line_bin.strip()
+                if not stripped or stripped.startswith('#'):
                     continue
+                if HwU.histo_end_re.match(line_bin):
+                    raise HwU.ParseError("Only %d of %d bins were found for '%s' "
+                                         "before its closing tag."%
+                                         (rows_read, n_bins, metadata.title))
+                if HwU.histo_start_re.match(line_bin):
+                    raise HwU.ParseError("A new histogram starts before all %d "
+                                         "bins of '%s' were read."%
+                                         (n_bins, metadata.title))
+                numeric_text = line_bin.split('#', 1)[0].strip()
+                if not numeric_text:
+                    continue
+                fields = numeric_text.replace('D', 'E').replace('d', 'e').split()
+                if len(fields) != len(weight_header):
+                    raise HwU.ParseError("There are %d columns in bin %d of "
+                        "'%s'; exactly %d were expected."%(len(fields),
+                        rows_read+1, metadata.title, len(weight_header)))
                 if numpy is not None:
-                    parsed = numpy.fromstring(
-                        line_bin.replace('D', 'E').replace('d', 'e'),
-                        dtype=numpy.float64, sep=' ')
-                    if numpy.isnan(parsed).any():
-                        raise HwU.ParseError("A NaN weight was found in '%s'."%
-                                             metadata.title)
-                else:
-                    fields = line_bin.split()
                     try:
-                        parsed = [float(value.replace('D', 'E').replace('d', 'e'))
-                                  for value in fields]
-                    except ValueError:
-                        parsed = []
-                    if any(math.isnan(value) for value in parsed):
-                        raise HwU.ParseError("A NaN weight was found in '%s'."%
-                                             metadata.title)
-                if len(parsed) == 0:
-                    continue
-                if len(parsed) < len(weight_header):
-                    raise HwU.ParseError("There are only %d columns in bin %d of "
-                        "'%s'; %d were expected."%(len(parsed), rows_read,
-                        metadata.title, len(weight_header)))
-                boundaries.append(float(parsed[boundary_positions['boundary_xmin']]))
-                boundaries.append(float(parsed[boundary_positions['boundary_xmax']]))
+                        # ``asarray`` rejects partial tokens such as ``1.0x``;
+                        # ``fromstring`` silently accepted those on some NumPy
+                        # versions.
+                        parsed = numpy.asarray(fields, dtype=numpy.float64)
+                    except (TypeError, ValueError, OverflowError):
+                        raise HwU.ParseError("A non-numeric value was found in bin "
+                            "%d of '%s'."%(rows_read+1, metadata.title))
+                    if not numpy.isfinite(parsed).all():
+                        raise HwU.ParseError("A non-finite value was found in bin "
+                            "%d of '%s'."%(rows_read+1, metadata.title))
+                else:
+                    try:
+                        parsed = [float(value) for value in fields]
+                    except (TypeError, ValueError, OverflowError):
+                        raise HwU.ParseError("A non-numeric value was found in bin "
+                            "%d of '%s'."%(rows_read+1, metadata.title))
+                    if not all(math.isfinite(value) for value in parsed):
+                        raise HwU.ParseError("A non-finite value was found in bin "
+                            "%d of '%s'."%(rows_read+1, metadata.title))
+                lower = float(parsed[boundary_positions['boundary_xmin']])
+                upper = float(parsed[boundary_positions['boundary_xmax']])
+                if lower > upper:
+                    raise HwU.ParseError("Bin %d of '%s' has decreasing boundaries "
+                                         "(%s > %s)."%
+                                         (rows_read+1, metadata.title,
+                                          lower, upper))
+                boundaries.append(lower)
+                boundaries.append(upper)
                 if numpy is not None:
                     values[rows_read, :] = parsed[numpy_output_positions]
                 else:
@@ -2092,8 +2202,14 @@ def iter_hwu_dense(file_path, accepted_types_order=None,
                 rows_read += 1
 
             for end_line in stream:
+                stripped = end_line.strip()
+                if not stripped or stripped.startswith('#'):
+                    continue
                 if HwU.histo_end_re.match(end_line):
                     break
+                raise HwU.ParseError("Unexpected content after the %d bins of "
+                                     "'%s'; a closing histogram tag was expected."%
+                                     (n_bins, metadata.title))
             else:
                 raise HwU.ParseError("The closing histogram tag for '%s' is missing."%
                                      metadata.title)
@@ -2112,27 +2228,105 @@ def iter_hwu_dense(file_path, accepted_types_order=None,
         stream.close()
 
 
-class _DenseDoubleBuffer(object):
-    """Fixed-size double buffer backed either by RAM or an anonymous mmap."""
+class _SpillArena(object):
+    """Shared file-backed mmap arena used by many dense buffers."""
 
-    def __init__(self, size, use_mmap=False, numpy=None):
+    def __init__(self, capacity):
+        if capacity <= 0:
+            raise MadGraph5Error('Spill arena capacity must be positive.')
+        self.capacity = capacity
+        self.used = 0
+        self._file = None
+        self._mapping = None
+        try:
+            self._file = tempfile.TemporaryFile()
+            self._file.truncate(capacity)
+            self._mapping = mmap.mmap(self._file.fileno(), capacity)
+            # mmap keeps its own OS handle.  Closing the Python file object
+            # avoids retaining a second descriptor for the arena.
+            self._file.close()
+            self._file = None
+        except BaseException:
+            try:
+                self.close()
+            except Exception:
+                pass
+            raise
+
+    def allocate(self, n_bytes):
+        if n_bytes < 0 or self.used+n_bytes > self.capacity:
+            raise MadGraph5Error('Dense spill arena is out of space.')
+        start = self.used
+        self.used += n_bytes
+        return memoryview(self._mapping)[start:self.used]
+
+    @property
+    def remaining(self):
+        return self.capacity-self.used
+
+    def close(self):
+        if self._mapping is not None:
+            mapping = self._mapping
+            try:
+                mapping.close()
+            except BufferError:
+                raise
+            else:
+                self._mapping = None
+        if self._file is not None:
+            self._file.close()
+            self._file = None
+
+    def __del__(self):
+        try:
+            self.close()
+        except Exception:
+            pass
+
+
+class _DenseDoubleBuffer(object):
+    """Fixed-size double buffer backed by RAM or mmap spill storage."""
+
+    def __init__(self, size, use_mmap=False, numpy=None, backing_view=None):
+        if not isinstance(size, int) or size < 0:
+            raise MadGraph5Error("Dense buffer size must be a non-negative integer.")
         self.size = size
         self.numpy = numpy
         self._file = None
         self._mapping = None
-        if use_mmap and size:
-            self._file = tempfile.TemporaryFile()
-            self._file.truncate(size*8)
-            self._mapping = mmap.mmap(self._file.fileno(), size*8)
-            if numpy is not None:
-                self.data = numpy.frombuffer(self._mapping, dtype=numpy.float64,
-                                             count=size)
+        self.data = None
+        try:
+            if backing_view is not None:
+                if len(backing_view) != size*8:
+                    raise MadGraph5Error('Dense buffer backing has the wrong size.')
+                if numpy is not None:
+                    self.data = numpy.frombuffer(backing_view,
+                                      dtype=numpy.float64, count=size)
+                else:
+                    self.data = backing_view.cast('d')
+            elif use_mmap and size:
+                self._file = tempfile.TemporaryFile()
+                self._file.truncate(size*8)
+                self._mapping = mmap.mmap(self._file.fileno(), size*8)
+                # mmap owns the backing storage after construction; avoid
+                # retaining the temporary file's additional descriptor.
+                self._file.close()
+                self._file = None
+                if numpy is not None:
+                    self.data = numpy.frombuffer(self._mapping,
+                                      dtype=numpy.float64, count=size)
+                else:
+                    self.data = memoryview(self._mapping).cast('d')
+            elif numpy is not None:
+                self.data = numpy.zeros(size, dtype=numpy.float64)
             else:
-                self.data = memoryview(self._mapping).cast('d')
-        elif numpy is not None:
-            self.data = numpy.zeros(size, dtype=numpy.float64)
-        else:
-            self.data = array.array('d', [0.0])*size
+                self.data = array.array('d', [0.0])*size
+        except BaseException:
+            try:
+                self.close()
+            except Exception:
+                pass
+            raise
 
     def __getitem__(self, index):
         return self.data[index]
@@ -2143,15 +2337,27 @@ class _DenseDoubleBuffer(object):
     def close(self):
         if isinstance(self.data, memoryview):
             self.data.release()
-        elif self.numpy is not None:
-            # Drop the ndarray view before closing its mmap backing.
-            self.data = None
+        # Drop ndarray/memoryview references before closing mmap backing.
+        self.data = None
         if self._mapping is not None:
-            self._mapping.close()
-            self._mapping = None
+            mapping = self._mapping
+            try:
+                mapping.close()
+            except BufferError:
+                # An external exported view still exists.  Retain the mapping
+                # so a later close can retry rather than silently leaking it.
+                raise
+            else:
+                self._mapping = None
         if self._file is not None:
             self._file.close()
             self._file = None
+
+    def __del__(self):
+        try:
+            self.close()
+        except Exception:
+            pass
 
 
 class DenseWeightView(MutableMapping):
@@ -2223,20 +2429,53 @@ class DenseHistogramAccumulator(object):
         self.n_bins = record.n_bins
         self.n_weights = len(self.weight_labels)
         self.numpy = numpy
+        self._closed = False
+        self._buffers = []
         size = self.n_bins*self.n_weights
-        self._sums = allocate(size)
-        self._compensations = allocate(size)
-        self._variances = allocate(self.n_bins)
-        self._variance_compensations = allocate(self.n_bins)
+        try:
+            self._sums = allocate(size)
+            self._buffers.append(self._sums)
+            self._compensations = allocate(size)
+            self._buffers.append(self._compensations)
+            self._variances = allocate(self.n_bins)
+            self._buffers.append(self._variances)
+            self._variance_compensations = allocate(self.n_bins)
+            self._buffers.append(self._variance_compensations)
+        except BaseException:
+            try:
+                self.close()
+            except Exception:
+                pass
+            raise
+
+    def _ensure_open(self):
+        if self._closed:
+            raise MadGraph5Error("Histogram accumulator '%s' is closed."%
+                                 self.title)
 
     @staticmethod
     def _kahan_add(total, compensation, index, value):
+        if not math.isfinite(value):
+            raise MadGraph5Error('A non-finite value was encountered while '
+                                 'aggregating histogram data.')
         corrected = value-compensation[index]
         updated = total[index]+corrected
-        compensation[index] = (updated-total[index])-corrected
+        new_compensation = (updated-total[index])-corrected
+        if not math.isfinite(updated) or not math.isfinite(new_compensation):
+            raise MadGraph5Error('Floating-point overflow while aggregating '
+                                 'histogram data.')
+        compensation[index] = new_compensation
         total[index] = updated
 
     def add(self, record, factor=1.0):
+        self._ensure_open()
+        try:
+            factor = float(factor)
+        except (TypeError, ValueError, OverflowError):
+            raise MadGraph5Error("Histogram aggregation factor '%s' is not a "
+                                 "number."%str(factor))
+        if not math.isfinite(factor):
+            raise MadGraph5Error('Histogram aggregation factors must be finite.')
         if record.weight_labels != self.weight_labels:
             if set(record.weight_labels) != set(self.weight_labels):
                 missing = set(self.weight_labels)-set(record.weight_labels)
@@ -2244,10 +2483,12 @@ class DenseHistogramAccumulator(object):
                 raise MadGraph5Error("Incompatible weights for histogram '%s' "
                     "(missing: %s; extra: %s)."%(self.title, list(missing),
                     list(extra)))
-            source_positions = [record.weight_labels.index(label)
+            record_positions = dict((label, index) for index, label in
+                                    enumerate(record.weight_labels))
+            source_positions = [record_positions[label]
                                 for label in self.weight_labels]
         else:
-            source_positions = list(range(self.n_weights))
+            source_positions = None
         if record.n_bins != self.n_bins or record.boundaries != self.boundaries:
             raise MadGraph5Error("Histogram '%s' has incompatible bin boundaries."%
                                  self.title)
@@ -2256,34 +2497,67 @@ class DenseHistogramAccumulator(object):
         if self.numpy is not None:
             source = self.numpy.frombuffer(record.values,
                 dtype=self.numpy.float64).reshape(self.n_bins, self.n_weights)
-            if source_positions != list(range(self.n_weights)):
-                source = source[:, source_positions]
-            scaled = source*factor
-            if stat_position is not None:
-                errors = scaled[:, stat_position]
-                variance_values = errors*errors
-                variance_correction = (variance_values-
-                                        self._variance_compensations.data)
-                variance_updated = (self._variances.data+
-                                    variance_correction)
-                self._variance_compensations.data[:] = (
-                    variance_updated-self._variances.data)-variance_correction
-                self._variances.data[:] = variance_updated
-                scaled[:, stat_position] = 0.0
-
             sums = self._sums.data.reshape(self.n_bins, self.n_weights)
             compensations = self._compensations.data.reshape(
                                                self.n_bins, self.n_weights)
-            corrected = scaled-compensations
-            updated = sums+corrected
-            compensations[:] = (updated-sums)-corrected
-            sums[:] = updated
+            # Keep temporary arrays for one chunk near 32--40 MiB in total.
+            # In particular, reordering columns must not copy a full large
+            # histogram before accumulation even starts.
+            chunk_bins = max(1, (1 << 20)//max(1, self.n_weights))
+            for start in range(0, self.n_bins, chunk_bins):
+                end = min(self.n_bins, start+chunk_bins)
+                source_chunk = source[start:end]
+                if source_positions is not None:
+                    source_chunk = source_chunk[:, source_positions]
+                with self.numpy.errstate(over='ignore', invalid='ignore'):
+                    scaled = source_chunk*factor
+                    if not self.numpy.isfinite(scaled).all():
+                        raise MadGraph5Error("Floating-point overflow while "
+                            "scaling histogram '%s'."%self.title)
+                    variance_updated = None
+                    variance_compensation = None
+                    if stat_position is not None:
+                        errors = scaled[:, stat_position]
+                        variance_values = errors*errors
+                        old_variances = self._variances.data[start:end]
+                        old_compensations = \
+                            self._variance_compensations.data[start:end]
+                        variance_correction = (variance_values-
+                                                old_compensations)
+                        variance_updated = old_variances+variance_correction
+                        variance_compensation = (
+                            variance_updated-old_variances)-variance_correction
+                        if not self.numpy.isfinite(variance_updated).all() or \
+                           not self.numpy.isfinite(variance_compensation).all():
+                            raise MadGraph5Error("Floating-point overflow while "
+                                "combining statistical errors for histogram "
+                                "'%s'."%self.title)
+                        scaled[:, stat_position] = 0.0
+
+                    sum_chunk = sums[start:end]
+                    compensation_chunk = compensations[start:end]
+                    corrected = scaled-compensation_chunk
+                    updated = sum_chunk+corrected
+                    new_compensations = (updated-sum_chunk)-corrected
+                    if not self.numpy.isfinite(updated).all() or \
+                               not self.numpy.isfinite(new_compensations).all():
+                        raise MadGraph5Error("Floating-point overflow while "
+                            "combining histogram '%s'."%self.title)
+
+                if variance_updated is not None:
+                    self._variance_compensations.data[start:end] = \
+                                                       variance_compensation
+                    self._variances.data[start:end] = variance_updated
+                compensation_chunk[:] = new_compensations
+                sum_chunk[:] = updated
             return
 
+        positions = range(self.n_weights) if source_positions is None \
+                                            else source_positions
         for bin_index in range(self.n_bins):
             source_offset = bin_index*self.n_weights
             target_offset = source_offset
-            for target_position, source_position in enumerate(source_positions):
+            for target_position, source_position in enumerate(positions):
                 value = record.values[source_offset+source_position]*factor
                 if target_position == stat_position:
                     self._kahan_add(self._variances,
@@ -2294,6 +2568,7 @@ class DenseHistogramAccumulator(object):
                                     target_offset+target_position, value)
 
     def get_value(self, bin_index, label):
+        self._ensure_open()
         try:
             position = self.label_positions[label]
         except KeyError:
@@ -2303,6 +2578,7 @@ class DenseHistogramAccumulator(object):
         return float(self._sums[bin_index*self.n_weights+position])
 
     def to_hwu(self):
+        self._ensure_open()
         histo = HwU()
         histo.title = self.title
         histo.type = self.type
@@ -2320,29 +2596,93 @@ class DenseHistogramAccumulator(object):
         return histo
 
     def close(self):
-        for buffer_ in (self._sums, self._compensations, self._variances,
-                        self._variance_compensations):
-            buffer_.close()
+        if self._closed:
+            return
+        first_error = None
+        for buffer_ in self._buffers:
+            try:
+                buffer_.close()
+            except Exception as error:
+                if first_error is None:
+                    first_error = error
+        if first_error is not None:
+            raise first_error
+        self._closed = True
 
 
 class StreamingHwUAggregator(object):
     """Aggregate many HwU files with memory independent of the file count."""
 
+    _spill_initial_arena_size = 16*1024*1024
+    _spill_arena_size = 256*1024*1024
+
     def __init__(self, memory_limit=256*1024*1024):
-        self.memory_limit = max(0, int(memory_limit))
+        try:
+            self.memory_limit = int(memory_limit)
+        except (TypeError, ValueError, OverflowError):
+            raise MadGraph5Error("Histogram memory limit '%s' is not an integer."%
+                                 str(memory_limit))
+        if self.memory_limit < 0:
+            raise MadGraph5Error('Histogram memory limit must be non-negative.')
         self.resident_bytes = 0
         self.numpy = _optional_numpy()
         self.accumulators = collections.OrderedDict()
         self.expected_keys = None
         self.n_files = 0
         self.accepted_types_order = []
+        self._spill_arenas = []
+        self._closed = False
+        self._failed_error = None
+
+    def _ensure_usable(self):
+        if self._failed_error is not None:
+            raise MadGraph5Error('This streaming histogram aggregator cannot be '
+                'reused because a previous input failed: %s. Create a new '
+                'aggregator.'%str(self._failed_error))
+        if self._closed:
+            raise MadGraph5Error('This streaming histogram aggregator is closed.')
+
+    def _release_resources(self):
+        first_error = None
+        for accumulator in self.accumulators.values():
+            try:
+                accumulator.close()
+            except Exception as error:
+                if first_error is None:
+                    first_error = error
+        for arena in self._spill_arenas:
+            try:
+                arena.close()
+            except Exception as error:
+                if first_error is None:
+                    first_error = error
+        if first_error is not None:
+            raise first_error
+        self.accumulators.clear()
+        self._spill_arenas = []
+        self.resident_bytes = 0
+
+    def _allocate_spill(self, n_bytes):
+        if self._spill_arenas and \
+                           self._spill_arenas[-1].remaining >= n_bytes:
+            return self._spill_arenas[-1].allocate(n_bytes)
+        capacity = max(self._spill_initial_arena_size, n_bytes)
+        if self._spill_arenas:
+            capacity = max(capacity, min(self._spill_arena_size,
+                                         2*self._spill_arenas[-1].capacity))
+        arena = _SpillArena(capacity)
+        self._spill_arenas.append(arena)
+        return arena.allocate(n_bytes)
 
     def _allocate(self, size):
+        self._ensure_usable()
         n_bytes = size*8
         use_mmap = self.resident_bytes+n_bytes > self.memory_limit
         if not use_mmap:
             self.resident_bytes += n_bytes
-        return _DenseDoubleBuffer(size, use_mmap=use_mmap, numpy=self.numpy)
+            return _DenseDoubleBuffer(size, numpy=self.numpy)
+        return _DenseDoubleBuffer(size, numpy=self.numpy,
+                                  backing_view=self._allocate_spill(n_bytes))
 
     @staticmethod
     def _identity_base(record):
@@ -2352,13 +2692,41 @@ class StreamingHwUAggregator(object):
                 hashlib.sha1(record.boundaries).digest(),
                 frozenset(record.weight_labels))
 
-    @classmethod
-    def _identity(cls, record, occurrence):
-        return cls._identity_base(record)+(occurrence,)
-
     def add_file(self, file_path, factor=1.0, accepted_types_order=None,
                  consider_reweights='ALL', merging_scale=None, run_id=None,
                  accepted_titles=None):
+        """Add one file, permanently invalidating this object on failure.
+
+        Aggregation updates dense sums in place.  Invalidating on any failure
+        prevents a caller from accidentally emitting partially updated results.
+        """
+
+        self._ensure_usable()
+        try:
+            factor = float(factor)
+        except (TypeError, ValueError, OverflowError):
+            raise MadGraph5Error("Histogram aggregation factor '%s' is not a "
+                                 "number."%str(factor))
+        if not math.isfinite(factor):
+            raise MadGraph5Error('Histogram aggregation factors must be finite.')
+        try:
+            self._add_file(file_path, factor=factor,
+                accepted_types_order=accepted_types_order,
+                consider_reweights=consider_reweights,
+                merging_scale=merging_scale, run_id=run_id,
+                accepted_titles=accepted_titles)
+        except BaseException as error:
+            self._failed_error = error
+            try:
+                self._release_resources()
+            except Exception:
+                logger.debug('Failed to release histogram aggregation buffers.',
+                             exc_info=True)
+            raise
+
+    def _add_file(self, file_path, factor=1.0, accepted_types_order=None,
+                  consider_reweights='ALL', merging_scale=None, run_id=None,
+                  accepted_titles=None):
         if self.n_files == 0:
             self.accepted_types_order = list(accepted_types_order or [])
         occurrences = collections.defaultdict(int)
@@ -2371,10 +2739,10 @@ class StreamingHwUAggregator(object):
             base = self._identity_base(record)
             occurrence = occurrences[base]
             occurrences[base] += 1
-            key = self._identity(record, occurrence)
-            if key in seen:
-                raise MadGraph5Error("Histogram identity %s occurs more than once "
-                                     "in '%s'."%(key, file_path))
+            # Reuse ``base``: hashing all bin boundaries is significant for
+            # large files and the occurrence suffix already makes this key
+            # unique within the file.
+            key = base+(occurrence,)
             seen.add(key)
             if self.expected_keys is not None and key not in self.expected_keys:
                 raise MadGraph5Error("Histograms in '%s' are not compatible "
@@ -2397,12 +2765,20 @@ class StreamingHwUAggregator(object):
         self.n_files += 1
 
     def to_hwu_list(self, n_rebin=1):
+        """Return lightweight views valid until this aggregator is closed.
+
+        For long-lived independent results, write them with :meth:`output` and
+        reload the resulting HwU file instead of retaining every weight in RAM.
+        """
+
+        self._ensure_usable()
         result = HwUList([])
         for group in self.iter_hwu_groups(n_rebin=n_rebin):
             result.extend(group)
         return result
 
     def _ordered_accumulators(self):
+        self._ensure_usable()
         accumulators = list(self.accumulators.values())
         title_order = collections.OrderedDict()
         for accumulator in accumulators:
@@ -2429,6 +2805,7 @@ class StreamingHwUAggregator(object):
     def iter_hwu_groups(self, n_rebin=1):
         """Yield one lightweight plot group at a time."""
 
+        self._ensure_usable()
         grouped = collections.OrderedDict()
         for accumulator in self._ordered_accumulators():
             key = self._accumulator_plot_key(accumulator)
@@ -2444,13 +2821,17 @@ class StreamingHwUAggregator(object):
             yield group
 
     def common_weight_schema(self):
+        self._ensure_usable()
         accumulators = list(self.accumulators.values())
         if not accumulators:
             raise MadGraph5Error('No histograms have been aggregated.')
         schema = list(accumulators[0].weight_labels)
+        if len(schema) != len(set(schema)):
+            raise MadGraph5Error('Histogram weight columns must be unique.')
         expected = set(schema)
         for accumulator in accumulators[1:]:
-            if set(accumulator.weight_labels) != expected:
+            labels = list(accumulator.weight_labels)
+            if len(labels) != len(set(labels)) or set(labels) != expected:
                 raise MadGraph5Error("Histograms written to one HwU file must "
                     "have the same weight columns; '%s' has a different schema."%
                     accumulator.title)
@@ -2459,18 +2840,35 @@ class StreamingHwUAggregator(object):
     def output(self, path, n_rebin=1, **options):
         """Render aggregated data without materializing every bin at once."""
 
+        self._ensure_usable()
         proxy = HwUList([])
         return proxy.output(path,
             _histogram_groups=self.iter_hwu_groups(n_rebin=n_rebin),
             _weight_schema=self.common_weight_schema(), **options)
 
     def __len__(self):
+        self._ensure_usable()
         return len(self.accumulators)
 
     def close(self):
-        for accumulator in self.accumulators.values():
-            accumulator.close()
-        self.accumulators.clear()
+        if self._closed:
+            return
+        self._release_resources()
+        self._closed = True
+
+    def __enter__(self):
+        self._ensure_usable()
+        return self
+
+    def __exit__(self, exception_type, exception, traceback):
+        self.close()
+        return False
+
+    def __del__(self):
+        try:
+            self.close()
+        except Exception:
+            pass
 
 
 class _LineStreamSink(object):
@@ -2489,6 +2887,82 @@ class _LineStreamSink(object):
     def extend(self, lines):
         for line in lines:
             self.append(line)
+
+
+class _AtomicTextOutput(object):
+    """Write a text output beside its target and replace it only on success."""
+
+    def __init__(self, target_path):
+        self.target_path = target_path
+        target_directory = os.path.dirname(os.path.abspath(target_path))
+        prefix = '.'+os.path.basename(target_path)+'.'
+        self.temporary_path = None
+        descriptor = None
+        for unused_attempt in range(100):
+            candidate = os.path.join(target_directory, prefix+
+                                     os.urandom(12).hex()+'.tmp')
+            try:
+                descriptor = os.open(candidate,
+                    os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o666)
+            except OSError as error:
+                if error.errno == errno.EEXIST:
+                    continue
+                raise
+            self.temporary_path = candidate
+            break
+        if descriptor is None:
+            raise MadGraph5Error("Could not create a temporary output beside '%s'."%
+                                 target_path)
+        try:
+            self.stream = os.fdopen(descriptor, 'w')
+        except BaseException:
+            try:
+                os.close(descriptor)
+            except OSError:
+                pass
+            try:
+                os.unlink(self.temporary_path)
+            except OSError:
+                pass
+            self.temporary_path = None
+            raise
+        self._committed = False
+        try:
+            self._existing_mode = os.stat(target_path).st_mode & 0o7777
+        except OSError:
+            self._existing_mode = None
+
+    def commit(self):
+        if self._committed:
+            return
+        if not self.stream.closed:
+            self.stream.flush()
+            self.stream.close()
+        if self._existing_mode is not None:
+            os.chmod(self.temporary_path, self._existing_mode)
+        os.replace(self.temporary_path, self.target_path)
+        self.temporary_path = None
+        self._committed = True
+
+    def abort(self):
+        try:
+            if not self.stream.closed:
+                self.stream.close()
+        except Exception:
+            pass
+        if self.temporary_path is not None:
+            try:
+                os.unlink(self.temporary_path)
+            except OSError:
+                pass
+            self.temporary_path = None
+
+    def __del__(self):
+        try:
+            if not self._committed:
+                self.abort()
+        except Exception:
+            pass
 
 class HwUList(histograms_PhysicsObjectList):
     """ A class implementing features related to a list of Hwu Histograms. """
@@ -2637,9 +3111,13 @@ class HwUList(histograms_PhysicsObjectList):
         """Validate and return the single column schema required by HwU."""
 
         schema = list(histograms[0].bins.weight_labels)
+        if len(schema) != len(set(schema)):
+            raise MadGraph5Error("Histogram '%s' has duplicate weight columns."%
+                                 histograms[0].title)
         expected = set(schema)
         for histo in histograms[1:]:
-            if set(histo.bins.weight_labels) != expected:
+            labels = list(histo.bins.weight_labels)
+            if len(labels) != len(set(labels)) or set(labels) != expected:
                 raise MadGraph5Error("Histograms written to one HwU file must "
                     "have the same weight columns; '%s' has a different schema."%
                     histo.title)
@@ -3045,25 +3523,32 @@ class HwUList(histograms_PhysicsObjectList):
         or not."""
         
         if len(self)==0 and _histogram_groups is None:
-            return MadGraph5Error, 'No histograms stored in the list yet.'
+            raise MadGraph5Error('No histograms stored in the list yet.')
         
         if not format in HwU.output_formats_implemented:
             raise MadGraph5Error("The specified output format '%s'"%format+\
                              " is not yet supported. Supported formats are %s."\
                                                  %HwU.output_formats_implemented)
 
-        if isinstance(path, str) and not any(ext in os.path.basename(path) \
-                         for ext in ['.HwU','.Hwu','.ps','.gnuplot','.pdf','.py']):
-            output_base_name = os.path.basename(path)
-            HwU_stream       = open(path+'.HwU','w')
-        else:
+        if not isinstance(path, str) or not os.path.basename(path) or \
+                         os.path.basename(path).lower().endswith(
+                                  ('.hwu', '.ps', '.gnuplot', '.pdf', '.py')):
             raise MadGraph5Error("The path argument of the output function of"+\
               " the HwUList instance must be file path without its extension.")
 
         if _histogram_groups is None:
             weight_schema = self._common_weight_schema(self)
         else:
+            if _weight_schema is None:
+                raise MadGraph5Error('A weight schema is required for streamed '
+                                     'histogram output.')
             weight_schema = list(_weight_schema)
+            if len(weight_schema) != len(set(weight_schema)):
+                raise MadGraph5Error('Histogram weight columns must be unique.')
+
+        output_base_name = os.path.basename(path)
+        hwu_target = _AtomicTextOutput(path+'.HwU')
+        HwU_stream = hwu_target.stream
         HwU_output_list = _LineStreamSink(HwU_stream)
         # If the format is just the raw HwU source, then simply write them
         # out all in sequence.
@@ -3071,33 +3556,49 @@ class HwUList(histograms_PhysicsObjectList):
             groups = _histogram_groups if _histogram_groups is not None \
                                            else [self]
             histogram_index = 0
-            for group in groups:
-                for histo in group:
-                    HwU_output_list.extend(histo.iter_HwU_source(
-                        print_header=(histogram_index == 0),
-                        weight_labels=weight_schema))
-                    HwU_output_list.extend(['',''])
-                    histogram_index += 1
-            HwU_stream.close()
+            try:
+                for group in groups:
+                    for histo in group:
+                        HwU_output_list.extend(histo.iter_HwU_source(
+                            print_header=(histogram_index == 0),
+                            weight_labels=weight_schema))
+                        HwU_output_list.extend(['',''])
+                        histogram_index += 1
+                if histogram_index == 0:
+                    raise MadGraph5Error('No histograms were provided for output.')
+                hwu_target.commit()
+            except BaseException:
+                hwu_target.abort()
+                raise
             return
 
         if format == 'matplotlib':
-            self._output_matplotlib(path, output_base_name, HwU_stream,
-                number_of_ratios=number_of_ratios,
-                uncertainties=uncertainties,
-                use_band=use_band,
-                ratio_correlations=ratio_correlations,
-                arg_string=arg_string,
-                jet_samples_to_keep=jet_samples_to_keep,
-                auto_open=auto_open,
-                lhapdfconfig=lhapdfconfig,
-                assigned_colours=assigned_colours,
-                histogram_groups=_histogram_groups)
+            script_target = _AtomicTextOutput(path+'.py')
+            try:
+                self._output_matplotlib(path, output_base_name, HwU_stream,
+                    script_target.stream, weight_schema,
+                    number_of_ratios=number_of_ratios,
+                    uncertainties=uncertainties,
+                    use_band=use_band,
+                    ratio_correlations=ratio_correlations,
+                    arg_string=arg_string,
+                    jet_samples_to_keep=jet_samples_to_keep,
+                    auto_open=auto_open,
+                    lhapdfconfig=lhapdfconfig,
+                    assigned_colours=assigned_colours,
+                    histogram_groups=_histogram_groups)
+                hwu_target.commit()
+                script_target.commit()
+            except BaseException:
+                hwu_target.abort()
+                script_target.abort()
+                raise
             return
         
         # Now we consider that we are attempting a gnuplot output.
         if format == 'gnuplot':
-            gnuplot_stream = open(path+'.gnuplot','w')
+            gnuplot_target = _AtomicTextOutput(path+'.gnuplot')
+            gnuplot_stream = gnuplot_target.stream
 
         # Group compatible curves without changing the source list.
         matching_histo_lists = _histogram_groups if \
@@ -3114,7 +3615,7 @@ class HwUList(histograms_PhysicsObjectList):
                  coli[6] : "#e69f00",
                  coli[7] : "black"}
         if assigned_colours:
-            for index, item in enumerate(assigned_colours):
+            for index, item in enumerate(assigned_colours[:len(coli)]):
                 if (item != None): colours[coli[index]]=item
 
         replace_dict=colours
@@ -3328,6 +3829,8 @@ set key invert
         # Now output each group one by one
         # Block position keeps track of the gnuplot data_block index considered
         block_position = 0
+        output_schema_state = {'base_labels': list(weight_schema),
+                               'labels': None}
         for histo_group in matching_histo_lists:
             # Output this group
             block_position = histo_group.output_group(HwU_output_list, 
@@ -3338,7 +3841,11 @@ set key invert
                     ratio_correlations = ratio_correlations,
                     jet_samples_to_keep=jet_samples_to_keep,
                     lhapdfconfig = lhapdfconfig,
-                    _copy_group=(_histogram_groups is None))
+                    _copy_group=(_histogram_groups is None),
+                    _output_schema_state=output_schema_state)
+
+        if block_position == 0:
+            raise MadGraph5Error('No histograms were provided for output.')
 
         # Now write the tail of the gnuplot command file
         gnuplot_output_list.extend([
@@ -3348,16 +3855,17 @@ set key invert
             gnuplot_output_list.append(
                                  '!open "%s.pdf" &> /dev/null'%output_base_name)
         
-        # Now write result to stream and close it
+        # Replace both final files only after all groups were prepared.
         gnuplot_stream.write('\n'.join(gnuplot_output_list))
-        gnuplot_stream.close()
-        HwU_stream.close()
+        hwu_target.commit()
+        gnuplot_target.commit()
 
         logger.debug("Histograms have been written out at "+\
                                  "%s.[HwU|gnuplot]' and can "%output_base_name+\
                                          "now be rendered by invoking gnuplot.")
 
     def _output_matplotlib(self, path, output_base_name, hwu_stream,
+          script_stream, weight_schema,
           number_of_ratios=-1,
           uncertainties=['scale','pdf','statistical','merging_scale','alpsfact'],
           use_band=None,
@@ -3384,33 +3892,34 @@ set key invert
         hwu_output = _LineStreamSink(hwu_stream)
         plot_specs = []
         block_position = 0
-        try:
-            for histo_group in matching_histo_lists:
-                # Plot preparation adds ratios and auxiliary uncertainty
-                # columns.  Copy one group only, keeping the full input list
-                # and all previously completed groups out of working memory.
-                prepared_group = histo_group if ephemeral_groups \
-                                  else copy.deepcopy(histo_group)
-                first_block = block_position
-                block_position = prepared_group.output_group(
-                    hwu_output, [], block_position, output_base_name+'.HwU',
-                    number_of_ratios=number_of_ratios,
-                    uncertainties=uncertainties,
-                    use_band=use_band,
-                    ratio_correlations=ratio_correlations,
-                    jet_samples_to_keep=jet_samples_to_keep,
-                    lhapdfconfig=lhapdfconfig,
-                    _copy_group=False)
-                plot_specs.append(self._get_matplotlib_plot_spec(
-                    prepared_group, first_block, uncertainties, use_band,
-                    jet_samples_to_keep, colours))
-        finally:
-            hwu_stream.close()
+        output_schema_state = {'base_labels': list(weight_schema),
+                               'labels': None}
+        for histo_group in matching_histo_lists:
+            # Plot preparation adds ratios and auxiliary uncertainty columns.
+            # Copy one group only, keeping completed groups out of memory.
+            prepared_group = histo_group if ephemeral_groups \
+                              else copy.deepcopy(histo_group)
+            first_block = block_position
+            block_position = prepared_group.output_group(
+                hwu_output, [], block_position, output_base_name+'.HwU',
+                number_of_ratios=number_of_ratios,
+                uncertainties=uncertainties,
+                use_band=use_band,
+                ratio_correlations=ratio_correlations,
+                jet_samples_to_keep=jet_samples_to_keep,
+                lhapdfconfig=lhapdfconfig,
+                _copy_group=False,
+                _output_schema_state=output_schema_state)
+            plot_specs.append(self._get_matplotlib_plot_spec(
+                prepared_group, first_block, uncertainties, use_band,
+                jet_samples_to_keep, colours))
+
+        if block_position == 0:
+            raise MadGraph5Error('No histograms were provided for output.')
 
         script = self._get_matplotlib_script(output_base_name, plot_specs,
                                                auto_open, arg_string)
-        with open(path+'.py', 'w') as script_stream:
-            script_stream.write(script)
+        script_stream.write(script)
 
         logger.debug("Histograms have been written out at '%s.[HwU|py]' and can "
                      "now be rendered by invoking Python."%output_base_name)
@@ -3553,6 +4062,7 @@ set key invert
 # Matplotlib histogram renderer generated by MadGraph5_aMC@NLO.
 # Original command: %s
 import os
+import math
 import subprocess
 import sys
 
@@ -3572,18 +4082,34 @@ PLOTS = %s
           ratio_correlations = True, 
           jet_samples_to_keep=None,
           lhapdfconfig='lhapdf-config',
-          _copy_group=True):
+          _copy_group=True,
+          _output_schema_state=None):
         
         """ This functions output a single group of histograms with either one
         histograms untyped (i.e. type=None) or two of type 'NLO' and 'LO' 
         respectively."""
 
+        if not self:
+            raise MadGraph5Error('Cannot output an empty histogram group.')
         if _copy_group:
             self = copy.deepcopy(self)
         canonical_labels = list(self[0].bins.weight_labels)
         canonical_set = set(canonical_labels)
+        if len(canonical_labels) != len(canonical_set):
+            raise MadGraph5Error("Histogram '%s' has duplicate weight columns."%
+                                 self[0].title)
+        if _output_schema_state is not None and \
+                         _output_schema_state.get('base_labels') is not None:
+            base_labels = list(_output_schema_state['base_labels'])
+            if len(base_labels) != len(set(base_labels)) or \
+                                           set(base_labels) != canonical_set:
+                raise MadGraph5Error("Histogram group '%s' has a different base "
+                                     "column schema."%self[0].title)
+            canonical_labels = base_labels
+            self[0].bins.weight_labels = list(canonical_labels)
         for histo in self[1:]:
-            if set(histo.bins.weight_labels) != canonical_set:
+            labels = list(histo.bins.weight_labels)
+            if len(labels) != len(set(labels)) or set(labels) != canonical_set:
                 raise MadGraph5Error("Histograms in plot group '%s' have "
                                      "incompatible weight schemas."%self[0].title)
             histo.bins.weight_labels = list(canonical_labels)
@@ -3838,6 +4364,25 @@ PLOTS = %s
                  ' alpsfact uncertainties. It is required to be able to output them'+\
                  ' together.')
 
+        # HwU has one global column header.  Uncertainty preparation above may
+        # append auxiliary columns, so validate the final schema both within
+        # this plot group and across all groups written to the same file.
+        final_labels = list(self[0].bins.weight_labels)
+        if len(final_labels) != len(set(final_labels)):
+            raise MadGraph5Error("Histogram '%s' has duplicate output columns."%
+                                 self[0].title)
+        for histo in self[1:]:
+            if list(histo.bins.weight_labels) != final_labels:
+                raise MadGraph5Error("Histograms in plot group '%s' produced "
+                                     "different output columns."%self[0].title)
+        if _output_schema_state is not None:
+            previous_labels = _output_schema_state.get('labels')
+            if previous_labels is None:
+                _output_schema_state['labels'] = final_labels
+            elif previous_labels != final_labels:
+                raise MadGraph5Error("Histogram group '%s' produced a different "
+                    "final column schema from earlier groups in this HwU file."%
+                    self[0].title)
 
         # Now output the corresponding HwU histogram data
         for i, histo in enumerate(self):
@@ -4564,45 +5109,84 @@ def _load_matplotlib():
 
 
 def _index_hwu_blocks(path):
-    """Return byte offsets for histogram data without loading any bin values."""
+    """Return (byte offset, declared bin count) for every histogram block."""
     offsets = []
     with open(path, 'rb') as stream:
         while True:
             line = stream.readline()
             if not line:
                 break
-            if line.lstrip().startswith(b'<histogram>'):
-                offsets.append(stream.tell())
+            stripped = line.lstrip()
+            if not stripped.startswith(b'<histogram>'):
+                continue
+            fields = stripped.split(None, 2)
+            if len(fields) < 2 or fields[0] != b'<histogram>':
+                raise SystemExit('A malformed histogram opening tag was found.')
+            try:
+                n_bins = int(fields[1])
+            except ValueError:
+                raise SystemExit('A histogram has an invalid bin count.')
+            if n_bins < 0:
+                raise SystemExit('A histogram has a negative bin count.')
+            offsets.append((stream.tell(), n_bins))
     if not offsets:
         raise SystemExit("No histogram blocks were found in '%s'." % path)
     return offsets
 
 
-def _read_hwu_block(path, offset, positions):
+def _read_hwu_block(path, block, positions):
     """Read selected columns of one block into compact column arrays."""
+    if isinstance(block, (tuple, list)):
+        if len(block) != 2:
+            raise SystemExit('Invalid histogram block descriptor.')
+        offset, expected_rows = block
+    else:
+        # Backward compatibility for callers which stored old integer offsets.
+        offset, expected_rows = block, None
+    positions = list(positions)
+    if any(not isinstance(position, int) or position < 0
+           for position in positions):
+        raise SystemExit('Histogram column positions must be non-negative integers.')
     positions = sorted(set(positions))
     columns = dict((position, []) for position in positions)
+    rows_read = 0
+    closing_tag_found = False
     with open(path, 'rb') as stream:
         stream.seek(offset)
         for line in stream:
             stripped = line.strip()
-            if stripped.startswith(b'<\\histogram>'):
+            if stripped == b'<\\histogram>':
+                closing_tag_found = True
                 break
             if not stripped or stripped.startswith(b'#'):
                 continue
-            fields = stripped.split()
+            if stripped.startswith(b'<histogram>'):
+                raise SystemExit('A new histogram starts before the previous '
+                                 'block is closed.')
+            fields = stripped.split(b'#', 1)[0].split()
             if not fields:
                 continue
             if positions and positions[-1] >= len(fields):
                 raise SystemExit('Histogram block has %d columns but column %d '
                                  'was requested.' % (len(fields), positions[-1]))
             try:
-                for position in positions:
-                    value = fields[position].replace(b'D', b'E').replace(b'd', b'e')
-                    columns[position].append(float(value))
+                values = [float(fields[position].replace(b'D', b'E').replace(
+                          b'd', b'e')) for position in positions]
             except ValueError:
-                continue
-    if not columns.get(0):
+                raise SystemExit('A non-numeric value was found in histogram '
+                                 'row %d.'%(rows_read+1))
+            if not all(math.isfinite(value) for value in values):
+                raise SystemExit('A non-finite value was found in histogram '
+                                 'row %d.'%(rows_read+1))
+            for position, value in zip(positions, values):
+                columns[position].append(value)
+            rows_read += 1
+    if not closing_tag_found:
+        raise SystemExit('A histogram block is missing its closing tag.')
+    if expected_rows is not None and rows_read != expected_rows:
+        raise SystemExit('Histogram block contains %d rows but declares %d.'%
+                         (rows_read, expected_rows))
+    if rows_read == 0:
         raise SystemExit('An empty histogram block was encountered.')
     return {'columns': columns}
 
