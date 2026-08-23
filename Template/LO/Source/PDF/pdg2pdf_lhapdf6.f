@@ -38,8 +38,7 @@ c     effective w/z/a approximation (leading log fixed order, not resummed)
       double precision eva_get_pdf_by_PID
       external eva_get_pdf_by_PID
       integer ppid
-      integer ievo,ievo_eva
-      common/to_eva/ievo_eva
+      double precision q2max
       integer hel,helMulti,hel_picked
       double precision hel_jacobian
       common/hel_picked/hel_picked,hel_jacobian
@@ -47,6 +46,11 @@ c     effective w/z/a approximation (leading log fixed order, not resummed)
       external get_nhel
       real*8 pol(2),fLPol
       common/to_polarization/pol
+
+c     collider configuration
+      integer lpp(2)
+      double precision ebeam(2),xbk(2),q2fact(2)
+      common/to_collider/ebeam,xbk,q2fact,lpp
 
       nb_hadron = (nb_proton(iabs(beamid))+nb_neutron(iabs(beamid)))
 c     Make sure we have a reasonable Bjorken x. Note that even though
@@ -130,11 +134,11 @@ c         write(*,*) 'running eva'
             end select
             ppid  = ppid * ih/iabs(ih) ! get sign of parent
             fLPol = pol(iabs(beamid))        ! see setrun.f for treatment of polbeam*
-c              q2max = xmu*xmu
-            ievo = ievo_eva
+            q2max = xmu*xmu
             hel      = GET_NHEL(HEL_PICKED, beamid) ! helicity of v
             helMulti = GET_NHEL(0, beamid)          ! helicity multiplicity of v to undo spin averaging
-            pdg2pdf  = helMulti*eva_get_pdf_by_PID(ipart,ppid,hel,fLpol,x,xmu*xmu,ievo)
+            pdg2pdf  = eva_get_pdf_by_PID(ipart,ppid,hel,fLpol,x,q2max,ebeam(beamid))
+            pdg2pdf  = helMulti*pdg2pdf
             return
          endif
       else

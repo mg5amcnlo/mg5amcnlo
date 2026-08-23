@@ -185,7 +185,7 @@ c          WRITE(HEL_BUFF,'(20i5)')(NHEL(II,I),II=1,NEXTERNAL)
     ENDIF
     ANS=ANS/DBLE(IDEN)
 
-    CALL SELECT_COLOR(RCOL, JAMP2, ICONFIG, 1,  SELECTED_COL)
+    CALL SELECT_COLOR(RCOL, JAMP2, ICONFIG, 1,  SELECTED_COL, IVEC)
 
     END
  
@@ -220,6 +220,8 @@ C
 	LOGICAL CHOSEN_SO_CONFIGS(NSQAMPSO)
 	DATA CHOSEN_SO_CONFIGS/%(chosen_so_configs)s/
 	SAVE CHOSEN_SO_CONFIGS
+    double precision bwcutoff
+    common/to_bwcutoff/ bwcutoff
 C  
 C ARGUMENTS 
 C  

@@ -5,8 +5,8 @@ c handling_lhe_events.f fill_MC_mshell.f
       implicit none
       integer maxevt,ifile,ofile,i,j,npart,mgfile,ifile2,ione
       parameter(ione=1)
-      integer IDBMUP(2),PDFGUP(2),PDFSUP(2),IDWTUP,NPRUP
-      double precision EBMUP(2),XSECUP,XERRUP,XMAXUP,LPRUP
+      integer IDBMUP(2),PDFGUP(2),PDFSUP(2),IDWTUP,NPRUP,LPRUP(100)
+      double precision EBMUP(2),XSECUP(100),XERRUP(100),XMAXUP(100)
       INTEGER MAXNUP
       PARAMETER (MAXNUP=500)
       INTEGER NUP,IDPRUP,IDUP(MAXNUP),ISTUP(MAXNUP),

@@ -20,11 +20,8 @@ import string
 import collections
 import itertools
 import copy
-from six.moves import range
-import six
-if six.PY3:
-    import io
-    file = io.IOBase
+import io
+file = io.IOBase
 
 class Multi_list(list):
     """ a list of list """

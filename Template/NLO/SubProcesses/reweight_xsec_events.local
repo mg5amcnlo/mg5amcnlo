@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 event_file=$1
 save_wgts=$2

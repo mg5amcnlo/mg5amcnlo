@@ -277,6 +277,7 @@ C
       COMPLEX*16 W(20,NWAVEFUNCS)
       COMPLEX*16 DUM0,DUM1
       DATA DUM0, DUM1/(0D0, 0D0), (1D0, 0D0)/
+      DOUBLE PRECISION BWCUTOFF
 C     
 C     GLOBAL VARIABLES
 C     
@@ -301,6 +302,7 @@ C     1 T(2,6) T(3,4) T(5,1)
 C     ----------
 C     BEGIN CODE
 C     ----------
+      BWCUTOFF=15  ! use if $ syntax is defined in the process
       CALL IXXXXX(P(0,1),ZERO,NHEL(1),+1*IC(1),W(1,1))
       CALL OXXXXX(P(0,2),ZERO,NHEL(2),-1*IC(2),W(1,2))
       CALL OXXXXX(P(0,3),ZERO,NHEL(3),+1*IC(3),W(1,3))

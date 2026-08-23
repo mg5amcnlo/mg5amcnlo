@@ -281,7 +281,7 @@ C ----------
 %(helas_calls)s
 %(jamp_lines)s
 
-      RES = 0.D0 
+      RES(:) = 0.D0 
 	  DO M = 1, NAMPSO
         CF_INDEX= 0
         DO I = 1, NCOLOR
@@ -294,10 +294,8 @@ C ----------
             RES(%(proc_prefix)sSQSOINDEX(M,N)) = RES(%(proc_prefix)sSQSOINDEX(M,N)) + REAL(ZTEMP*DCONJG(JAMP(I,N)))
 		  ENDDO
         ENDDO
-      DO N = 1, NAMPSO
-         RES(%(proc_prefix)sSQSOINDEX(M,N)) = RES(%(proc_prefix)sSQSOINDEX(M,N))/DENOM
-      ENDDO
 	  ENDDO
+      RES(:) = RES(:)/DENOM
       END
 
       SUBROUTINE %(proc_prefix)sGET_value(P, ALPHAS, NHEL ,ANS)

@@ -17,8 +17,6 @@
 from __future__ import absolute_import
 import unittest
 import madgraph.various.misc as misc
-from six.moves import range
-
 class TEST_misc(unittest.TestCase):
     
     def test_equal(self):

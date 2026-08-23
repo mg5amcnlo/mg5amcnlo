@@ -15,7 +15,6 @@
 from __future__ import absolute_import
 from __future__ import print_function
 from cmd import Cmd
-from six.moves import zip
 """ Basic test of the command interface """
 
 import unittest
@@ -127,10 +126,10 @@ class IOExportEWSudTest(IOTests.IOTestManager):
 
     @IOTests.createIOTest()
     def testIO_test_ppzz_ewsudakov(self):
-        """ target: SubProcesses/[P0.*\/.+\.(inc|f)]"""
+        r""" target: SubProcesses/[P0.*\/.+\.(inc|f)]"""
         self.generate(['p p > z z [LOonly=QCD] --ewsudakov'], 'loop_qcd_qed_sm_Gmu_forSudakov')
 
     @IOTests.createIOTest()
     def testIO_test_pptt_ewsudakovSA(self):
-        """ target: SubProcesses/[P0.*\/.+\.(inc|f)]"""
+        r""" target: SubProcesses/[P0.*\/.+\.(inc|f)]"""
         self.generate(['p p > t t~  [LOonly=QCD] --ewsudakov'], 'loop_qcd_qed_sm_Gmu_forSudakov', SA=True)

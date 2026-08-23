@@ -36,6 +36,7 @@ import madgraph.iolibs.save_load_object as save_load_object
 from madgraph.core.color_algebra import *
 import madgraph.various.misc as misc
 import madgraph.iolibs.ufo_expression_parsers as parsers
+import madgraph.various.banner as bannermod
 
 import aloha
 import aloha.create_aloha as create_aloha
@@ -44,9 +45,6 @@ import aloha.aloha_object as aloha_object
 import aloha.aloha_lib as aloha_lib
 import models as ufomodels
 import models.model_reader as model_reader
-import six
-from six.moves import range
-from six.moves import zip
 logger = logging.getLogger('madgraph.model')
 logger_mod = logging.getLogger('madgraph.model')
 
@@ -109,7 +107,7 @@ def get_model_db():
     data_path = ['http://madgraph.phys.ucl.ac.be/models_db.dat',
                      'http://madgraph.mi.infn.it//models_db.dat']
     import random
-    import six.moves.urllib.request, six.moves.urllib.parse, six.moves.urllib.error
+    import urllib.request, urllib.parse, urllib.error
     r = random.randint(0,1)
     r = [r, (1-r)]
 
@@ -121,7 +119,7 @@ def get_model_db():
     for index in r:
         cluster_path = data_path[index]
         try:
-            data = six.moves.urllib.request.urlopen(cluster_path)
+            data = urllib.request.urlopen(cluster_path)
         except Exception as err:
             misc.sprint(err)
             continue
@@ -339,7 +337,8 @@ def import_full_model(model_path, decay=False, prefix=''):
     # Check the validity of the model
     files_list_prov = ['couplings.py','lorentz.py','parameters.py',
                        'particles.py', 'vertices.py', 'function_library.py',
-                       'propagators.py', 'coupling_orders.py']
+                       'propagators.py', 'coupling_orders.py',
+                       'CT_couplings.py', 'CT_parameters.py', 'CT_vertices.py']
     
     if decay:
         files_list_prov.append('decays.py')    
@@ -348,22 +347,25 @@ def import_full_model(model_path, decay=False, prefix=''):
     for filename in files_list_prov:
         filepath = os.path.join(model_path, filename)
         if not os.path.isfile(filepath):
-            if filename not in ['propagators.py', 'decays.py', 'coupling_orders.py']:
+            if filename not in ['propagators.py', 'decays.py', 'coupling_orders.py','CT_couplings.py', 'CT_parameters.py', 'CT_vertices.py']:
                 raise UFOImportError("%s directory is not a valid UFO model: \n %s is missing" % \
                                                          (model_path, filename))
         files_list.append(filepath)
     files_list.append(__file__) # include models/import_ufo.py itself, see mg5amcnlo/mg5amcnlo#89
     # use pickle files if defined and up-to-date
-    if aloha.unitary_gauge == 1: 
+    if aloha.unitary_gauge == 1:
         pickle_name = 'model.pkl'
+    elif aloha.unitary_gauge == 2:
+        # axial gauge removes the goldstones (like unitary) and therefore
+        # must not share the Feynman gauge pickle (which keeps them)
+        pickle_name = 'model_axial.pkl'
     elif aloha.unitary_gauge == 3:
         pickle_name = 'model_FDG.pkl'
     else:
         pickle_name = 'model_Feynman.pkl'
     if decay:
         pickle_name = 'dec_%s' % pickle_name
-    if six.PY3:
-        pickle_name = 'py3_%s' % pickle_name
+    pickle_name = 'py3_%s' % pickle_name
     
     allow_reload = False
     if files.is_uptodate(os.path.join(model_path, pickle_name), files_list):
@@ -514,7 +516,13 @@ class UFOMG5Converter(object):
         self.model.set('particles', self.particles)
         self.model.set('interactions', self.interactions)
         self.conservecharge = set(['charge'])
-        
+
+        if hasattr(model, 'startfromalpha0'):
+            startfromalpha = bannermod.ConfigFile.format_variable(model.startfromalpha0, bool, name="startfromalpha0")
+            self.model.set('startfromalpha0', startfromalpha)
+        else:
+            self.model.set('startfromalpha0', False) 
+         
         self.ufomodel = model
         self.checked_lor = set()
 
@@ -939,7 +947,7 @@ class UFOMG5Converter(object):
     def get_symmetric_color(old_color, substitution):
         """ """
         all_color_flag = ['f','d', 'Epsilon', 'EpsilonBar', 'K6', 'K6Bar', 'T', 'T6', 'Tr' ]
-        split = re.split("(%s)\(([\d,\s\-\+]*)\)" % '|'.join(all_color_flag), old_color)
+        split = re.split(r"(%s)\(([\d,\s\-\+]*)\)" % '|'.join(all_color_flag), old_color)
         new_expr = ''
         for i in range(len(split)):
             if i % 3 == 0:
@@ -996,7 +1004,7 @@ class UFOMG5Converter(object):
         for old,new in substitution.items():
                 new_spins[new] = lor_orig.spins[old]
 
-        split = re.split("(%s)\(([\d,\s\-\+]*)\)" % '|'.join(self.all_aloha_obj), lor_orig.structure )
+        split = re.split(r"(%s)\(([\d,\s\-\+]*)\)" % '|'.join(self.all_aloha_obj), lor_orig.structure )
         new_expr = ''
         for i in range(len(split)):
             if i % 3 == 0:
@@ -1039,6 +1047,8 @@ class UFOMG5Converter(object):
 
         if len(vertex) !=1 :
             for onevertex in vertex:
+                if onevertex.get('orders') != gold_vertex.get('orders'):
+                    continue
                 to_be_done = self.update_vertex_for_goldstone([onevertex], gold_vertex, goldstone, vector)
                 if not to_be_done:
                     return

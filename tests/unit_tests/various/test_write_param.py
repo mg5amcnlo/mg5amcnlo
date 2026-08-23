@@ -15,8 +15,7 @@
 from __future__ import division
 from __future__ import absolute_import
 import random
-import six
-StringIO = six
+import io
 import os
 
 import tests.unit_tests as unittest
@@ -25,7 +24,6 @@ import madgraph.core.base_objects as base_objects
 
 import models.import_ufo as import_ufo
 import models.write_param_card as writter
-from six.moves import range
 import madgraph.various.misc as misc 
 
 
@@ -41,7 +39,7 @@ class TestParamWritting(unittest.TestCase):
         self.model = import_ufo.import_model('sm')
         # initialize the main object 
         self.writter = writter.ParamCardWriter(self.model)
-        self.content = StringIO.StringIO()
+        self.content = io.StringIO()
         self.writter.define_output_file(self.content)
         self.content.truncate(0) # remove the header
         self.content.seek(0)
@@ -205,7 +203,7 @@ class TestParamWrittingWithRestrict(unittest.TestCase):
         
         # initialize the main object 
         self.writter = writter.ParamCardWriter(self.model)
-        self.content = StringIO.StringIO()
+        self.content = io.StringIO()
         self.writter.define_output_file(self.content)
         self.content.truncate(0) # remove the header
         self.content.seek(0) # need in py3 to fully remove header

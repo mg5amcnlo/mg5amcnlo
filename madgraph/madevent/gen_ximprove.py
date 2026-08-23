@@ -29,11 +29,7 @@ import subprocess
 import shutil
 import stat
 import sys
-import six
 import time
-from six.moves import range
-from six.moves import zip
-
 try:
     import madgraph
 except ImportError:
@@ -46,8 +42,7 @@ except ImportError:
     import internal.combine_grid as combine_grid
     import internal.combine_runs as combine_runs
     import internal.lhe_parser as lhe_parser
-    if six.PY3:
-        import internal.hel_recycle as hel_recycle
+    import internal.hel_recycle as hel_recycle
 else:
     MADEVENT= False
     import madgraph.madevent.sum_html as sum_html
@@ -58,8 +53,7 @@ else:
     import madgraph.madevent.combine_grid as combine_grid
     import madgraph.madevent.combine_runs as combine_runs
     import madgraph.various.lhe_parser as lhe_parser
-    if six.PY3:
-        import madgraph.madevent.hel_recycle as hel_recycle
+    import madgraph.madevent.hel_recycle as hel_recycle
 
 logger = logging.getLogger('madgraph.madevent.gen_ximprove')
 pjoin = os.path.join
@@ -1476,6 +1470,7 @@ class gen_ximprove_v4(gen_ximprove):
                     'precision': yerr/math.sqrt(nb_split)/(C.get('xsec')+ yerr),
                     'nhel': self.run_card['nhel'],
                     'channel': C.name.replace('G',''),
+                    #'base_directory': C.name if self.keep_grid_for_refine else '',  
                     'grid_refinment' : 1
                     }
 

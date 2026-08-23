@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #
 #  Cleans up directories removing leaving only the results
 #     object files

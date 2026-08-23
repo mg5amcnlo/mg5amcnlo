@@ -1,4 +1,5 @@
-#!/bin/bash -e
+#!/usr/bin/env bash
+set -e
 
 # ####################################################################
 # To successfully employ this script, make sure that your bash is in #

@@ -28,8 +28,6 @@ import shutil
 import subprocess
 import sys
 import time
-import six
-
 pjoin = os.path.join
 # Get the grand parent directory (mg5 root) of the module real path 
 # (tests/acceptance_tests) and add it to the current PYTHONPATH to allow
@@ -733,7 +731,7 @@ class MEComparator(object):
     def run_comparison(self, proc_list, model='sm', orders={}, energy=1000):
         """Run the codes and store results."""
 
-        if isinstance(model, six.string_types):
+        if isinstance(model, str):
             model= [model] * len(self.me_runners)
 
         self.results = []

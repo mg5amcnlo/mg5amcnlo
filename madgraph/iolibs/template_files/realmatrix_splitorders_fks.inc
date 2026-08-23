@@ -624,9 +624,7 @@ C ----------
 %(helas_calls)s
 %(jamp_lines)s
 
-      DO I=0,NSQAMPSO
-         RES(I)=0d0
-      ENDDO
+      RES(:) = 0d0
       DO M = 1, NAMPSO
       CF_INDEX = 0
       DO I = 1, NCOLOR
@@ -640,11 +638,8 @@ C ----------
           ENDDO
       ENDDO
 
-	  DO N = 1, NAMPSO
-            RES(SQSOINDEX%(proc_prefix)s(M,N)) = RES(SQSOINDEX%(proc_prefix)s(M,N))/DENOM 
-          ENDDO
       ENDDO
-
+      RES(:) = RES(:)/DENOM
       DO I=1,NSQAMPSO
          RES(0)=RES(0)+RES(I)
       ENDDO
@@ -710,9 +705,7 @@ C ----------
 %(helas_calls_vec)s
 %(jamp_lines)s
 
-      DO I=0,NSQAMPSO
-         RES(I)=0d0
-      ENDDO
+      RES(:) = 0d0
       DO M = 1, NAMPSO
       CF_INDEX = 0
       DO I = 1, NCOLOR
@@ -726,11 +719,8 @@ C ----------
           ENDDO
       ENDDO
 
-	  DO N = 1, NAMPSO
-            RES(SQSOINDEX%(proc_prefix)s(M,N)) = RES(SQSOINDEX%(proc_prefix)s(M,N))/DENOM 
-          ENDDO
       ENDDO
-
+      RES(:) = RES(:)/DENOM
       DO I=1,NSQAMPSO
          RES(0)=RES(0)+RES(I)
       ENDDO

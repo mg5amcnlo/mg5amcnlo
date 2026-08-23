@@ -25,10 +25,7 @@ import glob
 import math
 import xml.sax.handler
 import shutil
-from six import StringIO
-from six.moves import map
-from six.moves import range
-
+from io import StringIO
 if __name__ == '__main__':
     import sys
     sys.path.append('/Users/omatt/Documents/eclipse/madweight/')

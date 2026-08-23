@@ -155,7 +155,7 @@ c         Set right sign for ANS, based on sign of chosen helicity
     ENDIF
     ANS=ANS/DBLE(IDEN)
 
-    call select_color(rcol, jamp2, iconfig,%(proc_id)s,  icol)
+    call select_color(rcol, jamp2, iconfig,%(proc_id)s,  icol, ivec)
 
     END
  
@@ -191,6 +191,8 @@ C
 	SAVE CHOSEN_SO_CONFIGS
     INTEGER                 NCOMB         
     PARAMETER (             NCOMB=${ncomb})
+    double precision bwcutoff
+    common/to_bwcutoff/ bwcutoff
 C  
 C ARGUMENTS 
 C

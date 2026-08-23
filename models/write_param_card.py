@@ -16,8 +16,6 @@ from __future__ import absolute_import
 import models.model_reader as model_reader
 import madgraph.core.base_objects as base_objects
 import madgraph.various.misc as misc
-from six.moves import range
-
 class ParamCardWriterError(Exception):
     """ a error class for this file """
 

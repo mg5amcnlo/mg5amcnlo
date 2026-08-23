@@ -40,6 +40,12 @@ c jet-rate distance. To be set to 1 for FxFx
 c Include all the parameters set in the run_card.dat
 
       include 'run_card.inc'
+c Set UPC parameter
+      if(lpp(1).eq.2.and.lpp(2).eq.2) then
+        xiAI(1:2)=1d0 ! this should be an input in run_card.dat
+        call get_nucleus_RA(nb_proton(1),nb_neutron(1),RAI(1))
+        call get_nucleus_RA(nb_proton(2),nb_neutron(2),RAI(2))
+      endif
 c Change shower_MC string to upper case
       call to_upper(shower_MC)
 c Determine if there is a need to do scale and/or PDF reweighting
@@ -118,9 +124,21 @@ c Set alphaS(mZ)
 C Fill common block for Les Houches init info
          do i=1,2
             if(lpp(i).eq.1.or.lpp(i).eq.2) then
-               idbmup(i)=2212
+               if (nb_proton(i).eq.1.and.nb_neutron(i).eq.0) then
+                  idbmup(i)=2212
+               elseif (nb_proton(i).eq.0.and.nb_neutron(i).eq.1) then
+                  idbmup(i)=2112
+               else
+                  idbmup(i) = 1000000000 + (nb_proton(i)+nb_neutron(i))
+     $                             *10 + nb_proton(i)*10000
+               endif
             elseif(lpp(i).eq.-1.or.lpp(i).eq.-2) then
-               idbmup(i)=-2212
+               if (nb_proton(i).eq.1.and.nb_neutron(i).eq.0) then
+                  idbmup(i)=-2212
+               else
+                  idbmup(i) = -1*(1000000000 + (nb_proton(i)+
+     $                          nb_neutron(i))*10 + nb_proton(i)*10000)
+               endif
             elseif(lpp(i).eq.3) then
                idbmup(i)=11
             elseif(lpp(i).eq.-3) then

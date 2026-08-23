@@ -25,13 +25,8 @@ import signal
 import subprocess
 import sys
 import traceback
-import six
-if six.PY3:
-    import io
-    file = io.IOBase
-from six.moves import map
-from six.moves import range
-from six.moves import input
+import io
+file = io.IOBase
 try:
     import readline
     GNU_SPLITTING = ('GNU' in readline.__doc__)
@@ -343,17 +338,44 @@ class OriginalCmd(object):
             names = names + dir(aclass)
         return names
 
-    def complete_help(self, *args):
-        return self.completenames(*args)
+    def complete_help(self, text, line, begidx, endidx):
+
+        full_arg = self.split_arg(line[0:begidx])
+        #print("full_arg:", full_arg , text, line, begidx, endidx)
+        # Format
+        if len(full_arg) < 1:
+            return self.completenames(text, line, begidx, endidx)
+        elif len(full_arg) == 2 :
+            options = [name[5:] for name in dir(self) if name.startswith('%s2_' % full_arg[1])]
+            return self.list_completion(text, options)
+        else:
+            return
+
+        #return self.completenames(text, line, begidx, endidx)
 
     def do_help(self, arg):
-        if arg:
+        sarg = arg.strip().split()
+        if len(sarg) ==1:
             # XXX check arg syntax
             try:
                 func = getattr(self, 'help_' + arg)
             except AttributeError:
                 try:
                     doc=getattr(self, 'do_' + arg).__doc__
+                    if doc:
+                        self.stdout.write("%s\n"%str(doc))
+                        return
+                except AttributeError:
+                    pass
+                self.stdout.write("%s\n"%str(self.nohelp % (arg,)))
+                return
+            func()
+        elif len(sarg) == 2:
+            try:
+                func = getattr(self, 'help_' + sarg[0]+ '2_' + sarg[1])
+            except AttributeError:
+                try:
+                    doc=getattr(self, '%s2_%s'  % (sarg[0], sarg[1])).__doc__
                     if doc:
                         self.stdout.write("%s\n"%str(doc))
                         return
@@ -1755,7 +1777,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         signal.signal(signal.SIGALRM, handle_alarm)
     
         if fct is None:
-            fct = six.moves.input
+            fct = input
         
         if timeout:
             signal.alarm(timeout)
@@ -2034,7 +2056,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
                 to_write.remove(key)
             except Exception:
                 pass
-            if '_path' in key:       
+            if '_path' in key or '-config' in key or key in ['fastjet', 'lhapdf', 'lhapdf_py3', 'f2py_compiler', 'f2py_compiler_py3']:       
                 # special case need to update path
                 # check if absolute path
                 if not os.path.isabs(value):

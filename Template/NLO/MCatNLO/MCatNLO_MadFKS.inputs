@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # SOURCE INPUT FILES
 source shower_card.dat

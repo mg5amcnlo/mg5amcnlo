@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 nmass_dn=1
 nmass_up=50
 nmasses=$((nmass_up - nmass_dn + 1))
@@ -17,7 +17,7 @@ rm -rf run_gridsudgen.sh
 touch run_gridsudgen.sh
 chmod +x run_gridsudgen.sh
 
-echo "#!/bin/bash" > run_gridsudgen.sh
+echo "#!/usr/bin/env bash" > run_gridsudgen.sh
 echo " " >> run_gridsudgen.sh
 echo $exe "<<EOF" >> run_gridsudgen.sh
 cat <<EOF >> run_gridsudgen.sh

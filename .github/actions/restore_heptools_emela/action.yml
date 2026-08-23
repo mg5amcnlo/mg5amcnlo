@@ -1,0 +1,30 @@
+name: Restore lhapdf cache
+description: Restores lhapdf from cache and sets MG5 accordingly
+
+inputs:
+  setup_only:
+    required: false
+    default: 'false'
+
+runs:
+  using: composite
+  steps:
+    - name: restore lhapdf
+      uses: ./.github/actions/restore_heptools_lhapdf
+      with:
+        setup_only:  ${{ inputs.setup_only }}
+
+    - name: Set cache key
+      run: echo "CACHE_KEY=emela-$ImageOS" >> $GITHUB_ENV
+      shell: bash
+
+    - uses: actions/cache/restore@v5
+      if: ${{ inputs.setup_only != 'true' }}
+      with:
+        path: ~/.cache/HEPtools
+        key: ${{ env.CACHE_KEY }}
+
+    - run: |
+        cd $GITHUB_WORKSPACE
+        echo "eMELA = /home/runner/.cache/HEPtools/bin/eMELA-config" >>       input/mg5_configuration.txt
+      shell: bash

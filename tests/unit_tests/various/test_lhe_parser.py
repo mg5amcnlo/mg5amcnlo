@@ -22,7 +22,6 @@ import tempfile
 import os
 import shutil
 import math
-from six.moves import zip
 pjoin = os.path.join
 from madgraph import MG5DIR
 import itertools

@@ -4,10 +4,11 @@ c -o compare_events compare_events.f handling_lhe_events.f fill_MC_mshell.f
       program compare_events
       implicit none
       integer maxevt,maxevt2,ifile,ifile2,i
-      integer IDBMUP(2),PDFGUP(2),PDFSUP(2),IDWTUP,NPRUP,LPRUP
-      double precision EBMUP(2),XSECUP,XERRUP,XMAXUP
-      integer IDBMUP2(2),PDFGUP2(2),PDFSUP2(2),IDWTUP2,NPRUP2,LPRUP2
-      double precision EBMUP2(2),XSECUP2,XERRUP2,XMAXUP2
+      integer IDBMUP(2),PDFGUP(2),PDFSUP(2),IDWTUP,NPRUP,LPRUP(100)
+      double precision EBMUP(2),XSECUP(100),XERRUP(100),XMAXUP(100)
+      integer IDBMUP2(2),PDFGUP2(2),PDFSUP2(2),IDWTUP2,NPRUP2
+     $     ,LPRUP2(100)
+      double precision EBMUP2(2),XSECUP2(100),XERRUP2(100),XMAXUP2(100)
       INTEGER MAXNUP
       PARAMETER (MAXNUP=500)
       INTEGER NUP,IDPRUP,IDUP(MAXNUP),ISTUP(MAXNUP),

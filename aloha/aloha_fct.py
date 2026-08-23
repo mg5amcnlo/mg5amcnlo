@@ -14,8 +14,6 @@ from __future__ import absolute_import
 from aloha.aloha_object import *
 import aloha.aloha_lib as aloha_lib
 import cmath
-from six.moves import range
-
 import logging
 logger = logging.getLogger('aloha')
 

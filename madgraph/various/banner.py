@@ -25,12 +25,9 @@ import os
 import sys
 import re
 import math
-import six
-StringIO = six
-from six.moves import range
-if six.PY3:
-    import io
-    file = io.IOBase
+import io
+import io as StringIO
+file = io.IOBase
 import itertools
 import time
 
@@ -332,7 +329,7 @@ class Banner(dict):
         """set the lha_strategy: how the weight have to be handle by the shower"""
         
         if not (-4 <= int(value) <= 4):
-            six.reraise(Exception, "wrong value for lha_strategy", value)
+            raise Exception("wrong value for lha_strategy: %s" % value)
         if not self["init"]:
             raise Exception("No init block define")
         
@@ -1004,6 +1001,8 @@ class ConfigFile(dict):
         self.comments = {} # comment associated to parameters. can be display via help message
         # store the valid options for a given parameter.
         self.allowed_value = {}
+        # allow nickname for some parameter to avoid integer mapping for some var
+        self.shortcut_values = {}
         
         self.default_setup()
 
@@ -1132,6 +1131,11 @@ class ConfigFile(dict):
                 scan_targettype = self.scan_set[lower_name] 
                 del self.scan_set[lower_name]
 
+        # check if the user used a shortcut value (which are always str)
+        if lower_name in self.shortcut_values: 
+            if isinstance(value,str) and value.strip().lower() in self.shortcut_values[lower_name]:
+                value = self.shortcut_values[lower_name][value.strip().lower()]
+        
         # 2. Find the type of the attribute that we want
         if lower_name in self.list_parameter:
             targettype = self.list_parameter[lower_name]
@@ -1190,7 +1194,7 @@ class ConfigFile(dict):
                     
                 if not new_values:
 
-                    text= "value '%s' for entry '%s' is not valid.  Preserving previous value: '%s'.\n" \
+                    text= "value '%s' for entry '%s' is not valid. Preserving previous value: '%s'.\n" \
                                % (value, name, self[lower_name])
                     text += "allowed values are any list composed of the following entries: %s" % ', '.join([str(i) for i in self.allowed_value[lower_name]])
                     return self.warn(text, 'warning', raiseerror)                    
@@ -1296,7 +1300,7 @@ class ConfigFile(dict):
                     
             if not valid:
                 # act if not valid:
-                text = "value '%s' for entry '%s' is not valid.  Preserving previous value: '%s'.\n" \
+                text = "value '%s' for entry '%s' is not valid. Preserving previous value: '%s'.\n" \
                                % (value, name, self[lower_name])
                 text += "allowed values are %s\n" % ', '.join([str(i) for i in self.allowed_value[lower_name]])
                 if lower_name in self.comments:
@@ -1310,7 +1314,8 @@ class ConfigFile(dict):
 
 
     def add_param(self, name, value, system=False, comment=False, typelist=None,
-                  allowed=[]):
+                  allowed=[],
+                  shortcut={}):
         """add a default parameter to the class"""
 
         lower_name = name.lower()
@@ -1345,6 +1350,11 @@ class ConfigFile(dict):
                     assert val in allowed or '*' in allowed
             else:
                 assert value in allowed or '*' in allowed
+        if shortcut:
+            if allowed and shortcut and '*' not in allowed:
+                assert all([val in allowed for val in shortcut.values()]), "Some shortcut value are not in the allowed list"
+            assert all([isinstance(v, str) for v in shortcut.keys()]), "All shortcut values should be str"
+            self.shortcut_values[lower_name] = shortcut
         #elif isinstance(value, bool) and allowed != ['*']:
         #    self.allowed_value[name] = [True, False]
         
@@ -1407,7 +1417,7 @@ class ConfigFile(dict):
             if targettype in ['str', 'int', 'float', 'bool']:
                 targettype = eval(targettype)
 
-        if (six.PY2 and not isinstance(value, (str,six.text_type)) or (six.PY3 and  not isinstance(value, str))):
+        if not isinstance(value, str):
             # just have to check that we have the correct format
             if isinstance(value, targettype):
                 pass # assignement at the end
@@ -2871,7 +2881,8 @@ class RunCard(ConfigFile):
     def read(self, finput, consistency=True, unknown_warning=True, **opt):
         """Read the input file, this can be a path to a file, 
            a file object, a str with the content of the file."""
-           
+        
+        self.path = None
         if isinstance(finput, str):
             if "\n" in finput:
                 finput = finput.split('\n')
@@ -2880,9 +2891,11 @@ class RunCard(ConfigFile):
             elif os.path.isfile(finput):
                 self.path = finput
                 finput = open(finput)
+                
             else:
                 raise Exception("No such file %s" % finput)
         
+
         for line in finput:
             line = line.split('#')[0]
             line = line.split('!')[0]
@@ -3023,7 +3036,6 @@ class RunCard(ConfigFile):
                     if "$%s" % b.name not in text:
                         text += "\n$%s\n" % b.name
                 text = string.Template(text).substitute(mapping)
-
             if not self.list_parameter:
                 text = text % self
             else:
@@ -3049,7 +3061,7 @@ class RunCard(ConfigFile):
                         continue
                     else:
                         this_group = this_group[0]
-                    text += this_group.get_template(self) % self
+                    text += this_group.get_template(self) % self + "\n"
                     this_group.manage_parameters(self, written, to_write)
                     
                 elif len(nline) != 2:
@@ -3139,6 +3151,7 @@ class RunCard(ConfigFile):
                     text = text.replace(template_off, '\n'.join(to_add))
                 else:
                     text += '\n'.join(to_add)
+
 
         if to_write or write_hidden:
             text+="""#********************************************************************* 
@@ -3236,8 +3249,9 @@ class RunCard(ConfigFile):
 
 
     def get_default(self, name, default=None, log_level=None):
-        """return self[name] if exist otherwise default. log control if we 
-        put a warning or not if we use the default value"""
+        """return self[name] if exist otherwise 
+        check run_card_default.dat otherwise python default. 
+        log control if we put a warning or not if we use the default value"""
 
         lower_name = name.lower()
         if lower_name not in self.user_set:
@@ -3255,11 +3269,41 @@ class RunCard(ConfigFile):
                         log_level = 10
                 else:
                     log_level = 20
+
+            def get_template_default(name):
+                try:
+                    if name.lower() in self.parameter_in_block:
+                            block = self.parameter_in_block[name.lower()]
+                            if block.status(self) != block.status(defaultcard):
+                                return  'python'
+                    if name.lower() in defaultcard.user_set:
+                        return 'defaultcard'
+                    else: 
+                        return 'python'
+                except Exception as err:
+                    return 'python'
+
+            
             if not default:
-                default = dict.__getitem__(self, name.lower())
+                info = ''
+                if hasattr(self, 'path') and self.path:
+                    try:
+                        defaultcard = RunCard(self.path.replace('.dat', '_default.dat'))
+                        previousdefault = defaultcard.__getitem__(name.lower())
+                        #check special case for parameter in block where the default card shows one block
+                        # but the user card shows another block. In that case we do not want to take the default value from the default card.
+                        if get_template_default(name) == 'defaultcard':
+                            info = ' from run_card_default.dat' 
+                            default = previousdefault
+                        else:
+                            default = dict.__getitem__(self, name.lower())
+                    except Exception as err:
+                        default = dict.__getitem__(self, name.lower())
+                else:
+                    default = dict.__getitem__(self, name.lower())
  
-            logger.log(log_level, '%s missed argument %s. Takes default: %s'
-                                   % (self.filename, name, default))
+            logger.log(log_level, '%s missed argument %s. Takes default: %s%s'
+                                   % (self.filename, name, default, info))
             self[name] = default
             return default
         else:
@@ -3272,6 +3316,12 @@ class RunCard(ConfigFile):
             return 'dressed'
         else:
             return value
+
+    def mod_inc_iseed(self, value):
+        """A negative iseed in the run_card is preserved across runs (so the
+        same seed can be reused), but the Fortran code expects a non-negative
+        seed, so export the absolute value to the include file."""
+        return abs(value)
 
     def edit_dummy_fct_from_file(self, filelist, outdir):
         """
@@ -3353,7 +3403,7 @@ class RunCard(ConfigFile):
     def retro_compatible_custom_fct(lines, mode=None):
 
         f77_type = ['real*8', 'integer', 'double precision', 'logical']
-        function_pat = re.compile('^\s+(?:SUBROUTINE|(?:%(type)s)\s+function)\s+([a-zA-Z]\w*)' \
+        function_pat = re.compile(r'^\s+(?:SUBROUTINE|(?:%(type)s)\s+function)\s+([a-zA-Z]\w*)' \
                                 % {'type':'|'.join(f77_type)}, re.I+re.M)
         include_pat = re.compile(r"\s+include\s+[\'\"]([\w\./]*)") 
         
@@ -3722,15 +3772,15 @@ class RunCard(ConfigFile):
             if to_add or previous:
                 # remove previous definition of the commonblock
                 try:
-                    start = out.index('C START USER COMMON BLOCK')
+                    start = out.index('C     START USER COMMON BLOCK')
                 except ValueError:
                     pass
                 else:
-                    stop = out.index('C STOP USER COMMON BLOCK')
+                    stop = out.index('C     STOP USER COMMON BLOCK')
                     out = out[:start]+ out[stop+1:]
                 #add new common-block
                 if self.definition_path[incname]: 
-                    out.append("C START USER COMMON BLOCK")
+                    out.append("C     START USER COMMON BLOCK")
                     if isinstance(pathinc , str):
                         filename = os.path.basename(pathinc).split('.',1)[0]
                     elif hasattr(pathinc , "name"):
@@ -3741,7 +3791,7 @@ class RunCard(ConfigFile):
                         misc.sprint(incname, pathinc )
                     filename = filename.upper()
                     out.append("        COMMON/USER_CUSTOM_%s/%s" %(filename,','.join( self.definition_path[incname])))
-                    out.append('C STOP USER COMMON BLOCK')
+                    out.append('C     STOP USER COMMON BLOCK')
             
             if not output_file:
                 fsock.writelines(out)
@@ -3923,15 +3973,16 @@ frame_block = RunBlock('frame', template_on=template_on, template_off=template_o
 
 
 
-# EVA SCALE EVOLUTION ------------------------------------------------------------------------------------
+# EVA PDF PRECISION ------------------------------------------------------------------------------------
 template_on = \
-"""  %(ievo_eva)s  = ievo_eva         ! scale evolution for EW pdfs (eva):
-                         ! 0 for evo by q^2; 1 for evo by pT^2
+"""     %(evaorder)s = evaorder         ! 0=EVA@LLA, 1=full LP, 2=NLP [2502.07878]
+     %(eva_xcut)s = eva_xcut         ! =1 [default] for restricting xi > MV/Ebeam
+                          ! =0 for no restriction [results of 2111.02442]
+     %(ievo_eva)s = ievo_eva         ! scale evolution for EW pdfs (eva) in LLA
+                          ! =0 for evo by q^2; =1 for evo by pT^2
 """
 template_off = ""
-eva_scale_block = RunBlock('eva_scale', template_on=template_on, template_off=template_off)
-
-
+eva_pdf_block = RunBlock('eva_pdf', template_on=template_on, template_off=template_off)
 
 # MLM Merging ------------------------------------------------------------------------------------
 template_on = \
@@ -4143,7 +4194,7 @@ class RunCardLO(RunCard):
     """an object to handle in a nice way the run_card information"""
     
     blocks = [heavy_ion_block, beam_pol_block, syscalc_block, ecut_block,
-             frame_block, eva_scale_block, mlm_block, ckkw_block, psoptim_block,
+             frame_block, eva_pdf_block, mlm_block, ckkw_block, psoptim_block,
               pdlabel_block, fixedfacscale, running_block]
 
     dummy_fct_file = {"dummy_cuts": pjoin("SubProcesses","dummy_fct.f"),
@@ -4172,8 +4223,10 @@ class RunCardLO(RunCard):
                        allowed=['partonshower'], comment="list of check that can be bypassed manually.")
         self.add_param("python_seed", -2, include=False, hidden=True, comment="controlling python seed [handling in particular the final unweighting].\n -1 means use default from random module.\n -2 means set to same value as iseed")
         self.add_param("lpp1", 1, fortran_name="lpp(1)", allowed=[-1,1,0,2,3,9,-2,-3,4,-4],
+                       shortcut={'p':1,"p~":-1,'e-':3,'e+':-3,'mu-':4,'mu+':-4, 'no':0},
                         comment='first beam energy distribution:\n 0: fixed energy\n 1: PDF of proton\n -1: PDF of antiproton\n 2:elastic photon from proton, +/-3:PDF of electron/positron, +/-4:PDF of muon/antimuon, 9: PLUGIN MODE')
         self.add_param("lpp2", 1, fortran_name="lpp(2)", allowed=[-1,1,0,2,3,9,-2,-3,4,-4],
+                       shortcut={'p':1,"p~":-1,'e-':3,'e+':-3,'mu-':4,'mu+':-4, 'no':0},
                        comment='second beam energy distribution:\n 0: fixed energy\n 1: PDF of proton\n -1: PDF of antiproton\n 2:elastic photon from proton, +/-3:PDF of electron/positron, +/-4:PDF of muon/antimuon, 9: PLUGIN MODE')
         self.add_param("ebeam1", 6500.0, fortran_name="ebeam(1)")
         self.add_param("ebeam2", 6500.0, fortran_name="ebeam(2)")
@@ -4182,18 +4235,24 @@ class RunCardLO(RunCard):
         self.add_param("polbeam2", 0.0, fortran_name="pb2", hidden=True,
                                               comment="Beam polarization from -100 (left-handed) to 100 (right-handed) --use lpp=0 for this parameter--")
         self.add_param('nb_proton1', 1, hidden=True, allowed=[1,0, 82 , '*'],fortran_name="nb_proton(1)",
+                       shortcut={'lead':82},
                        comment='For heavy ion physics nb of proton in the ion (for both beam but if group_subprocess was False)')
         self.add_param('nb_proton2', 1, hidden=True, allowed=[1,0, 82 , '*'],fortran_name="nb_proton(2)",
+                       shortcut={'lead':82},
                        comment='For heavy ion physics nb of proton in the ion (used for beam 2 if group_subprocess was False)')
         self.add_param('nb_neutron1', 0, hidden=True, allowed=[1,0, 126 , '*'],fortran_name="nb_neutron(1)",
+                       shortcut={'lead':126},   
                        comment='For heavy ion physics nb of neutron in the ion (for both beam but if group_subprocess was False)')
         self.add_param('nb_neutron2', 0, hidden=True, allowed=[1,0, 126 , '*'],fortran_name="nb_neutron(2)",
+                       shortcut={'lead':126},
                        comment='For heavy ion physics nb of neutron in the ion (of beam 2 if group_subprocess was False )')        
         self.add_param('mass_ion1', -1.0, hidden=True, fortran_name="mass_ion(1)",
                        allowed=[-1,0, 0.938, 207.9766521*0.938, 0.000511, 0.105, '*'],
+                       shortcut={'proton':0.938,'lead':207.9766521*0.938,'electron':0.000511,'muon':0.105},
                        comment='For heavy ion physics mass in GeV of the ion (of beam 1)')
         self.add_param('mass_ion2', -1.0, hidden=True, fortran_name="mass_ion(2)",
                        allowed=[-1,0, 0.938, 207.9766521*0.938, 0.000511, 0.105, '*'],
+                       shortcut={'proton':0.938,'lead':207.9766521*0.938,'electron':0.000511,'muon':0.105},
                        comment='For heavy ion physics mass in GeV of the ion (of beam 2)')
         valid_pdf = ['lhapdf', 'cteq6_m','cteq6_l', 'cteq6l1','nn23lo', 'nn23lo1', 'nn23nlo','iww','eva','edff','chff','none','mixed']+\
                        sum(self.allowed_lep_densities.values(),[])
@@ -4206,15 +4265,21 @@ class RunCardLO(RunCard):
         self.add_param("fixed_fac_scale1", False, hidden=True)
         self.add_param("fixed_fac_scale2", False, hidden=True)
         self.add_param("fixed_extra_scale", False, hidden=True)
-        self.add_param("scale", 91.1880)
-        self.add_param("dsqrt_q2fact1", 91.1880, fortran_name="sf1")
-        self.add_param("dsqrt_q2fact2", 91.1880, fortran_name="sf2")
+        self.add_param("scale", 91.1880, shortcut={'mz':91.1880, 'mh':125.0, 'mt':173.0, 'mtau':1.77686})
+        self.add_param("dsqrt_q2fact1", 91.1880, fortran_name="sf1", shortcut={'mz':91.1880, 'mh':125.0, 'mt':173.0, 'mtau':1.77686})
+        self.add_param("dsqrt_q2fact2", 91.1880, fortran_name="sf2", shortcut={'mz':91.1880, 'mh':125.0, 'mt':173.0, 'mtau':1.77686})
         self.add_param("mue_ref_fixed", 91.1880, hidden=True)
         self.add_param("dynamical_scale_choice", -1, comment="\'-1\' is based on CKKW back clustering (following feynman diagram).\n \'1\' is the sum of transverse energy.\n '2' is HT (sum of the transverse mass)\n '3' is HT/2\n '4' is the center of mass energy\n'0' allows to use the user_hook definition (need to be defined via custom_fct entry) ",
-                                                allowed=[-1,0,1,2,3,4,10])
+                                                allowed=[-1,0,1,2,3,4,10],
+                                                shortcut={'ckkw':-1,'ht':2,'ht/2':3,'et':1,'shat':4},
+                                                )
         self.add_param("mue_over_ref", 1.0, hidden=True, comment='ratio mu_other/mu for dynamical scale')
         self.add_param("ievo_eva",0,hidden=True, allowed=[0,1],fortran_name="ievo_eva",
                         comment='eva: 0 for EW pdf muf evolution by q^2; 1 for evo by pT^2')
+        self.add_param("evaorder",0,hidden=True, allowed=[0,1,2],fortran_name="evaorder",
+                        comment='eva order: 0=EVA, 1=iEVA, 2=iEVA@nlp')
+        self.add_param("eva_xcut",1,hidden=True, allowed=[0,1],fortran_name="eva_xcut",
+                        comment='eva_xcut: 1 = impose x > MV/Ebeam restriction; set to 1 (0) to recover results of [2502.07878 (2111.02442)]')
         
         # Bias module options
         self.add_param("bias_module", 'None', include=False, hidden=True)
@@ -4467,7 +4532,16 @@ class RunCardLO(RunCard):
             self['iseed'] = self['gseed']
         
         #Some parameter need to be fixed when using syscalc
-        #if self['use_syst']:
+        if self['use_syst']:
+            if (self['pdlabel1'] in ['eva']) and \
+               (self['pdlabel2'] in ['eva']):
+                # update for EVAxEVA (no pdf replicas available for EVA)
+                opts = self['systematics_arguments']
+                pdf = [a[6:] for a in opts if a.startswith('--pdf=')]                
+                if pdf==['errorset']:
+                    logger.warning('systematics.py with --pdf=errorset not supported for EVAxEVA; updating to --pdf=central')
+                    self['systematics_arguments'].remove('--pdf=errorset')
+                    self['systematics_arguments'].append('--pdf=central')
         #    if self['scalefact'] != 1.0:
         #        logger.warning('Since use_syst=T, changing the value of \'scalefact\' to 1')
         #        self['scalefact'] = 1.0
@@ -4523,16 +4597,16 @@ class RunCardLO(RunCard):
                     self.set(pdlabelX, 'none')
                     mod = True
             elif abs(self[lpp]) == 1: # PDF from PDF library
-                if self[pdlabelX] in ['eva', 'iww', 'edff','chff','none']:
+                if self[pdlabelX] in ['eva','iww','edff','chff','none']:
                     raise InvalidRunCard("%s \'%s\' not compatible with %s \'%s\'" % (lpp, self[lpp], pdlabelX, self[pdlabelX]))
             elif abs(self[lpp]) in [3,4]: # PDF from PDF library
-                if self[pdlabelX] not in ['none','eva', 'iww'] + sum(self.allowed_lep_densities.values(),[]):
-                    logger.warning("%s \'%s\' not compatible with %s \'%s\'. Change %s to eva" % (lpp, self[lpp], pdlabelX, self[pdlabelX], pdlabelX))
+                if self[pdlabelX] not in ['none','eva','iww'] + sum(self.allowed_lep_densities.values(),[]):
+                    logger.warning("%s \'%s\' not compatible with %s \'%s\'. Changing %s to eva" % (lpp, self[lpp], pdlabelX, self[pdlabelX], pdlabelX))
                     self.set(pdlabelX, 'eva')
                     mod = True
             elif abs(self[lpp]) == 2:
-                if self[pdlabelX] not in ['none','chff','edff', 'iww']:
-                    logger.warning("%s \'%s\' not compatible with %s \'%s\'. Change %s to edff" % (lpp, self[lpp], pdlabelX, self[pdlabelX], pdlabelX))
+                if self[pdlabelX] not in ['none','chff','edff','iww']:
+                    logger.warning("%s \'%s\' not compatible with %s \'%s\'. Changing %s to edff" % (lpp, self[lpp], pdlabelX, self[pdlabelX], pdlabelX))
                     self.set(pdlabelX, 'edff')
                     mod = True
 
@@ -4594,21 +4668,17 @@ class RunCardLO(RunCard):
         if self['pdlabel'] not in sum(self.allowed_lep_densities.values(),[]):
             for i in [1,2]:
                 if abs(self['lpp%s' % i ]) in [3,4] and self['fixed_fac_scale%s' % i] and self['dsqrt_q2fact%s'%i] == 91.188:
-                    logger.warning("Vector boson from lepton PDF is using fixed scale value of muf [dsqrt_q2fact%s]. Looks like you kept the default value (Mz). Is this really the cut-off that you want to use?" % i)
+                    logger.warning("Weak boson from lepton PDF is using fixed scale value of muf [dsqrt_q2fact%s]. Looks like you kept the default value (Mz). Is this really the cut-off that you want to use?" % i)
         
                 if abs(self['lpp%s' % i ]) == 2 and self['fixed_fac_scale%s' % i] and self['dsqrt_q2fact%s'%i] == 91.188:
                     if self['pdlabel'] in ['edff','chff']:
                         logger.warning("Since 3.5.0 exclusive photon-photon processes in ultraperipheral proton and nuclear collisions from gamma-UPC (arXiv:2207.03012) will ignore the factorisation scale.")
                     else:
-                        logger.warning("Since 2.7.1 Elastic photon from proton is using fixed scale value of muf [dsqrt_q2fact%s] as the cut in the Equivalent Photon Approximation (Budnev, et al) formula. Please edit it accordingly." % i)
+                        logger.warning("Since 2.7.1 elastic photon from proton is using fixed scale value of muf [dsqrt_q2fact%s] as the cut in the Equivalent Photon Approximation (Budnev, et al) formula. Please edit it accordingly." % i)
 
 
-        if six.PY2 and self['hel_recycling']:
-            self['hel_recycling'] = False
-            logger.warning("""Helicity recycling optimization requires Python3. This optimzation is therefore deactivated automatically. 
-            In general this optimization speeds up the computation by a factor of two.""")
 
-                
+
         # check that ebeam is bigger than the associated mass.
         for i in [1,2]:
             if self['lpp%s' % i ] not in [1,2]:
@@ -4763,7 +4833,7 @@ class RunCardLO(RunCard):
                 # UPC for p p collision
                 elif beam_id == [[22],[22]]:
                     self['lpp1'] = 2
-                    self['lpp1'] = 2
+                    self['lpp2'] = 2
                     self['ebeam1'] = '6500'
                     self['ebeam2'] = '6500'
                     self['pdlabel'] = 'edff'
@@ -4827,7 +4897,7 @@ class RunCardLO(RunCard):
                         self['ebeam2']  = '15k'
 
             if any(i in beam_id for i in [22,23,24,-24,12,-12,14,-14]):
-                self.display_block.append('eva_scale')
+                self.display_block.append('eva_pdf')
 
             # automatic polarisation of the beam if neutrino beam  
             if any(id  in beam_id for id in [12,-12,14,-14,16,-16]):
@@ -5532,7 +5602,7 @@ class RunCardNLO(RunCard):
      
     LO = False
     
-    blocks = [running_block_nlo]
+    blocks = [heavy_ion_block, running_block_nlo]
 
     dummy_fct_file = {"dummy_cuts": pjoin("SubProcesses","dummy_fct.f"),
                       "user_dynamical_scale": pjoin("SubProcesses","dummy_fct.f"),
@@ -5561,11 +5631,27 @@ class RunCardNLO(RunCard):
         self.add_param('niters_fo', 6, include=False)
         #seed and collider
         self.add_param('iseed', 0)
-        self.add_param('lpp1', 1, fortran_name='lpp(1)')        
-        self.add_param('lpp2', 1, fortran_name='lpp(2)')                        
+        self.add_param('lpp1', 1, fortran_name='lpp(1)',
+                       shortcut={'p':1, 'p~':-1,  'e-': 3, 'e+':-3, 'mu-':4, 'mu+':-4})        
+        self.add_param('lpp2', 1, fortran_name='lpp(2)',
+                       shortcut={'p':1, 'p~':-1,  'e-': 3, 'e+':-3, 'mu-':4, 'mu+':-4})                        
         self.add_param('ebeam1', 6500.0, fortran_name='ebeam(1)')
         self.add_param('ebeam2', 6500.0, fortran_name='ebeam(2)')        
-        self.add_param('pdlabel', 'nn23nlo', allowed=['lhapdf', 'emela', 'cteq6_m','cteq6_d','cteq6_l','cteq6l1', 'nn23lo','nn23lo1','nn23nlo','ct14q00','ct14q07','ct14q14','ct14q21'] +\
+        self.add_param('nb_proton1', 1, hidden=True, allowed=[1,0, 82 , '*'],fortran_name="nb_proton(1)",
+                       comment='For heavy ion physics nb of proton in the ion (for both beam but if group_subprocess was False)')
+        self.add_param('nb_proton2', 1, hidden=True, allowed=[1,0, 82 , '*'],fortran_name="nb_proton(2)",
+                       comment='For heavy ion physics nb of proton in the ion (used for beam 2 if group_subprocess was False)')
+        self.add_param('nb_neutron1', 0, hidden=True, allowed=[1,0, 126 , '*'],fortran_name="nb_neutron(1)",
+                       comment='For heavy ion physics nb of neutron in the ion (for both beam but if group_subprocess was False)')
+        self.add_param('nb_neutron2', 0, hidden=True, allowed=[1,0, 126 , '*'],fortran_name="nb_neutron(2)",
+                       comment='For heavy ion physics nb of neutron in the ion (of beam 2 if group_subprocess was False )')
+        self.add_param('mass_ion1', -1.0, hidden=True, fortran_name="mass_ion(1)",
+                       allowed=[-1,0, 0.938, 207.9766521*0.938, 0.000511, 0.105, '*'],
+                       comment='For heavy ion physics mass in GeV of the ion (of beam 1)')
+        self.add_param('mass_ion2', -1.0, hidden=True, fortran_name="mass_ion(2)",
+                       allowed=[-1,0, 0.938, 207.9766521*0.938, 0.000511, 0.105, '*'],
+                       comment='For heavy ion physics mass in GeV of the ion (of beam 2)')
+        self.add_param('pdlabel', 'nn23nlo', allowed=['lhapdf', 'emela', 'cteq6_m','cteq6_d','cteq6_l','cteq6l1', 'nn23lo','nn23lo1','nn23nlo','ct14q00','ct14q07','ct14q14','ct14q21','edff','chff'] +\
              sum(self.allowed_lep_densities.values(),[]) )                
         self.add_param('lhaid', [244600],fortran_name='lhaPDFid')
         self.add_param('pdfscheme', 0)
@@ -5591,13 +5677,15 @@ class RunCardNLO(RunCard):
         self.add_param('fixed_ren_scale', False)
         self.add_param('fixed_fac_scale', False)
         self.add_param('fixed_extra_scale', True, hidden=True, system=True) # set system since running from Ellis-Sexton scale not implemented
-        self.add_param('mur_ref_fixed', 91.118)                       
+        self.add_param('mur_ref_fixed', 91.118, shortcut={'mz':91.118, 'mw':80.419, 'mt':172.5, 'mh':125.0})                       
         self.add_param('muf1_ref_fixed', -1.0, hidden=True)
-        self.add_param('muf_ref_fixed', 91.118)                       
+        self.add_param('muf_ref_fixed', 91.118, shortcut={'mz':91.118, 'mw':80.419, 'mt':172.5, 'mh':125.0})                       
         self.add_param('muf2_ref_fixed', -1.0, hidden=True)
-        self.add_param('mue_ref_fixed', 91.118, hidden=True) 
+        self.add_param('mue_ref_fixed', 91.118, hidden=True, shortcut={'mz':91.118, 'mw':80.419, 'mt':172.5, 'mh':125.0}) 
         self.add_param("dynamical_scale_choice", [-1],fortran_name='dyn_scale', 
-            allowed = [-2,-1,0,1,2,3,10],                                       comment="\'-1\' is based on CKKW back clustering (following feynman diagram).\n \'1\' is the sum of transverse energy.\n '2' is HT (sum of the transverse mass)\n '3' is HT/2, '0' allows to use the user_hook definition (need to be defined via custom_fct entry) ")
+            allowed = [-2,-1,0,1,2,3,10],
+            shortcut={  'ht/2':3,'ht':2,'et':1},
+            comment="\'-1\' is based on CKKW back clustering (following feynman diagram).\n \'1\' is the sum of transverse energy.\n '2' is HT (sum of the transverse mass)\n '3' is HT/2, '0' allows to use the user_hook definition (need to be defined via custom_fct entry) ")
         self.add_param('fixed_qes_scale', False, hidden=True)
         self.add_param('qes_ref_fixed', -1.0, hidden=True)
         self.add_param('mur_over_ref', 1.0)
@@ -5681,20 +5769,30 @@ class RunCardNLO(RunCard):
         
         super(RunCardNLO, self).check_validity()
 
+        # if heavy ion mode use for one beam, forbid lpp!=1
+        if self['lpp1'] not in [1,2]:
+            if self['nb_proton1'] !=1 or self['nb_neutron1'] !=0:
+                raise InvalidRunCard( "Heavy ion mode is only supported for lpp1=1/2")
+        if self['lpp2'] not in [1,2]:
+            if self['nb_proton2'] !=1 or self['nb_neutron2'] !=0:
+                raise InvalidRunCard( "Heavy ion mode is only supported for lpp2=1/2")
+
         # for lepton-lepton collisions, ignore 'pdlabel' and 'lhaid'
         if abs(self['lpp1'])!=1 or abs(self['lpp2'])!=1:
             if self['lpp1'] == 1 or self['lpp2']==1:
                 raise InvalidRunCard('Process like Deep Inelastic scattering not supported at NLO accuracy.')
 
-            if abs(self['lpp1']) == abs(self['lpp2']) in [3,4]:
-                # for dressed lepton collisions, check that the lhaid is a valid one
-                if self['pdlabel'] not in sum(self.allowed_lep_densities.values(),[]) + ['emela']:
-                    raise InvalidRunCard('pdlabel %s not allowed for dressed-lepton collisions' % self['pdlabel'])
-            
-            elif self['pdlabel']!='nn23nlo' or self['reweight_pdf']:
-                self['pdlabel']='nn23nlo'
-                self['reweight_pdf']=[False]
-                logger.info('''Lepton-lepton collisions: ignoring PDF related parameters in the run_card.dat (pdlabel, lhaid, reweight_pdf, ...)''')
+            if not self['lpp1'] == 2 == self['lpp2']:
+
+                if abs(self['lpp1']) == abs(self['lpp2']) in [3,4]:
+                    # for dressed lepton collisions, check that the lhaid is a valid one
+                    if self['pdlabel'] not in sum(self.allowed_lep_densities.values(),[]) + ['emela']:
+                        raise InvalidRunCard('pdlabel %s not allowed for dressed-lepton collisions' % self['pdlabel'])
+                
+                elif self['pdlabel']!='nn23nlo' or self['reweight_pdf']:
+                    self['pdlabel']='nn23nlo'
+                    self['reweight_pdf']=[False]
+                    logger.info('''Lepton-lepton collisions: ignoring PDF related parameters in the run_card.dat (pdlabel, lhaid, reweight_pdf, ...)''')
         
             if self['lpp1'] == 0  == self['lpp2']:
                 if self['pdlabel']!='nn23nlo' or self['reweight_pdf']:
@@ -5797,6 +5895,10 @@ class RunCardNLO(RunCard):
                 raise InvalidRunCard("'dynamical_scale_choice' has two or more identical entries. They have to be all different for the code to work correctly.")
             
         # Check that lenght of lists are consistent
+        if self['lpp1'] == self['lpp2'] == 2:
+            if not self['rw_fscale'] == [1.0]:
+                self['rw_fscale'] = [1.0]
+                logger.warning("Factorisation scale cannot be varied for elastic photon collisions.")
         if len(self['reweight_pdf']) != len(self['lhaid']):
             raise InvalidRunCard("'reweight_pdf' and 'lhaid' lists should have the same length")
         if len(self['reweight_scale']) != len(self['dynamical_scale_choice']):

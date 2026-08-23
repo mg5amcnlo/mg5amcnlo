@@ -36,9 +36,6 @@ import tests.input_files.import_vertexlist as import_vertexlist
 import madgraph.core.diagram_generation as diagram_generation
 import madgraph.various.diagram_symmetry as diagram_symmetry
 import madgraph.various.misc as misc
-from six.moves import range
-
-
 _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0]
 
 #===============================================================================

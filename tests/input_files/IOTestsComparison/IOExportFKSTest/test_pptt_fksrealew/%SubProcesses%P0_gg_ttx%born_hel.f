@@ -221,9 +221,7 @@ C     JAMPs contributing to orders QCD=2 QED=0
      $ *AMP(1)+(-1.000000000000000D+00)*AMP(2)
       JAMP(2,1) = ((0.000000000000000D+00,-1.000000000000000D+00))
      $ *AMP(1)+(-1.000000000000000D+00)*AMP(3)
-      DO I = 1, NSQAMPSO
-        ANS(I) = 0D0
-      ENDDO
+      ANS(:) = 0D0
       DO M = 1, NAMPSO
         CF_INDEX = 0
         DO I = 1, NCOLOR
@@ -235,8 +233,8 @@ C     JAMPs contributing to orders QCD=2 QED=0
           ANS(SQSOINDEXB(M,M))=ANS(SQSOINDEXB(M,M))+ZTEMP
      $     *DCONJG(JAMP(I,M))
         ENDDO
-        ANS(SQSOINDEXB(M,M))=ANS(SQSOINDEXB(M,M))/DENOM
       ENDDO
+      ANS(:) = ANS(:)/DENOM
       END
 
 

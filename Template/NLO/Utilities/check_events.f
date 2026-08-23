@@ -27,8 +27,8 @@ c negative number of events
       common/cHW6processes/idups_Sproc_HW6,idups_Hproc_HW6
       integer icolups_proc(10000,0:500,0:2,22)
       common/ccolconn/icolups_proc
-      integer IDBMUP(2),PDFGUP(2),PDFSUP(2),IDWTUP,NPRUP,LPRUP
-      double precision EBMUP(2),XSECUP,XERRUP,XMAXUP
+      integer IDBMUP(2),PDFGUP(2),PDFSUP(2),IDWTUP,NPRUP,LPRUP(100)
+      double precision EBMUP(2),XSECUP(100),XERRUP(100),XMAXUP(100)
       INTEGER MAXNUP
       PARAMETER (MAXNUP=500)
       INTEGER NUP,IDPRUP,IDUP(MAXNUP),ISTUP(MAXNUP),

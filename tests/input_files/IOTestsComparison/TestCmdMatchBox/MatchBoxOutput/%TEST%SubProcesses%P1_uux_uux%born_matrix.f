@@ -276,7 +276,7 @@ C     JAMPs contributing to orders QCD=2
       LNJAMP(1,1) = (5.000000000000000D-01)*AMP(2)
       LNJAMP(2,1) = (-5.000000000000000D-01)*AMP(1)
 
-      RES = 0.D0
+      RES(:) = 0.D0
       DO M = 1, NAMPSO
         CF_INDEX = 0
         DO I = 1, NCOLOR
@@ -290,11 +290,8 @@ C     JAMPs contributing to orders QCD=2
      $        ZTEMP*DCONJG(JAMP(I,N))
           ENDDO
         ENDDO
-        DO N = 1, NAMPSO
-          RES(MG5_1_SQSOINDEX(M,N)) = RES(MG5_1_SQSOINDEX(M,N))/DENOM
-        ENDDO
       ENDDO
-
+      RES(:) = RES(:)/DENOM
       END
 
 
@@ -415,31 +412,29 @@ C     JAMPs contributing to orders QCD=2
 
       END
 
-      SUBROUTINE MG5_1_GET_JAMP(NJAMP, ONEJAMP)
+      SUBROUTINE MG5_1_GET_JAMP(NJAMP, SOINDEX, ONEJAMP)
 
-      INTEGER     NCOLOR, NJAMP
-      PARAMETER (NCOLOR=2)
-      INTEGER NAMPSO
-      PARAMETER (NAMPSO=1)
-      COMPLEX*16  JAMP(NCOLOR,NAMPSO), ONEJAMP
-      COMMON/MG5_1_JAMP/JAMP,LNJAMP
-
-      ONEJAMP = JAMP(NJAMP+1,1)  ! +1 since njamp start at zero (c convention)
-      END
-
-      SUBROUTINE MG5_1_GET_LNJAMP(NJAMP, ONEJAMP)
-
-      INTEGER     NCOLOR, NJAMP
+      INTEGER     NCOLOR, NJAMP, SOINDEX
       PARAMETER (NCOLOR=2)
       INTEGER NAMPSO
       PARAMETER (NAMPSO=1)
       COMPLEX*16  JAMP(NCOLOR,NAMPSO), LNJAMP(NCOLOR,NAMPSO), ONEJAMP
       COMMON/MG5_1_JAMP/JAMP,LNJAMP
 
-      ONEJAMP = LNJAMP(NJAMP+1,1)  ! +1 since njamp start at zero (c convention)
+      ONEJAMP = JAMP(NJAMP+1, SOINDEX)  ! +1 since njamp start at zero (c convention)
       END
 
+      SUBROUTINE MG5_1_GET_LNJAMP(NJAMP, SOINDEX, ONEJAMP)
 
+      INTEGER     NCOLOR, NJAMP, SOINDEX
+      PARAMETER (NCOLOR=2)
+      INTEGER NAMPSO
+      PARAMETER (NAMPSO=1)
+      COMPLEX*16  JAMP(NCOLOR,NAMPSO), LNJAMP(NCOLOR,NAMPSO), ONEJAMP
+      COMMON/MG5_1_JAMP/JAMP,LNJAMP
+
+      ONEJAMP = LNJAMP(NJAMP+1,SOINDEX)  ! +1 since njamp start at zero (c convention)
+      END
 
 
       SUBROUTINE MG5_1_GET_NCOLOR(IN1, IN2, OUT)
@@ -504,39 +499,25 @@ C     JAMPs contributing to orders QCD=2
       RETURN
       END
 
+      SUBROUTINE MG5_1_GET_MAXSOINDEX(OUT)
 
+      INTEGER OUT
+      OUT  = 1
+      RETURN
+      END
 
+      SUBROUTINE MG5_1__GET_CHOSEN_SO_CONFIG(M,N, OUT)
 
+      INTEGER M, N
+      LOGICAL OUT
+      PARAMETER (NSQAMPSO=1)
+      LOGICAL CHOSEN_SO_CONFIGS(NSQAMPSO)
+      DATA CHOSEN_SO_CONFIGS/.TRUE./
+      COMMON/MG5_1_CHOSEN_BORN_SQSO/CHOSEN_SO_CONFIGS
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+      OUT  = CHOSEN_SO_CONFIGS(MG5_1_SQSOINDEX(M,N))
+      RETURN
+      END
 
 
 

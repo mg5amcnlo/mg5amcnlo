@@ -38,9 +38,6 @@ import os
 import math
 import sys
 import logging
-from six.moves import map
-from six.moves import range
-
 logger = logging.getLogger('madgraph.madweight')
 pjoin = os.path.join
 

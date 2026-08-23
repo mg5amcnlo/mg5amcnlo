@@ -498,14 +498,14 @@ class HelasModelTest(HelasModelTestSetup):
 
         wavefunctions = {}
         # IXXXXXX.Key: (spin, state)
-        key1 = ((-2, 0, tuple()), ('',))
+        key1 = ((-2, 0, tuple(),None), ('',))
         wavefunctions[key1] = \
                           lambda wf: 'CALL IXXXXX(P(0,%d),%s,NHEL(%d),%d*IC(%d),W(1,%d))' % \
                           (wf.get('number_external'), wf.get('mass'),
                            wf.get('number_external'), -(-1) ** wf.get_with_flow('is_part'),
                            wf.get('number_external'), wf.get('number'))
         # OXXXXXX.Key: (spin, state)
-        key2 = ((2, 0, tuple()), ('',))
+        key2 = ((2, 0, tuple(),None), ('',))
         wavefunctions[key2] = \
                           lambda wf: 'CALL OXXXXX(P(0,%d),%s,NHEL(%d),%d*IC(%d),W(1,%d))' % \
                           (wf.get('number_external'), wf.get('mass'),
@@ -953,6 +953,22 @@ class UFOHELASCallWriterTest(unittest.TestCase):
         
         for i, line in enumerate(solution):
             self.assertEqual(line, result[i])
+
+    @test_aloha.set_global(unitary=3)
+    def test_UFO_Python_helas_call_writer_fd(self):
+        """Test automatic generation of UFO helas calls in Python in FD gauge"""
+
+        python_model = helas_call_writers.PythonUFOHelasCallWriter(
+            self.mybasemodel)
+
+        result = python_model.get_matrix_element_calls(self.mymatrixelement)
+        solution = ['w[0] = vfdxxxx(p[0],zero,hel[0],-1)',
+                    'w[1] = vfdxxxx(p[1],wmas,hel[1],-1)',
+                    'w[2] = vfdxxxx(p[2],zero,hel[2],+1)',
+                    'w[3] = vfdxxxx(p[3],wmas,hel[3],+1)',
+                    'w[4] = vfdxxxx(p[4],zmas,hel[4],+1)']
+
+        self.assertEqual(solution, result[:5])
         
 
 class UFOHELASCALLWriterComplexMass(unittest.TestCase):
@@ -1134,4 +1150,3 @@ w[9]= VVVV5_2(w[0],w[3],w[4],GC_57,CMASS_mdl_MW)
 amp[11]= VVV1_0(w[2],w[1],w[9],-GC_3)"""
         
         self.assertEqual(solution.split('\n'), result)        
-

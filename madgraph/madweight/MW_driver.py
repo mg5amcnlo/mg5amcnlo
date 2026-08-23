@@ -18,9 +18,6 @@ import math
 import os 
 import sys
 import subprocess
-from six.moves import map
-from six.moves import range
-
 class RunningMW(object):
 
     def __init__(self, card_nb, first_event, nb_events, evt_file, mw_int_points, \

@@ -999,6 +999,7 @@ c Trivial, but prevents loss of accuracy
       !(note that in e+e- collisions, if tau is generated with a BW
       ! then use_evpr is set to true)
       if ((lpp(1).eq.1.and.lpp(2).eq.1).or.
+     $   (lpp(1).eq.2.and.lpp(2).eq.2).or.
      $   (lpp(1).eq.0.and.lpp(2).eq.0)) then
           use_evpr = .true.
       else if ((abs(lpp(1)).eq.3.and.abs(lpp(2)).eq.3).or.

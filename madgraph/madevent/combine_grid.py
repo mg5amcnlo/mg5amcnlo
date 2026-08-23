@@ -3,7 +3,6 @@ from __future__ import absolute_import
 import collections
 import math
 import os
-from six.moves import range
 try:
     import madgraph
 except ImportError:

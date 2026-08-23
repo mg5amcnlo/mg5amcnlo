@@ -3,9 +3,6 @@
 from __future__ import division
 from __future__ import absolute_import
 from madgraph.interface import reweight_interface
-from six.moves import map
-from six.moves import range
-from six.moves import zip
 import pickle
 
 ################################################################################
@@ -2792,9 +2789,11 @@ class decay_all_events(object):
                 if name == 'all':
                     continue
                 #self.banner.get('proc_card').get('multiparticles'):
-                mgcmd.do_define("%s = %s" % (name, ' '.join(repr(i) for i in pdgs)))
-            
-        
+                try:
+                    mgcmd.do_define("%s = %s" % (name, ' '.join(repr(i) for i in pdgs)))
+                except Exception as e:
+                    pass
+
         mgcmd.exec_cmd("set group_subprocesses False")
         logger.info('generating the production square matrix element')
         start = time.time()
@@ -4197,7 +4196,7 @@ class decay_all_events(object):
 class decay_all_events_onshell(decay_all_events):
     """special mode for onshell production"""
 
-    @misc.mute_logger()
+    #@misc.mute_logger()
     @misc.set_global()
     def generate_all_matrix_element(self):
         """generate the full series of matrix element needed by Madspin.
@@ -4333,7 +4332,8 @@ class decay_all_events_onshell(decay_all_events):
         # remove decay with 0 branching ratio.
         #mgcmd.remove_pointless_decay(self.banner.param_card)
         #
-        commandline = 'output standalone %s' % pjoin(path_me,'madspin_me')
+        misc.sprint("generating directory *****************************************************************************")
+        commandline = 'output standalone %s --prefix=int' % pjoin(path_me,'madspin_me')
         logger.info(commandline)
         mgcmd.exec_cmd(commandline, precmd=True)
         logger.info('Done %.4g' % (time.time()-start))  
@@ -4362,7 +4362,7 @@ class decay_all_events_onshell(decay_all_events):
         #os.environ["GFORTRAN_UNBUFFERED_ALL"] = "y"
         misc.compile(cwd=pjoin(self.path_me,'madspin_me', 'Source'),
                      nb_core=self.mgcmd.options['nb_core'])        
-        misc.compile(['all'],cwd=pjoin(self.path_me,'madspin_me', 'SubProcesses'),
+        misc.compile(['all_matrix2py.so'],cwd=pjoin(self.path_me,'madspin_me', 'SubProcesses'),
                      nb_core=self.mgcmd.options['nb_core'])
 
     def save_to_file(self, *args):

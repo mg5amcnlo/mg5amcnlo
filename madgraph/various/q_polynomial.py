@@ -2,9 +2,6 @@ from __future__ import absolute_import
 import array
 import copy
 import math
-from six.moves import map
-from six.moves import range
-from six.moves import zip
 from functools import reduce
 
 import madgraph.various.misc as misc

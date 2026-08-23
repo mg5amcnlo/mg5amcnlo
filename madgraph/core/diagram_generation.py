@@ -20,7 +20,6 @@ based on relevant properties.
 """
 
 from __future__ import absolute_import
-from six.moves import filter
 #force filter to be a generator # like in py3
 
 import array
@@ -33,10 +32,6 @@ import madgraph.core.base_objects as base_objects
 import madgraph.various.misc as misc
 import madgraph.fks.fks_tag as fks_tag
 from madgraph import InvalidCmd, MadGraph5Error
-from six.moves import range
-from six.moves import zip
-from six.moves import filter
-
 logger = logging.getLogger('madgraph.diagram_generation')
 
 if madgraph.ordering:
@@ -1730,11 +1725,24 @@ class MultiProcess(base_objects.PhysicsObject):
         except KeyError:
             fstags = []
 
+        try:
+            istags = [leg['is_tagged'] for leg in process_definition['legs'] \
+                 if 'is_tagged' in leg.keys() and leg['state'] == False]
+
+        except KeyError:
+            istags = []
+
         # Generate all combinations for the initial state
         for prod in itertools.product(*isids):
-            islegs = [\
-                    base_objects.Leg({'id':id, 'state': False, 
-                                      'polarization': islegs_orig[i]['polarization']})
+            if any(istags):
+                if not all(istags):
+                    raise MadGraph5Error("Tagging only one initial-state particle is not allowed")
+                islegs = [\
+                        fks_tag.TagLeg({'id':id, 'state': False, 'polarization': isleg['polarization'], 'is_tagged': tag}) \
+                        for id, isleg, tag in zip(prod, islegs_orig, istags)]
+            else:
+                islegs = [\
+                        base_objects.Leg({'id':id, 'state': False, 'polarization': islegs_orig[i]['polarization']})
                     for i,id in enumerate(prod)]
 
             # check for longitudinal photon

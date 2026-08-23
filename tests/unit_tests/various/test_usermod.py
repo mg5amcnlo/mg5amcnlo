@@ -32,10 +32,6 @@ import models as ufomodels
 import models.model_reader as model_reader
 import madgraph.iolibs.export_v4 as export_v4
 import madgraph.various.misc as misc
-import six
-from six.moves import range
-from six.moves import zip
-
 _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0]
 pjoin = os.path.join
 
@@ -162,7 +158,7 @@ class Particle(UFOBaseClass):
         if self.selfconjugate:
             raise Exception('%s has no anti particle.' % self.name) 
         outdic = {}
-        for k,v in six.iteritems(self.__dict__):
+        for k,v in self.__dict__.items():
             if k not in self.require_args_all:                
                 outdic[k] = -v
         if self.color in [1,8]:
@@ -485,6 +481,66 @@ QED = CouplingOrder(name = 'QED',
         
         for line1, line2 in zip(target, text):
             self.assertEqual(line1.replace(',',')'), line2.replace(',',')'))
+
+
+    def test_zz_goldstone_normalization(self):
+        """Check that all three goldstone attribute variants are normalized to
+        whichever name is canonical in require_args_all, with no duplicates."""
+
+        # Retrieve parameter objects needed to build particles
+        MZ = next(p for p in self.base_model.parameters if p.name == 'MZ')
+        WZ = next(p for p in self.base_model.parameters if p.name == 'WZ')
+
+        # --- Case A: model's require_args_all uses 'goldstoneboson' (MG5 bundled models) ---
+        # All three input conventions should produce goldstoneboson = True in output.
+
+        p_goldstoneboson = Particle(pdg_code = 9000001,
+             name = 'G0a', antiname = 'G0a', spin = 1, color = 1,
+             mass = MZ, width = WZ, texname = 'G0a', antitexname = 'G0a',
+             charge = 0.0, GhostNumber = 0, LeptonNumber = 0, Y = 0,
+             goldstoneboson = True)
+
+        p_GoldstoneBoson = Particle(pdg_code = 9000002,
+             name = 'G0b', antiname = 'G0b', spin = 1, color = 1,
+             mass = MZ, width = WZ, texname = 'G0b', antitexname = 'G0b',
+             charge = 0.0, GhostNumber = 0, LeptonNumber = 0, Y = 0,
+             GoldstoneBoson = True)
+
+        p_goldstone = Particle(pdg_code = 9000003,
+             name = 'G0c', antiname = 'G0c', spin = 1, color = 1,
+             mass = MZ, width = WZ, texname = 'G0c', antitexname = 'G0c',
+             charge = 0.0, GhostNumber = 0, LeptonNumber = 0, Y = 0,
+             goldstone = True)
+
+        for p in [p_goldstoneboson, p_GoldstoneBoson, p_goldstone]:
+            text = self.base_model.create_data_text(p)
+            self.assertIn('goldstoneboson = True', text,
+                          'goldstoneboson not True in output for %s' % p.name)
+            self.assertNotIn('GoldstoneBoson =', text,
+                             'GoldstoneBoson should not appear in output for %s' % p.name)
+            self.assertNotRegex(text, r'(?<!\w)goldstone(?!\w)\s*=',
+                             'raw goldstone key should not appear in output for %s' % p.name)
+
+        # --- Case B: external model whose require_args_all uses 'goldstone' ---
+        # goldstoneboson/GoldstoneBoson as extra attr should still be normalised.
+        p_ext = Particle(pdg_code = 9000004,
+             name = 'G0d', antiname = 'G0d', spin = 1, color = 1,
+             mass = MZ, width = WZ, texname = 'G0d', antitexname = 'G0d',
+             charge = 0.0, GhostNumber = 0, LeptonNumber = 0, Y = 0,
+             goldstoneboson = True)
+        # Simulate an external object_library.py that uses 'goldstone' as the
+        # canonical constructor argument instead of 'goldstoneboson'.
+        p_ext.require_args_all = [x if x != 'goldstoneboson' else 'goldstone'
+                                   for x in Particle.require_args_all]
+        p_ext.goldstone = False  # canonical attr present but not yet set
+
+        text = self.base_model.create_data_text(p_ext)
+        self.assertIn('goldstone = True', text,
+                      'goldstone not True in output for external-convention particle')
+        self.assertNotIn('goldstoneboson =', text,
+                         'goldstoneboson should not appear in output for external-convention particle')
+        self.assertNotIn('GoldstoneBoson =', text,
+                         'GoldstoneBoson should not appear in output for external-convention particle')
 
                 
     def test_write_vertices(self):

@@ -19,8 +19,6 @@ import math
 import logging
 import re
 import xml.dom.minidom as minidom
-from six.moves import range
-
 logger = logging.getLogger('madevent.stdout') # -> stdout
 
 pjoin = os.path.join

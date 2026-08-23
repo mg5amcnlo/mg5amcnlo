@@ -8,8 +8,6 @@
 from __future__ import absolute_import
 import math,sys,re
 from xml.dom import minidom
-from six.moves import range
-
 #tolerance for energy momentum conservation
 toler = 1e-4
 #lepton masses from PDGLive

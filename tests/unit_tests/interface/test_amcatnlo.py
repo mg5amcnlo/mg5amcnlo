@@ -25,7 +25,7 @@ import madgraph.interface.extended_cmd as ext_cmd
 import madgraph.interface.amcatnlo_interface as mecmd
 import madgraph.various.misc as misc
 import os
-from six import StringIO
+from io import StringIO
 import logging
 
 root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]

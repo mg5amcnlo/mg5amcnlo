@@ -34,6 +34,10 @@ C
       DOUBLE PRECISION D1,S1
       DOUBLE PRECISION A2
 C     
+C     STUFF FOR UPC
+C     
+      DOUBLE PRECISION PHOTONPDFSQUARE
+C     
 C     EXTERNAL FUNCTIONS                                              
 C         
 C     

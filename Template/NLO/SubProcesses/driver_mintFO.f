@@ -483,7 +483,7 @@ c The nbody contributions
       nbody=.true.
       calculatedBorn=.false.
       call get_born_nFKSprocess(nFKS_picked,nFKS_born)
-      call update_fks_dir(nFKS_born)
+      call update_fks_dir_FO(nFKS_born)
       if (ini_fin_fks(ichan).eq.0) then
          jac=1d0
       else
@@ -542,7 +542,7 @@ c The n+1-body contributions (including counter terms)
 c         wgt_me_born=0d0
 c         wgt_me_real=0d0
          jac=MC_int_wgt
-         call update_fks_dir(iFKS)
+         call update_fks_dir_FO(iFKS)
          call generate_momenta(nndim,iconfig,jac,x,p)
          if (p_born(0,1).lt.0d0) cycle
          call compute_prefactors_n1body(vegas_wgt,jac)
@@ -689,7 +689,10 @@ c Finalize PS point
       return
       end
 
-      subroutine update_fks_dir(nFKS)
+      subroutine update_fks_dir_FO(nFKS)
+c Fixed-order variant of update_fks_dir: unlike the version in
+c driver_vec.f (used by the multi-event interface), setfksfactor is
+c called with .false. here.
       implicit none
       include 'run.inc'
       integer nFKS
@@ -732,82 +735,6 @@ c Finalize PS point
       return
       end
 
-      subroutine get_born_nFKSprocess(nFKS_in,nFKS_out)
-      implicit none
-      include 'nexternal.inc'
-      include 'nFKSconfigs.inc'
-      include 'fks_info.inc'
-      integer nFKS_in,nFKS_out,iFKS,iiFKS,nFKSprocessBorn(fks_configs)
-      logical firsttime
-      data firsttime /.true./
-      save nFKSprocessBorn
-c
-      if (firsttime) then
-         firsttime=.false.
-         do iFKS=1,fks_configs
-            nFKSprocessBorn(iFKS)=0
-            if ( need_color_links_D(iFKS) .or. 
-     &           need_charge_links_D(iFKS) )then
-               nFKSprocessBorn(iFKS)=iFKS
-            endif
-            if (nFKSprocessBorn(iFKS).eq.0) then
-c     try to find the process that has the same j_fks but with i_fks a
-c     gluon
-               do iiFKS=1,fks_configs
-                  if ( (need_color_links_D(iiFKS) .or.
-     &                  need_charge_links_D(iiFKS)) .and.
-     &                 fks_j_D(iFKS).eq.fks_j_D(iiFKS) ) then
-                     nFKSprocessBorn(iFKS)=iiFKS
-                     exit
-                  endif
-               enddo
-            endif
-c     try to find the process that has the j_fks initial state if
-c     current j_fks is initial state (and similar for final state j_fks)
-            if (nFKSprocessBorn(iFKS).eq.0) then
-               do iiFKS=1,fks_configs
-                  if ( need_color_links_D(iiFKS) .or.
-     &                 need_charge_links_D(iiFKS) ) then
-                     if ( fks_j_D(iiFKS).le.nincoming .and.
-     &                    fks_j_D(iFKS).le.nincoming ) then
-                        nFKSprocessBorn(iFKS)=iiFKS
-                        exit
-                     elseif ( fks_j_D(iiFKS).gt.nincoming .and.
-     &                        fks_j_D(iFKS).gt.nincoming ) then
-                        nFKSprocessBorn(iFKS)=iiFKS
-                        exit
-                     endif
-                  endif
-               enddo
-            endif
-c     If still not found, just pick any one that has a soft singularity
-            if (nFKSprocessBorn(iFKS).eq.0) then
-               do iiFKS=1,fks_configs
-                  if ( need_color_links_D(iiFKS) .or.
-     &                 need_charge_links_D(iiFKS) ) then
-                     nFKSprocessBorn(iFKS)=iiFKS
-                  endif
-               enddo
-            endif
-c     if there are no soft singularities at all, just do something trivial
-            if (nFKSprocessBorn(iFKS).eq.0) then
-               nFKSprocessBorn(iFKS)=iFKS
-            endif
-         enddo
-         write (*,*) 'Total number of FKS directories is', fks_configs
-         write (*,*) 'For the Born we use nFKSprocesses:'
-         write (*,*)  nFKSprocessBorn
-      endif
-      if (nFKSprocessBorn(nFKS_in).eq.0) then
-         write(*,*) 'Could not find the correct map to Born '/
-     &        /'FKS configuration for the NLO FKS '/
-     &        /'configuration', nFKS_in
-         stop 1
-      else
-         nFKS_out=nFKSprocessBorn(nFKS_in)
-      endif
-      return
-      end
 
       subroutine update_vegas_x(xx,x)
       use mint_module

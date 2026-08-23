@@ -1,0 +1,46 @@
+name: Restore rivet/contur cache
+description: Restores lhapdf from cache and sets MG5 accordingly
+
+inputs:
+  setup_only:
+    required: false
+    default: "false"
+
+runs:
+  using: composite
+  steps:
+    - name: restore pythia8 
+      uses: ./.github/actions/restore_heptools_pythia8
+      with: 
+        setup_only:  ${{ inputs.setup_only }}
+
+    - name: Set cache key
+      run: echo "CACHE_KEY=contur-$ImageOS" >> $GITHUB_ENV
+      shell: bash
+
+    - uses: actions/cache/restore@v5
+      if: ${{ inputs.setup_only != 'true' }}
+      with:
+        path: ~/.cache/HEPtools
+        key: ${{ env.CACHE_KEY }}
+
+    - run: |
+        cd $GITHUB_WORKSPACE
+        echo "hepmc3_path = /home/runner/.cache/HEPtools/hepmc3" >>  input/mg5_configuration.txt
+        echo "rivet_path = /home/runner/.cache/HEPtools/rivet" >>  input/mg5_configuration.txt
+        echo "yoda_path = /home/runner/.cache/HEPtools/yoda" >>  input/mg5_configuration.txt
+        echo "contur_path = /home/runner/.cache/HEPtools/contur" >>  input/mg5_configuration.txt
+        echo "fastjet = /home/runner/.cache/HEPtools/fastjet/bin/fastjet-config" >>  input/mg5_configuration.txt
+      shell: bash
+
+    - name: set pythonpath for ubuntu22
+      if: ${{ env.CACHE_KEY  == 'contur-ubuntu22' }}
+      run: |
+          echo "PYTHONPATH=$PYTHONPATH:/home/runner/.cache/HEPtools/contur/python3.10/:/home/runner/.cache/HEPtools/rivet/python3.10/:/home/runner/.cache/HEPtools/rivet/local/python3.10/" >> $GITHUB_ENV
+      shell: bash
+
+    - name: set pythonpath for ubuntu24
+      if: ${{ env.CACHE_KEY  == 'contur-ubuntu24' }}
+      run: |
+          echo "PYTHONPATH=$PYTHONPATH:/home/runner/.cache/HEPtools/contur/python3.12/:/home/runner/.cache/HEPtools/rivet/python3.12/:/home/runner/.cache/HEPtools/rivet/local/python3.10/" >> $GITHUB_ENV
+      shell: bash

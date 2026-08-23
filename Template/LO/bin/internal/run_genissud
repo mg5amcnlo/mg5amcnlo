@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #  This generates a grid file for the present choice of run_card
 #
 #  Usage: run_genissud [para/serial]
@@ -52,7 +52,7 @@ echo $$ >> myprocid
 if [ "$p" = "1" ]; then 
   for i in -2 -1 0 1 2 3 4 5;do
     rm -f donegen$i rungen$i waitgen$i gensudgrid$i.log gensudgrid$i.pbs gen$i.log
-    echo '#!/bin/bash' > gensudgrid$i.pbs
+    echo '#!/usr/bin/env bash' > gensudgrid$i.pbs
     touch waitgen$i
     echo "cd $main;rm waitgen$i;touch rungen$i;bin/internal/gensudgrid $i > gensudgrid$i.log;rm rungen$i;touch donegen$i" >> gensudgrid$i.pbs
     chmod u+x gensudgrid$i.pbs

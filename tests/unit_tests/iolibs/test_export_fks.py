@@ -15,8 +15,6 @@
 """Unit test library for the export_FKS format routines"""
 
 from __future__ import absolute_import
-import six
-StringIO = six
 import copy
 import fractions
 import os 
@@ -24,8 +22,6 @@ import sys
 import tempfile
 import glob
 import shutil
-import six
-from six.moves import zip
 from tests import test_manager
 
 root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]

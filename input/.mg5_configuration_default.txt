@@ -32,7 +32,7 @@
 # acknowledged_v3.1_syntax = False
 
 
-#! Prefered Fortran Compiler
+#! Preferred Fortran Compiler
 #! If None: try to find g77 or gfortran on the system
 #!
 # fortran_compiler = None
@@ -40,24 +40,31 @@
 # f2py_compiler_py3 = None 
 
 
-#! Prefered C++ Compiler
+#! Preferred C++ Compiler
 #! If None: try to find g++ or clang on the system
 #!
 # cpp_compiler = None
 
-#! Prefered Text Editor
+#! Preferred Text Editor
 #!  Default: use the shell default Editor
 #!           or try to find one available on the system
 #!  Be careful: Only shell based editor are allowed
 # text_editor = None
 
-#! Prefered WebBrower
+#! Preferred WebBrower
 #! If None: try to find one available on the system
 # web_browser = None
 
-#! Prefered PS viewer
+#! Preferred PS viewer
 #!  If None: try to find one available on the system
 # eps_viewer = None
+
+#! Controls whether to use `pigz`, the multithreaded `gzip` implementation,
+#! when available on the system (will respect the nb_core setting).
+#!  If None: try to use pigz if available on the system, fall back to gzip otherwise.
+#!  If False: use gzip
+#!  If True: use pigz
+# use_pigz = None
 
 #! Time allowed to answer question (if no answer takes default value)
 #!  0: No time limit
@@ -87,6 +94,11 @@
 # thepeg_path = 
 # hepmc_path = 
 
+#! DMTCP path.
+#!  Defines the path to the DMTCP installation directory (i.e. the
+#!  one containing the lib, bin and include directories) .
+# dmtcp = 
+
 #! Control when MG5 checks if he is up-to-date.
 #! Enter the number of day between two check (0 means never)
 #! A question is always asked before any update
@@ -110,13 +122,21 @@
 #!  0: single machine/ 1: cluster / 2: multicore
 # run_mode = 2
 
+#! Checkpointing
+# checkpointing = True # useful for very long jobs
+
 #! Cluster Type [pbs|sge|condor|lsf|ge|slurm|htcaas|htcaas2] Use for cluster run only
 #!  And cluster queue (or partition for slurm)
 #!  And size of the cluster (some part of the code can adapt splitting accordingly)
 # cluster_type = condor
 # cluster_queue = madgraph
 # cluster_size = 150 
+
+#! Advanced cluster settings
 # cluster_walltime =  # time in minute for slurm and second for condor (not supported for other scheduller)
+# cluster_requirement = x86_64-v4 # selected microarchitecture for checkpointing consistency
+# cluster_vacatetime = 120 # time in seconds for checkpoint creation before the job removal/requeuing
+# enforce_shared_disk = True # enforce shared disk I/O (this setting is currently only relevant for Condor)
 
 #! Path to a node directory to avoid direct writing on the central disk
 #!  Note that condor clusters avoid direct writing by default (therefore this

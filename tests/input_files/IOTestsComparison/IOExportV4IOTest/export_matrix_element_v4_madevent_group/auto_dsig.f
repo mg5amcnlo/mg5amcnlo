@@ -93,6 +93,7 @@ C     local
 C     
       DOUBLE PRECISION P1(0:3, NEXTERNAL)
       INTEGER CHANNEL
+      DOUBLE PRECISION RWGT_VALUE
 C     
 C     DATA
 C     
@@ -166,10 +167,24 @@ C       LP=SIGN(1,LPP(IB(2)))
       CHANNEL = SUBDIAG(1)
       CALL RANMAR(RHEL)
       CALL RANMAR(RCOL)
+      IF (IMODE.EQ.0) THEN
+C       Select a flavor combination (need to do here for right sign)
+        CALL RANMAR(R)
+        IPSEL=0
+        DO WHILE (R.GE.0D0 .AND. IPSEL.LT.IPROC)
+          IPSEL=IPSEL+1
+          R=R-DABS(PD(IPSEL))/PD(0)
+        ENDDO
+
+        RWGT_VALUE=REWGT(PP,1)
+      ELSE
+        RWGT_VALUE=1D0
+      ENDIF
+C     1 argument is for IVEC=1
       CALL SMATRIX1(P1,RHEL, RCOL,CHANNEL,1, DSIGUU, SELECTED_HEL(1),
      $  SELECTED_COL(1))
 
-
+      DSIGUU = DSIGUU* RWGT_VALUE
       IF (IMODE.EQ.5) THEN
         IF (DSIGUU.LT.1D199) THEN
           DSIG1 = DSIGUU*CONV
@@ -178,15 +193,6 @@ C       LP=SIGN(1,LPP(IB(2)))
         ENDIF
         RETURN
       ENDIF
-C     Select a flavor combination (need to do here for right sign)
-      CALL RANMAR(R)
-      IPSEL=0
-      DO WHILE (R.GE.0D0 .AND. IPSEL.LT.IPROC)
-        IPSEL=IPSEL+1
-        R=R-DABS(PD(IPSEL))/PD(0)
-      ENDDO
-
-      DSIGUU=DSIGUU*REWGT(PP,1)
 
 C     Apply the bias weight specified in the run card (default is 1.0)
       DSIGUU=DSIGUU*CUSTOM_BIAS(PP,DSIGUU,1,1)
@@ -337,6 +343,9 @@ C
       DOUBLE PRECISION P1(0:3, NEXTERNAL)
       INTEGER IVEC, CURR_WARP, IWARP, NB_WARP_USED
       INTEGER CHANNELS(VECSIZE_MEMMAX)
+C     Per-event MLM graph: igraphs(1) from REWGT (0 = no MLM)
+      INTEGER IGRAPH(VECSIZE_MEMMAX)
+      COMMON/VEC_IGRAPH/IGRAPH
 C     
 C     DATA
 C     
@@ -443,55 +452,65 @@ C         Select a flavor combination (need to do here for right sign)
         ENDDO  ! end loop on IWARP/IVEC	 
       ENDDO  ! end loop on the CURR_WARP
       CALL SMATRIX1_MULTI(P_MULTI, HEL_RAND, COL_RAND, CHANNELS,
-     $  ALL_OUT , SELECTED_HEL, SELECTED_COL, VECSIZE_USED)
+     $  IGRAPH, ALL_OUT , SELECTED_HEL, SELECTED_COL, VECSIZE_USED)
 
 
-      DO IVEC=1,VECSIZE_USED
-        DSIGUU = ALL_OUT(IVEC)
-        IF (IMODE.EQ.5) THEN
-          IF (DSIGUU.LT.1D199) THEN
-            ALL_OUT(IVEC) = DSIGUU*CONV
-          ELSE
-            ALL_OUT(IVEC) = 0.0D0
+      DO CURR_WARP=1, NB_WARP_USED
+        IF(IMIRROR_VEC(CURR_WARP).EQ.1)THEN
+          IB(1) = 1
+          IB(2) = 2
+        ELSE
+          IB(1) = 2
+          IB(2) = 1
+        ENDIF
+        DO IWARP=1, WARP_SIZE
+          IVEC = (CURR_WARP-1)*WARP_SIZE+IWARP
+          DSIGUU = ALL_OUT(IVEC)
+          IF (IMODE.EQ.5) THEN
+            IF (DSIGUU.LT.1D199) THEN
+              ALL_OUT(IVEC) = DSIGUU*CONV
+            ELSE
+              ALL_OUT(IVEC) = 0.0D0
+            ENDIF
+            RETURN
           ENDIF
-          RETURN
-        ENDIF
 
-        XBK(:) = ALL_XBK(:,IVEC)
-C       CM_RAP = ALL_CM_RAP(IVEC)
-        Q2FACT(:) = ALL_Q2FACT(:, IVEC)
+          XBK(:) = ALL_XBK(:,IVEC)
+C         CM_RAP = ALL_CM_RAP(IVEC)
+          Q2FACT(:) = ALL_Q2FACT(:, IVEC)
 
-        IF(FRAME_ID.NE.6)THEN
-          CALL BOOST_TO_FRAME(ALL_PP(0,1,IVEC), FRAME_ID, P1)
-        ELSE
-          P1 = ALL_PP(:,:,IVEC)
-        ENDIF
-C       call restore_cl_val_to(ivec)
-C       DSIGUU=DSIGUU*REWGT(P1,ivec)
-        DSIGUU=DSIGUU*ALL_RWGT(IVEC)
+          IF(FRAME_ID.NE.6)THEN
+            CALL BOOST_TO_FRAME(ALL_PP(0,1,IVEC), FRAME_ID, P1)
+          ELSE
+            P1 = ALL_PP(:,:,IVEC)
+          ENDIF
+C         call restore_cl_val_to(ivec)
+C         DSIGUU=DSIGUU*REWGT(P1,ivec)
+          DSIGUU=DSIGUU*ALL_RWGT(IVEC)
 
-C       Apply the bias weight specified in the run card (default is
-C        1.0)
-        DSIGUU=DSIGUU*CUSTOM_BIAS(P1,DSIGUU,1, IVEC)
+C         Apply the bias weight specified in the run card (default is
+C          1.0)
+          DSIGUU=DSIGUU*CUSTOM_BIAS(P1,DSIGUU,1, IVEC)
 
-        DSIGUU=DSIGUU*NFACT
+          DSIGUU=DSIGUU*NFACT
 
-        IF (DSIGUU.LT.1D199) THEN
-C         Set sign of dsig based on sign of PDF and matrix element
-          ALL_OUT(IVEC)=DSIGN(CONV*ALL_PD(0,IVEC)*DSIGUU,DSIGUU
-     $     *ALL_PD(IPSEL,IVEC))
-        ELSE
-          WRITE(*,*) 'Error in matrix element'
-          DSIGUU=0D0
-          ALL_OUT(IVEC)=0D0
-        ENDIF
-C       Generate events only if IMODE is 0.
-        IF(IMODE.EQ.0.AND.DABS(ALL_OUT(IVEC)).GT.0D0)THEN
-C         Call UNWGT to unweight and store events
-          ICONFIG = CHANNELS(IVEC)
-          CALL UNWGT(ALL_PP(0,1,IVEC), ALL_OUT(IVEC)*ALL_WGT(IVEC),1,
-     $      SELECTED_HEL(IVEC), SELECTED_COL(IVEC), IVEC)
-        ENDIF
+          IF (DSIGUU.LT.1D199) THEN
+C           Set sign of dsig based on sign of PDF and matrix element
+            ALL_OUT(IVEC)=DSIGN(CONV*ALL_PD(0,IVEC)*DSIGUU,DSIGUU
+     $       *ALL_PD(IPSEL,IVEC))
+          ELSE
+            WRITE(*,*) 'Error in matrix element'
+            DSIGUU=0D0
+            ALL_OUT(IVEC)=0D0
+          ENDIF
+C         Generate events only if IMODE is 0.
+          IF(IMODE.EQ.0.AND.DABS(ALL_OUT(IVEC)).GT.0D0)THEN
+C           Call UNWGT to unweight and store events
+            ICONFIG = SYMCONF(ICONF_VEC(CURR_WARP))
+            CALL UNWGT(ALL_PP(0,1,IVEC), ALL_OUT(IVEC)*ALL_WGT(IVEC),1
+     $       , SELECTED_HEL(IVEC), SELECTED_COL(IVEC), IVEC)
+          ENDIF
+        ENDDO
       ENDDO
 
       END
@@ -506,19 +525,21 @@ C         Call UNWGT to unweight and store events
 
 
       SUBROUTINE SMATRIX1_MULTI(P_MULTI, HEL_RAND, COL_RAND, CHANNELS,
-     $  OUT, SELECTED_HEL, SELECTED_COL, VECSIZE_USED)
+     $  IGRAPH, OUT, SELECTED_HEL, SELECTED_COL, VECSIZE_USED)
       USE OMP_LIB
       IMPLICIT NONE
 
       INCLUDE 'nexternal.inc'
-      INCLUDE '../../Source/vector.inc'  ! defines VECSIZE_MEMMAX
       INCLUDE 'maxamps.inc'
+      INCLUDE 'cluster.inc'  ! for IGRAPHS common block (MLM per-event color selection); also defines VECSIZE_MEMMAX via vector.inc
       INTEGER                 NCOMB
       PARAMETER (             NCOMB=16)
       DOUBLE PRECISION P_MULTI(0:3, NEXTERNAL, VECSIZE_MEMMAX)
       DOUBLE PRECISION HEL_RAND(VECSIZE_MEMMAX)
       DOUBLE PRECISION COL_RAND(VECSIZE_MEMMAX)
       INTEGER CHANNELS(VECSIZE_MEMMAX)
+C     Per-event MLM graph: igraphs(1) from REWGT (0 = no MLM)
+      INTEGER IGRAPH(VECSIZE_MEMMAX)
       DOUBLE PRECISION OUT(VECSIZE_MEMMAX)
       INTEGER SELECTED_HEL(VECSIZE_MEMMAX)
       INTEGER SELECTED_COL(VECSIZE_MEMMAX)
@@ -581,7 +602,6 @@ C      particle
       GET_NHEL1 = NHEL(IPART, IABS(HEL))
       RETURN
       END
-
 
 
 
