@@ -26,6 +26,7 @@ import itertools
 import logging
 import math
 import os
+import pprint
 import re
 import sys
 
@@ -613,8 +614,7 @@ class HwU(Histogram):
     allowed_dimensions         = [2]
     allowed_types              = []   
 
-    # For now only HwU output format is implemented.
-    output_formats_implemented = ['HwU','gnuplot'] 
+    output_formats_implemented = ['HwU','gnuplot','matplotlib']
     # Lists the mandatory named weights that must be specified for each bin and
     # what corresponding label we assign them to in the Bin weight dictionary,
     # (if any).
@@ -936,6 +936,12 @@ class HwU(Histogram):
             raise MadGraph5Error("The specified output format '%s'"%format+\
                              " is not yet supported. Supported formats are %s."\
                                                  %HwU.output_formats_implemented)
+
+        if format == 'matplotlib':
+            if not isinstance(path, str):
+                raise MadGraph5Error("A path is required for matplotlib output.")
+            HwUList([copy.deepcopy(self)]).output(path, format='matplotlib')
+            return True
 
         if format == 'HwU':
             str_output_list = self.get_HwU_source(print_header=print_header)
@@ -2155,7 +2161,7 @@ class HwUList(histograms_PhysicsObjectList):
                                                  %HwU.output_formats_implemented)
 
         if isinstance(path, str) and not any(ext in os.path.basename(path) \
-                                   for ext in ['.Hwu','.ps','.gnuplot','.pdf']):
+                         for ext in ['.HwU','.Hwu','.ps','.gnuplot','.pdf','.py']):
             output_base_name = os.path.basename(path)
             HwU_stream       = open(path+'.HwU','w')
         else:
@@ -2172,6 +2178,19 @@ class HwUList(histograms_PhysicsObjectList):
                 HwU_output_list.extend(['',''])
             HwU_stream.write('\n'.join(HwU_output_list))
             HwU_stream.close()
+            return
+
+        if format == 'matplotlib':
+            self._output_matplotlib(path, output_base_name, HwU_stream,
+                number_of_ratios=number_of_ratios,
+                uncertainties=uncertainties,
+                use_band=use_band,
+                ratio_correlations=ratio_correlations,
+                arg_string=arg_string,
+                jet_samples_to_keep=jet_samples_to_keep,
+                auto_open=auto_open,
+                lhapdfconfig=lhapdfconfig,
+                assigned_colours=assigned_colours)
             return
         
         # Now we consider that we are attempting a gnuplot output.
@@ -2446,6 +2465,216 @@ set key invert
         logger.debug("Histograms have been written out at "+\
                                  "%s.[HwU|gnuplot]' and can "%output_base_name+\
                                          "now be rendered by invoking gnuplot.")
+
+    def _output_matplotlib(self, path, output_base_name, hwu_stream,
+          number_of_ratios=-1,
+          uncertainties=['scale','pdf','statistical','merging_scale','alpsfact'],
+          use_band=None,
+          ratio_correlations=True,
+          arg_string='',
+          jet_samples_to_keep=None,
+          auto_open=True,
+          lhapdfconfig='lhapdf-config',
+          assigned_colours=None):
+        """Write HwU data and a standalone Matplotlib rendering script."""
+
+        working_list = copy.deepcopy(self)
+        matching_histo_lists = HwUList([HwUList([working_list[0]])])
+        for histo in working_list[1:]:
+            for histo_list in matching_histo_lists:
+                if histo.test_plot_compability(histo_list[0],
+                       consider_type=False, consider_unknown_weight_labels=True):
+                    histo_list.append(histo)
+                    break
+            else:
+                matching_histo_lists.append(HwUList([histo]))
+
+        colours = ['#009e73','#0072b2','#d55e00','#f0e442',
+                   '#56b4e9','#cc79a7','#e69f00','black']
+        if assigned_colours:
+            for index, colour in enumerate(assigned_colours[:len(colours)]):
+                if colour is not None:
+                    colours[index] = colour
+
+        hwu_output = []
+        plot_specs = []
+        block_position = 0
+        try:
+            for histo_group in matching_histo_lists:
+                first_block = block_position
+                block_position = histo_group.output_group(
+                    hwu_output, [], block_position, output_base_name+'.HwU',
+                    number_of_ratios=number_of_ratios,
+                    uncertainties=uncertainties,
+                    use_band=use_band,
+                    ratio_correlations=ratio_correlations,
+                    jet_samples_to_keep=jet_samples_to_keep,
+                    lhapdfconfig=lhapdfconfig)
+                plot_specs.append(self._get_matplotlib_plot_spec(
+                    histo_group, first_block, uncertainties, use_band,
+                    jet_samples_to_keep, colours))
+
+            hwu_stream.write('\n'.join(hwu_output))
+        finally:
+            hwu_stream.close()
+
+        script = self._get_matplotlib_script(output_base_name, plot_specs,
+                                               auto_open, arg_string)
+        with open(path+'.py', 'w') as script_stream:
+            script_stream.write(script)
+
+        logger.debug("Histograms have been written out at '%s.[HwU|py]' and can "
+                     "now be rendered by invoking Python."%output_base_name)
+
+    @staticmethod
+    def _get_matplotlib_curve_label(histo, index):
+        """Return the legend label for a central Matplotlib curve."""
+
+        label = []
+        if histo.type:
+            label.append('NLO' if histo.type.split()[0]=='NLO' else histo.type)
+        elif not hasattr(histo, 'jetsample'):
+            label.append('central value (%d)'%(index+1))
+        if hasattr(histo, 'jetsample'):
+            if histo.jetsample == -1:
+                label.append('all jet samples')
+            else:
+                label.append('jet sample %d'%histo.jetsample)
+        return ', '.join(label) if label else 'central value'
+
+    @staticmethod
+    def _get_matplotlib_uncertainties(histo, uncertainties):
+        """Map generated auxiliary uncertainty weights to HwU columns."""
+
+        uncertainty_names = [
+            ('scale', 'delta_mu', 'scale'),
+            ('pdf', 'delta_pdf', 'PDF'),
+            ('merging_scale', 'delta_merging', 'merging scale'),
+            ('alpsfact', 'delta_alpsfact', 'alpsfact')]
+        label_positions = dict((label, index+2) for index, label in
+                                      enumerate(histo.bins.weight_labels))
+        result = []
+        for uncertainty_type, prefix, display_name in uncertainty_names:
+            if uncertainty_type not in uncertainties:
+                continue
+            central_prefix = prefix+'_cen'
+            for label in histo.bins.weight_labels:
+                if not isinstance(label, str) or not label.endswith(' @aux'):
+                    continue
+                if label == central_prefix+' @aux':
+                    suffix = ''
+                elif label.startswith(central_prefix+' '):
+                    suffix = label[len(central_prefix)+1:-len(' @aux')]
+                else:
+                    continue
+                suffix_part = (' '+suffix) if suffix else ''
+                minimum_label = prefix+'_min'+suffix_part+' @aux'
+                maximum_label = prefix+'_max'+suffix_part+' @aux'
+                if minimum_label not in label_positions or \
+                                           maximum_label not in label_positions:
+                    continue
+                label_name = display_name
+                if suffix and suffix != 'none':
+                    label_name += ' (%s)'%suffix
+                result.append({
+                    'type': uncertainty_type,
+                    'label': label_name,
+                    'central': label_positions[label],
+                    'minimum': label_positions[minimum_label],
+                    'maximum': label_positions[maximum_label]})
+        return result
+
+    @classmethod
+    def _get_matplotlib_plot_spec(cls, histo_group, first_block,
+          uncertainties, use_band, jet_samples_to_keep, colours):
+        """Build the serializable instructions used by the generated script."""
+
+        main_histograms = [histo for histo in histo_group
+                                                if histo.type != 'AUX']
+        ratio_histograms = [histo for histo in histo_group
+                                                if histo.type == 'AUX']
+        main_curves = []
+        available_uncertainties = []
+        for index, histo in enumerate(main_histograms):
+            show_uncertainties = not (
+                index != 0 and hasattr(histo, 'jetsample') and
+                histo.jetsample != -1 and not (
+                    jet_samples_to_keep and len(jet_samples_to_keep)==1 and
+                    jet_samples_to_keep[0] == histo.jetsample))
+            curve_uncertainties = cls._get_matplotlib_uncertainties(
+                                                    histo, uncertainties)
+            if not show_uncertainties:
+                curve_uncertainties = []
+            for uncertainty in curve_uncertainties:
+                if uncertainty['type'] not in available_uncertainties:
+                    available_uncertainties.append(uncertainty['type'])
+            main_curves.append({
+                'block': first_block+index,
+                'label': cls._get_matplotlib_curve_label(histo, index),
+                'color': colours[index%len(colours)],
+                'statistical': 'statistical' in uncertainties,
+                'uncertainties': curve_uncertainties})
+
+        if use_band is None:
+            if len(available_uncertainties) <= 1:
+                selected_bands = list(available_uncertainties)
+            elif 'scale' in available_uncertainties:
+                selected_bands = ['scale']
+            else:
+                selected_bands = [available_uncertainties[0]]
+        else:
+            selected_bands = list(use_band)
+
+        ratio_curves = []
+        for index, histo in enumerate(ratio_histograms):
+            ratio_label = histo.title.strip() or 'ratio %d'%(index+1)
+            if ratio_label.endswith('1/K-factor'):
+                ratio_label = '1/K-factor'
+            elif ratio_label.endswith('K-factor'):
+                ratio_label = 'K-factor'
+            ratio_curves.append({
+                'block': first_block+len(main_histograms)+index,
+                'label': ratio_label,
+                'color': colours[(len(main_histograms)+index)%len(colours)],
+                'statistical': 'statistical' in uncertainties,
+                'uncertainties': cls._get_matplotlib_uncertainties(
+                                                    histo, uncertainties)})
+
+        for curve in main_curves+ratio_curves:
+            for uncertainty in curve['uncertainties']:
+                uncertainty['band'] = uncertainty['type'] in selected_bands
+
+        return {
+            'title': histo_group[0].get_HwU_histogram_name(
+                                                    format='human-no_type'),
+            'x_axis_mode': histo_group[0].x_axis_mode,
+            'y_axis_mode': histo_group[0].y_axis_mode,
+            'main': main_curves,
+            'ratios': ratio_curves,
+            'relative_uncertainties': bool(available_uncertainties or
+                                           'statistical' in uncertainties)}
+
+    @staticmethod
+    def _get_matplotlib_script(output_base_name, plot_specs, auto_open,
+                                                                  arg_string):
+        """Return the standalone Python source for Matplotlib rendering."""
+
+        arg_string = arg_string.replace('\r', ' ').replace('\n', ' ')
+        header = """#!/usr/bin/env python3
+# Matplotlib histogram renderer generated by MadGraph5_aMC@NLO.
+# Original command: %s
+import os
+import subprocess
+import sys
+
+DATA_FILE = %r
+PDF_FILE = %r
+OPEN_AFTER_RENDER = %r
+PLOTS = %s
+
+"""%(arg_string, output_base_name+'.HwU', output_base_name+'.pdf',
+       auto_open, pprint.pformat(plot_specs, width=100))
+        return header+_MATPLOTLIB_SCRIPT_BODY
 
     def output_group(self, HwU_out, gnuplot_out, block_position, HwU_name,
           number_of_ratios = -1, 
@@ -3414,6 +3643,264 @@ def plot_from_HWU(path, ax, hwu_variable, hwu_central, *args, **opts):
     return hwu, H
 
 
+_MATPLOTLIB_SCRIPT_BODY = r'''SOURCE_LINESTYLES = {
+    'scale': '--',
+    'pdf': ':',
+    'merging_scale': '-.',
+    'alpsfact': (0, (3, 1, 1, 1)),
+}
+
+
+def _load_matplotlib():
+    try:
+        import matplotlib
+        matplotlib.use('Agg')
+        import matplotlib.pyplot as pyplot
+        from matplotlib.backends.backend_pdf import PdfPages
+    except (ImportError, RuntimeError) as error:
+        raise SystemExit(
+            'Matplotlib and its dependencies are required to render this '
+            'histogram script: %s' % error)
+    return pyplot, PdfPages
+
+
+def _read_hwu_blocks(path):
+    blocks = []
+    current = None
+    with open(path, 'r') as stream:
+        for line in stream:
+            stripped = line.strip()
+            if stripped.startswith('<histogram>'):
+                current = []
+            elif stripped.startswith('<\\histogram>'):
+                if current is not None:
+                    blocks.append(current)
+                current = None
+            elif current is not None and stripped and not stripped.startswith('#'):
+                try:
+                    current.append([
+                        float(value.replace('D', 'E').replace('d', 'e'))
+                        for value in stripped.split()])
+                except ValueError:
+                    continue
+    if not blocks:
+        raise SystemExit("No histogram blocks were found in '%s'." % path)
+    return blocks
+
+
+def _column(rows, position):
+    return [row[position] for row in rows]
+
+
+def _edges(rows):
+    return [row[0] for row in rows] + [rows[-1][1]]
+
+
+def _centres(rows):
+    return [(row[0] + row[1]) / 2.0 for row in rows]
+
+
+def _step_values(values):
+    return list(values) + [values[-1]]
+
+
+def _draw_step(axis, edges, values, **options):
+    return axis.step(edges, _step_values(values), where='post', **options)
+
+
+def _draw_band(axis, edges, minimum, maximum, **options):
+    lower = [min(low, high) for low, high in zip(minimum, maximum)]
+    upper = [max(low, high) for low, high in zip(minimum, maximum)]
+    return axis.fill_between(edges, _step_values(lower), _step_values(upper),
+                             step='post', **options)
+
+
+def _relative(values, central):
+    return [(value / reference - 1.0) if reference else 0.0
+            for value, reference in zip(values, central)]
+
+
+def _finish_axis(axis):
+    axis.grid(True, which='both', alpha=0.2)
+    handles, labels = axis.get_legend_handles_labels()
+    unique = {}
+    for handle, label in zip(handles, labels):
+        if label and label not in unique and label != '_nolegend_':
+            unique[label] = handle
+    if unique:
+        axis.legend(list(unique.values()), list(unique.keys()), fontsize='small')
+
+
+def _draw_main(axis, plot, blocks):
+    positive_values = True
+    positive_edges = True
+    for curve in plot['main']:
+        rows = blocks[curve['block']]
+        edges = _edges(rows)
+        centres = _centres(rows)
+        central = _column(rows, 2)
+        positive_values = positive_values and all(value > 0.0 for value in central)
+        positive_edges = positive_edges and all(value > 0.0 for value in edges)
+        _draw_step(axis, edges, central, color=curve['color'],
+                   label=curve['label'], linewidth=1.5)
+        if curve['statistical']:
+            axis.errorbar(centres, central,
+                          yerr=[abs(value) for value in _column(rows, 3)],
+                          fmt='none', color=curve['color'], capsize=1.5,
+                          linewidth=0.8)
+        for uncertainty in curve['uncertainties']:
+            minimum = _column(rows, uncertainty['minimum'])
+            maximum = _column(rows, uncertainty['maximum'])
+            label = '%s, %s variation' % (curve['label'], uncertainty['label'])
+            if uncertainty['band']:
+                _draw_band(axis, edges, minimum, maximum,
+                           color=curve['color'], alpha=0.18, label=label)
+            else:
+                linestyle = SOURCE_LINESTYLES.get(uncertainty['type'], '--')
+                _draw_step(axis, edges, minimum, color=curve['color'],
+                           linestyle=linestyle, linewidth=1.0, label=label)
+                _draw_step(axis, edges, maximum, color=curve['color'],
+                           linestyle=linestyle, linewidth=1.0,
+                           label='_nolegend_')
+
+    if plot['y_axis_mode'] == 'LOG' and positive_values:
+        axis.set_yscale('log')
+    if plot['x_axis_mode'] == 'LOG' and positive_edges:
+        axis.set_xscale('log')
+    axis.set_ylabel(r'$\sigma$ per bin [pb]')
+    axis.text(1.01, 0.02, 'MadGraph5_aMC@NLO', transform=axis.transAxes,
+              rotation=90, va='bottom', family='monospace', fontsize='small')
+    _finish_axis(axis)
+
+
+def _draw_relative_uncertainties(axis, plot, blocks):
+    for curve in plot['main']:
+        rows = blocks[curve['block']]
+        edges = _edges(rows)
+        centres = _centres(rows)
+        central = _column(rows, 2)
+        for uncertainty in curve['uncertainties']:
+            minimum = _relative(_column(rows, uncertainty['minimum']), central)
+            maximum = _relative(_column(rows, uncertainty['maximum']), central)
+            label = '%s, %s' % (curve['label'], uncertainty['label'])
+            if uncertainty['band']:
+                _draw_band(axis, edges, minimum, maximum,
+                           color=curve['color'], alpha=0.18, label=label)
+            else:
+                linestyle = SOURCE_LINESTYLES.get(uncertainty['type'], '--')
+                _draw_step(axis, edges, minimum, color=curve['color'],
+                           linestyle=linestyle, linewidth=1.0, label=label)
+                _draw_step(axis, edges, maximum, color=curve['color'],
+                           linestyle=linestyle, linewidth=1.0,
+                           label='_nolegend_')
+        if curve['statistical']:
+            statistical = [(abs(error) / abs(value)) if value else 0.0
+                           for error, value in zip(_column(rows, 3), central)]
+            axis.errorbar(centres, [0.0] * len(centres), yerr=statistical,
+                          fmt='none', color=curve['color'], capsize=1.5,
+                          linewidth=0.8)
+    axis.axhline(0.0, color='0.45', linewidth=0.8)
+    axis.set_ylabel('rel. unc.')
+    _finish_axis(axis)
+
+
+def _draw_ratios(axis, plot, blocks):
+    for curve in plot['ratios']:
+        rows = blocks[curve['block']]
+        edges = _edges(rows)
+        centres = _centres(rows)
+        central = _column(rows, 2)
+        _draw_step(axis, edges, central, color=curve['color'],
+                   label=curve['label'], linewidth=1.3)
+        if curve['statistical']:
+            axis.errorbar(centres, central,
+                          yerr=[abs(value) for value in _column(rows, 3)],
+                          fmt='none', color=curve['color'], capsize=1.5,
+                          linewidth=0.8)
+        for uncertainty in curve['uncertainties']:
+            minimum = _column(rows, uncertainty['minimum'])
+            maximum = _column(rows, uncertainty['maximum'])
+            label = '%s, %s' % (curve['label'], uncertainty['label'])
+            if uncertainty['band']:
+                _draw_band(axis, edges, minimum, maximum,
+                           color=curve['color'], alpha=0.18, label=label)
+            else:
+                linestyle = SOURCE_LINESTYLES.get(uncertainty['type'], '--')
+                _draw_step(axis, edges, minimum, color=curve['color'],
+                           linestyle=linestyle, linewidth=1.0, label=label)
+                _draw_step(axis, edges, maximum, color=curve['color'],
+                           linestyle=linestyle, linewidth=1.0,
+                           label='_nolegend_')
+    axis.axhline(1.0, color='0.45', linewidth=0.8)
+    axis.set_ylabel('ratio')
+    _finish_axis(axis)
+
+
+def _open_pdf(path):
+    try:
+        if sys.platform == 'darwin':
+            subprocess.Popen(['open', path])
+        elif os.name == 'nt':
+            os.startfile(path)
+        else:
+            subprocess.Popen(['xdg-open', path], stdout=subprocess.DEVNULL,
+                             stderr=subprocess.DEVNULL)
+    except (AttributeError, OSError):
+        pass
+
+
+def main(pdf_path=None):
+    pyplot, PdfPages = _load_matplotlib()
+    script_directory = os.path.dirname(os.path.abspath(__file__))
+    data_path = os.path.join(script_directory, DATA_FILE)
+    if pdf_path is None:
+        pdf_path = os.path.join(script_directory, PDF_FILE)
+    else:
+        pdf_path = os.path.abspath(pdf_path)
+    blocks = _read_hwu_blocks(data_path)
+
+    with PdfPages(pdf_path) as pdf:
+        for plot in PLOTS:
+            row_count = 1 + int(plot['relative_uncertainties']) + \
+                        int(bool(plot['ratios']))
+            heights = [4.0]
+            if plot['relative_uncertainties']:
+                heights.append(1.5)
+            if plot['ratios']:
+                heights.append(1.5)
+            figure, axes = pyplot.subplots(
+                row_count, 1, sharex=True, figsize=(8.3, 5.8+1.4*(row_count-1)),
+                gridspec_kw={'height_ratios': heights})
+            if row_count == 1:
+                axes = [axes]
+            else:
+                axes = list(axes)
+
+            axis_index = 0
+            _draw_main(axes[axis_index], plot, blocks)
+            axis_index += 1
+            if plot['relative_uncertainties']:
+                _draw_relative_uncertainties(axes[axis_index], plot, blocks)
+                axis_index += 1
+            if plot['ratios']:
+                _draw_ratios(axes[axis_index], plot, blocks)
+            axes[-1].set_xlabel('bin')
+            figure.suptitle(plot['title'])
+            figure.tight_layout(rect=(0.0, 0.0, 1.0, 0.96))
+            pdf.savefig(figure)
+            pyplot.close(figure)
+
+    print("Wrote Matplotlib histogram PDF to '%s'." % pdf_path)
+    if OPEN_AFTER_RENDER:
+        _open_pdf(pdf_path)
+    return pdf_path
+
+
+if __name__ == '__main__':
+    main(sys.argv[1] if len(sys.argv) > 1 else None)
+'''
+
+
 
 
 
@@ -3425,11 +3912,12 @@ if __name__ == "__main__":
         Where <options> can be a list of the following: 
            '--help'          See this message.
            '--gnuplot' or '' output the histograms read to gnuplot
+           '--matplotlib'    output the histograms and a Python script which renders them to PDF.
            '--HwU'           to output the histograms read to the raw HwU source.
            '--types=<type1>,<type2>,...' to keep only the type<i> when importing histograms.
            '--titles=<title1>,<title2>,...' to keep only the titles which have any of 'title<i>' in them (not necessarily equal to them)
            '--n_ratios=<integer>' Specifies how many curves must be considerd for the ratios.
-           '--no_open'       Turn off the automatic processing of the gnuplot output.
+           '--no_open'       Turn off automatic processing/opening of plotting output.
            '--show_full'     to show the complete output of what was read.
            '--show_short'    to show a summary of what was read.
            '--simple_ratios' to turn off correlations and error propagation in the ratio.
@@ -3466,7 +3954,7 @@ if __name__ == "__main__":
                                    By default, all weights are considered.
     """
 
-    possible_options=['--help', '--gnuplot', '--HwU', '--types','--n_ratios',\
+    possible_options=['--help', '--gnuplot', '--matplotlib', '--HwU', '--types','--n_ratios',\
                       '--no_open','--show_full','--show_short','--simple_ratios','--sum','--average','--rebin',  \
                       '--assign_types','--multiply','--no_suffix', '--out', '--jet_samples', 
                       '--no_scale','--no_pdf','--no_stat','--no_merging','--no_alpsfact',
@@ -3674,7 +4162,29 @@ if __name__ == "__main__":
         for hist in histo_list:
             hist.rebin(n_rebin)
 
-    if '--gnuplot' in sys.argv or all(arg not in ['--HwU'] for arg in sys.argv):
+    if '--matplotlib' in sys.argv:
+        histo_list.output(OutName, format='matplotlib',
+            number_of_ratios=n_ratios,
+            uncertainties=uncertainties,
+            ratio_correlations=ratio_correlations,
+            arg_string=arg_string,
+            jet_samples_to_keep=jet_samples_to_keep,
+            use_band=use_band,
+            auto_open=auto_open,
+            lhapdfconfig=lhapdfconfig,
+            assigned_colours=assigned_colours)
+        log("%d histograms have been output in the matplotlib format at "
+            "'%s.[HwU|py]'."%(len(histo_list), OutName))
+        if auto_open:
+            return_code = subprocess.call([sys.executable, OutName+'.py'])
+            if return_code != 0:
+                log("Automatic processing of the matplotlib script failed. "
+                    "Try the command by hand:\n%s %s.py"%
+                    (sys.executable, OutName))
+        sys.exit(0)
+
+    if '--gnuplot' in sys.argv or all(
+                         arg not in ['--HwU','--matplotlib'] for arg in sys.argv):
         # Where the magic happens:
         histo_list.output(OutName, format='gnuplot', 
             number_of_ratios = n_ratios, 

@@ -239,6 +239,57 @@ class TestHistogramRegressions(unittest.TestCase):
                          ['numerator.HwU', 'denominator.HwU'])
         self.assertEqual(axes.plotted_ratio, [2.0])
 
+    def test_matplotlib_output_writes_standalone_renderer(self):
+        labels = ['central', 'stat_error',
+                  ('scale', 0.5, 1.0), ('scale', 2.0, 1.0)]
+        first = self.make_hwu(labels, [2.0, 0.2, 1.8, 2.2],
+                              title='matplotlib plot', n_bins=2)
+        second = self.make_hwu(labels, [1.0, 0.1, 0.9, 1.1],
+                               title='matplotlib plot', n_bins=2)
+        first.type = 'NLO'
+        second.type = 'LO'
+
+        with misc.TMP_directory() as tmpdir:
+            output_base = pjoin(tmpdir, 'matplotlib_output')
+            histograms.HwUList([first, second]).output(
+                output_base, format='matplotlib', auto_open=False,
+                uncertainties=['scale', 'statistical'])
+
+            hwu_path = output_base+'.HwU'
+            script_path = output_base+'.py'
+            self.assertTrue(os.path.exists(hwu_path))
+            self.assertTrue(os.path.exists(script_path))
+            with open(script_path) as stream:
+                script = stream.read()
+            namespace = {
+                '__file__': script_path,
+                '__name__': 'generated_matplotlib_renderer_test'}
+            exec(compile(script, script_path, 'exec'), namespace)
+
+            self.assertEqual(namespace['DATA_FILE'],
+                             'matplotlib_output.HwU')
+            self.assertEqual(namespace['PDF_FILE'],
+                             'matplotlib_output.pdf')
+            self.assertFalse(namespace['OPEN_AFTER_RENDER'])
+            self.assertEqual(len(namespace['PLOTS']), 1)
+            plot = namespace['PLOTS'][0]
+            self.assertEqual(len(plot['main']), 2)
+            self.assertEqual(len(plot['ratios']), 1)
+            self.assertTrue(plot['relative_uncertainties'])
+            self.assertTrue(any(uncertainty['band'] for uncertainty in
+                                plot['main'][0]['uncertainties']))
+            self.assertEqual(len(namespace['_read_hwu_blocks'](hwu_path)), 3)
+
+            cli_base = pjoin(tmpdir, 'cli_matplotlib')
+            result = subprocess.run(
+                [sys.executable, histograms.__file__, hwu_path,
+                 '--matplotlib', '--no_open', '--out='+cli_base,
+                 '--only_stat'], stdout=subprocess.PIPE,
+                 stderr=subprocess.PIPE, universal_newlines=True)
+            self.assertEqual(result.returncode, 0, result.stdout+result.stderr)
+            self.assertTrue(os.path.exists(cli_base+'.HwU'))
+            self.assertTrue(os.path.exists(cli_base+'.py'))
+
     def test_uncertainty_output_defaults_and_missing_merging_weights(self):
         output_default = inspect.signature(histograms.HwUList.output).\
                             parameters['uncertainties'].default
