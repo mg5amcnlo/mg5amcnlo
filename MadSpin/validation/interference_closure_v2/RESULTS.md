@@ -314,6 +314,78 @@ frameless legends, minor tick locators).
 observable) and `data/meta.json` are committed, so
 `plot_interference.py data/ plots/` regenerates all of it with no MadSpin run.
 
+### 6a. Stacked variant, and its sign convention
+
+The same comparisons drawn as stacks rather than as overlaid curves, written
+next to the originals under a `_stacked` suffix in both styles (nothing is
+overwritten; `--stacked-only` on either script rebuilds just these).  Same
+`data/histograms.npz`, same binning, same axis labels -- only the marks change.
+
+**Sign convention, stated on every stacked figure and worth stating twice.**
+Four of the nine blocks are strictly positive in every bin of every observable
+here; the five interference blocks are not, and `(I,I)` in particular changes
+sign in the middle of the range -- that sign change *is* the effect these plots
+exist to show.  A stack that piled `|contribution|` on the previous one would
+draw those bins the wrong way up and turn a subtraction into an addition, with
+no visible sign that it had.  So:
+
+> in each bin, contributions with a **positive** content are stacked upward
+> from zero and contributions with a **negative** content are stacked downward
+> from zero.  A band below the axis is a subtraction and can be read as one.
+> The **top of the stack is therefore not the total** -- it is the sum of the
+> positive contributions alone.  The total is the algebraic sum of the two
+> piles and is drawn explicitly as a line, labelled `net: ...`.  **Read the
+> line, not the envelope.**
+
+This is the ROOT `THStack` convention.  The alternative -- laying each band
+from the running cumulative sum so that the last band's top *is* the total --
+keeps the envelope meaningful, but a negative band then overlaps the ones
+beneath it, which with nine components is unreadable.  Hence the explicit net
+line instead.
+
+The stack's net reproduces the total bin by bin to
+**`max |net - total| = 4.4e-16 pb`** across every stacked panel in both styles
+(`1.1e-16` relative to the peak bin) -- it is the same addition regrouped, so
+the residual is one unit in the last place of a double and nothing more.  The
+per-panel table is in `plots/stacked_numbers.txt` and
+`plots_userstyle/us_stacked_numbers.txt`.
+
+What was stacked, and what was not:
+
+* `closure_cos_k_p_stacked` -- the four diagonal blocks one by one, plus the
+  interference sum as a fifth band.  The best of the set: the four blocks are
+  positive everywhere, so this part of the stack is an ordinary one, and the
+  two rising and two falling curves that the overlaid version asks the reader
+  to add by eye are simply seen to add to the flat unpolarised reference.
+* `closure_cnn_stacked`, `closure_dphi_lab_stacked` -- these **do** have
+  something to stack, contrary to first impression: `all 9 blocks` is exactly
+  `4 diagonal` **+** `5 interference`, and on these two observables the second
+  term is 4% of the first and changes sign inside the frame.  `dphi_lab` is the
+  clearest demonstration of the convention anywhere in this directory: the
+  interference band sits *above* the diagonal block below `Delta phi ~ 2.1` and
+  hangs *below zero* above it, and the net line tracks the unpolarised points
+  through both.
+* `blocks_cnn_stacked`, `blocks_dphi_lab_stacked` -- all nine stacked in the
+  upper panel; the five interference blocks stacked alone on their own scale in
+  the lower one, which is the panel the convention actually earns its place on.
+  There `(I,I)` fills the frame on both sides of zero and the four single-`I`
+  blocks are hairlines, which is the same conclusion as section 4b, read off a
+  picture instead of a `chi2`.
+* The 9-block stack is only 0.4-4.3% negative by area (`cnn` and `dphi_lab` are
+  the 4% cases, everything else is well under 1%); the interference-only stack
+  is 102-135% negative -- i.e. the positive and negative piles nearly cancel,
+  which is the same statement as "the interference carries no cross section"
+  from section 3.  Both columns are tabulated in `plots/stacked_numbers.txt`.
+* `pt_t` and `m_tt` were **not** stacked.  Their closure figures are log-scale
+  and their interference is a null test consistent with zero in every bin, so a
+  stack would be a solid slab plus noise on a log axis, where the sign
+  convention cannot be drawn at all.
+* One deliberate departure from the unstacked figures: `blocks_*_stacked` gives
+  each block **one** colour across both of its panels.  The unstacked
+  `blocks_figure` draws `(I,I)` green above and purple below, which is harmless
+  when the marker shape also changes but not when the only thing identifying a
+  band is its fill.
+
 ## 7. Statistics: how much cheaper the fully weighted mode really is
 
 Measured, on the interference contribution to three means, comparing this run's

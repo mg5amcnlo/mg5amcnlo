@@ -1,0 +1,33 @@
+Stacked renderings, user style.  Same data, same binning
+and the same arithmetic as the MG7-style stacked figures
+in ../plots: both call signed_stack() in
+plot_interference.py, so the two renderings cannot
+disagree.
+
+SIGN CONVENTION (also written on every stacked figure):
+  in each bin, contributions with POSITIVE content are stacked
+  upward from zero and contributions with NEGATIVE content are
+  stacked downward from zero, so a band below the axis is a
+  subtraction and reads as one.  The top of the stack is
+  therefore the sum of the POSITIVE contributions only and is
+  NOT the total.  The total is the algebraic sum of the two
+  piles and is drawn as an explicit line, labelled "net: ...".
+  Read the line, not the envelope.
+
+It is needed because the four diagonal blocks are positive in
+every bin of every observable here while the five interference
+blocks are not: (I,I) is negative over about half the range of
+C_nn and of dphi_lab; that sign change is the whole effect.
+
+Closure: the net of the stacked bands against the total curve
+drawn on the same panel, bin by bin.  Same addition regrouped,
+so the residual is floating point only (eps = 2.2e-16).
+
+  figure / panel                      max|net-tot|      relative
+  us_closure_cos_k_p_stacked             2.220e-16     1.795e-16
+  us_closure_cnn_stacked                 4.441e-16     1.118e-16
+  us_closure_dphi_lab_stacked            2.220e-16     1.370e-16
+  us_blocks_cnn_stacked (9)              4.441e-16     1.118e-16
+  us_blocks_cnn_stacked (5 I)            2.776e-17     1.854e-16
+  us_blocks_dphi_lab_stacked (9)         2.220e-16     1.370e-16
+  us_blocks_dphi_lab_stacked (5 I)       2.776e-17     1.193e-16

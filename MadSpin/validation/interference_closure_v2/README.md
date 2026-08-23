@@ -157,6 +157,14 @@ a free consistency check, reported in `plots/closure_numbers.txt`.
     python3 MadSpin/validation/interference_closure_v2/analyse_interference.py <workdir> data/
     python3 MadSpin/validation/interference_closure_v2/plot_interference.py   data/ plots/
 
+Both plotting scripts also emit stacked variants of the closure and block
+figures, under a `_stacked` suffix next to the originals; `--stacked-only`
+rebuilds just those and `--no-stacked` skips them.  Their sign convention --
+positive contributions stacked up from zero, negative ones down, and the total
+drawn as an explicit `net` line rather than read off the envelope -- is in
+`RESULTS.md` section 6a, on every stacked figure, and in
+`plots/stacked_numbers.txt`.
+
 `analyse_interference.py` writes `data/histograms.npz` (bin edges, sum of
 weights, sum of weights squared and raw counts per sample and observable) and
 `data/meta.json`; both are committed, so `plot_interference.py` regenerates

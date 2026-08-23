@@ -1,0 +1,49 @@
+Stacked renderings of the interference-closure figures.
+
+Sign convention (also written on every stacked figure):
+  in each bin, contributions with POSITIVE content are stacked
+  upward from zero and contributions with NEGATIVE content are
+  stacked downward from zero.  A band below the axis is a
+  subtraction.  The top of the stack is therefore the sum
+  of the POSITIVE contributions only and is NOT the total;
+  the total is the algebraic sum of the two piles, drawn as
+  an explicit line ("net: ...").  Read the line, not the
+  envelope.
+
+This matters because four of the nine blocks are positive in
+every bin while the five interference ones are not: (I,I) is
+negative over roughly half the range of C_nn and of dphi_lab,
+and its sign change is the physics the figure exists to show.
+
+Closure of the stack: the net of the stacked bands must equal,
+bin by bin, the total curve drawn on the same panel.  It is the
+same addition regrouped: the residual is floating point only.
+
+  figure / panel                     max|net-tot|       relative
+  closure_cos_k_p_stacked               2.220e-16      1.795e-16
+  closure_cnn_stacked                   4.441e-16      1.118e-16
+  closure_dphi_lab_stacked              2.220e-16      1.370e-16
+  blocks_cnn_stacked (9)                4.441e-16      1.118e-16
+  blocks_cnn_stacked (5 I)              2.776e-17      1.854e-16
+  blocks_dphi_lab_stacked (9)           2.220e-16      1.370e-16
+  blocks_dphi_lab_stacked (5 I)         2.776e-17      1.193e-16
+  (units are pb; "relative" is against the peak bin of the same
+   total.  Machine epsilon on a double is 2.2e-16.)
+
+How much of the stack sits below zero, per observable: the
+ratio of the summed negative pile to the summed positive pile
+over all bins, for the 9-block stack and for the 5
+interference blocks alone.  The second column is why the
+convention is needed.
+  observable neg/pos (9 blocks) neg/pos (5 inter.)
+  cos_k_p                0.0050             1.2510
+  cos_k_m                0.0050             1.2515
+  ckk                    0.0038             1.3520
+  cnn                    0.0425             1.0231
+  crr                    0.0059             1.2018
+  cos_phi                0.0305             1.0330
+  cos_n_p                0.0051             1.2456
+  dphi_lab               0.0397             1.0248
+  pt_t                   0.0044             1.3253
+  m_tt                   0.0044             1.3229
+
