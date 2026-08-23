@@ -3631,9 +3631,10 @@ minimised over the two tops, on the reshuffled momenta the trial actually used:
 **All 265 are inside `d = 5.2`; 51 % inside one.** `corr(ln w/C, ln d) =
 -0.62`. The largest overweight of the run -- factor 48.9 -- sits at `d = 0.12`,
 the second (30.95) at `d = 0.27`, the third (19.46) at `d = 0.94`. Their
-`sqrt(shat)` runs 578 to 1650 GeV: a *hard* jet, the opposite end of the sample
-from threshold, because `2 p_r.p_j` has to be large enough to make up
-`M_r^2 - m_r^2`.
+`sqrt(shat)` runs 578 to 1650 GeV -- nowhere near threshold, and what the jet
+has to do is *land* at `2 p_r.p_j = M_r^2 - m_r^2`, not be soft. Over the whole
+population `sqrt(shat)` is mildly *below* the sample's (median 634 against 716);
+the next subsection takes that apart.
 
 ### Why the probe misses it, quantified
 
@@ -3661,6 +3662,79 @@ The root's position also matches the corner section 15 saw: the virtuality that
 puts the internal propagator on shell is at `(m - pole)/Gamma` between **-14.4
 and -8.1** (p10-p90, median -11.8), against the `-10.7` section 15 measured for
 the over-bound trials. It is the same thing seen from the other side.
+
+### Is it `shat` near its minimum? Four readings, all refuted
+
+Asked directly, and worth the answer in full because "minimal `shat`" has
+several readings that are not equivalent. Populations: the **265 over-bound**
+trials, the **431 near-bound** ones (`0.3 < w/C < 1`, the control that is also
+heavy), and **40 000 ordinary mass draws** made on the run's own production
+events the way `_draw_mass_value` makes them.
+
+The sharp statistic is the AUC of each variable between over-bound and
+near-bound -- both heavy, so it isolates what makes a heavy trial *overflow* --
+beside the AUC between heavy and ordinary, which is what makes a trial heavy at
+all. `0.500` means the variable says nothing.
+
+| variable | over-bound vs near-bound | heavy vs ordinary draw |
+|---|---|---|
+| `sqrt(shat)` (readings 1 and 3) | 0.523 | 0.388 |
+| `sqrt(shat) - sum m_i'` (reading 2) | 0.525 | 0.408 |
+| `sum m_i' / sqrt(shat)` ("fill"; 1 = infeasible) | 0.474 | 0.575 |
+| `|chi - 1|` (reading 4) | 0.490 | **0.885** |
+| `(min m_i' - pole)/Gamma` | 0.452 | **0.013** |
+| **`d`** | **0.133** | **0.000** |
+
+**(1) and (3), `sqrt(shat)` near the sample or generation boundary.** Refuted,
+and the median alone did not say so -- the over-bound trials are mildly shifted
+*down* in `sqrt(shat)` (median 634 GeV against the sample's 716; 43.8 % below
+600 GeV against 31.9 %), the opposite of what section 17's "hard jet" reading
+suggests. But shifted is not concentrated: their own **minimum is 387.8 GeV**,
+19 GeV above the sample's 368.9, only **1.5 %** are below 400 GeV, and the
+sample's lowest `sqrt(shat)` decile holds 16.2 % of them -- a 1.6x enrichment.
+Against `d`, where 100 % of them are inside 5.2 and an ordinary draw sits at 196.
+The mild enrichment is a *consequence* of the mechanism: the resonance needs
+`2 p_r.p_j <= M_r^2 - m_min^2`, and a lower `sqrt(shat)` gives a softer jet
+more often. Reading 3 is reading 1 shifted by the `ptj = 20` cut and has the
+identical AUC; `sqrt(shat) - (2 m_t + 2 ptj)` is 43 GeV at the over-bound 5th
+percentile and 248 GeV at their median.
+
+**(2), `sqrt(shat)` minimal *given the drawn masses*.** The reading that would
+have been interesting, and it is refuted the hardest -- backwards, in fact:
+
+| | min slack | p1 | p5 | median | max fill |
+|---|---|---|---|---|---|
+| over-bound | **60.9 GeV** | 70.9 | 101.0 | 302.2 | **0.843** |
+| near-bound | 57.5 | 67.5 | 91.4 | 276.6 | 0.852 |
+| ordinary draw | **21.4** | 59.8 | 100.4 | 372.2 | **0.943** |
+
+The over-bound trials never come within 61 GeV of the reshuffle boundary and
+never fill more than 84 % of `sqrt(shat)`, while ordinary draws reach 21 GeV and
+94 %. They are **further** from their own boundary than a random draw is, and
+the AUC against the near-bound control is 0.525.
+
+**(4), the RAMBO solve near its edge.** `|chi - 1|` does separate heavy from
+ordinary strongly (AUC 0.885, median 0.021 against 0.0017) -- but that is the
+same statement as "a mass was drawn low", and it does **not** separate
+over-bound from near-bound (0.490). It is what makes `J^P` 1.07 instead of
+1.00, and 1.07 is not 48.9.
+
+**Does any of it add anything beyond `d`?** No. Spearman `r(ln w/C, d) =
+-0.688` on the 696 recorded trials; the partial correlations given `d` are
+`+0.14` for `sqrt(shat)`, `+0.15` for the slack, `-0.08` for `|chi - 1|`. The
+raw correlations are `+0.04` to `+0.05` before conditioning, so there is barely
+anything for `d` to be a proxy *of*. What residual there is has the **wrong
+sign** for the hypothesis: within quartiles of `d`, higher `sqrt(shat)` gives a
+higher weight (`r = +0.18` to `+0.22`), not a lower one.
+
+**Are "drawn low" and the mechanism two views of one thing?** No, and this is
+the number that settles it. Over ordinary draws, `Spearman(d, min m') = 0.007`
+-- independent. Of the draws that put a resonance more than 8 widths below its
+pole (2.02 % of draws, which is the corner section 15 identified), only
+**0.87 %** land inside `d < 5`. Drawing low is *necessary* -- it is what makes
+`2 p_r.p_j = M_r^2 - m_r^2` solvable at all -- and short of sufficient by a
+factor 115. The extra condition is on the jet, and it is the whole content of
+the mechanism.
 
 ### The `BW_cut` prediction, run
 
@@ -3807,6 +3881,13 @@ Verified rather than asserted, on the same sample, same seed, same `nb_core`:
   `auto` sends two decaying particles to `joint`, so the mass stage is only
   reached on a `2 -> 3` sample by an explicit `set unweighting sequential` or
   from three decaying particles up.
+* **The residual `sqrt(shat)` dependence.** After conditioning on `d` there is
+  a small positive one (partial `r = +0.14`, `+0.18` to `+0.22` within `d`
+  quartiles): at fixed distance from the internal pole, a harder event gives a
+  bigger weight. Plausibly the resonant diagram's share of the matrix element
+  growing against the non-resonant background, but not measured -- it would
+  need the diagram-level decomposition, which the density path does not expose.
+  It is the wrong sign for a threshold reading either way.
 * **Higher multiplicity.** The mechanism gets *more* available with every extra
   production-level parton (more `(r, k)` pairs, and pairs of partons as well as
   single ones). Only `2 -> 3` was measured. The predicate tests pairs only.
