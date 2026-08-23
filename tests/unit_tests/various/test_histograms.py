@@ -16,8 +16,12 @@ from __future__ import division
 
 from __future__ import absolute_import
 import madgraph.various.histograms as histograms
+import inspect
 import os
+import subprocess
+import sys
 import unittest
+from unittest import mock
 import copy
 import tests.IOTests as IOTests
 import madgraph.various.misc as misc
@@ -102,3 +106,202 @@ class TestHistograms(unittest.TestCase):
                                              set(new_histo.bins[i].wgts.keys()))
              for label, wgt in bin.wgts.items():
                  self.assertEqual(wgt,new_histo.bins[i].wgts[label])
+
+
+class TestHistogramRegressions(unittest.TestCase):
+    """Regression tests for histogram arithmetic and output helpers."""
+
+    @staticmethod
+    def make_hwu(labels=None, values=None, title='same', x_axis_mode='LIN',
+                 y_axis_mode='LOG', n_bins=1):
+        if labels is None:
+            labels = ['central', 'stat_error']
+        if values is None:
+            values = [1.0, 0.1]
+        bins = []
+        for i in range(n_bins):
+            bins.append(histograms.Bin((float(i), float(i+1)),
+                              dict(zip(labels, values))))
+        histo = histograms.HwU(title=title, x_axis_mode=x_axis_mode,
+                                             y_axis_mode=y_axis_mode)
+        histo.bins = histograms.BinList(bins, weight_labels=list(labels))
+        return histo
+
+    def test_bin_range_requires_positive_width(self):
+        for width in [0.0, -1.0]:
+            with self.assertRaises(histograms.MadGraph5Error):
+                histograms.BinList(bin_range=[0.0, 1.0, width])
+
+    def test_statistical_errors_remain_nonnegative(self):
+        divided = histograms.Histogram.DIVIDE(
+            {'central': 2.0, 'stat_error': 0.2},
+            {'central': -4.0, 'stat_error': 0.4})
+        self.assertAlmostEqual(divided['stat_error'],
+                                             0.07071067811865477)
+
+        rescaled = histograms.Histogram.RESCALE(-2.0)(
+                              {'central': 2.0, 'stat_error': 0.2})
+        self.assertEqual(rescaled['central'], -4.0)
+        self.assertEqual(rescaled['stat_error'], 0.4)
+
+    def test_compatibility_checks_axes_and_bin_count(self):
+        reference = self.make_hwu()
+        different_axis = self.make_hwu(x_axis_mode='LOG')
+        different_bin_count = self.make_hwu(n_bins=2)
+
+        self.assertFalse(reference.test_plot_compability(different_axis))
+        self.assertFalse(reference.test_plot_compability(different_bin_count))
+
+    def test_mur_uncertainties_keep_dynamic_scale_labels(self):
+        labels = [
+            'central', 'stat_error',
+            ('scale_adv', 0, 0.5, 1.0),
+            ('scale_adv', 0, 2.0, 1.0),
+            ('scale_adv', 1, 0.5, 1.0),
+            ('scale_adv', 1, 2.0, 1.0),
+            ('scale', 0.5, 1.0),
+            ('scale', 2.0, 1.0)]
+        histo = self.make_hwu(labels,
+                     [1.0, 0.1, 10.0, 11.0, 20.0, 21.0, 30.0, 31.0])
+
+        histo.set_uncertainty('MUR')
+
+        self.assertEqual(
+            [histo.bins[0].wgts[label] for label in
+                ['delta_mur_cen 0 @aux', 'delta_mur_min 0 @aux',
+                 'delta_mur_max 0 @aux']],
+            [10.0, 10.0, 11.0])
+        self.assertEqual(
+            [histo.bins[0].wgts[label] for label in
+                ['delta_mur_cen 1 @aux', 'delta_mur_min 1 @aux',
+                 'delta_mur_max 1 @aux']],
+            [20.0, 20.0, 21.0])
+
+    def test_pdf_fallback_handles_small_and_special_sets(self):
+        small = self.make_hwu(
+              ['central', 'stat_error', ('pdf', 1000)], [1.0, 0.1, 1.1])
+
+        special_labels = ['central', 'stat_error'] + [
+                                  ('pdf', 244400+i) for i in range(101)]
+        special_values = [100.0, 0.1, 100.0] + [
+                                  float(101+i) for i in range(100)]
+        special = self.make_hwu(special_labels, special_values)
+
+        with mock.patch.object(histograms.subprocess, 'check_output',
+                               side_effect=OSError) as check_output, \
+             mock.patch.object(histograms.subprocess, 'Popen') as popen, \
+             mock.patch.object(histograms.logger, 'warning'):
+            small.set_uncertainty('pdf')
+            special.set_uncertainty('PDF')
+
+        self.assertEqual(check_output.call_count, 2)
+        popen.assert_not_called()
+        self.assertEqual(small.bins[0].wgts['delta_pdf_min @aux'], 1.1)
+        self.assertEqual(small.bins[0].wgts['delta_pdf_max @aux'], 1.1)
+        self.assertEqual(special.bins[0].wgts['delta_pdf_min @aux'], 32.0)
+        self.assertEqual(special.bins[0].wgts['delta_pdf_max @aux'], 168.0)
+
+    def test_ratio_helper_uses_denominator_path(self):
+        constructor_paths = []
+
+        class FakeHistogram(object):
+            def __init__(self, path):
+                self.path = path
+
+            def get(self, name):
+                if name == 'bins':
+                    return [0.0]
+                if self.path == 'numerator.HwU':
+                    return [6.0]
+                return [3.0]
+
+        class FakeHwUList(object):
+            def __init__(self, path, raw_labels=False):
+                constructor_paths.append(path)
+                self.path = path
+
+            def get(self, name):
+                return FakeHistogram(self.path)
+
+        class FakeAxes(object):
+            plotted_ratio = None
+
+            def plot(self, bins, ratio, *args, **opts):
+                self.plotted_ratio = ratio
+
+        axes = FakeAxes()
+        with mock.patch.object(histograms, 'HwUList', FakeHwUList):
+            histograms.plot_ratio_from_HWU(
+                'numerator.HwU', axes, 'plot', 'num', 'den',
+                hwu_denominator_path='denominator.HwU')
+
+        self.assertEqual(constructor_paths,
+                         ['numerator.HwU', 'denominator.HwU'])
+        self.assertEqual(axes.plotted_ratio, [2.0])
+
+    def test_uncertainty_output_defaults_and_missing_merging_weights(self):
+        output_default = inspect.signature(histograms.HwUList.output).\
+                            parameters['uncertainties'].default
+        group_default = inspect.signature(histograms.HwUList.output_group).\
+                            parameters['uncertainties'].default
+        for default in [output_default, group_default]:
+            self.assertIn('statistical', default)
+            self.assertNotIn('statitistical', default)
+
+        hwu_output = []
+        gnuplot_output = []
+        histo_list = histograms.HwUList([self.make_hwu()])
+        histo_list.output_group(hwu_output, gnuplot_output, 0, 'plots.HwU',
+                                uncertainties=['merging_scale'])
+        self.assertNotIn('Relative scale and PDF uncertainty',
+                         '\n'.join(gnuplot_output))
+
+    def test_cli_accepts_run_id_and_rejects_incompatible_sums(self):
+        xml_template = """<histfile>
+<run id="{run_id}" header="xmin;xmax;Weight;WeightError">
+<jethistograms njet="0">
+<histogram name="{name}" unit="pb" weight="all">
+0.0 1.0 {value} 0.1
+</histogram>
+</jethistograms>
+</run>
+{remainder}</histfile>
+"""
+        second_run = """<run id="1" header="xmin;xmax;Weight;WeightError">
+<jethistograms njet="0">
+<histogram name="run_one" unit="pb" weight="all">
+0.0 1.0 2.0 0.1
+</histogram>
+</jethistograms>
+</run>
+"""
+
+        with misc.TMP_directory() as tmpdir:
+            xml_path = pjoin(tmpdir, 'runs.xml')
+            with open(xml_path, 'w') as stream:
+                stream.write(xml_template.format(run_id=0, name='run_zero',
+                              value=1.0, remainder=second_run))
+            output_base = pjoin(tmpdir, 'selected')
+            result = subprocess.run(
+                [sys.executable, histograms.__file__,
+                 xml_path+'@run_id=1', '--out='+output_base, '--HwU',
+                 '--no_open'], stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                 universal_newlines=True)
+            self.assertEqual(result.returncode, 0, result.stdout+result.stderr)
+            with open(output_base+'.HwU') as stream:
+                selected_output = stream.read()
+            self.assertIn('run_one pb', selected_output)
+            self.assertNotIn('run_zero pb', selected_output)
+
+            first_path = pjoin(tmpdir, 'first.HwU')
+            second_path = pjoin(tmpdir, 'second.HwU')
+            self.make_hwu(title='first').output(first_path)
+            self.make_hwu(title='second').output(second_path)
+            result = subprocess.run(
+                [sys.executable, histograms.__file__, first_path, second_path,
+                 '--sum', '--no_suffix', '--out='+pjoin(tmpdir, 'sum'),
+                 '--HwU', '--no_open'], stdout=subprocess.PIPE,
+                 stderr=subprocess.PIPE, universal_newlines=True)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn('are not compatible and cannot be combined',
+                          result.stdout+result.stderr)

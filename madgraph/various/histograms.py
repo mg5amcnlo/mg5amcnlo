@@ -250,6 +250,9 @@ class BinList(histograms_PhysicsObjectList):
             if len(bin_range)!=3 or any(not isinstance(f, float) for f in bin_range):
                 raise MadGraph5Error("The range argument to build a BinList"+\
                   " must be a list of exactly three floats.")
+            if bin_range[2] <= 0.0:
+                raise MadGraph5Error("The bin width used to build a BinList"+\
+                  " must be strictly positive, not '%s'."%str(bin_range[2]))
             current = bin_range[0]
             while current < bin_range[1]:
                 self.append(Bin(boundaries =
@@ -471,7 +474,7 @@ class Histogram(object):
             # d(x/y) = ( (dx/y)**2 + ((x*dy)/(y**2))**2 )**0.5
             new_wgts['stat_error'] = math.sqrt(wgtsA['stat_error']**2+
             ((wgtsA['central']*wgtsB['stat_error'])/
-                             wgtsB['central'])**2)/wgtsB['central']
+                             wgtsB['central'])**2)/abs(wgtsB['central'])
         
         for label, wgt in wgtsA.items():
             if label=='stat_error':
@@ -544,7 +547,7 @@ class Histogram(object):
         
         def rescaler(wgts):
             return Histogram.SINGLEHISTO_OPERATION(wgts,(lambda a: a*factor),
-                                                           (lambda a: a*factor))
+                                                      (lambda a: a*abs(factor)))
 
         return rescaler
 
@@ -970,8 +973,9 @@ class HwU(Histogram):
            (set(this_unknown_weight_labels) != set(other_unknown_weight_labels) and\
                                                  consider_unknown_weight_labels) or \
            (self.type != other.type and consider_type) or \
-           self.x_axis_mode != self.x_axis_mode or \
-           self.y_axis_mode != self.y_axis_mode or \
+           self.x_axis_mode != other.x_axis_mode or \
+           self.y_axis_mode != other.y_axis_mode or \
+           len(self.bins) != len(other.bins) or \
            any(b1.boundaries!=b2.boundaries for (b1,b2) in \
                                                      zip(self.bins,other.bins)):
             return False
@@ -1206,21 +1210,23 @@ class HwU(Histogram):
         uncertainty, for the scale specified which can be either 'mur', 'muf',
         'all_scale' or 'PDF'."""
 
-        if type.upper()=='MUR':
+        type = type.upper()
+
+        if type=='MUR':
             new_wgt_label  = 'delta_mur'
             scale_position = 1
-        elif type.upper()=='MUF':
+        elif type=='MUF':
             new_wgt_label = 'delta_muf'
             scale_position = 2
-        elif type.upper()=='ALL_SCALE':
+        elif type=='ALL_SCALE':
             new_wgt_label = 'delta_mu'
             scale_position = -1
-        elif type.upper()=='PDF':
+        elif type=='PDF':
             new_wgt_label = 'delta_pdf'
             scale_position = -2            
-        elif type.upper()=='MERGING':
+        elif type=='MERGING':
             new_wgt_label = 'delta_merging'
-        elif type.upper()=='ALPSFACT':
+        elif type=='ALPSFACT':
             new_wgt_label = 'delta_alpsfact'
         else:
             raise MadGraph5Error(' The function set_uncertainty can'+\
@@ -1229,7 +1235,7 @@ class HwU(Histogram):
         
         wgts_to_consider=[]
         label_to_consider=[]
-        if type.upper() == 'MERGING':
+        if type == 'MERGING':
             # It is a list of list because we consider only the possibility of
             # a single "central value" in this case, so the outtermost list is
             # always of length 1.
@@ -1237,7 +1243,7 @@ class HwU(Histogram):
                             HwU.get_HwU_wgt_label_type(label)=='merging_scale' ])
             label_to_consider.append('none')
 
-        elif type.upper() == 'ALPSFACT':
+        elif type == 'ALPSFACT':
             # It is a list of list because we consider only the possibility of
             # a single "central value" in this case, so the outtermost list is
             # always of length 1.
@@ -1269,10 +1275,10 @@ class HwU(Histogram):
             ##########: remove renormalisation OR factorisation scale dependence...
 
             if scale_position > -1:
-                for wgts in wgts_to_consider:
-                    wgts_to_consider.remove(wgts)
-                    wgts = [ label for label in wgts if label[-scale_position]==1.0 ]
-                    wgts_to_consider.append(wgts)
+                wgts_to_consider = [
+                    [label for label in wgts
+                                      if label[-scale_position] == 1.0]
+                    for wgts in wgts_to_consider]
         elif scale_position == -2:
             ##########: advanced PDF
             pdf_sets=[label[2] for label in self.bins.weight_labels if \
@@ -1300,8 +1306,9 @@ class HwU(Histogram):
         if type=='PDF':
             use_lhapdf=False
             try:
-                lhapdf_libdir=subprocess.Popen([lhapdfconfig,'--libdir'],\
-                                               stdout=subprocess.PIPE).stdout.read().decode(errors='ignore').strip()
+                lhapdf_libdir=subprocess.check_output(
+                    [lhapdfconfig,'--libdir'], stderr=subprocess.STDOUT
+                ).decode(errors='ignore').strip()
             except:
                 use_lhapdf=False
             else:
@@ -1399,7 +1406,7 @@ class HwU(Histogram):
                     bin.wgts[new_wgt_labels[0]] = ep.central
                     bin.wgts[new_wgt_labels[1]] = ep.central-ep.errminus
                     bin.wgts[new_wgt_labels[2]] = ep.central+ep.errplus
-                elif type=='PDF' and use_lhapdf and label != 'none' and len(bin.wgts) == 1:
+                elif type=='PDF' and use_lhapdf and label != 'none' and len(wgts) == 1:
                     bin.wgts[new_wgt_labels[0]] = bin.wgts[wgts[0]]
                     bin.wgts[new_wgt_labels[1]] = bin.wgts[wgts[0]]
                     bin.wgts[new_wgt_labels[2]] = bin.wgts[wgts[0]]
@@ -1408,28 +1415,28 @@ class HwU(Histogram):
                     pdf_up     = 0.0
                     pdf_down   = 0.0
                     cntrl_val  = bin.wgts['central']
-                    if wgts[0][1] <= 90000:
+                    pdf_set_id = wgts[0][1]
+                    if len(pdfs) <= 2:
+                        pdf_up = max(pdfs)
+                        pdf_down = min(pdfs)
+                    elif pdf_set_id <= 90000:
                         # use Hessian method (CTEQ & MSTW)
-                        if len(pdfs)>2:
-                            for i in range(int((len(pdfs)-1)/2)):
-                                pdf_up   += max(0.0,pdfs[2*i+1]-cntrl_val,
-                                                      pdfs[2*i+2]-cntrl_val)**2
-                                pdf_down += max(0.0,cntrl_val-pdfs[2*i+1],
-                                                       cntrl_val-pdfs[2*i+2])**2
-                            pdf_up   = cntrl_val + math.sqrt(pdf_up)
-                            pdf_down = cntrl_val - math.sqrt(pdf_down)
-                        else:
-                            pdf_up   = bin.wgts[pdfs[0]]
-                            pdf_down = bin.wgts[pdfs[0]]
-                    elif wgts[0] in range(90200, 90303) or \
-                         wgts[0] in range(90400, 90433) or \
-                         wgts[0] in range(90700, 90801) or \
-                         wgts[0] in range(90900, 90931) or \
-                         wgts[0] in range(91200, 91303) or \
-                         wgts[0] in range(91400, 91433) or \
-                         wgts[0] in range(91700, 91801) or \
-                         wgts[0] in range(91900, 90931) or \
-                         wgts[0] in range(92000, 92031):
+                        for i in range(int((len(pdfs)-1)/2)):
+                            pdf_up   += max(0.0,pdfs[2*i+1]-cntrl_val,
+                                                  pdfs[2*i+2]-cntrl_val)**2
+                            pdf_down += max(0.0,cntrl_val-pdfs[2*i+1],
+                                                   cntrl_val-pdfs[2*i+2])**2
+                        pdf_up   = cntrl_val + math.sqrt(pdf_up)
+                        pdf_down = cntrl_val - math.sqrt(pdf_down)
+                    elif pdf_set_id in range(90200, 90303) or \
+                         pdf_set_id in range(90400, 90433) or \
+                         pdf_set_id in range(90700, 90801) or \
+                         pdf_set_id in range(90900, 90931) or \
+                         pdf_set_id in range(91200, 91303) or \
+                         pdf_set_id in range(91400, 91433) or \
+                         pdf_set_id in range(91700, 91801) or \
+                         pdf_set_id in range(91900, 91931) or \
+                         pdf_set_id in range(92000, 92031):
                         # PDF4LHC15 Hessian sets
                         pdf_stdev = 0.0
                         for pdf in pdfs[1:]:
@@ -1437,22 +1444,22 @@ class HwU(Histogram):
                         pdf_stdev = math.sqrt(pdf_stdev)
                         pdf_up   = cntrl_val+pdf_stdev
                         pdf_down = cntrl_val-pdf_stdev
-                    elif wgts[0] in range(244400, 244501) or \
-                         wgts[0] in range(244600, 244701) or \
-                         wgts[0] in range(244800, 244901) or \
-                         wgts[0] in range(245000, 245101) or \
-                         wgts[0] in range(245200, 245301) or \
-                         wgts[0] in range(245400, 245501) or \
-                         wgts[0] in range(245600, 245701) or \
-                         wgts[0] in range(245800, 245901) or \
-                         wgts[0] in range(246000, 246101) or \
-                         wgts[0] in range(246200, 246301) or \
-                         wgts[0] in range(246400, 246501) or \
-                         wgts[0] in range(246600, 246701) or \
-                         wgts[0] in range(246800, 246901) or \
-                         wgts[0] in range(247000, 247101) or \
-                         wgts[0] in range(247200, 247301) or \
-                         wgts[0] in range(247400, 247501): 
+                    elif pdf_set_id in range(244400, 244501) or \
+                         pdf_set_id in range(244600, 244701) or \
+                         pdf_set_id in range(244800, 244901) or \
+                         pdf_set_id in range(245000, 245101) or \
+                         pdf_set_id in range(245200, 245301) or \
+                         pdf_set_id in range(245400, 245501) or \
+                         pdf_set_id in range(245600, 245701) or \
+                         pdf_set_id in range(245800, 245901) or \
+                         pdf_set_id in range(246000, 246101) or \
+                         pdf_set_id in range(246200, 246301) or \
+                         pdf_set_id in range(246400, 246501) or \
+                         pdf_set_id in range(246600, 246701) or \
+                         pdf_set_id in range(246800, 246901) or \
+                         pdf_set_id in range(247000, 247101) or \
+                         pdf_set_id in range(247200, 247301) or \
+                         pdf_set_id in range(247400, 247501):
                         # use Gaussian (68%CL) method (NNPDF)
                         pdf_stdev = 0.0
                         pdf_diff = sorted([abs(pdf-cntrl_val) for pdf in pdfs[1:]])
@@ -2128,7 +2135,7 @@ class HwUList(histograms_PhysicsObjectList):
                 self.append(new_histo)
         
     def output(self, path, format='gnuplot',number_of_ratios = -1, 
-          uncertainties=['scale','pdf','statitistical','merging_scale','alpsfact'],
+          uncertainties=['scale','pdf','statistical','merging_scale','alpsfact'],
           use_band = None,
           ratio_correlations=True, arg_string='', 
           jet_samples_to_keep=None,
@@ -2442,7 +2449,7 @@ set key invert
 
     def output_group(self, HwU_out, gnuplot_out, block_position, HwU_name,
           number_of_ratios = -1, 
-          uncertainties = ['scale','pdf','statitistical','merging_scale','alpsfact'],
+          uncertainties = ['scale','pdf','statistical','merging_scale','alpsfact'],
           use_band = None,
           ratio_correlations = True, 
           jet_samples_to_keep=None,
@@ -2654,8 +2661,8 @@ set key invert
             uncertainties_present.remove('pdf')
         if mu_var_pos is None and 'scale' in uncertainties_present:
             uncertainties_present.remove('scale')
-        if merging_var_pos is None and 'merging' in uncertainties_present:
-            uncertainties_present.remove('merging')
+        if merging_var_pos is None and 'merging_scale' in uncertainties_present:
+            uncertainties_present.remove('merging_scale')
         if alpsfact_var_pos is None and 'alpsfact' in uncertainties_present:
             uncertainties_present.remove('alpsfact')
         no_uncertainties = len(uncertainties_present)==0
@@ -3325,9 +3332,8 @@ def plot_ratio_from_HWU(path, ax, hwu_variable, hwu_numerator, hwu_denominator, 
         hwu = path
 
     if 'hwu_denominator_path' in opts:
-        print('found second hwu')
         if isinstance(opts['hwu_denominator_path'],str):
-            hwu2 = HwUList(path, raw_labels=True)
+            hwu2 = HwUList(opts['hwu_denominator_path'], raw_labels=True)
         else:
             hwu2 = opts['hwu_denominator_path']
         del opts['hwu_denominator_path']
@@ -3520,7 +3526,7 @@ if __name__ == "__main__":
 
     jet_samples_to_keep = None
     
-    lhapdfconfig = ['lhapdf-config']
+    lhapdfconfig = 'lhapdf-config'
     for arg in sys.argv[1:]:
         if arg.startswith('--lhapdf-config='):
             lhapdfconfig = arg[16:]
@@ -3565,7 +3571,7 @@ if __name__ == "__main__":
         ratio_correlations = False
     
     for arg in sys.argv:
-        if arg.startswith('--no_') and not arg.startswith('--no_open'):
+        if arg.startswith('--no_') and arg not in ['--no_open','--no_suffix']:
             uncertainties.remove(variation_type_map[arg[5:]])
         if arg.startswith('--only_'):
             uncertainties= [variation_type_map[arg[7:]]]
@@ -3607,7 +3613,7 @@ if __name__ == "__main__":
             opt, value = option.split('=')
             if opt=='run_id':
                 file_options[opt]=int(value)
-            if opt=='merging_scale':
+            elif opt=='merging_scale':
                 file_options[opt]=float(value)
             else:
                 log("Unreckognize file option '%s'."%option)
@@ -3619,7 +3625,8 @@ if __name__ == "__main__":
             new_histo_list = HwUList(histo for histo in new_histo_list if
                                  any(t in histo.title for t in accepted_titles))
         for histo in new_histo_list:
-            if no_suffix or n_files==1:
+            if no_suffix or n_files==1 or \
+                              any(_ in sys.argv for _ in ['--sum','--average']):
                 continue
             if not histo.type is None:
                 histo.type += '|'
@@ -3649,7 +3656,9 @@ if __name__ == "__main__":
         if any(_ in sys.argv for _ in ['--sum','--average']):
             for j, hist in enumerate(new_histo_list):
                  # First make sure the plots have the same weight labels and such
-                 hist.test_plot_compability(histo_list[j])
+                 if not hist.test_plot_compability(histo_list[j]):
+                     raise MadGraph5Error("Histograms at position %d from the"%j+
+                       " input files are not compatible and cannot be combined.")
                  # Now let the histogram module do the magic and add them.
                  histo_list[j] += hist*histo_norm[i]
         
