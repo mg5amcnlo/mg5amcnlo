@@ -3424,6 +3424,118 @@ class TestProductionResonanceRegion(unittest.TestCase):
         self.assertFalse(shim._near_production_resonance(
             self._event(160.0, self.POLE ** 2), [0] * 5, self._pool(6, -6)))
 
+    # ------------------------------------------------------------------
+    # The partner ``k`` is any other production-level final state, status 1
+    # OR status 2. What keeps a second DECAYED resonance from being mistaken
+    # for the radiated parton is not a status test -- `status` only records
+    # whether MadSpin attached a decay -- but the fact that two resonances
+    # are too heavy to put their pair mass on one of their own poles.
+    # ------------------------------------------------------------------
+    Z_POLE, Z_WIDTH = 91.188, 2.44140351     # default MG5 SM param_card
+    W_POLE, W_WIDTH = 80.419, 2.04759951
+
+    @staticmethod
+    def _bw_floor(pole, width, bw_cut):
+        """The lowest mass MadSpin can hand this predicate: decay.py's own
+        ``m_min = max(mpole - BW_cut * w, 0.5)``."""
+        return max(pole - bw_cut * width, 0.5)
+
+    def _pair_event(self, specs, s2):
+        """``specs`` is two ``(pdg, status, mass)`` production-level finals,
+        put back to back with ``(p_0 + p_1)^2 = s2``; a massless parton is
+        parked far away so the event is ``2 -> 3`` and cannot itself pair with
+        anything near a pole."""
+        m0, m1 = specs[0][2], specs[1][2]
+        M = math.sqrt(s2)
+        lam = (s2 - (m0 + m1) ** 2) * (s2 - (m0 - m1) ** 2)
+        pstar = math.sqrt(max(lam, 0.0)) / (2 * M)
+        mom = [lhe_parser.FourMomentum(math.sqrt(m0 ** 2 + pstar ** 2),
+                                       0., 0., pstar),
+               lhe_parser.FourMomentum(math.sqrt(m1 ** 2 + pstar ** 2),
+                                       0., 0., -pstar),
+               lhe_parser.FourMomentum(2000., 0., 2000., 0.)]
+        full = list(specs) + [(21, 1, 0.0)]
+        lines = ['%d 1 1.0 100.0 0.0075 0.118' % (len(full) + 2)]
+        for sign in (1, -1):
+            lines.append('21 -1 0 0 501 502 0. 0. %.15e %.15e 0.0 0. 9.'
+                         % (sign * 5000.0, 5000.0))
+        for (pdg, status, mass), q in zip(full, mom):
+            lines.append('%d %d 1 2 501 502 %.15e %.15e %.15e %.15e %.15e 0. 9.'
+                         % (pdg, status, q.px, q.py, q.pz, q.E, mass))
+        evt = lhe_parser.Event()
+        evt.parse('\n'.join(lines))
+        return evt
+
+    def test_two_decayed_resonances_are_too_heavy_to_fake_the_pole(self):
+        """``s2 = (p_r + p_k)^2 >= (m_r + m_k)^2`` for any two physical
+        momenta, so the window is reachable only when
+
+            m_r + m_k  <=  sqrt(M_r^2 + N M_r Gamma_r) ,
+
+        and a mass MadSpin sampled is never more than ``BW_cut`` widths below
+        its pole. The tightest pair in the SM is ``r = Z`` with ``k = W``, and
+        even with BOTH pushed to the floor of the window it misses at the
+        default ``BW_cut = 15`` -- by 1.6 GeV, which is the whole margin there
+        is, so this is pinned rather than assumed. It opens at ``BW_cut`` about
+        15.4, where MadSpin's own check already calls the narrow-width
+        approximation it factorises with invalid; and there the pairing is the
+        real ``W* -> W Z`` production resonance, so a status test would lose a
+        true positive at exactly the setting where it gains the false one.
+        """
+        shim = self._shim({('mass', 23): self.Z_POLE, ('decay', 23): self.Z_WIDTH,
+                           ('mass', 24): self.W_POLE, ('decay', 24): self.W_WIDTH})
+        top = math.sqrt(self.Z_POLE ** 2 + shim._PRODUCTION_RESONANCE_WIDTHS
+                        * self.Z_POLE * self.Z_WIDTH)
+        for bw_cut, expected in ((5.0, False), (10.0, False), (15.0, False),
+                                 (20.0, True), (25.0, True)):
+            mz = self._bw_floor(self.Z_POLE, self.Z_WIDTH, bw_cut)
+            mw = self._bw_floor(self.W_POLE, self.W_WIDTH, bw_cut)
+            # the single most dangerous point the constraints allow: the pair
+            # mass pushed as close to M_Z^2 as the >= (m_Z + m_W)^2 bound lets it
+            evt = self._pair_event([(23, 2, mz), (24, 2, mw)],
+                                   max((mz + mw) ** 2, self.Z_POLE ** 2))
+            self.assertEqual(
+                shim._near_production_resonance(evt, list(evt),
+                                                self._pool(23, 24)),
+                expected,
+                'BW_cut = %g: m_Z = %.3f + m_W = %.3f = %.3f, against a window '
+                'whose upper edge is at %.3f' % (bw_cut, mz, mw, mz + mw, top))
+
+    def test_a_top_pair_cannot_fake_the_pole_at_any_usable_BW_cut(self):
+        """The same bound on the process the tag was measured on,
+        ``p p > t t~ j``. The window on ``m(t t~)`` is [165.4, 180.3] GeV,
+        while two tops sampled 15 widths low still weigh 303 GeV together: it
+        would take ``BW_cut`` about 55, i.e. a top drawn at 90 GeV, to reach --
+        far past the point where MadSpin refuses the run outright."""
+        shim = self._shim()
+        for bw_cut in (5.0, 10.0, 15.0, 25.0, 50.0):
+            mt = self._bw_floor(self.POLE, self.WIDTH, bw_cut)
+            evt = self._pair_event([(6, 2, mt), (-6, 2, mt)],
+                                   max(4 * mt * mt, self.POLE ** 2))
+            self.assertFalse(
+                shim._near_production_resonance(evt, list(evt),
+                                                self._pool(6, -6)),
+                'BW_cut = %g: 2 * m_t = %.3f against an upper edge at %.3f'
+                % (bw_cut, 2 * mt,
+                   math.sqrt(self.POLE ** 2 + shim._PRODUCTION_RESONANCE_WIDTHS
+                             * self.POLE * self.WIDTH)))
+
+    def test_a_light_decayed_partner_tags_exactly_like_a_parton(self):
+        """Why the pairing must not test ``k``'s status. A light partner --
+        a BSM scalar radiated off the top line, say -- sits on the resonance's
+        own propagator in exactly the way a jet does. The answer may not turn
+        on whether the user happened to put that particle in the decay card."""
+        shim = self._shim({('mass', 6): self.POLE, ('decay', 6): self.WIDTH,
+                           ('mass', 9000006): 2.0, ('decay', 9000006): 1e-3})
+        mt = self._bw_floor(self.POLE, self.WIDTH, 15.0)
+        for status, pool in ((2, self._pool(6, 9000006)), (1, self._pool(6))):
+            evt = self._pair_event([(6, 2, mt), (9000006, status, 2.0)],
+                                   self.POLE ** 2)
+            self.assertTrue(
+                shim._near_production_resonance(evt, list(evt), pool),
+                'the same momenta must tag whether or not the partner was '
+                'decayed (partner status %d)' % status)
+
 
 class TestProductionResonanceReport(unittest.TestCase):
     """The three-way split of the carried overweights, and what it changes.

@@ -5241,6 +5241,27 @@ class MadSpinInterface(extended_cmd.Cmd):
                 if not pole or not width:
                     continue
                 qr = lhe_parser.FourMomentum(r)
+                # ``k`` is deliberately NOT restricted to status 1. `status`
+                # records whether MadSpin attached a decay to the particle, not
+                # whether it was radiated off the ``r`` line, so it is no proxy
+                # for the physics: the very same momenta would tag or not tag
+                # depending only on which particles the user asked to decay.
+                # A partner that is itself a decayed resonance is kept safe by
+                # arithmetic instead. ``s2 = (p_r + p_k)^2 >= (m_r + m_k)^2``
+                # for any two physical momenta, so the window can only be
+                # entered when ``m_r + m_k <= sqrt(M_r^2 + N M_r Gamma_r)``,
+                # and MadSpin never samples a mass more than ``BW_cut`` widths
+                # below its pole (decay.py: ``m_min = max(m - BW_cut w, 0.5)``).
+                # The tightest SM pair, ``r = Z`` with ``k = W``, still misses
+                # by 1.6 GeV at the default ``BW_cut = 15`` and only opens at
+                # ``BW_cut >= 15.4``; ``t`` with ``W`` needs 20.5 and ``t`` with
+                # ``t~`` needs 55.3 -- values MadSpin's own check already calls
+                # too large for the narrow-width approximation it factorises
+                # with. Where it does open (``W Z j`` with both bosons far off
+                # shell) the pairing is the genuine ``W* -> W Z`` production
+                # resonance anyway, so excluding status 2 would cost a true
+                # positive at exactly the BW_cut where it buys the false one.
+                # Pinned by TestProductionResonanceRegion's two-resonance tests.
                 for k in finals:
                     if k is r:
                         continue
