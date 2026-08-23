@@ -303,9 +303,9 @@ def one_figure(d, key, label, kind, out, show_diag_blocks=False, name=None):
     r4, r4e = ratio(s4, s4e, u, ue)
     r9, r9e = ratio(s9, s9e, u, ue)
     ax.axhline(1.0, color='gray', lw=0.8, linestyle='dashed')
-    ax.errorbar(ctr - wid / 6, r4, yerr=r4e, fmt='v', ms=4, color=C_SUM4,
+    ax.errorbar(ctr, r4, yerr=r4e, fmt='v', ms=4, color=C_SUM4,
                 lw=1.0, capsize=2, label=r'4 diagonal')
-    ax.errorbar(ctr + wid / 6, r9, yerr=r9e, fmt='o', ms=4, color=C_SUM9,
+    ax.errorbar(ctr, r9, yerr=r9e, fmt='o', ms=4, color=C_SUM9,
                 lw=1.0, capsize=2, label=r'9 blocks')
     ax.set_ylabel(r'sum / unpol.')
     ax.set_xlabel(label)
@@ -380,9 +380,9 @@ def summary_figure(d, keys, out):
         r4, r4e = ratio(s4, s4e, u, ue)
         r9, r9e = ratio(s9, s9e, u, ue)
         rax.axhline(1.0, color='gray', lw=0.8, linestyle='dashed')
-        rax.errorbar(ctr - wid / 6, r4, yerr=r4e, fmt='v', ms=4, color=C_SUM4,
+        rax.errorbar(ctr, r4, yerr=r4e, fmt='v', ms=4, color=C_SUM4,
                      lw=1.0, capsize=2, label='4 diagonal')
-        rax.errorbar(ctr + wid / 6, r9, yerr=r9e, fmt='o', ms=4, color=C_SUM9,
+        rax.errorbar(ctr, r9, yerr=r9e, fmt='o', ms=4, color=C_SUM9,
                      lw=1.0, capsize=2, label='9 blocks')
         ok = np.isfinite(r9e) & (r9e < 0.35) & np.isfinite(r4e) & (r4e < 0.35)
         if ok.sum() < 4:
@@ -441,8 +441,7 @@ def blocks_figure(d, key, label, out):
     ax.axhline(0.0, color='gray', lw=0.8, linestyle='dashed')
     for i, tag in enumerate(INTER):
         s, e = d.h([tag], key)
-        off = (i - 2) * wid / 8.0
-        ax.errorbar(ctr + off, s / wid, yerr=e / wid,
+        ax.errorbar(ctr, s / wid, yerr=e / wid,
                     fmt='os^vD'[i], ms=3.5, mfc='none' if i < 4 else None,
                     color=allcolors[(i + 8) % len(allcolors)] if i < 4 else C_INT,
                     lw=1.0, capsize=1.5, label=BLOCK_LABEL[tag])
