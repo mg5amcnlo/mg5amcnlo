@@ -837,13 +837,14 @@ c$$$  include 'madfks_mcatnlo.inc'
       include 'born_nhel.inc'
       include 'nFKSconfigs.inc'
       include 'fks_info.inc'
-      integer nofpartners,i,iconnect,n_connect,nFKSprocess_save
+      integer nofpartners,i,iconnect,n_connect,nFKSprocess_save,iFKS,ii,jj
       double precision p(0:3,nexternal),probne,fks_Sij ,sevmc_Hev
      $     ,sevmc_Sev,z_shower(nexternal),xmcxsec(nexternal),g22,wgt1
      $     ,xlum_mc_fact,fks_Hij,amp_split_xmcxsec(amp_split_size,2),xi
-     $     ,y,z(2),p_cms(0:3,nexternal),p_lab(0:3,nexternal),jac
-     $     ,amp_split_gfunc(amp_split_size),wgt,xx(ndimmax),factor,vol
-     $     ,vol_save
+     $     ,y,z(2),p_cms(0:3,nexternal),p_lab(0:3,nexternal),jac,wgt
+     $     ,xx(ndimmax),factor ,p_cms_flipped(0:3,nexternal)
+     $     ,p_lab_flipped(0:3,nexternal) ,p_flipped(0:3,nexternal),xi_ij
+     $     ,y_ij
       external fks_Sij,fks_Hij
       logical lzone(nexternal),flagmc,passcuts
       double precision    xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev(0:3)
@@ -878,76 +879,138 @@ c$$$  include 'madfks_mcatnlo.inc'
       sevmc_Hev = fks_Sij(p,i_fks,j_fks,xi_i_fks_ev,y_ij_fks_ev)
       sevmc_Sev = fks_Hij(p,i_fks,j_fks)
       if (sevmc_Hev.eq.0d0 .and. sevmc_Sev.eq.0d0) return
-      nFKSprocess_save=nFKSprocess
-      call generate_lab_momenta_inverse(ndim,iconfig,jac,xx,p_lab)
-      call get_mint_wgt(xx,vol_save)
-      do nFKSprocess=1,fks_configs
-         ! This sets i_fks and j_fks to correspond to the ones in
-         ! nFKSprocess.
-         call update_fks_dir(nFKSprocess)
-c$$$         call fks_inc_chooser()
-         call update_coltype_and_charge(nFKSprocess,i_fks,j_fks)
-         if ( i_fks.eq.FKS_I_D(nFKSprocess_save) .and. 
-     &        j_fks.eq.FKS_J_D(nFKSprocess_save) ) then
-            include_gfun=.true.
-         else
-            include_gfun=.false.
-         endif
-!     compute kinematic variables
-         xi=get_xi_from_p(i_fks,j_fks,p_cms)
-         y=get_yij_from_p(i_fks,j_fks,p_cms)
-         ! call the inverse phase-space. This will update the Born
-         ! momenta, and the corresponding phase-space jacobian for the
-         ! n+1-body. Note: if the random numbers are not generated flat
-         ! (they are flat here), also the jacobian from importance
-         ! sampling should be included.
-         !     inputs are: ndim,iconfig,p
-         !     outputs are: xx,jac (also updates pborn common block)
-         jac=1d0
-         call generate_lab_momenta_inverse(ndim,iconfig,jac,xx,p_lab)
-         call get_mint_wgt(xx,vol)
-         
-         CalculatedBorn=.false.
-         call compute_MCsubtraction_kl(i_fks,j_fks,xi,y,p,p_cms,p_born
-     $        ,include_gfun,z,n_connect,amp_split_xmcxsec)
-         do iconnect=1,n_connect
-            if (all(amp_split_xmcxsec(:,iconnect).eq.0d0)) cycle
-            call get_mc_lum(j_fks,z(iconnect),xi,xlum_mc_fact)
-            do iamp=1, amp_split_size
-               if (amp_split_xmcxsec(iamp,iconnect).eq.0d0) cycle
+
+      xi=get_xi_from_p(i_fks,j_fks,p_cms)
+      y=get_yij_from_p(i_fks,j_fks,p_cms)
+      call compute_MCsubtraction_kl(i_fks,j_fks,xi,y,p
+     $     ,p_cms,p_born,include_gfun,z,n_connect
+     $     ,amp_split_xmcxsec)
+      xi_ij=xi
+      y_ij=y
+
+      do iconnect=1,n_connect
+         if (all(amp_split_xmcxsec(:,iconnect).eq.0d0)) cycle
+         call get_mc_lum(j_fks,z(iconnect),xi,xlum_mc_fact)
 !     Re-remove the 1/xi^2 and 1/(1-y) factors; they depend on 'ij', not 'kl'.
 !     Also, include the difference in phase-space Jacobian factors.
-               amp_split_xmcxsec(iamp,iconnect)=amp_split_xmcxsec(iamp
-     $              ,iconnect)*xi_i_fks_ev**2*(1d0-y_ij_fks_ev)*jac/wgt
-     $              *vol/vol_save
-               call amp_split_pos_to_orders(iamp, orders)
-               QCD_power=orders(qcd_pos)
-               wgtcpower=0d0
-               if (cpower_pos.gt.0) wgtcpower=dble(orders(cpower_pos))
-               orders_tag=get_orders_tag(orders)
-               amp_pos=iamp
-               g22=g**(QCD_power)
-               if (nFKSprocess.eq.nFKSprocess_save) then
-                  wgt1=sevmc_Sev*f_MC_S*xlum_mc_fact*
-     &                 amp_split_xmcxsec(iamp,iconnect)/g22
-                  call add_wgt(12,orders,wgt1,0d0,0d0)
-               endif
-               wgt1=sevmc_Hev*f_MC_H*xlum_mc_fact*
-     &              amp_split_xmcxsec(iamp,iconnect)/g22
-               call add_wgt(13,orders,-wgt1,0d0,0d0)
+         do iamp=1, amp_split_size
+            if (amp_split_xmcxsec(iamp,iconnect).eq.0d0) cycle
+            amp_split_xmcxsec(iamp,iconnect)=amp_split_xmcxsec(iamp
+     $           ,iconnect)*xi_ij**2*(1d0-y_ij)*jac/wgt
+            call amp_split_pos_to_orders(iamp, orders)
+            QCD_power=orders(qcd_pos)
+            wgtcpower=0d0
+            if (cpower_pos.gt.0) wgtcpower=dble(orders(cpower_pos))
+            orders_tag=get_orders_tag(orders)
+            amp_pos=iamp
+            g22=g**(QCD_power)
+            wgt1=sevmc_Sev*f_MC_S*xlum_mc_fact*
+     &           amp_split_xmcxsec(iamp,iconnect)/g22
+            call add_wgt(12,orders,wgt1,0d0,0d0)
+            wgt1=sevmc_Hev*f_MC_H*xlum_mc_fact*
+     &           amp_split_xmcxsec(iamp,iconnect)/g22
+            call add_wgt(13,orders,-wgt1,0d0,0d0)
+         enddo
+      enddo
+
+      factor=jac/wgt*xi_ij**2*(1d0-y_ij)
+      if (include_gfun) then
+         call compute_MCsubtraction_from_gfun(xi,y,sevmc_Hev
+     $        ,sevmc_Sev,factor)
+      endif
+      include_gfun=.false.
+
+      nFKSprocess_save=nFKSprocess
+
+      do iFKS=1,fks_configs
+         call update_fks_dir(iFKS)
+         ! only include the ones compatible with the real-emission process
+         if (any(pdg_type_d(iFKS,:).ne.pdg_type_d(nFKSprocess_save,:)))
+     $        cycle
+         ! This sets i_fks and j_fks to correspond to the ones in
+         ! nFKSprocess (which here is iFKS).
+c$$$         call fks_inc_chooser()
+         ! TODO: check that this is indeed too general:
+         call update_coltype_and_charge(iFKS,i_fks,j_fks)
+         
+!     1. include do-loop over identical particless for i-fks and j-fks
+!     2. flip all momenta (p, p_lab and p_cms) among the possible i-fks and j-fks
+!     3. do NOT update i-fks and j-fks.
+         do ii=3,nexternal
+            if (pdg_type_d(nFKSprocess_save,ii).ne.
+     &           pdg_type_d(nFKSprocess_save,i_fks)) cycle
+            do jj=1,nexternal
+               if (ii.eq.jj) cycle
+               if (j_fks.le.nincoming .and. j_fks.ne.jj) cycle
+               if (jj.le.nincoming .and. j_fks.ne.jj) cycle
+               if (pdg_type_d(nFKSprocess_save,jj).ne.
+     &              pdg_type_d(nFKSprocess_save,j_fks)) cycle
+               if (pdg_type_d(nFKSprocess_save,ii).eq.
+     $              pdg_type_d(nFKSprocess_save,jj) .and.
+     $              ii.lt.jj) cycle
+               if ( iFKS.eq.nFKSprocess_save .and. 
+     &              ii.eq.i_fks .and. jj.eq.j_fks) cycle ! this is already included above
+
+               call flip_momenta(i_fks,ii,j_fks,jj,p,p_flipped)
+               call flip_momenta(i_fks,ii,j_fks,jj,p_cms,p_cms_flipped)
+               call flip_momenta(i_fks,ii,j_fks,jj,p_lab,p_lab_flipped)
+               
+!     compute kinematic variables
+               xi=get_xi_from_p(i_fks,j_fks,p_cms_flipped)
+               y=get_yij_from_p(i_fks,j_fks,p_cms_flipped)
+               
+! call the inverse phase-space. This will update the Born
+! momenta, and the corresponding phase-space jacobian for the
+! n+1-body. Note: if the random numbers are not generated flat
+! (they are flat here), also the jacobian from importance
+! sampling should be included.
+               jac=1d0
+!     inputs are: ndim,iconfig,p
+!     outputs are: xx,jac (also updates pborn common block)
+               call generate_lab_momenta_inverse(ndim,iconfig,jac,xx
+     $              ,p_lab_flipped)
+               if (jac.le.0d0) cycle
+               CalculatedBorn=.false.
+               ! include_gfun must be .false., because we do not want to
+               ! update gfactsf
+               call compute_MCsubtraction_kl(i_fks,j_fks,xi,y,p_flipped
+     $              ,p_cms_flipped,p_born,include_gfun,z,n_connect
+     $              ,amp_split_xmcxsec)
+               do iconnect=1,n_connect
+                  if (all(amp_split_xmcxsec(:,iconnect).eq.0d0)) cycle
+                  call get_mc_lum(j_fks,z(iconnect),xi,xlum_mc_fact)
+!     Re-remove the 1/xi^2 and 1/(1-y) factors; they depend on 'ij', not 'kl'.
+!     Also, include the difference in phase-space Jacobian factors.
+                  do iamp=1, amp_split_size
+                     if (amp_split_xmcxsec(iamp,iconnect).eq.0d0) cycle
+                     amp_split_xmcxsec(iamp,iconnect)
+     $                    =amp_split_xmcxsec(iamp,iconnect)*xi_ij**2
+     $                    *(1d0-y_ij)*jac/wgt
+                     call amp_split_pos_to_orders(iamp, orders)
+                     QCD_power=orders(qcd_pos)
+                     wgtcpower=0d0
+                     if (cpower_pos.gt.0) wgtcpower=dble(orders(cpower_pos))
+                     orders_tag=get_orders_tag(orders)
+                     amp_pos=iamp
+                     g22=g**(QCD_power)
+                     if (iFKS.eq.nFKSprocess_save) then
+                        wgt1=sevmc_Sev*f_MC_S*xlum_mc_fact*
+     &                       amp_split_xmcxsec(iamp,iconnect)/g22
+                        call add_wgt(12,orders,wgt1,0d0,0d0)
+                     endif
+                     wgt1=sevmc_Hev*f_MC_H*xlum_mc_fact*
+     &                    amp_split_xmcxsec(iamp,iconnect)/g22
+                     call add_wgt(13,orders,-wgt1,0d0,0d0)
+                  enddo
+               enddo
             enddo
          enddo
-         amp_split_gfunc=0d0
-         factor=vol/vol_save*jac/wgt*xi_i_fks_ev**2*(1d0-y_ij_fks_ev)
-         if (include_gfun) then
-            call compute_MCsubtraction_from_gfun(xi,y,sevmc_Hev
-     $           ,sevmc_Sev,factor,nFKSprocess.eq.nFKSprocess_save)
-         endif
       enddo
-      nFKSprocess=nFKSprocess_save
-      call update_fks_dir(nFKSprocess)
+      
+      iFKS=nFKSprocess_save
+      call update_fks_dir(iFKS)
 c$$$      call fks_inc_chooser()
-      call update_coltype_and_charge(nFKSprocess,i_fks,j_fks)
+      call update_coltype_and_charge(iFKS,i_fks,j_fks)
       call cpu_time(tAfter)
       t_MC_subt=t_MC_subt+(tAfter-tBefore)
       return
@@ -977,7 +1040,7 @@ c$$$      call fks_inc_chooser()
       end
 
       subroutine compute_MCsubtraction_from_gfun(xi,y,sevmc_Hev
-     $     ,sevmc_Sev,jac_ratio,include_gfun_for_Sevent)
+     $     ,sevmc_Sev,jac_ratio)
       use extra_weights
       use kinematics_module
       implicit none
@@ -1019,9 +1082,7 @@ c$$$      call fks_inc_chooser()
             g22=g**(QCD_power)
             wgt1=amp_split(iamp)/g22*jac_ratio/(xi**2*(1d0-y))*gfact_con(i)
             call add_wgt(8+i,orders,-wgt1*f_MC_H_con(i)*sevmc_Hev,0d0,0d0)
-            if (include_gfun_for_Sevent) then
-               call add_wgt(4+i,orders, wgt1*f_MC_S_con(i)*sevmc_Sev,0d0,0d0)
-            endif
+            call add_wgt(4+i,orders, wgt1*f_MC_S_con(i)*sevmc_Sev,0d0,0d0)
          enddo
       enddo
       end

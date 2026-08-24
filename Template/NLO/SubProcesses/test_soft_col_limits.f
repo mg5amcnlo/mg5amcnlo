@@ -564,23 +564,6 @@ c dump momenta in a fort.80 file
       amp_split=amp_split_mc*xi**2*(1d0-y) ! re-remove the 1/xi^2 and 1/(1-y) factors; they depend on 'ij', not 'kl'
       end
 
-      subroutine flip_momenta(i,ii,j,jj,p,p_flipped)
-      implicit none
-      include 'nexternal.inc'
-      integer i,ii,j,jj
-      double precision p(0:3,nexternal),p_flipped(0:3,nexternal)
-      p_flipped=p
-      if (ii.ne.i) then
-         p_flipped(0:3,ii)=p(0:3,i)
-         p_flipped(0:3,i)=p(0:3,ii)
-      endif
-      if (jj.ne.j) then
-         p_flipped(0:3,jj)=p(0:3,j)
-         p_flipped(0:3,j)=p(0:3,jj)
-      endif
-      end
-
-
       subroutine compute_MCsubtraction_from_gfun_test(xi,y,amp_split_gfunc)
       use kinematics_module
       implicit none

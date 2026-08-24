@@ -11,7 +11,7 @@ module kinematics_module
 
   public :: get_qMC, fill_kinematics_module,dot,rho,sumdot,pt,deltaR,boost_n1_to_its_cms&
        &,delta_phi,delta_y,HTo2,HT,get_xi_from_p,get_yij_from_p&
-       &,get_phi_from_p,fill_father_and_ileg,boost_n1_to_lab
+       &,get_phi_from_p,fill_father_and_ileg,boost_n1_to_lab,flip_momenta
   private
 
 contains
@@ -729,4 +729,20 @@ contains
     pout(3)=-(q1*cphi-q2*sphi)*sth+q3*cth
     pout(0)=pin(0)
   end subroutine rotate_invar_inverse
+
+  subroutine flip_momenta(i,ii,j,jj,p,p_flipped)
+    implicit none
+    integer :: i,ii,j,jj
+    double precision :: p(0:3,next_n1),p_flipped(0:3,next_n1)
+    p_flipped=p
+    if (ii.ne.i) then
+       p_flipped(0:3,ii)=p(0:3,i)
+       p_flipped(0:3,i)=p(0:3,ii)
+    endif
+    if (jj.ne.j) then
+       p_flipped(0:3,jj)=p(0:3,j)
+       p_flipped(0:3,j)=p(0:3,jj)
+    endif
+  end subroutine flip_momenta
+
 end module kinematics_module
