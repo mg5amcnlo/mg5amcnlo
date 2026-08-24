@@ -76,8 +76,12 @@ C_REF = 'black'
 COLOR = {'LL': 'C0', 'TT': 'C3', 'TL': 'C2', 'LT': 'C4', 'SUM': 'C5',
          # The extra spinmodes take the two cycle colours the components leave
          # free; the same two hues as the MG7 figures, in this style's palette.
-         'onshell': 'C1', 'PA': 'C9'}
-LS_EXTRA = {'onshell': (0, (6, 2)), 'PA': (0, (3, 1, 1, 1, 1, 1))}
+         'onshell': 'C1', 'PA': 'C9',
+         # madspin_v1, on variant B only; the first cycle colour neither a
+         # component nor another spinmode has taken, matching the MG7 choice.
+         'madspin_v1': 'C6'}
+LS_EXTRA = {'onshell': (0, (6, 2)), 'PA': (0, (3, 1, 1, 1, 1, 1)),
+            'madspin_v1': (0, (2, 1.5))}
 FIGSIZE = (7.2, 10.0)
 MS = 4
 STEP_ALPHA = 0.55
@@ -87,11 +91,12 @@ DPI = 300
 
 # The multiplier on the distribution pane's autoscale top, per figure variant
 # and per y scale; what sets it is the number of rows in the opaque legend box.
-# Ten rows on the full figure and on variant B, six on variant A because the
-# two extra spinmodes are not there.  Checked on the rendered PNG.
+# Ten rows on the full figure, ELEVEN on variant B now that madspin_v1 is a
+# fourth total there, six on variant A because the extra spinmodes are not
+# there.  Checked on the rendered PNG.
 # Variant B's distribution pane is shorter than the full figure's while
-# carrying the same ten-row box, so it needs more of the two.
-HEADROOM = {None: (4000.0, 1.45), 'A': (400.0, 1.35), 'B': (4000.0, 1.95)}
+# carrying the larger box, so it needs more of the two.
+HEADROOM = {None: (4000.0, 1.45), 'A': (400.0, 1.35), 'B': (50000.0, 2.10)}
 
 
 def _step(ax, edges, y, **kw):
@@ -160,6 +165,10 @@ def draw_shape(d, obs, outdir, extras=()):
     the sum pane's +-2 % / +-5 %, because a shape ratio between two spinmodes
     lives at a few percent -- and, like every other graphic in this style, what
     they are is stated in numbers.txt and not on the canvas.
+
+    ``extras`` is the three-curve variant-B list -- ``onshell``, ``PA`` and
+    ``madspin_v1`` -- exactly as in the MG7 script.  ``madspin_v1`` is on this
+    variant only.
     """
     c = PA.Curves(d, obs)
     edges, x = c.edges, c.centres()
@@ -193,7 +202,7 @@ def draw_shape(d, obs, outdir, extras=()):
     # scale of the excursion can be read off the pane.
     axr.yaxis.set_major_locator(MaxNLocator(5))
     axr.set_ylabel(PA.SHAPE_RATIO_TXT_2L, fontsize=7.5)
-    axr.legend(loc='upper left', fontsize=8, ncol=2)
+    axr.legend(loc='upper left', fontsize=8, ncol=3)
     axr.set_xlabel(xlab, fontsize=10)
     for s in axr.spines.values():
         s.set_linewidth(1.6)
@@ -289,6 +298,8 @@ def main():
     a = ap.parse_args()
     d = PA.Data(a.data)
     extras = PA.load_extras(a.data)
+    # madspin_v1 is variant B's alone; see pol_analysis.VARIANT_B_EXTRA_SAMPLES.
+    b_extras = extras + PA.load_variant_b_extras(a.data)
     for obs in PA.OBS:
         draw(d, obs, a.out, extras)
         if a.no_variants:
@@ -297,7 +308,7 @@ def main():
         draw(d, obs, os.path.join(a.out, PA.VARIANTS['A']['dir']),
              extras=(), variant='A')
         draw_shape(d, obs, os.path.join(a.out, PA.VARIANTS['B']['dir']),
-                   extras)
+                   b_extras)
 
 
 if __name__ == '__main__':

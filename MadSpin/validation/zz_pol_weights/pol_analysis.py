@@ -260,6 +260,27 @@ EXTRA_SAMPLES = [
     ('PA', 'weights_PA.npz', 'meta_PA.json'),
 ]
 
+# A FOURTH sample, and it goes on VARIANT B ONLY -- not on the original
+# figures and not on variant A, both of which are left exactly as they were.
+#
+# ``madspin_v1`` is MadSpin's LEGACY spin-correlation path, against which the
+# reference ``madspin`` sample is the current density method.  It is the same
+# process, the same run card, the same 250 000 events, the same exclusive
+# decay card AND -- the thing that makes the comparison mean anything -- the
+# same Pythia8 shower as the other three, from ``run_10_decayed_1``.  All four
+# are therefore showered HepMC2 read by the same extractor with the same
+# selection, so a difference between the curves is a SPINMODE difference and
+# not a difference of event-record level.
+#
+# It carries NO ms_pol_* weights: its N line names 29 weights where the other
+# three name 33.  That costs nothing here, because the variant-B pane needs
+# only the nominal, and it is why this sample can never enter the polarisation
+# decomposition panes.  ``Data.has_pol`` is False for it and every consumer of
+# ``Data.pol`` already asks first.
+VARIANT_B_EXTRA_SAMPLES = [
+    ('madspin_v1', 'weights_madspin_v1.npz', 'meta_madspin_v1.json'),
+]
+
 # The caption these figures used to carry as a plot title.  Nothing is written
 # on them now beyond the axis labels, the tick labels and the legend, so the
 # caption lives here and is printed into numbers.txt by
@@ -307,9 +328,11 @@ LEGEND_TO_COLUMN = {'Z0 Z0': 'ms_pol_23.0_23.0', 'ZT ZT': 'ms_pol_23.T_23.T',
 # The two overlaid samples are the same 'Weight' column of a different file, so
 # they are named for the run that produced them and not for a weight.
 EXTRA_TEX = {'onshell': r'full, \texttt{spinmode = onshell}',
-             'PA': r'full, \texttt{spinmode = PA}'}
+             'PA': r'full, \texttt{spinmode = PA}',
+             'madspin_v1': r'full, \texttt{spinmode = madspin\_v1}'}
 EXTRA_TXT = {'onshell': 'full, spinmode = onshell',
-             'PA': 'full, spinmode = PA'}
+             'PA': 'full, spinmode = PA',
+             'madspin_v1': 'full, spinmode = madspin_v1'}
 
 RATIO_TEX = {
     'SUM': r'$(Z_{0}Z_{0}{+}Z_{T}Z_{T}{+}Z_{T}Z_{0}{+}Z_{0}Z_{T})/\mathrm{full}$',
@@ -345,8 +368,11 @@ VARIANTS = {
           'extras_on_distribution': True,
           'panes': ['SHAPE'],
           'what': 'the distribution pane, then a single ratio pane carrying '
-                  'the self-normalised shape ratio of onshell and PA to '
-                  'madspin.  The sum pane and the 2 x 2 are not drawn'},
+                  'the self-normalised shape ratio of onshell, PA and '
+                  'madspin_v1 to madspin.  The sum pane and the 2 x 2 are not '
+                  'drawn.  madspin_v1 is on THIS VARIANT ONLY -- the original '
+                  'figures and variant A carry the same three modes they '
+                  'always did'},
 }
 
 # --------------------------------------------------------------------------
@@ -399,8 +425,10 @@ SHAPE_RATIO_TXT = '(1/sigma dsigma/dX)_Y / (1/sigma dsigma/dX)_madspin'
 SHAPE_RATIO_TXT_2L = ('(1/sigma dsigma/dX)_Y\n'
                       '/ (1/sigma dsigma/dX)_madspin')
 SHAPE_CURVE_TEX = {'onshell': r'$Y = $ \texttt{onshell}',
-                   'PA': r'$Y = $ \texttt{PA}'}
-SHAPE_CURVE_TXT = {'onshell': 'Y = onshell', 'PA': 'Y = PA'}
+                   'PA': r'$Y = $ \texttt{PA}',
+                   'madspin_v1': r'$Y = $ \texttt{madspin\_v1}'}
+SHAPE_CURVE_TXT = {'onshell': 'Y = onshell', 'PA': 'Y = PA',
+                   'madspin_v1': 'Y = madspin_v1'}
 
 
 def shape_density(d, obs, norm=SHAPE_NORM):
@@ -629,8 +657,8 @@ class Curves(object):
         return 0.5 * (self.edges[:-1] + self.edges[1:])
 
 
-def load_extras(ddir=None):
-    """The extra spinmode samples that are actually cached, in figure order.
+def _load_listed(samples, ddir):
+    """Those of ``samples`` whose ``.npz`` and meta are actually on disk.
 
     Missing quietly rather than loudly: the reference figures are a complete
     piece of work on their own and must still be re-makeable from
@@ -639,11 +667,32 @@ def load_extras(ddir=None):
     """
     ddir = ddir or os.path.join(_HERE, 'data')
     out = []
-    for key, npz, meta in EXTRA_SAMPLES:
+    for key, npz, meta in samples:
         if os.path.exists(os.path.join(ddir, npz)) and \
                 os.path.exists(os.path.join(ddir, meta)):
             out.append((key, Data(ddir, npz, meta)))
     return out
+
+
+def load_extras(ddir=None):
+    """The extra spinmode samples drawn on EVERY figure, in figure order.
+
+    ``onshell`` and ``PA``.  Deliberately NOT ``madspin_v1``: that one is
+    variant B's alone -- see :func:`load_variant_b_extras` -- so that this
+    function keeps returning exactly what it returned before it existed and
+    the original figures and variant A are untouched by its arrival.
+    """
+    return _load_listed(EXTRA_SAMPLES, ddir)
+
+
+def load_variant_b_extras(ddir=None):
+    """The samples that go on VARIANT B ONLY, in figure order.
+
+    Currently ``madspin_v1``.  Variant B draws
+    ``load_extras() + load_variant_b_extras()``; every other figure draws
+    ``load_extras()`` alone.
+    """
+    return _load_listed(VARIANT_B_EXTRA_SAMPLES, ddir)
 
 
 def full_distribution(d, obs):

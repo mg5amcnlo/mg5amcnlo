@@ -1,9 +1,10 @@
 # MadSpin polarisation weights on a showered NLO `p p > z z`
 
-What this is: one streaming pass over each of **three** showered HepMC2 files
+What this is: one streaming pass over each of **four** showered HepMC2 files
 — the same `p p > z z` process, the same run card and the same 250 000 events,
-differing only in MadSpin's `spinmode` — reduced to three 22 MB `.npz`, and two
-figures made off them. The `madspin` sample carries
+differing only in MadSpin's `spinmode` — reduced to four ~20 MB `.npz`, and two
+figures made off them. (Three at first; the fourth, `madspin_v1`, was added by
+a later pass and appears on variant B only.) The `madspin` sample carries
 `keep_weight_for_polarization_vector = [0, T]` weights for both `z` and is the
 one the polarisation decomposition is of; the other two enter the distribution
 pane of each figure as a mode comparison.
@@ -24,13 +25,24 @@ same cached `.npz` — no HepMC was read and nothing was generated. It is
 described under *The two figure variants*; base of that pass `6bf26d66e`
 (`MadSpin zz_pol_weights: the exclusive-decay samples, and bare figures`).
 
+**A later pass still added a FOURTH sample**, `madspin_v1` (`run_10`), read
+from its own showered HepMC by the same extractor. It is a fourth curve in the
+distribution pane and a third in the ratio pane of **variant B only** — the
+original figures and variant A are untouched and their PNGs are still
+byte-identical to what this branch carried. It is described under *The fourth
+sample: `madspin_v1`*; base of that pass `5d31068d8` (`MadSpin zz_pol_weights:
+two figure variants off the cached weights`). Where a table below says "three"
+and has since grown a fourth row, the fourth row is that sample.
+
 ```
 data/weights.npz        250 000 rows: the weights and the observables (madspin)
 data/meta.json          input path and size, event count, the 33 weight names,
                         the nominal-weight choice, the lepton selection, code
-                        SHA, and the registry of all three samples
+                        SHA, and the registry of all four samples
 data/weights_onshell.npz, data/meta_onshell.json    the same, spinmode=onshell
 data/weights_PA.npz,      data/meta_PA.json         the same, spinmode=PA
+data/weights_madspin_v1.npz, data/meta_madspin_v1.json  the same, spinmode=
+                        madspin_v1; 29 weight names, not 33 -- no ms_pol_*
 extract_hepmc_pol.py    the one pass over a HepMC file, plain or gzipped
 pol_analysis.py         the weight algebra, the selection, the ratio statistics
 plot_zz_pol.py          the MG7-style figures, and numbers.txt
@@ -57,7 +69,7 @@ and nothing else**. Five things were on them and are not:
 | the four per-pane `integrated R` in the 2×2 legends | the same table. **The dashed line in each small pane still is that value** — only the number left |
 | `polarisation interference` over the sum pane | this file, and the sum pane's own axis label already names the quantity |
 | `bands: ±2 %, ±5 %` (user style only) | `numbers.txt`; the two bands are still drawn, only the words are gone. Variant B's ratio pane carries the same two graphics at ±1 % and ±3 %, also unlabelled |
-| `spinmode ... not drawn: too few events` | `numbers.txt` prints `on the figure: ...` per observable. It does not trigger on these samples — all three modes are drawn on both figures |
+| `spinmode ... not drawn: too few events` | `numbers.txt` prints `on the figure: ...` per observable. It does not trigger on these samples — every mode is drawn on both figures |
 
 `numbers.txt` opens with a *WHAT IS NOT ON THE FIGURES* section listing exactly
 this, so a reader who has only the figure and the text file can recover
@@ -80,17 +92,20 @@ decades and pushed the legend back onto the total. 60× → 250× (MG7) and
 | `madspin` (reference) | `run_06_decayed_1` | 3.449 GB `.gz` | 10.562 GB | 109 455 942 | 250 000 | **27.8 s** | `weights.npz`, 23.2 MB |
 | `PA` | `run_07_decayed_1` | 3.462 GB `.gz` | 10.599 GB | 109 867 054 | 250 000 | **28.9 s** | `weights_PA.npz`, 23.2 MB |
 | `onshell` | `run_08_decayed_1` | 3.449 GB `.gz` | 10.574 GB | 109 618 102 | 250 000 | **29.0 s** | `weights_onshell.npz`, 21.7 MB |
+| `madspin_v1` *(later pass)* | `run_10_decayed_1` | 3.443 GB `.gz` | 10.540 GB | 109 701 181 | 250 000 | **30.7 s** *(serial)* | `weights_madspin_v1.npz`, 19.5 MB |
 
-All three are HepMC2 `IO_GenEvent`, `HepMC::Version 2.06.09`, from
-`.../PROCNLO_loop_sm_7/Events/`. **The three passes were run concurrently**, on
-separate cores of an 18-core machine; the times above are therefore within a
-second of one another and none of them is a serial measurement. They are
+All are HepMC2 `IO_GenEvent`, `HepMC::Version 2.06.09`, from
+`.../PROCNLO_loop_sm_7/Events/`. **The first three passes were run
+concurrently**, on separate cores of an 18-core machine; their three times are
+therefore within a second of one another and none of them is a serial
+measurement. The fourth was run alone in a later pass, so its 30.7 s **is** a
+serial time. They are
 smaller and faster than the previous pass's files (4.6 GB `.gz` / 14.1 GB
 inflated / 142 M lines / ~34 s) for the obvious reason: an exclusive leptonic
 `Z` decay makes no hadrons, so there is far less event record per event.
 
-All three are streamed through the system `gzip -dc` in a child process — never
-a temporary on disk, never the `gzip` module. The child inflates on its own
+All are streamed through the system `gzip -dc` in a child process — never a
+temporary on disk, never the `gzip` module. The child inflates on its own
 core while this process parses, and the parser is the bottleneck either way.
 The progress line for a `.gz` deliberately prints no ETA: `os.path.getsize`
 gives the *compressed* size, which is not the target the inflated byte count is
@@ -103,11 +118,12 @@ never touches the colour-flow tail.
 
 The `E` line's weight block is found by walking *forward* through the
 random-state count (`E <10 fields> n_random <random...> n_weights <weights...>`),
-not by slicing back from the end of the line. All three files have
+not by slicing back from the end of the line. All four files have
 `n_random = 0`. The count found is asserted against the `N` line every event,
 and the `N` line's names are compared against that file's own first event's
-names on **every one of the 250 000 events of each of the three files**, not
-sampled.
+names on **every one of the 250 000 events of each of the four files**, not
+sampled. Note that the count itself is not constant across files: 33 for the
+first three, **29** for `madspin_v1` — see *The fourth sample*.
 
 ---
 
@@ -201,6 +217,9 @@ Not carried over from the previous pass. Re-derived from each new file's own
 
 ### The `N` lines
 
+(A fourth file, `madspin_v1`, was added by a later pass and names **29**, not
+33 — see *The fourth sample*. The three of this pass:)
+
 All three files name the **same 33 weights in the same order** — `"0"`, the
 eighteen `1010`–`1027` alternative-PDF members, the nine `MUR*_MUF*`,
 `"Weight"`, and the four `ms_pol_23.*_23.*`. **Identical to the previous
@@ -208,7 +227,8 @@ pass's list.** Constant within each file, checked on every one of the 250 000
 `N` lines of each file against that file's own first, not sampled.
 
 So all three files carry polarisation weights, which they need not have: a
-different `spinmode` is a different reweighting. That they do is recorded and
+different `spinmode` is a different reweighting — and the fourth sample added
+later shows exactly that, carrying none. That these three do is recorded and
 **nothing here is built on it** — decomposing `onshell` and `PA` is a different
 study, and the ratio panes belong to the sample whose decomposition they are.
 
@@ -587,10 +607,11 @@ the legend lost two rows.
 **B** replaces the sum pane *and* the 2 × 2 with a single ratio pane carrying
 
 ```
-(1/sigma dsigma/dX)_Y  /  (1/sigma dsigma/dX)_madspin      for Y = onshell, PA
+(1/sigma dsigma/dX)_Y  /  (1/sigma dsigma/dX)_madspin
+                        for Y = onshell, PA, and later madspin_v1
 ```
 
-both curves together. The distribution pane keeps all three modes. Dividing
+all curves together. The distribution pane keeps every mode. Dividing
 each mode by its own cross section first takes the rate difference out, which
 is the whole point here: `onshell` differs from `madspin` mostly in **rate**
 (+4.99 % inclusive, 12.0σ on the `Δφ` fiducial) and `PA` agrees in rate
@@ -619,7 +640,8 @@ them:
 | `M(e+ μ+)` | `madspin` | 880 | 0.686 % |
 | | `onshell` | 924 | 0.730 % |
 | | `PA` | 889 | 0.720 % |
-| `Δφ(e+e-)` | all three | 0 | 0 |
+| | `madspin_v1` | 887 | 0.702 % |
+| `Δφ(e+e-)` | all four | 0 | 0 |
 
 `numbers.txt` prints **both** normalisations bin by bin so the choice is
 auditable. The largest difference between them in any bin of either observable
@@ -649,6 +671,10 @@ sibling `m_tt` work saw. Two tests, from the cached `.npz` alone:
 | `madspin` | 250 000 | **14 273** | — |
 | `onshell` | 250 000 | **13 962** | −0.00028 ± 0.00203 |
 | `PA` | 250 000 | **14 099** | +0.00041 ± 0.00203 |
+
+(A later pass added a fourth row, `madspin_v1` at **14 179** — a fourth
+distinct value, so the argument below extends to it unchanged. See *The fourth
+sample*.)
 
 `n(w < 0)` is the decisive one and it is **permutation invariant**. Neither
 MadSpin nor Pythia can change the sign of an event weight — MadSpin multiplies
@@ -691,8 +717,10 @@ that normalisation.
 |---|---|---|---|---|---|
 | `Δφ(e+e-)` | `PA` | **65.90/11 = 5.99** | **7e-10** | 4.56 | **−2.71 ± 0.49 % per rad (5.5σ)** |
 | | `onshell` | 24.18/11 = 2.20 | 0.012 | 2.45 | −1.08 ± 0.50 % per rad (2.2σ) |
+| | `madspin_v1` | 10.27/11 = 0.93 | 0.51 | 1.64 | −0.88 ± 0.49 % per rad (1.8σ) |
 | `M(e+ μ+)` | `PA` | 2.92/6 = 0.49 | 0.82 | 1.06 | +0.03 ± 0.06 % per 10 GeV (0.5σ) |
 | | `onshell` | 13.25/6 = 2.21 | 0.039 | 2.98 | −0.02 ± 0.06 % per 10 GeV (0.3σ) |
+| | `madspin_v1` | 7.00/6 = 1.17 | 0.32 | 1.73 | −0.10 ± 0.06 % per 10 GeV (1.7σ) |
 
 * **`PA` on `Δφ` is the result the pane exists for.** The ratio runs
   `+2.6, −3.4, +2.6, +2.6, +4.0, +2.7, +2.1, +3.6, +2.5, −1.3, −3.9, −3.0 %`
@@ -737,6 +765,225 @@ content is a few-percent excursion.
 
 ---
 
+## The fourth sample: `madspin_v1`
+
+A later pass added a fourth spinmode, `run_10` / `madspin_v1`, as a fourth
+curve in variant B's distribution pane and a **third curve in its single ratio
+pane**. Variant A and the two original figures are untouched — not "regenerated
+identically" but literally untouched: their PDFs were restored from the commit
+after the re-run, and their PNGs (which matplotlib writes deterministically)
+were byte-identical anyway.
+
+`madspin_v1` is MadSpin's **legacy** spin-correlation path; the reference
+`madspin` sample is the current **density** method. So this curve is
+legacy-against-density, and it is the comparison the variant was extended for.
+
+### The input, and a correction to the brief this pass was given
+
+The brief for this pass named the **LHE** of `run_10_decayed_1` as the input,
+and spent most of its length on the resulting confound: an LHE is parton level,
+the other three samples are Pythia8-showered HepMC, so a difference would be
+shower-versus-parton confounded with v1-versus-density. It then asked whether
+LHE siblings of `run_06/07/08` existed so the confound could be broken.
+
+**They do — every `run_0X_decayed_1/` carries both an `events.lhe.gz` and an
+`events_PYTHIA8_0.hepmc.gz` — but the question does not arise, because
+`run_10_decayed_1` carries a showered HepMC too.** Using it removes the
+confound entirely rather than measuring around it, and that is what this pass
+did. The LHE was not used. All four samples are now the same kind of object:
+
+| | |
+|---|---|
+| input | `run_10_decayed_1/events_PYTHIA8_0.hepmc.gz`, HepMC2 `IO_GenEvent` |
+| same extractor | `extract_hepmc_pol.py`, streamed through a `gzip -dc` child, never unpacked to disk |
+| same selection | highest-pT status-1 lepton per flavour and charge, dressed within `ΔR < 0.1`, then `pT > 10 GeV`, `|η| < 2.5` |
+| same binning, same in-range normalisation | `SHAPE_NORM = 'inrange'` |
+
+**A difference on this figure is therefore a spinmode difference.** No shower
+effect was measured and none needed to be; the parton-level comparison the
+brief asked for was not performed and is not needed for this figure.
+
+### The pass
+
+| | |
+|---|---|
+| on disk / inflated | 3.443 GB `.gz` → 10.540 GB |
+| lines | 109 701 181 |
+| events | **250 000** |
+| one pass | **30.7 s** |
+| output | `data/weights_madspin_v1.npz`, 19.5 MB |
+
+Unlike the first three — which were run concurrently on separate cores and
+whose quoted times are therefore not serial measurements — **this pass was run
+alone, so its 30.7 s is a genuine serial time** and the only number in that
+column that can be read as a rate.
+
+### The `N` line: 29 names, not 33 — established, not assumed
+
+The other three files name 33 weights. This one names **29**:
+
+```
+N 29 "0" "1010" ... "1027" "MUR0.5_MUF0.5" ... "MUR2.0_MUF2.0" "Weight"
+```
+
+Exactly the four `ms_pol_23.*_23.*` are missing; nothing else differs and the
+order is otherwise identical. The `N` line is **present and well formed** — it
+is not absent, and the file is not malformed. Checked on every one of the
+250 000 `N` lines against that file's own first, as for the other three.
+
+This is handled **explicitly** and not by a silent fallback. The extractor's
+`REQUIRED_WEIGHTS` are `"0"` and `"Weight"` alone — without those there is no
+nominal and it exits — and everything else is kept if present and reported if
+not. It printed
+
+```
+not on the N line, not kept: ms_pol_23.0_23.0, ms_pol_23.0_23.T,
+                             ms_pol_23.T_23.0, ms_pol_23.T_23.T
+```
+
+as it read the line, and `data/meta_madspin_v1.json` records
+`"has_pol_weights": false` and lists the four in `weight_names_absent`.
+`Data.has_pol` is `False` for this sample and every consumer of `Data.pol`
+already asks first, so it can never reach a polarisation pane — and it does
+not: variant B's ratio pane is a ratio of **nominal** distributions and asks no
+sample but the reference for a polarisation weight.
+
+The legacy path simply does not emit them. That is a fact about the mode, it
+was read off the file rather than assumed, and **nothing in this study is built
+on it**.
+
+### The nominal, identified with the same care as the others
+
+Same answer, re-derived rather than carried over:
+
+| | |
+|---|---|
+| `"0" × N / "Weight"`, min / max over all 250 000 | 1.000000000000000 / 1.000000000000000 |
+| `sum("0")` = `mean("Weight")` | **0.030918986 pb** |
+| `C` line, **last** event | 0.030918986 pb — agrees to 1e-11 |
+| `C` line, **first** event | 1.395e-07 pb — **low by 2.2e5** |
+| banner `XSECUP ± XERRUP` | 3.090971e-02 ± 6.382e-05 → **0.15σ** |
+| `|Weight|` distinct values | **one**: 0.034874918 = banner `XMAXUP` exactly |
+| `sum("MUR1.0_MUF1.0")/sum("Weight") − 1` | +1.8e-05, the `rwgt` block's rounding |
+
+So the nominal is `"Weight"` (equivalently `"0"`, which is `"Weight"/N`), the
+same quantity as for the other three, confirmed against this file's **own last
+`C` line**. **The first `C` line is Pythia's running estimate after one event
+and is low by 2.2e5 — the same trap, a fourth time.**
+
+The absence of the `ms_pol_*` block changes nothing about which weight is
+nominal: those were never candidates for it. The one check that used them —
+that they sit in the `"Weight"` normalisation and not the `"0"` one, which was
+called "the decisive check" for the other three — simply does not arise for a
+file that has none.
+
+One incidental contrast: `run_06` carries **five** distinct `|Weight|` values
+(one dominant plus four single-event oddities); `run_10` carries exactly
+**one**, like `run_07` and `run_08`. The oddity remains `run_06`'s alone.
+
+### The decay card is exclusive in effect, on this file too
+
+Read off the event record the same way — mark each `z`'s end vertex, follow the
+chain of status-44 copies, take the particles born at the final vertex — for
+every event:
+
+| spinmode | events | one `z → e+e-` **and** the other `z → μ+μ-` | anything else |
+|---|---|---|---|
+| `madspin_v1` | 250 000 | **250 000 (100.0000 %)** | 0 |
+
+Exactly exclusive, like the other three. Survivors after the fiducial cuts:
+
+| observable | `madspin_v1` | `madspin` (reference) |
+|---|---|---|
+| `M(e+ μ+)` | **117 802** | 118 521 |
+| `Δφ(e+e-)` | **163 630** | 164 111 |
+
+Both clear `MIN_SEL_TO_DRAW = 2000` by ~60×, so the mode is drawn on both
+figures and nothing is suppressed.
+
+### It is a fourth independent generation, so quadrature still holds
+
+The same decisive test, extended:
+
+| spinmode | events | `n(w < 0)` | row-by-row `corr(m_4l)` |
+|---|---|---|---|
+| `madspin` | 250 000 | **14 273** | — |
+| `onshell` | 250 000 | **13 962** | −0.00028 ± 0.00203 |
+| `PA` | 250 000 | **14 099** | +0.00041 ± 0.00203 |
+| `madspin_v1` | 250 000 | **14 179** | **−0.00005 ± 0.00203** |
+
+`n(w < 0)` is permutation invariant and a property of the production sample
+alone, and 14 179 is a fourth distinct value. **`run_10` is a fourth separate
+generation**, `corr(m_4l)` is zero as for the others, and the plain quadrature
+bar between modes remains correct rather than merely conservative.
+
+### What the ratio pane now shows for `madspin_v1` — a null
+
+| observable | χ²/ndf | p | max &#124;pull&#124; | slope of a weighted straight line |
+|---|---|---|---|---|
+| `Δφ(e+e-)` | **10.27/11 = 0.93** | 0.51 | 1.64 | −0.88 ± 0.49 % per rad (1.8σ) |
+| `M(e+ μ+)` | **7.00/6 = 1.17** | 0.32 | 1.73 | −0.10 ± 0.06 % per 10 GeV (1.7σ) |
+
+Per-bin, `madspin_v1 / madspin` runs
+
+* `Δφ(e+e-)`: `−0.6, −2.2, +0.5, +3.4, +1.4, +0.1, +1.2, +1.5, +0.3, −0.4,
+  −1.1, −1.2 %` across the twelve bins;
+* `M(e+ μ+)`: `+1.0, −0.7, +1.4, −0.6, −0.0, −0.4, −3.9 %` across the seven.
+
+**No bin departs from 1 by as much as 2σ on either observable, and both χ² per
+degree of freedom are ≈ 1.** In rate the two also agree: the inclusive cross
+sections are 0.030919 against 0.030874 pb, **+0.15 %**, and the fiducial rate
+ratios are 0.9949 ± 0.0046 (1.1σ) on `M(e+ μ+)` and 0.9986 ± 0.0039 (0.4σ) on
+`Δφ`.
+
+**So the legacy path and the density method agree, in both rate and shape, on
+both observables, at these statistics.** That is a different answer from either
+of the other two curves on the same pane — `onshell` differs in rate, `PA`
+differs in shape, `madspin_v1` differs in neither — which is what makes it
+worth drawing there.
+
+Two honest qualifications, because a null is only worth its power:
+
+* **What this pane could have seen.** The `madspin_v1` bars are ~1 % per bin on
+  `M(e+ μ+)` and 1–3 % on `Δφ`. A shape effect of the size `PA` shows (up to
+  4 %, 5.99 χ²/ndf) would have been seen comfortably; one well below a percent
+  would not. This is agreement at the percent level, not agreement in
+  principle.
+* **The `Δφ` slope is not quite flat.** −0.88 ± 0.49 % per rad is 1.8σ — not
+  significant, and the χ² of 10.27/11 gives no reason to claim a trend — but it
+  carries the *same sign* as `onshell`'s (−1.08 ± 0.50, 2.2σ) and `PA`'s
+  (−2.71 ± 0.49, 5.5σ). Three modes sloping the same way at 1.8σ, 2.2σ and
+  5.5σ is worth writing down and is **not** worth calling an effect on this
+  statistics. It would be settled by more events, not by more analysis.
+
+### What this pass did not do
+
+* **The LHE was not read**, and no parton-level comparison was made. Early in
+  the pass, before the input was corrected, the `run_10` LHE was inspected far
+  enough to establish two things that are recorded here because they are facts
+  about the files and cost nothing: its `<rwgt>` block carries `1001`–`1027`
+  and **no `ms_pol_*`** (consistent with the HepMC's 29-name `N` line), while
+  `run_06`'s LHE **does** carry them, spelled `ms_pol_23:0_23:0` with a colon
+  where the HepMC has a dot. Nothing in this study is built on either
+  observation and no LHE-derived number appears in any figure or table.
+* **The shower effect was not measured.** It would need the parton-level pass
+  the confound-breaking plan called for, and with a showered `run_10` in hand
+  that plan became unnecessary rather than merely unfinished. The LHE siblings
+  do exist for all four runs if anyone wants it later.
+* **No polarisation decomposition of `madspin_v1`** — impossible from this
+  file, which carries no `ms_pol_*` weights at all. This is the one comparison
+  the fourth sample structurally cannot join.
+* **The bin edges were not re-chosen** for the fourth curve either, for the
+  same reason as before: the four samples' per-bin tables are read against the
+  same edges.
+* **The three earlier `meta.json` were edited in place**, and only their
+  `sample_registry` field, so that all four metas list all four samples. That
+  is a pure JSON edit — no HepMC was re-read and no `.npz` was regenerated, so
+  `weights.npz`, `weights_onshell.npz` and `weights_PA.npz` are bit-for-bit the
+  files this branch already carried.
+
+---
+
 ## Not covered
 
 * **The bin edges were not re-chosen.** `M(e+ μ+)`'s seven edges
@@ -753,25 +1000,32 @@ content is a few-percent excursion.
   integrate to the quoted σ. This was true of the previous pass too.
   **Correction:** this bullet used to say 3 120 / 3 088 / 3 134 *selected*
   events. Those are events with a finite `M(e+ μ+)`, i.e. before the fiducial
-  cuts; the selected overflow is **880 / 924 / 889** (`madspin` / `onshell` /
-  `PA`), 0.686 / 0.730 / 0.720 % of each mode's selected σ. See *The two figure
-  variants* → *Decision 1*, which is where it mattered.
+  cuts; the selected overflow is **880 / 924 / 889 / 887** (`madspin` /
+  `onshell` / `PA` / `madspin_v1`), 0.686 / 0.730 / 0.720 / 0.702 % of each
+  mode's selected σ. See *The two figure variants* → *Decision 1*, which is
+  where it mattered.
 * **`PA`'s `Δφ` shape difference is measured, not explained.** 57.61/11 with
   the rate removed, moving ~3 % of the rate out of `Δφ → π`, is the headline
   result of this comparison and no attempt was made to attribute it to a
   mechanism inside MadSpin. The decayed LHE files would answer it without any
   showering at all, and they sit beside the HepMC in each run directory (they
-  are not committed either).
-* **No polarisation decomposition of `onshell` or `PA`.** All three files carry
-  the four `ms_pol_*` weights and this study deliberately uses only the
-  reference's. Whether `Z_0Z_0/full` is the same in the three modes is now the
-  obvious next question — especially given `PA`'s `Δφ` shape effect — and it is
+  are not committed either). **Confirmed since:** every `run_0X_decayed_1/`
+  does carry both an `events.lhe.gz` and an `events_PYTHIA8_0.hepmc.gz`, so
+  that route is available; it was still not taken.
+* **No polarisation decomposition of `onshell` or `PA`.** Those three files
+  carry the four `ms_pol_*` weights and this study deliberately uses only the
+  reference's. (The fourth sample, `madspin_v1`, carries none at all and so
+  could not join this even if it were attempted.) Whether `Z_0Z_0/full` is the
+  same in those three modes is now the obvious next question — especially given `PA`'s `Δφ` shape effect — and it is
   entirely answerable from the three committed `.npz` without touching a HepMC
   file again.
 * **`onshell`'s 5 % cross section is inferred, not verified.** The pole
   explanation is a reading of the numbers.
-* **No third and fourth spinmode.** `none`, `full`, `madspin_v1` and
-  `onshell_v1` exist and were not run.
+* **No third and fourth spinmode.** ~~`none`, `full`, `madspin_v1` and
+  `onshell_v1` exist and were not run.~~ **Superseded in part:**
+  `madspin_v1` has since been run (`run_10`) and is a fourth curve on variant
+  B — see *The fourth sample*. `none`, `full` and `onshell_v1` still were not
+  run.
 * **No systematic on the polarisation frame.** The card sets `frame_id 24`.
 * **No scale or PDF variation of the polarisation fractions.** All 33 weights
   are summed and recorded in `data/meta.json`; the study divides only the
@@ -783,7 +1037,9 @@ content is a few-percent excursion.
   a generator-level fiducial only.
 * **The three passes were timed concurrently**, so the per-file times are not
   independent serial measurements. They are within a second of one another and
-  nothing in this study depends on them.
+  nothing in this study depends on them. (The fourth sample's 30.7 s **is** a
+  serial measurement — it was run alone — and is the only figure in that column
+  that can be read as a rate.)
 
 ### The variants specifically
 
@@ -805,7 +1061,9 @@ content is a few-percent excursion.
   observable cannot resolve a trend.
 * **No paired error bar exists to compare against.** The pairing test came back
   negative, so the correlated treatment was never computed and the factor it
-  would have bought here is unknown and, on these three samples, unbuyable.
+  would have bought here is unknown and, on these samples, unbuyable. The
+  fourth sample came back negative on the same test, at a fourth distinct
+  `n(w < 0)`.
 * **The two variants' PDFs are timestamped from a later run than the two
   original PDFs.** The originals' *content* is unchanged — their PNGs are
   byte-identical and their PDF streams differ only in matplotlib's random Type1

@@ -116,10 +116,14 @@ COLOR = {'full': 'black', 'LL': 'blue', 'TT': 'red',
          # The two extra spinmodes are full (unpolarised) distributions, like
          # the black one and unlike the four components, so they take the two
          # hues the components leave free rather than a shade of one of them.
-         'onshell': 'darkorange', 'PA': allcolors[9]}
+         'onshell': 'darkorange', 'PA': allcolors[9],
+         # madspin_v1 is on variant B only.  allcolors[6] is the first hue
+         # neither a component nor another spinmode has taken.
+         'madspin_v1': allcolors[6]}
 LS = {'full': 'solid', 'LL': 'dashed', 'TT': 'dashdot',
       'TL': (0, (1, 1.4)), 'LT': (0, (5, 1.5, 1, 1.5)), 'SUM': 'solid',
-      'onshell': (0, (6, 2)), 'PA': (0, (3, 1, 1, 1, 1, 1))}
+      'onshell': (0, (6, 2)), 'PA': (0, (3, 1, 1, 1, 1, 1)),
+      'madspin_v1': (0, (2, 1.5))}
 
 # The caption these figures used to carry as a plot title lives in
 # ``pol_analysis.CAPTION``, next to everything else both plotting scripts
@@ -190,11 +194,11 @@ def _shape_ylim(series, frac=0.12, head=0.30, noisy=3.0):
 
 # The multiplier on the distribution pane's autoscale top, per figure variant
 # and per y scale.  What sets it is the number of rows in the legend, which is
-# drawn inside the pane at the upper left: seven curves on the full figure and
-# on variant B, five on variant A because the two extra spinmodes are not
-# there.  All of these were checked on the rendered PNG and not on the axis
-# limits.
-HEADROOM = {None: (250.0, 1.62), 'A': (60.0, 1.45), 'B': (250.0, 1.62)}
+# drawn inside the pane at the upper left: seven curves on the full figure,
+# EIGHT on variant B now that madspin_v1 is a fourth total there, and five on
+# variant A because the extra spinmodes are not there.  All of these were
+# checked on the rendered PNG and not on the axis limits.
+HEADROOM = {None: (250.0, 1.62), 'A': (60.0, 1.45), 'B': (2500.0, 1.78)}
 
 
 def _distribution(ax, c, obs, extras, variant=None):
@@ -268,13 +272,20 @@ def draw_shape(d, obs, outdir, extras=()):
     """Variant B: the distribution, and ONE ratio pane under it.
 
     The pane is ``(1/sigma dsigma/dX)_Y / (1/sigma dsigma/dX)_madspin`` for
-    both extra spinmodes at once -- each curve divided by its OWN cross section
+    every extra spinmode at once -- each curve divided by its OWN cross section
     before the division, so that the rate difference between the modes divides
     out and what is left is the shape.  That is the pane this data wants:
     ``onshell`` differs from ``madspin`` in RATE (+4.99 % inclusive) and much
     less in shape, ``PA`` agrees in rate (1.4 sigma) and differs in SHAPE.  A
     ratio that still carried the normalisation would show the first as a large
     flat offset and would hide the second under it.
+
+    ``extras`` here is ``load_extras() + load_variant_b_extras()``, i.e. three
+    curves: ``onshell``, ``PA`` and ``madspin_v1``.  The last is on THIS
+    FIGURE ONLY; the original figures and variant A get ``load_extras()``
+    alone and are unchanged.  ``madspin_v1`` carries no ms_pol_* weights, and
+    needs none: nothing on this figure asks a sample other than the reference
+    for a polarisation weight.
 
     Which sigma normalises each curve is ``PA.SHAPE_NORM``, stated there and in
     numbers.txt.  The error is the within-sample delta-method one of
@@ -320,7 +331,7 @@ def draw_shape(d, obs, outdir, extras=()):
         axr.set_ylim(*_shape_ylim(series))
     axr.set_ylabel(PA.SHAPE_RATIO_TEX if USETEX else PA.SHAPE_RATIO_TXT,
                    fontsize=8.5)
-    axr.legend(frameon=False, fontsize=8.5, loc='upper left', ncol=2)
+    axr.legend(frameon=False, fontsize=8.5, loc='upper left', ncol=3)
     axr.xaxis.set_minor_locator(AutoMinorLocator())
     # The window is a few percent wide, and the default locator then labels it
     # with two ticks -- 1.0 and one other -- which is not a readable scale for
@@ -459,7 +470,8 @@ def _shape_numbers(d, A, extras):
     """
     A('--- THE SHAPE RATIO: what the variant-B pane draws ---')
     A('   %s' % PA.SHAPE_RATIO_TXT)
-    A('for Y = onshell and Y = PA, both in one pane.  Each mode is divided by')
+    A('for every Y in one pane -- Y = onshell, Y = PA and, on this variant')
+    A('alone, Y = madspin_v1.  Each mode is divided by')
     A('its OWN cross section before the division, so the RATE difference')
     A('between the modes divides out and what is left is the SHAPE.  That is')
     A('the pane this data wants: onshell differs from madspin in rate (+4.99 %')
@@ -485,13 +497,13 @@ def _shape_numbers(d, A, extras):
     A('made for that reason and not because it changes an answer.')
     A('')
     A('what is outside the drawn range, per observable and mode:')
-    A('   %-10s %-9s %12s %14s %14s %10s'
+    A('   %-10s %-11s %12s %14s %14s %10s'
       % ('observable', 'spinmode', 'N outside', 'sigma_selected',
          'sigma_inrange', 'outside %'))
     for obs in PA.OBS:
         for lab, dd in [('madspin', d)] + list(extras):
             sd = PA.shape_density(dd, obs, 'inrange')
-            A('   %-10s %-9s %12d %14.6f %14.6f %10.3f'
+            A('   %-10s %-11s %12d %14.6f %14.6f %10.3f'
               % (PA.SHORT[obs], dd.label, sd['n_outside'],
                  sd['sigma_selected_pb'], sd['sigma_norm_pb'],
                  100 * sd['sigma_outside_pb'] / sd['sigma_selected_pb']))
@@ -502,7 +514,8 @@ def _shape_numbers(d, A, extras):
     A('GeV while the observable reaches 4.2 TeV, distinguishes them.')
     A('')
     A('NOTE, and it corrects an earlier statement in RESULTS.md: the counts')
-    A('3120 / 3088 / 3134 quoted there as lying above 450 GeV are events with')
+    A('3120 / 3088 / 3134 quoted there for the first three samples as lying')
+    A('above 450 GeV are events with')
     A('a FINITE M(e+ mu+), i.e. before the fiducial pT and eta cuts.  The')
     A('SELECTED overflow -- the events that are actually in sigma_fid and')
     A('missing from the histogram -- is the "N outside" column above.')
@@ -515,7 +528,7 @@ def _shape_numbers(d, A, extras):
     A('A plain sqrt(sum w^2) would overstate the bar by 1/sqrt(1 - 2 p) for a')
     A('bin holding a fraction p of the rate: 8 % on a twelfth of the Delta phi')
     A('rate, which would understate the chi2 by 14 %.  BETWEEN samples there')
-    A('is NO correlation to keep -- see "DO THE THREE SAMPLES SHARE PRODUCTION')
+    A('is NO correlation to keep -- see "DO THE SAMPLES SHARE PRODUCTION')
     A('EVENTS?" above -- so the two relative errors add in quadrature.  One')
     A('degree of freedom is removed from the chi2 because each curve was')
     A('divided by its own normalisation, which is exactly one constraint.')
@@ -549,7 +562,44 @@ def _shape_numbers(d, A, extras):
             A('     the two normalisations differ by at most %.4f in any bin'
               % dmax)
             A('')
-    A('For the contrast, "THE THREE SPINMODES COMPARED" above quotes a')
+    # What the pane says about the fourth curve, computed rather than
+    # asserted: madspin_v1 is the comparison this variant was extended for,
+    # and the answer is a NULL result, which is worth stating in numbers.
+    v1 = [(k, x) for k, x in extras if k == 'madspin_v1']
+    if v1:
+        dx = v1[0][1]
+        A('WHAT THE PANE SAYS ABOUT madspin_v1 -- the comparison this variant')
+        A('was extended for.  madspin_v1 is MadSpin\'s LEGACY spin-correlation')
+        A('path and the reference madspin sample is the current DENSITY')
+        A('method, so this curve is legacy-against-density.  All four samples')
+        A('are Pythia8-showered HepMC read by the same extractor with the same')
+        A('selection and the same binning, so the curve is a SPINMODE')
+        A('difference and nothing else -- there is no shower-versus-parton')
+        A('confusion in it.')
+        A('')
+        for obs in PA.OBS:
+            cc = PA.compare_shape(PA.shape_density(d, obs),
+                                  PA.shape_density(dx, obs))
+            A('   %-9s chi2/ndf = %.2f/%d = %.2f   max|pull| %.2f'
+              % (PA.SHORT[obs], cc['chi2'], cc['ndf'], cc['chi2_per_ndf'],
+                 cc['max_abs_pull']))
+        A('')
+        A('That is a NULL result on both observables: no bin departs from 1 by')
+        A('as much as 2 sigma and the chi2 per degree of freedom is about 1.')
+        A('The legacy path and the density method agree in SHAPE on both')
+        A('observables at these statistics, and they agree in RATE too -- the')
+        A('inclusive cross sections differ by 0.15 % and the two fiducial')
+        A('rates by 1.1 and 0.4 sigma; see "THE SPINMODES COMPARED" above.')
+        A('This is the pane\'s answer and it is a different answer from the')
+        A('other two curves on it: onshell differs in rate, PA differs in')
+        A('shape, madspin_v1 differs in neither.  A null result is only worth')
+        A('as much as its power, so read it next to the error column in the')
+        A('madspin_v1 tables above: the bars are ~1 % per bin on M(e+ mu+)')
+        A('and ~1-3 % on Delta phi, so a shape effect of the size PA shows')
+        A('(up to 4 %) would have been seen, and one much below a percent')
+        A('would not.')
+        A('')
+    A('For the contrast, "THE SPINMODES COMPARED" above quotes a')
     A('"SHAPE only" chi2 as well.  It is a DIFFERENT statistic and the two')
     A('are not interchangeable: that one rescales the other mode to the')
     A('reference\'s SELECTED fiducial rate and keeps the plain sqrt(sum w^2)')
@@ -565,11 +615,20 @@ def write_numbers(d, path, extras=()):
     m = d.meta
     A('MadSpin polarisation weights on a showered NLO  p p > z z')
     A('=' * 74)
-    A('Three samples: the same process, the same run card and the same 250k')
+    A('%d samples: the same process, the same run card and the same 250k'
+      % (1 + len(extras)))
     A('showered events, differing only in MadSpin\'s spinmode.  The')
     A('polarisation decomposition below is the REFERENCE (madspin, run_06)')
-    A('sample\'s; the other two enter the distribution pane of each figure and')
-    A('the cross-mode comparison section, and nowhere else.')
+    A('sample\'s; the others enter the distribution pane of a figure and the')
+    A('cross-mode comparison section, and nowhere else.')
+    A('')
+    A('WHICH SAMPLE IS ON WHICH FIGURE.  onshell and PA are on every figure,')
+    A('as they always were.  madspin_v1 -- MadSpin\'s LEGACY spin-correlation')
+    A('path, against which the reference madspin sample is the current density')
+    A('method -- is on VARIANT B ONLY, as a fourth curve in the distribution')
+    A('pane and a third in the single ratio pane.  The original figures and')
+    A('variant A are unchanged by it.  It appears in EVERY table below,')
+    A('because the tables are of the samples and not of one figure.')
     A('')
     A('--- WHAT IS NOT ON THE FIGURES ---')
     A('The figures carry their axis labels, their tick labels and their legend')
@@ -618,20 +677,22 @@ def write_numbers(d, path, extras=()):
     A('legend.  Variant B\'s pane is documented in full under "THE SHAPE')
     A('RATIO" below, including which sigma normalises each curve.')
     A('')
-    A('%-9s %-34s %9s %9s %8s %8s'
+    A('%-11s %-34s %9s %9s %8s %8s'
       % ('spinmode', 'input', 'on disk', 'inflated', 'pass s', 'events'))
     for mm in [m] + [x.meta for _, x in extras]:
-        A('%-9s %-34s %8.3fG %8.3fG %8.1f %8d'
+        A('%-11s %-34s %8.3fG %8.3fG %8.1f %8d'
           % (mm.get('label', 'madspin'),
              mm['input_path'].split('Events/')[-1].replace(
                  '/events_PYTHIA8_0', '/...'),
              mm['input_gb'], mm.get('inflated_gb', mm['input_gb']),
              mm['pass_seconds'], mm['n_events']))
-    A('All three .gz inputs were streamed through "gzip -dc" in a child')
-    A('process and never unpacked to disk: they inflate to ~10.6 GB each and')
-    A('no temporary of that size should have to exist.  The three passes were')
-    A('run concurrently on separate cores, so the times above are within a')
-    A('second of each other and none of them is a serial measurement.')
+    A('Every .gz input was streamed through "gzip -dc" in a child process and')
+    A('never unpacked to disk: they inflate to ~10.5 GB each and no temporary')
+    A('of that size should have to exist.  The first three passes were run')
+    A('CONCURRENTLY on separate cores, so their times are within a second of')
+    A('each other and none of them is a serial measurement; the madspin_v1')
+    A('pass was run on its own later, so ITS time is a serial one and is the')
+    A('only number in that column that can be read as a rate.')
     A('%d lines read from the reference file, %s' % (m['lines_read'],
       m['hepmc_flavour']))
     A('code       %s' % m['code_sha'])
@@ -640,6 +701,9 @@ def write_numbers(d, path, extras=()):
       % len(m['weight_names']))
     for i in range(0, len(m['weight_names']), 6):
         A('   ' + '  '.join('%-18s' % n for n in m['weight_names'][i:i + 6]))
+    A('   (that is the REFERENCE file\'s N line.  The other files are checked')
+    A('   against their OWN first N line, and compared with this one under')
+    A('   "THE OTHER SPINMODES" below -- they do not all agree.)')
     A('')
     A('--- what the figures call these weights ---')
     A('The figures carry the physics name only; this is the mapping back to')
@@ -693,7 +757,7 @@ def write_numbers(d, path, extras=()):
       % (ev['n_negative'], ev['n_events'], 100 * ev['frac_negative']))
     A('')
     A('--- IS THE DECAY CARD EXCLUSIVE IN EFFECT? (measured, not assumed) ---')
-    A('The MadSpin card of all three runs is')
+    A('The MadSpin card of every run is')
     A('  decay z > e+ e-')
     A('  decay z > mu+ mu-')
     A('which is exclusive in INTENT.  Whether it is exclusive in EFFECT is a')
@@ -702,15 +766,15 @@ def write_numbers(d, path, extras=()):
     A('of status-44 copies, take the particles born at the final vertex -- for')
     A('every event of every file:')
     A('')
-    A('   %-9s %10s %14s %14s %10s'
+    A('   %-11s %10s %14s %14s %10s'
       % ('spinmode', 'events', 'one z->e+e- AND', 'at least one', 'other'))
-    A('   %-9s %10s %14s %14s %10s'
+    A('   %-11s %10s %14s %14s %10s'
       % ('', '', 'other z->mu+mu-', 'z->e+e-', 'channels'))
     for lab, dd in [('madspin', d)] + list(extras):
         zz1, zz2 = dd.z['z1_ch'], dd.z['z2_ch']
         q4 = ((zz1 == 11) & (zz2 == 13)) | ((zz1 == 13) & (zz2 == 11))
         qe = (zz1 == 11) | (zz2 == 11)
-        A('   %-9s %10d %8d %5.4g%% %8d %5.4g%% %10d'
+        A('   %-11s %10d %8d %5.4g%% %8d %5.4g%% %10d'
           % (dd.label, dd.n, q4.sum(), 100 * q4.mean(), qe.sum(),
              100 * qe.mean(), int((~q4).sum())))
     A('')
@@ -730,54 +794,96 @@ def write_numbers(d, path, extras=()):
     A('because decay z > light light has a branching fraction of ~1; these')
     A('quote ~0.031 pb, smaller by ~2.35e-03, which is that product of')
     A('branching fractions.  The two sets of numbers are NOT comparable as')
-    A('rates and only the ratios between the three modes are.')
+    A('rates and only the ratios between the modes are.')
     A('')
     if extras:
-        A('--- THE OTHER TWO SPINMODES ---')
+        A('--- THE OTHER SPINMODES ---')
         A('Checked, not assumed, on each file separately.')
         A('')
-        same = all(x.meta['weight_names'] == m['weight_names']
-                   for _, x in extras)
         A('The N line.  Every one of the 250 000 N lines in each file was')
         A('compared against that file\'s first, as for the reference; they are')
-        A('constant within each file.  Across files: the three name')
-        A('%s'
-          % ('the SAME %d weights, in the SAME order' % len(m['weight_names'])
-             if same else 'DIFFERENT weight sets -- see each meta.json'))
-        A('-- including the four ms_pol_* ones, because all three runs set')
-        A('keep_weight_for_polarization_vector = [0, T].  That the onshell and')
-        A('PA files carry polarisation weights is recorded here and nothing in')
-        A('this study is built on it: their decomposition is a separate piece')
-        A('of work, and the ratio panes belong to the sample whose')
-        A('decomposition they are.')
+        A('constant within each file.  Across files they are NOT all the same:')
+        A('')
+        A('   %-11s %8s  %s' % ('spinmode', 'n(names)', 'against the reference'))
+        for lab, dd in [('madspin', d)] + list(extras):
+            wn = dd.meta['weight_names']
+            if wn == m['weight_names']:
+                verdict = 'identical, same order'
+            else:
+                miss = [k for k in m['weight_names'] if k not in wn]
+                new = [k for k in wn if k not in m['weight_names']]
+                verdict = 'missing %s%s' % (
+                    ', '.join(miss) if miss else '(none)',
+                    '; extra ' + ', '.join(new) if new else '')
+            A('   %-11s %8d  %s' % (dd.label, len(wn), verdict))
+        A('')
+        haspol = [dd.label for lab, dd in [('madspin', d)] + list(extras)
+                  if dd.has_pol]
+        nopol = [dd.label for lab, dd in [('madspin', d)] + list(extras)
+                 if not dd.has_pol]
+        A('So %s carr%s the four ms_pol_* weights, because %s run%s set'
+          % (', '.join(haspol), 'y' if len(haspol) > 1 else 'ies',
+             'those' if len(haspol) > 1 else 'that',
+             's' if len(haspol) > 1 else ''))
+        A('keep_weight_for_polarization_vector = [0, T]; %s do%s not.'
+          % (', '.join(nopol) if nopol else '(none)',
+             '' if len(nopol) > 1 else 'es'))
+        if nopol:
+            A('')
+            A('THAT IS NOT A DEFECT AND IT IS NOT WORKED AROUND.  madspin_v1 is')
+            A('the LEGACY MadSpin path and it does not emit polarisation')
+            A('weights at all; the extractor\'s REQUIRED_WEIGHTS are "0" and')
+            A('"Weight" alone, everything else is kept if present, and the')
+            A('four absent names are printed by the extractor as it reads the')
+            A('N line and recorded in that sample\'s meta.json as')
+            A('has_pol_weights: false.  Nothing on variant B asks a sample')
+            A('other than the reference for a polarisation weight -- the pane')
+            A('is a ratio of NOMINAL distributions -- so the absence costs the')
+            A('figure nothing.  What it does cost is that madspin_v1 can never')
+            A('enter the polarisation decomposition panes, and it does not.')
+        A('')
+        A('That the onshell and PA files carry polarisation weights is')
+        A('recorded here and nothing in this study is built on it: their')
+        A('decomposition is a separate piece of work, and the ratio panes')
+        A('belong to the sample whose decomposition they are.')
         A('')
         A('The nominal, re-derived per file rather than carried over:')
         A('')
-        A('%-9s %22s %22s %14s %10s'
+        A('%-11s %22s %22s %14s %10s'
           % ('spinmode', '"0"*N/"Weight" range', 'sum("0") = mean("W")',
              'C last', 'C first'))
         for lab, dd in [('madspin', d)] + list(extras):
             e = dd.nominal_evidence()
-            A('%-9s %10.6f %10.6f %22.9f %14.9f %10.3e'
+            A('%-11s %10.6f %10.6f %22.9f %14.9f %10.3e'
               % (dd.label, e['w0_times_N_over_Weight_min'],
                  e['w0_times_N_over_Weight_max'], e['sum_w0_pb'],
                  e['C_line_last_event_pb'], e['C_line_first_event_pb']))
         A('')
-        A('Same answer on all three: "0" * N_events == "Weight" to the last')
-        A('bit on every event, sum("0") == mean("Weight") == the C line of the')
-        A('LAST event to 1e-11, and the C line of the FIRST event is Pythia\'s')
-        A('running estimate after one event -- low by 2.2e5 in every file.  So')
-        A('the reference file\'s conclusion holds for the other two, and it')
-        A('holds because it was re-checked and not because it was carried')
-        A('over.  The distributions use "0" (its sum IS the cross section in')
-        A('pb) and each sample is scaled by its OWN 1/n_events.')
+        A('Same answer on every file, INCLUDING the one with no polarisation')
+        A('weights: "0" * N_events == "Weight" to the last bit on every event,')
+        A('sum("0") == mean("Weight") == the C line of the LAST event to')
+        A('1e-11, and the C line of the FIRST event is Pythia\'s running')
+        A('estimate after one event -- low by 2.2e5 in every file.  So the')
+        A('reference file\'s conclusion holds for the others, and it holds')
+        A('because it was re-checked and not because it was carried over.  The')
+        A('distributions use "0" (its sum IS the cross section in pb) and each')
+        A('sample is scaled by its OWN 1/n_events.')
         A('')
-        A('%-9s %14s %12s %10s %s'
+        A('The nominal for madspin_v1 is therefore the SAME quantity as for')
+        A('the other three and was identified the same way: "Weight" (or')
+        A('equivalently "0", which is "Weight"/N), confirmed against that')
+        A('file\'s own LAST C line.  The absence of the ms_pol_* block changes')
+        A('nothing about which weight is nominal -- those weights were never')
+        A('candidates for it, and the one check that used them (that they sit')
+        A('in the "Weight" normalisation, not the "0" one) simply does not')
+        A('arise for a file that has none.')
+        A('')
+        A('%-11s %14s %12s %10s %s'
           % ('spinmode', 'sigma_tot pb', 'negatives', 'MUR1/W-1',
              'distinct |Weight|'))
         for lab, dd in [('madspin', d)] + list(extras):
             e = dd.nominal_evidence()
-            A('%-9s %14.6f %11.3f %% %10.2e %s'
+            A('%-11s %14.6f %11.3f %% %10.2e %s'
               % (dd.label, e['sum_w0_pb'], 100 * e['frac_negative'],
                  e['sum_MUR1_over_sum_Weight_minus_1'],
                  ', '.join('%.6f' % v for v in e['distinct_abs_Weight'])))
@@ -789,19 +895,19 @@ def write_numbers(d, path, extras=()):
         A('thing seen once in the earlier run_02 file; it recurs here and it')
         A('has no consequence for anything in this study.')
         A('')
-        A('--- DO THE THREE SAMPLES SHARE PRODUCTION EVENTS? ---')
+        A('--- DO THE SAMPLES SHARE PRODUCTION EVENTS? ---')
         A('This decides the error bar on every mode-to-mode comparison in this')
-        A('file, so it is established and not assumed.  If the three runs had')
+        A('file, so it is established and not assumed.  If the runs had')
         A('decayed one common set of production events, the mode-to-mode ratio')
         A('would be CORRELATED, a paired error would be correct, and it would')
         A('be much smaller than the quadrature one.  They did not.')
         A('')
         pe = PA.pairing_evidence(d, extras)
-        A('%-9s %10s %12s %14s %18s'
+        A('%-11s %10s %12s %14s %18s'
           % ('spinmode', 'events', 'n(w < 0)', 'sigma_tot pb',
              'corr(m_4l) row by row'))
         for row in pe['rows']:
-            A('%-9s %10d %12d %14.6f %18s'
+            A('%-11s %10d %12d %14.6f %18s'
               % (row['label'], row['n_events'], row['n_negative'],
                  row['sigma_pb'],
                  '--  (reference)' if not np.isfinite(row['corr_m_4l'])
@@ -813,7 +919,7 @@ def write_numbers(d, path, extras=()):
         A('MadSpin multiplies by a positive decay factor and Pythia passes the')
         A('LHE weight through -- so the number of negative-weight events is a')
         A('property of the PRODUCTION sample alone and cannot depend on the')
-        A('spinmode or on the order the events are written in.  Three decays of')
+        A('spinmode or on the order the events are written in.  Two decays of')
         A('one production sample would give the same count EXACTLY.  These')
         A('differ, so a common production sample is excluded outright, in any')
         A('order, and not merely left unproven.')
@@ -839,17 +945,17 @@ def write_numbers(d, path, extras=()):
         A('must be -- see "integrated polarisation ratios" and')
         A('pol_analysis.shape_density.)')
         A('')
-        A('--- THE THREE SPINMODES COMPARED ---')
+        A('--- THE SPINMODES COMPARED ---')
         A('Same lepton selection, same bin edges, same absolute normalisation.')
         A('Errors here are the PLAIN quadrature sum, unlike every ratio pane in')
-        A('this file: these are three independent MadSpin runs, independently')
+        A('this file: these are independent MadSpin runs, independently')
         A('showered, so there is no covariance to keep -- established above,')
         A('not assumed.')
         A('')
         A('inclusive cross section (all 250k events, no selection):')
         for lab, dd in [('madspin', d)] + list(extras):
             w0 = np.asarray(dd.z['w_0'], dtype=np.float64)
-            A('   %-9s %12.6f +- %.6f pb' % (dd.label, w0.sum(),
+            A('   %-11s %12.6f +- %.6f pb' % (dd.label, w0.sum(),
                                              np.sqrt((w0 ** 2).sum())))
         A('')
         A('The two chi2 answer different questions and only the pair of them')
@@ -866,7 +972,7 @@ def write_numbers(d, path, extras=()):
         A('carried the whole rate difference on the earlier inclusive samples')
         A('is now inert and whatever is left is the inclusive cross section')
         A('and the acceptance:')
-        A('   %-9s %12s %10s %12s %12s %10s'
+        A('   %-11s %12s %10s %12s %12s %10s'
           % ('spinmode', 'sigma_tot', 'f(z->ee)', 'product', 'sigma_fid',
              'acceptance'))
         for lab, dd in [('madspin', d)] + list(extras):
@@ -874,18 +980,18 @@ def write_numbers(d, path, extras=()):
             fee = float(((zz1 == 11) | (zz2 == 11)).mean())
             st = float(np.asarray(dd.z['w_0'], dtype=np.float64).sum())
             fid = PA.full_distribution(dd, 'dphi_ee_dr')['sigma_pb']
-            A('   %-9s %12.6f %10.6f %12.6f %12.6f %10.4f'
+            A('   %-11s %12.6f %10.6f %12.6f %12.6f %10.4f'
               % (dd.label, st, fee, st * fee, fid, fid / (st * fee)))
         A('')
         A('which z decayed to what, off the event record (truth, used to')
         A('categorise only -- no plotted observable touches it):')
-        A('   %-9s %10s %10s %10s %10s'
+        A('   %-11s %10s %10s %10s %10s'
           % ('spinmode', 'n(4 lepton)', 'frac %', 'n(z->ee)', 'frac %'))
         for lab, dd in [('madspin', d)] + list(extras):
             z1, z2 = dd.z['z1_ch'], dd.z['z2_ch']
             q4 = ((z1 == 11) & (z2 == 13)) | ((z1 == 13) & (z2 == 11))
             qe = (z1 == 11) | (z2 == 11)
-            A('   %-9s %10d %10.4f %10d %10.4f'
+            A('   %-11s %10d %10.4f %10d %10.4f'
               % (dd.label, q4.sum(), 100 * q4.mean(), qe.sum(),
                  100 * qe.mean()))
         A('')
@@ -894,7 +1000,7 @@ def write_numbers(d, path, extras=()):
             rerr = _sigma_err(d, obs)
             A('%s: N selected, fiducial cross section, and the comparison'
               % PA.SHORT[obs])
-            A('   %-9s N=%6d  sigma_fid=%.6f +- %.6f pb   (the reference)'
+            A('   %-11s N=%6d  sigma_fid=%.6f +- %.6f pb   (the reference)'
               % (d.label, ref['n_sel'], ref['sigma_pb'], rerr))
             sparse = not ref['drawable']
             for key, dx in extras:
@@ -905,7 +1011,7 @@ def write_numbers(d, path, extras=()):
                 rre = rr * math.sqrt((oerr / o['sigma_pb']) ** 2
                                      + (rerr / ref['sigma_pb']) ** 2)
                 sparse = sparse or not o['drawable']
-                A('   %-9s N=%6d  sigma_fid=%.6f +- %.6f pb'
+                A('   %-11s N=%6d  sigma_fid=%.6f +- %.6f pb'
                   % (dx.label, o['n_sel'], o['sigma_pb'], oerr))
                 A('             rate ratio to madspin %.4f +- %.4f (%.1f '
                   'sigma)%s'
@@ -926,12 +1032,12 @@ def write_numbers(d, path, extras=()):
             A('   on the figure: madspin%s%s'
               % (' + ' + ' + '.join(drawn) if drawn else '',
                  '   NOT drawn: ' + ', '.join(notdrawn) if notdrawn
-                 else '   (all three modes drawn)'))
+                 else '   (every mode drawn)'))
             if sparse:
                 A('   Fewer than %d selected events in this observable for at'
                   % PA.MIN_SEL_TO_DRAW)
                 A('   least one mode.  At that statistics the per-bin errors')
-                A('   are tens of percent and three curves laid over one')
+                A('   are tens of percent and several curves laid over one')
                 A('   another would show gaps the eye reads as a mode')
                 A('   difference and that are entirely noise.  The undrawn')
                 A('   curves are NOT on the figure and the numbers above are')
@@ -1032,22 +1138,28 @@ def write_numbers(d, path, extras=()):
     print('wrote %s' % path)
 
 
-def draw_variants(d, extras, outdir):
+def draw_variants(d, extras, outdir, b_extras=None):
     """The two variants, written ALONGSIDE the main figures.
 
     Each goes into its own subdirectory of ``outdir`` -- the originals stay
     exactly where they were and are not touched.  Returns the ``(base, want)``
     pairs so that ``--check-minus`` covers the variant PDFs too.
+
+    ``extras`` is what every figure draws (``onshell``, ``PA``); ``b_extras``
+    is what VARIANT B draws, which is that list plus ``madspin_v1``.  Keeping
+    them as two arguments is the whole mechanism by which the fourth sample
+    reaches variant B and nothing else.
     """
+    b_extras = extras if b_extras is None else b_extras
     bases = []
     for obs in PA.OBS:
         # A: the same three tiers, no extra spinmodes on the distribution.
         bases.append(draw(d, obs, os.path.join(outdir, PA.VARIANTS['A']['dir']),
                           extras=(), variant='A'))
-        # B: the distribution with all three modes, then one shape-ratio pane.
+        # B: the distribution with all four modes, then one shape-ratio pane.
         bases.append(draw_shape(d, obs,
                                 os.path.join(outdir, PA.VARIANTS['B']['dir']),
-                                extras))
+                                b_extras))
     return bases
 
 
@@ -1062,10 +1174,15 @@ def main():
     a = ap.parse_args()
     d = PA.Data(a.data)
     extras = PA.load_extras(a.data)
+    # madspin_v1 goes on variant B and nowhere else on the canvas.  It DOES
+    # go into numbers.txt alongside the other modes, which is why the text is
+    # written from the full four-sample list and the original figures from
+    # ``extras`` alone.
+    b_extras = extras + PA.load_variant_b_extras(a.data)
     bases = [draw(d, obs, a.out, extras) for obs in PA.OBS]
     if not a.no_variants:
-        bases += draw_variants(d, extras, a.out)
-    write_numbers(d, a.numbers, extras)
+        bases += draw_variants(d, extras, a.out, b_extras=b_extras)
+    write_numbers(d, a.numbers, b_extras)
     if a.check_minus:
         print('usetex = %s   minus workaround active = %s' % (USETEX, MINUS_FIX))
         bad = n = 0

@@ -1,10 +1,18 @@
 MadSpin polarisation weights on a showered NLO  p p > z z
 ==========================================================================
-Three samples: the same process, the same run card and the same 250k
+4 samples: the same process, the same run card and the same 250k
 showered events, differing only in MadSpin's spinmode.  The
 polarisation decomposition below is the REFERENCE (madspin, run_06)
-sample's; the other two enter the distribution pane of each figure and
-the cross-mode comparison section, and nowhere else.
+sample's; the others enter the distribution pane of a figure and the
+cross-mode comparison section, and nowhere else.
+
+WHICH SAMPLE IS ON WHICH FIGURE.  onshell and PA are on every figure,
+as they always were.  madspin_v1 -- MadSpin's LEGACY spin-correlation
+path, against which the reference madspin sample is the current density
+method -- is on VARIANT B ONLY, as a fourth curve in the distribution
+pane and a third in the single ratio pane.  The original figures and
+variant A are unchanged by it.  It appears in EVERY table below,
+because the tables are of the samples and not of one figure.
 
 --- WHAT IS NOT ON THE FIGURES ---
 The figures carry their axis labels, their tick labels and their legend
@@ -49,8 +57,10 @@ directory.  The original figures are unchanged.
 
    plots/variant_B_shape_ratio/ and plots_userstyle/variant_B_shape_ratio/
       variant B -- The distribution pane, then a single ratio pane
-      carrying the self-normalised shape ratio of onshell and PA to
-      madspin. The sum pane and the 2 x 2 are not drawn
+      carrying the self-normalised shape ratio of onshell, PA and
+      madspin_v1 to madspin. The sum pane and the 2 x 2 are not drawn.
+      madspin_v1 is on THIS VARIANT ONLY -- the original figures and
+      variant A carry the same three modes they always did
 
 Both variants keep the house style of the original: both styles, PDF
 AND PNG, the Z_0Z_0 naming, --check-minus on the MG7 figures only, and
@@ -58,15 +68,18 @@ nothing written on the canvas beyond axis labels, tick labels and the
 legend.  Variant B's pane is documented in full under "THE SHAPE
 RATIO" below, including which sigma normalises each curve.
 
-spinmode  input                                on disk  inflated   pass s   events
-madspin   run_06_decayed_1/....hepmc.gz         3.449G   10.562G     27.8   250000
-onshell   run_08_decayed_1/....hepmc.gz         3.449G   10.574G     29.0   250000
-PA        run_07_decayed_1/....hepmc.gz         3.462G   10.599G     28.9   250000
-All three .gz inputs were streamed through "gzip -dc" in a child
-process and never unpacked to disk: they inflate to ~10.6 GB each and
-no temporary of that size should have to exist.  The three passes were
-run concurrently on separate cores, so the times above are within a
-second of each other and none of them is a serial measurement.
+spinmode    input                                on disk  inflated   pass s   events
+madspin     run_06_decayed_1/....hepmc.gz         3.449G   10.562G     27.8   250000
+onshell     run_08_decayed_1/....hepmc.gz         3.449G   10.574G     29.0   250000
+PA          run_07_decayed_1/....hepmc.gz         3.462G   10.599G     28.9   250000
+madspin_v1  run_10_decayed_1/....hepmc.gz         3.443G   10.540G     30.7   250000
+Every .gz input was streamed through "gzip -dc" in a child process and
+never unpacked to disk: they inflate to ~10.5 GB each and no temporary
+of that size should have to exist.  The first three passes were run
+CONCURRENTLY on separate cores, so their times are within a second of
+each other and none of them is a serial measurement; the madspin_v1
+pass was run on its own later, so ITS time is a serial one and is the
+only number in that column that can be read as a rate.
 109455942 lines read from the reference file, HepMC2 IO_GenEvent (HepMC::Version 2.06.09)
 code       7e39b7b1b4b383bcf70391efbf616a3683403956
 
@@ -77,6 +90,9 @@ code       7e39b7b1b4b383bcf70391efbf616a3683403956
    1027                MUR0.5_MUF0.5       MUR0.5_MUF1.0       MUR0.5_MUF2.0       MUR1.0_MUF0.5       MUR1.0_MUF1.0     
    MUR1.0_MUF2.0       MUR2.0_MUF0.5       MUR2.0_MUF1.0       MUR2.0_MUF2.0       Weight              ms_pol_23.0_23.0  
    ms_pol_23.0_23.T    ms_pol_23.T_23.0    ms_pol_23.T_23.T  
+   (that is the REFERENCE file's N line.  The other files are checked
+   against their OWN first N line, and compared with this one under
+   "THE OTHER SPINMODES" below -- they do not all agree.)
 
 --- what the figures call these weights ---
 The figures carry the physics name only; this is the mapping back to
@@ -112,7 +128,7 @@ the vertical scale of the distributions distinguishes them.
   14273 of 250000 events carry a NEGATIVE weight (5.709 %).
 
 --- IS THE DECAY CARD EXCLUSIVE IN EFFECT? (measured, not assumed) ---
-The MadSpin card of all three runs is
+The MadSpin card of every run is
   decay z > e+ e-
   decay z > mu+ mu-
 which is exclusive in INTENT.  Whether it is exclusive in EFFECT is a
@@ -121,11 +137,12 @@ read off the event record -- mark each z's end vertex, follow the chain
 of status-44 copies, take the particles born at the final vertex -- for
 every event of every file:
 
-   spinmode      events one z->e+e- AND   at least one      other
-                        other z->mu+mu-        z->e+e-   channels
-   madspin       250000   250000   100%   250000   100%          0
-   onshell       250000   250000   100%   250000   100%          0
-   PA            250000   250000   100%   250000   100%          0
+   spinmode        events one z->e+e- AND   at least one      other
+                          other z->mu+mu-        z->e+e-   channels
+   madspin         250000   250000   100%   250000   100%          0
+   onshell         250000   250000   100%   250000   100%          0
+   PA              250000   250000   100%   250000   100%          0
+   madspin_v1      250000   250000   100%   250000   100%          0
 
 It is exclusive in effect: every event of every file has one z to e+e-
 and the other to mu+mu-, with no other channel present at all.  So
@@ -143,42 +160,73 @@ samples quoted ~13.1 pb, essentially the production cross section
 because decay z > light light has a branching fraction of ~1; these
 quote ~0.031 pb, smaller by ~2.35e-03, which is that product of
 branching fractions.  The two sets of numbers are NOT comparable as
-rates and only the ratios between the three modes are.
+rates and only the ratios between the modes are.
 
---- THE OTHER TWO SPINMODES ---
+--- THE OTHER SPINMODES ---
 Checked, not assumed, on each file separately.
 
 The N line.  Every one of the 250 000 N lines in each file was
 compared against that file's first, as for the reference; they are
-constant within each file.  Across files: the three name
-the SAME 33 weights, in the SAME order
--- including the four ms_pol_* ones, because all three runs set
-keep_weight_for_polarization_vector = [0, T].  That the onshell and
-PA files carry polarisation weights is recorded here and nothing in
-this study is built on it: their decomposition is a separate piece
-of work, and the ratio panes belong to the sample whose
-decomposition they are.
+constant within each file.  Across files they are NOT all the same:
+
+   spinmode    n(names)  against the reference
+   madspin           33  identical, same order
+   onshell           33  identical, same order
+   PA                33  identical, same order
+   madspin_v1        29  missing ms_pol_23.0_23.0, ms_pol_23.0_23.T, ms_pol_23.T_23.0, ms_pol_23.T_23.T
+
+So madspin, onshell, PA carry the four ms_pol_* weights, because those runs set
+keep_weight_for_polarization_vector = [0, T]; madspin_v1 does not.
+
+THAT IS NOT A DEFECT AND IT IS NOT WORKED AROUND.  madspin_v1 is
+the LEGACY MadSpin path and it does not emit polarisation
+weights at all; the extractor's REQUIRED_WEIGHTS are "0" and
+"Weight" alone, everything else is kept if present, and the
+four absent names are printed by the extractor as it reads the
+N line and recorded in that sample's meta.json as
+has_pol_weights: false.  Nothing on variant B asks a sample
+other than the reference for a polarisation weight -- the pane
+is a ratio of NOMINAL distributions -- so the absence costs the
+figure nothing.  What it does cost is that madspin_v1 can never
+enter the polarisation decomposition panes, and it does not.
+
+That the onshell and PA files carry polarisation weights is
+recorded here and nothing in this study is built on it: their
+decomposition is a separate piece of work, and the ratio panes
+belong to the sample whose decomposition they are.
 
 The nominal, re-derived per file rather than carried over:
 
-spinmode    "0"*N/"Weight" range   sum("0") = mean("W")         C last    C first
-madspin     1.000000   1.000000            0.030873887    0.030873887  1.394e-07
-onshell     1.000000   1.000000            0.032414610    0.032414610  1.460e-07
-PA          1.000000   1.000000            0.031115558    0.031115558  1.403e-07
+spinmode      "0"*N/"Weight" range   sum("0") = mean("W")         C last    C first
+madspin       1.000000   1.000000            0.030873887    0.030873887  1.394e-07
+onshell       1.000000   1.000000            0.032414610    0.032414610  1.460e-07
+PA            1.000000   1.000000            0.031115558    0.031115558  1.403e-07
+madspin_v1    1.000000   1.000000            0.030918986    0.030918986  1.395e-07
 
-Same answer on all three: "0" * N_events == "Weight" to the last
-bit on every event, sum("0") == mean("Weight") == the C line of the
-LAST event to 1e-11, and the C line of the FIRST event is Pythia's
-running estimate after one event -- low by 2.2e5 in every file.  So
-the reference file's conclusion holds for the other two, and it
-holds because it was re-checked and not because it was carried
-over.  The distributions use "0" (its sum IS the cross section in
-pb) and each sample is scaled by its OWN 1/n_events.
+Same answer on every file, INCLUDING the one with no polarisation
+weights: "0" * N_events == "Weight" to the last bit on every event,
+sum("0") == mean("Weight") == the C line of the LAST event to
+1e-11, and the C line of the FIRST event is Pythia's running
+estimate after one event -- low by 2.2e5 in every file.  So the
+reference file's conclusion holds for the others, and it holds
+because it was re-checked and not because it was carried over.  The
+distributions use "0" (its sum IS the cross section in pb) and each
+sample is scaled by its OWN 1/n_events.
 
-spinmode    sigma_tot pb    negatives   MUR1/W-1 distinct |Weight|
-madspin         0.030874       5.709 %  -2.98e-05 0.034853, 0.035835, 0.039692, 0.052436, 0.108678
-onshell         0.032415       5.585 %  -1.56e-05 0.036490
-PA              0.031116       5.640 %   6.63e-06 0.035071
+The nominal for madspin_v1 is therefore the SAME quantity as for
+the other three and was identified the same way: "Weight" (or
+equivalently "0", which is "Weight"/N), confirmed against that
+file's own LAST C line.  The absence of the ms_pol_* block changes
+nothing about which weight is nominal -- those weights were never
+candidates for it, and the one check that used them (that they sit
+in the "Weight" normalisation, not the "0" one) simply does not
+arise for a file that has none.
+
+spinmode      sigma_tot pb    negatives   MUR1/W-1 distinct |Weight|
+madspin           0.030874       5.709 %  -2.98e-05 0.034853, 0.035835, 0.039692, 0.052436, 0.108678
+onshell           0.032415       5.585 %  -1.56e-05 0.036490
+PA                0.031116       5.640 %   6.63e-06 0.035071
+madspin_v1        0.030919       5.672 %   1.81e-05 0.034875
 
 On the |Weight| column: each file's dominant value is its banner
 XMAXUP exactly.  Any further value is carried by a handful of
@@ -187,24 +235,25 @@ branch -- and the counts above say how many.  This is the same
 thing seen once in the earlier run_02 file; it recurs here and it
 has no consequence for anything in this study.
 
---- DO THE THREE SAMPLES SHARE PRODUCTION EVENTS? ---
+--- DO THE SAMPLES SHARE PRODUCTION EVENTS? ---
 This decides the error bar on every mode-to-mode comparison in this
-file, so it is established and not assumed.  If the three runs had
+file, so it is established and not assumed.  If the runs had
 decayed one common set of production events, the mode-to-mode ratio
 would be CORRELATED, a paired error would be correct, and it would
 be much smaller than the quadrature one.  They did not.
 
-spinmode      events     n(w < 0)   sigma_tot pb corr(m_4l) row by row
-madspin       250000        14273       0.030874    --  (reference)
-onshell       250000        13962       0.032415 -0.00028 +- 0.00203
-PA            250000        14099       0.031116 +0.00041 +- 0.00203
+spinmode        events     n(w < 0)   sigma_tot pb corr(m_4l) row by row
+madspin         250000        14273       0.030874    --  (reference)
+onshell         250000        13962       0.032415 -0.00028 +- 0.00203
+PA              250000        14099       0.031116 +0.00041 +- 0.00203
+madspin_v1      250000        14179       0.030919 -0.00005 +- 0.00203
 
 n(w < 0) is the DECISIVE column and it is permutation invariant.
 Neither MadSpin nor Pythia can change the sign of an event weight --
 MadSpin multiplies by a positive decay factor and Pythia passes the
 LHE weight through -- so the number of negative-weight events is a
 property of the PRODUCTION sample alone and cannot depend on the
-spinmode or on the order the events are written in.  Three decays of
+spinmode or on the order the events are written in.  Two decays of
 one production sample would give the same count EXACTLY.  These
 differ, so a common production sample is excluded outright, in any
 order, and not merely left unproven.
@@ -230,17 +279,18 @@ optimistic.  (Within a single sample the covariance is kept and
 must be -- see "integrated polarisation ratios" and
 pol_analysis.shape_density.)
 
---- THE THREE SPINMODES COMPARED ---
+--- THE SPINMODES COMPARED ---
 Same lepton selection, same bin edges, same absolute normalisation.
 Errors here are the PLAIN quadrature sum, unlike every ratio pane in
-this file: these are three independent MadSpin runs, independently
+this file: these are independent MadSpin runs, independently
 showered, so there is no covariance to keep -- established above,
 not assumed.
 
 inclusive cross section (all 250k events, no selection):
-   madspin       0.030874 +- 0.000070 pb
-   onshell       0.032415 +- 0.000073 pb
-   PA            0.031116 +- 0.000070 pb
+   madspin         0.030874 +- 0.000070 pb
+   onshell         0.032415 +- 0.000073 pb
+   PA              0.031116 +- 0.000070 pb
+   madspin_v1      0.030919 +- 0.000070 pb
 
 The two chi2 answer different questions and only the pair of them
 is the result: a mode that differs from the reference ONLY in
@@ -256,46 +306,57 @@ every mode by construction, so the channel-bookkeeping column that
 carried the whole rate difference on the earlier inclusive samples
 is now inert and whatever is left is the inclusive cross section
 and the acceptance:
-   spinmode     sigma_tot   f(z->ee)      product    sigma_fid acceptance
-   madspin       0.030874   1.000000     0.030874     0.020400     0.6608
-   onshell       0.032415   1.000000     0.032415     0.021407     0.6604
-   PA            0.031116   1.000000     0.031116     0.020509     0.6591
+   spinmode       sigma_tot   f(z->ee)      product    sigma_fid acceptance
+   madspin         0.030874   1.000000     0.030874     0.020400     0.6608
+   onshell         0.032415   1.000000     0.032415     0.021407     0.6604
+   PA              0.031116   1.000000     0.031116     0.020509     0.6591
+   madspin_v1      0.030919   1.000000     0.030919     0.020371     0.6588
 
 which z decayed to what, off the event record (truth, used to
 categorise only -- no plotted observable touches it):
-   spinmode  n(4 lepton)     frac %   n(z->ee)     frac %
-   madspin       250000   100.0000     250000   100.0000
-   onshell       250000   100.0000     250000   100.0000
-   PA            250000   100.0000     250000   100.0000
+   spinmode    n(4 lepton)     frac %   n(z->ee)     frac %
+   madspin         250000   100.0000     250000   100.0000
+   onshell         250000   100.0000     250000   100.0000
+   PA              250000   100.0000     250000   100.0000
+   madspin_v1      250000   100.0000     250000   100.0000
 
 m_epmup: N selected, fiducial cross section, and the comparison
-   madspin   N=118521  sigma_fid=0.014796 +- 0.000048 pb   (the reference)
-   onshell   N=118080  sigma_fid=0.015477 +- 0.000050 pb
+   madspin     N=118521  sigma_fid=0.014796 +- 0.000048 pb   (the reference)
+   onshell     N=118080  sigma_fid=0.015477 +- 0.000050 pb
              rate ratio to madspin 1.0460 +- 0.0048 (9.6 sigma)
              as drawn (rate included) chi2/ndf = 104.70/7 = 14.96   max|pull| 5.33
              SHAPE only (rescaled to the same fiducial rate) chi2/ndf = 10.98/6 = 1.83
-   PA        N=117447  sigma_fid=0.014784 +- 0.000048 pb
+   PA          N=117447  sigma_fid=0.014784 +- 0.000048 pb
              rate ratio to madspin 0.9992 +- 0.0046 (0.2 sigma)
              as drawn (rate included) chi2/ndf = 2.52/7 = 0.36   max|pull| 1.07
              SHAPE only (rescaled to the same fiducial rate) chi2/ndf = 2.46/6 = 0.41
-   on the figure: madspin + onshell + PA   (all three modes drawn)
+   madspin_v1  N=117802  sigma_fid=0.014721 +- 0.000048 pb
+             rate ratio to madspin 0.9949 +- 0.0046 (1.1 sigma)
+             as drawn (rate included) chi2/ndf = 7.35/7 = 1.05   max|pull| 1.88
+             SHAPE only (rescaled to the same fiducial rate) chi2/ndf = 6.08/6 = 1.01
+   on the figure: madspin + onshell + PA + madspin_v1   (every mode drawn)
 
 dphi_ee: N selected, fiducial cross section, and the comparison
-   madspin   N=164111  sigma_fid=0.020400 +- 0.000056 pb   (the reference)
-   onshell   N=163838  sigma_fid=0.021407 +- 0.000059 pb
+   madspin     N=164111  sigma_fid=0.020400 +- 0.000056 pb   (the reference)
+   onshell     N=163838  sigma_fid=0.021407 +- 0.000059 pb
              rate ratio to madspin 1.0494 +- 0.0041 (12.0 sigma)
              as drawn (rate included) chi2/ndf = 173.09/12 = 14.42   max|pull| 5.89
              SHAPE only (rescaled to the same fiducial rate) chi2/ndf = 22.28/11 = 2.03
-   PA        N=163674  sigma_fid=0.020509 +- 0.000057 pb
+   PA          N=163674  sigma_fid=0.020509 +- 0.000057 pb
              rate ratio to madspin 1.0053 +- 0.0039 (1.4 sigma)
              as drawn (rate included) chi2/ndf = 59.26/12 = 4.94   max|pull| 3.55
              SHAPE only (rescaled to the same fiducial rate) chi2/ndf = 57.61/11 = 5.24
-   on the figure: madspin + onshell + PA   (all three modes drawn)
+   madspin_v1  N=163630  sigma_fid=0.020371 +- 0.000056 pb
+             rate ratio to madspin 0.9986 +- 0.0039 (0.4 sigma)
+             as drawn (rate included) chi2/ndf = 9.53/12 = 0.79   max|pull| 1.57
+             SHAPE only (rescaled to the same fiducial rate) chi2/ndf = 9.38/11 = 0.85
+   on the figure: madspin + onshell + PA + madspin_v1   (every mode drawn)
 
 
 --- THE SHAPE RATIO: what the variant-B pane draws ---
    (1/sigma dsigma/dX)_Y / (1/sigma dsigma/dX)_madspin
-for Y = onshell and Y = PA, both in one pane.  Each mode is divided by
+for every Y in one pane -- Y = onshell, Y = PA and, on this variant
+alone, Y = madspin_v1.  Each mode is divided by
 its OWN cross section before the division, so the RATE difference
 between the modes divides out and what is left is the SHAPE.  That is
 the pane this data wants: onshell differs from madspin in rate (+4.99 %
@@ -321,13 +382,15 @@ whose cause is off the canvas.  Both are tabulated below; the choice is
 made for that reason and not because it changes an answer.
 
 what is outside the drawn range, per observable and mode:
-   observable spinmode     N outside sigma_selected  sigma_inrange  outside %
-   m_epmup    madspin            880       0.014796       0.014695      0.686
-   m_epmup    onshell            924       0.015477       0.015364      0.730
-   m_epmup    PA                 889       0.014784       0.014677      0.720
-   dphi_ee    madspin              0       0.020400       0.020400      0.000
-   dphi_ee    onshell              0       0.021407       0.021407      0.000
-   dphi_ee    PA                   0       0.020509       0.020509      0.000
+   observable spinmode       N outside sigma_selected  sigma_inrange  outside %
+   m_epmup    madspin              880       0.014796       0.014695      0.686
+   m_epmup    onshell              924       0.015477       0.015364      0.730
+   m_epmup    PA                   889       0.014784       0.014677      0.720
+   m_epmup    madspin_v1           887       0.014721       0.014617      0.702
+   dphi_ee    madspin                0       0.020400       0.020400      0.000
+   dphi_ee    onshell                0       0.021407       0.021407      0.000
+   dphi_ee    PA                     0       0.020509       0.020509      0.000
+   dphi_ee    madspin_v1             0       0.020371       0.020371      0.000
 
 Delta phi is binned over its whole physical range [0, pi] and has no
 outside at all, so for that observable the two normalisations are the
@@ -335,7 +398,8 @@ same number to the last bit.  Only M(e+ mu+), whose last edge is at 450
 GeV while the observable reaches 4.2 TeV, distinguishes them.
 
 NOTE, and it corrects an earlier statement in RESULTS.md: the counts
-3120 / 3088 / 3134 quoted there as lying above 450 GeV are events with
+3120 / 3088 / 3134 quoted there for the first three samples as lying
+above 450 GeV are events with
 a FINITE M(e+ mu+), i.e. before the fiducial pT and eta cuts.  The
 SELECTED overflow -- the events that are actually in sigma_fid and
 missing from the histogram -- is the "N outside" column above.
@@ -348,7 +412,7 @@ of pol_analysis.ratio is used, exactly as for the polarisation ratios.
 A plain sqrt(sum w^2) would overstate the bar by 1/sqrt(1 - 2 p) for a
 bin holding a fraction p of the rate: 8 % on a twelfth of the Delta phi
 rate, which would understate the chi2 by 14 %.  BETWEEN samples there
-is NO correlation to keep -- see "DO THE THREE SAMPLES SHARE PRODUCTION
+is NO correlation to keep -- see "DO THE SAMPLES SHARE PRODUCTION
 EVENTS?" above -- so the two relative errors add in quadrature.  One
 degree of freedom is removed from the chi2 because each curve was
 divided by its own normalisation, which is exactly one constraint.
@@ -375,6 +439,17 @@ m_epmup: the shape ratio bin by bin
       175.0- 260.0      10699       0.9961     0.0149       0.26       0.9957
       260.0- 450.0       4770       0.9922     0.0232       0.34       0.9918
      the two normalisations differ by at most 0.0003 in any bin
+
+   Y = madspin_v1  chi2/ndf = 7.00/6 = 1.17   max|pull| 1.73
+     bin                N(ref)        ratio      error   sigma(1) norm=selected
+        0.0-  45.0      19789       1.0095     0.0102       0.92       1.0093
+       45.0-  70.0      23238       0.9935     0.0092       0.71       0.9933
+       70.0-  95.0      21986       1.0142     0.0096       1.48       1.0141
+       95.0- 125.0      19652       0.9938     0.0102       0.61       0.9936
+      125.0- 175.0      17507       0.9999     0.0111       0.01       0.9997
+      175.0- 260.0      10699       0.9956     0.0148       0.29       0.9955
+      260.0- 450.0       4770       0.9606     0.0227       1.73       0.9605
+     the two normalisations differ by at most 0.0002 in any bin
 
 dphi_ee: the shape ratio bin by bin
    Y = onshell   chi2/ndf = 24.18/11 = 2.20   max|pull| 2.45
@@ -409,7 +484,50 @@ dphi_ee: the shape ratio bin by bin
         2.9-   3.1      27210       0.9699     0.0085       3.55       0.9699
      the two normalisations differ by at most 0.0000 in any bin
 
-For the contrast, "THE THREE SPINMODES COMPARED" above quotes a
+   Y = madspin_v1  chi2/ndf = 10.27/11 = 0.93   max|pull| 1.64
+     bin                N(ref)        ratio      error   sigma(1) norm=selected
+        0.0-   0.3       3547       0.9939     0.0271       0.23       0.9939
+        0.3-   0.5       4186       0.9781     0.0244       0.90       0.9781
+        0.5-   0.8       5107       1.0053     0.0228       0.23       1.0053
+        0.8-   1.0       6401       1.0337     0.0205       1.64       1.0337
+        1.0-   1.3       8255       1.0135     0.0176       0.77       1.0135
+        1.3-   1.6      10423       1.0013     0.0153       0.09       1.0013
+        1.6-   1.8      13238       1.0122     0.0135       0.90       1.0122
+        1.8-   2.1      16174       1.0152     0.0120       1.27       1.0152
+        2.1-   2.4      19743       1.0029     0.0106       0.27       1.0029
+        2.4-   2.6      23414       0.9961     0.0095       0.41       0.9961
+        2.6-   2.9      26413       0.9892     0.0087       1.24       0.9892
+        2.9-   3.1      27210       0.9882     0.0086       1.37       0.9882
+     the two normalisations differ by at most 0.0000 in any bin
+
+WHAT THE PANE SAYS ABOUT madspin_v1 -- the comparison this variant
+was extended for.  madspin_v1 is MadSpin's LEGACY spin-correlation
+path and the reference madspin sample is the current DENSITY
+method, so this curve is legacy-against-density.  All four samples
+are Pythia8-showered HepMC read by the same extractor with the same
+selection and the same binning, so the curve is a SPINMODE
+difference and nothing else -- there is no shower-versus-parton
+confusion in it.
+
+   m_epmup   chi2/ndf = 7.00/6 = 1.17   max|pull| 1.73
+   dphi_ee   chi2/ndf = 10.27/11 = 0.93   max|pull| 1.64
+
+That is a NULL result on both observables: no bin departs from 1 by
+as much as 2 sigma and the chi2 per degree of freedom is about 1.
+The legacy path and the density method agree in SHAPE on both
+observables at these statistics, and they agree in RATE too -- the
+inclusive cross sections differ by 0.15 % and the two fiducial
+rates by 1.1 and 0.4 sigma; see "THE SPINMODES COMPARED" above.
+This is the pane's answer and it is a different answer from the
+other two curves on it: onshell differs in rate, PA differs in
+shape, madspin_v1 differs in neither.  A null result is only worth
+as much as its power, so read it next to the error column in the
+madspin_v1 tables above: the bars are ~1 % per bin on M(e+ mu+)
+and ~1-3 % on Delta phi, so a shape effect of the size PA shows
+(up to 4 %) would have been seen, and one much below a percent
+would not.
+
+For the contrast, "THE SPINMODES COMPARED" above quotes a
 "SHAPE only" chi2 as well.  It is a DIFFERENT statistic and the two
 are not interchangeable: that one rescales the other mode to the
 reference's SELECTED fiducial rate and keeps the plain sqrt(sum w^2)

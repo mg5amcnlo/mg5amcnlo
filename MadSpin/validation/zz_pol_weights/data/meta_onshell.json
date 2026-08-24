@@ -27,6 +27,15 @@
       "meta": "meta_PA.json",
       "compressed": true,
       "decay_card": "decay z > e+ e- / decay z > mu+ mu-"
+    },
+    {
+      "label": "madspin_v1",
+      "spinmode": "madspin_v1",
+      "run": "run_10_decayed_1",
+      "npz": "weights_madspin_v1.npz",
+      "meta": "meta_madspin_v1.json",
+      "compressed": true,
+      "decay_card": "decay z > e+ e- / decay z > mu+ mu-"
     }
   ],
   "input_path": "/Users/omattelaer/Documents/git_workspace/LTS/PROCNLO_loop_sm_7/Events/run_08_decayed_1/events_PYTHIA8_0.hepmc.gz",

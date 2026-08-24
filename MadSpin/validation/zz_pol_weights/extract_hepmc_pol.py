@@ -120,6 +120,18 @@ SAMPLE_REGISTRY = [
      'run': 'run_07_decayed_1', 'npz': 'weights_PA.npz',
      'meta': 'meta_PA.json', 'compressed': True,
      'decay_card': 'decay z > e+ e- / decay z > mu+ mu-'},
+    # A fourth sample, added by a later pass.  Same process, same run card,
+    # same 250 000 events, same exclusive decay card and -- the point -- the
+    # same Pythia8 shower as the other three, so it is directly comparable to
+    # them and a difference is a spinmode difference.  It is the LEGACY
+    # MadSpin path, and it does NOT emit the four ms_pol_* weights: its N line
+    # names 29 weights where the others name 33.  That is handled by the
+    # REQUIRED_WEIGHTS / KEEP_WEIGHTS split above and recorded in its
+    # meta.json as ``has_pol_weights: false``, not worked around.
+    {'label': 'madspin_v1', 'spinmode': 'madspin_v1',
+     'run': 'run_10_decayed_1', 'npz': 'weights_madspin_v1.npz',
+     'meta': 'meta_madspin_v1.json', 'compressed': True,
+     'decay_card': 'decay z > e+ e- / decay z > mu+ mu-'},
 ]
 
 # Final-state PDG ids worth stopping on.  Photons are in because the dressed
