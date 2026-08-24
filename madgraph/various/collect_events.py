@@ -68,14 +68,14 @@ EXTERNAL_RUN_RECORD_CAPACITY = 250_000
 
 # Descriptor budget. macOS ships a soft RLIMIT_NOFILE of 256, which is far
 # too small once several worker threads read from every input file at once,
-# so raise it when we are allowed to. Whatever we end up with is then shared
-# between the input-file pool and the fan-in of the external merge, with a
-# reserve for the output stream, the worker part files and the interpreter.
+# so raise it towards the (much larger) hard limit when we are allowed to.
+# How far we raise it, and how the result is split between the input files
+# and the fan-in of the external merge, follows from the actual number of
+# files in hand -- see fd_budget() and plan_external_fds().
 FD_SOFT_LIMIT_TARGET = 8192
-FD_TOTAL_BUDGET = 320
 FD_RESERVED = 64
-FD_POOL_MAX_OPEN = 256
-FD_MERGE_MAX_FAN_IN = 64
+FD_MIN_BUDGET = 16
+FD_MERGE_MIN_FAN_IN = 2
 
 PathLike = Union[str, Path]
 
@@ -415,24 +415,35 @@ def raise_fd_soft_limit(target: int = FD_SOFT_LIMIT_TARGET) -> Optional[int]:
         return soft
     return target
 
-def _fd_budget() -> int:
-    """Descriptors we may spend on input files and shuffle runs together."""
-    soft = raise_fd_soft_limit()
-    if soft is None or (resource is not None and soft == resource.RLIM_INFINITY):
-        return FD_TOTAL_BUDGET
-    return max(16, min(FD_TOTAL_BUDGET, int(soft) - FD_RESERVED))
+def fd_budget(wanted: int, extra_reserved: int = 0) -> int:
+    """How many descriptors we may really spend, having asked for `wanted`.
 
-def _fd_pool_capacity() -> int:
-    """How many input files the pool may keep open at once.
-
-    The external path holds up to `_fd_merge_fan_in()` shuffle runs open while
-    the pool is in use, so the pool only gets what is left of the budget.
+    `wanted` is what the caller would open if nothing stopped it, so the soft
+    limit is first raised far enough to cover it, plus a reserve for the
+    interpreter, the output stream and any worker part files. Sizing the
+    request from the files actually in hand means a job with a handful of
+    inputs does not disturb the limit at all, while a thousand-file job can
+    still hold every input open at once.
     """
-    return max(8, min(FD_POOL_MAX_OPEN, _fd_budget() - _fd_merge_fan_in()))
+    reserve = FD_RESERVED + max(0, extra_reserved)
+    soft = raise_fd_soft_limit(min(FD_SOFT_LIMIT_TARGET, max(1, wanted) + reserve))
+    if soft is None or (resource is not None and soft == resource.RLIM_INFINITY):
+        return max(FD_MIN_BUDGET, wanted)
+    return max(FD_MIN_BUDGET, int(soft) - reserve)
 
-def _fd_merge_fan_in() -> int:
-    """How many shuffle runs a single merge pass may read at once."""
-    return max(2, min(FD_MERGE_MAX_FAN_IN, _fd_budget() // 4))
+def plan_external_fds(nb_inputs: int, nb_runs: int) -> Tuple[int, int]:
+    """Split the budget between the merge fan-in and the input reader.
+
+    The final copy reads the merged index and the input files at the same
+    time, so both come out of one budget. When everything fits -- the usual
+    case once the soft limit is raised -- the merge reads all of its runs in
+    a single pass and the reader holds every input file open.
+    """
+    budget = fd_budget(nb_inputs + nb_runs)
+    if nb_inputs + nb_runs <= budget:
+        return max(FD_MERGE_MIN_FAN_IN, nb_runs), max(1, nb_inputs)
+    fan_in = max(FD_MERGE_MIN_FAN_IN, min(nb_runs, budget // 4))
+    return fan_in, max(1, budget - fan_in)
 
 def _pread_exact(fd: int, offset: int, size: int) -> bytes:
     """Read exactly `size` bytes at `offset` without touching the file offset.
@@ -453,19 +464,118 @@ def _pread_exact(fd: int, offset: int, size: int) -> bytes:
         got += len(blob)
     return chunks[0] if len(chunks) == 1 else b"".join(chunks)
 
-class FDPool:
+class _FDReader:
+    """Common context-manager plumbing for the three reader strategies."""
+
+    def read(self, file_idx: int, start: int, end: int) -> bytes:
+        raise NotImplementedError
+
+    def close(self) -> None:
+        raise NotImplementedError
+
+    def __enter__(self) -> "_FDReader":
+        return self
+
+    def __exit__(self, *exc_info) -> None:
+        self.close()
+
+class DirectFDReader(_FDReader):
+    """Every input file held open, with no synchronisation on the read path.
+
+    This is the normal case: once the soft limit is raised, the whole input
+    set almost always fits. os.pread ignores the file offset, so concurrent
+    readers of one descriptor cannot interfere, and with nothing to evict
+    there is nothing left to lock -- reads go straight to the descriptor.
+    """
+
+    def __init__(self, paths: Sequence[str]) -> None:
+        self._fds: List[int] = []
+        try:
+            for path in paths:
+                self._fds.append(os.open(path, os.O_RDONLY))
+        except OSError:
+            self.close()
+            raise
+
+    def read(self, file_idx: int, start: int, end: int) -> bytes:
+        return _pread_exact(self._fds[file_idx], start, end - start)
+
+    def close(self) -> None:
+        for fd in self._fds:
+            try:
+                os.close(fd)
+            except OSError:
+                pass
+        self._fds = []
+
+class LRUFDReader(_FDReader):
+    """Bounded LRU of descriptors for a single-threaded caller.
+
+    The disk-backed path has exactly one writer, so it needs the bound but
+    none of the machinery that makes the bound safe to share: no lock, no pin
+    counting, no waiting on a condition.
+    """
+
+    def __init__(self, paths: Sequence[str], max_open: int) -> None:
+        self._paths = list(paths)
+        self._max_open = max(1, max_open)
+        self._open: "OrderedDict[int, int]" = OrderedDict()
+
+    def read(self, file_idx: int, start: int, end: int) -> bytes:
+        fd = self._open.get(file_idx)
+        if fd is None:
+            while len(self._open) >= self._max_open:
+                _, victim = self._open.popitem(last=False)
+                try:
+                    os.close(victim)
+                except OSError:
+                    pass
+            fd = os.open(self._paths[file_idx], os.O_RDONLY)
+        else:
+            self._open.move_to_end(file_idx)
+        self._open[file_idx] = fd
+        return _pread_exact(fd, start, end - start)
+
+    def close(self) -> None:
+        for fd in self._open.values():
+            try:
+                os.close(fd)
+            except OSError:
+                pass
+        self._open.clear()
+
+def open_fd_reader(
+    paths: Sequence[PathLike],
+    capacity: Optional[int] = None,
+    threadsafe: bool = True,
+) -> _FDReader:
+    """Cheapest reader that stays inside the descriptor budget.
+
+    Everything fits -> no bookkeeping at all; otherwise a bounded LRU, which
+    only needs to be thread-safe when several workers share it.
+    """
+    str_paths = [str(path) for path in paths]
+    if capacity is None:
+        capacity = fd_budget(len(str_paths))
+    if len(str_paths) <= capacity:
+        return DirectFDReader(str_paths)
+    if not threadsafe:
+        return LRUFDReader(str_paths, capacity)
+    return FDPool(str_paths, max_open=capacity)
+
+class FDPool(_FDReader):
     """Thread-safe, size-bounded pool of read-only descriptors.
 
-    A single pool is shared by every copy worker: the workers are threads in
-    one process, so a per-worker cache would multiply the descriptor cost by
-    the worker count and blow past RLIMIT_NOFILE. Reads go through os.pread,
+    Used when several copy workers share a reader that cannot hold the whole
+    input set: a cache per worker would multiply the descriptor cost by the
+    worker count and blow past RLIMIT_NOFILE. Reads go through os.pread,
     which does not use the file offset and therefore lets all threads share
     one descriptor per file without locking around the read itself.
     """
 
     def __init__(self, paths: Sequence[str], max_open: Optional[int] = None) -> None:
         self._paths = list(paths)
-        self._max_open = max(1, _fd_pool_capacity() if max_open is None else max_open)
+        self._max_open = max(1, fd_budget(len(self._paths)) if max_open is None else max_open)
         self._cond = threading.Condition()
         # file_idx -> [fd, pin_count], in least-recently-used order
         self._open: "OrderedDict[int, List[int]]" = OrderedDict()
@@ -528,12 +638,6 @@ class FDPool:
                     pass
             self._open.clear()
 
-    def __enter__(self) -> "FDPool":
-        return self
-
-    def __exit__(self, *exc_info) -> None:
-        self.close()
-
 # ============================
 # In-memory path
 # ============================
@@ -553,13 +657,13 @@ def _split_chunks(arr: List[EventRef], k: int) -> List[List[EventRef]]:
         start = end
     return chunks
 
-def _copy_event_refs(pool: FDPool, refs: Sequence[EventRef], fout) -> None:
+def _copy_event_refs(reader: _FDReader, refs: Sequence[EventRef], fout) -> None:
     for ref in refs:
-        fout.write(pool.read(ref.file_idx, ref.start, ref.end))
+        fout.write(reader.read(ref.file_idx, ref.start, ref.end))
 
-def _write_part(pool: FDPool, refs: Sequence[EventRef], part_path: str) -> None:
+def _write_part(reader: _FDReader, refs: Sequence[EventRef], part_path: str) -> None:
     with open(part_path, "wb") as fout:
-        _copy_event_refs(pool, refs, fout)
+        _copy_event_refs(reader, refs, fout)
 
 def write_randomized_events_memory(
     input_paths: Sequence[Path],
@@ -584,12 +688,13 @@ def write_randomized_events_memory(
     str_paths = [str(p) for p in input_paths]
 
     if workers <= 1 or len(shuffled) == 0:
-        with FDPool(str_paths) as pool:
+        reader = open_fd_reader(str_paths, threadsafe=False)
+        with reader:
             with _open_output_stream(output_path, prefer_pigz=prefer_pigz, gzip_level=gzip_level, verbose=verbose) as fout:
                 fout.write(open_tag)
                 fout.write(header_block)
                 fout.write(init_block)
-                _copy_event_refs(pool, shuffled, fout)
+                _copy_event_refs(reader, shuffled, fout)
                 fout.write(b"</LesHouchesEvents>\n")
         return
 
@@ -599,10 +704,14 @@ def write_randomized_events_memory(
     if verbose:
         print(f"      writing event chunks with {len(chunks)} thread worker(s)")
 
+    # the workers hold their part files open for the whole copy, so those
+    # descriptors have to come off the budget before the reader is sized.
+    capacity = fd_budget(len(str_paths), extra_reserved=len(chunks))
+
     try:
-        with FDPool(str_paths) as pool:
+        with open_fd_reader(str_paths, capacity=capacity) as reader:
             with ThreadPoolExecutor(max_workers=len(chunks)) as executor:
-                futures = [executor.submit(_write_part, pool, chunk, str(part)) for chunk, part in zip(chunks, part_paths)]
+                futures = [executor.submit(_write_part, reader, chunk, str(part)) for chunk, part in zip(chunks, part_paths)]
                 for future in futures:
                     future.result()
 
@@ -659,8 +768,8 @@ def _reduce_run_paths(
     practice this is a no-op.
     """
     if fan_in is None:
-        fan_in = _fd_merge_fan_in()
-    fan_in = max(2, fan_in)
+        fan_in = plan_external_fds(0, len(run_paths))[0]
+    fan_in = max(FD_MERGE_MIN_FAN_IN, fan_in)
 
     level = 0
     while len(run_paths) > fan_in:
@@ -713,13 +822,15 @@ def _copy_record_iter(
     records: Iterator[Tuple[int, int, int, int]],
     fout,
     limit: Optional[int] = None,
+    capacity: Optional[int] = None,
 ) -> int:
     written = 0
-    with FDPool(input_paths) as pool:
+    # one writer, so the reader never needs to be thread-safe here
+    with open_fd_reader(input_paths, capacity=capacity, threadsafe=False) as reader:
         for _, file_idx, start, end in records:
             if limit is not None and written >= limit:
                 break
-            fout.write(pool.read(file_idx, start, end))
+            fout.write(reader.read(file_idx, start, end))
             written += 1
     return written
 
@@ -817,13 +928,18 @@ def write_randomized_events_external(
         )
 
         target = total_events if subset is None else min(subset, total_events)
-        run_paths = _reduce_run_paths(run_paths, temp_dir, verbose=verbose)
+        fan_in, capacity = plan_external_fds(len(input_paths), len(run_paths))
+        if verbose:
+            print(f"      descriptor plan: merge fan-in {fan_in}, "
+                  f"{capacity} of {len(input_paths)} input file(s) held open")
+        run_paths = _reduce_run_paths(run_paths, temp_dir, fan_in=fan_in, verbose=verbose)
         records_iter = _iter_merged_run_records(run_paths) if run_paths else iter(())
         with _open_output_stream(output_path, prefer_pigz=prefer_pigz, gzip_level=gzip_level, verbose=verbose) as fout:
             fout.write(open_tag)
             fout.write(header_block)
             fout.write(init_block)
-            _copy_record_iter([str(p) for p in input_paths], records_iter, fout, limit=target)
+            _copy_record_iter([str(p) for p in input_paths], records_iter, fout,
+                              limit=target, capacity=capacity)
             fout.write(b"</LesHouchesEvents>\n")
 
     return total_events

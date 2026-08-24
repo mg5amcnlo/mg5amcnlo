@@ -265,3 +265,77 @@ class TestCollectEvents(unittest.TestCase):
             self.assertRaises(RuntimeError, pool.read, 0, size - 4, size + 64)
         finally:
             pool.close()
+
+
+class TestFDReaderSelection(unittest.TestCase):
+    """The reader strategy must follow the descriptor budget, and all three
+    strategies must return the same bytes."""
+
+    def setUp(self):
+        self.tmpdir = tempfile.mkdtemp(prefix='collect_events_reader_')
+        self.paths = []
+        for idx in range(12):
+            path = pjoin(self.tmpdir, 'f%02d.bin' % idx)
+            with open(path, 'wb') as fsock:
+                fsock.write(('payload-%02d-' % idx).encode() * 64)
+            self.paths.append(path)
+
+    def tearDown(self):
+        shutil.rmtree(self.tmpdir, ignore_errors=True)
+
+    def test_direct_reader_when_everything_fits(self):
+        """no bookkeeping at all when the budget covers the input set"""
+        reader = collect_events.open_fd_reader(self.paths, capacity=len(self.paths))
+        with reader:
+            self.assertIsInstance(reader, collect_events.DirectFDReader)
+
+    def test_bounded_reader_when_it_does_not_fit(self):
+        """a tight budget falls back to an LRU, thread-safe only if shared"""
+        reader = collect_events.open_fd_reader(self.paths, capacity=4,
+                                               threadsafe=False)
+        with reader:
+            self.assertIsInstance(reader, collect_events.LRUFDReader)
+        reader = collect_events.open_fd_reader(self.paths, capacity=4,
+                                               threadsafe=True)
+        with reader:
+            self.assertIsInstance(reader, collect_events.FDPool)
+
+    def test_all_readers_agree(self):
+        """the three strategies are interchangeable"""
+        expected = []
+        for path in self.paths:
+            with open(path, 'rb') as fsock:
+                expected.append(fsock.read())
+
+        readers = [collect_events.DirectFDReader(self.paths),
+                   collect_events.LRUFDReader(self.paths, 3),
+                   collect_events.FDPool(self.paths, max_open=3)]
+        for reader in readers:
+            with reader:
+                for idx, blob in enumerate(expected):
+                    # read back to front, so the LRU actually has to evict
+                    self.assertEqual(reader.read(idx, 7, len(blob)), blob[7:])
+                for idx in reversed(range(len(expected))):
+                    self.assertEqual(reader.read(idx, 0, 5), expected[idx][:5])
+
+    def test_budget_is_sized_from_the_request(self):
+        """a small job must not push the soft limit around"""
+        soft_before = resource.getrlimit(resource.RLIMIT_NOFILE)[0]
+        collect_events.fd_budget(4)
+        self.assertEqual(resource.getrlimit(resource.RLIMIT_NOFILE)[0],
+                         soft_before)
+
+    def test_external_plan_prefers_a_single_merge_pass(self):
+        """with room to spare, nothing is capped back to a fixed size"""
+        fan_in, capacity = collect_events.plan_external_fds(1000, 20)
+        self.assertGreaterEqual(fan_in, 20)
+        self.assertEqual(capacity, 1000)
+
+    def test_external_plan_shares_a_tight_budget(self):
+        """when it does not fit, both sides stay within the budget"""
+        budget = collect_events.fd_budget(1020)
+        fan_in, capacity = collect_events.plan_external_fds(10 ** 6, 500)
+        self.assertLessEqual(fan_in + capacity, max(budget, 10 ** 6))
+        self.assertGreaterEqual(fan_in, collect_events.FD_MERGE_MIN_FAN_IN)
+        self.assertGreaterEqual(capacity, 1)
+
