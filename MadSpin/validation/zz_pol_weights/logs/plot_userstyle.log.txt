@@ -1,2 +1,2 @@
-m_epmup    N=  312  purity=0.904  eff=0.493  sum/full = 0.9926 +- 0.0125
-dphi_ee    N=11984  purity=0.964  eff=0.654  sum/full = 0.9965 +- 0.0043
+m_epmup    N=118521  purity=1.000  eff=0.474  sum/full = 0.9873 +- 0.0006
+dphi_ee    N=164111  purity=1.000  eff=0.656  sum/full = 0.9918 +- 0.0005

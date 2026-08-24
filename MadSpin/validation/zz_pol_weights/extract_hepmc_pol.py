@@ -33,16 +33,20 @@ the first and last event and the float64 sums of all 33 weights, so the
 question can be settled from the outputs with the evidence in hand.  See
 ``analyse_pol.py`` and RESULTS.md.
 
-**Which ``z`` decayed to what.**  This sample's MadSpin card is
-``decay z > light light`` with ``light`` covering *every* fermion but the top,
-so it is an INCLUSIVE ``Z`` decay and not the ``z > e+ e-`` / ``z > mu+ mu-``
-pair the observables want.  Which channel each ``z`` took is therefore read out
-of the event record: a ``z``'s end-vertex barcode marks that vertex, the chain
-of status-44 ``z`` copies extends the marking, and the particles produced at a
-marked vertex are that ``z``'s decay products.  This is truth information and
-it is used ONLY to categorise events and to measure the purity of the
-reconstructed selection -- never to build the plotted observables, which come
-from final-state (status 1) particles alone.
+**Which ``z`` decayed to what.**  The present samples' MadSpin card is
+``decay z > e+ e-`` and ``decay z > mu+ mu-``, which is exclusive *in intent*.
+Whether it is exclusive *in effect* is a different question and it is measured
+here rather than assumed, because it decides what the figures mean: which
+channel each ``z`` took is read out of the event record, by marking a ``z``'s
+end-vertex barcode, extending the marking along the chain of status-44 ``z``
+copies, and taking the particles produced at a marked vertex as that ``z``'s
+decay products.  (On these three files it comes out at 250 000 of 250 000,
+so the card is exclusive in effect too; the earlier samples this script was
+written for used ``decay z > light light`` over every fermion but the top and
+gave 0.23 %.)  This is truth information and it is used ONLY to categorise
+events and to measure the purity of the reconstructed selection -- never to
+build the plotted observables, which come from final-state (status 1) particles
+alone.
 
 Note on HepMC statuses: this writer maps *final* particles to 1 and everything
 else to ``abs(pythia_status)``.  A hard-process lepton that never branches is
@@ -104,16 +108,18 @@ WIDE_WEIGHTS = frozenset(('0', 'Weight', 'MUR1.0_MUF1.0'))
 # the study is of one file.  ``pol_analysis.EXTRA_SAMPLES`` is the loader's
 # copy of the same fact.
 SAMPLE_REGISTRY = [
-    {'label': 'madspin', 'spinmode': 'madspin (MadSpin\'s default; the card '
-                                     'leaves "set spinmode" commented out)',
-     'run': 'run_02_decayed_1', 'npz': 'weights.npz', 'meta': 'meta.json',
-     'compressed': False},
+    {'label': 'madspin', 'spinmode': 'madspin (set explicitly in this card)',
+     'run': 'run_06_decayed_1', 'npz': 'weights.npz', 'meta': 'meta.json',
+     'compressed': True,
+     'decay_card': 'decay z > e+ e- / decay z > mu+ mu-'},
     {'label': 'onshell', 'spinmode': 'onshell',
-     'run': 'run_05_decayed_1', 'npz': 'weights_onshell.npz',
-     'meta': 'meta_onshell.json', 'compressed': True},
+     'run': 'run_08_decayed_1', 'npz': 'weights_onshell.npz',
+     'meta': 'meta_onshell.json', 'compressed': True,
+     'decay_card': 'decay z > e+ e- / decay z > mu+ mu-'},
     {'label': 'PA', 'spinmode': 'PA',
-     'run': 'run_03_decayed_1', 'npz': 'weights_PA.npz',
-     'meta': 'meta_PA.json', 'compressed': True},
+     'run': 'run_07_decayed_1', 'npz': 'weights_PA.npz',
+     'meta': 'meta_PA.json', 'compressed': True,
+     'decay_card': 'decay z > e+ e- / decay z > mu+ mu-'},
 ]
 
 # Final-state PDG ids worth stopping on.  Photons are in because the dressed

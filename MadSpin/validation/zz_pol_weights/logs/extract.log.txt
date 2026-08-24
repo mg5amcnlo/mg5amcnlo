@@ -1,13 +1,16 @@
-     25000 events    1.41 / 14.06 GB       3 s  eta     30 s
-     50000 events    2.82 / 14.06 GB       7 s  eta     27 s
-     75000 events    4.22 / 14.06 GB      10 s  eta     24 s
-    100000 events    5.63 / 14.06 GB      14 s  eta     21 s
-    125000 events    7.03 / 14.06 GB      17 s  eta     17 s
-    150000 events    8.44 / 14.06 GB      20 s  eta     14 s
-    175000 events    9.85 / 14.06 GB      24 s  eta     10 s
-    200000 events   11.25 / 14.06 GB      27 s  eta      7 s
-    225000 events   12.66 / 14.06 GB      31 s  eta      3 s
-    250000 events   14.06 / 14.06 GB      34 s  eta      0 s
-read   14.061 GB in 34.0 s (0.57 min), 142420114 lines
+     20000 events    0.84 GB inflated       2 s
+     40000 events    1.69 GB inflated       5 s
+     60000 events    2.53 GB inflated       7 s
+     80000 events    3.38 GB inflated       9 s
+    100000 events    4.22 GB inflated      11 s
+    120000 events    5.07 GB inflated      13 s
+    140000 events    5.91 GB inflated      16 s
+    160000 events    6.76 GB inflated      18 s
+    180000 events    7.61 GB inflated      20 s
+    200000 events    8.46 GB inflated      22 s
+    220000 events    9.30 GB inflated      25 s
+    240000 events   10.14 GB inflated      27 s
+read   3.449 GB on disk (10.562 GB inflated) in 27.8 s (0.46 min), 109455942 lines
 events 250000
-wrote  data/weights.npz (7.0 MB)
+wrote  data/weights.npz (23.2 MB)
+       /private/tmp/t88/MadSpin/validation/zz_pol_weights/data/meta.json

@@ -8,7 +8,14 @@ and only the drawing differs.
 
 The extra spinmode samples are overlaid on the distribution pane only, on the
 same rule as the MG7 figures: drawn where the selection leaves enough events to
-be a measurement, named and explained in the pane where it does not.
+be a measurement.  With the exclusive ``decay z > e+ e-`` / ``decay z > mu+
+mu-`` card both observables clear that threshold for all three modes.
+
+As on the MG7 figures, **nothing but the axis labels, the tick labels and the
+legend is written here** -- no title, no integrated values, no per-pane numbers
+and no note about a dropped mode.  The two shaded bands behind the sum pane are
++-2 % and +-5 % about 1; they are graphics, they stay, and what they are is
+stated in ``numbers.txt`` and RESULTS.md rather than on the canvas.
 
 The conventions are the ones the sibling studies under ``MadSpin/validation/``
 follow: stock rcParams (no usetex, sans serif), plain steps for the reference
@@ -68,8 +75,6 @@ MS = 4
 STEP_ALPHA = 0.55
 DPI = 300
 
-TITLE = ('p p > z z [QCD] (MC@NLO) + MadSpin, Pythia8 showered\n'
-         '13 TeV, 250k events, decay z > light light (inclusive)')
 
 
 def _step(ax, edges, y, **kw):
@@ -107,6 +112,8 @@ def draw(d, obs, outdir, extras=()):
     for key, dx in extras:
         fd = PA.full_distribution(dx, obs)
         if not fd['drawable']:
+            # Recorded, and deliberately NOT written on the figure; the
+            # survivors and the drawn/not-drawn decision are in numbers.txt.
             dropped.append((key, fd['n_sel']))
             continue
         _step(ax, edges, fd['y'], color=COLOR[key], lw=1.3, ls=LS_EXTRA[key],
@@ -126,25 +133,14 @@ def draw(d, obs, outdir, extras=()):
     ax.set_ylabel(ylab)
     ax.set_xlim(edges[0], edges[-1])
     lo, hi = ax.get_ylim()
-    # The user style's legend has an opaque frame, so on the log pane it needs
-    # enough headroom to clear the total's peak outright rather than merely to
-    # sit above the autoscale top: at 40x its lower edge landed on the black
-    # step.  Checked on the rendered PNG, not on the axis limits.
-    ax.set_ylim(lo, hi * (400.0 if obs in PA.LOGY else 1.45))
+    # The user style's legend has an opaque frame and ten rows, so on the log
+    # pane it needs enough headroom to clear the total's peak outright rather
+    # than merely to sit above the autoscale top.  The exclusive samples
+    # resolve the Z_0 Z_0 tail down to 1e-8, stretching the pane to six
+    # decades, and at the earlier 400x the box still covered the black step;
+    # 4000x clears it.  Checked on the rendered PNG, not on the axis limits.
+    ax.set_ylim(lo, hi * (4000.0 if obs in PA.LOGY else 1.45))
     ax.legend(loc='upper left', fontsize=8)
-    if dropped:
-        # See plot_zz_pol.draw: a figure that silently drops two of its three
-        # samples implies a comparison it did not make.
-        who = ' and '.join('%s (N=%d)' % (k, n) for k, n in dropped)
-        # Below the legend, not beside it: this style's legend has an opaque
-        # frame and is wide enough to reach the middle of the pane, so the
-        # upper-right corner the MG7 figure uses is not free here.
-        ax.text(0.985, 0.60,
-                'spinmode %s not drawn: too few events\nfor a comparison at '
-                'this selection' % who,
-                transform=ax.transAxes, fontsize=7.5, ha='right', va='top',
-                color='0.35')
-    ax.set_title(TITLE, fontsize=9)
     ax.tick_params(labelbottom=False)
 
     # -- the sum: the polarisation interference, on its own scale ------------
@@ -158,13 +154,9 @@ def draw(d, obs, outdir, extras=()):
                  zorder=4)
     axs.set_ylim(*_ratio_ylim(r, er, 1.0))
     axs.set_ylabel(PA.RATIO_TXT['SUM'], fontsize=8)
-    # The value, not its significance: the sigma-from-1 lives in numbers.txt
-    # and RESULTS.md.
-    axs.text(0.012, 0.05,
-             'integrated: %.4f +- %.4f\nbands: +-2%%, +-5%%' % (Rint, Eint),
-             transform=axs.transAxes, fontsize=7.5, ha='left', va='bottom')
-    axs.text(0.988, 0.94, 'POLARISATION INTERFERENCE', transform=axs.transAxes,
-             fontsize=8.5, ha='right', va='top', color=COLOR['SUM'])
+    # Neither the integrated value, nor what the two bands are, nor the words
+    # "polarisation interference" are written here any more.  All three are in
+    # numbers.txt and RESULTS.md.
     axs.set_xlabel(xlab, fontsize=10)
     for s in axs.spines.values():
         s.set_linewidth(1.6)
@@ -172,16 +164,14 @@ def draw(d, obs, outdir, extras=()):
     # -- the breakdown -------------------------------------------------------
     for a, k in zip(small, ['LL', 'TT', 'TL', 'LT']):
         rk, ek, _ = c.ratios[k]
-        Rk, Ek = c.integrated[k]
-        a.axhline(Rk, color=C_REF, ls='--', lw=0.9, zorder=2,
-                  label='integrated %.4f +- %.4f' % (Rk, Ek))
+        Rk = c.integrated[k][0]
+        # The dashed line is that pane's integrated value; its number is in
+        # numbers.txt, not beside it.
+        a.axhline(Rk, color=C_REF, ls='--', lw=0.9, zorder=2)
         _step(a, edges, rk, color=COLOR[k], lw=1.0, alpha=STEP_ALPHA, zorder=3)
         a.errorbar(x, rk, yerr=ek, fmt='o', ms=MS, color=COLOR[k], zorder=4)
         a.set_ylim(*_ratio_ylim(rk, ek, Rk))
         a.set_ylabel(PA.RATIO_TXT[k], fontsize=9)
-        # See the note in plot_zz_pol.draw: no fixed corner is free in every
-        # pane, so the number rides on the reference line's legend entry.
-        a.legend(loc='best', fontsize=7, framealpha=0.75)
     for a in small[:2]:
         a.tick_params(labelbottom=False)
     for a in small[2:]:

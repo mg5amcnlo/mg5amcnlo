@@ -14,13 +14,24 @@ One figure per observable, in three tiers:
 3. a 2 x 2 breakdown, ``LL/full``, ``TT/full``, ``TL/full``, ``LT/full``.
 
 The two extra spinmodes enter the distribution pane and NOWHERE else.  The
-ratio panes are the polarisation decomposition of the default (``madspin``)
+ratio panes are the polarisation decomposition of the reference (``madspin``)
 sample; putting a second sample's numerator over a first sample's denominator
 would be meaningless, and each extra sample's own decomposition is a different
 study.  A spinmode curve is drawn only where the selection leaves enough events
-for it to be a measurement -- see ``PA.MIN_SEL_TO_DRAW``; where it does not, the
-pane says so in as many words instead of carrying three noise realisations that
-the eye would read as a mode difference.
+for it to be a measurement -- see ``PA.MIN_SEL_TO_DRAW``.  With the exclusive
+``decay z > e+ e-`` / ``decay z > mu+ mu-`` card both observables clear that
+threshold for all three modes, so nothing is dropped; the mechanism is kept
+because a future sample may not, and ``numbers.txt`` records the survivors and
+the drawn/not-drawn decision either way.
+
+**Nothing but the axis labels, the tick labels and the legend is written on
+these figures.**  The integrated ratios, the per-pane numbers, the identity of
+the sample and every explanatory note were on the figure in earlier passes and
+have been moved off it; all of them are in ``numbers.txt`` and RESULTS.md, and
+``write_numbers`` prints the figure caption line that used to be the plot title
+so that it stays recoverable.  The dashed reference line in each of the four
+small panes is still that pane's integrated value -- the line is drawn, its
+number is not printed.
 
 Tier 2 is the physics and is drawn as such.  The four polarisation weights are
 not a partition of the cross section: each is the production/decay convolution
@@ -87,9 +98,9 @@ LS = {'full': 'solid', 'LL': 'dashed', 'TT': 'dashdot',
       'TL': (0, (1, 1.4)), 'LT': (0, (5, 1.5, 1, 1.5)), 'SUM': 'solid',
       'onshell': (0, (6, 2)), 'PA': (0, (3, 1, 1, 1, 1, 1))}
 
-TITLE_TEX = (r'$pp \to ZZ$ [QCD] (MC@NLO) $+$ MadSpin, showered; '
-             r'13 TeV, 250k events')
-TITLE_TXT = 'p p > z z [QCD] (MC@NLO) + MadSpin, showered; 13 TeV, 250k events'
+# The caption these figures used to carry as a plot title lives in
+# ``pol_analysis.CAPTION``, next to everything else both plotting scripts
+# share, and is printed into numbers.txt by :func:`write_numbers`.
 
 
 def _pad(lo, hi, frac=0.18):
@@ -174,26 +185,22 @@ def draw(d, obs, outdir, extras=()):
     ax.set_ylabel(ylab)
     lo, hi = ax.get_ylim()
     # On the log pane the autoscale floor is set by the Z_0 Z_0 component's
-    # last bin, four decades under the total, so the plain 1.6x headroom that
-    # works on a linear pane leaves the legend sitting on the curves.  One
-    # column throughout now that the labels are short.
-    ax.set_ylim(lo, hi * (60.0 if obs in PA.LOGY else 1.62))
+    # last bin, so the plain 1.6x headroom that works on a linear pane leaves
+    # the legend sitting on the curves.  One column throughout now that the
+    # labels are short.  The exclusive samples resolve the Z_0 Z_0 tail down to
+    # 1e-8 where the earlier sparse ones had empty bins there, which stretches
+    # the pane to six decades and puts the seven-row legend back on the total;
+    # 250x rather than the earlier 60x clears it.  Checked on the rendered PNG,
+    # not on the axis limits.
+    ax.set_ylim(lo, hi * (250.0 if obs in PA.LOGY else 1.62))
     ax.legend(frameon=False, fontsize=8.5, loc='upper left')
-    if dropped:
-        # Said on the figure, not only in numbers.txt.  A reader who sees two
-        # of three samples must be told that the other two exist and why they
-        # are absent, or the figure implies a comparison was never made.
-        who = ' and '.join('%s (N=%d)' % (k, n) for k, n in dropped)
-        msg = ('spinmode %s not drawn: too few events\nfor a comparison at '
-               'this selection' % who)
-        # Right, and below the legend rather than beside it: the legend's
-        # longest entry now names a spinmode and reaches past the middle of
-        # the pane.  Low enough to clear it, high enough to stay off the
-        # curves -- on the log pane this note only ever appears on, the floor
-        # is where the Z_0Z_0 component runs.  Checked on the rendered PNG.
-        ax.text(0.985, 0.78, msg, transform=ax.transAxes, fontsize=8,
-                ha='right', va='top', color='0.35')
-    ax.set_title(TITLE_TEX if USETEX else TITLE_TXT, fontsize=10)
+    # A dropped spinmode is recorded and returned, and it is NOT written on the
+    # figure: nothing is.  ``write_numbers`` prints the survivors and the
+    # drawn/not-drawn decision for every mode and every observable, which is
+    # where a reader is told what is and is not on the canvas.  With the
+    # exclusive decay card ``dropped`` is empty for both observables.
+    # No title either -- see the module docstring; the caption is in
+    # numbers.txt.
     ax.xaxis.set_minor_locator(AutoMinorLocator())
     if obs not in PA.LOGY:
         ax.yaxis.set_minor_locator(AutoMinorLocator())
@@ -214,17 +221,10 @@ def draw(d, obs, outdir, extras=()):
     axs.set_ylabel(rlab['SUM'], fontsize=8.5)
     axs.xaxis.set_minor_locator(AutoMinorLocator())
     axs.yaxis.set_minor_locator(AutoMinorLocator())
-    # The value, not its significance: the sigma-from-1 lives in numbers.txt
-    # and RESULTS.md, where it can be read next to the sample it belongs to.
-    note = ((r'integrated: $%.4f \pm %.4f$' % (Rint, Eint)) if USETEX else
-            ('integrated: %.4f +- %.4f' % (Rint, Eint)))
-    axs.text(0.015, 0.06, note, transform=axs.transAxes, fontsize=8.5,
-             ha='left', va='bottom')
-    axs.text(0.985, 0.94,
-             'polarisation interference' if not USETEX
-             else r'\textbf{polarisation interference}',
-             transform=axs.transAxes, fontsize=9, ha='right', va='top',
-             color=COLOR['SUM'])
+    # Neither the integrated value nor the words "polarisation interference"
+    # are written here any more.  Both are in numbers.txt (the integrated
+    # ratios table and the per-bin table for this observable) and in
+    # RESULTS.md, where they can be read next to the sample they belong to.
     axs.set_xlabel(xlab, fontsize=12)
     for s in axs.spines.values():
         s.set_linewidth(1.5)
@@ -232,9 +232,12 @@ def draw(d, obs, outdir, extras=()):
     # -- tier 3: the breakdown, one polarisation per pane --------------------
     for a, k in zip(small, ['LL', 'TT', 'TL', 'LT']):
         rk, ek, _ = c.ratios[k]
-        Rk, Ek = c.integrated[k]
-        lab = (r'integrated $%.4f$' % Rk) if USETEX else 'integrated %.4f' % Rk
-        a.axhline(Rk, color='black', lw=0.9, ls='--', label=lab)
+        Rk = c.integrated[k][0]
+        # The dashed line IS that pane's integrated value and stays, because it
+        # is the reference the shape is read against.  Its number is no longer
+        # printed beside it -- all five integrated ratios and their errors are
+        # in numbers.txt's "integrated polarisation ratios" table.
+        a.axhline(Rk, color='black', lw=0.9, ls='--')
         a.stairs(rk, edges, color=COLOR[k], ls=LS[k], lw=LW, zorder=4,
                  baseline=None)
         a.errorbar(x, rk, yerr=ek, fmt='o', ms=3.0, color=COLOR[k],
@@ -243,11 +246,6 @@ def draw(d, obs, outdir, extras=()):
         a.set_ylabel(rlab[k], fontsize=10)
         a.xaxis.set_minor_locator(AutoMinorLocator())
         a.yaxis.set_minor_locator(AutoMinorLocator())
-        # A legend rather than a fixed-position text: these panes have no
-        # common shape -- LL rises across Delta phi and falls across the mass,
-        # TT does the opposite -- so any one corner is under the data in some
-        # of them.  ``loc='best'`` picks the empty one per pane.
-        a.legend(loc='best', frameon=False, fontsize=8)
     for a in small[:2]:
         plt.setp(a.get_xticklabels(), visible=False)
     for a in small[2:]:
@@ -267,6 +265,20 @@ def draw(d, obs, outdir, extras=()):
 
 
 # --------------------------------------------------------------------------
+def _wrap(text, width):
+    """``text`` broken on spaces into lines of at most ``width`` characters."""
+    out, line = [], ''
+    for w in text.split():
+        if line and len(line) + 1 + len(w) > width:
+            out.append(line)
+            line = w
+        else:
+            line = (line + ' ' + w) if line else w
+    if line:
+        out.append(line)
+    return out
+
+
 def _sigma_err(dd, obs):
     """``sqrt(sum w^2)`` on one sample's fiducial cross section, in pb."""
     w = np.asarray(dd.full, dtype=np.float64)[dd.sel[obs]] * dd.scale_to_pb
@@ -281,9 +293,29 @@ def write_numbers(d, path, extras=()):
     A('=' * 74)
     A('Three samples: the same process, the same run card and the same 250k')
     A('showered events, differing only in MadSpin\'s spinmode.  The')
-    A('polarisation decomposition below is the DEFAULT (madspin) sample\'s;')
-    A('the other two enter the distribution pane of each figure and the')
-    A('cross-mode comparison section, and nowhere else.')
+    A('polarisation decomposition below is the REFERENCE (madspin, run_06)')
+    A('sample\'s; the other two enter the distribution pane of each figure and')
+    A('the cross-mode comparison section, and nowhere else.')
+    A('')
+    A('--- WHAT IS NOT ON THE FIGURES ---')
+    A('The figures carry their axis labels, their tick labels and their legend')
+    A('and NOTHING else.  Everything that used to be written on them is here:')
+    A('  * the plot title, which was the caption below;')
+    A('  * the integrated (LL+TT+TL+LT)/full and its error, printed in the sum')
+    A('    pane -- see "integrated polarisation ratios" below;')
+    A('  * the four per-pane integrated ratios, printed in the 2x2 legends.')
+    A('    The dashed line in each small pane still IS that value; only the')
+    A('    number left the canvas;')
+    A('  * the words "polarisation interference" over the sum pane;')
+    A('  * in the user style, the note naming the two shaded bands behind the')
+    A('    sum pane.  They are +-2 % and +-5 % about 1.  The bands are still')
+    A('    drawn; only the words are gone;')
+    A('  * the "spinmode ... not drawn: too few events" note.  Which modes are')
+    A('    drawn on which figure is stated per observable further down.')
+    A('')
+    A('figure caption (was the plot title):')
+    for chunk in _wrap(PA.CAPTION, 70):
+        A('   ' + chunk)
     A('')
     A('%-9s %-34s %9s %9s %8s %8s'
       % ('spinmode', 'input', 'on disk', 'inflated', 'pass s', 'events'))
@@ -294,13 +326,17 @@ def write_numbers(d, path, extras=()):
                  '/events_PYTHIA8_0', '/...'),
              mm['input_gb'], mm.get('inflated_gb', mm['input_gb']),
              mm['pass_seconds'], mm['n_events']))
-    A('The two .gz inputs were streamed through "gzip -dc" in a child process,')
-    A('never unpacked to disk; the pass cost the same as the plain file\'s.')
+    A('All three .gz inputs were streamed through "gzip -dc" in a child')
+    A('process and never unpacked to disk: they inflate to ~10.6 GB each and')
+    A('no temporary of that size should have to exist.  The three passes were')
+    A('run concurrently on separate cores, so the times above are within a')
+    A('second of each other and none of them is a serial measurement.')
     A('%d lines read from the reference file, %s' % (m['lines_read'],
       m['hepmc_flavour']))
     A('code       %s' % m['code_sha'])
     A('')
-    A('--- the 33 weight names on every N line (asserted, not sampled) ---')
+    A('--- the %d weight names on every N line (asserted, not sampled) ---'
+      % len(m['weight_names']))
     for i in range(0, len(m['weight_names']), 6):
         A('   ' + '  '.join('%-18s' % n for n in m['weight_names'][i:i + 6]))
     A('')
@@ -341,40 +377,78 @@ def write_numbers(d, path, extras=()):
     A('  |Weight| takes %d distinct value(s): %s'
       % (len(vals), ', '.join('%.6f (x%d)' % (v, c)
                               for v, c in zip(vals, cnts))))
-    A('     -- 249 999 of them are the banner XWGTUP and the second value is a')
-    A('     SINGLE event, not a second MC@NLO branch; see the spinmode section')
-    A('     below, where the other two files each carry exactly one value.')
+    if len(vals) > 1:
+        j = int(np.argmax(cnts))
+        A('     -- %d of the %d events carry %.6f, the banner\'s XMAXUP; the'
+          % (cnts[j], ev['n_events'], vals[j]))
+        odd = np.abs(d.full) != vals[j]
+        A('     other %d value(s) are carried by %d event(s) in total and are'
+          % (len(vals) - 1, int(odd.sum())))
+        A('     single-event anomalies, NOT a second MC@NLO branch.  Together')
+        A('     they are worth %.3e pb in a %.6f pb total.'
+          % (float(np.abs(d.full)[odd].sum() * d.scale_to_pb),
+             ev['sum_w0_pb']))
     A('  %d of %d events carry a NEGATIVE weight (%.3f %%).'
       % (ev['n_negative'], ev['n_events'], 100 * ev['frac_negative']))
     A('')
-    A('--- THE SAMPLE IS NOT p p > z z > e+e- mu+mu- ---')
-    A('The MadSpin card is  decay z > light light  with')
-    A('  define light = 1 2 3 4 5 -1 -2 -3 -4 -5 11 12 13 14 15 16 -11 ... -16')
-    A('i.e. every fermion but the top: an INCLUSIVE Z decay.  Read off the')
-    A('event record, of the 250 000 events')
-    z1, z2 = d.z['z1_ch'], d.z['z2_ch']
-    t4 = ((z1 == 11) & (z2 == 13)) | ((z1 == 13) & (z2 == 11))
-    tee = (z1 == 11) | (z2 == 11)
-    A('  %6d (%.4f %%) have one z -> e+e- AND the other z -> mu+mu-'
-      % (t4.sum(), 100 * t4.mean()))
-    A('  %6d (%.3f %%) have at least one z -> e+e-'
-      % (tee.sum(), 100 * tee.mean()))
-    A('M(e+ mu+) therefore exists for two events in a thousand, and its figure')
-    A('is statistics limited by the decay card and by nothing else.')
+    A('--- IS THE DECAY CARD EXCLUSIVE IN EFFECT? (measured, not assumed) ---')
+    A('The MadSpin card of all three runs is')
+    A('  decay z > e+ e-')
+    A('  decay z > mu+ mu-')
+    A('which is exclusive in INTENT.  Whether it is exclusive in EFFECT is a')
+    A('different question and it decides what these figures mean, so it is')
+    A('read off the event record -- mark each z\'s end vertex, follow the chain')
+    A('of status-44 copies, take the particles born at the final vertex -- for')
+    A('every event of every file:')
+    A('')
+    A('   %-9s %10s %14s %14s %10s'
+      % ('spinmode', 'events', 'one z->e+e- AND', 'at least one', 'other'))
+    A('   %-9s %10s %14s %14s %10s'
+      % ('', '', 'other z->mu+mu-', 'z->e+e-', 'channels'))
+    for lab, dd in [('madspin', d)] + list(extras):
+        zz1, zz2 = dd.z['z1_ch'], dd.z['z2_ch']
+        q4 = ((zz1 == 11) & (zz2 == 13)) | ((zz1 == 13) & (zz2 == 11))
+        qe = (zz1 == 11) | (zz2 == 11)
+        A('   %-9s %10d %8d %5.4g%% %8d %5.4g%% %10d'
+          % (dd.label, dd.n, q4.sum(), 100 * q4.mean(), qe.sum(),
+             100 * qe.mean(), int((~q4).sum())))
+    A('')
+    A('It is exclusive in effect: every event of every file has one z to e+e-')
+    A('and the other to mu+mu-, with no other channel present at all.  So')
+    A('BOTH observables have the full 250 000 events behind them before the')
+    A('fiducial cuts, and the sparsity that made M(e+ mu+) undrawable on the')
+    A('earlier decay z > light light samples (312 of 250 000 survivors) is')
+    A('gone.')
+    A('')
+    A('WHAT THE CROSS SECTIONS ARE OF.  Because the card is exclusive, the')
+    A('sigma quoted for each file is')
+    A('     sigma(p p > z z) x BR(z -> e+e-) x BR(z -> mu+mu-) x 2')
+    A('(the 2 being the two ways of assigning the channels to the two z), and')
+    A('NOT an inclusive p p > z z cross section.  The earlier inclusive')
+    A('samples quoted ~13.1 pb, essentially the production cross section')
+    A('because decay z > light light has a branching fraction of ~1; these')
+    A('quote ~0.031 pb, smaller by ~2.35e-03, which is that product of')
+    A('branching fractions.  The two sets of numbers are NOT comparable as')
+    A('rates and only the ratios between the three modes are.')
     A('')
     if extras:
         A('--- THE OTHER TWO SPINMODES ---')
         A('Checked, not assumed, on each file separately.')
         A('')
+        same = all(x.meta['weight_names'] == m['weight_names']
+                   for _, x in extras)
         A('The N line.  Every one of the 250 000 N lines in each file was')
         A('compared against that file\'s first, as for the reference; they are')
-        A('constant within each file.  All three files name the SAME 33')
-        A('weights, in the same order -- including the four ms_pol_* ones,')
-        A('because all three runs set keep_weight_for_polarization_vector')
-        A('= [0, T].  That the onshell and PA files carry polarisation weights')
-        A('is recorded here and nothing in this study is built on it: their')
-        A('decomposition is a separate piece of work, and the ratio panes')
-        A('belong to the sample whose decomposition they are.')
+        A('constant within each file.  Across files: the three name')
+        A('%s'
+          % ('the SAME %d weights, in the SAME order' % len(m['weight_names'])
+             if same else 'DIFFERENT weight sets -- see each meta.json'))
+        A('-- including the four ms_pol_* ones, because all three runs set')
+        A('keep_weight_for_polarization_vector = [0, T].  That the onshell and')
+        A('PA files carry polarisation weights is recorded here and nothing in')
+        A('this study is built on it: their decomposition is a separate piece')
+        A('of work, and the ratio panes belong to the sample whose')
+        A('decomposition they are.')
         A('')
         A('The nominal, re-derived per file rather than carried over:')
         A('')
@@ -407,13 +481,12 @@ def write_numbers(d, path, extras=()):
                  e['sum_MUR1_over_sum_Weight_minus_1'],
                  ', '.join('%.6f' % v for v in e['distinct_abs_Weight'])))
         A('')
-        A('Note on the reference file\'s two |Weight| values, which the first')
-        A('pass reported as "two values (MC@NLO)": 249 999 of its 250 000')
-        A('events carry 14.727665 -- the banner XWGTUP exactly -- and ONE')
-        A('event (index 185 691) carries 15.625049.  It is a single-event')
-        A('anomaly worth 6.2e-05 pb, not a second MC@NLO branch.  The onshell')
-        A('and PA files each carry exactly ONE |Weight| value, equal to their')
-        A('own banner XWGTUP.')
+        A('On the |Weight| column: each file\'s dominant value is its banner')
+        A('XMAXUP exactly.  Any further value is carried by a handful of')
+        A('individual events -- a single-event anomaly, not a second MC@NLO')
+        A('branch -- and the counts above say how many.  This is the same')
+        A('thing seen once in the earlier run_02 file; it recurs here and it')
+        A('has no consequence for anything in this study.')
         A('')
         A('--- THE THREE SPINMODES COMPARED ---')
         A('Same lepton selection, same bin edges, same absolute normalisation.')
@@ -431,12 +504,16 @@ def write_numbers(d, path, extras=()):
         A('is the result: a mode that differs from the reference ONLY in')
         A('normalisation gives a large "as drawn" chi2 and a small "shape')
         A('only" one, and reading the first as a shape difference would be')
-        A('wrong.  That is exactly what happens for PA below.')
+        A('wrong.  Read both rows below before concluding anything.')
         A('')
         A('where the rate differences come from -- sigma_tot x the fraction of')
         A('events in the z -> e+e- channel, against the fiducial cross')
         A('section, i.e. how much of the difference is channel bookkeeping and')
-        A('how much is acceptance:')
+        A('how much is acceptance.  With the exclusive card f(z->ee) is 1 in')
+        A('every mode by construction, so the channel-bookkeeping column that')
+        A('carried the whole rate difference on the earlier inclusive samples')
+        A('is now inert and whatever is left is the inclusive cross section')
+        A('and the acceptance:')
         A('   %-9s %12s %10s %12s %12s %10s'
           % ('spinmode', 'sigma_tot', 'f(z->ee)', 'product', 'sigma_fid',
              'acceptance'))
@@ -490,16 +567,23 @@ def write_numbers(d, path, extras=()):
                   'rate) chi2/ndf = %.2f/%d = %.2f'
                   % (cc['shape_chi2'], cc['shape_ndf'],
                      cc['shape_chi2_per_ndf']))
+            drawn = [dx.label for _, dx in extras
+                     if PA.full_distribution(dx, obs)['drawable']]
+            notdrawn = [dx.label for _, dx in extras
+                        if not PA.full_distribution(dx, obs)['drawable']]
+            A('   on the figure: madspin%s%s'
+              % (' + ' + ' + '.join(drawn) if drawn else '',
+                 '   NOT drawn: ' + ', '.join(notdrawn) if notdrawn
+                 else '   (all three modes drawn)'))
             if sparse:
-                A('   Fewer than %d selected events in this observable, for'
+                A('   Fewer than %d selected events in this observable for at'
                   % PA.MIN_SEL_TO_DRAW)
-                A('   every mode.  The per-bin errors are 20-50 %, the two')
-                A('   chi2 are BELOW their number of degrees of freedom, and')
-                A('   the rate ratios are 1 to within their errors.  This')
-                A('   observable cannot compare the spinmodes at this')
-                A('   statistics; the extra curves are NOT drawn on its figure')
-                A('   and the numbers above are the whole of what can honestly')
-                A('   be said about it.')
+                A('   least one mode.  At that statistics the per-bin errors')
+                A('   are tens of percent and three curves laid over one')
+                A('   another would show gaps the eye reads as a mode')
+                A('   difference and that are entirely noise.  The undrawn')
+                A('   curves are NOT on the figure and the numbers above are')
+                A('   the whole of what can honestly be said about them.')
             A('')
         A('')
     A('--- integrated polarisation ratios ---')
@@ -525,14 +609,27 @@ def write_numbers(d, path, extras=()):
             A('  %-24s %10d %12.5f %12.5f %10s%s'
               % (PA.RATIO_KEY[k], mask.sum(), R, E,
                  '%.2f' % (abs(R - 1) / E) if k == 'SUM' else '--', extra))
+        # TL and LT must agree wherever the selection does not distinguish the
+        # two z, and the difference is taken with the SAME delta-method error
+        # rather than by subtracting two of the rows above, whose errors are
+        # strongly correlated.  Where it is compatible with zero it is a check
+        # that the weight-to-name mapping was not transposed; where it is not,
+        # the selection is asymmetric between the two z and it should not be.
+        Rd, Ed = PA.ratio(d.pol['TL'][mask] - d.pol['LT'][mask], f)
+        A('  %-24s %10d %12.5f %12.5f %10.2f   [sigma from ZERO, not from 1]'
+          % ('(TL - LT) / full', mask.sum(), Rd, Ed, abs(Rd) / Ed))
         A('')
-    A('The sum over ALL events is 1 to within 0.03 % and 0.2 sigma.  That is')
+    Rall, Eall = PA.ratio(d.pol['SUM'], d.full)
+    A('The sum over ALL events is 1 to within %.3f %% and %.2f sigma.  That is'
+      % (100 * abs(Rall - 1), abs(Rall - 1) / Eall))
     A('not a null result: the interference between different polarisations of')
     A('the same z is odd in the decay angles and integrates to zero over the')
     A('full angular phase space, so an unrestricted sum MUST come back to 1 and')
     A('the fact that it does is a check on the weights themselves.  The')
     A('interference is visible only differentially, or after a cut that')
-    A('restricts the decay angles -- which every lepton selection does.')
+    A('restricts the decay angles -- which every lepton selection does, and')
+    A('which is why both selected rows above sit below 1 by many sigma where')
+    A('the unrestricted one does not.')
     A('')
     A('--- the lepton selection ---')
     A('highest-pT final-state (status 1) lepton per flavour and charge,')

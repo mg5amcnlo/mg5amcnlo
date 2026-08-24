@@ -1,20 +1,35 @@
-=== onshell (run_05) ===
-     50000 events    2.81 GB inflated       7 s
-    100000 events    5.62 GB inflated      13 s
-    150000 events    8.43 GB inflated      20 s
-    200000 events   11.25 GB inflated      27 s
-    250000 events   14.06 GB inflated      34 s
-read   4.643 GB on disk (14.061 GB inflated) in 33.7 s (0.56 min), 142596393 lines
+=== spinmode PA  (run_07_decayed_1)
+     20000 events    0.85 GB inflated       2 s
+     40000 events    1.69 GB inflated       5 s
+     60000 events    2.54 GB inflated       7 s
+     80000 events    3.39 GB inflated       9 s
+    100000 events    4.25 GB inflated      12 s
+    120000 events    5.10 GB inflated      14 s
+    140000 events    5.94 GB inflated      16 s
+    160000 events    6.79 GB inflated      18 s
+    180000 events    7.63 GB inflated      21 s
+    200000 events    8.48 GB inflated      23 s
+    220000 events    9.33 GB inflated      25 s
+    240000 events   10.18 GB inflated      28 s
+read   3.462 GB on disk (10.599 GB inflated) in 28.9 s (0.48 min), 109867054 lines
 events 250000
-wrote  data/weights_onshell.npz (6.9 MB)
-       /private/tmp/t87/MadSpin/validation/zz_pol_weights/data/meta_onshell.json
-=== PA (run_03) ===
-     50000 events    2.82 GB inflated       7 s
-    100000 events    5.63 GB inflated      14 s
-    150000 events    8.45 GB inflated      21 s
-    200000 events   11.27 GB inflated      28 s
-    250000 events   14.09 GB inflated      35 s
-read   4.658 GB on disk (14.086 GB inflated) in 34.6 s (0.58 min), 142633550 lines
+wrote  data/weights_PA.npz (23.2 MB)
+       /private/tmp/t88/MadSpin/validation/zz_pol_weights/data/meta_PA.json
+
+=== spinmode onshell  (run_08_decayed_1)
+     20000 events    0.85 GB inflated       2 s
+     40000 events    1.70 GB inflated       5 s
+     60000 events    2.54 GB inflated       7 s
+     80000 events    3.38 GB inflated       9 s
+    100000 events    4.23 GB inflated      11 s
+    120000 events    5.08 GB inflated      14 s
+    140000 events    5.92 GB inflated      16 s
+    160000 events    6.77 GB inflated      18 s
+    180000 events    7.61 GB inflated      21 s
+    200000 events    8.45 GB inflated      23 s
+    220000 events    9.30 GB inflated      25 s
+    240000 events   10.15 GB inflated      28 s
+read   3.449 GB on disk (10.574 GB inflated) in 29.0 s (0.48 min), 109618102 lines
 events 250000
-wrote  data/weights_PA.npz (7.0 MB)
-       /private/tmp/t87/MadSpin/validation/zz_pol_weights/data/meta_PA.json
+wrote  data/weights_onshell.npz (21.7 MB)
+       /private/tmp/t88/MadSpin/validation/zz_pol_weights/data/meta_onshell.json

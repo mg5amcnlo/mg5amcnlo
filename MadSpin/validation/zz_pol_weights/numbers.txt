@@ -2,18 +2,44 @@ MadSpin polarisation weights on a showered NLO  p p > z z
 ==========================================================================
 Three samples: the same process, the same run card and the same 250k
 showered events, differing only in MadSpin's spinmode.  The
-polarisation decomposition below is the DEFAULT (madspin) sample's;
-the other two enter the distribution pane of each figure and the
-cross-mode comparison section, and nowhere else.
+polarisation decomposition below is the REFERENCE (madspin, run_06)
+sample's; the other two enter the distribution pane of each figure and
+the cross-mode comparison section, and nowhere else.
+
+--- WHAT IS NOT ON THE FIGURES ---
+The figures carry their axis labels, their tick labels and their legend
+and NOTHING else.  Everything that used to be written on them is here:
+  * the plot title, which was the caption below;
+  * the integrated (LL+TT+TL+LT)/full and its error, printed in the sum
+    pane -- see "integrated polarisation ratios" below;
+  * the four per-pane integrated ratios, printed in the 2x2 legends.
+    The dashed line in each small pane still IS that value; only the
+    number left the canvas;
+  * the words "polarisation interference" over the sum pane;
+  * in the user style, the note naming the two shaded bands behind the
+    sum pane.  They are +-2 % and +-5 % about 1.  The bands are still
+    drawn; only the words are gone;
+  * the "spinmode ... not drawn: too few events" note.  Which modes are
+    drawn on which figure is stated per observable further down.
+
+figure caption (was the plot title):
+   p p > z z [QCD] (MC@NLO) + MadSpin, Pythia8 showered; 13 TeV, 250k
+   events per spinmode; MadSpin card decay z > e+ e- and decay z > mu+
+   mu- (exclusive: every event has one z -> e+e- and one z -> mu+mu-).
+   Cross sections are therefore sigma(p p > z z) times the two leptonic
+   branching fractions, not an inclusive sigma.
 
 spinmode  input                                on disk  inflated   pass s   events
-madspin   run_02_decayed_1/....hepmc           14.061G   14.061G     34.0   250000
-onshell   run_05_decayed_1/....hepmc.gz         4.643G   14.061G     33.7   250000
-PA        run_03_decayed_1/....hepmc.gz         4.658G   14.086G     34.6   250000
-The two .gz inputs were streamed through "gzip -dc" in a child process,
-never unpacked to disk; the pass cost the same as the plain file's.
-142420114 lines read from the reference file, HepMC2 IO_GenEvent (HepMC::Version 2.06.09)
-code       b0e4472bc189d56871760b4fd54ed8113183b8de
+madspin   run_06_decayed_1/....hepmc.gz         3.449G   10.562G     27.8   250000
+onshell   run_08_decayed_1/....hepmc.gz         3.449G   10.574G     29.0   250000
+PA        run_07_decayed_1/....hepmc.gz         3.462G   10.599G     28.9   250000
+All three .gz inputs were streamed through "gzip -dc" in a child
+process and never unpacked to disk: they inflate to ~10.6 GB each and
+no temporary of that size should have to exist.  The three passes were
+run concurrently on separate cores, so the times above are within a
+second of each other and none of them is a serial measurement.
+109455942 lines read from the reference file, HepMC2 IO_GenEvent (HepMC::Version 2.06.09)
+code       7e39b7b1b4b383bcf70391efbf616a3683403956
 
 --- the 33 weight names on every N line (asserted, not sampled) ---
    0                   1010                1011                1012                1013                1014              
@@ -39,51 +65,77 @@ so every ratio below is identical whichever of the two is used; only
 the vertical scale of the distributions distinguishes them.
 
   "0" * N / "Weight", over all 250000 events: min 1.000000000000000, max 1.000000000000000
-  sum("0")        = 13.115048182696 pb
-  mean("Weight")  = 13.115048182696 pb
-  C line, LAST event = 13.115048182689 pb   <-- agrees with both to 1e-11
-  C line, FIRST event = 5.891066e-05 pb  (the RUNNING Pythia estimate after
+  sum("0")        = 0.030873887204 pb
+  mean("Weight")  = 0.030873887204 pb
+  C line, LAST event = 0.030873887204 pb   <-- agrees with both to 1e-11
+  C line, FIRST event = 1.394127e-07 pb  (the RUNNING Pythia estimate after
      one event; it is not the sample cross section and must not be used)
-  sum("MUR1.0_MUF1.0")/sum("Weight") - 1 = 4.366e-06  -- the LHE <wgt id=
+  sum("MUR1.0_MUF1.0")/sum("Weight") - 1 = -2.975e-05  -- the LHE <wgt id=
      '1001'> copy of the same nominal, to the rwgt block's rounding
-  median|sum of the four ms_pol| / median|"Weight"| = 0.899  -- the
+  median|sum of the four ms_pol| / median|"Weight"| = 0.984  -- the
      polarisation weights are in the "Weight" normalisation, so
      dividing them by "0" would inflate every ratio by 250000.
-  |Weight| takes 2 distinct value(s): 14.727665 (x249999), 15.625049 (x1)
-     -- 249 999 of them are the banner XWGTUP and the second value is a
-     SINGLE event, not a second MC@NLO branch; see the spinmode section
-     below, where the other two files each carry exactly one value.
-  13687 of 250000 events carry a NEGATIVE weight (5.475 %).
+  |Weight| takes 5 distinct value(s): 0.034853 (x249996), 0.035835 (x1), 0.039692 (x1), 0.052436 (x1), 0.108678 (x1)
+     -- 249996 of the 250000 events carry 0.034853, the banner's XMAXUP; the
+     other 4 value(s) are carried by 4 event(s) in total and are
+     single-event anomalies, NOT a second MC@NLO branch.  Together
+     they are worth 9.466e-07 pb in a 0.030874 pb total.
+  14273 of 250000 events carry a NEGATIVE weight (5.709 %).
 
---- THE SAMPLE IS NOT p p > z z > e+e- mu+mu- ---
-The MadSpin card is  decay z > light light  with
-  define light = 1 2 3 4 5 -1 -2 -3 -4 -5 11 12 13 14 15 16 -11 ... -16
-i.e. every fermion but the top: an INCLUSIVE Z decay.  Read off the
-event record, of the 250 000 events
-     572 (0.2288 %) have one z -> e+e- AND the other z -> mu+mu-
-   17677 (7.071 %) have at least one z -> e+e-
-M(e+ mu+) therefore exists for two events in a thousand, and its figure
-is statistics limited by the decay card and by nothing else.
+--- IS THE DECAY CARD EXCLUSIVE IN EFFECT? (measured, not assumed) ---
+The MadSpin card of all three runs is
+  decay z > e+ e-
+  decay z > mu+ mu-
+which is exclusive in INTENT.  Whether it is exclusive in EFFECT is a
+different question and it decides what these figures mean, so it is
+read off the event record -- mark each z's end vertex, follow the chain
+of status-44 copies, take the particles born at the final vertex -- for
+every event of every file:
+
+   spinmode      events one z->e+e- AND   at least one      other
+                        other z->mu+mu-        z->e+e-   channels
+   madspin       250000   250000   100%   250000   100%          0
+   onshell       250000   250000   100%   250000   100%          0
+   PA            250000   250000   100%   250000   100%          0
+
+It is exclusive in effect: every event of every file has one z to e+e-
+and the other to mu+mu-, with no other channel present at all.  So
+BOTH observables have the full 250 000 events behind them before the
+fiducial cuts, and the sparsity that made M(e+ mu+) undrawable on the
+earlier decay z > light light samples (312 of 250 000 survivors) is
+gone.
+
+WHAT THE CROSS SECTIONS ARE OF.  Because the card is exclusive, the
+sigma quoted for each file is
+     sigma(p p > z z) x BR(z -> e+e-) x BR(z -> mu+mu-) x 2
+(the 2 being the two ways of assigning the channels to the two z), and
+NOT an inclusive p p > z z cross section.  The earlier inclusive
+samples quoted ~13.1 pb, essentially the production cross section
+because decay z > light light has a branching fraction of ~1; these
+quote ~0.031 pb, smaller by ~2.35e-03, which is that product of
+branching fractions.  The two sets of numbers are NOT comparable as
+rates and only the ratios between the three modes are.
 
 --- THE OTHER TWO SPINMODES ---
 Checked, not assumed, on each file separately.
 
 The N line.  Every one of the 250 000 N lines in each file was
 compared against that file's first, as for the reference; they are
-constant within each file.  All three files name the SAME 33
-weights, in the same order -- including the four ms_pol_* ones,
-because all three runs set keep_weight_for_polarization_vector
-= [0, T].  That the onshell and PA files carry polarisation weights
-is recorded here and nothing in this study is built on it: their
-decomposition is a separate piece of work, and the ratio panes
-belong to the sample whose decomposition they are.
+constant within each file.  Across files: the three name
+the SAME 33 weights, in the SAME order
+-- including the four ms_pol_* ones, because all three runs set
+keep_weight_for_polarization_vector = [0, T].  That the onshell and
+PA files carry polarisation weights is recorded here and nothing in
+this study is built on it: their decomposition is a separate piece
+of work, and the ratio panes belong to the sample whose
+decomposition they are.
 
 The nominal, re-derived per file rather than carried over:
 
 spinmode    "0"*N/"Weight" range   sum("0") = mean("W")         C last    C first
-madspin     1.000000   1.000000           13.115048183   13.115048183  5.891e-05
-onshell     1.000000   1.000000           13.667705043   13.667705043  6.144e-05
-PA          1.000000   1.000000           13.078107263   13.078107263  5.874e-05
+madspin     1.000000   1.000000            0.030873887    0.030873887  1.394e-07
+onshell     1.000000   1.000000            0.032414610    0.032414610  1.460e-07
+PA          1.000000   1.000000            0.031115558    0.031115558  1.403e-07
 
 Same answer on all three: "0" * N_events == "Weight" to the last
 bit on every event, sum("0") == mean("Weight") == the C line of the
@@ -95,17 +147,16 @@ over.  The distributions use "0" (its sum IS the cross section in
 pb) and each sample is scaled by its OWN 1/n_events.
 
 spinmode    sigma_tot pb    negatives   MUR1/W-1 distinct |Weight|
-madspin        13.115048       5.475 %   4.37e-06 14.727665, 15.625049
-onshell        13.667705       5.507 %  -2.07e-05 15.359319
-PA             13.078107       5.469 %   2.41e-05 14.684339
+madspin         0.030874       5.709 %  -2.98e-05 0.034853, 0.035835, 0.039692, 0.052436, 0.108678
+onshell         0.032415       5.585 %  -1.56e-05 0.036490
+PA              0.031116       5.640 %   6.63e-06 0.035071
 
-Note on the reference file's two |Weight| values, which the first
-pass reported as "two values (MC@NLO)": 249 999 of its 250 000
-events carry 14.727665 -- the banner XWGTUP exactly -- and ONE
-event (index 185 691) carries 15.625049.  It is a single-event
-anomaly worth 6.2e-05 pb, not a second MC@NLO branch.  The onshell
-and PA files each carry exactly ONE |Weight| value, equal to their
-own banner XWGTUP.
+On the |Weight| column: each file's dominant value is its banner
+XMAXUP exactly.  Any further value is carried by a handful of
+individual events -- a single-event anomaly, not a second MC@NLO
+branch -- and the counts above say how many.  This is the same
+thing seen once in the earlier run_02 file; it recurs here and it
+has no consequence for anything in this study.
 
 --- THE THREE SPINMODES COMPARED ---
 Same lepton selection, same bin edges, same absolute normalisation.
@@ -114,61 +165,59 @@ this file: these are three independent MadSpin runs, independently
 showered, so there is no covariance to keep.
 
 inclusive cross section (all 250k events, no selection):
-   madspin      13.115048 +- 0.029455 pb
-   onshell      13.667705 +- 0.030719 pb
-   PA           13.078107 +- 0.029369 pb
+   madspin       0.030874 +- 0.000070 pb
+   onshell       0.032415 +- 0.000073 pb
+   PA            0.031116 +- 0.000070 pb
 
 The two chi2 answer different questions and only the pair of them
 is the result: a mode that differs from the reference ONLY in
 normalisation gives a large "as drawn" chi2 and a small "shape
 only" one, and reading the first as a shape difference would be
-wrong.  That is exactly what happens for PA below.
+wrong.  Read both rows below before concluding anything.
 
 where the rate differences come from -- sigma_tot x the fraction of
 events in the z -> e+e- channel, against the fiducial cross
 section, i.e. how much of the difference is channel bookkeeping and
-how much is acceptance:
+how much is acceptance.  With the exclusive card f(z->ee) is 1 in
+every mode by construction, so the channel-bookkeeping column that
+carried the whole rate difference on the earlier inclusive samples
+is now inert and whatever is left is the inclusive cross section
+and the acceptance:
    spinmode     sigma_tot   f(z->ee)      product    sigma_fid acceptance
-   madspin      13.115048   0.070708     0.927339     0.636824     0.6867
-   onshell      13.667705   0.067104     0.917158     0.626169     0.6827
-   PA           13.078107   0.067448     0.882092     0.603937     0.6847
+   madspin       0.030874   1.000000     0.030874     0.020400     0.6608
+   onshell       0.032415   1.000000     0.032415     0.021407     0.6604
+   PA            0.031116   1.000000     0.031116     0.020509     0.6591
 
 which z decayed to what, off the event record (truth, used to
 categorise only -- no plotted observable touches it):
    spinmode  n(4 lepton)     frac %   n(z->ee)     frac %
-   madspin          572     0.2288      17677     7.0708
-   onshell          604     0.2416      16776     6.7104
-   PA               637     0.2548      16862     6.7448
+   madspin       250000   100.0000     250000   100.0000
+   onshell       250000   100.0000     250000   100.0000
+   PA            250000   100.0000     250000   100.0000
 
 m_epmup: N selected, fiducial cross section, and the comparison
-   madspin   N=   312  sigma_fid=0.016848 +- 0.001041 pb   (the reference)
-   onshell   N=   306  sigma_fid=0.017202 +- 0.001075 pb
-             rate ratio to madspin 1.0210 +- 0.0897 (0.2 sigma)   [NOT DRAWN]
-             as drawn (rate included) chi2/ndf = 4.50/7 = 0.64   max|pull| 1.56
-             SHAPE only (rescaled to the same fiducial rate) chi2/ndf = 4.46/6 = 0.74
-   PA        N=   317  sigma_fid=0.016858 +- 0.001046 pb
-             rate ratio to madspin 1.0005 +- 0.0876 (0.0 sigma)   [NOT DRAWN]
-             as drawn (rate included) chi2/ndf = 5.05/7 = 0.72   max|pull| 1.66
-             SHAPE only (rescaled to the same fiducial rate) chi2/ndf = 5.05/6 = 0.84
-   Fewer than 2000 selected events in this observable, for
-   every mode.  The per-bin errors are 20-50 %, the two
-   chi2 are BELOW their number of degrees of freedom, and
-   the rate ratios are 1 to within their errors.  This
-   observable cannot compare the spinmodes at this
-   statistics; the extra curves are NOT drawn on its figure
-   and the numbers above are the whole of what can honestly
-   be said about it.
+   madspin   N=118521  sigma_fid=0.014796 +- 0.000048 pb   (the reference)
+   onshell   N=118080  sigma_fid=0.015477 +- 0.000050 pb
+             rate ratio to madspin 1.0460 +- 0.0048 (9.6 sigma)
+             as drawn (rate included) chi2/ndf = 104.70/7 = 14.96   max|pull| 5.33
+             SHAPE only (rescaled to the same fiducial rate) chi2/ndf = 10.98/6 = 1.83
+   PA        N=117447  sigma_fid=0.014784 +- 0.000048 pb
+             rate ratio to madspin 0.9992 +- 0.0046 (0.2 sigma)
+             as drawn (rate included) chi2/ndf = 2.52/7 = 0.36   max|pull| 1.07
+             SHAPE only (rescaled to the same fiducial rate) chi2/ndf = 2.46/6 = 0.41
+   on the figure: madspin + onshell + PA   (all three modes drawn)
 
 dphi_ee: N selected, fiducial cross section, and the comparison
-   madspin   N= 11984  sigma_fid=0.636824 +- 0.006449 pb   (the reference)
-   onshell   N= 11366  sigma_fid=0.626169 +- 0.006550 pb
-             rate ratio to madspin 0.9833 +- 0.0143 (1.2 sigma)
-             as drawn (rate included) chi2/ndf = 14.69/12 = 1.22   max|pull| 2.15
-             SHAPE only (rescaled to the same fiducial rate) chi2/ndf = 13.37/11 = 1.22
-   PA        N= 11478  sigma_fid=0.603937 +- 0.006293 pb
-             rate ratio to madspin 0.9484 +- 0.0138 (3.7 sigma)
-             as drawn (rate included) chi2/ndf = 26.05/12 = 2.17   max|pull| 2.91
-             SHAPE only (rescaled to the same fiducial rate) chi2/ndf = 12.81/11 = 1.16
+   madspin   N=164111  sigma_fid=0.020400 +- 0.000056 pb   (the reference)
+   onshell   N=163838  sigma_fid=0.021407 +- 0.000059 pb
+             rate ratio to madspin 1.0494 +- 0.0041 (12.0 sigma)
+             as drawn (rate included) chi2/ndf = 173.09/12 = 14.42   max|pull| 5.89
+             SHAPE only (rescaled to the same fiducial rate) chi2/ndf = 22.28/11 = 2.03
+   PA        N=163674  sigma_fid=0.020509 +- 0.000057 pb
+             rate ratio to madspin 1.0053 +- 0.0039 (1.4 sigma)
+             as drawn (rate included) chi2/ndf = 59.26/12 = 4.94   max|pull| 3.55
+             SHAPE only (rescaled to the same fiducial rate) chi2/ndf = 57.61/11 = 5.24
+   on the figure: madspin + onshell + PA   (all three modes drawn)
 
 
 --- integrated polarisation ratios ---
@@ -178,83 +227,88 @@ printed beside them for the sum, where the correlation is strongest.
 
 sample                       N events        ratio        error   sigma(1)
 all events (no selection)
-  (LL+TT+TL+LT) / full         250000      0.99971      0.00169       0.17   [naive independent error 0.00360, 2.1x too large]
-  LL / full                    250000      0.05840      0.00034         --
-  TT / full                    250000      0.69610      0.00108         --
-  TL / full                    250000      0.12281      0.00056         --
-  LT / full                    250000      0.12240      0.00057         --
+  (LL+TT+TL+LT) / full         250000      1.00017      0.00046       0.36   [naive independent error 0.00323, 7.0x too large]
+  LL / full                    250000      0.05831      0.00020         --
+  TT / full                    250000      0.69708      0.00062         --
+  TL / full                    250000      0.12244      0.00033         --
+  LT / full                    250000      0.12233      0.00033         --
+  (TL - LT) / full             250000      0.00011      0.00041       0.26   [sigma from ZERO, not from 1]
 
 m_epmup selection
-  (LL+TT+TL+LT) / full            312      0.99261      0.01252       0.59   [naive independent error 0.08763, 7.0x too large]
-  LL / full                       312      0.06193      0.00578         --
-  TT / full                       312      0.68712      0.01640         --
-  TL / full                       312      0.11774      0.00737         --
-  LT / full                       312      0.12582      0.00747         --
+  (LL+TT+TL+LT) / full         118521      0.98729      0.00055      23.08   [naive independent error 0.00456, 8.3x too large]
+  LL / full                    118521      0.05921      0.00028         --
+  TT / full                    118521      0.67456      0.00084         --
+  TL / full                    118521      0.12648      0.00045         --
+  LT / full                    118521      0.12703      0.00045         --
+  (TL - LT) / full             118521     -0.00055      0.00057       0.96   [sigma from ZERO, not from 1]
 
 dphi_ee selection
-  (LL+TT+TL+LT) / full          11984      0.99650      0.00429       0.82   [naive independent error 0.01490, 3.5x too large]
-  LL / full                     11984      0.05816      0.00107         --
-  TT / full                     11984      0.69428      0.00357         --
-  TL / full                     11984      0.11969      0.00173         --
-  LT / full                     11984      0.12437      0.00183         --
+  (LL+TT+TL+LT) / full         164111      0.99180      0.00050      16.40   [naive independent error 0.00392, 7.8x too large]
+  LL / full                    164111      0.05797      0.00024         --
+  TT / full                    164111      0.68936      0.00073         --
+  TL / full                    164111      0.12027      0.00038         --
+  LT / full                    164111      0.12420      0.00040         --
+  (TL - LT) / full             164111     -0.00393      0.00049       7.99   [sigma from ZERO, not from 1]
 
-The sum over ALL events is 1 to within 0.03 % and 0.2 sigma.  That is
+The sum over ALL events is 1 to within 0.017 % and 0.36 sigma.  That is
 not a null result: the interference between different polarisations of
 the same z is odd in the decay angles and integrates to zero over the
 full angular phase space, so an unrestricted sum MUST come back to 1 and
 the fact that it does is a check on the weights themselves.  The
 interference is visible only differentially, or after a cut that
-restricts the decay angles -- which every lepton selection does.
+restricts the decay angles -- which every lepton selection does, and
+which is why both selected rows above sit below 1 by many sigma where
+the unrestricted one does not.
 
 --- the lepton selection ---
 highest-pT final-state (status 1) lepton per flavour and charge,
 dressed with every final-state photon within Delta R < 0.1 (the run
 card's own rphreco), then pT > 10 GeV and |eta| < 2.5.
 
-m_epmup: 312 events selected
-   truth (one z -> e+e- AND the other z -> mu+mu-): 572 events, selection purity 0.9038, efficiency 0.4930
+m_epmup: 118521 events selected
+   truth (one z -> e+e- AND the other z -> mu+mu-): 250000 events, selection purity 1.0000, efficiency 0.4741
    how often the highest-pT choice was a genuine choice --
    fraction of selected events with a SECOND same-flavour same-sign lepton:
-      ep   above 3 GeV:  0.641 %   above 10 GeV:  0.000 %
-      em   above 3 GeV:  0.000 %   above 10 GeV:  0.000 %
-      mup  above 3 GeV:  0.962 %   above 10 GeV:  0.641 %
-      mum  above 3 GeV:  0.962 %   above 10 GeV:  0.641 %
-   dressing moved the observable by +2.493 on average (rms 9.064); 16.03 % of
+      ep   above 3 GeV:  0.469 %   above 10 GeV:  0.112 %
+      em   above 3 GeV:  0.459 %   above 10 GeV:  0.120 %
+      mup  above 3 GeV:  0.313 %   above 10 GeV:  0.066 %
+      mum  above 3 GeV:  0.327 %   above 10 GeV:  0.073 %
+   dressing moved the observable by +2.048 on average (rms 10.21); 15.69 % of
       selected events moved by more than 1 percent.
 
-dphi_ee: 11984 events selected
-   truth (at least one z -> e+e-): 17677 events, selection purity 0.9643, efficiency 0.6537
+dphi_ee: 164111 events selected
+   truth (at least one z -> e+e-): 250000 events, selection purity 1.0000, efficiency 0.6564
    how often the highest-pT choice was a genuine choice --
    fraction of selected events with a SECOND same-flavour same-sign lepton:
-      ep   above 3 GeV:  4.606 %   above 10 GeV:  2.153 %
-      em   above 3 GeV:  4.347 %   above 10 GeV:  2.245 %
-   dressing moved the observable by -4.753e-05 on average (rms 0.002734); 1.42 % of
+      ep   above 3 GeV:  0.462 %   above 10 GeV:  0.108 %
+      em   above 3 GeV:  0.461 %   above 10 GeV:  0.119 %
+   dressing moved the observable by +6.621e-07 on average (rms 0.00241); 0.52 % of
       selected events moved by more than 1 percent.
 
 --- m_epmup: the sum against 1, bin by bin ---
-fiducial cross section 0.0168484 pb
+fiducial cross section 0.014796 pb
          bin        N     sum/full      error   sigma(1)           LL          TT          TL          LT
-  0.0- 45.0       55       0.9544     0.0326       1.40       0.0470      0.6784      0.1045      0.1245
- 45.0- 70.0       62       1.0137     0.0363       0.38       0.0780      0.6549      0.1311      0.1497
- 70.0- 95.0       61       1.0247     0.0279       0.89       0.0924      0.6435      0.1566      0.1321
- 95.0-125.0       49       1.0198     0.0233       0.85       0.0929      0.6209      0.1533      0.1527
-125.0-175.0       38       0.9466     0.0334       1.60       0.0309      0.7292      0.0990      0.0876
-175.0-260.0       34       0.9705     0.0198       1.49       0.0135      0.8176      0.0512      0.0881
-260.0-450.0       11       0.9933     0.0516       0.13       0.0039      0.8764      0.0202      0.0928
+  0.0- 45.0    19789       0.9772     0.0014      16.58       0.0506      0.6842      0.1210      0.1213
+ 45.0- 70.0    23238       0.9788     0.0013      15.84       0.0644      0.6447      0.1343      0.1355
+ 70.0- 95.0    21986       0.9909     0.0013       6.99       0.0935      0.5884      0.1549      0.1540
+ 95.0-125.0    19652       0.9970     0.0013       2.33       0.0767      0.6229      0.1479      0.1494
+125.0-175.0    17507       0.9923     0.0014       5.47       0.0415      0.7161      0.1172      0.1174
+175.0-260.0    10699       0.9898     0.0016       6.33       0.0161      0.8172      0.0780      0.0785
+260.0-450.0     4770       0.9893     0.0025       4.30       0.0045      0.8929      0.0453      0.0467
 
 --- dphi_ee: the sum against 1, bin by bin ---
-fiducial cross section 0.636824 pb
+fiducial cross section 0.0204002 pb
          bin        N     sum/full      error   sigma(1)           LL          TT          TL          LT
-  0.0-  0.3      399       1.0033     0.0171       0.19       0.0258      0.8166      0.0868      0.0742
-  0.3-  0.5      301       1.0415     0.0225       1.84       0.0205      0.8400      0.0912      0.0898
-  0.5-  0.8      353       1.0223     0.0176       1.27       0.0248      0.8266      0.0917      0.0792
-  0.8-  1.0      509       1.0291     0.0162       1.80       0.0227      0.8140      0.0959      0.0965
-  1.0-  1.3      638       1.0390     0.0191       2.05       0.0285      0.7944      0.0971      0.1190
-  1.3-  1.6      777       0.9987     0.0149       0.08       0.0342      0.7619      0.0948      0.1078
-  1.6-  1.8      940       1.0359     0.0185       1.94       0.0469      0.7690      0.1131      0.1069
-  1.8-  2.1     1217       1.0181     0.0147       1.23       0.0538      0.7431      0.1052      0.1159
-  2.1-  2.4     1362       1.0018     0.0131       0.14       0.0648      0.7175      0.1123      0.1073
-  2.4-  2.6     1668       1.0001     0.0128       0.01       0.0756      0.6824      0.1192      0.1229
-  2.6-  2.9     1902       0.9718     0.0106       2.67       0.0830      0.6158      0.1344      0.1387
-  2.9-  3.1     1918       0.9460     0.0097       5.58       0.0680      0.5409      0.1617      0.1753
+  0.0-  0.3     3547       1.0166     0.0044       3.78       0.0212      0.8338      0.0664      0.0952
+  0.3-  0.5     4186       1.0149     0.0042       3.53       0.0190      0.8345      0.0702      0.0911
+  0.5-  0.8     5107       1.0139     0.0033       4.22       0.0183      0.8295      0.0759      0.0902
+  0.8-  1.0     6401       1.0147     0.0027       5.41       0.0206      0.8109      0.0842      0.0990
+  1.0-  1.3     8255       1.0156     0.0025       6.19       0.0257      0.7923      0.0931      0.1044
+  1.3-  1.6    10423       1.0135     0.0019       7.03       0.0324      0.7688      0.1041      0.1082
+  1.6-  1.8    13238       1.0122     0.0016       7.44       0.0405      0.7555      0.1065      0.1097
+  1.8-  2.1    16174       1.0074     0.0015       5.06       0.0530      0.7376      0.1086      0.1081
+  2.1-  2.4    19743       1.0005     0.0014       0.39       0.0664      0.7131      0.1089      0.1122
+  2.4-  2.6    23414       0.9913     0.0012       6.98       0.0785      0.6740      0.1177      0.1211
+  2.6-  2.9    26413       0.9735     0.0012      21.60       0.0801      0.6129      0.1383      0.1423
+  2.9-  3.1    27210       0.9542     0.0012      38.50       0.0687      0.5487      0.1706      0.1661
 

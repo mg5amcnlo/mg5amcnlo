@@ -52,27 +52,32 @@ not.
 
 The selection
 -------------
-See :data:`SEL` and RESULTS.md.  Note that this sample's MadSpin card is
-``decay z > light light`` over *every* fermion but the top -- an inclusive ``Z``
-decay -- so the four-lepton final state the observables want is 0.23 % of the
-events, not all of them.
+See :data:`SEL` and RESULTS.md.  The MadSpin card of these three samples is
+EXCLUSIVE -- ``decay z > e+ e-`` and ``decay z > mu+ mu-`` -- and the event
+record says it is exclusive in effect as well as in intent: all 250 000 events
+of all three files have one ``z`` to ``e+e-`` and the other to ``mu+mu-``.  The
+four-lepton final state is therefore every event, not the 0.23 % of the earlier
+inclusive ``decay z > light light`` samples, and both observables have real
+statistics.  The absolute normalisation means something different for it: these
+cross sections carry the two leptonic branching fractions, the earlier ones
+carried an essentially inclusive one.
 
 The three spinmodes
 -------------------
 Three HepMC files, the same process and the same 250 000 events' worth of
-showering, differing only in MadSpin's ``spinmode``: the default ``madspin``
-(run_02), ``onshell`` (run_05) and ``PA`` (run_03).  Each has its own ``.npz``
+showering, differing only in MadSpin's ``spinmode``: ``madspin`` (run_06, the
+reference), ``onshell`` (run_08) and ``PA`` (run_07).  Each has its own ``.npz``
 and its own ``meta.json``, each re-derives its own nominal from its own ``"0"``
 / ``"Weight"`` / ``C`` line, and :func:`full_distribution` puts the three on the
 same binning, the same lepton selection and the same absolute ``dsigma/dx``
 scale so that they are comparable in rate and not only in shape.
 
-The polarisation decomposition remains the *default* sample's, and the extra
-samples enter one place only: the distribution pane of each figure.  All three
-files happen to carry the four ``ms_pol_*`` weights (they are all
-``keep_weight_for_polarization_vector = [0, T]`` runs), but nothing here is
-built on that -- decomposing the other two modes is a different study, and the
-ratio panes belong to the sample whose decomposition they are.
+The polarisation decomposition remains the *reference* (``madspin``, run_06)
+sample's, and the extra samples enter one place only: the distribution pane of
+each figure.  All three files happen to carry the four ``ms_pol_*`` weights
+(they are all ``keep_weight_for_polarization_vector = [0, T]`` runs), but
+nothing here is built on that -- decomposing the other two modes is a different
+study, and the ratio panes belong to the sample whose decomposition they are.
 """
 
 import json
@@ -195,9 +200,13 @@ SEL = {
 OBS = ['m_epmup_dr', 'dphi_ee_dr']
 
 BINS = {
-    # 312 events survive the four-lepton fiducial -- see RESULTS.md for why so
-    # few -- so the binning is coarse on purpose and roughly equal-population
-    # rather than uniform.  Anything finer would be a plot of its own noise.
+    # These seven edges were chosen for the earlier inclusive samples, where
+    # only 312 events survived the four-lepton fiducial and anything finer
+    # would have been a plot of its own noise.  They are KEPT unchanged for the
+    # exclusive samples, which leave ~118 000 -- not because the statistics
+    # still demand them but so that the two passes' figures and per-bin tables
+    # are read against the same edges.  Finer bins are now affordable and are
+    # noted in RESULTS.md as something this pass did not do.
     'm_epmup_dr': np.array([0., 45., 70., 95., 125., 175., 260., 450.]),
     # 12 uniform bins over the full [0, pi] range of the observable.
     'dphi_ee_dr': np.linspace(0.0, math.pi, 13),
@@ -232,14 +241,30 @@ EXTRA_SAMPLES = [
     ('PA', 'weights_PA.npz', 'meta_PA.json'),
 ]
 
+# The caption these figures used to carry as a plot title.  Nothing is written
+# on them now beyond the axis labels, the tick labels and the legend, so the
+# caption lives here and is printed into numbers.txt by
+# ``plot_zz_pol.write_numbers``.
+CAPTION = ('p p > z z [QCD] (MC@NLO) + MadSpin, Pythia8 showered; 13 TeV, '
+           '250k events per spinmode; MadSpin card decay z > e+ e- and '
+           'decay z > mu+ mu- (exclusive: every event has one z -> e+e- and '
+           'one z -> mu+mu-).  Cross sections are therefore sigma(p p > z z) '
+           'times the two leptonic branching fractions, not an inclusive '
+           'sigma.')
+
 # Below this many selected events a curve is not drawn.  It is not a
-# statistics-free number: with the inclusive ``decay z > light light`` card the
-# four-lepton observable keeps ~0.13 % of the events, and at 300 events over 7
-# bins the per-bin error is already 15-20 %.  What the threshold buys is the
-# refusal to draw a *second* and *third* such curve on top of the first and let
-# the eye read the gaps between three noise realisations as a mode difference.
-# ``numbers.txt`` prints the survivors and the chi2 between the modes either
-# way, so nothing is hidden by not drawing it.
+# statistics-free number: with the earlier inclusive ``decay z > light light``
+# card the four-lepton observable kept ~0.13 % of the events, and at 300 events
+# over 7 bins the per-bin error is already 15-20 %.  What the threshold buys is
+# the refusal to draw a *second* and *third* such curve on top of the first and
+# let the eye read the gaps between three noise realisations as a mode
+# difference.  ``numbers.txt`` prints the survivors and the chi2 between the
+# modes either way, so nothing is hidden by not drawing it.
+#
+# With the EXCLUSIVE card of the present three samples both observables clear
+# it for every mode by a factor of ~60 (118 000 and 164 000 survivors against
+# 2 000), so nothing is dropped and all three modes are on both figures.  The
+# threshold is kept, unchanged, for the next sample that does not.
 MIN_SEL_TO_DRAW = 2000
 
 CURVE_TEX = {
@@ -458,13 +483,16 @@ def diagnostics(d, obs):
         GeV is a choice that was never close; one above 10 GeV is.
 
     ``purity`` / ``efficiency``
-        against the ``z`` decay channels read out of the event record.  The
-        sample is an INCLUSIVE ``z > light light``, so an event can have an
-        ``e+`` and a ``mu+`` without either ``z`` having decayed to them --
-        ``Z -> tau tau`` and semileptonic ``b`` decays both do it.  Purity is
-        the fraction of selected events whose ``z`` really took the channel the
-        observable assumes; efficiency is the fraction of those events the
-        selection keeps.
+        against the ``z`` decay channels read out of the event record.  Purity
+        is the fraction of selected events whose ``z`` really took the channel
+        the observable assumes; efficiency is the fraction of those events the
+        selection keeps.  On the earlier INCLUSIVE ``z > light light`` samples
+        purity was a real question -- an event could have an ``e+`` and a
+        ``mu+`` without either ``z`` decaying to them, via ``Z -> tau tau`` or
+        semileptonic ``b``.  On the present EXCLUSIVE samples every event is in
+        the channel, so purity is 1 by construction and only the efficiency
+        carries information.  It is still computed from the record rather than
+        asserted, which is how the exclusivity itself is established.
     """
     z, sel = d.z, d.sel[obs]
     n = int(sel.sum())
