@@ -55,9 +55,32 @@ than restating it: LaTeX text, serif, step histograms of line width 1.2, the
 tableau colours with black/blue/red promoted, frameless legends, minor tick
 locators, and the Type1 minus-sign workaround.
 
+Two variants, written ALONGSIDE this figure
+-------------------------------------------
+Into subdirectories of the same output directory, leaving the original figures
+exactly where they were:
+
+``plots/variant_A_madspin_only/``
+    the same three tiers with the ``onshell`` and ``PA`` curves dropped from
+    the distribution pane -- the reference sample's polarisation decomposition
+    on its own.  Same binning, same styles, PDF and PNG.
+
+``plots/variant_B_shape_ratio/``
+    the distribution pane with all three modes on it, and then ONE ratio pane
+    instead of the sum pane and the 2 x 2: the self-normalised shape ratio
+    ``(1/sigma dsigma/dX)_Y / (1/sigma dsigma/dX)_madspin`` for both
+    ``Y = onshell`` and ``Y = PA``, drawn together.  Dividing each mode by its
+    own cross section first takes the RATE difference out and leaves the SHAPE,
+    which is what separates the two modes here: ``onshell`` differs from
+    ``madspin`` in rate and much less in shape, ``PA`` agrees in rate and
+    differs in shape.  Which sigma does the normalising is
+    ``pol_analysis.SHAPE_NORM``, argued there and printed into numbers.txt with
+    both candidates tabulated.
+
 Usage::
 
     plot_zz_pol.py [--data DIR] [--out DIR] [--numbers PATH] [--check-minus]
+                   [--no-variants]
 """
 
 import argparse
@@ -70,7 +93,7 @@ import numpy as np
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
-from matplotlib.ticker import AutoMinorLocator
+from matplotlib.ticker import AutoMinorLocator, MaxNLocator
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
 if _HERE not in sys.path:
@@ -127,32 +150,64 @@ def _ratio_ylim(r, e, anchor=None):
     return _pad(lo, hi)
 
 
-def draw(d, obs, outdir, extras=()):
-    c = PA.Curves(d, obs)
+def _shape_ylim(series, frac=0.12, head=0.30, noisy=3.0):
+    """The window for the variant-B pane: sized by the structure, not the edge.
+
+    ``_ratio_ylim`` takes the extreme of ``point +- bar`` over every bin.  On
+    this pane that is the wrong rule, because the thinly populated edge bins
+    carry bars two to three times the median and would set a window in which
+    the several-percent structure the pane exists to show is a flat line.
+
+    So: the window is taken from the bins whose bar is at most ``noisy`` times
+    the median bar -- the ones that are a measurement -- as ``point +- bar``,
+    and is then widened to contain the CENTRAL value of every bin including the
+    noisy ones, so that no drawn point is off the canvas even where its bar
+    runs past the frame.  1 is always inside.  ``series`` is a list of
+    ``(ratio, error)`` pairs; all of them share the one window, because the
+    pane's whole purpose is to compare them.
+
+    The padding is asymmetric -- ``head`` above against ``frac`` below --
+    because this pane carries the only legend below the distribution, at its
+    upper left, and a legend sitting on the highest error bar is as unreadable
+    as a point off the frame.
+    """
+    rr = np.concatenate([np.asarray(r, dtype=float) for r, _ in series])
+    ee = np.concatenate([np.asarray(e, dtype=float) for _, e in series])
+    ok = np.isfinite(rr) & np.isfinite(ee)
+    if not ok.any():
+        return 0.0, 2.0
+    med = float(np.median(ee[ok]))
+    fine = ok & (ee <= noisy * med) if med > 0 else ok
+    if not fine.any():
+        fine = ok
+    lo = min(1.0, float(np.min(rr[fine] - ee[fine])), float(np.min(rr[ok])))
+    hi = max(1.0, float(np.max(rr[fine] + ee[fine])), float(np.max(rr[ok])))
+    if not np.isfinite(lo) or not np.isfinite(hi) or hi <= lo:
+        return 0.0, 2.0
+    d = hi - lo
+    return lo - frac * d, hi + head * d
+
+
+# The multiplier on the distribution pane's autoscale top, per figure variant
+# and per y scale.  What sets it is the number of rows in the legend, which is
+# drawn inside the pane at the upper left: seven curves on the full figure and
+# on variant B, five on variant A because the two extra spinmodes are not
+# there.  All of these were checked on the rendered PNG and not on the axis
+# limits.
+HEADROOM = {None: (250.0, 1.62), 'A': (60.0, 1.45), 'B': (250.0, 1.62)}
+
+
+def _distribution(ax, c, obs, extras, variant=None):
+    """Tier 1, shared by every variant: the total, the four components, and
+    -- unless the variant drops them -- the other two spinmodes.
+
+    Returns the list of spinmodes that were NOT drawn because the selection
+    left them under ``PA.MIN_SEL_TO_DRAW``.  Nothing about that is written on
+    the figure; ``write_numbers`` says it.
+    """
     edges, x = c.edges, c.centres()
-    xlab, ylab = (PA.LABELS_TEX if USETEX else PA.LABELS_TXT)[obs]
+    ylab = (PA.LABELS_TEX if USETEX else PA.LABELS_TXT)[obs][1]
     curve = PA.CURVE_TEX if USETEX else PA.CURVE_TXT
-    rlab = PA.RATIO_TEX if USETEX else PA.RATIO_TXT
-
-    fig = plt.figure(figsize=(8.0, 11.0))
-    # Three vertical rhythms, so three gridspecs rather than one.  The
-    # distribution and the sum pane are a normal stacked PAIR sharing one x
-    # axis -- tick labels and axis name under the sum pane only, and a tight
-    # gap between them.  The 2 x 2 breakdown is a separate block with its own
-    # labels, set off by a modest gap.  A single hspace cannot do all three:
-    # tight enough for the pair leaves the sum pane's axis name on the 2 x 2,
-    # and wide enough to clear it tears the stacked pair apart.
-    gs = fig.add_gridspec(2, 1, height_ratios=[4.8, 2.5], hspace=0.13)
-    top = gs[0].subgridspec(2, 1, height_ratios=[3.1, 1.7], hspace=0.06)
-    sub = gs[1].subgridspec(2, 2, hspace=0.12, wspace=0.26)
-    ax = fig.add_subplot(top[0])
-    axs = fig.add_subplot(top[1], sharex=ax)
-    small = [fig.add_subplot(sub[0, 0], sharex=ax),
-             fig.add_subplot(sub[0, 1], sharex=ax),
-             fig.add_subplot(sub[1, 0], sharex=ax),
-             fig.add_subplot(sub[1, 1], sharex=ax)]
-
-    # -- tier 1: the distribution, full plus the four components -------------
     y, e = c.dist['full']
     ax.stairs(y, edges, color=COLOR['full'], ls=LS['full'], lw=LW + 0.5,
               label=curve['full'], zorder=6)
@@ -192,7 +247,8 @@ def draw(d, obs, outdir, extras=()):
     # the pane to six decades and puts the seven-row legend back on the total;
     # 250x rather than the earlier 60x clears it.  Checked on the rendered PNG,
     # not on the axis limits.
-    ax.set_ylim(lo, hi * (250.0 if obs in PA.LOGY else 1.62))
+    head = HEADROOM[variant]
+    ax.set_ylim(lo, hi * (head[0] if obs in PA.LOGY else head[1]))
     ax.legend(frameon=False, fontsize=8.5, loc='upper left')
     # A dropped spinmode is recorded and returned, and it is NOT written on the
     # figure: nothing is.  ``write_numbers`` prints the survivors and the
@@ -205,6 +261,115 @@ def draw(d, obs, outdir, extras=()):
     if obs not in PA.LOGY:
         ax.yaxis.set_minor_locator(AutoMinorLocator())
     plt.setp(ax.get_xticklabels(), visible=False)
+    return dropped
+
+
+def draw_shape(d, obs, outdir, extras=()):
+    """Variant B: the distribution, and ONE ratio pane under it.
+
+    The pane is ``(1/sigma dsigma/dX)_Y / (1/sigma dsigma/dX)_madspin`` for
+    both extra spinmodes at once -- each curve divided by its OWN cross section
+    before the division, so that the rate difference between the modes divides
+    out and what is left is the shape.  That is the pane this data wants:
+    ``onshell`` differs from ``madspin`` in RATE (+4.99 % inclusive) and much
+    less in shape, ``PA`` agrees in rate (1.4 sigma) and differs in SHAPE.  A
+    ratio that still carried the normalisation would show the first as a large
+    flat offset and would hide the second under it.
+
+    Which sigma normalises each curve is ``PA.SHAPE_NORM``, stated there and in
+    numbers.txt.  The error is the within-sample delta-method one of
+    ``PA.shape_density`` combined in quadrature between samples, which is right
+    because the three samples do not share production events -- see
+    ``PA.pairing_evidence``.
+
+    The sum pane and the 2 x 2 breakdown are NOT drawn here.  They are the
+    reference sample's polarisation decomposition and they are unchanged on the
+    full figure and on variant A; this variant is about the three modes.
+    """
+    c = PA.Curves(d, obs)
+    edges, x = c.edges, c.centres()
+    xlab = (PA.LABELS_TEX if USETEX else PA.LABELS_TXT)[obs][0]
+
+    fig = plt.figure(figsize=(8.0, 6.6))
+    # One stacked pair, the same rhythm as the top pair of the full figure:
+    # tick labels and the axis name under the ratio pane only.
+    gs = fig.add_gridspec(2, 1, height_ratios=[3.1, 1.9], hspace=0.06)
+    ax = fig.add_subplot(gs[0])
+    axr = fig.add_subplot(gs[1], sharex=ax)
+
+    _distribution(ax, c, obs, extras, variant='B')
+
+    ref = PA.shape_density(d, obs)
+    axr.axhline(1.0, color='black', lw=1.0, ls=':')
+    series = []
+    for key, dx in extras:
+        if not PA.full_distribution(dx, obs)['drawable']:
+            continue
+        cmp = PA.compare_shape(ref, PA.shape_density(dx, obs))
+        r, er = cmp['ratio'], cmp['ratio_err']
+        series.append((r, er))
+        lab = (PA.SHAPE_CURVE_TEX if USETEX else PA.SHAPE_CURVE_TXT)[key]
+        # ``baseline=None`` for the same reason as the sum pane: stairs would
+        # otherwise close the path down to zero and draw two spurious vertical
+        # rules on a frame that sits around 1.
+        axr.stairs(r, edges, color=COLOR[key], ls=LS[key], lw=LW + 0.2,
+                   zorder=4, baseline=None, label=lab)
+        axr.errorbar(x, r, yerr=er, fmt='o', ms=3.4, color=COLOR[key],
+                     elinewidth=1.0, zorder=5)
+    if series:
+        axr.set_ylim(*_shape_ylim(series))
+    axr.set_ylabel(PA.SHAPE_RATIO_TEX if USETEX else PA.SHAPE_RATIO_TXT,
+                   fontsize=8.5)
+    axr.legend(frameon=False, fontsize=8.5, loc='upper left', ncol=2)
+    axr.xaxis.set_minor_locator(AutoMinorLocator())
+    # The window is a few percent wide, and the default locator then labels it
+    # with two ticks -- 1.0 and one other -- which is not a readable scale for
+    # a pane whose whole content is a few-percent excursion.  Ask for five.
+    axr.yaxis.set_major_locator(MaxNLocator(5))
+    axr.yaxis.set_minor_locator(AutoMinorLocator())
+    axr.set_xlabel(xlab, fontsize=12)
+    for s in axr.spines.values():
+        s.set_linewidth(1.5)
+    ax.set_xlim(edges[0], edges[-1])
+
+    os.makedirs(outdir, exist_ok=True)
+    base = os.path.join(outdir, PA.SHORT[obs])
+    want = wants_minus(fig)
+    fig.savefig(base + '.pdf', bbox_inches='tight')
+    fig.savefig(base + '.png', dpi=200, bbox_inches='tight')
+    plt.close(fig)
+    print('%-12s variant B  N=%d  norm=%s' % (PA.SHORT[obs], c.n_sel,
+                                              PA.SHAPE_NORM))
+    return base, want
+
+
+def draw(d, obs, outdir, extras=(), variant=None):
+    c = PA.Curves(d, obs)
+    edges, x = c.edges, c.centres()
+    xlab = (PA.LABELS_TEX if USETEX else PA.LABELS_TXT)[obs][0]
+    rlab = PA.RATIO_TEX if USETEX else PA.RATIO_TXT
+
+    fig = plt.figure(figsize=(8.0, 11.0))
+    # Three vertical rhythms, so three gridspecs rather than one.  The
+    # distribution and the sum pane are a normal stacked PAIR sharing one x
+    # axis -- tick labels and axis name under the sum pane only, and a tight
+    # gap between them.  The 2 x 2 breakdown is a separate block with its own
+    # labels, set off by a modest gap.  A single hspace cannot do all three:
+    # tight enough for the pair leaves the sum pane's axis name on the 2 x 2,
+    # and wide enough to clear it tears the stacked pair apart.
+    gs = fig.add_gridspec(2, 1, height_ratios=[4.8, 2.5], hspace=0.13)
+    top = gs[0].subgridspec(2, 1, height_ratios=[3.1, 1.7], hspace=0.06)
+    sub = gs[1].subgridspec(2, 2, hspace=0.12, wspace=0.26)
+    ax = fig.add_subplot(top[0])
+    axs = fig.add_subplot(top[1], sharex=ax)
+    small = [fig.add_subplot(sub[0, 0], sharex=ax),
+             fig.add_subplot(sub[0, 1], sharex=ax),
+             fig.add_subplot(sub[1, 0], sharex=ax),
+             fig.add_subplot(sub[1, 1], sharex=ax)]
+
+    # -- tier 1: the distribution, full plus the four components -------------
+    # Shared with variant B, and with variant A, which passes no extras.
+    _distribution(ax, c, obs, extras, variant=variant)
 
     # -- tier 2: the sum, on its own scale -----------------------------------
     r, er, nb = c.ratios['SUM']
@@ -259,8 +424,9 @@ def draw(d, obs, outdir, extras=()):
     fig.savefig(base + '.pdf', bbox_inches='tight')
     fig.savefig(base + '.png', dpi=200, bbox_inches='tight')
     plt.close(fig)
-    print('%-12s N=%d  sum/full = %.4f +- %.4f' % (PA.SHORT[obs], c.n_sel,
-                                                   Rint, Eint))
+    print('%-12s %-10s N=%d  sum/full = %.4f +- %.4f'
+          % (PA.SHORT[obs], 'variant ' + variant if variant else 'full',
+             c.n_sel, Rint, Eint))
     return base, want
 
 
@@ -283,6 +449,114 @@ def _sigma_err(dd, obs):
     """``sqrt(sum w^2)`` on one sample's fiducial cross section, in pb."""
     w = np.asarray(dd.full, dtype=np.float64)[dd.sel[obs]] * dd.scale_to_pb
     return float(np.sqrt((w ** 2).sum()))
+
+
+def _shape_numbers(d, A, extras):
+    """The variant-B pane, in full: what it is, which sigma, and the bins.
+
+    Both normalisations are printed side by side so that the choice recorded in
+    ``pol_analysis.SHAPE_NORM`` can be audited rather than taken on trust.
+    """
+    A('--- THE SHAPE RATIO: what the variant-B pane draws ---')
+    A('   %s' % PA.SHAPE_RATIO_TXT)
+    A('for Y = onshell and Y = PA, both in one pane.  Each mode is divided by')
+    A('its OWN cross section before the division, so the RATE difference')
+    A('between the modes divides out and what is left is the SHAPE.  That is')
+    A('the pane this data wants: onshell differs from madspin in rate (+4.99 %')
+    A('inclusive) and much less in shape, PA agrees in rate (1.4 sigma) and')
+    A('differs in shape.  A ratio still carrying the normalisation shows the')
+    A('first as a large flat offset and buries the second underneath it.')
+    A('')
+    A('WHICH SIGMA NORMALISES EACH CURVE.  Two candidates, and they are not')
+    A('the same number:')
+    A('   selected  the whole selected fiducial cross section, every event')
+    A('             passing the lepton cuts, INCLUDING those whose observable')
+    A('             falls outside the drawn range;')
+    A('   inrange   the integral of the drawn histogram, in-range events only.')
+    A('')
+    A('THE FIGURES USE: %s' % PA.SHAPE_NORM)
+    A('   -- %s' % PA.SHAPE_NORM_TXT[PA.SHAPE_NORM])
+    A('because it makes the pane an exact statement about what is on the')
+    A('canvas: the cross-section-weighted mean of the drawn ratio over the')
+    A('drawn bins is then 1 by construction, so every visible departure from 1')
+    A('is paid for by another visible bin.  With "selected" the out-of-range')
+    A('rate -- which is mode dependent -- slides the whole pane by an amount')
+    A('whose cause is off the canvas.  Both are tabulated below; the choice is')
+    A('made for that reason and not because it changes an answer.')
+    A('')
+    A('what is outside the drawn range, per observable and mode:')
+    A('   %-10s %-9s %12s %14s %14s %10s'
+      % ('observable', 'spinmode', 'N outside', 'sigma_selected',
+         'sigma_inrange', 'outside %'))
+    for obs in PA.OBS:
+        for lab, dd in [('madspin', d)] + list(extras):
+            sd = PA.shape_density(dd, obs, 'inrange')
+            A('   %-10s %-9s %12d %14.6f %14.6f %10.3f'
+              % (PA.SHORT[obs], dd.label, sd['n_outside'],
+                 sd['sigma_selected_pb'], sd['sigma_norm_pb'],
+                 100 * sd['sigma_outside_pb'] / sd['sigma_selected_pb']))
+    A('')
+    A('Delta phi is binned over its whole physical range [0, pi] and has no')
+    A('outside at all, so for that observable the two normalisations are the')
+    A('same number to the last bit.  Only M(e+ mu+), whose last edge is at 450')
+    A('GeV while the observable reaches 4.2 TeV, distinguishes them.')
+    A('')
+    A('NOTE, and it corrects an earlier statement in RESULTS.md: the counts')
+    A('3120 / 3088 / 3134 quoted there as lying above 450 GeV are events with')
+    A('a FINITE M(e+ mu+), i.e. before the fiducial pT and eta cuts.  The')
+    A('SELECTED overflow -- the events that are actually in sigma_fid and')
+    A('missing from the histogram -- is the "N outside" column above.')
+    A('')
+    A('THE ERROR ON THIS PANE, and it is two different things multiplied')
+    A('together.  WITHIN one sample the bin content and the sigma that')
+    A('normalises it are sums over the SAME events -- the bin is a subset of')
+    A('the normalisation -- so they are correlated and the delta-method error')
+    A('of pol_analysis.ratio is used, exactly as for the polarisation ratios.')
+    A('A plain sqrt(sum w^2) would overstate the bar by 1/sqrt(1 - 2 p) for a')
+    A('bin holding a fraction p of the rate: 8 % on a twelfth of the Delta phi')
+    A('rate, which would understate the chi2 by 14 %.  BETWEEN samples there')
+    A('is NO correlation to keep -- see "DO THE THREE SAMPLES SHARE PRODUCTION')
+    A('EVENTS?" above -- so the two relative errors add in quadrature.  One')
+    A('degree of freedom is removed from the chi2 because each curve was')
+    A('divided by its own normalisation, which is exactly one constraint.')
+    A('')
+    for obs in PA.OBS:
+        edges = PA.BINS[obs]
+        A('%s: the shape ratio bin by bin' % PA.SHORT[obs])
+        refs = {n: PA.shape_density(d, obs, n)
+                for n in ('inrange', 'selected')}
+        for key, dx in extras:
+            cmps = {n: PA.compare_shape(refs[n], PA.shape_density(dx, obs, n))
+                    for n in ('inrange', 'selected')}
+            cc = cmps[PA.SHAPE_NORM]
+            other = 'selected' if PA.SHAPE_NORM == 'inrange' else 'inrange'
+            A('   Y = %-8s  chi2/ndf = %.2f/%d = %.2f   max|pull| %.2f'
+              % (dx.label, cc['chi2'], cc['ndf'], cc['chi2_per_ndf'],
+                 cc['max_abs_pull']))
+            A('     %-14s %10s %12s %10s %10s %12s'
+              % ('bin', 'N(ref)', 'ratio', 'error', 'sigma(1)',
+                 'norm=' + other))
+            n = refs[PA.SHAPE_NORM]['n']
+            for b in range(len(edges) - 1):
+                if not n[b]:
+                    continue
+                r, e = cc['ratio'][b], cc['ratio_err'][b]
+                A('     %6.1f-%6.1f %10d %12.4f %10.4f %10.2f %12.4f'
+                  % (edges[b], edges[b + 1], n[b], r, e,
+                     abs(r - 1) / e if e else float('nan'),
+                     cmps[other]['ratio'][b]))
+            dmax = np.nanmax(np.abs(cc['ratio'] - cmps[other]['ratio']))
+            A('     the two normalisations differ by at most %.4f in any bin'
+              % dmax)
+            A('')
+    A('For the contrast, "THE THREE SPINMODES COMPARED" above quotes a')
+    A('"SHAPE only" chi2 as well.  It is a DIFFERENT statistic and the two')
+    A('are not interchangeable: that one rescales the other mode to the')
+    A('reference\'s SELECTED fiducial rate and keeps the plain sqrt(sum w^2)')
+    A('per-bin bar, so it neither uses the in-range normalisation nor removes')
+    A('the within-sample correlation.  Its bars are the larger and its chi2')
+    A('the smaller of the two.  The pane draws the one computed here.')
+    A('')
 
 
 def write_numbers(d, path, extras=()):
@@ -309,13 +583,40 @@ def write_numbers(d, path, extras=()):
     A('  * the words "polarisation interference" over the sum pane;')
     A('  * in the user style, the note naming the two shaded bands behind the')
     A('    sum pane.  They are +-2 % and +-5 % about 1.  The bands are still')
-    A('    drawn; only the words are gone;')
+    A('    drawn; only the words are gone.  Variant B\'s single ratio pane')
+    A('    carries the same two graphics at +-1 % and +-3 %, tighter because a')
+    A('    shape ratio between two spinmodes lives at a few percent, and they')
+    A('    are unlabelled on the canvas for the same reason;')
     A('  * the "spinmode ... not drawn: too few events" note.  Which modes are')
     A('    drawn on which figure is stated per observable further down.')
     A('')
     A('figure caption (was the plot title):')
     for chunk in _wrap(PA.CAPTION, 70):
         A('   ' + chunk)
+    A('')
+    A('--- WHICH FIGURES EXIST ---')
+    A('Three per observable per style, and the two variants are written')
+    A('ALONGSIDE the original figure, in subdirectories of the same style')
+    A('directory.  The original figures are unchanged.')
+    A('')
+    A('   plots/ and plots_userstyle/')
+    A('      the three-tier figure: the distribution with the four')
+    A('      polarisation components on the full AND the onshell and PA')
+    A('      totals; a full-width (Z_0Z_0 + Z_TZ_T + Z_TZ_0 + Z_0Z_T)/full')
+    A('      pane; then the 2 x 2 of the individual ratios.')
+    for key in ('A', 'B'):
+        v = PA.VARIANTS[key]
+        A('')
+        A('   plots/%s/ and plots_userstyle/%s/' % (v['dir'], v['dir']))
+        for chunk in _wrap('variant %s -- %s'
+                           % (key, v['what'][0].upper() + v['what'][1:]), 64):
+            A('      ' + chunk)
+    A('')
+    A('Both variants keep the house style of the original: both styles, PDF')
+    A('AND PNG, the Z_0Z_0 naming, --check-minus on the MG7 figures only, and')
+    A('nothing written on the canvas beyond axis labels, tick labels and the')
+    A('legend.  Variant B\'s pane is documented in full under "THE SHAPE')
+    A('RATIO" below, including which sigma normalises each curve.')
     A('')
     A('%-9s %-34s %9s %9s %8s %8s'
       % ('spinmode', 'input', 'on disk', 'inflated', 'pass s', 'events'))
@@ -488,11 +789,62 @@ def write_numbers(d, path, extras=()):
         A('thing seen once in the earlier run_02 file; it recurs here and it')
         A('has no consequence for anything in this study.')
         A('')
+        A('--- DO THE THREE SAMPLES SHARE PRODUCTION EVENTS? ---')
+        A('This decides the error bar on every mode-to-mode comparison in this')
+        A('file, so it is established and not assumed.  If the three runs had')
+        A('decayed one common set of production events, the mode-to-mode ratio')
+        A('would be CORRELATED, a paired error would be correct, and it would')
+        A('be much smaller than the quadrature one.  They did not.')
+        A('')
+        pe = PA.pairing_evidence(d, extras)
+        A('%-9s %10s %12s %14s %18s'
+          % ('spinmode', 'events', 'n(w < 0)', 'sigma_tot pb',
+             'corr(m_4l) row by row'))
+        for row in pe['rows']:
+            A('%-9s %10d %12d %14.6f %18s'
+              % (row['label'], row['n_events'], row['n_negative'],
+                 row['sigma_pb'],
+                 '--  (reference)' if not np.isfinite(row['corr_m_4l'])
+                 else '%+.5f +- %.5f' % (row['corr_m_4l'],
+                                         row['corr_stderr'])))
+        A('')
+        A('n(w < 0) is the DECISIVE column and it is permutation invariant.')
+        A('Neither MadSpin nor Pythia can change the sign of an event weight --')
+        A('MadSpin multiplies by a positive decay factor and Pythia passes the')
+        A('LHE weight through -- so the number of negative-weight events is a')
+        A('property of the PRODUCTION sample alone and cannot depend on the')
+        A('spinmode or on the order the events are written in.  Three decays of')
+        A('one production sample would give the same count EXACTLY.  These')
+        A('differ, so a common production sample is excluded outright, in any')
+        A('order, and not merely left unproven.')
+        A('')
+        A('corr(m_4l) corroborates it and is the nearest thing the cached')
+        A('columns have to the sqrt(shat) the sibling m_tt study paired on.')
+        A('For a 2 -> 2 production event the four-lepton invariant mass IS the')
+        A('production m(ZZ), so two decays of one production event would agree')
+        A('in it to the dressing; row by row it is consistent with ZERO on')
+        A('~243 000 common rows, where pairing would give ~1.')
+        A('')
+        A('The .npz carries no production-level column at all -- no')
+        A('sqrt(shat), no event number, no production kinematics -- so the')
+        A('literal "max |Delta sqrt(shat)| = 0" test of the m_tt study cannot')
+        A('be run on this cache.  It does not need to be: the negative-weight')
+        A('count is a stronger test in the direction that matters, because it')
+        A('is permutation invariant, and it FAILS.')
+        A('')
+        A('CONSEQUENCE: every between-mode error in this file and on the')
+        A('figures is the PLAIN quadrature sum, and that is CORRECT here and')
+        A('not merely conservative.  A paired bar would be wrong, not just')
+        A('optimistic.  (Within a single sample the covariance is kept and')
+        A('must be -- see "integrated polarisation ratios" and')
+        A('pol_analysis.shape_density.)')
+        A('')
         A('--- THE THREE SPINMODES COMPARED ---')
         A('Same lepton selection, same bin edges, same absolute normalisation.')
         A('Errors here are the PLAIN quadrature sum, unlike every ratio pane in')
         A('this file: these are three independent MadSpin runs, independently')
-        A('showered, so there is no covariance to keep.')
+        A('showered, so there is no covariance to keep -- established above,')
+        A('not assumed.')
         A('')
         A('inclusive cross section (all 250k events, no selection):')
         for lab, dd in [('madspin', d)] + list(extras):
@@ -586,6 +938,7 @@ def write_numbers(d, path, extras=()):
                 A('   the whole of what can honestly be said about them.')
             A('')
         A('')
+        _shape_numbers(d, A, extras)
     A('--- integrated polarisation ratios ---')
     A('Errors are the delta-method ones for a ratio of two sums over the SAME')
     A('events (see pol_analysis.ratio); the naive independent-samples bar is')
@@ -679,16 +1032,39 @@ def write_numbers(d, path, extras=()):
     print('wrote %s' % path)
 
 
+def draw_variants(d, extras, outdir):
+    """The two variants, written ALONGSIDE the main figures.
+
+    Each goes into its own subdirectory of ``outdir`` -- the originals stay
+    exactly where they were and are not touched.  Returns the ``(base, want)``
+    pairs so that ``--check-minus`` covers the variant PDFs too.
+    """
+    bases = []
+    for obs in PA.OBS:
+        # A: the same three tiers, no extra spinmodes on the distribution.
+        bases.append(draw(d, obs, os.path.join(outdir, PA.VARIANTS['A']['dir']),
+                          extras=(), variant='A'))
+        # B: the distribution with all three modes, then one shape-ratio pane.
+        bases.append(draw_shape(d, obs,
+                                os.path.join(outdir, PA.VARIANTS['B']['dir']),
+                                extras))
+    return bases
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--data', default=os.path.join(_HERE, 'data'))
     ap.add_argument('--out', default=os.path.join(_HERE, 'plots'))
     ap.add_argument('--numbers', default=os.path.join(_HERE, 'numbers.txt'))
     ap.add_argument('--check-minus', action='store_true')
+    ap.add_argument('--no-variants', action='store_true',
+                    help='draw only the original three-tier figures')
     a = ap.parse_args()
     d = PA.Data(a.data)
     extras = PA.load_extras(a.data)
     bases = [draw(d, obs, a.out, extras) for obs in PA.OBS]
+    if not a.no_variants:
+        bases += draw_variants(d, extras, a.out)
     write_numbers(d, a.numbers, extras)
     if a.check_minus:
         print('usetex = %s   minus workaround active = %s' % (USETEX, MINUS_FIX))

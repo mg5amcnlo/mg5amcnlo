@@ -25,9 +25,17 @@ line.  The layout is the same three tiers, for the same reason: the sum pane
 is the physics and gets the width and the emphasis, the four components get a
 2 x 2 breakdown underneath.
 
+The two variants of ``plot_zz_pol.py`` are rendered here too, into
+``plots_userstyle/variant_A_madspin_only/`` and
+``plots_userstyle/variant_B_shape_ratio/``, alongside the original figures and
+never over them.  A -- the same three tiers without the ``onshell`` and ``PA``
+curves.  B -- the distribution and then a single pane carrying the
+self-normalised shape ratio of both extra modes to ``madspin``.  Which sigma
+normalises each curve, and why, is ``pol_analysis.SHAPE_NORM``.
+
 Usage::
 
-    python3 plot_zz_pol_userstyle.py [--data DIR] [--out DIR]
+    python3 plot_zz_pol_userstyle.py [--data DIR] [--out DIR] [--no-variants]
 """
 
 import argparse
@@ -45,7 +53,7 @@ _HERE = os.path.dirname(os.path.abspath(__file__))
 if _HERE not in sys.path:
     sys.path.insert(0, _HERE)
 import pol_analysis as PA                                        # noqa: E402
-from plot_zz_pol import _ratio_ylim                              # noqa: E402
+from plot_zz_pol import _ratio_ylim, _shape_ylim                 # noqa: E402
 
 # ``plot_zz_pol`` imports the MG7-style module, which sets the paper rcParams
 # (serif / usetex) at import time; they are reset here because the user's style
@@ -77,30 +85,28 @@ DPI = 300
 
 
 
+# The multiplier on the distribution pane's autoscale top, per figure variant
+# and per y scale; what sets it is the number of rows in the opaque legend box.
+# Ten rows on the full figure and on variant B, six on variant A because the
+# two extra spinmodes are not there.  Checked on the rendered PNG.
+# Variant B's distribution pane is shorter than the full figure's while
+# carrying the same ten-row box, so it needs more of the two.
+HEADROOM = {None: (4000.0, 1.45), 'A': (400.0, 1.35), 'B': (4000.0, 1.95)}
+
+
 def _step(ax, edges, y, **kw):
     ax.step(edges, np.concatenate([y[:1], y]), where='pre', **kw)
 
 
-def draw(d, obs, outdir, extras=()):
-    c = PA.Curves(d, obs)
+def _distribution(ax, c, obs, extras, variant=None):
+    """The distribution pane, shared by the full figure and both variants.
+
+    Returns the spinmodes the selection left under ``PA.MIN_SEL_TO_DRAW``;
+    that they were dropped is recorded and deliberately NOT written on the
+    canvas, exactly as on the MG7 figures.
+    """
     edges, x = c.edges, c.centres()
-    xlab, ylab = PA.LABELS_TXT[obs]
-
-    fig = plt.figure(figsize=FIGSIZE)
-    # See the note in plot_zz_pol.draw: the distribution and the sum pane are a
-    # stacked PAIR sharing one x axis, the 2 x 2 is a separate block with its
-    # own, and the three gaps that implies cannot come from one hspace.
-    gs = fig.add_gridspec(2, 1, height_ratios=[4.7, 2.5], hspace=0.13)
-    top = gs[0].subgridspec(2, 1, height_ratios=[3.0, 1.7], hspace=0.06)
-    sub = gs[1].subgridspec(2, 2, hspace=0.12, wspace=0.28)
-    ax = fig.add_subplot(top[0])
-    axs = fig.add_subplot(top[1], sharex=ax)
-    small = [fig.add_subplot(sub[0, 0], sharex=ax),
-             fig.add_subplot(sub[0, 1], sharex=ax),
-             fig.add_subplot(sub[1, 0], sharex=ax),
-             fig.add_subplot(sub[1, 1], sharex=ax)]
-
-    # -- the distribution: the total, with the four components on top of it ---
+    ylab = PA.LABELS_TXT[obs][1]
     y, e = c.dist['full']
     _step(ax, edges, y, color=C_REF, lw=1.6, label=PA.CURVE_TXT['full'],
           zorder=6)
@@ -112,8 +118,6 @@ def draw(d, obs, outdir, extras=()):
     for key, dx in extras:
         fd = PA.full_distribution(dx, obs)
         if not fd['drawable']:
-            # Recorded, and deliberately NOT written on the figure; the
-            # survivors and the drawn/not-drawn decision are in numbers.txt.
             dropped.append((key, fd['n_sel']))
             continue
         _step(ax, edges, fd['y'], color=COLOR[key], lw=1.3, ls=LS_EXTRA[key],
@@ -139,9 +143,93 @@ def draw(d, obs, outdir, extras=()):
     # resolve the Z_0 Z_0 tail down to 1e-8, stretching the pane to six
     # decades, and at the earlier 400x the box still covered the black step;
     # 4000x clears it.  Checked on the rendered PNG, not on the axis limits.
-    ax.set_ylim(lo, hi * (4000.0 if obs in PA.LOGY else 1.45))
+    head = HEADROOM[variant]
+    ax.set_ylim(lo, hi * (head[0] if obs in PA.LOGY else head[1]))
     ax.legend(loc='upper left', fontsize=8)
     ax.tick_params(labelbottom=False)
+    return dropped
+
+
+def draw_shape(d, obs, outdir, extras=()):
+    """Variant B in this style: the distribution, then ONE shape-ratio pane.
+
+    The physics, the normalisation choice and the error treatment are
+    ``pol_analysis``'s and are the same objects the MG7 variant draws; see
+    ``plot_zz_pol.draw_shape``.  Only the rendering differs.  The two shaded
+    tolerance bands behind the pane are +-1 % and +-3 % about 1 -- tighter than
+    the sum pane's +-2 % / +-5 %, because a shape ratio between two spinmodes
+    lives at a few percent -- and, like every other graphic in this style, what
+    they are is stated in numbers.txt and not on the canvas.
+    """
+    c = PA.Curves(d, obs)
+    edges, x = c.edges, c.centres()
+    xlab = PA.LABELS_TXT[obs][0]
+
+    fig = plt.figure(figsize=(FIGSIZE[0], 6.2))
+    gs = fig.add_gridspec(2, 1, height_ratios=[3.0, 1.9], hspace=0.06)
+    ax = fig.add_subplot(gs[0])
+    axr = fig.add_subplot(gs[1], sharex=ax)
+
+    _distribution(ax, c, obs, extras, variant='B')
+
+    ref = PA.shape_density(d, obs)
+    axr.axhspan(0.97, 1.03, facecolor='C0', alpha=0.10, zorder=0)
+    axr.axhspan(0.99, 1.01, facecolor='C0', alpha=0.16, zorder=0)
+    axr.axhline(1.0, color=C_REF, ls='--', lw=1.0, zorder=2)
+    series = []
+    for key, dx in extras:
+        if not PA.full_distribution(dx, obs)['drawable']:
+            continue
+        cmp = PA.compare_shape(ref, PA.shape_density(dx, obs))
+        r, er = cmp['ratio'], cmp['ratio_err']
+        series.append((r, er))
+        _step(axr, edges, r, color=COLOR[key], lw=1.2, ls=LS_EXTRA[key],
+              alpha=0.75, zorder=3)
+        axr.errorbar(x, r, yerr=er, fmt='o', ms=MS + 0.5, color=COLOR[key],
+                     label=PA.SHAPE_CURVE_TXT[key], zorder=4)
+    if series:
+        axr.set_ylim(*_shape_ylim(series))
+    # A few-percent window gets two default ticks; ask for five so that the
+    # scale of the excursion can be read off the pane.
+    axr.yaxis.set_major_locator(MaxNLocator(5))
+    axr.set_ylabel(PA.SHAPE_RATIO_TXT_2L, fontsize=7.5)
+    axr.legend(loc='upper left', fontsize=8, ncol=2)
+    axr.set_xlabel(xlab, fontsize=10)
+    for s in axr.spines.values():
+        s.set_linewidth(1.6)
+
+    os.makedirs(outdir, exist_ok=True)
+    base = os.path.join(outdir, PA.SHORT[obs])
+    fig.savefig(base + '.pdf', bbox_inches='tight')
+    fig.savefig(base + '.png', dpi=DPI, bbox_inches='tight')
+    plt.close(fig)
+    print('%-10s variant B  N=%5d  norm=%s' % (PA.SHORT[obs], c.n_sel,
+                                               PA.SHAPE_NORM))
+    return base
+
+
+def draw(d, obs, outdir, extras=(), variant=None):
+    c = PA.Curves(d, obs)
+    edges, x = c.edges, c.centres()
+    xlab, ylab = PA.LABELS_TXT[obs]
+
+    fig = plt.figure(figsize=FIGSIZE)
+    # See the note in plot_zz_pol.draw: the distribution and the sum pane are a
+    # stacked PAIR sharing one x axis, the 2 x 2 is a separate block with its
+    # own, and the three gaps that implies cannot come from one hspace.
+    gs = fig.add_gridspec(2, 1, height_ratios=[4.7, 2.5], hspace=0.13)
+    top = gs[0].subgridspec(2, 1, height_ratios=[3.0, 1.7], hspace=0.06)
+    sub = gs[1].subgridspec(2, 2, hspace=0.12, wspace=0.28)
+    ax = fig.add_subplot(top[0])
+    axs = fig.add_subplot(top[1], sharex=ax)
+    small = [fig.add_subplot(sub[0, 0], sharex=ax),
+             fig.add_subplot(sub[0, 1], sharex=ax),
+             fig.add_subplot(sub[1, 0], sharex=ax),
+             fig.add_subplot(sub[1, 1], sharex=ax)]
+
+    # -- the distribution: the total, with the four components on top of it ---
+    # Shared with variant B, and with variant A, which passes no extras.
+    _distribution(ax, c, obs, extras, variant=variant)
 
     # -- the sum: the polarisation interference, on its own scale ------------
     r, er, _ = c.ratios['SUM']
@@ -186,8 +274,9 @@ def draw(d, obs, outdir, extras=()):
     fig.savefig(base + '.png', dpi=DPI, bbox_inches='tight')
     plt.close(fig)
     g = PA.diagnostics(d, obs)
-    print('%-10s N=%5d  purity=%.3f  eff=%.3f  sum/full = %.4f +- %.4f'
-          % (PA.SHORT[obs], c.n_sel, g['purity'], g['efficiency'], Rint, Eint))
+    print('%-10s %-10s N=%5d  purity=%.3f  eff=%.3f  sum/full = %.4f +- %.4f'
+          % (PA.SHORT[obs], 'variant ' + variant if variant else 'full',
+             c.n_sel, g['purity'], g['efficiency'], Rint, Eint))
     return base
 
 
@@ -195,11 +284,20 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--data', default=os.path.join(_HERE, 'data'))
     ap.add_argument('--out', default=os.path.join(_HERE, 'plots_userstyle'))
+    ap.add_argument('--no-variants', action='store_true',
+                    help='draw only the original three-tier figures')
     a = ap.parse_args()
     d = PA.Data(a.data)
     extras = PA.load_extras(a.data)
     for obs in PA.OBS:
         draw(d, obs, a.out, extras)
+        if a.no_variants:
+            continue
+        # The two variants, ALONGSIDE the originals and never over them.
+        draw(d, obs, os.path.join(a.out, PA.VARIANTS['A']['dir']),
+             extras=(), variant='A')
+        draw_shape(d, obs, os.path.join(a.out, PA.VARIANTS['B']['dir']),
+                   extras)
 
 
 if __name__ == '__main__':

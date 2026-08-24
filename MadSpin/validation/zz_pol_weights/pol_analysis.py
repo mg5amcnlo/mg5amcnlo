@@ -78,6 +78,25 @@ each figure.  All three files happen to carry the four ``ms_pol_*`` weights
 (they are all ``keep_weight_for_polarization_vector = [0, T]`` runs), but
 nothing here is built on that -- decomposing the other two modes is a different
 study, and the ratio panes belong to the sample whose decomposition they are.
+
+The two figure variants
+-----------------------
+Beside the three-tier figure the two plotting scripts also draw, into
+subdirectories of their own output directories and without touching it, the two
+variants registered in :data:`VARIANTS`:
+
+``A``
+    the same three tiers with the ``onshell`` and ``PA`` curves dropped, i.e.
+    the reference sample's polarisation decomposition on its own.
+
+``B``
+    the distribution pane, and then ONE ratio pane instead of the sum pane and
+    the 2 x 2: the SHAPE ratio of each extra mode to the reference, each curve
+    divided by its own cross section first so that the rate difference divides
+    out.  See :data:`SHAPE_NORM` for which cross section that is,
+    :func:`shape_density` for the within-sample error and
+    :func:`pairing_evidence` for why the between-sample one is a plain
+    quadrature sum.
 """
 
 import json
@@ -307,6 +326,230 @@ RATIO_TXT = {'SUM': '(Z0Z0 + ZTZT + ZTZ0 + Z0ZT) / full',
 # and less ambiguous handle.  Only the FIGURES use the Z_0 Z_T spelling.
 RATIO_KEY = {'SUM': '(LL+TT+TL+LT) / full', 'LL': 'LL / full',
              'TT': 'TT / full', 'TL': 'TL / full', 'LT': 'LT / full'}
+
+
+# --------------------------------------------------------------------------
+# The three figure variants.  ``full`` is the original three-tier figure and is
+# what both plotting scripts still draw by default, into their original output
+# directories; the two variants are written ALONGSIDE it, into a subdirectory
+# of the same style directory, and nothing about the original figures changes.
+VARIANTS = {
+    # tier 1 only, and only the reference sample on it.
+    'A': {'dir': 'variant_A_madspin_only',
+          'extras_on_distribution': False,
+          'panes': ['SUM', '2x2'],
+          'what': 'the same three-tier figure with the onshell and PA curves '
+                  'dropped from the distribution pane'},
+    # tier 1 with all three modes, then ONE ratio pane: the shape ratio.
+    'B': {'dir': 'variant_B_shape_ratio',
+          'extras_on_distribution': True,
+          'panes': ['SHAPE'],
+          'what': 'the distribution pane, then a single ratio pane carrying '
+                  'the self-normalised shape ratio of onshell and PA to '
+                  'madspin.  The sum pane and the 2 x 2 are not drawn'},
+}
+
+# --------------------------------------------------------------------------
+# WHICH SIGMA NORMALISES EACH CURVE IN THE VARIANT-B PANE.
+#
+# ``(1/sigma) dsigma/dx`` needs a sigma and there are two candidates, which are
+# not the same number:
+#
+#   'selected'  the whole selected fiducial cross section, every event that
+#               passes the lepton cuts, INCLUDING those whose observable falls
+#               outside the drawn range;
+#   'inrange'   the integral of the drawn histogram, i.e. only the events
+#               inside [edges[0], edges[-1]].
+#
+# They differ only for ``M(e+ mu+)``, whose last edge is at 450 GeV while the
+# observable reaches 4.2 TeV.  ``Delta phi`` is binned over its entire physical
+# range [0, pi] and has no outside at all, so for that observable the two are
+# the same number to the last bit.
+#
+# THE CHOICE MADE HERE IS 'inrange', and the reason is that it makes the pane
+# an exact statement about what is on the canvas.  With 'inrange' the
+# cross-section-weighted mean of the drawn ratio over the drawn bins is 1 by
+# construction, so every visible departure from 1 is paid for by another
+# visible bin and the reader can account for the whole pane without being told
+# about events that are not on it.  With 'selected' the out-of-range rate --
+# which is mode dependent, 0.686 % of the selected sigma for madspin against
+# 0.730 % for onshell and 0.720 % for PA -- slides the whole pane by a small
+# amount whose cause is off the canvas.
+#
+# It is a small effect and ``numbers.txt`` prints BOTH normalisations bin by
+# bin so that the choice can be audited: the largest difference between them in
+# any bin of either observable is 0.09 %, about a tenth of the smallest error
+# bar on the pane.  The choice is made for the reason above, not because it
+# changes an answer.
+SHAPE_NORM = 'inrange'
+SHAPE_NORM_TXT = {
+    'inrange': 'the integral of the drawn histogram (in-range events only)',
+    'selected': 'the whole selected fiducial cross section, '
+                'including out-of-range events',
+}
+
+SHAPE_RATIO_TEX = (r'$\left[\frac{1}{\sigma}\frac{\mathrm{d}\sigma}'
+                   r'{\mathrm{d}X}\right]_{Y}\Big/\left[\frac{1}{\sigma}'
+                   r'\frac{\mathrm{d}\sigma}{\mathrm{d}X}\right]'
+                   r'_{\mathrm{madspin}}$')
+SHAPE_RATIO_TXT = '(1/sigma dsigma/dX)_Y / (1/sigma dsigma/dX)_madspin'
+# The same label broken over two lines.  The sans-serif rendering spells the
+# quantity out where the TeX one sets it as a fraction, and on one line it is
+# wider than the pane is tall, so it would run off the bottom of the figure.
+SHAPE_RATIO_TXT_2L = ('(1/sigma dsigma/dX)_Y\n'
+                      '/ (1/sigma dsigma/dX)_madspin')
+SHAPE_CURVE_TEX = {'onshell': r'$Y = $ \texttt{onshell}',
+                   'PA': r'$Y = $ \texttt{PA}'}
+SHAPE_CURVE_TXT = {'onshell': 'Y = onshell', 'PA': 'Y = PA'}
+
+
+def shape_density(d, obs, norm=SHAPE_NORM):
+    """``(1/sigma) dsigma/dx`` per bin for one sample, with its own error.
+
+    ``norm`` picks the sigma, ``'inrange'`` or ``'selected'``; see
+    :data:`SHAPE_NORM` for which one the figures use and why.
+
+    The error is the delta-method one of :func:`ratio`, not a plain
+    ``sqrt(sum w^2)``.  The bin content and the normalising sigma are sums over
+    the SAME events -- the bin is a subset of the normalisation -- so they are
+    correlated, and the part of a bin's fluctuation that is common to the
+    normalisation does not move the normalised fraction at all.  Treating them
+    as independent overstates the bar by ``1/sqrt(1 - 2 p_b)`` for a bin
+    holding a fraction ``p_b`` of the rate, which is 8 % on a twelfth of the
+    ``Delta phi`` rate and would understate the chi2 by 14 %.
+
+    This is a WITHIN-sample correlation and is unrelated to the between-sample
+    one; see :func:`pairing_evidence`, which establishes that there is no
+    between-sample correlation to keep.
+    """
+    edges = BINS[obs]
+    sel = d.sel[obs]
+    x = np.asarray(d.z[obs], dtype=np.float64)[sel]
+    w = np.asarray(d.full, dtype=np.float64)[sel] * d.scale_to_pb
+    if norm == 'inrange':
+        den = w * ((x >= edges[0]) & (x <= edges[-1]))
+    elif norm == 'selected':
+        den = w
+    else:
+        raise ValueError('unknown shape normalisation %r' % (norm,))
+    nb = len(edges) - 1
+    width = np.diff(edges)
+    idx = np.digitize(x, edges) - 1
+    f = np.full(nb, np.nan)
+    e = np.full(nb, np.nan)
+    n = np.zeros(nb, dtype=int)
+    for b in range(nb):
+        # np.histogram puts x == edges[-1] in the last bin; np.digitize does
+        # not.  Match np.histogram so that this pane and the distribution pane
+        # above it bin the same events.
+        m = (idx == b) if b < nb - 1 else ((idx == b) | (x == edges[-1]))
+        n[b] = int(m.sum())
+        R, E = ratio(w * m, den)
+        f[b], e[b] = R / width[b], E / width[b]
+    return {'label': d.label, 'f': f, 'err': e, 'n': n, 'norm': norm,
+            'sigma_norm_pb': float(den.sum()),
+            'sigma_selected_pb': float(w.sum()),
+            'n_outside': int(len(x) - int(((x >= edges[0])
+                                           & (x <= edges[-1])).sum())),
+            'sigma_outside_pb': float(w.sum() - den.sum())
+            if norm == 'inrange' else
+            float(w.sum() - (w * ((x >= edges[0])
+                                  & (x <= edges[-1]))).sum())}
+
+
+def compare_shape(ref, other):
+    """``other / ref`` of two :func:`shape_density` results, and its chi2.
+
+    The two samples are independent -- see :func:`pairing_evidence` -- so the
+    two relative errors add in quadrature and there is no covariance term to
+    subtract.  Were the two samples a common set of production events decayed
+    twice, this bar would be wrong and too large; they are not.
+
+    One degree of freedom is removed from the chi2 because each curve was
+    divided by its own normalisation, which is exactly one constraint.
+    """
+    fr, er = np.asarray(ref['f']), np.asarray(ref['err'])
+    fo, eo = np.asarray(other['f']), np.asarray(other['err'])
+    ok = np.isfinite(fr) & np.isfinite(fo) & (fr > 0) & (fo > 0)
+    r = np.full(len(fr), np.nan)
+    rel = np.full(len(fr), np.nan)
+    r[ok] = fo[ok] / fr[ok]
+    rel[ok] = np.sqrt((eo[ok] / fo[ok]) ** 2 + (er[ok] / fr[ok]) ** 2)
+    e = r * rel
+    good = ok & np.isfinite(e) & (e > 0)
+    chi2 = float(np.sum((r[good] - 1.0) ** 2 / e[good] ** 2))
+    ndf = max(int(good.sum()) - 1, 0)
+    return {'label': other['label'], 'ratio': r, 'ratio_err': e, 'chi2': chi2,
+            'ndf': ndf, 'chi2_per_ndf': chi2 / ndf if ndf else float('nan'),
+            'max_abs_pull': float(np.max(np.abs(r[good] - 1.0) / e[good]))
+            if good.any() else float('nan')}
+
+
+def pairing_evidence(d, extras):
+    """Do the three samples decay a COMMON set of production events?
+
+    If they did, the mode-to-mode ratio would be correlated and a paired error
+    would be both correct and much smaller than the quadrature one.  So it has
+    to be established rather than assumed, and it is established here from the
+    cached ``.npz`` alone.
+
+    Two tests, and they answer at two different strengths.
+
+    ``n_negative``
+        the decisive one.  Neither MadSpin nor Pythia can change the SIGN of an
+        event weight -- MadSpin multiplies by a positive decay/branching factor
+        and Pythia passes the LHE weight through -- so the number of
+        negative-weight events is a property of the PRODUCTION sample alone,
+        and it is invariant under any reordering of the file.  Three decays of
+        one production sample must give the same count exactly.  They do not:
+        14 273 / 13 962 / 14 099.  A common production sample is therefore
+        excluded outright, in any order, and not merely unproven.
+
+    ``m_4l correlation``
+        the corroborating one, and the closest thing the cached columns have to
+        the ``sqrt(shat)`` the sibling ``m_tt`` study paired on.  For a
+        ``2 -> 2`` production event the four-lepton invariant mass IS the
+        production ``m(ZZ)``, so two decays of one production event would agree
+        in it to the dressing.  Row by row the correlation is 4e-04 on 243 000
+        common rows, against a standard error of 2e-03: zero, where pairing
+        would give ~1.
+
+    The cached ``.npz`` carries no production-level column at all -- no
+    ``sqrt(shat)``, no event number, no production kinematics -- so the literal
+    ``max |Delta sqrt(shat)| = 0`` test of the ``m_tt`` study cannot be run
+    here.  It does not need to be: the negative-weight count is a strictly
+    stronger test in the direction that matters, because it is permutation
+    invariant and it FAILS.
+    """
+    out = {'ref': d.label, 'rows': [], 'paired': False}
+    ref_neg = int((d.full < 0).sum())
+    for lab, dx in [(d.label, d)] + list(extras):
+        w = np.asarray(dx.full, dtype=np.float64)
+        row = {'label': dx.label, 'n_events': dx.n,
+               'n_negative': int((w < 0).sum()),
+               'frac_negative': float((w < 0).mean()),
+               'abs_weight_values': [float(v)
+                                     for v in np.unique(np.abs(w))],
+               'sigma_pb': float(np.asarray(dx.z['w_0'],
+                                            dtype=np.float64).sum())}
+        if dx is d:
+            row['corr_m_4l'] = float('nan')
+            row['n_common_rows'] = dx.n
+            row['same_n_negative'] = True
+        else:
+            a = np.asarray(d.z['m_4l'], dtype=np.float64)
+            b = np.asarray(dx.z['m_4l'], dtype=np.float64)
+            k = min(len(a), len(b))
+            a, b = a[:k], b[:k]
+            ok = np.isfinite(a) & np.isfinite(b)
+            row['n_common_rows'] = int(ok.sum())
+            row['corr_m_4l'] = float(np.corrcoef(a[ok], b[ok])[0, 1]) \
+                if ok.sum() > 2 else float('nan')
+            row['corr_stderr'] = 1.0 / math.sqrt(max(int(ok.sum()), 1))
+            row['same_n_negative'] = row['n_negative'] == ref_neg
+        out['rows'].append(row)
+    out['paired'] = all(r['same_n_negative'] for r in out['rows'])
+    return out
 
 
 # --------------------------------------------------------------------------

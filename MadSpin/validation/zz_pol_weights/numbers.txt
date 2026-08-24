@@ -18,7 +18,10 @@ and NOTHING else.  Everything that used to be written on them is here:
   * the words "polarisation interference" over the sum pane;
   * in the user style, the note naming the two shaded bands behind the
     sum pane.  They are +-2 % and +-5 % about 1.  The bands are still
-    drawn; only the words are gone;
+    drawn; only the words are gone.  Variant B's single ratio pane
+    carries the same two graphics at +-1 % and +-3 %, tighter because a
+    shape ratio between two spinmodes lives at a few percent, and they
+    are unlabelled on the canvas for the same reason;
   * the "spinmode ... not drawn: too few events" note.  Which modes are
     drawn on which figure is stated per observable further down.
 
@@ -28,6 +31,32 @@ figure caption (was the plot title):
    mu- (exclusive: every event has one z -> e+e- and one z -> mu+mu-).
    Cross sections are therefore sigma(p p > z z) times the two leptonic
    branching fractions, not an inclusive sigma.
+
+--- WHICH FIGURES EXIST ---
+Three per observable per style, and the two variants are written
+ALONGSIDE the original figure, in subdirectories of the same style
+directory.  The original figures are unchanged.
+
+   plots/ and plots_userstyle/
+      the three-tier figure: the distribution with the four
+      polarisation components on the full AND the onshell and PA
+      totals; a full-width (Z_0Z_0 + Z_TZ_T + Z_TZ_0 + Z_0Z_T)/full
+      pane; then the 2 x 2 of the individual ratios.
+
+   plots/variant_A_madspin_only/ and plots_userstyle/variant_A_madspin_only/
+      variant A -- The same three-tier figure with the onshell and PA
+      curves dropped from the distribution pane
+
+   plots/variant_B_shape_ratio/ and plots_userstyle/variant_B_shape_ratio/
+      variant B -- The distribution pane, then a single ratio pane
+      carrying the self-normalised shape ratio of onshell and PA to
+      madspin. The sum pane and the 2 x 2 are not drawn
+
+Both variants keep the house style of the original: both styles, PDF
+AND PNG, the Z_0Z_0 naming, --check-minus on the MG7 figures only, and
+nothing written on the canvas beyond axis labels, tick labels and the
+legend.  Variant B's pane is documented in full under "THE SHAPE
+RATIO" below, including which sigma normalises each curve.
 
 spinmode  input                                on disk  inflated   pass s   events
 madspin   run_06_decayed_1/....hepmc.gz         3.449G   10.562G     27.8   250000
@@ -158,11 +187,55 @@ branch -- and the counts above say how many.  This is the same
 thing seen once in the earlier run_02 file; it recurs here and it
 has no consequence for anything in this study.
 
+--- DO THE THREE SAMPLES SHARE PRODUCTION EVENTS? ---
+This decides the error bar on every mode-to-mode comparison in this
+file, so it is established and not assumed.  If the three runs had
+decayed one common set of production events, the mode-to-mode ratio
+would be CORRELATED, a paired error would be correct, and it would
+be much smaller than the quadrature one.  They did not.
+
+spinmode      events     n(w < 0)   sigma_tot pb corr(m_4l) row by row
+madspin       250000        14273       0.030874    --  (reference)
+onshell       250000        13962       0.032415 -0.00028 +- 0.00203
+PA            250000        14099       0.031116 +0.00041 +- 0.00203
+
+n(w < 0) is the DECISIVE column and it is permutation invariant.
+Neither MadSpin nor Pythia can change the sign of an event weight --
+MadSpin multiplies by a positive decay factor and Pythia passes the
+LHE weight through -- so the number of negative-weight events is a
+property of the PRODUCTION sample alone and cannot depend on the
+spinmode or on the order the events are written in.  Three decays of
+one production sample would give the same count EXACTLY.  These
+differ, so a common production sample is excluded outright, in any
+order, and not merely left unproven.
+
+corr(m_4l) corroborates it and is the nearest thing the cached
+columns have to the sqrt(shat) the sibling m_tt study paired on.
+For a 2 -> 2 production event the four-lepton invariant mass IS the
+production m(ZZ), so two decays of one production event would agree
+in it to the dressing; row by row it is consistent with ZERO on
+~243 000 common rows, where pairing would give ~1.
+
+The .npz carries no production-level column at all -- no
+sqrt(shat), no event number, no production kinematics -- so the
+literal "max |Delta sqrt(shat)| = 0" test of the m_tt study cannot
+be run on this cache.  It does not need to be: the negative-weight
+count is a stronger test in the direction that matters, because it
+is permutation invariant, and it FAILS.
+
+CONSEQUENCE: every between-mode error in this file and on the
+figures is the PLAIN quadrature sum, and that is CORRECT here and
+not merely conservative.  A paired bar would be wrong, not just
+optimistic.  (Within a single sample the covariance is kept and
+must be -- see "integrated polarisation ratios" and
+pol_analysis.shape_density.)
+
 --- THE THREE SPINMODES COMPARED ---
 Same lepton selection, same bin edges, same absolute normalisation.
 Errors here are the PLAIN quadrature sum, unlike every ratio pane in
 this file: these are three independent MadSpin runs, independently
-showered, so there is no covariance to keep.
+showered, so there is no covariance to keep -- established above,
+not assumed.
 
 inclusive cross section (all 250k events, no selection):
    madspin       0.030874 +- 0.000070 pb
@@ -219,6 +292,130 @@ dphi_ee: N selected, fiducial cross section, and the comparison
              SHAPE only (rescaled to the same fiducial rate) chi2/ndf = 57.61/11 = 5.24
    on the figure: madspin + onshell + PA   (all three modes drawn)
 
+
+--- THE SHAPE RATIO: what the variant-B pane draws ---
+   (1/sigma dsigma/dX)_Y / (1/sigma dsigma/dX)_madspin
+for Y = onshell and Y = PA, both in one pane.  Each mode is divided by
+its OWN cross section before the division, so the RATE difference
+between the modes divides out and what is left is the SHAPE.  That is
+the pane this data wants: onshell differs from madspin in rate (+4.99 %
+inclusive) and much less in shape, PA agrees in rate (1.4 sigma) and
+differs in shape.  A ratio still carrying the normalisation shows the
+first as a large flat offset and buries the second underneath it.
+
+WHICH SIGMA NORMALISES EACH CURVE.  Two candidates, and they are not
+the same number:
+   selected  the whole selected fiducial cross section, every event
+             passing the lepton cuts, INCLUDING those whose observable
+             falls outside the drawn range;
+   inrange   the integral of the drawn histogram, in-range events only.
+
+THE FIGURES USE: inrange
+   -- the integral of the drawn histogram (in-range events only)
+because it makes the pane an exact statement about what is on the
+canvas: the cross-section-weighted mean of the drawn ratio over the
+drawn bins is then 1 by construction, so every visible departure from 1
+is paid for by another visible bin.  With "selected" the out-of-range
+rate -- which is mode dependent -- slides the whole pane by an amount
+whose cause is off the canvas.  Both are tabulated below; the choice is
+made for that reason and not because it changes an answer.
+
+what is outside the drawn range, per observable and mode:
+   observable spinmode     N outside sigma_selected  sigma_inrange  outside %
+   m_epmup    madspin            880       0.014796       0.014695      0.686
+   m_epmup    onshell            924       0.015477       0.015364      0.730
+   m_epmup    PA                 889       0.014784       0.014677      0.720
+   dphi_ee    madspin              0       0.020400       0.020400      0.000
+   dphi_ee    onshell              0       0.021407       0.021407      0.000
+   dphi_ee    PA                   0       0.020509       0.020509      0.000
+
+Delta phi is binned over its whole physical range [0, pi] and has no
+outside at all, so for that observable the two normalisations are the
+same number to the last bit.  Only M(e+ mu+), whose last edge is at 450
+GeV while the observable reaches 4.2 TeV, distinguishes them.
+
+NOTE, and it corrects an earlier statement in RESULTS.md: the counts
+3120 / 3088 / 3134 quoted there as lying above 450 GeV are events with
+a FINITE M(e+ mu+), i.e. before the fiducial pT and eta cuts.  The
+SELECTED overflow -- the events that are actually in sigma_fid and
+missing from the histogram -- is the "N outside" column above.
+
+THE ERROR ON THIS PANE, and it is two different things multiplied
+together.  WITHIN one sample the bin content and the sigma that
+normalises it are sums over the SAME events -- the bin is a subset of
+the normalisation -- so they are correlated and the delta-method error
+of pol_analysis.ratio is used, exactly as for the polarisation ratios.
+A plain sqrt(sum w^2) would overstate the bar by 1/sqrt(1 - 2 p) for a
+bin holding a fraction p of the rate: 8 % on a twelfth of the Delta phi
+rate, which would understate the chi2 by 14 %.  BETWEEN samples there
+is NO correlation to keep -- see "DO THE THREE SAMPLES SHARE PRODUCTION
+EVENTS?" above -- so the two relative errors add in quadrature.  One
+degree of freedom is removed from the chi2 because each curve was
+divided by its own normalisation, which is exactly one constraint.
+
+m_epmup: the shape ratio bin by bin
+   Y = onshell   chi2/ndf = 13.25/6 = 2.21   max|pull| 2.98
+     bin                N(ref)        ratio      error   sigma(1) norm=selected
+        0.0-  45.0      19789       1.0091     0.0102       0.89       1.0086
+       45.0-  70.0      23238       0.9963     0.0092       0.40       0.9958
+       70.0-  95.0      21986       1.0118     0.0096       1.22       1.0113
+       95.0- 125.0      19652       0.9702     0.0100       2.98       0.9697
+      125.0- 175.0      17507       1.0074     0.0112       0.66       1.0070
+      175.0- 260.0      10699       1.0161     0.0150       1.07       1.0156
+      260.0- 450.0       4770       0.9869     0.0232       0.57       0.9865
+     the two normalisations differ by at most 0.0005 in any bin
+
+   Y = PA        chi2/ndf = 2.92/6 = 0.49   max|pull| 1.06
+     bin                N(ref)        ratio      error   sigma(1) norm=selected
+        0.0-  45.0      19789       0.9893     0.0101       1.06       0.9889
+       45.0-  70.0      23238       0.9958     0.0092       0.46       0.9954
+       70.0-  95.0      21986       1.0058     0.0096       0.61       1.0055
+       95.0- 125.0      19652       1.0039     0.0103       0.38       1.0036
+      125.0- 175.0      17507       1.0106     0.0112       0.94       1.0102
+      175.0- 260.0      10699       0.9961     0.0149       0.26       0.9957
+      260.0- 450.0       4770       0.9922     0.0232       0.34       0.9918
+     the two normalisations differ by at most 0.0003 in any bin
+
+dphi_ee: the shape ratio bin by bin
+   Y = onshell   chi2/ndf = 24.18/11 = 2.20   max|pull| 2.45
+     bin                N(ref)        ratio      error   sigma(1) norm=selected
+        0.0-   0.3       3547       1.0467     0.0281       1.66       1.0467
+        0.3-   0.5       4186       0.9712     0.0243       1.19       0.9712
+        0.5-   0.8       5107       1.0193     0.0229       0.84       1.0193
+        0.8-   1.0       6401       1.0351     0.0206       1.70       1.0351
+        1.0-   1.3       8255       1.0295     0.0177       1.67       1.0295
+        1.3-   1.6      10423       1.0257     0.0155       1.66       1.0257
+        1.6-   1.8      13238       0.9806     0.0132       1.47       0.9806
+        1.8-   2.1      16174       1.0024     0.0118       0.21       1.0024
+        2.1-   2.4      19743       1.0011     0.0105       0.11       1.0011
+        2.4-   2.6      23414       0.9872     0.0094       1.37       0.9872
+        2.6-   2.9      26413       0.9787     0.0087       2.45       0.9787
+        2.9-   3.1      27210       1.0076     0.0087       0.87       1.0076
+     the two normalisations differ by at most 0.0000 in any bin
+
+   Y = PA        chi2/ndf = 65.90/11 = 5.99   max|pull| 4.56
+     bin                N(ref)        ratio      error   sigma(1) norm=selected
+        0.0-   0.3       3547       1.0258     0.0276       0.93       1.0258
+        0.3-   0.5       4186       0.9660     0.0242       1.41       0.9660
+        0.5-   0.8       5107       1.0255     0.0231       1.11       1.0255
+        0.8-   1.0       6401       1.0256     0.0205       1.25       1.0256
+        1.0-   1.3       8255       1.0397     0.0179       2.21       1.0397
+        1.3-   1.6      10423       1.0273     0.0155       1.76       1.0273
+        1.6-   1.8      13238       1.0210     0.0136       1.55       1.0210
+        1.8-   2.1      16174       1.0364     0.0122       2.99       1.0364
+        2.1-   2.4      19743       1.0252     0.0107       2.35       1.0252
+        2.4-   2.6      23414       0.9866     0.0094       1.43       0.9866
+        2.6-   2.9      26413       0.9609     0.0086       4.56       0.9609
+        2.9-   3.1      27210       0.9699     0.0085       3.55       0.9699
+     the two normalisations differ by at most 0.0000 in any bin
+
+For the contrast, "THE THREE SPINMODES COMPARED" above quotes a
+"SHAPE only" chi2 as well.  It is a DIFFERENT statistic and the two
+are not interchangeable: that one rescales the other mode to the
+reference's SELECTED fiducial rate and keeps the plain sqrt(sum w^2)
+per-bin bar, so it neither uses the in-range normalisation nor removes
+the within-sample correlation.  Its bars are the larger and its chi2
+the smaller of the two.  The pane draws the one computed here.
 
 --- integrated polarisation ratios ---
 Errors are the delta-method ones for a ratio of two sums over the SAME

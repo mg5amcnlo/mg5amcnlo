@@ -19,6 +19,11 @@ number is quoted it is labelled as such and is there only for the contrast.
 Base of this branch: `7e39b7b1b` (`MadSpin zz_pol_weights: the onshell and PA
 spinmodes on the same figures`).
 
+**A later pass added two figure variants** beside the original figures, off the
+same cached `.npz` — no HepMC was read and nothing was generated. It is
+described under *The two figure variants*; base of that pass `6bf26d66e`
+(`MadSpin zz_pol_weights: the exclusive-decay samples, and bare figures`).
+
 ```
 data/weights.npz        250 000 rows: the weights and the observables (madspin)
 data/meta.json          input path and size, event count, the 33 weight names,
@@ -31,6 +36,8 @@ pol_analysis.py         the weight algebra, the selection, the ratio statistics
 plot_zz_pol.py          the MG7-style figures, and numbers.txt
 plot_zz_pol_userstyle.py  the same figures in the user style
 plots/, plots_userstyle/  PDF and PNG
+plots/variant_A_madspin_only/, plots_userstyle/variant_A_madspin_only/
+plots/variant_B_shape_ratio/,  plots_userstyle/variant_B_shape_ratio/
 numbers.txt             every number quoted below, and the per-bin tables
 ```
 
@@ -49,7 +56,7 @@ and nothing else**. Five things were on them and are not:
 | `integrated: R ± σ` in the sum pane | `numbers.txt`, *integrated polarisation ratios*; and the table below |
 | the four per-pane `integrated R` in the 2×2 legends | the same table. **The dashed line in each small pane still is that value** — only the number left |
 | `polarisation interference` over the sum pane | this file, and the sum pane's own axis label already names the quantity |
-| `bands: ±2 %, ±5 %` (user style only) | `numbers.txt`; the two bands are still drawn, only the words are gone |
+| `bands: ±2 %, ±5 %` (user style only) | `numbers.txt`; the two bands are still drawn, only the words are gone. Variant B's ratio pane carries the same two graphics at ±1 % and ±3 %, also unlabelled |
 | `spinmode ... not drawn: too few events` | `numbers.txt` prints `on the figure: ...` per observable. It does not trigger on these samples — all three modes are drawn on both figures |
 
 `numbers.txt` opens with a *WHAT IS NOT ON THE FIGURES* section listing exactly
@@ -495,8 +502,9 @@ structure of the mass pane would not be.
 
 ## Figures
 
-`plots/` (MG7 style, usetex, `--check-minus` passes: 2/2 PDFs carry `/minus`)
-and `plots_userstyle/` (stock rcParams), each with `m_epmup` and `dphi_ee` in
+`plots/` (MG7 style, usetex, `--check-minus` passes: **6/6** PDFs carry
+`/minus` — the two original figures and the four variant ones) and
+`plots_userstyle/` (stock rcParams), each with `m_epmup` and `dphi_ee` in
 PDF and PNG. Each figure is three tiers:
 
 1. the distribution — the full (unpolarised) `dσ/dx` at absolute normalisation
@@ -551,6 +559,184 @@ as a dashed line — with, now, no number printed beside it.
 
 ---
 
+## The two figure variants
+
+Added in a later pass, off the cached `.npz` alone — **no HepMC file was read
+and nothing was generated**. They are written **alongside** the figures above,
+into subdirectories of the same two style directories, and the originals are
+untouched: their PNGs are byte-identical to the ones this branch already
+carried.
+
+| | MG7 style | user style |
+|---|---|---|
+| the original three-tier figure | `plots/` | `plots_userstyle/` |
+| **A** — the same, `onshell` and `PA` dropped | `plots/variant_A_madspin_only/` | `plots_userstyle/variant_A_madspin_only/` |
+| **B** — distribution + one shape-ratio pane | `plots/variant_B_shape_ratio/` | `plots_userstyle/variant_B_shape_ratio/` |
+
+Each is `m_epmup` and `dphi_ee`, PDF **and** PNG, same binning, same `Z_0Z_0`
+naming, nothing on the canvas beyond axis labels, tick labels and the legend,
+and `--check-minus` on the MG7 side only (6/6). Both are drawn by the same two
+scripts; `--no-variants` suppresses them.
+
+**A** is the reference sample's polarisation decomposition on its own: the same
+three tiers, the same sum pane, the same 2 × 2, with the two extra spinmode
+curves gone from the distribution. Only the log-pane legend headroom changed
+with them (250× → 60× in the MG7 style, 4000× → 400× in the user style), because
+the legend lost two rows.
+
+**B** replaces the sum pane *and* the 2 × 2 with a single ratio pane carrying
+
+```
+(1/sigma dsigma/dX)_Y  /  (1/sigma dsigma/dX)_madspin      for Y = onshell, PA
+```
+
+both curves together. The distribution pane keeps all three modes. Dividing
+each mode by its own cross section first takes the rate difference out, which
+is the whole point here: `onshell` differs from `madspin` mostly in **rate**
+(+4.99 % inclusive, 12.0σ on the `Δφ` fiducial) and `PA` agrees in rate
+(1.4σ) and differs in **shape**. A ratio that still carried the normalisation
+would show the first as a large flat offset and bury the second under it.
+
+### Decision 1 — which σ normalises each curve
+
+**The integral of the drawn histogram** (`pol_analysis.SHAPE_NORM = 'inrange'`),
+not the whole selected fiducial cross section.
+
+The reason is that it makes the pane an exact statement about what is on the
+canvas: with the in-range integral the cross-section-weighted mean of the drawn
+ratio over the drawn bins is 1 by construction, so **every visible departure
+from 1 is paid for by another visible bin**. Normalising by the whole selected
+σ lets the out-of-range rate — which is mode dependent — slide the whole pane
+by an amount whose cause is off the canvas.
+
+`Δφ` is binned over its entire physical range `[0, π]` and has no outside at
+all, so there the two are the same number to the last bit. Only `M(e+ μ+)`,
+whose last edge is 450 GeV while the observable reaches 4.2 TeV, distinguishes
+them:
+
+| observable | mode | selected events outside | σ outside / σ selected |
+|---|---|---|---|
+| `M(e+ μ+)` | `madspin` | 880 | 0.686 % |
+| | `onshell` | 924 | 0.730 % |
+| | `PA` | 889 | 0.720 % |
+| `Δφ(e+e-)` | all three | 0 | 0 |
+
+`numbers.txt` prints **both** normalisations bin by bin so the choice is
+auditable. The largest difference between them in any bin of either observable
+is **0.0005** — about a twentieth of the smallest error bar on the pane. The
+choice is made for the reason above and not because it changes an answer.
+
+**This corrects a statement made earlier in this file.** *Not covered* below
+quoted 3 120 / 3 088 / 3 134 events above 450 GeV. Those are events with a
+**finite** `M(e+ μ+)`, i.e. before the fiducial `pT` and `|η|` cuts. The
+**selected** overflow — the events actually inside `σ_fid` and missing from the
+histogram — is 880 / 924 / 889, a factor 3.5 smaller. The qualitative point
+(the drawn curve does not integrate to the quoted σ) stands; the number did
+not.
+
+### Decision 2 — the error, and whether the three samples are paired
+
+**They are not paired, and the plain quadrature bar is correct here rather
+than merely conservative.**
+
+It was established, not assumed. If the three runs had decayed one common set
+of production events the mode-to-mode ratio would be correlated and a paired
+error would be both right and much smaller — the factor of 1.7 to 3.5 the
+sibling `m_tt` work saw. Two tests, from the cached `.npz` alone:
+
+| spinmode | events | `n(w < 0)` | row-by-row `corr(m_4l)` |
+|---|---|---|---|
+| `madspin` | 250 000 | **14 273** | — |
+| `onshell` | 250 000 | **13 962** | −0.00028 ± 0.00203 |
+| `PA` | 250 000 | **14 099** | +0.00041 ± 0.00203 |
+
+`n(w < 0)` is the decisive one and it is **permutation invariant**. Neither
+MadSpin nor Pythia can change the sign of an event weight — MadSpin multiplies
+by a positive decay factor, Pythia passes the LHE weight through — so the
+number of negative-weight events is a property of the *production* sample alone
+and cannot depend on the spinmode or on the order the events are written in.
+Three decays of one production sample would give the same count **exactly**.
+They differ by up to 311 events. **A common production sample is excluded
+outright, in any order**, not merely left unproven. Consistently with that,
+the three runs also carry three different `XMAXUP` (0.034853 / 0.036490 /
+0.035071) and three different cross sections, and `run_06` / `run_07` /
+`run_08` are three separate generations.
+
+`corr(m_4l)` corroborates it and is the nearest thing these cached columns have
+to the `sqrt(shat)` the `m_tt` study paired on: for a `2 → 2` production event
+the four-lepton invariant mass *is* the production `m(ZZ)`, so two decays of
+one production event would agree in it to the dressing. Row by row it is
+**zero** (0.2σ on 243 000 common rows) where pairing would give ~1.
+
+The `.npz` carries no production-level column at all — no `sqrt(shat)`, no
+event number, no production kinematics — so the literal
+`max |Δ sqrt(shat)| = 0` test cannot be run on this cache. It does not need to
+be: the negative-weight count is a *stronger* test in the direction that
+matters, because it is permutation invariant, and it fails.
+
+So between samples the two relative errors add in quadrature. **Within** a
+sample they do not: a bin's content and the σ that normalises it are sums over
+the *same* events (the bin is a subset of the normalisation), so
+`shape_density` uses the same delta-method error the polarisation ratios use.
+A plain `sqrt(Σw²)` would overstate the bar by `1/sqrt(1 − 2 p_b)` for a bin
+holding a fraction `p_b` of the rate — 8 % on a twelfth of the `Δφ` rate — and
+would understate the χ² by 14 %.
+
+### What the pane shows
+
+Both normalised by the in-range integral; the χ² loses one degree of freedom to
+that normalisation.
+
+| observable | Y | χ²/ndf | p | max &#124;pull&#124; | slope of a weighted straight line |
+|---|---|---|---|---|---|
+| `Δφ(e+e-)` | `PA` | **65.90/11 = 5.99** | **7e-10** | 4.56 | **−2.71 ± 0.49 % per rad (5.5σ)** |
+| | `onshell` | 24.18/11 = 2.20 | 0.012 | 2.45 | −1.08 ± 0.50 % per rad (2.2σ) |
+| `M(e+ μ+)` | `PA` | 2.92/6 = 0.49 | 0.82 | 1.06 | +0.03 ± 0.06 % per 10 GeV (0.5σ) |
+| | `onshell` | 13.25/6 = 2.21 | 0.039 | 2.98 | −0.02 ± 0.06 % per 10 GeV (0.3σ) |
+
+* **`PA` on `Δφ` is the result the pane exists for.** The ratio runs
+  `+2.6, −3.4, +2.6, +2.6, +4.0, +2.7, +2.1, +3.6, +2.5, −1.3, −3.9, −3.0 %`
+  across the twelve bins: **about +2.5 % at low and intermediate `Δφ` falling
+  to −3.9 % as `Δφ → π`**, a 5.5σ downward slope. `PA` moves rate out of the
+  back-to-back region and into intermediate `Δφ`, exactly the region the
+  polarisation observable lives in. Removing the linear trend leaves 35.19/10,
+  so it is not *only* a slope, but the slope is its dominant feature.
+* **`onshell` on `Δφ` is not the null the rate story suggests.** Its residual
+  shape χ² is 24.18/11, p = 0.012, with a −1.1 % per radian slope at 2.2σ. It
+  is 2.7× smaller in χ² and 2.5× smaller in slope than `PA`'s and it is the
+  *right* order of magnitude smaller, but calling it "shape agreement" would
+  overstate it. **The honest statement is that `onshell`'s difference is
+  dominated by rate and `PA`'s is entirely shape, not that `onshell` has no
+  shape difference.**
+* **`M(e+ μ+)` separates them the other way and much less sharply.** `PA` is a
+  flat 1 (p = 0.82). `onshell`'s 13.25/6 (p = 0.039) has no trend at all and is
+  carried by one bin: 95–125 GeV at **−3.0 ± 1.0 %**, 2.98σ. With seven bins
+  and this p-value that is a bin to watch and not a measurement.
+
+**The χ² above is not the "shape only" χ² quoted under *The three spinmodes
+compared*, and the two are not interchangeable.** That one rescales the other
+mode to the reference's *selected* fiducial rate and keeps a plain `sqrt(Σw²)`
+per-bin bar; this one uses the in-range normalisation and the delta-method
+within-sample bar. This one's bars are the smaller and its χ² the larger:
+`Δφ`/`PA` 65.90/11 here against 57.61/11 there, `Δφ`/`onshell` 24.18/11 against
+22.28/11. The pane draws the one computed here; both are in `numbers.txt`.
+
+### The y-window of the B pane
+
+`_ratio_ylim`, which every other ratio pane uses, takes the extreme of
+`point ± bar` over every bin. On this pane that is the wrong rule: the thinly
+populated edge bins carry bars two to three times the median and would set a
+window in which the few-percent structure is a flat line. `_shape_ylim` instead
+takes the window from the bins whose bar is at most 3× the median — the ones
+that are a measurement — and then widens it to contain the *central* value of
+every bin, so no drawn point is off the canvas even where its bar runs past the
+frame. The padding is asymmetric because this pane carries a legend at its
+upper left. The y major locator is forced to five ticks: a few-percent window
+otherwise gets two, which is not a readable scale for a pane whose entire
+content is a few-percent excursion.
+
+---
+
 ## Not covered
 
 * **The bin edges were not re-chosen.** `M(e+ μ+)`'s seven edges
@@ -561,11 +747,15 @@ as a dashed line — with, now, no number printed beside it.
   give a few percent per bin — and re-binning is the single cheapest
   improvement available, at no cost beyond re-running `plot_zz_pol.py`. The
   same holds for `Δφ`'s twelve.
-* **The `M(e+ μ+)` overflow is not drawn.** 3 120 / 3 088 / 3 134 selected
-  events lie above the last edge at 450 GeV (the observable reaches 4.2 TeV).
-  They are counted in the fiducial σ and in the integrated ratios but fall
-  outside the histogram, so the drawn curve does not integrate to the quoted σ.
-  This was true of the previous pass too and is stated here for the first time.
+* **The `M(e+ μ+)` overflow is not drawn.** Events above the last edge at 450
+  GeV (the observable reaches 4.2 TeV) are counted in the fiducial σ and in the
+  integrated ratios but fall outside the histogram, so the drawn curve does not
+  integrate to the quoted σ. This was true of the previous pass too.
+  **Correction:** this bullet used to say 3 120 / 3 088 / 3 134 *selected*
+  events. Those are events with a finite `M(e+ μ+)`, i.e. before the fiducial
+  cuts; the selected overflow is **880 / 924 / 889** (`madspin` / `onshell` /
+  `PA`), 0.686 / 0.730 / 0.720 % of each mode's selected σ. See *The two figure
+  variants* → *Decision 1*, which is where it mattered.
 * **`PA`'s `Δφ` shape difference is measured, not explained.** 57.61/11 with
   the rate removed, moving ~3 % of the rate out of `Δφ → π`, is the headline
   result of this comparison and no attempt was made to attribute it to a
@@ -594,3 +784,30 @@ as a dashed line — with, now, no number printed beside it.
 * **The three passes were timed concurrently**, so the per-file times are not
   independent serial measurements. They are within a second of one another and
   nothing in this study depends on them.
+
+### The variants specifically
+
+* **`onshell`'s residual `Δφ` shape difference was measured and not chased.**
+  24.18/11, p = 0.012, a −1.1 % per radian slope at 2.2σ. It is real enough to
+  be worth a sentence and too weak to interpret at twelve bins; finer binning
+  would settle whether it is the same downward trend as `PA`'s at a quarter of
+  the size or something else.
+* **The `M(e+ μ+)` 95–125 GeV bin of `onshell` (−3.0 %, 2.98σ) was not
+  followed up.** It is one bin out of seven, its p-value over the pane is 0.039
+  and the coarse binning is inherited. It is flagged, not claimed.
+* **No shape ratio of the polarisation components between modes.** The pane
+  compares the three modes' *totals*. Whether `Z_0Z_0/full` differs between
+  modes is the separate study *No polarisation decomposition of `onshell` or
+  `PA`* above, and it is still not done.
+* **The bin edges were not re-chosen for the variants either**, for the same
+  reason and with the same cost: the shape pane is the place where the coarse
+  `M(e+ μ+)` binning hurts most, because seven bins over a 4 TeV-wide
+  observable cannot resolve a trend.
+* **No paired error bar exists to compare against.** The pairing test came back
+  negative, so the correlated treatment was never computed and the factor it
+  would have bought here is unknown and, on these three samples, unbuyable.
+* **The two variants' PDFs are timestamped from a later run than the two
+  original PDFs.** The originals' *content* is unchanged — their PNGs are
+  byte-identical and their PDF streams differ only in matplotlib's random Type1
+  font-subset tag — and the two original PDFs were left at the bytes this
+  branch already carried rather than rewritten for a tag change.
