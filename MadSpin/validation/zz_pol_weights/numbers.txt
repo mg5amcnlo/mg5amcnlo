@@ -1,8 +1,18 @@
 MadSpin polarisation weights on a showered NLO  p p > z z
 ==========================================================================
-input      /Users/omattelaer/Documents/git_workspace/LTS/PROCNLO_loop_sm_7/Events/run_02_decayed_1/events_PYTHIA8_0.hepmc
-           14.061 GB, HepMC2 IO_GenEvent (HepMC::Version 2.06.09)
-one pass   34.0 s (0.57 min), 142420114 lines, 250000 events
+Three samples: the same process, the same run card and the same 250k
+showered events, differing only in MadSpin's spinmode.  The
+polarisation decomposition below is the DEFAULT (madspin) sample's;
+the other two enter the distribution pane of each figure and the
+cross-mode comparison section, and nowhere else.
+
+spinmode  input                                on disk  inflated   pass s   events
+madspin   run_02_decayed_1/....hepmc           14.061G   14.061G     34.0   250000
+onshell   run_05_decayed_1/....hepmc.gz         4.643G   14.061G     33.7   250000
+PA        run_03_decayed_1/....hepmc.gz         4.658G   14.086G     34.6   250000
+The two .gz inputs were streamed through "gzip -dc" in a child process,
+never unpacked to disk; the pass cost the same as the plain file's.
+142420114 lines read from the reference file, HepMC2 IO_GenEvent (HepMC::Version 2.06.09)
 code       b0e4472bc189d56871760b4fd54ed8113183b8de
 
 --- the 33 weight names on every N line (asserted, not sampled) ---
@@ -21,7 +31,7 @@ the weight column each curve sums.  data/meta.json carries it too.
    TT                     ZT ZT                  ms_pol_23.T_23.T
    TL                     ZT Z0                  ms_pol_23.T_23.0
    LT                     Z0 ZT                  ms_pol_23.0_23.T
-   full                   full (unpolarised)     Weight
+   full                   full (unpolarised), spinmode = madspin   Weight
 
 --- WHICH WEIGHT IS THE FULL ---
 Answer: "Weight".  "0" is the SAME weight divided by the event count,
@@ -39,8 +49,11 @@ the vertical scale of the distributions distinguishes them.
   median|sum of the four ms_pol| / median|"Weight"| = 0.899  -- the
      polarisation weights are in the "Weight" normalisation, so
      dividing them by "0" would inflate every ratio by 250000.
-  |Weight| takes 2 distinct values ['14.727665', '15.625049'] (MC@NLO), and 13687 of 250000 events
-     carry a NEGATIVE one (5.475 %).
+  |Weight| takes 2 distinct value(s): 14.727665 (x249999), 15.625049 (x1)
+     -- 249 999 of them are the banner XWGTUP and the second value is a
+     SINGLE event, not a second MC@NLO branch; see the spinmode section
+     below, where the other two files each carry exactly one value.
+  13687 of 250000 events carry a NEGATIVE weight (5.475 %).
 
 --- THE SAMPLE IS NOT p p > z z > e+e- mu+mu- ---
 The MadSpin card is  decay z > light light  with
@@ -51,6 +64,112 @@ event record, of the 250 000 events
    17677 (7.071 %) have at least one z -> e+e-
 M(e+ mu+) therefore exists for two events in a thousand, and its figure
 is statistics limited by the decay card and by nothing else.
+
+--- THE OTHER TWO SPINMODES ---
+Checked, not assumed, on each file separately.
+
+The N line.  Every one of the 250 000 N lines in each file was
+compared against that file's first, as for the reference; they are
+constant within each file.  All three files name the SAME 33
+weights, in the same order -- including the four ms_pol_* ones,
+because all three runs set keep_weight_for_polarization_vector
+= [0, T].  That the onshell and PA files carry polarisation weights
+is recorded here and nothing in this study is built on it: their
+decomposition is a separate piece of work, and the ratio panes
+belong to the sample whose decomposition they are.
+
+The nominal, re-derived per file rather than carried over:
+
+spinmode    "0"*N/"Weight" range   sum("0") = mean("W")         C last    C first
+madspin     1.000000   1.000000           13.115048183   13.115048183  5.891e-05
+onshell     1.000000   1.000000           13.667705043   13.667705043  6.144e-05
+PA          1.000000   1.000000           13.078107263   13.078107263  5.874e-05
+
+Same answer on all three: "0" * N_events == "Weight" to the last
+bit on every event, sum("0") == mean("Weight") == the C line of the
+LAST event to 1e-11, and the C line of the FIRST event is Pythia's
+running estimate after one event -- low by 2.2e5 in every file.  So
+the reference file's conclusion holds for the other two, and it
+holds because it was re-checked and not because it was carried
+over.  The distributions use "0" (its sum IS the cross section in
+pb) and each sample is scaled by its OWN 1/n_events.
+
+spinmode    sigma_tot pb    negatives   MUR1/W-1 distinct |Weight|
+madspin        13.115048       5.475 %   4.37e-06 14.727665, 15.625049
+onshell        13.667705       5.507 %  -2.07e-05 15.359319
+PA             13.078107       5.469 %   2.41e-05 14.684339
+
+Note on the reference file's two |Weight| values, which the first
+pass reported as "two values (MC@NLO)": 249 999 of its 250 000
+events carry 14.727665 -- the banner XWGTUP exactly -- and ONE
+event (index 185 691) carries 15.625049.  It is a single-event
+anomaly worth 6.2e-05 pb, not a second MC@NLO branch.  The onshell
+and PA files each carry exactly ONE |Weight| value, equal to their
+own banner XWGTUP.
+
+--- THE THREE SPINMODES COMPARED ---
+Same lepton selection, same bin edges, same absolute normalisation.
+Errors here are the PLAIN quadrature sum, unlike every ratio pane in
+this file: these are three independent MadSpin runs, independently
+showered, so there is no covariance to keep.
+
+inclusive cross section (all 250k events, no selection):
+   madspin      13.115048 +- 0.029455 pb
+   onshell      13.667705 +- 0.030719 pb
+   PA           13.078107 +- 0.029369 pb
+
+The two chi2 answer different questions and only the pair of them
+is the result: a mode that differs from the reference ONLY in
+normalisation gives a large "as drawn" chi2 and a small "shape
+only" one, and reading the first as a shape difference would be
+wrong.  That is exactly what happens for PA below.
+
+where the rate differences come from -- sigma_tot x the fraction of
+events in the z -> e+e- channel, against the fiducial cross
+section, i.e. how much of the difference is channel bookkeeping and
+how much is acceptance:
+   spinmode     sigma_tot   f(z->ee)      product    sigma_fid acceptance
+   madspin      13.115048   0.070708     0.927339     0.636824     0.6867
+   onshell      13.667705   0.067104     0.917158     0.626169     0.6827
+   PA           13.078107   0.067448     0.882092     0.603937     0.6847
+
+which z decayed to what, off the event record (truth, used to
+categorise only -- no plotted observable touches it):
+   spinmode  n(4 lepton)     frac %   n(z->ee)     frac %
+   madspin          572     0.2288      17677     7.0708
+   onshell          604     0.2416      16776     6.7104
+   PA               637     0.2548      16862     6.7448
+
+m_epmup: N selected, fiducial cross section, and the comparison
+   madspin   N=   312  sigma_fid=0.016848 +- 0.001041 pb   (the reference)
+   onshell   N=   306  sigma_fid=0.017202 +- 0.001075 pb
+             rate ratio to madspin 1.0210 +- 0.0897 (0.2 sigma)   [NOT DRAWN]
+             as drawn (rate included) chi2/ndf = 4.50/7 = 0.64   max|pull| 1.56
+             SHAPE only (rescaled to the same fiducial rate) chi2/ndf = 4.46/6 = 0.74
+   PA        N=   317  sigma_fid=0.016858 +- 0.001046 pb
+             rate ratio to madspin 1.0005 +- 0.0876 (0.0 sigma)   [NOT DRAWN]
+             as drawn (rate included) chi2/ndf = 5.05/7 = 0.72   max|pull| 1.66
+             SHAPE only (rescaled to the same fiducial rate) chi2/ndf = 5.05/6 = 0.84
+   Fewer than 2000 selected events in this observable, for
+   every mode.  The per-bin errors are 20-50 %, the two
+   chi2 are BELOW their number of degrees of freedom, and
+   the rate ratios are 1 to within their errors.  This
+   observable cannot compare the spinmodes at this
+   statistics; the extra curves are NOT drawn on its figure
+   and the numbers above are the whole of what can honestly
+   be said about it.
+
+dphi_ee: N selected, fiducial cross section, and the comparison
+   madspin   N= 11984  sigma_fid=0.636824 +- 0.006449 pb   (the reference)
+   onshell   N= 11366  sigma_fid=0.626169 +- 0.006550 pb
+             rate ratio to madspin 0.9833 +- 0.0143 (1.2 sigma)
+             as drawn (rate included) chi2/ndf = 14.69/12 = 1.22   max|pull| 2.15
+             SHAPE only (rescaled to the same fiducial rate) chi2/ndf = 13.37/11 = 1.22
+   PA        N= 11478  sigma_fid=0.603937 +- 0.006293 pb
+             rate ratio to madspin 0.9484 +- 0.0138 (3.7 sigma)
+             as drawn (rate included) chi2/ndf = 26.05/12 = 2.17   max|pull| 2.91
+             SHAPE only (rescaled to the same fiducial rate) chi2/ndf = 12.81/11 = 1.16
+
 
 --- integrated polarisation ratios ---
 Errors are the delta-method ones for a ratio of two sums over the SAME

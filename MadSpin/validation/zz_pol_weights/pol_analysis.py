@@ -56,6 +56,23 @@ See :data:`SEL` and RESULTS.md.  Note that this sample's MadSpin card is
 ``decay z > light light`` over *every* fermion but the top -- an inclusive ``Z``
 decay -- so the four-lepton final state the observables want is 0.23 % of the
 events, not all of them.
+
+The three spinmodes
+-------------------
+Three HepMC files, the same process and the same 250 000 events' worth of
+showering, differing only in MadSpin's ``spinmode``: the default ``madspin``
+(run_02), ``onshell`` (run_05) and ``PA`` (run_03).  Each has its own ``.npz``
+and its own ``meta.json``, each re-derives its own nominal from its own ``"0"``
+/ ``"Weight"`` / ``C`` line, and :func:`full_distribution` puts the three on the
+same binning, the same lepton selection and the same absolute ``dsigma/dx``
+scale so that they are comparable in rate and not only in shape.
+
+The polarisation decomposition remains the *default* sample's, and the extra
+samples enter one place only: the distribution pane of each figure.  All three
+files happen to carry the four ``ms_pol_*`` weights (they are all
+``keep_weight_for_polarization_vector = [0, T]`` runs), but nothing here is
+built on that -- decomposing the other two modes is a different study, and the
+ratio panes belong to the sample whose decomposition they are.
 """
 
 import json
@@ -87,12 +104,21 @@ N_EVENTS_NORM = 250000     # asserted against the file, see ``load``
 
 
 class Data(object):
-    """``weights.npz`` plus the selections and the weight columns."""
+    """One sample's ``.npz`` plus the selections and the weight columns.
 
-    def __init__(self, ddir=None):
+    ``npz`` / ``meta`` name the pair to read, so that the three spinmode
+    samples can live side by side in the same ``data/`` directory.  The
+    polarisation block is optional: :attr:`has_pol` says whether this file's
+    ``N`` line carried the four ``ms_pol_*`` weights, and everything that
+    consumes :attr:`pol` must ask first.
+    """
+
+    def __init__(self, ddir=None, npz='weights.npz', meta='meta.json'):
         ddir = ddir or os.path.join(_HERE, 'data')
-        self.z = dict(np.load(os.path.join(ddir, 'weights.npz')))
-        self.meta = json.load(open(os.path.join(ddir, 'meta.json')))
+        self.ddir = ddir
+        self.z = dict(np.load(os.path.join(ddir, npz)))
+        self.meta = json.load(open(os.path.join(ddir, meta)))
+        self.label = self.meta.get('label', 'madspin')
         self.n = len(self.z['w_Weight'])
         assert self.n == self.meta['n_events']
 
@@ -101,18 +127,26 @@ class Data(object):
         # cross section in pb, so it is the right column for an absolute
         # dsigma/dx.  The polarisation weights live in the ``"Weight"``
         # normalisation and are put on the same footing by the same factor.
+        # Re-derived per sample rather than carried over -- see
+        # :meth:`nominal_evidence`, which every sample is put through.
         self.scale_to_pb = 1.0 / self.n
         pm = self.meta['pol_map']
-        self.pol = {k: self.z['w_' + pm[k]].astype(np.float64) for k in POL_KEYS}
-        self.pol['SUM'] = sum(self.pol[k] for k in POL_KEYS)
+        self.has_pol = all('w_' + pm[k] in self.z for k in POL_KEYS)
+        self.pol = {}
+        if self.has_pol:
+            self.pol = {k: self.z['w_' + pm[k]].astype(np.float64)
+                        for k in POL_KEYS}
+            self.pol['SUM'] = sum(self.pol[k] for k in POL_KEYS)
 
         self.sel = {k: v(self) for k, v in SEL.items()}
 
     # -- the pieces of the "which weight is nominal" argument ----------------
     def nominal_evidence(self):
-        w0, w, mu = self.z['w_0'], self.z['w_Weight'], self.z['w_MUR1.0_MUF1.0']
+        w0, w = self.z['w_0'], self.z['w_Weight']
+        mu = self.z.get('w_MUR1.0_MUF1.0')
         r = w0 * self.n / w
         return {
+            'label': self.label,
             'n_events': self.n,
             'w0_times_N_over_Weight_min': float(r.min()),
             'w0_times_N_over_Weight_max': float(r.max()),
@@ -121,12 +155,15 @@ class Data(object):
             'C_line_last_event_pb': self.meta['C_line_last_event'][0],
             'C_line_first_event_pb': self.meta['C_line_first_event'][0],
             'sum_MUR1_over_sum_Weight_minus_1':
-                float(mu.sum() / w.sum() - 1.0),
+                float(mu.sum() / w.sum() - 1.0) if mu is not None
+                else float('nan'),
             'n_negative': int((w < 0).sum()),
             'frac_negative': float((w < 0).mean()),
             'distinct_abs_Weight': [float(x) for x in np.unique(np.abs(w))],
+            'has_pol_weights': self.has_pol,
             'pol_over_Weight_order_of_magnitude':
-                float(np.median(np.abs(self.pol['SUM'])) / np.median(np.abs(w))),
+                float(np.median(np.abs(self.pol['SUM'])) / np.median(np.abs(w)))
+                if self.has_pol else float('nan'),
         }
 
 
@@ -187,15 +224,33 @@ LOGY = {'m_epmup_dr'}
 # about the file and belongs in numbers.txt, not on the figure; the same goes
 # for the four polarisation curves, which carry only their physics name here.
 # numbers.txt prints the name-to-column mapping so nothing is unrecoverable.
+# The two extra spinmode samples.  Each is a separate MadSpin run of the same
+# process showered the same way, cached in its own .npz beside the reference's
+# so that the figures stay re-makeable without going near 14 GB of HepMC again.
+EXTRA_SAMPLES = [
+    ('onshell', 'weights_onshell.npz', 'meta_onshell.json'),
+    ('PA', 'weights_PA.npz', 'meta_PA.json'),
+]
+
+# Below this many selected events a curve is not drawn.  It is not a
+# statistics-free number: with the inclusive ``decay z > light light`` card the
+# four-lepton observable keeps ~0.13 % of the events, and at 300 events over 7
+# bins the per-bin error is already 15-20 %.  What the threshold buys is the
+# refusal to draw a *second* and *third* such curve on top of the first and let
+# the eye read the gaps between three noise realisations as a mode difference.
+# ``numbers.txt`` prints the survivors and the chi2 between the modes either
+# way, so nothing is hidden by not drawing it.
+MIN_SEL_TO_DRAW = 2000
+
 CURVE_TEX = {
-    'full': r'full (unpolarised)',
+    'full': r'full (unpolarised), \texttt{spinmode = madspin}',
     'LL': r'$Z_{0}Z_{0}$',
     'TT': r'$Z_{T}Z_{T}$',
     'TL': r'$Z_{T}Z_{0}$',
     'LT': r'$Z_{0}Z_{T}$',
     'SUM': r'$Z_{0}Z_{0} + Z_{T}Z_{T} + Z_{T}Z_{0} + Z_{0}Z_{T}$',
 }
-CURVE_TXT = {'full': 'full (unpolarised)',
+CURVE_TXT = {'full': 'full (unpolarised), spinmode = madspin',
              'LL': 'Z0 Z0', 'TT': 'ZT ZT', 'TL': 'ZT Z0', 'LT': 'Z0 ZT',
              'SUM': 'Z0Z0 + ZTZT + ZTZ0 + Z0ZT'}
 
@@ -203,7 +258,14 @@ CURVE_TXT = {'full': 'full (unpolarised)',
 # into numbers.txt by plot_zz_pol.write_numbers.
 LEGEND_TO_COLUMN = {'Z0 Z0': 'ms_pol_23.0_23.0', 'ZT ZT': 'ms_pol_23.T_23.T',
                     'ZT Z0': 'ms_pol_23.T_23.0', 'Z0 ZT': 'ms_pol_23.0_23.T',
-                    'full (unpolarised)': 'Weight'}
+                    CURVE_TXT['full']: 'Weight'}
+
+# The two overlaid samples are the same 'Weight' column of a different file, so
+# they are named for the run that produced them and not for a weight.
+EXTRA_TEX = {'onshell': r'full, \texttt{spinmode = onshell}',
+             'PA': r'full, \texttt{spinmode = PA}'}
+EXTRA_TXT = {'onshell': 'full, spinmode = onshell',
+             'PA': 'full, spinmode = PA'}
 
 RATIO_TEX = {
     'SUM': r'$(Z_{0}Z_{0}{+}Z_{T}Z_{T}{+}Z_{T}Z_{0}{+}Z_{0}Z_{T})/\mathrm{full}$',
@@ -297,6 +359,88 @@ class Curves(object):
 
     def centres(self):
         return 0.5 * (self.edges[:-1] + self.edges[1:])
+
+
+def load_extras(ddir=None):
+    """The extra spinmode samples that are actually cached, in figure order.
+
+    Missing quietly rather than loudly: the reference figures are a complete
+    piece of work on their own and must still be re-makeable from
+    ``weights.npz`` alone, which is what someone who only ran the first
+    extraction has.
+    """
+    ddir = ddir or os.path.join(_HERE, 'data')
+    out = []
+    for key, npz, meta in EXTRA_SAMPLES:
+        if os.path.exists(os.path.join(ddir, npz)) and \
+                os.path.exists(os.path.join(ddir, meta)):
+            out.append((key, Data(ddir, npz, meta)))
+    return out
+
+
+def full_distribution(d, obs):
+    """One sample's full (unpolarised) ``dsigma/dx``, on the shared binning.
+
+    Same lepton selection, same bin edges and the same absolute normalisation
+    (``"Weight" / n_events``, whose sum over the sample is the cross section in
+    pb) as :class:`Curves` builds for the reference, so that the three samples
+    are comparable in RATE and not only in shape.  Each sample's own
+    ``n_events`` is used, not the reference's.
+    """
+    sel = d.sel[obs]
+    x = np.asarray(d.z[obs], dtype=np.float64)[sel]
+    w = np.asarray(d.full, dtype=np.float64)[sel] * d.scale_to_pb
+    y, e = histogram(x, w, BINS[obs])
+    return {'label': d.label, 'n_sel': int(sel.sum()), 'y': y, 'err': e,
+            'sigma_pb': float(w.sum()),
+            'drawable': int(sel.sum()) >= MIN_SEL_TO_DRAW}
+
+
+def compare_full(ref, other):
+    """``other / ref`` bin by bin, and the chi2 between the two.
+
+    Note the error treatment, which is the OPPOSITE of :func:`ratio`'s and for
+    a good reason.  The polarisation ratios divide two weights of the SAME
+    events and must keep the covariance.  These are two different files -- two
+    independent MadSpin runs, independently showered -- so the plain
+    quadrature sum is the correct error here and there is no covariance to
+    keep.
+
+    Two chi2 come back, and reporting only the first would misread the result.
+    ``chi2`` compares the two distributions as drawn, rate included.
+    ``shape_chi2`` rescales ``other`` to ``ref``'s fiducial rate first and so
+    tests the SHAPE alone, on one fewer degree of freedom.  A mode that differs
+    only in normalisation gives a large ``chi2`` and a small ``shape_chi2``,
+    and calling that a shape difference would be wrong.
+    """
+    y1, e1 = np.asarray(ref['y']), np.asarray(ref['err'])
+    y2, e2 = np.asarray(other['y']), np.asarray(other['err'])
+    ok = np.isfinite(y1) & np.isfinite(y2) & (y1 > 0) & (y2 > 0)
+    r = np.full(len(y1), np.nan)
+    er = np.full(len(y1), np.nan)
+    r[ok] = y2[ok] / y1[ok]
+    er[ok] = r[ok] * np.sqrt((e2[ok] / y2[ok]) ** 2 + (e1[ok] / y1[ok]) ** 2)
+    d2 = e1 ** 2 + e2 ** 2
+    good = ok & np.isfinite(d2) & (d2 > 0)
+    chi2 = float(np.sum((y2[good] - y1[good]) ** 2 / d2[good]))
+    ndf = int(good.sum())
+    s1, s2 = ref['sigma_pb'], other['sigma_pb']
+    f = s1 / s2 if s2 else float('nan')
+    y2s, e2s = y2 * f, e2 * f
+    d2s = e1 ** 2 + e2s ** 2
+    gs = ok & np.isfinite(d2s) & (d2s > 0)
+    shape_chi2 = float(np.sum((y2s[gs] - y1[gs]) ** 2 / d2s[gs]))
+    shape_ndf = max(int(gs.sum()) - 1, 0)
+    return {'ratio': r, 'ratio_err': er, 'chi2': chi2, 'ndf': ndf,
+            'shape_ratio': np.where(ok, y2s / y1, np.nan),
+            'shape_chi2': shape_chi2, 'shape_ndf': shape_ndf,
+            'shape_chi2_per_ndf': shape_chi2 / shape_ndf if shape_ndf
+            else float('nan'),
+            'chi2_per_ndf': chi2 / ndf if ndf else float('nan'),
+            'sigma_ratio': s2 / s1 if s1 else float('nan'),
+            'max_abs_pull': float(np.max(np.abs(y2[good] - y1[good])
+                                         / np.sqrt(d2[good]))) if ndf
+            else float('nan')}
 
 
 # --------------------------------------------------------------------------

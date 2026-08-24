@@ -6,6 +6,10 @@ paper style.  The physics, the data, the selection, the binning and the ratio
 statistics are the same objects -- all of them come from ``pol_analysis`` --
 and only the drawing differs.
 
+The extra spinmode samples are overlaid on the distribution pane only, on the
+same rule as the MG7 figures: drawn where the selection leaves enough events to
+be a measurement, named and explained in the pane where it does not.
+
 The conventions are the ones the sibling studies under ``MadSpin/validation/``
 follow: stock rcParams (no usetex, sans serif), plain steps for the reference
 and ``errorbar(fmt='o', ms=4)`` plus a faint companion step for everything
@@ -54,7 +58,11 @@ assert not mpl.rcParams['text.usetex'], (
     'become exposed to the Type1 subsetting bug and need their own check')
 
 C_REF = 'black'
-COLOR = {'LL': 'C0', 'TT': 'C3', 'TL': 'C2', 'LT': 'C4', 'SUM': 'C5'}
+COLOR = {'LL': 'C0', 'TT': 'C3', 'TL': 'C2', 'LT': 'C4', 'SUM': 'C5',
+         # The extra spinmodes take the two cycle colours the components leave
+         # free; the same two hues as the MG7 figures, in this style's palette.
+         'onshell': 'C1', 'PA': 'C9'}
+LS_EXTRA = {'onshell': (0, (6, 2)), 'PA': (0, (3, 1, 1, 1, 1, 1))}
 FIGSIZE = (7.2, 10.0)
 MS = 4
 STEP_ALPHA = 0.55
@@ -68,7 +76,7 @@ def _step(ax, edges, y, **kw):
     ax.step(edges, np.concatenate([y[:1], y]), where='pre', **kw)
 
 
-def draw(d, obs, outdir):
+def draw(d, obs, outdir, extras=()):
     c = PA.Curves(d, obs)
     edges, x = c.edges, c.centres()
     xlab, ylab = PA.LABELS_TXT[obs]
@@ -93,6 +101,18 @@ def draw(d, obs, outdir):
           zorder=6)
     ax.errorbar(x, y, yerr=e, fmt='none', ecolor=C_REF, elinewidth=1.0,
                 zorder=6)
+    # The other two spinmodes: full distributions like the black one, so they
+    # are drawn as steps with bars and not with the components' markers.
+    dropped = []
+    for key, dx in extras:
+        fd = PA.full_distribution(dx, obs)
+        if not fd['drawable']:
+            dropped.append((key, fd['n_sel']))
+            continue
+        _step(ax, edges, fd['y'], color=COLOR[key], lw=1.3, ls=LS_EXTRA[key],
+              label=PA.EXTRA_TXT[key], zorder=5)
+        ax.errorbar(x, fd['y'], yerr=fd['err'], fmt='none',
+                    ecolor=COLOR[key], elinewidth=0.9, zorder=5)
     for k in PA.POL_KEYS:
         yk, ek = c.dist[k]
         shown = np.where(yk > 0, yk, np.nan) if obs in PA.LOGY else yk
@@ -112,6 +132,18 @@ def draw(d, obs, outdir):
     # step.  Checked on the rendered PNG, not on the axis limits.
     ax.set_ylim(lo, hi * (400.0 if obs in PA.LOGY else 1.45))
     ax.legend(loc='upper left', fontsize=8)
+    if dropped:
+        # See plot_zz_pol.draw: a figure that silently drops two of its three
+        # samples implies a comparison it did not make.
+        who = ' and '.join('%s (N=%d)' % (k, n) for k, n in dropped)
+        # Below the legend, not beside it: this style's legend has an opaque
+        # frame and is wide enough to reach the middle of the pane, so the
+        # upper-right corner the MG7 figure uses is not free here.
+        ax.text(0.985, 0.60,
+                'spinmode %s not drawn: too few events\nfor a comparison at '
+                'this selection' % who,
+                transform=ax.transAxes, fontsize=7.5, ha='right', va='top',
+                color='0.35')
     ax.set_title(TITLE, fontsize=9)
     ax.tick_params(labelbottom=False)
 
@@ -175,8 +207,9 @@ def main():
     ap.add_argument('--out', default=os.path.join(_HERE, 'plots_userstyle'))
     a = ap.parse_args()
     d = PA.Data(a.data)
+    extras = PA.load_extras(a.data)
     for obs in PA.OBS:
-        draw(d, obs, a.out)
+        draw(d, obs, a.out, extras)
 
 
 if __name__ == '__main__':

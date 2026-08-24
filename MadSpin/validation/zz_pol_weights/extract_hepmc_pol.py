@@ -49,9 +49,23 @@ else to ``abs(pythia_status)``.  A hard-process lepton that never branches is
 therefore status 1, not status 23, and counting status-23 leptons undercounts
 the hard leptons by a third.  That is why the vertex chain above exists.
 
+**Gzipped input.**  A path ending in ``.gz`` is streamed through the system
+``gzip -dc`` in a child process rather than decompressed to disk: the 4.6 GB
+compressed files in this study expand to 14 GB each and there is no reason for
+that to exist anywhere but in a pipe.  Decompression then runs on its own core
+in parallel with the parsing, which costs about six seconds on top of the plain
+pass rather than the fourteen a serial ``gzip`` module read would.
+
+**A different file may carry a different weight set.**  ``"0"`` and ``"Weight"``
+are required; ``"MUR1.0_MUF1.0"`` and the four ``ms_pol_*`` are kept when the
+``N`` line names them and recorded as absent when it does not.  A MadSpin run
+with a different ``spinmode`` is a different reweighting and there is no
+guarantee it produced the polarisation weights at all.
+
 Usage::
 
-    extract_hepmc_pol.py INPUT.hepmc -o data/weights.npz [--max-events N]
+    extract_hepmc_pol.py INPUT.hepmc[.gz] -o data/weights.npz \
+        [--meta meta.json] [--label madspin] [--max-events N]
 """
 
 import argparse
@@ -74,6 +88,33 @@ POL_KEYS = ['LL', 'LT', 'TL', 'TT']
 # "MUR1.0_MUF1.0" are all candidates for "the full"; all three are kept and the
 # choice between them is made downstream, from the evidence.
 KEEP_WEIGHTS = ['0', 'Weight', 'MUR1.0_MUF1.0'] + POL_NAMES
+# Of those, the two that must be on the N line for the file to be usable at
+# all: without them there is no nominal and nothing downstream has a scale.
+# Everything else is kept if present and reported as absent if not -- a run
+# with a different ``spinmode`` need not have produced the ms_pol_* weights,
+# and asserting that it did would turn "this file is different" into a crash.
+REQUIRED_WEIGHTS = ['0', 'Weight']
+# Float64 for the three nominal candidates (the "0" / "Weight" bit-for-bit
+# comparison downstream needs full precision); float32 is plenty for the rest.
+WIDE_WEIGHTS = frozenset(('0', 'Weight', 'MUR1.0_MUF1.0'))
+
+# The three samples this study covers.  Written into EVERY meta.json so that
+# a reader who opens data/meta.json alone is told that two sibling samples
+# exist and where they are, rather than being left with the impression that
+# the study is of one file.  ``pol_analysis.EXTRA_SAMPLES`` is the loader's
+# copy of the same fact.
+SAMPLE_REGISTRY = [
+    {'label': 'madspin', 'spinmode': 'madspin (MadSpin\'s default; the card '
+                                     'leaves "set spinmode" commented out)',
+     'run': 'run_02_decayed_1', 'npz': 'weights.npz', 'meta': 'meta.json',
+     'compressed': False},
+    {'label': 'onshell', 'spinmode': 'onshell',
+     'run': 'run_05_decayed_1', 'npz': 'weights_onshell.npz',
+     'meta': 'meta_onshell.json', 'compressed': True},
+    {'label': 'PA', 'spinmode': 'PA',
+     'run': 'run_03_decayed_1', 'npz': 'weights_PA.npz',
+     'meta': 'meta_PA.json', 'compressed': True},
+]
 
 # Final-state PDG ids worth stopping on.  Photons are in because the dressed
 # lepton needs them.
@@ -90,6 +131,35 @@ PHOTON_PT_MIN = 0.05    # below this a photon cannot move a dressed mass
 STORE_PT_MIN = 3.0      # a lepton softer than this is not stored at all
 
 NAN = float('nan')
+
+
+def open_stream(path):
+    """``(file object, child process or None)`` for a plain or gzipped HepMC.
+
+    A ``.gz`` path is piped through the system ``gzip -dc`` rather than read
+    with the ``gzip`` module or unpacked to disk.  Two reasons, in order of
+    weight: the 4.6 GB files here expand to 14 GB and no temporary of that size
+    should have to exist, and the child does its inflating on its own core
+    while this process parses, which is most of the decompression cost hidden.
+
+    The caller must drain the pipe to the end or ``kill`` the child; a reader
+    that stops early (``--max-events``) and only closes the pipe leaves ``gzip``
+    blocked on a write that will never be read.
+    """
+    if path.endswith('.gz'):
+        proc = subprocess.Popen(['gzip', '-dc', path],
+                                stdout=subprocess.PIPE, bufsize=1 << 22)
+        return proc.stdout, proc
+    return open(path, 'rb', buffering=1 << 22), None
+
+
+def close_stream(fh, proc):
+    if proc is not None:
+        proc.kill()             # a no-op once gzip has exited on its own
+        fh.close()
+        proc.wait()
+    else:
+        fh.close()
 
 
 def code_sha():
@@ -279,10 +349,13 @@ def observables(ep, em, mup, mum, photons):
     return row
 
 
-def run(path, out, max_events=None, report_every=20000):
+def run(path, out, max_events=None, report_every=20000, meta_name=None,
+        label=None):
     t0 = time.time()
     size = os.path.getsize(path)
+    gz = path.endswith('.gz')
     names = None
+    kept = None
     keep_idx = None
     c_first = c_last = None
     n_lines = n_bytes = n_seen = 0
@@ -315,7 +388,7 @@ def run(path, out, max_events=None, report_every=20000):
                       chans[1] if len(chans) > 1 else -1])
         wrows.append(wrow)
 
-    fh = open(path, 'rb', buffering=1 << 22)
+    fh, proc = open_stream(path)
     for line in fh:
         n_lines += 1
         n_bytes += len(line)
@@ -369,20 +442,38 @@ def run(path, out, max_events=None, report_every=20000):
             n_seen += 1
             if report_every and n_seen % report_every == 0:
                 el = time.time() - t0
-                sys.stderr.write(
-                    '  %8d events  %6.2f / %.2f GB  %6.0f s  eta %6.0f s\n'
-                    % (n_seen, n_bytes / 1e9, size / 1e9, el,
-                       el * (size - n_bytes) / n_bytes))
+                if gz:
+                    # ``size`` is the COMPRESSED size, so it is not the target
+                    # ``n_bytes`` is counting towards and no honest ETA can be
+                    # formed from the two.  Report what is known instead of a
+                    # number that would be wrong by the compression ratio.
+                    sys.stderr.write(
+                        '  %8d events  %6.2f GB inflated  %6.0f s\n'
+                        % (n_seen, n_bytes / 1e9, el))
+                else:
+                    sys.stderr.write(
+                        '  %8d events  %6.2f / %.2f GB  %6.0f s  eta %6.0f s\n'
+                        % (n_seen, n_bytes / 1e9, size / 1e9, el,
+                           el * (size - n_bytes) / n_bytes))
                 sys.stderr.flush()
         elif c == _N:
             nm = parse_n_line(line)
             if names is None:
                 names = nm
-                missing = [k for k in KEEP_WEIGHTS if k not in names]
+                missing = [k for k in REQUIRED_WEIGHTS if k not in names]
                 if missing:
                     raise SystemExit('weight name(s) not on the N line: %s'
                                      % missing)
-                keep_idx = [names.index(k) for k in KEEP_WEIGHTS]
+                # The rest are kept if the file has them.  A different
+                # ``spinmode`` is a different MadSpin run and need not have
+                # produced the ms_pol_* weights at all; which ones it did
+                # produce goes into meta.json and is reported, not assumed.
+                kept = [k for k in KEEP_WEIGHTS if k in names]
+                absent = [k for k in KEEP_WEIGHTS if k not in names]
+                if absent:
+                    sys.stderr.write('  not on the N line, not kept: %s\n'
+                                     % ', '.join(absent))
+                keep_idx = [names.index(k) for k in kept]
             elif nm != names:
                 raise SystemExit('weight names changed at event %d' % n_seen)
             if len(pending) != len(names):
@@ -403,15 +494,15 @@ def run(path, out, max_events=None, report_every=20000):
             c_last = v
     if have:
         finish()
-    fh.close()
+    close_stream(fh, proc)
     dt = time.time() - t0
 
     W = np.asarray(wrows, dtype=np.float64)
     R = np.asarray(rows, dtype=np.float32)
     I = np.asarray(irows, dtype=np.int16)
     payload = {}
-    for i, k in enumerate(KEEP_WEIGHTS):
-        payload['w_' + k] = W[:, i] if k in ('0', 'Weight', 'MUR1.0_MUF1.0') \
+    for i, k in enumerate(kept):
+        payload['w_' + k] = W[:, i] if k in WIDE_WEIGHTS \
             else W[:, i].astype(np.float32)
     for i, k in enumerate(COLS):
         payload[k] = R[:, i]
@@ -421,9 +512,16 @@ def run(path, out, max_events=None, report_every=20000):
     np.savez_compressed(out, **payload)
 
     meta = {
+        'label': label or 'madspin',
+        'sample_registry': SAMPLE_REGISTRY,
         'input_path': os.path.abspath(path),
         'input_bytes': size,
         'input_gb': round(size / 1e9, 3),
+        'gzipped': gz,
+        # For a .gz, ``input_gb`` is what is on disk and this is what went
+        # through the parser; for a plain file the two are the same number.
+        'inflated_bytes': n_bytes,
+        'inflated_gb': round(n_bytes / 1e9, 3),
         'hepmc_flavour': 'HepMC2 IO_GenEvent (HepMC::Version 2.06.09)',
         'code_sha': code_sha(),
         'extractor': os.path.basename(__file__),
@@ -432,7 +530,9 @@ def run(path, out, max_events=None, report_every=20000):
         'lines_read': n_lines,
         'n_events': n_seen,
         'weight_names': names,
-        'weight_names_kept': KEEP_WEIGHTS,
+        'weight_names_kept': kept,
+        'weight_names_absent': [k for k in KEEP_WEIGHTS if k not in kept],
+        'has_pol_weights': all(k in kept for k in POL_NAMES),
         'pol_map': dict(zip(POL_KEYS, POL_NAMES)),
         'sum_all_weights': [float(x) for x in wsum],
         'sum_abs_all_weights': [float(x) for x in wsum_abs],
@@ -458,14 +558,18 @@ def run(path, out, max_events=None, report_every=20000):
             'measure the purity of the reconstructed selection, never to build '
             'a plotted observable.',
     }
-    with open(os.path.join(os.path.dirname(os.path.abspath(out)),
-                           'meta.json'), 'w') as fp:
+    mpath = os.path.join(os.path.dirname(os.path.abspath(out)),
+                         meta_name or 'meta.json')
+    with open(mpath, 'w') as fp:
         json.dump(meta, fp, indent=2)
 
-    print('read   %.3f GB in %.1f s (%.2f min), %d lines'
-          % (size / 1e9, dt, dt / 60, n_lines))
+    print('read   %.3f GB on disk%s in %.1f s (%.2f min), %d lines'
+          % (size / 1e9,
+             ' (%.3f GB inflated)' % (n_bytes / 1e9) if gz else '',
+             dt, dt / 60, n_lines))
     print('events %d' % n_seen)
     print('wrote  %s (%.1f MB)' % (out, os.path.getsize(out) / 1e6))
+    print('       %s' % mpath)
     return meta
 
 
@@ -475,8 +579,14 @@ def main():
     ap.add_argument('-o', '--out', required=True)
     ap.add_argument('--max-events', type=int, default=None)
     ap.add_argument('--report-every', type=int, default=20000)
+    ap.add_argument('--meta', default='meta.json',
+                    help='name of the meta file written next to --out; give '
+                         'each sample its own so a second pass does not '
+                         'overwrite the first one\'s')
+    ap.add_argument('--label', default=None,
+                    help="what this sample is, e.g. the MadSpin spinmode")
     a = ap.parse_args()
-    run(a.input, a.out, a.max_events, a.report_every)
+    run(a.input, a.out, a.max_events, a.report_every, a.meta, a.label)
 
 
 if __name__ == '__main__':

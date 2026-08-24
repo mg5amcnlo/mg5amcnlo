@@ -1,17 +1,24 @@
 # MadSpin polarisation weights on a showered NLO `p p > z z`
 
-What this is: one streaming pass over a 14 GB showered HepMC2 file that carries
-MadSpin's `keep_weight_for_polarization_vector = [0, T]` weights for both `z`,
-reduced to a 7 MB `.npz`, and two figures made off that `.npz`.
+What this is: one streaming pass over each of **three** showered HepMC2 files
+— the same `p p > z z` process, the same run card and the same 250 000 events,
+differing only in MadSpin's `spinmode` — reduced to three 7 MB `.npz`, and two
+figures made off them. The default (`madspin`) sample carries
+`keep_weight_for_polarization_vector = [0, T]` weights for both `z` and is the
+one the polarisation decomposition is of; the other two enter the distribution
+pane of each figure as a mode comparison.
 
-Base of this branch: `b0e4472bc` (`MadSpin: validate the NLO path on
-p p > z z, and stack the gg box on top`).
+Base of this branch: `633f9c6fa` (`MadSpin zz_pol_weights: three more layout
+edits, no numbers touched`), itself on `b0e4472bc`.
 
 ```
-data/weights.npz        250 000 rows: the weights and the observables
+data/weights.npz        250 000 rows: the weights and the observables (madspin)
 data/meta.json          input path and size, event count, the 33 weight names,
-                        the nominal-weight choice, the lepton selection, code SHA
-extract_hepmc_pol.py    the one pass over the HepMC file
+                        the nominal-weight choice, the lepton selection, code
+                        SHA, and the registry of all three samples
+data/weights_onshell.npz, data/meta_onshell.json    the same, spinmode=onshell
+data/weights_PA.npz,      data/meta_PA.json         the same, spinmode=PA
+extract_hepmc_pol.py    the one pass over a HepMC file, plain or gzipped
 pol_analysis.py         the weight algebra, the selection, the ratio statistics
 plot_zz_pol.py          the MG7-style figures, and numbers.txt
 plot_zz_pol_userstyle.py  the same figures in the user style
@@ -19,20 +26,29 @@ plots/, plots_userstyle/  PDF and PNG
 numbers.txt             every number quoted below, and the per-bin tables
 ```
 
-The HepMC file is **not** committed and was never copied.
+The HepMC files are **not** committed and were never copied or decompressed.
 
 ---
 
 ## The pass
 
-| | |
-|---|---|
-| input | `.../PROCNLO_loop_sm_7/Events/run_02_decayed_1/events_PYTHIA8_0.hepmc` |
-| size | 14.061 GB, HepMC2 `IO_GenEvent`, `HepMC::Version 2.06.09` |
-| lines | 142 420 114 |
-| events | 250 000 |
-| **wall time, one pass** | **34.0 s** |
-| output | `data/weights.npz`, 7.0 MB |
+| spinmode | run | on disk | inflated | lines | events | **one pass** | output |
+|---|---|---|---|---|---|---|---|
+| `madspin` (default) | `run_02_decayed_1` | 14.061 GB | — | 142 420 114 | 250 000 | **34.0 s** | `weights.npz`, 7.0 MB |
+| `onshell` | `run_05_decayed_1` | **4.643 GB** `.gz` | 14.061 GB | 142 596 393 | 250 000 | **33.7 s** | `weights_onshell.npz`, 6.9 MB |
+| `PA` | `run_03_decayed_1` | **4.658 GB** `.gz` | 14.086 GB | 142 633 550 | 250 000 | **34.6 s** | `weights_PA.npz`, 7.0 MB |
+
+All three are HepMC2 `IO_GenEvent`, `HepMC::Version 2.06.09`, from
+`.../PROCNLO_loop_sm_7/Events/`.
+
+The two gzipped files are streamed through the system `gzip -dc` in a child
+process — never a temporary on disk, never the `gzip` module. **The compressed
+pass costs nothing**: 33.7 s and 34.6 s against the plain file's 34.0 s, because
+the child inflates on its own core while this process parses, and the parser is
+the bottleneck either way. A serial `gzip`-module read would have added the
+full ~14 s of inflation to each pass. The progress line for a `.gz` deliberately
+prints no ETA: `os.path.getsize` gives the *compressed* size, which is not the
+target the inflated byte count is walking towards.
 
 Read in binary, line by line, with a 4 MB buffer; nothing but the current
 event's leptons and photons is ever in memory. `P` lines are split with
@@ -41,16 +57,20 @@ never touches the colour-flow tail — that is most of the 34 s saved.
 
 The `E` line's weight block is found by walking *forward* through the
 random-state count (`E <10 fields> n_random <random...> n_weights <weights...>`),
-not by slicing back from the end of the line. This file has `n_random = 0`, so
-the two agree here; a file that did not would have silently shifted the
-polarisation weights onto the scale variations. The count found is asserted
-against the `N` line every event, and the `N` line's names are compared against
-the first event's names on **every one of the 250 000 events**, not sampled.
-They are constant.
+not by slicing back from the end of the line. All three files have
+`n_random = 0`, so the two agree here; a file that did not would have silently
+shifted the polarisation weights onto the scale variations. The count found is
+asserted against the `N` line every event, and the `N` line's names are compared
+against that file's own first event's names on **every one of the 250 000 events
+of each of the three files**, not sampled. They are constant within each file,
+and identical across the three; see the spinmode section.
 
 ---
 
 ## Which weight is the full
+
+Below is the `madspin` (reference) sample. The same question is re-derived from
+scratch for the other two further down, and comes out the same way.
 
 **`"Weight"`.** But the more useful statement is that the question has no
 consequence for the ratios, because `"0"` and `"Weight"` are the *same weight in
@@ -84,10 +104,19 @@ Reading that table:
   the LHE `<wgt id='1001'>`, the same central scale, agreeing with `"Weight"` to
   the rounding of the LHE `rwgt` block.
 
-Sanity: `|Weight|` takes two values, 14.727665 and 15.625049 (MC@NLO), and
-**13 687 of 250 000 events (5.475 %) carry a negative one**. The banner's
-`<init>` quotes `XSECUP = 13.139183 ± 0.036376` pb; the event sample gives
-13.115048 pb, 0.7σ away.
+Sanity: **13 687 of 250 000 events (5.475 %) carry a negative weight**. The banner's `<init>` quotes `XSECUP = 13.139183 ± 0.036376` pb;
+the event sample gives 13.115048 pb, 0.7σ away.
+
+**Correcting the first pass on `|Weight|`.** That pass reported "`|Weight|`
+takes two values, 14.727665 and 15.625049 (MC@NLO)", which reads as two MC@NLO
+branches. Counted: **249 999 events carry 14.727665 — the banner's `XWGTUP`
+exactly — and exactly one event (index 185 691) carries 15.625049.** It is a
+single-event anomaly worth 6.2e-05 pb in a 13.1 pb total, not a second branch.
+The `onshell` and `PA` files each carry exactly **one** `|Weight|` value, equal
+to their own banner `XWGTUP` (15.359319 and 14.684339). Whatever produced the
+odd event in `run_02` did not recur in the other two runs; it has no
+consequence for anything in this study, and it is recorded because the earlier
+description of it was wrong.
 
 ---
 
@@ -182,6 +211,173 @@ Truth-matched, the selections come out at
 
 Truth is used **only** for these diagnostics. Every plotted observable is built
 from final-state particles alone.
+
+---
+
+## The other two spinmodes
+
+`run_05` is `set spinmode onshell`, `run_03` is `set spinmode PA`; `run_02` sets
+no `spinmode` at all, which is MadSpin's default, `madspin`. Everything else in
+the three cards is identical — same process, same `decay z > light light`, same
+`frame_id 24`, same `keep_weight_for_polarization_vector = [0, T]`, same 250 000
+events.
+
+### What the `N` lines actually say
+
+Checked per file the way the first was checked: every one of the 250 000 `N`
+lines compared against that file's own first, not sampled. **Constant within
+each file**, and the three files name the **same 33 weights in the same
+order** — `"0"`, the eighteen `1010`–`1027` alternative-PDF members, the nine
+`MUR*_MUF*`, `"Weight"`, and the four `ms_pol_23.*_23.*`.
+
+So both new files **do** carry polarisation weights, which they need not have:
+they are separate MadSpin runs and a different `spinmode` is a different
+reweighting. That they carry them is recorded and **nothing here is built on
+it.** Decomposing `onshell` and `PA` into `Z_0Z_0 … Z_TZ_T` is a different
+study, and the ratio panes of these figures belong to the sample whose
+decomposition they are. The extractor was nonetheless changed to *tolerate*
+their absence — `"0"` and `"Weight"` are required, the rest are kept if named
+and reported as absent if not — so that the next file with a different weight
+set produces a note rather than a crash.
+
+### The nominal, re-derived per file
+
+| spinmode | `"0"×N/"Weight"` min/max | `sum("0")` = `mean("Weight")` | `C` last event | `C` first event |
+|---|---|---|---|---|
+| `madspin` | 1.000000000000000 / 1.000000000000000 | 13.115048183 pb | 13.115048183 pb | 5.891e-05 pb |
+| `onshell` | 1.000000000000000 / 1.000000000000000 | 13.667705043 pb | 13.667705043 pb | 6.144e-05 pb |
+| `PA` | 1.000000000000000 / 1.000000000000000 | 13.078107263 pb | 13.078107263 pb | 5.874e-05 pb |
+
+**It came out the same, on all three, and it came out the same because it was
+re-derived and not because it was carried over.** `"0" × N_events == "Weight"`
+to the last bit on every event of every file; `sum("0") == mean("Weight")`
+equals that file's **last** `C` line to 1e-11; and the **first** `C` line is
+Pythia's running estimate after one event, low by 2.2e5 in every file — the same
+trap, three times. Each sample's distributions are scaled by its **own**
+`1/n_events`.
+
+`sum("MUR1.0_MUF1.0")/sum("Weight") − 1` is 4.4e-06, −2.1e-05 and 2.4e-05 — the
+LHE `rwgt` block's rounding in each case. Negative-weight fractions agree:
+5.475 %, 5.507 %, 5.469 %.
+
+### The comparison
+
+Same lepton selection, same bin edges, same absolute normalisation. Two notes
+on the statistics, both of which change the reading:
+
+* the error here is the **plain quadrature sum**, the opposite of what every
+  ratio pane in this study uses. Those divide two weights of the *same* events
+  and must keep the covariance; these are three independent runs, independently
+  showered, with no covariance to keep.
+* **two χ² are quoted and only the pair is the result.** One compares the
+  distributions as drawn, rate included; the other rescales to a common
+  fiducial rate first and so tests the shape alone, on one fewer degree of
+  freedom. A mode that differs only in normalisation gives a large first χ²
+  and a small second one, and calling that a shape difference would be wrong.
+  It is exactly what happens below.
+
+**Inclusive cross section, all 250 000 events, no selection:**
+
+| spinmode | σ | vs `madspin` | banner `XSECUP` |
+|---|---|---|---|
+| `madspin` | 13.115048 ± 0.029455 pb | — | 13.139183 ± 0.036376 |
+| `onshell` | **13.667705 ± 0.030719 pb** | **+4.21 %** | 13.634223 ± 0.028026 |
+| `PA` | 13.078107 ± 0.029369 pb | −0.28 % | 13.033217 ± 0.029759 |
+
+Each sample reproduces its own banner (0.5σ, 0.8σ, 1.1σ), so these are the
+three runs' own cross sections and not a reading error. **`onshell` sits 4.2 %
+above the other two** — 13 σ on the statistical errors, which are tiny here —
+while `PA` and `madspin` agree to 0.3 %, which is 0.9σ. The obvious explanation
+is that the on-shell mode puts both `Z` exactly on their pole and so does not
+pay the off-shell/Breit-Wigner truncation the other two do; **that is an
+inference from the numbers, not something this study verified**, and it is the
+kind of claim the `MadSpin/validation/zz_loopinduced` comparison against a
+fully off-shell calculation is the right place to settle.
+
+**`Δφ(e+e-)` — 11 984 / 11 366 / 11 478 survivors:**
+
+| spinmode | N | fiducial σ | rate ratio | χ²/ndf as drawn | χ²/ndf shape only |
+|---|---|---|---|---|---|
+| `madspin` | 11 984 | 0.636824 ± 0.006449 pb | — | — | — |
+| `onshell` | 11 366 | 0.626169 ± 0.006550 pb | 0.9833 ± 0.0143 (1.2σ) | 14.69/12 = 1.22 (p 0.26) | 13.37/11 = 1.22 (p 0.27) |
+| `PA` | 11 478 | 0.603937 ± 0.006293 pb | **0.9484 ± 0.0138 (3.7σ)** | 26.05/12 = 2.17 (p **0.011**) | 12.81/11 = 1.16 (p 0.31) |
+
+This is the figure that carries the comparison, and what it shows is:
+
+* **The three modes agree on the *shape* of `Δφ(e+e-)`.** Rescaled to a common
+  fiducial rate, both shape χ² are at their number of degrees of freedom
+  (1.22 and 1.16, p = 0.27 and 0.31). There is no shape difference in this
+  observable at 11 k events.
+* **They disagree on the *rate*.** `PA` is 5.2 % below `madspin`, 3.7σ;
+  `onshell` is 1.7 % below, 1.2σ. `PA`'s "as drawn" χ² of 26.05/12 — the one
+  that looks like a 2.5σ disagreement — is **entirely** that normalisation
+  offset: removing it takes the χ² from 26.05 to 12.81 on eleven degrees of
+  freedom. Quoting the first χ² alone would have claimed a shape effect this
+  data does not contain.
+* **The rate difference is channel bookkeeping, not acceptance.** Writing the
+  fiducial cross section as σ_tot × *f*(`z→e+e-`) × acceptance:
+
+  | spinmode | σ_tot | *f*(`z→e+e-`) | product | fiducial σ | acceptance |
+  |---|---|---|---|---|---|
+  | `madspin` | 13.115048 | 0.070708 | 0.927339 | 0.636824 | 0.6867 |
+  | `onshell` | 13.667705 | 0.067104 | 0.917158 | 0.626169 | 0.6827 |
+  | `PA` | 13.078107 | 0.067448 | 0.882092 | 0.603937 | 0.6847 |
+
+  **The acceptance is the same in all three to 0.6 %.** `onshell`'s 4.2 %
+  higher inclusive cross section is cancelled almost exactly by its 5.1 % lower
+  `z→e+e-` fraction, which is why its 4.2 % never reaches the figure. `PA`'s
+  deficit is its 4.6 % lower `z→e+e-` fraction, essentially undiluted. So the
+  whole of the visible difference between the modes in this observable is
+  (i) the inclusive cross section and (ii) how often the `z` went to electrons
+  — see the next subsection — and none of it is the selection.
+
+**`M(e+ μ+)` — 312 / 306 / 317 survivors — cannot compare the modes at this
+statistics, and is not drawn.**
+
+| spinmode | N | fiducial σ | rate ratio | χ²/ndf vs `madspin` |
+|---|---|---|---|---|
+| `madspin` | 312 | 0.016848 ± 0.001041 pb | — | — |
+| `onshell` | 306 | 0.017202 ± 0.001075 pb | 1.021 ± 0.090 (0.2σ) | 4.50/7 = 0.64 |
+| `PA` | 317 | 0.016858 ± 0.001046 pb | 1.001 ± 0.088 (0.0σ) | 5.05/7 = 0.72 |
+
+Both χ² are *below* their number of degrees of freedom (shape only: 0.74 and
+0.84), and both rate ratios are 1 within 0.2σ. The per-bin errors are 20–50 %, and the per-bin ratios wander
+between 0.62 and 1.47 with no bin more than 1.7σ from the reference. Three such
+curves laid over one another would show gaps of 20–40 % that the eye reads as a
+mode difference and that are entirely the noise of ~45 events per bin. **So the
+two extra curves are not drawn on that figure**; the pane says so in as many
+words, and the numbers above are the whole of what can honestly be said about
+it. The rule is `pol_analysis.MIN_SEL_TO_DRAW = 2000`, applied per sample per
+observable.
+
+This is the `decay z > light light` card again. More showering would fix it
+only at an absurd price: `M(e+ μ+)` keeps 312 events where `Δφ(e+e-)` keeps
+11 984, so matching the latter's statistics needs **9.6 million showered events
+per mode, about 540 GB of HepMC each**. The fix is a MadSpin card with
+`decay z > e+ e-` and `decay z > mu+ mu-`, as the reference sample's own section
+above already says.
+
+### A difference in the decay channels
+
+Read off the event record (truth, used to categorise only):
+
+| spinmode | one `z→e+e-` **and** one `z→μ+μ-` | at least one `z→e+e-` |
+|---|---|---|
+| `madspin` | 572 (0.2288 %) | 17 677 (7.071 %) |
+| `onshell` | 604 (0.2416 %) | 16 776 (6.710 %) |
+| `PA` | 637 (0.2548 %) | 16 862 (6.745 %) |
+
+The `z→e+e-` fractions are **not** the same across modes: 17 677 against 16 776
+is a 5.1 % difference and 4.8σ on Poisson errors. The decay table is identical
+in the three cards, so this is the accept/reject: the channel and the kinematics
+are chosen together, and a mode that weights the production/decay correlation
+differently ends up with different channel proportions among the events it
+keeps. **It is the whole of why the fiducial `Δφ` rates differ** — the
+acceptance table above shows the selection itself treats the three identically —
+and it is reported here as an observation: this study did not trace it to a
+specific line of MadSpin and does not claim to have. It is the natural thing to
+chase next, and it is cheap to chase, because the decayed LHE files answer it
+without any showering at all.
 
 ---
 
@@ -309,7 +505,9 @@ and `plots_userstyle/` (stock rcParams), each with `m_epmup` and `dphi_ee` in
 PDF and PNG. Each figure is three tiers:
 
 1. the distribution — the full (unpolarised) `dσ/dx` at absolute normalisation
-   with `LL`, `TT`, `TL`, `LT` overlaid in the same binning;
+   with `LL`, `TT`, `TL`, `LT` overlaid in the same binning, **and the full
+   (unpolarised) `dσ/dx` of the `onshell` and `PA` spinmodes** where the
+   statistics support it;
 2. a **full-width pane for `(LL+TT+TL+LT)/full`**, on its own vertical scale,
    with the integrated value printed in it (the significance is quoted here and
    in `numbers.txt`, not on the figure);
@@ -322,12 +520,32 @@ different vertical gaps means three gridspecs rather than one `hspace` -- tight
 enough for the pair leaves the sum pane's axis name sitting on the 2 x 2, and
 wide enough to clear it tears the pair apart.
 
-The curves carry physics names only: `full (unpolarised)` and
-`Z_0 Z_0` / `Z_0 Z_T` / `Z_T Z_0` / `Z_T Z_T`, in the ratio pane labels as well
-as in the legend, so the naming is the same everywhere on the figure. Which
-weight column each of those sums is a fact about the file and lives in
-`numbers.txt` (which prints the mapping table explicitly), in
-`data/meta.json`'s `pol_map`, and in the table below:
+**The two extra spinmodes enter tier 1 and nowhere else.** Tiers 2 and 3 are
+the polarisation decomposition of the `madspin` sample; a second sample's
+numerator over a first sample's denominator is not a quantity, and each extra
+sample's own decomposition is a different study. They are drawn as full curves
+— steps with error bars, in the two hues the four components leave free
+(orange and cyan, dashed and dash-dot-dot) — rather than in a component's
+style, because that is what they are.
+
+Tier 1 draws an extra spinmode only where the selection leaves it at least
+`pol_analysis.MIN_SEL_TO_DRAW = 2000` events. On `Δφ(e+e-)` (11 366 and 11 478)
+both are drawn. On `M(e+ μ+)` (306 and 317) **neither is**, and the pane says
+so: *"spinmode onshell (N=306) and PA (N=317) not drawn: too few events for a
+comparison at this selection"*. A figure that silently omitted two of its three
+samples would imply a comparison it never made; one that drew them would let
+the eye read three noise realisations of ~45 events per bin as a mode
+difference. The threshold is not a taste: at those numbers the per-bin errors
+are 20–50 % and both χ² come in *below* their degrees of freedom.
+
+The curves carry physics names only — `Z_0 Z_0` / `Z_0 Z_T` / `Z_T Z_0` /
+`Z_T Z_T`, in the ratio pane labels as well as in the legend — except that the
+three full curves now name their spinmode, because three unlabelled "full"
+curves on one pane would be unreadable. The reference is
+`full (unpolarised), spinmode = madspin`; the others are `full, spinmode =
+onshell` and `full, spinmode = PA`. Which weight column each sum is is a fact
+about the file and lives in `numbers.txt` (which prints the mapping table
+explicitly), in `data/meta.json`'s `pol_map`, and in the table below:
 
 | figure name | short key | weight column |
 |---|---|---|
@@ -335,7 +553,9 @@ weight column each of those sums is a fact about the file and lives in
 | `Z_T Z_T` | TT | `ms_pol_23.T_23.T` |
 | `Z_T Z_0` | TL | `ms_pol_23.T_23.0` |
 | `Z_0 Z_T` | LT | `ms_pol_23.0_23.T` |
-| `full (unpolarised)` | full | `Weight` |
+| `full (unpolarised), spinmode = madspin` | full | `Weight` of `weights.npz` |
+| `full, spinmode = onshell` | — | `Weight` of `weights_onshell.npz` |
+| `full, spinmode = PA` | — | `Weight` of `weights_PA.npz` |
 
 Tier 2 does not share a scale with anything, because it is the physics and a
 shared window would squash it. The four small panes do not share one either,
@@ -349,6 +569,22 @@ autoscaled around its own integrated value, drawn as a dashed line.
 
 * **No second observable with real four-lepton statistics.** The 312-event
   `M(e+ μ+)` figure is the ceiling this sample allows; see the decay-card note.
+  With three samples this is now the binding limit on the mode comparison too:
+  `M(e+ μ+)` cannot separate the spinmodes at 306–317 events and its extra
+  curves are not drawn.
+* **No polarisation decomposition of `onshell` or `PA`.** Both files carry the
+  four `ms_pol_*` weights and this study deliberately does not use them. Whether
+  `Z_0Z_0/full` is the same in the three modes is the obvious next question and
+  it is entirely answerable from the three committed `.npz` without touching a
+  HepMC file again.
+* **The `z→e+e-` fraction difference between the modes is measured, not
+  explained.** 7.071 % / 6.710 % / 6.745 % is a 4.8σ effect and it is the whole
+  of the fiducial rate difference; no attempt was made here to attribute it to
+  a mechanism inside MadSpin, and the decayed LHE files would answer it without
+  any showering.
+* **No third and fourth spinmode.** `none`, `full`, `madspin_v1` and
+  `onshell_v1` exist and were not run; only `run_02`, `run_03` and `run_05`
+  were available.
 * **No systematic on the polarisation frame.** The card sets `frame_id 24`; the
   weights are what MadSpin produced in that frame and no alternative frame was
   generated, so the frame dependence of the four fractions is not measured here.
