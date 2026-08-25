@@ -291,7 +291,10 @@ section over the full `m_tt` range, so the rate difference (including
 `ms_joint`'s overweight carry) divides out. No in-plot prose, no `m_tt`
 definition in the header or the axis caption, and no sample-size line: the cells
 are *not* all the same size and the counts, with the sensitivity each one buys,
-are in `numbers.txt` where they carry their errors.
+are in `numbers.txt` where they carry their errors. The upper pane's own error
+bars are still the harvest's `sqrt(Σw²)/σ` and were deliberately left alone;
+against the delta-method bar the ratio pane now uses they are 0.24 % too large,
+which is invisible at this scale but is stated here rather than left implicit.
 
 ### The ratio pane divides by `joint`, and the truth is not in it
 
@@ -305,36 +308,80 @@ differences from the truth by eye. The truth is deliberately absent from the
 pane; it is still the black curve above, where the absolute lineshape is what is
 being shown.
 
-**The errors change with the denominator, and this is not a relabelling.** A
-ratio to the truth combines two *independent* errors in quadrature. The cells
-are not independent of one another: every one of them decays the same production
-events in the same order (`max |Δ√ŝ| = 0` across a row, asserted at harvest), so
-the production-level fluctuation is common to numerator and denominator and
-largely cancels. An independent-samples error bar would be **too large by up to
-a factor 1.7** here — measured, not assumed.
+### What the pane draws is **per-curve statistics**, and what to quote is the paired error
 
-The pairing is therefore applied on the figure's own bins.
-`run_mtt_unweighting.py --stage paired-bins` re-reads the decayed LHE files
-(it re-runs no MadSpin and generates nothing) and counts, per plot bin, how many
+The fixed ±5 % / ±10 % reference bands are gone. In their place:
+
+* the **band around 1** is `joint`'s **own** statistical error, bin by bin;
+* every **other curve carries its own** statistical error.
+
+Both come from `UData.own_shape_err`. Because these are **shape** ratios — each
+curve divided by its own total σ — a bin is a *subset* of the normalisation it
+is divided by, and the correct within-sample bar is the **delta-method**
+(linearised / jackknife) one this project already uses for exactly this case in
+`zz_pol_weights/pol_analysis.ratio`:
+
+```
+R = N/D,  N = Σ nᵢ,  D = Σ dᵢ
+dR = (dN − R dD)/D
+var(R) = Σ (nᵢ − R dᵢ)² / D²
+```
+
+It returns **zero** when `nᵢ ∝ dᵢ`, which a plain `sqrt(Σw²)` does not; the
+naive form is **0.23–0.24 % too large** on these bins (median over the pane,
+printed in `numbers.txt`). For a unit-weight cell it reduces exactly to the
+binomial `R²(1−n/N)/n` that the paired estimator uses term by term — the two
+error treatments on this figure are the same statistics seen from two sides.
+The weighted form is kept because `ms_joint` is *not* unit weight
+(`deff = 1.028`) and its band has to know that.
+
+> **Do not add the band and a bar in quadrature.** That is the wrong error on
+> the difference between a scheme and `joint`, and it is **too large**.
+
+The reason is the pairing, which has not gone away and is still measured. The
+cells are not independent of one another: the four `PA_*` cells all come off one
+1M production sample, and `ms_seq` / `ms_globalretry` off a 500k front
+truncation of the `ms_joint` sample; every one of them decays the same
+production events in the same order (`max |Δ√ŝ| = 0` across a row, asserted at
+harvest). So a curve and `joint` fluctuate **together**, and the error on their
+difference is smaller than their two own errors combined. Quadrature discards
+that correlation and reproduces the `(unpaired)` column of `numbers.txt`
+exactly — inflating the error by a median factor **1.16** in the `PA` row and
+**1.10** in `madspin`, which would shrink every per-bin χ² by 26 % and 18 % and
+could hide a real departure.
+
+**The paired numbers remain the right ones for any significance statement.**
+`run_mtt_unweighting.py --stage paired-bins` re-reads the decayed LHE files (it
+re-runs no MadSpin and generates nothing) and counts, per plot bin, how many
 production events land in *that* bin under a cell and under its row's `joint`;
-`UData.paired_ratio` turns those into the covariance the ratio's error needs.
-Per-window coincidences — which is all the harvest had stored — cannot do this,
-because an event can be in one window under both schemes and in a *different bin*
-under each. The stage asserts its own window sums against the harvest's stored
-coincidences before the numbers are used.
+`UData.paired_ratio` turns those into the covariance the difference's error
+needs. Per-window coincidences — which is all the harvest had stored — cannot do
+this, because an event can be in one window under both schemes and in a
+*different bin* under each. The stage asserts its own window sums against the
+harvest's stored coincidences before the numbers are used. Every per-bin row of
+`numbers.txt` now prints **all three** errors side by side —
+`ratio ± own [paired] (unpaired)`, with `joint`'s own band in its own column —
+so nothing that the figure stopped drawing has stopped being available.
 
 Per curve, per pane:
 
-| pane | curve | denominator | treatment |
-|---|---|---|---|
-| `PA` | `sequential`, `sequential_global_retry`, `sequential_with_mass` | `PA_joint` | **fully paired**, 1 000 000 shared events, gain 0.98→0.59 in σ from the sub-threshold tail to the 5 GeV bins above 380 GeV |
-| `PA` | `joint` | itself | reference; exactly 1, no error bar — its statistical error is inside every other bar through the denominator |
-| `madspin` | `sequential`, `sequential_global_retry` | `ms_joint` | **partly paired**: the 500k cells are a front truncation of `ms_joint`'s 1M, so the coincidences exist over that prefix and the unshared half of `ms_joint` enters as an independent error. Gain 1.00→0.75 |
-| `madspin` | `joint` | itself | reference, as above |
+| pane | curve | denominator | drawn on the figure | quoted for significance |
+|---|---|---|---|---|
+| `PA` | `sequential`, `sequential_global_retry`, `sequential_with_mass` | `PA_joint` | its own delta-method error | **fully paired**, 1 000 000 shared events, gain 0.98→0.59 in σ from the sub-threshold tail to the 5 GeV bins above 380 GeV |
+| `PA` | `joint` | itself | exactly 1, no bar — its own error is the **band** | it *is* the denominator |
+| `madspin` | `sequential`, `sequential_global_retry` | `ms_joint` | its own delta-method error | **partly paired**: the 500k cells are a front truncation of `ms_joint`'s 1M, so the coincidences exist over that prefix and the unshared half of `ms_joint` enters as an independent error. Gain 1.00→0.75 |
+| `madspin` | `joint` | itself | the **band**, as above | it *is* the denominator |
 
 No pair had to be left unpaired. The pairing is weaker in the `madspin` row for
 a structural reason, not a missing measurement: half of the denominator is not
 shared with either numerator.
+
+One consequence of drawing `joint`'s own error as a band rather than folding it
+into every bar: the band is very wide in the deep sub-threshold bins, where
+`joint` holds a handful of events — ±100 % in the leftmost `madspin` bin
+(316–326 GeV, `n = 1`), ±33 % in the same `PA` bin (`n = 9`), ±18 % at
+326–331 GeV — so it fills the pane there. That is what the statistics of those
+bins are, and the previous fixed bands said nothing about them.
 
 Errors are computed from **counts**, values from **weights**. For the four `PA`
 cells the two are identical to the last digit (zero overweights,
@@ -354,10 +401,17 @@ caveat about `ms_joint` applies to the pane too.
 ### Clipping
 
 Still **clipped to 0.8–1.2**, with off-scale points drawn on the boundary as
-triangles pointing the way they went. Under the new denominator **6 points go
-off in the `PA` pane and 5 in the `madspin` pane**, all of them below 342 GeV
-where the bins hold between 1 and 161 events — the deep sub-threshold tail,
-~0.02 % of σ. From 342 GeV up, nothing leaves the pane in either row. Every off-scale value is in `numbers.txt`, flagged with a `*`; the
+triangles pointing the way they went. **The new bars change nothing here**: the
+clip is applied to the point's central value, which is untouched by the change
+of error treatment, so it is still **6 points in the `PA` pane and 5 in the
+`madspin` pane** — the same bins as before, all of them below 342 GeV where the
+bins hold between 1 and 161 events, the deep sub-threshold tail, ~0.02 % of σ.
+From 342 GeV up, nothing leaves the pane in either row. What *did* change is
+that the band around 1 now runs off the top and bottom of the pane in the
+leftmost bins, where `joint`'s own error is larger than the clip; it is a band,
+not a point, so it is simply cut by the frame and carries no arrow. Its value
+in every bin is the `band` column of `numbers.txt`.
+Every off-scale value is in `numbers.txt`, flagged with a `*`; the
 clip is no longer annotated on the figure and there is no footnote under it.
 No bin on this figure is a *structural* zero — every cell draws a virtuality and
 reshuffles, so all of them can reach below `2m_t` — so an empty bin is drawn as
@@ -365,6 +419,23 @@ a gap and the open-circle marker the companion figure uses for `onshell` never
 appears here.
 
 ### What the pane shows
+
+The numbers below are **paired** and come from `numbers.txt`, not from the bars
+on the figure. The figure's bars are per-curve statistics and cannot give a
+significance; reading one off them by eye — band and bar overlapping or not — is
+the uncorrelated, too-large answer.
+
+**Does the visual reading of `sequential` against `sequential_global_retry`
+change?** Not in its verdict, and only mildly in appearance. The two curves'
+bars were nearly identical to each other before (paired, 0.0177 and 0.0177
+median in `PA`) and are nearly identical to each other now (own, 0.0146 and
+0.0146); both shrank by the same factor ≈ 0.82 in `PA` and ≈ 0.90 in `madspin`.
+So the *relative* picture — two curves, comparable bars, tracking each other
+across the pane with `sequential` sitting a fraction of a bar low above
+350 GeV — is the same picture, drawn with uniformly shorter bars. What is new is
+the band, and a reader who folds band and bar together lands on a *larger* error
+than the old bars showed. Both readings are wrong as significances; the paired
+window numbers below are the measurement and they have not moved by a digit.
 
 In `PA`: `sequential_global_retry`/`joint` = **0.99996 ± 0.00109** below 380 GeV
 (0.04 σ — the null holding), while `sequential`/`joint` = **0.99800 ± 0.00108**
@@ -389,6 +460,20 @@ Both carry `numbers.txt` with everything above unclipped and per bin.
 ## 9. What this does not cover
 
 * **A paired *weighted* comparison** — see the caveat in section 6.
+* **The error on a *difference*, on the figure.** The ratio pane now draws
+  per-curve statistics only. There is no drawn quantity from which a
+  scheme-versus-`joint` significance can be read; that number lives in the
+  `[paired]` column and the window table of `numbers.txt` and nowhere else.
+* **`Σw²` over the full `m_tt` range.** The harvest kept it only inside the
+  histogram's 290–520 GeV grid, which holds 55.7 % of σ. The delta-method
+  denominator needs it over the whole file, so the missing part is reconstructed
+  from the in-range design effect (`UData._sumw2_total`). It enters `var(R)`
+  multiplied by `R²`, so a 3 % error on it — the entire spread of `deff` across
+  these cells — moves a bar by 4·10⁻⁵ of itself, and six of the seven cells are
+  unit weight (`deff = 1.00000`) where the reconstruction is exact. It is the
+  only approximation on the figure's error bars.
+* **The upper pane's error bars**, still `sqrt(Σw²)/σ` and 0.24 % too large
+  against the delta-method form; left unchanged deliberately.
 * **`onshell`** — no virtuality is drawn, `_spinmode_has_density` is False and
   `_unweighting_mode` forces `joint` whatever the card says. There is no scheme
   axis to scan.

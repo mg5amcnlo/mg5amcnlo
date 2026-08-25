@@ -3,16 +3,26 @@
 
 A second, independent rendering of the two figures ``plot_mtt_unweighting.py``
 draws in the MG7-paper style.  Same data, same numbers, same clipping, same
-ratio denominator and the same PAIRED errors -- only the styling differs, and
+ratio denominator and the same error treatment -- only the styling differs, and
 neither of the first study's scripts is modified.
 
 The lower panel divides by the row's ``joint`` cell, not by the truth, and the
 truth is not drawn in it.  ``joint`` builds no ``Z_k`` table and
 ``sequential_global_retry`` cancels ``Z_k`` identically, so those two agreeing
-is the null hypothesis and this panel puts it on the line.  Because the
-denominator is now a *sibling* -- the same production events, decayed again --
-the errors are paired: :meth:`UData.paired_ratio` supplies them, measured on
-these very bins, and this file does not reimplement that.
+is the null hypothesis and this panel puts it on the line.
+
+The errors drawn are **per-curve statistics**: the band around 1 is ``joint``'s
+own, and each coloured curve carries its own, both from
+:meth:`UData.own_shape_err` -- the delta-method error of a self-normalised
+histogram, since the bin is a subset of the sigma it is divided by.  This file
+reimplements neither.
+
+They are **not** the error on the difference between a curve and ``joint``.
+The cells decay the same production events, so they fluctuate together; band
+and bar in quadrature discards that and comes out too large.
+:meth:`UData.paired_ratio` is the correct error on the difference and is what
+``numbers.txt`` quotes for the ``sequential`` versus
+``sequential_global_retry`` comparison this figure exists for.
 
 The style conventions are the ones ``plot_mtt_threshold_userstyle.py`` already
 follows: stock rcParams (no usetex, sans serif), figsize (6, 6), a [3, 1]
@@ -123,14 +133,28 @@ def make_figure(d, row, out):
     # The unity line is ``joint`` itself, drawn in joint's own colour: a black
     # dashed line here would invite it to be read as the truth, which is the
     # one curve deliberately absent from this panel.
-    rx.axhspan(0.95, 1.05, facecolor='C0', alpha=0.16, zorder=0)
-    rx.axhspan(0.9, 1.1, facecolor='C0', alpha=0.10, zorder=0)
-
+    #
+    # The band is joint's OWN statistical error, bin by bin -- not a fixed
+    # reference rule.  It is the denominator's error, so it belongs on the line
+    # and not on the coloured bars.  It is not an agreement band: adding it in
+    # quadrature to a bar throws away the correlation between two cells that
+    # decayed the same production events, and overstates the difference's
+    # error.  numbers.txt has the paired error, which is the one to quote.
     ref = d.ref_of(row)
+    yref, _, cref = d.shape(ref)
+    with np.errstate(divide='ignore', invalid='ignore'):
+        rel_ref = np.where((cref > 0) & (yref > 0),
+                           d.own_shape_err(ref) / yref, np.nan)
+    rx.fill_between(d.edges, np.concatenate([(1 - rel_ref)[:1], 1 - rel_ref]),
+                    np.concatenate([(1 + rel_ref)[:1], 1 + rel_ref]),
+                    step='pre', facecolor='C0', alpha=0.20, edgecolor='none',
+                    zorder=1)
+
     n_off = 0
     for key in [k for k in keys if k != ref]:
         scheme = CELL_SCHEME[key]
-        r, re = d.paired_ratio(row, key)
+        # Each curve's OWN statistical error, matching the band's definition.
+        r, re = d.own_ratio_err(row, key)
         inside = np.isfinite(r) & (r >= RCLIP_LO) & (r <= RCLIP_HI)
         above = np.isfinite(r) & (r > RCLIP_HI)
         below = np.isfinite(r) & (r < RCLIP_LO)
@@ -160,7 +184,7 @@ def make_figure(d, row, out):
 
     rx.set_ylim(RCLIP_LO, RCLIP_HI)
     rx.set_yticks([0.8, 0.9, 1.0, 1.1, 1.2])
-    rx.text(0.99, 0.92, 'bands: $\\pm5\\%$, $\\pm10\\%$',
+    rx.text(0.99, 0.92, 'band: stat. error of joint',
             transform=rx.transAxes, ha='right', va='top', fontsize=7,
             color='C0')
     rx.set_ylabel('Shape ratio to joint', fontsize=9)

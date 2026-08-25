@@ -128,7 +128,7 @@ are additions: nothing above is modified by them.
 | `plot_mtt_unweighting_userstyle.py` | the same two figures in the user's own matplotlib style. |
 | `data/histograms_unweighting.npz` | the raw measurement: the same 0.25 GeV `m_tt` grid, plus a **top-virtuality** grid `m(W b)` and the `Delta m_tt` histograms. |
 | `data/meta_unweighting.json` | cells, resolved schemes, overweight counters, paired coincidence counts per **window**, sensitivity. |
-| `data/paired_bins_unweighting.json` | paired coincidence counts per **plot bin**, which the ratio pane needs and the per-window ones cannot supply. Written by `--stage paired-bins`, which re-reads the decayed LHE files and runs no MadSpin. |
+| `data/paired_bins_unweighting.json` | paired coincidence counts per **plot bin**, which the per-window ones cannot supply. They are the correct error on a scheme-versus-`joint` *difference* and are what `numbers.txt` quotes for every significance; the pane itself draws each curve's own statistics. Written by `--stage paired-bins`, which re-reads the decayed LHE files and runs no MadSpin. |
 | `data/logs_unweighting/` | every MadSpin log and card, again as `.log.txt`. |
 | `plots_unweighting/`, `plots_unweighting_userstyle/` | PDF + PNG + `numbers.txt`. |
 | `RESULTS_unweighting.md` | the answers and the numbers. |

@@ -31,21 +31,44 @@ holding, and ``sequential`` -- the only scheme that trusts the tabulated
 drawn in the pane at all; it is still the black curve of the upper pane, where
 the absolute lineshape is the thing being shown.
 
-Changing the denominator from the truth to a *sibling* changes the errors, and
-this is the whole reason the pane is not a relabelling.  The truth is an
-independent sample, so a ratio to it combines two independent errors in
-quadrature.  The cells are **not** independent of each other: every one of them
-decays the SAME production events in the same order (``max |Delta sqrt(shat)|``
-is 0 across a row, checked), so the production-level fluctuation is common and
-largely cancels.  Treating such a ratio as independent overstates its error --
-by a factor 1.7 in the 5 GeV bins above 380 GeV, measured, not assumed.
+What the pane's error bars are, and what they are NOT
+-----------------------------------------------------
+The pane draws **each curve's own statistical error**.  The band around 1 is
+``joint``'s own error, bin by bin -- ``joint`` is the denominator, so its
+statistics are not a property of any other curve and cannot be carried on their
+bars; and every other curve carries its own.  Both come from
+:meth:`UData.own_shape_err`, the **delta-method** error for a self-normalised
+histogram: the plotted quantity is ``(1/sigma) dsigma/dm``, the bin content is a
+*subset* of the ``sigma`` it is divided by, and
 
-The pairing is therefore used, on the figure's own bins.  ``run_mtt_unweighting
---stage paired-bins`` re-reads the decayed LHE files and counts, per plot bin,
-how many production events land in *that* bin under a cell and under its row's
-``joint``; :func:`paired_ratio` turns those into the covariance the ratio's
-error needs.  Per-window coincidences cannot do this: an event can be in one
-window under both schemes and in a different BIN under each.
+    R = N/D,  N = sum_i n_i, D = sum_i d_i,  var(R) = sum_i (n_i - R d_i)^2/D^2
+
+is the linearised (jackknife) error that keeps that within-sample correlation.
+It returns exactly zero when ``n_i ∝ d_i``, which a plain ``sqrt(sum w^2)``
+does not; ``sqrt(sum w^2)`` is wrong here and, on these bins, 0.2-0.6 % too
+large.  This is the same estimator ``zz_pol_weights/pol_analysis.ratio`` uses
+for exactly this case.
+
+**These bars must not be added in quadrature to read a difference off the
+pane.**  The cells are *not* independent of each other: every one of them
+decays the SAME production events in the same order (``max |Delta sqrt(shat)|``
+is 0 across a row, checked), so the production-level fluctuation is common to a
+curve and to ``joint`` and largely cancels in their difference.  Combining the
+band and a bar in quadrature discards that cancellation and **overestimates**
+the error on the difference -- by a median factor 1.16 per bin in the ``PA``
+row and 1.10 in ``madspin``, measured, not assumed.
+
+The paired error is still computed, still in ``numbers.txt`` and is still the
+number to quote for any significance.  ``run_mtt_unweighting --stage
+paired-bins`` re-reads the decayed LHE files and counts, per plot bin, how many
+production events land in *that* bin under a cell and under its row's
+``joint``; :meth:`UData.paired_ratio` turns those into the covariance a
+scheme-versus-``joint`` error needs.  Per-window coincidences cannot do this: an
+event can be in one window under both schemes and in a different BIN under each.
+The window table at the end of ``numbers.txt`` is the exact statement, and
+``sequential_global_retry``/``joint`` = 0.99996 +- 0.00109 against
+``sequential``/``joint`` = 0.99800 +- 0.00108 is the physics this figure exists
+for.  Read that from the table, never by eye off the bars.
 
 Two figures, one per spinmode:
 
@@ -97,6 +120,43 @@ def _fmt_plain(n):
     prints the backslashes.  Same grouping, plain space.
     """
     return '{:,}'.format(int(n)).replace(',', ' ')
+
+
+def _naive_over_delta(d, key):
+    """Median ``sqrt(sum w^2)`` bar divided by the delta-method one.
+
+    The size of the mistake the pane would make if it took its own statistical
+    error the easy way.  Reported rather than asserted; see
+    :meth:`UData.own_shape_err`.
+    """
+    _, naive, cnt = d.shape(key)
+    delta = d.own_shape_err(key)
+    m = (cnt > 0) & (delta > 0)
+    return float(np.median(naive[m] / delta[m])) if m.any() else float('nan')
+
+
+def _quad_over_paired(d, row):
+    """Median of (band and bar in quadrature) / (paired error), over the row.
+
+    The price of reading a difference off the drawn bars.  It is above 1 by
+    construction -- the quadrature sum is the paired error with the covariance
+    thrown away -- and how far above is a measured property of these samples,
+    not a rule of thumb.
+    """
+    ref = d.ref_of(row)
+    yref, _, cref = d.shape(ref)
+    with np.errstate(divide='ignore', invalid='ignore'):
+        band = np.where(cref > 0, d.own_shape_err(ref) / yref, np.nan)
+    out = []
+    for key in d.cells(row):
+        if key == ref:
+            continue
+        r, re = d.paired_ratio(row, key)
+        _, ro = d.own_ratio_err(row, key)
+        quad = np.sqrt(ro ** 2 + (np.abs(r) * band) ** 2)
+        m = np.isfinite(quad) & np.isfinite(re) & (re > 0)
+        out.append(quad[m] / re[m])
+    return float(np.median(np.concatenate(out))) if out else float('nan')
 
 # The ratio pane's clip.  +-20 % is wide enough to hold everything the schemes
 # do to each other above threshold and narrow enough that a per-cent-level
@@ -152,8 +212,11 @@ class UData(Data):
         if not os.path.exists(p):
             raise SystemExit(
                 '%s is missing.  The ratio pane divides one cell by another '
-                'cell of the same production sample, so its errors are PAIRED '
-                'and need the per-bin coincidence counts.  Produce them with\n'
+                'cell of the same production sample; the error on that '
+                'DIFFERENCE is paired and needs the per-bin coincidence '
+                'counts, and numbers.txt quotes it for every significance '
+                'even though the pane itself draws per-curve statistics.  '
+                'Produce them with\n'
                 '    python3 run_mtt_unweighting.py --stage paired-bins\n'
                 'which re-reads the decayed LHE files and runs no MadSpin.'
                 % p)
@@ -200,6 +263,99 @@ class UData(Data):
         y, ye, cnt = self.density(key)
         s = self.sigma(key)
         return y / s, ye / s, cnt
+
+    def _sumw2_total(self, key):
+        """``sum_i w_i^2`` over the WHOLE file, which the harvest half-holds.
+
+        The normalisation of :meth:`shape` is the sample's total ``sigma`` over
+        the full ``m_tt`` range, so the delta-method sum below runs over every
+        event of the file -- but ``histograms_unweighting.npz`` only carries
+        ``sum w^2`` inside the histogram's 290-520 GeV grid, which holds 55.7 %
+        of the rate.  The rest is reconstructed from the design effect measured
+        IN range, ``deff = n sum(w^2)/sum(w)^2``:
+
+            sum(w^2)_out ~ deff_in * sum(w)_out^2 / n_out
+
+        with ``sum(w)_out`` and ``n_out`` both exact (``meta`` has the file's
+        total ``sumw`` and ``nevents``, the ``.npz`` has the in-range ones).
+        Assuming the same weight dispersion outside the window as inside is the
+        only approximation on this figure's error bars, and it is a tiny one:
+        the term it feeds enters ``var(R)`` multiplied by ``R^2``, so a 3 %
+        error on it -- the whole spread of ``deff`` across these cells -- moves
+        a bar by 4e-5 of itself.  Six of the seven cells are unit weight to the
+        last digit (``deff = 1.00000``) and the assumption is exact for them.
+        """
+        s2_in = float(self.z['%s_sumw2' % key].sum())
+        s_in = float(self.z['%s_sumw' % key].sum())
+        n_in = float(self.z['%s_cnt' % key].sum())
+        n = self.nevents(key)
+        d = float(self.meta['runs'][key]['sumw'])
+        n_out, s_out = n - n_in, d - s_in
+        if n_out <= 0 or s_out <= 0:
+            return s2_in
+        deff = n_in * s2_in / (s_in * s_in) if s_in > 0 else 1.0
+        return s2_in + deff * s_out * s_out / n_out
+
+    def own_shape_err(self, key):
+        """The curve's OWN statistical error on :meth:`shape`, by the delta method.
+
+        Not ``sqrt(sum w^2)/sigma``.  The plotted quantity is self-normalised:
+        the bin content is a *subset* of the ``sigma`` it is divided by, so the
+        two are correlated and the part of a bin's fluctuation that is shared
+        with the normalisation does not move the normalised fraction at all.
+        The linearised (delta-method / jackknife) error for a ratio of two sums
+        over a common sample keeps that::
+
+            R = N/D,  N = sum_i n_i,  D = sum_i d_i
+            dR = (dN - R dD)/D
+            var(R) = sum_i (n_i - R d_i)^2 / D^2
+
+        Here ``d_i = w_i`` over every event of the file and ``n_i = w_i`` if
+        the event is in the bin and 0 otherwise, so the sum collapses onto
+        quantities the harvest already holds::
+
+            var(R) = [ (1 - 2R) sum(w^2)_bin + R^2 sum(w^2)_total ] / D^2
+
+        with no per-event loop.  For a unit-weight sample this is exactly the
+        binomial ``R^2 (1 - n/N)/n`` that :meth:`paired_ratio` uses term by
+        term, which is the consistency check that the two error treatments on
+        this figure are the same statistics seen from two sides; the weighted
+        form above is kept because ``ms_joint`` is NOT unit weight (the
+        overweight safety net gives it ``deff = 1.028``) and its bar has to
+        know that.
+
+        It returns exactly zero when ``n_i ∝ d_i``, which is the property that
+        makes it right and ``sqrt(sum w^2)`` wrong.  On these bins the naive
+        form is 0.2-0.6 % too large; small, but it is the difference between an
+        error bar that is defined and one that merely looks about right.
+
+        This is a WITHIN-sample correlation.  It is unrelated to, and no
+        substitute for, the BETWEEN-sample pairing of :meth:`paired_ratio`.
+        """
+        sumw = self._rebin(self.z['%s_sumw' % key])
+        sumw2 = self._rebin(self.z['%s_sumw2' % key])
+        d = float(self.meta['runs'][key]['sumw'])
+        s2_tot = self._sumw2_total(key)
+        r = sumw / d
+        var = ((1.0 - 2.0 * r) * sumw2 + r * r * s2_tot) / (d * d)
+        # ``shape`` is a density: the same 1/width the value carries.
+        return np.sqrt(np.maximum(var, 0.0)) / self.widths
+
+    def own_ratio_err(self, row, key):
+        """``(shape ratio to joint, this curve's OWN error on it)``.
+
+        The value is :meth:`paired_ratio`'s -- one definition of the ratio on
+        the figure -- and the error is this curve's own, relative error carried
+        through.  ``joint`` divided by itself is ``(1, 0)`` as a *ratio*; its
+        own statistics are the band, drawn from :meth:`own_shape_err` directly,
+        because they belong to the denominator and not to any curve's bar.
+        """
+        r, _ = self.paired_ratio(row, key)
+        y, _, _ = self.shape(key)
+        e = self.own_shape_err(key)
+        with np.errstate(divide='ignore', invalid='ignore'):
+            rel = np.where(y > 0, e / y, np.nan)
+        return r, np.abs(r) * rel
 
     # --- the top-virtuality histogram, which the parent has no notion of ---
     def cells(self, row):
@@ -314,13 +470,29 @@ class UData(Data):
 
         The reference divided by itself is returned as exactly ``(1, 0)``: it
         is the definition of the pane, and its own statistical error is already
-        inside every other curve's error bar through ``n_b``.
+        inside every other curve's PAIRED error through ``n_b``.  It is not
+        inside the bars the figure draws -- those are each curve's own -- which
+        is why the reference's statistics are drawn separately, as the band,
+        from :meth:`own_shape_err`.
+
+        This method is no longer what the pane's error bars are made of.  It
+        stays because it is the CORRECT error on a scheme-versus-``joint``
+        difference and is what ``numbers.txt`` quotes for every significance;
+        see :meth:`own_ratio_err` for what is drawn, and the module docstring
+        for why the two must not be confused.
 
         Counts, not weights, throughout.  These are accept/reject samples and
-        are meant to be unit weight; where the overweight safety net broke that
-        the design effect is 1.0004 at worst (``deff`` in ``numbers.txt``), so
-        the count-based relative error is right to well under a per cent, and
-        it is the only form in which the pairing is available at all.
+        are meant to be unit weight; six of the seven cells are, to the last
+        digit (``deff = 1.00000`` in ``numbers.txt``), and for those the
+        count-based relative error is the weighted one.  The exception is
+        ``ms_joint``, whose overweight safety net gives it ``deff = 1.02814``,
+        so its count-based relative error is 1.4 % low -- on an error, not on a
+        value.  Counts are nonetheless what is used, because they are the only
+        form in which the pairing is available at all: the coincidences are
+        counted events, not summed weights.  ``own_shape_err`` does carry the
+        weights, which is why the ``own`` and ``paired`` columns of
+        ``numbers.txt`` differ by that much for ``ms_joint`` and by nothing
+        anywhere else.
         """
         r = self.pb['rows'][row]
         ref = r['ref']
@@ -500,14 +672,33 @@ def make_figure(d, row, out, tag=''):
     # independent sample with a physical shape difference of its own, and
     # carrying it through this pane would make the reader subtract that by eye
     # from the sub-per-cent effect the figure is about.
-    rx.axhspan(0.95, 1.05, facecolor=allcolors[0], alpha=0.16, zorder=0)
-    rx.axhspan(0.9, 1.1, facecolor=allcolors[0], alpha=0.10, zorder=0)
-    rx.text(0.993, 0.93, _tx(r'bands: $\pm5\%$, $\pm10\%$',
-                             'bands: +-5%, +-10%'),
-            transform=rx.transAxes, ha='right', va='top',
-            fontsize=8.5, color=allcolors[0])
-
     ref = d.ref_of(row)
+
+    # The band is no longer a pair of fixed reference rules.  It is ``joint``'s
+    # OWN statistical error, bin by bin, from :meth:`UData.own_shape_err` --
+    # the delta-method one, because both sides of this pane are self-normalised
+    # and the bin is a subset of the sigma it is divided by.  ``joint`` is the
+    # denominator, so its statistics are a property of the LINE and not of any
+    # coloured curve, and this is the only place they can honestly be drawn.
+    #
+    # It is NOT an agreement band to add in quadrature with a bar: the cells
+    # share their production events, so a curve and ``joint`` fluctuate
+    # together and their difference is smaller than the two errors combined.
+    # The paired error in numbers.txt is that difference's error.
+    yref, _, cref = d.shape(ref)
+    eref = d.own_shape_err(ref)
+    with np.errstate(divide='ignore', invalid='ignore'):
+        rel_ref = np.where((cref > 0) & (yref > 0), eref / yref, np.nan)
+    rx.fill_between(d.edges, np.concatenate([(1 - rel_ref)[:1], 1 - rel_ref]),
+                    np.concatenate([(1 + rel_ref)[:1], 1 + rel_ref]),
+                    step='pre', facecolor=COLOR[CELL_SCHEME[ref]], alpha=0.20,
+                    edgecolor='none', zorder=2)
+    rx.text(0.993, 0.93,
+            _tx(r'band: stat.\ error of \texttt{joint}',
+                'band: stat. error of joint'),
+            transform=rx.transAxes, ha='right', va='top',
+            fontsize=8.5, color=COLOR[CELL_SCHEME[ref]])
+
     n_off = 0
     # The reference LAST, so its flat line sits on top of the others rather
     # than under them, and in its own colour and dash from the pane above --
@@ -520,7 +711,18 @@ def make_figure(d, row, out, tag=''):
         # about the rate -- including the overweight excess that moves
         # ms_joint's sigma by +0.3 % -- is divided out here on purpose and
         # lives in numbers.txt instead.
-        r, re = d.paired_ratio(row, key)
+        #
+        # The bar is this curve's OWN statistical error, not the paired
+        # scheme-versus-joint one: the band already carries the denominator's
+        # statistics, and putting them on the bars as well would draw them
+        # twice.  What the pane no longer shows directly is the error on the
+        # DIFFERENCE, which is smaller than band and bar in quadrature and is
+        # tabulated per bin and per window in numbers.txt.
+        r, re = d.own_ratio_err(row, key)
+        # ``joint``'s own error is the BAND; drawing it again as bars on the
+        # flat line would show the same statistics twice.
+        if key == ref:
+            re = np.full_like(r, np.nan)
         # An empty bin here is a statement about the sample size, never a
         # structural zero: every cell on this figure draws a virtuality and
         # reshuffles, so all of them can reach below 2 m_t.  Drawn as a gap,
@@ -856,19 +1058,44 @@ def write_numbers(d, out, fh=sys.stdout):
         p('   own total sigma first, so this is a shape ratio and the')
         p('   overweight rate carry is divided out of it.')
         p('')
-        p('   ERRORS ARE PAIRED.  The cells decay the SAME production events')
-        p('   in the same order (max |Delta sqrt(shat)| = %.3g GeV over %s'
+        p('   THREE ERRORS PER BIN, AND THEY ANSWER DIFFERENT QUESTIONS.')
+        p('')
+        p('   "own"      -- what the FIGURE now draws.  Each curve\'s own')
+        p('                 statistical error, and the band around 1 is')
+        p('                 %s\'s own (the "band" column).  Delta method:' % ref)
+        p('                     var(R) = sum_i (n_i - R d_i)^2 / D^2,')
+        p('                 the linearised error of a self-normalised')
+        p('                 histogram, in which the bin is a SUBSET of the')
+        p('                 sigma it is divided by.  It returns zero when the')
+        p('                 bin is proportional to the normalisation, which a')
+        p('                 plain sqrt(sum w^2) does not; the naive form is')
+        p('                 %.2f %% too large on these bins.'
+          % (100.0 * _naive_over_delta(d, ref) - 100.0))
+        p('                 DO NOT add the band and a bar in quadrature.  That')
+        p('                 discards the correlation below and OVERESTIMATES')
+        p('                 the error on the difference.')
+        p('')
+        p('   "paired"   -- the CORRECT error on the difference between a')
+        p('                 scheme and %s, and the one to quote for any' % ref)
+        p('                 significance.  The cells decay the SAME production')
+        p('                 events in the same order (max |Delta sqrt(shat)| =')
+        p('                 %.3g GeV over %s pairs), so the production'
           % (pbr['max_dshat'], _fmt_plain(pbr['n_pairs'])))
-        p('   pairs), so the production fluctuation is common to numerator and')
-        p('   denominator and cancels.  The covariance is MEASURED on these')
-        p('   very bins by "run_mtt_unweighting.py --stage paired-bins", which')
-        p('   counts how many production events land in the SAME bin under')
-        p('   both cells; a per-window coincidence count cannot answer this,')
-        p('   because an event can be in one window under both schemes and in')
-        p('   a different bin under each.')
-        p('   The "unpaired" column drops the covariance term -- it is what an')
-        p('   independent-samples error bar would have been, and the ratio of')
-        p('   the two is what the shared production sample bought, per bin.')
+        p('                 fluctuation is common to numerator and denominator')
+        p('                 and cancels.  The covariance is MEASURED on these')
+        p('                 very bins by "run_mtt_unweighting.py --stage')
+        p('                 paired-bins", which counts how many production')
+        p('                 events land in the SAME bin under both cells; a')
+        p('                 per-window coincidence count cannot answer this,')
+        p('                 because an event can be in one window under both')
+        p('                 schemes and in a different bin under each.')
+        p('')
+        p('   "unpaired" -- the paired error with the covariance term dropped:')
+        p('                 what an independent-samples bar would have been.')
+        p('                 The ratio of it to "paired" is what the shared')
+        p('                 production sample bought, per bin.  It is also')
+        p('                 what band-and-bar-in-quadrature amounts to, which')
+        p('                 is why that reading is wrong.')
         p('')
         pairing = ('%s: every cell holds %s events and pairs with %s over all '
                    'of them.'
@@ -891,33 +1118,51 @@ def write_numbers(d, out, fh=sys.stdout):
         p('   %s' % ',  '.join('%s = %s' % (SHORT[CELL_SCHEME[k]],
                                             CELL_SCHEME[k]) for k in keys))
         others = [k for k in keys if k != ref]
-        head = '%9s %9s' % ('bin [GeV]', 'n(joint)')
+        head = '%9s %9s %9s' % ('bin [GeV]', 'n(joint)', 'band')
         for key in others:
-            head += ' %-26s' % SHORT[CELL_SCHEME[key]]
+            head += ' %-34s' % SHORT[CELL_SCHEME[key]]
         p(head.rstrip())
-        p(('%9s %9s' % ('', '') + ''.join(
-            ' %-26s' % 'ratio +- paired (unpaired)' for _ in others)).rstrip())
+        p(('%9s %9s %9s' % ('', '', '+- (own)') + ''.join(
+            ' %-34s' % 'ratio +- own [paired] (unpaired)'
+            for _ in others)).rstrip())
         den_of_ref, _, nref = d.shape(ref)
+        # The band the figure draws around 1: the reference's OWN error.
+        band = d.own_shape_err(ref) / np.where(den_of_ref > 0, den_of_ref,
+                                               np.nan)
         cols = []
         for key in others:
             r, re = d.paired_ratio(row, key)
-            cols.append((r, re, d.unpaired_ratio_err(row, key)))
+            _, ro = d.own_ratio_err(row, key)
+            cols.append((r, ro, re, d.unpaired_ratio_err(row, key)))
         for i in range(len(d.centres)):
-            line = '%4.0f-%4.0f %9d' % (d.edges[i], d.edges[i + 1], nref[i])
-            for r, re, ru in cols:
+            line = '%4.0f-%4.0f %9d %9s' % (
+                d.edges[i], d.edges[i + 1], nref[i],
+                '%.4f' % band[i] if np.isfinite(band[i]) else '-')
+            for r, ro, re, ru in cols:
                 if not np.isfinite(r[i]):
-                    line += ' %-26s' % '-'
+                    line += ' %-34s' % '-'
                 else:
                     flag = ' *' if not RCLIP_LO <= r[i] <= RCLIP_HI else ''
-                    line += ' %-26s' % ('%.4f +- %.4f (%.4f)%s'
-                                        % (r[i], re[i], ru[i], flag))
+                    line += ' %-34s' % ('%.4f +- %.4f [%.4f] (%.4f)%s'
+                                        % (r[i], ro[i], re[i], ru[i], flag))
             p(line.rstrip())
         p('   * = outside the pane\'s +-20 %, drawn there as a boundary '
           'triangle.')
+        p('   "band" and "+- own" are what the figure DRAWS; "[paired]" is')
+        p('   what to quote.  Band and bar in quadrature reproduces the')
+        p('   "(unpaired)" column, which is the wrong, too-large answer.')
         p('')
         # The one-line summary of what the pane is FOR.
-        p('   what the pane says, summed over the plotted range %g-%g GeV:'
+        p('   what the pane says, summed over the plotted range %g-%g GeV.'
           % (d.edges[0], d.edges[-1]))
+        _f = _quad_over_paired(d, row)
+        p('   Built on the PAIRED error, not on the bars the figure draws:')
+        p('   this is a statement about a difference, so it needs the error on')
+        p('   the difference.  Combining the band and a bar in quadrature')
+        p('   instead inflates it by a median factor %.2f, which would shrink'
+          % _f)
+        p('   every chi2 below by %.0f %% and could hide a real departure.'
+          % (100.0 * (1.0 - 1.0 / (_f * _f))))
         p('   %-16s %10s %8s %10s %14s'
           % ('cell', 'chi2', 'ndf', 'chi2/ndf', 'how far off'))
         for key in others:
@@ -1003,6 +1248,14 @@ def write_numbers(d, out, fh=sys.stdout):
     p('   that off the pane is a comparison of two CURVES, not of a curve with')
     p('   the line, and that comparison is where the shared denominator\'s own')
     p('   fluctuation drops out.')
+    p('')
+    p('   THE FIGURE\'S BARS CANNOT GIVE THIS NUMBER.  What the pane draws is')
+    p('   each curve\'s OWN statistical error, and the band is joint\'s own.')
+    p('   Those are per-curve statistics; the significance of a DIFFERENCE')
+    p('   needs the paired error, because the cells share their production')
+    p('   events and fluctuate together.  The table below is that error, and')
+    p('   it is what to quote.  Anything read by eye off the bars -- band and')
+    p('   bar overlapping or not -- is the too-large, uncorrelated answer.')
     p('')
     p('   Integrated, from the paired window counts (exact; the per-bin chi2')
     p('   above cannot be turned into a significance because its bins are')

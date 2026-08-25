@@ -298,66 +298,98 @@ ms_globalretry        1.00000      1.00000       0.003323       0.003323
    own total sigma first, so this is a shape ratio and the
    overweight rate carry is divided out of it.
 
-   ERRORS ARE PAIRED.  The cells decay the SAME production events
-   in the same order (max |Delta sqrt(shat)| = 0 GeV over 1 000 000
-   pairs), so the production fluctuation is common to numerator and
-   denominator and cancels.  The covariance is MEASURED on these
-   very bins by "run_mtt_unweighting.py --stage paired-bins", which
-   counts how many production events land in the SAME bin under
-   both cells; a per-window coincidence count cannot answer this,
-   because an event can be in one window under both schemes and in
-   a different bin under each.
-   The "unpaired" column drops the covariance term -- it is what an
-   independent-samples error bar would have been, and the ratio of
-   the two is what the shared production sample bought, per bin.
+   THREE ERRORS PER BIN, AND THEY ANSWER DIFFERENT QUESTIONS.
+
+   "own"      -- what the FIGURE now draws.  Each curve's own
+                 statistical error, and the band around 1 is
+                 PA_joint's own (the "band" column).  Delta method:
+                     var(R) = sum_i (n_i - R d_i)^2 / D^2,
+                 the linearised error of a self-normalised
+                 histogram, in which the bin is a SUBSET of the
+                 sigma it is divided by.  It returns zero when the
+                 bin is proportional to the normalisation, which a
+                 plain sqrt(sum w^2) does not; the naive form is
+                 0.24 % too large on these bins.
+                 DO NOT add the band and a bar in quadrature.  That
+                 discards the correlation below and OVERESTIMATES
+                 the error on the difference.
+
+   "paired"   -- the CORRECT error on the difference between a
+                 scheme and PA_joint, and the one to quote for any
+                 significance.  The cells decay the SAME production
+                 events in the same order (max |Delta sqrt(shat)| =
+                 0 GeV over 1 000 000 pairs), so the production
+                 fluctuation is common to numerator and denominator
+                 and cancels.  The covariance is MEASURED on these
+                 very bins by "run_mtt_unweighting.py --stage
+                 paired-bins", which counts how many production
+                 events land in the SAME bin under both cells; a
+                 per-window coincidence count cannot answer this,
+                 because an event can be in one window under both
+                 schemes and in a different bin under each.
+
+   "unpaired" -- the paired error with the covariance term dropped:
+                 what an independent-samples bar would have been.
+                 The ratio of it to "paired" is what the shared
+                 production sample bought, per bin.  It is also
+                 what band-and-bar-in-quadrature amounts to, which
+                 is why that reading is wrong.
 
    PA: every cell holds 1 000 000 events and pairs with PA_joint over all of them.
 
    joint = joint,  seq = sequential,  seq_glob_retry = sequential_global_retry,  seq_with_mass = sequential_with_mass
-bin [GeV]  n(joint) seq                        seq_glob_retry             seq_with_mass
-                    ratio +- paired (unpaired) ratio +- paired (unpaired) ratio +- paired (unpaired)
- 316- 326         9 0.6667 +- 0.3514 (0.3514) * 0.5556 +- 0.3099 (0.3099) * 0.6667 +- 0.3514 (0.3514) *
- 326- 331        31 1.1613 +- 0.2803 (0.2845)  1.3548 +- 0.3164 (0.3208) * 1.8387 +- 0.4103 (0.4103) *
- 331- 336       128 1.2109 +- 0.1436 (0.1446) * 0.8984 +- 0.1145 (0.1154)  1.0391 +- 0.1277 (0.1286)
- 336- 338       111 0.9550 +- 0.1248 (0.1297)  0.8378 +- 0.1178 (0.1178)  1.0360 +- 0.1379 (0.1378)
- 338- 340       149 1.0537 +- 0.1201 (0.1205)  1.0470 +- 0.1199 (0.1199)  1.1678 +- 0.1299 (0.1303)
- 340- 342       236 0.9576 +- 0.0885 (0.0891)  0.9153 +- 0.0860 (0.0862)  0.9873 +- 0.0906 (0.0912)
- 342- 344       374 0.9332 +- 0.0691 (0.0694)  1.0348 +- 0.0735 (0.0750)  0.9118 +- 0.0673 (0.0683)
- 344- 345       314 0.9713 +- 0.0771 (0.0781)  0.9522 +- 0.0756 (0.0769)  0.9013 +- 0.0733 (0.0739)
- 345- 346       426 1.0258 +- 0.0689 (0.0698)  1.0094 +- 0.0670 (0.0690)  1.0775 +- 0.0703 (0.0725)
- 346- 347       682 0.9883 +- 0.0518 (0.0537)  1.0029 +- 0.0519 (0.0543)  1.0117 +- 0.0517 (0.0546)
- 347- 348       942 1.0212 +- 0.0439 (0.0468)  0.9915 +- 0.0427 (0.0458)  0.9788 +- 0.0426 (0.0453)
- 348- 349      1173 0.9727 +- 0.0381 (0.0404)  1.0145 +- 0.0391 (0.0417)  0.9949 +- 0.0384 (0.0411)
- 349- 350      1407 0.9268 +- 0.0333 (0.0356)  0.9261 +- 0.0333 (0.0356)  0.9545 +- 0.0340 (0.0364)
- 350- 351      1541 1.0474 +- 0.0344 (0.0373)  1.0227 +- 0.0341 (0.0366)  1.0032 +- 0.0338 (0.0361)
- 351- 352      1629 1.0859 +- 0.0349 (0.0373)  1.0780 +- 0.0348 (0.0371)  1.0731 +- 0.0344 (0.0369)
- 352- 353      1875 0.9957 +- 0.0306 (0.0325)  0.9861 +- 0.0301 (0.0323)  0.9883 +- 0.0299 (0.0323)
- 353- 354      1970 0.9924 +- 0.0295 (0.0316)  1.0188 +- 0.0299 (0.0323)  0.9949 +- 0.0295 (0.0317)
- 354- 355      2160 0.9852 +- 0.0279 (0.0301)  0.9676 +- 0.0274 (0.0297)  0.9694 +- 0.0277 (0.0297)
- 355- 356      2191 0.9995 +- 0.0280 (0.0302)  0.9950 +- 0.0278 (0.0301)  1.0402 +- 0.0287 (0.0311)
- 356- 358      4740 1.0156 +- 0.0177 (0.0207)  1.0076 +- 0.0176 (0.0206)  0.9922 +- 0.0175 (0.0204)
- 358- 360      5219 0.9828 +- 0.0166 (0.0193)  0.9989 +- 0.0166 (0.0195)  0.9971 +- 0.0166 (0.0195)
- 360- 362      5398 1.0033 +- 0.0164 (0.0192)  1.0135 +- 0.0165 (0.0194)  1.0204 +- 0.0167 (0.0195)
- 362- 364      5826 0.9950 +- 0.0155 (0.0184)  0.9717 +- 0.0153 (0.0181)  0.9854 +- 0.0155 (0.0183)
- 364- 366      6036 1.0035 +- 0.0154 (0.0182)  1.0262 +- 0.0156 (0.0185)  1.0050 +- 0.0153 (0.0182)
- 366- 368      6401 0.9728 +- 0.0145 (0.0173)  0.9803 +- 0.0146 (0.0174)  1.0011 +- 0.0147 (0.0176)
- 368- 370      6412 1.0098 +- 0.0148 (0.0177)  1.0006 +- 0.0148 (0.0176)  0.9765 +- 0.0145 (0.0173)
- 370- 372      6557 1.0014 +- 0.0145 (0.0174)  1.0079 +- 0.0146 (0.0175)  0.9948 +- 0.0145 (0.0173)
- 372- 374      6727 1.0107 +- 0.0144 (0.0173)  0.9918 +- 0.0142 (0.0171)  1.0242 +- 0.0146 (0.0175)
- 374- 376      6974 0.9881 +- 0.0138 (0.0167)  0.9933 +- 0.0139 (0.0168)  1.0052 +- 0.0141 (0.0169)
- 376- 378      6978 1.0089 +- 0.0139 (0.0170)  1.0162 +- 0.0140 (0.0171)  0.9938 +- 0.0138 (0.0168)
- 378- 380      7169 0.9775 +- 0.0134 (0.0164)  0.9993 +- 0.0136 (0.0166)  0.9933 +- 0.0136 (0.0166)
- 380- 385     18266 1.0080 +- 0.0068 (0.0104)  1.0127 +- 0.0068 (0.0105)  0.9995 +- 0.0068 (0.0104)
- 385- 390     18880 0.9970 +- 0.0065 (0.0102)  0.9851 +- 0.0065 (0.0101)  1.0023 +- 0.0065 (0.0102)
- 390- 395     18874 1.0101 +- 0.0065 (0.0103)  1.0079 +- 0.0065 (0.0103)  1.0048 +- 0.0065 (0.0102)
- 395- 400     19182 0.9921 +- 0.0063 (0.0101)  0.9938 +- 0.0063 (0.0101)  1.0024 +- 0.0063 (0.0101)
- 400- 405     19012 1.0037 +- 0.0063 (0.0102)  1.0081 +- 0.0063 (0.0102)  0.9955 +- 0.0062 (0.0101)
- 405- 410     19150 0.9861 +- 0.0060 (0.0100)  0.9838 +- 0.0061 (0.0100)  0.9857 +- 0.0061 (0.0100)
- 410- 415     18642 1.0141 +- 0.0062 (0.0104)  1.0112 +- 0.0062 (0.0103)  1.0192 +- 0.0062 (0.0104)
- 415- 420     19073 0.9931 +- 0.0059 (0.0101)  0.9923 +- 0.0059 (0.0101)  0.9913 +- 0.0059 (0.0101)
+bin [GeV]  n(joint)      band seq                                seq_glob_retry                     seq_with_mass
+                     +- (own) ratio +- own [paired] (unpaired)   ratio +- own [paired] (unpaired)   ratio +- own [paired] (unpaired)
+ 316- 326         9    0.3333 0.6667 +- 0.2722 [0.3514] (0.3514) * 0.5556 +- 0.2485 [0.3099] (0.3099) * 0.6667 +- 0.2722 [0.3514] (0.3514) *
+ 326- 331        31    0.1796 1.1613 +- 0.1935 [0.2803] (0.2845) 1.3548 +- 0.2091 [0.3164] (0.3208) * 1.8387 +- 0.2435 [0.4103] (0.4103) *
+ 331- 336       128    0.0884 1.2109 +- 0.0973 [0.1436] (0.1446) * 0.8984 +- 0.0838 [0.1145] (0.1154) 1.0391 +- 0.0901 [0.1277] (0.1286)
+ 336- 338       111    0.0949 0.9550 +- 0.0927 [0.1248] (0.1297) 0.8378 +- 0.0869 [0.1178] (0.1178) 1.0360 +- 0.0966 [0.1379] (0.1378)
+ 338- 340       149    0.0819 1.0537 +- 0.0841 [0.1201] (0.1205) 1.0470 +- 0.0838 [0.1199] (0.1199) 1.1678 +- 0.0885 [0.1299] (0.1303)
+ 340- 342       236    0.0651 0.9576 +- 0.0637 [0.0885] (0.0891) 0.9153 +- 0.0623 [0.0860] (0.0862) 0.9873 +- 0.0647 [0.0906] (0.0912)
+ 342- 344       374    0.0517 0.9332 +- 0.0499 [0.0691] (0.0694) 1.0348 +- 0.0526 [0.0735] (0.0750) 0.9118 +- 0.0494 [0.0673] (0.0683)
+ 344- 345       314    0.0564 0.9713 +- 0.0556 [0.0771] (0.0781) 0.9522 +- 0.0551 [0.0756] (0.0769) 0.9013 +- 0.0536 [0.0733] (0.0739)
+ 345- 346       426    0.0484 1.0258 +- 0.0491 [0.0689] (0.0698) 1.0094 +- 0.0487 [0.0670] (0.0690) 1.0775 +- 0.0503 [0.0703] (0.0725)
+ 346- 347       682    0.0383 0.9883 +- 0.0381 [0.0518] (0.0537) 1.0029 +- 0.0383 [0.0519] (0.0543) 1.0117 +- 0.0385 [0.0517] (0.0546)
+ 347- 348       942    0.0326 1.0212 +- 0.0329 [0.0439] (0.0468) 0.9915 +- 0.0324 [0.0427] (0.0458) 0.9788 +- 0.0322 [0.0426] (0.0453)
+ 348- 349      1173    0.0292 0.9727 +- 0.0288 [0.0381] (0.0404) 1.0145 +- 0.0294 [0.0391] (0.0417) 0.9949 +- 0.0291 [0.0384] (0.0411)
+ 349- 350      1407    0.0266 0.9268 +- 0.0256 [0.0333] (0.0356) 0.9261 +- 0.0256 [0.0333] (0.0356) 0.9545 +- 0.0260 [0.0340] (0.0364)
+ 350- 351      1541    0.0255 1.0474 +- 0.0260 [0.0344] (0.0373) 1.0227 +- 0.0257 [0.0341] (0.0366) 1.0032 +- 0.0255 [0.0338] (0.0361)
+ 351- 352      1629    0.0248 1.0859 +- 0.0258 [0.0349] (0.0373) 1.0780 +- 0.0257 [0.0348] (0.0371) 1.0731 +- 0.0256 [0.0344] (0.0369)
+ 352- 353      1875    0.0231 0.9957 +- 0.0230 [0.0306] (0.0325) 0.9861 +- 0.0229 [0.0301] (0.0323) 0.9883 +- 0.0229 [0.0299] (0.0323)
+ 353- 354      1970    0.0225 0.9924 +- 0.0224 [0.0295] (0.0316) 1.0188 +- 0.0227 [0.0299] (0.0323) 0.9949 +- 0.0225 [0.0295] (0.0317)
+ 354- 355      2160    0.0215 0.9852 +- 0.0213 [0.0279] (0.0301) 0.9676 +- 0.0211 [0.0274] (0.0297) 0.9694 +- 0.0212 [0.0277] (0.0297)
+ 355- 356      2191    0.0213 0.9995 +- 0.0213 [0.0280] (0.0302) 0.9950 +- 0.0213 [0.0278] (0.0301) 1.0402 +- 0.0218 [0.0287] (0.0311)
+ 356- 358      4740    0.0145 1.0156 +- 0.0146 [0.0177] (0.0207) 1.0076 +- 0.0145 [0.0176] (0.0206) 0.9922 +- 0.0144 [0.0175] (0.0204)
+ 358- 360      5219    0.0138 0.9828 +- 0.0137 [0.0166] (0.0193) 0.9989 +- 0.0138 [0.0166] (0.0195) 0.9971 +- 0.0138 [0.0166] (0.0195)
+ 360- 362      5398    0.0136 1.0033 +- 0.0136 [0.0164] (0.0192) 1.0135 +- 0.0137 [0.0165] (0.0194) 1.0204 +- 0.0137 [0.0167] (0.0195)
+ 362- 364      5826    0.0131 0.9950 +- 0.0130 [0.0155] (0.0184) 0.9717 +- 0.0129 [0.0153] (0.0181) 0.9854 +- 0.0130 [0.0155] (0.0183)
+ 364- 366      6036    0.0128 1.0035 +- 0.0129 [0.0154] (0.0182) 1.0262 +- 0.0130 [0.0156] (0.0185) 1.0050 +- 0.0129 [0.0153] (0.0182)
+ 366- 368      6401    0.0125 0.9728 +- 0.0123 [0.0145] (0.0173) 0.9803 +- 0.0123 [0.0146] (0.0174) 1.0011 +- 0.0125 [0.0147] (0.0176)
+ 368- 370      6412    0.0124 1.0098 +- 0.0125 [0.0148] (0.0177) 1.0006 +- 0.0125 [0.0148] (0.0176) 0.9765 +- 0.0123 [0.0145] (0.0173)
+ 370- 372      6557    0.0123 1.0014 +- 0.0123 [0.0145] (0.0174) 1.0079 +- 0.0124 [0.0146] (0.0175) 0.9948 +- 0.0123 [0.0145] (0.0173)
+ 372- 374      6727    0.0122 1.0107 +- 0.0122 [0.0144] (0.0173) 0.9918 +- 0.0121 [0.0142] (0.0171) 1.0242 +- 0.0123 [0.0146] (0.0175)
+ 374- 376      6974    0.0119 0.9881 +- 0.0119 [0.0138] (0.0167) 0.9933 +- 0.0119 [0.0139] (0.0168) 1.0052 +- 0.0120 [0.0141] (0.0169)
+ 376- 378      6978    0.0119 1.0089 +- 0.0120 [0.0139] (0.0170) 1.0162 +- 0.0120 [0.0140] (0.0171) 0.9938 +- 0.0119 [0.0138] (0.0168)
+ 378- 380      7169    0.0118 0.9775 +- 0.0116 [0.0134] (0.0164) 0.9993 +- 0.0118 [0.0136] (0.0166) 0.9933 +- 0.0117 [0.0136] (0.0166)
+ 380- 385     18266    0.0073 1.0080 +- 0.0074 [0.0068] (0.0104) 1.0127 +- 0.0074 [0.0068] (0.0105) 0.9995 +- 0.0073 [0.0068] (0.0104)
+ 385- 390     18880    0.0072 0.9970 +- 0.0072 [0.0065] (0.0102) 0.9851 +- 0.0072 [0.0065] (0.0101) 1.0023 +- 0.0072 [0.0065] (0.0102)
+ 390- 395     18874    0.0072 1.0101 +- 0.0072 [0.0065] (0.0103) 1.0079 +- 0.0072 [0.0065] (0.0103) 1.0048 +- 0.0072 [0.0065] (0.0102)
+ 395- 400     19182    0.0072 0.9921 +- 0.0071 [0.0063] (0.0101) 0.9938 +- 0.0071 [0.0063] (0.0101) 1.0024 +- 0.0072 [0.0063] (0.0101)
+ 400- 405     19012    0.0072 1.0037 +- 0.0072 [0.0063] (0.0102) 1.0081 +- 0.0072 [0.0063] (0.0102) 0.9955 +- 0.0072 [0.0062] (0.0101)
+ 405- 410     19150    0.0072 0.9861 +- 0.0071 [0.0060] (0.0100) 0.9838 +- 0.0071 [0.0061] (0.0100) 0.9857 +- 0.0071 [0.0061] (0.0100)
+ 410- 415     18642    0.0073 1.0141 +- 0.0073 [0.0062] (0.0104) 1.0112 +- 0.0073 [0.0062] (0.0103) 1.0192 +- 0.0073 [0.0062] (0.0104)
+ 415- 420     19073    0.0072 0.9931 +- 0.0071 [0.0059] (0.0101) 0.9923 +- 0.0071 [0.0059] (0.0101) 0.9913 +- 0.0071 [0.0059] (0.0101)
    * = outside the pane's +-20 %, drawn there as a boundary triangle.
+   "band" and "+- own" are what the figure DRAWS; "[paired]" is
+   what to quote.  Band and bar in quadrature reproduces the
+   "(unpaired)" column, which is the wrong, too-large answer.
 
-   what the pane says, summed over the plotted range 316-420 GeV:
+   what the pane says, summed over the plotted range 316-420 GeV.
+   Built on the PAIRED error, not on the bars the figure draws:
+   this is a statement about a difference, so it needs the error on
+   the difference.  Combining the band and a bar in quadrature
+   instead inflates it by a median factor 1.16, which would shrink
+   every chi2 below by 26 % and could hide a real departure.
    cell                   chi2      ndf   chi2/ndf    how far off
    PA_seq                 47.4       39      1.215          +0.9 s
    PA_globalretry         56.4       39      1.445          +2.0 s
@@ -409,18 +441,42 @@ bin [GeV]  n(joint) seq                        seq_glob_retry             seq_wi
    own total sigma first, so this is a shape ratio and the
    overweight rate carry is divided out of it.
 
-   ERRORS ARE PAIRED.  The cells decay the SAME production events
-   in the same order (max |Delta sqrt(shat)| = 0 GeV over 500 000
-   pairs), so the production fluctuation is common to numerator and
-   denominator and cancels.  The covariance is MEASURED on these
-   very bins by "run_mtt_unweighting.py --stage paired-bins", which
-   counts how many production events land in the SAME bin under
-   both cells; a per-window coincidence count cannot answer this,
-   because an event can be in one window under both schemes and in
-   a different bin under each.
-   The "unpaired" column drops the covariance term -- it is what an
-   independent-samples error bar would have been, and the ratio of
-   the two is what the shared production sample bought, per bin.
+   THREE ERRORS PER BIN, AND THEY ANSWER DIFFERENT QUESTIONS.
+
+   "own"      -- what the FIGURE now draws.  Each curve's own
+                 statistical error, and the band around 1 is
+                 ms_joint's own (the "band" column).  Delta method:
+                     var(R) = sum_i (n_i - R d_i)^2 / D^2,
+                 the linearised error of a self-normalised
+                 histogram, in which the bin is a SUBSET of the
+                 sigma it is divided by.  It returns zero when the
+                 bin is proportional to the normalisation, which a
+                 plain sqrt(sum w^2) does not; the naive form is
+                 0.23 % too large on these bins.
+                 DO NOT add the band and a bar in quadrature.  That
+                 discards the correlation below and OVERESTIMATES
+                 the error on the difference.
+
+   "paired"   -- the CORRECT error on the difference between a
+                 scheme and ms_joint, and the one to quote for any
+                 significance.  The cells decay the SAME production
+                 events in the same order (max |Delta sqrt(shat)| =
+                 0 GeV over 500 000 pairs), so the production
+                 fluctuation is common to numerator and denominator
+                 and cancels.  The covariance is MEASURED on these
+                 very bins by "run_mtt_unweighting.py --stage
+                 paired-bins", which counts how many production
+                 events land in the SAME bin under both cells; a
+                 per-window coincidence count cannot answer this,
+                 because an event can be in one window under both
+                 schemes and in a different bin under each.
+
+   "unpaired" -- the paired error with the covariance term dropped:
+                 what an independent-samples bar would have been.
+                 The ratio of it to "paired" is what the shared
+                 production sample bought, per bin.  It is also
+                 what band-and-bar-in-quadrature amounts to, which
+                 is why that reading is wrong.
 
    madspin: PARTLY paired.  ms_joint is decayed from 1 000 000 production events; 
    the other cells hold 500 000, a FRONT TRUNCATION of the same file, so the
@@ -430,50 +486,58 @@ bin [GeV]  n(joint) seq                        seq_glob_retry             seq_wi
    pairing gain is smaller in this row than in PA.
 
    joint = joint,  seq = sequential,  seq_glob_retry = sequential_global_retry
-bin [GeV]  n(joint) seq                        seq_glob_retry
-                    ratio +- paired (unpaired) ratio +- paired (unpaired)
- 316- 326         1 -                          6.0177 +- 6.9487 (6.9487) *
- 326- 331        32 0.6268 +- 0.2271 (0.2271) * 0.5015 +- 0.1982 (0.1982) *
- 331- 336        85 1.0619 +- 0.1943 (0.1958)  0.9912 +- 0.1855 (0.1869)
- 336- 338        68 1.1209 +- 0.2270 (0.2270)  1.2389 +- 0.2431 (0.2431) *
- 338- 340       119 1.1125 +- 0.1707 (0.1707)  1.1294 +- 0.1725 (0.1725)
- 340- 342       161 1.3705 +- 0.1695 (0.1695) * 0.8846 +- 0.1255 (0.1260)
- 342- 344       296 0.9623 +- 0.0973 (0.0982)  0.8539 +- 0.0902 (0.0908)
- 344- 345       262 0.9494 +- 0.1024 (0.1035)  1.0795 +- 0.1119 (0.1127)
- 345- 346       377 1.0748 +- 0.0911 (0.0937)  1.0163 +- 0.0883 (0.0902)
- 346- 347       599 1.0281 +- 0.0696 (0.0721)  1.0883 +- 0.0717 (0.0750)
- 347- 348       901 0.9729 +- 0.0541 (0.0567)  0.9840 +- 0.0551 (0.0571)
- 348- 349      1107 1.0002 +- 0.0501 (0.0521)  0.9948 +- 0.0499 (0.0519)
- 349- 350      1294 0.9502 +- 0.0448 (0.0466)  0.9626 +- 0.0449 (0.0470)
- 350- 351      1494 1.0064 +- 0.0427 (0.0450)  0.9622 +- 0.0414 (0.0437)
- 351- 352      1690 0.9685 +- 0.0394 (0.0413)  0.9970 +- 0.0403 (0.0421)
- 352- 353      1834 0.9942 +- 0.0383 (0.0403)  0.9931 +- 0.0381 (0.0403)
- 353- 354      1949 0.9757 +- 0.0369 (0.0386)  0.9747 +- 0.0368 (0.0386)
- 354- 355      2024 1.0099 +- 0.0372 (0.0388)  1.0357 +- 0.0376 (0.0394)
- 355- 356      2195 0.9676 +- 0.0345 (0.0362)  0.9969 +- 0.0353 (0.0369)
- 356- 358      4773 0.9893 +- 0.0225 (0.0249)  1.0162 +- 0.0229 (0.0253)
- 358- 360      5077 1.0057 +- 0.0221 (0.0244)  0.9702 +- 0.0216 (0.0238)
- 360- 362      5323 1.0118 +- 0.0217 (0.0239)  1.0095 +- 0.0216 (0.0239)
- 362- 364      5820 0.9899 +- 0.0203 (0.0225)  0.9943 +- 0.0203 (0.0226)
- 364- 366      6057 1.0001 +- 0.0200 (0.0222)  1.0035 +- 0.0200 (0.0223)
- 366- 368      6228 1.0226 +- 0.0199 (0.0222)  1.0145 +- 0.0199 (0.0221)
- 368- 370      6378 1.0060 +- 0.0196 (0.0217)  0.9802 +- 0.0191 (0.0214)
- 370- 372      6717 1.0040 +- 0.0187 (0.0211)  0.9927 +- 0.0186 (0.0210)
- 372- 374      6770 0.9541 +- 0.0181 (0.0204)  0.9947 +- 0.0186 (0.0209)
- 374- 376      7059 0.9688 +- 0.0179 (0.0201)  0.9671 +- 0.0180 (0.0201)
- 376- 378      6910 1.0203 +- 0.0187 (0.0210)  1.0493 +- 0.0190 (0.0214)
- 378- 380      7097 1.0234 +- 0.0184 (0.0208)  0.9793 +- 0.0180 (0.0202)
- 380- 385     18408 0.9826 +- 0.0099 (0.0125)  0.9875 +- 0.0099 (0.0126)
- 385- 390     18932 0.9892 +- 0.0096 (0.0124)  1.0078 +- 0.0098 (0.0125)
- 390- 395     18877 1.0183 +- 0.0098 (0.0126)  0.9958 +- 0.0097 (0.0125)
- 395- 400     19158 0.9922 +- 0.0095 (0.0123)  0.9904 +- 0.0096 (0.0123)
- 400- 405     19056 0.9972 +- 0.0095 (0.0124)  1.0054 +- 0.0096 (0.0125)
- 405- 410     19075 0.9990 +- 0.0095 (0.0124)  0.9987 +- 0.0095 (0.0124)
- 410- 415     18875 0.9953 +- 0.0094 (0.0125)  0.9897 +- 0.0094 (0.0124)
- 415- 420     18957 0.9979 +- 0.0094 (0.0125)  1.0071 +- 0.0094 (0.0125)
+bin [GeV]  n(joint)      band seq                                seq_glob_retry
+                     +- (own) ratio +- own [paired] (unpaired)   ratio +- own [paired] (unpaired)
+ 316- 326         1    1.0000 -                                  6.0177 +- 3.4743 [6.9487] (6.9487) *
+ 326- 331        32    0.1768 0.6268 +- 0.1982 [0.2271] (0.2271) * 0.5015 +- 0.1773 [0.1982] (0.1982) *
+ 331- 336        85    0.1085 1.0619 +- 0.1583 [0.1943] (0.1958) 0.9912 +- 0.1529 [0.1855] (0.1869)
+ 336- 338        68    0.1213 1.1209 +- 0.1818 [0.2270] (0.2270) 1.2389 +- 0.1912 [0.2431] (0.2431) *
+ 338- 340       119    0.0917 1.1125 +- 0.1369 [0.1707] (0.1707) 1.1294 +- 0.1380 [0.1725] (0.1725)
+ 340- 342       161    0.0788 1.3705 +- 0.1307 [0.1695] (0.1695) * 0.8846 +- 0.1050 [0.1255] (0.1260)
+ 342- 344       296    0.0581 0.9623 +- 0.0807 [0.0973] (0.0982) 0.8539 +- 0.0761 [0.0902] (0.0908)
+ 344- 345       262    0.0618 0.9494 +- 0.0852 [0.1024] (0.1035) 1.0795 +- 0.0909 [0.1119] (0.1127)
+ 345- 346       377    0.0515 1.0748 +- 0.0756 [0.0911] (0.0937) 1.0163 +- 0.0735 [0.0883] (0.0902)
+ 346- 347       599    0.0408 1.0281 +- 0.0587 [0.0696] (0.0721) 1.0883 +- 0.0604 [0.0717] (0.0750)
+ 347- 348       901    0.0333 0.9729 +- 0.0465 [0.0541] (0.0567) 0.9840 +- 0.0468 [0.0551] (0.0571)
+ 348- 349      1107    0.0300 1.0002 +- 0.0425 [0.0501] (0.0521) 0.9948 +- 0.0424 [0.0499] (0.0519)
+ 349- 350      1294    0.0278 0.9502 +- 0.0384 [0.0448] (0.0466) 0.9626 +- 0.0386 [0.0449] (0.0470)
+ 350- 351      1494    0.0259 1.0064 +- 0.0367 [0.0427] (0.0450) 0.9622 +- 0.0359 [0.0414] (0.0437)
+ 351- 352      1690    0.0243 0.9685 +- 0.0339 [0.0394] (0.0413) 0.9970 +- 0.0344 [0.0403] (0.0421)
+ 352- 353      1834    0.0233 0.9942 +- 0.0329 [0.0383] (0.0403) 0.9931 +- 0.0329 [0.0381] (0.0403)
+ 353- 354      1949    0.0227 0.9757 +- 0.0316 [0.0369] (0.0386) 0.9747 +- 0.0316 [0.0368] (0.0386)
+ 354- 355      2024    0.0222 1.0099 +- 0.0316 [0.0372] (0.0388) 1.0357 +- 0.0320 [0.0376] (0.0394)
+ 355- 356      2195    0.0213 0.9676 +- 0.0297 [0.0345] (0.0362) 0.9969 +- 0.0301 [0.0353] (0.0369)
+ 356- 358      4773    0.0144 0.9893 +- 0.0203 [0.0225] (0.0249) 1.0162 +- 0.0206 [0.0229] (0.0253)
+ 358- 360      5077    0.0140 1.0057 +- 0.0199 [0.0221] (0.0244) 0.9702 +- 0.0195 [0.0216] (0.0238)
+ 360- 362      5323    0.0137 1.0118 +- 0.0195 [0.0217] (0.0239) 1.0095 +- 0.0195 [0.0216] (0.0239)
+ 362- 364      5820    0.0131 0.9899 +- 0.0184 [0.0203] (0.0225) 0.9943 +- 0.0185 [0.0203] (0.0226)
+ 364- 366      6057    0.0128 1.0001 +- 0.0181 [0.0200] (0.0222) 1.0035 +- 0.0182 [0.0200] (0.0223)
+ 366- 368      6228    0.0126 1.0226 +- 0.0181 [0.0199] (0.0222) 1.0145 +- 0.0180 [0.0199] (0.0221)
+ 368- 370      6378    0.0125 1.0060 +- 0.0177 [0.0196] (0.0217) 0.9802 +- 0.0175 [0.0191] (0.0214)
+ 370- 372      6717    0.0122 1.0040 +- 0.0173 [0.0187] (0.0211) 0.9927 +- 0.0172 [0.0186] (0.0210)
+ 372- 374      6770    0.0121 0.9541 +- 0.0168 [0.0181] (0.0204) 0.9947 +- 0.0171 [0.0186] (0.0209)
+ 374- 376      7059    0.0120 0.9688 +- 0.0165 [0.0179] (0.0201) 0.9671 +- 0.0165 [0.0180] (0.0201)
+ 376- 378      6910    0.0124 1.0203 +- 0.0171 [0.0187] (0.0210) 1.0493 +- 0.0174 [0.0190] (0.0214)
+ 378- 380      7097    0.0118 1.0234 +- 0.0169 [0.0184] (0.0208) 0.9793 +- 0.0166 [0.0180] (0.0202)
+ 380- 385     18408    0.0073 0.9826 +- 0.0102 [0.0099] (0.0125) 0.9875 +- 0.0103 [0.0099] (0.0126)
+ 385- 390     18932    0.0072 0.9892 +- 0.0101 [0.0096] (0.0124) 1.0078 +- 0.0102 [0.0098] (0.0125)
+ 390- 395     18877    0.0072 1.0183 +- 0.0103 [0.0098] (0.0126) 0.9958 +- 0.0102 [0.0097] (0.0125)
+ 395- 400     19158    0.0072 0.9922 +- 0.0101 [0.0095] (0.0123) 0.9904 +- 0.0101 [0.0096] (0.0123)
+ 400- 405     19056    0.0072 0.9972 +- 0.0101 [0.0095] (0.0124) 1.0054 +- 0.0102 [0.0096] (0.0125)
+ 405- 410     19075    0.0072 0.9990 +- 0.0101 [0.0095] (0.0124) 0.9987 +- 0.0101 [0.0095] (0.0124)
+ 410- 415     18875    0.0072 0.9953 +- 0.0102 [0.0094] (0.0125) 0.9897 +- 0.0102 [0.0094] (0.0124)
+ 415- 420     18957    0.0072 0.9979 +- 0.0102 [0.0094] (0.0125) 1.0071 +- 0.0102 [0.0094] (0.0125)
    * = outside the pane's +-20 %, drawn there as a boundary triangle.
+   "band" and "+- own" are what the figure DRAWS; "[paired]" is
+   what to quote.  Band and bar in quadrature reproduces the
+   "(unpaired)" column, which is the wrong, too-large answer.
 
-   what the pane says, summed over the plotted range 316-420 GeV:
+   what the pane says, summed over the plotted range 316-420 GeV.
+   Built on the PAIRED error, not on the bars the figure draws:
+   this is a statement about a difference, so it needs the error on
+   the difference.  Combining the band and a bar in quadrature
+   instead inflates it by a median factor 1.10, which would shrink
+   every chi2 below by 18 % and could hide a real departure.
    cell                   chi2      ndf   chi2/ndf    how far off
    ms_seq                 36.5       38      0.960          -0.2 s
    ms_globalretry         38.5       39      0.986          -0.1 s
@@ -523,6 +587,14 @@ bin [GeV]  n(joint) seq                        seq_glob_retry
    that off the pane is a comparison of two CURVES, not of a curve with
    the line, and that comparison is where the shared denominator's own
    fluctuation drops out.
+
+   THE FIGURE'S BARS CANNOT GIVE THIS NUMBER.  What the pane draws is
+   each curve's OWN statistical error, and the band is joint's own.
+   Those are per-curve statistics; the significance of a DIFFERENCE
+   needs the paired error, because the cells share their production
+   events and fluctuate together.  The table below is that error, and
+   it is what to quote.  Anything read by eye off the bars -- band and
+   bar overlapping or not -- is the too-large, uncorrelated answer.
 
    Integrated, from the paired window counts (exact; the per-bin chi2
    above cannot be turned into a significance because its bins are
