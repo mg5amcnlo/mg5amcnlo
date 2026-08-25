@@ -63,6 +63,28 @@ Note that `M(e+ mu+)` holds even in its **own** large-K bin: at
 260–450 GeV `K` itself reaches 2.2–2.3, and the ratio there is still
 0.945 ± 0.055. A large K-factor is not by itself a symmetry violation.
 
+### "Integrated they are equal" is true of the *inclusive* integral only
+
+The premise this question started from — that `ZZ` exchange symmetry forces
+`K(Z_0Z_T) = K(Z_TZ_0)` — holds for the integral over **all** events, with no
+selection, and there it does hold: 1.3608 ± 0.0063 against 1.3601 ± 0.0063.
+It does **not** survive integration over an asymmetric fiducial, and it is
+worth saying so explicitly because an experimenter's "integrated" number is
+always inside some fiducial:
+
+| integral over | `Z_TZ_0/Z_0Z_T`, LO | `Z_TZ_0/Z_0Z_T`, NLO |
+|---|---|---|
+| the `M(e+ mu+)` four-lepton fiducial | 1.0042 ± 0.0036 (1.2σ) | 0.9957 ± 0.0045 (1.0σ) |
+| the `Δφ(e+e-)` two-lepton fiducial | 0.9857 ± 0.0032 (**4.5σ**) | 0.9684 ± 0.0039 (**8.1σ**) |
+
+The `Δφ` selection keeps only the two electrons and leaves the muon `Z`
+unconstrained, so it is itself an asymmetric cut and it breaks the degeneracy
+even before any binning. This is the same 8σ that `RESULTS.md`'s "`TL` versus
+`LT`" section found and read correctly; it is restated here because the
+K-factor question is usually posed as if the integral were protected.
+Corresponding K-factors inside those fiducials: `M(e+ mu+)` gives
+`K(Z_0Z_T) = 1.360`, `K(Z_TZ_0) = 1.348`; `Δφ(e+e-)` gives 1.378 and 1.353.
+
 ---
 
 ## The index mapping is the way round everyone assumed — measured, not read
