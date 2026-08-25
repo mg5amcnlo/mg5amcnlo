@@ -141,7 +141,8 @@ from run_mtt_unweighting import CELLS, CELL_SCHEME     # noqa: E402
 
 # The pane's clip.  See the module docstring: same criterion as the m_tt
 # figure's +-20 %, different observable, different answer.
-RCLIP_LO, RCLIP_HI = 0.90, 1.10
+RCLIP_LO, RCLIP_HI = 0.80, 1.20   # matches plot_mtt_unweighting, so the two
+#                                   figures sit side by side on the same scale
 
 # The marker ``numbers.txt`` is cut back to before this section is appended, so
 # running this script twice does not append twice.

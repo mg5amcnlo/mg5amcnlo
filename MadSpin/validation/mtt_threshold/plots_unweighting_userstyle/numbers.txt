@@ -843,7 +843,7 @@ window                             pair                        ratio    sigma
 
 ==============================================================================
 -- 5.PA per-bin SHAPE ratio to PA_joint -- THIS IS THE FIGURE'S RATIO PANE --
-   UNCLIPPED.  The pane clips to +-10 %; a value outside it is
+   UNCLIPPED.  The pane clips to +-20 %; a value outside it is
    drawn ON the boundary as a triangle pointing the way it went and
    its real value is here, flagged with a star.
 
@@ -923,7 +923,7 @@ window                             pair                        ratio    sigma
  190.898- 192.389       1860    0.0232 1.0263 +- 0.0235 [0.0334]        1.0016 +- 0.0232 [0.0328]        1.0097 +- 0.0233 [0.0330]
  192.389- 193.881       1566    0.0253 1.0524 +- 0.0259 [0.0371]        1.0134 +- 0.0254 [0.0361]        1.0198 +- 0.0255 [0.0363]
  193.881- 195.373       1410    0.0266 0.9837 +- 0.0264 [0.0372]        1.0262 +- 0.0270 [0.0384]        1.0014 +- 0.0266 [0.0377]
-   * = outside the pane's +-10 %, drawn there as a boundary triangle.
+   * = outside the pane's +-20 %, drawn there as a boundary triangle.
 
    -- the pane as numbers, on the "diff" error ---
    pair                                    chi2    ndf  chi2/ndf how far off    delta [GeV]
@@ -942,7 +942,7 @@ window                             pair                        ratio    sigma
 
 ==============================================================================
 -- 5.MS per-bin SHAPE ratio to ms_joint -- THIS IS THE FIGURE'S RATIO PANE --
-   UNCLIPPED.  The pane clips to +-10 %; a value outside it is
+   UNCLIPPED.  The pane clips to +-20 %; a value outside it is
    drawn ON the boundary as a triangle pointing the way it went and
    its real value is here, flagged with a star.
 
@@ -961,7 +961,7 @@ window                             pair                        ratio    sigma
         bin [GeV]   n(joint)      band seq                              seq_glob_retry
                               +- (own) ratio +- own [diff]              ratio +- own [diff]
  150.627- 152.119       1173    0.0632 1.0329 +- 0.0363 [0.0747]        0.9882 +- 0.0354 [0.0718]
- 152.119- 153.611       1348    0.0826 0.9140 +- 0.0310 [0.0816]        0.8874 +- 0.0306 [0.0794] *
+ 152.119- 153.611       1348    0.0826 0.9140 +- 0.0310 [0.0816]        0.8874 +- 0.0306 [0.0794]
  153.611- 155.102       1560    0.0410 1.0048 +- 0.0330 [0.0528]        1.0438 +- 0.0336 [0.0544]
  155.102- 156.594       1904    0.0449 0.9762 +- 0.0292 [0.0527]        0.9757 +- 0.0292 [0.0527]
  156.594- 158.085       2256    0.0465 0.9858 +- 0.0274 [0.0534]        0.9813 +- 0.0273 [0.0532]
@@ -1016,13 +1016,13 @@ window                             pair                        ratio    sigma
  183.440- 184.435       4860    0.0156 1.0172 +- 0.0204 [0.0259]        0.9984 +- 0.0202 [0.0255]
  184.435- 185.429       4122    0.0156 1.0394 +- 0.0225 [0.0277]        1.0176 +- 0.0222 [0.0273]
  185.429- 186.423       3800    0.0168 1.0113 +- 0.0230 [0.0286]        0.9987 +- 0.0229 [0.0283]
- 186.423- 187.915       4536    0.0148 1.1160 +- 0.0222 [0.0277] *      1.0515 +- 0.0215 [0.0266]
+ 186.423- 187.915       4536    0.0148 1.1160 +- 0.0222 [0.0277]        1.0515 +- 0.0215 [0.0266]
  187.915- 189.406       3941    0.0159 1.0037 +- 0.0226 [0.0277]        1.0037 +- 0.0226 [0.0277]
  189.406- 190.898       3418    0.0171 0.9593 +- 0.0237 [0.0288]        0.9822 +- 0.0240 [0.0293]
  190.898- 192.389       2900    0.0186 1.0936 +- 0.0275 [0.0342]        1.0627 +- 0.0271 [0.0335]
  192.389- 193.881       2539    0.0199 0.9829 +- 0.0278 [0.0340]        0.9979 +- 0.0280 [0.0344]
  193.881- 195.373       2362    0.0206 0.9444 +- 0.0283 [0.0343]        0.9681 +- 0.0287 [0.0349]
-   * = outside the pane's +-10 %, drawn there as a boundary triangle.
+   * = outside the pane's +-20 %, drawn there as a boundary triangle.
 
    -- the pane as numbers, on the "diff" error ---
    pair                                    chi2    ndf  chi2/ndf how far off    delta [GeV]
