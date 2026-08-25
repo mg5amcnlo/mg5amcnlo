@@ -508,13 +508,29 @@ def draw_ratio6(nlo, lo, obs, outdir, with_band=False):
     oname = PA.RATIO6_ORDER_TXT
     cur = PA.ratio6_curves(nlo, lo, obs, with_band=with_band)
 
-    fig = plt.figure(figsize=(9.4, 13.6))
+    fig = plt.figure(figsize=(9.4, 12.85))
     # Two vertical rhythms, so two gridspecs: see plot_zz_pol.draw_ratio6.  The
     # wide pane on top carries its own x tick labels and its own axis name and
-    # is set off from the 3 x 2 by the outer gap; the 3 x 2 keeps exactly the
-    # geometry it had before this pane existed.
-    outer = fig.add_gridspec(2, 1, height_ratios=[2.9, 10.4], hspace=0.09)
-    gs = outer[1].subgridspec(3, 2, hspace=0.07, wspace=0.30)
+    # is set off from the 3 x 2 by the outer gap.
+    #
+    # The share-out is the MG7 figure's, kept in step with it on purpose: the
+    # wide pane takes 4.3 of the outer 12.85 where it took 2.9 of 13.3, and the
+    # grid's rows stop being equal -- 3.55 for the sum-consistency and
+    # K-factor row, 2.5 for each of the two fraction rows, which are flat
+    # enough to read at that height.  The figure shrinks, 13.6 in to 12.85 in.
+    # Height in inches, pane then row 1 then rows 2-3: 2.19 -> 3.15,
+    # 2.50 -> 2.49, 2.50 -> 1.75.
+    # The top row keeps MORE than its MG7 counterpart's 3.3 for one reason:
+    # this style writes the sum-consistency axis name as plain text with
+    # spaces, (Z0Z0 + ZTZT + ZTZ0 + Z0ZT) / full, which set rotated is longer
+    # than the mathtext MG7 sets, and at 3.15 it came within 0.07 in of the
+    # frame.  Measured, label extent against axes extent, not guessed.
+    # The outer hspace is a fraction of the MEAN row height, so it moves with
+    # the ratios: 0.10 of the new mean buys back the gap 0.09 of the old one
+    # gave, which is what keeps the pane's axis name off the grid.
+    outer = fig.add_gridspec(2, 1, height_ratios=[4.3, 8.55], hspace=0.10)
+    gs = outer[1].subgridspec(3, 2, height_ratios=[3.55, 2.5, 2.5],
+                              hspace=0.07, wspace=0.30)
     axtop = fig.add_subplot(outer[0])
     axes = []
     for r in range(3):

@@ -2155,22 +2155,48 @@ def draw_ratio6(nlo, lo, obs, outdir, with_band=False):
     oname = PA.RATIO6_ORDER_TEX if USETEX else PA.RATIO6_ORDER_TXT
     cur = PA.ratio6_curves(nlo, lo, obs, with_band=with_band)
 
-    fig = plt.figure(figsize=(9.0, 13.4))
+    fig = plt.figure(figsize=(9.0, 12.6))
     # TWO vertical rhythms, so two gridspecs and not one, on exactly the
     # argument ``draw`` makes for its three: the wide pane on top is its own
     # block with its own x tick labels and its own axis name, and the 3 x 2
     # below is a second block with its own.  A single hspace over four rows
     # would have to be either tight enough to crush the wide pane's axis name
     # into the grid's top row or wide enough to tear the grid's own rows
-    # apart, and there is no value that is both.  The outer gap is a fraction
-    # of the MEAN row height, and the two rows here are very unequal (2.9 in
-    # against 10.2 in), so 0.09 of the 6.55 in mean is the ~0.6 in that clears
-    # the wide pane's tick labels and axis name.  Checked on the rendered PNG.
-    outer = fig.add_gridspec(2, 1, height_ratios=[2.9, 10.2], hspace=0.09)
-    # The 3 x 2 keeps the K-factor figure's geometry exactly: its right column
+    # apart, and there is no value that is both.
+    #
+    # THE SHARE-OUT, and it is deliberately uneven three ways.  The wide pane
+    # spans 4.18 decades on M(e+ mu+) and 2.79 on Delta phi and carries ten
+    # curves; the four fraction panes are nearly flat and nearly band-free and
+    # read the same at seven tenths the height.  So the pane takes 4.3 of the
+    # outer 12.6 where it took 2.9 of 13.1, and the grid's own rows are no
+    # longer equal: the sum-consistency and K-factor row keeps 3.3 against the
+    # fraction rows' 2.5 each.  Height in inches, pane then row 1 then rows
+    # 2-3: 2.19 -> 3.17, 2.45 -> 2.31, 2.45 -> 1.75.  The figure gets SHORTER,
+    # 13.4 in to 12.6 in, which is the point -- the pane grows out of the
+    # fraction rows and not out of the page.
+    #
+    # WHY THE GRID'S TOP ROW IS NOT CUT AS HARD.  Its left pane's axis name is
+    # (Z_0Z_0+Z_TZ_T+Z_TZ_0+Z_0Z_T)/full, which is set ROTATED and is by some
+    # way the longest string on the figure: at 3.1 it came within 0.14 in of
+    # the frame top and bottom, at 3.3 it clears them by 0.21 in.  The four
+    # fraction panes carry one short name each and clear by over an inch even
+    # at 2.5, which is why the height comes off them.  Measured on the
+    # rendered figure, label extent against axes extent.
+    #
+    # The outer gap is a fraction of the MEAN row height and the two rows are
+    # very unequal, so the fraction has to move when the ratios do: 0.10 of the
+    # new 6.30 mean is the same ~0.46 in of gap that 0.09 of the old 6.55 mean
+    # bought, and that is what clears the wide pane's tick labels and axis
+    # name.  Checked on the rendered PNG, not arithmetically.
+    outer = fig.add_gridspec(2, 1, height_ratios=[4.3, 8.3], hspace=0.10)
+    # The 3 x 2 keeps the K-factor figure's wspace exactly: its right column
     # carries five-significant-figure tick labels, which at the default wspace
-    # put the right axis name on the left column's frame.
-    gs = outer[1].subgridspec(3, 2, hspace=0.07, wspace=0.30)
+    # put the right axis name on the left column's frame.  hspace stays 0.07 --
+    # rows 1 and 2 have their x tick labels off, so nothing but frame sits in
+    # those two gaps and they do not need to grow back what the shorter rows
+    # take off them.
+    gs = outer[1].subgridspec(3, 2, height_ratios=[3.3, 2.5, 2.5],
+                              hspace=0.07, wspace=0.30)
     axtop = fig.add_subplot(outer[0])
     axes = []
     for r in range(3):
