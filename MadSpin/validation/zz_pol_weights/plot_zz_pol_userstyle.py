@@ -53,7 +53,8 @@ _HERE = os.path.dirname(os.path.abspath(__file__))
 if _HERE not in sys.path:
     sys.path.insert(0, _HERE)
 import pol_analysis as PA                                        # noqa: E402
-from plot_zz_pol import _ratio_ylim, _shape_ylim                 # noqa: E402
+from plot_zz_pol import (_ratio_ylim, _shape_ylim,               # noqa: E402
+                         _ratio6_ylim)
 
 # ``plot_zz_pol`` imports the MG7-style module, which sets the paper rcParams
 # (serif / usetex) at import time; they are reset here because the user's style
@@ -402,6 +403,133 @@ def draw_kfactor(nlo, lo, obs, outdir):
     return base
 
 
+# --------------------------------------------------------------------------
+# The two six-panel ratio figures in the user style.  Same panels, same
+# objects, same conventions as plot_zz_pol.draw_ratio6 -- see that docstring
+# for what each panel is, which error goes on which curve, and why the K panel
+# carries no reference line.  Only the rendering differs.
+#
+# The +-2 % / +-5 % tolerance bands of this style's other ratio panes are NOT
+# here.  Those are drawn about 1 on a quantity that ought to BE 1; on these
+# panels only the sum pane is such a quantity, and putting a shaded tolerance
+# behind a shaded SCALE band would make the two unreadable against each other
+# on the one pane that carries both.  The sum pane keeps its dashed rule at 1
+# and loses the two tolerance bands, and this is the reason.
+BAND_ALPHA = 0.20
+BAND_ALPHA_K = 0.14
+KF6_HEADROOM_K = 0.40
+
+
+def _band(ax, edges, lo, hi, color, alpha, zorder=1):
+    """A scale band on the same step grid ``_step`` draws on.
+
+    ``_step`` plots ``where='pre'`` after repeating the first value, so cell
+    ``i`` spans ``[edges[i], edges[i+1]]``; ``fill_between(step='post')`` with
+    ``x = edges`` and the LAST value repeated spans the same cells.  The two
+    conventions meet in the middle and the band lands under its own curve
+    rather than half a bin off it.
+    """
+    lo = np.asarray(lo, dtype=float)
+    hi = np.asarray(hi, dtype=float)
+    ax.fill_between(edges, np.concatenate([lo, lo[-1:]]),
+                    np.concatenate([hi, hi[-1:]]), step='post',
+                    facecolor=color, alpha=alpha, lw=0.0, zorder=zorder)
+
+
+def draw_ratio6(nlo, lo, obs, outdir, with_band=False):
+    """Variant A as a 3 x 2 of ratios, in the user style."""
+    edges = PA.BINS[obs]
+    x = 0.5 * (edges[:-1] + edges[1:])
+    xlab = PA.LABELS_TXT[obs][0]
+    rlab = PA.RATIO_TXT
+    oname = PA.RATIO6_ORDER_TXT
+    cur = PA.ratio6_curves(nlo, lo, obs, with_band=with_band)
+
+    fig = plt.figure(figsize=(9.4, 10.4))
+    gs = fig.add_gridspec(3, 2, hspace=0.07, wspace=0.30)
+    axes = []
+    for r in range(3):
+        for cc in range(2):
+            axes.append(fig.add_subplot(gs[r, cc],
+                                        sharex=axes[cc] if r else None))
+
+    def ratio_pane(ax, pane, anchor_line):
+        col = COLOR[pane] if pane != 'SUM' else COLOR['SUM']
+        series = []
+        for tag in PA.RATIO6_ORDERS:
+            h = cur[pane][tag]
+            r, e = np.asarray(h['r'], float), np.asarray(h['err'], float)
+            blo = h.get('lo') if with_band else None
+            bhi = h.get('hi') if with_band else None
+            if with_band:
+                _band(ax, edges, blo, bhi, col, BAND_ALPHA,
+                      zorder=2 if tag == 'NLO' else 1)
+            _step(ax, edges, r, color=col, lw=1.3, ls=LS_ORDER[tag],
+                  alpha=1.0 if tag == 'NLO' else STEP_ALPHA,
+                  zorder=4 if tag == 'NLO' else 3)
+            ax.errorbar(x, r, yerr=e, fmt='o' if tag == 'NLO' else 's',
+                        ms=MS - 0.5, mfc='none' if tag == 'LO' else None,
+                        color=col, label=oname[tag],
+                        zorder=6 if tag == 'NLO' else 5)
+            series.append((r, e, blo, bhi))
+        if anchor_line is not None:
+            ax.axhline(anchor_line, color=C_REF, lw=1.0,
+                       ls=':' if pane == 'SUM' else '--', zorder=2)
+        ax.set_ylim(*_ratio6_ylim(series, anchor_line, head=0.24))
+        ax.set_ylabel(rlab[pane], fontsize=8 if pane == 'SUM' else 9)
+        ax.set_xlim(edges[0], edges[-1])
+        ax.tick_params(labelsize=8.5)
+        ax.yaxis.set_major_locator(MaxNLocator(5))
+        ax.legend(loc='best', fontsize=8, ncol=2)
+
+    ratio_pane(axes[0], 'SUM', 1.0)
+    for sp in axes[0].spines.values():
+        sp.set_linewidth(1.6)
+
+    axk = axes[1]
+    kseries = []
+    for key in PA.KF_PANE_ORDER:
+        kk = cur['K'][key]
+        k, e = np.asarray(kk['k'], float), np.asarray(kk['err'], float)
+        blo = kk.get('lo') if with_band else None
+        bhi = kk.get('hi') if with_band else None
+        if with_band:
+            _band(axk, edges, blo, bhi, COLOR[key], BAND_ALPHA_K,
+                  zorder=2 if key == 'full' else 1)
+        _step(axk, edges, k, color=COLOR[key], lw=1.2, ls=LS_COMP[key],
+              alpha=0.85, zorder=3)
+        axk.errorbar(x, k, yerr=e, fmt='o', ms=MS, color=COLOR[key],
+                     label=PA.KF_CURVE_TXT[key], zorder=4)
+        kseries.append((k, e, blo, bhi))
+    axk.set_ylim(*_ratio6_ylim(kseries, None, head=KF6_HEADROOM_K))
+    axk.set_ylabel(PA.KFACTOR_TXT, fontsize=9)
+    axk.set_xlim(edges[0], edges[-1])
+    axk.legend(loc='upper left', fontsize=8, ncol=3)
+    axk.yaxis.set_major_locator(MaxNLocator(6))
+    axk.tick_params(labelsize=8.5)
+    for sp in axk.spines.values():
+        sp.set_linewidth(1.6)
+
+    for ax, pane in zip(axes[2:], PA.RATIO6_FRACTIONS):
+        ratio_pane(ax, pane, cur[pane]['NLO']['integrated'])
+
+    for i, ax in enumerate(axes):
+        if i < 4:
+            ax.tick_params(labelbottom=False)
+        else:
+            ax.set_xlabel(xlab, fontsize=10)
+
+    os.makedirs(outdir, exist_ok=True)
+    base = os.path.join(outdir, PA.SHORT[obs])
+    fig.savefig(base + '.pdf', bbox_inches='tight')
+    fig.savefig(base + '.png', dpi=DPI, bbox_inches='tight')
+    plt.close(fig)
+    print('%-10s six-panel%-7s sum/full NLO %.4f  LO %.4f'
+          % (PA.SHORT[obs], ' + band' if with_band else '',
+             cur['SUM']['NLO']['integrated'], cur['SUM']['LO']['integrated']))
+    return base
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--data', default=os.path.join(_HERE, 'data'))
@@ -430,6 +558,16 @@ def main():
     elif not a.no_variants:
         for obs in PA.OBS:
             draw_kfactor(d, lo, obs, os.path.join(a.out, PA.KFACTOR_DIR))
+            # The two six-panel ratio figures, in their own subdirectories.
+            draw_ratio6(d, lo, obs, os.path.join(a.out, PA.RATIO6_DIR))
+        if d.has_scale and lo.has_scale:
+            for obs in PA.OBS:
+                draw_ratio6(d, lo, obs,
+                            os.path.join(a.out, PA.RATIO6_SCALE_DIR),
+                            with_band=True)
+        else:
+            print('no MUR*_MUF* columns in %s: the scale figure is not drawn'
+                  % a.data)
 
 
 if __name__ == '__main__':

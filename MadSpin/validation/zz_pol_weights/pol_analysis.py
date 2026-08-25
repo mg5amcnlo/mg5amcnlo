@@ -164,6 +164,32 @@ class Data(object):
 
         self.sel = {k: v(self) for k, v in SEL.items()}
 
+        # The nine scale columns, if this sample's .npz was written by a pass
+        # that kept them.  Only ``weights.npz`` and ``weights_LO.npz`` were
+        # re-read; the three other spinmode samples still carry the central
+        # point alone, and ``has_scale`` is how everything downstream asks
+        # rather than assuming.  Cached lazily: the ratio is nine float64
+        # arrays of 250 000 and is built once per sample, on first use.
+        self.has_scale = all('w_' + s in self.z for s in SCALE_NAMES)
+        self._scale_ratio = {}
+
+    def scale_ratio(self, name):
+        """``w_name / w_central`` per event -- see DECISION 3 at the bottom.
+
+        Not clipped.  A handful of MC@NLO events have a near-cancelling
+        central weight and give a ratio of tens; :data:`SCALE_WILD_RATIO`
+        records how many and what they are worth, which is 0.39 % of the
+        reweighted total.
+        """
+        if not self.has_scale:
+            raise KeyError('%s carries no scale columns; re-extract with the '
+                           'current extract_hepmc_pol.py' % self.label)
+        if name not in self._scale_ratio:
+            c = np.asarray(self.z['w_' + SCALE_CENTRAL], dtype=np.float64)
+            w = np.asarray(self.z['w_' + name], dtype=np.float64)
+            self._scale_ratio[name] = w / c
+        return self._scale_ratio[name]
+
     # -- the pieces of the "which weight is nominal" argument ----------------
     def nominal_evidence(self):
         w0, w = self.z['w_0'], self.z['w_Weight']
@@ -1073,3 +1099,513 @@ def dressing_shift(d, obs):
     return {'mean_shift': float(dd.mean()), 'rms_shift': float(dd.std()),
             'frac_moved_by_more_than_1pct':
                 float((np.abs(dd) > 0.01 * np.abs(a[ok])).mean())}
+
+
+# ==========================================================================
+# THE SCALE UNCERTAINTY
+# ==========================================================================
+# Added by a later pass, together with the two six-panel ratio figures.  It
+# needed the eight scale columns beyond the central one, which the earlier
+# passes did NOT cache -- ``weights.npz`` and ``weights_LO.npz`` carried
+# ``w_MUR1.0_MUF1.0`` alone.  Both were re-read from their HepMC by
+# ``extract_hepmc_pol.py`` with the widened ``KEEP_WEIGHTS``; every column that
+# was already there came back bit-for-bit identical and the two files grew by
+# the eight new ones and by nothing else.  RESULTS.md, *The scale columns*.
+
+# The nine names AS THEY APPEAR ON THE HepMC ``N`` LINE.  Read the next block
+# before attaching any meaning to them.
+SCALE_NAMES = ['MUR0.5_MUF0.5', 'MUR0.5_MUF1.0', 'MUR0.5_MUF2.0',
+               'MUR1.0_MUF0.5', 'MUR1.0_MUF1.0', 'MUR1.0_MUF2.0',
+               'MUR2.0_MUF0.5', 'MUR2.0_MUF1.0', 'MUR2.0_MUF2.0']
+SCALE_CENTRAL = 'MUR1.0_MUF1.0'
+
+# --------------------------------------------------------------------------
+# THE TWO LABELS ARE TRANSPOSED, AND THIS IS MEASURED, NOT SUSPECTED.
+#
+# The weight the ``N`` line calls ``MURa_MUFb`` is the one generated at
+# ``muR = b``, ``muF = a``.  The magnitudes of the two factors are right; which
+# scale each belongs to is swapped.  Three independent checks, all on these
+# files:
+#
+# 1. ``p p > z z`` at ``order = LO`` is the Born, ``O(alpha_s^0)``, so its
+#    cross section is EXACTLY independent of muR and can only move with muF.
+#    In ``weights_LO.npz`` the weight is degenerate in the SECOND label on all
+#    250 000 events -- ``MUR0.5_MUF0.5``, ``MUR0.5_MUF1.0`` and
+#    ``MUR0.5_MUF2.0`` are the same float -- and varies only with the FIRST.
+#    So the first label is the factorisation scale.
+# 2. Directly, on event 1 of ``run_12_decayed_1``.  Its LHE ``<rwgt>`` block
+#    gives ids 1001-1003 (muR = 1, 2, 0.5 at muF = 1) the same value
+#    2.3950370e-02, ids 1004-1006 (muF = 2) 2.3914174e-02 and ids 1007-1009
+#    (muF = 0.5) 2.3803324e-02.  The HepMC of the same event carries
+#    2.3803324e-02 under all three ``MUR0.5_*`` names, 2.3950370e-02 under
+#    ``MUR1.0_*`` and 2.3914174e-02 under ``MUR2.0_*``.  The first name label
+#    tracks the LHE's muF, value for value.
+# 3. The mechanism.  The LHE header writes the nine with muF OUTER and muR
+#    INNER, each cycling (1.0, 2.0, 0.5); the name generator assumes muR outer
+#    and muF inner with the same cycle.  Composing the two is exactly a
+#    transposition, and it reproduces all nine assignments including the two
+#    fixed points (1,1) and the two diagonal corners.
+#
+# WHAT IT CHANGES HERE: nothing numerical, and that is worth spelling out.
+# An envelope is a min and a max over a SET of points, and a permutation of a
+# set leaves both alone.  The 7-point subset is not obviously safe -- it is
+# defined by which two points it drops -- but it is: the pair it drops,
+# (muR, muF) = (0.5, 2.0) and (2.0, 0.5), is the anti-diagonal, and the
+# transposition maps that pair onto itself.  Dropping the two NAMES
+# ``MUR0.5_MUF2.0`` and ``MUR2.0_MUF0.5`` therefore drops the two correct
+# points.  What the transposition does change is the reading of any INDIVIDUAL
+# point, so every per-point table in numbers.txt is printed under the TRUE
+# labels of :data:`SCALE_TRUE` and says so.
+SCALE_TRUE = {
+    # name on the N line -> (true muR factor, true muF factor)
+    'MUR0.5_MUF0.5': (0.5, 0.5), 'MUR0.5_MUF1.0': (1.0, 0.5),
+    'MUR0.5_MUF2.0': (2.0, 0.5), 'MUR1.0_MUF0.5': (0.5, 1.0),
+    'MUR1.0_MUF1.0': (1.0, 1.0), 'MUR1.0_MUF2.0': (2.0, 1.0),
+    'MUR2.0_MUF0.5': (0.5, 2.0), 'MUR2.0_MUF1.0': (1.0, 2.0),
+    'MUR2.0_MUF2.0': (2.0, 2.0),
+}
+
+
+def scale_true_txt(name):
+    """``name`` rendered under its TRUE ``(muR, muF)``."""
+    r, f = SCALE_TRUE[name]
+    return 'muR=%.1f muF=%.1f' % (r, f)
+
+
+# The two points a 7-point envelope drops: the anti-diagonal, where muR and muF
+# are pulled a factor of four apart.  Named by their N-line names, which -- see
+# above -- is the correct pair either way round.
+SCALE_NONADJACENT = ['MUR0.5_MUF2.0', 'MUR2.0_MUF0.5']
+SCALE_SEVEN = [s for s in SCALE_NAMES if s not in SCALE_NONADJACENT]
+
+# --------------------------------------------------------------------------
+# DECISION 1 -- WHICH ENVELOPE.  Seven points.
+#
+# The drawn band is the envelope of the SEVEN points that leave muR and muF
+# within a factor of two of one another, i.e. the nine minus the anti-diagonal
+# pair (muR, muF) = (0.5, 2.0) and (2.0, 0.5).  That is the usual LHC and
+# MG5_aMC convention and the reason for it is the usual one: those two points
+# put a factor of four between the two scales, which manufactures a large
+# log(muR/muF) that the fixed-order calculation was never asked to resum, so
+# they inflate the envelope without probing a missing higher order.
+#
+# It is a convention and numbers.txt prints the 9-point envelope beside it
+# everywhere, so the size of the choice is on the record.  On these samples the
+# choice is worth stating precisely because it matters in one place and not in
+# the other:
+#
+#   * on a single sample's CROSS SECTION it matters a lot.  The NLO sample is
+#     +3.14 % / -3.59 % over nine points and +2.33 % / -1.92 % over seven --
+#     the two dropped points ARE the two extremes there.
+#   * on the K-FACTOR it makes no difference at all, to four decimals.  K is
+#     largest at (muR, muF) = (0.5, 0.5) and smallest at (2.0, 2.0), both on
+#     the main diagonal and both kept; the two anti-diagonal points land in
+#     the interior.  Measured, not assumed -- numbers.txt prints all nine.
+SCALE_ENVELOPE = 'seven'
+SCALE_ENVELOPE_TXT = {
+    'seven': '7-point: the nine muR/muF combinations minus the two '
+             'non-adjacent ones, (muR, muF) = (0.5, 2.0) and (2.0, 0.5)',
+    'nine': '9-point: every muR/muF combination, the two non-adjacent '
+            'ones included',
+}
+
+# --------------------------------------------------------------------------
+# DECISION 2 -- CORRELATION BETWEEN NUMERATOR AND DENOMINATOR.
+#
+# FRACTIONS (component / full within ONE sample).  There is no choice to make
+# and the code does not offer one: the same event weights are summed top and
+# bottom, so the envelope is taken of the RATIO computed scale by scale,
+#
+#     band = [ min_s f(s), max_s f(s) ],  f(s) = sum_i(w_c,i r_s,i)
+#                                                / sum_i(w_full,i r_s,i)
+#
+# and NOT as the ratio of two separately built envelopes.  The latter would be
+# claiming that the numerator can sit at its high scale while the denominator
+# sits at its low one, which cannot happen -- they are the same events at the
+# same scale.  Almost all of the variation cancels this way and what survives
+# is only the reweighting of the phase-space MIX inside the bin, which is why
+# the fraction bands on the figure are sub-percent where a single cross section
+# moves by several.
+#
+# K-FACTOR (NLO sample / LO sample).  Here the choice is real, both answers are
+# defensible, and they differ:
+#
+#   correlated    the same scale point on both sides, envelope of the per-scale
+#                 ratio: band = [min_s K(s), max_s K(s)].  Says: "if the two
+#                 orders are evaluated at one common scale, how much does the
+#                 NLO enhancement itself move?"
+#   uncorrelated  independent envelopes on the two cross sections, combined at
+#                 their extremes: [num_min/den_max, num_max/den_min].  Says:
+#                 "if the LO and the NLO prediction each carry their own scale
+#                 uncertainty and nothing is shared, how far apart can their
+#                 ratio be?"
+#
+# THE DRAWN BAND IS THE CORRELATED ONE.  Reasons: the two samples are the same
+# process, the same PDF set, the same functional scale choice and the same
+# 250 000-event run card, so a scale is a physical setting shared between them
+# and not two independent nuisance parameters; and the muF/PDF part of the
+# variation, which is the part that has nothing to do with the order, then
+# largely cancels, leaving a band that is about the missing higher order rather
+# than about the parton luminosity.  The uncorrelated one is roughly a third
+# wider (unpolarised: -5.82 % / +7.99 % against -4.61 % / +6.81 %) and every
+# table in numbers.txt carries it in its own columns so the size of the
+# convention can be read off directly.
+KFACTOR_SCALE_CORRELATION = 'correlated'
+KFACTOR_SCALE_CORRELATION_TXT = {
+    'correlated': 'the same muR/muF point in the NLO and the LO sample, '
+                  'envelope of the per-scale ratio',
+    'uncorrelated': 'independent envelopes on the two cross sections, '
+                    'combined as [num_min/den_max, num_max/den_min]',
+}
+
+# --------------------------------------------------------------------------
+# DECISION 3 -- HOW A POLARISED COMPONENT IS SCALE-VARIED AT ALL.
+#
+# MadSpin writes the four ``ms_pol_*`` weights at the CENTRAL scale and at no
+# other, so there is no such thing as a cached ``ms_pol_23.0_23.0`` at
+# ``muR = 2``.  What is done here, and it is the only thing the cached weights
+# support, is to carry the FULL weight's per-event scale ratio over to the
+# component:
+#
+#     r_s(i) = w_s(i) / w_central(i),     w_c^s(i) = w_c(i) * r_s(i)
+#
+# i.e. the per-event polarisation fraction w_c(i)/w_full(i) is held fixed under
+# the variation and only the event's overall weight moves.  ``s = central``
+# reproduces the nominal exactly, by construction.
+#
+# WHEN THIS IS EXACT AND WHEN IT IS NOT.  At LO it is exact: the muF and alpha_s
+# dependence multiplies the whole squared matrix element at a fixed phase-space
+# point, identically for the polarised projection and for the total, so the
+# per-event fraction really is scale independent.  At NLO it is an
+# approximation -- the virtual and real pieces are not decomposed by
+# polarisation, and this study's own result is that the components have
+# DIFFERENT K-factors, which is the same statement as their alpha_s dependence
+# differing.  So the NLO component bands are the total's band transported onto
+# the component, not a first-principles polarised scale variation.  What that
+# costs is bounded by how far the components' K-factors are from one another,
+# which is the few percent measured below, on a band of several percent.  It is
+# stated here and in RESULTS.md rather than buried, and no cached weight can do
+# better; only a MadSpin run that emitted ``ms_pol_*`` per scale point could.
+SCALE_POL_MODEL_TXT = (
+    'the ms_pol_* weights exist at the central scale only, so a component is '
+    'varied by the FULL weight\'s per-event ratio w_s/w_central -- the '
+    'per-event polarisation fraction is held fixed.  Exact at LO, an '
+    'approximation at NLO.')
+
+# 187 of the NLO sample's 250 000 events have |w_s / w_central| > 3 for at
+# least one s: MC@NLO event weights can very nearly cancel, and a near-zero
+# denominator makes a large ratio.  They are NOT clipped -- clipping a weight
+# because it is large is how a bias gets introduced -- and they are not a
+# problem: together they move the reweighted total by 0.39 %, and the
+# reweighted total agrees with the directly summed w_s to 3e-05, which is the
+# same 3e-05 by which ``sum(MUR1.0_MUF1.0)`` and ``sum(Weight)`` differ in the
+# first place.  The LO sample has none: its extreme ratio is 1.246.
+SCALE_WILD_RATIO = 3.0
+
+
+def scale_points(which=None):
+    """The list of N-line names the envelope ``which`` runs over."""
+    which = which or SCALE_ENVELOPE
+    if which == 'nine':
+        return list(SCALE_NAMES)
+    if which == 'seven':
+        return list(SCALE_SEVEN)
+    raise ValueError('unknown envelope %r' % which)
+
+
+def _envelope(vals):
+    """``(min, max)`` over a list, NaN-safe and NaN-preserving per element."""
+    a = np.asarray(vals, dtype=np.float64)
+    if a.size == 0:
+        return np.nan, np.nan
+    with np.errstate(invalid='ignore'):
+        ok = np.isfinite(a)
+    if a.ndim == 1:
+        return ((float(np.min(a[ok])), float(np.max(a[ok])))
+                if ok.any() else (np.nan, np.nan))
+    lo = np.where(ok.any(axis=0), np.nanmin(np.where(ok, a, np.nan), axis=0),
+                  np.nan)
+    hi = np.where(ok.any(axis=0), np.nanmax(np.where(ok, a, np.nan), axis=0),
+                  np.nan)
+    return lo, hi
+
+
+def component_weights(d, key):
+    """The nominal weight column of ``'full'`` or one of :data:`POL_KEYS`."""
+    return np.asarray(d.full if key == 'full' else d.pol[key],
+                      dtype=np.float64)
+
+
+def fraction_band(d, obs, key, which=None):
+    """Per-bin ``component/full`` with its scale band, within ONE sample.
+
+    Returns ``dict(r, err, lo, hi, per_scale)``: the nominal ratio and its
+    delta-method statistical bar (both exactly what :func:`binned_ratio`
+    already gives, unchanged), then the envelope of the ratio recomputed at
+    each scale point.  ``per_scale`` is the ``(n_scale, n_bin)`` table.
+
+    The envelope is of the RATIO, scale by scale -- see the note on DECISION 2
+    above.  Taking the ratio of two envelopes instead would inflate every bar
+    on the four fraction panels by more than an order of magnitude and would be
+    describing a configuration that cannot occur.
+    """
+    sel = d.sel[obs]
+    x = np.asarray(d.z[obs], dtype=np.float64)[sel]
+    num = component_weights(d, key)[sel]
+    den = np.asarray(d.full, dtype=np.float64)[sel]
+    edges = BINS[obs]
+    r, e, n = binned_ratio(x, num, den, edges)
+    rows = []
+    for s in scale_points(which):
+        rs = d.scale_ratio(s)[sel]
+        rr, _, _ = binned_ratio(x, num * rs, den * rs, edges)
+        rows.append(rr)
+    lo, hi = _envelope(rows)
+    return {'key': key, 'r': r, 'err': e, 'n': n, 'lo': lo, 'hi': hi,
+            'per_scale': np.asarray(rows), 'points': scale_points(which)}
+
+
+def sum_band(d, obs, which=None):
+    """The sum-consistency pane's ``(LL+TT+TL+LT)/full`` with its scale band."""
+    return fraction_band(d, obs, 'SUM', which)
+
+
+def integrated_fraction_band(d, key, obs=None, which=None):
+    """The same quantity as one number: nominal, stat bar, and scale envelope."""
+    num = component_weights(d, key) if key != 'SUM' else d.pol['SUM']
+    den = np.asarray(d.full, dtype=np.float64)
+    if obs is not None:
+        num, den = num[d.sel[obs]], den[d.sel[obs]]
+    R, E = ratio(num, den)
+    vals = []
+    for s in scale_points(which):
+        rs = d.scale_ratio(s)
+        rs = rs[d.sel[obs]] if obs is not None else rs
+        vals.append(float((num * rs).sum() / (den * rs).sum()))
+    lo, hi = _envelope(vals)
+    return {'key': key, 'R': R, 'err': E, 'lo': lo, 'hi': hi,
+            'per_scale': dict(zip(scale_points(which), vals))}
+
+
+def _component_sum(d, obs, key, edges, scale=None):
+    """The binned weighted sum of one component, optionally scale-reweighted."""
+    sel = d.sel[obs]
+    x = np.asarray(d.z[obs], dtype=np.float64)[sel]
+    w = component_weights(d, key)[sel] * d.scale_to_pb
+    if scale is not None:
+        w = w * d.scale_ratio(scale)[sel]
+    y, _ = np.histogram(x, bins=edges, weights=w)
+    return y
+
+
+def kfactor_band(nlo, lo, obs, key, which=None, correlation=None):
+    """Per-bin ``NLO/LO`` with its scale band, for one component.
+
+    ``correlation='correlated'`` (the default, and what the figure draws) takes
+    the envelope of ``K(s)`` with the SAME ``s`` on both sides;
+    ``'uncorrelated'`` builds an envelope on each cross section and combines
+    them at their extremes.  Both are returned by
+    :func:`integrated_kfactor_bands`; this one returns whichever was asked for,
+    so that the drawing code cannot silently pick the other.
+
+    The nominal ``k`` and its statistical bar are :func:`kfactor`'s, untouched:
+    two independent samples, so the two relative MC errors in quadrature.
+    """
+    correlation = correlation or KFACTOR_SCALE_CORRELATION
+    edges = BINS[obs]
+    kk = kfactor(nlo, lo, obs, key)
+    pts = scale_points(which)
+    na = [_component_sum(nlo, obs, key, edges, s) for s in pts]
+    nb = [_component_sum(lo, obs, key, edges, s) for s in pts]
+    with np.errstate(divide='ignore', invalid='ignore'):
+        if correlation == 'correlated':
+            rows = [np.where(b > 0, a / b, np.nan) for a, b in zip(na, nb)]
+            band_lo, band_hi = _envelope(rows)
+        elif correlation == 'uncorrelated':
+            alo, ahi = _envelope(na)
+            blo, bhi = _envelope(nb)
+            band_lo = np.where(bhi > 0, alo / bhi, np.nan)
+            band_hi = np.where(blo > 0, ahi / blo, np.nan)
+        else:
+            raise ValueError('unknown correlation %r' % correlation)
+    kk = dict(kk)
+    kk.update({'lo': band_lo, 'hi': band_hi, 'correlation': correlation,
+               'points': pts})
+    return kk
+
+
+def integrated_kfactor_bands(nlo, lo, obs=None, which=None):
+    """Every component's K as one number, with BOTH correlation conventions.
+
+    One row per component of :data:`KF_PANE_ORDER`, carrying the nominal K and
+    its statistical bar (:func:`integrated_kfactors`), the correlated scale
+    envelope, the uncorrelated one, and the same for the double ratio
+    ``D = K_component / K_full`` -- which is the quantity the physics question
+    actually turns on and the one whose band is small.
+    """
+    which = which or SCALE_ENVELOPE
+    pts = scale_points(which)
+    base = {r['key']: r for r in integrated_kfactors(nlo, lo, obs)}
+
+    def tot(d, key, s=None):
+        w = component_weights(d, key)
+        if s is not None:
+            w = w * d.scale_ratio(s)
+        if obs is not None:
+            w = w[d.sel[obs]]
+        return float((w * d.scale_to_pb).sum())
+
+    Ks = {k: {s: tot(nlo, k, s) / tot(lo, k, s) for s in pts}
+          for k in KF_PANE_ORDER}
+    rows = []
+    for key in KF_PANE_ORDER:
+        r = dict(base[key])
+        vals = [Ks[key][s] for s in pts]
+        r['K_scale_lo'], r['K_scale_hi'] = _envelope(vals)
+        na = [tot(nlo, key, s) for s in pts]
+        nb = [tot(lo, key, s) for s in pts]
+        r['K_scale_lo_uncorr'] = min(na) / max(nb)
+        r['K_scale_hi_uncorr'] = max(na) / min(nb)
+        r['K_per_scale'] = dict(zip(pts, vals))
+        r['sigma_nlo_per_scale'] = dict(zip(pts, na))
+        r['sigma_lo_per_scale'] = dict(zip(pts, nb))
+        if key != 'full':
+            # D = K_comp / K_full.  Scale by scale, so the common movement of
+            # the two K's -- which is nearly all of it -- cancels.  The
+            # statistical bar is the double ratio's delta-method one, which is
+            # already computed by component_fraction_double_ratio.
+            ds = [Ks[key][s] / Ks['full'][s] for s in pts]
+            r['D'] = Ks[key][SCALE_CENTRAL] / Ks['full'][SCALE_CENTRAL]
+            r['D_scale_lo'], r['D_scale_hi'] = _envelope(ds)
+            r['D_per_scale'] = dict(zip(pts, ds))
+        rows.append(r)
+    dr = {x['key']: x for x in component_fraction_double_ratio(nlo, lo, obs)}
+    for r in rows:
+        if r['key'] in dr:
+            r['D_err'] = dr[r['key']]['double_ratio_err']
+            r['D_sigma_from_1'] = dr[r['key']]['sigma_from_1']
+    return rows
+
+
+def scale_survival(nlo, lo, obs=None, which=None):
+    """Does the polarisation dependence of K survive the scale band?
+
+    The question the second six-panel figure exists to answer, reduced to
+    numbers.  For each component it reports how far ``D = K_c/K_full`` sits
+    from 1 against its statistical bar AND against its scale band, and it
+    reports the one comparison the brief names directly: the two MIXED
+    components against ``Z_TZ_T``, both as a difference of K and as a ratio,
+    with the ratio's own scale envelope taken scale by scale.
+    """
+    which = which or SCALE_ENVELOPE
+    pts = scale_points(which)
+    rows = integrated_kfactor_bands(nlo, lo, obs, which)
+    by = {r['key']: r for r in rows}
+    out = {'rows': rows, 'envelope': which, 'points': pts}
+    mixed_over_tt = []
+    mixed_minus_tt = []
+    for s in [SCALE_CENTRAL] + pts:
+        km = 0.5 * (by['LT']['K_per_scale'][s] + by['TL']['K_per_scale'][s])
+        kt = by['TT']['K_per_scale'][s]
+        mixed_over_tt.append(km / kt)
+        mixed_minus_tt.append(km - kt)
+    out['mixed_over_TT'] = mixed_over_tt[0]
+    out['mixed_over_TT_band'] = _envelope(mixed_over_tt[1:])
+    out['mixed_minus_TT'] = mixed_minus_tt[0]
+    out['mixed_minus_TT_band'] = _envelope(mixed_minus_tt[1:])
+    for r in rows:
+        if 'D' not in r:
+            continue
+        half = 0.5 * (r['D_scale_hi'] - r['D_scale_lo'])
+        r['D_minus_1'] = r['D'] - 1.0
+        r['D_over_scale_halfband'] = (abs(r['D'] - 1.0) / half if half
+                                      else float('inf'))
+        r['D_over_stat'] = r.get('D_sigma_from_1', float('nan'))
+    return out
+
+
+# ==========================================================================
+# THE TWO SIX-PANEL RATIO FIGURES
+# ==========================================================================
+# Variant A restructured.  It was a distribution pane, a full-width sum pane
+# and a 2 x 2 of polarised ratios, on the NLO reference alone.  It is now a
+# 3 x 2 of RATIOS ONLY -- the distribution pane is gone, because the figure is
+# about ratios and the distribution is already the top pane of the original
+# figure, of variant B and of five of the six K-factor panels.
+#
+#   top left    (LL+TT+TL+LT)/full, the sum consistency
+#   top right   K = NLO/LO, five curves
+#   the four    the polarised fractions, component/full, one per pane
+#
+# BOTH ORDERS ON FIVE OF THE SIX.  The figure now spans NLO and LO, so every
+# panel that admits two orders draws two: the sum pane and the four fraction
+# panes each carry the NLO reference and the LO sample, told apart by the same
+# LS_ORDER line styles the K-factor figure already uses.  The K panel is a
+# ratio BETWEEN the orders and can only be one curve per component.
+#
+# Nothing here touches variant A, variant B, the K-factor figure or the
+# original figures: two new subdirectories, and both scripts write into them
+# only.
+RATIO6_DIR = 'variant_A6_ratios'
+RATIO6_SCALE_DIR = 'variant_A6_ratios_scale'
+
+# The pane order, reading across then down.  ``'K'`` is the K-factor pane and
+# is not a weight column.  The four fractions are in the K-factor figure's
+# component order (LL, LT, TL, TT) and not variant A's (LL, TT, TL, LT),
+# because on this figure they sit under a K panel whose five-entry legend is
+# in the former and reading the two against each other should not require
+# re-sorting.
+RATIO6_PANES = ['SUM', 'K', 'LL', 'LT', 'TL', 'TT']
+RATIO6_FRACTIONS = ['LL', 'LT', 'TL', 'TT']
+
+# The two order curves on the five ratio panes.
+RATIO6_ORDERS = ['NLO', 'LO']
+RATIO6_ORDER_TEX = {'NLO': r'NLO', 'LO': r'LO'}
+RATIO6_ORDER_TXT = {'NLO': 'NLO', 'LO': 'LO'}
+
+RATIO6_WHAT = (
+    'variant A restructured as a 3 x 2 of ratios: the sum consistency and the '
+    'K-factor on the top row, the four polarised fractions below.  The '
+    'distribution pane is dropped.  Five of the six panes carry BOTH orders; '
+    'the K pane is itself the order ratio.')
+RATIO6_SCALE_WHAT = (
+    'the same six panels with the muR/muF scale uncertainty drawn as a band '
+    'on every curve.  Envelope: %s.  Fractions: envelope of the ratio taken '
+    'scale by scale within one sample.  K-factor: %s.'
+    % (SCALE_ENVELOPE_TXT[SCALE_ENVELOPE],
+       KFACTOR_SCALE_CORRELATION_TXT[KFACTOR_SCALE_CORRELATION]))
+
+
+def ratio6_curves(nlo, lo, obs, with_band=False, which=None):
+    """Everything the six panels draw, for one observable.
+
+    ``dict`` keyed by pane.  ``'K'`` maps to ``{component: kfactor dict}``;
+    every other pane maps to ``{order: fraction dict}``.  With
+    ``with_band=True`` each dict also carries ``lo`` / ``hi``, which is the
+    only difference between the two figures -- they are the same panels off the
+    same objects and the second one shades a band.
+    """
+    out = {}
+    for pane in ['SUM'] + RATIO6_FRACTIONS:
+        d = {}
+        for tag, samp in (('NLO', nlo), ('LO', lo)):
+            if with_band:
+                d[tag] = fraction_band(samp, obs, pane, which)
+            else:
+                r, e, n = binned_ratio(
+                    np.asarray(samp.z[obs], dtype=np.float64)[samp.sel[obs]],
+                    component_weights(samp, pane)[samp.sel[obs]]
+                    if pane != 'SUM' else samp.pol['SUM'][samp.sel[obs]],
+                    np.asarray(samp.full, dtype=np.float64)[samp.sel[obs]],
+                    BINS[obs])
+                d[tag] = {'key': pane, 'r': r, 'err': e, 'n': n}
+            d[tag]['integrated'] = ratio(
+                (samp.pol['SUM'] if pane == 'SUM'
+                 else component_weights(samp, pane))[samp.sel[obs]],
+                np.asarray(samp.full, dtype=np.float64)[samp.sel[obs]])[0]
+        out[pane] = d
+    out['K'] = {}
+    for key in KF_PANE_ORDER:
+        out['K'][key] = (kfactor_band(nlo, lo, obs, key, which)
+                         if with_band else kfactor(nlo, lo, obs, key))
+    return out

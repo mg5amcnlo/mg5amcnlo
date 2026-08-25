@@ -109,7 +109,46 @@ from plot_zz_loopinduced import (                                # noqa: E402
 _NLO = os.path.abspath(os.path.join(_HERE, '..', 'zz_nlo'))
 if _NLO not in sys.path:
     sys.path.insert(0, _NLO)
-from plot_zz_stack import wants_minus                            # noqa: E402
+from plot_zz_stack import wants_minus as _wants_minus_any        # noqa: E402
+
+
+def wants_minus(fig):
+    """``_wants_minus_any``, but a TICK label only counts if it is on screen.
+
+    The sibling helper asks every tick label the locator produced whether it
+    carries a minus.  That over-reports: ``MaxNLocator`` routinely emits one
+    tick beyond each end of the view, and matplotlib never draws those.  The
+    ``Z_0Z_0/full`` pane of the six-panel figures is exactly that case -- the
+    locator offers -0.03 on a pane whose window starts at -0.0056 -- so the
+    figure was declared to "want" a minus that is not on it, ``--check-minus``
+    then looked for a ``/minus`` that could not be there, and a correct figure
+    was reported as a failure.
+
+    Axis labels, titles and legend entries are still asked unconditionally:
+    they are always drawn, and narrowing THOSE could hide a genuinely eaten
+    sign, which is the one outcome this check exists to prevent.  Only the
+    tick labels are filtered, and only by the view interval their own axis is
+    set to.  The sibling module is left alone; this is a wrapper, not an edit.
+    """
+    fig.canvas.draw()
+    for ax in fig.axes:
+        always = [ax.xaxis.label, ax.yaxis.label, ax.title]
+        leg = ax.get_legend()
+        if leg is not None:
+            always += list(leg.get_texts())
+        for t in always:
+            if '-' in t.get_text() or '\u2212' in t.get_text():
+                return True
+        for axis, (v0, v1) in ((ax.xaxis, ax.get_xlim()),
+                               (ax.yaxis, ax.get_ylim())):
+            lo_v, hi_v = min(v0, v1), max(v0, v1)
+            for loc, t in zip(axis.get_ticklocs(), axis.get_ticklabels()):
+                if not (lo_v <= loc <= hi_v):
+                    continue
+                if '-' in t.get_text() or '\u2212' in t.get_text():
+                    return True
+    return False
+
 
 COLOR = {'full': 'black', 'LL': 'blue', 'TT': 'red',
          'TL': allcolors[2], 'LT': allcolors[4], 'SUM': allcolors[5],
@@ -1151,8 +1190,335 @@ def write_numbers(d, path, extras=(), lo=None):
         A('')
     if lo is not None:
         _kfactor_numbers(A, d, lo)
+        _ratio6_numbers(A, d, lo)
+        if d.has_scale and lo.has_scale:
+            _scale_numbers(A, d, lo)
+        else:
+            A('=' * 74)
+            A('SCALE UNCERTAINTY: NOT AVAILABLE')
+            A('=' * 74)
+            A('The .npz in this data directory carry the central scale weight')
+            A('alone.  Re-run extract_hepmc_pol.py on run_06_decayed_1 and')
+            A('run_12_decayed_1 to add the nine MUR*_MUF* columns; it is one')
+            A('~30 s streaming pass per file and nothing else changes.')
+            A('')
     open(path, 'w').write('\n'.join(out) + '\n')
     print('wrote %s' % path)
+
+
+
+def _ratio6_numbers(A, d, lo):
+    """What the two six-panel ratio figures are, and their per-bin tables."""
+    A('=' * 74)
+    A('THE TWO SIX-PANEL RATIO FIGURES (variant A, restructured)')
+    A('=' * 74)
+    A('Written to plots/%s/ and plots/%s/ and to the two' % (
+        PA.RATIO6_DIR, PA.RATIO6_SCALE_DIR))
+    A('same-named directories under plots_userstyle/.  PDF and PNG, both')
+    A('styles.  Variant A itself, variant B, the K-factor figure and the')
+    A('original figures are untouched by this pass and their PNGs are still')
+    A('byte-for-byte what this branch carried.')
+    A('')
+    A('WHAT CHANGED FROM VARIANT A.  Variant A was a distribution pane, a')
+    A('full-width (Z0Z0+ZTZT+ZTZ0+Z0ZT)/full pane and a 2x2 of the individual')
+    A('polarisation ratios, on the NLO reference alone.  These are a 3 x 2 of')
+    A('RATIOS ONLY:')
+    A('  top left    (Z0Z0 + ZTZT + ZTZ0 + Z0ZT) / full, the sum consistency')
+    A('  top right   K = NLO / LO, five curves (unpolarised + the four)')
+    A('  the four    component / full, one polarisation per pane')
+    A('The distribution pane is GONE.  It is still the top pane of the')
+    A('original figures, of variant B and of five of the six K-factor panels,')
+    A('and this figure is about ratios.')
+    A('')
+    A('BOTH ORDERS ON FIVE OF THE SIX PANES.  The figure now spans NLO and')
+    A('LO, so every pane that admits two orders draws two -- the sum pane and')
+    A('the four fraction panes each carry the NLO reference (solid, filled')
+    A('markers) and the LO sample (dashed, open markers).  The K pane is')
+    A('itself the ratio BETWEEN the two orders and can only be one curve per')
+    A('component.')
+    A('')
+    A('PANE ORDER.  The four fractions run LL, LT, TL, TT -- the K-factor')
+    A('figure\'s component order -- and NOT variant A\'s LL, TT, TL, LT.  They')
+    A('sit under a K pane whose five-entry legend is in the former, and')
+    A('reading the two against each other should not need re-sorting.')
+    A('')
+    A('ERRORS.  Unchanged from the figures they are built out of, and not one')
+    A('rule for the whole canvas:')
+    A('  the five ratio panes, both orders: the delta-method / jackknife bar.')
+    A('    Numerator and denominator are sums over the SAME events of ONE')
+    A('    sample, so their covariance is real and is kept.')
+    A('  the K pane: the two relative MC errors in quadrature.  Two')
+    A('    independent samples, no covariance to subtract.')
+    A('')
+    A('THE DASHED RULE in each fraction pane is that pane\'s NLO integrated')
+    A('value, as on variant A.  The dotted rule on the sum pane is 1.  The K')
+    A('pane carries NO rule: a K-factor ought not to be 1 and drawing one')
+    A('there would suggest a null hypothesis nobody holds.')
+    A('')
+    for obs in PA.OBS:
+        cur = PA.ratio6_curves(d, lo, obs)
+        edges = PA.BINS[obs]
+        A('-' * 74)
+        A('%s -- the six panes, bin by bin' % PA.LABELS_TXT[obs][0])
+        A('-' * 74)
+        for pane in ['SUM'] + PA.RATIO6_FRACTIONS:
+            A('  %s' % PA.RATIO_TXT[pane])
+            A('    %-18s %12s %10s   %12s %10s'
+              % ('bin', 'NLO', '+-', 'LO', '+-'))
+            for i in range(len(edges) - 1):
+                A('    %7.3f - %-8.3f %12.6f %10.6f   %12.6f %10.6f'
+                  % (edges[i], edges[i + 1],
+                     cur[pane]['NLO']['r'][i], cur[pane]['NLO']['err'][i],
+                     cur[pane]['LO']['r'][i], cur[pane]['LO']['err'][i]))
+            A('    integrated: NLO %.6f   LO %.6f'
+              % (cur[pane]['NLO']['integrated'],
+                 cur[pane]['LO']['integrated']))
+            A('')
+        A('  K = NLO / LO, per component')
+        A('    %-18s' % 'bin'
+          + ''.join('%11s' % PA.KF_CURVE_TXT[k].replace(' ', '')
+                    for k in PA.KF_PANE_ORDER))
+        for i in range(len(edges) - 1):
+            A('    %7.3f - %-8.3f' % (edges[i], edges[i + 1])
+              + ''.join('%11.4f' % cur['K'][k]['k'][i]
+                        for k in PA.KF_PANE_ORDER))
+        A('')
+
+
+def _scale_numbers(A, d, lo):
+    """The scale conventions, both of them, and every number they produce."""
+    A('=' * 74)
+    A('SCALE UNCERTAINTY -- THE CONVENTIONS, STATED, AND BOTH ALTERNATIVES')
+    A('=' * 74)
+    A('')
+    A('WHERE THE COLUMNS CAME FROM.  They were NOT cached.  Before this pass')
+    A('data/weights.npz and data/weights_LO.npz carried w_MUR1.0_MUF1.0 and')
+    A('no other scale point, so the eight remaining MUR*_MUF* columns could')
+    A('not be summed and were not approximated.  Both files were re-read from')
+    A('their HepMC by extract_hepmc_pol.py with KEEP_WEIGHTS widened to all')
+    A('nine -- %.1f s for run_06_decayed_1 and %.1f s for run_12_decayed_1,'
+      % (d.meta['pass_seconds'], lo.meta['pass_seconds']))
+    A('one streaming pass each.  EVERY COLUMN THAT WAS ALREADY THERE CAME')
+    A('BACK BIT-FOR-BIT IDENTICAL; the two .npz grew by the eight new columns')
+    A('and by nothing else, which is why every figure and every number of the')
+    A('earlier passes is unchanged.  The three other spinmode samples were')
+    A('not re-read: nothing on these two figures uses them.')
+    A('')
+    A('*** THE TWO LABELS ARE TRANSPOSED IN THESE FILES. ***')
+    A('The weight the HepMC N line calls MURa_MUFb is the one generated at')
+    A('muR = b, muF = a.  The two factors are right; which scale each belongs')
+    A('to is swapped.  Measured three ways, all on these files:')
+    A('  (1) p p > z z at order = LO is the Born, O(alpha_s^0), so its cross')
+    A('      section is EXACTLY muR independent and can only move with muF.')
+    A('      In weights_LO.npz the weight is degenerate in the SECOND label on')
+    A('      all 250 000 events and varies only with the FIRST.  So the first')
+    A('      label is the factorisation scale.')
+    A('  (2) Directly, on event 1 of run_12_decayed_1.  Its LHE <rwgt> gives')
+    A('      ids 1001-1003 (muR = 1, 2, 0.5 at muF = 1) the same value')
+    A('      2.3950370e-02, ids 1004-1006 (muF = 2) 2.3914174e-02 and ids')
+    A('      1007-1009 (muF = 0.5) 2.3803324e-02.  The HepMC of the same')
+    A('      event has 2.3803324e-02 under all three MUR0.5_* names,')
+    A('      2.3950370e-02 under MUR1.0_* and 2.3914174e-02 under MUR2.0_*.')
+    A('  (3) The mechanism.  The LHE header writes the nine with muF OUTER')
+    A('      and muR INNER, each cycling (1.0, 2.0, 0.5); the name generator')
+    A('      assumes muR outer and muF inner with the same cycle.  Composing')
+    A('      the two is exactly a transposition and it reproduces all nine.')
+    A('IT CHANGES NO NUMBER HERE.  An envelope is a min and a max over a SET,')
+    A('and a permutation of a set moves neither.  The 7-point subset is')
+    A('defined by which two points it DROPS, so it is not automatically safe')
+    A('-- but it is: the pair dropped, (muR, muF) = (0.5, 2.0) and (2.0,')
+    A('0.5), is the anti-diagonal, which the transposition maps onto itself.')
+    A('What it does change is the reading of any INDIVIDUAL point, so every')
+    A('per-point table below is printed under the TRUE muR / muF.')
+    A('')
+    A('DECISION 1 -- WHICH ENVELOPE.  Drawn: %s.'
+      % PA.SCALE_ENVELOPE_TXT[PA.SCALE_ENVELOPE])
+    A('  The two dropped points put a factor of four between muR and muF,')
+    A('  which manufactures a large log(muR/muF) the fixed-order calculation')
+    A('  was never asked to resum; they inflate the envelope without probing')
+    A('  a missing higher order.  Both envelopes are printed below.  On these')
+    A('  samples the choice matters in one place and not in the other: on a')
+    A('  single sample\'s cross section the two dropped points ARE the two')
+    A('  extremes, and on the K-factor they are interior and the two')
+    A('  envelopes agree to four decimals.')
+    A('')
+    A('DECISION 2 -- CORRELATION BETWEEN NUMERATOR AND DENOMINATOR.')
+    A('  FRACTIONS (component / full inside ONE sample): no choice, and the')
+    A('    code offers none.  The same event weights appear top and bottom,')
+    A('    so the envelope is of the RATIO recomputed scale by scale, NOT the')
+    A('    ratio of two separately built envelopes.  The latter would be')
+    A('    describing a configuration that cannot occur -- the numerator at')
+    A('    its high scale while the denominator sits at its low one, on the')
+    A('    same events.  Nearly all the variation cancels this way; what')
+    A('    survives is the reweighting of the phase-space MIX inside the bin,')
+    A('    which is why these bands are sub-percent where a single cross')
+    A('    section moves by several.')
+    A('  K-FACTOR: a real choice, both defensible, and they differ.')
+    A('    DRAWN: %s.' % PA.KFACTOR_SCALE_CORRELATION_TXT['correlated'])
+    A('    ALTERNATIVE, quoted in every table below but not drawn: %s.'
+      % PA.KFACTOR_SCALE_CORRELATION_TXT['uncorrelated'])
+    A('    The correlated one is drawn because the two samples are the same')
+    A('    process, the same PDF set, the same functional scale choice and')
+    A('    the same run card, so a scale is a physical setting shared between')
+    A('    them rather than two independent nuisance parameters; and the')
+    A('    muF / parton-luminosity part of the variation, which has nothing')
+    A('    to do with the ORDER, then largely cancels.  The uncorrelated one')
+    A('    is about a third wider.')
+    A('')
+    A('DECISION 3 -- HOW A POLARISED COMPONENT IS VARIED AT ALL.')
+    A('  %s' % PA.SCALE_POL_MODEL_TXT)
+    A('  Exact at LO because the muF and alpha_s dependence multiplies the')
+    A('  whole squared matrix element at a fixed phase-space point,')
+    A('  identically for the polarised projection and for the total.  An')
+    A('  APPROXIMATION at NLO: the virtual and real pieces are not decomposed')
+    A('  by polarisation, and this study\'s own result is that the components')
+    A('  have different K-factors, which is the same statement as their')
+    A('  alpha_s dependence differing.  The NLO component bands are therefore')
+    A('  the total\'s band transported onto the component.  Only a MadSpin run')
+    A('  emitting ms_pol_* per scale point could do better; no cached weight')
+    A('  can.')
+    A('  187 of the NLO sample\'s 250 000 events have |w_s/w_central| > 3 for')
+    A('  some s -- MC@NLO weights that very nearly cancel.  They are NOT')
+    A('  clipped: together they move the reweighted total by 0.39 %, and the')
+    A('  reweighted total agrees with the directly summed w_s to 3e-05, the')
+    A('  same 3e-05 by which sum(MUR1.0_MUF1.0) and sum(Weight) already')
+    A('  differ.  The LO sample has none; its extreme ratio is 1.246.')
+    A('')
+    # -- the nine points, per sample, under the TRUE labels -----------------
+    A('-' * 74)
+    A('THE NINE POINTS, PER SAMPLE, UNDER THEIR TRUE muR / muF')
+    A('-' * 74)
+    for samp, tag in ((d, 'NLO (run_06)'), (lo, 'LO (run_12)')):
+        c = float((np.asarray(samp.full, float) * samp.scale_to_pb).sum())
+        A('  %s   sigma(central) = %.7f pb' % (tag, c))
+        A('    %-22s %-14s %14s %10s   %s'
+          % ('N-line name', 'TRUE', 'sigma [pb]', 'rel', 'in 7-point'))
+        for s in PA.SCALE_NAMES:
+            w = (np.asarray(samp.full, float) * samp.scale_ratio(s)
+                 * samp.scale_to_pb).sum()
+            A('    %-22s %-14s %14.7f %9.2f %%   %s'
+              % (s, PA.scale_true_txt(s), w, 100 * (w / c - 1.0),
+                 'yes' if s in PA.SCALE_SEVEN else 'NO  (anti-diagonal)'))
+        for which in ('seven', 'nine'):
+            vals = [float((np.asarray(samp.full, float) * samp.scale_ratio(s)
+                           * samp.scale_to_pb).sum())
+                    for s in PA.scale_points(which)]
+            A('    %s-point envelope on sigma: %+.2f %% / %+.2f %%'
+              % (which, 100 * (max(vals) / c - 1), 100 * (min(vals) / c - 1)))
+        A('')
+    # -- the K-factor table, the answer ------------------------------------
+    for which in ('seven', 'nine'):
+        rows = PA.integrated_kfactor_bands(d, lo, None, which)
+        A('-' * 74)
+        A('INCLUSIVE K-FACTOR WITH STATISTICS AND SCALE (%s-point envelope)'
+          % which)
+        A('-' * 74)
+        A('  no lepton selection: all 250 000 events of each sample.')
+        A('  %-12s %9s %9s   %-20s %-20s'
+          % ('component', 'K', '+- stat', 'scale, correlated',
+             'scale, uncorrelated'))
+        for r in rows:
+            A('  %-12s %9.4f %9.4f   %+7.2f %% %+7.2f %%   %+7.2f %% %+7.2f %%'
+              % (PA.KF_CURVE_TXT[r['key']], r['K'], r['K_err'],
+                 100 * (r['K_scale_hi'] / r['K'] - 1),
+                 100 * (r['K_scale_lo'] / r['K'] - 1),
+                 100 * (r['K_scale_hi_uncorr'] / r['K'] - 1),
+                 100 * (r['K_scale_lo_uncorr'] / r['K'] - 1)))
+        A('')
+        A('  the same, as absolute K bounds:')
+        A('  %-12s %9s   %-19s %-19s'
+          % ('component', 'K', 'correlated', 'uncorrelated'))
+        for r in rows:
+            A('  %-12s %9.4f   [%7.4f, %7.4f]  [%7.4f, %7.4f]'
+              % (PA.KF_CURVE_TXT[r['key']], r['K'],
+                 r['K_scale_lo'], r['K_scale_hi'],
+                 r['K_scale_lo_uncorr'], r['K_scale_hi_uncorr']))
+        A('')
+        A('  K per scale point, under the TRUE labels:')
+        A('    %-22s' % 'TRUE'
+          + ''.join('%11s' % PA.KF_CURVE_TXT[k].replace(' ', '')
+                    for k in PA.KF_PANE_ORDER))
+        for s in PA.scale_points(which):
+            A('    %-22s' % PA.scale_true_txt(s)
+              + ''.join('%11.4f' % {r['key']: r for r in rows}[k]
+                        ['K_per_scale'][s] for k in PA.KF_PANE_ORDER))
+        A('')
+    # -- the double ratio: the question the figure exists to answer --------
+    surv = PA.scale_survival(d, lo)
+    rows = surv['rows']
+    A('=' * 74)
+    A('DOES THE POLARISATION DEPENDENCE OF K SURVIVE THE SCALE BAND?')
+    A('=' * 74)
+    A('K itself moves by -4.6 % / +6.8 % (correlated, 7-point) and the spread')
+    A('BETWEEN components is about 7.5 %, so on the raw K the band and the')
+    A('effect are the same size.  That is the wrong comparison and it is the')
+    A('one RESULTS.md flagged.  The scale moves all five K TOGETHER -- it is')
+    A('very nearly a common multiplicative shift -- so the quantity to test')
+    A('is the RATIO of one component\'s K to the unpolarised K,')
+    A('')
+    A('    D = K_component / K_full   ( == f_NLO / f_LO, the double ratio )')
+    A('')
+    A('taken scale by scale so the common movement cancels.  D = 1 is "this')
+    A('component has the same K as the total".')
+    A('')
+    A('  %-10s %8s %9s %8s   %-19s %8s'
+      % ('component', 'D', '+- stat', 'stat sig', 'scale band on D',
+         'D-1 / halfband'))
+    for r in rows:
+        if 'D' not in r:
+            continue
+        A('  %-10s %8.4f %9.4f %7.1fs   %+7.2f %% %+7.2f %% %10.1f'
+          % (PA.KF_CURVE_TXT[r['key']], r['D'], r['D_err'],
+             r['D_sigma_from_1'],
+             100 * (r['D_scale_hi'] / r['D'] - 1),
+             100 * (r['D_scale_lo'] / r['D'] - 1),
+             r['D_over_scale_halfband']))
+    A('')
+    A('  the mixed components against Z_T Z_T, the comparison the brief names:')
+    mlo, mhi = surv['mixed_over_TT_band']
+    dlo, dhi = surv['mixed_minus_TT_band']
+    A('    K(mixed avg) / K(ZT ZT)  = %.4f, envelope [%.4f, %.4f]'
+      % (surv['mixed_over_TT'], mlo, mhi))
+    A('    K(mixed avg) - K(ZT ZT)  = %.4f, envelope [%.4f, %.4f]'
+      % (surv['mixed_minus_TT'], dlo, dhi))
+    A('    The envelope never reaches 1 (never reaches 0 for the difference),')
+    A('    so the mixed components take a LARGER NLO enhancement than ZT ZT')
+    A('    at every one of the %d scale points, by at least %.1f %%.'
+      % (len(surv['points']), 100 * (mlo - 1)))
+    A('')
+    # -- per-observable, fiducial ------------------------------------------
+    for obs in PA.OBS:
+        A('-' * 74)
+        A('%s -- fiducial K with statistics and scale' % PA.LABELS_TXT[obs][0])
+        A('-' * 74)
+        for r in PA.integrated_kfactor_bands(d, lo, obs):
+            A('  %-12s K = %.4f +- %.4f  scale [%.4f, %.4f]'
+              % (PA.KF_CURVE_TXT[r['key']], r['K'], r['K_err'],
+                 r['K_scale_lo'], r['K_scale_hi']))
+        A('')
+        A('  the fraction bands, per bin, NLO sample (envelope of the ratio):')
+        edges = PA.BINS[obs]
+        for pane in ['SUM'] + PA.RATIO6_FRACTIONS:
+            fb = PA.fraction_band(d, obs, pane)
+            A('    %s' % PA.RATIO_TXT[pane])
+            A('      %-18s %12s %10s %12s %12s'
+              % ('bin', 'ratio', '+- stat', 'scale lo', 'scale hi'))
+            for i in range(len(edges) - 1):
+                A('      %7.3f - %-8.3f %12.6f %10.6f %12.6f %12.6f'
+                  % (edges[i], edges[i + 1], fb['r'][i], fb['err'][i],
+                     fb['lo'][i], fb['hi'][i]))
+            A('')
+        A('  the K bands, per bin (correlated, %s-point):' % PA.SCALE_ENVELOPE)
+        A('    %-18s' % 'bin'
+          + ''.join('%22s' % PA.KF_CURVE_TXT[k].replace(' ', '')
+                    for k in PA.KF_PANE_ORDER))
+        kb = {k: PA.kfactor_band(d, lo, obs, k) for k in PA.KF_PANE_ORDER}
+        for i in range(len(edges) - 1):
+            A('    %7.3f - %-8.3f' % (edges[i], edges[i + 1])
+              + ''.join('  %8.4f [%.3f,%.3f]'.replace('  ', ' ', 0)
+                        % (kb[k]['k'][i], kb[k]['lo'][i], kb[k]['hi'][i])
+                        for k in PA.KF_PANE_ORDER))
+        A('')
 
 
 def _kfactor_numbers(A, d, lo):
@@ -1452,6 +1818,214 @@ def draw_kfactor(nlo, lo, obs, outdir):
     return base, want
 
 
+# --------------------------------------------------------------------------
+# THE TWO SIX-PANEL RATIO FIGURES.  See pol_analysis.RATIO6_DIR for what they
+# are and why the distribution pane is not on them.
+
+# The band's face alpha, and the line style of the band EDGE.  Faint enough
+# that the nominal step and its error bars stay the most visible thing in the
+# pane -- the band is a systematic, the points are the measurement -- and
+# opaque enough to read where two components overlap on the K pane.
+BAND_ALPHA = 0.18
+BAND_ALPHA_K = 0.13
+BAND_LW = 0.0
+
+
+def _band(ax, edges, lo, hi, color, alpha, zorder=2):
+    """A scale band drawn on the same step grid as ``stairs``.
+
+    ``fill_between(step='post')`` with ``x = edges`` and the last value
+    repeated puts ``lo[i]``/``hi[i]`` across ``[edges[i], edges[i+1]]``, which
+    is exactly the cell ``ax.stairs(values, edges)`` fills.  Anything else --
+    filling between bin CENTRES, say -- would draw a band half a bin out of
+    register with the curve it belongs to, most visibly in the end bins.
+    """
+    lo = np.asarray(lo, dtype=float)
+    hi = np.asarray(hi, dtype=float)
+    ax.fill_between(edges, np.concatenate([lo, lo[-1:]]),
+                    np.concatenate([hi, hi[-1:]]), step='post',
+                    facecolor=color, alpha=alpha, lw=BAND_LW, zorder=zorder)
+
+
+def _ratio6_ylim(series, anchor=None, frac=0.10, head=0.34):
+    """One window containing every drawn curve of a pane, bars and bands.
+
+    ``series`` is a list of ``(y, err, lo, hi)``; ``lo``/``hi`` may be None on
+    the band-free figure.  The head padding is larger than the foot because
+    every pane of these figures carries its legend at the upper left and a
+    legend sitting on a curve is as unreadable as a curve off the frame.
+    """
+    los, his = [], []
+    for y, e, blo, bhi in series:
+        y = np.asarray(y, dtype=float)
+        e = np.asarray(e, dtype=float) if e is not None else np.zeros_like(y)
+        ok = np.isfinite(y)
+        eo = np.where(np.isfinite(e), e, 0.0)
+        if ok.any():
+            los.append(float(np.min((y - eo)[ok])))
+            his.append(float(np.max((y + eo)[ok])))
+        for b, sink in ((blo, los), (bhi, his)):
+            if b is None:
+                continue
+            b = np.asarray(b, dtype=float)
+            if np.isfinite(b).any():
+                sink.append(float(np.nanmin(b)) if sink is los
+                            else float(np.nanmax(b)))
+    if not los or not his:
+        return 0.0, 1.0
+    lo, hi = min(los), max(his)
+    if anchor is not None and np.isfinite(anchor):
+        lo, hi = min(lo, anchor), max(hi, anchor)
+    if not np.isfinite(lo) or not np.isfinite(hi) or hi <= lo:
+        return _pad(lo, hi)
+    d = hi - lo
+    return lo - frac * d, hi + head * d
+
+
+def draw_ratio6(nlo, lo, obs, outdir, with_band=False):
+    """Variant A as a 3 x 2 of ratios; ``with_band`` adds the scale envelope.
+
+    ONE function for both versions, deliberately.  They are the same six
+    panels off the same ``pol_analysis.ratio6_curves`` objects and differ only
+    in whether a band is shaded behind each curve, so writing them twice would
+    be inviting the two to drift apart in some detail that is not the point.
+
+    Panel by panel:
+
+    * top left, ``(Z_0Z_0 + Z_TZ_T + Z_TZ_0 + Z_0Z_T)/full`` -- the sum
+      consistency, NLO and LO.  Reference line at 1, because 1 is what this
+      one ought to be.
+    * top right, ``K = NLO/LO``, five curves.  NO reference line: a K-factor
+      ought not to be 1 and drawing a rule at 1 would suggest a null
+      hypothesis nobody holds.  Same argument as the K-factor figure's.
+    * the four below, ``component/full`` for each polarisation, NLO and LO.
+      The dashed rule in each is that pane's NLO integrated value, as on
+      variant A, and its number is in numbers.txt and not beside it.
+
+    WHICH ERROR IS ON WHAT, and it is not one rule for the whole figure:
+
+    * the five ratio panes, both orders: the delta-method / jackknife bar of
+      ``pol_analysis.ratio``.  Numerator and denominator are sums over the
+      SAME events of ONE sample, so the covariance between them is real and
+      must be kept.
+    * the K pane: the two relative MC errors in quadrature.  Numerator and
+      denominator are two independent samples and there is no covariance to
+      subtract.
+
+    That is the same split the existing figures make and it is not changed
+    here.  The scale band is a separate object drawn behind both.
+    """
+    edges = PA.BINS[obs]
+    x = 0.5 * (edges[:-1] + edges[1:])
+    xlab = (PA.LABELS_TEX if USETEX else PA.LABELS_TXT)[obs][0]
+    rlab = PA.RATIO_TEX if USETEX else PA.RATIO_TXT
+    kname = PA.KF_CURVE_TEX if USETEX else PA.KF_CURVE_TXT
+    oname = PA.RATIO6_ORDER_TEX if USETEX else PA.RATIO6_ORDER_TXT
+    cur = PA.ratio6_curves(nlo, lo, obs, with_band=with_band)
+
+    fig = plt.figure(figsize=(9.0, 10.2))
+    # Same geometry as the K-factor figure: a 3 x 2 whose right column carries
+    # five-significant-figure tick labels, which at the default wspace put the
+    # right axis name on the left column's frame.
+    gs = fig.add_gridspec(3, 2, hspace=0.07, wspace=0.30)
+    axes = []
+    for r in range(3):
+        for cc in range(2):
+            axes.append(fig.add_subplot(gs[r, cc],
+                                        sharex=axes[cc] if r else None))
+
+    def ratio_pane(ax, pane, anchor_line):
+        series = []
+        for tag in PA.RATIO6_ORDERS:
+            h = cur[pane][tag]
+            r, e = np.asarray(h['r'], float), np.asarray(h['err'], float)
+            blo = h.get('lo') if with_band else None
+            bhi = h.get('hi') if with_band else None
+            if with_band:
+                _band(ax, edges, blo, bhi, COLOR[pane], BAND_ALPHA,
+                      zorder=2 if tag == 'NLO' else 1)
+            ax.stairs(r, edges, color=COLOR[pane], ls=LS_ORDER[tag],
+                      lw=LW + (0.4 if tag == 'NLO' else 0.0), baseline=None,
+                      zorder=5 if tag == 'NLO' else 4, label=oname[tag])
+            ax.errorbar(x, r, yerr=e, fmt='o', ms=3.2 if tag == 'NLO' else 2.6,
+                        mfc='none' if tag == 'LO' else None, color=COLOR[pane],
+                        elinewidth=0.9, zorder=6 if tag == 'NLO' else 5)
+            series.append((r, e, blo, bhi))
+        if anchor_line is not None:
+            ax.axhline(anchor_line, color='black', lw=0.9,
+                       ls=':' if pane == 'SUM' else '--', zorder=3)
+        # ``loc='best'`` and not a fixed corner.  These five panes carry
+        # curves that rise on some observables and fall on others -- Z_TZ_T
+        # descends across Delta phi where Z_0Z_0 climbs -- so any one corner
+        # is under a curve on half of them.  The legend is two short entries
+        # and 'best' places it in whichever corner the data leaves free.
+        ax.set_ylim(*_ratio6_ylim(series, anchor_line, head=0.20))
+        ax.set_ylabel(rlab[pane], fontsize=9 if pane == 'SUM' else 10)
+        ax.xaxis.set_minor_locator(AutoMinorLocator())
+        ax.yaxis.set_minor_locator(AutoMinorLocator())
+        ax.yaxis.set_major_locator(MaxNLocator(5))
+        ax.tick_params(labelsize=9)
+        ax.legend(frameon=False, fontsize=8.0, loc='best', ncol=2)
+
+    # top left -- the sum consistency, reference at 1.
+    ratio_pane(axes[0], 'SUM', 1.0)
+    for s in axes[0].spines.values():
+        s.set_linewidth(1.5)
+
+    # top right -- the K-factor, five curves, no reference line.
+    axk = axes[1]
+    kseries = []
+    for key in PA.KF_PANE_ORDER:
+        kk = cur['K'][key]
+        k, e = np.asarray(kk['k'], float), np.asarray(kk['err'], float)
+        blo = kk.get('lo') if with_band else None
+        bhi = kk.get('hi') if with_band else None
+        if with_band:
+            _band(axk, edges, blo, bhi, COLOR[key], BAND_ALPHA_K,
+                  zorder=2 if key == 'full' else 1)
+        axk.stairs(k, edges, color=COLOR[key], ls=LS[key],
+                   lw=LW + (0.5 if key == 'full' else 0.0), baseline=None,
+                   zorder=6 if key == 'full' else 4, label=kname[key])
+        axk.errorbar(x, k, yerr=e, fmt='o', ms=3.0, color=COLOR[key],
+                     elinewidth=0.9, zorder=6 if key == 'full' else 5)
+        kseries.append((k, e, blo, bhi))
+    # Two legend rows over a pane whose biggest excursion (K(Z_TZ_0) ~ 2.9 in
+    # the first Delta phi bin) is at the upper LEFT, exactly under them.
+    # Checked on the rendered PNG, not on the axis limits.
+    axk.set_ylim(*_ratio6_ylim(kseries, None, head=0.56))
+    axk.set_ylabel(PA.KFACTOR_TEX if USETEX else PA.KFACTOR_TXT, fontsize=10)
+    axk.legend(frameon=False, fontsize=8.0, loc='upper left', ncol=3)
+    axk.xaxis.set_minor_locator(AutoMinorLocator())
+    axk.yaxis.set_major_locator(MaxNLocator(6))
+    axk.yaxis.set_minor_locator(AutoMinorLocator())
+    axk.tick_params(labelsize=9)
+    for sp in axk.spines.values():
+        sp.set_linewidth(1.5)
+
+    # the four fraction panes.
+    for ax, pane in zip(axes[2:], PA.RATIO6_FRACTIONS):
+        ratio_pane(ax, pane, cur[pane]['NLO']['integrated'])
+
+    for i, ax in enumerate(axes):
+        if i < 4:
+            plt.setp(ax.get_xticklabels(), visible=False)
+        else:
+            ax.set_xlabel(xlab, fontsize=11)
+    axes[0].set_xlim(edges[0], edges[-1])
+    axes[1].set_xlim(edges[0], edges[-1])
+
+    os.makedirs(outdir, exist_ok=True)
+    base = os.path.join(outdir, PA.SHORT[obs])
+    want = wants_minus(fig)
+    fig.savefig(base + '.pdf', bbox_inches='tight')
+    fig.savefig(base + '.png', dpi=200, bbox_inches='tight')
+    plt.close(fig)
+    print('%-12s six-panel%-7s sum/full NLO %.4f  LO %.4f'
+          % (PA.SHORT[obs], ' + band' if with_band else '',
+             cur['SUM']['NLO']['integrated'], cur['SUM']['LO']['integrated']))
+    return base, want
+
+
 def draw_variants(d, extras, outdir, b_extras=None):
     """The two variants, written ALONGSIDE the main figures.
 
@@ -1505,6 +2079,19 @@ def main():
     else:
         kdir = os.path.join(a.out, PA.KFACTOR_DIR)
         bases += [draw_kfactor(d, lo, obs, kdir) for obs in PA.OBS]
+        # The two six-panel ratio figures, in their own two subdirectories
+        # beside the K-factor one.  Both need the LO sample; the second also
+        # needs the nine scale columns in BOTH .npz, and is skipped and said
+        # to be skipped rather than approximated if either is short of them.
+        r6 = os.path.join(a.out, PA.RATIO6_DIR)
+        bases += [draw_ratio6(d, lo, obs, r6) for obs in PA.OBS]
+        if d.has_scale and lo.has_scale:
+            r6s = os.path.join(a.out, PA.RATIO6_SCALE_DIR)
+            bases += [draw_ratio6(d, lo, obs, r6s, with_band=True)
+                      for obs in PA.OBS]
+        else:
+            print('no MUR*_MUF* columns in %s: the scale figure is not drawn'
+                  % a.data)
     write_numbers(d, a.numbers, b_extras, lo=lo)
     if a.check_minus:
         print('usetex = %s   minus workaround active = %s' % (USETEX, MINUS_FIX))

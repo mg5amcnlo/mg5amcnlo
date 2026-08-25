@@ -6,6 +6,12 @@ dphi_ee      variant A  N=164111  sum/full = 0.9918 +- 0.0005
 dphi_ee      variant B  N=164111  norm=inrange
 m_epmup      K-factor  unpolarised=1.290  Z0Z0=1.286  Z0ZT=1.360  ZTZ0=1.348  ZTZT=1.265
 dphi_ee      K-factor  unpolarised=1.289  Z0Z0=1.295  Z0ZT=1.378  ZTZ0=1.353  ZTZT=1.262
-wrote /private/tmp/t91/MadSpin/validation/zz_pol_weights/numbers.txt
+m_epmup      six-panel        sum/full NLO 0.9873  LO 0.9887
+dphi_ee      six-panel        sum/full NLO 0.9918  LO 0.9928
+m_epmup      six-panel + band sum/full NLO 0.9873  LO 0.9887
+dphi_ee      six-panel + band sum/full NLO 0.9918  LO 0.9928
+wrote /private/tmp/t92/MadSpin/validation/zz_pol_weights/numbers.txt
 usetex = True   minus workaround active = True
-8/8 applicable PDFs carry /minus
+m_epmup: no minus sign in this figure, check not applicable
+m_epmup: no minus sign in this figure, check not applicable
+10/10 applicable PDFs carry /minus

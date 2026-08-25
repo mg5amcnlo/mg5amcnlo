@@ -88,10 +88,28 @@ POL_NAMES = ['ms_pol_23.0_23.0', 'ms_pol_23.0_23.T',
              'ms_pol_23.T_23.0', 'ms_pol_23.T_23.T']
 POL_KEYS = ['LL', 'LT', 'TL', 'TT']
 
+# The nine renormalisation/factorisation scale points MG5_aMC writes into the
+# ``N`` line, in the order they appear there.  ALL NINE are kept, including the
+# two non-adjacent corners MUR0.5_MUF2.0 and MUR2.0_MUF0.5 that a 7-point
+# envelope discards -- which of the nine a given envelope uses is a decision
+# for the ANALYSIS, made in ``pol_analysis.SCALE_ENVELOPE``, and the extractor
+# has no business making it.  Keeping seven here would have hard-coded the
+# convention into the cache and made the 9-point comparison unmeasurable
+# without another 30 s pass over 10 GB.
+SCALE_NAMES = ['MUR0.5_MUF0.5', 'MUR0.5_MUF1.0', 'MUR0.5_MUF2.0',
+               'MUR1.0_MUF0.5', 'MUR1.0_MUF1.0', 'MUR1.0_MUF2.0',
+               'MUR2.0_MUF0.5', 'MUR2.0_MUF1.0', 'MUR2.0_MUF2.0']
+# The central point of those nine, and the denominator every per-event scale
+# RATIO is formed against -- see ``pol_analysis.scale_ratios``.
+SCALE_CENTRAL = 'MUR1.0_MUF1.0'
+
 # Every weight the .npz keeps a per-event column of.  "0", "Weight" and
 # "MUR1.0_MUF1.0" are all candidates for "the full"; all three are kept and the
-# choice between them is made downstream, from the evidence.
-KEEP_WEIGHTS = ['0', 'Weight', 'MUR1.0_MUF1.0'] + POL_NAMES
+# choice between them is made downstream, from the evidence.  The other eight
+# scale points were NOT kept by the first pass over these files and were added
+# by a later one, which re-read the two samples the scale study needs; see
+# RESULTS.md, *The scale columns*.
+KEEP_WEIGHTS = ['0', 'Weight'] + SCALE_NAMES + POL_NAMES
 # Of those, the two that must be on the N line for the file to be usable at
 # all: without them there is no nominal and nothing downstream has a scale.
 # Everything else is kept if present and reported as absent if not -- a run
@@ -100,7 +118,12 @@ KEEP_WEIGHTS = ['0', 'Weight', 'MUR1.0_MUF1.0'] + POL_NAMES
 REQUIRED_WEIGHTS = ['0', 'Weight']
 # Float64 for the three nominal candidates (the "0" / "Weight" bit-for-bit
 # comparison downstream needs full precision); float32 is plenty for the rest.
-WIDE_WEIGHTS = frozenset(('0', 'Weight', 'MUR1.0_MUF1.0'))
+# Float64 for the three nominal candidates; float32 for the other eight scale
+# points, which are only ever used as a RATIO to the central one and whose
+# float32 relative precision (1e-7) is four orders below the smallest band on
+# any figure.  Keeping the central point wide also keeps the pre-existing
+# ``w_MUR1.0_MUF1.0`` column bit-for-bit what the first pass wrote.
+WIDE_WEIGHTS = frozenset(('0', 'Weight', SCALE_CENTRAL))
 
 # The three samples this study covers.  Written into EVERY meta.json so that
 # a reader who opens data/meta.json alone is told that two sibling samples

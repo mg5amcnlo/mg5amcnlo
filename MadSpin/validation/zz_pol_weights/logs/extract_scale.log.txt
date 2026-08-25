@@ -1,0 +1,40 @@
+# Re-extraction of the two scale-column samples (base aacedbf19).
+# KEEP_WEIGHTS widened from ['0','Weight','MUR1.0_MUF1.0']+POL_NAMES to all
+# nine MUR*_MUF*.  Both passes run concurrently.  Every pre-existing column
+# came back bit-for-bit identical; the two .npz grew by eight columns only.
+
+=== run_06_decayed_1 (madspin, NLO, the reference) -> weights.npz
+     20000 events    0.84 GB inflated       2 s
+     40000 events    1.69 GB inflated       5 s
+     60000 events    2.53 GB inflated       7 s
+     80000 events    3.38 GB inflated      10 s
+    100000 events    4.22 GB inflated      13 s
+    120000 events    5.07 GB inflated      16 s
+    140000 events    5.91 GB inflated      18 s
+    160000 events    6.76 GB inflated      21 s
+    180000 events    7.61 GB inflated      23 s
+    200000 events    8.46 GB inflated      26 s
+    220000 events    9.30 GB inflated      28 s
+    240000 events   10.14 GB inflated      31 s
+read   3.449 GB on disk (10.562 GB inflated) in 32.1 s (0.54 min), 109455942 lines
+events 250000
+wrote  /tmp/t92_reextract/weights.npz (28.2 MB)
+       /tmp/t92_reextract/meta.json
+
+=== run_12_decayed_1 (madspin, order = LO) -> weights_LO.npz
+     20000 events    0.82 GB inflated       2 s
+     40000 events    1.63 GB inflated       5 s
+     60000 events    2.45 GB inflated       8 s
+     80000 events    3.26 GB inflated      11 s
+    100000 events    4.07 GB inflated      13 s
+    120000 events    4.89 GB inflated      16 s
+    140000 events    5.71 GB inflated      19 s
+    160000 events    6.53 GB inflated      21 s
+    180000 events    7.35 GB inflated      24 s
+    200000 events    8.17 GB inflated      26 s
+    220000 events    8.98 GB inflated      28 s
+    240000 events    9.80 GB inflated      31 s
+read   3.315 GB on disk (10.206 GB inflated) in 31.9 s (0.53 min), 106124632 lines
+events 250000
+wrote  /tmp/t92_reextract/weights_LO.npz (26.3 MB)
+       /tmp/t92_reextract/meta_LO.json

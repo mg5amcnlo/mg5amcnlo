@@ -74,11 +74,11 @@ legend.  Variant B's pane is documented in full under "THE SHAPE
 RATIO" below, including which sigma normalises each curve.
 
 spinmode    input                                on disk  inflated   pass s   events
-madspin     run_06_decayed_1/....hepmc.gz         3.449G   10.562G     27.8   250000
+madspin     run_06_decayed_1/....hepmc.gz         3.449G   10.562G     32.1   250000
 onshell     run_08_decayed_1/....hepmc.gz         3.449G   10.574G     29.0   250000
 PA          run_07_decayed_1/....hepmc.gz         3.462G   10.599G     28.9   250000
 madspin_v1  run_10_decayed_1/....hepmc.gz         3.443G   10.540G     30.7   250000
-LO          run_12_decayed_1/....hepmc.gz         3.315G   10.206G     28.0   250000
+LO          run_12_decayed_1/....hepmc.gz         3.315G   10.206G     31.9   250000
 Every .gz input was streamed through "gzip -dc" in a child process and
 never unpacked to disk: they inflate to ~10.5 GB each and no temporary
 of that size should have to exist.  The first three passes were run
@@ -87,7 +87,7 @@ each other and none of them is a serial measurement; the madspin_v1
 pass was run on its own later, so ITS time is a serial one and is the
 only number in that column that can be read as a rate.
 109455942 lines read from the reference file, HepMC2 IO_GenEvent (HepMC::Version 2.06.09)
-code       7e39b7b1b4b383bcf70391efbf616a3683403956
+code       aacedbf19e71709768f5b153d6ea8bf54ac1890a
 
 --- the 33 weight names on every N line (asserted, not sampled) ---
    0                   1010                1011                1012                1013                1014              
@@ -833,4 +833,598 @@ in-selection K: unpolarised = 1.2890+-0.0048  Z0 Z0 = 1.2950+-0.0085  Z0 ZT = 1.
  2.36- 2.62     23414     24104     1.2769+-0.0124    1.2845+-0.0199    1.3904+-0.0196    1.3238+-0.0189    1.2459+-0.0128
  2.62- 2.88     26413     26765     1.3003+-0.0119    1.3059+-0.0192    1.4069+-0.0190    1.2939+-0.0165    1.2718+-0.0127
  2.88- 3.14     27210     28283     1.2635+-0.0113    1.2439+-0.0188    1.3142+-0.0180    1.2392+-0.0151    1.2470+-0.0128
+
+==========================================================================
+THE TWO SIX-PANEL RATIO FIGURES (variant A, restructured)
+==========================================================================
+Written to plots/variant_A6_ratios/ and plots/variant_A6_ratios_scale/ and to the two
+same-named directories under plots_userstyle/.  PDF and PNG, both
+styles.  Variant A itself, variant B, the K-factor figure and the
+original figures are untouched by this pass and their PNGs are still
+byte-for-byte what this branch carried.
+
+WHAT CHANGED FROM VARIANT A.  Variant A was a distribution pane, a
+full-width (Z0Z0+ZTZT+ZTZ0+Z0ZT)/full pane and a 2x2 of the individual
+polarisation ratios, on the NLO reference alone.  These are a 3 x 2 of
+RATIOS ONLY:
+  top left    (Z0Z0 + ZTZT + ZTZ0 + Z0ZT) / full, the sum consistency
+  top right   K = NLO / LO, five curves (unpolarised + the four)
+  the four    component / full, one polarisation per pane
+The distribution pane is GONE.  It is still the top pane of the
+original figures, of variant B and of five of the six K-factor panels,
+and this figure is about ratios.
+
+BOTH ORDERS ON FIVE OF THE SIX PANES.  The figure now spans NLO and
+LO, so every pane that admits two orders draws two -- the sum pane and
+the four fraction panes each carry the NLO reference (solid, filled
+markers) and the LO sample (dashed, open markers).  The K pane is
+itself the ratio BETWEEN the two orders and can only be one curve per
+component.
+
+PANE ORDER.  The four fractions run LL, LT, TL, TT -- the K-factor
+figure's component order -- and NOT variant A's LL, TT, TL, LT.  They
+sit under a K pane whose five-entry legend is in the former, and
+reading the two against each other should not need re-sorting.
+
+ERRORS.  Unchanged from the figures they are built out of, and not one
+rule for the whole canvas:
+  the five ratio panes, both orders: the delta-method / jackknife bar.
+    Numerator and denominator are sums over the SAME events of ONE
+    sample, so their covariance is real and is kept.
+  the K pane: the two relative MC errors in quadrature.  Two
+    independent samples, no covariance to subtract.
+
+THE DASHED RULE in each fraction pane is that pane's NLO integrated
+value, as on variant A.  The dotted rule on the sum pane is 1.  The K
+pane carries NO rule: a K-factor ought not to be 1 and drawing one
+there would suggest a null hypothesis nobody holds.
+
+--------------------------------------------------------------------------
+M(e+ mu+) [GeV] -- the six panes, bin by bin
+--------------------------------------------------------------------------
+  (Z0Z0 + ZTZT + ZTZ0 + Z0ZT) / full
+    bin                         NLO         +-             LO         +-
+      0.000 - 45.000       0.977188   0.001376       0.979907   0.001251
+     45.000 - 70.000       0.978811   0.001338       0.980194   0.001150
+     70.000 - 95.000       0.990926   0.001298       0.996393   0.001115
+     95.000 - 125.000      0.996963   0.001304       0.996247   0.001053
+    125.000 - 175.000      0.992277   0.001411       0.991086   0.001074
+    175.000 - 260.000      0.989780   0.001614       0.990307   0.001127
+    260.000 - 450.000      0.989338   0.002481       0.989775   0.001210
+    integrated: NLO 0.987290   LO 0.988750
+
+  Z0Z0 / full
+    bin                         NLO         +-             LO         +-
+      0.000 - 45.000       0.050615   0.000654       0.050425   0.000574
+     45.000 - 70.000       0.064358   0.000669       0.066638   0.000605
+     70.000 - 95.000       0.093544   0.000807       0.092721   0.000712
+     95.000 - 125.000      0.076748   0.000714       0.075865   0.000639
+    125.000 - 175.000      0.041538   0.000457       0.039437   0.000374
+    175.000 - 260.000      0.016135   0.000253       0.015120   0.000190
+    260.000 - 450.000      0.004517   0.000146       0.003561   0.000068
+    integrated: NLO 0.059210   LO 0.059357
+
+  Z0ZT / full
+    bin                         NLO         +-             LO         +-
+      0.000 - 45.000       0.121336   0.001065       0.118730   0.000913
+     45.000 - 70.000       0.135476   0.001013       0.130531   0.000860
+     70.000 - 95.000       0.154038   0.001065       0.149704   0.000915
+     95.000 - 125.000      0.149440   0.001160       0.142315   0.000978
+    125.000 - 175.000      0.117450   0.001149       0.106984   0.000877
+    175.000 - 260.000      0.078459   0.001262       0.062616   0.000796
+    260.000 - 450.000      0.046651   0.001833       0.027609   0.000639
+    integrated: NLO 0.127032   LO 0.120467
+
+  ZTZ0 / full
+    bin                         NLO         +-             LO         +-
+      0.000 - 45.000       0.121029   0.001044       0.118801   0.000913
+     45.000 - 70.000       0.134251   0.001009       0.131444   0.000863
+     70.000 - 95.000       0.154937   0.001074       0.151482   0.000921
+     95.000 - 125.000      0.147855   0.001134       0.140982   0.000973
+    125.000 - 175.000      0.117237   0.001136       0.108167   0.000882
+    175.000 - 260.000      0.078022   0.001308       0.062493   0.000793
+    260.000 - 450.000      0.045305   0.001610       0.028383   0.000623
+    integrated: NLO 0.126484   LO 0.120977
+
+  ZTZT / full
+    bin                         NLO         +-             LO         +-
+      0.000 - 45.000       0.684208   0.002050       0.691951   0.001798
+     45.000 - 70.000       0.644725   0.001903       0.651580   0.001665
+     70.000 - 95.000       0.588405   0.001971       0.602486   0.001713
+     95.000 - 125.000      0.622920   0.001984       0.637085   0.001739
+    125.000 - 175.000      0.716052   0.001939       0.736497   0.001595
+    175.000 - 260.000      0.817165   0.002177       0.850078   0.001571
+    260.000 - 450.000      0.892866   0.002879       0.930222   0.001518
+    integrated: NLO 0.674563   LO 0.687948
+
+  K = NLO / LO, per component
+    bin               unpolarised       Z0Z0       Z0ZT       ZTZ0       ZTZT
+      0.000 - 45.000       1.2588     1.2636     1.2865     1.2824     1.2447
+     45.000 - 70.000       1.2720     1.2285     1.3202     1.2991     1.2586
+     70.000 - 95.000       1.2579     1.2690     1.2943     1.2866     1.2285
+     95.000 - 125.000      1.3174     1.3327     1.3833     1.3816     1.2881
+    125.000 - 175.000      1.2907     1.3595     1.4170     1.3989     1.2549
+    175.000 - 260.000      1.3730     1.4651     1.7204     1.7142     1.3198
+    260.000 - 450.000      1.3806     1.7511     2.3328     2.2038     1.3252
+
+--------------------------------------------------------------------------
+Delta phi(e+ e-) [rad] -- the six panes, bin by bin
+--------------------------------------------------------------------------
+  (Z0Z0 + ZTZT + ZTZ0 + Z0ZT) / full
+    bin                         NLO         +-             LO         +-
+      0.000 - 0.262        1.016578   0.004383       1.007267   0.003730
+      0.262 - 0.524        1.014857   0.004208       1.003608   0.002949
+      0.524 - 0.785        1.013948   0.003302       1.010100   0.002999
+      0.785 - 1.047        1.014746   0.002727       1.008748   0.002127
+      1.047 - 1.309        1.015622   0.002523       1.008879   0.001901
+      1.309 - 1.571        1.013489   0.001919       1.009664   0.001603
+      1.571 - 1.833        1.012227   0.001644       1.011801   0.001413
+      1.833 - 2.094        1.007385   0.001460       1.009468   0.001203
+      2.094 - 2.356        1.000529   0.001364       1.005309   0.001129
+      2.356 - 2.618        0.991323   0.001244       0.993558   0.001077
+      2.618 - 2.880        0.973518   0.001226       0.976846   0.001053
+      2.880 - 3.142        0.954195   0.001190       0.959453   0.001024
+    integrated: NLO 0.991797   LO 0.992773
+
+  Z0Z0 / full
+    bin                         NLO         +-             LO         +-
+      0.000 - 0.262        0.021194   0.001043       0.017467   0.000697
+      0.262 - 0.524        0.018989   0.000803       0.017750   0.000779
+      0.524 - 0.785        0.018307   0.000726       0.018709   0.000711
+      0.785 - 1.047        0.020601   0.000683       0.019541   0.000592
+      1.047 - 1.309        0.025705   0.000666       0.024606   0.000576
+      1.309 - 1.571        0.032356   0.000649       0.030760   0.000568
+      1.571 - 1.833        0.040517   0.000623       0.040193   0.000560
+      1.833 - 2.094        0.053038   0.000663       0.051391   0.000562
+      2.094 - 2.356        0.066364   0.000685       0.065609   0.000606
+      2.356 - 2.618        0.078532   0.000710       0.078068   0.000631
+      2.618 - 2.880        0.080054   0.000690       0.079712   0.000619
+      2.880 - 3.142        0.068725   0.000633       0.069808   0.000557
+    integrated: NLO 0.057973   LO 0.057702
+
+  Z0ZT / full
+    bin                         NLO         +-             LO         +-
+      0.000 - 0.262        0.095197   0.002349       0.087055   0.001900
+      0.262 - 0.524        0.091144   0.002242       0.083319   0.001676
+      0.524 - 0.785        0.090201   0.001844       0.083007   0.001476
+      0.785 - 1.047        0.099013   0.001742       0.088219   0.001306
+      1.047 - 1.309        0.104443   0.001538       0.094956   0.001204
+      1.309 - 1.571        0.108211   0.001345       0.103333   0.001118
+      1.571 - 1.833        0.109720   0.001185       0.102333   0.000978
+      1.833 - 2.094        0.108138   0.001064       0.102198   0.000862
+      2.094 - 2.356        0.112223   0.000990       0.103621   0.000781
+      2.356 - 2.618        0.121121   0.000951       0.111236   0.000746
+      2.618 - 2.880        0.142309   0.001065       0.131528   0.000875
+      2.880 - 3.142        0.166126   0.001289       0.159708   0.001110
+    integrated: NLO 0.124198   LO 0.116198
+
+  ZTZ0 / full
+    bin                         NLO         +-             LO         +-
+      0.000 - 0.262        0.066369   0.002861       0.030332   0.001151
+      0.262 - 0.524        0.070233   0.002594       0.037149   0.001180
+      0.524 - 0.785        0.075903   0.002278       0.048025   0.001104
+      0.785 - 1.047        0.084205   0.001777       0.060512   0.000980
+      1.047 - 1.309        0.093128   0.001555       0.079059   0.001070
+      1.309 - 1.571        0.104135   0.001402       0.090929   0.001030
+      1.571 - 1.833        0.106494   0.001211       0.100171   0.000979
+      1.833 - 2.094        0.108618   0.001091       0.103194   0.000905
+      2.094 - 2.356        0.108891   0.000983       0.105429   0.000848
+      2.356 - 2.618        0.117693   0.000931       0.113525   0.000793
+      2.618 - 2.880        0.138280   0.000931       0.138966   0.000816
+      2.880 - 3.142        0.170648   0.001059       0.173997   0.000948
+    integrated: NLO 0.120271   LO 0.114539
+
+  ZTZT / full
+    bin                         NLO         +-             LO         +-
+      0.000 - 0.262        0.833818   0.004240       0.872413   0.003366
+      0.262 - 0.524        0.834492   0.003963       0.865389   0.002917
+      0.524 - 0.785        0.829536   0.003430       0.860360   0.002795
+      0.785 - 1.047        0.810927   0.003099       0.840476   0.002338
+      1.047 - 1.309        0.792346   0.002797       0.810259   0.002274
+      1.309 - 1.571        0.768787   0.002472       0.784643   0.002097
+      1.571 - 1.833        0.755495   0.002275       0.769104   0.001939
+      1.833 - 2.094        0.737590   0.002057       0.752685   0.001745
+      2.094 - 2.356        0.713051   0.001898       0.730650   0.001590
+      2.356 - 2.618        0.673977   0.001744       0.690729   0.001496
+      2.618 - 2.880        0.612875   0.001797       0.626641   0.001573
+      2.880 - 3.142        0.548696   0.002033       0.555940   0.001793
+    integrated: NLO 0.689355   LO 0.704333
+
+  K = NLO / LO, per component
+    bin               unpolarised       Z0Z0       Z0ZT       ZTZ0       ZTZT
+      0.000 - 0.262        1.3457     1.6329     1.4716     2.9446     1.2862
+      0.262 - 0.524        1.3868     1.4835     1.5170     2.6218     1.3373
+      0.524 - 0.785        1.3274     1.2989     1.4425     2.0980     1.2798
+      0.785 - 1.047        1.3009     1.3714     1.4601     1.8103     1.2552
+      1.047 - 1.309        1.3074     1.3659     1.4381     1.5401     1.2785
+      1.309 - 1.571        1.3093     1.3772     1.3711     1.4994     1.2828
+      1.571 - 1.833        1.2930     1.3034     1.3863     1.3746     1.2701
+      1.833 - 2.094        1.2688     1.3094     1.3425     1.3355     1.2433
+      2.094 - 2.356        1.2798     1.2946     1.3861     1.3219     1.2490
+      2.356 - 2.618        1.2769     1.2845     1.3904     1.3238     1.2459
+      2.618 - 2.880        1.3003     1.3059     1.4069     1.2939     1.2718
+      2.880 - 3.142        1.2635     1.2439     1.3142     1.2392     1.2470
+
+==========================================================================
+SCALE UNCERTAINTY -- THE CONVENTIONS, STATED, AND BOTH ALTERNATIVES
+==========================================================================
+
+WHERE THE COLUMNS CAME FROM.  They were NOT cached.  Before this pass
+data/weights.npz and data/weights_LO.npz carried w_MUR1.0_MUF1.0 and
+no other scale point, so the eight remaining MUR*_MUF* columns could
+not be summed and were not approximated.  Both files were re-read from
+their HepMC by extract_hepmc_pol.py with KEEP_WEIGHTS widened to all
+nine -- 32.1 s for run_06_decayed_1 and 31.9 s for run_12_decayed_1,
+one streaming pass each.  EVERY COLUMN THAT WAS ALREADY THERE CAME
+BACK BIT-FOR-BIT IDENTICAL; the two .npz grew by the eight new columns
+and by nothing else, which is why every figure and every number of the
+earlier passes is unchanged.  The three other spinmode samples were
+not re-read: nothing on these two figures uses them.
+
+*** THE TWO LABELS ARE TRANSPOSED IN THESE FILES. ***
+The weight the HepMC N line calls MURa_MUFb is the one generated at
+muR = b, muF = a.  The two factors are right; which scale each belongs
+to is swapped.  Measured three ways, all on these files:
+  (1) p p > z z at order = LO is the Born, O(alpha_s^0), so its cross
+      section is EXACTLY muR independent and can only move with muF.
+      In weights_LO.npz the weight is degenerate in the SECOND label on
+      all 250 000 events and varies only with the FIRST.  So the first
+      label is the factorisation scale.
+  (2) Directly, on event 1 of run_12_decayed_1.  Its LHE <rwgt> gives
+      ids 1001-1003 (muR = 1, 2, 0.5 at muF = 1) the same value
+      2.3950370e-02, ids 1004-1006 (muF = 2) 2.3914174e-02 and ids
+      1007-1009 (muF = 0.5) 2.3803324e-02.  The HepMC of the same
+      event has 2.3803324e-02 under all three MUR0.5_* names,
+      2.3950370e-02 under MUR1.0_* and 2.3914174e-02 under MUR2.0_*.
+  (3) The mechanism.  The LHE header writes the nine with muF OUTER
+      and muR INNER, each cycling (1.0, 2.0, 0.5); the name generator
+      assumes muR outer and muF inner with the same cycle.  Composing
+      the two is exactly a transposition and it reproduces all nine.
+IT CHANGES NO NUMBER HERE.  An envelope is a min and a max over a SET,
+and a permutation of a set moves neither.  The 7-point subset is
+defined by which two points it DROPS, so it is not automatically safe
+-- but it is: the pair dropped, (muR, muF) = (0.5, 2.0) and (2.0,
+0.5), is the anti-diagonal, which the transposition maps onto itself.
+What it does change is the reading of any INDIVIDUAL point, so every
+per-point table below is printed under the TRUE muR / muF.
+
+DECISION 1 -- WHICH ENVELOPE.  Drawn: 7-point: the nine muR/muF combinations minus the two non-adjacent ones, (muR, muF) = (0.5, 2.0) and (2.0, 0.5).
+  The two dropped points put a factor of four between muR and muF,
+  which manufactures a large log(muR/muF) the fixed-order calculation
+  was never asked to resum; they inflate the envelope without probing
+  a missing higher order.  Both envelopes are printed below.  On these
+  samples the choice matters in one place and not in the other: on a
+  single sample's cross section the two dropped points ARE the two
+  extremes, and on the K-factor they are interior and the two
+  envelopes agree to four decimals.
+
+DECISION 2 -- CORRELATION BETWEEN NUMERATOR AND DENOMINATOR.
+  FRACTIONS (component / full inside ONE sample): no choice, and the
+    code offers none.  The same event weights appear top and bottom,
+    so the envelope is of the RATIO recomputed scale by scale, NOT the
+    ratio of two separately built envelopes.  The latter would be
+    describing a configuration that cannot occur -- the numerator at
+    its high scale while the denominator sits at its low one, on the
+    same events.  Nearly all the variation cancels this way; what
+    survives is the reweighting of the phase-space MIX inside the bin,
+    which is why these bands are sub-percent where a single cross
+    section moves by several.
+  K-FACTOR: a real choice, both defensible, and they differ.
+    DRAWN: the same muR/muF point in the NLO and the LO sample, envelope of the per-scale ratio.
+    ALTERNATIVE, quoted in every table below but not drawn: independent envelopes on the two cross sections, combined as [num_min/den_max, num_max/den_min].
+    The correlated one is drawn because the two samples are the same
+    process, the same PDF set, the same functional scale choice and
+    the same run card, so a scale is a physical setting shared between
+    them rather than two independent nuisance parameters; and the
+    muF / parton-luminosity part of the variation, which has nothing
+    to do with the ORDER, then largely cancels.  The uncorrelated one
+    is about a third wider.
+
+DECISION 3 -- HOW A POLARISED COMPONENT IS VARIED AT ALL.
+  the ms_pol_* weights exist at the central scale only, so a component is varied by the FULL weight's per-event ratio w_s/w_central -- the per-event polarisation fraction is held fixed.  Exact at LO, an approximation at NLO.
+  Exact at LO because the muF and alpha_s dependence multiplies the
+  whole squared matrix element at a fixed phase-space point,
+  identically for the polarised projection and for the total.  An
+  APPROXIMATION at NLO: the virtual and real pieces are not decomposed
+  by polarisation, and this study's own result is that the components
+  have different K-factors, which is the same statement as their
+  alpha_s dependence differing.  The NLO component bands are therefore
+  the total's band transported onto the component.  Only a MadSpin run
+  emitting ms_pol_* per scale point could do better; no cached weight
+  can.
+  187 of the NLO sample's 250 000 events have |w_s/w_central| > 3 for
+  some s -- MC@NLO weights that very nearly cancel.  They are NOT
+  clipped: together they move the reweighted total by 0.39 %, and the
+  reweighted total agrees with the directly summed w_s to 3e-05, the
+  same 3e-05 by which sum(MUR1.0_MUF1.0) and sum(Weight) already
+  differ.  The LO sample has none; its extreme ratio is 1.246.
+
+--------------------------------------------------------------------------
+THE NINE POINTS, PER SAMPLE, UNDER THEIR TRUE muR / muF
+--------------------------------------------------------------------------
+  NLO (run_06)   sigma(central) = 0.0308739 pb
+    N-line name            TRUE               sigma [pb]        rel   in 7-point
+    MUR0.5_MUF0.5          muR=0.5 muF=0.5      0.0312482      1.21 %   yes
+    MUR0.5_MUF1.0          muR=1.0 muF=0.5      0.0304360     -1.42 %   yes
+    MUR0.5_MUF2.0          muR=2.0 muF=0.5      0.0297659     -3.59 %   NO  (anti-diagonal)
+    MUR1.0_MUF0.5          muR=0.5 muF=1.0      0.0315926      2.33 %   yes
+    MUR1.0_MUF1.0          muR=1.0 muF=1.0      0.0308739      0.00 %   yes
+    MUR1.0_MUF2.0          muR=2.0 muF=1.0      0.0302810     -1.92 %   yes
+    MUR2.0_MUF0.5          muR=0.5 muF=2.0      0.0318441      3.14 %   NO  (anti-diagonal)
+    MUR2.0_MUF1.0          muR=1.0 muF=2.0      0.0312028      1.07 %   yes
+    MUR2.0_MUF2.0          muR=2.0 muF=2.0      0.0306708     -0.66 %   yes
+    seven-point envelope on sigma: +2.33 % / -1.92 %
+    nine-point envelope on sigma: +3.14 % / -3.59 %
+
+  LO (run_12)   sigma(central) = 0.0239497 pb
+    N-line name            TRUE               sigma [pb]        rel   in 7-point
+    MUR0.5_MUF0.5          muR=0.5 muF=0.5      0.0226941     -5.24 %   yes
+    MUR0.5_MUF1.0          muR=1.0 muF=0.5      0.0226941     -5.24 %   yes
+    MUR0.5_MUF2.0          muR=2.0 muF=0.5      0.0226941     -5.24 %   NO  (anti-diagonal)
+    MUR1.0_MUF0.5          muR=0.5 muF=1.0      0.0239497      0.00 %   yes
+    MUR1.0_MUF1.0          muR=1.0 muF=1.0      0.0239497      0.00 %   yes
+    MUR1.0_MUF2.0          muR=2.0 muF=1.0      0.0239497      0.00 %   yes
+    MUR2.0_MUF0.5          muR=0.5 muF=2.0      0.0249417      4.14 %   NO  (anti-diagonal)
+    MUR2.0_MUF1.0          muR=1.0 muF=2.0      0.0249417      4.14 %   yes
+    MUR2.0_MUF2.0          muR=2.0 muF=2.0      0.0249417      4.14 %   yes
+    seven-point envelope on sigma: +4.14 % / -5.24 %
+    nine-point envelope on sigma: +4.14 % / -5.24 %
+
+--------------------------------------------------------------------------
+INCLUSIVE K-FACTOR WITH STATISTICS AND SCALE (seven-point envelope)
+--------------------------------------------------------------------------
+  no lepton selection: all 250 000 events of each sample.
+  component            K   +- stat   scale, correlated    scale, uncorrelated 
+  unpolarised     1.2891    0.0039     +6.81 %   -4.61 %     +7.99 %   -5.82 %
+  Z0 Z0           1.2847    0.0070     +7.81 %   -5.32 %     +9.69 %   -7.19 %
+  Z0 ZT           1.3608    0.0063     +8.38 %   -5.78 %     +9.73 %   -7.07 %
+  ZT Z0           1.3601    0.0063     +8.37 %   -5.78 %     +9.75 %   -7.08 %
+  ZT ZT           1.2652    0.0041     +6.24 %   -4.17 %     +7.28 %   -5.30 %
+
+  the same, as absolute K bounds:
+  component            K   correlated          uncorrelated       
+  unpolarised     1.2891   [ 1.2297,  1.3769]  [ 1.2141,  1.3921]
+  Z0 Z0           1.2847   [ 1.2164,  1.3851]  [ 1.1924,  1.4092]
+  Z0 ZT           1.3608   [ 1.2821,  1.4748]  [ 1.2646,  1.4932]
+  ZT Z0           1.3601   [ 1.2815,  1.4738]  [ 1.2637,  1.4927]
+  ZT ZT           1.2652   [ 1.2125,  1.3441]  [ 1.1982,  1.3573]
+
+  K per scale point, under the TRUE labels:
+    TRUE                  unpolarised       Z0Z0       Z0ZT       ZTZ0       ZTZT
+    muR=0.5 muF=0.5            1.3769     1.3851     1.4748     1.4738     1.3441
+    muR=1.0 muF=0.5            1.3411     1.3476     1.4294     1.4282     1.3117
+    muR=0.5 muF=1.0            1.3191     1.3150     1.3986     1.3981     1.2926
+    muR=1.0 muF=1.0            1.2891     1.2847     1.3608     1.3601     1.2652
+    muR=2.0 muF=1.0            1.2644     1.2598     1.3297     1.3288     1.2426
+    muR=1.0 muF=2.0            1.2510     1.2370     1.3085     1.3081     1.2321
+    muR=2.0 muF=2.0            1.2297     1.2164     1.2821     1.2815     1.2125
+
+--------------------------------------------------------------------------
+INCLUSIVE K-FACTOR WITH STATISTICS AND SCALE (nine-point envelope)
+--------------------------------------------------------------------------
+  no lepton selection: all 250 000 events of each sample.
+  component            K   +- stat   scale, correlated    scale, uncorrelated 
+  unpolarised     1.2891    0.0039     +6.81 %   -4.61 %     +8.85 %   -7.42 %
+  Z0 Z0           1.2847    0.0070     +7.81 %   -5.32 %    +11.01 %   -9.31 %
+  Z0 ZT           1.3608    0.0063     +8.38 %   -5.78 %    +10.57 %   -8.87 %
+  ZT Z0           1.3601    0.0063     +8.37 %   -5.78 %    +10.63 %   -8.92 %
+  ZT ZT           1.2652    0.0041     +6.24 %   -4.17 %     +8.09 %   -6.75 %
+
+  the same, as absolute K bounds:
+  component            K   correlated          uncorrelated       
+  unpolarised     1.2891   [ 1.2297,  1.3769]  [ 1.1934,  1.4032]
+  Z0 Z0           1.2847   [ 1.2164,  1.3851]  [ 1.1651,  1.4261]
+  Z0 ZT           1.3608   [ 1.2821,  1.4748]  [ 1.2400,  1.5047]
+  ZT Z0           1.3601   [ 1.2815,  1.4738]  [ 1.2388,  1.5046]
+  ZT ZT           1.2652   [ 1.2125,  1.3441]  [ 1.1798,  1.3675]
+
+  K per scale point, under the TRUE labels:
+    TRUE                  unpolarised       Z0Z0       Z0ZT       ZTZ0       ZTZT
+    muR=0.5 muF=0.5            1.3769     1.3851     1.4748     1.4738     1.3441
+    muR=1.0 muF=0.5            1.3411     1.3476     1.4294     1.4282     1.3117
+    muR=2.0 muF=0.5            1.3116     1.3168     1.3919     1.3907     1.2848
+    muR=0.5 muF=1.0            1.3191     1.3150     1.3986     1.3981     1.2926
+    muR=1.0 muF=1.0            1.2891     1.2847     1.3608     1.3601     1.2652
+    muR=2.0 muF=1.0            1.2644     1.2598     1.3297     1.3288     1.2426
+    muR=0.5 muF=2.0            1.2767     1.2618     1.3405     1.3402     1.2557
+    muR=1.0 muF=2.0            1.2510     1.2370     1.3085     1.3081     1.2321
+    muR=2.0 muF=2.0            1.2297     1.2164     1.2821     1.2815     1.2125
+
+==========================================================================
+DOES THE POLARISATION DEPENDENCE OF K SURVIVE THE SCALE BAND?
+==========================================================================
+K itself moves by -4.6 % / +6.8 % (correlated, 7-point) and the spread
+BETWEEN components is about 7.5 %, so on the raw K the band and the
+effect are the same size.  That is the wrong comparison and it is the
+one RESULTS.md flagged.  The scale moves all five K TOGETHER -- it is
+very nearly a common multiplicative shift -- so the quantity to test
+is the RATIO of one component's K to the unpolarised K,
+
+    D = K_component / K_full   ( == f_NLO / f_LO, the double ratio )
+
+taken scale by scale so the common movement cancels.  D = 1 is "this
+component has the same K as the total".
+
+  component         D   +- stat stat sig   scale band on D     D-1 / halfband
+  Z0 Z0        0.9966    0.0046     0.7s     +0.94 %   -0.78 %        0.4
+  Z0 ZT        1.0556    0.0037    14.8s     +1.47 %   -1.23 %        3.9
+  ZT Z0        1.0550    0.0037    14.7s     +1.45 %   -1.22 %        3.9
+  ZT ZT        0.9815    0.0011    16.3s     +0.46 %   -0.54 %        3.8
+
+  the mixed components against Z_T Z_T, the comparison the brief names:
+    K(mixed avg) / K(ZT ZT)  = 1.0753, envelope [1.0572, 1.0969]
+    K(mixed avg) - K(ZT ZT)  = 0.0952, envelope [0.0693, 0.1302]
+    The envelope never reaches 1 (never reaches 0 for the difference),
+    so the mixed components take a LARGER NLO enhancement than ZT ZT
+    at every one of the 7 scale points, by at least 5.7 %.
+
+--------------------------------------------------------------------------
+M(e+ mu+) [GeV] -- fiducial K with statistics and scale
+--------------------------------------------------------------------------
+  unpolarised  K = 1.2896 +- 0.0056  scale [1.2181, 1.3951]
+  Z0 Z0        K = 1.2864 +- 0.0098  scale [1.2070, 1.4039]
+  Z0 ZT        K = 1.3599 +- 0.0087  scale [1.2714, 1.4890]
+  ZT Z0        K = 1.3483 +- 0.0086  scale [1.2600, 1.4771]
+  ZT ZT        K = 1.2645 +- 0.0059  scale [1.1996, 1.3610]
+
+  the fraction bands, per bin, NLO sample (envelope of the ratio):
+    (Z0Z0 + ZTZT + ZTZ0 + Z0ZT) / full
+      bin                       ratio    +- stat     scale lo     scale hi
+        0.000 - 45.000       0.977188   0.001376     0.977112     0.977260
+       45.000 - 70.000       0.978811   0.001338     0.978678     0.978962
+       70.000 - 95.000       0.990926   0.001298     0.990592     0.991208
+       95.000 - 125.000      0.996963   0.001304     0.996749     0.997192
+      125.000 - 175.000      0.992277   0.001411     0.992088     0.992468
+      175.000 - 260.000      0.989780   0.001614     0.989558     0.990063
+      260.000 - 450.000      0.989338   0.002481     0.989198     0.989459
+
+    Z0Z0 / full
+      bin                       ratio    +- stat     scale lo     scale hi
+        0.000 - 45.000       0.050615   0.000654     0.050230     0.050962
+       45.000 - 70.000       0.064358   0.000669     0.064059     0.064630
+       70.000 - 95.000       0.093544   0.000807     0.092897     0.094066
+       95.000 - 125.000      0.076748   0.000714     0.076403     0.076974
+      125.000 - 175.000      0.041538   0.000457     0.041405     0.041677
+      175.000 - 260.000      0.016135   0.000253     0.016050     0.016234
+      260.000 - 450.000      0.004517   0.000146     0.004426     0.004614
+
+    Z0ZT / full
+      bin                       ratio    +- stat     scale lo     scale hi
+        0.000 - 45.000       0.121336   0.001065     0.121048     0.121589
+       45.000 - 70.000       0.135476   0.001013     0.135110     0.135763
+       70.000 - 95.000       0.154038   0.001065     0.153685     0.154307
+       95.000 - 125.000      0.149440   0.001160     0.148807     0.150130
+      125.000 - 175.000      0.117450   0.001149     0.116543     0.118424
+      175.000 - 260.000      0.078459   0.001262     0.077020     0.079988
+      260.000 - 450.000      0.046651   0.001833     0.044906     0.048574
+
+    ZTZ0 / full
+      bin                       ratio    +- stat     scale lo     scale hi
+        0.000 - 45.000       0.121029   0.001044     0.120729     0.121385
+       45.000 - 70.000       0.134251   0.001009     0.134053     0.134484
+       70.000 - 95.000       0.154937   0.001074     0.154665     0.155250
+       95.000 - 125.000      0.147855   0.001134     0.147346     0.148403
+      125.000 - 175.000      0.117237   0.001136     0.116416     0.118103
+      175.000 - 260.000      0.078022   0.001308     0.076666     0.079475
+      260.000 - 450.000      0.045305   0.001610     0.043674     0.047101
+
+    ZTZT / full
+      bin                       ratio    +- stat     scale lo     scale hi
+        0.000 - 45.000       0.684208   0.002050     0.683569     0.685135
+       45.000 - 70.000       0.644725   0.001903     0.644260     0.645498
+       70.000 - 95.000       0.588405   0.001971     0.587471     0.589713
+       95.000 - 125.000      0.622920   0.001984     0.621638     0.624007
+      125.000 - 175.000      0.716052   0.001939     0.713997     0.717807
+      175.000 - 260.000      0.817165   0.002177     0.814370     0.819840
+      260.000 - 450.000      0.892866   0.002879     0.888970     0.896366
+
+  the K bands, per bin (correlated, seven-point):
+    bin                          unpolarised                  Z0Z0                  Z0ZT                  ZTZ0                  ZTZT
+      0.000 - 45.000      1.2588 [1.187,1.366]    1.2636 [1.188,1.376]    1.2865 [1.207,1.403]    1.2824 [1.201,1.402]    1.2447 [1.176,1.346]
+     45.000 - 70.000      1.2720 [1.197,1.383]    1.2285 [1.152,1.342]    1.3202 [1.237,1.443]    1.2991 [1.215,1.423]    1.2586 [1.187,1.364]
+     70.000 - 95.000      1.2579 [1.185,1.366]    1.2690 [1.192,1.383]    1.2943 [1.212,1.415]    1.2866 [1.204,1.408]    1.2285 [1.161,1.329]
+     95.000 - 125.000     1.3174 [1.242,1.429]    1.3327 [1.248,1.457]    1.3833 [1.291,1.518]    1.3816 [1.291,1.514]    1.2881 [1.220,1.389]
+    125.000 - 175.000     1.2907 [1.222,1.393]    1.3595 [1.274,1.485]    1.4170 [1.325,1.550]    1.3989 [1.309,1.529]    1.2549 [1.193,1.348]
+    175.000 - 260.000     1.3730 [1.309,1.468]    1.4651 [1.381,1.587]    1.7204 [1.605,1.883]    1.7142 [1.600,1.875]    1.3198 [1.264,1.405]
+    260.000 - 450.000     1.3806 [1.332,1.455]    1.7511 [1.642,1.904]    2.3328 [2.162,2.565]    2.2038 [2.044,2.421]    1.3252 [1.283,1.390]
+
+--------------------------------------------------------------------------
+Delta phi(e+ e-) [rad] -- fiducial K with statistics and scale
+--------------------------------------------------------------------------
+  unpolarised  K = 1.2890 +- 0.0048  scale [1.2226, 1.3869]
+  Z0 Z0        K = 1.2950 +- 0.0085  scale [1.2184, 1.4079]
+  Z0 ZT        K = 1.3777 +- 0.0078  scale [1.2891, 1.5065]
+  ZT Z0        K = 1.3535 +- 0.0076  scale [1.2678, 1.4781]
+  ZT ZT        K = 1.2616 +- 0.0050  scale [1.2027, 1.3494]
+
+  the fraction bands, per bin, NLO sample (envelope of the ratio):
+    (Z0Z0 + ZTZT + ZTZ0 + Z0ZT) / full
+      bin                       ratio    +- stat     scale lo     scale hi
+        0.000 - 0.262        1.016578   0.004383     1.015594     1.017610
+        0.262 - 0.524        1.014857   0.004208     1.013423     1.016464
+        0.524 - 0.785        1.013948   0.003302     1.012986     1.014911
+        0.785 - 1.047        1.014746   0.002727     1.014204     1.015379
+        1.047 - 1.309        1.015622   0.002523     1.015077     1.016181
+        1.309 - 1.571        1.013489   0.001919     1.013088     1.013849
+        1.571 - 1.833        1.012227   0.001644     1.011996     1.012414
+        1.833 - 2.094        1.007385   0.001460     1.006627     1.008083
+        2.094 - 2.356        1.000529   0.001364     0.999808     1.001198
+        2.356 - 2.618        0.991323   0.001244     0.990847     0.991789
+        2.618 - 2.880        0.973518   0.001226     0.973085     0.973887
+        2.880 - 3.142        0.954195   0.001190     0.953848     0.954488
+
+    Z0Z0 / full
+      bin                       ratio    +- stat     scale lo     scale hi
+        0.000 - 0.262        0.021194   0.001043     0.020951     0.021401
+        0.262 - 0.524        0.018989   0.000803     0.018780     0.019158
+        0.524 - 0.785        0.018307   0.000726     0.018170     0.018467
+        0.785 - 1.047        0.020601   0.000683     0.020327     0.020918
+        1.047 - 1.309        0.025705   0.000666     0.025411     0.026047
+        1.309 - 1.571        0.032356   0.000649     0.032064     0.032688
+        1.571 - 1.833        0.040517   0.000623     0.040243     0.040839
+        1.833 - 2.094        0.053038   0.000663     0.052868     0.053239
+        2.094 - 2.356        0.066364   0.000685     0.065984     0.066650
+        2.356 - 2.618        0.078532   0.000710     0.078075     0.078957
+        2.618 - 2.880        0.080054   0.000690     0.079693     0.080383
+        2.880 - 3.142        0.068725   0.000633     0.068375     0.068958
+
+    Z0ZT / full
+      bin                       ratio    +- stat     scale lo     scale hi
+        0.000 - 0.262        0.095197   0.002349     0.094641     0.095461
+        0.262 - 0.524        0.091144   0.002242     0.090634     0.091479
+        0.524 - 0.785        0.090201   0.001844     0.089801     0.090489
+        0.785 - 1.047        0.099013   0.001742     0.098542     0.099534
+        1.047 - 1.309        0.104443   0.001538     0.103757     0.105263
+        1.309 - 1.571        0.108211   0.001345     0.107706     0.108811
+        1.571 - 1.833        0.109720   0.001185     0.109076     0.110431
+        1.833 - 2.094        0.108138   0.001064     0.107397     0.108958
+        2.094 - 2.356        0.112223   0.000990     0.111473     0.113054
+        2.356 - 2.618        0.121121   0.000951     0.120221     0.122072
+        2.618 - 2.880        0.142309   0.001065     0.141364     0.143309
+        2.880 - 3.142        0.166126   0.001289     0.165499     0.166814
+
+    ZTZ0 / full
+      bin                       ratio    +- stat     scale lo     scale hi
+        0.000 - 0.262        0.066369   0.002861     0.062942     0.069991
+        0.262 - 0.524        0.070233   0.002594     0.066651     0.074131
+        0.524 - 0.785        0.075903   0.002278     0.072977     0.078986
+        0.785 - 1.047        0.084205   0.001777     0.082147     0.086305
+        1.047 - 1.309        0.093128   0.001555     0.091595     0.094679
+        1.309 - 1.571        0.104135   0.001402     0.102882     0.105463
+        1.571 - 1.833        0.106494   0.001211     0.105733     0.107384
+        1.833 - 2.094        0.108618   0.001091     0.108006     0.109339
+        2.094 - 2.356        0.108891   0.000983     0.108340     0.109497
+        2.356 - 2.618        0.117693   0.000931     0.117341     0.118092
+        2.618 - 2.880        0.138280   0.000931     0.137751     0.138672
+        2.880 - 3.142        0.170648   0.001059     0.170048     0.171153
+
+    ZTZT / full
+      bin                       ratio    +- stat     scale lo     scale hi
+        0.000 - 0.262        0.833818   0.004240     0.831303     0.836136
+        0.262 - 0.524        0.834492   0.003963     0.832448     0.836330
+        0.524 - 0.785        0.829536   0.003430     0.827378     0.831500
+        0.785 - 1.047        0.810927   0.003099     0.808907     0.812857
+        1.047 - 1.309        0.792346   0.002797     0.790342     0.794226
+        1.309 - 1.571        0.768787   0.002472     0.766847     0.770453
+        1.571 - 1.833        0.755495   0.002275     0.753554     0.757161
+        1.833 - 2.094        0.737590   0.002057     0.735399     0.739643
+        2.094 - 2.356        0.713051   0.001898     0.711017     0.714778
+        2.356 - 2.618        0.673977   0.001744     0.672250     0.675435
+        2.618 - 2.880        0.612875   0.001797     0.611735     0.613838
+        2.880 - 3.142        0.548696   0.002033     0.548193     0.549120
+
+  the K bands, per bin (correlated, seven-point):
+    bin                          unpolarised                  Z0Z0                  Z0ZT                  ZTZ0                  ZTZT
+      0.000 - 0.262       1.3457 [1.278,1.442]    1.6329 [1.504,1.812]    1.4716 [1.372,1.611]    2.9446 [2.596,3.412]    1.2862 [1.228,1.369]
+      0.262 - 0.524       1.3868 [1.323,1.478]    1.4835 [1.373,1.640]    1.5170 [1.422,1.652]    2.6218 [2.331,3.014]    1.3373 [1.282,1.417]
+      0.524 - 0.785       1.3274 [1.264,1.418]    1.2989 [1.196,1.444]    1.4425 [1.350,1.573]    2.0980 [1.894,2.371]    1.2798 [1.225,1.359]
+      0.785 - 1.047       1.3009 [1.239,1.390]    1.3714 [1.264,1.520]    1.4601 [1.369,1.589]    1.8103 [1.667,2.004]    1.2552 [1.201,1.334]
+      1.047 - 1.309       1.3074 [1.243,1.401]    1.3659 [1.264,1.508]    1.4381 [1.342,1.575]    1.5401 [1.428,1.695]    1.2785 [1.221,1.362]
+      1.309 - 1.571       1.3093 [1.245,1.404]    1.3772 [1.279,1.517]    1.3711 [1.284,1.497]    1.4994 [1.397,1.643]    1.2828 [1.225,1.368]
+      1.571 - 1.833       1.2930 [1.223,1.395]    1.3034 [1.215,1.429]    1.3863 [1.296,1.516]    1.3746 [1.284,1.502]    1.2701 [1.206,1.364]
+      1.833 - 2.094       1.2688 [1.205,1.363]    1.3094 [1.231,1.424]    1.3425 [1.254,1.471]    1.3355 [1.251,1.457]    1.2433 [1.188,1.327]
+      2.094 - 2.356       1.2798 [1.215,1.376]    1.2946 [1.223,1.401]    1.3861 [1.295,1.518]    1.3219 [1.239,1.442]    1.2490 [1.193,1.335]
+      2.356 - 2.618       1.2769 [1.212,1.373]    1.2845 [1.216,1.387]    1.3904 [1.300,1.521]    1.3238 [1.247,1.437]    1.2459 [1.188,1.333]
+      2.618 - 2.880       1.3003 [1.230,1.404]    1.3059 [1.231,1.418]    1.4069 [1.315,1.541]    1.2939 [1.221,1.403]    1.2718 [1.208,1.367]
+      2.880 - 3.142       1.2635 [1.196,1.364]    1.2439 [1.170,1.353]    1.3142 [1.234,1.433]    1.2392 [1.170,1.344]    1.2470 [1.186,1.339]
 

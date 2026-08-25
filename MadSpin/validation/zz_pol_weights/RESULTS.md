@@ -44,6 +44,19 @@ zz_pol_weights: madspin_v1 as a fourth curve on variant B`). Only one HepMC
 was read in that pass — `run_12_decayed_1`'s — and every other number in this
 file comes off the caches that were already here.
 
+**A later pass again** restructured variant A into a **six-panel figure of
+ratios**, made a **second version of it carrying scale uncertainty**, and — to
+do that — **re-read two HepMC files**, because the nine `MUR*_MUF*` columns the
+scale band needs were *not* in the caches. It is described under *The six-panel
+ratio figures, and the scale band*; base of that pass `aacedbf19` (`MadSpin
+zz_pol_weights: an LO sample, and the NLO/LO K-factor figure`). It turns the
+`+4.1 % −5.2 %` flag that this file has been carrying — "larger than the
+differences and not cancelling in a controlled way" — into a measurement, and
+the flag was **half right and half wrong**: see *Does the polarisation
+dependence survive?*. This pass also found that **the `MUR`/`MUF` labels on the
+`N` line of these files are transposed**, which changes no number here and is
+documented because it changes the reading of any individual scale point.
+
 ```
 data/weights.npz        250 000 rows: the weights and the observables (madspin)
 data/meta.json          input path and size, event count, the 33 weight names,
@@ -63,6 +76,8 @@ plots/, plots_userstyle/  PDF and PNG
 plots/variant_A_madspin_only/, plots_userstyle/variant_A_madspin_only/
 plots/variant_B_shape_ratio/,  plots_userstyle/variant_B_shape_ratio/
 plots/kfactor_LO_NLO/,         plots_userstyle/kfactor_LO_NLO/
+plots/variant_A6_ratios/,      plots_userstyle/variant_A6_ratios/
+plots/variant_A6_ratios_scale/, plots_userstyle/variant_A6_ratios_scale/
 numbers.txt             every number quoted below, and the per-bin tables
 ```
 
@@ -1257,6 +1272,289 @@ untouched**, as they were by the fourth sample.
 
 ---
 
+## The six-panel ratio figures, and the scale band
+
+Base of this pass `aacedbf19`. Two things were asked for: variant A
+restructured as a six-panel figure of ratios, and a second version of it
+carrying scale uncertainty. Both are written **alongside** everything that was
+already here — variant A, variant B, the K-factor figure and the originals are
+untouched and their PNGs are still byte-for-byte what this branch carried.
+
+```
+plots/variant_A6_ratios/            m_epmup.{pdf,png}  dphi_ee.{pdf,png}
+plots/variant_A6_ratios_scale/      m_epmup.{pdf,png}  dphi_ee.{pdf,png}
+plots_userstyle/variant_A6_ratios/         the same two, user style
+plots_userstyle/variant_A6_ratios_scale/   the same two, user style
+```
+
+### Version 1 — the six panels
+
+Variant A was a distribution pane, a full-width `(Z_0Z_0 + Z_TZ_T + Z_TZ_0 +
+Z_0Z_T)/full` pane and a 2 × 2 of the individual polarisation ratios, on the
+NLO reference alone. Version 1 is a 3 × 2 of **ratios only**:
+
+| | left | right |
+|---|---|---|
+| **top** | `(Z_0Z_0 + Z_TZ_T + Z_TZ_0 + Z_0Z_T)/full` | `K = NLO/LO`, five curves |
+| **middle** | `Z_0Z_0/full` | `Z_0Z_T/full` |
+| **bottom** | `Z_TZ_0/full` | `Z_TZ_T/full` |
+
+The distribution pane is **gone**. It is still the top pane of the original
+figures, of variant B and of five of the six K-factor panels, and this figure
+is about ratios.
+
+**Both orders on five of the six.** The figure now spans NLO and LO, so every
+panel that admits two orders draws two — the sum pane and the four fraction
+panes each carry the NLO reference (solid, filled markers) and the LO sample
+(dashed, open markers), on the `LS_ORDER` styles the K-factor figure already
+uses. The K panel is itself the ratio *between* the orders and can only be one
+curve per component.
+
+The four fractions run `LL, LT, TL, TT` — the K-factor figure's component order
+— and not variant A's `LL, TT, TL, LT`, because they sit under a K panel whose
+five-entry legend is in the former and reading the two against each other
+should not need re-sorting.
+
+Errors are unchanged from the figures these panels are built out of, and it is
+deliberately **not one rule for the whole canvas**: the five ratio panes take
+the delta-method / jackknife bar (numerator and denominator are sums over the
+*same* events of *one* sample, so their covariance is real and is kept), and
+the K panel takes the two relative MC errors in quadrature (two independent
+samples, nothing to subtract).
+
+### The scale columns were NOT cached, so two HepMC were re-read
+
+This file previously said, under *Not covered*, that a scale uncertainty on `K`
+"needs no new event: it is a re-sum of columns already cached". **That was
+wrong and is corrected here.** `data/weights.npz` and `data/weights_LO.npz`
+carried `w_MUR1.0_MUF1.0` and *no other scale point*; the extractor's
+`KEEP_WEIGHTS` was `['0', 'Weight', 'MUR1.0_MUF1.0'] + POL_NAMES`. The eight
+remaining columns were not there to be summed.
+
+So `KEEP_WEIGHTS` was widened to all nine and the two samples the scale study
+needs were re-read from their HepMC — **32.1 s** for `run_06_decayed_1` and
+**31.9 s** for `run_12_decayed_1`, one streaming pass each, run concurrently.
+**Every column that was already there came back bit-for-bit identical**, and
+the two `.npz` grew by the eight new columns and by nothing else (23.2 → 28.2
+MB, 23.0 → 26.3 MB). That is checked, not assumed, and it is why every figure
+and every number of the earlier passes is unchanged. The three other spinmode
+samples were **not** re-read: nothing on these two figures uses them, so their
+`.npz` still carry the central point alone and `pol_analysis.Data.has_scale`
+is how anything downstream asks.
+
+The eight new columns are `float32`; `MUR1.0_MUF1.0` stays `float64` so that
+the pre-existing column is bit-identical and the `"0"`/`"Weight"` nominal
+argument keeps its precision. They are only ever used as a ratio to the central
+point, where `float32`'s 1e-7 is four orders below the smallest band drawn.
+
+### The two labels are transposed — measured, and it changes no number
+
+**The weight the `N` line calls `MURa_MUFb` is the one generated at
+`muR = b`, `muF = a`.** The two *factors* are right; which scale each belongs
+to is swapped. Three independent checks, all on these files:
+
+1. **`p p > z z` at `order = LO` is the Born, `O(αs^0)`**, so its cross section
+   is *exactly* `μR`-independent and can only move with `μF`. In
+   `weights_LO.npz` the weight is degenerate in the **second** label on all
+   250 000 events — `MUR0.5_MUF0.5`, `MUR0.5_MUF1.0` and `MUR0.5_MUF2.0` are
+   the same float — and varies only with the **first**. So the first label is
+   the factorisation scale.
+2. **Directly, on event 1 of `run_12_decayed_1`.** Its LHE `<rwgt>` gives ids
+   1001–1003 (`μR = 1, 2, 0.5` at `μF = 1`) the same value `2.3950370e-02`,
+   ids 1004–1006 (`μF = 2`) `2.3914174e-02` and ids 1007–1009 (`μF = 0.5`)
+   `2.3803324e-02`. The HepMC of the same event carries `2.3803324e-02` under
+   all three `MUR0.5_*` names, `2.3950370e-02` under `MUR1.0_*` and
+   `2.3914174e-02` under `MUR2.0_*`. The first name label tracks the LHE's
+   `μF`, value for value.
+3. **The mechanism.** The LHE header writes the nine with `μF` **outer** and
+   `μR` **inner**, each cycling `(1.0, 2.0, 0.5)`; the name generator assumes
+   `μR` outer and `μF` inner with the same cycle. Composing the two is exactly
+   a transposition, and it reproduces all nine assignments including the fixed
+   points `(1,1)`, `(0.5,0.5)` and `(2,2)`.
+
+**It changes no number in this study.** An envelope is a min and a max over a
+*set*, and a permutation of a set moves neither. The 7-point subset is defined
+by which two points it *drops*, so it is not automatically safe — but it is:
+the pair dropped, `(μR, μF) = (0.5, 2.0)` and `(2.0, 0.5)`, is the
+anti-diagonal, which the transposition maps onto itself. Dropping the two
+*names* `MUR0.5_MUF2.0` and `MUR2.0_MUF0.5` therefore drops the two correct
+points. What it does change is the reading of any **individual** point, so
+every per-point table in `numbers.txt` is printed under the true `μR`/`μF`.
+
+Read under the true labels, both samples behave as they must: `σ_NLO` *falls*
+with `μR` (a positive `O(αs)` correction) and *rises* with `μF`; `σ_LO` has no
+`μR` dependence at all and rises with `μF` by more than NLO does, which is what
+an NLO calculation compensating its LO `μF` dependence looks like.
+
+### Decision 1 — which envelope: 7-point
+
+**Drawn: the 7-point envelope** — the nine minus the anti-diagonal pair
+`(μR, μF) = (0.5, 2.0)` and `(2.0, 0.5)`. Those two put a factor of four
+between the scales, manufacturing a large `log(μR/μF)` the fixed-order
+calculation was never asked to resum; they inflate the envelope without probing
+a missing higher order. It is a convention, so `numbers.txt` prints the 9-point
+envelope beside it everywhere.
+
+On these samples the choice matters in exactly one of the two places, and both
+are worth stating:
+
+| quantity | 7-point | 9-point |
+|---|---|---|
+| `σ_NLO` | **+2.33 % / −1.92 %** | **+3.14 % / −3.59 %** |
+| `σ_LO` | +4.14 % / −5.24 % | +4.14 % / −5.24 % |
+| `K` (unpolarised, correlated) | `[1.2297, 1.3769]` | `[1.2297, 1.3769]` |
+
+On the **cross section** the two dropped points *are* the two extremes and the
+9-point envelope is nearly twice the 7-point one. On the **K-factor** they land
+in the interior and the two envelopes agree to four decimals: `K` is largest at
+`(μR, μF) = (0.5, 0.5)` and smallest at `(2.0, 2.0)`, both on the main diagonal
+and both kept. Measured, not assumed.
+
+(The `+4.1 % −5.2 %` this file has been quoting from the banner is the **LO**
+sample's envelope, and it is a pure `μF` effect — as it must be at `O(αs^0)`.)
+
+### Decision 2 — correlation between numerator and denominator
+
+**Fractions (component / full inside one sample): no choice, and the code
+offers none.** The same event weights appear top and bottom, so the envelope is
+taken of the **ratio recomputed scale by scale**,
+
+```
+band = [ min_s f(s), max_s f(s) ],   f(s) = Σ_i w_c,i r_s,i / Σ_i w_full,i r_s,i
+```
+
+and **not** as the ratio of two separately built envelopes. The latter would be
+describing a configuration that cannot occur — the numerator at its high scale
+while the denominator sits at its low one, on the same events. Almost all the
+variation cancels this way; what survives is only the reweighting of the
+phase-space *mix* inside the bin, which is why the fraction bands on the figure
+are sub-percent where a single cross section moves by several. This is the
+whole reason the four fraction panels look almost band-free and the K panel
+does not.
+
+**K-factor: a real choice, both defensible, and they differ.** The **drawn band
+is the correlated one** — the same `μR`/`μF` point in both samples, envelope of
+the per-scale ratio. Reasons: the two samples are the same process, the same
+PDF set, the same functional scale choice and the same run card, so a scale is
+a *physical setting shared between them* rather than two independent nuisance
+parameters; and the `μF`/parton-luminosity part of the variation, which has
+nothing to do with the order, then largely cancels, leaving a band about the
+missing higher order. The **uncorrelated** alternative — independent envelopes
+combined as `[num_min/den_max, num_max/den_min]` — is about a third wider and
+is quoted in every `numbers.txt` table:
+
+| component | `K` | correlated (drawn) | uncorrelated (quoted) |
+|---|---|---|---|
+| unpolarised | 1.2891 | `+6.81 % −4.61 %` | `+7.99 % −5.82 %` |
+| `Z_0Z_0` | 1.2847 | `+7.81 % −5.32 %` | `+9.69 % −7.19 %` |
+| `Z_0Z_T` | 1.3608 | `+8.38 % −5.78 %` | `+9.73 % −7.07 %` |
+| `Z_TZ_0` | 1.3601 | `+8.37 % −5.78 %` | `+9.75 % −7.08 %` |
+| `Z_TZ_T` | 1.2652 | `+6.24 % −4.17 %` | `+7.28 % −5.30 %` |
+
+### Decision 3 — how a polarised component is scale-varied at all
+
+MadSpin writes the four `ms_pol_*` weights at the **central scale and at no
+other**, so there is no cached `ms_pol_23.0_23.0` at `μR = 2`. What is done —
+and it is the only thing the cached weights support — is to carry the full
+weight's per-event scale ratio over to the component:
+
+```
+r_s(i) = w_s(i) / w_central(i)          w_c^s(i) = w_c(i) · r_s(i)
+```
+
+i.e. the per-event polarisation *fraction* is held fixed and only the event's
+overall weight moves. `s = central` reproduces the nominal exactly.
+
+**Exact at LO**, where the `μF` and `αs` dependence multiplies the whole
+squared matrix element at a fixed phase-space point, identically for the
+polarised projection and for the total. **An approximation at NLO**: the
+virtual and real pieces are not decomposed by polarisation, and this study's
+own result is that the components have *different* K-factors, which is the same
+statement as their `αs` dependence differing. So the NLO component bands are
+the total's band transported onto the component, not a first-principles
+polarised scale variation. Only a MadSpin run emitting `ms_pol_*` per scale
+point could do better; no cached weight can, and this is stated rather than
+buried.
+
+187 of the NLO sample's 250 000 events have `|w_s/w_central| > 3` for some `s`
+— MC@NLO weights that very nearly cancel. They are **not** clipped: together
+they move the reweighted total by 0.39 %, and the reweighted total agrees with
+the directly summed `w_s` to 3e-05, the same 3e-05 by which
+`sum(MUR1.0_MUF1.0)` and `sum(Weight)` already differ. The LO sample has none;
+its extreme ratio is 1.246.
+
+### Does the polarisation dependence survive?
+
+**The flag this file has been carrying was half right and half wrong.** Right:
+the scale band on `K` itself is `−4.6 % / +6.8 %`, and the spread *between*
+components is about 7.5 %, so on the raw `K` the band and the effect really are
+the same size. Wrong: that is not the comparison the physics question asks for.
+The scale variation moves all five `K` **together** — it is very nearly a
+common multiplicative shift, as the per-scale table in `numbers.txt` shows — so
+the quantity to test is
+
+```
+D = K_component / K_full     ( ≡ f_NLO / f_LO, the double ratio )
+```
+
+taken **scale by scale**, so the common movement cancels. `D = 1` means "this
+component has the same K-factor as the total".
+
+| component | `K` | ± stat | scale band on `K` | `D` | ± stat | scale band on `D` | `\|D−1\|` / half-band |
+|---|---|---|---|---|---|---|---|
+| unpolarised | **1.2891** | 0.0039 | `[1.2297, 1.3769]` | — | — | — | — |
+| `Z_0Z_0` | **1.2847** | 0.0070 | `[1.2164, 1.3851]` | 0.9966 | 0.0046 | `+0.94 % −0.78 %` | 0.4 |
+| `Z_0Z_T` | **1.3608** | 0.0063 | `[1.2821, 1.4748]` | 1.0556 | 0.0037 | `+1.47 % −1.23 %` | **3.9** |
+| `Z_TZ_0` | **1.3601** | 0.0063 | `[1.2815, 1.4738]` | 1.0550 | 0.0037 | `+1.45 % −1.22 %` | **3.9** |
+| `Z_TZ_T` | **1.2652** | 0.0041 | `[1.2125, 1.3441]` | 0.9815 | 0.0011 | `+0.46 % −0.54 %` | **3.8** |
+
+Inclusive, all 250 000 events of each sample, no lepton selection; 7-point
+envelope, correlated.
+
+**The answer is yes.** Three of the four components sit 3.8–3.9 half-bands away
+from `D = 1` — the scale band on `D` is a factor of three or four smaller than
+the effect, where the band on `K` alone was comparable to it. `Z_0Z_0` is
+compatible with the unpolarised K on both uncertainties, as it already was on
+statistics alone.
+
+The comparison the brief names directly:
+
+```
+K(mixed average) / K(Z_T Z_T) = 1.0753,  7-point envelope [1.0572, 1.0969]
+K(mixed average) − K(Z_T Z_T) = 0.0952,  7-point envelope [0.0693, 0.1302]
+```
+
+The envelope **never reaches 1** (never reaches 0 for the difference). The two
+mixed components take a larger NLO enhancement than `Z_TZ_T` at *every one of
+the seven scale points*, by at least **5.7 %**. The mixed-versus-`Z_TZ_T`
+difference is therefore still significant with the band included, and the 9-
+point envelope gives the same interval to four decimals.
+
+What the scale band does **not** rescue is any statement about the *absolute*
+K-factor of a component: `K(Z_0Z_T) = 1.3608` has a `[1.2821, 1.4748]` band
+around it, and quoting it as `1.361 ± 0.006` was, as this file warned, a
+statement about these two samples and not a theory uncertainty.
+
+### One thing that had to be fixed to draw them
+
+`--check-minus` reported the two `M(e+ μ+)` six-panel PDFs as failures. They
+were not. `wants_minus` asks every tick label the *locator* produced whether it
+carries a minus, and `MaxNLocator` routinely offers one tick beyond each end of
+the view that matplotlib never draws: the `Z_0Z_0/full` pane's locator offers
+`−0.03` on a pane whose window starts at `−0.0056`. The figure was declared to
+"want" a minus that is not on it, the check then looked for a `/minus` that
+could not be there, and a correct figure was reported as broken.
+
+`plot_zz_pol.py` now defines a **wrapper** that filters *tick* labels by their
+axis's view interval and still asks axis labels, titles and legend entries
+unconditionally — narrowing those could hide a genuinely eaten sign, which is
+the one outcome the check exists to prevent. The sibling module in
+`MadSpin/validation/zz_nlo/` is **not** edited. The count went 10/12 with two
+spurious failures to **10/10**, and the two `M(e+ μ+)` figures are now
+correctly reported as "no minus sign in this figure, check not applicable".
+
+---
+
 ## Not covered
 
 * **The bin edges were not re-chosen.** `M(e+ μ+)`'s seven edges
@@ -1306,9 +1604,12 @@ untouched**, as they were by the fourth sample.
   than assumed — see *The fifth sample*. What is still not done is varying the
   frame on the NLO sample, where 6 and 24 genuinely differ; that would need a
   new MadSpin run and no cached weight can answer it.
-* **No scale or PDF variation of the polarisation fractions.** All 33 weights
-  are summed and recorded in `data/meta.json`; the study divides only the
-  central ones.
+* **No PDF variation of the polarisation fractions.** All 33 weights are
+  summed and recorded in `data/meta.json`; the eighteen `1010`–`1027`
+  alternative-PDF members are still only summed and never divided.
+  **Superseded in part:** the *scale* variation of the fractions and of `K`
+  was built by a later pass and is *The six-panel ratio figures, and the scale
+  band* above. This bullet used to say "no scale **or** PDF".
 * **No comparison against a `pure_interference` calculation.**
 * **Bare vs dressed is quoted, not plotted.** Both are in the `.npz`; only the
   dressed ones are drawn.
@@ -1330,13 +1631,19 @@ untouched**, as they were by the fourth sample.
 * **The K-factor is LO+PS against NLO+PS, not a fixed-order K.** Both sides are
   showered by the same Pythia8, so the shower is common and largely cancels,
   but "largely" is not "exactly" and no fixed-order cross-check was made.
-* **No scale or PDF uncertainty on K.** All 33 weights of both samples are in
-  the `.npz` and the scale envelope of each sample alone is in its banner
-  (`+4.1 % −5.2 %`), but the correlated envelope of the *ratio* — which is what
-  a quoted K-factor uncertainty would have to be — was not built. Every bar on
-  the figure and in the tables is MC statistics only. This is the largest
-  missing piece and it needs no new event: it is a re-sum of columns already
-  cached.
+* **~~No scale or PDF uncertainty on K.~~ DONE for scale, and this bullet was
+  wrong about the cost.** The correlated envelope of the ratio was built by a
+  later pass and is *The six-panel ratio figures, and the scale band* above.
+  Two corrections to what this bullet said. (1) "All 33 weights of both samples
+  are in the `.npz`" — they were **not**: only `MUR1.0_MUF1.0` of the nine was
+  cached, so the pass had to re-read two HepMC files, ~32 s each. (2)
+  "`+4.1 % −5.2 %`" is the **LO** sample's envelope, not both samples'; the NLO
+  one is `+2.33 % / −1.92 %` over seven points. What remains undone here is the
+  **PDF** uncertainty: the eighteen `1010`–`1027` members are cached only as
+  sums in `meta.json`, not as per-event columns, so a PDF band would need a
+  third HepMC pass. Every bar on the K-factor figure itself is still MC
+  statistics only — the bands are on the two new six-panel figures, which are
+  written beside it and do not touch it.
 * **The `Z_TZ_0` low-`Δφ` excursion is explained qualitatively, not
   quantitatively.** "The LO spectrum is nearly empty there" is read off the
   shape ratios, not off a phase-space calculation.
@@ -1348,6 +1655,38 @@ untouched**, as they were by the fourth sample.
   sample at the same settings and would have halved the LO error on every
   number above, but it was never showered, so using it would have meant
   generating rather than reading — outside this pass's brief of one new HepMC.
+
+### The two six-panel ratio figures specifically
+
+* **No PDF uncertainty anywhere.** The eighteen `1010`–`1027` members are in
+  `meta.json` as sums only, never as per-event columns, so a PDF band would
+  need a third HepMC pass. It was not run and is not approximated.
+* **The NLO polarised scale variation is a transported band, not a
+  first-principles one.** `ms_pol_*` exists at the central scale only; see
+  *Decision 3*. Exact at LO, an approximation at NLO, and the size of what it
+  costs is bounded by the very component-to-component `K` spread the figure
+  measures — a few percent, on a band of several. Closing it needs a MadSpin
+  run that emits `ms_pol_*` per scale point, not a re-read.
+* **`αs(M_Z)` and the shower scale are not varied.** `shower_scale_factor` is
+  1.0 in both run cards and no variation of it was requested or reweighted, so
+  the shower is common to the two orders and treated as cancelling. "Largely"
+  is not "exactly", as the K-factor section already says.
+* **The transposed `MUR`/`MUF` labels are diagnosed but not fixed upstream.**
+  This pass established the permutation and worked under the true labels; it
+  did not touch whatever writes the names. Anyone reading a `MUR*_MUF*` weight
+  out of a Pythia8-showered HepMC from this MG5_aMC should check the ordering
+  on their own file rather than trust this one — the check in *The two labels
+  are transposed* takes one LO event and two minutes.
+* **The band is not propagated into the χ² or the significances elsewhere in
+  this file.** Every σ quoted in the earlier sections is still MC statistics
+  only, and only the K-factor and the double ratio have been given a scale
+  band. The mode-to-mode comparisons (`onshell`, `PA`, `madspin_v1`) are all at
+  one order and their samples were not re-read, so no band exists for them.
+* **The two dropped 7-point corners were not investigated per bin.** They are
+  interior on the *integrated* `K` and that was checked; whether they stay
+  interior in every bin of every component was not.
+* **No re-binning.** These figures inherit the same seven and twelve edges as
+  everything else here, for the same reason and with the same reservation.
 
 ### The variants specifically
 
