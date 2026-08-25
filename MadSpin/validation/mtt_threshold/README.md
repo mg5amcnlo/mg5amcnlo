@@ -126,6 +126,8 @@ are additions: nothing above is modified by them.
 | `run_mtt_unweighting.py` | runs the cells and writes the raw histograms. Imports the physics setup, the binning and the readers from `run_mtt_threshold.py`, so "same truth, same production sample, same observable, same grid" is a property of the code. |
 | `plot_mtt_unweighting.py` | the two figures in the MG7 paper style, plus the full numeric report. |
 | `plot_mtt_unweighting_userstyle.py` | the same two figures in the user's own matplotlib style. |
+| `plot_mtop_unweighting.py` | the same two rows on the **top virtuality** `m(W b)` -- the observable `Z_k` distorts directly, rather than through the `m_tt` recoil. Same panes, same normalisation, same clipping convention, on a Breit-Wigner binning of its own; runs off the already-harvested `mtop_*` arrays, so no MadSpin and no LHE re-read. Appends its own section to `numbers.txt`, idempotently, and does not touch the `m_tt` figures. |
+| `plot_mtop_unweighting_userstyle.py` | the same two virtuality figures in the user's own matplotlib style. |
 | `data/histograms_unweighting.npz` | the raw measurement: the same 0.25 GeV `m_tt` grid, plus a **top-virtuality** grid `m(W b)` and the `Delta m_tt` histograms. |
 | `data/meta_unweighting.json` | cells, resolved schemes, overweight counters, paired coincidence counts per **window**, sensitivity. |
 | `data/paired_bins_unweighting.json` | paired coincidence counts per **plot bin**, which the per-window ones cannot supply. They are the correct error on a scheme-versus-`joint` *difference* and are what `numbers.txt` quotes for every significance; the pane itself draws each curve's own statistics. Written by `--stage paired-bins`, which re-reads the decayed LHE files and runs no MadSpin. |
@@ -140,6 +142,8 @@ python3 run_mtt_unweighting.py --stage harvest --basedir /tmp/u --cross-check
 python3 run_mtt_unweighting.py --stage paired-bins   # re-reads the LHE, no MadSpin
 python3 plot_mtt_unweighting.py
 python3 plot_mtt_unweighting_userstyle.py
+python3 plot_mtop_unweighting.py            # after the two above: appends to numbers.txt
+python3 plot_mtop_unweighting_userstyle.py
 ```
 
 ## The cells, and why they are the cells

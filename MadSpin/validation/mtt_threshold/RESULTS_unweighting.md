@@ -457,7 +457,152 @@ two curves rather than of a curve with the line.
 
 Both carry `numbers.txt` with everything above unclipped and per bin.
 
-## 9. What this does not cover
+## 9. The differential picture: the `m(W b)` lineshape figure
+
+Section 5 read the virtuality through its **mean**. This section reads it
+through its **shape**, and the shape turns out to carry three to four times more
+information about the same effect.
+
+Figures: `plots_unweighting/mtop_unweighting_{PA,madspin}.pdf/.png` and the same
+two in `plots_unweighting_userstyle/`. They are written **alongside** the `m_tt`
+figures, which are unchanged. `numbers.txt` in both directories carries a
+top-virtuality section appended after the `m_tt` one.
+
+### What it is built from, and the three things it cannot do
+
+No MadSpin was re-run and no LHE file was re-read: the virtuality histogram
+(`mtop_bins`, `<cell>_mtop_sumw`, `<cell>_mtop_cnt`) was already in
+`data/histograms_unweighting.npz`, harvested in the same pass as `m_tt`. That
+is just as well, because the decayed LHE files
+(`/tmp/mtt_unweighting_work/MS/mode_*/events_decayed.lhe.gz`) **no longer
+exist** — the directories survive and are empty. Three limits follow:
+
+* **`m(t)` and `m(t~)` cannot be separated.** `harvest_cell` fills `m(W+ b)` and
+  `m(W- b~)` into the *same* array, deliberately. Every number here is the two
+  tops together, `n = 2N`. A per-top split is a real check — the `m_tt` study
+  found single-resonance shifts that reversed sign between the two, so only a
+  same-sign move on both is evidence — and it is one this harvest cannot supply
+  and the LHE files can no longer be re-read for.
+* **There is no `truth` curve.** `truth_mtop_*` was never stored. The upper pane
+  has only the scheme curves and nothing is drawn in its place.
+* **`Σw²` was not stored per virtuality bin.** It is reconstructed from `Σw` and
+  the count on the fine grid — exact for a bin with no overweight, and an upper
+  bound (`Σ_j x_j² ≤ x²`) otherwise. The reconstruction is *scored* at run time
+  against the `m_tt` histogram, where `Σw²` is stored: median 1.00000 for all
+  seven cells, worst bin 1.166 and only in `ms_joint`, always upwards.
+
+### The binning
+
+A Breit-Wigner needs a different grid from a threshold. The plotted range is
+**exactly** the `±15 Γ_t` cut window, 150.6275–195.3725 GeV (the harvest grid is
+`m_t ± 16 Γ_t` and holds nothing outside the cut — checked per cell), and the
+width grows outwards:
+
+| \|m − m_t\| | bin width | |
+|---|---|---|
+| 0–2 Γ_t | Γ_t/5 = 0.29830 GeV | five bins across the FWHM |
+| 2–5 Γ_t | Γ_t/3 = 0.49717 GeV | |
+| 5–9 Γ_t | 2Γ_t/3 = 0.99433 GeV | |
+| 9–15 Γ_t | Γ_t = 1.49150 GeV | |
+
+62 bins, every edge on a harvested fine-bin edge (the harvest grid is exactly
+`Γ_t/75`, so the rebinning is exact and is asserted). Per-bin precision stays
+inside 0.19–2.7 % instead of the 0.16–4.8 % a uniform grid of the same bin count
+gives, and it costs nothing: the Fisher error on a rigid shift of the peak is
+0.00077 GeV on this grid and 0.00077 GeV on a 150-bin uniform `Γ_t/5` grid.
+Tail bins carry no information about where the peak is.
+
+### The pairing comes out differently here, and that is measured
+
+On `m_tt` the paired error is 10–16 % smaller than band-and-bar in quadrature,
+and section 8 says loudly that the quadrature reading is wrong there. On the
+virtuality it is not: each scheme re-draws its own masses and the shared
+production kinematics barely constrains `m(W b)`. The stored paired moments say
+so directly — paired σ divided by unpaired quadrature at the same `n`:
+
+| pair | paired | unpaired | ratio |
+|---|---|---|---|
+| `PA_joint` vs `PA_globalretry` | 0.0031998 | 0.0032013 | 0.99951 |
+| `PA_seq` vs `PA_globalretry` | 0.0032007 | 0.0032034 | 0.99916 |
+| `ms_seq` vs `ms_globalretry` | 0.0046831 | 0.0047019 | 0.99600 |
+
+Pairing buys between 0.01 % and 0.4 % here. The per-bin coincidence counts were
+never produced for the virtuality and cannot be now, but they would move these
+errors by less than half a per cent — so the quadrature error *is* the paired
+error on this observable. **That is a property of `m(W b)`, not a general
+licence**: the same construction on `m_tt` is 10–16 % too large.
+
+### The pane is clipped at ±10 %, not ±20 %
+
+Same *criterion* as the `m_tt` figure — wide enough to hold what the schemes do
+to each other, narrow enough that a per-cent difference is visible — applied to
+a different observable. Nothing leaves ±12 % and the bars run 0.19–3.6 %, so a
+±20 % pane would assert agreement at a scale twenty times coarser than the
+sensitivity. The convention is unchanged: two points go off in the `madspin` row
+and are drawn on the boundary as triangles, with their unclipped values starred
+in `numbers.txt`. Both other deviations from the `m_tt` figure's geometry are
+cosmetic and forced: the `m_t` label rides above the peak rather than at the
+foot of its rule (the pole is mid-axis, where a lower-right legend is), and the
+band caption sits at the bottom right rather than the top right (the `madspin`
+curves reach the top of a ±10 % pane).
+
+### Sensitivity, before any ratio is read
+
+Per bin, the 1 σ resolution on the shape ratio to `joint` is 0.27 % (best),
+1.6 % (median), 3.7 % (worst) in `PA`; 0.33 / 1.9 / 8.2 % in `madspin`.
+
+Projected on a **rigid shift** of the lineshape — the same direction ⟨m(W b)⟩
+projects on, so the two are directly comparable:
+
+| pair | σ(δ), lineshape | σ, moment | gain |
+|---|---|---|---|
+| `PA_seq` / `PA_globalretry` | **0.00106 GeV** | 0.00320 GeV | 3.0× |
+| `ms_seq` / `ms_globalretry` | **0.00150 GeV** | 0.00468 GeV | 3.1× |
+
+⟨m(W b)⟩ of a Breit-Wigner is dominated by tails that carry no information about
+where the peak sits, so the sample mean is a badly inefficient estimator of a
+shift. The figure therefore **improves** the bound on record rather than
+repeating it.
+
+### The reading
+
+| row | pair | lineshape χ²/ndf | rigid shift δ | 95 % UL |
+|---|---|---|---|---|
+| `PA` | `seq` / `globalretry` | 43.3/62 = 0.698 | **+0.00060 ± 0.00106** (0.6 σ) | \|δ\| < 0.00267 GeV |
+| `madspin` | `seq` / `globalretry` | 43.7/62 = 0.705 | **−0.00118 ± 0.00150** (0.8 σ) | \|δ\| < 0.00412 GeV |
+
+**A bound, not a detection.** No `Z_k` effect is seen in either row, the two
+rows do not even agree in sign, and both are consistent with zero. Against the
+~0.001 GeV residual the shipped table is expected to produce, σ(δ) ≈ 0.0011 GeV
+is a *one-sigma* sensitivity to the expected effect: this excludes an effect a
+few times larger than predicted and does not touch the prediction itself. It is
+nonetheless the closest this study gets — the 95 % upper limits are 3.3× and
+2.6× tighter than the ⟨m(W b)⟩ limits of section 5 (0.00882 and 0.01067 GeV).
+
+The `madspin` row's ratio pane must be read with section 6 in hand: **both**
+coloured curves leave 1 together there, which is a statement about the
+denominator `ms_joint` — whose counted and weighted ⟨m_top⟩ differ by
+−0.0247 GeV against < 4·10⁻⁵ for every other cell — and not about `Z_k`. The
+`Z_k` statement in that row is `ms_seq` against `ms_globalretry`, in which
+`ms_joint` does not appear at all.
+
+### One caveat that is itself a measurement
+
+Every error here treats an event's two tops as independent (`n = 2N`). They are
+not: the `PA` row is a genuine null and its per-bin χ²/ndf comes out **below 1**
+on every binning tried (0.56–0.88, over grids from 10 to 150 bins). The two
+virtualities of an event compete for the same `√ŝ`, so they are anti-correlated
+and a histogram of `2N` tops fluctuates less than `2N` independent draws would.
+
+Which way this cuts matters: the quoted per-bin errors are **conservative**, so
+the agreement looks *better* than it is. If the true error is `sqrt(0.7) = 0.84`
+of the quoted one, every departure is 1.19× more significant than the bars
+suggest and σ(δ) is 0.84× the values above. The same assumption is already in
+the ⟨m(W b)⟩ moment errors of section 5 (`rms/sqrt(2N)`), so it is inherited,
+not introduced. Settling it needs the per-event *pair* of virtualities, which
+the harvest did not keep; a future harvest should store their per-event mean.
+
+## 10. What this does not cover
 
 * **A paired *weighted* comparison** — see the caveat in section 6.
 * **The error on a *difference*, on the figure.** The ratio pane now draws
@@ -498,3 +643,21 @@ Both carry `numbers.txt` with everything above unclipped and per bin.
   weighted paired estimator would need the per-event weights kept alongside the
   pairing, which this harvest does not store. It matters only in the `madspin`
   row, and only at the 0.3 % level described in section 8.
+* **`m(t)` and `m(t~)` separately.** The harvest fills both tops into one
+  histogram by design and the decayed LHE files it would take to split them are
+  gone. The `m_tt` study found single-resonance shifts that reversed sign
+  between the two resonances, so a same-sign move on both is the only real
+  evidence and this study cannot produce that test. **This is the largest single
+  gap in section 9.**
+* **A `truth` curve for `m(W b)`.** `truth_mtop_*` was never harvested. The
+  virtuality figure is scheme-versus-scheme only, which is what isolates `Z_k`
+  but says nothing about whether MadSpin's lineshape matches the full off-shell
+  matrix element.
+* **A per-bin *paired* error on the virtuality figure.** The coincidence counts
+  were never produced for `m(W b)` and cannot be now. It costs at most 0.4 %,
+  measured off the stored paired moments (section 9), and is the one place in
+  this document where the paired error is quoted from an argument rather than a
+  count.
+* **Whether an event's two tops are independent.** They are not — the `PA` null
+  χ²/ndf is 0.56–0.88 — but by how much cannot be measured from what was
+  stored. The per-bin and moment errors are conservative as a result.

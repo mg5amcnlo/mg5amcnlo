@@ -658,3 +658,461 @@ window                             pair                        ratio    sigma
    the Z_hat/Z question, because neither of its two samples is the one
    every other ratio on the figure divides by.
 
+==============================================================================
+===== TOP VIRTUALITY m(W b): THE DIRECT Z_k OBSERVABLE =====
+==============================================================================
+   The companion of the m_tt sections above, on the observable Z_k
+   distorts DIRECTLY.  m_tt sees Z_k only after the production
+   reshuffle has smeared it into the recoil; m(W b) is the quantity the
+   tabulated look-ahead factor multiplies.
+
+   Figure: mtop_unweighting_PA.pdf/.png, mtop_unweighting_madspin
+   .pdf/.png -- written ALONGSIDE the m_tt figures, which are
+   unchanged.
+
+-- 0. what is harvested, and the three things that are NOT -----------
+   No MadSpin was re-run and no LHE file was re-read.  The virtuality
+   histogram was already in data/histograms_unweighting.npz, harvested
+   in the same pass as m_tt: mtop_bins (2400 uniform bins, 149.1360 to 196.8640
+   GeV) and <cell>_mtop_sumw / _mtop_cnt.  Three limits follow, and the
+   decayed LHE files that could lift them (/tmp/mtt_unweighting_work/
+   MS/mode_*/events_decayed.lhe.gz) NO LONGER EXIST -- the directories
+   survive and are empty.
+
+   (a) m(t) AND m(t~) ARE NOT SEPARABLE.  harvest_cell fills m(W+ b)
+       and m(W- b~) into the SAME array, on purpose: the setup is
+       charge symmetric and the decay chains are conjugates.  Every
+       number below is the two tops TOGETHER, n = 2 N entries per cell.
+       The m_tt study found single-resonance shifts that reversed sign
+       between the two resonances, so a per-top split is a real check
+       and it is one this harvest cannot supply.  It needs a re-harvest
+       of the decayed LHE files, which are gone.
+   (b) THERE IS NO truth CURVE.  truth_mtop_* was never stored, only
+       truth_sumw/_sumw2/_cnt for m_tt.  The upper pane of the m_tt
+       figure has a black truth curve; this one has none, and nothing
+       is drawn in its place.  Every statement here is
+       scheme-versus-scheme inside one spinmode, which is what isolates
+       Z_k; the truth would be an independent sample with a physical
+       shape difference of its own.
+   (c) sum(w^2) WAS NOT STORED PER VIRTUALITY BIN.  It is reconstructed
+       from sum(w) and the count on the fine grid, exactly for a bin
+       with no overweight and as an upper bound otherwise, and the
+       reconstruction is SCORED below against the m_tt histogram where
+       sum(w^2) is stored.
+
+   reconstruction check -- ratio of reconstructed to true ERROR bar,
+   run on the m_tt grid where both are available:
+   cell                     median      worst bin
+   PA_joint                1.00000        1.00000
+   PA_seq                  1.00000        1.00000
+   PA_globalretry          1.00000        1.00000
+   PA_withmass             1.00000        1.00000
+   ms_joint                1.00000        1.16571
+   ms_seq                  1.00000        1.00000
+   ms_globalretry          1.00000        1.00000
+   1.00000 in the median everywhere; only ms_joint (754 overweights,
+   largest factor 83) departs at all, and only upwards, so its bar is
+   never too small.
+
+-- 1. the binning, and why it is not the m_tt one --------------------
+   m_tt used zone_edges(): built for a threshold at 2 m_t in a spectrum
+   running to 520 GeV.  This is a Breit-Wigner and needs a different
+   grid.
+     pole        m_t = 173.0000 GeV
+     width       Gamma_t = 1.4915 GeV
+     range       150.6275 .. 195.3725 GeV = m_t +- 15 Gamma_t, EXACTLY the
+                 run's Breit-Wigner cut (bwcutoff = 15 Gamma_t).  The
+                 harvest grid is m_t +- 16 Gamma_t and holds nothing
+                 outside the cut -- checked, per cell, below.
+     zones       |m - m_t| / Gamma_t     bin width
+                  0.0 .. 2.0             0.29830 GeV = 1/5 Gamma_t
+                  2.0 .. 5.0             0.49717 GeV = 1/3 Gamma_t
+                  5.0 .. 9.0             0.99433 GeV = 2/3 Gamma_t
+                  9.0 .. 15.0            1.49150 GeV = 1 Gamma_t
+     bins        62 in total, every edge on a harvested fine-bin edge
+                 (the harvest grid is exactly Gamma_t/75, so the
+                 rebinning is exact and is asserted, not rounded).
+
+   Gamma_t/5 in the core is five bins across the FWHM, which is what
+   "resolve the lineshape" means for a Breit-Wigner.  The widening
+   outwards keeps the per-bin precision inside 0.19-2.7 % instead of
+   the 0.16-4.8 % a uniform grid of the same bin count gives, and it
+   costs nothing: the Fisher error on a rigid shift of the peak is
+   0.00077 GeV on this grid and 0.00077 GeV on a 150-bin uniform
+   Gamma_t/5 grid.  Tail bins carry no information about where the peak
+   is, so widening them is free.
+
+   cell                  in pane   in harvest       lost
+   PA_joint            2 000 000    2 000 000          0
+   PA_seq              2 000 000    2 000 000          0
+   PA_globalretry      2 000 000    2 000 000          0
+   PA_withmass         2 000 000    2 000 000          0
+   ms_joint            2 000 000    2 000 000          0
+   ms_seq              1 000 000    1 000 000          0
+   ms_globalretry      1 000 000    1 000 000          0
+
+-- 2. the pairing: what it buys HERE, measured -----------------------
+   On m_tt the cells share their production events and fluctuate
+   together, so the paired error on a difference is 1.10-1.16 times
+   SMALLER than band-and-bar in quadrature, and numbers.txt says
+   loudly that the quadrature reading is wrong there.
+
+   On the virtuality it is different, and the difference is measured,
+   not argued.  Each scheme re-draws its own masses; the shared
+   production kinematics barely constrains m(W b) at all.  The stored
+   per-event paired moments say so directly -- compare the PAIRED error
+   on <m_top(a)> - <m_top(b)> with the unpaired quadrature of the two
+   cells at the same n:
+   pair                                     paired     unpaired      ratio
+   PA_joint vs PA_globalretry            0.0031998    0.0032013    0.99951
+   PA_seq vs PA_globalretry              0.0032007    0.0032034    0.99916
+   PA_seq vs PA_joint                    0.0032004    0.0032017    0.99960
+   PA_withmass vs PA_joint               0.0031965    0.0031997    0.99899
+   ms_joint vs ms_globalretry            0.0046551    0.0046599    0.99896
+   ms_seq vs ms_globalretry              0.0046831    0.0047019    0.99600
+   ms_seq vs ms_joint                    0.0046623    0.0046628    0.99990
+
+   Pairing buys between 0.01 % and 0.4 % on this observable.  The
+   equivalent per-event correlation of the two cells' virtualities is
+   rho = 0.001-0.008, against rho ~ 0.13 for m_tt bin membership.
+
+   CONSEQUENCE.  The per-bin coincidence counts that "--stage
+   paired-bins" produced for m_tt were never produced for the
+   virtuality, and cannot be now: they need the decayed LHE files.  The
+   error on a difference below is therefore the QUADRATURE of the two
+   curves' own errors -- and on this observable that IS the paired
+   answer, to better than half a per cent, by the table above.  This is
+   a property of m(W b), not a general licence: the same construction
+   on m_tt is 10-16 % too large and must not be used there.
+
+-- 3. what this measurement can and cannot resolve -------------------
+   Quoted BEFORE any ratio is read.  A flat ratio pane reported as
+   agreement, when the bins cannot see the effect, is the failure mode
+   this study exists to avoid.
+
+   PER BIN, the 1-sigma resolution on the shape ratio to joint:
+   row              best bin     median bin      worst bin
+   PA                 0.266 %         1.618 %         3.719 %
+   madspin            0.329 %         1.897 %         8.159 %
+
+   PROJECTED ON A RIGID SHIFT of the lineshape, which is the same
+   direction the <m(W b)> bound already on record projects on, so the
+   two are directly comparable.  A shift delta multiplies the
+   self-normalised density by 1 - delta (g - <g>), g = d ln f/dm taken
+   off the reference curve itself (so the matrix element and the phase
+   space are in it, not only the propagator).
+   pair                               sigma(delta) [GeV]     moment sigma
+   PA_globalretry / PA_joint                   0.00106          0.00320
+   PA_seq / PA_joint                           0.00106          0.00320
+   PA_withmass / PA_joint                      0.00106          0.00320
+   PA_seq / PA_globalretry                     0.00106          0.00320
+   ms_globalretry / ms_joint                   0.00131          0.00466
+   ms_seq / ms_joint                           0.00131          0.00466
+   ms_seq / ms_globalretry                     0.00150          0.00468
+
+   The lineshape fit is 3-4 times SHARPER than the mean.  That is not
+   an accident: <m(W b)> of a Breit-Wigner is dominated by the tails,
+   which carry no information about where the peak sits, so the sample
+   mean is a badly inefficient estimator of a shift.  The figure
+   therefore IMPROVES the bound on record rather than repeating it.
+
+   Against an expected Z_hat/Z residual of ~0.001 GeV, sigma(delta) ~
+   0.0011 GeV is a ~1-sigma sensitivity to the expected effect.  This
+   is a BOUND, not a detection, and it is a bound roughly at the size
+   of the thing being bounded -- the closest this study gets.
+
+-- 4. the moments, unchanged, for continuity with the m_tt sections --
+   These are the numbers already on record.  Reprinted so the
+   differential result below can be read against them on one page.
+   cell              <m_top> [GeV]     +- [GeV]    rms [GeV]
+   PA_joint             172.958803     0.002262     3.199628
+   PA_seq               172.960721     0.002265     3.203772
+   PA_globalretry       172.958179     0.002265     3.203046
+   PA_withmass          172.954496     0.002263     3.199759
+   ms_joint             173.188281     0.002310     3.267094
+   ms_seq               173.172570     0.003327     3.326781
+   ms_globalretry       173.171083     0.003323     3.322758
+
+   PAIRED  PA_joint vs PA_globalretry         +0.000624 +- 0.003200 GeV  (0.2 sigma)
+   PAIRED  PA_seq vs PA_globalretry           +0.002542 +- 0.003201 GeV  (0.8 sigma)
+   PAIRED  PA_seq vs PA_joint                 +0.001918 +- 0.003200 GeV  (0.6 sigma)
+   PAIRED  PA_withmass vs PA_joint            -0.004307 +- 0.003196 GeV  (1.3 sigma)
+   PAIRED  ms_joint vs ms_globalretry         +0.017031 +- 0.004655 GeV  (3.7 sigma)
+   PAIRED  ms_seq vs ms_globalretry           +0.001486 +- 0.004683 GeV  (0.3 sigma)
+   PAIRED  ms_seq vs ms_joint                 -0.015545 +- 0.004662 GeV  (3.3 sigma)
+
+==============================================================================
+-- 5.PA per-bin SHAPE ratio to PA_joint -- THIS IS THE FIGURE'S RATIO PANE --
+   UNCLIPPED.  The pane clips to +-10 %; a value outside it is
+   drawn ON the boundary as a triangle pointing the way it went and
+   its real value is here, flagged with a star.
+
+   TWO ERRORS PER BIN.
+     "own"   what the FIGURE draws on the bars; the band around 1
+             is PA_joint's own.  Delta method for a self-normalised
+             histogram: the bin is a SUBSET of the total it is
+             divided by, so var(R) = sum_i (n_i - R d_i)^2/D^2.
+     "diff"  the error on the DIFFERENCE, which is what a
+             significance needs.  Here it is band and bar in
+             quadrature -- and by section 2 that IS the paired
+             answer on this observable, to better than 0.4 %.  Do
+             not carry that habit back to the m_tt figure.
+
+   joint = joint,  seq = sequential,  seq_glob_retry = sequential_global_retry,  seq_with_mass = sequential_with_mass
+        bin [GeV]   n(joint)      band seq                              seq_glob_retry                   seq_with_mass
+                              +- (own) ratio +- own [diff]              ratio +- own [diff]              ratio +- own [diff]
+ 150.627- 152.119       1637    0.0247 0.9780 +- 0.0244 [0.0344]        1.0257 +- 0.0250 [0.0356]        1.0367 +- 0.0252 [0.0359]
+ 152.119- 153.611       1936    0.0227 0.9923 +- 0.0226 [0.0319]        0.9985 +- 0.0227 [0.0321]        0.9902 +- 0.0226 [0.0319]
+ 153.611- 155.102       2224    0.0212 1.0130 +- 0.0213 [0.0303]        0.9834 +- 0.0210 [0.0296]        0.9978 +- 0.0212 [0.0299]
+ 155.102- 156.594       2667    0.0194 0.9884 +- 0.0192 [0.0271]        0.9906 +- 0.0193 [0.0272]        0.9981 +- 0.0193 [0.0273]
+ 156.594- 158.085       2980    0.0183 1.0295 +- 0.0186 [0.0265]        1.0359 +- 0.0186 [0.0266]        1.0440 +- 0.0187 [0.0267]
+ 158.085- 159.577       3820    0.0162 1.0157 +- 0.0163 [0.0231]        1.0327 +- 0.0164 [0.0234]        1.0045 +- 0.0162 [0.0229]
+ 159.577- 160.571       3066    0.0180 0.9677 +- 0.0178 [0.0249]        0.9534 +- 0.0176 [0.0246]        0.9928 +- 0.0180 [0.0254]
+ 160.571- 161.565       3535    0.0168 0.9709 +- 0.0166 [0.0232]        0.9980 +- 0.0168 [0.0237]        1.0025 +- 0.0168 [0.0238]
+ 161.565- 162.559       4144    0.0155 0.9896 +- 0.0154 [0.0218]        1.0080 +- 0.0156 [0.0221]        0.9998 +- 0.0155 [0.0219]
+ 162.559- 163.554       5081    0.0140 1.0128 +- 0.0141 [0.0200]        0.9982 +- 0.0140 [0.0198]        0.9892 +- 0.0139 [0.0197]
+ 163.554- 164.548       6269    0.0126 0.9898 +- 0.0125 [0.0177]        1.0112 +- 0.0127 [0.0180]        0.9877 +- 0.0125 [0.0177]
+ 164.548- 165.542       7913    0.0112 0.9966 +- 0.0112 [0.0158]        0.9869 +- 0.0111 [0.0157]        0.9991 +- 0.0112 [0.0159]
+ 165.542- 166.040       4659    0.0146 1.0305 +- 0.0149 [0.0212]        1.0215 +- 0.0148 [0.0210]        0.9876 +- 0.0145 [0.0205]
+ 166.040- 166.537       5471    0.0135 1.0035 +- 0.0135 [0.0191]        0.9954 +- 0.0135 [0.0190]        0.9857 +- 0.0134 [0.0189]
+ 166.537- 167.034       6349    0.0125 0.9962 +- 0.0125 [0.0177]        0.9775 +- 0.0124 [0.0174]        0.9857 +- 0.0124 [0.0175]
+ 167.034- 167.531       7424    0.0116 1.0220 +- 0.0117 [0.0167]        1.0244 +- 0.0117 [0.0167]        1.0117 +- 0.0117 [0.0165]
+ 167.531- 168.028       8864    0.0106 1.0033 +- 0.0106 [0.0150]        1.0103 +- 0.0107 [0.0151]        1.0195 +- 0.0107 [0.0152]
+ 168.028- 168.525      10742    0.0096 1.0048 +- 0.0096 [0.0137]        0.9962 +- 0.0096 [0.0136]        0.9993 +- 0.0096 [0.0136]
+ 168.525- 169.023      13266    0.0087 1.0084 +- 0.0087 [0.0123]        1.0129 +- 0.0087 [0.0124]        1.0174 +- 0.0087 [0.0124]
+ 169.023- 169.520      16944    0.0076 0.9957 +- 0.0076 [0.0108]        0.9999 +- 0.0076 [0.0108]        1.0058 +- 0.0077 [0.0109]
+ 169.520- 170.017      22414    0.0066 0.9909 +- 0.0066 [0.0093]        0.9925 +- 0.0066 [0.0093]        0.9968 +- 0.0066 [0.0094]
+ 170.017- 170.315      17174    0.0076 1.0031 +- 0.0076 [0.0108]        0.9985 +- 0.0076 [0.0107]        0.9990 +- 0.0076 [0.0107]
+ 170.315- 170.614      20852    0.0069 1.0011 +- 0.0069 [0.0098]        1.0038 +- 0.0069 [0.0098]        1.0200 +- 0.0070 [0.0099]
+ 170.614- 170.912      26459    0.0061 0.9948 +- 0.0061 [0.0086]        0.9990 +- 0.0061 [0.0086]        1.0089 +- 0.0061 [0.0087]
+ 170.912- 171.210      33405    0.0054 1.0101 +- 0.0055 [0.0077]        0.9976 +- 0.0054 [0.0077]        1.0053 +- 0.0054 [0.0077]
+ 171.210- 171.508      44816    0.0047 1.0116 +- 0.0047 [0.0067]        1.0112 +- 0.0047 [0.0067]        1.0177 +- 0.0047 [0.0067]
+ 171.508- 171.807      62413    0.0039 0.9925 +- 0.0039 [0.0055]        0.9908 +- 0.0039 [0.0055]        0.9972 +- 0.0039 [0.0056]
+ 171.807- 172.105      88703    0.0033 0.9978 +- 0.0033 [0.0046]        1.0044 +- 0.0033 [0.0047]        1.0001 +- 0.0033 [0.0046]
+ 172.105- 172.403     130483    0.0027 1.0009 +- 0.0027 [0.0038]        1.0030 +- 0.0027 [0.0038]        1.0004 +- 0.0027 [0.0038]
+ 172.403- 172.702     191569    0.0022 0.9995 +- 0.0022 [0.0031]        1.0020 +- 0.0022 [0.0031]        0.9986 +- 0.0022 [0.0031]
+ 172.702- 173.000     247197    0.0019 1.0030 +- 0.0019 [0.0027]        0.9993 +- 0.0019 [0.0027]        1.0008 +- 0.0019 [0.0027]
+ 173.000- 173.298     247705    0.0019 0.9983 +- 0.0019 [0.0027]        0.9987 +- 0.0019 [0.0027]        0.9962 +- 0.0019 [0.0027]
+ 173.298- 173.597     192424    0.0022 0.9968 +- 0.0022 [0.0031]        0.9935 +- 0.0022 [0.0031]        0.9989 +- 0.0022 [0.0031]
+ 173.597- 173.895     131154    0.0027 1.0001 +- 0.0027 [0.0038]        0.9961 +- 0.0027 [0.0038]        0.9990 +- 0.0027 [0.0038]
+ 173.895- 174.193      88418    0.0033 0.9942 +- 0.0033 [0.0046]        0.9995 +- 0.0033 [0.0046]        0.9964 +- 0.0033 [0.0046]
+ 174.193- 174.492      61468    0.0040 1.0039 +- 0.0040 [0.0056]        1.0061 +- 0.0040 [0.0056]        1.0003 +- 0.0040 [0.0056]
+ 174.492- 174.790      44383    0.0047 0.9942 +- 0.0047 [0.0066]        1.0018 +- 0.0047 [0.0066]        0.9959 +- 0.0047 [0.0066]
+ 174.790- 175.088      33303    0.0054 1.0051 +- 0.0054 [0.0077]        1.0004 +- 0.0054 [0.0077]        1.0094 +- 0.0055 [0.0077]
+ 175.088- 175.386      25748    0.0062 1.0000 +- 0.0062 [0.0088]        1.0022 +- 0.0062 [0.0088]        0.9989 +- 0.0062 [0.0087]
+ 175.386- 175.685      20754    0.0069 0.9993 +- 0.0069 [0.0098]        0.9917 +- 0.0069 [0.0097]        0.9945 +- 0.0069 [0.0097]
+ 175.685- 175.983      16764    0.0077 1.0042 +- 0.0077 [0.0109]        1.0187 +- 0.0078 [0.0110]        1.0035 +- 0.0077 [0.0109]
+ 175.983- 176.480      21686    0.0068 0.9979 +- 0.0067 [0.0095]        1.0054 +- 0.0068 [0.0096]        0.9987 +- 0.0067 [0.0095]
+ 176.480- 176.977      16523    0.0077 0.9937 +- 0.0077 [0.0109]        1.0030 +- 0.0078 [0.0110]        1.0048 +- 0.0078 [0.0110]
+ 176.977- 177.475      12836    0.0088 0.9915 +- 0.0088 [0.0124]        1.0050 +- 0.0088 [0.0125]        0.9989 +- 0.0088 [0.0124]
+ 177.475- 177.972      10466    0.0097 1.0133 +- 0.0098 [0.0139]        0.9888 +- 0.0097 [0.0137]        0.9843 +- 0.0097 [0.0136]
+ 177.972- 178.469       8594    0.0108 0.9927 +- 0.0107 [0.0151]        1.0183 +- 0.0109 [0.0154]        0.9981 +- 0.0108 [0.0152]
+ 178.469- 178.966       7062    0.0119 1.0041 +- 0.0119 [0.0169]        0.9894 +- 0.0118 [0.0167]        1.0115 +- 0.0119 [0.0169]
+ 178.966- 179.463       5989    0.0129 1.0057 +- 0.0129 [0.0183]        1.0023 +- 0.0129 [0.0183]        1.0000 +- 0.0129 [0.0182]
+ 179.463- 179.960       5100    0.0140 1.0302 +- 0.0142 [0.0202]        1.0275 +- 0.0142 [0.0202]        1.0129 +- 0.0141 [0.0200]
+ 179.960- 180.458       4464    0.0150 1.0114 +- 0.0150 [0.0213]        0.9919 +- 0.0149 [0.0210]        1.0166 +- 0.0151 [0.0214]
+ 180.458- 181.452       7319    0.0117 1.0023 +- 0.0117 [0.0165]        0.9907 +- 0.0116 [0.0164]        0.9821 +- 0.0116 [0.0163]
+ 181.452- 182.446       5634    0.0133 1.0332 +- 0.0135 [0.0193]        1.0424 +- 0.0136 [0.0194]        1.0169 +- 0.0134 [0.0191]
+ 182.446- 183.440       4765    0.0145 0.9964 +- 0.0144 [0.0204]        0.9851 +- 0.0144 [0.0202]        0.9872 +- 0.0144 [0.0203]
+ 183.440- 184.435       3768    0.0163 1.0072 +- 0.0163 [0.0231]        1.0220 +- 0.0165 [0.0234]        1.0191 +- 0.0164 [0.0233]
+ 184.435- 185.429       3180    0.0177 1.0053 +- 0.0178 [0.0252]        1.0104 +- 0.0178 [0.0253]        0.9893 +- 0.0176 [0.0249]
+ 185.429- 186.423       2719    0.0192 0.9985 +- 0.0192 [0.0271]        0.9904 +- 0.0191 [0.0269]        1.0162 +- 0.0193 [0.0274]
+ 186.423- 187.915       3384    0.0172 0.9911 +- 0.0171 [0.0241]        0.9832 +- 0.0170 [0.0240]        0.9663 +- 0.0169 [0.0237]
+ 187.915- 189.406       2741    0.0191 1.0113 +- 0.0192 [0.0272]        0.9912 +- 0.0190 [0.0268]        0.9624 +- 0.0187 [0.0262]
+ 189.406- 190.898       2337    0.0207 0.9863 +- 0.0205 [0.0289]        0.9551 +- 0.0202 [0.0283]        0.9641 +- 0.0203 [0.0284]
+ 190.898- 192.389       1860    0.0232 1.0263 +- 0.0235 [0.0334]        1.0016 +- 0.0232 [0.0328]        1.0097 +- 0.0233 [0.0330]
+ 192.389- 193.881       1566    0.0253 1.0524 +- 0.0259 [0.0371]        1.0134 +- 0.0254 [0.0361]        1.0198 +- 0.0255 [0.0363]
+ 193.881- 195.373       1410    0.0266 0.9837 +- 0.0264 [0.0372]        1.0262 +- 0.0270 [0.0384]        1.0014 +- 0.0266 [0.0377]
+   * = outside the pane's +-10 %, drawn there as a boundary triangle.
+
+   -- the pane as numbers, on the "diff" error ---
+   pair                                    chi2    ndf  chi2/ndf how far off    delta [GeV]
+   PA_seq / PA_joint                       37.1     62     0.598       -2.2 s -0.00096+-0.00106
+   PA_globalretry / PA_joint               50.9     62     0.821       -1.0 s -0.00157+-0.00106
+   PA_withmass / PA_joint                  42.0     62     0.677       -1.8 s -0.00143+-0.00106
+   PA_seq / PA_globalretry                 43.3     62     0.698       -1.7 s +0.00060+-0.00106
+
+   The LAST line of each row is the one the figure exists for: it
+   compares sequential (which trusts the tabulated Z_hat) with
+   sequential_global_retry (which cancels Z_k identically), and
+   NEITHER of them is the pane's denominator, so the denominator's
+   own fluctuation drops out of it.  On the figure it is the
+   separation between the two coloured curves, not the distance of
+   either from the line.
+
+==============================================================================
+-- 5.MS per-bin SHAPE ratio to ms_joint -- THIS IS THE FIGURE'S RATIO PANE --
+   UNCLIPPED.  The pane clips to +-10 %; a value outside it is
+   drawn ON the boundary as a triangle pointing the way it went and
+   its real value is here, flagged with a star.
+
+   TWO ERRORS PER BIN.
+     "own"   what the FIGURE draws on the bars; the band around 1
+             is ms_joint's own.  Delta method for a self-normalised
+             histogram: the bin is a SUBSET of the total it is
+             divided by, so var(R) = sum_i (n_i - R d_i)^2/D^2.
+     "diff"  the error on the DIFFERENCE, which is what a
+             significance needs.  Here it is band and bar in
+             quadrature -- and by section 2 that IS the paired
+             answer on this observable, to better than 0.4 %.  Do
+             not carry that habit back to the m_tt figure.
+
+   joint = joint,  seq = sequential,  seq_glob_retry = sequential_global_retry
+        bin [GeV]   n(joint)      band seq                              seq_glob_retry
+                              +- (own) ratio +- own [diff]              ratio +- own [diff]
+ 150.627- 152.119       1173    0.0632 1.0329 +- 0.0363 [0.0747]        0.9882 +- 0.0354 [0.0718]
+ 152.119- 153.611       1348    0.0826 0.9140 +- 0.0310 [0.0816]        0.8874 +- 0.0306 [0.0794] *
+ 153.611- 155.102       1560    0.0410 1.0048 +- 0.0330 [0.0528]        1.0438 +- 0.0336 [0.0544]
+ 155.102- 156.594       1904    0.0449 0.9762 +- 0.0292 [0.0527]        0.9757 +- 0.0292 [0.0527]
+ 156.594- 158.085       2256    0.0465 0.9858 +- 0.0274 [0.0534]        0.9813 +- 0.0273 [0.0532]
+ 158.085- 159.577       2903    0.0254 0.9379 +- 0.0243 [0.0340]        0.9066 +- 0.0239 [0.0332]
+ 159.577- 160.571       2339    0.0251 0.9904 +- 0.0283 [0.0377]        0.9847 +- 0.0283 [0.0375]
+ 160.571- 161.565       2748    0.0239 1.0117 +- 0.0265 [0.0359]        0.9868 +- 0.0261 [0.0352]
+ 161.565- 162.559       3278    0.0219 0.9685 +- 0.0238 [0.0319]        0.9790 +- 0.0239 [0.0321]
+ 162.559- 163.554       4068    0.0176 0.9888 +- 0.0218 [0.0279]        0.9960 +- 0.0219 [0.0280]
+ 163.554- 164.548       5055    0.0154 0.9879 +- 0.0196 [0.0248]        1.0237 +- 0.0199 [0.0254]
+ 164.548- 165.542       6581    0.0126 1.0001 +- 0.0174 [0.0215]        1.0261 +- 0.0176 [0.0219]
+ 165.542- 166.040       3987    0.0159 0.9703 +- 0.0220 [0.0269]        1.0145 +- 0.0225 [0.0277]
+ 166.040- 166.537       4708    0.0149 0.9944 +- 0.0205 [0.0253]        0.9936 +- 0.0205 [0.0253]
+ 166.537- 167.034       5376    0.0142 1.0346 +- 0.0196 [0.0245]        1.0209 +- 0.0194 [0.0243]
+ 167.034- 167.531       6510    0.0125 0.9753 +- 0.0173 [0.0211]        0.9962 +- 0.0175 [0.0214]
+ 167.531- 168.028       7921    0.0115 0.9605 +- 0.0155 [0.0191]        0.9726 +- 0.0156 [0.0192]
+ 168.028- 168.525       9599    0.0102 1.0314 +- 0.0146 [0.0180]        1.0339 +- 0.0147 [0.0181]
+ 168.525- 169.023      12047    0.0091 1.0006 +- 0.0129 [0.0158]        1.0099 +- 0.0129 [0.0159]
+ 169.023- 169.520      15533    0.0081 1.0124 +- 0.0114 [0.0141]        1.0111 +- 0.0114 [0.0140]
+ 169.520- 170.017      20772    0.0069 0.9942 +- 0.0097 [0.0119]        0.9909 +- 0.0097 [0.0119]
+ 170.017- 170.315      16005    0.0079 0.9889 +- 0.0111 [0.0136]        0.9704 +- 0.0110 [0.0134]
+ 170.315- 170.614      19472    0.0072 1.0048 +- 0.0101 [0.0125]        1.0011 +- 0.0101 [0.0124]
+ 170.614- 170.912      25014    0.0063 0.9879 +- 0.0088 [0.0108]        0.9911 +- 0.0089 [0.0108]
+ 170.912- 171.210      32088    0.0055 1.0063 +- 0.0079 [0.0096]        1.0266 +- 0.0079 [0.0098]
+ 171.210- 171.508      43206    0.0049 1.0094 +- 0.0068 [0.0084]        1.0021 +- 0.0067 [0.0083]
+ 171.508- 171.807      60371    0.0040 1.0007 +- 0.0057 [0.0070]        0.9922 +- 0.0057 [0.0069]
+ 171.807- 172.105      86797    0.0033 0.9909 +- 0.0047 [0.0057]        0.9921 +- 0.0047 [0.0057]
+ 172.105- 172.403     127890    0.0027 1.0035 +- 0.0038 [0.0047]        1.0068 +- 0.0038 [0.0047]
+ 172.403- 172.702     189189    0.0022 0.9993 +- 0.0031 [0.0038]        0.9904 +- 0.0031 [0.0038]
+ 172.702- 173.000     245653    0.0020 0.9986 +- 0.0027 [0.0033]        0.9992 +- 0.0027 [0.0033]
+ 173.000- 173.298     247798    0.0019 1.0025 +- 0.0027 [0.0033]        1.0035 +- 0.0027 [0.0033]
+ 173.298- 173.597     193719    0.0022 0.9930 +- 0.0030 [0.0038]        1.0007 +- 0.0031 [0.0038]
+ 173.597- 173.895     133206    0.0027 0.9976 +- 0.0037 [0.0046]        0.9965 +- 0.0037 [0.0046]
+ 173.895- 174.193      90232    0.0034 1.0050 +- 0.0046 [0.0057]        0.9967 +- 0.0046 [0.0057]
+ 174.193- 174.492      62893    0.0039 1.0021 +- 0.0056 [0.0068]        0.9990 +- 0.0056 [0.0068]
+ 174.492- 174.790      46008    0.0046 1.0190 +- 0.0066 [0.0081]        1.0088 +- 0.0066 [0.0080]
+ 174.790- 175.088      34949    0.0054 0.9931 +- 0.0075 [0.0092]        1.0025 +- 0.0075 [0.0092]
+ 175.088- 175.386      27071    0.0060 1.0047 +- 0.0086 [0.0105]        1.0116 +- 0.0086 [0.0105]
+ 175.386- 175.685      21691    0.0068 1.0239 +- 0.0097 [0.0119]        1.0171 +- 0.0096 [0.0119]
+ 175.685- 175.983      17749    0.0077 1.0025 +- 0.0106 [0.0131]        1.0181 +- 0.0107 [0.0132]
+ 175.983- 176.480      23415    0.0065 1.0051 +- 0.0092 [0.0113]        1.0037 +- 0.0092 [0.0113]
+ 176.480- 176.977      17960    0.0075 1.0035 +- 0.0105 [0.0129]        1.0013 +- 0.0105 [0.0129]
+ 176.977- 177.475      14080    0.0085 1.0144 +- 0.0120 [0.0147]        1.0340 +- 0.0121 [0.0149]
+ 177.475- 177.972      11635    0.0096 0.9988 +- 0.0131 [0.0162]        1.0089 +- 0.0131 [0.0163]
+ 177.972- 178.469       9678    0.0102 0.9966 +- 0.0143 [0.0175]        0.9720 +- 0.0142 [0.0173]
+ 178.469- 178.966       8112    0.0111 0.9742 +- 0.0155 [0.0189]        0.9977 +- 0.0157 [0.0192]
+ 178.966- 179.463       6937    0.0121 0.9807 +- 0.0168 [0.0205]        0.9828 +- 0.0168 [0.0206]
+ 179.463- 179.960       5986    0.0130 0.9979 +- 0.0182 [0.0224]        0.9932 +- 0.0182 [0.0223]
+ 179.960- 180.458       5342    0.0138 0.9621 +- 0.0190 [0.0232]        0.9824 +- 0.0192 [0.0235]
+ 180.458- 181.452       8798    0.0107 0.9781 +- 0.0149 [0.0182]        1.0082 +- 0.0151 [0.0186]
+ 181.452- 182.446       7065    0.0119 1.0069 +- 0.0169 [0.0207]        1.0041 +- 0.0169 [0.0206]
+ 182.446- 183.440       5847    0.0132 0.9867 +- 0.0184 [0.0225]        0.9737 +- 0.0182 [0.0223]
+ 183.440- 184.435       4860    0.0156 1.0172 +- 0.0204 [0.0259]        0.9984 +- 0.0202 [0.0255]
+ 184.435- 185.429       4122    0.0156 1.0394 +- 0.0225 [0.0277]        1.0176 +- 0.0222 [0.0273]
+ 185.429- 186.423       3800    0.0168 1.0113 +- 0.0230 [0.0286]        0.9987 +- 0.0229 [0.0283]
+ 186.423- 187.915       4536    0.0148 1.1160 +- 0.0222 [0.0277] *      1.0515 +- 0.0215 [0.0266]
+ 187.915- 189.406       3941    0.0159 1.0037 +- 0.0226 [0.0277]        1.0037 +- 0.0226 [0.0277]
+ 189.406- 190.898       3418    0.0171 0.9593 +- 0.0237 [0.0288]        0.9822 +- 0.0240 [0.0293]
+ 190.898- 192.389       2900    0.0186 1.0936 +- 0.0275 [0.0342]        1.0627 +- 0.0271 [0.0335]
+ 192.389- 193.881       2539    0.0199 0.9829 +- 0.0278 [0.0340]        0.9979 +- 0.0280 [0.0344]
+ 193.881- 195.373       2362    0.0206 0.9444 +- 0.0283 [0.0343]        0.9681 +- 0.0287 [0.0349]
+   * = outside the pane's +-10 %, drawn there as a boundary triangle.
+
+   -- the pane as numbers, on the "diff" error ---
+   pair                                    chi2    ndf  chi2/ndf how far off    delta [GeV]
+   ms_seq / ms_joint                       83.2     62     1.342       +1.9 s +0.00039+-0.00131
+   ms_globalretry / ms_joint               75.7     62     1.222       +1.2 s +0.00163+-0.00131
+   ms_seq / ms_globalretry                 43.7     62     0.705       -1.6 s -0.00118+-0.00150
+
+   The LAST line of each row is the one the figure exists for: it
+   compares sequential (which trusts the tabulated Z_hat) with
+   sequential_global_retry (which cancels Z_k identically), and
+   NEITHER of them is the pane's denominator, so the denominator's
+   own fluctuation drops out of it.  On the figure it is the
+   separation between the two coloured curves, not the distance of
+   either from the line.
+
+==============================================================================
+-- 6. two things the errors above do NOT know, both measured ---------
+==============================================================================
+
+   (i) THE TWO TOPS OF AN EVENT ARE NOT INDEPENDENT, and every error
+       here treats them as if they were (n = 2 N).  The evidence is the
+       chi2 of the PA row, which is a genuine null and comes out BELOW
+       1 on every binning tried (0.56-0.88 over grids from 10 to 150
+       bins).  An event's two virtualities compete for the same shat,
+       so they are anti-correlated, and a histogram of 2 N tops
+       fluctuates LESS than 2 N independent draws would.
+
+       Which way this cuts: the quoted per-bin errors are CONSERVATIVE,
+       so the agreement below looks BETTER than it is.  If the true
+       per-bin error is sqrt(0.7) = 0.84 of the quoted one, then every
+       departure is 1.19 times more significant than the figure's bars
+       suggest, and sigma(delta) is 0.84 times the value in section 3.
+       The same assumption is in the <m(W b)> moment errors already on
+       record (rms/sqrt(2N)), so it is inherited, not introduced here.
+       Settling it needs the per-event pair of virtualities, which the
+       harvest did not keep and the LHE files can no longer supply.
+       A future harvest should store the per-event mean of the two.
+
+   (ii) ms_joint IS THE madspin ROW'S DENOMINATOR AND IT CARRIES A
+       RATE ARTEFACT.  The overweight safety net wrote 754 of its 1M
+       events with weight above 1 (largest factor 83, +0.296 % of
+       sigma).  On the virtuality that is not a small effect:
+   cell              <m_top> counted <m_top> weighted     difference
+   PA_joint               172.958805       172.958805      -0.000000
+   PA_seq                 172.960724       172.960724      -0.000000
+   PA_globalretry         172.958176       172.958176      -0.000000
+   PA_withmass            172.954496       172.954496      +0.000000
+   ms_joint               173.188286       173.163575      -0.024711
+   ms_seq                 173.172576       173.172538      -0.000038
+   ms_globalretry         173.171078       173.171065      -0.000013
+
+       ms_joint moves by -0.0247 GeV between the counted and the
+       weighted mean; every other cell moves by less than 4e-5.  The
+       figure plots the WEIGHTED density, which is the physical one,
+       and its error bar carries the reconstructed sum(w^2), which is
+       why ms_joint's band reaches 8.3 % in the bins an overweight
+       landed in against 2.7 % for a counted error.
+
+       Read the madspin row accordingly: BOTH coloured curves leave 1
+       together there, which is a statement about ms_joint and not
+       about Z_k.  The Z_k statement in that row is ms_seq against
+       ms_globalretry, the last line of section 5.MS, in which
+       ms_joint does not appear at all.
+
+==============================================================================
+-- 7. READING THE FIGURE: is there a Z_k effect in the virtuality? ---
+==============================================================================
+
+   [PA]  PA_seq against PA_globalretry
+     lineshape chi2/ndf   43.298 / 62 = 0.698  (-1.7 sigma)
+     rigid shift          +0.00060 +- 0.00106 GeV  (0.6 sigma)
+     95 % upper limit     |delta| < 0.00267 GeV
+     for comparison, the MOMENT bound already on record:
+                          +0.00254 +- 0.00320 GeV  (0.8 sigma), 95 % |.| < 0.00882
+
+   [madspin]  ms_seq against ms_globalretry
+     lineshape chi2/ndf   43.706 / 62 = 0.705  (-1.6 sigma)
+     rigid shift          -0.00118 +- 0.00150 GeV  (0.8 sigma)
+     95 % upper limit     |delta| < 0.00412 GeV
+     for comparison, the MOMENT bound already on record:
+                          +0.00149 +- 0.00468 GeV  (0.3 sigma), 95 % |.| < 0.01067
+
+   No Z_k effect is seen in either row.  The differential test is 3-4
+   times sharper than the moment test it replaces, and it is a BOUND,
+   at roughly the size of the ~0.001 GeV residual the shipped table is
+   expected to produce -- so a null here excludes an effect a few times
+   larger than expected and does not touch the expected one itself.
+
+   What would settle it: the per-top split (a) -- a same-sign move on
+   m(t) AND m(t~) is evidence, a move on one alone is not -- and about
+   an order of magnitude more events.  Both need the decayed LHE files
+   or a re-run, and neither is available from this harvest.
+
