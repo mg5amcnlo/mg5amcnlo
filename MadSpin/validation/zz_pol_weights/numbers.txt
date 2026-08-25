@@ -835,7 +835,7 @@ in-selection K: unpolarised = 1.2890+-0.0048  Z0 Z0 = 1.2950+-0.0085  Z0 ZT = 1.
  2.88- 3.14     27210     28283     1.2635+-0.0113    1.2439+-0.0188    1.3142+-0.0180    1.2392+-0.0151    1.2470+-0.0128
 
 ==========================================================================
-THE TWO SIX-PANEL RATIO FIGURES (variant A, restructured)
+THE TWO SEVEN-PANE RATIO FIGURES (variant A, restructured)
 ==========================================================================
 Written to plots/variant_A6_ratios/ and plots/variant_A6_ratios_scale/ and to the two
 same-named directories under plots_userstyle/.  PDF and PNG, both
@@ -843,16 +843,28 @@ styles.  Variant A itself, variant B, the K-factor figure and the
 original figures are untouched by this pass and their PNGs are still
 byte-for-byte what this branch carried.
 
+THE LAYOUT.  A FULL-WIDTH DISTRIBUTION PANE over a 3 x 2 of ratios:
+  the seventh   dsigma/dx, absolute, unpolarised + the four
+  (full width)  components, at NLO and at LO -- ten curves
+  top left      (Z0Z0 + ZTZT + ZTZ0 + Z0ZT) / full, the sum
+                consistency
+  top right     K = NLO / LO, five curves (unpolarised + the four)
+  the four      component / full, one polarisation per pane
+
 WHAT CHANGED FROM VARIANT A.  Variant A was a distribution pane, a
 full-width (Z0Z0+ZTZT+ZTZ0+Z0ZT)/full pane and a 2x2 of the individual
-polarisation ratios, on the NLO reference alone.  These are a 3 x 2 of
-RATIOS ONLY:
-  top left    (Z0Z0 + ZTZT + ZTZ0 + Z0ZT) / full, the sum consistency
-  top right   K = NLO / LO, five curves (unpolarised + the four)
-  the four    component / full, one polarisation per pane
-The distribution pane is GONE.  It is still the top pane of the
-original figures, of variant B and of five of the six K-factor panels,
-and this figure is about ratios.
+polarisation ratios, on the NLO reference alone.  The six RATIO panes
+here are that decomposition spanning two orders, with the K-factor
+added; the seventh pane on top is the distribution, at both orders.
+
+AN EARLIER PASS DROPPED THE DISTRIBUTION PANE FROM THIS FIGURE and
+this file said so, on the argument that "the figure is about ratios".
+That argument did not survive.  Six ratio panes with no absolute scale
+anywhere say how the components divide the rate up and never say what
+the rate IS, and a reader who wants the K pane to mean anything has to
+fetch the two cross sections off another figure.  The seventh pane is
+that missing statement.  The six below it are unchanged -- same
+content, same order, same conventions, same errors, same bands.
 
 BOTH ORDERS ON FIVE OF THE SIX PANES.  The figure now spans NLO and
 LO, so every pane that admits two orders draws two -- the sum pane and
@@ -873,11 +885,213 @@ rule for the whole canvas:
     sample, so their covariance is real and is kept.
   the K pane: the two relative MC errors in quadrature.  Two
     independent samples, no covariance to subtract.
+  the seventh pane, all ten curves: the plain MC error sqrt(sum w^2).
+    Each is a single weighted sum and not a ratio, so there is no
+    covariance for a delta-method bar to keep.  Same rule, and the
+    same objects, as panels 1-5 of the K-factor figure.
 
 THE DASHED RULE in each fraction pane is that pane's NLO integrated
 value, as on variant A.  The dotted rule on the sum pane is 1.  The K
 pane carries NO rule: a K-factor ought not to be 1 and drawing one
-there would suggest a null hypothesis nobody holds.
+there would suggest a null hypothesis nobody holds.  The seventh pane
+carries no rule either: it is a distribution, not a ratio.
+
+--------------------------------------------------------------------------
+THE SEVENTH PANE -- the distribution, full width, over the six
+--------------------------------------------------------------------------
+the differential cross section dsigma/dx at absolute normalisation,
+same binning as the six panes below: the unpolarised total and the
+four polarised components, at NLO and at LO. Colour is the component,
+the line is the order; LO is drawn OVER NLO so that it stays visible
+where the two nearly coincide.
+
+DECISION -- THE Y SCALE IS MEASURED, NOT TAKEN FROM THE OBSERVABLE.
+Every other distribution pane in this study takes its y scale from
+pol_analysis.LOGY, which is a property of the OBSERVABLE, and that is
+right for a pane carrying FIVE curves.  This one carries TEN -- the
+same five at two orders -- so it asks the data instead: log when the
+ten curves span more than 2.0 decades.
+  M(e+ mu+) [GeV]          7.737e-09 .. 1.171e-04  4.18 decades -> LOG
+  Delta phi(e+ e-) [rad]   2.114e-05 .. 1.308e-02  2.79 decades -> LOG
+Both observables come out log.  Delta phi is the one this changes:
+LOGY has it linear, and drawn linear FOUR of the ten curves -- Z0Z0
+and Z0ZT at both orders -- lie within a few pixels of the frame on top
+of one another and cannot be read at all.  The six ratio panes below
+and every other figure in this study still follow LOGY and are
+unchanged.
+
+DECISION -- WHICH CURVES CARRY A SCALE BAND, on the scale variant:
+the UNPOLARISED pair, NLO and LO, and not the four components.  Ten
+translucent bands behind ten curves in one pane is a pane in which
+neither the bands nor the curves can be attributed; and the
+unpolarised pair is what this pane exists to state, being the absolute
+rate the six ratio panes divide by and never show.  It applies to THIS
+PANE ONLY -- the six below band every curve they carry, exactly as
+before.  The components' bands are NOT thereby lost: they are in the
+per-bin tables below, at both orders.
+
+AND THE BAND IS SMALL ON A LOG PANE, WHICH IS WORTH SAYING PLAINLY.
+A few percent is 0.017 of a decade; on a pane four decades tall that
+is under two pixels, so the unpolarised band the scale variant draws
+here is at the line width and cannot be measured off the canvas.  It
+is drawn to scale and not exaggerated.  The six ratio panes are where
+this figure's bands are read, and the tables below are where this
+pane's are.
+
+THE STYLES.  Colour is the component, the line is the ORDER (solid
+NLO, dashed LO) -- the same LS_ORDER the six panes below use.  LO is
+drawn OVER NLO, the reverse of the six panes, because K ~ 1.29 is a
+hair's breadth on a log pane and the lower curve is the one that
+vanishes.  The line WEIGHT steps down through the components so that
+Z0ZT and ZTZ0 -- equal to 1-2 % bin by bin, as they must be, ZZ being
+symmetric -- do not hide one another: the later, thinner one sits
+inside the earlier, thicker one and leaves a halo of it showing.
+Nothing is offset; two coincident curves are drawn coincident.
+
+--------------------------------------------------------------------------
+M(e+ mu+) [GeV] -- the seventh pane, bin by bin, in pb per unit x
+  band = the seven-point envelope, as a percentage of that bin's
+         nominal
+--------------------------------------------------------------------------
+  unpolarised
+    bin                            NLO      +- MC   band-%   band+%              LO      +- MC   band-%   band+%
+       0.000 - 45.000     5.532205e-05   4.36e-07    -2.02     2.25    4.394713e-05   3.06e-07    -7.22     5.98
+      45.000 - 70.000     1.170732e-04   8.50e-07    -1.86     2.23    9.204083e-05   5.94e-07    -7.26     6.02
+      70.000 - 95.000     1.104268e-04   8.27e-07    -1.84     2.23    8.778958e-05   5.80e-07    -7.16     5.93
+      95.000 - 125.000    8.240220e-05   6.51e-07    -1.98     2.40    6.254992e-05   4.47e-07    -6.68     5.47
+     125.000 - 175.000    4.332110e-05   3.69e-07    -2.08     2.51    3.356390e-05   2.54e-07    -5.72     4.57
+     175.000 - 260.000    1.540592e-05   1.70e-07    -2.28     2.75    1.122080e-05   1.12e-07    -4.06     3.04
+     260.000 - 450.000    2.999574e-06   5.07e-08    -2.77     3.74    2.172605e-06   3.31e-08    -1.58     0.82
+    integrated (in selection): NLO 1.479603e-02 pb   LO 1.147338e-02 pb
+
+  Z0 Z0
+    bin                            NLO      +- MC   band-%   band+%              LO      +- MC   band-%   band+%
+       0.000 - 45.000     2.800132e-06   4.22e-08    -2.73     2.15    2.216026e-06   2.96e-08    -8.26     6.95
+      45.000 - 70.000     7.534649e-06   9.53e-08    -2.27     2.12    6.133430e-06   6.83e-08    -8.12     6.82
+      70.000 - 95.000     1.032979e-05   1.17e-07    -2.51     2.25    8.139961e-06   8.25e-08    -8.08     6.78
+      95.000 - 125.000    6.324213e-06   7.65e-08    -2.14     2.60    4.745343e-06   5.24e-08    -7.59     6.31
+     125.000 - 175.000    1.799488e-06   2.48e-08    -2.34     2.84    1.323657e-06   1.61e-08    -6.56     5.32
+     175.000 - 260.000    2.485675e-07   4.72e-09    -2.79     3.38    1.696610e-07   2.73e-09    -4.89     3.76
+     260.000 - 450.000    1.354809e-08   4.89e-10    -4.71     5.98    7.736766e-09   1.89e-10    -2.53     1.62
+    integrated (in selection): NLO 8.760766e-04 pb   LO 6.810247e-04 pb
+
+  Z0 ZT
+    bin                            NLO      +- MC   band-%   band+%              LO      +- MC   band-%   band+%
+       0.000 - 45.000     6.712564e-06   7.89e-08    -2.25     2.46    5.217824e-06   5.41e-08    -7.74     6.47
+      45.000 - 70.000     1.586065e-05   1.65e-07    -2.12     2.44    1.201422e-05   1.11e-07    -7.81     6.53
+      70.000 - 95.000     1.700997e-05   1.73e-07    -2.05     2.40    1.314242e-05   1.18e-07    -7.80     6.52
+      95.000 - 125.000    1.231415e-05   1.36e-07    -2.26     2.74    8.901815e-06   8.82e-08    -7.34     6.08
+     125.000 - 175.000    5.088055e-06   6.57e-08    -2.77     3.36    3.590807e-06   4.00e-08    -6.28     5.08
+     175.000 - 260.000    1.208730e-06   2.34e-08    -3.54     4.56    7.026008e-07   1.14e-08    -4.45     3.39
+     260.000 - 450.000    1.399328e-07   5.96e-09    -6.40     8.01    5.998428e-08   1.66e-09    -1.75     0.97
+    integrated (in selection): NLO 1.879576e-03 pb   LO 1.382163e-03 pb
+
+  ZT Z0
+    bin                            NLO      +- MC   band-%   band+%              LO      +- MC   band-%   band+%
+       0.000 - 45.000     6.695580e-06   7.76e-08    -2.21     2.55    5.220978e-06   5.41e-08    -7.83     6.55
+      45.000 - 70.000     1.571724e-05   1.63e-07    -1.93     2.34    1.209820e-05   1.11e-07    -7.82     6.54
+      70.000 - 95.000     1.710923e-05   1.74e-07    -2.01     2.43    1.329852e-05   1.19e-07    -7.80     6.52
+      95.000 - 125.000    1.218358e-05   1.33e-07    -2.26     2.74    8.818412e-06   8.76e-08    -7.29     6.04
+     125.000 - 175.000    5.078819e-06   6.50e-08    -2.69     3.27    3.630517e-06   4.04e-08    -6.26     5.07
+     175.000 - 260.000    1.202003e-06   2.40e-08    -3.55     4.47    7.012222e-07   1.13e-08    -4.47     3.41
+     260.000 - 450.000    1.358959e-07   5.32e-09    -6.27     7.85    6.166534e-08   1.65e-09    -1.84     1.05
+    integrated (in selection): NLO 1.871461e-03 pb   LO 1.388020e-03 pb
+
+  ZT ZT
+    bin                            NLO      +- MC   band-%   band+%              LO      +- MC   band-%   band+%
+       0.000 - 45.000     3.785178e-05   3.21e-07    -1.89     2.15    3.040928e-05   2.26e-07    -6.92     5.70
+      45.000 - 70.000     7.548001e-05   5.95e-07    -1.78     2.16    5.997198e-05   4.16e-07    -6.95     5.72
+      70.000 - 95.000     6.497572e-05   5.36e-07    -1.71     2.06    5.289200e-05   3.80e-07    -6.73     5.52
+      95.000 - 125.000    5.133001e-05   4.40e-07    -1.81     2.19    3.984960e-05   3.05e-07    -6.30     5.12
+     125.000 - 175.000    3.102016e-05   2.79e-07    -1.84     2.22    2.471972e-05   1.94e-07    -5.51     4.38
+     175.000 - 260.000    1.258918e-05   1.43e-07    -2.02     2.44    9.538554e-06   9.72e-08    -3.96     2.96
+     260.000 - 450.000    2.678217e-06   4.62e-08    -2.39     3.29    2.021004e-06   3.10e-08    -1.56     0.80
+    integrated (in selection): NLO 9.980855e-03 pb   LO 7.893095e-03 pb
+
+--------------------------------------------------------------------------
+Delta phi(e+ e-) [rad] -- the seventh pane, bin by bin, in pb per unit x
+  band = the seven-point envelope, as a percentage of that bin's
+         nominal
+--------------------------------------------------------------------------
+  unpolarised
+    bin                            NLO      +- MC   band-%   band+%              LO      +- MC   band-%   band+%
+       0.000 - 0.262      1.628970e-03   3.17e-05    -3.22     4.17    1.210472e-03   2.10e-05    -2.76     1.93
+       0.262 - 0.524      1.940493e-03   3.45e-05    -2.88     3.78    1.399288e-03   2.26e-05    -2.63     1.81
+       0.524 - 0.785      2.338283e-03   3.81e-05    -2.98     3.90    1.761552e-03   2.54e-05    -2.71     1.88
+       0.785 - 1.047      2.930442e-03   4.26e-05    -2.64     3.30    2.252620e-03   2.87e-05    -3.32     2.41
+       1.047 - 1.309      3.824006e-03   4.84e-05    -2.40     2.90    2.924820e-03   3.27e-05    -3.98     3.00
+       1.309 - 1.571      4.894366e-03   5.44e-05    -2.25     2.72    3.738266e-03   3.70e-05    -4.68     3.64
+       1.571 - 1.833      6.186785e-03   6.13e-05    -2.17     2.63    4.784804e-03   4.18e-05    -5.33     4.22
+       1.833 - 2.094      7.676769e-03   6.77e-05    -1.95     2.36    6.050531e-03   4.71e-05    -5.83     4.68
+       2.094 - 2.356      9.428218e-03   7.48e-05    -1.85     2.22    7.366755e-03   5.19e-05    -6.32     5.13
+       2.356 - 2.618      1.126281e-02   8.15e-05    -2.05     2.10    8.820355e-03   5.68e-05    -6.63     5.42
+       2.618 - 2.880      1.273521e-02   8.66e-05    -1.88     2.06    9.793920e-03   5.99e-05    -6.85     5.62
+       2.880 - 3.142      1.307649e-02   8.78e-05    -1.95     1.98    1.034960e-02   6.15e-05    -6.96     5.72
+    integrated (in selection): NLO 2.040016e-02 pb   LO 1.582655e-02 pb
+
+  Z0 Z0
+    bin                            NLO      +- MC   band-%   band+%              LO      +- MC   band-%   band+%
+       0.000 - 0.262      3.452396e-05   1.81e-06    -3.55     4.30    2.114315e-05   9.20e-07    -6.15     4.98
+       0.262 - 0.524      3.684719e-05   1.68e-06    -3.56     4.31    2.483799e-05   1.16e-06    -6.20     5.03
+       0.524 - 0.785      4.280728e-05   1.83e-06    -3.39     4.28    3.295676e-05   1.34e-06    -6.19     5.01
+       0.785 - 1.047      6.036897e-05   2.17e-06    -3.93     4.77    4.401851e-05   1.45e-06    -6.06     4.89
+       1.047 - 1.309      9.829651e-05   2.81e-06    -3.51     4.27    7.196702e-05   1.87e-06    -6.09     4.92
+       1.309 - 1.571      1.583609e-04   3.61e-06    -3.11     3.78    1.149872e-04   2.41e-06    -6.36     5.17
+       1.571 - 1.833      2.506685e-04   4.55e-06    -2.83     3.44    1.923165e-04   3.16e-06    -6.60     5.39
+       1.833 - 2.094      4.071598e-04   6.19e-06    -2.26     2.75    3.109442e-04   4.17e-06    -6.86     5.63
+       2.094 - 2.356      6.256954e-04   8.11e-06    -2.42     2.34    4.833285e-04   5.62e-06    -7.30     6.04
+       2.356 - 2.618      8.844901e-04   1.02e-05    -2.55     1.97    6.885902e-04   7.12e-06    -7.53     6.26
+       2.618 - 2.880      1.019505e-03   1.11e-05    -2.19     1.84    7.806940e-04   7.72e-06    -7.77     6.48
+       2.880 - 3.142      8.986861e-04   1.02e-05    -2.45     2.15    7.224831e-04   7.19e-06    -7.90     6.61
+    integrated (in selection): NLO 1.182655e-03 pb   LO 9.132262e-04 pb
+
+  Z0 ZT
+    bin                            NLO      +- MC   band-%   band+%              LO      +- MC   band-%   band+%
+       0.000 - 0.262      1.550726e-04   4.83e-06    -3.06     3.94    1.053779e-04   2.94e-06    -5.05     4.00
+       0.262 - 0.524      1.768649e-04   5.35e-06    -2.95     3.56    1.165880e-04   3.01e-06    -4.96     3.92
+       0.524 - 0.785      2.109166e-04   5.48e-06    -2.93     3.87    1.462203e-04   3.35e-06    -4.75     3.72
+       0.785 - 1.047      2.901528e-04   6.57e-06    -3.08     3.73    1.987228e-04   3.88e-06    -4.97     3.91
+       1.047 - 1.309      3.993902e-04   7.71e-06    -2.79     3.69    2.777289e-04   4.69e-06    -5.35     4.26
+       1.309 - 1.571      5.296260e-04   8.80e-06    -2.67     3.23    3.862853e-04   5.66e-06    -5.89     4.75
+       1.571 - 1.833      6.788161e-04   9.88e-06    -2.71     3.29    4.896448e-04   6.34e-06    -6.50     5.31
+       1.833 - 2.094      8.301520e-04   1.10e-05    -2.46     2.99    6.183537e-04   7.09e-06    -6.96     5.74
+       2.094 - 2.356      1.058062e-03   1.25e-05    -2.45     2.98    7.633534e-04   7.88e-06    -7.35     6.10
+       2.356 - 2.618      1.364163e-03   1.45e-05    -2.39     2.90    9.811434e-04   9.12e-06    -7.48     6.21
+       2.618 - 2.880      1.812337e-03   1.82e-05    -2.17     2.63    1.288172e-03   1.16e-05    -7.49     6.21
+       2.880 - 3.142      2.172346e-03   2.22e-05    -1.96     2.37    1.652918e-03   1.51e-05    -7.50     6.21
+    integrated (in selection): NLO 2.533668e-03 pb   LO 1.839012e-03 pb
+
+  ZT Z0
+    bin                            NLO      +- MC   band-%   band+%              LO      +- MC   band-%   band+%
+       0.000 - 0.262      1.081133e-04   5.03e-06    -8.21     9.85    3.671625e-05   1.53e-06    -5.20     4.11
+       0.262 - 0.524      1.362858e-04   5.52e-06    -7.83     9.54    5.198205e-05   1.85e-06    -4.71     3.68
+       0.524 - 0.785      1.774837e-04   5.99e-06    -6.72     8.12    8.459848e-05   2.29e-06    -4.31     3.31
+       0.785 - 1.047      2.467590e-04   6.22e-06    -4.85     5.88    1.363107e-04   2.81e-06    -4.35     3.34
+       1.047 - 1.309      3.561209e-04   7.40e-06    -3.69     4.59    2.312328e-04   4.06e-06    -4.94     3.88
+       1.309 - 1.571      5.096737e-04   8.83e-06    -3.32     4.04    3.399158e-04   5.11e-06    -5.61     4.49
+       1.571 - 1.833      6.588574e-04   9.88e-06    -2.87     3.48    4.793009e-04   6.29e-06    -6.24     5.07
+       1.833 - 2.094      8.338376e-04   1.11e-05    -2.50     3.04    6.243797e-04   7.32e-06    -6.79     5.58
+       2.094 - 2.356      1.026650e-03   1.23e-05    -2.30     2.79    7.766664e-04   8.30e-06    -7.20     5.96
+       2.356 - 2.618      1.325550e-03   1.42e-05    -2.34     2.45    1.001329e-03   9.51e-06    -7.39     6.13
+       2.618 - 2.880      1.761027e-03   1.67e-05    -2.25     2.11    1.361018e-03   1.15e-05    -7.48     6.21
+       2.880 - 3.142      2.231472e-03   2.03e-05    -1.91     1.62    1.800799e-03   1.45e-05    -7.58     6.29
+    integrated (in selection): NLO 2.453539e-03 pb   LO 1.812764e-03 pb
+
+  ZT ZT
+    bin                            NLO      +- MC   band-%   band+%              LO      +- MC   band-%   band+%
+       0.000 - 0.262      1.358265e-03   2.75e-05    -2.95     3.85    1.056031e-03   1.88e-05    -2.45     1.65
+       0.262 - 0.524      1.619325e-03   2.99e-05    -2.66     3.53    1.210928e-03   2.00e-05    -2.30     1.52
+       0.524 - 0.785      1.939691e-03   3.27e-05    -2.75     3.63    1.515568e-03   2.24e-05    -2.43     1.62
+       0.785 - 1.047      2.376374e-03   3.60e-05    -2.43     3.05    1.893273e-03   2.47e-05    -3.05     2.17
+       1.047 - 1.309      3.029938e-03   4.00e-05    -2.21     2.66    2.369862e-03   2.73e-05    -3.69     2.74
+       1.309 - 1.571      3.762727e-03   4.37e-05    -2.04     2.47    2.933205e-03   3.01e-05    -4.38     3.35
+       1.571 - 1.833      4.674088e-03   4.86e-05    -1.95     2.36    3.680010e-03   3.35e-05    -5.00     3.91
+       1.833 - 2.094      5.662311e-03   5.26e-05    -1.75     2.11    4.554141e-03   3.70e-05    -5.49     4.36
+       2.094 - 2.356      6.722801e-03   5.65e-05    -1.81     1.93    5.382517e-03   3.97e-05    -5.97     4.80
+       2.356 - 2.618      7.590883e-03   5.86e-05    -1.93     1.84    6.092474e-03   4.14e-05    -6.28     5.08
+       2.618 - 2.880      7.805091e-03   5.81e-05    -1.74     1.87    6.137271e-03   4.06e-05    -6.46     5.26
+       2.880 - 3.142      7.175022e-03   5.53e-05    -1.88     1.89    5.753758e-03   3.89e-05    -6.49     5.29
+    integrated (in selection): NLO 1.406295e-02 pb   LO 1.114717e-02 pb
 
 --------------------------------------------------------------------------
 M(e+ mu+) [GeV] -- the six panes, bin by bin

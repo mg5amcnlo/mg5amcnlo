@@ -49,7 +49,13 @@ ratios**, made a **second version of it carrying scale uncertainty**, and — to
 do that — **re-read two HepMC files**, because the nine `MUR*_MUF*` columns the
 scale band needs were *not* in the caches. It is described under *The six-panel
 ratio figures, and the scale band*; base of that pass `aacedbf19` (`MadSpin
-zz_pol_weights: an LO sample, and the NLO/LO K-factor figure`). It turns the
+zz_pol_weights: an LO sample, and the NLO/LO K-factor figure`). **A pass after
+that put a full-width distribution pane back on top of both of them**, so each
+is now seven panes and not six; the six are unchanged and it is an addition
+above them. See *The seventh pane* at the end of that section; base of that
+pass `a333435e2` (`MadSpin zz_pol_weights: variant A as six panels, and the
+scale band`), and it read no HepMC — every curve on the new pane comes off the
+two `.npz` that were already here. The scale-band pass turns the
 `+4.1 % −5.2 %` flag that this file has been carrying — "larger than the
 differences and not cancelling in a controlled way" — into a measurement, and
 the flag was **half right and half wrong**: see *Does the polarisation
@@ -1280,6 +1286,11 @@ carrying scale uncertainty. Both are written **alongside** everything that was
 already here — variant A, variant B, the K-factor figure and the originals are
 untouched and their PNGs are still byte-for-byte what this branch carried.
 
+**Both have since grown a seventh pane**, a full-width distribution above the
+3 × 2, which is *The seventh pane* at the end of this section. Everything
+between here and there describes the six, and the six are unchanged by it. The
+section keeps its name because the six panels are still its subject.
+
 ```
 plots/variant_A6_ratios/            m_epmup.{pdf,png}  dphi_ee.{pdf,png}
 plots/variant_A6_ratios_scale/      m_epmup.{pdf,png}  dphi_ee.{pdf,png}
@@ -1291,7 +1302,7 @@ plots_userstyle/variant_A6_ratios_scale/   the same two, user style
 
 Variant A was a distribution pane, a full-width `(Z_0Z_0 + Z_TZ_T + Z_TZ_0 +
 Z_0Z_T)/full` pane and a 2 × 2 of the individual polarisation ratios, on the
-NLO reference alone. Version 1 is a 3 × 2 of **ratios only**:
+NLO reference alone. Version 1 is a 3 × 2 of **ratios**:
 
 | | left | right |
 |---|---|---|
@@ -1299,9 +1310,12 @@ NLO reference alone. Version 1 is a 3 × 2 of **ratios only**:
 | **middle** | `Z_0Z_0/full` | `Z_0Z_T/full` |
 | **bottom** | `Z_TZ_0/full` | `Z_TZ_T/full` |
 
-The distribution pane is **gone**. It is still the top pane of the original
-figures, of variant B and of five of the six K-factor panels, and this figure
-is about ratios.
+This pass dropped the distribution pane, on the argument that it is still the
+top pane of the original figures, of variant B and of five of the six
+K-factor panels and that this figure is about ratios. **A later pass put a
+full-width distribution pane back above the 3 × 2 and that argument did not
+survive it** — see *The seventh pane* below. The six panels themselves are
+exactly as this section describes them and were not touched.
 
 **Both orders on five of the six.** The figure now spans NLO and LO, so every
 panel that admits two orders draws two — the sum pane and the four fraction
@@ -1535,6 +1549,96 @@ K-factor of a component: `K(Z_0Z_T) = 1.3608` has a `[1.2821, 1.4748]` band
 around it, and quoting it as `1.361 ± 0.006` was, as this file warned, a
 statement about these two samples and not a theory uncertainty.
 
+### The seventh pane — the distribution, put back on top
+
+Base of this pass `a333435e2`. **Both** versions gained a **full-width
+distribution pane above the 3 × 2**, so each figure is now one wide pane over
+six. The six are untouched: same content, same order, same conventions, same
+errors, same bands. Nothing outside `variant_A6_ratios*` was rewritten, and no
+HepMC was read — every curve comes off `data/weights.npz` and
+`data/weights_LO.npz`.
+
+**What is on it.** `dσ/dx` at **absolute** normalisation, same binning as the
+panes below: the unpolarised total and the four polarised components, **at NLO
+and at LO** — ten curves. Colour is the component, exactly the colour it
+carries everywhere else in this study; the line is the **order**, on the same
+`LS_ORDER` (solid NLO, dashed LO) the six panes below and the K-factor figure
+use, so one rule reads across the whole canvas. **LO is drawn over NLO**, which
+is the reverse of the six panes below and is asked for: `K ≈ 1.29` is a hair's
+breadth on a log pane, whichever curve is underneath disappears, and LO is the
+thinner, dashed, non-reference one. Errors are the plain MC `√Σw²` of
+`component_histogram` — each curve is a single weighted sum and not a ratio, so
+there is no covariance for a delta-method bar to keep, the same rule panels 1–5
+of the K-factor figure follow.
+
+**Why it is back.** The section above dropped it because "this figure is about
+ratios". Six ratio panes with no absolute scale anywhere say how the components
+divide the rate up and never say what the rate *is*, and a reader who wants the
+`K` pane to mean something has to go and fetch the two cross sections off
+another figure. That is the gap this pane closes.
+
+**Geometry.** A nested gridspec, exactly as the other stacked layouts here do
+it: an outer `(2, 1)` with `height_ratios = [2.9, 10.2]` and `hspace = 0.09`,
+and the 3 × 2 built as a `subgridspec` of the lower cell keeping its own
+`hspace = 0.07`, `wspace = 0.30` unchanged. Two vertical rhythms need two
+gridspecs — the outer gap has to clear the wide pane's own tick labels and axis
+name, and any single `hspace` over four rows is either tight enough to crush
+that or wide enough to tear the grid's rows apart. The figure grew from
+`9.0 × 10.2` to `9.0 × 13.4` in (MG7) and `9.4 × 10.4` to `9.4 × 13.6` in
+(user style). Checked on the rendered PNGs.
+
+**Log y, and it is measured rather than inherited.** Every other distribution
+pane in this study takes its y scale from `pol_analysis.LOGY`, which is a
+property of the *observable*. That is right for a pane carrying five curves.
+This one carries ten, so it asks the data:
+
+| observable | span of the ten curves | drawn |
+|---|---|---|
+| `M(e+ μ+)` | `7.74e−09 … 1.17e−04`, **4.18 decades** | log |
+| `Δφ(e+e−)` | `2.11e−05 … 1.31e−02`, **2.79 decades** | log |
+
+Both clear the two-decade threshold, so both are log. `Δφ` is the one this
+changes — `LOGY` has it linear, and drawn linear **four of the ten curves**
+(`Z_0Z_0` and `Z_0Z_T` at both orders) lie on top of one another within a few
+pixels of the frame and cannot be read at all. `LOGY` itself is not touched and
+every other figure in the study is unchanged. The legend needed `14×` headroom
+(MG7) / `26×` (user style, opaque frame) to clear the data; checked on the
+PNGs, not on the axis limits.
+
+**One thing the ten curves needed.** `Z_0Z_T` and `Z_TZ_0` are equal to 1–2 %
+bin by bin — they must be, `ZZ` is symmetric and the two differ only by which
+`Z` the projection is taken on — so on a log pane they are the same curve to
+within the line width, and drawn flat the purple `Z_0Z_T` was simply **not on
+the figure** while both of its legend entries were. The components are now
+drawn with the line weight **stepping down**, so the later, thinner curve sits
+inside the earlier, thicker one and leaves a halo of it showing. Nothing is
+offset and no value is touched: two coincident curves are drawn coincident and
+both are visible.
+
+**The band, on the scale version.** Drawn on the **unpolarised pair only**, NLO
+and LO, and not on the four components. Ten translucent bands behind ten curves
+is a pane in which neither the bands nor the curves can be attributed, and the
+unpolarised pair is what this pane exists to state. It is
+`pol_analysis.RATIO6_TOP_BAND_KEYS`, a list and not a boolean, so widening it
+to all five is one edit.
+
+**This applies to the new pane only.** The six panes below band every curve
+they carry, exactly as *Version 2* describes, and were not changed. Reading the
+instruction as applying to the whole figure would strip the bands off the
+`Z_0Z_0`, `Z_0Z_T`, `Z_TZ_0` and `Z_TZ_T` panes, which are the panes the scale
+version exists for; that reading was not taken, and if it is wanted it is
+`with_band` on `ratio_pane` and nothing else.
+
+**And the band is small on a log pane, which is worth saying plainly.** A few
+percent is 0.017 of a decade; on a pane four decades tall that is under two
+pixels. The unpolarised band on this pane is therefore at the line width and
+cannot be measured off the canvas — it is drawn to scale and not exaggerated.
+The trade is deliberate: a linear `Δφ` pane makes the band legible and four
+curves illegible, and the band is *tabulated* while the curves are not drawn
+anywhere else on the figure. `numbers.txt` prints the per-bin envelope for
+**all five components at both orders**, so nothing the pane does not draw is
+lost. The six ratio panes remain where this figure's bands are read.
+
 ### One thing that had to be fixed to draw them
 
 `--check-minus` reported the two `M(e+ μ+)` six-panel PDFs as failures. They
@@ -1550,8 +1654,16 @@ axis's view interval and still asks axis labels, titles and legend entries
 unconditionally — narrowing those could hide a genuinely eaten sign, which is
 the one outcome the check exists to prevent. The sibling module in
 `MadSpin/validation/zz_nlo/` is **not** edited. The count went 10/12 with two
-spurious failures to **10/10**, and the two `M(e+ μ+)` figures are now
+spurious failures to **10/10**, and the two `M(e+ μ+)` figures were then
 correctly reported as "no minus sign in this figure, check not applicable".
+
+**The seventh pane changed that count, and the wrapper is what makes the new
+count trustworthy.** Both `variant_A6_ratios*` figures now carry a log y axis
+on the new pane, whose `10^−8` … `10^−3` tick labels are real minus signs that
+are really drawn, so all twelve PDFs are now *applicable* and the run reports
+**12/12**. The wrapper is unchanged and is still doing the work: it now says
+"applicable" because the minus is inside the view, having said "not
+applicable" when the only candidate was a tick the locator offered outside it.
 
 ---
 
@@ -1642,8 +1754,8 @@ correctly reported as "no minus sign in this figure, check not applicable".
   **PDF** uncertainty: the eighteen `1010`–`1027` members are cached only as
   sums in `meta.json`, not as per-event columns, so a PDF band would need a
   third HepMC pass. Every bar on the K-factor figure itself is still MC
-  statistics only — the bands are on the two new six-panel figures, which are
-  written beside it and do not touch it.
+  statistics only — the bands are on the two new `variant_A6_ratios*` figures,
+  which are written beside it and do not touch it.
 * **The `Z_TZ_0` low-`Δφ` excursion is explained qualitatively, not
   quantitatively.** "The LO spectrum is nearly empty there" is read off the
   shape ratios, not off a phase-space calculation.
@@ -1687,6 +1799,30 @@ correctly reported as "no minus sign in this figure, check not applicable".
   interior in every bin of every component was not.
 * **No re-binning.** These figures inherit the same seven and twelve edges as
   everything else here, for the same reason and with the same reservation.
+
+### The seventh pane specifically
+
+* **The band on it is at the line width and cannot be read off the canvas.** A
+  few-percent envelope on a four-decade log axis is under two pixels. The
+  numbers are in `numbers.txt` for all five components at both orders, and the
+  six ratio panes below are where this figure's bands are read. Nothing was
+  exaggerated to make it visible and nothing should be.
+* **The components' bands are computed but not drawn.** `numbers.txt` prints
+  them; the pane draws the unpolarised pair only. Widening it is one edit
+  (`pol_analysis.RATIO6_TOP_BAND_KEYS`), and the pane was not tried with all
+  ten bands beyond confirming that they overlap into illegibility.
+* **`Z_0Z_T` and `Z_TZ_0` are still coincident.** The line-weight ladder makes
+  both *visible*; it does not make them *separable*, because they are equal to
+  1–2 % and no drawing can separate curves that are the same curve. A reader
+  who needs them apart has the two dedicated fraction panes below and the
+  per-bin table.
+* **The overflow is still not drawn**, so the `M(e+ μ+)` pane's curves do not
+  integrate to the σ printed beside them in `numbers.txt` — the same 0.69 %
+  the *Not covered* bullet on the overflow describes, now visible on a pane
+  that quotes an absolute normalisation. It was not fixed here.
+* **No spinmode curves on it.** `onshell`, `PA` and `madspin_v1` carry no
+  `MUR*_MUF*` columns and no LO partner, and this figure is the NLO/LO pair;
+  they stay on the original figures and on variant B.
 
 ### The variants specifically
 

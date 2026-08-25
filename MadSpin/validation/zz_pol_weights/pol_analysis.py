@@ -1398,6 +1398,35 @@ def _component_sum(d, obs, key, edges, scale=None):
     return y
 
 
+def distribution_band(d, obs, key, which=None):
+    """One sample's ABSOLUTE ``dsigma/dx`` for one component, with its band.
+
+    :func:`component_histogram` unchanged -- same ``y``, same plain MC ``err``
+    -- plus ``lo``/``hi``, the envelope of the same histogram rebuilt at each
+    scale point.  This is the only band on the study that is NOT a band on a
+    ratio, and it is much the largest one for that reason: on a ratio almost
+    all of the muR/muF variation cancels between numerator and denominator
+    (see DECISION 2), and on an absolute cross section none of it does.  The
+    NLO sample moves +2.33 % / -1.92 % and the LO one +4.14 % / -5.24 %, and
+    those are the numbers this band draws.
+
+    A polarised ``key`` is varied by DECISION 3's model -- the full weight's
+    per-event ratio -- exactly as :func:`fraction_band` varies it, because the
+    ``ms_pol_*`` columns exist at the central point only.  Whether the FIGURE
+    draws such a band is a separate question and the answer on the seventh
+    pane is no; see :data:`RATIO6_TOP_BAND_KEYS`.
+    """
+    edges = BINS[obs]
+    width = np.diff(edges)
+    h = dict(component_histogram(d, obs, key))
+    pts = scale_points(which)
+    rows = [_component_sum(d, obs, key, edges, s) / width for s in pts]
+    band_lo, band_hi = _envelope(rows)
+    h.update({'lo': band_lo, 'hi': band_hi, 'per_scale': np.asarray(rows),
+              'points': pts})
+    return h
+
+
 def kfactor_band(nlo, lo, obs, key, which=None, correlation=None):
     """Per-bin ``NLO/LO`` with its scale band, for one component.
 
@@ -1525,26 +1554,38 @@ def scale_survival(nlo, lo, obs=None, which=None):
 
 
 # ==========================================================================
-# THE TWO SIX-PANEL RATIO FIGURES
+# THE TWO SEVEN-PANE RATIO FIGURES (a distribution pane over a 3 x 2)
 # ==========================================================================
 # Variant A restructured.  It was a distribution pane, a full-width sum pane
-# and a 2 x 2 of polarised ratios, on the NLO reference alone.  It is now a
-# 3 x 2 of RATIOS ONLY -- the distribution pane is gone, because the figure is
-# about ratios and the distribution is already the top pane of the original
-# figure, of variant B and of five of the six K-factor panels.
+# and a 2 x 2 of polarised ratios, on the NLO reference alone.  The six ratio
+# panels are a 3 x 2:
 #
 #   top left    (LL+TT+TL+LT)/full, the sum consistency
 #   top right   K = NLO/LO, five curves
 #   the four    the polarised fractions, component/full, one per pane
 #
-# BOTH ORDERS ON FIVE OF THE SIX.  The figure now spans NLO and LO, so every
+# BOTH ORDERS ON FIVE OF THE SIX.  The figure spans NLO and LO, so every
 # panel that admits two orders draws two: the sum pane and the four fraction
 # panes each carry the NLO reference and the LO sample, told apart by the same
 # LS_ORDER line styles the K-factor figure already uses.  The K panel is a
 # ratio BETWEEN the orders and can only be one curve per component.
 #
+# THE SEVENTH PANE, ADDED ON TOP.  An earlier pass dropped the distribution
+# pane from these two figures on the argument that "this figure is about
+# ratios"; a later one put a FULL-WIDTH distribution pane back ABOVE the 3 x 2
+# and that argument does not survive it.  Six ratio panels with no absolute
+# scale anywhere say how the components divide the rate up and never say what
+# the rate IS, and a reader who wants the K-factor pane to mean something has
+# to fetch the two cross sections from another figure.  The seventh pane is
+# that missing statement: dsigma/dx at absolute normalisation, on the same
+# binning, both orders, unpolarised plus the four components.  See
+# :data:`RATIO6_TOP_WHAT` and :func:`ratio6_top_curves`.
+#
+# The SIX are untouched by its arrival -- same content, same order, same
+# conventions, same errors.  It is an addition above them.
+#
 # Nothing here touches variant A, variant B, the K-factor figure or the
-# original figures: two new subdirectories, and both scripts write into them
+# original figures: two subdirectories, and both scripts write into them
 # only.
 RATIO6_DIR = 'variant_A6_ratios'
 RATIO6_SCALE_DIR = 'variant_A6_ratios_scale'
@@ -1564,16 +1605,144 @@ RATIO6_ORDER_TEX = {'NLO': r'NLO', 'LO': r'LO'}
 RATIO6_ORDER_TXT = {'NLO': 'NLO', 'LO': 'LO'}
 
 RATIO6_WHAT = (
-    'variant A restructured as a 3 x 2 of ratios: the sum consistency and the '
-    'K-factor on the top row, the four polarised fractions below.  The '
-    'distribution pane is dropped.  Five of the six panes carry BOTH orders; '
-    'the K pane is itself the order ratio.')
+    'variant A restructured as a full-width distribution pane over a 3 x 2 of '
+    'ratios: dsigma/dx at absolute normalisation on top, then the sum '
+    'consistency and the K-factor, then the four polarised fractions.  Five '
+    'of the six ratio panes carry BOTH orders; the K pane is itself the order '
+    'ratio.')
 RATIO6_SCALE_WHAT = (
-    'the same six panels with the muR/muF scale uncertainty drawn as a band '
-    'on every curve.  Envelope: %s.  Fractions: envelope of the ratio taken '
-    'scale by scale within one sample.  K-factor: %s.'
+    'the same seven panes with the muR/muF scale uncertainty drawn as a band. '
+    ' Envelope: %s.  On the six ratio panes, every curve is banded.  '
+    'Fractions: envelope of the ratio taken scale by scale within one sample. '
+    ' K-factor: %s.  On the top pane the band is on the two UNPOLARISED '
+    'curves only -- see RATIO6_TOP_BAND_KEYS.'
     % (SCALE_ENVELOPE_TXT[SCALE_ENVELOPE],
        KFACTOR_SCALE_CORRELATION_TXT[KFACTOR_SCALE_CORRELATION]))
+
+# --------------------------------------------------------------------------
+# THE SEVENTH PANE.
+#
+# WHAT IS ON IT.  Five components x two orders = ten curves: the unpolarised
+# total and the four polarisations, at NLO and at LO, as dsigma/dx in pb per
+# unit of the observable, on :data:`BINS`.  Colour is the component, exactly
+# the colour it has on every other figure of this study; the line is the
+# ORDER, on the same LS_ORDER the six panes below and the K-factor figure use,
+# so "solid = NLO, dashed = LO" reads the same everywhere on the canvas.
+#
+# LO IS DRAWN OVER NLO, and this is the one place where the z-order is the
+# reverse of the six panes below (there NLO is on top, as the reference).  The
+# reason is only legibility: the two orders differ by the K-factor, ~1.29
+# unpolarised, which on a log pane spanning four decades is a hair's breadth,
+# and whichever curve is underneath disappears.  LO is the thinner, dashed,
+# non-reference curve, so it is the one that has to be on top to survive.
+RATIO6_TOP_ORDERS = ['NLO', 'LO']
+
+# WHICH CURVES CARRY A SCALE BAND ON THE SCALE VARIANT: the unpolarised pair,
+# and not the polarised components.
+#
+# Not a statement that the components have no scale uncertainty -- they have
+# one, DECISION 3 says how it is modelled, and the six panes below draw it on
+# every curve they carry.  It is a statement about this pane.  Ten curves in
+# one pane, five of them within a factor of a few of each other on a log axis,
+# with ten translucent bands behind them, is a pane in which nothing can be
+# read: the bands overlap each other and the curves they belong to become
+# ambiguous.  The unpolarised pair is also what the pane is for -- it is the
+# absolute rate the six ratio panes divide by and never show -- and its band
+# is the honest one, the +2.33 % / -1.92 % and +4.14 % / -5.24 % of two cross
+# sections, where a component's is DECISION 3's transported approximation.
+#
+# It is a list and not a boolean so that the choice is one edit: putting
+# KF_PANE_ORDER here bands all ten, ``[]`` bands none.  numbers.txt prints the
+# per-bin band of ALL five components at both orders either way, so nothing
+# that is not drawn is thereby unrecoverable.
+RATIO6_TOP_BAND_KEYS = ['full']
+
+# --------------------------------------------------------------------------
+# THE Y SCALE OF THE SEVENTH PANE IS MEASURED, NOT INHERITED FROM :data:`LOGY`.
+#
+# :data:`LOGY` is a property of the OBSERVABLE and it is right for every pane
+# that uses it: those carry FIVE curves -- one sample's total and its four
+# components -- and on Delta phi those five fit a linear axis.  This pane
+# carries TEN, the same five at two orders, and the LO component curves sit
+# below the NLO ones it was already the tightest fit against.  Measured on the
+# drawn histograms:
+#
+#   M(e+ mu+)        4.18 decades from Z_0Z_0(LO) to unpolarised(NLO)
+#   Delta phi        2.79 decades
+#
+# Drawn linear, Delta phi puts FOUR of the ten curves -- Z_0Z_0 and Z_0Z_T at
+# both orders -- on top of one another within a few pixels of the frame, where
+# nothing about them can be read; :data:`LOGY` had it linear because with five
+# curves and no LO sample that was survivable and it no longer is.  So the
+# seventh pane asks the data instead: log when the ten curves span more than
+# :data:`RATIO6_TOP_LOG_DECADES`.  Both observables do, so both panes are log,
+# and numbers.txt prints the span and the decision for each.
+#
+# WHAT IT COSTS, AND IT IS NOT NOTHING.  A scale band of a few percent is
+# 0.017 of a decade, which on a four-decade pane is under two pixels: the
+# unpolarised band the scale variant draws on this pane is at the line width
+# and a reader cannot measure it off the canvas.  It is drawn to scale rather
+# than exaggerated, and the numbers are in numbers.txt bin by bin for all five
+# components at both orders.  The alternative -- a linear Delta phi pane where
+# the band is legible and four curves are not -- trades a quantity that is
+# tabulated for four curves that are not drawn anywhere else on the figure,
+# and that is the worse trade.  The six ratio panes are where this figure's
+# bands are read, and they are unchanged.
+RATIO6_TOP_LOG_DECADES = 2.0
+
+
+def ratio6_top_span(nlo, lo, obs):
+    """``(min>0, max, decades)`` over every curve the seventh pane draws."""
+    pos = []
+    for samp in (nlo, lo):
+        for key in KF_PANE_ORDER:
+            y = np.asarray(component_histogram(samp, obs, key)['y'], float)
+            pos.append(y[np.isfinite(y) & (y > 0)])
+    a = np.concatenate(pos) if pos else np.array([])
+    if a.size == 0:
+        return float('nan'), float('nan'), float('nan')
+    return float(a.min()), float(a.max()), float(math.log10(a.max() / a.min()))
+
+
+def ratio6_top_logy(nlo, lo, obs):
+    """Whether the seventh pane is drawn on a log y axis.  See above."""
+    return ratio6_top_span(nlo, lo, obs)[2] > RATIO6_TOP_LOG_DECADES
+
+
+RATIO6_TOP_WHAT = (
+    'the differential cross section dsigma/dx at absolute normalisation, same '
+    'binning as the six panes below: the unpolarised total and the four '
+    'polarised components, at NLO and at LO.  Colour is the component, the '
+    'line is the order; LO is drawn OVER NLO so that it stays visible where '
+    'the two nearly coincide.')
+
+
+def ratio6_top_curves(nlo, lo, obs, with_band=False, which=None,
+                      band_keys=None):
+    """The seventh pane's ten curves, for one observable.
+
+    ``dict`` keyed by order (``'NLO'``, ``'LO'``), each a dict keyed by
+    component (:data:`KF_PANE_ORDER`) holding what :func:`component_histogram`
+    returns.  With ``with_band=True`` the components listed in ``band_keys``
+    (default :data:`RATIO6_TOP_BAND_KEYS`, i.e. the unpolarised one) also
+    carry ``lo``/``hi`` from :func:`distribution_band`; the rest do not, and a
+    caller must therefore ask with ``.get('lo')`` and get ``None``.
+
+    Passing ``band_keys=KF_PANE_ORDER`` bands all ten and is what
+    ``_ratio6_top_numbers`` does so that numbers.txt can tabulate the bands
+    the figure does not draw.
+    """
+    band_keys = RATIO6_TOP_BAND_KEYS if band_keys is None else band_keys
+    out = {}
+    for tag, samp in (('NLO', nlo), ('LO', lo)):
+        d = {}
+        for key in KF_PANE_ORDER:
+            if with_band and key in band_keys:
+                d[key] = distribution_band(samp, obs, key, which)
+            else:
+                d[key] = component_histogram(samp, obs, key)
+        out[tag] = d
+    return out
 
 
 def ratio6_curves(nlo, lo, obs, with_band=False, which=None):

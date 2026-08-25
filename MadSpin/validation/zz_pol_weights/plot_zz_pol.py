@@ -1207,10 +1207,112 @@ def write_numbers(d, path, extras=(), lo=None):
 
 
 
+def _ratio6_top_numbers(A, d, lo):
+    """The seventh pane: what is on it, the two decisions, and every bin.
+
+    Every band is printed for every component at BOTH orders even though the
+    figure draws two of the ten, and every value is printed even though the
+    log axis makes a few-percent band a line width.  What is not on the canvas
+    has to be here or it is unrecoverable.
+    """
+    A('-' * 74)
+    A('THE SEVENTH PANE -- the distribution, full width, over the six')
+    A('-' * 74)
+    for line in _wrap(PA.RATIO6_TOP_WHAT, 70):
+        A(line)
+    A('')
+    A('DECISION -- THE Y SCALE IS MEASURED, NOT TAKEN FROM THE OBSERVABLE.')
+    A('Every other distribution pane in this study takes its y scale from')
+    A('pol_analysis.LOGY, which is a property of the OBSERVABLE, and that is')
+    A('right for a pane carrying FIVE curves.  This one carries TEN -- the')
+    A('same five at two orders -- so it asks the data instead: log when the')
+    A('ten curves span more than %.1f decades.' % PA.RATIO6_TOP_LOG_DECADES)
+    for obs in PA.OBS:
+        mn, mx, dec = PA.ratio6_top_span(d, lo, obs)
+        A('  %-24s %.3e .. %.3e  %.2f decades -> %s'
+          % (PA.LABELS_TXT[obs][0], mn, mx, dec,
+             'LOG' if PA.ratio6_top_logy(d, lo, obs) else 'linear'))
+    A('Both observables come out log.  Delta phi is the one this changes:')
+    A('LOGY has it linear, and drawn linear FOUR of the ten curves -- Z0Z0')
+    A('and Z0ZT at both orders -- lie within a few pixels of the frame on top')
+    A('of one another and cannot be read at all.  The six ratio panes below')
+    A('and every other figure in this study still follow LOGY and are')
+    A('unchanged.')
+    A('')
+    A('DECISION -- WHICH CURVES CARRY A SCALE BAND, on the scale variant:')
+    A('the UNPOLARISED pair, NLO and LO, and not the four components.  Ten')
+    A('translucent bands behind ten curves in one pane is a pane in which')
+    A('neither the bands nor the curves can be attributed; and the')
+    A('unpolarised pair is what this pane exists to state, being the absolute')
+    A('rate the six ratio panes divide by and never show.  It applies to THIS')
+    A('PANE ONLY -- the six below band every curve they carry, exactly as')
+    A('before.  The components\' bands are NOT thereby lost: they are in the')
+    A('per-bin tables below, at both orders.')
+    A('')
+    A('AND THE BAND IS SMALL ON A LOG PANE, WHICH IS WORTH SAYING PLAINLY.')
+    A('A few percent is 0.017 of a decade; on a pane four decades tall that')
+    A('is under two pixels, so the unpolarised band the scale variant draws')
+    A('here is at the line width and cannot be measured off the canvas.  It')
+    A('is drawn to scale and not exaggerated.  The six ratio panes are where')
+    A('this figure\'s bands are read, and the tables below are where this')
+    A('pane\'s are.')
+    A('')
+    A('THE STYLES.  Colour is the component, the line is the ORDER (solid')
+    A('NLO, dashed LO) -- the same LS_ORDER the six panes below use.  LO is')
+    A('drawn OVER NLO, the reverse of the six panes, because K ~ 1.29 is a')
+    A('hair\'s breadth on a log pane and the lower curve is the one that')
+    A('vanishes.  The line WEIGHT steps down through the components so that')
+    A('Z0ZT and ZTZ0 -- equal to 1-2 % bin by bin, as they must be, ZZ being')
+    A('symmetric -- do not hide one another: the later, thinner one sits')
+    A('inside the earlier, thicker one and leaves a halo of it showing.')
+    A('Nothing is offset; two coincident curves are drawn coincident.')
+    A('')
+    if not (d.has_scale and lo.has_scale):
+        A('(no MUR*_MUF* columns in this data directory: the band columns')
+        A('below would be empty and the tables are printed without them)')
+        A('')
+    for obs in PA.OBS:
+        edges = PA.BINS[obs]
+        band = (PA.ratio6_top_curves(d, lo, obs, with_band=True,
+                                     band_keys=PA.KF_PANE_ORDER)
+                if d.has_scale and lo.has_scale else
+                PA.ratio6_top_curves(d, lo, obs))
+        A('-' * 74)
+        A('%s -- the seventh pane, bin by bin, in pb per unit x'
+          % PA.LABELS_TXT[obs][0])
+        A('  band = the %s-point envelope, as a percentage of that bin\'s'
+          % PA.SCALE_ENVELOPE)
+        A('         nominal')
+        A('-' * 74)
+        for key in PA.KF_PANE_ORDER:
+            A('  %s' % PA.KF_CURVE_TXT[key])
+            A('    %-20s %13s %10s %8s %8s   %13s %10s %8s %8s'
+              % ('bin', 'NLO', '+- MC', 'band-%', 'band+%',
+                 'LO', '+- MC', 'band-%', 'band+%'))
+            for i in range(len(edges) - 1):
+                cells = []
+                for tag in PA.RATIO6_TOP_ORDERS:
+                    h = band[tag][key]
+                    y = float(h['y'][i])
+                    e = float(h['err'][i])
+                    blo, bhi = h.get('lo'), h.get('hi')
+                    if blo is None or not y:
+                        cells.append('%13.6e %10.2e %8s %8s' % (y, e, '-', '-'))
+                    else:
+                        cells.append('%13.6e %10.2e %8.2f %8.2f'
+                                     % (y, e, 100.0 * (blo[i] / y - 1.0),
+                                        100.0 * (bhi[i] / y - 1.0)))
+                A('    %8.3f - %-9.3f %s   %s'
+                  % (edges[i], edges[i + 1], cells[0], cells[1]))
+            A('    integrated (in selection): NLO %.6e pb   LO %.6e pb'
+              % (band['NLO'][key]['sigma_pb'], band['LO'][key]['sigma_pb']))
+            A('')
+
+
 def _ratio6_numbers(A, d, lo):
-    """What the two six-panel ratio figures are, and their per-bin tables."""
+    """What the two seven-pane ratio figures are, and their per-bin tables."""
     A('=' * 74)
-    A('THE TWO SIX-PANEL RATIO FIGURES (variant A, restructured)')
+    A('THE TWO SEVEN-PANE RATIO FIGURES (variant A, restructured)')
     A('=' * 74)
     A('Written to plots/%s/ and plots/%s/ and to the two' % (
         PA.RATIO6_DIR, PA.RATIO6_SCALE_DIR))
@@ -1219,16 +1321,28 @@ def _ratio6_numbers(A, d, lo):
     A('original figures are untouched by this pass and their PNGs are still')
     A('byte-for-byte what this branch carried.')
     A('')
+    A('THE LAYOUT.  A FULL-WIDTH DISTRIBUTION PANE over a 3 x 2 of ratios:')
+    A('  the seventh   dsigma/dx, absolute, unpolarised + the four')
+    A('  (full width)  components, at NLO and at LO -- ten curves')
+    A('  top left      (Z0Z0 + ZTZT + ZTZ0 + Z0ZT) / full, the sum')
+    A('                consistency')
+    A('  top right     K = NLO / LO, five curves (unpolarised + the four)')
+    A('  the four      component / full, one polarisation per pane')
+    A('')
     A('WHAT CHANGED FROM VARIANT A.  Variant A was a distribution pane, a')
     A('full-width (Z0Z0+ZTZT+ZTZ0+Z0ZT)/full pane and a 2x2 of the individual')
-    A('polarisation ratios, on the NLO reference alone.  These are a 3 x 2 of')
-    A('RATIOS ONLY:')
-    A('  top left    (Z0Z0 + ZTZT + ZTZ0 + Z0ZT) / full, the sum consistency')
-    A('  top right   K = NLO / LO, five curves (unpolarised + the four)')
-    A('  the four    component / full, one polarisation per pane')
-    A('The distribution pane is GONE.  It is still the top pane of the')
-    A('original figures, of variant B and of five of the six K-factor panels,')
-    A('and this figure is about ratios.')
+    A('polarisation ratios, on the NLO reference alone.  The six RATIO panes')
+    A('here are that decomposition spanning two orders, with the K-factor')
+    A('added; the seventh pane on top is the distribution, at both orders.')
+    A('')
+    A('AN EARLIER PASS DROPPED THE DISTRIBUTION PANE FROM THIS FIGURE and')
+    A('this file said so, on the argument that "the figure is about ratios".')
+    A('That argument did not survive.  Six ratio panes with no absolute scale')
+    A('anywhere say how the components divide the rate up and never say what')
+    A('the rate IS, and a reader who wants the K pane to mean anything has to')
+    A('fetch the two cross sections off another figure.  The seventh pane is')
+    A('that missing statement.  The six below it are unchanged -- same')
+    A('content, same order, same conventions, same errors, same bands.')
     A('')
     A('BOTH ORDERS ON FIVE OF THE SIX PANES.  The figure now spans NLO and')
     A('LO, so every pane that admits two orders draws two -- the sum pane and')
@@ -1249,12 +1363,18 @@ def _ratio6_numbers(A, d, lo):
     A('    sample, so their covariance is real and is kept.')
     A('  the K pane: the two relative MC errors in quadrature.  Two')
     A('    independent samples, no covariance to subtract.')
+    A('  the seventh pane, all ten curves: the plain MC error sqrt(sum w^2).')
+    A('    Each is a single weighted sum and not a ratio, so there is no')
+    A('    covariance for a delta-method bar to keep.  Same rule, and the')
+    A('    same objects, as panels 1-5 of the K-factor figure.')
     A('')
     A('THE DASHED RULE in each fraction pane is that pane\'s NLO integrated')
     A('value, as on variant A.  The dotted rule on the sum pane is 1.  The K')
     A('pane carries NO rule: a K-factor ought not to be 1 and drawing one')
-    A('there would suggest a null hypothesis nobody holds.')
+    A('there would suggest a null hypothesis nobody holds.  The seventh pane')
+    A('carries no rule either: it is a distribution, not a ratio.')
     A('')
+    _ratio6_top_numbers(A, d, lo)
     for obs in PA.OBS:
         cur = PA.ratio6_curves(d, lo, obs)
         edges = PA.BINS[obs]
@@ -1830,6 +1950,44 @@ BAND_ALPHA = 0.18
 BAND_ALPHA_K = 0.13
 BAND_LW = 0.0
 
+# The band on the seventh pane is a band on an ABSOLUTE cross section, so it is
+# a couple of percent wide where the ratio bands below are sub-percent, and it
+# is behind a curve on a log axis rather than a ratio window.  A little more
+# opaque than the ratio panes' so that it reads at all at that width.
+BAND_ALPHA_TOP = 0.22
+
+# The multiplier on the seventh pane's autoscale top, log pane and linear pane.
+# What sets it is the ten-entry legend: two rows at ncol=5 over a pane whose
+# curves peak at the right on Delta phi and at 90 GeV on the mass, so the box
+# has to clear the highest curve outright and not merely the autoscale top.
+# Both observables currently come out LOG (see PA.RATIO6_TOP_LOG_DECADES); the
+# linear entry is kept for a future observable that does not.  Checked on the
+# rendered PNGs, not on the axis limits.
+TOP_HEADROOM = (14.0, 1.55)
+
+# THE LINE WEIGHT LADDER, and it is there to solve one measured problem.
+#
+# On this pane colour is the component and the line is the ORDER, which is the
+# convention the six panes below and the K-factor figure already use and which
+# is worth keeping across one canvas.  It has one failure: Z_0Z_T and Z_TZ_0
+# are equal to 1-2 % bin by bin -- they must be, ZZ is symmetric and the two
+# differ only by which Z the projection is taken on -- so on a log pane they
+# are the same curve to within the line width, and whichever is drawn second
+# hides the other outright.  Drawn flat, the purple Z_0Z_T is simply not on
+# the figure while its two legend entries are, which is worse than a crowded
+# pane.
+#
+# So the components are drawn in :data:`pol_analysis.KF_PANE_ORDER` with the
+# line weight stepping DOWN, and the later, thinner curve therefore sits
+# inside the earlier, thicker one and leaves a halo of it showing.  Nothing is
+# offset and no value is touched -- two coincident curves are drawn coincident
+# and both are visible.  The unpolarised total comes out the thickest, which
+# is also what it is on every other pane of the study.  Checked on the
+# rendered PNG.
+TOP_LW_BASE = LW + 1.0
+TOP_LW_STEP = 0.22
+TOP_LW_NLO = 0.30
+
 
 def _band(ax, edges, lo, hi, color, alpha, zorder=2):
     """A scale band drawn on the same step grid as ``stairs``.
@@ -1882,16 +2040,90 @@ def _ratio6_ylim(series, anchor=None, frac=0.10, head=0.34):
     return lo - frac * d, hi + head * d
 
 
+def _ratio6_top(ax, nlo, lo, obs, with_band=False):
+    """The seventh pane: dsigma/dx, both orders, five components each.
+
+    See ``pol_analysis.RATIO6_TOP_WHAT`` for what is on it and
+    ``RATIO6_TOP_BAND_KEYS`` for why the scale band is on the unpolarised pair
+    and on nothing else.  Nothing but the axis labels, the ticks and the
+    legend is written here, as on every other figure of this study.
+    """
+    edges = PA.BINS[obs]
+    x = 0.5 * (edges[:-1] + edges[1:])
+    ylab = (PA.LABELS_TEX if USETEX else PA.LABELS_TXT)[obs][1]
+    name = PA.KF_CURVE_TEX if USETEX else PA.KF_CURVE_TXT
+    oname = PA.RATIO6_ORDER_TEX if USETEX else PA.RATIO6_ORDER_TXT
+    # The y scale is MEASURED here and not taken from PA.LOGY -- ten curves,
+    # not five, and the reason is argued at PA.RATIO6_TOP_LOG_DECADES.  Both
+    # observables come out log; numbers.txt prints the span and the decision.
+    logy = PA.ratio6_top_logy(nlo, lo, obs)
+    cur = PA.ratio6_top_curves(nlo, lo, obs, with_band=with_band)
+
+    # Component-major, order-minor: at ncol=5 matplotlib fills the legend
+    # column by column, so this puts one COMPONENT in each column with its two
+    # orders under one another, which is the way the pane is read.
+    for i, key in enumerate(PA.KF_PANE_ORDER):
+        for tag in PA.RATIO6_TOP_ORDERS:
+            h = cur[tag][key]
+            y, e = np.asarray(h['y'], float), np.asarray(h['err'], float)
+            shown = np.where(y > 0, y, np.nan) if logy else y
+            # LO OVER NLO -- the reverse of the six panes below, and
+            # deliberately: see pol_analysis.RATIO6_TOP_ORDERS.  A K-factor of
+            # 1.29 is a hair's breadth on a four-decade pane and the curve
+            # underneath is the one that vanishes; LO is the thinner, dashed,
+            # non-reference one, so LO is the one that goes on top.  The
+            # component z-order runs the other way -- earlier, thicker
+            # components stay UNDER later, thinner ones, which is what makes
+            # the weight ladder above show a halo instead of a hidden curve.
+            z = 10 * (i + 1) + (6 if tag == 'LO' else 4)
+            lw = (TOP_LW_BASE - TOP_LW_STEP * i
+                  + (TOP_LW_NLO if tag == 'NLO' else 0.0))
+            blo, bhi = h.get('lo'), h.get('hi')
+            if with_band and blo is not None:
+                _band(ax, edges, blo, bhi, COLOR[key], BAND_ALPHA_TOP,
+                      zorder=z - 2)
+            ax.stairs(shown, edges, color=COLOR[key], ls=LS_ORDER[tag],
+                      lw=lw, baseline=None,
+                      zorder=z, label='%s, %s' % (name[key], oname[tag]))
+            ax.errorbar(x, shown, yerr=np.where(np.isfinite(shown), e, np.nan),
+                        fmt='none', ecolor=COLOR[key], elinewidth=0.8,
+                        alpha=0.9 if tag == 'NLO' else 0.6, zorder=z)
+    if logy:
+        ax.set_yscale('log')
+    ax.set_ylabel(ylab, fontsize=10)
+    lo_y, hi_y = ax.get_ylim()
+    ax.set_ylim(lo_y, hi_y * TOP_HEADROOM[0 if logy else 1])
+    ax.set_xlim(edges[0], edges[-1])
+    ax.legend(frameon=False, fontsize=8.0, loc='upper left', ncol=5,
+              columnspacing=1.4, handlelength=2.4)
+    ax.xaxis.set_minor_locator(AutoMinorLocator())
+    if not logy:
+        ax.yaxis.set_minor_locator(AutoMinorLocator())
+    ax.tick_params(labelsize=9)
+    for sp in ax.spines.values():
+        sp.set_linewidth(1.5)
+
+
 def draw_ratio6(nlo, lo, obs, outdir, with_band=False):
-    """Variant A as a 3 x 2 of ratios; ``with_band`` adds the scale envelope.
+    """Variant A as a distribution pane over a 3 x 2 of ratios.
+
+    ``with_band`` adds the scale envelope.
 
     ONE function for both versions, deliberately.  They are the same six
     panels off the same ``pol_analysis.ratio6_curves`` objects and differ only
     in whether a band is shaded behind each curve, so writing them twice would
     be inviting the two to drift apart in some detail that is not the point.
 
-    Panel by panel:
+    Pane by pane:
 
+    * the full-width pane on top, ``dsigma/dx`` at absolute normalisation:
+      unpolarised plus the four components, at NLO and at LO, LO over NLO in
+      z-order.  It is the one absolute statement on a figure that is otherwise
+      all ratios -- see ``pol_analysis``'s section header.  With the band, the
+      two UNPOLARISED curves are banded and the components are not; that is
+      ``pol_analysis.RATIO6_TOP_BAND_KEYS`` and the reason is there.  It
+      applies to THIS PANE only: the six below band every curve they carry,
+      exactly as they did before this pane existed.
     * top left, ``(Z_0Z_0 + Z_TZ_T + Z_TZ_0 + Z_0Z_T)/full`` -- the sum
       consistency, NLO and LO.  Reference line at 1, because 1 is what this
       one ought to be.
@@ -1923,16 +2155,32 @@ def draw_ratio6(nlo, lo, obs, outdir, with_band=False):
     oname = PA.RATIO6_ORDER_TEX if USETEX else PA.RATIO6_ORDER_TXT
     cur = PA.ratio6_curves(nlo, lo, obs, with_band=with_band)
 
-    fig = plt.figure(figsize=(9.0, 10.2))
-    # Same geometry as the K-factor figure: a 3 x 2 whose right column carries
-    # five-significant-figure tick labels, which at the default wspace put the
-    # right axis name on the left column's frame.
-    gs = fig.add_gridspec(3, 2, hspace=0.07, wspace=0.30)
+    fig = plt.figure(figsize=(9.0, 13.4))
+    # TWO vertical rhythms, so two gridspecs and not one, on exactly the
+    # argument ``draw`` makes for its three: the wide pane on top is its own
+    # block with its own x tick labels and its own axis name, and the 3 x 2
+    # below is a second block with its own.  A single hspace over four rows
+    # would have to be either tight enough to crush the wide pane's axis name
+    # into the grid's top row or wide enough to tear the grid's own rows
+    # apart, and there is no value that is both.  The outer gap is a fraction
+    # of the MEAN row height, and the two rows here are very unequal (2.9 in
+    # against 10.2 in), so 0.09 of the 6.55 in mean is the ~0.6 in that clears
+    # the wide pane's tick labels and axis name.  Checked on the rendered PNG.
+    outer = fig.add_gridspec(2, 1, height_ratios=[2.9, 10.2], hspace=0.09)
+    # The 3 x 2 keeps the K-factor figure's geometry exactly: its right column
+    # carries five-significant-figure tick labels, which at the default wspace
+    # put the right axis name on the left column's frame.
+    gs = outer[1].subgridspec(3, 2, hspace=0.07, wspace=0.30)
+    axtop = fig.add_subplot(outer[0])
     axes = []
     for r in range(3):
         for cc in range(2):
             axes.append(fig.add_subplot(gs[r, cc],
                                         sharex=axes[cc] if r else None))
+
+    # -- the seventh pane, above the six --------------------------------------
+    _ratio6_top(axtop, nlo, lo, obs, with_band=with_band)
+    axtop.set_xlabel(xlab, fontsize=11)
 
     def ratio_pane(ax, pane, anchor_line):
         series = []
@@ -2020,7 +2268,7 @@ def draw_ratio6(nlo, lo, obs, outdir, with_band=False):
     fig.savefig(base + '.pdf', bbox_inches='tight')
     fig.savefig(base + '.png', dpi=200, bbox_inches='tight')
     plt.close(fig)
-    print('%-12s six-panel%-7s sum/full NLO %.4f  LO %.4f'
+    print('%-12s 7-pane%-10s sum/full NLO %.4f  LO %.4f'
           % (PA.SHORT[obs], ' + band' if with_band else '',
              cur['SUM']['NLO']['integrated'], cur['SUM']['LO']['integrated']))
     return base, want

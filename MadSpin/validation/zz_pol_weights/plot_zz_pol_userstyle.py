@@ -419,6 +419,20 @@ BAND_ALPHA = 0.20
 BAND_ALPHA_K = 0.14
 KF6_HEADROOM_K = 0.40
 
+# The seventh pane.  See plot_zz_pol._ratio6_top and the block of comments at
+# pol_analysis.RATIO6_TOP_LOG_DECADES / RATIO6_TOP_BAND_KEYS for what is on it,
+# why its y scale is measured rather than taken from PA.LOGY, why the scale
+# band is on the unpolarised pair alone, and why the line weight steps down
+# through the components.  Only the rendering differs here.
+BAND_ALPHA_TOP = 0.24
+# This style's legend has an OPAQUE frame and two rows of five, so it needs
+# more headroom over the log pane than the MG7 one does.  Checked on the
+# rendered PNGs.
+TOP_HEADROOM = (26.0, 1.75)
+TOP_LW_BASE = 1.9
+TOP_LW_STEP = 0.22
+TOP_LW_NLO = 0.30
+
 
 def _band(ax, edges, lo, hi, color, alpha, zorder=1):
     """A scale band on the same step grid ``_step`` draws on.
@@ -436,8 +450,57 @@ def _band(ax, edges, lo, hi, color, alpha, zorder=1):
                     facecolor=color, alpha=alpha, lw=0.0, zorder=zorder)
 
 
+def _ratio6_top(ax, nlo, lo, obs, with_band=False):
+    """The seventh pane in the user style: dsigma/dx, both orders, five each.
+
+    Steps and error bars, and NOT this style's usual ``errorbar(fmt='o')``
+    markers: ten curves would put ten markers in every bin, which on the
+    twelve-bin Delta phi pane is a hundred and twenty overlapping dots and no
+    curve left to read.  The markers stay on the six panes below, which carry
+    two curves each and have room for them.
+    """
+    edges = PA.BINS[obs]
+    x = 0.5 * (edges[:-1] + edges[1:])
+    ylab = PA.LABELS_TXT[obs][1]
+    name = PA.KF_CURVE_TXT
+    oname = PA.RATIO6_ORDER_TXT
+    logy = PA.ratio6_top_logy(nlo, lo, obs)
+    cur = PA.ratio6_top_curves(nlo, lo, obs, with_band=with_band)
+
+    for i, key in enumerate(PA.KF_PANE_ORDER):
+        for tag in PA.RATIO6_TOP_ORDERS:
+            h = cur[tag][key]
+            y, e = np.asarray(h['y'], float), np.asarray(h['err'], float)
+            shown = np.where(y > 0, y, np.nan) if logy else y
+            # LO over NLO, and later components over earlier ones; see the
+            # MG7 script.
+            z = 10 * (i + 1) + (6 if tag == 'LO' else 4)
+            lw = (TOP_LW_BASE - TOP_LW_STEP * i
+                  + (TOP_LW_NLO if tag == 'NLO' else 0.0))
+            blo, bhi = h.get('lo'), h.get('hi')
+            if with_band and blo is not None:
+                _band(ax, edges, blo, bhi, COLOR[key], BAND_ALPHA_TOP,
+                      zorder=z - 2)
+            _step(ax, edges, shown, color=COLOR[key], lw=lw, ls=LS_ORDER[tag],
+                  zorder=z, label='%s, %s' % (name[key], oname[tag]))
+            ax.errorbar(x, shown, yerr=np.where(np.isfinite(shown), e, np.nan),
+                        fmt='none', ecolor=COLOR[key], elinewidth=0.9,
+                        alpha=0.9 if tag == 'NLO' else 0.6, zorder=z)
+    if logy:
+        ax.set_yscale('log')
+    ax.set_ylabel(ylab, fontsize=9)
+    ax.set_xlim(edges[0], edges[-1])
+    lo_y, hi_y = ax.get_ylim()
+    ax.set_ylim(lo_y, hi_y * TOP_HEADROOM[0 if logy else 1])
+    ax.legend(loc='upper left', fontsize=8, ncol=5, columnspacing=1.2,
+              handlelength=2.4)
+    ax.tick_params(labelsize=8.5)
+    for sp in ax.spines.values():
+        sp.set_linewidth(1.6)
+
+
 def draw_ratio6(nlo, lo, obs, outdir, with_band=False):
-    """Variant A as a 3 x 2 of ratios, in the user style."""
+    """Variant A as a distribution pane over a 3 x 2 of ratios, user style."""
     edges = PA.BINS[obs]
     x = 0.5 * (edges[:-1] + edges[1:])
     xlab = PA.LABELS_TXT[obs][0]
@@ -445,13 +508,22 @@ def draw_ratio6(nlo, lo, obs, outdir, with_band=False):
     oname = PA.RATIO6_ORDER_TXT
     cur = PA.ratio6_curves(nlo, lo, obs, with_band=with_band)
 
-    fig = plt.figure(figsize=(9.4, 10.4))
-    gs = fig.add_gridspec(3, 2, hspace=0.07, wspace=0.30)
+    fig = plt.figure(figsize=(9.4, 13.6))
+    # Two vertical rhythms, so two gridspecs: see plot_zz_pol.draw_ratio6.  The
+    # wide pane on top carries its own x tick labels and its own axis name and
+    # is set off from the 3 x 2 by the outer gap; the 3 x 2 keeps exactly the
+    # geometry it had before this pane existed.
+    outer = fig.add_gridspec(2, 1, height_ratios=[2.9, 10.4], hspace=0.09)
+    gs = outer[1].subgridspec(3, 2, hspace=0.07, wspace=0.30)
+    axtop = fig.add_subplot(outer[0])
     axes = []
     for r in range(3):
         for cc in range(2):
             axes.append(fig.add_subplot(gs[r, cc],
                                         sharex=axes[cc] if r else None))
+
+    _ratio6_top(axtop, nlo, lo, obs, with_band=with_band)
+    axtop.set_xlabel(xlab, fontsize=10)
 
     def ratio_pane(ax, pane, anchor_line):
         col = COLOR[pane] if pane != 'SUM' else COLOR['SUM']
@@ -524,7 +596,7 @@ def draw_ratio6(nlo, lo, obs, outdir, with_band=False):
     fig.savefig(base + '.pdf', bbox_inches='tight')
     fig.savefig(base + '.png', dpi=DPI, bbox_inches='tight')
     plt.close(fig)
-    print('%-10s six-panel%-7s sum/full NLO %.4f  LO %.4f'
+    print('%-10s 7-pane%-10s sum/full NLO %.4f  LO %.4f'
           % (PA.SHORT[obs], ' + band' if with_band else '',
              cur['SUM']['NLO']['integrated'], cur['SUM']['LO']['integrated']))
     return base
