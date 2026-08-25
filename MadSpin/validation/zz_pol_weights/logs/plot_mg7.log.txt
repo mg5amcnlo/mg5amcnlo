@@ -1,5 +1,11 @@
-m_epmup      N=118521  sum/full = 0.9873 +- 0.0006
-dphi_ee      N=164111  sum/full = 0.9918 +- 0.0005
-wrote /private/tmp/t88/MadSpin/validation/zz_pol_weights/numbers.txt
+m_epmup      full       N=118521  sum/full = 0.9873 +- 0.0006
+dphi_ee      full       N=164111  sum/full = 0.9918 +- 0.0005
+m_epmup      variant A  N=118521  sum/full = 0.9873 +- 0.0006
+m_epmup      variant B  N=118521  norm=inrange
+dphi_ee      variant A  N=164111  sum/full = 0.9918 +- 0.0005
+dphi_ee      variant B  N=164111  norm=inrange
+m_epmup      K-factor  unpolarised=1.290  Z0Z0=1.286  Z0ZT=1.360  ZTZ0=1.348  ZTZT=1.265
+dphi_ee      K-factor  unpolarised=1.289  Z0Z0=1.295  Z0ZT=1.378  ZTZ0=1.353  ZTZT=1.262
+wrote /private/tmp/t91/MadSpin/validation/zz_pol_weights/numbers.txt
 usetex = True   minus workaround active = True
-2/2 applicable PDFs carry /minus
+8/8 applicable PDFs carry /minus

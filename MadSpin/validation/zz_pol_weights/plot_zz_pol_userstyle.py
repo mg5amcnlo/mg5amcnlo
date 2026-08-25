@@ -79,9 +79,24 @@ COLOR = {'LL': 'C0', 'TT': 'C3', 'TL': 'C2', 'LT': 'C4', 'SUM': 'C5',
          'onshell': 'C1', 'PA': 'C9',
          # madspin_v1, on variant B only; the first cycle colour neither a
          # component nor another spinmode has taken, matching the MG7 choice.
-         'madspin_v1': 'C6'}
+         'madspin_v1': 'C6',
+         # LO, on variant B and on the K-factor figure; the next free cycle
+         # colour, again the same hue the MG7 script gives it.  C7 (grey) is
+         # left alone on purpose: it reads as de-emphasis and this curve is not.
+         'LO': 'C8',
+         # The K-factor figure draws the unpolarised component too, and there
+         # it is a curve among five rather than THE reference, so it needs an
+         # entry in this dict as well as C_REF.
+         'full': C_REF}
 LS_EXTRA = {'onshell': (0, (6, 2)), 'PA': (0, (3, 1, 1, 1, 1, 1)),
-            'madspin_v1': (0, (2, 1.5))}
+            'madspin_v1': (0, (2, 1.5)), 'LO': (0, (7, 1.5, 1.5, 1.5))}
+
+# The K-factor figure's two curves per panel are the same component at two
+# ORDERS: same colour, told apart by the line.  See plot_zz_pol.LS_ORDER.
+LS_ORDER = {'NLO': 'solid', 'LO': (0, (5, 2))}
+# Its five K curves, one per component, need a line each on the shared panel.
+LS_COMP = {'full': 'solid', 'LL': (0, (5, 2)), 'LT': (0, (1, 1.4)),
+           'TL': (0, (6, 1.6, 1.4, 1.6)), 'TT': (0, (3, 1, 1, 1, 1, 1))}
 FIGSIZE = (7.2, 10.0)
 MS = 4
 STEP_ALPHA = 0.55
@@ -91,12 +106,12 @@ DPI = 300
 
 # The multiplier on the distribution pane's autoscale top, per figure variant
 # and per y scale; what sets it is the number of rows in the opaque legend box.
-# Ten rows on the full figure, ELEVEN on variant B now that madspin_v1 is a
-# fourth total there, six on variant A because the extra spinmodes are not
-# there.  Checked on the rendered PNG.
+# Ten rows on the full figure, TWELVE on variant B now that madspin_v1 and LO
+# are a fourth and fifth total there, six on variant A because the extra
+# spinmodes are not there.  Checked on the rendered PNG.
 # Variant B's distribution pane is shorter than the full figure's while
 # carrying the larger box, so it needs more of the two.
-HEADROOM = {None: (4000.0, 1.45), 'A': (400.0, 1.35), 'B': (50000.0, 2.10)}
+HEADROOM = {None: (4000.0, 1.45), 'A': (400.0, 1.35), 'B': (120000.0, 2.45)}
 
 
 def _step(ax, edges, y, **kw):
@@ -289,6 +304,104 @@ def draw(d, obs, outdir, extras=(), variant=None):
     return base
 
 
+# The multiplier on each K-factor panel's autoscale top.  Two legend rows on
+# panels 1-5 and two on panel 6, but this style's legend has an OPAQUE frame
+# and larger markers, so it needs more than the MG7 one does.  Checked on the
+# rendered PNGs.
+KF_HEADROOM = {True: 15.0, False: 1.42}
+KF_HEADROOM_K = 1.42
+
+
+def draw_kfactor(nlo, lo, obs, outdir):
+    """The six-panel K-factor figure in the user style.
+
+    The physics, the binning, the selection and every error bar are
+    ``pol_analysis``'s and are the same objects ``plot_zz_pol.draw_kfactor``
+    draws; only the rendering differs.  See that docstring for what the figure
+    is, why it is ABSOLUTE where variant B is normalised, and which error goes
+    on which curve.
+
+    No tolerance bands here, unlike the ratio panes of the other figures in
+    this style: those bands are drawn about 1 because the quantity is a ratio
+    that ought to BE 1, and a K-factor ought not to be.  Putting a +-2 % band
+    around 1 on panel 6 would suggest a null hypothesis nobody holds.
+    """
+    edges = PA.BINS[obs]
+    x = 0.5 * (edges[:-1] + edges[1:])
+    xlab, ylab = PA.LABELS_TXT[obs]
+    name = PA.KF_CURVE_TXT
+    logy = obs in PA.LOGY
+
+    fig = plt.figure(figsize=(9.4, 10.4))
+    gs = fig.add_gridspec(3, 2, hspace=0.07, wspace=0.30)
+    axes = []
+    for r in range(3):
+        for cc in range(2):
+            axes.append(fig.add_subplot(gs[r, cc],
+                                        sharex=axes[cc] if r else None))
+
+    ks = {}
+    for i, key in enumerate(PA.KF_PANE_ORDER):
+        ax = axes[i]
+        kk = PA.kfactor(nlo, lo, obs, key)
+        ks[key] = kk
+        for tag, h in (('NLO', kk['nlo']), ('LO', kk['lo'])):
+            y, e = np.asarray(h['y'], float), np.asarray(h['err'], float)
+            shown = np.where(y > 0, y, np.nan) if logy else y
+            _step(ax, edges, shown, color=COLOR[key], lw=1.4,
+                  ls=LS_ORDER[tag], alpha=1.0 if tag == 'NLO' else STEP_ALPHA,
+                  zorder=4 if tag == 'NLO' else 3)
+            ax.errorbar(x, shown, yerr=np.where(np.isfinite(shown), e, np.nan),
+                        fmt='o' if tag == 'NLO' else 's', ms=MS - 0.5,
+                        mfc='none' if tag == 'LO' else None,
+                        color=COLOR[key], label='%s, %s' % (name[key], tag),
+                        zorder=5 if tag == 'NLO' else 4)
+        if logy:
+            ax.set_yscale('log')
+        ax.set_ylabel(ylab, fontsize=8.5)
+        ax.set_xlim(edges[0], edges[-1])
+        lo_y, hi_y = ax.get_ylim()
+        ax.set_ylim(lo_y, hi_y * KF_HEADROOM[logy])
+        ax.legend(loc='upper left', fontsize=8)
+        ax.tick_params(labelsize=8.5)
+        if not logy:
+            ax.yaxis.set_major_locator(MaxNLocator(5))
+
+    axk = axes[5]
+    for key in PA.KF_PANE_ORDER:
+        kk = ks[key]
+        k, e = np.asarray(kk['k'], float), np.asarray(kk['err'], float)
+        _step(axk, edges, k, color=COLOR[key], lw=1.2, ls=LS_COMP[key],
+              alpha=0.8, zorder=3)
+        axk.errorbar(x, k, yerr=e, fmt='o', ms=MS, color=COLOR[key],
+                     label=name[key], zorder=4)
+    axk.set_ylabel(PA.KFACTOR_TXT, fontsize=9)
+    lo_y, hi_y = axk.get_ylim()
+    axk.set_ylim(lo_y, lo_y + (hi_y - lo_y) * KF_HEADROOM_K)
+    axk.legend(loc='upper left', fontsize=8, ncol=3)
+    axk.yaxis.set_major_locator(MaxNLocator(6))
+    axk.tick_params(labelsize=8.5)
+    for sp in axk.spines.values():
+        sp.set_linewidth(1.6)
+
+    for i, ax in enumerate(axes):
+        if i < 4:
+            ax.tick_params(labelbottom=False)
+        else:
+            ax.set_xlabel(xlab, fontsize=10)
+
+    os.makedirs(outdir, exist_ok=True)
+    base = os.path.join(outdir, PA.SHORT[obs])
+    fig.savefig(base + '.pdf', bbox_inches='tight')
+    fig.savefig(base + '.png', dpi=DPI, bbox_inches='tight')
+    plt.close(fig)
+    ki = PA.integrated_kfactors(nlo, lo, obs)
+    print('%-10s K-factor  ' % PA.SHORT[obs]
+          + '  '.join('%s=%.3f' % (PA.KF_CURVE_TXT[r['key']].replace(' ', ''),
+                                   r['K']) for r in ki))
+    return base
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--data', default=os.path.join(_HERE, 'data'))
@@ -309,6 +422,14 @@ def main():
              extras=(), variant='A')
         draw_shape(d, obs, os.path.join(a.out, PA.VARIANTS['B']['dir']),
                    b_extras)
+    # The K-factor figure, in its own subdirectory beside the two variants.
+    # Skipped, and said to be skipped, when the LO .npz is not there.
+    lo = PA.load_kfactor_partner(a.data)
+    if lo is None:
+        print('LO sample not in %s: K-factor figure not drawn' % a.data)
+    elif not a.no_variants:
+        for obs in PA.OBS:
+            draw_kfactor(d, lo, obs, os.path.join(a.out, PA.KFACTOR_DIR))
 
 
 if __name__ == '__main__':

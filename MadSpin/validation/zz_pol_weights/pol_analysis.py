@@ -277,9 +277,42 @@ EXTRA_SAMPLES = [
 # only the nominal, and it is why this sample can never enter the polarisation
 # decomposition panes.  ``Data.has_pol`` is False for it and every consumer of
 # ``Data.pol`` already asks first.
+# A FIFTH sample, and the only one of the five that is not NLO: ``run_12``
+# is ``<run_settings> order = LO`` where every other run in the study says
+# ``order = NLO``.  Everything else about it matches the reference: the same
+# ``p p > z z [QCD]`` process, the same run card, the same 250 000 events, the
+# same exclusive ``decay z > e+ e-`` / ``decay z > mu+ mu-`` card, the same
+# ``spinmode madspin`` and the same Pythia8 shower.  It therefore DOES carry
+# the four ms_pol_* weights -- 33 names on its N line, exactly the reference's
+# list -- which is what makes the K-factor figure possible at all.
+#
+# It goes on variant B, as a FOURTH ``Y`` curve, and on the K-factor figure.
+# The original figures and variant A are untouched by it, on the same rule
+# that kept ``madspin_v1`` off them.
+#
+# WHAT ITS VARIANT-B CURVE MEANS IS NOT WHAT THE OTHER THREE MEAN, and the
+# figure cannot say so because nothing is written on it, so it is said here,
+# in numbers.txt and in RESULTS.md.  The pane is
+# ``(1/sigma dsigma/dX)_Y / (1/sigma dsigma/dX)_madspin``.  For ``onshell``,
+# ``PA`` and ``madspin_v1`` the numerator and the denominator are the same
+# ORDER and differ in SPINMODE, so the curve is a spinmode effect.  For ``LO``
+# they are the same SPINMODE and differ in ORDER, so that curve is an order
+# effect.  The pane's DEFINITION is unchanged and no curve is computed
+# differently -- ``LO`` is simply another ``Y`` -- but a reader who takes the
+# fourth curve for a fourth spinmode would be reading the wrong physics off
+# it.  Note also that the pane divides each curve by its own sigma, so the
+# thing an order change is most visible in -- the RATE, the K-factor -- is
+# exactly what this pane removes.  That is what the K-factor figure is for.
 VARIANT_B_EXTRA_SAMPLES = [
     ('madspin_v1', 'weights_madspin_v1.npz', 'meta_madspin_v1.json'),
+    ('LO', 'weights_LO.npz', 'meta_LO.json'),
 ]
+
+# The LO sample again, on its own, for the K-factor figure.  Same entry as the
+# variant-B one; kept separate because that figure loads exactly one partner
+# for the reference and must not silently acquire whatever else variant B
+# grows.
+KFACTOR_SAMPLE = ('LO', 'weights_LO.npz', 'meta_LO.json')
 
 # The caption these figures used to carry as a plot title.  Nothing is written
 # on them now beyond the axis labels, the tick labels and the legend, so the
@@ -329,10 +362,17 @@ LEGEND_TO_COLUMN = {'Z0 Z0': 'ms_pol_23.0_23.0', 'ZT ZT': 'ms_pol_23.T_23.T',
 # they are named for the run that produced them and not for a weight.
 EXTRA_TEX = {'onshell': r'full, \texttt{spinmode = onshell}',
              'PA': r'full, \texttt{spinmode = PA}',
-             'madspin_v1': r'full, \texttt{spinmode = madspin\_v1}'}
+             'madspin_v1': r'full, \texttt{spinmode = madspin\_v1}',
+             # The LO curve is named for the thing that makes it different,
+             # which is the ORDER and not the spinmode: its spinmode is
+             # ``madspin``, the same as the black reference's.  Labelling it
+             # ``spinmode = LO`` like its three neighbours would be a false
+             # statement on a figure that carries no other text to correct it.
+             'LO': r'full (unpolarised), LO'}
 EXTRA_TXT = {'onshell': 'full, spinmode = onshell',
              'PA': 'full, spinmode = PA',
-             'madspin_v1': 'full, spinmode = madspin_v1'}
+             'madspin_v1': 'full, spinmode = madspin_v1',
+             'LO': 'full (unpolarised), LO'}
 
 RATIO_TEX = {
     'SUM': r'$(Z_{0}Z_{0}{+}Z_{T}Z_{T}{+}Z_{T}Z_{0}{+}Z_{0}Z_{T})/\mathrm{full}$',
@@ -368,11 +408,15 @@ VARIANTS = {
           'extras_on_distribution': True,
           'panes': ['SHAPE'],
           'what': 'the distribution pane, then a single ratio pane carrying '
-                  'the self-normalised shape ratio of onshell, PA and '
-                  'madspin_v1 to madspin.  The sum pane and the 2 x 2 are not '
-                  'drawn.  madspin_v1 is on THIS VARIANT ONLY -- the original '
-                  'figures and variant A carry the same three modes they '
-                  'always did'},
+                  'the self-normalised shape ratio of onshell, PA, '
+                  'madspin_v1 and LO to madspin.  The sum pane and the 2 x 2 '
+                  'are not drawn.  madspin_v1 and LO are on THIS VARIANT '
+                  'ONLY -- the original figures and variant A carry the same '
+                  'three modes they always did.  The pane definition is '
+                  'unchanged by the LO curve, but that curve is an ORDER '
+                  'difference at fixed spinmode where the other three are '
+                  'SPINMODE differences at fixed order, and the pane divides '
+                  'out exactly the rate change the K-factor figure is about'},
 }
 
 # --------------------------------------------------------------------------
@@ -426,9 +470,10 @@ SHAPE_RATIO_TXT_2L = ('(1/sigma dsigma/dX)_Y\n'
                       '/ (1/sigma dsigma/dX)_madspin')
 SHAPE_CURVE_TEX = {'onshell': r'$Y = $ \texttt{onshell}',
                    'PA': r'$Y = $ \texttt{PA}',
-                   'madspin_v1': r'$Y = $ \texttt{madspin\_v1}'}
+                   'madspin_v1': r'$Y = $ \texttt{madspin\_v1}',
+                   'LO': r'$Y = $ LO'}
 SHAPE_CURVE_TXT = {'onshell': 'Y = onshell', 'PA': 'Y = PA',
-                   'madspin_v1': 'Y = madspin_v1'}
+                   'madspin_v1': 'Y = madspin_v1', 'LO': 'Y = LO'}
 
 
 def shape_density(d, obs, norm=SHAPE_NORM):
@@ -761,6 +806,208 @@ def compare_full(ref, other):
 
 
 # --------------------------------------------------------------------------
+# --------------------------------------------------------------------------
+# THE K-FACTOR FIGURE: NLO/LO, per polarisation component.
+#
+# This is the one figure in the study that is about the RATE.  Everything else
+# here either divides the rate out (variant B's shape pane, which normalises
+# each curve by its own sigma) or divides one component of a sample by that
+# same sample's total (the sum pane and the 2 x 2).  A K-factor is a ratio of
+# CROSS SECTIONS, so nothing may be normalised away before it is taken:
+# ``K = sigma_NLO / sigma_LO`` bin by bin, with both sides in pb.
+#
+# THE TWO FIGURES THEREFORE USE DIFFERENT NORMALISATIONS AND THIS IS NOT AN
+# INCONSISTENCY.  Variant B answers "does the SHAPE move", and to see that it
+# has to remove the rate, which is the largest and least interesting
+# difference between an LO and an NLO sample -- at these cuts the rate moves by
+# 29 % and the shape by a few percent, so an un-normalised variant-B pane would
+# be four curves sitting at 0.78 and nothing else would be legible.  This
+# figure answers "does the RATE move, and does it move by the same factor for
+# every polarisation", and normalising would delete the entire answer.
+#
+# The panel order is the one the figure was asked for and is NOT
+# :data:`PANE_ORDER`: unpolarised first, then Z_0Z_0, Z_0Z_T, Z_TZ_0, Z_TZ_T,
+# and the K-factor panel sixth.
+KF_PANE_ORDER = ['full', 'LL', 'LT', 'TL', 'TT']
+
+KFACTOR_TEX = r'$K = \mathrm{NLO}/\mathrm{LO}$'
+KFACTOR_TXT = 'K = NLO / LO'
+KF_ORDER_TEX = {'NLO': 'NLO', 'LO': 'LO'}
+
+# Where the K-factor figure is written, inside each style's plot directory,
+# beside plots/ and plots/variant_A_madspin_only/ and
+# plots/variant_B_shape_ratio/.  Nothing already there is touched.
+KFACTOR_DIR = 'kfactor_LO_NLO'
+
+# The y-axis label of panels 1-5.  It is the ABSOLUTE dsigma/dx that
+# ``LABELS_TEX[obs][1]`` already names, and it is reused verbatim so that the
+# panels and the distribution pane of the other figures are read on the same
+# axis.  Panel 6 is dimensionless and takes KFACTOR_TEX / KFACTOR_TXT.
+KF_CURVE_TEX = {'full': r'unpolarised', 'LL': r'$Z_{0}Z_{0}$',
+                'LT': r'$Z_{0}Z_{T}$', 'TL': r'$Z_{T}Z_{0}$',
+                'TT': r'$Z_{T}Z_{T}$'}
+KF_CURVE_TXT = {'full': 'unpolarised', 'LL': 'Z0 Z0', 'LT': 'Z0 ZT',
+                'TL': 'ZT Z0', 'TT': 'ZT ZT'}
+
+
+def load_kfactor_partner(ddir=None):
+    """The LO sample, or ``None`` when its ``.npz`` is not on disk.
+
+    ``None`` rather than an exception, on the same rule as :func:`_load_listed`:
+    someone who has run only the reference extraction must still be able to
+    remake every figure that does not need this one.  The K-factor figure is
+    then skipped and said to be skipped, not faked.
+    """
+    got = _load_listed([KFACTOR_SAMPLE], ddir)
+    return got[0][1] if got else None
+
+
+def component_histogram(d, obs, key):
+    """One sample's ABSOLUTE ``dsigma/dx`` for one component, in pb per unit x.
+
+    ``key`` is ``'full'`` or one of :data:`POL_KEYS`.  The weight column is put
+    in pb by the sample's own ``scale_to_pb`` -- its own ``n_events``, not the
+    reference's -- so that two samples of different size would still be
+    comparable in rate.  (Here both are 250 000.)
+
+    THE ERROR IS THE PLAIN MC ONE, ``sqrt(sum w^2)``, and that is correct here
+    where it would be wrong on the ratio panes.  The delta-method bar of
+    :func:`ratio` exists to keep the covariance between a numerator and a
+    denominator summed over the SAME events; this function returns a single
+    sum, not a ratio, so there is no covariance to keep.
+    """
+    sel = d.sel[obs]
+    x = np.asarray(d.z[obs], dtype=np.float64)[sel]
+    w = np.asarray(d.full if key == 'full' else d.pol[key],
+                   dtype=np.float64)[sel] * d.scale_to_pb
+    y, e = histogram(x, w, BINS[obs])
+    return {'label': d.label, 'key': key, 'n_sel': int(sel.sum()),
+            'y': y, 'err': e, 'sigma_pb': float(w.sum()),
+            'drawable': int(sel.sum()) >= MIN_SEL_TO_DRAW}
+
+
+def kfactor(nlo, lo, obs, key):
+    """``(NLO/LO, error)`` bin by bin for one component, plus both histograms.
+
+    WHICH ERROR, AND WHY IT IS THE PLAIN QUADRATURE ONE.  The numerator is a
+    sum over the NLO sample and the denominator a sum over the LO one, and
+    those are two different generations -- different order, different run
+    (``run_06`` against ``run_12``), and no event in one is an event in the
+    other.  :func:`pairing_evidence` is not even needed to see it, though it
+    agrees: the LO sample has ``n(w<0) = 0`` against the reference's 14 273.
+    So the two relative errors add in quadrature and there is no covariance
+    term to subtract.
+
+    The delta-method bar of :func:`ratio` does NOT apply to this quantity and
+    is deliberately not used.  It applies to a ratio whose two sums run over
+    one set of events -- a component against its OWN sample's total, which is
+    what the sum pane and the 2 x 2 draw, and what
+    :func:`component_fraction_double_ratio` below uses on each side before
+    dividing.  Using it here would be claiming a cancellation between two
+    independent samples that does not exist, and would make every bar on the
+    K-factor panel too small.
+
+    The bin widths cancel in the ratio and are left in only so that the two
+    returned histograms are the same ``dsigma/dx`` the panels above draw.
+    """
+    a = component_histogram(nlo, obs, key)
+    b = component_histogram(lo, obs, key)
+    ya, ea = np.asarray(a['y'], float), np.asarray(a['err'], float)
+    yb, eb = np.asarray(b['y'], float), np.asarray(b['err'], float)
+    ok = np.isfinite(ya) & np.isfinite(yb) & (ya > 0) & (yb > 0)
+    k = np.full(len(ya), np.nan)
+    e = np.full(len(ya), np.nan)
+    k[ok] = ya[ok] / yb[ok]
+    e[ok] = k[ok] * np.sqrt((ea[ok] / ya[ok]) ** 2 + (eb[ok] / yb[ok]) ** 2)
+    return {'key': key, 'k': k, 'err': e, 'nlo': a, 'lo': b,
+            'k_integrated': (a['sigma_pb'] / b['sigma_pb']
+                             if b['sigma_pb'] else float('nan'))}
+
+
+def integrated_kfactors(nlo, lo, obs=None):
+    """The K-factor of every component as ONE number, with its error.
+
+    ``obs=None`` gives the inclusive one: every event of both samples, no
+    lepton selection at all, which is the cleanest statement of the physics
+    question the figure exists to answer.  Passing an observable restricts both
+    sides to that observable's fiducial selection, which is what the panels
+    actually show.
+
+    Same error argument as :func:`kfactor`: two independent samples, so the two
+    relative MC errors go in quadrature.
+    """
+    rows = []
+    for key in KF_PANE_ORDER:
+        def one(d):
+            w = np.asarray(d.full if key == 'full' else d.pol[key],
+                           dtype=np.float64)
+            if obs is not None:
+                w = w[d.sel[obs]]
+            w = w * d.scale_to_pb
+            return float(w.sum()), float(math.sqrt(float(np.sum(w * w))))
+        a, ea = one(nlo)
+        b, eb = one(lo)
+        K = a / b if b else float('nan')
+        eK = (abs(K) * math.sqrt((ea / a) ** 2 + (eb / b) ** 2)
+              if a and b else float('nan'))
+        rows.append({'key': key, 'sigma_nlo_pb': a, 'err_nlo_pb': ea,
+                     'sigma_lo_pb': b, 'err_lo_pb': eb, 'K': K, 'K_err': eK})
+    full = rows[0]
+    for r in rows:
+        # How far this component's K sits from the unpolarised one.  Quoted
+        # with a plain quadrature bar, which OVERSTATES it -- a component and
+        # its own sample's total are strongly correlated, so most of the
+        # common MC fluctuation cancels in the difference and the true
+        # significance is larger, not smaller.  The sharp version of the same
+        # statement is the double ratio below, which handles that correlation
+        # properly on each side.  This column is the conservative one.
+        d = r['K'] - full['K']
+        sd = math.sqrt(r['K_err'] ** 2 + full['K_err'] ** 2)
+        r['K_minus_K_full'] = d
+        r['K_minus_K_full_err'] = sd
+        r['K_minus_K_full_sigma'] = abs(d) / sd if sd else float('nan')
+    return rows
+
+
+def component_fraction_double_ratio(nlo, lo, obs=None):
+    """``f_NLO / f_LO`` where ``f = sigma_component / sigma_full`` per sample.
+
+    THIS is where the delta-method bar belongs, and it is the sharpest form of
+    the question "do the polarisations have different K-factors".  A component
+    fraction ``f`` is a ratio of two sums over the SAME events of ONE sample,
+    so its error is :func:`ratio`'s correlated one -- the part of the
+    fluctuation common to the component and to the total does not move the
+    fraction and must not be counted.  The two fractions then come from the two
+    independent samples, so THEY combine in quadrature.
+
+    The double ratio is algebraically ``K_component / K_full``, so it is the
+    same statement as the ``K_minus_K_full`` column of
+    :func:`integrated_kfactors` -- but with the within-sample correlation kept
+    on each side instead of thrown away, which is why its bars are two to four
+    times smaller and its significances correspondingly larger.  Both are
+    printed into numbers.txt so the difference between the two treatments is
+    on the record rather than a choice made silently.
+    """
+    rows = []
+    for key in POL_KEYS:
+        def frac(d):
+            num = np.asarray(d.pol[key], dtype=np.float64)
+            den = np.asarray(d.full, dtype=np.float64)
+            if obs is not None:
+                num, den = num[d.sel[obs]], den[d.sel[obs]]
+            return ratio(num, den)
+        f1, e1 = frac(nlo)
+        f2, e2 = frac(lo)
+        D = f1 / f2 if f2 else float('nan')
+        eD = (abs(D) * math.sqrt((e1 / f1) ** 2 + (e2 / f2) ** 2)
+              if f1 and f2 else float('nan'))
+        rows.append({'key': key, 'f_nlo': f1, 'f_nlo_err': e1,
+                     'f_lo': f2, 'f_lo_err': e2, 'double_ratio': D,
+                     'double_ratio_err': eD,
+                     'sigma_from_1': abs(D - 1.0) / eD if eD else float('nan')})
+    return rows
+
+
 def diagnostics(d, obs):
     """How honest the selection is, measured rather than asserted.
 

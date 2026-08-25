@@ -34,6 +34,16 @@ sample: `madspin_v1`*; base of that pass `5d31068d8` (`MadSpin zz_pol_weights:
 two figure variants off the cached weights`). Where a table below says "three"
 and has since grown a fourth row, the fourth row is that sample.
 
+**A later pass again added a FIFTH sample**, `LO` (`run_12`), and a **new
+six-panel figure** off it. This one is not another spinmode: it is the same
+`spinmode madspin` as the reference and differs in **order**, `order = LO`
+against `order = NLO`. It is a fifth curve on variant B and the partner of the
+reference on the new K-factor figure. It is described under *The fifth sample:
+`LO`, and the K-factor figure*; base of that pass `bdbc78e75` (`MadSpin
+zz_pol_weights: madspin_v1 as a fourth curve on variant B`). Only one HepMC
+was read in that pass — `run_12_decayed_1`'s — and every other number in this
+file comes off the caches that were already here.
+
 ```
 data/weights.npz        250 000 rows: the weights and the observables (madspin)
 data/meta.json          input path and size, event count, the 33 weight names,
@@ -43,6 +53,8 @@ data/weights_onshell.npz, data/meta_onshell.json    the same, spinmode=onshell
 data/weights_PA.npz,      data/meta_PA.json         the same, spinmode=PA
 data/weights_madspin_v1.npz, data/meta_madspin_v1.json  the same, spinmode=
                         madspin_v1; 29 weight names, not 33 -- no ms_pol_*
+data/weights_LO.npz,      data/meta_LO.json         the same, spinmode=madspin
+                        but order = LO; 33 weight names, ms_pol_* present
 extract_hepmc_pol.py    the one pass over a HepMC file, plain or gzipped
 pol_analysis.py         the weight algebra, the selection, the ratio statistics
 plot_zz_pol.py          the MG7-style figures, and numbers.txt
@@ -50,6 +62,7 @@ plot_zz_pol_userstyle.py  the same figures in the user style
 plots/, plots_userstyle/  PDF and PNG
 plots/variant_A_madspin_only/, plots_userstyle/variant_A_madspin_only/
 plots/variant_B_shape_ratio/,  plots_userstyle/variant_B_shape_ratio/
+plots/kfactor_LO_NLO/,         plots_userstyle/kfactor_LO_NLO/
 numbers.txt             every number quoted below, and the per-bin tables
 ```
 
@@ -93,6 +106,7 @@ decades and pushed the legend back onto the total. 60× → 250× (MG7) and
 | `PA` | `run_07_decayed_1` | 3.462 GB `.gz` | 10.599 GB | 109 867 054 | 250 000 | **28.9 s** | `weights_PA.npz`, 23.2 MB |
 | `onshell` | `run_08_decayed_1` | 3.449 GB `.gz` | 10.574 GB | 109 618 102 | 250 000 | **29.0 s** | `weights_onshell.npz`, 21.7 MB |
 | `madspin_v1` *(later pass)* | `run_10_decayed_1` | 3.443 GB `.gz` | 10.540 GB | 109 701 181 | 250 000 | **30.7 s** *(serial)* | `weights_madspin_v1.npz`, 19.5 MB |
+| `madspin`, **`order = LO`** *(later pass)* | `run_12_decayed_1` | 3.315 GB `.gz` | 10.206 GB | 106 124 632 | 250 000 | **28.0 s** *(serial)* | `weights_LO.npz`, 23.0 MB |
 
 All are HepMC2 `IO_GenEvent`, `HepMC::Version 2.06.09`, from
 `.../PROCNLO_loop_sm_7/Events/`. **The first three passes were run
@@ -149,6 +163,7 @@ at the final vertex — for every event of every file:
 | `madspin` | 250 000 | **250 000 (100.0000 %)** | 0 |
 | `PA` | 250 000 | **250 000 (100.0000 %)** | 0 |
 | `onshell` | 250 000 | **250 000 (100.0000 %)** | 0 |
+| `LO` *(later pass)* | 250 000 | **250 000 (100.0000 %)** | 0 |
 
 **It is exclusive in effect, exactly, on all three files.** Not "essentially 1"
 — 250 000 of 250 000, with no other channel present at all. For contrast, the
@@ -984,6 +999,264 @@ Two honest qualifications, because a null is only worth its power:
 
 ---
 
+## The fifth sample: `LO`, and the K-factor figure
+
+A later pass added `run_12` / **`LO`** and a **new six-panel figure**, the
+K-factor `NLO/LO` per polarisation component. One HepMC was read — the new
+one. Everything else came off the caches already in `data/`.
+
+`LO` is not a fifth spinmode. Its MadSpin card says `set spinmode madspin`,
+the same as the reference's. What differs is the **order**:
+
+```
+run_06  <run_settings>  order = NLO   fixed_order = OFF  shower = PYTHIA8  madspin = ON
+run_12  <run_settings>  order = LO    fixed_order = OFF  shower = PYTHIA8  madspin = ON
+```
+
+and the production cross sections in the two `summary.txt` follow: **13.66 pb**
+against **10.59 pb**, a ratio of 1.290.
+
+### It carries the four `ms_pol_*`, so the decomposition is real
+
+Its `N` line names **33** weights — the reference's list exactly, including
+`ms_pol_23.0_23.0`, `ms_pol_23.0_23.T`, `ms_pol_23.T_23.0`,
+`ms_pol_23.T_23.T`. (This was the condition the brief put on the figure: had it
+named 29 like `madspin_v1`, only the unpolarised curve of panel 6 could have
+been drawn and panels 2–5 not at all.) It does, so all six panels are real.
+
+### The pass, and the numbers established for it
+
+| | |
+|---|---|
+| input | `run_12_decayed_1/events_PYTHIA8_0.hepmc.gz` |
+| on disk / inflated | 3.315 GB `.gz` → 10.206 GB, 106 124 632 lines |
+| **one pass** | **28.0 s**, serial, one `gzip -dc` child, nothing unpacked to disk |
+| output | `data/weights_LO.npz`, 23.0 MB, and `data/meta_LO.json` |
+| events | **250 000** |
+| `N`-line names | **33**, identical to the reference's — `ms_pol_*` present |
+| nominal | `"0" × N == "Weight"` to the last bit (min = max = 1.0, as on all four others) |
+| σ from the last `C` line | **0.023 949 678 pb**, equal to `Σ w_"0"` to 12 digits |
+| σ against the banner | 0.023 949 678 / 10.59 = 2.2615e-3 = 2·BR(Z→ee)·BR(Z→μμ); the reference gives 2.2602e-3 off 13.66. **Same branching factor, so it cancels in K** |
+| the first `C` line | 9.5798e-08, low by a factor 2.5e5 — the same running-estimate artefact as the other four (2.2e5 there); the **last** is right |
+| `n(w < 0)` | **0** |
+| survivors | `M(e+ μ+)` **119 765**, `Δφ(e+e-)` **165 206** (reference: 118 521 / 164 111) |
+| exclusive decay | **250 000 / 250 000 (100.0000 %)**, one `z → e+e-` and one `z → μ+μ-`, read off the event record |
+
+One bookkeeping consequence: `data/meta_LO.json` carries a **five**-entry
+`sample_registry` and the four older metas still carry their four-entry one,
+because they were written before this sample existed and re-writing them would
+have meant re-reading four HepMC files to change a list. `extract_hepmc_pol.py`
+now names all five, so the registry in the newest meta is the complete one.
+
+**`n(w < 0) = 0` is not a null result and it is not evidence of a shared
+production sample.** An LO matrix element for `p p > z z` is positive definite,
+so the count *must* be zero; it is 14 273 for the reference. The pairing test
+of *The ratio errors* therefore still separates the two samples, and in any
+case they cannot be paired: they are different orders of a different run.
+
+### One MadSpin card line differs beyond the order, and it had to be checked
+
+The banners of `run_06` and `run_12` differ in exactly **two** places, and one
+of them is a polarisation setting:
+
+```
+run_06:   set frame_id 24
+run_12:  #set frame_id 24        <- commented out, so the default 6 applies
+```
+
+`frame_id` is the bitmask `sum(2**n for n in me_frame)`
+(`madgraph/various/banner.py`), so **24 = legs 3+4** — the two `z`, i.e. the
+`ZZ` rest frame — and the default **6 = legs 1+2**, the initial partons. Those
+are different frames in general, the polarisation basis is frame dependent, and
+a K-factor between two different bases would be meaningless.
+
+**They are the same frame on this sample.** `run_12`'s LHE is `2 → 2` in every
+event — `NUP = 4` throughout — so `p1 + p2 = p3 + p4` exactly and legs 1+2 and
+legs 3+4 define one boost. `run_06`'s LHE carries a fifth leg in about a fifth
+of its events, which is why *it* needs `frame_id 24` stated explicitly. Both
+samples therefore quantise along the `ZZ`-rest-frame axis and the components
+being divided are the same components. Had `run_12` been a real-emission
+sample this figure could not have been drawn.
+
+### The figure
+
+`plots/kfactor_LO_NLO/` and `plots_userstyle/kfactor_LO_NLO/`, PDF and PNG,
+both observables, both styles, `--check-minus` on the MG7 pair. The whole run
+is now **8/8 applicable PDFs carry `/minus`** — two originals, four variants
+and the two new ones, every one of which has a minus somewhere in its tick
+labels.
+
+Three rows of two. Panels 1–5 are one component each — unpolarised, `Z_0Z_0`,
+`Z_0Z_T`, `Z_TZ_0`, `Z_TZ_T`, in that order — carrying that component's **LO
+and NLO** `dσ/dX`, same colour, solid for NLO and dashed for LO. Panel 6 is
+`K = NLO/LO` with all five curves on one pane.
+
+### The two figures use different normalisations, and why
+
+**Variant B divides every curve by its own σ. This figure divides nothing.**
+That is not an inconsistency; it is the difference between the two questions.
+
+* A K-factor **is** a rate ratio. Normalising each side by its own σ would set
+  every curve on panel 6 to 1 by construction and delete the entire answer.
+  Panels 1–5 are therefore absolute pb per unit of the observable and panel 6
+  is their ratio.
+* Variant B asks whether the **shape** moves. At these cuts the rate moves 29 %
+  and the shape a few percent, so an un-normalised variant-B pane would be
+  four curves sitting near 0.78 with the few-percent structure invisible under
+  them. That pane exists to remove exactly what this figure exists to show.
+
+### Errors, per curve
+
+| curve | bar | why |
+|---|---|---|
+| panels 1–5, LO and NLO alike | plain MC, `sqrt(Σ w²)` per bin | each is a single weighted sum, not a ratio. There is no numerator/denominator covariance for a delta-method bar to keep |
+| panel 6, all five | the two relative errors in quadrature | numerator and denominator are sums over two **independent** samples (`run_06` vs `run_12`, different order), so there is no covariance to subtract either |
+
+**The delta-method bar the other figures' ratio panes use is on nothing drawn
+here, and that is not an oversight.** It belongs to a ratio whose two sums run
+over *one* set of events — a component against its own sample's total — and no
+quantity on this canvas is one. The brief asked for it "where that applies";
+among the six panels it applies nowhere. Where it *does* apply to this
+comparison is the component-**fraction** double ratio `f_NLO / f_LO`, which is
+algebraically `K_comp / K_full` with the within-sample correlation kept on each
+side. `numbers.txt` prints it beside the quadrature version precisely so that
+the two treatments of the same statement can be read against each other; its
+bars are two to four times smaller, as they should be.
+
+### The answer: yes, the polarisations have different K-factors
+
+Inclusive, all 250 000 events of each sample, no lepton selection:
+
+| component | σ_NLO [pb] | σ_LO [pb] | **K = NLO/LO** | `K − K_unpol` | `f_NLO/f_LO` (delta method) |
+|---|---|---|---|---|---|
+| unpolarised | 0.0308739 | 0.0239497 | **1.2891 ± 0.0039** | — | — |
+| `Z_0Z_0` | 0.0018002 | 0.0014012 | **1.2847 ± 0.0070** | −0.0044 ± 0.0080 (0.5σ) | 0.9966 ± 0.0046 (0.7σ) |
+| `Z_0Z_T` | 0.0037769 | 0.0027755 | **1.3608 ± 0.0063** | +0.0717 ± 0.0074 (9.7σ) | 1.0556 ± 0.0037 (**14.8σ**) |
+| `Z_TZ_0` | 0.0037802 | 0.0027795 | **1.3601 ± 0.0063** | +0.0709 ± 0.0074 (9.6σ) | 1.0550 ± 0.0037 (**14.7σ**) |
+| `Z_TZ_T` | 0.0215217 | 0.0170104 | **1.2652 ± 0.0041** | −0.0239 ± 0.0057 (4.2σ) | 0.9815 ± 0.0011 (**16.3σ**) |
+
+The two **mixed** components take the largest NLO enhancement, ~1.36 against
+1.289 for the total; `Z_TZ_T`, which is 70 % of the rate and therefore drags
+the total with it, takes the smallest at 1.265; `Z_0Z_0` is compatible with the
+unpolarised K. The component fractions move accordingly: `Z_TZ_T` falls from
+71.03 % of the rate at LO to 69.71 % at NLO while `Z_0Z_T` and `Z_TZ_0` each
+rise from 11.59/11.61 % to 12.23/12.24 %.
+
+**Every bar above is MC statistics only.** No scale or PDF uncertainty is in
+any of them, and the scale envelope on each sample alone is `+4.1 % −5.2 %`,
+far larger than these differences and not cancelling in the ratio in any
+controlled way. The significances are statements about *these two samples*,
+not a theory uncertainty on K.
+
+### `Z_0Z_T` and `Z_TZ_0` are not the same curve on `Δφ(e+e-)`
+
+`z1_ch = 11` and `z2_ch = 13` on **all 250 000 events of both samples**, so the
+first index is always the `z` that went to `e+e-`: `ms_pol_23.0_23.T` is
+(electron-`z` longitudinal, muon-`z` transverse). `Δφ(e+e-)` is built from the
+electron `z` alone and is therefore sensitive to which index is which, and the
+two components have genuinely different shapes in it *within one sample* —
+last-bin/first-bin ratio of the normalised spectrum 15.7 (`Z_0Z_T`) against
+49.1 (`Z_TZ_0`) at LO, 14.0 against 20.6 at NLO. `M(e+ μ+)` takes one lepton
+from each `z` and is nearly symmetric between them, which is why their
+K-factors agree there (1.360 / 1.348) and not here (1.378 / 1.354).
+
+That asymmetry is the whole of the largest excursion on either panel 6:
+`K(Z_TZ_0) = 2.94 ± 0.18` in the lowest `Δφ` bin against ~1.3 for everything
+else, on 3 547 NLO and 3 308 LO selected events. It is not noise, and it is not
+a large NLO prediction: with the electron `z` transverse the **LO** spectrum is
+very nearly empty at small `Δφ` — that needs a boosted `z`, which `2 → 2`
+kinematics supplies only in the tail — and real radiation fills a region that
+started almost empty. A large K on a small denominator at the edge of LO phase
+space says the LO prediction is unreliable there. The same mechanism, milder,
+is the rise of `K` to 2.3 in the last `M(e+ μ+)` bin.
+
+## `LO` on variant B — and there is no LO triplet
+
+The brief asked for `LO` "on top of the NLO one in every pane" of variant B,
+and flagged the problem itself: the ratio pane is a *mode-to-mode* ratio among
+NLO samples and there is only one LO sample, so `onshell_LO / madspin_LO`-style
+curves cannot exist. It asked first whether sibling LO runs exist.
+
+### They do not. `run_12` is the only showered LO sample
+
+Every run directory was checked, not just the `run_11`/`run_12`/`run_13`
+neighbourhood the brief guessed at:
+
+* `order = LO` appears in **exactly two** banners, `run_11` and `run_12`.
+  Every other run — `run_01` … `run_10` — says `order = NLO`. There is no
+  `run_13` at all.
+* `run_11` has **no** `run_11_decayed_1/`. It was never decayed or showered,
+  so there is no HepMC to read and it cannot be a curve on anything.
+* `run_11` and `run_12`'s banners are **identical apart from the run tag** — same
+  process, same run card, same `spinmode madspin`, same `frame_id` line. `run_11`
+  is not a second LO spinmode; it is the same configuration at a different
+  seed, and its σ (10.63 pb) agrees with `run_12`'s (10.59 pb).
+
+So there is exactly one LO sample and it is `spinmode = madspin`.
+
+### What was done, and why
+
+`LO` was added as a **fourth `Y` curve in the existing ratio pane**, and the
+pane's definition was **not** changed. It is still
+`(1/σ dσ/dX)_Y / (1/σ dσ/dX)_madspin`; `LO` is simply another `Y`. This is the
+brief's first honest option — an LO/NLO curve against the reference mode — and
+it happens to need no redefinition at all, because the reference mode *is* the
+NLO denominator the pane already divides by.
+
+**What that curve means is not what the other three mean, and the figure cannot
+say so**, because nothing is written on it. So it is said here, in
+`numbers.txt` and in the code:
+
+* `onshell`, `PA`, `madspin_v1`: same order, different spinmode → a **spinmode**
+  effect.
+* `LO`: same spinmode, different order → an **order** effect.
+
+The alternative — `LO` in the distribution pane only, ratio pane untouched —
+was rejected because the shape information is the interesting half of it and
+would have been thrown away for a labelling problem that a sentence fixes.
+
+Note also that this pane divides each curve by its own σ, so the thing an order
+change is *most* visible in — the rate, the K-factor — is exactly what it
+removes. That is what the new figure is for, and the two are complementary
+rather than redundant. And it shows a real shape effect. `χ²/ndf` of
+the four `Y` curves against 1:
+
+| `Y` | `M(e+ μ+)` | `Δφ(e+e-)` |
+|---|---|---|
+| `onshell` | 13.25/6 = 2.21 | 24.18/11 = 2.20 |
+| `PA` | 2.92/6 = 0.49 | **65.90/11 = 5.99** |
+| `madspin_v1` | 7.00/6 = 1.17 | 10.27/11 = 0.93 |
+| **`LO`** | **51.77/6 = 8.63** | 27.85/11 = 2.53 |
+
+So the order change is the largest shape effect on `M(e+ μ+)` by a factor of
+four, and on `Δφ(e+e-)` it is *not* the largest — `PA`'s spinmode effect is
+more than twice it there. The two observables are sensitive to different
+things and neither curve dominates both. Bin by bin on `M(e+ μ+)` `LO` is
++2.4 %, +1.4 %, +2.5 % over the first three bins and then −2.1 %, −0.1 %,
+−6.1 %, −6.6 % — **not** a monotone slope but a step down above ~125 GeV: NLO
+moves shape into the tail, and it does so abruptly rather than gradually at
+these seven edges. Whether the step is real or an artefact of a binning chosen
+for a 312-event sample is exactly the question the *bin edges were not
+re-chosen* bullet is about.
+
+**Which files this pass actually rewrote.** Only variant B's four PNGs and
+four PDFs, plus the eight new K-factor files, `numbers.txt`, the two logs and
+the three scripts. The two original figures and variant A's four were *not*
+rewritten: re-running the scripts regenerated their PDFs with a different
+matplotlib Type1 font-subset tag and byte-identical PNGs — i.e. identical
+content — so the PDFs were restored to the bytes this branch already carried,
+exactly as the `madspin_v1` pass did before it. `git status` after the pass
+lists no original or variant-A figure at all.
+
+The legend on variant B's distribution pane now has **nine** rows (MG7) and
+**twelve** (user style), so the log-pane headroom was raised — 2500× → 12000×
+and 50000× → 120000× — and the linear one 1.78 → 2.00 and 2.10 → 2.45. Checked
+on the rendered PNGs; at the old values the `Z_TZ_T` legend entry sat on the
+black total around `M = 100` GeV. **The original figures and variant A are
+untouched**, as they were by the fourth sample.
+
+---
+
 ## Not covered
 
 * **The bin edges were not re-chosen.** `M(e+ μ+)`'s seven edges
@@ -1026,7 +1299,13 @@ Two honest qualifications, because a null is only worth its power:
   `madspin_v1` has since been run (`run_10`) and is a fourth curve on variant
   B — see *The fourth sample*. `none`, `full` and `onshell_v1` still were not
   run.
-* **No systematic on the polarisation frame.** The card sets `frame_id 24`.
+* **No systematic on the polarisation frame.** The reference card sets
+  `frame_id 24`. **Refined by the LO pass:** the LO card leaves it at the
+  default 6, which is a *different* setting but the *same frame* on a `2 → 2`
+  event, and that equality was checked against the LHE multiplicity rather
+  than assumed — see *The fifth sample*. What is still not done is varying the
+  frame on the NLO sample, where 6 and 24 genuinely differ; that would need a
+  new MadSpin run and no cached weight can answer it.
 * **No scale or PDF variation of the polarisation fractions.** All 33 weights
   are summed and recorded in `data/meta.json`; the study divides only the
   central ones.
@@ -1040,6 +1319,35 @@ Two honest qualifications, because a null is only worth its power:
   nothing in this study depends on them. (The fourth sample's 30.7 s **is** a
   serial measurement — it was run alone — and is the only figure in that column
   that can be read as a rate.)
+
+### The K-factor figure specifically
+
+* **One LO sample, so no LO spinmode comparison.** `onshell` and `PA` have no
+  LO counterparts (there is no `run_11_decayed_1` and no `run_13`), so whether
+  the K-factor differences reported here are a property of the process or
+  partly of `spinmode madspin` is untestable on what exists. It would take two
+  more LO runs and two more showers.
+* **The K-factor is LO+PS against NLO+PS, not a fixed-order K.** Both sides are
+  showered by the same Pythia8, so the shower is common and largely cancels,
+  but "largely" is not "exactly" and no fixed-order cross-check was made.
+* **No scale or PDF uncertainty on K.** All 33 weights of both samples are in
+  the `.npz` and the scale envelope of each sample alone is in its banner
+  (`+4.1 % −5.2 %`), but the correlated envelope of the *ratio* — which is what
+  a quoted K-factor uncertainty would have to be — was not built. Every bar on
+  the figure and in the tables is MC statistics only. This is the largest
+  missing piece and it needs no new event: it is a re-sum of columns already
+  cached.
+* **The `Z_TZ_0` low-`Δφ` excursion is explained qualitatively, not
+  quantitatively.** "The LO spectrum is nearly empty there" is read off the
+  shape ratios, not off a phase-space calculation.
+* **The polarisation interference is not decomposed at LO.** `Σ/full` is
+  1.00070 for LO against 1.00017 for NLO inclusively — both within a per-mille
+  of 1 — and no per-bin comparison of the interference between the two orders
+  was made, although the cached weights would support one.
+* **`run_11` was not extracted.** It is a second, statistically independent LO
+  sample at the same settings and would have halved the LO error on every
+  number above, but it was never showered, so using it would have meant
+  generating rather than reading — outside this pass's brief of one new HepMC.
 
 ### The variants specifically
 

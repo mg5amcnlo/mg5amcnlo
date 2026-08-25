@@ -1,0 +1,20 @@
+=== order = LO, spinmode madspin  (run_12_decayed_1)
+     20000 events    0.82 GB inflated       2 s
+     40000 events    1.63 GB inflated       4 s
+     60000 events    2.45 GB inflated       7 s
+     80000 events    3.26 GB inflated      10 s
+    100000 events    4.07 GB inflated      12 s
+    120000 events    4.89 GB inflated      14 s
+    140000 events    5.71 GB inflated      16 s
+    160000 events    6.53 GB inflated      18 s
+    180000 events    7.35 GB inflated      20 s
+    200000 events    8.17 GB inflated      23 s
+    220000 events    8.98 GB inflated      25 s
+    240000 events    9.80 GB inflated      27 s
+read   3.315 GB on disk (10.206 GB inflated) in 28.0 s (0.47 min), 106124632 lines
+events 250000
+wrote  data/weights_LO.npz (23.0 MB)
+       /private/tmp/t91/MadSpin/validation/zz_pol_weights/data/meta_LO.json
+
+run alone, so 28.0 s IS a serial time (the first three passes of
+extract_modes.log.txt were run concurrently and theirs are not).

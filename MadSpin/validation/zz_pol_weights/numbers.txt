@@ -1,6 +1,6 @@
 MadSpin polarisation weights on a showered NLO  p p > z z
 ==========================================================================
-4 samples: the same process, the same run card and the same 250k
+5 samples: the same process, the same run card and the same 250k
 showered events, differing only in MadSpin's spinmode.  The
 polarisation decomposition below is the REFERENCE (madspin, run_06)
 sample's; the others enter the distribution pane of a figure and the
@@ -57,10 +57,15 @@ directory.  The original figures are unchanged.
 
    plots/variant_B_shape_ratio/ and plots_userstyle/variant_B_shape_ratio/
       variant B -- The distribution pane, then a single ratio pane
-      carrying the self-normalised shape ratio of onshell, PA and
-      madspin_v1 to madspin. The sum pane and the 2 x 2 are not drawn.
-      madspin_v1 is on THIS VARIANT ONLY -- the original figures and
-      variant A carry the same three modes they always did
+      carrying the self-normalised shape ratio of onshell, PA,
+      madspin_v1 and LO to madspin. The sum pane and the 2 x 2 are not
+      drawn. madspin_v1 and LO are on THIS VARIANT ONLY -- the
+      original figures and variant A carry the same three modes they
+      always did. The pane definition is unchanged by the LO curve,
+      but that curve is an ORDER difference at fixed spinmode where
+      the other three are SPINMODE differences at fixed order, and the
+      pane divides out exactly the rate change the K-factor figure is
+      about
 
 Both variants keep the house style of the original: both styles, PDF
 AND PNG, the Z_0Z_0 naming, --check-minus on the MG7 figures only, and
@@ -73,6 +78,7 @@ madspin     run_06_decayed_1/....hepmc.gz         3.449G   10.562G     27.8   25
 onshell     run_08_decayed_1/....hepmc.gz         3.449G   10.574G     29.0   250000
 PA          run_07_decayed_1/....hepmc.gz         3.462G   10.599G     28.9   250000
 madspin_v1  run_10_decayed_1/....hepmc.gz         3.443G   10.540G     30.7   250000
+LO          run_12_decayed_1/....hepmc.gz         3.315G   10.206G     28.0   250000
 Every .gz input was streamed through "gzip -dc" in a child process and
 never unpacked to disk: they inflate to ~10.5 GB each and no temporary
 of that size should have to exist.  The first three passes were run
@@ -143,6 +149,7 @@ every event of every file:
    onshell         250000   250000   100%   250000   100%          0
    PA              250000   250000   100%   250000   100%          0
    madspin_v1      250000   250000   100%   250000   100%          0
+   LO              250000   250000   100%   250000   100%          0
 
 It is exclusive in effect: every event of every file has one z to e+e-
 and the other to mu+mu-, with no other channel present at all.  So
@@ -174,8 +181,9 @@ constant within each file.  Across files they are NOT all the same:
    onshell           33  identical, same order
    PA                33  identical, same order
    madspin_v1        29  missing ms_pol_23.0_23.0, ms_pol_23.0_23.T, ms_pol_23.T_23.0, ms_pol_23.T_23.T
+   LO                33  identical, same order
 
-So madspin, onshell, PA carry the four ms_pol_* weights, because those runs set
+So madspin, onshell, PA, LO carry the four ms_pol_* weights, because those runs set
 keep_weight_for_polarization_vector = [0, T]; madspin_v1 does not.
 
 THAT IS NOT A DEFECT AND IT IS NOT WORKED AROUND.  madspin_v1 is
@@ -202,6 +210,7 @@ madspin       1.000000   1.000000            0.030873887    0.030873887  1.394e-
 onshell       1.000000   1.000000            0.032414610    0.032414610  1.460e-07
 PA            1.000000   1.000000            0.031115558    0.031115558  1.403e-07
 madspin_v1    1.000000   1.000000            0.030918986    0.030918986  1.395e-07
+LO            1.000000   1.000000            0.023949678    0.023949678  9.580e-08
 
 Same answer on every file, INCLUDING the one with no polarisation
 weights: "0" * N_events == "Weight" to the last bit on every event,
@@ -227,6 +236,7 @@ madspin           0.030874       5.709 %  -2.98e-05 0.034853, 0.035835, 0.039692
 onshell           0.032415       5.585 %  -1.56e-05 0.036490
 PA                0.031116       5.640 %   6.63e-06 0.035071
 madspin_v1        0.030919       5.672 %   1.81e-05 0.034875
+LO                0.023950       0.000 %   3.29e-05 0.023950, 0.034134, 0.037988
 
 On the |Weight| column: each file's dominant value is its banner
 XMAXUP exactly.  Any further value is carried by a handful of
@@ -247,6 +257,7 @@ madspin         250000        14273       0.030874    --  (reference)
 onshell         250000        13962       0.032415 -0.00028 +- 0.00203
 PA              250000        14099       0.031116 +0.00041 +- 0.00203
 madspin_v1      250000        14179       0.030919 -0.00005 +- 0.00203
+LO              250000            0       0.023950 -0.00219 +- 0.00203
 
 n(w < 0) is the DECISIVE column and it is permutation invariant.
 Neither MadSpin nor Pythia can change the sign of an event weight --
@@ -291,6 +302,7 @@ inclusive cross section (all 250k events, no selection):
    onshell         0.032415 +- 0.000073 pb
    PA              0.031116 +- 0.000070 pb
    madspin_v1      0.030919 +- 0.000070 pb
+   LO              0.023950 +- 0.000048 pb
 
 The two chi2 answer different questions and only the pair of them
 is the result: a mode that differs from the reference ONLY in
@@ -311,6 +323,7 @@ and the acceptance:
    onshell         0.032415   1.000000     0.032415     0.021407     0.6604
    PA              0.031116   1.000000     0.031116     0.020509     0.6591
    madspin_v1      0.030919   1.000000     0.030919     0.020371     0.6588
+   LO              0.023950   1.000000     0.023950     0.015827     0.6608
 
 which z decayed to what, off the event record (truth, used to
 categorise only -- no plotted observable touches it):
@@ -319,6 +332,7 @@ categorise only -- no plotted observable touches it):
    onshell         250000   100.0000     250000   100.0000
    PA              250000   100.0000     250000   100.0000
    madspin_v1      250000   100.0000     250000   100.0000
+   LO              250000   100.0000     250000   100.0000
 
 m_epmup: N selected, fiducial cross section, and the comparison
    madspin     N=118521  sigma_fid=0.014796 +- 0.000048 pb   (the reference)
@@ -334,7 +348,11 @@ m_epmup: N selected, fiducial cross section, and the comparison
              rate ratio to madspin 0.9949 +- 0.0046 (1.1 sigma)
              as drawn (rate included) chi2/ndf = 7.35/7 = 1.05   max|pull| 1.88
              SHAPE only (rescaled to the same fiducial rate) chi2/ndf = 6.08/6 = 1.01
-   on the figure: madspin + onshell + PA + madspin_v1   (every mode drawn)
+   LO          N=119765  sigma_fid=0.011473 +- 0.000033 pb
+             rate ratio to madspin 0.7754 +- 0.0034 (66.7 sigma)
+             as drawn (rate included) chi2/ndf = 3257.41/7 = 465.34   max|pull| 25.13
+             SHAPE only (rescaled to the same fiducial rate) chi2/ndf = 44.03/6 = 7.34
+   on the figure: madspin + onshell + PA + madspin_v1 + LO   (every mode drawn)
 
 dphi_ee: N selected, fiducial cross section, and the comparison
    madspin     N=164111  sigma_fid=0.020400 +- 0.000056 pb   (the reference)
@@ -350,7 +368,11 @@ dphi_ee: N selected, fiducial cross section, and the comparison
              rate ratio to madspin 0.9986 +- 0.0039 (0.4 sigma)
              as drawn (rate included) chi2/ndf = 9.53/12 = 0.79   max|pull| 1.57
              SHAPE only (rescaled to the same fiducial rate) chi2/ndf = 9.38/11 = 0.85
-   on the figure: madspin + onshell + PA + madspin_v1   (every mode drawn)
+   LO          N=165206  sigma_fid=0.015827 +- 0.000039 pb
+             rate ratio to madspin 0.7758 +- 0.0029 (78.0 sigma)
+             as drawn (rate included) chi2/ndf = 4462.79/12 = 371.90   max|pull| 27.95
+             SHAPE only (rescaled to the same fiducial rate) chi2/ndf = 24.90/11 = 2.26
+   on the figure: madspin + onshell + PA + madspin_v1 + LO   (every mode drawn)
 
 
 --- THE SHAPE RATIO: what the variant-B pane draws ---
@@ -387,10 +409,12 @@ what is outside the drawn range, per observable and mode:
    m_epmup    onshell              924       0.015477       0.015364      0.730
    m_epmup    PA                   889       0.014784       0.014677      0.720
    m_epmup    madspin_v1           887       0.014721       0.014617      0.702
+   m_epmup    LO                   822       0.011473       0.011395      0.686
    dphi_ee    madspin                0       0.020400       0.020400      0.000
    dphi_ee    onshell                0       0.021407       0.021407      0.000
    dphi_ee    PA                     0       0.020509       0.020509      0.000
    dphi_ee    madspin_v1             0       0.020371       0.020371      0.000
+   dphi_ee    LO                     0       0.015827       0.015827      0.000
 
 Delta phi is binned over its whole physical range [0, pi] and has no
 outside at all, so for that observable the two normalisations are the
@@ -451,6 +475,17 @@ m_epmup: the shape ratio bin by bin
       260.0- 450.0       4770       0.9606     0.0227       1.73       0.9605
      the two normalisations differ by at most 0.0002 in any bin
 
+   Y = LO        chi2/ndf = 51.77/6 = 8.63   max|pull| 4.55
+     bin                N(ref)        ratio      error   sigma(1) norm=selected
+        0.0-  45.0      19789       1.0244     0.0098       2.49       1.0244
+       45.0-  70.0      23238       1.0139     0.0088       1.57       1.0139
+       70.0-  95.0      21986       1.0252     0.0092       2.74       1.0252
+       95.0- 125.0      19652       0.9789     0.0095       2.21       0.9789
+      125.0- 175.0      17507       0.9991     0.0105       0.08       0.9991
+      175.0- 260.0      10699       0.9393     0.0134       4.55       0.9393
+      260.0- 450.0       4770       0.9341     0.0208       3.16       0.9341
+     the two normalisations differ by at most 0.0000 in any bin
+
 dphi_ee: the shape ratio bin by bin
    Y = onshell   chi2/ndf = 24.18/11 = 2.20   max|pull| 2.45
      bin                N(ref)        ratio      error   sigma(1) norm=selected
@@ -498,6 +533,22 @@ dphi_ee: the shape ratio bin by bin
         2.4-   2.6      23414       0.9961     0.0095       0.41       0.9961
         2.6-   2.9      26413       0.9892     0.0087       1.24       0.9892
         2.9-   3.1      27210       0.9882     0.0086       1.37       0.9882
+     the two normalisations differ by at most 0.0000 in any bin
+
+   Y = LO        chi2/ndf = 27.85/11 = 2.53   max|pull| 3.20
+     bin                N(ref)        ratio      error   sigma(1) norm=selected
+        0.0-   0.3       3547       0.9578     0.0247       1.70       0.9578
+        0.3-   0.5       4186       0.9295     0.0220       3.20       0.9295
+        0.5-   0.8       5107       0.9711     0.0208       1.39       0.9711
+        0.8-   1.0       6401       0.9908     0.0188       0.49       0.9908
+        1.0-   1.3       8255       0.9859     0.0162       0.87       0.9859
+        1.3-   1.6      10423       0.9845     0.0142       1.09       0.9845
+        1.6-   1.8      13238       0.9969     0.0126       0.25       0.9969
+        1.8-   2.1      16174       1.0159     0.0113       1.40       1.0159
+        2.1-   2.4      19743       1.0071     0.0100       0.71       1.0071
+        2.4-   2.6      23414       1.0095     0.0090       1.04       1.0095
+        2.6-   2.9      26413       0.9913     0.0083       1.05       0.9913
+        2.9-   3.1      27210       1.0202     0.0083       2.42       1.0202
      the two normalisations differ by at most 0.0000 in any bin
 
 WHAT THE PANE SAYS ABOUT madspin_v1 -- the comparison this variant
@@ -626,4 +677,160 @@ fiducial cross section 0.0204002 pb
   2.4-  2.6    23414       0.9913     0.0012       6.98       0.0785      0.6740      0.1177      0.1211
   2.6-  2.9    26413       0.9735     0.0012      21.60       0.0801      0.6129      0.1383      0.1423
   2.9-  3.1    27210       0.9542     0.0012      38.50       0.0687      0.5487      0.1706      0.1661
+
+==========================================================================
+THE K-FACTOR FIGURE: NLO/LO, PER POLARISATION COMPONENT
+==========================================================================
+A FIFTH sample: run_12_decayed_1, the same p p > z z [QCD] process, the
+same run card, the same 250 000 events, the same exclusive decay card,
+the same spinmode madspin and the same Pythia8 shower as the reference
+-- and <run_settings> order = LO where every other run in this study
+says order = NLO.  It carries the four ms_pol_* weights (33 names on
+its N line, the reference's list exactly), which is what makes a
+per-polarisation K-factor possible at all.
+
+ONE MADSPIN CARD LINE DIFFERS BEYOND THE ORDER and it is a polarisation
+setting, so it is checked rather than waved through.  run_06 sets
+"set frame_id 24"; run_12 leaves it commented out and takes the default
+6.  frame_id is the bitmask sum(2**n for n in me_frame), so 24 = legs
+3+4 (the two z, i.e. the ZZ rest frame) and 6 = legs 1+2 (the initial
+partons).  Those are the same frame exactly when the event has no other
+final-state leg, and the LO sample's LHE is 2 -> 2 in every event
+(NUP = 4 throughout) while the NLO one carries a fifth leg in about a
+fifth of its events.  So both samples quantise the z polarisations
+along the ZZ-rest-frame axis and the components being divided are the
+same components.  Had the LO run been a real-emission sample this
+K-factor would have been ill defined.
+
+NORMALISATION.  THIS FIGURE IS ABSOLUTE AND VARIANT B IS NOT, and that
+is deliberate.  A K-factor is a ratio of RATES, so nothing may be
+divided out before it is taken: panels 1-5 are dsigma/dx in pb per unit
+of the observable and panel 6 is their ratio.  Variant B divides every
+curve by its own sigma because it asks about SHAPE; at these cuts the
+rate moves 29 % and the shape a few percent, so an unnormalised
+variant-B pane would be four curves sitting near 0.78 and nothing else
+would be readable.  The two figures answer two different questions.
+
+ERRORS, PER CURVE.
+  panels 1-5, both curves: plain MC, sqrt(sum w^2) per bin.  Each is a
+    single weighted sum and not a ratio, so there is no covariance for
+    a delta-method bar to keep.
+  panel 6, all five curves: the two relative errors in quadrature.
+    Numerator and denominator are sums over two INDEPENDENT samples
+    (run_06 against run_12, different order), so there is no covariance
+    to subtract either.  The independence needs no argument beyond the
+    orders being different, and the n(w<0) test of "ARE THE SAMPLES
+    PAIRED" agrees at once: 14 273 for the reference against 0 for LO,
+    the LO matrix element being positive definite.
+  So the delta-method bar used by the sum pane and the 2x2 is on
+    NOTHING drawn on this figure.  That is not an oversight: it belongs
+    to a ratio whose two sums run over ONE set of events, and no
+    quantity on this canvas is one.  Where it does apply to this
+    comparison is the component-FRACTION double ratio at the foot of
+    this section, which is printed precisely so that the two error
+    treatments of the same statement can be read against each other.
+
+--- inclusive K-factors (all 250k events of each sample, no selection) ---
+component      sigma_NLO [pb]    sigma_LO [pb]         K = NLO/LO
+unpolarised   0.0308739+-0.0000697  0.0239497+-0.0000479    1.2891 +- 0.0039
+Z0 Z0         0.0018002+-0.0000073  0.0014012+-0.0000051    1.2847 +- 0.0070
+Z0 ZT         0.0037769+-0.0000131  0.0027755+-0.0000085    1.3608 +- 0.0063
+ZT Z0         0.0037802+-0.0000131  0.0027795+-0.0000086    1.3601 +- 0.0063
+ZT ZT         0.0215217+-0.0000524  0.0170104+-0.0000363    1.2652 +- 0.0041
+
+the banner cross sections these reproduce: 1.366e+01 pb (run_06, NLO)
+and 1.059e+01 pb (run_12, LO), whose ratio is 1.28990 against the 1.28911
+of the unpolarised row above.  The two differ only by the rounding of
+the banner numbers to four digits.  Each sample's own sum(w_"0") is
+sigma times the two leptonic branching fractions and not the inclusive
+sigma; the factor is the same on both sides and cancels in K.
+
+--- do the polarisations have DIFFERENT K-factors? ---
+two statements of the same question, with two error treatments.
+
+(a) K_component - K_unpolarised, plain quadrature bars.  CONSERVATIVE:
+    a component and its own sample's total share most of their MC
+    fluctuation, so this bar keeps a cancellation it should have used.
+component               K - K_unpol      sigma
+Z0 Z0             -0.0044 +- 0.0080        0.5
+Z0 ZT              0.0717 +- 0.0074        9.7
+ZT Z0              0.0709 +- 0.0074        9.6
+ZT ZT             -0.0239 +- 0.0057        4.2
+
+(b) the double ratio f_NLO/f_LO, f = sigma_component/sigma_full.  This
+    is algebraically K_component/K_unpolarised, and THIS is where the
+    delta-method bar belongs: each f is a ratio of two sums over the
+    SAME events of ONE sample, so its error is the correlated one; the
+    two f then come from the two independent samples and combine in
+    quadrature.  Sharper than (a) by a factor of a few, as it should be.
+component                         f_NLO                       f_LO     f_NLO/f_LO    sigma
+Z0 Z0              0.058308 +- 0.000200       0.058508 +- 0.000180  0.9966+-0.0046      0.7
+Z0 ZT              0.122333 +- 0.000327       0.115889 +- 0.000271  1.0556+-0.0037     14.8
+ZT Z0              0.122441 +- 0.000327       0.116054 +- 0.000271  1.0550+-0.0037     14.7
+ZT ZT              0.697084 +- 0.000616       0.710255 +- 0.000532  0.9815+-0.0011     16.3
+
+THE ANSWER IS YES.  The two MIXED components, Z_0Z_T and Z_T Z_0, have
+a K-factor near 1.36 against 1.289 for the unpolarised total, while
+Z_T Z_T sits low at 1.265 and Z_0 Z_0 is compatible with the
+unpolarised one.  On the double ratio that is ~15 sigma for the two
+mixed components and ~16 sigma for Z_T Z_T; MC statistics only, no
+scale or PDF uncertainty is in any of these bars and the scale envelope
+on each sample alone is +4.1 % -5.2 %, which is far larger than the
+K-factor differences and does NOT cancel in the ratio in any
+controlled way.  The significances above are therefore statements about
+these two samples, not a theory uncertainty on K.
+
+--- WHICH z IS THE FIRST INDEX, and why Z_0Z_T and Z_TZ_0 are not the
+--- same curve on Delta phi(e+e-) ---
+The two mixed components are NOT interchangeable here, and the figure
+shows it.  z1_ch is 11 and z2_ch is 13 on ALL 250 000 events of BOTH
+samples -- the extractor reads each z's channel off the event record --
+so the FIRST z is always the one that went to e+e-.  ms_pol_23.0_23.T
+is therefore (electron-z longitudinal, muon-z transverse) and
+ms_pol_23.T_23.0 the other way round.  Delta phi(e+e-) is built from
+the electron z alone, so it is directly sensitive to which of the two
+the first index names, and the two components have genuinely different
+shapes in it within ONE sample: the last-bin/first-bin ratio of the
+normalised Delta phi spectrum is 15.7 for Z_0Z_T against 49.1 for
+Z_TZ_0 at LO, and 14.0 against 20.6 at NLO.  M(e+ mu+) uses one lepton
+from each z and is nearly symmetric between them, which is why their
+K-factors agree there (1.360 / 1.348) and not here (1.378 / 1.354).
+
+That asymmetry is the whole of the largest excursion on either panel 6:
+K(Z_TZ_0) = 2.94 +- 0.18 in the lowest Delta phi bin against ~1.3 for
+everything else.  It is not a statistical accident -- 3547 NLO and 3308
+LO selected events in that bin -- and the mechanism is plain in the
+numbers above: with the electron z TRANSVERSE the LO spectrum is very
+nearly empty at small Delta phi (it needs a boosted z, which LO 2 -> 2
+kinematics supplies only in the tail), and real radiation at NLO fills
+a region that started almost empty.  A large K on a small denominator
+is what a fixed-order ratio does at the edge of LO phase space; it says
+the LO prediction is unreliable there, not that the NLO one is large.
+
+--- m_epmup: K-factor bin by bin (panel 6) ---
+in-selection K: unpolarised = 1.2896+-0.0056  Z0 Z0 = 1.2864+-0.0098  Z0 ZT = 1.3599+-0.0087  ZT Z0 = 1.3483+-0.0086  ZT ZT = 1.2645+-0.0059
+         bin     N_NLO      N_LO        unpolarised             Z0 Z0             Z0 ZT             ZT Z0             ZT ZT
+ 0.00-45.00     19789     20643     1.2588+-0.0132    1.2636+-0.0254    1.2865+-0.0202    1.2824+-0.0199    1.2447+-0.0140
+45.00-70.00     23238     24019     1.2720+-0.0124    1.2285+-0.0207    1.3202+-0.0183    1.2991+-0.0180    1.2586+-0.0132
+70.00-95.00     21986     22910     1.2579+-0.0126    1.2690+-0.0193    1.2943+-0.0176    1.2866+-0.0174    1.2285+-0.0134
+95.00-125.00     19652     19588     1.3174+-0.0140    1.3327+-0.0218    1.3833+-0.0205    1.3816+-0.0204    1.2881+-0.0148
+125.00-175.00     17507     17518     1.2907+-0.0147    1.3595+-0.0250    1.4170+-0.0242    1.3989+-0.0237    1.2549+-0.0150
+175.00-260.00     10699      9956     1.3730+-0.0204    1.4651+-0.0365    1.7204+-0.0434    1.7142+-0.0441    1.3198+-0.0202
+260.00-450.00      4770      4309     1.3806+-0.0314    1.7511+-0.0763    2.3328+-0.1185    2.2038+-0.1045    1.3252+-0.0306
+
+--- dphi_ee: K-factor bin by bin (panel 6) ---
+in-selection K: unpolarised = 1.2890+-0.0048  Z0 Z0 = 1.2950+-0.0085  Z0 ZT = 1.3777+-0.0078  ZT Z0 = 1.3535+-0.0076  ZT ZT = 1.2616+-0.0050
+         bin     N_NLO      N_LO        unpolarised             Z0 Z0             Z0 ZT             ZT Z0             ZT ZT
+ 0.00- 0.26      3547      3308     1.3457+-0.0351    1.6329+-0.1114    1.4716+-0.0616    2.9446+-0.1841    1.2862+-0.0347
+ 0.26- 0.52      4186      3824     1.3868+-0.0333    1.4835+-0.0969    1.5170+-0.0603    2.6218+-0.1414    1.3373+-0.0331
+ 0.52- 0.79      5107      4814     1.3274+-0.0289    1.2989+-0.0765    1.4425+-0.0500    2.0980+-0.0908    1.2798+-0.0287
+ 0.79- 1.05      6401      6156     1.3009+-0.0252    1.3714+-0.0667    1.4601+-0.0437    1.8103+-0.0589    1.2552+-0.0251
+ 1.05- 1.31      8255      7993     1.3074+-0.0221    1.3659+-0.0527    1.4381+-0.0369    1.5401+-0.0419    1.2785+-0.0224
+ 1.31- 1.57     10423     10216     1.3093+-0.0195    1.3772+-0.0426    1.3711+-0.0304    1.4994+-0.0344    1.2828+-0.0199
+ 1.57- 1.83     13238     13076     1.2930+-0.0171    1.3034+-0.0319    1.3863+-0.0270    1.3746+-0.0274    1.2701+-0.0175
+ 1.83- 2.09     16174     16535     1.2688+-0.0149    1.3094+-0.0265    1.3425+-0.0235    1.3355+-0.0237    1.2433+-0.0153
+ 2.09- 2.36     19743     20132     1.2798+-0.0136    1.2946+-0.0225    1.3861+-0.0217    1.3219+-0.0212    1.2490+-0.0140
+ 2.36- 2.62     23414     24104     1.2769+-0.0124    1.2845+-0.0199    1.3904+-0.0196    1.3238+-0.0189    1.2459+-0.0128
+ 2.62- 2.88     26413     26765     1.3003+-0.0119    1.3059+-0.0192    1.4069+-0.0190    1.2939+-0.0165    1.2718+-0.0127
+ 2.88- 3.14     27210     28283     1.2635+-0.0113    1.2439+-0.0188    1.3142+-0.0180    1.2392+-0.0151    1.2470+-0.0128
 

@@ -132,6 +132,23 @@ SAMPLE_REGISTRY = [
      'run': 'run_10_decayed_1', 'npz': 'weights_madspin_v1.npz',
      'meta': 'meta_madspin_v1.json', 'compressed': True,
      'decay_card': 'decay z > e+ e- / decay z > mu+ mu-'},
+    # A FIFTH sample, added by a later pass, and the only one of the five that
+    # is not NLO: ``<run_settings> order = LO`` where every other run says
+    # ``order = NLO``.  Same process, same run card, same 250 000 events, same
+    # exclusive decay card, same Pythia8 shower, same ``spinmode madspin`` and
+    # the same ``keep_weight_for_polarization_vector [0, T]``, so it DOES carry
+    # the four ms_pol_* and its N line names 33 weights like the reference.
+    # It exists so a K-factor -- NLO/LO, per polarisation component -- can be
+    # formed against ``madspin`` (run_06).  One card line differs beyond the
+    # order and it is discussed in RESULTS.md: run_06 sets ``frame_id 24`` and
+    # this one leaves the default 6.  On a 2->2 LO event those two frames are
+    # the same frame (legs 1+2 == legs 3+4 by momentum conservation), which is
+    # checked in RESULTS.md against the LHE multiplicity, so the polarisation
+    # axis is the ZZ rest frame in both and the K-factor is well defined.
+    {'label': 'LO', 'spinmode': 'madspin (order = LO)',
+     'run': 'run_12_decayed_1', 'npz': 'weights_LO.npz',
+     'meta': 'meta_LO.json', 'compressed': True,
+     'decay_card': 'decay z > e+ e- / decay z > mu+ mu-'},
 ]
 
 # Final-state PDG ids worth stopping on.  Photons are in because the dressed

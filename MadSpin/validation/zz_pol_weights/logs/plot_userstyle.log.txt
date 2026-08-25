@@ -1,2 +1,8 @@
-m_epmup    N=118521  purity=1.000  eff=0.474  sum/full = 0.9873 +- 0.0006
-dphi_ee    N=164111  purity=1.000  eff=0.656  sum/full = 0.9918 +- 0.0005
+m_epmup    full       N=118521  purity=1.000  eff=0.474  sum/full = 0.9873 +- 0.0006
+m_epmup    variant A  N=118521  purity=1.000  eff=0.474  sum/full = 0.9873 +- 0.0006
+m_epmup    variant B  N=118521  norm=inrange
+dphi_ee    full       N=164111  purity=1.000  eff=0.656  sum/full = 0.9918 +- 0.0005
+dphi_ee    variant A  N=164111  purity=1.000  eff=0.656  sum/full = 0.9918 +- 0.0005
+dphi_ee    variant B  N=164111  norm=inrange
+m_epmup    K-factor  unpolarised=1.290  Z0Z0=1.286  Z0ZT=1.360  ZTZ0=1.348  ZTZT=1.265
+dphi_ee    K-factor  unpolarised=1.289  Z0Z0=1.295  Z0ZT=1.378  ZTZ0=1.353  ZTZT=1.262

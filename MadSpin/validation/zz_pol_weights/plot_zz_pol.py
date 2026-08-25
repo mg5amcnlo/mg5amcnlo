@@ -119,11 +119,24 @@ COLOR = {'full': 'black', 'LL': 'blue', 'TT': 'red',
          'onshell': 'darkorange', 'PA': allcolors[9],
          # madspin_v1 is on variant B only.  allcolors[6] is the first hue
          # neither a component nor another spinmode has taken.
-         'madspin_v1': allcolors[6]}
+         'madspin_v1': allcolors[6],
+         # LO, on variant B and on the K-factor figure.  allcolors[8] is the
+         # next hue free of a component and of another sample; grey
+         # (allcolors[7]) is deliberately left alone, because on the six-decade
+         # log pane it is the one colour that reads as "de-emphasised" and this
+         # curve is not.
+         'LO': allcolors[8]}
 LS = {'full': 'solid', 'LL': 'dashed', 'TT': 'dashdot',
       'TL': (0, (1, 1.4)), 'LT': (0, (5, 1.5, 1, 1.5)), 'SUM': 'solid',
       'onshell': (0, (6, 2)), 'PA': (0, (3, 1, 1, 1, 1, 1)),
-      'madspin_v1': (0, (2, 1.5))}
+      'madspin_v1': (0, (2, 1.5)), 'LO': (0, (7, 1.5, 1.5, 1.5))}
+
+# The K-factor figure's two curves per panel are the SAME component at two
+# ORDERS, so they share the component's colour and are told apart by the line:
+# NLO is the solid one the rest of the study already draws that component with,
+# LO the dashed one.  With two curves to a panel that is unambiguous, and it
+# keeps Z_0Z_0 blue on this figure exactly as it is blue on every other.
+LS_ORDER = {'NLO': 'solid', 'LO': (0, (5, 2))}
 
 # The caption these figures used to carry as a plot title lives in
 # ``pol_analysis.CAPTION``, next to everything else both plotting scripts
@@ -195,10 +208,12 @@ def _shape_ylim(series, frac=0.12, head=0.30, noisy=3.0):
 # The multiplier on the distribution pane's autoscale top, per figure variant
 # and per y scale.  What sets it is the number of rows in the legend, which is
 # drawn inside the pane at the upper left: seven curves on the full figure,
-# EIGHT on variant B now that madspin_v1 is a fourth total there, and five on
-# variant A because the extra spinmodes are not there.  All of these were
-# checked on the rendered PNG and not on the axis limits.
-HEADROOM = {None: (250.0, 1.62), 'A': (60.0, 1.45), 'B': (2500.0, 1.78)}
+# NINE on variant B now that madspin_v1 and LO are a fourth and fifth total
+# there, and five on variant A because the extra spinmodes are not there.  All
+# of these were checked on the rendered PNG and not on the axis limits.  The
+# jump from 2500x to 12000x is the ninth legend row: at 2500x the Z_T Z_T
+# entry sat on the black total around M = 100 GeV.
+HEADROOM = {None: (250.0, 1.62), 'A': (60.0, 1.45), 'B': (12000.0, 2.00)}
 
 
 def _distribution(ax, c, obs, extras, variant=None):
@@ -609,7 +624,7 @@ def _shape_numbers(d, A, extras):
     A('')
 
 
-def write_numbers(d, path, extras=()):
+def write_numbers(d, path, extras=(), lo=None):
     out = []
     A = out.append
     m = d.meta
@@ -1134,8 +1149,307 @@ def write_numbers(d, path, extras=()):
               % (c.edges[b], c.edges[b + 1], n[b], r[b], e[b],
                  abs(r[b] - 1) / e[b] if e[b] else float('nan'), row))
         A('')
+    if lo is not None:
+        _kfactor_numbers(A, d, lo)
     open(path, 'w').write('\n'.join(out) + '\n')
     print('wrote %s' % path)
+
+
+def _kfactor_numbers(A, d, lo):
+    """The K-factor figure's numbers, and the argument for its error bars."""
+    A('=' * 74)
+    A('THE K-FACTOR FIGURE: NLO/LO, PER POLARISATION COMPONENT')
+    A('=' * 74)
+    A('A FIFTH sample: run_12_decayed_1, the same p p > z z [QCD] process, the')
+    A('same run card, the same 250 000 events, the same exclusive decay card,')
+    A('the same spinmode madspin and the same Pythia8 shower as the reference')
+    A('-- and <run_settings> order = LO where every other run in this study')
+    A('says order = NLO.  It carries the four ms_pol_* weights (33 names on')
+    A('its N line, the reference\'s list exactly), which is what makes a')
+    A('per-polarisation K-factor possible at all.')
+    A('')
+    A('ONE MADSPIN CARD LINE DIFFERS BEYOND THE ORDER and it is a polarisation')
+    A('setting, so it is checked rather than waved through.  run_06 sets')
+    A('"set frame_id 24"; run_12 leaves it commented out and takes the default')
+    A('6.  frame_id is the bitmask sum(2**n for n in me_frame), so 24 = legs')
+    A('3+4 (the two z, i.e. the ZZ rest frame) and 6 = legs 1+2 (the initial')
+    A('partons).  Those are the same frame exactly when the event has no other')
+    A('final-state leg, and the LO sample\'s LHE is 2 -> 2 in every event')
+    A('(NUP = 4 throughout) while the NLO one carries a fifth leg in about a')
+    A('fifth of its events.  So both samples quantise the z polarisations')
+    A('along the ZZ-rest-frame axis and the components being divided are the')
+    A('same components.  Had the LO run been a real-emission sample this')
+    A('K-factor would have been ill defined.')
+    A('')
+    A('NORMALISATION.  THIS FIGURE IS ABSOLUTE AND VARIANT B IS NOT, and that')
+    A('is deliberate.  A K-factor is a ratio of RATES, so nothing may be')
+    A('divided out before it is taken: panels 1-5 are dsigma/dx in pb per unit')
+    A('of the observable and panel 6 is their ratio.  Variant B divides every')
+    A('curve by its own sigma because it asks about SHAPE; at these cuts the')
+    A('rate moves 29 % and the shape a few percent, so an unnormalised')
+    A('variant-B pane would be four curves sitting near 0.78 and nothing else')
+    A('would be readable.  The two figures answer two different questions.')
+    A('')
+    A('ERRORS, PER CURVE.')
+    A('  panels 1-5, both curves: plain MC, sqrt(sum w^2) per bin.  Each is a')
+    A('    single weighted sum and not a ratio, so there is no covariance for')
+    A('    a delta-method bar to keep.')
+    A('  panel 6, all five curves: the two relative errors in quadrature.')
+    A('    Numerator and denominator are sums over two INDEPENDENT samples')
+    A('    (run_06 against run_12, different order), so there is no covariance')
+    A('    to subtract either.  The independence needs no argument beyond the')
+    A('    orders being different, and the n(w<0) test of "ARE THE SAMPLES')
+    A('    PAIRED" agrees at once: 14 273 for the reference against 0 for LO,')
+    A('    the LO matrix element being positive definite.')
+    A('  So the delta-method bar used by the sum pane and the 2x2 is on')
+    A('    NOTHING drawn on this figure.  That is not an oversight: it belongs')
+    A('    to a ratio whose two sums run over ONE set of events, and no')
+    A('    quantity on this canvas is one.  Where it does apply to this')
+    A('    comparison is the component-FRACTION double ratio at the foot of')
+    A('    this section, which is printed precisely so that the two error')
+    A('    treatments of the same statement can be read against each other.')
+    A('')
+    A('--- inclusive K-factors (all 250k events of each sample, no selection) ---')
+    A('%-12s %16s %16s %18s' % ('component', 'sigma_NLO [pb]', 'sigma_LO [pb]',
+                                'K = NLO/LO'))
+    rows = PA.integrated_kfactors(d, lo)
+    for r in rows:
+        A('%-12s %10.7f+-%.7f %10.7f+-%.7f %9.4f +- %.4f'
+          % (PA.KF_CURVE_TXT[r['key']], r['sigma_nlo_pb'], r['err_nlo_pb'],
+             r['sigma_lo_pb'], r['err_lo_pb'], r['K'], r['K_err']))
+    A('')
+    A('the banner cross sections these reproduce: 1.366e+01 pb (run_06, NLO)')
+    A('and 1.059e+01 pb (run_12, LO), whose ratio is %.5f against the %.5f'
+      % (13.66 / 10.59, rows[0]['K']))
+    A('of the unpolarised row above.  The two differ only by the rounding of')
+    A('the banner numbers to four digits.  Each sample\'s own sum(w_"0") is')
+    A('sigma times the two leptonic branching fractions and not the inclusive')
+    A('sigma; the factor is the same on both sides and cancels in K.')
+    A('')
+    A('--- do the polarisations have DIFFERENT K-factors? ---')
+    A('two statements of the same question, with two error treatments.')
+    A('')
+    A('(a) K_component - K_unpolarised, plain quadrature bars.  CONSERVATIVE:')
+    A('    a component and its own sample\'s total share most of their MC')
+    A('    fluctuation, so this bar keeps a cancellation it should have used.')
+    A('%-12s %22s %10s' % ('component', 'K - K_unpol', 'sigma'))
+    for r in rows[1:]:
+        A('%-12s %12.4f +- %.4f %10.1f'
+          % (PA.KF_CURVE_TXT[r['key']], r['K_minus_K_full'],
+             r['K_minus_K_full_err'], r['K_minus_K_full_sigma']))
+    A('')
+    A('(b) the double ratio f_NLO/f_LO, f = sigma_component/sigma_full.  This')
+    A('    is algebraically K_component/K_unpolarised, and THIS is where the')
+    A('    delta-method bar belongs: each f is a ratio of two sums over the')
+    A('    SAME events of ONE sample, so its error is the correlated one; the')
+    A('    two f then come from the two independent samples and combine in')
+    A('    quadrature.  Sharper than (a) by a factor of a few, as it should be.')
+    A('%-12s %26s %26s %14s %8s'
+      % ('component', 'f_NLO', 'f_LO', 'f_NLO/f_LO', 'sigma'))
+    for r in PA.component_fraction_double_ratio(d, lo):
+        A('%-12s %14.6f +- %.6f %14.6f +- %.6f %7.4f+-%.4f %8.1f'
+          % (PA.KF_CURVE_TXT[r['key']], r['f_nlo'], r['f_nlo_err'],
+             r['f_lo'], r['f_lo_err'], r['double_ratio'],
+             r['double_ratio_err'], r['sigma_from_1']))
+    A('')
+    A('THE ANSWER IS YES.  The two MIXED components, Z_0Z_T and Z_T Z_0, have')
+    A('a K-factor near 1.36 against 1.289 for the unpolarised total, while')
+    A('Z_T Z_T sits low at 1.265 and Z_0 Z_0 is compatible with the')
+    A('unpolarised one.  On the double ratio that is ~15 sigma for the two')
+    A('mixed components and ~16 sigma for Z_T Z_T; MC statistics only, no')
+    A('scale or PDF uncertainty is in any of these bars and the scale envelope')
+    A('on each sample alone is +4.1 % -5.2 %, which is far larger than the')
+    A('K-factor differences and does NOT cancel in the ratio in any')
+    A('controlled way.  The significances above are therefore statements about')
+    A('these two samples, not a theory uncertainty on K.')
+    A('')
+    A('--- WHICH z IS THE FIRST INDEX, and why Z_0Z_T and Z_TZ_0 are not the')
+    A('--- same curve on Delta phi(e+e-) ---')
+    A('The two mixed components are NOT interchangeable here, and the figure')
+    A('shows it.  z1_ch is 11 and z2_ch is 13 on ALL 250 000 events of BOTH')
+    A('samples -- the extractor reads each z\'s channel off the event record --')
+    A('so the FIRST z is always the one that went to e+e-.  ms_pol_23.0_23.T')
+    A('is therefore (electron-z longitudinal, muon-z transverse) and')
+    A('ms_pol_23.T_23.0 the other way round.  Delta phi(e+e-) is built from')
+    A('the electron z alone, so it is directly sensitive to which of the two')
+    A('the first index names, and the two components have genuinely different')
+    A('shapes in it within ONE sample: the last-bin/first-bin ratio of the')
+    A('normalised Delta phi spectrum is 15.7 for Z_0Z_T against 49.1 for')
+    A('Z_TZ_0 at LO, and 14.0 against 20.6 at NLO.  M(e+ mu+) uses one lepton')
+    A('from each z and is nearly symmetric between them, which is why their')
+    A('K-factors agree there (1.360 / 1.348) and not here (1.378 / 1.354).')
+    A('')
+    A('That asymmetry is the whole of the largest excursion on either panel 6:')
+    A('K(Z_TZ_0) = 2.94 +- 0.18 in the lowest Delta phi bin against ~1.3 for')
+    A('everything else.  It is not a statistical accident -- 3547 NLO and 3308')
+    A('LO selected events in that bin -- and the mechanism is plain in the')
+    A('numbers above: with the electron z TRANSVERSE the LO spectrum is very')
+    A('nearly empty at small Delta phi (it needs a boosted z, which LO 2 -> 2')
+    A('kinematics supplies only in the tail), and real radiation at NLO fills')
+    A('a region that started almost empty.  A large K on a small denominator')
+    A('is what a fixed-order ratio does at the edge of LO phase space; it says')
+    A('the LO prediction is unreliable there, not that the NLO one is large.')
+    A('')
+    for obs in PA.OBS:
+        A('--- %s: K-factor bin by bin (panel 6) ---' % PA.SHORT[obs])
+        ki = PA.integrated_kfactors(d, lo, obs)
+        A('in-selection K: '
+          + '  '.join('%s = %.4f+-%.4f'
+                      % (PA.KF_CURVE_TXT[r['key']], r['K'], r['K_err'])
+                      for r in ki))
+        ks = {k: PA.kfactor(d, lo, obs, k) for k in PA.KF_PANE_ORDER}
+        A('%12s %9s %9s   %s'
+          % ('bin', 'N_NLO', 'N_LO',
+             '  '.join('%16s' % PA.KF_CURVE_TXT[k] for k in PA.KF_PANE_ORDER)))
+        edges = PA.BINS[obs]
+        nn, _ = np.histogram(np.asarray(d.z[obs], float)[d.sel[obs]],
+                             bins=edges)
+        nl, _ = np.histogram(np.asarray(lo.z[obs], float)[lo.sel[obs]],
+                             bins=edges)
+        for b in range(len(edges) - 1):
+            A('%5.2f-%5.2f %9d %9d   %s'
+              % (edges[b], edges[b + 1], nn[b], nl[b],
+                 '  '.join('%8.4f+-%.4f' % (ks[k]['k'][b], ks[k]['err'][b])
+                           for k in PA.KF_PANE_ORDER)))
+        A('')
+
+
+# The multiplier on each K-factor panel's autoscale top, per y scale.  These
+# panels need far less than the distribution panes of the other figures do,
+# because each carries a TWO-row legend against those panes' seven to eleven:
+# 10x on a log panel and 1.3x on a linear one clears it.  Panel 6's legend is
+# five entries in three columns, so two rows, and 1.32 of the drawn span
+# clears that.  Checked on the rendered PNGs, not on the axis limits.
+KF_HEADROOM = {True: 10.0, False: 1.30}
+KF_HEADROOM_K = 1.32
+
+
+def draw_kfactor(nlo, lo, obs, outdir):
+    """The six-panel K-factor figure: NLO against LO, per polarisation.
+
+    Three rows of two.  Panels 1-5 are one component each -- unpolarised,
+    Z_0Z_0, Z_0Z_T, Z_TZ_0, Z_TZ_T, in that order -- carrying that component's
+    LO and NLO ``dsigma/dx``.  Panel 6 is ``K = NLO/LO`` with all five curves
+    on one pane, which is the comparison the whole figure exists to make.
+
+    THIS FIGURE IS NOT NORMALISED AND VARIANT B IS.  A K-factor is a ratio of
+    rates, so nothing is divided out here: the panels are absolute pb per unit
+    of the observable and panel 6 is their ratio.  Variant B divides every
+    curve by its own sigma because it is asking about SHAPE, and at these cuts
+    the rate moves 29 % against a few percent of shape, so it would otherwise
+    show nothing else.  The two figures answer two different questions and
+    ``pol_analysis.KF_PANE_ORDER``'s comment and RESULTS.md both say so.
+
+    ERRORS, per curve:
+
+    - panels 1-5, both curves: the plain MC error ``sqrt(sum w^2)`` of
+      ``PA.component_histogram``.  Each is a single weighted sum and not a
+      ratio, so there is no covariance for a delta-method bar to keep.
+    - panel 6, all five curves: the two relative errors in quadrature
+      (``PA.kfactor``).  Numerator and denominator are sums over two
+      INDEPENDENT samples -- different order, ``run_06`` against ``run_12``,
+      and ``n(w<0)`` = 14 273 against 0 -- so there is no covariance to
+      subtract either.
+
+    The delta-method bar the ratio panes of the other figures use is therefore
+    on NOTHING drawn here, and that is not an oversight: it belongs to a ratio
+    whose two sums run over one set of events, and no quantity on this canvas
+    is one.  Where it does apply to this comparison is the component-FRACTION
+    double ratio ``f_NLO/f_LO``, which is algebraically ``K_comp/K_full`` with
+    the within-sample correlation kept; ``numbers.txt`` prints it beside the
+    quadrature version so the two treatments can be read against each other.
+    """
+    edges = PA.BINS[obs]
+    x = 0.5 * (edges[:-1] + edges[1:])
+    xlab, ylab = (PA.LABELS_TEX if USETEX else PA.LABELS_TXT)[obs]
+    name = PA.KF_CURVE_TEX if USETEX else PA.KF_CURVE_TXT
+    logy = obs in PA.LOGY
+
+    fig = plt.figure(figsize=(9.0, 10.2))
+    # wspace is wide for a 3x2: the right column's y tick labels run to five
+    # significant figures on a linear pane (0.00125) and at the default gap
+    # its axis label lands on the left column's frame.  Checked on the PNG.
+    gs = fig.add_gridspec(3, 2, hspace=0.07, wspace=0.30)
+    # Column-wise sharex: only the bottom row carries tick labels and the axis
+    # name, exactly as the stacked panes of the other figures do.
+    axes = []
+    for r in range(3):
+        for cc in range(2):
+            share = axes[cc] if r else None
+            axes.append(fig.add_subplot(gs[r, cc], sharex=share))
+
+    ks = {}
+    for i, key in enumerate(PA.KF_PANE_ORDER):
+        ax = axes[i]
+        kk = PA.kfactor(nlo, lo, obs, key)
+        ks[key] = kk
+        for tag, h in (('NLO', kk['nlo']), ('LO', kk['lo'])):
+            y, e = np.asarray(h['y'], float), np.asarray(h['err'], float)
+            shown = np.where(y > 0, y, np.nan) if logy else y
+            ax.stairs(shown, edges, color=COLOR[key], ls=LS_ORDER[tag],
+                      lw=LW + (0.5 if tag == 'NLO' else 0.0),
+                      baseline=None, zorder=5 if tag == 'NLO' else 4,
+                      label='%s, %s' % (name[key], tag))
+            ax.errorbar(x, shown, yerr=np.where(np.isfinite(shown), e, np.nan),
+                        fmt='none', ecolor=COLOR[key], elinewidth=0.8,
+                        alpha=0.9 if tag == 'NLO' else 0.6,
+                        zorder=5 if tag == 'NLO' else 4)
+        if logy:
+            ax.set_yscale('log')
+        ax.set_ylabel(ylab, fontsize=9)
+        lo_y, hi_y = ax.get_ylim()
+        ax.set_ylim(lo_y, hi_y * KF_HEADROOM[logy])
+        ax.legend(frameon=False, fontsize=8.0, loc='upper left')
+        ax.xaxis.set_minor_locator(AutoMinorLocator())
+        ax.tick_params(labelsize=9)
+        if not logy:
+            ax.yaxis.set_minor_locator(AutoMinorLocator())
+            # Four ticks, not the default six: on a linear pane the labels are
+            # five significant figures wide and six of them crowd the column.
+            ax.yaxis.set_major_locator(MaxNLocator(5))
+
+    # Panel 6: the five K-factors together.
+    axk = axes[5]
+    for key in PA.KF_PANE_ORDER:
+        kk = ks[key]
+        k, e = np.asarray(kk['k'], float), np.asarray(kk['err'], float)
+        axk.stairs(k, edges, color=COLOR[key], ls=LS[key],
+                   lw=LW + (0.5 if key == 'full' else 0.0), baseline=None,
+                   zorder=6 if key == 'full' else 4, label=name[key])
+        axk.errorbar(x, k, yerr=e, fmt='o', ms=3.0, color=COLOR[key],
+                     elinewidth=0.9, zorder=6 if key == 'full' else 5)
+    axk.set_ylabel(PA.KFACTOR_TEX if USETEX else PA.KFACTOR_TXT, fontsize=10)
+    lo_y, hi_y = axk.get_ylim()
+    axk.set_ylim(lo_y, lo_y + (hi_y - lo_y) * KF_HEADROOM_K)
+    axk.legend(frameon=False, fontsize=8.0, loc='upper left', ncol=3)
+    axk.xaxis.set_minor_locator(AutoMinorLocator())
+    axk.yaxis.set_major_locator(MaxNLocator(6))
+    axk.yaxis.set_minor_locator(AutoMinorLocator())
+    axk.tick_params(labelsize=9)
+    for sp in axk.spines.values():
+        sp.set_linewidth(1.5)
+
+    for i, ax in enumerate(axes):
+        if i < 4:
+            plt.setp(ax.get_xticklabels(), visible=False)
+        else:
+            ax.set_xlabel(xlab, fontsize=11)
+    # One xlim per COLUMN: the sharex above is column-wise, so setting it on
+    # the two top panels reaches all six.
+    axes[0].set_xlim(edges[0], edges[-1])
+    axes[1].set_xlim(edges[0], edges[-1])
+
+    os.makedirs(outdir, exist_ok=True)
+    base = os.path.join(outdir, PA.SHORT[obs])
+    want = wants_minus(fig)
+    fig.savefig(base + '.pdf', bbox_inches='tight')
+    fig.savefig(base + '.png', dpi=200, bbox_inches='tight')
+    plt.close(fig)
+    ki = PA.integrated_kfactors(nlo, lo, obs)
+    print('%-12s K-factor  ' % PA.SHORT[obs]
+          + '  '.join('%s=%.3f' % ((PA.KF_CURVE_TXT[r['key']]).replace(' ', ''),
+                                   r['K']) for r in ki))
+    return base, want
 
 
 def draw_variants(d, extras, outdir, b_extras=None):
@@ -1182,7 +1496,16 @@ def main():
     bases = [draw(d, obs, a.out, extras) for obs in PA.OBS]
     if not a.no_variants:
         bases += draw_variants(d, extras, a.out, b_extras=b_extras)
-    write_numbers(d, a.numbers, b_extras)
+    # The K-factor figure needs the LO sample and is skipped, loudly, without
+    # it -- the rest of the study must stay re-makeable from the reference
+    # .npz alone.
+    lo = PA.load_kfactor_partner(a.data)
+    if lo is None:
+        print('LO sample not in %s: K-factor figure not drawn' % a.data)
+    else:
+        kdir = os.path.join(a.out, PA.KFACTOR_DIR)
+        bases += [draw_kfactor(d, lo, obs, kdir) for obs in PA.OBS]
+    write_numbers(d, a.numbers, b_extras, lo=lo)
     if a.check_minus:
         print('usetex = %s   minus workaround active = %s' % (USETEX, MINUS_FIX))
         bad = n = 0
