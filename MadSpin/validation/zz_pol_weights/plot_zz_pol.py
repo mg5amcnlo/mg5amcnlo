@@ -2104,6 +2104,55 @@ def _ratio6_top(ax, nlo, lo, obs, with_band=False):
         sp.set_linewidth(1.5)
 
 
+# -- the fixed canvas the two ratio6 observables share ------------------------
+# THE TWO OBSERVABLES ARE PLACED SIDE BY SIDE, M(e+ mu+) as sub-figure (a) and
+# Delta phi(e+ e-) as (b), and with ``bbox_inches='tight'`` they cannot be.
+# Tight crops each figure to its OWN ink and the two do not carry the same ink:
+# the wide pane's decade ticks are 10^-8 against 10^-4 and its axis name is
+# dsigma/dM [pb/GeV] against dsigma/dDeltaphi [pb/rad].  So M came out 1570 px
+# wide and Delta phi 1544 px, the axes landed at different fractions of their
+# own canvas, and scaled to a common width in a subfigure nothing lined up --
+# 26 px of it, which is a visible step between two panels meant to share a
+# baseline and an x axis position.
+#
+# WHY A DECLARED CANVAS AND NOT A FIXED ``bbox_inches`` RECTANGLE.  Both would
+# equalise the saved size.  A rectangle would do it by measuring the two
+# figures, taking the union and hard-coding the result -- a number that lives
+# outside the layout it describes, that has to be re-measured whenever a label
+# changes, and that CROPS SILENTLY when it stops being big enough.  Declaring
+# the margins instead keeps the geometry in one place: the axes block is placed
+# at a stated offset inside a stated canvas, so the saved size and every axes
+# position are fixed BY CONSTRUCTION and are the same for the two observables
+# whatever their labels do.  An overrun then shows as ink running off a canvas
+# whose size is written here, which is a failure one can see on the figure.
+#
+# THE AXES BLOCK IS NOT CHANGED BY ANY OF THIS.  6.975 x 9.702 in is exactly
+# what the old figsize (9.0 x 12.6) and matplotlib's default subplot margins
+# were already giving it, so every pane keeps the height in inches it was given
+# last round.  height_ratios, hspace and wspace are untouched and, spanning the
+# same block, still mean the same absolute gaps.  Only the white around the
+# block is now declared instead of cropped.
+#
+# THE MARGINS are the worst case over BOTH observables and BOTH variants,
+# measured as label extent against axes extent on the rendered figure: left
+# 0.583 in, right 0.096, bottom 0.423, top 0.000.  The left one is the tightest,
+# and MEASURED rather than assumed: it is NOT the wide pane, whose 10^-8 ticks
+# and dsigma/dM reach 0.550 in, and not the sum pane's long rotated name either
+# at 0.569 -- it is Z_0Z_0/full on M(e+ mu+), whose 0.000 / 0.025 /
+# 0.050 ticks are the widest column of digits on the figure.  Each margin gets
+# ~0.12 in of white on top of that, which is about the pad
+# ``bbox_inches='tight'`` was adding anyway, so the figure keeps its framing.
+R6_AXES = (6.975, 9.702)              # the axes block, w x h in inches
+R6_MARGIN = (0.70, 0.21, 0.55, 0.11)  # left, right, bottom, top, in inches
+R6_FIG = (R6_AXES[0] + R6_MARGIN[0] + R6_MARGIN[1],
+          R6_AXES[1] + R6_MARGIN[2] + R6_MARGIN[3])
+# Where the block sits in the canvas, as the fractions a gridspec wants.
+R6_BOX = dict(left=R6_MARGIN[0] / R6_FIG[0],
+              right=1.0 - R6_MARGIN[1] / R6_FIG[0],
+              bottom=R6_MARGIN[2] / R6_FIG[1],
+              top=1.0 - R6_MARGIN[3] / R6_FIG[1])
+
+
 def draw_ratio6(nlo, lo, obs, outdir, with_band=False):
     """Variant A as a distribution pane over a 3 x 2 of ratios.
 
@@ -2155,7 +2204,7 @@ def draw_ratio6(nlo, lo, obs, outdir, with_band=False):
     oname = PA.RATIO6_ORDER_TEX if USETEX else PA.RATIO6_ORDER_TXT
     cur = PA.ratio6_curves(nlo, lo, obs, with_band=with_band)
 
-    fig = plt.figure(figsize=(9.0, 12.6))
+    fig = plt.figure(figsize=R6_FIG)
     # TWO vertical rhythms, so two gridspecs and not one, on exactly the
     # argument ``draw`` makes for its three: the wide pane on top is its own
     # block with its own x tick labels and its own axis name, and the 3 x 2
@@ -2175,6 +2224,12 @@ def draw_ratio6(nlo, lo, obs, outdir, with_band=False):
     # 13.4 in to 12.6 in, which is the point -- the pane grows out of the
     # fraction rows and not out of the page.
     #
+    # Those ratio units were picked to read as inches of the figsize they were
+    # set against, 4.3 + 8.3 = 12.6.  Since R6_AXES the canvas is declared
+    # separately and no longer carries that number, so the correspondence is
+    # gone; the RATIOS and the inch heights above are what survived, and both
+    # are unchanged -- the block they divide is still 9.702 in tall.
+    #
     # WHY THE GRID'S TOP ROW IS NOT CUT AS HARD.  Its left pane's axis name is
     # (Z_0Z_0+Z_TZ_T+Z_TZ_0+Z_0Z_T)/full, which is set ROTATED and is by some
     # way the longest string on the figure: at 3.1 it came within 0.14 in of
@@ -2188,7 +2243,8 @@ def draw_ratio6(nlo, lo, obs, outdir, with_band=False):
     # new 6.30 mean is the same ~0.46 in of gap that 0.09 of the old 6.55 mean
     # bought, and that is what clears the wide pane's tick labels and axis
     # name.  Checked on the rendered PNG, not arithmetically.
-    outer = fig.add_gridspec(2, 1, height_ratios=[4.3, 8.3], hspace=0.10)
+    outer = fig.add_gridspec(2, 1, height_ratios=[4.3, 8.3], hspace=0.10,
+                             **R6_BOX)
     # The 3 x 2 keeps the K-factor figure's wspace exactly: its right column
     # carries five-significant-figure tick labels, which at the default wspace
     # put the right axis name on the left column's frame.  hspace stays 0.07 --
@@ -2291,8 +2347,11 @@ def draw_ratio6(nlo, lo, obs, outdir, with_band=False):
     os.makedirs(outdir, exist_ok=True)
     base = os.path.join(outdir, PA.SHORT[obs])
     want = wants_minus(fig)
-    fig.savefig(base + '.pdf', bbox_inches='tight')
-    fig.savefig(base + '.png', dpi=200, bbox_inches='tight')
+    # NO ``bbox_inches='tight'`` here, and that is the point of R6_BOX: the
+    # canvas is already exactly the size it should be, the same size for both
+    # observables, and cropping it would put the two back out of step.
+    fig.savefig(base + '.pdf')
+    fig.savefig(base + '.png', dpi=200)
     plt.close(fig)
     print('%-12s 7-pane%-10s sum/full NLO %.4f  LO %.4f'
           % (PA.SHORT[obs], ' + band' if with_band else '',

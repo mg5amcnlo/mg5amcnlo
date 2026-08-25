@@ -499,6 +499,33 @@ def _ratio6_top(ax, nlo, lo, obs, with_band=False):
         sp.set_linewidth(1.6)
 
 
+# -- the fixed canvas the two ratio6 observables share ------------------------
+# The same problem the MG7 script's R6_AXES block sets out, and the same fix;
+# the argument for it is written there and is not repeated here.  Measured on
+# this style: M(e+ mu+) came out 2461 px wide and Delta phi(e+ e-) 2412, so the
+# two were 49 px apart -- worse than the MG7 pair's 26, because this style
+# writes its axis names as plain text and its tick labels larger.
+#
+# The axes block, 7.285 x 9.8945 in, is exactly what figsize (9.4, 12.85) and
+# matplotlib's default subplot margins already gave it, so nothing inside the
+# frame moves: height_ratios, hspace and wspace are untouched and span the same
+# block.  Margins are the worst case over both observables and both variants,
+# label extent against axes extent on the rendered figure -- left 0.653 in,
+# right 0.120, bottom 0.415, top 0.000 -- each with ~0.12 in of white on top,
+# which is about what the tight crop's pad was adding.  As on the MG7 figure
+# the left margin is set by Z0Z0 / full on M(e+ mu+) and its 0.000 / 0.025 /
+# 0.050 ticks, not by the wide pane (0.573 in) and not by the long rotated
+# sum name (0.630); measured, not assumed.
+R6_AXES = (7.285, 9.8945)             # the axes block, w x h in inches
+R6_MARGIN = (0.77, 0.24, 0.54, 0.11)  # left, right, bottom, top, in inches
+R6_FIG = (R6_AXES[0] + R6_MARGIN[0] + R6_MARGIN[1],
+          R6_AXES[1] + R6_MARGIN[2] + R6_MARGIN[3])
+R6_BOX = dict(left=R6_MARGIN[0] / R6_FIG[0],
+              right=1.0 - R6_MARGIN[1] / R6_FIG[0],
+              bottom=R6_MARGIN[2] / R6_FIG[1],
+              top=1.0 - R6_MARGIN[3] / R6_FIG[1])
+
+
 def draw_ratio6(nlo, lo, obs, outdir, with_band=False):
     """Variant A as a distribution pane over a 3 x 2 of ratios, user style."""
     edges = PA.BINS[obs]
@@ -508,7 +535,7 @@ def draw_ratio6(nlo, lo, obs, outdir, with_band=False):
     oname = PA.RATIO6_ORDER_TXT
     cur = PA.ratio6_curves(nlo, lo, obs, with_band=with_band)
 
-    fig = plt.figure(figsize=(9.4, 12.85))
+    fig = plt.figure(figsize=R6_FIG)
     # Two vertical rhythms, so two gridspecs: see plot_zz_pol.draw_ratio6.  The
     # wide pane on top carries its own x tick labels and its own axis name and
     # is set off from the 3 x 2 by the outer gap.
@@ -519,7 +546,11 @@ def draw_ratio6(nlo, lo, obs, outdir, with_band=False):
     # K-factor row, 2.5 for each of the two fraction rows, which are flat
     # enough to read at that height.  The figure shrinks, 13.6 in to 12.85 in.
     # Height in inches, pane then row 1 then rows 2-3: 2.19 -> 3.15,
-    # 2.50 -> 2.49, 2.50 -> 1.75.
+    # 2.50 -> 2.49, 2.50 -> 1.75.  Those ratio units were picked to read as
+    # inches of the figsize they were set against, 4.3 + 8.55 = 12.85; since
+    # R6_AXES the canvas is declared separately and no longer carries that
+    # number, so only the ratios and the inch heights survive, and both are
+    # unchanged -- the block they divide is still 9.8945 in tall.
     # The top row keeps MORE than its MG7 counterpart's 3.3 for one reason:
     # this style writes the sum-consistency axis name as plain text with
     # spaces, (Z0Z0 + ZTZT + ZTZ0 + Z0ZT) / full, which set rotated is longer
@@ -528,7 +559,8 @@ def draw_ratio6(nlo, lo, obs, outdir, with_band=False):
     # The outer hspace is a fraction of the MEAN row height, so it moves with
     # the ratios: 0.10 of the new mean buys back the gap 0.09 of the old one
     # gave, which is what keeps the pane's axis name off the grid.
-    outer = fig.add_gridspec(2, 1, height_ratios=[4.3, 8.55], hspace=0.10)
+    outer = fig.add_gridspec(2, 1, height_ratios=[4.3, 8.55], hspace=0.10,
+                             **R6_BOX)
     gs = outer[1].subgridspec(3, 2, height_ratios=[3.55, 2.5, 2.5],
                               hspace=0.07, wspace=0.30)
     axtop = fig.add_subplot(outer[0])
@@ -609,8 +641,10 @@ def draw_ratio6(nlo, lo, obs, outdir, with_band=False):
 
     os.makedirs(outdir, exist_ok=True)
     base = os.path.join(outdir, PA.SHORT[obs])
-    fig.savefig(base + '.pdf', bbox_inches='tight')
-    fig.savefig(base + '.png', dpi=DPI, bbox_inches='tight')
+    # NO tight crop: the canvas is already the right size, and the same size
+    # for both observables.  See R6_BOX.
+    fig.savefig(base + '.pdf')
+    fig.savefig(base + '.png', dpi=DPI)
     plt.close(fig)
     print('%-10s 7-pane%-10s sum/full NLO %.4f  LO %.4f'
           % (PA.SHORT[obs], ' + band' if with_band else '',
