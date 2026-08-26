@@ -153,14 +153,14 @@ REF = 'truth'
 MODES = ['madspin', 'PA', 'onshell', 'none']
 
 CURVES_TEX = {
-    'truth':   r'truth: $gg \to e^{+}e^{-}\mu^{+}\mu^{-}$ (off shell, loop induced)',
+    'truth':   r'$gg \to e^{+}e^{-}\mu^{+}\mu^{-}$ (off shell, loop induced)',
     'madspin': r'MadSpin, \texttt{spinmode = madspin}',
     'PA':      r'MadSpin, \texttt{spinmode = PA}',
     'onshell': r'MadSpin, \texttt{spinmode = onshell}',
     'none':    r'MadSpin, \texttt{spinmode = none}',
 }
 CURVES_PLAIN = {
-    'truth':   'truth: gg -> e+ e- mu+ mu- (off shell, loop induced)',
+    'truth':   'gg -> e+ e- mu+ mu- (off shell, loop induced)',
     'madspin': 'MadSpin, spinmode = madspin',
     'PA':      'MadSpin, spinmode = PA',
     'onshell': 'MadSpin, spinmode = onshell',
@@ -348,7 +348,7 @@ def draw(data, obs, outdir, modes=MODES):
     rx.set_ylim(*RATIO_CLIP)
     rx.set_xlim(edges[0], edges[-1])
     rx.set_xlabel(xlab)
-    rx.set_ylabel(r'mode / truth' if USETEX else 'mode / truth', fontsize=11)
+    rx.set_ylabel(r'ratio' if USETEX else 'ratio', fontsize=11)
     rx.xaxis.set_minor_locator(AutoMinorLocator())
     rx.yaxis.set_minor_locator(AutoMinorLocator())
 

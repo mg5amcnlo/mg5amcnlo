@@ -155,7 +155,7 @@ def draw(d, obs, outdir):
                 n_out += 1
 
     rx.set_xlabel(OBS.LABELS[obs][0])
-    rx.set_ylabel('mode / truth', fontsize=9)
+    rx.set_ylabel('ratio', fontsize=9)
     rx.text(0.99, 0.92, 'bands: $\\pm5\\%$, $\\pm10\\%$', transform=rx.transAxes,
             ha='right', va='top', fontsize=7, color='C0')
 
