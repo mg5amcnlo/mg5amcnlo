@@ -5,6 +5,77 @@ ANNOUNCEMENT:
    A new LTS (based on current 3.5.X) is starting now and will act as stable release for the coming years.
 
 3.7.2 (XX/XX/XX):
+    OM: keep_weight_for_polarization_vector now accepts 'A', the axial direction, and
+        with it MadSpin's 'consider_axial' and the polarisation weights can be used
+        together (the previous entry refused the pair). What an 'A' entry is: the
+        same masked density contraction as every other entry of that option, on the
+        row where both indices are the axial one, over the same nominal denominator.
+        It is a genuine extra <rwgt> weight with the ordinary normalisation, not a
+        differently normalised quantity: the propagator coefficient c_A =
+        (Q^2-M^2)/M^2 is already folded into the decay matrix before this code sees
+        it, c_A is real, and the numerator is therefore c_A^2 rho_prod(A,A)
+        rho_dec(A,A) -- non-negative for the same reason every other single-state
+        entry is.
+        What listing it does to the sum rule: repairs condition (a) of it. The
+        option's weights add up to the nominal exactly when the requested labels
+        PARTITION each slot's helicity basis (a) and the contraction has no
+        cross-block interference (b) -- two conditions it has always had.
+        'consider_axial' widens a massive vector's basis from {-1,0,+1} to
+        {-1,0,+1,A}, so [0,+,-] and [0,T] stop being partitions of it and [0,+,-,A]
+        and [0,T,A] become them. Naming 'A' therefore restores (a) to precisely what
+        it was rather than weakening it, and the physical entries themselves never
+        move: their numerators are the same masked contractions whether or not 'A' is
+        in the list. (Their VALUES do differ from a consider_axial-off run, because
+        the nominal denominator now carries the axial terms too -- that is
+        consider_axial's doing, and its point.)
+        Condition (b) is untouched by any of this and, on a real process, dominates.
+        Worth spelling out, because it bounds what 'A' can be read as: the axial
+        direction enters the convolution both on its own diagonal, as
+        c_A^2 rho_P(A,A) rho_D(A,A), and in the cross terms
+        2 Re sum_lambda c_A rho_P(lambda,A) rho_D(lambda,A). The first is O(c_A^2)
+        and is what w_A isolates; the second is O(c_A), belongs to no single-state
+        block, and is where most of what consider_axial changes actually lives. So
+        w_A is the axial member of the option's existing diagonal decomposition -- it
+        is NOT a measure of "how much consider_axial matters", any more than
+        w(+) + w(-) is a measure of the transverse part when the (-1,+1)
+        interference is large.
+        What a consumer must not do with it: read it as a cross-section. Every other
+        entry is also a cross-section fraction -- rerun the production with a {0}
+        brace and, in the narrow-width limit, you get that sub-sample. There is no
+        '{A}' sample: the axial direction is a piece of the propagator numerator, not
+        a state the resonance can be produced in, which is exactly why it is kept out
+        of every normalising trace. So sum_events w(0)/sigma is still a polarisation
+        fraction and sum_events w(A)/sigma is not a fraction of anything observable,
+        and summing the physical labels alone under consider_axial gives less than
+        the nominal by that share. All of this is written into the banner's
+        <weightgroup name='madspin_polarization'> block, as XML comments and in the
+        axial weight's own description, because the event file is where a consumer
+        meets these numbers. The axial column is spelled 'axial' and not '4' there,
+        since '4' would read as a helicity the resonance can carry.
+        Measured on "u d~ > w+ h", "decay w+ > ta+ vt", spinmode madspin,
+        consider_axial True, 200 events. With
+        keep_weight_for_polarization_vector = [0, +, -, A] the four weights summed
+        over the sample are 56.2906%, 25.2833%, 23.9154% and 0.00026% of the
+        nominal; with [0, +, -] on the same seed the first three come back
+        BIT-IDENTICAL on all 600 <wgt> entries and the sum is short by exactly the
+        axial column. (The sums are 105.489% and 105.490% of the nominal, not 100%:
+        that 5.5% is condition (b), the (-1,+1) interference of a 1 -> 2 decay, and
+        it is already there in the consider_axial-off run -- 105.493% -- so the
+        axial direction is not what breaks the sum here.) w_A >= 0 on every event,
+        median 8.3e-08 of the nominal and max 1.0e-04; binned in |c_A| it follows
+        c_A^2 over three decades (log-log slope 2.098 against the 2 the formula
+        predicts), which is the closure test on "no invented normalisation".
+        One refusal is added and one warning: 'A' with 'consider_axial' off is an
+        error rather than a silently dropped label (no basis has an axial direction,
+        so every slot would drop it and the run would quietly emit the three-state
+        weights), and a vector list that omits 'A' while consider_axial is on gets a
+        warning saying that it no longer partitions the basis. 'A' is dropped
+        per-slot, the way '0' is
+        dropped on a fermion, wherever the basis genuinely has no axial direction (a
+        fermion, a scalar, a massless vector). The pure-interference vocabulary is now
+        derived from the same table instead of being a second hand-written copy of
+        it, minus 'A': that mode and consider_axial are refused together, so its bases
+        never have a fourth direction.
     OM: MadSpin's density-matrix convolution can now run over the *fourth*, axial
         direction of a massive vector's spin basis ('set consider_axial True' in the
         MadSpin card, off by default and bit-for-bit inert when off). The massive
@@ -38,8 +109,7 @@ ANNOUNCEMENT:
         the production current conserved and the axial column ~1e-3 of the physical
         one, the worst case improves from 7.1e-5 to 2.6e-6.
         'consider_axial' is refused together with 'pure_interference', with a
-        polarisation brace on the production process, with
-        keep_weight_for_polarization_vector/_fermion and in gauge = FD, and it falls
+        polarisation brace on the production process and in gauge = FD, and it falls
         back to the joint accept/reject: the staged schemes stand an undrawn decay in
         as DensityMatrix.identity = delta/n, which is a theorem about the three
         physical polarisations only (eps_A is the rest-frame time direction and is

@@ -58,9 +58,14 @@ cmd_logger = logging.getLogger('cmdprint2') # -> print
 # Polarisation labels accepted by keep_weight_for_polarization_*
 # ---------------------------------------------------------------------------
 # Same spelling and same meaning as MG5's polarisation braces:
-#   {L} -> [-1], {R}/{+} -> [1], {T} -> [-1,1], {0} -> [0]
+#   {L} -> [-1], {R}/{+} -> [1], {T} -> [-1,1], {0} -> [0], {A} -> [4]
 # Maps the (case-insensitive, brace-tolerant) user spelling onto
 # (canonical label, helicity values).
+#
+# '{A}' is the AXIAL direction eps_A = k/sqrt(k.k), HELAS' nhel = 4. It only
+# exists in a basis 'set consider_axial True' has widened -- every other slot
+# drops it the way a fermion drops '0' -- and a card that names it without that
+# option is refused in _check_axial_compatibility rather than silently ignored.
 POLARIZATION_ALIASES = {
     '0': ('0', (0,)),
     '+': ('+', (1,)),
@@ -68,13 +73,21 @@ POLARIZATION_ALIASES = {
     '-': ('-', (-1,)),
     'l': ('-', (-1,)),
     't': ('T', (-1, 1)),
+    'a': ('A', (madspin.DensityMatrix.AXIAL_HELICITY,)),
 }
+
+#: canonical labels whose helicity values are the *physical* polarisations, i.e.
+#: everything except the axial direction. What the pure-interference vocabulary
+#: is allowed to speak (see MadSpinInterface._POL_TOKENS).
+PHYSICAL_POLARIZATION_ALIASES = {
+    key: value for key, value in POLARIZATION_ALIASES.items()
+    if value[0] != 'A'}
 
 
 def parse_polarization_label(label):
     """(canonical label, helicity values) for one
     keep_weight_for_polarization_vector/_fermion entry, or None if it is not
-    one of 0/+/-/T (L and R aliasing - and +)."""
+    one of 0/+/-/T/A (L and R aliasing - and +)."""
     key = str(label).strip().lower()
     if key.startswith('{') and key.endswith('}'):
         key = key[1:-1].strip()
@@ -297,7 +310,8 @@ class MadSpinOptions(banner.ConfigFile):
                        "value and doc/madspin_sequential_plan.md section 13.")
         self.add_param('keep_weight_for_polarization_vector', [], typelist=str,
                        comment="density spin modes only. Polarisations (0, +, -, T; "
-                       "L/R accepted as aliases of -/+) offered to each decaying "
+                       "L/R accepted as aliases of -/+; A only under "
+                       "'set consider_axial True') offered to each decaying "
                        "SPIN-1 particle. Together with "
                        "keep_weight_for_polarization_fermion it defines a set of "
                        "polarisation COMBINATIONS -- one per element of the cartesian "
@@ -320,12 +334,20 @@ class MadSpinOptions(banner.ConfigFile):
                        "it (a choice with an empty intersection is dropped) and the "
                        "denominator is the (already restricted) nominal convolution, "
                        "so a weight stays the fraction of the sample that is written "
-                       "out.")
+                       "out. 'A' is the AXIAL direction and needs "
+                       "'set consider_axial True': it is the fourth basis direction "
+                       "the propagator numerator's k^mu k^nu piece lives on, so its "
+                       "weight is a share of the event's spin-correlation weight and "
+                       "NOT a cross-section -- there is no sample in which the "
+                       "resonance is produced axially. Listing it is what makes the "
+                       "weights add back up to the nominal under consider_axial, "
+                       "since without it the axial block is missing from the sum.")
         self.add_param('keep_weight_for_polarization_fermion', [], typelist=str,
                        comment="as keep_weight_for_polarization_vector, but the list "
                        "offered to each decaying SPIN-1/2 particle. '0' is unphysical "
-                       "for a fermion and is dropped from its choices; 'T' is its full "
-                       "helicity basis, i.e. that particle summed over.")
+                       "for a fermion and is dropped from its choices, and so is 'A' "
+                       "(only a massive vector has an axial direction); 'T' is its "
+                       "full helicity basis, i.e. that particle summed over.")
         self.add_param('consider_axial', False,
                        comment="density spin modes only. Include the AXIAL "
                        "('{A}') direction in the spin basis of each decaying "
@@ -419,16 +441,22 @@ class MadSpinOptions(banner.ConfigFile):
     def _canonical_polarization_list(name, value):
         """Reject an unknown polarisation label at card-reading time, and return
         the canonical spelling (so '{l}' and 'L' both become '-'). Anything but
-        0/+/-/T (with L/R as aliases) has no meaning in the helicity bases the
-        density spin modes use."""
+        0/+/-/T/A (with L/R as aliases) has no meaning in the helicity bases the
+        density spin modes use.
+
+        'A' passes here but is not yet legal: whether the basis has an axial
+        direction at all depends on ``consider_axial``, which a card is free to
+        set on a *later* line than this one. That cross-check is therefore made
+        once at launch, in ``_check_axial_compatibility``."""
         canonical = []
         for entry in value:
             parsed = parse_polarization_label(entry)
             if parsed is None:
                 raise banner.InvalidCmd(
-                    "%s: '%s' is not a polarisation. "
-                    "Use 0, +, - or T (L and R are accepted as aliases of - and +)."
-                    % (name, entry))
+                    "%s: '%s' is not a polarisation. Use 0, +, - or T (L and R "
+                    "are accepted as aliases of - and +), or A for the axial "
+                    "direction of a massive vector under "
+                    "'set consider_axial True'." % (name, entry))
             if parsed[0] not in canonical:
                 canonical.append(parsed[0])
         return canonical
@@ -7527,13 +7555,36 @@ class MadSpinInterface(extended_cmd.Cmd):
             out.add(int(pdg))
         return frozenset(out)
 
+    def _axial_weight_labels_requested(self):
+        """The ``keep_weight_for_polarization_*`` options that name the axial
+        label 'A', as a sorted list of option names. Empty in every run that
+        does not type it."""
+        out = []
+        for species in ('vector', 'fermion'):
+            if any(label == 'A'
+                   for label, _ in self._polarization_weight_labels(species)):
+                out.append('keep_weight_for_polarization_%s' % species)
+        return out
+
     def _check_axial_compatibility(self):
         """Refuse the combinations 'consider_axial' has not been thought
-        through with, up front, instead of quietly biasing them. Nothing here
-        fires unless the card sets the option, so a default run never reaches
-        any of it.
+        through with, up front, instead of quietly biasing them. Only the
+        first check below can fire without the option, and only for a card
+        that types the axial label, so a default run never reaches any of it.
         """
         if not self.options.get('consider_axial'):
+            # 'A' in a polarisation-weight list with no axial basis to project
+            # onto. Every slot would drop it (the way a fermion drops '0') and
+            # the run would silently emit the three-state weights the user did
+            # not ask for, so this is an error and not a warning.
+            named = self._axial_weight_labels_requested()
+            if named:
+                raise self.InvalidCmd(
+                    "MadSpin: %s names the axial polarisation 'A', but "
+                    "'consider_axial' is off, so no particle's spin basis has "
+                    "an axial direction to project onto. Add "
+                    "'set consider_axial True', or drop 'A' from the list."
+                    % ' and '.join(named))
             return
         if self.options['spinmode'] not in ('madspin', 'full'):
             raise self.InvalidCmd(
@@ -7560,16 +7611,76 @@ class MadSpinInterface(extended_cmd.Cmd):
                 "restricts the convolution to a subspace of physical "
                 "polarisations, and what the axial direction of the propagator "
                 "numerator should then contribute is not defined.")
+        # keep_weight_for_polarization_vector / _fermion: ALLOWED, with 'A'
+        # ------------------------------------------------------------------
+        # Milestone 3 refused the combination, on the grounds that the weights
+        # "would stop adding to one, since no projection onto a physical
+        # polarisation can pick up the axial direction". The first half of that
+        # is true and the second half is the fix: the axial direction is a
+        # basis direction like any other, so it gets a label of its own and the
+        # list closes again.
+        #
+        # What an 'A' entry is. The nominal contraction is
+        #
+        #     W = sum_{i,j in B4} c_i c_j rho_P(i,j) rho_D(i,j),
+        #     B4 = {-1, 0, +1, A},  c_phys = 1,  c_A = (Q^2 - M^2)/M^2
+        #
+        # and every entry of the option is the same sum with the (i,j) rows
+        # masked down to one block. For a single state that is
+        #
+        #     W_lambda = c_lambda^2 rho_P(lambda,lambda) rho_D(lambda,lambda)
+        #
+        # which for lambda = A is a non-negative number computed by exactly the
+        # code path the other entries use -- the c_i c_j factors already ride on
+        # the decay matrix (weight_helicity), so nothing is renormalised and
+        # nothing is invented for it. It is a GENUINE EXTRA WEIGHT on the same
+        # footing as the others, not a differently normalised quantity.
+        #
+        # The sum rule. The two conditions the option always had are unchanged:
+        # (a) the species list must PARTITION each slot's basis and (b) the
+        # contraction must have no cross-block interference. What consider_axial
+        # does is enlarge the basis from B3 to B4, so [0, +, -] and [0, T] stop
+        # being partitions and [0, +, -, A] and [0, T, A] become them. Listing
+        # 'A' therefore RESTORES the sum rule to exactly the condition it had
+        # before this option existed; it does not weaken it. Omitting it leaves
+        # the axial block out of the sum, which is what the warning below is
+        # about.
+        #
+        # Do the other entries change? Their numerators do not -- W_0, W_+, W_-
+        # are the same masked contractions with or without 'A' in the list. Their
+        # VALUES differ from a consider_axial-off run, because the denominator W
+        # now carries the axial terms too. That is caused by consider_axial, not
+        # by naming 'A', and it is the point of consider_axial: W is the more
+        # accurate off-shell weight and the fractions are fractions of it.
+        #
+        # What a consumer must not do with it. w_A is a share of the event's
+        # SPIN-CORRELATION WEIGHT, not a cross-section. The axial direction is a
+        # piece of the propagator numerator, not a state the resonance can be
+        # produced in -- which is precisely why trace() excludes it
+        # (_axial_trace_restriction) and why there is no '{A}' production sample
+        # to compare a summed w_A against. sum_events w_0 / sigma is still a
+        # polarisation fraction; sum_events w_A / sigma is not a fraction of
+        # anything observable, and sum over the physical labels alone is less
+        # than the nominal by the off-shell k^mu k^nu piece. The banner
+        # <weight> description says so, because that is the one place a consumer
+        # reading the file will see it (_declare_polarization_weights).
+        #
+        # One way in which it is better defined than the others: eps_A =
+        # k/sqrt(k.k) is fixed by the leg's momentum alone, so unlike {0} and
+        # {+/-} the A projection does not depend on me_frame at all.
         if self._polarization_weights_enabled():
-            raise self.InvalidCmd(
-                "MadSpin: 'consider_axial' is not supported together with "
-                "keep_weight_for_polarization_vector/_fermion. Those weights "
-                "are the same convolution with the helicity index projected "
-                "onto one physical polarisation, and they are meant to be read "
-                "as fractions of the full weight -- which they stop being as "
-                "soon as the full weight also carries the axial direction, "
-                "since no projection onto a physical polarisation can pick it "
-                "up. The set would no longer add up to one.")
+            vector = [label for label, _ in
+                      self._polarization_weight_labels('vector')]
+            if vector and 'A' not in vector:
+                logger.warning(
+                    "MadSpin: consider_axial is on and "
+                    "keep_weight_for_polarization_vector = %s does not name "
+                    "'A', so it no longer partitions a massive vector's spin "
+                    "basis: the axial block of the convolution belongs to none "
+                    "of these weights and their sum is short by it. Add 'A' to "
+                    "the list to close the partition. (That is condition (a) "
+                    "of the sum rule; condition (b), the interference terms, "
+                    "is unaffected either way.)", vector)
         if aloha.unitary_gauge == 3:
             # same refusal as check_axial_output, reached differently: MadSpin
             # puts no '{A}' brace on its process lines, so the output-level
@@ -7862,12 +7973,21 @@ class MadSpinInterface(extended_cmd.Cmd):
     # Pure-interference mode ('set pure_interference t = 0 T')
     # ------------------------------------------------------------------
 
-    # The brace vocabulary, spelled out because this option never goes through
-    # a process line and so never reaches MG5's parser. Kept identical to the
-    # semantics _production_polarization inherits from it ({L} -> -1, {R} -> +1,
-    # {T} -> the transverse pair, {0} -> the longitudinal state).
-    _POL_TOKENS = {'0': (0,), '+': (1,), 'R': (1,), '-': (-1,), 'L': (-1,),
-                   'T': (-1, 1)}
+    # The brace vocabulary, because this option never goes through a process
+    # line and so never reaches MG5's parser. Derived from POLARIZATION_ALIASES
+    # rather than written out a second time, so the two spellings of the same
+    # vocabulary cannot drift apart ({L} -> -1, {R} -> +1, {T} -> the transverse
+    # pair, {0} -> the longitudinal state), upper-cased because _parse_pol_side
+    # and _looks_like_pure_interference_entry both fold the user's token up.
+    #
+    # The AXIAL label is deliberately NOT here. This mode and 'consider_axial'
+    # are refused together in _check_axial_compatibility -- they want the
+    # normalising trace for opposite reasons -- so the basis a pure_interference
+    # entry names never has a fourth direction, and accepting 'A' would only
+    # produce a restriction that matches no row.
+    _POL_TOKENS = {key.upper(): values
+                   for key, (_, values)
+                   in PHYSICAL_POLARIZATION_ALIASES.items()}
 
     def _parse_pol_side(self, text, entry):
         """One side of a ``pure_interference`` entry -> a tuple of helicities."""
@@ -8325,13 +8445,16 @@ class MadSpinInterface(extended_cmd.Cmd):
     #  * so does a particle whose species list is empty (only
     #    ..._vector set -> the fermions stay summed over), and
     #  * so does a slot every label of whose list is unphysical for it
-    #    ('0' alone on a fermion).
+    #    ('0' alone on a fermion, 'A' alone on anything but a massive vector
+    #    under consider_axial).
     #
     # A label that is unphysical for a slot is dropped from that slot's choices
     # rather than silently left unrestricted, so a card that gives both species
     # the same list -- 'keep_weight_for_polarization_vector = [0, T, +, -]' and
     # the same for _fermion -- does not emit a '0' and a 'T' copy of the same
-    # fermion weight.
+    # fermion weight. 'A' is dropped by the same rule wherever the basis has no
+    # axial direction; a card that names it with 'consider_axial' *off*, where
+    # every slot would drop it, is refused instead (_check_axial_compatibility).
     #
     # Production braces (PR #349, #353)
     # ---------------------------------
@@ -8362,6 +8485,54 @@ class MadSpinInterface(extended_cmd.Cmd):
     # The product form removed the *third* condition the one-label-per-weight
     # version had ("only one particle may be restricted"): the mixed (+,-) and
     # (-,+) assignments are now combinations of their own. See the sum-rule tests.
+    #
+    # The axial direction ('consider_axial')
+    # --------------------------------------
+    # 'set consider_axial True' widens a massive vector's basis from
+    # {-1,0,+1} to {-1,0,+1,A} and folds the propagator numerator's coefficient
+    # c_A = (Q^2-M^2)/M^2 into the decay matrix (weight_helicity), so the nominal
+    # contraction runs over sixteen (i,j) blocks per such slot instead of nine.
+    #
+    # 'A' is one more label in the vocabulary and w_A is one more weight of
+    # exactly the shape above -- same masked contraction, same denominator,
+    # no separate normalisation, and non-negative for the same reason the other
+    # single-state entries are (c_A is real, so the numerator is
+    # c_A^2 rho_P(A,A) rho_D(A,A)).
+    #
+    # Condition (a) is what consider_axial disturbs and what 'A' repairs: the
+    # partitions of a massive vector's basis become [0, +, -, A] and [0, T, A],
+    # and [0, +, -] now UNDERSHOOTS by the axial block instead of closing.
+    # Condition (b) is untouched. So the sum rule is not weakened by the axial
+    # direction; it is restored to exactly what it was, provided 'A' is listed
+    # (_check_axial_compatibility warns when it is not).
+    #
+    # How big w_A is, and what it is not. The axial direction reaches the
+    # contraction through two kinds of term:
+    #
+    #     2 Re sum_lambda c_A rho_P(lambda,A) rho_D(lambda,A)     O(c_A)
+    #     c_A^2 rho_P(A,A) rho_D(A,A)                             O(c_A^2)
+    #
+    # and w_A is the second alone -- the first belongs to no single-state block,
+    # which is condition (b) again. Since c_A = (Q^2-M^2)/M^2 is O(Gamma/M) over
+    # the bulk of a Breit-Wigner, w_A is by construction the *smaller* of the
+    # two, and it is NOT a measure of "how much consider_axial matters". It is
+    # the axial member of this option's diagonal decomposition, no more and no
+    # less -- exactly as w(+) + w(-) is not a measure of the transverse part
+    # when the (-1,+1) interference is large. Measured on "u d~ > w+ h" with
+    # "w+ > ta+ vt": w_A/w has median 8e-08 and follows c_A^2 over three decades
+    # of virtuality (fitted log-log slope 2.1), which is what says that no
+    # normalisation was invented for it.
+    #
+    # What w_A is NOT. Every other entry is also a cross-section fraction: run
+    # the production with a {0} brace instead and, in the narrow-width limit,
+    # you get the same sub-sample. There is no '{A}' sample -- the axial
+    # direction is a piece of the propagator, not a state the resonance can be
+    # produced in, which is exactly why it is kept out of every normalising
+    # trace (_axial_trace_restriction). w_A is a share of the event's
+    # spin-correlation weight and nothing more, and summing the physical labels
+    # alone under consider_axial gives less than the nominal by that share. The
+    # banner <weight> descriptions carry this, since the event file is where a
+    # consumer meets these numbers.
 
     #: species name per MG5 spin (2S+1). Only 1/2/3 have a helicity basis in
     #: ``_density_basis``' ``hel_dict``, so nothing else can reach a slot.
@@ -8369,8 +8540,9 @@ class MadSpinInterface(extended_cmd.Cmd):
 
     #: emitting more than this many combinations per event is legal but worth a
     #: warning: it is that many masked contractions and that many <wgt> lines per
-    #: event, and the product grows very fast (four decaying vectors with a
-    #: 4-entry list is 256).
+    #: event, and the product grows very fast -- four decaying vectors with a
+    #: 4-entry list is 256, and 'consider_axial' raises a vector's ceiling from
+    #: four distinct choices (0, +, -, T) to five, so 5^4 = 625.
     POLARIZATION_COMBINATION_WARN = 32
 
     def _polarization_weight_labels(self, species):
@@ -8388,9 +8560,9 @@ class MadSpinInterface(extended_cmd.Cmd):
             parsed = parse_polarization_label(entry)
             if parsed is None:
                 raise self.InvalidCmd(
-                    "%s: '%s' is not a polarisation. "
-                    "Use 0, +, - or T (L and R are accepted as aliases)."
-                    % (option, entry))
+                    "%s: '%s' is not a polarisation. Use 0, +, - or T (L and R "
+                    "are accepted as aliases), or A for the axial direction "
+                    "under 'set consider_axial True'." % (option, entry))
             if parsed[0] not in [l for l, _ in out]:
                 out.append(parsed)
         cache[species] = out
@@ -8430,6 +8602,14 @@ class MadSpinInterface(extended_cmd.Cmd):
          * the pure-interference mode (``set pure_interference t = 0 T``), whose
            cross restriction is a projection for the same reason -- and whose
            production is unpolarised, so no brace switches it on.
+
+        The axial label 'A' is the one projection that does *not* need this:
+        eps_A = k/sqrt(k.k) is fixed by the leg's own momentum, so it names the
+        same 4-vector in every frame, unlike {0} and {+/-} which are built on
+        the frame's quantisation axis. Requesting only 'A' would therefore be
+        frame-independent -- but it is not worth a special case here, and the
+        boost is harmless: it is a change of basis the three physical directions
+        genuinely need.
 
         This is ``_frame_boost``'s guard: it short-circuits to None -- leaving
         every momentum in the lab -- exactly when this returns False.
@@ -8471,8 +8651,10 @@ class MadSpinInterface(extended_cmd.Cmd):
         spins = prod_static.get('decaying_spins')
         if spins is None:
             # only the length of a basis distinguishes the three spins
-            # ``_density_basis``' hel_dict knows about
-            spins = [len(h) for h in helicities]
+            # ``_density_basis``' hel_dict knows about -- except that
+            # 'consider_axial' gives a massive vector a fourth entry, so a
+            # 4-long basis is a vector too
+            spins = [3 if len(h) == 4 else len(h) for h in helicities]
 
         out = []
         for k, basis in enumerate(helicities):
@@ -8485,9 +8667,10 @@ class MadSpinInterface(extended_cmd.Cmd):
                 if base[k] is not None:
                     allowed = [h for h in allowed if h in base[k]]
                 if not allowed:
-                    # unphysical for this spin, or incompatible with the
-                    # production brace: zero for every event of this topology,
-                    # so not worth a column
+                    # unphysical for this spin ('0' on a fermion, 'A' on
+                    # anything whose basis 'consider_axial' has not widened),
+                    # or incompatible with the production brace: zero for every
+                    # event of this topology, so not worth a column
                     continue
                 allowed = tuple(sorted(set(allowed)))
                 if allowed in seen:
@@ -8602,16 +8785,24 @@ class MadSpinInterface(extended_cmd.Cmd):
         """A ``prod_static`` stub -- helicity bases, production restriction and
         pdgs -- for one slot layout, without a production event. Goes through
         exactly the same ``_apply_production_polarization`` the real basis does,
-        so the declared ids cannot drift away from the emitted ones."""
+        so the declared ids cannot drift away from the emitted ones.
+
+        The axial widening of ``_density_basis`` is repeated here for the same
+        reason -- a basis declared three states wide would emit no 'A' column in
+        the banner while every event carried one."""
         hel_dict = {1: [0], 2: [1, -1], 3: [-1, 0, 1]}
-        spins = [self.model.get_particle(int(pdg)).get('spin')
-                 for pdg in slot_pdgs]
+        pdgs = [int(pdg) for pdg in slot_pdgs]
+        spins = [self.model.get_particle(pdg).get('spin') for pdg in pdgs]
         helicities = [list(hel_dict[spin]) for spin in spins]
+        axial_pdgs = self._axial_pdgs(pdgs)
+        if axial_pdgs:
+            helicities = [h + [madspin.DensityMatrix.AXIAL_HELICITY]
+                          if pdg in axial_pdgs else h
+                          for pdg, h in zip(pdgs, helicities)]
         helicities, restriction = self._apply_production_polarization(
-            [int(pdg) for pdg in slot_pdgs], helicities)
+            pdgs, helicities)
         return {'helicities': helicities, 'hel_restriction': restriction,
-                'decaying_pdg': [int(pdg) for pdg in slot_pdgs],
-                'decaying_spins': spins}
+                'decaying_pdg': pdgs, 'decaying_spins': spins}
 
     def _polarization_layout_statics(self, evt_decayfile):
         """One ``_polarization_layout_static`` per topology seen in the input
@@ -8640,6 +8831,7 @@ class MadSpinInterface(extended_cmd.Cmd):
 
         entries = collections.OrderedDict()
         biggest = 0
+        axial = False
         for static in statics:
             combinations = self._polarization_combinations(dict(static))
             biggest = max(biggest, len(combinations))
@@ -8648,11 +8840,23 @@ class MadSpinInterface(extended_cmd.Cmd):
                 if wid in entries:
                     continue
                 base = restriction or (None,) * len(pdgs)
-                entries[wid] = ' '.join(
+                text = ' '.join(
                     '%s(%s)' % (self._polarization_particle_name(pdg),
                                 'sum' if hel is None
-                                else ','.join(str(h) for h in hel))
+                                else ','.join(self._polarization_hel_name(h)
+                                              for h in hel))
                     for pdg, hel in zip(pdgs, base))
+                if any(hel is not None
+                       and madspin.DensityMatrix.AXIAL_HELICITY in hel
+                       for hel in base):
+                    # said on the weight itself, not only in the group note: an
+                    # analysis that pulls one <wgt> out by id may never look at
+                    # the surrounding block
+                    axial = True
+                    text += (' -- axial: the propagator k^mu k^nu direction, '
+                             'a share of the spin-correlation weight and NOT a '
+                             'cross-section')
+                entries[wid] = text
         if not entries:
             return
         if biggest > self.POLARIZATION_COMBINATION_WARN:
@@ -8664,6 +8868,25 @@ class MadSpinInterface(extended_cmd.Cmd):
                 "what you meant.", biggest, biggest, biggest)
 
         text = "\n<weightgroup name='madspin_polarization'>\n"
+        if axial:
+            # The one place a consumer of the file will see what the axial
+            # column means. Written as XML comments so the line-based readers
+            # (systematics, reweight_interface) that scan this block for
+            # "<weight id=" skip straight over it.
+            text += (
+                "<!-- consider_axial: the spin basis of a massive vector has a "
+                "fourth, AXIAL direction eps_A = k/sqrt(k.k). -->\n"
+                "<!-- It is the k^mu k^nu piece of the propagator numerator, "
+                "entering with c_A = (Q^2-M^2)/M^2, not a state the resonance "
+                "can be produced in: it carries NO cross-section and is "
+                "excluded from every normalising trace. -->\n"
+                "<!-- So sum_events w(A)/sigma is not a polarisation fraction, "
+                "while sum_events w(0)/sigma still is. -->\n"
+                "<!-- Sum rule: the weights of this group add up to the "
+                "nominal weight when the requested labels partition each "
+                "particle's basis -- which for a massive vector under "
+                "consider_axial means A must be in the list -- and when the "
+                "contraction has no cross-block interference. -->\n")
         for wid, description in entries.items():
             text += "<weight id='%s'> MadSpin polarisation %s </weight>\n" % (
                 wid, description)
@@ -8675,6 +8898,17 @@ class MadSpinInterface(extended_cmd.Cmd):
         else:
             self.banner['initrwgt'] = text
         self._pol_weights_declared = True
+
+    @staticmethod
+    def _polarization_hel_name(helicity):
+        """How one helicity value is spelled in the banner description. The
+        three physical ones keep the integer they have always printed as, so an
+        unset ``consider_axial`` leaves every pre-existing banner byte-identical;
+        HELAS' nhel = 4 prints as 'axial', which is what it is -- '4' would read
+        as a helicity the resonance can carry."""
+        if helicity == madspin.DensityMatrix.AXIAL_HELICITY:
+            return 'axial'
+        return str(helicity)
 
     def _polarization_particle_name(self, pdg):
         """Readable name for the banner description; the pdg is what the id

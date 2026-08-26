@@ -4329,6 +4329,8 @@ class TestKeepWeightForPolarization(unittest.TestCase):
             interface_madspin.MadSpinInterface._polarization_slot_layout)
         _polarization_particle_name = \
             interface_madspin.MadSpinInterface._polarization_particle_name
+        _polarization_hel_name = staticmethod(
+            interface_madspin.MadSpinInterface._polarization_hel_name)
         _declare_polarization_weights = \
             interface_madspin.MadSpinInterface._declare_polarization_weights
         _add_polarization_weights = \
@@ -4395,7 +4397,7 @@ class TestKeepWeightForPolarization(unittest.TestCase):
     #: helicity basis and MG5 spin of the pdgs used below
     BY_PDG = {6: ([1, -1], 2), -6: ([1, -1], 2),
               23: ([-1, 0, 1], 3), 24: ([-1, 0, 1], 3),
-              25: ([0], 1)}
+              -24: ([-1, 0, 1], 3), 25: ([0], 1)}
 
     def _static(self, pdgs, base=None, helicities=None):
         """A ``prod_static`` stub for a slot layout given by its pdgs."""
@@ -4455,9 +4457,34 @@ class TestKeepWeightForPolarization(unittest.TestCase):
     def test_card_refuses_a_non_polarisation(self):
         options = interface_madspin.MadSpinOptions()
         self.assertRaises(banner.InvalidCmd, options.__setitem__,
-                          'keep_weight_for_polarization_vector', '[0, A]')
+                          'keep_weight_for_polarization_vector', '[0, X]')
         self.assertRaises(banner.InvalidCmd, options.__setitem__,
-                          'keep_weight_for_polarization_fermion', '[+, A]')
+                          'keep_weight_for_polarization_fermion', '[+, Q]')
+
+    def test_card_accepts_the_axial_label(self):
+        """Milestone 4: 'A' is a polarisation label like the others. Whether it
+        MEANS anything depends on consider_axial, which a card is free to set on
+        a later line, so the cross-check is at launch and not here."""
+        options = interface_madspin.MadSpinOptions()
+        options['keep_weight_for_polarization_vector'] = '[0, +, -, a]'
+        self.assertEqual(options['keep_weight_for_polarization_vector'],
+                         ['0', '+', '-', 'A'])
+        # brace-tolerant and case-insensitive like every other spelling
+        options['keep_weight_for_polarization_vector'] = '[{A}]'
+        self.assertEqual(options['keep_weight_for_polarization_vector'], ['A'])
+        self.assertEqual(interface_madspin.parse_polarization_label('A'),
+                         ('A', (madspin.DensityMatrix.AXIAL_HELICITY,)))
+
+    def test_pure_interference_vocabulary_excludes_the_axial_label(self):
+        """The two hand-written copies of the vocabulary are now one: the
+        pure-interference tokens are POLARIZATION_ALIASES minus the axial
+        direction, upper-cased. 'A' stays out because that mode and
+        consider_axial are refused together, so its basis never has one."""
+        self.assertEqual(
+            interface_madspin.MadSpinInterface._POL_TOKENS,
+            {'0': (0,), '+': (1,), 'R': (1,), '-': (-1,), 'L': (-1,),
+             'T': (-1, 1)})
+        self.assertNotIn('A', interface_madspin.MadSpinInterface._POL_TOKENS)
 
     def test_needs_frame_axis_covers_the_three_projections(self):
         """A helicity *projection* does not commute with a boost, so it only
@@ -4533,7 +4560,12 @@ class TestKeepWeightForPolarization(unittest.TestCase):
         self.assertEqual(parse('l'), ('-', (-1,)))
         self.assertEqual(parse('T'), ('T', (-1, 1)))
         self.assertEqual(parse('{T}'), ('T', (-1, 1)))
-        self.assertIsNone(parse('A'))
+        # milestone 4: the axial direction is a label of its own
+        self.assertEqual(parse('A'),
+                         ('A', (madspin.DensityMatrix.AXIAL_HELICITY,)))
+        self.assertEqual(parse('{a}'),
+                         ('A', (madspin.DensityMatrix.AXIAL_HELICITY,)))
+        self.assertIsNone(parse('G'))
         self.assertIsNone(parse(''))
 
     # ------------------------------------------------------------------
@@ -4997,6 +5029,163 @@ class TestKeepWeightForPolarization(unittest.TestCase):
                                     1.0 + ratios['ms_pol_23:T'], atol=1e-5),
                         ratios)
         self.assertFalse(np.allclose(sum(ratios.values()), 1.0, atol=1e-3))
+
+    # ------------------------------------------------------------------
+    # the axial direction ('consider_axial'), milestone 4
+    # ------------------------------------------------------------------
+    # 'set consider_axial True' widens a massive vector's basis from
+    # {-1,0,+1} to {-1,0,+1,A}. Nothing about the weights changes except the
+    # arithmetic of condition (a): [0, +, -] stops being a partition of that
+    # basis and [0, +, -, A] becomes one. So the axial label does not weaken the
+    # sum rule, it is what repairs it -- which is why milestone 3's blanket
+    # refusal of the pair could be replaced rather than kept.
+
+    #: the widened basis of a massive vector under consider_axial
+    AXIAL_VECTOR = [-1, 0, 1, madspin.DensityMatrix.AXIAL_HELICITY]
+
+    def _axial_static(self, pdgs=(24,), base=None):
+        return self._static(list(pdgs), base=base,
+                            helicities=[list(self.AXIAL_VECTOR)
+                                        for _ in pdgs])
+
+    def test_axial_is_a_choice_only_on_a_widened_basis(self):
+        """'A' behaves exactly like '0' on a fermion: it is dropped from any
+        slot whose basis does not contain it, rather than silently left
+        unrestricted."""
+        stub = self._Stub(vector=['0', '+', '-', 'A'], fermion=['+', '-', 'A'])
+        # widened vector: four choices, the axial one among them
+        self.assertEqual(
+            stub._polarization_slot_choices(self._axial_static([24])),
+            [[('0', (0,)), ('+', (1,)), ('-', (-1,)),
+              ('A', (madspin.DensityMatrix.AXIAL_HELICITY,))]])
+        # three-state vector (consider_axial off, or a massless one): dropped
+        self.assertEqual(
+            [wid for wid, _ in
+             stub._polarization_combinations(self._static([23]))],
+            ['ms_pol_23:0', 'ms_pol_23:+', 'ms_pol_23:-'])
+        # fermion and scalar: dropped too
+        self.assertEqual(
+            [wid for wid, _ in
+             stub._polarization_combinations(self._static([6]))],
+            ['ms_pol_6:+', 'ms_pol_6:-'])
+        self.assertEqual(
+            stub._polarization_slot_choices(self._static([25])),
+            [[(None, None)]])
+
+    def test_axial_slot_species_inferred_from_a_four_long_basis(self):
+        """The decaying_spins fallback has to know that a 4-long basis is still
+        a vector, or an older prod_static would drop every vector label."""
+        stub = self._Stub(vector=['0', 'A'])
+        static = self._axial_static([24])
+        del static['decaying_spins']
+        self.assertEqual([wid for wid, _ in
+                          stub._polarization_combinations(static)],
+                         ['ms_pol_24:0', 'ms_pol_24:A'])
+
+    def test_axial_sum_rule_needs_the_axial_label(self):
+        """The decision this milestone had to settle, in numbers. On the
+        widened basis [0, +, -] undershoots by exactly the axial block and
+        [0, +, -, A] closes -- so 'A' is a genuine extra weight of the same
+        shape as the others, not a differently normalised quantity."""
+        import numpy as np
+        hels = [self.AXIAL_VECTOR]
+        prod = self._joint(hels, 71)
+        dec = self._joint(hels, 72, diagonal_only=True)
+
+        closed = self._Stub(vector=['0', '+', '-', 'A'])._polarization_ratios(
+            prod, dec, self._axial_static([24]))
+        self.assertEqual(sorted(closed),
+                         ['ms_pol_24:+', 'ms_pol_24:-', 'ms_pol_24:0',
+                          'ms_pol_24:A'])
+        self.assertTrue(np.allclose(sum(closed.values()), 1.0, atol=1e-5),
+                        closed)
+
+        physical = self._Stub(vector=['0', '+', '-'])._polarization_ratios(
+            prod, dec, self._axial_static([24]))
+        self.assertEqual(len(physical), 3)
+        # the physical entries themselves are untouched by whether 'A' is
+        # listed: only the set of columns changes, never a numerator
+        for wid, value in physical.items():
+            self.assertTrue(np.allclose(value, closed[wid], atol=1e-6))
+        # ... and what is missing is exactly the axial column
+        self.assertTrue(np.allclose(sum(physical.values()),
+                                    1.0 - closed['ms_pol_24:A'], atol=1e-5))
+        self.assertFalse(np.allclose(sum(physical.values()), 1.0, atol=1e-3))
+
+        # [0, T, A] is the other partition of the widened basis
+        alt = self._Stub(vector=['0', 'T', 'A'])._polarization_ratios(
+            prod, dec, self._axial_static([24]))
+        self.assertTrue(np.allclose(sum(alt.values()), 1.0, atol=1e-5), alt)
+
+    def test_axial_ratio_is_non_negative_and_matches_a_hand_contraction(self):
+        """c_A is real, so the axial block enters as c_A^2 rho_P(A,A)
+        rho_D(A,A): non-negative for the same reason every other single-state
+        entry is. The propagator coefficients ride on the decay matrix
+        (weight_helicity) before this code sees it, so there is no extra
+        normalisation here -- which the brute-force contraction pins."""
+        import numpy as np
+        hels = [self.AXIAL_VECTOR]
+        for seed in (7, 17, 27):
+            prod = self._joint(hels, seed)
+            dec = self._joint(hels, seed + 1, diagonal_only=True)
+            ratios = self._Stub(vector=['A'])._polarization_ratios(
+                prod, dec, self._axial_static([24]))
+            axial = ratios['ms_pol_24:A']
+            self.assertGreaterEqual(axial, 0.0)
+            expected = (self._brute_force(
+                dec, prod, ((madspin.DensityMatrix.AXIAL_HELICITY,),))
+                / self._brute_force(dec, prod, None))
+            self.assertTrue(np.allclose(axial, expected.real, atol=1e-5),
+                            (axial, expected))
+
+    def test_axial_product_over_two_slots(self):
+        """Two axial vectors: the cartesian product is 4x4 and the mixed
+        (physical, axial) assignments are combinations of their own, so the sum
+        rule survives the product exactly as it does for two tops."""
+        import numpy as np
+        hels = [self.AXIAL_VECTOR, self.AXIAL_VECTOR]
+        stub = self._Stub(vector=['0', '+', '-', 'A'])
+        prod = self._joint(hels, 111)
+        dec = self._joint(hels, 112, diagonal_only=True)
+        ratios = stub._polarization_ratios(prod, dec,
+                                           self._axial_static([24, -24]))
+        self.assertEqual(len(ratios), 16)
+        self.assertIn('ms_pol_24:A_-24:0', ratios)
+        self.assertTrue(np.allclose(sum(ratios.values()), 1.0, atol=1e-5))
+
+    def test_banner_says_what_the_axial_column_is(self):
+        """The event file is where a consumer meets these numbers, so the one
+        thing they must not do with w_A -- read it as a cross-section -- is
+        written next to it. '4' would read as a helicity the resonance can
+        carry, so the description spells it 'axial'."""
+        real = banner.Banner()
+        stub = self._Stub(vector=['0', 'A'], banner=real)
+        stub._declare_polarization_weights([self._axial_static([24])])
+        text = real['initrwgt']
+        self.assertIn("<weight id='ms_pol_24:A'>", text)
+        # the stub has no model, so the readable half falls back to the pdg
+        self.assertIn('24(axial)', text)
+        self.assertNotIn('24(4)', text)
+        self.assertIn('NOT a cross-section', text)
+        # the group-level note: what summing them does and does not give
+        self.assertIn('carries NO cross-section', text)
+        self.assertIn('Sum rule', text)
+        # every note is an XML comment, so the line-based readers that scan
+        # this block for "<weight id=" walk straight past them
+        for line in text.split('\n'):
+            line = line.strip()
+            if line and not line.startswith('<weight') \
+                    and not line.startswith('</weight') \
+                    and not line.startswith('<weightgroup') \
+                    and not line.startswith('</weightgroup'):
+                self.assertTrue(line.startswith('<!--') and line.endswith('-->'),
+                                line)
+        # a purely physical request leaves the banner exactly as it was
+        real = banner.Banner()
+        stub = self._Stub(vector=['0', 'T'], banner=real)
+        stub._declare_polarization_weights([self._static([23])])
+        self.assertNotIn('axial', real['initrwgt'])
+        self.assertNotIn('<!--', real['initrwgt'])
 
 
 class TestSequentialSlots(unittest.TestCase):
@@ -10179,17 +10368,91 @@ class TestAxialInterfaceGates(unittest.TestCase):
         stub._production_polarization = lambda: {24: ((0,),)}
         stub._polarization_weights_enabled = lambda: False
         self.assertRaises(Exception, stub._check_axial_compatibility)
-        # so are the polarisation-fraction weights: a projection onto a
-        # physical polarisation can never pick the axial direction up, so the
-        # fractions would stop adding up to one
-        stub = self._stub()
-        stub._pure_interference = lambda: {}
-        stub._production_polarization = lambda: {}
-        stub._polarization_weights_enabled = lambda: True
-        self.assertRaises(Exception, stub._check_axial_compatibility)
         # and the clean combination goes through
         stub = self._stub()
         stub._pure_interference = lambda: {}
         stub._production_polarization = lambda: {}
         stub._polarization_weights_enabled = lambda: False
+        self.assertIsNone(stub._check_axial_compatibility())
+
+    # -- keep_weight_for_polarization_*: allowed, milestone 4 ------------
+
+    def _pol_stub(self, vector=(), fermion=(), **options):
+        """A gate stub with the polarisation-weight options set for real (the
+        checks below read the label lists, not just the on/off predicate)."""
+        stub = self._stub(
+            keep_weight_for_polarization_vector=list(vector),
+            keep_weight_for_polarization_fermion=list(fermion), **options)
+        stub._pure_interference = lambda: {}
+        stub._production_polarization = lambda: {}
+        return stub
+
+    @staticmethod
+    def _warnings_of(call):
+        """Every message one call logs. The module-level ``logger`` object is
+        swapped rather than a handler attached: the test manager's
+        ``logging.config.fileConfig`` disables every logger that already
+        existed, 'decay.stdout' included, so a handler on it would never see
+        anything."""
+        messages = []
+
+        class _Recorder(object):
+            def _record(self, text, *args):
+                messages.append(text % args if args else text)
+            warning = info = debug = critical = error = _record
+
+        saved = interface_madspin.logger
+        interface_madspin.logger = _Recorder()
+        try:
+            call()
+        finally:
+            interface_madspin.logger = saved
+        return messages
+
+    def test_polarization_weights_are_allowed_with_the_axial_label(self):
+        """Milestone 3 refused this pair outright. It is allowed as soon as the
+        list can name the axial direction: 'A' is one more basis direction, its
+        weight is the same masked contraction as every other entry, and listing
+        it is what makes the set partition the four-state basis again."""
+        stub = self._pol_stub(vector=['0', '+', '-', 'A'], fermion=['+', '-'])
+        self.assertIsNone(stub._check_axial_compatibility())
+
+    def test_axial_label_missing_warns_instead_of_refusing(self):
+        """[0, +, -] no longer partitions a vector's basis once consider_axial
+        widened it, so the weights sum to LESS than the nominal. That is a
+        defensible thing to ask for (the physical fractions are still the
+        physical fractions), so it is a warning and not a refusal."""
+        stub = self._pol_stub(vector=['0', '+', '-'])
+        messages = self._warnings_of(stub._check_axial_compatibility)
+        self.assertTrue(any("does not name 'A'" in m for m in messages),
+                        messages)
+        # ... and no warning once the list closes
+        stub = self._pol_stub(vector=['0', '+', '-', 'A'])
+        messages = self._warnings_of(stub._check_axial_compatibility)
+        self.assertEqual([m for m in messages if "does not name" in m], [])
+
+    def test_axial_label_without_the_option_is_refused(self):
+        """'A' with consider_axial off would be dropped by every slot -- there
+        is no axial direction in any basis -- and the run would silently emit
+        the three-state weights. Refused rather than ignored."""
+        for kwargs in ({'vector': ['0', 'A']}, {'fermion': ['+', 'A']}):
+            stub = self._pol_stub(consider_axial=False, **kwargs)
+            try:
+                stub._check_axial_compatibility()
+            except Exception as error:
+                self.assertIn("'consider_axial' is off", str(error))
+            else:
+                self.fail('the axial label was accepted without the option')
+        # both lists at once name both options
+        stub = self._pol_stub(consider_axial=False, vector=['A'],
+                              fermion=['A'])
+        try:
+            stub._check_axial_compatibility()
+        except Exception as error:
+            self.assertIn('keep_weight_for_polarization_vector and '
+                          'keep_weight_for_polarization_fermion', str(error))
+        else:
+            self.fail('the axial label was accepted without the option')
+        # and a list that does not name it is still a no-op with the option off
+        stub = self._pol_stub(consider_axial=False, vector=['0', 'T'])
         self.assertIsNone(stub._check_axial_compatibility())
