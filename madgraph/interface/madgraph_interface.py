@@ -766,6 +766,10 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info(" > Example: generate t{L} > w+{T} b{R}, w+ > ta+ vt",'$MG:color:GREEN')
         logger.info(" > Example: generate p p > z{T} z{A}, z > e+ e-",'$MG:color:GREEN')
         logger.info(" > Example: generate p p > z{0} z{T}, z > e+ e-, z > mu+ mu-",'$MG:color:GREEN')
+        logger.info(" > '{G}','{H}','{Q}','{W}','{S}' select a piece of the *propagator* of a massive vector")
+        logger.info("   and are only valid on a particle that is decayed further (an internal line).")
+        logger.info(" > '{A}' is the same on an internal line; on a final-state particle it also needs the")
+        logger.info("   off-shell '*' syntax and 'set consider_axial True'.")
         logger.info(" > Users need to set 'group_subprocesses False', 'nhel=1' (run_card), and 'me_frame' (run_card)")
         logger.info(" > For the proces 'p p > w+ z j j, w+ > l+ vl, z > l+ l-', the WZ rest frame is given by me_frame = [3,4,5,6]")
         logger.info(" > For further details, see appendices of [arXiv:1912.01725] and [arXiv:2512.10015],")
@@ -3334,9 +3338,10 @@ This implies that with decay chains:
                myprocdef.get_ninitial() and not standalone_only:
                 raise self.InvalidCmd("Can not mix processes with different number of initial states.")               
 
-            # Check the axial/scalar polarization {A}: propagator-only unless
-            # 'consider_axial' is on AND the leg carries the off-shell '*'.
-            self.check_axial_polarization(myprocdef)
+            # Check the propagator-only polarization braces: {G},{H},{Q},{W}
+            # and {S} are internal-line only, and {A} needs 'consider_axial'
+            # plus the off-shell '*' unless the leg is decayed further.
+            self.check_propagator_polarization(myprocdef)
 
             #Check that we do not have situation like z{T} z
             if not myprocdef.check_polarization():
@@ -4871,13 +4876,31 @@ This implies that with decay chains:
     # The integer the '{A}' brace is parsed into (see extract_process).
     AXIAL_POLARIZATION = 99
 
-    def check_axial_polarization(self, procdef):
-        """Validate every '{A}' (axial/scalar, pol=99) brace of a
+    # The braces that name a piece of the *propagator* numerator of a massive
+    # vector and nothing else: they have no external-wavefunction counterpart
+    # (there is no VXXXXX helicity for them), so on a genuine external leg the
+    # integer would be written straight into the NHEL table and VXXXXX would
+    # quietly return a meaningless vector. See aloha/create_aloha.py for the
+    # numerators ("1G", "1H", ...) and [arXiv:2512.10015] for the definitions.
+    # '{A}' (99) is deliberately absent: it has its own, softer rule below.
+    PROPAGATOR_ONLY_POLARIZATIONS = {4: ('G', 'the metric piece -g^{mu nu}'),
+                                     5: ('H', 'the Theta projector'),
+                                     6: ('Q', 'the q^mu q^nu / q^2 tensor'),
+                                     7: ('W', 'the Ward-protected full '
+                                              'propagator'),
+                                     9: ('S', 'the scalar piece '
+                                              '(axial + finite width)'),
+                                     }
+
+    def check_propagator_polarization(self, procdef):
+        """Validate the propagator-only polarization braces of a
         ProcessDefinition and of its decay chains.
 
-        A massive spin-one particle has three physical polarisations; the
-        fourth, axial one is the k^mu piece its *propagator* carries off shell
-        (arXiv:1908.08454). Three cases:
+        Two families are checked, sharing one decay-chain-aware walk:
+
+        '{A}' (axial/scalar, pol=99). A massive spin-one particle has three
+        physical polarisations; the fourth, axial one is the k^mu piece its
+        *propagator* carries off shell (arXiv:1908.08454). Three cases:
 
         * '{A}' on a particle that is decayed further ('t > w+{A} b,
           w+ > ta+ vt') is the historical propagator use. Always allowed, and
@@ -4887,6 +4910,13 @@ This implies that with decay chains:
           identically for an on-shell particle. It additionally needs
           'set consider_axial True'.
         * '{A}' on an initial-state particle is never meaningful.
+
+        '{G}', '{H}', '{Q}', '{W}' and '{S}' (pol=4,5,6,7,9). Each of these
+        names a rank-two piece of the propagator numerator, complete with its
+        1/(q^2-M^2+iM*Gamma) pole; none of them is a polarisation vector. They
+        are therefore allowed on a decayed leg only -- on an external leg they
+        are refused outright, with no option to turn them on, because no
+        external wavefunction for them exists.
 
         Raises InvalidCmd; returns None.
         """
@@ -4902,7 +4932,24 @@ This implies that with decay chains:
                     decayed_ids.update(leg.get('ids'))
 
         for leg in procdef.get('legs'):
-            if axial not in leg.get('polarization'):
+            pol = leg.get('polarization')
+            # the strictly propagator-only braces: nothing rescues them on an
+            # external leg, so check them before the softer '{A}' rules.
+            if not decayed_ids.intersection(leg.get('ids')):
+                for value in pol:
+                    if value not in self.PROPAGATOR_ONLY_POLARIZATIONS:
+                        continue
+                    tag, what = self.PROPAGATOR_ONLY_POLARIZATIONS[value]
+                    raise self.InvalidCmd(
+                        'The polarization {%s} is %s of a massive vector '
+                        'propagator, not a polarization vector: it exists '
+                        'only for an internal line. It is allowed on a '
+                        'particle that is decayed further (write '
+                        '"t > w+{%s} b, w+ > ta+ vt"), and is not allowed on '
+                        'an %s-state particle of the process.'
+                        % (tag, what, tag,
+                           'final' if leg.get('state') else 'initial'))
+            if axial not in pol:
                 continue
             if not leg.get('state'):
                 raise self.InvalidCmd(
@@ -4925,7 +4972,7 @@ This implies that with decay chains:
                     'enable it.')
 
         for decay in procdef.get('decay_chains'):
-            self.check_axial_polarization(decay)
+            self.check_propagator_polarization(decay)
 
     def extract_process(self, line, proc_number = 0, overall_orders = {},
                         avoid_squared_orders=False):

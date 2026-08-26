@@ -378,8 +378,8 @@ class Switcher(object):
     def check_load(self, *args, **opts):
         return self.cmd.check_load(self, *args, **opts)
         
-    def check_axial_polarization(self, *args, **opts):
-        return self.cmd.check_axial_polarization(self, *args, **opts)
+    def check_propagator_polarization(self, *args, **opts):
+        return self.cmd.check_propagator_polarization(self, *args, **opts)
 
     def check_open(self, *args, **opts):
         return self.cmd.check_open(self, *args, **opts)

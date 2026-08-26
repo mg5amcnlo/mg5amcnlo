@@ -688,6 +688,24 @@ class HelasWavefunction(base_objects.PhysicsObject):
                 if self['state'] == 'final' and self.get('pdg_code') in decay_ids:
                     self.set('decay', True)
                 else:
+                    # Braces that name a piece of the propagator numerator of a
+                    # massive vector have no external wavefunction: the integer
+                    # would end up in the NHEL table and VXXXXX would silently
+                    # return a meaningless vector. The command interface
+                    # already refuses them (check_propagator_polarization);
+                    # this catches the direct-API path as well.
+                    propagator_only = \
+                        base_objects.Leg.propagator_only_polarizations
+                    for value in leg.get('polarization'):
+                        # 99 ('{A}') has its own, softer rule just below
+                        if value == 99 or value not in propagator_only:
+                            continue
+                        raise InvalidCmd(
+                            "The polarization {%s} is a piece of a massive "
+                            "vector propagator, not a polarization vector: "
+                            "it is only valid on a particle that is decayed "
+                            "further (an internal line), not on an external "
+                            "leg of the process." % propagator_only[value])
                     if 99 in leg.get('polarization'):
                         # The axial/scalar polarization {A} of a massive vector
                         # is the k^mu piece of its *propagator*; it vanishes
