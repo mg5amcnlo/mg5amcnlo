@@ -197,7 +197,7 @@ def main():
             '$\\circ$: exactly 0 (structural)',
             transform=rx.transAxes, ha='right', va='bottom', fontsize=7,
             color='0.30', linespacing=1.3)
-    rx.set_ylabel('Shape ratio\n(clipped to $\\pm20\\%$)', fontsize=9)
+    rx.set_ylabel('Shape ratio', fontsize=9)
     # The variable and its unit, nothing else.
     rx.set_xlabel(r'$m_{t\bar{t}}$ [GeV]')
     rx.set_xlim(lo, hi)
