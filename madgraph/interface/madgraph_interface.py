@@ -900,6 +900,10 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info("deactivates mixed expansion support at NLO, goes back to MG5aMCv2 behavior")
         logger.info("acknowledged_v3.1_syntax <value>",'$MG:color:GREEN') 
         logger.info("if set to True allows to use syntax which have change meaning between 3.0 and 3.1 version")
+        logger.info("consider_axial <value>",'$MG:color:GREEN')
+        logger.info(" > (default: False) allow the axial/scalar polarisation {A} on a FINAL-STATE")
+        logger.info(" > particle. Only meaningful together with the off-shell '*' syntax")
+        logger.info(" > ('generate p p > z{A}* z'), since {A} vanishes for an on-shell particle.")
           
 #===============================================================================
 # CheckValidForCmd
@@ -1588,6 +1592,7 @@ This will take effect only in a NEW terminal
                                           'loop_optimized_output',\
                                           'loop_color_flows',\
                                           'include_lepton_initiated_processes',\
+                                          'consider_axial',\
                                           'low_mem_multicore_nlo_generation']:
             args.append('True')
 
@@ -1637,7 +1642,7 @@ This will take effect only in a NEW terminal
             if not args[1].isdigit():
                 raise self.InvalidCmd('%s values should be a integer' % args[0])
             
-        if args[0] in ['loop_optimized_output', 'loop_color_flows', 'low_mem_multicore_nlo_generation', 'nlo_mixed_expansion']:
+        if args[0] in ['loop_optimized_output', 'loop_color_flows', 'low_mem_multicore_nlo_generation', 'nlo_mixed_expansion', 'consider_axial']:
             try:
                 args[1] = banner_module.ConfigFile.format_variable(args[1], bool, args[0])
             except Exception:
@@ -2692,7 +2697,8 @@ class CompleteForCmd(cmd.CompleteCmd):
             if args[1] in ['complex_mass_scheme',\
                            'loop_optimized_output', 'loop_color_flows',\
                            'include_lepton_initiated_processes',\
-                           'low_mem_multicore_nlo_generation', 'nlo_mixed_expansion']:
+                           'low_mem_multicore_nlo_generation', 'nlo_mixed_expansion',\
+                           'consider_axial']:
                 return self.list_completion(text, ['False', 'True', 'default'])
             elif args[1] in ['group_subprocesses']:
                 return self.list_completion(text, ['False', 'True', 'Auto', 'gpu', 'nlo'])
@@ -3036,7 +3042,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                     'max_t_for_channel',
                     'zerowidth_tchannel',
                     'default_unset_couplings',
-                    'nlo_mixed_expansion'
+                    'nlo_mixed_expansion',
+                    'consider_axial'
                     ]
     _valid_nlo_modes = ['all','real','virt','sqrvirt','tree','noborn','LOonly', 'only']
     _valid_sqso_types = ['==','<=','=','>']
@@ -3119,6 +3126,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                           'max_t_for_channel': 99, # means no restrictions
                           'zerowidth_tchannel': True,
                           'nlo_mixed_expansion':True,
+                          'consider_axial': False,
                         }
 
     options_madevent = {'automatic_html_opening':True,
@@ -3325,6 +3333,10 @@ This implies that with decay chains:
             if self._curr_amps and self._curr_amps[0].get_ninitial() != \
                myprocdef.get_ninitial() and not standalone_only:
                 raise self.InvalidCmd("Can not mix processes with different number of initial states.")               
+
+            # Check the axial/scalar polarization {A}: propagator-only unless
+            # 'consider_axial' is on AND the leg carries the off-shell '*'.
+            self.check_axial_polarization(myprocdef)
 
             #Check that we do not have situation like z{T} z
             if not myprocdef.check_polarization():
@@ -4855,6 +4867,65 @@ This implies that with decay chains:
         args = self.split_arg(line)
         args.insert(0, 'process')
         self.do_add(" ".join(args))
+
+    # The integer the '{A}' brace is parsed into (see extract_process).
+    AXIAL_POLARIZATION = 99
+
+    def check_axial_polarization(self, procdef):
+        """Validate every '{A}' (axial/scalar, pol=99) brace of a
+        ProcessDefinition and of its decay chains.
+
+        A massive spin-one particle has three physical polarisations; the
+        fourth, axial one is the k^mu piece its *propagator* carries off shell
+        (arXiv:1908.08454). Three cases:
+
+        * '{A}' on a particle that is decayed further ('t > w+{A} b,
+          w+ > ta+ vt') is the historical propagator use. Always allowed, and
+          unaffected by 'consider_axial'.
+        * '{A}' on a genuinely final-state particle is only meaningful with the
+          off-shell '*' syntax, because the axial polarisation vanishes
+          identically for an on-shell particle. It additionally needs
+          'set consider_axial True'.
+        * '{A}' on an initial-state particle is never meaningful.
+
+        Raises InvalidCmd; returns None.
+        """
+        if procdef is None:
+            return
+        axial = self.AXIAL_POLARIZATION
+        # pdgs that this level hands over to a decay chain: those legs become
+        # internal propagators, which is the case '{A}' was written for.
+        decayed_ids = set()
+        for decay in procdef.get('decay_chains'):
+            for leg in decay.get('legs'):
+                if not leg.get('state'):
+                    decayed_ids.update(leg.get('ids'))
+
+        for leg in procdef.get('legs'):
+            if axial not in leg.get('polarization'):
+                continue
+            if not leg.get('state'):
+                raise self.InvalidCmd(
+                    'The axial polarization {A} is not supported for an '
+                    'initial-state particle.')
+            if decayed_ids.intersection(leg.get('ids')):
+                # propagator: the leg is replaced by the decay chain
+                continue
+            if not leg.get('offshell'):
+                raise self.InvalidCmd(
+                    'The axial polarization {A} of a final-state particle is '
+                    'identically zero on shell, so it requires the off-shell '
+                    '"*" syntax (write "z{A}*", the star after the brace). '
+                    'Without a star, {A} is only valid for a particle that is '
+                    'decayed further, i.e. for a propagator.')
+            if not self.options['consider_axial']:
+                raise self.InvalidCmd(
+                    'The axial polarization {A} of a final-state particle is '
+                    'disabled by default. Use "set consider_axial True" to '
+                    'enable it.')
+
+        for decay in procdef.get('decay_chains'):
+            self.check_axial_polarization(decay)
 
     def extract_process(self, line, proc_number = 0, overall_orders = {},
                         avoid_squared_orders=False):
@@ -8748,6 +8819,28 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
         self.check_set(args)
         self.options[args[0]] = banner_module.ConfigFile.format_variable(args[1], bool, args[0])
         
+    def help_set2_consider_axial(self):
+        logger.info("consider_axial <value>",'$MG:color:GREEN')
+        logger.info(" > (default: False) allow the axial/scalar polarisation {A}")
+        logger.info("   of a massive spin-one particle to be requested on a")
+        logger.info("   FINAL-STATE particle, which is only meaningful together")
+        logger.info("   with the off-shell '*' syntax: 'generate p p > z{A}* z'.")
+        logger.info("   {A} is identically zero for an on-shell particle, so the")
+        logger.info("   star is mandatory. See arXiv:1908.08454.")
+        logger.info("   {A} on a particle that is decayed further (the propagator")
+        logger.info("   case, 'generate t > w+{A} b, w+ > ta+ vt') is always")
+        logger.info("   allowed and does not need this option.")
+
+    def set2_consider_axial(self, args, log=True):
+        """Set whether the axial/scalar polarisation {A} may be requested on a
+        final-state particle (which additionally requires the off-shell '*').
+        Default is False.
+        Example: set consider_axial True
+        """
+        args = ['consider_axial'] + args
+        self.check_set(args)
+        self.options[args[0]] = banner_module.ConfigFile.format_variable(args[1], bool, args[0])
+
     def help_set2_zerowidth_tchannel(self):
         logger.info("zerowidth_tchannel <value>",'$MG:color:GREEN')
         logger.info(" > (default: True) [Used ONLY for tree-level output with madevent]")

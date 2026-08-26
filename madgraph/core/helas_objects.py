@@ -689,7 +689,29 @@ class HelasWavefunction(base_objects.PhysicsObject):
                     self.set('decay', True)
                 else:
                     if 99 in leg.get('polarization'):
-                        raise Exception("polarization A only valid for propagator.")
+                        # The axial/scalar polarization {A} of a massive vector
+                        # is the k^mu piece of its *propagator*; it vanishes
+                        # identically for an on-shell particle. On an external
+                        # leg it is therefore only meaningful together with the
+                        # off-shell '*' syntax -- and even then the generated
+                        # code for it does not exist yet (see below).
+                        if not leg.get('offshell'):
+                            raise InvalidCmd(
+                                "polarization A only valid for propagator, or "
+                                "for an off-shell final-state particle written "
+                                "\"z{A}*\" (star after the brace).")
+                        raise InvalidCmd(
+                            "The axial polarization {A} of an off-shell "
+                            "final-state particle is accepted by the process "
+                            "syntax but is NOT implemented in the generated "
+                            "code yet: there is no external wavefunction for "
+                            "it (aloha/template_files/aloha_functions.f, "
+                            "VXXXXX), no helicity entry in the NHEL table and "
+                            "no fourth index in the MadSpin density matrix. "
+                            "Generating this process would silently produce a "
+                            "wrong number, so it is refused instead. Use {A} "
+                            "on a particle that is decayed further (the "
+                            "propagator case) until that support lands.")
                 # Set fermion flow state. Initial particle and final
                 # antiparticle are incoming, and vice versa for
                 # outgoing

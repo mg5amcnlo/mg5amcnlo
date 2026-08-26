@@ -328,6 +328,93 @@ class TestValidCmd(unittest.TestCase):
         self.do('generate v{0T} v{0} > w+ w-')
         self.assertEqual(len(cmd._curr_amps), 2)
 
+    def test_consider_axial_default(self):
+        """the axial option exists, is a MadGraph option, and is off."""
+        cmd = self.cmd
+        self.assertIn('consider_axial', cmd.options_madgraph)
+        self.assertEqual(cmd.options_madgraph['consider_axial'], False)
+        self.assertIn('consider_axial', cmd._set_options)
+        self.assertEqual(cmd.options['consider_axial'], False)
+
+    @test_aloha.set_global()
+    def test_generate_axial_polarisation(self):
+        """{A} on a FINAL-STATE particle: needs the off-shell '*' AND
+        'set consider_axial True'. On a particle that is decayed further it
+        stays the (unconditional) propagator syntax it always was."""
+        import madgraph.core.helas_objects as helas_objects
+
+        cmd = self.cmd
+        self.do('import model sm')
+        original = cmd.options['consider_axial']
+        try:
+            # --- option off (the default) -------------------------------
+            cmd.options['consider_axial'] = False
+
+            # no star: {A} is identically zero on shell
+            self.assertRaises(madgraph.InvalidCmd,
+                              self.do, 'generate p p > z{A} h')
+            try:
+                self.do('generate p p > z{A} h')
+            except madgraph.InvalidCmd as error:
+                self.assertIn('off-shell', str(error))
+
+            # star but option off
+            self.assertRaises(madgraph.InvalidCmd,
+                              self.do, 'generate p p > z{A}* h')
+            try:
+                self.do('generate p p > z{A}* h')
+            except madgraph.InvalidCmd as error:
+                self.assertIn('consider_axial', str(error))
+
+            # initial state is never meaningful
+            self.assertRaises(madgraph.InvalidCmd,
+                              self.do, 'generate z{A}* z > w+ w-')
+
+            # the propagator syntax does not go through the option at all
+            self.do('generate t > w+{A} b, w+ > ta+ vt')
+            self.assertTrue(cmd._curr_amps)
+
+            # --- option on ----------------------------------------------
+            cmd.options['consider_axial'] = True
+            self.do('generate p p > z{A}* h')
+            self.assertTrue(cmd._curr_amps)
+            legs = cmd._curr_amps[0].get('process').get('legs')
+            axial = [l for l in legs if l.get('polarization') == [99]]
+            self.assertEqual(len(axial), 1)
+            self.assertTrue(axial[0].get('state'))
+            self.assertTrue(axial[0].get('offshell'))
+
+            # ... but the generated code for it does not exist yet, so the
+            # matrix element refuses rather than producing a wrong number.
+            try:
+                helas_objects.HelasMultiProcess(cmd._curr_amps)
+            except madgraph.InvalidCmd as error:
+                self.assertIn('not implemented', str(error).lower())
+            else:
+                self.fail('axial final state built a matrix element')
+        finally:
+            cmd.options['consider_axial'] = original
+            cmd.exec_cmd('generate p p > t t~')
+
+    def test_set_consider_axial(self):
+        """'set consider_axial' parses like the other boolean MG5 options."""
+        cmd = self.cmd
+        original = cmd.options['consider_axial']
+        try:
+            cmd.exec_cmd('set consider_axial True')
+            self.assertEqual(cmd.options['consider_axial'], True)
+            cmd.exec_cmd('set consider_axial False')
+            self.assertEqual(cmd.options['consider_axial'], False)
+            # bare 'set consider_axial' means True, like complex_mass_scheme
+            cmd.exec_cmd('set consider_axial')
+            self.assertEqual(cmd.options['consider_axial'], True)
+            cmd.exec_cmd('set consider_axial default')
+            self.assertEqual(cmd.options['consider_axial'], False)
+            self.assertRaises(madgraph.InvalidCmd,
+                              cmd.exec_cmd, 'set consider_axial banana')
+        finally:
+            cmd.options['consider_axial'] = original
+
 
 class TestExtendedCmd(unittest.TestCase):
     """test the extension of cmd interface"""
