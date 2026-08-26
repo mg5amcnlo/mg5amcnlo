@@ -40,6 +40,7 @@ import math
 import random
 
 import madgraph.core.base_objects as MG
+import madgraph.core.base_objects as base_objects
 import madgraph.various.misc as misc
 import MadSpin.decay as madspin
 import madgraph.various.lhe_parser as lhe_parser
@@ -9953,3 +9954,242 @@ class TestBreitWignerTruncation(unittest.TestCase):
         chain = self._chain([6])
         self.assertEqual(self._V1(-1, self.TABLE).bw_truncation_factor(chain),
                          self._V1(15, self.TABLE).bw_truncation_factor(chain))
+
+
+class TestAxialBasis(unittest.TestCase):
+    """'consider_axial': the fourth, axial direction eps_A = k/sqrt(k.k) of a
+    massive vector's spin basis, and the two things that keep it honest --
+    a weight of (Q^2-M^2)/M^2 in the contraction, and no place at all in any
+    trace."""
+
+    AXIAL = 4
+    BASIS = [-1, 0, 1, AXIAL]
+
+    def _density(self, hel, seed=0):
+        import numpy as np
+        rng = np.random.default_rng(seed)
+        n = len(hel)
+        arr = (rng.normal(size=n * (n + 1) // 2)
+               + 1j * rng.normal(size=n * (n + 1) // 2)).astype('complex64')
+        for i in range(n):
+            arr[i * (2 * n - i + 1) // 2] = abs(arr[i * (2 * n - i + 1) // 2])
+        return madspin.DensityMatrix(arr, 1, hel, n)
+
+    def test_axial_helicity_is_the_helas_integer(self):
+        """The label the density matrix uses must be the one VXXXXX reads and
+        the one base_objects translates '{A}' (99) into -- ALLOW_HEL is matched
+        against NHEL by value, so a disagreement would give an all-zero
+        density."""
+        self.assertEqual(madspin.DensityMatrix.AXIAL_HELICITY,
+                         base_objects.polarization_to_helicities([99])[0])
+
+    def test_trace_restriction_alone_drops_the_axial_diagonal(self):
+        """hel_restriction_trace with no hel_restriction beside it: the trace
+        loses the axial entry while the contraction keeps every row."""
+        import numpy as np
+        rho = self._density(self.BASIS, seed=1)
+        full = rho.trace()
+        rho.set_hel_restriction_trace([(-1, 0, 1)])
+        self.assertIsNone(rho.hel_restriction)
+        phys = rho.trace()
+        # exactly the axial diagonal entry, and nothing else, has gone
+        axial = rho.values[(rho.helicities[:, 0] == self.AXIAL)
+                           & (rho.helicities[:, 1] == self.AXIAL)][0]
+        self.assertAlmostEqual(complex(full - phys).real, complex(axial).real,
+                               places=5)
+        # the contraction is untouched by a trace-only restriction
+        other = self._density(self.BASIS, seed=2)
+        bare = self._density(self.BASIS, seed=1)
+        self.assertAlmostEqual(complex(rho.scalar_multiplication(other)).real,
+                               complex(bare.scalar_multiplication(other)).real,
+                               places=4)
+
+    def test_an_unrestricted_matrix_still_has_no_trace_restriction(self):
+        """The widening of _trace_restriction must not move anything that
+        existed before: no restriction of either kind is still None."""
+        rho = self._density(self.BASIS, seed=3)
+        self.assertIsNone(rho._trace_restriction())
+
+    def test_weight_helicity_scales_row_and_column(self):
+        """Entry (i,j) picks up c_i*c_j: that is what the propagator numerator
+        does to the squared amplitude, once and not once per side."""
+        import numpy as np
+        c = -0.37
+        rho = self._density(self.BASIS, seed=4)
+        out = rho.weight_helicity([{self.AXIAL: c}])
+        h = out.helicities
+        expect = np.ones(h.shape[0])
+        expect[h[:, 0] == self.AXIAL] *= c
+        expect[h[:, 1] == self.AXIAL] *= c
+        self.assertTrue(np.allclose(out.values, rho.values * expect,
+                                    rtol=1e-5, atol=1e-6))
+        # the axial-axial entry gets c^2, the physical block nothing
+        aa = (h[:, 0] == self.AXIAL) & (h[:, 1] == self.AXIAL)
+        phys = (h[:, 0] != self.AXIAL) & (h[:, 1] != self.AXIAL)
+        self.assertTrue(np.allclose(out.values[aa], rho.values[aa] * c * c,
+                                    rtol=1e-5, atol=1e-6))
+        self.assertTrue(np.allclose(out.values[phys], rho.values[phys]))
+
+    def test_weight_helicity_keeps_the_fast_path_and_the_restrictions(self):
+        rho = self._density(self.BASIS, seed=5)
+        rho.set_hel_restriction_trace([(-1, 0, 1)])
+        out = rho.weight_helicity([{self.AXIAL: 2.0}])
+        self.assertIs(out.map_density_matrix_ind, rho.map_density_matrix_ind)
+        self.assertEqual(out.hel_restriction_trace, rho.hel_restriction_trace)
+        self.assertIsNone(out.hel_restriction)
+
+    def test_weight_helicity_is_a_no_op_without_weights(self):
+        """Returns self, so nothing that does not ask for a weight pays for a
+        copy -- and so the unweighted path stays bit-for-bit identical."""
+        rho = self._density(self.BASIS, seed=6)
+        self.assertIs(rho.weight_helicity([None]), rho)
+        self.assertIs(rho.weight_helicity([{}]), rho)
+
+    def test_the_weighted_contraction_stays_non_negative(self):
+        """With real weights the convolution is still sum_s |sum_l c_l A_l B_l|^2,
+        so no signed-weight machinery is needed: unlike the -g^{mu nu}
+        completeness (which would put a minus sign on the axial index), the
+        propagator numerator is diagonal with real coefficients."""
+        import numpy as np
+        # a genuine rank-one (pure-state) pair, which is what one spectator /
+        # colour configuration contributes
+        rng = np.random.default_rng(7)
+        n = 4
+        for c in (-2.0, -0.3, 0.0, 0.5, 3.0):
+            A = rng.normal(size=n) + 1j * rng.normal(size=n)
+            B = rng.normal(size=n) + 1j * rng.normal(size=n)
+            w = np.array([1.0, 1.0, 1.0, c])
+            amp = np.sum(w * A * B)
+            rho_p = np.outer(A, A.conjugate())
+            rho_d = np.outer(B, B.conjugate())
+            got = np.sum(np.outer(w, w) * rho_p * rho_d)
+            self.assertAlmostEqual(got.real, abs(amp) ** 2, places=8)
+            self.assertGreaterEqual(got.real, 0.0)
+
+
+class TestAxialInterfaceGates(unittest.TestCase):
+    """The MadSpin-side bookkeeping of 'consider_axial': which pdgs get the
+    fourth direction, what weight it carries, and what the option refuses."""
+
+    AXIAL = madspin.DensityMatrix.AXIAL_HELICITY
+
+    class _Model(object):
+        def __init__(self, table):
+            self.table = table
+
+        def get_particle(self, pdg):
+            return self.table[abs(int(pdg))]
+
+    class _Particle(dict):
+        def get(self, key):
+            return self[key]
+
+    class _Value(object):
+        def __init__(self, v):
+            self.value = v
+
+    class _Banner(object):
+        def __init__(self, masses):
+            self.masses = masses
+
+        def get(self, card, block, pdg):
+            assert (card, block) == ('param_card', 'mass')
+            return TestAxialInterfaceGates._Value(self.masses[abs(int(pdg))])
+
+    def _stub(self, **options):
+        stub = object.__new__(interface_madspin.MadSpinInterface)
+        opts = {'consider_axial': True, 'spinmode': 'madspin',
+                'unweighting': 'auto', 'fixed_order': False}
+        opts.update(options)
+        stub.options = opts
+        stub.model = self._Model({
+            24: self._Particle({'spin': 3, 'mass': 'MW'}),      # massive vector
+            23: self._Particle({'spin': 3, 'mass': 'MZ'}),      # massive vector
+            22: self._Particle({'spin': 3, 'mass': 'ZERO'}),    # massless vector
+            6: self._Particle({'spin': 2, 'mass': 'MT'}),       # fermion
+            25: self._Particle({'spin': 1, 'mass': 'MH'}),      # scalar
+        })
+        stub.banner = self._Banner({24: 80.419, 23: 91.188})
+        return stub
+
+    def test_only_massive_vectors_get_the_axial_direction(self):
+        stub = self._stub()
+        self.assertEqual(stub._axial_pdgs([24, -24, 23]), frozenset({24, -24, 23}))
+        self.assertEqual(stub._axial_pdgs([6, 25, 22]), frozenset())
+
+    def test_nothing_at_all_without_the_option(self):
+        """The single gate everything else hangs off: with the option off the
+        set is empty and every axial branch is dead."""
+        stub = self._stub(consider_axial=False)
+        self.assertEqual(stub._axial_pdgs([24, 23, 6]), frozenset())
+        self.assertIsNone(stub._axial_trace_restriction([24], frozenset(),
+                                                        [[-1, 0, 1, 4]]))
+
+    def test_trace_restriction_names_the_physical_states_only(self):
+        stub = self._stub()
+        got = stub._axial_trace_restriction([24, 6], frozenset({24}),
+                                            [[-1, 0, 1, self.AXIAL], [1, -1]])
+        self.assertEqual(got, ((-1, 0, 1), None))
+
+    def test_axial_weight_is_the_propagator_coefficient(self):
+        """c_A = (Q^2-M^2)/M^2: zero on shell, and it is what the '1A' custom
+        propagator carries."""
+        stub = self._stub()
+        pole = 80.419
+        for q in (pole, 70.0, 95.0):
+            got = stub._axial_weights([24], frozenset({24}), [q])
+            self.assertEqual(list(got[0]), [self.AXIAL])
+            self.assertAlmostEqual(got[0][self.AXIAL],
+                                   (q * q - pole ** 2) / pole ** 2, places=12)
+        self.assertEqual(stub._axial_weights([24], frozenset({24}), [pole])[0],
+                         {self.AXIAL: 0.0})
+        # a non-axial index is left alone
+        self.assertEqual(stub._axial_weights([6], frozenset({24}), [173.0]),
+                         [None])
+
+    def test_the_option_forces_the_joint_accept_reject(self):
+        """DensityMatrix.identity is only a theorem for the three physical
+        polarisations, so the staged schemes are not available."""
+        stub = self._stub(unweighting='sequential')
+        stub._log_once = lambda *a, **k: None
+        stub._announce_mode = lambda mode, asked: mode
+        stub._pure_interference = lambda: {}
+        self.assertEqual(stub._unweighting_mode(True), 'joint')
+
+    def test_refusals(self):
+        for kwargs, needle in (({'spinmode': 'PA'}, 'off-shell resonance'),
+                               ({'spinmode': 'onshell'}, 'off-shell resonance')):
+            stub = self._stub(**kwargs)
+            stub._pure_interference = lambda: {}
+            stub._production_polarization = lambda: {}
+            stub._polarization_weights_enabled = lambda: False
+            self.assertRaises(Exception, stub._check_axial_compatibility)
+            try:
+                stub._check_axial_compatibility()
+            except Exception as error:
+                self.assertIn(needle, str(error))
+        # pure_interference and a production brace are refused too
+        stub = self._stub()
+        stub._pure_interference = lambda: {6: ((0,), (-1, 1))}
+        stub._production_polarization = lambda: {}
+        stub._polarization_weights_enabled = lambda: False
+        self.assertRaises(Exception, stub._check_axial_compatibility)
+        stub = self._stub()
+        stub._pure_interference = lambda: {}
+        stub._production_polarization = lambda: {24: ((0,),)}
+        stub._polarization_weights_enabled = lambda: False
+        self.assertRaises(Exception, stub._check_axial_compatibility)
+        # so are the polarisation-fraction weights: a projection onto a
+        # physical polarisation can never pick the axial direction up, so the
+        # fractions would stop adding up to one
+        stub = self._stub()
+        stub._pure_interference = lambda: {}
+        stub._production_polarization = lambda: {}
+        stub._polarization_weights_enabled = lambda: True
+        self.assertRaises(Exception, stub._check_axial_compatibility)
+        # and the clean combination goes through
+        stub = self._stub()
+        stub._pure_interference = lambda: {}
+        stub._production_polarization = lambda: {}
+        stub._polarization_weights_enabled = lambda: False
+        self.assertIsNone(stub._check_axial_compatibility())

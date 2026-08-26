@@ -5,6 +5,66 @@ ANNOUNCEMENT:
    A new LTS (based on current 3.5.X) is starting now and will act as stable release for the coming years.
 
 3.7.2 (XX/XX/XX):
+    OM: MadSpin's density-matrix convolution can now run over the *fourth*, axial
+        direction of a massive vector's spin basis ('set consider_axial True' in the
+        MadSpin card, off by default and bit-for-bit inert when off). The massive
+        vector propagator MG5 writes is (-g^{mu nu} + k^mu k^nu/M^2)/(k^2-M^2+iM*Gamma),
+        and in the orthonormal tetrad of the previous entry its numerator is diagonal:
+        the three physical polarisations with coefficient 1, plus eps_A eps_A with
+        coefficient (Q^2-M^2)/M^2 -- exactly ALOHA's '1A' custom propagator. So the
+        axial index enters the convolution with that real, virtuality-dependent
+        weight, applied once (as c_i c_j on the (i,j) entry, DensityMatrix.
+        weight_helicity), and NOT with the -1 that the completeness relation of
+        -g^{mu nu} alone would suggest. It vanishes on shell, which is why
+        'consider_axial' requires the off-shell spinmode 'madspin'/'full', and it
+        leaves the convolution manifestly non-negative -- no signed weight, no change
+        to the accept/reject.
+        The axial direction carries no cross-section, so it takes no part in any
+        trace: trace()/normalized(), and with them the production and decay matrix
+        elements that normalise the MadSpin weight, stay the physical three-state
+        objects (a trace-only helicity restriction, DensityMatrix.
+        set_hel_restriction_trace, with the contraction left unrestricted).
+        MadSpin does not put an '{A}' brace on the process lines it generates:
+        GET_ALL_INTER overwrites NHEL at the changing positions from ALLOW_HEL before
+        calling GET_AMP, so the fourth state reaches the amplitude without ever
+        entering the NHEL table -- which is what leaves SMATRIX, the helicity-
+        averaging IDEN and the decay pool untouched.
+        Measured with 'density_debug' on "u d~ > w+ h" with "w+ > ta+ vt" (massive
+        daughters and a production current that is not conserved at the W leg, so the
+        axial column is alive): over 345 trials the three-index convolution misses the
+        1e-4 closure tolerance against the full 2 -> 3 matrix element on 9% of them
+        (worst 3.3e-3), the four-index one on none (worst 1.5e-5, at the complex64
+        floor of the density storage). On "u u~ > w+ w-", where massless quarks make
+        the production current conserved and the axial column ~1e-3 of the physical
+        one, the worst case improves from 7.1e-5 to 2.6e-6.
+        'consider_axial' is refused together with 'pure_interference', with a
+        polarisation brace on the production process, with
+        keep_weight_for_polarization_vector/_fermion and in gauge = FD, and it falls
+        back to the joint accept/reject: the staged schemes stand an undrawn decay in
+        as DensityMatrix.identity = delta/n, which is a theorem about the three
+        physical polarisations only (eps_A is the rest-frame time direction and is
+        invariant under the rotations that make the physical average flat).
+    OM: '{A}' is now also accepted on an *initial*-state leg carrying the off-shell
+        star, i.e. on the decaying resonance of a 1 -> N process ("generate
+        w+{T0A}* > ta+ vt"). eps_A = p^mu/vmass is real, so unlike the transverse
+        states it is not conjugated for an incoming leg and VXXXXX's 'nsv' only signs
+        the momentum it stores; the star rule and the '--allow_axial' output gate are
+        the same as for a final-state leg.
+    OM: three fixes to MadSpin's 'density_debug' cross-check, which could not run at
+        all in the off-shell spinmodes before:
+        - it evaluates the decay matrix elements before the density path has built
+          its [production, decay] f2py module pair, and died on "'module' object is
+          not subscriptable";
+        - it compared the density weight, which divides by the propagator denominator
+          at the pole |i M Gamma|^2 (the Breit-Wigner shape being supplied by the
+          virtuality sampling jacobian), against a full matrix element carrying the
+          real |Q^2-M^2+iM Gamma|^2. The ratio is now divided out, which is a no-op
+          on shell;
+        - the production-diagonal check used calculate_matrix_element(production)
+          after add_decays() had turned that event into the full one, and compared it
+          against a prod_diag evaluated at the pre-reshuffling momenta. Both sides now
+          come from the density routine, at the density's own momenta. The check is
+          skipped on the max-weight-scan trials that reuse a stale production density.
     OM: the axial polarisation brace '{A}' now has a real external wavefunction and
         can be put on an off-shell final-state particle ("generate p p > z{A}* h"),
         not only on an internal line. VXXXXX (aloha_functions.f, its loop variant and

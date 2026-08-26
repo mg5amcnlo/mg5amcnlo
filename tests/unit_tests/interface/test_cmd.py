@@ -363,10 +363,30 @@ class TestValidCmd(unittest.TestCase):
             except madgraph.InvalidCmd as error:
                 self.assertIn('off-shell', str(error))
 
-            # initial state is refused (MadSpin's decay-side ME would want
-            # it one day; it is not wired up)
+            # an INITIAL-state '{A}' follows the same rule as a final-state
+            # one: it needs the star. That spelling is MadSpin's decay-side
+            # matrix element, where the decaying resonance is leg 1.
             self.assertRaises(madgraph.InvalidCmd,
-                              self.do, 'generate z{A}* z > w+ w-')
+                              self.do, 'generate w+{A} > ta+ vt')
+            self.do('generate w+{A}* > ta+ vt')
+            self.assertTrue(cmd._curr_amps)
+            init = [l for l in cmd._curr_amps[0].get('process').get('legs')
+                    if not l.get('state')]
+            self.assertEqual(len(init), 1)
+            self.assertEqual(init[0].get('polarization'), [99])
+            self.assertTrue(init[0].get('offshell'))
+            # ... and it builds, exactly like a final-state one: eps_A is real,
+            # so there is nothing for the incoming/outgoing conjugation to do
+            init_me = helas_objects.HelasMultiProcess(
+                cmd._curr_amps).get('matrix_elements')[0]
+            init_values = set(h for row in init_me.get_helicity_matrix()
+                              for h in row)
+            self.assertIn(4, init_values)
+            self.assertNotIn(99, init_values)
+            # an initial-state axial leg is external by construction, so
+            # '--allow_axial' still has to gate writing it out
+            self.assertEqual(
+                len(cmd.collect_axial_external_legs(cmd._curr_amps)), 1)
 
             # the propagator syntax is unchanged
             self.do('generate t > w+{A} b, w+ > ta+ vt')

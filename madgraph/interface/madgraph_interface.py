@@ -1843,8 +1843,16 @@ This will take effect only in a NEW terminal
                     if not leg.get('state'):
                         decayed.add(leg.get('id'))
             for leg in proc.get('legs'):
-                if 99 in leg.get('polarization') and leg.get('state') \
-                   and leg.get('id') not in decayed:
+                if 99 not in leg.get('polarization'):
+                    continue
+                # An *initial*-state axial leg is MadSpin's decay-side matrix
+                # element ("w+{T0A}* > ta+ vt", the decaying resonance as leg
+                # 1). It is external by construction -- nothing decays it --
+                # so it needs the same explicit '--allow_axial' as a
+                # final-state one, and 'decayed' does not apply to it.
+                if not leg.get('state'):
+                    axial_legs.append(leg)
+                elif leg.get('id') not in decayed:
                     axial_legs.append(leg)
             for decay in proc.get('decay_chains'):
                 scan_process(decay, set())
@@ -5035,9 +5043,21 @@ This implies that with decay chains:
           current J is conserved, i.e. for massless daughters. Whether such a
           process may then be *written out* is decided at output time by
           'output standalone --allow_axial' (check_output), not here.
-        * '{A}' on an initial-state particle is refused. (The one place it
-          would make sense is MadSpin's decay-side matrix element, where the
-          decaying particle IS leg 1; that is not wired up yet.)
+        * '{A}' on an initial-state particle follows exactly the same rule as
+          on a final-state one: it needs the star ("w+{T0A}* > ta+ vt"). That
+          spelling is a 1 -> N decay whose decaying resonance IS leg 1, i.e.
+          the shape of MadSpin's decay-side matrix element, and it is how a
+          four-state NHEL table can be written for one. Nothing about the state
+          changes the wavefunction: VXXXXX builds eps_A = p^mu/vmass, which is
+          real, and 'nsv' only flips the momentum it stores in vc(1:2) -- the
+          incoming and outgoing axial states are the same vector, where the
+          transverse ones are complex conjugates.
+
+          (MadSpin itself does not need the brace: GET_ALL_INTER overwrites
+          NHEL at the changing positions from ALLOW_HEL, so the fourth state
+          reaches GET_AMP without ever entering the NHEL table -- which is what
+          keeps SMATRIX and the helicity-averaging IDEN three-state. See
+          MadSpinInterface._axial_pdgs.)
 
         '{G}', '{H}', '{Q}', '{W}' and '{S}' (pol=4,5,6,7,9). Each of these
         names a rank-two piece of the propagator numerator, complete with its
@@ -5079,11 +5099,7 @@ This implies that with decay chains:
                            'final' if leg.get('state') else 'initial'))
             if axial not in pol:
                 continue
-            if not leg.get('state'):
-                raise self.InvalidCmd(
-                    'The axial polarization {A} is not supported for an '
-                    'initial-state particle.')
-            if decayed_ids.intersection(leg.get('ids')):
+            if leg.get('state') and decayed_ids.intersection(leg.get('ids')):
                 # propagator: the leg is replaced by the decay chain
                 continue
             if not leg.get('offshell'):

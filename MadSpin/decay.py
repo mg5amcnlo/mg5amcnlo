@@ -5351,10 +5351,19 @@ class DensityMatrix:
         Symmetric restrictions are returned untouched, so nothing that existed
         before the interference mode can move; only a cross restriction defers
         to ``hel_restriction_trace``.
+
+        A trace restriction with *no* contraction restriction beside it is the
+        axial basis ('consider_axial'): the fourth basis direction eps_A is a
+        piece of the propagator numerator, not a state the resonance can be
+        produced in, so it belongs in the contraction but not in any trace.
+        That combination cannot arise from the pure-interference mode, which
+        never sets ``hel_restriction_trace`` without also setting
+        ``hel_restriction`` -- so an unrestricted matrix keeps returning None
+        and every pre-existing path stays bit-for-bit identical.
         """
         restriction = self.hel_restriction
         if restriction is None:
-            return None
+            return self.hel_restriction_trace
         if any(DensityMatrix._is_cross_restriction(entry)
                for entry in restriction):
             return self.hel_restriction_trace
@@ -5598,12 +5607,92 @@ class DensityMatrix:
         Built through the normal constructor, so it shares the cached helicity
         map with the real density matrices of the same basis and keeps the
         scalar_multiplication fast path available.
+
+        NOT valid on the axial basis ('consider_axial'). The flat diagonal is a
+        consequence of rotational invariance acting on the three physical
+        polarisations as a vector; eps_A = k/sqrt(k.k) is the rest-frame time
+        direction and is *invariant* under that group, so the phase-space
+        average is diag(a,a,a,b) with a process- and virtuality-dependent b/a
+        rather than delta/n. There is no cheap correct value for b, so the
+        axial basis refuses the schemes that need this object (the sequential
+        accept/reject) rather than biasing them -- see
+        MadSpinInterface._unweighting_mode.
         """
         array = np.zeros(dimension * (dimension + 1) // 2, dtype=np.complex64)
         # diagonal entries in the packed upper-triangular storage
         diag = [i * (2 * dimension - i + 1) // 2 for i in range(dimension)]
         array[diag] = 1.0 / dimension
         return cls(array, nchanging, all_helicity_combinations, dimension)
+
+    # The helicity label the axial ('{A}') basis direction carries inside a
+    # density matrix. It is HELAS' nhel = 4 -- the same integer VXXXXX reads
+    # and the same one base_objects.polarization_to_helicities() produces from
+    # the Leg-level 99 -- so that ALLOW_HEL and the helicity labels of this
+    # class speak the value the Fortran does.
+    AXIAL_HELICITY = 4
+
+    def weight_helicity(self, weights):
+        """A copy of this matrix with entry (i,j) of index k multiplied by
+        ``w_k(i) * w_k(j)``.
+
+        ``weights`` has one entry per changing helicity: either ``None`` (that
+        index untouched) or a ``{helicity: factor}`` mapping, factors defaulting
+        to 1.
+
+        This is how the axial direction enters the convolution. The massive
+        vector propagator MG5 writes is
+
+            (-g^{mu nu} + k^mu k^nu / M^2) / (k^2 - M^2 + i M Gamma)
+
+        and in the orthonormal tetrad of milestone 2 its numerator is diagonal:
+
+            sum_{lambda=-1,0,+1} eps_lambda^mu eps_lambda^{nu *}
+                + (Q^2 - M^2)/M^2  eps_A^mu eps_A^nu
+
+        (exactly ALOHA's '1A' custom propagator, create_aloha.get_custom_propa:
+        numerator (P^2-M^2) P^mu P^nu over P^2 M^2 times the same pole). So the
+        amplitude is sum_lambda c_lambda A_lambda B_lambda with c = 1 on the
+        three physical directions and c_A = (Q^2-M^2)/M^2, and the squared
+        amplitude carries c_i c_j on the (i,j) entry -- once, not once per
+        side. Note c_A is real and vanishes on shell: the axial direction is a
+        purely off-shell effect and the narrow-width limit of this whole
+        construction is the historical three-state one.
+
+        Because the weights are real and enter as c_i c_j, the weighted
+        contraction is still sum over spectators of |sum_lambda c_lambda
+        A_lambda B_lambda|^2 -- manifestly non-negative. Nothing here can make
+        the accept/reject weight change sign.
+        """
+        factors = np.ones(self.helicities.shape[0], dtype=np.float64)
+        touched = False
+        for k, table in enumerate(weights):
+            if not table:
+                continue
+            touched = True
+            for col in (2 * k, 2 * k + 1):
+                labels = self.helicities[:, col]
+                for hel, value in table.items():
+                    if value == 1.0:
+                        continue
+                    factors[labels == int(hel)] *= float(value)
+        if not touched:
+            return self
+        out = DensityMatrix.from_components(
+            self.helicities,
+            self.values * factors,
+            self.nchanging,
+            self.all_helicity_combinations,
+            self.dimension,
+            basis_id=self._basis_id,
+        )
+        out.hel_restriction = self.hel_restriction
+        out.hel_restriction_trace = self.hel_restriction_trace
+        # only the values changed: same labels, same row order, same basis. Keep
+        # the map so scalar_multiplication stays on its identical-map fast path
+        # (from_components drops it, which would silently move every axial run
+        # onto the slower sorted-alignment route).
+        out.map_density_matrix_ind = self.map_density_matrix_ind
+        return out
 
     def normalized(self):
         """Same matrix divided by its trace (Dhat = D / Tr D), i.e. on the same

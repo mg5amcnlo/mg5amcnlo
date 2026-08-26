@@ -718,18 +718,17 @@ class HelasWavefunction(base_objects.PhysicsObject):
                         # orthonormal tetrad. (The amplitude on that direction
                         # is k.J, which is zero only for a conserved current,
                         # i.e. for massless daughters -- not in general.)
-                        if leg.get('state') is False:
-                            # An initial-state axial leg is what MadSpin's
-                            # decay-side matrix element would need (there the
-                            # decaying particle is leg 1). Not enabled yet:
-                            # the density-matrix side of that does not exist.
-                            raise InvalidCmd(
-                                "The axial polarization {A} is not supported "
-                                "for an initial-state particle.")
+                        # An initial-state axial leg is MadSpin's decay-side
+                        # matrix element, where the decaying resonance is leg
+                        # 1 ("w+{T0A}* > ta+ vt"). It obeys the same star rule
+                        # as a final-state one and needs no separate handling:
+                        # eps_A = p^mu/vmass is real, so unlike the transverse
+                        # states it is not conjugated for an incoming leg, and
+                        # VXXXXX's nsv only signs the momentum it stores.
                         if not leg.get('offshell'):
                             raise InvalidCmd(
                                 "polarization A only valid for propagator, or "
-                                "for an off-shell final-state particle written "
+                                "for an off-shell external particle written "
                                 "\"z{A}*\" (star after the brace).")
                 # Set fermion flow state. Initial particle and final
                 # antiparticle are incoming, and vice versa for

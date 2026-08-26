@@ -32,6 +32,8 @@ if '__main__' == __name__:
     import sys
     sys.path.append(pjoin(os.path.dirname(__file__), '..'))
 
+import aloha
+import madgraph.core.base_objects as base_objects
 import madgraph.interface.extended_cmd as extended_cmd
 import madgraph.interface.madgraph_interface as mg_interface
 import madgraph.interface.master_interface as master_interface
@@ -1873,6 +1875,7 @@ class MadSpinInterface(extended_cmd.Cmd):
         # beyond the spinmode check is behind that guard.)
         self._validate_pure_interference()
         self._validate_weighted_decay()
+        self._check_axial_compatibility()
         if self._density_spinmode():
             # read (and validate) the production polarisation braces now rather
             # than on the first event, deep inside a worker process
@@ -3682,6 +3685,23 @@ class MadSpinInterface(extended_cmd.Cmd):
                            "accept/reject (every partial weight of a staged "
                            "scheme is identically zero in this mode)")
             return self._announce_mode('joint', self.options['unweighting'])
+        if self.options.get('consider_axial'):
+            # Every staged scheme stands an undrawn decay slot in as
+            # DensityMatrix.identity, delta/n. That is a theorem about the
+            # three physical polarisations -- rotational invariance in the
+            # parent rest frame acts on them as a vector, so the average is
+            # flat -- and it is false for the axial direction, which is that
+            # frame's *time* axis and is invariant under the same group. The
+            # phase-space average is diag(a,a,a,b) with a b/a that depends on
+            # the process and on the virtuality, and there is no cheap way to
+            # get it. Falling back to the joint test costs speed; using
+            # delta/4 would cost correctness.
+            self._log_once('consider_axial_joint',
+                           "MadSpin: consider_axial forces the joint "
+                           "accept/reject (the staged schemes need the "
+                           "phase-space average of an undrawn decay, which is "
+                           "not flat once the axial direction is in the basis)")
+            return self._announce_mode('joint', self.options.get('unweighting'))
         if self._weighted_decay():
             # There is no accept/reject at all in this mode, so there is no
             # scheme to choose: the staged schemes exist only to split a test
@@ -7418,6 +7438,18 @@ class MadSpinInterface(extended_cmd.Cmd):
         decaying_spins = [self.model.get_particle(i).get('spin') for i in decaying_pdg]
         helicities = [hel_dict[i] for i in decaying_spins]
 
+        # 'consider_axial': a massive vector's spin basis gains the fourth,
+        # axial direction eps_A = k/sqrt(k.k). The value appended is HELAS'
+        # nhel = 4, which is what ALLOW_HEL hands GET_ALL_INTER and what
+        # VXXXXX reads -- and it is appended *last* on purpose, see _axial_pdgs
+        # for why the first entry of every basis has to stay a physical
+        # helicity.
+        axial_pdgs = self._axial_pdgs(decaying_pdg)
+        if axial_pdgs:
+            helicities = [list(h) + [madspin.DensityMatrix.AXIAL_HELICITY]
+                          if pdg in axial_pdgs else h
+                          for pdg, h in zip(decaying_pdg, helicities)]
+
         helicities, hel_restriction = self._apply_production_polarization(
                                                     decaying_pdg, helicities)
         # pure-interference mode replaces the symmetric restriction by a cross
@@ -7425,6 +7457,13 @@ class MadSpinInterface(extended_cmd.Cmd):
         # the (separate) normalising trace -- see _apply_pure_interference
         hel_restriction, hel_restriction_trace = self._apply_pure_interference(
                                     decaying_pdg, helicities, hel_restriction)
+        if axial_pdgs and hel_restriction_trace is None:
+            # keep the axial direction out of every trace (see
+            # _axial_trace_restriction). Only when the interference mode has
+            # not already claimed hel_restriction_trace for itself -- the two
+            # are refused together in _check_axial_compatibility.
+            hel_restriction_trace = self._axial_trace_restriction(
+                                    decaying_pdg, axial_pdgs, helicities)
 
         allowed_hel_pairs, allowed_hel = self.get_allowed_hel(helicities)
 
@@ -7442,9 +7481,155 @@ class MadSpinInterface(extended_cmd.Cmd):
             'hel_restriction': hel_restriction,
             'hel_restriction_trace': hel_restriction_trace,
             'pure_interference': bool(self._pure_interference_pdgs(decays_key)),
+            'axial_pdgs': axial_pdgs,
             'ncomb': len(allowed_hel_pairs),
             'dimension': math.prod(len(i) for i in helicities),
         }
+
+    # ------------------------------------------------------------------
+    # The axial ('{A}') basis direction -- 'consider_axial'
+    # ------------------------------------------------------------------
+
+    def _axial_pdgs(self, decaying_pdg):
+        """The decaying pdgs whose spin basis gains the axial direction, as a
+        frozenset. Empty -- and every axial code path dead -- unless the card
+        says ``set consider_axial True``.
+
+        Only a *massive vector* has one: the axial direction is the k^mu piece
+        of a massive spin-one propagator numerator. A massless vector's
+        propagator is -g^{mu nu} alone and a fermion or a scalar has no such
+        piece, so those bases are left exactly as they were.
+
+        NOTE on how the fourth state reaches the Fortran. MadSpin does NOT put
+        a '{A}' brace on the process lines it generates, and that is
+        deliberate. GET_ALL_INTER *overwrites* NHEL at the changing positions
+        from ALLOW_HEL before calling GET_AMP, so the value 4 never has to
+        appear in the process' NHEL table: that table is only used by
+        GET_DENSITY's outer loop to enumerate the spectator helicities, and it
+        filters on the *first* ALLOW_HEL combination -- which is why the axial
+        entry is appended last and every basis still starts on a physical
+        helicity. Keeping the brace off the process lines is what leaves NHEL,
+        the helicity-averaging IDEN and therefore SMATRIX untouched: the
+        production and decay matrix elements that form the *denominator* of the
+        MadSpin weight, and the decay pool those events were drawn from, stay
+        the physical three-state objects they have to be. A brace would have
+        added |A_axial|^2 to both of them and biased the accept/reject.
+        """
+        if not self.options.get('consider_axial'):
+            return frozenset()
+        out = set()
+        for pdg in set(decaying_pdg):
+            particle = self.model.get_particle(pdg)
+            if particle.get('spin') != 3:
+                continue
+            if particle.get('mass').lower() == 'zero':
+                continue
+            out.add(int(pdg))
+        return frozenset(out)
+
+    def _check_axial_compatibility(self):
+        """Refuse the combinations 'consider_axial' has not been thought
+        through with, up front, instead of quietly biasing them. Nothing here
+        fires unless the card sets the option, so a default run never reaches
+        any of it.
+        """
+        if not self.options.get('consider_axial'):
+            return
+        if self.options['spinmode'] not in ('madspin', 'full'):
+            raise self.InvalidCmd(
+                "MadSpin: 'consider_axial' needs an off-shell resonance and so "
+                "the 'madspin' (= 'full') spinmode. The axial direction is the "
+                "k^mu piece of the propagator numerator: it enters the "
+                "convolution with the coefficient (Q^2-M^2)/M^2, which is "
+                "identically zero on shell, and it is normalised by the leg's "
+                "own virtuality, which only the off-shell '*' process lines of "
+                "that spinmode carry. spinmode = %s would pay for a fourth "
+                "helicity index that cannot contribute."
+                % self.options['spinmode'])
+        if self._pure_interference():
+            raise self.InvalidCmd(
+                "MadSpin: 'consider_axial' and 'pure_interference' both claim "
+                "the trace that normalises the convolution -- the interference "
+                "block needs the *production* trace, the axial basis needs the "
+                "physical-polarisation one -- and the two have not been "
+                "reconciled. Please use one at a time.")
+        if self._production_polarization():
+            raise self.InvalidCmd(
+                "MadSpin: 'consider_axial' is not supported together with a "
+                "polarisation brace on the production process. A brace "
+                "restricts the convolution to a subspace of physical "
+                "polarisations, and what the axial direction of the propagator "
+                "numerator should then contribute is not defined.")
+        if self._polarization_weights_enabled():
+            raise self.InvalidCmd(
+                "MadSpin: 'consider_axial' is not supported together with "
+                "keep_weight_for_polarization_vector/_fermion. Those weights "
+                "are the same convolution with the helicity index projected "
+                "onto one physical polarisation, and they are meant to be read "
+                "as fractions of the full weight -- which they stop being as "
+                "soon as the full weight also carries the axial direction, "
+                "since no projection onto a physical polarisation can pick it "
+                "up. The set would no longer add up to one.")
+        if aloha.unitary_gauge == 3:
+            # same refusal as check_axial_output, reached differently: MadSpin
+            # puts no '{A}' brace on its process lines, so the output-level
+            # gate never sees an axial leg to refuse.
+            raise self.InvalidCmd(
+                "MadSpin: 'consider_axial' is not available in the "
+                "Feynman-diagram gauge (gauge = FD). There the massive-vector "
+                "wavefunction carries an extra Goldstone component "
+                "(aloha_functions_fd.f, VFDXXXX) whose value for the axial "
+                "state nhel = 4 is not defined, and VFDXXXX would return it "
+                "uninitialised. Use the unitary or Feynman gauge.")
+
+    def _axial_trace_restriction(self, decaying_pdg, axial_pdgs, helicities):
+        """The trace-only restriction that keeps the axial direction out of
+        every normalisation.
+
+        ``trace()`` answers "how much cross-section is there", and the axial
+        direction carries none: it is not a state the resonance can be produced
+        in, it is a piece of its propagator. The quantities the trace feeds --
+        ``prod_diag`` (the unpolarised production ME), ``dec_diag`` (the
+        unpolarised decay ME) and ``normalized()`` -- all have to stay the
+        physical three-state objects, both because that is what the events were
+        generated with and because ``density_debug`` checks them against
+        SMATRIX, which is three-state by construction.
+
+        Rides on ``hel_restriction_trace`` with ``hel_restriction`` left None,
+        so the contraction itself still runs over all four directions.
+        """
+        if not axial_pdgs:
+            return None
+        restriction = []
+        for pdg, basis in zip(decaying_pdg, helicities):
+            if pdg in axial_pdgs:
+                restriction.append(tuple(
+                    h for h in basis
+                    if h != madspin.DensityMatrix.AXIAL_HELICITY))
+            else:
+                restriction.append(None)
+        return madspin.DensityMatrix.normalize_hel_restriction(restriction)
+
+    def _axial_weights(self, decaying_pdg, axial_pdgs, virtualities):
+        """The per-index ``{helicity: factor}`` tables handed to
+        ``DensityMatrix.weight_helicity``: ``c_A = (Q^2 - M^2)/M^2`` on the
+        axial direction of every axial index, nothing on the others.
+
+        ``virtualities`` is the sampled sqrt(k.k) of each decaying particle, in
+        slot order. Q is the leg's own virtuality -- the same one that
+        normalises eps_A = k/Q (milestone 2) -- and M is the pole mass out of
+        the param_card, which is the mass ALOHA's OM2 = 1/M^2 puts in the
+        propagator numerator (a real pole mass, not the complex one).
+        """
+        weights = []
+        for pdg, q in zip(decaying_pdg, virtualities):
+            if pdg not in axial_pdgs or q is None:
+                weights.append(None)
+                continue
+            pole = self.banner.get('param_card', 'mass', abs(int(pdg))).value
+            c_axial = (float(q) ** 2 - pole ** 2) / (pole ** 2)
+            weights.append({madspin.DensityMatrix.AXIAL_HELICITY: c_axial})
+        return weights
 
     # ------------------------------------------------------------------
     # Production polarisation ({0}/{+}/{-}/{L}/{R}/{T} on the decaying leg)
@@ -7519,7 +7704,14 @@ class MadSpinInterface(extended_cmd.Cmd):
                     if not leg.get('state'):
                         continue
                     pol = leg.get('polarization')
-                    pol = tuple(sorted(set(int(p) for p in pol))) if pol else None
+                    # a polarization list is a list of *braces*: '{A}' is 99 at
+                    # Leg level and has to become HELAS' nhel = 4 before it can
+                    # be compared with the helicity basis this class builds.
+                    # Same single translation point as the NHEL table and the
+                    # ALLOW_HEL rows use -- see base_objects.
+                    pol = tuple(sorted(set(
+                        base_objects.polarization_to_helicities(pol)))) \
+                        if pol else None
                     ids = [int(i) for i in leg.get('ids')]
                     for pdg in ids:
                         seq.setdefault(pdg, []).append(pol)
@@ -7564,7 +7756,9 @@ class MadSpinInterface(extended_cmd.Cmd):
     @staticmethod
     def _format_polarization_sequence(sequence):
         """A polarisation sequence as it reads in a process line, for errors."""
-        names = {(0,): '{0}', (1,): '{+}', (-1,): '{-}', (-1, 1): '{T}'}
+        names = {(0,): '{0}', (1,): '{+}', (-1,): '{-}', (-1, 1): '{T}',
+                 (4,): '{A}', (0, 4): '{0A}', (-1, 1, 4): '{TA}',
+                 (-1, 0, 1): '{T0}', (-1, 0, 1, 4): '{T0A}'}
         return ' '.join('(none)' if p is None else names.get(p, str(list(p)))
                         for p in sequence)
 
@@ -7654,7 +7848,9 @@ class MadSpinInterface(extended_cmd.Cmd):
                 raise self.InvalidCmd(
                     'MadSpin: the polarisation %s requested for particle %s is not '
                     'expressible in the helicity basis %s used by the density spin '
-                    'modes. Only {0}, {+}/{R}, {-}/{L} and {T} are supported.'
+                    'modes. Only {0}, {+}/{R}, {-}/{L}, {T} and -- with '
+                    '"set consider_axial True" on a massive vector -- {A} are '
+                    'supported.'
                     % (list(allowed), pdg, basis))
             kept = [h for h in basis if h in allowed]
             restriction.append(tuple(kept))
@@ -10104,6 +10300,25 @@ class MadSpinInterface(extended_cmd.Cmd):
                 prod_static)
         return decays
 
+    def _density_debug_propagator_ratio(self, decays, decay_dict):
+        """``prod(|Q^2-M^2+i M Gamma|^2 / (M Gamma)^2)`` over the decaying
+        resonances: what the full matrix element carries and what the density
+        convolution deliberately does not.
+
+        Exactly 1 when every resonance sits on its pole, so the pole-
+        approximation spinmodes -- the only ones for which ``density_debug``
+        ever said anything -- are untouched.
+        """
+        ratio = 1.0
+        for pdg, decay_list in decays.items():
+            pole = decay_dict[pdg][1]
+            width = decay_dict[pdg][0]
+            mw = pole * width
+            for dec in decay_list:
+                q2 = lhe_parser.FourMomentum(dec[0]).mass_sqr
+                ratio *= ((q2 - pole * pole) ** 2 + mw * mw) / (mw * mw)
+        return ratio
+
     def get_onshell_evt_and_wgt(self, production, decays, decay_dict, prod_density_cached=None, build_event=True):
         """ return the onshell wgt for the production event associated to the decays
             return also the full event with decay. 
@@ -10187,11 +10402,26 @@ class MadSpinInterface(extended_cmd.Cmd):
                 full_event = full_event.add_decays(decays)
             
                 #print(f"full event 2 = {full_event}")
-                if self.options['density_debug']:
+                if self.options['density_debug'] and \
+                        not getattr(self, '_density_debug_stale', False):
                     me1 = self.calculate_matrix_element(full_event)
+                    # The density path divides by the propagator denominator at
+                    # the *pole*, |i M Gamma|^2 (prod_denominators), because the
+                    # Breit-Wigner shape is supplied by the virtuality sampling
+                    # jacobian and must not be counted twice. The full matrix
+                    # element carries the real denominator
+                    # |Q^2-M^2+i M Gamma|^2 at the virtuality that was drawn.
+                    # So the two are the same number only on shell, and
+                    # comparing them raw made this check fail on the very first
+                    # off-shell trial of every 'madspin'/'full' run -- by
+                    # exactly this ratio, measured to 7 digits before it was put
+                    # in. Undo it, and what is left is the closure of the
+                    # density convolution itself.
+                    me1 = me1 * self._density_debug_propagator_ratio(
+                                                    decays, decay_dict)
                     #print(f"me1 = {me1} , me2 = {full_me} , ratio = {me1/full_me}")
                     if abs(1-me1/full_me) > self.options['density_tolerance']:
-                        print(f"full = {me1} , density = {full_me} , ratio = {me1/full_me}")	    
+                        print(f"full = {me1} , density = {full_me} , ratio = {me1/full_me}")
                         print(full_event)
                         print(production)
                         print(decays)
@@ -10208,12 +10438,28 @@ class MadSpinInterface(extended_cmd.Cmd):
                             else prod_diag
             production.me_wgt = production_me
 
-        if self.generate_all.mode == 'density' and self.options['density_debug']:
-            prod_me = self.calculate_matrix_element(production)
-            #print(f"prod_diag = {prod_diag} , prod_me = {prod_me}")
-            if abs(1-prod_diag/prod_me) > self.options['density_tolerance']:
-                print(f"prod_me = {prod_me} , prod_diag = {prod_diag} , ratio = {prod_diag/prod_me}")	    
-                raise RuntimeError("ERROR production matrix element from density does not match with diagonal")	     
+        if self.generate_all.mode == 'density' and self.options['density_debug'] \
+                and not getattr(self, '_density_debug_stale', False):
+            # NOT calculate_matrix_element(production) and NOT prod_diag. By
+            # this point `production` has had add_decays() run on it, so it is
+            # the *full* event and its matrix element is the 2 -> 4 one; and
+            # outside the pole approximation prod_diag is MEdenom_prod, the
+            # production matrix element at the momenta the event was generated
+            # with, deliberately a different phase-space point from the
+            # reshuffled one the density was built at. Between them those two
+            # made this check fail on every off-shell trial. Both sides are
+            # therefore taken from calculate_matrix_element_from_density, where
+            # the event is still production-only and the momenta are the
+            # density's own.
+            prod_me = getattr(self, '_density_debug_prod_me', None)
+            prod_trace = getattr(self, '_density_debug_prod_trace', None)
+            if prod_me is None or prod_trace is None:
+                prod_me = self.calculate_matrix_element(production)
+                prod_trace = prod_diag
+            #print(f"prod_trace = {prod_trace} , prod_me = {prod_me}")
+            if abs(1-prod_trace/prod_me) > self.options['density_tolerance']:
+                print(f"prod_me = {prod_me} , prod_trace = {prod_trace} , ratio = {prod_trace/prod_me}")
+                raise RuntimeError("ERROR production matrix element from density does not match with diagonal")
             if abs(1-dec_diag/decay_me_debug) > self.options['density_tolerance']:
                 print(f"decay_me = {decay_me_debug} , dec_diag = {dec_diag} , ratio = {dec_diag/decay_me_debug}")	    
                 raise RuntimeError("ERROR decay matrix element from density does not match with diagonal")	   
@@ -10462,6 +10708,9 @@ class MadSpinInterface(extended_cmd.Cmd):
         allowed_hel = prod_static['allowed_hel']
         ncomb = prod_static['ncomb']
         dimension = prod_static['dimension']
+        # empty unless 'consider_axial' put the fourth basis direction on a
+        # massive vector; every axial branch below is dead without it
+        axial_pdgs = prod_static.get('axial_pdgs') or frozenset()
 
         # ------------------------------------------------------------------
         # Normalization
@@ -10498,6 +10747,17 @@ class MadSpinInterface(extended_cmd.Cmd):
                                            'joint accept/reject')
         else:
             density_prod = prod_density_cached
+        if self.options['density_debug']:
+            # The max-weight scan reuses one production density across every
+            # phase-space draw of a production event (_joint_maxwgt_range),
+            # while an offshell (madspin/full) draw reshuffles the production
+            # onto its own virtuality every time -- so on those trials rho_prod
+            # and the full matrix element below describe different momenta and
+            # the closure check has nothing to say. The event loop itself does
+            # NOT reuse it outside the pole approximation, so this only ever
+            # skips scan trials.
+            self._density_debug_stale = (prod_density_cached is not None
+                                         and not density_pole_approximation)
 
         # ------------------------------------------------------------------
         # Symmetry factor:
@@ -10569,13 +10829,31 @@ class MadSpinInterface(extended_cmd.Cmd):
                                    else self._decay_frame_rest_leg(part, frame_boost)
                 )
 
+                if pdg in axial_pdgs:
+                    # keep the axial direction out of this slot's own trace --
+                    # dec_diag just below is the *physical* decay matrix
+                    # element, the denominator of the MadSpin weight -- and
+                    # then fold the propagator's axial coefficient
+                    # (Q^2-M^2)/M^2 into the matrix that gets contracted. See
+                    # _axial_trace_restriction and weight_helicity.
+                    density_dec_tmp.set_hel_restriction_trace(
+                        self._axial_trace_restriction(
+                            [pdg], axial_pdgs,
+                            [helicities[decaying_idx + i_decay_event]]))
+
+                if MEdenom_decay is None:
+                    dec_diag *= density_dec_tmp.trace().real
+
+                if pdg in axial_pdgs:
+                    q2 = lhe_parser.FourMomentum(current_decay_event[0]).mass_sqr
+                    density_dec_tmp = density_dec_tmp.weight_helicity(
+                        self._axial_weights([pdg], axial_pdgs,
+                                            [math.sqrt(abs(q2))]))
+
                 if density_dec is None:
                     density_dec = density_dec_tmp
                 else:
                     density_dec = density_dec.tensor_product(density_dec_tmp)
-
-                if MEdenom_decay is None:
-                    dec_diag *= density_dec_tmp.trace().real
                 density_iden_decay *= color * spin
                 prod_color *= color
                 # |D|^2 of the propagator denominator D = i*m*Gamma at the pole.
@@ -10638,9 +10916,17 @@ class MadSpinInterface(extended_cmd.Cmd):
         #print(f"production = {production}")
         #print(f"decays = {decays}")
         if MEdenom_prod is None:
-            prod_diag = density_prod.trace().real 
-        else: 
+            prod_diag = density_prod.trace().real
+        else:
             prod_diag = MEdenom_prod
+        if self.options['density_debug']:
+            # what get_onshell_evt_and_wgt's production check needs: the trace
+            # of the matrix built at *these* momenta, and the unpolarised
+            # production matrix element at those same momenta, taken while
+            # `production` is still production-only. Debug-only, so nothing
+            # pays for it in a real run.
+            self._density_debug_prod_trace = density_prod.trace().real
+            self._density_debug_prod_me = self.calculate_matrix_element(production)
         if MEdenom_decay is not None:
             dec_diag *= MEdenom_decay
         return me, density_prod, prod_diag, dec_diag, jac_reshuffle
@@ -10897,12 +11183,17 @@ class MadSpinInterface(extended_cmd.Cmd):
         # DensityMatrix.set_hel_restriction). None for the decay densities.
         if hel_restriction is not None:
             density_matrix.set_hel_restriction(hel_restriction)
-            # pure-interference mode only: the contraction runs over the
-            # interference block while trace()/normalized() keep using the
-            # production trace, which is the unrestricted one for the
-            # unpolarised production the mode requires (section 13.4).
-            if hel_restriction_trace is not None:
-                density_matrix.set_hel_restriction_trace(hel_restriction_trace)
+        # pure-interference mode: the contraction runs over the interference
+        # block while trace()/normalized() keep using the production trace,
+        # which is the unrestricted one for the unpolarised production the mode
+        # requires (section 13.4). 'consider_axial': a trace restriction with
+        # NO contraction restriction beside it, keeping the axial direction out
+        # of the normalisations while every row still takes part in the
+        # convolution (_axial_trace_restriction). Hence the two are set
+        # independently -- this used to be nested inside the branch above,
+        # which no caller could tell apart until the axial basis arrived.
+        if hel_restriction_trace is not None:
+            density_matrix.set_hel_restriction_trace(hel_restriction_trace)
         return density_matrix
 
 
@@ -11033,6 +11324,20 @@ class MadSpinInterface(extended_cmd.Cmd):
 
             # Valentin: we only pass here with the options 'onshell_v1' and 'madspin_v1' for which I kept only one madspin_me directory
             # it is not adapted to modes where the directories for production and decays are separated
+            if not hasattr(self, 'f2py_module') and \
+                    self.options['spinmode'] not in ['onshell_v1', 'madspin_v1']:
+                # ... except that 'density_debug' *does* reach here first: it
+                # evaluates the decay matrix elements at the top of
+                # get_onshell_evt_and_wgt, before the density path has had a
+                # chance to build the two-module list. Loading the single
+                # legacy module here would leave self.f2py_module a module
+                # rather than the [production, decay] pair the lambdas below
+                # index, and every density_debug run died on "'module' object
+                # is not subscriptable". Build the pair the way
+                # calculate_matrix_element_from_density does instead.
+                self.f2py_module = [0, 0]
+                self.pdg2prefix = [0, 0]
+                self.create_and_initialise_f2py_modules([0, 0], [0, 0], [0, 0])
             if not hasattr(self, 'f2py_module'):
                 sp_path = pjoin(self.path_me, self.ms_me_subdir, 'SubProcesses')
                 if sys.path[0] != sp_path:
