@@ -324,6 +324,21 @@ class MadSpinOptions(banner.ConfigFile):
                        "offered to each decaying SPIN-1/2 particle. '0' is unphysical "
                        "for a fermion and is dropped from its choices; 'T' is its full "
                        "helicity basis, i.e. that particle summed over.")
+        self.add_param('consider_axial', False,
+                       comment="density spin modes only. Include the AXIAL "
+                       "('{A}') direction in the spin basis of each decaying "
+                       "particle, i.e. use the full four-dimensional basis of "
+                       "an off-shell massive vector rather than its three "
+                       "physical polarisations. This is the MadSpin home of "
+                       "what used to be the global MG5 option of the same "
+                       "name: MadSpin passes '--allow_axial' on to every "
+                       "'output standalone' it generates, so the directories "
+                       "and the convolution can never disagree about the size "
+                       "of the basis. A directory built with one value of this "
+                       "option cannot be reused (set ms_dir / use_old_dir) with "
+                       "the other -- MadSpin refuses that rather than "
+                       "convoluting a four-index density against a "
+                       "three-state matrix element.")
         self.add_param('density_debug', False, comment='Turn on check against full ME calculation')
         self.add_param('density_tolerance', 1E-4, comment='Tolerance for deviation between density and full ME')
         self.add_param('decay_event_mult', 1E0, comment='Produce more events than needed so that MadSpin does not have to regenerate decay events')
@@ -2018,6 +2033,12 @@ class MadSpinInterface(extended_cmd.Cmd):
                         decay2['path'] = decay2['path'].replace(generate_all.path_me, self.options['ms_dir'])
             generate_all.path_me = self.options['ms_dir'] # directory can have been move
             generate_all.ms_dir = generate_all.path_me
+
+        # the reused directory has its spin basis baked in (the NHEL table and
+        # the ALLOW_HEL rows of GET_DENSITY); refuse to convolute it with a
+        # basis of a different size. 'consider_axial' is a card option, not a
+        # banner one, so the directory carries its own record of it.
+        generate_all.check_spin_basis_tag(self.options['consider_axial'])
         
         if not hasattr(self.banner, 'param_card'):
             self.banner.charge_card('slha')

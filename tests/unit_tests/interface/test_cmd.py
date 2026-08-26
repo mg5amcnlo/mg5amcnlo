@@ -22,6 +22,7 @@ import madgraph.core.base_objects as base_objects
 import MadSpin.interface_madspin as ms_cmd
 import madgraph.interface.extended_cmd as ext_cmd
 import madgraph.various.misc as misc
+import math
 import os
 import logging
 
@@ -329,29 +330,32 @@ class TestValidCmd(unittest.TestCase):
         self.do('generate v{0T} v{0} > w+ w-')
         self.assertEqual(len(cmd._curr_amps), 2)
 
-    def test_consider_axial_default(self):
-        """the axial option exists, is a MadGraph option, and is off."""
+    def test_consider_axial_is_not_a_madgraph_option(self):
+        """'consider_axial' is deliberately NOT a global MG5 option: whether
+        the axial state may be written out is an *output* question
+        ('output standalone --allow_axial') and, for MadSpin, a MadSpin card
+        option. See check_axial_output()."""
         cmd = self.cmd
-        self.assertIn('consider_axial', cmd.options_madgraph)
-        self.assertEqual(cmd.options_madgraph['consider_axial'], False)
-        self.assertIn('consider_axial', cmd._set_options)
-        self.assertEqual(cmd.options['consider_axial'], False)
+        self.assertNotIn('consider_axial', cmd.options_madgraph)
+        self.assertNotIn('consider_axial', cmd.options)
+        self.assertNotIn('consider_axial', cmd._set_options)
+        self.assertRaises(madgraph.InvalidCmd,
+                          cmd.exec_cmd, 'set consider_axial True')
+        # ... it lives in the MadSpin card instead
+        import MadSpin.interface_madspin as ms_interface
+        self.assertIn('consider_axial', ms_interface.MadSpinOptions())
 
     @test_aloha.set_global()
     def test_generate_axial_polarisation(self):
-        """{A} on a FINAL-STATE particle: needs the off-shell '*' AND
-        'set consider_axial True'. On a particle that is decayed further it
-        stays the (unconditional) propagator syntax it always was."""
+        """{A} on a FINAL-STATE particle needs the off-shell '*'. Generation
+        itself is then unconditional; it is the OUTPUT that has to be asked
+        for it explicitly with '--allow_axial'."""
         import madgraph.core.helas_objects as helas_objects
 
         cmd = self.cmd
         self.do('import model sm')
-        original = cmd.options['consider_axial']
         try:
-            # --- option off (the default) -------------------------------
-            cmd.options['consider_axial'] = False
-
-            # no star: {A} is identically zero on shell
+            # no star: '{A}' is not a polarisation of an on-shell particle
             self.assertRaises(madgraph.InvalidCmd,
                               self.do, 'generate p p > z{A} h')
             try:
@@ -359,24 +363,16 @@ class TestValidCmd(unittest.TestCase):
             except madgraph.InvalidCmd as error:
                 self.assertIn('off-shell', str(error))
 
-            # star but option off
-            self.assertRaises(madgraph.InvalidCmd,
-                              self.do, 'generate p p > z{A}* h')
-            try:
-                self.do('generate p p > z{A}* h')
-            except madgraph.InvalidCmd as error:
-                self.assertIn('consider_axial', str(error))
-
-            # initial state is never meaningful
+            # initial state is refused (MadSpin's decay-side ME would want
+            # it one day; it is not wired up)
             self.assertRaises(madgraph.InvalidCmd,
                               self.do, 'generate z{A}* z > w+ w-')
 
-            # the propagator syntax does not go through the option at all
+            # the propagator syntax is unchanged
             self.do('generate t > w+{A} b, w+ > ta+ vt')
             self.assertTrue(cmd._curr_amps)
 
-            # --- option on ----------------------------------------------
-            cmd.options['consider_axial'] = True
+            # with the star, generation goes through with no option at all
             self.do('generate p p > z{A}* h')
             self.assertTrue(cmd._curr_amps)
             legs = cmd._curr_amps[0].get('process').get('legs')
@@ -385,16 +381,85 @@ class TestValidCmd(unittest.TestCase):
             self.assertTrue(axial[0].get('state'))
             self.assertTrue(axial[0].get('offshell'))
 
-            # ... but the generated code for it does not exist yet, so the
-            # matrix element refuses rather than producing a wrong number.
-            try:
-                helas_objects.HelasMultiProcess(cmd._curr_amps)
-            except madgraph.InvalidCmd as error:
-                self.assertIn('not implemented', str(error).lower())
-            else:
-                self.fail('axial final state built a matrix element')
+            # and the matrix element now builds: '{A}' has an external
+            # wavefunction (VXXXXX with nhel = 4).
+            me = helas_objects.HelasMultiProcess(
+                cmd._curr_amps).get('matrix_elements')[0]
+
+            # the NHEL table carries 4 (the HELAS scalar-polarisation
+            # convention), NEVER the raw Leg-level 99
+            hel_matrix = list(me.get_helicity_matrix())
+            values = set(h for row in hel_matrix for h in row)
+            self.assertIn(4, values)
+            self.assertNotIn(99, values)
+
+            # get_helicity_per_particle -- what fills the ALLOW_HEL rows of
+            # GET_DENSITY -- must agree with it, otherwise GET_DENSITY's outer
+            # loop matches nothing and every density comes back zero
+            per_part = me.get_helicity_per_particle()
+            for i, choices in enumerate(per_part):
+                self.assertEqual(set(choices),
+                                 set(row[i] for row in hel_matrix))
+            self.assertNotIn(99, [h for c in per_part for h in c])
         finally:
-            cmd.options['consider_axial'] = original
+            cmd.exec_cmd('generate p p > t t~')
+
+    def test_polarization_to_helicities(self):
+        """the one place where a polarization brace becomes a helicity."""
+        import madgraph.core.base_objects as base_objects
+        # physical entries pass through
+        self.assertEqual(
+            base_objects.polarization_to_helicities([1, -1, 0]), [1, -1, 0])
+        # '{A}' (99) becomes the HELAS scalar polarisation nhel = 4
+        self.assertEqual(base_objects.polarization_to_helicities([99]), [4])
+        self.assertEqual(
+            base_objects.polarization_to_helicities([1, -1, 0, 99]),
+            [1, -1, 0, 4])
+        # order is preserved: GET_DENSITY takes ALLOW_HEL(1) from the first
+        # entry and matches it against the NHEL table
+        self.assertEqual(
+            base_objects.polarization_to_helicities([99, 1, -1, 0]),
+            [4, 1, -1, 0])
+
+    @test_aloha.set_global()
+    def test_axial_output_needs_allow_axial(self):
+        """'{A}' on a final state is only written out when the output line
+        asks for it."""
+        cmd = self.cmd
+        self.do('import model sm')
+        try:
+            self.do('generate t > w+{A}* b')
+            legs = cmd.collect_axial_external_legs(cmd._curr_amps)
+            self.assertEqual(len(legs), 1)
+
+            # no flag -> refused, and the message names the flag
+            try:
+                cmd.check_output(['standalone', '/tmp/should_not_exist', '-f'])
+            except madgraph.InvalidCmd as error:
+                self.assertIn('--allow_axial', str(error))
+            else:
+                self.fail('output accepted {A} without --allow_axial')
+
+            # flag, but a format with no off-shell external leg support
+            try:
+                cmd.check_output(['standalone_cpp', '/tmp/should_not_exist',
+                                  '-f', '--allow_axial'])
+            except madgraph.InvalidCmd as error:
+                self.assertIn('standalone', str(error))
+            else:
+                self.fail('standalone_cpp accepted an off-shell {A} leg')
+
+            # flag + fortran standalone -> accepted
+            cmd.check_output(['standalone', '/tmp/should_not_exist', '-f',
+                              '--allow_axial'])
+
+            # a '{A}' that is a propagator is not an external leg and needs
+            # nothing
+            self.do('generate t > w+{A} b, w+ > ta+ vt')
+            self.assertEqual(cmd.collect_axial_external_legs(cmd._curr_amps),
+                             [])
+            cmd.check_output(['standalone', '/tmp/should_not_exist', '-f'])
+        finally:
             cmd.exec_cmd('generate p p > t t~')
 
     @test_aloha.set_global()
@@ -474,9 +539,7 @@ class TestValidCmd(unittest.TestCase):
         and 3". They must print the brace letter instead."""
         cmd = self.cmd
         self.do('import model sm')
-        original = cmd.options['consider_axial']
         try:
-            cmd.options['consider_axial'] = True
             self.do('generate p p > z{A}* h')
             proc = cmd._curr_amps[0].get('process')
             self.assertIn('z{A}*', proc.nice_string(prefix=False))
@@ -498,27 +561,109 @@ class TestValidCmd(unittest.TestCase):
                 self.assertIn(expected, proc.input_string())
                 self.assertNotIn(',', proc.input_string())
         finally:
-            cmd.options['consider_axial'] = original
             cmd.exec_cmd('generate p p > t t~')
 
-    def test_set_consider_axial(self):
-        """'set consider_axial' parses like the other boolean MG5 options."""
-        cmd = self.cmd
-        original = cmd.options['consider_axial']
-        try:
-            cmd.exec_cmd('set consider_axial True')
-            self.assertEqual(cmd.options['consider_axial'], True)
-            cmd.exec_cmd('set consider_axial False')
-            self.assertEqual(cmd.options['consider_axial'], False)
-            # bare 'set consider_axial' means True, like complex_mass_scheme
-            cmd.exec_cmd('set consider_axial')
-            self.assertEqual(cmd.options['consider_axial'], True)
-            cmd.exec_cmd('set consider_axial default')
-            self.assertEqual(cmd.options['consider_axial'], False)
-            self.assertRaises(madgraph.InvalidCmd,
-                              cmd.exec_cmd, 'set consider_axial banana')
-        finally:
-            cmd.options['consider_axial'] = original
+
+
+class TestAxialWavefunction(unittest.TestCase):
+    """The external wavefunction of the axial polarisation '{A}'.
+
+    HELAS has always called that state nhel = 4. It is eps_A^mu = p^mu/vmass,
+    and for the off-shell external leg '{A}' needs, vmass is sqrt(p.p) -- so
+    eps_A is the unit vector p^mu/sqrt(p.p) that completes the three physical
+    polarisations into an orthonormal tetrad."""
+
+    def test_python_wavefunction(self):
+        """the reference implementation: aloha/template_files/wavefunctions.py"""
+        import aloha.template_files.wavefunctions as wavefunctions
+
+        Q = 60.
+        p = [0., 21., -33.5, 44.7]
+        p[0] = math.sqrt(p[1]**2 + p[2]**2 + p[3]**2 + Q**2)
+        metric = [1., -1., -1., -1.]
+
+        def dot(a, b):
+            return sum(metric[i] * a[i] * b[i] for i in range(4))
+
+        eps = {}
+        for nhel in (-1, 0, 1, 4):
+            wf = wavefunctions.vxxxxx(p, Q, nhel, 1)
+            eps[nhel] = [complex(wf[i]) for i in (2, 3, 4, 5)]
+
+        # the axial state IS p^mu / sqrt(p.p)
+        for i in range(4):
+            self.assertAlmostEqual(eps[4][i].real, p[i] / Q, 10)
+            self.assertAlmostEqual(eps[4][i].imag, 0., 12)
+
+        # ... a unit TIMELIKE vector, where the physical ones are spacelike
+        self.assertAlmostEqual(
+            dot(eps[4], [c.conjugate() for c in eps[4]]).real, 1., 10)
+        for nhel in (-1, 0, 1):
+            self.assertAlmostEqual(
+                dot(eps[nhel], [c.conjugate() for c in eps[nhel]]).real, -1., 10)
+            # ... and orthogonal to it (the physical states are transverse
+            # to p, the axial one is along p)
+            self.assertAlmostEqual(
+                abs(dot(eps[nhel], [c.conjugate() for c in eps[4]])), 0., 10)
+
+    def test_fortran_and_cpp_templates_have_a_live_branch(self):
+        """The nhel = 4 branch used to sit commented out inside a disabled
+        '#ifdef HELAS_CHECK' -- and with the OLD component indices, writing
+        over vc(1:2) which now hold the momentum. Guard both."""
+        import madgraph
+
+        files = {'aloha_functions.f': ('vc(3)', 'vc(4)', 'vc(5)', 'vc(6)'),
+                 # the loop convention puts the momentum in vc(1:4)
+                 'aloha_functions_loop.f': ('vc(5)', 'vc(6)', 'vc(7)', 'vc(8)'),
+                 }
+        for name, components in files.items():
+            path = os.path.join(madgraph.MG5DIR, 'aloha', 'template_files', name)
+            text = open(path).read()
+            start = text.index('      subroutine vxxxxx')
+            end = text.index('\n      subroutine ', start + 10)
+            body = text[start:end]
+            live = [l for l in body.split('\n')
+                    if not l.startswith('c') and 'nhel.eq.4' in l]
+            self.assertTrue(live, '%s has no live nhel = 4 branch' % name)
+            branch = body[body.index(live[0]):]
+            branch = branch[:branch.index('endif')]
+            for comp in components:
+                self.assertIn(comp + ' = ', branch,
+                              '%s: nhel = 4 does not fill %s' % (name, comp))
+
+        path = os.path.join(madgraph.MG5DIR, 'aloha', 'template_files',
+                            'vxxxxx.cc')
+        text = open(path).read()
+        self.assertIn('nhel == 4', text)
+        for comp in ('vc[2]', 'vc[3]', 'vc[4]', 'vc[5]'):
+            self.assertIn(comp, text)
+
+    def test_offshell_leg_is_called_with_the_virtuality(self):
+        """Both external-wavefunction writers must feed sqrt(p.p), not the
+        pole mass, to a leg carrying the off-shell '*'. That is what makes the
+        axial state p^mu/sqrt(p.p)."""
+        import madgraph.core.base_objects as base_objects
+        import madgraph.core.helas_objects as helas_objects
+        import madgraph.iolibs.helas_call_writers as helas_call_writers
+        import madgraph.interface.master_interface as master
+
+        mgcmd = master.MasterCmd()
+        mgcmd.exec_cmd('import model sm')
+        mgcmd.exec_cmd('generate t > w+{A}* b')
+        me = helas_objects.HelasMultiProcess(
+            mgcmd._curr_amps).get('matrix_elements')[0]
+        wf = [w for w in me.get_external_wavefunctions()
+              if w.get('polarization') == [99]][0]
+
+        fortran = helas_call_writers.FortranUFOHelasCallWriter(
+            mgcmd._curr_model).get_wavefunction_call(wf)
+        self.assertIn('SQRT(P(0,2)**2', fortran)
+        self.assertNotIn('MDL_MW', fortran)
+
+        python = helas_call_writers.PythonUFOHelasCallWriter(
+            mgcmd._curr_model).get_wavefunction_call(wf)
+        self.assertIn('p[1][0]**2', python)
+        self.assertNotIn('MW', python)
 
 
 class TestExtendedCmd(unittest.TestCase):

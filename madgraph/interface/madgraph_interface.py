@@ -497,6 +497,12 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info("      --jamp_optim=[True|False]: [madevent(default:True)|standalone(default:False)] allows a more efficient code computing the color-factor.")
         logger.info("      --t_strategy: [madevent] allows to change ordering strategy for t-channel.")
         logger.info("      --hel_recycling=False: [madevent] forbids helicity recycling optimization")
+        logger.info("      --density=i[,j,...]: [standalone] also write GET_DENSITY, the spin density matrix")
+        logger.info("        of the external particle(s) at position i (,j,...) of the process.")
+        logger.info("      --allow_axial: [standalone] permit the axial polarisation '{A}' on an off-shell")
+        logger.info("        final-state particle ('generate p p > z{A}* h'). That is the fourth,")
+        logger.info("        unphysical direction of a massive vector's spin basis, eps^mu = p^mu/sqrt(p.p),")
+        logger.info("        so it is never written without this flag.")
         logger.info("   Examples:",'$MG:color:GREEN')
         logger.info("       output",'$MG:color:GREEN')
         logger.info("       output standalone MYRUN -f",'$MG:color:GREEN')
@@ -769,7 +775,7 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info(" > '{G}','{H}','{Q}','{W}','{S}' select a piece of the *propagator* of a massive vector")
         logger.info("   and are only valid on a particle that is decayed further (an internal line).")
         logger.info(" > '{A}' is the same on an internal line; on a final-state particle it also needs the")
-        logger.info("   off-shell '*' syntax and 'set consider_axial True'.")
+        logger.info("   off-shell '*' syntax, and an output that enables it ('output standalone --allow_axial').")
         logger.info(" > Users need to set 'group_subprocesses False', 'nhel=1' (run_card), and 'me_frame' (run_card)")
         logger.info(" > For the proces 'p p > w+ z j j, w+ > l+ vl, z > l+ l-', the WZ rest frame is given by me_frame = [3,4,5,6]")
         logger.info(" > For further details, see appendices of [arXiv:1912.01725] and [arXiv:2512.10015],")
@@ -904,10 +910,6 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info("deactivates mixed expansion support at NLO, goes back to MG5aMCv2 behavior")
         logger.info("acknowledged_v3.1_syntax <value>",'$MG:color:GREEN') 
         logger.info("if set to True allows to use syntax which have change meaning between 3.0 and 3.1 version")
-        logger.info("consider_axial <value>",'$MG:color:GREEN')
-        logger.info(" > (default: False) allow the axial/scalar polarisation {A} on a FINAL-STATE")
-        logger.info(" > particle. Only meaningful together with the off-shell '*' syntax")
-        logger.info(" > ('generate p p > z{A}* z'), since {A} vanishes for an on-shell particle.")
           
 #===============================================================================
 # CheckValidForCmd
@@ -1596,7 +1598,6 @@ This will take effect only in a NEW terminal
                                           'loop_optimized_output',\
                                           'loop_color_flows',\
                                           'include_lepton_initiated_processes',\
-                                          'consider_axial',\
                                           'low_mem_multicore_nlo_generation']:
             args.append('True')
 
@@ -1646,7 +1647,7 @@ This will take effect only in a NEW terminal
             if not args[1].isdigit():
                 raise self.InvalidCmd('%s values should be a integer' % args[0])
             
-        if args[0] in ['loop_optimized_output', 'loop_color_flows', 'low_mem_multicore_nlo_generation', 'nlo_mixed_expansion', 'consider_axial']:
+        if args[0] in ['loop_optimized_output', 'loop_color_flows', 'low_mem_multicore_nlo_generation', 'nlo_mixed_expansion']:
             try:
                 args[1] = banner_module.ConfigFile.format_variable(args[1], bool, args[0])
             except Exception:
@@ -1796,6 +1797,129 @@ This will take effect only in a NEW terminal
                     self._export_dir = '.'
 
         self._export_dir = os.path.realpath(self._export_dir)
+
+        self.check_axial_output(args)
+
+    # Output formats whose generated code can host an off-shell external leg
+    # (the '*' syntax) and therefore an axial external state. The Fortran
+    # writer feeds VXXXXX sqrt(p.p) instead of the pole mass for such a leg
+    # (helas_call_writers.generate_external_wavefunction); the C++ writer has
+    # no equivalent -- it always passes mME[i] -- so standalone_cpp/gpu are
+    # deliberately absent.
+    _axial_export_formats = ['standalone', 'standalone_msP', 'standalone_msF',
+                             'standalone_rw', 'matrix']
+
+    @staticmethod
+    def collect_axial_external_legs(amps):
+        """Return the final-state legs carrying '{A}' that really stay
+        external, i.e. that are NOT handed over to a decay chain.
+
+        '{A}' on a decayed leg is the historical propagator use and needs
+        nothing; '{A}' on a genuine external leg is the new thing that has to
+        be asked for. Telling them apart means walking the amplitude tree,
+        because for a decay-chain amplitude the decays hang off the *amplitude*
+        (DecayChainAmplitude['decay_chains']) and not always off the Process.
+        """
+
+        def processes_of(obj):
+            """the core Process(es) an amplitude object stands for"""
+            if isinstance(obj, diagram_generation.DecayChainAmplitude):
+                out = []
+                for sub in obj.get('amplitudes'):
+                    out.extend(processes_of(sub))
+                return out
+            try:
+                proc = obj.get('process')
+            except Exception:
+                return []
+            return [proc] if proc else []
+
+        axial_legs = []
+
+        def scan_process(proc, decayed_ids):
+            decayed = set(decayed_ids)
+            for decay in proc.get('decay_chains'):
+                for leg in decay.get('legs'):
+                    if not leg.get('state'):
+                        decayed.add(leg.get('id'))
+            for leg in proc.get('legs'):
+                if 99 in leg.get('polarization') and leg.get('state') \
+                   and leg.get('id') not in decayed:
+                    axial_legs.append(leg)
+            for decay in proc.get('decay_chains'):
+                scan_process(decay, set())
+
+        def scan_amplitude(obj, decayed_ids):
+            if isinstance(obj, diagram_generation.DecayChainAmplitude):
+                decayed = set(decayed_ids)
+                for chain in obj.get('decay_chains'):
+                    for proc in processes_of(chain):
+                        for leg in proc.get('legs'):
+                            if not leg.get('state'):
+                                decayed.add(leg.get('id'))
+                for sub in obj.get('amplitudes'):
+                    scan_amplitude(sub, decayed)
+                for chain in obj.get('decay_chains'):
+                    scan_amplitude(chain, set())
+                return
+            for proc in processes_of(obj):
+                scan_process(proc, decayed_ids)
+
+        for amp in amps:
+            scan_amplitude(amp, set())
+        return axial_legs
+
+    def check_axial_output(self, args):
+        """The axial polarisation '{A}' on a genuinely final-state leg is an
+        unphysical basis direction: not one of the three polarisations of a
+        massive vector, but the fourth column a spin density matrix needs off
+        shell -- and not something anyone wants by accident. Writing it out
+        therefore requires an explicit '--allow_axial' on the output line.
+
+        This is the *output*-level gate. It replaces the former global
+        'consider_axial' MadGraph option, which was the wrong home for it: the
+        choice belongs to the code being written (an output option) and to
+        MadSpin (a MadSpin card option, which makes MadSpin add '--allow_axial'
+        to the 'output standalone' lines it issues itself).
+        """
+
+        if self._export_format == 'aloha' or not self._curr_amps:
+            return
+
+        axial_legs = self.collect_axial_external_legs(self._curr_amps)
+        if not axial_legs:
+            return
+
+        if '--allow_axial' not in args and \
+           not any(a.startswith('--allow_axial=') for a in args):
+            raise self.InvalidCmd(
+                'The axial polarization {A} was requested on a final-state '
+                'particle. This is the fourth, unphysical direction of a '
+                'massive vector\'s spin basis (the extra column of an '
+                'off-shell spin density matrix), not one of the three '
+                'polarizations, so it is not written out unless you ask for '
+                'it explicitly:\n'
+                '   output standalone MYDIR --allow_axial\n'
+                'From MadSpin, use "set consider_axial True" in the MadSpin '
+                'card instead -- MadSpin then passes the flag on to the '
+                'standalone outputs it generates.')
+
+        if self._export_format not in self._axial_export_formats:
+            raise self.InvalidCmd(
+                'The axial polarization {A} on a final-state particle needs '
+                'the off-shell "*" external leg, which only the Fortran '
+                'standalone outputs support (%s). It cannot be written for '
+                'the "%s" output.'
+                % (', '.join(self._axial_export_formats), self._export_format))
+
+        if aloha.unitary_gauge == 3:
+            raise self.InvalidCmd(
+                'The axial polarization {A} on a final-state particle is not '
+                'available in the Feynman-diagram gauge (gauge = FD): there '
+                'the massive-vector wavefunction carries an extra Goldstone '
+                'component (aloha_functions_fd.f, VFDXXXX) whose value for '
+                'the axial state is not defined. Use the unitary or Feynman '
+                'gauge.')
 
 
     def check_compute_widths(self, args):
@@ -2621,7 +2745,7 @@ class CompleteForCmd(cmd.CompleteCmd):
                 except Exception as error:
                     print(error)
             if 'standalone' in args:
-                possible_options_full = list(possible_options_full) + ['--prefix=int', '--prefix=proc', '--density=']
+                possible_options_full = list(possible_options_full) + ['--prefix=int', '--prefix=proc', '--density=', '--allow_axial']
 
             # Directory continuation
             if args[-1].endswith(os.path.sep):
@@ -2701,8 +2825,7 @@ class CompleteForCmd(cmd.CompleteCmd):
             if args[1] in ['complex_mass_scheme',\
                            'loop_optimized_output', 'loop_color_flows',\
                            'include_lepton_initiated_processes',\
-                           'low_mem_multicore_nlo_generation', 'nlo_mixed_expansion',\
-                           'consider_axial']:
+                           'low_mem_multicore_nlo_generation', 'nlo_mixed_expansion']:
                 return self.list_completion(text, ['False', 'True', 'default'])
             elif args[1] in ['group_subprocesses']:
                 return self.list_completion(text, ['False', 'True', 'Auto', 'gpu', 'nlo'])
@@ -3046,8 +3169,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                     'max_t_for_channel',
                     'zerowidth_tchannel',
                     'default_unset_couplings',
-                    'nlo_mixed_expansion',
-                    'consider_axial'
+                    'nlo_mixed_expansion'
                     ]
     _valid_nlo_modes = ['all','real','virt','sqrvirt','tree','noborn','LOonly', 'only']
     _valid_sqso_types = ['==','<=','=','>']
@@ -3130,7 +3252,6 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                           'max_t_for_channel': 99, # means no restrictions
                           'zerowidth_tchannel': True,
                           'nlo_mixed_expansion':True,
-                          'consider_axial': False,
                         }
 
     options_madevent = {'automatic_html_opening':True,
@@ -3339,8 +3460,8 @@ This implies that with decay chains:
                 raise self.InvalidCmd("Can not mix processes with different number of initial states.")               
 
             # Check the propagator-only polarization braces: {G},{H},{Q},{W}
-            # and {S} are internal-line only, and {A} needs 'consider_axial'
-            # plus the off-shell '*' unless the leg is decayed further.
+            # and {S} are internal-line only, and {A} needs the off-shell '*'
+            # unless the leg is decayed further.
             self.check_propagator_polarization(myprocdef)
 
             #Check that we do not have situation like z{T} z
@@ -4903,13 +5024,20 @@ This implies that with decay chains:
         *propagator* carries off shell (arXiv:1908.08454). Three cases:
 
         * '{A}' on a particle that is decayed further ('t > w+{A} b,
-          w+ > ta+ vt') is the historical propagator use. Always allowed, and
-          unaffected by 'consider_axial'.
+          w+ > ta+ vt') is the historical propagator use. Always allowed.
         * '{A}' on a genuinely final-state particle is only meaningful with the
-          off-shell '*' syntax, because the axial polarisation vanishes
-          identically for an on-shell particle. It additionally needs
-          'set consider_axial True'.
-        * '{A}' on an initial-state particle is never meaningful.
+          off-shell '*' syntax. A massive vector has three physical
+          polarisations; the axial direction is the fourth one, outside that
+          spectrum, and the star is what gives the leg the virtuality that
+          normalises it (eps_A^mu = p^mu/sqrt(p.p), not p^mu/M_pole). Note
+          that the *amplitude* on that direction is not generally zero on
+          shell -- it is proportional to k.J, which vanishes only when the
+          current J is conserved, i.e. for massless daughters. Whether such a
+          process may then be *written out* is decided at output time by
+          'output standalone --allow_axial' (check_output), not here.
+        * '{A}' on an initial-state particle is refused. (The one place it
+          would make sense is MadSpin's decay-side matrix element, where the
+          decaying particle IS leg 1; that is not wired up yet.)
 
         '{G}', '{H}', '{Q}', '{W}' and '{S}' (pol=4,5,6,7,9). Each of these
         names a rank-two piece of the propagator numerator, complete with its
@@ -4960,16 +5088,20 @@ This implies that with decay chains:
                 continue
             if not leg.get('offshell'):
                 raise self.InvalidCmd(
-                    'The axial polarization {A} of a final-state particle is '
-                    'identically zero on shell, so it requires the off-shell '
-                    '"*" syntax (write "z{A}*", the star after the brace). '
+                    'The axial polarization {A} is not one of the three '
+                    'polarizations of an on-shell massive vector: it is the '
+                    'fourth, k^mu direction, which only has a meaning off '
+                    'shell. It therefore requires the off-shell "*" syntax '
+                    '(write "z{A}*", the star after the brace) -- which is '
+                    'also what normalises it to the leg\'s own virtuality, '
+                    'eps_A^mu = p^mu/sqrt(p.p), instead of to the pole mass. '
                     'Without a star, {A} is only valid for a particle that is '
                     'decayed further, i.e. for a propagator.')
-            if not self.options['consider_axial']:
-                raise self.InvalidCmd(
-                    'The axial polarization {A} of a final-state particle is '
-                    'disabled by default. Use "set consider_axial True" to '
-                    'enable it.')
+            # NB: there is deliberately no further gate here. Whether the
+            # axial external state may actually be *written out* is an output
+            # question, not a generation one, and is answered by the
+            # 'output standalone --allow_axial' flag (check_output) and, for
+            # MadSpin, by its card's 'consider_axial'.
 
         for decay in procdef.get('decay_chains'):
             self.check_propagator_polarization(decay)
@@ -8866,28 +8998,6 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
         self.check_set(args)
         self.options[args[0]] = banner_module.ConfigFile.format_variable(args[1], bool, args[0])
         
-    def help_set2_consider_axial(self):
-        logger.info("consider_axial <value>",'$MG:color:GREEN')
-        logger.info(" > (default: False) allow the axial/scalar polarisation {A}")
-        logger.info("   of a massive spin-one particle to be requested on a")
-        logger.info("   FINAL-STATE particle, which is only meaningful together")
-        logger.info("   with the off-shell '*' syntax: 'generate p p > z{A}* z'.")
-        logger.info("   {A} is identically zero for an on-shell particle, so the")
-        logger.info("   star is mandatory. See arXiv:1908.08454.")
-        logger.info("   {A} on a particle that is decayed further (the propagator")
-        logger.info("   case, 'generate t > w+{A} b, w+ > ta+ vt') is always")
-        logger.info("   allowed and does not need this option.")
-
-    def set2_consider_axial(self, args, log=True):
-        """Set whether the axial/scalar polarisation {A} may be requested on a
-        final-state particle (which additionally requires the off-shell '*').
-        Default is False.
-        Example: set consider_axial True
-        """
-        args = ['consider_axial'] + args
-        self.check_set(args)
-        self.options[args[0]] = banner_module.ConfigFile.format_variable(args[1], bool, args[0])
-
     def help_set2_zerowidth_tchannel(self):
         logger.info("zerowidth_tchannel <value>",'$MG:color:GREEN')
         logger.info(" > (default: True) [Used ONLY for tree-level output with madevent]")

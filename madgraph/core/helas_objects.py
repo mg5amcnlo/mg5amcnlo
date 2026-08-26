@@ -708,28 +708,29 @@ class HelasWavefunction(base_objects.PhysicsObject):
                             "leg of the process." % propagator_only[value])
                     if 99 in leg.get('polarization'):
                         # The axial/scalar polarization {A} of a massive vector
-                        # is the k^mu piece of its *propagator*; it vanishes
-                        # identically for an on-shell particle. On an external
-                        # leg it is therefore only meaningful together with the
-                        # off-shell '*' syntax -- and even then the generated
-                        # code for it does not exist yet (see below).
+                        # is the k^mu direction: the fourth basis vector, not
+                        # one of the three physical polarizations. It only has
+                        # a meaning off shell, and the off-shell '*' syntax is
+                        # also what fixes its normalisation -- the external
+                        # call passes sqrt(p.p) rather than the pole mass, so
+                        # VXXXXX returns eps_A^mu = p^mu/sqrt(p.p), the unit
+                        # vector completing the physical three into an
+                        # orthonormal tetrad. (The amplitude on that direction
+                        # is k.J, which is zero only for a conserved current,
+                        # i.e. for massless daughters -- not in general.)
+                        if leg.get('state') is False:
+                            # An initial-state axial leg is what MadSpin's
+                            # decay-side matrix element would need (there the
+                            # decaying particle is leg 1). Not enabled yet:
+                            # the density-matrix side of that does not exist.
+                            raise InvalidCmd(
+                                "The axial polarization {A} is not supported "
+                                "for an initial-state particle.")
                         if not leg.get('offshell'):
                             raise InvalidCmd(
                                 "polarization A only valid for propagator, or "
                                 "for an off-shell final-state particle written "
                                 "\"z{A}*\" (star after the brace).")
-                        raise InvalidCmd(
-                            "The axial polarization {A} of an off-shell "
-                            "final-state particle is accepted by the process "
-                            "syntax but is NOT implemented in the generated "
-                            "code yet: there is no external wavefunction for "
-                            "it (aloha/template_files/aloha_functions.f, "
-                            "VXXXXX), no helicity entry in the NHEL table and "
-                            "no fourth index in the MadSpin density matrix. "
-                            "Generating this process would silently produce a "
-                            "wrong number, so it is refused instead. Use {A} "
-                            "on a particle that is decayed further (the "
-                            "propagator case) until that support lands.")
                 # Set fermion flow state. Initial particle and final
                 # antiparticle are incoming, and vice versa for
                 # outgoing
@@ -4885,21 +4886,29 @@ class HelasMatrixElement(base_objects.PhysicsObject):
 
         process = self.get('processes')[0]
         model = process.get('model')
-        hel_per_part = [ wf.get('polarization') if wf.get('polarization') 
+        # polarization_to_helicities: a polarization list is a list of *braces*,
+        # not of helicities. '{A}' is stored as 99 and has to become the HELAS
+        # nhel = 4 before it reaches the NHEL table. Must stay in step with
+        # get_helicity_per_particle below -- GET_DENSITY matches the two against
+        # each other, and a mismatch makes every density identically zero.
+        hel_per_part = [ base_objects.polarization_to_helicities(wf.get('polarization'))
+                        if wf.get('polarization')
                         else model.get('particle_dict')[\
                                   wf.get('pdg_code')].get_helicity_states(allow_reverse)
             for wf in self.get_external_wavefunctions()]
         return itertools.product(*hel_per_part)
-    
+
     def get_helicity_per_particle(self):
         """give the allowed helicity for each external particle"""
-        
+
         if not self.get('processes'):
             return None
 
         process = self.get('processes')[0]
         model = process.get('model')
-        hel_per_part = [ wf.get('polarization') if wf.get('polarization') 
+        # same translation as get_helicity_matrix -- see there
+        hel_per_part = [ base_objects.polarization_to_helicities(wf.get('polarization'))
+                        if wf.get('polarization')
                         else model.get('particle_dict')[\
                                   wf.get('pdg_code')].get_helicity_states()
             for wf in self.get_external_wavefunctions()]

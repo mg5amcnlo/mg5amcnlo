@@ -381,6 +381,9 @@ class Switcher(object):
     def check_propagator_polarization(self, *args, **opts):
         return self.cmd.check_propagator_polarization(self, *args, **opts)
 
+    def check_axial_output(self, *args, **opts):
+        return self.cmd.check_axial_output(self, *args, **opts)
+
     def check_open(self, *args, **opts):
         return self.cmd.check_open(self, *args, **opts)
         
@@ -629,9 +632,6 @@ class Switcher(object):
 
     def help_set2_output_dependencies(self, *args, **opts):
         return self.cmd.help_set2_output_dependencies(self, *args, **opts)
-
-    def help_set2_consider_axial(self, *args, **opts):
-        return self.cmd.help_set2_consider_axial(self, *args, **opts)
 
     def help_set2_zerowidth_tchannel(self, *args, **opts):
         return self.cmd.help_set2_zerowidth_tchannel(self, *args, **opts)

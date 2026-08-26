@@ -804,6 +804,8 @@ c       real    p(0:3)         : four-momentum of vector boson
 c       real    vmass          : mass          of vector boson
 c       integer nhel = -1, 0, 1: helicity      of vector boson
 c                                (0 is forbidden if vmass=0.0)
+c                     4        : axial/scalar state eps^mu = p^mu/vmass
+c                                (the '{A}' polarization; final state only)
 c       integer nsv  = -1 or 1 : +1 for final, -1 for initial
 c
 c output:
@@ -872,23 +874,39 @@ c#endif
       vc(1) = dcmplx(p(0),p(3))*nsv
       vc(2) = dcmplx(p(1),p(2))*nsv
 
-c#ifdef HELAS_CHECK
-c nhel=4 option for scalar polarization
-c      if( nhel.eq.4 ) then
-c         if( vmass.eq.rZero ) then
-c            vc(1) = rOne
-c            vc(2) = p(1)/p(0)
-c            vc(3) = p(2)/p(0)
-c            vc(4) = p(3)/p(0)
-c         else
-c            vc(1) = p(0)/vmass
-c            vc(2) = p(1)/vmass
-c            vc(3) = p(2)/vmass
-c            vc(4) = p(3)/vmass
-c         endif
-c         return
-c      endif
-c#endif
+c     nhel = 4 is the axial (scalar) polarization '{A}': the fourth,
+c     unphysical direction of the massive-vector basis, eps^mu = p^mu/vmass.
+c     It completes the three physical polarizations into an orthonormal
+c     tetrad of the momentum-dependent basis:
+c
+c        eps_A.eps_A = +1   eps_i.eps_i = -1   eps_A.eps_i = 0
+c
+c     which is what makes a four-by-four spin density matrix in this basis
+c     meaningful. The normalization is therefore fixed by the SAME vmass the
+c     three physical states are built with -- for an off-shell external leg
+c     ("z{A}*") the caller passes sqrt(p.p), not the pole mass, so this is
+c     eps_A^mu = p^mu/sqrt(p.p) there. No nsv factor: the axial state is
+c     only allowed on a final-state leg (nsv = +1).
+c
+c     vmass = 0 keeps the historical HELAS BRST-check convention
+c     eps^mu = p^mu/p(0), which is NOT normalized (p.p = 0); it exists so
+c     that a gauge check can feed the momentum in as a wavefunction.
+c
+c     This mirrors aloha/template_files/wavefunctions.py:vxxxxx exactly.
+      if( nhel.eq.4 ) then
+         if( vmass.eq.rZero ) then
+            vc(3) = dcmplx( rOne )
+            vc(4) = dcmplx( p(1)/p(0) )
+            vc(5) = dcmplx( p(2)/p(0) )
+            vc(6) = dcmplx( p(3)/p(0) )
+         else
+            vc(3) = dcmplx( p(0)/vmass )
+            vc(4) = dcmplx( p(1)/vmass )
+            vc(5) = dcmplx( p(2)/vmass )
+            vc(6) = dcmplx( p(3)/vmass )
+         endif
+         return
+      endif
 
       if ( vmass.ne.rZero ) then
 

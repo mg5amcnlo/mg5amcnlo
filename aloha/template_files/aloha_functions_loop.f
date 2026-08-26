@@ -1426,23 +1426,26 @@ c     Convention for loop computations
       vc(3) = dcmplx(p(2),0.D0)*nsv
       vc(4) = dcmplx(p(3),0.D0)*nsv
 
-c#ifdef HELAS_CHECK
-c nhel=4 option for scalar polarization
-c      if( nhel.eq.4 ) then
-c         if( vmass.eq.rZero ) then
-c            vc(1) = rOne
-c            vc(2) = p(1)/p(0)
-c            vc(3) = p(2)/p(0)
-c            vc(4) = p(3)/p(0)
-c         else
-c            vc(1) = p(0)/vmass
-c            vc(2) = p(1)/vmass
-c            vc(3) = p(2)/vmass
-c            vc(4) = p(3)/vmass
-c         endif
-c         return
-c      endif
-c#endif
+c     nhel = 4 is the axial (scalar) polarization '{A}', eps^mu = p^mu/vmass.
+c     See aloha/template_files/aloha_functions.f for the convention: the
+c     normalization uses the SAME vmass as the three physical states, so an
+c     off-shell external leg (which is called with sqrt(p.p)) gets the unit
+c     vector p^mu/sqrt(p.p). Here vc(1:4) holds the momentum and vc(5:8) the
+c     wavefunction, so the components go in vc(5:8).
+      if( nhel.eq.4 ) then
+         if( vmass.eq.rZero ) then
+            vc(5) = dcmplx( rOne )
+            vc(6) = dcmplx( p(1)/p(0) )
+            vc(7) = dcmplx( p(2)/p(0) )
+            vc(8) = dcmplx( p(3)/p(0) )
+         else
+            vc(5) = dcmplx( p(0)/vmass )
+            vc(6) = dcmplx( p(1)/vmass )
+            vc(7) = dcmplx( p(2)/vmass )
+            vc(8) = dcmplx( p(3)/vmass )
+         endif
+         return
+      endif
 
       if ( vmass.ne.rZero ) then
 

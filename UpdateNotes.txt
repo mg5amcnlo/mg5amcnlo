@@ -5,6 +5,21 @@ ANNOUNCEMENT:
    A new LTS (based on current 3.5.X) is starting now and will act as stable release for the coming years.
 
 3.7.2 (XX/XX/XX):
+    OM: the axial polarisation brace '{A}' now has a real external wavefunction and
+        can be put on an off-shell final-state particle ("generate p p > z{A}* h"),
+        not only on an internal line. VXXXXX (aloha_functions.f, its loop variant and
+        vxxxxx.cc) implements the historical HELAS nhel = 4 scalar state
+        eps^mu = p^mu/vmass, and since the off-shell '*' makes the writer pass
+        sqrt(p.p) rather than the pole mass, an external axial leg is the unit vector
+        eps_A^mu = p^mu/sqrt(p.p) -- the fourth direction of an orthonormal tetrad
+        with the three physical polarisations, which is what a four-by-four spin
+        density matrix in that basis needs. Because the state is unphysical it is
+        only written when asked for: "output standalone MYDIR --allow_axial"
+        (Fortran standalone family only; the C++ writer has no off-shell external
+        leg). From MadSpin the same choice is the new MadSpin card option
+        'consider_axial', which passes the flag to the standalone outputs MadSpin
+        generates and is recorded in the generated directory so that a reused
+        'ms_dir'/'use_old_dir' cannot mix two different spin bases.
     OM: MadSpin: the run_card me_frame and polbeam1/polbeam2 are now honoured by the
         density-based spinmodes (onshell/PA/madspin/full) and no longer only by the
         legacy madspin_v1/onshell_v1 paths.

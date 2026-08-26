@@ -2077,6 +2077,24 @@ class PythonUFOHelasCallWriter(UFOHelasCallWriter):
 
 
 
+    @staticmethod
+    def external_mass_argument(wf):
+        """The second argument of an external wavefunction routine.
+
+        Normally the pole-mass parameter name. When the leg carries the
+        off-shell '*' syntax its momentum is deliberately not on the pole, and
+        the routine must be handed sqrt(p.p) instead -- exactly what the
+        Fortran writer (generate_external_wavefunction) already does. This is
+        also what fixes the normalisation of the axial polarisation '{A}':
+        VXXXXX returns p^mu/vmass, so with vmass = sqrt(p.p) the axial state
+        is the unit vector p^mu/sqrt(p.p) rather than p^mu/M_pole."""
+
+        if not wf.get('offshell'):
+            return wf.get('mass')
+        n = wf.get('number_external') - 1
+        return 'abs(p[%d][0]**2-p[%d][1]**2-p[%d][2]**2-p[%d][3]**2)**0.5' \
+               % (n, n, n, n)
+
     def generate_helas_call(self, argument, gauge_check=False):
         """Routine for automatic generation of Python Helas calls
         according to just the spin structure of the interaction.
@@ -2123,6 +2141,7 @@ class PythonUFOHelasCallWriter(UFOHelasCallWriter):
                 else:
                     call = call + "%s,hel[%d],"
             call = call + "%+d)"
+            mass_arg = self.external_mass_argument
             if argument.get('spin') == 1:
                 call_function = lambda wf: call % \
                                 (wf.get('me_id')-1,
@@ -2134,7 +2153,7 @@ class PythonUFOHelasCallWriter(UFOHelasCallWriter):
                     call_function = lambda wf: call % \
                                 (wf.get('me_id')-1,
                                  wf.get('number_external')-1,
-                                 wf.get('mass'),
+                                 mass_arg(wf),
                                  wf.get('number_external')-1,
                                  # For boson, need initial/final here
                                  (-1)**(wf.get('state') == 'initial'))
@@ -2149,7 +2168,7 @@ class PythonUFOHelasCallWriter(UFOHelasCallWriter):
                 call_function = lambda wf: call % \
                                 (wf.get('me_id')-1,
                                  wf.get('number_external')-1,
-                                 wf.get('mass'),
+                                 mass_arg(wf),
                                  wf.get('number_external')-1,
                                  # For fermions, need particle/antiparticle
                                  -(-1)**wf.get_with_flow('is_part'))

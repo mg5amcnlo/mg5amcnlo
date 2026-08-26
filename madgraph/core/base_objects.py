@@ -2099,6 +2099,27 @@ def polarization_to_string(polarization):
                     for p in polarization])
 
 
+def polarization_to_helicities(polarization):
+    """Translate a leg 'polarization' list into the helicity values that go
+    into the NHEL table and are handed to the HELAS wavefunction routines.
+
+    All the physical entries (-1,0,1 and the spin-3/2, spin-2 ones) already
+    *are* helicity values and pass straight through. The only entry that has
+    to be translated is the axial/scalar state '{A}', which the process parser
+    stores as 99 -- an out-of-band tag chosen so that it cannot collide with a
+    helicity -- while VXXXXX (aloha_functions.f) has always called that state
+    nhel = 4. 4 is not free at Leg level, where it is the '{G}' brace, but
+    '{G}' has no external wavefunction at all and is refused on any external
+    leg, so no external polarization list can ever contain a literal 4 and the
+    two meanings never meet.
+
+    Use this -- never the raw list -- wherever a polarization becomes a
+    helicity, so that the NHEL table and the ALLOW_HEL rows of a density
+    matrix cannot end up on opposite sides of the translation."""
+
+    return [Leg.polarization_to_helicity.get(p, p) for p in polarization]
+
+
 #===============================================================================
 # Leg
 #===============================================================================
@@ -2122,6 +2143,11 @@ class Leg(PhysicsObject):
                                      9: 'S',   # scalar = axial + width
                                      99: 'A',  # axial/auxiliary
                                      }
+
+    # Leg-level polarization value -> HELAS helicity value (the integer that
+    # ends up in the NHEL table and is passed to VXXXXX/IXXXXX/...).
+    # See polarization_to_helicities() above for why 99 -> 4 is safe.
+    polarization_to_helicity = {99: 4}
 
     def default_setup(self):
         """Default values for all properties"""

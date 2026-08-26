@@ -13,6 +13,28 @@ void vxxxxx(double p[4],double vmass,int nhel,int nsv, complex<double> vc[6]){
   pt =min(pp,sqrt(pt2));
   vc[0] = complex<double>(p[0]*nsv,p[3]*nsv);
   vc[1] = complex<double>(p[1]*nsv,p[2]*nsv);
+  // nhel = 4 is the axial (scalar) polarization '{A}': eps^mu = p^mu/vmass,
+  // the fourth direction completing the three physical polarizations into an
+  // orthonormal tetrad (eps_A.eps_A = +1). The normalization uses the SAME
+  // vmass the physical states use, so an off-shell external leg -- which is
+  // called with sqrt(p.p) instead of the pole mass -- gets p^mu/sqrt(p.p).
+  // vmass = 0 keeps the historical HELAS BRST-check convention p^mu/p[0].
+  // Mirrors aloha_functions.f and wavefunctions.py.
+  if (nhel == 4){
+    if (vmass == 0.0){
+      vc[2] = complex<double>(1.0,0.0);
+      vc[3] = complex<double>(p[1]/p[0],0.0);
+      vc[4] = complex<double>(p[2]/p[0],0.0);
+      vc[5] = complex<double>(p[3]/p[0],0.0);
+    }
+    else{
+      vc[2] = complex<double>(p[0]/vmass,0.0);
+      vc[3] = complex<double>(p[1]/vmass,0.0);
+      vc[4] = complex<double>(p[2]/vmass,0.0);
+      vc[5] = complex<double>(p[3]/vmass,0.0);
+    }
+    return;
+  }
   if (vmass != 0.0){
     hel0 = 1.0-std::abs(hel);
     if( pp == 0.0 ){ 

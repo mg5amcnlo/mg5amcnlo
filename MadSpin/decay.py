@@ -2129,6 +2129,11 @@ class decay_all_events(object):
             self.generate_all_matrix_element()
             self.save_status_to_pickle(pickle_info)
         else:
+            # before anything else: the directory we are about to reuse has a
+            # spin basis baked into its generated code, and it has to be the
+            # one this run asks for. Deliberately outside the try/except
+            # below, which would quietly fall back to regenerating.
+            self.check_spin_basis_tag()
             try:
                 data = save_load_object.load_from_file(pjoin(self.path_me,"production_me", "all_ME.pkl"))
                 self.all_ME, self.all_decay,self.width_estimator = data.all_ME, data.all_decay, data.width_estimator
@@ -2280,6 +2285,57 @@ class decay_all_events(object):
         # set the environment variable GFORTRAN_UNBUFFERED_ALL 
         # to its original value
         #os.environ['GFORTRAN_UNBUFFERED_ALL']='n'
+
+    # Name of the file recording which spin basis the standalone directories
+    # under path_me were generated with. See check_spin_basis_tag().
+    SPIN_BASIS_TAG = 'spin_basis.txt'
+
+    def write_spin_basis_tag(self):
+        """Record the spin basis the matrix-element directories were just
+        generated with, so that a later run reusing them ('ms_dir',
+        'use_old_dir') can check that it is asking for the same one."""
+
+        try:
+            with open(pjoin(self.path_me, self.SPIN_BASIS_TAG), 'w') as fsock:
+                fsock.write('consider_axial = %s\n'
+                            % bool(self.options['consider_axial']))
+        except IOError:
+            pass
+
+    def check_spin_basis_tag(self, consider_axial=None):
+        """Refuse to reuse matrix-element directories that were generated
+        with a different spin basis.
+
+        'consider_axial' decides how many states each decaying particle has --
+        three physical polarisations, or those plus the axial '{A}' direction.
+        It is baked into the generated code (the NHEL table and the ALLOW_HEL
+        rows of GET_DENSITY) at output time, so a directory built with one
+        value and a convolution written for the other would be silently
+        inconsistent: a four-index density matrix contracted against a
+        three-state matrix element. Unlike the old global MG5 option, this one
+        is not recorded in the banner's proc_card, so the directory carries its
+        own record instead."""
+
+        if consider_axial is None:
+            consider_axial = self.options['consider_axial']
+        consider_axial = bool(consider_axial)
+        path = pjoin(self.path_me, self.SPIN_BASIS_TAG)
+        if os.path.exists(path):
+            previous = 'true' in open(path).read().split('=')[-1].strip().lower()
+        else:
+            # directories from before this record existed are three-state
+            previous = False
+        if previous != consider_axial:
+            raise Exception(
+                "The matrix-element directories in %s were generated with "
+                "'consider_axial = %s' but this run asks for "
+                "'consider_axial = %s'. That option changes the spin basis "
+                "baked into the generated code (the NHEL table and the "
+                "ALLOW_HEL rows of GET_DENSITY), so the two cannot be mixed. "
+                "Either set 'consider_axial %s' in the MadSpin card, or drop "
+                "'ms_dir'/'use_old_dir' so that the directories are "
+                "regenerated." % (self.path_me, previous, consider_axial,
+                                  previous))
 
     def save_status_to_pickle(self, path=None):
         import madgraph.iolibs.save_load_object as save_load_object
@@ -4599,8 +4655,19 @@ class decay_all_events_onshell(decay_all_events):
             mgcmd.exec_cmd(commandline, precmd=True)
             fill_all_me(self, "production")
         else:
+            # 'consider_axial' is a MadSpin card option, not a global MG5 one:
+            # the axial ('{A}') direction of a decaying vector's spin basis is
+            # something MadSpin decides, and the standalone directories it
+            # generates have to be told about it on the output line. Passing
+            # the flag from here -- rather than reading it back out of the
+            # banner's proc_card, which is where the old global option lived --
+            # is what guarantees that the production directory, the decay
+            # directory and the convolution all agree on the size of the basis:
+            # they are all built in this one call from this one option.
+            axial = ' --allow_axial' if self.options['consider_axial'] else ''
+
             commandline_production = commandline.replace('add process', 'generate',1)
-            commandline_production += 'output standalone %s --prefix=int --density=1' % pjoin(path_me, ms_me_subdir)
+            commandline_production += 'output standalone %s --prefix=int --density=1%s' % (pjoin(path_me, ms_me_subdir), axial)
 
             logger.info(commandline_production)
             mgcmd.exec_cmd(commandline_production, precmd=True)
@@ -4609,7 +4676,7 @@ class decay_all_events_onshell(decay_all_events):
             fill_all_me(self, "production")
 
             commandline_decay = self.get_decay_command()
-            commandline_decay += 'output standalone %s --prefix=int --density=1 -f' % pjoin(path_me, ms_me_decay_subdir) #we add -f, else it would ask us if we want to clean the folder madspin_decay and madspin_me
+            commandline_decay += 'output standalone %s --prefix=int --density=1%s -f' % (pjoin(path_me, ms_me_decay_subdir), axial) #we add -f, else it would ask us if we want to clean the folder madspin_decay and madspin_me
             commandline_decay = commandline_decay.replace('add process', 'generate',1)
 
             logger.info(commandline_decay)
@@ -4618,6 +4685,7 @@ class decay_all_events_onshell(decay_all_events):
             # store information about the decay matrix elements
             fill_all_me(self, "decay")
 
+        self.write_spin_basis_tag()
         logger.info('Done %.4g' % (time.time()-start))
 
         return self.all_me
