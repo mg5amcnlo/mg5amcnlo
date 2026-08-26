@@ -99,14 +99,14 @@ MINUS_FIX = P.MINUS_FIX
 P.PROC_TEX = r'pp \to t\bar t'
 P.PROC_PLAIN = r'pp \to t\bar t'
 P.CURVES = [
-    ('truth',      r'truth: $pp \to t\bar t$, $t \to W^+ b$ (off shell)'),
+    ('truth',      r'$pp \to t\bar t$, $t \to W^+ b$ (off shell)'),
     ('madspin',    r'MadSpin, \texttt{spinmode = madspin}'),
     ('PA',         r'MadSpin, \texttt{spinmode = PA}'),
     ('onshell',    r'MadSpin, \texttt{spinmode = onshell}'),
     ('madspin_v1', r'MadSpin, \texttt{spinmode = madspin\_v1} (legacy)'),
 ]
 P.CURVES_PLAIN = {
-    'truth':      r'truth: $pp \to t\bar t$, $t \to W^+ b$ (off shell)',
+    'truth':      r'$pp \to t\bar t$, $t \to W^+ b$ (off shell)',
     'madspin':    'MadSpin, spinmode = madspin',
     'PA':         'MadSpin, spinmode = PA',
     'onshell':    'MadSpin, spinmode = onshell',

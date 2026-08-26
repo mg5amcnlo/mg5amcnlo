@@ -162,14 +162,14 @@ allcolors[3] = 'red'
 #               would only add ink.  RESULTS.md carries the comparison.
 # --------------------------------------------------------------------------
 CURVES = [
-    ('truth',      r'truth: $pp \to t\bar t j$, $t \to W^+ b$ (off shell)'),
+    ('truth',      r'$pp \to t\bar t j$, $t \to W^+ b$ (off shell)'),
     ('madspin',    r'MadSpin, \texttt{spinmode = madspin}'),
     ('PA',         r'MadSpin, \texttt{spinmode = PA}'),
     ('onshell',    r'MadSpin, \texttt{spinmode = onshell}'),
     ('madspin_v1', r'MadSpin, \texttt{spinmode = madspin\_v1} (legacy)'),
 ]
 CURVES_PLAIN = {
-    'truth':      r'truth: $pp \to t\bar t j$, $t \to W^+ b$ (off shell)',
+    'truth':      r'$pp \to t\bar t j$, $t \to W^+ b$ (off shell)',
     'madspin':    'MadSpin, spinmode = madspin',
     'PA':         'MadSpin, spinmode = PA',
     'onshell':    'MadSpin, spinmode = onshell',
@@ -732,8 +732,8 @@ def make_figure(d, out, style_tag=''):
     # Say it on the axis, not only in the caption: a reader who crops the
     # figure out of the document must still be told the pane is clipped, and
     # that what it compares is shapes.
-    rx.set_ylabel(_tx(r'shape ratio to truth' '\n' r'(clipped to $\pm20\%$)',
-                      'shape ratio to truth\n(clipped to $\\pm20\\%$)'),
+    rx.set_ylabel(_tx(r'shape ratio' '\n' r'(clipped to $\pm20\%$)',
+                      'shape ratio\n(clipped to $\\pm20\\%$)'),
                   fontsize=10.5)
     # The one piece of text kept in a pane, and deliberately: it is a key to two
     # MARKS, not commentary.  The axis label says the pane is clipped, but it
