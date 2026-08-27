@@ -124,6 +124,19 @@ class MadSpinUnknownPartialWidth(madspin.MadSpinError):
     pass
 
 
+class MadSpinStaleParameters(madspin.MadSpinError):
+    """A reused ``ms_dir``/``use_old_dir`` directory was built with different
+    parameters than the run now asking for it.
+
+    Everything that directory holds is a function of the param_card: the decay
+    gridpacks and the events they produce, the partial widths measured while
+    building them, the maximum weights of the unweighting, the pickled
+    branching ratios. None of it can be recomputed without rebuilding the
+    directory, and all of it would be reused in silence -- so a changed
+    param_card makes the reuse unsound rather than merely stale."""
+    pass
+
+
 class MadSpinZeroBranchingRatio(madspin.MadSpinError):
     """The branching ratio MadSpin is about to apply to every event is zero (or
     not a number). Raised instead of writing the events.
@@ -1877,6 +1890,11 @@ class MadSpinInterface(extended_cmd.Cmd):
         if spinmode in ('none', 'onshell_v1'):
             self._warn_ignored_decay_groups(spinmode)
 
+        # Before any mode is dispatched, and before anything cached in a reused
+        # directory is read back: everything in there was computed from a
+        # param_card, and none of it is re-measured on reuse.
+        self._check_reused_param_card()
+
         if spinmode in ["none"]:
             out = self.run_bridge(line)
             self._log_lhe_timers()
@@ -2486,6 +2504,139 @@ class MadSpinInterface(extended_cmd.Cmd):
     # native path regenerates -- and so re-measures -- on every run, while a
     # gridpack is built once and merely *run* by every later run.
     PARTIAL_WIDTH_FILE = 'ms_partial_width.dat'
+
+    # Copy of the param_card a reusable directory was built with. Everything
+    # that directory caches is derived from those parameters, so this is what
+    # says whether the cache may be reused at all -- see
+    # _check_reused_param_card.
+    PARAM_CARD_STAMP = 'ms_param_card.dat'
+
+    def _reused_directory(self):
+        """The directory whose already-built content this run would reuse, or
+        None when everything is generated from scratch.
+
+        ``ms_dir`` is the persistent one (decay gridpacks, max_wgt caches,
+        madspin.pkl); ``use_old_dir`` reuses the same kind of material in the
+        run's own working directory (production_me/all_ME.pkl)."""
+        if self.options['ms_dir']:
+            return os.path.realpath(self.options['ms_dir'])
+        if self.options['use_old_dir'] and self.options['curr_dir']:
+            return os.path.realpath(self.options['curr_dir'])
+        return None
+
+    def _check_reused_param_card(self):
+        """Refuse to reuse a directory that was built with other parameters.
+
+        A reused directory is a cache of things computed *from* the param_card:
+        the decay events in ``decay_<pdg>_<i>`` and the partial widths measured
+        while generating them, the maximum weights of the unweighting
+        (``max_wgt``, ``max_wgt_sequential*``, ``pure_interference_c``), the
+        branching ratios pickled in ``madspin.pkl``/``all_ME.pkl``, and the
+        matrix-element directories themselves. None of those record which
+        parameters produced them and none is re-measured on reuse, so a changed
+        param_card would be applied to half the calculation and not the other
+        half -- the reported cross-section computed from one card, the events
+        from another.
+
+        Rebuilding is not something MadSpin can do behind the user's back
+        either: the whole point of ``ms_dir`` is that the expensive part is not
+        rebuilt. So this stops, and says which blocks moved.
+
+        ``run_from_pickle`` has long carried a narrower version of this check,
+        comparing the pickled banner's blocks -- but skipping every ``decay``
+        block, i.e. exactly the widths that drive the branching ratios and the
+        Breit-Wigner sampling. Comparing the *card* rather than the pickled
+        banner is what makes the widths comparable: MadSpin overwrites the
+        banner's widths with its own LO estimates as it runs (madspin_v1), so
+        the pickled banner is not the card that went in, while this stamp is.
+        """
+        reusing = self._reused_directory()
+        # A run that is *not* reusing rebuilds the directory from scratch
+        # (run_onshell/run_bridge remove decay_*_*, generate_all_matrix_element
+        # removes the ME trees), so a stamp left there by an earlier run no
+        # longer describes what is on disk. Keep it in step rather than letting
+        # it stop the next reuse for a change that was in fact rebuilt.
+        directory = reusing or (self.options['curr_dir'] and
+                                os.path.realpath(self.options['curr_dir']))
+        if not directory:
+            return
+        stamp = pjoin(directory, self.PARAM_CARD_STAMP)
+        if not reusing and not os.path.exists(stamp):
+            return  # nothing reuses this directory; do not leave a file behind
+        # 'slha' first: Banner.__getattribute__ answers a missing param_card by
+        # charging it, so hasattr() raises rather than returning False when the
+        # input carries no banner at all (hepmc, lhe_no_banner).
+        if 'slha' not in self.banner:
+            return
+        if not hasattr(self.banner, 'param_card'):
+            self.banner.charge_card('param_card')
+        current = self.banner.param_card
+        if reusing and os.path.exists(stamp):
+            try:
+                previous = check_param_card.ParamCard(stamp)
+            except Exception as error:
+                previous = None
+                logger.debug('unreadable %s (%s)', stamp, error)
+            if not previous:
+                # A stamp that parses to nothing says nothing. Every block
+                # would "differ", which would turn a safety net into a gate
+                # that stops runs that were always fine.
+                logger.debug('%s carries no parameters; not checking the '
+                             'reused ones', stamp)
+                return
+            # Only blocks both cards have: a block that exists on one side only
+            # is a change of *model*, which the proc_card of the banner and
+            # 'import model' already police, and flagging it here would stop
+            # reuse across MadSpin versions that write one more block.
+            changed = [name for name in set(current) & set(previous)
+                       if name != 'qnumbers'  # model structure, not parameters
+                       and current[name] != previous[name]]
+            if changed:
+                raise MadSpinStaleParameters(
+                    "MadSpin is reusing %s, which was built with a different "
+                    "param_card.\n"
+                    "\n"
+                    "Blocks that differ: %s\n"
+                    "\n"
+                    "That directory caches everything MadSpin computes from "
+                    "the parameters -- the decay events and the partial widths "
+                    "measured while generating them, the maximum weights of "
+                    "the unweighting, the branching ratios in madspin.pkl. "
+                    "None of it is re-measured on reuse, so continuing would "
+                    "decay the events with the old parameters while reporting "
+                    "a cross-section computed from the new ones.\n"
+                    "\n"
+                    "Point 'ms_dir'/'use_old_dir' at a fresh directory (or "
+                    "remove %s) and rerun, so everything is rebuilt with the "
+                    "parameters you asked for."
+                    % (directory, ', '.join(sorted(changed)), directory))
+            return
+        already_built = reusing and (
+            any(os.path.exists(pjoin(directory, name))
+                for name in ('madspin.pkl', 'max_wgt'))
+            or bool(misc.glob('decay_*_*', directory)))
+        if already_built:
+            # Built by a MadSpin that left no stamp. The content is reused
+            # either way -- ``run_from_pickle`` still compares the pickled
+            # banner's non-decay blocks -- but nothing can vouch for the widths,
+            # so say so instead of stamping it with this run's card as if it had
+            # been built with it.
+            logger.warning(
+                "%s was built by a MadSpin that did not record its "
+                "param_card, so the parameters it was built with cannot be "
+                "checked against this run's. If you have changed the "
+                "param_card since, use a fresh directory: the cached decay "
+                "events, partial widths and maximum weights are not "
+                "re-measured on reuse.", directory)
+        # First use of this directory, or a rebuild of one already stamped:
+        # record what it is being built with.
+        try:
+            if not os.path.isdir(directory):
+                os.makedirs(directory)
+            current.write(stamp)
+        except (IOError, OSError) as error:
+            logger.debug('could not record the parameters of %s: %s',
+                         directory, error)
 
     @classmethod
     def _store_partial_width(cls, decay_dir, cross):
@@ -10219,6 +10370,31 @@ class MadSpinInterface(extended_cmd.Cmd):
         return full_event, full_me/(production_me*decay_me)*jac, prod_density_cached
 
 
+    def me_param_card(self, folder_name=None):
+        """The parameters every MadSpin matrix element is initialised with.
+
+        There is exactly one source of truth, ``path_me/param_card.dat``: the
+        banner of the input event file (as overridden by ``import model <MODEL>
+        <CARD>``), written out on every run. ``decay_all_events_onshell
+        .refresh_me_param_cards`` copies it into each ME directory's ``Cards/``
+        at compile time, so ``<folder>/Cards/param_card.dat`` is that same card;
+        it is preferred only because it is the file sitting next to the code
+        that reads it, and it is what an archived run keeps.
+
+        What is deliberately *not* consulted is ``path_me/Cards/param_card.dat``
+        -- the process directory's own card, which ``path_me`` happens to point
+        at when MadSpin is launched from MadEvent. That card may have been
+        edited after the events were generated, and using it would evaluate the
+        production matrix element with parameters the events do not have. A
+        user who does want other parameters says so with ``import model``,
+        which is checked against the banner.
+        """
+        if folder_name:
+            card = pjoin(self.path_me, folder_name, 'Cards', 'param_card.dat')
+            if os.path.exists(card):
+                return card
+        return pjoin(self.path_me, 'param_card.dat')
+
     def initialise_f2py_module(self, mymod, sp_path, prod_or_decay):
         """ Routine to initialise the fortran module with module.initialise(param_card_path).
             If one the process is at loop-induced level, it is also needed to call module.set_madloop_path(path_to_MadLoop5_resources)
@@ -10231,11 +10407,7 @@ class MadSpinInterface(extended_cmd.Cmd):
             raise ValueError("prod_or_decay only accepts values as 'prod' or 'decay'.")
 
         with misc.chdir(sp_path): #changed the search of the card to the subdirectories madspin_me and madspin_decay
-            if (not os.path.exists(pjoin(self.path_me, folder_name, 'Cards', 'param_card.dat'))
-                    and os.path.exists(pjoin(self.path_me, folder_name, 'param_card.dat'))):
-                mymod.initialise(pjoin(self.path_me, 'param_card.dat'))
-            else:
-                mymod.initialise(pjoin(self.path_me, folder_name, 'Cards', 'param_card.dat'))
+            mymod.initialise(self.me_param_card(folder_name))
             # If the module is loop-induced, we also need to set the directory in which the MadLoop param card is present
             MadLoopCardPath = pjoin(self.path_me, folder_name, 'SubProcesses', 'MadLoop5_resources')
             if os.path.exists(MadLoopCardPath):
@@ -11030,11 +11202,11 @@ class MadSpinInterface(extended_cmd.Cmd):
                 if self.model_init:
                     self.model_init = False
                     with misc.chdir(sp_path):
-                        if not os.path.exists(pjoin(self.path_me, 'Cards','param_card.dat')) and \
-                                os.path.exists(pjoin(self.path_me,'param_card.dat')):
-                            mymod.initialise(pjoin(self.path_me,'param_card.dat'))
-                        else:
-                            mymod.initialise(pjoin(self.path_me, 'Cards','param_card.dat'))
+                        # Same single source of truth as the density modes:
+                        # never the process directory's own Cards/param_card.dat,
+                        # which path_me points at under MadEvent and which can
+                        # disagree with the events (see me_param_card).
+                        mymod.initialise(self.me_param_card(self.ms_me_subdir))
             mymod = self.f2py_module
 
             #if Rpath linking is not working the below code can be an alternative:
