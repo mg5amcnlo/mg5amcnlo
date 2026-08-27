@@ -441,6 +441,20 @@ inclusively, what MadSpin's density matrix demonstrably buys you is the
 single-`Z` polarisation. The correlation between the two decays is present in
 the truth at the sub-percent level and is not resolved here.**
 
+**What "sub-percent" is worth, undiluted.** A `Z` is a weak spin analyser: the
+parity-violating `cos θ` term of `Z → l+ l-` carries
+`eta_l = 2 g_V g_A / (g_V² + g_A²) = 0.2193` in this calculation's on-shell EW
+scheme, and it enters `<cos θ₁ cos θ₂>` squared. Dividing it out,
+`C_kk = 4 <cos θ₁ cos θ₂> / eta_l² = +0.570 ± 0.141` — the correlation between
+the two `Z` helicity projections, against a ceiling of `f_TT = 0.83`. The
+correlation is **large**; the moment is small only because of the `eta_l²/4 =
+1/83` dilution. The same figure's single-`Z` moment gives the longitudinal
+fraction `f_0 = 2 - 5 <cos²θ> = 0.112 ± 0.007`, reproduced by all three
+spin-correlated modes and replaced by the isotropic `1/3` by `none`. The
+derivations, the literature names, the polarised-matrix-element cross-check and
+the verdict on which of these belongs in the paper are in
+[SPIN_COEFFICIENTS.md](SPIN_COEFFICIENTS.md).
+
 ### Does NOT separate, exactly: `m_4l`
 
 Every MadSpin mode gives the same `m_4l` as the production sample, event by

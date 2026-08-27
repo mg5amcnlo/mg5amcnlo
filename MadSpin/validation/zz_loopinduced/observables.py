@@ -273,6 +273,16 @@ def compute(p):
     sign = np.sign(np.sum(zdir * np.cross(n1, n2), axis=1))
     sign = np.where(sign == 0, 1.0, sign)
     out['phi_planes'] = sign * np.arccos(cosphi)
+
+    # --- the polarisation projectors (see POL_0 below) --------------------
+    # <pol0_1> is the longitudinal fraction of the (e+ e-) parent, <pol0_2>
+    # that of the (mu+ mu-) one, and <pol00> the JOINT longitudinal fraction.
+    # They are event-level estimators, so they carry an ordinary error of the
+    # mean and the joint one is simply the product of the two single ones.
+    out['pol0_1'] = POL_0(out['cos_theta1'])
+    out['pol0_2'] = POL_0(out['cos_theta2'])
+    out['pol00'] = out['pol0_1'] * out['pol0_2']
+    out['polTT'] = (1.0 - out['pol0_1']) * (1.0 - out['pol0_2'])
     return out
 
 
@@ -284,6 +294,110 @@ W_Z = 2.441404
 BW_CUT = 15
 M_LO = M_Z - BW_CUT * W_Z
 M_HI = M_Z + BW_CUT * W_Z
+# --------------------------------------------------------------------------
+# What a cos(theta) moment is worth: the Z polarisation, and the price of
+# using a Z as a spin analyser
+# --------------------------------------------------------------------------
+# For a Z of helicity ``lambda`` along its own flight direction, decaying to
+# massless leptons, the ``l+`` polar angle in the Z rest frame is distributed as
+#
+#     W_{+-1}(c) = (3/8) (1 + c^2 +- 2 eta_l c)      W_0(c) = (3/4) (1 - c^2)
+#
+# each normalised to 1 over ``c in [-1, 1]``.  Only the PARITY-VIOLATING term
+# carries the analysing power
+#
+#     eta_l = 2 g_V g_A / (g_V^2 + g_A^2) = (1 - 4 sw2) / (1 - 4 sw2 + 8 sw2^2)
+#
+# which is small because the Z's coupling to charged leptons is nearly pure
+# vector.  The ``(1 + c^2)`` versus ``sin^2`` SHAPE difference carries no
+# ``eta_l`` at all.  So the two kinds of moment are not on the same footing:
+#
+#   * the rank-1 (vector polarisation) moments -- <cos theta>, and the
+#     inter-decay <cos theta1 cos theta2> -- are diluted by eta_l and eta_l^2;
+#   * the rank-2 (alignment) moments -- <cos^2 theta> and the joint
+#     <cos^2 theta1 cos^2 theta2> -- are NOT diluted at all.
+#
+# Writing f_0 for the longitudinal fraction, the rank-2 relation is
+#
+#     <cos^2 theta> = (2 - f_0) / 5      i.e.   f_0 = 2 - 5 <cos^2 theta>
+#
+# and ``POL_0`` below is exactly that, per event, so that <POL_0> = f_0 with an
+# ordinary error of the mean.  f_0 = 1/3 is the isotropic (unpolarised) value.
+#
+# The rank-1 inter-decay one is
+#
+#     <cos theta1 cos theta2> = (eta_l^2 / 4) C_kk,
+#     C_kk = <S_k(1) S_k(2)>, S_k the spin-1 projection on each Z's own
+#            helicity axis, eigenvalues +1, 0, -1
+#
+# so the calibration constant is 4 / eta_l^2 -- NOT the 9 of the t t~ case.
+# The 9 there is the spin-1/2 version of the same algebra: for a decay
+# (1/2)(1 + kappa c) one gets <c1 c2> = (kappa^2 / 9) C_nn, and kappa = 1 for a
+# charged lepton from a top.  For spin 1 the coefficient is 4 even at eta_l = 1.
+#
+# Numbers: this study runs the MG5 default SM param_card in the on-shell EW
+# scheme, where MW is derived from (aEWM1, Gf, MZ) and sw2 = 1 - MW^2/MZ^2.
+SM_AEWM1 = 132.507
+SM_GF = 1.166390e-05
+
+
+def _mw_from_sminputs(aewm1=SM_AEWM1, gf=SM_GF, mz=M_Z):
+    """MW as the SM UFO builds it: the on-shell solution of the Gf relation."""
+    aew = 1.0 / aewm1
+    return math.sqrt(mz ** 2 / 2.0
+                     + math.sqrt(mz ** 4 / 4.0
+                                 - (aew * math.pi * mz ** 2) / (gf * math.sqrt(2.0))))
+
+
+M_W = _mw_from_sminputs()
+SW2 = 1.0 - M_W ** 2 / M_Z ** 2
+ETA_L = (1.0 - 4.0 * SW2) / (1.0 - 4.0 * SW2 + 8.0 * SW2 ** 2)
+
+
+def POL_0(cos_theta):
+    """Per-event estimator of the longitudinal fraction: <2 - 5 cos^2> = f_0.
+
+    Not a probability event by event -- it runs from -3 to +2 -- but its mean
+    is f_0 exactly, and the mean of the PRODUCT of the two Z's estimators is
+    the joint fraction f_00.  1 - POL_0 is the transverse estimator.
+    """
+    return 2.0 - 5.0 * cos_theta ** 2
+
+
+def c_kk_from_moment(mean, err):
+    """(C_kk, error) from <cos theta1 cos theta2>: C_kk = 4 <c1 c2> / eta_l^2."""
+    k = 4.0 / ETA_L ** 2
+    return k * mean, k * err
+
+
+def _selftest_polarisation():
+    """The projector has to give 1/3 on an isotropic decay and the right value
+    on each pure helicity, or every number built on it is decoration."""
+    c = np.linspace(-1.0, 1.0, 200001)
+
+    def _integral(y):
+        # trapezoid by hand: np.trapz is deprecated in numpy 2 and
+        # np.trapezoid does not exist in numpy 1, and this module has to
+        # import under both
+        return float(np.sum(0.5 * (y[1:] + y[:-1]) * np.diff(c)))
+
+    def mean(w, v):
+        return _integral(w * v) / _integral(w)
+    flat = np.ones_like(c)
+    w_t = 0.375 * (1.0 + c ** 2)
+    w_l = 0.75 * (1.0 - c ** 2)
+    assert abs(mean(flat, POL_0(c)) - 1.0 / 3.0) < 1e-6, 'POL_0: isotropic'
+    assert abs(mean(w_t, POL_0(c)) - 0.0) < 1e-6, 'POL_0: pure transverse'
+    assert abs(mean(w_l, POL_0(c)) - 1.0) < 1e-6, 'POL_0: pure longitudinal'
+    # and the eta_l term must not touch it, which is the whole point
+    w_p = 0.375 * (1.0 + c ** 2 + 2.0 * ETA_L * c)
+    assert abs(mean(w_p, POL_0(c)) - 0.0) < 1e-6, 'POL_0: eta_l leaks in'
+    assert 0.20 < ETA_L < 0.24, 'eta_l off its on-shell-scheme value: %r' % ETA_L
+
+
+_selftest_polarisation()
+
+
 
 BINS = {
     # the headline cross-pair mass

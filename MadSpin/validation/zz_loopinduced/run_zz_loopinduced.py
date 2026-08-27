@@ -526,6 +526,16 @@ def stage_harvest(files, datadir, extra_meta):
             'cos_theta1': moment(obs['cos_theta1']),
             'cos2_theta1': moment(obs['cos_theta1'] ** 2),
             'cos1cos2': moment(obs['cos1cos2']),
+            'cos2_theta2': moment(obs['cos_theta2'] ** 2),
+            # the polarisation projectors of observables.py: <pol0_i> is the
+            # longitudinal fraction of one z, <pol00> the joint one.  Kept as
+            # moments rather than derived in the plotter because the error has
+            # to come off the same events -- f_00 built from three separately
+            # averaged moments would carry their covariance as an inflation.
+            'pol0_1': moment(obs['pol0_1']),
+            'pol0_2': moment(obs['pol0_2']),
+            'pol00': moment(obs['pol00']),
+            'polTT': moment(obs['polTT']),
             'cos_phi': moment(np.cos(obs['phi_planes'])),
             'cos_2phi': moment(np.cos(2 * obs['phi_planes'])),
             'm_epmum': moment(obs['m_epmum']),

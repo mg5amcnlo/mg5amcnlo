@@ -1,6 +1,9 @@
 # `g g > z z` (loop induced) + MadSpin, against the full off-shell four-lepton calculation
 
-What is here, and how to re-run it. The findings are in [RESULTS.md](RESULTS.md).
+What is here, and how to re-run it. The findings are in [RESULTS.md](RESULTS.md);
+what the two angular figures measure, what the di-boson literature calls it, and
+which coefficient is worth quoting are in
+[SPIN_COEFFICIENTS.md](SPIN_COEFFICIENTS.md).
 
 ## The comparison
 
@@ -103,6 +106,14 @@ data/numbers.txt                   the numeric report
 plots/, plots_userstyle/           PDF and PNG
 logs/                              run logs, copied as .log.txt
 RESULTS.md                         the findings
+SPIN_COEFFICIENTS.md               what cos(theta1) and cos1cos2 measure: the
+                                   polarisation fractions, C_kk, the literature
+                                   names, and the verdict on what to quote
+polweight_closure.py               the cross-check of that extraction against
+                                   MadSpin's own ms_pol_* weights -- the only
+                                   script here that runs on a DIFFERENT study's
+                                   samples, because these ones carry no such
+                                   weights
 ```
 
 ## Re-running
@@ -112,6 +123,7 @@ export PATH="$HOME/.pyenv/versions/mg-3.14/bin:$PATH"     # f2py is required
 python3 run_zz_loopinduced.py --stage all --basedir /tmp/zz_work --nb-core 6
 python3 plot_zz_loopinduced.py --check-minus
 python3 plot_zz_loopinduced_userstyle.py
+python3 plot_zz_loopinduced.py --only-numbers    # numbers.txt alone, no figures
 ```
 
 The two plotting scripts need only `data/`; they import neither MadSpin nor
