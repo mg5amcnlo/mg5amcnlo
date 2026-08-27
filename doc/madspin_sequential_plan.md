@@ -3903,3 +3903,479 @@ Verified rather than asserted, on the same sample, same seed, same `nb_core`:
   is only ever *tighter* than a run-level `K . max_e J_corner`, never a
   different distribution: redraw-until-accept makes the accepted density
   independent of `C` for any `C >= max w`, the same argument as #377.
+
+## 18. The joint max-weight scan reuses a stale `rho_prod` (assessment)
+
+Found in passing during milestone 3 of the axial work (`2ba47b8d8`), where it
+masked the `density_debug` closure signal; that commit made `density_debug`
+skip the affected trials and left the scan alone, because touching it would
+have broken the milestone's bit-identity proof. This section is the assessment
+that was asked for afterwards. **Nothing shipped is changed by it.** Every
+number below was taken with four environment-gated diagnostics whose default
+is off; the patch is reproduced at the end.
+
+### 18.1 The defect, confirmed
+
+The joint bound is measured by `_joint_maxwgt_range`
+(`MadSpin/interface_madspin.py:6735`). For each probe production event it takes
+`nb_ps_point` decay draws and keeps the largest weight. Off shell
+(`spinmode madspin`/`full`) each draw is a genuinely different phase-space
+point: line `6808` builds a fresh **on-shell** copy of the production event per
+draw, and `calculate_matrix_element_from_density` then reshuffles that copy onto
+*that draw's* virtualities --
+
+    :10627   if not density_pole_approximation or \
+    :10628       (not prod_static or prod_static.get('decays_key') != decays_key):
+    ...
+    :10677           jac *= production.reshuffle_production()
+
+-- the first disjunct being unconditionally true off shell. The production
+density is taken **after** that reshuffle:
+
+    :10735   if prod_density_cached is None:
+    :10736       density_prod = self.get_density(production, ...)
+
+and the scan hands the same `prod_density_cached` back in on every draw after
+the first:
+
+    :6809   if density_matrix_prod is None:
+    :6810       _, wgt, density_matrix_prod = self.get_onshell_evt_and_wgt(
+    :6811           prod_draw, decays, decay_dict, build_event=False)
+    :6812   else:
+    :6813       wgt = self.get_onshell_evt_and_wgt(
+    :6814           prod_draw, decays, decay_dict, density_matrix_prod,
+    :6815           build_event=False)[1]
+
+So draws `j >= 1` contract `rho_prod` evaluated at **draw 0's** virtualities
+against a `rho_dec` and a `jac_reshuffle` taken at draw `j`'s. The event loop
+carries exactly the guard the scan is missing:
+
+    :4747   if prod_density_cached is None or not density_pole_approximation:
+
+-- `or not density_pole_approximation` forces a fresh `rho_prod` on every
+off-shell trial, and the cache is used only under `PA`/`onshell`, where the
+production event is never reshuffled in place and the cached matrix is the
+right one. The existing comment at `:10750` already states the diagnosis; this
+section confirms it and prices it.
+
+Only `rho_prod` is stale. `MEdenom_prod` (`:10669`) is taken **before** the
+reshuffle, on the per-draw on-shell copy, so it is the same number on every
+draw; `prod_static`, `me_wgt` and the jacobians are all rebuilt per draw
+because `prod_draw` is a fresh `Event`. The defect is one object.
+
+Confirmed empirically as well as by reading: running the same probe twice with
+the same seed, once as shipped and once with the density re-derived per draw,
+the two agree **exactly** on all 304 `j = 0` trials (0 disagreements) and
+differ on the 149 264 later ones -- which is what "the draws are identical, only
+`rho_prod` differs" predicts. The per-draw resonance distance `d` of section
+17 is bit-identical between the two runs, confirming the draws are aligned.
+
+### 18.2 Which modes and schemes
+
+| | affected? | why |
+|---|---|---|
+| `joint` + `madspin`/`full` | **yes** | `_joint_maxwgt_range`, above |
+| `joint` + `PA` | no | the reshuffle is on a separate copy (`:6817-6823`); `rho_prod` is evaluated at `base_event`'s unchanged on-shell momenta, so the cache is *correct* -- which is what the event loop's `or not density_pole_approximation` says |
+| `joint` + `onshell` | no | not the density path at all |
+| `sequential`, `sequential_global_retry`, `two_stage`, `sequential_with_mass` | no | their probe (`_scan_maxwgt_range`, `:6645`) calls `sequential_accept_reject` once per draw, and that derives `rho` per chain in `_upfront_production` (`:8990`) whenever `offshell`; the cached `_ms_density_prod` at `:9702-9714` is guarded by `if not offshell` |
+
+Checked, not only reasoned: the same `p p > t t~ j` probe under
+`set spinmode PA` returns the **identical** bound
+`3.4098530956016246e-09` with the diagnostic on and off, to the last digit.
+
+The *joint* scheme has no mass stage, so there is no second place for this to
+hide. But every mode that **forces** `joint` inherits it whenever the spinmode
+is off shell: `fixed_order`, `@` decay groups, `pure_interference`,
+`decay_output = weighted`, and -- new on this branch -- `consider_axial`
+(`:3690-3706`), which *additionally requires* `madspin`/`full`. **Every
+`consider_axial` run therefore takes the defective path by construction.**
+
+### 18.3 What it does to the bound
+
+`p p > t t~ (j)` at 6.5+6.5 TeV, `spinmode madspin`, `unweighting joint`,
+`BW_cut = 15`, both tops to `w b`, seed 42 -- section 17's samples, unchanged.
+The probe is the default one (`Nevents_for_max_weight = 300 -> 304`,
+`max_weight_ps_point -> 492`, `nb_sigma = 6.77`), i.e. ~149 500 trials.
+Both columns are MadSpin's own printed bound on identical draws.
+
+| | shipped (stale `rho`) | correct (per-draw `rho`) | ratio |
+|---|---|---|---|
+| `p p > t t~ j` (2 -> 3) | `2.925218e-09` | `1.0178792e-07` | **x 34.80** |
+| `p p > t t~` (2 -> 2) | `7.442786e-10` | `7.525693e-10` | x 1.0111 |
+
+**The direction is too LOW, and by a factor 35 on the `2 -> 3` process.** Not
+"wasteful"; the dangerous direction.
+
+Seed 42 is the *mildest* of the four seeds tried, because the shipped bound is
+not a stable quantity -- it depends on which virtuality each probe event
+happened to draw **first**, and the corrected one does not:
+
+| seed | shipped | correct | ratio |
+|---|---|---|---|
+| 42 | `2.925218e-09` | `1.0178792e-07` | 34.80 |
+| 43 | `1.176710e-09` | `9.326181e-08` | 79.26 |
+| 44 | `1.556063e-09` | `8.078270e-08` | 51.91 |
+| 45 | `1.402010e-09` | `9.210736e-08` | 65.70 |
+| | sd/mean **44.7 %**, max/min 2.49 | sd/mean **9.4 %**, max/min 1.26 | median **58.8** |
+
+That second column is what a max-weight scan is supposed to look like: 304
+production events, 492 draws each, and a 9 % seed-to-seed spread on the answer.
+The first is a 2.5x range on the same probe, because each of its 304 per-event
+maxima is conditioned on the virtuality that event's **first** draw happened to
+pick: 492 draws that explore only one `rho_prod`. **The factor is 35 to 79
+depending on the seed, not 35.** Section 17's un-costed "raising it needs 49x"
+sits in the middle of that range.
+
+Per trial the mismatch is small in the bulk and unbounded in the tail
+(`|1 - w_stale/w_fresh|`, off-shell draws only):
+
+| | median | p90 | p99 | max | `> 1 %` | `> 10 %` |
+|---|---|---|---|---|---|---|
+| `t t~ j` | 0.72 % | 4.8 % | 27 % | **6.10** | 41.5 % | 4.3 % |
+| `t t~` | 0.33 % | 2.1 % | 7.2 % | 0.456 | 23.9 % | 0.35 % |
+
+(the milestone-3 commit quotes "median 1.5 %, up to 42 %" for `u d~ > w+ h`;
+the numbers are process dependent, and the shape is the same.)
+
+### 18.4 It is section 17's resonance, not a second candidate
+
+The brief asked whether a badly placed bound is an *independent* candidate for
+the 265/300 000 overweights that section 17 attributed to the production matrix
+element's own resonance propagator. It is not independent. It is the same
+mechanism seen from the other side, and this is what closes the hypothesis.
+
+Recording section 17's distance `d = min_{r,k} |(p_r+p_k)^2 - M_r^2| /
+(M_r Gamma_r)` on every probe draw (on the *reshuffled* momenta, the ones
+`rho_prod` is supposed to be evaluated at), the 10 probe events that set the
+correct bound take their maximum **on the resonance**, and the shipped scan
+takes its maximum on the same events far away from it:
+
+| evt | `w` correct | `w` shipped | ratio | `d` at the correct max | `d` at the shipped max |
+|---|---|---|---|---|---|
+| 290 | 4.460e-08 | 3.362e-10 | 132.6 | 0.216 | 51.1 |
+| 195 | 2.867e-08 | 3.058e-10 | 93.7 | 0.468 | 27.5 |
+| 61 | 2.454e-08 | 1.663e-09 | 14.8 | 0.509 | 32.9 |
+| 188 | 2.151e-08 | 9.453e-10 | 22.8 | 0.188 | 42.7 |
+| 258 | 1.533e-08 | 3.357e-10 | 45.7 | 0.234 | 23.6 |
+| 177 | 1.220e-08 | 4.390e-10 | 27.8 | 0.837 | 21.3 |
+| 296 | 8.165e-09 | 4.074e-10 | 20.0 | 0.186 | 25.9 |
+| 216 | 3.043e-09 | 3.162e-10 | 9.6 | 1.029 | 54.7 |
+| 281 | 2.073e-09 | 3.326e-10 | 6.2 | 2.340 | 18.0 |
+| 261 | 1.465e-09 | 3.118e-10 | 4.7 | 2.328 | 23.1 |
+
+median `d` at the correct per-event max, over these ten: **0.49**; at the
+shipped one: **26.7**. (Over all 304 probe events the two medians are 231 and
+224 -- the shift is entirely in the tail that sets the bound.) Binned over all 149 264 off-shell draws:
+
+| `d` | trials | median &#124;1 - stale/fresh&#124; | max |
+|---|---|---|---|
+| `[0, 1)` | 15 | **0.980** | 0.997 |
+| `[1, 3)` | 18 | 0.929 | 0.990 |
+| `[3, 10)` | 120 | 0.539 | 2.23 |
+| `[10, 30)` | 6 209 | 0.023 | 5.29 |
+| `[30, inf)` | 142 902 | 0.007 | 6.10 |
+
+On the pole the stale weight is **fifty times too small**. `rho_prod` is where
+the internal propagator lives -- `MEdenom_prod` is the *on-shell* production
+matrix element and carries none of it -- so freezing `rho_prod` at draw 0's
+(generic) virtuality is precisely the thing that blinds the scan to the region.
+The scan visits the region once per probe event instead of once per draw, a
+factor ~492 fewer looks, and then `_combine_maxwgt`'s
+`mean + nb_sigma*sd` has nothing in its top-50 to raise the bound with. That the effect is 1.01x in
+`2 -> 2`, where section 17 showed the region does not exist, and 34.8x in
+`2 -> 3`, where it does, is the same asymmetry that section 17 called "the whole
+of the 26x".
+
+Section 17 wrote "no bound is changed. Raising it needs 49x and costs 49x". The
+49x it could not justify is now *measured*, from the probe, on the same sample:
+34.8x at seed 42 and 35 to 79x over four seeds, with 49x in the middle of that
+range. 18.8 shows what raising it does, and 18.8's second half separates this
+from section 17's own diagnosis rather than assuming they are the same.
+
+### 18.5 What correcting it does to the overweight population
+
+The 265 carried events of the shipped `t t~ j` run are exactly the trials with
+`w > C`, and each is written with `carry = w/C`. So the shipped run's own carry
+histogram is a full-statistics measurement of the trial tail over its 4 041 115
+trials:
+
+    carry > 2      151      carry > 10      18
+    carry > 5       52      carry > 20       2
+                            carry > 34.80    1     (the maximum, 48.9071)
+
+Under a bound `x` times larger the trial count scales by `x` (the acceptance is
+`w/C`) and the overweights are the trials above the new bound, so
+
+    E[n_overweight(x . C)]  =  x . #{carry > x}  =  34.80 x 1  =  35 ,
+
+and the largest known factor becomes `48.9071 / 34.80 = 1.41`. That predicts
+**~35 events with factors near 1.4**, but the `35` rests on a single trial in
+the tail (`N = 1`, so a 95 % Poisson interval of `[0.9, 194]`) and is worth very
+little. **The direct measurement in 18.8 is 8 events, largest 1.67** -- inside
+that interval, and the number to quote. The `1.41` for the severity holds up
+(measured: 1.67).
+
+Note what this does *not* say: the shipped output is not biased. `#375`'s carry
+is exactly unbiased (accept with `min(1, w/C)`, write `max(1, w/C)`; the
+expected written weight is `w/C` in both regimes), so a bound below the true
+maximum turns the joint accept/reject into a *partially unweighted* sample
+rather than a wrong one. What the too-low bound costs is 265 non-unit weights,
+`+0.245 %` of the cross-section arriving through the carry, and 2.4 % of the
+effective statistics (section 17). What it buys is a factor 34.5 in speed. It
+would have been an outright bias before `#375`, where the excess was clipped --
+section 17 measured that as leaving the low tail of the top lineshape 25 % low.
+
+One consequence is *not* covered by the carry. `pure_interference` and
+`decay_output = weighted` force `joint`, and the same scan trials measure
+`c = <W>` and `<|W|>`, which normalise the **written weights** rather than a
+bound. On `p p > t t~ j` with `decay_output = weighted`:
+
+| | `c = <W>` | quoted error |
+|---|---|---|
+| shipped | `2.212664e-10` | 0.08 % |
+| correct | `2.196368e-10` | 0.29 % |
+
+a `+0.74 %` shift, and an error understated by 3.6x -- because suppressing the
+tail also suppresses the spread the error is taken from. `c` divides the written
+weight (`pi_factor = signed / pure_interference_c`), so `mean(w)` comes out
+`0.74 %` low against `sigma_ref * BR`; small, but it lands on the **output**,
+not on a bound, and it is larger than the precision the run claims for it.
+`_weighted_decay_note`'s `mean(w)` test and the interference mode's `z` test are
+the monitors that would see it.
+
+The interference mode's *other* variant is fine. `pure_interference +
+decay_output = unweighted` does accept/reject and its bound is live, but that
+path carries its overflow too (`carry = abs(signed)/maxwgt`), and it normalises
+the written magnitude with the run's **own** `<|W|> = (N_file/N_drawn) . M`,
+which the code's own comment says "makes the accept/reject bound cancel exactly
+rather than on average". Between the carry and that rescaling a low bound should
+come out in the wash. The `logger.critical` there ("an under-estimated one
+biases the sample") reads as predating `#375`'s carry; not chased down here, and
+worth a separate look.
+
+### 18.6 Options, priced
+
+1. **Re-derive `rho_prod` per draw** (drop the cache off shell; one extra
+   `or not density_pole_approximation`, the event loop's own condition).
+   * scan cost: `+17 %` wall (`6.20 s -> 7.27 s` for 149 568 trials on 8 cores,
+     `t t~ j`). A scan trial becomes as expensive as an event-loop trial, which
+     is what it is supposed to be simulating.
+   * run cost: the bound rises, so the acceptance falls by the same factor.
+     Measured `13.47 -> 471` trials per event on `p p > t t~ j` (x 35.0);
+     x 1.01 on `p p > t t~`. On the 300 000-event sample that is a measured
+     **350 s -> 6.9 h**, on 8 cores.
+   * **and it needs a decay-pool fix first.** 35x less acceptance is 35x more
+     pool regeneration -- 2 refills became 74 -- and that raced two workers into
+     the same `decay_6_0` build and killed one of them (18.8.1). Shipping (1)
+     without fixing that ships a run that loses a worker.
+   * **it changes the accepted sample.** The per-event mass-bound argument of
+     `#377` -- redraw-until-accept makes the accepted density independent of
+     `C` for any `C >= max w`, so a bound that dominates cancels -- applies to a
+     bound that is *raised past* the maximum. This one is currently *below* it,
+     so the shipped sample is the partially-weighted one described above and
+     the corrected sample is a different (properly unweighted) one. This is the
+     "smaller bound changes what gets written" case, seen from the other end.
+2. **Correct the scan, then deliberately lower the bound.** Measure the true
+   maximum and divide by a declared factor, keeping the carry to stay unbiased.
+   This is the honest form of what the code does today by accident, and it makes
+   the speed/weight trade an option rather than a bug. Cost: the `+17 %` scan
+   only; the run is unchanged at whatever factor reproduces today's bound. It
+   also removes the 2.5x seed-to-seed swing of 18.3 -- today's bound is not
+   reproducible run to run, a declared fraction of the correct one is.
+3. **Correct the scan only where the measurement is used as a measurement.**
+   `c` and `<|W|>` (18.5) are not bounds and have no carry protecting them.
+   Deriving `rho_prod` per draw only when `probe_c` is set costs the `+17 %` on
+   `pure_interference` / `decay_output = weighted` runs and nothing elsewhere,
+   and fixes the only place the defect reaches the output.
+4. **Leave it, document it.** Nothing is biased today. The cost is that the
+   overweight report (`_near_production_resonance`, `9c729f3f3`) tags all 265 as
+   the production resonance and drops the line to `INFO`, which is a true
+   statement about the *mechanism* and now also, unintentionally, hides a scan
+   that cannot see it.
+
+Recommendation: **(3) then (2)**, and not (1) on its own.
+
+(3) is the only part of this that reaches an output and it is nearly free.
+
+(1) alone buys, measured (18.8), `263 -> 8` carried weights and `48.9 -> 1.67`
+on the worst one, and costs `350 s -> 6.9 h` plus a decay-pool race that has to
+be fixed first. That is a bad trade at face value: `#375`'s carry already makes
+the shipped sample unbiased, so what (1) buys is tidiness (a genuinely
+unit-weight file) rather than correctness. It should be the user's explicit
+choice, which is what (2) turns it into -- and (2) additionally removes the
+2.5x seed-to-seed swing in today's bound, which is a reproducibility problem
+independent of where the bound sits.
+
+Whatever is chosen, the scan should stop **silently** measuring a different
+quantity from the one the event loop computes. Even under (4) the constant in
+(2) should be written down, because "the bound is 35 to 79x below the maximum,
+deliberately, and the carry absorbs it" is a defensible design and "the scan
+freezes `rho_prod`" is not.
+
+### 18.7 Not settled
+
+* How the factor scales. Two processes and four seeds (18.3), so the `35 to 79`
+  range is measured but the *process* dependence is two points. The mechanism
+  says it should grow with production multiplicity (section 17's closing note),
+  so `>= 2 -> 4` is likely worse; not measured.
+* `p p > t t~ j` has a **pre-existing** `density_debug` closure failure of
+  1.4 % on the *first, non-stale* trial (`full = 0.0016651567985569238,
+  density = 0.0016421164116264863, ratio = 1.0140309096037938`). Reproduced bit
+  for bit on the untouched base tip, so it is not this defect and not the
+  instrumentation; it is presumably the same off-shell-propagator-numerator
+  story that milestone 3 solved for massive *vectors* (`{A}`), unsolved for the
+  off-shell *fermion* `(p-slash + m)`. It means `density_debug` cannot be used
+  as an independent check on this process at the default tolerance, which is why
+  18.1's confirmation is by weight comparison instead.
+* The `c` / `<|W|>` shift was measured on one process and only through the log;
+  its effect on a written `pure_interference` sample was not measured.
+* The corrected-bound run (18.8) lost a worker to a build race, so it is
+  296 302 events rather than 300 000. The comparison is made shard by shard on
+  the matched production events, so the counts are directly comparable, but the
+  8 survivors are a Poisson-8 measurement and the `x 32.9` carries that.
+* The decay-pool build race of 18.8.1 was observed once and not diagnosed.
+
+### 18.8 The direct overweight measurement
+
+The prediction of 18.5 was `~35`, from a single trial in the tail; it is worth
+what a Poisson `N = 1` is worth. So the corrected bound was run: the identical
+`p p > t t~ j` card and seed, `MS_SCAN_FRESH_RHO=1`, everything downstream
+untouched -- 6.9 hours against 350 s, which is the price of 18.6 (1) made
+concrete.
+
+One of the eight workers died 33 802 events in (18.8.1), so the comparison below
+is made **shard by shard on the same production events**, `A[:m]` against
+`B[:m]` for `m = min(len_A, len_B)` -- the forked workers slice the input file
+identically in both runs, so shard `k` is the same block of production events in
+each. 296 302 events matched:
+
+| shard | matched events | shipped: overweights (largest) | corrected: overweights (largest) |
+|---|---|---|---|
+| 0 | 37 500 | 32 (12.48) | 0 (--) |
+| 1 | 33 802 | 33 (11.11) | 2 (1.146) |
+| 2 | 37 500 | 38 (**48.91**) | 1 (1.068) |
+| 3 | 37 500 | 32 (15.51) | 0 (--) |
+| 4 | 37 500 | 33 (15.67) | 1 (1.304) |
+| 5 | 37 500 | 26 (19.46) | 0 (--) |
+| 6 | 37 500 | 31 (7.11) | 1 (1.177) |
+| 7 | 37 500 | 38 (30.95) | 3 (**1.668**) |
+| **total** | **296 302** | **263** (0.0888 %), largest **48.9071** | **8** (0.0027 %), largest **1.6679** |
+
+**x 32.9 fewer, x 29.3 less severe.** The carry contribution to the summed
+weight goes from `+0.245 %` to `+0.0007 %`. The written sample stops being
+partially weighted: 8 non-unit weights in 296 302, none above 1.67.
+
+#### Is 48.9 inside the 35-to-79 range a clue or a coincidence?
+
+Neither, and this is the part worth being careful about. The two numbers are
+**not the same quantity**, but they share a denominator, so of course they are
+the same order:
+
+    48.9   =  (largest trial weight the run realised) / (shipped bound)
+    34.8   =  (correct bound)                         / (shipped bound)      [seed 42]
+
+Dividing one by the other removes the shipped bound and leaves the only number
+that means anything on its own:
+
+    48.9071 / 34.797  =  1.406  =  (largest realised weight) / (correct bound)
+
+and run B measured its own version of that directly: **1.6679**. So a 300 000-
+event run's largest trial weight sits about `1.4` to `1.7` above a bound
+measured from 304 probe events. That is the ordinary tail under-coverage of any
+max-weight scan, it is what the 8 survivors are, and it is the *entire* residual
+once the stale `rho` is gone. The `48.9` decomposes as `34.8 x 1.41`: the scan
+defect supplies the first factor and normal probe statistics the second.
+
+The seed-to-seed spread of 18.3 (`35` to `79`) is a spread in the **shipped**
+bound, not in the correct one (44.7 % against 9.4 %). `48.9` landing inside it is
+therefore an arithmetic consequence of both being divided by that same unstable
+number, not evidence of a relationship. Read the stable quantity instead: the
+correct bound is `9.20e-08 +- 9 %` over four seeds, and the largest weight a
+300 k run realises is `1.4-1.7` times it.
+
+#### Are the two explanations independent? No -- they are one.
+
+The brief asked whether a badly placed bound is a *second*, independent
+candidate for the 265. It is not. Three separate pieces of evidence say the
+scan defect and section 17's production resonance are the same thing seen from
+opposite ends:
+
+1. **Where the correct bound comes from** (18.4). The probe draws that set it
+   sit at `d = 0.49` (median over the top ten events) -- on the production
+   resonance, the region section 17 named. The shipped scan's own per-event
+   maxima on those same events sit at `d = 26.7`. At `d < 1` the stale weight
+   is **50x too small**. `rho_prod` is where the internal propagator lives;
+   freezing it is precisely what hides the region.
+2. **The `2 -> 2` control.** Section 17 proved the region cannot exist there
+   (the only internal resonance line is spacelike). The stale-`rho` effect
+   there is **x 1.011**, against x 34.8 in `2 -> 3`. Same asymmetry, same cause.
+3. **This run.** Correcting the scan removes **255 of the 263**. If the
+   population had a second, independent cause, it would not.
+
+So section 17's physics is right and unchanged -- the overweights *are* the
+production matrix element's own resonance propagator opened by a low
+virtuality. What this section adds is the reason the **bound never covered
+it**: the scan cannot see that region, because `rho_prod` is exactly the object
+it freezes. Section 17 recorded "raising it needs 49x and costs 49x" without
+being able to say where 49x came from. It comes from here.
+
+#### 18.8.1 A cost of the corrected bound that was not anticipated
+
+Worker 1 of 8 did not finish. It died at 33 802/37 500 events with
+
+    ar: ../../lib/libmodel.a: Inappropriate file type or format
+    FileNotFoundError: .../decay_6_0/Source/param_card.inc.tmp
+
+-- two workers rebuilding the same `decay_6_0` directory at once. The shipped
+run does **2** decay-pool regenerations; the corrected-bound run did **74**,
+because a bound 35x larger is an acceptance 35x smaller and the pools drain 35x
+faster. The refill path has a known race history (`d6605efb6`, "publish a refill
+generation only once its files exist"); this is a different one, in the
+*compilation* rather than the publication, and it only becomes likely under the
+regeneration pressure the corrected bound creates. It is a real, priced cost of
+18.6 option (1) and it would have to be fixed first. Not chased down here.
+
+
+### 18.9 The diagnostics used, and the bit-identity check
+
+Four environment-gated switches on `MadSpin/interface_madspin.py`, all off
+unless the variable is set, none of them committed. Reproduce with:
+
+    MS_SCAN_FRESH_RHO=1   re-derive rho_prod on every off-shell scan draw
+                          (i.e. the event loop's own condition, applied to
+                          _joint_maxwgt_range)
+    MS_SCAN_DUMP=<dir>    dump (event, draw, weight, d) per scan trial
+    MS_SCAN_ONLY=1        os._exit(0) once the joint bound has been printed
+    MS_NO_STALE_SKIP=1    stop density_debug skipping the stale scan trials
+
+    --- a/MadSpin/interface_madspin.py
+    +++ b/MadSpin/interface_madspin.py
+    @@ _joint_maxwgt_range, at the shipped ``if density_matrix_prod is None:``
+    -                if density_matrix_prod is None:
+    +                if (density_matrix_prod is None
+    +                        or (_MS_SCAN_FRESH_RHO and offshell_density)):
+                         _, wgt, density_matrix_prod = self.get_onshell_evt_and_wgt(
+                             prod_draw, decays, decay_dict, build_event=False)
+
+plus the dump append, an `os._exit(0)` after `self._pi_max_weight = ...` in
+`get_maxwgt_for_onshell`, `and not _MS_NO_STALE_SKIP` on
+`self._density_debug_stale`, and a `_ms_scan_resonance_distance` helper that is
+called only from the dump.
+
+Two checks that the shipped path is untouched:
+
+* with every switch off (only `MS_SCAN_DUMP` set, which appends to a list and
+  writes a file), the full `p p > t t~ j` run reproduces the reference sample's
+  **300 000 events byte for byte** -- `sha256` over the event blocks
+  `f76f89c4a963ffa16b2c81c3edf02f96a61aad1da94a401dbb520ddf5e67b73c`, identical
+  to the pre-axial reference run -- and reports the identical
+  `265/300000 ... largest factor 48.9071 ... +0.245 %`;
+* the pre-existing `density_debug` failure of 18.7 reproduces to the last digit
+  against an untouched checkout of the same tip.
+
+The instrumentation is **not committed**: `MadSpin/interface_madspin.py` in this
+commit is byte-identical to `2ba47b8d8` (`git diff` against that tip is empty),
+so milestone 3's own bit-identity property is untouched by this section.
+
+`python tests/test_manager.py test_madspin -t0`: **498 OK**, on the reverted
+tree.
