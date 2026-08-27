@@ -439,7 +439,7 @@
    },
    "perturbative_order": "NLO (MC@NLO)",
    "process": "p p > t t~ [QCD]",
-   "production_lhe": "/private/tmp/smeft_fig5_work/PROC_sm_nlo/Events/run_01/events.lhe.gz",
+   "production_lhe": "/Users/omattelaer/Documents/madspin_validation_samples/t_fig5_sm_nlo_redo/PROC_sm_nlo/Events/run_01/events.lhe.gz",
    "production_weights": {
     "mean_weight": 771.1626939221708,
     "n_events": 500000,
@@ -461,11 +461,162 @@
    },
    "production_xsec_err_pb": 1.4343,
    "production_xsec_pb": 771.0876,
+   "regeneration": {
+    "audit": {
+     "alpha_s_exemption": "SMINPUTS 3 (aS) is reported as exempt, not as a match: the run card says 0.1190025 and the standalone card 0.118. The run is pdlabel = lhapdf, so alpha_s comes from the PDF grid at run time and the card value is inert -- the known, cancelling case.",
+     "clean": true,
+     "output": "run directory : /Users/omattelaer/Documents/madspin_validation_samples/t_fig5_sm_nlo_redo/MS_sm_nlo_none\nrun card      : /Users/omattelaer/Documents/madspin_validation_samples/t_fig5_sm_nlo_redo/MS_sm_nlo_none/_audit_banner_param_card.dat\n  source      : <slha> block of the input LHE (no <run>/param_card.dat: spinmode=none builds no density matrix element)\n  headline parameters as the events carry them:\n    MT   = 172.76\n    WT   = 1.33\n    WW   = 2.085\n    WZ   = 2.4952\n    ymt  = 172.76\n  [MATCH] decay_6_0\n      card: /Users/omattelaer/Documents/madspin_validation_samples/t_fig5_sm_nlo_redo/MS_sm_nlo_none/decay_6_0/Cards/param_card.dat\n      every numeric entry agrees with the run card\n  [MATCH] decay_x6_0\n      card: /Users/omattelaer/Documents/madspin_validation_samples/t_fig5_sm_nlo_redo/MS_sm_nlo_none/decay_x6_0/Cards/param_card.dat\n      every numeric entry agrees with the run card\n\nrun directory : /Users/omattelaer/Documents/madspin_validation_samples/t_fig5_sm_nlo_redo/MS_sm_nlo_onshell\nrun card      : /Users/omattelaer/Documents/madspin_validation_samples/t_fig5_sm_nlo_redo/MS_sm_nlo_onshell/param_card.dat\n  source      : MadSpin's own param_card.dat, written from banner['slha']\n  headline parameters as the events carry them:\n    MT   = 172.76\n    WT   = 1.33\n    WW   = 2.085\n    WZ   = 2.4952\n    ymt  = 172.76\n  [MATCH] madspin_decay\n      card: /Users/omattelaer/Documents/madspin_validation_samples/t_fig5_sm_nlo_redo/MS_sm_nlo_onshell/madspin_decay/Cards/param_card.dat\n      every numeric entry agrees with the run card\n  [MATCH] madspin_me\n      card: /Users/omattelaer/Documents/madspin_validation_samples/t_fig5_sm_nlo_redo/MS_sm_nlo_onshell/madspin_me/Cards/param_card.dat\n      every numeric entry agrees with the run card\n  [MATCH] decay_6_0\n      card: /Users/omattelaer/Documents/madspin_validation_samples/t_fig5_sm_nlo_redo/MS_sm_nlo_onshell/decay_6_0/Cards/param_card.dat\n      every numeric entry agrees with the run card\n  [MATCH] decay_x6_0\n      card: /Users/omattelaer/Documents/madspin_validation_samples/t_fig5_sm_nlo_redo/MS_sm_nlo_onshell/decay_x6_0/Cards/param_card.dat\n      every numeric entry agrees with the run card\n\nAUDIT CLEAN -- every matrix element is initialised with the run's own parameters\n",
+     "tool": "MadSpin/validation/smeft_fig5/audit_me_param_cards.py",
+     "tool_note": "T113's own audit_me_param_cards.py was not committed anywhere and no longer exists on disk, so this is a reconstruction to the same specification: for each MadSpin run directory it compares every numeric SLHA entry of the card each matrix-element directory is initialised from against the card the run itself carries. It was validated by pointing it at the ORIGINAL run directory, where it reproduces the reported defect exactly (MT 172.76 vs 173, WT 1.33 vs 1.4915, WZ 2.4952 vs 2.441404, WW 2.085 vs 2.0476)."
+    },
+    "base_branch": "claude/ms-smeft-fig5-nlo-redo",
+    "base_description": "merge of the fix commit 0a1007bc25de8398a56a7fb25bbd8f92eaf88e3b (\"MadSpin: evaluate the matrix elements with the run's own param_card\", tip of claude/ms-paramcard-refresh) with e2f28e4d98ebd0f323393ed26e81f82c222edfb6 (tip of claude/ms-smeft-fig5-samples, which holds this driver and the manifest)",
+    "base_sha": "71ffba30a696f54a6939a59ce0b8fa6a4040a19e",
+    "fix_commit": "0a1007bc25de8398a56a7fb25bbd8f92eaf88e3b",
+    "madspin_internal_seed": 686579303,
+    "madspin_internal_seed_note": "MadSpin derives this from the card seed 42; it is the same number in the old and the new run, so the two runs walk the same random sequence and differ only through the matrix-element values.",
+    "nevents": 500000,
+    "parameters": {
+     "cuts": "none (fully inclusive leptons and b quarks; cut_decays False)",
+     "decays": [
+      "decay t > w+ b, w+ > e+ ve",
+      "decay t~ > w- b~, w- > e- ve~"
+     ],
+     "lhaid": 230000,
+     "model": "loop_sm",
+     "mu_F_GeV": 173.0,
+     "mu_R_GeV": 173.0,
+     "param_overrides": {
+      "MT": 172.76,
+      "WT": 1.33,
+      "WW": 2.085,
+      "WZ": 2.4952,
+      "ymt": 172.76
+     },
+     "pdf": "NNPDF2.3 LO, alpha_s(M_Z)=0.130 (LHAPDF id 230000, NNPDF23_lo_as_0130_qed)",
+     "process": "p p > t t~ [QCD]",
+     "source": "data/meta.json of e2f28e4d9, samples.sm_nlo.param_overrides, cross-checked against the <slha> block of the production LHE banner and against the original mg5 steering script mg5_sm_nlo.dat"
+    },
+    "production_lhe_md5": "9730e92f1433841f3dc2ebbfdb83e2e1",
+    "production_reuse_note": "The defect is entirely inside MadSpin: the production run PROC_sm_nlo was always launched with the right numbers (its banner <slha> holds MT 172.76 / WT 1.33 / WW 2.085 / WZ 2.4952 / ymt 172.76, verified before reuse). So the 500k production LHE was carried over unchanged -- md5 9730e92f1433841f3dc2ebbfdb83e2e1, byte-identical to the original -- and only the MadSpin decay stage was rerun. That makes the old/new comparison exact: the production events, their weights and their cross-section are the same events, so every difference below is the fix and not Monte-Carlo noise.",
+    "production_reused": true,
+    "samples_commit": "e2f28e4d98ebd0f323393ed26e81f82c222edfb6",
+    "seed_madspin": 42,
+    "seed_production": 42,
+    "spinmodes_run": [
+     "onshell",
+     "none"
+    ],
+    "superseded": {
+     "decayed_xsec_err_pb": {
+      "none": 0.020284181,
+      "onshell": 0.020273923
+     },
+     "decayed_xsec_pb": {
+      "none": 10.904888,
+      "onshell": 10.899373
+     },
+     "me_param_card_values_used": {
+      "MT": 173.0,
+      "WT": 1.4915,
+      "WW": 2.0476,
+      "WZ": 2.441404,
+      "ymt": 173.0
+     },
+     "negative_weight_fraction": {
+      "none": 0.229476,
+      "onshell": 0.229476
+     },
+     "note": "the numbers this sample replaces",
+     "production_xsec_err_pb": 1.4343,
+     "production_xsec_pb": 771.0876,
+     "workdir": "/private/tmp/smeft_fig5_work"
+    },
+    "what_changed": {
+     "control_run": {
+      "log": "/Users/omattelaer/Documents/madspin_validation_samples/t_fig5_sm_nlo_redo/MS_sm_nlo_onshell_seed99_noisefloor/madspin.log",
+      "nevents": 500000,
+      "not_a_figure_curve": "deliberately NOT written into data/histograms.npz: it is a systematics control, not one of the curves in Fig. 5",
+      "path": "/Users/omattelaer/Documents/madspin_validation_samples/t_fig5_sm_nlo_redo/MS_sm_nlo_onshell_seed99_noisefloor",
+      "purpose": "measure how much a Delta phi shape moves when NOTHING changes but the MadSpin seed, so the old/new difference has something to be compared against",
+      "same_production_events": true,
+      "seed_madspin": 99,
+      "spinmode": "onshell",
+      "unweight_efficiency": 0.2242,
+      "xsec_pb": 10.89973526711992
+     },
+     "cross_section_pb": {
+      "none_delta_pb": 0.0,
+      "none_new": 10.905949984032086,
+      "none_old": 10.905949984032086,
+      "note": "sigma = sum(sumw)/500000 (IDWTUP = -4). The <init> XSECUP quoted in decayed_xsec_pb is 10.899373 +- 0.020274 pb for onshell in BOTH the old and the new run -- unchanged to all the digits the banner carries. The control run at a different MadSpin seed lands 7.0e-04 pb away, so the run-to-run scatter is ~50x the shift the fix produced.",
+      "onshell_control_seed99": 10.89973526711992,
+      "onshell_delta_pb": -1.262222599862639e-05,
+      "onshell_delta_percent": -0.00011579560518403014,
+      "onshell_new": 10.900423520031994,
+      "onshell_old": 10.900436142257993
+     },
+     "headline": "The defect was real and is now gone, but it was immaterial. The cross-section did not move (-0.0001%, i.e. 1.3e-05 pb on 10.90 pb, against a 0.020 pb integration error) and the Delta phi shape did not move by any amount 500k events can resolve: the apparent shift is smaller than, and of the same character as, MadSpin's own decay-resampling noise, measured explicitly with a control run.",
+     "shape": {
+      "A_FB": {
+       "buggy_MT173_WT1.4915": [
+        -0.1616939020805911,
+        0.002569140941589462
+       ],
+       "definition": "(sumw[Delta phi < pi/2] - sumw[Delta phi > pi/2]) / sumw_total",
+       "delta_defect": 0.007569412211681226,
+       "delta_noise_floor": -0.005049093232839724,
+       "fixed_seed42": [
+        -0.15412448986890986,
+        0.0025698687117239037
+       ],
+       "fixed_seed99_control": [
+        -0.1591735831017496,
+        0.0025690854370047445
+       ],
+       "verdict": "the defect moved A_FB by +0.007569 (4.68% of A_FB); two runs of the FIXED code differing only in the MadSpin seed move it by -0.005049 (3.28%). The shift attributable to the wrong parameters is not separable from resampling noise at 500k events. Per-sample statistical error on A_FB is +-0.002570."
+      },
+      "chi2_per_ndf_720bins": {
+       "buggy_vs_fixed_seed42": 1.002,
+       "buggy_vs_fixed_seed99": 0.975,
+       "fixed_vs_fixed_noise_floor": 0.997,
+       "note": "all three pairings sit at chi2/ndf = 1: the buggy and the fixed sample are no more different from each other than two fixed samples are"
+      },
+      "mean_Delta_phi_rad": {
+       "buggy": [
+        1.735262684765625,
+        0.0023699659253519512
+       ],
+       "delta_defect": -0.004648946885561056,
+       "delta_noise_floor": 0.0033947390550497225,
+       "fixed_seed42": [
+        1.730613737880064,
+        0.0023733711644952555
+       ],
+       "fixed_seed99_control": [
+        1.7340084769351136,
+        0.002370469402754617
+       ]
+      },
+      "observable": "Delta phi(e-, e+) on [0, pi], unit-area normalised",
+      "onshell_over_none_ratio_18bin": {
+       "caveat": "this is the same size as the noise floor above; do not read it as a physics shift",
+       "max_absolute_change_old_to_new": 0.0332,
+       "max_relative_change_percent": 3.15,
+       "note": "the spin-correlation effect the figure is about, at a resolution a plot would show"
+      }
+     },
+     "spinmode_none_was_never_affected": "spinmode = none needs no density matrix, so MadSpin never builds madspin_me/ or madspin_decay/ for it and the defective card was never read. Re-running it on the fixed code reproduced the old histograms BIT-FOR-BIT -- all five arrays byte-identical, sum(w) identical to the last digit. Only the onshell curve was ever suspect.",
+     "untouched_samples_verified": "all 21 arrays in data/histograms.npz that do not belong to sm_nlo (eft_int_none, eft_int_onshell, sm_lo_none, sm_lo_onshell -- five arrays each -- plus the shared edges) were compared byte-for-byte against the pre-regeneration file and are IDENTICAL."
+    },
+    "why": "Task T113 found that MadSpin initialised its density matrix elements from the param_card that \"output standalone\" wrote from the MODEL DEFAULTS, not from the card the input events carry. This sample was the one genuinely affected: its madspin_me/ and madspin_decay/ directories held MT = 173, WT = 1.4915, WZ = 2.441404, WW = 2.0476 (and ymt = 173) while the events were generated with MT = 172.76, WT = 1.33, WZ = 2.4952, WW = 2.085. Top mass 0.24 GeV high, top width 12% large.",
+    "workdir": "/Users/omattelaer/Documents/madspin_validation_samples/t_fig5_sm_nlo_redo"
+   },
    "spinmodes": {
     "none": {
      "decay_output": "unweighted (auto, ordinary run)",
-     "decayed_lhe": "/private/tmp/smeft_fig5_work/MS_sm_nlo_none/events_decayed.lhe.gz",
-     "decayed_lhe_bytes": 198878400,
+     "decayed_lhe": "/Users/omattelaer/Documents/madspin_validation_samples/t_fig5_sm_nlo_redo/MS_sm_nlo_none/events_decayed.lhe.gz",
+     "decayed_lhe_bytes": 198878437,
      "decayed_xsec_detail": {
       "banner_comment_xsec_err_pb": null,
       "banner_comment_xsec_pb": null,
@@ -489,7 +640,7 @@
       "1_em_1_ep": 500000
      },
      "madspin_log": "MadSpin/validation/smeft_fig5/logs/madspin_sm_nlo_none.log.txt",
-     "madspin_wall_seconds": 200.0,
+     "madspin_wall_seconds": 886.5,
      "mean_weight": 10.90594998403816,
      "n_events_histogrammed": 500000,
      "n_events_in_file": 500000,
@@ -514,8 +665,8 @@
     },
     "onshell": {
      "decay_output": "unweighted (auto, ordinary run)",
-     "decayed_lhe": "/private/tmp/smeft_fig5_work/MS_sm_nlo_onshell/events_decayed.lhe.gz",
-     "decayed_lhe_bytes": 207134128,
+     "decayed_lhe": "/Users/omattelaer/Documents/madspin_validation_samples/t_fig5_sm_nlo_redo/MS_sm_nlo_onshell/events_decayed.lhe.gz",
+     "decayed_lhe_bytes": 207135097,
      "decayed_xsec_detail": {
       "banner_comment_xsec_err_pb": null,
       "banner_comment_xsec_pb": null,
@@ -539,14 +690,14 @@
       "1_em_1_ep": 500000
      },
      "madspin_log": "MadSpin/validation/smeft_fig5/logs/madspin_sm_nlo_onshell.log.txt",
-     "madspin_wall_seconds": 200.2,
-     "mean_weight": 10.900436142303016,
+     "madspin_wall_seconds": 854.9,
+     "mean_weight": 10.900423520077016,
      "n_events_histogrammed": 500000,
      "n_events_in_file": 500000,
      "n_negative_weight": 114738,
-     "n_overweight_written": 3,
+     "n_overweight_written": 4,
      "n_positive_weight": 385262,
-     "n_trials": 2234161,
+     "n_trials": 2233115,
      "n_written": 500000,
      "n_written_total": 500000,
      "n_zero_weight": 0,
@@ -554,25 +705,25 @@
      "normalisation": {
       "bin_width_rad": 0.004363323129985824,
       "dsigma_dphi": "d sigma / d Delta phi in bin i = sumw[i] / n_events_in_file / bin_width_rad, in pb/rad",
-      "mean_weight_over_init_xsec": 1.0000975416019817,
+      "mean_weight_over_init_xsec": 1.0000963835329808,
       "n_events_in_file": 500000,
-      "sigma_total": "sum(sumw) / n_events_in_file = 10.900436142303016 pb, which matches the decayed LHE <init> XSECUP",
+      "sigma_total": "sum(sumw) / n_events_in_file = 10.900423520077016 pb, which matches the decayed LHE <init> XSECUP",
       "sign": "sumw may be negative bin by bin for an interference sample; that is physical, not a bug",
       "statistical_error": "per-bin variance is sumw2[i]; the error on d sigma / d Delta phi in bin i is sqrt(sumw2[i]) / n_events_in_file / bin_width_rad",
       "weight_convention": "LHE IDWTUP = -4: XWGTUP carries the full cross-section in pb with the event sign, so sigma = sum(w) / N, not sum(w)"
      },
      "overweight_lines": [
-      "INFO: MadSpin sequential slot 0: 1.13 decay events per accepted one (565126 drawn) [3 ABOVE the maximum weight]",
-      "WARNING: MadSpin sequential: 3 weights exceeded their stage maximum (mass set / angles / per particle). That bound is under-estimated: to go back to unit weights everywhere, raise nb_sigma or Nevents_for_max_weight, or set unweighting = joint.",
-      "INFO: MadSpin overweight safety net: 3/500000 written events (0.0006%) carried a non-unit weight because a trial weight exceeded its accept/reject bound (largest factor 1.0655). Carrying it added +1.47e-05% of the sample's cross-section."
+      "INFO: MadSpin sequential slot 0: 1.13 decay events per accepted one (563382 drawn) [4 ABOVE the maximum weight]",
+      "WARNING: MadSpin sequential: 4 weights exceeded their stage maximum (mass set / angles / per particle). That bound is under-estimated: to go back to unit weights everywhere, raise nb_sigma or Nevents_for_max_weight, or set unweighting = joint.",
+      "INFO: MadSpin overweight safety net: 4/500000 written events (0.0008%) carried a non-unit weight because a trial weight exceeded its accept/reject bound (largest factor 1.1953). Carrying it added -0.000101% of the sample's cross-section."
      ],
-     "overweight_safety_net": "MadSpin overweight safety net: 3/500000 written events (0.0006%) carried a non-unit weight because a trial weight exceeded its accept/reject bound (largest factor 1.0655). Carrying it added +1.47e-05% of the sample's cross-section.",
+     "overweight_safety_net": "MadSpin overweight safety net: 4/500000 written events (0.0008%) carried a non-unit weight because a trial weight exceeded its accept/reject bound (largest factor 1.1953). Carrying it added -0.000101% of the sample's cross-section.",
      "seed_madspin": 42,
      "spinmode": "onshell",
-     "sum_abs_weights": 10073448.438186634,
-     "sum_weights": 5450218.071151508,
-     "unweight_efficiency": 0.2238,
-     "unweight_efficiency_line": "MadSpin unweight efficiency: 0.2238 (500000 written / 2234161 trials, 4.47 trials/event)",
+     "sum_abs_weights": 10073451.675575634,
+     "sum_weights": 5450211.760038508,
+     "unweight_efficiency": 0.2239,
+     "unweight_efficiency_line": "MadSpin unweight efficiency: 0.2239 (500000 written / 2233115 trials, 4.47 trials/event)",
      "unweighting_scheme": "sequential (auto, 2 decaying particle(s))"
     }
    },
@@ -636,6 +787,7 @@
   ],
   "sqrt_s_GeV": 13000.0,
   "width_top_GeV": 1.33,
-  "workdir": "/private/tmp/smeft_fig5_work"
+  "workdir": "/private/tmp/smeft_fig5_work",
+  "workdir_note": "setup.workdir is where eft_int / eft_int_ctg_plus / sm_lo were made. sm_nlo was regenerated later under samples.sm_nlo.regeneration.workdir = /Users/omattelaer/Documents/madspin_validation_samples/t_fig5_sm_nlo_redo, which is durable; the other three are still under /tmp and may not survive."
  }
 }

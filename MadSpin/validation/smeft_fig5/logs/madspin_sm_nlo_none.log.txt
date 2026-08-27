@@ -1,5 +1,5 @@
 Running MG5 in debug mode
-using input+file /private/tmp/smeft_fig5_work/MS_sm_nlo_none/madspin_card.dat
+using input+file /Users/omattelaer/Documents/madspin_validation_samples/t_fig5_sm_nlo_redo/MS_sm_nlo_none/madspin_card.dat
 ************************************************************
 *                                                          *
 *           W E L C O M E  to  M A D S P I N               *
@@ -19,7 +19,7 @@ set max_running_process 4
 set nb_core 12
 define p = g u c d s u~ c~ d~ s~
 define p = g u c d s u~ c~ d~ s~
-INFO: Restrict model sm with file ../../t110/models/sm/restrict_default.dat . 
+INFO: Restrict model sm with file ../../../git_workspace/madgraph5/.claude/worktrees/fig5nlo/models/sm/restrict_default.dat . 
 [1;32mDEBUG: Simplifying conditional expressions [0m
 [1;32mDEBUG: remove interactions: u s w+ at order: QED=1 [0m
 [1;32mDEBUG: remove interactions: u b w+ at order: QED=1 [0m
@@ -107,7 +107,7 @@ Defined multiparticle vl = ve vm vt
 Defined multiparticle vl~ = ve~ vm~ vt~
 Defined multiparticle all = g u c d s u~ c~ d~ s~ a ve vm vt e- mu- ve~ vm~ vt~ e+ mu+ t b t~ b~ z w+ h w- ta- ta+
 Defined multiparticle p = g u c d s u~ c~ d~ s~
-import /private/tmp/smeft_fig5_work/MS_sm_nlo_none/events.lhe.gz
+import /Users/omattelaer/Documents/madspin_validation_samples/t_fig5_sm_nlo_redo/MS_sm_nlo_none/events.lhe.gz
 INFO: process: p p > t t~  
 INFO: options:  
 Set group_subprocesses to Auto
@@ -116,7 +116,7 @@ Complex mass already desactivated.
 set loop optimized output to True
 set loop color flows to False
 INFO: detected model: loop_sm. Loading... 
-INFO: Restrict model loop_sm with file ../../t110/models/loop_sm/restrict_default.dat . 
+INFO: Restrict model loop_sm with file ../../../git_workspace/madgraph5/.claude/worktrees/fig5nlo/models/loop_sm/restrict_default.dat . 
 [1;32mDEBUG: Simplifying conditional expressions [0m
 [1;32mDEBUG: remove interactions: s u w+ at order: QED=1 [0m
 [1;32mDEBUG: remove interactions: b u w+ at order: QED=1 [0m
@@ -323,57 +323,57 @@ INFO: MadSpin: decay_output = unweighted (auto, ordinary run)
 INFO: generate 100000 decay event for particle t 
 INFO: Will use seed 686579303 
 stty: stdin isn't a terminal
-INFO: Time for decay event generation = 16.5 sec 
+INFO: Time for decay event generation = 146.2 sec 
 INFO: generate 100000 decay event for particle t~ 
 stty: stdin isn't a terminal
-INFO: Time for decay event generation = 13.7 sec 
-decaying event number 100 [0.009538650512695312 s]
-decaying event number 200 [0.017943859100341797 s]
-decaying event number 300 [0.05579996109008789 s]
-decaying event number 400 [0.06411170959472656 s]
-decaying event number 500 [0.07244277000427246 s]
-decaying event number 600 [0.11112093925476074 s]
-decaying event number 700 [0.1194908618927002 s]
-decaying event number 800 [0.15862298011779785 s]
-decaying event number 900 [0.16713380813598633 s]
-decaying event number 1000 [0.17571401596069336 s]
-decaying event number 2000 [0.3814547061920166 s]
-decaying event number 3000 [0.5873677730560303 s]
-decaying event number 4000 [0.8058788776397705 s]
-decaying event number 5000 [1.0114319324493408 s]
-decaying event number 6000 [1.1875789165496826 s]
-decaying event number 7000 [1.3941848278045654 s]
-decaying event number 8000 [1.6009957790374756 s]
-decaying event number 9000 [1.8064000606536865 s]
-decaying event number 10000 [1.9827499389648438 s]
-decaying event number 20000 [4.0033557415008545 s]
-decaying event number 30000 [6.001725912094116 s]
-decaying event number 40000 [7.9670069217681885 s]
-decaying event number 50000 [10.02470588684082 s]
-decaying event number 60000 [12.127492904663086 s]
-decaying event number 70000 [14.224461078643799 s]
-decaying event number 80000 [16.320405960083008 s]
-decaying event number 90000 [18.44164776802063 s]
-decaying event number 100000 [20.546508073806763 s]
+INFO: Time for decay event generation = 128.9 sec 
+decaying event number 100 [0.021205902099609375 s]
+decaying event number 200 [0.035800933837890625 s]
+decaying event number 300 [0.09923911094665527 s]
+decaying event number 400 [0.1132810115814209 s]
+decaying event number 500 [0.12735819816589355 s]
+decaying event number 600 [0.19154024124145508 s]
+decaying event number 700 [0.20607995986938477 s]
+decaying event number 800 [0.2708570957183838 s]
+decaying event number 900 [0.28502488136291504 s]
+decaying event number 1000 [0.29927611351013184 s]
+decaying event number 2000 [0.6827490329742432 s]
+decaying event number 3000 [1.0605878829956055 s]
+decaying event number 4000 [1.4546680450439453 s]
+decaying event number 5000 [1.8372299671173096 s]
+decaying event number 6000 [2.157649040222168 s]
+decaying event number 7000 [2.5291080474853516 s]
+decaying event number 8000 [2.895421266555786 s]
+decaying event number 9000 [3.261596202850342 s]
+decaying event number 10000 [3.579512119293213 s]
+decaying event number 20000 [7.604596853256226 s]
+decaying event number 30000 [11.592574119567871 s]
+decaying event number 40000 [15.20023488998413 s]
+decaying event number 50000 [19.113077878952026 s]
+decaying event number 60000 [23.51629400253296 s]
+decaying event number 70000 [28.34215211868286 s]
+decaying event number 80000 [31.93980097770691 s]
+decaying event number 90000 [36.241533041000366 s]
+decaying event number 100000 [40.33284401893616 s]
 INFO: generate 100000 decay event for particle t 
 stty: stdin isn't a terminal
-INFO: Time for decay event generation = 9.8 sec 
+INFO: Time for decay event generation = 51.3 sec 
 INFO: generate 100000 decay event for particle t~ 
 stty: stdin isn't a terminal
-INFO: Time for decay event generation = 10.2 sec 
-decaying event number 200000 [61.495208978652954 s]
-decaying event number 300000 [82.30126905441284 s]
+INFO: Time for decay event generation = 71.8 sec 
+decaying event number 200000 [204.3014030456543 s]
+decaying event number 300000 [243.11362099647522 s]
 INFO: generate 100000 decay event for particle t~ 
 stty: stdin isn't a terminal
-INFO: Time for decay event generation = 9.0 sec 
+INFO: Time for decay event generation = 64.9 sec 
 INFO: generate 100000 decay event for particle t 
 stty: stdin isn't a terminal
-INFO: Time for decay event generation = 11.0 sec 
-decaying event number 400000 [123.29842877388 s]
+INFO: Time for decay event generation = 65.6 sec 
+decaying event number 400000 [411.5115718841553 s]
 INFO: generate 43914 decay event for particle t~ 
 stty: stdin isn't a terminal
-INFO: Time for decay event generation = 11.1 sec 
+INFO: Time for decay event generation = 50.8 sec 
 INFO: generate 43691 decay event for particle t 
 stty: stdin isn't a terminal
-INFO: Time for decay event generation = 6.2 sec 
+INFO: Time for decay event generation = 42.2 sec 
 quit
