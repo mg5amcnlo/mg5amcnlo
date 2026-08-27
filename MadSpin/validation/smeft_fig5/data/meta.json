@@ -1,4 +1,54 @@
 {
+ "figures": {
+  "current_draw": {
+   "check": "--check-minus passed on all 14 MG7-style PDFs",
+   "commit": "claude/ms-smeft-fig5-redraw, on top of the merge of claude/ms-smeft-fig5-ctg (0a3e10d72) with claude/ms-smeft-fig5-nlo-redo (f61cd949a)",
+   "environment": "python 3.14.6, matplotlib 3.11.0, numpy 2.5.0, TeX Live 2026 (text.usetex)",
+   "histograms_git_blob": "2d596a26108b9c4e1c8d613fdfe738c51ec9304c",
+   "outputs": "plots/ (MG7 paper style) and plots_userstyle/, each with PDF, PNG, *_curves.npz and numbers*.txt for every variation",
+   "scripts": [
+    "plot_smeft_fig5.py (A-D)",
+    "plot_smeft_fig5_userstyle.py (A-D, user style)",
+    "plot_smeft_fig5_varE.py (E)",
+    "plot_smeft_fig5_varF.py (F)",
+    "plot_smeft_fig5_ctg_scan.py (G-N)"
+   ]
+  },
+  "histograms_npz": {
+   "changed_from_previous": [
+    "sm_nlo onshell"
+   ],
+   "git_blob": "2d596a26108b9c4e1c8d613fdfe738c51ec9304c",
+   "introduced_by": "f61cd949a  MadSpin: regenerate the Fig. 5 SM NLO sample with sound matrix elements (branch claude/ms-smeft-fig5-nlo-redo)",
+   "md5": "78c4fe17e3b9577e3cf7bff3720375c5",
+   "sm_nlo_source": "regenerated -- see samples.sm_nlo.regeneration",
+   "unchanged_from_previous": [
+    "eft_int onshell/none",
+    "sm_lo onshell/none",
+    "sm_nlo none"
+   ]
+  },
+  "note": "Which histogram file each committed figure set was drawn from, so the question is not re-litigated.  All variations are drawn from the SAME data/histograms.npz; the split below is only about which sm_nlo sample that file held at the time.",
+  "previous_draw": {
+   "commit": "0a3e10d72  MadSpin: document the Fig. 5 c_tG scan, and correct one clause of F's caption",
+   "histograms_git_blob": "998a1efd2ace7f69b980cb2fee3b02923696706f",
+   "sm_nlo_source": "the superseded run -- see samples.sm_nlo.regeneration.superseded"
+  },
+  "what_the_redraw_changed": {
+   "A": "nothing -- carries no NLO curve; the PNG is pixel-identical in both styles",
+   "B": "nothing -- as A",
+   "C, D, E, F, G-N": "the sm_nlo onshell curve and everything derived from it moved; every other curve is bit-identical",
+   "against_the_noise_floor": "T123's seed-only control moves the Delta phi asymmetry by -0.0050 while this change moves it by +0.0076; the 720-bin chi2/ndf is ~1 for every pairing.  Every figure moved by less than reseeding the MadSpin run, so nothing here exceeds the noise floor.",
+   "byte_identity_rule": "the earlier `keep A-F byte-identical' rule is retired: it was about adding variations without disturbing the existing ones, and a new sample legitimately moves every figure with an NLO curve.  A and B remain pixel-identical because they have no NLO curve.",
+   "max_per_bin_relative_change": {
+    "cross section on every figure": "-0.0001 % (10.9004361 -> 10.9004235 pb)",
+    "pane1 NLO/LO (E, F, G-N)": "3.53 % max, 1.8 sigma max",
+    "pane2 (SM+int)/SM at c_tG = -1 or +1 (E, F, G, H, K, L)": "0.56 % (c_tG -1) and 0.83 % (+1) max, 1.8 sigma max",
+    "pane2 at |c_tG| = 10 (I, J, M, N)": "6.99 % (+10) and 2.26 % (-10) max, still 1.8 sigma max -- the larger percentage is the 1/(1+w) amplification of the same shift, not a larger shift",
+    "sm_nlo_onshell_shape (the primitive, 20 plotted bins)": "3.53 % max, 0.98 % median, 1.9 sigma max, chi2/ndf 0.91"
+   }
+  }
+ },
  "samples": {
   "eft_int": {
    "label": "SMEFT $\\mathcal{O}_{tG}$ interference ($c_{tG}=-1$)",
@@ -736,6 +786,14 @@
   "BW_cut": 15.0,
   "beam_energy_GeV": 6500.0,
   "bwcutoff": 15.0,
+  "cards_archive": {
+   "contents": "mg5_{eft_int,eft_int_ctg_plus,sm_lo,sm_nlo}.dat; PROC_*/Cards/{run_card,param_card,proc_card_mg5}.dat; MS_{eft_int,sm_lo,sm_nlo}_{onshell,none}/madspin_card.dat",
+   "created_on": "2026-08-27",
+   "durable": true,
+   "not_included": "LHE files, matrix-element source and grids -- 19 GB, deliberately not mirrored.  The plotted content of those runs is data/histograms.npz.",
+   "path": "/Users/omattelaer/Documents/madspin_validation_samples/smeft_fig5_cards",
+   "why": "The three non-sm_nlo samples sit in a 19 GB /tmp tree that may be reaped, and copying it is neither cheap nor useful.  What is cheap and does make the study repeatable is the steering: 124 kB of mg5_*.dat scripts, PROC_*/Cards/{run,param,proc}_card.dat and each MS_*/madspin_card.dat, copied verbatim out of setup.workdir.  With these plus run_smeft_fig5.py the samples can be remade from nothing; without them a reaped /tmp would take the exact run and param cards with it."
+  },
   "ctGRe_cross_check": 1.0,
   "ctGRe_primary": -1.0,
   "cuts": "none (fully inclusive leptons and b quarks; cut_decays False)",
@@ -788,6 +846,32 @@
   "sqrt_s_GeV": 13000.0,
   "width_top_GeV": 1.33,
   "workdir": "/private/tmp/smeft_fig5_work",
-  "workdir_note": "setup.workdir is where eft_int / eft_int_ctg_plus / sm_lo were made. sm_nlo was regenerated later under samples.sm_nlo.regeneration.workdir = /Users/omattelaer/Documents/madspin_validation_samples/t_fig5_sm_nlo_redo, which is durable; the other three are still under /tmp and may not survive."
+  "workdir_note": "DEPRECATED as a single pointer -- read setup.workdirs instead.  This key is what run_smeft_fig5.py writes for its own --workdir and it describes only the samples that driver made in that invocation (eft_int, eft_int_ctg_plus, sm_lo, and the SUPERSEDED sm_nlo).  The sm_nlo sample actually committed here lives elsewhere: see samples.sm_nlo.regeneration.workdir.  No plotting step reads any of these: data/histograms.npz and data/meta.json are the whole input, and every figure redraws with all four workdirs gone.",
+  "workdirs": {
+   "eft_int": {
+    "durable": false,
+    "holds": "PROC_eft_int, MS_eft_int_onshell, MS_eft_int_none",
+    "path": "/private/tmp/smeft_fig5_work"
+   },
+   "eft_int_ctg_plus": {
+    "durable": false,
+    "holds": "PROC_eft_int_ctg_plus (production only; the onshell decay aborts by design -- see setup.negative_weight_note)",
+    "path": "/private/tmp/smeft_fig5_work"
+   },
+   "note": "One entry per sample, because the study no longer has a single workdir. `durable' means outside /tmp and therefore not subject to reaping; a non-durable path is expected to disappear and must not be the only record of anything.",
+   "sm_lo": {
+    "durable": false,
+    "holds": "PROC_sm_lo, MS_sm_lo_onshell, MS_sm_lo_none",
+    "path": "/private/tmp/smeft_fig5_work"
+   },
+   "sm_nlo": {
+    "durable": true,
+    "holds": "the regenerated decay stage actually plotted here -- MS_sm_nlo_onshell, MS_sm_nlo_none, the seed-99 control run, and the reused 500k production LHE.  Same value as samples.sm_nlo.regeneration.workdir.",
+    "path": "/Users/omattelaer/Documents/madspin_validation_samples/t_fig5_sm_nlo_redo",
+    "superseded_path": "/private/tmp/smeft_fig5_work"
+   },
+   "verified_by": "MadSpin/validation/smeft_fig5 redraw task (branch claude/ms-smeft-fig5-redraw): each path below was stat'd on this date and existed.",
+   "verified_on": "2026-08-27"
+  }
  }
 }

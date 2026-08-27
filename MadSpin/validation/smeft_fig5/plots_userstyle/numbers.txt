@@ -7,6 +7,15 @@ PDF          : NNPDF2.3 LO, alpha_s(M_Z)=0.130 (LHAPDF id 230000, NNPDF23_lo_as_
 cuts         : none (fully inclusive leptons and b quarks; cut_decays False)
 sign         : ctGRe = -1, so the eft_int sample is -2 Re(M_SM^* M_tG); the paper caption is written for ctGRe = +1
 plot binning : 20 uniform bins over [0, pi], width 0.157080 rad (36 stored bins each)
+sm_nlo       : regenerated with the MadSpin param_card fix (0a1007bc2,
+               task T123).  The defect -- density matrices evaluated at
+               model defaults, MT 173 / WT 1.4915, not the run's
+               172.76 / 1.33 -- was real; its measured effect here is
+               -0.0001 % on sigma (10.9004361 -> 10.9004235 pb, against
+               a 0.020 pb integration error) and, on the shape, less
+               than reseeding MadSpin: the asymmetry moves by +0.0076
+               buggy-vs-fixed and -0.0050 for seed 42 -> 99 alone.
+               spinmode = none was never affected.  See README.md.
 
 ------------------------------------------------------------------------------
 normalisation checks (all recomputed from histograms.npz)

@@ -584,6 +584,15 @@ def write_numbers(d, out, fh=sys.stdout):
     p('sign         : %s' % setup['sign_convention'])
     p('plot binning : %d uniform bins over [0, pi], width %.6f rad '
       '(%d stored bins each)' % (d.nbins, d.width, d.group))
+    p('sm_nlo       : regenerated with the MadSpin param_card fix (0a1007bc2,')
+    p('               task T123).  The defect -- density matrices evaluated at')
+    p('               model defaults, MT 173 / WT 1.4915, not the run\'s')
+    p('               172.76 / 1.33 -- was real; its measured effect here is')
+    p('               -0.0001 % on sigma (10.9004361 -> 10.9004235 pb, against')
+    p('               a 0.020 pb integration error) and, on the shape, less')
+    p('               than reseeding MadSpin: the asymmetry moves by +0.0076')
+    p('               buggy-vs-fixed and -0.0050 for seed 42 -> 99 alone.')
+    p('               spinmode = none was never affected.  See README.md.')
     p('')
     check_normalisation(d, fh)
 

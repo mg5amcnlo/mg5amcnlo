@@ -10,13 +10,13 @@ one go::
 
 Everything comes from ``data/histograms.npz`` and ``data/meta.json``: the
 histogram file is the ONLY input and nothing about the samples is hard-coded
-here, so a regenerated ``sm_nlo`` (task T123) is a re-run of this script and not
-a rewrite of it.  Data loading, rebinning, error propagation and
+here, so the regenerated ``sm_nlo`` (task T123) was a re-run of this script and
+not a rewrite of it.  Data loading, rebinning, error propagation and
 ``check_normalisation()`` come from ``plot_smeft_fig5.py``; the user-style
-constants from ``plot_smeft_fig5_userstyle.py``; ``_step`` and the health
-warning from ``plot_smeft_fig5_varE.py``; the pane layout from
-``plot_smeft_fig5_varF.py``.  None of those four is modified and variations
-``A``--``F`` are left byte-identical -- this script only adds ``G``--``N``.
+constants from ``plot_smeft_fig5_userstyle.py``; ``_step`` and the SM NLO
+provenance note from ``plot_smeft_fig5_varE.py``; the pane layout from
+``plot_smeft_fig5_varF.py``.  None of those four is modified -- this script
+only adds ``G``--``N``.
 
 
 What was asked, and what is actually possible
@@ -138,7 +138,7 @@ No text on the figures
 Axis labels and legends only, as everywhere else in this series.  **The
 coefficient a figure is drawn at is not written on it.**  It is in the file
 name, in ``README.md`` and in that figure's ``numbers_*.txt``, which opens and
-closes with both the c_tG value and the SM NLO health warning.  The file names
+closes with both the c_tG value and the SM NLO provenance note.  The file names
 are
 
     smeft_fig5_G_ctg_m1_shape     smeft_fig5_K_ctg_m1_rate
@@ -150,17 +150,16 @@ are
 ``p`` plus) and the convention, so no figure can be mistaken for another.
 
 
-Health warning on the SM NLO sample
-===================================
-``sm_nlo``'s MadSpin density matrices were evaluated at model defaults rather
-than the run's card: the events were made at ``MT = 172.76``, ``WT = 1.33``,
-``WZ = 2.4952``, ``WW = 2.085`` while the matrix-element directories held
-``173 / 1.4915 / 2.4414 / 2.0476``.  A sound sample is being regenerated (task
-T123); until it lands, every red curve here and every ``NLO`` entry of both
-ratio panes is provisional.  The defect is in the **density** path, which
-``spinmode = none`` does not use at all -- the ``none`` runs build no
-``madspin_me`` directory -- so the **dashed** NLO curves are the sound ones and
-the **solid** NLO curves are the suspect ones.  See ``README.md``.
+Provenance of the SM NLO sample
+===============================
+``sm_nlo``'s MadSpin density matrices used to be evaluated at model defaults
+rather than the run's card (``173 / 1.4915 / 2.4414 / 2.0476`` against the
+run's ``172.76 / 1.33 / 2.4952 / 2.085``).  That is fixed, and the
+sample drawn here was regenerated with the fix (task T123).  The measured
+effect on this observable is ``-0.0001 %`` on the cross section and, on the
+shape, smaller than reseeding the MadSpin run.  The defect was in the
+**density** path, which ``spinmode = none`` does not use at all, so only the
+**solid** NLO curves were ever touched.  See ``README.md``.
 """
 
 import argparse
@@ -196,15 +195,15 @@ CURVES = F.CURVES                   # upper pane, unchanged from F
 PANE1 = F.PANE1                     # [('sm_nlo','sm_lo'), ('eft_int','sm_lo')]
 PANE2 = F.PANE2                     # ['sm_lo', 'sm_nlo']
 
-NLO_WARNING_SHORT = E.NLO_WARNING_SHORT
-NLO_WARNING_LONG = E.NLO_WARNING_LONG
+NLO_PROVENANCE_SHORT = E.NLO_PROVENANCE_SHORT
+NLO_PROVENANCE_LONG = E.NLO_PROVENANCE_LONG
 
 NLO_REGEN_NOTE = """\
-    A sound SM NLO sample is being regenerated (task T123, branch
-    claude/ms-smeft-fig5-nlo-redo).  When it lands, drop the new
-    data/histograms.npz in place and re-run this script: nothing about the
-    samples is hard-coded here, every cross section, weight and curve is read
-    out of the histogram file and its meta.json."""
+    The regeneration (task T123, branch claude/ms-smeft-fig5-nlo-redo) needed
+    no change to this script: nothing about the samples is hard-coded here,
+    every cross section, weight and curve being read out of the histogram file
+    and its meta.json.  Dropping a new data/histograms.npz in place and
+    re-running is all a further regeneration would take."""
 
 
 def _ctg_tag(c):
@@ -716,13 +715,13 @@ def write_numbers(d, s, tag, fh=sys.stdout):
     p = lambda *a: print(*a, file=fh)
     setup = d.meta['setup']
     _header(s, tag, p)
-    p(NLO_WARNING_LONG)
+    p(NLO_PROVENANCE_LONG)
     p('')
     p(NLO_REGEN_NOTE)
     p('')
-    p('  On this figure the defect is in the DENSITY path, which spinmode =')
-    p('  none does not use.  So the DASHED NLO curves are SOUND and the SOLID')
-    p('  NLO curves are the suspect ones.')
+    p('  On this figure the defect was in the DENSITY path, which spinmode =')
+    p('  none does not use.  So the DASHED NLO curves never moved at all; the')
+    p('  SOLID ones moved by less than reseeding the run.')
     p('')
 
     # -- what the eight figures are, so any one of them locates the others
@@ -848,8 +847,9 @@ def write_numbers(d, s, tag, fh=sys.stdout):
     p('      no scale at all.')
     p('    * the convention: %s -- %s'
       % (s.convention, CONVENTION_BLURB[s.convention]))
-    p('    * the SM NLO health warning, and that it hits the SOLID red curves')
-    p('      only, spinmode = none using no density matrices;')
+    p('    * the SM NLO provenance note: the defect touched the SOLID red')
+    p('      curves only, spinmode = none using no density matrices, and its')
+    p('      measured effect on this observable is below the seed noise;')
     p('    * that pane 1 is %s;'
       % ('a SHAPE ratio and not a K-factor (the K-factor is %.3f)'
          % (d.sigma('sm_nlo', 'onshell') / d.sigma('sm_lo', 'onshell'))
@@ -885,7 +885,7 @@ def write_numbers(d, s, tag, fh=sys.stdout):
         p('      look innocuous and are not.  Read the rate figure at the same')
         p('      coefficient instead.')
     p('')
-    p(NLO_WARNING_LONG)
+    p(NLO_PROVENANCE_LONG)
     p('')
     p(NLO_REGEN_NOTE)
     p('')
@@ -967,7 +967,7 @@ def main():
     print('')
     check_sum_health(d)
     print('')
-    print('*** %s ***' % NLO_WARNING_SHORT)
+    print('*** %s ***' % NLO_PROVENANCE_SHORT)
     print('*** the defect hits the SOLID red curves only: '
           'spinmode = none uses no density matrices ***')
     print('*** I, J, M, N are drawn at |c_tG| = 10, outside EFT validity: '

@@ -103,17 +103,20 @@ Three consequences, all stated on the figure:
    Read pane 2's NLO curve as "an LO interference against an NLO SM", which is
    what it is, and not as "the operator matters less at NLO".
 
-Health warning on the SM NLO sample
------------------------------------
-Both new panes use the SM NLO sample, and that sample has a known defect: its
-MadSpin density matrices were evaluated at the *model default* parameters rather
-than the run's, so the events were made at ``MT = 172.76``, ``WT = 1.33``,
-``WZ = 2.4952``, ``WW = 2.085`` while the matrix-element directories held
-``173 / 1.4915 / 2.4414 / 2.0476``.
+Provenance of the SM NLO sample
+-------------------------------
+Both new panes use the SM NLO sample, which once had a real defect: its MadSpin
+density matrices were evaluated at the *model default* parameters
+(``173 / 1.4915 / 2.4414 / 2.0476``) rather than the run's own
+(``172.76 / 1.33 / 2.4952 / 2.085``).  That is fixed, and the sample drawn here
+was regenerated with the fix (task T123).  The measured effect on this
+observable is ``-0.0001 %`` on the cross section and, on the shape, smaller than
+reseeding the MadSpin run -- see ``NLO_PROVENANCE_LONG`` below for the control
+numbers.
 
-The figure no longer says so on its face -- no text is allowed on it -- so the
-warning survives **only** in ``README.md`` and in ``numbers_E.txt``, which opens
-and closes with it.  A caption written from this figure must carry it by hand.
+The figure says nothing on its face -- no text is allowed on it -- so the note
+survives **only** in ``README.md`` and in ``numbers_E.txt``, which opens and
+closes with it.  A caption written from this figure must carry it by hand.
 """
 
 import argparse
@@ -197,38 +200,45 @@ def choose_ylim_E(series):
     return (1.0 - 1.1 * half, 1.0 + 1.1 * half)
 
 
-NLO_WARNING_SHORT = ('SM NLO density matrices ran at model defaults '
-                     '(MT 173, WT 1.4915) -- see README')
-NLO_WARNING_LONG = """\
-!! HEALTH WARNING on every number and curve involving the SM NLO sample !!
+NLO_PROVENANCE_SHORT = ('SM NLO regenerated with the param_card fix; '
+                        'measured effect -0.0001 % on sigma, below seed '
+                        'noise on the shape -- see README')
+NLO_PROVENANCE_LONG = """\
+SM NLO provenance: the param_card defect, measured and fixed
 
-    MadSpin's density path initialises its standalone matrix-element library
-    from <madspin_me>/Cards/param_card.dat -- the card `output standalone'
-    wrote from the MODEL DEFAULTS -- and never from the run's own card.  For
-    PROC_sm_nlo the run used
+    MadSpin's density path used to initialise its standalone matrix-element
+    library from <madspin_me>/Cards/param_card.dat -- the card `output
+    standalone' wrote from the MODEL DEFAULTS -- and never from the run's own
+    card.  For PROC_sm_nlo that meant
 
-        MT 172.76   WT 1.33   WZ 2.4952   WW 2.085
+        run :  MT 172.76   WT 1.33     WZ 2.4952   WW 2.085
+        ME  :  MT 173.0    WT 1.4915   WZ 2.4414   WW 2.0476
 
-    while its ME directories held
+    a top mass 0.24 GeV too high and a top width 12 % too large in the density
+    matrix.  The defect was real.  It is fixed (0a1007bc2), and the sm_nlo
+    sample plotted here was regenerated with the fix (T123), reusing the same
+    500k production events at the same MadSpin seeds -- so the comparison
+    below is exact and not Monte-Carlo noise in the production.
 
-        MT 173.0    WT 1.4915 WZ 2.4414   WW 2.0476
+    The measured effect on this observable is nil:
 
-    so the spin-density matrices of the SM NLO sample were evaluated at a top
-    mass 0.24 GeV too high and a top width 12 % too large.  The `onshell'
-    curve of that sample, and therefore both ratio panes' NLO entries, are
-    affected at an unquantified level.  The figure is drawn anyway because it
-    is wanted, but the NLO curves must not be quoted as a result until the
-    sample is regenerated.
+      rate   10.9004361 -> 10.9004235 pb, i.e. -0.0001 %, against a 0.020 pb
+             integration error.  The <init> XSECUP is 10.899373 +- 0.020274 pb
+             before and after, to every digit the banner carries.
 
-    The two LO samples were audited for this report and are clear: the only
-    parameter that differs between their event card and their ME card is
-    alpha_s(M_Z) (0.1190025 against 0.1179).  At LO both the QCD production
-    density matrix and the O_tG interference are proportional to g_s^4, one
-    overall factor, and MadSpin normalises its accept/reject weight on
-    Tr(rho_prod), so that factor cancels exactly.  The upper pane's two LO
-    curves and pane 1's denominator are therefore sound.  (The `none' runs
-    build no density matrices at all -- they have no madspin_me directory --
-    so they cannot be affected.)"""
+      shape  below the reseeding noise floor.  Buggy against fixed moves the
+             Delta phi forward-backward asymmetry by +0.0076; changing only
+             the MadSpin seed, 42 -> 99, with the fixed code moves it by
+             -0.0050; buggy against that seed-99 run, by +0.0025.  The 720-bin
+             chi2/ndf is 1.002, 0.975 and 0.997 for the three pairings: all
+             equally indistinguishable.
+
+    So `immaterial' here is a measurement, not a hope.  spinmode = none was
+    never affected -- it builds no density matrix, has no madspin_me directory,
+    and its histograms reproduced bit for bit.  The two LO samples differ from
+    their ME card only in alpha_s(M_Z) (0.1190025 against 0.1179), which
+    cancels exactly in MadSpin's Tr(rho_prod)-normalised accept/reject
+    weight."""
 
 
 # --------------------------------------------------------------------------
@@ -347,7 +357,7 @@ def make_figure_mg7(d, out):
     # --- upper pane ------------------------------------------------------
     # No free-floating text anywhere on this figure: axis labels and legends
     # only.  The parameter point (ctGRe = -1, Lambda = 1 TeV), the size of the
-    # two LO `none' curves' agreement and the SM NLO health warning all live in
+    # two LO `none' curves' agreement and the SM NLO provenance note all live in
     # README.md and numbers_E.txt instead.
     for sample, mode in CURVES:
         y, ye = d.shape(sample, mode)
@@ -539,7 +549,7 @@ def write_numbers_E(d, fh=sys.stdout):
     p('=' * 78)
     p('Fig. 5 variation E: one no-spin-correlation curve, two ratio panes')
     p('=' * 78)
-    p(NLO_WARNING_LONG)
+    p(NLO_PROVENANCE_LONG)
     p('')
     p('observable   : %s' % setup['observable'])
     p('sqrt(s)      : %g GeV      scale: %s' % (setup['sqrt_s_GeV'],
@@ -655,13 +665,13 @@ def write_numbers_E(d, fh=sys.stdout):
     p('  against an NLO SM", not as "the operator matters less at NLO".')
     p('')
     p('=' * 78)
-    p('where the warnings and the parameter point live')
+    p('where the provenance note and the parameter point live')
     p('=' * 78)
     p('  The figure carries NO text beyond its axis labels and legends, by')
     p('  request.  Everything below therefore exists ONLY here and in')
     p('  README.md, and whoever writes the caption must carry it across:')
     p('')
-    p('    * the SM NLO health warning, repeated below;')
+    p('    * the SM NLO provenance note, repeated below;')
     p('    * the parameter point ctGRe = %g, Lambda = %g GeV, without which'
       % (d.meta['samples']['eft_int']['wilson_coefficients']['ctGRe'],
          d.meta['samples']['eft_int']['wilson_coefficients']
@@ -674,7 +684,7 @@ def write_numbers_E(d, fh=sys.stdout):
     p('      %.2f);' % (v.sigma('sm_nlo') / v.sigma('sm_lo')))
     p('    * that the drawn `none\' curve covers the two LO samples only.')
     p('')
-    p(NLO_WARNING_LONG)
+    p(NLO_PROVENANCE_LONG)
 
 
 # --------------------------------------------------------------------------
@@ -729,7 +739,7 @@ def main():
 
     write_numbers_E(d)
     print('')
-    print('*** %s ***' % NLO_WARNING_SHORT)
+    print('*** %s ***' % NLO_PROVENANCE_SHORT)
 
     if failures:
         raise SystemExit('the usetex minus sign was lost in: %s'

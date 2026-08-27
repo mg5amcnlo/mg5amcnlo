@@ -15,56 +15,58 @@ python3 run_smeft_fig5.py --workdir /tmp/smeft_fig5_work --fixed-order-probe
 
 ---
 
-## HEALTH WARNING — the SM NLO sample is not sound
+## The SM NLO sample: a real defect, fixed, and its size measured
 
-**`sm_nlo` was decayed with its spin-density matrices evaluated at the model
-default parameters, not at the run's own card.** Task T113 found that MadSpin's
-density path initialises its standalone matrix-element library from
+**`sm_nlo` was once decayed with its spin-density matrices evaluated at the
+model default parameters instead of the run's own card.** MadSpin's density path
+initialised its standalone matrix-element library from
 `<madspin_me>/Cards/param_card.dat` — the card `output standalone` wrote from
-the model defaults — and never from the run's card, whose fallback branch is
-unreachable — the same mechanism described below under *Where the Wilson
-coefficient is set, and why it is not the param_card*. Its audit found,
-specifically for this directory's samples:
+the model defaults — and never from the run's card (the same mechanism as *Where
+the Wilson coefficient is set, and why it is not the param_card*, below). Task
+T113 found, for `PROC_sm_nlo`:
 
-> `PROC_sm_nlo` ran with `MT 172.76 / WT 1.33 / WZ 2.4952 / WW 2.085` while its
-> ME directories held `173 / 1.4915 / 2.4414 / 2.0476`.
+> the run used `MT 172.76 / WT 1.33 / WZ 2.4952 / WW 2.085` while its ME
+> directories held `173 / 1.4915 / 2.4414 / 2.0476`
 
-So the SM NLO density matrices used a top mass 0.24 GeV too high and a top
-width 12 % too large. **Every curve and every number involving `sm_nlo` — that
-is, variations `C`, `D`, both NLO entries of `E`, and every red curve of `F` —
-is affected at an unquantified level and must not be quoted as a result until
-the sample is regenerated.** That now includes every red curve of `G`–`N` and
-every `NLO` entry of their ratio panes.
+— a top mass 0.24 GeV too high and a top width 12 % too large in the density
+matrix.
 
-**A sound SM NLO sample is being regenerated** (task T123, branch
-`claude/ms-smeft-fig5-nlo-redo`). When it lands, drop the new
-`data/histograms.npz` in place and re-run the plotting scripts: none of them
-hard-codes a cross section, a weight or any other NLO number — every one is read
-out of the histogram file and its `meta.json` — so the redraw is a re-run and
-not a rewrite. This section and the health warning at the top and bottom of each
-`numbers_*.txt` stay until it does.
+**The defect is fixed** (`0a1007bc2`)**, and the sample committed here was
+regenerated with the fix** (task T123, branch `claude/ms-smeft-fig5-nlo-redo`),
+reusing the same 500k production events at the same MadSpin seeds — so the
+old/new comparison is exact rather than Monte-Carlo noise. **The measured effect
+on this observable is nil:**
 
-One qualification that matters for `F` and for `G`–`N`: the defect is in the
-**density** path, and `spinmode = none` does not use it — the `none` runs build
-no `madspin_me` directory at all (see the table below). So on those figures,
-whose curves come in matched solid/dashed pairs, the **dashed** NLO curves are
-sound and only the **solid** ones are suspect. The figures are drawn anyway,
-because they are wanted.
+| | old | new | change |
+|---|---|---|---|
+| cross section | `10.9004361 pb` | `10.9004235 pb` | `-0.0001 %`, against a `0.020 pb` integration error |
+| `Delta phi` shape | | | below the reseeding noise floor |
 
-**None of the figures says so on its face.** `C` and `D` predate the finding and
-are left byte-identical; `E` carried the caveat in red under its x-axis until
-the user asked for every free-floating annotation to be removed from the plot,
-and `F` and `G`–`N` never carried it. So **this section and
-`plots/numbers_E.txt`, `plots/numbers_F.txt` and `plots/numbers_G.txt` …
-`numbers_N.txt` — all of which open and close with the warning — are the only
-places it lives.** Anyone writing a caption from these figures must carry it
+"Below the noise floor" is a measurement and not a hope. Buggy against fixed
+moves the $\Delta\phi$ forward–backward asymmetry by `+0.0076`; changing *only*
+the MadSpin seed, 42 → 99, with the fixed code moves it by `-0.0050`; buggy
+against that seed-99 run, by `+0.0025`. The 720-bin `chi2/ndf` is `1.002`,
+`0.975` and `0.997` for the three pairings — all equally indistinguishable. The
+defect's "signal" is the size of reseeding noise.
+
+**Only `spinmode = onshell` was ever affected.** `none` builds no density matrix
+— it has no `madspin_me` directory at all — so its histograms reproduced bit for
+bit. On the paired figures (`F`, `G`–`N`) the dashed NLO curves did not move by
+one bit; the solid ones moved by less than a reseed.
+
+The full record — what was regenerated and what was not, the acceptance test,
+and the control run — is under *Regeneration of `sm_nlo` (the param_card fix)*
+at the foot of this file. This note also opens and closes every
+`plots/numbers_E.txt` … `numbers_N.txt`. The figures themselves carry no text
+beyond axis labels and legends, so a caption written from them must carry it
 across by hand.
 
 ### The two LO samples are clear (audited here, T113's audit having stopped)
 
 The status of `sm_lo` was left unresolved when the audit task was stopped. It is
 settled here, cheaply, by running T113's own `audit_me_param_cards.py` over this
-directory's `--workdir`. The result, for all six decayed runs:
+directory's `--workdir`. The result, for all six decayed runs **as originally
+generated**:
 
 | run | ME card against the run's card |
 |---|---|
@@ -82,9 +84,10 @@ accept/reject weight on `Tr(rho_prod)`, so the factor cancels exactly. The
 tree-level decay matrix elements carry no `alpha_s` at all.
 
 **Conclusion: the LO curves — the whole of variation `B`, the whole upper pane
-of `E`, and pane 1's denominator — are sound. Only the NLO ones are suspect.**
-(`alpha_s` should still be fixed; it is simply not a physics error on these
-samples.)
+of `E`, and pane 1's denominator — were never in question.** On the regenerated
+`sm_nlo` the audit reports `MATCH` for every entry, `aS` included, so the
+`alpha_s` mismatch is gone there too; it survives only on the two LO samples,
+where it cancels.
 
 ---
 
@@ -331,9 +334,15 @@ looking at the PNG.
 from `plot_smeft_fig5_varE.py`; `F` from `plot_smeft_fig5_varF.py`, which
 imports all three and modifies none of them; `G`–`N` from
 `plot_smeft_fig5_ctg_scan.py`, which imports all four and modifies none of them.
-Each variation is therefore an addition: `A`–`D` are byte-identical to what they
-were before `E` existed, `A`–`E` to what they were before `F` did, and `A`–`F`
-to what they were before `G`–`N` did.
+Each variation is an addition, none of the scripts modifying the ones it
+imports. The earlier "`A`–`F` stay byte-identical" rule no longer holds and was
+never about the scripts: the `sm_nlo` regeneration changed the histogram file,
+so every figure carrying an NLO curve — `C`, `D`, `E`, `F` and all of `G`–`N` —
+is redrawn and differs in its bytes. `A` and `B` carry no NLO curve and are
+**pixel-identical** to what they were, in both styles. What the redraw changed
+numerically is a per-bin shift of at most 3.5 % on the `sm_nlo` `onshell` shape
+(median 1.0 %, `chi2/ndf` 0.91 on the plotted 20 bins) — see the section on the
+SM NLO sample above.
 
 `B` is the one to put in the paper. It is the only variation that shows the
 result the extra samples were generated for: the SM and the interference term
@@ -459,8 +468,9 @@ have to be in the caption:
    "the operator matters less at NLO".
 
 Both ratio panes use the `onshell` curves throughout, since that is the physical
-prediction. **Both need `sm_nlo`, which is not sound** — see the health warning
-at the top of this file.
+prediction. Both need `sm_nlo`; that sample was regenerated with the
+`param_card` fix and the change is immaterial — see *The SM NLO sample* at the
+top of this file.
 
 The measured ends of the four ratio curves, on the plotted 20-bin binning:
 
@@ -503,9 +513,6 @@ $n_{\rm SM}$, i.e.\ weighted by the samples' own cross sections
 this panel is proportional to $c_{tG}/\Lambda^2$ and its two curves mirror about
 unity for $c_{tG}>0$; the interference is leading order in both curves, so the
 NLO one is the smaller only because $\sigma_{\rm SM}$ carries the $K$-factor.
-\OM{The SM NLO sample was decayed with its spin-density matrices evaluated at
-the model default $m_t=173$~GeV and $\Gamma_t=1.4915$~GeV rather than the run's
-$172.76$ and $1.33$; the red curves are provisional until it is regenerated.}
 \OM{Samples: $10^6$ events each at LO, $5\times10^5$ at NLO.}}
 ```
 
@@ -611,8 +618,8 @@ visible — but that would have been an assumption, and it is now a measurement.
 #### Caption for `F`
 
 Same content as `E`'s caption, with the decomposition added. The parameter point
-and the health warning are on the same footing as for `E`: they are **not** on
-the figure and must come from here.
+are on the same footing as for `E`: they are **not** on the figure and must come
+from here.
 
 ```latex
 \caption{As Fig.~\ref{fig:valid_interf}, with every curve shown both with spin
@@ -635,12 +642,7 @@ $+12\%$ to $-18\%$: the entire difference between the interference and the SM in
 this observable is a spin-correlation effect.  The red pair behaves oppositely
 --- the dashed curve carries a $10\%$ structure of its own --- because the
 LO/NLO difference here is the extra radiation changing the $t\bar t$ boost, not
-spin.
-\OM{The SM NLO sample was decayed with its spin-density matrices evaluated at
-the model default $m_t=173$~GeV and $\Gamma_t=1.4915$~GeV rather than the run's
-$172.76$ and $1.33$.  The defect is in the density path, which
-\code{spinmode=none} does not use, so the \emph{solid} red curves are
-provisional and the dashed red ones are not.}}
+spin.}
 ```
 
 > **Correction to one clause of `F`'s caption.** It says the pane-2 curves
@@ -649,9 +651,9 @@ provisional and the dashed red ones are not.}}
 > is `w/(1+w)`, not `w`: flipping `c_tG` flips `w` but also moves `1+w`, and the
 > deviation at `+1` comes out **1.759x** (LO) and **1.442x** (NLO) the one at
 > `-1`, not `1.000x`. The mirror is exact only in the `rate` convention of
-> `K`–`N` below, whose coefficient is `w` itself. `F`'s figure and numbers are
-> unaffected — they are drawn at `c_tG = -1` — and are left byte-identical; only
-> the extrapolation in that clause was wrong.
+> `K`–`N` below, whose coefficient is `w` itself. `F`'s own figure is drawn at
+> `c_tG = -1` and is unaffected by the correction; only the extrapolation in
+> that clause was wrong.
 
 ### Variations `G`–`N` — `F` scanned over the Wilson coefficient
 
@@ -822,12 +824,7 @@ the SM prediction with the interference added at its physical sign and size,
 $w=\sigma_{\rm int}(c_{tG})/\sigma_{\rm SM}=\WVALUES$ at LO and NLO, divided by
 the SM alone.  In both lower panels the dashed curve is the part of the ratio
 that is \emph{not} a spin-correlation effect and the gap up to the solid curve
-of the same colour is the spin-correlation effect itself.
-\OM{The SM NLO sample was decayed with its spin-density matrices evaluated at the
-model default $m_t=173$~GeV and $\Gamma_t=1.4915$~GeV rather than the run's
-$172.76$ and $1.33$; the defect is in the density path, which
-\code{spinmode=none} does not use, so the \emph{solid} red curves are
-provisional and the dashed red ones are not.}}
+of the same colour is the spin-correlation effect itself.}
 ```
 
 with, for `I`, `J`, `M` and `N`, this sentence added and **not** optional:
@@ -990,7 +987,7 @@ Monte-Carlo noise in the production.
 `spinmode = none` needs no density matrix, so MadSpin never builds
 `madspin_me/` for it and the defective card was never read. Re-running it
 reproduced the old histograms **bit for bit**. Only the `onshell` curve was ever
-suspect.
+affected.
 
 ### Acceptance test
 
@@ -1028,3 +1025,55 @@ sound, not because the figure changes.
 The control run is kept under
 `samples.sm_nlo.regeneration.control_run.path` and is deliberately **not** in
 `histograms.npz`: it is a systematics control, not a curve on the figure.
+
+### The redraw, and what it moved
+
+All fourteen variations were re-run against the regenerated `histograms.npz`
+(blob `2d596a26`, previously `998a1efd`). What moved, and by how much:
+
+| figures | max per-bin relative change | in units of the plotted error |
+|---|---|---|
+| `A`, `B` | **0** — no NLO curve; PNG pixel-identical in both styles | — |
+| `sm_nlo onshell` shape (the primitive, all NLO figures) | **3.53 %** max, 0.98 % median | 1.9 sigma max, `chi2/ndf` 0.91 on 20 bins |
+| pane 1 `NLO/LO` (`E`, `F`, `G`–`N`) | 3.53 % | 1.8 sigma |
+| pane 2 at `c_tG = -1` / `+1` (`E`, `F`, `G`, `H`, `K`, `L`) | 0.56 % / 0.83 % | 1.8 sigma |
+| pane 2 at `c_tG = +10` / `-10` (`I`, `J`, `M`, `N`) | 6.99 % / 2.26 % | 1.8 sigma |
+| cross section, every figure | `-0.0001 %` | 0.0006 of the integration error |
+
+The larger percentage at `|c_tG| = 10` is the `1/(1+w)` amplification of the
+*same* shift — the sigma column is flat across the whole table, which is the
+point. Everything moved by less than reseeding the MadSpin run (T123's control:
+`Delta A_FB = -0.0050` for a seed change alone against `+0.0076` here), so
+nothing exceeds the noise floor.
+
+**The earlier "keep `A`–`F` byte-identical" rule is retired.** It was about
+adding variations without disturbing the ones already there. A new sample
+legitimately moves every figure that carries an NLO curve, and `C`, `D`, `E`,
+`F` and all of `G`–`N` differ in their bytes and (slightly) in their pixels.
+`A` and `B` carry no NLO curve and are pixel-identical; their PDFs differ only
+in the embedded timestamp and matplotlib's random font-subset tag.
+
+### Where the samples live
+
+`setup.workdir` is a single scalar that stopped describing the study when
+`sm_nlo` was regenerated elsewhere. It has **not** been silently repointed —
+that would make it wrong for the other three samples. Instead `meta.json` now
+carries `setup.workdirs`, one entry per sample with an explicit `durable` flag,
+and `setup.workdir_note` says the scalar is deprecated as a pointer.
+
+| sample | workdir | durable |
+|---|---|---|
+| `eft_int`, `eft_int_ctg_plus`, `sm_lo` | `/private/tmp/smeft_fig5_work` (19 GB) | **no** — under `/tmp` |
+| `sm_nlo` | `/Users/omattelaer/Documents/madspin_validation_samples/t_fig5_sm_nlo_redo` | yes |
+
+Copying 19 GB out of `/tmp` is neither cheap nor useful. What *is* cheap and
+does make the study repeatable is the steering, so the 124 kB that matters —
+`mg5_*.dat`, `PROC_*/Cards/{run,param,proc}_card.dat` and every
+`MS_*/madspin_card.dat` — is mirrored to a durable
+`setup.cards_archive.path`. With those plus `run_smeft_fig5.py` the samples can
+be remade; without them a reaped `/tmp` would take the exact cards with it.
+
+None of this is needed to redraw: **no plotting script reads any workdir.**
+`data/histograms.npz` and `data/meta.json` are the whole input, and every figure
+redraws with all four workdirs gone. `meta.json`'s `figures` block records which
+histogram blob each figure set was drawn from, with the plotting environment.

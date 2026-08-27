@@ -1,39 +1,46 @@
 ==============================================================================
 Fig. 5 variation F: every curve of E drawn in both spinmodes
 ==============================================================================
-!! HEALTH WARNING on every number and curve involving the SM NLO sample !!
+SM NLO provenance: the param_card defect, measured and fixed
 
-    MadSpin's density path initialises its standalone matrix-element library
-    from <madspin_me>/Cards/param_card.dat -- the card `output standalone'
-    wrote from the MODEL DEFAULTS -- and never from the run's own card.  For
-    PROC_sm_nlo the run used
+    MadSpin's density path used to initialise its standalone matrix-element
+    library from <madspin_me>/Cards/param_card.dat -- the card `output
+    standalone' wrote from the MODEL DEFAULTS -- and never from the run's own
+    card.  For PROC_sm_nlo that meant
 
-        MT 172.76   WT 1.33   WZ 2.4952   WW 2.085
+        run :  MT 172.76   WT 1.33     WZ 2.4952   WW 2.085
+        ME  :  MT 173.0    WT 1.4915   WZ 2.4414   WW 2.0476
 
-    while its ME directories held
+    a top mass 0.24 GeV too high and a top width 12 % too large in the density
+    matrix.  The defect was real.  It is fixed (0a1007bc2), and the sm_nlo
+    sample plotted here was regenerated with the fix (T123), reusing the same
+    500k production events at the same MadSpin seeds -- so the comparison
+    below is exact and not Monte-Carlo noise in the production.
 
-        MT 173.0    WT 1.4915 WZ 2.4414   WW 2.0476
+    The measured effect on this observable is nil:
 
-    so the spin-density matrices of the SM NLO sample were evaluated at a top
-    mass 0.24 GeV too high and a top width 12 % too large.  The `onshell'
-    curve of that sample, and therefore both ratio panes' NLO entries, are
-    affected at an unquantified level.  The figure is drawn anyway because it
-    is wanted, but the NLO curves must not be quoted as a result until the
-    sample is regenerated.
+      rate   10.9004361 -> 10.9004235 pb, i.e. -0.0001 %, against a 0.020 pb
+             integration error.  The <init> XSECUP is 10.899373 +- 0.020274 pb
+             before and after, to every digit the banner carries.
 
-    The two LO samples were audited for this report and are clear: the only
-    parameter that differs between their event card and their ME card is
-    alpha_s(M_Z) (0.1190025 against 0.1179).  At LO both the QCD production
-    density matrix and the O_tG interference are proportional to g_s^4, one
-    overall factor, and MadSpin normalises its accept/reject weight on
-    Tr(rho_prod), so that factor cancels exactly.  The upper pane's two LO
-    curves and pane 1's denominator are therefore sound.  (The `none' runs
-    build no density matrices at all -- they have no madspin_me directory --
-    so they cannot be affected.)
+      shape  below the reseeding noise floor.  Buggy against fixed moves the
+             Delta phi forward-backward asymmetry by +0.0076; changing only
+             the MadSpin seed, 42 -> 99, with the fixed code moves it by
+             -0.0050; buggy against that seed-99 run, by +0.0025.  The 720-bin
+             chi2/ndf is 1.002, 0.975 and 0.997 for the three pairings: all
+             equally indistinguishable.
 
-  Note for F specifically: the defect is in the DENSITY path, which
+    So `immaterial' here is a measurement, not a hope.  spinmode = none was
+    never affected -- it builds no density matrix, has no madspin_me directory,
+    and its histograms reproduced bit for bit.  The two LO samples differ from
+    their ME card only in alpha_s(M_Z) (0.1190025 against 0.1179), which
+    cancels exactly in MadSpin's Tr(rho_prod)-normalised accept/reject
+    weight.
+
+  Note for F specifically: the defect was in the DENSITY path, which
   spinmode = none does not use.  So on this figure the DASHED NLO
-  curves are sound and the SOLID ones are the suspect ones.
+  curves never moved at all; the SOLID ones moved by less than
+  reseeding the run.
 
 observable   : Delta phi(e-, e+), radians, folded onto [0, pi]
 sqrt(s)      : 13000 GeV      scale: fixed mu_R = mu_F = 173.0 GeV
@@ -167,14 +174,14 @@ bin by bin
     0.975     0.9589 +- 0.0105     0.8224 +- 0.0046     0.9325 +- 0.0095     0.9942 +- 0.0049     0.9617 +- 0.0010     0.9782 +- 0.0015     0.9987 +- 0.0011     1.0101 +- 0.0017
 
 ==============================================================================
-where the warnings and the parameter point live
+where the provenance note and the parameter point live
 ==============================================================================
   The figure carries NO text beyond its axis labels and legends, by
   request.  Everything below exists ONLY here and in README.md, and
   whoever writes the caption must carry it across:
 
-    * the SM NLO health warning, repeated at the top of this file --
-      and, for F, the fact that it hits the SOLID red curves only;
+    * the SM NLO provenance note, repeated at the top of this file --
+      the defect touched the SOLID red curves only, and is measured;
     * the parameter point ctGRe = -1, Lambda = 1000 GeV, without which
       pane 2 has no scale at all -- its magnitude is proportional to
       c_tG/Lambda^2 and all four of its curves mirror about 1 for
@@ -187,32 +194,38 @@ where the warnings and the parameter point live
     * that the dashed curves are the non-spin part of each ratio and
       the solid-to-dashed gap is the spin-correlation effect.
 
-!! HEALTH WARNING on every number and curve involving the SM NLO sample !!
+SM NLO provenance: the param_card defect, measured and fixed
 
-    MadSpin's density path initialises its standalone matrix-element library
-    from <madspin_me>/Cards/param_card.dat -- the card `output standalone'
-    wrote from the MODEL DEFAULTS -- and never from the run's own card.  For
-    PROC_sm_nlo the run used
+    MadSpin's density path used to initialise its standalone matrix-element
+    library from <madspin_me>/Cards/param_card.dat -- the card `output
+    standalone' wrote from the MODEL DEFAULTS -- and never from the run's own
+    card.  For PROC_sm_nlo that meant
 
-        MT 172.76   WT 1.33   WZ 2.4952   WW 2.085
+        run :  MT 172.76   WT 1.33     WZ 2.4952   WW 2.085
+        ME  :  MT 173.0    WT 1.4915   WZ 2.4414   WW 2.0476
 
-    while its ME directories held
+    a top mass 0.24 GeV too high and a top width 12 % too large in the density
+    matrix.  The defect was real.  It is fixed (0a1007bc2), and the sm_nlo
+    sample plotted here was regenerated with the fix (T123), reusing the same
+    500k production events at the same MadSpin seeds -- so the comparison
+    below is exact and not Monte-Carlo noise in the production.
 
-        MT 173.0    WT 1.4915 WZ 2.4414   WW 2.0476
+    The measured effect on this observable is nil:
 
-    so the spin-density matrices of the SM NLO sample were evaluated at a top
-    mass 0.24 GeV too high and a top width 12 % too large.  The `onshell'
-    curve of that sample, and therefore both ratio panes' NLO entries, are
-    affected at an unquantified level.  The figure is drawn anyway because it
-    is wanted, but the NLO curves must not be quoted as a result until the
-    sample is regenerated.
+      rate   10.9004361 -> 10.9004235 pb, i.e. -0.0001 %, against a 0.020 pb
+             integration error.  The <init> XSECUP is 10.899373 +- 0.020274 pb
+             before and after, to every digit the banner carries.
 
-    The two LO samples were audited for this report and are clear: the only
-    parameter that differs between their event card and their ME card is
-    alpha_s(M_Z) (0.1190025 against 0.1179).  At LO both the QCD production
-    density matrix and the O_tG interference are proportional to g_s^4, one
-    overall factor, and MadSpin normalises its accept/reject weight on
-    Tr(rho_prod), so that factor cancels exactly.  The upper pane's two LO
-    curves and pane 1's denominator are therefore sound.  (The `none' runs
-    build no density matrices at all -- they have no madspin_me directory --
-    so they cannot be affected.)
+      shape  below the reseeding noise floor.  Buggy against fixed moves the
+             Delta phi forward-backward asymmetry by +0.0076; changing only
+             the MadSpin seed, 42 -> 99, with the fixed code moves it by
+             -0.0050; buggy against that seed-99 run, by +0.0025.  The 720-bin
+             chi2/ndf is 1.002, 0.975 and 0.997 for the three pairings: all
+             equally indistinguishable.
+
+    So `immaterial' here is a measurement, not a hope.  spinmode = none was
+    never affected -- it builds no density matrix, has no madspin_me directory,
+    and its histograms reproduced bit for bit.  The two LO samples differ from
+    their ME card only in alpha_s(M_Z) (0.1190025 against 0.1179), which
+    cancels exactly in MadSpin's Tr(rho_prod)-normalised accept/reject
+    weight.

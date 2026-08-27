@@ -75,21 +75,21 @@ Everything else follows ``E``
 -----------------------------
 No text on the plot: axis labels and legends only.  The parameter point
 (``ctGRe = -1``, ``Lambda = 1 TeV``, which sets pane 2's scale), the pane-2
-weights and the SM NLO health warning live in ``README.md`` and in
+weights and the SM NLO provenance note live in ``README.md`` and in
 ``numbers_F.txt``, which opens and closes with the warning and ends with an
 explicit list of what a caption must carry.
 
 Health warning on the SM NLO sample
 -----------------------------------
 ``sm_nlo``'s MadSpin density matrices were evaluated at model defaults rather
-than the run's card: the events were made at ``MT = 172.76``, ``WT = 1.33``,
-``WZ = 2.4952``, ``WW = 2.085`` while the matrix-element directories held
-``173 / 1.4915 / 2.4414 / 2.0476``.  Every red curve on this figure, and the
-``NLO`` entries of both ratio panes, are provisional.  Note that the defect is
-in the **density** path, which ``spinmode = none`` does not use at all -- the
-``none`` runs build no ``madspin_me`` directory -- so ``F``'s dashed NLO curves
-are the *sound* ones and its solid NLO curves are the suspect ones.  See
-``README.md``.
+than the run's card (``173 / 1.4915 / 2.4414 / 2.0476`` against the run's
+``172.76 / 1.33 / 2.4952 / 2.085``).  That is fixed, and the sample drawn here
+was regenerated with the fix (task T123); the measured effect on this
+observable is ``-0.0001 %`` on the cross section and, on the shape, smaller
+than reseeding the MadSpin run.  The defect was in the **density** path, which
+``spinmode = none`` does not use at all -- the ``none`` runs build no
+``madspin_me`` directory -- so only ``F``'s solid NLO curves were ever touched.
+See ``README.md``.
 """
 
 import argparse
@@ -132,10 +132,10 @@ CURVES = [(s, m) for m in MODES for s in SAMPLES]
 PANE1 = [('sm_nlo', 'sm_lo'), ('eft_int', 'sm_lo')]
 PANE2 = ['sm_lo', 'sm_nlo']
 
-# Reuse `E''s health-warning text verbatim: it is the same defect, the same
+# Reuse `E''s provenance text verbatim: it is the same defect, the same
 # sample and the same wording, and there should be one copy of it.
-NLO_WARNING_SHORT = E.NLO_WARNING_SHORT
-NLO_WARNING_LONG = E.NLO_WARNING_LONG
+NLO_PROVENANCE_SHORT = E.NLO_PROVENANCE_SHORT
+NLO_PROVENANCE_LONG = E.NLO_PROVENANCE_LONG
 
 
 # --------------------------------------------------------------------------
@@ -465,11 +465,12 @@ def write_numbers_F(d, fh=sys.stdout):
     p('=' * 78)
     p('Fig. 5 variation F: every curve of E drawn in both spinmodes')
     p('=' * 78)
-    p(NLO_WARNING_LONG)
+    p(NLO_PROVENANCE_LONG)
     p('')
-    p('  Note for F specifically: the defect is in the DENSITY path, which')
+    p('  Note for F specifically: the defect was in the DENSITY path, which')
     p('  spinmode = none does not use.  So on this figure the DASHED NLO')
-    p('  curves are sound and the SOLID ones are the suspect ones.')
+    p('  curves never moved at all; the SOLID ones moved by less than')
+    p('  reseeding the run.')
     p('')
     p('observable   : %s' % setup['observable'])
     p('sqrt(s)      : %g GeV      scale: %s' % (setup['sqrt_s_GeV'],
@@ -575,14 +576,14 @@ def write_numbers_F(d, fh=sys.stdout):
 
     p('')
     p('=' * 78)
-    p('where the warnings and the parameter point live')
+    p('where the provenance note and the parameter point live')
     p('=' * 78)
     p('  The figure carries NO text beyond its axis labels and legends, by')
     p('  request.  Everything below exists ONLY here and in README.md, and')
     p('  whoever writes the caption must carry it across:')
     p('')
-    p('    * the SM NLO health warning, repeated at the top of this file --')
-    p('      and, for F, the fact that it hits the SOLID red curves only;')
+    p('    * the SM NLO provenance note, repeated at the top of this file --')
+    p('      the defect touched the SOLID red curves only, and is measured;')
     p('    * the parameter point ctGRe = %g, Lambda = %g GeV, without which'
       % (d.meta['samples']['eft_int']['wilson_coefficients']['ctGRe'],
          d.meta['samples']['eft_int']['wilson_coefficients']
@@ -600,7 +601,7 @@ def write_numbers_F(d, fh=sys.stdout):
     p('    * that the dashed curves are the non-spin part of each ratio and')
     p('      the solid-to-dashed gap is the spin-correlation effect.')
     p('')
-    p(NLO_WARNING_LONG)
+    p(NLO_PROVENANCE_LONG)
 
 
 # --------------------------------------------------------------------------
@@ -655,7 +656,7 @@ def main():
 
     write_numbers_F(d)
     print('')
-    print('*** %s ***' % NLO_WARNING_SHORT)
+    print('*** %s ***' % NLO_PROVENANCE_SHORT)
     print('*** on F the defect hits the SOLID red curves only: '
           'spinmode = none uses no density matrices ***')
 
