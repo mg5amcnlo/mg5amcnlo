@@ -1,0 +1,84 @@
+==============================================================================
+Delta phi(e-, e+): spin correlations on against off
+==============================================================================
+observable   : Delta phi(e-, e+), radians, folded onto [0, pi]
+sqrt(s)      : 13000 GeV      scale: fixed mu_R = mu_F = 173.0 GeV
+PDF          : NNPDF2.3 LO, alpha_s(M_Z)=0.130 (LHAPDF id 230000, NNPDF23_lo_as_0130_qed)
+cuts         : none (fully inclusive leptons and b quarks; cut_decays False)
+sign         : ctGRe = -1, so the eft_int sample is -2 Re(M_SM^* M_tG); the paper caption is written for ctGRe = +1
+plot binning : 20 uniform bins over [0, pi], width 0.157080 rad (36 stored bins each)
+
+------------------------------------------------------------------------------
+normalisation checks (all recomputed from histograms.npz)
+------------------------------------------------------------------------------
+sample/spinmode         sum(w)/N [pb]    <init> [pb]   rel.diff    banner
+eft_int / onshell           1.9738654      1.9738676   1.13e-06    139.78
+eft_int / none              1.9747396      1.9747419   1.18e-06    139.78
+sm_lo / onshell             7.1752896      7.1744806   1.13e-04    508.05
+sm_lo / none                7.1784680      7.1776585   1.13e-04    508.05
+sm_nlo / onshell           10.9004361     10.8993730   9.75e-05        --
+sm_nlo / none              10.9059500     10.9048880   9.74e-05        --
+
+sample/spinmode         neg.frac  relerr(w2) relerr(sqrtN)  factor
+eft_int / onshell        0.00020     0.00450     0.00450    1.00
+eft_int / none           0.00020     0.00476     0.00476    1.00
+sm_lo / onshell          0.00017     0.00460     0.00460    1.00
+sm_lo / none             0.00017     0.00476     0.00476    1.00
+sm_nlo / onshell         0.22948     0.01181     0.00653    1.81
+sm_nlo / none            0.22948     0.01210     0.00670    1.81
+
+sample       sigma onshell    sigma none    ratio-1
+eft_int           1.973865      1.974740  -4.43e-04
+sm_lo             7.175290      7.178468  -4.43e-04
+sm_nlo           10.900436     10.905950  -5.06e-04
+
+  [ok ] sigma = sum(w)/N reproduces <init> XSECUP
+        worst relative difference 1.13e-04
+  [ok ] banner '# Integrated weight' is stale (= production sigma)
+        confirmed on eft_int/onshell, eft_int/none, sm_lo/onshell, sm_lo/none -- reading it instead of <init> would be wrong by ~70x
+  [ok ] sumw2 errors differ from sqrt(N) for the signed NLO sample
+        NLO 1.81x, LO 1.00x -- a sqrt(N) error bar on the NLO curve would be about half its true size
+  [ok ] onshell and none share a total cross section
+        worst |sigma_on/sigma_none - 1| = 5.06e-04, so the unit-area ratio is the absolute ratio to that accuracy
+
+==============================================================================
+the spin-correlation effect, bin by bin (onshell / none)
+==============================================================================
+   phi/pi             eft_int               sm_lo              sm_nlo
+    0.025    1.3115 +- 0.0097    1.1821 +- 0.0090    1.1439 +- 0.0218
+    0.075    1.2783 +- 0.0094    1.1621 +- 0.0088    1.1543 +- 0.0221
+    0.125    1.2883 +- 0.0095    1.1761 +- 0.0089    1.1164 +- 0.0209
+    0.175    1.2753 +- 0.0093    1.1635 +- 0.0087    1.1662 +- 0.0219
+    0.225    1.2605 +- 0.0091    1.1428 +- 0.0085    1.1342 +- 0.0209
+    0.275    1.2458 +- 0.0089    1.1318 +- 0.0083    1.1274 +- 0.0208
+    0.325    1.2125 +- 0.0085    1.1133 +- 0.0080    1.1267 +- 0.0205
+    0.375    1.1880 +- 0.0082    1.1037 +- 0.0078    1.1054 +- 0.0199
+    0.425    1.1540 +- 0.0078    1.1016 +- 0.0076    1.0977 +- 0.0193
+    0.475    1.1414 +- 0.0076    1.0842 +- 0.0073    1.0596 +- 0.0181
+    0.525    1.1015 +- 0.0071    1.0592 +- 0.0069    1.0425 +- 0.0174
+    0.575    1.0596 +- 0.0067    1.0238 +- 0.0065    1.0020 +- 0.0162
+    0.625    1.0116 +- 0.0062    0.9998 +- 0.0062    1.0042 +- 0.0162
+    0.675    0.9637 +- 0.0058    0.9775 +- 0.0058    0.9764 +- 0.0152
+    0.725    0.9232 +- 0.0054    0.9351 +- 0.0054    0.9314 +- 0.0143
+    0.775    0.8687 +- 0.0050    0.9129 +- 0.0051    0.9395 +- 0.0141
+    0.825    0.8235 +- 0.0046    0.8960 +- 0.0049    0.8980 +- 0.0133
+    0.875    0.7711 +- 0.0042    0.8748 +- 0.0046    0.8649 +- 0.0125
+    0.925    0.7347 +- 0.0040    0.8671 +- 0.0045    0.8710 +- 0.0125
+    0.975    0.7019 +- 0.0038    0.8485 +- 0.0043    0.8505 +- 0.0121
+
+extremes of the effect, on the plotted binning:
+  eft_int  first bin  +31.2% +- 1.0%   last bin  -29.8% +- 0.4%   max |effect|  31.2%
+  sm_lo    first bin  +18.2% +- 0.9%   last bin  -15.2% +- 0.4%   max |effect|  18.2%
+  sm_nlo   first bin  +14.4% +- 2.2%   last bin  -15.0% +- 1.2%   max |effect|  16.6%
+
+  The paper currently says "an impact of up to 25%%".  On these samples
+  the interference term runs from +31% in the first bin to -30% in
+  the last, so "up to 30%%" is the correct statement; the SM at the same
+  binning moves by only +18% / -15% (LO).
+
+==============================================================================
+do the two spinmode = none curves coincide?
+==============================================================================
+  EFT none / SM LO none: max |ratio-1| = 2.1%, chi2/ndf = 1.93
+  EFT none / SM NLO none: max |ratio-1| = 8.0%, chi2/ndf = 10.50
+  for contrast, EFT onshell / SM LO onshell: max |ratio-1| = 17.8%

@@ -212,3 +212,160 @@ Two traps, both spelled out per sample in `meta.json` under
    `decayed_xsec_detail` so the discrepancy is visible rather than a trap.
 
 `sumw` may be negative bin by bin for an interference sample. That is physical.
+
+---
+
+## Plotting
+
+```
+python3 plot_smeft_fig5.py            # MG7 paper style  -> plots/
+python3 plot_smeft_fig5_userstyle.py  # user's own style -> plots_userstyle/
+```
+
+Both run entirely off `data/histograms.npz` and `data/meta.json`. Neither needs
+MadSpin, an LHE file, or `--workdir`: the decayed samples can be gone and the
+figure still redraws. `plot_smeft_fig5_userstyle.py` imports its data handling,
+error propagation and checks from `plot_smeft_fig5.py`, so there is one
+implementation of the physics and two renderings of it.
+
+Each writes PDF **and** PNG for every variation, the plotted curves as their own
+`smeft_fig5_curves.npz` (rebinned and normalised, so a panel can be reproduced
+without redoing either step), and `numbers.txt`. `plot_smeft_fig5.py` also runs
+`--check-minus` on every PDF it writes: matplotlib's usetex Type1 subsetting has
+silently eaten every math minus in this project before, and this figure states
+its sign convention with one. Note that `pdftotext` extracts *nothing* from
+these PDFs — subsetted fonts, no `ToUnicode` — so it cannot be used to verify
+any label; the check is on the font encoding, and label text is verified by
+looking at the PNG.
+
+### The four variations
+
+| tag | curves | what it adds |
+|---|---|---|
+| `A` | EFT `onshell`, EFT `none`, SM LO `onshell` | the original figure plus an SM reference |
+| `B` | `A` + SM LO `none` | **recommended** — the two `none` curves land on top of each other |
+| `C` | EFT both + SM NLO both | the same at NLO |
+| `D` | EFT both + SM LO both + SM NLO both | LO and NLO together |
+
+`B` is the one to put in the paper. It is the only variation that shows the
+result the extra samples were generated for: the SM and the interference term
+have *the same* $\Delta\phi$ shape once the spin correlations are switched off
+(they agree to 2 %, against a 0.7 % per-bin statistical error), so the whole
+visible difference between the EFT and the SM in this observable — 18 % at
+$\Delta\phi=\pi$ — is a spin-correlation effect and nothing else. `A` cannot
+make that point (no SM `none` curve, and its ratio pane can only hold one
+curve). `C` weakens it: the NLO `none` curve differs from the EFT `none` curve
+by up to 8 % because the extra radiation changes the $t\bar t$ boost, so the
+coincidence is blurred by something that has nothing to do with spin. `D` says
+only that the spin-correlation effect is the same at LO and NLO, at the price of
+six curves.
+
+### What is plotted, and the normalisation
+
+`(1/sigma) dsigma/dDelta phi` in 1/rad, **every curve normalised to unit area**,
+on 20 uniform bins over `[0, pi]` (`--nbins` must divide the stored 720). The
+interference normalisation is arbitrary — it scales with `c_tG/Lambda^2` — so an
+absolute vertical axis would carry no information.
+
+The ratio pane is each sample divided by **itself** with the spin correlations
+switched off, never one sample by another. For the interference term that is the
+only ratio that is well defined without a convention, because the arbitrary
+factor cancels between numerator and denominator.
+
+Normalising to unit area costs nothing here, and `check_normalisation()` proves
+it rather than asserting it: `onshell` and `none` share a total cross section to
+`5e-4` (MadSpin writes `sigma_production * BR` in either mode), so the ratio of
+the unit-area shapes *is* the absolute ratio to that accuracy.
+
+`check_normalisation()` re-derives all three of the traps in the section above
+from `histograms.npz` alone, and `main()` refuses to draw if any of them fails:
+
+* `sigma = sum(sumw)/N` reproduces every decayed `<init>` XSECUP to `1.1e-4`;
+* the banner `# Integrated weight (pb)` comment is the *production* cross
+  section on all four LO samples — using it would be wrong by a factor ~70;
+* `sumw2` errors are **1.81x** the naive `sqrt(N)` ones on the 22.9 %-negative
+  NLO sample, and 1.00x on the LO ones. A `sqrt(N)` error bar on the NLO curve
+  would be about half its true size.
+
+### The size of the spin-correlation effect
+
+On the plotted binning, `onshell/none`:
+
+| sample | first bin | last bin |
+|---|---|---|
+| EFT `O_tG` interference | **+31.2 % ± 1.0** | **−29.8 % ± 0.4** |
+| SM LO | +18.2 % ± 0.9 | −15.2 % ± 0.4 |
+| SM NLO | +14.4 % ± 2.2 | −15.0 % ± 1.2 |
+
+The paper's "an impact of up to 25 %" is **too small**: the interference term
+moves by about 30 % at *both* ends, and the effect is monotonic in between, so
+the ratio spans a factor 1.31/0.70 = 1.87 across the range. "up to 30 %" is the
+correct statement. At finer binning the first bin drifts to +25 % (the ratio is
+flat to within its errors below `0.2 pi`), so 30 % is the value at the
+figure's own binning and should be quoted with it.
+
+## The paper text
+
+The caption and the paragraph below match what `plots/smeft_fig5_B.pdf` shows.
+Three things in the current text have to change: the Wilson coefficient sign,
+the 25 %, and the missing statement of the scale, which deviates from the Sec. 5
+default announced in `validation.tex`.
+
+```latex
+% --- applications.tex, replacing "setting all Wilson coefficients ... importance."
+setting all Wilson coefficients to zero except for the real part of the
+$\mathcal{O}_{tG}$ operator, which we set to \code{ctGRe=-1} with
+$\Lambda=1$~TeV.  The sign is not a free choice: at \code{ctGRe=+1} the
+interference term of Eq.~(\ref{eq:CMDM_interf}) is negative over essentially the
+whole sampled phase space, so that normalising the distribution to unit area
+would flip its sign, and \newms\ rejects production events with a non-positive
+$\mathrm{Tr}(\rho_{\rm prod})$; at \code{ctGRe=-1} every sign is reversed and the
+generation is ordinary.  The quantity shown is therefore
+$-2\operatorname{Re}(\mcal^*_{\rm SM}\mcal_{tG})$.  The samples are generated at
+$\sqrt{s}=13$~TeV with the NNPDF2.3LO set, no cuts, and a \emph{fixed}
+$\mu_R=\mu_F=173$~GeV rather than the CKKW scale used elsewhere in this
+paper\footnote{The observable is a ratio between two \emph{decays} of one
+production sample, and a dynamical scale recomputed on the generated final state
+is not the same object on an undecayed and on a decayed event file.}
+\OM{Deviation from the default announced in Sec.~\ref{sec:validation}: flag it
+there too, as for the $m_{t\bar t}$ figures.}  For comparison we also generate
+the SM contribution alone with the same settings.  The top decays are performed
+in the \code{onshell} mode for the setup with spin correlations and in the
+\code{none} mode for the setup without.  A comparison of the two simulations is
+presented in Fig.~\ref{fig:valid_interf}, which shows the $\Delta\phi$
+distribution between the two electrons from the $t\bar{t}$ decay, an observable
+which is sensitive to spin-correlation effects (see
+Sec.~\ref{subsec:validation-polarised} for more details).  For the interference
+term the inclusion of spin correlations changes the shape of the distribution by
+$+31\%$ at $\Delta\phi\to0$ and by $-30\%$ at $\Delta\phi\to\pi$, roughly twice
+the corresponding effect in the SM ($+18\%$ and $-15\%$), and the correct
+simulation of spin correlations for such measurements is therefore of critical
+importance.
+```
+
+```latex
+% --- applications.tex, the figure caption
+\caption{$\Delta\phi(e^-e^+)$ of the electron and the positron from the
+$t\bar{t}$ decay in the $pp\to t\bar{t}$ process, with spin correlations
+(\code{spinmode=onshell}, solid) and without (\code{spinmode=none}, dashed), for
+the amplitude-level interference of Eq.~(\ref{eq:CMDM_interf}) (blue) and for the
+SM at LO (black).  Every curve is normalised to unit area, the normalisation of
+the interference term being arbitrary; the lower panel gives, for each sample
+separately, the ratio of its own \code{onshell} to its own \code{none}
+prediction, i.e.\ the size of the spin-correlation effect.  The interference is
+generated at \code{ctGRe=-1} ($\Lambda=1$~TeV), so the quantity plotted is
+$-2\operatorname{Re}(\mcal^*_{\rm SM}\mcal_{tG})$.  Note that the two
+\code{none} curves coincide to within $2\%$: without spin correlations this
+observable retains almost no memory of the operator, so the entire separation
+between the two solid curves is a spin-correlation effect.  Samples: $10^6$
+events each, $\sqrt{s}=13$~TeV, NNPDF2.3LO, fixed $\mu_R=\mu_F=173$~GeV, no
+cuts, $t\to W^+b\,(W^+\to e^+\nu_e)$ and $\bar t\to W^-\bar b\,(W^-\to
+e^-\bar\nu_e)$.}
+```
+
+```latex
+% --- validation.tex, after "...the default in \mgamc."
+\OM{Two $t\bar t$ studies (Fig.~\ref{fig:valid_interf} and the $m_{t\bar t}$
+panels) use a fixed $\mu_R=\mu_F=173$~GeV instead; this is stated where they
+are described.}
+```
