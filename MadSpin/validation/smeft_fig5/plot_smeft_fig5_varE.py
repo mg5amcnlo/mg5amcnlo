@@ -130,13 +130,28 @@ _USER_RC = {k: mpl.rcParamsDefault[k] for k in _MG7_RC}
 
 TAG = 'E'
 
-# The three curves of the upper pane: variation A's set, relabelled.  Colour
-# names the sample and the dash names the spinmode, as in A--D.
-CURVES = [('eft_int', 'onshell'), ('eft_int', 'none'), ('sm_lo', 'onshell')]
+# The upper pane.  Colour names the sample and the dash names the spinmode, as
+# in A--D.  Three `onshell' curves and exactly one `none'; the solid ones are
+# listed first so the legend groups them.
+CURVES = [('eft_int', 'onshell'), ('sm_lo', 'onshell'), ('sm_nlo', 'onshell'),
+          ('eft_int', 'none')]
 
-# The one no-spin-correlation curve that is drawn, and the one it stands for.
+# The one no-spin-correlation curve that is drawn, and the samples it covers.
+#
+# It covers the two LO samples ONLY.  Their `none' shapes agree to 2.1 %
+# (chi2/ndf 1.9), so one curve honestly stands for both.  The SM NLO `none'
+# shape does NOT join them: it differs from the SMEFT one by 8.0 %
+# (chi2/ndf 10.5) and from the SM LO one by 8.7 % (chi2/ndf 13.8), measured on
+# these histograms and confirming T110's 8 %.  That difference is a
+# radiation effect -- the extra emission changes the t t~ boost -- and has
+# nothing to do with spin, so folding NLO into the drawn curve would be simply
+# false.  The legend entry therefore NAMES the two samples the curve covers and
+# says nothing at all about NLO; SM NLO appears on the pane with its `onshell'
+# curve only, exactly as SM LO did in variation A.
 NONE_KEPT = 'eft_int'
-NONE_STANDS_FOR = 'sm_lo'
+NONE_COVERS = ('eft_int', 'sm_lo')
+NONE_EXCLUDES = 'sm_nlo'
+NONE_STANDS_FOR = 'sm_lo'          # the partner of NONE_KEPT, for the numbers
 
 # Ratio panes.  ``(numerator, denominator)`` in pane 1; ``(sm, interference)``
 # in pane 2.  Everything ``onshell``.
@@ -245,10 +260,16 @@ class VarE(object):
         f = w / (1.0 + w)
         return 1.0 + f * (rho - 1.0), f * rho_e
 
-    def none_agreement(self):
-        """``(max |ratio-1|, chi2/ndf, median per-bin relative error)``."""
+    def none_agreement(self, other=None):
+        """``(max |ratio-1|, chi2/ndf, median per-bin relative error)``.
+
+        ``NONE_KEPT``'s ``none`` shape against ``other``'s (default the sample
+        the drawn curve also covers).  Pass ``NONE_EXCLUDES`` to measure the
+        NLO sample, which is exactly the comparison that decides the drawn
+        curve may not claim to cover it.
+        """
         a, ae = self.d.shape(NONE_KEPT, 'none')
-        b, be = self.d.shape(NONE_STANDS_FOR, 'none')
+        b, be = self.d.shape(other or NONE_STANDS_FOR, 'none')
         r = a / b
         e = np.abs(r) * np.sqrt((ae / a) ** 2 + (be / b) ** 2)
         chi2 = float(np.sum(((r - 1) / e) ** 2)) / self.d.nbins
@@ -260,6 +281,23 @@ class VarE(object):
 
 
 # --------------------------------------------------------------------------
+def _label_E(sample, mode, plain=False):
+    """The upper pane's legend entry: identifying, never explaining.
+
+    The one ``none`` curve names the two samples it covers and stops there.  It
+    does not name SM NLO, whose ``none`` shape is 8 % away and is not on the
+    pane; nothing in the legend invites the reader to assume otherwise.
+    """
+    tex = not plain and P.USETEX
+    name = P.SAMPLE_TEX if tex else P.SAMPLE_PLAIN
+    mtag = P.MODE_TEX if tex else P.MODE_PLAIN
+    if mode == 'none':
+        covers = ' \\& ' if tex else ' & '
+        return (covers.join(name[c] for c in NONE_COVERS)
+                + ', %s' % mtag[mode])
+    return '%s, %s' % (name[sample], mtag[mode])
+
+
 def _step(ax, d, y, **kw):
     ax.step(d.edges, np.concatenate([y[:1], y]), where='pre', **kw)
 
@@ -289,24 +327,15 @@ def make_figure_mg7(d, out):
     r2 = fig.add_subplot(gs[2], sharex=ax)
     lo, hi = 0.0, float(np.pi)
 
-    maxdev, chi2, rel = v.none_agreement()
-
     # --- upper pane ------------------------------------------------------
+    # No free-floating text anywhere on this figure: axis labels and legends
+    # only.  The parameter point (ctGRe = -1, Lambda = 1 TeV), the size of the
+    # two LO `none' curves' agreement and the SM NLO health warning all live in
+    # README.md and numbers_E.txt instead.
     for sample, mode in CURVES:
         y, ye = d.shape(sample, mode)
-        if mode == 'none':
-            # The single no-spin-correlation curve.  The label says what it
-            # stands for: the other sample's `none' shape lies on top of it.
-            label = tx(r'\texttt{none} (both): %s' % P.SAMPLE_TEX[sample]
-                       + '\n' + r'\quad and %s, agreeing to %.0f\%%'
-                       % (P.SAMPLE_TEX[NONE_STANDS_FOR], 100 * maxdev),
-                       'none (both): %s and %s, to %.0f%%'
-                       % (P.SAMPLE_PLAIN[sample],
-                          P.SAMPLE_PLAIN[NONE_STANDS_FOR], 100 * maxdev))
-        else:
-            label = P._label(sample, mode)
         _step(ax, d, y, color=P.COLOR[sample], ls=P.LS[mode], lw=P.LW,
-              label=label, zorder=4)
+              label=_label_E(sample, mode), zorder=4)
         ax.errorbar(d.centres, y, yerr=ye, fmt='none',
                     ecolor=P.COLOR[sample], elinewidth=0.9, capsize=0,
                     zorder=4)
@@ -321,46 +350,9 @@ def make_figure_mg7(d, out):
     ax.yaxis.set_minor_locator(AutoMinorLocator())
     ax.tick_params(labelbottom=False)
     ymin, ymax = ax.get_ylim()
-    ax.set_ylim(min(ymin, 0.15), ymax + 0.62 * (ymax - ymin))
-
-    ax.text(0.028, 0.974,
-            tx(r'$pp \to t\bar t$ at $\sqrt{s} = 13$~TeV, '
-               r'$\mu_R = \mu_F = 173$~GeV, no cuts',
-               r'$pp \to t\bar t$ at $\sqrt{s}=13$ TeV, '
-               r'$\mu_R=\mu_F=173$ GeV, no cuts'),
-            transform=ax.transAxes, ha='left', va='top', fontsize=10.5)
-    ax.text(0.028, 0.926,
-            tx(r'$t \to W^+b\,(W^+\!\to e^+\nu_e)$, '
-               r'$\bar t \to W^-\bar b\,(W^-\!\to e^-\bar\nu_e)$; '
-               r'every curve normalised to unit area',
-               r'$t\to W^+b(\to e^+\nu)$, $\bar t\to W^-\bar b(\to e^-\bar'
-               r'\nu)$; every curve normalised to unit area'),
-            transform=ax.transAxes, ha='left', va='top', fontsize=10.5)
-    ax.text(0.028, 0.878,
-            tx(r'interference at $c_{tG} = -1$, $\Lambda = 1$~TeV, i.e.\ '
-               r'$-2\,\mathrm{Re}(\mathcal{M}^{*}_{\mathrm{SM}}'
-               r'\mathcal{M}_{tG})$',
-               r'interference at $c_{tG}=-1$, $\Lambda=1$ TeV, i.e. '
-               r'$-2Re(M^*_{SM}M_{tG})$'),
-            transform=ax.transAxes, ha='left', va='top', fontsize=10.5,
-            color='blue')
-    ax.text(0.028, 0.830,
-            tx(r'one \texttt{none} curve is drawn for both samples: without '
-               r'spin correlations they agree to'
-               '\n'
-               r'%.1f\%% ($\chi^2/\mathrm{ndf} = %.1f$ against a %.1f\%% '
-               r'per-bin error) -- \emph{that} is the result'
-               % (100 * maxdev, chi2, 100 * rel),
-               'one none curve is drawn for both samples: without spin '
-               'correlations they\nagree to %.1f%% (chi2/ndf = %.1f against '
-               'a %.1f%% per-bin error) -- that is the result'
-               % (100 * maxdev, chi2, 100 * rel)),
-            transform=ax.transAxes, ha='left', va='top', fontsize=9.5,
-            color='0.25')
-
+    ax.set_ylim(min(ymin, 0.15), ymax + 0.34 * (ymax - ymin))
     ax.legend(frameon=False, loc='upper left', fontsize=10.0,
-              handlelength=2.8, borderaxespad=0.9, labelspacing=0.65,
-              bbox_to_anchor=(0.015, 0.755))
+              handlelength=2.8, borderaxespad=1.0, labelspacing=0.5)
 
     # --- pane 1: shape ratios, NOT a K-factor ----------------------------
     r1.axhline(1.0, color='black', lw=0.9, zorder=2)
@@ -378,20 +370,6 @@ def make_figure_mg7(d, out):
     r1.set_ylabel(tx(r'shape ratio', 'shape ratio'), fontsize=11.5)
     r1.legend(frameon=False, loc='lower left', fontsize=8.5,
               handlelength=2.4, borderaxespad=0.5, ncol=2)
-    r1.text(0.982, 0.965,
-            tx(r'\textbf{not a $K$-factor}: both curves are unit-area shapes, '
-               r'so the rates are already divided out'
-               '\n'
-               r'(the LO$\,\to\,$NLO $K$-factor of these samples is '
-               r'$%.2f$ and appears nowhere on this figure)'
-               % (v.sigma('sm_nlo') / v.sigma('sm_lo')),
-               'NOT a K-factor: both curves are unit-area shapes, so the '
-               'rates are already divided out\n(the LO->NLO K-factor of '
-               'these samples is %.2f and appears nowhere on this figure)'
-               % (v.sigma('sm_nlo') / v.sigma('sm_lo'))),
-            transform=r1.transAxes, ha='right', va='top', fontsize=8.0,
-            color='0.3')
-
     # --- pane 2: the operator's effect on the SM prediction --------------
     r2.axhline(1.0, color='black', lw=0.9, zorder=2)
     series = []
@@ -404,31 +382,15 @@ def make_figure_mg7(d, out):
                     elinewidth=0.9, capsize=0, zorder=4)
         handles.append(Line2D(
             [], [], color=P.COLOR[sm], lw=P.LW,
-            label=tx(r'$(\,$%s$\,+\,$int.$\,)\,/\,$%s, $w = %.3f$'
-                     % (P.SAMPLE_TEX[sm], P.SAMPLE_TEX[sm], v.weight(sm)),
-                     '(%s + int.) / %s, w = %.3f'
-                     % (P.SAMPLE_PLAIN[sm], P.SAMPLE_PLAIN[sm],
-                        v.weight(sm)))))
+            label=tx(r'$(\,$%s$\,+\,$int.$\,)\,/\,$%s'
+                     % (P.SAMPLE_TEX[sm], P.SAMPLE_TEX[sm]),
+                     '(%s + int.) / %s'
+                     % (P.SAMPLE_PLAIN[sm], P.SAMPLE_PLAIN[sm]))))
     _autoscale(r2, series, pad_frac=0.20, top_extra=0.70)
     r2.set_ylabel(tx(r'$(\mathrm{SM}+\mathcal{O}_{tG})/\mathrm{SM}$',
                      '(SM + O_tG) / SM'), fontsize=11.5)
     r2.legend(handles=handles, frameon=False, loc='lower left', fontsize=8.5,
               handlelength=2.4, borderaxespad=0.5, ncol=2)
-    r2.text(0.982, 0.965,
-            tx(r'cross-section weighted: '
-               r'$(\sigma_{\rm SM}n_{\rm SM}+\sigma_{\rm int}n_{\rm int})'
-               r'/(\sigma_{\rm SM}+\sigma_{\rm int})$, '
-               r'$w=\sigma_{\rm int}/\sigma_{\rm SM}$;'
-               '\n'
-               r'this pane scales with $c_{tG}/\Lambda^2$ and mirrors about 1 '
-               r'for $c_{tG}>0$. Interference is LO in both curves.',
-               'cross-section weighted: (s_SM n_SM + s_int n_int)/'
-               '(s_SM + s_int), w = s_int/s_SM;\nthis pane scales with '
-               'c_tG/Lambda^2 and mirrors about 1 for c_tG > 0. '
-               'Interference is LO in both curves.'),
-            transform=r2.transAxes, ha='right', va='top', fontsize=8.0,
-            color='0.3')
-
     r2.set_xlabel(tx(r'$\Delta\phi(e^-e^+)$ [rad]',
                      r'$\Delta\phi(e^-e^+)$ [rad]'))
     for rx in (r1, r2):
@@ -439,13 +401,7 @@ def make_figure_mg7(d, out):
     r1.tick_params(labelbottom=False)
     r2.xaxis.set_major_formatter(P._pi_formatter())
 
-    # The NLO caveat, on the face of the figure.
-    fig.text(0.5, 0.006,
-             tx(r'\textbf{Caveat:} %s' % NLO_WARNING_SHORT.replace('%', r'\%'),
-                'Caveat: ' + NLO_WARNING_SHORT),
-             ha='center', va='bottom', fontsize=8.0, color='red')
-
-    fig.subplots_adjust(left=0.145, right=0.975, top=0.988, bottom=0.093)
+    fig.subplots_adjust(left=0.145, right=0.975, top=0.988, bottom=0.078)
     base = os.path.join(out, 'smeft_fig5_%s' % TAG)
     fig.savefig(base + '.pdf')
     fig.savefig(base + '.png', dpi=300)
@@ -458,7 +414,6 @@ def make_figure_user(d, out):
     """The user's own style, three panes."""
     mpl.rcParams.update(_USER_RC)
     v = VarE(d)
-    maxdev, chi2, rel = v.none_agreement()
 
     fig = plt.figure(figsize=(6, 8))
     gs = fig.add_gridspec(3, 1, height_ratios=[3, 1.15, 1.15],
@@ -467,40 +422,22 @@ def make_figure_user(d, out):
     r1 = fig.add_subplot(gs[1], sharex=ax)
     r2 = fig.add_subplot(gs[2], sharex=ax)
 
+    # As in the MG7 rendering: axis labels and legends, and nothing else.
     for sample, mode in CURVES:
         y, ye = d.shape(sample, mode)
         c = U.COLOR[sample]
-        if mode == 'none':
-            label = ('none (both): %s\nand %s, agreeing to %.0f%%'
-                     % (P.SAMPLE_PLAIN[sample],
-                        P.SAMPLE_PLAIN[NONE_STANDS_FOR], 100 * maxdev))
-        else:
-            label = '%s, %s' % (P.SAMPLE_PLAIN[sample], P.MODE_PLAIN[mode])
         ax.step(d.edges, np.concatenate([y[:1], y]), where='pre', color=c,
                 lw=1.0, alpha=U.STEP_ALPHA, zorder=3)
         ax.errorbar(d.centres, y, yerr=ye, fmt='o', ms=U.MS, color=c,
                     mfc=(c if U.FILLED[mode] else 'white'), mew=1.1,
-                    label=label, zorder=4)
+                    label=_label_E(sample, mode, plain=True), zorder=4)
 
     ax.set_ylabel(r'$(1/\sigma)\,d\sigma/d\Delta\phi(e^-e^+)$  [1/rad]')
     ax.set_xlim(0.0, np.pi)
     ax.tick_params(labelbottom=False)
     ymin, ymax = ax.get_ylim()
-    ax.set_ylim(ymin, ymax + 0.75 * (ymax - ymin))
-    ax.legend(loc='upper left', fontsize=8.0, ncol=1)
-    ax.set_title(r'$pp\to t\bar{t}$, 13 TeV, $\mu_R=\mu_F=173$ GeV, no cuts; '
-                 'all curves normalised to unit area', fontsize=9)
-    ax.text(0.985, 0.965,
-            'interference at $c_{tG}=-1$, $\\Lambda=1$ TeV,\n'
-            'i.e. $-2\\,\\mathrm{Re}(\\mathcal{M}^*_{SM}\\mathcal{M}_{tG})$',
-            transform=ax.transAxes, ha='right', va='top', fontsize=8,
-            color=U.COLOR['eft_int'])
-    ax.text(0.985, 0.855,
-            'one "none" curve for both samples:\n'
-            'they agree to %.1f%% ($\\chi^2$/ndf = %.1f,\n'
-            'per-bin error %.1f%%)' % (100 * maxdev, chi2, 100 * rel),
-            transform=ax.transAxes, ha='right', va='top', fontsize=8,
-            color='0.25')
+    ax.set_ylim(ymin, ymax + 0.34 * (ymax - ymin))
+    ax.legend(loc='upper left', fontsize=8.5, ncol=1)
 
     r1.axhline(1.0, color='black', ls='--', lw=0.9, zorder=2)
     series = []
@@ -516,12 +453,6 @@ def make_figure_user(d, out):
     r1.set_ylim(*choose_ylim_E(series))
     r1.set_ylabel('Shape ratio')
     r1.legend(loc='lower left', fontsize=7, ncol=2)
-    r1.text(0.985, 0.94,
-            'shapes only (unit area) -- not a K-factor; the LO$\\to$NLO\n'
-            'K-factor is %.2f and is not shown'
-            % (v.sigma('sm_nlo') / v.sigma('sm_lo')),
-            transform=r1.transAxes, ha='right', va='top', fontsize=7,
-            color='0.3')
     r1.tick_params(labelbottom=False)
 
     r2.axhline(1.0, color='black', ls='--', lw=0.9, zorder=2)
@@ -533,25 +464,17 @@ def make_figure_user(d, out):
         r2.step(d.edges, np.concatenate([r[:1], r]), where='pre', color=c,
                 lw=1.0, alpha=U.STEP_ALPHA, zorder=3)
         r2.errorbar(d.centres, r, yerr=e, fmt='o', ms=U.MS, color=c, zorder=4,
-                    label='(%s + int.) / %s, w = %.3f'
-                          % (P.SAMPLE_PLAIN[sm], P.SAMPLE_PLAIN[sm],
-                             v.weight(sm)))
+                    label='(%s + int.) / %s'
+                          % (P.SAMPLE_PLAIN[sm], P.SAMPLE_PLAIN[sm]))
     r2.set_ylim(*choose_ylim_E(series))
     r2.set_ylabel('(SM + $\\mathcal{O}_{tG}$) / SM')
     r2.legend(loc='lower left', fontsize=7, ncol=2)
-    r2.text(0.985, 0.94,
-            'cross-section weighted, $w=\\sigma_{int}/\\sigma_{SM}$;\n'
-            'scales with $c_{tG}/\\Lambda^2$, mirrors about 1 for $c_{tG}>0$',
-            transform=r2.transAxes, ha='right', va='top', fontsize=7,
-            color='0.3')
     r2.set_xlabel(r'$\Delta\phi(e^-e^+)$ [rad]')
     r2.set_xlim(0.0, np.pi)
     U._pi_ticks(r2)
 
-    fig.text(0.5, 0.004, 'Caveat: ' + NLO_WARNING_SHORT, ha='center',
-             va='bottom', fontsize=7, color='red')
     fig.subplots_adjust(hspace=0.1, left=0.145, right=0.97,
-                        bottom=0.085, top=0.945)
+                        bottom=0.075, top=0.985)
     base = os.path.join(out, 'smeft_fig5_%s' % TAG)
     fig.savefig(base + '.pdf')
     fig.savefig(base + '.png', dpi=U.DPI)
