@@ -1,0 +1,26 @@
+Per-event spread and what it costs
+==========================================================================
+C_kk = 83.154 * <cos th1 cos th2>   (eta_l = 0.21933, on shell)
+
+sample         N     N_eff    sd(c1c2)  k = cal*sd       C_kk
+qq        200000    145175      0.3637       30.24 -0.645 +- 0.080
+
+sigma(C_kk) = k / sqrt(N_eff).  Events needed PER BIN:
+target           gg        qq
++-0.30        10164
++-0.20        22869
++-0.15        40656
++-0.10        91476
+
+qq     at 4 bins: N_eff/bin = 36294 -> sigma(C_kk) = 0.159
+
+Bin edges: quantiles of the qq sample (equal statistical power)
+  135.4  212.2  249.0  322.9  4382.1
+
+qq  --  pp -> e+ e- mu+ mu- (continuum, NLO QCD)
+m_4l bin [GeV]             N     N_eff                 C_kk      f_0 (mean of 2)
+  135.4 -   212.2     49257     36840     -0.145 +- 0.149     +0.2950 +- 0.0055 
+  212.2 -   249.0     49084     36972     -0.929 +- 0.155     +0.2238 +- 0.0056 
+  249.0 -   322.9     49729     36490     -0.731 +- 0.163     +0.1456 +- 0.0057 
+  322.9 -  4382.1     51930     34946     -0.777 +- 0.171     +0.0895 +- 0.0059 
+inclusive             200000    145175     -0.645 +- 0.080  
