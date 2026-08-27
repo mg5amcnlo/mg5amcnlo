@@ -9412,6 +9412,194 @@ class TestFixedOrderReshufflingSpinmodesRefused(unittest.TestCase):
             self.assertEqual(refused, reshuffles, spinmode)
 
 
+class TestAnEmptyProductionReadIsRefused(unittest.TestCase):
+    """A production file that hands over no event must stop the run, not
+    produce an empty 'decayed' file.
+
+    ``fixed_order`` reads the production as ``<eventgroup>`` blocks -- a born
+    event and its counter-events, as a fixed-order run writes them -- and
+    ``EventFile.next_eventgroup`` on a file *without* those wrappers reads to
+    EOF looking for a closing tag it never finds and yields nothing at all. An
+    ordinary LO or (MC@)NLO event file is exactly such a file.
+
+    Nothing downstream noticed, because every stage was consistent with the
+    empty read: no particle counted as decaying, so no decay pool generated,
+    so no trial made and no event written, so a banner and a closing tag
+    written out and the run ended 0. `spinmode = onshell` with
+    ``fixed_order = True`` on a plain `p p > t t~ [QCD]` file therefore handed
+    the user a success and an empty file, where ``PA`` and ``madspin`` say no
+    -- not because they check the file, but because they are refused for an
+    unrelated reason (they reshuffle) before it is ever opened.
+    """
+
+    HEADER = """<LesHouchesEvents version="1.0">
+<init>
+2212 2212 0.65e+04 0.65e+04 -1 -1 244600 244600 -4 1
++1.0e+00 +1.0e-02 +1.0e+00 0
+</init>
+"""
+
+    EVENT = """<event>
+ 4 1 +1.0e+00 1.0e+02 7.5e-03 1.0e-01
+ 21 -1 0 0 501 502 +0.0e+00 +0.0e+00 +2.0e+02 2.0e+02 0.0e+00 0. 9.
+ 21 -1 0 0 503 501 +0.0e+00 +0.0e+00 -2.0e+02 2.0e+02 0.0e+00 0. 9.
+  6  1 1 2 503   0 +1.0e+02 +0.0e+00 +0.0e+00 2.0e+02 1.73e+02 0. 9.
+ -6  1 1 2   0 502 -1.0e+02 +0.0e+00 +0.0e+00 2.0e+02 1.73e+02 0. 9.
+</event>
+"""
+
+    def setUp(self):
+        import tempfile
+        self.tmpdir = tempfile.mkdtemp()
+
+    def tearDown(self):
+        shutil.rmtree(self.tmpdir, ignore_errors=True)
+
+    def _write(self, name, body):
+        path = os.path.join(self.tmpdir, name)
+        with open(path, 'w') as fsock:
+            fsock.write(self.HEADER + body + '</LesHouchesEvents>\n')
+        return path
+
+    def _plain_file(self, nb=3):
+        return self._write('plain.lhe', self.EVENT * nb)
+
+    def _grouped_file(self, nb=3):
+        body = ''.join('<eventgroup>\n%s</eventgroup>\n' % (self.EVENT * 2)
+                       for _ in range(nb))
+        return self._write('grouped.lhe', body)
+
+    def _stub(self, fixed_order):
+        stub = interface_madspin.MadSpinInterface.__new__(
+            interface_madspin.MadSpinInterface)
+        stub.options = {'fixed_order': fixed_order}
+        return stub
+
+    def _open(self, path, fixed_order):
+        lhe = lhe_parser.EventFile(path)
+        lhe.eventgroup = bool(fixed_order)
+        return lhe
+
+    def _nb_read(self, path, fixed_order):
+        """What the counting loop of ``run_onshell`` would see."""
+        lhe = self._open(path, fixed_order)
+        try:
+            return sum(1 for _ in lhe)
+        finally:
+            lhe.close()
+
+    # -- the read itself, which is where the events go missing --------------
+
+    def test_a_plain_file_read_as_event_groups_yields_nothing(self):
+        """The mechanism, before any of MadSpin: this is what made the rest of
+        the run consistently decide there was nothing to decay."""
+        path = self._plain_file(nb=3)
+        self.assertEqual(self._nb_read(path, fixed_order=False), 3)
+        self.assertEqual(self._nb_read(path, fixed_order=True), 0)
+
+    # -- the refusal --------------------------------------------------------
+
+    def test_fixed_order_on_a_plain_file_is_refused(self):
+        path = self._plain_file()
+        stub = self._stub(fixed_order=True)
+        lhe = self._open(path, fixed_order=True)
+        self.assertRaises(
+            interface_madspin.MadSpinInterface.InvalidCmd,
+            stub._check_production_events, lhe, self._nb_read(path, True))
+        lhe.close()
+
+    def test_the_refusal_names_the_missing_event_groups(self):
+        """The user's way out is 'turn fixed_order off', and only a message
+        that says the file has events but no groups leads there."""
+        path = self._plain_file()
+        lhe = self._open(path, fixed_order=True)
+        try:
+            self._stub(True)._check_production_events(lhe, 0)
+        except interface_madspin.MadSpinInterface.InvalidCmd as error:
+            message = str(error)
+        else:
+            self.fail('an empty fixed_order read was accepted')
+        lhe.close()
+        self.assertIn('eventgroup', message)
+        self.assertIn('fixed_order', message)
+        self.assertIn(os.path.basename(path), message)
+
+    def test_a_genuinely_empty_file_is_refused_too(self):
+        path = self._write('empty.lhe', '')
+        for fixed_order in (False, True):
+            stub = self._stub(fixed_order)
+            lhe = self._open(path, fixed_order)
+            self.assertRaises(
+                interface_madspin.MadSpinInterface.InvalidCmd,
+                stub._check_production_events, lhe, 0)
+            lhe.close()
+
+    # -- and what must keep working ----------------------------------------
+
+    def test_a_real_event_group_file_is_accepted(self):
+        """``fixed_order`` + ``onshell`` is a supported combination: the guard
+        must refuse the file, never the mode."""
+        path = self._grouped_file(nb=3)
+        nb_event = self._nb_read(path, fixed_order=True)
+        self.assertEqual(nb_event, 3)          # three groups, six events
+        lhe = self._open(path, fixed_order=True)
+        self._stub(fixed_order=True)._check_production_events(lhe, nb_event)
+        lhe.close()
+
+    def test_an_ordinary_run_is_untouched(self):
+        path = self._plain_file(nb=3)
+        nb_event = self._nb_read(path, fixed_order=False)
+        lhe = self._open(path, fixed_order=False)
+        self._stub(fixed_order=False)._check_production_events(lhe, nb_event)
+        lhe.close()
+
+
+class TestAnEmptyDecayedFileIsNeverWritten(unittest.TestCase):
+    """Writing zero events is a failure in every mode, and must be reported as
+    one.
+
+    The empty file is the reason the ``fixed_order`` read above went unnoticed
+    all the way to the end, and the accounting is the one place both the serial
+    and the parallel path pass through with the final counts in hand. No mode
+    writes zero by design: the accept/reject redraws until it accepts, and the
+    two paths that do drop events -- the pure-interference single draw and the
+    BR equalization -- drop them one at a time and never take a whole file.
+    """
+
+    @staticmethod
+    def _check(*args):
+        return interface_madspin.MadSpinInterface \
+            ._check_something_was_written(*args)
+
+    def _refuses(self, n_processed, n_written, nb_try):
+        try:
+            self._check('/tmp/events_decayed.lhe', n_processed, n_written,
+                        nb_try)
+        except Exception as error:
+            return str(error)
+        self.fail('a decayed file holding %d event(s) was accepted'
+                  % n_written)
+
+    def test_zero_written_out_of_zero_processed_is_refused(self):
+        """The shape the fixed_order read produced: nothing in, nothing out."""
+        message = self._refuses(0, 0, 0)
+        self.assertIn('events_decayed.lhe', message)
+        self.assertIn('no decayed event', message)
+
+    def test_zero_written_out_of_a_full_file_is_refused(self):
+        """And the shape a broken accept/reject would produce. The counts are
+        in the message because they are what separates the two."""
+        message = self._refuses(2000, 0, 5000)
+        self.assertIn('2000', message)
+        self.assertIn('5000', message)
+
+    def test_a_single_written_event_is_enough(self):
+        """The guard is 'nothing at all', not 'fewer than expected': a run may
+        legitimately keep only a small fraction (BR equalization drops, the
+        pure-interference single draw) and must not be stopped for it."""
+        self._check('/tmp/events_decayed.lhe', 2000, 1, 5000)  # must not raise
+
+
 class _CaptureCritical(object):
     """Collect the CRITICAL records ``ms_density_real`` emits, and reset its
     once-per-site memory so the tests do not shadow one another."""

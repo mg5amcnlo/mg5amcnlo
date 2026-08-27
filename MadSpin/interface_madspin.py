@@ -2955,7 +2955,10 @@ class MadSpinInterface(extended_cmd.Cmd):
         # covers (see _unweighting_mode): the acceptance test measured 1.8e4
         # for the mass bound and 18e6 mass sets for 1000 events.
         self._nb_decaying = nb_decaying
-                	
+        # ... and if that loop saw nothing, stop here: everything below follows
+        # an empty read without ever noticing it was empty.
+        self._check_production_events(orig_lhe, nb_event)
+
         with misc.MuteLogger(["madgraph", "madevent", "ALOHA", "cmdprint"], [50,50,50,50]):
             mg5 = self.mg5cmd
             if not self.model:
@@ -3287,8 +3290,11 @@ class MadSpinInterface(extended_cmd.Cmd):
                 pass
             self._apply_accounting(base_out, [stats])
         else:
-            logger.info("MadSpin: unweighting %s events on %s cores", nb_event, nb_core)
-            self._run_onshell_parallel(orig_lhe, nb_event, nb_core,
+            # the event count is announced by _run_onshell_parallel, once the
+            # split has counted the events actually on disk: ``nb_event`` here
+            # is the banner-declared one, which is only the same number when
+            # the file holds everything the production run was asked for.
+            self._run_onshell_parallel(orig_lhe, nb_core,
                                        evt_decayfile, base_out, ctx)
         logger.info(f"Time for decay = {time.time()-start:.2f} sec")
 
@@ -3482,6 +3488,69 @@ class MadSpinInterface(extended_cmd.Cmd):
             "reshuffling is not defined -- only the born event would be "
             "reshuffled. Use spinmode=onshell (or onshell_v1), which keeps the "
             "production kinematics, or turn fixed_order off." % spinmode)
+
+    def _check_production_events(self, orig_lhe, nb_event):
+        """Refuse a run whose production file handed over no event at all.
+
+        Nothing downstream notices an empty read, because every stage is
+        consistent with it: no particle is counted as decaying (the log says
+        ``0 decaying particle(s)``), so no decay pool is generated for one, so
+        no trial is made and no event is written, so the writer emits a banner
+        and a closing tag and the run ends 0. That file is indistinguishable
+        from a decayed sample and is not one -- which is the worst way to fail,
+        so fail here instead, before the matrix-element generation that is the
+        expensive part of the run.
+
+        ``fixed_order`` is how this is normally reached, and it is not an empty
+        file. That option reads the production as ``<eventgroup>`` blocks (a
+        born event and its counter-events, as the fixed-order analysis writes
+        them), and ``EventFile.next_eventgroup`` on a file *without* those
+        wrappers simply reads to EOF looking for a closing tag it never finds:
+        an ordinary LO or (MC@)NLO event file read that way yields nothing at
+        all. Say which of the two it is rather than reporting a full file as
+        empty.
+
+        The spinmode refusal above cannot cover this -- it is a property of the
+        file, not of the mode -- which is why ``PA``/``madspin`` appear to be
+        protected here and ``onshell``/``onshell_v1``/``none`` are not: those
+        two are refused for an unrelated reason before the file is ever opened.
+        """
+        if nb_event:
+            return
+        if self.options['fixed_order'] and self._has_plain_events(orig_lhe):
+            raise self.InvalidCmd(
+                "fixed_order is on but %s holds no <eventgroup> block, only "
+                "plain events. fixed_order reads the production as groups of "
+                "a born event and its counter-events -- what a fixed-order "
+                "run writes -- and a file without those wrappers reads as "
+                "empty, which would leave nothing but a banner in the decayed "
+                "file. Turn fixed_order off to decay this file."
+                % orig_lhe.name)
+        raise self.InvalidCmd(
+            "no production event to decay in %s." % orig_lhe.name)
+
+    @staticmethod
+    def _has_plain_events(orig_lhe):
+        """Whether the file holds at least one event when read one by one,
+        i.e. without the ``<eventgroup>`` wrapper ``fixed_order`` reads it
+        with. Opened separately so the caller's own handle keeps its position.
+        """
+        try:
+            plain = lhe_parser.EventFile(orig_lhe.name)
+        except Exception:
+            return False
+        try:
+            next(plain)
+            return True
+        except StopIteration:
+            return False
+        except Exception:
+            return False
+        finally:
+            try:
+                plain.close()
+            except Exception:
+                pass
 
     def _spinmode_has_density(self):
         """Whether the spinmode carries the density-matrix machinery the staged
@@ -5796,6 +5865,31 @@ class MadSpinInterface(extended_cmd.Cmd):
                            path, exc)
         return total
 
+    @staticmethod
+    def _check_something_was_written(base_out, n_processed, n_written, nb_try):
+        """Refuse to hand back a decayed file with nothing in it.
+
+        At this point ``base_out`` is a banner and a closing tag, which is
+        exactly what a decayed sample of zero cross-section looks like -- so a
+        run that ends here quietly is the worst kind of failure, and the reason
+        an empty ``fixed_order`` read (see ``_check_production_events``) got all
+        the way to the end unremarked.
+
+        No mode writes zero by design. The accept/reject redraws until it
+        accepts, and the two paths that do drop events -- the pure-interference
+        single draw and the BR equalization -- drop them one at a time and
+        never take a whole file. So zero written is always a failure, whatever
+        produced it, and this is the one place both the serial and the parallel
+        path pass through with the final counts in hand.
+        """
+        if n_written:
+            return
+        raise Exception(
+            "MadSpin produced no decayed event (%d production event(s) "
+            "processed, %d trial(s)). %s holds a banner and nothing else; it "
+            "is not a decayed sample and must not be used as one."
+            % (n_processed, nb_try, base_out))
+
     def _apply_accounting(self, base_out, stats_list):
         """Post-loop accounting shared by the serial and parallel paths: the
         unweighting-efficiency log, the BR-equalization banner rewrite, and the
@@ -5813,6 +5907,8 @@ class MadSpinInterface(extended_cmd.Cmd):
             "MadSpin unweight efficiency: %.4f (%d written / %d trials, %.2f trials/event)",
             eff, n_written, nb_try, (1.0 / eff if eff else float("inf"))
         )
+        self._check_something_was_written(base_out, n_processed, n_written,
+                                          nb_try)
         self._report_sequential_stats(stats_list, n_written)
         self._report_overweight(stats_list, n_written)
         if self._pure_interference():
@@ -6021,7 +6117,7 @@ class MadSpinInterface(extended_cmd.Cmd):
             # it itself (deadlock fail-safe).
             self._set_status('D')
 
-    def _run_onshell_parallel(self, orig_lhe, nb_event, nb_core, evt_decayfile,
+    def _run_onshell_parallel(self, orig_lhe, nb_core, evt_decayfile,
                               base_out, ctx):
         """Parallel driver for the unweighting stage: split the production events
         into contiguous shards, fork one worker per shard, then merge the
@@ -6036,9 +6132,18 @@ class MadSpinInterface(extended_cmd.Cmd):
         import json
 
         shard_paths, shard_counts = self._split_production(orig_lhe, nb_core, base_out)
+        # the split is the first thing that counts the events actually on disk,
+        # so it is the first place that can announce how many there are: what
+        # the caller has is the banner's declared ``nevents``, which a sliced or
+        # short production file does not match.
+        logger.info("MadSpin: unweighting %s events on %s cores",
+                    sum(shard_counts), len(shard_paths))
         nb_core = len(shard_paths)
         if nb_core == 0:
-            # no events at all: emit a banner-only file
+            # No event at all. _check_production_events refuses this before the
+            # matrix elements are generated, so this is only a backstop; write
+            # the banner-only file the accounting names, and let its
+            # zero-written guard raise rather than returning 0 with it.
             output_lhe = lhe_parser.EventFile(base_out, 'w')
             self.banner.scale_init_cross(self.branching_ratio)
             self.banner.write(output_lhe, close_tag=False)
