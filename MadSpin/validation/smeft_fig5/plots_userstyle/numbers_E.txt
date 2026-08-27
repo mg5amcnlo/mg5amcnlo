@@ -79,7 +79,7 @@ upper pane: which spinmode = none curve is drawn
   drawn        : eft_int, spinmode = none
   stands for   : sm_lo, spinmode = none (not drawn)
   agreement    : max |ratio - 1| = 2.06 %, chi2/ndf = 1.93, against a
-                 median per-bin relative error of 0.48 %
+                 median per-bin relative error of 0.67 %
   n_events     : eft_int 1000000, sm_lo 1000000 -- same statistics, same 0.48 % error
 
      phi/pi      EFT none    SM LO none       ratio

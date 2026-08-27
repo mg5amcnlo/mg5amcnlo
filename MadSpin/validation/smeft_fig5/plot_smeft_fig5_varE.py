@@ -143,6 +143,28 @@ NONE_STANDS_FOR = 'sm_lo'
 PANE1 = [('sm_nlo', 'sm_lo'), ('eft_int', 'sm_lo')]
 PANE2 = ['sm_lo', 'sm_nlo']
 
+# The user style's ratio-limit ladder (imported ``U.RATIO_LADDER``) jumps
+# straight from +-1 % to +-15 %.  Variation B's onshell/none ratio spans +-30 %
+# so that gap never showed; pane 2 here spans +-2.5 %, and the +-15 % rung would
+# draw it as a flat line.  The ladder is therefore extended with intermediate
+# rungs *locally*, in this script only -- the user's own module is unchanged and
+# the rungs it does have are kept exactly where they are.
+LADDER_E = [(0.99, 1.01), (0.98, 1.02), (0.95, 1.05),
+            (0.92, 1.08), (0.85, 1.15), (0.8, 1.2)] + list(U.RATIO_LADDER[2:])
+
+
+def choose_ylim_E(series):
+    lo = hi = 1.0
+    for r, e in series:
+        lo = min(lo, float((r - e).min()))
+        hi = max(hi, float((r + e).max()))
+    for cand in LADDER_E:
+        if lo >= cand[0] and hi <= cand[1]:
+            return cand
+    half = max(1.0 - lo, hi - 1.0)
+    return (1.0 - 1.1 * half, 1.0 + 1.1 * half)
+
+
 NLO_WARNING_SHORT = ('SM NLO density matrices ran at model defaults '
                      '(MT 173, WT 1.4915) -- see README')
 NLO_WARNING_LONG = """\
@@ -230,7 +252,10 @@ class VarE(object):
         r = a / b
         e = np.abs(r) * np.sqrt((ae / a) ** 2 + (be / b) ** 2)
         chi2 = float(np.sum(((r - 1) / e) ** 2)) / self.d.nbins
-        rel = float(np.median(np.abs(ae / a)))
+        # the error quoted is the one the chi2 is measured against, i.e. the
+        # error on the RATIO (the two samples' 0.48 % errors in quadrature),
+        # not the error on either curve alone
+        rel = float(np.median(np.abs(e / r)))
         return float(np.max(np.abs(r - 1))), chi2, rel
 
 
@@ -239,16 +264,14 @@ def _step(ax, d, y, **kw):
     ax.step(d.edges, np.concatenate([y[:1], y]), where='pre', **kw)
 
 
-def _autoscale(ax, series, pad_frac=0.12, floor=None):
+def _autoscale(ax, series, pad_frac=0.12, top_extra=0.0):
+    """Fit every point plus its error, then leave room above for the note."""
     lo = hi = 1.0
     for r, e in series:
         lo = min(lo, float((r - e).min()))
         hi = max(hi, float((r + e).max()))
     pad = pad_frac * (hi - lo)
-    ax.set_ylim(lo - pad, hi + pad)
-    if floor is not None:
-        ax.set_ylim(min(ax.get_ylim()[0], floor[0]),
-                    max(ax.get_ylim()[1], floor[1]))
+    ax.set_ylim(lo - pad, hi + pad + top_extra * (hi - lo))
 
 
 # --------------------------------------------------------------------------
@@ -298,7 +321,7 @@ def make_figure_mg7(d, out):
     ax.yaxis.set_minor_locator(AutoMinorLocator())
     ax.tick_params(labelbottom=False)
     ymin, ymax = ax.get_ylim()
-    ax.set_ylim(min(ymin, 0.15), ymax + 0.72 * (ymax - ymin))
+    ax.set_ylim(min(ymin, 0.15), ymax + 0.62 * (ymax - ymin))
 
     ax.text(0.028, 0.974,
             tx(r'$pp \to t\bar t$ at $\sqrt{s} = 13$~TeV, '
@@ -337,7 +360,7 @@ def make_figure_mg7(d, out):
 
     ax.legend(frameon=False, loc='upper left', fontsize=10.0,
               handlelength=2.8, borderaxespad=0.9, labelspacing=0.65,
-              bbox_to_anchor=(0.015, 0.735))
+              bbox_to_anchor=(0.015, 0.755))
 
     # --- pane 1: shape ratios, NOT a K-factor ----------------------------
     r1.axhline(1.0, color='black', lw=0.9, zorder=2)
@@ -351,11 +374,11 @@ def make_figure_mg7(d, out):
                                     P.SAMPLE_PLAIN[den])))
         r1.errorbar(d.centres, r, yerr=e, fmt='none', ecolor=P.COLOR[num],
                     elinewidth=0.9, capsize=0, zorder=4)
-    _autoscale(r1, series)
+    _autoscale(r1, series, top_extra=0.55)
     r1.set_ylabel(tx(r'shape ratio', 'shape ratio'), fontsize=11.5)
     r1.legend(frameon=False, loc='lower left', fontsize=8.5,
               handlelength=2.4, borderaxespad=0.5, ncol=2)
-    r1.text(0.982, 0.93,
+    r1.text(0.982, 0.965,
             tx(r'\textbf{not a $K$-factor}: both curves are unit-area shapes, '
                r'so the rates are already divided out'
                '\n'
@@ -386,12 +409,12 @@ def make_figure_mg7(d, out):
                      '(%s + int.) / %s, w = %.3f'
                      % (P.SAMPLE_PLAIN[sm], P.SAMPLE_PLAIN[sm],
                         v.weight(sm)))))
-    _autoscale(r2, series, pad_frac=0.35)
+    _autoscale(r2, series, pad_frac=0.20, top_extra=0.70)
     r2.set_ylabel(tx(r'$(\mathrm{SM}+\mathcal{O}_{tG})/\mathrm{SM}$',
                      '(SM + O_tG) / SM'), fontsize=11.5)
     r2.legend(handles=handles, frameon=False, loc='lower left', fontsize=8.5,
               handlelength=2.4, borderaxespad=0.5, ncol=2)
-    r2.text(0.982, 0.93,
+    r2.text(0.982, 0.965,
             tx(r'cross-section weighted: '
                r'$(\sigma_{\rm SM}n_{\rm SM}+\sigma_{\rm int}n_{\rm int})'
                r'/(\sigma_{\rm SM}+\sigma_{\rm int})$, '
@@ -490,7 +513,7 @@ def make_figure_user(d, out):
         r1.errorbar(d.centres, r, yerr=e, fmt='o', ms=U.MS, color=c, zorder=4,
                     label='%s / %s' % (P.SAMPLE_PLAIN[num],
                                        P.SAMPLE_PLAIN[den]))
-    r1.set_ylim(*U.choose_ratio_ylim(series))
+    r1.set_ylim(*choose_ylim_E(series))
     r1.set_ylabel('Shape ratio')
     r1.legend(loc='lower left', fontsize=7, ncol=2)
     r1.text(0.985, 0.94,
@@ -513,7 +536,7 @@ def make_figure_user(d, out):
                     label='(%s + int.) / %s, w = %.3f'
                           % (P.SAMPLE_PLAIN[sm], P.SAMPLE_PLAIN[sm],
                              v.weight(sm)))
-    r2.set_ylim(*U.choose_ratio_ylim(series))
+    r2.set_ylim(*choose_ylim_E(series))
     r2.set_ylabel('(SM + $\\mathcal{O}_{tG}$) / SM')
     r2.legend(loc='lower left', fontsize=7, ncol=2)
     r2.text(0.985, 0.94,
