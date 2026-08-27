@@ -62,7 +62,7 @@ OBS = OZ.leptonic()
 MODES = ['madspin', 'PA', 'onshell', 'none', 'madspin_v1', 'onshell_v1']
 
 CURVES_TEX = {
-    'truth':      r'truth: $pp \to e^{+}e^{-}\mu^{+}\mu^{-}$ [QCD] (off shell)',
+    'truth':      r'$pp \to e^{+}e^{-}\mu^{+}\mu^{-}$ [QCD] (off shell)',
     'madspin':    r'MadSpin, \texttt{spinmode = madspin}',
     'PA':         r'MadSpin, \texttt{spinmode = PA}',
     'onshell':    r'MadSpin, \texttt{spinmode = onshell}',
@@ -73,7 +73,7 @@ CURVES_TEX = {
 CURVES_PLAIN = {k: (v.replace(r'\texttt{', '').replace('}', '')
                     .replace('\\_', '_'))
                 for k, v in CURVES_TEX.items()}
-CURVES_PLAIN['truth'] = 'truth: p p > e+ e- mu+ mu- [QCD] (off shell)'
+CURVES_PLAIN['truth'] = 'p p > e+ e- mu+ mu- [QCD] (off shell)'
 
 COLOR = {'truth': 'black', 'madspin': 'blue', 'PA': 'red',
          'onshell': allcolors[2], 'none': allcolors[4],
@@ -225,7 +225,7 @@ def draw(data, obs, outdir, modes=MODES):
     rx.set_ylim(*RATIO_CLIP)
     rx.set_xlim(edges[0], edges[-1])
     rx.set_xlabel(xlab)
-    rx.set_ylabel('mode / truth' if is_truth else 'mode / madspin', fontsize=11)
+    rx.set_ylabel('ratio' if is_truth else 'mode / madspin', fontsize=11)
     rx.xaxis.set_minor_locator(AutoMinorLocator())
     rx.yaxis.set_minor_locator(AutoMinorLocator())
 
