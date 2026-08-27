@@ -1,5 +1,5 @@
 Running MG5 in debug mode
-using input+file /private/tmp/smeft_fig5_work/MS_sm_nlo_onshell/madspin_card.dat
+using input+file /Users/omattelaer/Documents/madspin_validation_samples/t_fig5_sm_nlo_redo/MS_sm_nlo_onshell/madspin_card.dat
 ************************************************************
 *                                                          *
 *           W E L C O M E  to  M A D S P I N               *
@@ -19,7 +19,7 @@ set max_running_process 4
 set nb_core 12
 define p = g u c d s u~ c~ d~ s~
 define p = g u c d s u~ c~ d~ s~
-INFO: Restrict model sm with file ../../t110/models/sm/restrict_default.dat . 
+INFO: Restrict model sm with file ../../../git_workspace/madgraph5/.claude/worktrees/fig5nlo/models/sm/restrict_default.dat . 
 [1;32mDEBUG: Simplifying conditional expressions [0m
 [1;32mDEBUG: remove interactions: u s w+ at order: QED=1 [0m
 [1;32mDEBUG: remove interactions: u b w+ at order: QED=1 [0m
@@ -107,7 +107,7 @@ Defined multiparticle vl = ve vm vt
 Defined multiparticle vl~ = ve~ vm~ vt~
 Defined multiparticle all = g u c d s u~ c~ d~ s~ a ve vm vt e- mu- ve~ vm~ vt~ e+ mu+ t b t~ b~ z w+ h w- ta- ta+
 Defined multiparticle p = g u c d s u~ c~ d~ s~
-import /private/tmp/smeft_fig5_work/MS_sm_nlo_onshell/events.lhe.gz
+import /Users/omattelaer/Documents/madspin_validation_samples/t_fig5_sm_nlo_redo/MS_sm_nlo_onshell/events.lhe.gz
 INFO: process: p p > t t~  
 INFO: options:  
 Set group_subprocesses to Auto
@@ -116,7 +116,7 @@ Complex mass already desactivated.
 set loop optimized output to True
 set loop color flows to False
 INFO: detected model: loop_sm. Loading... 
-INFO: Restrict model loop_sm with file ../../t110/models/loop_sm/restrict_default.dat . 
+INFO: Restrict model loop_sm with file ../../../git_workspace/madgraph5/.claude/worktrees/fig5nlo/models/loop_sm/restrict_default.dat . 
 [1;32mDEBUG: Simplifying conditional expressions [0m
 [1;32mDEBUG: remove interactions: s u w+ at order: QED=1 [0m
 [1;32mDEBUG: remove interactions: b u w+ at order: QED=1 [0m
@@ -327,80 +327,80 @@ INFO: generate 1178500 decay event for particle t
 INFO: generate 928500 decay event for particle t~ 
 stty: stdin isn't a terminal
 stty: stdin isn't a terminal
-INFO: Time for decay event generation = 70.4 sec 
-INFO: Time for decay event generation = 82.0 sec 
+INFO: Time for decay event generation = 293.6 sec 
+INFO: Time for decay event generation = 321.5 sec 
 [1;34mWARNING: set the mass of the b-quark to its value in the param_card.dat: 4.7 GeV  [0m
 INFO: generating the production square matrix element for density 
-INFO: generate p p > t t~   --no_warning=duplicate;define pert_QCD = -4 -3 -2 -1 1 2 3 4 21;add process p p > t t~  pert_QCD  --no_warning=duplicate;output standalone /private/tmp/smeft_fig5_work/MS_sm_nlo_onshell/madspin_me --prefix=int --density=1 
+INFO: generate p p > t t~   --no_warning=duplicate;define pert_QCD = -4 -3 -2 -1 1 2 3 4 21;add process p p > t t~  pert_QCD  --no_warning=duplicate;output standalone /Users/omattelaer/Documents/madspin_validation_samples/t_fig5_sm_nlo_redo/MS_sm_nlo_onshell/madspin_me --prefix=int --density=1 
 INFO: generate matrix element for decay only (1 - > N). 
-INFO: generate t > b w+ , w+ > e+ ve  @0 --no_warning=duplicate --standalone;add process t~ > b~ w- , w- > e- ve~  @1 --no_warning=duplicate --standalone;output standalone /private/tmp/smeft_fig5_work/MS_sm_nlo_onshell/madspin_decay --prefix=int --density=1 -f 
-INFO: Done 2.931 
+INFO: generate t > b w+ , w+ > e+ ve  @0 --no_warning=duplicate --standalone;add process t~ > b~ w- , w- > e- ve~  @1 --no_warning=duplicate --standalone;output standalone /Users/omattelaer/Documents/madspin_validation_samples/t_fig5_sm_nlo_redo/MS_sm_nlo_onshell/madspin_decay --prefix=int --density=1 -f 
+INFO: Done 59.56 
 INFO: Compiling code 
 INFO: Compiling code 
-INFO: Time ME generation: 9.28 sec 
+INFO: Time ME generation: 198.34 sec 
 INFO: Estimating the maximum weight of each decaying particle 
 INFO: ***************************** 
 INFO: Probing the first 240 events with 496 phase space points 
 INFO: MadSpin: probing the maximum weight on 12 cores 
-INFO: Event 1/20 :  0.640938s 
-INFO: Event 6/20 :  0.919895s 
-INFO: Event 11/20 :  1.209444s 
-INFO: Event 16/20 :  1.508171s 
-INFO: Sequential maximum weights: 1.1 1.13 3.343 
+INFO: Event 1/20 :  2.017159s 
+INFO: Event 6/20 :  2.633828s 
+INFO: Event 11/20 :  3.317397s 
+INFO: Event 16/20 :  3.964567s 
+INFO: Sequential maximum weights: 1.1 1.126 3.344 
 INFO: Start generating decays 
 INFO: MadSpin: unweighting 500000 events on 12 cores 
-INFO: decaying event number 10/41667. Decay events per accepted event, per particle: p0=1.45 p1=3.82 [0.015283823013305664 s] 
-INFO: decaying event number 20/41667. Decay events per accepted event, per particle: p0=1.29 p1=3.43 [0.019361019134521484 s] 
-INFO: decaying event number 30/41667. Decay events per accepted event, per particle: p0=1.26 p1=3.42 [0.023988008499145508 s] 
-INFO: decaying event number 40/41667. Decay events per accepted event, per particle: p0=1.22 p1=3.15 [0.027444839477539062 s] 
-INFO: decaying event number 50/41667. Decay events per accepted event, per particle: p0=1.18 p1=2.92 [0.03084111213684082 s] 
-INFO: decaying event number 60/41667. Decay events per accepted event, per particle: p0=1.15 p1=2.97 [0.035238027572631836 s] 
-INFO: decaying event number 70/41667. Decay events per accepted event, per particle: p0=1.14 p1=2.99 [0.03929591178894043 s] 
-INFO: decaying event number 80/41667. Decay events per accepted event, per particle: p0=1.14 p1=2.98 [0.04387187957763672 s] 
-INFO: decaying event number 90/41667. Decay events per accepted event, per particle: p0=1.14 p1=3.08 [0.04832196235656738 s] 
-INFO: decaying event number 100/41667. Decay events per accepted event, per particle: p0=1.15 p1=2.99 [0.05224609375 s] 
-INFO: decaying event number 200/41667. Decay events per accepted event, per particle: p0=1.12 p1=3.20 [0.0942540168762207 s] 
-INFO: decaying event number 300/41667. Decay events per accepted event, per particle: p0=1.12 p1=3.19 [0.13498687744140625 s] 
-INFO: decaying event number 400/41667. Decay events per accepted event, per particle: p0=1.14 p1=3.15 [0.1735222339630127 s] 
-INFO: decaying event number 500/41667. Decay events per accepted event, per particle: p0=1.13 p1=3.12 [0.20984387397766113 s] 
-INFO: decaying event number 600/41667. Decay events per accepted event, per particle: p0=1.12 p1=3.14 [0.2493879795074463 s] 
-INFO: decaying event number 700/41667. Decay events per accepted event, per particle: p0=1.12 p1=3.19 [0.289992094039917 s] 
-INFO: decaying event number 800/41667. Decay events per accepted event, per particle: p0=1.11 p1=3.25 [0.3299591541290283 s] 
-INFO: decaying event number 900/41667. Decay events per accepted event, per particle: p0=1.11 p1=3.25 [0.36829113960266113 s] 
-INFO: decaying event number 1000/41667. Decay events per accepted event, per particle: p0=1.12 p1=3.23 [0.4064209461212158 s] 
-INFO: decaying event number 2000/41667. Decay events per accepted event, per particle: p0=1.12 p1=3.28 [0.8139948844909668 s] 
-INFO: decaying event number 3000/41667. Decay events per accepted event, per particle: p0=1.12 p1=3.24 [1.225757122039795 s] 
-INFO: decaying event number 4000/41667. Decay events per accepted event, per particle: p0=1.12 p1=3.25 [1.6408700942993164 s] 
-INFO: decaying event number 5000/41667. Decay events per accepted event, per particle: p0=1.12 p1=3.24 [2.0650291442871094 s] 
-INFO: decaying event number 6000/41667. Decay events per accepted event, per particle: p0=1.13 p1=3.23 [2.4999160766601562 s] 
-INFO: decaying event number 7000/41667. Decay events per accepted event, per particle: p0=1.13 p1=3.25 [2.960886001586914 s] 
-INFO: decaying event number 8000/41667. Decay events per accepted event, per particle: p0=1.13 p1=3.26 [3.4318370819091797 s] 
-INFO: decaying event number 9000/41667. Decay events per accepted event, per particle: p0=1.13 p1=3.28 [3.909899950027466 s] 
-INFO: decaying event number 10000/41667. Decay events per accepted event, per particle: p0=1.13 p1=3.29 [4.389230012893677 s] 
-INFO: decaying event number 20000/41667. Decay events per accepted event, per particle: p0=1.13 p1=3.31 [9.345597267150879 s] 
-INFO: MadSpin worker 0 OWNS pdg -6: generating gen 1 (1064916 events, seed 144183813) for all 12 workers 
-INFO: generate 1064916 decay event for particle t~ 
+INFO: decaying event number 10/41667. Decay events per accepted event, per particle: p0=1.45 p1=3.82 [0.5372319221496582 s] 
+INFO: decaying event number 20/41667. Decay events per accepted event, per particle: p0=1.29 p1=3.43 [0.5427579879760742 s] 
+INFO: decaying event number 30/41667. Decay events per accepted event, per particle: p0=1.26 p1=3.42 [0.5491058826446533 s] 
+INFO: decaying event number 40/41667. Decay events per accepted event, per particle: p0=1.22 p1=3.15 [0.553959846496582 s] 
+INFO: decaying event number 50/41667. Decay events per accepted event, per particle: p0=1.18 p1=2.92 [0.5584709644317627 s] 
+INFO: decaying event number 60/41667. Decay events per accepted event, per particle: p0=1.15 p1=2.97 [0.5641138553619385 s] 
+INFO: decaying event number 70/41667. Decay events per accepted event, per particle: p0=1.14 p1=2.99 [0.569350004196167 s] 
+INFO: decaying event number 80/41667. Decay events per accepted event, per particle: p0=1.14 p1=2.98 [0.5750720500946045 s] 
+INFO: decaying event number 90/41667. Decay events per accepted event, per particle: p0=1.14 p1=3.08 [0.5808019638061523 s] 
+INFO: decaying event number 100/41667. Decay events per accepted event, per particle: p0=1.15 p1=2.99 [0.5858838558197021 s] 
+INFO: decaying event number 200/41667. Decay events per accepted event, per particle: p0=1.10 p1=3.17 [0.6390080451965332 s] 
+INFO: decaying event number 300/41667. Decay events per accepted event, per particle: p0=1.10 p1=3.17 [0.693105936050415 s] 
+INFO: decaying event number 400/41667. Decay events per accepted event, per particle: p0=1.12 p1=3.15 [0.7571578025817871 s] 
+INFO: decaying event number 500/41667. Decay events per accepted event, per particle: p0=1.11 p1=3.12 [0.8299751281738281 s] 
+INFO: decaying event number 600/41667. Decay events per accepted event, per particle: p0=1.11 p1=3.13 [0.9310710430145264 s] 
+INFO: decaying event number 700/41667. Decay events per accepted event, per particle: p0=1.11 p1=3.15 [1.000269889831543 s] 
+INFO: decaying event number 800/41667. Decay events per accepted event, per particle: p0=1.10 p1=3.23 [1.1196589469909668 s] 
+INFO: decaying event number 900/41667. Decay events per accepted event, per particle: p0=1.10 p1=3.22 [1.1946020126342773 s] 
+INFO: decaying event number 1000/41667. Decay events per accepted event, per particle: p0=1.11 p1=3.22 [1.292747974395752 s] 
+INFO: decaying event number 2000/41667. Decay events per accepted event, per particle: p0=1.11 p1=3.32 [2.2151050567626953 s] 
+INFO: decaying event number 3000/41667. Decay events per accepted event, per particle: p0=1.11 p1=3.27 [3.0720667839050293 s] 
+INFO: decaying event number 4000/41667. Decay events per accepted event, per particle: p0=1.12 p1=3.29 [3.9788689613342285 s] 
+INFO: decaying event number 5000/41667. Decay events per accepted event, per particle: p0=1.12 p1=3.28 [4.863370895385742 s] 
+INFO: decaying event number 6000/41667. Decay events per accepted event, per particle: p0=1.12 p1=3.29 [5.7878289222717285 s] 
+INFO: decaying event number 7000/41667. Decay events per accepted event, per particle: p0=1.13 p1=3.27 [6.651166915893555 s] 
+INFO: decaying event number 8000/41667. Decay events per accepted event, per particle: p0=1.13 p1=3.30 [7.5743818283081055 s] 
+INFO: decaying event number 9000/41667. Decay events per accepted event, per particle: p0=1.12 p1=3.29 [8.454246997833252 s] 
+INFO: decaying event number 10000/41667. Decay events per accepted event, per particle: p0=1.13 p1=3.29 [9.343435049057007 s] 
+INFO: decaying event number 20000/41667. Decay events per accepted event, per particle: p0=1.13 p1=3.31 [18.93204092979431 s] 
+INFO: MadSpin worker 0 OWNS pdg -6: generating gen 1 (1077384 events, seed 144183813) for all 12 workers 
+INFO: generate 1077384 decay event for particle t~ 
 stty: stdin isn't a terminal
-INFO: Time for decay event generation = 40.0 sec 
-INFO: decaying event number 30000/41667. Decay events per accepted event, per particle: p0=1.13 p1=3.33 [53.933565855026245 s] 
-INFO: worker 10 of 12 done. [58.1 s] 
-INFO: worker 6 of 12 done. [58.1 s] 
-INFO: worker 3 of 12 done. [58.1 s] 
-INFO: worker 4 of 12 done. [58.2 s] 
-INFO: worker 1 of 12 done. [58.1 s] 
-INFO: worker 7 of 12 done. [58.2 s] 
-INFO: worker 11 of 12 done. [58.2 s] 
-INFO: worker 5 of 12 done. [58.2 s] 
-INFO: worker 2 of 12 done. [58.3 s] 
-INFO: worker 8 of 12 done. [58.3 s] 
-INFO: worker 9 of 12 done. [58.4 s] 
-INFO: decaying event number 40000/41667. Decay events per accepted event, per particle: p0=1.13 p1=3.34 [58.52985692024231 s] 
-INFO: worker 0 of 12 done. [59.1 s] 
-INFO: MadSpin unweight efficiency: 0.2238 (500000 written / 2234161 trials, 4.47 trials/event) 
-INFO: MadSpin sequential slot 0: 1.13 decay events per accepted one (565126 drawn) [3 ABOVE the maximum weight] 
-INFO: MadSpin sequential slot 1: 3.34 decay events per accepted one (1669035 drawn) 
-[1;34mWARNING: MadSpin sequential: 3 weights exceeded their stage maximum (mass set / angles / per particle). That bound is under-estimated: to go back to unit weights everywhere, raise nb_sigma or Nevents_for_max_weight, or set unweighting = joint. [0m
-INFO: MadSpin overweight safety net: 3/500000 written events (0.0006%) carried a non-unit weight because a trial weight exceeded its accept/reject bound (largest factor 1.0655). Carrying it added +1.47e-05% of the sample's cross-section.  
-INFO: Done so far. output written in /private/tmp/smeft_fig5_work/MS_sm_nlo_onshell/events_decayed.lhe 
-INFO: Time for decay = 97.71 sec 
+INFO: Time for decay event generation = 154.5 sec 
+INFO: decaying event number 30000/41667. Decay events per accepted event, per particle: p0=1.13 p1=3.35 [184.76722192764282 s] 
+INFO: worker 7 of 12 done. [191.0 s] 
+INFO: worker 9 of 12 done. [191.1 s] 
+INFO: worker 2 of 12 done. [191.8 s] 
+INFO: worker 8 of 12 done. [191.8 s] 
+INFO: worker 3 of 12 done. [191.9 s] 
+INFO: worker 4 of 12 done. [191.9 s] 
+INFO: worker 6 of 12 done. [191.9 s] 
+INFO: worker 5 of 12 done. [191.9 s] 
+INFO: worker 10 of 12 done. [192.0 s] 
+INFO: worker 11 of 12 done. [192.1 s] 
+INFO: worker 1 of 12 done. [192.2 s] 
+INFO: decaying event number 40000/41667. Decay events per accepted event, per particle: p0=1.13 p1=3.34 [193.02827382087708 s] 
+INFO: worker 0 of 12 done. [194.0 s] 
+INFO: MadSpin unweight efficiency: 0.2239 (500000 written / 2233115 trials, 4.47 trials/event) 
+INFO: MadSpin sequential slot 0: 1.13 decay events per accepted one (563382 drawn) [4 ABOVE the maximum weight] 
+INFO: MadSpin sequential slot 1: 3.34 decay events per accepted one (1669733 drawn) 
+[1;34mWARNING: MadSpin sequential: 4 weights exceeded their stage maximum (mass set / angles / per particle). That bound is under-estimated: to go back to unit weights everywhere, raise nb_sigma or Nevents_for_max_weight, or set unweighting = joint. [0m
+INFO: MadSpin overweight safety net: 4/500000 written events (0.0008%) carried a non-unit weight because a trial weight exceeded its accept/reject bound (largest factor 1.1953). Carrying it added -0.000101% of the sample's cross-section.  
+INFO: Done so far. output written in /Users/omattelaer/Documents/madspin_validation_samples/t_fig5_sm_nlo_redo/MS_sm_nlo_onshell/events_decayed.lhe 
+INFO: Time for decay = 276.03 sec 
 quit

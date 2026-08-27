@@ -212,3 +212,83 @@ Two traps, both spelled out per sample in `meta.json` under
    `decayed_xsec_detail` so the discrepancy is visible rather than a trap.
 
 `sumw` may be negative bin by bin for an interference sample. That is physical.
+
+## Regeneration of `sm_nlo` (the param_card fix)
+
+The `sm_nlo` sample committed here is **not** the one the first run produced.
+It was regenerated on
+`71ffba30a696f54a6939a59ce0b8fa6a4040a19e`, which merges
+`0a1007bc25de8398a56a7fb25bbd8f92eaf88e3b` — *"MadSpin: evaluate the matrix
+elements with the run's own `param_card`"* — into the sample definitions.
+
+### What was wrong
+
+MadSpin initialised its density matrix elements from the `param_card.dat` that
+`output standalone` writes **from the model defaults**, not from the card the
+input events carry. Every other sample here dodges this, because the SMEFT ones
+put their Wilson coefficient in the model *restriction* precisely so that the
+default and the run agree (see `setup.smeft_model.restriction_note`). The NLO
+sample could not: it sets `MT`/`WT`/`ymt`/`WW`/`WZ` on the `loop_sm` defaults at
+launch. So its ME directories held
+
+| | events | matrix elements |
+|---|---|---|
+| `MT` | 172.76 | 173.0 |
+| `WT` | 1.33 | 1.4915 |
+| `WZ` | 2.4952 | 2.441404 |
+| `WW` | 2.085 | 2.0476 |
+| `ymt` | 172.76 | 173.0 |
+
+Top mass 0.24 GeV high, top width 12 % large.
+
+### What was regenerated, and what was not
+
+The defect is entirely inside MadSpin. The production run was always launched
+with the right numbers — the banner `<slha>` of `PROC_sm_nlo` carries them — so
+**the 500k production LHE was reused unchanged** (md5
+`9730e92f1433841f3dc2ebbfdb83e2e1`) and only the decay stage was rerun, in both
+spinmodes, at the same seeds. That makes the old/new comparison exact: same
+events, same weights, same cross-section, so any difference is the fix and not
+Monte-Carlo noise in the production.
+
+`spinmode = none` needs no density matrix, so MadSpin never builds
+`madspin_me/` for it and the defective card was never read. Re-running it
+reproduced the old histograms **bit for bit**. Only the `onshell` curve was ever
+suspect.
+
+### Acceptance test
+
+`audit_me_param_cards.py` compares every numeric SLHA entry of the card each
+matrix-element directory is initialised from against the card the run carries.
+Pointed at the *original* run it reproduces the table above; pointed at the
+regenerated one every directory reports `MATCH`, `aS` included — the fix copies
+the whole card, so not even the (inert, PDF-supplied) `aS` differs any more.
+
+```
+audit_me_param_cards.py --workdir <regeneration workdir>
+```
+
+### What changed numerically: nothing that matters
+
+* **Cross-section**: `10.9004361 -> 10.9004235 pb`, a shift of `1.3e-05 pb`
+  (`-0.0001 %`) against a `0.020 pb` integration error. The `<init>` `XSECUP`
+  is `10.899373 +- 0.020274 pb` before *and* after, to every digit the banner
+  carries. `none` is unchanged exactly.
+* **Shape**: it does not move by anything 500k events can resolve. A control
+  run — the fixed code, the same production events, only the MadSpin seed
+  changed from 42 to 99 — moves the `Delta phi` forward–backward asymmetry by
+  `-0.0050`, while the *defect* moves it by `+0.0076`. The two are the same
+  size. Against the seed-99 run the buggy sample differs by only `+0.0025`. The
+  720-bin shape `chi2/ndf` is 1.002 (buggy vs fixed), 0.975 (buggy vs fixed,
+  other seed) and 0.997 (fixed vs fixed): all three pairings are equally
+  indistinguishable.
+
+So the defect was **real but immaterial** at this statistics — which is a
+different statement from "we fixed it", and the one to make. A 0.24 GeV top
+mass and a 12 % top width in the *density matrix* leave the `Delta phi`
+spin-correlation shape where it was. The sample is replaced because it is now
+sound, not because the figure changes.
+
+The control run is kept under
+`samples.sm_nlo.regeneration.control_run.path` and is deliberately **not** in
+`histograms.npz`: it is a systematics control, not a curve on the figure.
