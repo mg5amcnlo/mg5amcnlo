@@ -476,10 +476,10 @@ The measured ends of the four ratio curves, on the plotted 20-bin binning:
 
 | curve | first bin | last bin |
 |---|---|---|
-| `NLO / LO` (pane 1) | **+3.57 % ± 1.45** | **−6.53 % ± 1.04** |
+| `NLO / LO` (pane 1) | **+4.11 % ± 1.45** | **−4.11 % ± 1.05** |
 | `SMEFT / LO` (pane 1) | **+11.54 % ± 0.79** | **−17.76 % ± 0.46** |
 | `(LO + SMEFT) / LO` (pane 2) | **+2.49 % ± 0.17** | **−3.83 % ± 0.10** |
-| `(NLO + SMEFT) / NLO` (pane 2) | **+1.18 % ± 0.23** | **−1.84 % ± 0.15** |
+| `(NLO + SMEFT) / NLO` (pane 2) | **+1.09 % ± 0.23** | **−2.18 % ± 0.15** |
 
 #### Caption for `E`
 
@@ -563,11 +563,11 @@ and the contrast is the pane's whole point.
 |---|---|---|---|---|
 | `SMEFT/LO`, `onshell` | +11.54 % ± 0.79 | −17.76 % ± 0.46 | 17.76 % | +2.08 % |
 | **`SMEFT/LO`, `none`** | **+0.53 % ± 0.80** | **−0.58 % ± 0.49** | **2.06 %** | **+0.24 %** |
-| `NLO/LO`, `onshell` | +3.57 % ± 1.45 | −6.53 % ± 1.04 | 6.53 % | +0.81 % |
+| `NLO/LO`, `onshell` | +4.11 % ± 1.45 | −4.11 % ± 1.05 | 7.46 % | +0.92 % |
 | **`NLO/LO`, `none`** | **+7.02 % ± 1.60** | **−6.75 % ± 0.95** | **9.59 %** | **+1.47 %** |
 | `(LO+SMEFT)/LO`, `onshell` | +2.49 % ± 0.17 | −3.83 % ± 0.10 | 3.83 % | +0.45 % |
 | **`(LO+SMEFT)/LO`, `none`** | **+0.11 % ± 0.17** | **−0.13 % ± 0.11** | **0.44 %** | **+0.05 %** |
-| `(NLO+SMEFT)/NLO`, `onshell` | +1.18 % ± 0.23 | −1.84 % ± 0.15 | 1.84 % | +0.16 % |
+| `(NLO+SMEFT)/NLO`, `onshell` | +1.09 % ± 0.23 | −2.18 % ± 0.15 | 2.18 % | +0.15 % |
 | **`(NLO+SMEFT)/NLO`, `none`** | **−0.93 % ± 0.22** | **+1.01 % ± 0.17** | **1.22 %** | **−0.16 %** |
 
 Both predictions the figure was drawn to test come out right:
@@ -588,7 +588,7 @@ Both predictions the figure was drawn to test come out right:
    the $t\bar t$ boost and survives switching the spin correlations off.
 
    A detail worth stating because it is the opposite of what one might guess:
-   the `none` curve is **larger** than the `onshell` one (9.6 % against 6.5 %),
+   the `none` curve is **larger** than the `onshell` one (9.6 % against 7.5 %),
    so the spin correlations partly *mask* the LO/NLO shape difference rather
    than cause it.
 
@@ -606,9 +606,9 @@ drawn and refuses to draw if they disagree by more than `1e-3`:
 |---|---|---|---|
 | `sigma(eft_int)` | 1.973865 | 1.974740 | −4.427e−4 |
 | `sigma(sm_lo)` | 7.175290 | 7.178468 | −4.428e−4 |
-| `sigma(sm_nlo)` | 10.900436 | 10.905950 | −5.056e−4 |
+| `sigma(sm_nlo)` | 10.900424 | 10.905950 | −5.067e−4 |
 | `w(sm_lo)` | 0.275092 | 0.275092 | **−6.3e−8** |
-| `w(sm_nlo)` | 0.181081 | 0.181070 | **−6.3e−5** |
+| `w(sm_nlo)` | 0.181082 | 0.181070 | **−6.4e−5** |
 
 This confirms T110's `5e-4`, and the LO weight does better still: `eft_int` and
 `sm_lo` move between the spinmodes by the *same* 4.428e−4, which cancels in
@@ -710,7 +710,7 @@ The coefficient enters the figure in exactly one place, the **signed weight**
 
 ```
 w_SM(c_tG) = sigma_int(c_tG) / sigma_SM ,      w = -0.275092 c_tG  (LO)
-                                               w = -0.181081 c_tG  (NLO)
+                                               w = -0.181082 c_tG  (NLO)
 ```
 
 (the minus is because the samples were generated at `ctGRe = -1`, where
@@ -871,7 +871,7 @@ On the plotted binning, `onshell/none`:
 |---|---|---|
 | EFT `O_tG` interference | **+31.2 % ± 1.0** | **−29.8 % ± 0.4** |
 | SM LO | +18.2 % ± 0.9 | −15.2 % ± 0.4 |
-| SM NLO | +14.4 % ± 2.2 | −15.0 % ± 1.2 |
+| SM NLO | +15.0 % ± 2.2 | −12.7 % ± 1.2 |
 
 The paper's "an impact of up to 25 %" is **too small**: the interference term
 moves by about 30 % at *both* ends, and the effect is monotonic in between, so
