@@ -993,11 +993,11 @@ c$$$         call fks_inc_chooser()
                      orders_tag=get_orders_tag(orders)
                      amp_pos=iamp
                      g22=g**(QCD_power)
-                     if (iFKS.eq.nFKSprocess_save) then
-                        wgt1=sevmc_Sev*f_MC_S*xlum_mc_fact*
-     &                       amp_split_xmcxsec(iamp,iconnect)/g22
-                        call add_wgt(12,orders,wgt1,0d0,0d0)
-                     endif
+c$$$                     if (iFKS.eq.nFKSprocess_save) then
+c$$$                        wgt1=sevmc_Sev*f_MC_S*xlum_mc_fact*
+c$$$     &                       amp_split_xmcxsec(iamp,iconnect)/g22
+c$$$                        call add_wgt(12,orders,wgt1,0d0,0d0)
+c$$$                     endif
                      wgt1=sevmc_Hev*f_MC_H*xlum_mc_fact*
      &                    amp_split_xmcxsec(iamp,iconnect)/g22
                      call add_wgt(13,orders,-wgt1,0d0,0d0)
@@ -1463,7 +1463,7 @@ c f_* multiplication factors for Born and nbody
 
       subroutine include_born_flow_weight(born_flow_factor)
       implicit none
-      integer born_flow_factor
+      double precision born_flow_factor
       double precision      f_b,f_nb
       common /factor_nbody/ f_b,f_nb
       double precision     f_r,f_s,f_c,f_dc,f_sc,f_dsc(4)
@@ -1750,6 +1750,7 @@ c terms.
 c f_* multiplication factors for real-emission, soft counter, ... etc.       
       prefact=xinorm_ev/xi_i_fks_ev/(1-y_ij_fks_ev)
       f_r=prefact*jac_ev*fkssymmetryfactor*vegas_wgt
+      !TODO: check fkssymmetryfactor
       f_MC_S=f_r
       f_MC_H=f_r
       if (.not.nocntevents) then
@@ -1986,7 +1987,7 @@ c Check for NaN's and INF's. Simply skip the contribution
       if (wgt1.ne.wgt1) return
       if (wgt2.ne.wgt2) return
       if (wgt3.ne.wgt3) return
-      
+
 C Apply user-defined (in FKS_params.dat) contribution type filters if necessary
       if (VetoedContributionTypes(0).gt.0) then
         do i=1,VetoedContributionTypes(0)

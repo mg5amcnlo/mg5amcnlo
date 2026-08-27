@@ -2956,18 +2956,20 @@ c$$$      xjac=xjac*(y_ij_fks_upp-y_ij_fks_low)*x(2)*2d0
          endif
       elseif (colltest) then
          y_ij_fks = y_ij_fks_fix
-         if ( y_ij_fks_fix.gt.y_ij_fks_upp .or.
-     &        y_ij_fks_fix.lt.y_ij_fks_low) then
-            xjac=-33d0
-            pass=.false.
-            return
-         endif
 c$$$         xjac=xjac*sqrt((y_ij_fks_upp-y_ij_fks)*
 c$$$     &        (y_ij_fks_upp-y_ij_fks_low))*2d0 ! compute x(2) from y
       else
          y_ij_fks = y_ij_fks_upp -
      &        (y_ij_fks_upp-y_ij_fks_low)*(cctiny+(1-cctiny)*x(2)**2)
          xjac=xjac*(y_ij_fks_upp-y_ij_fks_low)*x(2)*2d0
+      endif
+      if ( y_ij_fks.gt.y_ij_fks_upp .or.
+     &     y_ij_fks.lt.y_ij_fks_low) then
+         ! y_ij_fks is not in the allowed range, the counter-events do
+         ! not need to be generated.
+         xjac=-33d0
+         pass=.false.
+         return
       endif
       
 c
@@ -3071,7 +3073,7 @@ c
       endif
       if (xiimax.lt.xiimin) then
          write (*,*) 'WARNING #10 in genps_fks.f',icountevts,xiimax
-     $        ,xiimin
+     $        ,xiimin,tau_born,tau_lower_bound
          xjac=-342d0
          pass=.false.
          return
@@ -3142,16 +3144,18 @@ c$$$      xjac=xjac*2d0*x(1)
          endif
       elseif (softtest) then
          xi_i_fks=xi_i_fks_fix
-         if(xi_i_fks_fix.gt.xiimax)then
-            xjac=-102
-            pass=.false.
-            return
-         endif
 c$$$         xjac=xjac*2d0*sqrt((xi_i_fks-xiimin)/(xiimax-xiimin)) ! compute x(1) from xi
       else
          xi_i_hat=sstiny+(1-sstiny)*x(1)**2
          xi_i_fks=xiimin+(xiimax-xiimin)*xi_i_hat
          xjac=xjac*2d0*x(1)
+      endif
+      if(xi_i_fks.gt.xiimax)then
+         ! xi_i_fks is not in the allowed range: no need to generate
+         ! soft counter eevent kinematics.
+         xjac=-102
+         pass=.false.
+         return
       endif
 c
 c Initial state variables are different for events and counterevents. Update them here.
