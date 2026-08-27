@@ -1,0 +1,641 @@
+{
+ "samples": {
+  "eft_int": {
+   "label": "SMEFT $\\mathcal{O}_{tG}$ interference ($c_{tG}=-1$)",
+   "model": "/private/tmp/smeft_fig5_work/models/SMEFTsim_topU3l_MwScheme_UFO-fig5m",
+   "model_restriction": "fig5m",
+   "nevents_requested": 1000000,
+   "note": "amplitude-level interference. With ctGRe = -1 the sample is -2 Re(M_SM^* M_tG) relative to the paper caption, which is written for ctGRe = +1; its integral is positive. Normalisation arbitrary: it scales linearly with c_tG / Lambda^2.",
+   "param_overrides": {},
+   "perturbative_order": "LO",
+   "process": "p p > t t~ NP=1 NP^2==1",
+   "production_lhe": "/private/tmp/smeft_fig5_work/PROC_eft_int/Events/run_01/unweighted_events.lhe.gz",
+   "production_weights": {
+    "mean_weight": 139.77573822263005,
+    "n_events": 1000000,
+    "n_negative_weight": 204,
+    "n_positive_weight": 999796,
+    "n_zero_weight": 0,
+    "negative_weight_fraction": 0.000204,
+    "sum_abs_weights": 139832790.00094488,
+    "sum_weights": 139775738.22263005
+   },
+   "production_xsec_detail": {
+    "banner_comment_xsec_err_pb": null,
+    "banner_comment_xsec_pb": 139.77591999999999,
+    "init_xsec_err_pb": 0.01098019,
+    "init_xsec_pb": 139.7759,
+    "source": "<init> block",
+    "xsec_err_pb": 0.01098019,
+    "xsec_pb": 139.7759
+   },
+   "production_xsec_err_pb": 0.01098019,
+   "production_xsec_pb": 139.7759,
+   "spinmodes": {
+    "none": {
+     "decay_output": "unweighted (auto, ordinary run)",
+     "decayed_lhe": "/private/tmp/smeft_fig5_work/MS_eft_int_none/events_decayed.lhe.gz",
+     "decayed_lhe_bytes": 363243316,
+     "decayed_xsec_detail": {
+      "banner_comment_xsec_err_pb": null,
+      "banner_comment_xsec_pb": 139.77591999999999,
+      "init_xsec_err_pb": 0.00015512718,
+      "init_xsec_pb": 1.9747419,
+      "source": "<init> block",
+      "xsec_err_pb": 0.00015512718,
+      "xsec_pb": 1.9747419
+     },
+     "decayed_xsec_err_pb": 0.00015512718,
+     "decayed_xsec_pb": 1.9747419,
+     "events_without_exactly_one_e_minus_and_one_e_plus": 0,
+     "histogram_keys": [
+      "eft_int_none_sumw",
+      "eft_int_none_sumw2",
+      "eft_int_none_count",
+      "eft_int_none_count_pos",
+      "eft_int_none_count_neg"
+     ],
+     "lepton_multiplicity_census": {
+      "1_em_1_ep": 1000000
+     },
+     "madspin_log": "MadSpin/validation/smeft_fig5/logs/madspin_eft_int_none.log.txt",
+     "madspin_wall_seconds": 359.6,
+     "mean_weight": 1.9747395774363918,
+     "n_events_histogrammed": 1000000,
+     "n_events_in_file": 1000000,
+     "n_negative_weight": 204,
+     "n_positive_weight": 999796,
+     "n_zero_weight": 0,
+     "negative_weight_fraction": 0.000204,
+     "normalisation": {
+      "bin_width_rad": 0.004363323129985824,
+      "dsigma_dphi": "d sigma / d Delta phi in bin i = sumw[i] / n_events_in_file / bin_width_rad, in pb/rad",
+      "mean_weight_over_init_xsec": 0.9999988238647247,
+      "n_events_in_file": 1000000,
+      "sigma_total": "sum(sumw) / n_events_in_file = 1.9747395774363918 pb, which matches the decayed LHE <init> XSECUP",
+      "sign": "sumw may be negative bin by bin for an interference sample; that is physical, not a bug",
+      "statistical_error": "per-bin variance is sumw2[i]; the error on d sigma / d Delta phi in bin i is sqrt(sumw2[i]) / n_events_in_file / bin_width_rad",
+      "weight_convention": "LHE IDWTUP = -4: XWGTUP carries the full cross-section in pb with the event sign, so sigma = sum(w) / N, not sum(w)"
+     },
+     "seed_madspin": 42,
+     "spinmode": "none",
+     "sum_abs_weights": 1975545.6000412148,
+     "sum_weights": 1974739.5774363917
+    },
+    "onshell": {
+     "decay_output": "unweighted (auto, ordinary run)",
+     "decayed_lhe": "/private/tmp/smeft_fig5_work/MS_eft_int_onshell/events_decayed.lhe.gz",
+     "decayed_lhe_bytes": 376027475,
+     "decayed_xsec_detail": {
+      "banner_comment_xsec_err_pb": null,
+      "banner_comment_xsec_pb": 139.77591999999999,
+      "init_xsec_err_pb": 0.0001550585,
+      "init_xsec_pb": 1.9738676,
+      "source": "<init> block",
+      "xsec_err_pb": 0.0001550585,
+      "xsec_pb": 1.9738676
+     },
+     "decayed_xsec_err_pb": 0.0001550585,
+     "decayed_xsec_pb": 1.9738676,
+     "events_without_exactly_one_e_minus_and_one_e_plus": 0,
+     "histogram_keys": [
+      "eft_int_onshell_sumw",
+      "eft_int_onshell_sumw2",
+      "eft_int_onshell_count",
+      "eft_int_onshell_count_pos",
+      "eft_int_onshell_count_neg"
+     ],
+     "lepton_multiplicity_census": {
+      "1_em_1_ep": 1000000
+     },
+     "madspin_log": "MadSpin/validation/smeft_fig5/logs/madspin_eft_int_onshell.log.txt",
+     "madspin_wall_seconds": 262.1,
+     "mean_weight": 1.9738653698037714,
+     "n_events_histogrammed": 1000000,
+     "n_events_in_file": 1000000,
+     "n_negative_weight": 204,
+     "n_overweight_written": 1,
+     "n_positive_weight": 999796,
+     "n_trials": 4034905,
+     "n_written": 1000000,
+     "n_written_total": 1000000,
+     "n_zero_weight": 0,
+     "negative_weight_fraction": 0.000204,
+     "normalisation": {
+      "bin_width_rad": 0.004363323129985824,
+      "dsigma_dphi": "d sigma / d Delta phi in bin i = sumw[i] / n_events_in_file / bin_width_rad, in pb/rad",
+      "mean_weight_over_init_xsec": 0.9999988701388945,
+      "n_events_in_file": 1000000,
+      "sigma_total": "sum(sumw) / n_events_in_file = 1.9738653698037714 pb, which matches the decayed LHE <init> XSECUP",
+      "sign": "sumw may be negative bin by bin for an interference sample; that is physical, not a bug",
+      "statistical_error": "per-bin variance is sumw2[i]; the error on d sigma / d Delta phi in bin i is sqrt(sumw2[i]) / n_events_in_file / bin_width_rad",
+      "weight_convention": "LHE IDWTUP = -4: XWGTUP carries the full cross-section in pb with the event sign, so sigma = sum(w) / N, not sum(w)"
+     },
+     "overweight_lines": [
+      "INFO: MadSpin sequential slot 1: 2.93 decay events per accepted one (2934081 drawn) [1 ABOVE the maximum weight]",
+      "WARNING: MadSpin sequential: 1 weights exceeded their stage maximum (mass set / angles / per particle). That bound is under-estimated: to go back to unit weights everywhere, raise nb_sigma or Nevents_for_max_weight, or set unweighting = joint.",
+      "INFO: MadSpin overweight safety net: 1/1000000 written events (0.0001%) carried a non-unit weight because a trial weight exceeded its accept/reject bound (largest factor 1.0180). Carrying it added +1.8e-06% of the sample's cross-section."
+     ],
+     "overweight_safety_net": "MadSpin overweight safety net: 1/1000000 written events (0.0001%) carried a non-unit weight because a trial weight exceeded its accept/reject bound (largest factor 1.0180). Carrying it added +1.8e-06% of the sample's cross-section.",
+     "seed_madspin": 42,
+     "spinmode": "onshell",
+     "sum_abs_weights": 1974671.0355717372,
+     "sum_weights": 1973865.3698037714,
+     "unweight_efficiency": 0.2478,
+     "unweight_efficiency_line": "MadSpin unweight efficiency: 0.2478 (1000000 written / 4034905 trials, 4.03 trials/event)",
+     "unweighting_scheme": "sequential (auto, 2 decaying particle(s))"
+    }
+   },
+   "wilson_coefficients": {
+    "LambdaSMEFT_GeV": 1000.0,
+    "all_other_Wilson_coefficients": 0.0,
+    "ctGIm": 0.0,
+    "ctGRe": -1.0
+   },
+   "xerr_log": 0.01098,
+   "xsec_log": 139.8
+  },
+  "eft_int_ctg_plus": {
+   "label": "SMEFT $\\mathcal{O}_{tG}$ interference ($c_{tG}=+1$, check)",
+   "model": "/private/tmp/smeft_fig5_work/models/SMEFTsim_topU3l_MwScheme_UFO-fig5p",
+   "model_restriction": "fig5p",
+   "nevents_requested": 1000000,
+   "note": "sign cross-check only, not a curve on the figure: the paper's ctGRe = +1 sign, same seed as eft_int",
+   "param_overrides": {},
+   "perturbative_order": "LO",
+   "process": "p p > t t~ NP=1 NP^2==1",
+   "production_lhe": "/private/tmp/smeft_fig5_work/PROC_eft_int_ctg_plus/Events/run_01/unweighted_events.lhe.gz",
+   "production_only": true,
+   "production_weights": {
+    "mean_weight": -139.77573822263005,
+    "n_events": 1000000,
+    "n_negative_weight": 999796,
+    "n_positive_weight": 204,
+    "n_zero_weight": 0,
+    "negative_weight_fraction": 0.999796,
+    "sum_abs_weights": 139832790.00094488,
+    "sum_weights": -139775738.22263005
+   },
+   "production_xsec_detail": {
+    "banner_comment_xsec_err_pb": null,
+    "banner_comment_xsec_pb": -139.77591999999999,
+    "init_xsec_err_pb": 0.01098019,
+    "init_xsec_pb": -139.7759,
+    "source": "<init> block",
+    "xsec_err_pb": 0.01098019,
+    "xsec_pb": -139.7759
+   },
+   "production_xsec_err_pb": 0.01098019,
+   "production_xsec_pb": -139.7759,
+   "spinmodes": {},
+   "wilson_coefficients": {
+    "LambdaSMEFT_GeV": 1000.0,
+    "all_other_Wilson_coefficients": 0.0,
+    "ctGIm": 0.0,
+    "ctGRe": 1.0
+   },
+   "xerr_log": 0.01098,
+   "xsec_log": -139.8
+  },
+  "sm_lo": {
+   "label": "SM LO",
+   "model": "/private/tmp/smeft_fig5_work/models/SMEFTsim_topU3l_MwScheme_UFO-fig5m",
+   "model_restriction": "fig5m",
+   "nevents_requested": 1000000,
+   "note": "SM tree level in the same model, EFT vertex switched off",
+   "param_overrides": {},
+   "perturbative_order": "LO",
+   "process": "p p > t t~ NP=0",
+   "production_lhe": "/private/tmp/smeft_fig5_work/PROC_sm_lo/Events/run_01/unweighted_events.lhe.gz",
+   "production_weights": {
+    "mean_weight": 508.10529235285236,
+    "n_events": 1000000,
+    "n_negative_weight": 169,
+    "n_positive_weight": 999831,
+    "n_zero_weight": 0,
+    "negative_weight_fraction": 0.000169,
+    "sum_abs_weights": 508277090.00927675,
+    "sum_weights": 508105292.35285234
+   },
+   "production_xsec_detail": {
+    "banner_comment_xsec_err_pb": null,
+    "banner_comment_xsec_pb": 508.04802561910003,
+    "init_xsec_err_pb": 0.04268037,
+    "init_xsec_pb": 508.048,
+    "source": "<init> block",
+    "xsec_err_pb": 0.04268037,
+    "xsec_pb": 508.048
+   },
+   "production_xsec_err_pb": 0.04268037,
+   "production_xsec_pb": 508.048,
+   "spinmodes": {
+    "none": {
+     "decay_output": "unweighted (auto, ordinary run)",
+     "decayed_lhe": "/private/tmp/smeft_fig5_work/MS_sm_lo_none/events_decayed.lhe.gz",
+     "decayed_lhe_bytes": 363524229,
+     "decayed_xsec_detail": {
+      "banner_comment_xsec_err_pb": null,
+      "banner_comment_xsec_pb": 508.04802561910003,
+      "init_xsec_err_pb": 0.0006029846,
+      "init_xsec_pb": 7.1776585,
+      "source": "<init> block",
+      "xsec_err_pb": 0.0006029846,
+      "xsec_pb": 7.1776585
+     },
+     "decayed_xsec_err_pb": 0.0006029846,
+     "decayed_xsec_pb": 7.1776585,
+     "events_without_exactly_one_e_minus_and_one_e_plus": 0,
+     "histogram_keys": [
+      "sm_lo_none_sumw",
+      "sm_lo_none_sumw2",
+      "sm_lo_none_count",
+      "sm_lo_none_count_pos",
+      "sm_lo_none_count_neg"
+     ],
+     "lepton_multiplicity_census": {
+      "1_em_1_ep": 1000000
+     },
+     "madspin_log": "MadSpin/validation/smeft_fig5/logs/madspin_sm_lo_none.log.txt",
+     "madspin_wall_seconds": 367.8,
+     "mean_weight": 7.178467957582793,
+     "n_events_histogrammed": 1000000,
+     "n_events_in_file": 1000000,
+     "n_negative_weight": 169,
+     "n_positive_weight": 999831,
+     "n_zero_weight": 0,
+     "negative_weight_fraction": 0.000169,
+     "normalisation": {
+      "bin_width_rad": 0.004363323129985824,
+      "dsigma_dphi": "d sigma / d Delta phi in bin i = sumw[i] / n_events_in_file / bin_width_rad, in pb/rad",
+      "mean_weight_over_init_xsec": 1.0001127746023015,
+      "n_events_in_file": 1000000,
+      "sigma_total": "sum(sumw) / n_events_in_file = 7.178467957582793 pb, which matches the decayed LHE <init> XSECUP",
+      "sign": "sumw may be negative bin by bin for an interference sample; that is physical, not a bug",
+      "statistical_error": "per-bin variance is sumw2[i]; the error on d sigma / d Delta phi in bin i is sqrt(sumw2[i]) / n_events_in_file / bin_width_rad",
+      "weight_convention": "LHE IDWTUP = -4: XWGTUP carries the full cross-section in pb with the event sign, so sigma = sum(w) / N, not sum(w)"
+     },
+     "seed_madspin": 42,
+     "spinmode": "none",
+     "sum_abs_weights": 7180895.100126711,
+     "sum_weights": 7178467.957582793
+    },
+    "onshell": {
+     "decay_output": "unweighted (auto, ordinary run)",
+     "decayed_lhe": "/private/tmp/smeft_fig5_work/MS_sm_lo_onshell/events_decayed.lhe.gz",
+     "decayed_lhe_bytes": 376389688,
+     "decayed_xsec_detail": {
+      "banner_comment_xsec_err_pb": null,
+      "banner_comment_xsec_pb": 508.04802561910003,
+      "init_xsec_err_pb": 0.00060271763,
+      "init_xsec_pb": 7.1744806,
+      "source": "<init> block",
+      "xsec_err_pb": 0.00060271763,
+      "xsec_pb": 7.1744806
+     },
+     "decayed_xsec_err_pb": 0.00060271763,
+     "decayed_xsec_pb": 7.1744806,
+     "events_without_exactly_one_e_minus_and_one_e_plus": 0,
+     "histogram_keys": [
+      "sm_lo_onshell_sumw",
+      "sm_lo_onshell_sumw2",
+      "sm_lo_onshell_count",
+      "sm_lo_onshell_count_pos",
+      "sm_lo_onshell_count_neg"
+     ],
+     "lepton_multiplicity_census": {
+      "1_em_1_ep": 1000000
+     },
+     "madspin_log": "MadSpin/validation/smeft_fig5/logs/madspin_sm_lo_onshell.log.txt",
+     "madspin_wall_seconds": 266.2,
+     "mean_weight": 7.175289632162056,
+     "n_events_histogrammed": 1000000,
+     "n_events_in_file": 1000000,
+     "n_negative_weight": 169,
+     "n_overweight_written": 0,
+     "n_positive_weight": 999831,
+     "n_trials": 4581057,
+     "n_written": 1000000,
+     "n_written_total": 1000000,
+     "n_zero_weight": 0,
+     "negative_weight_fraction": 0.000169,
+     "normalisation": {
+      "bin_width_rad": 0.004363323129985824,
+      "dsigma_dphi": "d sigma / d Delta phi in bin i = sumw[i] / n_events_in_file / bin_width_rad, in pb/rad",
+      "mean_weight_over_init_xsec": 1.0001127652588615,
+      "n_events_in_file": 1000000,
+      "sigma_total": "sum(sumw) / n_events_in_file = 7.175289632162056 pb, which matches the decayed LHE <init> XSECUP",
+      "sign": "sumw may be negative bin by bin for an interference sample; that is physical, not a bug",
+      "statistical_error": "per-bin variance is sumw2[i]; the error on d sigma / d Delta phi in bin i is sqrt(sumw2[i]) / n_events_in_file / bin_width_rad",
+      "weight_convention": "LHE IDWTUP = -4: XWGTUP carries the full cross-section in pb with the event sign, so sigma = sum(w) / N, not sum(w)"
+     },
+     "overweight_lines": [
+      "INFO: MadSpin overweight safety net: 0/1000000 written events carried a non-unit weight -- no accept/reject bound was exceeded, so nothing was clipped and nothing is biased by it."
+     ],
+     "overweight_safety_net": "MadSpin overweight safety net: 0/1000000 written events carried a non-unit weight -- no accept/reject bound was exceeded, so nothing was clipped and nothing is biased by it.",
+     "seed_madspin": 42,
+     "spinmode": "onshell",
+     "sum_abs_weights": 7177715.700068696,
+     "sum_weights": 7175289.632162056,
+     "unweight_efficiency": 0.2183,
+     "unweight_efficiency_line": "MadSpin unweight efficiency: 0.2183 (1000000 written / 4581057 trials, 4.58 trials/event)",
+     "unweighting_scheme": "sequential (auto, 2 decaying particle(s))"
+    }
+   },
+   "wilson_coefficients": {
+    "all_Wilson_coefficients_absent": true,
+    "note": "NP=0 selects the pure SM amplitude; no EFT vertex enters, so ctGRe has no effect here"
+   },
+   "xerr_log": 0.04268,
+   "xsec_log": 508.0
+  },
+  "sm_nlo": {
+   "fixed_order_probe": {
+    "PA_foon": {
+     "fixed_order": true,
+     "log": "MadSpin/validation/smeft_fig5/logs/fixed_order_probe_PA_foon.log.txt",
+     "nevents_in": 2000,
+     "ran": false,
+     "refusal_message": "fixed_order is not available in spinmode=PA: that mode reshuffles the production onto sampled virtualities, and how an event group's counter-events follow the born event through that reshuffling is not defined -- only the born event would be reshuffled. Use spinmode=onshell (or onshell_v1), which keeps the production kinematics, or turn fixed_order off.",
+     "refused": true,
+     "returncode": 1,
+     "spinmode": "PA",
+     "verdict": "refused",
+     "wrote_events": false
+    },
+    "madspin_foon": {
+     "fixed_order": true,
+     "log": "MadSpin/validation/smeft_fig5/logs/fixed_order_probe_madspin_foon.log.txt",
+     "nevents_in": 2000,
+     "ran": false,
+     "refusal_message": "fixed_order is not available in spinmode=madspin: that mode reshuffles the production onto sampled virtualities, and how an event group's counter-events follow the born event through that reshuffling is not defined -- only the born event would be reshuffled. Use spinmode=onshell (or onshell_v1), which keeps the production kinematics, or turn fixed_order off.",
+     "refused": true,
+     "returncode": 1,
+     "spinmode": "madspin",
+     "verdict": "refused",
+     "wrote_events": false
+    },
+    "onshell_fooff": {
+     "decay_output": "unweighted (auto, ordinary run)",
+     "decayed_xsec_err_pb": 0.020271359,
+     "decayed_xsec_pb": 10.897994,
+     "fixed_order": false,
+     "log": "MadSpin/validation/smeft_fig5/logs/fixed_order_probe_onshell_fooff.log.txt",
+     "n_events_out": 2000,
+     "n_overweight_written": 0,
+     "n_trials": 8986,
+     "n_written": 2000,
+     "n_written_total": 2000,
+     "negative_weight_fraction": 0.229,
+     "nevents_in": 2000,
+     "overweight_lines": [
+      "INFO: MadSpin overweight safety net: 0/2000 written events carried a non-unit weight -- no accept/reject bound was exceeded, so nothing was clipped and nothing is biased by it."
+     ],
+     "overweight_safety_net": "MadSpin overweight safety net: 0/2000 written events carried a non-unit weight -- no accept/reject bound was exceeded, so nothing was clipped and nothing is biased by it.",
+     "ran": true,
+     "refusal_message": null,
+     "refused": false,
+     "returncode": 0,
+     "spinmode": "onshell",
+     "unweight_efficiency": 0.2226,
+     "unweight_efficiency_line": "MadSpin unweight efficiency: 0.2226 (2000 written / 8986 trials, 4.49 trials/event)",
+     "unweighting_scheme": "sequential (auto, 2 decaying particle(s))",
+     "verdict": "ran, 2000 events out",
+     "wrote_events": true
+    },
+    "onshell_foon": {
+     "decay_output": "unweighted (auto, ordinary run)",
+     "decayed_xsec_err_pb": 1.4343,
+     "decayed_xsec_pb": 771.0876,
+     "fixed_order": true,
+     "log": "MadSpin/validation/smeft_fig5/logs/fixed_order_probe_onshell_foon.log.txt",
+     "n_events_out": 0,
+     "n_trials": 0,
+     "n_written": 0,
+     "negative_weight_fraction": 0.0,
+     "nevents_in": 2000,
+     "ran": true,
+     "refusal_message": null,
+     "refused": false,
+     "returncode": 0,
+     "spinmode": "onshell",
+     "unweight_efficiency": 0.0,
+     "unweight_efficiency_line": "MadSpin unweight efficiency: 0.0000 (0 written / 0 trials, inf trials/event)",
+     "unweighting_scheme": "joint (auto, 0 decaying particle(s))",
+     "verdict": "exited 0 but wrote an EMPTY decayed file -- silent no-op",
+     "wrote_events": false
+    }
+   },
+   "label": "SM NLO (MC@NLO)",
+   "model": "loop_sm",
+   "model_restriction": null,
+   "nevents_requested": 500000,
+   "note": "MC@NLO; signed weights of its own, unrelated to the EFT ones",
+   "param_overrides": {
+    "MT": 172.76,
+    "WT": 1.33,
+    "WW": 2.085,
+    "WZ": 2.4952,
+    "ymt": 172.76
+   },
+   "perturbative_order": "NLO (MC@NLO)",
+   "process": "p p > t t~ [QCD]",
+   "production_lhe": "/private/tmp/smeft_fig5_work/PROC_sm_nlo/Events/run_01/events.lhe.gz",
+   "production_weights": {
+    "mean_weight": 771.1626939221708,
+    "n_events": 500000,
+    "n_negative_weight": 114738,
+    "n_positive_weight": 385262,
+    "n_zero_weight": 0,
+    "negative_weight_fraction": 0.229476,
+    "sum_abs_weights": 712656449.9956881,
+    "sum_weights": 385581346.9610854
+   },
+   "production_xsec_detail": {
+    "banner_comment_xsec_err_pb": null,
+    "banner_comment_xsec_pb": null,
+    "init_xsec_err_pb": 1.4343,
+    "init_xsec_pb": 771.0876,
+    "source": "<init> block",
+    "xsec_err_pb": 1.4343,
+    "xsec_pb": 771.0876
+   },
+   "production_xsec_err_pb": 1.4343,
+   "production_xsec_pb": 771.0876,
+   "spinmodes": {
+    "none": {
+     "decay_output": "unweighted (auto, ordinary run)",
+     "decayed_lhe": "/private/tmp/smeft_fig5_work/MS_sm_nlo_none/events_decayed.lhe.gz",
+     "decayed_lhe_bytes": 198878400,
+     "decayed_xsec_detail": {
+      "banner_comment_xsec_err_pb": null,
+      "banner_comment_xsec_pb": null,
+      "init_xsec_err_pb": 0.020284181,
+      "init_xsec_pb": 10.904888,
+      "source": "<init> block",
+      "xsec_err_pb": 0.020284181,
+      "xsec_pb": 10.904888
+     },
+     "decayed_xsec_err_pb": 0.020284181,
+     "decayed_xsec_pb": 10.904888,
+     "events_without_exactly_one_e_minus_and_one_e_plus": 0,
+     "histogram_keys": [
+      "sm_nlo_none_sumw",
+      "sm_nlo_none_sumw2",
+      "sm_nlo_none_count",
+      "sm_nlo_none_count_pos",
+      "sm_nlo_none_count_neg"
+     ],
+     "lepton_multiplicity_census": {
+      "1_em_1_ep": 500000
+     },
+     "madspin_log": "MadSpin/validation/smeft_fig5/logs/madspin_sm_nlo_none.log.txt",
+     "madspin_wall_seconds": 200.0,
+     "mean_weight": 10.90594998403816,
+     "n_events_histogrammed": 500000,
+     "n_events_in_file": 500000,
+     "n_negative_weight": 114738,
+     "n_positive_weight": 385262,
+     "n_zero_weight": 0,
+     "negative_weight_fraction": 0.229476,
+     "normalisation": {
+      "bin_width_rad": 0.004363323129985824,
+      "dsigma_dphi": "d sigma / d Delta phi in bin i = sumw[i] / n_events_in_file / bin_width_rad, in pb/rad",
+      "mean_weight_over_init_xsec": 1.0000973860564328,
+      "n_events_in_file": 500000,
+      "sigma_total": "sum(sumw) / n_events_in_file = 10.90594998403816 pb, which matches the decayed LHE <init> XSECUP",
+      "sign": "sumw may be negative bin by bin for an interference sample; that is physical, not a bug",
+      "statistical_error": "per-bin variance is sumw2[i]; the error on d sigma / d Delta phi in bin i is sqrt(sumw2[i]) / n_events_in_file / bin_width_rad",
+      "weight_convention": "LHE IDWTUP = -4: XWGTUP carries the full cross-section in pb with the event sign, so sigma = sum(w) / N, not sum(w)"
+     },
+     "seed_madspin": 42,
+     "spinmode": "none",
+     "sum_abs_weights": 10078541.999993129,
+     "sum_weights": 5452974.992019081
+    },
+    "onshell": {
+     "decay_output": "unweighted (auto, ordinary run)",
+     "decayed_lhe": "/private/tmp/smeft_fig5_work/MS_sm_nlo_onshell/events_decayed.lhe.gz",
+     "decayed_lhe_bytes": 207134128,
+     "decayed_xsec_detail": {
+      "banner_comment_xsec_err_pb": null,
+      "banner_comment_xsec_pb": null,
+      "init_xsec_err_pb": 0.020273923,
+      "init_xsec_pb": 10.899373,
+      "source": "<init> block",
+      "xsec_err_pb": 0.020273923,
+      "xsec_pb": 10.899373
+     },
+     "decayed_xsec_err_pb": 0.020273923,
+     "decayed_xsec_pb": 10.899373,
+     "events_without_exactly_one_e_minus_and_one_e_plus": 0,
+     "histogram_keys": [
+      "sm_nlo_onshell_sumw",
+      "sm_nlo_onshell_sumw2",
+      "sm_nlo_onshell_count",
+      "sm_nlo_onshell_count_pos",
+      "sm_nlo_onshell_count_neg"
+     ],
+     "lepton_multiplicity_census": {
+      "1_em_1_ep": 500000
+     },
+     "madspin_log": "MadSpin/validation/smeft_fig5/logs/madspin_sm_nlo_onshell.log.txt",
+     "madspin_wall_seconds": 200.2,
+     "mean_weight": 10.900436142303016,
+     "n_events_histogrammed": 500000,
+     "n_events_in_file": 500000,
+     "n_negative_weight": 114738,
+     "n_overweight_written": 3,
+     "n_positive_weight": 385262,
+     "n_trials": 2234161,
+     "n_written": 500000,
+     "n_written_total": 500000,
+     "n_zero_weight": 0,
+     "negative_weight_fraction": 0.229476,
+     "normalisation": {
+      "bin_width_rad": 0.004363323129985824,
+      "dsigma_dphi": "d sigma / d Delta phi in bin i = sumw[i] / n_events_in_file / bin_width_rad, in pb/rad",
+      "mean_weight_over_init_xsec": 1.0000975416019817,
+      "n_events_in_file": 500000,
+      "sigma_total": "sum(sumw) / n_events_in_file = 10.900436142303016 pb, which matches the decayed LHE <init> XSECUP",
+      "sign": "sumw may be negative bin by bin for an interference sample; that is physical, not a bug",
+      "statistical_error": "per-bin variance is sumw2[i]; the error on d sigma / d Delta phi in bin i is sqrt(sumw2[i]) / n_events_in_file / bin_width_rad",
+      "weight_convention": "LHE IDWTUP = -4: XWGTUP carries the full cross-section in pb with the event sign, so sigma = sum(w) / N, not sum(w)"
+     },
+     "overweight_lines": [
+      "INFO: MadSpin sequential slot 0: 1.13 decay events per accepted one (565126 drawn) [3 ABOVE the maximum weight]",
+      "WARNING: MadSpin sequential: 3 weights exceeded their stage maximum (mass set / angles / per particle). That bound is under-estimated: to go back to unit weights everywhere, raise nb_sigma or Nevents_for_max_weight, or set unweighting = joint.",
+      "INFO: MadSpin overweight safety net: 3/500000 written events (0.0006%) carried a non-unit weight because a trial weight exceeded its accept/reject bound (largest factor 1.0655). Carrying it added +1.47e-05% of the sample's cross-section."
+     ],
+     "overweight_safety_net": "MadSpin overweight safety net: 3/500000 written events (0.0006%) carried a non-unit weight because a trial weight exceeded its accept/reject bound (largest factor 1.0655). Carrying it added +1.47e-05% of the sample's cross-section.",
+     "seed_madspin": 42,
+     "spinmode": "onshell",
+     "sum_abs_weights": 10073448.438186634,
+     "sum_weights": 5450218.071151508,
+     "unweight_efficiency": 0.2238,
+     "unweight_efficiency_line": "MadSpin unweight efficiency: 0.2238 (500000 written / 2234161 trials, 4.47 trials/event)",
+     "unweighting_scheme": "sequential (auto, 2 decaying particle(s))"
+    }
+   },
+   "wilson_coefficients": {},
+   "xerr_log": 1.4,
+   "xsec_log": 771.1
+  }
+ },
+ "setup": {
+  "BW_cut": 15.0,
+  "beam_energy_GeV": 6500.0,
+  "bwcutoff": 15.0,
+  "ctGRe_cross_check": 1.0,
+  "ctGRe_primary": -1.0,
+  "cuts": "none (fully inclusive leptons and b quarks; cut_decays False)",
+  "decay_note": "one decay line per t-like particle (multi-channel positional rule); both tops decay to electrons so every event holds exactly one e- and one e+",
+  "decays": [
+   "decay t > w+ b, w+ > e+ ve",
+   "decay t~ > w- b~, w- > e- ve~"
+  ],
+  "dphi_nbins": 720,
+  "fixed_order": "off -- MC@NLO events are individual signed-weight events, not born/counter-event groups, so the option is not needed; it is in any case refused by MadSpin in the reshuffling spinmodes (PA, madspin)",
+  "generated_by": "MadSpin/validation/smeft_fig5/run_smeft_fig5.py",
+  "lhaid": 230000,
+  "m_top_GeV": 172.76,
+  "mu_F_GeV": 173.0,
+  "mu_R_GeV": 173.0,
+  "negative_weight_note": "At ctGRe = -1 the O_tG interference is positive over the sampled phase space: MadSpin evaluates Tr(rho_prod) > 0 for every production event, including the ~0.02% whose MadEvent weight is negative -- those are unweighting residuals rather than negative-matrix-element points, and a MadSpin onshell run on the negative-weight events alone completes normally. At ctGRe = +1 every sign flips and spinmode=onshell aborts on the first event with MadSpinDegenerateWeight, because _check_production_density accepts only Tr(rho_prod) > 0. The negative-weight fraction is reported for the production sample and again after each decay; MadSpin preserves it exactly.",
+  "observable": "Delta phi(e-, e+), radians, folded onto [0, pi]",
+  "pdf": "NNPDF2.3 LO, alpha_s(M_Z)=0.130 (LHAPDF id 230000, NNPDF23_lo_as_0130_qed)",
+  "pdf_note": "the NLO sample deliberately uses the same LO set, so an LO/NLO comparison shows a change of order and not of PDF",
+  "pdlabel": "lhapdf",
+  "scale": "fixed mu_R = mu_F = 173.0 GeV",
+  "seed_madspin": 42,
+  "seed_production": 42,
+  "sign_convention": "ctGRe = -1, so the eft_int sample is -2 Re(M_SM^* M_tG); the paper caption is written for ctGRe = +1",
+  "smeft_model": {
+   "LambdaSMEFT_GeV": 1000.0,
+   "all_other_wilson_coefficients": "zero (inherited from restrict_spyros.dat)",
+   "copied_to": "/private/tmp/smeft_fig5_work/models/SMEFTsim_topU3l_MwScheme_UFO",
+   "m_top_GeV": 172.76,
+   "mass_note": "the SMEFTsim v3.0.2 values are kept as they are; the restriction card fixes m_t = 172.76 GeV, Gamma_t = 1.33 GeV, and loop_sm is set to the same two numbers so the three samples describe one top quark",
+   "restriction_cards": {
+    "fig5m": {
+     "ctGRe": -1.0,
+     "path": "/private/tmp/smeft_fig5_work/models/SMEFTsim_topU3l_MwScheme_UFO/restrict_fig5m.dat"
+    },
+    "fig5p": {
+     "ctGRe": 1.0,
+     "path": "/private/tmp/smeft_fig5_work/models/SMEFTsim_topU3l_MwScheme_UFO/restrict_fig5p.dat"
+    }
+   },
+   "restriction_note": "restrict_spyros.dat (all Wilson coefficients zero except ctGRe, LambdaSMEFT = 1000 GeV) with the ctGRe entry rewritten per sample. The coefficient is carried by the restriction card, not by a param_card override, because MadSpin initialises its density matrix-element library from <madspin_me>/Cards/param_card.dat -- the card output-standalone wrote from the model defaults -- and never from the run's own card. Model default and run value must therefore be the same number.",
+   "restriction_source": "/private/tmp/smeft_fig5_work/models/SMEFTsim_topU3l_MwScheme_UFO/restrict_spyros.dat",
+   "source": "/Users/omattelaer/Desktop/UFOMODEL/SMEFTsim_topU3l_MwScheme_UFO",
+   "width_top_GeV": 1.33
+  },
+  "spinmodes": [
+   "onshell",
+   "none"
+  ],
+  "sqrt_s_GeV": 13000.0,
+  "width_top_GeV": 1.33,
+  "workdir": "/private/tmp/smeft_fig5_work"
+ }
+}

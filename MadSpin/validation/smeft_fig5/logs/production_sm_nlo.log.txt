@@ -1,0 +1,855 @@
+Running MG5 in debug mode
+************************************************************
+*                                                          *
+*                     W E L C O M E to                     *
+*              M A D G R A P H 5 _ a M C @ N L O           *
+*                                                          *
+*                                                          *
+*                 *                       *                *
+*                   *        * *        *                  *
+*                     * * * * 5 * * * *                    *
+*                   *        * *        *                  *
+*                 *                       *                *
+*                                                          *
+*         VERSION 3.7.2                 2026-04-28         *
+*         GIT r992-590-g02ee49a59  claude/ms-smeft-fig5-samples         *
+*                                                          *
+*    The MadGraph5_aMC@NLO Development Team - Find us at   *
+*              http://madgraph.phys.ucl.ac.be/             *
+*                            and                           *
+*            http://amcatnlo.web.cern.ch/amcatnlo/         *
+*                                                          *
+*               Type 'help' for in-line help.              *
+*           Type 'tutorial' to learn how MG5 works         *
+*    Type 'tutorial aMCatNLO' to learn how aMC@NLO works   *
+*    Type 'tutorial MadLoop' to learn how MadLoop works    *
+*                                                          *
+************************************************************
+load MG5 configuration from /Users/omattelaer/.mg5/mg5_configuration.txt 
+[1;32mDEBUG:  set configuration option f2py_compiler to /Users/omattelaer/Documents/git_workspace/version3/py313/.direnv/python-3.13/bin/f2py --python=3.13 [1;30m[madgraph_interface.py at line 7452][0m [0m
+[1;32mDEBUG:  set configuration option f2py_compiler to /Users/omattelaer/Documents/git_workspace/version3/py311/.direnv/python-3.13/bin/f2py --python=3.11 [1;30m[madgraph_interface.py at line 7452][0m [0m
+[1;32mDEBUG:  set configuration option f2py_compiler to /Users/omattelaer/Documents/git_workspace/version3/py312/.direnv/python-3.13/bin/f2py --python=3.12 [1;30m[madgraph_interface.py at line 7452][0m [0m
+[1;32mDEBUG:  set configuration option f2py_compiler to /Users/omattelaer/Documents/git_workspace/version3/py314/.direnv/python-3.13/bin/f2py --python=3.14 [1;30m[madgraph_interface.py at line 7452][0m [0m
+set f2py compiler to /Users/omattelaer/Documents/git_workspace/version3/py314/.direnv/python-3.13/bin/f2py
+[1;32mDEBUG:  set configuration option lhapdf to /Users/omattelaer/Documents/HEPTools/lhapdf6_py312/bin/lhapdf-config --python=3.12 [1;30m[madgraph_interface.py at line 7452][0m [0m
+[1;32mDEBUG:  set configuration option lhapdf to /Users/omattelaer/Documents/HEPTools/lhapdf6_py313/bin/lhapdf-config --python=3.13 [1;30m[madgraph_interface.py at line 7452][0m [0m
+[1;32mDEBUG:  set configuration option lhapdf to /Users/omattelaer/Documents/HEPTools/lhapdf6_py314/bin/lhapdf-config --python=3.14 [1;30m[madgraph_interface.py at line 7452][0m [0m
+/Users/omattelaer/Documents/HEPTools/lhapdf6_py314/bin/lhapdf-config does not seem to correspond to a valid lhapdf-config executable. 
+Please set the 'lhapdf' variable to the (absolute) /PATH/TO/lhapdf-config (including lhapdf-config).
+Note that you can still compile and run aMC@NLO with the built-in PDFs
+ MG5_aMC> set lhapdf /PATH/TO/lhapdf-config
+
+load MG5 configuration from ../../../input/mg5_configuration.txt 
+fastjet-config does not seem to correspond to a valid fastjet-config executable (v3+). We will use fjcore instead.
+ Please set the 'fastjet'variable to the full (absolute) /PATH/TO/fastjet-config (including fastjet-config).
+ MG5_aMC> set fastjet /PATH/TO/fastjet-config
+
+/Users/omattelaer/Documents/HEPTools/EMELA/bin/eMELA-config does not seem to correspond to a valid eMELA-config executable.
+ Please set the 'fastjet'variable to the full (absolute) /PATH/TO/eMELA-config (including eMELA-config).
+ MG5_aMC> set eMELA /PATH/TO/eMELA-config
+
+set ninja to /Users/omattelaer/Documents/HEPTools/lib
+set collier to /Users/omattelaer/Documents/HEPTools/lib
+lhapdf-config does not seem to correspond to a valid lhapdf-config executable. 
+Please set the 'lhapdf' variable to the (absolute) /PATH/TO/lhapdf-config (including lhapdf-config).
+Note that you can still compile and run aMC@NLO with the built-in PDFs
+ MG5_aMC> set lhapdf /PATH/TO/lhapdf-config
+
+set lhapdf to /Users/omattelaer/Documents/HEPTools/lhapdf6_py3/bin/lhapdf-config
+[1;34m
+    The current version of MG5_aMC (v3.7.2) is different than the one active when
+    installing the 'mg5amc_py8_interface_path' (which was MG5aMC v3.5.15). 
+    Please consider refreshing the installation of this interface with the command:
+     MG5_aMC>install mg5amc_py8_interface
+    [0m
+Using default gzip "gzip". Set another one in ./input/mg5_configuration.txt
+[1;34mWARNING: launching caffeinate to prevent idle sleep when MG5aMC is running. Run './bin/mg5_aMC -s' to prevent this. [0m
+import /private/tmp/smeft_fig5_work/mg5_sm_nlo.dat
+The import format was not given, so we guess it as command
+set automatic_html_opening False --no_save
+import model loop_sm
+INFO: Restrict model loop_sm with file ../../../models/loop_sm/restrict_default.dat . 
+[1;32mDEBUG: Simplifying conditional expressions [0m
+[1;32mDEBUG: remove interactions: s u w+ at order: QED=1 [0m
+[1;32mDEBUG: remove interactions: b u w+ at order: QED=1 [0m
+[1;32mDEBUG: remove interactions: d c w+ at order: QED=1 [0m
+[1;32mDEBUG: remove interactions: b c w+ at order: QED=1 [0m
+[1;32mDEBUG: remove interactions: d t w+ at order: QED=1 [0m
+[1;32mDEBUG: remove interactions: s t w+ at order: QED=1 [0m
+[1;32mDEBUG: remove interactions: c c h at order: QED=1 [0m
+[1;32mDEBUG: remove interactions: e- e- h at order: QED=1 [0m
+[1;32mDEBUG: remove interactions: m- m- h at order: QED=1 [0m
+[1;32mDEBUG: remove interactions: u s w+ at order: QED=1 [0m
+[1;32mDEBUG: remove interactions: u b w+ at order: QED=1 [0m
+[1;32mDEBUG: remove interactions: c d w+ at order: QED=1 [0m
+[1;32mDEBUG: remove interactions: c b w+ at order: QED=1 [0m
+[1;32mDEBUG: remove interactions: t d w+ at order: QED=1 [0m
+[1;32mDEBUG: remove interactions: t s w+ at order: QED=1 [0m
+[1;32mDEBUG: remove interactions: g g h h at order: QCD=2, QED=2 [0m
+[1;32mDEBUG: remove interactions: g g h at order: QCD=2, QED=1 [0m
+[1;32mDEBUG: remove interactions: g g w+ w+ at order: QCD=2, QED=2 [0m
+[1;32mDEBUG: remove interactions: g g w+ w+ at order: QCD=2, QED=2 [0m
+[1;32mDEBUG: remove interactions: g g w+ w+ at order: QCD=2, QED=2 [0m
+[1;32mDEBUG: remove interactions: g g w+ w+ at order: QCD=2, QED=2 [0m
+[1;32mDEBUG: remove interactions: g g w+ w+ at order: QCD=2, QED=2 [0m
+[1;32mDEBUG: remove interactions: g g w+ w+ at order: QCD=2, QED=2 [0m
+[1;32mDEBUG: modify interactions: g g at order: QCD=2 [0m
+[1;32mDEBUG: modify interactions: c c at order: QCD=2 [0m
+[1;32mDEBUG: remove interactions: b c w+ at order: QCD=2, QED=1 [0m
+[1;32mDEBUG: remove interactions: b u w+ at order: QCD=2, QED=1 [0m
+[1;32mDEBUG: remove interactions: c c h at order: QCD=2, QED=1 [0m
+[1;32mDEBUG: remove interactions: c b w+ at order: QCD=2, QED=1 [0m
+[1;32mDEBUG: remove interactions: c d w+ at order: QCD=2, QED=1 [0m
+[1;32mDEBUG: remove interactions: d c w+ at order: QCD=2, QED=1 [0m
+[1;32mDEBUG: remove interactions: d t w+ at order: QCD=2, QED=1 [0m
+[1;32mDEBUG: remove interactions: s t w+ at order: QCD=2, QED=1 [0m
+[1;32mDEBUG: remove interactions: s u w+ at order: QCD=2, QED=1 [0m
+[1;32mDEBUG: remove interactions: t d w+ at order: QCD=2, QED=1 [0m
+[1;32mDEBUG: remove interactions: t s w+ at order: QCD=2, QED=1 [0m
+[1;32mDEBUG: remove interactions: u b w+ at order: QCD=2, QED=1 [0m
+[1;32mDEBUG: remove interactions: u s w+ at order: QCD=2, QED=1 [0m
+[1;32mDEBUG: remove interactions: g g g at order: QCD=3 [0m
+[1;32mDEBUG: remove interactions: g g g g at order: QCD=4 [0m
+[1;32mDEBUG: remove interactions: d d g at order: QCD=3 [0m
+[1;32mDEBUG: remove interactions: u u g at order: QCD=3 [0m
+[1;32mDEBUG: remove interactions: c c g at order: QCD=3 [0m
+[1;32mDEBUG: remove interactions: s s g at order: QCD=3 [0m
+[1;32mDEBUG: remove interactions: b b g at order: QCD=3 [0m
+[1;32mDEBUG: remove interactions: t t g at order: QCD=3 [0m
+[1;32mDEBUG: remove interactions: c c h at order: QED=1, QCD=2 [0m
+[1;32mDEBUG: remove interactions: c c h at order: QED=1, QCD=2 [0m
+[1;32mDEBUG: remove interactions: c c at order: QCD=2 [0m
+[1;32mDEBUG: remove interactions: c c at order: QCD=2 [0m
+[1;32mDEBUG: remove counterterm of particle g with loop particles ((c)) perturbing order QCD [0m
+[1;32mDEBUG: remove counterterm of particle c with loop particles ((c,g)) perturbing order QCD [0m
+[1;32mDEBUG:  Fuse the Following coupling (they have the same value): ('GC_1007', 1), ('GC_1009', -1)  [0m
+[1;32mDEBUG:  Fuse the Following coupling (they have the same value): ('GC_1021', 1), ('GC_1027', -1)  [0m
+[1;32mDEBUG:  Fuse the Following coupling (they have the same value): ('GC_1015', 1), ('GC_1030', -1)  [0m
+[1;32mDEBUG:  Fuse the Following coupling (they have the same value): ('GC_1038', 1), ('GC_1039', -1)  [0m
+[1;32mDEBUG:  Fuse the Following coupling (they have the same value): ('GC_1054', 1), ('GC_1056', -1)  [0m
+[1;32mDEBUG:  Fuse the Following coupling (they have the same value): ('GC_1066', 1), ('GC_1067', -1)  [0m
+[1;32mDEBUG:  Fuse the Following coupling (they have the same value): ('GC_1074', 1), ('GC_1075', -1)  [0m
+[1;32mDEBUG:  Fuse the Following coupling (they have the same value): ('GC_1096', 1), ('GC_1097', -1)  [0m
+[1;32mDEBUG:  Fuse the Following coupling (they have the same value): ('GC_11', 1), ('GC_12', 1), ('GC_16', 1), ('GC_20', 1), ('GC_39', 1), ('GC_43', 1), ('GC_47', 1)  [0m
+[1;32mDEBUG:  Fuse the Following coupling (they have the same value): ('GC_21', 1), ('GC_22', -1)  [0m
+[1;32mDEBUG:  Fuse the Following coupling (they have the same value): ('GC_25', 1), ('GC_3', -1)  [0m
+[1;32mDEBUG:  Fuse the Following coupling (they have the same value): ('GC_R2_1021', 1), ('GC_R2_1027', -1)  [0m
+[1;32mDEBUG:  Fuse the Following coupling (they have the same value): ('GC_R2_1015', 1), ('GC_R2_1030', -1)  [0m
+[1;32mDEBUG:  Fuse the Following coupling (they have the same value): ('GC_UV_1021', 1), ('GC_UV_1027', -1)  [0m
+[1;32mDEBUG:  Fuse the Following coupling (they have the same value): ('GC_UV_1021_1eps', 1), ('GC_UV_1027_1eps', -1)  [0m
+[1;32mDEBUG:  Fuse the Following coupling (they have the same value): ('GC_UV_1015', 1), ('GC_UV_1030', -1)  [0m
+[1;32mDEBUG:  Fuse the Following coupling (they have the same value): ('GC_UV_1015_1eps', 1), ('GC_UV_1030_1eps', -1)  [0m
+[1;32mDEBUG:  Fuse the Following coupling (they have the same value): ('R2GC_137_43', 1), ('R2GC_138_45', -1)  [0m
+[1;32mDEBUG:  Fuse the Following coupling (they have the same value): ('R2GC_137_44', 1), ('R2GC_138_46', -1)  [0m
+[1;32mDEBUG:  Fuse the Following coupling (they have the same value): ('R2GC_141_50', 1), ('R2GC_142_52', -1)  [0m
+[1;32mDEBUG:  Fuse the Following coupling (they have the same value): ('R2GC_141_51', 1), ('R2GC_142_53', -1)  [0m
+[1;32mDEBUG:  Fuse the Following coupling (they have the same value): ('R2_GGGZaxialDown', 1), ('R2_GGGZaxialUp', -1)  [0m
+[1;32mDEBUG:  Fuse the Following coupling (they have the same value): ('R2_GGWWcs', 1), ('R2_GGWWtb', 1), ('R2_GGWWud', 1)  [0m
+[1;32mDEBUG:  Fuse the Following coupling (they have the same value): ('R2_GGZdown', 1), ('R2_GGZup', -1)  [0m
+[1;32mDEBUG:  Fuse the Following coupling (they have the same value): ('R2_DDZ_V2', 1), ('R2_UUZ_V2', -1)  [0m
+[1;32mDEBUG:  Fuse the Following coupling (they have the same value): ('R2_DDZ_V3', 1), ('R2_UUZ_V5', 1)  [0m
+[1;32mDEBUG:  Fuse the Following coupling (they have the same value): ('R2_bxtW', 1), ('R2_cxsW', 1), ('R2_dxuW', 1), ('R2_sxcW', 1), ('R2_txbW', 1), ('R2_uxdW', 1)  [0m
+[1;32mDEBUG:  Fuse the Following coupling (they have the same value): ('UVWfct_G_1_1eps', 1), ('UVWfct_G_2_1eps', 1)  [0m
+[1;32mDEBUG:  Fuse the Following coupling (they have the same value): ('UVWfct_b_0_1eps', 1), ('UVWfct_t_0_1eps', 1)  [0m
+[1;32mDEBUG:  Fuse the Following coupling (they have the same value): ('UV_3Gb_1eps', 1), ('UV_3Gc_1eps', 1), ('UV_3Gq_1eps', 1), ('UV_3Gt_1eps', 1)  [0m
+[1;32mDEBUG:  Fuse the Following coupling (they have the same value): ('UV_4Gb_1eps', 1), ('UV_4Gc_1eps', 1), ('UV_4Ggt_1eps', 1), ('UV_4Gq_1eps', 1)  [0m
+[1;32mDEBUG:  Fuse the Following coupling (they have the same value): ('UV_GQQb_1eps', 1), ('UV_GQQc_1eps', 1), ('UV_GQQq_1eps', 1), ('UV_GQQt_1eps', 1)  [0m
+[1;32mDEBUG: remove parameters: mdl_lamWS [0m
+[1;32mDEBUG: remove parameters: mdl_AWS [0m
+[1;32mDEBUG: remove parameters: mdl_rhoWS [0m
+[1;32mDEBUG: remove parameters: mdl_etaWS [0m
+[1;32mDEBUG: remove parameters: mdl_ymc [0m
+[1;32mDEBUG: remove parameters: mdl_yme [0m
+[1;32mDEBUG: remove parameters: mdl_ymm [0m
+[1;32mDEBUG: remove parameters: mdl_MC [0m
+[1;32mDEBUG: remove parameters: mdl_Me [0m
+[1;32mDEBUG: remove parameters: mdl_MM [0m
+[1;32mDEBUG: remove parameters: mdl_WTau [0m
+[1;32mDEBUG: remove parameters: mdl_lamWS__exp__2 [0m
+[1;32mDEBUG: remove parameters: mdl_CKM12 [0m
+[1;32mDEBUG: remove parameters: mdl_lamWS__exp__3 [0m
+[1;32mDEBUG: remove parameters: mdl_CKM13 [0m
+[1;32mDEBUG: remove parameters: mdl_CKM21 [0m
+[1;32mDEBUG: remove parameters: mdl_CKM23 [0m
+[1;32mDEBUG: remove parameters: mdl_CKM31 [0m
+[1;32mDEBUG: remove parameters: mdl_CKM32 [0m
+[1;32mDEBUG: remove parameters: mdl_CKM1x2 [0m
+[1;32mDEBUG: remove parameters: mdl_CKM1x3 [0m
+[1;32mDEBUG: remove parameters: mdl_CKM2x1 [0m
+[1;32mDEBUG: remove parameters: mdl_CKM2x3 [0m
+[1;32mDEBUG: remove parameters: mdl_CKM3x1 [0m
+[1;32mDEBUG: remove parameters: mdl_CKM3x2 [0m
+[1;32mDEBUG: remove parameters: mdl_conjg__CKM1x3 [0m
+[1;32mDEBUG: remove parameters: mdl_conjg__CKM2x3 [0m
+[1;32mDEBUG: remove parameters: mdl_conjg__CKM2x1 [0m
+[1;32mDEBUG: remove parameters: mdl_conjg__CKM3x1 [0m
+[1;32mDEBUG: remove parameters: mdl_conjg__CKM3x2 [0m
+[1;32mDEBUG: remove parameters: mdl_MC__exp__2 [0m
+[1;32mDEBUG: remove parameters: mdl_conjg__CKM12 [0m
+[1;32mDEBUG: remove parameters: mdl_conjg__CKM13 [0m
+[1;32mDEBUG: remove parameters: mdl_conjg__CKM21 [0m
+[1;32mDEBUG: remove parameters: mdl_conjg__CKM23 [0m
+[1;32mDEBUG: remove parameters: mdl_conjg__CKM31 [0m
+[1;32mDEBUG: remove parameters: mdl_conjg__CKM32 [0m
+[1;32mDEBUG: remove parameters: mdl_yc [0m
+[1;32mDEBUG: remove parameters: mdl_ye [0m
+[1;32mDEBUG: remove parameters: mdl_ym [0m
+[1;32mDEBUG: remove parameters: mdl_I1x31 [0m
+[1;32mDEBUG: remove parameters: mdl_I1x32 [0m
+[1;32mDEBUG: remove parameters: mdl_I2x12 [0m
+[1;32mDEBUG: remove parameters: mdl_I2x13 [0m
+[1;32mDEBUG: remove parameters: mdl_I2x22 [0m
+[1;32mDEBUG: remove parameters: mdl_I2x23 [0m
+[1;32mDEBUG: remove parameters: mdl_I2x32 [0m
+[1;32mDEBUG: remove parameters: mdl_I3x21 [0m
+[1;32mDEBUG: remove parameters: mdl_I3x22 [0m
+[1;32mDEBUG: remove parameters: mdl_I3x23 [0m
+[1;32mDEBUG: remove parameters: mdl_I3x31 [0m
+[1;32mDEBUG: remove parameters: mdl_I3x32 [0m
+[1;32mDEBUG: remove parameters: mdl_I4x13 [0m
+[1;32mDEBUG: remove parameters: mdl_I4x23 [0m
+[1;32mDEBUG: remove parameters: mdl_Vector_ubGp [0m
+[1;32mDEBUG: remove parameters: mdl_Vector_cdGp [0m
+[1;32mDEBUG: remove parameters: mdl_Vector_csGp [0m
+[1;32mDEBUG: remove parameters: mdl_Vector_cbGp [0m
+[1;32mDEBUG: remove parameters: mdl_Vector_tdGp [0m
+[1;32mDEBUG: remove parameters: mdl_Vector_tsGp [0m
+[1;32mDEBUG: remove parameters: mdl_Axial_ubGp [0m
+[1;32mDEBUG: remove parameters: mdl_Axial_cdGp [0m
+[1;32mDEBUG: remove parameters: mdl_Axial_csGp [0m
+[1;32mDEBUG: remove parameters: mdl_Axial_cbGp [0m
+[1;32mDEBUG: remove parameters: mdl_Axial_tdGp [0m
+[1;32mDEBUG: remove parameters: mdl_Axial_tsGp [0m
+[1;32mDEBUG: remove parameters: mdl_Vector_ubGm [0m
+[1;32mDEBUG: remove parameters: mdl_Vector_cdGm [0m
+[1;32mDEBUG: remove parameters: mdl_Vector_csGm [0m
+[1;32mDEBUG: remove parameters: mdl_Vector_cbGm [0m
+[1;32mDEBUG: remove parameters: mdl_Vector_tdGm [0m
+[1;32mDEBUG: remove parameters: mdl_Vector_tsGm [0m
+[1;32mDEBUG: remove parameters: mdl_Axial_ubGm [0m
+[1;32mDEBUG: remove parameters: mdl_Axial_cdGm [0m
+[1;32mDEBUG: remove parameters: mdl_Axial_csGm [0m
+[1;32mDEBUG: remove parameters: mdl_Axial_cbGm [0m
+[1;32mDEBUG: remove parameters: mdl_Axial_tdGm [0m
+[1;32mDEBUG: remove parameters: mdl_Axial_tsGm [0m
+[1;32mDEBUG: remove parameters: mdl_yc__exp__2 [0m
+[1;32mDEBUG: remove parameters: mdl_GWcft_UV_c_1EPS_ [0m
+[1;32mDEBUG: remove parameters: mdl_cWcft_UV_1EPS_ [0m
+[1;32mDEBUG: remove parameters: mdl_cMass_UV_1EPS_ [0m
+[1;32mDEBUG: remove parameters: mdl_G_UVc_FIN_ [0m
+[1;32mDEBUG: remove parameters: mdl_GWcft_UV_c_FIN_ [0m
+[1;32mDEBUG: remove parameters: mdl_cWcft_UV_FIN_ [0m
+[1;32mDEBUG: remove parameters: mdl_cMass_UV_FIN_ [0m
+[1;32mDEBUG: remove parameters: mdl_UV_yuk_c_FIN_ [0m
+[1;32mDEBUG: fix parameter value: mdl_lhv [0m
+[1;32mDEBUG: remove parameters: mdl_CKM11 [0m
+[1;32mDEBUG: fix parameter value: mdl_CKM22 [0m
+[1;32mDEBUG: fix parameter value: mdl_CKM33 [0m
+[1;32mDEBUG: remove parameters: mdl_CKM1x1 [0m
+[1;32mDEBUG: remove parameters: mdl_CKM2x2 [0m
+[1;32mDEBUG: fix parameter value: mdl_CKM3x3 [0m
+[1;32mDEBUG: fix parameter value: mdl_conjg__CKM3x3 [0m
+[1;32mDEBUG: remove parameters: mdl_conjg__CKM2x2 [0m
+[1;32mDEBUG: remove parameters: mdl_conjg__CKM11 [0m
+[1;32mDEBUG: fix parameter value: mdl_conjg__CKM22 [0m
+[1;32mDEBUG: remove parameters: mdl_conjg__CKM33 [0m
+INFO: Change particles name to pass to MG5 convention 
+Defined multiparticle p = g u c d s u~ c~ d~ s~
+Defined multiparticle j = g u c d s u~ c~ d~ s~
+Defined multiparticle l+ = e+ mu+
+Defined multiparticle l- = e- mu-
+Defined multiparticle vl = ve vm vt
+Defined multiparticle vl~ = ve~ vm~ vt~
+Defined multiparticle all = g gh gh~ d u s c d~ u~ s~ c~ a ve vm vt e- mu- ve~ vm~ vt~ e+ mu+ b t b~ t~ z w+ h w- ta- ta+
+define p = g u c d s u~ c~ d~ s~
+Defined multiparticle p = g u c d s u~ c~ d~ s~
+generate p p > t t~ [QCD]
+INFO: Checking for minimal orders which gives processes. 
+INFO: Please specify coupling orders to bypass this step. 
+INFO: Trying coupling order WEIGHTED<=2: WEIGTHED IS QCD+2*QED 
+[1mSetting the born squared orders automatically in the process definition to QED=0 QCD^2<=4.
+If this is not what you need, please regenerate with the correct orders.[0m
+[1;34mWARNING: Use of multiparticles is non-trivial for NLO process generation and depends on the orders included, the process considered, as well as the PDF set chosen. See appendix D of arXiv:1804.10017 [hep-ph] for some guidance. [0m
+INFO: Generating FKS-subtracted matrix elements for born process: g g > t t~ QCD^2=6 QED^2=0 (1 / 9) 
+INFO: Generating FKS-subtracted matrix elements for born process: u u~ > t t~ QCD^2=6 QED^2=0 (2 / 9) 
+INFO: Generating FKS-subtracted matrix elements for born process: c c~ > t t~ QCD^2=6 QED^2=0 (3 / 9) 
+INFO: Generating FKS-subtracted matrix elements for born process: d d~ > t t~ QCD^2=6 QED^2=0 (4 / 9) 
+INFO: Generating FKS-subtracted matrix elements for born process: s s~ > t t~ QCD^2=6 QED^2=0 (5 / 9) 
+INFO: Generating FKS-subtracted matrix elements for born process: u~ u > t t~ QCD^2=6 QED^2=0 (6 / 9) 
+INFO: Generating FKS-subtracted matrix elements for born process: c~ c > t t~ QCD^2=6 QED^2=0 (7 / 9) 
+INFO: Generating FKS-subtracted matrix elements for born process: d~ d > t t~ QCD^2=6 QED^2=0 (8 / 9) 
+INFO: Generating FKS-subtracted matrix elements for born process: s~ s > t t~ QCD^2=6 QED^2=0 (9 / 9) 
+INFO: Generating virtual matrix element with MadLoop for process: g g > t t~ QCD^2=6 QED^2=0 (1 / 9) 
+INFO: Generating virtual matrix element with MadLoop for process: u u~ > t t~ QCD^2=6 QED^2=0 (2 / 9) 
+INFO: Generating virtual matrix element with MadLoop for process: c c~ > t t~ QCD^2=6 QED^2=0 (3 / 9) 
+INFO: Generating virtual matrix element with MadLoop for process: d d~ > t t~ QCD^2=6 QED^2=0 (4 / 9) 
+INFO: Generating virtual matrix element with MadLoop for process: s s~ > t t~ QCD^2=6 QED^2=0 (5 / 9) 
+INFO: Generating virtual matrix element with MadLoop for process: u~ u > t t~ QCD^2=6 QED^2=0 (6 / 9) 
+INFO: Generating virtual matrix element with MadLoop for process: c~ c > t t~ QCD^2=6 QED^2=0 (7 / 9) 
+INFO: Generating virtual matrix element with MadLoop for process: d~ d > t t~ QCD^2=6 QED^2=0 (8 / 9) 
+INFO: Generating virtual matrix element with MadLoop for process: s~ s > t t~ QCD^2=6 QED^2=0 (9 / 9) 
+INFO: Generated 9 subprocesses with 136 real emission diagrams, 11 born diagrams and 124 virtual diagrams 
+output /private/tmp/smeft_fig5_work/PROC_sm_nlo
+INFO: Writing out the aMC@NLO code, using optimized Loops 
+INFO: initialize a new directory: PROC_sm_nlo 
+INFO: remove old information in PROC_sm_nlo 
+INFO: Generating real emission matrix-elements... 
+INFO: Generating Helas calls for FKS process: g g > t t~ [ all = QCD QED ] QCD^2=6 QED^2=0 (1 / 9) 
+INFO: Processing color information for process: g g > t t~ [ all = QCD QED ] QCD^2=6 QED^2=0 
+INFO: Generating Helas calls for FKS process: u u~ > t t~ [ all = QCD QED ] QCD^2=6 QED^2=0 (2 / 9) 
+INFO: Processing color information for process: u u~ > t t~ [ all = QCD QED ] QCD^2=6 QED^2=0 
+INFO: Generating Helas calls for FKS process: c c~ > t t~ [ all = QCD QED ] QCD^2=6 QED^2=0 (3 / 9) 
+INFO: Generating Helas calls for FKS process: d d~ > t t~ [ all = QCD QED ] QCD^2=6 QED^2=0 (4 / 9) 
+INFO: Generating Helas calls for FKS process: s s~ > t t~ [ all = QCD QED ] QCD^2=6 QED^2=0 (5 / 9) 
+INFO: Generating Helas calls for FKS process: u~ u > t t~ [ all = QCD QED ] QCD^2=6 QED^2=0 (6 / 9) 
+INFO: Processing color information for process: u~ u > t t~ [ all = QCD QED ] QCD^2=6 QED^2=0 
+INFO: Generating Helas calls for FKS process: c~ c > t t~ [ all = QCD QED ] QCD^2=6 QED^2=0 (7 / 9) 
+INFO: Generating Helas calls for FKS process: d~ d > t t~ [ all = QCD QED ] QCD^2=6 QED^2=0 (8 / 9) 
+INFO: Generating Helas calls for FKS process: s~ s > t t~ [ all = QCD QED ] QCD^2=6 QED^2=0 (9 / 9) 
+INFO: ... Done 
+INFO: Writing files in P0_gg_ttx (1 / 3) 
+INFO: Creating files in directory V0_gg_ttx 
+[1;32mDEBUG: adding in aloha model 2 lorentz struct [0m
+ALOHA: aloha creates VVV1 set of routines with options: L2,P0[0m
+ALOHA: aloha creates FFV1 set of routines with options: L3[0m
+ALOHA: aloha creates FFV1 set of routines with options: L2,P0[0m
+ALOHA: aloha creates FFV1 set of routines with options: L1,P0[0m
+ALOHA: aloha creates FFV1 set of routines with options: L3[0m
+ALOHA: aloha creates FFV1 set of routines with options: L1[0m
+ALOHA: aloha creates FFV1 set of routines with options: L2[0m
+ALOHA: aloha creates VVVV1 set of routines with options: L2,P0[0m
+ALOHA: aloha creates VVVV3 set of routines with options: L2,P0[0m
+ALOHA: aloha creates VVVV4 set of routines with options: L2,P0[0m
+ALOHA: aloha creates GHGHG set of routines with options: L2[0m
+ALOHA: aloha creates GHGHG set of routines with options: L1[0m
+INFO: Computing diagram color coefficients 
+INFO: Particles with .true. are generated off-shell: ['.false.', '.false.', '.false.', '.false.'] 
+INFO: Drawing loop Feynman diagrams for Process: g g > t t~ [ all = QCD QED ] QCD^2=6 QED^2=0 
+INFO: Generating born Feynman diagrams for Process: g g > t t~ [ all = QCD QED ] QCD^2=6 QED^2=0 
+INFO: Writing files in P0_uux_ttx (2 / 3) 
+INFO: Creating files in directory V0_uux_ttx 
+INFO: Computing diagram color coefficients 
+INFO: Particles with .true. are generated off-shell: ['.false.', '.false.', '.false.', '.false.'] 
+INFO: Drawing loop Feynman diagrams for Process: u u~ > t t~ [ all = QCD QED ] QCD^2=6 QED^2=0 
+INFO: Generating born Feynman diagrams for Process: u u~ > t t~ [ all = QCD QED ] QCD^2=6 QED^2=0 
+INFO: Writing files in P0_uxu_ttx (3 / 3) 
+INFO: Creating files in directory V0_uxu_ttx 
+INFO: Computing diagram color coefficients 
+INFO: Particles with .true. are generated off-shell: ['.false.', '.false.', '.false.', '.false.'] 
+INFO: Drawing loop Feynman diagrams for Process: u~ u > t t~ [ all = QCD QED ] QCD^2=6 QED^2=0 
+INFO: Generating born Feynman diagrams for Process: u~ u > t t~ [ all = QCD QED ] QCD^2=6 QED^2=0 
+History written to /private/tmp/smeft_fig5_work/PROC_sm_nlo/Cards/proc_card_mg5.dat
+ALOHA: aloha starts to compute helicity amplitudes
+ALOHA: aloha creates VVV1 routines[0m
+ALOHA: aloha creates FFV1 routines[0m
+ALOHA: aloha creates VVVV1 set of routines with options: P0[0m
+ALOHA: aloha creates VVVV3 set of routines with options: P0[0m
+ALOHA: aloha creates VVVV4 set of routines with options: P0[0m
+ALOHA: aloha creates GHGHG set of routines with options: L2[0m
+ALOHA: aloha creates R2_GG_1 routines[0m
+ALOHA: aloha creates R2_GG_2 routines[0m
+ALOHA: aloha creates R2_QQ_1 routines[0m
+ALOHA: aloha creates R2_QQ_2 routines[0m
+ALOHA: aloha creates R2_GG_3 routines[0m
+ALOHA: aloha creates R2_GG_1_R2_GG_2 routines[0m
+ALOHA: aloha creates R2_QQ_1_R2_QQ_2 routines[0m
+ALOHA: aloha creates R2_GG_1_R2_GG_3 routines[0m
+ALOHA: aloha creates 26 routines in  0.202 s
+save configuration file to /private/tmp/smeft_fig5_work/PROC_sm_nlo/Cards/amcatnlo_configuration.txt
+INFO: Use Fortran compiler gfortran 
+INFO: Use c++ compiler clang 
+INFO: Generate jpeg diagrams 
+INFO: Generate web pages 
+Type "launch" to generate events from this process, or see
+/private/tmp/smeft_fig5_work/PROC_sm_nlo/README
+Run "open index.html" to see more information about this process.
+launch /private/tmp/smeft_fig5_work/PROC_sm_nlo
+INFO: ************************************************************
+*                                                          *
+*           W E L C O M E  to  M A D G R A P H 5           *
+*                       a M C @ N L O                      *
+*                                                          *
+*                 *                       *                *
+*                   *        * *        *                  *
+*                     * * * * 5 * * * *                    *
+*                   *        * *        *                  *
+*                 *                       *                *
+*                                                          *
+*         VERSION 3.7.2                 2026-04-28         *
+*                                                          *
+*    The MadGraph5_aMC@NLO Development Team - Find us at   *
+*                 http://amcatnlo.cern.ch                  *
+*                                                          *
+*               Type 'help' for in-line help.              *
+*                                                          *
+************************************************************ 
+INFO: load configuration from /Users/omattelaer/.mg5/mg5_configuration.txt  
+INFO: load configuration from /private/tmp/smeft_fig5_work/PROC_sm_nlo/Cards/amcatnlo_configuration.txt  
+INFO: load configuration from /private/tmp/t110/input/mg5_configuration.txt  
+INFO: load configuration from /private/tmp/smeft_fig5_work/PROC_sm_nlo/Cards/amcatnlo_configuration.txt  
+INFO: set f2py compiler to /Users/omattelaer/Documents/git_workspace/version3/py314/.direnv/python-3.13/bin/f2py 
+Using default gzip "gzip". Set another one in ./input/mg5_configuration.txt
+set automatic_html_opening False --no_save
+launch auto 
+stty: stdin isn't a terminal
+The following switches determine which programs are run:
+/==============================================================================\
+| 1. Type of perturbative computation         [1m      order[0m = [32mNLO[0m                |
+| 2. No MC@[N]LO matching / event generation  [1mfixed_order[0m = [32mOFF[0m                |
+| 3. Shower the generated events              [1m     shower[0m = [32mHERWIG6[0m            |
+| 4. Decay onshell particles                  [1m    madspin[0m = [31mOFF[0m                |
+| 5. Add weights to events for new hypp.      [1m   reweight[0m = [31mOFF[0m                |
+| 6. Run MadAnalysis5 on the events generated [1mmadanalysis[0m = [01mNot Avail[0m          |
+\==============================================================================/
+Either type the switch number (1 to 6) to change its setting,
+Set any switch explicitly (e.g. type 'order=LO' at the prompt)
+Type 'help' for the list of all valid option
+Type '0', 'auto', 'done' or just press enter when you are done.
+The following switches determine which programs are run:
+/==============================================================================\
+| 1. Type of perturbative computation         [1m      order[0m = [32mNLO[0m                |
+| 2. No MC@[N]LO matching / event generation  [1mfixed_order[0m = [32mOFF[0m                |
+| 3. Shower the generated events              [1m     shower[0m = [32mHERWIG6[0m            |
+| 4. Decay onshell particles                  [1m    madspin[0m = [31mOFF[0m                |
+| 5. Add weights to events for new hypp.      [1m   reweight[0m = [31mOFF[0m                |
+| 6. Run MadAnalysis5 on the events generated [1mmadanalysis[0m = [01mNot Avail[0m          |
+\==============================================================================/
+Either type the switch number (1 to 6) to change its setting,
+Set any switch explicitly (e.g. type 'order=LO' at the prompt)
+Type 'help' for the list of all valid option
+Type '0', 'auto', 'done' or just press enter when you are done.
+The following switches determine which programs are run:
+/==============================================================================\
+| 1. Type of perturbative computation         [1m      order[0m = [32mNLO[0m                |
+| 2. No MC@[N]LO matching / event generation  [1mfixed_order[0m = [32mOFF[0m                |
+| 3. Shower the generated events              [1m     shower[0m = [32mHERWIG6[0m            |
+| 4. Decay onshell particles                  [1m    madspin[0m = [31mOFF[0m                |
+| 5. Add weights to events for new hypp.      [1m   reweight[0m = [31mOFF[0m                |
+| 6. Run MadAnalysis5 on the events generated [1mmadanalysis[0m = [01mNot Avail[0m          |
+\==============================================================================/
+Either type the switch number (1 to 6) to change its setting,
+Set any switch explicitly (e.g. type 'order=LO' at the prompt)
+Type 'help' for the list of all valid option
+Type '0', 'auto', 'done' or just press enter when you are done.
+The following switches determine which programs are run:
+/==============================================================================\
+| 1. Type of perturbative computation         [1m      order[0m = [32mNLO[0m                |
+| 2. No MC@[N]LO matching / event generation  [1mfixed_order[0m = [32mOFF[0m                |
+| 3. Shower the generated events              [1m     shower[0m = [32mHERWIG6[0m            |
+| 4. Decay onshell particles                  [1m    madspin[0m = [31mOFF[0m                |
+| 5. Add weights to events for new hypp.      [1m   reweight[0m = [31mOFF[0m                |
+| 6. Run MadAnalysis5 on the events generated [1mmadanalysis[0m = [01mNot Avail[0m          |
+\==============================================================================/
+Either type the switch number (1 to 6) to change its setting,
+Set any switch explicitly (e.g. type 'order=LO' at the prompt)
+Type 'help' for the list of all valid option
+Type '0', 'auto', 'done' or just press enter when you are done.
+The following switches determine which programs are run:
+/==============================================================================\
+| 1. Type of perturbative computation         [1m      order[0m = [32mNLO[0m                |
+| 2. No MC@[N]LO matching / event generation  [1mfixed_order[0m = [32mOFF[0m                |
+| 3. Shower the generated events              [1m     shower[0m = [32mHERWIG6[0m            |
+| 4. Decay onshell particles                  [1m    madspin[0m = [31mOFF[0m                |
+| 5. Add weights to events for new hypp.      [1m   reweight[0m = [31mOFF[0m                |
+| 6. Run MadAnalysis5 on the events generated [1mmadanalysis[0m = [01mNot Avail[0m          |
+\==============================================================================/
+Either type the switch number (1 to 6) to change its setting,
+Set any switch explicitly (e.g. type 'order=LO' at the prompt)
+Type 'help' for the list of all valid option
+Type '0', 'auto', 'done' or just press enter when you are done.
+INFO: will run in mode: noshower 
+[1;34mWARNING: You have chosen not to run a parton shower. NLO events without showering are NOT physical. Please, shower the LesHouches events before using them for physics analyses. You have to choose NOW which parton-shower you WILL use and specify it in the run_card. [0m
+set nevents 500000
+[1mINFO: modify parameter nevents of the run_card.dat to 500000 [0m
+set iseed 42
+[1mINFO: modify parameter iseed of the run_card.dat to 42 [0m
+set use_syst False
+[1;34mWARNING: invalid set command use_syst False  [0m
+set ebeam1 6500.0
+[1mINFO: modify parameter ebeam1 of the run_card.dat to 6500.0 [0m
+set ebeam2 6500.0
+[1mINFO: modify parameter ebeam2 of the run_card.dat to 6500.0 [0m
+set pdlabel lhapdf
+[1mINFO: modify parameter pdlabel of the run_card.dat to lhapdf [0m
+set lhaid 230000
+[1mINFO: modify parameter lhaid of the run_card.dat to [230000] [0m
+set fixed_ren_scale True
+[1mINFO: modify parameter fixed_ren_scale of the run_card.dat to True [0m
+set fixed_fac_scale True
+[1mINFO: modify parameter fixed_fac_scale of the run_card.dat to True [0m
+set muR_ref_fixed 173.0
+[1mINFO: modify parameter mur_ref_fixed of the run_card.dat to 173.0 [0m
+set muF_ref_fixed 173.0
+[1mINFO: modify parameter muf_ref_fixed of the run_card.dat to 173.0 [0m
+set reweight_scale False
+[1mINFO: modify parameter reweight_scale of the run_card.dat to [False] [0m
+set reweight_pdf False
+[1mINFO: modify parameter reweight_pdf of the run_card.dat to [False] [0m
+set req_acc -1
+[1mINFO: modify parameter req_acc of the run_card.dat to -1.0 [0m
+set parton_shower PYTHIA8
+[1mINFO: modify parameter parton_shower of the run_card.dat to PYTHIA8 [0m
+set MT 172.76
+[1mINFO: modify param_card information BLOCK mass with id (6,) set to 172.76 [0m
+set WT 1.33
+[1mINFO: modify param_card information BLOCK decay with id (6,) set to 1.33 [0m
+set WW 2.085
+[1mINFO: modify param_card information BLOCK decay with id (24,) set to 2.085 [0m
+set WZ 2.4952
+[1mINFO: modify param_card information BLOCK decay with id (23,) set to 2.4952 [0m
+set ymt 172.76
+[1mINFO: modify param_card information BLOCK yukawa with id (6,) set to 172.76 [0m
+INFO: Update the dependent parameter of the param_card.dat 
+[1;34mWARNING: update the strong coupling value (alpha_s) to the value from the pdf selected: 0.1190025 [0m
+INFO: Starting run 
+INFO: Compiling the code 
+INFO: Using LHAPDF v6.5.5 interface for PDFs 
+[1;32mrun_card missed argument nb_proton1. Takes default: 1[0m
+[1;32mrun_card missed argument nb_proton2. Takes default: 1[0m
+[1;32mrun_card missed argument nb_neutron1. Takes default: 0[0m
+[1;32mrun_card missed argument nb_neutron2. Takes default: 0[0m
+[1;32mrun_card missed argument mass_ion1. Takes default: -1.0[0m
+[1;32mrun_card missed argument mass_ion2. Takes default: -1.0[0m
+[1;32mrun_card missed argument muf1_ref_fixed. Takes default: 173.0[0m
+[1;32mrun_card missed argument muf2_ref_fixed. Takes default: 173.0[0m
+[1;32mrun_card missed argument mue_ref_fixed. Takes default: 91.118[0m
+[1;32mrun_card missed argument fixed_qes_scale. Takes default: False[0m
+[1;32mrun_card missed argument qes_ref_fixed. Takes default: 173.0[0m
+[1;32mrun_card missed argument muf1_over_ref. Takes default: 1.0[0m
+[1;32mrun_card missed argument muf2_over_ref. Takes default: 1.0[0m
+[1;32mrun_card missed argument qes_over_ref. Takes default: 1.0[0m
+[1;32mrun_card missed argument rw_rscale_down. Takes default: -1.0[0m
+[1;32mrun_card missed argument rw_rscale_up. Takes default: -1.0[0m
+[1;32mrun_card missed argument rw_fscale_down. Takes default: -1.0[0m
+[1;32mrun_card missed argument rw_fscale_up. Takes default: -1.0[0m
+[1;32mrun_card missed argument pdf_set_min. Takes default: 244601[0m
+[1;32mrun_card missed argument pdf_set_max. Takes default: 244700[0m
+[1;32mrun_card missed argument flavour_bias. Takes default: [5, 1][0m
+[1;32mrun_card missed argument maxjetflavor. Takes default: 4[0m
+[1mINFO: For gauge cancellation, the width of 't' has been set to zero. [0m
+INFO: Compiling source... 
+INFO:           ...done, continuing with P* directories 
+INFO: Compiling directories... 
+INFO: Compiling on 18 cores 
+INFO:  Compiling P0_gg_ttx... 
+INFO:  Compiling P0_uux_ttx... 
+INFO:  Compiling P0_uxu_ttx... 
+INFO:     P0_uxu_ttx done. 
+INFO:     P0_uux_ttx done. 
+INFO:     P0_gg_ttx done. 
+INFO: Checking test output: 
+INFO: P0_gg_ttx 
+INFO:  Result for test_ME: 
+INFO:    Passed. 
+[1;32mDEBUG: 
+Sum of all orders:      Soft test  1 PASSED. Fraction of failures: 0.00
+Split-order  2: QCD:  6; QED:  0;      Soft test  1 PASSED. Fraction of failures: 0.03
+Sum of all orders: Collinear test  1 PASSED. Fraction of failures: 0.00
+Split-order  2: QCD:  6; QED:  0; Collinear test  1 PASSED. Fraction of failures: 0.00
+Sum of all orders:      Soft test  2 PASSED. Fraction of failures: 0.00
+Split-order  2: QCD:  6; QED:  0;      Soft test  2 PASSED. Fraction of failures: 0.00
+Sum of all orders: Collinear test  2 PASSED. Fraction of failures: 0.00
+Split-order  2: QCD:  6; QED:  0; Collinear test  2 PASSED. Fraction of failures: 0.00
+Sum of all orders:      Soft test  3 PASSED. Fraction of failures: 0.00
+Split-order  2: QCD:  6; QED:  0;      Soft test  3 PASSED. Fraction of failures: 0.00
+Sum of all orders:      Soft test  4 PASSED. Fraction of failures: 0.00
+Split-order  2: QCD:  6; QED:  0;      Soft test  4 PASSED. Fraction of failures: 0.00
+Sum of all orders:      Soft test  5 PASSED. Fraction of failures: 0.00
+Split-order  2: QCD:  6; QED:  0;      Soft test  5 PASSED. Fraction of failures: 0.00
+Sum of all orders: Collinear test  5 PASSED. Fraction of failures: 0.02
+Split-order  2: QCD:  6; QED:  0; Collinear test  5 PASSED. Fraction of failures: 0.02
+Sum of all orders:      Soft test  6 PASSED. Fraction of failures: 0.00
+Split-order  2: QCD:  6; QED:  0;      Soft test  6 PASSED. Fraction of failures: 0.00
+Sum of all orders: Collinear test  6 PASSED. Fraction of failures: 0.01
+Split-order  2: QCD:  6; QED:  0; Collinear test  6 PASSED. Fraction of failures: 0.01
+Sum of all orders:      Soft test  7 PASSED. Fraction of failures: 0.00
+Split-order  2: QCD:  6; QED:  0;      Soft test  7 PASSED. Fraction of failures: 0.00
+Sum of all orders: Collinear test  7 PASSED. Fraction of failures: 0.00
+Split-order  2: QCD:  6; QED:  0; Collinear test  7 PASSED. Fraction of failures: 0.00
+Sum of all orders:      Soft test  8 PASSED. Fraction of failures: 0.00
+Split-order  2: QCD:  6; QED:  0;      Soft test  8 PASSED. Fraction of failures: 0.00
+Sum of all orders: Collinear test  8 PASSED. Fraction of failures: 0.00
+Split-order  2: QCD:  6; QED:  0; Collinear test  8 PASSED. Fraction of failures: 0.00 [0m
+INFO:  Result for test_MC: 
+INFO:    Passed. 
+[1;32mDEBUG: 
+Sum of all orders:      Soft test  1 PASSED. Fraction of failures: 0.00
+Split-order  2: QCD:  6; QED:  0;      Soft test  1 PASSED. Fraction of failures: 0.00
+Sum of all orders: Collinear test  1 PASSED. Fraction of failures: 0.00
+Split-order  2: QCD:  6; QED:  0; Collinear test  1 PASSED. Fraction of failures: 0.00
+Sum of all orders:      Soft test  2 PASSED. Fraction of failures: 0.00
+Split-order  2: QCD:  6; QED:  0;      Soft test  2 PASSED. Fraction of failures: 0.00
+Sum of all orders: Collinear test  2 PASSED. Fraction of failures: 0.00
+Split-order  2: QCD:  6; QED:  0; Collinear test  2 PASSED. Fraction of failures: 0.00
+Sum of all orders:      Soft test  3 PASSED. Fraction of failures: 0.00
+Split-order  2: QCD:  6; QED:  0;      Soft test  3 PASSED. Fraction of failures: 0.00
+Sum of all orders:      Soft test  4 PASSED. Fraction of failures: 0.00
+Split-order  2: QCD:  6; QED:  0;      Soft test  4 PASSED. Fraction of failures: 0.00
+Sum of all orders:      Soft test  5 PASSED. Fraction of failures: 0.00
+Split-order  2: QCD:  6; QED:  0;      Soft test  5 PASSED. Fraction of failures: 0.00
+Sum of all orders: Collinear test  5 PASSED. Fraction of failures: 0.00
+Split-order  2: QCD:  6; QED:  0; Collinear test  5 PASSED. Fraction of failures: 0.00
+Sum of all orders:      Soft test  6 PASSED. Fraction of failures: 0.00
+Split-order  2: QCD:  6; QED:  0;      Soft test  6 PASSED. Fraction of failures: 0.00
+Sum of all orders: Collinear test  6 PASSED. Fraction of failures: 0.00
+Split-order  2: QCD:  6; QED:  0; Collinear test  6 PASSED. Fraction of failures: 0.00
+Sum of all orders:      Soft test  7 PASSED. Fraction of failures: 0.00
+Split-order  2: QCD:  6; QED:  0;      Soft test  7 PASSED. Fraction of failures: 0.00
+Sum of all orders: Collinear test  7 PASSED. Fraction of failures: 0.00
+Split-order  2: QCD:  6; QED:  0; Collinear test  7 PASSED. Fraction of failures: 0.00
+Sum of all orders:      Soft test  8 PASSED. Fraction of failures: 0.00
+Split-order  2: QCD:  6; QED:  0;      Soft test  8 PASSED. Fraction of failures: 0.00
+Sum of all orders: Collinear test  8 PASSED. Fraction of failures: 0.00
+Split-order  2: QCD:  6; QED:  0; Collinear test  8 PASSED. Fraction of failures: 0.00 [0m
+INFO:  Result for check_poles: 
+INFO:    Poles successfully cancel for 20 points over 20 (tolerance=1.0e-05) 
+INFO: P0_uux_ttx 
+INFO:  Result for test_ME: 
+INFO:    Passed. 
+[1;32mDEBUG: 
+Sum of all orders:      Soft test  1 PASSED. Fraction of failures: 0.00
+Split-order  2: QCD:  6; QED:  0;      Soft test  1 PASSED. Fraction of failures: 0.02
+Sum of all orders: Collinear test  1 PASSED. Fraction of failures: 0.01
+Split-order  2: QCD:  6; QED:  0; Collinear test  1 PASSED. Fraction of failures: 0.01
+Sum of all orders:      Soft test  2 PASSED. Fraction of failures: 0.00
+Split-order  2: QCD:  6; QED:  0;      Soft test  2 PASSED. Fraction of failures: 0.01
+Sum of all orders: Collinear test  2 PASSED. Fraction of failures: 0.00
+Split-order  2: QCD:  6; QED:  0; Collinear test  2 PASSED. Fraction of failures: 0.00
+Sum of all orders:      Soft test  3 PASSED. Fraction of failures: 0.00
+Split-order  2: QCD:  6; QED:  0;      Soft test  3 PASSED. Fraction of failures: 0.00
+Sum of all orders:      Soft test  4 PASSED. Fraction of failures: 0.00
+Split-order  2: QCD:  6; QED:  0;      Soft test  4 PASSED. Fraction of failures: 0.00
+Sum of all orders:      Soft test  5 PASSED. Fraction of failures: 0.00
+Split-order  2: QCD:  6; QED:  0;      Soft test  5 PASSED. Fraction of failures: 0.00
+Sum of all orders: Collinear test  5 PASSED. Fraction of failures: 0.03
+Split-order  2: QCD:  6; QED:  0; Collinear test  5 PASSED. Fraction of failures: 0.03
+Sum of all orders:      Soft test  6 PASSED. Fraction of failures: 0.00
+Split-order  2: QCD:  6; QED:  0;      Soft test  6 PASSED. Fraction of failures: 0.00
+Sum of all orders: Collinear test  6 PASSED. Fraction of failures: 0.01
+Split-order  2: QCD:  6; QED:  0; Collinear test  6 PASSED. Fraction of failures: 0.01 [0m
+INFO:  Result for test_MC: 
+INFO:    Passed. 
+[1;32mDEBUG: 
+Sum of all orders:      Soft test  1 PASSED. Fraction of failures: 0.00
+Split-order  2: QCD:  6; QED:  0;      Soft test  1 PASSED. Fraction of failures: 0.00
+Sum of all orders: Collinear test  1 PASSED. Fraction of failures: 0.00
+Split-order  2: QCD:  6; QED:  0; Collinear test  1 PASSED. Fraction of failures: 0.00
+Sum of all orders:      Soft test  2 PASSED. Fraction of failures: 0.00
+Split-order  2: QCD:  6; QED:  0;      Soft test  2 PASSED. Fraction of failures: 0.00
+Sum of all orders: Collinear test  2 PASSED. Fraction of failures: 0.00
+Split-order  2: QCD:  6; QED:  0; Collinear test  2 PASSED. Fraction of failures: 0.00
+Sum of all orders:      Soft test  3 PASSED. Fraction of failures: 0.00
+Split-order  2: QCD:  6; QED:  0;      Soft test  3 PASSED. Fraction of failures: 0.00
+Sum of all orders:      Soft test  4 PASSED. Fraction of failures: 0.00
+Split-order  2: QCD:  6; QED:  0;      Soft test  4 PASSED. Fraction of failures: 0.00
+Sum of all orders:      Soft test  5 PASSED. Fraction of failures: 0.00
+Split-order  2: QCD:  6; QED:  0;      Soft test  5 PASSED. Fraction of failures: 0.00
+Sum of all orders: Collinear test  5 PASSED. Fraction of failures: 0.00
+Split-order  2: QCD:  6; QED:  0; Collinear test  5 PASSED. Fraction of failures: 0.00
+Sum of all orders:      Soft test  6 PASSED. Fraction of failures: 0.00
+Split-order  2: QCD:  6; QED:  0;      Soft test  6 PASSED. Fraction of failures: 0.00
+Sum of all orders: Collinear test  6 PASSED. Fraction of failures: 0.00
+Split-order  2: QCD:  6; QED:  0; Collinear test  6 PASSED. Fraction of failures: 0.00 [0m
+INFO:  Result for check_poles: 
+INFO:    Poles successfully cancel for 20 points over 20 (tolerance=1.0e-05) 
+INFO: P0_uxu_ttx 
+INFO:  Result for test_ME: 
+INFO:    Passed. 
+[1;32mDEBUG: 
+Sum of all orders:      Soft test  1 PASSED. Fraction of failures: 0.00
+Split-order  2: QCD:  6; QED:  0;      Soft test  1 PASSED. Fraction of failures: 0.00
+Sum of all orders: Collinear test  1 PASSED. Fraction of failures: 0.00
+Split-order  2: QCD:  6; QED:  0; Collinear test  1 PASSED. Fraction of failures: 0.00
+Sum of all orders:      Soft test  2 PASSED. Fraction of failures: 0.00
+Split-order  2: QCD:  6; QED:  0;      Soft test  2 PASSED. Fraction of failures: 0.00
+Sum of all orders: Collinear test  2 PASSED. Fraction of failures: 0.00
+Split-order  2: QCD:  6; QED:  0; Collinear test  2 PASSED. Fraction of failures: 0.00
+Sum of all orders:      Soft test  3 PASSED. Fraction of failures: 0.00
+Split-order  2: QCD:  6; QED:  0;      Soft test  3 PASSED. Fraction of failures: 0.00
+Sum of all orders:      Soft test  4 PASSED. Fraction of failures: 0.00
+Split-order  2: QCD:  6; QED:  0;      Soft test  4 PASSED. Fraction of failures: 0.00
+Sum of all orders:      Soft test  5 PASSED. Fraction of failures: 0.00
+Split-order  2: QCD:  6; QED:  0;      Soft test  5 PASSED. Fraction of failures: 0.00
+Sum of all orders: Collinear test  5 PASSED. Fraction of failures: 0.02
+Split-order  2: QCD:  6; QED:  0; Collinear test  5 PASSED. Fraction of failures: 0.02
+Sum of all orders:      Soft test  6 PASSED. Fraction of failures: 0.00
+Split-order  2: QCD:  6; QED:  0;      Soft test  6 PASSED. Fraction of failures: 0.00
+Sum of all orders: Collinear test  6 PASSED. Fraction of failures: 0.01
+Split-order  2: QCD:  6; QED:  0; Collinear test  6 PASSED. Fraction of failures: 0.01 [0m
+INFO:  Result for test_MC: 
+INFO:    Passed. 
+[1;32mDEBUG: 
+Sum of all orders:      Soft test  1 PASSED. Fraction of failures: 0.00
+Split-order  2: QCD:  6; QED:  0;      Soft test  1 PASSED. Fraction of failures: 0.00
+Sum of all orders: Collinear test  1 PASSED. Fraction of failures: 0.00
+Split-order  2: QCD:  6; QED:  0; Collinear test  1 PASSED. Fraction of failures: 0.00
+Sum of all orders:      Soft test  2 PASSED. Fraction of failures: 0.00
+Split-order  2: QCD:  6; QED:  0;      Soft test  2 PASSED. Fraction of failures: 0.00
+Sum of all orders: Collinear test  2 PASSED. Fraction of failures: 0.00
+Split-order  2: QCD:  6; QED:  0; Collinear test  2 PASSED. Fraction of failures: 0.00
+Sum of all orders:      Soft test  3 PASSED. Fraction of failures: 0.00
+Split-order  2: QCD:  6; QED:  0;      Soft test  3 PASSED. Fraction of failures: 0.00
+Sum of all orders:      Soft test  4 PASSED. Fraction of failures: 0.00
+Split-order  2: QCD:  6; QED:  0;      Soft test  4 PASSED. Fraction of failures: 0.00
+Sum of all orders:      Soft test  5 PASSED. Fraction of failures: 0.00
+Split-order  2: QCD:  6; QED:  0;      Soft test  5 PASSED. Fraction of failures: 0.00
+Sum of all orders: Collinear test  5 PASSED. Fraction of failures: 0.00
+Split-order  2: QCD:  6; QED:  0; Collinear test  5 PASSED. Fraction of failures: 0.00
+Sum of all orders:      Soft test  6 PASSED. Fraction of failures: 0.00
+Split-order  2: QCD:  6; QED:  0;      Soft test  6 PASSED. Fraction of failures: 0.00
+Sum of all orders: Collinear test  6 PASSED. Fraction of failures: 0.00
+Split-order  2: QCD:  6; QED:  0; Collinear test  6 PASSED. Fraction of failures: 0.00 [0m
+INFO:  Result for check_poles: 
+INFO:    Poles successfully cancel for 20 points over 20 (tolerance=1.0e-05) 
+INFO: Starting run 
+INFO: Using 18 cores 
+INFO: Cleaning previous results 
+INFO: Generating events without running the shower. 
+INFO: Setting up grids 
+INFO:  Idle: 0,  Running: 5,  Completed: 0 [ current time: 11h15 ] 
+INFO:  Idle: 0,  Running: 4,  Completed: 1 [  0.65s  ] 
+INFO:  Idle: 0,  Running: 3,  Completed: 2 [  0.87s  ] 
+INFO:  Idle: 0,  Running: 2,  Completed: 3 [  0.92s  ] 
+INFO:  Idle: 0,  Running: 1,  Completed: 4 [  0.95s  ] 
+INFO:  Idle: 0,  Running: 0,  Completed: 5 [  0.96s  ] 
+sum of cpu time of last step: 0 second
+INFO: Determining the number of unweighted events per channel
+
+      Intermediate results:
+      Random seed: 42
+      Total cross section:      7.627e+02 +- 8.2e+00 pb
+      Total abs(cross section): 1.399e+03 +- 1.2e+01 pb 
+
+ 
+INFO: Computing upper envelope 
+INFO:  Idle: 0,  Running: 5,  Completed: 0 [ current time: 11h15 ] 
+INFO:  Idle: 0,  Running: 4,  Completed: 1 [  0.15s  ] 
+INFO:  Idle: 0,  Running: 3,  Completed: 2 [  0.26s  ] 
+INFO:  Idle: 0,  Running: 2,  Completed: 3 [  3.4s  ] 
+INFO:  Idle: 0,  Running: 1,  Completed: 4 [  33s  ] 
+INFO:  Idle: 0,  Running: 0,  Completed: 5 [  33.1s  ] 
+sum of cpu time of last step: 0 second
+INFO: Updating the number of unweighted events per channel
+
+      Intermediate results:
+      Random seed: 42
+      Total cross section:      7.711e+02 +- 1.4e+00 pb
+      Total abs(cross section): 1.425e+03 +- 1.8e+00 pb 
+
+ 
+INFO: Generating events 
+INFO:  Idle: 0,  Running: 5,  Completed: 0 [ current time: 11h16 ] 
+INFO:  Idle: 0,  Running: 4,  Completed: 1 [  9.4s  ] 
+INFO:  Idle: 0,  Running: 3,  Completed: 2 [  9.9s  ] 
+INFO:  Idle: 0,  Running: 2,  Completed: 3 [  51.7s  ] 
+INFO:  Idle: 0,  Running: 1,  Completed: 4 [  4m 41s  ] 
+INFO:  Idle: 0,  Running: 0,  Completed: 5 [  5m 1s  ] 
+sum of cpu time of last step: 0 second
+INFO: Collecting events 
+[1;32mDEBUG: 
+  Number of loop ME evaluations (by MadLoop): 319341
+    Stability unknown:                   0
+    Stable PS point:                     319341
+    Unstable PS point (and rescued):     0
+    Unstable PS point (and not rescued): 0
+    Only double precision used:          319341
+    Quadruple precision used:            0
+    Initialization phase-space points:   0
+    Reduction methods used:
+      > Ninja (double precision)         319341
+
+  Statistics on virtual integration optimization : 
+  Could not find statistics on the integration optimization. 
+
+  Inclusive timing profile :
+    Overall slowest channel          0:05:00 (P0_gg_ttx/GF3.0 [step 2])
+    Average channel running time     0:00:48
+    Aggregated total running time    0:12:14
+  Timing profile for <Other_tasks> :
+    Overall fraction of time         21.163 %
+    Largest fraction of time         24.870 % (P0_uux_ttx/GF1.0 [step 1])
+    Smallest fraction of time        14.418 % (P0_gg_ttx/GF1.0 [step 0])
+  Timing profile for <Nbody_prefactor> :
+    Overall fraction of time         16.867 %
+    Largest fraction of time         21.894 % (P0_gg_ttx/GF3.0 [step 1])
+    Smallest fraction of time        11.263 % (P0_uxu_ttx/GF1.0 [step 2])
+  Timing profile for <Counter_terms> :
+    Overall fraction of time         12.312 %
+    Largest fraction of time         16.842 % (P0_gg_ttx/GF2.0 [step 1])
+    Smallest fraction of time        7.543 % (P0_uxu_ttx/GF1.0 [step 2])
+  Timing profile for <Virtuals> :
+    Overall fraction of time         10.203 %
+    Largest fraction of time         21.465 % (P0_gg_ttx/GF3.0 [step 0])
+    Smallest fraction of time        1.603 % (P0_uxu_ttx/GF1.0 [step 1])
+  Timing profile for <Reals_evaluation> :
+    Overall fraction of time         8.497 %
+    Largest fraction of time         11.146 % (P0_gg_ttx/GF2.0 [step 1])
+    Smallest fraction of time        5.307 % (P0_uxu_ttx/GF1.0 [step 2])
+  Timing profile for <AlphaS_dependencies> :
+    Overall fraction of time         7.102 %
+    Largest fraction of time         12.500 % (P0_uux_ttx/GF1.0 [step 1])
+    Smallest fraction of time        5.566 % (P0_gg_ttx/GF1.0 [step 2])
+  Timing profile for <Write_events> :
+    Overall fraction of time         5.755 %
+    Largest fraction of time         18.925 % (P0_uxu_ttx/GF1.0 [step 2])
+    Smallest fraction of time        0.000 % (P0_gg_ttx/GF1.0 [step 0])
+  Timing profile for <Integrated_CT> :
+    Overall fraction of time         4.360 %
+    Largest fraction of time         7.496 % (P0_uxu_ttx/GF1.0 [step 1])
+    Smallest fraction of time        3.764 % (P0_gg_ttx/GF1.0 [step 2])
+  Timing profile for <MCsubtraction> :
+    Overall fraction of time         4.273 %
+    Largest fraction of time         5.592 % (P0_gg_ttx/GF3.0 [step 1])
+    Smallest fraction of time        3.126 % (P0_uxu_ttx/GF1.0 [step 2])
+  Timing profile for <Adding_alphas_pdf> :
+    Overall fraction of time         3.070 %
+    Largest fraction of time         6.472 % (P0_uxu_ttx/GF1.0 [step 1])
+    Smallest fraction of time        2.528 % (P0_gg_ttx/GF1.0 [step 2])
+  Timing profile for <PS_Generation> :
+    Overall fraction of time         2.583 %
+    Largest fraction of time         4.097 % (P0_uxu_ttx/GF1.0 [step 1])
+    Smallest fraction of time        2.129 % (P0_gg_ttx/GF1.0 [step 2])
+  Timing profile for <Applying_cuts> :
+    Overall fraction of time         1.889 %
+    Largest fraction of time         3.355 % (P0_uux_ttx/GF1.0 [step 1])
+    Smallest fraction of time        1.489 % (P0_gg_ttx/GF1.0 [step 2])
+  Timing profile for <N1body_prefactor> :
+    Overall fraction of time         0.688 %
+    Largest fraction of time         1.173 % (P0_uux_ttx/GF1.0 [step 1])
+    Smallest fraction of time        0.534 % (P0_gg_ttx/GF1.0 [step 2])
+  Timing profile for <Born> :
+    Overall fraction of time         0.683 %
+    Largest fraction of time         1.425 % (P0_uxu_ttx/GF1.0 [step 1])
+    Smallest fraction of time        0.557 % (P0_gg_ttx/GF1.0 [step 2])
+  Timing profile for <Sum_ident_contr> :
+    Overall fraction of time         0.522 %
+    Largest fraction of time         0.949 % (P0_uux_ttx/GF1.0 [step 1])
+    Smallest fraction of time        0.440 % (P0_gg_ttx/GF1.0 [step 2])
+  Timing profile for <Pick_unwgt> :
+    Overall fraction of time         0.034 %
+    Largest fraction of time         0.112 % (P0_uux_ttx/GF1.0 [step 2])
+    Smallest fraction of time        0.000 % (P0_gg_ttx/GF1.0 [step 0])
+  Zero time record for FxFx_cluster.
+  Zero time record for Reweight_scale.
+  Zero time record for Reweight_pdf.
+  Zero time record for Filling_plots.
+ [0m
+INFO: 
+   --------------------------------------------------------------
+      Summary:
+      Process p p > t t~ [QCD]
+      Run at p-p collider (6500.0 + 6500.0 GeV)
+      Number of events generated: 500000
+      Total cross section: 7.711e+02 +- 1.4e+00 pb
+   --------------------------------------------------------------
+ 
+INFO: The /private/tmp/smeft_fig5_work/PROC_sm_nlo/Events/run_01/events.lhe.gz file has been generated.
+ 
+INFO: Events generated 
+reweight -from_cards
+decay_events -from_cards
+[1;34mWARNING: You have chosen not to run a parton shower. NLO events without showering are NOT physical. Please, shower the Les Houches events before using them for physics analyses. [0m
+INFO:  
+quit
+INFO:  
+quit
