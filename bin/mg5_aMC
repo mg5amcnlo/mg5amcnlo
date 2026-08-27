@@ -229,5 +229,10 @@ try:
 except Exception as error:
     pass
 
+# A command file interrupted by an error has to be reported to the shell.
+# (in interactive mode the user did see the error already and nothing is set)
+if getattr(cmd_line, 'exit_status', 0):
+    sys.exit(1)
+
 
     

@@ -1660,3 +1660,78 @@ P1_qq_wp_wp_lvl
         self.assertIn("200       = nevents", run_card)
         os.chdir(cwd)
         
+
+#===============================================================================
+# TestCmdFileErrorStatus
+#===============================================================================
+class TestCmdFileErrorStatus(unittest.TestCase):
+    """Check that an error occuring while reading a command file is reported
+    to the shell via the exit code. In interactive mode the user does see the
+    error and can react to it, but a script driving mg5_aMC has no other way
+    to know that nothing was actually generated."""
+
+    def setUp(self):
+        self.tmpdir = tempfile.mkdtemp(prefix='mg5_exit_status_')
+
+    def tearDown(self):
+        shutil.rmtree(self.tmpdir, ignore_errors=True)
+
+    def write_script(self, *lines):
+        """write a mg5 command file in the temporary directory"""
+
+        path = pjoin(self.tmpdir, 'cmd.mg5')
+        fsock = open(path, 'w')
+        fsock.write('\n'.join(lines) + '\n')
+        fsock.close()
+        return path
+
+    def run_script(self, path):
+        """run mg5_aMC on that command file and return the exit code"""
+
+        devnull = open(os.devnull, 'w')
+        try:
+            return subprocess.call([sys.executable,
+                                    pjoin(MG5DIR, 'bin', 'mg5_aMC'),
+                                    '-f', path],
+                                   stdout=devnull, stderr=subprocess.STDOUT,
+                                   cwd=self.tmpdir)
+        finally:
+            devnull.close()
+
+    def test_exit_status_for_failing_command_file(self):
+        """a command file interrupted by an error returns a non zero status"""
+
+        out_dir = pjoin(self.tmpdir, 'PROC_failing')
+        path = self.write_script('import model a_model_which_does_not_exist',
+                                 'generate e+ e- > mu+ mu-',
+                                 'output %s' % out_dir)
+
+        self.assertNotEqual(self.run_script(path), 0)
+        self.assertFalse(os.path.exists(out_dir))
+
+    def test_exit_status_for_valid_command_file(self):
+        """a command file which succeeds still returns a zero status"""
+
+        out_dir = pjoin(self.tmpdir, 'PROC_valid')
+        path = self.write_script('import model sm',
+                                 'generate e+ e- > mu+ mu-',
+                                 'output %s' % out_dir)
+
+        self.assertEqual(self.run_script(path), 0)
+        self.assertTrue(os.path.exists(out_dir))
+
+    def test_loop_induced_without_import_model(self):
+        """[noborn=..] validates the model before check_generate, so no model
+        is loaded yet when running from a command file (preloop is not called
+        in that mode). The default model has to be loaded --and upgraded to
+        loop_sm-- instead of crashing."""
+
+        path = self.write_script('generate g g > z z [noborn=QCD]')
+
+        cmd = Cmd.MasterCmd()
+        cmd.use_rawinput = False
+        cmd.run_cmd('import %s' % path)
+
+        self.assertEqual(cmd._curr_model.get('name'), 'loop_sm')
+        self.assertEqual(len(cmd._curr_amps), 1)
+        self.assertEqual(cmd.exit_status, 0)

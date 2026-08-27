@@ -8701,6 +8701,8 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
         or: set crash_on_error False [Default]
         or: set crash_on_error never [never crash]
         if crash_on_error is True, the code will stop with a non zero exit code.
+        Note that when reading a command file, an error always stops the
+        execution and returns a non zero exit code (use 'never' to bypass this).
         """
 
         args = ['crash_on_error'] + args

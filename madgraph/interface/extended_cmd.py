@@ -908,6 +908,10 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
     keyboard_stop_msg = """stopping all current operation
             in order to quit the program please enter exit"""
 
+    # status to return to the shell. set to one when a command file is
+    # interrupted by an error (see stop_on_error)
+    exit_status = 0
+
     if MADEVENT:
         plugin_path = []
     else:
@@ -1381,17 +1385,35 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
                 return False
             
         #stop the execution if on a non interactive mode
+        return self.stop_on_error()
+
+
+
+    def stop_on_error(self):
+        """Check if the failing command has to stop the execution, i.e. if it
+        does not come from an interactive prompt but from a command file.
+        In that case, also flag the run as failed on the root interface such
+        that the launcher can exit with a non zero status. Otherwise a script
+        driving MG5aMC has no way to know that a command did crash."""
+
+        stop = False
         if self.use_rawinput == False or self.inputfile:
-            return True
+            stop = True
         elif self.mother:
             if self.mother.use_rawinput is False:
-                return True
-                
+                stop = True
+
             elif self.mother.mother:
                 if self.mother.mother.use_rawinput is False:
-                    return True 
-        
-        return False
+                    stop = True
+
+        if stop:
+            cmd = self
+            while getattr(cmd, 'mother', None):
+                cmd = cmd.mother
+            cmd.exit_status = 1
+
+        return stop
 
 
 
@@ -1419,19 +1441,13 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
                 return False
 
         #stop the execution if on a non interactive mode
-        if self.use_rawinput == False or self.inputfile:
+        if self.stop_on_error():
             return True
-        elif self.mother:
-            if self.mother.use_rawinput is False:
-                return True
-            elif self.mother.mother:
-                if self.mother.mother.use_rawinput is False:
-                    return True                
-            
+
         # Remove failed command from history
         self.history.pop()
         return False
-    
+
     def nice_config_error(self, error, line):
         if self.child:
             return self.child.nice_user_error(error, line)
@@ -1474,16 +1490,10 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
 
         
         #stop the execution if on a non interactive mode
-        if self.use_rawinput == False or self.inputfile:
+        if self.stop_on_error():
             return True
-        elif self.mother:
-            if self.mother.use_rawinput is False:
-                return True
-            elif self.mother.mother:
-                if self.mother.mother.use_rawinput is False:
-                    return True                             
 
-        # Remove failed command from history                                            
+        # Remove failed command from history
         if self.history:
             self.history.pop()
         return False
