@@ -1,0 +1,330 @@
+==============================================================================
+Fig. 5 variation M: F scanned over the Wilson coefficient, at c_tG = +10, rate convention
+==============================================================================
+
+  THE COEFFICIENT IS NOT WRITTEN ON THE FIGURE.  This figure is drawn
+  at
+
+        ctGRe = +10          Lambda = 1000 GeV
+        convention: rate
+        file stem : smeft_fig5_M_ctg_p10_rate
+
+  and a caption must say so.  The samples were generated at ctGRe =
+  -1; the interference is linear in the coefficient, so everything
+  here is the measured interference times -10.
+
+!! HEALTH WARNING on every number and curve involving the SM NLO sample !!
+
+    MadSpin's density path initialises its standalone matrix-element library
+    from <madspin_me>/Cards/param_card.dat -- the card `output standalone'
+    wrote from the MODEL DEFAULTS -- and never from the run's own card.  For
+    PROC_sm_nlo the run used
+
+        MT 172.76   WT 1.33   WZ 2.4952   WW 2.085
+
+    while its ME directories held
+
+        MT 173.0    WT 1.4915 WZ 2.4414   WW 2.0476
+
+    so the spin-density matrices of the SM NLO sample were evaluated at a top
+    mass 0.24 GeV too high and a top width 12 % too large.  The `onshell'
+    curve of that sample, and therefore both ratio panes' NLO entries, are
+    affected at an unquantified level.  The figure is drawn anyway because it
+    is wanted, but the NLO curves must not be quoted as a result until the
+    sample is regenerated.
+
+    The two LO samples were audited for this report and are clear: the only
+    parameter that differs between their event card and their ME card is
+    alpha_s(M_Z) (0.1190025 against 0.1179).  At LO both the QCD production
+    density matrix and the O_tG interference are proportional to g_s^4, one
+    overall factor, and MadSpin normalises its accept/reject weight on
+    Tr(rho_prod), so that factor cancels exactly.  The upper pane's two LO
+    curves and pane 1's denominator are therefore sound.  (The `none' runs
+    build no density matrices at all -- they have no madspin_me directory --
+    so they cannot be affected.)
+
+    A sound SM NLO sample is being regenerated (task T123, branch
+    claude/ms-smeft-fig5-nlo-redo).  When it lands, drop the new
+    data/histograms.npz in place and re-run this script: nothing about the
+    samples is hard-coded here, every cross section, weight and curve is read
+    out of the histogram file and its meta.json.
+
+  On this figure the defect is in the DENSITY path, which spinmode =
+  none does not use.  So the DASHED NLO curves are SOUND and the SOLID
+  NLO curves are the suspect ones.
+
+==============================================================================
+the eight variations, and why they are eight
+==============================================================================
+  The upper pane is IDENTICAL in all eight.  So is pane 1 in the four
+  `shape' figures.  Both facts are consequences of the interference
+  being linear in c_tG: n_int = (dsigma_int)/(sigma_int) has the factor
+  in numerator and denominator and it cancels, sign and all.  The
+  coefficient enters the figure in exactly one place, the signed weight
+  w = sigma_int(c_tG)/sigma_SM.
+
+  Two versions of pane 1 were asked for, at c_tG = -1 and +1.  In the
+  shape convention they would have been the SAME PICTURE, so the two
+  versions are the RATE ones, K and L, where pane 1 does contain w and
+  c_tG = +1 mirrors c_tG = -1 exactly about the no-interference line.
+
+tag  c_tG     conv.     file stem
+G    -1       shape     smeft_fig5_G_ctg_m1_shape
+H    1        shape     smeft_fig5_H_ctg_p1_shape
+I    10       shape     smeft_fig5_I_ctg_p10_shape
+J    -10      shape     smeft_fig5_J_ctg_m10_shape
+K    -1       rate      smeft_fig5_K_ctg_m1_rate
+L    1        rate      smeft_fig5_L_ctg_p1_rate
+M    10       rate      smeft_fig5_M_ctg_p10_rate  <== this file
+N    -10      rate      smeft_fig5_N_ctg_m10_rate
+
+  rate  : ratios of unnormalised d sigma/d phi; the interference keeps its physical sign and size
+  shape : ratios of unit-area curves; the rate change is divided out (F's convention)
+
+observable   : Delta phi(e-, e+), radians, folded onto [0, pi]
+sqrt(s)      : 13000 GeV      scale: fixed mu_R = mu_F = 173.0 GeV
+PDF          : NNPDF2.3 LO, alpha_s(M_Z)=0.130 (LHAPDF id 230000, NNPDF23_lo_as_0130_qed)
+cuts         : none (fully inclusive leptons and b quarks; cut_decays False)
+sign         : ctGRe = -1, so the eft_int sample is -2 Re(M_SM^* M_tG); the paper caption is written for ctGRe = +1
+parameter pt : ctGRe = +10 (generated at -1), Lambda = 1000 GeV
+plot binning : 20 uniform bins over [0, pi], width 0.157080 rad (36 stored bins each)
+encoding     : line style = spinmode (solid onshell, dashed none), colour = quantity
+
+------------------------------------------------------------------------------
+normalisation checks (all recomputed from histograms.npz)
+------------------------------------------------------------------------------
+sample/spinmode         sum(w)/N [pb]    <init> [pb]   rel.diff    banner
+eft_int / onshell           1.9738654      1.9738676   1.13e-06    139.78
+eft_int / none              1.9747396      1.9747419   1.18e-06    139.78
+sm_lo / onshell             7.1752896      7.1744806   1.13e-04    508.05
+sm_lo / none                7.1784680      7.1776585   1.13e-04    508.05
+sm_nlo / onshell           10.9004361     10.8993730   9.75e-05        --
+sm_nlo / none              10.9059500     10.9048880   9.74e-05        --
+
+sample/spinmode         neg.frac  relerr(w2) relerr(sqrtN)  factor
+eft_int / onshell        0.00020     0.00450     0.00450    1.00
+eft_int / none           0.00020     0.00476     0.00476    1.00
+sm_lo / onshell          0.00017     0.00460     0.00460    1.00
+sm_lo / none             0.00017     0.00476     0.00476    1.00
+sm_nlo / onshell         0.22948     0.01181     0.00653    1.81
+sm_nlo / none            0.22948     0.01210     0.00670    1.81
+
+sample       sigma onshell    sigma none    ratio-1
+eft_int           1.973865      1.974740  -4.43e-04
+sm_lo             7.175290      7.178468  -4.43e-04
+sm_nlo           10.900436     10.905950  -5.06e-04
+
+  [ok ] sigma = sum(w)/N reproduces <init> XSECUP
+        worst relative difference 1.13e-04
+  [ok ] banner '# Integrated weight' is stale (= production sigma)
+        confirmed on eft_int/onshell, eft_int/none, sm_lo/onshell, sm_lo/none -- reading it instead of <init> would be wrong by ~70x
+  [ok ] sumw2 errors differ from sqrt(N) for the signed NLO sample
+        NLO 1.81x, LO 1.00x -- a sqrt(N) error bar on the NLO curve would be about half its true size
+  [ok ] onshell and none share a total cross section
+        worst |sigma_on/sigma_none - 1| = 5.06e-04, so the unit-area ratio is the absolute ratio to that accuracy
+
+------------------------------------------------------------------------------
+the upper pane is identical in all eight figures -- measured, not assumed
+------------------------------------------------------------------------------
+  n_int = (dsigma_int/dphi) / sigma_int.  Both scale by c_tG/c_ref, so
+  the factor cancels -- INCLUDING its sign, which is why c_tG = +1 and
+  c_tG = -1 give the same upper pane and not mirrored ones.
+
+mode       c_tG         max |dn/n|     max |de/e|
+onshell    -1            0.000e+00      0.000e+00
+onshell    1             0.000e+00      0.000e+00
+onshell    10            2.220e-16      4.441e-16
+onshell    -10           2.220e-16      4.441e-16
+none       -1            0.000e+00      0.000e+00
+none       1             0.000e+00      0.000e+00
+none       10            3.331e-16      3.331e-16
+none       -10           3.331e-16      3.331e-16
+
+  Same statement for pane 1 in the SHAPE convention: it is built only
+  from unit-area shapes, so it too is the same picture at every c_tG.
+  That is why G, H, I and J share a pane 1, and why the two pane-1
+  versions that were asked for are the RATE ones, K and L.
+
+------------------------------------------------------------------------------
+is SM + interference still a sensible object at each c_tG?
+------------------------------------------------------------------------------
+c_tG   SM       mode              w      1 + w   bins<0  verdict
+-1     sm_lo    onshell      0.2751     1.2751        0  sound
+-1     sm_lo    none         0.2751     1.2751        0  sound
+-1     sm_nlo   onshell      0.1811     1.1811        0  sound
+-1     sm_nlo   none         0.1811     1.1811        0  sound
+1      sm_lo    onshell     -0.2751     0.7249        0  sound
+1      sm_lo    none        -0.2751     0.7249        0  sound
+1      sm_nlo   onshell     -0.1811     0.8189        0  sound
+1      sm_nlo   none        -0.1811     0.8189        0  sound
+10     sm_lo    onshell     -2.7509    -1.7509       20  NEGATIVE d sigma in 20/20 bins
+10     sm_lo    none        -2.7509    -1.7509       20  NEGATIVE d sigma in 20/20 bins
+10     sm_nlo   onshell     -1.8108    -0.8108       20  NEGATIVE d sigma in 20/20 bins
+10     sm_nlo   none        -1.8107    -0.8107       20  NEGATIVE d sigma in 20/20 bins
+-10    sm_lo    onshell      2.7509     3.7509        0  positive, but |w| > 1: the correction exceeds the SM
+-10    sm_lo    none         2.7509     3.7509        0  positive, but |w| > 1: the correction exceeds the SM
+-10    sm_nlo   onshell      1.8108     2.8108        0  positive, but |w| > 1: the correction exceeds the SM
+-10    sm_nlo   none         1.8107     2.8107        0  positive, but |w| > 1: the correction exceeds the SM
+
+  The shape convention divides by (1 + w).  It vanishes at
+      sm_lo    c_tG = +3.6351 (onshell)  +3.6351 (none)
+      sm_nlo   c_tG = +5.5224 (onshell)  +5.5227 (none)
+  and c_tG = +10 is past both poles, so variations I's pane-2 curves
+  are ratios of two NEGATIVE densities.  They come out positive and
+  near 1.  That is the arbitrary-sign normalisation this series has
+  been avoiding since it began; read M (the rate figure at the same
+  coefficient) instead, where the same physics lies below zero.
+
+==============================================================================
+the weights: the only place c_tG enters
+==============================================================================
+  w(c_tG) = sigma_int(c_tG)/sigma_SM is linear in c_tG and signed.
+  At the generated point ctGRe = -1 it is measured to be
+      onshell   w(LO) = +0.275092   w(NLO) = +0.181081
+      none      w(LO) = +0.275092   w(NLO) = +0.181070
+  so w(LO) = -0.275092 * c_tG and w(NLO) = -0.181081 * c_tG.
+
+c_tG     SM       mode               w       1 + w           k
+-1       sm_lo    onshell     0.275092    1.275092    0.275092
+-1       sm_lo    none        0.275092    1.275092    0.275092
+-1       sm_nlo   onshell     0.181081    1.181081    0.181081
+-1       sm_nlo   none        0.181070    1.181070    0.181070
+1        sm_lo    onshell    -0.275092    0.724908   -0.275092
+1        sm_lo    none       -0.275092    0.724908   -0.275092
+1        sm_nlo   onshell    -0.181081    0.818919   -0.181081
+1        sm_nlo   none       -0.181070    0.818930   -0.181070
+10       sm_lo    onshell    -2.750921   -1.750921   -2.750921
+10       sm_lo    none       -2.750921   -1.750921   -2.750921
+10       sm_nlo   onshell    -1.810813   -0.810813   -1.810813
+10       sm_nlo   none       -1.810699   -0.810699   -1.810699
+-10      sm_lo    onshell     2.750921    3.750921    2.750921
+-10      sm_lo    none        2.750921    3.750921    2.750921
+-10      sm_nlo   onshell     1.810813    2.810813    1.810813
+-10      sm_nlo   none        1.810699    2.810699    1.810699
+
+  k is the coefficient of (rho - 1) in this convention:
+      shape : baseline 1,     k = w/(1+w)
+      rate  : baseline 1 + w, k = w
+  and the error on the pane-2 curve is |k| * sigma(rho) in both, which
+  is the identity that keeps the shared n_SM from being counted twice.
+
+==============================================================================
+what this figure draws
+==============================================================================
+curve                              first bin    last bin         min         max
+p1 sm_nlo/sm_lo, onshell              1.5733      1.4200      1.4200      1.6070
+p1 eft_int/sm_lo, onshell            -3.0683     -2.2625     -3.0801     -2.2625
+p1 sm_nlo/sm_lo, none                 1.6259      1.4167      1.4167      1.6650
+p1 eft_int/sm_lo, none               -2.7655     -2.7349     -2.8076     -2.7234
+p2 (sm_lo+int)/sm_lo, onshell        -2.0683     -1.2625     -2.0801     -1.2625
+p2 (sm_nlo+int)/sm_nlo, onshell      -0.9502     -0.5933     -0.9534     -0.5933
+p2 (sm_lo+int)/sm_lo, none           -1.7655     -1.7349     -1.8076     -1.7234
+p2 (sm_nlo+int)/sm_nlo, none         -0.7009     -0.9305     -0.9305     -0.6661
+
+  and with their errors:
+    p1 sm_nlo/sm_lo, onshell         first   +1.5733 +- 0.0221   last   +1.4200 +- 0.0159
+    p1 eft_int/sm_lo, onshell        first   -3.0683 +- 0.0218   last   -2.2625 +- 0.0127
+    p1 sm_nlo/sm_lo, none            first   +1.6259 +- 0.0243   last   +1.4167 +- 0.0145
+    p1 eft_int/sm_lo, none           first   -2.7655 +- 0.0219   last   -2.7349 +- 0.0134
+    p2 (sm_lo+int)/sm_lo, onshell    first   -2.0683 +- 0.0218   last   -1.2625 +- 0.0127
+    p2 (sm_nlo+int)/sm_nlo, onshell  first   -0.9502 +- 0.0272   last   -0.5933 +- 0.0180
+    p2 (sm_lo+int)/sm_lo, none       first   -1.7655 +- 0.0219   last   -1.7349 +- 0.0134
+    p2 (sm_nlo+int)/sm_nlo, none     first   -0.7009 +- 0.0254   last   -0.9305 +- 0.0198
+
+==============================================================================
+bin by bin
+==============================================================================
+   phi/pi p1 sm_nlo/sm_lo, onshell p1 eft_int/sm_lo, onshell p1 sm_nlo/sm_lo, none p1 eft_int/sm_lo, none p2 (sm_lo+int)/sm_lo, onshell p2 (sm_nlo+int)/sm_nlo, onshell p2 (sm_lo+int)/sm_lo, none p2 (sm_nlo+int)/sm_nlo, none
+    0.025     1.5733 +- 0.0221    -3.0683 +- 0.0218     1.6259 +- 0.0243    -2.7655 +- 0.0219    -2.0683 +- 0.0218    -0.9502 +- 0.0272    -1.7655 +- 0.0219    -0.7009 +- 0.0254
+    0.075     1.5768 +- 0.0221    -3.0801 +- 0.0219     1.5875 +- 0.0239    -2.8002 +- 0.0220    -2.0801 +- 0.0219    -0.9534 +- 0.0272    -1.8002 +- 0.0220    -0.7639 +- 0.0265
+    0.125     1.5803 +- 0.0220    -3.0387 +- 0.0215     1.6650 +- 0.0243    -2.7740 +- 0.0218    -2.0387 +- 0.0215    -0.9228 +- 0.0265    -1.7740 +- 0.0218    -0.6661 +- 0.0243
+    0.175     1.6070 +- 0.0221    -3.0776 +- 0.0216     1.6034 +- 0.0238    -2.8076 +- 0.0218    -2.0776 +- 0.0216    -0.9151 +- 0.0261    -1.8076 +- 0.0218    -0.7510 +- 0.0259
+    0.225     1.6023 +- 0.0219    -3.0551 +- 0.0213     1.6146 +- 0.0234    -2.7699 +- 0.0212    -2.0551 +- 0.0213    -0.9067 +- 0.0258    -1.7699 +- 0.0212    -0.7155 +- 0.0248
+    0.275     1.5869 +- 0.0217    -3.0472 +- 0.0211     1.5931 +- 0.0230    -2.7682 +- 0.0208    -2.0472 +- 0.0211    -0.9202 +- 0.0260    -1.7682 +- 0.0208    -0.7376 +- 0.0251
+    0.325     1.5750 +- 0.0210    -2.9931 +- 0.0204     1.5564 +- 0.0222    -2.7482 +- 0.0202    -1.9931 +- 0.0204    -0.9004 +- 0.0252    -1.7482 +- 0.0202    -0.7658 +- 0.0252
+    0.375     1.5625 +- 0.0208    -2.9895 +- 0.0201     1.5602 +- 0.0219    -2.7774 +- 0.0200    -1.9895 +- 0.0201    -0.9133 +- 0.0253    -1.7774 +- 0.0200    -0.7802 +- 0.0249
+    0.425     1.5577 +- 0.0203    -2.9383 +- 0.0194     1.5634 +- 0.0213    -2.8050 +- 0.0197    -1.9383 +- 0.0194    -0.8863 +- 0.0245    -1.8050 +- 0.0197    -0.7941 +- 0.0245
+    0.475     1.5397 +- 0.0197    -2.8995 +- 0.0188     1.5756 +- 0.0208    -2.7543 +- 0.0189    -1.8995 +- 0.0188    -0.8831 +- 0.0240    -1.7543 +- 0.0189    -0.7480 +- 0.0230
+    0.525     1.5395 +- 0.0193    -2.8519 +- 0.0182     1.5643 +- 0.0200    -2.7424 +- 0.0182    -1.8519 +- 0.0182    -0.8524 +- 0.0232    -1.7424 +- 0.0182    -0.7531 +- 0.0225
+    0.575     1.5425 +- 0.0189    -2.8481 +- 0.0178     1.5763 +- 0.0194    -2.7520 +- 0.0176    -1.8481 +- 0.0178    -0.8464 +- 0.0226    -1.7520 +- 0.0176    -0.7459 +- 0.0215
+    0.625     1.5218 +- 0.0186    -2.7911 +- 0.0172     1.5152 +- 0.0186    -2.7587 +- 0.0171    -1.7911 +- 0.0172    -0.8340 +- 0.0224    -1.7587 +- 0.0171    -0.8206 +- 0.0223
+    0.675     1.5226 +- 0.0181    -2.7036 +- 0.0163     1.5244 +- 0.0178    -2.7422 +- 0.0163    -1.7036 +- 0.0163    -0.7756 +- 0.0211    -1.7422 +- 0.0163    -0.7989 +- 0.0211
+    0.725     1.4883 +- 0.0177    -2.6889 +- 0.0159     1.4943 +- 0.0169    -2.7234 +- 0.0155    -1.6889 +- 0.0159    -0.8068 +- 0.0215    -1.7234 +- 0.0155    -0.8226 +- 0.0207
+    0.775     1.5036 +- 0.0173    -2.5940 +- 0.0151     1.4611 +- 0.0163    -2.7262 +- 0.0150    -1.5940 +- 0.0151    -0.7252 +- 0.0199    -1.7262 +- 0.0150    -0.8658 +- 0.0209
+    0.825     1.4582 +- 0.0166    -2.5047 +- 0.0144     1.4549 +- 0.0158    -2.7250 +- 0.0145    -1.5047 +- 0.0144    -0.7177 +- 0.0197    -1.7250 +- 0.0145    -0.8730 +- 0.0203
+    0.875     1.4392 +- 0.0162    -2.4225 +- 0.0137     1.4557 +- 0.0153    -2.7480 +- 0.0141    -1.4225 +- 0.0137    -0.6832 +- 0.0191    -1.7480 +- 0.0141    -0.8877 +- 0.0198
+    0.925     1.4308 +- 0.0159    -2.3101 +- 0.0130     1.4243 +- 0.0148    -2.7262 +- 0.0136    -1.3101 +- 0.0130    -0.6146 +- 0.0182    -1.7262 +- 0.0136    -0.9140 +- 0.0199
+    0.975     1.4200 +- 0.0159    -2.2625 +- 0.0127     1.4167 +- 0.0145    -2.7349 +- 0.0134    -1.2625 +- 0.0127    -0.5933 +- 0.0180    -1.7349 +- 0.0134    -0.9305 +- 0.0198
+
+==============================================================================
+what a caption must carry, since the figure carries no text
+==============================================================================
+    * ctGRe = +10, Lambda = 1000 GeV.  Without it the ratio panes have
+      no scale at all.
+    * the convention: rate -- ratios of unnormalised d sigma/d phi; the interference keeps its physical sign and size
+    * the SM NLO health warning, and that it hits the SOLID red curves
+      only, spinmode = none using no density matrices;
+    * that pane 1 is a ratio of unnormalised d sigma, so the SM NLO / SM LO curve IS the differential K-factor (its integral is 1.519);
+    * that the dashed curves are the non-spin part of each ratio and
+      the solid-to-dashed gap is the spin-correlation effect;
+    * !! THIS FIGURE IS OUTSIDE EFT VALIDITY.  SM + interference is
+      NEGATIVE in up to 20 of the 20 bins.  It is drawn as it comes
+      out, unclipped.  It must NOT be presented as a small
+      correction: at |c_tG| = 10 the dropped dimension-six SQUARED
+      term is of the same order or larger than what is kept.
+    * !! and this is the SHAPE convention past its (1 + w) pole, so
+      its pane-2 curves are ratios of two NEGATIVE densities.  They
+      look innocuous and are not.  Read the rate figure at the same
+      coefficient instead.
+
+!! HEALTH WARNING on every number and curve involving the SM NLO sample !!
+
+    MadSpin's density path initialises its standalone matrix-element library
+    from <madspin_me>/Cards/param_card.dat -- the card `output standalone'
+    wrote from the MODEL DEFAULTS -- and never from the run's own card.  For
+    PROC_sm_nlo the run used
+
+        MT 172.76   WT 1.33   WZ 2.4952   WW 2.085
+
+    while its ME directories held
+
+        MT 173.0    WT 1.4915 WZ 2.4414   WW 2.0476
+
+    so the spin-density matrices of the SM NLO sample were evaluated at a top
+    mass 0.24 GeV too high and a top width 12 % too large.  The `onshell'
+    curve of that sample, and therefore both ratio panes' NLO entries, are
+    affected at an unquantified level.  The figure is drawn anyway because it
+    is wanted, but the NLO curves must not be quoted as a result until the
+    sample is regenerated.
+
+    The two LO samples were audited for this report and are clear: the only
+    parameter that differs between their event card and their ME card is
+    alpha_s(M_Z) (0.1190025 against 0.1179).  At LO both the QCD production
+    density matrix and the O_tG interference are proportional to g_s^4, one
+    overall factor, and MadSpin normalises its accept/reject weight on
+    Tr(rho_prod), so that factor cancels exactly.  The upper pane's two LO
+    curves and pane 1's denominator are therefore sound.  (The `none' runs
+    build no density matrices at all -- they have no madspin_me directory --
+    so they cannot be affected.)
+
+    A sound SM NLO sample is being regenerated (task T123, branch
+    claude/ms-smeft-fig5-nlo-redo).  When it lands, drop the new
+    data/histograms.npz in place and re-run this script: nothing about the
+    samples is hard-coded here, every cross section, weight and curve is read
+    out of the histogram file and its meta.json.
+
+==============================================================================
+Fig. 5 variation M: F scanned over the Wilson coefficient, at c_tG = +10, rate convention
+==============================================================================
+
+  THE COEFFICIENT IS NOT WRITTEN ON THE FIGURE.  This figure is drawn
+  at
+
+        ctGRe = +10          Lambda = 1000 GeV
+        convention: rate
+        file stem : smeft_fig5_M_ctg_p10_rate
+
+  and a caption must say so.  The samples were generated at ctGRe =
+  -1; the interference is linear in the coefficient, so everything
+  here is the measured interference times -10.
+
