@@ -1,3 +1,18 @@
+FRAME CORRECTION 2026-08-27 -- READ BEFORE USING THE ANGULAR NUMBERS BELOW
+  Every cos_theta1 / cos_theta2 / cos1cos2 / pol0_* / pol00 / polTT number and
+  histogram in this file was harvested with a boost composition that is not the
+  helicity frame: the axis was taken in the four-lepton frame while the l+ was
+  boosted into its pair's rest frame straight from the LAB.  The two boosts are
+  not collinear, so the composition carries a Wigner rotation (median 8 deg on a
+  comparable sample) that damps every rank-2 moment towards the isotropic 1/3.
+  observables.py has been fixed; these numbers have NOT been re-harvested,
+  because the samples they were made on no longer exist on disk.
+  Direction and rough size, measured on a proxy sample: f_0 too high by ~0.04,
+  f_TT too low by ~0.07, C_kk too small in modulus by ~0.11.
+  Comparisons between samples (MadSpin vs truth, chi2/ndf, ratio panels) are
+  NOT affected -- both sides were harvested identically.
+  See zz_loopinduced/POLWEIGHT_CLOSURE_DIAGNOSIS.md.
+
 p p > z z [QCD]  (MC@NLO events)  +  MadSpin, all six spinmodes
 code 36e3a8b781196f5eb81a0d4f2059dee07edb6a5b
 scale: fixed muR = muF = 91.1880 GeV (= m_Z)

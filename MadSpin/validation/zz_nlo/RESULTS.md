@@ -1,5 +1,18 @@
 # `p p > Z Z` at NLO + MadSpin, and the `g g` contribution on top of it
 
+> **Frame correction, 2026-08-27.** The angular observables of this study
+> (`cos_theta1`, `cos_theta2`, `cos1cos2`, and the `f_0` / `f_00` / `f_TT` /
+> `C_kk` coefficients built from them) were harvested with a boost composition
+> that is not the helicity frame — the axis in the four-lepton frame, the `l+`
+> boosted into its pair's rest frame straight from the lab. That composition
+> carries a Wigner rotation and damps every rank-2 moment towards `1/3`.
+> `observables.py` is fixed and guarded by a self-test; the numbers and plots
+> here are **not** re-harvested, because the samples no longer exist on disk.
+> Sample-to-sample comparisons (MadSpin vs truth, `chi2/ndf`, ratio panels) are
+> unaffected — both sides were harvested identically. Absolute polarisation
+> coefficients are biased towards isotropy. Full diagnosis:
+> [`POLWEIGHT_CLOSURE_DIAGNOSIS.md`](../zz_loopinduced/POLWEIGHT_CLOSURE_DIAGNOSIS.md).
+
 Setup, cards and re-run instructions are in [README.md](README.md). Raw numbers
 are in [`data/numbers.txt`](data/numbers.txt) (Part 1) and
 [`data/numbers_stack.txt`](data/numbers_stack.txt) (Part 2); everything below is

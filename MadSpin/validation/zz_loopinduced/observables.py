@@ -19,7 +19,13 @@ resonance:
 
 ``cos_theta1`` / ``cos_theta2``
     the ``l+`` direction in its own pair's rest frame, measured against that
-    pair's direction of flight in the four-lepton rest frame.  Flat for an
+    pair's direction of flight in the four-lepton rest frame.  The two boosts
+    are SEQUENTIAL -- lab -> four-lepton frame -> pair rest frame -- and that is
+    not a detail: taking the axis in one frame while boosting the lepton in from
+    another composes two non-collinear boosts, and the Wigner rotation of that
+    composition makes the angle depend on the observer.  This module got it
+    wrong until 2026-08-27; ``_selftest_helicity_frame`` is the guard and
+    POLWEIGHT_CLOSURE_DIAGNOSIS.md is the story.  Flat for an
     unpolarised parent; the ``1 + cos^2`` / ``cos`` structure of a real ``Z``
     decay is what a spin-correlated MadSpin mode has to reproduce.  These
     respond to the polarisation of ONE ``Z``.
@@ -244,12 +250,25 @@ def compute(p):
 
     # --- cos theta1 / cos theta2: the l+ in its own pair's rest frame, against
     #     that pair's flight direction in the four-lepton rest frame ---
+    # The two boosts are SEQUENTIAL -- lab -> four-lepton frame -> pair rest
+    # frame -- and they have to be.  Taking the axis in the four-lepton frame
+    # while boosting the lepton into the pair's rest frame straight from the lab
+    # composes two boosts that are not collinear, and the Wigner rotation of
+    # that composition tilts the analysing frame away from the axis by an angle
+    # that is zero only when the four-lepton system is at rest in the lab or the
+    # pair flies along the boost.  It is not a small effect here: the median
+    # tilt on a 13 TeV ``p p > z z`` sample is 8 degrees and the tail reaches 80,
+    # and it damps every rank-2 moment towards the isotropic value -- it moved
+    # ``f_0`` from 0.170 to 0.210 on the sample of ``polweight_closure.py``.
+    # ``_selftest_helicity_frame`` below is the guard: the angle defined this
+    # way is a Lorentz invariant of the four momenta, and the mixed composition
+    # is not.  See POLWEIGHT_CLOSURE_DIAGNOSIS.md.
     zee_in4 = boost_to_rest(zee, four)
     zmm_in4 = boost_to_rest(zmm, four)
     d1 = _unit(zee_in4[:, 1:4])
     d2 = _unit(zmm_in4[:, 1:4])
-    e1 = _unit(boost_to_rest(ep, zee)[:, 1:4])
-    e2 = _unit(boost_to_rest(mup, zmm)[:, 1:4])
+    e1 = _unit(boost_to_rest(boost_to_rest(ep, four), zee_in4)[:, 1:4])
+    e2 = _unit(boost_to_rest(boost_to_rest(mup, four), zmm_in4)[:, 1:4])
     out['cos_theta1'] = np.clip(np.sum(d1 * e1, axis=1), -1.0, 1.0)
     out['cos_theta2'] = np.clip(np.sum(d2 * e2, axis=1), -1.0, 1.0)
     # The product is the strict INTER-decay correlation: each factor is
@@ -397,6 +416,104 @@ def _selftest_polarisation():
 
 _selftest_polarisation()
 
+
+def _selftest_helicity_frame():
+    """``cos_theta1/2`` must be Lorentz INVARIANT, and ``compute`` must not
+    disagree with an explicit two-step construction.
+
+    Both angles are built out of nothing but the four lepton momenta and two
+    rest frames those momenta define, so no observer can measure a different
+    value: boosting the whole event -- along the beam, or in any other
+    direction -- has to leave every angular observable of ``compute``
+    untouched.  That single property is what the study got wrong for its first
+    pass and what this test exists to keep it from getting wrong again.
+
+    The version this replaces took ``d1`` in the four-lepton frame but boosted
+    the ``l+`` into its pair's rest frame straight from the LAB.  Those two
+    boosts are not collinear, so their composition carries a Wigner rotation:
+    the analysing frame is tilted away from the axis by an angle that grows
+    with the rapidity of the four-lepton system and vanishes when it is at
+    rest.  The observable was therefore a function of the observer, and it
+    damped every rank-2 moment towards the isotropic value.  This test FAILS on
+    that version -- the boosted event gives different angles -- and passes on
+    the sequential one.  See POLWEIGHT_CLOSURE_DIAGNOSIS.md.
+
+    Property 2 pins the frame down positively rather than only forbidding the
+    old one: a decay generated as a pure ``sin^2(theta)`` about the parent's
+    own direction in the four-lepton frame has to come back with
+    ``<cos^2 theta> = 1/5``, which is exactly the closure MadSpin's polarised
+    matrix-element weights were failing.
+    """
+    rng = np.random.default_rng(20260827)
+    n = 4000
+
+    # --- a synthetic ZZ -> 4l sample, built in the four-lepton rest frame ---
+    m1 = rng.normal(M_Z, 2.5, size=n)
+    m2 = rng.normal(M_Z, 2.5, size=n)
+    s = (rng.uniform(0.0, 1.0, size=n) ** 2) * 600.0 + m1 + m2 + 20.0
+    # back-to-back Z of the pair, isotropic production angle
+    e1z = (s ** 2 + m1 ** 2 - m2 ** 2) / (2.0 * s)
+    pz = np.sqrt(np.maximum(e1z ** 2 - m1 ** 2, 0.0))
+    ct = rng.uniform(-1.0, 1.0, size=n)
+    st = np.sqrt(1.0 - ct ** 2)
+    fi = rng.uniform(0.0, 2.0 * np.pi, size=n)
+    nz = np.column_stack([st * np.cos(fi), st * np.sin(fi), ct])
+    Z1 = np.column_stack([e1z, pz[:, None] * nz])
+    Z2 = np.column_stack([s - e1z, -pz[:, None] * nz])
+
+    def _decay(parent, m, cos_hel):
+        """Two massless daughters, ``cos_hel`` measured against the parent's own
+        direction in the frame ``parent`` is written in.  Returns the l+ and l-
+        in that same frame."""
+        # local triad with z along the parent's direction
+        z = _unit(parent[:, 1:4])
+        ref = np.tile(np.array([0.0, 0.0, 1.0]), (len(z), 1))
+        bad = np.abs(z[:, 2]) > 0.99
+        ref[bad] = np.array([1.0, 0.0, 0.0])
+        x = _unit(ref - z * np.sum(ref * z, axis=1)[:, None])
+        y = np.cross(z, x)
+        sh = np.sqrt(1.0 - cos_hel ** 2)
+        ph = rng.uniform(0.0, 2.0 * np.pi, size=len(z))
+        k = (z * cos_hel[:, None] + x * (sh * np.cos(ph))[:, None]
+             + y * (sh * np.sin(ph))[:, None])
+        half = m / 2.0
+        lp = np.column_stack([half, half[:, None] * k])
+        lm = np.column_stack([half, -half[:, None] * k])
+        # from the parent rest frame out to the frame ``parent`` lives in
+        back = parent.copy()
+        back[:, 1:4] *= -1.0
+        return boost_to_rest(lp, back), boost_to_rest(lm, back)
+
+    # pure longitudinal: sin^2 theta, drawn by inverting its cumulative
+    u = rng.uniform(-1.0, 1.0, size=n)
+    cos_hel = 2.0 * np.sin(np.arcsin(u) / 3.0)          # root of (3c - c^3)/2 = u
+    ep, em = _decay(Z1, m1, cos_hel)
+    mup, mum = _decay(Z2, m2, cos_hel[::-1].copy())
+    p = {-11: ep, 11: em, -13: mup, 13: mum}
+
+    got = compute(p)
+    assert abs(float(np.mean(got['cos_theta1'] ** 2)) - 0.2) < 5e-3, \
+        'helicity frame: a pure sin^2 decay does not give <cos^2 theta> = 1/5 ' \
+        '(got %.5f)' % float(np.mean(got['cos_theta1'] ** 2))
+
+    # --- property 1: invariance under an arbitrary boost of the whole event --
+    for beta in ((0.0, 0.0, 0.90), (0.0, 0.0, -0.55), (0.31, -0.18, 0.62)):
+        b = np.array(beta)
+        g = 1.0 / math.sqrt(1.0 - float(b @ b))
+        ref = np.tile(np.concatenate([[g], -g * b]), (n, 1))  # boost_to_rest(-beta)
+        ref *= 100.0                                          # any positive scale
+        moved = {k: boost_to_rest(v, ref) for k, v in p.items()}
+        again = compute(moved)
+        for name in ('cos_theta1', 'cos_theta2', 'cos1cos2', 'phi_planes'):
+            d = float(np.abs(again[name] - got[name]).max())
+            assert d < 1e-6, (
+                'helicity frame: %s is not Lorentz invariant -- boosting the '
+                'event by beta = %s moves it by %.4g. The two boosts into the '
+                'pair rest frame have to be sequential (lab -> 4l -> pair); a '
+                'mixed composition carries a Wigner rotation.' % (name, beta, d))
+
+
+_selftest_helicity_frame()
 
 
 BINS = {

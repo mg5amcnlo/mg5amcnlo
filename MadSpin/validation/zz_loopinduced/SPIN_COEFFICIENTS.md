@@ -1,5 +1,41 @@
 # What the two angular figures measure, and what it is called
 
+> ## AMENDMENT (2026-08-27) — read this first
+>
+> **Section 9 of this file is withdrawn.** It reported that MadSpin's
+> `ms_pol_*` weights fail a `1/5` / `2/5` closure by 14-21 sigma and called for
+> an investigation of MadSpin. The investigation was done and the failure was
+> **ours**: `observables.compute` built `cos_theta1/2` by taking the axis in the
+> four-lepton frame while boosting the `l+` into its pair's rest frame straight
+> from the **lab**. Those two boosts are not collinear, so their composition
+> carries a Wigner rotation — median 8 degrees, mean 11, tail to 81 — which
+> tilted the analysing frame off the axis and damped every rank-2 moment towards
+> `1/3`. That, and nothing else, was the "0 <-> T leakage of 0.055".
+>
+> With the boosts composed sequentially (`lab -> 4l frame -> pair rest frame`)
+> the eight entries close to **1.4 sigma at worst** on the same 250 000 events,
+> and the two `f_0` extractions agree to **1.4 sigma** where they were 12 apart.
+> **MadSpin's polarised weights are correct and nothing in MadSpin was changed.**
+> The full diagnosis, the evidence, the fix and the regression test are in
+> [`POLWEIGHT_CLOSURE_DIAGNOSIS.md`](POLWEIGHT_CLOSURE_DIAGNOSIS.md).
+>
+> **Consequence for the numbers below.** Every rank-2 angular quantity in this
+> file — `f_0`, `f_00`, `f_TT`, `f_00 - f_0 f_0`, `C_kk`, and the `cos_theta`
+> and `cos1cos2` histograms — was harvested with the pre-fix definition and is
+> **biased towards the isotropic value**. On the proxy sample of section 9,
+> `f_0` moves from `0.2105` to `0.1702` and `C_kk` from `-0.650` to `-0.758`.
+> The `g g > z z` samples this study ran on have been swept from `/tmp` and no
+> copy survives, so the corrected numbers require re-running the study; they are
+> **not** recomputed here. The tables below are left as they were harvested,
+> marked, rather than silently patched.
+>
+> **Not affected:** every MadSpin-versus-truth comparison (both sides were
+> harvested identically, so the `chi2/ndf` and the ratio panels stand),
+> `spinmode = none` being exactly `1/3` (an isotropic decay is isotropic about
+> any axis), `phi_planes` (built entirely inside the four-lepton frame), and the
+> `ms_pol_*` weights and the paper's `Z0Z0/Z0ZT/ZTZ0/ZTZT` figures built from
+> them.
+
 `cos(theta1)` and `cos1cos2` are the two figures of this study that carry spin
 information. This file works out what named quantity sits behind each of them,
 extracts it for every sample, closes the extraction against MadSpin's own
@@ -33,8 +69,8 @@ that is the difference between `C_kk = 0.57` (allowed) and `C_kk = 1.23`
 ```python
 zee_in4 = boost_to_rest(zee, four);  d1 = _unit(zee_in4[:, 1:4])
 zmm_in4 = boost_to_rest(zmm, four);  d2 = _unit(zmm_in4[:, 1:4])
-e1 = _unit(boost_to_rest(ep,  zee)[:, 1:4])
-e2 = _unit(boost_to_rest(mup, zmm)[:, 1:4])
+e1 = _unit(boost_to_rest(boost_to_rest(ep,  four), zee_in4)[:, 1:4])
+e2 = _unit(boost_to_rest(boost_to_rest(mup, four), zmm_in4)[:, 1:4])
 out['cos_theta1'] = clip(sum(d1 * e1)); out['cos_theta2'] = clip(sum(d2 * e2))
 ```
 
@@ -46,6 +82,13 @@ frame those two axes are anti-parallel. That is the standard `H -> ZZ -> 4l`
 helicity convention the module's docstring cites (Gao et al.,
 [arXiv:0708.0458](https://arxiv.org/abs/0708.0458)), and it is what makes the
 labels below mean what the literature means by them.
+
+The **double** boost on the third and fourth lines is the whole content of the
+amendment at the top of this file. Until 2026-08-27 they read
+`boost_to_rest(ep, zee)` — the axis in the four-lepton frame, the lepton boosted
+into the pair's rest frame straight from the lab. Two rest frames of the same
+`Z`, differing by a Wigner rotation of median 8 degrees, and every number below
+that was harvested before the fix carries its damping.
 
 Two properties of *this* study's cuts matter for everything that follows. The
 only cuts are `pt(l+ l-) > 1 GeV` on each reconstructed pair and
@@ -180,9 +223,17 @@ Numerically `4/eta_l^2 = 83.154`, so a `C_kk` of order 1 shows up as a
 measured moment is 0.0069 and only 4 sigma from zero.** Inverting it:
 
 ```
-gg -> ZZ  (this study, truth)         C_kk = +0.570 +- 0.141
-qq~ -> ZZ (zz_nlo, truth)             C_kk = -0.675 +- 0.131
+gg -> ZZ  (this study, truth)         C_kk = +0.570 +- 0.141     [PRE-FIX]
+qq~ -> ZZ (zz_nlo, truth)             C_kk = -0.675 +- 0.131     [PRE-FIX]
 ```
+
+**[PRE-FIX]** — both numbers were harvested with the boost composition the
+amendment at the top of this file withdraws, and both are damped towards zero.
+The size of the damping on a sample where it can be measured is
+`C_kk: -0.650 -> -0.758` (`run_12`, section 9). The *sign* difference between
+the two mechanisms is robust — a rotation cannot flip a sign — but the
+magnitudes and the `6.5 sigma` separation below are not, until both studies are
+re-run.
 
 (the second from the sibling study's own published moment,
 `<c1 c2> = -0.00812 +- 0.00158`, same cuts, same window, same `eta_l`). The two
@@ -225,6 +276,16 @@ and `3.3e-5` on `<(c1 c2)^2>` against the unbinned truth of an independent
 250 000-event sample, an order of magnitude under the statistical bars).
 Re-harvesting replaces the whole block with unbinned moments — the harvester now
 stores `cos2_theta2`, `pol0_1`, `pol0_2`, `pol00`, `polTT`.
+
+**[PRE-FIX] Every number in the two tables below is damped towards isotropy by
+the Wigner rotation the amendment at the top of this file describes.** They are
+left as harvested rather than silently patched; the `g g > z z` samples have
+been swept from `/tmp` and no copy survives, so correcting them requires
+re-running the study. Direction and rough size, from the proxy sample of
+section 9: `f_0` down by about `0.04`, `f_TT` up by about `0.07`, `f_00` down by
+about `0.009`, `C_kk` more negative by about `0.11`. The **pull** table that
+follows is *not* affected in any interesting way — truth and the modes were
+harvested identically — and neither is the `+21.7 sigma` on `none`.
 
 | sample | `f_0` (e+e-) | `f_0` (mu+mu-) | `f_00` | `f_00 - f_0 f_0` | `f_TT` | `C_kk` |
 |---|---|---|---|---|---|---|
@@ -378,128 +439,109 @@ inter-decay object available — but 3.2 sigma at 50 000 events, blind to `none`
 and needing about `5e5` events for a 10-sigma statement. It is computed and
 reported; it should not go in the paper.
 
-## 9. The polarised-matrix-element cross-check — it ran, and it does not close
+## 9. The polarised-matrix-element cross-check — it ran, it failed, and the
+failure was in this file
 
 MadSpin can attach one extra weight per polarisation combination
 (`set keep_weight_for_polarization_vector [0, T]`), giving `sigma_LL`,
 `sigma_LT`, `sigma_TL`, `sigma_TT` on the very same events. Those weights exist
 on the `p p > z z` samples of the `zz_pol_weights` study. **They do not exist on
-this study's `g g > z z` samples, and no `gg` sample was regenerated for this**,
-so the check below is not on these events — it is a check of the *method*, on a
-sample where the geometry is exactly right.
+this study's `g g > z z` samples**, so the check is not on these events — it is
+a check of the *method*, on a sample where the geometry is exactly right.
 
 ### The sample chosen, and why
 
 `Events/run_12_decayed_1` of `PROCNLO_loop_sm_7`: `p p > z z [QCD]` run at
 `order = LO`, `spinmode = madspin`, `BW_cut = 15`, exclusive
 `decay z > e+ e-` / `decay z > mu+ mu-`, 250 000 events, **no cuts**, read from
-the Les Houches file (not the shower), and every event has `NUP = 8` — a Born
-`2 -> 2`. That last point is the reason for choosing it: MadSpin defines the
-`0`/`T` labels in the `me_frame` (run-card `me_frame`, default `frame_id = 6`,
-i.e. the rest frame of legs 1 and 2), and on a `2 -> 2` that frame **is** the
-`ZZ` rest frame, so the matrix-element quantisation axis and this study's
-helicity axis coincide exactly. It was verified rather than assumed:
-`pt(ZZ) = 3.7e-8 GeV` over all 250 000 events, and computing the angles in the
-`me_frame` and in the four-lepton frame gives bit-identical results.
+the Les Houches file, and every event has `NUP = 8` — a Born `2 -> 2`. That last
+point is the reason for choosing it: MadSpin defines the `0`/`T` labels in the
+`me_frame` (run-card `me_frame`, default `frame_id = 6`, i.e. the rest frame of
+legs 1 and 2), and on a `2 -> 2` that frame **is** the `ZZ` rest frame, so the
+matrix-element quantisation axis and this study's helicity axis coincide
+exactly. Verified rather than assumed: `pt(ZZ) = 3.7e-8 GeV` over all 250 000
+events, and computing the angles in the `me_frame` and in the four-lepton frame
+gives bit-identical results.
 
-### The result
+### The result, with the boosts composed correctly
+
+Reweighting the sample by each polarised weight must give `<cos^2 theta> = 1/5`
+for a longitudinal `Z` and `2/5` for a transverse one. It does:
+
+| weight | `<cos^2 th1>` | must be | `<cos^2 th2>` | must be |
+|---|---|---|---|---|
+| `LL` | 0.2004 +- 0.0006 | 0.2 | 0.2005 +- 0.0007 | 0.2 |
+| `LT` | 0.2007 +- 0.0005 | 0.2 | 0.3998 +- 0.0009 | 0.4 |
+| `TL` | 0.4009 +- 0.0010 | 0.4 | 0.2003 +- 0.0006 | 0.2 |
+| `TT` | 0.4008 +- 0.0006 | 0.4 | 0.3992 +- 0.0008 | 0.4 |
+
+Worst of the eight, **1.4 sigma** (jackknife, 20 blocks). The `LL` shape is a
+pure `sin^2 theta` to `<P2> = -0.1994 +- 0.0008` (exact `-0.2`) and
+`<P4> = -0.0004 +- 0.0010` (exact `0`), which is only true if `LL` really is the
+single `(00),(00)` entry of the joint density matrix that
+`decay.py::_restriction_rows` says it is.
+
+And the two extractions of `f_0` — from the decay angles and from the polarised
+matrix elements — agree:
 
 | | angular moment | polarised ME | |
 |---|---|---|---|
-| `f_0` (e-side) | 0.21048 +- 0.00305 | `(LL+LT)/full` = 0.174396 +- 0.000347 | **12 sigma apart** |
-| `f_0` (mu-side) | 0.21791 +- 0.00304 | `(LL+TL)/full` = 0.174562 +- 0.000347 | 14 sigma apart |
-| `f_00` | 0.06330 +- 0.00473 | `LL/full` = 0.058508 +- 0.000180 | 1.0 sigma |
+| `f_0` (e-side) | 0.17023 +- 0.00307 | `(LL+LT)/full` = 0.17440 +- 0.00035 | -1.4 sigma |
+| `f_0` (mu-side) | 0.17720 +- 0.00306 | `(LL+TL)/full` = 0.17456 +- 0.00035 | +0.9 sigma |
+| `f_00` | 0.05437 +- 0.00475 | `LL/full` = 0.05851 +- 0.00018 | -0.9 sigma |
 
-and the reason is visible directly in the component shapes. Reweighting the
-sample by each polarised weight must, if the labels mean what they say, give
-`<cos^2 theta> = 1/5` for a longitudinal `Z` and `2/5` for a transverse one:
+The `0-T` interference the `{0, T}` partition drops contributes `+0.07 %` to the
+total (`sum of the four / full = 1.000705 +- 0.000395`), unchanged by any of
+this — it is a property of the weights alone.
 
-| weight | `<cos^2 th1>` | predicted | `<cos^2 th2>` | predicted |
-|---|---|---|---|---|
-| `LL` | 0.2104 | 0.2 | 0.2117 | 0.2 |
-| `LT` | 0.2144 | 0.2 | 0.3876 | 0.4 |
-| `TL` | 0.3890 | 0.4 | 0.2142 | 0.2 |
-| `TT` | 0.3893 | 0.4 | 0.3875 | 0.4 |
+### What the earlier version of this section reported, and why it was wrong
 
-(jackknife errors 0.0006-0.0010 over 20 blocks, so these are 14-21 sigma
-deviations, not tails). Every entry is pulled towards the isotropic `1/3`, and a
-**single symmetric `0 <-> T` leakage** describes all eight at once: solving
-`<P2>_obs = (1-a) <P2>_pure + a <P2>_other` column by column gives
+It reported the same eight entries as `0.2104 / 0.3893 / 0.2144 / 0.3890 / ...`,
+14-21 sigma out, fitted by a symmetric `0 <-> T` leakage of `0.055`, and
+concluded that "the `f_0` from the angular distribution and the `f_0` from
+MadSpin's `ms_pol_*` weights are not the same number at the 5 % level". The
+leakage was the Wigner rotation of the mixed boost composition described in
+section 1 and diagnosed in
+[`POLWEIGHT_CLOSURE_DIAGNOSIS.md`](POLWEIGHT_CLOSURE_DIAGNOSIS.md). Its
+signature was already visible in the data and was not looked for: the deviation
+**vanishes** when the `ZZ` system is at rest in the lab (`<P2>_LL = -0.2038 +-
+0.0029` for `|y(ZZ)| < 0.15`) and when the `Z` flies along the beam
+(`-0.1948 +- 0.0022` for `|cos theta*| > 0.95`), grows with the `Z` speed, and
+is flat in the virtuality — the four defining properties of a Wigner rotation
+between the lab and the `ZZ` frame, and none of them a property of anything in
+MadSpin.
 
-```
-a = 0.0522   0.0720   0.0552   0.0537        (LL, LT, TL, TT on slot 1)
-```
+The exclusion list of the earlier version survives intact **except for its
+first entry**. "The frame" was excluded by trying the axis in the lab (0.286)
+and along the beam (0.293) and finding the `ZZ` axis (0.2104) closest. That scan
+varied only the *axis* and left the lepton boosted from the lab in all three
+variants, so every member of it was a mixed composition and the answer was not
+in the family being scanned. The right question was not which axis but which
+boost path.
 
-and the same `a` reproduces the `f_0` gap independently --
-`f_0^ang = f_0^ME + a (1 - 2 f_0^ME)` gives `a = 0.0554`.  So a single number
-near `0.055` accounts for the whole discrepancy. A mutual leakage of
-`sin^2(delta)` is exactly what a quantisation-axis misalignment by `delta`
-produces — `delta ~ 13 deg` here — but the axis has been checked and it is not
-misaligned.
+`polweight_closure.py` in this directory reproduces every number above in one
+pass over that Les Houches file, and `--mixed` reproduces the historical
+failure.
 
-### What was ruled out
-
-* **The frame.** Repeating the whole table with the axis taken in the lab gives
-  `<cos^2 th1>_LL = 0.2860` and along the beam `0.2925`; the `ZZ`/`me_frame`
-  axis (0.2104) is by far the closest, so the right frame is being used. On the
-  NLO samples the `me_frame` axis beats the four-lepton one (leak 0.055 against
-  0.070), which is a second, independent confirmation that `me_frame` is what
-  MadSpin projects on.
-* **The virtuality reshuffling.** The `Z` directions in the `ZZ` rest frame of
-  the production events and of the decayed events agree to `0.000 deg` (max over
-  60 000 matched events) and `m_4l` to `2.1e-8` relative. Nothing rotates.
-* **Off-shellness.** Splitting on `|m(e+e-) - MZ|` gives
-  `<cos^2 th1>_LL = 0.2099 / 0.2112 / 0.2123` for `< 2`, `2-6`, `> 6 GeV`. The
-  leakage is there at the peak.
-* **The spinmode.** Same table on `run_08` (`onshell`, no virtuality drawn at
-  all) gives leak `0.055`, on `run_07` (`PA`) `0.062`, on `run_06`
-  (`madspin`, NLO) `0.052`. Restricting `run_08` to its `NUP = 8` events —
-  Born-like kinematics *and* on-shell `Z` — still gives `LL: 0.2100`, leak
-  `0.060`.
-* **Statistics and weight tails.** Jackknife over 20 blocks reproduces the
-  quoted bars; `N_eff` is 60 000-220 000; the top ten `LL` weights carry 0.1 %
-  of the sum and the top 1 % carry 9 %.
-* **The mask logic.** `MadSpin/decay.py:_restriction_rows` constrains **both**
-  the bra and the ket helicity of each particle
-  (`mask &= isin(bra, allowed); mask &= isin(ket, allowed)`), so `LL` really is
-  the single `(00),(00)` entry of the joint density matrix, whose angular
-  content is exactly `sin^2 th1 sin^2 th2`. The `0-T` interference the
-  `{0, T}` partition drops contributes only `+0.07 %` to the total
-  (`sum of the four / full = 1.000705 +- 0.000395`), and in any case it is odd
-  in the azimuths and cannot survive the `phi` integration that `<cos^2 theta>`
-  performs.
-
-### What this means, and what it does not
-
-It does **not** mean MadSpin's generated angular distributions are wrong. The
-main body of this study is the evidence against that: on the same code, the
-`madspin`, `PA` and `onshell` `cos(theta1)` histograms sit on top of an
-independently generated off-shell four-lepton truth at
-`chi2/ndf = 0.75, 0.88, 0.81`, and the `f_0` extracted from them agrees with the
-truth's within 1.5 sigma. The nominal weight is a trace and is frame- and
-basis-independent, so a projection-side problem would not touch it.
-
-What it does mean is a concrete warning: **the `f_0` obtained by fitting the
-angular distribution and the `f_0` obtained from MadSpin's `ms_pol_*` weights
-are not the same number at the 5 % level, on a sample where they are supposed to
-coincide exactly.** Quote the angular one — it is the experimentally defined
-quantity, and it is the one this study validates against truth. The
-discrepancy is reproducible across four samples, three spinmodes and two orders,
-its cause is not in the frame, the reshuffling, the off-shellness or the mask,
-and it deserves its own investigation. `polweight_closure.py` in this directory
-reproduces every number above in one pass over that Les Houches file; it is the
-only script here that does not run on this study's own samples, and it says so
-in its docstring.
-
-For completeness, the same sample gives, from its angular moments,
-`f_0 = 0.2105 +- 0.0031` and `C_kk = -0.650 +- 0.060` for `qq~ -> ZZ` at LO,
-against `f_0 = 0.2380 +- 0.0068` and `C_kk = -0.675 +- 0.131` from the sibling
-`zz_nlo` study's independently generated NLO truth. The `C_kk` agree to 0.2
-sigma — an end-to-end check of the extraction chain against a sample built by
-different code — and the `f_0` difference is the NLO effect the
-`zz_pol_weights` study measures directly as a per-component K-factor.
+For completeness, the same sample gives, from its (corrected) angular moments,
+`f_0 = 0.1702 +- 0.0031` and `C_kk = -0.758 +- 0.061` for `qq~ -> ZZ` at LO. The
+`C_kk = -0.675 +- 0.131` quoted for the sibling `zz_nlo` study in section 4 was
+harvested with the pre-fix definition and will move by a comparable amount when
+that study is re-run, so the "0.2 sigma agreement" claimed there is not a
+statement that can currently be made either way.
 
 ## 10. Verdict
+
+**0. The frame, which came first and was got wrong first.** `f_0` and `C_kk`
+are moments about the `Z`'s **helicity** axis, and reaching that frame means
+boosting to the four-lepton frame and then to the pair's rest frame, in that
+order. Composing the two boosts the other way round — axis in one frame, lepton
+boosted from another — is not a different convention, it is not a convention at
+all: the resulting angle is not Lorentz invariant, and it damps every rank-2
+moment towards `1/3`. This file's first pass did that, blamed the resulting
+5 % closure failure on MadSpin, and was wrong. The three claims below are
+unaffected in structure; their *numbers* are not.
+   ([`POLWEIGHT_CLOSURE_DIAGNOSIS.md`](POLWEIGHT_CLOSURE_DIAGNOSIS.md))
 
 1. **Claim 1 (dilution) — right in structure, wrong in the number, and the
    conclusion inverts.** `eta_l` enters squared, as claimed. But `eta_l = 0.219`
@@ -513,7 +555,10 @@ different code — and the `f_0` difference is the NLO effect the
    formula.** `f_0 = 2 - 5 <cos^2 theta>` is confirmed by an independent
    derivation from the density matrix, `f_0 = 0.1116 +- 0.0069` for the truth,
    and `spinmode = none` gives `0.3211 +- 0.0067` and `0.3287 +- 0.0067`,
-   consistent with the isotropic `1/3` that an unpolarised `Z` must give.
+   consistent with the isotropic `1/3` that an unpolarised `Z` must give. The
+   `none` numbers are the only ones in the file the frame error cannot touch —
+   an isotropic decay is isotropic about every axis — which is also why they
+   could not have caught it. `f_0 = 0.1116` **[PRE-FIX]**.
 3. **Claim 3 (tensor-tensor analogue) — right about the object, wrong about it
    being worth adding.** The object is `f_00 - f_0^(1) f_0^(2)`, equivalently
    `25 [<c1^2 c2^2> - <c1^2><c2^2>]`, and it is genuinely `eta_l`-free. It is
@@ -528,6 +573,14 @@ they are 6.5 sigma apart. Leave the rank-2 correlation in `numbers.txt`.
 ---
 
 ## The paragraph for the paper
+
+**Do not use the numbers in the LaTeX below.** Every `f_0` and `C_kk` in it was
+harvested with the withdrawn boost composition and is damped towards isotropy;
+the study has to be re-run before the paragraph can be quoted. The *physics* of
+it — that `eta_l` multiplies only `P1`, that the rank-2 moment is undiluted,
+that `f_0 = 2 - 5 <cos^2 theta>`, that the calibration is `4/eta_l^2 = 83.2` and
+not the `9` of the spin-1/2 case, and that the `gg` box and the `qq~` continuum
+correlate the helicities with opposite sign — is unchanged.
 
 ```latex
 The two \texttt{cos}\,$\theta$ figures admit a named reading. For a $Z$ of

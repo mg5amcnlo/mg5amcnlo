@@ -1,6 +1,12 @@
 #!/usr/bin/env python3
 """Close the angular extraction of ``f_0`` against MadSpin's polarised-ME weights.
 
+It closes: the eight entries of the table this prints agree with 1/5 and 2/5 to
+1.4 sigma at worst on 250 000 events, and the two extractions of ``f_0`` agree
+to 1.4 sigma.  It did NOT close when this script first ran, and the reason was
+here rather than in MadSpin -- see ``--mixed`` and
+POLWEIGHT_CLOSURE_DIAGNOSIS.md.
+
 This is the cross-check of section 9 of ``SPIN_COEFFICIENTS.md``, and it is the
 only thing in this directory that does NOT run on this study's samples: the
 ``g g > z z`` runs carry no ``ms_pol_*`` weights, so the check is done on a
@@ -22,7 +28,9 @@ Use a **Born** sample. MadSpin quantises on the ``me_frame`` axis (run-card
 ``me_frame``, i.e. the rest frame of legs 1 and 2 by default); on a ``2 -> 2``
 production that frame is the ``ZZ`` rest frame and coincides with the helicity
 axis ``observables.compute`` uses, so any residual is a real disagreement and
-not a frame mismatch. The script boosts to the initial-state CM by default so
+not a frame mismatch -- **provided the boosts into the pair rest frame are
+composed through that frame and not taken from the lab**, which is exactly the
+mistake ``--mixed`` reproduces. The script boosts to the initial-state CM by default so
 that it is also usable on events with extra radiation, and ``--frame 4l`` asks
 for the four-lepton frame instead; on a Born sample the two agree bit for bit,
 which is itself worth checking.
@@ -109,14 +117,29 @@ def read(path, want=(-11, 11, -13, 13), maxev=-1):
             np.array(init), np.array(nup))
 
 
-def angles(p, ref):
-    """``(cos theta1, cos theta2)`` with the analysing axis taken in ``ref``."""
+def angles(p, ref, mixed=False):
+    """``(cos theta1, cos theta2)`` with the analysing frame taken in ``ref``.
+
+    The boosts are SEQUENTIAL: lab -> ``ref`` -> the pair's rest frame.  Taking
+    the axis in ``ref`` while boosting the lepton into the pair rest frame
+    straight from the lab -- ``mixed=True``, which is what this script and
+    ``observables.compute`` did until the closure was diagnosed -- composes two
+    non-collinear boosts, and the Wigner rotation of that composition tilts the
+    analysing frame off the axis by a median 8 degrees on this sample.  That
+    tilt, and nothing else, is the '5 % leakage' this script used to report.
+    ``mixed=True`` is kept so the failure can be reproduced on demand.
+    """
     ep, em, mup, mum = p[-11], p[11], p[-13], p[13]
     z1, z2 = ep + em, mup + mum
-    d1 = OBS._unit(OBS.boost_to_rest(z1, ref)[:, 1:4])
-    d2 = OBS._unit(OBS.boost_to_rest(z2, ref)[:, 1:4])
-    e1 = OBS._unit(OBS.boost_to_rest(ep, z1)[:, 1:4])
-    e2 = OBS._unit(OBS.boost_to_rest(mup, z2)[:, 1:4])
+    z1r, z2r = OBS.boost_to_rest(z1, ref), OBS.boost_to_rest(z2, ref)
+    d1 = OBS._unit(z1r[:, 1:4])
+    d2 = OBS._unit(z2r[:, 1:4])
+    if mixed:
+        e1 = OBS._unit(OBS.boost_to_rest(ep, z1)[:, 1:4])
+        e2 = OBS._unit(OBS.boost_to_rest(mup, z2)[:, 1:4])
+    else:
+        e1 = OBS._unit(OBS.boost_to_rest(OBS.boost_to_rest(ep, ref), z1r)[:, 1:4])
+        e2 = OBS._unit(OBS.boost_to_rest(OBS.boost_to_rest(mup, ref), z2r)[:, 1:4])
     return (np.clip(np.sum(d1 * e1, axis=1), -1.0, 1.0),
             np.clip(np.sum(d2 * e2, axis=1), -1.0, 1.0))
 
@@ -153,11 +176,17 @@ def main():
                     help="'me' (default) = rest frame of the initial state, which "
                          "is what MadSpin quantises on; '4l' = four-lepton frame")
     ap.add_argument('--max-events', type=int, default=-1)
+    ap.add_argument('--mixed', action='store_true',
+                    help='reproduce the historical failure: take the axis in the '
+                         'analysing frame but boost the lepton into the pair rest '
+                         'frame straight from the lab. That composition carries a '
+                         'Wigner rotation and is what made this test look like a '
+                         '5 %% leakage; see POLWEIGHT_CLOSURE_DIAGNOSIS.md.')
     args = ap.parse_args()
 
     w, p, pol, init, nup = read(args.lhe, maxev=args.max_events)
     four = p[-11] + p[11] + p[-13] + p[13]
-    c1, c2 = angles(p, init if args.frame == 'me' else four)
+    c1, c2 = angles(p, init if args.frame == 'me' else four, mixed=args.mixed)
 
     print('%d events, NUP: %s' % (len(w), dict(zip(*np.unique(nup, return_counts=True)))))
     print('analysing axis taken in the %s frame'
@@ -193,17 +222,22 @@ def main():
         j1, j2 = jackknife(c1 ** 2, pol[k]), jackknife(c2 ** 2, pol[k])
         print('  %-6s %.4f +- %.4f / %.1f      %.4f +- %.4f / %.1f'
               % (k, m1, j1, a, m2, j2, b))
-    # one symmetric 0 <-> T leakage a fits all of them: <P2> -> (1-a)<P2> + a<P2>'
-    p2 = lambda m: 1.5 * (m - 1.0 / 3.0)
-    lk = [(p2(wmean(c1 ** 2, pol[k])[0]) - p2(PREDICTED[k][0]))
-          / (p2(0.4 if PREDICTED[k][0] == 0.2 else 0.2) - p2(PREDICTED[k][0]))
-          for k in SHORT]
-    print('  implied 0 <-> T leakage per column: %s'
-          % ' '.join('%.4f' % x for x in lk))
+    worst = 0.0
+    for k in SHORT:
+        for c, target in ((c1, PREDICTED[k][0]), (c2, PREDICTED[k][1])):
+            worst = max(worst, abs(wmean(c ** 2, pol[k])[0] - target)
+                        / max(jackknife(c ** 2, pol[k]), 1e-12))
+    print('  worst deviation over the eight entries: %.1f sigma' % worst)
     f0a = 2 - 5 * wmean(c1 ** 2, w)[0]
-    f0m = ratio(pol['LL'] + pol['LT'], w)[0]
-    print('  leakage that maps f_0(ME) = %.4f onto f_0(angular) = %.4f: %.4f'
-          % (f0m, f0a, (f0a - f0m) / (1 - 2 * f0m)))
+    e0a = 5 * wmean(c1 ** 2, w)[1]
+    f0m, f0me = ratio(pol['LL'] + pol['LT'], w)
+    print('  f_0 (slot 1): angular %.5f +- %.5f   polarised ME %.5f +- %.5f'
+          '   -> %.1f sigma' % (f0a, e0a, f0m, f0me,
+                                (f0a - f0m) / np.hypot(e0a, f0me)))
+    if args.mixed:
+        print('\n  (--mixed) the deviations above are the Wigner rotation of a '
+              'non-sequential\n  boost composition, not a property of the '
+              'weights. Drop --mixed to close.')
 
 
 if __name__ == '__main__':
