@@ -33,21 +33,32 @@ So the SM NLO density matrices used a top mass 0.24 GeV too high and a top
 width 12 % too large. **Every curve and every number involving `sm_nlo` — that
 is, variations `C`, `D`, both NLO entries of `E`, and every red curve of `F` —
 is affected at an unquantified level and must not be quoted as a result until
-the sample is regenerated.**
+the sample is regenerated.** That now includes every red curve of `G`–`N` and
+every `NLO` entry of their ratio panes.
 
-One qualification that matters for `F`: the defect is in the **density** path,
-and `spinmode = none` does not use it — the `none` runs build no `madspin_me`
-directory at all (see the table below). So on `F`, whose curves come in matched
-solid/dashed pairs, the **dashed** NLO curves are sound and only the **solid**
-ones are suspect. The figures are drawn anyway, because they are wanted.
+**A sound SM NLO sample is being regenerated** (task T123, branch
+`claude/ms-smeft-fig5-nlo-redo`). When it lands, drop the new
+`data/histograms.npz` in place and re-run the plotting scripts: none of them
+hard-codes a cross section, a weight or any other NLO number — every one is read
+out of the histogram file and its `meta.json` — so the redraw is a re-run and
+not a rewrite. This section and the health warning at the top and bottom of each
+`numbers_*.txt` stay until it does.
+
+One qualification that matters for `F` and for `G`–`N`: the defect is in the
+**density** path, and `spinmode = none` does not use it — the `none` runs build
+no `madspin_me` directory at all (see the table below). So on those figures,
+whose curves come in matched solid/dashed pairs, the **dashed** NLO curves are
+sound and only the **solid** ones are suspect. The figures are drawn anyway,
+because they are wanted.
 
 **None of the figures says so on its face.** `C` and `D` predate the finding and
 are left byte-identical; `E` carried the caveat in red under its x-axis until
 the user asked for every free-floating annotation to be removed from the plot,
-and `F` never carried it. So **this section and `plots/numbers_E.txt` /
-`plots/numbers_F.txt` — both of which open and close with the warning — are the
-only places it lives.** Anyone writing a caption from these
-figures must carry it across by hand.
+and `F` and `G`–`N` never carried it. So **this section and
+`plots/numbers_E.txt`, `plots/numbers_F.txt` and `plots/numbers_G.txt` …
+`numbers_N.txt` — all of which open and close with the warning — are the only
+places it lives.** Anyone writing a caption from these figures must carry it
+across by hand.
 
 ### The two LO samples are clear (audited here, T113's audit having stopped)
 
@@ -284,6 +295,7 @@ python3 plot_smeft_fig5.py            # MG7 paper style  -> plots/          (A-D
 python3 plot_smeft_fig5_userstyle.py  # user's own style -> plots_userstyle/ (A-D)
 python3 plot_smeft_fig5_varE.py       # both styles, variation E only
 python3 plot_smeft_fig5_varF.py       # both styles, variation F only
+python3 plot_smeft_fig5_ctg_scan.py   # both styles, variations G-N (the c_tG scan)
 ```
 
 Both run entirely off `data/histograms.npz` and `data/meta.json`. Neither needs
@@ -302,7 +314,7 @@ these PDFs — subsetted fonts, no `ToUnicode` — so it cannot be used to verif
 any label; the check is on the font encoding, and label text is verified by
 looking at the PNG.
 
-### The six variations
+### The fourteen variations
 
 | tag | curves | ratio pane(s) | what it adds |
 |---|---|---|---|
@@ -312,12 +324,16 @@ looking at the PNG.
 | `D` | EFT both + SM LO both + SM NLO both | `onshell/none` | LO and NLO together |
 | `E` | EFT `onshell`, SM LO `onshell`, SM NLO `onshell`, **one** `none` | **two**: shape ratios, then SM + interference | three orders on one pane, and what the operator does to the SM prediction; no text on the plot |
 | `F` | all six: three samples × both spinmodes | **two**, four curves each: `E`'s ratios in *both* spinmodes | `E` decomposed — the dashed curve is the non-spin part of each ratio and the solid/dashed gap is the spin-correlation effect |
+| `G`–`J` | as `F` (identical upper pane) | `F`'s, `shape` convention, at `c_tG = -1, +1, +10, -10` | the Wilson-coefficient scan with the rate change divided out; pane 1 is `c_tG`-invariant and is the same in all four |
+| `K`–`N` | as `F` (identical upper pane) | same four `c_tG`, `rate` convention: ratios of *unnormalised* `dsigma` | the same scan with the interference at its physical sign and size; **pane 1 scans here**, and `K`/`L` are the two pane-1 versions |
 
 `A`–`D` come from `plot_smeft_fig5.py` and `plot_smeft_fig5_userstyle.py`; `E`
 from `plot_smeft_fig5_varE.py`; `F` from `plot_smeft_fig5_varF.py`, which
-imports all three and modifies none of them. Each variation is therefore an
-addition: `A`–`D` are byte-identical to what they were before `E` existed, and
-`A`–`E` to what they were before `F` did.
+imports all three and modifies none of them; `G`–`N` from
+`plot_smeft_fig5_ctg_scan.py`, which imports all four and modifies none of them.
+Each variation is therefore an addition: `A`–`D` are byte-identical to what they
+were before `E` existed, `A`–`E` to what they were before `F` did, and `A`–`F`
+to what they were before `G`–`N` did.
 
 `B` is the one to put in the paper. It is the only variation that shows the
 result the extra samples were generated for: the SM and the interference term
@@ -625,6 +641,202 @@ the model default $m_t=173$~GeV and $\Gamma_t=1.4915$~GeV rather than the run's
 $172.76$ and $1.33$.  The defect is in the density path, which
 \code{spinmode=none} does not use, so the \emph{solid} red curves are
 provisional and the dashed red ones are not.}}
+```
+
+> **Correction to one clause of `F`'s caption.** It says the pane-2 curves
+> "mirror about unity for $c_{tG}>0$". The sign is right and the size is not.
+> `F`'s pane 2 divides by the *total* of `SM + interference`, so its coefficient
+> is `w/(1+w)`, not `w`: flipping `c_tG` flips `w` but also moves `1+w`, and the
+> deviation at `+1` comes out **1.759x** (LO) and **1.442x** (NLO) the one at
+> `-1`, not `1.000x`. The mirror is exact only in the `rate` convention of
+> `K`–`N` below, whose coefficient is `w` itself. `F`'s figure and numbers are
+> unaffected — they are drawn at `c_tG = -1` — and are left byte-identical; only
+> the extrapolation in that clause was wrong.
+
+### Variations `G`–`N` — `F` scanned over the Wilson coefficient
+
+`plot_smeft_fig5_ctg_scan.py --help`. Eight figures: `F`'s three panes at
+`c_tG = -1, +1, +10, -10` in each of two ratio conventions. Both styles, PDF and
+PNG, a `_curves.npz` and a `numbers_<TAG>.txt` per figure, `--check-minus` on
+every MG7 PDF. It reads `data/histograms.npz` and `data/meta.json` and nothing
+else — no cross section, weight or NLO number is hard-coded — so **regenerating
+the SM NLO sample is a re-run of this script, not a rewrite of it**.
+
+| tag | file stem | `c_tG` | convention |
+|---|---|---|---|
+| `G` | `smeft_fig5_G_ctg_m1_shape` | `-1` | `shape` |
+| `H` | `smeft_fig5_H_ctg_p1_shape` | `+1` | `shape` |
+| `I` | `smeft_fig5_I_ctg_p10_shape` | `+10` | `shape` |
+| `J` | `smeft_fig5_J_ctg_m10_shape` | `-10` | `shape` |
+| `K` | `smeft_fig5_K_ctg_m1_rate` | `-1` | `rate` |
+| `L` | `smeft_fig5_L_ctg_p1_rate` | `+1` | `rate` |
+| `M` | `smeft_fig5_M_ctg_p10_rate` | `+10` | `rate` |
+| `N` | `smeft_fig5_N_ctg_m10_rate` | `-10` | `rate` |
+
+The coefficient is **not written on any of them** — axis labels and legends
+only, as everywhere else here. It is in the file name, in this table and at the
+top *and* bottom of each `numbers_<TAG>.txt`. `G` reproduces `F` exactly.
+
+#### Pane 1 cannot depend on `c_tG`, and that is why the eight are not what was asked for
+
+The request was pane 2 at four coefficients crossed with **two versions of
+pane 1**, one at `-1` and one at `+1`. That cross product does not exist.
+
+The interference is linear in `c_tG`. `F`'s panes are built from unit-area
+shapes, and
+
+```
+n_int = (dsigma_int/dphi) / sigma_int
+```
+
+carries the factor `c_tG/c_ref` in the numerator *and* in the denominator, where
+it cancels — **sign included**, since a negative overall factor divides out of a
+ratio. So `n_int` is exactly invariant. Consequences:
+
+* the **upper pane is identical in all eight figures**, which is what was
+  expected and is the reason it is;
+* but `F`'s **pane 1 is identical too** — `n_NLO/n_LO` and `n_int/n_LO` contain
+  no `c_tG` at all — and not merely at `+1` against `-1` but at *every* non-zero
+  coefficient. Drawing it at `-1` and again at `+1` would have shipped one
+  figure under two names.
+
+`check_ctg_invariance()` measures this instead of asserting it: rescaling `sumw`
+and `sumw2` by `c_tG/c_ref` and renormalising moves the upper-pane curves and
+their error bars by at most `3.3e-16`, i.e. by nothing.
+
+The coefficient enters the figure in exactly one place, the **signed weight**
+
+```
+w_SM(c_tG) = sigma_int(c_tG) / sigma_SM ,      w = -0.275092 c_tG  (LO)
+                                               w = -0.181081 c_tG  (NLO)
+```
+
+(the minus is because the samples were generated at `ctGRe = -1`, where
+`sigma_int` is *positive*). Any curve containing `w` scans; any curve not
+containing `w` does not.
+
+#### The convention
+
+**The interference always enters a ratio pane with the physical sign and
+magnitude it has at the stated `c_tG`, through `w`, and is never re-normalised
+to positive unit area there.** `n_int` is unit-area in the *upper* pane only,
+where the sign of its own integral divides out; that sign is not lost, it is
+moved to the one place it changes an answer and carried there explicitly by `w`.
+Both ratio panes of a given figure use the same convention.
+
+`rate` (`K`–`N`) — every ratio between **unnormalised** differential cross
+sections:
+
+```
+pane 1:  dsigma_NLO/dsigma_LO = K (n_NLO/n_LO),  K = sigma_NLO/sigma_LO = 1.519
+         dsigma_int/dsigma_LO = w_LO(c_tG) (n_int/n_LO)
+pane 2:  (dsigma_SM + dsigma_int)/dsigma_SM = 1 + w_SM(c_tG) rho_SM
+```
+
+No denominator can change sign, the rate change the operator makes is included,
+and `c_tG = +1` **mirrors `c_tG = -1` exactly** about the no-interference line:
+`w` flips and nothing else moves. Pane 1 scans here, so `K` and `L` *are* the
+two genuinely different pane-1 versions that were wanted — pane 1's blue curve
+runs `+0.226 … +0.308` at `-1` and `-0.308 … -0.226` at `+1`.
+
+`shape` (`G`–`J`) — every ratio between **unit-area** curves, which is what the
+upper pane's normalisation implies:
+
+```
+pane 1:  n_NLO/n_LO,  n_int/n_LO                    (c_tG-invariant)
+pane 2:  n_(SM+int)/n_SM = 1 + [w/(1+w)] (rho_SM - 1)
+```
+
+This is `F`'s pane 2 exactly. It answers a different question — does the
+*shape* move, with the rate change divided out — and it is the convention that
+carries the sign trap (below).
+
+Both use the same error identity, the one that stops the shared `n_SM` being
+counted as two independent measurements. Writing either pane-2 curve as
+
+```
+baseline + k (rho_SM - 1),          rho_SM = n_int/n_SM
+```
+
+with `(baseline, k) = (1, w/(1+w))` for `shape` and `(1+w, w)` for `rate`, the
+SM measurement appears once, inside `rho_SM`, and the error is
+`|k| sigma(rho_SM)` in both. `rho_SM`'s own error adds `n_int`'s and `n_SM`'s in
+quadrature; the samples are independent. `pane2_baseline_*` and `pane2_k_*` are
+in each `_curves.npz` beside `pane2_w_*`.
+
+#### The weights, and where the sum stops being physics
+
+| `c_tG` | `w` (LO) | `1 + w` (LO) | `w` (NLO) | `1 + w` (NLO) | bins with `dsigma < 0` | verdict |
+|---|---|---|---|---|---|---|
+| `-1` | `+0.2751` | `1.2751` | `+0.1811` | `1.1811` | 0 / 20 | sound |
+| `+1` | `-0.2751` | `0.7249` | `-0.1811` | `0.8189` | 0 / 20 | sound |
+| `-10` | `+2.7509` | `3.7509` | `+1.8108` | `2.8108` | 0 / 20 | **interference bigger than the SM, outside EFT validity** |
+| `+10` | `-2.7509` | `-1.7509` | `-1.8108` | `-0.8108` | **20 / 20** | **negative `dsigma`, outside EFT validity** |
+
+(`onshell`; the `none` weights differ in the sixth digit and are tabulated in
+each `numbers_*.txt`.) So:
+
+* `G`, `H`, `K`, `L` are physics: a 28 % (LO) / 18 % (NLO) correction on the
+  rate, of either sign.
+* `J` and `N` (`c_tG = -10`) stay positive everywhere, so nothing *looks*
+  broken — but the dimension-six interference is now 2.75 (LO) and 1.81 (NLO)
+  times the entire SM cross section. A "correction" three times the size of what
+  it corrects is not one; the dimension-six **squared** term that was dropped is
+  of the same order or larger. `N`'s pane 2 sits at `3.26 … 4.08` (LO).
+* `I` and `M` (`c_tG = +10`) have `SM + interference` **negative in all 20 bins,
+  at both LO and NLO**. `M` draws that as it comes out — pane 2 lies entirely
+  below zero, `-2.08 … -1.26` (LO) and `-0.95 … -0.59` (NLO) — with **no
+  clipping and no floor**. That is the honest picture of a failed expansion.
+
+#### The sign trap, which is `I`
+
+The `shape` convention divides by `1 + w`, the *total* of `SM + interference`
+relative to the SM. That vanishes and then changes sign at
+
+```
+c_tG = +3.635  (LO)        c_tG = +5.522  (NLO)
+```
+
+— the coefficients at which the interference exactly cancels the SM cross
+section. **`c_tG = +10` is past both poles**, so `I`'s two pane-2 curves are
+ratios of two *negative* densities. They come out positive, near 1, spanning
+`0.72 … 1.19`: a picture indistinguishable from a modest 20 % shape distortion,
+drawn from a differential cross section that is negative in every bin. This is
+exactly the arbitrary-sign normalisation this figure has been avoiding since
+`ctGRe = -1` was chosen over `+1`. **Read `M` instead at that coefficient**, and
+treat `I` as the illustration of why the `shape` convention needs its pole
+quoted. `numbers_I.txt` says so at the top and at the bottom.
+
+#### Caption for `G`–`N`
+
+`F`'s caption, with three substitutions and one addition. The `c_tG` value and
+the convention are **not** on the figure and must come from here.
+
+```latex
+\caption{As Fig.~\ref{fig:valid_interf_decomposed} (variation \texttt{F}), drawn
+at $c_{tG}=\VALUE$ with $\Lambda=1$~TeV.  The upper panel is independent of
+$c_{tG}$: the interference is linear in the coefficient, so the factor cancels
+between $\rd\sigma_{\rm int}$ and $\sigma_{\rm int}$ in the unit-area
+normalisation, sign included.  Middle panel: \CONVENTIONSENTENCE.  Lower panel:
+the SM prediction with the interference added at its physical sign and size,
+$w=\sigma_{\rm int}(c_{tG})/\sigma_{\rm SM}=\WVALUES$ at LO and NLO, divided by
+the SM alone.  In both lower panels the dashed curve is the part of the ratio
+that is \emph{not} a spin-correlation effect and the gap up to the solid curve
+of the same colour is the spin-correlation effect itself.
+\OM{The SM NLO sample was decayed with its spin-density matrices evaluated at the
+model default $m_t=173$~GeV and $\Gamma_t=1.4915$~GeV rather than the run's
+$172.76$ and $1.33$; the defect is in the density path, which
+\code{spinmode=none} does not use, so the \emph{solid} red curves are
+provisional and the dashed red ones are not.}}
+```
+
+with, for `I`, `J`, `M` and `N`, this sentence added and **not** optional:
+
+```latex
+At $|c_{tG}|=10$ the dimension-six interference exceeds the SM cross section it
+corrects, so the dropped dimension-six squared contribution is of the same order
+or larger and the linear truncation shown here is not a prediction; at
+$c_{tG}=+10$ the sum is negative in every bin and is plotted unclipped.
 ```
 
 ### What is plotted, and the normalisation

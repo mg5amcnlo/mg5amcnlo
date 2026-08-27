@@ -862,11 +862,17 @@ def write_numbers(d, s, tag, fh=sys.stdout):
     worst = [s.diagnose(sm, m) for sm in PANE2 for m in MODES]
     if any(n for _, _, n, _ in worst):
         p('    * !! THIS FIGURE IS OUTSIDE EFT VALIDITY.  SM + interference is')
-        p('      NEGATIVE in up to %d of the %d bins.  It is drawn as it comes'
+        p('      NEGATIVE in up to %d of the %d bins -- a negative'
           % (max(n for _, _, n, _ in worst), d.nbins))
-        p('      out, unclipped.  It must NOT be presented as a small')
-        p('      correction: at |c_tG| = 10 the dropped dimension-six SQUARED')
-        p('      term is of the same order or larger than what is kept.')
+        p('      differential cross section.  It must NOT be presented as a')
+        p('      small correction: at |c_tG| = 10 the dropped dimension-six')
+        p('      SQUARED term is of the same order or larger than what is')
+        p('      kept.')
+        if s.convention == 'rate':
+            p('      Pane 2 draws that as it comes out, unclipped and below')
+            p('      zero.')
+        else:
+            p('      PANE 2 DOES NOT SHOW IT: see the next point.')
     elif any(abs(w) > 1 for w, _, _, _ in worst):
         p('    * !! THIS FIGURE IS OUTSIDE EFT VALIDITY.  |w| > 1: the')
         p('      interference is larger than the whole SM cross section it')

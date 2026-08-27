@@ -268,10 +268,13 @@ what a caption must carry, since the figure carries no text
     * that the dashed curves are the non-spin part of each ratio and
       the solid-to-dashed gap is the spin-correlation effect;
     * !! THIS FIGURE IS OUTSIDE EFT VALIDITY.  SM + interference is
-      NEGATIVE in up to 20 of the 20 bins.  It is drawn as it comes
-      out, unclipped.  It must NOT be presented as a small
-      correction: at |c_tG| = 10 the dropped dimension-six SQUARED
-      term is of the same order or larger than what is kept.
+      NEGATIVE in up to 20 of the 20 bins -- a negative
+      differential cross section.  It must NOT be presented as a
+      small correction: at |c_tG| = 10 the dropped dimension-six
+      SQUARED term is of the same order or larger than what is
+      kept.
+      Pane 2 draws that as it comes out, unclipped and below
+      zero.
     * !! and this is the SHAPE convention past its (1 + w) pole, so
       its pane-2 curves are ratios of two NEGATIVE densities.  They
       look innocuous and are not.  Read the rate figure at the same
