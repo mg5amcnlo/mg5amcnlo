@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-r"""Variation ``E`` of the remade Fig. 5: variation ``B``'s upper pane with a
-single no-spin-correlation curve, over **two** ratio panes.
+r"""Variation ``E`` of the remade Fig. 5: three ``onshell`` curves and a single
+no-spin-correlation curve, over **two** ratio panes, with no text on the plot.
 
 Standalone and re-runnable; it draws both renderings in one go::
 
@@ -16,26 +16,40 @@ from ``plot_smeft_fig5.py``; the user-style constants from
 What ``E`` changes, and why
 ---------------------------
 
-**Upper pane.**  Variation ``B`` draws two ``spinmode = none`` curves, one for
-the SMEFT interference and one for the SM at LO, and they are indistinguishable:
-they agree to 2.1 % with a chi2/ndf of 1.9 against a 0.7 % per-bin error.  Only
-**one** is drawn here -- the SMEFT one -- and it is labelled as standing for
-both.
+**No text on the plot.**  Axis labels and legends, and nothing else: no header
+block, no parameter point written on the figure, no notes on the ratio panes, no
+title, no footnote, and legend entries that identify rather than explain.
+Everything that would otherwise be written there lives in ``README.md`` and in
+``numbers_E.txt``, which ends with an explicit list of what a caption must carry
+-- the parameter point above all, since pane 2's magnitude is proportional to
+``c_tG/Lambda^2`` and means nothing without it.
 
-The SMEFT ``none`` curve is the one kept, for three reasons.  It is the curve
-the published figure already had (variation ``A``'s curve set is exactly ``E``'s
-upper pane), so ``E`` is a minimal edit of the published figure rather than a
-new one.  It keeps the blue sample complete, solid *and* dashed, which is right
-for a figure whose subject is the operator; dropping the SMEFT dash instead
-would leave the operator with no "without spin correlations" reference at all.
-And the two ``none`` samples have the same 1 M events and the same 0.48 % median
-per-bin error, so nothing is lost by statistics either way.
+**Upper pane.**  Three ``onshell`` curves -- the SMEFT interference, the SM at
+LO and the SM at NLO -- and exactly one ``spinmode = none`` curve.
 
-The coincidence of the two ``none`` curves *is* this figure's main result -- it
-is what says that the whole separation between the two solid curves is a
-spin-correlation effect and not a shape difference the operator would produce
-anyway.  Drawing one curve must not lose it, so the agreement is stated twice:
-in the legend entry itself and in a note under the header block.
+That one ``none`` curve covers the **two LO samples only**, and its legend entry
+names them: "SMEFT O_tG interference & SM, LO, none".  Measured on these
+histograms at the plotted binning::
+
+    pair of `none' shapes      max |r-1|    chi2/ndf
+    SMEFT  / SM LO                 2.1 %         1.9
+    SMEFT  / SM NLO                8.0 %        10.5
+    SM LO  / SM NLO                8.7 %        13.8
+
+The two LO shapes are one curve; the NLO shape is four times further away, and
+the gap does not close at finer binning (8.1 % at 36 bins, 11.1 % at 72).  This
+confirms T110's 8 %.  The cause is radiation and not spin -- the extra emission
+changes the ``t t~`` boost -- so a ``none`` curve claiming to cover NLO as well
+would be false.  The claim is narrowed rather than a curve added: SM NLO is on
+the pane with its ``onshell`` curve alone, exactly as SM LO was in variation
+``A``, and nothing in the legend suggests it has a dashed partner hidden under
+the blue one.
+
+The SMEFT ``none`` is the one kept because ``E``'s LO content is then exactly
+the published figure's curve set; because it keeps the blue sample complete,
+solid *and* dashed, which is right for a figure whose subject is the operator;
+and because both LO ``none`` samples have 1 M events and the same 0.48 % median
+per-bin error, so statistics does not decide it.
 
 **Two ratio panes**, replacing ``B``'s single ``onshell/none`` pane.  Both use
 the ``onshell`` curves throughout, since that is the physical prediction.
@@ -95,8 +109,11 @@ Both new panes use the SM NLO sample, and that sample has a known defect: its
 MadSpin density matrices were evaluated at the *model default* parameters rather
 than the run's, so the events were made at ``MT = 172.76``, ``WT = 1.33``,
 ``WZ = 2.4952``, ``WW = 2.085`` while the matrix-element directories held
-``173 / 1.4915 / 2.4414 / 2.0476``.  See ``README.md``; the figure says so on
-its face, and every NLO number in ``numbers_E.txt`` is flagged.
+``173 / 1.4915 / 2.4414 / 2.0476``.
+
+The figure no longer says so on its face -- no text is allowed on it -- so the
+warning survives **only** in ``README.md`` and in ``numbers_E.txt``, which opens
+and closes with it.  A caption written from this figure must carry it by hand.
 """
 
 import argparse
@@ -495,11 +512,13 @@ def write_curves_E(d, path):
         out['%s_%s_shape_err' % (s, m)] = ye
     for s in ('eft_int', 'sm_lo', 'sm_nlo'):
         out['%s_sigma_onshell_pb' % s] = np.array(v.sigma(s))
-    # the SM LO `none' shape is not drawn, but it is what the single drawn
-    # `none' curve stands for, so it belongs in the file
-    y, ye = d.shape(NONE_STANDS_FOR, 'none')
-    out['%s_none_shape_not_drawn' % NONE_STANDS_FOR] = y
-    out['%s_none_shape_not_drawn_err' % NONE_STANDS_FOR] = ye
+    # The `none' shapes that are not drawn.  SM LO's is what the single drawn
+    # curve also stands for; SM NLO's is the one it explicitly does NOT, and it
+    # belongs here so that claim can be rechecked without regenerating anything.
+    for s_ in (NONE_STANDS_FOR, NONE_EXCLUDES):
+        y, ye = d.shape(s_, 'none')
+        out['%s_none_shape_not_drawn' % s_] = y
+        out['%s_none_shape_not_drawn_err' % s_] = ye
     for num, den in PANE1:
         r, e = v.shape_ratio(num, den)
         out['pane1_%s_over_%s' % (num, den)] = r
@@ -543,23 +562,45 @@ def write_numbers_E(d, fh=sys.stdout):
     p('upper pane: which spinmode = none curve is drawn')
     p('=' * 78)
     maxdev, chi2, rel = v.none_agreement()
+    ndev, nchi2, nrel = v.none_agreement(NONE_EXCLUDES)
     p('  drawn        : %s, spinmode = none' % NONE_KEPT)
-    p('  stands for   : %s, spinmode = none (not drawn)' % NONE_STANDS_FOR)
-    p('  agreement    : max |ratio - 1| = %.2f %%, chi2/ndf = %.2f, against a'
-      % (100 * maxdev, chi2))
-    p('                 median per-bin relative error of %.2f %%'
-      % (100 * rel))
+    p('  covers       : %s' % ', '.join(NONE_COVERS))
+    p('  does NOT     : %s -- see the second row of the table below'
+      % NONE_EXCLUDES)
+    p('')
+    p('  %-26s %12s %10s %12s' % ('pair of spinmode=none shapes',
+                                  'max |r-1|', 'chi2/ndf', 'per-bin err'))
+    for other, verdict in ((NONE_STANDS_FOR, 'covered by the drawn curve'),
+                           (NONE_EXCLUDES, 'NOT covered -- 4x further away')):
+        md, c2, rl = v.none_agreement(other)
+        p('  %-26s %11.2f%% %10.2f %11.2f%%   %s'
+          % ('%s / %s' % (NONE_KEPT, other), 100 * md, c2, 100 * rl, verdict))
+    p('')
+    p('  The SM NLO `none\' shape is %.1f %% away from the drawn one'
+      % (100 * ndev))
+    p('  (chi2/ndf %.1f), which confirms T110\'s 8 %%.  The cause is radiation,'
+      % nchi2)
+    p('  not spin: the extra emission changes the t t~ boost.  A single `none\'')
+    p('  curve claiming to cover NLO as well would therefore be false, so the')
+    p('  legend entry names only %s and says nothing'
+      % ' and '.join(NONE_COVERS))
+    p('  about SM NLO, which appears with its `onshell\' curve alone.')
     a, ae = d.shape(NONE_KEPT, 'none')
     b, be = d.shape(NONE_STANDS_FOR, 'none')
+    c, ce = d.shape(NONE_EXCLUDES, 'none')
+    p('')
     p('  n_events     : %s %d, %s %d -- same statistics, same %.2f %% error'
       % (NONE_KEPT, d.nevents(NONE_KEPT, 'none'), NONE_STANDS_FOR,
          d.nevents(NONE_STANDS_FOR, 'none'),
          100 * float(np.median(np.abs(be / b)))))
     p('')
-    p('  %9s %13s %13s %11s' % ('phi/pi', 'EFT none', 'SM LO none', 'ratio'))
+    p('  %9s %12s %12s %12s %9s %9s'
+      % ('phi/pi', 'EFT none', 'SM LO none', 'SM NLO none',
+         'LO/EFT', 'NLO/EFT'))
     for i in range(d.nbins):
-        p('  %9.3f %13.5f %13.5f %11.5f'
-          % (d.centres[i] / np.pi, a[i], b[i], a[i] / b[i]))
+        p('  %9.3f %12.5f %12.5f %12.5f %8.4f %9.4f'
+          % (d.centres[i] / np.pi, a[i], b[i], c[i],
+             b[i] / a[i], c[i] / a[i]))
 
     p('')
     p('=' * 78)
@@ -612,6 +653,26 @@ def write_numbers_E(d, fh=sys.stdout):
     p('  at LO, so w falls from %.3f to %.3f.  Read it as "an LO interference'
       % (v.weight('sm_lo'), v.weight('sm_nlo')))
     p('  against an NLO SM", not as "the operator matters less at NLO".')
+    p('')
+    p('=' * 78)
+    p('where the warnings and the parameter point live')
+    p('=' * 78)
+    p('  The figure carries NO text beyond its axis labels and legends, by')
+    p('  request.  Everything below therefore exists ONLY here and in')
+    p('  README.md, and whoever writes the caption must carry it across:')
+    p('')
+    p('    * the SM NLO health warning, repeated below;')
+    p('    * the parameter point ctGRe = %g, Lambda = %g GeV, without which'
+      % (d.meta['samples']['eft_int']['wilson_coefficients']['ctGRe'],
+         d.meta['samples']['eft_int']['wilson_coefficients']
+         ['LambdaSMEFT_GeV']))
+    p('      pane 2 has no scale at all -- its magnitude is proportional to')
+    p('      c_tG/Lambda^2 and its two curves mirror about 1 for c_tG > 0;')
+    p('    * the pane-2 weights w = %.4f (LO) and %.4f (NLO);'
+      % (v.weight('sm_lo'), v.weight('sm_nlo')))
+    p('    * that pane 1 is a SHAPE ratio and not a K-factor (the K-factor is')
+    p('      %.2f);' % (v.sigma('sm_nlo') / v.sigma('sm_lo')))
+    p('    * that the drawn `none\' curve covers the two LO samples only.')
     p('')
     p(NLO_WARNING_LONG)
 

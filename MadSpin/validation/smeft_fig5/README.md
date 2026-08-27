@@ -34,9 +34,13 @@ width 12 % too large. **Every curve and every number involving `sm_nlo` — that
 is, variations `C`, `D` and both NLO entries of `E` — is affected at an
 unquantified level and must not be quoted as a result until the sample is
 regenerated.** The figures are drawn anyway, because they are wanted.
-Variation `E` carries the caveat in red on its own face and in `numbers_E.txt`;
-`C` and `D` predate the finding and are left byte-identical, so this section is
-the record for them.
+
+**None of the figures says so on its face.** `C` and `D` predate the finding and
+are left byte-identical; `E` carried the caveat in red under its x-axis until
+the user asked for every free-floating annotation to be removed from the plot.
+So **this section and `plots/numbers_E.txt` — which opens and closes with the
+warning — are the only places it lives.** Anyone writing a caption from these
+figures must carry it across by hand.
 
 ### The two LO samples are clear (audited here, T113's audit having stopped)
 
@@ -298,7 +302,7 @@ looking at the PNG.
 | `B` | `A` + SM LO `none` | `onshell/none` | **recommended** — the two `none` curves land on top of each other |
 | `C` | EFT both + SM NLO both | `onshell/none` | the same at NLO |
 | `D` | EFT both + SM LO both + SM NLO both | `onshell/none` | LO and NLO together |
-| `E` | `A`'s three curves, the `none` one relabelled | **two**: shape ratios, then SM + interference | `B`'s result with one `none` curve, and what the operator does to the SM prediction |
+| `E` | EFT `onshell`, SM LO `onshell`, SM NLO `onshell`, **one** `none` | **two**: shape ratios, then SM + interference | three orders on one pane, and what the operator does to the SM prediction; no text on the plot |
 
 `A`–`D` come from `plot_smeft_fig5.py` and `plot_smeft_fig5_userstyle.py`; `E`
 comes from `plot_smeft_fig5_varE.py`, which imports those two modules and
@@ -320,41 +324,70 @@ six curves.
 
 ### Variation `E`
 
-`B`'s upper pane with **one** no-spin-correlation curve, over **two** ratio
-panes. `plot_smeft_fig5_varE.py --help`; it writes `smeft_fig5_E.pdf`/`.png`,
+Three `onshell` curves — the SMEFT interference, the SM at LO and the SM at NLO
+— plus **one** `spinmode = none` curve, over **two** ratio panes.
+`plot_smeft_fig5_varE.py --help`; it writes `smeft_fig5_E.pdf`/`.png`,
 `smeft_fig5_E_curves.npz` and `numbers_E.txt` into *both* plot directories, and
 runs the same `--check-minus` on the MG7 PDF.
 
-**Which `none` curve is drawn.** `B`'s two `none` curves agree to **2.1 %** with
-a **chi2/ndf of 1.9** against a 0.7 % per-bin error on their ratio, so one of
-them carries both. The **SMEFT** one is kept, for three reasons: it is the curve
-the published figure already had (`E`'s upper pane is exactly `A`'s curve set),
-so `E` is a minimal edit of the published figure rather than a new one; it keeps
-the blue sample complete, solid *and* dashed, which is right for a figure whose
-subject is the operator, whereas dropping the SMEFT dash would leave the
-operator with no "without spin correlations" reference at all; and both `none`
-samples have 1 M events and the same 0.48 % median per-bin error, so nothing is
-lost by statistics either way.
+#### No text on the plot
 
-Those two curves coinciding **is** this figure's result — it is what says that
-the whole separation between the two solid curves is a spin-correlation effect
-and not a shape difference the operator would produce anyway — so dropping a
-curve must not lose it. The agreement is therefore stated twice: in the legend
-entry (`none` (both): SMEFT $\mathcal{O}_{tG}$ interference and SM, LO, agreeing
-to 2 %) and in a note under the header block, which also gives the chi2 and the
-per-bin error it is measured against.
+`E` carries **axis labels and legends only**. There is no header block, no
+parameter-point line, no note on either ratio pane, no title and no footnote,
+and the legend entries are identifying rather than explaining. Everything that
+used to be written on the figure now lives in this section and in
+`numbers_E.txt`, which is why both are more detailed than they would otherwise
+be. `numbers_E.txt` ends with an explicit list of what a caption has to carry.
+
+#### Which `none` curve is drawn, and what it may claim
+
+One `none` curve is drawn, the **SMEFT** one, and it covers the two **LO**
+samples — the SMEFT interference and the SM at LO — and nothing else. Its legend
+entry names exactly those two:
+
+> SMEFT $\mathcal{O}_{tG}$ interference & SM, LO, `none`
+
+The three pairwise agreements, measured on `histograms.npz` at the plotted
+20-bin binning (all in `numbers_E.txt`):
+
+| pair of `none` shapes | max \|ratio−1\| | chi2/ndf | per-bin error |
+|---|---|---|---|
+| SMEFT / SM LO | **2.1 %** | **1.9** | 0.7 % |
+| SMEFT / SM NLO | **8.0 %** | **10.5** | 1.3 % |
+| SM LO / SM NLO | **8.7 %** | **13.8** | 1.3 % |
+
+So the two LO shapes really are one curve, and the NLO one really is not: it is
+four times further away and its chi2/ndf is 10.5, not 1.9. This **confirms
+T110's 8 %** rather than overturning it, and the gap does not close at finer
+binning (8.1 % at 36 bins, 11.1 % at 72). The cause has nothing to do with spin
+— the extra radiation changes the $t\bar t$ boost — so a single `none` curve
+labelled as standing for all three samples would simply be false.
+
+The resolution is to narrow the curve's claim, not to add a curve the user asked
+not to have: **SM NLO appears on the pane with its `onshell` curve alone**,
+exactly as SM LO did in variation `A`, and nothing in the legend invites the
+reader to assume it has a dashed partner hiding under the blue one.
+
+The SMEFT `none` is the one kept for the same reasons as before: `E`'s LO
+content is then exactly the published figure's curve set; it keeps the blue
+sample complete, solid *and* dashed, which is right for a figure whose subject
+is the operator; and both LO `none` samples have 1 M events and the same 0.48 %
+median per-bin error, so statistics does not decide it.
 
 Everything else in the upper pane is `B` unchanged, unit-area normalisation
 included.
 
-**Pane 1: `NLO/LO` and `SMEFT/LO`, and it is not a K-factor.** Every curve in
-the upper pane is normalised to unit area, so the rates are divided out *before*
-the ratio is taken; the pane shows only how the shape moves. The pane says so on
-its face, and quotes the number a reader might otherwise think they are looking
-at: the LO→NLO K-factor of these samples is `10.900/7.175 = 1.52` and appears
-nowhere on the figure.
+#### Pane 1: `NLO/LO` and `SMEFT/LO`, and it is not a K-factor
 
-**Pane 2: `(LO + SMEFT)/LO` and `(NLO + SMEFT)/NLO`, cross-section weighted.**
+Every curve in the upper pane is normalised to unit area, so the rates are
+divided out *before* the ratio is taken; the pane shows only how the shape
+moves. The y label says `shape ratio` and that is now the only thing on the
+figure that says it. The number a reader might otherwise think they are looking
+at — the LO→NLO K-factor of these samples, `10.900/7.175 = 1.52` — appears
+nowhere on the figure and must go in the caption.
+
+#### Pane 2: `(LO + SMEFT)/LO` and `(NLO + SMEFT)/NLO`, cross-section weighted
+
 Adding two unit-area shapes needs a relative weight, and that weight sets the
 whole size of the pane. The weight used is the ratio of the **decayed cross
 sections**, which `meta.json` carries for every sample:
@@ -372,11 +405,13 @@ two unit-area shapes with equal weight — is well defined but corresponds to no
 parameter point: it would assert the dimension-six interference is as large as
 the SM, which at `ctGRe = -1`, `Lambda = 1 TeV` it is not.
 
-Three things follow, all of them on the figure:
+Three things follow. **None of them is on the figure any more**, so all three
+have to be in the caption:
 
-1. **The pane's magnitude scales with `c_tG/Lambda^2`**, so the parameter point
-   is written on the figure. At `c_tG = +1` the interference flips sign and the
-   two pane-2 curves *mirror about 1*.
+1. **The pane's magnitude scales with `c_tG/Lambda^2`.** The samples are at
+   `ctGRe = -1`, `Lambda = 1 TeV`. At `c_tG = +1` the interference flips sign
+   and the two pane-2 curves *mirror about 1*. Without that statement the pane
+   has no scale at all.
 
 2. **Pane 2 carries no information beyond pane 1 and the two cross sections.**
    The shared `n_SM` cancels algebraically:
@@ -398,11 +433,8 @@ Three things follow, all of them on the figure:
    "the operator matters less at NLO".
 
 Both ratio panes use the `onshell` curves throughout, since that is the physical
-prediction.
-
-**Both new panes need `sm_nlo`, which is not sound** — see the health warning at
-the top of this file. The figure carries the caveat in red under its x-axis and
-`numbers_E.txt` opens and closes with it.
+prediction. **Both need `sm_nlo`, which is not sound** — see the health warning
+at the top of this file.
 
 The measured ends of the four ratio curves, on the plotted 20-bin binning:
 
@@ -412,6 +444,46 @@ The measured ends of the four ratio curves, on the plotted 20-bin binning:
 | `SMEFT / LO` (pane 1) | **+11.54 % ± 0.79** | **−17.76 % ± 0.46** |
 | `(LO + SMEFT) / LO` (pane 2) | **+2.49 % ± 0.17** | **−3.83 % ± 0.10** |
 | `(NLO + SMEFT) / NLO` (pane 2) | **+1.18 % ± 0.23** | **−1.84 % ± 0.15** |
+
+#### Caption for `E`
+
+Everything the figure no longer says, in one place. `\OM{}` marks the two things
+a referee would ask about.
+
+```latex
+\caption{$\Delta\phi(e^-e^+)$ of the electron and the positron from the
+$t\bar{t}$ decay in $pp\to t\bar{t}$ at $\sqrt{s}=13$~TeV, NNPDF2.3LO, fixed
+$\mu_R=\mu_F=173$~GeV and no cuts, with
+$t\to W^+b\,(W^+\to e^+\nu_e)$ and $\bar t\to W^-\bar b\,(W^-\to e^-\bar\nu_e)$.
+Solid: with spin correlations (\code{spinmode=onshell}), for the amplitude-level
+interference of Eq.~(\ref{eq:CMDM_interf}) (blue), the SM at LO (black) and the
+SM at NLO (red).  Dashed: the same observable without spin correlations
+(\code{spinmode=none}); \emph{one} such curve is drawn because the interference
+and the SM LO shapes coincide there to $2\%$ ($\chi^2/\mathrm{ndf}=1.9$ against a
+$0.7\%$ per-bin error), so the entire separation of those two solid curves is a
+spin-correlation effect.  The SM NLO \code{none} shape is \emph{not} on that
+curve --- it differs by $8\%$, a radiation effect on the $t\bar t$ boost rather
+than a spin effect --- and is therefore not drawn.  Every curve is normalised to
+unit area.  The interference is generated at \code{ctGRe=-1} with
+$\Lambda=1$~TeV, so the quantity plotted is
+$-2\operatorname{Re}(\mcal^*_{\rm SM}\mcal_{tG})$.  Middle panel: ratios of the
+unit-area \code{onshell} shapes to the SM LO one.  Because the rates are divided
+out before the ratio is taken this is a \emph{shape} ratio and not a $K$-factor;
+the LO$\to$NLO $K$-factor of these samples is $1.52$ and is not shown.  Lower
+panel: the SM prediction with the interference added, $(\sigma_{\rm SM}n_{\rm
+SM}+\sigma_{\rm int}n_{\rm int})/(\sigma_{\rm SM}+\sigma_{\rm int})$ divided by
+$n_{\rm SM}$, i.e.\ weighted by the samples' own cross sections
+($\sigma_{\rm int}/\sigma_{\rm SM}=0.275$ at LO and $0.181$ at NLO).  The size of
+this panel is proportional to $c_{tG}/\Lambda^2$ and its two curves mirror about
+unity for $c_{tG}>0$; the interference is leading order in both curves, so the
+NLO one is the smaller only because $\sigma_{\rm SM}$ carries the $K$-factor.
+\OM{The SM NLO sample was decayed with its spin-density matrices evaluated at
+the model default $m_t=173$~GeV and $\Gamma_t=1.4915$~GeV rather than the run's
+$172.76$ and $1.33$; the red curves are provisional until it is regenerated.}
+\OM{Samples: $10^6$ events each at LO, $5\times10^5$ at NLO.}}
+```
+
+#### One style note
 
 The user-style rendering extends the ratio-limit ladder it imports with
 intermediate rungs (`±2 %`, `±5 %`, `±8 %`, `±20 %`), locally and in
