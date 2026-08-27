@@ -31,15 +31,22 @@ specifically for this directory's samples:
 
 So the SM NLO density matrices used a top mass 0.24 GeV too high and a top
 width 12 % too large. **Every curve and every number involving `sm_nlo` — that
-is, variations `C`, `D` and both NLO entries of `E` — is affected at an
-unquantified level and must not be quoted as a result until the sample is
-regenerated.** The figures are drawn anyway, because they are wanted.
+is, variations `C`, `D`, both NLO entries of `E`, and every red curve of `F` —
+is affected at an unquantified level and must not be quoted as a result until
+the sample is regenerated.**
+
+One qualification that matters for `F`: the defect is in the **density** path,
+and `spinmode = none` does not use it — the `none` runs build no `madspin_me`
+directory at all (see the table below). So on `F`, whose curves come in matched
+solid/dashed pairs, the **dashed** NLO curves are sound and only the **solid**
+ones are suspect. The figures are drawn anyway, because they are wanted.
 
 **None of the figures says so on its face.** `C` and `D` predate the finding and
 are left byte-identical; `E` carried the caveat in red under its x-axis until
-the user asked for every free-floating annotation to be removed from the plot.
-So **this section and `plots/numbers_E.txt` — which opens and closes with the
-warning — are the only places it lives.** Anyone writing a caption from these
+the user asked for every free-floating annotation to be removed from the plot,
+and `F` never carried it. So **this section and `plots/numbers_E.txt` /
+`plots/numbers_F.txt` — both of which open and close with the warning — are the
+only places it lives.** Anyone writing a caption from these
 figures must carry it across by hand.
 
 ### The two LO samples are clear (audited here, T113's audit having stopped)
@@ -276,6 +283,7 @@ Two traps, both spelled out per sample in `meta.json` under
 python3 plot_smeft_fig5.py            # MG7 paper style  -> plots/          (A-D)
 python3 plot_smeft_fig5_userstyle.py  # user's own style -> plots_userstyle/ (A-D)
 python3 plot_smeft_fig5_varE.py       # both styles, variation E only
+python3 plot_smeft_fig5_varF.py       # both styles, variation F only
 ```
 
 Both run entirely off `data/histograms.npz` and `data/meta.json`. Neither needs
@@ -294,7 +302,7 @@ these PDFs — subsetted fonts, no `ToUnicode` — so it cannot be used to verif
 any label; the check is on the font encoding, and label text is verified by
 looking at the PNG.
 
-### The five variations
+### The six variations
 
 | tag | curves | ratio pane(s) | what it adds |
 |---|---|---|---|
@@ -303,11 +311,13 @@ looking at the PNG.
 | `C` | EFT both + SM NLO both | `onshell/none` | the same at NLO |
 | `D` | EFT both + SM LO both + SM NLO both | `onshell/none` | LO and NLO together |
 | `E` | EFT `onshell`, SM LO `onshell`, SM NLO `onshell`, **one** `none` | **two**: shape ratios, then SM + interference | three orders on one pane, and what the operator does to the SM prediction; no text on the plot |
+| `F` | all six: three samples × both spinmodes | **two**, four curves each: `E`'s ratios in *both* spinmodes | `E` decomposed — the dashed curve is the non-spin part of each ratio and the solid/dashed gap is the spin-correlation effect |
 
 `A`–`D` come from `plot_smeft_fig5.py` and `plot_smeft_fig5_userstyle.py`; `E`
-comes from `plot_smeft_fig5_varE.py`, which imports those two modules and
-modifies neither, so `A`–`D` are byte-identical to what they were before `E`
-existed.
+from `plot_smeft_fig5_varE.py`; `F` from `plot_smeft_fig5_varF.py`, which
+imports all three and modifies none of them. Each variation is therefore an
+addition: `A`–`D` are byte-identical to what they were before `E` existed, and
+`A`–`E` to what they were before `F` did.
 
 `B` is the one to put in the paper. It is the only variation that shows the
 result the extra samples were generated for: the SM and the interference term
@@ -490,6 +500,132 @@ intermediate rungs (`±2 %`, `±5 %`, `±8 %`, `±20 %`), locally and in
 `plot_smeft_fig5_varE.py` only: the user's own ladder jumps from `±1 %` to
 `±15 %`, which was fine for `B`'s `±30 %` pane but would draw pane 2's `±2.5 %`
 as a flat line.
+
+### Variation `F` — `E`, decomposed
+
+`E` with **every curve doubled**: every quantity is drawn once from the
+`onshell` samples and once from the `none` ones.
+`plot_smeft_fig5_varF.py --help`; same outputs as `E` under the `F` tag
+(`smeft_fig5_F.pdf`/`.png`, `smeft_fig5_F_curves.npz`, `numbers_F.txt`, in both
+plot directories) and the same `--check-minus` on the MG7 PDF. Same rule on
+text: **axis labels and legends only.**
+
+* Upper pane: all six curves. This undoes `E`'s single-`none` compromise, and it
+  dissolves the problem `E` had to solve by narrowing its legend claim — with
+  all three `none` curves drawn, nothing is implied about a sample that is not
+  on the pane, so the legend entries are plain `sample, spinmode`.
+* Pane 1: `NLO/LO` and `SMEFT/LO`, each in both spinmodes.
+* Pane 2: `(LO+SMEFT)/LO` and `(NLO+SMEFT)/NLO`, each in both spinmodes.
+
+#### Encoding
+
+**Line style is the spinmode** (solid `onshell`, dashed `none`) and **colour is
+the quantity** — the same rule in all three panes, and the one `A`–`E` already
+use. In the upper pane the quantity is the sample (blue SMEFT, black SM LO, red
+SM NLO, as in `D`); in the ratio panes it is the ratio, coloured by the sample
+that is not the LO reference (pane 1) or by the SM sample being corrected (pane
+2). So a reader pairs curves by colour and reads the vertical gap *within* a
+colour as the spin-correlation effect. In the user style the marker fill carries
+the spinmode instead (filled `onshell`, open `none`), as it does in `A`–`E`
+there.
+
+#### What it shows: the decomposition
+
+Each ratio splits into the dashed curve — the part that is **not** a
+spin-correlation effect — and the gap up to the solid curve, which is the
+spin-correlation effect itself. The two pane-1 pairs then say opposite things,
+and the contrast is the pane's whole point.
+
+| curve | first bin | last bin | max \|dev\| | mean |
+|---|---|---|---|---|
+| `SMEFT/LO`, `onshell` | +11.54 % ± 0.79 | −17.76 % ± 0.46 | 17.76 % | +2.08 % |
+| **`SMEFT/LO`, `none`** | **+0.53 % ± 0.80** | **−0.58 % ± 0.49** | **2.06 %** | **+0.24 %** |
+| `NLO/LO`, `onshell` | +3.57 % ± 1.45 | −6.53 % ± 1.04 | 6.53 % | +0.81 % |
+| **`NLO/LO`, `none`** | **+7.02 % ± 1.60** | **−6.75 % ± 0.95** | **9.59 %** | **+1.47 %** |
+| `(LO+SMEFT)/LO`, `onshell` | +2.49 % ± 0.17 | −3.83 % ± 0.10 | 3.83 % | +0.45 % |
+| **`(LO+SMEFT)/LO`, `none`** | **+0.11 % ± 0.17** | **−0.13 % ± 0.11** | **0.44 %** | **+0.05 %** |
+| `(NLO+SMEFT)/NLO`, `onshell` | +1.18 % ± 0.23 | −1.84 % ± 0.15 | 1.84 % | +0.16 % |
+| **`(NLO+SMEFT)/NLO`, `none`** | **−0.93 % ± 0.22** | **+1.01 % ± 0.17** | **1.22 %** | **−0.16 %** |
+
+Both predictions the figure was drawn to test come out right:
+
+1. **`SMEFT/LO` in the `none` case collapses onto 1** — max 2.1 %, mean 0.2 %,
+   ends +0.5 % / −0.6 %, against an `onshell` curve running +11.5 % to −17.8 %.
+   So **the entire `SMEFT/LO` structure in this observable is spin
+   correlation.** This is the strongest form of what `B` was recommended for:
+   `B` showed the two `none` curves lying on top of each other, `F` shows their
+   *ratio* pinned flat at 1 underneath an `onshell` ratio that spans a factor
+   1.36. Note this is the same measurement seen twice — the flat blue dashed
+   curve *is* the ratio whose max deviation is the 2.1 % quoted in `E`'s
+   section — so it is a consistency check, not new information.
+
+2. **`NLO/LO` in the `none` case does not collapse** — 9.59 % max, which is the
+   8.75 % of the `SM LO none / SM NLO none` comparison the other way round
+   (`1/(1−0.0875) − 1 = 0.0959`). The LO/NLO difference is a radiation effect on
+   the $t\bar t$ boost and survives switching the spin correlations off.
+
+   A detail worth stating because it is the opposite of what one might guess:
+   the `none` curve is **larger** than the `onshell` one (9.6 % against 6.5 %),
+   so the spin correlations partly *mask* the LO/NLO shape difference rather
+   than cause it.
+
+Pane 2 inherits both statements, shrunk by `w/(1+w)`: its LO `none` curve is
+flat to 0.4 %, while its NLO `none` curve keeps a 1.2 % structure of the
+opposite sign to the `onshell` one.
+
+#### The `none` curves' weights, measured rather than assumed
+
+Pane 2 needs `w = sigma_int/sigma_SM`, and the `none` curves take it from the
+`none` samples' own cross sections. `check_weights()` runs before anything is
+drawn and refuses to draw if they disagree by more than `1e-3`:
+
+| | `onshell` | `none` | ratio−1 |
+|---|---|---|---|
+| `sigma(eft_int)` | 1.973865 | 1.974740 | −4.427e−4 |
+| `sigma(sm_lo)` | 7.175290 | 7.178468 | −4.428e−4 |
+| `sigma(sm_nlo)` | 10.900436 | 10.905950 | −5.056e−4 |
+| `w(sm_lo)` | 0.275092 | 0.275092 | **−6.3e−8** |
+| `w(sm_nlo)` | 0.181081 | 0.181070 | **−6.3e−5** |
+
+This confirms T110's `5e-4`, and the LO weight does better still: `eft_int` and
+`sm_lo` move between the spinmodes by the *same* 4.428e−4, which cancels in
+their ratio. Using the `onshell` weights throughout would have changed nothing
+visible — but that would have been an assumption, and it is now a measurement.
+
+#### Caption for `F`
+
+Same content as `E`'s caption, with the decomposition added. The parameter point
+and the health warning are on the same footing as for `E`: they are **not** on
+the figure and must come from here.
+
+```latex
+\caption{As Fig.~\ref{fig:valid_interf}, with every curve shown both with spin
+correlations (\code{spinmode=onshell}, solid) and without (\code{spinmode=none},
+dashed): the amplitude-level interference of Eq.~(\ref{eq:CMDM_interf}) (blue),
+the SM at LO (black) and the SM at NLO (red).  Every curve is normalised to unit
+area; the interference is generated at \code{ctGRe=-1} with $\Lambda=1$~TeV, so
+the quantity plotted is $-2\operatorname{Re}(\mcal^*_{\rm SM}\mcal_{tG})$.
+Middle panel: ratios of the unit-area shapes to the SM LO one --- a \emph{shape}
+ratio, not a $K$-factor, the rates having been divided out (the LO$\to$NLO
+$K$-factor is $1.52$ and is not shown).  Lower panel: the SM prediction with the
+interference added, weighted by the samples' own cross sections
+($\sigma_{\rm int}/\sigma_{\rm SM}=0.275$ at LO, $0.181$ at NLO), divided by the
+SM alone; its size is proportional to $c_{tG}/\Lambda^2$ and all four curves
+mirror about unity for $c_{tG}>0$.  In both lower panels the dashed curve is the
+part of the ratio that is \emph{not} a spin-correlation effect and the gap up to
+the solid curve of the same colour is the spin-correlation effect itself.  The
+blue dashed curve is flat at unity to $2\%$ while the blue solid one spans
+$+12\%$ to $-18\%$: the entire difference between the interference and the SM in
+this observable is a spin-correlation effect.  The red pair behaves oppositely
+--- the dashed curve carries a $10\%$ structure of its own --- because the
+LO/NLO difference here is the extra radiation changing the $t\bar t$ boost, not
+spin.
+\OM{The SM NLO sample was decayed with its spin-density matrices evaluated at
+the model default $m_t=173$~GeV and $\Gamma_t=1.4915$~GeV rather than the run's
+$172.76$ and $1.33$.  The defect is in the density path, which
+\code{spinmode=none} does not use, so the \emph{solid} red curves are
+provisional and the dashed red ones are not.}}
+```
 
 ### What is plotted, and the normalisation
 

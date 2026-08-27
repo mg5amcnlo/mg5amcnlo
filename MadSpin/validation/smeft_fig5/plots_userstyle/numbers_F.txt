@@ -100,25 +100,25 @@ the decomposition, which is what F is for
   ratio that is NOT a spin-correlation effect; the gap to the `onshell'
   curve of the same colour is the spin-correlation effect itself.
 
-curve                     first bin   last bin  max |dev|   mean dev
-sm_nlo/sm_lo, onshell        +3.57%     -6.53%      6.53%     +0.81%
-eft_int/sm_lo, onshell      +11.54%    -17.76%     17.76%     +2.08%
-sm_nlo/sm_lo, none           +7.02%     -6.75%      9.59%     +1.47%
-eft_int/sm_lo, none          +0.53%     -0.58%      2.06%     +0.24%
-(sm_lo+int)/sm_lo, onshell     +2.49%     -3.83%      3.83%     +0.45%
-(sm_nlo+int)/sm_nlo, onshell     +1.18%     -1.84%      1.84%     +0.16%
-(sm_lo+int)/sm_lo, none      +0.11%     -0.13%      0.44%     +0.05%
-(sm_nlo+int)/sm_nlo, none     -0.93%     +1.01%      1.22%     -0.16%
+curve                           first bin   last bin  max |dev|   mean dev
+sm_nlo/sm_lo, onshell              +3.57%     -6.53%      6.53%     +0.81%
+eft_int/sm_lo, onshell            +11.54%    -17.76%     17.76%     +2.08%
+sm_nlo/sm_lo, none                 +7.02%     -6.75%      9.59%     +1.47%
+eft_int/sm_lo, none                +0.53%     -0.58%      2.06%     +0.24%
+(sm_lo+int)/sm_lo, onshell         +2.49%     -3.83%      3.83%     +0.45%
+(sm_nlo+int)/sm_nlo, onshell       +1.18%     -1.84%      1.84%     +0.16%
+(sm_lo+int)/sm_lo, none            +0.11%     -0.13%      0.44%     +0.05%
+(sm_nlo+int)/sm_nlo, none          -0.93%     +1.01%      1.22%     -0.16%
 
   and with their errors:
-    sm_nlo/sm_lo, onshell    first   +3.57% +- 1.45%   last   -6.53% +- 1.04%
-    eft_int/sm_lo, onshell   first  +11.54% +- 0.79%   last  -17.76% +- 0.46%
-    sm_nlo/sm_lo, none       first   +7.02% +- 1.60%   last   -6.75% +- 0.95%
-    eft_int/sm_lo, none      first   +0.53% +- 0.80%   last   -0.58% +- 0.49%
-    (sm_lo+int)/sm_lo, onshell first   +2.49% +- 0.17%   last   -3.83% +- 0.10%
-    (sm_nlo+int)/sm_nlo, onshell first   +1.18% +- 0.23%   last   -1.84% +- 0.15%
-    (sm_lo+int)/sm_lo, none  first   +0.11% +- 0.17%   last   -0.13% +- 0.11%
-    (sm_nlo+int)/sm_nlo, none first   -0.93% +- 0.22%   last   +1.01% +- 0.17%
+    sm_nlo/sm_lo, onshell          first   +3.57% +- 1.45%   last   -6.53% +- 1.04%
+    eft_int/sm_lo, onshell         first  +11.54% +- 0.79%   last  -17.76% +- 0.46%
+    sm_nlo/sm_lo, none             first   +7.02% +- 1.60%   last   -6.75% +- 0.95%
+    eft_int/sm_lo, none            first   +0.53% +- 0.80%   last   -0.58% +- 0.49%
+    (sm_lo+int)/sm_lo, onshell     first   +2.49% +- 0.17%   last   -3.83% +- 0.10%
+    (sm_nlo+int)/sm_nlo, onshell   first   +1.18% +- 0.23%   last   -1.84% +- 0.15%
+    (sm_lo+int)/sm_lo, none        first   +0.11% +- 0.17%   last   -0.13% +- 0.11%
+    (sm_nlo+int)/sm_nlo, none      first   -0.93% +- 0.22%   last   +1.01% +- 0.17%
 
 ==============================================================================
 the two predictions, against what the figure actually shows

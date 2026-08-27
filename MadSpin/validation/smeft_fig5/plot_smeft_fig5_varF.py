@@ -231,6 +231,22 @@ def check_weights(d, fh=sys.stdout):
 
 
 # --------------------------------------------------------------------------
+def _room(ax, series, bottom_extra=0.0, top_extra=0.0, pad_frac=0.10):
+    """Fit every point plus its error, then reserve room for the legend.
+
+    ``E._autoscale`` only opens the top, because ``E``'s notes sat there.  ``F``
+    has no notes and four curves per pane, so its legends go at the bottom and
+    the room has to be made there instead.
+    """
+    lo = hi = 1.0
+    for r, e in series:
+        lo = min(lo, float((r - e).min()))
+        hi = max(hi, float((r + e).max()))
+    span = hi - lo
+    ax.set_ylim(lo - pad_frac * span - bottom_extra * span,
+                hi + pad_frac * span + top_extra * span)
+
+
 def _label_top(sample, mode, plain=False):
     tex = not plain and P.USETEX
     name = P.SAMPLE_TEX if tex else P.SAMPLE_PLAIN
@@ -289,7 +305,7 @@ def make_figure_mg7(d, out):
     ax.yaxis.set_minor_locator(AutoMinorLocator())
     ax.tick_params(labelbottom=False)
     ymin, ymax = ax.get_ylim()
-    ax.set_ylim(min(ymin, 0.15), ymax + 0.58 * (ymax - ymin))
+    ax.set_ylim(min(ymin, 0.15), ymax + 0.30 * (ymax - ymin))
     ax.legend(frameon=False, loc='upper left', fontsize=9.5,
               handlelength=2.8, borderaxespad=1.0, labelspacing=0.4, ncol=2,
               columnspacing=1.4)
@@ -305,7 +321,7 @@ def make_figure_mg7(d, out):
                     zorder=4, label=_label_p1(num, den, mode))
             r1.errorbar(d.centres, r, yerr=e, fmt='none', ecolor=P.COLOR[num],
                         elinewidth=0.9, capsize=0, zorder=4)
-    E._autoscale(r1, series, top_extra=0.30)
+    _room(r1, series, bottom_extra=0.46)
     r1.set_ylabel(tx(r'shape ratio', 'shape ratio'), fontsize=11.5)
     r1.legend(frameon=False, loc='lower left', fontsize=7.5,
               handlelength=2.4, borderaxespad=0.5, ncol=2, columnspacing=1.4)
@@ -323,7 +339,7 @@ def make_figure_mg7(d, out):
                         elinewidth=0.9, capsize=0, zorder=4)
             handles.append(Line2D([], [], color=P.COLOR[sm], lw=P.LW,
                                   ls=P.LS[mode], label=_label_p2(sm, mode)))
-    E._autoscale(r2, series, top_extra=0.30)
+    _room(r2, series, bottom_extra=0.46)
     r2.set_ylabel(tx(r'$(\mathrm{SM}+\mathcal{O}_{tG})/\mathrm{SM}$',
                      '(SM + O_tG) / SM'), fontsize=11.5)
     r2.legend(handles=handles, frameon=False, loc='lower left', fontsize=7.5,
@@ -375,7 +391,7 @@ def make_figure_user(d, out):
     ax.set_xlim(0.0, np.pi)
     ax.tick_params(labelbottom=False)
     ymin, ymax = ax.get_ylim()
-    ax.set_ylim(ymin, ymax + 0.45 * (ymax - ymin))
+    ax.set_ylim(ymin, ymax + 0.32 * (ymax - ymin))
     ax.legend(loc='upper left', fontsize=8.0, ncol=2)
 
     r1.axhline(1.0, color='black', ls='--', lw=0.9, zorder=2)
@@ -386,7 +402,8 @@ def make_figure_user(d, out):
             series.append((r, e))
             draw(r1, r, e, U.COLOR[num], mode,
                  _label_p1(num, den, mode, plain=True))
-    r1.set_ylim(*E.choose_ylim_E(series))
+    _lo, _hi = E.choose_ylim_E(series)
+    r1.set_ylim(_lo - 0.40 * (_hi - _lo), _hi)
     r1.set_ylabel('Shape ratio')
     r1.legend(loc='lower left', fontsize=6.5, ncol=2)
     r1.tick_params(labelbottom=False)
@@ -398,7 +415,8 @@ def make_figure_user(d, out):
             r, e = v.sum_ratio(sm, mode)
             series.append((r, e))
             draw(r2, r, e, U.COLOR[sm], mode, _label_p2(sm, mode, plain=True))
-    r2.set_ylim(*E.choose_ylim_E(series))
+    _lo, _hi = E.choose_ylim_E(series)
+    r2.set_ylim(_lo - 0.40 * (_hi - _lo), _hi)
     r2.set_ylabel('(SM + $\\mathcal{O}_{tG}$) / SM')
     r2.legend(loc='lower left', fontsize=6.5, ncol=2)
     r2.set_xlabel(r'$\Delta\phi(e^-e^+)$ [rad]')
@@ -480,7 +498,7 @@ def write_numbers_F(d, fh=sys.stdout):
     p('  ratio that is NOT a spin-correlation effect; the gap to the `onshell\'')
     p('  curve of the same colour is the spin-correlation effect itself.')
     p('')
-    hdr = '%-24s %10s %10s %10s %10s' % ('curve', 'first bin', 'last bin',
+    hdr = '%-30s %10s %10s %10s %10s' % ('curve', 'first bin', 'last bin',
                                          'max |dev|', 'mean dev')
     p(hdr)
     rows = []
@@ -493,14 +511,14 @@ def write_numbers_F(d, fh=sys.stdout):
             rows.append(('(%s+int)/%s, %s' % (sm, sm, mode),
                          v.sum_ratio(sm, mode)))
     for name, (r, e) in rows:
-        p('%-24s %+9.2f%% %+9.2f%% %9.2f%% %+9.2f%%'
+        p('%-30s %+9.2f%% %+9.2f%% %9.2f%% %+9.2f%%'
           % (name, 100 * (r[0] - 1), 100 * (r[-1] - 1),
              100 * np.max(np.abs(r - 1)), 100 * (r.mean() - 1)))
 
     p('')
     p('  and with their errors:')
     for name, (r, e) in rows:
-        p('    %-24s first %+7.2f%% +- %.2f%%   last %+7.2f%% +- %.2f%%'
+        p('    %-30s first %+7.2f%% +- %.2f%%   last %+7.2f%% +- %.2f%%'
           % (name, 100 * (r[0] - 1), 100 * e[0],
              100 * (r[-1] - 1), 100 * e[-1]))
 
