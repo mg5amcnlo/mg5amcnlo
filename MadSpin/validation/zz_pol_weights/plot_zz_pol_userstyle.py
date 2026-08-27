@@ -508,29 +508,36 @@ def draw_ratio6(nlo, lo, obs, outdir, with_band=False):
     oname = PA.RATIO6_ORDER_TXT
     cur = PA.ratio6_curves(nlo, lo, obs, with_band=with_band)
 
-    fig = plt.figure(figsize=(9.4, 12.85))
+    fig = plt.figure(figsize=(9.4, 18.56))
     # Two vertical rhythms, so two gridspecs: see plot_zz_pol.draw_ratio6.  The
     # wide pane on top carries its own x tick labels and its own axis name and
     # is set off from the 3 x 2 by the outer gap.
     #
-    # The share-out is the MG7 figure's, kept in step with it on purpose: the
-    # wide pane takes 4.3 of the outer 12.85 where it took 2.9 of 13.3, and the
-    # grid's rows stop being equal -- 3.55 for the sum-consistency and
-    # K-factor row, 2.5 for each of the two fraction rows, which are flat
-    # enough to read at that height.  The figure shrinks, 13.6 in to 12.85 in.
-    # Height in inches, pane then row 1 then rows 2-3: 2.19 -> 3.15,
-    # 2.50 -> 2.49, 2.50 -> 1.75.
-    # The top row keeps MORE than its MG7 counterpart's 3.3 for one reason:
-    # this style writes the sum-consistency axis name as plain text with
-    # spaces, (Z0Z0 + ZTZT + ZTZ0 + Z0ZT) / full, which set rotated is longer
-    # than the mathtext MG7 sets, and at 3.15 it came within 0.07 in of the
-    # frame.  Measured, label extent against axes extent, not guessed.
-    # The outer hspace is a fraction of the MEAN row height, so it moves with
-    # the ratios: 0.10 of the new mean buys back the gap 0.09 of the old one
-    # gave, which is what keeps the pane's axis name off the grid.
-    outer = fig.add_gridspec(2, 1, height_ratios=[4.3, 8.55], hspace=0.10)
-    gs = outer[1].subgridspec(3, 2, height_ratios=[3.55, 2.5, 2.5],
-                              hspace=0.07, wspace=0.30)
+    # The share-out is the MG7 figure's, kept in step with it on purpose and
+    # stated the same way, in INCHES of drawn axes: the wide pane is DOUBLED,
+    # the sum-consistency and K-factor row is taken up by half, and the four
+    # fraction panes keep the height they had.  Pane 3.15 -> 6.31, row 1
+    # 2.49 -> 3.73, fraction rows 1.75 -> 1.75.  The height comes out of the
+    # page this time, not out of the other rows: 12.85 -> 18.56 in of canvas,
+    # 10.31 -> 14.71 in of tight bounding box, which is what is written.
+    # The ratio numbers below are those target inches to two places.
+    #
+    # The top row is still TALLER than its MG7 counterpart -- 3.73 against 3.47,
+    # the same 1.5x applied to a row that was already the taller of the two --
+    # for the reason it was taller to begin with: this style writes the
+    # sum-consistency axis name as plain text with spaces, (Z0Z0 + ZTZT +
+    # ZTZ0 + Z0ZT) / full, which set rotated is 2.08 in against the 1.90 in of
+    # the mathtext MG7 sets.  It cleared its 2.49 in row by 0.20 in and clears
+    # 3.73 by 0.83.  Measured, label extent against axes extent, not guessed.
+    #
+    # Both hspaces are fractions of the MEAN row height, so both come DOWN as
+    # the rows grow, and by the amount that holds the gap fixed in inches:
+    # outer 0.10 -> 0.068 for the same ~0.47 in that clears the pane's tick
+    # labels and axis name, inner 0.07 -> 0.058 for the same ~0.14 in of bare
+    # frame between rows whose x tick labels are off.
+    outer = fig.add_gridspec(2, 1, height_ratios=[6.31, 7.51], hspace=0.068)
+    gs = outer[1].subgridspec(3, 2, height_ratios=[3.73, 1.75, 1.75],
+                              hspace=0.058, wspace=0.30)
     axtop = fig.add_subplot(outer[0])
     axes = []
     for r in range(3):
