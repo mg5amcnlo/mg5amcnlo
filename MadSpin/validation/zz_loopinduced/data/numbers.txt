@@ -1,5 +1,5 @@
 g g > z z  (loop induced) + MadSpin   against   g g > e+ e- mu+ mu- / a  (loop induced)
-code 60a95e61715fe694d1046e9c9d9cc4ca5a70d431
+code 05fdf4aa43822bfa5280977424aad3e505d3fae3
 m_Z = 91.188 GeV   Gamma_Z = 2.4414 GeV   BW_cut = 15
 mass window on both reconstructed pairs of the truth sample: 54.56694 .. 127.80906 GeV
 
@@ -135,6 +135,18 @@ none         +0.3320 +- 0.0033      +0.3305 +- 0.0033      +0.3313 +- 0.0024    
     PA         rate = 1.0060 +- 0.0032 (+0.60 %)   shape chi2/ndf = 27.5/31 = 0.89
     onshell    rate = 1.0519 +- 0.0033 (+5.19 %)   shape chi2/ndf = 28.7/31 = 0.93
     none       rate = 1.0519 +- 0.0033 (+5.19 %)   shape chi2/ndf = 153.0/31 = 4.94
+
+  Delta phi(e+, e-) in the lab [rad]  (same Z; tracks pt(e+e-))
+    madspin    rate = 1.0075 +- 0.0034 (+0.75 %)   shape chi2/ndf = 28.2/31 = 0.91
+    PA         rate = 1.0060 +- 0.0032 (+0.60 %)   shape chi2/ndf = 103.4/31 = 3.33
+    onshell    rate = 1.0519 +- 0.0033 (+5.19 %)   shape chi2/ndf = 28.7/31 = 0.92
+    none       rate = 1.0519 +- 0.0033 (+5.19 %)   shape chi2/ndf = 182.7/31 = 5.89
+
+  Delta phi(mu+, mu-) in the lab [rad]  (same Z; tracks pt(mu+mu-))
+    madspin    rate = 1.0075 +- 0.0034 (+0.75 %)   shape chi2/ndf = 35.5/31 = 1.15
+    PA         rate = 1.0060 +- 0.0032 (+0.60 %)   shape chi2/ndf = 107.0/31 = 3.45
+    onshell    rate = 1.0519 +- 0.0033 (+5.19 %)   shape chi2/ndf = 31.6/31 = 1.02
+    none       rate = 1.0519 +- 0.0033 (+5.19 %)   shape chi2/ndf = 173.2/31 = 5.59
 
   m(e+ e-) [GeV]
     madspin    rate = 1.0075 +- 0.0034 (+0.75 %)   shape chi2/ndf = 602.8/74 = 8.15

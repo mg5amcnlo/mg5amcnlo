@@ -137,6 +137,12 @@ pa_lowpt_diagnosis.py              its measurement, from the per-event columns;
                                    asserts the four claims
 data/pa_lowpt_diagnosis.npz        the derived histograms, 11 kB
 plots/pa_lowpt_diagnosis.{pdf,png,txt}
+DPHI_PAIRS.md                      the two same-Z Delta phi (dphi_ee,
+                                   dphi_mumu): they are a pt(ll) plot in
+                                   disguise, so they inherit the support
+                                   problem above -- and they are the one
+                                   lab-frame handle on the single-Z
+                                   polarisation
 ```
 
 **One thing this comparison cannot do, and it matters.** `g g > z z` produces

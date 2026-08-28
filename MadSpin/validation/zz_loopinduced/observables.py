@@ -58,6 +58,24 @@ resonance:
     the ``(e+ mu-)`` invariant mass: a cross-pair combination, so it is built
     from one lepton out of each decay and cannot be reproduced by any
     single-``Z`` observable.
+
+``dphi_epmum`` / ``dphi_ee`` / ``dphi_mumu``
+    lab-frame azimuthal separations, all three folded to ``[0, pi]`` by the same
+    ``abs((dphi + pi) % (2 pi) - pi)`` so that they are directly comparable.
+    ``dphi_epmum`` is CROSS-pair -- one lepton from each ``Z`` -- and is the
+    cheapest handle on the correlation between the two decays.  The other two
+    are INTRA-pair, both leptons out of the same ``Z``, and they are a different
+    kind of observable: not a correlation at all, but a proxy for that ``Z``'s
+    own transverse momentum.  A ``Z`` at rest in the transverse plane gives
+    back-to-back leptons at ``Delta phi = pi``; a boosted ``Z`` collimates them
+    towards ``Delta phi = 0``.  So ``dphi_ee`` is a monotone (and rather tight)
+    re-reading of ``pt_ee``, which is why it inherits ``pt_ee``'s support
+    problem: the ``m_4l < 2 m_Z`` region that no spinmode can reach lives at low
+    ``pt`` and therefore at LARGE ``Delta phi``.  See PA_LOWPT_DIAGNOSIS.md;
+    the number to quote on these is the agreement on both supports, not one of
+    them.  ``dphi_ee`` and ``dphi_mumu`` measure the same thing on the two ``Z``,
+    which are equivalent apart from which pair the positional decay rule writes
+    first, so they are each other's control.
 """
 
 import gzip
@@ -224,6 +242,66 @@ def phi_of(v):
     return np.arctan2(v[:, 2], v[:, 1])
 
 
+def _dphi(a, b):
+    """Lab azimuthal separation of two momenta, folded to ``[0, pi]``.
+
+    One function so that every ``Delta phi`` in this study is folded the same
+    way and the three of them are directly comparable.  The fold is
+    ``abs((dphi + pi) % (2 pi) - pi)``, which is the convention ``dphi_epmum``
+    has always used; :func:`_selftest_dphi` pins it to the unsigned angle
+    between the two transverse projections, ``arccos(cos(phi_a - phi_b))``.
+    """
+    d = phi_of(a) - phi_of(b)
+    return np.abs((d + np.pi) % (2 * np.pi) - np.pi)
+
+
+def _selftest_dphi():
+    """The fold has to be the unsigned transverse angle, and nothing else.
+
+    Two properties, both checked on import:
+
+    1. it agrees with ``arccos(cos(phi_a - phi_b))`` -- i.e. it really is the
+       angle in ``[0, pi]``, and the ``%`` does not leave a branch anywhere
+       (getting the fold wrong shows up as a step at ``+-pi``, which on a
+       distribution that PEAKS at ``pi`` -- and both intra-pair ones do -- would
+       land exactly on the interesting bin);
+    2. it is invariant under a common rotation about the beam, which is what
+       makes it a lab observable one can compare between two samples that were
+       generated with different random azimuths.
+    """
+    rng = np.random.default_rng(20260828)
+    n = 512
+    pt1 = rng.uniform(0.5, 200.0, size=n)
+    pt2 = rng.uniform(0.5, 200.0, size=n)
+    f1 = rng.uniform(-np.pi, np.pi, size=n)
+    f2 = rng.uniform(-np.pi, np.pi, size=n)
+
+    def _vec(p, f):
+        pz = rng.normal(0.0, 300.0, size=n)
+        return np.column_stack([np.hypot(p, pz), p * np.cos(f), p * np.sin(f), pz])
+
+    a, b = _vec(pt1, f1), _vec(pt2, f2)
+    got = _dphi(a, b)
+    assert got.min() >= 0.0 and got.max() <= np.pi + 1e-12, \
+        'dphi: not folded into [0, pi]'
+    want = np.arccos(np.clip(np.cos(f1 - f2), -1.0, 1.0))
+    assert np.abs(got - want).max() < 1e-9, \
+        'dphi: the fold is not arccos(cos(dphi)) -- there is a branch left'
+
+    rot = rng.uniform(-np.pi, np.pi, size=n)
+    c, s = np.cos(rot), np.sin(rot)
+    def _spin(v):
+        out = v.copy()
+        out[:, 1] = c * v[:, 1] - s * v[:, 2]
+        out[:, 2] = s * v[:, 1] + c * v[:, 2]
+        return out
+    assert np.abs(_dphi(_spin(a), _spin(b)) - got).max() < 1e-9, \
+        'dphi: not invariant under a rotation about the beam'
+
+
+_selftest_dphi()
+
+
 # --------------------------------------------------------------------------
 # The observables
 # --------------------------------------------------------------------------
@@ -244,9 +322,15 @@ def compute(p):
         'm_epmup': mass(ep + mup),
     }
 
-    # --- delta phi (e+, mu-) in the lab: the cheapest correlation handle ---
-    dphi = phi_of(ep) - phi_of(mum)
-    out['dphi_epmum'] = np.abs((dphi + np.pi) % (2 * np.pi) - np.pi)
+    # --- delta phi in the lab, all three folded to [0, pi] the same way ------
+    # (e+, mu-) is CROSS-pair: the cheapest correlation handle.  (e+, e-) and
+    # (mu+, mu-) are INTRA-pair -- both leptons out of one z -- so they are not
+    # inter-decay correlations at all; they are a proxy for that z's own pt,
+    # anti-correlated with it because a boosted z collimates its decay products
+    # and a z at rest gives them back to back.  See the module docstring.
+    out['dphi_epmum'] = _dphi(ep, mum)
+    out['dphi_ee'] = _dphi(ep, em)
+    out['dphi_mumu'] = _dphi(mup, mum)
 
     # --- cos theta1 / cos theta2: the l+ in its own pair's rest frame, against
     #     that pair's flight direction in the four-lepton rest frame ---
@@ -526,6 +610,10 @@ BINS = {
     'cos_theta2': np.linspace(-1.0, 1.0, 41),
     'cos1cos2':   np.linspace(-1.0, 1.0, 41),
     'dphi_epmum': np.linspace(0.0, math.pi, 33),
+    # the intra-pair azimuthal separations: same binning as the cross-pair one
+    # above, so the three are read off the same grid
+    'dphi_ee':    np.linspace(0.0, math.pi, 33),
+    'dphi_mumu':  np.linspace(0.0, math.pi, 33),
     # lineshape / window sanity
     'm_ee':       np.linspace(M_LO, M_HI, 76),
     'm_mumu':     np.linspace(M_LO, M_HI, 76),
@@ -550,6 +638,10 @@ LABELS = {
                    r'$\mathrm{d}\sigma/\mathrm{d}(\cos\theta_{1}\cos\theta_{2})$ [pb]'),
     'dphi_epmum': (r'$\Delta\phi(e^{+},\mu^{-})$ in the lab [rad]',
                    r'$\mathrm{d}\sigma/\mathrm{d}\Delta\phi$ [pb/rad]'),
+    'dphi_ee':    (r'$\Delta\phi(e^{+},e^{-})$ in the lab [rad]',
+                   r'$\mathrm{d}\sigma/\mathrm{d}\Delta\phi$ [pb/rad]'),
+    'dphi_mumu':  (r'$\Delta\phi(\mu^{+},\mu^{-})$ in the lab [rad]',
+                   r'$\mathrm{d}\sigma/\mathrm{d}\Delta\phi$ [pb/rad]'),
     'm_ee':       (r'$m(e^{+}e^{-})$ [GeV]',
                    r'$\mathrm{d}\sigma/\mathrm{d}m(e^{+}e^{-})$ [pb/GeV]'),
     'm_mumu':     (r'$m(\mu^{+}\mu^{-})$ [GeV]',
@@ -569,6 +661,12 @@ LABELS_TXT = {
     'cos_theta2': 'cos(theta2) of mu+ in the (mu+ mu-) rest frame',
     'cos1cos2':   'cos(theta1) x cos(theta2)  (inter-decay correlation)',
     'dphi_epmum': 'Delta phi(e+, mu-) in the lab [rad]',
+    # the two intra-pair ones say "same Z" in their own description: they are
+    # not correlations between the decays, they track that Z's own pt, and a
+    # reader of numbers.txt who takes them for the cross-pair kind will read
+    # the low-pt support hole of PA_LOWPT_DIAGNOSIS.md as a spin defect
+    'dphi_ee':    'Delta phi(e+, e-) in the lab [rad]  (same Z; tracks pt(e+e-))',
+    'dphi_mumu':  'Delta phi(mu+, mu-) in the lab [rad]  (same Z; tracks pt(mu+mu-))',
     'm_ee':       'm(e+ e-) [GeV]',
     'm_mumu':     'm(mu+ mu-) [GeV]',
     'm_4l':       'm(e+ e- mu+ mu-) [GeV]',

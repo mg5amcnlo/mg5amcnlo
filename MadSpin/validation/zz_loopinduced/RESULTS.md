@@ -16,6 +16,15 @@
 > validation should say instead, are in
 > [PA_LOWPT_DIAGNOSIS.md](PA_LOWPT_DIAGNOSIS.md).
 
+> **Two observables added, 2026-08-28.** `Delta phi(e+ e-)` and
+> `Delta phi(mu+ mu-)` — same-`Z` azimuthal separations, harvested from the same
+> events, nothing regenerated. They are a `pt(ll)` plot in disguise (correlation
+> −0.65), so the support hole above reappears in them at *large* `Delta phi` and
+> the `PA` ranking inverts the same way (3.33 / 3.45 on the full truth, 1.19 /
+> 1.34 on `m_4l >= 2 m_Z`). They also give the study its only **lab-frame** grip
+> on the single-`Z` polarisation: `spinmode = none` fails them at 4.72 / 4.03 on
+> the matched support. [DPHI_PAIRS.md](DPHI_PAIRS.md).
+
 > **Frame correction, 2026-08-27 — applied, and the study re-run. Read this
 > before any number below.** The angular observables of this study
 > (`cos_theta1`, `cos_theta2`, `cos1cos2`, and the `f_0` / `f_00` / `f_TT` /

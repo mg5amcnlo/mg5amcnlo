@@ -347,7 +347,12 @@ What must **not** be quoted:
    there**; the `+0.60 %` agreement of the totals is `+2.74 %` above threshold
    against `−2.09 %` below.
 2. Quote `pt(e+ e-)` (and any other `m_4l`-correlated observable) on both
-   supports, or at least annotate the full-support number.
+   supports, or at least annotate the full-support number.  The two same-`Z`
+   azimuthal separations added on 2026-08-28, `dphi_ee` and `dphi_mumu`, are
+   exactly such observables — `Delta phi` between two leptons of one `Z` is
+   anti-correlated with that `Z`'s `pt` at −0.65, so the same hole reappears
+   there at *large* `Delta phi` and the same ranking inversion follows
+   (`PA` 3.33 / 3.45 → 1.19 / 1.34).  See [DPHI_PAIRS.md](DPHI_PAIRS.md).
 3. `plot_zz_loopinduced.py` **silently dropped from its shape `chi2`** every bin
    where a mode has no support against a truth that does — the `re_ > 0` test
    in `ratio()` removes them, because a zero numerator gives a zero error.  For
