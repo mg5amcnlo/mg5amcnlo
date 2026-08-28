@@ -179,7 +179,53 @@ LOGY = {'m_epmum', 'm_epmup', 'm_4l', 'pt_ee', 'm_ee', 'm_mumu'}
 
 # The ratio pane window.  Wide enough that the modes that genuinely disagree
 # leave it (and get arrows), tight enough that the ones that agree are resolved.
+#
+# Deliberately the SAME window on every figure, and deliberately not recomputed
+# from whichever curves a given pane happens to draw: the panes are meant to be
+# read against each other, and a per-figure autoscale would make a 2 % wobble
+# and a factor of two look alike.  So narrowing RATIO_MODES below does not
+# widen or tighten this.
 RATIO_CLIP = (0.5, 1.5)
+
+# Which modes get a curve in the RATIO pane, per observable.  The upper
+# distribution pane always draws every mode that has the observable; this table
+# narrows only the lower pane, and anything absent from it draws the full set.
+#
+# One entry per figure that needs it, so the next such request is one line.
+RATIO_MODES = {
+    # onshell and none draw no virtuality, so m(mu+mu-) is a delta function at
+    # m_Z (see NO_VIRTUALITY / structurally_empty below).  Their ratio to the
+    # off-shell truth is therefore not a measurement of anything: it is a
+    # carpet of structural-zero markers along the pane floor plus a single
+    # off-scale spike in the peak bin, and it crowds out the madspin-vs-PA
+    # comparison this pane exists for.  Both still appear in the distribution
+    # pane above -- where the delta function is the point -- and both still get
+    # their rate and shape lines in numbers.txt.
+    'm_mumu': ('madspin', 'PA'),
+}
+
+
+def ratio_modes(obs, modes=MODES):
+    """The modes to draw in the ratio pane of ``obs``.  Everything by default."""
+    keep = RATIO_MODES.get(obs)
+    return [m for m in modes if keep is None or m in keep]
+
+
+def ratio_note(obs, tex=True):
+    """A one-line cue naming the ratio curves, or '' when nothing was dropped.
+
+    The legend sits in the distribution pane and describes the distribution
+    pane.  Where the two panes show different curve sets the legend silently
+    over-claims for the lower one, and a reader would take a missing ratio
+    curve for agreement rather than for omission -- exactly backwards here.
+    Generated from the table, so it follows any future entry on its own.
+    """
+    keep = RATIO_MODES.get(obs)
+    if keep is None:
+        return ''
+    names = [k if not tex else r'\texttt{%s}' % k for k in MODES if k in keep]
+    return 'ratio: %s only' % ', '.join(names)
+
 
 PROC_TEX = r'gg \to ZZ \to e^{+}e^{-}\mu^{+}\mu^{-}'
 
@@ -309,11 +355,12 @@ def draw(data, obs, outdir, modes=MODES):
     yref, eref = data.density(REF, obs)
 
     order = [REF] + [m for m in modes if data.has(m, obs)]
+    rmodes = ratio_modes(obs, modes)
     for key in order:
         y, e = data.density(key, obs)
         lab = CURVES_TEX[key] if USETEX else CURVES_PLAIN[key]
         ax.stairs(y, edges, color=COLOR[key], ls=LS[key], lw=LW, label=lab)
-        if key == REF:
+        if key == REF or key not in rmodes:
             continue
         r, re_ = ratio(y, e, yref, eref)
         rx.errorbar(x, np.clip(r, *RATIO_CLIP), yerr=re_, fmt='none',
@@ -351,6 +398,12 @@ def draw(data, obs, outdir, modes=MODES):
     rx.set_ylabel(r'ratio' if USETEX else 'ratio', fontsize=11)
     rx.xaxis.set_minor_locator(AutoMinorLocator())
     rx.yaxis.set_minor_locator(AutoMinorLocator())
+    note = ratio_note(obs, tex=USETEX)
+    if note:
+        # bottom centre: the only corner of this pane the surviving curves
+        # leave free, and it is where the dropped markers used to sit.
+        rx.text(0.5, 0.06, note, transform=rx.transAxes, ha='center',
+                va='bottom', fontsize=8)
 
     os.makedirs(outdir, exist_ok=True)
     base = os.path.join(outdir, obs)

@@ -41,8 +41,8 @@ import observables as OBS                                        # noqa: E402
 # at all.  The accessors below are literally the same code on both sides of the
 # comparison.
 from plot_zz_loopinduced import (                                # noqa: E402
-    Data, ratio, structurally_empty, MODES, REF, CURVES_PLAIN, LOGY,
-    RATIO_CLIP,
+    Data, ratio, structurally_empty, ratio_modes, ratio_note, MODES, REF,
+    CURVES_PLAIN, LOGY, RATIO_CLIP,
 )
 mpl.rcParams.update(mpl.rcParamsDefault)
 matplotlib.use('Agg')
@@ -120,12 +120,16 @@ def draw(d, obs, outdir):
     rx.axhline(1.0, color=C_REF, ls='--', lw=0.9, zorder=2)
     rx.set_ylim(*RATIO_CLIP)
 
+    # The ratio pane can show fewer modes than the pane above it; see
+    # plot_zz_loopinduced.RATIO_MODES.  Everything below -- the structural-zero
+    # rings, the arrow count, the note -- follows that narrower set.
+    rorder = [m for m in ratio_modes(obs) if d.has(m, obs)]
     struct_of = {k: structurally_empty(d.density(k, obs)[0], k, obs) & (yref > 0)
-                 for k in order}
-    circled = [k for k in order if struct_of[k].any()]
+                 for k in rorder}
+    circled = [k for k in rorder if struct_of[k].any()]
 
     n_out = 0
-    for key in order:
+    for key in rorder:
         y, e = d.density(key, obs)
         r, re_ = ratio(y, e, yref, eref)
         struct = struct_of[key]
@@ -158,6 +162,12 @@ def draw(d, obs, outdir):
     rx.set_ylabel('ratio', fontsize=9)
     rx.text(0.99, 0.92, 'bands: $\\pm5\\%$, $\\pm10\\%$', transform=rx.transAxes,
             ha='right', va='top', fontsize=7, color='C0')
+    note = ratio_note(obs, tex=False)
+    if note:
+        # Same cue and same corner as the MG7-style figure, so the two
+        # renderings of m(mu+ mu-) say the same thing about their lower pane.
+        rx.text(0.5, 0.06, note, transform=rx.transAxes, ha='center',
+                va='bottom', fontsize=8)
 
     os.makedirs(outdir, exist_ok=True)
     base = os.path.join(outdir, obs)
@@ -166,9 +176,9 @@ def draw(d, obs, outdir):
     plt.close(fig)
     # NOT ``'none'`` for the empty case: one of the modes is literally called
     # ``none``, so "open circles: none" would be unreadable.
-    print('%-12s ratio pane clipped to %s: %d point(s) drawn as arrows; '
-          'open circles (exact structural zeros): %s'
-          % (obs, RATIO_CLIP, n_out,
+    print('%-12s ratio pane clipped to %s, curves %s: %d point(s) drawn as '
+          'arrows; open circles (exact structural zeros): %s'
+          % (obs, RATIO_CLIP, ','.join(rorder), n_out,
              ', '.join(circled) if circled else '(no modes)'))
     return base
 
