@@ -50,7 +50,7 @@ if _HERE not in sys.path:
 # afterwards -- the user's style sets no rcParams at all.
 from plot_mtt_threshold import (                     # noqa: E402
     Data, ratio, structurally_empty, MODES, REF, CURVES_PLAIN, write_numbers,
-    RATIO_CLIP, offscale_arrows, PROC_TEX,
+    RATIO_CLIP, offscale_arrows, PROC_TEX, CLOSE_LOWER_EDGE,
 )
 mpl.rcParams.update(mpl.rcParamsDefault)
 matplotlib.use('Agg')
@@ -130,20 +130,23 @@ def main():
     ymin, ymax = ax.get_ylim()
     ax.set_ylim(ymin, ymax * 3.5)
 
-    # Close each mode's curve down at its lower edge, as the MG7-style figure
-    # does (``plot_mtt_threshold.CLOSE_LOWER_EDGE``).  ``ax.step`` on a
-    # NaN-padded array does not stroke the vertical between the last empty bin
-    # and the first populated one, so without this the hard edge every mode has
-    # at ``m_tt = 2 m_t`` is drawn only as the curve's absence to the left of
-    # it.  Same colour, width and alpha as the faint companion step, so it
-    # reads as part of the curve.  All four land on the same x -- 346.00 GeV,
-    # measured -- so they overprint on the ``2 m_t`` line, which is the result.
+    # Close each mode's curve down at its lower edge, for the modes the shared
+    # module says have a real one (``CLOSE_LOWER_EDGE``; here that is all four).
+    # ``ax.step`` on a NaN-padded array does not stroke the vertical between the
+    # last empty bin and the first populated one, so without this the hard edge
+    # every mode has at ``m_tt = 2 m_t`` is drawn only as the curve's absence to
+    # the left of it.  Same colour, width and alpha as the faint companion step,
+    # so it reads as part of the curve.  All four land on the same x -- 346.00
+    # GeV, measured -- so they overprint on the ``2 m_t`` line, which is the
+    # result.
     #
     # The pane is log-y: zero has no position on it, so the fall goes to the
-    # bottom of the axis.  That is a floor, not a zero; the zero is a count in
+    # bottom of the axis.  That is a FLOOR, not a zero; the zero is a count in
     # numbers.txt.
     floor = ax.get_ylim()[0]
     for key in MODES:
+        if key not in CLOSE_LOWER_EDGE:
+            continue
         y, _ye, cnt = d.shape(key)
         nz = np.nonzero(cnt > 0)[0]
         if not nz.size or nz[0] == 0:

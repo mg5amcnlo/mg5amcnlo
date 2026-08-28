@@ -56,7 +56,7 @@ if _HERE not in sys.path:
 # restored immediately afterwards -- the user's style sets no rcParams at all.
 from plot_mtt_threshold import (                     # noqa: E402
     Data, ratio, structurally_empty, MODES, REF, CURVES_PLAIN, write_numbers,
-    AGREE_HI, RATIO_CLIP, offscale_arrows,
+    AGREE_HI, RATIO_CLIP, offscale_arrows, CLOSE_LOWER_EDGE,
 )
 mpl.rcParams.update(mpl.rcParamsDefault)
 matplotlib.use('Agg')
@@ -136,6 +136,31 @@ def main():
     # The headroom is cut back accordingly.
     ymin, ymax = ax.get_ylim()
     ax.set_ylim(ymin, ymax * 3.5)
+
+    # Close a mode's curve down at its lower edge, for the modes the shared
+    # module says have a real one (``CLOSE_LOWER_EDGE``).  Here that is
+    # ``onshell`` ALONE: it never reshuffles, so it inherits the on-shell
+    # production sample's edge and stops dead at 346.00 GeV.  ``madspin``, ``PA``
+    # and ``madspin_v1`` are deliberately not closed -- the recoil jet lets them
+    # move ``m_tt`` and all three still have entries in the leftmost plotted
+    # bin, so where they stop is where the sample ran out.  They run on to the
+    # frame, which is what "no edge here" looks like.
+    #
+    # The pane is log-y: zero has no position on it, so the fall goes to the
+    # bottom of the axis.  That is a FLOOR, not a zero; the zero is a count in
+    # numbers.txt.
+    floor = ax.get_ylim()[0]
+    for key in MODES:
+        if key not in CLOSE_LOWER_EDGE:
+            continue
+        y, _ye, cnt = d.shape(key)
+        nz = np.nonzero(cnt > 0)[0]
+        if not nz.size or nz[0] == 0:
+            continue
+        x0 = d.edges[nz[0]]
+        ax.plot([x0, x0], [floor, y[nz[0]]], color=COLOR[key], lw=1.0,
+                alpha=STEP_ALPHA, zorder=3, solid_capstyle='butt')
+
     ax.set_title(r'$pp\to t\bar{t}j$, 13 TeV, LO, $\mu_R=\mu_F=m_t$, '
                  r'BW cut $=%g\,\Gamma_t$' % d.meta.get('bwcutoff', 15.0),
                  fontsize=10)

@@ -137,7 +137,10 @@ every file. A `lhe_parser` cross-check on a slice of each file is recorded too.
 Below `2 m_t` no on-shell `t t~` pair can land. `spinmode = onshell` draws no
 virtuality and never reshuffles, so it inherits the production sample's `m_tt`
 exactly and has **zero** support there -- structurally, for any sample size.
-That zero is drawn as a zero, with an open marker on the ratio axis.
+That zero is a zero, and the main pane now draws the **fall to it**: `onshell`
+gets a closing vertical at its lower edge, in its own colour and dash pattern,
+so the cutoff reads as a cliff in the curve rather than as the curve merely not
+being there. See "Where `onshell` stops" below.
 
 `madspin`, `PA` and `madspin_v1` are **not** in that position, and the figure
 must not say they are. See `RESULTS.md`: for a `2 -> 3` production the density
@@ -147,7 +150,33 @@ different route, regenerating the whole phase-space point from the decay-chain
 topology with the new off-shell masses while holding `sqrt(shat)` and the
 production tree's invariants fixed. An empty sub-threshold bin of any of the
 three would be a statement about the sample size, so it is drawn as a gap
-rather than as a zero.
+rather than as a zero -- and, for the same reason, **none of the three gets a
+closing vertical**. All three still have entries in the leftmost plotted bin,
+so where they stop is where the sample ran out; a fall there would claim a
+cutoff that does not exist. They run on to the frame, which is what "no edge
+here" has to look like.
+
+### Where `onshell` stops
+
+Measured off `data/histograms.npz` on its 0.25 GeV grid: `onshell`'s lowest
+populated `m_tt` is **346.00 GeV**, which is `2 m_t`, over nine plot bins. It is
+the same value the undecayed production sample has, which is the point --
+`onshell` reproduces that sample event by event. The other three modes reach
+**316.00 GeV**, the leftmost plotted bin, with 6 (`madspin`), 5 (`PA`) and 1
+(`madspin_v1`) events; the off-shell truth reaches it too. So the four modes do
+**not** share an edge here, unlike in the `2 -> 2` sibling study where all four
+stop at 346.00 GeV.
+
+The fall has to be drawn explicitly: `ax.step` on a NaN-padded array does not
+stroke the vertical between the last empty bin and the first populated one, so
+before this `onshell`'s cutoff was rendered only as the curve's absence to the
+left of `2 m_t`. Which modes close is
+`plot_mtt_threshold.CLOSE_LOWER_EDGE`, a per-mode set: `('onshell',)` here, all
+four in the `2 -> 2` study.
+
+**The pane is log-`y`, so zero has no position on it.** The fall runs to the
+bottom of the axis. That is a *floor*, not a zero; the zero itself stays a count
+in `numbers.txt` and in `RESULTS.md` section 2. There is no label on the line.
 
 ## The normalisation, and why it is shape
 

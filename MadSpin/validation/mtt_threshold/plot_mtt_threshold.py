@@ -186,26 +186,35 @@ MODES = ['madspin', 'PA', 'onshell', 'madspin_v1']
 PROC_TEX = r'pp \to t\bar t j'
 PROC_PLAIN = r'pp \to t\bar t j'
 
-# Close each mode's curve down at the left edge of its support in the MAIN pane.
+# Which modes close their curve down at the left edge of their support in the
+# MAIN pane.  PER MODE, not per figure: whether the edge is real is a property
+# of the mode and the process together, and the two figures disagree about it.
 #
-# ``ax.step`` with a NaN-padded array does not stroke the vertical between the
-# last empty bin and the first populated one -- the polyline simply starts with
-# the horizontal segment of the first populated bin -- so a hard lower edge is
-# drawn as the curve's ABSENCE to the left of it and nothing else.  Where the
-# edge is real and shared, that is worth drawing as a fall.
+# It has to be drawn explicitly.  ``ax.step`` with a NaN-padded array does not
+# stroke the vertical between the last empty bin and the first populated one --
+# the polyline simply starts with the horizontal segment of the first populated
+# bin -- so a hard lower edge is otherwise drawn as the curve's ABSENCE to the
+# left of it and nothing else.
 #
-# Off by default, because it asserts a CUTOFF.  It is only honest where the edge
-# is structural: for ``p p > t t~`` every mode stops at ``m_tt = 2 m_t``,
-# because ``m_tt = sqrt(shat)`` there and the reshuffle holds ``sqrt(shat)``
-# fixed.  For ``p p > t t~ j`` the recoil jet lets the modes move ``m_tt``, and
-# three of the four still have entries in the leftmost plotted bin -- their
-# lower edge is where the SAMPLE ran out, not where the physics stops, and a
-# closing vertical there would claim a cutoff that does not exist.
+# Listing a mode here ASSERTS A CUTOFF, so only a structural edge earns it:
+#
+#   p p > t t~ j (this module)  ``onshell`` alone.  It never reshuffles, so it
+#       inherits the on-shell production sample's ``m_tt >= 2 m_t`` exactly and
+#       stops dead at 346.00 GeV, measured, over nine plot bins.  The three
+#       density modes are NOT listed: the recoil jet lets them move ``m_tt``,
+#       and all three still have entries in the leftmost plotted bin (316 GeV,
+#       6 / 5 / 1 events), so where they stop is where the SAMPLE ran out, not
+#       where the physics stops.  A fall there would claim a cutoff that does
+#       not exist.
+#   p p > t t~ (the 2 -> 2 sibling)  all four.  There the tops ARE the final
+#       state, ``m_tt = sqrt(shat)``, and the reshuffle holds ``sqrt(shat)``
+#       fixed, so every mode has the same real edge; that module re-points this
+#       global accordingly.
 #
 # The pane is log-y, so an exact zero has no position on it.  The fall is drawn
-# to the bottom of the axis, which is a floor and not a zero; the zero itself is
+# to the bottom of the axis, which is a FLOOR and not a zero; the zero itself is
 # a count in numbers.txt.
-CLOSE_LOWER_EDGE = False
+CLOSE_LOWER_EDGE = ('onshell',)
 
 COLOR = {'truth': 'black', 'madspin': 'blue', 'PA': 'red',
          'onshell': allcolors[2], 'madspin_v1': allcolors[4],
@@ -661,16 +670,24 @@ def make_figure(d, out, style_tag=''):
     # After set_ylim, so the floor it falls to is the final one.  Same colour,
     # dash pattern and width as the mode's step: it reads as part of the curve,
     # not as an annotation on top of it.
-    if CLOSE_LOWER_EDGE:
-        floor = ax.get_ylim()[0]
-        for key in MODES:
-            y, _ye, cnt = d.shape(key)
-            nz = np.nonzero(cnt > 0)[0]
-            if not nz.size or nz[0] == 0:
-                continue          # no edge inside the plotted window
-            x0 = d.edges[nz[0]]
-            ax.plot([x0, x0], [floor, y[nz[0]]], color=COLOR[key],
-                    ls=LS[key], lw=LW, zorder=4, solid_capstyle='butt')
+    floor = ax.get_ylim()[0]
+    for key in MODES:
+        if key not in CLOSE_LOWER_EDGE:
+            continue
+        y, _ye, cnt = d.shape(key)
+        nz = np.nonzero(cnt > 0)[0]
+        if not nz.size or nz[0] == 0:
+            # Listed, but it reaches the first plotted bin: there is no edge
+            # inside the window to close.  Draw nothing rather than a fall at
+            # the frame.
+            continue
+        x0 = d.edges[nz[0]]
+        # Same zorder as the mode's own step: the fall is part of that curve,
+        # so it must not be promoted above the others.  On the t t~ j figure it
+        # therefore crosses the three modes that keep going, exactly as the
+        # step would have if the bins had content.
+        ax.plot([x0, x0], [floor, y[nz[0]]], color=COLOR[key],
+                ls=LS[key], lw=LW, zorder=4, solid_capstyle='butt')
 
     ax.text(0.028, 0.965,
             _tx(r'$%s$ at $\sqrt{s} = 13$~TeV, LO, '

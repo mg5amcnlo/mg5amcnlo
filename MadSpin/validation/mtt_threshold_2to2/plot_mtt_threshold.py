@@ -113,19 +113,20 @@ P.CURVES_PLAIN = {
     'madspin_v1': 'MadSpin, spinmode = madspin_v1 (legacy)',
 }
 
-# Close each mode's curve down at its lower edge in the main pane.  Honest here
-# and only here: for ``p p > t t~`` the two tops ARE the final state, so
-# ``m_tt = sqrt(shat)`` and the reshuffle holds ``sqrt(shat)`` fixed -- every
-# mode stops dead at ``2 m_t``, measured as well as argued (lowest populated
-# 0.25 GeV bin: 346.00 GeV for all four, and for the production sample).  All
-# four falls therefore land on the same x as the ``2 m_t`` line.  The sibling
-# ``t t~ j`` figure leaves this off: there the recoil jet lets the modes move
-# ``m_tt``, three of the four reach the leftmost plotted bin, and their lower
-# edge is a statistics limit rather than a cutoff.
-P.CLOSE_LOWER_EDGE = True
+# ALL FOUR modes close their curve down at their lower edge in the main pane --
+# the fourth re-pointed global, and the one place this study's answer shows up
+# in the drawing rather than in the numbers.  Honest here in a way it is not for
+# ``t t~ j``: the two tops ARE the final state, so ``m_tt = sqrt(shat)``, and
+# the reshuffle holds ``sqrt(shat)`` fixed, so every mode stops dead at
+# ``2 m_t``.  Measured as well as argued -- lowest populated 0.25 GeV bin is
+# 346.00 GeV for all four and for the production sample -- so the four falls
+# land on one x, on the ``2 m_t`` line.  The sibling figure closes ``onshell``
+# alone, which is the only mode that has a real edge there.
+P.CLOSE_LOWER_EDGE = tuple(P.MODES)
 
 CURVES = P.CURVES
 CURVES_PLAIN = P.CURVES_PLAIN
+CLOSE_LOWER_EDGE = P.CLOSE_LOWER_EDGE
 PROC_TEX = P.PROC_TEX
 PROC_PLAIN = P.PROC_PLAIN
 

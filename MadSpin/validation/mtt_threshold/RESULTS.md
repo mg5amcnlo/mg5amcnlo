@@ -28,9 +28,15 @@ Two things follow, and neither is allowed to go quiet:
   any drawn point can be checked. The agreement thresholds quoted **for the
   figure** are the shape ones of section 1b.
 * **`onshell`'s zero below `2 m_t` is still zero.** Dividing by a total cross
-  section cannot make a structural zero non-zero. It carries **no** arrow, and
-  since the figure cleanup no marker either: the bins are counted in
-  `plots/numbers.txt` rather than drawn.
+  section cannot make a structural zero non-zero. In the ratio pane it carries
+  **no** arrow and, since the figure cleanup, no marker either -- the bins are
+  counted in `plots/numbers.txt`. In the main pane it is drawn as a **fall**:
+  a closing vertical at 346.00 GeV, `onshell`'s measured lowest populated
+  `m_tt`, in its own colour and dash pattern. `madspin`, `PA` and `madspin_v1`
+  get none, because all three still have entries in the leftmost plotted bin
+  (316.00 GeV; 6, 5 and 1 events) -- where they stop is where the sample ran
+  out, not where the physics stops. The pane is log-`y`, so the fall runs to the
+  **axis floor**, which is a floor and not a zero.
 
 ---
 
