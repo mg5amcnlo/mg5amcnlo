@@ -216,20 +216,40 @@ The emptiness is stated as a **count** -- `0 of N` -- in `numbers.txt` and in
 That is now the only place it is stated: the four concentric open circles the
 figure used to draw there, and the in-pane key explaining them, were removed.
 
-### Where the MadSpin sampling drops to zero
+### Where the MadSpin sampling drops to zero, and how the figure says so
 
 Measured off `data/histograms.npz` (0.25 GeV grid): the lowest `m_tt` carrying
 any content is **346.00 GeV, identically for `madspin`, `PA`, `onshell`,
-`madspin_v1`** and for the undecayed production sample. All four share the edge.
+`madspin_v1`** and for the undecayed production sample. All four share the edge,
+and that value **is** `2 m_t = 346.0 GeV`.
 
-That value **is** `2 m_t = 346.0 GeV`, which the figure already marks with its
-dashed vertical line, so no second line was drawn -- it would coincide with the
-first. The `BW_cut = 15` Breit-Wigner truncation would predict an edge at
+The main pane **draws the fall**. It has to be drawn explicitly: `ax.step` on a
+NaN-padded array does not stroke the vertical between the last empty bin and the
+first populated one -- the polyline just starts with the horizontal segment of
+the first populated bin -- so before this the cutoff was rendered as the curve's
+*absence* to the left of `2 m_t` and nothing more. Each mode now gets a closing
+vertical at its own lower edge, in its own colour, dash pattern and width, so it
+reads as part of the curve rather than as an annotation. All four land on the
+same `x`, on top of the `2 m_t` line, which is the result.
+
+**The pane is log-`y`, so zero has no position on it.** The fall is drawn to the
+bottom of the axis. That is a *floor*, not a zero; the zero itself is a count --
+`0 of N` -- in `numbers.txt` and in `RESULTS.md`. No second annotation line was
+added and no label: the fall is the whole of it.
+
+The `BW_cut = 15` Breit-Wigner truncation would predict an edge at
 `2 (m_t - 15 Gamma_t) = 301.26 GeV`; that is the *truth* sample's cut-off, not
 MadSpin's, and it lies left of the plotted 316-420 GeV window. The two numbers
 disagree because for `p p > t t~` the observable is `m_tt = sqrt(shat)`, which
 does not depend on the top virtualities the truncation acts on -- the same
 identity the whole study rests on.
+
+The sibling `t t~ j` figure does **not** do this, and the switch
+(`plot_mtt_threshold.CLOSE_LOWER_EDGE`) is off by default for that reason. There
+the recoil jet lets every density mode move `m_tt`: `madspin`, `PA` and
+`madspin_v1` still have entries in the leftmost plotted bin (316 GeV), so they
+have no edge inside the window at all -- where they stop is where the sample ran
+out. Only `onshell` has a genuine hard edge there, at the same 346.00 GeV.
 
 ## No prose on the figure
 

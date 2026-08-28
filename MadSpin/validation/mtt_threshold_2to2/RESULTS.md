@@ -138,14 +138,23 @@ are structurally zero and in how many bins, so the statement is auditable and
 not just visible. (The figure used to draw four concentric open circles there;
 they were removed, the bins were not.)
 
-### Where the MadSpin sampling stops
+### Where the MadSpin sampling stops, and how the figure shows it
 
 Measured from `data/histograms.npz` on its 0.25 GeV grid: the lowest `m_tt` with
 any content is **346.00 GeV for all four modes** -- `madspin`, `PA`, `onshell`,
 `madspin_v1` -- and for the undecayed production sample as well. They share the
-edge exactly. That edge is `2 m_t = 346.0 GeV`, which the figure already marks
-with its dashed vertical line, so **no second vertical line was added**: it
-would land on top of the first.
+edge exactly, and it is `2 m_t = 346.0 GeV`.
+
+The main pane now **draws each mode's fall to that edge**, in the mode's own
+colour and dash pattern. Without it the cutoff was invisible as a cutoff:
+`ax.step` on a NaN-padded array leaves the vertical between the last empty bin
+and the first populated one unstroked, so the curve simply began at 346 GeV with
+a horizontal segment. The four falls coincide, on the `2 m_t` line. **No second
+annotation line was added** -- it would have landed on the first -- and no label.
+
+The pane is log-`y`, so an exact zero cannot be plotted: the fall runs to the
+bottom of the axis, which is a floor and not a zero. The zero stays a count,
+`0 of N`, here and in `numbers.txt`.
 
 The Breit-Wigner truncation does **not** set an `m_tt` edge for this process.
 `BW_cut = 15` would put one at `2 (m_t - 15 Gamma_t) = 301.26 GeV`, and that is

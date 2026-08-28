@@ -186,6 +186,27 @@ MODES = ['madspin', 'PA', 'onshell', 'madspin_v1']
 PROC_TEX = r'pp \to t\bar t j'
 PROC_PLAIN = r'pp \to t\bar t j'
 
+# Close each mode's curve down at the left edge of its support in the MAIN pane.
+#
+# ``ax.step`` with a NaN-padded array does not stroke the vertical between the
+# last empty bin and the first populated one -- the polyline simply starts with
+# the horizontal segment of the first populated bin -- so a hard lower edge is
+# drawn as the curve's ABSENCE to the left of it and nothing else.  Where the
+# edge is real and shared, that is worth drawing as a fall.
+#
+# Off by default, because it asserts a CUTOFF.  It is only honest where the edge
+# is structural: for ``p p > t t~`` every mode stops at ``m_tt = 2 m_t``,
+# because ``m_tt = sqrt(shat)`` there and the reshuffle holds ``sqrt(shat)``
+# fixed.  For ``p p > t t~ j`` the recoil jet lets the modes move ``m_tt``, and
+# three of the four still have entries in the leftmost plotted bin -- their
+# lower edge is where the SAMPLE ran out, not where the physics stops, and a
+# closing vertical there would claim a cutoff that does not exist.
+#
+# The pane is log-y, so an exact zero has no position on it.  The fall is drawn
+# to the bottom of the axis, which is a floor and not a zero; the zero itself is
+# a count in numbers.txt.
+CLOSE_LOWER_EDGE = False
+
 COLOR = {'truth': 'black', 'madspin': 'blue', 'PA': 'red',
          'onshell': allcolors[2], 'madspin_v1': allcolors[4],
          'production': 'gray'}
@@ -635,6 +656,22 @@ def make_figure(d, out, style_tag=''):
     # docstring; the axis names the variable and no more.
     ymin, ymax = ax.get_ylim()
     ax.set_ylim(ymin, ymax * 3.2)
+
+    # The closing vertical at each mode's lower edge (see CLOSE_LOWER_EDGE).
+    # After set_ylim, so the floor it falls to is the final one.  Same colour,
+    # dash pattern and width as the mode's step: it reads as part of the curve,
+    # not as an annotation on top of it.
+    if CLOSE_LOWER_EDGE:
+        floor = ax.get_ylim()[0]
+        for key in MODES:
+            y, _ye, cnt = d.shape(key)
+            nz = np.nonzero(cnt > 0)[0]
+            if not nz.size or nz[0] == 0:
+                continue          # no edge inside the plotted window
+            x0 = d.edges[nz[0]]
+            ax.plot([x0, x0], [floor, y[nz[0]]], color=COLOR[key],
+                    ls=LS[key], lw=LW, zorder=4, solid_capstyle='butt')
+
     ax.text(0.028, 0.965,
             _tx(r'$%s$ at $\sqrt{s} = 13$~TeV, LO, '
                 r'$\mu_R = \mu_F = m_t$, BW cut $=%g\,\Gamma_t$ on both sides'

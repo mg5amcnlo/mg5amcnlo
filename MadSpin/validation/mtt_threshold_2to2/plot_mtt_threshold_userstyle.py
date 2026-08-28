@@ -129,6 +129,29 @@ def main():
     # the title keeps the setup, which cannot be read off the curves.
     ymin, ymax = ax.get_ylim()
     ax.set_ylim(ymin, ymax * 3.5)
+
+    # Close each mode's curve down at its lower edge, as the MG7-style figure
+    # does (``plot_mtt_threshold.CLOSE_LOWER_EDGE``).  ``ax.step`` on a
+    # NaN-padded array does not stroke the vertical between the last empty bin
+    # and the first populated one, so without this the hard edge every mode has
+    # at ``m_tt = 2 m_t`` is drawn only as the curve's absence to the left of
+    # it.  Same colour, width and alpha as the faint companion step, so it
+    # reads as part of the curve.  All four land on the same x -- 346.00 GeV,
+    # measured -- so they overprint on the ``2 m_t`` line, which is the result.
+    #
+    # The pane is log-y: zero has no position on it, so the fall goes to the
+    # bottom of the axis.  That is a floor, not a zero; the zero is a count in
+    # numbers.txt.
+    floor = ax.get_ylim()[0]
+    for key in MODES:
+        y, _ye, cnt = d.shape(key)
+        nz = np.nonzero(cnt > 0)[0]
+        if not nz.size or nz[0] == 0:
+            continue
+        x0 = d.edges[nz[0]]
+        ax.plot([x0, x0], [floor, y[nz[0]]], color=COLOR[key], lw=1.0,
+                alpha=STEP_ALPHA, zorder=3, solid_capstyle='butt')
+
     ax.set_title(r'$%s$, 13 TeV, LO, $\mu_R=\mu_F=m_t$, '
                  r'BW cut $=%g\,\Gamma_t$'
                  % (PROC_TEX.replace(r'\bar t', r'\bar{t}'),
