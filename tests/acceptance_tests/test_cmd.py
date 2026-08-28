@@ -17,6 +17,7 @@ import subprocess
 import unittest
 import os
 import re
+import math
 import shutil
 import sys
 import logging
@@ -1477,6 +1478,274 @@ class TestCmdShell2(unittest.TestCase,
             self.assertAlmostEqual(madspin_report_dict[key].real/(ref_val.real * iden_dec**2), 1, places=4)
                                                                              
                                                                              
+    ############################################################################
+    # Axial ({A}) polarisation closure:  t t~ > (z > f+ f-) (z > f+ f-)
+    #
+    # The three physical polarisations of a massive vector close the
+    # production-times-decay factorisation only when the decay current is
+    # conserved at the Z leg.  In the tetrad {eps_-1, eps_0, eps_+1, eps_A}
+    # with eps_A^mu = k^mu/sqrt(k.k) the unitary-gauge numerator is
+    #
+    #     -g^{mu nu} + k^mu k^nu / M^2
+    #        = sum_i eps_i^mu eps_i^{*nu} + c_A eps_A^mu eps_A^nu ,
+    #        c_A = (Q^2 - M^2)/M^2 ,   Q^2 = k.k
+    #
+    # so the axial direction enters with a virtuality-dependent coefficient
+    # that vanishes on shell.  Its production-side amplitude is
+    # k_mu M_prod^mu and its decay-side amplitude is
+    # k_mu M_dec^mu = -2 m_f g_A ubar gamma5 v -- proportional to the mass of
+    # the decay fermions.  With e+ e- that is exactly zero and the three-state
+    # sum is exact; with ta+ ta- it is not, and the fourth state is needed.
+    #
+    # The production must also have a non-conserved current at the Z leg, which
+    # is why the process is t t~ and not the u u~ / d d~ of the tests above:
+    # for massless initial quarks k_mu M_prod^mu = 0 identically and the axial
+    # column of the production density matrix is zero whatever the daughters
+    # are (measured: 2e-15 of the largest entry, versus 0.99 for t t~).
+    ############################################################################
+
+    # A 2 -> 2 production of two off-shell Z followed by two 1 -> 2 decays.
+    # (sqrt(s), Q1, Q2, cos(theta_prod), and per-decay (cos theta, phi)).
+    _AXIAL_PS_POINTS = [
+        (600., 120.,      80.,     0.45,  0.31, 0.77, -0.62, 2.3),
+        (600.,  60.,     150.,    -0.30, -0.80, 0.20,  0.50, 5.1),
+        (800., 200.,      91.188,  0.70,  0.05, 3.00,  0.90, 1.0),
+        (500.,  91.188,   91.188,  0.10,  0.40, 0.10, -0.40, 4.0),  # both on shell
+        (1000., 300.,     45.,    -0.85, -0.25, 2.20,  0.33, 0.9),
+    ]
+
+    @staticmethod
+    def _axial_boost(p, ref):
+        """Boost the four-vector p out of the rest frame of ref into the frame
+        in which ref is the given four-vector."""
+        E = ref[0]
+        bx, by, bz = ref[1]/E, ref[2]/E, ref[3]/E
+        b2 = bx*bx + by*by + bz*bz
+        if b2 <= 0.:
+            return list(p)
+        gamma = 1.0/math.sqrt(1.0-b2)
+        bp = bx*p[1] + by*p[2] + bz*p[3]
+        g2 = (gamma-1.0)/b2
+        return [gamma*(p[0]+bp),
+                p[1] + g2*bp*bx + gamma*bx*p[0],
+                p[2] + g2*bp*by + gamma*by*p[0],
+                p[3] + g2*bp*bz + gamma*bz*p[0]]
+
+    @classmethod
+    def _axial_phase_space(cls, point, m_in, m_dau):
+        """Return (production, full, decay1, decay2) momenta for one point."""
+        sqrts, Q1, Q2, ctp, ct1, ph1, ct2, ph2 = point
+        E = sqrts/2.
+        pin = math.sqrt(E*E - m_in*m_in)
+        p1, p2 = [E, 0., 0., pin], [E, 0., 0., -pin]
+        E1 = (sqrts**2 + Q1**2 - Q2**2)/(2*sqrts)
+        k = math.sqrt(max(E1*E1 - Q1*Q1, 0.))
+        st = math.sqrt(1.-ctp*ctp)
+        q1 = [E1, k*st, 0., k*ctp]
+        q2 = [sqrts-E1, -k*st, 0., -k*ctp]
+        out = []
+        for q, Q, ct, ph in ((q1, Q1, ct1, ph1), (q2, Q2, ct2, ph2)):
+            Ed = Q/2.
+            pd = math.sqrt(max(Ed*Ed - m_dau*m_dau, 0.))
+            sd = math.sqrt(1.-ct*ct)
+            a = [Ed, pd*sd*math.cos(ph), pd*sd*math.sin(ph), pd*ct]
+            b = [Ed, -a[1], -a[2], -a[3]]
+            out.append((cls._axial_boost(a, q), cls._axial_boost(b, q)))
+        (a1, b1), (a2, b2) = out
+        return ([p1, p2, q1, q2], [p1, p2, a1, b1, a2, b2],
+                [q1, a1, b1], [q2, a2, b2])
+
+    def _axial_run(self, mdir, momenta):
+        """Compile (once) and run ./check on a standalone directory with the
+        given phase-space point, returning (matrix element, density matrix).
+
+        The momenta go through PS.input rather than through
+        edit_p_in_standalone(): that helper writes them with '%e', i.e. seven
+        significant digits, which is nowhere near enough for a closure that is
+        supposed to hold to 1e-13.
+        """
+        sub = pjoin(mdir, 'SubProcesses')
+        Pdir = pjoin(sub, [d for d in sorted(os.listdir(sub))
+                           if d.startswith('P') and
+                           os.path.isdir(pjoin(sub, d))][0])
+        with open(pjoin(Pdir, 'PS.input'), 'w') as psinput:
+            for p in momenta:
+                psinput.write(' '.join('%.17e' % x for x in p) + '\n')
+        if not os.path.exists(pjoin(Pdir, 'check')):
+            devnull = open(os.devnull, 'w')
+            subprocess.call(['make'], stdout=devnull, stderr=devnull, cwd=Pdir)
+        self.assertTrue(os.path.exists(pjoin(Pdir, 'check')),
+                        'standalone did not compile in %s' % Pdir)
+        log = subprocess.run(['./check'], cwd=Pdir, stdout=subprocess.PIPE,
+                             stderr=subprocess.STDOUT).stdout.decode()
+        me = float(re.search(r'Matrix element =\s+([\d\.eEdD\+\-]+)',
+                             log).group(1).replace('D', 'E'))
+        # 'particle N has helicity a b' lines, one per density particle,
+        # followed by one 'value is i (re,im)' line.
+        density, current = {}, []
+        for line in log.splitlines():
+            hel = re.match(r'\s*particle\s+(\d+)\s+has helicity\s+'
+                           r'(-?\d+)\s+(-?\d+)\s*$', line)
+            if hel:
+                current.append((int(hel.group(2)), int(hel.group(3))))
+                continue
+            val = re.match(r'\s*value is\s+\d+\s+\(([^,]+),([^\)]+)\)\s*$', line)
+            if val and current:
+                row = tuple(c[0] for c in current)
+                col = tuple(c[1] for c in current)
+                value = complex(float(val.group(1).replace('D', 'E')),
+                                float(val.group(2).replace('D', 'E')))
+                density[(row, col)] = value
+                if row != col:
+                    density[(col, row)] = value.conjugate()
+                current = []
+        return me, density
+
+    def _axial_closure(self, daughters, m_dau):
+        """Generate t t~ > (z > daughters)(z > daughters) three ways -- the
+        full matrix element, the production density matrix and the decay
+        density matrix -- and reconstruct the full matrix element from the
+        densities, once over the three physical polarisations and once over
+        all four.  Returns the per-phase-space-point numbers."""
+
+        mz, wz = 91.188, 2.441404
+        m_top = 173.0
+        # 'z{T0A}*': the three physical states plus the axial one, on a leg
+        # that carries the off-shell '*' so that every state -- including
+        # eps_A = k/sqrt(k.k) -- is built with the leg's own virtuality.
+        prod_dir = self.out_dir + '_axprod'
+        dec_dir = self.out_dir + '_axdec_' + daughters.replace('+', 'p').replace('-', 'm').replace(' ', '')
+        full_dir = self.out_dir + '_axfull_' + daughters.replace('+', 'p').replace('-', 'm').replace(' ', '')
+        for d in (prod_dir, dec_dir, full_dir):
+            if os.path.isdir(d):
+                shutil.rmtree(d)
+
+        self.do('import model sm')
+        self.do('generate t t~ > z{T0A}* z{T0A}* / a')
+        self.do('output standalone %s --density=3,4 --allow_axial -f' % prod_dir)
+        self.do('generate z{T0A}* > %s' % daughters)
+        self.do('output standalone %s --density=1 --allow_axial -f' % dec_dir)
+        self.do('generate t t~ > z z / a, z > %s' % daughters)
+        self.do('output standalone %s -f' % full_dir)
+
+        # A vanishing daughter mass would make this test vacuous: the axial
+        # decay amplitude is k_mu M_dec^mu = -2 m_f g_A ubar gamma5 v.
+        masses = {}
+        for line in open(pjoin(full_dir, 'Cards', 'param_card.dat')):
+            m = re.match(r'\s*(\d+)\s+([\d\.eEdD\+\-]+)\s*#\s*(\w+)\s*$', line)
+            if m:
+                masses.setdefault(m.group(3), float(m.group(2)))
+        self.assertAlmostEqual(masses['MTA'], 1.777, places=6)
+        self.assertAlmostEqual(masses['MT'], m_top, places=6)
+        self.assertAlmostEqual(masses['MZ'], mz, places=6)
+
+        states = [1, -1, 0, 4]           # ALLOW_HEL order used by check_sa.f
+        results = []
+        for point in self._AXIAL_PS_POINTS:
+            prod_p, full_p, dec1_p, dec2_p = \
+                self._axial_phase_space(point, m_top, m_dau)
+            me_prod, rho_prod = self._axial_run(prod_dir, prod_p)
+            me_full, _ = self._axial_run(full_dir, full_p)
+            me_dec1, rho_dec1 = self._axial_run(dec_dir, dec1_p)
+            me_dec2, rho_dec2 = self._axial_run(dec_dir, dec2_p)
+
+            def virtuality(p):
+                return p[0]**2 - p[1]**2 - p[2]**2 - p[3]**2
+            q1sq, q2sq = virtuality(prod_p[2]), virtuality(prod_p[3])
+
+            def reconstruct(with_axial):
+                # c_lambda = 1 on the three physical directions and
+                # (Q^2-M^2)/M^2 on the axial one -- 0 when it is left out.
+                def c(sq):
+                    return {1: 1., -1: 1., 0: 1.,
+                            4: ((sq-mz**2)/mz**2) if with_axial else 0.}
+                c1, c2 = c(q1sq), c(q2sq)
+                total = 0j
+                for a in states:
+                    for b in states:
+                        for cc in states:
+                            for d in states:
+                                w = c1[a]*c1[b]*c2[cc]*c2[d]
+                                if w == 0.:
+                                    continue
+                                total += w \
+                                    * rho_prod.get(((a, cc), (b, d)), 0j) \
+                                    * rho_dec1.get(((a,), (b,)), 0j) \
+                                    * rho_dec2.get(((cc,), (d,)), 0j)
+                # GET_INTER normalises each density matrix by its own IDEN;
+                # for 'z{T0A}*' that is the four states of the braced leg, so
+                # the two decay matrices restore a factor 4 each.
+                denom = (((q1sq-mz**2)**2 + mz**2*wz**2) *
+                         ((q2sq-mz**2)**2 + mz**2*wz**2))
+                return 16.*total.real/denom
+
+            axial_prod = max([abs(v) for k, v in rho_prod.items()
+                              if 4 in k[0]+k[1]] + [0.])
+            results.append({
+                'point': point,
+                'Q1': math.sqrt(q1sq), 'Q2': math.sqrt(q2sq),
+                'me_direct': me_full,
+                'pred3': reconstruct(False),
+                'pred4': reconstruct(True),
+                'axial_prod_fraction': axial_prod/max(abs(v) for v in rho_prod.values()),
+                'axial_dec_fraction': abs(rho_dec1.get(((4,), (4,)), 0j))/me_dec1,
+                })
+            results[-1]['rel3'] = abs(results[-1]['pred3']/me_full - 1.)
+            results[-1]['rel4'] = abs(results[-1]['pred4']/me_full - 1.)
+        return results
+
+    def test_standalone_density_axial_tau(self):
+        ############################################################################
+        # t t~ > (z > ta+ ta-)(z > ta+ ta-): with MASSIVE daughters the three
+        # physical polarisations do not close the density-matrix factorisation
+        # and the axial one does.  This is the test that fails if the {A}
+        # support regresses.
+        ############################################################################
+        results = self._axial_closure('ta+ ta-', 1.777)
+
+        for r in results:
+            misc.sprint('Q1=%.3f Q2=%.3f  direct=%.10e  3pol=%.10e (%.2e)  '
+                        '4pol=%.10e (%.2e)' % (r['Q1'], r['Q2'], r['me_direct'],
+                        r['pred3'], r['rel3'], r['pred4'], r['rel4']))
+
+            # the production current is not conserved at either Z leg ...
+            self.assertGreater(r['axial_prod_fraction'], 0.1)
+            # ... and neither is the tau decay current
+            self.assertGreater(r['axial_dec_fraction'], 1e-5)
+
+            # Four polarisations reproduce the full matrix element exactly.
+            self.assertLess(r['rel4'], 1e-10)
+
+            on_shell = (abs(r['Q1']-91.188) < 1e-6 and abs(r['Q2']-91.188) < 1e-6)
+            if on_shell:
+                # c_A = (Q^2-M^2)/M^2 = 0: the axial direction is carried by the
+                # propagator, so on shell it must drop out and three close too.
+                self.assertLess(r['rel3'], 1e-10)
+            else:
+                # Off shell it does not: the three-state sum is wrong at the
+                # per-mille level and the axial term is what is missing.
+                self.assertGreater(r['rel3'], 1e-4)
+
+    def test_standalone_density_axial_massless_daughters(self):
+        ############################################################################
+        # The same closure with e+ e-.  k_mu M_dec^mu is proportional to the
+        # daughter mass, so the axial column of the decay density matrix is
+        # exactly zero and the fourth polarisation must change nothing: three
+        # and four close equally well.  This is the control that says the
+        # per-mille gap seen with taus is a mass effect and not an artefact.
+        ############################################################################
+        results = self._axial_closure('e+ e-', 0.)
+
+        for r in results:
+            misc.sprint('Q1=%.3f Q2=%.3f  direct=%.10e  3pol=%.2e  4pol=%.2e'
+                        % (r['Q1'], r['Q2'], r['me_direct'], r['rel3'], r['rel4']))
+            # the production side is the same as in the tau test ...
+            self.assertGreater(r['axial_prod_fraction'], 0.1)
+            # ... but the decay side kills the axial column by the Dirac equation
+            self.assertLess(r['axial_dec_fraction'], 1e-20)
+            self.assertLess(r['rel3'], 1e-10)
+            self.assertLess(r['rel4'], 1e-10)
+
     def test_standalone_density_f2py(self):       
 
         ############################################################################
