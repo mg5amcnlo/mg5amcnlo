@@ -3,7 +3,7 @@
   "current_draw": {
    "check": "--check-minus passed on all 16 MG7-style PDFs",
    "commit": "claude/ms-smeft-fig5-redraw, on top of the merge of claude/ms-smeft-fig5-ctg (0a3e10d72) with claude/ms-smeft-fig5-nlo-redo (f61cd949a)",
-   "environment": "python 3.14.6, matplotlib 3.11.0, numpy 2.5.0, TeX Live 2026 (text.usetex)",
+   "environment": "python 3.14.6, matplotlib 3.11.0, TeX Live 2026 (text.usetex); numpy 2.5.0 for A-N, numpy 2.4.6 for O and P -- the PNGs are reproduced byte for byte across the two, only the PDF timestamp and font-subset tag move",
    "final_figure": "O -- smeft_fig5_O_ctg_p1_shape_final.  H with pane 2 cut to its two onshell curves, `onshell` named once in the corner, no units on the axes and decimal x ticks.  P is the same plus the one non-degenerate K-factor curve, k = n_NLO/n_LO, and is a proposal rather than the figure.",
    "histograms_git_blob": "2d596a26108b9c4e1c8d613fdfe738c51ec9304c",
    "k_factor_curve": "The requested third pane-2 curve, (NLO + K int)/NLO with K = dsigma_NLO/dsigma_LO, is NOT drawn: it is (LO + int)/LO identically in the rate convention (measured difference exactly 0.0) and, in the shape convention of O, that curve times the constant 1.0014992469 -- the same in all 20 bins to 2e-16, and a separation of 0.91 sigma.  check_k_degeneracy() measures both and refuses to draw if either fails.",
