@@ -2,7 +2,7 @@ set seed 7777
 set BW_cut 15
 set spinmode madspin
 set nb_core 6
-set ms_dir /tmp/t75run/ms_madspin/msdir
+set ms_dir /Users/omattelaer/Documents/madspin_validation_samples/t118_zz_loopinduced/ms_madspin/msdir
 decay z > e+ e-
 decay z > mu+ mu-
 launch

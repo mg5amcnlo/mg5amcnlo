@@ -205,6 +205,18 @@ def _generate(basedir, tag, proc, nb_core, logdir):
     script = pjoin(basedir, 'gen_%s.mg5' % tag)
     with open(script, 'w') as fp:
         fp.write('set auto_convert_model T\n')
+        # The model has to be imported EXPLICITLY.  ``bin/mg5_aMC <script>``
+        # never runs ``preloop``, which is the only place the default ``sm`` is
+        # loaded, so a command file that goes straight from ``set`` to
+        # ``generate ... [noborn=QCD]`` dies inside
+        # ``loop_interface.validate_model`` with ``AttributeError: 'NoneType'
+        # object has no attribute 'get'`` -- and mg5_aMC still exits 0, so the
+        # failure is silent unless the output directory is checked afterwards,
+        # which is what the check below is for.  The original run's log
+        # (``logs/gen_ggzz.log.txt``, line 72) shows ``import model sm``
+        # executing, so this line restores what was actually run; the version
+        # of this file that was committed could not have produced that log.
+        fp.write('import model sm\n')
         fp.write('generate %s\n' % proc)
         fp.write('output %s\n' % outdir)
     rc, dt = sh([pjoin(_ROOT, 'bin', 'mg5_aMC'), script],
@@ -212,8 +224,12 @@ def _generate(basedir, tag, proc, nb_core, logdir):
     copy_log(pjoin(basedir, 'gen_%s.log' % tag),
              pjoin(logdir, 'gen_%s.log.txt' % tag))
     print('%s: output in %.0f s (rc=%d)' % (tag, dt, rc))
-    if rc != 0:
-        raise RuntimeError('generation of %s failed' % tag)
+    # rc is NOT enough: mg5_aMC exits 0 on a command file whose ``generate``
+    # raised, so the only reliable evidence that the output happened is the
+    # output directory itself.
+    if rc != 0 or not os.path.exists(pjoin(outdir, 'SubProcesses')):
+        raise RuntimeError('generation of %s failed, see %s'
+                           % (tag, pjoin(basedir, 'gen_%s.log' % tag)))
     # NOTE: MG5 compiles CutTools/IREGI inside the *source* tree the first time
     # a loop-induced output is made.  Two outputs started at once race in that
     # shared directory and one of them dies with a missing include; the two
@@ -268,7 +284,8 @@ def stage_prod(basedir, nb_core, logdir):
                     tag='sample_%s' % tag)
         copy_log(pjoin(basedir, 'run_%s.log' % tag),
                  pjoin(logdir, 'run_%s.log.txt' % tag))
-        print('sample %s: %d events in %.0f s (rc=%d)' % (tag, NEVENTS, dt, rc))
+        print('sample %s: %d events in %.0f s (rc=%d)'
+              % (tag, RUN_CARD_COMMON['nevents'], dt, rc))
         if rc != 0 or not os.path.exists(lhe):
             raise RuntimeError('sample %s failed' % tag)
         info[tag] = lhe
@@ -478,10 +495,79 @@ def read_ms_result(logpath):
     return {}
 
 
+def param_card_audit(basedir, modes):
+    """Did each density mode evaluate its matrix elements on the RUN's card?
+
+    Until ``0a1007bc25de8398a56a7fb25bbd8f92eaf88e3b`` MadSpin handed the
+    compiled density library the ``Cards/param_card.dat`` that ``output
+    standalone`` writes **from the model defaults**, and nothing ever refreshed
+    it from the event banner.  Widths, branching ratios, Breit-Wigner sampling
+    and the decay generation were always right; only the matrix elements --
+    i.e. exactly the density matrices that make ``madspin``/``PA``/``onshell``
+    different from ``none`` -- were evaluated at the wrong parameters.
+
+    ``path_me/param_card.dat`` is MadSpin's copy of ``banner['slha']``, so it is
+    the card the input events were generated with.  This compares it, block by
+    block, against the card actually sitting next to each compiled matrix
+    element.  A clean audit is the evidence that these samples do not carry the
+    old bug; it is recorded in meta.json rather than merely checked, because
+    every study in this session that did not record it is now expensive to
+    reassess.
+    """
+    sys.path.insert(0, _ROOT)
+    try:
+        from models import check_param_card
+    except ImportError:
+        return {'status': 'check_param_card unavailable'}
+    out = {}
+    for mode in modes:
+        msdir = pjoin(basedir, 'ms_%s' % mode, 'msdir')
+        src = pjoin(msdir, 'param_card.dat')
+        if not os.path.exists(src):
+            out[mode] = {'status': 'no %s (mode builds no matrix element)' % src}
+            continue
+        ref = check_param_card.ParamCard(src)
+        modeout = {'source': src, 'me_cards': {}}
+        for sub in sorted(os.listdir(msdir)):
+            card = pjoin(msdir, sub, 'Cards', 'param_card.dat')
+            if not os.path.exists(card):
+                continue
+            other = check_param_card.ParamCard(card)
+            diffs = []
+            for bname, block in ref.items():
+                if bname not in other:
+                    continue
+                for key, param in block.param_dict.items():
+                    o = other[bname].param_dict.get(key)
+                    if o is None:
+                        continue
+                    if abs(param.value - o.value) > 1e-10 * max(
+                            1.0, abs(param.value)):
+                        diffs.append('%s%s: run %.10g vs me %.10g'
+                                     % (bname, list(key), param.value, o.value))
+            modeout['me_cards'][sub] = {'clean': not diffs,
+                                        'differences': diffs}
+        modeout['clean'] = all(v['clean'] for v in modeout['me_cards'].values())
+        out[mode] = modeout
+    return out
+
+
 # --------------------------------------------------------------------------
 # stage: harvest
 # --------------------------------------------------------------------------
-def stage_harvest(files, datadir, extra_meta):
+def stage_harvest(files, datadir, extra_meta, events_out=None):
+    """Histogram every sample, and optionally keep the per-event columns.
+
+    ``events_out`` is the lesson of this study's own history: the first run's
+    LHE files lived under ``/tmp``, were swept, and left the committed 1-D
+    histograms as the only record -- which made a *differential* re-reading of
+    the same events (``C_kk(m_4l)``, ``f_0(m_4l)``) impossible without a
+    complete re-run.  With the columns on disk, any later question about these
+    events that is a function of ``(m_4l, cos th1, cos th2, ...)`` is answerable
+    without MadGraph and without the LHE.  They are written OUTSIDE the
+    repository -- tens of MB per sample -- and the path is recorded in
+    meta.json.
+    """
     sys.path.insert(0, _HERE)
     import numpy as np
     import observables as O
@@ -513,6 +599,13 @@ def stage_harvest(files, datadir, extra_meta):
         meta['runs'][label]['m_mumu_range'] = [float(obs['m_mumu'].min()),
                                                float(obs['m_mumu'].max())]
         meta['runs'][label]['pt_ee_min'] = float(obs['pt_ee'].min())
+        if events_out:
+            os.makedirs(events_out, exist_ok=True)
+            cols = {'w': w}
+            cols.update({k: v for k, v in obs.items()})
+            out = pjoin(events_out, 'events_%s.npz' % label)
+            np.savez_compressed(out, **cols)
+            meta['runs'][label]['event_columns'] = out
         # Angular moments, with the error of a weighted mean.  These compress
         # each angular figure to one number with an uncertainty, which is what
         # a "these curves lie on top of each other" claim needs in order to say
@@ -556,12 +649,23 @@ def main():
                     choices=['all', 'prod', 'madspin', 'harvest'])
     ap.add_argument('--basedir', default='/tmp/zz_loopinduced_work')
     ap.add_argument('--nb-core', type=int, default=6)
+    # The sample size.  50 000 is what the original study ran and what
+    # meta.json records; it is kept as the default so that an invocation
+    # without this flag still reproduces that run.  The angular coefficients
+    # this study feeds (C_kk in particular) carry a 4/eta_l^2 = 83.15
+    # amplification on their errors, which is what makes a larger sample worth
+    # the wall time -- see the header of SPIN_COEFFICIENTS.md.
+    ap.add_argument('--nevents', type=int, default=NEVENTS)
     ap.add_argument('--modes', default=','.join(MODES))
     ap.add_argument('--data', default=pjoin(_HERE, 'data'))
     ap.add_argument('--logs', default=pjoin(_HERE, 'logs'))
+    # Where the per-event columns go.  Deliberately OUTSIDE the repository and
+    # outside /tmp: see stage_harvest's docstring.
+    ap.add_argument('--events-out', default=None)
     args = ap.parse_args()
 
     global _TIMINGS
+    RUN_CARD_COMMON['nevents'] = args.nevents
     os.makedirs(args.basedir, exist_ok=True)
     _TIMINGS = pjoin(args.basedir, 'timings.json')
     os.makedirs(args.logs, exist_ok=True)
@@ -617,6 +721,18 @@ def main():
             if os.path.exists(log):
                 extra['reported'][mode] = read_ms_result(log)
         extra['controls'] = controls(basedir)
+        # The two SHAs that make these samples different from the ones this
+        # study first published.  ``code_sha`` above records the tip; these name
+        # the two fixes that had to be in it, so that a later reader does not
+        # have to reconstruct the branch history to know whether the samples
+        # carry either bug.
+        extra['required_fixes'] = {
+            'helicity_frame_observable':
+                '0d62a68c02c696e5a81dfdefe078fe2ddb97567b',
+            'madspin_me_param_card':
+                '0a1007bc25de8398a56a7fb25bbd8f92eaf88e3b',
+        }
+        extra['param_card_audit'] = param_card_audit(basedir, modes)
         if os.path.exists(_TIMINGS):
             extra['wall_times'] = json.load(open(_TIMINGS))
         try:
@@ -638,7 +754,7 @@ def main():
             if got:
                 extra['integration_error'][key] = got[1]
                 extra.setdefault('integration_sigma', {})[key] = got[0]
-        stage_harvest(files, args.data, extra)
+        stage_harvest(files, args.data, extra, args.events_out)
 
 
 if __name__ == '__main__':

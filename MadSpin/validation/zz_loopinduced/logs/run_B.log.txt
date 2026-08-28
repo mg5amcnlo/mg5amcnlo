@@ -1,3 +1,5 @@
+/Users/omattelaer/Documents/madspin_validation_samples/t118_zz_loopinduced/gg4l/bin/internal/file_writers.py:188: SyntaxWarning: "\s" is an invalid escape sequence. Such sequences will not work in the future. Did you mean "\\s"? A raw string is also an option.
+  keyword_pairs = {r'^if.+then\s*$': ('^end\s*if', 2),
 ************************************************************
 *                                                          *
 *                      W E L C O M E to                    *
@@ -19,247 +21,447 @@
 *                                                          *
 ************************************************************
 INFO: load configuration from /Users/omattelaer/.mg5/mg5_configuration.txt  
-INFO: load configuration from /private/tmp/t75run/gg4l/Cards/me5_configuration.txt  
-INFO: load configuration from /private/tmp/t75/input/mg5_configuration.txt  
-INFO: load configuration from /private/tmp/t75run/gg4l/Cards/me5_configuration.txt  
+INFO: load configuration from /Users/omattelaer/Documents/madspin_validation_samples/t118_zz_loopinduced/gg4l/Cards/me5_configuration.txt  
+INFO: load configuration from /private/tmp/t118/input/mg5_configuration.txt  
+INFO: load configuration from /Users/omattelaer/Documents/madspin_validation_samples/t118_zz_loopinduced/gg4l/Cards/me5_configuration.txt  
 Using default gzip "gzip". Set another one in ./input/mg5_configuration.txt
-import command /tmp/t75run/runB.cmd
+import command /Users/omattelaer/Documents/madspin_validation_samples/t118_zz_loopinduced/run_B.cmd
 set run_mode 2
 INFO: This option will be the default in any output that you are going to create in this session. 
 INFO: In order to keep this changes permanent please run 'save options' 
-set nb_core 11
+set nb_core 12
 INFO: This option will be the default in any output that you are going to create in this session. 
 INFO: In order to keep this changes permanent please run 'save options' 
 generate_events prod -f
 stty: stdin isn't a terminal
 [1;34mvalue '[]' for entry 'bypass_check' is not valid. Preserving previous value: '[]'.
 allowed values are any list composed of the following entries: partonshower[0m
-Generating 50000 events with run name prod
+Generating 200000 events with run name prod
 survey  prod 
 INFO: compile directory 
+initMadLoop -r -f
+Initializing MadLoop loop-induced matrix elements (this can take some time)...
+MadLoop initialization finished.
 compile Source Directory
-Using random number seed offset = 30
+Using random number seed offset = 4321
 INFO: Running Survey 
 Creating Jobs
 Working on SubProcesses
 INFO:     P0_gg_llll  
-INFO:  Idle: 26,  Running: 18,  Completed: 0 [ current time: 11h17 ] 
-INFO:  Idle: 24,  Running: 18,  Completed: 2 [  3.3s  ] 
-INFO:  Idle: 22,  Running: 18,  Completed: 5 [  9.6s  ] 
-INFO:  Idle: 9,  Running: 18,  Completed: 20 [  12.6s  ] 
-INFO: P0_gg_llll/G1.07 is at 0.000714 +- 0.000159 pb. Now submitting iteration #2. 
+INFO:  Idle: 26,  Running: 18,  Completed: 0 [ current time: 12h52 ] 
+INFO:  Idle: 25,  Running: 18,  Completed: 1 [  6.2s  ] 
+INFO:  Idle: 22,  Running: 18,  Completed: 5 [  22.9s  ] 
+INFO:  Idle: 13,  Running: 18,  Completed: 16 [  27.4s  ] 
+INFO: P0_gg_llll/G1.07 is at 0.00107 +- 0.00053 pb. Now submitting iteration #2. 
 INFO: Survey finished for P0_gg_llll/G1.05 [0 cross] 
 INFO: Survey finished for P0_gg_llll/G1.04 [0 cross] 
-INFO: P0_gg_llll/G5.17 is at 6.74e-06 +- 2.62e-07 pb. Now submitting iteration #2. 
+INFO: P0_gg_llll/G5.17 is at 6.32e-06 +- 2.45e-07 pb. Now submitting iteration #2. 
+INFO:  Idle: 6,  Running: 18,  Completed: 34 [  31.1s  ] 
+INFO:  Idle: 5,  Running: 18,  Completed: 35 [  37.9s  ] 
 INFO: Survey finished for P0_gg_llll/G5.14 [0 cross] 
-INFO:  Idle: 3,  Running: 18,  Completed: 37 [  15.7s  ] 
-INFO: P0_gg_llll/G5.22 is at 0.00241 +- 0.000115 pb. Now submitting iteration #2. 
-INFO: P0_gg_llll/G5.23 is at 0.000119 +- 9.92e-06 pb. Now submitting iteration #2. 
-INFO: P0_gg_llll/G1.08 is at 1.5e-06 +- 9.73e-07 pb. Now submitting iteration #2. 
-INFO:  Idle: 6,  Running: 18,  Completed: 50 [  19s  ] 
-INFO: P0_gg_llll/G5.25 is at 0.000103 +- 6.04e-06 pb. Now submitting iteration #2. 
-INFO: P0_gg_llll/G1.07 is at 0.000732 +- 9.53e-06 pb. Now submitting iteration #3. 
+INFO: P0_gg_llll/G5.22 is at 0.00282 +- 0.000199 pb. Now submitting iteration #2. 
+INFO:  Idle: 3,  Running: 18,  Completed: 44 [  41.9s  ] 
+INFO: P0_gg_llll/G5.23 is at 0.000112 +- 7.96e-06 pb. Now submitting iteration #2. 
+INFO: P0_gg_llll/G1.08 is at 2.21e-06 +- 1.06e-06 pb. Now submitting iteration #2. 
+INFO: P0_gg_llll/G5.25 is at 0.000109 +- 8.48e-06 pb. Now submitting iteration #2. 
+INFO:  Idle: 8,  Running: 18,  Completed: 52 [  46s  ] 
+Note: The following floating-point exceptions are signalling: IEEE_INVALID_FLAG IEEE_DIVIDE_BY_ZERO
+Note: The following floating-point exceptions are signalling: IEEE_INVALID_FLAG IEEE_DIVIDE_BY_ZERO
+Note: The following floating-point exceptions are signalling: IEEE_INVALID_FLAG IEEE_DIVIDE_BY_ZERO
+Note: The following floating-point exceptions are signalling: IEEE_INVALID_FLAG IEEE_DIVIDE_BY_ZERO
+INFO:  Idle: 4,  Running: 18,  Completed: 58 [  50.6s  ] 
+INFO: P0_gg_llll/G1.07 is at 0.00111 +- 2.31e-05 pb. Now submitting iteration #3. 
 INFO: Survey finished for P0_gg_llll/G5.16 [0 cross] 
-INFO: P0_gg_llll/G5.17 is at 6.22e-06 +- 2.13e-07 pb. Now submitting iteration #3. 
-INFO:  Idle: 6,  Running: 18,  Completed: 65 [  23.1s  ] 
-Note: The following floating-point exceptions are signalling: IEEE_INVALID_FLAG IEEE_DIVIDE_BY_ZERO
-Note: The following floating-point exceptions are signalling: IEEE_INVALID_FLAG IEEE_DIVIDE_BY_ZERO
-Note: The following floating-point exceptions are signalling: IEEE_INVALID_FLAG IEEE_DIVIDE_BY_ZERO
-Note: The following floating-point exceptions are signalling: IEEE_INVALID_FLAG IEEE_DIVIDE_BY_ZERO
-INFO: P0_gg_llll/G5.22 is at 0.00255 +- 8.45e-05 pb. Now submitting iteration #3. 
-INFO: P0_gg_llll/G5.23 is at 0.000115 +- 2.02e-06 pb. Now submitting iteration #3. 
 INFO: Survey finished for P0_gg_llll/G5.26 [0 cross] 
-INFO: P0_gg_llll/G1.08 is at 1.69e-06 +- 1.12e-07 pb. Now submitting iteration #3. 
-INFO:  Idle: 2,  Running: 18,  Completed: 85 [  31.8s  ] 
-INFO: P0_gg_llll/G5.25 is at 0.00011 +- 5.07e-06 pb. Now submitting iteration #3. 
-INFO: Survey finished for P0_gg_llll/G5.17 at 6.16e-06 +- 8.46e-08 pb 
-INFO: Survey finished for P0_gg_llll/G1.07 at 0.000712 +- 1.16e-05 pb 
-INFO:  Idle: 0,  Running: 13,  Completed: 98 [  34.9s  ] 
-INFO: Survey finished for P0_gg_llll/G5.22 at 0.0026 +- 3.92e-05 pb 
-INFO: Survey finished for P0_gg_llll/G5.23 at 0.0001126 +- 1.09e-06 pb 
-INFO:  Idle: 0,  Running: 5,  Completed: 108 [  40.7s  ] 
-INFO: P0_gg_llll/G1.08 is at 1.48e-06 +- 2.7e-07 pb. Now submitting iteration #4. 
-INFO: Survey finished for P0_gg_llll/G5.25 at 0.000109 +- 1.54e-06 pb 
-INFO:  Idle: 0,  Running: 3,  Completed: 116 [  55.3s  ] 
-INFO: P0_gg_llll/G1.08 is at 4.05e-05 +- 7.87e-05 pb. Now submitting iteration #5. 
-INFO:  Idle: 0,  Running: 3,  Completed: 121 [  1m 23s  ] 
-INFO: Survey finished for P0_gg_llll/G1.08 at 3.94e-05 +- 6.29e-05 pb 
-INFO:  Idle: 0,  Running: 0,  Completed: 125 [  1m 23s  ] 
+INFO: P0_gg_llll/G5.17 is at 6.11e-06 +- 9.4e-08 pb. Now submitting iteration #3. 
+INFO: P0_gg_llll/G5.22 is at 0.00268 +- 5.39e-05 pb. Now submitting iteration #3. 
+INFO:  Idle: 3,  Running: 18,  Completed: 74 [  54.1s  ] 
+INFO:  Idle: 0,  Running: 18,  Completed: 77 [  57.3s  ] 
+INFO: P0_gg_llll/G5.23 is at 0.0001113 +- 6.03e-07 pb. Now submitting iteration #3. 
+INFO: P0_gg_llll/G5.25 is at 0.000115 +- 2.98e-06 pb. Now submitting iteration #3. 
+INFO: P0_gg_llll/G1.08 is at 7.01e-06 +- 9.46e-06 pb. Now submitting iteration #3. 
+INFO:  Idle: 5,  Running: 18,  Completed: 86 [  1m 5s  ] 
+INFO: Survey finished for P0_gg_llll/G5.17 at 6.155e-06 +- 3.94e-08 pb 
+INFO: P0_gg_llll/G1.07 is at 0.000923 +- 0.000126 pb. Now submitting iteration #4. 
+INFO:  Idle: 0,  Running: 18,  Completed: 97 [  1m 10s  ] 
+INFO: Survey finished for P0_gg_llll/G5.22 at 0.002672 +- 2.05e-05 pb 
+INFO: Survey finished for P0_gg_llll/G5.23 at 0.0001105 +- 3.67e-07 pb 
+INFO:  Idle: 0,  Running: 10,  Completed: 107 [  1m 13s  ] 
+INFO:  Idle: 0,  Running: 9,  Completed: 108 [  1m 19s  ] 
+INFO: Survey finished for P0_gg_llll/G5.25 at 0.000111 +- 1.43e-06 pb 
+INFO: P0_gg_llll/G1.08 is at 5.7e-06 +- 3.56e-06 pb. Now submitting iteration #4. 
+INFO:  Idle: 0,  Running: 7,  Completed: 116 [  1m 33s  ] 
+INFO: P0_gg_llll/G1.07 is at 0.0008 +- 6.12e-05 pb. Now submitting iteration #5. 
+INFO:  Idle: 0,  Running: 7,  Completed: 121 [  1m 44s  ] 
+INFO: P0_gg_llll/G1.08 is at 5.72e-06 +- 2.33e-06 pb. Now submitting iteration #5. 
+INFO:  Idle: 0,  Running: 7,  Completed: 126 [  2m 24s  ] 
+INFO: Survey finished for P0_gg_llll/G1.07 at 0.000718 +- 3.33e-05 pb 
+INFO:  Idle: 0,  Running: 3,  Completed: 131 [  2m 32s  ] 
+INFO: Survey finished for P0_gg_llll/G1.08 at 9.07e-06 +- 4.03e-06 pb 
+INFO:  Idle: 0,  Running: 0,  Completed: 135 [  2m 32s  ] 
 INFO: End survey 
-refine 50000
+refine 200000
 Creating Jobs
-INFO: Refine results to 50000 
-INFO: Generating 50000.0 unweighted events. 
+INFO: Refine results to 200000 
+INFO: Generating 200000.0 unweighted events. 
 sum of cpu time of last step: 0 second
-INFO: Effective Luminosity 16046177.627968678 pb^-1 
+INFO: Effective Luminosity 63403038.93740897 pb^-1 
 INFO: need to improve 5 channels 
-[1;34mWARNING: Channel G1.07//private/tmp/t75run/gg4l/SubProcesses/P0_gg_llll has a very low efficiency of unweighting. Might not be possible to reach target [0m
-- Current estimate of cross-section: 0.0035833456 +- 7.503572030510152e-05
-INFO:  Idle: 0,  Running: 14,  Completed: 0 [ current time: 11h18 ] 
-INFO:  Idle: 1,  Running: 13,  Completed: 1 [  10.5s  ] 
-INFO: P0_gg_llll/G1.08 is at 1/134 (0.75%) event. Resubmit 3 job at iteration 1. 
-INFO:  Idle: 0,  Running: 15,  Completed: 3 [  21.9s  ] 
-INFO: P0_gg_llll/G1.08 is at 1/180 (0.65%) event. Resubmit 8 job at iteration 2. 
-INFO:  Idle: 3,  Running: 18,  Completed: 7 [  26.1s  ] 
-INFO:  Idle: 2,  Running: 18,  Completed: 8 [  34.2s  ] 
-INFO: P0_gg_llll/G5.25 is at 592/1775 (33%) event. Resubmit 1 job at iteration 1. 
-INFO:  Idle: 0,  Running: 15,  Completed: 14 [  38.3s  ] 
-INFO:  Idle: 0,  Running: 14,  Completed: 15 [  46.5s  ] 
-INFO: P0_gg_llll/G1.08 is at 1/297 ('0.42%') event. Resubmit 12 job at iteration 3. 
-INFO:  Idle: 6,  Running: 18,  Completed: 18 [  59.8s  ] 
-INFO:  Idle: 2,  Running: 18,  Completed: 23 [  1m 4s  ] 
-INFO:  Idle: 1,  Running: 18,  Completed: 24 [  1m 14s  ] 
-INFO: P0_gg_llll/G5.25 is at 946/1774 (53%) event. Resubmit 2 job at iteration 2. 
-INFO:  Idle: 0,  Running: 15,  Completed: 30 [  1m 19s  ] 
-INFO:  Idle: 1,  Running: 14,  Completed: 31 [  1m 23s  ] 
-INFO: P0_gg_llll/G5.23 is at 775/1752 (44%) event. Resubmit 1 job at iteration 1. 
-INFO:  Idle: 1,  Running: 14,  Completed: 33 [  1m 28s  ] 
-INFO: P0_gg_llll/G1.08 is at 1/282 ('0.35%') event. Resubmit 18 job at iteration 4. 
-INFO:  Idle: 13,  Running: 18,  Completed: 35 [  1m 41s  ] 
-INFO:  Idle: 9,  Running: 18,  Completed: 39 [  1m 48s  ] 
-INFO:  Idle: 8,  Running: 18,  Completed: 41 [  1m 56s  ] 
-INFO:  Idle: 4,  Running: 18,  Completed: 45 [  2m 2s  ] 
-INFO:  Idle: 2,  Running: 18,  Completed: 47 [  2m 10s  ] 
-INFO: found enough event for P0_gg_llll/G5.25 
-INFO:  Idle: 0,  Running: 15,  Completed: 52 [  2m 16s  ] 
-INFO:  Idle: 0,  Running: 13,  Completed: 54 [  2m 23s  ] 
-INFO: P0_gg_llll/G1.08 is at 3/228 ('1.3%') event. Resubmit 27 job at iteration 5. 
-INFO:  Idle: 20,  Running: 18,  Completed: 57 [  2m 37s  ] 
-INFO:  Idle: 14,  Running: 18,  Completed: 63 [  2m 51s  ] 
-INFO:  Idle: 8,  Running: 18,  Completed: 70 [  3m 5s  ] 
-INFO:  Idle: 2,  Running: 18,  Completed: 76 [  3m 8s  ] 
-INFO:  Idle: 1,  Running: 18,  Completed: 77 [  3m 18s  ] 
-INFO: P0_gg_llll/G5.23 is at 1473/1765 (83%) event. Resubmit 1 job at iteration 2. 
-INFO:  Idle: 0,  Running: 13,  Completed: 84 [  3m 21s  ] 
-INFO:  Idle: 1,  Running: 12,  Completed: 85 [  3m 31s  ] 
-INFO: P0_gg_llll/G1.08 is at 1/241 ('0.42%') event. Resubmit 40 job at iteration 6. 
-INFO:  Idle: 33,  Running: 18,  Completed: 87 [  3m 46s  ] 
-INFO:  Idle: 27,  Running: 18,  Completed: 93 [  4m 0s  ] 
-INFO:  Idle: 21,  Running: 18,  Completed: 99 [  4m 12s  ] 
-INFO:  Idle: 13,  Running: 18,  Completed: 108 [  4m 15s  ] 
-INFO:  Idle: 6,  Running: 18,  Completed: 116 [  4m 25s  ] 
-INFO: P0_gg_llll/G5.22 is at 3777/43660 (8.7%) event. Resubmit 10 job at iteration 1. 
-INFO:  Idle: 7,  Running: 18,  Completed: 125 [  4m 28s  ] 
-INFO: P0_gg_llll/G1.07 is at 1023/11039 (9.3%) event. Resubmit 18 job at iteration 1. 
-INFO:  Idle: 15,  Running: 18,  Completed: 135 [  4m 39s  ] 
-INFO:  Idle: 12,  Running: 18,  Completed: 139 [  4m 43s  ] 
-INFO:  Idle: 12,  Running: 18,  Completed: 140 [  4m 50s  ] 
-INFO:  Idle: 11,  Running: 18,  Completed: 141 [  10m 15s  ] 
-INFO:  Idle: 2,  Running: 18,  Completed: 151 [  10m 22s  ] 
+[1;34mWARNING: Channel G1.08//Users/omattelaer/Documents/madspin_validation_samples/t118_zz_loopinduced/gg4l/SubProcesses/P0_gg_llll has a very low efficiency of unweighting. Might not be possible to reach target [0m
+[1;34mWARNING: Channel G5.22//Users/omattelaer/Documents/madspin_validation_samples/t118_zz_loopinduced/gg4l/SubProcesses/P0_gg_llll has a very low efficiency of unweighting. Might not be possible to reach target [0m
+[1;34mWARNING: Channel G1.07//Users/omattelaer/Documents/madspin_validation_samples/t118_zz_loopinduced/gg4l/SubProcesses/P0_gg_llll has a very low efficiency of unweighting. Might not be possible to reach target [0m
+- Current estimate of cross-section: 0.0036275706 +- 3.933994469270033e-05
+INFO:  Idle: 0,  Running: 14,  Completed: 0 [ current time: 12h55 ] 
+INFO:  Idle: 1,  Running: 13,  Completed: 1 [  7m 24s  ] 
+INFO: P0_gg_llll/G5.25 is at 177/7102 (2.5%) event. Resubmit 3 job at iteration 1. 
+INFO:  Idle: 0,  Running: 16,  Completed: 2 [  7m 49s  ] 
+INFO:  Idle: 1,  Running: 15,  Completed: 3 [  9m 16s  ] 
+INFO: P0_gg_llll/G5.23 is at 552/6947 (7.9%) event. Resubmit 3 job at iteration 1. 
+INFO:  Idle: 0,  Running: 18,  Completed: 4 [  9m 49s  ] 
+INFO:  Idle: 3,  Running: 6,  Completed: 16 [  11m 1s  ] 
+INFO: P0_gg_llll/G1.08 is at 23/1480 (1.6%) event. Resubmit 10 job at iteration 1. 
+INFO: P0_gg_llll/G5.22 is at 2818/172319 (1.6%) event. Resubmit 10 job at iteration 1. 
+INFO: P0_gg_llll/G1.07 is at 544/44569 (1.2%) event. Resubmit 10 job at iteration 1. 
+INFO:  Idle: 18,  Running: 18,  Completed: 19 [  11m 40s  ] 
+INFO:  Idle: 16,  Running: 18,  Completed: 22 [  16m 16s  ] 
+INFO:  Idle: 14,  Running: 18,  Completed: 25 [  21m 1s  ] 
+INFO:  Idle: 10,  Running: 18,  Completed: 29 [  25m 25s  ] 
+INFO:  Idle: 3,  Running: 18,  Completed: 37 [  26m 36s  ] 
+INFO: P0_gg_llll/G5.25 is at 577/7023 (8.2%) event. Resubmit 8 job at iteration 2. 
+INFO: P0_gg_llll/G5.23 is at 1511/6981 (22%) event. Resubmit 8 job at iteration 2. 
+INFO: P0_gg_llll/G1.08 is at 54/1539 (3.5%) event. Resubmit 25 job at iteration 2. 
+INFO:  Idle: 38,  Running: 18,  Completed: 43 [  31m 40s  ] 
+INFO:  Idle: 35,  Running: 18,  Completed: 46 [  35m 49s  ] 
+INFO:  Idle: 25,  Running: 18,  Completed: 58 [  40m 17s  ] 
+INFO:  Idle: 22,  Running: 18,  Completed: 61 [  41m 50s  ] 
+INFO:  Idle: 19,  Running: 18,  Completed: 64 [  46m 41s  ] 
+INFO:  Idle: 18,  Running: 18,  Completed: 66 [  51m 50s  ] 
+INFO:  Idle: 11,  Running: 18,  Completed: 74 [  53m 38s  ] 
+INFO:  Idle: 9,  Running: 18,  Completed: 76 [  55m 27s  ] 
+INFO:  Idle: 6,  Running: 18,  Completed: 79 [  57m 18s  ] 
+INFO:  Idle: 3,  Running: 18,  Completed: 82 [  1h 1m  ] 
+INFO: P0_gg_llll/G5.22 is at 9842/171926 (5.7%) event. Resubmit 25 job at iteration 2. 
+INFO: P0_gg_llll/G1.07 is at 1942/43763 (4.4%) event. Resubmit 25 job at iteration 2. 
+INFO: P0_gg_llll/G5.25 is at 1190/7025 ('17%') event. Resubmit 12 job at iteration 3. 
+INFO: P0_gg_llll/G5.23 is at 337/6996 ('4.8%') event. Resubmit 12 job at iteration 3. 
+INFO:  Idle: 73,  Running: 18,  Completed: 86 [  1h 3m  ] 
+INFO:  Idle: 71,  Running: 18,  Completed: 88 [  1h 7m  ] 
+INFO:  Idle: 63,  Running: 18,  Completed: 96 [  1h 9m  ] 
+INFO:  Idle: 58,  Running: 18,  Completed: 101 [  1h 11m  ] 
+INFO:  Idle: 56,  Running: 18,  Completed: 104 [  1h 15m  ] 
+INFO:  Idle: 54,  Running: 18,  Completed: 106 [  1h 19m  ] 
+INFO:  Idle: 46,  Running: 18,  Completed: 114 [  1h 22m  ] 
+INFO:  Idle: 41,  Running: 18,  Completed: 119 [  1h 24m  ] 
+INFO:  Idle: 38,  Running: 18,  Completed: 122 [  1h 29m  ] 
+INFO:  Idle: 35,  Running: 18,  Completed: 125 [  1h 33m  ] 
+INFO:  Idle: 27,  Running: 18,  Completed: 134 [  1h 36m  ] 
+INFO:  Idle: 24,  Running: 18,  Completed: 137 [  1h 38m  ] 
+INFO:  Idle: 22,  Running: 18,  Completed: 139 [  1h 41m  ] 
+INFO:  Idle: 21,  Running: 18,  Completed: 140 [  1h 43m  ] 
+INFO:  Idle: 17,  Running: 18,  Completed: 144 [  1h 46m  ] 
+INFO:  Idle: 9,  Running: 18,  Completed: 152 [  1h 49m  ] 
+INFO:  Idle: 4,  Running: 18,  Completed: 158 [  1h 51m  ] 
+INFO: P0_gg_llll/G1.08 is at 130/1560 ('8.4%') event. Resubmit 37 job at iteration 3. 
+INFO: P0_gg_llll/G1.07 is at 1847/43736 ('4.2%') event. Resubmit 37 job at iteration 3. 
+INFO: P0_gg_llll/G5.22 is at 27515/172061 ('16%') event. Resubmit 37 job at iteration 3. 
+INFO:  Idle: 106,  Running: 18,  Completed: 168 [  1h 57m  ] 
+INFO:  Idle: 99,  Running: 18,  Completed: 175 [  1h 59m  ] 
+INFO:  Idle: 95,  Running: 18,  Completed: 179 [  2h 2m  ] 
+INFO:  Idle: 95,  Running: 18,  Completed: 180 [  2h 5m  ] 
+INFO:  Idle: 89,  Running: 18,  Completed: 186 [  2h 8m  ] 
+INFO:  Idle: 84,  Running: 18,  Completed: 191 [  2h 11m  ] 
+INFO:  Idle: 78,  Running: 18,  Completed: 197 [  2h 14m  ] 
+INFO:  Idle: 77,  Running: 18,  Completed: 198 [  2h 20m  ] 
+INFO:  Idle: 71,  Running: 18,  Completed: 204 [  2h 23m  ] 
+INFO:  Idle: 63,  Running: 18,  Completed: 212 [  2h 26m  ] 
+INFO:  Idle: 60,  Running: 18,  Completed: 215 [  2h 29m  ] 
+INFO:  Idle: 59,  Running: 18,  Completed: 216 [  2h 32m  ] 
+INFO:  Idle: 57,  Running: 18,  Completed: 219 [  2h 35m  ] 
+INFO:  Idle: 49,  Running: 18,  Completed: 227 [  2h 38m  ] 
+INFO:  Idle: 43,  Running: 18,  Completed: 233 [  2h 41m  ] 
+INFO:  Idle: 42,  Running: 18,  Completed: 234 [  2h 47m  ] 
+INFO:  Idle: 36,  Running: 18,  Completed: 240 [  2h 50m  ] 
+INFO:  Idle: 31,  Running: 18,  Completed: 245 [  2h 53m  ] 
+INFO:  Idle: 25,  Running: 18,  Completed: 251 [  2h 56m  ] 
+INFO:  Idle: 24,  Running: 18,  Completed: 252 [  3h 2m  ] 
+INFO:  Idle: 19,  Running: 18,  Completed: 258 [  3h 5m  ] 
+INFO:  Idle: 11,  Running: 18,  Completed: 266 [  3h 8m  ] 
+INFO:  Idle: 8,  Running: 18,  Completed: 269 [  3h 11m  ] 
+INFO:  Idle: 7,  Running: 18,  Completed: 270 [  3h 14m  ] 
+INFO: P0_gg_llll/G5.25 is at 3637/7018 ('52%') event. Resubmit 12 job at iteration 4. 
 INFO: found enough event for P0_gg_llll/G5.23 
-INFO: P0_gg_llll/G5.22 is at 13162/43534 (30%) event. Resubmit 25 job at iteration 2. 
-INFO: P0_gg_llll/G1.08 is at 19/243 ('7.8%') event. Resubmit 60 job at iteration 7. 
-INFO:  Idle: 82,  Running: 18,  Completed: 156 [  10m 32s  ] 
-INFO:  Idle: 77,  Running: 18,  Completed: 161 [  10m 41s  ] 
-INFO:  Idle: 76,  Running: 18,  Completed: 162 [  14m 59s  ] 
-INFO:  Idle: 67,  Running: 18,  Completed: 172 [  15m 3s  ] 
-INFO:  Idle: 65,  Running: 18,  Completed: 174 [  15m 10s  ] 
-INFO:  Idle: 61,  Running: 18,  Completed: 178 [  15m 15s  ] 
-INFO:  Idle: 60,  Running: 18,  Completed: 179 [  15m 21s  ] 
-INFO:  Idle: 59,  Running: 18,  Completed: 180 [  15m 36s  ] 
-INFO:  Idle: 58,  Running: 18,  Completed: 181 [  15m 51s  ] 
-INFO:  Idle: 57,  Running: 18,  Completed: 182 [  16m 6s  ] 
-INFO:  Idle: 56,  Running: 18,  Completed: 183 [  16m 23s  ] 
-INFO:  Idle: 55,  Running: 18,  Completed: 184 [  16m 37s  ] 
-INFO:  Idle: 54,  Running: 18,  Completed: 185 [  16m 52s  ] 
-INFO:  Idle: 53,  Running: 18,  Completed: 186 [  17m 7s  ] 
-INFO:  Idle: 52,  Running: 18,  Completed: 187 [  17m 23s  ] 
-INFO:  Idle: 51,  Running: 18,  Completed: 188 [  17m 39s  ] 
-INFO:  Idle: 50,  Running: 18,  Completed: 189 [  17m 55s  ] 
-INFO:  Idle: 49,  Running: 18,  Completed: 190 [  18m 15s  ] 
-INFO:  Idle: 48,  Running: 18,  Completed: 191 [  18m 32s  ] 
-INFO:  Idle: 47,  Running: 18,  Completed: 192 [  18m 47s  ] 
-INFO:  Idle: 46,  Running: 18,  Completed: 193 [  19m 1s  ] 
-INFO:  Idle: 45,  Running: 18,  Completed: 194 [  19m 16s  ] 
-INFO:  Idle: 44,  Running: 18,  Completed: 195 [  19m 29s  ] 
-INFO:  Idle: 32,  Running: 18,  Completed: 207 [  19m 34s  ] 
-INFO:  Idle: 31,  Running: 18,  Completed: 208 [  19m 39s  ] 
-INFO:  Idle: 27,  Running: 18,  Completed: 212 [  19m 43s  ] 
-INFO:  Idle: 15,  Running: 18,  Completed: 225 [  19m 48s  ] 
-INFO:  Idle: 14,  Running: 18,  Completed: 226 [  19m 53s  ] 
-INFO:  Idle: 10,  Running: 18,  Completed: 230 [  19m 56s  ] 
-INFO: P0_gg_llll/G1.07 is at 727/11165 (6.5%) event. Resubmit 45 job at iteration 2. 
-INFO: P0_gg_llll/G5.22 is at 36675/43542 ('84%') event. Resubmit 8 job at iteration 3. 
-INFO:  Idle: 49,  Running: 18,  Completed: 244 [  19m 59s  ] 
-INFO:  Idle: 48,  Running: 18,  Completed: 245 [  20m 2s  ] 
-INFO:  Idle: 47,  Running: 18,  Completed: 246 [  20m 7s  ] 
-INFO:  Idle: 43,  Running: 18,  Completed: 250 [  20m 10s  ] 
-INFO:  Idle: 35,  Running: 18,  Completed: 259 [  24m 16s  ] 
-INFO:  Idle: 31,  Running: 18,  Completed: 263 [  24m 21s  ] 
-INFO:  Idle: 30,  Running: 18,  Completed: 264 [  24m 25s  ] 
-INFO:  Idle: 22,  Running: 18,  Completed: 272 [  24m 28s  ] 
-INFO:  Idle: 17,  Running: 18,  Completed: 277 [  28m 31s  ] 
-INFO:  Idle: 13,  Running: 18,  Completed: 281 [  28m 37s  ] 
-INFO:  Idle: 10,  Running: 18,  Completed: 284 [  28m 41s  ] 
-INFO:  Idle: 1,  Running: 18,  Completed: 293 [  28m 44s  ] 
-INFO: P0_gg_llll/G1.08 is at 37/249 ('15%') event. Resubmit 90 job at iteration 8. 
-INFO:  Idle: 89,  Running: 18,  Completed: 295 [  28m 53s  ] 
-INFO:  Idle: 88,  Running: 18,  Completed: 296 [  29m 7s  ] 
-INFO:  Idle: 87,  Running: 18,  Completed: 297 [  29m 21s  ] 
-INFO:  Idle: 86,  Running: 18,  Completed: 298 [  29m 36s  ] 
-INFO:  Idle: 85,  Running: 18,  Completed: 299 [  29m 50s  ] 
-INFO:  Idle: 84,  Running: 18,  Completed: 300 [  30m 5s  ] 
-INFO:  Idle: 83,  Running: 18,  Completed: 301 [  30m 20s  ] 
-INFO:  Idle: 82,  Running: 18,  Completed: 302 [  30m 37s  ] 
-INFO:  Idle: 81,  Running: 18,  Completed: 303 [  30m 53s  ] 
-INFO:  Idle: 80,  Running: 18,  Completed: 304 [  31m 7s  ] 
-INFO:  Idle: 79,  Running: 18,  Completed: 305 [  31m 22s  ] 
-INFO:  Idle: 78,  Running: 18,  Completed: 306 [  31m 39s  ] 
-INFO:  Idle: 77,  Running: 18,  Completed: 307 [  31m 57s  ] 
-INFO:  Idle: 76,  Running: 18,  Completed: 308 [  32m 14s  ] 
-INFO:  Idle: 75,  Running: 18,  Completed: 309 [  32m 32s  ] 
-INFO:  Idle: 74,  Running: 18,  Completed: 310 [  32m 48s  ] 
-INFO:  Idle: 73,  Running: 18,  Completed: 311 [  32m 52s  ] 
-INFO:  Idle: 69,  Running: 18,  Completed: 315 [  32m 58s  ] 
-INFO:  Idle: 60,  Running: 18,  Completed: 324 [  33m 1s  ] 
-INFO:  Idle: 57,  Running: 18,  Completed: 329 [  33m 6s  ] 
-INFO:  Idle: 53,  Running: 18,  Completed: 333 [  33m 12s  ] 
-INFO:  Idle: 43,  Running: 18,  Completed: 343 [  33m 15s  ] 
-INFO:  Idle: 39,  Running: 18,  Completed: 347 [  33m 20s  ] 
-INFO:  Idle: 35,  Running: 18,  Completed: 351 [  33m 25s  ] 
-INFO:  Idle: 23,  Running: 18,  Completed: 363 [  33m 28s  ] 
-INFO:  Idle: 21,  Running: 18,  Completed: 365 [  33m 33s  ] 
-INFO:  Idle: 16,  Running: 18,  Completed: 370 [  33m 38s  ] 
-INFO:  Idle: 7,  Running: 18,  Completed: 379 [  33m 41s  ] 
-INFO:  Idle: 4,  Running: 18,  Completed: 382 [  33m 44s  ] 
+INFO:  Idle: 11,  Running: 18,  Completed: 278 [  3h 17m  ] 
+INFO: P0_gg_llll/G1.08 is at 34/1574 ('2.2%') event. Resubmit 55 job at iteration 4. 
+INFO: P0_gg_llll/G1.07 is at 5552/43733 ('13%') event. Resubmit 55 job at iteration 4. 
+INFO:  Idle: 114,  Running: 18,  Completed: 285 [  3h 20m  ] 
+INFO:  Idle: 108,  Running: 18,  Completed: 291 [  3h 23m  ] 
+INFO:  Idle: 100,  Running: 18,  Completed: 299 [  3h 29m  ] 
+INFO:  Idle: 94,  Running: 18,  Completed: 307 [  3h 32m  ] 
+INFO:  Idle: 92,  Running: 18,  Completed: 309 [  3h 38m  ] 
+INFO:  Idle: 88,  Running: 18,  Completed: 313 [  3h 41m  ] 
+INFO:  Idle: 80,  Running: 18,  Completed: 321 [  3h 44m  ] 
+INFO:  Idle: 76,  Running: 18,  Completed: 325 [  3h 47m  ] 
+INFO:  Idle: 74,  Running: 18,  Completed: 327 [  3h 50m  ] 
+INFO:  Idle: 70,  Running: 18,  Completed: 331 [  3h 56m  ] 
+INFO:  Idle: 58,  Running: 18,  Completed: 343 [  3h 59m  ] 
+INFO:  Idle: 56,  Running: 18,  Completed: 345 [  4h 2m  ] 
+INFO:  Idle: 44,  Running: 18,  Completed: 357 [  4h 8m  ] 
+INFO:  Idle: 40,  Running: 18,  Completed: 361 [  4h 11m  ] 
+INFO:  Idle: 39,  Running: 18,  Completed: 363 [  4h 14m  ] 
+INFO:  Idle: 35,  Running: 18,  Completed: 367 [  4h 17m  ] 
+INFO:  Idle: 31,  Running: 18,  Completed: 371 [  4h 44m  ] 
+INFO:  Idle: 25,  Running: 18,  Completed: 377 [  4h 47m  ] 
+INFO:  Idle: 23,  Running: 18,  Completed: 379 [  4h 50m  ] 
+INFO:  Idle: 21,  Running: 18,  Completed: 381 [  4h 56m  ] 
+INFO:  Idle: 17,  Running: 18,  Completed: 385 [  5h 2m  ] 
+INFO:  Idle: 7,  Running: 18,  Completed: 395 [  5h 8m  ] 
+INFO:  Idle: 5,  Running: 18,  Completed: 397 [  5h 11m  ] 
+INFO:  Idle: 3,  Running: 18,  Completed: 399 [  5h 41m  ] 
+INFO: P0_gg_llll/G5.25 is at 5058/7019 ('72%') event. Resubmit 8 job at iteration 5. 
+INFO: P0_gg_llll/G5.22 is at 53802/172033 ('31%') event. Resubmit 55 job at iteration 4. 
+INFO: P0_gg_llll/G1.08 is at 320/1571 ('20%') event. Resubmit 82 job at iteration 5. 
+INFO:  Idle: 136,  Running: 18,  Completed: 411 [  5h 44m  ] 
+INFO:  Idle: 129,  Running: 18,  Completed: 418 [  5h 47m  ] 
+INFO:  Idle: 121,  Running: 18,  Completed: 428 [  5h 50m  ] 
+INFO:  Idle: 115,  Running: 18,  Completed: 434 [  5h 53m  ] 
+INFO:  Idle: 109,  Running: 18,  Completed: 440 [  5h 56m  ] 
+INFO:  Idle: 103,  Running: 18,  Completed: 446 [  5h 59m  ] 
+INFO:  Idle: 95,  Running: 18,  Completed: 454 [  6h 2m  ] 
+INFO:  Idle: 89,  Running: 18,  Completed: 460 [  6h 5m  ] 
+INFO:  Idle: 84,  Running: 18,  Completed: 465 [  6h 8m  ] 
+INFO:  Idle: 77,  Running: 18,  Completed: 472 [  6h 11m  ] 
+INFO:  Idle: 67,  Running: 18,  Completed: 482 [  6h 14m  ] 
+INFO:  Idle: 62,  Running: 18,  Completed: 488 [  6h 17m  ] 
+INFO:  Idle: 57,  Running: 18,  Completed: 493 [  6h 20m  ] 
+INFO:  Idle: 50,  Running: 18,  Completed: 500 [  6h 23m  ] 
+INFO:  Idle: 42,  Running: 18,  Completed: 508 [  6h 26m  ] 
+INFO:  Idle: 36,  Running: 18,  Completed: 514 [  6h 29m  ] 
+INFO:  Idle: 32,  Running: 18,  Completed: 518 [  6h 32m  ] 
+INFO:  Idle: 24,  Running: 18,  Completed: 526 [  6h 35m  ] 
+INFO:  Idle: 18,  Running: 18,  Completed: 532 [  6h 38m  ] 
+INFO:  Idle: 13,  Running: 18,  Completed: 537 [  6h 41m  ] 
+INFO:  Idle: 6,  Running: 18,  Completed: 544 [  6h 44m  ] 
+INFO: found enough event for P0_gg_llll/G5.25 
+INFO: P0_gg_llll/G1.07 is at 13575/43702 ('31%') event. Resubmit 82 job at iteration 5. 
+INFO: P0_gg_llll/G5.22 is at 92312/172008 ('54%') event. Resubmit 82 job at iteration 5. 
+INFO:  Idle: 157,  Running: 18,  Completed: 557 [  6h 47m  ] 
+INFO:  Idle: 153,  Running: 18,  Completed: 561 [  6h 50m  ] 
+INFO:  Idle: 149,  Running: 18,  Completed: 565 [  6h 53m  ] 
+INFO:  Idle: 140,  Running: 18,  Completed: 575 [  6h 56m  ] 
+INFO:  Idle: 134,  Running: 18,  Completed: 581 [  6h 59m  ] 
+INFO:  Idle: 130,  Running: 18,  Completed: 585 [  7h 2m  ] 
+INFO:  Idle: 122,  Running: 18,  Completed: 593 [  7h 5m  ] 
+INFO:  Idle: 114,  Running: 18,  Completed: 601 [  7h 8m  ] 
+INFO:  Idle: 112,  Running: 18,  Completed: 603 [  7h 11m  ] 
+INFO:  Idle: 104,  Running: 18,  Completed: 611 [  7h 14m  ] 
+INFO:  Idle: 96,  Running: 18,  Completed: 619 [  7h 17m  ] 
+INFO:  Idle: 93,  Running: 18,  Completed: 622 [  7h 20m  ] 
+INFO:  Idle: 86,  Running: 18,  Completed: 629 [  7h 23m  ] 
+INFO:  Idle: 78,  Running: 18,  Completed: 637 [  7h 26m  ] 
+INFO:  Idle: 72,  Running: 18,  Completed: 643 [  7h 29m  ] 
+INFO:  Idle: 68,  Running: 18,  Completed: 647 [  7h 32m  ] 
+INFO:  Idle: 61,  Running: 18,  Completed: 655 [  7h 35m  ] 
+INFO:  Idle: 55,  Running: 18,  Completed: 661 [  7h 38m  ] 
+INFO:  Idle: 51,  Running: 18,  Completed: 665 [  7h 41m  ] 
+INFO:  Idle: 43,  Running: 18,  Completed: 673 [  7h 44m  ] 
+INFO:  Idle: 33,  Running: 18,  Completed: 683 [  7h 47m  ] 
+INFO:  Idle: 29,  Running: 18,  Completed: 687 [  7h 50m  ] 
+INFO:  Idle: 25,  Running: 18,  Completed: 691 [  7h 53m  ] 
+INFO:  Idle: 15,  Running: 18,  Completed: 701 [  7h 56m  ] 
+INFO:  Idle: 9,  Running: 18,  Completed: 707 [  7h 59m  ] 
+INFO:  Idle: 6,  Running: 18,  Completed: 710 [  8h 2m  ] 
+INFO: P0_gg_llll/G1.08 is at 52/1581 ('3.3%') event. Resubmit 123 job at iteration 6. 
+INFO: P0_gg_llll/G1.07 is at 25395/43844 ('58%') event. Resubmit 123 job at iteration 6. 
+INFO:  Idle: 241,  Running: 18,  Completed: 721 [  8h 5m  ] 
+INFO:  Idle: 233,  Running: 18,  Completed: 729 [  8h 8m  ] 
+INFO:  Idle: 229,  Running: 18,  Completed: 734 [  8h 11m  ] 
+INFO:  Idle: 224,  Running: 18,  Completed: 739 [  8h 14m  ] 
+INFO:  Idle: 216,  Running: 18,  Completed: 747 [  8h 17m  ] 
+INFO:  Idle: 210,  Running: 18,  Completed: 753 [  8h 20m  ] 
+INFO:  Idle: 206,  Running: 18,  Completed: 757 [  8h 23m  ] 
+INFO:  Idle: 198,  Running: 18,  Completed: 765 [  8h 26m  ] 
+INFO:  Idle: 192,  Running: 18,  Completed: 771 [  8h 29m  ] 
+INFO:  Idle: 188,  Running: 18,  Completed: 775 [  8h 32m  ] 
+INFO:  Idle: 180,  Running: 18,  Completed: 783 [  8h 35m  ] 
+INFO:  Idle: 174,  Running: 18,  Completed: 789 [  8h 38m  ] 
+INFO:  Idle: 170,  Running: 18,  Completed: 793 [  8h 41m  ] 
+INFO:  Idle: 162,  Running: 18,  Completed: 801 [  8h 44m  ] 
+INFO:  Idle: 156,  Running: 18,  Completed: 807 [  8h 47m  ] 
+INFO:  Idle: 152,  Running: 18,  Completed: 811 [  8h 50m  ] 
+INFO:  Idle: 144,  Running: 18,  Completed: 819 [  8h 53m  ] 
+INFO:  Idle: 138,  Running: 18,  Completed: 825 [  8h 56m  ] 
+INFO:  Idle: 134,  Running: 18,  Completed: 829 [  8h 59m  ] 
+INFO:  Idle: 126,  Running: 18,  Completed: 837 [  9h 2m  ] 
+INFO:  Idle: 125,  Running: 18,  Completed: 838 [  9h 5m  ] 
+INFO:  Idle: 116,  Running: 18,  Completed: 847 [  9h 8m  ] 
+INFO:  Idle: 110,  Running: 18,  Completed: 853 [  9h 11m  ] 
+INFO:  Idle: 107,  Running: 18,  Completed: 856 [  9h 14m  ] 
+INFO:  Idle: 99,  Running: 18,  Completed: 865 [  9h 17m  ] 
+INFO:  Idle: 91,  Running: 18,  Completed: 873 [  9h 20m  ] 
+INFO:  Idle: 88,  Running: 18,  Completed: 876 [  9h 23m  ] 
+INFO:  Idle: 81,  Running: 18,  Completed: 883 [  9h 26m  ] 
+INFO:  Idle: 73,  Running: 18,  Completed: 891 [  9h 29m  ] 
+INFO:  Idle: 69,  Running: 18,  Completed: 895 [  9h 32m  ] 
+INFO:  Idle: 63,  Running: 18,  Completed: 901 [  9h 35m  ] 
+INFO:  Idle: 55,  Running: 18,  Completed: 909 [  9h 38m  ] 
+INFO:  Idle: 54,  Running: 18,  Completed: 910 [  9h 41m  ] 
+INFO:  Idle: 45,  Running: 18,  Completed: 919 [  9h 44m  ] 
+INFO:  Idle: 37,  Running: 18,  Completed: 927 [  9h 47m  ] 
+INFO:  Idle: 36,  Running: 18,  Completed: 928 [  9h 50m  ] 
+INFO:  Idle: 27,  Running: 18,  Completed: 937 [  9h 53m  ] 
+INFO:  Idle: 21,  Running: 18,  Completed: 943 [  9h 56m  ] 
+INFO:  Idle: 19,  Running: 18,  Completed: 945 [  9h 59m  ] 
+INFO:  Idle: 9,  Running: 18,  Completed: 955 [  10h 2m  ] 
+INFO:  Idle: 3,  Running: 18,  Completed: 961 [  10h 5m  ] 
+INFO: P0_gg_llll/G5.22 is at 149924/171924 ('87%') event. Resubmit 32 job at iteration 6. 
+INFO: P0_gg_llll/G1.08 is at 728/1579 ('46%') event. Resubmit 165 job at iteration 7. 
+INFO:  Idle: 195,  Running: 18,  Completed: 966 [  10h 8m  ] 
+INFO:  Idle: 186,  Running: 18,  Completed: 975 [  10h 11m  ] 
+INFO:  Idle: 180,  Running: 18,  Completed: 981 [  10h 14m  ] 
+INFO:  Idle: 177,  Running: 18,  Completed: 985 [  10h 17m  ] 
+INFO:  Idle: 169,  Running: 18,  Completed: 993 [  10h 20m  ] 
+INFO:  Idle: 162,  Running: 18,  Completed: 1000 [  10h 23m  ] 
+INFO:  Idle: 155,  Running: 18,  Completed: 1007 [  10h 26m  ] 
+INFO:  Idle: 151,  Running: 18,  Completed: 1011 [  10h 29m  ] 
+INFO:  Idle: 144,  Running: 18,  Completed: 1019 [  10h 32m  ] 
+INFO:  Idle: 138,  Running: 18,  Completed: 1025 [  10h 35m  ] 
+INFO:  Idle: 134,  Running: 18,  Completed: 1029 [  10h 38m  ] 
+INFO:  Idle: 126,  Running: 18,  Completed: 1037 [  10h 41m  ] 
+INFO:  Idle: 118,  Running: 18,  Completed: 1045 [  10h 44m  ] 
+INFO:  Idle: 115,  Running: 18,  Completed: 1048 [  10h 47m  ] 
+INFO:  Idle: 108,  Running: 18,  Completed: 1055 [  10h 50m  ] 
+INFO:  Idle: 98,  Running: 18,  Completed: 1065 [  10h 53m  ] 
+INFO:  Idle: 92,  Running: 18,  Completed: 1071 [  10h 56m  ] 
+INFO:  Idle: 89,  Running: 18,  Completed: 1074 [  10h 59m  ] 
+INFO:  Idle: 80,  Running: 18,  Completed: 1083 [  11h 2m  ] 
+INFO:  Idle: 73,  Running: 18,  Completed: 1090 [  11h 5m  ] 
+INFO:  Idle: 68,  Running: 18,  Completed: 1095 [  11h 8m  ] 
+INFO:  Idle: 62,  Running: 18,  Completed: 1101 [  11h 11m  ] 
+INFO:  Idle: 54,  Running: 18,  Completed: 1109 [  11h 14m  ] 
+INFO:  Idle: 48,  Running: 18,  Completed: 1115 [  11h 17m  ] 
+INFO:  Idle: 44,  Running: 18,  Completed: 1119 [  11h 20m  ] 
+INFO:  Idle: 36,  Running: 18,  Completed: 1127 [  11h 23m  ] 
+INFO:  Idle: 26,  Running: 18,  Completed: 1137 [  11h 26m  ] 
+INFO:  Idle: 22,  Running: 18,  Completed: 1141 [  11h 29m  ] 
+INFO:  Idle: 17,  Running: 18,  Completed: 1146 [  11h 32m  ] 
+INFO:  Idle: 8,  Running: 18,  Completed: 1155 [  11h 35m  ] 
+INFO:  Idle: 2,  Running: 18,  Completed: 1161 [  11h 38m  ] 
+INFO: P0_gg_llll/G1.07 is at 28599/43862 ('65%') event. Resubmit 184 job at iteration 7. 
 INFO: found enough event for P0_gg_llll/G5.22 
-INFO: P0_gg_llll/G1.07 is at 1705/11172 ('15%') event. Resubmit 67 job at iteration 3. 
-INFO:  Idle: 65,  Running: 18,  Completed: 388 [  33m 48s  ] 
-INFO:  Idle: 64,  Running: 18,  Completed: 389 [  33m 52s  ] 
-INFO:  Idle: 55,  Running: 18,  Completed: 398 [  33m 55s  ] 
-INFO:  Idle: 51,  Running: 18,  Completed: 402 [  33m 58s  ] 
-INFO:  Idle: 49,  Running: 18,  Completed: 405 [  38m 10s  ] 
-INFO:  Idle: 47,  Running: 18,  Completed: 407 [  38m 14s  ] 
-INFO:  Idle: 38,  Running: 18,  Completed: 416 [  38m 17s  ] 
-INFO:  Idle: 34,  Running: 18,  Completed: 420 [  38m 22s  ] 
-INFO:  Idle: 31,  Running: 18,  Completed: 423 [  42m 33s  ] 
-INFO:  Idle: 28,  Running: 18,  Completed: 426 [  42m 36s  ] 
-INFO:  Idle: 16,  Running: 18,  Completed: 438 [  42m 43s  ] 
-INFO:  Idle: 13,  Running: 18,  Completed: 441 [  47m 41s  ] 
-INFO:  Idle: 8,  Running: 18,  Completed: 446 [  47m 44s  ] 
-INFO:  Idle: 3,  Running: 18,  Completed: 451 [  47m 47s  ] 
-INFO:  Idle: 0,  Running: 17,  Completed: 455 [  47m 51s  ] 
-INFO:  Idle: 0,  Running: 13,  Completed: 459 [  48m 20s  ] 
-INFO:  Idle: 0,  Running: 12,  Completed: 460 [  52m 48s  ] 
-INFO:  Idle: 0,  Running: 9,  Completed: 463 [  52m 51s  ] 
-INFO:  Idle: 0,  Running: 3,  Completed: 469 [  52m 54s  ] 
-INFO: found enough event for P0_gg_llll/G1.07 
-INFO:  Idle: 0,  Running: 0,  Completed: 473 [  52m 56s  ] 
+INFO:  Idle: 181,  Running: 18,  Completed: 1166 [  11h 41m  ] 
+INFO:  Idle: 172,  Running: 18,  Completed: 1175 [  11h 44m  ] 
+INFO:  Idle: 167,  Running: 18,  Completed: 1181 [  11h 47m  ] 
+INFO:  Idle: 161,  Running: 18,  Completed: 1187 [  11h 50m  ] 
+INFO:  Idle: 155,  Running: 18,  Completed: 1193 [  11h 53m  ] 
+INFO:  Idle: 147,  Running: 18,  Completed: 1201 [  11h 56m  ] 
+INFO:  Idle: 141,  Running: 18,  Completed: 1207 [  11h 59m  ] 
+INFO:  Idle: 137,  Running: 18,  Completed: 1211 [  12h 2m  ] 
+INFO:  Idle: 129,  Running: 18,  Completed: 1219 [  12h 5m  ] 
+INFO:  Idle: 123,  Running: 18,  Completed: 1225 [  12h 8m  ] 
+INFO:  Idle: 119,  Running: 18,  Completed: 1229 [  12h 11m  ] 
+INFO:  Idle: 111,  Running: 18,  Completed: 1237 [  12h 14m  ] 
+INFO:  Idle: 101,  Running: 18,  Completed: 1247 [  12h 17m  ] 
+INFO:  Idle: 98,  Running: 18,  Completed: 1250 [  12h 20m  ] 
+INFO:  Idle: 93,  Running: 18,  Completed: 1255 [  12h 23m  ] 
+INFO:  Idle: 83,  Running: 18,  Completed: 1265 [  12h 26m  ] 
+INFO:  Idle: 77,  Running: 18,  Completed: 1271 [  12h 29m  ] 
+INFO:  Idle: 74,  Running: 18,  Completed: 1274 [  12h 32m  ] 
+INFO:  Idle: 65,  Running: 18,  Completed: 1283 [  12h 35m  ] 
+INFO:  Idle: 58,  Running: 18,  Completed: 1290 [  12h 38m  ] 
+INFO:  Idle: 51,  Running: 18,  Completed: 1297 [  12h 41m  ] 
+INFO:  Idle: 47,  Running: 18,  Completed: 1301 [  12h 44m  ] 
+INFO:  Idle: 39,  Running: 18,  Completed: 1309 [  12h 47m  ] 
+INFO:  Idle: 33,  Running: 18,  Completed: 1315 [  12h 50m  ] 
+INFO:  Idle: 29,  Running: 18,  Completed: 1319 [  12h 53m  ] 
+INFO:  Idle: 21,  Running: 18,  Completed: 1327 [  12h 56m  ] 
+INFO:  Idle: 15,  Running: 18,  Completed: 1333 [  12h 59m  ] 
+INFO:  Idle: 10,  Running: 18,  Completed: 1338 [  13h 2m  ] 
+INFO:  Idle: 3,  Running: 18,  Completed: 1345 [  13h 5m  ] 
+INFO: P0_gg_llll/G1.08 is at 1173/1575 ('75%') event. Resubmit 124 job at iteration 8. 
+INFO:  Idle: 116,  Running: 18,  Completed: 1356 [  13h 8m  ] 
+INFO:  Idle: 110,  Running: 18,  Completed: 1362 [  13h 12m  ] 
+INFO:  Idle: 107,  Running: 18,  Completed: 1365 [  13h 15m  ] 
+INFO:  Idle: 99,  Running: 18,  Completed: 1374 [  13h 18m  ] 
+INFO:  Idle: 93,  Running: 18,  Completed: 1380 [  13h 21m  ] 
+INFO:  Idle: 87,  Running: 18,  Completed: 1386 [  13h 24m  ] 
+INFO:  Idle: 81,  Running: 18,  Completed: 1392 [  13h 27m  ] 
+INFO:  Idle: 73,  Running: 18,  Completed: 1400 [  13h 30m  ] 
+INFO:  Idle: 67,  Running: 18,  Completed: 1406 [  13h 33m  ] 
+INFO:  Idle: 63,  Running: 18,  Completed: 1410 [  13h 36m  ] 
+INFO:  Idle: 55,  Running: 18,  Completed: 1418 [  13h 39m  ] 
+INFO:  Idle: 49,  Running: 18,  Completed: 1424 [  13h 42m  ] 
+INFO:  Idle: 44,  Running: 18,  Completed: 1429 [  13h 45m  ] 
+INFO:  Idle: 37,  Running: 18,  Completed: 1436 [  13h 48m  ] 
+INFO:  Idle: 27,  Running: 18,  Completed: 1446 [  13h 51m  ] 
+INFO:  Idle: 21,  Running: 18,  Completed: 1452 [  13h 54m  ] 
+INFO:  Idle: 18,  Running: 18,  Completed: 1455 [  13h 57m  ] 
+INFO:  Idle: 9,  Running: 18,  Completed: 1464 [  14h 0m  ] 
+INFO:  Idle: 3,  Running: 18,  Completed: 1470 [  14h 3m  ] 
+INFO: P0_gg_llll/G1.07 is at 33129/43874 ('76%') event. Resubmit 276 job at iteration 8. 
+INFO:  Idle: 272,  Running: 18,  Completed: 1477 [  14h 6m  ] 
+INFO:  Idle: 266,  Running: 18,  Completed: 1483 [  14h 9m  ] 
+INFO:  Idle: 259,  Running: 18,  Completed: 1491 [  14h 12m  ] 
+INFO:  Idle: 253,  Running: 18,  Completed: 1497 [  14h 15m  ] 
+INFO:  Idle: 249,  Running: 18,  Completed: 1501 [  14h 18m  ] 
+INFO:  Idle: 241,  Running: 18,  Completed: 1509 [  14h 21m  ] 
+INFO:  Idle: 235,  Running: 18,  Completed: 1515 [  14h 24m  ] 
+INFO:  Idle: 231,  Running: 18,  Completed: 1519 [  14h 27m  ] 
+INFO:  Idle: 223,  Running: 18,  Completed: 1527 [  14h 30m  ] 
+INFO:  Idle: 213,  Running: 18,  Completed: 1537 [  14h 33m  ] 
+INFO:  Idle: 210,  Running: 18,  Completed: 1540 [  14h 36m  ] 
+INFO:  Idle: 205,  Running: 18,  Completed: 1545 [  14h 39m  ] 
+INFO:  Idle: 195,  Running: 18,  Completed: 1555 [  14h 42m  ] 
+INFO:  Idle: 189,  Running: 18,  Completed: 1561 [  14h 45m  ] 
+INFO:  Idle: 186,  Running: 18,  Completed: 1564 [  14h 48m  ] 
+INFO:  Idle: 177,  Running: 18,  Completed: 1573 [  14h 51m  ] 
+INFO:  Idle: 170,  Running: 18,  Completed: 1580 [  14h 54m  ] 
+INFO:  Idle: 165,  Running: 18,  Completed: 1585 [  14h 57m  ] 
+INFO:  Idle: 159,  Running: 18,  Completed: 1591 [  15h 0m  ] 
+INFO:  Idle: 151,  Running: 18,  Completed: 1599 [  15h 3m  ] 
+INFO:  Idle: 145,  Running: 18,  Completed: 1605 [  15h 6m  ] 
+INFO:  Idle: 141,  Running: 18,  Completed: 1609 [  15h 9m  ] 
+INFO:  Idle: 133,  Running: 18,  Completed: 1617 [  15h 12m  ] 
+INFO:  Idle: 127,  Running: 18,  Completed: 1623 [  15h 15m  ] 
+INFO:  Idle: 123,  Running: 18,  Completed: 1627 [  15h 18m  ] 
+INFO:  Idle: 115,  Running: 18,  Completed: 1635 [  15h 21m  ] 
+INFO:  Idle: 107,  Running: 18,  Completed: 1643 [  15h 24m  ] 
+INFO:  Idle: 102,  Running: 18,  Completed: 1648 [  15h 27m  ] 
+INFO:  Idle: 97,  Running: 18,  Completed: 1653 [  15h 30m  ] 
+INFO:  Idle: 87,  Running: 18,  Completed: 1663 [  15h 33m  ] 
+INFO:  Idle: 81,  Running: 18,  Completed: 1669 [  15h 36m  ] 
+INFO:  Idle: 78,  Running: 18,  Completed: 1672 [  15h 39m  ] 
+INFO:  Idle: 69,  Running: 18,  Completed: 1681 [  15h 42m  ] 
+INFO:  Idle: 62,  Running: 18,  Completed: 1688 [  15h 45m  ] 
+INFO:  Idle: 59,  Running: 18,  Completed: 1691 [  15h 48m  ] 
+INFO:  Idle: 51,  Running: 18,  Completed: 1699 [  15h 51m  ] 
+INFO:  Idle: 43,  Running: 18,  Completed: 1707 [  15h 54m  ] 
+INFO:  Idle: 37,  Running: 18,  Completed: 1713 [  15h 57m  ] 
+INFO:  Idle: 33,  Running: 18,  Completed: 1717 [  16h 0m  ] 
+INFO:  Idle: 25,  Running: 18,  Completed: 1725 [  16h 3m  ] 
+INFO:  Idle: 19,  Running: 18,  Completed: 1731 [  16h 6m  ] 
+INFO:  Idle: 15,  Running: 18,  Completed: 1735 [  16h 9m  ] 
+INFO:  Idle: 7,  Running: 18,  Completed: 1743 [  16h 12m  ] 
+INFO:  Idle: 1,  Running: 18,  Completed: 1749 [  16h 15m  ] 
+INFO: found enough event for P0_gg_llll/G1.08 
+INFO:  Idle: 0,  Running: 11,  Completed: 1757 [  16h 18m  ] 
+INFO:  Idle: 1,  Running: 0,  Completed: 1768 [  16h 21m  ] 
+INFO:  Idle: 0,  Running: 0,  Completed: 1769 [  16h 24m  ] 
+INFO:  Idle: 0,  Running: 0,  Completed: 1769 [  16h 24m  ] 
 INFO: Combining runs 
 sum of cpu time of last step: 0 second
 INFO: finish refine 
-refine 50000 --treshold=0.9
+refine 200000 --treshold=0.9
 No need for second refine due to stability of cross-section
 INFO: Combining Events 
-combination of events done in 4.792909860610962 s 
+combination of events done in 20.044022798538208 s 
  
  
  
   === Results Summary for run: prod tag: tag_1 ===
 
-     Cumulative sequential time for this run: 13h32m39s
-     Cross-section :   0.003648 +- 4.681e-06 pb
-     Nb of events :  50000
+     Cumulative sequential time for this run: 9 days,22h50m51s
+     Cross-section :   0.003655 +- 1.161e-06 pb
+     Nb of events :  200000
  
 store_events
 INFO: Storing parton level results 

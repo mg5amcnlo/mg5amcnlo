@@ -1,4 +1,5 @@
 Running MG5 in debug mode
+('WARNING: loading of madgraph too slow!!!', 1.7843058109283447)
 ************************************************************
 *                                                          *
 *                     W E L C O M E to                     *
@@ -12,7 +13,7 @@ Running MG5 in debug mode
 *                 *                       *                *
 *                                                          *
 *         VERSION 3.7.2                 2026-04-28         *
-*         GIT r992-582-g178e9542d  claude/ms-zz-loopinduced         *
+*         GIT r992-588-g0d62a68c0  claude/ms-zz-li-regen         *
 *                                                          *
 *    The MadGraph5_aMC@NLO Development Team - Find us at   *
 *              http://madgraph.phys.ucl.ac.be/             *
@@ -39,7 +40,7 @@ Please set the 'lhapdf' variable to the (absolute) /PATH/TO/lhapdf-config (inclu
 Note that you can still compile and run aMC@NLO with the built-in PDFs
  MG5_aMC> set lhapdf /PATH/TO/lhapdf-config
 
-load MG5 configuration from input/mg5_configuration.txt 
+load MG5 configuration from ../../../input/mg5_configuration.txt 
 fastjet-config does not seem to correspond to a valid fastjet-config executable (v3+). We will use fjcore instead.
  Please set the 'fastjet'variable to the full (absolute) /PATH/TO/fastjet-config (including fastjet-config).
  MG5_aMC> set fastjet /PATH/TO/fastjet-config
@@ -64,13 +65,13 @@ set lhapdf to /Users/omattelaer/Documents/HEPTools/lhapdf6_py3/bin/lhapdf-config
     [0m
 Using default gzip "gzip". Set another one in ./input/mg5_configuration.txt
 [1;34mWARNING: launching caffeinate to prevent idle sleep when MG5aMC is running. Run './bin/mg5_aMC -s' to prevent this. [0m
-import /private/tmp/t75run/genB.mg5
+import /Users/omattelaer/Documents/madspin_validation_samples/t118_zz_loopinduced/gen_gg4l.mg5
 The import format was not given, so we guess it as command
 set auto_convert_model T
 save options auto_convert_model
-save configuration file to /private/tmp/t75/input/mg5_configuration.txt
+save configuration file to /private/tmp/t118/input/mg5_configuration.txt
 import model sm
-INFO: Restrict model sm with file models/sm/restrict_default.dat . 
+INFO: Restrict model sm with file ../../../models/sm/restrict_default.dat . 
 [1;32mDEBUG: Simplifying conditional expressions [0m
 [1;32mDEBUG: remove interactions: u s w+ at order: QED=1 [0m
 [1;32mDEBUG: remove interactions: u b w+ at order: QED=1 [0m
@@ -157,11 +158,11 @@ Defined multiparticle l- = e- mu-
 Defined multiparticle vl = ve vm vt
 Defined multiparticle vl~ = ve~ vm~ vt~
 Defined multiparticle all = g u c d s u~ c~ d~ s~ a ve vm vt e- mu- ve~ vm~ vt~ e+ mu+ t b t~ b~ z w+ h w- ta- ta+
-generate g g > e+ e- mu+ mu- /a [noborn=QCD]
+generate g g > e+ e- mu+ mu- / a [noborn=QCD]
 The current model sm does not allow to generate loop corrections of type ['QCD'].
 MG5_aMC now loads 'loop_sm'.
  import model loop_sm
-INFO: Restrict model loop_sm with file models/loop_sm/restrict_default.dat . 
+INFO: Restrict model loop_sm with file ../../../models/loop_sm/restrict_default.dat . 
 [1;32mDEBUG: Simplifying conditional expressions [0m
 [1;32mDEBUG: remove interactions: s u w+ at order: QED=1 [0m
 [1;32mDEBUG: remove interactions: b u w+ at order: QED=1 [0m
@@ -366,20 +367,18 @@ INFO: Trying coupling order WEIGHTED<=15: WEIGTHED IS QCD+2*QED
 [1;32mDEBUG:  > loop : (4,8,W20) [0m
 [1;32mDEBUG: A total of 28 loop diagrams were identified with equivalent ones. [0m
 INFO: Contributing diagrams generated: 0 Born, 60(+28) loops, 32 R2, 0 UV 
-1 processes with 60 diagrams generated in 0.375 s
+1 processes with 60 diagrams generated in 0.421 s
 Total: 1 processes with 60 diagrams
-output /tmp/t75run/gg4l
+output /Users/omattelaer/Documents/madspin_validation_samples/t118_zz_loopinduced/gg4l
 INFO: initialize a new directory: gg4l 
 INFO: remove old information in gg4l 
-[1mINFO: Compiling CutTools. This has to be done only once and can take a couple of minutes. [0m
-[1mINFO: Compiling IREGI. This has to be done only once and can take a couple of minutes. [0m
 INFO: Organizing processes into subprocess groups 
 INFO: Generating Helas calls for process: g g > e+ e- mu+ mu- WEIGHTED<=16 [ noborn = QCD ] / a 
 [1;32mDEBUG: 96 loop wavefunctions have been reused, for a total of 108 ones [0m
 [1;32mDEBUG: Computing the loop color basis [0m
 INFO: Processing color information for loop process: g g > e+ e- mu+ mu- [ noborn = QCD ] / a 
 INFO: Creating color matrix  loop process: g g > e+ e- mu+ mu- WEIGHTED<=16 [ noborn = QCD ] / a 
-INFO: Creating files in directory /private/tmp/t75run/gg4l/SubProcesses/PV0_0_1_gg_epemmupmum_no_a 
+INFO: Creating files in directory /Users/omattelaer/Documents/madspin_validation_samples/t118_zz_loopinduced/gg4l/SubProcesses/PV0_0_1_gg_epemmupmum_no_a 
 [1;32mDEBUG: adding in aloha model 2 lorentz struct [0m
 ALOHA: aloha creates FFV1 set of routines with options: L1[0m
 ALOHA: aloha creates FFV2 set of routines with options: L1[0m
@@ -397,7 +396,7 @@ INFO: Drawing loop Feynman diagrams for Process: g g > e+ e- mu+ mu- WEIGHTED<=1
 INFO: Creating files in directory P0_gg_llll 
 INFO: Generating Feynman diagrams for Process: g g > e+ e- mu+ mu- WEIGHTED<=16 [ noborn = QCD ] / a 
 INFO: Finding symmetric diagrams for subprocess group gg_llll 
-Generated helas calls for 1 subprocesses (60 diagrams) in 0.052 s
+Generated helas calls for 1 subprocesses (60 diagrams) in 0.060 s
 ALOHA: aloha starts to compute helicity amplitudes
 ALOHA: aloha creates FFV2 routines[0m
 ALOHA: aloha creates FFV4 routines[0m
@@ -411,14 +410,14 @@ ALOHA: aloha creates R2_GGVV routines[0m
 ALOHA: aloha creates FFV2_4 routines[0m
 ALOHA: aloha creates FFV2_3 routines[0m
 ALOHA: aloha creates FFV2_5 routines[0m
-ALOHA: aloha creates 22 routines in  0.358 s
-save configuration file to /private/tmp/t75run/gg4l/Cards/me5_configuration.txt
+ALOHA: aloha creates 22 routines in  0.833 s
+save configuration file to /Users/omattelaer/Documents/madspin_validation_samples/t118_zz_loopinduced/gg4l/Cards/me5_configuration.txt
 INFO: Use Fortran compiler gfortran 
 INFO: Use c++ compiler clang 
 INFO: Generate jpeg diagrams 
 INFO: Generate web pages 
-Output to directory /private/tmp/t75run/gg4l done.
+Output to directory /Users/omattelaer/Documents/madspin_validation_samples/t118_zz_loopinduced/gg4l done.
 Type "launch" to generate events from this process, or see
-/private/tmp/t75run/gg4l/README
+/Users/omattelaer/Documents/madspin_validation_samples/t118_zz_loopinduced/gg4l/README
 Run "open index.html" to see more information about this process.
 quit
