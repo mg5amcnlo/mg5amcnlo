@@ -704,6 +704,23 @@ def write_numbers(data, path, modes=MODES):
                   % (key, rate, rate_e, 100 * (rate - 1), int(good.sum())))
                 continue
             chi2 = float(np.sum(((r[good] - rate) / re_[good]) ** 2))
+            # Bins where the truth has support and the mode has NONE carry a
+            # zero numerator, hence a zero error, hence fall out of ``good``
+            # and out of the chi2 -- silently, until 2026-08-28.  They are the
+            # most significant disagreement a mode can have, so they are named
+            # here and their share of the truth is quoted.  For this study they
+            # are the m_4l < 2 m_Z region, which no spinmode can reach and which
+            # PA_LOWPT_DIAGNOSIS.md is about.
+            nzero = int(ok.sum() - good.sum())
+            if nzero:
+                miss = float(yref[ok & ~good].sum() / yref[ok].sum())
+                A('    %-10s rate = %.4f +- %.4f (%+.2f %%)   shape chi2/ndf = '
+                  '%.1f/%d = %.2f   [%d bin(s) with truth support and NO support '
+                  'in this mode, %.2f %% of the truth over this observable, NOT '
+                  'in the chi2]'
+                  % (key, rate, rate_e, 100 * (rate - 1), chi2, ndf, chi2 / ndf,
+                     nzero, 100 * miss))
+                continue
             A('    %-10s rate = %.4f +- %.4f (%+.2f %%)   shape chi2/ndf = '
               '%.1f/%d = %.2f'
               % (key, rate, rate_e, 100 * (rate - 1), chi2, ndf, chi2 / ndf))

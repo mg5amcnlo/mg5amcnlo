@@ -149,10 +149,10 @@ none         +0.3320 +- 0.0033      +0.3305 +- 0.0033      +0.3313 +- 0.0024    
     none       rate = 1.0519 +- 0.0033 (+5.19 %)   shape: delta function, 1 bin with support -- no shape test
 
   m(e+ e- mu+ mu-) [GeV]
-    madspin    rate = 1.0088 +- 0.0034 (+0.88 %)   shape chi2/ndf = 109.2/61 = 1.79
-    PA         rate = 1.0072 +- 0.0032 (+0.72 %)   shape chi2/ndf = 123.7/61 = 2.03
-    onshell    rate = 1.0533 +- 0.0033 (+5.33 %)   shape chi2/ndf = 123.7/61 = 2.03
-    none       rate = 1.0533 +- 0.0033 (+5.33 %)   shape chi2/ndf = 123.7/61 = 2.03
+    madspin    rate = 1.0088 +- 0.0034 (+0.88 %)   shape chi2/ndf = 109.2/61 = 1.79   [3 bin(s) with truth support and NO support in this mode, 1.22 % of the truth over this observable, NOT in the chi2]
+    PA         rate = 1.0072 +- 0.0032 (+0.72 %)   shape chi2/ndf = 123.7/61 = 2.03   [3 bin(s) with truth support and NO support in this mode, 1.22 % of the truth over this observable, NOT in the chi2]
+    onshell    rate = 1.0533 +- 0.0033 (+5.33 %)   shape chi2/ndf = 123.7/61 = 2.03   [3 bin(s) with truth support and NO support in this mode, 1.22 % of the truth over this observable, NOT in the chi2]
+    none       rate = 1.0533 +- 0.0033 (+5.33 %)   shape chi2/ndf = 123.7/61 = 2.03   [3 bin(s) with truth support and NO support in this mode, 1.22 % of the truth over this observable, NOT in the chi2]
 
   pt(e+ e-) [GeV]
     madspin    rate = 1.0083 +- 0.0036 (+0.83 %)   shape chi2/ndf = 85.2/69 = 1.23

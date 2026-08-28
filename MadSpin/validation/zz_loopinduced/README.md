@@ -128,7 +128,24 @@ polweight_closure.py               the cross-check of that extraction against
                                    script here that runs on a DIFFERENT study's
                                    samples, because these ones carry no such
                                    weights
+PA_LOWPT_DIAGNOSIS.md              why PA sits low below pt(ee) = 20 GeV: the
+                                   truth's m_4l < 2 m_Z region, which no
+                                   spinmode can reach.  Read it before quoting
+                                   any pt(e+ e-) or m(l+ l-) number
+pa_lowpt_diagnosis.py              its measurement, from the per-event columns;
+                                   --from-cache works off data/, --selftest
+                                   asserts the four claims
+data/pa_lowpt_diagnosis.npz        the derived histograms, 11 kB
+plots/pa_lowpt_diagnosis.{pdf,png,txt}
 ```
+
+**One thing this comparison cannot do, and it matters.** `g g > z z` produces
+two on-shell `z`, so `m_4l = sqrt(shat) >= 2 m_Z`, and the RAMBO reshuffle holds
+`sqrt(shat)` fixed — every MadSpin mode has *exactly zero* support below
+`2 m_Z`, at any sample size. Sample B has **2.09 %** of its cross section there,
+all of it at low `pt`. Any bin-by-bin comparison over the full truth charges
+that hole to whichever mode is normalised correctly. See
+[PA_LOWPT_DIAGNOSIS.md](PA_LOWPT_DIAGNOSIS.md).
 
 ## Re-running
 

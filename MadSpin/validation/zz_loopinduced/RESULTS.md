@@ -1,5 +1,21 @@
 # `g g > z z` (loop induced) + MadSpin against the full off-shell `g g > 4l`
 
+> **Support correction, 2026-08-28 — read this together with the frame note
+> below.** The truth carries **2.09 % of its cross section below
+> `m_4l = 2 m_Z`**, and **every** MadSpin spinmode has *exactly zero* support
+> there: `g g > z z` puts both `z` on shell and the RAMBO reshuffle holds
+> `sqrt(shat)` fixed. That region is entirely at low `pt` and it is the whole of
+> `PA`'s `pt(e+ e-)` `chi2/ndf = 3.32`. On the support the two samples share,
+> `PA` is **1.59** and is the *best* of the three spin-correlated modes
+> (`madspin` 2.15, `onshell` 2.41); `onshell`'s 1.08 on the full support is the
+> `1/f^2` normalisation error cancelling the same hole. Two further statements
+> of section 5 below are superseded: `madspin` does **not** miss the `m(l+ l-)`
+> low tail (1.020, not 0.773, on the reachable support, and shape `chi2/ndf`
+> **0.89**), and "`madspin` is better than `PA` on every observable with any
+> sensitivity" is not true on the matched support. The evidence, and what the
+> validation should say instead, are in
+> [PA_LOWPT_DIAGNOSIS.md](PA_LOWPT_DIAGNOSIS.md).
+
 > **Frame correction, 2026-08-27 — applied, and the study re-run. Read this
 > before any number below.** The angular observables of this study
 > (`cos_theta1`, `cos_theta2`, `cos1cos2`, and the `f_0` / `f_00` / `f_TT` /
@@ -22,7 +38,9 @@
 > `data/numbers.txt`. Where the two disagree, `data/numbers.txt` is right. Two
 > conclusions moved enough to name here: `none`'s separation on `f_0` grew from
 > `22 sigma` to `77 sigma`, and `PA` developed a real `pt(e+ e-)` shape
-> deviation (`chi2/ndf = 3.32`) that 50 000 events could not resolve.
+> deviation (`chi2/ndf = 3.32`) that 50 000 events could not resolve — **which
+> the support note above then explained: it is the missing `m_4l < 2 m_Z`
+> region, not a property of `PA`.**
 
 Setup, cards and re-run instructions are in [README.md](README.md). Raw numbers
 are in [`data/numbers.txt`](data/numbers.txt); everything below is read off it
@@ -58,6 +76,10 @@ truncation. Nothing is corrected by hand on top of it.
   lineshape is where they part company: `PA` has a monotonic tilt from x2.8 at
   62 GeV to x0.42 at 126 GeV, while `madspin` holds 0.95-1.03 across the region
   that carries the rate.
+  *(2026-08-28: the lineshape half of this stands and is sharper than stated —
+  `madspin` 0.89, `PA` 17.13 on the matched support — but "on every observable"
+  does not: `PA` beats `madspin` on `pt(e+ e-)`, 1.59 against 2.15. See
+  [PA_LOWPT_DIAGNOSIS.md](PA_LOWPT_DIAGNOSIS.md).)*
 
 ---
 
@@ -497,6 +519,14 @@ between modes. It is still worth plotting: against the truth it tests whether
 the off-shell four-body phase space distributes `m_4l` the way an on-shell
 `2 -> 2` plus decays does, and it does, at `chi2/ndf = 1.3`.
 
+> **Read that `chi2` with the correction of 2026-08-28.** Fixing `sqrt(shat)` is
+> also what puts a hard floor at `m_4l = 2 m_Z` on every mode, and the shape test
+> could not see it: `plot_zz_loopinduced.py` dropped from its `chi2` every bin
+> where a mode has no support (a zero numerator gives a zero error), which is
+> **3 bins carrying 1.22 %** of the truth over the histogram's range, with a
+> further 0.16 % below its 150 GeV lower edge. Those bins are now named in
+> `data/numbers.txt`. See [PA_LOWPT_DIAGNOSIS.md](PA_LOWPT_DIAGNOSIS.md).
+
 ### The lineshape: the one place `madspin` and `PA` part company
 
 `m(e+e-)` and `m(mu+mu-)` were meant as the sanity check that the window and the
@@ -547,6 +577,16 @@ against `PA`'s 5.18 on `m(e+e-)`, and 2.31 against 3.87 on `m(mu+mu-)`.
 lineshape, `pt(e+e-)` (1.10 against 1.76) and `Phi` (0.57 against 1.38) — and
 the two are indistinguishable everywhere else. That ordering is the expected
 one, and it is the first time it has been measured for a loop-induced process.
+
+> **Superseded, 2026-08-28.** Both halves of this paragraph are artefacts of the
+> support mismatch, and at 200 000 events on the *reachable* support the picture
+> is: `madspin` 0.89 and `PA` 17.13 on `m(e+ e-)` (so the lineshape ordering is
+> right and much sharper than stated), but `PA` 1.59 and `madspin` 2.15 on
+> `pt(e+ e-)` — the other way round. The "`madspin` is 0.773 of the truth's low
+> tail, 6.5 sigma low" number above is 1.020 once the truth is restricted to
+> `m_4l >= 2 m_Z`; the truth's low-mass tail that `madspin` appeared to miss is
+> the sub-threshold region *no* mode can produce. See
+> [PA_LOWPT_DIAGNOSIS.md](PA_LOWPT_DIAGNOSIS.md) section 4.
 
 ---
 

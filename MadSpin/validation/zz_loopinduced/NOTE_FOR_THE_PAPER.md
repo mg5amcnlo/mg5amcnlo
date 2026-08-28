@@ -55,7 +55,9 @@ the MG7 PDFs pass the minus-sign check.
   distribution that the Wigner rotation had smeared towards flat. Visually the
   `none` curve's central peak and depleted tails are now unmistakable.
 * `pt_ee`: unchanged for `madspin` (1.10 -> 1.23), `onshell` and `none`
-  (1.10 -> 1.08). **`PA` moved from `1.76` to `3.32`** — see section 5, this is
+  (1.10 -> 1.08). **`PA` moved from `1.76` to `3.32`** — see section 5, where it
+  is now diagnosed as the missing `m_4l < 2 m_Z` truth and not a `PA` defect;
+  this is
   new and it is not a frame effect.
 
 The caption is now correct as written: `theta_1` *is* the helicity angle, the
@@ -148,19 +150,47 @@ At 200 000 events `spinmode = PA` shows a **coherent 7.5 % deficit below
 this is purely the four-fold statistics resolving something that 50 000 events
 left at a marginal `1.76`.
 
+> **Diagnosed, 2026-08-28. The reshuffling hypothesis below is wrong, and so is
+> the reading that this is a `PA` defect.** Full evidence:
+> [PA_LOWPT_DIAGNOSIS.md](PA_LOWPT_DIAGNOSIS.md).
+>
+> The truth carries **2.09 % of its cross section below `m_4l = 2 m_Z`**, and
+> **every** spinmode has *exactly zero* support there — `g g > z z` puts both
+> `z` on shell, and the RAMBO reshuffle holds `sqrt(shat)` fixed, so `m_4l` is
+> the production sample's, bit for bit. That missing region is entirely at low
+> `pt`: 9.5 % of the truth's `pt < 5 GeV` bin, falling to nothing by 60 GeV.
+> Restrict the truth to `m_4l >= 2 m_Z` and `PA`'s ratio below 20 GeV becomes
+> `0.995 / 1.018 / 1.013 / 1.021`, flat, with `chi2/ndf` falling **3.32 -> 1.59**
+> — the *best* of the three spin-correlated modes (`madspin` 2.15,
+> `onshell` 2.41). `onshell`'s 1.08 on the full support is its `1/f^2 = +5.2 %`
+> normalisation error cancelling the very same hole: in the first bin
+> `1.1819 x (1 - 0.0953) = 1.069`, to four digits.
+>
+> The reshuffling is **not** the cause — dividing its jacobian out event by
+> event leaves the deficit in place. It is the cause of the `m(l+ l-)` tilt,
+> which is a real and quantified property of the production approximation.
+>
+> **Consequences for the paper.** `PA` can and should be quoted alongside the
+> other modes. Do **not** quote `pt(e+ e-) chi2/ndf = 3.32` as a `PA` defect,
+> and do not quote `onshell`'s 1.08 as agreement. If `pt_ee` is shown, `PA` will
+> sit low in the first few bins of the ratio panel and the caption must say why:
+> all four modes are missing the sub-`2 m_Z` truth, and only `PA` has a
+> normalisation honest enough to show it.
+
 `PA` is the only mode that reshuffles the production onto sampled virtualities
 while evaluating the density matrix at **on-shell** momenta. `onshell` does not
 reshuffle, `madspin` evaluates at the reshuffled momenta, and neither shows the
 effect — so a mismatch between reshuffled kinematics and an on-shell density is
 at least a coherent place to look.
 
-**This is not yet understood and should not go in the paper as a result.** It is
-flagged so that it is not discovered later in a figure. If the paper shows
-`pt_ee` for the loop-induced study, `PA` will visibly sit low in the first few
-bins of the ratio panel.
+~~**This is not yet understood and should not go in the paper as a result.**~~
+(Superseded by the box above; the paragraph is kept so the note reads as the
+record of what was thought when.)
 
 ---
 
 Full diagnosis, evidence and the regression test:
-`MadSpin/validation/zz_loopinduced/POLWEIGHT_CLOSURE_DIAGNOSIS.md`.
+`MadSpin/validation/zz_loopinduced/POLWEIGHT_CLOSURE_DIAGNOSIS.md` (the frame
+bug) and `MadSpin/validation/zz_loopinduced/PA_LOWPT_DIAGNOSIS.md` (the `PA`
+low-`pt` deficit).
 No MadSpin source was changed by any of this.

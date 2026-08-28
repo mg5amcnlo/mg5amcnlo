@@ -1,0 +1,129 @@
+PA low-pt deficit: the measurement
+========================================================================
+
+--- the samples are paired, event by event ---
+  max |m_4l(mode) - m_4l(none)|          1.63e-05 GeV   (LHE write precision)
+  max |chi - pt_after/pt_before|  PA     1.54e-05
+                                  madspin 3.97e-05
+  so pt(onshell) is the BEFORE-reshuffle pt of the same production event,
+  and chi = lambda^(1/2)(m_4l, m1, m2) / lambda^(1/2)(m_4l, mZ, mZ) is the
+  whole of what the reshuffle does to pt.
+
+--- cross sections [fb of the 200 000-event files] ---
+  truth       731.0965   ratio to truth 1.00000
+  PA          735.4466   ratio to truth 1.00595
+  madspin     736.6117   ratio to truth 1.00754
+  onshell     769.0671   ratio to truth 1.05194
+  none        769.0763   ratio to truth 1.05195
+  truth m_4l >= 2 mZ    715.8056   (2.0915 % of the truth is BELOW 2 mZ = 182.376 GeV)
+  every MadSpin mode has EXACTLY zero support there: the production sample
+  is g g > z z with both z on shell, so m_4l = sqrt(shat) >= 2 mZ, and the
+  RAMBO reshuffle holds sqrt(shat) fixed.
+
+--- pt(e+ e-): the deficit, and what is left of it on the reachable support ---
+  pt [GeV]          truth    f_sub | PA / truth (all)         | PA / truth (m_4l >= 2 mZ)
+      0 -     5    22.891    9.53% |  0.9002 +- 0.0166   -6.38 |  0.9951 +- 0.0187   -1.72
+      5 -    10    41.841    8.82% |  0.9282 +- 0.0125   -6.21 |  1.0179 +- 0.0140   -0.68
+     10 -    15    47.324    7.12% |  0.9404 +- 0.0119   -5.51 |  1.0125 +- 0.0130   -1.15
+     15 -    20    48.176    4.87% |  0.9711 +- 0.0121   -2.88 |  1.0209 +- 0.0128   -0.51
+     20 -    25    46.607    3.48% |  1.0227 +- 0.0128   +1.31 |  1.0596 +- 0.0133   +2.41
+     25 -    30    44.860    2.08% |  1.0346 +- 0.0131   +2.19 |  1.0566 +- 0.0135   +2.17
+     30 -    35    42.769    1.51% |  1.0366 +- 0.0135   +2.28 |  1.0525 +- 0.0137   +1.83
+     35 -    40    41.333    0.80% |  1.0226 +- 0.0135   +1.23 |  1.0309 +- 0.0137   +0.25
+     40 -    50    74.075    0.22% |  1.0452 +- 0.0103   +3.81 |  1.0474 +- 0.0103   +1.94
+     50 -    60    62.999    0.01% |  1.0435 +- 0.0111   +3.37 |  1.0436 +- 0.0111   +1.45
+     60 -    80    94.728    0.00% |  1.0165 +- 0.0089   +1.18 |  1.0165 +- 0.0089   -1.23
+     80 -   100    60.787    0.00% |  1.0036 +- 0.0110   -0.21 |  1.0036 +- 0.0110   -2.16
+    100 -   130    49.992    0.00% |  1.0031 +- 0.0121   -0.23 |  1.0031 +- 0.0121   -2.01
+    130 -   170    27.997    0.00% |  1.0359 +- 0.0166   +1.80 |  1.0359 +- 0.0166   +0.51
+    170 -   220    14.322    0.00% |  0.9741 +- 0.0222   -1.43 |  0.9741 +- 0.0222   -2.40
+    220 -   300     7.271    0.00% |  0.9822 +- 0.0313   -0.76 |  0.9822 +- 0.0313   -1.44
+    300 -   400     2.237    0.00% |  1.0322 +- 0.0586   +0.45 |  1.0322 +- 0.0586   +0.08
+    400 -   600     0.746    0.00% |  1.1785 +- 0.1123   +1.54 |  1.1785 +- 0.1123   +1.35
+  ("f_sub" is the share of that truth bin that lies below 2 mZ; the two
+   pull columns are against each comparison's own flat line, i.e. they
+   are shape pulls with the normalisation divided out.)
+
+--- chi, the reshuffle ratio pt_after/pt_before ---
+  mode           min       p5   median     mean      p95      max   frac>1
+  PA          0.0291   0.8923   1.0011   1.0473   1.2703    22.86   0.5382
+  madspin     0.0040   0.8509   0.9996   1.0213   1.1908    25.31   0.4873
+
+--- pt below the truth's own pt(ll) > 1 GeV cut (an acceptance mismatch
+    in the OTHER direction: sample A applies it to the on-shell z, before
+    the reshuffle, the truth to the reconstructed pair) ---
+  PA        0.01550 % of sigma
+  madspin   0.18912 % of sigma
+  onshell   0.00000 % of sigma
+  none      0.00000 % of sigma
+
+--- per-observable shape test, against both supports ---
+  observable   mode      | full truth support         | truth m_4l >= 2 mZ        
+                         |     rate  chi2/ndf   ndf  drop |     rate  chi2/ndf   ndf  drop
+  m_epmum      PA        |   1.0060      0.85    79     0 |   1.0277      1.15    79     0
+               madspin   |   1.0073      1.16    79     0 |   1.0290      1.53    79     0
+               onshell   |   1.0516      0.92    79     0 |   1.0743      1.36    79     0
+               none      |   1.0526     14.06    79     0 |   1.0753     12.22    79     0
+               PA_nojac  |   0.9957      0.88    79     0 |   1.0172      1.00    79     0
+  m_epmup      PA        |   1.0061      1.13    79     0 |   1.0278      1.26    79     0
+               madspin   |   1.0078      1.20    79     0 |   1.0295      1.53    79     0
+               onshell   |   1.0519      1.16    79     0 |   1.0746      1.54    79     0
+               none      |   1.0530     13.37    79     0 |   1.0757     11.93    79     0
+               PA_nojac  |   0.9957      1.12    79     0 |   1.0172      1.09    79     0
+  phi_planes   PA        |   1.0059      1.18    31     0 |   1.0274      1.16    31     0
+               madspin   |   1.0075      0.87    31     0 |   1.0291      0.90    31     0
+               onshell   |   1.0519      1.15    31     0 |   1.0744      1.15    31     0
+               none      |   1.0519      1.42    31     0 |   1.0744      1.35    31     0
+               PA_nojac  |   0.9957      1.11    31     0 |   1.0170      1.08    31     0
+  cos_theta1   PA        |   1.0059      1.63    39     0 |   1.0274      1.70    39     0
+               madspin   |   1.0075      0.86    39     0 |   1.0291      0.84    39     0
+               onshell   |   1.0519      1.33    39     0 |   1.0744      1.36    39     0
+               none      |   1.0519     86.65    39     0 |   1.0744     88.09    39     0
+               PA_nojac  |   0.9957      1.65    39     0 |   1.0170      1.70    39     0
+  cos_theta2   PA        |   1.0059      1.63    39     0 |   1.0274      1.66    39     0
+               madspin   |   1.0075      1.53    39     0 |   1.0291      1.56    39     0
+               onshell   |   1.0519      1.18    39     0 |   1.0744      1.23    39     0
+               none      |   1.0519     84.29    39     0 |   1.0744     85.17    39     0
+               PA_nojac  |   0.9957      1.60    39     0 |   1.0170      1.62    39     0
+  cos1cos2     PA        |   1.0059      0.89    39     0 |   1.0274      1.00    39     0
+               madspin   |   1.0075      1.29    39     0 |   1.0291      1.28    39     0
+               onshell   |   1.0519      1.21    39     0 |   1.0744      1.27    39     0
+               none      |   1.0519    174.21    39     0 |   1.0744    176.79    39     0
+               PA_nojac  |   0.9957      0.87    39     0 |   1.0170      0.95    39     0
+  dphi_epmum   PA        |   1.0059      0.89    31     0 |   1.0274      0.89    31     0
+               madspin   |   1.0075      1.25    31     0 |   1.0291      1.37    31     0
+               onshell   |   1.0519      0.93    31     0 |   1.0744      1.10    31     0
+               none      |   1.0519      4.94    31     0 |   1.0744      4.06    31     0
+               PA_nojac  |   0.9957      0.98    31     0 |   1.0170      0.97    31     0
+  m_ee         PA        |   1.0059     11.73    74     0 |   1.0274     17.13    74     0
+               madspin   |   1.0075      8.15    74     0 |   1.0291      0.89    74     0
+               onshell   |   1.0519        --     0    74 |   1.0744        --     0    74
+               none      |   1.0519        --     0    74 |   1.0744        --     0    74
+               PA_nojac  |   0.9957      2.55    74     0 |   1.0170      4.34    74     0
+  m_mumu       PA        |   1.0059     12.17    74     0 |   1.0274     17.58    74     0
+               madspin   |   1.0075      9.52    74     0 |   1.0291      1.33    74     0
+               onshell   |   1.0519        --     0    74 |   1.0744        --     0    74
+               none      |   1.0519        --     0    74 |   1.0744        --     0    74
+               PA_nojac  |   0.9957      3.05    74     0 |   1.0170      4.68    74     0
+  m_4l         PA        |   1.0072      2.03    61     3 |   1.0272      4.17    61     0
+               madspin   |   1.0088      1.79    61     3 |   1.0288      2.85    61     0
+               onshell   |   1.0533      2.03    61     3 |   1.0741      4.17    61     0
+               none      |   1.0533      2.03    61     3 |   1.0741      4.17    61     0
+               PA_nojac  |   0.9969      2.96    61     3 |   1.0167      1.36    61     0
+  pt_ee        PA        |   1.0057      3.32    69     0 |   1.0272      1.59    69     0
+               madspin   |   1.0073      1.23    69     0 |   1.0289      2.15    69     0
+               onshell   |   1.0517      1.08    69     0 |   1.0742      2.41    69     0
+               none      |   1.0517      1.08    69     0 |   1.0742      2.41    69     0
+               PA_nojac  |   0.9954      1.93    69     0 |   1.0168      1.27    69     0
+
+  "drop" is the number of bins where the truth has support and the mode
+  has none.  plot_zz_loopinduced.py drops those bins from its chi2 without
+  saying so; the m_4l row is where that mattered.
+
+--- fraction of sigma with m(e+ e-) < 80 GeV ---
+  truth (all)            2.3610 %
+  truth (m_4l >= 2 mZ)   1.8063 %
+  madspin                1.8416 %
+  PA                     3.0680 %
+  madspin / truth(all) = 0.7800   but madspin / truth(reachable) = 1.0195
+  PA      / truth(all) = 1.2994              / truth(reachable) = 1.6985
