@@ -1,7 +1,9 @@
 # Note for the MadSpin-2 paper session — polarisation figures
 
-**Short version: your `Z0Z0 / Z0ZT / ZTZ0 / ZTZT` figures are fine. One other
-figure is not, and one sentence of prose needs a decision.**
+**Short version: your `Z0Z0 / Z0ZT / ZTZ0 / ZTZT` figures are fine. The
+loop-induced `cos1cos2` figure was damped by a frame bug and has now been
+regenerated — replace it. Every coefficient the paper wanted from that study is
+now measured and quotable, and the opposite-sign `C_kk` result survives.**
 
 ## 1. The polarised-weight figures are validated, not suspect
 
@@ -28,7 +30,45 @@ the text, section 4 below has one.
 (`pol_analysis.py` has no boost into a `Z` rest frame; the stored
 `data/weights*.npz` carry no `cos_theta` array). **Nothing to change.**
 
-## 2. `figures/LI_processes/cos1cos2.pdf` — the curves are damped
+## 2. `figures/LI_processes/cos1cos2.pdf` — regenerated, please replace it
+
+**The study has been re-run.** The frame fix is in, the samples are at 200 000
+events instead of 50 000, and they now live outside `/tmp` at
+`~/Documents/madspin_validation_samples/t118_zz_loopinduced/` with per-event
+columns beside them, so this cannot happen a third time. Take the new figure
+from
+
+```
+MadSpin/validation/zz_loopinduced/plots/cos1cos2.pdf            (MG7 style)
+MadSpin/validation/zz_loopinduced/plots_userstyle/cos1cos2.pdf  (user style)
+```
+
+and likewise `pt_ee.pdf` from either directory. Both are PDF+PNG, `usetex`, and
+the MG7 PDFs pass the minus-sign check.
+
+**What changed in the two figures.**
+
+* `cos1cos2`: the three spin-correlated modes still lie on truth
+  (`chi2/ndf` 0.89 to 1.29). `spinmode = none` fails **much** harder —
+  `chi2/ndf = 174.2/39`, against `28.6/39` before. Roughly `4x` of that is the
+  four-fold statistics; the remaining `~55 %` is the frame fix sharpening a
+  distribution that the Wigner rotation had smeared towards flat. Visually the
+  `none` curve's central peak and depleted tails are now unmistakable.
+* `pt_ee`: unchanged for `madspin` (1.10 -> 1.23), `onshell` and `none`
+  (1.10 -> 1.08). **`PA` moved from `1.76` to `3.32`** — see section 5, this is
+  new and it is not a frame effect.
+
+The caption is now correct as written: `theta_1` *is* the helicity angle, the
+`e+` boosted `lab -> 4l frame -> (e+e-) rest frame` sequentially, and a
+polarisation fraction may be read off it.
+
+**Conclusions that did NOT move**: the four spinmodes all work on a
+loop-induced process; the `+0.7 %` / `+5.2 %` normalisation split between the
+modes that draw a virtuality and those that do not; `spinmode = none` being the
+only mode the angular observables reject. Those are all still true and, where
+statistics matter, more strongly true.
+
+### The old section 2, kept for the record
 
 The `cos1cos2` figure of the loop-induced section (`applications.tex`,
 Fig. `fig:cos1cos2_LI`) plots a variable that was built with the wrong boost
@@ -50,34 +90,46 @@ direction of the `e+` in the `(e+ e-)` rest frame and the direction of the
 `(e+ e-)` system in the four-lepton rest frame" — read as the correct sequential
 construction, so the figure does not currently implement its caption.
 
-**What it costs to fix.** The `g g > z z` samples the figure was made on lived
-in `/tmp` and have been swept; no copy survives anywhere on the machine. The
-loop-induced study has to be re-run to regenerate it. `observables.py` is
-already fixed and guarded, so a re-run produces the corrected figure with no
-further work.
+**What it cost to fix.** A full re-run, which has now been done.
 
-**If you do not want to re-run**: the figure is still a valid MadSpin-vs-truth
-comparison, and the honest fix is to the caption — say that `theta_1` is the
-polar angle of the `e+` in the `(e+e-)` rest frame *reached from the lab*, and
-drop the words "helicity angle" if they appear. It is a well-defined,
-discriminating, frame-dependent observable; it is just not the helicity angle,
-and no polarisation fraction may be read off it.
+## 3. The numbers, now quotable
 
-## 3. Numbers you must not quote yet
+The "do not paste these in yet" of the previous version is lifted. Post-fix, on
+200 000 events per sample:
 
-`SPIN_COEFFICIENTS.md` recommended quoting `f_0 = 0.112 +- 0.007` for the `gg`
-box, `C_kk = +0.57 +- 0.14` against `-0.68 +- 0.13`, and drafted a LaTeX
-paragraph around them. **All of those are damped and none is currently
-quotable.** They are biased towards isotropy: on the proxy sample `f_0` moves by
-`-0.040` and `C_kk` by `-0.108`. The *physics* of that paragraph is unchanged —
-`eta_l = 0.219` multiplies only the `P1` term, the rank-2 moment is undiluted,
-`f_0 = 2 - 5 <cos^2 theta>`, the calibration is `4/eta_l^2 = 83.2` and not the
-`9` of the spin-1/2 case, and the `gg` box and the `qq~` continuum correlate the
-helicities with **opposite sign** (a rotation cannot flip a sign, so that
-statement is robust). Only the numbers have to wait for a re-run.
+| | pre-fix (50k) | **post-fix (200k)** |
+|---|---|---|
+| `f_0` (gg box, truth) | `0.112 +- 0.007` | **`0.067 +- 0.003`** |
+| `f_TT` (gg box, truth) | `0.828 +- 0.011` | **`0.908 +- 0.007`** |
+| `C_kk` (gg box) | `+0.57 +- 0.14` | **`+0.38 +- 0.07`** |
+| `C_kk` (qq~ continuum) | `-0.68 +- 0.13` | **`-0.645 +- 0.080`** |
+| `none` vs truth on `f_0` | `21.7 sigma` | **`77 sigma`** |
 
-Nothing in `applications.tex` or `validation.tex` currently quotes any of them,
-so there is no correction to make — only a "do not paste these in yet".
+**The opposite-sign `C_kk` result survives** and is now a measurement rather
+than a prediction: `+0.380 +- 0.072` against `-0.645 +- 0.080`, **9.5 sigma
+apart**, both sides post-fix and both at 200 000 events. This was the one claim
+genuinely at risk, because the correction pushed the `gg` value *down* by
+`0.19`, towards the `qq~` sign. It did not cross: `+0.380` is `5.3 sigma` from
+zero on its own.
+
+The `gg` box is **more** transverse than the earlier numbers said — the
+longitudinal fraction is `6.7 %`, not `11 %`, and `f_TT = 0.908`.
+
+Quote `f_0` from the **`f_0 (both)`** column of `data/numbers.txt`, not from one
+lepton pair. The two `Z` are equivalent, so the estimator is their per-event
+average; it is a `sqrt(2)` improvement and it removes the one `+2.2 sigma`
+scatter that the single-pair columns show for `PA`. All three physical modes
+then reproduce truth to better than `1.7 sigma`.
+
+The corrected LaTeX paragraph is at the end of `SPIN_COEFFICIENTS.md` and is
+ready to paste.
+
+**Caveat on one consistency check.** The pre-fix argument that `eta_l = 0.15`
+must be wrong "because `C_kk` would come out `1.23`, outside its own bound" no
+longer works: at the post-fix moment the wrong `eta_l` gives `0.82`, inside the
+bound. The `eta_l = 0.219` value is still right — the derivation in section 3 of
+`SPIN_COEFFICIENTS.md` settles it — but do not present the bound violation as
+the evidence.
 
 ## 4. A sentence you can use, if you want one
 
@@ -86,6 +138,26 @@ so there is no correction to make — only a "do not paste these in yet".
 > $\{Z_0Z_0,Z_0Z_T,Z_TZ_0,Z_TZ_T\}$ weight reproduces
 > $\langle\cos^2\theta\rangle = 1/5$ for a longitudinal and $2/5$ for a
 > transverse $Z$, on all eight entries, to better than $1.4\sigma$.
+
+## 5. New, and unrelated to the frame: `PA` and `pt(e+ e-)`
+
+At 200 000 events `spinmode = PA` shows a **coherent 7.5 % deficit below
+`pt(e+ e-) = 20 GeV`**, recovering above it. Every low-`pt` bin pulls `-4` to
+`-7 sigma`; `chi2/ndf = 3.32/69` against `madspin`'s `1.23` and `onshell`'s
+`1.08`. `pt_ee` builds no decay-angle frame, so the frame fix cannot touch it —
+this is purely the four-fold statistics resolving something that 50 000 events
+left at a marginal `1.76`.
+
+`PA` is the only mode that reshuffles the production onto sampled virtualities
+while evaluating the density matrix at **on-shell** momenta. `onshell` does not
+reshuffle, `madspin` evaluates at the reshuffled momenta, and neither shows the
+effect — so a mismatch between reshuffled kinematics and an on-shell density is
+at least a coherent place to look.
+
+**This is not yet understood and should not go in the paper as a result.** It is
+flagged so that it is not discovered later in a figure. If the paper shows
+`pt_ee` for the loop-induced study, `PA` will visibly sit low in the first few
+bins of the ratio panel.
 
 ---
 
