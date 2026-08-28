@@ -1,0 +1,591 @@
+% ===================================================================
+%  Spin observables and coefficients used in the MadSpin2 validation
+%  ------------------------------------------------------------------
+%  Self-contained: compiles on its own with
+%      pdflatex spin_definitions.tex ; pdflatex spin_definitions.tex
+%  Pasteable: everything between "BODY BEGINS" and "BODY ENDS" can be
+%  dropped into the paper unchanged.  The \providecommand block below
+%  only fills in the paper's own macros (\ms, \newms, \mg, \code,
+%  \opt, \Tr) when they are not already defined, so it is harmless
+%  either way; the \cite keys are the paper's real BibTeX keys, and
+%  the entries not yet in bibliography.bib are given, ready to paste,
+%  in the commented block at the very end of this file.
+%
+%  Sources (MadSpin/validation/zz_loopinduced/):
+%    SPIN_COEFFICIENTS.md, POLWEIGHT_CLOSURE_DIAGNOSIS.md,
+%    PA_LOWPT_DIAGNOSIS.md, observables.py, data/numbers.txt.
+%  Numbers are from data/numbers.txt (post-frame-fix, 200k events per
+%  sample).  RESULTS.md describes the 50k first pass and is stale.
+% ===================================================================
+\documentclass[a4paper,11pt]{article}
+
+\usepackage[T1]{fontenc}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{xcolor}
+\usepackage[margin=2.6cm]{geometry}
+\usepackage[colorlinks,linkcolor={red!50!black},citecolor={blue!50!black},
+            urlcolor={blue!80!black}]{hyperref}
+
+% --- the paper's macros, only defined if the paper has not already ---
+\providecommand{\mgamc}{{\textsc{MG5aMC}}}
+\providecommand{\mg}{{\textsc{MG5aMC}}}
+\providecommand{\ms}{{\textsc{MadSpin}}}
+\providecommand{\newms}{{\textsc{MadSpin2}}}
+\providecommand{\code}[1]{\texttt{#1}}
+\providecommand{\opt}[1]{\texttt{#1}}
+\providecommand{\Tr}{\operatorname{Tr}}
+
+% --- macros introduced by this section ---
+\providecommand{\etal}{\ensuremath{\eta_\ell}}          % leptonic analysing power
+\providecommand{\ckk}{\ensuremath{C_{kk}}}              % helicity-sign correlation
+\providecommand{\cnn}{\ensuremath{C_{nn}}}              % t tbar transverse correlation
+\providecommand{\fourl}{four-lepton}
+
+\title{Spin observables and coefficients: definitions, conventions and numbers}
+\author{}
+\date{}
+
+\begin{document}
+\maketitle
+
+% =================== BODY BEGINS ===================
+
+\section{Spin observables and coefficients}
+\label{sec:spinobs}
+
+This section collects, in one place, the definitions of every spin observable
+and coefficient quoted in this work, in a form that can be reimplemented from
+the text alone. Unless stated otherwise the numbers are those of the
+loop-induced $gg\to ZZ$ study of this work: $200\,000$
+events per sample, all moments \emph{unbinned}, i.e.\ weighted means over
+events with the ordinary error of the mean, and no binning or within-bin
+reconstruction anywhere.
+
+\subsection{The helicity angles}
+\label{subsec:spinobs_angles}
+
+Every angular observable below is built from the four charged leptons alone
+($e^+e^-\mu^+\mu^-$, one of each); the $Z$ candidates are the reconstructed
+same-flavour opposite-sign pairs. Write $Z_1=(e^+e^-)$, $Z_2=(\mu^+\mu^-)$ and
+$Q=Z_1+Z_2$ for the \fourl{} system.
+
+\begin{description}
+\item[$\theta_i$] the polar angle of the $\ell^+$ from $Z_i$, measured
+  \emph{in the rest frame of $Z_i$}, against the direction of flight of $Z_i$
+  \emph{in the \fourl{} rest frame} --- the helicity axis. In the \fourl{}
+  frame the two axes are back to back, and each $Z$ is analysed on its own
+  axis.
+\item[$\Phi$] the signed angle between the two decay planes, constructed
+  entirely inside the \fourl{} rest frame.
+\end{description}
+
+This is the standard $H\to ZZ\to4\ell$ helicity convention~\cite{Gao:2010qx},
+specialised to a $ZZ$ system that is a continuum rather than a resonance.
+Ref.~\cite{Gao:2010qx} measures the angle of the \emph{fermion} $\ell^-$ where
+we use the $\ell^+$; the two conventions differ by $\cos\theta_i\to
+-\cos\theta_i$ on \emph{both} sides simultaneously, so they flip the sign of
+the single rank-one moment $\langle\cos\theta\rangle$ and of the $\etal$ term
+in Eq.~\eqref{eq:Wlambda}, and leave $\langle\cos^2\theta\rangle$,
+$\langle\cos\theta_1\cos\theta_2\rangle$ and every coefficient built from them
+unchanged.
+
+\paragraph{The boosts must be composed sequentially.} Reaching the frame in
+which $\theta_i$ is defined means boosting lab $\to$ \fourl{} rest frame $\to$
+$Z_i$ rest frame, \emph{in that order}, for the lepton as well as for the axis.
+Taking the axis in the \fourl{} frame while boosting the $\ell^+$ into the pair
+rest frame straight from the lab composes two boosts that are not collinear;
+their composition carries a Wigner rotation, so the resulting angle is not a
+Lorentz invariant of the four momenta and the observable becomes a function of
+the observer. This is not a different convention, it is not a convention at
+all. The effect is large: on a $13$~TeV $pp\to ZZ$ sample the median tilt
+between the two constructions is $8^\circ$, the mean $11^\circ$, with a tail to
+$81^\circ$, and a rotation by that angle damps \emph{every} rank-two moment
+towards the isotropic value $1/3$. That mistake was made and corrected in the
+course of this work: before the correction the extraction closed against
+\ms's own polarised matrix-element weights only at $14$--$21\sigma$, and the
+apparent failure was attributed to \ms; with the boosts composed sequentially
+the same eight closure entries agree to $1.4\sigma$ at worst on the same
+$250\,000$ events, and no \ms{} source was involved. The implementation carries
+a regression test on the two defining properties --- invariance of $\theta_i$
+under an arbitrary boost of the whole event, and
+$\langle\cos^2\theta\rangle=1/5$ recovered on a synthetic pure $\sin^2\theta$
+decay.
+
+\paragraph{No angular cuts.} The selection used here is $p_T(\ell^+\ell^-)>1$~GeV
+and $|m(\ell^+\ell^-)-m_Z|<15\,\Gamma_Z$ on each reconstructed pair, i.e.\
+$54.567$--$127.809$~GeV for $m_Z=91.188$~GeV, $\Gamma_Z=2.4414$~GeV. Neither is
+a function of a decay angle, so the azimuths $\phi_1,\phi_2$ are integrated
+over their full range and the statements below that rely on the off-diagonal
+density-matrix elements integrating away are exact rather than approximate. A
+selection with lepton $p_T$ or $\eta$ cuts could not say that.
+
+\subsection{The single-$Z$ decay distributions and the leptonic analysing power}
+\label{subsec:spinobs_etal}
+
+For a $Z$ of helicity $\lambda$ along its own flight direction decaying to
+massless leptons, the $\ell^+$ polar angle $c=\cos\theta$ in the $Z$ rest frame
+is distributed as
+\begin{equation}
+  W_{\pm1}(c)=\tfrac38\left(1+c^2\pm2\etal\,c\right),
+  \qquad
+  W_{0}(c)=\tfrac34\left(1-c^2\right),
+  \label{eq:Wlambda}
+\end{equation}
+each normalised to unity on $c\in[-1,1]$. Expanded on Legendre polynomials,
+\begin{equation}
+  W_{\pm1}=\tfrac12+\tfrac14P_2(c)\pm\tfrac34\etal\,P_1(c),
+  \qquad
+  W_{0}=\tfrac12-\tfrac12P_2(c),
+  \label{eq:Wlegendre}
+\end{equation}
+which is the point of the whole construction in one line: the leptonic
+analysing power multiplies \emph{only} $P_1$. Rank-one (vector polarisation)
+moments are diluted by $\etal$; rank-two (alignment) moments are not diluted at
+all.
+
+The analysing power is
+\begin{equation}
+  \etal=\frac{2g_Vg_A}{g_V^2+g_A^2}
+       =\frac{1-4s_W^2}{1-4s_W^2+8s_W^4},
+  \qquad s_W^2\equiv\sin^2\theta_W,
+  \label{eq:etal}
+\end{equation}
+the two spellings being the same function through $g_V/g_A=1-4s_W^2$. It is
+small because the $Z$ coupling to charged leptons is nearly pure vector, which
+is why a $Z$ is a weak spin analyser.
+
+\paragraph{The value, and a trap.} \emph{$\etal$ is steep in $s_W^2$, and the
+scheme matters.} The default \mg{} parameter card runs the on-shell electroweak
+scheme: from $\alpha_{\rm EW}^{-1}=132.507$, $G_F=1.16639\times10^{-5}$ and
+$m_Z=91.188$~GeV the SM UFO builds $m_W=80.4190$~GeV and
+$s_W^2=1-m_W^2/m_Z^2=0.222246$, hence
+\begin{equation}
+  \boxed{\;\etal=0.2193\;}
+  \qquad
+  \frac{\etal^2}{4}=0.01203,
+  \qquad
+  \frac{4}{\etal^2}=83.15 .
+  \label{eq:etalvalue}
+\end{equation}
+The frequently quoted $0.15$ is the \emph{effective} value, obtained by
+evaluating Eq.~\eqref{eq:etal} at $\sin^2\theta_{\rm eff}\simeq0.2315$; the
+value $\simeq0.13$ appearing in Ref.~\cite{Aguilar-Saavedra:2022wam}
+corresponds to $s_W^2\simeq0.233$. A $5\%$ change in $s_W^2$ moves $\etal$ by
+$40\%$, and $\etal$ enters squared, so the difference between the on-shell and
+the effective value is a factor $2.1$ in every diluted quantity. Quote the
+scheme with the number: taking $\etal=0.15$ where the simulation uses
+$0.2193$ inflates $\ckk$ below by that factor, and that error was made and
+caught in the course of this work.
+
+\subsection{Rank two: the longitudinal fraction and the joint fractions}
+\label{subsec:spinobs_f0}
+
+Let $f_0=P(\lambda=0)$ be the longitudinal population of one $Z$. Averaging
+Eq.~\eqref{eq:Wlambda} over the populations, with
+$\langle c^2\rangle_{\pm1}=2/5$ and $\langle c^2\rangle_0=1/5$,
+\begin{equation}
+  \langle\cos^2\theta\rangle=\frac{2-f_0}{5}
+  \qquad\Longleftrightarrow\qquad
+  \boxed{\;f_0=2-5\,\langle\cos^2\theta\rangle\;}
+  \label{eq:f0}
+\end{equation}
+with \emph{no $\etal$}: the $(1+\cos^2\theta)$ versus $\sin^2\theta$ shape
+difference carries no analysing power, so $f_0$ is undiluted. The isotropic
+(unpolarised) value is $f_0=1/3$, since
+$\sum_\lambda\frac13W_\lambda(c)=\frac12$ identically.
+
+It is carried as a per-event estimator, $P_0(c)\equiv2-5c^2$, whose mean is
+$f_0$ exactly with an ordinary error of the mean. It is not a probability event
+by event --- it runs over $[-3,2]$ --- but it is unbiased, and the product of
+the two $Z$ estimators is the joint longitudinal fraction:
+\begin{equation}
+  f_{00}=\big\langle(2-5\cos^2\theta_1)(2-5\cos^2\theta_2)\big\rangle
+        =25\langle c_1^2c_2^2\rangle-10\big(\langle c_1^2\rangle+\langle c_2^2\rangle\big)+4 .
+  \label{eq:f00}
+\end{equation}
+The remaining joint fractions follow by subtraction,
+\begin{equation}
+  f_{0T}=f_0^{(1)}-f_{00},\qquad
+  f_{T0}=f_0^{(2)}-f_{00},\qquad
+  f_{TT}=1-f_0^{(1)}-f_0^{(2)}+f_{00}=\big\langle(1-P_0)(1-P_0)\big\rangle,
+  \label{eq:fjoint}
+\end{equation}
+where $T$ collects both transverse helicities. If the two $Z$ decayed
+independently, $f_{00}$ would collapse to $f_0^{(1)}f_0^{(2)}$ exactly; the
+connected part is therefore the rank-two, $\etal$-free inter-decay correlation,
+\begin{equation}
+  \boxed{\;f_{00}-f_0^{(1)}f_0^{(2)}=25\left[\langle c_1^2c_2^2\rangle-\langle c_1^2\rangle\langle c_2^2\rangle\right]\;}
+  \label{eq:rank2corr}
+\end{equation}
+equivalently $\langle P_2(c_1)P_2(c_2)\rangle-\langle P_2(c_1)\rangle\langle
+P_2(c_2)\rangle=\frac{9}{100}\big(f_{00}-f_0^{(1)}f_0^{(2)}\big)$.
+
+The two $Z$ are equivalent here, so the quoted $f_0$ is the average of the two
+sides taken \emph{per event}, not the combination of two separately quoted
+columns: the two sides are measured on the same events and combining them as if
+independent would drop their covariance.
+
+\subsection{Rank one: the helicity correlation \texorpdfstring{$\ckk$}{Ckk}}
+\label{subsec:spinobs_ckk}
+
+After the azimuthal integration only the diagonal populations
+$P(\lambda_1,\lambda_2)$ survive, so
+$W(c_1,c_2)=\sum_{\lambda_1\lambda_2}P(\lambda_1,\lambda_2)
+W_{\lambda_1}(c_1)W_{\lambda_2}(c_2)$. With $\langle c\rangle_{\pm1}=\pm\etal/2$
+and $\langle c\rangle_0=0$,
+\begin{equation}
+  \boxed{\;\langle\cos\theta_1\cos\theta_2\rangle=\frac{\etal^2}{4}\,\ckk\;}
+  \qquad
+  \ckk=\big\langle S_k^{(1)}S_k^{(2)}\big\rangle=P(++)+P(--)-P(+-)-P(-+),
+  \label{eq:ckk}
+\end{equation}
+with $S_k$ the spin-one projection on each $Z$'s \emph{own} helicity axis,
+eigenvalues $+1,0,-1$. A longitudinal $Z$ contributes zero, so $\ckk$ is a
+purely transverse-sector object and
+\begin{equation}
+  |\ckk|\le f_{TT}.
+  \label{eq:ckkbound}
+\end{equation}
+
+\paragraph{The calibration is $4/\etal^2=83.15$ --- four, not nine.} At
+analysing power one the spin-one constant is $4$, not the $9$ of the
+spin-one-half $t\bar t$ case. The two follow from different algebras and the
+confusion is easy to make: for a spin-one-half decay
+$\frac12(1+\kappa\,c)$ one has $\langle c\rangle_\pm=\pm\kappa/3$, hence
+$\langle c_1c_2\rangle=(\kappa^2/9)\,\cnn$ and $\cnn=9\langle c_1c_2\rangle$ at
+$\kappa=1$; for spin one, Eq.~\eqref{eq:ckk} gives $4$. Do not carry the $9$
+across. Numerically $4/\etal^2=83.15$, so a $\ckk$ of order one appears as a
+raw moment of order $0.012$: the smallness of
+$\langle\cos\theta_1\cos\theta_2\rangle$ is the $\etal^2$ dilution and nothing
+else.
+
+\subsection{For contrast: the \texorpdfstring{$t\bar t$}{ttbar} coefficient}
+\label{subsec:spinobs_cnn}
+
+The $t\bar t$ sections of this work use the spin-one-half coefficient on the
+$\hat n$ axis,
+\begin{equation}
+  \cnn=\Tr\!\left[\rho\,\sigma_n\otimes\sigma_n\right]
+      =2\,\mathrm{Re}\,\rho(+-,-+)-2\,\mathrm{Re}\,\rho(++,--)
+      =9\,\big\langle\cos\theta^n_{\ell^+}\cos\theta^n_{\ell^-}\big\rangle ,
+  \label{eq:cnn}
+\end{equation}
+each lepton angle measured in the rest frame of its parent top and the
+analysing power of a charged lepton from a top being $\kappa=1$. It is a pure
+double-interference object: no diagonal entry of $\rho$
+contributes~\cite{Bernreuther:2015yna}. Equations~\eqref{eq:ckk}
+and~\eqref{eq:cnn} are the same construction at different spin, but they are
+\emph{not} interchangeable: the calibration constants differ ($4$ against $9$),
+the analysing powers differ ($\etal=0.2193$ against $\kappa=1$), and $\ckk$ is
+a diagonal-population object where $\cnn$ is an off-diagonal one.
+
+\subsection{Mapping onto the literature, and a normalisation hazard}
+\label{subsec:spinobs_dictionary}
+
+\emph{Different papers normalise the qutrit generators differently, and the
+numerical range of the correlation coefficients changes with the choice.}
+Whether the $1/9$ sits in front, whether the generators are $\lambda_i$ or
+$\lambda_i/2$, and whether the correlation matrix absorbs a factor $9/4$ all
+vary. Quote the convention with the number, always.
+
+Two parametrisations are in use for a pair of spin-one particles (two qutrits):
+\begin{equation}
+  \rho=\tfrac19\Big[\mathbb{1}\otimes\mathbb{1}
+    +a_i\,\lambda_i\otimes\mathbb{1}
+    +b_j\,\mathbb{1}\otimes\lambda_j
+    +c_{ij}\,\lambda_i\otimes\lambda_j\Big],
+  \qquad \Tr(\lambda_j\lambda_k)=2\delta_{jk},
+  \label{eq:fano}
+\end{equation}
+the Gell-Mann/Fano form of the entanglement
+literature~\cite{Ashby-Pickering:2022umy,Barr:2024djo,Fabbrichesi:2023cev},
+in which $c_{ij}$ is an $8\times8$ matrix and not the $3\times3$ of the $t\bar
+t$ case; and
+\begin{equation}
+  \rho=\tfrac19\Big[\mathbb{1}\otimes\mathbb{1}
+    +A^1_{LM}\,T^L_M\otimes\mathbb{1}
+    +A^2_{LM}\,\mathbb{1}\otimes T^L_M
+    +C_{L_1M_1L_2M_2}\,T^{L_1}_{M_1}\otimes T^{L_2}_{M_2}\Big],
+  \label{eq:irreducible}
+\end{equation}
+the irreducible-tensor form of Ref.~\cite{Aguilar-Saavedra:2022wam}, with
+$T^L_M$ the rank-$L$ multipole operators, $L=1$ the vector polarisation and
+$L=2$ the alignment. Equation~\eqref{eq:irreducible} is the parametrisation
+that matches the physics used here, because $L$ is exactly the rank that
+decides whether $\etal$ enters. The same reference defines the leptonic
+analysing power identically to Eq.~\eqref{eq:etal}, under the same name
+$\etal$.
+
+In the basis ordered $(+1,0,-1)$, with $T^1_0=\sqrt{3/2}\,S_z$ and
+$T^2_0=(3S_z^2-2)/\sqrt2$, the dictionary in the normalisation of
+Eq.~\eqref{eq:irreducible} is
+\begin{align}
+  A_{20}&=\frac{1-3f_0}{\sqrt2}=5\sqrt2\,\langle P_2(\cos\theta)\rangle, \label{eq:dictA20}\\
+  C_{2020}-A^1_{20}A^2_{20}&=\tfrac92\big(f_{00}-f_0^{(1)}f_0^{(2)}\big), \label{eq:dictC2020}\\
+  C_{1010}&=\tfrac32\,\ckk=\frac{6\,\langle\cos\theta_1\cos\theta_2\rangle}{\etal^2}. \label{eq:dictC1010}
+\end{align}
+Equation~\eqref{eq:dictA20} was verified against the published projector
+$\int Y^0_2\,\mathrm{d}\sigma/\sigma=(B_2/4\pi)\,A_{20}$ with
+$B_2=\sqrt{2\pi/5}$ of Ref.~\cite{Aguilar-Saavedra:2022wam}, and agrees.
+Translating to Eq.~\eqref{eq:fano} uses
+\begin{equation}
+  S_z=\tfrac12\lambda_3+\tfrac{\sqrt3}{2}\lambda_8 ,
+  \label{eq:szgellmann}
+\end{equation}
+so that \emph{$\ckk$ is a fixed combination of $c_{33}$, $c_{88}$ and $c_{38}$
+rather than a single Gell-Mann entry} --- one more reason to quote $\ckk$ in
+the spin-operator language of Eq.~\eqref{eq:ckk} and give the mapping
+explicitly.
+
+Experimentally, $f_0$ is the standard \emph{longitudinal polarisation
+fraction} measured in $WZ$, $WW$ and $ZZ$, and $f_{00},f_{0T},f_{T0},f_{TT}$
+the \emph{joint (doubly polarised) fractions}. For $gg\to ZZ$ specifically the
+reference is Ref.~\cite{Javurkova:2024bwa}: same process, same decomposition.
+The matrix-element side of that decomposition --- what \mg's polarised matrix
+elements and \ms's \code{keep\_weight\_for\_polarization\_vector} weights
+implement --- is Ref.~\cite{BuarqueFranzosi:2019boy}.
+
+\subsection{Numbers}
+\label{subsec:spinobs_numbers}
+
+Table~\ref{tab:spincoeff} gives the coefficients for the loop-induced
+$gg\to ZZ$ study. The reference (``truth'') is the off-shell four-lepton
+calculation $gg\to e^+e^-\mu^+\mu^-$; the other rows are the \ms{} spinmodes
+run on the $gg\to ZZ$ production sample. All entries are unbinned moments over
+$200\,000$ events per sample, quoted with the error of the mean; truth and each
+mode are independent samples, so pulls add the two bars in quadrature.
+
+\begin{table}[htbp]
+  \centering
+  \small
+  \setlength{\tabcolsep}{4.5pt}
+  \begin{tabular}{lccccc}
+    \toprule
+    sample & $f_0$ & $f_{00}$ & $f_{00}-f_0^{(1)}f_0^{(2)}$ & $f_{TT}$ & $\ckk$ \\
+    \midrule
+    truth              & $0.0669\pm0.0025$ & $0.0417\pm0.0054$ & $\phantom{-}0.0372\pm0.0054$ & $0.9079\pm0.0071$ & $+0.380\pm0.072$ \\
+    \code{madspin}     & $0.0673\pm0.0025$ & $0.0513\pm0.0054$ & $\phantom{-}0.0468\pm0.0054$ & $0.9166\pm0.0071$ & $+0.460\pm0.072$ \\
+    \code{PA}          & $0.0720\pm0.0025$ & $0.0538\pm0.0054$ & $\phantom{-}0.0487\pm0.0054$ & $0.9099\pm0.0071$ & $+0.491\pm0.072$ \\
+    \code{onshell}     & $0.0727\pm0.0025$ & $0.0525\pm0.0054$ & $\phantom{-}0.0472\pm0.0054$ & $0.9072\pm0.0071$ & $+0.431\pm0.072$ \\
+    \code{none}        & $0.3313\pm0.0024$ & $0.1065\pm0.0052$ & $-0.0033\pm0.0050$          & $0.4439\pm0.0059$ & $-0.034\pm0.062$ \\
+    \midrule
+    \multicolumn{6}{@{}l}{\emph{pull against truth, in $\sigma$}}\\
+    \code{madspin}     & $+0.1$  & $+1.3$ & $+1.3$ & $+0.9$  & $+0.8$ \\
+    \code{PA}          & $+1.5$  & $+1.6$ & $+1.5$ & $+0.2$  & $+1.1$ \\
+    \code{onshell}     & $+1.7$  & $+1.4$ & $+1.3$ & $-0.1$  & $+0.5$ \\
+    \code{none}        & $+77.4$ & $+8.6$ & $-5.5$ & $-50.3$ & $-4.3$ \\
+    \bottomrule
+  \end{tabular}
+  \caption{Spin coefficients of the loop-induced $gg\to ZZ$ study, unbinned
+    moments over $200\,000$ events per sample. $f_0$ is the per-event average
+    of the two $Z$; on a single side the \code{none} pull is $+55.2\sigma$
+    rather than $+77.4\sigma$. The isotropic values a mode with no production
+    density must give are $f_0=1/3$, $f_{TT}=4/9$,
+    $f_{00}-f_0^{(1)}f_0^{(2)}=0$ and $\ckk=0$, and \code{none} reproduces all
+    four within $0.8\sigma$.}
+  \label{tab:spincoeff}
+\end{table}
+
+The three spin-correlated modes agree with truth on every coefficient, the
+largest pull anywhere being $+1.7\sigma$. The $gg$ box produces $ZZ$ that are
+overwhelmingly transverse: $f_{TT}=0.908\pm0.007$, with only
+$(6.7\pm0.3)\,\%$ longitudinal.
+
+\paragraph{$\ckk$: opposite signs between the two production mechanisms.}
+Undiluting the raw moments through Eq.~\eqref{eq:ckk},
+\begin{equation}
+  \ckk\big(gg\to ZZ,\ \text{box}\big)=+0.380\pm0.072,
+  \qquad
+  \ckk\big(q\bar q\to ZZ,\ \text{continuum}\big)=-0.645\pm0.080,
+  \label{eq:ckknumbers}
+\end{equation}
+both from $200\,000$-event samples. The two mechanisms correlate the $Z$
+helicities with \emph{opposite sign}, $(1.025)/\sqrt{0.072^2+0.080^2}=9.5\sigma$
+apart, and both are large against the ceiling $f_{TT}\simeq0.91$ of
+Eq.~\eqref{eq:ckkbound}. The $gg$ value is $5.3\sigma$ from zero on its own.
+The corresponding raw moment on the $gg$ side is
+$\langle\cos\theta_1\cos\theta_2\rangle=0.00457\pm0.00087$.
+
+\paragraph{What each coefficient is good for.} As a test of \ms, $\ckk$ and the
+rank-two correlation add nothing over the shape comparison: both are blind to
+\code{spinmode = none}, whose $\cos\theta_1\cos\theta_2$ \emph{distribution}
+nevertheless fails at $\chi^2/\mathrm{ndf}=174.2/39$. The reason is structural
+--- \code{none} gives $\langle\cos\theta_1\cos\theta_2\rangle=0$, and the truth
+value is also nearly zero because of the $\etal^2$ dilution, so two nearly-zero
+numbers do not separate --- while the shape difference between a product of two
+flat variables and a product of two $(1+\cos^2\theta)$-shaped ones is of order
+one. $f_0$ is the coefficient worth quoting: it is undiluted, it separates
+\code{none} at $77\sigma$, and it is a statement about the physics rather than
+about a histogram.
+
+\subsection{Caveats that belong with the definitions}
+\label{subsec:spinobs_caveats}
+
+\begin{enumerate}
+\item \textbf{$\ckk$ lives in the transverse sector only.} A longitudinal $Z$
+  has $S_k=0$, so Eq.~\eqref{eq:ckkbound} holds: $|\ckk|\le f_{TT}$. A
+  reported $|\ckk|$ exceeding $f_{TT}$ signals an error in the analysing power,
+  the frame, or the calibration constant.
+
+\item \textbf{Reachable support: the $gg\to ZZ$ samples have none below
+  $2m_Z$.} Producing two on-shell $Z$ forces
+  $m_{4\ell}=\sqrt{\hat s}\ge2m_Z=182.376$~GeV, and the reshuffling holds
+  $\sqrt{\hat s}$ fixed, so at $2\to2$ \emph{every} \ms{} mode has exactly zero
+  support below that threshold, at any sample size. The off-shell truth carries
+  $2.09\,\%$ of its cross section there, concentrated entirely at low
+  $p_T(\ell^+\ell^-)$ ($9.5\,\%$ of the truth's $p_T<5$~GeV bin, falling to
+  nothing above $60$~GeV). \emph{Any mode-versus-truth comparison must
+  therefore state whether it is made on the full or on the reachable support},
+  because the ranking of the modes inverts between the two: on $p_T(e^+e^-)$,
+  \code{PA} goes from $\chi^2/\mathrm{ndf}=3.32$ (worst) on the full truth to
+  $1.59$ (best) on the reachable truth, while \code{madspin} goes $1.23\to2.15$
+  and \code{onshell} $1.08\to2.41$. The $2.09\,\%$ hole is not a tail that a
+  mode gets slightly wrong; it is a region of phase space the method does not
+  have.
+\end{enumerate}
+
+% ==================== BODY ENDS ====================
+
+\begin{thebibliography}{9}
+
+\bibitem{Gao:2010qx}
+  Y.~Gao, A.~V.~Gritsan, Z.~Guo, K.~Melnikov, M.~Schulze and N.~V.~Tran,
+  \emph{Spin determination of single-produced resonances at hadron colliders},
+  Phys.\ Rev.\ D \textbf{81} (2010) 075022
+  [\href{https://arxiv.org/abs/1001.3396}{arXiv:1001.3396}].
+
+\bibitem{Javurkova:2024bwa}
+  M.~Javurkova, R.~Ruiz, R.~Coelho Lopes de S\'a and J.~Sandesara,
+  \emph{Polarized $ZZ$ pairs in gluon fusion and vector boson fusion at the LHC},
+  Phys.\ Lett.\ B \textbf{855} (2024) 138787
+  [\href{https://arxiv.org/abs/2401.17365}{arXiv:2401.17365}].
+
+\bibitem{BuarqueFranzosi:2019boy}
+  D.~Buarque Franzosi, O.~Mattelaer, R.~Ruiz and S.~Shil,
+  \emph{Automated predictions from polarized matrix elements},
+  JHEP \textbf{04} (2020) 082
+  [\href{https://arxiv.org/abs/1912.01725}{arXiv:1912.01725}].
+
+\bibitem{Aguilar-Saavedra:2022wam}
+  J.~A.~Aguilar-Saavedra, A.~Bernal, J.~A.~Casas and J.~M.~Moreno,
+  \emph{Testing entanglement and Bell inequalities in $H\to ZZ$},
+  Phys.\ Rev.\ D \textbf{107} (2023) 016012
+  [\href{https://arxiv.org/abs/2209.13441}{arXiv:2209.13441}].
+
+\bibitem{Ashby-Pickering:2022umy}
+  R.~Ashby-Pickering, A.~J.~Barr and A.~Wierzchucka,
+  \emph{Quantum state tomography, entanglement detection and Bell violation
+  prospects in weak decays of massive particles},
+  JHEP \textbf{05} (2023) 020
+  [\href{https://arxiv.org/abs/2209.13990}{arXiv:2209.13990}].
+
+\bibitem{Fabbrichesi:2023cev}
+  M.~Fabbrichesi, R.~Floreanini, E.~Gabrielli and L.~Marzola,
+  \emph{Bell inequalities and quantum entanglement in weak gauge boson
+  production at the LHC and future colliders},
+  Eur.\ Phys.\ J.\ C \textbf{83} (2023) 823
+  [\href{https://arxiv.org/abs/2302.00683}{arXiv:2302.00683}].
+
+\bibitem{Barr:2024djo}
+  A.~J.~Barr, M.~Fabbrichesi, R.~Floreanini, E.~Gabrielli and L.~Marzola,
+  \emph{Quantum entanglement and Bell inequality violation at colliders},
+  Prog.\ Part.\ Nucl.\ Phys.\ \textbf{139} (2024) 104134
+  [\href{https://arxiv.org/abs/2402.07972}{arXiv:2402.07972}].
+
+\bibitem{Bernreuther:2015yna}
+  W.~Bernreuther, D.~Heisler and Z.-G.~Si,
+  \emph{A set of top quark spin correlation and polarization observables for
+  the LHC: Standard Model predictions and new physics contributions},
+  JHEP \textbf{12} (2015) 026
+  [\href{https://arxiv.org/abs/1508.05271}{arXiv:1508.05271}].
+
+\bibitem{CMS:2019nrx}
+  CMS Collaboration,
+  \emph{Measurement of the top quark polarization and $t\bar t$ spin
+  correlations using dilepton final states in proton-proton collisions at
+  $\sqrt{s}=13$~TeV},
+  Phys.\ Rev.\ D \textbf{100} (2019) 072002
+  [\href{https://arxiv.org/abs/1907.03729}{arXiv:1907.03729}].
+
+\end{thebibliography}
+
+\end{document}
+
+% ===================================================================
+%  BibTeX entries for the references NOT yet in bibliography.bib.
+%  (Javurkova:2024bwa, BuarqueFranzosi:2019boy, Bernreuther:2015yna
+%   and CMS:2019nrx are already there and are cited by their existing
+%   keys; the five below are new.  Keys and fields are INSPIRE's.)
+%
+% @article{Gao:2010qx,
+%     author = "Gao, Yanyan and Gritsan, Andrei V. and Guo, Zijin and Melnikov, Kirill and Schulze, Markus and Tran, Nhan V.",
+%     title = "{Spin Determination of Single-Produced Resonances at Hadron Colliders}",
+%     eprint = "1001.3396",
+%     archivePrefix = "arXiv",
+%     primaryClass = "hep-ph",
+%     reportNumber = "FERMILAB-PUB-10-011-E",
+%     doi = "10.1103/PhysRevD.81.075022",
+%     journal = "Phys. Rev. D",
+%     volume = "81",
+%     pages = "075022",
+%     year = "2010"
+% }
+%
+% @article{Aguilar-Saavedra:2022wam,
+%     author = "Aguilar-Saavedra, J. A. and Bernal, A. and Casas, J. A. and Moreno, J. M.",
+%     title = "{Testing entanglement and Bell inequalities in H$\to$ZZ}",
+%     eprint = "2209.13441",
+%     archivePrefix = "arXiv",
+%     primaryClass = "hep-ph",
+%     doi = "10.1103/PhysRevD.107.016012",
+%     journal = "Phys. Rev. D",
+%     volume = "107",
+%     number = "1",
+%     pages = "016012",
+%     year = "2023"
+% }
+%
+% @article{Ashby-Pickering:2022umy,
+%     author = "Ashby-Pickering, Rachel and Barr, Alan J. and Wierzchucka, Agnieszka",
+%     title = "{Quantum state tomography, entanglement detection and Bell violation prospects in weak decays of massive particles}",
+%     eprint = "2209.13990",
+%     archivePrefix = "arXiv",
+%     primaryClass = "quant-ph",
+%     doi = "10.1007/JHEP05(2023)020",
+%     journal = "JHEP",
+%     volume = "05",
+%     pages = "020",
+%     year = "2023",
+%     note = "[Erratum: JHEP 03, 166 (2026)]"
+% }
+%
+% @article{Fabbrichesi:2023cev,
+%     author = "Fabbrichesi, Marco and Floreanini, Roberto and Gabrielli, Emidio and Marzola, Luca",
+%     title = "{Bell inequalities and quantum entanglement in weak gauge boson production at the LHC and future colliders}",
+%     eprint = "2302.00683",
+%     archivePrefix = "arXiv",
+%     primaryClass = "hep-ph",
+%     doi = "10.1140/epjc/s10052-023-11935-8",
+%     journal = "Eur. Phys. J. C",
+%     volume = "83",
+%     number = "9",
+%     pages = "823",
+%     year = "2023"
+% }
+%
+% @article{Barr:2024djo,
+%     author = "Barr, Alan J. and Fabbrichesi, Marco and Floreanini, Roberto and Gabrielli, Emidio and Marzola, Luca",
+%     title = "{Quantum entanglement and Bell inequality violation at colliders}",
+%     eprint = "2402.07972",
+%     archivePrefix = "arXiv",
+%     primaryClass = "hep-ph",
+%     doi = "10.1016/j.ppnp.2024.104134",
+%     journal = "Prog. Part. Nucl. Phys.",
+%     volume = "139",
+%     pages = "104134",
+%     year = "2024"
+% }
+% ===================================================================
