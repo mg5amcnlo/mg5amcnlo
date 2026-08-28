@@ -149,12 +149,27 @@ def record_timing(tag, seconds, rc=0):
     os.replace(tmp, _TIMINGS)
 
 
-def code_sha():
+def _git(*args):
     try:
         return subprocess.check_output(
-            ['git', 'rev-parse', 'HEAD'], cwd=_ROOT).decode().strip()
+            ['git'] + list(args), cwd=_ROOT).decode().strip()
     except Exception:
         return 'unknown'
+
+
+def code_sha():
+    return _git('rev-parse', 'HEAD')
+
+
+# The commit the 200 000-event samples under
+# ``~/Documents/madspin_validation_samples/t118_zz_loopinduced`` were generated
+# on, and its tree.  It is a merge of ``claude/ms-zz-nlo`` (carrying the frame
+# fix ``0d62a68c0``) with ``claude/ms-paramcard-refresh`` (``0a1007bc2``); the
+# branch it sat on was never pushed, so the COMMIT may be unreachable in a fresh
+# clone while the TREE is reproducible from the two parents.  Both are recorded
+# because the tree is what actually determines the physics.
+SAMPLE_BASE_SHA = 'f39482f53'
+SAMPLE_BASE_TREE = '00ac9924a0a206e8849a8235a25e59d5f7228366'
 
 
 def set_run_card(path, **kv):
@@ -627,6 +642,14 @@ def stage_harvest(files, datadir, extra_meta, events_out=None):
             # averaged moments would carry their covariance as an inflation.
             'pol0_1': moment(obs['pol0_1']),
             'pol0_2': moment(obs['pol0_2']),
+            # The two z are equivalent, so the estimator to quote is the
+            # average of the two f_0 -- and it has to be averaged PER EVENT,
+            # not built from the two moments above, because the two are
+            # measured on the same events and their covariance would otherwise
+            # be dropped.  Doing it here buys a factor sqrt(2) on the bar over
+            # either side alone, which is what turns "one of the two f_0 is
+            # 2.2 sigma off" into a single unambiguous number per mode.
+            'pol0_avg': moment(0.5 * (obs['pol0_1'] + obs['pol0_2'])),
             'pol00': moment(obs['pol00']),
             'polTT': moment(obs['polTT']),
             'cos_phi': moment(np.cos(obs['phi_planes'])),
@@ -733,6 +756,24 @@ def main():
                 '0a1007bc25de8398a56a7fb25bbd8f92eaf88e3b',
         }
         extra['param_card_audit'] = param_card_audit(basedir, modes)
+        # ``code_sha`` is the tip at HARVEST time, which is not the same commit
+        # the events were generated on -- the driver and the plotter keep being
+        # edited after a 20-hour generation finishes.  What a later reader needs
+        # is the tree the SAMPLES were produced from, so record it explicitly,
+        # along with where the events themselves live.  The absence of exactly
+        # this is what made the earlier studies in this series expensive to
+        # reassess.
+        extra['samples'] = {
+            'basedir': basedir,
+            'generated_on_commit': SAMPLE_BASE_SHA,
+            'generated_on_tree': SAMPLE_BASE_TREE,
+            'harvest_tree': _git('rev-parse', 'HEAD^{tree}'),
+            'note': 'generated_on_tree is the working tree the events were '
+                    'produced from; it is the merge of the frame fix and the '
+                    'param_card fix named in required_fixes.  If harvest_tree '
+                    'differs, only the harvester/plotter moved, not the '
+                    'physics.',
+        }
         if os.path.exists(_TIMINGS):
             extra['wall_times'] = json.load(open(_TIMINGS))
         try:

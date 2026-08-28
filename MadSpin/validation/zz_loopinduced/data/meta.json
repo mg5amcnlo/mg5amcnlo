@@ -2,8 +2,8 @@
  "BW_cut": 15,
  "banner_cross": {
   "truth": {
-   "nevents": 50000,
-   "sigma_pb": 0.0036484416000000003
+   "nevents": 200000,
+   "sigma_pb": 0.0036554823
   }
  },
  "bins": {
@@ -675,21 +675,16 @@
   "f_squared": 0.956283955247934,
   "source": "MadSpin.decay.bw_retained_fraction(m_Z, Gamma_Z, 15)"
  },
- "code_sha": "178e9542dadcce00f18200528bb6cd9477fddaeb",
- "controls": {
-  "A_no_ptcut": {
-   "error_pb": 0.0008527,
-   "sigma_pb": 1.629
-  }
- },
- "cuts_file": "/private/tmp/t75/MadSpin/validation/zz_loopinduced/zz_equivalent_cuts.f",
+ "code_sha": "60a95e61715fe694d1046e9c9d9cc4ca5a70d431",
+ "controls": {},
+ "cuts_file": "/Users/omattelaer/Documents/git_workspace/madgraph5/.claude/worktrees/zzliregen/MadSpin/validation/zz_loopinduced/zz_equivalent_cuts.f",
  "integration_error": {
-  "production": 0.001424,
-  "truth": 4.681e-06
+  "production": 0.0004287,
+  "truth": 1.161e-06
  },
  "integration_sigma": {
-  "production": 1.624,
-  "truth": 0.003648
+  "production": 1.625,
+  "truth": 0.003655
  },
  "m_Z": 91.188,
  "madspin_modes": [
@@ -715,43 +710,118 @@
   "m_4l",
   "pt_ee"
  ],
+ "param_card_audit": {
+  "PA": {
+   "clean": true,
+   "me_cards": {
+    "decay_23_0": {
+     "clean": true,
+     "differences": []
+    },
+    "decay_23_1": {
+     "clean": true,
+     "differences": []
+    },
+    "madspin_decay": {
+     "clean": true,
+     "differences": []
+    },
+    "madspin_me": {
+     "clean": true,
+     "differences": []
+    }
+   },
+   "source": "/Users/omattelaer/Documents/madspin_validation_samples/t118_zz_loopinduced/ms_PA/msdir/param_card.dat"
+  },
+  "madspin": {
+   "clean": true,
+   "me_cards": {
+    "decay_23_0": {
+     "clean": true,
+     "differences": []
+    },
+    "decay_23_1": {
+     "clean": true,
+     "differences": []
+    },
+    "madspin_decay": {
+     "clean": true,
+     "differences": []
+    },
+    "madspin_me": {
+     "clean": true,
+     "differences": []
+    }
+   },
+   "source": "/Users/omattelaer/Documents/madspin_validation_samples/t118_zz_loopinduced/ms_madspin/msdir/param_card.dat"
+  },
+  "none": {
+   "status": "no /Users/omattelaer/Documents/madspin_validation_samples/t118_zz_loopinduced/ms_none/msdir/param_card.dat (mode builds no matrix element)"
+  },
+  "onshell": {
+   "clean": true,
+   "me_cards": {
+    "decay_23_0": {
+     "clean": true,
+     "differences": []
+    },
+    "decay_23_1": {
+     "clean": true,
+     "differences": []
+    },
+    "madspin_decay": {
+     "clean": true,
+     "differences": []
+    },
+    "madspin_me": {
+     "clean": true,
+     "differences": []
+    }
+   },
+   "source": "/Users/omattelaer/Documents/madspin_validation_samples/t118_zz_loopinduced/ms_onshell/msdir/param_card.dat"
+  }
+ },
  "processes": {
   "A": "g g > z z [noborn=QCD]",
   "B": "g g > e+ e- mu+ mu- / a [noborn=QCD]"
  },
  "production": {
-  "nevents": 50000,
-  "sigma_pb": 1.6243
+  "nevents": 200000,
+  "sigma_pb": 1.6255
  },
  "reported": {
   "PA": {
-   "br": 0.0022622163967733833,
+   "br": 0.0022622163967811557,
    "br_err": 0,
-   "cross": 0.003674518093279007,
+   "cross": 0.0036772327529677683,
    "efficiency": 1,
-   "error": 3.22207481392433e-06
+   "error": 9.69766924972146e-07
   },
   "madspin": {
-   "br": 0.0022622163967733833,
+   "br": 0.0022622163967811557,
    "br_err": 0,
-   "cross": 0.003674518093279007,
+   "cross": 0.0036772327529677683,
    "efficiency": 1,
-   "error": 3.22207481392433e-06
+   "error": 9.69766924972146e-07
   },
   "none": {
    "br": 0.0023656606667227524,
    "br_err": 0,
-   "cross": 0.003842542620957767,
+   "cross": 0.003845381413757834,
    "efficiency": 1,
-   "error": 3.3694104876132166e-06
+   "error": 1.0141114146107096e-06
   },
   "onshell": {
    "br": 0.0023656324926919934,
    "br_err": 0,
-   "cross": 0.003842496857879605,
+   "cross": 0.0038453356168708353,
    "efficiency": 1,
-   "error": 3.3693703593412065e-06
+   "error": 1.0140993369672037e-06
   }
+ },
+ "required_fixes": {
+  "helicity_frame_observable": "0d62a68c02c696e5a81dfdefe078fe2ddb97567b",
+  "madspin_me_param_card": "0a1007bc25de8398a56a7fb25bbd8f92eaf88e3b"
  },
  "run_card_B_only": {
   "drll": "0.0",
@@ -773,287 +843,391 @@
  },
  "runs": {
   "PA": {
-   "lhe": "/tmp/t75run/ms_PA/events_decayed.lhe.gz",
+   "event_columns": "/Users/omattelaer/Documents/madspin_validation_samples/t118_zz_loopinduced/event_columns/events_PA.npz",
+   "lhe": "/Users/omattelaer/Documents/madspin_validation_samples/t118_zz_loopinduced/ms_PA/events_decayed.lhe.gz",
    "m_ee_range": [
-    54.720943124662305,
-    127.80668780355263
+    54.56753186581547,
+    127.79788246047667
    ],
    "m_mumu_range": [
-    54.581092203122004,
-    127.74283161392776
+    54.574382942339874,
+    127.80688162382883
    ],
    "moments": {
     "cos1cos2": [
-     0.004999272025863039,
-     0.001708770843202139
+     0.005903121098990499,
+     0.0008677643177472496
     ],
     "cos2_theta1": [
-     0.37887957261806615,
-     0.0013827445052029667
+     0.3844885247086679,
+     0.0006924270146850378
+    ],
+    "cos2_theta2": [
+     0.3867230041904818,
+     0.0006928962611312719
     ],
     "cos_2phi": [
-     -0.002879551782685066,
-     0.003163623813505135
+     0.001060721060526378,
+     0.0015817088668458876
     ],
     "cos_phi": [
-     0.001080175397985248,
-     0.0031577177116701455
+     -0.0030762308554448652,
+     0.0015819622266887209
     ],
     "cos_theta1": [
-     -0.0017993478528170101,
-     0.0027527307713082687
+     -0.0015384217281031697,
+     0.001386517504338215
     ],
     "m_epmum": [
-     102.35588624783767,
-     0.3430555277294837
+     102.68455082283045,
+     0.1725318625580462
+    ],
+    "pol00": [
+     0.053830437752984496,
+     0.005372120704005099
+    ],
+    "pol0_1": [
+     0.07755737645666051,
+     0.003462135073425189
+    ],
+    "pol0_2": [
+     0.06638497904759083,
+     0.0034644813056563598
+    ],
+    "pol0_avg": [
+     0.07197117775212568,
+     0.0024736525581264676
+    ],
+    "polTT": [
+     0.909888082248733,
+     0.007092177593727749
     ]
    },
-   "nevents": 50000,
-   "pt_ee_min": 0.19125632525141043,
-   "sigma_from_events": 0.0036745181000000003,
-   "sigma_mc_error": 1.6432944512306743e-05,
-   "sumw": 183.725905,
-   "sumw2": 0.6751041633613806
+   "nevents": 200000,
+   "pt_ee_min": 0.30377254827367395,
+   "sigma_from_events": 0.0036772328000000006,
+   "sigma_mc_error": 8.22254250989189e-06,
+   "sumw": 735.4465600000001,
+   "sumw2": 2.704408213079169
   },
   "madspin": {
-   "lhe": "/tmp/t75run/ms_madspin/events_decayed.lhe.gz",
+   "event_columns": "/Users/omattelaer/Documents/madspin_validation_samples/t118_zz_loopinduced/event_columns/events_madspin.npz",
+   "lhe": "/Users/omattelaer/Documents/madspin_validation_samples/t118_zz_loopinduced/ms_madspin/events_decayed.lhe.gz",
    "m_ee_range": [
-    54.72898695330203,
-    127.76598530809946
+    54.58241668336001,
+    127.8083544068729
    ],
    "m_mumu_range": [
-    54.57898082481259,
-    127.67146097116547
+    54.58344141736781,
+    127.80094774824228
    ],
    "moments": {
     "cos1cos2": [
-     0.0038614733784290605,
-     0.001708119767799137
+     0.005531013935636167,
+     0.0008696210425586451
     ],
     "cos2_theta1": [
-     0.37838596866440694,
-     0.0013806743177055504
+     0.38764049896200325,
+     0.0006934962228671113
+    ],
+    "cos2_theta2": [
+     0.38542939699005485,
+     0.0006940180167544618
     ],
     "cos_2phi": [
-     0.0035894641916677456,
-     0.0031670382828913627
+     0.0028240784286601,
+     0.001579464827412284
     ],
     "cos_phi": [
-     -0.0009726187799015194,
-     0.003167945031431394
+     -0.0013426842643385992,
+     0.0015833670395920465
     ],
     "cos_theta1": [
-     0.001780133381144895,
-     0.0027509372940492565
+     -0.00019089932534556542,
+     0.0013921933459822506
     ],
     "m_epmum": [
-     102.5588784938629,
-     0.34189079965600405
+     102.859286855257,
+     0.17392086275772242
+    ],
+    "pol00": [
+     0.05126963166224695,
+     0.005387719374041455
+    ],
+    "pol0_1": [
+     0.06179750518998335,
+     0.003467481114335556
+    ],
+    "pol0_2": [
+     0.07285301504972541,
+     0.003470090083772308
+    ],
+    "pol0_avg": [
+     0.06732526011985437,
+     0.0024765210194259766
+    ],
+    "polTT": [
+     0.916619111422538,
+     0.007109972702360467
     ]
    },
-   "nevents": 50000,
-   "pt_ee_min": 0.6076272165211541,
-   "sigma_from_events": 0.0036745181000000003,
-   "sigma_mc_error": 1.6432944512306743e-05,
-   "sumw": 183.725905,
-   "sumw2": 0.6751041633613806
+   "nevents": 200000,
+   "pt_ee_min": 0.03184055004776798,
+   "sigma_from_events": 0.0036830583075080007,
+   "sigma_mc_error": 9.381411667769339e-06,
+   "sumw": 736.6116615016001,
+   "sumw2": 3.5204353952063476
   },
   "none": {
-   "lhe": "/tmp/t75run/ms_none/events_decayed.lhe.gz",
+   "event_columns": "/Users/omattelaer/Documents/madspin_validation_samples/t118_zz_loopinduced/event_columns/events_none.npz",
+   "lhe": "/Users/omattelaer/Documents/madspin_validation_samples/t118_zz_loopinduced/ms_none/events_decayed.lhe.gz",
    "m_ee_range": [
-    91.18799625140812,
-    91.18800358434271
+    91.18799661872637,
+    91.18800514586137
    ],
    "m_mumu_range": [
-    91.18799783113707,
-    91.18800342930612
+    91.18799642527277,
+    91.18800433287424
    ],
    "moments": {
     "cos1cos2": [
-     0.004266519530370937,
-     0.0015003006079551096
+     -0.00040507720675057374,
+     0.000745837739276235
     ],
     "cos2_theta1": [
-     0.33577314965295785,
-     0.0013408753525174328
+     0.3336003464123499,
+     0.0006664211717306155
+    ],
+    "cos2_theta2": [
+     0.33389022009779734,
+     0.0006673310770473517
     ],
     "cos_2phi": [
-     0.004362241988164311,
-     0.003158712718850566
+     -0.0008811764895885781,
+     0.001582064136623722
     ],
     "cos_phi": [
-     -0.0036262042050835288,
-     0.0031691259729999537
+     -0.0014680880639253793,
+     0.0015804386360638023
     ],
     "cos_theta1": [
-     0.0008431703555549639,
-     0.0025914182939722774
+     -0.0016287793211389493,
+     0.001291506278517981
     ],
     "m_epmum": [
-     104.11362716687563,
-     0.331402819453658
+     104.67884486124316,
+     0.16820792216982625
+    ],
+    "pol00": [
+     0.10646810373053953,
+     0.0052189510821787
+    ],
+    "pol0_1": [
+     0.3319982679382506,
+     0.003332105858653077
+    ],
+    "pol0_2": [
+     0.3305488995110137,
+     0.0033366553852367587
+    ],
+    "pol0_avg": [
+     0.3312735837246321,
+     0.002356027537473804
+    ],
+    "polTT": [
+     0.4439209362812753,
+     0.00587640047574214
     ]
    },
-   "nevents": 50000,
-   "pt_ee_min": 1.0050112223487453,
-   "sigma_from_events": 0.0038425425999999993,
-   "sigma_mc_error": 1.718437292007757e-05,
-   "sumw": 192.12712999999997,
-   "sumw2": 0.7382566816407383
+   "nevents": 200000,
+   "pt_ee_min": 1.0007443788590973,
+   "sigma_from_events": 0.0038453813999999994,
+   "sigma_mc_error": 8.598534209813309e-06,
+   "sumw": 769.0762799999999,
+   "sumw2": 2.9573916222931915
   },
   "onshell": {
-   "lhe": "/tmp/t75run/ms_onshell/events_decayed.lhe.gz",
+   "event_columns": "/Users/omattelaer/Documents/madspin_validation_samples/t118_zz_loopinduced/event_columns/events_onshell.npz",
+   "lhe": "/Users/omattelaer/Documents/madspin_validation_samples/t118_zz_loopinduced/ms_onshell/events_decayed.lhe.gz",
    "m_ee_range": [
-    91.18799666088653,
-    91.18800359395334
+    91.18799479182739,
+    91.18800404150659
    ],
    "m_mumu_range": [
-    91.18799606912266,
-    91.18800422491547
+    91.18799530515889,
+    91.18800447091094
    ],
    "moments": {
     "cos1cos2": [
-     0.006112218221417468,
-     0.0017040380963415224
+     0.005183954273871207,
+     0.0008673170482436492
     ],
     "cos2_theta1": [
-     0.3805695561773442,
-     0.0013855810971238002
+     0.38588613914560216,
+     0.0006924880491181299
+    ],
+    "cos2_theta2": [
+     0.38504854739428535,
+     0.0006927403887681387
     ],
     "cos_2phi": [
-     0.003850195105490138,
-     0.0031601563350604437
+     -0.00016312819752766573,
+     0.0015818178641773127
     ],
     "cos_phi": [
-     -0.0019158167835739619,
-     0.0031683479202852605
+     -0.0017735232457731095,
+     0.0015810048869572366
     ],
     "cos_theta1": [
-     0.0013726722948017938,
-     0.002758868144540856
+     -1.796218399397578e-05,
+     0.0013890394861611425
     ],
     "m_epmum": [
-     102.56844467725338,
-     0.34448415212227523
+     102.70033533790838,
+     0.17327998486620846
+    ],
+    "pol00": [
+     0.05251928001934738,
+     0.005370961512455973
+    ],
+    "pol0_1": [
+     0.07056930427198925,
+     0.0034624402455906496
+    ],
+    "pol0_2": [
+     0.07475726302857337,
+     0.0034637019438406936
+    ],
+    "pol0_avg": [
+     0.07266328365028131,
+     0.00247275962892843
+    ],
+    "polTT": [
+     0.9071927127187848,
+     0.007082184527670338
     ]
    },
-   "nevents": 50000,
-   "pt_ee_min": 1.0050112213545717,
-   "sigma_from_events": 0.0038424969,
-   "sigma_mc_error": 1.7184168543464423e-05,
-   "sumw": 192.124845,
-   "sumw2": 0.7382391213254804
+   "nevents": 200000,
+   "pt_ee_min": 1.0007443788591015,
+   "sigma_from_events": 0.0038453356,
+   "sigma_mc_error": 8.598431797899941e-06,
+   "sumw": 769.0671199999999,
+   "sumw2": 2.957321175325472
   },
   "truth": {
-   "lhe": "/tmp/t75run/gg4l/Events/prod/unweighted_events.lhe.gz",
+   "event_columns": "/Users/omattelaer/Documents/madspin_validation_samples/t118_zz_loopinduced/event_columns/events_truth.npz",
+   "lhe": "/Users/omattelaer/Documents/madspin_validation_samples/t118_zz_loopinduced/gg4l/Events/prod/unweighted_events.lhe.gz",
    "m_ee_range": [
-    54.58168796326317,
-    127.51965497741938
+    54.56731945943208,
+    127.77586199845189
    ],
    "m_mumu_range": [
-    54.56714919114658,
-    127.18139731915834
+    54.569020775881185,
+    127.79436554234704
    ],
    "moments": {
     "cos1cos2": [
-     0.006856042090337546,
-     0.001698479041569911
+     0.004574061236096843,
+     0.0008687589645956511
     ],
     "cos2_theta1": [
-     0.3776720968352744,
-     0.0013845366177326409
+     0.38668414015612246,
+     0.0006941041422141078
+    ],
+    "cos2_theta2": [
+     0.38657337046708273,
+     0.0006936826174778932
     ],
     "cos_2phi": [
-     0.0026401237036642977,
-     0.0031693713752579816
+     0.0012742306395163514,
+     0.0015827002184768519
     ],
     "cos_phi": [
-     -0.0016660696167326424,
-     0.00316644054440902
+     -0.0023901073998767283,
+     0.0015821368504436895
     ],
     "cos_theta1": [
-     0.004207119179204857,
-     0.0027482881835189203
+     0.0019331612341847737,
+     0.0013904682719209473
     ],
     "m_epmum": [
-     101.96010896345678,
-     0.3387380017732478
+     102.78793765823042,
+     0.17434751577875865
+    ],
+    "pol00": [
+     0.04165863749927769,
+     0.0053962676900396675
+    ],
+    "pol0_1": [
+     0.06657929921938838,
+     0.0034705207110705383
+    ],
+    "pol0_2": [
+     0.06713314766458725,
+     0.003468413087389466
+    ],
+    "pol0_avg": [
+     0.06685622344198783,
+     0.0024721596300844866
+    ],
+    "polTT": [
+     0.9079461906153024,
+     0.007113540383648051
     ]
    },
-   "nevents": 50000,
-   "pt_ee_min": 1.0048602156636495,
-   "sigma_from_events": 0.0036484415999999986,
-   "sigma_mc_error": 1.6316326859076193e-05,
-   "sumw": 182.42207999999994,
-   "sumw2": 0.665556305430528
+   "nevents": 200000,
+   "pt_ee_min": 1.001049129083728,
+   "sigma_from_events": 0.0036554822999999986,
+   "sigma_mc_error": 8.17390691334728e-06,
+   "sumw": 731.0964599999998,
+   "sumw2": 2.672510169122658
   }
  },
+ "samples": {
+  "basedir": "/Users/omattelaer/Documents/madspin_validation_samples/t118_zz_loopinduced",
+  "generated_on_commit": "f39482f53",
+  "generated_on_tree": "00ac9924a0a206e8849a8235a25e59d5f7228366",
+  "harvest_tree": "a4ab40feb6cb209a27904084d3ccdca3fd201d43",
+  "note": "generated_on_tree is the working tree the events were produced from; it is the merge of the frame fix and the param_card fix named in required_fixes.  If harvest_tree differs, only the harvester/plotter moved, not the physics."
+ },
  "seeds": {
-  "control_A_actual": 4327,
   "madspin_all_modes": 7777,
   "requested_production": 4321,
   "sample_A_actual": 4321,
-  "sample_B_actual": 30
+  "sample_B_actual": 4321
  },
  "wall_times": {
-  "control_A_no_ptcut": {
-   "cores": 4,
-   "note": "sample A with ptheavy = 0",
-   "returncode": 0,
-   "wall_seconds": 495.8
-  },
-  "control_B_default_lepton_cuts": {
-   "note": "2 000 events, sample B with MG5 default ptl/etal/drll restored: 0.001967 +- 2.145e-05 pb",
-   "returncode": 0,
-   "wall_seconds": null
-  },
-  "control_B_no_masswindow_CANCELLED": {
-   "note": "CANCELLED at 1h39m without finishing 20 000 events; no event file was ever written. Not a measurement -- see RESULTS.md section 2d.",
-   "returncode": null,
-   "wall_seconds": 5940.0
-  },
   "madspin_PA": {
-   "cores": 4,
    "returncode": 0,
-   "wall_seconds": 1377.0
+   "wall_seconds": 4902.7
   },
   "madspin_madspin": {
-   "cores": 6,
-   "note": "the offshell-density mode; ~4x the per-event cost of PA",
    "returncode": 0,
-   "wall_seconds": 5112.0
+   "wall_seconds": 14377.1
   },
   "madspin_none": {
-   "cores": 4,
    "returncode": 0,
-   "wall_seconds": 746.0
+   "wall_seconds": 830.4
   },
   "madspin_onshell": {
-   "cores": 4,
    "returncode": 0,
-   "wall_seconds": 1357.0
+   "wall_seconds": 4790.7
   },
   "output_gg4l": {
-   "note": "includes the one-off CutTools and IREGI builds in the source tree",
    "returncode": 0,
-   "wall_seconds": 207.0
+   "wall_seconds": 22.5
   },
   "output_ggzz": {
-   "note": "CutTools/IREGI already built by the gg4l output; the two outputs must be serial (they race in the shared vendor/ tree)",
    "returncode": 0,
-   "wall_seconds": 3.8
+   "wall_seconds": 176.2
   },
   "sample_A": {
-   "cores": 16,
-   "note": "50 000 events, 17m39s cumulative CPU",
    "returncode": 0,
-   "wall_seconds": 93.8
+   "wall_seconds": 2338.2
   },
   "sample_B": {
-   "cores": 11,
-   "note": "50 000 events, 13h32m39s cumulative CPU -- this is the expensive one",
    "returncode": 0,
-   "wall_seconds": 3266.0
+   "wall_seconds": 59258.9
   }
  },
  "width_Z": 2.441404

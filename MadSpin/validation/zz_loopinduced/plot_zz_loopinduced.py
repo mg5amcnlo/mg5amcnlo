@@ -434,8 +434,10 @@ def _polarisation(data, key):
     out = {}
     if 'pol0_1' in mom:
         for src_name, dst in (('pol0_1', 'f_0 (e+ e-)'), ('pol0_2', 'f_0 (mu+ mu-)'),
+                              ('pol0_avg', 'f_0 (both)'),
                               ('pol00', 'f_00'), ('polTT', 'f_TT')):
-            out[dst] = (mom[src_name][0], mom[src_name][1], True)
+            if src_name in mom:
+                out[dst] = (mom[src_name][0], mom[src_name][1], True)
     else:
         c1, e1, neff = _binned_power(data, key, 'cos_theta1', 2)
         c2, e2, _ = _binned_power(data, key, 'cos_theta2', 2)
@@ -478,8 +480,9 @@ def write_polarisation(data, A, modes):
     keys = [REF] + [k for k in modes if k in data.meta['runs']
                     and data.meta['runs'][k].get('moments')]
     rows = {k: _polarisation(data, k) for k in keys}
-    names = ['f_0 (e+ e-)', 'f_0 (mu+ mu-)', 'f_00', 'f_00 - f_0 f_0',
-             'f_TT', 'C_kk']
+    names = ['f_0 (e+ e-)', 'f_0 (mu+ mu-)', 'f_0 (both)', 'f_00',
+             'f_00 - f_0 f_0', 'f_TT', 'C_kk']
+    names = [n for n in names if any(n in r for r in rows.values())]
     exact = all(v[2] for r in rows.values() for v in r.values())
     A('--- the named coefficients behind the two angular figures ---')
     A('  A Z is a WEAK spin analyser.  Its decay to l+ l- carries the analysing')

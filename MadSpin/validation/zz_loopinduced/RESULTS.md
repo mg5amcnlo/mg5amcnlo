@@ -1,17 +1,28 @@
 # `g g > z z` (loop induced) + MadSpin against the full off-shell `g g > 4l`
 
-> **Frame correction, 2026-08-27.** The angular observables of this study
+> **Frame correction, 2026-08-27 — applied, and the study re-run. Read this
+> before any number below.** The angular observables of this study
 > (`cos_theta1`, `cos_theta2`, `cos1cos2`, and the `f_0` / `f_00` / `f_TT` /
-> `C_kk` coefficients built from them) were harvested with a boost composition
-> that is not the helicity frame — the axis in the four-lepton frame, the `l+`
-> boosted into its pair's rest frame straight from the lab. That composition
-> carries a Wigner rotation and damps every rank-2 moment towards `1/3`.
-> `observables.py` is fixed and guarded by a self-test; the numbers and plots
-> here are **not** re-harvested, because the samples no longer exist on disk.
-> Sample-to-sample comparisons (MadSpin vs truth, `chi2/ndf`, ratio panels) are
-> unaffected — both sides were harvested identically. Absolute polarisation
-> coefficients are biased towards isotropy. Full diagnosis:
-> [`POLWEIGHT_CLOSURE_DIAGNOSIS.md`](POLWEIGHT_CLOSURE_DIAGNOSIS.md).
+> `C_kk` coefficients built from them) were first harvested with a boost
+> composition that is not the helicity frame — the axis in the four-lepton
+> frame, the `l+` boosted into its pair's rest frame straight from the lab. That
+> composition carries a Wigner rotation and damps every rank-2 moment towards
+> `1/3`. `observables.py` is fixed and guarded by a self-test.
+>
+> **The study has since been regenerated from scratch with the fix in place, at
+> 200 000 events per sample instead of 50 000.** `data/histograms.npz`,
+> `data/meta.json`, `data/numbers.txt`, `plots/` and `plots_userstyle/` are all
+> the post-fix 200 000-event set, and the corrected coefficient tables are in
+> [SPIN_COEFFICIENTS.md](SPIN_COEFFICIENTS.md).
+>
+> **The prose of THIS file has not been rewritten and still describes the
+> 50 000-event first pass.** Its structural conclusions stand — the four modes
+> work, the `+0.71 %` / `+5.32 %` normalisation split, `spinmode = none` being
+> the only mode that separates — but every *number* in it is superseded by
+> `data/numbers.txt`. Where the two disagree, `data/numbers.txt` is right. Two
+> conclusions moved enough to name here: `none`'s separation on `f_0` grew from
+> `22 sigma` to `77 sigma`, and `PA` developed a real `pt(e+ e-)` shape
+> deviation (`chi2/ndf = 3.32`) that 50 000 events could not resolve.
 
 Setup, cards and re-run instructions are in [README.md](README.md). Raw numbers
 are in [`data/numbers.txt`](data/numbers.txt); everything below is read off it

@@ -19,15 +19,25 @@
 > The full diagnosis, the evidence, the fix and the regression test are in
 > [`POLWEIGHT_CLOSURE_DIAGNOSIS.md`](POLWEIGHT_CLOSURE_DIAGNOSIS.md).
 >
-> **Consequence for the numbers below.** Every rank-2 angular quantity in this
-> file — `f_0`, `f_00`, `f_TT`, `f_00 - f_0 f_0`, `C_kk`, and the `cos_theta`
-> and `cos1cos2` histograms — was harvested with the pre-fix definition and is
-> **biased towards the isotropic value**. On the proxy sample of section 9,
-> `f_0` moves from `0.2105` to `0.1702` and `C_kk` from `-0.650` to `-0.758`.
-> The `g g > z z` samples this study ran on have been swept from `/tmp` and no
-> copy survives, so the corrected numbers require re-running the study; they are
-> **not** recomputed here. The tables below are left as they were harvested,
-> marked, rather than silently patched.
+> **Consequence for the numbers below — now resolved.** Every rank-2 angular
+> quantity in this file — `f_0`, `f_00`, `f_TT`, `f_00 - f_0 f_0`, `C_kk`, and
+> the `cos_theta` and `cos1cos2` histograms — was harvested with the pre-fix
+> definition and was **biased towards the isotropic value**.
+>
+> **The study has since been re-run from scratch with the fix in place, at
+> 200 000 events per sample instead of 50 000, and every table below now carries
+> the post-fix, unbinned numbers.** The samples live outside `/tmp` at
+> `~/Documents/madspin_validation_samples/t118_zz_loopinduced/`, and the
+> per-event columns are kept alongside them (`event_columns/events_*.npz`), so a
+> differential re-reading of these same events no longer requires a re-run. The
+> base the samples were generated on, and the matrix-element/param-card audit,
+> are recorded in `data/meta.json`.
+>
+> The frame fix moved the truth sample by, in the direction the proxy sample
+> predicted: `f_0` `0.1116 -> 0.0666`, `f_TT` `0.8278 -> 0.9079`,
+> `C_kk` `+0.570 -> +0.380`. **The `gg` box's `C_kk` stays positive**, so the
+> opposite-sign result against the `qq~` continuum survives the fix — see
+> section 4.
 >
 > **Not affected:** every MadSpin-versus-truth comparison (both sides were
 > harvested identically, so the `chi2/ndf` and the ratio panels stand),
@@ -35,6 +45,13 @@
 > any axis), `phi_planes` (built entirely inside the four-lepton frame), and the
 > `ms_pol_*` weights and the paper's `Z0Z0/Z0ZT/ZTZ0/ZTZT` figures built from
 > them.
+>
+> One thing the fix *did* repair that the pre-fix pass had flagged as a mild
+> tension: `spinmode = none`'s `<cos th1 cos th2>` was `+0.00427 +- 0.00150`,
+> 2.8 sigma from the zero an independent decay must give. Post-fix it is
+> `-0.00041 +- 0.00075`, 0.5 sigma. The spurious correlation was the Wigner
+> rotation — it is common to both decays, so it correlates them — and not
+> statistics.
 
 `cos(theta1)` and `cos1cos2` are the two figures of this study that carry spin
 information. This file works out what named quantity sits behind each of them,
@@ -223,24 +240,31 @@ Numerically `4/eta_l^2 = 83.154`, so a `C_kk` of order 1 shows up as a
 measured moment is 0.0069 and only 4 sigma from zero.** Inverting it:
 
 ```
-gg -> ZZ  (this study, truth)         C_kk = +0.570 +- 0.141     [PRE-FIX]
-qq~ -> ZZ (zz_nlo, truth)             C_kk = -0.675 +- 0.131     [PRE-FIX]
+gg -> ZZ  (this study, truth, 200k)   C_kk = +0.380 +- 0.072
+qq~ -> ZZ (zz_nlo, truth, 200k, T114) C_kk = -0.645 +- 0.080
 ```
 
-**[PRE-FIX]** — both numbers were harvested with the boost composition the
-amendment at the top of this file withdraws, and both are damped towards zero.
-The size of the damping on a sample where it can be measured is
-`C_kk: -0.650 -> -0.758` (`run_12`, section 9). The *sign* difference between
-the two mechanisms is robust — a rotation cannot flip a sign — but the
-magnitudes and the `6.5 sigma` separation below are not, until both studies are
-re-run.
+Both numbers are now post-fix and both come from 200 000-event samples. The
+`gg` value is this study's re-run (`<c1 c2> = +0.004574 +- 0.000869`, times
+`4/eta_l^2 = 83.154`); the `qq~` value is the sibling study's post-fix re-run
+under task T114.
 
-(the second from the sibling study's own published moment,
-`<c1 c2> = -0.00812 +- 0.00158`, same cuts, same window, same `eta_l`). The two
-production mechanisms have **opposite-sign** helicity-sign correlations, 6.5
-sigma apart, and both are large — `|C_kk| ~ 0.6` against a ceiling of
-`f_TT ~ 0.83`. So the answer to "is the smallness the dilution or is the
+**The two production mechanisms have opposite-sign helicity-sign
+correlations.** The separation is
+
+```
+(+0.380 - (-0.645)) / sqrt(0.072^2 + 0.080^2) = 1.025 / 0.108 = 9.5 sigma
+```
+
+and both are large — `|C_kk| ~ 0.4` to `0.65` against a ceiling of
+`f_TT ~ 0.91`. So the answer to "is the smallness the dilution or is the
 production genuinely uncorrelated?" is: **it is the dilution, entirely.**
+
+This was the one claim the frame bug put at risk, because the pre-fix `gg`
+number (`+0.570 +- 0.141`) was biased towards isotropy and the correction pushed
+it *down*, towards the `qq~` sign. It moved by `-0.19`, which is not enough to
+cross zero: `+0.380 +- 0.072` is `5.3 sigma` from zero on its own. The
+opposite-sign result is now a measurement rather than a prediction.
 
 ## 5. The rank-2 correlation: the undiluted analogue
 
@@ -268,41 +292,62 @@ and it does not discriminate.
 
 ## 6. The numbers
 
-From `data/numbers.txt`, regenerated by this pass. `f_0 (e+ e-)` is exact
-(unbinned `<cos^2 theta1>`); the rest come from the committed histograms with
-the binning bias removed by a local-quadratic within-bin reconstruction
-(`plot_zz_loopinduced._binned_power`; validated to `1.6e-5` on `<cos^2 theta>`
-and `3.3e-5` on `<(c1 c2)^2>` against the unbinned truth of an independent
-250 000-event sample, an order of magnitude under the statistical bars).
-Re-harvesting replaces the whole block with unbinned moments — the harvester now
-stores `cos2_theta2`, `pol0_1`, `pol0_2`, `pol00`, `polTT`.
+From `data/numbers.txt`, regenerated post-fix at 200 000 events per sample.
+**Every entry is now an unbinned moment** taken straight off the events —
+`pol0_1`, `pol0_2`, `pol00`, `polTT` and `cos1cos2` — so the local-quadratic
+within-bin reconstruction that the 50 000-event pass had to use for `f_00` and
+`f_TT` is gone, and with it the independent-`z` approximation in its error bar.
+`plot_zz_loopinduced._polarisation` keeps that fallback only for reading a
+`meta.json` written before those moments existed.
 
-**[PRE-FIX] Every number in the two tables below is damped towards isotropy by
-the Wigner rotation the amendment at the top of this file describes.** They are
-left as harvested rather than silently patched; the `g g > z z` samples have
-been swept from `/tmp` and no copy survives, so correcting them requires
-re-running the study. Direction and rough size, from the proxy sample of
-section 9: `f_0` down by about `0.04`, `f_TT` up by about `0.07`, `f_00` down by
-about `0.009`, `C_kk` more negative by about `0.11`. The **pull** table that
-follows is *not* affected in any interesting way — truth and the modes were
-harvested identically — and neither is the `+21.7 sigma` on `none`.
+| sample | `f_0` (e+e-) | `f_0` (mu+mu-) | `f_0` (both) | `f_00` | `f_00 - f_0 f_0` | `f_TT` | `C_kk` |
+|---|---|---|---|---|---|---|---|
+| truth   | +0.0666 +- 0.0035 | +0.0671 +- 0.0035 | **+0.0669 +- 0.0025** | +0.0417 +- 0.0054 | +0.0372 +- 0.0054 | +0.9079 +- 0.0071 | +0.380 +- 0.072 |
+| madspin | +0.0618 +- 0.0035 | +0.0729 +- 0.0035 | **+0.0673 +- 0.0025** | +0.0513 +- 0.0054 | +0.0468 +- 0.0054 | +0.9166 +- 0.0071 | +0.460 +- 0.072 |
+| PA      | +0.0776 +- 0.0035 | +0.0664 +- 0.0035 | **+0.0720 +- 0.0025** | +0.0538 +- 0.0054 | +0.0487 +- 0.0054 | +0.9099 +- 0.0071 | +0.491 +- 0.072 |
+| onshell | +0.0706 +- 0.0035 | +0.0748 +- 0.0035 | **+0.0727 +- 0.0025** | +0.0525 +- 0.0054 | +0.0472 +- 0.0054 | +0.9072 +- 0.0071 | +0.431 +- 0.072 |
+| none    | +0.3320 +- 0.0033 | +0.3305 +- 0.0033 | **+0.3313 +- 0.0024** | +0.1065 +- 0.0052 | -0.0033 +- 0.0050 | +0.4439 +- 0.0059 | -0.034 +- 0.062 |
 
-| sample | `f_0` (e+e-) | `f_0` (mu+mu-) | `f_00` | `f_00 - f_0 f_0` | `f_TT` | `C_kk` |
-|---|---|---|---|---|---|---|
-| truth   | +0.1116 +- 0.0069 | +0.1067 +- 0.0069 | +0.0461 +- 0.0108 | +0.0342 +- 0.0107 | +0.8278 +- 0.0108 | +0.570 +- 0.141 |
-| madspin | +0.1081 +- 0.0069 | +0.0935 +- 0.0069 | +0.0507 +- 0.0107 | +0.0406 +- 0.0107 | +0.8491 +- 0.0107 | +0.321 +- 0.142 |
-| PA      | +0.1056 +- 0.0069 | +0.0860 +- 0.0069 | +0.0348 +- 0.0107 | +0.0257 +- 0.0107 | +0.8432 +- 0.0107 | +0.416 +- 0.142 |
-| onshell | +0.0972 +- 0.0069 | +0.1051 +- 0.0069 | +0.0368 +- 0.0107 | +0.0266 +- 0.0107 | +0.8346 +- 0.0107 | +0.508 +- 0.142 |
-| none    | +0.3211 +- 0.0067 | +0.3287 +- 0.0067 | +0.1145 +- 0.0105 | +0.0090 +- 0.0100 | +0.4647 +- 0.0105 | +0.355 +- 0.125 |
+**`f_0` (both) is the column to quote.** The two `Z` are equivalent, so the
+estimator for the single-`Z` longitudinal fraction is the average of the two
+sides — and it is averaged *per event*, not built from the two columns to its
+left, because those are measured on the same events and combining them as if
+independent would drop their covariance. It is a `sqrt(2)` improvement on either
+side alone, and it is a quantity the committed 1-D histograms cannot produce:
+it needs the joint of `pol0_1` and `pol0_2` event by event, which is precisely
+what the new `event_columns/` files keep.
+
+What the fix moved, on the truth row: `f_0` `0.1116 -> 0.0666`, `f_TT`
+`0.8278 -> 0.9079`, `f_00` `0.0461 -> 0.0417`, `C_kk` `+0.570 -> +0.380`. Every
+one of those is in the direction and roughly the size the proxy sample of
+section 9 predicted (`f_0` down ~0.04, `f_TT` up ~0.07, `f_00` down ~0.009,
+`C_kk` more negative by ~0.11). The `gg` box is **more** transverse than the
+pre-fix numbers said: `f_TT = 0.908`, and the longitudinal fraction is only
+`6.7 %`.
 
 Pulls against truth (independent samples, so the bars add in quadrature):
 
-| sample | `f_0` (e+e-) | `f_0` (mu+mu-) | `f_00` | `f_00 - f_0 f_0` | `C_kk` |
-|---|---|---|---|---|---|
-| madspin | -0.4 | -1.3 | +0.3 | +0.4 | -1.2 |
-| PA      | -0.6 | -2.1 | -0.7 | -0.6 | -0.8 |
-| onshell | -1.5 | -0.2 | -0.6 | -0.5 | -0.3 |
-| none    | **+21.7** | **+23.1** | +4.6 | -1.7 | -1.1 |
+| sample | `f_0` (e+e-) | `f_0` (mu+mu-) | `f_0` (both) | `f_00` | `f_00 - f_0 f_0` | `f_TT` | `C_kk` |
+|---|---|---|---|---|---|---|---|
+| madspin | -1.0 | +1.2 | **+0.1** | +1.3 | +1.3 | +0.9 | +0.8 |
+| PA      | +2.2 | -0.2 | **+1.5** | +1.6 | +1.5 | +0.2 | +1.1 |
+| onshell | +0.8 | +1.6 | **+1.7** | +1.4 | +1.3 | -0.1 | +0.5 |
+| none    | +55.2 | +54.7 | **+77.4** | +8.6 | -5.5 | -50.3 | -4.3 |
+
+The three physical modes agree with truth on every coefficient — the largest
+pull anywhere is `+1.7`, and the `+2.2` on `PA`'s `f_0 (e+ e-)` is answered by
+the `-0.2` on its `f_0 (mu+ mu-)` and by the `+1.5` of the combined column, so
+it is scatter and not a shape. **Quadrupling the statistics did not open any gap
+between `madspin`, `PA`, `onshell` and truth in the angular coefficients**,
+which is the result the paper takes from this study.
+
+`spinmode = none` separates far more strongly than the 50 000-event pass
+reported: on the combined `f_0`, `+77.4 sigma` against the `+21.7 sigma` then
+quoted. Three things contribute and they are worth keeping apart — the frame fix
+widened the *gap* (truth moved to `0.067` while `none` stayed at `1/3`, so the
+separation grew from `0.210` to `0.265`), the extra events halved the *bar*, and
+averaging the two `Z` per event takes another `sqrt(2)` off it. On the
+like-for-like single-side column it is `+55.2 sigma`.
 
 ### Is `spinmode = none` exactly isotropic? Measured, not assumed
 
@@ -313,21 +358,36 @@ cancel between `2 x (1/4)` and `-1/2`. So an unpolarised `Z` decays flat in
 `cos(theta)` whether MadSpin draws from flat phase space or from the
 spin-averaged decay matrix element; the two routes give the same thing.
 
-Measured on the committed `none` histograms:
+Measured post-fix on the unbinned `none` moments, 200 000 events:
 
 ```
-f_0(e+ e-)   = 0.3211 +- 0.0067      vs 1/3      -1.8 sigma
-f_0(mu+ mu-) = 0.3287 +- 0.0067      vs 1/3      -0.7 sigma
-f_00 - f_0 f_0 = +0.0090 +- 0.0100   vs 0        +0.9 sigma
+f_0(e+ e-)   = 0.3320 +- 0.0033      vs 1/3      -0.4 sigma
+f_0(mu+ mu-) = 0.3305 +- 0.0033      vs 1/3      -0.8 sigma
+f_TT         = 0.4439 +- 0.0059      vs 4/9      -0.1 sigma
+f_00 - f_0 f_0 = -0.0033 +- 0.0050   vs 0        -0.7 sigma
+C_kk         = -0.034 +- 0.062       vs 0        -0.5 sigma
 ```
 
-so yes: isotropic to the statistics of 50 000 events, and the rank-2
-*correlation* is compatible with zero, which is the null test that the joint
-estimator has to pass for a mode that decays the two `Z` independently. The one
-mild tension anywhere in this file is `none`'s `<cos th1 cos th2> = +0.00427 +-
-0.00150`, 2.8 sigma from the zero that an independent decay must give; with five
-samples and six moments that is unremarkable, and it is not a shape effect —
-`none`'s `cos1cos2` **histogram** fails at `chi2/ndf = 28.6`.
+so yes: isotropic to the statistics of 200 000 events, on five independent
+tests, and the rank-2 *correlation* is compatible with zero — the null test that
+the joint estimator has to pass for a mode that decays the two `Z`
+independently.
+
+**The one mild tension the pre-fix pass reported here is gone, and its
+disappearance is evidence for the frame fix.** That pass measured `none`'s
+`<cos th1 cos th2> = +0.00427 +- 0.00150`, 2.8 sigma from the zero an
+independent decay must give, and set it aside as a look-elsewhere effect. It was
+not: post-fix the same quantity is `-0.00041 +- 0.00075`, 0.5 sigma. The Wigner
+rotation is a function of the event kinematics and *both* decay angles are
+mis-projected by it, so a common tilt correlates two decays that are genuinely
+independent. `none` was the one sample the frame error was believed unable to
+touch — true for each `Z` on its own, because an isotropic decay is isotropic
+about any axis, but false for the inter-decay correlation, which is exactly
+where it showed up.
+
+None of this weakens `none` as a **shape** discriminant: its `cos1cos2`
+histogram fails at `chi2/ndf = 174.2/39`, up from `28.6` pre-fix at a quarter
+the statistics.
 
 ## 7. What the literature calls these things
 
@@ -524,11 +584,11 @@ pass over that Les Houches file, and `--mixed` reproduces the historical
 failure.
 
 For completeness, the same sample gives, from its (corrected) angular moments,
-`f_0 = 0.1702 +- 0.0031` and `C_kk = -0.758 +- 0.061` for `qq~ -> ZZ` at LO. The
-`C_kk = -0.675 +- 0.131` quoted for the sibling `zz_nlo` study in section 4 was
-harvested with the pre-fix definition and will move by a comparable amount when
-that study is re-run, so the "0.2 sigma agreement" claimed there is not a
-statement that can currently be made either way.
+`f_0 = 0.1702 +- 0.0031` and `C_kk = -0.758 +- 0.061` for `qq~ -> ZZ` at LO.
+The sibling `zz_nlo` study has since been re-run post-fix at 200 000 events
+(task T114) and gives `C_kk = -0.645 +- 0.080`, which is what section 4 now
+quotes; that is 1.1 sigma from this proxy's `-0.758`, and the two are different
+samples at different orders, so they are consistent.
 
 ## 10. Verdict
 
@@ -539,48 +599,54 @@ order. Composing the two boosts the other way round — axis in one frame, lepto
 boosted from another — is not a different convention, it is not a convention at
 all: the resulting angle is not Lorentz invariant, and it damps every rank-2
 moment towards `1/3`. This file's first pass did that, blamed the resulting
-5 % closure failure on MadSpin, and was wrong. The three claims below are
-unaffected in structure; their *numbers* are not.
+5 % closure failure on MadSpin, and was wrong. The study has since been re-run
+with the fix in place; the three claims below carry the post-fix numbers.
    ([`POLWEIGHT_CLOSURE_DIAGNOSIS.md`](POLWEIGHT_CLOSURE_DIAGNOSIS.md))
 
 1. **Claim 1 (dilution) — right in structure, wrong in the number, and the
    conclusion inverts.** `eta_l` enters squared, as claimed. But `eta_l = 0.219`
    here, not `0.15`, because the SM UFO is in the on-shell scheme; the dilution
-   is `1/83`, not `1/180`. Undiluting, `C_kk = +0.570 +- 0.141` for `gg -> ZZ`
-   against a ceiling of `f_TT = 0.83`. The production is **strongly**
+   is `1/83`, not `1/180`. Undiluting, `C_kk = +0.380 +- 0.072` for `gg -> ZZ`
+   against a ceiling of `f_TT = 0.91`. The production is **strongly**
    spin-correlated; the moment is small only because a `Z` is a poor spin
-   analyser. Had `eta_l = 0.15` been used, `C_kk` would have come out `1.23`,
-   outside its own bound — which is how the error shows up.
+   analyser. Had `eta_l = 0.15` been used, `C_kk` would have come out `0.82`,
+   which is not outside its bound at the post-fix value — so this particular
+   consistency check no longer catches the `eta_l` error on its own, and the
+   derivation in section 3, not the bound, is what settles it.
 2. **Claim 2 (undiluted alignment) — right, including the weights and the
    formula.** `f_0 = 2 - 5 <cos^2 theta>` is confirmed by an independent
-   derivation from the density matrix, `f_0 = 0.1116 +- 0.0069` for the truth,
-   and `spinmode = none` gives `0.3211 +- 0.0067` and `0.3287 +- 0.0067`,
-   consistent with the isotropic `1/3` that an unpolarised `Z` must give. The
-   `none` numbers are the only ones in the file the frame error cannot touch —
-   an isotropic decay is isotropic about every axis — which is also why they
-   could not have caught it. `f_0 = 0.1116` **[PRE-FIX]**.
+   derivation from the density matrix, `f_0 = 0.0666 +- 0.0035` for the truth,
+   and `spinmode = none` gives `0.3320 +- 0.0033` and `0.3305 +- 0.0033`,
+   consistent with the isotropic `1/3` that an unpolarised `Z` must give. Each
+   `Z`'s own `f_0` under `none` is the one quantity in the file the frame error
+   cannot touch — an isotropic decay is isotropic about every axis — which is
+   why `none` could not have caught it. Its *inter-decay* moment could have,
+   and did, once looked at: see section 6.
 3. **Claim 3 (tensor-tensor analogue) — right about the object, wrong about it
    being worth adding.** The object is `f_00 - f_0^(1) f_0^(2)`, equivalently
    `25 [<c1^2 c2^2> - <c1^2><c2^2>]`, and it is genuinely `eta_l`-free. It is
-   now computed. On the truth it is `+0.0342 +- 0.0107`, a 3.2-sigma
-   measurement, and it separates `none` from truth by `-1.7 sigma`, i.e. not at
-   all. It stays in `numbers.txt` and out of the paper.
+   now computed. On the truth it is `+0.0372 +- 0.0054`, a 6.9-sigma
+   measurement at 200 000 events, and it separates `none` from truth by
+   `-5.5 sigma` — which at four times the statistics is a real separation, but
+   still an order of magnitude weaker than `f_0`'s `55 sigma` on the same
+   events. It stays in `numbers.txt` and out of the paper.
 
 **Quote `f_0` in the paper.** Mention `C_kk` in one sentence for the physics —
 the opposite signs between the `gg` box and `qq~` are the interesting thing, and
-they are 6.5 sigma apart. Leave the rank-2 correlation in `numbers.txt`.
+they are 9.5 sigma apart on post-fix 200 000-event samples on both sides. Leave
+the rank-2 correlation in `numbers.txt`.
 
 ---
 
 ## The paragraph for the paper
 
-**Do not use the numbers in the LaTeX below.** Every `f_0` and `C_kk` in it was
-harvested with the withdrawn boost composition and is damped towards isotropy;
-the study has to be re-run before the paragraph can be quoted. The *physics* of
-it — that `eta_l` multiplies only `P1`, that the rank-2 moment is undiluted,
-that `f_0 = 2 - 5 <cos^2 theta>`, that the calibration is `4/eta_l^2 = 83.2` and
-not the `9` of the spin-1/2 case, and that the `gg` box and the `qq~` continuum
-correlate the helicities with opposite sign — is unchanged.
+The numbers below are the post-fix ones, from the 200 000-event re-run, and are
+the ones to quote. The physics is as it was — `eta_l` multiplies only `P1`, the
+rank-2 moment is undiluted, `f_0 = 2 - 5 <cos^2 theta>`, the calibration is
+`4/eta_l^2 = 83.2` and not the `9` of the spin-1/2 case, and the `gg` box and
+the `qq~` continuum correlate the helicities with opposite sign — but every
+figure moved, and the `qq~` comparison is now against that study's own post-fix
+200 000-event re-run rather than its 50 000-event first pass.
 
 ```latex
 The two \texttt{cos}\,$\theta$ figures admit a named reading. For a $Z$ of
@@ -591,23 +657,25 @@ the leptonic analysing power $\eta_\ell=2g_Vg_A/(g_V^2+g_A^2)$ --- $0.219$ in
 the on-shell scheme of the default \textsc{MadGraph} parameter card --- while
 the $(1+\cos^2\theta)$ versus $\sin^2\theta$ shape difference carries none. The
 rank-two moment is therefore undiluted and gives the longitudinal polarisation
-fraction of a single $Z$ directly, $f_0 = 2-5\langle\cos^2\theta_1\rangle$. On
-the off-shell four-lepton reference we measure $f_0 = 0.112\pm0.007$, and the
-three spin-correlated \textsc{MadSpin} modes reproduce it to better than
-$1.5\sigma$: $0.108\pm0.007$ (\texttt{madspin}), $0.106\pm0.007$ (\texttt{PA})
-and $0.097\pm0.007$ (\texttt{onshell}). Switching the production density off
-gives $0.321\pm0.007$, the isotropic value $1/3$ that an unpolarised $Z$ must
-produce, $21.7\sigma$ away. The inter-decay moment is the same statement one
-rank lower, $\langle\cos\theta_1\cos\theta_2\rangle = (\eta_\ell^2/4)\,C_{kk}$
-with $C_{kk}=\langle S_k^{(1)}S_k^{(2)}\rangle$ the correlation of the two
-helicity projections; the calibration is $4/\eta_\ell^2 = 83.2$, not the $9$ of
-the $t\bar t$ case, which is the spin-$1/2$ algebra. Undiluting the measured
-moment gives $C_{kk} = +0.57\pm0.14$ for the $gg$ box against
-$-0.68\pm0.13$ for the $q\bar q$ continuum of Sec.~\ref{sec:zznlo}: the two
-mechanisms correlate the $Z$ helicities with opposite sign, and the smallness of
-the raw moment is the $\eta_\ell^2$ dilution and nothing else. As a test of
+fraction of a single $Z$ directly, $f_0 = 2-5\langle\cos^2\theta\rangle$,
+averaged over the two $Z$ event by event. On the off-shell four-lepton reference
+we measure $f_0 = 0.067\pm0.003$ --- the $gg$ box produces $ZZ$ that are
+overwhelmingly transverse, $f_{TT} = 0.908\pm0.007$ --- and the three
+spin-correlated \textsc{MadSpin} modes reproduce it to better than $1.7\sigma$:
+$0.067\pm0.003$ (\texttt{madspin}), $0.072\pm0.003$ (\texttt{PA}) and
+$0.073\pm0.003$ (\texttt{onshell}). Switching the production density off gives
+$0.331\pm0.002$, the isotropic value $1/3$ that an unpolarised $Z$ must produce,
+$77\sigma$ away. The inter-decay moment is the same statement one rank lower,
+$\langle\cos\theta_1\cos\theta_2\rangle = (\eta_\ell^2/4)\,C_{kk}$ with
+$C_{kk}=\langle S_k^{(1)}S_k^{(2)}\rangle$ the correlation of the two helicity
+projections; the calibration is $4/\eta_\ell^2 = 83.2$, not the $9$ of the
+$t\bar t$ case, which is the spin-$1/2$ algebra. Undiluting the measured moment
+gives $C_{kk} = +0.38\pm0.07$ for the $gg$ box against $-0.65\pm0.08$ for the
+$q\bar q$ continuum of Sec.~\ref{sec:zznlo}: the two mechanisms correlate the
+$Z$ helicities with opposite sign, $9.5\sigma$ apart, and the smallness of the
+raw moment is the $\eta_\ell^2$ dilution and nothing else. As a test of
 \textsc{MadSpin} the coefficient adds nothing over the histogram --- it is blind
 to \texttt{spinmode = none}, whose $\cos\theta_1\cos\theta_2$ distribution
-nevertheless fails at $\chi^2/\mathrm{ndf} = 28.6$ --- so we quote it as
+nevertheless fails at $\chi^2/\mathrm{ndf} = 174.2/39$ --- so we quote it as
 physics and keep the shape test as the test.
 ```
