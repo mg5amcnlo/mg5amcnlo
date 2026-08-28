@@ -18,6 +18,7 @@ from __future__ import absolute_import
 import madgraph.various.histograms as histograms
 import inspect
 import io
+import json
 import os
 import re
 import subprocess
@@ -92,6 +93,7 @@ class TestHistograms(unittest.TestCase):
         with misc.TMP_directory() as tmpdir:
             one_histo.output(pjoin(tmpdir,'OUT'), format='gnuplot')
             self.assertTrue(os.path.exists(pjoin(tmpdir, 'OUT.py')))
+            self.assertTrue(os.path.exists(pjoin(tmpdir, 'OUT.html')))
             new_histo = histograms.HwUList(pjoin(tmpdir,'OUT.HwU'))
         
         # Output preparation must not replace the input with nested groups or
@@ -347,6 +349,53 @@ class TestHistogramRegressions(unittest.TestCase):
             self.assertTrue(os.path.exists(cli_base+'.HwU'))
             self.assertTrue(os.path.exists(cli_base+'.py'))
 
+    def test_html_output_embeds_histograms_without_external_assets(self):
+        title = 'direct </script><script>bad()</script> histogram'
+        first = self.make_hwu(title=title, n_bins=2)
+        second = self.make_hwu(title=title, values=[2.0, 0.2], n_bins=2)
+        first.type = 'NLO'
+        second.type = 'LO'
+
+        with misc.TMP_directory() as tmpdir:
+            output_base = pjoin(tmpdir, 'html_output')
+            histograms.HwUList([first, second]).output(
+                output_base, format='html', auto_open=False,
+                uncertainties=['statistical'])
+
+            html_path = output_base+'.html'
+            self.assertTrue(os.path.exists(output_base+'.HwU'))
+            self.assertTrue(os.path.exists(html_path))
+            self.assertFalse(os.path.exists(output_base+'.pdf'))
+            with open(html_path) as stream:
+                page = stream.read()
+            source_match = re.search(
+                r'<script id="hwu-source" type="application/json">'
+                r'(.*?)</script>', page, re.S)
+            specs_match = re.search(
+                r'<script id="plot-specs" type="application/json">'
+                r'(.*?)</script>', page, re.S)
+            self.assertIsNotNone(source_match)
+            self.assertIsNotNone(specs_match)
+            embedded_source = json.loads(source_match.group(1))
+            embedded_specs = json.loads(specs_match.group(1))
+            self.assertIn(title, embedded_source)
+            self.assertEqual(embedded_source.count('<histogram>'), 3)
+            self.assertEqual(embedded_specs[0]['title'], title)
+            self.assertIn('document.createElementNS', page)
+            self.assertNotRegex(page, r'<(?:script|img)[^>]+src=')
+            self.assertNotIn(title, page)
+
+            cli_base = pjoin(tmpdir, 'cli_html')
+            result = subprocess.run(
+                [sys.executable, histograms.__file__, output_base+'.HwU',
+                 '--html', '--no_open', '--out='+cli_base,
+                 '--only_stat'], stdout=subprocess.PIPE,
+                 stderr=subprocess.PIPE, universal_newlines=True)
+            self.assertEqual(result.returncode, 0, result.stdout+result.stderr)
+            self.assertTrue(os.path.exists(cli_base+'.HwU'))
+            self.assertTrue(os.path.exists(cli_base+'.html'))
+            self.assertFalse(os.path.exists(cli_base+'.pdf'))
+
     def test_renderer_prefers_gnuplot_and_falls_back_to_matplotlib(self):
         with misc.TMP_directory() as tmpdir:
             output_base = pjoin(tmpdir, 'rendered')
@@ -581,6 +630,8 @@ class TestHistogramRegressions(unittest.TestCase):
                 stream.write('existing script')
             with open(output_base+'.py', 'w') as stream:
                 stream.write('existing matplotlib script')
+            with open(output_base+'.html', 'w') as stream:
+                stream.write('existing html output')
             groups = iter([
                 histograms.HwUList([first]),
                 histograms.HwUList([incompatible])])
@@ -597,6 +648,8 @@ class TestHistogramRegressions(unittest.TestCase):
             with open(output_base+'.py') as stream:
                 self.assertEqual(stream.read(),
                                  'existing matplotlib script')
+            with open(output_base+'.html') as stream:
+                self.assertEqual(stream.read(), 'existing html output')
 
     def test_generated_matplotlib_reader_is_strict(self):
         script = histograms.HwUList._get_matplotlib_script(

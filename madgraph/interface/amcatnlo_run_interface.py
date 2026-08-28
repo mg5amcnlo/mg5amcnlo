@@ -2958,7 +2958,7 @@ RESTART = %(mint_mode)s
                 common_run.render_HwU_plot(out, stdout=devnull, stderr=devnull)
             except Exception:
                 pass
-            logger.info('The results of this run and the HwU data with GnuPlot and Matplotlib plotting scripts' + \
+            logger.info('The results of this run and the HwU data with GnuPlot, Matplotlib, and HTML plotting output' + \
                         ' have been saved in %s' % pjoin(self.me_dir, 'Events', self.run_name))
         elif self.analyse_card['fo_analysis_format'].lower() == 'root':
             rootfiles = []
@@ -4255,7 +4255,7 @@ RESTART = %(mint_mode)s
             if out_id=='TOP':
                 hist_format='TopDrawer format'
             elif out_id=='HWU':
-                hist_format='HwU format, with GnuPlot and Matplotlib scripts'
+                hist_format='HwU format, with GnuPlot, Matplotlib, and HTML output'
 
             if not topfiles:
                 # if no topfiles are found just warn the user

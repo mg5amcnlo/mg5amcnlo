@@ -29,7 +29,9 @@ except ImportError:
 import copy
 import fractions
 import hashlib
+import html as html_module
 import itertools
+import json
 import logging
 import math
 import mmap
@@ -828,7 +830,7 @@ class HwU(Histogram):
     allowed_dimensions         = [2]
     allowed_types              = []   
 
-    output_formats_implemented = ['HwU','gnuplot','matplotlib']
+    output_formats_implemented = ['HwU','gnuplot','matplotlib','html']
     # Lists the mandatory named weights that must be specified for each bin and
     # what corresponding label we assign them to in the Bin weight dictionary,
     # (if any).
@@ -1222,7 +1224,7 @@ class HwU(Histogram):
                              " is not yet supported. Supported formats are %s."\
                                                  %HwU.output_formats_implemented)
 
-        if format in ['gnuplot', 'matplotlib']:
+        if format in ['gnuplot', 'matplotlib', 'html']:
             if not isinstance(path, str):
                 raise MadGraph5Error("A path is required for %s output."%format)
             HwUList([copy.deepcopy(self)]).output(path, format=format)
@@ -2889,6 +2891,70 @@ class _LineStreamSink(object):
             self.append(line)
 
 
+class _TeeLineSink(object):
+    """Forward list-like line writes to multiple streaming sinks."""
+
+    def __init__(self, *sinks):
+        self.sinks = sinks
+
+    def append(self, line):
+        for sink in self.sinks:
+            sink.append(line)
+
+    def extend(self, lines):
+        for line in lines:
+            self.append(line)
+
+
+def _json_for_html(value):
+    """Serialize JSON without permitting an embedded closing script tag."""
+
+    return json.dumps(value, ensure_ascii=True, separators=(',', ':')).\
+        replace('&', r'\u0026').replace('<', r'\u003c').\
+        replace('>', r'\u003e')
+
+
+class _EscapedJSONStringLineSink(object):
+    """Stream lines as the contents of one safely embedded JSON string."""
+
+    def __init__(self, stream):
+        self.stream = stream
+        self.first = True
+
+    def append(self, line):
+        if not self.first:
+            self.stream.write(r'\n')
+        encoded = _json_for_html(str(line))
+        self.stream.write(encoded[1:-1])
+        self.first = False
+
+    def extend(self, lines):
+        for line in lines:
+            self.append(line)
+
+
+class _HTMLHistogramWriter(object):
+    """Stream a self-contained HTML histogram document."""
+
+    def __init__(self, stream, output_base_name, arg_string):
+        self.stream = stream
+        title = html_module.escape(output_base_name+' histograms', quote=True)
+        command = html_module.escape(
+            arg_string.replace('\r', ' ').replace('\n', ' '), quote=True)
+        stream.write(_HTML_DOCUMENT_PREFIX % {
+            'title': title,
+            'command': command})
+        self.data_sink = _EscapedJSONStringLineSink(stream)
+
+    def finish(self, plot_specs):
+        self.stream.write('"</script>\n')
+        self.stream.write(
+            '<script id="plot-specs" type="application/json">')
+        self.stream.write(_json_for_html(plot_specs))
+        self.stream.write('</script>\n')
+        self.stream.write(_HTML_SCRIPT_BODY)
+
+
 class _AtomicTextOutput(object):
     """Write a text output beside its target and replace it only on success."""
 
@@ -3532,7 +3598,7 @@ class HwUList(histograms_PhysicsObjectList):
 
         if not isinstance(path, str) or not os.path.basename(path) or \
                          os.path.basename(path).lower().endswith(
-                                  ('.hwu', '.ps', '.gnuplot', '.pdf', '.py')):
+                    ('.hwu', '.ps', '.gnuplot', '.pdf', '.py', '.html')):
             raise MadGraph5Error("The path argument of the output function of"+\
               " the HwUList instance must be file path without its extension.")
 
@@ -3594,15 +3660,40 @@ class HwUList(histograms_PhysicsObjectList):
                 script_target.abort()
                 raise
             return
+
+        if format == 'html':
+            html_target = _AtomicTextOutput(path+'.html')
+            try:
+                self._output_html(output_base_name, HwU_stream,
+                    html_target.stream, weight_schema,
+                    number_of_ratios=number_of_ratios,
+                    uncertainties=uncertainties,
+                    use_band=use_band,
+                    ratio_correlations=ratio_correlations,
+                    arg_string=arg_string,
+                    jet_samples_to_keep=jet_samples_to_keep,
+                    lhapdfconfig=lhapdfconfig,
+                    assigned_colours=assigned_colours,
+                    histogram_groups=_histogram_groups)
+                hwu_target.commit()
+                html_target.commit()
+            except BaseException:
+                hwu_target.abort()
+                html_target.abort()
+                raise
+            return
         
         # Now we consider that we are attempting a gnuplot output.
         if format == 'gnuplot':
             gnuplot_target = _AtomicTextOutput(path+'.gnuplot')
             gnuplot_stream = gnuplot_target.stream
-            # Keep a Matplotlib renderer beside the default GnuPlot card.  Both
-            # renderers use the same prepared HwU data, so streamed histogram
-            # groups still only need to be visited once.
+            # Keep Matplotlib and direct HTML renderers beside the default
+            # GnuPlot card. All renderers use the same prepared HwU data, so
+            # streamed histogram groups still only need to be visited once.
             script_target = _AtomicTextOutput(path+'.py')
+            html_target = _AtomicTextOutput(path+'.html')
+            html_writer = _HTMLHistogramWriter(
+                         html_target.stream, output_base_name, arg_string)
 
         # Group compatible curves without changing the source list.
         matching_histo_lists = _histogram_groups if \
@@ -3836,6 +3927,8 @@ set key invert
         block_position = 0
         plot_specs = []
         ephemeral_groups = _histogram_groups is not None
+        histogram_output = _TeeLineSink(HwU_output_list,
+                                         html_writer.data_sink)
         output_schema_state = {'base_labels': list(weight_schema),
                                'labels': None}
         for histo_group in matching_histo_lists:
@@ -3845,7 +3938,7 @@ set key invert
             prepared_group = histo_group if ephemeral_groups \
                               else copy.deepcopy(histo_group)
             first_block = block_position
-            block_position = prepared_group.output_group(HwU_output_list,
+            block_position = prepared_group.output_group(histogram_output,
                     gnuplot_output_list, block_position,output_base_name+'.HwU',
                     number_of_ratios=number_of_ratios, 
                     uncertainties = uncertainties,
@@ -3874,13 +3967,15 @@ set key invert
         gnuplot_stream.write('\n'.join(gnuplot_output_list))
         script_target.stream.write(self._get_matplotlib_script(
                          output_base_name, plot_specs, auto_open, arg_string))
+        html_writer.finish(plot_specs)
         hwu_target.commit()
         gnuplot_target.commit()
         script_target.commit()
+        html_target.commit()
 
         logger.debug("Histograms have been written out at "+\
-                  "%s.[HwU|gnuplot|py]' and can be rendered by invoking "%\
-                  output_base_name+"GnuPlot or Python.")
+            "%s.[HwU|gnuplot|py|html]' and can be viewed with GnuPlot, "%\
+            output_base_name+"Matplotlib, or a web browser.")
 
     def _output_matplotlib(self, path, output_base_name, hwu_stream,
           script_stream, weight_schema,
@@ -3941,6 +4036,63 @@ set key invert
 
         logger.debug("Histograms have been written out at '%s.[HwU|py]' and can "
                      "now be rendered by invoking Python."%output_base_name)
+
+    def _output_html(self, output_base_name, hwu_stream, html_stream,
+          weight_schema,
+          number_of_ratios=-1,
+          uncertainties=['scale','pdf','statistical','merging_scale','alpsfact'],
+          use_band=None,
+          ratio_correlations=True,
+          arg_string='',
+          jet_samples_to_keep=None,
+          lhapdfconfig='lhapdf-config',
+          assigned_colours=None,
+          histogram_groups=None):
+        """Write HwU data and a self-contained native HTML/SVG page."""
+
+        ephemeral_groups = histogram_groups is not None
+        matching_histo_lists = histogram_groups if histogram_groups is not None \
+                                           else self._group_for_output(self)
+
+        colours = ['#009e73','#0072b2','#d55e00','#f0e442',
+                   '#56b4e9','#cc79a7','#e69f00','black']
+        if assigned_colours:
+            for index, colour in enumerate(assigned_colours[:len(colours)]):
+                if colour is not None:
+                    colours[index] = colour
+
+        html_writer = _HTMLHistogramWriter(
+                              html_stream, output_base_name, arg_string)
+        hwu_output = _TeeLineSink(_LineStreamSink(hwu_stream),
+                                  html_writer.data_sink)
+        plot_specs = []
+        block_position = 0
+        output_schema_state = {'base_labels': list(weight_schema),
+                               'labels': None}
+        for histo_group in matching_histo_lists:
+            prepared_group = histo_group if ephemeral_groups \
+                              else copy.deepcopy(histo_group)
+            first_block = block_position
+            block_position = prepared_group.output_group(
+                hwu_output, [], block_position, output_base_name+'.HwU',
+                number_of_ratios=number_of_ratios,
+                uncertainties=uncertainties,
+                use_band=use_band,
+                ratio_correlations=ratio_correlations,
+                jet_samples_to_keep=jet_samples_to_keep,
+                lhapdfconfig=lhapdfconfig,
+                _copy_group=False,
+                _output_schema_state=output_schema_state)
+            plot_specs.append(self._get_matplotlib_plot_spec(
+                prepared_group, first_block, uncertainties, use_band,
+                jet_samples_to_keep, colours))
+
+        if block_position == 0:
+            raise MadGraph5Error('No histograms were provided for output.')
+
+        html_writer.finish(plot_specs)
+        logger.debug("Histograms have been written out at '%s.[HwU|html]' and "
+                     "can be viewed in a web browser."%output_base_name)
 
     @staticmethod
     def _get_matplotlib_curve_label(histo, index):
@@ -5003,7 +5155,7 @@ r'%s dynamical\_scale\_choice=%s' % (title,mu[j])))
         return block_position+len(self)
     
 ################################################################################
-## matplotlib related function
+## HTML and matplotlib related functions
 ################################################################################
 def plot_ratio_from_HWU(path, ax, hwu_variable, hwu_numerator, hwu_denominator, *args, **opts):
     """INPUT:
@@ -5103,6 +5255,770 @@ def plot_from_HWU(path, ax, hwu_variable, hwu_central, *args, **opts):
                            alpha=0.5, edgecolor=H.get_color(),hatch='/')
 
     return hwu, H
+
+
+_HTML_DOCUMENT_PREFIX = r'''<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>%(title)s</title>
+<style>
+:root { color-scheme: light dark; font-family: system-ui, sans-serif; }
+body { margin: 0; background: #f4f6f8; color: #17212b; }
+header { padding: 1.25rem max(1rem, calc((100%% - 72rem) / 2));
+         background: #263746; color: white; }
+header h1 { margin: 0 0 .35rem; font-size: 1.5rem; }
+header p { margin: .2rem 0; opacity: .86; overflow-wrap: anywhere; }
+nav { max-width: 72rem; margin: 1rem auto; padding: 0 1rem; }
+nav details { background: white; border: 1px solid #d6dce1;
+              border-radius: .4rem; padding: .6rem .8rem; }
+nav ol { columns: 2 20rem; margin-bottom: 0; }
+nav a { color: #006b9c; }
+main { max-width: 72rem; margin: 0 auto; padding: 0 1rem 2rem; }
+article { margin: 1rem 0; padding: 1rem; background: white;
+          border: 1px solid #d6dce1; border-radius: .5rem;
+          box-shadow: 0 1px 3px rgb(0 0 0 / 8%%); }
+article h2 { margin: 0 0 .6rem; font-size: 1.15rem; }
+svg { display: block; width: 100%%; height: auto; background: white; }
+.legend { display: flex; flex-wrap: wrap; gap: .4rem 1rem;
+          margin: .35rem 0 0; font-size: .78rem; }
+.legend-item { display: inline-flex; align-items: center; gap: .35rem; }
+.swatch { display: inline-block; width: 1.6rem; height: .55rem;
+          border-top-width: 2px; border-top-style: solid; }
+.error { padding: 1rem; color: #9c1c1c; background: #fff0f0;
+         border: 1px solid #e4a7a7; white-space: pre-wrap; }
+noscript { display: block; max-width: 72rem; margin: 1rem auto;
+           padding: 1rem; background: #fff0f0; color: #7a1212; }
+@media (prefers-color-scheme: dark) {
+  body { background: #12171c; color: #e7ebef; }
+  article, nav details { background: #202830; border-color: #44515d; }
+  svg { background: #fff; }
+  nav a { color: #72c7ef; }
+}
+@media print {
+  body { background: white; }
+  header, nav { display: none; }
+  article { break-after: page; border: 0; box-shadow: none; }
+}
+</style>
+</head>
+<body>
+<header>
+  <h1>%(title)s</h1>
+  <p>Direct HTML/SVG histogram output generated by MadGraph5_aMC@NLO.</p>
+  <p><code>%(command)s</code></p>
+</header>
+<nav id="contents"><details open><summary>Histograms</summary><ol></ol></details></nav>
+<main id="plots"><p id="loading">Rendering histograms...</p></main>
+<noscript>JavaScript is required to draw the embedded histogram data.</noscript>
+<script id="hwu-source" type="application/json">"'''
+
+
+_HTML_SCRIPT_BODY = r'''<script>
+(function () {
+    'use strict';
+
+    var SVG_NS = 'http://www.w3.org/2000/svg';
+    var plotSerial = 0;
+
+    function svgElement(name, attributes, text) {
+        var element = document.createElementNS(SVG_NS, name);
+        Object.keys(attributes || {}).forEach(function (key) {
+            element.setAttribute(key, String(attributes[key]));
+        });
+        if (text !== undefined) {
+            element.textContent = text;
+        }
+        return element;
+    }
+
+    function parseBlocks(source) {
+        var blocks = [];
+        var current = null;
+        var expectedRows = null;
+        source.split(/\r?\n/).forEach(function (line) {
+            var stripped = line.trim();
+            if (stripped.indexOf('<histogram>') === 0) {
+                if (current !== null) {
+                    throw new Error('A histogram starts before the previous block closes.');
+                }
+                var match = stripped.match(/^<histogram>\s+(\d+)/);
+                if (!match) {
+                    throw new Error('Malformed histogram opening tag.');
+                }
+                expectedRows = Number(match[1]);
+                current = [];
+                return;
+            }
+            if (stripped === '<\\histogram>') {
+                if (current === null) {
+                    throw new Error('Histogram closing tag without an opening tag.');
+                }
+                if (current.length !== expectedRows) {
+                    throw new Error('Histogram declares ' + expectedRows +
+                                    ' rows but contains ' + current.length + '.');
+                }
+                blocks.push(current);
+                current = null;
+                expectedRows = null;
+                return;
+            }
+            if (current === null || !stripped || stripped.charAt(0) === '#') {
+                return;
+            }
+            var data = stripped.split('#', 1)[0].trim();
+            if (!data) {
+                return;
+            }
+            var row = data.split(/\s+/).map(function (field) {
+                return Number(field.replace(/[dD]/, 'e'));
+            });
+            if (!row.length || row.some(function (value) {
+                    return !Number.isFinite(value);
+                })) {
+                throw new Error('A histogram row contains invalid numeric data.');
+            }
+            current.push(row);
+        });
+        if (current !== null) {
+            throw new Error('A histogram block is missing its closing tag.');
+        }
+        if (!blocks.length) {
+            throw new Error('No histogram blocks were found.');
+        }
+        return blocks;
+    }
+
+    function blockAt(blocks, index) {
+        if (!Number.isInteger(index) || index < 0 || index >= blocks.length) {
+            throw new Error('Histogram block ' + index + ' is missing.');
+        }
+        return blocks[index];
+    }
+
+    function column(block, position) {
+        return block.map(function (row) {
+            if (position < 0 || position >= row.length) {
+                throw new Error('Histogram column ' + position + ' is missing.');
+            }
+            return row[position];
+        });
+    }
+
+    function edges(block) {
+        var result = column(block, 0);
+        result.push(block[block.length - 1][1]);
+        return result;
+    }
+
+    function centres(block) {
+        return block.map(function (row) { return (row[0] + row[1]) / 2; });
+    }
+
+    function relative(values, central) {
+        return values.map(function (value, index) {
+            return central[index] ? value / central[index] - 1 : 0;
+        });
+    }
+
+    function dashFor(type) {
+        return {
+            scale: '8 4',
+            pdf: '2 3',
+            merging_scale: '8 3 2 3',
+            alpsfact: '5 2 1 2'
+        }[type] || '6 3';
+    }
+
+    function finiteDomain(values, logarithmic, reference, padding) {
+        var selected = values.filter(function (value) {
+            return Number.isFinite(value) && (!logarithmic || value > 0);
+        });
+        if (reference !== null && reference !== undefined &&
+                Number.isFinite(reference) && (!logarithmic || reference > 0)) {
+            selected.push(reference);
+        }
+        if (!selected.length) {
+            return logarithmic ? [0.1, 10] : [-1, 1];
+        }
+        var minimum = Math.min.apply(null, selected);
+        var maximum = Math.max.apply(null, selected);
+        if (minimum === maximum) {
+            if (logarithmic) {
+                minimum /= 10;
+                maximum *= 10;
+            } else {
+                var width = Math.abs(minimum) || 1;
+                minimum -= width;
+                maximum += width;
+            }
+        } else if (padding) {
+            if (logarithmic) {
+                var low = Math.log10(minimum);
+                var high = Math.log10(maximum);
+                var logPadding = (high - low) * 0.06;
+                minimum = Math.pow(10, low - logPadding);
+                maximum = Math.pow(10, high + logPadding);
+            } else {
+                var linearPadding = (maximum - minimum) * 0.07;
+                minimum -= linearPadding;
+                maximum += linearPadding;
+            }
+        }
+        return [minimum, maximum];
+    }
+
+    function tickValues(domain, logarithmic) {
+        var ticks = [];
+        var index;
+        if (!logarithmic) {
+            for (index = 0; index <= 5; index += 1) {
+                ticks.push(domain[0] + (domain[1] - domain[0]) * index / 5);
+            }
+            return ticks;
+        }
+        var first = Math.ceil(Math.log10(domain[0]));
+        var last = Math.floor(Math.log10(domain[1]));
+        var count = last - first + 1;
+        var step = Math.max(1, Math.ceil(count / 7));
+        for (index = first; index <= last; index += step) {
+            ticks.push(Math.pow(10, index));
+        }
+        if (!ticks.length) {
+            for (index = 0; index <= 4; index += 1) {
+                ticks.push(Math.pow(10, Math.log10(domain[0]) +
+                    (Math.log10(domain[1]) - Math.log10(domain[0])) *
+                    index / 4));
+            }
+        }
+        return ticks;
+    }
+
+    function formatNumber(value) {
+        if (value === 0) {
+            return '0';
+        }
+        var magnitude = Math.abs(value);
+        if (magnitude >= 10000 || magnitude < 0.001) {
+            return value.toExponential(1);
+        }
+        return Number(value.toPrecision(4)).toString();
+    }
+
+    function addLegend(article, label, colour, dash, band) {
+        if (!label || article._legendKeys.has(label)) {
+            return;
+        }
+        article._legendKeys.add(label);
+        var item = document.createElement('span');
+        item.className = 'legend-item';
+        var swatch = document.createElement('span');
+        swatch.className = 'swatch';
+        if (band) {
+            swatch.style.background = colour;
+            swatch.style.opacity = '0.25';
+            swatch.style.borderTopColor = colour;
+        } else {
+            swatch.style.borderTopColor = colour;
+            swatch.style.borderTopStyle =
+                dash && dash.indexOf('2 3') >= 0 ? 'dotted' :
+                dash ? 'dashed' : 'solid';
+        }
+        var caption = document.createElement('span');
+        caption.textContent = label;
+        item.appendChild(swatch);
+        item.appendChild(caption);
+        article.querySelector('.legend').appendChild(item);
+    }
+
+    function panelEdges(plot, blocks) {
+        var curves = plot.main.length ? plot.main : plot.ratios;
+        if (!curves.length) {
+            throw new Error('A plot has no curves.');
+        }
+        return edges(blockAt(blocks, curves[0].block));
+    }
+
+    function mainPanel(plot, blocks) {
+        var range = [];
+        plot.main.forEach(function (curve) {
+            var block = blockAt(blocks, curve.block);
+            var central = column(block, 2);
+            var displayed = plot.y_axis_mode === 'LOG' ?
+                central.map(function (value) { return Math.abs(value); }) :
+                central.slice();
+            range = range.concat(displayed);
+            if (curve.statistical) {
+                column(block, 3).forEach(function (error, index) {
+                    range.push(displayed[index] - Math.abs(error));
+                    range.push(displayed[index] + Math.abs(error));
+                });
+            }
+            curve.uncertainties.forEach(function (uncertainty) {
+                range = range.concat(column(block, uncertainty.minimum));
+                range = range.concat(column(block, uncertainty.maximum));
+            });
+        });
+        return {
+            edges: panelEdges(plot, blocks),
+            range: range,
+            logarithmic: plot.y_axis_mode === 'LOG',
+            reference: null,
+            ylabel: 'cross section per bin [pb]',
+            draw: function (api, article) {
+                plot.main.forEach(function (curve) {
+                    var block = blockAt(blocks, curve.block);
+                    curve.uncertainties.forEach(function (uncertainty) {
+                        if (!uncertainty.band) {
+                            return;
+                        }
+                        api.band(edges(block),
+                            column(block, uncertainty.minimum),
+                            column(block, uncertainty.maximum), curve.color);
+                        addLegend(article, curve.label + ', ' +
+                            uncertainty.label + ' variation',
+                            curve.color, '', true);
+                    });
+                });
+                plot.main.forEach(function (curve) {
+                    var block = blockAt(blocks, curve.block);
+                    curve.uncertainties.forEach(function (uncertainty) {
+                        if (uncertainty.band) {
+                            return;
+                        }
+                        var dash = dashFor(uncertainty.type);
+                        api.step(edges(block),
+                            column(block, uncertainty.minimum),
+                            curve.color, dash, 1);
+                        api.step(edges(block),
+                            column(block, uncertainty.maximum),
+                            curve.color, dash, 1);
+                        addLegend(article, curve.label + ', ' +
+                            uncertainty.label + ' variation',
+                            curve.color, dash, false);
+                    });
+                });
+                plot.main.forEach(function (curve) {
+                    var block = blockAt(blocks, curve.block);
+                    var central = column(block, 2);
+                    if (plot.y_axis_mode === 'LOG') {
+                        api.step(edges(block), central.map(function (value) {
+                            return value > 0 ? value : null;
+                        }), curve.color, '', 1.7);
+                        api.step(edges(block), central.map(function (value) {
+                            return value < 0 ? Math.abs(value) : null;
+                        }), curve.color, '7 4', 1.7);
+                    } else {
+                        api.step(edges(block), central,
+                                 curve.color, '', 1.7);
+                    }
+                    addLegend(article, curve.label, curve.color, '', false);
+                    if (curve.statistical) {
+                        var displayed = plot.y_axis_mode === 'LOG' ?
+                            central.map(function (value) {
+                                return Math.abs(value);
+                            }) : central;
+                        api.errors(centres(block), displayed,
+                                   column(block, 3), curve.color);
+                    }
+                });
+            }
+        };
+    }
+
+    function uncertaintyPanel(plot, blocks) {
+        var range = [0];
+        plot.main.forEach(function (curve) {
+            var block = blockAt(blocks, curve.block);
+            var central = column(block, 2);
+            curve.uncertainties.forEach(function (uncertainty) {
+                range = range.concat(relative(
+                    column(block, uncertainty.minimum), central));
+                range = range.concat(relative(
+                    column(block, uncertainty.maximum), central));
+            });
+            if (curve.statistical) {
+                column(block, 3).forEach(function (error, index) {
+                    var value = central[index] ?
+                        Math.abs(error) / Math.abs(central[index]) : 0;
+                    range.push(-value);
+                    range.push(value);
+                });
+            }
+        });
+        return {
+            edges: panelEdges(plot, blocks),
+            range: range,
+            logarithmic: false,
+            reference: 0,
+            ylabel: 'relative uncertainty',
+            draw: function (api, article) {
+                api.reference(0);
+                plot.main.forEach(function (curve) {
+                    var block = blockAt(blocks, curve.block);
+                    var central = column(block, 2);
+                    curve.uncertainties.forEach(function (uncertainty) {
+                        var minimum = relative(
+                            column(block, uncertainty.minimum), central);
+                        var maximum = relative(
+                            column(block, uncertainty.maximum), central);
+                        var label = curve.label + ', ' + uncertainty.label;
+                        if (uncertainty.band) {
+                            api.band(edges(block), minimum, maximum,
+                                     curve.color);
+                            addLegend(article, label, curve.color, '', true);
+                        } else {
+                            var dash = dashFor(uncertainty.type);
+                            api.step(edges(block), minimum,
+                                     curve.color, dash, 1);
+                            api.step(edges(block), maximum,
+                                     curve.color, dash, 1);
+                            addLegend(article, label, curve.color, dash, false);
+                        }
+                    });
+                    if (curve.statistical) {
+                        var errors = column(block, 3).map(
+                            function (error, index) {
+                                return central[index] ?
+                                    Math.abs(error) /
+                                    Math.abs(central[index]) : 0;
+                            });
+                        api.errors(centres(block),
+                            errors.map(function () { return 0; }),
+                            errors, curve.color);
+                    }
+                });
+            }
+        };
+    }
+
+    function ratioPanel(plot, blocks) {
+        var range = [1];
+        plot.ratios.forEach(function (curve) {
+            var block = blockAt(blocks, curve.block);
+            var central = column(block, 2);
+            range = range.concat(central);
+            if (curve.statistical) {
+                column(block, 3).forEach(function (error, index) {
+                    range.push(central[index] - Math.abs(error));
+                    range.push(central[index] + Math.abs(error));
+                });
+            }
+            curve.uncertainties.forEach(function (uncertainty) {
+                range = range.concat(column(block, uncertainty.minimum));
+                range = range.concat(column(block, uncertainty.maximum));
+            });
+        });
+        return {
+            edges: panelEdges(plot, blocks),
+            range: range,
+            logarithmic: false,
+            reference: 1,
+            ylabel: 'ratio',
+            draw: function (api, article) {
+                api.reference(1);
+                plot.ratios.forEach(function (curve) {
+                    var block = blockAt(blocks, curve.block);
+                    curve.uncertainties.forEach(function (uncertainty) {
+                        var label = curve.label + ', ' + uncertainty.label;
+                        if (uncertainty.band) {
+                            api.band(edges(block),
+                                column(block, uncertainty.minimum),
+                                column(block, uncertainty.maximum),
+                                curve.color);
+                            addLegend(article, label, curve.color, '', true);
+                        } else {
+                            var dash = dashFor(uncertainty.type);
+                            api.step(edges(block),
+                                column(block, uncertainty.minimum),
+                                curve.color, dash, 1);
+                            api.step(edges(block),
+                                column(block, uncertainty.maximum),
+                                curve.color, dash, 1);
+                            addLegend(article, label, curve.color, dash, false);
+                        }
+                    });
+                    var central = column(block, 2);
+                    api.step(edges(block), central,
+                             curve.color, '', 1.5);
+                    addLegend(article, curve.label, curve.color, '', false);
+                    if (curve.statistical) {
+                        api.errors(centres(block), central,
+                                   column(block, 3), curve.color);
+                    }
+                });
+            }
+        };
+    }
+
+    function renderPanel(svg, article, plot, specification,
+                         offset, panelHeight, showXAxis) {
+        var left = 82;
+        var right = 18;
+        var top = offset + 18;
+        var bottom = offset + panelHeight - (showXAxis ? 46 : 28);
+        var width = 900 - left - right;
+        var height = bottom - top;
+        var xLogarithmic = plot.x_axis_mode === 'LOG' &&
+            specification.edges.every(function (value) { return value > 0; });
+        var xDomain = finiteDomain(
+            specification.edges, xLogarithmic, null, false);
+        var yDomain = finiteDomain(
+            specification.range, specification.logarithmic,
+            specification.reference, true);
+
+        function scaled(value, domain, logarithmic) {
+            if (!Number.isFinite(value) || (logarithmic && value <= 0)) {
+                return null;
+            }
+            var low = logarithmic ? Math.log10(domain[0]) : domain[0];
+            var high = logarithmic ? Math.log10(domain[1]) : domain[1];
+            var current = logarithmic ? Math.log10(value) : value;
+            return (current - low) / (high - low);
+        }
+        function x(value) {
+            var result = scaled(value, xDomain, xLogarithmic);
+            return result === null ? null : left + result * width;
+        }
+        function y(value) {
+            var result = scaled(
+                value, yDomain, specification.logarithmic);
+            return result === null ? null : bottom - result * height;
+        }
+
+        var clipId = 'plot-clip-' + (plotSerial += 1);
+        var definitions = svgElement('defs');
+        var clip = svgElement('clipPath', {id: clipId});
+        clip.appendChild(svgElement('rect', {
+            x: left, y: top, width: width, height: height
+        }));
+        definitions.appendChild(clip);
+        svg.appendChild(definitions);
+        svg.appendChild(svgElement('rect', {
+            x: left, y: top, width: width, height: height,
+            fill: '#fff', stroke: '#9aa5af', 'stroke-width': 0.8
+        }));
+
+        var grid = svgElement('g', {
+            stroke: '#dce1e5', 'stroke-width': 0.7
+        });
+        tickValues(yDomain, specification.logarithmic).forEach(
+            function (value) {
+                var position = y(value);
+                grid.appendChild(svgElement('line', {
+                    x1: left, x2: left + width,
+                    y1: position, y2: position
+                }));
+                svg.appendChild(svgElement('text', {
+                    x: left - 8, y: position + 4,
+                    'text-anchor': 'end', fill: '#28323b',
+                    'font-size': 11
+                }, formatNumber(value)));
+            });
+        tickValues(xDomain, xLogarithmic).forEach(function (value) {
+            var position = x(value);
+            grid.appendChild(svgElement('line', {
+                x1: position, x2: position,
+                y1: top, y2: bottom
+            }));
+            if (showXAxis) {
+                svg.appendChild(svgElement('text', {
+                    x: position, y: bottom + 18,
+                    'text-anchor': 'middle', fill: '#28323b',
+                    'font-size': 11
+                }, formatNumber(value)));
+            }
+        });
+        svg.appendChild(grid);
+
+        var dataLayer = svgElement('g', {
+            'clip-path': 'url(#' + clipId + ')'
+        });
+        svg.appendChild(dataLayer);
+
+        function drawStep(stepEdges, values, colour, dash, lineWidth) {
+            var path = '';
+            var active = false;
+            values.forEach(function (value, index) {
+                var x0 = x(stepEdges[index]);
+                var x1 = x(stepEdges[index + 1]);
+                var position = value === null ? null : y(value);
+                if (x0 === null || x1 === null || position === null) {
+                    active = false;
+                    return;
+                }
+                path += (active ? ' L ' : ' M ') + x0 + ' ' + position;
+                path += ' L ' + x1 + ' ' + position;
+                active = true;
+            });
+            if (path) {
+                var attributes = {
+                    d: path, fill: 'none', stroke: colour,
+                    'stroke-width': lineWidth || 1.4,
+                    'vector-effect': 'non-scaling-stroke'
+                };
+                if (dash) {
+                    attributes['stroke-dasharray'] = dash;
+                }
+                dataLayer.appendChild(svgElement('path', attributes));
+            }
+        }
+
+        function drawBand(bandEdges, minimum, maximum, colour) {
+            minimum.forEach(function (low, index) {
+                var high = maximum[index];
+                var x0 = x(bandEdges[index]);
+                var x1 = x(bandEdges[index + 1]);
+                var y0 = y(Math.min(low, high));
+                var y1 = y(Math.max(low, high));
+                if ([x0, x1, y0, y1].some(function (value) {
+                        return value === null;
+                    })) {
+                    return;
+                }
+                dataLayer.appendChild(svgElement('rect', {
+                    x: Math.min(x0, x1), y: Math.min(y0, y1),
+                    width: Math.abs(x1 - x0),
+                    height: Math.max(0.6, Math.abs(y1 - y0)),
+                    fill: colour, opacity: 0.18
+                }));
+            });
+        }
+
+        function drawErrors(xValues, central, errors, colour) {
+            var path = '';
+            xValues.forEach(function (value, index) {
+                var horizontal = x(value);
+                var low = y(central[index] - Math.abs(errors[index]));
+                var high = y(central[index] + Math.abs(errors[index]));
+                if (horizontal === null || low === null || high === null) {
+                    return;
+                }
+                path += ' M ' + horizontal + ' ' + low +
+                        ' L ' + horizontal + ' ' + high +
+                        ' M ' + (horizontal - 2.5) + ' ' + low +
+                        ' L ' + (horizontal + 2.5) + ' ' + low +
+                        ' M ' + (horizontal - 2.5) + ' ' + high +
+                        ' L ' + (horizontal + 2.5) + ' ' + high;
+            });
+            if (path) {
+                dataLayer.appendChild(svgElement('path', {
+                    d: path, fill: 'none', stroke: colour,
+                    'stroke-width': 0.8,
+                    'vector-effect': 'non-scaling-stroke'
+                }));
+            }
+        }
+
+        function drawReference(value) {
+            var position = y(value);
+            if (position !== null) {
+                dataLayer.appendChild(svgElement('line', {
+                    x1: left, x2: left + width,
+                    y1: position, y2: position,
+                    stroke: '#737d86', 'stroke-width': 0.9
+                }));
+            }
+        }
+
+        specification.draw({
+            step: drawStep,
+            band: drawBand,
+            errors: drawErrors,
+            reference: drawReference
+        }, article);
+
+        svg.appendChild(svgElement('text', {
+            x: 18, y: top + height / 2,
+            transform: 'rotate(-90 18 ' + (top + height / 2) + ')',
+            'text-anchor': 'middle', fill: '#28323b',
+            'font-size': 12
+        }, specification.ylabel));
+        if (showXAxis) {
+            svg.appendChild(svgElement('text', {
+                x: left + width / 2, y: bottom + 38,
+                'text-anchor': 'middle', fill: '#28323b',
+                'font-size': 12
+            }, 'bin'));
+        }
+    }
+
+    function renderPlot(plot, blocks, index) {
+        var article = document.createElement('article');
+        article.id = 'histogram-' + (index + 1);
+        article._legendKeys = new Set();
+        var heading = document.createElement('h2');
+        heading.textContent = plot.title;
+        article.appendChild(heading);
+        var svg = svgElement('svg', {
+            viewBox: '0 0 900 400',
+            role: 'img',
+            'aria-label': plot.title
+        });
+        var legend = document.createElement('div');
+        legend.className = 'legend';
+        article.appendChild(svg);
+        article.appendChild(legend);
+
+        var panels = [mainPanel(plot, blocks)];
+        if (plot.relative_uncertainties) {
+            panels.push(uncertaintyPanel(plot, blocks));
+        }
+        if (plot.ratios.length) {
+            panels.push(ratioPanel(plot, blocks));
+        }
+        var heights = panels.map(function (_, panelIndex) {
+            return panelIndex === 0 ? 390 : 205;
+        });
+        var totalHeight = heights.reduce(function (sum, value) {
+            return sum + value;
+        }, 0);
+        svg.setAttribute('viewBox', '0 0 900 ' + totalHeight);
+        var offset = 0;
+        panels.forEach(function (panel, panelIndex) {
+            renderPanel(svg, article, plot, panel, offset,
+                        heights[panelIndex], panelIndex === panels.length - 1);
+            offset += heights[panelIndex];
+        });
+        return article;
+    }
+
+    try {
+        var source = JSON.parse(
+            document.getElementById('hwu-source').textContent);
+        var plots = JSON.parse(
+            document.getElementById('plot-specs').textContent);
+        var blocks = parseBlocks(source);
+        var main = document.getElementById('plots');
+        var loading = document.getElementById('loading');
+        if (loading) {
+            loading.remove();
+        }
+        var contents = document.querySelector('#contents ol');
+        plots.forEach(function (plot, index) {
+            var item = document.createElement('li');
+            var link = document.createElement('a');
+            link.href = '#histogram-' + (index + 1);
+            link.textContent = plot.title;
+            item.appendChild(link);
+            contents.appendChild(item);
+            main.appendChild(renderPlot(plot, blocks, index));
+        });
+    } catch (error) {
+        var target = document.getElementById('plots');
+        target.textContent = '';
+        var message = document.createElement('div');
+        message.className = 'error';
+        message.textContent = 'Could not render histogram data:\n' +
+                              (error && error.message ? error.message : error);
+        target.appendChild(message);
+    }
+}());
+</script>
+</body>
+</html>
+'''
 
 
 _MATPLOTLIB_SCRIPT_BODY = r'''SOURCE_LINESTYLES = {
@@ -5509,8 +6425,9 @@ if __name__ == "__main__":
         python histograms.py <.HwU input_file_path_1> <.HwU input_file_path_2> ... --out=<output_file_path.format> <options>
         Where <options> can be a list of the following: 
            '--help'          See this message.
-           '--gnuplot' or '' output GnuPlot and Matplotlib scripts; prefer GnuPlot when rendering.
+           '--gnuplot' or '' output GnuPlot, Matplotlib, and direct HTML renderers; prefer GnuPlot for PDF rendering.
            '--matplotlib'    output the histograms and a Python script which renders them to PDF.
+           '--html'          output the histograms directly in a standalone HTML/SVG page.
            '--HwU'           to output the histograms read to the raw HwU source.
            '--types=<type1>,<type2>,...' to keep only the type<i> when importing histograms.
            '--titles=<title1>,<title2>,...' to keep only the titles which have any of 'title<i>' in them (not necessarily equal to them)
@@ -5553,7 +6470,7 @@ if __name__ == "__main__":
                                    By default, all weights are considered.
     """
 
-    possible_options=['--help', '--gnuplot', '--matplotlib', '--HwU', '--types','--n_ratios',\
+    possible_options=['--help', '--gnuplot', '--matplotlib', '--html', '--HwU', '--types','--n_ratios',\
                       '--no_open','--show_full','--show_short','--simple_ratios','--sum','--average','--rebin',  \
                       '--assign_types','--multiply','--no_suffix', '--out', '--jet_samples', 
                       '--no_scale','--no_pdf','--no_stat','--no_merging','--no_alpsfact',
@@ -5792,6 +6709,20 @@ if __name__ == "__main__":
             return dense_aggregator.output(path, n_rebin=n_rebin, **options)
         return histo_list.output(path, **options)
 
+    if '--html' in sys.argv:
+        output_histograms(OutName, format='html',
+            number_of_ratios=n_ratios,
+            uncertainties=uncertainties,
+            ratio_correlations=ratio_correlations,
+            arg_string=arg_string,
+            jet_samples_to_keep=jet_samples_to_keep,
+            use_band=use_band,
+            lhapdfconfig=lhapdfconfig,
+            assigned_colours=assigned_colours)
+        log("%d histograms have been output directly at "
+            "'%s.[HwU|html]'."%(histogram_count, OutName))
+        sys.exit(0)
+
     if '--matplotlib' in sys.argv:
         output_histograms(OutName, format='matplotlib',
             number_of_ratios=n_ratios,
@@ -5814,7 +6745,7 @@ if __name__ == "__main__":
         sys.exit(0)
 
     if '--gnuplot' in sys.argv or all(
-                         arg not in ['--HwU','--matplotlib'] for arg in sys.argv):
+                arg not in ['--HwU','--matplotlib','--html'] for arg in sys.argv):
         # Where the magic happens:
         output_histograms(OutName, format='gnuplot',
             number_of_ratios = n_ratios, 
@@ -5828,7 +6759,7 @@ if __name__ == "__main__":
             assigned_colours=assigned_colours)
         # Tell the user that everything went for the best
         log("%d histograms have been output at " % histogram_count+\
-                                  "'%s.[HwU|gnuplot|py]'." % OutName)
+                             "'%s.[HwU|gnuplot|py|html]'." % OutName)
         if auto_open:
             try:
                 backend, return_code = render_histogram_output(
@@ -5843,7 +6774,7 @@ if __name__ == "__main__":
             else:
                 if backend is None:
                     log("Neither GnuPlot nor Matplotlib is available; no PDF "
-                        "was created.")
+                        "was created. The HTML plots remain available.")
                     sys.exit(0)
                 if return_code == 0:
                     sys.exit(0)
