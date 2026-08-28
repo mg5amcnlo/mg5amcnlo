@@ -124,6 +124,19 @@ class MadSpinUnknownPartialWidth(madspin.MadSpinError):
     pass
 
 
+class MadSpinStaleParameters(madspin.MadSpinError):
+    """A reused ``ms_dir``/``use_old_dir`` directory was built with different
+    parameters than the run now asking for it.
+
+    Everything that directory holds is a function of the param_card: the decay
+    gridpacks and the events they produce, the partial widths measured while
+    building them, the maximum weights of the unweighting, the pickled
+    branching ratios. None of it can be recomputed without rebuilding the
+    directory, and all of it would be reused in silence -- so a changed
+    param_card makes the reuse unsound rather than merely stale."""
+    pass
+
+
 class MadSpinZeroBranchingRatio(madspin.MadSpinError):
     """The branching ratio MadSpin is about to apply to every event is zero (or
     not a number). Raised instead of writing the events.
@@ -1877,6 +1890,11 @@ class MadSpinInterface(extended_cmd.Cmd):
         if spinmode in ('none', 'onshell_v1'):
             self._warn_ignored_decay_groups(spinmode)
 
+        # Before any mode is dispatched, and before anything cached in a reused
+        # directory is read back: everything in there was computed from a
+        # param_card, and none of it is re-measured on reuse.
+        self._check_reused_param_card()
+
         if spinmode in ["none"]:
             out = self.run_bridge(line)
             self._log_lhe_timers()
@@ -2486,6 +2504,139 @@ class MadSpinInterface(extended_cmd.Cmd):
     # native path regenerates -- and so re-measures -- on every run, while a
     # gridpack is built once and merely *run* by every later run.
     PARTIAL_WIDTH_FILE = 'ms_partial_width.dat'
+
+    # Copy of the param_card a reusable directory was built with. Everything
+    # that directory caches is derived from those parameters, so this is what
+    # says whether the cache may be reused at all -- see
+    # _check_reused_param_card.
+    PARAM_CARD_STAMP = 'ms_param_card.dat'
+
+    def _reused_directory(self):
+        """The directory whose already-built content this run would reuse, or
+        None when everything is generated from scratch.
+
+        ``ms_dir`` is the persistent one (decay gridpacks, max_wgt caches,
+        madspin.pkl); ``use_old_dir`` reuses the same kind of material in the
+        run's own working directory (production_me/all_ME.pkl)."""
+        if self.options['ms_dir']:
+            return os.path.realpath(self.options['ms_dir'])
+        if self.options['use_old_dir'] and self.options['curr_dir']:
+            return os.path.realpath(self.options['curr_dir'])
+        return None
+
+    def _check_reused_param_card(self):
+        """Refuse to reuse a directory that was built with other parameters.
+
+        A reused directory is a cache of things computed *from* the param_card:
+        the decay events in ``decay_<pdg>_<i>`` and the partial widths measured
+        while generating them, the maximum weights of the unweighting
+        (``max_wgt``, ``max_wgt_sequential*``, ``pure_interference_c``), the
+        branching ratios pickled in ``madspin.pkl``/``all_ME.pkl``, and the
+        matrix-element directories themselves. None of those record which
+        parameters produced them and none is re-measured on reuse, so a changed
+        param_card would be applied to half the calculation and not the other
+        half -- the reported cross-section computed from one card, the events
+        from another.
+
+        Rebuilding is not something MadSpin can do behind the user's back
+        either: the whole point of ``ms_dir`` is that the expensive part is not
+        rebuilt. So this stops, and says which blocks moved.
+
+        ``run_from_pickle`` has long carried a narrower version of this check,
+        comparing the pickled banner's blocks -- but skipping every ``decay``
+        block, i.e. exactly the widths that drive the branching ratios and the
+        Breit-Wigner sampling. Comparing the *card* rather than the pickled
+        banner is what makes the widths comparable: MadSpin overwrites the
+        banner's widths with its own LO estimates as it runs (madspin_v1), so
+        the pickled banner is not the card that went in, while this stamp is.
+        """
+        reusing = self._reused_directory()
+        # A run that is *not* reusing rebuilds the directory from scratch
+        # (run_onshell/run_bridge remove decay_*_*, generate_all_matrix_element
+        # removes the ME trees), so a stamp left there by an earlier run no
+        # longer describes what is on disk. Keep it in step rather than letting
+        # it stop the next reuse for a change that was in fact rebuilt.
+        directory = reusing or (self.options['curr_dir'] and
+                                os.path.realpath(self.options['curr_dir']))
+        if not directory:
+            return
+        stamp = pjoin(directory, self.PARAM_CARD_STAMP)
+        if not reusing and not os.path.exists(stamp):
+            return  # nothing reuses this directory; do not leave a file behind
+        # 'slha' first: Banner.__getattribute__ answers a missing param_card by
+        # charging it, so hasattr() raises rather than returning False when the
+        # input carries no banner at all (hepmc, lhe_no_banner).
+        if 'slha' not in self.banner:
+            return
+        if not hasattr(self.banner, 'param_card'):
+            self.banner.charge_card('param_card')
+        current = self.banner.param_card
+        if reusing and os.path.exists(stamp):
+            try:
+                previous = check_param_card.ParamCard(stamp)
+            except Exception as error:
+                previous = None
+                logger.debug('unreadable %s (%s)', stamp, error)
+            if not previous:
+                # A stamp that parses to nothing says nothing. Every block
+                # would "differ", which would turn a safety net into a gate
+                # that stops runs that were always fine.
+                logger.debug('%s carries no parameters; not checking the '
+                             'reused ones', stamp)
+                return
+            # Only blocks both cards have: a block that exists on one side only
+            # is a change of *model*, which the proc_card of the banner and
+            # 'import model' already police, and flagging it here would stop
+            # reuse across MadSpin versions that write one more block.
+            changed = [name for name in set(current) & set(previous)
+                       if name != 'qnumbers'  # model structure, not parameters
+                       and current[name] != previous[name]]
+            if changed:
+                raise MadSpinStaleParameters(
+                    "MadSpin is reusing %s, which was built with a different "
+                    "param_card.\n"
+                    "\n"
+                    "Blocks that differ: %s\n"
+                    "\n"
+                    "That directory caches everything MadSpin computes from "
+                    "the parameters -- the decay events and the partial widths "
+                    "measured while generating them, the maximum weights of "
+                    "the unweighting, the branching ratios in madspin.pkl. "
+                    "None of it is re-measured on reuse, so continuing would "
+                    "decay the events with the old parameters while reporting "
+                    "a cross-section computed from the new ones.\n"
+                    "\n"
+                    "Point 'ms_dir'/'use_old_dir' at a fresh directory (or "
+                    "remove %s) and rerun, so everything is rebuilt with the "
+                    "parameters you asked for."
+                    % (directory, ', '.join(sorted(changed)), directory))
+            return
+        already_built = reusing and (
+            any(os.path.exists(pjoin(directory, name))
+                for name in ('madspin.pkl', 'max_wgt'))
+            or bool(misc.glob('decay_*_*', directory)))
+        if already_built:
+            # Built by a MadSpin that left no stamp. The content is reused
+            # either way -- ``run_from_pickle`` still compares the pickled
+            # banner's non-decay blocks -- but nothing can vouch for the widths,
+            # so say so instead of stamping it with this run's card as if it had
+            # been built with it.
+            logger.warning(
+                "%s was built by a MadSpin that did not record its "
+                "param_card, so the parameters it was built with cannot be "
+                "checked against this run's. If you have changed the "
+                "param_card since, use a fresh directory: the cached decay "
+                "events, partial widths and maximum weights are not "
+                "re-measured on reuse.", directory)
+        # First use of this directory, or a rebuild of one already stamped:
+        # record what it is being built with.
+        try:
+            if not os.path.isdir(directory):
+                os.makedirs(directory)
+            current.write(stamp)
+        except (IOError, OSError) as error:
+            logger.debug('could not record the parameters of %s: %s',
+                         directory, error)
 
     @classmethod
     def _store_partial_width(cls, decay_dir, cross):
@@ -4527,6 +4678,13 @@ class MadSpinInterface(extended_cmd.Cmd):
         # check -- before it can be normalised against; hence the second moment
         # here, and sum|w| as the fallback scale that cannot cancel.
         nb_overweight = 0        # written events carrying a non-unit factor
+        nb_overweight_nwa = 0    # ... of which sat in the region where the
+                                 # narrow-width approximation is invalid by
+                                 # construction (_near_nwa_threshold)
+        nb_overweight_res = 0    # ... and of which sat on the production
+                                 # matrix element's own resonance
+                                 # (_near_production_resonance). Exclusive with
+                                 # the line above, threshold winning.
         max_overweight = 1.0     # the largest single factor carried
         sum_overweight_dw = 0.0     # sum of (factor - 1) * w_nominal: the signed
                                     # weight the clipping used to throw away
@@ -4644,6 +4802,11 @@ class MadSpinInterface(extended_cmd.Cmd):
                     # move a written weight.
                     br = br * carry
                     nb_overweight += 1
+                    if self._near_nwa_threshold(production, evt_decayfile):
+                        nb_overweight_nwa += 1
+                    elif self._near_production_resonance(full_evt, production,
+                                                         evt_decayfile):
+                        nb_overweight_res += 1
                     if carry > max_overweight:
                         max_overweight = carry
                 full_evt.wgt *= br
@@ -4858,6 +5021,11 @@ class MadSpinInterface(extended_cmd.Cmd):
                 sum_overweight_dabs += abs(w_nom) * (carry - 1.0)
                 br = br * carry
                 nb_overweight += 1
+                if self._near_nwa_threshold(production, evt_decayfile):
+                    nb_overweight_nwa += 1
+                elif self._near_production_resonance(full_evt, production,
+                                                     evt_decayfile):
+                    nb_overweight_res += 1
                 if carry > max_overweight:
                     max_overweight = carry
             if self.options['fixed_order']:
@@ -4906,6 +5074,8 @@ class MadSpinInterface(extended_cmd.Cmd):
                     # or many gives the identical end-of-run number
                     nb_overflow_joint=nb_overflow_joint,
                     nb_overweight=nb_overweight,
+                    nb_overweight_nwa=nb_overweight_nwa,
+                    nb_overweight_res=nb_overweight_res,
                     sum_overweight_dw=float(sum_overweight_dw),
                     sum_overweight_dabs=float(sum_overweight_dabs),
                     sum_nom=float(sum_nom),
@@ -5013,15 +5183,30 @@ class MadSpinInterface(extended_cmd.Cmd):
         total_overflow = sum(v for k, v in merged.items()
                              if k.startswith('nb_overflow_'))
         if total_overflow:
-            logger.warning(
-                "MadSpin sequential: %d weights exceeded their stage maximum "
-                "(mass set / angles / per particle). That bound is "
-                "under-estimated; the excess is now CARRIED on the weight of "
-                "the affected events rather than dropped (see the overweight "
-                "line below for how much it is worth). To go back to unit "
-                "weights everywhere, raise nb_sigma or "
-                "Nevents_for_max_weight, or set unweighting = joint.",
-                total_overflow)
+            # Same split as _report_overweight, and for the same reason: an
+            # exceedance at threshold is the narrow-width approximation running
+            # out, not an under-estimated bound. The two counts are in
+            # different units -- this one counts STAGE weights, the overweight
+            # line counts written EVENTS -- so the note is only allowed to
+            # decide the volume of this line, never to be read as its
+            # breakdown.
+            near, res, far = self._nwa_threshold_split(stats_list)
+            msg = ("MadSpin sequential: %d weights exceeded their stage "
+                   "maximum (mass set / angles / per particle). " % total_overflow)
+            if (near or res) and not far:
+                msg += ("Every event that carried one sits within %s of the "
+                        "sum-of-poles threshold, or on a resonance of the "
+                        "production matrix element itself -- regions where the "
+                        "narrow-width approximation is invalid by "
+                        "construction and no accept/reject bound built on it "
+                        "can dominate; see the overweight line below."
+                        % self._nwa_threshold_margin())
+                logger.info(msg)
+            else:
+                msg += ("That bound is under-estimated: to go back to unit "
+                        "weights everywhere, raise nb_sigma or "
+                        "Nevents_for_max_weight, or set unweighting = joint.")
+                logger.warning(msg)
 
     # How many Monte Carlo errors the summed weight has to be away from zero
     # before it may be used as a denominator. sum w = 0 is not a pathology to be
@@ -5032,6 +5217,259 @@ class MadSpinInterface(extended_cmd.Cmd):
     # z = sqrt(N), so this never fires on one; a pure-interference sample has
     # z = O(1) and always does.
     _OVERWEIGHT_MIN_Z = 5.0
+
+    # How much the carried excess has to be worth, in per-cent of whatever
+    # denominator the overweight line was allowed to quote, before the region
+    # breakdown is printed at all. Below it the head of the line has already
+    # said how many events carried one and what it was worth, and a paragraph
+    # about WHY only buries that; above it the three-way split still decides
+    # both the wording and the volume.
+    _OVERWEIGHT_QUIET_PERCENT = 0.5
+
+    # ------------------------------------------------------------------
+    # The region where the narrow-width approximation is invalid by
+    # construction
+    # ------------------------------------------------------------------
+    # MadSpin factorises production x decay, and the production side is
+    # evaluated with every resonance ON its pole: that is what
+    # ``|M_prod|^2_on`` is in the offshell mass weight
+    # ``Tr(rho_off)/|M_prod|^2_on``, and what the cached on-shell ``rho`` is
+    # under PA. The construction therefore needs the event to be able to put
+    # every resonance on its pole at once, with phase space left over.
+    #
+    # It cannot, once ``sqrt(shat)`` comes down onto the sum of the poles.
+    # There the reference configuration the whole thing is normalised to sits
+    # at the edge of -- or outside -- the region the sample can reach: the
+    # Breit-Wigner windows stop being set by ``BW_cut`` and start being cut off
+    # by the energy budget, and the jacobian of the reshuffle that moves the
+    # production onto a drawn mass set diverges, because there is no recoil
+    # momentum left to absorb the change. Neither of those is a bug, and
+    # neither is fixable by a better accept/reject bound: they are the
+    # approximation being asked for something it does not have.
+    #
+    # That matters for one thing only, here: how loudly an overweight in this
+    # region should be reported. Since PR #375 an overweight is CARRIED on the
+    # event weight rather than clipped, so it is no longer a silent bias
+    # anywhere -- and here it is not even a surprise. Outside the region it
+    # still is: there it says the bound does not dominate for a reason nobody
+    # has explained, and it keeps the loud line.
+    #
+    # The margin is measured in the summed WIDTHS of the resonances the event
+    # decays, because the width is the only scale in the problem that says how
+    # far off its pole a resonance is allowed to go. One summed width is the
+    # statement "this event does not have even one width of room to share".
+    #
+    # Measured, ``p p > t t~`` at 6.5+6.5 TeV, ``spinmode madspin``,
+    # ``BW_cut = 15``, 50 000 production events x 400 free mass sets each
+    # (2.0e7 draws) against the shipped global bound: every one of the 239
+    # over-bound draws, on every one of the 14 events that produced one, sits
+    # at ``sqrt(shat) - 2 m_t < 0.24`` summed widths -- a factor four inside
+    # this margin -- while the region itself holds 0.31 % of the sample. See
+    # doc/madspin_sequential_plan.md section 15.
+    _NWA_THRESHOLD_WIDTHS = 1.0
+
+    def _near_nwa_threshold(self, production, evt_decayfile):
+        """Is this production event inside the region described above?
+
+            sqrt(shat)  <  sum_r pole_r  +  _NWA_THRESHOLD_WIDTHS * sum_r Gamma_r
+
+        with both sums over the final-state particles this event actually
+        decays, counted with multiplicity -- so both tops of a ``t t~`` event
+        enter, and a ``t t~`` event with only one decay line enters once. The
+        "does this particle decay" test is ``_decaying_pdgs``'s, so a pdg with
+        an empty pool is not counted for a decay that will not happen.
+
+        Cached on the production event. False -- never an exception -- when
+        anything it needs is missing: this decides how loudly a diagnostic is
+        printed and must not be able to stop a run.
+        """
+        cached = getattr(production, '_ms_near_nwa_threshold', None)
+        if cached is not None:
+            return cached
+        answer = False
+        try:
+            pole_sum = 0.0
+            width_sum = 0.0
+            decaying = False
+            for particle in production:
+                if int(particle.status) != 1:
+                    continue
+                pdg = particle.pdg
+                if pdg not in evt_decayfile or not len(evt_decayfile[pdg]):
+                    continue
+                decaying = True
+                pole_sum += self.banner.get('param', 'mass', abs(pdg)).value
+                width_sum += self.banner.get('param', 'decay', abs(pdg)).value
+            sqrts = production.sqrts
+            if decaying and sqrts and sqrts > 0:
+                answer = bool(sqrts < pole_sum
+                              + self._NWA_THRESHOLD_WIDTHS * width_sum)
+        except (AttributeError, KeyError, TypeError, ValueError):
+            answer = False
+        production._ms_near_nwa_threshold = answer
+        return answer
+
+    # ------------------------------------------------------------------
+    # The second region an overweight can come from: the production matrix
+    # element's OWN resonance
+    # ------------------------------------------------------------------
+    # This one has nothing to do with threshold and does not exist at all in
+    # ``2 -> 2``. Once the production process has a final-state particle
+    # besides the resonances -- a jet -- its matrix element contains a
+    # propagator of the resonance itself, on the line the jet is radiated
+    # from, with virtuality
+    #
+    #     (p_r + p_j)^2  =  m_r^2 + 2 p_r.p_j .
+    #
+    # With ``m_r`` ON its pole that is ``>= M_r^2`` for any real jet, so the
+    # propagator can never go on shell: the singularity sits exactly on the
+    # boundary of phase space and is unreachable. Sampling ``m_r`` BELOW the
+    # pole -- which is what ``BW_cut`` is for -- opens it: the equation
+    # ``2 p_r.p_j = M_r^2 - m_r^2`` now has solutions, and on them the
+    # production matrix element is a Breit-Wigner peak regulated only by
+    # ``M_r Gamma_r``. The weight there is correct; it is simply enormous, and
+    # a single run-level bound cannot dominate it.
+    #
+    # In ``2 -> 2`` the only internal resonance line is t-channel,
+    # ``(p_in - p_r)^2 = m_r^2 - 2 p_in.p_r < m_r^2 <= M_r^2``, so it is
+    # spacelike and this region does not exist. That asymmetry is the whole
+    # reason a ``2 -> 3`` production overweights 26x more often than the same
+    # ``2 -> 2`` one.
+    #
+    # Measured, ``p p > t t~ j`` at 6.5+6.5 TeV, ``spinmode madspin``,
+    # ``unweighting joint``, ``BW_cut = 15``, 300 000 events: **all 265** of
+    # the run's carried overweights have one resonance within 5.2 M_r Gamma_r
+    # of this pole (51 % within one, the largest -- factor 48.9 -- at 0.12),
+    # against 3.30 for the trials that merely came close to the bound. Their
+    # production reshuffling jacobian is 1.07 (max 2.47), i.e. the threshold
+    # mechanism above is not involved. The region is reachable inside
+    # ``BW_cut = 15`` for 3.5 % of the production events and essentially never
+    # below ``BW_cut = 8`` -- see doc/madspin_sequential_plan.md section 17.
+    #
+    # The margin is 10 and not the 5.2 that population happens to fill: twice
+    # the measured envelope, so the tag is not fitted to one sample, and still
+    # specific -- the fraction of joint TRIALS that land inside it is 9.2e-4
+    # (against 2.9e-4 at 5 and 5.3e-5 at 1), i.e. a thousand times rarer than
+    # the tag firing would need to be to silence an overweight by coincidence.
+    _PRODUCTION_RESONANCE_WIDTHS = 10.0
+
+    def _near_production_resonance(self, full_evt, production, evt_decayfile):
+        """Does this accepted event sit on the production process's own
+        resonance, i.e. is there a decayed resonance ``r`` and another
+        production-level final state ``k`` with
+
+            |m^2(r + k) - M_r^2|  <=  _PRODUCTION_RESONANCE_WIDTHS . M_r Gamma_r
+
+        evaluated at the virtuality the event actually carries?
+
+        The first ``len(production)`` entries of ``full_evt`` are the
+        production event's own particles (``add_decay_to_particle`` appends the
+        decay products after them and flips the parent to status 2), so this is
+        a pairwise invariant mass over the production final state, on the
+        reshuffled momenta -- O(n^2) four-vector arithmetic on an event that is
+        already built, and only ever on an event that overflowed.
+
+        False -- never an exception -- when anything it needs is missing: like
+        ``_near_nwa_threshold`` this decides how loudly a diagnostic prints and
+        must not be able to stop a run.
+        """
+        try:
+            # fixed_order hands in the event GROUP (born + counter-events);
+            # they share the draw, so the born one answers for all of them.
+            # Tested on the element and not with isinstance(list): Event is
+            # itself a list of Particle, so that test is always true.
+            if full_evt and isinstance(full_evt[0], lhe_parser.Event):
+                full_evt = full_evt[0]
+            parts = list(full_evt)[:len(production)]
+            finals = [q for q in parts if int(q.status) in (1, 2)]
+            if len(finals) < 3:
+                # 2 -> 2: no jet to radiate the resonance off, so the internal
+                # propagator is t-channel and cannot go on shell
+                return False
+            for r in finals:
+                if int(r.status) != 2:
+                    continue
+                pdg = r.pdg
+                if pdg not in evt_decayfile or not len(evt_decayfile[pdg]):
+                    continue
+                pole = self.banner.get('param', 'mass', abs(pdg)).value
+                width = self.banner.get('param', 'decay', abs(pdg)).value
+                if not pole or not width:
+                    continue
+                qr = lhe_parser.FourMomentum(r)
+                # ``k`` is deliberately NOT restricted to status 1. `status`
+                # records whether MadSpin attached a decay to the particle, not
+                # whether it was radiated off the ``r`` line, so it is no proxy
+                # for the physics: the very same momenta would tag or not tag
+                # depending only on which particles the user asked to decay.
+                # A partner that is itself a decayed resonance is kept safe by
+                # arithmetic instead. ``s2 = (p_r + p_k)^2 >= (m_r + m_k)^2``
+                # for any two physical momenta, so the window can only be
+                # entered when ``m_r + m_k <= sqrt(M_r^2 + N M_r Gamma_r)``,
+                # and MadSpin never samples a mass more than ``BW_cut`` widths
+                # below its pole (decay.py: ``m_min = max(m - BW_cut w, 0.5)``).
+                # The tightest SM pair, ``r = Z`` with ``k = W``, still misses
+                # by 1.6 GeV at the default ``BW_cut = 15`` and only opens at
+                # ``BW_cut >= 15.4``; ``t`` with ``W`` needs 20.5 and ``t`` with
+                # ``t~`` needs 55.3 -- values MadSpin's own check already calls
+                # too large for the narrow-width approximation it factorises
+                # with. Where it does open (``W Z j`` with both bosons far off
+                # shell) the pairing is the genuine ``W* -> W Z`` production
+                # resonance anyway, so excluding status 2 would cost a true
+                # positive at exactly the BW_cut where it buys the false one.
+                # Pinned by TestProductionResonanceRegion's two-resonance tests.
+                for k in finals:
+                    if k is r:
+                        continue
+                    s2 = (qr + lhe_parser.FourMomentum(k)).mass_sqr
+                    if abs(s2 - pole * pole) <= (
+                            self._PRODUCTION_RESONANCE_WIDTHS * pole * width):
+                        return True
+        except (AttributeError, KeyError, TypeError, ValueError, IndexError):
+            return False
+        return False
+
+    def _nwa_threshold_margin(self):
+        """``_NWA_THRESHOLD_WIDTHS`` as it is said out loud."""
+        return ('one summed width' if self._NWA_THRESHOLD_WIDTHS == 1
+                else '%g summed widths' % self._NWA_THRESHOLD_WIDTHS)
+
+    def _nwa_threshold_split(self, stats_list):
+        """(at threshold, on a production resonance, neither) over the carried
+        overweights of a run. Exclusive, in that order: an event that is both
+        counts as threshold, which is the stronger statement."""
+        nb = sum(s.get('nb_overweight', 0) for s in stats_list)
+        near = sum(s.get('nb_overweight_nwa', 0) for s in stats_list)
+        res = sum(s.get('nb_overweight_res', 0) for s in stats_list)
+        return near, res, nb - near - res
+
+    def _nwa_threshold_note(self, near, res, far):
+        """The sentence both end-of-run lines append when the split is
+        non-trivial. Always quotes every part, so the total the head of the
+        line gives stays recoverable from it."""
+        if not near and not res:
+            return ''
+        note = ''
+        if near:
+            note += ("%d of them are production events within %s of "
+                     "the sum-of-poles threshold, "
+                     % (near, self._nwa_threshold_margin()))
+        if res:
+            note += ("%d of them have a resonance and another production-level "
+                     "final state whose invariant mass is within %g widths of "
+                     "that resonance's own pole. "
+                     % (res, self._PRODUCTION_RESONANCE_WIDTHS))
+        both = 'either region' if (near and res) else 'that region'
+        it = 'those' if (near and res) else 'it'
+        if far:
+            note += ("The other %d are NOT in %s, and those do say "
+                     "the bound is under-estimated: raise nb_sigma or "
+                     "Nevents_for_max_weight. " % (far, both))
+        else:
+            note += ("None of them is outside %s, so nothing here says the "
+                     "bound is under-estimated for an unexplained reason. "
+                     % it)
+        return note
 
     def _report_overweight(self, stats_list, n_written):
         """The overweight safety net's end-of-run measurement.
@@ -5064,6 +5502,14 @@ class MadSpinInterface(extended_cmd.Cmd):
         of its own Monte Carlo errors away from zero. When it is not, the shift
         is quoted against ``sum |w|`` -- which cannot cancel -- and the line says
         which convention it used, so the two are never confused.
+
+        The line has two volumes. Whatever the regions say, an excess worth
+        less than ``_OVERWEIGHT_QUIET_PERCENT`` of that denominator gets the
+        head of the line and nothing else, at info: the number is already
+        printed and nobody needs a paragraph explaining a per-mille. At or
+        above it the three-way region split decides the wording and the volume
+        as before. Only the volume moves -- the counts and the shift in the
+        head of the line are identical on both sides of the threshold.
         """
         nb = sum(s.get('nb_overweight', 0) for s in stats_list)
         if not n_written or not nb:
@@ -5077,7 +5523,6 @@ class MadSpinInterface(extended_cmd.Cmd):
         d_w = sum(s.get('sum_overweight_dw', 0.0) for s in stats_list)
         d_abs = sum(s.get('sum_overweight_dabs', 0.0) for s in stats_list)
         biggest = max([s.get('max_overweight', 1.0) for s in stats_list] or [1.0])
-        joint = sum(s.get('nb_overflow_joint', 0) for s in stats_list)
         # the file as clipping would have written it
         sum_w = sum(s.get('sum_nom', 0.0) for s in stats_list)
         sum_abs = sum(s.get('sum_abs_nom', 0.0) for s in stats_list)
@@ -5088,30 +5533,47 @@ class MadSpinInterface(extended_cmd.Cmd):
         # string: the head already contains literal per-cent signs.
         msg = ("MadSpin overweight safety net: %d/%d written events (%.3g%%) "
                "carried a non-unit weight because a trial weight exceeded its "
-               "accept/reject bound (largest factor %.4f%s). "
-               % (nb, n_written, 100.0 * nb / n_written, biggest,
-                  ', %d of them from the joint accept/reject' % joint
-                  if joint else ''))
+               "accept/reject bound (largest factor %.4f). "
+               % (nb, n_written, 100.0 * nb / n_written, biggest))
         if z >= self._OVERWEIGHT_MIN_Z:
-            msg += ("Carrying it added %+.6g to the summed event weight, i.e. "
-                    "%+.3g%% of the sample's cross-section (IDWTUP = -4: sigma "
-                    "is the mean weight and the event count does not change, "
-                    "so this is the relative shift). "
-                    % (d_w, 100.0 * d_w / sum_w))
+            shift = 100.0 * d_w / sum_w
+            msg += ("Carrying it added %+.3g%% of the sample's cross-section. "
+                    % shift)
         else:
             # pure_interference, or any sample whose weights cancel: the
             # cross-section is consistent with zero, so it is not a denominator
+            shift = 100.0 * d_abs / sum_abs if sum_abs else float('nan')
             msg += ("Carrying it added %+.6g to the summed event weight and "
                     "%+.6g to the summed |weight|. The summed weight is %+.4g "
                     "against a Monte Carlo error of %.4g (z = %.2f), i.e. "
                     "consistent with the zero cross-section this sample has by "
                     "construction, so it is not a usable denominator and the "
                     "shift is quoted against sum|w| = %.4g instead: %+.3g%%. "
-                    % (d_w, d_abs, sum_w, delta, z, sum_abs,
-                       100.0 * d_abs / sum_abs if sum_abs else float('nan')))
-        msg += ("Clipping it -- what MadSpin did before -- would have discarded "
-                "that silently.")
-        logger.warning(msg)
+                    % (d_w, d_abs, sum_w, delta, z, sum_abs, shift))
+        # No dedicated note when the excess is very small. ``shift`` is the
+        # per-cent the line has just quoted, so the smallness test is made
+        # against whichever denominator was legitimate: ``sum w`` when it is a
+        # usable one, ``sum |w|`` when the weights cancel -- it never divides
+        # by a cross-section that is consistent with zero, and it never calls
+        # a sample quiet on a ratio the line itself refused to print. A sample
+        # with no scale at all (every written weight zero) gives nan, and nan
+        # compares false here, so it keeps the full note rather than being
+        # declared small on an undefined ratio. The test is on the MAGNITUDE:
+        # a large negative shift -- which a sample with counter-events can
+        # have, with every carried factor still above 1 -- is not small.
+        if abs(shift) < self._OVERWEIGHT_QUIET_PERCENT:
+            logger.info(msg)
+            return
+
+        near, res, far = self._nwa_threshold_split(stats_list)
+        msg = (msg + self._nwa_threshold_note(near, res, far)).rstrip()
+        # Calmer only when EVERY one of them is in one of the two explained
+        # regions: the count in the head of the line is the total either way,
+        # so this changes the volume and not the arithmetic.
+        if ((near or res) and not far):
+            logger.info(msg)
+        else:
+            logger.warning(msg)
 
     def _report_pure_interference(self, base_out, stats_list, n_processed,
                                   n_written):
@@ -9908,6 +10370,31 @@ class MadSpinInterface(extended_cmd.Cmd):
         return full_event, full_me/(production_me*decay_me)*jac, prod_density_cached
 
 
+    def me_param_card(self, folder_name=None):
+        """The parameters every MadSpin matrix element is initialised with.
+
+        There is exactly one source of truth, ``path_me/param_card.dat``: the
+        banner of the input event file (as overridden by ``import model <MODEL>
+        <CARD>``), written out on every run. ``decay_all_events_onshell
+        .refresh_me_param_cards`` copies it into each ME directory's ``Cards/``
+        at compile time, so ``<folder>/Cards/param_card.dat`` is that same card;
+        it is preferred only because it is the file sitting next to the code
+        that reads it, and it is what an archived run keeps.
+
+        What is deliberately *not* consulted is ``path_me/Cards/param_card.dat``
+        -- the process directory's own card, which ``path_me`` happens to point
+        at when MadSpin is launched from MadEvent. That card may have been
+        edited after the events were generated, and using it would evaluate the
+        production matrix element with parameters the events do not have. A
+        user who does want other parameters says so with ``import model``,
+        which is checked against the banner.
+        """
+        if folder_name:
+            card = pjoin(self.path_me, folder_name, 'Cards', 'param_card.dat')
+            if os.path.exists(card):
+                return card
+        return pjoin(self.path_me, 'param_card.dat')
+
     def initialise_f2py_module(self, mymod, sp_path, prod_or_decay):
         """ Routine to initialise the fortran module with module.initialise(param_card_path).
             If one the process is at loop-induced level, it is also needed to call module.set_madloop_path(path_to_MadLoop5_resources)
@@ -9920,11 +10407,7 @@ class MadSpinInterface(extended_cmd.Cmd):
             raise ValueError("prod_or_decay only accepts values as 'prod' or 'decay'.")
 
         with misc.chdir(sp_path): #changed the search of the card to the subdirectories madspin_me and madspin_decay
-            if (not os.path.exists(pjoin(self.path_me, folder_name, 'Cards', 'param_card.dat'))
-                    and os.path.exists(pjoin(self.path_me, folder_name, 'param_card.dat'))):
-                mymod.initialise(pjoin(self.path_me, 'param_card.dat'))
-            else:
-                mymod.initialise(pjoin(self.path_me, folder_name, 'Cards', 'param_card.dat'))
+            mymod.initialise(self.me_param_card(folder_name))
             # If the module is loop-induced, we also need to set the directory in which the MadLoop param card is present
             MadLoopCardPath = pjoin(self.path_me, folder_name, 'SubProcesses', 'MadLoop5_resources')
             if os.path.exists(MadLoopCardPath):
@@ -10719,11 +11202,11 @@ class MadSpinInterface(extended_cmd.Cmd):
                 if self.model_init:
                     self.model_init = False
                     with misc.chdir(sp_path):
-                        if not os.path.exists(pjoin(self.path_me, 'Cards','param_card.dat')) and \
-                                os.path.exists(pjoin(self.path_me,'param_card.dat')):
-                            mymod.initialise(pjoin(self.path_me,'param_card.dat'))
-                        else:
-                            mymod.initialise(pjoin(self.path_me, 'Cards','param_card.dat'))
+                        # Same single source of truth as the density modes:
+                        # never the process directory's own Cards/param_card.dat,
+                        # which path_me points at under MadEvent and which can
+                        # disagree with the events (see me_param_card).
+                        mymod.initialise(self.me_param_card(self.ms_me_subdir))
             mymod = self.f2py_module
 
             #if Rpath linking is not working the below code can be an alternative:

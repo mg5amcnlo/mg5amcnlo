@@ -44,6 +44,7 @@ import madgraph.various.misc as misc
 import MadSpin.decay as madspin
 import madgraph.various.lhe_parser as lhe_parser
 import MadSpin.interface_madspin as interface_madspin
+import models.check_param_card as check_param_card
 import models.import_ufo as import_ufo
 
 
@@ -2735,6 +2736,21 @@ class TestUnweightRangeWeightPaths(unittest.TestCase):
         _parse_pol_side = interface_madspin.MadSpinInterface._parse_pol_side
         _pure_interference = \
             interface_madspin.MadSpinInterface._pure_interference
+        # asked once per carried overweight. These events decay nothing (
+        # get_decay_from_file returns {}), so the real predicate answers False
+        # without ever reaching for a banner -- which is the point: it must be
+        # able to answer for any event the loop can hand it.
+        _near_nwa_threshold = \
+            interface_madspin.MadSpinInterface._near_nwa_threshold
+        _NWA_THRESHOLD_WIDTHS = \
+            interface_madspin.MadSpinInterface._NWA_THRESHOLD_WIDTHS
+        # ... and, when that one says no, the production process's own
+        # resonance. Same contract: it is handed the event the loop built and
+        # must answer for any of them without a banner.
+        _near_production_resonance = \
+            interface_madspin.MadSpinInterface._near_production_resonance
+        _PRODUCTION_RESONANCE_WIDTHS = \
+            interface_madspin.MadSpinInterface._PRODUCTION_RESONANCE_WIDTHS
 
         def __init__(self, weights, pure_interference=''):
             self.options = interface_madspin.MadSpinOptions()
@@ -2961,11 +2977,16 @@ class _CapturedMadSpinLog(object):
     def __enter__(self):
         import logging
         self.messages = []
+        # the LEVEL each message came out at, in the same order. Some
+        # end-of-run lines choose between info and warning, and "what it said"
+        # is only half of what those tests are checking.
+        self.levels = []
         capture = self
 
         class _Handler(logging.Handler):
             def emit(self, record):
                 capture.messages.append(record.getMessage())
+                capture.levels.append(record.levelno)
 
         self._handler = _Handler(level=logging.DEBUG)
         self._logger = interface_madspin.logger
@@ -2997,8 +3018,20 @@ class TestOverweightReport(unittest.TestCase):
     class _Stub(object):
         _OVERWEIGHT_MIN_Z = \
             interface_madspin.MadSpinInterface._OVERWEIGHT_MIN_Z
+        _OVERWEIGHT_QUIET_PERCENT = \
+            interface_madspin.MadSpinInterface._OVERWEIGHT_QUIET_PERCENT
         _report_overweight = \
             interface_madspin.MadSpinInterface._report_overweight
+        _NWA_THRESHOLD_WIDTHS = \
+            interface_madspin.MadSpinInterface._NWA_THRESHOLD_WIDTHS
+        _nwa_threshold_split = \
+            interface_madspin.MadSpinInterface._nwa_threshold_split
+        _nwa_threshold_note = \
+            interface_madspin.MadSpinInterface._nwa_threshold_note
+        _nwa_threshold_margin = \
+            interface_madspin.MadSpinInterface._nwa_threshold_margin
+        _PRODUCTION_RESONANCE_WIDTHS = \
+            interface_madspin.MadSpinInterface._PRODUCTION_RESONANCE_WIDTHS
 
     def _log(self, **stats):
         base = dict(nb_overweight=0, sum_overweight_dw=0.0,
@@ -3023,13 +3056,19 @@ class TestOverweightReport(unittest.TestCase):
 
     def test_a_counter_event_sample_quotes_the_signed_shift(self):
         """The same three carried events, but on counter-events: the shift is
-        negative even though the factors are all above 1."""
+        negative even though the factors are all above 1.
+
+        The sign is the whole content of this test, so it is pinned both ways
+        round: the negative number is printed, and the magnitude is not printed
+        in its place.
+        """
         msg = self._log(n_written=1000, nb_overweight=3, max_overweight=2.0,
                         sum_overweight_dw=-3.0, sum_overweight_dabs=3.0,
                         sum_nom=500.0, sum_abs_nom=1000.0, sum_sq_nom=1000.0)
         self.assertIn("of the sample's cross-section", msg)
         self.assertIn('-0.6%', msg)          # -3/500, and negative
-        self.assertIn('-3', msg)
+        self.assertNotIn('+0.6%', msg)       # not the magnitude
+        self.assertIn('3/1000 written events', msg)
 
     def test_a_cancelling_sample_refuses_the_cross_section_as_a_denominator(self):
         """pure_interference: sum w is zero by construction, so it must not be
@@ -3044,12 +3083,21 @@ class TestOverweightReport(unittest.TestCase):
         self.assertIn('+5%', msg)            # 50/1000
 
     def test_an_all_zero_sample_does_not_divide_by_zero(self):
-        """Degenerate to the last digit: every written weight is 0."""
-        msg = self._log(n_written=10, nb_overweight=2, max_overweight=3.0,
+        """Degenerate to the last digit: every written weight is 0.
+
+        Neither the quoted shift nor the test that decides how much to print
+        may divide by that. The ratio is undefined, so it is said and not
+        raised -- and an undefined ratio is not 'small': the line keeps its
+        full note rather than going quiet on a number nobody could compute.
+        """
+        msg = self._log(n_written=10, nb_overweight=2, nb_overweight_nwa=1,
+                        max_overweight=3.0,
                         sum_overweight_dw=0.0, sum_overweight_dabs=0.0,
                         sum_nom=0.0, sum_abs_nom=0.0, sum_sq_nom=0.0)
         self.assertIn('quoted against sum|w|', msg)
         self.assertIn('nan', msg)            # said, not raised
+        # and the region note is still there: an undefined ratio is not small
+        self.assertIn('The other 1 are NOT in that region', msg)
 
     def test_nothing_carried_says_so_and_stops(self):
         msg = self._log(n_written=1000, sum_nom=1000.0, sum_abs_nom=1000.0,
@@ -3057,6 +3105,817 @@ class TestOverweightReport(unittest.TestCase):
         self.assertIn('0/1000 written events carried a non-unit weight', msg)
         self.assertNotIn('cross-section', msg)
 
+
+
+class TestNwaThresholdRegion(unittest.TestCase):
+    """``_near_nwa_threshold`` and the separate reporting of the overweights
+    that fall in it.
+
+    MadSpin evaluates the production side with every resonance ON its pole, so
+    the construction needs the event to have the invariant mass to put them all
+    there. Below ``sum of the poles + _NWA_THRESHOLD_WIDTHS x sum of the
+    widths`` it does not, and an accept/reject weight above its bound there is
+    the approximation running out rather than an under-estimated bound. Since
+    the overweight is now CARRIED and not clipped, that difference is worth a
+    quieter line -- and only a line: nothing here may change a count, a weight,
+    or the total the report quotes.
+    """
+
+    POLE, WIDTH = 173.0, 1.5
+
+    class _Val(object):
+        def __init__(self, value):
+            self.value = value
+
+    class _Banner(object):
+        """``banner.get('param', 'mass'|'decay', |pdg|)``, and a KeyError for
+        anything it was not given -- which is what a model without that
+        parameter does."""
+
+        def __init__(self, table):
+            self.table = dict(table)
+
+        def get(self, card, kind, pdg):
+            return TestNwaThresholdRegion._Val(self.table[(kind, pdg)])
+
+    class _Shim(object):
+        _near_nwa_threshold = \
+            interface_madspin.MadSpinInterface._near_nwa_threshold
+        _NWA_THRESHOLD_WIDTHS = \
+            interface_madspin.MadSpinInterface._NWA_THRESHOLD_WIDTHS
+
+        def __init__(self, banner):
+            self.banner = banner
+
+    def _shim(self, table=None):
+        if table is None:
+            table = {('mass', 6): self.POLE, ('decay', 6): self.WIDTH}
+        return self._Shim(self._Banner(table))
+
+    def _event(self, sqrts, pdgs=(6, -6)):
+        rng = random.Random(11)
+        event = _rambo_event(len(pdgs), sqrts, [self.POLE] * len(pdgs), rng)
+        for particle, pdg in zip([p for p in event if int(p.status) == 1],
+                                 pdgs):
+            particle.pid = pdg
+        return event
+
+    @staticmethod
+    def _pool(*pdgs):
+        """An ``evt_decayfile`` whose pools are non-empty for these pdgs."""
+        return dict((pdg, ['a decay event']) for pdg in pdgs)
+
+    # -- where the boundary is ----------------------------------------
+
+    def test_the_cut_is_the_summed_poles_plus_the_summed_widths(self):
+        """Two tops: 2 x 173 + K x 2 x 1.5. The test is on sqrt(shat), the
+        same quantity ``_upfront_production`` and the joint path both spend as
+        the mass-draw budget."""
+        shim = self._shim()
+        margin = shim._NWA_THRESHOLD_WIDTHS
+        cut = 2 * self.POLE + margin * 2 * self.WIDTH
+        for sqrts, expected in ((cut - 0.5, True), (cut + 0.5, False),
+                                (2 * self.POLE + 0.01, True),
+                                (800.0, False)):
+            self.assertEqual(
+                shim._near_nwa_threshold(self._event(sqrts), self._pool(6, -6)),
+                expected, 'sqrt(shat) = %g against a cut of %g' % (sqrts, cut))
+
+    def test_the_sums_count_every_decaying_particle_not_every_pdg(self):
+        """``t t~`` decayed on both sides costs two poles and two widths. The
+        same event with only ``t`` in the decay pools costs one of each -- and
+        is then nowhere near its threshold."""
+        shim = self._shim()
+        margin = shim._NWA_THRESHOLD_WIDTHS
+        # inside the two-decay cut (2 poles + margin x 2 widths) and far
+        # outside the one-decay cut (1 pole + margin x 1 width)
+        sqrts = 2 * self.POLE + margin * 2 * self.WIDTH - 0.5
+        self.assertTrue(
+            shim._near_nwa_threshold(self._event(sqrts), self._pool(6, -6)))
+        # a fresh event object: the answer is cached per production event
+        self.assertFalse(
+            shim._near_nwa_threshold(self._event(sqrts), self._pool(6)))
+
+    def test_a_pdg_with_an_empty_pool_does_not_count(self):
+        """The 'does this particle decay' test is ``_decaying_pdgs``'s, so a
+        pdg present with an empty pool is not a decay and must not add a pole
+        the event then has to clear."""
+        shim = self._shim()
+        margin = shim._NWA_THRESHOLD_WIDTHS
+        event = self._event(2 * self.POLE + margin * 2 * self.WIDTH - 0.5)
+        self.assertFalse(
+            shim._near_nwa_threshold(event, {6: ['x'], -6: []}))
+
+    def test_an_event_with_nothing_to_decay_is_not_in_the_region(self):
+        shim = self._shim()
+        self.assertFalse(
+            self._shim()._near_nwa_threshold(self._event(350.0), {}))
+
+    # -- it may never break a run -------------------------------------
+
+    def test_a_missing_model_parameter_answers_false_instead_of_raising(self):
+        """This decides how loudly a diagnostic prints. A model with no width
+        entry for the resonance must cost a quiet False, not the run."""
+        shim = self._shim({('mass', 6): self.POLE})     # no ('decay', 6)
+        self.assertFalse(
+            shim._near_nwa_threshold(self._event(347.0), self._pool(6, -6)))
+
+    def test_a_zero_width_resonance_needs_the_poles_themselves(self):
+        """Gamma = 0 is the narrow-width approximation being exact, so the
+        margin collapses onto the poles and only an event that cannot even
+        reach them is flagged."""
+        shim = self._shim({('mass', 6): self.POLE, ('decay', 6): 0.0})
+        self.assertFalse(
+            shim._near_nwa_threshold(self._event(2 * self.POLE + 0.01),
+                                     self._pool(6, -6)))
+
+    def test_the_answer_is_cached_on_the_production_event(self):
+        shim = self._shim()
+        event = self._event(347.0)
+        self.assertTrue(shim._near_nwa_threshold(event, self._pool(6, -6)))
+        # the banner is gone; a second call must not need it
+        shim.banner = None
+        self.assertTrue(shim._near_nwa_threshold(event, self._pool(6, -6)))
+
+
+class TestNwaThresholdReport(unittest.TestCase):
+    """The end-of-run split: what it says, how loudly, and what it must not
+    change.
+
+    Everything here is the LOUD regime -- an excess big enough to be worth
+    explaining -- so the fixture is built to clear
+    ``_OVERWEIGHT_QUIET_PERCENT``. The other regime is
+    ``TestOverweightQuietBelowThreshold``.
+    """
+
+    def _log(self, **stats):
+        base = dict(nb_overweight=0, nb_overweight_nwa=0,
+                    sum_overweight_dw=0.0, sum_overweight_dabs=0.0,
+                    sum_nom=0.0, sum_abs_nom=0.0, sum_sq_nom=0.0,
+                    max_overweight=1.0, nb_overflow_joint=0)
+        base.update(stats)
+        n_written = base.pop('n_written')
+        with _CapturedMadSpinLog() as caught:
+            TestOverweightReport._Stub()._report_overweight([base], n_written)
+        return caught
+
+    # 30/1000 = +3%, comfortably above _OVERWEIGHT_QUIET_PERCENT: below it the
+    # report prints the head of the line and stops, and none of the tests in
+    # this class would be exercising anything.
+    _SAMPLE = dict(n_written=1000, max_overweight=2.0, sum_overweight_dw=30.0,
+                   sum_overweight_dabs=30.0, sum_nom=1000.0,
+                   sum_abs_nom=1000.0, sum_sq_nom=1000.0)
+
+    def test_all_of_them_at_threshold_is_reported_calmly(self):
+        import logging
+        caught = self._log(nb_overweight=3, nb_overweight_nwa=3,
+                           **self._SAMPLE)
+        msg = '\n'.join(caught.messages)
+        self.assertEqual(caught.levels, [logging.INFO])
+        self.assertIn('3 of them are production events within one summed '
+                      'width of the sum-of-poles threshold', msg)
+        self.assertIn('None of them is outside it', msg)
+        # the TOTAL is still the first number on the line
+        self.assertIn('3/1000 written events', msg)
+
+    def test_one_of_them_away_from_threshold_keeps_the_warning(self):
+        """The whole point of the split: an overweight away from threshold is
+        still a bound that does not dominate for a reason nobody explained, and
+        two others at threshold must not buy it quiet."""
+        import logging
+        caught = self._log(nb_overweight=3, nb_overweight_nwa=2,
+                           **self._SAMPLE)
+        msg = '\n'.join(caught.messages)
+        self.assertEqual(caught.levels, [logging.WARNING])
+        self.assertIn('3/1000 written events', msg)
+        self.assertIn('2 of them are production events within one summed width of', msg)
+        self.assertIn('The other 1 are NOT in that region', msg)
+        self.assertIn('raise nb_sigma', msg)
+
+    def test_none_of_them_at_threshold_says_nothing_extra(self):
+        import logging
+        caught = self._log(nb_overweight=3, nb_overweight_nwa=0,
+                           **self._SAMPLE)
+        msg = '\n'.join(caught.messages)
+        self.assertEqual(caught.levels, [logging.WARNING])
+        self.assertNotIn('production events within', msg)
+        self.assertIn('3/1000 written events', msg)
+
+    def test_the_split_does_not_move_the_cross_section_shift(self):
+        """Tagging is a report, not an accounting change: the number the line
+        quotes is identical with and without the region."""
+        plain = '\n'.join(self._log(nb_overweight=3, nb_overweight_nwa=0,
+                                    **self._SAMPLE).messages)
+        tagged = '\n'.join(self._log(nb_overweight=3, nb_overweight_nwa=3,
+                                     **self._SAMPLE).messages)
+        for piece in ('3/1000 written events', 'largest factor 2.0000',
+                      "+3% of the sample's cross-section"):
+            self.assertIn(piece, plain)
+            self.assertIn(piece, tagged)
+
+    def test_a_run_with_no_overweight_at_all_is_unchanged(self):
+        import logging
+        caught = self._log(n_written=1000, sum_nom=1000.0, sum_abs_nom=1000.0,
+                           sum_sq_nom=1000.0)
+        self.assertEqual(caught.levels, [logging.INFO])
+        self.assertIn('0/1000 written events carried a non-unit weight',
+                      '\n'.join(caught.messages))
+        self.assertNotIn('production events within',
+                         '\n'.join(caught.messages))
+
+
+class TestProductionResonanceRegion(unittest.TestCase):
+    """``_near_production_resonance``: the second region an overweight can come
+    from, and the one that only exists from ``2 -> 3`` up.
+
+    Once the production process has a final state besides the resonances, its
+    matrix element carries a propagator of the resonance itself on the line the
+    extra parton is radiated from, at ``(p_r + p_j)^2 = m_r^2 + 2 p_r.p_j``.
+    On the pole that is ``>= M_r^2`` for any real parton, so it is unreachable;
+    sampling ``m_r`` below the pole opens it, and there the production matrix
+    element is a Breit-Wigner peak that no single run-level bound dominates.
+    The predicate says whether the accepted event sits on it.
+    """
+
+    POLE, WIDTH = 173.0, 1.5
+
+    class _Shim(object):
+        _near_production_resonance = \
+            interface_madspin.MadSpinInterface._near_production_resonance
+        _PRODUCTION_RESONANCE_WIDTHS = \
+            interface_madspin.MadSpinInterface._PRODUCTION_RESONANCE_WIDTHS
+
+        def __init__(self, banner):
+            self.banner = banner
+
+    def _shim(self, table=None):
+        if table is None:
+            table = {('mass', 6): self.POLE, ('decay', 6): self.WIDTH}
+        return self._Shim(TestNwaThresholdRegion._Banner(table))
+
+    def _event(self, m_res, s_rj, n_final=3, res_status=2):
+        """A production event whose resonance ``r`` (mass ``m_res``, status
+        ``res_status``) and massless parton ``j`` have ``(p_r + p_j)^2 = s_rj``.
+
+        Built in the ``r j`` rest frame -- the predicate only ever reads
+        pairwise invariant masses, so nothing here needs the rest of the event
+        to balance."""
+        M = math.sqrt(s_rj)
+        pstar = (s_rj - m_res ** 2) / (2 * M)
+        r = lhe_parser.FourMomentum(math.sqrt(m_res ** 2 + pstar ** 2),
+                                    0., 0., pstar)
+        j = lhe_parser.FourMomentum(pstar, 0., 0., -pstar)
+        far = lhe_parser.FourMomentum(math.sqrt(self.POLE ** 2 + 4e6),
+                                      0., 2000., 0.)
+        mom = [(6, res_status, m_res, r), (21, 1, 0.0, j)]
+        if n_final > 2:
+            mom.append((-6, 2, self.POLE, far))
+        mom = mom[:n_final]
+        lines = ['%d 1 1.0 100.0 0.0075 0.118' % (len(mom) + 2)]
+        for sign in (1, -1):
+            lines.append('21 -1 0 0 501 502 0. 0. %.15e %.15e 0.0 0. 9.'
+                         % (sign * 1000.0, 1000.0))
+        for pdg, status, mass, q in mom:
+            lines.append('%d %d 1 2 501 502 %.15e %.15e %.15e %.15e %.15e 0. 9.'
+                         % (pdg, status, q.px, q.py, q.pz, q.E, mass))
+        evt = lhe_parser.Event()
+        evt.parse('\n'.join(lines))
+        return evt
+
+    @staticmethod
+    def _pool(*pdgs):
+        return dict((pdg, ['a decay event']) for pdg in pdgs)
+
+    def test_the_window_is_M_times_Gamma_in_the_invariant_MASS_SQUARED(self):
+        """The propagator's own scale: ``|s - M^2| <= N M Gamma``, not
+        ``|m - M| <= N Gamma``. The two differ by a factor 2M."""
+        shim = self._shim()
+        n = shim._PRODUCTION_RESONANCE_WIDTHS
+        half = n * self.POLE * self.WIDTH
+        for delta, expected in ((0.0, True), (0.9 * half, True),
+                                (1.1 * half, False), (50 * half, False)):
+            evt = self._event(160.0, self.POLE ** 2 + delta)
+            self.assertEqual(
+                shim._near_production_resonance(evt, list(evt),
+                                                self._pool(6, -6)),
+                expected, 'delta = %g against a half-window of %g'
+                % (delta, half))
+
+    def test_a_two_to_two_event_can_never_be_in_it(self):
+        """No extra parton, so the only internal resonance line is t-channel
+        and spacelike. Even an event whose two finals happen to reconstruct the
+        pole is rejected, because the region does not exist there."""
+        shim = self._shim()
+        evt = self._event(160.0, self.POLE ** 2, n_final=2)
+        self.assertFalse(
+            shim._near_production_resonance(evt, list(evt), self._pool(6, -6)))
+
+    def test_an_undecayed_particle_is_not_a_resonance_of_this_run(self):
+        """Status 1 (nothing was attached to it) and an empty pool are both
+        'this event does not decay that', so neither can tag."""
+        shim = self._shim()
+        on_pole = self.POLE ** 2
+        self.assertFalse(shim._near_production_resonance(
+            self._event(160.0, on_pole, res_status=1), [0] * 5,
+            self._pool(6, -6)))
+        self.assertFalse(shim._near_production_resonance(
+            self._event(160.0, on_pole), [0] * 5, {6: [], -6: ['x']}))
+
+    def test_it_only_looks_at_the_production_block(self):
+        """The slice is ``len(production)``: decay products appended after it
+        must not be able to pair up with the resonance."""
+        shim = self._shim()
+        evt = self._event(160.0, self.POLE ** 2)
+        # 2 initial + 3 final; cutting the production block to the first four
+        # entries drops the parton the resonance would have paired with
+        self.assertTrue(
+            shim._near_production_resonance(evt, [0] * 5, self._pool(6, -6)))
+        self.assertFalse(
+            shim._near_production_resonance(evt, [0] * 3, self._pool(6, -6)))
+
+    def test_it_never_raises(self):
+        """It decides how loudly a diagnostic prints, so a missing parameter,
+        a missing banner or nonsense must come back False."""
+        evt = self._event(160.0, self.POLE ** 2)
+        self.assertFalse(self._shim({})._near_production_resonance(
+            evt, list(evt), self._pool(6, -6)))
+        broken = TestProductionResonanceRegion._Shim(None)
+        self.assertFalse(broken._near_production_resonance(
+            evt, list(evt), self._pool(6, -6)))
+        self.assertFalse(self._shim()._near_production_resonance(
+            None, [], self._pool(6, -6)))
+
+    def test_a_zero_width_particle_cannot_be_on_its_own_pole(self):
+        """No width, no Breit-Wigner: the propagator is a pole and not a peak,
+        and the phase-space point is measure zero rather than enhanced."""
+        shim = self._shim({('mass', 6): self.POLE, ('decay', 6): 0.0})
+        self.assertFalse(shim._near_production_resonance(
+            self._event(160.0, self.POLE ** 2), [0] * 5, self._pool(6, -6)))
+
+    # ------------------------------------------------------------------
+    # The partner ``k`` is any other production-level final state, status 1
+    # OR status 2. What keeps a second DECAYED resonance from being mistaken
+    # for the radiated parton is not a status test -- `status` only records
+    # whether MadSpin attached a decay -- but the fact that two resonances
+    # are too heavy to put their pair mass on one of their own poles.
+    # ------------------------------------------------------------------
+    Z_POLE, Z_WIDTH = 91.188, 2.44140351     # default MG5 SM param_card
+    W_POLE, W_WIDTH = 80.419, 2.04759951
+
+    @staticmethod
+    def _bw_floor(pole, width, bw_cut):
+        """The lowest mass MadSpin can hand this predicate: decay.py's own
+        ``m_min = max(mpole - BW_cut * w, 0.5)``."""
+        return max(pole - bw_cut * width, 0.5)
+
+    def _pair_event(self, specs, s2):
+        """``specs`` is two ``(pdg, status, mass)`` production-level finals,
+        put back to back with ``(p_0 + p_1)^2 = s2``; a massless parton is
+        parked far away so the event is ``2 -> 3`` and cannot itself pair with
+        anything near a pole."""
+        m0, m1 = specs[0][2], specs[1][2]
+        M = math.sqrt(s2)
+        lam = (s2 - (m0 + m1) ** 2) * (s2 - (m0 - m1) ** 2)
+        pstar = math.sqrt(max(lam, 0.0)) / (2 * M)
+        mom = [lhe_parser.FourMomentum(math.sqrt(m0 ** 2 + pstar ** 2),
+                                       0., 0., pstar),
+               lhe_parser.FourMomentum(math.sqrt(m1 ** 2 + pstar ** 2),
+                                       0., 0., -pstar),
+               lhe_parser.FourMomentum(2000., 0., 2000., 0.)]
+        full = list(specs) + [(21, 1, 0.0)]
+        lines = ['%d 1 1.0 100.0 0.0075 0.118' % (len(full) + 2)]
+        for sign in (1, -1):
+            lines.append('21 -1 0 0 501 502 0. 0. %.15e %.15e 0.0 0. 9.'
+                         % (sign * 5000.0, 5000.0))
+        for (pdg, status, mass), q in zip(full, mom):
+            lines.append('%d %d 1 2 501 502 %.15e %.15e %.15e %.15e %.15e 0. 9.'
+                         % (pdg, status, q.px, q.py, q.pz, q.E, mass))
+        evt = lhe_parser.Event()
+        evt.parse('\n'.join(lines))
+        return evt
+
+    def test_two_decayed_resonances_are_too_heavy_to_fake_the_pole(self):
+        """``s2 = (p_r + p_k)^2 >= (m_r + m_k)^2`` for any two physical
+        momenta, so the window is reachable only when
+
+            m_r + m_k  <=  sqrt(M_r^2 + N M_r Gamma_r) ,
+
+        and a mass MadSpin sampled is never more than ``BW_cut`` widths below
+        its pole. The tightest pair in the SM is ``r = Z`` with ``k = W``, and
+        even with BOTH pushed to the floor of the window it misses at the
+        default ``BW_cut = 15`` -- by 1.6 GeV, which is the whole margin there
+        is, so this is pinned rather than assumed. It opens at ``BW_cut`` about
+        15.4, where MadSpin's own check already calls the narrow-width
+        approximation it factorises with invalid; and there the pairing is the
+        real ``W* -> W Z`` production resonance, so a status test would lose a
+        true positive at exactly the setting where it gains the false one.
+        """
+        shim = self._shim({('mass', 23): self.Z_POLE, ('decay', 23): self.Z_WIDTH,
+                           ('mass', 24): self.W_POLE, ('decay', 24): self.W_WIDTH})
+        top = math.sqrt(self.Z_POLE ** 2 + shim._PRODUCTION_RESONANCE_WIDTHS
+                        * self.Z_POLE * self.Z_WIDTH)
+        for bw_cut, expected in ((5.0, False), (10.0, False), (15.0, False),
+                                 (20.0, True), (25.0, True)):
+            mz = self._bw_floor(self.Z_POLE, self.Z_WIDTH, bw_cut)
+            mw = self._bw_floor(self.W_POLE, self.W_WIDTH, bw_cut)
+            # the single most dangerous point the constraints allow: the pair
+            # mass pushed as close to M_Z^2 as the >= (m_Z + m_W)^2 bound lets it
+            evt = self._pair_event([(23, 2, mz), (24, 2, mw)],
+                                   max((mz + mw) ** 2, self.Z_POLE ** 2))
+            self.assertEqual(
+                shim._near_production_resonance(evt, list(evt),
+                                                self._pool(23, 24)),
+                expected,
+                'BW_cut = %g: m_Z = %.3f + m_W = %.3f = %.3f, against a window '
+                'whose upper edge is at %.3f' % (bw_cut, mz, mw, mz + mw, top))
+
+    def test_a_top_pair_cannot_fake_the_pole_at_any_usable_BW_cut(self):
+        """The same bound on the process the tag was measured on,
+        ``p p > t t~ j``. The window on ``m(t t~)`` is [165.4, 180.3] GeV,
+        while two tops sampled 15 widths low still weigh 303 GeV together: it
+        would take ``BW_cut`` about 55, i.e. a top drawn at 90 GeV, to reach --
+        far past the point where MadSpin refuses the run outright."""
+        shim = self._shim()
+        for bw_cut in (5.0, 10.0, 15.0, 25.0, 50.0):
+            mt = self._bw_floor(self.POLE, self.WIDTH, bw_cut)
+            evt = self._pair_event([(6, 2, mt), (-6, 2, mt)],
+                                   max(4 * mt * mt, self.POLE ** 2))
+            self.assertFalse(
+                shim._near_production_resonance(evt, list(evt),
+                                                self._pool(6, -6)),
+                'BW_cut = %g: 2 * m_t = %.3f against an upper edge at %.3f'
+                % (bw_cut, 2 * mt,
+                   math.sqrt(self.POLE ** 2 + shim._PRODUCTION_RESONANCE_WIDTHS
+                             * self.POLE * self.WIDTH)))
+
+    def test_a_light_decayed_partner_tags_exactly_like_a_parton(self):
+        """Why the pairing must not test ``k``'s status. A light partner --
+        a BSM scalar radiated off the top line, say -- sits on the resonance's
+        own propagator in exactly the way a jet does. The answer may not turn
+        on whether the user happened to put that particle in the decay card."""
+        shim = self._shim({('mass', 6): self.POLE, ('decay', 6): self.WIDTH,
+                           ('mass', 9000006): 2.0, ('decay', 9000006): 1e-3})
+        mt = self._bw_floor(self.POLE, self.WIDTH, 15.0)
+        for status, pool in ((2, self._pool(6, 9000006)), (1, self._pool(6))):
+            evt = self._pair_event([(6, 2, mt), (9000006, status, 2.0)],
+                                   self.POLE ** 2)
+            self.assertTrue(
+                shim._near_production_resonance(evt, list(evt), pool),
+                'the same momenta must tag whether or not the partner was '
+                'decayed (partner status %d)' % status)
+
+
+class TestProductionResonanceReport(unittest.TestCase):
+    """The three-way split of the carried overweights, and what it changes.
+
+    Threshold wins over the production resonance when an event is both, which
+    is the stronger statement; the line drops to info only when EVERY carried
+    overweight is explained by one of the two; and none of it may move an
+    arithmetic number.
+
+    As in ``TestNwaThresholdReport``, this is the loud regime: the fixture is
+    built to clear ``_OVERWEIGHT_QUIET_PERCENT`` so that the split is reached
+    at all.
+    """
+
+    def _log(self, **stats):
+        base = dict(nb_overweight=0, nb_overweight_nwa=0, nb_overweight_res=0,
+                    sum_overweight_dw=0.0, sum_overweight_dabs=0.0,
+                    sum_nom=0.0, sum_abs_nom=0.0, sum_sq_nom=0.0,
+                    max_overweight=1.0, nb_overflow_joint=0)
+        base.update(stats)
+        n_written = base.pop('n_written')
+        with _CapturedMadSpinLog() as caught:
+            TestOverweightReport._Stub()._report_overweight([base], n_written)
+        return caught
+
+    # +3%: see TestNwaThresholdReport._SAMPLE.
+    _SAMPLE = dict(n_written=1000, max_overweight=2.0, sum_overweight_dw=30.0,
+                   sum_overweight_dabs=30.0, sum_nom=1000.0,
+                   sum_abs_nom=1000.0, sum_sq_nom=1000.0)
+
+    def test_all_of_them_on_a_production_resonance_is_reported_calmly(self):
+        import logging
+        caught = self._log(nb_overweight=3, nb_overweight_res=3,
+                           **self._SAMPLE)
+        msg = '\n'.join(caught.messages)
+        self.assertEqual(caught.levels, [logging.INFO])
+        self.assertIn("resonance's own pole", msg)
+        self.assertIn('within 10 widths of', msg)   # the named region width
+        self.assertIn('None of them is outside it', msg)
+        self.assertIn('3/1000 written events', msg)
+
+    def test_one_of_them_in_neither_region_keeps_the_warning(self):
+        import logging
+        caught = self._log(nb_overweight=3, nb_overweight_res=2,
+                           **self._SAMPLE)
+        msg = '\n'.join(caught.messages)
+        self.assertEqual(caught.levels, [logging.WARNING])
+        self.assertIn('The other 1 are NOT in that region', msg)
+        self.assertIn('raise nb_sigma', msg)
+
+    def test_both_regions_are_quoted_and_add_up_to_the_total(self):
+        import logging
+        caught = self._log(nb_overweight=5, nb_overweight_nwa=2,
+                           nb_overweight_res=3, **self._SAMPLE)
+        msg = '\n'.join(caught.messages)
+        self.assertEqual(caught.levels, [logging.INFO])
+        self.assertIn('2 of them are production events within one summed '
+                      'width of', msg)
+        self.assertIn('3 of them have a resonance and another '
+                      'production-level final state', msg)
+        self.assertIn('None of them is outside those', msg)
+        self.assertIn('5/1000 written events', msg)
+
+    def test_both_regions_with_a_leftover_names_both_and_warns(self):
+        import logging
+        caught = self._log(nb_overweight=6, nb_overweight_nwa=2,
+                           nb_overweight_res=3, **self._SAMPLE)
+        msg = '\n'.join(caught.messages)
+        self.assertEqual(caught.levels, [logging.WARNING])
+        self.assertIn('The other 1 are NOT in either region', msg)
+        # the two clauses are still two sentences, not one run together
+        self.assertIn("own pole. The other 1 are NOT", msg)
+
+    def test_the_split_does_not_move_the_cross_section_shift(self):
+        plain = '\n'.join(self._log(nb_overweight=3,
+                                    **self._SAMPLE).messages)
+        tagged = '\n'.join(self._log(nb_overweight=3, nb_overweight_res=3,
+                                     **self._SAMPLE).messages)
+        for piece in ('3/1000 written events', 'largest factor 2.0000',
+                      "+3% of the sample's cross-section"):
+            self.assertIn(piece, plain)
+            self.assertIn(piece, tagged)
+
+
+class TestOverweightQuietBelowThreshold(unittest.TestCase):
+    """The other regime of ``_report_overweight``: below
+    ``_OVERWEIGHT_QUIET_PERCENT`` the line is one short info statement and
+    there is no region breakdown at all.
+
+    The head of the line has already said how many events carried a non-unit
+    weight, what the largest factor was and what the whole thing was worth; a
+    paragraph explaining WHY a per-mille happened only buries that. So the
+    smallness of the shift, not the region split, decides whether the note is
+    printed -- and that is deliberately true even when the overweights are
+    unexplained, which is the one case where the old code always warned. It is
+    pinned here rather than left to be rediscovered in a bug report.
+
+    What may NOT change across the threshold is the arithmetic: the counts and
+    the quoted shift in the head of the line are the same either side of it,
+    and the total is still the first number on the line. Only the volume moves.
+    """
+
+    def _log(self, **stats):
+        base = dict(nb_overweight=0, nb_overweight_nwa=0, nb_overweight_res=0,
+                    sum_overweight_dw=0.0, sum_overweight_dabs=0.0,
+                    sum_nom=0.0, sum_abs_nom=0.0, sum_sq_nom=0.0,
+                    max_overweight=1.0, nb_overflow_joint=0)
+        base.update(stats)
+        n_written = base.pop('n_written')
+        with _CapturedMadSpinLog() as caught:
+            TestOverweightReport._Stub()._report_overweight([base], n_written)
+        return caught
+
+    # 3/1000 = +0.3%, below the threshold. _LOUD is the same sample with the
+    # excess scaled up to +3% and nothing else touched, so the pair isolates
+    # the threshold and only the threshold.
+    _QUIET = dict(n_written=1000, max_overweight=2.0, sum_overweight_dw=3.0,
+                  sum_overweight_dabs=3.0, sum_nom=1000.0,
+                  sum_abs_nom=1000.0, sum_sq_nom=1000.0)
+    _LOUD = dict(_QUIET, sum_overweight_dw=30.0, sum_overweight_dabs=30.0)
+
+    def test_the_fixtures_sit_either_side_of_the_named_threshold(self):
+        """The two regimes are separated by a named constant, not by a number
+        that happens to be spelled the same in the test and in the source."""
+        quiet = interface_madspin.MadSpinInterface._OVERWEIGHT_QUIET_PERCENT
+        self.assertLess(100.0 * self._QUIET['sum_overweight_dw']
+                        / self._QUIET['sum_nom'], quiet)
+        self.assertGreaterEqual(100.0 * self._LOUD['sum_overweight_dw']
+                                / self._LOUD['sum_nom'], quiet)
+
+    def test_a_small_shift_says_one_short_line_and_no_breakdown(self):
+        import logging
+        caught = self._log(nb_overweight=3, nb_overweight_nwa=3,
+                           **self._QUIET)
+        msg = '\n'.join(caught.messages)
+        self.assertEqual(caught.levels, [logging.INFO])
+        self.assertIn('3/1000 written events', msg)
+        self.assertIn("+0.3% of the sample's cross-section", msg)
+        self.assertNotIn('production events within', msg)
+        self.assertNotIn("resonance's own pole", msg)
+        self.assertNotIn('None of them is outside', msg)
+
+    def test_a_small_unexplained_shift_is_quiet_too(self):
+        """Not one of them is in either explained region -- the case that used
+        to be a WARNING with 'raise nb_sigma' on it. It is now an info line
+        with no note, because 0.3% of the cross-section is not worth the
+        paragraph. Deliberate, and pinned so that it is a decision and not a
+        regression.
+        """
+        import logging
+        caught = self._log(nb_overweight=3, nb_overweight_nwa=2, **self._QUIET)
+        msg = '\n'.join(caught.messages)
+        self.assertEqual(caught.levels, [logging.INFO])
+        self.assertIn('3/1000 written events', msg)
+        self.assertNotIn('raise nb_sigma', msg)
+        self.assertNotIn('are NOT in', msg)
+
+    def test_the_same_sample_above_the_threshold_gets_the_breakdown(self):
+        """Same counts, same regions, ten times the excess: the note is back
+        and so is the warning."""
+        import logging
+        caught = self._log(nb_overweight=3, nb_overweight_nwa=2, **self._LOUD)
+        msg = '\n'.join(caught.messages)
+        self.assertEqual(caught.levels, [logging.WARNING])
+        self.assertIn('3/1000 written events', msg)
+        self.assertIn('The other 1 are NOT in that region', msg)
+        self.assertIn('raise nb_sigma', msg)
+
+    def test_exactly_at_the_threshold_gets_the_breakdown(self):
+        """5/1000 = 0.5% exactly. The comparison is strict, so the boundary
+        belongs to the regime that says more."""
+        import logging
+        caught = self._log(nb_overweight=3, nb_overweight_nwa=3,
+                           **dict(self._QUIET, sum_overweight_dw=5.0,
+                                  sum_overweight_dabs=5.0))
+        self.assertEqual(caught.levels, [logging.INFO])
+        self.assertIn('production events within',
+                      '\n'.join(caught.messages))
+
+    def test_a_large_negative_shift_is_not_small(self):
+        """A sample with counter-events can lose 3% of its cross-section with
+        every carried factor still above 1. That is not 'very small' -- the
+        test is on the magnitude of the shift, not on its signed value."""
+        import logging
+        caught = self._log(nb_overweight=3, nb_overweight_nwa=2,
+                           **dict(self._QUIET, sum_overweight_dw=-30.0,
+                                  sum_overweight_dabs=30.0))
+        msg = '\n'.join(caught.messages)
+        self.assertEqual(caught.levels, [logging.WARNING])
+        self.assertIn("-3% of the sample's cross-section", msg)
+        self.assertIn('raise nb_sigma', msg)
+
+    def test_a_cancelling_sample_is_measured_against_the_scale_it_quoted(self):
+        """sum w is consistent with zero here, so the line quotes the shift
+        against sum|w|; the smallness test has to use that same number and
+        must never divide by the cross-section it just refused. 1/1000 of
+        sum|w| is small, so this is one short line."""
+        import logging
+        caught = self._log(n_written=1000, nb_overweight=3,
+                           max_overweight=2.0, sum_overweight_dw=-2.0,
+                           sum_overweight_dabs=1.0, sum_nom=20.0,
+                           sum_abs_nom=1000.0, sum_sq_nom=10000.0)
+        msg = '\n'.join(caught.messages)
+        self.assertEqual(caught.levels, [logging.INFO])
+        self.assertIn('quoted against sum|w|', msg)
+        self.assertIn('+0.1%', msg)
+        self.assertNotIn('are NOT in', msg)
+
+    def test_a_cancelling_sample_with_a_big_excess_still_gets_the_note(self):
+        """Same sample, fifty times the excess: 5% of sum|w| is not small, and
+        the note comes back even though the cross-section was never a usable
+        denominator."""
+        import logging
+        caught = self._log(n_written=1000, nb_overweight=3,
+                           nb_overweight_nwa=2,
+                           max_overweight=2.0, sum_overweight_dw=-2.0,
+                           sum_overweight_dabs=50.0, sum_nom=20.0,
+                           sum_abs_nom=1000.0, sum_sq_nom=10000.0)
+        msg = '\n'.join(caught.messages)
+        self.assertEqual(caught.levels, [logging.WARNING])
+        self.assertIn('quoted against sum|w|', msg)
+        self.assertIn('raise nb_sigma', msg)
+
+    def test_the_head_of_the_line_does_not_move_across_the_threshold(self):
+        """Only the volume changes. Everything the head of the line says about
+        the counts, the largest factor and the denominator is character for
+        character the same, and the total is the first number on it."""
+        quiet = '\n'.join(self._log(nb_overweight=3, nb_overweight_nwa=3,
+                                    **self._QUIET).messages)
+        loud = '\n'.join(self._log(nb_overweight=3, nb_overweight_nwa=3,
+                                   **self._LOUD).messages)
+        head = ('MadSpin overweight safety net: 3/1000 written events (0.3%) '
+                'carried a non-unit weight because a trial weight exceeded '
+                'its accept/reject bound (largest factor 2.0000). ')
+        self.assertTrue(quiet.startswith(head), quiet)
+        self.assertTrue(loud.startswith(head), loud)
+
+
+class TestNwaThresholdSequentialReport(unittest.TestCase):
+    """The sequential accept/reject's own stage-exceedance line takes the same
+    split.
+
+    It counts a different thing -- STAGE weights, not written events -- so it
+    may only borrow the split to decide its volume, never to quote it as its
+    own breakdown. The number it prints has to stay the stage count.
+    """
+
+    class _Stub(object):
+        _report_sequential_stats = \
+            interface_madspin.MadSpinInterface._report_sequential_stats
+        _NWA_THRESHOLD_WIDTHS = \
+            interface_madspin.MadSpinInterface._NWA_THRESHOLD_WIDTHS
+        _nwa_threshold_split = \
+            interface_madspin.MadSpinInterface._nwa_threshold_split
+        _nwa_threshold_note = \
+            interface_madspin.MadSpinInterface._nwa_threshold_note
+        _nwa_threshold_margin = \
+            interface_madspin.MadSpinInterface._nwa_threshold_margin
+        _PRODUCTION_RESONANCE_WIDTHS = \
+            interface_madspin.MadSpinInterface._PRODUCTION_RESONANCE_WIDTHS
+
+        def __init__(self):
+            self.options = {'density_tolerance': 1e-4}
+
+    def _log(self, nb_overweight, nb_overweight_nwa, overflow=3):
+        stats = dict(nb_overweight=nb_overweight,
+                     nb_overweight_nwa=nb_overweight_nwa,
+                     sequential_stats={'nb_overflow_mass': overflow})
+        with _CapturedMadSpinLog() as caught:
+            self._Stub()._report_sequential_stats([stats], 1000)
+        return caught
+
+    def test_all_at_threshold_drops_the_line_to_info(self):
+        import logging
+        caught = self._log(2, 2)
+        msg = '\n'.join(caught.messages)
+        self.assertIn(logging.INFO, caught.levels)
+        self.assertNotIn(logging.WARNING, caught.levels)
+        self.assertIn('3 weights exceeded their stage maximum', msg)
+        self.assertIn('invalid by construction', msg)
+        self.assertNotIn('raise nb_sigma', msg)
+
+    def test_one_away_from_threshold_keeps_the_warning(self):
+        import logging
+        caught = self._log(2, 1)
+        msg = '\n'.join(caught.messages)
+        self.assertIn(logging.WARNING, caught.levels)
+        self.assertIn('3 weights exceeded their stage maximum', msg)
+        self.assertIn('raise nb_sigma', msg)
+
+    def test_the_stage_count_is_never_replaced_by_the_event_split(self):
+        """The two numbers are in different units. 3 stage exceedances with 2
+        carried events must still print 3."""
+        for nwa in (0, 1, 2):
+            msg = '\n'.join(self._log(2, nwa, overflow=3).messages)
+            self.assertIn('3 weights exceeded their stage maximum', msg)
+
+
+class TestNwaThresholdCounterWiring(unittest.TestCase):
+    """``_unweight_range`` has to increment the region counter on the events
+    that carry an overweight and on no others, through both of its branches,
+    and hand it back additively so a sharded run reports what a serial one
+    would."""
+
+    class _Stub(TestUnweightRangeWeightPaths._Stub):
+        """The joint stub, with the region predicate answering from a list so
+        the wiring can be tested without a banner."""
+
+        def __init__(self, weights, near):
+            TestUnweightRangeWeightPaths._Stub.__init__(self, weights)
+            self._near = list(near)
+            self._asked = 0
+
+        def _near_nwa_threshold(self, production, evt_decayfile):
+            answer = self._near[self._asked % len(self._near)]
+            self._asked += 1
+            return answer
+
+    def _run(self, stub, nb_events):
+        harness = TestUnweightRangeWeightPaths()
+        return harness._run(stub, harness._ctx(), nb_events=nb_events)
+
+    def test_only_the_events_that_carry_one_are_asked_and_counted(self):
+        """Weight 2.0 against a bound of 1.0: every event overflows, and the
+        region answers True, False, True, False."""
+        random.seed(3)
+        stub = self._Stub([2.0], [True, False])
+        wgts, stats = self._run(stub, 4)
+        self.assertEqual(stats['nb_overweight'], 4)
+        self.assertEqual(stats['nb_overweight_nwa'], 2)
+        self.assertEqual(stub._asked, 4)      # asked once per overweight only
+
+    def test_a_run_without_overweights_never_asks_and_reports_zero(self):
+        random.seed(3)
+        stub = self._Stub([0.5], [True])
+        wgts, stats = self._run(stub, 20)
+        self.assertEqual(stats['nb_overweight'], 0)
+        self.assertEqual(stats['nb_overweight_nwa'], 0)
+        self.assertEqual(stub._asked, 0)
+
+    def test_the_counter_is_additive_over_shards(self):
+        """The end-of-run report sums it over the workers' stats dicts, so two
+        shards of 2 must give what one shard of 4 gives."""
+        random.seed(3)
+        _, whole = self._run(self._Stub([2.0], [True, False]), 4)
+        random.seed(3)
+        _, part_a = self._run(self._Stub([2.0], [True, False]), 2)
+        random.seed(3)
+        _, part_b = self._run(self._Stub([2.0], [True, False]), 2)
+        self.assertEqual(
+            part_a['nb_overweight_nwa'] + part_b['nb_overweight_nwa'],
+            whole['nb_overweight_nwa'])
 
 class TestBannerEventWeightRescale(unittest.TestCase):
     """``_rewrite_lhe_banner_cross(event_scale=...)``: the second pass that
@@ -9095,3 +9954,419 @@ class TestBreitWignerTruncation(unittest.TestCase):
         chain = self._chain([6])
         self.assertEqual(self._V1(-1, self.TABLE).bw_truncation_factor(chain),
                          self._V1(15, self.TABLE).bw_truncation_factor(chain))
+
+
+class TestMatrixElementParamCard(unittest.TestCase):
+    """The parameters MadSpin evaluates its matrix elements with.
+
+    ``output standalone`` writes ``<me_dir>/Cards/param_card.dat`` from the
+    *model* -- its default/restriction values -- because it knows nothing about
+    the event file. ``initialise_f2py_module`` then handed exactly that file to
+    the compiled density library, and its only other branch required
+    ``<me_dir>/param_card.dat`` (a file ``output standalone`` never writes) to
+    exist *and* ``<me_dir>/Cards/param_card.dat`` (which it always writes) not
+    to. So the run's own card was unreachable: every production and decay
+    density matrix was evaluated at the model defaults, and a mass, a width or
+    a Wilson coefficient set in the param_card the events were generated with
+    was silently dropped.
+
+    The single source of truth is ``path_me/param_card.dat``: written from
+    ``banner['slha']`` on every run, so it carries the parameters of the input
+    events including the ``import model <MODEL> <CARD>`` override -- the one
+    supported way of asking MadSpin for different parameters, which is checked
+    against the banner before it is accepted.
+    """
+
+    # the run's card and the model's default differ in a mass, a width and a
+    # BSM coefficient -- the three kinds of parameter this used to drop
+    RUN_CARD = (
+        'Block mass\n'
+        '    6 1.500000e+02 # MT\n'
+        '   23 9.118760e+01 # MZ\n'
+        'Block newcoup\n'
+        '    1 -1.000000e+00 # ctg\n'
+        'DECAY   6 5.320000e+00 # WT\n'
+        'DECAY  23 2.495200e+00 # WZ\n'
+    )
+    MODEL_DEFAULT_CARD = (
+        'Block mass\n'
+        '    6 1.727600e+02 # MT\n'
+        '   23 9.118760e+01 # MZ\n'
+        'Block newcoup\n'
+        '    1 0.000000e+00 # ctg\n'
+        'DECAY   6 1.330000e+00 # WT\n'
+        'DECAY  23 2.495200e+00 # WZ\n'
+    )
+    # the process directory's own card: a third source, which path_me points at
+    # when MadSpin is launched from MadEvent, and which may have been edited
+    # after the events were made
+    PROCESS_DIR_CARD = (
+        'Block mass\n'
+        '    6 9.900000e+01 # MT\n'
+        '   23 9.118760e+01 # MZ\n'
+        'Block newcoup\n'
+        '    1 7.000000e+00 # ctg\n'
+        'DECAY   6 9.900000e+00 # WT\n'
+        'DECAY  23 2.495200e+00 # WZ\n'
+    )
+
+    def setUp(self):
+        import tempfile
+        self.tmpdir = tempfile.mkdtemp(prefix='ms_param_card_')
+        open(pjoin(self.tmpdir, 'param_card.dat'), 'w').write(self.RUN_CARD)
+        for subdir in ('madspin_me', 'madspin_decay'):
+            os.makedirs(pjoin(self.tmpdir, subdir, 'Cards'))
+            os.makedirs(pjoin(self.tmpdir, subdir, 'SubProcesses'))
+            open(pjoin(self.tmpdir, subdir, 'Cards', 'param_card.dat'),
+                 'w').write(self.MODEL_DEFAULT_CARD)
+
+    def tearDown(self):
+        shutil.rmtree(self.tmpdir, ignore_errors=True)
+
+    # ------------------------------------------------------------------
+    # the read site: what the compiled library is actually initialised with
+    # ------------------------------------------------------------------
+
+    class _Module(object):
+        """Stands in for the f2py extension: records the card it is given."""
+        def __init__(self):
+            self.card = None
+        def initialise(self, path):
+            self.card = path
+        def set_madloop_path(self, path):
+            pass
+
+    def _interface(self):
+        interface = interface_madspin.MadSpinInterface
+
+        class Stub(object):
+            me_param_card = interface.me_param_card
+            initialise_f2py_module = interface.initialise_f2py_module
+
+            def _set_f2py_beampol(self, mymod):
+                pass  # beam polarisation is not what is under test here
+        stub = Stub()
+        stub.path_me = self.tmpdir
+        stub.ms_me_subdir = 'madspin_me'
+        stub.ms_me_decay_subdir = 'madspin_decay'
+        return stub
+
+    def _initialised_with(self, prod_or_decay):
+        """The *content* of the card the library is handed -- the path alone
+        does not say whose parameters ended up inside it."""
+        stub = self._interface()
+        mymod = self._Module()
+        subdir = (stub.ms_me_subdir if prod_or_decay == 'prod'
+                  else stub.ms_me_decay_subdir)
+        stub.initialise_f2py_module(
+            mymod, pjoin(self.tmpdir, subdir, 'SubProcesses'), prod_or_decay)
+        self.assertIsNotNone(mymod.card)
+        return open(mymod.card).read()
+
+    def _refresh(self):
+        madspin.decay_all_events_onshell.refresh_me_param_cards(
+            self._generator())
+
+    def _generator(self):
+        class Gen(object):
+            refresh_me_param_cards = \
+                madspin.decay_all_events_onshell.refresh_me_param_cards
+        gen = Gen()
+        gen.path_me = self.tmpdir
+
+        class MsCmd(object):
+            ms_me_subdir = 'madspin_me'
+            ms_me_decay_subdir = 'madspin_decay'
+        gen.mscmd = MsCmd()
+        return gen
+
+    def test_the_production_library_sees_the_runs_parameters(self):
+        """The regression: with the ME directory laid out as ``output
+        standalone`` leaves it, the density library used to be initialised at
+        the model defaults -- MT = 172.76 and no BSM coupling -- whatever the
+        events were generated with."""
+        self._refresh()
+        card = self._initialised_with('prod')
+        self.assertEqual(card, self.RUN_CARD)
+        self.assertNotEqual(card, self.MODEL_DEFAULT_CARD)
+
+    def test_the_decay_library_sees_them_too(self):
+        """The decay side is not a lesser case: MadSpin generates its decay
+        events with the run's card and measures the partial widths there, so a
+        decay density matrix built at other parameters is inconsistent with the
+        kinematics MadSpin itself produced."""
+        self._refresh()
+        self.assertEqual(self._initialised_with('decay'), self.RUN_CARD)
+
+    def test_the_process_directory_card_is_never_read(self):
+        """``path_me`` is the process directory when MadSpin runs under
+        MadEvent, so ``path_me/Cards/param_card.dat`` is right there -- and it
+        may have been edited after the events were generated. Using it would
+        evaluate the production matrix element at parameters the events do not
+        have. (The legacy onshell_v1 read site did exactly that.)"""
+        os.makedirs(pjoin(self.tmpdir, 'Cards'))
+        open(pjoin(self.tmpdir, 'Cards', 'param_card.dat'),
+             'w').write(self.PROCESS_DIR_CARD)
+        self._refresh()
+        for side in ('prod', 'decay'):
+            self.assertEqual(self._initialised_with(side), self.RUN_CARD)
+
+    def test_an_unknown_side_is_still_refused(self):
+        stub = self._interface()
+        self.assertRaises(ValueError, stub.initialise_f2py_module,
+                          self._Module(), self.tmpdir, 'both')
+
+    # ------------------------------------------------------------------
+    # the resolver on its own
+    # ------------------------------------------------------------------
+
+    def test_the_resolver_falls_back_to_the_runs_card(self):
+        """An ME directory without a Cards/ (or an older layout) resolves to
+        the source of truth itself rather than to nothing."""
+        shutil.rmtree(pjoin(self.tmpdir, 'madspin_me', 'Cards'))
+        self.assertEqual(self._interface().me_param_card('madspin_me'),
+                         pjoin(self.tmpdir, 'param_card.dat'))
+
+    def test_the_resolver_without_a_folder_is_the_source_of_truth(self):
+        self.assertEqual(self._interface().me_param_card(),
+                         pjoin(self.tmpdir, 'param_card.dat'))
+
+    # ------------------------------------------------------------------
+    # the writer
+    # ------------------------------------------------------------------
+
+    def test_the_refresh_overwrites_the_model_default(self):
+        for subdir in ('madspin_me', 'madspin_decay'):
+            self.assertEqual(
+                open(pjoin(self.tmpdir, subdir, 'Cards',
+                           'param_card.dat')).read(),
+                self.MODEL_DEFAULT_CARD)
+        self._refresh()
+        for subdir in ('madspin_me', 'madspin_decay'):
+            self.assertEqual(
+                open(pjoin(self.tmpdir, subdir, 'Cards',
+                           'param_card.dat')).read(),
+                self.RUN_CARD)
+
+    def test_it_is_a_copy_and_not_a_link(self):
+        """A copy, not a symlink: these trees get compiled in place, tarred
+        into gridpacks and moved to other machines, and the copy left behind is
+        the record of what the run used -- which a link the next run repoints
+        would destroy."""
+        self._refresh()
+        card = pjoin(self.tmpdir, 'madspin_me', 'Cards', 'param_card.dat')
+        self.assertFalse(os.path.islink(card))
+        os.remove(pjoin(self.tmpdir, 'param_card.dat'))
+        self.assertEqual(open(card).read(), self.RUN_CARD)
+
+    def test_the_refresh_runs_again_on_every_run(self):
+        """Freshness comes from repeating the copy, not from a link: a reused
+        directory whose card was left behind by an earlier run is brought back
+        to this run's parameters."""
+        self._refresh()
+        open(pjoin(self.tmpdir, 'madspin_me', 'Cards', 'param_card.dat'),
+             'w').write(self.MODEL_DEFAULT_CARD)
+        self._refresh()
+        self.assertEqual(self._initialised_with('prod'), self.RUN_CARD)
+
+    def test_a_missing_decay_directory_is_not_an_error(self):
+        """``madspin_decay`` only exists in the density modes."""
+        shutil.rmtree(pjoin(self.tmpdir, 'madspin_decay'))
+        self._refresh()
+        self.assertEqual(self._initialised_with('prod'), self.RUN_CARD)
+
+    def test_nothing_to_copy_is_not_an_error(self):
+        os.remove(pjoin(self.tmpdir, 'param_card.dat'))
+        self._refresh()
+        self.assertEqual(
+            open(pjoin(self.tmpdir, 'madspin_me', 'Cards',
+                       'param_card.dat')).read(),
+            self.MODEL_DEFAULT_CARD)
+
+
+class TestReusedMsDirParameters(unittest.TestCase):
+    """A reused ``ms_dir``/``use_old_dir`` directory caches things computed
+    *from* the param_card -- the decay gridpacks and the events they produce,
+    the partial widths measured while building them, the maximum weights of the
+    unweighting, the branching ratios in ``madspin.pkl`` -- and re-measures
+    none of them on reuse. A run that changes the param_card and reuses the
+    directory therefore decays its events with one card while reporting a
+    cross-section computed from another.
+
+    ``run_from_pickle`` has long carried a narrower version of this check, but
+    it skips every ``decay`` block -- i.e. exactly the widths that drive the
+    branching ratios and the Breit-Wigner sampling.
+    """
+
+    CARD = (
+        'Block mass\n'
+        '    6 1.727600e+02 # MT\n'
+        'Block newcoup\n'
+        '    1 0.000000e+00 # ctg\n'
+        'DECAY   6 1.330000e+00 # WT\n'
+    )
+
+    def setUp(self):
+        import tempfile
+        self.tmpdir = tempfile.mkdtemp(prefix='ms_reuse_param_')
+
+    def tearDown(self):
+        shutil.rmtree(self.tmpdir, ignore_errors=True)
+
+    def _stub(self, card=None, ms_dir=None, use_old_dir=False, curr_dir=None):
+        interface = interface_madspin.MadSpinInterface
+
+        class Stub(object):
+            PARAM_CARD_STAMP = interface.PARAM_CARD_STAMP
+            _reused_directory = interface._reused_directory
+            _check_reused_param_card = interface._check_reused_param_card
+        stub = Stub()
+        stub.options = {'ms_dir': ms_dir, 'use_old_dir': use_old_dir,
+                        'curr_dir': curr_dir}
+        stub.banner = banner.Banner()
+        stub.banner['slha'] = self.CARD if card is None else card
+        return stub
+
+    def _build(self, **opts):
+        """First use of the directory: it gets stamped."""
+        stub = self._stub(**opts)
+        stub._check_reused_param_card()
+        return stub
+
+    def test_a_fresh_directory_is_stamped_with_what_it_is_built_with(self):
+        self._build(ms_dir=self.tmpdir)
+        stamp = pjoin(self.tmpdir, 'ms_param_card.dat')
+        self.assertTrue(os.path.exists(stamp))
+        self.assertEqual(
+            check_param_card.ParamCard(stamp)['mass'].get((6,)).value, 172.76)
+
+    def test_the_directory_is_created_if_it_is_not_there_yet(self):
+        target = pjoin(self.tmpdir, 'not_yet')
+        self._build(ms_dir=target)
+        self.assertTrue(os.path.exists(pjoin(target, 'ms_param_card.dat')))
+
+    def test_reusing_it_with_the_same_card_is_allowed(self):
+        self._build(ms_dir=self.tmpdir)
+        self._stub(ms_dir=self.tmpdir)._check_reused_param_card()
+
+    def test_a_changed_width_stops_the_run(self):
+        """The one ``run_from_pickle`` skips: widths drive the branching ratio
+        and the Breit-Wigner sampling, and the partial widths cached beside the
+        gridpacks were measured with the old one."""
+        self._build(ms_dir=self.tmpdir)
+        stub = self._stub(ms_dir=self.tmpdir,
+                          card=self.CARD.replace('1.330000e+00',
+                                                 '5.320000e+00'))
+        self.assertRaises(interface_madspin.MadSpinStaleParameters,
+                          stub._check_reused_param_card)
+
+    def test_a_changed_mass_stops_the_run(self):
+        self._build(ms_dir=self.tmpdir)
+        stub = self._stub(ms_dir=self.tmpdir,
+                          card=self.CARD.replace('1.727600e+02',
+                                                 '1.500000e+02'))
+        self.assertRaises(interface_madspin.MadSpinStaleParameters,
+                          stub._check_reused_param_card)
+
+    def test_a_changed_coupling_stops_the_run(self):
+        self._build(ms_dir=self.tmpdir)
+        stub = self._stub(ms_dir=self.tmpdir,
+                          card=self.CARD.replace('1 0.000000e+00 # ctg',
+                                                 '1 -1.000000e+00 # ctg'))
+        self.assertRaises(interface_madspin.MadSpinStaleParameters,
+                          stub._check_reused_param_card)
+
+    def test_the_message_names_the_block_and_the_way_out(self):
+        self._build(ms_dir=self.tmpdir)
+        stub = self._stub(ms_dir=self.tmpdir,
+                          card=self.CARD.replace('1.330000e+00',
+                                                 '5.320000e+00'))
+        try:
+            stub._check_reused_param_card()
+        except interface_madspin.MadSpinStaleParameters as error:
+            message = str(error)
+        else:
+            self.fail('a changed width was accepted')
+        self.assertIn('decay', message)
+        self.assertIn(self.tmpdir, message)
+        self.assertIn('ms_dir', message)
+
+    def test_use_old_dir_is_checked_too(self):
+        """``use_old_dir`` reuses the same kind of material (the pickled
+        branching ratios, the matrix-element directories) in the run's own
+        working directory."""
+        self._build(use_old_dir=True, curr_dir=self.tmpdir)
+        stub = self._stub(use_old_dir=True, curr_dir=self.tmpdir,
+                          card=self.CARD.replace('1.330000e+00',
+                                                 '5.320000e+00'))
+        self.assertRaises(interface_madspin.MadSpinStaleParameters,
+                          stub._check_reused_param_card)
+
+    def test_nothing_is_reused_nothing_is_checked(self):
+        """A run that builds everything from scratch has no cache to be wrong
+        about, and must not be stopped -- nor leave a stamp behind."""
+        stub = self._stub(curr_dir=self.tmpdir)
+        self.assertIsNone(stub._reused_directory())
+        stub._check_reused_param_card()
+        self.assertFalse(os.path.exists(pjoin(self.tmpdir,
+                                              'ms_param_card.dat')))
+
+    def test_ms_dir_wins_over_curr_dir(self):
+        target = pjoin(self.tmpdir, 'gridpack')
+        stub = self._stub(ms_dir=target, use_old_dir=True, curr_dir=self.tmpdir)
+        self.assertEqual(stub._reused_directory(), os.path.realpath(target))
+
+    def test_an_unreadable_stamp_does_not_abort_a_healthy_run(self):
+        """The stamp is a safety net, not a gate: a directory stamped by an
+        older version (or a truncated file) must not stop a run that would
+        otherwise have proceeded exactly as before."""
+        self._build(ms_dir=self.tmpdir)
+        open(pjoin(self.tmpdir, 'ms_param_card.dat'), 'w').write('\x00 junk')
+        self._stub(ms_dir=self.tmpdir,
+                   card=self.CARD.replace('1.330000e+00',
+                                          '5.320000e+00'))._check_reused_param_card()
+
+    def test_a_banner_without_a_card_is_not_checked(self):
+        """hepmc / lhe_no_banner inputs carry no slha to compare."""
+        stub = self._stub(ms_dir=self.tmpdir)
+        del stub.banner['slha']
+        stub._check_reused_param_card()
+        self.assertFalse(os.path.exists(pjoin(self.tmpdir,
+                                              'ms_param_card.dat')))
+
+    def test_a_rebuild_refreshes_the_stamp_it_finds(self):
+        """A run that reuses nothing rebuilds the directory from scratch, so a
+        stamp an earlier run left there stops describing what is on disk.
+        Leaving it would stop the *next* reuse over a change that was in fact
+        rebuilt."""
+        self._build(use_old_dir=True, curr_dir=self.tmpdir)
+        rebuilt = self.CARD.replace('1.330000e+00', '5.320000e+00')
+        # same directory, but this run does not reuse anything
+        self._stub(curr_dir=self.tmpdir, card=rebuilt)._check_reused_param_card()
+        self._stub(use_old_dir=True, curr_dir=self.tmpdir,
+                   card=rebuilt)._check_reused_param_card()
+
+    def test_a_plain_run_leaves_no_stamp_behind(self):
+        """...but a directory nothing ever reuses does not get a new file."""
+        self._stub(curr_dir=self.tmpdir)._check_reused_param_card()
+        self.assertFalse(os.path.exists(pjoin(self.tmpdir,
+                                              'ms_param_card.dat')))
+
+    def test_an_unstamped_directory_with_content_is_flagged(self):
+        """An ms_dir built by a MadSpin that left no stamp still gets reused.
+        Nothing can vouch for its widths, so say so rather than stamp it with
+        this run's card as if it had been built with it."""
+        open(pjoin(self.tmpdir, 'max_wgt'), 'w').write('1.0\n')
+        warnings = []
+        with misc.TMP_variable(interface_madspin.logger, 'warning',
+                               lambda *a, **k: warnings.append(a)):
+            self._build(ms_dir=self.tmpdir)
+        self.assertTrue(warnings)
+        self.assertIn('param_card', warnings[0][0])
+
+    def test_an_empty_unstamped_directory_is_not_flagged(self):
+        warnings = []
+        with misc.TMP_variable(interface_madspin.logger, 'warning',
+                               lambda *a, **k: warnings.append(a)):
+            self._build(ms_dir=self.tmpdir)
+        self.assertFalse(warnings)
