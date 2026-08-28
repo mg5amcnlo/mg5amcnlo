@@ -25,10 +25,10 @@ Two deliberate departures, and the reason for each:
 * the ratio ladder is not used at all.  The pane is deliberately clipped to a
   fixed +-20 % window (``plot_mtt_threshold.RATIO_CLIP``), which is the point of
   the figure rather than an accident of autoscaling, so choosing a rung from the
-  data would defeat it.  Everything that falls outside the window is marked:
-  a measured point gets an arrow at the boundary it left through, and
-  ``onshell``'s exact zero below ``2 m_t`` keeps its open marker -- a structural
-  zero, not a clipped point, and the two must stay distinguishable.
+  data would defeat it.  A measured point that falls outside the window gets an
+  arrow at the boundary it left through.  ``onshell``'s exact zero below
+  ``2 m_t`` is not marked: it is a structural zero, its step leaves the pane,
+  and its bins are listed in ``numbers.txt``.
 
 Usage::
 
@@ -160,10 +160,10 @@ def main():
         y, ye, cnt = d.shape(key)
         r, re = ratio(y, ye, den, dene)
         # Same distinction as the MG7-style figure: a structural zero
-        # (``onshell`` below 2 m_t) keeps its open marker and gets NO arrow --
-        # it is exactly 0, not a point that ran off the pane.  Any other empty
-        # bin is a statement about the sample size and is left as a gap.  A
-        # measured ratio outside the window gets an arrow at the boundary.
+        # (``onshell`` below 2 m_t) gets NO arrow -- it is exactly 0, not a
+        # point that ran off the pane, and it is not marked at all.  Any other
+        # empty bin is a statement about the sample size and is left as a gap.
+        # A measured ratio outside the window gets an arrow at the boundary.
         struct = structurally_empty(d, key) & (dcnt > 0)
         stat = (cnt == 0) & (dcnt > 0) & ~struct
         rr = np.where(struct, 0.0, np.where(stat, np.nan, r))
@@ -173,11 +173,6 @@ def main():
         rx.errorbar(d.centres, np.where(gone, np.nan, r),
                     yerr=np.where(gone, np.nan, re), fmt='o', ms=MS,
                     color=COLOR[key], zorder=4)
-        if struct.any():
-            rx.plot(d.centres[struct],
-                    np.full(struct.sum(), RATIO_CLIP[0]), 'o',
-                    mfc='white', mec=COLOR[key], mew=1.2, ms=MS + 1,
-                    clip_on=False, zorder=8)
         nb, na = offscale_arrows(rx, d.centres, np.where(gone, np.nan, r),
                                  COLOR[key], dx=d.widths, slot=slot,
                                  nslot=len(MODES), lw=0.9, scale=8)
@@ -187,16 +182,6 @@ def main():
           'arrow at the boundary it left through' % (RATIO_CLIP, n_out))
     rx.text(0.99, 0.92, 'bands: $\\pm5\\%$, $\\pm10\\%$', transform=rx.transAxes,
             ha='right', va='top', fontsize=7, color='C0')
-    # Kept on purpose: a key to two MARKS, not commentary.  The axis label can
-    # say the pane is clipped but not that an open circle is an exact
-    # structural zero while an arrow is a measured point that left the window,
-    # and that distinction is why onshell's sub-threshold zero is drawn at all.
-    # Bottom right is the corner no curve reaches, so it covers no point.
-    rx.text(0.99, 0.04,
-            'arrow: point outside the pane\n'
-            '$\\circ$: exactly 0 (structural)',
-            transform=rx.transAxes, ha='right', va='bottom', fontsize=7,
-            color='0.30', linespacing=1.3)
     rx.set_ylabel('Shape ratio\n(clipped to $\\pm20\\%$)', fontsize=9)
     # The variable and its unit, nothing else.
     rx.set_xlabel(r'$m_{t\bar{t}}$ [GeV]')

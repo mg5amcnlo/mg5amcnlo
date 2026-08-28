@@ -28,9 +28,9 @@ Two things follow, and neither is allowed to go quiet:
   any drawn point can be checked. The agreement thresholds quoted **for the
   figure** are the shape ones of section 1b.
 * **`onshell`'s zero below `2 m_t` is still zero.** Dividing by a total cross
-  section cannot make a structural zero non-zero, and the drawing convention
-  survives unchanged: open circle on the lower boundary, and **no** arrow, so it
-  stays distinguishable from a measured point that left the clipped pane.
+  section cannot make a structural zero non-zero. It carries **no** arrow, and
+  since the figure cleanup no marker either: the bins are counted in
+  `plots/numbers.txt` rather than drawn.
 
 ---
 
@@ -116,14 +116,12 @@ outside that window and each carries an **arrow** at the boundary it left
 through -- four `madspin`, one `PA`, nine `madspin_v1`. (It was fifteen when the
 pane was in absolute normalisation, four/two/nine; the `PA` 326-331 GeV bin came
 back inside once the +3.5 % plateau was divided out.) `onshell`'s exact zero
-keeps its **open circle** on the lower boundary and carries **no** arrow, so a
-structural zero and a clipped point stay distinguishable -- and it is still a
-zero under this normalisation, because dividing by a total cross section cannot
-make it anything else. The y-axis label says the pane is clipped and compares
-shapes, an in-pane key says what the two marks mean -- kept deliberately, since
-the axis label can state the clipping but not the difference between an arrow
-and an open circle -- and `plots/numbers.txt` lists every off-scale ratio with
-its value and its error, so the clipping hides no number.
+carries **no** arrow and, since the figure cleanup, no marker of its own: it is
+a structural zero, its step leaves the window, and it is still a zero under this
+normalisation because dividing by a total cross section cannot make it anything
+else. The y-axis label says the pane is clipped and compares shapes, and
+`plots/numbers.txt` lists every off-scale ratio with its value and its error, so
+the clipping hides no number.
 
 ---
 

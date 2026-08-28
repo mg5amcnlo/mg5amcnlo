@@ -129,17 +129,32 @@ recoil.
 
 ### The drawing convention, applied to all four
 
-The `t t~ j` figure draws an exact structural zero as an **open circle on the
-lower boundary of the clipped ratio pane, with no arrow**, so it stays distinct
-from a measured point that ran off the pane (arrow) and from an empty bin that
-only reflects `N` (gap). Here **all four modes** earn the circle, in all nine
-sub-threshold plot bins.
+An exact structural zero carries **no arrow** -- it is a `0`, not a point that
+ran off the clipped pane -- and, since the figure cleanup, **no marker** of its
+own: its step runs to `0` and leaves the window. Here **all four modes** are
+structurally zero, in all nine sub-threshold plot bins, and the pane shows that
+as the absence of any curve below `2 m_t`. `plots/numbers.txt` lists which modes
+are structurally zero and in how many bins, so the statement is auditable and
+not just visible. (The figure used to draw four concentric open circles there;
+they were removed, the bins were not.)
 
-The circles coincide -- that is the result -- so they are drawn **concentric**,
-smallest on top. Nudging them apart horizontally is not available: the turn-on is
-binned at 1 GeV, which is about 4 pt of axis, and four 5 pt markers do not fit
-side by side in it. `plots/numbers.txt` lists which modes carry circles and in
-how many bins, so the convention is auditable and not just visible.
+### Where the MadSpin sampling stops
+
+Measured from `data/histograms.npz` on its 0.25 GeV grid: the lowest `m_tt` with
+any content is **346.00 GeV for all four modes** -- `madspin`, `PA`, `onshell`,
+`madspin_v1` -- and for the undecayed production sample as well. They share the
+edge exactly. That edge is `2 m_t = 346.0 GeV`, which the figure already marks
+with its dashed vertical line, so **no second vertical line was added**: it
+would land on top of the first.
+
+The Breit-Wigner truncation does **not** set an `m_tt` edge for this process.
+`BW_cut = 15` would put one at `2 (m_t - 15 Gamma_t) = 301.26 GeV`, and that is
+where the off-shell *truth* is cut off (its lowest populated bin is 310.00 GeV,
+statistics, not the hard edge, and both are left of the plotted 316-420 GeV
+window). The MadSpin modes never see it, because `m_tt = sqrt(shat)` here is
+independent of the top virtualities the truncation acts on. Measured 346.00 GeV
+and computed 301.26 GeV therefore disagree, and the disagreement is the physics
+of the study rather than a defect.
 
 **No point leaves the clipped pane in either style.** Zero arrows are drawn, and
 that is itself a result: in the `t t~ j` figure fourteen shape ratios were off

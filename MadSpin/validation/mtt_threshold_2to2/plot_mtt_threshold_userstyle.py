@@ -15,16 +15,12 @@ usetex, sans serif), figsize (6, 6), a [3, 1] gridspec, a plain step for the
 reference and ``errorbar(fmt='o', ms=4)`` plus a faint companion step for
 everything else, log-y on the main panel (the tail spans three decades and is
 the whole point of the figure), a ratio panel clipped to a fixed +-20 % window
-rather than an autoscaled ladder, arrows for measured points that leave the
-window, and open markers for exact structural zeros.
+rather than an autoscaled ladder, and arrows for measured points that leave the
+window.
 
-One drawing detail differs from the ``t t~ j`` rendering, and it is forced by
-the result rather than chosen.  There, one mode -- ``onshell`` -- is
-structurally zero below ``2 m_t`` and one open circle per bin says so.  Here all
-four modes are, and they sit at exactly the same place, which IS the result.
-Four markers cannot be nudged apart inside a 1 GeV bin (about 4 pt of axis), so
-they are drawn concentric, smallest on top, and coincidence is what the reader
-sees.
+Exact structural zeros are not marked.  Here all four modes are structurally
+zero below ``2 m_t`` -- which IS the result -- and the pane shows it as the
+absence of any curve there; which modes, in which bins, is in ``numbers.txt``.
 
 Usage::
 
@@ -150,11 +146,11 @@ def main():
     # run outside it cannot drag the autoscale along.
     rx.set_ylim(*RATIO_CLIP)
 
-    # Which modes are structurally zero below threshold, in drawing order.
-    # Concentric rings, largest first: for this process it is all four of them
-    # and they coincide exactly, which is the finding.
+    # Which modes are structurally zero below threshold.  Not marked on the
+    # figure -- an exact 0 leaves the clipped pane with its step -- but the set
+    # still decides which empty bins get an arrow (none of these do).
     struct_of = {key: structurally_empty(d, key) & (dcnt > 0) for key in MODES}
-    circled = [key for key in MODES if struct_of[key].any()]
+    structural = [key for key in MODES if struct_of[key].any()]
 
     n_out = 0
     for slot, key in enumerate(MODES):
@@ -162,9 +158,9 @@ def main():
         # sits on 1.  Absolute statements are in numbers.txt and RESULTS.md.
         y, ye, cnt = d.shape(key)
         r, re = ratio(y, ye, den, dene)
-        # Same distinction as the MG7-style figure: a structural zero keeps its
-        # open marker and gets NO arrow -- it is exactly 0, not a point that ran
-        # off the pane.  Any other empty bin is a statement about the sample
+        # Same distinction as the MG7-style figure: a structural zero gets NO
+        # arrow -- it is exactly 0, not a point that ran off the pane -- and no
+        # marker either.  Any other empty bin is a statement about the sample
         # size and is left as a gap.  A measured ratio outside the window gets
         # an arrow at the boundary it left through.
         struct = struct_of[key]
@@ -176,13 +172,6 @@ def main():
         rx.errorbar(d.centres, np.where(gone, np.nan, r),
                     yerr=np.where(gone, np.nan, re), fmt='o', ms=MS,
                     color=COLOR[key], zorder=4)
-        if struct.any():
-            ring = circled.index(key)
-            rx.plot(d.centres[struct],
-                    np.full(struct.sum(), RATIO_CLIP[0]), 'o',
-                    mfc='white', mec=COLOR[key], mew=1.2,
-                    ms=MS + 1 + 2.4 * ring,
-                    clip_on=False, zorder=8 + (len(circled) - ring))
         nb, na = offscale_arrows(rx, d.centres, np.where(gone, np.nan, r),
                                  COLOR[key], dx=d.widths, slot=slot,
                                  nslot=len(MODES), lw=0.9, scale=8)
@@ -190,19 +179,10 @@ def main():
 
     print('ratio pane clipped to %s: %d point(s) outside it, each drawn as an '
           'arrow at the boundary it left through' % (RATIO_CLIP, n_out))
-    print('open circles (exact structural zeros): %s'
-          % (', '.join(circled) if circled else 'none'))
+    print('exact structural zeros (not marked; see numbers.txt): %s'
+          % (', '.join(structural) if structural else 'none'))
     rx.text(0.99, 0.92, 'bands: $\\pm5\\%$, $\\pm10\\%$', transform=rx.transAxes,
             ha='right', va='top', fontsize=7, color='C0')
-    # Kept on purpose: a key to two MARKS, not commentary.  The axis label can
-    # say the pane is clipped but not that an open circle is an exact
-    # structural zero while an arrow is a measured point that left the window.
-    # Bottom right is the corner no curve reaches, so it covers no point.
-    rx.text(0.99, 0.04,
-            'arrow: point outside the pane\n'
-            '$\\circ$: exactly 0 (structural)',
-            transform=rx.transAxes, ha='right', va='bottom', fontsize=7,
-            color='0.30', linespacing=1.3)
     rx.set_ylabel('Shape ratio\n(clipped to $\\pm20\\%$)', fontsize=9)
     # The variable and its unit, nothing else.
     rx.set_xlabel(r'$m_{t\bar{t}}$ [GeV]')

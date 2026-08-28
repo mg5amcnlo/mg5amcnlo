@@ -63,8 +63,8 @@ Nothing about the measurement or the drawing is re-decided in this directory.
 * `plot_mtt_threshold.py` loads `../mtt_threshold/plot_mtt_threshold.py` the
   same way and rebinds the process label and the two legend tables. The panel
   geometry, the zone binning, the log scale, the shape normalisation, the
-  clipped ratio pane, the arrows, the open-circle convention, the bands key and
-  the minus-sign workaround are all that module's.
+  clipped ratio pane, the arrows, the bands key and the minus-sign workaround
+  are all that module's.
 
 Two changes were made **in** `../mtt_threshold/plot_mtt_threshold.py` so that
 this could work, and both were checked to leave that study's own output
@@ -77,17 +77,16 @@ identical by MD5):
    and of nothing else, so the answer there is what it was. Which modes are
    structurally empty is a property of the *process*, which is why it is now
    read out of the data rather than hard-coded.
-2. the open circles are drawn **concentric**, largest first, indexed by
-   position among the modes that have any. With one such mode -- the `t t~ j`
-   case -- that is the original single `ms=5` marker. With four it is the only
-   way to show them: they coincide exactly, and the turn-on is binned at 1 GeV,
-   which is about 4 pt of axis and cannot hold four 5 pt markers side by side.
+2. the open circles that used to mark those bins were drawn **concentric**,
+   largest first, indexed by position among the modes that have any -- four
+   coincident markers cannot be nudged apart inside a 1 GeV bin. Both the
+   circles and the in-pane key that explained them have since been removed from
+   the figure; the bins they marked are still counted in `numbers.txt`.
 
-The setup line above the curves reads `pp -> t t~`, the truth legend entry
+The setup line above the curves reads `pp -> t t~`, the reference legend entry
 matches, and everything else on the figure is unchanged: no in-plot prose, no
 `m_tt` definition on the axis or above it, `m_tt [GeV]` on the x axis, the
-`2 m_t` line and tag, the legend, the `+-5 %` / `+-10 %` bands key and the
-arrow/circle key.
+`2 m_t` line and tag, the legend and the `+-5 %` / `+-10 %` bands key.
 
 ## Re-running
 
@@ -207,15 +206,30 @@ That the sub-threshold region is empty for **all four** modes, and that this is
 structural rather than a sample-size accident.
 
 The convention is the `t t~ j` study's, applied to every mode that earns it: an
-exact structural zero is drawn as an **open circle on the lower boundary of the
-clipped ratio pane, with no arrow**, so it stays visually distinct from a
-measured point that ran off the pane (which gets an arrow) and from an empty bin
-that is just a statement about `N` (which is left as a gap). Here all four modes
-get the circle, the circles coincide, and they are drawn concentric so that all
-four are visible.
+exact structural zero carries **no arrow** -- it is a `0`, not a measured point
+that ran off the clipped pane, and an arrow would say the opposite -- and no
+marker of its own. Its step runs to `0` and leaves the window, so what the pane
+shows below `2 m_t` is the absence of all four curves.
 
-The emptiness is also stated as a **count** -- `0 of N` -- in `numbers.txt` and
-in `RESULTS.md`, because an emptiness drawn is weaker than an emptiness counted.
+The emptiness is stated as a **count** -- `0 of N` -- in `numbers.txt` and in
+`RESULTS.md`, because an emptiness drawn is weaker than an emptiness counted.
+That is now the only place it is stated: the four concentric open circles the
+figure used to draw there, and the in-pane key explaining them, were removed.
+
+### Where the MadSpin sampling drops to zero
+
+Measured off `data/histograms.npz` (0.25 GeV grid): the lowest `m_tt` carrying
+any content is **346.00 GeV, identically for `madspin`, `PA`, `onshell`,
+`madspin_v1`** and for the undecayed production sample. All four share the edge.
+
+That value **is** `2 m_t = 346.0 GeV`, which the figure already marks with its
+dashed vertical line, so no second line was drawn -- it would coincide with the
+first. The `BW_cut = 15` Breit-Wigner truncation would predict an edge at
+`2 (m_t - 15 Gamma_t) = 301.26 GeV`; that is the *truth* sample's cut-off, not
+MadSpin's, and it lies left of the plotted 316-420 GeV window. The two numbers
+disagree because for `p p > t t~` the observable is `m_tt = sqrt(shat)`, which
+does not depend on the top virtualities the truncation acts on -- the same
+identity the whole study rests on.
 
 ## No prose on the figure
 
@@ -223,6 +237,6 @@ There is no annotation in the plot area. What the shaded region means, why no
 mode reaches it, the counts -- all of that is in `RESULTS.md` and `numbers.txt`,
 where it can carry its errors. What stays on the figure is one setup line above
 the curves (process, energy, order, scales, `BW cut`), the `2 m_t` tag on the
-threshold line, the legend, and the ratio-pane keys. The `m_tt` axis names the
+threshold line, the legend, and the ratio-pane bands key. The `m_tt` axis names the
 variable and its unit and nothing else; what `m_tt` is built from is in
 `RESULTS.md`, in `meta.json['observable']` and in "The observable" above.

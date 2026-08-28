@@ -162,14 +162,14 @@ allcolors[3] = 'red'
 #               would only add ink.  RESULTS.md carries the comparison.
 # --------------------------------------------------------------------------
 CURVES = [
-    ('truth',      r'truth: $pp \to t\bar t j$, $t \to W^+ b$ (off shell)'),
+    ('truth',      r'$pp \to t\bar t j$, $t \to W^+ b$ (off shell)'),
     ('madspin',    r'MadSpin, \texttt{spinmode = madspin}'),
     ('PA',         r'MadSpin, \texttt{spinmode = PA}'),
     ('onshell',    r'MadSpin, \texttt{spinmode = onshell}'),
     ('madspin_v1', r'MadSpin, \texttt{spinmode = madspin\_v1} (legacy)'),
 ]
 CURVES_PLAIN = {
-    'truth':      r'truth: $pp \to t\bar t j$, $t \to W^+ b$ (off shell)',
+    'truth':      r'$pp \to t\bar t j$, $t \to W^+ b$ (off shell)',
     'madspin':    'MadSpin, spinmode = madspin',
     'PA':         'MadSpin, spinmode = PA',
     'onshell':    'MadSpin, spinmode = onshell',
@@ -421,21 +421,14 @@ def ratio(num, nume, den, dene):
 # --------------------------------------------------------------------------
 # The ratio pane is CLIPPED to +-20 %.
 #
-# Several points genuinely live outside that window and none of them may quietly
-# disappear, so the clipping comes with two marks that mean different things:
+# A measured ratio whose central value lies outside that window still gets an
+# arrow at the boundary it left through, so it does not quietly disappear: a
+# clipped point drawn as an ordinary marker sitting at 1.2 would be worse than
+# not clipping at all.  The axis label says the pane is clipped.
 #
-#   arrow  -- a MEASURED ratio whose central value is outside the pane.  The
-#             arrow sits at the boundary it left through and points that way, so
-#             the reader can see both that the point exists and which direction
-#             it went.  A clipped point drawn as an ordinary marker sitting at
-#             1.2 would be worse than not clipping at all.
-#   open   -- ``onshell``'s exact zero below ``2 m_t``.  That is not a point
-#   circle    that ran off the pane, it is a structural zero (see
-#             :func:`structurally_empty`), and it keeps the open-marker
-#             convention it had on the unclipped figure.  It carries no arrow,
-#             precisely so the two cases stay distinguishable.
-#
-# Both the axis label and the in-pane key say the pane is clipped.
+# A structurally empty bin (see :func:`structurally_empty`) carries no arrow and
+# no marker of its own: it is an exact zero, it drops off the bottom of the pane
+# with its step, and its content is reported in numbers.txt rather than drawn.
 # --------------------------------------------------------------------------
 RATIO_CLIP = (0.8, 1.2)
 
@@ -670,18 +663,12 @@ def make_figure(d, out, style_tag=''):
     rx.set_ylim(*RATIO_CLIP)
 
     # Which modes are structurally zero below threshold is a property of the
-    # PROCESS, and it decides how the open circles have to be drawn.  For
-    # ``p p > t t~ j`` only ``onshell`` is, and one circle per bin is the whole
-    # problem.  For a ``2 -> 2`` production every mode is -- they all sit at
-    # exactly the same place, 0, which is the result -- and four white-filled
-    # circles at one x would hide three of themselves.  Nudging them apart
-    # horizontally is not available: the turn-on is binned at 1 GeV, which is
-    # about 4 pt of axis, and four 5 pt markers do not fit in it.  So they are
-    # drawn CONCENTRIC, largest first, and coincidence is what the reader sees.
-    # The one-structural-mode case is untouched by this: the radius ladder
-    # starts at the original ms=5.
+    # PROCESS -- for ``p p > t t~ j`` only ``onshell``, for a ``2 -> 2``
+    # production all four -- and the pane no longer marks them: a structural
+    # zero is an exact 0, its step drops off the bottom of the clipped window,
+    # and the bins are listed in numbers.txt.  The set is still computed,
+    # because it decides which empty bins get an arrow (none of these do).
     struct_of = {key: structurally_empty(d, key) & (dcnt > 0) for key in MODES}
-    circled = [key for key in MODES if struct_of[key].any()]
 
     n_out = 0
     for slot, key in enumerate(MODES):
@@ -693,13 +680,12 @@ def make_figure(d, out, style_tag=''):
         # numbers are in numbers.txt and in RESULTS.md section 2.
         y, ye, cnt = d.shape(key)
         r, re = ratio(y, ye, den, dene)
-        # Two kinds of empty bin, drawn differently on purpose.
+        # Two kinds of empty bin, handled differently on purpose.
         #   structural -- a mode that provably does not move m_tt, below 2 m_t.
         #                 A real, exact zero: it is 0 and not "somewhere below
-        #                 the pane", so it keeps its open circle and gets NO
-        #                 arrow.  With the pane clipped to +-20% the circle sits
-        #                 on the lower boundary, which is why the key below
-        #                 spells out what it means.
+        #                 the pane", so it gets NO arrow.  Its step runs to 0
+        #                 and leaves the clipped window; the bins and their
+        #                 counts are in numbers.txt.
         #   statistical -- any other bin with no entries.  Drawn as a gap: the
         #                 sample simply did not reach there, which is a
         #                 statement about N and not about the scheme.
@@ -711,14 +697,6 @@ def make_figure(d, out, style_tag=''):
         rx.errorbar(d.centres, np.where(struct | stat, np.nan, r),
                     yerr=np.where(struct | stat, np.nan, re), fmt='none',
                     ecolor=COLOR[key], elinewidth=0.9, capsize=0, zorder=4)
-        if struct.any():
-            # Largest ring first (lowest zorder), so the white fill of an outer
-            # circle cannot paint over an inner one.
-            ring = circled.index(key)
-            rx.plot(d.centres[struct],
-                    np.full(struct.sum(), RATIO_CLIP[0]), 'o',
-                    mfc='white', mec=COLOR[key], mew=1.2, ms=5 + 2.6 * ring,
-                    clip_on=False, zorder=8 + (len(circled) - ring))
         live = np.where(struct | stat, np.nan, r)
         nb, na = offscale_arrows(rx, d.centres, live, COLOR[key],
                                  dx=d.widths, slot=slot, nslot=len(MODES))
@@ -732,25 +710,9 @@ def make_figure(d, out, style_tag=''):
     # Say it on the axis, not only in the caption: a reader who crops the
     # figure out of the document must still be told the pane is clipped, and
     # that what it compares is shapes.
-    rx.set_ylabel(_tx(r'shape ratio to truth' '\n' r'(clipped to $\pm20\%$)',
-                      'shape ratio to truth\n(clipped to $\\pm20\\%$)'),
+    rx.set_ylabel(_tx(r'shape ratio' '\n' r'(clipped to $\pm20\%$)',
+                      'shape ratio\n(clipped to $\\pm20\\%$)'),
                   fontsize=10.5)
-    # The one piece of text kept in a pane, and deliberately: it is a key to two
-    # MARKS, not commentary.  The axis label says the pane is clipped, but it
-    # cannot say that an open circle means an exact structural zero while an
-    # arrow means a measured point that left the window -- and that distinction
-    # is the whole reason onshell's sub-threshold zero is drawn at all.  Without
-    # the key the circles are unreadable, so it stays.
-    #
-    # Bottom right: the only corner of this pane that no curve reaches, so the
-    # key cannot land on top of a point or an arrow.
-    rx.text(0.993, 0.045,
-            _tx(r'arrow: point outside the pane' '\n'
-                r'$\circ$: exactly $0$ (structural)',
-                'arrow: point outside the pane\n'
-                '$\\circ$: exactly 0 (structural)'),
-            transform=rx.transAxes, ha='right', va='bottom',
-            fontsize=8.5, color='0.30', linespacing=1.25)
     # The variable and its unit, and nothing else.  What m_tt is built from is
     # in RESULTS.md and in meta.json['observable'].
     rx.set_xlabel(_tx(r'$m_{t\bar t}$ [GeV]', r'$m_{t\bar t}$ [GeV]'))

@@ -8,8 +8,8 @@ The figure is the same figure as
 ``p p > t t~ j``, and it is drawn by that module's own code: this file imports
 it and re-points three module globals (the process label and the two legend
 label tables) at the ``2 -> 2`` process.  Nothing about the style, the binning,
-the normalisation, the clipping, the arrows or the open-circle convention is
-re-decided here, so the two figures cannot drift apart.
+the normalisation, the clipping or the arrows is re-decided here, so the two
+figures cannot drift apart.
 
 What is different is the physics, and it is the reason the study exists.
 
@@ -28,8 +28,8 @@ event with the production event it came from -- the pairing checked by
 ``max |Delta sqrt(shat)| = 0`` -- and the ``Delta m_tt`` moments in
 ``meta.json`` are what
 ``mtt_threshold/plot_mtt_threshold.py:preserves_mtt`` reads to decide which
-modes get the open-circle treatment.  If any mode had moved ``m_tt``, it would
-lose the circle and the figure would show its sub-threshold content.
+modes count as structurally empty below ``2 m_t``.  If any mode had moved
+``m_tt``, the figure would show its sub-threshold content.
 
 Usage::
 
@@ -99,14 +99,14 @@ MINUS_FIX = P.MINUS_FIX
 P.PROC_TEX = r'pp \to t\bar t'
 P.PROC_PLAIN = r'pp \to t\bar t'
 P.CURVES = [
-    ('truth',      r'truth: $pp \to t\bar t$, $t \to W^+ b$ (off shell)'),
+    ('truth',      r'$pp \to t\bar t$, $t \to W^+ b$ (off shell)'),
     ('madspin',    r'MadSpin, \texttt{spinmode = madspin}'),
     ('PA',         r'MadSpin, \texttt{spinmode = PA}'),
     ('onshell',    r'MadSpin, \texttt{spinmode = onshell}'),
     ('madspin_v1', r'MadSpin, \texttt{spinmode = madspin\_v1} (legacy)'),
 ]
 P.CURVES_PLAIN = {
-    'truth':      r'truth: $pp \to t\bar t$, $t \to W^+ b$ (off shell)',
+    'truth':      r'$pp \to t\bar t$, $t \to W^+ b$ (off shell)',
     'madspin':    'MadSpin, spinmode = madspin',
     'PA':         'MadSpin, spinmode = PA',
     'onshell':    'MadSpin, spinmode = onshell',

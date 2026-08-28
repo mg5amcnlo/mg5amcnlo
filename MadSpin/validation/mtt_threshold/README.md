@@ -168,8 +168,8 @@ Two consequences, both handled rather than absorbed:
   the per-bin table twice: in pb/GeV, and in the figure's own normalisation so
   any drawn point can be checked.
 * `onshell`'s structural zero below threshold is still zero. No normalisation
-  can change that, and the open-circle-without-arrow convention below is
-  unchanged.
+  can change that; it carries no arrow and, since the figure cleanup, no marker
+  of its own either -- it is counted in `numbers.txt` instead.
 
 `RESULTS.md` section 1a is the audit of the 3.4 %: what it is (the truncation,
 confirmed and dominant), what it is not (statistics, a shape effect, a
@@ -178,22 +178,20 @@ branching-ratio mismatch -- each excluded below 0.05 %), and what is left
 
 ## The ratio pane is clipped, and says so
 
-The lower pane is capped at `0.8`-`1.2`. Several points genuinely live outside
-that window, and the figure marks each of them:
+The lower pane is capped at `0.8`-`1.2`. A **measured** ratio outside that
+window gets an **arrow** at the boundary it left through, pointing that way: a
+clipped point drawn as an ordinary marker sitting at `1.2` would be worse than
+not clipping at all.
 
-* a **measured** ratio outside the window gets an **arrow** at the boundary it
-  left through, pointing that way. A clipped point drawn as an ordinary marker
-  sitting at `1.2` would be worse than not clipping at all.
-* `onshell`'s exact zero below `2 m_t` keeps its **open circle**, on the lower
-  boundary, and carries **no** arrow. It is a structural zero, not a point that
-  ran off the pane, and the two have to stay distinguishable.
+`onshell`'s exact zero below `2 m_t` is **not** marked. It is a structural
+zero, not a point that ran off the pane, so it carries no arrow; its step runs
+to `0` and leaves the window, and the bins are listed in `numbers.txt`. The
+open circle it used to carry, and the in-pane key that explained the circle and
+the arrow, were removed in the figure cleanup.
 
-The y-axis label says the pane is clipped and that it compares shapes; an
-in-pane key says what the two marks mean. The key is the only text kept in a
-pane, and deliberately: an axis label can state the clipping, but it cannot
-state the difference between an arrow and an open circle, and without that the
-circles are unreadable. `plots/numbers.txt` lists every off-scale ratio with its
-value and error, so nothing the clipping hides is lost.
+The y-axis label says the pane is clipped and that it compares shapes.
+`plots/numbers.txt` lists every off-scale ratio with its value and error, so
+nothing the clipping hides is lost.
 
 ## No prose on the figure
 
@@ -201,7 +199,7 @@ There is no annotation in the plot area. What the shaded region means, how each
 mode reaches it, the sub-threshold event counts -- all of that is in `RESULTS.md`
 and `numbers.txt`, where it can carry its errors. What stays on the figure is
 one setup line above the curves (process, energy, order, scales, `BW cut`), the
-`2 m_t` tag on the threshold line, the legend, and the ratio-pane key. The
+`2 m_t` tag on the threshold line, the legend, and the ratio-pane bands key. The
 `m_tt` axis names the variable and its unit and nothing else; what `m_tt` is
 built from is in `RESULTS.md`, in `meta.json['observable']` and in the
 "The observable" section above.
