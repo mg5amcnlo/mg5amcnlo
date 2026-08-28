@@ -59,7 +59,8 @@
 This section collects, in one place, the definitions of every spin observable
 and coefficient quoted in this work, in a form that can be reimplemented from
 the text alone. Unless stated otherwise the numbers are those of the
-loop-induced $gg\to ZZ$ study of this work: $200\,000$
+loop-induced $gg\to ZZ$ study of this work, with the
+$q\bar q$ continuum alongside it in Table~\ref{tab:spincoeff}: $200\,000$
 events per sample, all moments \emph{unbinned}, i.e.\ weighted means over
 events with the ordinary error of the mean, and no binning or within-bin
 reconstruction anywhere.
@@ -351,12 +352,69 @@ implement --- is Ref.~\cite{BuarqueFranzosi:2019boy}.
 \subsection{Numbers}
 \label{subsec:spinobs_numbers}
 
-Table~\ref{tab:spincoeff} gives the coefficients for the loop-induced
-$gg\to ZZ$ study. The reference (``truth'') is the off-shell four-lepton
-calculation $gg\to e^+e^-\mu^+\mu^-$; the other rows are the \ms{} spinmodes
-run on the $gg\to ZZ$ production sample. All entries are unbinned moments over
-$200\,000$ events per sample, quoted with the error of the mean; truth and each
-mode are independent samples, so pulls add the two bars in quadrature.
+Table~\ref{tab:spincoeff} gives the coefficients for both production
+mechanisms. The upper block is the loop-induced $gg\to ZZ$ study: the reference
+(``truth'') is the off-shell four-lepton calculation $gg\to e^+e^-\mu^+\mu^-$
+and the other rows are the \ms{} spinmodes run on the $gg\to ZZ$ production
+sample, all at $200\,000$ events per sample. The lower block is the $q\bar q$
+continuum, whose truth is $pp\to e^+e^-\mu^+\mu^-$ at NLO in QCD, likewise at
+$200\,000$ events. All entries are unbinned moments quoted with the error of the
+mean; truth and each mode are independent samples, so pulls add the two bars in
+quadrature.
+
+\paragraph{Selection.} Both blocks carry the selection of
+Sec.~\ref{subsec:spinobs_angles} --- $p_T(\ell^+\ell^-)>1$~GeV and
+$|m(\ell^+\ell^-)-m_Z|<15\,\Gamma_Z$ on each reconstructed pair --- and they
+carry it by construction rather than by coincidence, by two routes that are
+built to agree. On a four-lepton \emph{truth} sample there is no $Z$ to cut on,
+so both cuts are applied to the reconstructed pairs by a \code{custom\_fcts}
+file --- \code{zz\_equivalent\_cuts.f} for $gg$, its NLO twin
+\code{zz\_equivalent\_cuts\_nlo.f} for $q\bar q$ --- which reads the $p_T$
+threshold out of the run card's own \code{pt\_min\_pdg} and the window out of
+\code{bwcutoff}, rather than carrying a typed-in number. On a \emph{production}
+sample the same two cuts are the run card's \code{pt\_min\_pdg = \{23:\,1\}}
+acting on the two $Z$ directly and \ms's own \code{BW\_cut = 15}. So neither
+side can drift through an edit made in one place and not the other.
+Re-imposing the same window event by event on the $q\bar q$ sample as an
+analysis filter removes $111$ of its $200\,000$ events --- the residue of the
+NLO counter-event mapping, not a different cut --- and moves no coefficient by
+more than $0.07$ of its own bar. The table quotes the filtered numbers, so no
+selection qualifier attaches to the comparison.
+
+\paragraph{Support.} The blocks are \emph{not} all on the same support, and the
+main split is truth against \ms{} rather than $gg$ against $q\bar q$. Both
+truths are fully off shell and reach well below $m_{4l}=2m_Z$: $2.1\,\%$ of the
+$gg$ truth cross section and $1.4\,\%$ of the $q\bar q$ one lie there. A \ms{}
+row on an \emph{LO} $2\to2$ production sample cannot follow them, because there
+$m_{4l}=m_{ZZ}$ and on-shell $Z$ put that at $2m_Z$ exactly; all four $gg$ modes
+start at $182.395$~GeV and carry \emph{zero} weight below it, and so does
+$pp\to ZZ$ at LO with \code{spinmode = madspin}.
+
+On the MC@NLO $q\bar q$ sample that is no longer true, and the difference is
+worth stating rather than assuming away: the modes that redraw the virtuality do
+reach below threshold, \code{madspin} down to $137$~GeV with $0.15\,\%$ of its
+weight there, while \code{onshell}, which changes no mass, still starts at
+$2m_Z$. So the $gg$ and $q\bar q$ \ms{} rows sit on supports that differ by a
+little over a tenth of a percent of the weight. The truth-versus-truth
+comparison the sign statement rests on is unaffected --- it is a comparison on
+the full support of both. Restricting the $q\bar q$ truth to $m_{4l}\ge2m_Z$
+moves $f_0$ by $-0.8$ of its bar and every other coefficient by less, which
+bounds what the residual mismatch can be worth here; the observables on which
+the same hole is \emph{not} sub-statistical are in
+\code{PA\_LOWPT\_DIAGNOSIS.md}.
+
+\paragraph{Weights.} The $q\bar q$ truth is an MC@NLO sample and $7.4\,\%$ of
+its events carry a negative weight, so its bars are the error of a
+\emph{weighted} mean, $\sqrt{\sum_iw_i^2(x_i-\bar x)^2}\big/|\sum_iw_i|$, and
+the count that sets them is $N_\mathrm{eff}=(\sum w)^2/\sum w^2=145\,397$ rather
+than the $199\,889$ rows. The $gg$ truth, \code{PA}, \code{onshell} and
+\code{none} samples are unit weight to five figures, so there the same
+expression reduces to the $\sqrt{\mathrm{Var}/N}$ their bars were computed with;
+$gg$ \code{madspin} is the one exception, at $N_\mathrm{eff}=154\,000$, so its
+quoted bars are optimistic by about $14\,\%$. Correcting them would only
+\emph{shrink} the four \code{madspin} pulls and would leave the table's largest,
+\code{onshell}'s $+1.7\sigma$, untouched, so the row is left as published rather
+than silently re-derived.
 
 \begin{table}[htbp]
   \centering
@@ -366,33 +424,89 @@ mode are independent samples, so pulls add the two bars in quadrature.
     \toprule
     sample & $f_0$ & $f_{00}$ & $f_{00}-f_0^{(1)}f_0^{(2)}$ & $f_{TT}$ & $\ckk$ \\
     \midrule
+    \multicolumn{6}{@{}l}{\emph{$gg\to ZZ$, the box --- truth is $gg\to e^+e^-\mu^+\mu^-$, loop induced}}\\
     truth              & $0.0669\pm0.0025$ & $0.0417\pm0.0054$ & $\phantom{-}0.0372\pm0.0054$ & $0.9079\pm0.0071$ & $+0.380\pm0.072$ \\
     \code{madspin}     & $0.0673\pm0.0025$ & $0.0513\pm0.0054$ & $\phantom{-}0.0468\pm0.0054$ & $0.9166\pm0.0071$ & $+0.460\pm0.072$ \\
     \code{PA}          & $0.0720\pm0.0025$ & $0.0538\pm0.0054$ & $\phantom{-}0.0487\pm0.0054$ & $0.9099\pm0.0071$ & $+0.491\pm0.072$ \\
     \code{onshell}     & $0.0727\pm0.0025$ & $0.0525\pm0.0054$ & $\phantom{-}0.0472\pm0.0054$ & $0.9072\pm0.0071$ & $+0.431\pm0.072$ \\
     \code{none}        & $0.3313\pm0.0024$ & $0.1065\pm0.0052$ & $-0.0033\pm0.0050$          & $0.4439\pm0.0059$ & $-0.034\pm0.062$ \\
-    \midrule
-    \multicolumn{6}{@{}l}{\emph{pull against truth, in $\sigma$}}\\
+    \addlinespace[2pt]
+    \multicolumn{6}{@{}l}{\emph{pull against the $gg$ truth, in $\sigma$}}\\
     \code{madspin}     & $+0.1$  & $+1.3$ & $+1.3$ & $+0.9$  & $+0.8$ \\
     \code{PA}          & $+1.5$  & $+1.6$ & $+1.5$ & $+0.2$  & $+1.1$ \\
     \code{onshell}     & $+1.7$  & $+1.4$ & $+1.3$ & $-0.1$  & $+0.5$ \\
     \code{none}        & $+77.4$ & $+8.6$ & $-5.5$ & $-50.3$ & $-4.3$ \\
+    \midrule
+    \multicolumn{6}{@{}l}{\emph{$q\bar q\to ZZ$, the continuum --- truth is $pp\to e^+e^-\mu^+\mu^-$ at NLO}}\\
+    truth              & $0.1887\pm0.0029$ & $0.0628\pm0.0062$ & $\phantom{-}0.0272\pm0.0062$ & $0.6854\pm0.0078$ & $-0.645\pm0.080$ \\
+    \code{madspin}     & $0.1771\pm0.0028$ & $0.0504\pm0.0061$ & $\phantom{-}0.0191\pm0.0061$ & $0.6963\pm0.0076$ & $-0.540\pm0.078$ \\
+    \code{PA}          & $0.1768\pm0.0028$ & $0.0600\pm0.0061$ & $\phantom{-}0.0288\pm0.0061$ & $0.7065\pm0.0077$ & $-0.524\pm0.079$ \\
+    \code{onshell}     & $0.1804\pm0.0028$ & $0.0538\pm0.0061$ & $\phantom{-}0.0212\pm0.0061$ & $0.6930\pm0.0076$ & $-0.482\pm0.078$ \\
+    \code{none}        & $0.3348\pm0.0027$ & $0.1164\pm0.0060$ & $\phantom{-}0.0043\pm0.0060$ & $0.4469\pm0.0068$ & $-0.028\pm0.071$ \\
+    \addlinespace[2pt]
+    \multicolumn{6}{@{}l}{\emph{pull against the $q\bar q$ truth, in $\sigma$}}\\
+    \code{madspin}     & $-2.9$ & $-1.4$ & $-0.9$ & $+1.0$ & $+0.9$ \\
+    \code{PA}          & $-3.0$ & $-0.3$ & $+0.2$ & $+1.9$ & $+1.1$ \\
+    \code{onshell}     & $-2.1$ & $-1.0$ & $-0.7$ & $+0.7$ & $+1.5$ \\
+    \code{none}        & $+37.0$ & $+6.2$ & $-2.6$ & $-23.1$ & $+5.8$ \\
     \bottomrule
   \end{tabular}
-  \caption{Spin coefficients of the loop-induced $gg\to ZZ$ study, unbinned
-    moments over $200\,000$ events per sample. $f_0$ is the per-event average
-    of the two $Z$; on a single side the \code{none} pull is $+55.2\sigma$
-    rather than $+77.4\sigma$. The isotropic values a mode with no production
-    density must give are $f_0=1/3$, $f_{TT}=4/9$,
-    $f_{00}-f_0^{(1)}f_0^{(2)}=0$ and $\ckk=0$, and \code{none} reproduces all
-    four within $0.8\sigma$.}
+  \caption{Spin coefficients of the two $ZZ$ production mechanisms, unbinned
+    moments over $200\,000$ events per sample, on the common selection of the
+    text. $f_0$ is the per-event average of the two $Z$; on a single side the
+    $gg$ \code{none} pull is $+55.2\sigma$ rather than $+77.4\sigma$ and the
+    $q\bar q$ one $+26.8\sigma$ rather than $+37.0\sigma$. The isotropic values
+    a mode with no production density must give are $f_0=1/3$, $f_{TT}=4/9$,
+    $f_{00}-f_0^{(1)}f_0^{(2)}=0$ and $\ckk=0$; \code{none} reproduces all four
+    within $0.8\sigma$ on the $gg$ sample and within $0.7\sigma$ on the
+    $q\bar q$ one, which is the null test both blocks have to pass and do. The
+    $q\bar q$ truth is an independent sample from the $q\bar q$ production run,
+    so its pulls add the two bars in quadrature exactly as the $gg$ ones do ---
+    but the three spin-correlated $q\bar q$ modes share one production sample
+    and their three $f_0$ pulls are therefore one correlated measurement, not
+    three independent ones.}
   \label{tab:spincoeff}
 \end{table}
 
-The three spin-correlated modes agree with truth on every coefficient, the
-largest pull anywhere being $+1.7\sigma$. The $gg$ box produces $ZZ$ that are
-overwhelmingly transverse: $f_{TT}=0.908\pm0.007$, with only
-$(6.7\pm0.3)\,\%$ longitudinal.
+\paragraph{As a test of \ms, the two blocks do not read the same.} On the $gg$
+side the three spin-correlated modes agree with truth on every coefficient, the
+largest pull anywhere being $+1.7\sigma$. On the $q\bar q$ side they do not
+quite: all three sit low on $f_0$, by $-2.9$, $-3.0$ and $-2.1\sigma$, while
+agreeing with truth on the other four coefficients within $1.9\sigma$. Two
+qualifications are needed before that is read as a defect, and they cut in
+opposite directions.
+
+First, part of it is the support. The $q\bar q$ truth carries $1.4\,\%$ of its
+weight below $2m_Z$ and the modes at most $0.22\,\%$; restricting every row to
+$m_{4l}\ge2m_Z$ moves the truth to $f_0=0.1861\pm0.0029$ and leaves the three
+pulls at $-2.4$, $-2.5$ and $-1.4\sigma$. So the support accounts for about half
+a sigma of it and no more.
+
+Second, the three are \emph{not} three independent results. They are one
+$pp\to ZZ$ production sample decayed three ways, so they share its statistical
+fluctuation, and the honest summary is a single $\simeq2.5\sigma$ tension
+between the NLO $q\bar q$ \ms{} chain and the NLO off-shell truth on the one
+coefficient $f_0$ --- not a defect at $3\sigma$ repeated three times. It is
+larger than anything the $gg$ study saw and it is not significant on its own;
+resolving it needs a second, independently seeded production sample, which is
+cheap ($\simeq20$ minutes for all four modes at $200\,000$ events on 16 cores)
+and is the obvious next measurement. The cross sections give no hint of a
+problem: \code{madspin} and \code{PA} reproduce the truth's $0.028691$~pb to
+$-0.09\,\%$ and $-0.10\,\%$, and \code{onshell} and \code{none} sit
+$+4.49\,\%$ high, which is the Breit-Wigner truncation $1/f^2=1.0457$ that they
+do not apply and the other two do.
+
+\paragraph{The two mechanisms differ in every coefficient, not only in sign.}
+The $gg$ box produces $ZZ$ that are overwhelmingly transverse,
+$f_{TT}=0.9079\pm0.0071$ with only $(6.7\pm0.3)\,\%$ longitudinal; the $q\bar q$
+continuum is markedly less so, $f_{TT}=0.6854\pm0.0078$ with
+$(18.9\pm0.3)\,\%$ longitudinal. That is $21\sigma$ on $f_{TT}$ and $32\sigma$
+on $f_0$, and it is the physics reason the two blocks cannot be read as one
+sample: they are different production mechanisms, not two determinations of the
+same number. The one coefficient on which they \emph{agree} is the
+$\etal$-free rank-two correlation, $0.0372\pm0.0054$ against
+$0.0272\pm0.0062$, $1.2\sigma$ apart --- both mechanisms align the two $Z$
+about as strongly, and differ in what they align them into.
 
 \paragraph{$\ckk$: opposite signs between the two production mechanisms.}
 Undiluting the raw moments through Eq.~\eqref{eq:ckk},
@@ -402,12 +516,16 @@ Undiluting the raw moments through Eq.~\eqref{eq:ckk},
   \ckk\big(q\bar q\to ZZ,\ \text{continuum}\big)=-0.645\pm0.080,
   \label{eq:ckknumbers}
 \end{equation}
-both from $200\,000$-event samples. The two mechanisms correlate the $Z$
-helicities with \emph{opposite sign}, $(1.025)/\sqrt{0.072^2+0.080^2}=9.5\sigma$
-apart, and both are large against the ceiling $f_{TT}\simeq0.91$ of
-Eq.~\eqref{eq:ckkbound}. The $gg$ value is $5.3\sigma$ from zero on its own.
-The corresponding raw moment on the $gg$ side is
-$\langle\cos\theta_1\cos\theta_2\rangle=0.00457\pm0.00087$.
+both from $200\,000$-event samples, both truths, both on the selection and the
+full off-shell support above. The two mechanisms correlate the $Z$ helicities
+with \emph{opposite sign}: the separation is
+$1.025/\sqrt{0.072^2+0.080^2}=9.5\sigma$. Each is also large against its own
+ceiling of Eq.~\eqref{eq:ckkbound}, which is $f_{TT}=0.91$ on the $gg$ side and
+$0.69$ on the $q\bar q$ one, so the $q\bar q$ correlation fills $94\,\%$ of
+what is available to it against the $gg$ box's $42\,\%$. The $gg$ value is $5.3\sigma$ from zero on its own and the $q\bar q$
+one $8.1\sigma$. The corresponding raw moments are
+$\langle\cos\theta_1\cos\theta_2\rangle=+0.00457\pm0.00087$ for $gg$ and
+$-0.00776\pm0.00096$ for $q\bar q$.
 
 \paragraph{What each coefficient is good for.} As a test of \ms, $\ckk$ and the
 rank-two correlation add nothing over the shape comparison: both are blind to
