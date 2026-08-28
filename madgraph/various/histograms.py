@@ -3599,6 +3599,10 @@ class HwUList(histograms_PhysicsObjectList):
         if format == 'gnuplot':
             gnuplot_target = _AtomicTextOutput(path+'.gnuplot')
             gnuplot_stream = gnuplot_target.stream
+            # Keep a Matplotlib renderer beside the default GnuPlot card.  Both
+            # renderers use the same prepared HwU data, so streamed histogram
+            # groups still only need to be visited once.
+            script_target = _AtomicTextOutput(path+'.py')
 
         # Group compatible curves without changing the source list.
         matching_histo_lists = _histogram_groups if \
@@ -3617,6 +3621,7 @@ class HwUList(histograms_PhysicsObjectList):
         if assigned_colours:
             for index, item in enumerate(assigned_colours[:len(coli)]):
                 if (item != None): colours[coli[index]]=item
+        matplotlib_colours = [colours[colour] for colour in coli]
 
         replace_dict=colours
         replace_dict['arg_string']=arg_string
@@ -3829,11 +3834,18 @@ set key invert
         # Now output each group one by one
         # Block position keeps track of the gnuplot data_block index considered
         block_position = 0
+        plot_specs = []
+        ephemeral_groups = _histogram_groups is not None
         output_schema_state = {'base_labels': list(weight_schema),
                                'labels': None}
         for histo_group in matching_histo_lists:
-            # Output this group
-            block_position = histo_group.output_group(HwU_output_list, 
+            # Plot preparation adds ratios and auxiliary uncertainty columns.
+            # Retain the prepared group just long enough to describe the
+            # matching standalone Matplotlib plot.
+            prepared_group = histo_group if ephemeral_groups \
+                              else copy.deepcopy(histo_group)
+            first_block = block_position
+            block_position = prepared_group.output_group(HwU_output_list,
                     gnuplot_output_list, block_position,output_base_name+'.HwU',
                     number_of_ratios=number_of_ratios, 
                     uncertainties = uncertainties,
@@ -3841,8 +3853,11 @@ set key invert
                     ratio_correlations = ratio_correlations,
                     jet_samples_to_keep=jet_samples_to_keep,
                     lhapdfconfig = lhapdfconfig,
-                    _copy_group=(_histogram_groups is None),
+                    _copy_group=False,
                     _output_schema_state=output_schema_state)
+            plot_specs.append(self._get_matplotlib_plot_spec(
+                prepared_group, first_block, uncertainties, use_band,
+                jet_samples_to_keep, matplotlib_colours))
 
         if block_position == 0:
             raise MadGraph5Error('No histograms were provided for output.')
@@ -3855,14 +3870,17 @@ set key invert
             gnuplot_output_list.append(
                                  '!open "%s.pdf" &> /dev/null'%output_base_name)
         
-        # Replace both final files only after all groups were prepared.
+        # Replace all final files only after all groups were prepared.
         gnuplot_stream.write('\n'.join(gnuplot_output_list))
+        script_target.stream.write(self._get_matplotlib_script(
+                         output_base_name, plot_specs, auto_open, arg_string))
         hwu_target.commit()
         gnuplot_target.commit()
+        script_target.commit()
 
         logger.debug("Histograms have been written out at "+\
-                                 "%s.[HwU|gnuplot]' and can "%output_base_name+\
-                                         "now be rendered by invoking gnuplot.")
+                  "%s.[HwU|gnuplot|py]' and can be rendered by invoking "%\
+                  output_base_name+"GnuPlot or Python.")
 
     def _output_matplotlib(self, path, output_base_name, hwu_stream,
           script_stream, weight_schema,
@@ -5448,8 +5466,41 @@ if __name__ == '__main__':
 '''
 
 
+def _matplotlib_available():
+    """Return whether Matplotlib is installed for this Python interpreter."""
+
+    try:
+        from importlib.util import find_spec
+        return find_spec('matplotlib') is not None
+    except Exception:
+        return False
 
 
+def render_histogram_output(path, stdout=None, stderr=None):
+    """Render an extensionless HwU output path with the available backend.
+
+    GnuPlot remains the preferred renderer.  The generated Matplotlib script
+    is used only when no ``gnuplot`` executable is available on ``PATH``.
+    Return ``(None, None)`` without rendering when neither backend exists.
+    """
+
+    output_path = os.path.abspath(path)
+    output_directory = os.path.dirname(output_path)
+    output_base_name = os.path.basename(output_path)
+    try:
+        gnuplot = misc.which('gnuplot')
+    except (KeyError, OSError):
+        gnuplot = None
+    if gnuplot:
+        command = [os.path.abspath(gnuplot), output_base_name+'.gnuplot']
+        backend = 'gnuplot'
+    else:
+        if not _matplotlib_available():
+            return None, None
+        command = [sys.executable, output_path+'.py']
+        backend = 'matplotlib'
+    return backend, subprocess.call(command, cwd=output_directory,
+                                     stdout=stdout, stderr=stderr)
 
 
 if __name__ == "__main__":
@@ -5458,7 +5509,7 @@ if __name__ == "__main__":
         python histograms.py <.HwU input_file_path_1> <.HwU input_file_path_2> ... --out=<output_file_path.format> <options>
         Where <options> can be a list of the following: 
            '--help'          See this message.
-           '--gnuplot' or '' output the histograms read to gnuplot
+           '--gnuplot' or '' output GnuPlot and Matplotlib scripts; prefer GnuPlot when rendering.
            '--matplotlib'    output the histograms and a Python script which renders them to PDF.
            '--HwU'           to output the histograms read to the raw HwU source.
            '--types=<type1>,<type2>,...' to keep only the type<i> when importing histograms.
@@ -5776,17 +5827,32 @@ if __name__ == "__main__":
             lhapdfconfig=lhapdfconfig,
             assigned_colours=assigned_colours)
         # Tell the user that everything went for the best
-        log("%d histograms have been output in " % histogram_count+\
-                "the gnuplot format at '%s.[HwU|gnuplot]'." % OutName)
+        log("%d histograms have been output at " % histogram_count+\
+                                  "'%s.[HwU|gnuplot|py]'." % OutName)
         if auto_open:
-            command = 'gnuplot %s.gnuplot'%OutName
             try:
-                subprocess.call(command,shell=True,stderr=subprocess.PIPE)
-            except:
-                log("Automatic processing of the gnuplot card failed. Try the"+\
-                    " command by hand:\n%s"%command)
+                backend, return_code = render_histogram_output(
+                                      OutName, stderr=subprocess.PIPE)
+            except Exception:
+                if misc.which('gnuplot'):
+                    command = 'gnuplot %s.gnuplot'%OutName
+                else:
+                    command = '%s %s.py'%(sys.executable, OutName)
+                log("Automatic processing of the histogram output failed. "+
+                    "Try the command by hand:\n%s"%command)
             else:
-                sys.exit(0)
+                if backend is None:
+                    log("Neither GnuPlot nor Matplotlib is available; no PDF "
+                        "was created.")
+                    sys.exit(0)
+                if return_code == 0:
+                    sys.exit(0)
+                if backend == 'gnuplot':
+                    command = 'gnuplot %s.gnuplot'%OutName
+                else:
+                    command = '%s %s.py'%(sys.executable, OutName)
+                log("Automatic processing with %s failed. Try the command "
+                    "by hand:\n%s"%(backend, command))
 
     if '--HwU' in sys.argv:
         log("Histograms data has been output in the HwU format at "+\

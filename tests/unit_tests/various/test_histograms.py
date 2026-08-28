@@ -91,6 +91,7 @@ class TestHistograms(unittest.TestCase):
         
         with misc.TMP_directory() as tmpdir:
             one_histo.output(pjoin(tmpdir,'OUT'), format='gnuplot')
+            self.assertTrue(os.path.exists(pjoin(tmpdir, 'OUT.py')))
             new_histo = histograms.HwUList(pjoin(tmpdir,'OUT.HwU'))
         
         # Output preparation must not replace the input with nested groups or
@@ -346,6 +347,43 @@ class TestHistogramRegressions(unittest.TestCase):
             self.assertTrue(os.path.exists(cli_base+'.HwU'))
             self.assertTrue(os.path.exists(cli_base+'.py'))
 
+    def test_renderer_prefers_gnuplot_and_falls_back_to_matplotlib(self):
+        with misc.TMP_directory() as tmpdir:
+            output_base = pjoin(tmpdir, 'rendered')
+            with mock.patch.object(histograms.misc, 'which',
+                                   return_value='/tools/gnuplot'), \
+                 mock.patch.object(histograms.subprocess, 'call',
+                                   return_value=0) as call:
+                backend, return_code = histograms.render_histogram_output(
+                                                                  output_base)
+            self.assertEqual((backend, return_code), ('gnuplot', 0))
+            call.assert_called_once_with(
+                ['/tools/gnuplot', 'rendered.gnuplot'], cwd=tmpdir,
+                stdout=None, stderr=None)
+
+            with mock.patch.object(histograms.misc, 'which',
+                                   return_value=None), \
+                 mock.patch.object(histograms, '_matplotlib_available',
+                                   return_value=True), \
+                 mock.patch.object(histograms.subprocess, 'call',
+                                   return_value=0) as call:
+                backend, return_code = histograms.render_histogram_output(
+                                                                  output_base)
+            self.assertEqual((backend, return_code), ('matplotlib', 0))
+            call.assert_called_once_with(
+                [sys.executable, output_base+'.py'], cwd=tmpdir,
+                stdout=None, stderr=None)
+
+            with mock.patch.object(histograms.misc, 'which',
+                                   return_value=None), \
+                 mock.patch.object(histograms, '_matplotlib_available',
+                                   return_value=False), \
+                 mock.patch.object(histograms.subprocess, 'call') as call:
+                backend, return_code = histograms.render_histogram_output(
+                                                                  output_base)
+            self.assertEqual((backend, return_code), (None, None))
+            call.assert_not_called()
+
     def test_dense_streaming_sum_handles_order_schemas_and_mmap(self):
         labels = ['central', 'stat_error', 'weight_a', 'weight_b']
         reversed_labels = ['central', 'stat_error', 'weight_b', 'weight_a']
@@ -541,6 +579,8 @@ class TestHistogramRegressions(unittest.TestCase):
                 stream.write('existing data')
             with open(output_base+'.gnuplot', 'w') as stream:
                 stream.write('existing script')
+            with open(output_base+'.py', 'w') as stream:
+                stream.write('existing matplotlib script')
             groups = iter([
                 histograms.HwUList([first]),
                 histograms.HwUList([incompatible])])
@@ -554,6 +594,9 @@ class TestHistogramRegressions(unittest.TestCase):
                 self.assertEqual(stream.read(), 'existing data')
             with open(output_base+'.gnuplot') as stream:
                 self.assertEqual(stream.read(), 'existing script')
+            with open(output_base+'.py') as stream:
+                self.assertEqual(stream.read(),
+                                 'existing matplotlib script')
 
     def test_generated_matplotlib_reader_is_strict(self):
         script = histograms.HwUList._get_matplotlib_script(

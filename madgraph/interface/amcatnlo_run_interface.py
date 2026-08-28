@@ -2955,12 +2955,10 @@ RESTART = %(mint_mode)s
             out=pjoin(self.me_dir,'Events',self.run_name,'MADatNLO')
             self.combine_plots_HwU(jobs,out)
             try:
-                misc.call(['gnuplot','MADatNLO.gnuplot'],\
-                          stdout=devnull,stderr=devnull,\
-                          cwd=pjoin(self.me_dir, 'Events', self.run_name))
+                common_run.render_HwU_plot(out, stdout=devnull, stderr=devnull)
             except Exception:
                 pass
-            logger.info('The results of this run and the HwU and GnuPlot files with the plots' + \
+            logger.info('The results of this run and the HwU data with GnuPlot and Matplotlib plotting scripts' + \
                         ' have been saved in %s' % pjoin(self.me_dir, 'Events', self.run_name))
         elif self.analyse_card['fo_analysis_format'].lower() == 'root':
             rootfiles = []
@@ -4257,7 +4255,7 @@ RESTART = %(mint_mode)s
             if out_id=='TOP':
                 hist_format='TopDrawer format'
             elif out_id=='HWU':
-                hist_format='HwU and GnuPlot formats'
+                hist_format='HwU format, with GnuPlot and Matplotlib scripts'
 
             if not topfiles:
                 # if no topfiles are found just warn the user
@@ -4278,10 +4276,9 @@ RESTART = %(mint_mode)s
                         histos=[{'dirname':pjoin(rundir,file)}]
                         self.combine_plots_HwU(histos,out)
                         try:
-                            misc.call(['gnuplot','%s%d.gnuplot' % (filename,i)],\
-                                      stdout=os.open(os.devnull, os.O_RDWR),\
-                                      stderr=os.open(os.devnull, os.O_RDWR),\
-                                      cwd=pjoin(self.me_dir, 'Events', self.run_name))
+                            common_run.render_HwU_plot(
+                                out, stdout=subprocess.DEVNULL,
+                                stderr=subprocess.DEVNULL)
                         except Exception:
                             pass
                         plotfile=pjoin(self.me_dir,'Events',self.run_name,
@@ -4345,10 +4342,9 @@ RESTART = %(mint_mode)s
                                 norms.append(norm)
                             self.combine_plots_HwU(histos,out,normalisation=norms)
                             try:
-                                misc.call(['gnuplot','%s%d.gnuplot' % (filename, i)],\
-                                          stdout=os.open(os.devnull, os.O_RDWR),\
-                                          stderr=os.open(os.devnull, os.O_RDWR),\
-                                          cwd=pjoin(self.me_dir, 'Events',self.run_name))
+                                common_run.render_HwU_plot(
+                                    out, stdout=subprocess.DEVNULL,
+                                    stderr=subprocess.DEVNULL)
                             except Exception:
                                 pass
 
@@ -6135,4 +6131,3 @@ if '__main__' == __name__:
     except KeyboardInterrupt:
         print('quit on KeyboardInterrupt')
         pass
-

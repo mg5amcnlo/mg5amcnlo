@@ -92,6 +92,18 @@ else:
     from madgraph import InvalidCmd, MadGraph5Error, MG5DIR
     MADEVENT=False
 
+
+def render_HwU_plot(path, stdout=None, stderr=None):
+    """Render an extensionless HwU plot path with its preferred backend."""
+
+    if MADEVENT:
+        import internal.histograms as histograms
+    else:
+        import madgraph.various.histograms as histograms
+    return histograms.render_histogram_output(path, stdout=stdout,
+                                               stderr=stderr)
+
+
 #===============================================================================
 # HelpToCmd
 #===============================================================================
@@ -1487,22 +1499,24 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                         return True
         if mode == 'Pythia8':
             plot_files = glob.glob(pjoin(PY8_plots_root_path,'*.gnuplot'))
-            if not misc.which('gnuplot'):
-                logger.warning("Install gnuplot to be able to view the plots"+\
-                               " generated at :\n   "+\
-                               '\n   '.join('%s.gnuplot'%p for p in plot_files))
-                return True
             for plot in plot_files:
-                command = ['gnuplot',plot]
                 try:
-                    fsock = open(os.devnull, 'w')
-                    subprocess.call(command,cwd=PY8_plots_root_path,stderr=fsock)
-                    fsock.close()
+                    with open(os.devnull, 'w') as fsock:
+                        backend, return_code = render_HwU_plot(
+                            plot[:-len('.gnuplot')], stderr=fsock)
                 except Exception as e:
                     logger.warning("Automatic processing of the Pythia8 "+\
-                            "merging plots with gnuplot failed. Try the"+\
-                            " following command by hand:\n   %s"%(' '.join(command))+\
-                            "\nException was: %s"%str(e))
+                            "merging plots failed for '%s'.\nException was: %s"%
+                            (plot, str(e)))
+                    return False
+                if backend is None:
+                    continue
+                if return_code != 0:
+                    script = plot if backend == 'gnuplot' else \
+                                                    plot[:-len('.gnuplot')]+'.py'
+                    logger.warning("Automatic processing of the Pythia8 "+\
+                            "merging plots with %s failed. Try the following "
+                            "file by hand:\n   %s"%(backend, script))
                     return False
 
             plot_files = glob.glob(pjoin(PY8_plots_root_path,'*.pdf'))
@@ -8169,6 +8183,5 @@ def scanparamcardhandling(input_path=lambda obj: pjoin(obj.me_dir, 'Cards', 'par
 
         return new_fct
     return decorator    
-
 
 
