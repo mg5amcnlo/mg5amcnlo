@@ -499,6 +499,73 @@ def _ratio6_top(ax, nlo, lo, obs, with_band=False):
         sp.set_linewidth(1.6)
 
 
+# -- the two ratio painters, shared by the seven-pane and three-pane figures --
+# Lifted out of ``draw_ratio6`` unchanged; the argument for one painter rather
+# than two copies is in plot_zz_pol and is not repeated here.  Unlike the MG7
+# pair these DO set ``xlim``, because this style's panes always did.
+
+
+def _ratio6_ratio_pane(ax, cur, pane, anchor_line, edges, with_band=False):
+    """One ratio pane: the named ratio at both orders, with its anchor line."""
+    x = 0.5 * (edges[:-1] + edges[1:])
+    rlab = PA.RATIO_TXT
+    oname = PA.RATIO6_ORDER_TXT
+    col = COLOR[pane] if pane != 'SUM' else COLOR['SUM']
+    series = []
+    for tag in PA.RATIO6_ORDERS:
+        h = cur[pane][tag]
+        r, e = np.asarray(h['r'], float), np.asarray(h['err'], float)
+        blo = h.get('lo') if with_band else None
+        bhi = h.get('hi') if with_band else None
+        if with_band:
+            _band(ax, edges, blo, bhi, col, BAND_ALPHA,
+                  zorder=2 if tag == 'NLO' else 1)
+        _step(ax, edges, r, color=col, lw=1.3, ls=LS_ORDER[tag],
+              alpha=1.0 if tag == 'NLO' else STEP_ALPHA,
+              zorder=4 if tag == 'NLO' else 3)
+        ax.errorbar(x, r, yerr=e, fmt='o' if tag == 'NLO' else 's',
+                    ms=MS - 0.5, mfc='none' if tag == 'LO' else None,
+                    color=col, label=oname[tag],
+                    zorder=6 if tag == 'NLO' else 5)
+        series.append((r, e, blo, bhi))
+    if anchor_line is not None:
+        ax.axhline(anchor_line, color=C_REF, lw=1.0,
+                   ls=':' if pane == 'SUM' else '--', zorder=2)
+    ax.set_ylim(*_ratio6_ylim(series, anchor_line, head=0.24))
+    ax.set_ylabel(rlab[pane], fontsize=8 if pane == 'SUM' else 9)
+    ax.set_xlim(edges[0], edges[-1])
+    ax.tick_params(labelsize=8.5)
+    ax.yaxis.set_major_locator(MaxNLocator(5))
+    ax.legend(loc='best', fontsize=8, ncol=2)
+
+
+def _ratio6_k_pane(axk, cur, edges, with_band=False):
+    """The K-factor pane: five curves, no reference line."""
+    x = 0.5 * (edges[:-1] + edges[1:])
+    kseries = []
+    for key in PA.KF_PANE_ORDER:
+        kk = cur['K'][key]
+        k, e = np.asarray(kk['k'], float), np.asarray(kk['err'], float)
+        blo = kk.get('lo') if with_band else None
+        bhi = kk.get('hi') if with_band else None
+        if with_band:
+            _band(axk, edges, blo, bhi, COLOR[key], BAND_ALPHA_K,
+                  zorder=2 if key == 'full' else 1)
+        _step(axk, edges, k, color=COLOR[key], lw=1.2, ls=LS_COMP[key],
+              alpha=0.85, zorder=3)
+        axk.errorbar(x, k, yerr=e, fmt='o', ms=MS, color=COLOR[key],
+                     label=PA.KF_CURVE_TXT[key], zorder=4)
+        kseries.append((k, e, blo, bhi))
+    axk.set_ylim(*_ratio6_ylim(kseries, None, head=KF6_HEADROOM_K))
+    axk.set_ylabel(PA.KFACTOR_TXT, fontsize=9)
+    axk.set_xlim(edges[0], edges[-1])
+    axk.legend(loc='upper left', fontsize=8, ncol=3)
+    axk.yaxis.set_major_locator(MaxNLocator(6))
+    axk.tick_params(labelsize=8.5)
+    for sp in axk.spines.values():
+        sp.set_linewidth(1.6)
+
+
 # -- the fixed canvas the two ratio6 observables share ------------------------
 # The same problem the MG7 script's R6_AXES block sets out, and the same fix;
 # the argument for it is written there and is not repeated here.  Measured on
@@ -529,10 +596,7 @@ R6_BOX = dict(left=R6_MARGIN[0] / R6_FIG[0],
 def draw_ratio6(nlo, lo, obs, outdir, with_band=False):
     """Variant A as a distribution pane over a 3 x 2 of ratios, user style."""
     edges = PA.BINS[obs]
-    x = 0.5 * (edges[:-1] + edges[1:])
     xlab = PA.LABELS_TXT[obs][0]
-    rlab = PA.RATIO_TXT
-    oname = PA.RATIO6_ORDER_TXT
     cur = PA.ratio6_curves(nlo, lo, obs, with_band=with_band)
 
     fig = plt.figure(figsize=R6_FIG)
@@ -573,65 +637,15 @@ def draw_ratio6(nlo, lo, obs, outdir, with_band=False):
     _ratio6_top(axtop, nlo, lo, obs, with_band=with_band)
     axtop.set_xlabel(xlab, fontsize=10)
 
-    def ratio_pane(ax, pane, anchor_line):
-        col = COLOR[pane] if pane != 'SUM' else COLOR['SUM']
-        series = []
-        for tag in PA.RATIO6_ORDERS:
-            h = cur[pane][tag]
-            r, e = np.asarray(h['r'], float), np.asarray(h['err'], float)
-            blo = h.get('lo') if with_band else None
-            bhi = h.get('hi') if with_band else None
-            if with_band:
-                _band(ax, edges, blo, bhi, col, BAND_ALPHA,
-                      zorder=2 if tag == 'NLO' else 1)
-            _step(ax, edges, r, color=col, lw=1.3, ls=LS_ORDER[tag],
-                  alpha=1.0 if tag == 'NLO' else STEP_ALPHA,
-                  zorder=4 if tag == 'NLO' else 3)
-            ax.errorbar(x, r, yerr=e, fmt='o' if tag == 'NLO' else 's',
-                        ms=MS - 0.5, mfc='none' if tag == 'LO' else None,
-                        color=col, label=oname[tag],
-                        zorder=6 if tag == 'NLO' else 5)
-            series.append((r, e, blo, bhi))
-        if anchor_line is not None:
-            ax.axhline(anchor_line, color=C_REF, lw=1.0,
-                       ls=':' if pane == 'SUM' else '--', zorder=2)
-        ax.set_ylim(*_ratio6_ylim(series, anchor_line, head=0.24))
-        ax.set_ylabel(rlab[pane], fontsize=8 if pane == 'SUM' else 9)
-        ax.set_xlim(edges[0], edges[-1])
-        ax.tick_params(labelsize=8.5)
-        ax.yaxis.set_major_locator(MaxNLocator(5))
-        ax.legend(loc='best', fontsize=8, ncol=2)
-
-    ratio_pane(axes[0], 'SUM', 1.0)
+    _ratio6_ratio_pane(axes[0], cur, 'SUM', 1.0, edges, with_band=with_band)
     for sp in axes[0].spines.values():
         sp.set_linewidth(1.6)
 
-    axk = axes[1]
-    kseries = []
-    for key in PA.KF_PANE_ORDER:
-        kk = cur['K'][key]
-        k, e = np.asarray(kk['k'], float), np.asarray(kk['err'], float)
-        blo = kk.get('lo') if with_band else None
-        bhi = kk.get('hi') if with_band else None
-        if with_band:
-            _band(axk, edges, blo, bhi, COLOR[key], BAND_ALPHA_K,
-                  zorder=2 if key == 'full' else 1)
-        _step(axk, edges, k, color=COLOR[key], lw=1.2, ls=LS_COMP[key],
-              alpha=0.85, zorder=3)
-        axk.errorbar(x, k, yerr=e, fmt='o', ms=MS, color=COLOR[key],
-                     label=PA.KF_CURVE_TXT[key], zorder=4)
-        kseries.append((k, e, blo, bhi))
-    axk.set_ylim(*_ratio6_ylim(kseries, None, head=KF6_HEADROOM_K))
-    axk.set_ylabel(PA.KFACTOR_TXT, fontsize=9)
-    axk.set_xlim(edges[0], edges[-1])
-    axk.legend(loc='upper left', fontsize=8, ncol=3)
-    axk.yaxis.set_major_locator(MaxNLocator(6))
-    axk.tick_params(labelsize=8.5)
-    for sp in axk.spines.values():
-        sp.set_linewidth(1.6)
+    _ratio6_k_pane(axes[1], cur, edges, with_band=with_band)
 
     for ax, pane in zip(axes[2:], PA.RATIO6_FRACTIONS):
-        ratio_pane(ax, pane, cur[pane]['NLO']['integrated'])
+        _ratio6_ratio_pane(ax, cur, pane, cur[pane]['NLO']['integrated'],
+                           edges, with_band=with_band)
 
     for i, ax in enumerate(axes):
         if i < 4:
@@ -647,6 +661,86 @@ def draw_ratio6(nlo, lo, obs, outdir, with_band=False):
     fig.savefig(base + '.png', dpi=DPI)
     plt.close(fig)
     print('%-10s 7-pane%-10s sum/full NLO %.4f  LO %.4f'
+          % (PA.SHORT[obs], ' + band' if with_band else '',
+             cur['SUM']['NLO']['integrated'], cur['SUM']['LO']['integrated']))
+    return base
+
+
+# -- the three-pane variation's canvas ----------------------------------------
+# The reduced figure, user style.  What it is and why is at
+# pol_analysis.RATIO2_DIR; the geometry argument is at plot_zz_pol.R3_ROWS and
+# is not repeated.  Only what this style does DIFFERENTLY is here.
+#
+# The block keeps this style's seven-pane width, 7.285 in, so the two figures
+# read at one scale.  The distribution pane takes the same 4.62 in the MG7
+# figure gives it -- the two styles are held in step wherever they can be.
+#
+# THE RATIO PANES ARE TALLER THAN THE MG7 FIGURE'S, 2.49 against 2.31, for the
+# one reason the seven-pane figure's top row is taller: this style writes the
+# sum-consistency name as PLAIN TEXT WITH SPACES, (Z0Z0 + ZTZT + ZTZ0 + Z0ZT) /
+# full, which set rotated is 2.08 in against the mathtext MG7's 1.90.  The pane
+# is sized to that string, not to its content, and its width buys nothing --
+# which is why the extra width this variation gives the ratio panes does not
+# let either style shorten them.
+R3_ROWS = (4.62, 2.49, 2.49)  # distribution pane, sum, K -- inches of axes
+# The gap in INCHES, 0.140, which is what this style's seven-pane grid puts
+# between its own rows; hspace is solved for it because it is a fraction of the
+# mean row height and these rows are not those.  Nothing but frame is in either
+# gap: the x axis is written once, at the bottom.
+R3_GAP = 0.140
+R3_HSPACE = R3_GAP / (sum(R3_ROWS) / len(R3_ROWS))
+R3_AXES = (7.285, sum(R3_ROWS) + (len(R3_ROWS) - 1) * R3_GAP)
+# Measured on this figure, worst case over both observables and both variants,
+# plus ~0.12 in -- not carried over from R6_MARGIN, whose left was set by a
+# pane this figure does not draw.  Here the left is the sum pane's rotated name
+# at 0.630 in, ahead of the distribution pane's 0.573 and the K pane's 0.478,
+# so 0.75 against the seven-pane figure's 0.77.  The other three are the same.
+R3_MARGIN = (0.75, 0.24, 0.54, 0.11)  # left, right, bottom, top, in inches
+R3_FIG = (R3_AXES[0] + R3_MARGIN[0] + R3_MARGIN[1],
+          R3_AXES[1] + R3_MARGIN[2] + R3_MARGIN[3])
+R3_BOX = dict(left=R3_MARGIN[0] / R3_FIG[0],
+              right=1.0 - R3_MARGIN[1] / R3_FIG[0],
+              bottom=R3_MARGIN[2] / R3_FIG[1],
+              top=1.0 - R3_MARGIN[3] / R3_FIG[1])
+
+
+def draw_ratio3(nlo, lo, obs, outdir, with_band=False):
+    """The reduced variation: distribution pane, sum, K-factor, user style.
+
+    Three full-width panes sharing ONE x axis, written once at the bottom.
+    See plot_zz_pol.draw_ratio3 and pol_analysis.RATIO2_DIR.
+    """
+    edges = PA.BINS[obs]
+    xlab = PA.LABELS_TXT[obs][0]
+    cur = PA.ratio6_curves(nlo, lo, obs, with_band=with_band)
+
+    fig = plt.figure(figsize=R3_FIG)
+    # ONE gridspec where the seven-pane figure needs two: one rhythm, three
+    # full-width panes over one x axis, and the ratios are the inches.
+    gs = fig.add_gridspec(3, 1, height_ratios=list(R3_ROWS),
+                          hspace=R3_HSPACE, **R3_BOX)
+    axtop = fig.add_subplot(gs[0])
+    axs = fig.add_subplot(gs[1], sharex=axtop)
+    axk = fig.add_subplot(gs[2], sharex=axtop)
+
+    _ratio6_top(axtop, nlo, lo, obs, with_band=with_band)
+    _ratio6_ratio_pane(axs, cur, 'SUM', 1.0, edges, with_band=with_band)
+    for sp in axs.spines.values():
+        sp.set_linewidth(1.6)
+    _ratio6_k_pane(axk, cur, edges, with_band=with_band)
+
+    for ax in (axtop, axs):
+        ax.tick_params(labelbottom=False)
+    axk.set_xlabel(xlab, fontsize=10)
+
+    os.makedirs(outdir, exist_ok=True)
+    base = os.path.join(outdir, PA.SHORT[obs])
+    # NO tight crop: the canvas is already the right size, and the same size
+    # for both observables.  See R3_BOX.
+    fig.savefig(base + '.pdf')
+    fig.savefig(base + '.png', dpi=DPI)
+    plt.close(fig)
+    print('%-10s 3-pane%-10s sum/full NLO %.4f  LO %.4f'
           % (PA.SHORT[obs], ' + band' if with_band else '',
              cur['SUM']['NLO']['integrated'], cur['SUM']['LO']['integrated']))
     return base
@@ -682,10 +776,15 @@ def main():
             draw_kfactor(d, lo, obs, os.path.join(a.out, PA.KFACTOR_DIR))
             # The two six-panel ratio figures, in their own subdirectories.
             draw_ratio6(d, lo, obs, os.path.join(a.out, PA.RATIO6_DIR))
+            # The reduced three-pane variation; see pol_analysis.RATIO2_DIR.
+            draw_ratio3(d, lo, obs, os.path.join(a.out, PA.RATIO2_DIR))
         if d.has_scale and lo.has_scale:
             for obs in PA.OBS:
                 draw_ratio6(d, lo, obs,
                             os.path.join(a.out, PA.RATIO6_SCALE_DIR),
+                            with_band=True)
+                draw_ratio3(d, lo, obs,
+                            os.path.join(a.out, PA.RATIO2_SCALE_DIR),
                             with_band=True)
         else:
             print('no MUR*_MUF* columns in %s: the scale figure is not drawn'

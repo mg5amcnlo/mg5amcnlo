@@ -1590,6 +1590,41 @@ def scale_survival(nlo, lo, obs=None, which=None):
 RATIO6_DIR = 'variant_A6_ratios'
 RATIO6_SCALE_DIR = 'variant_A6_ratios_scale'
 
+# --------------------------------------------------------------------------
+# THE REDUCED VARIATION OF THE SAME FIGURE: three panes, all FULL WIDTH.
+#
+# The distribution pane, then the sum consistency, then the K-factor, stacked.
+# THE FOUR POLARISED-FRACTION PANES ARE DROPPED.  They are not lost: the
+# seven-pane figure above still carries them, unchanged, and their per-bin
+# tables are in numbers.txt either way.  What this variation is for is the
+# reading in which the fractions are not the question -- does the
+# decomposition close, and by how much does NLO move the rate -- and on that
+# reading four nearly flat panes are most of the page saying something else.
+#
+# WHY THE PANES GET THE WHOLE WIDTH.  On the seven-pane figure the sum and K
+# panes are the top row of a 3 x 2 and are half-width by construction, because
+# they sit above four panes that are worth pairing.  With those four gone
+# there is nothing left to pair them with, and a 1 x 2 row of two panes under
+# a full-width distribution pane would put a column break under a pane that
+# has none.  Full width also means ALL THREE PANES SHARE ONE X AXIS, which is
+# what lets the tick labels and the axis name be written once, at the bottom.
+#
+# THE NAME.  The digit counts RATIO panes and counts them the same way in both
+# names: six in ``variant_A6_ratios``, two here.  So the seven-pane figure is
+# A6 and the three-pane one is A2, ``_scale`` suffixes the band version of
+# each exactly as before, and neither name can be read for the other.
+#
+# As with A6, nothing here touches variant A, variant B, the K-factor figure,
+# the seven-pane figures or the original figures: two more subdirectories, and
+# both scripts write into them only.  Nothing new is computed either -- the
+# panes are the SAME ``ratio6_curves`` objects the seven-pane figure draws --
+# so numbers.txt is unchanged by this figure's existence.
+RATIO2_DIR = 'variant_A2_ratios'
+RATIO2_SCALE_DIR = 'variant_A2_ratios_scale'
+
+# The pane order, top to bottom, under the distribution pane.
+RATIO2_PANES = ['SUM', 'K']
+
 # The pane order, reading across then down.  ``'K'`` is the K-factor pane and
 # is not a weight column.  The four fractions are in the K-factor figure's
 # component order (LL, LT, TL, TT) and not variant A's (LL, TT, TL, LT),

@@ -84,6 +84,8 @@ plots/variant_B_shape_ratio/,  plots_userstyle/variant_B_shape_ratio/
 plots/kfactor_LO_NLO/,         plots_userstyle/kfactor_LO_NLO/
 plots/variant_A6_ratios/,      plots_userstyle/variant_A6_ratios/
 plots/variant_A6_ratios_scale/, plots_userstyle/variant_A6_ratios_scale/
+plots/variant_A2_ratios/,      plots_userstyle/variant_A2_ratios/
+plots/variant_A2_ratios_scale/, plots_userstyle/variant_A2_ratios_scale/
 numbers.txt             every number quoted below, and the per-bin tables
 ```
 
@@ -1638,6 +1640,63 @@ curves illegible, and the band is *tabulated* while the curves are not drawn
 anywhere else on the figure. `numbers.txt` prints the per-bin envelope for
 **all five components at both orders**, so nothing the pane does not draw is
 lost. The six ratio panes remain where this figure's bands are read.
+
+### The reduced variation — three panes, all full width
+
+`variant_A2_ratios/` and `variant_A2_ratios_scale/` are the **same figure with
+the four polarised-fraction panes dropped**: the distribution pane, then the
+sum consistency, then the K-factor, stacked, all three full width. The digit
+counts ratio panes exactly as `A6` does — six there, two here — so the two
+names cannot be read for one another.
+
+```
+plots/variant_A2_ratios/            m_epmup.{pdf,png}  dphi_ee.{pdf,png}
+plots/variant_A2_ratios_scale/      m_epmup.{pdf,png}  dphi_ee.{pdf,png}
+plots_userstyle/variant_A2_ratios/         the same two, user style
+plots_userstyle/variant_A2_ratios_scale/   the same two, user style
+```
+
+Nothing is recomputed and nothing is restyled. The three panes are drawn by
+the very same painters the seven-pane figure uses, off the same
+`ratio6_curves` objects, so every curve, every error bar, every colour, every
+line style and every label is the one above — which is why `numbers.txt` is
+**unchanged by this figure's existence**, the fractions' per-bin tables
+included. The seven-pane figures are untouched and their PNGs are still
+byte-for-byte what this branch carried.
+
+**All three panes share one x axis**, and that is what the reduction buys. On
+the seven-pane figure the distribution pane sits above a 3 × 2 and is a block
+of its own, so it writes its own x tick labels and its own axis name and the
+outer gap exists to hold them. Here every pane is full width over the same
+binning, the x axis is written **once at the bottom**, and both gaps hold
+nothing but frame — 0.136 in on the MG7 style, 0.140 in on the user style,
+which is what the seven-pane figure's 3 × 2 puts between its own rows. The
+gaps are held in **inches**: `hspace` is a fraction of the mean row height and
+these rows are not those, so the fraction is solved for rather than carried
+over.
+
+**The long rotated axis name is still what sets the ratio panes' height, and
+it does not care that they are now twice as wide.**
+`(Z_0Z_0+Z_TZ_T+Z_TZ_0+Z_0Z_T)/full` is 1.90 in of type at fontsize 9 and is
+measured against the pane's *height*. So the ratio panes keep **2.31 in**
+each, the seven-pane figure's top-row height, clearing by **0.208 in** at each
+end; the user style's plain-text version of the same name is 2.08 in, so its
+panes keep **2.49 in** and clear by **0.205 in**. The distribution pane takes
+**4.62 in** in both styles, exactly twice an MG7 ratio pane: it has to stay
+dominant and on this figure its dominance is height alone.
+
+Axes blocks 6.975 × 9.512 in (MG7) and 7.285 × 9.880 in (user style); the
+width is the seven-pane figure's, deliberately, so the two read at one scale.
+Canvases 7.875 × 10.172 in and 8.275 × 10.530 in, declared rather than cropped
+on the `R6_AXES` construction, so all four figures of a style come out one size
+— 1574 × 2034 px and 2482 × 3159 px. Margins are this figure's own, measured
+worst case over both observables and both variants: the **left** one is now set
+by the sum pane's rotated name (0.569 in MG7, 0.630 in user style) where on the
+seven-pane figure it was set by `Z_0Z_0/full`'s `0.000 / 0.025 / 0.050` tick
+column, a pane this figure does not draw. Minimum ink clearance on the rendered
+PNGs 19 px (MG7) and 30 px (user style) — nothing clipped. `--check-minus` goes
+12/12 to **16/16**: the four new PDFs all carry the distribution pane's log
+decade ticks.
 
 ### One thing that had to be fixed to draw them
 
