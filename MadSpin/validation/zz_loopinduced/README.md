@@ -118,6 +118,12 @@ data/histograms.npz                the raw histograms
 data/meta.json                     runs, statistics, seeds, card options, cuts, code SHA
 data/numbers.txt                   the numeric report
 plots/, plots_userstyle/           PDF and PNG
+plots/m_mumu_refstyle.{pdf,png}    m(mu+ mu-) a SECOND time, in the layout of
+                                   the user's own plot_matplotlib.py: capped
+                                   per-bin error bars instead of steps, and a
+                                   ratio pane sized from the data so that
+                                   nothing is clipped.  plots/m_mumu.* is
+                                   unchanged and still the default rendering
 logs/                              run logs, copied as .log.txt
 RESULTS.md                         the findings
 SPIN_COEFFICIENTS.md               what cos(theta1) and cos1cos2 measure: the

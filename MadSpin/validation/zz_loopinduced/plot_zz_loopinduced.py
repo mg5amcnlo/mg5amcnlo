@@ -39,6 +39,12 @@ Style follows the MG7 paper's ``plotexample/dummyplot.py``, as the sibling
 studies under ``MadSpin/validation/`` do: LaTeX text, serif, base font size 14,
 step histograms of line width 1.2, the paper's fixed figure width, tableau
 colours with black/blue/red promoted, frameless legends, minor tick locators.
+
+One observable, ``m(mu+ mu-)``, is written twice: once by ``draw`` like every
+other figure, and once more by ``draw_refstyle`` as ``m_mumu_refstyle.*`` in the
+layout of the user's own ``plot_matplotlib.py`` (see ``REF_STYLE``).  The second
+file is an addition, never a replacement -- the first is byte for byte what it
+was -- so the two renderings of the same numbers can be put side by side.
 """
 
 import argparse
@@ -54,7 +60,7 @@ matplotlib.use('Agg')
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
-from matplotlib.ticker import AutoMinorLocator
+from matplotlib.ticker import AutoMinorLocator, MaxNLocator
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
 if _HERE not in sys.path:
@@ -411,6 +417,199 @@ def draw(data, obs, outdir, modes=MODES):
     fig.savefig(base + '.png', dpi=200, bbox_inches='tight')
     plt.close(fig)
     return base
+
+
+# --------------------------------------------------------------------------
+# a second rendering, in the style of the user's own plot_matplotlib.py
+# --------------------------------------------------------------------------
+#
+# The reference is the ``plot_hist_with_ratio_multi`` layout of the user's
+# ``plot_matplotlib.py``: markers with capped error bars for every non-reference
+# curve, a faint companion step behind each, and a ratio pane that is a row of
+# ``errorbar(..., fmt='o')`` points against a dashed unity line -- no clipping,
+# no arrows.  ``draw`` above is a step-only rendering with a fixed ratio window;
+# this one shows the per-bin uncertainty of every point instead.
+#
+# ADDITIONAL, never a replacement: ``draw`` still writes ``<obs>.pdf/.png``
+# untouched, and this writes ``<obs>_refstyle.pdf/.png`` beside it, so the two
+# can be put side by side.  One entry per figure that wants the second
+# rendering; everything absent gets only the default one.
+REF_STYLE = ('m_mumu',)
+
+REF_STYLE_SUFFIX = '_refstyle'
+
+# The rcParams the reference sets that this module's own block does not, applied
+# for the duration of one figure so no other figure moves.  Only two of them
+# actually differ in substance:
+#
+#   lines.markersize   the reference asks for 4, this module for 8.  4 wins
+#                      HERE, because this rendering puts a marker on all 75
+#                      bins of four curves and size-8 discs would merge into a
+#                      band; the module-wide 8 stays as it is for every other
+#                      figure, which draws no markers on its curves at all.
+#   errorbar.capsize   the reference asks for 2, matplotlib's default is 0.
+#                      The caps are the point of the exercise -- they are what
+#                      the request meant by per-point error bars -- so 2 wins.
+#
+# ``figure.figsize`` is (7*0.75, 6.0) in both -- the reference's rcParams block
+# says in as many words not to change the 7*0.75, and this module already
+# follows it.  (The reference's own plotting functions then pass figsize=(6, 6)
+# explicitly, overriding their own rcParams; that override is not carried here,
+# because the paper width is the part the comment defends and it is what every
+# other figure in this study is drawn at.)
+#
+# ``text.usetex`` is NOT taken from the reference.  The reference decides it
+# with a bare ``shutil.which``; ``_have_latex`` above first extends PATH with
+# the usual MacTeX locations, so it is the more capable test of the same thing
+# and this module's answer wins.
+REF_STYLE_RC = {
+    'lines.linewidth': LW,
+    'lines.markersize': 4,
+    'errorbar.capsize': 2,
+    'axes.prop_cycle': mpl.cycler(color=allcolors),
+    'xtick.minor.visible': True, 'ytick.minor.visible': True,
+    'legend.frameon': False, 'legend.fontsize': 9,
+    'legend.handlelength': 2.0, 'legend.columnspacing': 1.4,
+    'mathtext.fontset': 'cm',
+    'savefig.bbox': 'tight',
+}
+
+
+def difference_axis_limits(values, padding=0.10):
+    """Symmetric limits that resolve the observed differences.
+
+    Verbatim from the reference script, where it picks the window of a
+    *difference* pane.  Used below on ``ratio - 1`` and re-centred on 1.
+    """
+    finite = np.asarray(values, dtype=float)
+    finite = finite[np.isfinite(finite)]
+    maximum = float(np.max(np.abs(finite))) if finite.size else 0.0
+    if maximum == 0.0:
+        return (-1e-18, 1e-18)
+    decade = 10.0 ** np.floor(np.log10(maximum))
+    bound = np.ceil((1.0 + padding) * maximum / decade) * decade
+    return (-bound, bound)
+
+
+def _ref_step(ax, edges, y, **kw):
+    """The reference's ``step(edges, append(y, y[-1]), where='post')``."""
+    ax.step(edges, np.append(y, y[-1]), where='post', **kw)
+
+
+def draw_refstyle(data, obs, outdir, modes=MODES):
+    """``obs`` again, in the reference script's marker-and-error-bar style."""
+    xlab, ylab = OBS.LABELS[obs] if USETEX else (OBS.LABELS_TXT[obs], '')
+    if not USETEX:
+        ylab = 'dsigma/d(%s) [pb per unit]' % OBS.LABELS_TXT[obs].split(' [')[0]
+    edges = data.edges(obs)
+    x = data.centres(obs)
+    yref, eref = data.density(REF, obs)
+
+    order = [m for m in modes if data.has(m, obs)]
+    rmodes = [m for m in ratio_modes(obs, modes) if data.has(m, obs)]
+
+    # The pane window, before anything is drawn.  The reference's own default is
+    # ratio_ylim=(0.99, 1.01), which is a 2 % window: here madspin and PA run
+    # from 0.32 to 1.69 and their error bars reach 0.24 and 1.87, so that
+    # window would hide every point of both curves.  ``draw``'s fixed
+    # RATIO_CLIP=(0.5, 1.5) would still lose thirteen of them -- and it can
+    # afford to, because it draws an arrow at the pane edge for each one,
+    # whereas this rendering has no arrows and a clipped point would simply be
+    # gone.  So the window is taken from the data, with the reference's own
+    # ``difference_axis_limits`` fed the residuals INCLUDING their error bars,
+    # so that no cap is cut off either.
+    dev = []
+    for key in rmodes:
+        y, e = data.density(key, obs)
+        r, re_ = ratio(y, e, yref, eref)
+        dev.append((r - 1.0) + re_)
+        dev.append((r - 1.0) - re_)
+    lo, hi = difference_axis_limits(np.concatenate(dev)) if dev else (-0.5, 0.5)
+    rlim = (1.0 + lo, 1.0 + hi)
+
+    with plt.rc_context(REF_STYLE_RC):
+        fig = plt.figure(figsize=(7 * 0.75, 6.0))
+        gs = fig.add_gridspec(2, 1, height_ratios=[3, 1], hspace=0.05)
+        ax = fig.add_subplot(gs[0])
+        rx = fig.add_subplot(gs[1], sharex=ax)
+
+        # reference curve: a plain solid step, as in the reference script
+        _ref_step(ax, edges, yref, color=COLOR[REF], lw=LW,
+                  label=CURVES_TEX[REF] if USETEX else CURVES_PLAIN[REF])
+
+        # Modes that collapse to a single delta-function bin get the
+        # reference's ``open_markers`` treatment, stepped outwards so they stay
+        # readable when they coincide.  On m(mu+mu-) onshell and none agree to
+        # five digits in that one bin -- which is the point, both of them drop
+        # the virtuality -- and as two filled discs of the same size the second
+        # would simply hide the first.
+        delta = [k for k in order
+                 if k in NO_VIRTUALITY and obs in PAIR_MASS_OBS]
+        for key in order:
+            y, e = data.density(key, obs)
+            # A log axis drops non-positive points silently but still draws the
+            # connecting segment through them; mask the structural zeros.
+            shown = np.where(y > 0, y, np.nan) if obs in LOGY else y
+            lab = CURVES_TEX[key] if USETEX else CURVES_PLAIN[key]
+            style = {}
+            if key in delta:
+                style = dict(markerfacecolor='none', markeredgecolor=COLOR[key],
+                             markeredgewidth=1.2,
+                             ms=4 + 2.6 * delta.index(key))
+            ax.errorbar(x, shown, yerr=np.where(np.isfinite(shown), e, np.nan),
+                        fmt='o', color=COLOR[key], label=lab, zorder=4, **style)
+            _ref_step(ax, edges, shown, color=COLOR[key], alpha=0.55, zorder=3)
+
+        if obs in LOGY:
+            ax.set_yscale('log')
+        ax.set_ylabel(ylab)
+        # Headroom before the legend, as in ``draw`` and for the same reason:
+        # this is a log-y Breit-Wigner peak and a five-entry frameless legend
+        # placed by 'best' would otherwise land on it.  The reference script
+        # calls a bare ``legend()`` because its own figures are flat.  More
+        # headroom is needed here than in ``draw``, because the delta-function
+        # marker of onshell/none is a lone dot near the top of the pane and at
+        # ``draw``'s factor it comes to rest on the legend's last row, where it
+        # reads as a stray legend handle rather than as data.
+        ylo, yhi = ax.get_ylim()
+        ax.set_ylim(ylo, yhi * (40.0 if obs in LOGY else 1.45))
+        ax.legend(loc='upper left' if obs in LOGY else 'best')
+        ax.tick_params(labelbottom=False)
+
+        for key in rmodes:
+            y, e = data.density(key, obs)
+            r, re_ = ratio(y, e, yref, eref)
+            ok = np.isfinite(r) & np.isfinite(re_)
+            rx.errorbar(x[ok], r[ok], yerr=re_[ok], fmt='o', color=COLOR[key],
+                        label=CURVES_TEX[key] if USETEX else CURVES_PLAIN[key])
+
+        rx.axhline(1.0, linestyle='--', color=COLOR[REF], lw=0.8)
+        rx.set_xlabel(xlab)
+        rx.set_ylabel('Ratio')
+        rx.set_ylim(*rlim)
+        rx.set_xlim(edges[0], edges[-1])
+        # The window is data-driven and comes out round, so matplotlib's
+        # default locator puts three integer ticks on it and nothing between.
+        # The reference never meets this because its own windows are 2 % wide.
+        rx.yaxis.set_major_locator(MaxNLocator(nbins=5, steps=[1, 2, 5, 10]))
+        note = ratio_note(obs, tex=USETEX)
+        if note:
+            # Same cue and same corner as the default rendering.  It still has
+            # the pane to itself: the data-driven window above is symmetric
+            # about 1 while the two curves sit mostly above 0.3, so the strip
+            # along the bottom is empty here too.
+            rx.text(0.5, 0.06, note, transform=rx.transAxes, ha='center',
+                    va='bottom', fontsize=8)
+
+        fig.subplots_adjust(hspace=0.1, left=0.15, right=0.97,
+                            bottom=0.12, top=0.96)
+
+        os.makedirs(outdir, exist_ok=True)
+        base = os.path.join(outdir, obs + REF_STYLE_SUFFIX)
+        fig.savefig(base + '.pdf', bbox_inches='tight')
+        fig.savefig(base + '.png', dpi=200, bbox_inches='tight')
+        plt.close(fig)
+    return base, rlim
 
 
 # --------------------------------------------------------------------------
@@ -800,6 +999,11 @@ def main():
         made.append(draw(data, obs, args.out))
         print('wrote %s.pdf / .png   (usetex=%s, minus fix applied=%s)'
               % (made[-1], USETEX, MINUS_FIX))
+        if obs in REF_STYLE:
+            base, rlim = draw_refstyle(data, obs, args.out)
+            made.append(base)
+            print('wrote %s.pdf / .png   (reference style, ratio pane '
+                  '%.2f--%.2f, nothing clipped)' % (base, rlim[0], rlim[1]))
     txt = write_numbers(data, os.path.join(args.data, 'numbers.txt'))
     print(txt)
 
