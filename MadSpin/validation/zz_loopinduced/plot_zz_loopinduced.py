@@ -561,8 +561,22 @@ def draw_refstyle(data, obs, outdir, modes=MODES):
     x = data.centres(obs)
     yref, eref = data.density(REF, obs)
 
-    order = [m for m in modes if data.has(m, obs)]
-    rmodes = [m for m in ratio_modes(obs, modes) if data.has(m, obs)]
+    # ONE curve set, both panes.  ``draw`` above deliberately draws every mode
+    # in its distribution pane and narrows only the ratio pane, and carries a
+    # note saying so; this rendering instead narrows both, which is what the
+    # reference does -- ``plot_hist_with_ratio_multi`` iterates the same
+    # ``histograms`` list twice -- and it is what lets this figure carry no
+    # annotation at all.  The legend then describes both panes exactly: every
+    # curve it names is in the ratio pane too, bar the reference itself, which
+    # cannot be a ratio against itself.
+    #
+    # On m(mu+ mu-) that means onshell and none are absent from the whole
+    # figure: RATIO_MODES already dropped them from the ratio pane because
+    # neither draws any virtuality, so their pair mass is a delta function at
+    # m_Z and a ratio to the off-shell truth measures nothing.  Both still
+    # appear in plots/m_mumu.* -- where the delta function IS the point -- and
+    # both still get their rate and shape lines in numbers.txt.
+    order = rmodes = [m for m in ratio_modes(obs, modes) if data.has(m, obs)]
 
     # The pane window, before anything is drawn.  The reference's own default is
     # ratio_ylim=(0.99, 1.01), which is a 2 % window: here madspin and PA run
@@ -614,10 +628,16 @@ def draw_refstyle(data, obs, outdir, modes=MODES):
 
         # Modes that collapse to a single delta-function bin get the
         # reference's ``open_markers`` treatment, stepped outwards so they stay
-        # readable when they coincide.  On m(mu+mu-) onshell and none agree to
-        # five digits in that one bin -- which is the point, both of them drop
-        # the virtuality -- and as two filled discs of the same size the second
-        # would simply hide the first.
+        # readable when they coincide: two such modes agree exactly in that one
+        # bin, and as filled discs of the same size the second would simply
+        # hide the first.
+        #
+        # DORMANT on m(mu+ mu-), whose only such modes are onshell and none and
+        # which ``order`` now excludes.  Kept because it is not dead: it fires
+        # for any REF_STYLE observable that keeps a no-virtuality mode in its
+        # curve set -- m(e+ e-), say, which has no RATIO_MODES entry -- and
+        # rediscovering the need for it from a figure where the two coincide
+        # would be a silent wrong answer, not an obvious one.
         delta = [k for k in order
                  if k in NO_VIRTUALITY and obs in PAIR_MASS_OBS]
         for key in order:
@@ -638,16 +658,20 @@ def draw_refstyle(data, obs, outdir, modes=MODES):
         if obs in LOGY:
             ax.set_yscale('log')
         ax.set_ylabel(ylab)
-        # Headroom before the legend, as in ``draw`` and for the same reason:
-        # this is a log-y Breit-Wigner peak and a five-entry frameless legend
-        # placed by 'best' would otherwise land on it.  The reference script
-        # calls a bare ``legend()`` because its own figures are flat.  More
-        # headroom is needed here than in ``draw``, because the delta-function
-        # marker of onshell/none is a lone dot near the top of the pane and at
-        # ``draw``'s factor it comes to rest on the legend's last row, where it
-        # reads as a stray legend handle rather than as data.
+        # Headroom before the legend, and the SAME factor as ``draw``: this is
+        # a log-y Breit-Wigner peak and a frameless legend placed by 'best'
+        # would otherwise land on it.  (The reference script calls a bare
+        # ``legend()`` because its own figures are flat.)
+        #
+        # This briefly needed 40 rather than 12, to keep the lone
+        # delta-function marker of onshell/none off the legend's last row,
+        # where it read as a stray legend handle rather than as data.  With
+        # those two curves gone from ``order`` the marker is gone with them,
+        # the legend is three entries instead of five, and the extra room buys
+        # nothing -- it only cost two decades of empty axis and squashed the
+        # peak.  Back to ``draw``'s factor, checked against 8 and 40.
         ylo, yhi = ax.get_ylim()
-        ax.set_ylim(ylo, yhi * (40.0 if obs in LOGY else 1.45))
+        ax.set_ylim(ylo, yhi * (12.0 if obs in LOGY else 1.45))
         ax.legend(loc='upper left' if obs in LOGY else 'best')
         ax.tick_params(labelbottom=False)
 

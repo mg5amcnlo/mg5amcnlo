@@ -164,19 +164,27 @@ A second rendering of `m(mu+ mu-)` only, in the layout of the user's own
 `plot_matplotlib.py`: the truth as a solid black step drawn *on top*, each
 MadSpin mode as markers with capped per-bin error bars and a faint companion
 step, and a ratio pane of `errorbar(fmt='o')` points against a dashed unity
-line. `onshell` and `none` have no virtuality, so their pair mass is a delta
-function at `m_Z` and they appear as a single concentric pair of open rings.
+line.
 
-**This figure carries no text beyond its axis labels and legend.** Three things
-it therefore does not say on the canvas, all of which a reader needs:
+**It shows three curves — `truth`, `madspin`, `PA` — and shows the same three in
+both panes**, bar the truth in the lower one, which cannot be a ratio against
+itself. `onshell` and `none` are absent from the whole figure. Neither draws any
+virtuality, so their pair mass is a delta function at `m_Z`: a single filled bin
+in the distribution and, against an off-shell truth, a ratio that is a carpet of
+structural zeros plus one off-scale spike rather than a measurement (see
+`RATIO_MODES` in `plot_zz_loopinduced.py`). Both still appear in
+`plots/m_mumu.*`, where the delta function is the point, and both still get
+their rate and shape lines in `data/numbers.txt`.
 
-* **The ratio pane draws only `madspin` and `PA`** — the legend above it lists
-  five curves, and the two it drops from the lower pane are `onshell` and
-  `none`, whose ratio to an off-shell truth is a carpet of structural zeros plus
-  one off-scale spike rather than a measurement (see `RATIO_MODES` in
-  `plot_zz_loopinduced.py`). **A missing ratio curve here means omitted, not
-  agreeing**, and the two that remain are the worst-disagreeing pair, so the
-  mistake would be in the flattering direction.
+That is the one structural difference from `plots/m_mumu.*`, and it is why this
+figure needs no annotation: there, the distribution pane draws all five curves
+while the ratio pane draws two, so the legend over-claims for the lower pane and
+a note has to say so. Here the legend describes both panes exactly.
+
+**Beyond that, this figure carries no text past its axis labels and legend.**
+Two things it therefore does not say on the canvas, both of which a reader
+needs:
+
 * **The shaded green band is a MODELLING spread, not an uncertainty on the
   points.** It is the reference's `ratio_uncertainty`: `|madspin - PA| /
   madspin` per bin, drawn as `1 +- ` that, with a second darker tier at half
