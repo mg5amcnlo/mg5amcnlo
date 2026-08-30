@@ -120,9 +120,17 @@ data/numbers.txt                   the numeric report
 plots/, plots_userstyle/           PDF and PNG
 plots/m_mumu_refstyle.{pdf,png}    m(mu+ mu-) a SECOND time, in the layout of
                                    the user's own plot_matplotlib.py: capped
-                                   per-bin error bars instead of steps, and a
-                                   ratio pane sized from the data so that
-                                   nothing is clipped.  plots/m_mumu.* is
+                                   per-bin error bars instead of steps, the
+                                   shaded |madspin - PA| / madspin envelope of
+                                   its plot_wb_mass behind the ratio points
+                                   (two tiers: the full envelope and its half),
+                                   and a ratio pane sized from the data so that
+                                   no POINT is clipped.  The band is a
+                                   modelling spread, not a statistical error,
+                                   and it is wider than the pane in 12 of the
+                                   75 bins -- all below 69 GeV, where madspin
+                                   and PA differ by a factor of three; the pane
+                                   says so in as many words.  plots/m_mumu.* is
                                    unchanged and still the default rendering
 logs/                              run logs, copied as .log.txt
 RESULTS.md                         the findings

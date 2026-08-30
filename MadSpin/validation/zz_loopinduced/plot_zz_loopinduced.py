@@ -42,9 +42,12 @@ colours with black/blue/red promoted, frameless legends, minor tick locators.
 
 One observable, ``m(mu+ mu-)``, is written twice: once by ``draw`` like every
 other figure, and once more by ``draw_refstyle`` as ``m_mumu_refstyle.*`` in the
-layout of the user's own ``plot_matplotlib.py`` (see ``REF_STYLE``).  The second
-file is an addition, never a replacement -- the first is byte for byte what it
-was -- so the two renderings of the same numbers can be put side by side.
+layout of the user's own ``plot_matplotlib.py`` (see ``REF_STYLE``).  That
+second rendering replaces the steps with markers and capped per-bin error bars,
+and puts the reference's shaded MadSpin-vs-PA envelope behind the ratio points
+(see ``RATIO_BAND``).  It is an addition, never a replacement -- ``m_mumu.*`` is
+byte for byte what it was -- so the two renderings of the same numbers can be
+put side by side.
 """
 
 import argparse
@@ -423,12 +426,15 @@ def draw(data, obs, outdir, modes=MODES):
 # a second rendering, in the style of the user's own plot_matplotlib.py
 # --------------------------------------------------------------------------
 #
-# The reference is the ``plot_hist_with_ratio_multi`` layout of the user's
-# ``plot_matplotlib.py``: markers with capped error bars for every non-reference
-# curve, a faint companion step behind each, and a ratio pane that is a row of
-# ``errorbar(..., fmt='o')`` points against a dashed unity line -- no clipping,
-# no arrows.  ``draw`` above is a step-only rendering with a fixed ratio window;
-# this one shows the per-bin uncertainty of every point instead.
+# The reference is the user's ``plot_matplotlib.py``, in two parts.  The layout
+# comes from ``plot_hist_with_ratio_multi``: markers with capped error bars for
+# every non-reference curve, a faint companion step behind each, and a ratio
+# pane that is a row of ``errorbar(..., fmt='o')`` points against a dashed unity
+# line.  The shaded band in that ratio pane comes from ``plot_wb_mass``, whose
+# ``ratio_uncertainty`` argument is the envelope of two named samples; see
+# ``RATIO_BAND`` below.  ``draw`` above is a step-only rendering with a fixed
+# ratio window and no band; this one shows the per-bin uncertainty of every
+# point, and the modelling envelope behind them.
 #
 # ADDITIONAL, never a replacement: ``draw`` still writes ``<obs>.pdf/.png``
 # untouched, and this writes ``<obs>_refstyle.pdf/.png`` beside it, so the two
@@ -437,6 +443,56 @@ def draw(data, obs, outdir, modes=MODES):
 REF_STYLE = ('m_mumu',)
 
 REF_STYLE_SUFFIX = '_refstyle'
+
+# The pair whose envelope becomes the shaded band of the ratio pane, per
+# observable.  Keyed like RATIO_MODES, and absent means no band.
+#
+# This is the reference's ``ratio_uncertainty``, whose one call site passes
+# ``("madspin", "pa")``: the band is the bin-by-bin |a - b| of those two, drawn
+# around one, and it is a MODELLING spread -- how far apart two spin treatments
+# of the same production sample are -- not a statistical error.  The error bars
+# on the points are the statistical part and are a separate object.
+RATIO_BAND = {
+    'm_mumu': ('madspin', 'PA'),
+}
+
+# The reference's two tiers: the full envelope, and the half envelope inside it.
+BAND_OUTER = dict(color='#74c476', alpha=0.22, linewidth=0, zorder=0)
+BAND_INNER = dict(color='#238b45', alpha=0.24, linewidth=0, zorder=0.5)
+
+
+def ratio_band(data, obs):
+    """``|a - b| / |denominator|`` per bin, or ``None`` when ``obs`` has no band.
+
+    The reference's construction, unchanged.  Its denominator rule is::
+
+        band_denominator = band_a_counts if ratio_ref == "wwbb" else ref_counts
+
+    i.e. when the ratio pane divides by the EXACT calculation the envelope is
+    normalised to ``a`` (MadSpin) rather than to that exact result, and only
+    when the pane already divides by one of the two band samples does the
+    envelope share the pane's own denominator.  ``REF`` here is ``truth``, the
+    fully off-shell four-lepton calculation, which is this study's ``wwbb``: the
+    exact answer both MadSpin modes are being measured against.  So the
+    denominator is ``a`` = madspin.
+
+    That does leave the band normalised to madspin while the points around it
+    are normalised to truth.  It is deliberate in the reference and is kept:
+    the band answers "how far apart are the two spin treatments, relative to
+    one of them", which is a statement about MadSpin and has to be normalised
+    to MadSpin to mean that.  Normalising it to truth instead would silently
+    turn it into a different quantity.
+    """
+    pair = RATIO_BAND.get(obs)
+    if pair is None or not all(data.has(k, obs) for k in pair):
+        return None
+    a = data.density(pair[0], obs)[0]
+    b = data.density(pair[1], obs)[0]
+    den = a                       # REF is the exact calculation; see above
+    hw = np.full_like(a, np.nan, dtype=float)
+    ok = den != 0
+    hw[ok] = np.abs(a[ok] - b[ok]) / np.abs(den[ok])
+    return hw
 
 # The rcParams the reference sets that this module's own block does not, applied
 # for the duration of one figure so no other figure moves.  Only two of them
@@ -527,6 +583,20 @@ def draw_refstyle(data, obs, outdir, modes=MODES):
     lo, hi = difference_axis_limits(np.concatenate(dev)) if dev else (-0.5, 0.5)
     rlim = (1.0 + lo, 1.0 + hi)
 
+    # The band is NOT allowed to set the window, and it does not fit inside it.
+    # Its half width reaches 2.32 on this observable -- madspin and PA differ by
+    # a factor of three in the low tail -- so containing it would need
+    # (-2.0, 4.0), where the points and their error bars, all inside
+    # [0.24, 1.87], would be squashed into the middle quarter of the pane and
+    # the lower half of the axis would be a negative ratio, which is not a
+    # quantity.  The band is a filled region, so unlike a clipped POINT (which
+    # would simply vanish, which is why the window is driven by the points) a
+    # clipped band still paints its bin to the pane edge and reads correctly as
+    # "wider than this pane".  The bins where that happens are counted, said in
+    # the pane, and returned, so it is never silent.
+    hw = ratio_band(data, obs)
+    n_over = int(np.nansum(hw > (rlim[1] - 1.0))) if hw is not None else 0
+
     with plt.rc_context(REF_STYLE_RC):
         fig = plt.figure(figsize=(7 * 0.75, 6.0))
         gs = fig.add_gridspec(2, 1, height_ratios=[3, 1], hspace=0.05)
@@ -576,14 +646,26 @@ def draw_refstyle(data, obs, outdir, modes=MODES):
         ax.legend(loc='upper left' if obs in LOGY else 'best')
         ax.tick_params(labelbottom=False)
 
+        # the band first, so it is behind everything: the reference's two tiers,
+        # per bin, at its own colours, alphas and zorders
+        if hw is not None:
+            fin = np.where(np.isfinite(hw))[0]
+            for i in fin:
+                rx.fill_between(edges[i:i + 2], [1 - hw[i]] * 2, [1 + hw[i]] * 2,
+                                **BAND_OUTER)
+                rx.fill_between(edges[i:i + 2],
+                                [1 - 0.5 * hw[i]] * 2, [1 + 0.5 * hw[i]] * 2,
+                                **BAND_INNER)
+
         for key in rmodes:
             y, e = data.density(key, obs)
             r, re_ = ratio(y, e, yref, eref)
             ok = np.isfinite(r) & np.isfinite(re_)
             rx.errorbar(x[ok], r[ok], yerr=re_[ok], fmt='o', color=COLOR[key],
-                        label=CURVES_TEX[key] if USETEX else CURVES_PLAIN[key])
+                        label=CURVES_TEX[key] if USETEX else CURVES_PLAIN[key],
+                        zorder=2)
 
-        rx.axhline(1.0, linestyle='--', color=COLOR[REF], lw=0.8)
+        rx.axhline(1.0, linestyle='--', color=COLOR[REF], lw=0.8, zorder=1)
         rx.set_xlabel(xlab)
         rx.set_ylabel('Ratio')
         rx.set_ylim(*rlim)
@@ -592,14 +674,33 @@ def draw_refstyle(data, obs, outdir, modes=MODES):
         # default locator puts three integer ticks on it and nothing between.
         # The reference never meets this because its own windows are 2 % wide.
         rx.yaxis.set_major_locator(MaxNLocator(nbins=5, steps=[1, 2, 5, 10]))
+        # Two stacked cues, bottom centre.  The band is thin near the peak, so
+        # the middle of the pane floor is clear of it as well as of the points.
+        cues = []
+        if hw is not None:
+            pair = RATIO_BAND[obs]
+            names = [r'\texttt{%s}' % k if USETEX else k for k in pair]
+            band_cue = ('band: $|$%s$-$%s$|/$%s' if USETEX
+                        else 'band: |%s-%s|/%s') % (names[0], names[1], names[0])
+            if n_over:
+                # NEVER silent: in these bins the envelope is wider than the
+                # window and the band runs off both edges.  It is visible as
+                # such -- a filled region clipped by the axes still paints its
+                # bin over the full pane height, which is the honest picture --
+                # but the count says how many, so the reader does not have to
+                # infer it from the shading.
+                band_cue += '; %d bins off pane' % n_over
+            cues.append(band_cue)
         note = ratio_note(obs, tex=USETEX)
         if note:
-            # Same cue and same corner as the default rendering.  It still has
-            # the pane to itself: the data-driven window above is symmetric
-            # about 1 while the two curves sit mostly above 0.3, so the strip
-            # along the bottom is empty here too.
-            rx.text(0.5, 0.06, note, transform=rx.transAxes, ha='center',
-                    va='bottom', fontsize=8)
+            # Same cue and same corner as the default rendering.
+            cues.append(note)
+        # Stacked upwards from the pane floor, most recent on top.  The middle
+        # of the floor is the one strip both curves and the (peak-narrow) band
+        # leave free, so the cues sit on clean background there.
+        for i, cue in enumerate(reversed(cues)):
+            rx.text(0.5, 0.05 + 0.155 * i, cue, transform=rx.transAxes,
+                    ha='center', va='bottom', fontsize=7.5)
 
         fig.subplots_adjust(hspace=0.1, left=0.15, right=0.97,
                             bottom=0.12, top=0.96)
@@ -609,7 +710,7 @@ def draw_refstyle(data, obs, outdir, modes=MODES):
         fig.savefig(base + '.pdf', bbox_inches='tight')
         fig.savefig(base + '.png', dpi=200, bbox_inches='tight')
         plt.close(fig)
-    return base, rlim
+    return base, rlim, n_over
 
 
 # --------------------------------------------------------------------------
@@ -1000,10 +1101,11 @@ def main():
         print('wrote %s.pdf / .png   (usetex=%s, minus fix applied=%s)'
               % (made[-1], USETEX, MINUS_FIX))
         if obs in REF_STYLE:
-            base, rlim = draw_refstyle(data, obs, args.out)
+            base, rlim, n_over = draw_refstyle(data, obs, args.out)
             made.append(base)
             print('wrote %s.pdf / .png   (reference style, ratio pane '
-                  '%.2f--%.2f, nothing clipped)' % (base, rlim[0], rlim[1]))
+                  '%.2f--%.2f, no point clipped; %d bin(s) where the band '
+                  'leaves the pane)' % (base, rlim[0], rlim[1], n_over))
     txt = write_numbers(data, os.path.join(args.data, 'numbers.txt'))
     print(txt)
 
