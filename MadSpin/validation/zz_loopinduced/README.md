@@ -119,18 +119,9 @@ data/meta.json                     runs, statistics, seeds, card options, cuts, 
 data/numbers.txt                   the numeric report
 plots/, plots_userstyle/           PDF and PNG
 plots/m_mumu_refstyle.{pdf,png}    m(mu+ mu-) a SECOND time, in the layout of
-                                   the user's own plot_matplotlib.py: capped
-                                   per-bin error bars instead of steps, the
-                                   shaded |madspin - PA| / madspin envelope of
-                                   its plot_wb_mass behind the ratio points
-                                   (two tiers: the full envelope and its half),
-                                   and a ratio pane sized from the data so that
-                                   no POINT is clipped.  The band is a
-                                   modelling spread, not a statistical error,
-                                   and it is wider than the pane in 12 of the
-                                   75 bins -- all below 69 GeV, where madspin
-                                   and PA differ by a factor of three; the pane
-                                   says so in as many words.  plots/m_mumu.* is
+                                   the user's own plot_matplotlib.py.  It
+                                   carries no annotation, so read the section
+                                   below before quoting it.  plots/m_mumu.* is
                                    unchanged and still the default rendering
 logs/                              run logs, copied as .log.txt
 RESULTS.md                         the findings
@@ -166,6 +157,44 @@ two on-shell `z`, so `m_4l = sqrt(shat) >= 2 m_Z`, and the RAMBO reshuffle holds
 all of it at low `pt`. Any bin-by-bin comparison over the full truth charges
 that hole to whichever mode is normalised correctly. See
 [PA_LOWPT_DIAGNOSIS.md](PA_LOWPT_DIAGNOSIS.md).
+
+## Reading `plots/m_mumu_refstyle`
+
+A second rendering of `m(mu+ mu-)` only, in the layout of the user's own
+`plot_matplotlib.py`: the truth as a solid black step drawn *on top*, each
+MadSpin mode as markers with capped per-bin error bars and a faint companion
+step, and a ratio pane of `errorbar(fmt='o')` points against a dashed unity
+line. `onshell` and `none` have no virtuality, so their pair mass is a delta
+function at `m_Z` and they appear as a single concentric pair of open rings.
+
+**This figure carries no text beyond its axis labels and legend.** Three things
+it therefore does not say on the canvas, all of which a reader needs:
+
+* **The ratio pane draws only `madspin` and `PA`** — the legend above it lists
+  five curves, and the two it drops from the lower pane are `onshell` and
+  `none`, whose ratio to an off-shell truth is a carpet of structural zeros plus
+  one off-scale spike rather than a measurement (see `RATIO_MODES` in
+  `plot_zz_loopinduced.py`). **A missing ratio curve here means omitted, not
+  agreeing**, and the two that remain are the worst-disagreeing pair, so the
+  mistake would be in the flattering direction.
+* **The shaded green band is a MODELLING spread, not an uncertainty on the
+  points.** It is the reference's `ratio_uncertainty`: `|madspin - PA| /
+  madspin` per bin, drawn as `1 +- ` that, with a second darker tier at half
+  width inside it. Note the denominator — the band is normalised to `madspin`
+  while the points around it are normalised to `truth`. That asymmetry is the
+  reference's own rule (`band_a_counts` when the ratio divides by the exact
+  calculation) and is kept deliberately: the band answers "how far apart are
+  the two spin treatments, relative to one of them". The statistical
+  uncertainty is the error bars, and it is a separate object.
+* **The band is wider than the pane in 12 of the 75 bins**, all of them below
+  69 GeV, where `madspin` and `PA` differ by a factor of three and the half
+  width reaches 2.32. Those bins are the ones where the green fill runs from
+  the pane floor to its ceiling. The ratio window is `(0.0, 2.0)`, chosen from
+  the points so that no measured point or error bar is clipped; sizing it to
+  contain the band instead needs `(-2.0, 4.0)`, which squashes every point into
+  the middle quarter of the pane and spends the lower half of the axis on
+  negative ratios. `plot_zz_loopinduced.py` prints the count on every run and
+  `draw_refstyle` returns it, so it never has to be re-derived by eye.
 
 ## Re-running
 

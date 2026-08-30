@@ -603,8 +603,13 @@ def draw_refstyle(data, obs, outdir, modes=MODES):
         ax = fig.add_subplot(gs[0])
         rx = fig.add_subplot(gs[1], sharex=ax)
 
-        # reference curve: a plain solid step, as in the reference script
-        _ref_step(ax, edges, yref, color=COLOR[REF], lw=LW,
+        # The reference curve: a plain solid step, as in the reference script,
+        # but ON TOP of the modes rather than behind them (the modes are at
+        # zorder 3 and 4 below).  It is the thing everything else is being
+        # measured against, and at 75 bins x 4 curves of ms-4 discs it was
+        # otherwise buried through the whole peak region, where all four modes
+        # sit on it.  A 1.2 pt line over a 4 pt disc leaves both readable.
+        _ref_step(ax, edges, yref, color=COLOR[REF], lw=LW, zorder=6,
                   label=CURVES_TEX[REF] if USETEX else CURVES_PLAIN[REF])
 
         # Modes that collapse to a single delta-function bin get the
@@ -674,33 +679,21 @@ def draw_refstyle(data, obs, outdir, modes=MODES):
         # default locator puts three integer ticks on it and nothing between.
         # The reference never meets this because its own windows are 2 % wide.
         rx.yaxis.set_major_locator(MaxNLocator(nbins=5, steps=[1, 2, 5, 10]))
-        # Two stacked cues, bottom centre.  The band is thin near the peak, so
-        # the middle of the pane floor is clear of it as well as of the points.
-        cues = []
-        if hw is not None:
-            pair = RATIO_BAND[obs]
-            names = [r'\texttt{%s}' % k if USETEX else k for k in pair]
-            band_cue = ('band: $|$%s$-$%s$|/$%s' if USETEX
-                        else 'band: |%s-%s|/%s') % (names[0], names[1], names[0])
-            if n_over:
-                # NEVER silent: in these bins the envelope is wider than the
-                # window and the band runs off both edges.  It is visible as
-                # such -- a filled region clipped by the axes still paints its
-                # bin over the full pane height, which is the honest picture --
-                # but the count says how many, so the reader does not have to
-                # infer it from the shading.
-                band_cue += '; %d bins off pane' % n_over
-            cues.append(band_cue)
-        note = ratio_note(obs, tex=USETEX)
-        if note:
-            # Same cue and same corner as the default rendering.
-            cues.append(note)
-        # Stacked upwards from the pane floor, most recent on top.  The middle
-        # of the floor is the one strip both curves and the (peak-narrow) band
-        # leave free, so the cues sit on clean background there.
-        for i, cue in enumerate(reversed(cues)):
-            rx.text(0.5, 0.05 + 0.155 * i, cue, transform=rx.transAxes,
-                    ha='center', va='bottom', fontsize=7.5)
+        # NO free-floating text in this pane: axis labels and legends only.
+        # ``draw`` above still writes its ``ratio: ...`` note, and that figure
+        # is deliberately left as it is; only this rendering drops it.
+        #
+        # Two facts therefore have no home on the canvas, and both are carried
+        # in README.md instead (see 'Reading plots/m_mumu_refstyle'):
+        #
+        #   * the ratio pane draws FEWER curves than the legend above it lists
+        #     (RATIO_MODES), so a reader must not read a missing ratio curve as
+        #     agreement;
+        #   * the band leaves the pane in ``n_over`` bins.  It stays visible
+        #     there -- a clipped fill still paints its bin over the full pane
+        #     height, which reads as 'wider than this pane' -- and the count is
+        #     printed by main() and returned below, so it is recoverable
+        #     without re-deriving it.
 
         fig.subplots_adjust(hspace=0.1, left=0.15, right=0.97,
                             bottom=0.12, top=0.96)
