@@ -39,6 +39,7 @@ Usage::
 """
 
 import argparse
+import collections
 import os
 import sys
 
@@ -450,7 +451,16 @@ def _band(ax, edges, lo, hi, color, alpha, zorder=1):
                     facecolor=color, alpha=alpha, lw=0.0, zorder=zorder)
 
 
-def _ratio6_top(ax, nlo, lo, obs, with_band=False):
+# -- the one text-size knob the three shared painters take --------------------
+# ``scale`` multiplies EVERY font size a pane writes and defaults to 1.0.  The
+# argument, and the quarter-point rounding, are in plot_zz_pol._ts and are not
+# repeated here.
+def _ts(base, scale):
+    """One font size, scaled and rounded to the quarter point."""
+    return round(base * scale * 4.0) / 4.0
+
+
+def _ratio6_top(ax, nlo, lo, obs, with_band=False, scale=1.0, legend_kw=None):
     """The seventh pane in the user style: dsigma/dx, both orders, five each.
 
     Steps and error bars, and NOT this style's usual ``errorbar(fmt='o')``
@@ -488,13 +498,16 @@ def _ratio6_top(ax, nlo, lo, obs, with_band=False):
                         alpha=0.9 if tag == 'NLO' else 0.6, zorder=z)
     if logy:
         ax.set_yscale('log')
-    ax.set_ylabel(ylab, fontsize=9)
+    ax.set_ylabel(ylab, fontsize=_ts(9, scale))
     ax.set_xlim(edges[0], edges[-1])
     lo_y, hi_y = ax.get_ylim()
     ax.set_ylim(lo_y, hi_y * TOP_HEADROOM[0 if logy else 1])
-    ax.legend(loc='upper left', fontsize=8, ncol=5, columnspacing=1.2,
-              handlelength=2.4)
-    ax.tick_params(labelsize=8.5)
+    # Ten entries in five columns; ``legend_kw`` trims the SPACING and never
+    # the structure.  See plot_zz_pol._ratio6_top.
+    lkw = dict(fontsize=_ts(8, scale), columnspacing=1.2, handlelength=2.4)
+    lkw.update(legend_kw or {})
+    ax.legend(loc='upper left', ncol=5, **lkw)
+    ax.tick_params(labelsize=_ts(8.5, scale))
     for sp in ax.spines.values():
         sp.set_linewidth(1.6)
 
@@ -505,7 +518,8 @@ def _ratio6_top(ax, nlo, lo, obs, with_band=False):
 # pair these DO set ``xlim``, because this style's panes always did.
 
 
-def _ratio6_ratio_pane(ax, cur, pane, anchor_line, edges, with_band=False):
+def _ratio6_ratio_pane(ax, cur, pane, anchor_line, edges, with_band=False,
+                       scale=1.0):
     """One ratio pane: the named ratio at both orders, with its anchor line."""
     x = 0.5 * (edges[:-1] + edges[1:])
     rlab = PA.RATIO_TXT
@@ -532,14 +546,20 @@ def _ratio6_ratio_pane(ax, cur, pane, anchor_line, edges, with_band=False):
         ax.axhline(anchor_line, color=C_REF, lw=1.0,
                    ls=':' if pane == 'SUM' else '--', zorder=2)
     ax.set_ylim(*_ratio6_ylim(series, anchor_line, head=0.24))
-    ax.set_ylabel(rlab[pane], fontsize=8 if pane == 'SUM' else 9)
+    # The compact sum name, and this painter is shared with the seven-pane A6
+    # figure, which therefore takes it too; see
+    # ``pol_analysis.RATIO_SUM_COMPACT``.  It is the one string this style
+    # sets as mathtext rather than plain text, and that is argued there.
+    ax.set_ylabel(PA.RATIO_SUM_COMPACT if pane == 'SUM' else rlab[pane],
+                  fontsize=_ts(9, scale))
     ax.set_xlim(edges[0], edges[-1])
-    ax.tick_params(labelsize=8.5)
+    ax.tick_params(labelsize=_ts(8.5, scale))
     ax.yaxis.set_major_locator(MaxNLocator(5))
-    ax.legend(loc='best', fontsize=8, ncol=2)
+    ax.legend(loc='best', fontsize=_ts(8, scale), ncol=2)
 
 
-def _ratio6_k_pane(axk, cur, edges, with_band=False):
+def _ratio6_k_pane(axk, cur, edges, with_band=False, scale=1.0,
+                   legend_kw=None):
     """The K-factor pane: five curves, no reference line."""
     x = 0.5 * (edges[:-1] + edges[1:])
     kseries = []
@@ -557,11 +577,13 @@ def _ratio6_k_pane(axk, cur, edges, with_band=False):
                      label=PA.KF_CURVE_TXT[key], zorder=4)
         kseries.append((k, e, blo, bhi))
     axk.set_ylim(*_ratio6_ylim(kseries, None, head=KF6_HEADROOM_K))
-    axk.set_ylabel(PA.KFACTOR_TXT, fontsize=9)
+    axk.set_ylabel(PA.KFACTOR_TXT, fontsize=_ts(9, scale))
     axk.set_xlim(edges[0], edges[-1])
-    axk.legend(loc='upper left', fontsize=8, ncol=3)
+    klw = dict(fontsize=_ts(8, scale))
+    klw.update(legend_kw or {})
+    axk.legend(loc='upper left', ncol=3, **klw)
     axk.yaxis.set_major_locator(MaxNLocator(6))
-    axk.tick_params(labelsize=8.5)
+    axk.tick_params(labelsize=_ts(8.5, scale))
     for sp in axk.spines.values():
         sp.set_linewidth(1.6)
 
@@ -584,7 +606,14 @@ def _ratio6_k_pane(axk, cur, edges, with_band=False):
 # 0.050 ticks, not by the wide pane (0.573 in) and not by the long rotated
 # sum name (0.630); measured, not assumed.
 R6_AXES = (7.285, 9.8945)             # the axes block, w x h in inches
-R6_MARGIN = (0.77, 0.24, 0.54, 0.11)  # left, right, bottom, top, in inches
+# THE LEFT MARGIN HAD TO MOVE, 0.77 -> 0.92, and unlike the MG7 figure's it
+# had to: with the sum pane's name written as a sum this figure needs 0.793 in
+# on the left and 0.77 CLIPPED IT.  matplotlib's mathtext stacks the summation
+# limits under the sign where LaTeX sets them beside it, which makes the
+# rotated name 0.31 in wide against MG7's 0.17.  0.793 + 0.12, rounded up.
+# Which is where the three-pane figure's left margin lands too, for the same
+# reason and off the same measurement.  See pol_analysis.RATIO_SUM_COMPACT.
+R6_MARGIN = (0.92, 0.24, 0.54, 0.11)  # left, right, bottom, top, in inches
 R6_FIG = (R6_AXES[0] + R6_MARGIN[0] + R6_MARGIN[1],
           R6_AXES[1] + R6_MARGIN[2] + R6_MARGIN[3])
 R6_BOX = dict(left=R6_MARGIN[0] / R6_FIG[0],
@@ -688,23 +717,111 @@ R3_ROWS = (4.62, 2.49, 2.49)  # distribution pane, sum, K -- inches of axes
 # mean row height and these rows are not those.  Nothing but frame is in either
 # gap: the x axis is written once, at the bottom.
 R3_GAP = 0.140
-R3_HSPACE = R3_GAP / (sum(R3_ROWS) / len(R3_ROWS))
 R3_AXES = (7.285, sum(R3_ROWS) + (len(R3_ROWS) - 1) * R3_GAP)
 # Measured on this figure, worst case over both observables and both variants,
-# plus ~0.12 in -- not carried over from R6_MARGIN, whose left was set by a
-# pane this figure does not draw.  Here the left is the sum pane's rotated name
-# at 0.630 in, ahead of the distribution pane's 0.573 and the K pane's 0.478,
-# so 0.75 against the seven-pane figure's 0.77.  The other three are the same.
-R3_MARGIN = (0.75, 0.24, 0.54, 0.11)  # left, right, bottom, top, in inches
-R3_FIG = (R3_AXES[0] + R3_MARGIN[0] + R3_MARGIN[1],
-          R3_AXES[1] + R3_MARGIN[2] + R3_MARGIN[3])
-R3_BOX = dict(left=R3_MARGIN[0] / R3_FIG[0],
-              right=1.0 - R3_MARGIN[1] / R3_FIG[0],
-              bottom=R3_MARGIN[2] / R3_FIG[1],
-              top=1.0 - R3_MARGIN[3] / R3_FIG[1])
+# plus 0.12 in rounded up to the hundredth -- not carried over from R6_MARGIN,
+# whose left was set by a pane this figure does not draw.  Here the left is the
+# sum pane's rotated name at 0.793 in, ahead of the distribution pane's 0.573
+# and the K pane's 0.478.
+#
+# THE LEFT MARGIN MOVED FURTHER THAN THE MG7 FIGURE'S, 0.75 -> 0.92 against
+# 0.69 -> 0.74, and the reason is the same one that lets this style keep its
+# row heights where MG7 has to grow them.  matplotlib's mathtext sets the
+# summation limits UNDER the sign; LaTeX's inline math sets them beside it.
+# Stacked, the name is short along the pane and WIDE across it -- 0.31 in
+# against MG7's 0.17 -- and rotated, across is the left margin.  The trade is
+# 0.17 in of page width for a pane that never has to grow.  The other three
+# margins are unchanged.
+#
+# figsize and the gridspec box come from ``_r3_geom``, here as for every
+# variation; see plot_zz_pol.
+R3_MARGIN = (0.92, 0.24, 0.54, 0.11)  # left, right, bottom, top, in inches
 
 
-def draw_ratio3(nlo, lo, obs, outdir, with_band=False):
+# -- the text-size variations -------------------------------------------------
+# What they are and why they are a spread rather than one number is at
+# plot_zz_pol.R3_TEXT; the scales themselves are shared, from
+# ``pol_analysis.RATIO2_TEXT``, so the two styles cannot end up offering
+# different sizes.  Only the ROWS and MARGINS below are this style's own, and
+# they are its own for this style's usual reason: its type is DejaVu Sans at
+# stock matplotlib metrics, not the MG7 script's LaTeX, so the same string at
+# the same size is not the same number of inches.
+R3Text = collections.namedtuple('R3Text', 'suffix scale rows gap margin '
+                                          'top_legend k_legend')
+R3_TEXT_BASE = R3Text('', 1.00, R3_ROWS, R3_GAP, R3_MARGIN, {}, {})
+# THE ROWS NEVER MOVE IN THIS STYLE, and that is the reverse of how the two
+# styles used to stand.  The explicit name was LONGER here than in MG7 -- 2.08
+# in of plain text with spaces against 1.895 in of mathtext -- which is the
+# whole reason these ratio panes are 2.49 in where MG7's are 2.31.  Set as a
+# sum it is SHORTER here: matplotlib's mathtext puts the summation limits
+# UNDER the sign where LaTeX's inline math puts them beside it, so the string
+# is two lines deep and correspondingly short along the pane -- 1.03 in at
+# 1.00x against MG7's 1.322, and 1.66 in at 1.60x, which a 2.49 in pane still
+# clears by 0.415.  MG7 has to grow its panes at 1.60x and this style does
+# not.
+#
+# WHAT IT PAYS FOR THAT is width, and the left margin is where this style's
+# geometry diverges hardest.  Stacked limits make the rotated name 0.31 in
+# wide against MG7's 0.17, and DejaVu Sans is a wider face than Computer
+# Modern to begin with, so the sum pane needs 0.79 in on the left at 1.00x
+# where MG7 needs 0.61 -- and 1.13 against 0.87 at 1.60x.  The margins below
+# are measured, not scaled.
+R3_TEXT = [
+    # 1.15x.  Nothing gives: legend 6.78 in in a 7.285 in pane, rows and
+    # spacing untouched, the sum name clearing 0.655 in per end.
+    R3Text('_text115', 1.15, (4.62, 2.49, 2.49), 0.140,
+           (1.00, 0.26, 0.57, 0.11), {}, {}),
+    # 1.30x.  The legend's white gives, the same trim the MG7 script takes at
+    # this step: 7.82 in cut to 7.08 in a 7.285 in pane.  Five columns, ten
+    # entries, unchanged.
+    R3Text('_text130', 1.30, (4.62, 2.49, 2.49), 0.140,
+           (1.09, 0.27, 0.61, 0.11),
+           dict(columnspacing=0.8, handlelength=2.0, handletextpad=0.5), {}),
+    # 1.45x.  Trimmed harder than MG7 needs at the same scale -- 0.45 em
+    # columns against 0.55 -- because DejaVu Sans sets the same ten entries
+    # wider: at MG7's trim this legend is still 0.04 in over the frame.  With
+    # it, 6.95 in in a 7.285 in pane.
+    R3Text('_text145', 1.45, (4.62, 2.49, 2.49), 0.140,
+           (1.17, 0.29, 0.65, 0.11),
+           dict(columnspacing=0.45, handlelength=1.6, handletextpad=0.35),
+           {}),
+    # 1.60x.  THE LEGEND'S TYPE STOPS AT 11.5 pt, the size 1.45x gives it, for
+    # the reason argued at plot_zz_pol.R3_TEXT: the alternative is fewer than
+    # five columns, which would put two components in one column and break the
+    # pairing the pane is read by.  The rows do NOT grow here, unlike MG7's --
+    # see above.
+    R3Text('_text160', 1.60, (4.62, 2.49, 2.49), 0.140,
+           (1.26, 0.30, 0.69, 0.11),
+           dict(fontsize=11.5, columnspacing=0.45, handlelength=1.6,
+                handletextpad=0.35), {}),
+]
+
+
+# The suffixes and scales are pol_analysis's, not this module's.  An assertion
+# and not a comment: two styles quietly offering different sizes is exactly the
+# failure the shared list exists to prevent, and it would show up as a figure
+# missing from a comparison rather than as an error.
+assert [(t.suffix, t.scale) for t in R3_TEXT] == PA.RATIO2_TEXT, \
+    'R3_TEXT disagrees with pol_analysis.RATIO2_TEXT'
+
+
+def _r3_geom(t):
+    """``(figsize, hspace, gridspec box)`` for one text-size variation.
+
+    The gap is held in INCHES and the fraction solved for; see
+    plot_zz_pol._r3_geom.
+    """
+    axes = (R3_AXES[0], sum(t.rows) + (len(t.rows) - 1) * t.gap)
+    fig = (axes[0] + t.margin[0] + t.margin[1],
+           axes[1] + t.margin[2] + t.margin[3])
+    box = dict(left=t.margin[0] / fig[0],
+               right=1.0 - t.margin[1] / fig[0],
+               bottom=t.margin[2] / fig[1],
+               top=1.0 - t.margin[3] / fig[1])
+    return fig, t.gap / (sum(t.rows) / len(t.rows)), box
+
+
+def draw_ratio3(nlo, lo, obs, outdir, with_band=False, text=R3_TEXT_BASE):
     """The reduced variation: distribution pane, sum, K-factor, user style.
 
     Three full-width panes sharing ONE x axis, written once at the bottom.
@@ -714,29 +831,33 @@ def draw_ratio3(nlo, lo, obs, outdir, with_band=False):
     xlab = PA.LABELS_TXT[obs][0]
     cur = PA.ratio6_curves(nlo, lo, obs, with_band=with_band)
 
-    fig = plt.figure(figsize=R3_FIG)
+    figsize, hspace, box = _r3_geom(text)
+    fig = plt.figure(figsize=figsize)
     # ONE gridspec where the seven-pane figure needs two: one rhythm, three
     # full-width panes over one x axis, and the ratios are the inches.
-    gs = fig.add_gridspec(3, 1, height_ratios=list(R3_ROWS),
-                          hspace=R3_HSPACE, **R3_BOX)
+    gs = fig.add_gridspec(3, 1, height_ratios=list(text.rows),
+                          hspace=hspace, **box)
     axtop = fig.add_subplot(gs[0])
     axs = fig.add_subplot(gs[1], sharex=axtop)
     axk = fig.add_subplot(gs[2], sharex=axtop)
 
-    _ratio6_top(axtop, nlo, lo, obs, with_band=with_band)
-    _ratio6_ratio_pane(axs, cur, 'SUM', 1.0, edges, with_band=with_band)
+    _ratio6_top(axtop, nlo, lo, obs, with_band=with_band, scale=text.scale,
+                legend_kw=text.top_legend)
+    _ratio6_ratio_pane(axs, cur, 'SUM', 1.0, edges, with_band=with_band,
+                       scale=text.scale)
     for sp in axs.spines.values():
         sp.set_linewidth(1.6)
-    _ratio6_k_pane(axk, cur, edges, with_band=with_band)
+    _ratio6_k_pane(axk, cur, edges, with_band=with_band, scale=text.scale,
+                   legend_kw=text.k_legend)
 
     for ax in (axtop, axs):
         ax.tick_params(labelbottom=False)
-    axk.set_xlabel(xlab, fontsize=10)
+    axk.set_xlabel(xlab, fontsize=_ts(10, text.scale))
 
     os.makedirs(outdir, exist_ok=True)
     base = os.path.join(outdir, PA.SHORT[obs])
     # NO tight crop: the canvas is already the right size, and the same size
-    # for both observables.  See R3_BOX.
+    # for both observables.  See R3_MARGIN and ``_r3_geom``.
     fig.savefig(base + '.pdf')
     fig.savefig(base + '.png', dpi=DPI)
     plt.close(fig)
@@ -778,6 +899,11 @@ def main():
             draw_ratio6(d, lo, obs, os.path.join(a.out, PA.RATIO6_DIR))
             # The reduced three-pane variation; see pol_analysis.RATIO2_DIR.
             draw_ratio3(d, lo, obs, os.path.join(a.out, PA.RATIO2_DIR))
+            # ... and one directory per larger text size, alongside it.
+            for t in R3_TEXT:
+                draw_ratio3(d, lo, obs,
+                            os.path.join(a.out, PA.RATIO2_DIR + t.suffix),
+                            text=t)
         if d.has_scale and lo.has_scale:
             for obs in PA.OBS:
                 draw_ratio6(d, lo, obs,
@@ -786,6 +912,11 @@ def main():
                 draw_ratio3(d, lo, obs,
                             os.path.join(a.out, PA.RATIO2_SCALE_DIR),
                             with_band=True)
+                for t in R3_TEXT:
+                    draw_ratio3(d, lo, obs,
+                                os.path.join(a.out, PA.RATIO2_SCALE_DIR
+                                             + t.suffix),
+                                with_band=True, text=t)
         else:
             print('no MUR*_MUF* columns in %s: the scale figure is not drawn'
                   % a.data)

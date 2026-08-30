@@ -84,6 +84,7 @@ Usage::
 """
 
 import argparse
+import collections
 import math
 import os
 import sys
@@ -2040,7 +2041,23 @@ def _ratio6_ylim(series, anchor=None, frac=0.10, head=0.34):
     return lo - frac * d, hi + head * d
 
 
-def _ratio6_top(ax, nlo, lo, obs, with_band=False):
+# -- the one text-size knob the three shared painters take --------------------
+# ``scale`` multiplies EVERY font size a pane writes -- the tick labels, the
+# axis name and the legend alike -- and DEFAULTS TO 1.0, which is the size
+# every figure on this branch has been drawn at.  The seven-pane figure never
+# passes it, so it is drawn at exactly the sizes it always was; only the
+# three-pane figure's text-size variations move it.  See R3_TEXT.
+#
+# Sizes are rounded to the quarter point.  matplotlib is happy with any float,
+# but a size quoted in a commit message and read off a figure should be a
+# number a person can hold, and a quarter point is finer than anyone can see.
+def _ts(base, scale):
+    """One font size, scaled and rounded to the quarter point."""
+    return round(base * scale * 4.0) / 4.0
+
+
+def _ratio6_top(ax, nlo, lo, obs, with_band=False, scale=1.0,
+                legend_kw=None):
     """The seventh pane: dsigma/dx, both orders, five components each.
 
     See ``pol_analysis.RATIO6_TOP_WHAT`` for what is on it and
@@ -2090,16 +2107,22 @@ def _ratio6_top(ax, nlo, lo, obs, with_band=False):
                         alpha=0.9 if tag == 'NLO' else 0.6, zorder=z)
     if logy:
         ax.set_yscale('log')
-    ax.set_ylabel(ylab, fontsize=10)
+    ax.set_ylabel(ylab, fontsize=_ts(10, scale))
     lo_y, hi_y = ax.get_ylim()
     ax.set_ylim(lo_y, hi_y * TOP_HEADROOM[0 if logy else 1])
     ax.set_xlim(edges[0], edges[-1])
-    ax.legend(frameon=False, fontsize=8.0, loc='upper left', ncol=5,
-              columnspacing=1.4, handlelength=2.4)
+    # TEN ENTRIES IN FIVE COLUMNS, and the five columns are the point: filled
+    # column by column they put one COMPONENT in each column with its two
+    # orders under one another.  ``legend_kw`` lets a caller trim the spacing
+    # -- and ONLY the spacing -- when larger text makes five columns of it too
+    # wide for the pane; the structure is never traded away for the fit.
+    lkw = dict(fontsize=_ts(8.0, scale), columnspacing=1.4, handlelength=2.4)
+    lkw.update(legend_kw or {})
+    ax.legend(frameon=False, loc='upper left', ncol=5, **lkw)
     ax.xaxis.set_minor_locator(AutoMinorLocator())
     if not logy:
         ax.yaxis.set_minor_locator(AutoMinorLocator())
-    ax.tick_params(labelsize=9)
+    ax.tick_params(labelsize=_ts(9, scale))
     for sp in ax.spines.values():
         sp.set_linewidth(1.5)
 
@@ -2115,7 +2138,8 @@ def _ratio6_top(ax, nlo, lo, obs, with_band=False):
 # on the three-pane one the two ratio panes inherit it from the pane above.
 
 
-def _ratio6_ratio_pane(ax, cur, pane, anchor_line, edges, with_band=False):
+def _ratio6_ratio_pane(ax, cur, pane, anchor_line, edges, with_band=False,
+                       scale=1.0):
     """One ratio pane: the named ratio at both orders, with its anchor line."""
     x = 0.5 * (edges[:-1] + edges[1:])
     rlab = PA.RATIO_TEX if USETEX else PA.RATIO_TXT
@@ -2145,15 +2169,24 @@ def _ratio6_ratio_pane(ax, cur, pane, anchor_line, edges, with_band=False):
     # is under a curve on half of them.  The legend is two short entries
     # and 'best' places it in whichever corner the data leaves free.
     ax.set_ylim(*_ratio6_ylim(series, anchor_line, head=0.20))
-    ax.set_ylabel(rlab[pane], fontsize=9 if pane == 'SUM' else 10)
+    # THE SUM PANE'S NAME IS THE COMPACT ONE, and this painter is shared, so
+    # the seven-pane A6 figure takes it too.  Deliberately: it is the same
+    # pane of the same curves and two names for it would be worse than either.
+    # See ``pol_analysis.RATIO_SUM_COMPACT``.  It is also no longer the pane's
+    # tallest constraint, which is what lets R3_TEXT go as far as it does.
+    if pane == 'SUM':
+        ax.set_ylabel(PA.RATIO_SUM_COMPACT, fontsize=_ts(10, scale))
+    else:
+        ax.set_ylabel(rlab[pane], fontsize=_ts(10, scale))
     ax.xaxis.set_minor_locator(AutoMinorLocator())
     ax.yaxis.set_minor_locator(AutoMinorLocator())
     ax.yaxis.set_major_locator(MaxNLocator(5))
-    ax.tick_params(labelsize=9)
-    ax.legend(frameon=False, fontsize=8.0, loc='best', ncol=2)
+    ax.tick_params(labelsize=_ts(9, scale))
+    ax.legend(frameon=False, fontsize=_ts(8.0, scale), loc='best', ncol=2)
 
 
-def _ratio6_k_pane(axk, cur, edges, with_band=False):
+def _ratio6_k_pane(axk, cur, edges, with_band=False, scale=1.0,
+                   legend_kw=None):
     """The K-factor pane: five curves, no reference line."""
     x = 0.5 * (edges[:-1] + edges[1:])
     kname = PA.KF_CURVE_TEX if USETEX else PA.KF_CURVE_TXT
@@ -2176,12 +2209,15 @@ def _ratio6_k_pane(axk, cur, edges, with_band=False):
     # the first Delta phi bin) is at the upper LEFT, exactly under them.
     # Checked on the rendered PNG, not on the axis limits.
     axk.set_ylim(*_ratio6_ylim(kseries, None, head=0.56))
-    axk.set_ylabel(PA.KFACTOR_TEX if USETEX else PA.KFACTOR_TXT, fontsize=10)
-    axk.legend(frameon=False, fontsize=8.0, loc='upper left', ncol=3)
+    axk.set_ylabel(PA.KFACTOR_TEX if USETEX else PA.KFACTOR_TXT,
+                   fontsize=_ts(10, scale))
+    klw = dict(fontsize=_ts(8.0, scale))
+    klw.update(legend_kw or {})
+    axk.legend(frameon=False, loc='upper left', ncol=3, **klw)
     axk.xaxis.set_minor_locator(AutoMinorLocator())
     axk.yaxis.set_major_locator(MaxNLocator(6))
     axk.yaxis.set_minor_locator(AutoMinorLocator())
-    axk.tick_params(labelsize=9)
+    axk.tick_params(labelsize=_ts(9, scale))
     for sp in axk.spines.values():
         sp.set_linewidth(1.5)
 
@@ -2217,15 +2253,22 @@ def _ratio6_k_pane(axk, cur, edges, with_band=False):
 #
 # THE MARGINS are the worst case over BOTH observables and BOTH variants,
 # measured as label extent against axes extent on the rendered figure: left
-# 0.583 in, right 0.096, bottom 0.423, top 0.000.  The left one is the tightest,
-# and MEASURED rather than assumed: it is NOT the wide pane, whose 10^-8 ticks
-# and dsigma/dM reach 0.550 in, and not the sum pane's long rotated name either
-# at 0.569 -- it is Z_0Z_0/full on M(e+ mu+), whose 0.000 / 0.025 /
-# 0.050 ticks are the widest column of digits on the figure.  Each margin gets
-# ~0.12 in of white on top of that, which is about the pad
+# 0.614 in, right 0.096, bottom 0.423, top 0.040.  Each margin gets 0.12 in of
+# white on top of that, rounded up to the hundredth, which is about the pad
 # ``bbox_inches='tight'`` was adding anyway, so the figure keeps its framing.
+#
+# THE LEFT MARGIN CHANGED OWNER, 0.70 -> 0.74.  It used to be Z_0Z_0/full and
+# its 0.000 / 0.025 / 0.050 tick column at 0.583 in, ahead of the wide pane's
+# 10^-8 ticks and dsigma/dM at 0.550 and the sum pane's rotated name at 0.569.
+# Now that the sum pane's name is written as a SUM it is 0.614 in and takes
+# the lead: the string is much shorter along the pane and a little wider
+# across it, and rotated, across is the left margin.  Which puts this figure's
+# left margin exactly where the three-pane figure's is, 0.74 in both, because
+# for the first time the same label sets both.  See
+# pol_analysis.RATIO_SUM_COMPACT for why the name changed and which figures it
+# moves; the axes block, the heights and the other three margins are untouched.
 R6_AXES = (6.975, 9.702)              # the axes block, w x h in inches
-R6_MARGIN = (0.70, 0.21, 0.55, 0.11)  # left, right, bottom, top, in inches
+R6_MARGIN = (0.74, 0.21, 0.55, 0.11)  # left, right, bottom, top, in inches
 R6_FIG = (R6_AXES[0] + R6_MARGIN[0] + R6_MARGIN[1],
           R6_AXES[1] + R6_MARGIN[2] + R6_MARGIN[3])
 # Where the block sits in the canvas, as the fractions a gridspec wants.
@@ -2423,29 +2466,154 @@ R3_ROWS = (4.62, 2.31, 2.31)  # distribution pane, sum, K -- inches of axes
 # figure's larger outer gap, 0.462 in, existed to hold the distribution pane's
 # own x tick labels and axis name, and this figure does not write them.
 R3_GAP = 0.136                        # inches between rows
-R3_HSPACE = R3_GAP / (sum(R3_ROWS) / len(R3_ROWS))
 R3_AXES = (6.975, sum(R3_ROWS) + (len(R3_ROWS) - 1) * R3_GAP)
 # THE MARGINS are this figure's own, measured as label extent against axes
 # extent on the rendered figure, worst case over both observables and both
-# variants, plus ~0.12 in of white -- the same recipe R6_MARGIN uses.  They are
-# NOT the seven-pane figure's: the left one there was set by Z_0Z_0/full and
-# its 0.000 / 0.025 / 0.050 tick column, and that pane is not on this figure.
-# What is left on the left is the sum pane's long rotated name and the
-# distribution pane's 10^-8 decade ticks, and MEASURED the sum pane wins:
-# 0.569 in against the pane's 0.550 and the K pane's 0.455.  So the left margin
-# comes to 0.69 where the seven-pane figure needs 0.70 -- a hundredth of an
-# inch, but a measured hundredth, and the label that sets it is a different
-# label.  The other three land where R6_MARGIN's do.
-R3_MARGIN = (0.69, 0.21, 0.55, 0.11)  # left, right, bottom, top, in inches
-R3_FIG = (R3_AXES[0] + R3_MARGIN[0] + R3_MARGIN[1],
-          R3_AXES[1] + R3_MARGIN[2] + R3_MARGIN[3])
-R3_BOX = dict(left=R3_MARGIN[0] / R3_FIG[0],
-              right=1.0 - R3_MARGIN[1] / R3_FIG[0],
-              bottom=R3_MARGIN[2] / R3_FIG[1],
-              top=1.0 - R3_MARGIN[3] / R3_FIG[1])
+# variants, plus 0.12 in of white rounded up to the hundredth -- the recipe
+# R6_MARGIN uses.  They are NOT the seven-pane figure's: the left one there is
+# set by Z_0Z_0/full and its 0.000 / 0.025 / 0.050 tick column, and that pane
+# is not on this figure.  What is left on the left is the sum pane's rotated
+# name and the distribution pane's 10^-8 decade ticks, and MEASURED the sum
+# pane wins: 0.614 in against the pane's 0.550 and the K pane's 0.455.
+#
+# THE LEFT MARGIN MOVED, 0.69 -> 0.74, AND ONLY BECAUSE THE NAME CHANGED.  The
+# sum pane needed 0.569 in when the name was spelled out term by term and
+# needs 0.614 now that it is a sum: written as a sum the string is far SHORTER
+# along the pane, which is the whole point of it, and slightly WIDER across
+# it, because the index sits under the summation sign.  It buys 0.6 in of pane
+# height and costs 0.05 in of page width.  The other three margins are
+# unchanged.  See pol_analysis.RATIO_SUM_COMPACT.
+#
+# The figsize and the gridspec box are no longer computed here: every text-size
+# variation has its own rows and margins and ``_r3_geom`` derives all three
+# from them, this one included, so there is one construction and not two.
+R3_MARGIN = (0.74, 0.21, 0.55, 0.11)  # left, right, bottom, top, in inches
 
 
-def draw_ratio3(nlo, lo, obs, outdir, with_band=False):
+# --------------------------------------------------------------------------
+# THE TEXT-SIZE VARIATIONS OF THE THREE-PANE FIGURE.
+#
+# What the set is for, how the suffixes are read and where the spread stops is
+# at ``pol_analysis.RATIO2_TEXT``, which is also where the SCALES live so that
+# the two styles offer the same sizes.  What is here is the GEOMETRY each
+# scale needs in THIS style's type, measured and not assumed.
+#
+# ALL THE TEXT, AT ONE SCALE.  Tick labels, axis names and legends all take
+# the same multiplier.  The figure already sets its legends smaller than its
+# axis names -- 8.0 against 10 -- and one multiplier is what PRESERVES that
+# relation; giving the legend its own smaller factor would flatten the
+# figure's own hierarchy at exactly the sizes where hierarchy starts to
+# matter.  The one exception is _text160 and it is marked there.
+#
+# WHAT USED TO BIND AND NO LONGER DOES.  The sum pane's rotated axis name was
+# the cap on this figure: 1.895 in of type in a 2.31 in pane, clearing
+# 0.2075 in at each end.  Written as a sum it is 1.322 in at fontsize 10 and
+# clears 0.494, so the panes carry it to 1.45x WITHOUT GROWING AT ALL -- and
+# at 1.45x its clearance is 0.267 in, still wider than the old label left at
+# 1.00x.  Only _text160 needs a taller pane, and only by 0.07 in.
+#
+# WHAT BINDS INSTEAD IS THE LEGEND, and the numbers are in each row below.
+#
+# THE MARGINS are re-measured for every variation, worst case over both
+# observables and both variants, as label extent against axes extent on the
+# rendered figure plus 0.12 in of white, rounded up to the hundredth -- the
+# recipe R3_MARGIN states.  They are not scaled from the base: the left one is
+# the sum pane's name plus its tick column and grows faster than the bottom
+# one, which is the x tick labels and the x axis name.
+#
+# THE GAP STAYS 0.136 in in every variation.  Nothing but frame is in it --
+# the x axis is written once, at the bottom -- so nothing about text size asks
+# it to move.  ``hspace`` is a fraction of the MEAN row height, so where the
+# rows do move (_text160) the fraction is re-solved for the same inches; see
+# ``_r3_geom``.
+R3Text = collections.namedtuple('R3Text', 'suffix scale rows gap margin '
+                                          'top_legend k_legend')
+# The base: scale 1.0 and the geometry above, so the unsuffixed figure is
+# drawn through exactly the same code path as its variations and cannot drift
+# from them.
+R3_TEXT_BASE = R3Text('', 1.00, R3_ROWS, R3_GAP, R3_MARGIN, {}, {})
+R3_TEXT = [
+    # 1.15x.  NOTHING GIVES.  Rows unchanged, legend untouched at its full
+    # spacing -- 6.67 in of it in a 6.975 in pane, 0.24 to spare -- and the
+    # sum name clears 0.426 in per end.  The modest step, and the only one
+    # that changes no setting but the sizes themselves.
+    R3Text('_text115', 1.15, (4.62, 2.31, 2.31), 0.136,
+           (0.79, 0.23, 0.59, 0.11), {}, {}),
+    # 1.30x.  THE LEGEND'S WHITE GIVES, and only its white: at full spacing it
+    # would be 7.42 in in a 6.975 in pane, 0.52 in over the right frame.  The
+    # handles go 2.4 -> 2.0 em, the handle-to-text pad 0.8 -> 0.5 and the
+    # column gap 1.4 -> 0.8, which brings it to 6.56 with 0.34 to spare.  Five
+    # columns and ten entries throughout -- the structure is never the thing
+    # traded.  Rows unchanged; the sum name clears 0.350 in.
+    R3Text('_text130', 1.30, (4.62, 2.31, 2.31), 0.136,
+           (0.87, 0.25, 0.62, 0.11),
+           dict(columnspacing=0.8, handlelength=2.0, handletextpad=0.5), {}),
+    # 1.45x.  The same trade, harder: 8.08 in of legend cut to 6.77 by
+    # 0.55 em columns, 1.75 em handles and a 0.38 em pad.  A 1.75 em handle at
+    # 11.5 pt is 0.28 in, which still shows two dashes of the LO linestyle
+    # against the NLO solid -- checked on the rendered PNG, since that
+    # distinction is the only thing separating each column's two entries.
+    # ROWS STILL UNCHANGED and the sum name clears 0.267 in, more than the old
+    # label had at 1.00x.  This is as far as the figure goes at its own size.
+    R3Text('_text145', 1.45, (4.62, 2.31, 2.31), 0.136,
+           (0.92, 0.26, 0.66, 0.11),
+           dict(columnspacing=0.55, handlelength=1.75, handletextpad=0.38),
+           {}),
+    # 1.60x.  THE STEP WHERE SOMETHING HAS TO GIVE, and two things do.
+    #
+    # THE RATIO PANES GROW, 2.31 -> 2.38 in each, because at fontsize 16 the
+    # sum name is 1.958 in and 2.31 would leave it 0.176 per end; 2.38 puts
+    # the clearance back to 0.2108, i.e. the 0.2075 the figure has always
+    # held.  Both panes grow and stay equal -- see R3_ROWS.  The distribution
+    # pane does not: its height is four decades of curves and larger type asks
+    # nothing more of it, so the 2:1 proportion becomes 1.94:1.
+    #
+    # THE LEGEND'S TYPE STOPS AT 11.5 pt, which is the size 1.45x gives it.
+    # This is the ONE place in the set where "all the text bigger" is not
+    # literally true and it is deliberate: at 12.75 pt even the trimmed legend
+    # is 0.23 in over the right frame, and the two ways out are a legend
+    # narrower than its five columns -- which would put two components in one
+    # column and break the pairing the pane is read by -- or a legend that
+    # stops growing.  A legend is the figure's smallest voice and holding it
+    # while the axis names go on growing costs the reading nothing; breaking
+    # the columns costs it the pane.  Anyone who wants the legend at 1.60x too
+    # should take _text145, where everything grows together.
+    R3Text('_text160', 1.60, (4.62, 2.38, 2.38), 0.136,
+           (0.99, 0.27, 0.70, 0.11),
+           dict(fontsize=11.5, columnspacing=0.55, handlelength=1.75,
+                handletextpad=0.38), {}),
+]
+
+
+# The suffixes and scales are pol_analysis's, not this module's.  An assertion
+# and not a comment: two styles quietly offering different sizes is exactly the
+# failure the shared list exists to prevent, and it would show up as a figure
+# missing from a comparison rather than as an error.
+assert [(t.suffix, t.scale) for t in R3_TEXT] == PA.RATIO2_TEXT, \
+    'R3_TEXT disagrees with pol_analysis.RATIO2_TEXT'
+
+
+def _r3_geom(t):
+    """``(figsize, hspace, gridspec box)`` for one text-size variation.
+
+    THE GAP IS HELD IN INCHES and the fraction is solved for, exactly as
+    R3_GAP states it.  ``hspace`` is a fraction of the MEAN row
+    height, so the moment the ratio panes grow a carried-over fraction buys a
+    different gap; every variation here wants the same 0.136 in of frame
+    between panes that the base wants, for the same reason -- with the x axis
+    written once at the bottom, nothing else is in either gap.
+    """
+    axes = (R3_AXES[0], sum(t.rows) + (len(t.rows) - 1) * t.gap)
+    fig = (axes[0] + t.margin[0] + t.margin[1],
+           axes[1] + t.margin[2] + t.margin[3])
+    box = dict(left=t.margin[0] / fig[0],
+               right=1.0 - t.margin[1] / fig[0],
+               bottom=t.margin[2] / fig[1],
+               top=1.0 - t.margin[3] / fig[1])
+    return fig, t.gap / (sum(t.rows) / len(t.rows)), box
+
+
+def draw_ratio3(nlo, lo, obs, outdir, with_band=False, text=R3_TEXT_BASE):
     """The reduced variation: the distribution pane, the sum, the K-factor.
 
     Three panes, all FULL WIDTH, stacked.  Same curves, same errors, same
@@ -2466,14 +2634,15 @@ def draw_ratio3(nlo, lo, obs, outdir, with_band=False):
     xlab = (PA.LABELS_TEX if USETEX else PA.LABELS_TXT)[obs][0]
     cur = PA.ratio6_curves(nlo, lo, obs, with_band=with_band)
 
-    fig = plt.figure(figsize=R3_FIG)
+    figsize, hspace, box = _r3_geom(text)
+    fig = plt.figure(figsize=figsize)
     # ONE gridspec, where the seven-pane figure needs two.  There it is two
     # vertical rhythms -- a pane with its own x axis over a grid with its own
     # -- and no single hspace serves both.  Here there is one rhythm: three
     # full-width panes over one x axis, equal gaps, and the ratios are the
     # inches themselves.
-    gs = fig.add_gridspec(3, 1, height_ratios=list(R3_ROWS),
-                          hspace=R3_HSPACE, **R3_BOX)
+    gs = fig.add_gridspec(3, 1, height_ratios=list(text.rows),
+                          hspace=hspace, **box)
     # ``sharex`` and not three separate axes with the same limits set three
     # times: the panes are the same binning of the same events and the figure
     # should not be able to draw them otherwise.
@@ -2481,17 +2650,20 @@ def draw_ratio3(nlo, lo, obs, outdir, with_band=False):
     axs = fig.add_subplot(gs[1], sharex=axtop)
     axk = fig.add_subplot(gs[2], sharex=axtop)
 
-    _ratio6_top(axtop, nlo, lo, obs, with_band=with_band)
-    _ratio6_ratio_pane(axs, cur, 'SUM', 1.0, edges, with_band=with_band)
+    _ratio6_top(axtop, nlo, lo, obs, with_band=with_band, scale=text.scale,
+                legend_kw=text.top_legend)
+    _ratio6_ratio_pane(axs, cur, 'SUM', 1.0, edges, with_band=with_band,
+                       scale=text.scale)
     for s in axs.spines.values():
         s.set_linewidth(1.5)
-    _ratio6_k_pane(axk, cur, edges, with_band=with_band)
+    _ratio6_k_pane(axk, cur, edges, with_band=with_band, scale=text.scale,
+                   legend_kw=text.k_legend)
 
     # The x axis, written once.  ``_ratio6_top`` set the limits and ``sharex``
     # carried them down, so the two below need nothing but their labels off.
     for ax in (axtop, axs):
         plt.setp(ax.get_xticklabels(), visible=False)
-    axk.set_xlabel(xlab, fontsize=11)
+    axk.set_xlabel(xlab, fontsize=_ts(11, text.scale))
 
     os.makedirs(outdir, exist_ok=True)
     base = os.path.join(outdir, PA.SHORT[obs])
@@ -2571,6 +2743,12 @@ def main():
         # them; see pol_analysis.RATIO2_DIR.
         r3 = os.path.join(a.out, PA.RATIO2_DIR)
         bases += [draw_ratio3(d, lo, obs, r3) for obs in PA.OBS]
+        # ... and the same figure at each of the larger text sizes, one
+        # directory per size, ALONGSIDE it and never over it.  See
+        # pol_analysis.RATIO2_TEXT.
+        for t in R3_TEXT:
+            bases += [draw_ratio3(d, lo, obs, r3 + t.suffix, text=t)
+                      for obs in PA.OBS]
         if d.has_scale and lo.has_scale:
             r6s = os.path.join(a.out, PA.RATIO6_SCALE_DIR)
             bases += [draw_ratio6(d, lo, obs, r6s, with_band=True)
@@ -2578,6 +2756,10 @@ def main():
             r3s = os.path.join(a.out, PA.RATIO2_SCALE_DIR)
             bases += [draw_ratio3(d, lo, obs, r3s, with_band=True)
                       for obs in PA.OBS]
+            for t in R3_TEXT:
+                bases += [draw_ratio3(d, lo, obs, r3s + t.suffix,
+                                      with_band=True, text=t)
+                          for obs in PA.OBS]
         else:
             print('no MUR*_MUF* columns in %s: the scale figure is not drawn'
                   % a.data)

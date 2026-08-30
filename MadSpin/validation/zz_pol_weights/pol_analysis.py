@@ -410,6 +410,67 @@ RATIO_TXT = {'SUM': '(Z0Z0 + ZTZT + ZTZ0 + Z0ZT) / full',
              'LL': 'Z0Z0 / full', 'TT': 'ZTZT / full',
              'TL': 'ZTZ0 / full', 'LT': 'Z0ZT / full'}
 
+# --------------------------------------------------------------------------
+# THE SUM-CONSISTENCY NAME, WRITTEN AS A SUM.
+#
+# The same quantity as ``RATIO_TEX['SUM']`` and a much shorter way of saying
+# it: the four terms are the four ordered pairs drawn from {0, T}, so the
+# explicit list is a summation index written out.  It is here because the
+# explicit spelling is the longest string on either ratio figure, it is set
+# ROTATED and so is measured against the pane's HEIGHT, and it was the one
+# thing capping how large the rest of the text could go -- 1.895 in of type in
+# a 2.31 in pane at fontsize 9.  This form is 1.19 in at that size, and 1.32 in
+# at the fontsize 10 it is now set at, so the pane it used to fill it now
+# leaves 0.45 in of clearance at each end.
+#
+# ``Z_{i}Z_{j}`` AND NOT ``Z_{i}Z_{i}``.  The sum runs over two indices and
+# both must appear in the summand: ``Z_{i}Z_{i}`` would be the two DIAGONAL
+# terms, Z_0Z_0 and Z_TZ_T, and would drop Z_0Z_T and Z_TZ_0 -- half of what
+# the pane plots and half of what numbers.txt tabulates under this name.  The
+# explicit spelling above names all four and this one has to name the same
+# four or the two are not the same label.
+#
+# ``\in`` AND NOT ``\epsilon``.  Set membership.  ``\epsilon`` is the Greek
+# letter and would set as one, which next to a summation sign reads as a typo.
+# The index set is braced for the same reason: {0, T} is a set.
+#
+# THE DENOMINATOR STAYS.  The pane is a RATIO to the unpolarised result and
+# without ``/full`` the name claims something else.  The parentheses stay with
+# it: the sum of the four ratios and the ratio of the summed four are the same
+# number here, since ``full`` is common to all four, but a reader should not
+# have to check that to know what is plotted.  They are PLAIN parentheses and
+# not ``\left(...\right)``: the sum is set in TEXT style, where the summation
+# sign is barely taller than a capital, so stretched delimiters buy nothing and
+# cost on both axes at once -- 1.40 in of rotated label against 1.32, and
+# 0.25 in of width against 0.17, which is 0.08 in of left margin.  ``\big``
+# would have been the third option and is not available: matplotlib's own
+# mathtext does not implement it, and this one string has to set in BOTH
+# engines -- see the next paragraph.
+#
+# ONE STRING FOR BOTH STYLES, and this is a place the user style gives up its
+# usual plain text.  Everywhere else it writes ``RATIO_TXT``'s ASCII rather
+# than the MG7 script's LaTeX, and that is why its version of the explicit
+# name was the LONGER of the two (2.08 in against 1.895) and its ratio panes
+# taller.  An ASCII rendering of a summation, ``sum_{i,j in {0,T}} Z_iZ_j /
+# full``, is 32 characters against the explicit spelling's 34: it would give
+# back essentially all the room the change is being made to buy, and it would
+# set i and j on the line instead of as the subscripts they are.  So the user
+# style renders this one string through matplotlib's mathtext, which needs no
+# usetex and no LaTeX installation, and the two styles carry the SAME source
+# string here -- less divergence than they had, not more.
+RATIO_SUM_COMPACT = r'$(\sum_{i,j\in\{0,T\}} Z_{i}Z_{j})/\mathrm{full}$'
+
+# WHICH FIGURES TAKE IT.  The two RATIO figures and no others: the shared
+# ``_ratio6_ratio_pane`` paints the sum pane of the seven-pane A6 figure and
+# of the three-pane A2 one, so both move together -- which is the point, two
+# figures showing the same pane under two different names would be worse than
+# either name.  The three-tier originals and variants keep ``RATIO_TXT``'s
+# explicit spelling, and so does numbers.txt, whose per-bin tables are headed
+# with it: a summation sign in a fixed-pitch text table is not an improvement,
+# and numbers.txt is required to regenerate byte-identically.
+RATIO_SUM_COMPACT_FIGURES = ('variant_A6_ratios', 'variant_A6_ratios_scale',
+                             'variant_A2_ratios', 'variant_A2_ratios_scale')
+
 # numbers.txt keeps the short internal keys instead: its rows are read next to
 # the weight-name list and the mapping table, where LL/TT/TL/LT is the shorter
 # and less ambiguous handle.  Only the FIGURES use the Z_0 Z_T spelling.
@@ -1621,6 +1682,41 @@ RATIO6_SCALE_DIR = 'variant_A6_ratios_scale'
 # so numbers.txt is unchanged by this figure's existence.
 RATIO2_DIR = 'variant_A2_ratios'
 RATIO2_SCALE_DIR = 'variant_A2_ratios_scale'
+
+# --------------------------------------------------------------------------
+# THE TEXT-SIZE VARIATIONS OF THE THREE-PANE FIGURE.
+#
+# "Make all the text bigger", answered as a SPREAD and not as one number:
+# how much bigger is a judgement about the page the figure lands on, and the
+# person who has to make it should be able to put the candidates side by side.
+# THE SUFFIX IS THE PERCENTAGE.  ``_text115`` is every font size on the figure
+# at 1.15x; the unsuffixed ``variant_A2_ratios`` is 1.00x and stays the
+# reference.  So the size is readable off the directory name and off the file
+# path in a draft, which is the point of naming them this way rather than
+# small/medium/large.
+#
+# THE SCALES LIVE HERE, not in the two plot scripts, so that the two styles
+# cannot end up offering different sizes to choose between -- the whole use of
+# the set is comparing like with like.  What each style keeps for itself is
+# the GEOMETRY each scale needs, because its type is not the other's: the MG7
+# script sets these strings through LaTeX and the user-style script through
+# matplotlib's own mathtext, and the same string at the same size is not the
+# same number of inches in the two.
+#
+# WHERE THE SPREAD STOPS, and it is no longer the sum pane's axis name that
+# stops it.  With RATIO_SUM_COMPACT in place that name clears its pane by
+# 0.49 in at 1.00x where the explicit spelling cleared by 0.21, and it does
+# not come back under pressure until about 1.5x.  What binds instead is the
+# distribution pane's TEN-ENTRY LEGEND, which is five columns wide by
+# construction -- one component per column, its two orders under one another
+# -- and is already 84% of the pane's width at 1.00x.  It runs out of pane at
+# about 1.19x, and from 1.30x up it is carried by trimming its white (the
+# handles, the handle-to-text pad, the space between columns) and never its
+# five columns.  At 1.60x even that is not enough and the legend's TYPE stops
+# growing, which is the one place in the set where "all the text" stops being
+# literally true; it is called out on that variation and nowhere else.
+RATIO2_TEXT = [('_text115', 1.15), ('_text130', 1.30),
+               ('_text145', 1.45), ('_text160', 1.60)]
 
 # The pane order, top to bottom, under the distribution pane.
 RATIO2_PANES = ['SUM', 'K']

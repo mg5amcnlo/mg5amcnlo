@@ -86,6 +86,8 @@ plots/variant_A6_ratios/,      plots_userstyle/variant_A6_ratios/
 plots/variant_A6_ratios_scale/, plots_userstyle/variant_A6_ratios_scale/
 plots/variant_A2_ratios/,      plots_userstyle/variant_A2_ratios/
 plots/variant_A2_ratios_scale/, plots_userstyle/variant_A2_ratios_scale/
+plots/variant_A2_ratios{,_scale}_text{115,130,145,160}/   and the same
+plots_userstyle/variant_A2_ratios{,_scale}_text{115,130,145,160}/  in user style
 numbers.txt             every number quoted below, and the per-bin tables
 ```
 
@@ -1641,6 +1643,49 @@ anywhere else on the figure. `numbers.txt` prints the per-bin envelope for
 **all five components at both orders**, so nothing the pane does not draw is
 lost. The six ratio panes remain where this figure's bands are read.
 
+### The sum-consistency pane's axis name, written as a sum
+
+The pane's name is now `(∑_{i,j∈{0,T}} Z_iZ_j)/full` where it was
+`(Z_0Z_0+Z_TZ_T+Z_TZ_0+Z_0Z_T)/full`. Same quantity, same four terms: the
+explicit list is the two ordered pairs drawn from {0, T} written out, so the
+sum names exactly what the pane plots and exactly what `numbers.txt`
+tabulates under it. `Z_iZ_j` and **not** `Z_iZ_i` — the sum runs over two
+indices and both have to appear in the summand, or it would be the two
+diagonal terms only and would drop `Z_0Z_T` and `Z_TZ_0`, half the pane.
+`\in` and **not** `\epsilon` — set membership, not the Greek letter — with
+the index set braced. The `/full` denominator stays, in parentheses: the pane
+is a ratio to the unpolarised result and without it the name claims something
+else.
+
+**This moves the seven-pane `A6` figures too, and that is deliberate.** The
+sum pane is painted by `_ratio6_ratio_pane`, which `A6` and `A2` share; two
+figures showing the same pane of the same curves under two different names
+would be worse than either name. So `variant_A6_ratios/` and
+`variant_A6_ratios_scale/` are regenerated here, in both styles — the label
+and, following from it, the left margin (0.70 → 0.74 MG7, 0.77 → **0.92**
+user style, where the old margin would have clipped it) and the sum pane's
+font size, 9 → 10 (MG7) and 8 → 9 (user), which drops an exception that only
+existed because the old name was too long to set at its siblings' size.
+Nothing else on those figures moves: same curves, same errors, same colours,
+same heights, same gaps.
+
+**The three-tier originals and the variants keep the explicit spelling**, and
+so does `numbers.txt`, whose per-bin tables are headed with it — a summation
+sign in a fixed-pitch text table is not an improvement, and `numbers.txt` is
+required to regenerate byte-identically. The new name is a separate constant,
+`pol_analysis.RATIO_SUM_COMPACT`, used by the shared ratio painter and nowhere
+else.
+
+**One string, two engines.** The user style writes every other label as plain
+ASCII; this one it renders through matplotlib's own mathtext, which needs no
+usetex. An ASCII rendering of a summation — `sum_{i,j in {0,T}} Z_iZ_j /
+full` — is 32 characters against the explicit spelling's 34 and would give
+back essentially all the room the change buys, besides setting `i` and `j` on
+the line instead of as the subscripts they are. So the two styles carry the
+*same source string* here, which is less divergence than they had; what
+differs is only that mathtext stacks the summation limits under the sign and
+LaTeX sets them beside it.
+
 ### The reduced variation — three panes, all full width
 
 `variant_A2_ratios/` and `variant_A2_ratios_scale/` are the **same figure with
@@ -1675,28 +1720,82 @@ gaps are held in **inches**: `hspace` is a fraction of the mean row height and
 these rows are not those, so the fraction is solved for rather than carried
 over.
 
-**The long rotated axis name is still what sets the ratio panes' height, and
-it does not care that they are now twice as wide.**
-`(Z_0Z_0+Z_TZ_T+Z_TZ_0+Z_0Z_T)/full` is 1.90 in of type at fontsize 9 and is
-measured against the pane's *height*. So the ratio panes keep **2.31 in**
-each, the seven-pane figure's top-row height, clearing by **0.208 in** at each
-end; the user style's plain-text version of the same name is 2.08 in, so its
-panes keep **2.49 in** and clear by **0.205 in**. The distribution pane takes
-**4.62 in** in both styles, exactly twice an MG7 ratio pane: it has to stay
-dominant and on this figure its dominance is height alone.
+**The sum pane's rotated axis name used to be what set the ratio panes'
+height. It is not any more, because the name changed.** It is now written as
+a sum — `(∑_{i,j∈{0,T}} Z_iZ_j)/full` — which is the same four ordered pairs
+drawn from {0, T} that `(Z_0Z_0+Z_TZ_T+Z_TZ_0+Z_0Z_T)/full` spelled out, in
+1.32 in of type at fontsize 10 instead of 1.90 at fontsize 9. In a 2.31 in
+pane it clears by **0.494 in** at each end where the old name cleared by 0.208.
+The ratio panes keep **2.31 in** each (MG7) and **2.49 in** (user style) and
+the distribution pane keeps **4.62 in**, twice an MG7 ratio pane — the
+proportions are unchanged; what changed is that they are no longer forced.
 
 Axes blocks 6.975 × 9.512 in (MG7) and 7.285 × 9.880 in (user style); the
 width is the seven-pane figure's, deliberately, so the two read at one scale.
-Canvases 7.875 × 10.172 in and 8.275 × 10.530 in, declared rather than cropped
+Canvases 7.925 × 10.172 in and 8.445 × 10.530 in, declared rather than cropped
 on the `R6_AXES` construction, so all four figures of a style come out one size
-— 1574 × 2034 px and 2482 × 3159 px. Margins are this figure's own, measured
-worst case over both observables and both variants: the **left** one is now set
-by the sum pane's rotated name (0.569 in MG7, 0.630 in user style) where on the
-seven-pane figure it was set by `Z_0Z_0/full`'s `0.000 / 0.025 / 0.050` tick
-column, a pane this figure does not draw. Minimum ink clearance on the rendered
-PNGs 19 px (MG7) and 30 px (user style) — nothing clipped. `--check-minus` goes
-12/12 to **16/16**: the four new PDFs all carry the distribution pane's log
-decade ticks.
+— 1585 × 2034 px and 2533 × 3159 px. Margins are this figure's own, measured
+worst case over both observables and both variants: the **left** one is set by
+the sum pane's rotated name, and it is the one thing the new name costs —
+0.614 in against the old 0.569 in MG7 (margin 0.69 → **0.74**) and 0.793
+against 0.630 in the user style (0.75 → **0.92**), because a summation index
+sits *under* the sign and rotated, across is the left margin. Minimum ink
+clearance on the rendered PNGs 19 px (MG7) and 30 px (user style) — nothing
+clipped.
+
+### The text-size spread — `_text115`, `_text130`, `_text145`, `_text160`
+
+"Make all the text bigger", answered as a **set to choose from** rather than
+one number. The suffix is the percentage: `_text130` is every font size on the
+figure at 1.30×, and the unsuffixed directory is 1.00× and stays the
+reference. Tick labels, axis names and legends all take the same multiplier —
+the figure already sets its legends smaller than its axis names and one
+multiplier preserves that relation — with the single, marked exception noted
+under `_text160`.
+
+```
+plots/variant_A2_ratios_text{115,130,145,160}/         m_epmup, dphi_ee
+plots/variant_A2_ratios_scale_text{115,130,145,160}/   the banded pair
+plots_userstyle/...  the same eight directories in the user style
+```
+
+| | scale | sum-name clear (MG7 / user) | ratio pane | legend |
+|---|---|---|---|---|
+| `_text115` | 1.15× | 0.426 / 0.655 in | 2.31 / 2.49 in | untouched, 0.24 in spare |
+| `_text130` | 1.30× | 0.350 / 0.570 in | 2.31 / 2.49 in | white trimmed |
+| `_text145` | 1.45× | 0.267 / 0.500 in | 2.31 / 2.49 in | white trimmed harder |
+| `_text160` | 1.60× | 0.211 / 0.415 in | **2.38** / 2.49 in | type held at 11.5 pt |
+
+**What binds is no longer the axis name — it is the ten-entry legend.** Five
+columns by construction (one component per column, its two orders under one
+another) and already 84% of the pane's width at 1.00×, it runs out of pane at
+about 1.19×. From 1.30× up it is carried by trimming its *white* — handle
+length, handle-to-text pad, column gap — and **never its five columns**; the
+handles still show the dashed LO against the solid NLO, checked on the
+rendered PNG. At 1.60× even that is not enough and the legend's **type stops
+at 11.5 pt**, the size 1.45× gives it. That is the one place in the set where
+"all the text" stops being literally true, and it is deliberate: the
+alternative is fewer than five columns, which puts two components in one
+column and breaks the pairing the pane is read by. Anyone who wants the
+legend at 1.60× too should take `_text145`, where everything grows together.
+
+**Only `_text160` (MG7) needs a taller pane**, 2.31 → 2.38 in, to put the sum
+name's clearance back to the 0.21 in the figure has always held; both ratio
+panes grow and stay equal, the distribution pane does not (its height is four
+decades of curves), so 2:1 becomes 1.94:1. The gap stays 0.136 in and
+`hspace`, being a fraction of the *mean* row height, is re-solved for it.
+**The user style never needs it**, which reverses how the two styles used to
+stand: its plain-text name was the *longer* of the two, and matplotlib's
+mathtext stacks the summation limits under the sign where LaTeX sets them
+beside it, so its name is now the *shorter* — 1.03 in against 1.32 at 1.00× —
+and pays for it in width instead.
+
+Every margin is re-measured per variation, worst case over both observables
+and both variants, label extent against axes extent plus 0.12 in rounded up;
+minimum slack over the whole set is 0.11 in and minimum ink clearance on the
+rendered PNGs is 19 px (MG7) / 30 px (user style), i.e. nothing is clipped
+anywhere. Both observables in a directory come out the same pixel size, so
+(a)/(b) still line up. `--check-minus` goes 16/16 to **32/32**.
 
 ### One thing that had to be fixed to draw them
 
