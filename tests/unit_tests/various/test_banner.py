@@ -1045,7 +1045,7 @@ c
 
         # the original dummy_cuts has to be removed, not duplicated
         # (otherwise the fortran compiler complains about a duplicated symbol)
-        self.assertEqual(1, len(re.findall(r'FUNCTION\s+DUMMY_CUTS', new_text)))
+        self.assertEqual(1, len(re.findall(r'FUNCTION\s+DUMMY_CUTS', new_text, re.I)))
         # the routine we did not overwrite is still there
         self.assertIn('GET_DUMMY_X1', new_text)
 
