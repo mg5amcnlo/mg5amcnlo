@@ -3479,17 +3479,24 @@ class RunCard(ConfigFile):
                     fsock = file_writers.FortranWriter(tmp,'w')
                     function_text = fsock.remove_routine(text, fct)
                     fsock.close()
-                    test = open(tmp,'r').read()                        
-                    if fct not in self.dummy_fct_file:
-                        if fct.startswith('user_'):
-                            self.dummy_fct_file[fct] = self.dummy_fct_file['user_']
+                    test = open(tmp,'r').read()
+                    # fortran is case insensitive (and upper case is idiomatic),
+                    # while dummy_fct_file --and the routines of the template
+                    # files-- are written in lower case. So normalise the name
+                    # extracted from the user file before any comparison.
+                    # (the removal above has to use the original case since it
+                    #  operates on the user file itself)
+                    lfct = fct.lower()
+                    if lfct not in self.dummy_fct_file:
+                        if lfct.startswith('user_'):
+                            self.dummy_fct_file[lfct] = self.dummy_fct_file['user_']
                         else:
-                            raise InvalidRunCard("function %s is not designed for overwritting")
-                    writein = self.dummy_fct_file[fct]
+                            raise InvalidRunCard("function %s is not designed for overwriting" % fct)
+                    writein = self.dummy_fct_file[lfct]
                     if writein not in to_mod:
-                        to_mod[writein]=[[fct], [function_text]]
+                        to_mod[writein]=[[lfct], [function_text]]
                     else:
-                        to_mod[writein][0].append(fct)
+                        to_mod[writein][0].append(lfct)
                         to_mod[writein][1].append(function_text)
 
         # step 2: write the new files
