@@ -817,7 +817,7 @@ c value to the list of weights using the add_wgt subroutine
       return
       end
 
-      subroutine compute_MC_subt_term(p,p_lab,p_cms,wgt,passcuts,probne)
+      subroutine compute_MC_subt_term(p,p_lab,p_cms,jacPS,passcuts,probne)
       use extra_weights
       use kinematics_module
       use mint_module
@@ -841,11 +841,11 @@ c$$$  include 'madfks_mcatnlo.inc'
       double precision p(0:3,nexternal),probne,fks_Sij ,sevmc_Hev
      $     ,sevmc_Sev,z_shower(nexternal),xmcxsec(nexternal),g22,wgt1
      $     ,xlum_mc_fact,fks_Hij,amp_split_xmcxsec(amp_split_size,2),xi
-     $     ,y,z(2),p_cms(0:3,nexternal),p_lab(0:3,nexternal),jac,wgt
+     $     ,y,z(2),p_cms(0:3,nexternal),p_lab(0:3,nexternal),jac,jacPS
      $     ,xx(ndimmax),factor ,p_cms_flipped(0:3,nexternal)
      $     ,p_lab_flipped(0:3,nexternal) ,p_flipped(0:3,nexternal),xi_ij
-     $     ,y_ij
-      external fks_Sij,fks_Hij
+     $     ,y_ij,bogus_probne_fun
+      external fks_Sij,fks_Hij,bogus_probne_fun
       logical lzone(nexternal),flagmc,passcuts
       double precision    xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev(0:3)
      $     ,p_i_fks_cnt(0:3,-2:2),ybst
@@ -870,6 +870,8 @@ c$$$  include 'madfks_mcatnlo.inc'
       common/counter_subt_diverge/n_MC_subt_diverge
       logical                calculatedBorn
       common/ccalculatedBorn/calculatedBorn
+      double precision  xinorm_ev
+      common /cxinormev/xinorm_ev
       logical include_gfun
 !     If .true., multiplies MC subtraction terms by S_ev
       logical UseSfun
@@ -887,7 +889,17 @@ c$$$  include 'madfks_mcatnlo.inc'
      $     ,amp_split_xmcxsec)
       xi_ij=xi
       y_ij=y
+      xinorm_ij=xnorm_ev
 
+      probne=1d0
+      if (mcatnlo_delta_mod) then
+!     include Delta
+         call compute_delta(p,probne)
+      else
+!     include bogus no-emission
+         probne=bogus_probne_fun(get_qMC(xi,y))
+      endif
+      
       do iconnect=1,n_connect
          if (all(amp_split_xmcxsec(:,iconnect).eq.0d0)) cycle
          call get_mc_lum(j_fks,z(iconnect),xi,xlum_mc_fact)
@@ -896,7 +908,7 @@ c$$$  include 'madfks_mcatnlo.inc'
          do iamp=1, amp_split_size
             if (amp_split_xmcxsec(iamp,iconnect).eq.0d0) cycle
             amp_split_xmcxsec(iamp,iconnect)=amp_split_xmcxsec(iamp
-     $           ,iconnect)*xi_ij**2*(1d0-y_ij)*jac/wgt
+     $           ,iconnect)*xi_ij**2*(1d0-y_ij)*probne
             call amp_split_pos_to_orders(iamp, orders)
             QCD_power=orders(qcd_pos)
             wgtcpower=0d0
@@ -913,7 +925,7 @@ c$$$  include 'madfks_mcatnlo.inc'
          enddo
       enddo
 
-      factor=jac/wgt*xi_ij**2*(1d0-y_ij)
+      factor=xi_ij**2*(1d0-y_ij)*probne
       if (include_gfun) then
          call compute_MCsubtraction_from_gfun(xi,y,sevmc_Hev
      $        ,sevmc_Sev,factor)
@@ -985,7 +997,9 @@ c$$$         call fks_inc_chooser()
                      if (amp_split_xmcxsec(iamp,iconnect).eq.0d0) cycle
                      amp_split_xmcxsec(iamp,iconnect)
      $                    =amp_split_xmcxsec(iamp,iconnect)*xi_ij**2
-     $                    *(1d0-y_ij)*jac/wgt
+     $                    *(1d0-y_ij)*jac/jacPS
+!     codex extra factor (eq.9 of audit)
+     $                    *(xinorm_ij*xi_ij)/(xinorm_ev*xi)
                      call amp_split_pos_to_orders(iamp, orders)
                      QCD_power=orders(qcd_pos)
                      wgtcpower=0d0
@@ -1008,6 +1022,7 @@ c$$$                     endif
       enddo
       
       iFKS=nFKSprocess_save
+      xinorm_ev=xnorm_ij
       call update_fks_dir(iFKS)
 c$$$      call fks_inc_chooser()
       call update_coltype_and_charge(iFKS,i_fks,j_fks)

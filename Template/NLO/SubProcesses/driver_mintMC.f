@@ -694,7 +694,7 @@ c
       double precision xx(ndimmax),vegas_wgt,f(nintegrals),jac,p(0:3
      $     ,nexternal),rwgt,vol,sig,x_local(99),MC_int_wgt,vol1,probne
      $     ,replace_MC_subt,sudakov_damp,sigintF,n1body_wgt,p_lab(0:3
-     $     ,nexternal) ,p_cms(0:3,nexternal)
+     $     ,nexternal) ,p_cms(0:3,nexternal),jacPS
       save vol1,proc_map
       integer             ini_fin_fks
       common/fks_channels/ini_fin_fks
@@ -899,9 +899,10 @@ c for different nFKSprocess.
             gfactcl=1.d0
             MCcntcalled=0
             icolup_s(1,1)=-1    ! set colour connection to -1: i.e., complete_xmcsubt has not been called
-            call generate_momenta(nndim,iconfig,jac,x_local,p,p_lab
+            jacPS=1d0
+            call generate_momenta(nndim,iconfig,jacPS,x_local,p,p_lab
      $           ,p_cms)
-
+            jac=jac*jacPS
 c Every contribution has to have a viable set of Born momenta (even if
 c counter-event momenta do not exist).
             if (p_born(0,1).lt.0d0) cycle
@@ -923,7 +924,7 @@ c counter-event momenta do not exist).
      $                 shower_scale_nbody(fks_father
      $                 ,partner_picked(iFKS)))
                else
-! in the case of MC@NLO-delta, an H-event contribution is by definition
+vv! in the case of MC@NLO-delta, an H-event contribution is by definition
 ! 'hard', and we should use the corresponding dipole scale for
 ! subsequent showering.
                   emsca_H(iFKS,ifold_counter,1:ndelH,1:ndelH)
@@ -973,7 +974,7 @@ c Include the MonteCarlo subtraction terms
                   if (ickkw.eq.3) call set_FxFx_scale(-3,p)
                   call set_alphaS(p)
                   call include_multichannel_enhance(4)
-                  call compute_MC_subt_term(p,p_lab,p_cms,jac
+                  call compute_MC_subt_term(p,p_lab,p_cms,jacPS
      $                 ,passcuts_nbody,probne)
                else
 c For UNLOPS all real-emission contributions need to be added to the

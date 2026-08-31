@@ -4978,6 +4978,8 @@ c     Jacobian due to delta() of tau_born
      $     ,x1bar2,omx1bar2,x2bar2,omx2bar2 ,yij_sol ,ximaxtmp,xi1,xi2
      $     ,xiimax,xiimin,xinorm,bstfact ,shy_bst ,chy_bst,chy_bstmo
      $     ,cosphi_i_fks,sinphi_i_fks ,xdir_t(1:3),ybst
+      double precision xinorm_ev
+      common /cxinormev/xinorm_ev
       integer idir,i
       double precision tau_Born_lower_bound,tau_lower_bound_resonance
      &     ,tau_lower_bound
@@ -5154,6 +5156,7 @@ c Lower bound on xi_i_fks
       endif
 
       xinorm=xiimax-xiimin
+      xinorm_ev=xinorm
       x(1)=sqrt((xi_i_fks-xiimin)/(xiimax-xiimin))
       if (softtest) then
          if(xi_i_fks/xiimax .gt. 1d0+stiny)then
@@ -5227,6 +5230,8 @@ c     Use xp in the reduced frame (a.k.a. tilde frame) to get the Born momenta.
      $     ,xmj2,xmjhat,xmhat,xim,cffA2,cffB2,cffC2,cffDEL2,xiBm,ximax
      $     ,xirplus,xirminus,xiimax,xinorm,rat_xi,x1_1,x1_2,expybst
      $     ,shybst,chybst,chybstmo,veckn,veckbarn,xdir(3),xmrec2
+      double precision xinorm_ev
+      common /cxinormev/xinorm_ev
       integer i
       logical valid1,valid2
       double precision rho,dot,ran2
@@ -5269,6 +5274,7 @@ c     Use xp in the reduced frame (a.k.a. tilde frame) to get the Born momenta.
       rat_xi=xiimax/xinorm
       x1_1=sqrt(xi_i_fks*rat_xi/xinorm)
       x1_2=(2*xiimax-xi_i_fks)/xinorm
+      xinorm_ev=xnorm
 
       valid1=x1_1.gt.0d0 .and. x1_1.lt.rat_xi
       valid2=x1_2.gt.rat_xi .and. x1_2.lt.1d0
@@ -5356,6 +5362,8 @@ c Phase-space factor for (xii,yij,phii)
       double precision xp_mother(0:3),recoil(0:3),sumrec,sumrec2,betabst
      $     ,gammabst,shybst,chybst,chybstmo,xdir(1:3),veckn,veckbarn
      $     ,xiimax,xmrec2
+      double precision xinorm_ev
+      common /cxinormev/xinorm_ev
       logical        softtest,colltest
       common/sctests/softtest,colltest
       double complex xij_aor
@@ -5410,6 +5418,7 @@ c     Phase-space factor for (xii,yij,phii)
 !     random number associated with xi_i_fks
       call get_recoil(p_born(0,1),j_fks,shat,xmrec2,pass)
       xiimax=1d0-xmrec2/shat
+      xinorm_ev=xiimax
       x(1)=sqrt(xi_i_fks/xiimax)
       xjac=xjac*2d0*x(1)
 

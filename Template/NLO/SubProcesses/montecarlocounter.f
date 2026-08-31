@@ -627,9 +627,8 @@ c$$$
       integer k_fks,l_fks,i
       logical lzone(2)
       double precision p(0:3,nexternal),p_born(0:3,nexternal-1),xi,y
-     $     ,mass,z(2),amp_split_xmcxsec(1:amp_split_size,2),probne
-     $     ,bogus_probne_fun,p_cm(0:3,nexternal)
-      external bogus_probne_fun
+     $     ,mass,z(2),amp_split_xmcxsec(1:amp_split_size,2)
+     $     ,p_cm(0:3,nexternal)
       double precision pmass(nexternal)
       common /to_mass/pmass
       double precision :: veckn_ev,veckbarn_ev,xp0jfks
@@ -676,19 +675,8 @@ c$$$
 
 !     TODO: "check_positivity_MCxsec" at some point?
       if (any(lzone(1:n_connect))) then
-         if (softtest.or.colltest) then
-            probne=1d0
-         else
-            if (mcatnlo_delta_mod) then
-!     include Delta
-               call compute_delta(p,probne)
-            else
-!     include bogus no-emission
-               probne=bogus_probne_fun(get_qMC(xi,y))
-            endif
-         endif
          amp_split_xmcxsec(1:amp_split_size,1:2)=amp_split_xmcxsec(
-     $        1:amp_split_size,1:2)*probne
+     $        1:amp_split_size,1:2)
      $        /(xi**2*(1d0-y)) ! re-instate 1/xi^2 and 1/(1-y); they
                                ! should not depend on 'kl', but rather
                                ! on 'ij'
