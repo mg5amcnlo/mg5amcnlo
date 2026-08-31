@@ -1,0 +1,40 @@
+LO diagram-content test of the q qbar f_0 deficit
+
+  full4l      p p > e+ e- mu+ mu- / a                 (6 Born diagrams)
+  zz4l        p p > e+ e- mu+ mu- / a e+ e- mu+ mu-   (2, doubly res.)
+  zz_madspin  p p > z z + MadSpin spinmode = madspin
+  zz_none     p p > z z + MadSpin spinmode = none
+
+one offline selection on all four: |m(l+l-) - 91.1880| < 36.6211 GeV and
+pt(l+l-) > 1.0 GeV on both reconstructed pairs.  No generator-level
+cut acts on any of them, so the cut cannot see a z on one side and a
+lepton pair on the other.
+
+sample           N_all     N_sel       N_eff    sigma [pb]
+full4l          800000    779924      779924      0.020948
+zz4l            800000    780493      780493      0.020945
+zz_madspin      200000    199936      199935      0.020941
+zz_none         200000    199925      199925      0.021898
+
+sample       f_0 (e+ e-)          f_0 (mu+ mu-)        f_0 (both)           f_00                 f_TT                 C_kk                
+full4l       +0.1744+-0.0017      +0.1739+-0.0017      +0.1742+-0.0012      +0.0618+-0.0027      +0.7135+-0.0034      -0.6278+-0.0345     
+zz4l         +0.1722+-0.0017      +0.1749+-0.0017      +0.1736+-0.0012      +0.0582+-0.0027      +0.7111+-0.0034      -0.6551+-0.0345     
+zz_madspin   +0.1712+-0.0034      +0.1738+-0.0034      +0.1725+-0.0024      +0.0571+-0.0053      +0.7120+-0.0066      -0.7214+-0.0682     
+zz_none      +0.3313+-0.0033      +0.3332+-0.0033      +0.3322+-0.0024      +0.1101+-0.0052      +0.4456+-0.0059      -0.0236+-0.0620     
+
+--- the differences ---
+  full4l - zz4l            f_0 (both)   +0.00059 +- 0.00175   +0.34 sigma
+  full4l - zz4l            f_TT         +0.00237 +- 0.00476   +0.50 sigma
+  full4l - zz4l            C_kk         +0.02727 +- 0.04883   +0.56 sigma
+    the four singly-resonant Born diagrams, and nothing else
+
+  full4l - zz_madspin      f_0 (both)   +0.00164 +- 0.00273   +0.60 sigma
+  full4l - zz_madspin      f_TT         +0.00144 +- 0.00745   +0.19 sigma
+  full4l - zz_madspin      C_kk         +0.09359 +- 0.07647   +1.22 sigma
+    the LO twin of the NLO comparison under test
+
+  zz4l - zz_madspin        f_0 (both)   +0.00104 +- 0.00273   +0.38 sigma
+  zz4l - zz_madspin        f_TT         -0.00094 +- 0.00745   -0.13 sigma
+  zz4l - zz_madspin        C_kk         +0.06632 +- 0.07646   +0.87 sigma
+    what is left once the extra diagrams are taken out of the truth
+

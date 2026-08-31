@@ -1,0 +1,175 @@
+#*********************************************************************
+#                       MadGraph5_aMC@NLO                            *
+#                                                                    *
+#                     run_card.dat MadEvent                          *
+#                                                                    *
+#  This file is used to set the parameters of the run.               *
+#                                                                    *
+#  Some notation/conventions:                                        *
+#                                                                    *
+#   Lines starting with a '# ' are info or comments                  *
+#                                                                    *
+#   mind the format:   value    = variable     ! comment             *
+#                                                                    *
+#   To display more options, you can type the command:               *
+#      update to_full                                                *
+#*********************************************************************
+#                                                                    
+#*********************************************************************
+# Tag name for the run (one word)                                    *
+#*********************************************************************
+  tag_1	= run_tag ! name of the run 
+#*********************************************************************
+# Number of events and rnd seed                                      *
+# Warning: Do not generate more than 1M events in a single run       *
+#*********************************************************************
+ 800000               = nevents ! Number of unweighted events requested 
+ 24680                = iseed ! rnd seed (0=assigned automatically=default))
+#*********************************************************************
+# Collider type and energy                                           *
+# lpp: 0=No PDF, 1=proton, -1=antiproton,                            *
+#                2=elastic photon of proton/ion beam                 *
+#             +/-3=PDF of electron/positron beam                     *
+#             +/-4=PDF of muon/antimuon beam                         *
+#*********************************************************************
+  1	= lpp1 ! beam 1 type 
+  1	= lpp2 ! beam 2 type
+ 6500.0               = ebeam1 ! beam 1 total energy in GeV
+ 6500.0               = ebeam2 ! beam 2 total energy in GeV
+# To see polarised beam options: type "update beam_pol"
+
+#*********************************************************************
+# PDF CHOICE: this automatically fixes alpha_s and its evol.         *
+# pdlabel: lhapdf=LHAPDF (installation needed) [1412.7420]           *
+#          iww=Improved Weizsaecker-Williams Approx.[hep-ph/9310350] *
+#          eva=Effective W/Z/A Approx.       [2111.02442, 2502.07878]*
+#          edff=EDFF in gamma-UPC            [eq.(11) in 2207.03012] *
+#          chff=ChFF in gamma-UPC            [eq.(13) in 2207.03012] *
+#          none=No PDF, same as lhapdf with lppx=0                   *
+#*********************************************************************
+ nn23lo1              = pdlabel ! PDF set 
+ 230000               = lhaid ! if pdlabel=lhapdf, this is the lhapdf number
+# To see heavy ion options: type "update ion_pdf"
+
+#*********************************************************************
+# Renormalization and factorization scales                           *
+#*********************************************************************
+ True                 = fixed_ren_scale ! if .true. use fixed ren scale
+ True                 = fixed_fac_scale ! if .true. use fixed fac scale
+ 91.1880              = scale ! fixed ren scale
+ 91.1880              = dsqrt_q2fact1 ! fixed fact scale for pdf1
+ 91.1880              = dsqrt_q2fact2 ! fixed fact scale for pdf2
+  -1	= dynamical_scale_choice ! Choose one of the preselected dynamical choices
+  1.0	= scalefact ! scale factor for event-by-event scales
+
+#*********************************************************************
+# Type and output format
+#*********************************************************************
+  False	= gridpack !True = setting up the grid pack
+  -1.0	= time_of_flight ! threshold (in mm) below which the invariant livetime is not written (-1 means not written)
+  average	= event_norm ! average/sum. Normalization of the weight in the LHEF
+# To see MLM/CKKW  merging options: type "update MLM" or "update CKKW"
+
+#*********************************************************************
+#
+#*********************************************************************
+# Phase-Space Optimization strategy (basic options)
+#*********************************************************************
+  0	= nhel ! using helicities importance sampling or not.
+                             ! 0: sum over helicity, 1: importance sampling
+  1	= sde_strategy ! default integration strategy (hep-ph/2021.00773)
+                             ! 1 is old strategy (using amp square)
+			     ! 2 is new strategy (using only the denominator)
+# To see advanced option for Phase-Space optimization: type "update psoptim"			     
+#*********************************************************************
+# Customization (custom cuts/scale/bias/...)                         *
+# list of files containing fortran function that overwrite default   *
+#*********************************************************************
+  	= custom_fcts ! List of files containing user hook function
+#*******************************                                                 
+# Parton level cuts definition *
+#*******************************
+  0.0	= dsqrt_shat ! minimal shat for full process
+  -1	= dsqrt_shatmax ! maximum shat for full process
+#                                                                    
+#
+#*********************************************************************
+# BW cutoff (M+/-bwcutoff*Gamma) ! Define on/off-shell for "$" and decay  
+#*********************************************************************
+ 15.0                 = bwcutoff ! (M+/-bwcutoff*Gamma)
+#*********************************************************************
+# Standard Cuts                                                      *
+#*********************************************************************
+# Minimum and maximum pt's (for max, -1 means no cut)                *
+#*********************************************************************
+ 0.0                  = ptl ! minimum pt for the charged leptons 
+  -1.0	= ptlmax ! maximum pt for the charged leptons
+ {} = pt_min_pdg ! pt cut for other particles (use pdg code). Applied on particle and anti-particle
+  {}	= pt_max_pdg ! pt cut for other particles (syntax e.g. {6: 100, 25: 50}) 
+#
+# For display option for energy cut in the partonic center of mass frame type 'update ecut'
+#
+#*********************************************************************
+# Maximum and minimum absolute rapidity (for max, -1 means no cut)   *
+#*********************************************************************
+ -1.0                 = etal ! max rap for the charged leptons 
+ 0.0                  = etalmin ! min rap for the charged leptons
+  {}	= eta_min_pdg ! rap cut for other particles (use pdg code). Applied on particle and anti-particle
+  {}	= eta_max_pdg ! rap cut for other particles (syntax e.g. {6: 2.5, 23: 5})
+#*********************************************************************
+# Minimum and maximum DeltaR distance                                *
+#*********************************************************************
+ 0.0                  = drll ! min distance between leptons 
+ -1.0                 = drllmax ! max distance between leptons
+#*********************************************************************
+# Minimum and maximum invariant mass for pairs                       *
+ # WARNING: for four lepton final state mmll cut require to have      *
+ #          different lepton masses for each flavor!                  *           
+#*********************************************************************
+ 0.0                  = mmll ! min invariant mass of l+l- (same flavour) lepton pair
+ -1.0                 = mmllmax ! max invariant mass of l+l- (same flavour) lepton pair
+ {11: 40.0, 13: 40.0} = mxx_min_pdg ! min invariant mass of a pair of particles X/X~ (e.g. {6:250})
+ {'default': True}    = mxx_only_part_antipart ! if True the invariant mass is applied only 
+                       ! to pairs of particle/antiparticle and not to pairs of the same pdg codes.  
+ #*********************************************************************
+ # Minimum and maximum invariant mass for all letpons                 *
+ #*********************************************************************
+ 0.0                  = mmnl ! min invariant mass for all letpons (l+- and vl) 
+ -1.0                 = mmnlmax ! max invariant mass for all letpons (l+- and vl) 
+ #*********************************************************************
+ # Minimum and maximum pt for 4-momenta sum of leptons / neutrino     *
+ #  for pair of lepton includes only same flavor, opposite charge
+ #*********************************************************************
+  0.0	= ptllmin ! Minimum pt for 4-momenta sum of leptons(l and vl)
+  -1.0	= ptllmax ! Maximum pt for 4-momenta sum of leptons(l and vl)
+#*********************************************************************
+# Inclusive cuts                                                     *
+#*********************************************************************
+ 0.0                  = xptl ! minimum pt for at least one charged lepton 
+ #*********************************************************************
+ # Control the pt's of leptons sorted by pt                           *
+ #*********************************************************************
+  0.0	= ptl1min ! minimum pt for the leading lepton in pt
+  0.0	= ptl2min ! minimum pt for the second lepton in pt
+  0.0	= ptl3min ! minimum pt for the third lepton in pt
+  0.0	= ptl4min ! minimum pt for the fourth lepton in pt
+  -1.0	= ptl1max ! maximum pt for the leading lepton in pt 
+  -1.0	= ptl2max ! maximum pt for the second lepton in pt
+  -1.0	= ptl3max ! maximum pt for the third lepton in pt
+  -1.0	= ptl4max ! maximum pt for the fourth lepton in pt
+#*********************************************************************
+# maximal pdg code for quark to be considered as a light jet         *
+# (otherwise b cuts are applied)                                     *
+#*********************************************************************
+  4	= maxjetflavor ! Maximum jet pdg code
+#*********************************************************************
+#
+#*********************************************************************
+# Store info for systematics studies                                 *
+# WARNING: Do not use for interference type of computation           *
+#*********************************************************************
+ False                = use_syst ! Enable systematics studies
+#
+  systematics	= systematics_program ! none, systematics [python], SysCalc [depreceted, C++]
+  ['--mur=0.5,1,2', '--muf=0.5,1,2', '--pdf=errorset']	= systematics_arguments ! see: https://cp3.irmp.ucl.ac.be/projects/madgraph/wiki/Systematics#Systematicspythonmodule
+

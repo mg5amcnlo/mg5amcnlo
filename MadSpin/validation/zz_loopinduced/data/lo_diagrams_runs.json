@@ -1,0 +1,40 @@
+{
+ "proc": {
+  "full4l": "p p > e+ e- mu+ mu- / a",
+  "zz4l": "p p > e+ e- mu+ mu- / a e+ e- mu+ mu-",
+  "zz": "p p > z z"
+ },
+ "nevents": 800000,
+ "nevents_zz": 200000,
+ "seed": 24680,
+ "seed_madspin": 13579,
+ "mxx_min_pdg": 40.0,
+ "sha": "f18c9bef6254fff7ae8891abcbb5394cc8e6e235",
+ "basedir": "/Users/omattelaer/Documents/madspin_validation_samples/t131_qq_diagrams/work",
+ "card_entries_absent": {
+  "full4l": [],
+  "zz4l": [],
+  "zz": [
+   "drll",
+   "drllmax",
+   "etal",
+   "etalmin",
+   "mmll",
+   "mmllmax",
+   "mmnl",
+   "mmnlmax",
+   "ptl",
+   "xptl"
+  ]
+ },
+ "lhe": {
+  "full4l": "/Users/omattelaer/Documents/madspin_validation_samples/t131_qq_diagrams/work/lo_full4l/Events/prod/unweighted_events.lhe.gz",
+  "zz4l": "/Users/omattelaer/Documents/madspin_validation_samples/t131_qq_diagrams/work/lo_zz4l/Events/prod/unweighted_events.lhe.gz",
+  "zz": "/Users/omattelaer/Documents/madspin_validation_samples/t131_qq_diagrams/work/lo_zz/Events/prod/unweighted_events.lhe.gz"
+ },
+ "madspin": {
+  "madspin": "/Users/omattelaer/Documents/madspin_validation_samples/t131_qq_diagrams/work/ms_madspin/events_decayed.lhe.gz",
+  "none": "/Users/omattelaer/Documents/madspin_validation_samples/t131_qq_diagrams/work/ms_none/events_decayed.lhe.gz"
+ },
+ "wall_seconds": 803.6615788936615
+}

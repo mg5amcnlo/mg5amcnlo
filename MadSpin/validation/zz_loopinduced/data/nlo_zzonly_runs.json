@@ -1,0 +1,61 @@
+{
+ "proc": "p p > e+ e- mu+ mu- / a e+ e- mu+ mu- [QCD]",
+ "sha": "f18c9bef6254fff7ae8891abcbb5394cc8e6e235",
+ "per_block": 50000,
+ "nblocks": 8,
+ "seed0": 7321,
+ "basedir": "/Users/omattelaer/Documents/madspin_validation_samples/t131_qq_diagrams/nlo",
+ "cuts_file": "/Users/omattelaer/Documents/git_workspace/madgraph5/.claude/worktrees/qqdeficit/MadSpin/validation/zz_nlo/zz_equivalent_cuts_nlo.f",
+ "pt_min_pdg": "{23: 1.0}",
+ "blocks": {
+  "z01": {
+   "lhe": "/Users/omattelaer/Documents/madspin_validation_samples/t131_qq_diagrams/nlo/pp4l_zzonly_nlo/Events/z01/events.lhe.gz",
+   "seed_requested": 7321,
+   "seed_actual": 7321,
+   "banner": {}
+  },
+  "z02": {
+   "lhe": "/Users/omattelaer/Documents/madspin_validation_samples/t131_qq_diagrams/nlo/pp4l_zzonly_nlo/Events/z02/events.lhe.gz",
+   "seed_requested": 7322,
+   "seed_actual": 7322,
+   "banner": {}
+  },
+  "z03": {
+   "lhe": "/Users/omattelaer/Documents/madspin_validation_samples/t131_qq_diagrams/nlo/pp4l_zzonly_nlo/Events/z03/events.lhe.gz",
+   "seed_requested": 7323,
+   "seed_actual": 7323,
+   "banner": {}
+  },
+  "z04": {
+   "lhe": "/Users/omattelaer/Documents/madspin_validation_samples/t131_qq_diagrams/nlo/pp4l_zzonly_nlo/Events/z04/events.lhe.gz",
+   "seed_requested": 7324,
+   "seed_actual": 7324,
+   "banner": {}
+  },
+  "z05": {
+   "lhe": "/Users/omattelaer/Documents/madspin_validation_samples/t131_qq_diagrams/nlo/pp4l_zzonly_nlo/Events/z05/events.lhe.gz",
+   "seed_requested": 7325,
+   "seed_actual": 7325,
+   "banner": {}
+  },
+  "z06": {
+   "lhe": "/Users/omattelaer/Documents/madspin_validation_samples/t131_qq_diagrams/nlo/pp4l_zzonly_nlo/Events/z06/events.lhe.gz",
+   "seed_requested": 7326,
+   "seed_actual": 7326,
+   "banner": {}
+  },
+  "z07": {
+   "lhe": "/Users/omattelaer/Documents/madspin_validation_samples/t131_qq_diagrams/nlo/pp4l_zzonly_nlo/Events/z07/events.lhe.gz",
+   "seed_requested": 7327,
+   "seed_actual": 7327,
+   "banner": {}
+  },
+  "z08": {
+   "lhe": "/Users/omattelaer/Documents/madspin_validation_samples/t131_qq_diagrams/nlo/pp4l_zzonly_nlo/Events/z08/events.lhe.gz",
+   "seed_requested": 7328,
+   "seed_actual": 7328,
+   "banner": {}
+  }
+ },
+ "wall_seconds": 345.10221433639526
+}

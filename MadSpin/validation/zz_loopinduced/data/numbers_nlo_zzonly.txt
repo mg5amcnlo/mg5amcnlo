@@ -1,0 +1,59 @@
+The NLO q qbar truth with and without its singly-resonant Born diagrams
+
+  truth         p p > e+ e- mu+ mu- / a [QCD]                    6 Born
+                                                                 diagrams per subprocess
+  truth_zzonly  p p > e+ e- mu+ mu- / a e+ e- mu+ mu- [QCD]      2, the doubly-resonant ones
+  madspin/...   p p > z z [QCD] + MadSpin
+
+truth and the MadSpin rows are the study's two independently seeded
+200 000-event samples combined; 8 blocks of the new NLO run.
+Same run card, same zz_equivalent_cuts_nlo.f, same window re-imposed
+offline on every row.
+
+sample                 N       N_eff    sigma [pb]
+truth             399808      290044      0.028665
+madspin           399779      300905      0.028650
+onshell           399793      300930      0.029960
+PA                399804      300840      0.028646
+none              399793      300930      0.029961
+truth_zzonly      399791      289151      0.028612
+
+sample         f_0 (both)            f_00                  f_TT                  C_kk                 
+truth          +0.1907+-0.0020       +0.0572+-0.0044       +0.6759+-0.0055       -0.6267+-0.0564      
+madspin        +0.1772+-0.0020       +0.0542+-0.0043       +0.6999+-0.0054       -0.5754+-0.0555      
+onshell        +0.1810+-0.0020       +0.0567+-0.0043       +0.6948+-0.0054       -0.5220+-0.0554      
+PA             +0.1803+-0.0020       +0.0581+-0.0043       +0.6974+-0.0054       -0.4943+-0.0555      
+none           +0.3337+-0.0019       +0.1147+-0.0042       +0.4473+-0.0048       -0.0461+-0.0505      
+truth_zzonly   +0.1897+-0.0020       +0.0622+-0.0044       +0.6829+-0.0055       -0.5705+-0.0565      
+
+--- the differences ---
+  truth - truth_zzonly           f_0 (both)  +0.00102 +- 0.00286   +0.35 sigma
+  truth - truth_zzonly           f_00        -0.00498 +- 0.00625   -0.80 sigma
+  truth - truth_zzonly           f_TT        -0.00701 +- 0.00777   -0.90 sigma
+  truth - truth_zzonly           C_kk        -0.05624 +- 0.07980   -0.70 sigma
+    the four singly-resonant Born diagrams at NLO, and nothing else
+
+  madspin - truth                f_0 (both)  -0.01353 +- 0.00283   -4.77 sigma
+  madspin - truth                f_00        -0.00305 +- 0.00619   -0.49 sigma
+  madspin - truth                f_TT        +0.02401 +- 0.00771   +3.11 sigma
+  madspin - truth                C_kk        +0.05135 +- 0.07912   +0.65 sigma
+    the finding under investigation, both samples
+
+  madspin - truth_zzonly         f_0 (both)  -0.01251 +- 0.00284   -4.41 sigma
+  madspin - truth_zzonly         f_00        -0.00803 +- 0.00620   -1.29 sigma
+  madspin - truth_zzonly         f_TT        +0.01699 +- 0.00772   +2.20 sigma
+  madspin - truth_zzonly         C_kk        -0.00489 +- 0.07921   -0.06 sigma
+    what the finding becomes once the truth is stripped of the diagrams MadSpin cannot carry
+
+  onshell - truth_zzonly         f_0 (both)  -0.00870 +- 0.00284   -3.07 sigma
+  onshell - truth_zzonly         f_00        -0.00545 +- 0.00620   -0.88 sigma
+  onshell - truth_zzonly         f_TT        +0.01195 +- 0.00771   +1.55 sigma
+  onshell - truth_zzonly         C_kk        +0.04852 +- 0.07913   +0.61 sigma
+    
+
+  PA - truth_zzonly              f_0 (both)  -0.00933 +- 0.00284   -3.29 sigma
+  PA - truth_zzonly              f_00        -0.00410 +- 0.00620   -0.66 sigma
+  PA - truth_zzonly              f_TT        +0.01456 +- 0.00771   +1.89 sigma
+  PA - truth_zzonly              C_kk        +0.07614 +- 0.07917   +0.96 sigma
+    
+

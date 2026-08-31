@@ -1,0 +1,64 @@
+The q qbar f_0 deficit, broken down on the EXISTING NLO samples
+nothing here is regenerated; see QQ_F0_DEFICIT.md
+
+--- combined, 400 000 events per row (both seeds) ---
+  truth      f_0 = +0.19068 +- 0.00202
+  madspin   f_0 = +0.17715 +- 0.00199   D = -0.01353 +- 0.00283   -4.77 sigma
+  onshell   f_0 = +0.18096 +- 0.00198   D = -0.00971 +- 0.00283   -3.43 sigma
+  PA        f_0 = +0.18034 +- 0.00198   D = -0.01034 +- 0.00283   -3.65 sigma
+  none      f_0 = +0.33369 +- 0.00192   D = +0.14301 +- 0.00279   +51.26 sigma
+
+--- pt(l+ l-) near the 1 GeV threshold (sample 2), weight fraction ---
+                  1       2       3       5       8      12      20      40
+  truth     0.00099 0.00204 0.00547 0.01321 0.02666 0.07922 0.25789 0.61452
+  madspin   0.00073 0.00139 0.00507 0.01196 0.02508 0.07953 0.26448 0.61176
+  onshell   0.00075 0.00154 0.00545 0.01299 0.02687 0.07937 0.25929 0.61374
+  PA        0.00067 0.00126 0.00489 0.01148 0.02447 0.07644 0.25876 0.62203
+
+  the hole the analysis re-cut cannot fill: pt(l+l-) < 2 GeV on either
+  pair, where the production side lost events to pt_min_pdg = {23: 1}
+  acting on the z BEFORE the reshuffle
+    truth     weight fraction 0.00115   f_0 there +0.3898
+    madspin   weight fraction 0.00085   f_0 there +0.2695
+    missing weight 0.00029; even at f_0 = 1 there it is worth 0.000237 on f_0
+
+--- pooled |cos theta| (both pairs), ratio to the truth, sample 2 ---
+  bin from      0.0     0.1     0.2     0.3     0.4     0.5     0.6     0.7     0.8     0.9
+  madspin   -0.0185 -0.0053 -0.0136 -0.0160 -0.0006 +0.0021 +0.0101 +0.0083 +0.0110 +0.0135
+  onshell   -0.0141 -0.0012 -0.0177 -0.0034 -0.0027 +0.0020 +0.0060 +0.0045 +0.0070 +0.0127
+  PA        -0.0146 +0.0041 -0.0139 -0.0013 -0.0047 -0.0016 +0.0053 +0.0036 +0.0144 +0.0035
+
+--- f_0 of each mode after reweighting to the TRUTH distribution ---
+    (sample 2; the deficit at fixed production kinematics)
+  reweighted in                   madspin           onshell           PA              
+  nothing (one bin)               -0.01543 (-3.85)  -0.01117 (-2.79)  -0.00878 (-2.19)
+  m_4l, 44 bins                   -0.01738 (-4.22)  -0.01295 (-3.23)  -0.00963 (-2.37)
+  pt(4l), 42 bins                 -0.01473 (-3.65)  -0.01077 (-2.67)  -0.00779 (-1.93)
+  m_ee x m_mumu, 6 x 6            -0.01579 (-3.93)  -0.01117 (-2.79)  -0.00984 (-2.44)
+  m_ee x m_mumu x m_4l, 4x4x10    -0.01762 (-4.28)  -0.01203 (-3.00)  -0.01016 (-2.49)
+  pt(4l) x m_4l, 4 x 16           -0.01677 (-3.83)  -0.01350 (-3.20)  -0.00871 (-1.92)
+  |y_4l|, 13 bins                 -0.01545 (-3.85)  -0.01110 (-2.77)  -0.00872 (-2.18)
+
+--- split by extra-parton multiplicity (sample 2) ---
+  njet = 0   truth f_0 = +0.18595 +- 0.00323   weight fraction 0.7698
+              madspin   +0.16977 +- 0.00311  wfrac 0.7985  D = -0.01619  -3.61 sigma
+              onshell   +0.17259 +- 0.00310  wfrac 0.7985  D = -0.01336  -2.98 sigma
+              PA        +0.17794 +- 0.00310  wfrac 0.7986  D = -0.00802  -1.79 sigma
+  njet = 1   truth f_0 = +0.21520 +- 0.00614   weight fraction 0.2302
+              madspin   +0.20694 +- 0.00657  wfrac 0.2015  D = -0.00826  -0.92 sigma
+              onshell   +0.21686 +- 0.00656  wfrac 0.2015  D = +0.00167  +0.19 sigma
+              PA        +0.20754 +- 0.00656  wfrac 0.2014  D = -0.00765  -0.85 sigma
+
+--- split by the sign of the MC@NLO weight (combined, 400 000) ---
+  w > 0  truth +0.18560 +- 0.00179   madspin +0.17559 +- 0.00178   D = -0.01001 +- 0.00252  -3.97 sigma
+         share of sum|w|: truth 0.9259   madspin 0.9338
+  w < 0  truth +0.12725 +- 0.00642   madspin +0.15508 +- 0.00671   D = +0.02783 +- 0.00929  +3.00 sigma
+         share of sum|w|: truth 0.0741   madspin 0.0662
+  the two subsets are the counter-events of two DIFFERENT processes
+  (p p > 4l and p p > z z), so only the signed sums have to agree.
+
+--- what the g g block actually excludes ---
+  g g truth f_0 = +0.06686, madspin +0.06723, D = +0.00037 +- 0.00350  +0.11 sigma
+  an ABSOLUTE effect of the q qbar size (-0.01353) would show at 3.86 sigma
+  a PROPORTIONAL one (-7.1 % of f_0) would be -0.00474, i.e. 1.35 sigma
+

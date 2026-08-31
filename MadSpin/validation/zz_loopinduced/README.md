@@ -19,6 +19,12 @@ what the two angular figures measure, what the di-boson literature calls it, and
 which coefficient is worth quoting are in
 [SPIN_COEFFICIENTS.md](SPIN_COEFFICIENTS.md).
 
+> The `q qbar` half of Table 1 of `spin_definitions.tex` carries a `4.8` sigma
+> deficit on `f_0` that the `g g` half does not. It is diagnosed in
+> [`QQ_F0_DEFICIT.md`](QQ_F0_DEFICIT.md): not the setup, not the cuts, not the
+> truth's extra diagrams, and not present at all at LO. Code and numbers in
+> [`diagram_content/`](diagram_content/).
+
 ## The comparison
 
 | | |

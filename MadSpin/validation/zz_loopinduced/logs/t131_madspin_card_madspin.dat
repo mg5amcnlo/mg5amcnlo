@@ -1,0 +1,8 @@
+set seed 13579
+set BW_cut 15
+set spinmode madspin
+set nb_core 16
+set ms_dir /Users/omattelaer/Documents/madspin_validation_samples/t131_qq_diagrams/work/ms_madspin/msdir
+decay z > e+ e-
+decay z > mu+ mu-
+launch
