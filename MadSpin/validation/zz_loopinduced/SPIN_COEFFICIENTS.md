@@ -539,6 +539,100 @@ a tenth of a percent of the weight, and the truth rows sit on a support neither
 matches. The mechanism by which MC@NLO reshuffling reaches below threshold is
 **not** established here — only measured.
 
+### 6c. The seed check: the `f_0` deficit is not a fluctuation
+
+The section above left the `q qbar` `f_0` deficit open and said what would close
+it: a second, independently seeded sample. It was run. **Both sides were
+reseeded**, not just the MadSpin chain — the truth's bar on `f_0 (both)` is
+`0.0029` against madspin's `0.0028`, so the truth carries about half the
+variance of the difference, and reusing it would have left the two pulls sharing
+half their noise while being combined as though independent. That would have
+hidden precisely the possibility the check exists to test, namely that the truth
+itself was the thing that fluctuated.
+
+| | sample 1 | sample 2 |
+|---|---|---|
+| production `iseed` | 4321 | **8765** |
+| MadSpin `set seed` | 7777 | **1357** |
+| truth blocks `iseed` | 4321–4324 | **5321–5324** |
+
+Nothing else differs: the same `run_zz_nlo.py` driver, hence the same
+`p p > z z [QCD]` and `p p > e+ e- mu+ mu- / a [QCD]`, the same
+`pt_min_pdg = {23: 1}` and `zz_equivalent_cuts_nlo.f`, the same fixed
+`mu = m_Z`, `nn23lo1` / `lhaid 230000`, 6500+6500 GeV, `bwcutoff = 15` and
+`BW_cut = 15`. The coefficients come from the same `qq_coefficients.py --recut`.
+2487 s wall on 16 cores; `data/numbers_qq.txt` is untouched and the second
+sample is `data/numbers_qq_seed2.txt`.
+
+Sample 2 lives outside the repository and outside `/tmp`, at
+`~/Documents/madspin_validation_samples/t130_qq_seed_check/`: `work/` holds
+the production `ppzz_nlo/Events/prod/events.lhe.gz` and the four
+`ms_<mode>/events_decayed.lhe.gz`, `events/qq_pp4l_nlo/b0{1..4}.lhe.gz` the
+reseeded truth blocks (hard links, so they survive a cleanup of `work/`), and
+`event_columns/events_<tag>.npz` the per-event columns a differential
+re-reading needs. The compiled `msdir/` working trees were deleted after the
+run; they are regenerable and were 3.3 GB. Seeds and the actual banner `iseed`
+of every block are recorded in `data/qq_seed2_runs.json`, and the driver is
+`seed_check/run_qq_seed2.py`.
+
+`f_0 (both)`, the two samples and their combination (`D = mode - truth`, and the
+two `D` are independent because both sides were reseeded):
+
+| | sample 1 | sample 2 | combined `D` | combined `z` |
+|---|---|---|---|---|
+| truth | +0.1887 +- 0.0029 | +0.1927 +- 0.0029 | (the two truths differ by +0.99 sigma) | |
+| madspin | +0.1771 (-2.90) | +0.1773 (-3.85) | -0.0135 +- 0.0028 | **-4.77** |
+| onshell | +0.1804 (-2.06) | +0.1815 (-2.79) | -0.0097 +- 0.0028 | **-3.43** |
+| PA | +0.1768 (-2.97) | +0.1839 (-2.19) | -0.0103 +- 0.0028 | **-3.65** |
+
+The two samples agree with each other on `D`: `chi2` on one degree of freedom is
+`0.45`, `0.26` and `0.30` for the three modes. On the matched support
+`m_4l >= 2 m_Z` the combined pulls are `-4.18`, `-2.78` and `-3.12` — the
+support is worth about half a sigma, as section 6b measured, and does not
+account for the deficit.
+
+`f_TT` moves with it, as it must: `f_TT = (1 - f_0^{(1)})(1 - f_0^{(2)})`, so a
+low `f_0` is a high `f_TT`. Combined, `f_TT` is `+3.12`, `+2.47` and `+2.80`
+sigma high for madspin, onshell and PA. This is **one** effect seen twice, not
+two. `f_00`, `f_00 - f_0 f_0` and `C_kk` combine to within `1.7 sigma` of truth
+for every mode.
+
+`spinmode = none` still passes every isotropic null test on sample 2
+(`f_0 (both) = 0.3326 +- 0.0027` against `1/3`, `-0.27 sigma`; `f_TT` `+0.50`;
+`f_00 - f_0 f_0` `+0.40`; `C_kk` `-0.90`), so the analysis chain and the frame
+convention are not the source.
+
+**What was wrong in the previous reading.** Section 6b noted that `onshell` has
+the least sub-threshold support and sat closest to truth while `PA` had the most
+and sat furthest, and took the ordering as evidence against a support
+explanation. Sample 2 reverses the ordering — `PA` is now the closest at
+`-2.19` and `madspin` the furthest at `-3.85`. The mode-to-mode ordering is
+noise on a shared production sample and carries no information in either
+direction. The correct statement is that all three spin-correlated modes are low
+together, and their differences are not significant.
+
+**Verdict.** The deficit is real, not a seed fluctuation. Two independent
+samples, `-2.90` and `-3.85` on `madspin`, combine to `-4.8 sigma` on the full
+support and `-4.2 sigma` on the matched one. The look-elsewhere discount that
+applies to the *first* sample — one coefficient out of roughly half a dozen
+effectively independent ones, singled out because it looked anomalous, which
+turns a local `2.9` into a global `~2.2 sigma` — does **not** apply to the
+second: sample 2 tested a stated prediction of a stated size and sign, and
+confirmed it. This is a `q qbar`-specific finding. The `gg` block shows nothing
+like it (`madspin` at `+0.1 sigma` on `f_0`), and it is not diagnosed here.
+
+**Per-`Z` agreement, paired.** `f_0 (e+ e-)` against `f_0 (mu+ mu-)` is a
+paired comparison — the two `Z` are the same events — and is done that way in
+`data/numbers_perz_paired.txt`, as T129 did for `Delta phi`. The two `Z` turn
+out to be almost uncorrelated event by event (`rho = +0.01` to `+0.02`), so the
+paired bar is `0.99`–`1.00` times the naive quadrature one and the pairing
+changes no conclusion. Across fifteen tests (three blocks, five samples) the
+largest is `gg PA` at `+2.29 sigma`, which is what fifteen tests give. The
+`gg madspin` figures `0.0618 / 0.0729` in `data/numbers.txt` are on the
+**no-recut** selection; with the study's own window re-imposed they are
+`0.0635 / 0.0710` and the paired pull falls from `-1.89` to `-1.55`. No `e`/`mu`
+asymmetry anywhere.
+
 ## 7. What the literature calls these things
 
 Two conventions are in use and they are **not** the same normalisation. Both

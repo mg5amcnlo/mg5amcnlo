@@ -1,0 +1,54 @@
+{
+ "seeds": {
+  "production": 8765,
+  "madspin": 1357,
+  "truth_blocks": [
+   5321,
+   5322,
+   5323,
+   5324
+  ]
+ },
+ "nevents": {
+  "prod": 200000,
+  "truth_block": 50000
+ },
+ "nb_core": 16,
+ "basedir": "/Users/omattelaer/Documents/madspin_validation_samples/t130_qq_seed_check/work",
+ "prod_lhe": "/Users/omattelaer/Documents/madspin_validation_samples/t130_qq_seed_check/work/ppzz_nlo/Events/prod/events.lhe.gz",
+ "prod_seed_actual": 8765,
+ "prod_banner": {},
+ "madspin": {
+  "madspin": "/Users/omattelaer/Documents/madspin_validation_samples/t130_qq_seed_check/work/ms_madspin/events_decayed.lhe.gz",
+  "onshell": "/Users/omattelaer/Documents/madspin_validation_samples/t130_qq_seed_check/work/ms_onshell/events_decayed.lhe.gz",
+  "none": "/Users/omattelaer/Documents/madspin_validation_samples/t130_qq_seed_check/work/ms_none/events_decayed.lhe.gz",
+  "PA": "/Users/omattelaer/Documents/madspin_validation_samples/t130_qq_seed_check/work/ms_PA/events_decayed.lhe.gz"
+ },
+ "truth": {
+  "b01": {
+   "lhe": "/Users/omattelaer/Documents/madspin_validation_samples/t130_qq_seed_check/work/pp4l_nlo/Events/b01/events.lhe.gz",
+   "seed_requested": 5321,
+   "seed_actual": 5321,
+   "banner": {}
+  },
+  "b02": {
+   "lhe": "/Users/omattelaer/Documents/madspin_validation_samples/t130_qq_seed_check/work/pp4l_nlo/Events/b02/events.lhe.gz",
+   "seed_requested": 5322,
+   "seed_actual": 5322,
+   "banner": {}
+  },
+  "b03": {
+   "lhe": "/Users/omattelaer/Documents/madspin_validation_samples/t130_qq_seed_check/work/pp4l_nlo/Events/b03/events.lhe.gz",
+   "seed_requested": 5323,
+   "seed_actual": 5323,
+   "banner": {}
+  },
+  "b04": {
+   "lhe": "/Users/omattelaer/Documents/madspin_validation_samples/t130_qq_seed_check/work/pp4l_nlo/Events/b04/events.lhe.gz",
+   "seed_requested": 5324,
+   "seed_actual": 5324,
+   "banner": {}
+  }
+ },
+ "wall_seconds": 2486.5127058029175
+}

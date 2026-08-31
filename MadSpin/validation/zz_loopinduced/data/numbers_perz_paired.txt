@@ -1,0 +1,28 @@
+paired per-Z null test:  d = f_0(e+ e-) - f_0(mu+ mu-),
+the weighted mean of the PER-EVENT difference.
+re-cut applied: yes   (window 54.567 .. 127.809 GeV, pt > 1.0 GeV)
+
+--- g g box   (/Users/omattelaer/Documents/madspin_validation_samples/t118_zz_loopinduced/event_columns)
+sample           N  f_0(e+e-)           f_0(mu+mu-)          paired d              naive bar  ratio   pull
+truth       200000  +0.0666 +- 0.0035  +0.0671 +- 0.0035  -0.0006 +- 0.0049  0.0049   0.99  -0.11
+madspin     199938  +0.0635 +- 0.0035  +0.0710 +- 0.0035  -0.0075 +- 0.0049  0.0049   0.99  -1.55
+PA          199969  +0.0775 +- 0.0035  +0.0664 +- 0.0035  +0.0111 +- 0.0048  0.0049   0.99  +2.29
+onshell     200000  +0.0706 +- 0.0035  +0.0748 +- 0.0035  -0.0042 +- 0.0048  0.0049   0.99  -0.86
+none        200000  +0.3320 +- 0.0033  +0.3305 +- 0.0033  +0.0014 +- 0.0047  0.0047   1.00  +0.31
+
+--- q qbar continuum, sample 1   (/Users/omattelaer/Documents/git_workspace/zz_spin_events/qq_ppzz_nlo_madspin)
+sample           N  f_0(e+e-)           f_0(mu+mu-)          paired d              naive bar  ratio   pull
+truth       199889  +0.1854 +- 0.0040  +0.1920 +- 0.0040  -0.0066 +- 0.0056  0.0057   0.99  -1.16
+madspin     199888  +0.1719 +- 0.0040  +0.1822 +- 0.0039  -0.0103 +- 0.0056  0.0056   1.00  -1.85
+PA          199901  +0.1751 +- 0.0039  +0.1785 +- 0.0039  -0.0034 +- 0.0055  0.0056   0.99  -0.61
+onshell     199895  +0.1803 +- 0.0039  +0.1806 +- 0.0040  -0.0003 +- 0.0056  0.0056   0.99  -0.05
+none        199895  +0.3345 +- 0.0038  +0.3351 +- 0.0038  -0.0006 +- 0.0054  0.0054   1.00  -0.11
+
+--- q qbar continuum, sample 2   (/Users/omattelaer/Documents/madspin_validation_samples/t130_qq_seed_check/event_columns)
+sample           N  f_0(e+e-)           f_0(mu+mu-)          paired d              naive bar  ratio   pull
+truth       199919  +0.1882 +- 0.0040  +0.1972 +- 0.0040  -0.0090 +- 0.0057  0.0057   1.00  -1.58
+madspin     199891  +0.1798 +- 0.0040  +0.1747 +- 0.0040  +0.0051 +- 0.0056  0.0056   0.99  +0.92
+PA          199903  +0.1857 +- 0.0039  +0.1821 +- 0.0040  +0.0035 +- 0.0056  0.0056   1.00  +0.63
+onshell     199898  +0.1833 +- 0.0039  +0.1797 +- 0.0040  +0.0037 +- 0.0056  0.0056   1.00  +0.66
+none        199898  +0.3288 +- 0.0038  +0.3364 +- 0.0038  -0.0075 +- 0.0054  0.0054   1.00  -1.38
+

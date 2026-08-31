@@ -1,0 +1,243 @@
+{
+ "recut": true,
+ "eta_l": 0.21932512438207097,
+ "mass_window": [
+  54.56694,
+  127.80906
+ ],
+ "runs": {
+  "truth": {
+   "N": 199919,
+   "N_cut": 81,
+   "N_eff": 144647.60678740023,
+   "sumw": 5725.299701762001,
+   "sigma_pb": 0.028638096938069922,
+   "negative_weights": 14933,
+   "m_4l_min": 122.51869213889312,
+   "weight_below_2mZ": 0.013866156636405922,
+   "f_0 (e+ e-)": [
+    0.18820368881898644,
+    0.004029451676517868
+   ],
+   "f_0 (mu+ mu-)": [
+    0.19716840399636845,
+    0.004026357021067235
+   ],
+   "f_0 (both)": [
+    0.19268604640767747,
+    0.0028610744226145388
+   ],
+   "f_00": [
+    0.051655502642594255,
+    0.006246934436469768
+   ],
+   "f_00 - f_0 f_0": [
+    0.01454768169192554,
+    0.006246934436469768
+   ],
+   "f_TT": [
+    0.6662834098272391,
+    0.0077454061142248655
+   ],
+   "cos1cos2": [
+    -0.007316373043865194,
+    0.000958425712229029
+   ],
+   "C_kk": [
+    -0.6083857926953998,
+    0.0796969459017725
+   ],
+   "files": [
+    "/Users/omattelaer/Documents/madspin_validation_samples/t130_qq_seed_check/events/qq_pp4l_nlo/b01.lhe.gz",
+    "/Users/omattelaer/Documents/madspin_validation_samples/t130_qq_seed_check/events/qq_pp4l_nlo/b02.lhe.gz",
+    "/Users/omattelaer/Documents/madspin_validation_samples/t130_qq_seed_check/events/qq_pp4l_nlo/b03.lhe.gz",
+    "/Users/omattelaer/Documents/madspin_validation_samples/t130_qq_seed_check/events/qq_pp4l_nlo/b04.lhe.gz"
+   ],
+   "event_columns": "/Users/omattelaer/Documents/madspin_validation_samples/t130_qq_seed_check/event_columns/events_truth.npz"
+  },
+  "madspin": {
+   "N": 199891,
+   "N_cut": 109,
+   "N_eff": 150122.46445570246,
+   "sumw": 5723.483790710999,
+   "sigma_pb": 0.02863302395160862,
+   "negative_weights": 13331,
+   "m_4l_min": 147.37943930971832,
+   "weight_below_2mZ": 0.0014418331173389866,
+   "f_0 (e+ e-)": [
+    0.1798265085483456,
+    0.003955812949944951
+   ],
+   "f_0 (mu+ mu-)": [
+    0.1746854303277801,
+    0.0039572097943455335
+   ],
+   "f_0 (both)": [
+    0.17725596943806285,
+    0.0028129975783888774
+   ],
+   "f_00": [
+    0.05789532780001998,
+    0.006143846223768197
+   ],
+   "f_00 - f_0 f_0": [
+    0.02648225676990999,
+    0.006143846223768197
+   ],
+   "f_TT": [
+    0.7033833889238943,
+    0.0076684133524872015
+   ],
+   "cos1cos2": [
+    -0.007344321018569753,
+    0.0009461439895017672
+   ],
+   "C_kk": [
+    -0.6107097789988486,
+    0.07867567134779721
+   ],
+   "files": [
+    "/Users/omattelaer/Documents/madspin_validation_samples/t130_qq_seed_check/work/ms_madspin/events_decayed.lhe.gz"
+   ],
+   "event_columns": "/Users/omattelaer/Documents/madspin_validation_samples/t130_qq_seed_check/event_columns/events_madspin.npz"
+  },
+  "onshell": {
+   "N": 199898,
+   "N_cut": 102,
+   "N_eff": 150130.12484367043,
+   "sumw": 5985.370842332002,
+   "sigma_pb": 0.02994212469525459,
+   "negative_weights": 13331,
+   "m_4l_min": 182.3900434511394,
+   "weight_below_2mZ": 0.0,
+   "f_0 (e+ e-)": [
+    0.18334286331680305,
+    0.0039473569416167914
+   ],
+   "f_0 (mu+ mu-)": [
+    0.1796835085561887,
+    0.003955592267754322
+   ],
+   "f_0 (both)": [
+    0.1815131859364959,
+    0.0028068089285954215
+   ],
+   "f_00": [
+    0.05969736710004523,
+    0.006127643050694668
+   ],
+   "f_00 - f_0 f_0": [
+    0.026753678150544333,
+    0.006127643050694668
+   ],
+   "f_TT": [
+    0.6966709952270532,
+    0.0076195063983324944
+   ],
+   "cos1cos2": [
+    -0.006760290122907875,
+    0.0009425421227195367
+   ],
+   "C_kk": [
+    -0.5621452652314991,
+    0.07837616166392072
+   ],
+   "files": [
+    "/Users/omattelaer/Documents/madspin_validation_samples/t130_qq_seed_check/work/ms_onshell/events_decayed.lhe.gz"
+   ],
+   "event_columns": "/Users/omattelaer/Documents/madspin_validation_samples/t130_qq_seed_check/event_columns/events_onshell.npz"
+  },
+  "none": {
+   "N": 199898,
+   "N_cut": 102,
+   "N_eff": 150130.12484367026,
+   "sumw": 5985.442042328,
+   "sigma_pb": 0.029942480876887213,
+   "negative_weights": 13331,
+   "m_4l_min": 182.39004344791056,
+   "weight_below_2mZ": 0.0,
+   "f_0 (e+ e-)": [
+    0.32884222178130484,
+    0.003847824666786741
+   ],
+   "f_0 (mu+ mu-)": [
+    0.3363543880789445,
+    0.0038484676130381666
+   ],
+   "f_0 (both)": [
+    0.33259830493012466,
+    0.0027191412058833555
+   ],
+   "f_00": [
+    0.11302697316364899,
+    0.0060106205897161435
+   ],
+   "f_00 - f_0 f_0": [
+    0.0024194488818776137,
+    0.0060106205897161435
+   ],
+   "f_TT": [
+    0.44783036330339965,
+    0.00677770377444956
+   ],
+   "cos1cos2": [
+    -0.0007764412767861741,
+    0.0008606424452770999
+   ],
+   "C_kk": [
+    -0.06456420945554078,
+    0.0715658746701357
+   ],
+   "files": [
+    "/Users/omattelaer/Documents/madspin_validation_samples/t130_qq_seed_check/work/ms_none/events_decayed.lhe.gz"
+   ],
+   "event_columns": "/Users/omattelaer/Documents/madspin_validation_samples/t130_qq_seed_check/event_columns/events_none.npz"
+  },
+  "PA": {
+   "N": 199903,
+   "N_cut": 97,
+   "N_eff": 150093.44076377034,
+   "sumw": 5723.086215659998,
+   "sigma_pb": 0.02862931629670389,
+   "negative_weights": 13343,
+   "m_4l_min": 144.44947389242233,
+   "weight_below_2mZ": 0.0022976959536304175,
+   "f_0 (e+ e-)": [
+    0.18566719629072717,
+    0.003947078678402298
+   ],
+   "f_0 (mu+ mu-)": [
+    0.18213653345972297,
+    0.003952868017216367
+   ],
+   "f_0 (both)": [
+    0.18390186487522503,
+    0.002805849046073457
+   ],
+   "f_00": [
+    0.056180312014455114,
+    0.006128171716978532
+   ],
+   "f_00 - f_0 f_0": [
+    0.022363532504876105,
+    0.006128171716978532
+   ],
+   "f_TT": [
+    0.6883765822640053,
+    0.007616098783888771
+   ],
+   "cos1cos2": [
+    -0.005592779605690741,
+    0.0009421549183171527
+   ],
+   "C_kk": [
+    -0.46506207835204527,
+    0.07834396406329713
+   ],
+   "files": [
+    "/Users/omattelaer/Documents/madspin_validation_samples/t130_qq_seed_check/work/ms_PA/events_decayed.lhe.gz"
+   ],
+   "event_columns": "/Users/omattelaer/Documents/madspin_validation_samples/t130_qq_seed_check/event_columns/events_PA.npz"
+  }
+ }
+}

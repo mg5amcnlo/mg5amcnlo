@@ -1,0 +1,84 @@
+p p > z z [QCD] + MadSpin   against   p p > e+ e- mu+ mu- / a [QCD]
+the q qbar half of the two-mechanism table; the g g half is in numbers.txt
+
+m_Z = 91.1880 GeV   Gamma_Z = 2.441404 GeV   BW_cut = 15
+mass window on both reconstructed pairs: 54.56694 .. 127.80906 GeV
+pt(l+ l-) > 1.0 GeV on both reconstructed pairs
+analysis re-cut applied: yes
+
+  eta_l = 2 g_V g_A / (g_V^2 + g_A^2) = 0.21933, from MW = 80.4190 built out
+  of (aEWM1, Gf, MZ) and sw2 = 1 - MW^2/MZ^2 = 0.222246.  4 / eta_l^2 = 83.1540.
+  Both mechanisms decay Z > l+ l- in the same model with the same
+  param card, so this is one number for the whole table, not two.
+
+--- sample sizes, weights and support ---
+sample            N    N_cut      N_eff    sigma [pb]      w < 0   min m_4l
+truth        199919       81     144648      0.028638      14933    122.519
+madspin      199891      109     150122      0.028633      13331    147.379
+onshell      199898      102     150130      0.029942      13331    182.390
+none         199898      102     150130      0.029942      13331    182.390
+PA           199903       97     150093      0.028629      13343    144.449
+
+  sigma is the mean weight (IDWTUP = -4).  Against the truth, the
+  MadSpin rows should reproduce it, except that onshell and none do
+  not apply the Breit-Wigner truncation 1/f^2 = 1.045714:
+    madspin    -0.02 %
+    onshell    +4.55 %
+    none       +4.55 %
+    PA         -0.03 %
+
+  "min m_4l" is the support statement, and it does NOT come out the same
+  here as on the g g side.  The truth is fully off shell and reaches well
+  below 2 m_Z = 182.376 GeV.  A MadSpin row on an LO 2 -> 2 production
+  sample cannot: m_4l = m_zz there, and on-shell z put that at 2 m_Z --
+  which is what every g g row does, and what p p > z z at LO with
+  spinmode = madspin does too (min m_4l = 182.394).  On THIS sample,
+  which is MC@NLO, the modes that redraw the virtuality do reach below:
+  the reshuffling has somewhere to put the imbalance that an LO 2 -> 2
+  event does not.  onshell, which changes no mass, still starts at 2 m_Z.
+  So the g g and q qbar MadSpin rows are on slightly different supports,
+  and this is the number that says by how much.
+  Weight below 2 m_Z, as a fraction of the total:
+    truth      0.01387
+    madspin    0.00144
+    onshell    0.00000
+    none       0.00000
+    PA         0.00230
+
+--- the coefficients ---
+sample     f_0 (e+ e-)            f_0 (mu+ mu-)          f_0 (both)             f_00                   f_00 - f_0 f_0         f_TT                   C_kk                  
+truth      +0.1882 +- 0.0040      +0.1972 +- 0.0040      +0.1927 +- 0.0029      +0.0517 +- 0.0062      +0.0145 +- 0.0062      +0.6663 +- 0.0077      -0.6084 +- 0.0797     
+madspin    +0.1798 +- 0.0040      +0.1747 +- 0.0040      +0.1773 +- 0.0028      +0.0579 +- 0.0061      +0.0265 +- 0.0061      +0.7034 +- 0.0077      -0.6107 +- 0.0787     
+onshell    +0.1833 +- 0.0039      +0.1797 +- 0.0040      +0.1815 +- 0.0028      +0.0597 +- 0.0061      +0.0268 +- 0.0061      +0.6967 +- 0.0076      -0.5621 +- 0.0784     
+none       +0.3288 +- 0.0038      +0.3364 +- 0.0038      +0.3326 +- 0.0027      +0.1130 +- 0.0060      +0.0024 +- 0.0060      +0.4478 +- 0.0068      -0.0646 +- 0.0716     
+PA         +0.1857 +- 0.0039      +0.1821 +- 0.0040      +0.1839 +- 0.0028      +0.0562 +- 0.0061      +0.0224 +- 0.0061      +0.6884 +- 0.0076      -0.4651 +- 0.0783     
+
+  Against the q qbar truth, in sigma (independent samples, so the
+  bars add in quadrature).  The truth carries far more of the
+  m_4l < 2 m_Z region than any mode does, so a part of every pull
+  below is a support difference and not a spin one; the size of that
+  part is bounded by the weight fractions printed above.
+    madspin    f_0 -1.5   f_0 -4.0   f_0 -3.8   f_00 +0.7   f_00 +1.4   f_TT +3.4   C_kk -0.0
+    onshell    f_0 -0.9   f_0 -3.1   f_0 -2.8   f_00 +0.9   f_00 +1.4   f_TT +2.8   C_kk +0.4
+    none       f_0 +25.2   f_0 +25.0   f_0 +35.4   f_00 +7.1   f_00 -1.4   f_TT -21.2   C_kk +5.1
+    PA         f_0 -0.4   f_0 -2.7   f_0 -2.2   f_00 +0.5   f_00 +0.9   f_TT +2.0   C_kk +1.3
+
+--- the same coefficients on the g g box, from numbers.txt ---
+  Not recomputed here.  Quoted so that the two mechanisms can be read
+  off one page; the g g numbers are owned by plot_zz_loopinduced.py.
+sample     f_0 (e+ e-)            f_0 (mu+ mu-)          f_0 (both)             f_00                   f_00 - f_0 f_0         f_TT                   C_kk                  
+truth      +0.0666 +- 0.0035      +0.0671 +- 0.0035      +0.0669 +- 0.0025      +0.0417 +- 0.0054      +0.0372 +- 0.0054      +0.9079 +- 0.0071      +0.3804 +- 0.0722     
+madspin    +0.0618 +- 0.0035      +0.0729 +- 0.0035      +0.0673 +- 0.0025      +0.0513 +- 0.0054      +0.0468 +- 0.0054      +0.9166 +- 0.0071      +0.4599 +- 0.0723     
+PA         +0.0776 +- 0.0035      +0.0664 +- 0.0035      +0.0720 +- 0.0025      +0.0538 +- 0.0054      +0.0487 +- 0.0054      +0.9099 +- 0.0071      +0.4909 +- 0.0722     
+onshell    +0.0706 +- 0.0035      +0.0748 +- 0.0035      +0.0727 +- 0.0025      +0.0525 +- 0.0054      +0.0472 +- 0.0054      +0.9072 +- 0.0071      +0.4311 +- 0.0721     
+none       +0.3320 +- 0.0033      +0.3305 +- 0.0033      +0.3313 +- 0.0024      +0.1065 +- 0.0052      -0.0033 +- 0.0050      +0.4439 +- 0.0059      -0.0337 +- 0.0620     
+
+--- the headline ---
+  C_kk(g g -> ZZ, box)       = +0.380 +- 0.072
+  C_kk(q qbar -> ZZ, contin) = -0.608 +- 0.080
+  separation = (+0.380 - (-0.608)) / sqrt(0.072^2 + 0.080^2) = 9.2 sigma
+  The two mechanisms correlate the two Z helicities with OPPOSITE
+  sign.  Each is large against its own ceiling |C_kk| <= f_TT:
+    g g    |C_kk| / f_TT = 0.42
+    q qbar |C_kk| / f_TT = 0.91
+
