@@ -6,9 +6,11 @@ LO diagram-content test of the q qbar f_0 deficit
   zz_none     p p > z z + MadSpin spinmode = none
 
 one offline selection on all four: |m(l+l-) - 91.1880| < 36.6211 GeV and
-pt(l+l-) > 1.0 GeV on both reconstructed pairs.  No generator-level
-cut acts on any of them, so the cut cannot see a z on one side and a
-lepton pair on the other.
+pt(l+l-) > 1.0 GeV on both reconstructed pairs.  NEITHER cut is
+applied at the generator level on any of them, so neither can see a z
+on one side and a lepton pair on the other -- which is the asymmetry the
+NLO comparison carries.  The one generator-level threshold there is, a
+40 GeV floor on the same-flavour pairs, is measured inert below.
 
 sample           N_all     N_sel       N_eff    sigma [pb]
 full4l          800000    779924      779924      0.020948
@@ -16,24 +18,42 @@ zz4l            800000    780493      780493      0.020945
 zz_madspin      200000    199936      199935      0.020941
 zz_none         200000    199925      199925      0.021898
 
-sample       f_0 (e+ e-)          f_0 (mu+ mu-)        f_0 (both)           f_00                 f_TT                 C_kk                
-full4l       +0.1744+-0.0017      +0.1739+-0.0017      +0.1742+-0.0012      +0.0618+-0.0027      +0.7135+-0.0034      -0.6278+-0.0345     
-zz4l         +0.1722+-0.0017      +0.1749+-0.0017      +0.1736+-0.0012      +0.0582+-0.0027      +0.7111+-0.0034      -0.6551+-0.0345     
-zz_madspin   +0.1712+-0.0034      +0.1738+-0.0034      +0.1725+-0.0024      +0.0571+-0.0053      +0.7120+-0.0066      -0.7214+-0.0682     
-zz_none      +0.3313+-0.0033      +0.3332+-0.0033      +0.3322+-0.0024      +0.1101+-0.0052      +0.4456+-0.0059      -0.0236+-0.0620     
+the five columns of Table 1 of spin_definitions.tex
+sample       f_0 (both)           f_00                 f_00 - f_0 f_0       f_TT                 C_kk                
+full4l       +0.1742+-0.0012      +0.0618+-0.0027      +0.0315+-0.0027      +0.7135+-0.0034      -0.6278+-0.0345     
+zz4l         +0.1736+-0.0012      +0.0582+-0.0027      +0.0281+-0.0027      +0.7111+-0.0034      -0.6551+-0.0345     
+zz_madspin   +0.1725+-0.0024      +0.0571+-0.0053      +0.0273+-0.0053      +0.7120+-0.0066      -0.7214+-0.0682     
+zz_none      +0.3322+-0.0024      +0.1101+-0.0052      -0.0003+-0.0052      +0.4456+-0.0059      -0.0236+-0.0620     
+
+per-Z: f_0 (e+ e-) +0.1744+-0.0017  f_0 (mu+ mu-) +0.1739+-0.0017
+
+--- the selection actually reached, sample by sample ---
+  the window is 54.5669 .. 127.8091 GeV and pt(l+l-) > 1.0 GeV
+  the run card carries mxx_min_pdg = {11: 40, 13: 40} with
+  mxx_only_part_antipart, i.e. a 40 GeV floor on the SAME-FLAVOUR pairs
+  only.  It sits below the window edge and is therefore inert; the
+  cross-pair fraction below 40 GeV shows it did not reach them either.
+  sample         min m_ee   max m_ee  min pt_ee     frac m(e+mu-) < 40
+  full4l          54.5670   127.8029     1.0012                0.13431
+  zz4l            54.5678   127.8087     1.0036                0.13409
+  zz_madspin      54.6389   127.7974     1.0058                0.13417
+  zz_none         91.1880    91.1880     1.0010                0.12089
 
 --- the differences ---
   full4l - zz4l            f_0 (both)   +0.00059 +- 0.00175   +0.34 sigma
+  full4l - zz4l            f_00 - f_0 f_0 +0.00336 +- 0.00381   +0.88 sigma
   full4l - zz4l            f_TT         +0.00237 +- 0.00476   +0.50 sigma
   full4l - zz4l            C_kk         +0.02727 +- 0.04883   +0.56 sigma
     the four singly-resonant Born diagrams, and nothing else
 
   full4l - zz_madspin      f_0 (both)   +0.00164 +- 0.00273   +0.60 sigma
+  full4l - zz_madspin      f_00 - f_0 f_0 +0.00414 +- 0.00596   +0.69 sigma
   full4l - zz_madspin      f_TT         +0.00144 +- 0.00745   +0.19 sigma
   full4l - zz_madspin      C_kk         +0.09359 +- 0.07647   +1.22 sigma
     the LO twin of the NLO comparison under test
 
   zz4l - zz_madspin        f_0 (both)   +0.00104 +- 0.00273   +0.38 sigma
+  zz4l - zz_madspin        f_00 - f_0 f_0 +0.00079 +- 0.00596   +0.13 sigma
   zz4l - zz_madspin        f_TT         -0.00094 +- 0.00745   -0.13 sigma
   zz4l - zz_madspin        C_kk         +0.06632 +- 0.07646   +0.87 sigma
     what is left once the extra diagrams are taken out of the truth

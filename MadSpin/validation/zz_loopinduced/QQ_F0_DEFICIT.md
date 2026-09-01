@@ -177,10 +177,19 @@ at 40 GeV well below the window), the study's window and `pt` cut applied
 offline to both alike -- so the T129 trap of section 1 is absent from this
 comparison by construction:
 
-| sample | sigma [pb] | `f_0` (both) | `f_TT` | `C_kk` |
-|---|---|---|---|---|
-| `full4l` (6 diagrams) | 0.020948 | +0.17416 +- 0.00123 | +0.7135 +- 0.0034 | -0.628 +- 0.035 |
-| `zz4l` (2 diagrams) | 0.020945 | +0.17357 +- 0.00123 | +0.7111 +- 0.0034 | -0.655 +- 0.035 |
+| sample | sigma [pb] | `f_0` (both) | `f_00` | `f_00 - f_0 f_0` | `f_TT` | `C_kk` |
+|---|---|---|---|---|---|---|
+| `full4l` (6 diagrams) | 0.020948 | +0.1742 +- 0.0012 | +0.0618 +- 0.0027 | +0.0315 +- 0.0027 | +0.7135 +- 0.0034 | -0.628 +- 0.035 |
+| `zz4l` (2 diagrams) | 0.020945 | +0.1736 +- 0.0012 | +0.0582 +- 0.0027 | +0.0281 +- 0.0027 | +0.7111 +- 0.0034 | -0.655 +- 0.035 |
+
+The `full4l` row is the LO reference line of Table 1 of `spin_definitions.tex`,
+which is where it is quoted. It is on the table's common selection: the window
+and the `pt` cut are applied offline, which reaches the same selection as the
+truth rows' `custom_fcts` file because both act on the reconstructed pairs, and
+the run's only generator-level threshold -- a 40 GeV floor on the same-flavour
+pairs -- sits below the window's 54.567 GeV edge and is measured inert (13.4 %
+of the surviving events have `m(e+ mu-) < 40 GeV`, against 12.9 % of the NLO
+truth's).
 
 ```
 full4l - zz4l   f_0 (both)  +0.00059 +- 0.00175   +0.34 sigma

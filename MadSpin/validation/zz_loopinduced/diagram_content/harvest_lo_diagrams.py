@@ -50,16 +50,27 @@ def load(path):
 def numbers(o):
     w = o['w']
     f0 = 0.5 * (o['pol0_1'] + o['pol0_2'])
+    f01, _ = wmean(o['pol0_1'], w)
+    f02, _ = wmean(o['pol0_2'], w)
     d = {'N_all': o['_n_all'], 'N': o['_n_sel'],
          'N_eff': float(w.sum() ** 2 / (w ** 2).sum()),
          'sigma_pb_all': o['_sumw_all'] / o['_n_all'],
          'sigma_pb_sel': float(w.sum() / o['_n_all']),
-         'f_0 (e+ e-)': list(wmean(o['pol0_1'], w)),
-         'f_0 (mu+ mu-)': list(wmean(o['pol0_2'], w)),
+         'f_0 (e+ e-)': [f01, wmean(o['pol0_1'], w)[1]],
+         'f_0 (mu+ mu-)': [f02, wmean(o['pol0_2'], w)[1]],
          'f_0 (both)': list(wmean(f0, w)),
          'f_00': list(wmean(o['pol00'], w)),
+         # the rank-2 correlation, per event so the bar keeps the covariance
+         # of the two sides -- the fourth column of Table 1
+         'f_00 - f_0 f_0': list(wmean(o['pol00'] - f01 * f02, w)),
          'f_TT': list(wmean(o['polTT'], w)),
-         'cos1cos2': list(wmean(o['cos1cos2'], w))}
+         'cos1cos2': list(wmean(o['cos1cos2'], w)),
+         # the 40 GeV same-flavour floor of the generator-level run card is
+         # inert if the CROSS pairs reach below it; measured, not assumed
+         'frac m(e+ mu-) < 40 GeV': float((o['m_epmum'] < 40).mean()),
+         'min m_ee': float(o['m_ee'].min()),
+         'max m_ee': float(o['m_ee'].max()),
+         'min pt_ee': float(o['pt_ee'].min())}
     d['C_kk'] = list(O.c_kk_from_moment(*d['cos1cos2']))
     return d
 
@@ -99,10 +110,12 @@ def main():
     A('')
     A('one offline selection on all four: |m(l+l-) - %.4f| < %.4f GeV and'
       % (O.M_Z, O.BW_CUT * O.W_Z))
-    A('pt(l+l-) > %.1f GeV on both reconstructed pairs.  No generator-level'
+    A('pt(l+l-) > %.1f GeV on both reconstructed pairs.  NEITHER cut is'
       % PT_MIN)
-    A('cut acts on any of them, so the cut cannot see a z on one side and a')
-    A('lepton pair on the other.')
+    A('applied at the generator level on any of them, so neither can see a z')
+    A('on one side and a lepton pair on the other -- which is the asymmetry the')
+    A('NLO comparison carries.  The one generator-level threshold there is, a')
+    A('40 GeV floor on the same-flavour pairs, is measured inert below.')
     A('')
     A('%-12s %9s %9s %11s %13s' % ('sample', 'N_all', 'N_sel', 'N_eff',
                                    'sigma [pb]'))
@@ -110,19 +123,37 @@ def main():
         A('%-12s %9d %9d %11.0f %13.6f'
           % (t, r['N_all'], r['N'], r['N_eff'], r['sigma_pb_sel']))
     A('')
-    names = ['f_0 (e+ e-)', 'f_0 (mu+ mu-)', 'f_0 (both)', 'f_00', 'f_TT',
-             'C_kk']
+    names = ['f_0 (both)', 'f_00', 'f_00 - f_0 f_0', 'f_TT', 'C_kk']
+    A('the five columns of Table 1 of spin_definitions.tex')
     A('%-12s %s' % ('sample', ' '.join('%-20s' % n for n in names)))
     for t, r in res.items():
         A('%-12s %s' % (t, ' '.join('%-20s' % ('%+.4f+-%.4f' % tuple(r[n]))
                                     for n in names)))
+    A('')
+    A('per-Z: %s' % '  '.join(
+        '%s %+.4f+-%.4f' % ((n,) + tuple(res['full4l'][n]))
+        for n in ('f_0 (e+ e-)', 'f_0 (mu+ mu-)') if 'full4l' in res))
+    A('')
+    A('--- the selection actually reached, sample by sample ---')
+    A('  the window is %.4f .. %.4f GeV and pt(l+l-) > %.1f GeV'
+      % (O.M_LO, O.M_HI, PT_MIN))
+    A('  the run card carries mxx_min_pdg = {11: 40, 13: 40} with')
+    A('  mxx_only_part_antipart, i.e. a 40 GeV floor on the SAME-FLAVOUR pairs')
+    A('  only.  It sits below the window edge and is therefore inert; the')
+    A('  cross-pair fraction below 40 GeV shows it did not reach them either.')
+    A('  %-12s %10s %10s %10s %22s'
+      % ('sample', 'min m_ee', 'max m_ee', 'min pt_ee', 'frac m(e+mu-) < 40'))
+    for t, r in res.items():
+        A('  %-12s %10.4f %10.4f %10.4f %22.5f'
+          % (t, r['min m_ee'], r['max m_ee'], r['min pt_ee'],
+             r['frac m(e+ mu-) < 40 GeV']))
     A('')
     A('--- the differences ---')
 
     def diff(a, b_, note):
         if a not in res or b_ not in res:
             return
-        for n in ('f_0 (both)', 'f_TT', 'C_kk'):
+        for n in ('f_0 (both)', 'f_00 - f_0 f_0', 'f_TT', 'C_kk'):
             x, ex = res[a][n]
             y, ey = res[b_][n]
             e = np.hypot(ex, ey)

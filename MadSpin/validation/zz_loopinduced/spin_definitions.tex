@@ -61,9 +61,9 @@ and coefficient quoted in this work, in a form that can be reimplemented from
 the text alone. Unless stated otherwise the numbers are those of the
 loop-induced $gg\to ZZ$ study of this work, with the
 $q\bar q$ continuum alongside it in Table~\ref{tab:spincoeff}: $200\,000$
-events per sample, all moments \emph{unbinned}, i.e.\ weighted means over
-events with the ordinary error of the mean, and no binning or within-bin
-reconstruction anywhere.
+events per sample except where a count is quoted, all moments \emph{unbinned},
+i.e.\ weighted means over events with the ordinary error of the mean, and no
+binning or within-bin reconstruction anywhere.
 
 \subsection{The helicity angles}
 \label{subsec:spinobs_angles}
@@ -439,6 +439,7 @@ than silently re-derived.
     \midrule
     \multicolumn{6}{@{}l}{\emph{$q\bar q\to ZZ$, the continuum --- truth is $pp\to e^+e^-\mu^+\mu^-$ at NLO}}\\
     truth              & $0.1887\pm0.0029$ & $0.0628\pm0.0062$ & $\phantom{-}0.0272\pm0.0062$ & $0.6854\pm0.0078$ & $-0.645\pm0.080$ \\
+    \quad at LO        & $0.1742\pm0.0012$ & $0.0618\pm0.0027$ & $\phantom{-}0.0315\pm0.0027$ & $0.7135\pm0.0034$ & $-0.628\pm0.035$ \\
     \code{madspin}     & $0.1771\pm0.0028$ & $0.0504\pm0.0061$ & $\phantom{-}0.0191\pm0.0061$ & $0.6963\pm0.0076$ & $-0.540\pm0.078$ \\
     \code{PA}          & $0.1768\pm0.0028$ & $0.0600\pm0.0061$ & $\phantom{-}0.0288\pm0.0061$ & $0.7065\pm0.0077$ & $-0.524\pm0.079$ \\
     \code{onshell}     & $0.1804\pm0.0028$ & $0.0538\pm0.0061$ & $\phantom{-}0.0212\pm0.0061$ & $0.6930\pm0.0076$ & $-0.482\pm0.078$ \\
@@ -452,8 +453,19 @@ than silently re-derived.
     \bottomrule
   \end{tabular}
   \caption{Spin coefficients of the two $ZZ$ production mechanisms, unbinned
-    moments over $200\,000$ events per sample, on the common selection of the
-    text. $f_0$ is the per-event average of the two $Z$; on a single side the
+    moments over $200\,000$ events per sample --- the LO reference row
+    excepted, which is $800\,000$ --- on the common selection of the text.
+    The ``at LO'' row is $pp\to e^+e^-\mu^+\mu^-$ with the same photon veto
+    and the same selection as the NLO truth above it, one order down: a
+    reference and not a third mechanism, which is why it carries no pull row.
+    It was generated with no cut of any kind at the generator level and
+    filtered to the common selection afterwards, which is the same selection
+    because both cuts act on the reconstructed pairs; the only generator-level
+    threshold it carries, a $40$~GeV floor on the same-flavour pairs, sits
+    below the window's $54.567$~GeV edge and is inert ($13.4\,\%$ of the
+    surviving events have $m(e^+\mu^-)<40$~GeV, against $12.9\,\%$ of the NLO
+    truth's, so nothing was removed there either). $f_0$ is the per-event
+    average of the two $Z$; on a single side the
     $gg$ \code{none} pull is $+55.2\sigma$ rather than $+77.4\sigma$ and the
     $q\bar q$ one $+26.8\sigma$ rather than $+37.0\sigma$. The isotropic values
     a mode with no production density must give are $f_0=1/3$, $f_{TT}=4/9$,
@@ -495,6 +507,13 @@ problem: \code{madspin} and \code{PA} reproduce the truth's $0.028691$~pb to
 $-0.09\,\%$ and $-0.10\,\%$, and \code{onshell} and \code{none} sit
 $+4.49\,\%$ high, which is the Breit-Wigner truncation $1/f^2=1.0457$ that they
 do not apply and the other two do.
+
+Third, and this is what the LO reference row of Table~\ref{tab:spincoeff} is
+for: the same comparison one order down --- $pp\to ZZ$ at LO through the same
+\ms{} chain, against the LO four-lepton reference, on the same selection ---
+agrees at $+0.6\sigma$, $f_0=0.1725\pm0.0024$ against $0.1742\pm0.0012$, so
+whatever the $q\bar q$ $f_0$ tension is, it is not something the chain does
+that survives at LO.
 
 \paragraph{The two mechanisms differ in every coefficient, not only in sign.}
 The $gg$ box produces $ZZ$ that are overwhelmingly transverse,
