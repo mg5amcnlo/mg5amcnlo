@@ -4736,8 +4736,49 @@ class decay_all_events_onshell(decay_all_events):
                 i+=1
         return commandline
 
+    def refresh_me_param_cards(self):
+        """Put MadSpin's parameters inside every matrix-element directory.
+
+        ``output standalone`` writes ``Cards/param_card.dat`` from the *model*,
+        i.e. from the model's default/restriction values -- it knows nothing
+        about the event file. But ``initialise_f2py_module`` hands exactly that
+        file to the compiled matrix element, so without this the production and
+        decay density matrices are evaluated with the model defaults and every
+        parameter the user actually generated the events with (a mass, a width,
+        a Wilson coefficient) is silently ignored.
+
+        ``path_me/param_card.dat`` is the single source of truth: it is written
+        from ``banner['slha']`` on every run (decay_all_events.__init__), so it
+        already carries the parameters of the input events, including the
+        ``import model <MODEL> <CARD>`` override -- the one supported way to
+        ask MadSpin for different parameters, which rewrites ``banner['slha']``
+        after checking it against the banner.
+
+        A *copy*, not a symlink: these trees are compiled in place, tarred into
+        gridpacks and (under ``ms_dir``) moved to other machines, none of which
+        survives a link pointing outside the tree; and the copy left behind is
+        the record of what the run used, which a link -- repointed by the next
+        run -- would destroy. Freshness costs nothing here because this runs on
+        every run, reuse included. Same idiom as the legacy
+        ``compile_fortran`` (production_me/full_me/decay_me).
+        """
+        source = pjoin(self.path_me, 'param_card.dat')
+        if not os.path.exists(source):
+            return
+        ms_me_subdir = getattr(self.mscmd, 'ms_me_subdir', 'madspin_me')
+        ms_me_decay_subdir = getattr(self.mscmd, 'ms_me_decay_subdir', 'madspin_decay')
+        for subdir in (ms_me_subdir, ms_me_decay_subdir):
+            cards = pjoin(self.path_me, subdir, 'Cards')
+            if not os.path.isdir(cards):
+                continue
+            shutil.copyfile(source, pjoin(cards, 'param_card.dat'))
+
     def compile(self):
         logger.info('Compiling code')
+        # Before anything is compiled or loaded: the matrix elements read their
+        # parameters from these cards at initialise() time, and what
+        # ``output standalone`` left there is the model default.
+        self.refresh_me_param_cards()
         ms_me_subdir = getattr(self.mscmd, 'ms_me_subdir', 'madspin_me')
         ms_me_decay_subdir = getattr(self.mscmd, 'ms_me_decay_subdir', 'madspin_decay')
         # Per-instance suffix for the f2py-linked shared library: with the

@@ -44,6 +44,7 @@ import madgraph.various.misc as misc
 import MadSpin.decay as madspin
 import madgraph.various.lhe_parser as lhe_parser
 import MadSpin.interface_madspin as interface_madspin
+import models.check_param_card as check_param_card
 import models.import_ufo as import_ufo
 
 
@@ -9953,3 +9954,594 @@ class TestBreitWignerTruncation(unittest.TestCase):
         chain = self._chain([6])
         self.assertEqual(self._V1(-1, self.TABLE).bw_truncation_factor(chain),
                          self._V1(15, self.TABLE).bw_truncation_factor(chain))
+
+
+class TestMatrixElementParamCard(unittest.TestCase):
+    """The parameters MadSpin evaluates its matrix elements with.
+
+    ``output standalone`` writes ``<me_dir>/Cards/param_card.dat`` from the
+    *model* -- its default/restriction values -- because it knows nothing about
+    the event file. ``initialise_f2py_module`` then handed exactly that file to
+    the compiled density library, and its only other branch required
+    ``<me_dir>/param_card.dat`` (a file ``output standalone`` never writes) to
+    exist *and* ``<me_dir>/Cards/param_card.dat`` (which it always writes) not
+    to. So the run's own card was unreachable: every production and decay
+    density matrix was evaluated at the model defaults, and a mass, a width or
+    a Wilson coefficient set in the param_card the events were generated with
+    was silently dropped.
+
+    The single source of truth is ``path_me/param_card.dat``: written from
+    ``banner['slha']`` on every run, so it carries the parameters of the input
+    events including the ``import model <MODEL> <CARD>`` override -- the one
+    supported way of asking MadSpin for different parameters, which is checked
+    against the banner before it is accepted.
+    """
+
+    # the run's card and the model's default differ in a mass, a width and a
+    # BSM coefficient -- the three kinds of parameter this used to drop
+    RUN_CARD = (
+        'Block mass\n'
+        '    6 1.500000e+02 # MT\n'
+        '   23 9.118760e+01 # MZ\n'
+        'Block newcoup\n'
+        '    1 -1.000000e+00 # ctg\n'
+        'DECAY   6 5.320000e+00 # WT\n'
+        'DECAY  23 2.495200e+00 # WZ\n'
+    )
+    MODEL_DEFAULT_CARD = (
+        'Block mass\n'
+        '    6 1.727600e+02 # MT\n'
+        '   23 9.118760e+01 # MZ\n'
+        'Block newcoup\n'
+        '    1 0.000000e+00 # ctg\n'
+        'DECAY   6 1.330000e+00 # WT\n'
+        'DECAY  23 2.495200e+00 # WZ\n'
+    )
+    # the process directory's own card: a third source, which path_me points at
+    # when MadSpin is launched from MadEvent, and which may have been edited
+    # after the events were made
+    PROCESS_DIR_CARD = (
+        'Block mass\n'
+        '    6 9.900000e+01 # MT\n'
+        '   23 9.118760e+01 # MZ\n'
+        'Block newcoup\n'
+        '    1 7.000000e+00 # ctg\n'
+        'DECAY   6 9.900000e+00 # WT\n'
+        'DECAY  23 2.495200e+00 # WZ\n'
+    )
+
+    def setUp(self):
+        import tempfile
+        self.tmpdir = tempfile.mkdtemp(prefix='ms_param_card_')
+        open(pjoin(self.tmpdir, 'param_card.dat'), 'w').write(self.RUN_CARD)
+        for subdir in ('madspin_me', 'madspin_decay'):
+            os.makedirs(pjoin(self.tmpdir, subdir, 'Cards'))
+            os.makedirs(pjoin(self.tmpdir, subdir, 'SubProcesses'))
+            open(pjoin(self.tmpdir, subdir, 'Cards', 'param_card.dat'),
+                 'w').write(self.MODEL_DEFAULT_CARD)
+
+    def tearDown(self):
+        shutil.rmtree(self.tmpdir, ignore_errors=True)
+
+    # ------------------------------------------------------------------
+    # the read site: what the compiled library is actually initialised with
+    # ------------------------------------------------------------------
+
+    class _Module(object):
+        """Stands in for the f2py extension: records the card it is given."""
+        def __init__(self):
+            self.card = None
+        def initialise(self, path):
+            self.card = path
+        def set_madloop_path(self, path):
+            pass
+
+    def _interface(self):
+        interface = interface_madspin.MadSpinInterface
+
+        class Stub(object):
+            me_param_card = interface.me_param_card
+            initialise_f2py_module = interface.initialise_f2py_module
+
+            def _set_f2py_beampol(self, mymod):
+                pass  # beam polarisation is not what is under test here
+        stub = Stub()
+        stub.path_me = self.tmpdir
+        stub.ms_me_subdir = 'madspin_me'
+        stub.ms_me_decay_subdir = 'madspin_decay'
+        return stub
+
+    def _initialised_with(self, prod_or_decay):
+        """The *content* of the card the library is handed -- the path alone
+        does not say whose parameters ended up inside it."""
+        stub = self._interface()
+        mymod = self._Module()
+        subdir = (stub.ms_me_subdir if prod_or_decay == 'prod'
+                  else stub.ms_me_decay_subdir)
+        stub.initialise_f2py_module(
+            mymod, pjoin(self.tmpdir, subdir, 'SubProcesses'), prod_or_decay)
+        self.assertIsNotNone(mymod.card)
+        return open(mymod.card).read()
+
+    def _refresh(self):
+        madspin.decay_all_events_onshell.refresh_me_param_cards(
+            self._generator())
+
+    def _generator(self):
+        class Gen(object):
+            refresh_me_param_cards = \
+                madspin.decay_all_events_onshell.refresh_me_param_cards
+        gen = Gen()
+        gen.path_me = self.tmpdir
+
+        class MsCmd(object):
+            ms_me_subdir = 'madspin_me'
+            ms_me_decay_subdir = 'madspin_decay'
+        gen.mscmd = MsCmd()
+        return gen
+
+    def test_the_production_library_sees_the_runs_parameters(self):
+        """The regression: with the ME directory laid out as ``output
+        standalone`` leaves it, the density library used to be initialised at
+        the model defaults -- MT = 172.76 and no BSM coupling -- whatever the
+        events were generated with."""
+        self._refresh()
+        card = self._initialised_with('prod')
+        self.assertEqual(card, self.RUN_CARD)
+        self.assertNotEqual(card, self.MODEL_DEFAULT_CARD)
+
+    def test_the_decay_library_sees_them_too(self):
+        """The decay side is not a lesser case: MadSpin generates its decay
+        events with the run's card and measures the partial widths there, so a
+        decay density matrix built at other parameters is inconsistent with the
+        kinematics MadSpin itself produced."""
+        self._refresh()
+        self.assertEqual(self._initialised_with('decay'), self.RUN_CARD)
+
+    def test_the_process_directory_card_is_never_read(self):
+        """``path_me`` is the process directory when MadSpin runs under
+        MadEvent, so ``path_me/Cards/param_card.dat`` is right there -- and it
+        may have been edited after the events were generated. Using it would
+        evaluate the production matrix element at parameters the events do not
+        have. (The legacy onshell_v1 read site did exactly that.)"""
+        os.makedirs(pjoin(self.tmpdir, 'Cards'))
+        open(pjoin(self.tmpdir, 'Cards', 'param_card.dat'),
+             'w').write(self.PROCESS_DIR_CARD)
+        self._refresh()
+        for side in ('prod', 'decay'):
+            self.assertEqual(self._initialised_with(side), self.RUN_CARD)
+
+    def test_an_unknown_side_is_still_refused(self):
+        stub = self._interface()
+        self.assertRaises(ValueError, stub.initialise_f2py_module,
+                          self._Module(), self.tmpdir, 'both')
+
+    # ------------------------------------------------------------------
+    # the resolver on its own
+    # ------------------------------------------------------------------
+
+    def test_the_resolver_falls_back_to_the_runs_card(self):
+        """An ME directory without a Cards/ (or an older layout) resolves to
+        the source of truth itself rather than to nothing."""
+        shutil.rmtree(pjoin(self.tmpdir, 'madspin_me', 'Cards'))
+        self.assertEqual(self._interface().me_param_card('madspin_me'),
+                         pjoin(self.tmpdir, 'param_card.dat'))
+
+    def test_the_resolver_without_a_folder_is_the_source_of_truth(self):
+        self.assertEqual(self._interface().me_param_card(),
+                         pjoin(self.tmpdir, 'param_card.dat'))
+
+    # ------------------------------------------------------------------
+    # the writer
+    # ------------------------------------------------------------------
+
+    def test_the_refresh_overwrites_the_model_default(self):
+        for subdir in ('madspin_me', 'madspin_decay'):
+            self.assertEqual(
+                open(pjoin(self.tmpdir, subdir, 'Cards',
+                           'param_card.dat')).read(),
+                self.MODEL_DEFAULT_CARD)
+        self._refresh()
+        for subdir in ('madspin_me', 'madspin_decay'):
+            self.assertEqual(
+                open(pjoin(self.tmpdir, subdir, 'Cards',
+                           'param_card.dat')).read(),
+                self.RUN_CARD)
+
+    def test_it_is_a_copy_and_not_a_link(self):
+        """A copy, not a symlink: these trees get compiled in place, tarred
+        into gridpacks and moved to other machines, and the copy left behind is
+        the record of what the run used -- which a link the next run repoints
+        would destroy."""
+        self._refresh()
+        card = pjoin(self.tmpdir, 'madspin_me', 'Cards', 'param_card.dat')
+        self.assertFalse(os.path.islink(card))
+        os.remove(pjoin(self.tmpdir, 'param_card.dat'))
+        self.assertEqual(open(card).read(), self.RUN_CARD)
+
+    def test_the_refresh_runs_again_on_every_run(self):
+        """Freshness comes from repeating the copy, not from a link: a reused
+        directory whose card was left behind by an earlier run is brought back
+        to this run's parameters."""
+        self._refresh()
+        open(pjoin(self.tmpdir, 'madspin_me', 'Cards', 'param_card.dat'),
+             'w').write(self.MODEL_DEFAULT_CARD)
+        self._refresh()
+        self.assertEqual(self._initialised_with('prod'), self.RUN_CARD)
+
+    def test_a_missing_decay_directory_is_not_an_error(self):
+        """``madspin_decay`` only exists in the density modes."""
+        shutil.rmtree(pjoin(self.tmpdir, 'madspin_decay'))
+        self._refresh()
+        self.assertEqual(self._initialised_with('prod'), self.RUN_CARD)
+
+    def test_nothing_to_copy_is_not_an_error(self):
+        os.remove(pjoin(self.tmpdir, 'param_card.dat'))
+        self._refresh()
+        self.assertEqual(
+            open(pjoin(self.tmpdir, 'madspin_me', 'Cards',
+                       'param_card.dat')).read(),
+            self.MODEL_DEFAULT_CARD)
+
+
+class TestLoopInducedMatrixElementParamCard(TestMatrixElementParamCard):
+    """The same question for a loop-induced production matrix element.
+
+    Loop-induced is the one spinmode family that takes a visibly different
+    route into the density matrix: ``output standalone --density=1`` produces a
+    MadLoop tree rather than a plain standalone one, ``initialise_f2py_module``
+    grows a second branch that rewrites ``MadLoopParams.dat`` and calls
+    ``set_madloop_path``, and MadLoop reads its parameters through
+    ``SubProcesses/MadLoop5_resources/param_card.dat`` -- a symlink
+    ``loop_exporters.py`` points at ``Cards/param_card.dat``.
+
+    None of that changes the answer, and these tests are here to keep it that
+    way. The card still arrives through the one ``mymod.initialise`` call that
+    precedes the MadLoop branch, and the refresh still reaches MadLoop because
+    it overwrites the file the link resolves to. Verified end to end on a
+    ``g g > z z [noborn=QCD]`` run whose events carry MZ = 93, WZ = 2.5: before
+    the fix both matrix-element directories sat at the model's 91.188 /
+    2.441404, and the production matrix element evaluated at a real event of
+    that run moved by 12% (6.845e-04 -> 7.645e-04) between the two cards.
+    """
+
+    def setUp(self):
+        super(TestLoopInducedMatrixElementParamCard, self).setUp()
+        # what a loop-induced ``output standalone`` leaves behind, and which
+        # ``initialise_f2py_module`` keys off to take the MadLoop branch
+        self.ml_path = pjoin(self.tmpdir, 'madspin_me', 'SubProcesses',
+                             'MadLoop5_resources')
+        os.makedirs(self.ml_path)
+        banner.MadLoopParam().write(pjoin(self.ml_path, 'MadLoopParams.dat'))
+        # loop_exporters.py links, rather than copies, the cards into
+        # MadLoop5_resources -- which is why refreshing Cards/ is enough
+        os.symlink(pjoin('..', '..', 'Cards', 'param_card.dat'),
+                   pjoin(self.ml_path, 'param_card.dat'))
+
+    class _Module(TestMatrixElementParamCard._Module):
+        """As the tree-level stand-in, but remembers the MadLoop path so a test
+        can tell that the loop branch was the one that ran."""
+        def __init__(self):
+            super(TestLoopInducedMatrixElementParamCard._Module,
+                  self).__init__()
+            self.madloop_path = None
+
+        def set_madloop_path(self, path):
+            self.madloop_path = path
+
+    def _initialised_module(self, prod_or_decay='prod'):
+        stub = self._interface()
+        mymod = self._Module()
+        subdir = (stub.ms_me_subdir if prod_or_decay == 'prod'
+                  else stub.ms_me_decay_subdir)
+        stub.initialise_f2py_module(
+            mymod, pjoin(self.tmpdir, subdir, 'SubProcesses'), prod_or_decay)
+        return mymod
+
+    def test_the_loop_branch_is_the_one_under_test(self):
+        """Guards the two tests below: if the MadLoop5_resources layout ever
+        stopped being recognised they would silently degenerate into a second
+        copy of the tree-level case and pass for the wrong reason."""
+        self._refresh()
+        self.assertEqual(self._initialised_module().madloop_path, self.ml_path)
+
+    def test_the_loop_induced_library_sees_the_runs_parameters(self):
+        """The regression, on the loop-induced route: the density library is
+        initialised from the run's card, not from the model defaults that
+        ``output standalone`` wrote into ``Cards/``."""
+        self._refresh()
+        card = self._initialised_module().card
+        self.assertEqual(open(card).read(), self.RUN_CARD)
+        self.assertNotEqual(open(card).read(), self.MODEL_DEFAULT_CARD)
+
+    def test_madloop_reads_the_refreshed_card_through_its_own_link(self):
+        """MadLoop does not read the path handed to ``initialise``; it reads
+        ``MadLoop5_resources/param_card.dat``. That is a symlink into
+        ``Cards/``, so overwriting the file there -- rather than pointing the
+        library elsewhere -- is what keeps the two in step."""
+        self._refresh()
+        self.assertEqual(
+            open(pjoin(self.ml_path, 'param_card.dat')).read(),
+            self.RUN_CARD)
+
+    def test_the_madloop_card_is_left_readable(self):
+        """``initialise_f2py_module`` rewrites ``MadLoopParams.dat`` in place
+        (via a temp file and a rename). A run that cannot parse it afterwards
+        would take MadLoop down with a Fortran STOP, i.e. exit code 0."""
+        self._refresh()
+        self._initialised_module()
+        reread = banner.MadLoopParam(pjoin(self.ml_path, 'MadLoopParams.dat'))
+        self.assertEqual(reread['HelicityFilterLevel'], 0)
+
+
+class TestReusedMsDirParameters(unittest.TestCase):
+    """A reused ``ms_dir``/``use_old_dir`` directory caches things computed
+    *from* the param_card -- the decay gridpacks and the events they produce,
+    the partial widths measured while building them, the maximum weights of the
+    unweighting, the branching ratios in ``madspin.pkl`` -- and re-measures
+    none of them on reuse. A run that changes the param_card and reuses the
+    directory therefore decays its events with one card while reporting a
+    cross-section computed from another.
+
+    ``run_from_pickle`` has long carried a narrower version of this check, but
+    it skips every ``decay`` block -- i.e. exactly the widths that drive the
+    branching ratios and the Breit-Wigner sampling.
+    """
+
+    CARD = (
+        'Block mass\n'
+        '    6 1.727600e+02 # MT\n'
+        'Block newcoup\n'
+        '    1 0.000000e+00 # ctg\n'
+        'DECAY   6 1.330000e+00 # WT\n'
+    )
+
+    def setUp(self):
+        import tempfile
+        self.tmpdir = tempfile.mkdtemp(prefix='ms_reuse_param_')
+
+    def tearDown(self):
+        shutil.rmtree(self.tmpdir, ignore_errors=True)
+
+    def _stub(self, card=None, ms_dir=None, use_old_dir=False, curr_dir=None):
+        interface = interface_madspin.MadSpinInterface
+
+        class Stub(object):
+            PARAM_CARD_STAMP = interface.PARAM_CARD_STAMP
+            CACHED_MATERIAL = interface.CACHED_MATERIAL
+            _reused_directory = interface._reused_directory
+            _holds_cached_material = interface._holds_cached_material
+            _check_reused_param_card = interface._check_reused_param_card
+        stub = Stub()
+        stub.options = {'ms_dir': ms_dir, 'use_old_dir': use_old_dir,
+                        'curr_dir': curr_dir}
+        stub.banner = banner.Banner()
+        stub.banner['slha'] = self.CARD if card is None else card
+        return stub
+
+    def _build(self, **opts):
+        """First use of the directory: it gets stamped."""
+        stub = self._stub(**opts)
+        stub._check_reused_param_card()
+        return stub
+
+    def test_a_fresh_directory_is_stamped_with_what_it_is_built_with(self):
+        self._build(ms_dir=self.tmpdir)
+        stamp = pjoin(self.tmpdir, 'ms_param_card.dat')
+        self.assertTrue(os.path.exists(stamp))
+        self.assertEqual(
+            check_param_card.ParamCard(stamp)['mass'].get((6,)).value, 172.76)
+
+    def test_the_directory_is_created_if_it_is_not_there_yet(self):
+        target = pjoin(self.tmpdir, 'not_yet')
+        self._build(ms_dir=target)
+        self.assertTrue(os.path.exists(pjoin(target, 'ms_param_card.dat')))
+
+    def test_reusing_it_with_the_same_card_is_allowed(self):
+        self._build(ms_dir=self.tmpdir)
+        self._stub(ms_dir=self.tmpdir)._check_reused_param_card()
+
+    def test_a_changed_width_stops_the_run(self):
+        """The one ``run_from_pickle`` skips: widths drive the branching ratio
+        and the Breit-Wigner sampling, and the partial widths cached beside the
+        gridpacks were measured with the old one."""
+        self._build(ms_dir=self.tmpdir)
+        stub = self._stub(ms_dir=self.tmpdir,
+                          card=self.CARD.replace('1.330000e+00',
+                                                 '5.320000e+00'))
+        self.assertRaises(interface_madspin.MadSpinStaleParameters,
+                          stub._check_reused_param_card)
+
+    def test_a_changed_mass_stops_the_run(self):
+        self._build(ms_dir=self.tmpdir)
+        stub = self._stub(ms_dir=self.tmpdir,
+                          card=self.CARD.replace('1.727600e+02',
+                                                 '1.500000e+02'))
+        self.assertRaises(interface_madspin.MadSpinStaleParameters,
+                          stub._check_reused_param_card)
+
+    def test_a_changed_coupling_stops_the_run(self):
+        self._build(ms_dir=self.tmpdir)
+        stub = self._stub(ms_dir=self.tmpdir,
+                          card=self.CARD.replace('1 0.000000e+00 # ctg',
+                                                 '1 -1.000000e+00 # ctg'))
+        self.assertRaises(interface_madspin.MadSpinStaleParameters,
+                          stub._check_reused_param_card)
+
+    def test_the_message_names_the_block_and_the_way_out(self):
+        self._build(ms_dir=self.tmpdir)
+        stub = self._stub(ms_dir=self.tmpdir,
+                          card=self.CARD.replace('1.330000e+00',
+                                                 '5.320000e+00'))
+        try:
+            stub._check_reused_param_card()
+        except interface_madspin.MadSpinStaleParameters as error:
+            message = str(error)
+        else:
+            self.fail('a changed width was accepted')
+        self.assertIn('decay', message)
+        self.assertIn(self.tmpdir, message)
+        self.assertIn('ms_dir', message)
+
+    def test_use_old_dir_is_checked_too(self):
+        """``use_old_dir`` reuses the same kind of material (the pickled
+        branching ratios, the matrix-element directories) in the run's own
+        working directory."""
+        self._build(use_old_dir=True, curr_dir=self.tmpdir)
+        stub = self._stub(use_old_dir=True, curr_dir=self.tmpdir,
+                          card=self.CARD.replace('1.330000e+00',
+                                                 '5.320000e+00'))
+        self.assertRaises(interface_madspin.MadSpinStaleParameters,
+                          stub._check_reused_param_card)
+
+    def test_nothing_is_reused_nothing_is_checked(self):
+        """A run that builds everything from scratch has no cache to be wrong
+        about, and must not be stopped -- nor leave a stamp behind."""
+        stub = self._stub(curr_dir=self.tmpdir)
+        self.assertIsNone(stub._reused_directory())
+        stub._check_reused_param_card()
+        self.assertFalse(os.path.exists(pjoin(self.tmpdir,
+                                              'ms_param_card.dat')))
+
+    def test_ms_dir_wins_over_curr_dir(self):
+        target = pjoin(self.tmpdir, 'gridpack')
+        stub = self._stub(ms_dir=target, use_old_dir=True, curr_dir=self.tmpdir)
+        self.assertEqual(stub._reused_directory(), os.path.realpath(target))
+
+    def test_an_unreadable_stamp_does_not_abort_a_healthy_run(self):
+        """The stamp is a safety net, not a gate: a directory stamped by an
+        older version (or a truncated file) must not stop a run that would
+        otherwise have proceeded exactly as before."""
+        self._build(ms_dir=self.tmpdir)
+        open(pjoin(self.tmpdir, 'ms_param_card.dat'), 'w').write('\x00 junk')
+        self._stub(ms_dir=self.tmpdir,
+                   card=self.CARD.replace('1.330000e+00',
+                                          '5.320000e+00'))._check_reused_param_card()
+
+    def test_a_banner_without_a_card_is_not_checked(self):
+        """hepmc / lhe_no_banner inputs carry no slha to compare."""
+        stub = self._stub(ms_dir=self.tmpdir)
+        del stub.banner['slha']
+        stub._check_reused_param_card()
+        self.assertFalse(os.path.exists(pjoin(self.tmpdir,
+                                              'ms_param_card.dat')))
+
+    def test_a_rebuild_refreshes_the_stamp_it_finds(self):
+        """A run that reuses nothing rebuilds the directory from scratch, so a
+        stamp an earlier run left there stops describing what is on disk.
+        Leaving it would stop the *next* reuse over a change that was in fact
+        rebuilt."""
+        self._build(use_old_dir=True, curr_dir=self.tmpdir)
+        rebuilt = self.CARD.replace('1.330000e+00', '5.320000e+00')
+        # same directory, but this run does not reuse anything
+        self._stub(curr_dir=self.tmpdir, card=rebuilt)._check_reused_param_card()
+        self._stub(use_old_dir=True, curr_dir=self.tmpdir,
+                   card=rebuilt)._check_reused_param_card()
+
+    def test_a_plain_run_leaves_no_stamp_behind(self):
+        """...but a directory nothing ever reuses does not get a new file."""
+        self._stub(curr_dir=self.tmpdir)._check_reused_param_card()
+        self.assertFalse(os.path.exists(pjoin(self.tmpdir,
+                                              'ms_param_card.dat')))
+
+    def test_an_unstamped_directory_with_content_is_flagged(self):
+        """An ms_dir built by a MadSpin that left no stamp still gets reused.
+        Nothing can vouch for its widths, so say so rather than stamp it with
+        this run's card as if it had been built with it."""
+        open(pjoin(self.tmpdir, 'max_wgt'), 'w').write('1.0\n')
+        warnings = []
+        with misc.TMP_variable(interface_madspin.logger, 'warning',
+                               lambda *a, **k: warnings.append(a)):
+            self._build(ms_dir=self.tmpdir)
+        self.assertTrue(warnings)
+        self.assertIn('param_card', warnings[0][0])
+
+    def test_an_empty_unstamped_directory_is_not_flagged(self):
+        warnings = []
+        with misc.TMP_variable(interface_madspin.logger, 'warning',
+                               lambda *a, **k: warnings.append(a)):
+            self._build(ms_dir=self.tmpdir)
+        self.assertFalse(warnings)
+
+    def test_an_unstamped_cache_does_not_acquire_a_stamp(self):
+        """The absence of a stamp means "unknown", not "matches this run".
+
+        Stamping a legacy cache with whatever card happens to be running would
+        authenticate it: the next run with that same card would match the stamp
+        and reuse decay events, partial widths and maximum weights that may
+        have been built with entirely different parameters, in silence and
+        without the warning. The upgrade boundary is exactly where unstamped
+        directories live, so this is the realistic path, not a corner."""
+        open(pjoin(self.tmpdir, 'max_wgt'), 'w').write('1.0\n')
+        with misc.TMP_variable(interface_madspin.logger, 'warning',
+                               lambda *a, **k: None):
+            self._build(ms_dir=self.tmpdir)
+        self.assertFalse(os.path.exists(pjoin(self.tmpdir,
+                                              'ms_param_card.dat')))
+
+    def test_an_unstamped_cache_is_never_authenticated_by_repetition(self):
+        """The hazard, in the sequence that produces it. A *changed* card was
+        never the danger -- it would meet the stamp the first run wrote and be
+        refused. The danger is the same card again: the second run would match
+        that stamp and reuse a cache of unknown provenance in silence, the
+        first run having vouched for it.
+
+        So the warning must come back every time, and the directory must stay
+        unstamped however often it is used: nothing on disk will ever learn
+        what that cache was built with. Left usable rather than refused --
+        the stamp is missing because the directory predates it, not because
+        anything is known to be wrong."""
+        open(pjoin(self.tmpdir, 'max_wgt'), 'w').write('1.0\n')
+        for run in range(3):
+            warnings = []
+            with misc.TMP_variable(interface_madspin.logger, 'warning',
+                                   lambda *a, **k: warnings.append(a)):
+                self._build(ms_dir=self.tmpdir)
+            self.assertTrue(warnings, 'run %d reused it in silence' % run)
+            self.assertFalse(os.path.exists(pjoin(self.tmpdir,
+                                                  'ms_param_card.dat')))
+
+    def test_a_changed_card_still_stops_a_directory_that_is_stamped(self):
+        """The counterweight to leaving legacy directories usable: a directory
+        whose provenance *is* known is still refused when the card moves."""
+        self._build(ms_dir=self.tmpdir)
+        open(pjoin(self.tmpdir, 'max_wgt'), 'w').write('1.0\n')
+        stub = self._stub(card=self.CARD.replace('1.330000e+00',
+                                                 '5.320000e+00'),
+                          ms_dir=self.tmpdir)
+        self.assertRaises(interface_madspin.MadSpinStaleParameters,
+                          stub._check_reused_param_card)
+
+    def test_every_kind_of_cached_material_counts(self):
+        """A cache this failed to notice would be stamped, i.e. authenticated
+        with a card it may never have been built with -- so the read sites'
+        caches are enumerated rather than approximated by "non-empty"."""
+        import tempfile
+        for name in ('madspin.pkl', 'max_wgt', 'max_wgt_sequential',
+                     'pure_interference_c', 'decay_6_0',
+                     pjoin('production_me', 'all_ME.pkl')):
+            tmpdir = tempfile.mkdtemp(prefix='ms_cached_')
+            try:
+                path = pjoin(tmpdir, name)
+                if name == 'decay_6_0':
+                    os.makedirs(path)
+                else:
+                    if not os.path.isdir(os.path.dirname(path)):
+                        os.makedirs(os.path.dirname(path))
+                    open(path, 'w').write('x')
+                with misc.TMP_variable(interface_madspin.logger, 'warning',
+                                       lambda *a, **k: None):
+                    self._build(ms_dir=tmpdir)
+                self.assertFalse(
+                    os.path.exists(pjoin(tmpdir, 'ms_param_card.dat')),
+                    '%s was not recognised as cached material' % name)
+            finally:
+                shutil.rmtree(tmpdir, ignore_errors=True)
+
+    def test_an_unrelated_file_is_not_cached_material(self):
+        """The counterweight: a directory holding something that is not one of
+        those caches is still a fresh one, and must still get its stamp."""
+        open(pjoin(self.tmpdir, 'README'), 'w').write('x')
+        self._build(ms_dir=self.tmpdir)
+        self.assertTrue(os.path.exists(pjoin(self.tmpdir,
+                                             'ms_param_card.dat')))
