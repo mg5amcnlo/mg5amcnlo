@@ -4,7 +4,7 @@ ANNOUNCEMENT:
    The 2.9.X LONG TERM STABLE version is now at end of life for bug fixing/support since December 2025.
    A new LTS (based on the current 3.5.X) is starting now and will act as the stable release for the coming years.
 
-3.7.3 (XX/XX/XX):
+3.7.3 (01/09/26):
     OM: BUG FIX (MadSpin): when two or more final-state particles with the same PDG code were decayed
         via *different* decay lines -- e.g. "p p > z z" with "decay z > e+ e-" and "decay z > u u~" --
         the two decay branches were paired with the two mothers in reverse order. The spin-correlated
@@ -18,7 +18,12 @@ ANNOUNCEMENT:
     OM: BUG FIX (polarisation): LO cross-sections computed with a run_card "me_frame" that selects a
         single particle -- e.g. "me_frame = 3" to work in the Z rest frame, which is the standard way
         to ask for the polarisation of that Z -- were wrong for a fraction of the events.
-        
+    OM: Allow to have +,- polarization restriction for onshell massive boson propagator 
+    RF: Fix an issue in the collection of events at NLO when using too many cores (introduced in 3.7.2)
+    RF: Allow to have HWU histograms render with matplotlib instead of gnuplot
+    OM: improved fix for a missing LHAPDF argument in the info file
+
+
 3.7.2 (07/07/26):
     MZ: negative seeds are now allowed and are strictly pinned (so no automatic reset to 0 for the following run).
         negative seeds are identical to positive ones (both produce exactly the same sample)
