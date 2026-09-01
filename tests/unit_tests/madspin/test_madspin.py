@@ -9773,6 +9773,269 @@ class TestRefillPoolIsCompleteBeforeItIsPublished(unittest.TestCase):
         self.assertFalse(os.path.exists(pool + '.mspool'))
 
 
+def _scan_probe_shard(shard_id, nb_core, events, start, stop, evt_decayfile,
+                      build_worker, out_path):
+    """Stand-in for ``_scan_maxwgt_shard_entry``: reports the worker id and the
+    slice of the probe events it was given, and publishes 'D' on the way out
+    exactly as the real entry does in its ``finally``.
+
+    A second copy of the JSON is left at ``<out_path>.kept`` because
+    ``_scan_maxwgt_parallel`` deletes the shard files once it has read them."""
+    worker = build_worker(shard_id, nb_core)
+    try:
+        payload = {'per_event': [[float(shard_id)]], 'z_samples': {},
+                   'shard_id': shard_id, 'nb_core': nb_core,
+                   'start': start, 'stop': stop}
+        _write_shard_payload(out_path, payload)
+    finally:
+        worker._set_status('D')
+
+
+def _scan_refill_shard(shard_id, nb_core, events, start, stop, evt_decayfile,
+                       build_worker, channel, out_path):
+    """Stand-in worker that runs its decay pool out at once and goes through the
+    REAL ``_worker_refill`` for ``channel``.
+
+    Everything the wait logic consults is the shipped code -- ``_channel_owner``,
+    ``_read_worker_status``, ``_wait_cycle_to_self``, the published-generation
+    marker. Only the two ends are stood in for: generating a pool (a madevent
+    run) and opening the refilled slice, neither of which this is about."""
+    worker = build_worker(shard_id, nb_core)
+    try:
+        worker._worker_refill(channel[0], channel[1], 1000)
+        payload = {'refilled': True, 'why': None}
+    except Exception as exc:
+        payload = {'refilled': False, 'why': str(exc)}
+    payload.update({'per_event': [[float(shard_id)]], 'z_samples': {},
+                    'shard_id': shard_id, 'nb_core': nb_core})
+    try:
+        _write_shard_payload(out_path, payload)
+    finally:
+        worker._set_status('D')
+
+
+def _write_shard_payload(out_path, payload):
+    import json
+    for path in (out_path, out_path + '.kept'):
+        with open(path, 'w') as fsock:
+            json.dump(payload, fsock)
+
+
+class TestMaxWeightScanForksEveryWorkerAnOwnerCanName(unittest.TestCase):
+    """The parallel max-weight scan must fork a worker for every id it lets
+    ``_channel_owner`` name.
+
+    ``nb_core`` reaches the workers as the *pool-addressing* count: the decay
+    pool was split into that many files and a worker opens ``paths[id]``. The
+    same number is the modulus of :meth:`_channel_owner`, so it also fixes which
+    worker is the sole (re)generator of each decay channel.
+
+    The scan used to cut the probe events into ``ceil(N / nb_core)``-sized
+    chunks while still handing out the original ``nb_core``. At the shipped
+    default of 75 probe events the trailing chunks come out empty -- one worker
+    never forked on 16 cores, three on 18, seven on 32 -- and yet those ids stay
+    nameable as owners. A live worker that runs its pool out on such a channel
+    then waits on a process that does not exist, and neither fail-safe rescues
+    it: ``_read_worker_status`` returns ``None`` (which is not ``('D',)``) for a
+    status file nobody ever wrote, and ``_wait_cycle_to_self`` finds no chain to
+    follow. The worker waits out ``MADSPIN_REFILL_WAIT`` -- an hour by default --
+    and takes the scan down with it."""
+
+    NB_EVENT = 75           # the Nevents_for_max_weight default
+    NB_CORE = (16, 18, 32)  # 1, 3 and 7 ids left unforked, respectively
+
+    class _Named(object):
+        """Stands in for the production EventFile, of which the scan only uses
+        the name (to build its shard-file paths)."""
+        def __init__(self, name):
+            self.name = name
+
+    def setUp(self):
+        import tempfile
+        self.tmpdir = tempfile.mkdtemp(prefix='ms_scan_')
+        self.addCleanup(shutil.rmtree, self.tmpdir, ignore_errors=True)
+
+    # ------------------------------------------------------------- the sides
+
+    def _parent(self):
+        """The parent side of the scan: the real ``_scan_maxwgt_parallel`` and
+        the status-board helpers it uses."""
+        interface = interface_madspin.MadSpinInterface
+
+        class Parent(object):
+            _scan_maxwgt_parallel = interface._scan_maxwgt_parallel
+            _balanced_ranges = staticmethod(interface._balanced_ranges)
+            _clear_worker_status = interface._clear_worker_status
+            _read_worker_status = interface._read_worker_status
+            _status_path = interface._status_path
+
+        parent = Parent()
+        parent.path_me = self.tmpdir
+        return parent
+
+    def _worker_factory(self, channel_keys=()):
+        """The child side: a worker carrying the real owner/waiter machinery,
+        with pool generation and slice opening stood in for."""
+        interface = interface_madspin.MadSpinInterface
+        tmpdir = self.tmpdir
+
+        class Worker(object):
+            # verbatim -- this is what is under test
+            _worker_refill = interface._worker_refill
+            _channel_owner = interface._channel_owner
+            _wait_cycle_to_self = interface._wait_cycle_to_self
+            _read_worker_status = interface._read_worker_status
+            _set_status = interface._set_status
+            _status_path = interface._status_path
+            _published_gen = staticmethod(interface._published_gen)
+            _publish_gen = staticmethod(interface._publish_gen)
+            _decay_dir = staticmethod(interface._decay_dir)
+
+            def _owner_generate(self, pdg, decay_file_nb, target_gen, needed):
+                """madevent's job; here only the marker the waiters poll."""
+                self._publish_gen(self._decay_dir(tmpdir, pdg, decay_file_nb),
+                                  target_gen)
+
+            def _open_refill_slice(self, decay_dir, gen, owner):
+                return ('slice', decay_dir, gen)
+
+        def build(shard_id, nb_core):
+            worker = Worker()
+            worker.path_me = tmpdir
+            worker.options = {'ms_dir': None}
+            worker.seed = 11
+            worker._shard_tag = shard_id
+            worker._shard_nb_core = nb_core
+            worker._channel_keys = list(channel_keys)
+            worker._pool_gen = {}
+            worker._owner_undersize = 0.10
+            worker._refill_seed_base = 42
+            worker._set_status('R')
+            return worker
+
+        return build
+
+    def _run_scan(self, parent, nb_core, entry, extra):
+        """Run the real scan; return ``{shard_id: payload}`` over the workers
+        that actually ran."""
+        import json
+        lhe = self._Named(pjoin(self.tmpdir, 'production.lhe'))
+        parent._scan_maxwgt_parallel(lhe, list(range(self.NB_EVENT)), {},
+                                     nb_core, entry, extra)
+        seen = {}
+        for sid in range(nb_core):
+            path = '%s.maxwgt.shard%d.json.kept' % (lhe.name, sid)
+            if os.path.exists(path):
+                with open(path) as fsock:
+                    seen[sid] = json.load(fsock)
+        return seen
+
+    # ------------------------------------------------------------- the split
+
+    def test_the_slices_cover_every_worker_and_every_event(self):
+        """Every worker gets a non-empty contiguous slice, the slices tile the
+        probe events exactly, and no two differ in size by more than one."""
+        for nb_core in self.NB_CORE:
+            ranges = interface_madspin.MadSpinInterface._balanced_ranges(
+                self.NB_EVENT, nb_core)
+            self.assertEqual(len(ranges), nb_core, 'nb_core=%s' % nb_core)
+            self.assertEqual(ranges[0][0], 0)
+            self.assertEqual(ranges[-1][1], self.NB_EVENT)
+            for (_, stop), (start, _) in zip(ranges, ranges[1:]):
+                self.assertEqual(stop, start)
+            sizes = [b - a for a, b in ranges]
+            self.assertTrue(min(sizes) >= 1)
+            self.assertTrue(max(sizes) - min(sizes) <= 1)
+
+    def test_an_even_split_is_diced_exactly_as_it_was_before(self):
+        """Both scans round their probe size up to a multiple of nb_core, so the
+        usual case divides evenly -- and there these are the very slices the
+        ceil-chunking produced. No sample is silently re-diced by the fix."""
+        for nb_core in self.NB_CORE:
+            nb_event = 4 * nb_core
+            chunk = nb_event // nb_core
+            self.assertEqual(
+                interface_madspin.MadSpinInterface._balanced_ranges(
+                    nb_event, nb_core),
+                [(sid * chunk, (sid + 1) * chunk) for sid in range(nb_core)])
+
+    # -------------------------------------------------------- the regression
+
+    def test_every_id_an_owner_can_take_belongs_to_a_worker_that_ran(self):
+        """The parent side of the regression: at the default 75 probe events the
+        scan must fork all 16 / 18 / 32 workers, since any of those ids can come
+        back from ``_channel_owner``."""
+        build = self._worker_factory()
+        for nb_core in self.NB_CORE:
+            seen = self._run_scan(self._parent(), nb_core,
+                                  _scan_probe_shard, (build,))
+            self.assertEqual(sorted(seen), list(range(nb_core)),
+                             'nb_core=%s' % nb_core)
+            covered = []
+            for payload in seen.values():
+                covered.extend(range(payload['start'], payload['stop']))
+            self.assertEqual(sorted(covered), list(range(self.NB_EVENT)))
+
+    def test_no_id_an_owner_can_take_reads_back_as_an_unwritten_status(self):
+        """The waiter's view of the same invariant, and the one that decides
+        whether it hangs: every id ``_channel_owner`` can return has a status
+        file to read. A missing one is exactly what ``_worker_refill`` cannot
+        tell apart from an owner that is simply not finished yet."""
+        build = self._worker_factory()
+        for nb_core in self.NB_CORE:
+            parent = self._parent()
+            self._run_scan(parent, nb_core, _scan_probe_shard, (build,))
+            missing = [wid for wid in range(nb_core)
+                       if parent._read_worker_status(wid) is None]
+            self.assertEqual(missing, [], 'nb_core=%s' % nb_core)
+
+    def test_a_worker_that_runs_out_is_not_left_waiting_on_a_missing_owner(self):
+        """The failure itself, end to end, in a couple of seconds rather than
+        the hour it takes in the field.
+
+        Every worker of a 16-core scan over the default 75 probe events runs its
+        pool out on the one channel whose owner is the last worker id, and goes
+        through the real ``_worker_refill``. With ``MADSPIN_REFILL_WAIT`` cut
+        down, a worker waiting on an owner that was never forked comes back
+        having given up; the scan must instead see every worker refilled."""
+        nb_core = 16
+        keys = [(6, nb) for nb in range(nb_core)]
+        channel = keys[nb_core - 1]   # owner == nb_core-1, the unforked id
+        for pdg, decay_file_nb in keys:
+            os.makedirs(interface_madspin.MadSpinInterface._decay_dir(
+                self.tmpdir, pdg, decay_file_nb))
+        build = self._worker_factory(keys)
+        self.assertEqual(build(0, nb_core)._channel_owner(*channel),
+                         nb_core - 1)
+        previous = os.environ.get('MADSPIN_REFILL_WAIT')
+        os.environ['MADSPIN_REFILL_WAIT'] = '5'
+        try:
+            seen = self._run_scan(self._parent(), nb_core, _scan_refill_shard,
+                                  (build, channel))
+        finally:
+            if previous is None:
+                del os.environ['MADSPIN_REFILL_WAIT']
+            else:
+                os.environ['MADSPIN_REFILL_WAIT'] = previous
+        gave_up = dict((sid, payload['why'])
+                       for sid, payload in seen.items()
+                       if not payload['refilled'])
+        self.assertEqual(gave_up, {})
+        self.assertEqual(sorted(seen), list(range(nb_core)))
+
+    def test_an_unforked_id_is_marked_done_so_nobody_waits_out_the_timeout(self):
+        """Belt and braces. Should a slice ever come back empty anyway, the
+        parent leaves 'D' on that id: a missing status file is indistinguishable
+        from an owner still working, so a waiter would sit out
+        ``MADSPIN_REFILL_WAIT``, whereas 'D' fires the fail-safe at once."""
+        parent = self._parent()
+        lhe = self._Named(pjoin(self.tmpdir, 'production.lhe'))
+        # no probe events at all: nothing to fork, but the ids stay addressable
+        parent._scan_maxwgt_parallel(lhe, [], {}, 4, _scan_probe_shard,
+                                     (self._worker_factory(),))
+        self.assertEqual(parent._read_worker_status(0), ('D',))
+
+
 class TestBreitWignerTruncation(unittest.TestCase):
     """The BW_cut window keeps only part of each resonance's Breit-Wigner, and
     the reported cross-section has to say so.
