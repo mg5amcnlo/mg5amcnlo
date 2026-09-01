@@ -10184,6 +10184,96 @@ class TestMatrixElementParamCard(unittest.TestCase):
             self.MODEL_DEFAULT_CARD)
 
 
+class TestLoopInducedMatrixElementParamCard(TestMatrixElementParamCard):
+    """The same question for a loop-induced production matrix element.
+
+    Loop-induced is the one spinmode family that takes a visibly different
+    route into the density matrix: ``output standalone --density=1`` produces a
+    MadLoop tree rather than a plain standalone one, ``initialise_f2py_module``
+    grows a second branch that rewrites ``MadLoopParams.dat`` and calls
+    ``set_madloop_path``, and MadLoop reads its parameters through
+    ``SubProcesses/MadLoop5_resources/param_card.dat`` -- a symlink
+    ``loop_exporters.py`` points at ``Cards/param_card.dat``.
+
+    None of that changes the answer, and these tests are here to keep it that
+    way. The card still arrives through the one ``mymod.initialise`` call that
+    precedes the MadLoop branch, and the refresh still reaches MadLoop because
+    it overwrites the file the link resolves to. Verified end to end on a
+    ``g g > z z [noborn=QCD]`` run whose events carry MZ = 93, WZ = 2.5: before
+    the fix both matrix-element directories sat at the model's 91.188 /
+    2.441404, and the production matrix element evaluated at a real event of
+    that run moved by 12% (6.845e-04 -> 7.645e-04) between the two cards.
+    """
+
+    def setUp(self):
+        super(TestLoopInducedMatrixElementParamCard, self).setUp()
+        # what a loop-induced ``output standalone`` leaves behind, and which
+        # ``initialise_f2py_module`` keys off to take the MadLoop branch
+        self.ml_path = pjoin(self.tmpdir, 'madspin_me', 'SubProcesses',
+                             'MadLoop5_resources')
+        os.makedirs(self.ml_path)
+        banner.MadLoopParam().write(pjoin(self.ml_path, 'MadLoopParams.dat'))
+        # loop_exporters.py links, rather than copies, the cards into
+        # MadLoop5_resources -- which is why refreshing Cards/ is enough
+        os.symlink(pjoin('..', '..', 'Cards', 'param_card.dat'),
+                   pjoin(self.ml_path, 'param_card.dat'))
+
+    class _Module(TestMatrixElementParamCard._Module):
+        """As the tree-level stand-in, but remembers the MadLoop path so a test
+        can tell that the loop branch was the one that ran."""
+        def __init__(self):
+            super(TestLoopInducedMatrixElementParamCard._Module,
+                  self).__init__()
+            self.madloop_path = None
+
+        def set_madloop_path(self, path):
+            self.madloop_path = path
+
+    def _initialised_module(self, prod_or_decay='prod'):
+        stub = self._interface()
+        mymod = self._Module()
+        subdir = (stub.ms_me_subdir if prod_or_decay == 'prod'
+                  else stub.ms_me_decay_subdir)
+        stub.initialise_f2py_module(
+            mymod, pjoin(self.tmpdir, subdir, 'SubProcesses'), prod_or_decay)
+        return mymod
+
+    def test_the_loop_branch_is_the_one_under_test(self):
+        """Guards the two tests below: if the MadLoop5_resources layout ever
+        stopped being recognised they would silently degenerate into a second
+        copy of the tree-level case and pass for the wrong reason."""
+        self._refresh()
+        self.assertEqual(self._initialised_module().madloop_path, self.ml_path)
+
+    def test_the_loop_induced_library_sees_the_runs_parameters(self):
+        """The regression, on the loop-induced route: the density library is
+        initialised from the run's card, not from the model defaults that
+        ``output standalone`` wrote into ``Cards/``."""
+        self._refresh()
+        card = self._initialised_module().card
+        self.assertEqual(open(card).read(), self.RUN_CARD)
+        self.assertNotEqual(open(card).read(), self.MODEL_DEFAULT_CARD)
+
+    def test_madloop_reads_the_refreshed_card_through_its_own_link(self):
+        """MadLoop does not read the path handed to ``initialise``; it reads
+        ``MadLoop5_resources/param_card.dat``. That is a symlink into
+        ``Cards/``, so overwriting the file there -- rather than pointing the
+        library elsewhere -- is what keeps the two in step."""
+        self._refresh()
+        self.assertEqual(
+            open(pjoin(self.ml_path, 'param_card.dat')).read(),
+            self.RUN_CARD)
+
+    def test_the_madloop_card_is_left_readable(self):
+        """``initialise_f2py_module`` rewrites ``MadLoopParams.dat`` in place
+        (via a temp file and a rename). A run that cannot parse it afterwards
+        would take MadLoop down with a Fortran STOP, i.e. exit code 0."""
+        self._refresh()
+        self._initialised_module()
+        reread = banner.MadLoopParam(pjoin(self.ml_path, 'MadLoopParams.dat'))
+        self.assertEqual(reread['HelicityFilterLevel'], 0)
+
+
 class TestReusedMsDirParameters(unittest.TestCase):
     """A reused ``ms_dir``/``use_old_dir`` directory caches things computed
     *from* the param_card -- the decay gridpacks and the events they produce,
