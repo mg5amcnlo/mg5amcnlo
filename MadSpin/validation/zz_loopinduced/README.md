@@ -25,6 +25,15 @@ which coefficient is worth quoting are in
 > truth's extra diagrams, and not present at all at LO. Code and numbers in
 > [`diagram_content/`](diagram_content/).
 
+> The opposite signs of `C_kk` between the two mechanisms are explained in the
+> paper by a claim about *helicity populations*, and the LHE turns out to carry
+> those populations directly: `SPINUP` is real on the LO and loop-induced
+> samples, and it is written for the incoming partons too, so the
+> chirality-conservation and `J_z = 0` clauses are measurable and not merely
+> plausible. Measurement, closure against the decay-angle extraction, and a
+> clause-by-clause verdict in
+> [`HELICITY_POPULATIONS.md`](HELICITY_POPULATIONS.md).
+
 ## The comparison
 
 | | |
@@ -138,6 +147,14 @@ RESULTS.md                         the findings
 SPIN_COEFFICIENTS.md               what cos(theta1) and cos1cos2 measure: the
                                    polarisation fractions, C_kk, the literature
                                    names, and the verdict on what to quote
+HELICITY_POPULATIONS.md            the paper's helicity-population sentence,
+                                   tested off the LHE SPINUP column rather than
+                                   the decay angles: the 3 x 3 P(l1, l2) per
+                                   mechanism, the initial-state J_z, and the
+                                   verdict clause by clause
+helicity_populations.py            its measurement; reads the two UNDECAYED
+                                   production LHE directly, ~4 s, no MadGraph
+data/numbers_helicity_populations.{txt,json}
 polweight_closure.py               the cross-check of that extraction against
                                    MadSpin's own ms_pol_* weights -- the only
                                    script here that runs on a DIFFERENT study's

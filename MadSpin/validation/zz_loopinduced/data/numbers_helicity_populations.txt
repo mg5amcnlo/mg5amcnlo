@@ -1,0 +1,156 @@
+The helicity populations ``P(lambda_1, lambda_2)``, read straight off the LHE.
+
+Why this file exists
+--------------------
+``spin_definitions.tex`` and ``SPIN_COEFFICIENTS.md`` quote
+
+    C_kk(g g -> Z Z, box)       = +0.380 +- 0.072
+    C_kk(q qbar -> Z Z, cont.)  = -0.645 +- 0.080
+
+and the paper explains the opposite signs by a statement about *helicity
+populations*: that the ``q qbar`` channel favours ``Z`` pairs of OPPOSITE
+helicity and the loop-induced ``g g`` channel pairs of EQUAL helicity.
+
+Since ``C_kk = P(++) + P(--) - P(+-) - P(-+)`` is the definition
+(Eq. (ckk) of ``spin_definitions.tex``, each ``S_k`` on its own ``Z``'s
+helicity axis), re-measuring ``C_kk`` from the decay angles tests the sign
+and nothing else: the population statement is true by construction once the
+sign is.  To test the population statement itself one needs the populations,
+independently of the decay angles.
+
+They are in the LHE.  ``unwgt.f`` calls ``get_helicities`` and writes the
+per-event helicity into column 13, ``SPINUP``, of every particle line, and
+``matrix1.f`` picks that helicity by importance sampling,
+
+    SUMHEL = SUMHEL + DABS(TS(I)) / ANS   ;   IF (RHEL .LT. SUMHEL) HEL_SELECTED = I
+
+i.e. with probability ``|M_i|^2 / sum_j |M_j|^2``.  On an unweighted file the
+frequency of a helicity configuration is therefore its physical fraction, and
+no decay, no analysing power and no ``eta_l`` dilution stands between the file
+and the number.  ``TS`` is a squared amplitude in both samples here -- tree
+level on the ``q qbar`` side, ``|M_loop|^2`` on the ``g g`` one -- so the
+``DABS`` is inert and the sampling is a genuine probability.
+
+The frame is the right one for free.  MadEvent evaluates the matrix element in
+the partonic centre-of-mass frame and boosts to the lab only afterwards (the
+``Boost momentum to lab frame`` block of ``unwgt.f`` runs after
+``get_helicities``), and both samples are ``2 -> 2`` at the hard level, so the
+partonic CM frame *is* the ``Z Z`` rest frame and ``SPINUP`` is the helicity
+along each ``Z``'s own direction there.  That is exactly the axis of
+Eq. (ckk).
+
+The bonus is the initial state.  ``SPINUP`` is written for the incoming
+partons too, so the same file carries
+
+* the ``g g`` total angular momentum along the beam, ``J_z = lambda_1 -
+  lambda_2`` for gluon 1 along ``+z`` and gluon 2 along ``-z``, which is the
+  ``J_z = 0`` clause of the paper sentence; and
+* the ``q qbar`` helicity pair, which is the chirality-conservation clause.
+
+Samples
+-------
+``qq``  ``p p > z z`` at LO, 200 000 events, the undecayed production sample of
+        the T131 diagram study.  At LO ``p p > z z`` is ``q qbar`` only --
+        ``g g -> Z Z`` is loop induced and absent from the tree-level process
+        -- so this sample is the ``q qbar`` mechanism with no admixture.
+``gg``  ``g g > z z [noborn=QCD]``, 200 000 events, the undecayed production
+        sample of the T118 loop-induced study.
+
+==============================================================================
+q qbar -> Z Z   (LO, p p > z z)   -- 200000 events
+==============================================================================
+  weights: min 9.2599  max 9.2599  negative 0
+  SPINUP values seen on the two z: [-1, 0, 1]
+
+  --- the joint helicity population matrix P(lambda_1, lambda_2) ---
+  rows: lambda of the FIRST z on the LHE line; columns: the second.
+           l2 = +1                l2 =  0                l2 = -1               
+  l1 =+1  0.01473 +- 0.00027     0.05727 +- 0.00052     0.34090 +- 0.00106    
+  l1 =+0  0.05820 +- 0.00052     0.05890 +- 0.00053     0.05725 +- 0.00052    
+  l1 =-1  0.33960 +- 0.00106     0.05840 +- 0.00052     0.01476 +- 0.00027    
+
+  --- the statement under test ---
+    P(++) + P(--)   EQUAL   helicities       0.02949 +- 0.00038
+    P(+-) + P(-+)   OPPOSITE helicities      0.68050 +- 0.00104
+    difference  EQUAL - OPPOSITE             -0.65100 +- 0.00111   (-586.9 sigma)
+    which of the two dominates: OPPOSITE
+
+  --- the coefficients, from SPINUP alone ---
+    f_0   (per-event average of the two z)   +0.17446 +- 0.00066
+    f_00  (both longitudinal)                +0.05890 +- 0.00053
+    f_TT  (both transverse)                  +0.70999 +- 0.00101
+    C_kk  = <lambda_1 lambda_2>              -0.65100 +- 0.00120
+    f_00 - f_0(1) f_0(2)                     +0.02847
+
+  --- closure against the decay-angle extraction ---
+  t131 zz_madspin (MadSpin decay of THIS lo_zz file)
+  If the two disagree, either the helicity sampling is not a
+  probability or SPINUP is not on the Z Z rest-frame axis.
+             SPINUP (this file)     decay angles           difference      
+    f_0      +0.17446 +- 0.00066     +0.17250 +- 0.00240     +0.8 sigma
+    f_TT     +0.70999 +- 0.00101     +0.71200 +- 0.00660     -0.3 sigma
+    C_kk     -0.65100 +- 0.00120     -0.72140 +- 0.06820     +1.0 sigma
+
+  --- the initial state, also from SPINUP ---
+    incoming pdg pairs seen: [(1, 1), (2, 2), (3, 3), (4, 4)]
+    NHEL is +-1 meaning helicity +-1/2 (fermions), so J_z = (NHEL_1 - NHEL_2) / 2
+    J_z = -1.0 along the beam : 0.50048 +- 0.00112
+    J_z = +1.0 along the beam : 0.49952 +- 0.00112
+    J_z = 0 in total          : 0.00000 +- 0.00000
+
+  --- Z helicities CONDITIONAL on the initial J_z ---
+    |J_z| = 1.0  (1.0000 of the rate)
+        P_eq  0.02949 +- 0.00038    P_opp 0.68050 +- 0.00104
+        f_TT  0.70999              C_kk  -0.65100 +- 0.00120
+
+==============================================================================
+g g -> Z Z      (loop induced, box)   -- 200000 events
+==============================================================================
+  weights: min 1.6255  max 1.6255  negative 0
+  SPINUP values seen on the two z: [-1, 0, 1]
+
+  --- the joint helicity population matrix P(lambda_1, lambda_2) ---
+  rows: lambda of the FIRST z on the LHE line; columns: the second.
+           l2 = +1                l2 =  0                l2 = -1               
+  l1 =+1  0.35605 +- 0.00107     0.01081 +- 0.00023     0.09654 +- 0.00066    
+  l1 =+0  0.01048 +- 0.00023     0.05017 +- 0.00049     0.01054 +- 0.00023    
+  l1 =-1  0.09599 +- 0.00066     0.01025 +- 0.00023     0.35918 +- 0.00107    
+
+  --- the statement under test ---
+    P(++) + P(--)   EQUAL   helicities       0.71523 +- 0.00101
+    P(+-) + P(-+)   OPPOSITE helicities      0.19252 +- 0.00088
+    difference  EQUAL - OPPOSITE             +0.52271 +- 0.00134   (+390.1 sigma)
+    which of the two dominates: EQUAL
+
+  --- the coefficients, from SPINUP alone ---
+    f_0   (per-event average of the two z)   +0.07121 +- 0.00053
+    f_00  (both longitudinal)                +0.05017 +- 0.00049
+    f_TT  (both transverse)                  +0.90776 +- 0.00065
+    C_kk  = <lambda_1 lambda_2>              +0.52271 +- 0.00178
+    f_00 - f_0(1) f_0(2)                     +0.04510
+
+  --- closure against the decay-angle extraction ---
+  t118 madspin (MadSpin decay of THIS ggzz file)
+  If the two disagree, either the helicity sampling is not a
+  probability or SPINUP is not on the Z Z rest-frame axis.
+             SPINUP (this file)     decay angles           difference      
+    f_0      +0.07121 +- 0.00053     +0.06730 +- 0.00250     +1.5 sigma
+    f_TT     +0.90776 +- 0.00065     +0.91660 +- 0.00710     -1.2 sigma
+    C_kk     +0.52271 +- 0.00178     +0.45990 +- 0.07230     +0.9 sigma
+
+  --- the initial state, also from SPINUP ---
+    incoming pdg pairs seen: [(21, 21)]
+    NHEL is the helicity itself (vectors), so J_z = (NHEL_1 - NHEL_2) / 1
+    J_z = -2.0 along the beam : 0.12060 +- 0.00073
+    J_z = +0.0 along the beam : 0.75829 +- 0.00096
+    J_z = +2.0 along the beam : 0.12111 +- 0.00073
+    J_z = 0 in total          : 0.75829 +- 0.00096
+
+  --- Z helicities CONDITIONAL on the initial J_z ---
+    |J_z| = 0.0  (0.7583 of the rate)
+        P_eq  0.88090 +- 0.00083    P_opp 0.04647 +- 0.00054
+        f_TT  0.92738              C_kk  +0.83443 +- 0.00123
+    |J_z| = 2.0  (0.2417 of the rate)
+        P_eq  0.19550 +- 0.00180    P_opp 0.65072 +- 0.00217
+        f_TT  0.84622              C_kk  -0.45521 +- 0.00364
+
