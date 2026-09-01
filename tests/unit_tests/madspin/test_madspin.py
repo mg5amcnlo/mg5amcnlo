@@ -10308,7 +10308,9 @@ class TestReusedMsDirParameters(unittest.TestCase):
 
         class Stub(object):
             PARAM_CARD_STAMP = interface.PARAM_CARD_STAMP
+            CACHED_MATERIAL = interface.CACHED_MATERIAL
             _reused_directory = interface._reused_directory
+            _holds_cached_material = interface._holds_cached_material
             _check_reused_param_card = interface._check_reused_param_card
         stub = Stub()
         stub.options = {'ms_dir': ms_dir, 'use_old_dir': use_old_dir,
@@ -10460,3 +10462,86 @@ class TestReusedMsDirParameters(unittest.TestCase):
                                lambda *a, **k: warnings.append(a)):
             self._build(ms_dir=self.tmpdir)
         self.assertFalse(warnings)
+
+    def test_an_unstamped_cache_does_not_acquire_a_stamp(self):
+        """The absence of a stamp means "unknown", not "matches this run".
+
+        Stamping a legacy cache with whatever card happens to be running would
+        authenticate it: the next run with that same card would match the stamp
+        and reuse decay events, partial widths and maximum weights that may
+        have been built with entirely different parameters, in silence and
+        without the warning. The upgrade boundary is exactly where unstamped
+        directories live, so this is the realistic path, not a corner."""
+        open(pjoin(self.tmpdir, 'max_wgt'), 'w').write('1.0\n')
+        with misc.TMP_variable(interface_madspin.logger, 'warning',
+                               lambda *a, **k: None):
+            self._build(ms_dir=self.tmpdir)
+        self.assertFalse(os.path.exists(pjoin(self.tmpdir,
+                                              'ms_param_card.dat')))
+
+    def test_an_unstamped_cache_is_never_authenticated_by_repetition(self):
+        """The hazard, in the sequence that produces it. A *changed* card was
+        never the danger -- it would meet the stamp the first run wrote and be
+        refused. The danger is the same card again: the second run would match
+        that stamp and reuse a cache of unknown provenance in silence, the
+        first run having vouched for it.
+
+        So the warning must come back every time, and the directory must stay
+        unstamped however often it is used: nothing on disk will ever learn
+        what that cache was built with. Left usable rather than refused --
+        the stamp is missing because the directory predates it, not because
+        anything is known to be wrong."""
+        open(pjoin(self.tmpdir, 'max_wgt'), 'w').write('1.0\n')
+        for run in range(3):
+            warnings = []
+            with misc.TMP_variable(interface_madspin.logger, 'warning',
+                                   lambda *a, **k: warnings.append(a)):
+                self._build(ms_dir=self.tmpdir)
+            self.assertTrue(warnings, 'run %d reused it in silence' % run)
+            self.assertFalse(os.path.exists(pjoin(self.tmpdir,
+                                                  'ms_param_card.dat')))
+
+    def test_a_changed_card_still_stops_a_directory_that_is_stamped(self):
+        """The counterweight to leaving legacy directories usable: a directory
+        whose provenance *is* known is still refused when the card moves."""
+        self._build(ms_dir=self.tmpdir)
+        open(pjoin(self.tmpdir, 'max_wgt'), 'w').write('1.0\n')
+        stub = self._stub(card=self.CARD.replace('1.330000e+00',
+                                                 '5.320000e+00'),
+                          ms_dir=self.tmpdir)
+        self.assertRaises(interface_madspin.MadSpinStaleParameters,
+                          stub._check_reused_param_card)
+
+    def test_every_kind_of_cached_material_counts(self):
+        """A cache this failed to notice would be stamped, i.e. authenticated
+        with a card it may never have been built with -- so the read sites'
+        caches are enumerated rather than approximated by "non-empty"."""
+        import tempfile
+        for name in ('madspin.pkl', 'max_wgt', 'max_wgt_sequential',
+                     'pure_interference_c', 'decay_6_0',
+                     pjoin('production_me', 'all_ME.pkl')):
+            tmpdir = tempfile.mkdtemp(prefix='ms_cached_')
+            try:
+                path = pjoin(tmpdir, name)
+                if name == 'decay_6_0':
+                    os.makedirs(path)
+                else:
+                    if not os.path.isdir(os.path.dirname(path)):
+                        os.makedirs(os.path.dirname(path))
+                    open(path, 'w').write('x')
+                with misc.TMP_variable(interface_madspin.logger, 'warning',
+                                       lambda *a, **k: None):
+                    self._build(ms_dir=tmpdir)
+                self.assertFalse(
+                    os.path.exists(pjoin(tmpdir, 'ms_param_card.dat')),
+                    '%s was not recognised as cached material' % name)
+            finally:
+                shutil.rmtree(tmpdir, ignore_errors=True)
+
+    def test_an_unrelated_file_is_not_cached_material(self):
+        """The counterweight: a directory holding something that is not one of
+        those caches is still a fresh one, and must still get its stamp."""
+        open(pjoin(self.tmpdir, 'README'), 'w').write('x')
+        self._build(ms_dir=self.tmpdir)
+        self.assertTrue(os.path.exists(pjoin(self.tmpdir,
+                                             'ms_param_card.dat')))

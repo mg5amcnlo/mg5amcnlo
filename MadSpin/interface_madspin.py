@@ -2524,6 +2524,30 @@ class MadSpinInterface(extended_cmd.Cmd):
             return os.path.realpath(self.options['curr_dir'])
         return None
 
+    # Everything a reused directory carries that was computed *from* a
+    # param_card and is not re-measured on reuse. Not a general "is this
+    # directory non-empty" test: these are the specific caches the read sites
+    # go looking for -- ``run_from_pickle`` (madspin.pkl),
+    # ``get_max_weight``/``_read_upfront_cache`` (max_wgt, max_wgt_sequential*,
+    # pure_interference*), ``decay_all_events`` (production_me/all_ME.pkl under
+    # use_old_dir) and the decay gridpacks themselves, whose measured partial
+    # widths live in ``ms_partial_width.dat`` beside them.
+    CACHED_MATERIAL = ('madspin.pkl', 'max_wgt*', 'pure_interference*',
+                       'decay_*_*', pjoin('production_me', 'all_ME.pkl'))
+
+    def _holds_cached_material(self, directory):
+        """Whether ``directory`` already carries results of an earlier run.
+
+        Distinguishes a directory that is merely *going* to be reused -- a
+        fresh or empty ``ms_dir``, which is stamped on first use and is how a
+        directory becomes protected at all -- from one that already holds a
+        cache no stamp can vouch for. A false answer here is not cosmetic: it
+        decides whether the stamp is written, so a cache this failed to notice
+        would be authenticated with a card it may never have been built with.
+        """
+        return any(misc.glob(pattern, directory)
+                   for pattern in self.CACHED_MATERIAL)
+
     def _check_reused_param_card(self):
         """Refuse to reuse a directory that was built with other parameters.
 
@@ -2611,16 +2635,28 @@ class MadSpinInterface(extended_cmd.Cmd):
                     "parameters you asked for."
                     % (directory, ', '.join(sorted(changed)), directory))
             return
-        already_built = reusing and (
-            any(os.path.exists(pjoin(directory, name))
-                for name in ('madspin.pkl', 'max_wgt'))
-            or bool(misc.glob('decay_*_*', directory)))
-        if already_built:
+        if reusing and self._holds_cached_material(directory):
             # Built by a MadSpin that left no stamp. The content is reused
             # either way -- ``run_from_pickle`` still compares the pickled
-            # banner's non-decay blocks -- but nothing can vouch for the widths,
-            # so say so instead of stamping it with this run's card as if it had
-            # been built with it.
+            # banner's non-decay blocks -- but nothing can vouch for the widths.
+            #
+            # And *return* rather than falling through to write the stamp. The
+            # absence of a stamp means "unknown", not "matches this run": a
+            # stamp written here would be a claim MadSpin cannot support, and
+            # the next run with this same card would match it and reuse the
+            # cache in silence -- exactly the corruption this check exists to
+            # stop, at the one moment it is weakest, the upgrade boundary where
+            # every unstamped directory lives.
+            #
+            # Left unstamped rather than refused. The stamp is missing because
+            # the directory predates it, not because anything is known to be
+            # wrong, and the great majority of them are consistent; refusing
+            # would break every existing ms_dir on upgrade. So the directory
+            # stays usable and the warning comes back on every reuse, which is
+            # the honest state -- nothing on disk will ever learn what that
+            # cache was built with. What does earn a stamp is a directory with
+            # no cache left in it: the fresh one the warning below asks for, or
+            # this one once its cached material is cleared out.
             logger.warning(
                 "%s was built by a MadSpin that did not record its "
                 "param_card, so the parameters it was built with cannot be "
@@ -2628,6 +2664,7 @@ class MadSpinInterface(extended_cmd.Cmd):
                 "param_card since, use a fresh directory: the cached decay "
                 "events, partial widths and maximum weights are not "
                 "re-measured on reuse.", directory)
+            return
         # First use of this directory, or a rebuild of one already stamped:
         # record what it is being built with.
         try:
