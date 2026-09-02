@@ -4089,11 +4089,12 @@ This implies that with decay chains:
 
         if merge and eps_files:
             output_pdf = pjoin(args[0], 'all_diagrams.pdf')
-            eps_files_sorted = sorted(eps_files)
+            output_pdf_abs = os.path.abspath(output_pdf)
+            eps_files_sorted_abs = sorted(os.path.abspath(f) for f in eps_files)
             gs_cmd = ['gs', '-dBATCH', '-dNOPAUSE', '-q', '-sDEVICE=pdfwrite',
-                      '-sOutputFile=' + output_pdf] + eps_files_sorted
+                      '-sOutputFile=' + output_pdf_abs] + eps_files_sorted_abs
             try:
-                subprocess.check_call(gs_cmd)
+                subprocess.check_call(gs_cmd, shell=False)
                 logger.info("Merged diagrams into " + output_pdf)
                 if not no_open:
                     self.exec_cmd('open %s' % output_pdf)
@@ -4126,13 +4127,10 @@ This implies that with decay chains:
         txt_files = []
         for amp in amplitudes:
             filename = pjoin(dirpath, 'diagrams_' + amp.get('process').shell_string() + '.txt')
-            try:
-                with open(filename, 'w') as fs:
-                    fs.write(amp.nice_string())
-                logger.info('Wrote file ' + filename)
-                txt_files.append(filename)
-            except (IOError, OSError) as e:
-                logger.warning("Failed to write text file: %s" % str(e))
+            with open(filename, 'w') as fs:
+                fs.write(amp.nice_string())
+            logger.info('Wrote file ' + filename)
+            txt_files.append(filename)
         
         if merge and txt_files:
             merged_file = pjoin(dirpath, 'all_diagrams_text.txt')
