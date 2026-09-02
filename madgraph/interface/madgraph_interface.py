@@ -4086,7 +4086,7 @@ This implies that with decay chains:
             logger.info("Wrote file " + filename)
             if not no_open:
                 filename_open = filename.replace(' ', '\\ ')
-                self.exec_cmd('open %s' % filename_open)
+                subprocess.check_call(['open', filename_open])
 
         if merge and eps_files:
             output_pdf = pjoin(args[0], 'all_diagrams.pdf')
@@ -4099,7 +4099,7 @@ This implies that with decay chains:
                 logger.info("Merged diagrams into " + output_pdf)
                 if not no_open:
                     output_pdf_open = output_pdf.replace(' ', '\\ ')
-                    self.exec_cmd('open %s' % output_pdf_open)
+                    subprocess.check_call(['open', output_pdf_open])
             except (subprocess.CalledProcessError, OSError) as e:
                 logger.warning("Failed to merge diagrams into PDF with ghostscript: %s" % str(e))
                 logger.warning("Make sure 'gs' (ghostscript) is installed and available in PATH.")
