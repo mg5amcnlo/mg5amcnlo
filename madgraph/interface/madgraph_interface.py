@@ -403,8 +403,12 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info(" > For \"diagrams\", you can specify where the file will be written.")
         logger.info("   Example: display diagrams ./",'$MG:color:GREEN')
         logger.info("   Add --no_open to save without opening the files (directory required).")
-        logger.info(" > For \"diagrams_text\", you can also specify a directory and --no_open.")
+        logger.info("   Add --merge to merge all .eps files into a single PDF via ghostscript (directory required).")
+        logger.info("   Example: display diagrams ./ --merge --no_open",'$MG:color:GREEN')
+        logger.info(" > For \"diagrams_text\", you can also specify a directory, --no_open, and --merge.")
         logger.info("   Example: display diagrams_text ./ --no_open",'$MG:color:GREEN')
+        logger.info("   Add --merge to merge all .txt files into all_diagrams_text.txt (directory required).")
+        logger.info("   Example: display diagrams_text ./ --merge --no_open",'$MG:color:GREEN')
 
 
     def help_launch(self):
@@ -990,11 +994,14 @@ class CheckValidForCmd(cmd.CheckCmd):
         """
 
         no_open = '--no_open' in args or '-no_open' in args
-        dir_args = [a for a in args if a not in ['--no_open', '-no_open']]
+        merge = '--merge' in args or '-merge' in args
+        dir_args = [a for a in args if a not in ['--no_open', '-no_open', '--merge', '-merge']]
 
         if len(dir_args) < 1:
             if no_open:
                 raise self.InvalidCmd('--no_open requires an explicit directory path, e.g. display diagrams ./ --no_open')
+            if merge:
+                raise self.InvalidCmd('--merge requires an explicit directory path, e.g. display diagrams ./ --merge')
             args.append(tempdir.name)
         elif not os.path.isdir(dir_args[0]):
             raise self.InvalidCmd( "%s is not a valid directory for export file" % dir_args[0])
@@ -3714,12 +3721,15 @@ This implies that with decay chains:
                 print(amp.nice_string_processes())
 
         elif args[0] == 'diagrams_text':
-            dirpath, no_open = self._parse_display_output_args(args[1:])
+            dirpath, no_open, merge = self._parse_display_output_args(args[1:])
             text = "\n".join([amp.nice_string() for amp in self._curr_amps])
             if dirpath:
-                self._write_diagrams_text_files(dirpath)
-            elif no_open:
-                raise self.InvalidCmd('--no_open requires an explicit directory path, e.g. display diagrams_text ./ --no_open')
+                self._write_diagrams_text_files(dirpath, merge=merge)
+            else:
+                if no_open:
+                    raise self.InvalidCmd('--no_open requires an explicit directory path, e.g. display diagrams_text ./ --no_open')
+                if merge:
+                    raise self.InvalidCmd('--merge requires an explicit directory path, e.g. display diagrams_text ./ --merge')
             if not no_open:
                 pydoc.pager(text)
 
@@ -4020,6 +4030,7 @@ This implies that with decay chains:
         self.check_draw(args)
 
         args = [('--no_open' if a == '-no_open' else a) for a in args]
+        args = [('--merge' if a == '-merge' else a) for a in args]
         # Check if we plot a decay chain
         if any([isinstance(a, diagram_generation.DecayChainAmplitude) for \
                a in self._curr_amps]) and not self._done_export:
@@ -4027,13 +4038,15 @@ This implies that with decay chains:
             warn += '\t  The decay processes will be drawn separately'
             logger.warning(warn)
 
-        (options, args) = _draw_parser.parse_args(args)
+        (parsed_opts, args) = _draw_parser.parse_args(args)
+        no_open = parsed_opts.no_open
+        merge = parsed_opts.merge
         if madgraph.iolibs.drawing_eps.EpsDiagramDrawer.april_fool:
-            options.horizontal = True
-            options.external = True  
-            options.max_size = 0.3 
-            options.add_gap = 0.5  
-        options = draw_lib.DrawOption(options)
+            parsed_opts.horizontal = True
+            parsed_opts.external = True  
+            parsed_opts.max_size = 0.3 
+            parsed_opts.add_gap = 0.5  
+        options = draw_lib.DrawOption(parsed_opts)
         start = time.time()
 
 
@@ -4043,9 +4056,11 @@ This implies that with decay chains:
         for amp in self._curr_amps:
             amplitudes.extend(amp.get_amplitudes())
 
+        eps_files = []
         for amp in amplitudes:
             filename = pjoin(args[0], 'diagrams_' + \
                                     amp.get('process').shell_string() + ".eps")
+            eps_files.append(filename)
 
             if selection=='all' and Dtype != 'loop':
                 diags=amp.get('diagrams')
@@ -4070,43 +4085,64 @@ This implies that with decay chains:
                          amp.get('process').nice_string())
             plot.draw(opt=options)
             logger.info("Wrote file " + filename)
-            if not options.no_open:
+            if not no_open:
                 self.exec_cmd('open %s' % filename)
+
+        if merge and eps_files:
+            output_pdf = pjoin(args[0], 'all_diagrams.pdf')
+            eps_files_sorted = sorted(eps_files)
+            gs_cmd = ['gs', '-dBATCH', '-dNOPAUSE', '-q', '-sDEVICE=pdfwrite',
+                      '-sOutputFile=' + output_pdf] + eps_files_sorted
+            try:
+                subprocess.check_call(gs_cmd)
+                logger.info("Merged diagrams into " + output_pdf)
+                if not no_open:
+                    self.exec_cmd('open %s' % output_pdf)
+            except (subprocess.CalledProcessError, OSError) as e:
+                logger.warning("Failed to merge diagrams into PDF with ghostscript: %s" % str(e))
+                logger.warning("Make sure 'gs' (ghostscript) is installed and available in PATH.")
 
         stop = time.time()
         logger.info('time to draw %s' % (stop - start))
 
     def _parse_display_output_args(self, line_args):
-        """Extract optional output directory and --no_open flag."""
+        """Extract optional output directory, --no_open, and --merge flags."""
         no_open = '--no_open' in line_args or '-no_open' in line_args
-        filtered = [a for a in line_args if a not in ['--no_open', '-no_open']]
+        merge = '--merge' in line_args or '-merge' in line_args
+        filtered = [a for a in line_args if a not in ['--no_open', '-no_open', '--merge', '-merge']]
         if not filtered:
-            return None, no_open
+            return None, no_open, merge
         if len(filtered) > 1:
             raise self.InvalidCmd('Too many arguments: %s' % ' '.join(filtered))
         if not os.path.isdir(filtered[0]):
             raise self.InvalidCmd("%s is not a valid directory" % filtered[0])
-        return filtered[0], no_open
+        return filtered[0], no_open, merge
 
-    def _write_diagrams_text_files(self, dirpath):
-        """Write one text file per process diagram."""
+    def _write_diagrams_text_files(self, dirpath, merge=False):
+        """Write one text file per process diagram. If merge=True, also concatenate all into all_diagrams_text.txt."""
         amplitudes = diagram_generation.AmplitudeList()
         for amp in self._curr_amps:
             amplitudes.extend(amp.get_amplitudes())
         
-        # write in one file
-        filename = pjoin(dirpath, 'diagrams_text' + '.txt')
-        text = "\n".join([amp.nice_string() for amp in self._curr_amps]) + "\n"
-        with open(filename, 'w') as fs:
-            fs.write(text)
-        logger.info('Wrote file ' + filename)
+        txt_files = []
+        for amp in amplitudes:
+            filename = pjoin(dirpath, 'diagrams_' + amp.get('process').shell_string() + '.txt')
+            with open(filename, 'w') as fs:
+                fs.write(amp.nice_string())
+            logger.info('Wrote file ' + filename)
+            txt_files.append(filename)
         
-        # # write in seperate files
-        # for amp in amplitudes:
-        #     filename = pjoin(dirpath, 'diagrams_' + amp.get('process').shell_string() + '.txt')
-        #     with open(filename, 'w') as fs:
-        #         fs.write(amp.nice_string())
-        #     logger.info('Wrote file ' + filename)
+        if merge and txt_files:
+            merged_file = pjoin(dirpath, 'all_diagrams_text.txt')
+            try:
+                with open(merged_file, 'w') as out_fs:
+                    for f in sorted(txt_files):
+                        with open(f, 'r') as in_fs:
+                            out_fs.write(in_fs.read())
+                            out_fs.write('\n\n')
+                logger.info("Merged diagrams text into " + merged_file)
+            except IOError as e:
+                logger.warning("Failed to merge text files: %s" % str(e))
 
     # Perform checks
     def do_check(self, line):
@@ -10362,6 +10398,9 @@ _draw_parser.add_option("", "--add_gap", default=0, type='float', \
 _draw_parser.add_option("", "--no_open", default=False,
                           action='store_true',
                           help="save diagrams without opening them (requires an explicit directory)")
+_draw_parser.add_option("", "--merge", default=False,
+                          action='store_true',
+                          help="merge all diagram .eps files into a single PDF file using ghostscript (requires an explicit directory)")
 
 # LAUNCH PROGRAM
 _launch_usage = "launch [DIRPATH] [options]\n" + \
