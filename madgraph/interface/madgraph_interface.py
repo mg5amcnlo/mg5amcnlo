@@ -402,6 +402,9 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info(" > For \"checks\", can specify only to see failed checks.")
         logger.info(" > For \"diagrams\", you can specify where the file will be written.")
         logger.info("   Example: display diagrams ./",'$MG:color:GREEN')
+        logger.info("   Add --no_open to save without opening the files (directory required).")
+        logger.info(" > For \"diagrams_text\", you can also specify a directory and --no_open.")
+        logger.info("   Example: display diagrams_text ./ --no_open",'$MG:color:GREEN')
 
 
     def help_launch(self):
@@ -972,7 +975,7 @@ class CheckValidForCmd(cmd.CheckCmd):
             raise self.InvalidCmd("No model currently active, please import a model!")
 
 # check that either _curr_amps or _fks_multi_proc exists
-        if (args[0] in ['processes', 'diagrams'] and not self._curr_amps and not self._fks_multi_proc):
+        if (args[0] in ['processes', 'diagrams', 'diagrams_text'] and not self._curr_amps and not self._fks_multi_proc):
            raise self.InvalidCmd("No process generated, please generate a process!")
         if args[0] == 'checks' and not self._comparisons and not self._cms_checks:
             raise self.InvalidCmd("No check results to display.")
@@ -986,14 +989,18 @@ class CheckValidForCmd(cmd.CheckCmd):
         syntax: draw DIRPATH [option=value]
         """
 
-        if len(args) < 1:
+        no_open = '--no_open' in args or '-no_open' in args
+        dir_args = [a for a in args if a not in ['--no_open', '-no_open']]
+
+        if len(dir_args) < 1:
+            if no_open:
+                raise self.InvalidCmd('--no_open requires an explicit directory path, e.g. display diagrams ./ --no_open')
             args.append(tempdir.name)
+        elif not os.path.isdir(dir_args[0]):
+            raise self.InvalidCmd( "%s is not a valid directory for export file" % dir_args[0])
 
         if not self._curr_amps:
             raise self.InvalidCmd("No process generated, please generate a process!")
-
-        if not os.path.isdir(args[0]):
-            raise self.InvalidCmd( "%s is not a valid directory for export file" % args[0])
 
     def check_check(self, args):
         """check the validity of args"""
@@ -3707,8 +3714,14 @@ This implies that with decay chains:
                 print(amp.nice_string_processes())
 
         elif args[0] == 'diagrams_text':
+            dirpath, no_open = self._parse_display_output_args(args[1:])
             text = "\n".join([amp.nice_string() for amp in self._curr_amps])
-            pydoc.pager(text)
+            if dirpath:
+                self._write_diagrams_text_files(dirpath)
+            elif no_open:
+                raise self.InvalidCmd('--no_open requires an explicit directory path, e.g. display diagrams_text ./ --no_open')
+            if not no_open:
+                pydoc.pager(text)
 
         elif args[0] == 'multiparticles':
             print('Multiparticle labels:')
@@ -4006,6 +4019,7 @@ This implies that with decay chains:
         # Check the validity of the arguments
         self.check_draw(args)
 
+        args = [('--no_open' if a == '-no_open' else a) for a in args]
         # Check if we plot a decay chain
         if any([isinstance(a, diagram_generation.DecayChainAmplitude) for \
                a in self._curr_amps]) and not self._done_export:
@@ -4022,8 +4036,6 @@ This implies that with decay chains:
         options = draw_lib.DrawOption(options)
         start = time.time()
 
-
-            
 
         # Collect amplitudes
         amplitudes = diagram_generation.AmplitudeList()
@@ -4058,10 +4070,43 @@ This implies that with decay chains:
                          amp.get('process').nice_string())
             plot.draw(opt=options)
             logger.info("Wrote file " + filename)
-            self.exec_cmd('open %s' % filename)
+            if not options.no_open:
+                self.exec_cmd('open %s' % filename)
 
         stop = time.time()
         logger.info('time to draw %s' % (stop - start))
+
+    def _parse_display_output_args(self, line_args):
+        """Extract optional output directory and --no_open flag."""
+        no_open = '--no_open' in line_args or '-no_open' in line_args
+        filtered = [a for a in line_args if a not in ['--no_open', '-no_open']]
+        if not filtered:
+            return None, no_open
+        if len(filtered) > 1:
+            raise self.InvalidCmd('Too many arguments: %s' % ' '.join(filtered))
+        if not os.path.isdir(filtered[0]):
+            raise self.InvalidCmd("%s is not a valid directory" % filtered[0])
+        return filtered[0], no_open
+
+    def _write_diagrams_text_files(self, dirpath):
+        """Write one text file per process diagram."""
+        amplitudes = diagram_generation.AmplitudeList()
+        for amp in self._curr_amps:
+            amplitudes.extend(amp.get_amplitudes())
+        
+        # write in one file
+        filename = pjoin(dirpath, 'diagrams_text' + '.txt')
+        text = "\n".join([amp.nice_string() for amp in self._curr_amps]) + "\n"
+        with open(filename, 'w') as fs:
+            fs.write(text)
+        logger.info('Wrote file ' + filename)
+        
+        # # write in seperate files
+        # for amp in amplitudes:
+        #     filename = pjoin(dirpath, 'diagrams_' + amp.get('process').shell_string() + '.txt')
+        #     with open(filename, 'w') as fs:
+        #         fs.write(amp.nice_string())
+        #     logger.info('Wrote file ' + filename)
 
     # Perform checks
     def do_check(self, line):
@@ -10314,6 +10359,9 @@ _draw_parser.add_option("", "--non_propagating", default=True, \
                           help="avoid contractions of non propagating lines")
 _draw_parser.add_option("", "--add_gap", default=0, type='float', \
                           help="set the x-distance between external particles")
+_draw_parser.add_option("", "--no_open", default=False,
+                          action='store_true',
+                          help="save diagrams without opening them (requires an explicit directory)")
 
 # LAUNCH PROGRAM
 _launch_usage = "launch [DIRPATH] [options]\n" + \
