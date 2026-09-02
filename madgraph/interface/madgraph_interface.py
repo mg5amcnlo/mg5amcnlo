@@ -4126,10 +4126,13 @@ This implies that with decay chains:
         txt_files = []
         for amp in amplitudes:
             filename = pjoin(dirpath, 'diagrams_' + amp.get('process').shell_string() + '.txt')
-            with open(filename, 'w') as fs:
-                fs.write(amp.nice_string())
-            logger.info('Wrote file ' + filename)
-            txt_files.append(filename)
+            try:
+                with open(filename, 'w') as fs:
+                    fs.write(amp.nice_string())
+                logger.info('Wrote file ' + filename)
+                txt_files.append(filename)
+            except (IOError, OSError) as e:
+                logger.warning("Failed to write text file: %s" % str(e))
         
         if merge and txt_files:
             merged_file = pjoin(dirpath, 'all_diagrams_text.txt')
