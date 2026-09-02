@@ -4085,7 +4085,8 @@ This implies that with decay chains:
             plot.draw(opt=options)
             logger.info("Wrote file " + filename)
             if not no_open:
-                launch_ext.open_file(filename)
+                filename_open = filename.replace(' ', '\\ ')
+                self.exec_cmd('open %s' % filename_open)
 
         if merge and eps_files:
             output_pdf = pjoin(args[0], 'all_diagrams.pdf')
@@ -4097,7 +4098,8 @@ This implies that with decay chains:
                 subprocess.check_call(gs_cmd, shell=False)
                 logger.info("Merged diagrams into " + output_pdf)
                 if not no_open:
-                    launch_ext.open_file(output_pdf)
+                    output_pdf_open = output_pdf.replace(' ', '\\ ')
+                    self.exec_cmd('open %s' % output_pdf_open)
             except (subprocess.CalledProcessError, OSError) as e:
                 logger.warning("Failed to merge diagrams into PDF with ghostscript: %s" % str(e))
                 logger.warning("Make sure 'gs' (ghostscript) is installed and available in PATH.")
