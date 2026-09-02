@@ -401,12 +401,11 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info("   Example: display particles e+.",'$MG:color:GREEN')
         logger.info(" > For \"checks\", can specify only to see failed checks.")
         logger.info(" > For \"diagrams\", you can specify where the file will be written.")
-        logger.info("   Example: display diagrams ./",'$MG:color:GREEN')
         logger.info("   Add --no_open to save without opening the files (directory required).")
         logger.info("   Add --merge to merge all .eps files into a single PDF via ghostscript (directory required).")
+        logger.info("   Example: display diagrams ./",'$MG:color:GREEN')       
         logger.info("   Example: display diagrams ./ --merge --no_open",'$MG:color:GREEN')
         logger.info(" > For \"diagrams_text\", you can also specify a directory, --no_open, and --merge.")
-        logger.info("   Example: display diagrams_text ./ --no_open",'$MG:color:GREEN')
         logger.info("   Add --merge to merge all .txt files into all_diagrams_text.txt (directory required).")
         logger.info("   Example: display diagrams_text ./ --merge --no_open",'$MG:color:GREEN')
 
