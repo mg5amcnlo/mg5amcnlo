@@ -3720,6 +3720,16 @@ This implies that with decay chains:
                 print(amp.nice_string_processes())
 
         elif args[0] == 'diagrams_text':
+            # Create the output directory if an explicit path was given and
+            # doesn't exist yet, so _parse_display_output_args sees it as valid.
+            _flags = {'--no_open', '-no_open', '--merge', '-merge'}
+            _dir_candidates = [a for a in args[1:] if a not in _flags]
+            if _dir_candidates and not os.path.isdir(_dir_candidates[0]):
+                try:
+                    os.makedirs(_dir_candidates[0], exist_ok=True)
+                except OSError as e:
+                    raise self.InvalidCmd(
+                        "Cannot create output directory %s: %s" % (_dir_candidates[0], str(e)))
             dirpath, no_open, merge = self._parse_display_output_args(args[1:])
             text = "\n".join([amp.nice_string() for amp in self._curr_amps])
             if dirpath:
@@ -4025,6 +4035,16 @@ This implies that with decay chains:
         Dtype refers to born, real or loop"""
 
         args = self.split_arg(line)
+        # Create the output directory if an explicit path (not tempdir) was given and
+        # doesn't exist yet, so check_draw sees it as a valid directory.
+        _flags = {'--no_open', '-no_open', '--merge', '-merge'}
+        _dir_args = [a for a in args if a not in _flags]
+        if _dir_args and not os.path.isdir(_dir_args[0]):
+            try:
+                os.makedirs(_dir_args[0], exist_ok=True)
+            except OSError as e:
+                raise self.InvalidCmd(
+                    "Cannot create output directory %s: %s" % (_dir_args[0], str(e)))
         # Check the validity of the arguments
         self.check_draw(args)
 
