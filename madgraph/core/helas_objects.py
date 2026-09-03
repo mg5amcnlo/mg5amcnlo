@@ -1661,13 +1661,19 @@ class HelasWavefunction(base_objects.PhysicsObject):
                 output['propa'] = 'P1S'
 
             elif self.get('polarization') == [1]:
-                if self.get('spin') != 2:
+                if self.get('spin') == 2:
+                    output['propa'] = 'P1P'
+                elif self.get('spin') == 3:
+                    output['propa'] = 'P1TR'
+                else:
                     raise InvalidCmd( 'polarization not supported for decay particle')
-                output['propa'] = 'P1P'
             elif self.get('polarization') == [-1]:
-                if self.get('spin') != 2:
-                    raise InvalidCmd( 'Left polarization not supported for decay particle for spin (2s+1=%s) particles' % self.get('spin')) 
-                output['propa'] = 'P1M'
+                if self.get('spin') == 2:
+                    output['propa'] = 'P1M'
+                elif self.get('spin') == 3:
+                    output['propa'] = 'P1TL'
+                else:
+                    raise InvalidCmd( 'Left polarization not supported for decay particle for spin (2s+1=%s) particles' % self.get('spin'))
             else:            
                 raise InvalidCmd( 'polarization not supported for decay particle')
             
@@ -1893,9 +1899,11 @@ class HelasWavefunction(base_objects.PhysicsObject):
             elif self.get('polarization') == [99]:
                 tags.append('P1A')
             elif self.get('polarization') == [1]:
-                tags.append('P1P')
+                # helicity +1: transverse projector for a vector, u-spinor for a fermion
+                tags.append('P1TR' if self.get('spin') == 3 else 'P1P')
             elif self.get('polarization') == [-1]:
-                tags.append('P1M')
+                # helicity -1: transverse projector for a vector, v-spinor for a fermion
+                tags.append('P1TL' if self.get('spin') == 3 else 'P1M')
             elif sorted(self.get('polarization')) == [0,9]: # = 0+9
                 tags.append('P1LS')
             elif self.get('polarization') == [4]: # = T-5

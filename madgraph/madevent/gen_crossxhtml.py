@@ -1072,6 +1072,10 @@ class OneTagResults(dict):
                     out += " <a href=\"%s\">%s</a> " % (f, 'HwU data')
                     out += " <a href=\"%s\">%s</a> " % \
                                            (f.replace('.HwU','.gnuplot'), 'GnuPlot')
+                    out += " <a href=\"%s\">%s</a> " % \
+                                           (f.replace('.HwU','.py'), 'Matplotlib')
+                    out += " <a href=\"%s\">%s</a> " % \
+                                           (f.replace('.HwU','.html'), 'HTML')
             if 'summary.txt' in self.parton:
                 out += ' <a href="./Events/%(run_name)s/summary.txt">summary</a>'
 
@@ -1204,6 +1208,8 @@ class OneTagResults(dict):
                         if kind == 'HwU':
                             out += " <a href=\"%s\">%s</a> " % (f, 'HwU data')
                             out += " <a href=\"%s\">%s</a> " % (f.replace('.HwU','.gnuplot'), 'GnuPlot')
+                            out += " <a href=\"%s\">%s</a> " % (f.replace('.HwU','.py'), 'Matplotlib')
+                            out += " <a href=\"%s\">%s</a> " % (f.replace('.HwU','.html'), 'HTML')
                         else:
                             out += " <a href=\"%s\">%s</a> " % (f, kind.upper())
 
@@ -1658,7 +1664,5 @@ class OneTagResults(dict):
 
 
         return  + '<br>'
-
-
 
 

@@ -57,6 +57,24 @@ jobs:
 
 
 
+  readonly_gridpack:
+    # concurrent read-only gridpack generation: build a gridpack, freeze it
+    # (restore_data default + chmod -R 555 madevent) and run it from several
+    # empty directories simultaneously.
+    runs-on: ubuntu-22.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/checkout_mg5
+      - uses: ./.github/actions/restore_all
+      - name: test concurrent read-only gridpack
+        run: |
+            cd $GITHUB_WORKSPACE
+            ./tests/test_manager.py test_concurrent_readonly_gridpack -pA -t0 -l INFO
+
+
+
   acceptancetest_5:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
