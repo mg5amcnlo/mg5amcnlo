@@ -6141,6 +6141,7 @@ class MadSpinInterface(extended_cmd.Cmd):
         before this was in place) fall back to striding it, which is correct but
         makes every worker parse everything."""
         local = {}
+        strided = []   # (channel, nb of pool files) for every fallback below
         for pdg, channels in evt_decayfile.items():
             local[pdg] = {}
             for file_nb, evtfile in channels.items():
@@ -6152,8 +6153,10 @@ class MadSpinInterface(extended_cmd.Cmd):
                     # split, but not into exactly nb_core files: stride the WHOLE
                     # chained pool. ``evtfile.name`` is only its first file, so
                     # striding that would strand every other file's events.
+                    strided.append(((pdg, file_nb), len(paths)))
                     reader = _StridedEvents(_ChainedEvents(paths), shard_id, nb_core)
                 else:
+                    strided.append(((pdg, file_nb), 1))
                     fresh = lhe_parser.EventFile(evtfile.name)
                     reader = _StridedEvents(fresh, shard_id, nb_core)
                 # The worker that OWNS this channel reads its slice ~10% short so
@@ -6168,6 +6171,21 @@ class MadSpinInterface(extended_cmd.Cmd):
                         reader = _LimitedEvents(reader,
                                                 int(math.floor((1.0 - frac) * n)))
                 local[pdg][file_nb] = reader
+        if strided:
+            # Say it out loud rather than degrade quietly: from here on this
+            # worker parses the other workers' decay events too. Normally this
+            # means the pool predates the per-worker split; it also fires when a
+            # phase caps its worker count below the count the pool was written
+            # with (see _scan_maxwgt_parallel), which is accepted and cheap.
+            logger.debug(
+                "MadSpin worker %s of %s: decay pool holds %s file(s), not %s "
+                "-- striding the chained pool for %s of %s channel(s) instead "
+                "of opening this worker's own file (correct, but every worker "
+                "then parses every worker's decay events)",
+                shard_id, nb_core,
+                '/'.join(str(n) for n in sorted(set(n for _, n in strided))),
+                nb_core, len(strided),
+                sum(len(c) for c in evt_decayfile.values()))
         return local
 
     def _init_owner_refill(self, evt_decayfile, seed_base):
@@ -7101,6 +7119,27 @@ class MadSpinInterface(extended_cmd.Cmd):
         # if exactly nb_core workers run, which is why the slices are balanced
         # (below) rather than ceil-chunked, and why nb_core is capped at the
         # number of probe events here as well as at the call sites.
+        #
+        # The cap has an accepted cost. It only ever bites when the production
+        # file itself holds fewer events than nb_core (both call sites already
+        # round the probe count up to a multiple of nb_core, so len(events) is
+        # otherwise >= nb_core), and when it does, the decay pool has already
+        # been written with _decay_pool_split() == the UNCAPPED count: the pool
+        # then has more files than there are workers, _reopen_decay_pool sees
+        # len(paths) != nb_core, drops the own-file fast path and strides the
+        # chained pool, so every worker parses every worker's decay events.
+        # That is correct (the stripes stay disjoint), one-off (the refills go
+        # through _open_refill_slice, which keys on this post-cap count, so they
+        # are unaffected) and small: measured at 0.04-0.18 s for 16-64 workers
+        # over a scan-sized pool. _reopen_decay_pool logs it at debug level.
+        # It is left alone deliberately. Re-splitting the pool to match would
+        # tie the pool's shape to whichever phase caps first -- it is written
+        # once, before the scan, and shared with the unweighting, which caps to
+        # a different count. Keeping a second, uncapped count just for pool
+        # addressing would reinstate exactly the divergence between "number of
+        # pool files" and "modulus of _channel_owner" that let the scan name an
+        # owner no worker was forked for, i.e. the 3600 s refill hang this cap
+        # exists to prevent. A rounding error is the cheaper of the two.
         nb_core = max(1, min(int(nb_core), len(events)))
         ranges = self._balanced_ranges(len(events), nb_core)
 

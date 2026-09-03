@@ -945,6 +945,92 @@ class TestStridedEvents(unittest.TestCase):
         self.assertEqual(self._drain(strided), [])
 
 
+class TestReopenDecayPoolFallback(unittest.TestCase):
+    """_reopen_decay_pool drops its own-file fast path when the decay pool does
+    not hold exactly nb_core files (e.g. a phase capped its worker count below
+    the count the pool was written with, see _scan_maxwgt_parallel). That is
+    correct but makes every worker parse every worker's decay events, so it must
+    not happen silently: the fallback logs at debug level, naming both counts."""
+
+    _BANNER = ('<LesHouchesEvents version="1.0">\n<init>\n'
+               '  2212 2212 6.5e+03 6.5e+03 0 0 247000 247000 -4 1\n'
+               '  1.0e+00 1.0e-03 1.0e+00 1\n</init>\n')
+    _EVENT = (
+        '<event>\n'
+        ' 2      0 +1.0000000e+00 1.72500000e+02 7.54677100e-03 1.25643300e-01\n'
+        '        6 -1    0    0  501    0 +0.0000000000e+00 +0.0000000000e+00'
+        ' +0.0000000000e+00 1.7250000000e+02 1.7250000000e+02 0.0000e+00 1.0000e+00\n'
+        '        5  1    1    1  501    0 +0.0000000000e+00 +0.0000000000e+00'
+        ' +0.0000000000e+00 4.7000000000e+00 4.7000000000e+00 0.0000e+00 -1.0000e+00\n'
+        '</event>\n')
+
+    class _Stub(object):
+        """Only what _reopen_decay_pool touches; the own-file branch asks for
+        the channel owner, the fallback branch asks for nothing."""
+        _owner_undersize = 0.0
+        def _channel_owner(self, pdg, file_nb):
+            return -1          # never this shard: skip the undersize trimming
+
+    def setUp(self):
+        import tempfile
+        self.tmpdir = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, self.tmpdir, True)
+
+    def _pool(self, nb_file, nb_event=4):
+        paths = []
+        for i in range(nb_file):
+            path = pjoin(self.tmpdir, 'pool_%d.lhe' % i)
+            with open(path, 'w') as fsock:
+                fsock.write(self._BANNER)
+                fsock.write(self._EVENT * nb_event)
+                fsock.write('</LesHouchesEvents>\n')
+            paths.append(path)
+        return {6: {0: interface_madspin._ChainedEvents(paths)}}
+
+    def _reopen(self, evt_decayfile, shard_id, nb_core):
+        return interface_madspin.MadSpinInterface._reopen_decay_pool(
+            self._Stub(), evt_decayfile, shard_id, nb_core)
+
+    @staticmethod
+    def _capture(callback):
+        """Run ``callback`` with a record-collecting handler on the module
+        logger; return (result, [messages])."""
+        import logging
+        records = []
+        class _Collect(logging.Handler):
+            def emit(self, record):
+                records.append(record.getMessage())
+        logger = logging.getLogger('decay.stdout')
+        handler = _Collect()
+        level, propagate = logger.level, logger.propagate
+        logger.addHandler(handler)
+        logger.setLevel(logging.DEBUG)
+        try:
+            return callback(), records
+        finally:
+            logger.removeHandler(handler)
+            logger.setLevel(level)
+            logger.propagate = propagate
+
+    def test_matching_count_opens_own_file_and_stays_quiet(self):
+        """len(paths) == nb_core: the fast path, and nothing to report."""
+        pool = self._pool(3)
+        local, records = self._capture(lambda: self._reopen(pool, 1, 3))
+        self.assertNotIsInstance(local[6][0],
+                                 interface_madspin._StridedEvents)
+        self.assertEqual([m for m in records if 'striding' in m], [])
+
+    def test_mismatched_count_strides_and_says_so(self):
+        """len(paths) != nb_core: stride the chained pool, and log both counts
+        so the degradation is visible instead of silent."""
+        pool = self._pool(3)
+        local, records = self._capture(lambda: self._reopen(pool, 0, 2))
+        self.assertIsInstance(local[6][0], interface_madspin._StridedEvents)
+        message = '\n'.join(records)
+        self.assertIn('holds 3 file(s), not 2', message)
+        self.assertIn('striding', message)
+
+
 
 class TestDensityIdentity(unittest.TestCase):
     """DensityMatrix.identity / normalized: the primitives that let the
