@@ -1050,7 +1050,15 @@ class AllMatrixElement(dict):
             pid =  leg.get('id')
             nb = leg.get('number')
             if pid in to_decay and leg.get('state'):
-                i, proc = to_decay[pid].pop()
+                # FIFO: pair the n-th leg of a given pid with the n-th decay
+                # branch written for that pid. pop() (LIFO) reverses that
+                # pairing whenever two or more final-state particles share a
+                # pid and carry *different* branches (p p > z z with
+                # 'decay z > e+ e-' / 'decay z > u u~'), so the branch used to
+                # build the spin-correlated weight is not the one whose decay
+                # products get attached to that leg. Single-branch pids (t/t~,
+                # w+/w-) are unaffected: the list holds one entry either way.
+                i, proc = to_decay[pid].pop(0)
                 decay_struct[nb] = dc_branch_from_me(proc)
                 identical = [me.get('decay_chains')[i] for me in me_list[1:]]
                 decay_struct[nb].add_decay_ids(identical)

@@ -766,6 +766,8 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info(" > Example: generate t{L} > w+{T} b{R}, w+ > ta+ vt",'$MG:color:GREEN')
         logger.info(" > Example: generate p p > z{T} z{A}, z > e+ e-",'$MG:color:GREEN')
         logger.info(" > Example: generate p p > z{0} z{T}, z > e+ e-, z > mu+ mu-",'$MG:color:GREEN')
+        logger.info(" > '{G}','{H}','{Q}','{W}','{S}' select a piece of the *propagator* of a massive vector")
+        logger.info("   and are only valid on a particle that is decayed further (an internal line).")
         logger.info(" > Users need to set 'group_subprocesses False', 'nhel=1' (run_card), and 'me_frame' (run_card)")
         logger.info(" > For the proces 'p p > w+ z j j, w+ > l+ vl, z > l+ l-', the WZ rest frame is given by me_frame = [3,4,5,6]")
         logger.info(" > For further details, see appendices of [arXiv:1912.01725] and [arXiv:2512.10015],")
@@ -3324,6 +3326,11 @@ This implies that with decay chains:
                myprocdef.get_ninitial() and not standalone_only:
                 raise self.InvalidCmd("Can not mix processes with different number of initial states.")
 
+            # Check the propagator-only polarization braces: {G},{H},{Q},{W}
+            # and {S} name a piece of a propagator numerator and are valid on
+            # an internal line only.
+            self.validate_propagator_polarization(myprocdef)
+
             #Check that we do not have situation like z{T} z
             if not myprocdef.check_polarization():
                 logger.critical("Not Supported syntax:\n"+ \
@@ -4873,6 +4880,73 @@ This implies that with decay chains:
         args = self.split_arg(line)
         args.insert(0, 'process')
         self.do_add(" ".join(args))
+
+    # The braces that name a piece of the *propagator* numerator of a massive
+    # vector and nothing else: they have no external-wavefunction counterpart
+    # (there is no VXXXXX helicity for them), so on a genuine external leg the
+    # integer would be written straight into the NHEL table and VXXXXX would
+    # quietly return a meaningless vector. See aloha/create_aloha.py for the
+    # numerators ("1G", "1H", ...) and [arXiv:2512.10015] for the definitions.
+    # '{A}' (99) is deliberately absent: it is already refused on an external
+    # leg by HelasWavefunction and keeps that behaviour unchanged here.
+    PROPAGATOR_ONLY_POLARIZATIONS = {4: ('G', 'the metric piece -g^{mu nu}'),
+                                     5: ('H', 'the Theta projector'),
+                                     6: ('Q', 'the q^mu q^nu / q^2 tensor'),
+                                     7: ('W', 'the Ward-protected full '
+                                              'propagator'),
+                                     9: ('S', 'the scalar piece '
+                                              '(axial + finite width)'),
+                                     }
+
+    def validate_propagator_polarization(self, procdef):
+        """Validate the propagator-only polarization braces of a
+        ProcessDefinition and of its decay chains.
+
+        '{G}', '{H}', '{Q}', '{W}' and '{S}' (pol=4,5,6,7,9) each name a
+        rank-two piece of the propagator numerator of a massive vector,
+        complete with its 1/(q^2-M^2+iM*Gamma) pole; none of them is a
+        polarisation vector, and no external wavefunction for them exists
+        (VXXXXX only knows nhel = -1,0,+1).
+
+        They are therefore allowed on a leg that is handed over to a decay
+        chain -- the propagator use, 't > w+{G} b, w+ > ta+ vt' -- and refused
+        on a genuine external leg of the process, initial or final. There is
+        no option to enable them on an external leg: there is nothing to
+        enable. Without this check the raw integer reached the NHEL table and
+        the generated code silently returned a wrong number.
+
+        Raises InvalidCmd; returns None.
+        """
+        if procdef is None:
+            return
+        # pdgs that this level hands over to a decay chain: those legs become
+        # internal propagators, which is the case these braces were written for.
+        decayed_ids = set()
+        for decay in procdef.get('decay_chains'):
+            for leg in decay.get('legs'):
+                if not leg.get('state'):
+                    decayed_ids.update(leg.get('ids'))
+
+        for leg in procdef.get('legs'):
+            if decayed_ids.intersection(leg.get('ids')):
+                # propagator: the leg is replaced by the decay chain
+                continue
+            for value in leg.get('polarization'):
+                if value not in self.PROPAGATOR_ONLY_POLARIZATIONS:
+                    continue
+                tag, what = self.PROPAGATOR_ONLY_POLARIZATIONS[value]
+                raise self.InvalidCmd(
+                    'The polarization {%s} is %s of a massive vector '
+                    'propagator, not a polarization vector: it exists '
+                    'only for an internal line. It is allowed on a '
+                    'particle that is decayed further (write '
+                    '"t > w+{%s} b, w+ > ta+ vt"), and is not allowed on '
+                    '%s-state particle of the process.'
+                    % (tag, what, tag,
+                       'a final' if leg.get('state') else 'an initial'))
+
+        for decay in procdef.get('decay_chains'):
+            self.validate_propagator_polarization(decay)
 
     def extract_process(self, line, proc_number = 0, overall_orders = {},
                         avoid_squared_orders=False):
@@ -7385,13 +7459,13 @@ os.system('%s  -O -W ignore::DeprecationWarning %s %s --mode={0}' %(sys.executab
         if mode == 'mg5_start':
             timeout = 2
             default = 'n'
-            update_delay = self.options['auto_update'] * 24 * 3600
+            update_delay = float(self.options['auto_update']) * 24 * 3600
             if update_delay == 0:
                 return
         elif mode == 'mg5_end':
             timeout = 5
             default = 'n'
-            update_delay = self.options['auto_update'] * 24 * 3600
+            update_delay = float(self.options['auto_update']) * 24 * 3600
             if update_delay == 0:
                 return
             options.remove('on_exit')
