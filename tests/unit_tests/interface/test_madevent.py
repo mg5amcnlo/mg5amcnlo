@@ -21,7 +21,11 @@ import madgraph
 import madgraph.interface.master_interface as mgcmd
 import madgraph.interface.extended_cmd as ext_cmd
 import madgraph.interface.madevent_interface as mecmd
+import madgraph.various.cluster as cluster
 import os
+import shutil
+import stat
+import tempfile
 
 
 root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
@@ -133,3 +137,210 @@ class TestMadEventCmd(unittest.TestCase):
                 
         target = set(['Main Commands','Advanced commands', 'Require MG5 directory', 'Not in help'])
         self.assertEqual(target, category)
+
+
+class TestDelphesFusion(unittest.TestCase):
+    """Unit tests for the fused parallel-Delphes path (is_delphes_fusion_active
+    and run_delphes_on_splits). These use fake Delphes/hadd executables so they
+    run everywhere, without a real ROOT/Delphes install."""
+
+    def setUp(self):
+        self.tmp = tempfile.mkdtemp(prefix='delphes_fusion_')
+        self._orig_rootsys = os.environ.get('ROOTSYS')
+
+    def tearDown(self):
+        shutil.rmtree(self.tmp, ignore_errors=True)
+        if self._orig_rootsys is None:
+            os.environ.pop('ROOTSYS', None)
+        else:
+            os.environ['ROOTSYS'] = self._orig_rootsys
+
+    def _make_stub(self, **opts):
+        """A MadEventCmd instance with only the attributes the tested methods
+        touch (bypassing the heavy __init__)."""
+        stub = mecmd.MadEventCmd.__new__(mecmd.MadEventCmd)
+        stub.me_dir = tempfile.mkdtemp(dir=self.tmp)
+        stub.run_name = 'run_01'
+        options = {'delphes_path': None, 'run_mode': 2, 'nb_core': 2,
+                   'nb_core_pythia8': None, 'nb_core_delphes': None,
+                   'cluster_temp_path': None}
+        options.update(opts)
+        stub.options = options
+        stub.run_card = {'event_norm': 'average'}
+        class _Banner(object):
+            def add(self, *a, **k): pass
+            def write(self, *a, **k): pass
+        stub.banner = _Banner()
+        stub.update_status = lambda *a, **k: None
+        for sub in ['Cards', 'Source', pjoin('Events', 'run_01')]:
+            os.makedirs(pjoin(stub.me_dir, sub))
+        return stub
+
+    # ---- is_delphes_fusion_active ---------------------------------------
+    def test_is_delphes_fusion_active(self):
+        def make(card=True, **opts):
+            stub = self._make_stub(**opts)
+            if card:
+                open(pjoin(stub.me_dir, 'Cards', 'delphes_card.dat'), 'w').close()
+            return stub
+
+        # nb_core_delphes unset -> single core (off, the default)
+        self.assertFalse(make(delphes_path='/d').is_delphes_fusion_active())
+        # nb_core_delphes set -> parallel (on)
+        self.assertTrue(make(delphes_path='/d', nb_core_delphes=2).is_delphes_fusion_active())
+        # set, but various disqualifiers -> off
+        self.assertFalse(make(delphes_path=None, nb_core_delphes=2).is_delphes_fusion_active())
+        self.assertFalse(make(card=False, delphes_path='/d', nb_core_delphes=2).is_delphes_fusion_active())
+        self.assertFalse(make(delphes_path='/d', nb_core_delphes=2, run_mode=0).is_delphes_fusion_active())
+        stub = make(delphes_path='/d', nb_core_delphes=2)
+        stub.run_card['event_norm'] = 'sum'
+        self.assertFalse(stub.is_delphes_fusion_active())
+
+    # ---- run_delphes_on_splits ------------------------------------------
+    def _setup_run(self, n_splits=3, fail_split=None):
+        """Build fake DelphesHepMC2 + hadd and n_splits split dirs holding a
+        distinct events.hepmc. Returns (stub, split_dirs, parallelization_dir)."""
+        # fake Delphes: args = card out in ; copies in->out, but produces no
+        # output (yet exits 0) for the split whose name matches fail_split.
+        ddir = pjoin(self.tmp, 'delphes')
+        os.makedirs(ddir)
+        exe = pjoin(ddir, 'DelphesHepMC2')
+        fail = ('[[ "$3" == *%s* ]] && exit 0' % fail_split) if fail_split else 'false'
+        with open(exe, 'w') as f:
+            f.write('#!/bin/bash\n%s\ncp "$3" "$2"\n' % fail)
+        os.chmod(exe, os.stat(exe).st_mode | stat.S_IEXEC)
+
+        # fake hadd (ROOTSYS/bin/hadd): concatenate the input ROOTs into output.
+        rootsys = pjoin(self.tmp, 'root')
+        os.makedirs(pjoin(rootsys, 'bin'))
+        hadd = pjoin(rootsys, 'bin', 'hadd')
+        with open(hadd, 'w') as f:
+            f.write('#!/bin/bash\n'
+                    'out=""; skip=0; ins=()\n'
+                    'for a in "$@"; do\n'
+                    '  if [ "$skip" = 1 ]; then skip=0; continue; fi\n'
+                    '  case "$a" in -f) ;; -j) skip=1;;\n'
+                    '    *) if [ -z "$out" ]; then out="$a"; else ins+=("$a"); fi;; esac\n'
+                    'done\n'
+                    'cat "${ins[@]}" > "$out"\n')
+        os.chmod(hadd, os.stat(hadd).st_mode | stat.S_IEXEC)
+        os.environ['ROOTSYS'] = rootsys
+
+        stub = self._make_stub(delphes_path=ddir, nb_core_delphes=2)
+        open(pjoin(stub.me_dir, 'Cards', 'delphes_card.dat'), 'w').close()
+        stub.cluster = cluster.MultiCore(nb_core=2, cluster_temp_path=None)
+
+        pdir = pjoin(stub.me_dir, 'Events', 'run_01', 'PY8_parallelization')
+        os.makedirs(pdir)
+        split_dirs = []
+        for i in range(n_splits):
+            d = pjoin(pdir, 'split_%d' % i)
+            os.makedirs(d)
+            with open(pjoin(d, 'events.hepmc'), 'w') as f:
+                f.write('CONTENT_%d\n' % i)
+            split_dirs.append(d)
+        return stub, split_dirs, pdir
+
+    def test_run_delphes_on_splits_all_ok(self):
+        stub, split_dirs, pdir = self._setup_run(n_splits=3)
+        ok = stub.run_delphes_on_splits(split_dirs, pdir, 'tag_1')
+        self.assertTrue(ok)
+        final = pjoin(stub.me_dir, 'Events', 'run_01', 'tag_1_delphes_events.root')
+        self.assertTrue(os.path.isfile(final))
+        # hadd concatenated every split's Delphes output, in order.
+        self.assertEqual(open(final).read(),
+                         'CONTENT_0\nCONTENT_1\nCONTENT_2\n')
+
+    def test_run_delphes_on_splits_partial_failure(self):
+        # split_1's Delphes produces no ROOT (but exits 0): the fused path must
+        # NOT hadd a partial set (that would silently drop events) and instead
+        # fall back to the standard single Delphes pass.
+        stub, split_dirs, pdir = self._setup_run(n_splits=3, fail_split='split_1')
+        ok = stub.run_delphes_on_splits(split_dirs, pdir, 'tag_1')
+        self.assertFalse(ok)
+        final = pjoin(stub.me_dir, 'Events', 'run_01', 'tag_1_delphes_events.root')
+        self.assertFalse(os.path.isfile(final))
+
+
+class TestLhapdfInfoPatch(unittest.TestCase):
+    """check that missing AlphaS_* metadata is added to the .info file of a
+    PDF set everywhere the run time can read it (global dir and local copy)"""
+
+    INFO_MISSING = """SetDesc: test set
+Format: lhagrid1
+FlavorScheme: variable
+NumFlavors: 5
+AlphaS_Type: ipol
+"""
+
+    def setUp(self):
+        import madgraph.interface.common_run_interface as common_run
+        self.common_run = common_run
+        self.tmpdir = tempfile.mkdtemp(prefix='mg5_lhapdf_test')
+        # a fake global lhapdf data directory with one set
+        self.pdfsets_dir = pjoin(self.tmpdir, 'share', 'LHAPDF')
+        os.makedirs(pjoin(self.pdfsets_dir, 'MYSET'))
+        with open(pjoin(self.pdfsets_dir, 'MYSET', 'MYSET.info'), 'w') as f:
+            f.write(self.INFO_MISSING)
+        # a fake process directory
+        self.me_dir = pjoin(self.tmpdir, 'PROC')
+        os.makedirs(pjoin(self.me_dir, 'lib', 'PDFsets'))
+        self.saved_datapath = os.environ.pop('LHAPDF_DATA_PATH', None)
+
+    def tearDown(self):
+        shutil.rmtree(self.tmpdir, ignore_errors=True)
+        if self.saved_datapath is not None:
+            os.environ['LHAPDF_DATA_PATH'] = self.saved_datapath
+
+    def get_fake_cmd(self):
+        common_run = self.common_run
+        class FakeRunCmd(object):
+            patch_lhapdf_info_file = staticmethod(
+                          common_run.CommonRunCmd.patch_lhapdf_info_file)
+            copy_lhapdf_set = common_run.CommonRunCmd.copy_lhapdf_set
+        cmd = FakeRunCmd()
+        cmd.me_dir = self.me_dir
+        cmd.options = {'cluster_local_path': None, 'run_mode': 2}
+        cmd.lhapdf_pdfsets = {}
+        return cmd
+
+    def test_patch_lhapdf_info_file(self):
+        """missing AlphaS_* keys are mirrored from their base counterpart,
+        and the patching is idempotent"""
+
+        setdir = pjoin(self.pdfsets_dir, 'MYSET')
+        self.common_run.CommonRunCmd.patch_lhapdf_info_file(setdir)
+        content = open(pjoin(setdir, 'MYSET.info')).read()
+        self.assertIn('AlphaS_FlavorScheme: variable', content)
+        self.assertIn('AlphaS_NumFlavors: 5', content)
+        # calling it again should not duplicate the keys
+        self.common_run.CommonRunCmd.patch_lhapdf_info_file(setdir)
+        content = open(pjoin(setdir, 'MYSET.info')).read()
+        self.assertEqual(content.count('AlphaS_FlavorScheme'), 1)
+        self.assertEqual(content.count('AlphaS_NumFlavors'), 1)
+        # a non existing directory should simply be ignored
+        self.common_run.CommonRunCmd.patch_lhapdf_info_file(
+                                             pjoin(self.tmpdir, 'DOESNOTEXIST'))
+
+    def test_copy_lhapdf_set_patches_global_and_local(self):
+        """with require_local, both the global set and the local copy end up
+        with the required metadata"""
+
+        cmd = self.get_fake_cmd()
+        cmd.copy_lhapdf_set(['MYSET'], self.pdfsets_dir)
+        local_info = pjoin(self.me_dir, 'lib', 'PDFsets', 'MYSET', 'MYSET.info')
+        global_info = pjoin(self.pdfsets_dir, 'MYSET', 'MYSET.info')
+        self.assertTrue(os.path.isfile(local_info))
+        self.assertIn('AlphaS_FlavorScheme: variable', open(local_info).read())
+        self.assertIn('AlphaS_FlavorScheme: variable', open(global_info).read())
+
+    def test_copy_lhapdf_set_patches_global_without_local(self):
+        """without require_local the set stays global but is still patched"""
+
+        cmd = self.get_fake_cmd()
+        cmd.copy_lhapdf_set(['MYSET'], self.pdfsets_dir, require_local=False)
+        local_set = pjoin(self.me_dir, 'lib', 'PDFsets', 'MYSET')
+        global_info = pjoin(self.pdfsets_dir, 'MYSET', 'MYSET.info')
+        self.assertFalse(os.path.exists(local_set))
+        self.assertIn('AlphaS_FlavorScheme: variable', open(global_info).read())
+        self.assertIn('AlphaS_NumFlavors: 5', open(global_info).read())

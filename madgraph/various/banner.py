@@ -3442,6 +3442,12 @@ class RunCard(ConfigFile):
         else:
             return value
 
+    def mod_inc_iseed(self, value):
+        """A negative iseed in the run_card is preserved across runs (so the
+        same seed can be reused), but the Fortran code expects a non-negative
+        seed, so export the absolute value to the include file."""
+        return abs(value)
+
     def edit_dummy_fct_from_file(self, filelist, outdir):
         """
         filelist is a list of input files (given by the user)
@@ -4442,7 +4448,7 @@ class RunCardLO(RunCard):
         self.add_param("bwcutoff", 15.0)
         self.add_param("cut_decays", False, cut='d')
         self.add_param('dsqrt_shat',0., cut=True)
-        self.add_param('dsqrt_shatmax', -1, cut=True) 
+        self.add_param('dsqrt_shatmax', -1.0, cut=True) 
         self.add_param("nhel", 0, include=False)
         self.add_param("limhel", 1e-8, hidden=True, comment="threshold to determine if an helicity contributes when not MC over helicity.")
         #pt cut
@@ -4964,7 +4970,7 @@ class RunCardLO(RunCard):
                 # UPC for p p collision
                 elif beam_id == [[22],[22]]:
                     self['lpp1'] = 2
-                    self['lpp1'] = 2
+                    self['lpp2'] = 2
                     self['ebeam1'] = '6500'
                     self['ebeam2'] = '6500'
                     self['pdlabel'] = 'edff'

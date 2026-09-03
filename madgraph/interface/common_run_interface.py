@@ -21,6 +21,7 @@ from __future__ import division
 
 from __future__ import absolute_import
 import ast
+import contextlib
 import logging
 import math
 import copy
@@ -90,6 +91,18 @@ else:
     
     from madgraph import InvalidCmd, MadGraph5Error, MG5DIR
     MADEVENT=False
+
+
+def render_HwU_plot(path, stdout=None, stderr=None):
+    """Render an extensionless HwU plot path with its preferred backend."""
+
+    if MADEVENT:
+        import internal.histograms as histograms
+    else:
+        import madgraph.various.histograms as histograms
+    return histograms.render_histogram_output(path, stdout=stdout,
+                                               stderr=stderr)
+
 
 #===============================================================================
 # HelpToCmd
@@ -689,6 +702,8 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                          'cluster_size':100,
                          'cluster_memory':None,
                          'nb_core': None,
+                         'nb_core_pythia8': None,
+                         'nb_core_delphes': None,
                          'cluster_temp_path':None}
 
 
@@ -1487,32 +1502,36 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                         return True
         if mode == 'Pythia8':
             plot_files = glob.glob(pjoin(PY8_plots_root_path,'*.gnuplot'))
-            if not misc.which('gnuplot'):
-                logger.warning("Install gnuplot to be able to view the plots"+\
-                               " generated at :\n   "+\
-                               '\n   '.join('%s.gnuplot'%p for p in plot_files))
-                return True
             for plot in plot_files:
-                command = ['gnuplot',plot]
                 try:
-                    fsock = open(os.devnull, 'w')
-                    subprocess.call(command,cwd=PY8_plots_root_path,stderr=fsock)
-                    fsock.close()
+                    with open(os.devnull, 'w') as fsock:
+                        backend, return_code = render_HwU_plot(
+                            plot[:-len('.gnuplot')], stderr=fsock)
                 except Exception as e:
                     logger.warning("Automatic processing of the Pythia8 "+\
-                            "merging plots with gnuplot failed. Try the"+\
-                            " following command by hand:\n   %s"%(' '.join(command))+\
-                            "\nException was: %s"%str(e))
+                            "merging plots failed for '%s'.\nException was: %s"%
+                            (plot, str(e)))
+                    return False
+                if backend is None:
+                    continue
+                if return_code != 0:
+                    script = plot if backend == 'gnuplot' else \
+                                                    plot[:-len('.gnuplot')]+'.py'
+                    logger.warning("Automatic processing of the Pythia8 "+\
+                            "merging plots with %s failed. Try the following "
+                            "file by hand:\n   %s"%(backend, script))
                     return False
 
-            plot_files = glob.glob(pjoin(PY8_plots_root_path,'*.pdf'))
+            plot_files = [path for path in
+                glob.glob(pjoin(PY8_plots_root_path,'*.html'))
+                if os.path.basename(path) != 'index.html']
             if len(plot_files)>0:
                 # Add an html page
                 html = "<html>\n<head>\n<TITLE>PLOT FOR PYTHIA8</TITLE>"
                 html+= '<link rel=stylesheet href="../../mgstyle.css" type="text/css">\n</head>\n<body>\n'
                 html += "<h2> Plot for Pythia8 </h2>\n"
                 html += '<a href=../../../crossx.html>return to summary</a><br>'
-                html += "<table>\n<tr> <td> <b>Obs.</b> </td> <td> <b>Type of plot</b> </td> <td><b> PDF</b> </td> <td><b> input file</b> </td> </tr>\n"
+                html += "<table>\n<tr> <td> <b>Obs.</b> </td> <td> <b>Type of plot</b> </td> <td><b>Plots</b> </td> <td><b>Input files</b> </td> </tr>\n"
                 def sorted_plots(elem):
                     name = os.path.basename(elem[1])
                     if 'central' in name:
@@ -1536,7 +1555,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                         # Add a line between observables
                         html += "<tr><td></td></tr>"
                         last_obs = obs
-                    name = os.path.basename(one_plot).replace('.pdf','')
+                    name = os.path.basename(one_plot).replace('.html','')
                     short_name = name
                     for dummy in ['_plots','_djr','_pt']:
                         short_name = short_name.replace(dummy,'')
@@ -1545,13 +1564,17 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                         short_name = "%s comparison with min/max merging scale"%obs
                     if 'central' in short_name:
                         short_name = "Merging uncertainty band around central scale"
-                    html += "<tr><td>%(obs)s</td><td>%(sn)s</td><td> <a href=./%(n)s.pdf>PDF</a> </td><td> <a href=./%(n)s.HwU>HwU</a> <a href=./%(n)s.gnuplot>GNUPLOT</a> </td></tr>\n" %\
-                                        {'obs':obs, 'sn': short_name, 'n': name}
+                    pdf_link = ' <a href=./%s.pdf>PDF</a>'%name if \
+                        os.path.exists(pjoin(PY8_plots_root_path,
+                                             name+'.pdf')) else ''
+                    html += "<tr><td>%(obs)s</td><td>%(sn)s</td><td> <a href=./%(n)s.html>HTML</a>%(pdf)s </td><td> <a href=./%(n)s.HwU>HwU</a> <a href=./%(n)s.gnuplot>GNUPLOT</a> <a href=./%(n)s.py>PYTHON</a> </td></tr>\n" %\
+                         {'obs':obs, 'sn': short_name, 'n': name,
+                          'pdf':pdf_link}
                 html += '</table>\n'
                 html += '<a href=../../../bin/internal/plot_djrs.py> Example of code to plot the above with matplotlib </a><br><br>'
                 html+='</body>\n</html>'
-                ff=open(pjoin(PY8_plots_root_path, 'index.html'),'w')
-                ff.write(html)
+                with open(pjoin(PY8_plots_root_path, 'index.html'),'w') as ff:
+                    ff.write(html)
             return True
 
         if not event_path:
@@ -3735,6 +3758,15 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 raise self.InvalidCmd('nb_core should be a positive number')
             self.nb_core = int(args[1])
             self.options['nb_core'] = self.nb_core
+        elif args[0] in ['nb_core_pythia8', 'nb_core_delphes']:
+            # Per-step override of the number of cores/jobs used by do_pythia8/
+            # do_delphes. 'None' means fall back to the global nb_core option.
+            if args[1] == 'None':
+                self.options[args[0]] = None
+                return
+            if not args[1].isdigit():
+                raise self.InvalidCmd('%s should be a positive number' % args[0])
+            self.options[args[0]] = int(args[1])
         elif args[0] == 'timeout':
             self.options[args[0]] = int(args[1])
         elif args[0] == 'cluster_status_update':
@@ -3810,6 +3842,88 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             return stop
         except self.InvalidCmd:
             return stop
+
+    def get_nb_core_override(self, step):
+        """Return the user-specified number of cores/jobs for a given step
+        (e.g. 'pythia8' or 'delphes') through the nb_core_<step> option, or
+        None when it is unset (in which case the caller keeps its default
+        parallelization based on the global nb_core option).
+        The value is allowed to exceed the global nb_core: for the Pythia8 step
+        it directly fixes the number of (statistically equivalent) split jobs."""
+
+        value = self.options.get('nb_core_%s' % step, None)
+        if value in (None, 'None', ''):
+            return None
+        return max(int(value), 1)
+
+    def resolve_nb_core(self, step):
+        """Return the effective number of cores/jobs for a given step: the
+        per-step nb_core_<step> option when set, otherwise the global nb_core
+        option (falling back to the number of available CPUs when that is also
+        unset). Unlike get_nb_core_override this never returns None."""
+
+        value = self.get_nb_core_override(step)
+        if value is not None:
+            return value
+        value = self.options.get('nb_core', None)
+        if value in (None, 'None', ''):
+            import multiprocessing
+            return multiprocessing.cpu_count()
+        return max(int(value), 1)
+
+    @contextlib.contextmanager
+    def multicore_concurrency(self, nb_core):
+        """Temporarily set the multicore scheduler concurrency
+        (self.cluster.nb_core) to nb_core for the duration of the block, always
+        restoring the previous value afterwards (even if the block raises).
+
+        A no-op when nb_core is None or when not running in multicore mode
+        (run_mode != 2), so callers can wrap their submit/wait unconditionally."""
+
+        if nb_core is None or self.options.get('run_mode') != 2:
+            yield
+            return
+        original = self.cluster.nb_core
+        self.cluster.nb_core = nb_core
+        try:
+            yield
+        finally:
+            self.cluster.nb_core = original
+
+    def is_delphes_fusion_active(self):
+        """Decide whether Delphes should run on the individual Pythia8 split
+        files (before the HepMC files are merged) and the resulting ROOT files
+        be combined with hadd, instead of running a single Delphes pass on the
+        merged HepMC file.
+
+        This is the opt-in rule for the fused parallel-Delphes path. It is
+        active when:
+          - Delphes is going to run, i.e. delphes_path is set and a
+            delphes_card.dat is present (this mirrors the post-Pythia8
+            'delphes --no_default' call which is a no-op without the card);
+          - the run is parallel (run_mode != 0) so Pythia8 splits exist to run
+            Delphes on;
+          - event_norm is 'average', which guarantees that the per-split HepMC
+            event weights are absolute and therefore combinable (the same
+            restriction already enforced for the Pythia8 splitting itself);
+          - nb_core_delphes has been explicitly set. Parallel Delphes is opt-in:
+            when nb_core_delphes is left unset Delphes runs on a single core
+            (the standard single pass on the merged HepMC file), which is the
+            default. nb_core_delphes then also sets the concurrency of the
+            per-split Delphes jobs.
+        """
+
+        if not self.options.get('delphes_path'):
+            return False
+        if not os.path.exists(pjoin(self.me_dir, 'Cards', 'delphes_card.dat')):
+            return False
+        if self.options.get('run_mode', 0) == 0:
+            return False
+        if self.run_card['event_norm'] != 'average':
+            return False
+        if self.get_nb_core_override('delphes') is None:
+            return False
+        return True
 
     def configure_run_mode(self, run_mode):
         """change the way to submit job 0: single core, 1: cluster, 2: multicore"""
@@ -4740,7 +4854,11 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                         f.write('\n')
                     f.write('\n'.join(extra) + '\n')
             except (OSError, IOError) as e:
-                logger.debug('Could not patch %s: %s', path, e)
+                logger.warning('Could not add %s to %s (%s). '
+                    'Recent LHAPDF versions can refuse to load this set '
+                    '(MetadataError). If this happens, add those keys to that '
+                    'file manually.',
+                    ', '.join(e2.split(':')[0] for e2 in extra), path, e)
 
 
     def copy_lhapdf_set(self, lhaid_list, pdfsets_dir, require_local=True):
@@ -4810,6 +4928,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
     
                 os.environ["LHAPATH"] = [d for d in lhapdf_cluster_possibilities if os.path.exists(pjoin(d, pdfset))][0]
                 os.environ["CLUSTER_LHAPATH"] = os.environ["LHAPATH"]
+                self.patch_lhapdf_info_file(pjoin(os.environ["LHAPATH"], pdfset))
                 # no need to copy it
                 if os.path.exists(pjoin(pdfsets_dir, pdfset)):
                     try:
@@ -4821,6 +4940,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                         logger.debug('%s', error)
             if not require_local and (os.path.exists(pjoin(pdfsets_dir, pdfset)) or \
                                     os.path.isdir(pjoin(pdfsets_dir, pdfset))):
+                self.patch_lhapdf_info_file(pjoin(pdfsets_dir, pdfset))
                 continue
             if not require_local:
                 if 'LHAPDF_DATA_PATH' in os.environ:
@@ -4831,19 +4951,27 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                             found =True
                             break
                     if found:
+                        self.patch_lhapdf_info_file(pjoin(path, pdfset))
                         continue
-                    
-                    
+
+            # ensure that the set used at run time has the metadata required
+            # by recent LHAPDF versions: the code can read the global copy
+            # (in particular if the local one is not picked up), and the
+            # local copy is created from it.
+            self.patch_lhapdf_info_file(pjoin(pdfsets_dir, pdfset))
+
             #check that the pdfset is not already there
             if not os.path.exists(pjoin(self.me_dir, 'lib', 'PDFsets', pdfset)) and \
                not os.path.isdir(pjoin(self.me_dir, 'lib', 'PDFsets', pdfset)):
-    
+
                 if pdfset and not os.path.exists(pjoin(pdfsets_dir, pdfset)):
                     self.install_lhapdf_pdfset(pdfsets_dir, pdfset)
-    
+                    self.patch_lhapdf_info_file(pjoin(pdfsets_dir, pdfset))
+
                 if os.path.exists(pjoin(pdfsets_dir, pdfset)):
                     files.cp(pjoin(pdfsets_dir, pdfset), pjoin(self.me_dir, 'lib', 'PDFsets'))
                 elif os.path.exists(pjoin(os.path.dirname(pdfsets_dir), pdfset)):
+                    self.patch_lhapdf_info_file(pjoin(os.path.dirname(pdfsets_dir), pdfset))
                     files.cp(pjoin(os.path.dirname(pdfsets_dir), pdfset), pjoin(self.me_dir, 'lib', 'PDFsets'))
 
             self.patch_lhapdf_info_file(pjoin(self.me_dir, 'lib', 'PDFsets', pdfset))
@@ -5123,12 +5251,14 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         return libdir
 
     def reset_iseed_in_run_card(self):
-        """If iseed is set to a non-zero value in the run_card, reset it to 0
+        """If iseed is set to a positive value in the run_card, reset it to 0
         and write the updated run_card to disk.  This ensures that subsequent
         runs will use an automatically-generated (independent) seed rather than
-        repeating the same one."""
+        repeating the same one. A negative iseed is preserved so the user can
+        keep reusing the same seed across runs (the absolute value is the
+        actual seed passed to the Fortran code)."""
         iseed = self.run_card['iseed']
-        if iseed != 0:
+        if iseed > 0:
             self.run_card['iseed'] = 0
             # Reset seed in run_card to 0, to ensure that following runs
             # will be statistically independent

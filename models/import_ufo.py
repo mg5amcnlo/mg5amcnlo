@@ -1047,6 +1047,8 @@ class UFOMG5Converter(object):
 
         if len(vertex) !=1 :
             for onevertex in vertex:
+                if onevertex.get('orders') != gold_vertex.get('orders'):
+                    continue
                 to_be_done = self.update_vertex_for_goldstone([onevertex], gold_vertex, goldstone, vector)
                 if not to_be_done:
                     return

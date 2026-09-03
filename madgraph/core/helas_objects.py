@@ -688,6 +688,24 @@ class HelasWavefunction(base_objects.PhysicsObject):
                 if self['state'] == 'final' and self.get('pdg_code') in decay_ids:
                     self.set('decay', True)
                 else:
+                    # Braces that name a piece of the propagator numerator of a
+                    # massive vector have no external wavefunction: the integer
+                    # would end up in the NHEL table and VXXXXX would silently
+                    # return a meaningless vector. The command interface
+                    # already refuses them (validate_propagator_polarization);
+                    # this catches the direct-API path as well.
+                    propagator_only = \
+                        base_objects.Leg.propagator_only_polarizations
+                    for value in leg.get('polarization'):
+                        # 99 ('{A}') keeps its own, pre-existing message below
+                        if value == 99 or value not in propagator_only:
+                            continue
+                        raise InvalidCmd(
+                            "The polarization {%s} is a piece of a massive "
+                            "vector propagator, not a polarization vector: "
+                            "it is only valid on a particle that is decayed "
+                            "further (an internal line), not on an external "
+                            "leg of the process." % propagator_only[value])
                     if 99 in leg.get('polarization'):
                         raise Exception("polarization A only valid for propagator.")
                 # Set fermion flow state. Initial particle and final
@@ -1648,13 +1666,19 @@ class HelasWavefunction(base_objects.PhysicsObject):
                 output['propa'] = 'P1S'
 
             elif self.get('polarization') == [1]:
-                if self.get('spin') != 2:
+                if self.get('spin') == 2:
+                    output['propa'] = 'P1P'
+                elif self.get('spin') == 3:
+                    output['propa'] = 'P1TR'
+                else:
                     raise InvalidCmd( 'polarization not supported for decay particle')
-                output['propa'] = 'P1P'
             elif self.get('polarization') == [-1]:
-                if self.get('spin') != 2:
-                    raise InvalidCmd( 'Left polarization not supported for decay particle for spin (2s+1=%s) particles' % self.get('spin')) 
-                output['propa'] = 'P1M'
+                if self.get('spin') == 2:
+                    output['propa'] = 'P1M'
+                elif self.get('spin') == 3:
+                    output['propa'] = 'P1TL'
+                else:
+                    raise InvalidCmd( 'Left polarization not supported for decay particle for spin (2s+1=%s) particles' % self.get('spin'))
             else:            
                 raise InvalidCmd( 'polarization not supported for decay particle')
             
@@ -1881,9 +1905,11 @@ class HelasWavefunction(base_objects.PhysicsObject):
             elif self.get('polarization') == [99]:
                 tags.append('P1A')
             elif self.get('polarization') == [1]:
-                tags.append('P1P')
+                # helicity +1: transverse projector for a vector, u-spinor for a fermion
+                tags.append('P1TR' if self.get('spin') == 3 else 'P1P')
             elif self.get('polarization') == [-1]:
-                tags.append('P1M')
+                # helicity -1: transverse projector for a vector, v-spinor for a fermion
+                tags.append('P1TL' if self.get('spin') == 3 else 'P1M')
             elif sorted(self.get('polarization')) == [0,9]: # = 0+9
                 tags.append('P1LS')
             elif self.get('polarization') == [4]: # = T-5

@@ -112,7 +112,7 @@ set label front 'MadGraph5\_aMC\@NLO' font "Courier,11" rotate by 90 at graph 1.
 
 set format y '10^{%%T}'
 set logscale y
-set yrange [1.2793e-15:3.7328e-11]
+set yrange [1.2747e-15:3.7328e-11]
 set origin 0.0000e+00, 5.0000e-01
 set size 1.0000e+00, 4.0000e-01
 set mytics 10
@@ -260,7 +260,7 @@ set label front 'MadGraph5\_aMC\@NLO' font "Courier,11" rotate by 90 at graph 1.
 
 set format y '10^{%%T}'
 set logscale y
-set yrange [1.0773e-15:2.4993e-11]
+set yrange [1.0077e-15:2.4993e-11]
 set origin 0.0000e+00, 5.0000e-01
 set size 1.0000e+00, 4.0000e-01
 set mytics 10
