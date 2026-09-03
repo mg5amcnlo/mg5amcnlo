@@ -118,16 +118,14 @@
       subroutine assign_Double(self,dn)
          type(Dual),intent(out)::self
          real(kind(1d0)),intent(in)::dn
-         integer::i
 
          self%comp(0) = dn
-         self%comp(1:i) = (0d0,0d0)
+         self%comp(1:) = (0d0,0d0)
       end subroutine assign_Double
 
       subroutine assign_Complex(self,cn)
          type(Dual),intent(inout)::self
          complex*16,intent(in)::cn
-         integer::i
 
          self%comp(0) = cn
          self%comp(1:) = (0d0,0d0)

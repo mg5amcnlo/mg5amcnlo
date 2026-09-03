@@ -688,7 +688,7 @@ class TestCmdShell2(unittest.TestCase,
 
 
 
-    def test_quakonium_standalone(self):
+    def test_quarkonium_standalone(self):
         """Standalone test for various quarkonium production matrix elements"""
 
         import os

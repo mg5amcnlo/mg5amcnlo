@@ -1161,14 +1161,10 @@ class Model(PhysicsObject):
             if not (isinstance(value, list)):
                 raise self.PhysicsObjectError("Object of type %s is not a list" % type(value))
 
-        elif name in ['case_sensitive', 'startfromalpha0']:
+        elif name in ['case_sensitive', 'startfromalpha0', 'dual_mass_scheme']:
             if not value in [True ,False]:
                 raise self.PhysicsObjectError("Object of type %s is not a boolean" % type(value))
 
-        elif name in ['case_sensitive', 'dual_mass_scheme']:
-            if not value in [True ,False]:
-                raise self.PhysicsObjectError("Object of type %s is not a boolean" % type(value))
-            
 
         return True
 

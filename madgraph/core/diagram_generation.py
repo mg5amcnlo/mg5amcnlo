@@ -1746,7 +1746,7 @@ class MultiProcess(base_objects.PhysicsObject):
                 if not all(istags):
                     raise MadGraph5Error("Tagging only one initial-state particle is not allowed")
                 islegs = [\
-                        fks_tag.TagLeg({'id':id, 'state': False, 'polarization': isleg['polarization'], 'onium': islegs['onium'], 'is_tagged': tag}) \
+                        fks_tag.TagLeg({'id':id, 'state': False, 'polarization': isleg['polarization'], 'onium': isleg['onium'], 'is_tagged': tag}) \
                         for id, isleg, tag in zip(prod, islegs_orig, istags)]
             else:
                 islegs = [\

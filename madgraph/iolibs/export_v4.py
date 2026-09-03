@@ -2696,19 +2696,21 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
             except:
                 pass
 
-            model_path = self.dir_path + '/Source/MODEL/'
-            ln(model_path + '/ldme.inc', self.dir_path + '/Source')
-            ln(model_path + '/ldme.inc', self.dir_path + '/SubProcesses')
-
         else:
             filename = pjoin(self.dir_path, 'Source', 'MODEL', 'ldme.inc')
             self.write_ldme_file(writers.FortranWriter(filename),
                          [])
-            ln(filename, self.dir_path + '/Source')
 
             filename = pjoin(self.dir_path, 'Source', 'MODEL', 'onia_read.inc')
             self.write_onia_read(writers.FortranWriter(filename),
                          [])
+
+        # ldme.inc is included unconditionally by the templates (setcuts.f,
+        # driver.f, ...), so the (possibly empty) file has to be reachable from
+        # both Source and SubProcesses for onia and non-onia processes alike.
+        model_path = self.dir_path + '/Source/MODEL/'
+        ln(model_path + '/ldme.inc', self.dir_path + '/Source')
+        ln(model_path + '/ldme.inc', self.dir_path + '/SubProcesses')
 
 
 
