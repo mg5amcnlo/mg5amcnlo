@@ -269,7 +269,7 @@ class Particle(PhysicsObject):
                 else:
                     return True
         return super(Particle, self).set(name, value,force=force)
-
+        
     def nice_string(self):
         """String representation of the object. Outputs valid Python 
         with improved format."""
@@ -295,8 +295,8 @@ class Particle(PhysicsObject):
         mystr = mystr.rstrip(',\n')
         mystr = mystr + '\n}'
 
-        return mystr        
-
+        return mystr
+    
     def filter(self, name, value):
         """Filter for valid particle property values."""
 
@@ -1164,7 +1164,7 @@ class Model(PhysicsObject):
         elif name in ['case_sensitive', 'startfromalpha0', 'dual_mass_scheme']:
             if not value in [True ,False]:
                 raise self.PhysicsObjectError("Object of type %s is not a boolean" % type(value))
-
+            
 
         return True
 
@@ -2178,7 +2178,7 @@ class Leg(PhysicsObject):
                 if i not in self.list_of_allowed_polarizations:
                     raise self.PhysicsObjectError( \
                           "%s is not a valid polarization" % str(value))
-
+                                                                    
         elif name == 'onium':
             if not isinstance(value, dict):
                 raise self.PhysicsObjectError( \

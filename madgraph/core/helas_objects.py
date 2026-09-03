@@ -3903,7 +3903,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
 
             # Append this diagram in the diagram list
             helas_diagrams.append(helas_diagram)
-
+        
 
         self.set('diagrams', helas_diagrams)
 
@@ -6130,7 +6130,7 @@ class HelasMultiProcess(base_objects.PhysicsObject):
                 # than for regular tree ones. So the function below is overloaded
                 # in LoopHelasProcess
                 cls.process_color(matrix_element,color_information,\
-                                                compute_loop_nc=compute_loop_nc)                 
+                                                compute_loop_nc=compute_loop_nc)                    
 
         if not matrix_elements:
             raise InvalidCmd("No matrix elements generated, check overall coupling orders")

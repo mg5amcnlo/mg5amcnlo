@@ -4298,7 +4298,7 @@ class RunCardLO(RunCard):
                         comment='eva order: 0=EVA, 1=iEVA, 2=iEVA@nlp')
         self.add_param("eva_xcut",1,hidden=True, allowed=[0,1],fortran_name="eva_xcut",
                         comment='eva_xcut: 1 = impose x > MV/Ebeam restriction; set to 1 (0) to recover results of [2502.07878 (2111.02442)]')
-                
+        
         # Bias module options
         self.add_param("bias_module", 'None', include=False, hidden=True)
         self.add_param('bias_parameters', {'__type__':1.0}, include='BIAS/bias.inc', hidden=True)
@@ -4514,7 +4514,7 @@ class RunCardLO(RunCard):
         self.add_param('etamax4pdg',[-1.], system=True)   
         self.add_param('mxxmin4pdg',[-1.], system=True)
         self.add_param('mxxpart_antipart', [False], system=True)
-                    
+                     
         
              
     def check_validity(self):
@@ -4947,7 +4947,7 @@ class RunCardLO(RunCard):
                     if not all(id  in [-12,-14,-16] for id in beam_id_split[1]):
                         logger.warning('Issue with default beam setup of neutrino in the run_card. Please check it up [polbeam2].')
             
-
+            
         # Check if need matching
         min_particle = 99
         max_particle = 0

@@ -290,7 +290,7 @@ class SubProcessGroup(base_objects.PhysicsObject):
                 elif leg.get('polarization') == [1]:
                     name += 'R'
                 else:
-                    name += '%s' %''.join([str(p).replace('-','m') for p in leg.get('polarization')])  
+                    name += '%s' %''.join([str(p).replace('-','m') for p in leg.get('polarization')])   
 
         
         for dc in process.get('decay_chains'):

@@ -250,7 +250,7 @@ class WriteALOHA:
     def write(self, mode=None):
                          
         self.mode = mode
-
+        
         core_text = self.define_expression()    
         self.define_argument_list()
         out = StringIO()
@@ -592,7 +592,7 @@ class ALOHAWriterForFortran(WriteALOHA):
                         size = 18
                 else:
                     size = '*'
-
+    
                 out.write(' %s %s(%s)\n' % (self.type2def[type], name, size))
             elif type == 'fct':
                 if name.upper() in ['EXP','LOG','SIN','COS','ASIN','ACOS']:
