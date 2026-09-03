@@ -4076,9 +4076,8 @@ class ProcessDefinition(Process):
                 else:
                     mystr = mystr + '{%s}' % polarization_to_string(leg.get('polarization'))
             if leg.get('offshell'):
-                mystr += '*'   
-            else:
-                mystr = mystr + ' '
+                mystr += '*'
+            mystr = mystr + ' '
             #mystr = mystr + '(%i) ' % leg['number']
             prevleg = leg
 
