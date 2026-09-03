@@ -337,7 +337,8 @@ def import_full_model(model_path, decay=False, prefix=''):
     # Check the validity of the model
     files_list_prov = ['couplings.py','lorentz.py','parameters.py',
                        'particles.py', 'vertices.py', 'function_library.py',
-                       'propagators.py', 'coupling_orders.py']
+                       'propagators.py', 'coupling_orders.py',
+                       'CT_couplings.py', 'CT_parameters.py', 'CT_vertices.py']
     
     if decay:
         files_list_prov.append('decays.py')    
@@ -346,14 +347,18 @@ def import_full_model(model_path, decay=False, prefix=''):
     for filename in files_list_prov:
         filepath = os.path.join(model_path, filename)
         if not os.path.isfile(filepath):
-            if filename not in ['propagators.py', 'decays.py', 'coupling_orders.py']:
+            if filename not in ['propagators.py', 'decays.py', 'coupling_orders.py','CT_couplings.py', 'CT_parameters.py', 'CT_vertices.py']:
                 raise UFOImportError("%s directory is not a valid UFO model: \n %s is missing" % \
                                                          (model_path, filename))
         files_list.append(filepath)
     files_list.append(__file__) # include models/import_ufo.py itself, see mg5amcnlo/mg5amcnlo#89
     # use pickle files if defined and up-to-date
-    if aloha.unitary_gauge == 1: 
+    if aloha.unitary_gauge == 1:
         pickle_name = 'model.pkl'
+    elif aloha.unitary_gauge == 2:
+        # axial gauge removes the goldstones (like unitary) and therefore
+        # must not share the Feynman gauge pickle (which keeps them)
+        pickle_name = 'model_axial.pkl'
     elif aloha.unitary_gauge == 3:
         pickle_name = 'model_FDG.pkl'
     else:
@@ -1042,6 +1047,8 @@ class UFOMG5Converter(object):
 
         if len(vertex) !=1 :
             for onevertex in vertex:
+                if onevertex.get('orders') != gold_vertex.get('orders'):
+                    continue
                 to_be_done = self.update_vertex_for_goldstone([onevertex], gold_vertex, goldstone, vector)
                 if not to_be_done:
                     return

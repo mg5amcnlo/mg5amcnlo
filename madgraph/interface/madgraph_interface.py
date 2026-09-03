@@ -2710,7 +2710,7 @@ class CompleteForCmd(cmd.CompleteCmd):
                 return self.list_completion(text, ['f77','g77','gfortran','default'])
             elif args[1] == 'cpp_compiler':
                 return self.list_completion(text, ['g++', 'c++', 'clang', 'default'])
-            elif args[1] == 'nb_core':
+            elif args[1] in ['nb_core', 'nb_core_pythia8', 'nb_core_delphes']:
                 return self.list_completion(text, [str(i) for i in range(100)] + ['default'] )
             elif args[1] == 'run_mode':
                 return self.list_completion(text, [str(i) for i in range(3)] + ['default'])
@@ -3120,6 +3120,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
     options_madevent = {'automatic_html_opening':True,
                          'run_mode':2,
                          'nb_core': None,
+                         'nb_core_pythia8': None,
+                         'nb_core_delphes': None,
                          'notification_center': True
                          }
 
@@ -4576,12 +4578,34 @@ This implies that with decay chains:
             myprocdef = self.extract_process(line)
             if gauge == 'unitary':
                 myprocdef_unit = myprocdef
-                self.do_set('gauge Feynman', log=False)
-                myprocdef_feyn = self.extract_process(line)              
             else:
-                myprocdef_feyn = myprocdef
                 self.do_set('gauge unitary', log=False)
                 myprocdef_unit = self.extract_process(line)
+            if gauge == 'feynman':
+                myprocdef_feyn = myprocdef
+            else:
+                self.do_set('gauge Feynman', log=False)
+                myprocdef_feyn = self.extract_process(line)
+            if myprocdef.get('perturbation_couplings') == [] and \
+               (args[0] == 'full' or (args[0] == 'gauge')) and \
+               0 in self._curr_model.get('gauge'):
+                if gauge == 'axial':
+                    myprocdef_axial = myprocdef
+                else:
+                    self.do_set('gauge axial', log=False)
+                    myprocdef_axial = self.extract_process(line)
+            else:
+                myprocdef_axial = None
+            if myprocdef.get('perturbation_couplings') == [] and \
+               (args[0] == 'full' or (args[0] == 'gauge')) and \
+               1 in self._curr_model.get('gauge'):
+                if gauge == 'FD':
+                    myprocdef_fd = myprocdef
+                else:
+                    self.do_set('gauge FD', log=False)
+                    myprocdef_fd = self.extract_process(line)
+            else:
+                myprocdef_fd = None
 
             nb_part_unit = len(myprocdef_unit.get('model').get('particles'))
             nb_part_feyn = len(myprocdef_feyn.get('model').get('particles'))
@@ -4589,6 +4613,8 @@ This implies that with decay chains:
                 logger_check.error('No Goldstone present for this check!!')
             gauge_result_no_brs = process_checks.check_unitary_feynman(
                                                 myprocdef_unit, myprocdef_feyn,
+                                                myprocdef_axial,
+                                                myprocdef_fd,
                                                 param_card = param_card,
                                                 options=options,
                                                 cuttools=CT_dir,
@@ -4743,7 +4769,12 @@ This implies that with decay chains:
             text += 'Gauge results:\n'
             text += process_checks.output_gauge(gauge_result) + '\n'
         if gauge_result_no_brs:
-            text += 'Gauge results (switching between Unitary/Feynman/axial gauge):\n'
+            gauge_labels = ['Unitary', 'Feynman']
+            if any('value_axial' in res for res in gauge_result_no_brs[1:]):
+                gauge_labels.append('Axial')
+            if any('value_fd' in res for res in gauge_result_no_brs[1:]):
+                gauge_labels.append('FD')
+            text += 'Gauge results (switching between %s gauge):\n' % '/'.join(gauge_labels)
             text += process_checks.output_unitary_feynman(gauge_result_no_brs) + '\n'
         if cms_results:
             text += 'Complex mass scheme results (varying width in the off-shell regions):\n'
@@ -7479,7 +7510,6 @@ os.system('%s  -O -W ignore::DeprecationWarning %s %s --mode={0}' %(sys.executab
                 if name not in ['mg5_path', 'f2py_compiler', 'f2py_compiler_py2','f2py_compiler_py3', 'lhapdf']:
                     self.options[name] = value
                 elif hasattr(self, 'set2_%s' % name) and value:
-                    misc.sprint('set configuration option %s to %s' % (name, value) )
                     func = getattr(self, 'set2_%s' % name)
                     func(value.split())
                 if value.lower() == "none" or value=="":
@@ -8876,8 +8906,22 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
         """Set the number of core to be used for parallelized tasks.
         Example: set nb_core 4
         """
-        return self.set_default('nb_core', args, log=log)   
-    
+        return self.set_default('nb_core', args, log=log)
+
+    def set2_nb_core_pythia8(self, args, log=True):
+        """Set the number of cores/jobs used by the Pythia8 step only.
+        Falls back to the global nb_core option when left to None.
+        Example: set nb_core_pythia8 8
+        """
+        return self.set_default('nb_core_pythia8', args, log=log)
+
+    def set2_nb_core_delphes(self, args, log=True):
+        """Set the number of cores/jobs used by the Delphes step only.
+        Falls back to the global nb_core option when left to None.
+        Example: set nb_core_delphes 8
+        """
+        return self.set_default('nb_core_delphes', args, log=log)
+
     def set2_cluster_type(self, args, log=True):
         """Set the cluster type to be used for cluster jobs submission.
         Example: set cluster_type condor

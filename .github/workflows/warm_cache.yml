@@ -6,9 +6,15 @@ permissions:
   contents: read
 on:
   push:
+    paths:
+      - '.github/workflows/warm_cache.yml'
+      - '.github/actions/restore_heptools/**'
+      - '.github/actions/restore_heptools_*/**'
+      - '.github/actions/restore_root/**'
+      - '.github/actions/restore_delphes/**'
   schedule:
-    - cron: '0 3 * * 0'    # every Sunday 3am
-  workflow_dispatch:         
+    - cron: '0 3 * * 0,3'  # twice a week (Sun & Wed 3am): keep caches warm
+  workflow_dispatch:
     inputs:
       reset_heptools:
         type: boolean
@@ -16,6 +22,10 @@ on:
       reset_ufo:
         type: boolean
         default: false
+      reset_delphes:
+        type: boolean
+        default: false
+        description: 'Rebuild the dedicated ROOT/Delphes cache (independent of heptools)'
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
@@ -34,7 +44,7 @@ jobs:
         run: echo "CACHE_KEY=$ImageOS" >> $GITHUB_ENV
 #
       - name: Delete heptools related cache
-        if: github.event_name == 'schedule' || inputs.reset_heptools == 'true'
+        if: inputs.reset_heptools == 'true'
         run: | 
           gh cache delete heptools-${{ env.CACHE_KEY }} --repo $GITHUB_REPOSITORY || true
           gh cache delete lhapdf-${{ env.CACHE_KEY }} --repo $GITHUB_REPOSITORY || true
@@ -45,10 +55,21 @@ jobs:
           GH_TOKEN: ${{ github.token }}
 
       - name: Delete ufo cache
-        if: github.event_name == 'schedule' || inputs.reset_ufo == 'true'
-        run: | 
+        if: inputs.reset_ufo == 'true'
+        run: |
           gh cache delete pip-numpy-${{ env.CACHE_KEY }} --repo $GITHUB_REPOSITORY || true
           gh cache delete ufomodel-${{ env.CACHE_KEY }} --repo $GITHUB_REPOSITORY || true
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      # ROOT/Delphes are deliberately NOT reset on the weekly schedule (they are
+      # large and stable). They are only rebuilt on explicit request, so the
+      # cache can be cleaned independently of the heptools one.
+      - name: Delete root/delphes cache
+        if: inputs.reset_delphes == 'true'
+        run: |
+          gh cache delete root-${{ env.CACHE_KEY }} --repo $GITHUB_REPOSITORY || true
+          gh cache delete delphes-${{ env.CACHE_KEY }} --repo $GITHUB_REPOSITORY || true
         env:
           GH_TOKEN: ${{ github.token }}
 
@@ -103,6 +124,9 @@ jobs:
            cp -r models/2HDM /home/runner/.cache/UFOMODEL
            
   lhapdf_cache:
+     # The scheduled run only keeps caches warm (see keep-warm-heptools); the
+     # heptools chain is rebuilt only on push/dispatch (or after reset_heptools).
+     if: github.event_name != 'schedule'
      needs: delete-cache
      runs-on: ${{ matrix.os }}
      strategy:
@@ -145,6 +169,7 @@ jobs:
                tar -xzpvf cteq6l1.tar.gz           
                
   pythia8_cache:
+     if: github.event_name != 'schedule'
      runs-on: ${{ matrix.os }}
      needs: lhapdf_cache
      strategy:
@@ -171,17 +196,35 @@ jobs:
          if: steps.cache-pythia8.outputs.cache-hit != 'true'
          uses: ./.github/actions/restore_heptools_lhapdf
 
-       - name: Install pythia8 into cache dir (in top of lhapdf cache) 
+       - name: Install pythia8 into cache dir (in top of lhapdf cache)
          if: steps.cache-pythia8.outputs.cache-hit != 'true'
+         # Compile pythia8 (and its hepmc dependency) in parallel across the
+         # runner's vCPUs; MAKEFLAGS is inherited by every make the installer
+         # spawns. Same speed-up as the contur build.
+         env:
+           MAKEFLAGS: "-j4"
          run: |
                mkdir -p /home/runner/.cache/HEPtools
                cd $GITHUB_WORKSPACE
                echo "heptools_install_dir=/home/runner/.cache/HEPtools" >> input/mg5_configuration.txt
                cp Template/LO/Source/.make_opts Template/LO/Source/make_opts
                echo "install pythia8" > cmd
-               ./bin/mg5_aMC cmd  
+               ./bin/mg5_aMC cmd
+
+       - name: Verify pythia8 landed in the cache
+         if: steps.cache-pythia8.outputs.cache-hit != 'true'
+         run: |
+               # mg5_aMC exits 0 even when "install pythia8" fails (e.g. a network
+               # timeout while downloading hepmc/pythia8 from the download server),
+               # so guard the cache here. Without Pythia.h, MG5 nullifies
+               # pythia8_path at startup, leaving the parton shower unavailable and
+               # breaking the rivet/contur acceptance tests. Fail loudly instead of
+               # saving a pythia8-less heptools cache.
+               test -f /home/runner/.cache/HEPtools/pythia8/include/Pythia8/Pythia.h
+               test -x /home/runner/.cache/HEPtools/pythia8/bin/pythia8-config
 
   emela_cache:
+     if: github.event_name != 'schedule'
      runs-on: ${{ matrix.os }}
      needs: lhapdf_cache
      strategy:
@@ -236,6 +279,7 @@ jobs:
 #             GH_TOKEN: ${{ github.token }}
 
   contur_cache:
+     if: github.event_name != 'schedule'
      runs-on: ${{ matrix.os }}
      needs: pythia8_cache
      strategy:
@@ -261,9 +305,21 @@ jobs:
          if: steps.cache-contur.outputs.cache-hit != 'true'
          uses: ./.github/actions/restore_heptools_pythia8
 
-       - name: Install contur into cache dir 
+       - name: Install contur into cache dir
          if: steps.cache-contur.outputs.cache-hit != 'true'
+         # rivet is the long pole of the whole cache build (~36 min, single
+         # threaded). MAKEFLAGS is inherited by every make the installer spawns,
+         # so an unqualified "make" becomes a parallel build across the runner's
+         # vCPUs. Harmless if a sub-build pins its own -j.
+         env:
+           MAKEFLAGS: "-j4"
          run: |
+               # YODA's python extension build needs Cython (no longer shipped by
+               # default on the GitHub runner image); without it rivet aborts at
+               # YODA, before FastJet is installed, leaving NLO builds broken.
+               # Install into the same interpreter mg5_aMC/YODA use (no sudo, so
+               # the system Python is left untouched for other steps).
+               python3 -m pip install Cython
                mkdir -p /home/runner/.cache/HEPtools
                cd $GITHUB_WORKSPACE
                echo "heptools_install_dir=/home/runner/.cache/HEPtools" >> input/mg5_configuration.txt
@@ -272,6 +328,15 @@ jobs:
                echo "install contur" >> cmd
                ./bin/mg5_aMC cmd
 
+       - name: Verify rivet/fastjet landed in the cache
+         if: steps.cache-contur.outputs.cache-hit != 'true'
+         run: |
+               # mg5_aMC exits 0 even when "install rivet" fails, so guard the
+               # cache here: a missing fastjet-config means NLO subprocesses cannot
+               # compile (fastjet/ClusterSequence.hh). Fail loudly instead of
+               # saving an incomplete heptools cache.
+               test -x /home/runner/.cache/HEPtools/fastjet/bin/fastjet-config
+
        #- name: Delete pythia8 cache (include in contur cache)
        #  run: |
        #      gh cache delete pythia8-${{ env.CACHE_KEY }} --repo $GITHUB_REPOSITORY || true
@@ -279,6 +344,7 @@ jobs:
        #     GH_TOKEN: ${{ github.token }}
 
   looptools_cache:
+     if: github.event_name != 'schedule'
      runs-on: ${{ matrix.os }}
      strategy:
       matrix:
@@ -335,7 +401,8 @@ jobs:
       matrix:
         os: [ubuntu-22.04, ubuntu-24.04]
     needs: [lhapdf_cache, pythia8_cache, emela_cache, looptools_cache, contur_cache]
-    if: always()   # 👈 runs even if a dependency failed
+    # runs even if a dependency failed, but never on the scheduled keep-warm run
+    if: always() && github.event_name != 'schedule'
     steps:
       - name: Set cache key
         run: echo "CACHE_KEY=$ImageOS" >> $GITHUB_ENV
@@ -374,7 +441,21 @@ jobs:
           path: ~/.cache/HEPtools
           key: looptools-${{ env.CACHE_KEY }}
 
+      # GitHub Actions caches are immutable: actions/cache/save is a silent
+      # no-op when the key already exists (it logs "Unable to reserve cache
+      # ... another job may be creating this cache" and the freshly rebuilt
+      # combined cache is discarded). Outside the Sunday cron / reset_heptools
+      # the old heptools-$KEY therefore never gets replaced. Delete it first so
+      # the new content is actually saved. Only do this (and the save) once all
+      # sub-caches succeeded, so a partial rebuild never replaces a good cache.
+      - name: Delete previous combined cache (so the fresh one can be saved)
+        if: needs.pythia8_cache.result == 'success' && needs.emela_cache.result == 'success' && needs.contur_cache.result == 'success' && needs.looptools_cache.result == 'success'
+        run: gh cache delete heptools-${{ env.CACHE_KEY }} --repo $GITHUB_REPOSITORY || true
+        env:
+          GH_TOKEN: ${{ github.token }}
+
       - uses: actions/cache/save@v5
+        if: needs.pythia8_cache.result == 'success' && needs.emela_cache.result == 'success' && needs.contur_cache.result == 'success' && needs.looptools_cache.result == 'success'
         with:
           path: ~/.cache/HEPtools
           key: heptools-${{ env.CACHE_KEY }}
@@ -389,3 +470,132 @@ jobs:
           gh cache delete looptools-${{ env.CACHE_KEY }} --repo $GITHUB_REPOSITORY || true
         env:
           GH_TOKEN: ${{ github.token }}
+
+  # On the scheduled run the heptools rebuild chain is skipped (the *_cache jobs
+  # are guarded with github.event_name != 'schedule'). Restore the combined
+  # heptools cache here so its 7-day eviction timer is reset and it stays warm
+  # without recompiling anything. ufo/numpy/root/delphes already keep themselves
+  # warm via their own cache-hit restores on the scheduled run.
+  keep-warm-heptools:
+    if: github.event_name == 'schedule'
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-22.04, ubuntu-24.04]
+    steps:
+      - name: Set cache key
+        run: echo "CACHE_KEY=$ImageOS" >> $GITHUB_ENV
+      - name: Restore (touch) the combined heptools cache
+        uses: actions/cache/restore@v5
+        with:
+          path: ~/.cache/HEPtools
+          key: heptools-${{ env.CACHE_KEY }}
+
+
+  # ---------------------------------------------------------------------------
+  # Dedicated ROOT + Delphes caches (kept separate from the heptools cache).
+  # Delphes depends only on ROOT, so root_cache is built first and delphes_cache
+  # is stacked on top of it.
+  #
+  # These are version-pinned and stable, so they are NOT force-rebuilt. The
+  # weekly run (and every PR restoring them) simply reads the cache, which
+  # resets GitHub's 7-day eviction timer and keeps it warm without re-downloading
+  # the (~identical) ROOT binary or recompiling Delphes. If the cache was evicted
+  # (idle >7 days or repo size pressure), the cache-miss branch below rebuilds it
+  # automatically. Use the reset_delphes input to force a rebuild, e.g. when
+  # bumping the ROOT version.
+  # ---------------------------------------------------------------------------
+  root_cache:
+     runs-on: ${{ matrix.os }}
+     needs: delete-cache
+     strategy:
+       matrix:
+         os: [ubuntu-22.04, ubuntu-24.04]
+
+     steps:
+       - name: Set cache key
+         run: echo "CACHE_KEY=$ImageOS" >> $GITHUB_ENV
+
+       - name: Cache ROOT
+         id: cache-root
+         uses: actions/cache@v5
+         with:
+           path: ~/.cache/Delphes
+           key: root-${{ env.CACHE_KEY }}
+
+       - name: Install ROOT runtime dependencies
+         if: steps.cache-root.outputs.cache-hit != 'true'
+         run: |
+               sudo apt-get update
+               sudo apt-get install -y libtbb12 libvdt0 libgsl-dev || true
+
+       - name: Install ROOT binary into the dedicated cache dir
+         if: steps.cache-root.outputs.cache-hit != 'true'
+         # ROOT.cern publishes per-image binary builds. Bump ROOT_VERSION / the
+         # gcc tags below when moving to a newer image; the filename must match
+         # an existing build at https://root.cern/download/ .
+         # NOTE: the same install logic is duplicated in the cache-miss fallback
+         # of .github/actions/restore_root/action.yml - keep them in sync.
+         run: |
+               mkdir -p $HOME/.cache/Delphes
+               cd $HOME/.cache/Delphes
+               ROOT_VERSION=6.40.02
+               case "$ImageOS" in
+                 ubuntu22) ROOT_TARBALL=root_v${ROOT_VERSION}.Linux-ubuntu22.04-x86_64-gcc11.4.tar.gz ;;
+                 ubuntu24) ROOT_TARBALL=root_v${ROOT_VERSION}.Linux-ubuntu24.04-x86_64-gcc13.3.tar.gz ;;
+                 *) echo "Unsupported runner image: $ImageOS"; exit 1 ;;
+               esac
+               wget -q "https://root.cern/download/${ROOT_TARBALL}"
+               tar -xzf "${ROOT_TARBALL}"
+               rm -f "${ROOT_TARBALL}"
+
+       - name: Verify ROOT landed in the cache
+         if: steps.cache-root.outputs.cache-hit != 'true'
+         run: |
+               test -x $HOME/.cache/Delphes/root/bin/root-config
+               $HOME/.cache/Delphes/root/bin/root-config --version
+
+  delphes_cache:
+     runs-on: ${{ matrix.os }}
+     needs: root_cache
+     strategy:
+       matrix:
+         os: [ubuntu-22.04, ubuntu-24.04]
+
+     steps:
+       - name: Set cache key
+         run: echo "CACHE_KEY=$ImageOS" >> $GITHUB_ENV
+
+       - name: Cache Delphes (stacked on top of ROOT)
+         id: cache-delphes
+         uses: actions/cache@v5
+         with:
+           path: ~/.cache/Delphes
+           key: delphes-${{ env.CACHE_KEY }}
+
+       - name: get mg5
+         if: steps.cache-delphes.outputs.cache-hit != 'true'
+         uses: actions/checkout@v5
+
+       - name: restore ROOT cache (dependency)
+         if: steps.cache-delphes.outputs.cache-hit != 'true'
+         uses: ./.github/actions/restore_root
+
+       - name: Install Delphes into the dedicated cache dir
+         if: steps.cache-delphes.outputs.cache-hit != 'true'
+         env:
+           MAKEFLAGS: "-j4"
+         run: |
+               cd $GITHUB_WORKSPACE
+               cp Template/LO/Source/.make_opts Template/LO/Source/make_opts
+               echo "install Delphes" > cmd
+               ./bin/mg5_aMC cmd
+               # MG installs Delphes into MG5DIR/Delphes; move it next to ROOT so
+               # the whole tool set lives in the dedicated cache.
+               rm -rf $HOME/.cache/Delphes/Delphes
+               mv $GITHUB_WORKSPACE/Delphes $HOME/.cache/Delphes/Delphes
+
+       - name: Verify Delphes landed in the cache
+         if: steps.cache-delphes.outputs.cache-hit != 'true'
+         run: |
+               test -x $HOME/.cache/Delphes/Delphes/DelphesHepMC2

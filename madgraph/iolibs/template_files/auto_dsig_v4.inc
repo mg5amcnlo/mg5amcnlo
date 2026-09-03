@@ -140,6 +140,7 @@ C     Continue only if IMODE is 0, 4 or 5
      channel = %(get_channel)s
 	 call ranmar(RHEL)
 	 call ranmar(RCOL)
+     if (IMODE.eq.0) then
 C     Select a flavor combination (need to do here for right sign)
          CALL RANMAR(R)
          IPSEL=0
@@ -149,6 +150,9 @@ C     Select a flavor combination (need to do here for right sign)
          ENDDO
 	 
          rwgt_value=REWGT(PP,1)
+      else
+         rwgt_value=1d0
+      endif
 C                                                      1 argument is for IVEC=1
          CALL SMATRIX%(proc_id)s(P1,RHEL, RCOL,channel,1, DSIGUU, selected_hel(1), selected_col(1))
 

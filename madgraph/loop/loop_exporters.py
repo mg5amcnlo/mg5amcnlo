@@ -177,14 +177,18 @@ class LoopExporterFortran(object):
             # his environmental paths
             CTlib = misc.which_lib('libcts.a')
             CTmod = misc.which_lib('mpmodule.mod')
-            if not CTlib is None and not CTmod is None:
+            if CTlib is None:
+                raise InvalidCmd("Could not find the location of the file"+\
+                    " libcts.a in your environment paths.")
+            elif CTmod is None:
+                raise InvalidCmd("Could not find the location of the file"+\
+                    " mpmodule.mod in your environment paths.")
+            else:
                 logger.info('MG5_aMC is using CutTools installation found at %s.'%\
-                                                         os.path.dirname(CTlib)) 
+                                                         os.path.dirname(CTlib))
                 ln(os.path.join(CTlib),os.path.join(targetPath,'lib'),abspath=True)
                 ln(os.path.join(CTmod),os.path.join(targetPath,'lib'),abspath=True)
-            else:
-                raise InvalidCmd("Could not find the location of the files"+\
-                    " libcts.a and mp_module.mod in you environment paths.")
+
     
     def get_aloha_model(self, model):
         """ Caches the aloha model created here as an attribute of the loop 

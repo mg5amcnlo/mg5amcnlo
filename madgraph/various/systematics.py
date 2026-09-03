@@ -271,8 +271,8 @@ class Systematics(object):
             elif p.lhapdfID == self.orig_pdf:
                 self.orig_pdf = p
                 break
-            else:  
-                self.orig_pdf = lhapdf.mkPDF(self.orig_pdf)
+        else:  
+            self.orig_pdf = lhapdf.mkPDF(self.orig_pdf)
         if not self.b1 == 0 == self.b2 and not isEVA and not isEVAxDIS: 
             self.log( "# Events generated with PDF: %s (%s)" %(self.orig_pdf.set().name,self.orig_pdf.lhapdfID ))
         elif isEVAxDIS:

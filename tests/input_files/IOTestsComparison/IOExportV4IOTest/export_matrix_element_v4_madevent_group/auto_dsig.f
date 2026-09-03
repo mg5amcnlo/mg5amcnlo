@@ -167,15 +167,19 @@ C       LP=SIGN(1,LPP(IB(2)))
       CHANNEL = SUBDIAG(1)
       CALL RANMAR(RHEL)
       CALL RANMAR(RCOL)
-C     Select a flavor combination (need to do here for right sign)
-      CALL RANMAR(R)
-      IPSEL=0
-      DO WHILE (R.GE.0D0 .AND. IPSEL.LT.IPROC)
-        IPSEL=IPSEL+1
-        R=R-DABS(PD(IPSEL))/PD(0)
-      ENDDO
+      IF (IMODE.EQ.0) THEN
+C       Select a flavor combination (need to do here for right sign)
+        CALL RANMAR(R)
+        IPSEL=0
+        DO WHILE (R.GE.0D0 .AND. IPSEL.LT.IPROC)
+          IPSEL=IPSEL+1
+          R=R-DABS(PD(IPSEL))/PD(0)
+        ENDDO
 
-      RWGT_VALUE=REWGT(PP,1)
+        RWGT_VALUE=REWGT(PP,1)
+      ELSE
+        RWGT_VALUE=1D0
+      ENDIF
 C     1 argument is for IVEC=1
       CALL SMATRIX1(P1,RHEL, RCOL,CHANNEL,1, DSIGUU, SELECTED_HEL(1),
      $  SELECTED_COL(1))
