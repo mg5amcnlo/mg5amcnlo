@@ -1212,6 +1212,7 @@ class CheckValidForCmd(cmd.CheckCmd):
 #            if order.strip().lower() != 'qcd':
 #                raise self.InvalidCmd('Polarization restriction can not be used for generic NLO computations')
 
+
             def check(p):
                 # Polarisation restriction can now be used for color charged
                 # particles, so there is no longer a color check here. The mass
@@ -1240,7 +1241,6 @@ class CheckValidForCmd(cmd.CheckCmd):
                             check(p)
                     else:
                         check(p)
-                    
 
 
     def check_tutorial(self, args):
@@ -2999,7 +2999,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
     _display_opts = ['particles', 'interactions', 'processes', 'diagrams',
                      'diagrams_text', 'multiparticles', 'couplings', 'lorentz',
                      'checks', 'parameters', 'options', 'coupling_order','variable',
-                     'modellist']
+                     'modellist', 'fockstates', 'boundstates']
     _add_opts = ['process', 'model']
     _save_opts = ['model', 'processes', 'options']
     _tutorial_opts = ['aMCatNLO', 'stop', 'MadLoop', 'MadGraph5']
@@ -3186,6 +3186,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             
         # Variables to store state information
         self._multiparticles = {}
+        self._boundstates = {}
+        self._fockstates = []
         self.options = {}
         self._generate_info = "" # store the first generated process
         self._model_v4_path = None
@@ -3239,7 +3241,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
 
     # Add a process to the existing multiprocess definition
     # Generate a new amplitude
-    def do_add(self, line):
+    def do_add(self, line, counter=0):
         """Generate an amplitude for a given process and add to
         existing amplitudes
         or merge two model
@@ -3317,6 +3319,7 @@ This implies that with decay chains:
                                                 " coupling orders constraints.")                    
             else:
                 nb_proc = len([l for l in self.history if l.startswith(('generate','add process'))])
+                nb_proc += counter
                 myprocdef = self.extract_process(line, proc_number=nb_proc)
 
             
@@ -3730,11 +3733,21 @@ This implies that with decay chains:
             for key in self._multiparticles:
                 print(self.multiparticle_string(key))
 
+        elif args[0] == 'fockstates':
+            print('Current model contains %i Fock states:'%(len(self._fockstates)))
+            print(' '.join([fockstate.get('name') for fockstate in self._fockstates]))
+
+        elif args[0] == 'boundstates':
+            print('Bound state lables:')
+            for key in self._boundstates:
+                print(self.boundstate_string(key))
+
         elif args[0] == 'coupling_order':
             hierarchy = list(self._curr_model['order_hierarchy'].items())
             hierarchy.sort(key=operator.itemgetter(1))
             for order in hierarchy:
                 print(' %s : weight = %s' % order)
+
         elif args[0] == 'couplings' and len(args) == 1:
             if self._model_v4_path:
                 print('No couplings information available in V4 model')
@@ -3984,6 +3997,14 @@ This implies that with decay chains:
             return "%s = %s" % (key, " ".join([self._curr_model.\
                                     get('particle_dict')[part_id].get_name() \
                                     for part_id in self._multiparticles[key]]))
+
+    def boundstate_string(self, key):
+        """Returns a nicely formatted string for the bound state"""
+
+        if key in self._boundstates:
+            return f"{key} = {' '.join(self._boundstates[key])}"
+        else:
+            return f"Boundstate {key} is not defined."
 
     def do_tutorial(self, line):
         """Activate/deactivate the tutorial mode."""
@@ -4860,6 +4881,10 @@ This implies that with decay chains:
         self.clean_process()
         self._generate_info = line
 
+        # reset P-wave onia counter for new process
+        if hasattr(aloha, "npwave"):
+            aloha.npwave = [0]
+
         # Call add process
         args = self.split_arg(line)
         args.insert(0, 'process')
@@ -5155,6 +5180,57 @@ This implies that with decay chains:
 
         args = self.split_arg(line)
 
+        # Extract process
+        boundstates = {}
+        boundstates_keys = [key for key in self._boundstates.keys()]
+        boundstates_keys_lower = [key.lower() for key in boundstates_keys]
+        for index,part_name in enumerate(args):
+            if part_name in boundstates_keys_lower:
+                bound_name = boundstates_keys[boundstates_keys_lower.index(part_name)]
+                boundstates[index] = self._boundstates[bound_name]
+
+        if not hasattr(aloha, "npwave"):
+            aloha.npwave = [0]
+
+        if boundstates:
+            # find all combinations of Fock states
+            for index,key in enumerate(boundstates.keys()):
+                if index==0:
+                    all_combinations = [[(key,b)] for b in boundstates[key]]
+                else:
+                    all_combinations = [c+[(key,b)] for c in all_combinations for b in boundstates[key]]
+            # filter symmetric final states
+            already_generated = []
+            unique_combinations = []
+            for fockstates in all_combinations:
+                state = sorted([fockstate[1] for fockstate in fockstates])
+                if state not in already_generated:
+                    unique_combinations.append(fockstates)
+                    already_generated.append(state)
+
+            # add processes
+            last = len(unique_combinations)-1
+            for idx,fockstates in enumerate(unique_combinations):
+                copy_args = args
+                for index,fockstate in fockstates:
+                    copy_args[index] = fockstate
+                process = f" ".join(["process"]+copy_args)
+                logger.info("INFO: Trying to generate "+process)
+                if not idx==last:
+                    for order in model_orders:
+                        try:
+                            (order_val,order_op) = squared_orders[order]
+                        except KeyError:
+                            try:
+                                order_val = orders[order]
+                                order_op = '='
+                            except KeyError:
+                                continue
+                        process += " "+order+order_op+str(order_val)
+                    self.do_add(process)
+                else:
+                    args = [arg.lower() for arg in copy_args]
+
         myleglist = base_objects.MultiLegList()
         state = False
 
@@ -5164,6 +5240,8 @@ This implies that with decay chains:
         else:
             upc_with_jet = False
 
+        onium_index = 0
+        aloha.dual_mode = False
         # Extract process
         for part_name in args:
             if part_name == '>':
@@ -5177,6 +5255,22 @@ This implies that with decay chains:
                 offshell = True
             else:
                 offshell = False
+
+            # check if particle is ONIA
+            is_onium = False
+            for fockstate in self._fockstates:
+                if part_name == fockstate.get('name').lower():
+                    is_onium = True
+                    onium_info = fockstate
+                    break
+                elif part_name.lstrip('-').isdigit() and int(part_name)==fockstate.get('pdg_code'):
+                    is_onium = True
+                    onium_info = fockstate
+                    break
+
+            # check that only final-state particles are ONIA
+            if is_onium and not state:
+                raise self.InvalidCmd("initial particles cannot be onia")
 
             # check if the particle is tagged (!PART!)
             if part_name.startswith('!') and part_name.endswith('!'):
@@ -5308,7 +5402,7 @@ This implies that with decay chains:
                     else:
                         raise self.InvalidCmd('Invalid Polarization')
 
-            duplicate =1
+            duplicate = 1
             if part_name in self._multiparticles:
                 # final-state multiparticles cannot be tagged
                 if is_tagged and state:
@@ -5317,6 +5411,45 @@ This implies that with decay chains:
                     raise self.InvalidCmd("Multiparticle %s is or-multiparticle" % part_name + \
                           " which can be used only for required s-channels")
                 mylegids.extend(self._multiparticles[part_name])
+
+            elif is_onium:
+                onium_name = onium_info.get('name')
+                onium_id = onium_info.get('pdg_code')
+                onium_principal = onium_info.get('principal')
+                onium_spin = int((onium_info.get('spin')-1)/2)
+                onium_orbit = onium_info.get('orbital')
+                onium_j = onium_info.get('J')
+                onium_color = onium_info.get('color')
+                onium_charge = onium_info.get('charge')
+                constituents = onium_info.get('particles')
+                try:
+                    onium_mass = onium_info.get('mass')
+                except AttributeError:
+                    onium_mass = -1.
+                try:
+                    onium_ldme = onium_info.get('ldme')
+                except AttributeError:
+                    onium_ldme = 1.
+
+                # use dual mode for P-wave ONIA
+                
+                if onium_orbit >= 1:
+                    aloha.dual_mode += 1
+                for i in range(2):
+                    mypart = self._curr_model['particles'].get_copy(constituents[i])
+
+                    myleglist.append(base_objects.MultiLeg({'ids':[mypart.get_pdg_code()],
+                                                        'state':state,
+                                                        'polarization': polarization,
+                                                        'onium': {'id':onium_id, 'name':onium_name,
+                                                                  'N':onium_principal, 'S':onium_spin,
+                                                                  'L':onium_orbit, 'J':onium_j,
+                                                                  'C':onium_color, 'charge':onium_charge,
+                                                                  'index':onium_index, 'mass':onium_mass,
+                                                                  'ldme':onium_ldme
+                                                                 }
+                                                        	}))
+                onium_index += 1
             elif part_name.isdigit() or part_name.startswith('-') and part_name[1:].isdigit():
                 if int(part_name) in self._curr_model.get('particle_dict'):
                     mylegids.append(int(part_name))
@@ -5352,14 +5485,22 @@ This implies that with decay chains:
                         myleglist.append(base_objects.MultiLeg({'ids':mylegids,
                                                             'state':state,
                                                             'polarization': polarization,
+                                                            'onium': {},
                                                             'offshell':offshell}))
                     else:
                         myleglist.append(fks_tag.MultiTagLeg({'ids':mylegids,
                                                           'state':state,
                                                           'polarization': polarization,
+                                                          'onium': {},
                                                           'is_tagged':is_tagged}))
+            elif is_onium:
+                pass
             else:
                 raise self.InvalidCmd("No particle %s in model" % part_name)
+
+        if aloha.dual_mode:
+            aloha.npwave.append(aloha.dual_mode)
+            aloha.npwave = list(set(aloha.npwave))
 
         if any(['is_tagged' in l.keys()  and l['is_tagged'] and l['state'] for l in myleglist]):
             logger.warning('The process involves tagged particles. Please consider citing arXiv:2106.02059 if relevant.')
@@ -6084,6 +6225,10 @@ This implies that with decay chains:
                                         self._curr_model.get('interactions')], []))
 
         self.add_default_multiparticles()
+        self.add_default_fockstates()
+        if self._fockstates:
+            logger.warning('The model contains non-relativistic bound states. Please consider citing arXiv:2510.26773 and arXiv:2607.26739 if relevant.')
+            self.add_default_boundstates()
 
 
     def import_mg4_proc_card(self, filepath):
@@ -6164,14 +6309,30 @@ This implies that with decay chains:
                 continue
             multi = self._multiparticles[qcd_container]
             b = self._curr_model.get_particle(5)
+            c = self._curr_model.get_particle(4)
             if not b:
                 break
+            if not c:
+                break
 
+            if 4 in multi:
+                if c['mass'] != 'ZERO':
+                    if 'onia' in self._curr_model.get('name'):
+                        multi.remove(4)
+                        multi.remove(-4)
+                        scheme = 3
+            elif c['mass'] == 'ZERO':
+                multi.append(4)
+                multi.append(-4)
+                scheme = 4
             if 5 in multi:
                 if b['mass'] != 'ZERO':
                     multi.remove(5)
                     multi.remove(-5)
-                    scheme = 4
+                    if c['mass'] != 'ZERO':
+                        scheme = 3
+                    else:
+                        scheme = 4
             elif b['mass'] == 'ZERO':
                 multi.append(5)
                 multi.append(-5)
@@ -6187,7 +6348,7 @@ This implies that with decay chains:
                 multi.remove(22)
                 photon = False
                 
-        if scheme in [4,5] and not photon:
+        if scheme in [3,4,5] and not photon:
             self.optimize_order(multi)
             self._multiparticles[qcd_container] = multi
             logger.warning("Pass the definition of \'j\' and \'p\' to %s flavour scheme." % scheme)
@@ -6231,6 +6392,36 @@ This implies that with decay chains:
             line.append('%s %s' % (part.get('name'), part.get('antiname')))
         line = 'all =' + ' '.join(line)
         self.do_define(line)
+
+    def add_default_boundstates(self):
+        """Add default bound states from file boundstates_default.txt in the input folder"""
+
+        # Load default bound states from boundstates_default.txt
+        boundstates_file = pjoin(MG5DIR, 'input', 'boundstates_default.txt')
+        # Check if the file exists!
+        if not os.path.isfile(boundstates_file):
+            logger.warning(f"Bound states file {boundstates_file} not found.")
+            return
+
+        with open(boundstates_file) as f:
+            for line in f:
+                if line.startswith('#'):
+                    continue
+                # The first item on the line is the quarkonium, the rest is the list of Fock states
+                boundstate_label, bound_state = line.split("=", 1)
+                boundstate_label = boundstate_label.strip()
+                bound_state = bound_state.strip()
+                fock_states = bound_state.strip().split()
+                self._boundstates[boundstate_label] = fock_states
+
+                logger.info(f"Defined boundstate {boundstate_label} = {bound_state}")
+
+    def add_default_fockstates(self):
+        """Add default Fock states from file fockstates_default.txt in the input folder"""
+        import models.import_boundstates as ufo_boundstates
+        self._fockstates = ufo_boundstates.get_boundstates_ufo(self._curr_model)
+
+        return self._fockstates
 
     def advanced_install(self, tool_to_install, 
                                HepToolsInstaller_web_address=None,
@@ -9859,14 +10050,24 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                 self.previous_lorentz = wanted_lorentz
                 self.previous_couplings = wanted_couplings
             else:
-                self._curr_exporter.convert_model(self._curr_model, 
-                                               wanted_lorentz,
-                                               wanted_couplings)
+                for npwave in aloha.npwave:
+                    if npwave == 0:
+                        aloha.dual_mode = False
+                    else:
+                        aloha.dual_mode = True
+                    self._curr_exporter.convert_model(self._curr_model,
+                                                   wanted_lorentz,
+                                                   wanted_couplings,
+                                                   npwave)
                 if hasattr(self, '_me_curr_exporter') and self._me_curr_exporter:
                     self._me_curr_exporter.convert_model(self._curr_model, 
                                                wanted_lorentz,
                                                wanted_couplings)
 
+            # exporting the files related to bound states
+            if self._export_format in ['madevent', 'standalone', 'standalone_msF',
+                                                        'standalone_msP', 'NLO', 'ewsudsa']:
+                self._curr_exporter.export_onia_files(self._curr_matrix_elements)
         
         # move the old options to the flaglist system.
         if nojpeg:

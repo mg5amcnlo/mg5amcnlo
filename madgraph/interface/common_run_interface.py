@@ -5275,9 +5275,10 @@ class AskforEditCard(cmd.OneLinePathCompletion):
     """
 
     all_card_name = ['param_card', 'run_card', 'pythia_card', 'pythia8_card', 'fo_analysis_card'
-                     'madweight_card', 'MadLoopParams', 'shower_card', 'rivet_card', 'reweight_card']
+                     'madweight_card', 'MadLoopParams', 'shower_card', 'rivet_card', 'reweight_card',
+                     'onia_card']
     to_init_card = ['param', 'run', 'madweight', 'madloop', 'fo_analysis',
-                    'shower', 'pythia8','delphes','madspin', 'rivet', 'reweight']
+                    'shower', 'pythia8','delphes','madspin', 'rivet', 'reweight', 'onia']
     special_shortcut = {}
     special_shortcut_help = {}
     
@@ -5294,6 +5295,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             self.me_dir = None
         self.param_card = None
         self.run_card = {}
+        self.onia_card = None
         self.pname2block = {}
         self.conflict = []
         self.restricted_value = {}
@@ -5326,6 +5328,8 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         self.paths['param_default'] = pjoin(self.me_dir,'Cards','param_card_default.dat')
         self.paths['run'] = pjoin(self.me_dir,'Cards','run_card.dat')
         self.paths['run_default'] = pjoin(self.me_dir,'Cards','run_card_default.dat')
+        self.paths['onia'] = pjoin(self.me_dir,'Cards','onia_card.dat')
+        self.paths['onia_default'] = pjoin(self.me_dir,'Cards','onia_card_default.dat')
         self.paths['transfer'] =pjoin(self.me_dir,'Cards','transfer_card.dat')
         self.paths['MadWeight'] =pjoin(self.me_dir,'Cards','MadWeight_card.dat')
         self.paths['MadWeight_default'] =pjoin(self.me_dir,'Cards','MadWeight_card_default.dat')
@@ -5574,6 +5578,36 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         self.update_block += [b.name for b in self.run_card.blocks]
         
         return self.run_set
+
+    def init_onia(self, cards):
+        """check if we need to load the onia_card"""
+        
+        self.onia_card = None
+        
+        is_valid_path = self.get_path('onia', cards)
+        if not is_valid_path:
+            return []
+        if isinstance(is_valid_path, param_card_mod.ParamCard):
+            self.onia_card = is_valid_path
+            return []
+
+        try:
+            self.onia_card = param_card_mod.ParamCard(self.paths['onia'])
+        except (param_card_mod.InvalidParamCard, ValueError) as e:
+            logger.error('Current onia_card is not valid. We are going to use the default one.')
+            logger.error('problem detected: %s' % e)
+            files.cp(self.paths['onia_default'], self.paths['onia'])
+            self.onia_card = param_card_mod.ParamCard(self.paths['onia'])   
+         
+        # Read the comment of the onia_card_default to find name variable for
+        # the onia_card also check which value seems to be constrained in the
+        # model.   
+        if os.path.exists(self.paths['onia_default']):
+            default_onia = param_card_mod.ParamCard(self.paths['onia_default'])
+        else:
+            default_onia = param_card_mod.ParamCard(self.onia_card)
+        self.onia_card_default = default_onia
+        return []
     
     def init_madweight(self, cards):
         
@@ -6385,7 +6419,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
 
         if args[0] in ['run_card', 'param_card', 'MadWeight_card', 'shower_card', 'fo_card',
                        'delphes_card','madanalysis5_hadron_card','madanalysis5_parton_card',
-                       'rivet_card', 'reweight_card']:
+                       'rivet_card', 'reweight_card', 'onia_card']:
 
             if args[1] == 'default':
                 logger.info('replace %s by the default card' % args[0],'$MG:BOLD')
@@ -6398,6 +6432,8 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                     self.shower_card = shower_card_mod.ShowerCard(self.paths['shower'])
                 elif args[0] == 'reweight_card':
                     self.reweight_card = banner_mod.DensityCard(self.paths['reweight_default'])
+                elif args[0] == 'onia_card':
+                    self.onia_card = param_card_mod.ParamCard(self.paths['onia'])
                 return
             else:
                 card = args[0]
@@ -6569,6 +6605,42 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 for bname, lhaid in all_var:
                     logger.warning('   %s %s' % (bname, ' '.join([str(i) for i in lhaid])))
                 logger.warning('all listed variables have been modified')
+
+        ### ONIA_CARD WITH BLOCK NAME -----------------------------------------
+        elif self.onia_card and (args[start] in self.onia_card or args[start] == 'ldme') \
+                                                  and card in ['','onia_card']:
+            #special treatment for scan
+            if any(t.startswith('scan') for t in args):
+                index = [i for i,t in enumerate(args) if t.startswith('scan')][0]
+                args = args[:index] + [' '.join(args[index:])]
+
+            if args[start] in self.conflict and card == '':
+                text  = 'ambiguous name (present in more than one card). Please specify which card to edit'
+                text += ' in the format < set card parameter value>'
+                logger.warning(text)
+                return
+
+            try:
+                key = tuple([int(i) for i in args[start+1:-1]])
+            except ValueError:
+                logger.warning('invalid set command %s, onia_card can not be updated' % line)
+                return
+
+            if key in self.onia_card[args[start]].param_dict:
+                if args[-1].lower() in ['default', 'auto', 'auto@nlo'] or args[-1].startswith('scan'):
+                    self.setO(args[start], key, args[-1])
+                else:
+                    try:
+                        value = float(args[-1])
+                    except Exception:
+                        logger.warning('Invalid input: Expected number and not \'%s\'' \
+                                                                     % args[-1])
+                        return
+                    self.setO(args[start], key, value)
+            else:
+                logger.warning('invalid set command %s' % line)
+                return
+            self.modified_card.add('onia')
                 
         # MadWeight_card with block name ---------------------------------------
         elif self.has_mw and (args[start] in self.mw_card and args[start] != 'comment') \
@@ -6878,6 +6950,28 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             logger.info('modify param_card information scale of BLOCK %s set to %s' %\
                         (block, value), '$MG:BOLD')
             self.param_card[block].scale = value            
+
+    def setO(self, block, lhaid, value):
+        if isinstance(value, str):
+            value = value.lower()
+            if value == 'default':
+                default = param_card_mod.ParamCard(self.paths['onia_default'])
+                value = default[block].param_dict[lhaid].value
+
+            elif value.startswith('scan'):
+                logger.warning('Invalid input: \'scan\' mode does not work with onia_card.')
+                return
+
+            else:
+                try:
+                    value = float(value)
+                except ValueError:
+                    logger.warning('Invalid input: \'%s\' not valid intput.'% value)
+
+        if lhaid:
+            logger.info('modify onia_card information BLOCK %s with id %s set to %s' %\
+                        (block, lhaid, value), '$MG:BOLD')
+            self.onia_card[block].param_dict[lhaid].value = value
     
     def check_card_consistency(self):
         """This is run on quitting the class. Apply here all the self-consistency
@@ -7322,6 +7416,11 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         """ write the param_card """    
     
         self.param_card.write(self.paths['param'])
+
+    def write_card_onia(self):
+        """ write the onia_card """    
+    
+        self.onia_card.write(self.paths['onia'])
     
     def write_card_fo_card(self):
         """ write the fo_card"""

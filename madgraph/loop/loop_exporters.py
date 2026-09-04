@@ -507,7 +507,7 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
             return file
         
     def convert_model(self, model, wanted_lorentz = [], 
-                                                         wanted_couplings = []):
+                                             wanted_couplings = [], npwave = 0):
         """ Caches the aloha model created here when writing out the aloha 
         fortran subroutine.
         """
@@ -3186,6 +3186,7 @@ class LoopProcessExporterFortranMatchBox(LoopProcessOptimizedExporterFortranSA,
       
 
     def finalize(self, matrix_element, cmdhistory, MG5options, outputflag):
+
         out = super().finalize(matrix_element, cmdhistory, MG5options, outputflag)
         misc.compile(cwd=pjoin(self.dir_path,'Source','MODEL'))
         return out

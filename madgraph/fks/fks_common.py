@@ -43,11 +43,11 @@ class FKSDiagramTag(diagram_generation.DiagramTag): #test written
 
     @staticmethod
     def link_from_leg(leg, model):
-        """Returns the default end link for a leg: ((id, number), number).
+        """Returns the default end link for a leg: ((id, number, onium), number).
         Note that the number is not taken into account if tag comparison,
         but is used only to extract leg permutations.
         """
-        return [((leg.get('id'), leg.get('number')), leg.get('number'))]
+        return [((leg.get('id'), leg.get('number'), leg.get('onium')), leg.get('number'))]
 
 
 def get_qed_qcd_orders_from_weighted(nexternal, hierarchy, weighted):

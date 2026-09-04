@@ -2634,7 +2634,7 @@ class ProcessExporterCPP(VirtualExporter):
 
 
     def convert_model(self, model, wanted_lorentz = [],
-                         wanted_couplings = []):
+                         wanted_couplings = [], npwave = 0):
         # create the model parameter files
         model_builder = self.create_model_class(model,
                                          os.path.join(self.dir_path, 'src'),

@@ -1,0 +1,36 @@
+# ----------------------------------------------------------------------------
+#
+# Makefile for DHELAS 4.0 library
+# Feb. 28, 2001
+#
+# ----------------------------------------------------------------------------
+#
+# Use a TAB to precede shell commands (e.g., f90, ar, etc).
+# Note: this Makefile uses features that *may not*
+# be supported by make utilities other than GNU make.
+#
+# ----------------------------------------------------------------------------
+
+include ../make_opts
+
+NPWAVE = __npwave__
+LIBRARY	= libdhelas$(NPWAVE).$(libext)
+LIBDIR  = ../../lib/
+
+BASIC_OBJS = dual_variables.o aloha_functions.o
+
+FFLAGS += $(ALOHA_FLAG)
+
+include ./aloha_file.inc
+
+all: $(LIBDIR)$(LIBRARY)
+
+# Dependencies
+aloha_functions.o: dual_variables.o
+$(ALOHARoutine): dual_variables.o
+
+$(LIBDIR)$(LIBRARY): $(BASIC_OBJS) $(ALOHARoutine)
+	$(call CREATELIB, $@, $^)
+
+clean:
+	$(RM) *.o $(LIBDIR)$(LIBRARY)

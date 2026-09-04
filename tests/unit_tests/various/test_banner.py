@@ -651,6 +651,7 @@ class TestRunCard(unittest.TestCase):
         text2 = open(fsock2.name).read()
         self.assertFalse("$RUNNING" in text1)
         self.assertFalse("$RUNNING" in text2)
+        text1 = text1.replace('\n\n\n', '\n')
         text1 = text1.replace('\n \n', '\n')
         text2 = text2.replace('\n \n', '\n')
         self.assertEqual(text1, text2)
