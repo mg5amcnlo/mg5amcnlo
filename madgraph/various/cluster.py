@@ -74,6 +74,7 @@ def store_input(arg=''):
             frame = inspect.currentframe()
             args, _, _, values = inspect.getargvalues(frame)
             args = dict([(i, values[i]) for i in args if i != 'self'])
+            del frame, values
             id = f(self, **args)
             if self.nb_retry > 0:
                 self.retry_args[id] = args

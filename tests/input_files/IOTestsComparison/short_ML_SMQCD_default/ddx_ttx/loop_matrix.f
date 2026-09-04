@@ -391,9 +391,24 @@ C      requirement.
       INTEGER POLARIZATIONS(0:NEXTERNAL,0:5)
       COMMON/ML5_0_BEAM_POL/POLARIZATIONS
 
+C     This array specifies which external particles' mass should be
+C      kept offshell according to the 'generate' command
+      LOGICAL KEEP_OFFSHELL_MASS(NEXTERNAL)
+
+
 C     ----------
 C     BEGIN CODE
 C     ----------
+
+C     If KEEP_OFFSHELL_MASS is .true., then its mass is computed as
+C      m**2 = p**2
+C     If KEEP_OFFSHELL_MASS is .false., then its mass is taken from
+C      pmass.inc
+      KEEP_OFFSHELL_MASS(1) = .FALSE.
+      KEEP_OFFSHELL_MASS(2) = .FALSE.
+      KEEP_OFFSHELL_MASS(3) = .FALSE.
+      KEEP_OFFSHELL_MASS(4) = .FALSE.
+
 
       IF(ML_INIT) THEN
         CALL PRINT_MADLOOP_BANNER()
@@ -661,7 +676,7 @@ C        trust the evaluation for checks.
       IF (IMPROVEPSPOINT.GE.0) THEN
 C       Make the input PS more precise (exact onshell and
 C        energy-momentum conservation)
-        CALL ML5_0_IMPROVE_PS_POINT_PRECISION(PS)
+        CALL ML5_0_IMPROVE_PS_POINT_PRECISION(KEEP_OFFSHELL_MASS, PS)
       ENDIF
 
       DO I=1,NEXTERNAL
@@ -1281,13 +1296,22 @@ C      VARIABLES FROM A GIVEN VARIABLE IN DOUBLE PRECISION
       REAL*16 MP_PS(0:3,NEXTERNAL),MP_P(0:3,NEXTERNAL)
       COMMON/ML5_0_MP_PSPOINT/MP_PS,MP_P
       REAL*8 P(0:3,NEXTERNAL)
+      LOGICAL KEEP_OFFSHELL_MASS(NEXTERNAL)
+
+      KEEP_OFFSHELL_MASS(1) = .FALSE.
+      KEEP_OFFSHELL_MASS(2) = .FALSE.
+      KEEP_OFFSHELL_MASS(3) = .FALSE.
+      KEEP_OFFSHELL_MASS(4) = .FALSE.
+
+
 
       DO I=1,NEXTERNAL
         DO J=0,3
           MP_PS(J,I)=P(J,I)
         ENDDO
       ENDDO
-      CALL ML5_0_MP_IMPROVE_PS_POINT_PRECISION(MP_PS)
+      CALL ML5_0_MP_IMPROVE_PS_POINT_PRECISION(KEEP_OFFSHELL_MASS
+     $ ,MP_PS)
       DO I=1,NEXTERNAL
         DO J=0,3
           MP_P(J,I)=MP_PS(J,I)

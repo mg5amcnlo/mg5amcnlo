@@ -798,12 +798,8 @@ def stdchannel_redirected(stdchannel, dest_filename):
             if dest_file is not None:
                 dest_file.close()
     else:
-        try:
-            logger.debug('no stdout/stderr redirection due to debug level')
-            yield
-        finally:
-            pass
-        return
+        logger.debug('no stdout/stderr redirection due to debug level')
+        yield
         
         
 def get_open_fds():
@@ -1253,7 +1249,11 @@ def gunzip(path, keep=False, stdout=None):
         if stdout:
             os.system('gunzip  %s -c %s > %s' % (options, path, stdout))
         else:
-            os.system('gunzip %s %s' % (options, path)) 
+            # -f: without it gunzip asks "already exists -- do you wish to
+            # overwrite (y or n)?" as soon as the uncompressed file is already
+            # there. Nothing answers that prompt here, so gunzip would silently
+            # decompress nothing and leave a stale file behind.
+            os.system('gunzip -f %s %s' % (options, path))
         return 0
     
     if not stdout:

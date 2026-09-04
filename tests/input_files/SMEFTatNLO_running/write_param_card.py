@@ -1,10 +1,6 @@
 
-from __future__ import absolute_import
-from six.moves import range
 __date__ = "3 june 2010"
 __author__ = 'olivier.mattelaer@uclouvain.be'
-
-from function_library import *
 
 class ParamCardWriter(object):
     
@@ -113,15 +109,18 @@ class ParamCardWriter(object):
         else:
             text = '''DECAY %s %e \n''' % (lhacode, complex(param.value).real)
         self.fsock.write(text) 
-                    
-
-
-    
+        
     def write_dep_param_block(self, lhablock):
         import cmath
         from parameters import all_parameters
+        
+        local_vars = {}
         for parameter in all_parameters:
-            exec("%s = %s" % (parameter.name, parameter.value))
+            try:
+                exec("%s = %s" % (parameter.name, parameter.value), {"cmath": cmath}, local_vars)
+            except Exception:
+                pass
+        
         text = "##  Not dependent paramater.\n"
         text += "## Those values should be edited following analytical the \n"
         text += "## analytical expression. Some generator could simply ignore \n"
@@ -133,15 +132,16 @@ class ParamCardWriter(object):
         else:
             data = self.dep_width
             prefix = "DECAY "
+        
         for part, param in data:
             if isinstance(param.value, str):
-                value = complex(eval(param.value)).real
+                value = complex(eval(param.value, {"cmath": cmath}, local_vars)).real
             else:
                 value = param.value
             
-            text += """%s %s %f # %s : %s \n""" %(prefix, part.pdg_code, 
+            text += """%s %s %f # %s : %s \n""" % (prefix, part.pdg_code,
                         value, part.name, param.value)
-        self.fsock.write(text)    
+        self.fsock.write(text) 
     
     sm_pdg = [1,2,3,4,5,6,11,12,13,13,14,15,16,21,22,23,24,25]
     data="""Block QNUMBERS %(pdg)d  # %(name)s 

@@ -817,7 +817,8 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
                     'Loop_SO_Results':[],
                     'Born_SO_Results':[],
                     'Born_kept':[],
-                    'Loop_kept':[]
+                    'Loop_kept':[],
+                    'RMatrix': []
                     }
         res_p = []
         
@@ -873,6 +874,11 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
             elif splitline[0]=='SO_Born':
                 res_dict['Born_SO_Results'][-1][1][splitline[1]]=\
                                                              float(splitline[2])
+            elif splitline[0]=='RHO':
+                res_dict['RMatrix'] = []
+                for elem in splitline[1:]:
+                    aux = elem.strip('()').split(',')
+                    res_dict['RMatrix'].append(float(aux[0]) + float(aux[1])*1j)
         
         res_dict['res_p'] = res_p
 
