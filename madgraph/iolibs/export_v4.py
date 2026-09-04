@@ -4036,7 +4036,14 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
                     replace_dict['dens_allow_hel'] += ' ALLOW_HEL(%i) = %i\n       ' % (i, h)
 
 
-        fsock =  open(pjoin(self.mgme_dir, 'madgraph', 'iolibs', 'template_files', 'check_sa.f'), 'r')
+        # An onium process needs its own driver: its SMATRIX takes the
+        # reshuffled momenta as an extra argument, and the driver has to pull in
+        # the LDME/onium-mass common blocks (ldme.inc) that pmass.inc refers to.
+        template = 'check_sa.f'
+        if matrix_element.get_nonia() > 0:
+            template = 'check_sa_onia.f'
+
+        fsock =  open(pjoin(self.mgme_dir, 'madgraph', 'iolibs', 'template_files', template), 'r')
         text = fsock.read()
         fsock.close()
         text = text % replace_dict
