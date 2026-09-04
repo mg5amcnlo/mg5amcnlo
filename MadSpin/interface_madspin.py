@@ -4454,7 +4454,11 @@ class MadSpinInterface(extended_cmd.Cmd):
     def _read_worker_status(self, worker_id):
         """(state, [target]) tuple for ``worker_id``, or None if unreadable."""
         try:
-            parts = open(self._status_path(worker_id)).read().split()
+            # closed explicitly: this is polled ten times a second for as long
+            # as MADSPIN_REFILL_WAIT, in every worker and once per hop of the
+            # wait-for chain
+            with open(self._status_path(worker_id)) as fsock:
+                parts = fsock.read().split()
         except (IOError, OSError):
             return None
         if not parts:
@@ -6056,6 +6060,31 @@ class MadSpinInterface(extended_cmd.Cmd):
                            base_out, exc)
         logger.info('Done so far. output written in %s' % base_out)
 
+    @staticmethod
+    def _balanced_ranges(nb_item, nb_core):
+        """``nb_core`` contiguous ``(start, stop)`` slices of ``range(nb_item)``
+        whose lengths differ by at most one -- the first ``nb_item % nb_core``
+        get one extra item.
+
+        Contrast ``ceil(nb_item / nb_core)``-sized chunks, which give the last
+        cores nothing whenever the division is uneven: 75 items on 16 cores is
+        fifteen chunks of five and one empty. An empty slice is not merely an
+        idle core, because the shard id doubles as the worker id that
+        :meth:`_channel_owner` deals channels out to -- a worker that is never
+        forked can still be named as a channel's owner, and whoever waits on it
+        waits for ever. Balanced slices keep every id live. When ``nb_item`` is a
+        multiple of ``nb_core`` -- what both max-weight scans arrange, by
+        rounding their probe size up -- this is the same split as before."""
+        nb_core = max(1, int(nb_core))
+        base, extra = divmod(int(nb_item), nb_core)
+        ranges, start = [], 0
+        for sid in range(nb_core):
+            stop = start + base + (1 if sid < extra else 0)
+            if stop > start:
+                ranges.append((start, stop))
+            start = stop
+        return ranges
+
     def _split_production(self, orig_lhe, nb_core, base_out):
         """Split the production event file into up to ``nb_core`` contiguous
         shard files (bannerless: the worker's EventFile tolerates a missing
@@ -6112,6 +6141,7 @@ class MadSpinInterface(extended_cmd.Cmd):
         before this was in place) fall back to striding it, which is correct but
         makes every worker parse everything."""
         local = {}
+        strided = []   # (channel, nb of pool files) for every fallback below
         for pdg, channels in evt_decayfile.items():
             local[pdg] = {}
             for file_nb, evtfile in channels.items():
@@ -6123,8 +6153,10 @@ class MadSpinInterface(extended_cmd.Cmd):
                     # split, but not into exactly nb_core files: stride the WHOLE
                     # chained pool. ``evtfile.name`` is only its first file, so
                     # striding that would strand every other file's events.
+                    strided.append(((pdg, file_nb), len(paths)))
                     reader = _StridedEvents(_ChainedEvents(paths), shard_id, nb_core)
                 else:
+                    strided.append(((pdg, file_nb), 1))
                     fresh = lhe_parser.EventFile(evtfile.name)
                     reader = _StridedEvents(fresh, shard_id, nb_core)
                 # The worker that OWNS this channel reads its slice ~10% short so
@@ -6139,6 +6171,21 @@ class MadSpinInterface(extended_cmd.Cmd):
                         reader = _LimitedEvents(reader,
                                                 int(math.floor((1.0 - frac) * n)))
                 local[pdg][file_nb] = reader
+        if strided:
+            # Say it out loud rather than degrade quietly: from here on this
+            # worker parses the other workers' decay events too. Normally this
+            # means the pool predates the per-worker split; it also fires when a
+            # phase caps its worker count below the count the pool was written
+            # with (see _scan_maxwgt_parallel), which is accepted and cheap.
+            logger.debug(
+                "MadSpin worker %s of %s: decay pool holds %s file(s), not %s "
+                "-- striding the chained pool for %s of %s channel(s) instead "
+                "of opening this worker's own file (correct, but every worker "
+                "then parses every worker's decay events)",
+                shard_id, nb_core,
+                '/'.join(str(n) for n in sorted(set(n for _, n in strided))),
+                nb_core, len(strided),
+                sum(len(c) for c in evt_decayfile.values()))
         return local
 
     def _init_owner_refill(self, evt_decayfile, seed_base):
@@ -7064,20 +7111,51 @@ class MadSpinInterface(extended_cmd.Cmd):
         import multiprocessing as mp
         import json
         base = '%s.maxwgt' % orig_lhe.name
-        chunk = int(math.ceil(len(events) / float(nb_core)))
-        # contiguous slices; the last cores get nothing if events < nb_core
-        ranges = [(sid * chunk, min((sid + 1) * chunk, len(events)))
-                  for sid in range(nb_core)]
-        ranges = [(a, b) for (a, b) in ranges if a < b]
-        # Keep the ORIGINAL nb_core as the pool-addressing count: the decay pool
-        # was split into nb_core files, and each worker must address it with that
-        # same count so it opens *its* file (paths[shard_id]). Reducing it to the
-        # number of non-empty ranges made len(paths) != nb_core, which dropped
-        # every worker onto the striding fallback -- reading only the first file.
-        # Trailing empty shards are simply not launched (their files go unused by
-        # the scan, which is fine -- the pool is generated uniformly).
+        # ``nb_core`` is the pool-addressing count -- the decay pool was split
+        # into that many files and each worker must address it with the same
+        # count to open *its* file (paths[shard_id]) instead of falling back to
+        # striding. It is ALSO the modulus of _channel_owner, so every id it can
+        # name has to belong to a worker that is actually forked. Both hold only
+        # if exactly nb_core workers run, which is why the slices are balanced
+        # (below) rather than ceil-chunked, and why nb_core is capped at the
+        # number of probe events here as well as at the call sites.
+        #
+        # The cap has an accepted cost. It only ever bites when the production
+        # file itself holds fewer events than nb_core (both call sites already
+        # round the probe count up to a multiple of nb_core, so len(events) is
+        # otherwise >= nb_core), and when it does, the decay pool has already
+        # been written with _decay_pool_split() == the UNCAPPED count: the pool
+        # then has more files than there are workers, _reopen_decay_pool sees
+        # len(paths) != nb_core, drops the own-file fast path and strides the
+        # chained pool, so every worker parses every worker's decay events.
+        # That is correct (the stripes stay disjoint), one-off (the refills go
+        # through _open_refill_slice, which keys on this post-cap count, so they
+        # are unaffected) and small: measured at 0.04-0.18 s for 16-64 workers
+        # over a scan-sized pool. _reopen_decay_pool logs it at debug level.
+        # It is left alone deliberately. Re-splitting the pool to match would
+        # tie the pool's shape to whichever phase caps first -- it is written
+        # once, before the scan, and shared with the unweighting, which caps to
+        # a different count. Keeping a second, uncapped count just for pool
+        # addressing would reinstate exactly the divergence between "number of
+        # pool files" and "modulus of _channel_owner" that let the scan name an
+        # owner no worker was forked for, i.e. the 3600 s refill hang this cap
+        # exists to prevent. A rounding error is the cheaper of the two.
+        nb_core = max(1, min(int(nb_core), len(events)))
+        ranges = self._balanced_ranges(len(events), nb_core)
 
         self._clear_worker_status(nb_core)   # fresh status board for this phase
+        # Belt and braces: should a slice ever come back empty anyway, mark the
+        # worker that will not be forked as DONE. A missing status file is
+        # indistinguishable from a worker that has not published yet, so a
+        # waiter blocked on such an owner would sit out MADSPIN_REFILL_WAIT
+        # (3600s by default) and then kill the scan; 'D' makes the fail-safe in
+        # _worker_refill fire at once instead.
+        for sid in range(len(ranges), nb_core):
+            try:
+                with open(self._status_path(sid), 'w') as f:
+                    f.write('D')
+            except (IOError, OSError):
+                pass
         mpctx = mp.get_context('fork')
         procs, out_paths = [], []
         for sid, (start, stop) in enumerate(ranges):
