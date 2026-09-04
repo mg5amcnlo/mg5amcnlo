@@ -44,8 +44,14 @@ jobs:
       - name: Set cache key
         run: echo "CACHE_KEY=$ImageOS" >> $GITHUB_ENV
 #
+      # "inputs.<x> == 'true'" can never be true for a "type: boolean" input:
+      # GitHub casts both sides to a number for a mixed-type comparison, and
+      # 'true' is not a number, so the result is 1 == NaN -> false. Ticking
+      # reset_heptools in the dispatch form was therefore a no-op. A boolean
+      # input is truthy on its own; on push/schedule the whole inputs context
+      # is null, so these steps stay skipped there.
       - name: Delete heptools related cache
-        if: inputs.reset_heptools == 'true'
+        if: inputs.reset_heptools
         run: | 
           gh cache delete heptools-${{ env.CACHE_KEY }} --repo $GITHUB_REPOSITORY || true
           gh cache delete lhapdf-${{ env.CACHE_KEY }} --repo $GITHUB_REPOSITORY || true
@@ -57,7 +63,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
 
       - name: Delete ufo cache
-        if: inputs.reset_ufo == 'true'
+        if: inputs.reset_ufo
         run: |
           gh cache delete pip-numpy-${{ env.CACHE_KEY }} --repo $GITHUB_REPOSITORY || true
           gh cache delete ufomodel-${{ env.CACHE_KEY }} --repo $GITHUB_REPOSITORY || true
@@ -68,7 +74,7 @@ jobs:
       # large and stable). They are only rebuilt on explicit request, so the
       # cache can be cleaned independently of the heptools one.
       - name: Delete root/delphes cache
-        if: inputs.reset_delphes == 'true'
+        if: inputs.reset_delphes
         run: |
           gh cache delete root-${{ env.CACHE_KEY }} --repo $GITHUB_REPOSITORY || true
           gh cache delete delphes-${{ env.CACHE_KEY }} --repo $GITHUB_REPOSITORY || true
