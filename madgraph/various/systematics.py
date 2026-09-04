@@ -51,6 +51,7 @@ class Systematics(object):
     
     def __init__(self, input_file, output_file,
                  start_event=0, stop_event=sys.maxsize, write_banner=False,
+                 no_banner=False, no_closing_tag=False,
                  mur=[0.5,1,2],
                  muf=[0.5,1,2],
                  alps=[1],
@@ -92,6 +93,13 @@ class Systematics(object):
         #get some information from the run_card.
         self.banner = banner_mod.Banner(self.input.banner)  
         self.force_write_banner = bool(write_banner)
+        # when each job reweights its own file (rather than a range of a shared
+        # one) every job starts at event 0 and reaches EOF, so each would write
+        # a banner and a closing tag. The caller concatenates the outputs, hence
+        # it asks all but the first to skip the banner and all but the last to
+        # skip the closing tag.
+        self.no_banner = bool(no_banner)
+        self.no_closing_tag = bool(no_closing_tag)
         self.orig_dyn = self.banner.get('run_card', 'dynamical_scale_choice')
         if  self.banner.run_card.LO:
             scalefact = self.banner.get('run_card', 'scalefact')
@@ -391,7 +399,7 @@ class Systematics(object):
     def run(self, stdout=sys.stdout):
         """ """
         start_time = time.time()
-        if self.start_event == 0 or self.force_write_banner:
+        if (self.start_event == 0 and not self.no_banner) or self.force_write_banner:
             lowest_id = self.write_banner(self.output)
         else:
             lowest_id = self.get_id()        
@@ -442,7 +450,8 @@ class Systematics(object):
             # order the 
             self.output.write(str(event))
         else:
-            self.output.write('</LesHouchesEvents>\n')
+            if not self.no_closing_tag:
+                self.output.write('</LesHouchesEvents>\n')
         self.output.close()
         self.print_cross_sections(all_cross, min(nb_event,self.stop_event)-self.start_event+1, stdout)
         
@@ -1338,7 +1347,7 @@ def call_systematics(args, result=sys.stdout, running=True,
                 result = open(values[0],'w')
             elif key in ['start_event', 'stop_event', 'only_beam']:
                 opts[key] = banner_mod.ConfigFile.format_variable(values[0], int, key)
-            elif key in ['write_banner', 'ion_scalling']:
+            elif key in ['write_banner', 'ion_scalling', 'no_banner', 'no_closing_tag']:
                 opts[key] = banner_mod.ConfigFile.format_variable(values[0], bool, key)
             else:
                 if key in opts:

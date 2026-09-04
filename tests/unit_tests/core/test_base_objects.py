@@ -1060,7 +1060,8 @@ class LegTest(unittest.TestCase):
                       'onshell':None,                       
                       'loop_line':False,
                       'polarization':[],
-                      'onium': {}}
+                      'onium': {},
+                      'offshell':False}
 
         self.myleg = base_objects.Leg(self.mydict)
 
@@ -1210,7 +1211,8 @@ class MultiLegTest(unittest.TestCase):
         self.mydict = {'ids':[3, 2, 5],
                       'state':True,
                       'polarization':[],
-                      'onium': {}}
+                      'onium': {},
+                      'offshell':False}
 
         self.my_multi_leg = base_objects.MultiLeg(self.mydict)
 
@@ -1287,7 +1289,8 @@ class MultiLegTest(unittest.TestCase):
     'ids': [3, 2, 5],
     'state': True,
     'polarization': [],
-    'onium': {}
+    'onium': {},
+    'offshell': False
 }"""
         self.assertEqual(goal, str(self.my_multi_leg))
 
@@ -2067,6 +2070,78 @@ class ProcessDefinitionTest(unittest.TestCase):
         temp_process['legs'] = set_legs([[1],[1,2],[23],[23],[34],[34]],
                                         [[1],[],[1],[-1],[1],[-1,1]])
         self.assertFalse(temp_process.check_polarization())
+
+    def _offshell_pol_legs(self, leg_class, id_key, combo, offshell_last=False):
+        """Build a 'c c~ > c c~' leg list where one final leg carries the
+        polarization/offshell combination given by 'combo'."""
+
+        pol, offshell = combo
+        specs = [(3, False, {}), (-3, False, {}),
+                 (3, True, {'polarization': pol, 'offshell': offshell}),
+                 (-3, True, {})]
+        if offshell_last:
+            specs[2], specs[3] = specs[3], specs[2]
+
+        legs = []
+        for pdg, state, extra in specs:
+            leg = leg_class()
+            leg.set('state', state)
+            leg.set(id_key, [pdg] if id_key == 'ids' else pdg)
+            for key, value in extra.items():
+                leg.set(key, value)
+            legs.append(leg)
+        return legs
+
+    def test_nice_string_offshell_and_polarization(self):
+        """Every combination of the '*' (offshell) and '{...}' (polarization)
+        leg decorations must render with the leg separated from the next one by
+        a space, and the four renderers must agree on the spelling.
+
+        Regression test: ProcessDefinition.nice_string() used to attach the
+        trailing space in the 'else' branch of the offshell test, so an offshell
+        leg was glued to its neighbour ('c*c~') and, when it was the last leg,
+        the final "remove last space" slice ate the '*' altogether."""
+
+        combos = [([], False), ([-1, 1], False), ([], True), ([-1, 1], True)]
+        goals = ['c c~ > c c~',
+                 'c c~ > c{T} c~',
+                 'c c~ > c* c~',
+                 'c c~ > c{T}* c~']
+
+        for combo, goal in zip(combos, goals):
+            procdef = base_objects.ProcessDefinition({
+                'legs': base_objects.MultiLegList(
+                    self._offshell_pol_legs(base_objects.MultiLeg, 'ids', combo)),
+                'model': self.mymodel})
+            self.assertEqual('Process: ' + goal, procdef.nice_string())
+
+            process = base_objects.Process({
+                'legs': base_objects.LegList(
+                    self._offshell_pol_legs(base_objects.Leg, 'id', combo)),
+                'model': self.mymodel})
+            self.assertEqual('Process: ' + goal, process.nice_string())
+            self.assertEqual(goal, process.input_string())
+            self.assertEqual(goal, process.base_string())
+
+    def test_nice_string_offshell_last_leg(self):
+        """An offshell last leg must keep its '*': the 'remove last space'
+        slice at the end of nice_string() must chop a space, not the marker."""
+
+        for combo, goal in zip([([], True), ([-1, 1], True)],
+                               ['c c~ > c~ c*', 'c c~ > c~ c{T}*']):
+            procdef = base_objects.ProcessDefinition({
+                'legs': base_objects.MultiLegList(
+                    self._offshell_pol_legs(base_objects.MultiLeg, 'ids',
+                                            combo, offshell_last=True)),
+                'model': self.mymodel})
+            self.assertEqual('Process: ' + goal, procdef.nice_string())
+
+            process = base_objects.Process({
+                'legs': base_objects.LegList(
+                    self._offshell_pol_legs(base_objects.Leg, 'id',
+                                            combo, offshell_last=True)),
+                'model': self.mymodel})
+            self.assertEqual('Process: ' + goal, process.nice_string())
 
     def test_representation(self):
         """Test process object string representation."""

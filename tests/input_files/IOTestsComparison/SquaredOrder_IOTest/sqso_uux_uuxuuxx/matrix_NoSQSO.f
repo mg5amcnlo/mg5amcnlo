@@ -8,7 +8,7 @@ C
       INTEGER                 NCOMB
       PARAMETER (             NCOMB=64)
 CF2PY INTENT(OUT) :: ANS
-CF2PY INTENT(IN) :: HEL
+CF2PY INTENT(IN) ::HEL
 CF2PY INTENT(IN) :: P(0:3,NEXTERNAL)
 
 C     
@@ -72,7 +72,15 @@ C     put in common block to expose this variable to python interface
       COMMON/PROCESS_NHEL/NHEL
       REAL*8 T
       REAL*8 MATRIX
-      INTEGER IHEL,IDEN, I, J
+      INTEGER IHEL,IDEN, I, J, JJ
+C     beam polarisation. Unpolarised unless something fills
+C     /to_beampol/: PY_SET_BEAMPOL for the MadSpin density
+C     modes, the driver's stdin for the v1 path. Convention as
+C     in madevent's /to_polarization/: 1 is unpolarised,
+C     |BEAMPOL| grows to 2 for a fully polarised beam and its
+C     sign gives the favoured helicity.
+      DOUBLE PRECISION BEAMPOL(2)
+      COMMON/TO_BEAMPOL/BEAMPOL
 C     For a 1>N process, them BEAMTWO_HELAVGFACTOR would be set to 1.
       INTEGER BEAMS_HELAVGFACTOR(2)
       DATA (BEAMS_HELAVGFACTOR(I),I=1,2)/2,2/
@@ -209,7 +217,31 @@ C      only three external particles.
      $       -1.AND.(.NOT.IS_BORN_HEL_SELECTED(IHEL))) THEN
               CYCLE
             ENDIF
+
             T=MATRIX(P ,NHEL(1,IHEL),JC(1))
+C           Support for polarised beam. Same reweighting of the
+C            initial-state
+C           helicity sum as madevent's matrix.f and as the v1 MadSpin
+C            msP/msF
+C           templates. Inert (and skipped) unless /to_beampol/ has
+C            been filled:
+C           |BEAMPOL| runs from 1 (unpolarised) to 2 (fully
+C            polarised), so
+C           anything at or below 1 -- including a zero-filled common
+C            block --
+C           means "no polarisation". 1 -> N matrix elements are left
+C            alone: their
+C           leg 1 is a decaying resonance, not a beam.
+            IF (NINITIAL.EQ.2) THEN
+              DO JJ=1,NINITIAL
+                IF (ABS(BEAMPOL(JJ)).LE.1D0) CYCLE
+                IF (NHEL(JJ,IHEL).EQ.INT(SIGN(1D0,BEAMPOL(JJ)))) THEN
+                  T=T*ABS(BEAMPOL(JJ))
+                ELSE
+                  T=T*(2D0-ABS(BEAMPOL(JJ)))
+                ENDIF
+              ENDDO
+            ENDIF
             IF(POLARIZATIONS(0,0).EQ.-1.OR.IS_BORN_HEL_SELECTED(IHEL))
      $        THEN
               ANS=ANS+T
@@ -221,6 +253,9 @@ C      only three external particles.
         ENDIF
       ENDDO
       ANS=ANS/DBLE(IDEN)
+C     write (*,*) "Spyros: IDEN         = ", IDEN
+C     write (*,*) "Spyros: USERHEL      = ", USERHEL
+C     write (*,*) "Spyros: HELAVGFACTOR = ", HELAVGFACTOR
       IF(USERHEL.NE.-1) THEN
         ANS=ANS*HELAVGFACTOR
       ELSE
@@ -228,6 +263,9 @@ C      only three external particles.
           IF (POLARIZATIONS(J,0).NE.-1) THEN
             ANS=ANS*BEAMS_HELAVGFACTOR(J)
             ANS=ANS/POLARIZATIONS(J,0)
+C           write (*,*) "Spyros: InPart ", J, " BEAMS_HELAVGFACTOR =
+C            ", BEAMS_HELAVGFACTOR(J), ", POLARIZATION = ",
+C            POLARIZATIONS(J,0)  
           ENDIF
         ENDDO
       ENDIF
@@ -271,21 +309,19 @@ C
       INTEGER I,J
       COMPLEX*16 ZTEMP
       INTEGER CF_INDEX
-      INTEGER CF(NCOLOR*(NCOLOR+1)/2)
+      INTEGER CF(21)
       INTEGER DENOM
+      COMMON /COLOR_MATRIX/ CF,DENOM
       COMPLEX*16 AMP(NGRAPHS), JAMP(NCOLOR), TMP_JAMP(55)
       COMPLEX*16 W(20,NWAVEFUNCS)
       COMPLEX*16 DUM0,DUM1
       DATA DUM0, DUM1/(0D0, 0D0), (1D0, 0D0)/
-      DOUBLE PRECISION BWCUTOFF
 C     
 C     GLOBAL VARIABLES
 C     
       INCLUDE 'coupl.inc'
 
-C     
 C     COLOR DATA
-C     
       DATA DENOM/1/
       DATA (CF(I),I=  1,  6) /27,18,18,6,6,18/
 C     1 T(2,1) T(3,4) T(5,6)
@@ -299,9 +335,145 @@ C     1 T(2,4) T(3,6) T(5,1)
 C     1 T(2,6) T(3,1) T(5,4)
       DATA (CF(I),I= 21, 21) /27/
 C     1 T(2,6) T(3,4) T(5,1)
+C     
+C     
 C     ----------
 C     BEGIN CODE
 C     ----------
+      CALL GET_AMP(P,NHEL,IC,AMP)
+C     WRITE (*,*) '  -> AMP = ', AMP
+      CALL GET_JAMP(AMP,JAMP)
+C     WRITE (*,*) '  -> JAMP = ', JAMP
+      CALL GET_MATRIX(JAMP,MATRIX)
+C     write (*,*) "  -> col.ave. |M|^2 for HEL=[", NHEL ,"] = ", MATRIX
+
+
+
+      END
+
+      SUBROUTINE GET_NHEL(IDEN_STAR,NHEL_STAR)
+C     CONSTANTS
+C     
+CF2PY INTENT(OUT) :: NHEL_STAR
+CF2PY INTENT(OUT) :: IDEN_STAR
+      INTEGER    NEXTERNAL
+      PARAMETER (NEXTERNAL=6)
+      INTEGER                 NCOMB
+      PARAMETER (             NCOMB=64)
+
+      INTEGER NHEL(NEXTERNAL,NCOMB),NHEL_STAR(NEXTERNAL,NCOMB)
+      INTEGER IDEN,IDEN_STAR
+
+      DATA (NHEL(I,   1),I=1,6) / 1,-1,-1, 1,-1, 1/
+      DATA (NHEL(I,   2),I=1,6) / 1,-1,-1, 1,-1,-1/
+      DATA (NHEL(I,   3),I=1,6) / 1,-1,-1, 1, 1, 1/
+      DATA (NHEL(I,   4),I=1,6) / 1,-1,-1, 1, 1,-1/
+      DATA (NHEL(I,   5),I=1,6) / 1,-1,-1,-1,-1, 1/
+      DATA (NHEL(I,   6),I=1,6) / 1,-1,-1,-1,-1,-1/
+      DATA (NHEL(I,   7),I=1,6) / 1,-1,-1,-1, 1, 1/
+      DATA (NHEL(I,   8),I=1,6) / 1,-1,-1,-1, 1,-1/
+      DATA (NHEL(I,   9),I=1,6) / 1,-1, 1, 1,-1, 1/
+      DATA (NHEL(I,  10),I=1,6) / 1,-1, 1, 1,-1,-1/
+      DATA (NHEL(I,  11),I=1,6) / 1,-1, 1, 1, 1, 1/
+      DATA (NHEL(I,  12),I=1,6) / 1,-1, 1, 1, 1,-1/
+      DATA (NHEL(I,  13),I=1,6) / 1,-1, 1,-1,-1, 1/
+      DATA (NHEL(I,  14),I=1,6) / 1,-1, 1,-1,-1,-1/
+      DATA (NHEL(I,  15),I=1,6) / 1,-1, 1,-1, 1, 1/
+      DATA (NHEL(I,  16),I=1,6) / 1,-1, 1,-1, 1,-1/
+      DATA (NHEL(I,  17),I=1,6) / 1, 1,-1, 1,-1, 1/
+      DATA (NHEL(I,  18),I=1,6) / 1, 1,-1, 1,-1,-1/
+      DATA (NHEL(I,  19),I=1,6) / 1, 1,-1, 1, 1, 1/
+      DATA (NHEL(I,  20),I=1,6) / 1, 1,-1, 1, 1,-1/
+      DATA (NHEL(I,  21),I=1,6) / 1, 1,-1,-1,-1, 1/
+      DATA (NHEL(I,  22),I=1,6) / 1, 1,-1,-1,-1,-1/
+      DATA (NHEL(I,  23),I=1,6) / 1, 1,-1,-1, 1, 1/
+      DATA (NHEL(I,  24),I=1,6) / 1, 1,-1,-1, 1,-1/
+      DATA (NHEL(I,  25),I=1,6) / 1, 1, 1, 1,-1, 1/
+      DATA (NHEL(I,  26),I=1,6) / 1, 1, 1, 1,-1,-1/
+      DATA (NHEL(I,  27),I=1,6) / 1, 1, 1, 1, 1, 1/
+      DATA (NHEL(I,  28),I=1,6) / 1, 1, 1, 1, 1,-1/
+      DATA (NHEL(I,  29),I=1,6) / 1, 1, 1,-1,-1, 1/
+      DATA (NHEL(I,  30),I=1,6) / 1, 1, 1,-1,-1,-1/
+      DATA (NHEL(I,  31),I=1,6) / 1, 1, 1,-1, 1, 1/
+      DATA (NHEL(I,  32),I=1,6) / 1, 1, 1,-1, 1,-1/
+      DATA (NHEL(I,  33),I=1,6) /-1,-1,-1, 1,-1, 1/
+      DATA (NHEL(I,  34),I=1,6) /-1,-1,-1, 1,-1,-1/
+      DATA (NHEL(I,  35),I=1,6) /-1,-1,-1, 1, 1, 1/
+      DATA (NHEL(I,  36),I=1,6) /-1,-1,-1, 1, 1,-1/
+      DATA (NHEL(I,  37),I=1,6) /-1,-1,-1,-1,-1, 1/
+      DATA (NHEL(I,  38),I=1,6) /-1,-1,-1,-1,-1,-1/
+      DATA (NHEL(I,  39),I=1,6) /-1,-1,-1,-1, 1, 1/
+      DATA (NHEL(I,  40),I=1,6) /-1,-1,-1,-1, 1,-1/
+      DATA (NHEL(I,  41),I=1,6) /-1,-1, 1, 1,-1, 1/
+      DATA (NHEL(I,  42),I=1,6) /-1,-1, 1, 1,-1,-1/
+      DATA (NHEL(I,  43),I=1,6) /-1,-1, 1, 1, 1, 1/
+      DATA (NHEL(I,  44),I=1,6) /-1,-1, 1, 1, 1,-1/
+      DATA (NHEL(I,  45),I=1,6) /-1,-1, 1,-1,-1, 1/
+      DATA (NHEL(I,  46),I=1,6) /-1,-1, 1,-1,-1,-1/
+      DATA (NHEL(I,  47),I=1,6) /-1,-1, 1,-1, 1, 1/
+      DATA (NHEL(I,  48),I=1,6) /-1,-1, 1,-1, 1,-1/
+      DATA (NHEL(I,  49),I=1,6) /-1, 1,-1, 1,-1, 1/
+      DATA (NHEL(I,  50),I=1,6) /-1, 1,-1, 1,-1,-1/
+      DATA (NHEL(I,  51),I=1,6) /-1, 1,-1, 1, 1, 1/
+      DATA (NHEL(I,  52),I=1,6) /-1, 1,-1, 1, 1,-1/
+      DATA (NHEL(I,  53),I=1,6) /-1, 1,-1,-1,-1, 1/
+      DATA (NHEL(I,  54),I=1,6) /-1, 1,-1,-1,-1,-1/
+      DATA (NHEL(I,  55),I=1,6) /-1, 1,-1,-1, 1, 1/
+      DATA (NHEL(I,  56),I=1,6) /-1, 1,-1,-1, 1,-1/
+      DATA (NHEL(I,  57),I=1,6) /-1, 1, 1, 1,-1, 1/
+      DATA (NHEL(I,  58),I=1,6) /-1, 1, 1, 1,-1,-1/
+      DATA (NHEL(I,  59),I=1,6) /-1, 1, 1, 1, 1, 1/
+      DATA (NHEL(I,  60),I=1,6) /-1, 1, 1, 1, 1,-1/
+      DATA (NHEL(I,  61),I=1,6) /-1, 1, 1,-1,-1, 1/
+      DATA (NHEL(I,  62),I=1,6) /-1, 1, 1,-1,-1,-1/
+      DATA (NHEL(I,  63),I=1,6) /-1, 1, 1,-1, 1, 1/
+      DATA (NHEL(I,  64),I=1,6) /-1, 1, 1,-1, 1,-1/
+      DATA IDEN/144/
+      IDEN_STAR = IDEN
+      NHEL_STAR = NHEL
+      END
+
+      SUBROUTINE GET_AMP(P,NHEL,IC,AMP)
+C     
+C     Process: u u~ > u u~ u u~
+C     
+CF2PY INTENT(OUT) :: AMP
+CF2PY INTENT(IN) :: NHEL
+CF2PY INTENT(IN) :: P(0:3,NEXTERNAL)
+CF2PY INTENT(IN) :: IC
+
+      IMPLICIT NONE
+C     
+C     CONSTANTS
+C     
+      INTEGER    NGRAPHS
+      PARAMETER (NGRAPHS=42)
+      INTEGER    NEXTERNAL
+      PARAMETER (NEXTERNAL=6)
+      INTEGER    NWAVEFUNCS, NCOLOR
+      PARAMETER (NWAVEFUNCS=16, NCOLOR=6)
+      REAL*8     ZERO
+      PARAMETER (ZERO=0D0)
+C     
+C     ARGUMENTS 
+C     
+      REAL*8 P(0:3,NEXTERNAL)
+      INTEGER NHEL(NEXTERNAL), IC(NEXTERNAL)
+C     
+C     LOCAL VARIABLES 
+C     
+      COMPLEX*16 AMP(NGRAPHS)
+      COMPLEX*16 W(20,NWAVEFUNCS)
+      COMPLEX*16 DUM0,DUM1
+      DATA DUM0, DUM1/(0D0, 0D0), (1D0, 0D0)/
+      DOUBLE PRECISION BWCUTOFF
+C     
+C     GLOBAL VARIABLES
+C     
+      INCLUDE 'coupl.inc'
+
+C     
+C     
       BWCUTOFF=15  ! use if $ syntax is defined in the process
       CALL IXXXXX(P(0,1),ZERO,NHEL(1),+1*IC(1),W(1,1))
       CALL OXXXXX(P(0,2),ZERO,NHEL(2),-1*IC(2),W(1,2))
@@ -420,6 +592,28 @@ C     Amplitude(s) for diagram number 41
       CALL IOVXXX(W(1,13),W(1,2),W(1,9),GG,AMP(41))
 C     Amplitude(s) for diagram number 42
       CALL IOVXXX(W(1,14),W(1,2),W(1,12),GG,AMP(42))
+
+      END
+
+      SUBROUTINE GET_JAMP(AMP,JAMP)
+C     
+C     Process: u u~ > u u~ u u~
+C     
+CF2PY INTENT(OUT) :: JAMP
+CF2PY INTENT(IN) :: AMP
+
+      IMPLICIT NONE
+C     
+C     CONSTANTS
+C     
+      INTEGER    NGRAPHS
+      PARAMETER (NGRAPHS=42)
+      INTEGER    NCOLOR
+      PARAMETER ( NCOLOR=6)
+      COMPLEX*16 IMAG1
+      PARAMETER (IMAG1=(0D0,1D0))
+      COMPLEX*16 AMP(NGRAPHS), JAMP(NCOLOR), TMP_JAMP(55)
+
       TMP_JAMP(39) = AMP(39) +  AMP(40)  ! used 3 times
       TMP_JAMP(38) = AMP(37) +  AMP(38)  ! used 3 times
       TMP_JAMP(37) = AMP(35) +  AMP(36)  ! used 3 times
@@ -529,20 +723,285 @@ C     Amplitude(s) for diagram number 42
      $ *TMP_JAMP(38)+(-8.333333333333333D-02)*TMP_JAMP(49)+(
      $ -2.777777777777778D-02)*TMP_JAMP(51)+(-2.500000000000000D-01)
      $ *TMP_JAMP(54)
+      END
+
+      SUBROUTINE GET_MATRIX(JAMP,MATRIX)
+C     
+C     Process: u u~ > u u~ u u~
+C     
+      IMPLICIT NONE
+C     
+C     CONSTANTS
+C     
+CF2PY INTENT(OUT) :: MATRIX
+CF2PY INTENT(IN) :: JAMP
+
+
+      INTEGER    NCOLOR
+      PARAMETER (NCOLOR=6)
+      REAL*8     ZERO,MATRIX
+      PARAMETER (ZERO=0D0)
+C     
+
+C     LOCAL VARIABLES 
+C     
+      INTEGER I,J
+      COMPLEX*16 ZTEMP
+
+      INTEGER CF_INDEX
+      INTEGER CF(NCOLOR*(NCOLOR+1)/2)
+      INTEGER DENOM
+      COMMON /COLOR_MATRIX/ CF,DENOM
+      COMPLEX*16 JAMP(NCOLOR), TMP_JAMP(55)
+      COMPLEX*16 DUM0,DUM1
+      DATA DUM0, DUM1/(0D0, 0D0), (1D0, 0D0)/
+C     
+
+C     COLOR DATA
+C     
 
       MATRIX = 0.D0
       CF_INDEX = 0
       DO I = 1, NCOLOR
-        ZTEMP = (0D0,0D0)
+        ZTEMP = (0.D0,0.D0)
         DO J = I, NCOLOR
-          CF_INDEX = CF_INDEX +1
+          CF_INDEX = CF_INDEX + 1
           ZTEMP = ZTEMP + CF(CF_INDEX)*JAMP(J)
         ENDDO
-        MATRIX = MATRIX+REAL(ZTEMP*DCONJG(JAMP(I)))
+        MATRIX = MATRIX+ZTEMP*DCONJG(JAMP(I))/DENOM
       ENDDO
-      MATRIX = MATRIX / DENOM
+      END
+
+
+
+      SUBROUTINE GET_INTER(JAMP_1,JAMP_2, INTER)
+
+CF2PY INTENT(OUT) :: INTER
+CF2PY INTENT(IN) :: JAMP_1
+CF2PY INTENT(IN) :: JAMP_2
+
+      INTEGER I,J
+      INTEGER NCOLOR
+      PARAMETER (NCOLOR=6)
+      INTEGER CF_INDEX
+      INTEGER CF(NCOLOR*(NCOLOR+1)/2)
+      INTEGER DENOM, IDEN
+      DATA IDEN/144/
+      COMMON /COLOR_MATRIX/ CF,DENOM
+      COMPLEX*16 JAMP_1(NCOLOR),JAMP_2(NCOLOR),INTER
+
+C     COLOR DATA
+C     
+
+      INTER = (0.D0,0.D0)
+      CF_INDEX = 0
+      DO I = 1, NCOLOR
+C       ZTEMP = DCONJG(JAMP_2(I))
+        DO J=I, NCOLOR
+          CF_INDEX = CF_INDEX +1
+          INTER = INTER + CF(CF_INDEX) * (JAMP_1(J) * DCONJG(JAMP_2(I))
+     $      +JAMP_1(I) * DCONJG(JAMP_2(J)))
+        ENDDO
+      ENDDO
+      INTER = INTER/ (2D0*DENOM*IDEN)
 
       END
+
+
+
+      SUBROUTINE  GET_DENSITY(P, POS, N_CHANGING, ALLOW_HEL, N_COMB,
+     $  ALPHAS, SCALE2, INTER)
+C     P momenta
+C     NHEL base of helicity that are not changing
+C     POS(N_CHNGING): position of the changing helicity
+C     n_changing: number of changing helicity
+C     ALLOW_HEL(NCOMB, N_CHANGING): combination of helicity to
+C      consider (all jamp computed)
+C     INTER(NCOMB*(NCOMB+1)/2): all interference term (not the
+C      symmetric one)
+      IMPLICIT NONE
+CF2PY INTENT(IN) :: P(0:3,6)
+CF2PY INTENT(IN) :: POS(N_CHANGING)
+CF2PY INTENT(IN) :: N_CHANGING
+CF2PY INTENT(IN) :: ALLOW_HEL(N_CHANGING*N_COMB)
+CF2PY INTENT(IN) :: N_COMB
+CF2PY INTENT(IN) :: ALPHAS
+CF2PY INTENT(IN) :: SCALE2
+CF2PY INTENT(OUT) :: INTER(N_COMB*(N_COMB+1)/2)
+C     SCALE2 is a dummy argument added to have the same syntax as in
+C      loop-induced
+C     
+C     
+C     ARGUMENTS
+C     
+      INTEGER    NEXTERNAL
+      PARAMETER (NEXTERNAL=6)
+      REAL*8 P(0:3,NEXTERNAL)
+      INTEGER THISNHEL(NEXTERNAL)
+      INTEGER N_CHANGING, N_COMB
+      INTEGER POS(*)
+      INTEGER ALLOW_HEL(*)
+      DOUBLE PRECISION ALPHAS, SCALE2
+      DOUBLE COMPLEX INTER(*)
+      INTEGER NINTER
+      INTEGER NB_NHEL
+      DOUBLE COMPLEX, ALLOCATABLE :: TMP_INTER(:)
+      PARAMETER (NB_NHEL=64)
+      INTEGER    NINITIAL
+      PARAMETER (NINITIAL=2)
+C     LOCAL
+      INTEGER I,IHEL,IPART,JJ
+      DOUBLE PRECISION PI
+      DOUBLE PRECISION POLFACT
+C     
+      INTEGER NHEL(NEXTERNAL,NB_NHEL)
+C     put in common block to expose this variable to python interface
+      COMMON/PROCESS_NHEL/NHEL
+C     beam polarisation, filled from python through PY_SET_BEAMPOL.
+C     Same common block and same convention as the v1 MadSpin path
+C     (matrix_standalone_msP_v4.inc / msF): BEAMPOL = 1 is unpolarised
+C     and |BEAMPOL| runs up to 2 for a fully polarised beam, its sign
+C     giving the favoured helicity.
+      DOUBLE PRECISION BEAMPOL(2)
+      COMMON/TO_BEAMPOL/BEAMPOL
+C     
+C     include coupling definition to update the value of alphas
+C     
+      INCLUDE 'coupl.inc'
+
+      NINTER = N_COMB*(N_COMB+1)/2
+      ALLOCATE(TMP_INTER(NINTER))
+      TMP_INTER(:) = (0D0, 0D0)
+
+      DO I=1, N_COMB*(N_COMB+1)/2
+        INTER(I) = 0
+      ENDDO
+
+      IF (ALPHAS.NE.0D0) THEN
+        PI = 3.141592653589793D0
+        G = 2* DSQRT(ALPHAS*PI)
+        CALL UPDATE_AS_PARAM()
+      ENDIF
+      DO IHEL =1, NB_NHEL
+        THISNHEL(:) = NHEL(:, IHEL)
+        DO IPART=1,N_CHANGING
+          IF(THISNHEL(POS(IPART)).NE.ALLOW_HEL(IPART)) GOTO 10  !BYPASS COMPUTATION FOR HELICITY
+        ENDDO
+        TMP_INTER(:) = 0
+        CALL  GET_ALL_INTER(P, THISNHEL, POS, N_CHANGING, ALLOW_HEL,
+     $    N_COMB, TMP_INTER)
+C       Support for polarised beam: reweight the initial-state helicity
+C       sum exactly as SMATRIX_PROD does in the v1 path. Skipped unless
+C       the process has two incoming legs -- the same shared library
+C       also holds the 1 -> N decay matrix elements, whose leg 1 is the
+C       decaying resonance and not a beam.
+        POLFACT = 1D0
+        IF (NINITIAL.EQ.2) THEN
+          DO JJ=1,NINITIAL
+C           |BEAMPOL| runs from 1 (unpolarised) to 2 (fully
+C           polarised), so anything at or below 1 means "no
+C           polarisation" -- including the zero-filled common
+C           block of an output whose link line does not pull
+C           in BLOCK DATA BEAMPOL_DEFAULT.
+            IF (ABS(BEAMPOL(JJ)).LE.1D0) CYCLE
+            IF (THISNHEL(JJ).EQ.INT(SIGN(1D0,BEAMPOL(JJ)))) THEN
+              POLFACT = POLFACT*ABS(BEAMPOL(JJ))
+            ELSE
+              POLFACT = POLFACT*(2D0-ABS(BEAMPOL(JJ)))
+            ENDIF
+          ENDDO
+        ENDIF
+        DO I = 1, N_COMB*(N_COMB+1)/2
+          INTER(I) = INTER(I) + POLFACT*TMP_INTER(I)
+        ENDDO
+ 10   ENDDO
+      RETURN
+      DEALLOCATE(TMP_INTER)
+      END
+
+      SUBROUTINE  GET_ALL_INTER(P, NHEL, POS, N_CHANGING, ALLOW_HEL,
+     $  N_COMB, INTER)
+C     P momenta
+C     NHEL base of helicity that are not changing
+C     POS(N_CHNGING): position of the changing helicity
+C     n_changing: number of changing helicity
+C     ALLOW_HEL(NCOMB, N_CHANGING): combination of helicity to
+C      consider (all jamp computed)
+C     INTER((NCOMB*NCOMB+1)/2: all interference term (not the
+C      symmetric one)
+      IMPLICIT NONE
+CF2PY INTENT(IN) :: P(0:3,6)
+CF2PY INTENT(IN) :: NHEL(6)
+CF2PY INTENT(IN) :: POS(N_CHANGING)
+CF2PY INTENT(IN) :: N_CHANGING
+CF2PY INTENT(IN) :: ALLOW_HEL(N_CHANGING*N_COMB)
+CF2PY INTENT(IN) :: N_COMB
+CF2PY INTENT(OUT) :: INTER(NCOMB*(NCOMB+1)/2)
+C     
+C     
+C     ARGUMENTS
+C     
+      INTEGER    NEXTERNAL
+      PARAMETER (NEXTERNAL=6)
+      REAL*8 P(0:3,NEXTERNAL)
+      INTEGER NHEL(NEXTERNAL)
+      INTEGER N_CHANGING, N_COMB
+      INTEGER POS(*)
+      INTEGER ALLOW_HEL(*)
+      DOUBLE COMPLEX INTER(*)
+C     
+C     Intermediate array
+C     
+      INTEGER    NGRAPHS
+      PARAMETER (NGRAPHS=42)
+      INTEGER    NCOLOR
+      PARAMETER (NCOLOR=6)
+      INTEGER IC(NEXTERNAL)
+
+      DOUBLE COMPLEX AMP(NGRAPHS)
+      DOUBLE COMPLEX, ALLOCATABLE, SAVE :: JAMP(:,:)
+      INTEGER, SAVE :: S_NCOMB = 0
+
+C     
+C     LOCAL
+C     
+      INTEGER I,J,SOL,N
+
+      IF (ALLOCATED(JAMP) .AND. S_NCOMB.NE.N_COMB) THEN
+        DEALLOCATE(JAMP)
+      ENDIF
+
+      IF (.NOT.ALLOCATED(JAMP)) THEN
+        S_NCOMB=N_COMB
+        ALLOCATE(JAMP(NCOLOR, N_COMB))
+      ENDIF
+C     ----------
+C     BEGIN CODE
+C     ----------
+      IC(:)=1
+      DO I = 1, N_COMB
+        DO N = 1, N_CHANGING
+          NHEL(POS(N)) = ALLOW_HEL((I-1)*N_CHANGING+N)
+        ENDDO
+        CALL GET_AMP(P,NHEL,IC,AMP)
+        CALL GET_JAMP(AMP,JAMP(1,I))
+      ENDDO
+
+      SOL = 0
+      DO I = 1, N_COMB
+        DO J= I, N_COMB
+          SOL = SOL +1
+          CALL GET_INTER(JAMP(1,I), JAMP(1,J), INTER(SOL))
+        ENDDO
+      ENDDO
+
+
+      RETURN
+      END
+
+
+
+
 
       SUBROUTINE GET_VALUE(P, ALPHAS, NHEL ,ANS)
       IMPLICIT NONE

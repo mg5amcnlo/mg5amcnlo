@@ -209,7 +209,16 @@ class MadLoopLauncher(ExtLauncher):
                                                              dir_path=curr_path)
                 # We use mu_r=-1.0 to use the one defined by the user in the
                 # param_card.dat
-                me_cmd.MadLoopInitializer.fix_PSPoint_in_check(sub_path, 
+                # Note: we must target the subprocess directory currently being
+                # run (curr_path) and not the SubProcesses directory (sub_path).
+                # Otherwise fix_PSPoint_in_check edits the first P* directory it
+                # finds instead of this one, leaving curr_path's check_sa.f with
+                # the NPSPOINTS value left over from the initialization. The
+                # phase-space point written would then be the (NPSPOINTS)-th
+                # RAMBO point instead of the first, making the kinematics depend
+                # on the initialization (and hence on the other subprocesses
+                # generated) rather than only on this process.
+                me_cmd.MadLoopInitializer.fix_PSPoint_in_check(curr_path,
                   read_ps = os.path.isfile(os.path.join(curr_path, 'PS.input')),
                   npoints = 1, mu_r=-1.0)
                 
@@ -220,7 +229,21 @@ class MadLoopLauncher(ExtLauncher):
                 bu_helicity_filter_value = MadLoopparam['DoubleCheckHelicityFilter']
                 MadLoopparam.set('DoubleCheckHelicityFilter', False)
                 MadLoopparam.write(os.path.join(self.card_dir, 'MadLoopParams.dat'))
-                
+
+                #This is not optimal at all but I don't think I have access to the command options here. The code only passes here for standalone mode
+                UseDensity = False
+                with open(os.path.join(self.card_dir, 'proc_card_mg5.dat'), 'r') as proc_card:
+                    for line in proc_card:
+                        if '--density' in line:
+                            UseDensity = True
+                            break
+
+                #for the density mode, we use HelicityFilterLevel = 0 because the use of symmetry of HelicityFilterLevel = 2 does not work for JAMP interferences
+                if UseDensity:
+                    MadLoopparam.set('HelicityFilterLevel', 0)
+                    MadLoopparam.write(os.path.join(self.card_dir, 'MadLoopParams.dat'))
+                    logger.warning("WARNING: With the density mode, HelicityFilterLevel must be set to 0. It is currently set to 0.")
+
                 # check
                 t1, t2, ram_usage = me_cmd.MadLoopInitializer.make_and_run(curr_path)
                 
@@ -382,7 +405,24 @@ class MadLoopLauncher(ExtLauncher):
                     str_lines.append('|    Single pole = %s'%\
                                    special_float_format(lso_contrib[1]['1EPS']))
                     str_lines.append('|    Double pole = %s'%\
-                                   special_float_format(lso_contrib[1]['2EPS']))              
+                                   special_float_format(lso_contrib[1]['2EPS']))    
+        if res['RMatrix']:
+            str_lines.append('|')
+            str_lines.append(('|| Density matrix (non-normalised):',main_color))
+
+            n = int((-1 + (1 + 8*len(res['RMatrix']))**.5)/2)
+            if n%1 != 0:
+                    raise ValueError("Problem in the dimension of the density matrix.")
+            rho_square = [[0. for o in range(n)] for _ in range(n)]
+            for i in range(n):
+                    for k in range(n):
+                            if k > i:
+                                    rho_square[i][k] = res['RMatrix'][i*n + k - i*(i + 1)//2].conjugate()
+                            elif k == i:
+                                    rho_square[i][k] = res['RMatrix'][i*n + k - i*(i + 1)//2] #this line is just here because the diagonal elements should not be conjugated (they are real anyway)
+                            else:
+                                    rho_square[i][k] = rho_square[k][i].conjugate()
+                    str_lines.append(('|  ' + str(rho_square[i]), main_color))          
         str_lines.extend([ASCII_bar,'\n'])
 
         return str_lines

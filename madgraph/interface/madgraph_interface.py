@@ -1214,10 +1214,14 @@ class CheckValidForCmd(cmd.CheckCmd):
 
 
             def check(p):
-                if p.get('color') != 1:
-                    raise self.InvalidCmd('Polarization restriction can not be used for color charged particles')
-                elif p.get('mass') != 'ZERO':
-                    raise self.InvalidCmd('Polarization restriction can not be used for massive particles') 
+                # Polarisation restriction can now be used for color charged
+                # particles, so there is no longer a color check here. The mass
+                # restriction is independent of the color one and must stay
+                # outside it -- keeping it in an "elif" would have silently
+                # exempted massive color-charged particles.
+                if p.get('mass') != 'ZERO':
+                    raise self.InvalidCmd('Polarization restriction can not be used for massive particles')
+ 
 
 
             for p in particles_parts[0].split()+ particles_parts[-1].split():
@@ -2609,6 +2613,9 @@ class CompleteForCmd(cmd.CompleteCmd):
                     return self.aloha_complete_output(text, line, begidx, endidx)
                 except Exception as error:
                     print(error)
+            if 'standalone' in args:
+                possible_options_full = list(possible_options_full) + ['--prefix=int', '--prefix=proc', '--density=']
+
             # Directory continuation
             if args[-1].endswith(os.path.sep):
                 return [name for name in self.path_completion(text,
@@ -3521,6 +3528,8 @@ This implies that with decay chains:
         # __init__.py check that function_library and object_library are imported
         text = open(pjoin(model_dir, '__init__.py')).read()
         mod = False
+        # import function_library 
+        # from . import function_library
         to_check =  ['object_library', 'function_library']
         for lib in to_check:
             if 'import %s' % lib in text:
@@ -5241,6 +5250,12 @@ This implies that with decay chains:
                 state = True
                 continue
 
+            if part_name.endswith('*'):
+                part_name = part_name[:-1]
+                offshell = True
+            else:
+                offshell = False
+
             # check if particle is ONIA
             is_onium = False
             for fockstate in self._fockstates:
@@ -5470,7 +5485,8 @@ This implies that with decay chains:
                         myleglist.append(base_objects.MultiLeg({'ids':mylegids,
                                                             'state':state,
                                                             'polarization': polarization,
-                                                            'onium': {}}))
+                                                            'onium': {},
+                                                            'offshell':offshell}))
                     else:
                         myleglist.append(fks_tag.MultiTagLeg({'ids':mylegids,
                                                           'state':state,
@@ -9096,7 +9112,11 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
         """Set the number of core to be used for parallelized tasks.
         Example: set nb_core 4
         """
-        return self.set_default('nb_core', args, log=log)
+        if args[0] in ['None', None, '0', 0]:
+            import multiprocessing
+            self.options['nb_core'] = multiprocessing.cpu_count()
+        else:
+            self.options['nb_core'] = int(args[0])
 
     def set2_nb_core_pythia8(self, args, log=True):
         """Set the number of cores/jobs used by the Pythia8 step only.

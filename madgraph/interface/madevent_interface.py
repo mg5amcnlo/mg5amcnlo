@@ -825,31 +825,34 @@ class AskRun(cmd.ControlSwitch):
 #   MADSPIN handling
 #
     def get_allowed_madspin(self):
-        """ ON|OFF|onshell """
+        """ ON|OFF|onshell|madspin|full|PA|none """
         
         if hasattr(self, 'allowed_madspin'):
             return self.allowed_madspin
         
         self.allowed_madspin = []
         if 'MadSpin'  in self.available_module:
-            self.allowed_madspin = ['OFF',"ON",'onshell',"full"]
+            self.allowed_madspin = ['OFF', 'ON', 'onshell', 'madspin',
+                                    'full', 'PA', 'none',
+                                    'madspin_v1', 'onshell_v1']
         return self.allowed_madspin
     
     def check_value_madspin(self, value):
         """handle alias and valid option not present in get_allowed_madspin"""
         
         if value.upper() in self.get_allowed_madspin():
-            return True
+            if value == value.upper():
+                return True
+            else:
+                return value.upper()
         elif value.lower() in self.get_allowed_madspin():
-            return True
+            if value == value.lower():
+                return True
+            else:
+                return value.lower()
         
         if 'MadSpin' not in self.available_module:
             return False
-             
-        if value.lower() in ['madspin', 'full']:
-            return 'full'
-        elif value.lower() in ['none']:
-            return 'none'
         
     
     def set_default_madspin(self):
@@ -866,12 +869,9 @@ class AskRun(cmd.ControlSwitch):
     def get_cardcmd_for_madspin(self, value):
         """set some command to run before allowing the user to modify the cards."""
         
-        if value == 'onshell':
-            return ["edit madspin_card --replace_line='set spinmode' --before_line='decay' set spinmode onshell"]
-        elif value in ['full', 'madspin']:
-            return ["edit madspin_card --replace_line='set spinmode' --before_line='decay' set spinmode full"]
-        elif value == 'none':
-            return ["edit madspin_card --replace_line='set spinmode' --before_line='decay' set spinmode none"]
+        if value in ['onshell', 'madspin', 'full', 'PA', 'none',
+                     'madspin_v1', 'onshell_v1']:
+            return ["edit madspin_card --replace_line='set spinmode' --before_line='decay' set spinmode %s" % value ]
         else:
             return []
         
@@ -887,7 +887,7 @@ class AskRun(cmd.ControlSwitch):
         if 'reweight' not in self.available_module:
             self.allowed_reweight = []
             return
-        self.allowed_reweight = ['OFF', 'ON']
+        self.allowed_reweight = ['OFF', 'ON', 'density']
         
         # check for plugin mode
         plugin_path = self.mother_interface.plugin_path
@@ -899,11 +899,44 @@ class AskRun(cmd.ControlSwitch):
         
         if 'reweight' in self.available_module:
             if os.path.exists(pjoin(self.me_dir,'Cards','reweight_card.dat')):
-                self.switch['reweight'] = 'ON'
+                reweightcard = open(pjoin(self.me_dir,'Cards','reweight_card.dat'), 'r')
+                content = reweightcard.read()
+                if 'change particle_in_density_matrix' in content:
+                    self.switch['reweight'] = 'density'
+                else:
+                    self.switch['reweight'] = 'ON'
+                reweightcard.close()
             else:
                 self.switch['reweight'] = 'OFF'
         else:
-            self.switch['reweight'] = 'Not Avail.'        
+            self.switch['reweight'] = 'Not Avail.'      
+
+    def get_cardcmd_for_reweight(self, value):
+        """set some command to run before allowing the user to modify the cards."""
+        if value in ['density']:
+            content_rwgt_card = open(pjoin(self.me_dir, "Cards", "reweight_card.dat"), "r")
+            if 'change particle_in_density_matrix' in content_rwgt_card.read():
+                content_rwgt_card.close()
+                return [] #if reweight_card.dat has information for density matrices, we keep it
+            else:
+                content_rwgt_card.close()
+                import shutil
+                shutil.copyfile(pjoin(self.me_dir, "Cards", "density_card_default.dat"), pjoin(self.me_dir, "Cards", "reweight_card.dat"))
+                return []
+        elif value in ['ON']:
+            content_rwgt_card = open(pjoin(self.me_dir, "Cards", "reweight_card.dat"), "r")
+            if 'change particle_in_density_matrix' in content_rwgt_card.read():
+                content_rwgt_card.close()
+                import shutil
+                shutil.copyfile(pjoin(self.me_dir, "Cards", "reweight_card_default.dat"), pjoin(self.me_dir, "Cards", "reweight_card.dat"))
+                return []
+            else:
+                content_rwgt_card.close()
+                return [] #else we keep the current reweight_card.dat
+        elif value in ['OFF']:
+            return [] #if reweight=OFF, we do not create a reweight_card.dat
+        else:
+            return 
 
 #===============================================================================
 # CheckValidForCmd
@@ -2637,13 +2670,23 @@ Beware that MG5aMC now changes your runtime options to a multi-core mode with on
                         to_use = 'none'
                         
                     if to_use == 'systematics':
-                        if self.run_card['systematics_arguments'] != ['']:
-                            self.exec_cmd('systematics %s %s ' % (self.run_name,
-                                          ' '.join(self.run_card['systematics_arguments'])),                  
-                                          postcmd=False, printcmd=False)
-                        else:
-                            self.exec_cmd('systematics %s --from_card' % self.run_name,
-                                           postcmd=False,printcmd=False)    
+                        # The unweighting may have written one file per
+                        # systematics job (auto_split_unweighted_output), which
+                        # systematics consumes and merges back. It can also fail
+                        # outright -- and it aborts this command when it does, so
+                        # store_events would never run. Merge in a finally: a
+                        # failing systematics must leave exactly the events it
+                        # would have left without the split.
+                        try:
+                            if self.run_card['systematics_arguments'] != ['']:
+                                self.exec_cmd('systematics %s %s ' % (self.run_name,
+                                              ' '.join(self.run_card['systematics_arguments'])),
+                                              postcmd=False, printcmd=False)
+                            else:
+                                self.exec_cmd('systematics %s --from_card' % self.run_name,
+                                               postcmd=False,printcmd=False)
+                        finally:
+                            self.finalize_split_unweighted_output()
                     elif to_use == 'syscalc':
                         self.run_syscalc('parton')
                 
@@ -2654,7 +2697,7 @@ Beware that MG5aMC now changes your runtime options to a multi-core mode with on
                     self.boost_events()
                             
                                        
-                self.exec_cmd('reweight -from_cards', postcmd=False)            
+                self.exec_cmd('reweight --mode=%s -from_cards' %switch_mode['reweight'], postcmd=False)            
                 self.exec_cmd('decay_events -from_cards', postcmd=False)
                 if self.run_card['time_of_flight']>=0:
                     self.exec_cmd("add_time_of_flight --threshold=%s" % self.run_card['time_of_flight'] ,postcmd=False)
@@ -3767,7 +3810,58 @@ Beware that this can be dangerous for local multicore runs.""")
             
 
       
-    ############################################################################ 
+    ############################################################################
+    def auto_split_unweighted_output(self):
+        """When systematics runs right after the unweighting, it splits the work
+        over ``nb_core`` jobs which each read their own slice of the (single)
+        event file -- every job therefore has to parse its way to that slice.
+        Writing one file per job instead removes that scan, and zipping them is
+        then a pure waste since systematics reads them back immediately.
+        An explicit choice in the run_card (user_set) is left alone."""
+        if 'nb_unweight_output' not in self.run_card:
+            return
+        if self.run_card.user_set & set(['nb_unweight_output',
+                                         'zip_unweighted_events']):
+            return
+        if self.run_card['systematics_program'] != 'systematics' or \
+                                                not self.run_card['use_syst']:
+            return
+        if self.options['run_mode'] != 2:
+            # only the multicore mode splits systematics over nb_core
+            return
+        try:
+            nb_core = int(self.options['nb_core'])
+        except (TypeError, ValueError):
+            return
+        # mirror do_systematics: it uses that same number of jobs, so the split
+        # matches its job count exactly (one file per job).
+        nb_split = min(nb_core, self.run_card['nevents']//2500)
+        if nb_split <= 1:
+            return
+        self.run_card['nb_unweight_output'] = nb_split
+        self.run_card['zip_unweighted_events'] = False
+        logger.debug("systematics will run on %s core: writing the unweighted "
+                     "events as %s files so that each job reads its own.",
+                     nb_core, nb_split)
+
+    def zip_unweighted_output(self, outputpath, start=None):
+        """gzip the file(s) the final unweighting produced, unless the run_card
+        asks not to (``zip_unweighted_events``) -- compressing them is a pure
+        waste when they are consumed straight away. Handles the split output of
+        ``nb_unweight_output`` transparently."""
+        paths = lhe_parser.EventFile.unweight_output_paths(
+                            outputpath, self.run_card['nb_unweight_output'])
+        if not self.run_card['zip_unweighted_events']:
+            logger.debug("unweight done, skipping the zipping (zip_unweighted_events=False)")
+            return paths
+        if start is not None:
+            logger.debug("unweight done. start zipping after %.1f s", time.time()-start)
+        for path in paths:
+            if os.path.exists(path):
+                misc.gzip(path)
+        return paths
+
+    ############################################################################
     def do_combine_events(self, line):
         """Advanced commands: Launch combine events"""
         start=time.time()
@@ -3781,7 +3875,8 @@ Beware that this can be dangerous for local multicore runs.""")
         if self.run_card['gridpack'] and isinstance(self, GridPackCmd):
             return GridPackCmd.do_combine_events(self, line)
 
-    
+        self.auto_split_unweighted_output()
+
         # Define The Banner
         tag = self.run_card['run_tag']
         # Update the banner with the pythia card
@@ -3811,21 +3906,38 @@ Beware that this can be dangerous for local multicore runs.""")
         Gdirs = self.get_Gdir()
         Gdirs.sort()
         partials_info = []
+        # Use RLIMIT_NOFILE directly to avoid spawning a shell
         try:
-            p = subprocess.Popen(["ulimit", "-n"], stdout=subprocess.PIPE)
-            out, err = p.communicate()
-            max_G = out.decode()
-            if max_G == "unlimited":
-                max_G =2500
+            import resource
+            soft_limit, _ = resource.getrlimit(resource.RLIMIT_NOFILE)
+            if soft_limit == resource.RLIM_INFINITY:
+                max_G = 2500
             else:
-                max_G = int(max_G) - 40
-        except Exception as  error:
+                # Keep descriptor headroom for logs/pipes/subprocesses.
+                max_G = max(80, int(soft_limit) - 40)
+        except Exception as error:
             logger.debug(error)
-            max_G = 80 # max(20, len(Gdirs)/self.options['nb_core'])
+            try:
+                out = subprocess.check_output(
+                    ["sh", "-c", "ulimit -n"], stderr=subprocess.STDOUT).decode().strip()
+                if out == "unlimited":
+                    max_G = 2500
+                else:
+                    max_G = max(80, int(out) - 40)
+            except Exception as error:
+                logger.debug(error)
+                max_G = 80 # max(20, len(Gdirs)/self.options['nb_core'])
 
         if not hasattr(self,'proc_characteristic'):
             self.proc_characteristic = self.get_characteristics()
         mycluster = cluster.MultiCore(nb_core=self.options['nb_core'])
+
+        def _safe_nunwgt(result):
+            """Extract an integer unweighted-event count when available."""
+            try:
+                return max(0, int(float(result.get('nunwgt'))))
+            except Exception:
+                return 0
 
         def split(a, n):
             """split a list "a" into n chunk of same size (or nearly same size)"""
@@ -3884,10 +3996,12 @@ Beware that this can be dangerous for local multicore runs.""")
             nb_event = AllEvent.unweight(pjoin(self.me_dir, "Events", self.run_name, "unweighted_events.lhe"),
                           get_wgt, trunc_error=1e-2, event_target=self.run_card['nevents'],
                           log_level=logging.DEBUG, normalization=self.run_card['event_norm'],
-                          proc_charac=self.proc_characteristic)
-            logger.debug("unweight done. start zipping after %.1f s", time.time()-start)
-            misc.gzip(pjoin(self.me_dir, "Events", self.run_name, "unweighted_events.lhe"))
-            
+                          proc_charac=self.proc_characteristic,
+                          keep_overshoot=self.run_card['allow_overshoot_events'],
+                          nb_output=self.run_card['nb_unweight_output'])
+            self.zip_unweighted_output(pjoin(self.me_dir, "Events", self.run_name,
+                                             "unweighted_events.lhe"), start)
+
             #cleaning
             for data in partials_info:
                 path = data[0]
@@ -3911,10 +4025,12 @@ Beware that this can be dangerous for local multicore runs.""")
                         os.remove(pjoin(Gdir, 'events.lhe'))
                         continue
 
+                    # Pass precomputed nunwgt to avoid re-counting from LHE files.
                     AllEvent.add(pjoin(Gdir, 'events.lhe'), 
                                 result.get('xsec'),
                                 result.get('xerru'),
-                                result.get('axsec')
+                                result.get('axsec'),
+                                nb_event=_safe_nunwgt(result)
                                 )
                     
             if len(AllEvent) == 0:
@@ -3923,9 +4039,11 @@ Beware that this can be dangerous for local multicore runs.""")
                 nb_event = AllEvent.unweight(pjoin(self.me_dir, "Events", self.run_name, "unweighted_events.lhe"),
                                 get_wgt, trunc_error=1e-2, event_target=self.run_card['nevents'],
                                 log_level=logging.DEBUG, normalization=self.run_card['event_norm'],
-                                proc_charac=self.proc_characteristic)
-                logger.debug("unweight done. start zipping after %.1f s", time.time()-start)
-                misc.gzip(pjoin(self.me_dir, "Events", self.run_name, "unweighted_events.lhe"))
+                                proc_charac=self.proc_characteristic,
+                                keep_overshoot=self.run_card['allow_overshoot_events'],
+                                nb_output=self.run_card['nb_unweight_output'])
+                self.zip_unweighted_output(pjoin(self.me_dir, "Events", self.run_name,
+                                                 "unweighted_events.lhe"), start)
 
         if nb_event < self.run_card['nevents']:
             logger.warning("failed to generate enough events. Please follow one of the following suggestions to fix the issue:")
@@ -3938,6 +4056,7 @@ Beware that this can be dangerous for local multicore runs.""")
 
                    
         self.results.add_detail('nb_event', nb_event)
+        self.banner.add_generation_info(self.results.current['cross'], nb_event)
     
         if self.run_card['bias_module'].lower() not in  ['dummy', 'none'] and nb_event:
             self.correct_bias()
@@ -3965,6 +4084,13 @@ Beware that this can be dangerous for local multicore runs.""")
             self.run_card = banner_mod.RunCard(self.banner['mgruncard'])
         AllEvent.banner = self.banner
 
+        def _safe_nunwgt(result):
+            """Extract an integer unweighted-event count when available."""
+            try:
+                return max(0, int(float(result.get('nunwgt'))))
+            except Exception:
+                return 0
+
         for Gdir in Gdirs:
             if os.path.exists(pjoin(Gdir, 'events.lhe')):
                 result = sum_html.OneResult('')
@@ -3977,10 +4103,12 @@ Beware that this can be dangerous for local multicore runs.""")
                     os.remove(pjoin(Gdir, 'events.lhe'))
                     continue
                 if not preprocess_only:
+                    # Pass precomputed nunwgt to avoid re-counting from LHE files.
                     AllEvent.add(pjoin(Gdir, 'events.lhe'), 
                              result.get('xsec'),
                              result.get('xerru'),
-                             result.get('axsec')
+                             result.get('axsec'),
+                             nb_event=_safe_nunwgt(result)
                     )
  
         if preprocess_only:
@@ -4139,6 +4267,12 @@ Beware that this can be dangerous for local multicore runs.""")
         # 4) Move the Files present in Events directory
         E_path = pjoin(self.me_dir, 'Events')
         O_path = pjoin(self.me_dir, 'Events', run)
+
+        # Backstop for the entry points that do not go through
+        # run_generate_events' systematics block (a bare 'combine_events' then
+        # 'store_events'): the run must never be left as N split files. No-op
+        # when they were already merged.
+        self.finalize_split_unweighted_output()
         
         # The events file
         for name in ['events.lhe', 'unweighted_events.lhe']:
@@ -5965,7 +6099,12 @@ tar -czf split_$1.tar.gz split_$1
         self.update_status('storing files of previous run', level=None,\
                                                      error=True)
         if 'event' in self.to_store:
-            if not os.path.exists(pjoin(self.me_dir, 'Events',self.run_name, 'unweighted_events.lhe.gz')) and\
+            # zip_unweighted_events=False means the events are consumed straight
+            # away: do not gzip them back here, that would defeat the purpose.
+            zip_events = ('zip_unweighted_events' not in self.run_card or
+                          self.run_card['zip_unweighted_events'])
+            if zip_events and \
+               not os.path.exists(pjoin(self.me_dir, 'Events',self.run_name, 'unweighted_events.lhe.gz')) and\
                os.path.exists(pjoin(self.me_dir, 'Events',self.run_name, 'unweighted_events.lhe')):
                 logger.info("gzipping output file: unweighted_events.lhe")
                 misc.gzip(pjoin(self.me_dir,'Events',self.run_name,"unweighted_events.lhe"))
@@ -6018,11 +6157,17 @@ tar -czf split_$1.tar.gz split_$1
             mode = self.cluster_mode
         
         # ensure that exe is executable
-        if os.path.exists(exe) and not os.access(exe, os.X_OK):
-            os.system('chmod +x %s ' % exe)
-        elif (cwd and os.path.exists(pjoin(cwd, exe))) and not \
-                                            os.access(pjoin(cwd, exe), os.X_OK):
-            os.system('chmod +x %s ' % pjoin(cwd, exe))
+        exe_path = None
+        if os.path.exists(exe):
+            exe_path = exe
+        elif cwd:
+            local_exe = pjoin(cwd, exe)
+            if os.path.exists(local_exe):
+                exe_path = local_exe
+        # Use os.chmod instead of shell chmod to avoid process-launch overhead.
+        if exe_path and not os.access(exe_path, os.X_OK):
+            mode_bits = os.stat(exe_path).st_mode
+            os.chmod(exe_path, mode_bits | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
                     
         if mode == 0:
             self.update_status((remaining, 1, 
@@ -7473,7 +7618,8 @@ class GridPackCmd(MadEventCmd):
                     else:
                         nb_event = min(abs(1.01*self.nb_event*sum_axsec/self.results.current.get('axsec')),self.run_card['nevents'], self.nb_event, self.gridpack_cross, sum_axsec)
                     AllEvent.unweight(pjoin(outdir, self.run_name, "partials%s.lhe.gz" % partials),
-                          get_wgt, log_level=5,  trunc_error=1e-2, event_target=nb_event)
+                          get_wgt, log_level=5,  trunc_error=1e-2, event_target=nb_event, 
+                          keep_overshoot=self.run_card['allow_overshoot_events'])
                     AllEvent = lhe_parser.MultiEventFile()
                     AllEvent.banner = self.banner
                     partials_info.append((pjoin(outdir, self.run_name, "partials%s.lhe.gz" % partials),
@@ -7494,7 +7640,8 @@ class GridPackCmd(MadEventCmd):
         nb_event = AllEvent.unweight(pjoin(outdir, self.run_name, "unweighted_events.lhe.gz"),
                           get_wgt, trunc_error=1e-2, event_target=self.nb_event,
                           log_level=logging.DEBUG, normalization=self.run_card['event_norm'],
-                          proc_charac=self.proc_characteristic)
+                          proc_charac=self.proc_characteristic,
+                          keep_overshoot=self.run_card['allow_overshoot_events'])
         
         
         if partials:
@@ -8016,5 +8163,3 @@ if '__main__' == __name__:
     
     
     
-
-

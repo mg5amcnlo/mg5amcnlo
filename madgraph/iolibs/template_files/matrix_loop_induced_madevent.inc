@@ -13,7 +13,7 @@ C
     use DiscreteSampler
     IMPLICIT NONE
     double precision RHEL, RCOL
-    integer channel, proc_id, hel_selected, icol
+    integer channel, proc_id, hel_selected, icol, ivec
 C  
 C CONSTANTS
 C  
@@ -55,7 +55,6 @@ c
 C  
 C LOCAL VARIABLES 
 C  
-    INTEGER IVEC
     INTEGER NHEL(NEXTERNAL,NCOMB)
     REAL*8 T,MATRIX%(proc_id)s
     REAL*8 R,SUMHEL,TS(NCOMB)

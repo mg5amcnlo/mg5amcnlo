@@ -22,6 +22,9 @@ on:
       reset_ufo:
         type: boolean
         default: false
+      reset_pip:
+        type: boolean
+        default: false
       reset_delphes:
         type: boolean
         default: false
@@ -57,8 +60,14 @@ jobs:
       - name: Delete ufo cache
         if: inputs.reset_ufo == 'true'
         run: |
-          gh cache delete pip-numpy-${{ env.CACHE_KEY }} --repo $GITHUB_REPOSITORY || true
           gh cache delete ufomodel-${{ env.CACHE_KEY }} --repo $GITHUB_REPOSITORY || true
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Delete pip cache
+        if: inputs.reset_pip == 'true'
+        run: |
+          gh cache delete pip-numpy-${{ env.CACHE_KEY }} --repo $GITHUB_REPOSITORY || true
         env:
           GH_TOKEN: ${{ github.token }}
 
@@ -92,7 +101,7 @@ jobs:
 
       - name: Install numpy into cache dir (if not cached)
         if: steps.cache-pip.outputs.cache-hit != 'true'
-        run: pip install --target ~/.cache/pip-packages numpy
+        run: pip install --upgrade --target ~/.cache/pip-packages numpy meson ninja
 
   ufo_cache:
      runs-on: ubuntu-latest

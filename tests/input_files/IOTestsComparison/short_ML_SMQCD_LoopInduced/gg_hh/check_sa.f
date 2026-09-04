@@ -38,10 +38,12 @@ C     integer    n_max_cg
       INCLUDE 'ngraphs.inc'
       INCLUDE 'nsquaredSO.inc'
 
+      INCLUDE 'MadLoopParams.inc'
+
 C     
 C     LOCAL
 C     
-      INTEGER I,J,K
+      INTEGER I,J,K,L
 C     four momenta. Energy is the zeroth component.
       REAL*8 P(0:3,NEXTERNAL)
       INTEGER MATELEM_ARRAY_DIM
@@ -53,10 +55,30 @@ C     sqrt(s)= center of mass energy
       INTEGER RETURNCODE, UNITS, TENS, HUNDREDS
       INTEGER NSQUAREDSO_LOOP
       REAL*8 , ALLOCATABLE :: PREC_FOUND(:)
-
+      INTEGER NB_INTER
       LOGICAL INIT
       DATA INIT/.TRUE./
       COMMON/INITCHECKSA/INIT
+
+      INTEGER NLOOPFLOWS
+      PARAMETER (NLOOPFLOWS=1)
+      INTEGER NCOMB
+      PARAMETER (NCOMB=4)
+      INTEGER N_CHANGING
+      PARAMETER (N_CHANGING=2)
+      INTEGER N_COMB_RHO
+      PARAMETER (N_COMB_RHO=2)
+      INTEGER H
+      INTEGER HELC(NEXTERNAL,NCOMB)
+      DOUBLE PRECISION ALPHAS, MU_R2
+
+      DOUBLE COMPLEX INTER_DENS(0:3,0:NSQUAREDSO)
+      DOUBLE COMPLEX RMATRIX((N_COMB_RHO*(N_COMB_RHO+1))/2,
+     $  0:NSQUAREDSO)
+      DOUBLE PRECISION RES(0:3,0:NSQUAREDSO), SUM_INT
+      INTEGER HEL_MULT
+      PARAMETER (HEL_MULT = 1)
+      INTEGER H1, H2
 
 C     
 C     GLOBAL VARIABLES
@@ -74,6 +96,12 @@ C     EXTERNAL
 C     
       REAL*8 DOT
       EXTERNAL DOT
+
+      INTEGER NHEL(NEXTERNAL)
+      INTEGER, ALLOCATABLE :: POS(:)
+      INTEGER, ALLOCATABLE :: ALLOW_HEL(:)
+      DOUBLE COMPLEX, ALLOCATABLE :: INTER(:)
+      INTEGER SOL
 
 C     
 C     BEGIN CODE
@@ -217,9 +245,11 @@ C       Now we can call the matrix element
 C       
         CALL ML5_0_SLOOPMATRIX_THRES(P,MATELEM,-1.0D0,PREC_FOUND
      $   ,RETURNCODE)
-C       
-C       write the information on the four momenta 
-C       
+
+C       CALL ML5_0_COMPUTE_RES_FROM_JAMP(RES,HEL_MULT)
+C       WRITE(*,*) "ML5_0_COMPUTE_RES_FROM_JAMP", RES(1:3,0)
+
+
         IF (K.EQ.NPSPOINTS) THEN
           WRITE (*,*)
           WRITE (*,*) ' Phase space point:'
@@ -290,8 +320,6 @@ C
           WRITE (*,*) 'Matrix element finite = ', MATELEM(1,0), 
      $     ' GeV^',-(2*NEXTERNAL-8)
           WRITE (*,*) '---------------------------------'
-
-
           OPEN(69, FILE='result.dat', ERR=976, ACTION='WRITE')
           DO I=1,NEXTERNAL
             WRITE (69,'(a2,1x,5ES30.15E3)') 'PS',P(0,I),P(1,I),P(2,I)
@@ -309,6 +337,7 @@ C
           WRITE (69,*) 'Born_kept F'
           WRITE (69,*) 'Loop_kept',(CHOSEN_LOOP_SO_CONFIGS(I),I=1
      $     ,NSQUAREDSO)
+
 
 
           CLOSE(69)
@@ -356,8 +385,6 @@ C     &-(2*nexternal-8)
 C     write (*,*) "-------------------------------------------------"
 
       END
-
-
 
 
       DOUBLE PRECISION FUNCTION DOT(P1,P2)
@@ -612,81 +639,79 @@ C
       IF (INIT.EQ.1) THEN
         INIT=0
         CALL RMARIN(1802,9373)
-        END IF
-C       
- 10     CALL RANMAR(RAN)
-        IF (RAN.LT.1D-16) GOTO 10
-        RN=RAN
-C       
-        END
+      END IF
+C     
+ 10   CALL RANMAR(RAN)
+      IF (RAN.LT.1D-16) GOTO 10
+      RN=RAN
+C     
+      END
 
 
 
-        SUBROUTINE RANMAR(RVEC)
-C       -----------------
-C       Universal random number generator proposed by Marsaglia and
-C        Zaman
-C       in report FSU-SCRI-87-50
-C       In this version RVEC is a double precision variable.
-        IMPLICIT REAL*8(A-H,O-Z)
-        COMMON/ RASET1 / RANU(97),RANC,RANCD,RANCM
-        COMMON/ RASET2 / IRANMR,JRANMR
-        SAVE /RASET1/,/RASET2/
-        UNI = RANU(IRANMR) - RANU(JRANMR)
-        IF(UNI .LT. 0D0) UNI = UNI + 1D0
-        RANU(IRANMR) = UNI
-        IRANMR = IRANMR - 1
-        JRANMR = JRANMR - 1
-        IF(IRANMR .EQ. 0) IRANMR = 97
-        IF(JRANMR .EQ. 0) JRANMR = 97
-        RANC = RANC - RANCD
-        IF(RANC .LT. 0D0) RANC = RANC + RANCM
-        UNI = UNI - RANC
-        IF(UNI .LT. 0D0) UNI = UNI + 1D0
-        RVEC = UNI
-        END
+      SUBROUTINE RANMAR(RVEC)
+C     -----------------
+C     Universal random number generator proposed by Marsaglia and Zaman
+C     in report FSU-SCRI-87-50
+C     In this version RVEC is a double precision variable.
+      IMPLICIT REAL*8(A-H,O-Z)
+      COMMON/ RASET1 / RANU(97),RANC,RANCD,RANCM
+      COMMON/ RASET2 / IRANMR,JRANMR
+      SAVE /RASET1/,/RASET2/
+      UNI = RANU(IRANMR) - RANU(JRANMR)
+      IF(UNI .LT. 0D0) UNI = UNI + 1D0
+      RANU(IRANMR) = UNI
+      IRANMR = IRANMR - 1
+      JRANMR = JRANMR - 1
+      IF(IRANMR .EQ. 0) IRANMR = 97
+      IF(JRANMR .EQ. 0) JRANMR = 97
+      RANC = RANC - RANCD
+      IF(RANC .LT. 0D0) RANC = RANC + RANCM
+      UNI = UNI - RANC
+      IF(UNI .LT. 0D0) UNI = UNI + 1D0
+      RVEC = UNI
+      END
 
-        SUBROUTINE RMARIN(IJ,KL)
-C       -----------------
-C       Initializing routine for RANMAR, must be called before
-C        generating
-C       any pseudorandom numbers with RANMAR. The input values should
-C        be in
-C       the ranges 0<=ij<=31328 ; 0<=kl<=30081
-        IMPLICIT REAL*8(A-H,O-Z)
-        COMMON/ RASET1 / RANU(97),RANC,RANCD,RANCM
-        COMMON/ RASET2 / IRANMR,JRANMR
-        SAVE /RASET1/,/RASET2/
-C       This shows correspondence between the simplified input seeds
-C        IJ, KL
-C       and the original Marsaglia-Zaman seeds I,J,K,L.
-C       To get the standard values in the Marsaglia-Zaman paper
-C        (i=12,j=34
-C       k=56,l=78) put ij=1802, kl=9373
-        I = MOD( IJ/177 , 177 ) + 2
-        J = MOD( IJ     , 177 ) + 2
-        K = MOD( KL/169 , 178 ) + 1
-        L = MOD( KL     , 169 )
-        DO 300 II = 1 , 97
-        S =  0D0
-        T = .5D0
-        DO 200 JJ = 1 , 24
-        M = MOD( MOD(I*J,179)*K , 179 )
-        I = J
-        J = K
-        K = M
-        L = MOD( 53*L+1 , 169 )
-        IF(MOD(L*M,64) .GE. 32) S = S + T
-        T = .5D0*T
- 200    CONTINUE
-        RANU(II) = S
- 300    CONTINUE
-        RANC  =   362436D0 / 16777216D0
-        RANCD =  7654321D0 / 16777216D0
-        RANCM = 16777213D0 / 16777216D0
-        IRANMR = 97
-        JRANMR = 33
-        END
+      SUBROUTINE RMARIN(IJ,KL)
+C     -----------------
+C     Initializing routine for RANMAR, must be called before generating
+C     any pseudorandom numbers with RANMAR. The input values should be
+C      in
+C     the ranges 0<=ij<=31328 ; 0<=kl<=30081
+      IMPLICIT REAL*8(A-H,O-Z)
+      COMMON/ RASET1 / RANU(97),RANC,RANCD,RANCM
+      COMMON/ RASET2 / IRANMR,JRANMR
+      SAVE /RASET1/,/RASET2/
+C     This shows correspondence between the simplified input seeds IJ,
+C      KL
+C     and the original Marsaglia-Zaman seeds I,J,K,L.
+C     To get the standard values in the Marsaglia-Zaman paper
+C      (i=12,j=34
+C     k=56,l=78) put ij=1802, kl=9373
+      I = MOD( IJ/177 , 177 ) + 2
+      J = MOD( IJ     , 177 ) + 2
+      K = MOD( KL/169 , 178 ) + 1
+      L = MOD( KL     , 169 )
+      DO 300 II = 1 , 97
+      S =  0D0
+      T = .5D0
+      DO 200 JJ = 1 , 24
+      M = MOD( MOD(I*J,179)*K , 179 )
+      I = J
+      J = K
+      K = M
+      L = MOD( 53*L+1 , 169 )
+      IF(MOD(L*M,64) .GE. 32) S = S + T
+      T = .5D0*T
+ 200  CONTINUE
+      RANU(II) = S
+ 300  CONTINUE
+      RANC  =   362436D0 / 16777216D0
+      RANCD =  7654321D0 / 16777216D0
+      RANCM = 16777213D0 / 16777216D0
+      IRANMR = 97
+      JRANMR = 33
+      END
 
 
 

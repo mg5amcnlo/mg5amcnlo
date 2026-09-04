@@ -14,7 +14,7 @@ C
     IMPLICIT NONE
     double precision RHEL
     double precision RCOL
-    integer channel, proc_id, hel_selected, icol
+    integer channel, proc_id, hel_selected, icol, ivec
 C  
 C CONSTANTS
 C  
@@ -60,7 +60,6 @@ C LOCAL VARIABLES
 C  
         INTEGER NHEL(NEXTERNAL,NCOMB)
 		INTEGER I, II, J ,JJ
-        INTEGER IVEC
         INTEGER ISHEL
         REAL*8 R,SUMHEL,TS(NCOMB), T
 		REAL*8 HWGT,XTOT

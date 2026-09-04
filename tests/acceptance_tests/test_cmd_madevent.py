@@ -1036,8 +1036,21 @@ C
         self.cmd_line.exec_cmd('decay_events run_01 -f')
         val1 = self.cmd_line.results.current['cross']
         err1 = self.cmd_line.results.current['error']
-        target = 440.779
-        self.assertTrue(misc.equal(target, val1, 4*err1))          
+        # Not the production 440.779 any more. BR(t -> w+ b) is 1 to seven
+        # digits, so the decayed cross-section used to be the production one --
+        # but MadSpin draws the top's virtuality only inside +- BW_cut widths of
+        # the pole and now says so: the reported sigma carries the fraction of
+        # the Breit-Wigner that window keeps. One top is decayed here (t~ is not
+        # in the card and MadSpin does not auto-conjugate), so the factor is a
+        # single bw_retained_fraction(173.0, 1.491257, 15) = 0.9786983 and
+        # 440.779 -> 431.39, i.e. -2.13%.
+        #
+        # The 4*err1 band is +-4.3% on a 100-event run, so the old number still
+        # fitted inside it. That is exactly why it is updated rather than left:
+        # a tolerance wide enough to hide a systematic shift is not a check that
+        # the shift is right.
+        target = 431.39
+        self.assertTrue(misc.equal(target, val1, 4*err1))
              
         
         
@@ -1336,18 +1349,20 @@ class TestMEfromfile(unittest.TestCase):
         command.close()
         
         fsock = open(pjoin(self.path, 'madspin_card.dat'), 'w')
-        fsock.write("""decay w+ > j j
+        fsock.write("""set spinmode madspin
+        decay w+ > j j
         decay w- > e- ve~
         launch
         """)
         fsock.close()
         fsock = open(pjoin(self.path, 'madspin_card2.dat'), 'w')
-        fsock.write("""decay w+ > j j
+        fsock.write("""set spinmode madspin
+        decay w+ > j j
         decay w- > j j
         launch
         """)
-        fsock.close()                
-        subprocess.call([sys.executable, pjoin(_file_path, os.path.pardir,'bin','mg5_aMC'), 
+        fsock.close()
+        subprocess.call([sys.executable, pjoin(_file_path, os.path.pardir,'bin','mg5_aMC'),
                          pjoin(self.path, 'cmd')],
                          cwd=pjoin(_file_path, os.path.pardir),
                         stdout=stdout,stderr=stdout)     
@@ -1358,13 +1373,254 @@ class TestMEfromfile(unittest.TestCase):
         #logger.info('\nMS info: the number of events in the html file is not (always) correct after MS\n')
         self.check_parton_output('run_01_decayed_2', cross=100521.52517, error=8e+02,target_event=1000)
         self.check_pythia_output(run_name='run_01_decayed_1')
-        
+
         #check the first decayed events for energy-momentum conservation.
-        
-        
+
+
         self.assertEqual(cwd, os.getcwd())
-        
-        
+
+
+    def test_wj_production_with_ms_decay(self):
+        """A run to test madspin (inline and offline) on p p > w+ j and p p > w- j.
+
+        Same as test_w_production_with_ms_decay but with an extra jet at
+        production, so the production process is 2 -> 2 (the W recoils against
+        the jet). This exercises the spinmode=madspin reshuffling path: a fresh
+        Breit-Wigner W mass is sampled and the production momenta are reshuffled
+        before accept/reject (unlike the 2 -> 1 w+/w- case, which stays onshell).
+        """
+
+        cwd = os.getcwd()
+
+        if logging.getLogger('madgraph').level <= 20:
+            stdout=None
+            stderr=None
+        else:
+            devnull =open(os.devnull,'w')
+            stdout=devnull
+            stderr=devnull
+
+        if logging.getLogger('madgraph').level > 20:
+            stdout = devnull
+        else:
+            stdout= None
+
+        #
+        #  START REAL CODE
+        #
+        command = open(pjoin(self.path, 'cmd'), 'w')
+        command.write("""import model sm
+        set automatic_html_opening False --no_save
+        set notification_center False --no_save
+        generate p p > w+ j
+        add process p p > w- j
+        output %(path)s
+        launch
+        madspin=ON
+        analysis=OFF
+        shower=pythia8
+        %(path)s/../madspin_card.dat
+        set nevents 1000
+        set lhaid 10042
+        set pdlabel lhapdf
+        launch -i
+        decay_events run_01
+        %(path)s/../madspin_card2.dat
+        """ % {'path':self.run_dir})
+        command.close()
+
+        fsock = open(pjoin(self.path, 'madspin_card.dat'), 'w')
+        fsock.write("""set spinmode madspin
+        decay w+ > j j
+        decay w- > e- ve~
+        launch
+        """)
+        fsock.close()
+        fsock = open(pjoin(self.path, 'madspin_card2.dat'), 'w')
+        fsock.write("""set spinmode madspin
+        decay w+ > j j
+        decay w- > j j
+        launch
+        """)
+        fsock.close()
+        subprocess.call([sys.executable, pjoin(_file_path, os.path.pardir,'bin','mg5_aMC'),
+                         pjoin(self.path, 'cmd')],
+                         cwd=pjoin(_file_path, os.path.pardir),
+                        stdout=stdout,stderr=stdout)
+
+        # Cross-section reference values are omitted (cross=0 skips the check):
+        # p p > w+/- j differ from the inclusive p p > w+/- of
+        # test_w_production_with_ms_decay and need a reference run to pin down.
+        # The event-count targets are driven by the (unchanged) W branching
+        # ratios, so they match the 2 -> 1 test: ~666 kept for the mixed-BR
+        # card (w+ > j j vs w- > e- ve~) and the full 1000 for the all-jets card.
+        self.check_parton_output(target_event=1000)
+        self.check_parton_output('run_01_decayed_1', target_event=666, delta_event=40)
+        self.check_parton_output('run_01_decayed_2', target_event=1000)
+        self.check_pythia_output(run_name='run_01_decayed_1')
+
+        #check the first decayed events for energy-momentum conservation.
+
+
+        self.assertEqual(cwd, os.getcwd())
+
+
+    def test_w_production_with_PA_decay(self):
+        """A run to test MadSpin PA (pole-approximation/density) mode on p p > w+ / w-.
+
+        Inline-only counterpart of test_w_production_with_PA_decay_inline_then_offline.
+        Exercises the new PA path through run_onshell(density_method=True).
+        The madspin card has different BRs for w+ (-> j j) vs w- (-> e- ve~)
+        and therefore exercises the BR-equalization / loose-decay branch
+        (events with the smaller-BR pdg are dropped to keep the output
+        unweighted).
+        """
+
+        cwd = os.getcwd()
+
+        if logging.getLogger('madgraph').level <= 20:
+            stdout=None
+            stderr=None
+        else:
+            devnull =open(os.devnull,'w')
+            stdout=devnull
+            stderr=devnull
+
+        if logging.getLogger('madgraph').level > 20:
+            stdout = devnull
+        else:
+            stdout= None
+
+        #
+        #  START REAL CODE
+        #
+        command = open(pjoin(self.path, 'cmd'), 'w')
+        command.write("""import model sm
+        set automatic_html_opening False --no_save
+        set notification_center False --no_save
+        generate p p > w+
+        add process p p > w-
+        output %(path)s
+        launch
+        madspin=ON
+        analysis=OFF
+        shower=OFF
+        %(path)s/../madspin_card.dat
+        set nevents 1000
+        set lhaid 10042
+        set pdlabel lhapdf
+        """ % {'path':self.run_dir})
+        command.close()
+
+        fsock = open(pjoin(self.path, 'madspin_card.dat'), 'w')
+        fsock.write("""set spinmode PA
+        decay w+ > j j
+        decay w- > e- ve~
+        launch
+        """)
+        fsock.close()
+        subprocess.call([sys.executable, pjoin(_file_path, os.path.pardir,'bin','mg5_aMC'),
+                         pjoin(self.path, 'cmd')],
+                         cwd=pjoin(_file_path, os.path.pardir),
+                        stdout=stdout,stderr=stdout)
+
+        # Parton-level production reference (unchanged from the madspin test).
+        self.check_parton_output(cross=150770.0, error=7.4e+02, target_event=1000)
+        # Mixed-BR case: BR equalization drops the w- -> e- ve~ events so the
+        # effective BR is ~ (sigma_w+ * BR(w+->jj) + sigma_w- * BR(w-->eve)) / sigma_tot,
+        # matching the legacy madspin result up to MC noise.
+        self.check_parton_output('run_01_decayed_1', cross=66344.2066122, error=1.5e+03,
+                                 target_event=666, delta_event=80)
+
+        self.assertEqual(cwd, os.getcwd())
+
+
+    def test_w_production_with_PA_decay_inline_then_offline(self):
+        """PA-mode MadSpin run inline first with one set of decay channels,
+        then again offline via ``decay_events`` with a different set of
+        channels, on a mixed w+/w- sample.
+
+        Mirrors ``test_w_production_with_ms_decay`` (same inline+offline
+        sequence on the legacy ``spinmode=madspin`` path).
+
+        Used to raise ``KeyError: (-24, 1, -2)`` in ``get_pdir`` because
+        every MadSpin instance compiled its matrix elements to the same
+        ``madspin_me/SubProcesses/`` directory, and macOS' ``dlopen``
+        caches loaded libraries by install_name
+        (``@rpath/liball_2me.dylib``) — the second run kept reusing the
+        first run's already-loaded matrix elements regardless of what was
+        on disk. Fixed by giving each MadSpinInterface instance a unique
+        ``madspin_me_<N>`` output subdir and patching the dylib's
+        install_name with ``install_name_tool`` so each run gets a fresh
+        in-memory library.
+        """
+
+        cwd = os.getcwd()
+
+        if logging.getLogger('madgraph').level <= 20:
+            stdout=None
+            stderr=None
+        else:
+            devnull =open(os.devnull,'w')
+            stdout=devnull
+            stderr=devnull
+
+        if logging.getLogger('madgraph').level > 20:
+            stdout = devnull
+        else:
+            stdout= None
+
+        command = open(pjoin(self.path, 'cmd'), 'w')
+        command.write("""import model sm
+        set automatic_html_opening False --no_save
+        set notification_center False --no_save
+        generate p p > w+
+        add process p p > w-
+        output %(path)s
+        launch
+        madspin=ON
+        analysis=OFF
+        shower=OFF
+        %(path)s/../madspin_card.dat
+        set nevents 1000
+        set lhaid 10042
+        set pdlabel lhapdf
+        launch -i
+        decay_events run_01
+        %(path)s/../madspin_card2.dat
+        """ % {'path':self.run_dir})
+        command.close()
+
+        fsock = open(pjoin(self.path, 'madspin_card.dat'), 'w')
+        fsock.write("""set spinmode PA
+        decay w+ > j j
+        decay w- > e- ve~
+        launch
+        """)
+        fsock.close()
+        fsock = open(pjoin(self.path, 'madspin_card2.dat'), 'w')
+        fsock.write("""set spinmode PA
+        decay w+ > j j
+        decay w- > j j
+        launch
+        """)
+        fsock.close()
+        subprocess.call([sys.executable, pjoin(_file_path, os.path.pardir,'bin','mg5_aMC'),
+                         pjoin(self.path, 'cmd')],
+                         cwd=pjoin(_file_path, os.path.pardir),
+                        stdout=stdout,stderr=stdout)
+
+        self.check_parton_output(cross=150770.0, error=7.4e+02, target_event=1000)
+        # Mixed-BR card: BR equalization drops part of the w- -> e- ve~ events.
+        self.check_parton_output('run_01_decayed_1', cross=66344.2066122, error=1.5e+03,
+                                 target_event=666, delta_event=80)
+        # Identical-BR card: no drops.
+        self.check_parton_output('run_01_decayed_2', cross=100521.52517, error=8e+02,
+                                 target_event=1000)
+
+        self.assertEqual(cwd, os.getcwd())
+
+
     def test_DY_onejet(self):
         """
         This test is checking that the scale in auto_dsig are correctly assigned
@@ -1822,7 +2078,8 @@ set draw_rivet_plots True
                                     '%s/Cards/run_card_default.dat'% self.run_dir)
 
         cmd.run_cmd('launch -f')
-        self.check_parton_output(cross=15.72, error=0.514)
+        
+        self.check_parton_output(cross=15.73, error=0.514)
 
     def _get_delphes_path(self):
         """Return the configured delphes_path from the MG5 configuration, or

@@ -1746,11 +1746,18 @@ class MultiProcess(base_objects.PhysicsObject):
                 if not all(istags):
                     raise MadGraph5Error("Tagging only one initial-state particle is not allowed")
                 islegs = [\
-                        fks_tag.TagLeg({'id':id, 'state': False, 'polarization': isleg['polarization'], 'onium': isleg['onium'], 'is_tagged': tag}) \
+                        fks_tag.TagLeg({'id':id, 'state': False, 
+                                        'polarization': isleg['polarization'],
+                                        'onium': isleg['onium'],
+                                        'offshell': isleg['offshell'], 
+                                        'is_tagged': tag}) \
                         for id, isleg, tag in zip(prod, islegs_orig, istags)]
             else:
                 islegs = [\
-                        base_objects.Leg({'id':id, 'state': False, 'polarization': islegs_orig[i]['polarization'], 'onium': islegs_orig[i]['onium']})
+                        base_objects.Leg({'id':id, 'state': False, 
+                                          'polarization': islegs_orig[i]['polarization'],
+                                          'onium': islegs_orig[i]['onium'],
+                                          'offshell': islegs_orig[i]['offshell']}) \
                     for i,id in enumerate(prod)]
 
             # check for longitudinal photon
@@ -1782,7 +1789,10 @@ class MultiProcess(base_objects.PhysicsObject):
                 
                 if not fstags:   
                     leg_list.extend([\
-                            base_objects.Leg({'id':id, 'state': True, 'polarization': fsleg['polarization'], 'onium': fsleg['onium']}) \
+                            base_objects.Leg({'id':id, 'state': True, 
+                                              'polarization': fsleg['polarization'],
+                                              'onium': fsleg['onium'],
+                                              'offshell': fsleg['offshell']}) \
                             for id, fsleg in zip(prod, fslegs)])
                 else:
                     leg_list.extend([\
@@ -1796,7 +1806,7 @@ class MultiProcess(base_objects.PhysicsObject):
                 # check for longitudinal photon
                 invalid = False
                 for l in legs[len(islegs):]:
-                    if 0 in l['polarization'] and  masses[l['id']] == "ZERO":
+                    if 0 in l['polarization'] and  masses[l['id']] == "ZERO" and not l['offshell']:
                         l['polarization'] =list(l['polarization'])
                         l['polarization'].remove(0)
                         if len(l['polarization']) == 0:

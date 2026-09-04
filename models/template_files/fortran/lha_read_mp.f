@@ -436,6 +436,9 @@ c
       integer fine
       integer dirup,i
 
+      character(512) ParamCardPath
+      common/ParamCardPath/ParamCardPath
+
 c-----
 c     Begin Code
 c-----
@@ -448,6 +451,9 @@ c
       open(unit=lun,file=filename,status='old',ERR=20)
 c      write(*,*) 'read model file ',filename
       fopened=.true.
+      if (filename(len(trim(filename))-13:len(trim(filename))).eq."param_card.dat") then
+        ParamCardPath = filename(1:len(trim(filename))-15)
+      endif
       return
       
 20    tempname=filename
