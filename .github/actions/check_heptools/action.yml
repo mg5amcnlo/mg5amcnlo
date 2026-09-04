@@ -1,0 +1,42 @@
+name: Check HEPTools cache content
+description: >
+  Verify that the requested tools are really present in the HEPTools install
+  prefix.  mg5_aMC exits 0 even when "install <tool>" fails (truncated
+  download, broken build, ...), so without this check a cache-building job
+  finishes green while saving a cache with a tool missing.
+
+inputs:
+  tools:
+    description: >
+      Space separated list of components to check, among:
+      lhapdf boost pythia8 emela contur looptools
+    required: true
+  prefix:
+    description: 'HEPTools install prefix to inspect (default ~/.cache/HEPtools)'
+    required: false
+    default: ''
+  mode:
+    description: >
+      "fatal" (default) makes the step fail on the first incomplete component,
+      "report" only emits warnings and sets the "valid" output.
+    required: false
+    default: 'fatal'
+
+outputs:
+  valid:
+    description: 'true when every requested component is complete'
+    value: ${{ steps.check.outputs.valid }}
+
+runs:
+  using: composite
+  steps:
+    - name: Check HEPTools content
+      id: check
+      shell: bash
+      env:
+        HEPTOOLS_PREFIX: ${{ inputs.prefix }}
+        CHECK_MODE: ${{ inputs.mode }}
+        CHECK_TOOLS: ${{ inputs.tools }}
+      # invoked through "bash" so the check does not depend on the executable
+      # bit surviving the checkout
+      run: bash "${{ github.action_path }}/check_heptools.sh" $CHECK_TOOLS
