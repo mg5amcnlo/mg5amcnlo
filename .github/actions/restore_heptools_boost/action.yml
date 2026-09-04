@@ -1,0 +1,33 @@
+name: Restore boost cache (if it exists and in any case configure even if it does not)
+description: Restores boost (stacked on lhapdf) from cache and sets MG5 accordingly
+
+inputs:
+  setup_only:
+    required: false
+    default: "false"
+
+runs:
+  using: composite
+  steps:
+
+    # Call previous cache to ensure that environment is setup correctly
+    - name: restore lhapdf
+      uses: ./.github/actions/restore_heptools_lhapdf
+      with:
+        setup_only: ${{ inputs.setup_only }}
+
+    - name: Set cache key
+      run: echo "CACHE_KEY=boost-$ImageOS" >> $GITHUB_ENV
+      shell: bash
+
+    # check if the cache exists (if not an higher level will be called)
+    - uses: actions/cache/restore@v5
+      if: ${{ inputs.setup_only != 'true' }}
+      with:
+        path: ~/.cache/HEPtools
+        key: ${{ env.CACHE_KEY }}
+
+    # Nothing to write into mg5_configuration.txt: boost has no MG5 option.
+    # HEPToolInstaller finds it on its own as soon as
+    # <heptools_install_dir>/boost/lib/libboost_system.so is present, and then
+    # skips the (~6 min, download-flaky) boost build when installing eMELA.
