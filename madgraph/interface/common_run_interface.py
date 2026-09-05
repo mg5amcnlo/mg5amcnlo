@@ -398,6 +398,8 @@ class CheckValidForCmd(object):
                 if nodefault:
                     return False
                 else:
+                    if self._has_py8_parallel_splits(prev_tag):
+                        return 'RECOVER_PY8_SPLITS'
                     self.help_pgs()
                     raise self.InvalidCmd('''No file file pythia_events.* currently available
             Please specify a valid run_name''')
@@ -412,7 +414,9 @@ class CheckValidForCmd(object):
                 filepath = pjoin(self.me_dir,'Events',self.run_name, '%s_pythia_events.hep.gz' % prev_tag)
             elif os.path.exists(pjoin(self.me_dir,'Events',self.run_name, '%s_pythia8_events.hepmc' % prev_tag)):
                 filepath = pjoin(self.me_dir,'Events',self.run_name, '%s_pythia8_events.hepmc.gz' % prev_tag)
-            else:                
+            else:
+                if self._has_py8_parallel_splits(prev_tag):
+                    return 'RECOVER_PY8_SPLITS'
                 raise self.InvalidCmd('No events file corresponding to %s run with tag %s.:%s '\
                     % (self.run_name, prev_tag, 
                        pjoin(self.me_dir,'Events',self.run_name, '%s_pythia_events.hep.gz' % prev_tag)))
@@ -3386,7 +3390,36 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
     ############################################################################
     # End of MadAnalysis5 related function
     ############################################################################
-    
+
+    def _has_py8_parallel_splits(self, tag):
+        """Return the PY8_parallelization directory path if leftover Pythia8
+        split HEPMC files are present for the given run tag, otherwise False.
+        Used by the delphes command recovery path so that a crashed
+        parallel run can still be processed with parallel Delphes on the
+        split HEPMC files instead of requiring a full re-run."""
+
+        parallelization_dir = pjoin(self.me_dir, 'Events', self.run_name,
+                                    'PY8_parallelization')
+        if not os.path.isdir(parallelization_dir):
+            return False
+        split_dirs = sorted(glob.glob(pjoin(parallelization_dir, 'split_*')))
+        split_dirs = [d for d in split_dirs if os.path.isdir(d) and
+                      os.path.isfile(pjoin(d, 'events.hepmc'))]
+        if not split_dirs:
+            return False
+        return parallelization_dir
+
+    def _try_run_delphes_on_splits_recovery(self, tag):
+        """Child-class hook for recovering a crashed parallel Delphes run.
+        When leftover split HEPMC files exist (see _has_py8_parallel_splits)
+        this should run Delphes on them, merge the ROOT outputs with hadd
+        and (when the pythia8 card asked for it) clean up the split HEPMC
+        files afterwards.
+
+        Returns True on success, False if recovery is not possible. Base
+        class default returns False."""
+        return False
+
     def do_delphes(self, line):
         """ run delphes and make associate root file/plot """
 
@@ -3406,7 +3439,36 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         filepath = self.check_delphes(args, nodefault=no_default)
         if no_default and not filepath:
             return # no output file but nothing to do either.
-        
+
+        tag = self.run_tag
+
+        # Recovery path: no merged HEPMC file exists, but leftover Pythia8
+        # split HEPMC files do (PY8_parallelization/split_*/events.hepmc).
+        # Let the child class run Delphes on the splits in parallel and
+        # merge the ROOT outputs with hadd.
+        if filepath == 'RECOVER_PY8_SPLITS':
+            logger.info('No merged HEPMC output found for run %s (tag %s); '
+                        'detected leftover Pythia8 parallelization splits. '
+                        'Running Delphes on the split HEPMC files in parallel...'
+                        % (self.run_name, tag))
+            if not self._try_run_delphes_on_splits_recovery(tag):
+                raise self.InvalidCmd(
+                    'Parallel Delphes recovery on the split HEPMC files '
+                    'failed. Either re-run Pythia8 (to regenerate the merged '
+                    'HEPMC) or run Delphes manually on the individual split '
+                    'files under Events/%s/PY8_parallelization/split_*/'
+                    % self.run_name)
+            # The recovery method has already produced the final ROOT and
+            # the 'delphes done' status. Skip the standard single-file run.
+            madir = self.options['madanalysis_path']
+            td = self.options['td_path']
+            if os.path.exists(pjoin(self.me_dir, 'Events', self.run_name,
+                                    '%s_delphes_events.lhco' % tag)):
+                self.create_plot('Delphes')
+                misc.gzip(pjoin(self.me_dir, 'Events', self.run_name,
+                                '%s_delphes_events.lhco' % tag))
+            return
+
         self.update_status('prepare delphes run', level=None)
 
         if os.path.exists(pjoin(self.options['delphes_path'], 'data')):
