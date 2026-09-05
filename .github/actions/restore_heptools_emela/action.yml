@@ -1,5 +1,5 @@
-name: Restore lhapdf cache
-description: Restores lhapdf from cache and sets MG5 accordingly
+name: Restore eMELA cache
+description: Restores eMELA (stacked on boost/lhapdf) from cache and sets MG5 accordingly
 
 inputs:
   setup_only:
@@ -9,8 +9,11 @@ inputs:
 runs:
   using: composite
   steps:
-    - name: restore lhapdf
-      uses: ./.github/actions/restore_heptools_lhapdf
+    # boost itself pulls in lhapdf, so this restores the whole chain. eMELA
+    # needs boost at build time; keeping it in a separate cache means a failed
+    # eMELA build no longer forces a boost rebuild too.
+    - name: restore boost (and lhapdf)
+      uses: ./.github/actions/restore_heptools_boost
       with:
         setup_only:  ${{ inputs.setup_only }}
 
