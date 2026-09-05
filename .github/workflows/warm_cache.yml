@@ -1,4 +1,20 @@
 # .github/workflows/warm-caches.yml
+#
+# Only the default branch (3.x) may delete or (re)save the shared caches.
+#
+# A GitHub Actions cache is readable from the branch that created it and from
+# the default branch, and nowhere else, while "gh cache delete <key>" removes
+# the entry for *every* ref. A run on a feature or release branch that deleted
+# heptools-$KEY and saved it again therefore did not refresh the cache: it moved
+# it out of 3.x and into that branch, and every other branch started missing it.
+# That is not hypothetical -- runs on madspin_density (2026-09-03) and on 3.8.0
+# (2026-09-04) each took the heptools caches away and left ~20 NLO/MadLoop/
+# shower acceptance jobs failing on every other branch until 3.x rebuilt them.
+#
+# The push trigger above fires on any branch that touches these paths, so the
+# guard has to live on the steps that mutate the cache rather than on the
+# trigger: the delete/save steps below are gated on refs/heads/3.x. Runs on
+# other branches still build and verify everything, they just do not write.
 name: Warm all caches
 
 permissions:
@@ -51,7 +67,7 @@ jobs:
       # input is truthy on its own; on push/schedule the whole inputs context
       # is null, so these steps stay skipped there.
       - name: Delete heptools related cache
-        if: inputs.reset_heptools
+        if: inputs.reset_heptools && github.ref == 'refs/heads/3.x'
         run: | 
           gh cache delete heptools-${{ env.CACHE_KEY }} --repo $GITHUB_REPOSITORY || true
           gh cache delete lhapdf-${{ env.CACHE_KEY }} --repo $GITHUB_REPOSITORY || true
@@ -63,7 +79,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
 
       - name: Delete ufo cache
-        if: inputs.reset_ufo
+        if: inputs.reset_ufo && github.ref == 'refs/heads/3.x'
         run: |
           gh cache delete pip-numpy-${{ env.CACHE_KEY }} --repo $GITHUB_REPOSITORY || true
           gh cache delete ufomodel-${{ env.CACHE_KEY }} --repo $GITHUB_REPOSITORY || true
@@ -74,7 +90,7 @@ jobs:
       # large and stable). They are only rebuilt on explicit request, so the
       # cache can be cleaned independently of the heptools one.
       - name: Delete root/delphes cache
-        if: inputs.reset_delphes
+        if: inputs.reset_delphes && github.ref == 'refs/heads/3.x'
         run: |
           gh cache delete root-${{ env.CACHE_KEY }} --repo $GITHUB_REPOSITORY || true
           gh cache delete delphes-${{ env.CACHE_KEY }} --repo $GITHUB_REPOSITORY || true
@@ -583,19 +599,19 @@ jobs:
       # the new content is actually saved. Only do this (and the save) once all
       # sub-caches succeeded, so a partial rebuild never replaces a good cache.
       - name: Delete previous combined cache (so the fresh one can be saved)
-        if: env.ALL_SUBCACHES_OK == 'true'
+        if: env.ALL_SUBCACHES_OK == 'true' && github.ref == 'refs/heads/3.x'
         run: gh cache delete heptools-${{ env.CACHE_KEY }} --repo $GITHUB_REPOSITORY || true
         env:
           GH_TOKEN: ${{ github.token }}
 
       - uses: actions/cache/save@v5
-        if: env.ALL_SUBCACHES_OK == 'true'
+        if: env.ALL_SUBCACHES_OK == 'true' && github.ref == 'refs/heads/3.x'
         with:
           path: ~/.cache/HEPtools
           key: heptools-${{ env.CACHE_KEY }}
 
       - name: Cleanup intermediate caches (only if all succeeded and verified)
-        if: env.ALL_SUBCACHES_OK == 'true'
+        if: env.ALL_SUBCACHES_OK == 'true' && github.ref == 'refs/heads/3.x'
         run: |
           gh cache delete lhapdf-${{ env.CACHE_KEY }} --repo $GITHUB_REPOSITORY || true
           gh cache delete boost-${{ env.CACHE_KEY }} --repo $GITHUB_REPOSITORY || true
