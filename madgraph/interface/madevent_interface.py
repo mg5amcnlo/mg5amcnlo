@@ -5356,6 +5356,25 @@ tar -czf split_$1.tar.gz split_$1
         if not split_hepmc:
             return False
 
+        # Before (re-)running Delphes on the splits, remove any leftover
+        # per-split ROOT / log file from a previous (possibly crashed) run.
+        # Stale outputs would otherwise leak into the hadd merge or cause the
+        # 'all outputs produced' success check to pass without actually
+        # re-running Delphes for that split.
+        for split_dir, _hepmc in split_hepmc:
+            stale_root = pjoin(split_dir, 'delphes_events.root')
+            stale_log = pjoin(split_dir, 'delphes.log')
+            if os.path.isfile(stale_root):
+                try:
+                    os.remove(stale_root)
+                except OSError:
+                    pass
+            if os.path.isfile(stale_log):
+                try:
+                    os.remove(stale_log)
+                except OSError:
+                    pass
+
         card = pjoin(self.me_dir, 'Cards', 'delphes_card.dat')
         self.update_status('Running Delphes on Pythia8 splits', level=None)
 
@@ -5432,6 +5451,118 @@ tar -czf split_$1.tar.gz split_$1
         # Note: the 'delphes done' status/level is set by the caller after the
         # Pythia8 shower is marked finished, to keep the recorded run level in
         # the natural pythia8 -> delphes order.
+        return True
+
+    def _try_run_delphes_on_splits_recovery(self, tag):
+        """Recovery-path override of the CommonRunCmd hook. Called when the
+        standalone 'delphes' command cannot find a merged HEPMC event file
+        for the current run but leftover Pythia8 parallelization splits
+        (PY8_parallelization/split_*/events.hepmc) are present.
+
+        Runs Delphes on each split in parallel, merges the ROOT outputs with
+        hadd and (when the original pythia8 HEPMC setting requested it)
+        cleans up the split directory afterwards. This lets a user recover
+        from a crash during the parallel-Delphes fused path without
+        re-running Pythia8."""
+
+        parallelization_dir = pjoin(self.me_dir, 'Events', self.run_name,
+                                    'PY8_parallelization')
+        if not os.path.isdir(parallelization_dir):
+            return False
+        split_dirs = sorted(glob.glob(pjoin(parallelization_dir, 'split_*')))
+        split_dirs = [d for d in split_dirs if os.path.isdir(d) and
+                      os.path.isfile(pjoin(d, 'events.hepmc'))]
+        if not split_dirs:
+            return False
+
+        try:
+            import madgraph
+        except ImportError:
+            import internal.misc as misc
+        else:
+            import madgraph.various.misc as misc
+
+        # If nb_core_delphes is not explicitly set we still want the user's
+        # recovery run to benefit from parallelism on the splits: fall back
+        # to the same concurrency Pythia8 used (i.e. number of splits), but
+        # cap at the global nb_core / available CPUs.
+        if not hasattr(self, 'to_store'):
+            self.to_store = []
+
+        # Parse the pythia8 card HEPMC:output setting so we know later
+        # whether to remove/compress the split HEPMC files after success.
+        hepmc_output_setting = None
+        py8_card_path = pjoin(self.me_dir, 'Cards', 'pythia8_card.dat')
+        if os.path.isfile(py8_card_path):
+            for line in open(py8_card_path, 'r'):
+                if line.strip().startswith('HEPMCoutput:file'):
+                    if '=' in line:
+                        hepmc_output_setting = line.split('=', 1)[1].strip().lower()
+                    else:
+                        hepmc_output_setting = line.split(None, 1)[1].strip().lower()
+                    break
+        if hepmc_output_setting is None:
+            # Fall back to the parallelization copy written for the splits
+            py8_card0 = pjoin(parallelization_dir, 'PY8Card.dat')
+            if os.path.isfile(py8_card0):
+                for line in open(py8_card0, 'r'):
+                    if line.strip().startswith('HEPMCoutput:file'):
+                        if '=' in line:
+                            hepmc_output_setting = line.split('=', 1)[1].strip().lower()
+                        else:
+                            hepmc_output_setting = line.split(None, 1)[1].strip().lower()
+                        break
+
+        # Run the existing parallel-Delphes-on-splits implementation
+        # directly (bypassing is_delphes_fusion_active, which requires an
+        # explicit nb_core_delphes override — during interactive recovery
+        # the user already confirmed they want to run Delphes by typing
+        # the command, so that extra gate is not needed).
+        #
+        # Drop any pre-existing final ROOT / log first so a fresh hadd
+        # merge is produced and crash leftovers don't silently get re-used.
+        final_root = pjoin(self.me_dir, 'Events', self.run_name,
+                           '%s_delphes_events.root' % tag)
+        final_log  = pjoin(self.me_dir, 'Events', self.run_name,
+                           '%s_delphes.log' % tag)
+        for stale in (final_root, final_log):
+            if os.path.isfile(stale):
+                try:
+                    os.remove(stale)
+                except OSError:
+                    pass
+        ok = self.run_delphes_on_splits(split_dirs, parallelization_dir, tag)
+        if not ok:
+            return False
+
+        # Record the delphes-finished status the same way the normal path
+        # (do_delphes via the fused route) does.
+        self.update_status('delphes done', level='delphes', makehtml=False)
+
+        # Handle the original HEPMC storage directive from the pythia8 card.
+        # After a successful recovery the user typically wants the same
+        # cleanup that the standard path would have performed.
+        if hepmc_output_setting is not None:
+            spec = hepmc_output_setting.split('@')[0]
+            if spec.endswith('remove') or spec == 'hepmcremove':
+                # The original pythia8 run would have removed the merged HEPMC
+                # right after producing it; we already skipped the HEPMC merge
+                # earlier if the fused path was used, so in recovery simply
+                # drop the (now useless) split parallelization directory.
+                logger.info('HEPMC output configured for removal on the '
+                            'Pythia8 card; cleaning up the leftover split '
+                            'HEPMC parallelization directory.')
+                if os.path.isdir(parallelization_dir):
+                    shutil.rmtree(parallelization_dir)
+            elif spec.endswith('.gz'):
+                # In recovery the merged HEPMC was never written so there is
+                # nothing to compress; leave the split files alone in case the
+                # user wants them for a later re-processing.
+                pass
+            else:
+                # Plain 'hepmc' / 'auto' -> keep everything as-is.
+                pass
+
         return True
 
     def parse_PY8_log_file(self, log_file_path):
