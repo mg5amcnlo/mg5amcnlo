@@ -4,6 +4,9 @@ ANNOUNCEMENT:
    The 2.9.X LONG TERM STABLE version is now at end of life for bug fixing/support since December 2025.
    A new LTS (based on the current 3.5.X) is starting now and will act as the stable release for the coming years.
 
+3.8.0 (07/09/26):
+   OM: Bug fix custom files for cuts/scale/... were broken for NLO computation since 3.6.X
+
 3.7.3 (01/09/26):
     OM: MadSpin: the run_card me_frame and polbeam1/polbeam2 are now honoured by the
         density-based spinmodes (onshell/PA/madspin/full) and no longer only by the
