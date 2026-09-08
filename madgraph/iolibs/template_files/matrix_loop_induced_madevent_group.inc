@@ -106,6 +106,9 @@ C
  
     REAL*8 POL(2)
     COMMON/TO_POLARIZATION/ POL
+
+    INTEGER NB_SPIN_STATE_IN(2)
+    COMMON /NB_HEL_STATE/ NB_SPIN_STATE_IN
     
     INTEGER          ISUM_HEL
     LOGICAL                    MULTI_CHANNEL
@@ -216,10 +219,12 @@ C Of course this option can also not be used for polarized beams.
             ENDDO
 
 			DO JJ=1,nincoming
+c NB_SPIN_STATE_IN/2 avoids a double counting
+c of an explicit polarisation in the process
                IF(POL(JJ).NE.1d0.AND.NHEL(JJ,I).EQ.INT(SIGN(1d0,POL(JJ)))) THEN
-                  T=T*ABS(POL(JJ))
+                  T=T*ABS(POL(JJ))*NB_SPIN_STATE_IN(JJ)/2d0
                ELSE IF(POL(JJ).NE.1d0)THEN
-                  T=T*(2d0-ABS(POL(JJ)))
+                  T=T*(2d0-ABS(POL(JJ)))*NB_SPIN_STATE_IN(JJ)/2d0
                ENDIF
             ENDDO
 			IF (ISUM_HEL.NE.0.and.DS_get_dim_status('Helicity').eq.0.and.ALLOW_HELICITY_GRID_ENTRIES) then
@@ -281,9 +286,9 @@ C           The helicity configuration was chosen already by genps and put in a 
 
 			DO JJ=1,nincoming
               IF(POL(JJ).NE.1d0.AND.NHEL(JJ,I).EQ.INT(SIGN(1d0,POL(JJ)))) THEN
-                T=T*ABS(POL(JJ))
+                T=T*ABS(POL(JJ))*NB_SPIN_STATE_IN(JJ)/2d0
               ELSE IF(POL(JJ).NE.1d0)THEN
-                T=T*(2d0-ABS(POL(JJ)))
+                T=T*(2d0-ABS(POL(JJ)))*NB_SPIN_STATE_IN(JJ)/2d0
               ENDIF
             ENDDO
 

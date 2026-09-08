@@ -3150,6 +3150,13 @@ class LoopInducedExporterME(LoopProcessOptimizedExporterFortranSA):
         replace_dict['beamone_helavgfactor'], replace_dict['beamtwo_helavgfactor'] =\
                                        matrix_element.get_beams_hel_avg_factor()
 
+        # number of helicity states actually kept for each beam (can be reduced
+        # by an explicit polarisation in the process definition). Used to avoid
+        # applying the beam polarisation of the run_card on top of it.
+        s1, s2 = matrix_element.get_spin_state_initial()
+        replace_dict['nb_spin_state1'] = s1
+        replace_dict['nb_spin_state2'] = s2
+
         # Extract helicity lines
         helicity_lines = self.get_helicity_lines(matrix_element)
         replace_dict['helicity_lines'] = helicity_lines
