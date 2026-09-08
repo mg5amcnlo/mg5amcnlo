@@ -136,7 +136,7 @@ c     other parameter
      #                         muF2_id_str,QES_id_str
       character*10 MonteCarlo
       character*100 path
-      character*1000 buffer,buffer_lc,buffer2
+      character*250 buffer,buffer_lc,buffer2
       integer nread
       logical complete,eof
       integer event_id
@@ -1299,10 +1299,12 @@ c
 c Copy the header (banner) of the LHE file open on unit infile to the
 c one open on unit outfile, updating the number of events. Records
 c longer than buff2 are copied in several chunks, so that long entries
-c of the run_card (e.g. systematics_arguments) are not truncated.
+c of the run_card (e.g. systematics_arguments) are not truncated: the
+c length of buff2 only sets how much of a record is inspected for the
+c 'nevents' and 'ickkw' entries (both are short).
       implicit none
       include 'run.inc'
-      character*1000 buff2
+      character*250 buff2
       integer nevts,infile,outfile,nread
       logical complete,eof
 c
@@ -1333,7 +1335,9 @@ c
 
       subroutine read_record_head(iunit,buff,nread,complete,eof)
 c Read into buff (at most len(buff) characters of) the next record of
-c the file open on unit iunit. nread is the number of characters
+c the file open on unit iunit. len(buff) is not a limit on the record
+c length, it only sets how much of it is read at a time.
+c nread is the number of characters
 c actually read and buff is blank-padded beyond that. complete is
 c .true. if the whole record has been read; when it is .false. the
 c remaining part of the record is still to be read from iunit (use
@@ -1362,7 +1366,7 @@ c Copy to ofile whatever is left of the record being read on unit
 c iunit, and terminate the record on ofile.
       implicit none
       integer iunit,ofile,nread
-      character*1000 chunk
+      character*250 chunk
       logical complete,eof
 c
       do
@@ -1380,7 +1384,7 @@ c
 c Discard whatever is left of the record being read on unit iunit.
       implicit none
       integer iunit,nread
-      character*1000 chunk
+      character*250 chunk
       logical complete,eof
 c
       do
@@ -1414,7 +1418,7 @@ c Copy the whole content of the file open on unit iunit to ofile,
 c preserving records of arbitrary length.
       implicit none
       integer iunit,ofile,nread
-      character*1000 buff
+      character*250 buff
       logical complete,eof
 c
       do
