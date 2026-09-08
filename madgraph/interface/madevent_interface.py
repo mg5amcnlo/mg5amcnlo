@@ -5358,22 +5358,24 @@ tar -czf split_$1.tar.gz split_$1
 
         # Before (re-)running Delphes on the splits, remove any leftover
         # per-split ROOT / log file from a previous (possibly crashed) run.
-        # Stale outputs would otherwise leak into the hadd merge or cause the
-        # 'all outputs produced' success check to pass without actually
-        # re-running Delphes for that split.
+        # Delphes opens its output with ROOT's CREATE mode and refuses to
+        # overwrite an existing file, and a surviving stale ROOT also
+        # satisfies the required_output check of the job below: the split
+        # would be reported as done and the old file silently hadd-ed into
+        # the final sample. A stale output we cannot remove is therefore a
+        # hard failure, not something to run through.
         for split_dir, _hepmc in split_hepmc:
-            stale_root = pjoin(split_dir, 'delphes_events.root')
-            stale_log = pjoin(split_dir, 'delphes.log')
-            if os.path.isfile(stale_root):
+            for stale in (pjoin(split_dir, 'delphes_events.root'),
+                          pjoin(split_dir, 'delphes.log')):
+                if not os.path.isfile(stale):
+                    continue
                 try:
-                    os.remove(stale_root)
-                except OSError:
-                    pass
-            if os.path.isfile(stale_log):
-                try:
-                    os.remove(stale_log)
-                except OSError:
-                    pass
+                    os.remove(stale)
+                except OSError as error:
+                    logger.warning('Could not remove the stale Delphes output '
+                                   '%s (%s); running the standard Delphes step '
+                                   'instead.' % (stale, error))
+                    return False
 
         card = pjoin(self.me_dir, 'Cards', 'delphes_card.dat')
         self.update_status('Running Delphes on Pythia8 splits', level=None)
@@ -5513,24 +5515,32 @@ tar -czf split_$1.tar.gz split_$1
                             hepmc_output_setting = line.split(None, 1)[1].strip().lower()
                         break
 
+        # This path bypasses is_delphes_fusion_active(), which is what
+        # normally guarantees that a Delphes card is present: mirror what
+        # do_delphes does instead of crashing inside run_delphes_on_splits.
+        delphes_card = pjoin(self.me_dir, 'Cards', 'delphes_card.dat')
+        if not os.path.exists(delphes_card):
+            default_card = pjoin(self.me_dir, 'Cards', 'delphes_card_default.dat')
+            if not os.path.exists(default_card):
+                logger.warning('No delphes_card.dat (and no default one) found; '
+                               'cannot run Delphes on the Pythia8 splits.')
+                return False
+            files.cp(default_card, delphes_card)
+            logger.info('No delphes card found. Take the default one.')
+
         # Run the existing parallel-Delphes-on-splits implementation
         # directly (bypassing is_delphes_fusion_active, which requires an
         # explicit nb_core_delphes override — during interactive recovery
         # the user already confirmed they want to run Delphes by typing
         # the command, so that extra gate is not needed).
         #
-        # Drop any pre-existing final ROOT / log first so a fresh hadd
-        # merge is produced and crash leftovers don't silently get re-used.
-        final_root = pjoin(self.me_dir, 'Events', self.run_name,
-                           '%s_delphes_events.root' % tag)
-        final_log  = pjoin(self.me_dir, 'Events', self.run_name,
-                           '%s_delphes.log' % tag)
-        for stale in (final_root, final_log):
-            if os.path.isfile(stale):
-                try:
-                    os.remove(stale)
-                except OSError:
-                    pass
+        # Note: the final merged ROOT/log are deliberately *not* removed
+        # here. hadd is called with '-f' and the log is opened for writing,
+        # so both are recreated on success anyway, while deleting them up
+        # front would throw away a previously recovered (complete) result
+        # whenever this run fails. Recovery stays reachable for the whole
+        # life of the run directory (the merged HepMC is never recreated),
+        # so that would otherwise happen on every repeated 'delphes <run>'.
         ok = self.run_delphes_on_splits(split_dirs, parallelization_dir, tag)
         if not ok:
             return False

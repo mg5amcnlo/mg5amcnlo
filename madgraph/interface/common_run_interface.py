@@ -394,7 +394,6 @@ class CheckValidForCmd(object):
                     filepath = p % {'tag': prev_tag}
                     break
             else:
-                a = input("NO INPUT")          
                 if nodefault:
                     return False
                 else:
