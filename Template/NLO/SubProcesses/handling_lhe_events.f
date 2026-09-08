@@ -149,6 +149,8 @@ c     other parameter
       character*10 MonteCarlo
       character*100 path
       character*250 buffer,buffer_lc,buffer2
+      integer nread
+      logical complete,eof
       integer event_id
       common /c_event_id/ event_id
       integer n_orderstags,oo,tag
@@ -165,20 +167,14 @@ c
       write(ifile,'(a)') '  <MG5ProcCard>'
       open (unit=92,file=path(1:index(path," ")-1)//'proc_card_mg5.dat'
      &     ,err=99)
-      do
-         read(92,'(a)',err=89,end=89) buffer
-         write(ifile,'(a)') buffer
-      enddo
- 89   close(92)
+      call copy_open_file(92,ifile)
+      close(92)
       write(ifile,'(a)') '  </MG5ProcCard>'
       write(ifile,'(a)') '  <slha>'
       open (unit=92,file=path(1:index(path," ")-1)//'param_card.dat'
      &     ,err=98)
-      do
-         read(92,'(a)',err=88,end=88) buffer
-         write(ifile,'(a)') buffer
-      enddo
- 88   close(92)
+      call copy_open_file(92,ifile)
+      close(92)
       write(ifile,'(a)') '  </slha>'
       write(ifile,'(a)') '  <MGRunCard>'
 c     import the parameter from the run_card 
@@ -202,23 +198,29 @@ c     copy the run_card as part of the banner.
       open (unit=92,file=path(1:index(path," ")-1)//'run_card.dat'
      &     ,err=97)
       do
-         read(92,'(a)',err=87,end=87) buffer
+         call read_record_head(92,buffer,nread,complete,eof)
+         if (eof) exit
          buffer_lc=buffer
          call case_trap3(72,buffer_lc)
+c A record that does not fit in buffer cannot be the iseed or the
+c nevents entry (those are short): it is simply copied over.
 c Replace the random number seed with the one used...
-         if(index(buffer_lc,'iseed').ne.0 .and. buffer(1:1).ne.'#')then
+         if(complete .and. index(buffer_lc,'iseed').ne.0 .and.
+     &        buffer(1:1).ne.'#')then
             write(buffer,'(i11,a)')iseed,' =  iseed'
+            nread=len_trim(buffer)
 c Update the number of events
-         elseif (index(buffer_lc,'nevents').ne.0 .and.
+         elseif (complete .and. index(buffer_lc,'nevents').ne.0 .and.
      &           buffer(1:1).ne.'#' .and.
      &           ( index(buffer_lc,'!').eq.0 .or.
      &             index(buffer_lc,'!').gt.index(buffer_lc,'nevents')
      &           )) then
             write(buffer,'(i11,a)')nevents,' = nevents'
+            nread=len_trim(buffer)
          endif
-         write(ifile,'(a)') buffer
+         call write_record(ifile,92,buffer,nread,complete)
       enddo
- 87   close(92)
+      close(92)
       write(ifile,'(a)') '  </MGRunCard>'
 c Functional form of the scales
       write(ifile,'(a)') '  <scalesfunctionalform>'
@@ -1333,28 +1335,136 @@ c
 
 
       subroutine copy_header(infile,outfile,nevts)
+c Copy the header (banner) of the LHE file open on unit infile to the
+c one open on unit outfile, updating the number of events. Records
+c longer than buff2 are copied in several chunks, so that long entries
+c of the run_card (e.g. systematics_arguments) are not truncated: the
+c length of buff2 only sets how much of a record is inspected for the
+c 'nevents' and 'ickkw' entries (both are short).
       implicit none
       include 'run.inc'
-      character*200 buff2
-      integer nevts,infile,outfile
+      character*250 buff2
+      integer nevts,infile,outfile,nread
+      logical complete,eof
 c
       buff2=' '
       do while(.true.)
-         read(infile,'(a)')buff2
-         if(index(buff2,'= nevents').eq.0)
-     &        write(outfile,'(a)') trim(buff2)
+         call read_record_head(infile,buff2,nread,complete,eof)
+         if(eof) exit
+         if(index(buff2,'= nevents').eq.0)then
+            call write_record(outfile,infile,buff2,nread,complete)
+         elseif(.not.complete)then
+            call skip_rest_of_record(infile)
+         endif
          if(index(buff2,'= nevents').ne.0) exit
          if(index(buff2,'= ickkw').ne.0) read(buff2,*) ickkw
       enddo
       write(outfile,*)
      &     nevts,' = nevents    ! Number of unweighted events requested'
       do while(index(buff2,'</header>').eq.0)
-         read(infile,'(a)')buff2
+         call read_record_head(infile,buff2,nread,complete,eof)
+         if(eof) exit
          if(index(buff2,'= ickkw').ne.0) read(buff2,*) ickkw
-         write(outfile,'(a)')trim(buff2)
+         call write_record(outfile,infile,buff2,nread,complete)
       enddo
 c
       return
+      end
+
+
+      subroutine read_record_head(iunit,buff,nread,complete,eof)
+c Read into buff (at most len(buff) characters of) the next record of
+c the file open on unit iunit. len(buff) is not a limit on the record
+c length, it only sets how much of it is read at a time.
+c nread is the number of characters
+c actually read and buff is blank-padded beyond that. complete is
+c .true. if the whole record has been read; when it is .false. the
+c remaining part of the record is still to be read from iunit (use
+c copy_rest_of_record or skip_rest_of_record for that). eof is .true.
+c if the end of the file has been reached, in which case buff is blank.
+      implicit none
+      integer iunit,nread
+      character*(*) buff
+      logical complete,eof
+c
+      buff=' '
+      nread=0
+      complete=.false.
+      eof=.false.
+      read(iunit,'(a)',advance='no',size=nread,eor=10,end=20) buff
+      return
+ 10   complete=.true.
+      return
+ 20   eof=.true.
+      return
+      end
+
+
+      subroutine copy_rest_of_record(iunit,ofile)
+c Copy to ofile whatever is left of the record being read on unit
+c iunit, and terminate the record on ofile.
+      implicit none
+      integer iunit,ofile,nread
+      character*250 chunk
+      logical complete,eof
+c
+      do
+         call read_record_head(iunit,chunk,nread,complete,eof)
+         if(complete.or.eof)then
+            write(ofile,'(a)') chunk(1:nread)
+            return
+         endif
+         write(ofile,'(a)',advance='no') chunk(1:nread)
+      enddo
+      end
+
+
+      subroutine skip_rest_of_record(iunit)
+c Discard whatever is left of the record being read on unit iunit.
+      implicit none
+      integer iunit,nread
+      character*250 chunk
+      logical complete,eof
+c
+      do
+         call read_record_head(iunit,chunk,nread,complete,eof)
+         if(complete.or.eof) return
+      enddo
+      end
+
+
+      subroutine write_record(ofile,iunit,buff,nread,complete)
+c Write buff(1:nread) to ofile as a complete record. If the record read
+c from unit iunit did not fit in buff (complete=.false.), the rest of
+c it is copied from iunit to ofile before terminating the record.
+      implicit none
+      integer ofile,iunit,nread
+      character*(*) buff
+      logical complete
+c
+      if(complete)then
+         write(ofile,'(a)') buff(1:nread)
+      else
+         write(ofile,'(a)',advance='no') buff(1:nread)
+         call copy_rest_of_record(iunit,ofile)
+      endif
+      return
+      end
+
+
+      subroutine copy_open_file(iunit,ofile)
+c Copy the whole content of the file open on unit iunit to ofile,
+c preserving records of arbitrary length.
+      implicit none
+      integer iunit,ofile,nread
+      character*250 buff
+      logical complete,eof
+c
+      do
+         call read_record_head(iunit,buff,nread,complete,eof)
+         if(eof) return
+         call write_record(ofile,iunit,buff,nread,complete)
+      enddo
       end
 
 
