@@ -2827,6 +2827,10 @@ class RunCard(ConfigFile):
     default_autodef_file = 'run.inc'
     donewarning = []
     include_as_parameter = []
+    # list of the retro-compatibility fixes to apply on the user provided
+    # functions (see retro_compatible_custom_fct). Empty by default: each
+    # RunCard class opts-in for the fixes which make sense for its output.
+    retro_compatible_modes = []
 
     @classmethod
     def fill_post_set_from_blocks(cls):
@@ -3512,9 +3516,13 @@ class RunCard(ConfigFile):
             #avoid to systematically rewrite the file. -> write in tmp place
             fsock = file_writers.FortranWriter(pjoin(outdir, path+'.tmp'),'w')
             starttext = open(pjoin(outdir, path+'.orig')).read()
+            # only apply a retro-compatibility fix if the shipped version of the
+            # file does use the associated include itself. This prevents adding
+            # an include to a file where it is not available (and not needed).
+            mode = [m for m in self.retro_compatible_modes if m in starttext]
             fsock.remove_routine(starttext, to_mod[path][0])
             for text in to_mod[path][1]:
-                text = self.retro_compatible_custom_fct(text)
+                text = self.retro_compatible_custom_fct(text, mode=mode)
                 fsock.writelines(text)
             fsock.close()
             if not filecmp.cmp(pjoin(outdir, path), pjoin(outdir, path+'.tmp')):
@@ -3533,6 +3541,13 @@ class RunCard(ConfigFile):
 
     @staticmethod
     def retro_compatible_custom_fct(lines, mode=None):
+        """update a user provided routine (list of lines) to make it compatible
+           with the current version of the code.
+           mode is the list of fixes to apply, None means "all of them".
+           supported fixes:
+            - 'vector.inc': add the include of vector.inc (needed since 3.6 to
+              be able to include run.inc) if the routine does not have it.
+        """
 
         f77_type = ['real*8', 'integer', 'double precision', 'logical']
         function_pat = re.compile(r'^\s+(?:SUBROUTINE|(?:%(type)s)\s+function)\s+([a-zA-Z]\w*)' \
@@ -3540,9 +3555,9 @@ class RunCard(ConfigFile):
         include_pat = re.compile(r"\s+include\s+[\'\"]([\w\./]*)") 
         
         assert isinstance(lines, list)
-        sol = []
 
         if mode is None or 'vector.inc' in mode:
+            sol = []
             search = True
             for i,line in enumerate(lines[:]):
                 if search and re.search(include_pat, line):
@@ -3555,7 +3570,8 @@ class RunCard(ConfigFile):
                 sol.append(line)
                 if re.search(function_pat, line):
                     search = True
-        return sol
+            lines = sol
+        return lines
 
     def guess_entry_fromname(self, name, value):
         """
@@ -4339,6 +4355,10 @@ class RunCardLO(RunCard):
                       }
     
     include_as_parameter = ['vector.inc']
+    # since 3.6, run.inc dimensions arrays with VECSIZE_MEMMAX which is defined
+    # in vector.inc -> older (<3.6) user functions need that include to be added.
+    # This is meaningless for NLO where vector.inc does not exist at all.
+    retro_compatible_modes = ['vector.inc']
 
     if MG5DIR:
         default_run_card = pjoin(MG5DIR, "internal", "default_run_card_lo.dat")
