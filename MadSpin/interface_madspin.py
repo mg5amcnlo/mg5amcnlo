@@ -9050,6 +9050,35 @@ class MadSpinInterface(extended_cmd.Cmd):
         parents = {slot: finals[slot_to_index[slot]] for slot in order}
         return rho_off, jac_reshuffle, slot_mass, parents, frame_boost
 
+    def _onshell_production_norm(self, production, prod_static):
+        """|M_prod|^2 on shell, in the frame the density modes quantise in.
+
+        The denominator of the offshell mass-set weight (sequential) and of the
+        joint weight. Without a frame boost this is exactly
+        ``calculate_matrix_element`` -- same value, same normalisation -- so
+        nothing changes there. With one (a polarisation brace, polarised beams,
+        a polarisation-weight request, the pure-interference mode) the
+        *restricted* matrix element is not Lorentz invariant and the lab-frame
+        value is a different projection from the one the numerator is built
+        from, so the trace of the on-shell rho *in that frame* is taken instead.
+
+        Evaluated on a round-tripped copy, like ``_upfront_production``'s
+        ``prod_off``, so the two sides of the ratio see the same %.10e
+        truncation.
+        """
+        frame_boost = self._frame_boost(production)
+        if frame_boost is None:
+            return self.calculate_matrix_element(production)
+        prod_on = lhe_parser.Event(str(production))
+        rho_on = self.get_density(prod_on, prod_static['position'],
+                                  prod_static['allowed_hel'],
+                                  prod_static['ncomb'],
+                                  prod_static['dimension'],
+                                  frame_boost=self._frame_boost(prod_on),
+                                  hel_restriction=prod_static.get('hel_restriction'),
+                                  hel_restriction_trace=prod_static.get('hel_restriction_trace'))
+        return rho_on.trace().real
+
     def _sequential_offshell(self):
         """Whether the sequential accept/reject runs its offshell (madspin/full)
         branch: the production density is evaluated at reshuffled momenta, so the
@@ -9741,7 +9770,14 @@ class MadSpinInterface(extended_cmd.Cmd):
         if offshell:
             me_prod_on = getattr(production, 'me_wgt', None)
             if not me_prod_on:
-                me_prod_on = self.calculate_matrix_element(production)
+                # The denominator has to be the same quantity as the numerator,
+                # in the same frame: Tr(rho_off) is built in the me_frame while
+                # calculate_matrix_element hands the matrix element the LAB
+                # momenta, and a helicity-restricted matrix element is not
+                # Lorentz invariant.  Unpolarised runs have no frame boost and
+                # keep the matrix-element call, bit for bit.
+                me_prod_on = self._onshell_production_norm(production,
+                                                           prod_static)
                 production.me_wgt = me_prod_on
             if not me_prod_on:
                 # a production event with no matrix element cannot be normalised
@@ -10686,7 +10722,12 @@ class MadSpinInterface(extended_cmd.Cmd):
             if not density_pole_approximation:
                 # compute the denominator and then reshuffle the event before 
                 # computing the numerator 
-                MEdenom_prod = self.calculate_matrix_element(production)  
+                # same frame-consistency fix as on the sequential mass
+                # stage: the numerator is the contraction of the (possibly
+                # restricted) production density built in the me_frame, so the
+                # denominator cannot be the lab-frame matrix element.
+                MEdenom_prod = self._onshell_production_norm(production,
+                                                             prod_static)
                 MEdenom_decay = 1.0              
                 for key in decays:
                     for dec in decays[key]:
