@@ -4447,12 +4447,16 @@ class Channel(base_objects.Diagram):
             delta_M_eff_sq = ((M-mass_n) ** 2-sum(mass_list) ** 2)
             # Recursive formula for ps area,
             # initial mass is replaced as the square root of M_eff_sq_mean
-            return math.sqrt((M ** 2+mass_n ** 2-M_eff_mean**2) ** 2-\
-                                 (2*M *mass_n) ** 2)* \
-                                 self.calculate_apx_psarea(M_eff_mean, mass_list)*\
-                                 delta_M_eff_sq*c_psarea* \
-                                 1./(16*(math.pi ** 2)*(M ** 2))
-            
+
+            value_to_sqrt = (M ** 2+mass_n ** 2-M_eff_mean**2) ** 2- (2*M *mass_n) ** 2
+            if (value_to_sqrt < 0):
+                return 0
+            else:
+                return math.sqrt(value_to_sqrt)* \
+                                     self.calculate_apx_psarea(M_eff_mean, mass_list)*\
+                                     delta_M_eff_sq*c_psarea* \
+                                     1./(16*(math.pi ** 2)*(M ** 2))
+
         # for two particle decay the phase space area is known.
         else:
             # calculate the symmetric factor first
