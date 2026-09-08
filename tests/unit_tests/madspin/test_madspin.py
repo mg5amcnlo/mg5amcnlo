@@ -129,7 +129,12 @@ def _borrow_frame_helpers(namespace):
     """
     for name in ('_beampol', '_frame_boost', '_needs_frame_axis',
                  '_polarization_weight_labels',
-                 '_polarization_weights_enabled'):
+                 '_polarization_weights_enabled',
+                 # the density denominator is taken in the same frame as the
+                 # numerator, so it is guarded by _frame_boost too: with no
+                 # boost it is exactly calculate_matrix_element, which is what
+                 # every stub here provides
+                 '_onshell_production_norm'):
         namespace[name] = inspect.getattr_static(
             interface_madspin.MadSpinInterface, name)
     namespace['InvalidCmd'] = interface_madspin.MadSpinInterface.InvalidCmd
@@ -678,6 +683,164 @@ class TestFrameBoost(unittest.TestCase):
         self.assertEqual((boost.E, boost.px, boost.py, boost.pz),
                          (500., 0., 0., 0.))
         self.assertEqual(stub._boost_momenta(momenta, boost), momenta)
+
+
+class TestOnshellProductionNorm(unittest.TestCase):
+    """``_onshell_production_norm``: |M_prod|^2 on shell, which is the
+    denominator of the offshell mass-set weight (the sequential accept/reject's
+    mass stage) and of the joint density weight.
+
+    The numerator on both paths is a contraction of the production density,
+    and the density modes build that in the ``me_frame``. So as soon as a
+    helicity index is *projected* -- a production brace, polarised beams, a
+    polarisation-weight request, the pure-interference mode -- the denominator
+    cannot be ``calculate_matrix_element``, which hands the matrix element the
+    LAB momenta: a restricted matrix element is not Lorentz invariant, and the
+    two sides of the ratio would then be different projections. The guard is
+    ``_frame_boost``, the same one the numerator goes through, so an
+    unpolarised run has no boost and keeps the matrix-element call bit for bit.
+    """
+
+    # what the density basis carries; only forwarded, never interpreted here
+    STATIC = {'position': [1, 2], 'allowed_hel': [], 'ncomb': 4,
+              'dimension': 4, 'hel_restriction': 'restrict',
+              'hel_restriction_trace': 'trace'}
+
+    ME = 7.0            # what calculate_matrix_element answers ...
+    TRACE = 11.0        # ... and what Tr(rho_on) does, so the two never alias
+
+    class _Rho(object):
+        """The one thing the norm asks a density for. The imaginary part is
+        non-zero on purpose: the trace of a hermitian rho is real, but the
+        stubbed value is not, and taking .real is what the shipped code does."""
+        def __init__(self, value):
+            self.value = value
+        def trace(self):
+            return complex(self.value, 3.0)
+
+    def _stub(self, frame_id=6, **frame):
+        """_FrameStub -- which already carries the frame helpers and the norm --
+        plus the two calls the norm can end on, each counted."""
+        outer = self
+        frame.setdefault('beampol', (0., 0.))
+
+        class Stub(_FrameStub):
+            def __init__(self):
+                _FrameStub.__init__(self, frame_id, **frame)
+                self.me_calls = []
+                self.density_calls = []
+
+            def get_pdir(self, event):
+                # 2 -> 2 in the matrix element's own ordering, which is what
+                # _rambo_event writes out
+                return None, ([21, 21], [6, -6]), None, None, None
+
+            def calculate_matrix_element(self, event):
+                self.me_calls.append(event)
+                return outer.ME
+
+            def get_density(self, event, position, allow_hel, ncomb, dimension,
+                            **opts):
+                self.density_calls.append((event, position, allow_hel, ncomb,
+                                           dimension, opts))
+                return outer._Rho(outer.TRACE)
+
+        return Stub()
+
+    def _production(self):
+        """A genuine LHE event, boosted off the partonic CM so that the frame
+        is something other than the lab and the %.10e round trip below is
+        actually visible."""
+        return _rambo_event(2, 800.0, [173.0, 173.0], random.Random(7),
+                            boost=0.4)
+
+    def test_unpolarised_stays_the_matrix_element(self):
+        """No projection, no boost, and then the denominator is the matrix
+        element it always was -- same call, same event object, same value. This
+        is the claim that the change is inert for every unpolarised run."""
+        stub, production = self._stub(), self._production()
+        self.assertIsNone(stub._frame_boost(production))
+        self.assertEqual(stub._onshell_production_norm(production, self.STATIC),
+                         self.ME)
+        self.assertEqual(len(stub.me_calls), 1)
+        self.assertIs(stub.me_calls[0], production)
+        self.assertEqual(stub.density_calls, [])
+
+    def test_a_projection_takes_the_trace_of_rho_instead(self):
+        """With a production brace the answer is Tr(rho_on) taken in the frame,
+        and the lab-frame matrix element is not consulted at all."""
+        stub = self._stub(prodpol={6: (0,)})
+        production = self._production()
+        self.assertEqual(stub._onshell_production_norm(production, self.STATIC),
+                         self.TRACE)
+        self.assertEqual(stub.me_calls, [])
+        self.assertEqual(len(stub.density_calls), 1)
+        _, position, allow_hel, ncomb, dimension, opts = stub.density_calls[0]
+        self.assertEqual((position, allow_hel, ncomb, dimension),
+                         (self.STATIC['position'], self.STATIC['allowed_hel'],
+                          self.STATIC['ncomb'], self.STATIC['dimension']))
+        # the restriction is what makes the frame observable in the first
+        # place; forwarding the basis but dropping it would put the trace of
+        # the *unrestricted* rho under a restricted numerator
+        self.assertEqual(opts['hel_restriction'],
+                         self.STATIC['hel_restriction'])
+        self.assertEqual(opts['hel_restriction_trace'],
+                         self.STATIC['hel_restriction_trace'])
+        self.assertIsNotNone(opts['frame_boost'])
+
+    def test_the_guard_is_frame_boost(self):
+        """Which branch is taken follows ``_frame_boost`` and nothing else, for
+        each of the four things that switch the frame on. Pinned together so
+        the denominator cannot drift away from the numerator, which goes
+        through the same guard."""
+        for kwargs in (dict(),
+                       dict(beampol=(80., 0.)),
+                       dict(prodpol={6: (0,)}),
+                       dict(vector=['0']),
+                       dict(fermion=['+']),
+                       dict(pure_interference='w+ = 0 T')):
+            stub, production = self._stub(**kwargs), self._production()
+            boosted = stub._frame_boost(production) is not None
+            self.assertEqual(bool(kwargs), boosted, kwargs)
+            got = stub._onshell_production_norm(production, self.STATIC)
+            self.assertEqual(got, self.TRACE if boosted else self.ME, kwargs)
+            self.assertEqual(bool(stub.density_calls), boosted, kwargs)
+            self.assertEqual(bool(stub.me_calls), not boosted, kwargs)
+
+    def test_the_density_runs_on_the_round_tripped_copy(self):
+        """rho_on is taken on ``Event(str(production))``, like
+        ``_upfront_production``'s ``prod_off``, so both sides of the ratio see
+        the same %.10e truncation -- and the frame is re-derived from that copy
+        rather than carried over from the original.
+
+        The re-derivation is not cosmetic. ``frame_id`` selecting a single leg
+        stores that leg's momentum in ``rest_leg_mom``, and it is later matched
+        with ``==`` on floats (``_decay_frame_rest_leg``), so a boost built from
+        the untruncated original would silently stop matching and leave the leg
+        off the branch that forces it exactly to rest.
+        """
+        stub = self._stub(frame_id=8, prodpol={6: (0,)})   # leg 3 alone
+        production = self._production()
+        stub._onshell_production_norm(production, self.STATIC)
+        event, _, _, _, _, opts = stub.density_calls[0]
+        self.assertIsNot(event, production)
+        self.assertEqual(str(event), str(lhe_parser.Event(str(production))))
+
+        rest = opts['frame_boost'].rest_leg_mom
+        copied = [p for p in event if int(p.status) == 1][0]
+        self.assertEqual(rest, (copied.E, copied.px, copied.py, copied.pz))
+        original = [p for p in production if int(p.status) == 1][0]
+        self.assertNotEqual(rest, (original.E, original.px, original.py,
+                                   original.pz))
+
+    def test_the_production_event_is_left_alone(self):
+        """The norm is called on an event the caller goes on to reshuffle, so
+        it may not touch it: the copy is what gets handed to get_density."""
+        stub = self._stub(prodpol={6: (0,)})
+        production = self._production()
+        before = str(production)
+        stub._onshell_production_norm(production, self.STATIC)
+        self.assertEqual(str(production), before)
 
 
 class TestEvent(unittest.TestCase):
