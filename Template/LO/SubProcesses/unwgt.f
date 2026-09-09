@@ -740,8 +740,9 @@ c     check if process contains onia (the file is only created in this case)
 c     if the process contains onia set icol to a negative value to force
 c     the flag 'is_LC' set to be false in the routine addmothers to bypass 
 c     the writing of intermediate particles
-      inquire( file=trim('../onia.inc'), exist=exists )
-      if (exists) icol = -abs(icol)
+#if HAS_ONIA
+      icol = -abs(icol)
+#endif
       call addmothers(ipsel,jpart,pb,isym,jsym,sscale,aaqcd,aaqed,buff,
      $                npart,numproc,flip, icol, ivec)
 
