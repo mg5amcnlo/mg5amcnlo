@@ -5061,10 +5061,12 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         if self.beam_polarization == [True, True]:
             replace_dict['beam_polarization'] = """
                          DO JJ=1,nincoming
+c NB_SPIN_STATE_IN/2 avoids a double counting
+c of an explicit polarisation in the process
                IF(POL(JJ).NE.1d0.AND.NHEL(JJ,I).EQ.INT(SIGN(1d0,POL(JJ)))) THEN
-                 T=T*ABS(POL(JJ))
+                 T=T*ABS(POL(JJ))*NB_SPIN_STATE_IN(JJ)/2d0
                ELSE IF(POL(JJ).NE.1d0)THEN
-                 T=T*(2d0-ABS(POL(JJ)))
+                 T=T*(2d0-ABS(POL(JJ)))*NB_SPIN_STATE_IN(JJ)/2d0
                ENDIF
              ENDDO
             """
@@ -5074,10 +5076,12 @@ class ProcessExporterFortranME(ProcessExporterFortran):
                 if self.beam_polarization[i]:
                     replace_dict['beam_polarization'] = """
                                    ! handling only one beam polarization here. Second beam can be handle via the pdf.
+c NB_SPIN_STATE_IN/2 avoids a double counting
+c of an explicit polarisation in the process
                                    IF(POL(%(bid)i).NE.1d0.AND.NHEL(%(bid)i,I).EQ.INT(SIGN(1d0,POL(%(bid)i)))) THEN
-                 T=T*ABS(POL(%(bid)i))
+                 T=T*ABS(POL(%(bid)i))*NB_SPIN_STATE_IN(%(bid)i)/2d0
                ELSE IF(POL(%(bid)i).NE.1d0)THEN
-                 T=T*(2d0-ABS(POL(%(bid)i)))
+                 T=T*(2d0-ABS(POL(%(bid)i)))*NB_SPIN_STATE_IN(%(bid)i)/2d0
                ENDIF """ % {'bid': i+1}
 
 
