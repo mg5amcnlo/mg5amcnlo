@@ -4,45 +4,64 @@ description: Restores heptools from cache and sets MG5 accordingly
 runs:
   using: composite
   steps:
-    - name: get os 
+    - name: get os
       run: echo "CACHE_KEY=heptools-$ImageOS" >> $GITHUB_ENV
       shell: bash
 
+    # warm_cache.yml saves the combined cache under a generation-suffixed key,
+    # "heptools-<ImageOS>-<run_id>", so that a refresh adds a new entry instead
+    # of having to delete the current one first (GitHub caches are immutable,
+    # and the delete-then-save it used to need left a ~30 min window in which
+    # every consumer missed). Nothing outside that run can know the generation,
+    # so the exact key below is deliberately unmatchable here and restore-keys
+    # does the work: GitHub serves the newest entry with the given prefix, i.e.
+    # the previous generation while a new one is being built.
+    # The bare prefix on the last line is transitional, for the unversioned
+    # entries that predate this change; it can be dropped once warm_cache has
+    # run one full cycle.
     - name: restore full cache
       id: heptools-cache
       uses: actions/cache/restore@v5
       with:
         path: ~/.cache/HEPtools
-        key: ${{ env.CACHE_KEY }}
+        key: ${{ env.CACHE_KEY }}-${{ github.run_id }}
+        restore-keys: |
+          ${{ env.CACHE_KEY }}-
+          ${{ env.CACHE_KEY }}
+
+    # NB: cache-hit is true only on an *exact* key match, which now essentially
+    # never happens here; cache-matched-key is non-empty whenever something was
+    # actually restored (exact match or restore-keys). That is the condition
+    # that means "we have a combined cache to look at".
 
     # Same content check the warm_cache jobs run before saving, in "report"
     # mode: here an incomplete combined cache is not fatal, we just fall back
     # to the (still present) sub-caches below.
     - name: validate cache content
       id: validate-cache
-      if: steps.heptools-cache.outputs.cache-hit == 'true'
+      if: steps.heptools-cache.outputs.cache-matched-key != ''
       uses: ./.github/actions/check_heptools
       with:
         tools: lhapdf boost pythia8 emela contur looptools
         mode: report
 
-    # setup other environment of previous level of cache 
+    # setup other environment of previous level of cache
     # try to use their cache if previous cache failed or content is incomplete
     - uses: ./.github/actions/restore_heptools_lhapdf
-      with: 
-        setup_only: ${{ steps.heptools-cache.outputs.cache-hit == 'true' && steps.validate-cache.outputs.valid == 'true' }}
+      with:
+        setup_only: ${{ steps.heptools-cache.outputs.cache-matched-key != '' && steps.validate-cache.outputs.valid == 'true' }}
     - uses: ./.github/actions/restore_heptools_boost
       with:
-        setup_only: ${{ steps.heptools-cache.outputs.cache-hit == 'true' && steps.validate-cache.outputs.valid == 'true' }}
+        setup_only: ${{ steps.heptools-cache.outputs.cache-matched-key != '' && steps.validate-cache.outputs.valid == 'true' }}
     - uses: ./.github/actions/restore_heptools_pythia8
-      with: 
-        setup_only: ${{ steps.heptools-cache.outputs.cache-hit == 'true' && steps.validate-cache.outputs.valid == 'true' }}
+      with:
+        setup_only: ${{ steps.heptools-cache.outputs.cache-matched-key != '' && steps.validate-cache.outputs.valid == 'true' }}
     - uses: ./.github/actions/restore_heptools_emela
-      with: 
-        setup_only: ${{ steps.heptools-cache.outputs.cache-hit == 'true' && steps.validate-cache.outputs.valid == 'true' }}
+      with:
+        setup_only: ${{ steps.heptools-cache.outputs.cache-matched-key != '' && steps.validate-cache.outputs.valid == 'true' }}
     - uses: ./.github/actions/restore_heptools_contur
-      with: 
-        setup_only: ${{ steps.heptools-cache.outputs.cache-hit == 'true' && steps.validate-cache.outputs.valid == 'true' }}
+      with:
+        setup_only: ${{ steps.heptools-cache.outputs.cache-matched-key != '' && steps.validate-cache.outputs.valid == 'true' }}
     - uses: ./.github/actions/restore_heptools_looptools
-      with: 
-        setup_only: ${{ steps.heptools-cache.outputs.cache-hit == 'true' && steps.validate-cache.outputs.valid == 'true' }}
+      with:
+        setup_only: ${{ steps.heptools-cache.outputs.cache-matched-key != '' && steps.validate-cache.outputs.valid == 'true' }}

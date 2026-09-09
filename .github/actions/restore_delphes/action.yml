@@ -24,11 +24,15 @@ runs:
       run: echo "CACHE_KEY=delphes-$ImageOS" >> $GITHUB_ENV
       shell: bash
 
+    # Generation-suffixed keys: see the comment in restore_heptools.
     - uses: actions/cache/restore@v5
       if: ${{ inputs.setup_only != 'true' }}
       with:
         path: ~/.cache/Delphes
-        key: ${{ env.CACHE_KEY }}
+        key: ${{ env.CACHE_KEY }}-${{ github.run_id }}
+        restore-keys: |
+          ${{ env.CACHE_KEY }}-
+          ${{ env.CACHE_KEY }}
 
     - run: |
         cd $GITHUB_WORKSPACE
