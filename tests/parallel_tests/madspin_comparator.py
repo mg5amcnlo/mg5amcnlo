@@ -857,6 +857,114 @@ def assert_multiplicities_consistent(test, results, pdgs, n_sigma=4):
                     % (pdg, la, na, lb, nb, abs(na - nb), n_sigma, na + nb))
 
 
+def lepton_flavour_shares(result, flavours=(11, 13), nb_leptons=4):
+    """How the ``nb_leptons``-lepton final state splits over lepton flavours.
+
+    Returns ``(counts, nevents)``. The key is the per-flavour multiplicity in
+    the order of ``flavours``, particle and antiparticle together -- so for
+    ``flavours=(11, 13)`` and ``nb_leptons=4``:
+
+        ``(2, 2)``  e+e-mu+mu-
+        ``(4, 0)``  e+e-e+e-
+        ``(0, 4)``  mu+mu-mu+mu-
+
+    Any event that does not carry exactly ``nb_leptons`` of them is keyed
+    ``None``, so a caller can tell "the composition moved" from "the sample is
+    not what I thought it was".
+
+    This is the flavour information ``assert_multiplicities_consistent`` throws
+    away: it counts finals per PDG, and per-PDG counts cannot see the
+    composition at all. Both 2:1:1 and 4:1:1 give exactly one electron per
+    event on average (2*0.25 + 1*0.5 = 1 either way), so no per-PDG count
+    distinguishes them, and neither does any pair-wise comparison built on
+    them.
+    """
+    counts = collections.Counter()
+    nevents = 0
+    for event in result.open_lhe():
+        nevents += 1
+        per_flavour = [0] * len(flavours)
+        for particle in event:
+            if particle.status != 1:
+                continue
+            for i, flavour in enumerate(flavours):
+                if abs(particle.pdg) == flavour:
+                    per_flavour[i] += 1
+        key = tuple(per_flavour)
+        counts[key if sum(per_flavour) == nb_leptons else None] += 1
+    return counts, nevents
+
+
+def assert_flavour_shares(test, results, expected, flavours=(11, 13),
+                          nb_leptons=4, n_sigma=4, min_events=200):
+    """Every mode's lepton-flavour composition must match ``expected``.
+
+    ``expected`` maps a :func:`lepton_flavour_shares` key to the fraction of
+    events it must hold, and the fractions must sum to 1 -- every event is
+    required to fall in one of the named categories, so a mode that silently
+    stopped producing the final state fails here rather than passing on an
+    empty numerator.
+
+    The tolerance is ``n_sigma`` binomial standard deviations,
+    ``sqrt(p(1-p)/N)`` on the measured fraction. It is a tolerance on
+    *counting noise only*: the expected fractions are exact numbers, not
+    calibrated ones, so there is nothing else for the bound to absorb. With
+    N = 10000 and p = 0.5 that is 2 percentage points, against the 17 points
+    that separate the two compositions this test exists to tell apart.
+
+    Why this assertion exists.  MadSpin writes a unit-weight sample, so its
+    composition has to be the ratio of the decayed cross sections, and that
+    ratio is a property of the matrix elements alone -- no MadSpin involved.
+    For ``p p > z z`` with one merged decay line (``define lp = e+ mu+`` /
+    ``decay z > lp lm``) and massless leptons of equal coupling, each Z decays
+    independently with B_e = B_mu, so
+
+        P(4e) : P(4mu) : P(e+e-mu+mu-) = B_e^2 : B_mu^2 : 2 B_e B_mu = 1:1:2.
+
+    Direct MadGraph agrees exactly: ``p p > z z, (z > e+ e-), (z > mu+ mu-)``
+    and ``p p > z z, z > e+ e-`` are generated from the *same* 2-graph
+    6-point amplitude and differ only in ``DATA IDEN`` (36 against 72), so
+    sigma(mixed)/sigma(same) = 2.0000 to every printed digit.
+
+    Four of the five modes once wrote 4:1:1 instead, from two independent
+    identical-particle-factor bugs, and the test suite could not see it:
+    ``assert_multiplicities_consistent`` is blind to the composition (see
+    :func:`lepton_flavour_shares`), and every other assertion here compares
+    modes against *each other*, which is no help when they are wrong in the
+    same way. This one compares against a number MadSpin had no part in.
+    """
+    total_expected = sum(expected.values())
+    assert abs(total_expected - 1.0) < 1e-9, (
+        'expected shares must cover every event, got %s' % total_expected)
+    for label, result in sorted(results.items()):
+        counts, nevents = lepton_flavour_shares(
+            result, flavours=flavours, nb_leptons=nb_leptons)
+        test.assertGreaterEqual(
+            nevents, min_events,
+            '%s wrote only %d events -- too few for a share test'
+            % (label, nevents))
+        classified = sum(counts[key] for key in expected)
+        test.assertEqual(
+            classified, nevents,
+            '%s: %d of %d events fall outside the expected flavour '
+            'categories %s (composition: %s)'
+            % (label, nevents - classified, nevents, sorted(expected),
+               dict(counts)))
+        for key, want in sorted(expected.items()):
+            got = counts[key] / float(nevents)
+            tol = n_sigma * math.sqrt(want * (1.0 - want) / nevents)
+            _logger.info('[%s] flavour share %s = %.4f (expected %.4f +- %.4f)',
+                         label, key, got, want, tol)
+            test.assertLess(
+                abs(got - want), tol,
+                '%s: flavour share %s = %.4f (%d/%d), expected %.4f, '
+                'off by %.1f binomial sigma (tolerance %.4f = %g sigma). '
+                'Full composition: %s'
+                % (label, key, got, counts[key], nevents, want,
+                   abs(got - want) / max(tol / n_sigma, 1e-12), tol, n_sigma,
+                   dict(counts)))
+
+
 def assert_efficiency_close(test, result_a, result_b, rel_tol=0.15):
     """Compare two modes' unweighting efficiencies. Both must be populated; if
     either is missing the test fails loudly so we don't silently skip a
@@ -900,6 +1008,20 @@ def assert_efficiency_ordering(test, results,
     2. ``onshell_decay_chain`` and ``onshell_density`` agree with each other
        within ``close_rel_tol`` (relative), and both are *better* (higher
        efficiency) than the pole approximation ``PA_density``.
+
+       Rule 2a is in practice much stronger than its tolerance: the two are
+       the same physics reached by different code (a full decay-chain matrix
+       element against a contraction of production and decay densities), so
+       on pure on-shell kinematics they compute the *same* weight and, off
+       one production sample with one seed, write bit-identical files. On the
+       ZZ run both sit at 0.2269 (10000/44080) to the trial. That is why this
+       rule was the one that broke when the joint-weight flavour fix moved
+       ``onshell_density`` (0.1776 -> 0.2269) and left ``onshell_decay_chain``
+       behind at 0.1776 -- 22% apart, and correctly rejected. The rule did
+       *not* encode the buggy behaviour and its tolerance has not been
+       touched; it is left at ``close_rel_tol`` rather than tightened to an
+       equality because nothing guarantees the identity once a mode reshuffles
+       or the two paths acquire different RNG consumption.
     3. ``madspin_density`` sits *between* ``full_decay_chain`` and
        ``PA_density``. Uses ``madspin_density_slack`` (default 0.05, absolute)
        rather than ``slack`` because the same ttbar 10k run showed the new
