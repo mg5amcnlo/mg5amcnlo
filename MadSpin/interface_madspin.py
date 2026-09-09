@@ -1669,6 +1669,51 @@ class MadSpinInterface(extended_cmd.Cmd):
             out //= math.factorial(repeat)
         return out
 
+    @staticmethod
+    def _decay_symmetry_factor(decays):
+        """The decay symmetry factor of the joint weight's denominator:
+        ``prod_groups prod_k n_k! / N!`` over the parent pdgs whose N identical
+        parents were *dealt* their decay channels, n_k counting the dealt
+        channels.
+
+        It is the reciprocal of :meth:`_assignment_multiplicity`, and it is
+        there for the same reason: a positional deal (``_draw_one_decay``'s
+        middle rule, which fires when the card gives a pdg exactly as many
+        channels as the event has identical parents) generates ONE of the
+        ``N!/prod_k n_k!`` assignments, so the rate owes their number. The same
+        multiplicity is what the branching ratio multiplies in for
+        ``kind == 'mult_split'``.
+
+        It must be keyed on the CHANNEL, and only on a dealt one. When the N
+        parents instead draw independently from one pool -- a single merged
+        decay line, ``define lp = e+ mu+`` / ``decay z > lp lm``, which is
+        ``kind == 'mult_cumul'`` and whose branching ratio carries no
+        multiplicity factor either -- the draw already samples every
+        assignment and there is nothing to compensate. Keying it on the drawn
+        *final state*, as it used to be, cannot tell the two apart: it doubled
+        the weight of every trial whose two Z decayed to different flavours and
+        gave ``p p > z z`` an e+e-mu+mu- : 4e : 4mu composition of 4:1:1 in
+        place of 2:1:1.
+
+        A decay event that did not come from ``_draw_one_decay`` carries no
+        tag; untagged means "not dealt", which leaves the factor at 1.
+        """
+        out = 1.0
+        for decay_event_list in decays.values():
+            nb = len(decay_event_list)
+            if nb < 2:
+                continue
+            if not all(getattr(evt, 'ms_positional', False)
+                       for evt in decay_event_list):
+                continue
+            counts = collections.Counter(getattr(evt, 'ms_channel', None)
+                                         for evt in decay_event_list)
+            sym = 1
+            for repeat in counts.values():
+                sym *= math.factorial(repeat)
+            out *= sym / float(math.factorial(nb))
+        return out
+
     def _resolve_group_rates(self, gen_jobs, channel_widths):
         """Branching ratio of the grouped particles, and each group's share.
 
@@ -6533,12 +6578,24 @@ class MadSpinInterface(extended_cmd.Cmd):
         if nb_decay == 0:
             return None #nothing to do for this particle
         # Determine the file to read in order to get the decay [decay_file]
+        # ``positional`` records which of the three rules below picked the
+        # channel: True only for the middle one, where the card gives this pdg
+        # exactly as many channels as the event has identical parents and the
+        # i-th parent is *dealt* the i-th channel. That is the only case in
+        # which a single assignment stands for several, and the only case whose
+        # rate owes the assignment multiplicity -- see the decay symmetry factor
+        # in calculate_matrix_element_from_density, which reads it back off the
+        # returned event. The other two rules draw (from one merged pool, or
+        # across channels by cross-section) and so sample the assignments
+        # themselves.
+        positional = False
         if nb_decay == 1:
             decay_file_nb = keys[0]
             decay_file = channels[decay_file_nb]
         elif ids.count(particle.pdg) == nb_decay:
             decay_file_nb = keys[ids[:i].count(particle.pdg)]
             decay_file = channels[decay_file_nb]
+            positional = True
         else:
             #need to select the file according to the associate cross-section
             r = random.random()
@@ -6603,8 +6660,21 @@ class MadSpinInterface(extended_cmd.Cmd):
                             'ms_refill_%d' % self._refill_nb)
                 decay_file = evt_decayfile[particle.pdg][decay_file_nb]
                 continue
+        # Which channel this decay came from, and whether it was dealt or drawn.
+        # The decay symmetry factor of the joint weight needs the channel, not
+        # the final state the channel happened to produce: one merged line
+        # (`define lp = e+ mu+` / `decay z > lp lm`) is a single channel whose
+        # events carry several different final states.
+        try:
+            decay.ms_channel = decay_file_nb
+            decay.ms_positional = positional
+        except AttributeError:
+            # a decay pool that yields something without a __dict__ (the unit
+            # tests use plain strings). Nothing to tag; the symmetry factor's
+            # getattr default then leaves the factor at 1.
+            pass
         return decay
-        
+
     
     def get_maxwgt_for_onshell(self, orig_lhe, evt_decayfile, decay_dict):
         """determine the maximum weight for the onshell (or similar) strategy"""
@@ -9580,6 +9650,14 @@ class MadSpinInterface(extended_cmd.Cmd):
                 if mass is not None:
                     copy[0].new_mass = mass
                     copy[0].reshuffle_info = decay[0].reshuffle_info
+                # which channel the draw dealt this slot, so the joint route
+                # recomputed here gets the same decay symmetry factor the real
+                # joint route would (a constant either way, and this check only
+                # asks for proportionality -- but there is no reason to make it
+                # compare two different weights)
+                for tag in ('ms_channel', 'ms_positional'):
+                    if hasattr(decay, tag):
+                        setattr(copy, tag, getattr(decay, tag))
                 decays_copy[pdg].append(copy)
                 slot += 1
         # the Breit-Wigner sampling jacobians: the joint path folds them in
@@ -10806,24 +10884,15 @@ class MadSpinInterface(extended_cmd.Cmd):
         else:
             density_prod = prod_density_cached
 
-        # ------------------------------------------------------------------
-        # Symmetry factor:
-        # For each parent-PDG group with N identical parents and decay-channel
-        # multiplicities {n_k}, the factor that belongs to the denominator is:
-        #   sym_group = (Π_k n_k!) / (N!)
-        # and sym_factor_decay = Π_groups sym_group.
-        # ------------------------------------------------------------------
-        sym_factor_decay = 1.0
+        # Decay symmetry factor: Π_k n_k!/N! per parent pdg whose N identical
+        # parents were DEALT their channels, n_k counting the dealt channels.
+        # It compensates the one assignment a positional deal generates out of
+        # N!/Π_k n_k! of them; parents that draw from a single merged pool
+        # sample the assignments themselves and take no factor. Full rationale,
+        # and what keying it on the drawn final state used to cost, in
+        # _decay_symmetry_factor.
+        sym_factor_decay = self._decay_symmetry_factor(decays)
 
-        # Canonical decay-channel signature: sorted final-state PDGs only.
-        def _decay_signature(dec_evt):
-            pdgs = []
-            for p in dec_evt:
-                if p.status == 1:
-                    pdgs.append(int(p.pid))
-            pdgs.sort()
-            return tuple(pdgs)
-        
         # ------------------------------------------------------------------
         # Build total decay density matrix as tensor product
         # ------------------------------------------------------------------
@@ -10832,23 +10901,6 @@ class MadSpinInterface(extended_cmd.Cmd):
 
         for pdg, decay_event_list in decays.items():
             N = len(decay_event_list)
-
-            # decay symmetry for this PDG group
-            if N > 1:
-                # Fast path for N==2 avoids building multiplicity maps.
-                if N == 2:
-                    if _decay_signature(decay_event_list[0]) != _decay_signature(decay_event_list[1]):
-                        sym_factor_decay *= 0.5
-                else:
-                    sig_counts = {}
-                    for evt in decay_event_list:
-                        sig = _decay_signature(evt)
-                        sig_counts[sig] = sig_counts.get(sig, 0) + 1
-                    sym = 1
-                    for nk in sig_counts.values():
-                        if nk > 1:
-                            sym *= math.factorial(nk)
-                    sym_factor_decay *= (sym / float(math.factorial(N)))
 
             # particle properties for this parent PDG
             width = decay_dict[pdg][0]
