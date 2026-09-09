@@ -5541,8 +5541,35 @@ PYTHIA8LINKLIBS=%(pythia8_prefix)s/lib/libpythia8.a -lz -ldl"""%{'pythia8_prefix
         else:
             self.make_opts_var['pineappl'] = ""
 
+        # Setting fastjet_config makes makefile_fks_dir build
+        # fastjetfortran_madfks_full.cc, which #includes
+        # "fastjet/ClusterSequence.hh" and asks fastjet-config for its cxxflags
+        # and libs.  A path that does not answer therefore turns the documented
+        # fjcore fallback (the else branch of that makefile) into a hard
+        # compilation error for every P* directory.  The option is read
+        # verbatim out of Cards/me5_configuration.txt and, unlike
+        # MadGraphCmd.set2_fastjet, was never re-validated here, so a stale or
+        # broken entry took the whole run down with an unrelated-looking
+        # "A compilation Error occurs when trying to compile .../P0_...".
+        # Check it the same way the shower setup above already does, and fall
+        # back to fjcore when it does not run.
         if 'fastjet' in list(self.options.keys()) and self.options['fastjet']:
-            self.make_opts_var['fastjet_config'] = self.options['fastjet']
+            try:
+                p = subprocess.Popen([self.options['fastjet'], '--version'],
+                                     stdout=subprocess.PIPE,
+                                     stderr=subprocess.PIPE)
+                p.communicate()
+                valid_fastjet = (p.returncode == 0)
+            except Exception:
+                valid_fastjet = False
+            if valid_fastjet:
+                self.make_opts_var['fastjet_config'] = self.options['fastjet']
+            else:
+                logger.warning('%s does not run: it is not a valid ' % \
+                    self.options['fastjet'] + 'fastjet-config. Compiling the ' +
+                    'Subprocesses with fjcore instead.\n Set the correct path ' +
+                    'with "set fastjet /PATH/TO/fastjet-config" if you need ' +
+                    'the full FastJet.')
 
         # add the make_opts_var to make_opts
         self.update_make_opts()
