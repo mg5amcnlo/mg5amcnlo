@@ -1431,6 +1431,120 @@ class TestDrawOneDecay(unittest.TestCase):
         return out
 
 
+class TestDecaySymmetryFactor(unittest.TestCase):
+    """_decay_symmetry_factor: the prod_k n_k!/N! of the joint weight's
+    denominator, and the tags _draw_one_decay leaves for it.
+
+    The factor compensates a positional DEAL, where the card gives a pdg
+    exactly as many decay channels as the event has identical parents and one
+    generated assignment stands for N!/prod_k n_k! of them. It must therefore
+    be keyed on the channel each parent was dealt, not on the final state that
+    channel happened to produce: one merged decay line (`define lp = e+ mu+` /
+    `decay z > lp lm`) is a single channel whose events carry several different
+    final states, and the parents draw from it independently -- the draw
+    samples the assignments itself, so there is nothing to compensate. Keying
+    the factor on the final state doubled the weight of every trial whose two Z
+    decayed to different flavours and gave `p p > z z` an
+    e+e-mu+mu- : 4e : 4mu composition of 4:1:1 in place of 2:1:1.
+    """
+
+    class _Part(object):
+        def __init__(self, pid):
+            self.pid = pid
+            self.pdg = pid
+            self.status = 1
+
+    class _Decay(object):
+        """A decay event the draw can tag (the pools of TestDrawOneDecay yield
+        plain strings, which have no __dict__)."""
+        def __init__(self, tag):
+            self.tag = tag
+
+    class _Pool(object):
+        def __init__(self, tag, cross=1.0):
+            self.tag = tag
+            self.n = 0
+            self.cross = cross
+        def __next__(self):
+            self.n += 1
+            return TestDecaySymmetryFactor._Decay('%s:%s' % (self.tag, self.n))
+
+    class _Stub(object):
+        get_decay_from_file = interface_madspin.MadSpinInterface.get_decay_from_file
+        _draw_all_decays = interface_madspin.MadSpinInterface._draw_all_decays
+        _draw_one_decay = interface_madspin.MadSpinInterface._draw_one_decay
+        _draw_decay_group = interface_madspin.MadSpinInterface._draw_decay_group
+        efficiency = 0.5
+
+    factor = staticmethod(interface_madspin.MadSpinInterface._decay_symmetry_factor)
+
+    def _draw(self, nb_parents, nb_channels):
+        production = [self._Part(23) for _ in range(nb_parents)]
+        evt_decayfile = {23: dict((i, self._Pool('c%d' % i))
+                                 for i in range(nb_channels))}
+        return self._Stub().get_decay_from_file(production, evt_decayfile, 10)
+
+    def test_one_merged_channel_for_two_parents_takes_no_factor(self):
+        """`decay z > lp lm` with two Z: both draw from the same pool, so the
+        draw already samples (ee,mumu) and (mumu,ee). This is the case the old
+        final-state keying got wrong."""
+        decays = self._draw(2, 1)
+        self.assertEqual([d.ms_channel for d in decays[23]], [0, 0])
+        self.assertEqual([d.ms_positional for d in decays[23]], [False, False])
+        self.assertEqual(self.factor(decays), 1.0)
+
+    def test_two_dealt_channels_for_two_parents_take_one_half(self):
+        """`decay z > e+ e-` + `decay z > mu+ mu-`: parent i is dealt channel i,
+        so only one of the two assignments is ever generated."""
+        decays = self._draw(2, 2)
+        self.assertEqual([d.ms_channel for d in decays[23]], [0, 1])
+        self.assertEqual([d.ms_positional for d in decays[23]], [True, True])
+        self.assertEqual(self.factor(decays), 0.5)
+
+    def test_three_dealt_channels_for_three_parents(self):
+        decays = self._draw(3, 3)
+        self.assertEqual([d.ms_channel for d in decays[23]], [0, 1, 2])
+        self.assertEqual(self.factor(decays), 1 / 6.)
+
+    def test_a_single_parent_never_takes_a_factor(self):
+        for nb_channels in (1, 2):
+            self.assertEqual(self.factor(self._draw(1, nb_channels)), 1.0)
+
+    def test_the_factor_is_keyed_on_the_channel_not_the_final_state(self):
+        """Two parents dealt two channels that happen to produce the same final
+        state still owe the 1/2! -- and two parents drawing repeatedly from one
+        channel owe nothing however different their final states are. Neither
+        is visible to a final-state signature."""
+        dealt = {23: [self._Decay('same'), self._Decay('same')]}
+        for i, dec in enumerate(dealt[23]):
+            dec.ms_channel, dec.ms_positional = i, True
+        self.assertEqual(self.factor(dealt), 0.5)
+
+        drawn = {23: [self._Decay('ee'), self._Decay('mumu')]}
+        for dec in drawn[23]:
+            dec.ms_channel, dec.ms_positional = 0, False
+        self.assertEqual(self.factor(drawn), 1.0)
+
+    def test_two_parents_dealt_the_same_channel_twice_cancel(self):
+        """n_k! / N! = 2!/2! = 1 when both dealt channels are the same one."""
+        decays = {23: [self._Decay('a'), self._Decay('b')]}
+        for dec in decays[23]:
+            dec.ms_channel, dec.ms_positional = 7, True
+        self.assertEqual(self.factor(decays), 1.0)
+
+    def test_an_untagged_decay_takes_no_factor(self):
+        """Anything that did not come from _draw_one_decay was not dealt."""
+        self.assertEqual(self.factor({23: ['a', 'b']}), 1.0)
+
+    def test_several_pdgs_multiply(self):
+        decays = {}
+        for pdg in (23, 6):
+            decays[pdg] = [self._Decay('x'), self._Decay('y')]
+            for i, dec in enumerate(decays[pdg]):
+                dec.ms_channel, dec.ms_positional = i, True
+        self.assertEqual(self.factor(decays), 0.25)
+
+
 class TestDrawOffshellMass(unittest.TestCase):
     """_draw_offshell_mass: one resonance virtuality, owned by the decay that
     carries it.

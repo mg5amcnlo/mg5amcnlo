@@ -1669,6 +1669,51 @@ class MadSpinInterface(extended_cmd.Cmd):
             out //= math.factorial(repeat)
         return out
 
+    @staticmethod
+    def _decay_symmetry_factor(decays):
+        """The decay symmetry factor of the joint weight's denominator:
+        ``prod_groups prod_k n_k! / N!`` over the parent pdgs whose N identical
+        parents were *dealt* their decay channels, n_k counting the dealt
+        channels.
+
+        It is the reciprocal of :meth:`_assignment_multiplicity`, and it is
+        there for the same reason: a positional deal (``_draw_one_decay``'s
+        middle rule, which fires when the card gives a pdg exactly as many
+        channels as the event has identical parents) generates ONE of the
+        ``N!/prod_k n_k!`` assignments, so the rate owes their number. The same
+        multiplicity is what the branching ratio multiplies in for
+        ``kind == 'mult_split'``.
+
+        It must be keyed on the CHANNEL, and only on a dealt one. When the N
+        parents instead draw independently from one pool -- a single merged
+        decay line, ``define lp = e+ mu+`` / ``decay z > lp lm``, which is
+        ``kind == 'mult_cumul'`` and whose branching ratio carries no
+        multiplicity factor either -- the draw already samples every
+        assignment and there is nothing to compensate. Keying it on the drawn
+        *final state*, as it used to be, cannot tell the two apart: it doubled
+        the weight of every trial whose two Z decayed to different flavours and
+        gave ``p p > z z`` an e+e-mu+mu- : 4e : 4mu composition of 4:1:1 in
+        place of 2:1:1.
+
+        A decay event that did not come from ``_draw_one_decay`` carries no
+        tag; untagged means "not dealt", which leaves the factor at 1.
+        """
+        out = 1.0
+        for decay_event_list in decays.values():
+            nb = len(decay_event_list)
+            if nb < 2:
+                continue
+            if not all(getattr(evt, 'ms_positional', False)
+                       for evt in decay_event_list):
+                continue
+            counts = collections.Counter(getattr(evt, 'ms_channel', None)
+                                         for evt in decay_event_list)
+            sym = 1
+            for repeat in counts.values():
+                sym *= math.factorial(repeat)
+            out *= sym / float(math.factorial(nb))
+        return out
+
     def _resolve_group_rates(self, gen_jobs, channel_widths):
         """Branching ratio of the grouped particles, and each group's share.
 
@@ -6620,8 +6665,14 @@ class MadSpinInterface(extended_cmd.Cmd):
         # the final state the channel happened to produce: one merged line
         # (`define lp = e+ mu+` / `decay z > lp lm`) is a single channel whose
         # events carry several different final states.
-        decay.ms_channel = decay_file_nb
-        decay.ms_positional = positional
+        try:
+            decay.ms_channel = decay_file_nb
+            decay.ms_positional = positional
+        except AttributeError:
+            # a decay pool that yields something without a __dict__ (the unit
+            # tests use plain strings). Nothing to tag; the symmetry factor's
+            # getattr default then leaves the factor at 1.
+            pass
         return decay
 
     
@@ -10825,35 +10876,14 @@ class MadSpinInterface(extended_cmd.Cmd):
         else:
             density_prod = prod_density_cached
 
-        # ------------------------------------------------------------------
-        # Symmetry factor:
-        # For each parent-PDG group of N identical parents whose decay channels
-        # were *dealt* positionally, with channel multiplicities {n_k}, the
-        # factor that belongs to the denominator is:
-        #   sym_group = (Π_k n_k!) / (N!)
-        # and sym_factor_decay = Π_groups sym_group.
-        #
-        # What it compensates: when the card gives this pdg exactly N decay
-        # lines, `_draw_one_decay` hands line i to the i-th parent, so only ONE
-        # of the N!/Π_k n_k! assignments is ever generated and the rate owes
-        # their number -- the same `_assignment_multiplicity` the branching
-        # ratio applies for kind == 'mult_split'.
-        #
-        # Why it is keyed on the channel and gated on `ms_positional`: when the
-        # N parents instead draw independently from one pool (a single merged
-        # decay line -- `define lp = e+ mu+` / `decay z > lp lm` -- which is
-        # kind == 'mult_cumul', and whose branching ratio carries no
-        # multiplicity factor either), the draw already samples every
-        # assignment, so there is nothing to compensate. Keying this on the
-        # drawn final state, as it was, cannot tell the two apart: it doubled
-        # the weight of every trial whose two Z decayed to different flavours
-        # and turned the 2:1:1 of e+e-mu+mu- : 4e : 4mu into 4:1:1 -- against
-        # 2.0000 for sigma(p p > z z, (z > e+ e-), (z > mu+ mu-)) /
-        # sigma(p p > z z, z > e+ e-) and against both `sequential` and
-        # `madspin_v1`. The same keying also keeps the factor right when two
-        # dealt lines happen to share a final state.
-        # ------------------------------------------------------------------
-        sym_factor_decay = 1.0
+        # Decay symmetry factor: Π_k n_k!/N! per parent pdg whose N identical
+        # parents were DEALT their channels, n_k counting the dealt channels.
+        # It compensates the one assignment a positional deal generates out of
+        # N!/Π_k n_k! of them; parents that draw from a single merged pool
+        # sample the assignments themselves and take no factor. Full rationale,
+        # and what keying it on the drawn final state used to cost, in
+        # _decay_symmetry_factor.
+        sym_factor_decay = self._decay_symmetry_factor(decays)
 
         # ------------------------------------------------------------------
         # Build total decay density matrix as tensor product
@@ -10863,20 +10893,6 @@ class MadSpinInterface(extended_cmd.Cmd):
 
         for pdg, decay_event_list in decays.items():
             N = len(decay_event_list)
-
-            # decay symmetry for this PDG group -- only for a positional deal
-            # (see the block comment above). An event that did not come from
-            # `_draw_one_decay` carries no tag; False is then the right default,
-            # since only that method ever deals.
-            if N > 1 and all(getattr(evt, 'ms_positional', False)
-                             for evt in decay_event_list):
-                chan_counts = collections.Counter(
-                    getattr(evt, 'ms_channel', None) for evt in decay_event_list)
-                sym = 1
-                for nk in chan_counts.values():
-                    if nk > 1:
-                        sym *= math.factorial(nk)
-                sym_factor_decay *= (sym / float(math.factorial(N)))
 
             # particle properties for this parent PDG
             width = decay_dict[pdg][0]
