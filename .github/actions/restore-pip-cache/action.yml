@@ -8,10 +8,14 @@ runs:
       run: echo "CACHE_KEY=pip-numpy-$ImageOS" >> $GITHUB_ENV
       shell: bash
 
+    # Generation-suffixed keys: see the comment in restore_heptools.
     - uses: actions/cache/restore@v5
       with:
         path: ~/.cache/pip-packages
-        key: ${{ env.CACHE_KEY }}
+        key: ${{ env.CACHE_KEY }}-${{ github.run_id }}
+        restore-keys: |
+          ${{ env.CACHE_KEY }}-
+          ${{ env.CACHE_KEY }}
 
     - run: |
         echo "PYTHONPATH=$PYTHONPATH:$HOME/.cache/pip-packages" >> $GITHUB_ENV

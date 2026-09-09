@@ -21,11 +21,15 @@ runs:
       shell: bash
 
     # check if the cache exists (if not an higher level will be called)
+    # Generation-suffixed keys: see the comment in restore_heptools_lhapdf.
     - uses: actions/cache/restore@v5
       if: ${{ inputs.setup_only != 'true' }}
       with:
         path: ~/.cache/HEPtools
-        key: ${{ env.CACHE_KEY }}
+        key: ${{ env.CACHE_KEY }}-${{ github.run_id }}
+        restore-keys: |
+          ${{ env.CACHE_KEY }}-
+          ${{ env.CACHE_KEY }}
 
     # Nothing to write into mg5_configuration.txt: boost has no MG5 option.
     # HEPToolInstaller finds it on its own as soon as

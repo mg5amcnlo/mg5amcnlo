@@ -47,6 +47,35 @@ jobs:
       - name: Set cache key
         run: echo "CACHE_KEY=$ImageOS" >> $GITHUB_ENV
 #
+      # Every cache is now saved under a generation-suffixed key
+      # "<name>-<ImageOS>-<run_id>" (see the design note at the top of the
+      # heptools_cache job), so an exact "gh cache delete <name>-<ImageOS>" no
+      # longer matches anything. Reset therefore has to enumerate: list every
+      # entry whose key starts with the prefix and delete it by id.
+      # "gh cache list --key" filters by key *prefix*, so passing the prefix
+      # without a trailing dash also catches the unversioned entries that
+      # predate this change.
+      - name: Define the prefix-delete helper
+        run: |
+          cat > "$RUNNER_TEMP/delete_caches.sh" <<'EOF'
+          #!/usr/bin/env bash
+          # usage: delete_caches.sh <key-prefix> [<key-prefix> ...]
+          set -u
+          for prefix in "$@"; do
+            ids=$(gh cache list --repo "$GITHUB_REPOSITORY" --key "$prefix" \
+                                --limit 100 --json id --jq '.[].id' 2>/dev/null || true)
+            if [ -z "$ids" ]; then
+              echo "no cache entry matching prefix '$prefix'"
+              continue
+            fi
+            for id in $ids; do
+              echo "deleting cache id $id (prefix '$prefix')"
+              gh cache delete "$id" --repo "$GITHUB_REPOSITORY" || true
+            done
+          done
+          EOF
+          chmod +x "$RUNNER_TEMP/delete_caches.sh"
+
       # "inputs.<x> == 'true'" can never be true for a "type: boolean" input:
       # GitHub casts both sides to a number for a mixed-type comparison, and
       # 'true' is not a number, so the result is 1 == NaN -> false. Ticking
@@ -55,27 +84,34 @@ jobs:
       # is null, so these steps stay skipped there.
       - name: Delete heptools related cache
         if: inputs.reset_heptools
-        run: | 
-          gh cache delete heptools-${{ env.CACHE_KEY }} --repo $GITHUB_REPOSITORY || true
-          gh cache delete lhapdf-${{ env.CACHE_KEY }} --repo $GITHUB_REPOSITORY || true
-          gh cache delete pythia8-${{ env.CACHE_KEY }} --repo $GITHUB_REPOSITORY || true
-          gh cache delete boost-${{ env.CACHE_KEY }} --repo $GITHUB_REPOSITORY || true
-          gh cache delete emela-${{ env.CACHE_KEY }} --repo $GITHUB_REPOSITORY || true
-          gh cache delete contur-${{ env.CACHE_KEY }} --repo $GITHUB_REPOSITORY || true
+        run: |
+          "$RUNNER_TEMP/delete_caches.sh" \
+            heptools-${{ env.CACHE_KEY }} \
+            lhapdf-${{ env.CACHE_KEY }} \
+            pythia8-${{ env.CACHE_KEY }} \
+            boost-${{ env.CACHE_KEY }} \
+            emela-${{ env.CACHE_KEY }} \
+            contur-${{ env.CACHE_KEY }} \
+            looptools-${{ env.CACHE_KEY }}
         env:
           GH_TOKEN: ${{ github.token }}
 
+      # The ufo cache is not per-image: its key is "ufomodel-<run_id>" (it used
+      # to be a bare "ufomodel"). The old "ufomodel-$ImageOS" target here never
+      # matched any key that was ever written, so reset_ufo was a no-op.
       - name: Delete ufo cache
         if: inputs.reset_ufo
         run: |
-          gh cache delete ufomodel-${{ env.CACHE_KEY }} --repo $GITHUB_REPOSITORY || true
+          "$RUNNER_TEMP/delete_caches.sh" ufomodel
         env:
           GH_TOKEN: ${{ github.token }}
 
+      # was 'inputs.reset_pip == "true"', i.e. never true - see the comment
+      # above about boolean inputs.
       - name: Delete pip cache
-        if: inputs.reset_pip == 'true'
+        if: inputs.reset_pip
         run: |
-          gh cache delete pip-numpy-${{ env.CACHE_KEY }} --repo $GITHUB_REPOSITORY || true
+          "$RUNNER_TEMP/delete_caches.sh" pip-numpy-${{ env.CACHE_KEY }}
         env:
           GH_TOKEN: ${{ github.token }}
 
@@ -85,8 +121,9 @@ jobs:
       - name: Delete root/delphes cache
         if: inputs.reset_delphes
         run: |
-          gh cache delete root-${{ env.CACHE_KEY }} --repo $GITHUB_REPOSITORY || true
-          gh cache delete delphes-${{ env.CACHE_KEY }} --repo $GITHUB_REPOSITORY || true
+          "$RUNNER_TEMP/delete_caches.sh" \
+            root-${{ env.CACHE_KEY }} \
+            delphes-${{ env.CACHE_KEY }}
         env:
           GH_TOKEN: ${{ github.token }}
 
@@ -100,16 +137,30 @@ jobs:
       - name: Set cache key
         run: echo "CACHE_KEY=$ImageOS" >> $GITHUB_ENV
 
+      # Generation-suffixed keys (see the note above heptools_cache), split into
+      # restore + save: the exact key can never match, so the "is it already
+      # cached?" question is answered by cache-matched-key (a restore-keys hit)
+      # and a new generation is only written when we really reinstalled.
       - name: Cache pip packages
         id: cache-pip
-        uses: actions/cache@v5
+        uses: actions/cache/restore@v5
         with:
           path: ~/.cache/pip-packages
-          key: pip-numpy-${{ env.CACHE_KEY }}
+          key: pip-numpy-${{ env.CACHE_KEY }}-${{ github.run_id }}
+          restore-keys: |
+            pip-numpy-${{ env.CACHE_KEY }}-
+            pip-numpy-${{ env.CACHE_KEY }}
 
       - name: Install numpy into cache dir (if not cached)
-        if: steps.cache-pip.outputs.cache-hit != 'true'
+        if: steps.cache-pip.outputs.cache-matched-key == ''
         run: pip install --upgrade --target ~/.cache/pip-packages numpy meson ninja
+
+      - name: Save the new pip cache generation
+        if: steps.cache-pip.outputs.cache-matched-key == ''
+        uses: actions/cache/save@v5
+        with:
+          path: ~/.cache/pip-packages
+          key: pip-numpy-${{ env.CACHE_KEY }}-${{ github.run_id }}
 
   ufo_cache:
      runs-on: ubuntu-latest
@@ -117,18 +168,26 @@ jobs:
 
     # Steps represent a sequence of tasks that will be executed as part of the job
      steps:
+       # Generation-suffixed keys (see the note above heptools_cache), split into
+       # restore + save like the pip/root/delphes caches. This one is not
+       # per-image (the UFO models are pure python), hence the bare "ufomodel-"
+       # prefix; the trailing bare "ufomodel" restore-key is transitional, for
+       # the unversioned entry that predates this change.
        - name: Cache UFO MODEL
          id: cache-ufo
-         uses: actions/cache@v5
+         uses: actions/cache/restore@v5
          with:
            path: ~/.cache/UFOMODEL
-           key: ufomodel
+           key: ufomodel-${{ github.run_id }}
+           restore-keys: |
+             ufomodel-
+             ufomodel
 
        - uses: actions/checkout@v5
-         if: steps.cache-ufo.outputs.cache-hit != 'true'
+         if: steps.cache-ufo.outputs.cache-matched-key == ''
 
        - name: Install UFO model
-         if: steps.cache-ufo.outputs.cache-hit != 'true'
+         if: steps.cache-ufo.outputs.cache-matched-key == ''
          run: |
            mkdir -p /home/runner/.cache/UFOMODEL
            echo "PYTHONPATH=$PYTHONPATH:$HOME/.cache/UFOMODEL" >> $GITHUB_ENV
@@ -136,9 +195,16 @@ jobs:
            ./bin/mg5_aMC cmd
 
        - name: move UFO model to cache
-         if: steps.cache-ufo.outputs.cache-hit != 'true'
+         if: steps.cache-ufo.outputs.cache-matched-key == ''
          run: |
            cp -r models/2HDM /home/runner/.cache/UFOMODEL
+
+       - name: Save the new UFO cache generation
+         if: steps.cache-ufo.outputs.cache-matched-key == ''
+         uses: actions/cache/save@v5
+         with:
+           path: ~/.cache/UFOMODEL
+           key: ufomodel-${{ github.run_id }}
            
   lhapdf_cache:
      # The scheduled run only keeps caches warm (see keep-warm-heptools); the
@@ -160,7 +226,7 @@ jobs:
          uses: actions/cache@v5
          with:
            path: ~/.cache/HEPtools
-           key: lhapdf-${{ env.CACHE_KEY }}
+           key: lhapdf-${{ env.CACHE_KEY }}-${{ github.run_id }}
 
        - name: get mg5
          uses: actions/checkout@v5
@@ -213,7 +279,7 @@ jobs:
          uses: actions/cache@v5
          with:
            path: ~/.cache/HEPtools
-           key: pythia8-${{ env.CACHE_KEY }}
+           key: pythia8-${{ env.CACHE_KEY }}-${{ github.run_id }}
 
        - name: get mg5
          if: steps.cache-pythia8.outputs.cache-hit != 'true'
@@ -273,7 +339,7 @@ jobs:
          uses: actions/cache@v5
          with:
            path: ~/.cache/HEPtools
-           key: boost-${{ env.CACHE_KEY }}
+           key: boost-${{ env.CACHE_KEY }}-${{ github.run_id }}
 
        - name: get mg5
          if: steps.cache-boost.outputs.cache-hit != 'true'
@@ -324,7 +390,7 @@ jobs:
          uses: actions/cache@v5
          with:
            path: ~/.cache/HEPtools
-           key: emela-${{ env.CACHE_KEY }}
+           key: emela-${{ env.CACHE_KEY }}-${{ github.run_id }}
 
        - name: get mg5
          if: steps.cache-eMELA.outputs.cache-hit != 'true'
@@ -398,7 +464,7 @@ jobs:
          uses: actions/cache@v5
          with:
            path: ~/.cache/HEPtools
-           key: contur-${{ env.CACHE_KEY }}
+           key: contur-${{ env.CACHE_KEY }}-${{ github.run_id }}
 
        - name: get mg5
          if: steps.cache-contur.outputs.cache-hit != 'true'
@@ -465,7 +531,7 @@ jobs:
          uses: actions/cache@v5
          with:
            path: ~/.cache/HEPtools
-           key: looptools-${{ env.CACHE_KEY }} # key to change if not final step
+           key: looptools-${{ env.CACHE_KEY }}-${{ github.run_id }}
        
        - name: get mg5
          if: steps.cache-nlo.outputs.cache-hit != 'true'
@@ -507,8 +573,35 @@ jobs:
          with:
            tools: looptools
 
+  # ---------------------------------------------------------------------------
+  # Cache key generations (the reason every key below ends in ${{ github.run_id }})
+  #
+  # GitHub Actions caches are immutable: a key that already exists cannot be
+  # overwritten, and actions/cache/save is a silent no-op on it. This job used
+  # to work around that by deleting heptools-<ImageOS> and then saving it
+  # again, which left a ~30 minute window in which no cache matched at all.
+  # Consumers restore with an exact key, so a miss is total: on a heptools miss
+  # restore_heptools_contur still points MG5 at a fastjet-config that is not
+  # there and every aMC@NLO SubProcess compile dies on
+  # fastjet/ClusterSequence.hh. That is what turned 13 acceptance jobs red on
+  # the 3.8.0 tip while the very same commit was green on a later re-run.
+  #
+  # Fix: every cache is saved under "<name>-<ImageOS>-<generation>" with the
+  # generation being github.run_id, and every consumer restores with a
+  # "<name>-<ImageOS>-" restore-keys prefix. A refresh therefore *adds* an
+  # entry; GitHub serves the newest one matching the prefix, so while a new
+  # generation is being built jobs keep using the previous one and there is no
+  # window. Old generations disappear on their own via the 7-day-unused
+  # eviction and the repo LRU.
+  #
+  # run_id is unique per run, which is all that is needed (the prefix match
+  # orders by creation time, not by key), and it is stable across "re-run
+  # failed jobs" - which is exactly what keeps the recovery path documented
+  # below working: the sub-caches that survived a failed run are still found by
+  # their exact key when that run is re-run.
+  # ---------------------------------------------------------------------------
   heptools_cache:
-    runs-on: ${{ matrix.os }}       
+    runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         os: [ubuntu-22.04, ubuntu-24.04]
@@ -529,52 +622,57 @@ jobs:
 
       # Restore in dependency order; each sub-cache is cumulative, so later
       # ones simply overlay the earlier content in ~/.cache/HEPtools.
+      # These are exact keys on purpose: the generation suffix pins them to the
+      # sub-caches *this* run produced (or, on a "re-run failed jobs", the ones
+      # the earlier attempt of this same run left behind - run_id is stable
+      # across attempts). No restore-keys here, so a stale sub-cache from an
+      # unrelated run can never be folded into the combined cache.
       - name: Restore lhapdf (if available)
         if: needs.lhapdf_cache.result == 'success'
         uses: actions/cache/restore@v5
         with:
           path: ~/.cache/HEPtools
-          key: lhapdf-${{ env.CACHE_KEY }}
+          key: lhapdf-${{ env.CACHE_KEY }}-${{ github.run_id }}
 
       - name: Restore boost (if available)
         if: needs.boost_cache.result == 'success'
         uses: actions/cache/restore@v5
         with:
           path: ~/.cache/HEPtools
-          key: boost-${{ env.CACHE_KEY }}
+          key: boost-${{ env.CACHE_KEY }}-${{ github.run_id }}
 
       - name: Restore pythia8 (if available)
         if: needs.pythia8_cache.result == 'success'
         uses: actions/cache/restore@v5
         with:
           path: ~/.cache/HEPtools
-          key: pythia8-${{ env.CACHE_KEY }}
+          key: pythia8-${{ env.CACHE_KEY }}-${{ github.run_id }}
 
       - name: Restore emela (if available)
         if: needs.emela_cache.result == 'success'
         uses: actions/cache/restore@v5
         with:
           path: ~/.cache/HEPtools
-          key: emela-${{ env.CACHE_KEY }}
+          key: emela-${{ env.CACHE_KEY }}-${{ github.run_id }}
 
       - name: Restore contur (if available)
         if: needs.contur_cache.result == 'success'
         uses: actions/cache/restore@v5
         with:
           path: ~/.cache/HEPtools
-          key: contur-${{ env.CACHE_KEY }}
+          key: contur-${{ env.CACHE_KEY }}-${{ github.run_id }}
 
       - name: Restore looptools (if available)
         if: needs.looptools_cache.result == 'success'
         uses: actions/cache/restore@v5
         with:
           path: ~/.cache/HEPtools
-          key: looptools-${{ env.CACHE_KEY }}
+          key: looptools-${{ env.CACHE_KEY }}-${{ github.run_id }}
 
       # Green sub-jobs are not proof that the tree is complete: a sub-cache may
       # predate the checks above, or a restore may have silently produced
       # nothing. Inspect the assembled tree itself before publishing it.
-      # Failing here stops the three steps below, which is deliberate: the old
+      # Failing here stops the two steps below, which is deliberate: the old
       # combined cache is left alone AND every intermediate cache survives, so
       # the next run only has to redo the one piece that is actually broken
       # instead of the whole chain.
@@ -584,34 +682,32 @@ jobs:
         with:
           tools: lhapdf boost pythia8 emela contur looptools
 
-      # GitHub Actions caches are immutable: actions/cache/save is a silent
-      # no-op when the key already exists (it logs "Unable to reserve cache
-      # ... another job may be creating this cache" and the freshly rebuilt
-      # combined cache is discarded). Outside the Sunday cron / reset_heptools
-      # the old heptools-$KEY therefore never gets replaced. Delete it first so
-      # the new content is actually saved. Only do this (and the save) once all
-      # sub-caches succeeded, so a partial rebuild never replaces a good cache.
-      - name: Delete previous combined cache (so the fresh one can be saved)
-        if: env.ALL_SUBCACHES_OK == 'true'
-        run: gh cache delete heptools-${{ env.CACHE_KEY }} --repo $GITHUB_REPOSITORY || true
-        env:
-          GH_TOKEN: ${{ github.token }}
-
+      # The generation suffix makes this key new every run, so there is nothing
+      # to delete first and no window in which consumers miss: the previous
+      # generation stays readable through their "heptools-<ImageOS>-"
+      # restore-keys prefix right up to the moment this one lands. Still gated
+      # on ALL_SUBCACHES_OK (plus the content check above), so a partial
+      # rebuild never publishes a generation newer than the good one.
       - uses: actions/cache/save@v5
         if: env.ALL_SUBCACHES_OK == 'true'
         with:
           path: ~/.cache/HEPtools
-          key: heptools-${{ env.CACHE_KEY }}
+          key: heptools-${{ env.CACHE_KEY }}-${{ github.run_id }}
 
+      # The sub-caches are deliberately transient: they exist only to hand
+      # content to this job, and each is scoped to this run by the generation
+      # suffix, so deleting them here cannot take a cache away from a
+      # concurrent warm_cache run on another branch (with the old fixed keys it
+      # could, which was the same delete-window bug one level down).
       - name: Cleanup intermediate caches (only if all succeeded and verified)
         if: env.ALL_SUBCACHES_OK == 'true'
         run: |
-          gh cache delete lhapdf-${{ env.CACHE_KEY }} --repo $GITHUB_REPOSITORY || true
-          gh cache delete boost-${{ env.CACHE_KEY }} --repo $GITHUB_REPOSITORY || true
-          gh cache delete pythia8-${{ env.CACHE_KEY }} --repo $GITHUB_REPOSITORY || true
-          gh cache delete emela-${{ env.CACHE_KEY }} --repo $GITHUB_REPOSITORY || true
-          gh cache delete contur-${{ env.CACHE_KEY }} --repo $GITHUB_REPOSITORY || true
-          gh cache delete looptools-${{ env.CACHE_KEY }} --repo $GITHUB_REPOSITORY || true
+          gh cache delete lhapdf-${{ env.CACHE_KEY }}-${{ github.run_id }} --repo $GITHUB_REPOSITORY || true
+          gh cache delete boost-${{ env.CACHE_KEY }}-${{ github.run_id }} --repo $GITHUB_REPOSITORY || true
+          gh cache delete pythia8-${{ env.CACHE_KEY }}-${{ github.run_id }} --repo $GITHUB_REPOSITORY || true
+          gh cache delete emela-${{ env.CACHE_KEY }}-${{ github.run_id }} --repo $GITHUB_REPOSITORY || true
+          gh cache delete contur-${{ env.CACHE_KEY }}-${{ github.run_id }} --repo $GITHUB_REPOSITORY || true
+          gh cache delete looptools-${{ env.CACHE_KEY }}-${{ github.run_id }} --repo $GITHUB_REPOSITORY || true
         env:
           GH_TOKEN: ${{ github.token }}
 
@@ -630,7 +726,7 @@ jobs:
   # are guarded with github.event_name != 'schedule'). Restore the combined
   # heptools cache here so its 7-day eviction timer is reset and it stays warm
   # without recompiling anything. ufo/numpy/root/delphes already keep themselves
-  # warm via their own cache-hit restores on the scheduled run.
+  # warm via their own restores on the scheduled run.
   keep-warm-heptools:
     if: github.event_name == 'schedule'
     runs-on: ${{ matrix.os }}
@@ -643,27 +739,34 @@ jobs:
 
       - name: Set cache key
         run: echo "CACHE_KEY=$ImageOS" >> $GITHUB_ENV
+      # Generation-suffixed keys, so match on the prefix like every consumer
+      # does; restoring is what resets the 7-day eviction timer.
       - name: Restore (touch) the combined heptools cache
         id: touch-heptools
         uses: actions/cache/restore@v5
         with:
           path: ~/.cache/HEPtools
-          key: heptools-${{ env.CACHE_KEY }}
+          key: heptools-${{ env.CACHE_KEY }}-${{ github.run_id }}
+          restore-keys: |
+            heptools-${{ env.CACHE_KEY }}-
+            heptools-${{ env.CACHE_KEY }}
 
       # The twice-weekly run is the only thing that regularly looks at the
       # combined cache, so it is also the place where a cache that was saved
       # incomplete (before the producing jobs were guarded) shows up. Fail here
       # rather than keeping a broken cache warm for weeks; the fix is to
       # re-dispatch this workflow with reset_heptools.
+      # (cache-hit is exact-match only, so it is never true here; what matters
+      # is whether restore-keys found anything, i.e. cache-matched-key.)
       - name: Check the cache we are keeping warm is still complete
-        if: steps.touch-heptools.outputs.cache-hit == 'true'
+        if: steps.touch-heptools.outputs.cache-matched-key != ''
         uses: ./.github/actions/check_heptools
         with:
           tools: lhapdf boost pythia8 emela contur looptools
 
       - name: Warn when there is no combined cache to keep warm
-        if: steps.touch-heptools.outputs.cache-hit != 'true'
-        run: echo "::warning::no heptools-${{ env.CACHE_KEY }} cache found; it will be rebuilt on the next push or manual dispatch."
+        if: steps.touch-heptools.outputs.cache-matched-key == ''
+        run: echo "::warning::no heptools-${{ env.CACHE_KEY }}-* cache found; it will be rebuilt on the next push or manual dispatch."
 
 
   # ---------------------------------------------------------------------------
@@ -690,21 +793,31 @@ jobs:
        - name: Set cache key
          run: echo "CACHE_KEY=$ImageOS" >> $GITHUB_ENV
 
+       # Generation-suffixed keys (see the note above heptools_cache). ROOT is
+       # version-pinned and stable: this job is meant to *read* the cache on the
+       # scheduled run (which resets the 7-day timer) and only rebuild on a real
+       # miss. actions/cache reports cache-hit on an exact key match only, which
+       # a generation suffix makes impossible, so this is split into an explicit
+       # restore + save and everything below is gated on cache-matched-key: a
+       # new generation is written only when ROOT was actually reinstalled.
        - name: Cache ROOT
          id: cache-root
-         uses: actions/cache@v5
+         uses: actions/cache/restore@v5
          with:
            path: ~/.cache/Delphes
-           key: root-${{ env.CACHE_KEY }}
+           key: root-${{ env.CACHE_KEY }}-${{ github.run_id }}
+           restore-keys: |
+             root-${{ env.CACHE_KEY }}-
+             root-${{ env.CACHE_KEY }}
 
        - name: Install ROOT runtime dependencies
-         if: steps.cache-root.outputs.cache-hit != 'true'
+         if: steps.cache-root.outputs.cache-matched-key == ''
          run: |
                sudo apt-get update
                sudo apt-get install -y libtbb12 libvdt0 libgsl-dev || true
 
        - name: Install ROOT binary into the dedicated cache dir
-         if: steps.cache-root.outputs.cache-hit != 'true'
+         if: steps.cache-root.outputs.cache-matched-key == ''
          # ROOT.cern publishes per-image binary builds. Bump ROOT_VERSION / the
          # gcc tags below when moving to a newer image; the filename must match
          # an existing build at https://root.cern/download/ .
@@ -724,10 +837,17 @@ jobs:
                rm -f "${ROOT_TARBALL}"
 
        - name: Verify ROOT landed in the cache
-         if: steps.cache-root.outputs.cache-hit != 'true'
+         if: steps.cache-root.outputs.cache-matched-key == ''
          run: |
                test -x $HOME/.cache/Delphes/root/bin/root-config
                $HOME/.cache/Delphes/root/bin/root-config --version
+
+       - name: Save the new ROOT cache generation
+         if: steps.cache-root.outputs.cache-matched-key == ''
+         uses: actions/cache/save@v5
+         with:
+           path: ~/.cache/Delphes
+           key: root-${{ env.CACHE_KEY }}-${{ github.run_id }}
 
   delphes_cache:
      runs-on: ${{ matrix.os }}
@@ -740,23 +860,27 @@ jobs:
        - name: Set cache key
          run: echo "CACHE_KEY=$ImageOS" >> $GITHUB_ENV
 
+       # Same generation-suffixed restore/save split as root_cache above.
        - name: Cache Delphes (stacked on top of ROOT)
          id: cache-delphes
-         uses: actions/cache@v5
+         uses: actions/cache/restore@v5
          with:
            path: ~/.cache/Delphes
-           key: delphes-${{ env.CACHE_KEY }}
+           key: delphes-${{ env.CACHE_KEY }}-${{ github.run_id }}
+           restore-keys: |
+             delphes-${{ env.CACHE_KEY }}-
+             delphes-${{ env.CACHE_KEY }}
 
        - name: get mg5
-         if: steps.cache-delphes.outputs.cache-hit != 'true'
+         if: steps.cache-delphes.outputs.cache-matched-key == ''
          uses: actions/checkout@v5
 
        - name: restore ROOT cache (dependency)
-         if: steps.cache-delphes.outputs.cache-hit != 'true'
+         if: steps.cache-delphes.outputs.cache-matched-key == ''
          uses: ./.github/actions/restore_root
 
        - name: Install Delphes into the dedicated cache dir
-         if: steps.cache-delphes.outputs.cache-hit != 'true'
+         if: steps.cache-delphes.outputs.cache-matched-key == ''
          env:
            MAKEFLAGS: "-j4"
          run: |
@@ -770,6 +894,13 @@ jobs:
                mv $GITHUB_WORKSPACE/Delphes $HOME/.cache/Delphes/Delphes
 
        - name: Verify Delphes landed in the cache
-         if: steps.cache-delphes.outputs.cache-hit != 'true'
+         if: steps.cache-delphes.outputs.cache-matched-key == ''
          run: |
                test -x $HOME/.cache/Delphes/Delphes/DelphesHepMC2
+
+       - name: Save the new Delphes cache generation
+         if: steps.cache-delphes.outputs.cache-matched-key == ''
+         uses: actions/cache/save@v5
+         with:
+           path: ~/.cache/Delphes
+           key: delphes-${{ env.CACHE_KEY }}-${{ github.run_id }}
