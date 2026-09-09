@@ -30,7 +30,21 @@ runs:
         echo "rivet_path = /home/runner/.cache/HEPtools/rivet" >>  input/mg5_configuration.txt
         echo "yoda_path = /home/runner/.cache/HEPtools/yoda" >>  input/mg5_configuration.txt
         echo "contur_path = /home/runner/.cache/HEPtools/contur" >>  input/mg5_configuration.txt
-        echo "fastjet = /home/runner/.cache/HEPtools/fastjet/bin/fastjet-config" >>  input/mg5_configuration.txt
+        # Only point MG5 at fastjet if it is really there.  The cache restore
+        # above is best-effort (fail-on-cache-miss is false, and warm_cache
+        # deletes the contur/heptools caches ~30 min before it re-saves them,
+        # so any job starting in that window gets nothing), and a fastjet-config
+        # that does not exist makes every aMC@NLO SubProcess compile
+        # fastjetfortran_madfks_full.cc and die on a missing
+        # fastjet/ClusterSequence.hh.  Without the line MG5 uses fjcore, which
+        # is a working fallback: the contur/rivet jobs still fail, loudly and on
+        # their own, but the numbered acceptance jobs no longer fail with them.
+        FJ=/home/runner/.cache/HEPtools/fastjet/bin/fastjet-config
+        if [ -x "$FJ" ]; then
+          echo "fastjet = $FJ" >>  input/mg5_configuration.txt
+        else
+          echo "::warning::$FJ missing (cache miss?) - leaving MG5 on fjcore"
+        fi
       shell: bash
 
     - name: set pythonpath for ubuntu22
