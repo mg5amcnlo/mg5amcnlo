@@ -11171,3 +11171,108 @@ class TestReusedMsDirParameters(unittest.TestCase):
         self._build(ms_dir=self.tmpdir)
         self.assertTrue(os.path.exists(pjoin(self.tmpdir,
                                              'ms_param_card.dat')))
+
+
+class TestDecayChainIdenticalFactor(unittest.TestCase):
+    """_decay_chain_identical_factor: the identical-particle bookkeeping the
+    legacy on-shell mode (`spinmode onshell_v1`) has to undo.
+
+    That mode alone takes its numerator from a separately generated
+    decay-chain matrix element and its denominator from the *undecayed*
+    production one. MG5 divides each by its own IDEN, and the
+    identical-particle parts do not match: `p p > z z` carries a 2 for the two
+    identical Z, while `p p > z z, z > e+ e-, z > mu+ mu-` carries
+    `identical_decay_chain_factor` -- 2 when the two chains are the same
+    process, 1 when they are not (IDEN 72 against 36 in the generated
+    matrix.f). So the mixed-flavour draw came out twice as heavy as the
+    same-flavour one for no physical reason, and a merged decay line
+    (`define lp = e+ mu+` / `decay z > lp lm`) wrote e+e-mu+mu- : 4e : 4mu as
+    4:1:1 where the ratio of decayed cross sections is 2:1:1.
+
+    Keyed on the drawn FINAL STATE -- the opposite of _decay_symmetry_factor,
+    because here MG5's generator really did apply the factor.
+    """
+
+    class _Part(object):
+        def __init__(self, pid, status=1):
+            self.pid = pid
+            self.pdg = pid
+            self.status = status
+
+    factor = staticmethod(
+        interface_madspin.MadSpinInterface._decay_chain_identical_factor)
+
+    @staticmethod
+    def _decay(*pids):
+        """A 1 -> N decay event: the parent (status 2) and its children."""
+        return [TestDecayChainIdenticalFactor._Part(pids[0], status=2)] + \
+               [TestDecayChainIdenticalFactor._Part(p) for p in pids[1:]]
+
+    def _zz(self, first, second):
+        production = [self._Part(2, status=-1), self._Part(-2, status=-1),
+                      self._Part(23), self._Part(23)]
+        decays = {23: [self._decay(23, *first), self._decay(23, *second)]}
+        return self.factor(production, decays)
+
+    def test_two_z_to_different_flavours_take_one_half(self):
+        """IDEN 36 for the chain process against 72 for the production: the
+        raw ratio is 2 too big."""
+        self.assertEqual(self._zz((-11, 11), (-13, 13)), 0.5)
+
+    def test_two_z_to_the_same_flavour_take_nothing(self):
+        """IDEN 72 on both sides -- already consistent."""
+        self.assertEqual(self._zz((-11, 11), (-11, 11)), 1.0)
+
+    def test_the_two_together_restore_the_2_to_1_ratio(self):
+        """The whole point: same-flavour and mixed end up on the same footing,
+        so the merged-line composition is 2:1:1."""
+        self.assertEqual(self._zz((-11, 11), (-13, 13)) /
+                         self._zz((-11, 11), (-11, 11)), 0.5)
+
+    def test_a_single_decaying_particle_takes_nothing(self):
+        """`p p > t t~`: t and t~ are separate keys with one parent each, so
+        no identical-chain factor exists on either side."""
+        production = [self._Part(21, status=-1), self._Part(21, status=-1),
+                      self._Part(6), self._Part(-6)]
+        decays = {6: [self._decay(6, 5, 24, -11, 12)],
+                  -6: [self._decay(-6, -5, -24, 1, -2)]}
+        self.assertEqual(self.factor(production, decays), 1.0)
+
+    def test_intermediate_resonances_separate_two_chains(self):
+        """The signature is the whole decay event, not just its final state:
+        `w+ > l+ vl` and a direct three-body decay to the same leptons are
+        different processes to MG5's check_equal_decay_processes."""
+        production = [self._Part(21, status=-1), self._Part(21, status=-1),
+                      self._Part(6), self._Part(6)]
+        two_step = self._decay(6, 5, 24, -11, 12)
+        three_body = [self._Part(6, status=2), self._Part(5),
+                      self._Part(-11), self._Part(12)]
+        self.assertEqual(self.factor(production, {6: [two_step, two_step]}), 1.0)
+        self.assertEqual(self.factor(production, {6: [two_step, three_body]}),
+                         0.5)
+
+    def test_three_identical_parents(self):
+        production = [self._Part(21, status=-1), self._Part(21, status=-1)] + \
+                     [self._Part(23) for _ in range(3)]
+        ee, mm = self._decay(23, -11, 11), self._decay(23, -13, 13)
+        # 3!/3! : all three the same process
+        self.assertEqual(self.factor(production, {23: [ee, ee, ee]}), 1.0)
+        # 2!1!/3!
+        self.assertEqual(self.factor(production, {23: [ee, ee, mm]}), 1 / 3.)
+
+    def test_an_undecayed_identical_leg_still_counts(self):
+        """MG5's non_chain_factor drops *every* leg whose pdg is decayed, so
+        the production factor to undo is n! over all of them, not over the
+        ones that were drawn a decay."""
+        production = [self._Part(21, status=-1), self._Part(21, status=-1),
+                      self._Part(23), self._Part(23)]
+        decays = {23: [self._decay(23, -11, 11)]}
+        self.assertEqual(self.factor(production, decays), 0.5)
+
+    def test_several_pdgs_multiply(self):
+        production = [self._Part(21, status=-1), self._Part(21, status=-1),
+                      self._Part(23), self._Part(23),
+                      self._Part(24), self._Part(24)]
+        decays = {23: [self._decay(23, -11, 11), self._decay(23, -13, 13)],
+                  24: [self._decay(24, -11, 12), self._decay(24, -13, 14)]}
+        self.assertEqual(self.factor(production, decays), 0.25)

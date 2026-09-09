@@ -1714,6 +1714,84 @@ class MadSpinInterface(extended_cmd.Cmd):
             out *= sym / float(math.factorial(nb))
         return out
 
+    @staticmethod
+    def _decay_process_signature(decay_event):
+        """A hashable stand-in for "which decay process is this?".
+
+        The multiset of (status, pdg) over the whole decay event, so the
+        intermediate resonances of a multi-step chain count too and
+        ``w+ > l+ vl`` is not confused with a direct three-body decay to the
+        same final state. It is the runtime counterpart of
+        :func:`HelasMatrixElement.check_equal_decay_processes`, which is what
+        MG5 uses when it decides how many of a decay-chain process's chains are
+        identical.
+        """
+        return tuple(sorted((int(p.status), int(p.pid)) for p in decay_event))
+
+    @classmethod
+    def _decay_chain_identical_factor(cls, production, decays):
+        """The identical-particle factor the *legacy on-shell* (``onshell_v1``)
+        weight has to divide out of its production x decay matrix element.
+
+        That mode is the only one that gets its numerator from a separately
+        generated decay-chain matrix element -- ``|M(p p > z z, z > e+ e-,
+        z > mu+ mu-)|^2`` -- while its denominator uses the *undecayed*
+        production matrix element. Both are MG5 matrix elements, so both are
+        already divided by their own ``IDEN``, and the identical-particle part
+        of the two IDENs does not match:
+
+          * the production process ``p p > z z`` has two identical Z, so its
+            IDEN carries a 2 (``S_prod``);
+          * the decay-chain process carries ``identical_decay_chain_factor``
+            (``helas_objects.py``), which is ``n!`` over *identical chains*:
+            2 when both Z were drawn to ``e+ e-``, 1 when one went to ``e+ e-``
+            and the other to ``mu+ mu-``.
+
+        So the raw ratio ``full_me / production_me`` comes out twice as large
+        for a mixed-flavour draw as for a same-flavour one, purely from
+        bookkeeping. With one merged decay line (``define lp = e+ mu+`` /
+        ``decay z > lp lm``) that turns the e+e-mu+mu- : 4e : 4mu composition
+        into 4:1:1 where it must be 2:1:1 -- the ratio of the two decayed cross
+        sections, which is exactly 2.0000 in direct MadGraph (the 6-point
+        amplitude is the same, only ``DATA IDEN`` differs, 36 against 72).
+
+        Returned factor: ``prod_pdg (prod_k n_k! / N_pdg!)``, with ``N_pdg`` the
+        number of production final-state legs of that pdg (which is what MG5's
+        ``non_chain_factor`` drops from the full process, and what the
+        production IDEN keeps) and ``n_k`` the number of chains of that pdg
+        sharing a decay-process signature. Multiplying the numerator by it
+        leaves a weight with no identical-particle factor anywhere -- which is
+        what the density modes have for free, since they build the numerator by
+        contracting the *same* production density they divide by.
+
+        Note that this is keyed on the drawn FINAL STATE, the opposite of
+        :meth:`_decay_symmetry_factor`, and for the opposite reason: there the
+        code was inventing a symmetry factor that the sampling had already
+        taken care of, here it is undoing one that MG5's matrix-element
+        generator really did apply.
+
+        Cases where it is 1 and nothing moves: a single decaying particle of a
+        given pdg (``p p > t t~`` -- ``t`` and ``t~`` are separate keys, N=1
+        each), and any run in which every event draws the same signatures (two
+        explicit decay lines, or a single non-merged one), where it is a
+        constant and cancels against the maximum weight.
+        """
+        out = 1.0
+        for pdg, decay_event_list in decays.items():
+            if not decay_event_list:
+                continue
+            nb_prod = sum(1 for p in production
+                          if int(p.status) == 1 and int(p.pid) == pdg)
+            if nb_prod < 2:
+                continue
+            counts = collections.Counter(cls._decay_process_signature(evt)
+                                         for evt in decay_event_list)
+            iden = 1
+            for repeat in counts.values():
+                iden *= math.factorial(repeat)
+            out *= iden / float(math.factorial(nb_prod))
+        return out
+
     def _resolve_group_rates(self, gen_jobs, channel_widths):
         """Branching ratio of the grouped particles, and each group's share.
 
@@ -10500,10 +10578,17 @@ class MadSpinInterface(extended_cmd.Cmd):
 
         # Calculate production*decay ME
         if self.generate_all.mode == 'onshell':
+            # MG5 builds the identical-particle factor of the *decay-chain*
+            # process into its IDEN, and it depends on which final state the
+            # chains were drawn to; the production ME in the denominator
+            # carries the factor of the undecayed process instead. Divide the
+            # mismatch out before the two are combined -- see
+            # _decay_chain_identical_factor.
+            iden_ratio = self._decay_chain_identical_factor(production, decays)
             full_event = lhe_parser.Event(str(production))
             full_event = full_event.add_decays(decays)
             #print(f"full_event = {full_event}")
-            full_me = self.calculate_matrix_element(full_event)
+            full_me = self.calculate_matrix_element(full_event) * iden_ratio
             #print(f"full_me = {full_me}")
         else:
             #offshell mode
