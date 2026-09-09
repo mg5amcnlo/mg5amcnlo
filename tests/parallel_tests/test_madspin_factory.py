@@ -21,6 +21,12 @@ MadSpin density-mode table, and then asserts:
     * each LHE is well-formed;
     * global branching ratios agree across modes;
     * lepton/quark final-state multiplicities agree within Poisson noise;
+    * where the final state has a flavour composition (the ZZ four-lepton
+      state), that composition matches the ratio of the decayed cross
+      sections -- a number computed from matrix elements alone, with no
+      MadSpin in it. Every other assertion here compares modes against each
+      other, which is no help when several are wrong in the same way; see
+      ``assert_flavour_shares``;
     * efficiency pairs that are physically expected to match -- old default
       vs. PA+density-reshuffled, and traditional onshell vs. PA-without-
       reshuffling -- match within ``EFF_TOL`` (15% to start; widen per the
@@ -66,6 +72,7 @@ from tests.parallel_tests.madspin_comparator import (
     assert_cross_sections_consistent,
     assert_efficiency_close,
     assert_efficiency_ordering,
+    assert_flavour_shares,
     assert_identity_ratios_agree,
     assert_lhe_well_formed,
     assert_multiplicities_consistent,
@@ -301,6 +308,16 @@ class MadSpinFactoryTest(_MadSpinFactoryBase):
         results = self._run_all_modes(factory)
         assert_multiplicities_consistent(
             self, results, pdgs=[11, -11, 13, -13])
+        # The composition of the four-lepton state, which the per-PDG counts
+        # above provably cannot see: both 2:1:1 and 4:1:1 give one electron
+        # per event. With one merged decay line and B_e = B_mu each Z decays
+        # independently, so 4e : 4mu : e+e-mu+mu- = 1 : 1 : 2 -- and direct
+        # MadGraph puts sigma(mixed)/sigma(same) at exactly 2.0000 (same
+        # 6-point amplitude, DATA IDEN 36 against 72). See
+        # assert_flavour_shares.
+        assert_flavour_shares(
+            self, results,
+            expected={(2, 2): 0.50, (4, 0): 0.25, (0, 4): 0.25})
         self._check_efficiency_pairs(results)
         offshell_results = {
             k: v for k, v in results.items()
