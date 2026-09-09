@@ -21,7 +21,6 @@
          complex(kind(1d0)),dimension(0:(1+der_order)**npwave-1) :: 
      &   comp = (0d0,0d0) ! npwave taken from onia.inc
    
-      ! Printing routine used for constitency checks
       contains
          procedure :: initZERO
       end type Dual
