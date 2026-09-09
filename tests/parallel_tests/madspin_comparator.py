@@ -1008,6 +1008,20 @@ def assert_efficiency_ordering(test, results,
     2. ``onshell_decay_chain`` and ``onshell_density`` agree with each other
        within ``close_rel_tol`` (relative), and both are *better* (higher
        efficiency) than the pole approximation ``PA_density``.
+
+       Rule 2a is in practice much stronger than its tolerance: the two are
+       the same physics reached by different code (a full decay-chain matrix
+       element against a contraction of production and decay densities), so
+       on pure on-shell kinematics they compute the *same* weight and, off
+       one production sample with one seed, write bit-identical files. On the
+       ZZ run both sit at 0.2269 (10000/44080) to the trial. That is why this
+       rule was the one that broke when the joint-weight flavour fix moved
+       ``onshell_density`` (0.1776 -> 0.2269) and left ``onshell_decay_chain``
+       behind at 0.1776 -- 22% apart, and correctly rejected. The rule did
+       *not* encode the buggy behaviour and its tolerance has not been
+       touched; it is left at ``close_rel_tol`` rather than tightened to an
+       equality because nothing guarantees the identity once a mode reshuffles
+       or the two paths acquire different RNG consumption.
     3. ``madspin_density`` sits *between* ``full_decay_chain`` and
        ``PA_density``. Uses ``madspin_density_slack`` (default 0.05, absolute)
        rather than ``slack`` because the same ttbar 10k run showed the new
