@@ -9650,6 +9650,14 @@ class MadSpinInterface(extended_cmd.Cmd):
                 if mass is not None:
                     copy[0].new_mass = mass
                     copy[0].reshuffle_info = decay[0].reshuffle_info
+                # which channel the draw dealt this slot, so the joint route
+                # recomputed here gets the same decay symmetry factor the real
+                # joint route would (a constant either way, and this check only
+                # asks for proportionality -- but there is no reason to make it
+                # compare two different weights)
+                for tag in ('ms_channel', 'ms_positional'):
+                    if hasattr(decay, tag):
+                        setattr(copy, tag, getattr(decay, tag))
                 decays_copy[pdg].append(copy)
                 slot += 1
         # the Breit-Wigner sampling jacobians: the joint path folds them in
