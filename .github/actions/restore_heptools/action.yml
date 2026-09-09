@@ -15,43 +15,34 @@ runs:
         path: ~/.cache/HEPtools
         key: ${{ env.CACHE_KEY }}
 
+    # Same content check the warm_cache jobs run before saving, in "report"
+    # mode: here an incomplete combined cache is not fatal, we just fall back
+    # to the (still present) sub-caches below.
     - name: validate cache content
       id: validate-cache
       if: steps.heptools-cache.outputs.cache-hit == 'true'
-      run: |
-        # Check that all expected HEPtool binaries/directories are present
-        VALID=true
-        test -d $HOME/.cache/HEPtools/lhapdf6_py3                    || VALID=false
-        # check the header/binary, not just the dir: a network-failed pythia8
-        # install can leave an incomplete pythia8/ dir that MG5 then rejects
-        # (pythia8_path nullified -> no shower -> rivet/contur tests fail).
-        test -f $HOME/.cache/HEPtools/pythia8/include/Pythia8/Pythia.h || VALID=false
-        test -x $HOME/.cache/HEPtools/pythia8/bin/pythia8-config      || VALID=false
-        test -x $HOME/.cache/HEPtools/bin/eMELA-config                || VALID=false
-        test -x $HOME/.cache/HEPtools/fastjet/bin/fastjet-config      || VALID=false
-        test -d $HOME/.cache/HEPtools/rivet                           || VALID=false
-        test -d $HOME/.cache/HEPtools/ninja                           || VALID=false
-        echo "cache_valid=$VALID" >> $GITHUB_OUTPUT
-        if [ "$VALID" = "false" ]; then
-          echo "::warning::heptools cache is incomplete, will restore from sub-caches"
-        fi
-      shell: bash
+      uses: ./.github/actions/check_heptools
+      with:
+        tools: lhapdf boost pythia8 emela contur looptools
+        mode: report
 
     # setup other environment of previous level of cache 
     # try to use their cache if previous cache failed or content is incomplete
     - uses: ./.github/actions/restore_heptools_lhapdf
       with: 
-        setup_only: ${{ steps.heptools-cache.outputs.cache-hit == 'true' && steps.validate-cache.outputs.cache_valid == 'true' }}
+        setup_only: ${{ steps.heptools-cache.outputs.cache-hit == 'true' && steps.validate-cache.outputs.valid == 'true' }}
+    - uses: ./.github/actions/restore_heptools_boost
+      with:
+        setup_only: ${{ steps.heptools-cache.outputs.cache-hit == 'true' && steps.validate-cache.outputs.valid == 'true' }}
     - uses: ./.github/actions/restore_heptools_pythia8
       with: 
-        setup_only: ${{ steps.heptools-cache.outputs.cache-hit == 'true' && steps.validate-cache.outputs.cache_valid == 'true' }}
+        setup_only: ${{ steps.heptools-cache.outputs.cache-hit == 'true' && steps.validate-cache.outputs.valid == 'true' }}
     - uses: ./.github/actions/restore_heptools_emela
       with: 
-        setup_only: ${{ steps.heptools-cache.outputs.cache-hit == 'true' && steps.validate-cache.outputs.cache_valid == 'true' }}
+        setup_only: ${{ steps.heptools-cache.outputs.cache-hit == 'true' && steps.validate-cache.outputs.valid == 'true' }}
     - uses: ./.github/actions/restore_heptools_contur
       with: 
-        setup_only: ${{ steps.heptools-cache.outputs.cache-hit == 'true' && steps.validate-cache.outputs.cache_valid == 'true' }}
+        setup_only: ${{ steps.heptools-cache.outputs.cache-hit == 'true' && steps.validate-cache.outputs.valid == 'true' }}
     - uses: ./.github/actions/restore_heptools_looptools
       with: 
-        setup_only: ${{ steps.heptools-cache.outputs.cache-hit == 'true' && steps.validate-cache.outputs.cache_valid == 'true' }}
-
+        setup_only: ${{ steps.heptools-cache.outputs.cache-hit == 'true' && steps.validate-cache.outputs.valid == 'true' }}
