@@ -159,11 +159,6 @@ class DiagramTag(object):
         legs = base_objects.LegList(sorted([l for l,v in leg_vertices],
                                            key= lambda l: l.get('number'), reverse=True))
 
-        # LS::ONIUM PROPERTIES ARE MISSING IN link.links
-        # for i in range(len(legs)):
-        #     if (legs[i].get('number')==3) or (legs[i].get('number')==4):
-        #         legs[i].set('onium',{'name': 'my_hardcoded_onium'})
-
         # The daughter vertices are in the second entry
         vertices = base_objects.VertexList(sum([v for l, v in leg_vertices],
                                                []))
@@ -241,13 +236,11 @@ class DiagramTag(object):
     def leg_from_link(link):
         """Return a leg from a link"""
 
-        # LS:: ONIUM PROPERTIES HAVE TO BE CHECKED
         if link.end_link:
             # This is an external leg, info in links
             return base_objects.Leg({'number':link.links[0][1],
                                      'id':link.links[0][0][0],
                                      'state':(link.links[0][0][1] == 0),
-                                     # 'onium':link.links[0][0][2],
                                      'onium': {},
                                      'onshell':False})
 

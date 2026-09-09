@@ -505,16 +505,10 @@ class CanonicalConfigTag(diagram_generation.DiagramTag):
         """Return a leg from a link"""
 
         if link.end_link:
-            # LS::ONIUM PROPERTIES ARE MISSING IN link.links
-            # if (link.links[0][1][0]==3) or (link.links[0][1][0]==4):
-            #     onium = {'name':'my_onium'}
-            # else:
-            #     onium = {}
             # This is an external leg, info in links
             leg = base_objects.Leg({'number':link.links[0][1][0],
                                      'id':link.links[0][1][1],
                                      'state':link.links[0][1][2],
-                                     # 'onium':onium,
                                      'onium':link.links[0][1][3],
                                      'onshell':None})
             return leg
