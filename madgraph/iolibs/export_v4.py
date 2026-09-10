@@ -1386,7 +1386,9 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
         if 'vector_size' not in self.opt['output_options']:
             self.opt['output_options']['vector_size'] = self.default_vector_size
 
-        model_builder = UFO_model_to_mg4(model, write_dir, self.opt + self.proc_characteristic)
+        model_opts = self.opt + self.proc_characteristic
+        model_opts['onia'] = getattr(self, 'has_boundstates', False)
+        model_builder = UFO_model_to_mg4(model, write_dir, model_opts)
         model_builder.build(wanted_couplings)
 
         # Backup the loop and dual modes, because they can be changed in what follows.
