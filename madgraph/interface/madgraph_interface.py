@@ -3183,12 +3183,19 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 self._mgme_dir = MG4DIR
 
         # check that make_opts exists
+        # This file is shared by every MG5aMC process running from this
+        # installation: it is copied verbatim into each new output directory and
+        # rewritten in place by set_fortran_compiler/set_cpp_compiler. Replacing
+        # it by rename (atomic_copy) rather than by shutil.copy is what keeps a
+        # concurrent reader from copying out a half-written make_opts -- which
+        # parses fine, drops FC/$(libext)/-ffixed-line-length-132, and surfaces
+        # only as column-72 Fortran errors in a completely unrelated build.
         make_opts = pjoin(MG5DIR, 'Template','LO','Source','make_opts')
         make_opts_source = pjoin(MG5DIR, 'Template','LO','Source','.make_opts')
         if not os.path.exists(make_opts):
-            shutil.copy(make_opts_source, make_opts)
+            misc.atomic_copy(make_opts_source, make_opts)
         elif  os.path.getmtime(make_opts) <  os.path.getmtime(make_opts_source):
-            shutil.copy(make_opts_source, make_opts)
+            misc.atomic_copy(make_opts_source, make_opts)
             
         # Variables to store state information
         self._multiparticles = {}
@@ -7549,9 +7556,8 @@ os.system('%s  -O -W ignore::DeprecationWarning %s %s --mode={0}' %(sys.executab
                                                                   cwd=MG5DIR)            
             print('new version installed, please relaunch mg5')
             try:
-                os.remove(pjoin(MG5DIR, 'Template','LO','Source','make_opts'))
-                shutil.copy(pjoin(MG5DIR, 'Template','LO','Source','.make_opts'),
-                            pjoin(MG5DIR, 'Template','LO','Source','make_opts'))
+                misc.atomic_copy(pjoin(MG5DIR, 'Template','LO','Source','.make_opts'),
+                                 pjoin(MG5DIR, 'Template','LO','Source','make_opts'))
             except:
                 pass
             sys.exit(0)

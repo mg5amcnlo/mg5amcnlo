@@ -28,6 +28,7 @@ import optparse
 import time
 import shutil
 import stat
+import tempfile
 import traceback
 import gzip as ziplib
 import io
@@ -510,6 +511,65 @@ def copytree(*args, **opts):
     if 'copy_function' not in opts:
         opts['copy_function'] = shutil.copy
     return shutil.copytree(*args, **opts)
+
+#===============================================================================
+# Atomic file replacement
+#===============================================================================
+def atomic_write(path, content):
+    """Write ``content`` to ``path`` so that any concurrent reader sees either
+    the complete old file or the complete new one, but never a truncated one.
+
+    ``open(path, 'w')`` (and therefore ``shutil.copy``) truncates the
+    destination before the first byte is written, so a reader that opens the
+    file in that window gets a short read.  For the files this is used on --
+    ``Source/make_opts`` above all, which is shared by every MG5 process on the
+    machine and re-written by each of them -- that failure is silent: a
+    truncated make_opts still *parses*, so ``make`` falls back to its builtins
+    ($(FC)=f77, no $(libext), no -ffixed-line-length-132) and the build dies
+    much later with unrelated column-72 Fortran errors.
+
+    The temporary file is created in the same directory as the destination:
+    os.replace is only atomic within one filesystem.
+    """
+    path = os.path.abspath(path)
+    dirname = os.path.dirname(path)
+    binary = isinstance(content, bytes)
+    fd, tmp = tempfile.mkstemp(dir=dirname,
+                               prefix='.%s.' % os.path.basename(path),
+                               suffix='.tmp')
+    try:
+        with os.fdopen(fd, 'wb' if binary else 'w') as fsock:
+            fsock.write(content)
+            fsock.flush()
+            os.fsync(fsock.fileno())
+        # mkstemp creates the file 0600; make_opts and friends have to stay
+        # readable by whoever else uses the install.
+        if os.path.exists(path):
+            shutil.copymode(path, tmp)
+        else:
+            os.chmod(tmp, 0o644)
+        os.replace(tmp, path)
+    except Exception:
+        try:
+            os.remove(tmp)
+        except OSError:
+            pass
+        raise
+
+
+def atomic_copy(src, dst):
+    """``shutil.copy(src, dst)``, but the destination is replaced atomically.
+
+    Like shutil.copy, ``dst`` may be a directory, in which case the basename of
+    ``src`` is used.  See :func:`atomic_write` for why this matters.  The source
+    is read into memory, so this is for configuration-sized files.
+    """
+    if os.path.isdir(dst):
+        dst = os.path.join(dst, os.path.basename(src))
+    with open(src, 'rb') as fsock:
+        content = fsock.read()
+    atomic_write(dst, content)
+    return dst
 
 #===============================================================================
 # Compiler which returns smart output error in case of trouble
