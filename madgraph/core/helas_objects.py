@@ -1415,9 +1415,14 @@ class HelasWavefunction(base_objects.PhysicsObject):
                     # have this replaced wavefunction in their mothers. This
                     # plays the role of the 'number_to_wavefunction' dictionary
                     # used for tree level.
+                    # Match on object identity rather than on the 'number'
+                    # attribute: numbers are reshuffled by the insertions above
+                    # (and by the renumbering just performed), so an unrelated
+                    # wavefunction can transiently carry new_wf_number and get
+                    # its mother silently overwritten.
                     for wf in diagram_wavefunctions:
                         for i,mother_wf in enumerate(wf.get('mothers')):
-                            if mother_wf.get('number')==new_wf_number:
+                            if mother_wf is self:
                                 wf.get('mothers')[i]=new_wf
 
             except ValueError:
