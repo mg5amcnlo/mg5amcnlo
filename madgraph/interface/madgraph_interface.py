@@ -10061,14 +10061,7 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                 self.previous_couplings = wanted_couplings
             else:
                 for npwave in aloha.npwave:
-                    if npwave == 0:
-                        aloha.dual_mode = False
-                    else:
-                        aloha.dual_mode = True
-                    self._curr_exporter.convert_model(self._curr_model,
-                                                   wanted_lorentz,
-                                                   wanted_couplings,
-                                                   npwave)
+                                                   npwave=npwave)
                 if hasattr(self, '_me_curr_exporter') and self._me_curr_exporter:
                     self._me_curr_exporter.convert_model(self._curr_model, 
                                                wanted_lorentz,
