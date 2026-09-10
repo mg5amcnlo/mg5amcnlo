@@ -4107,8 +4107,7 @@ frame_block = RunBlock('frame', template_on=template_on, template_off=template_o
 
 # Momentum reshuffling ------------------------------------------------------------------------------------
 template_on = \
-"""
-#*********************************************************************
+"""#*********************************************************************
 # Type of momentum-reshuffling algorithm                             *
 # This algorithm is currently implemented only for onium states      *
 # mom_resh_type:                                                     *
