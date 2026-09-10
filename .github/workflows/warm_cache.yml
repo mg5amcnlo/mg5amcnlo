@@ -6,6 +6,20 @@ permissions:
   contents: read
 on:
   push:
+    # Only these two branches warm the caches automatically. Every warm run
+    # rebuilds ~3.5GB of intermediate caches across both images against a 10GB
+    # per-repo quota, so letting a push to any feature branch that happens to
+    # touch one of the paths below start one is how the quota gets exhausted
+    # and the shared heptools caches get evicted. Use the workflow_dispatch
+    # button (below) to warm from anywhere else; that is a deliberate act.
+    #
+    # The schedule trigger needs no equivalent filter: GitHub only ever runs
+    # cron workflows on the default branch, which is 3.x.
+    branches:
+      - '3.x'
+      - 'test_ci'
+    # NB both filters must match: a push to 3.x/test_ci that touches none of
+    # these paths does not warm anything either.
     paths:
       - '.github/workflows/warm_cache.yml'
       - '.github/actions/restore_heptools/**'
