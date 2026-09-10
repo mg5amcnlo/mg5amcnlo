@@ -2183,7 +2183,8 @@ It has been validated for the last time with version: %s""",
     
 
 #decorator
-def set_global(loop=False, unitary=True, mp=False, cms=False):
+def set_global(loop=False, unitary=True, mp=False, cms=False,
+               dual=0, npwave=(0,)):
     from functools import wraps
     import aloha
     import aloha.aloha_lib as aloha_lib
@@ -2194,10 +2195,15 @@ def set_global(loop=False, unitary=True, mp=False, cms=False):
             old_gauge = aloha.unitary_gauge
             old_mp = aloha.mp_precision
             old_cms = aloha.complex_mass
+            old_dual = aloha.dual_mode
+            # npwave is a list mutated in place, so keep a copy of it
+            old_npwave = list(aloha.npwave)
             aloha.loop_mode = loop
             aloha.unitary_gauge = unitary
             aloha.mp_precision = mp
             aloha.complex_mass = cms
+            aloha.dual_mode = dual
+            aloha.npwave = list(npwave)
             aloha_lib.KERNEL.clean()
             try:
                 out =  f(*args, **opt)
@@ -2206,11 +2212,15 @@ def set_global(loop=False, unitary=True, mp=False, cms=False):
                 aloha.unitary_gauge = old_gauge
                 aloha.mp_precision = old_mp
                 aloha.complex_mass = old_cms
+                aloha.dual_mode = old_dual
+                aloha.npwave = old_npwave
                 raise
             aloha.loop_mode = old_loop
             aloha.unitary_gauge = old_gauge
             aloha.mp_precision = old_mp
             aloha.complex_mass = old_cms
+            aloha.dual_mode = old_dual
+            aloha.npwave = old_npwave
             aloha_lib.KERNEL.clean()
             return out
         return deco_f_set
