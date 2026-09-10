@@ -7278,10 +7278,7 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
 
         contains_onia = False
         if matrix_elements[0].get_nonia()>0:
-            if matrix_elements[0].get_npwave()>0:
-                aloha.dual_mode = True
-            else:
-                aloha.dual_mode = False
+            aloha.dual_mode = matrix_elements[0].get_npwave()
 
             self.opt['hel_recycling'] = False
             if not contains_onia:
