@@ -5188,9 +5188,6 @@ This implies that with decay chains:
                 bound_name = boundstates_keys[boundstates_keys_lower.index(part_name)]
                 boundstates[index] = self._boundstates[bound_name]
 
-        if not hasattr(aloha, "npwave"):
-            aloha.npwave = [0]
-
         if boundstates:
             # find all combinations of Fock states
             for index,key in enumerate(boundstates.keys()):
