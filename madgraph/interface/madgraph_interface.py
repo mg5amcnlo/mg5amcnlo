@@ -5237,7 +5237,7 @@ This implies that with decay chains:
             upc_with_jet = False
 
         onium_index = 0
-        aloha.dual_mode = False
+        aloha.dual_mode = 0
         # Extract process
         for part_name in args:
             if part_name == '>':
