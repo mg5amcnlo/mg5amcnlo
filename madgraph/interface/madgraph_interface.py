@@ -5496,6 +5496,7 @@ This implies that with decay chains:
             elif is_onium:
                 pass
             else:
+                raise self.InvalidCmd("No particle %s in model" % part_name)
 
         # Bound states are handled by the LO exporters only: nothing in the
         # FKS/loop path reads back the 'onium' leg properties and there is no
