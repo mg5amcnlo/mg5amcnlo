@@ -1616,7 +1616,11 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
         rows in chunks of size n."""
 
         if not matrix_element.get('color_matrix'):
-            return ["DATA %(proc_prefix)sDenom/1/", "DATA %(proc_prefix)sCF/0/"]
+            if matrix_element.get_nonia() > 0:
+                # colour-forbidden Fock state: the matrix element has to vanish
+                return ["DATA %(proc_prefix)sDenom/1/", "DATA %(proc_prefix)sCF/0/"]
+            # unchanged for everything else: a single trivial colour structure
+            return ["DATA %(proc_prefix)sDenom/1/", "DATA %(proc_prefix)sCF/1/"]
 
         ret_list = []
         my_cs = color.ColorString()
