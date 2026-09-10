@@ -534,6 +534,9 @@ C
         """Pass information for MA5"""
         
         self.proc_defs = cmd._curr_proc_defs
+        # only a model that defines Fock states can ever need setonia (and
+        # therefore rw_onia.f) in the model library
+        self.has_boundstates = bool(getattr(cmd, '_fockstates', []))
 
     #===========================================================================
     # Create jpeg diagrams, html pages,proc_card_mg5.dat and madevent.tar.gz
@@ -7971,7 +7974,7 @@ class UFO_model_to_mg4(object):
         self.dir_path = output_path
         
         self.opt = {'complex_mass': False, 'export_format': 'madevent', 'mp':True,
-                        'loop_induced': False}
+                        'loop_induced': False, 'onia': False}
         if opt:
             self.opt.update(opt)
             
@@ -8230,8 +8233,7 @@ class UFO_model_to_mg4(object):
         """Copy the standard files for the fortran model."""
         
         #copy the library files
-        file_to_link = ['formats.inc', 'rw_onia.f', \
-                        'rw_para.f', 'testprog.f']
+        file_to_link = ['formats.inc', 'rw_para.f', 'testprog.f']
     
         for filename in file_to_link:
             cp( MG5DIR + '/models/template_files/fortran/' + filename, \
