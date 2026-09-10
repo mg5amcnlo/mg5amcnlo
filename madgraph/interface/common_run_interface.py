@@ -1199,6 +1199,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
            madanalysis5_hadron_card.dat
            madanalysis5_parton_card.dat
            rivet_card.dat
+           onia_card.dat
            
            Please update the unit-test: test_card_type_recognition when adding
            cards.
@@ -1227,6 +1228,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                     'gridpack',
                     'ebeam1',
                     r'block\s+mw_run',
+                    r'block\s+ldme',
                     'BLOCK',
                     'DECAY',
                     'launch',
@@ -1279,6 +1281,8 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             return 'madweight_card.dat'
         elif 'transfer_card.dat' in text:
             return 'transfer_card.dat'
+        elif any(t.endswith('ldme') for t in text):
+            return 'onia_card.dat'
         elif 'block' in text and 'decay' in text: 
             return 'param_card.dat'
         elif 'b_stable' in text:
@@ -8332,6 +8336,14 @@ You can also copy/paste, your event file here.''')
                 self.run_card = banner_mod.RunCard(path)
         elif path == self.paths['shower']:
             self.shower_card = shower_card_mod.ShowerCard(path)
+        elif path == self.paths['onia']:
+            try:
+                self.onia_card = param_card_mod.ParamCard(path)
+            except (param_card_mod.InvalidParamCard, ValueError) as e:
+                logger.error('Current onia_card is not valid.')
+                logger.error('problem detected: %s' % e)
+                logger.error('Please re-open the file and fix the problem.')
+                logger.warning('using the \'set\' command without opening the file will discard all your manual change')
         elif path == self.paths['ML']:
             self.MLcard = banner_mod.MadLoopParam(path)
         elif path == self.paths['pythia8']:
