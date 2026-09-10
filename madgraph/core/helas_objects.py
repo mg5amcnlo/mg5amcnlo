@@ -1387,7 +1387,28 @@ class HelasWavefunction(base_objects.PhysicsObject):
                 # Use the copy in wavefunctions instead.
                 # Remove this copy from diagram_wavefunctions
                 new_wf_number = new_wf.get('number')
-                new_wf = wavefunctions[wavefunctions.index(new_wf)]
+                # HelasWavefunction.__eq__ ignores the pdg code, so for a loop
+                # wavefunction whose particle and antiparticle differ in nothing
+                # else -- a colour singlet, i.e. a lepton -- index() can return
+                # the wrong sign. Match the pdg code explicitly for every loop
+                # wavefunction. See appendix A of arXiv:2108.11404, which
+                # reported this for leptoquark pair production at NLO; the
+                # workaround given there guards only pdg < 0, but nothing makes
+                # the other sign safe, so the check is applied symmetrically.
+                if not new_wf.get('is_loop'):
+                    index_wf = wavefunctions.index(new_wf)
+                else:
+                    for i_wf, wf in enumerate(wavefunctions):
+                        if new_wf == wf and \
+                           wf.get('pdg_code') == new_wf.get('pdg_code'):
+                            index_wf = i_wf
+                            break
+                    else:
+                        # No pdg-matching candidate: same outcome as index()
+                        # finding nothing, i.e. keep the local copy. Caught by
+                        # the 'except ValueError' closing this try block.
+                        raise ValueError
+                new_wf = wavefunctions[index_wf]
                 diagram_wf_numbers = [w.get('number') for w in \
                                                           diagram_wavefunctions]
                 index = diagram_wf_numbers.index(new_wf_number)
@@ -1415,9 +1436,14 @@ class HelasWavefunction(base_objects.PhysicsObject):
                     # have this replaced wavefunction in their mothers. This
                     # plays the role of the 'number_to_wavefunction' dictionary
                     # used for tree level.
+                    # Match on object identity rather than on the 'number'
+                    # attribute: numbers are reshuffled by the insertions above
+                    # (and by the renumbering just performed), so an unrelated
+                    # wavefunction can transiently carry new_wf_number and get
+                    # its mother silently overwritten.
                     for wf in diagram_wavefunctions:
                         for i,mother_wf in enumerate(wf.get('mothers')):
-                            if mother_wf.get('number')==new_wf_number:
+                            if mother_wf is self:
                                 wf.get('mothers')[i]=new_wf
 
             except ValueError:
