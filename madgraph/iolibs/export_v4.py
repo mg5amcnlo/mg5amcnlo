@@ -10698,7 +10698,9 @@ c         segments from -DABS(tiny*Ga) to Ga
         """create makeinc.inc containing the file to compile """
         
         fsock = self.open('makeinc.inc', comment='#')
-        text = 'MODEL = couplings.o lha_read.o printout.o rw_onia.o rw_para.o'
+        text = 'MODEL = couplings.o lha_read.o printout.o rw_para.o'
+        if self.opt['onia']:
+            text += ' rw_onia.o'
         text += ' model_functions.o '
         
         if self.opt['export_format'].startswith('standalone'):
