@@ -147,7 +147,7 @@ class VirtualExporter(object):
         """
         return 
 
-    def convert_model(self, model, wanted_lorentz=[], wanted_couplings=[], npwave=0):
+    def convert_model(self, model, wanted_lorentz=[], wanted_couplings=[], **opts):
         return
     
     def finalize(self,matrix_element, cmdhistory, MG5options, outputflag, second_exporter=None):
@@ -1367,8 +1367,12 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
 
     def convert_model(self, model, wanted_lorentz = [],
                              wanted_couplings = [],
-                             npwave = 0):
-        """ Create a full valid MG4 model from a MG5 model (coming from UFO)"""
+                             npwave = 0, **opts):
+        """ Create a full valid MG4 model from a MG5 model (coming from UFO)
+
+        Every exporter takes **opts so that an option meant for one of them
+        (npwave here) can be passed by keyword to all of them and silently
+        ignored by those that do not care about it."""
 
         # Make sure aloha is in quadruple precision if needed
         old_aloha_mp=aloha.mp_precision
@@ -4286,10 +4290,10 @@ class ProcessExporterFortranMW(ProcessExporterFortran):
     # convert_model
     #===========================================================================    
     def convert_model(self, model, wanted_lorentz = [], 
-                             wanted_couplings = [], npwave = 0):
+                             wanted_couplings = [], **opts):
          
         super(ProcessExporterFortranMW,self).convert_model(model, 
-                                               wanted_lorentz, wanted_couplings, npwave)
+                                               wanted_lorentz, wanted_couplings, **opts)
          
         IGNORE_PATTERNS = ('*.pyc','*.dat','*.py~')
         try:
@@ -5177,10 +5181,10 @@ class ProcessExporterFortranME(ProcessExporterFortran):
  
  
     def convert_model(self, model, wanted_lorentz = [], 
-                            wanted_couplings = [], npwave = 0):
+                            wanted_couplings = [], **opts):
          
         super(ProcessExporterFortranME,self).convert_model(model, 
-                                               wanted_lorentz, wanted_couplings, npwave)
+                                               wanted_lorentz, wanted_couplings, **opts)
          
         IGNORE_PATTERNS = ('*.pyc','*.dat','*.py~')
         try:
