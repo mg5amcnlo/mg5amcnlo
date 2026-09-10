@@ -2006,14 +2006,14 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                     else:
                         all_element[(i+1, amp_number)] += value
                     if common_factor:
-                        res = (res + "%s" + AMP_format) % \
+                        res = res + ("%s" + AMP_format) % \
                                                    (self.coeff(coefficient[0],
                                                    coefficient[1] / abs(coefficient[1]),
                                                    coefficient[2],
                                                    coefficient[3]),
                                                    str(amp_number))
                     else:
-                        res = (res + "%s" + AMP_format) % (self.coeff(coefficient[0],
+                        res = res + ("%s" + AMP_format) % (self.coeff(coefficient[0],
                                                    coefficient[1],
                                                    coefficient[2],
                                                    coefficient[3]),
@@ -2021,7 +2021,7 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
     
                 if common_factor:
                     res = res + ')'
-                res_list.append(res.replace('_percent_', '%'))
+                res_list.append(res)
         
         if 'jamp_optim' in self.cmd_options:
             jamp_optim = banner_mod.ConfigFile.format_variable(self.cmd_options['jamp_optim'], bool, 'jamp_optim')
@@ -2079,17 +2079,17 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                 amp2 = "TMP_JAMP(%d)" % -amp2
             
             if frac not in  [1., -1]:
-                res_list.append((' TMP_JAMP(%d) = %s + (%s) * %s ! used %d times' % (i,amp1, format(frac), amp2, nb)).replace('_percent_', '%'))
+                res_list.append((' TMP_JAMP(%d) = %s + (%s) * %s ! used %d times' % (i,amp1, format(frac), amp2, nb)))
             elif frac == 1.:
-                res_list.append((' TMP_JAMP(%d) = %s +  %s ! used %d times' % (i,amp1, amp2, nb)).replace('_percent_', '%'))
+                res_list.append((' TMP_JAMP(%d) = %s +  %s ! used %d times' % (i,amp1, amp2, nb)))
             else:
-                res_list.append((' TMP_JAMP(%d) = %s - %s ! used %d times' % (i,amp1, amp2, nb)).replace('_percent_', '%'))
+                res_list.append((' TMP_JAMP(%d) = %s - %s ! used %d times' % (i,amp1, amp2, nb)))
 
         jamp_res = collections.defaultdict(list)
         max_jamp=0
         for (jamp, var), factor in new_mat.items():
             if var > 0:
-                name = (AMP_format % var).replace('_percent_', '%')
+                name = (AMP_format % var)
             else:
                 name = "TMP_JAMP(%d)" % -var
             if factor not in [1.]:
@@ -5791,7 +5791,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         if aloha.dual_mode:
             jamp_lines, nb_temp = self.get_JAMP_lines_split_order(\
                                 matrix_element,amp_orders,
-                                AMP_format_addon= "_percent_COMP(2**NPWAVE-1)",
+                                AMP_format_addon= "%%COMP(2**NPWAVE-1)",
                                 split_order_names=split_orders if len(split_orders)>0 else ['ALL_ORDERS'])
         else:
             jamp_lines, nb_temp = self.get_JAMP_lines_split_order(\
