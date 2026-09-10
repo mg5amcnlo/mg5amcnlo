@@ -4882,8 +4882,7 @@ This implies that with decay chains:
         self._generate_info = line
 
         # reset P-wave onia counter for new process
-        if hasattr(aloha, "npwave"):
-            aloha.npwave = [0]
+        aloha.npwave = [0]
 
         # Call add process
         args = self.split_arg(line)
