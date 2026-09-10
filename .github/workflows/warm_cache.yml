@@ -82,6 +82,61 @@ jobs:
       # reset_heptools in the dispatch form was therefore a no-op. A boolean
       # input is truthy on its own; on push/schedule the whole inputs context
       # is null, so these steps stay skipped there.
+      # Intermediate caches (lhapdf/boost/pythia8/emela/contur/looptools) are
+      # scoped to the run that built them and are deleted at the end of a
+      # SUCCESSFUL run by the heptools_cache job. A failed run keeps them on
+      # purpose, so that re-running just the broken job does not rebuild the
+      # whole chain -- but nothing ever collected them afterwards, and they are
+      # not small: ~3.5GB per run across both images. Three consecutive failed
+      # runs on 2026-09-09 therefore pushed the repo past GitHub's 10GB cache
+      # quota, LRU eviction started, and the *next* run lost its own looptools
+      # sub-cache 27 minutes after saving it -- failing that run, stranding
+      # another 3.5GB, and so on. It also cost the production heptools-ubuntu24
+      # cache, which is why every ubuntu-24.04 job needing lhapdf went red.
+      #
+      # So sweep them here, at the start of the run, bounding the leak to one
+      # generation while keeping the re-run affordance: this run's own id is
+      # skipped (its caches do not exist yet anyway, but a re-run of this run
+      # would find them), and so is any run that is still going, so a warm_cache
+      # running concurrently on another branch cannot have the ground taken from
+      # under it.
+      - name: Collect intermediate caches left behind by earlier runs
+        run: |
+          set -u
+          for prefix in lhapdf boost pythia8 emela contur looptools; do
+            # never let a gh hiccup fail the whole warm run: this is a cleanup,
+            # not a precondition (hence the "|| true", which -o pipefail would
+            # otherwise turn into a step failure).
+            entries=$(gh cache list --repo "$GITHUB_REPOSITORY" \
+                          --key "$prefix-$CACHE_KEY-" --limit 100 \
+                          --json id,key --jq '.[]|"\(.id) \(.key)"' 2>/dev/null || true)
+            [ -n "$entries" ] || continue
+            while read -r id key; do
+              [ -n "$key" ] || continue
+              run_id=${key##*-}
+              case "$run_id" in
+                ''|*[!0-9]*)
+                  echo "keeping $key (no run id in the key)"; continue ;;
+                "$GITHUB_RUN_ID")
+                  echo "keeping $key (this run)"; continue ;;
+              esac
+              # An unknown run (deleted, or beyond the retention window) can
+              # only have stale caches, so treat a lookup failure as completed.
+              status=$(gh run view "$run_id" --repo "$GITHUB_REPOSITORY" \
+                                   --json status --jq .status 2>/dev/null || echo completed)
+              if [ "$status" != completed ]; then
+                echo "keeping $key (run $run_id is $status)"
+                continue
+              fi
+              echo "deleting $key (run $run_id completed)"
+              gh cache delete "$id" --repo "$GITHUB_REPOSITORY" || true
+            done <<EOF
+          $entries
+          EOF
+          done
+        env:
+          GH_TOKEN: ${{ github.token }}
+
       - name: Delete heptools related cache
         if: inputs.reset_heptools
         run: |
@@ -627,47 +682,62 @@ jobs:
       # the earlier attempt of this same run left behind - run_id is stable
       # across attempts). No restore-keys here, so a stale sub-cache from an
       # unrelated run can never be folded into the combined cache.
-      - name: Restore lhapdf (if available)
+      #
+      # fail-on-cache-miss, because the job gate above already establishes that
+      # the cache MUST be there: the sub-cache job reported success, and it
+      # saves unconditionally on success. A miss therefore means the entry was
+      # evicted between that job and this one -- the repo is over its 10GB cache
+      # quota -- and that has to be reported as what it is. Without it the
+      # restore quietly does nothing and the failure surfaces two steps later as
+      # "HEPTools cache incomplete: missing file .../CutTools/lib/libcts.a",
+      # which sends you looking at CutTools instead of at the quota.
+      - name: Restore lhapdf
         if: needs.lhapdf_cache.result == 'success'
         uses: actions/cache/restore@v5
         with:
           path: ~/.cache/HEPtools
           key: lhapdf-${{ env.CACHE_KEY }}-${{ github.run_id }}
+          fail-on-cache-miss: true
 
-      - name: Restore boost (if available)
+      - name: Restore boost
         if: needs.boost_cache.result == 'success'
         uses: actions/cache/restore@v5
         with:
           path: ~/.cache/HEPtools
           key: boost-${{ env.CACHE_KEY }}-${{ github.run_id }}
+          fail-on-cache-miss: true
 
-      - name: Restore pythia8 (if available)
+      - name: Restore pythia8
         if: needs.pythia8_cache.result == 'success'
         uses: actions/cache/restore@v5
         with:
           path: ~/.cache/HEPtools
           key: pythia8-${{ env.CACHE_KEY }}-${{ github.run_id }}
+          fail-on-cache-miss: true
 
-      - name: Restore emela (if available)
+      - name: Restore emela
         if: needs.emela_cache.result == 'success'
         uses: actions/cache/restore@v5
         with:
           path: ~/.cache/HEPtools
           key: emela-${{ env.CACHE_KEY }}-${{ github.run_id }}
+          fail-on-cache-miss: true
 
-      - name: Restore contur (if available)
+      - name: Restore contur
         if: needs.contur_cache.result == 'success'
         uses: actions/cache/restore@v5
         with:
           path: ~/.cache/HEPtools
           key: contur-${{ env.CACHE_KEY }}-${{ github.run_id }}
+          fail-on-cache-miss: true
 
-      - name: Restore looptools (if available)
+      - name: Restore looptools
         if: needs.looptools_cache.result == 'success'
         uses: actions/cache/restore@v5
         with:
           path: ~/.cache/HEPtools
           key: looptools-${{ env.CACHE_KEY }}-${{ github.run_id }}
+          fail-on-cache-miss: true
 
       # Green sub-jobs are not proof that the tree is complete: a sub-cache may
       # predate the checks above, or a restore may have silently produced
