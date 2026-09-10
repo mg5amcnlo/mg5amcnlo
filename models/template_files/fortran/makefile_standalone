@@ -42,10 +42,12 @@ clean:
 	$(RM) *.o $(LIBDIR)$(LIBRARY)
 
 couplings.o: ../maxparticles.inc ../run.inc ../cuts.inc
-rw_onia.o: onia
+rw_onia.o: ldme.inc onia_read.inc
 
-onia:
+ldme.inc:
 	touch ldme.inc
+
+onia_read.inc:
 	touch onia_read.inc
 
 ../maxparticles.inc:

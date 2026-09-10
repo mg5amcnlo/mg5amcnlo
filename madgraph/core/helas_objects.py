@@ -4875,7 +4875,6 @@ class HelasMatrixElement(base_objects.PhysicsObject):
 
         return int(npwave)
     
-    # LM::This function should evaluate what is the higher derivative order needed. For the time being I have introduced a placeholder function
     def get_highest_derivate_order(self):
         """Gives the highest derivative order used"""
 
