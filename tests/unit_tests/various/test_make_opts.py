@@ -32,6 +32,7 @@ write is atomic, and a make_opts that has lost its body is refused loudly.
 
 from __future__ import absolute_import
 
+import itertools
 import os
 import shutil
 import tempfile
@@ -43,6 +44,63 @@ import madgraph.interface.common_run_interface as common_run_interface
 from madgraph import MG5DIR, MadGraph5Error
 
 pjoin = os.path.join
+
+MIN_READS = 50   # reads that must happen *while* writes are in flight
+
+
+def race(write, path, is_valid, nb_write=400):
+    """Run ``write`` in one thread and read ``path`` in another, and report
+    every read whose content ``is_valid`` rejects.
+
+    The two threads meet at a barrier so neither can run to completion before
+    the other starts, and the writer keeps going until the reader has managed
+    MIN_READS reads: without that the writer could finish every iteration
+    before the reader is first scheduled, and the test would pass having
+    observed nothing at all. Returns (bad, reads).
+    """
+    bad = []
+    reads = [0]
+    start = threading.Barrier(2)
+    stop = threading.Event()
+
+    def writer():
+        start.wait()
+        try:
+            for _ in range(nb_write):
+                write()
+            # Keep writing until the reader has really seen the file. Bounded,
+            # so a reader that died on an exception cannot hang the suite.
+            for _ in range(10 * nb_write):
+                if reads[0] >= MIN_READS or not reader_thread.is_alive():
+                    break
+                write()
+        finally:
+            stop.set()
+
+    def reader():
+        start.wait()
+        while not stop.is_set():
+            reads[0] += 1
+            try:
+                with open(path) as fsock:
+                    content = fsock.read()
+            except (IOError, OSError):
+                bad.append('missing')
+                continue
+            if not is_valid(content):
+                bad.append(len(content))
+
+    reader_thread = threading.Thread(target=reader)
+    threads = [threading.Thread(target=writer), reader_thread]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join()
+
+    if reads[0] < MIN_READS:
+        raise AssertionError('the reader only managed %d reads: the race was '
+                             'never exercised' % reads[0])
+    return bad, reads[0]
 
 
 class TestAtomicWrite(unittest.TestCase):
@@ -91,35 +149,14 @@ class TestAtomicWrite(unittest.TestCase):
         dest = pjoin(self.tmpdir, 'make_opts')
         misc.atomic_copy(self.source, dest)
 
-        stop = threading.Event()
-        bad = []
+        def check(content):
+            return content == self.reference
 
-        def writer():
-            try:
-                for _ in range(400):
-                    misc.atomic_copy(self.source, dest)
-            finally:
-                stop.set()
-
-        def reader():
-            while not stop.is_set():
-                try:
-                    with open(dest) as fsock:
-                        content = fsock.read()
-                except (IOError, OSError):
-                    bad.append('missing')
-                    continue
-                if content != self.reference:
-                    bad.append(len(content))
-
-        threads = [threading.Thread(target=writer), threading.Thread(target=reader)]
-        for thread in threads:
-            thread.start()
-        for thread in threads:
-            thread.join()
-
+        bad, reads = race(lambda: misc.atomic_copy(self.source, dest),
+                          dest, check)
         self.assertEqual(bad, [],
-            'reader saw %d truncated/missing make_opts' % len(bad))
+            'reader saw %d truncated/missing make_opts in %d reads'
+            % (len(bad), reads))
 
 
 class TestUpdateMakeOptsFull(unittest.TestCase):
@@ -159,10 +196,34 @@ class TestUpdateMakeOptsFull(unittest.TestCase):
         self.assertRaises(MadGraph5Error, self.update,
                           self.path, {'DEFAULT_F_COMPILER': 'gfortran'})
 
+    def test_refuses_a_make_opts_truncated_just_after_the_marker(self):
+        """The variables and the marker survive, the whole body is gone.
+
+        The file still parses, so nothing downstream complains -- make just
+        keeps its builtin $(FC) and an undefined $(libext). Rewriting it here
+        would make that permanent.
+        """
+        with open(self.path, 'w') as fsock:
+            fsock.write('DEFAULT_F2PY_COMPILER=f2py\n'
+                        'DEFAULT_F_COMPILER=gfortran\n'
+                        '#end_of_make_opts_variables\n')
+        self.assertRaises(MadGraph5Error, self.update,
+                          self.path, {'DEFAULT_F_COMPILER': 'gfortran-14'})
+
+    def test_refuses_a_make_opts_whose_body_lost_the_compiler_definitions(self):
+        """Body present but cut short, before FC=$(DEFAULT_F_COMPILER)."""
+        with open(self.path) as fsock:
+            head = fsock.read().split('FC=$(DEFAULT_F_COMPILER)')[0]
+        with open(self.path, 'w') as fsock:
+            fsock.write(head)
+        self.assertRaises(MadGraph5Error, self.update,
+                          self.path, {'DEFAULT_F_COMPILER': 'gfortran-14'})
+
     def test_refuses_a_make_opts_without_default_f_compiler(self):
         """Without it make keeps its builtin $(FC), i.e. f77."""
         with open(self.path, 'w') as fsock:
-            fsock.write('STDLIB=-lstdc++\n#end_of_make_opts_variables\n\nlibext=a\n')
+            fsock.write('STDLIB=-lstdc++\n#end_of_make_opts_variables\n\n'
+                        'FC=$(DEFAULT_F_COMPILER)\nlibext=a\n')
         self.assertRaises(MadGraph5Error, self.update,
                           self.path, {'STDLIB': '-lc++'})
 
@@ -180,34 +241,17 @@ class TestUpdateMakeOptsFull(unittest.TestCase):
 
     def test_write_is_atomic(self):
         """A reader racing update_make_opts_full always sees a usable file."""
-        stop = threading.Event()
-        bad = []
+        counter = itertools.count()
 
-        def writer():
-            try:
-                for i in range(150):
-                    self.update(self.path,
-                                {'DEFAULT_F_COMPILER': 'gfortran%d' % (i % 2)})
-            finally:
-                stop.set()
+        def write():
+            self.update(self.path, {'DEFAULT_F_COMPILER':
+                                    'gfortran%d' % (next(counter) % 2)})
 
-        def reader():
-            while not stop.is_set():
-                try:
-                    with open(self.path) as fsock:
-                        content = fsock.read()
-                except (IOError, OSError):
-                    bad.append('missing')
-                    continue
-                if 'FC=$(DEFAULT_F_COMPILER)' not in content or \
-                   'libext=a' not in content:
-                    bad.append(len(content))
+        def check(content):
+            return ('FC=$(DEFAULT_F_COMPILER)' in content
+                    and 'libext=a' in content)
 
-        threads = [threading.Thread(target=writer), threading.Thread(target=reader)]
-        for thread in threads:
-            thread.start()
-        for thread in threads:
-            thread.join()
-
+        bad, reads = race(write, self.path, check)
         self.assertEqual(bad, [],
-            'reader saw %d make_opts without the compiler definitions' % len(bad))
+            'reader saw %d make_opts without the compiler definitions in %d reads'
+            % (len(bad), reads))

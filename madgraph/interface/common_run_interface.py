@@ -4844,6 +4844,25 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 'later with unrelated errors. Remove the file and regenerate '
                 'the output directory.' % make_opts)
 
+        # The marker being present is not enough: a truncation landing just
+        # after it leaves a file that parses, keeps its variables, and has lost
+        # every definition the build actually needs -- which is then written
+        # back here, permanently. So check that the body still carries the two
+        # whose absence produced the failure this validation exists for:
+        # FC=$(DEFAULT_F_COMPILER) (else make compiles with f77) and libext
+        # (else the libraries are linked as 'libdhelas.', with no extension).
+        # Both are unconditionally present in every make_opts MG5aMC ships,
+        # Template/LO/Source/.make_opts and Template/NLO/Source/make_opts.inc.
+        body = '\n'.join(content)
+        missing = [key for key in ('FC=$(DEFAULT_F_COMPILER)', 'libext=')
+                   if key not in body]
+        if missing:
+            raise MadGraph5Error('%s has lost %s from the section after %s. The '
+                'file is truncated or was edited into an unusable state; make '
+                'would silently fall back to its own defaults. Remove it and '
+                'regenerate the output directory.'
+                % (make_opts, ' and '.join(missing), tag.strip()))
+
         content_variables = '\n'.join('%s=%s' % (k,v) for k, v in variables.items() if v is not None)
         content_variables += '\n%s' % tag
 
