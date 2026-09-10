@@ -5496,7 +5496,16 @@ This implies that with decay chains:
             elif is_onium:
                 pass
             else:
-                raise self.InvalidCmd("No particle %s in model" % part_name)
+
+        # Bound states are handled by the LO exporters only: nothing in the
+        # FKS/loop path reads back the 'onium' leg properties and there is no
+        # onia matrix-element template for it, so a perturbed process would
+        # silently produce a wrong result rather than fail.
+        if onium_index and perturbation_couplings.strip():
+            raise self.InvalidCmd(
+                "Onia are only supported at leading order: the perturbation "
+                "'[%s]' can not be combined with a bound state."
+                % perturbation_couplings.strip())
 
         if aloha.dual_mode:
             aloha.npwave.append(aloha.dual_mode)
