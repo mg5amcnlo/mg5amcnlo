@@ -6356,7 +6356,12 @@ This implies that with decay chains:
                 
         if scheme in [3,4,5] and not photon:
             self.optimize_order(multi)
-            self._multiparticles[qcd_container] = multi
+            # only re-register the containers that still exist: a model may
+            # define a real particle called 'j' (or 'p'), in which case the
+            # multiparticle was dropped above and must not come back.
+            for container in ['p', 'j']:
+                if container in self._multiparticles:
+                    self._multiparticles[container] = multi
             logger.warning("Pass the definition of \'j\' and \'p\' to %s flavour scheme." % scheme)
             for container in ['p', 'j']:
                 if container in defined_multiparticles:
