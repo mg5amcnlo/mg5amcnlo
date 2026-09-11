@@ -522,6 +522,12 @@ class UFOMG5Converter(object):
             self.model.set('startfromalpha0', startfromalpha)
         else:
             self.model.set('startfromalpha0', False) 
+
+        if hasattr(model, 'dual_mass_scheme'):
+            dual_mass_scheme = bannermod.ConfigFile.format_variable(model.dual_mass_scheme, bool, name="dual_mass_scheme")
+            self.model.set('dual_mass_scheme', dual_mass_scheme)
+        else:
+            self.model.set('dual_mass_scheme', False)
          
         self.ufomodel = model
         self.checked_lor = set()

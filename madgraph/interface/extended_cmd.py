@@ -1364,7 +1364,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             debug_file.write('Fail to write options with error %s' % error)
         
         #add the cards:
-        for card in ['proc_card_mg5.dat','param_card.dat', 'run_card.dat']:
+        for card in ['proc_card_mg5.dat','param_card.dat', 'run_card.dat', 'onia_card.dat']:
             try:
                 ff = open(pjoin(self.me_dir, 'Cards', card))
                 debug_file.write(ff.read())

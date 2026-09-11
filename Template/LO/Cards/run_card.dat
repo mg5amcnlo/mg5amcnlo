@@ -62,6 +62,7 @@ $fixed_fact_scale
  %(dynamical_scale_choice)s = dynamical_scale_choice ! Choose one of the preselected dynamical choices
  %(scalefact)s  = scalefact        ! scale factor for event-by-event scales
 $RUNNING
+$mom_resh
 #*********************************************************************
 # Type and output format
 #*********************************************************************

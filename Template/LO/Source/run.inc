@@ -83,6 +83,12 @@ C
       common/to_heavyion_mass/mass_ion
 
 C
+C     block for onia reshuffling
+C
+      integer mom_resh_type
+      common/to_mom_resh_type/mom_resh_type
+
+C
 C Controls what are the PDGs included in the CKKWl merging procedure, i.e. what
 C are the PDGs subject to the ktdurham cut
 C

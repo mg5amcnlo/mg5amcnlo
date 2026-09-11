@@ -30,7 +30,7 @@ BINARIES = $(BINDIR)gen_ximprove $(BINDIR)gensudgrid $(BINDIR)combine_runs
 
 # Compile commands
 
-all: %(libraries)s
+all: %(libraries)s%(dual_libs)s
 
 # Libraries
 
@@ -41,7 +41,7 @@ $(LIBDIR)libgeneric.$(libext): $(GENERIC)
 	$(call CREATELIB, $@, $^)
 	rm -f $(alfas_to_clean) 2>/dev/null
 $(LIBDIR)libdhelas.$(libext): DHELAS
-	cd DHELAS; make; cd ..
+	cd DHELAS; make; cd ..%(dhelas_dual)s
 $(LIBDIR)libpdf.$(libext): PDF $(alfas_functions).o
 	cd PDF; make; cd ..
 ifneq (,$(filter edff chff, $(pdlabel1) $(pdlabel2)))
@@ -107,7 +107,7 @@ treatCardsLoopNoInit:
 
 libmodel: $(LIBDIR)libmodel.$(libext)
 
-libdhelas: $(LIBDIR)libdhelas.$(libext)
+libdhelas: $(LIBDIR)libdhelas.$(libext)%(dual_libs)s
 
 $(LIBDIR)libcts.a: $(CUTTOOLSDIR)
 	cd $(CUTTOOLSDIR); make

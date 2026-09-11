@@ -1,0 +1,31 @@
+#################################################################################
+##
+## Copyright (c) 2025 The MadGraph5_aMC@NLO Development team and Contributors
+##
+## This file is a part of the MadGraph5_aMC@NLO project, an application which 
+## automatically generates Feynman diagrams and matrix elements for arbitrary
+## high-energy processes in the Standard Model and beyond.
+##
+## It is subject to the MadGraph5_aMC@NLO license which should accompany this 
+## distribution.
+##
+## For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
+##
+#################################################################################
+#
+#*********************************************************************
+# Long distance matrix elements (LDME)                               *
+#*********************************************************************
+Block ldme
+    200551  1.1799999999999999   # LDME for etab(3|1S01)
+   9950201  0.0072500000000000   # LDME for etab(3|3S18)
+   9951201  0.0037300000000000   # LDME for etab(3|1S08)
+   9956201  0.3750000000000000   # LDME for etab(3|1P18)
+#*********************************************************************
+# Masses                                                             *
+#*********************************************************************
+Block onium_mass
+    200551  10.3399999999999999   # mass for etab(3|1S01)
+   9950201  10.5399999999999991   # mass for etab(3|3S18)
+   9951201  10.5399999999999991   # mass for etab(3|1S08)
+   9956201  10.5399999999999991   # mass for etab(3|1P18)

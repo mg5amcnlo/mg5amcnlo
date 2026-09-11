@@ -1100,6 +1100,7 @@ class Model(PhysicsObject):
         self['limitations'] = [] # MLM means that the model can sometimes have issue with MLM/default scale. 
                                  # fix_scale means that the model should use fix_scale computation.
         self['startfromalpha0'] = False
+        self['dual_mass_scheme'] = False
         # attribute which might be define if needed
         #self['name2pdg'] = {'name': pdg}
         
@@ -1160,7 +1161,7 @@ class Model(PhysicsObject):
             if not (isinstance(value, list)):
                 raise self.PhysicsObjectError("Object of type %s is not a list" % type(value))
 
-        elif name in ['case_sensitive', 'startfromalpha0']:
+        elif name in ['case_sensitive', 'startfromalpha0', 'dual_mass_scheme']:
             if not value in [True ,False]:
                 raise self.PhysicsObjectError("Object of type %s is not a boolean" % type(value))
             
@@ -2140,6 +2141,8 @@ class Leg(PhysicsObject):
         self['offshell'] = False # set on True for "*" mode 
         # filter on the helicty
         self['polarization'] = []
+        # propteries of bound state
+        self['onium'] = {}
 
     def filter(self, name, value):
         """Filter for valid leg property values."""
@@ -2177,12 +2180,33 @@ class Leg(PhysicsObject):
                     raise self.PhysicsObjectError( \
                           "%s is not a valid polarization" % str(value))
                                                                     
+        elif name == 'onium':
+            if not isinstance(value, dict):
+                raise self.PhysicsObjectError( \
+                        "%s is not a valid dictionary" % str(value))
+            if value:
+                if not value['N'] > 0:
+                    raise self.PhysicsObjectError( \
+                      " %s is not a valid principal quantum number" % str(value['N']))
+                if value['S'] not in [0, 1, 99]:
+                    raise self.PhysicsObjectError( \
+                      " %s is not a valid spin type" % str(2*value['S']+1))
+                if value['L'] not in [0, 1, 99]:
+                    raise self.PhysicsObjectError( \
+                      " %s is not a valid orbital angular momentum" % str(value['L']))
+                if value['J'] not in range(abs(value['L']-value['S']),value['L']+value['S']+1):
+                    raise self.PhysicsObjectError( \
+                      " %s is not a valid total angular momentum" % str(value['J']))
+                if value['C'] not in [1, 8]:
+                    raise self.PhysicsObjectError( \
+                      " %s is not a valid color configuartion" % str(value['C']))
+                                                                    
         return True
 
     def get_sorted_keys(self):
         """Return particle property names as a nicely sorted list."""
 
-        return ['id', 'number', 'state', 'from_group', 'loop_line', 'onshell', 'polarization']
+        return ['id', 'number', 'state', 'from_group', 'loop_line', 'onshell', 'polarization', 'onium']
 
     def is_fermion(self, model):
         """Returns True if the particle corresponding to the leg is a
@@ -2344,6 +2368,7 @@ class MultiLeg(PhysicsObject):
         self['ids'] = []
         self['state'] = True
         self['polarization'] = []
+        self['onium'] = {}
         self['offshell'] = False
 
     def filter(self, name, value):
@@ -2365,6 +2390,27 @@ class MultiLeg(PhysicsObject):
                     raise self.PhysicsObjectError( \
                           "%s is not a valid polarization" % str(value))
 
+        if name == 'onium':
+            if not isinstance(value, dict):
+                raise self.PhysicsObjectError( \
+                        "%s is not a valid list" % str(value))
+            if value:
+                if not value['N'] > 0:
+                    raise self.PhysicsObjectError( \
+                      " %s is not a valid principal quantum number" % str(value['N']))
+                if value['S'] not in [0, 1, 99]:
+                    raise self.PhysicsObjectError( \
+                      " %s is not a valid spin type" % str(2*value['S']+1))
+                if value['L'] not in [0, 1, 99]:
+                    raise self.PhysicsObjectError( \
+                      " %s is not a valid orbital angular momentum" % str(value['L']))
+                if value['J'] not in range(abs(value['L']-value['S']),value['L']+value['S']+1):
+                    raise self.PhysicsObjectError( \
+                      " %s is not a valid total angular momentum" % str(value['J']))
+                if value['C'] not in [1, 8]:
+                    raise self.PhysicsObjectError( \
+                      " %s is not a valid color configuartion" % str(value['C']))
+
         if name == 'state':
             if not isinstance(value, bool):
                 raise self.PhysicsObjectError("%s is not a valid leg state (initial|final)" % \
@@ -2375,7 +2421,7 @@ class MultiLeg(PhysicsObject):
     def get_sorted_keys(self):
         """Return particle property names as a nicely sorted list."""
 
-        return ['ids', 'state','polarization', 'offshell']
+        return ['ids', 'state','polarization','onium', 'offshell']
 
 #===============================================================================
 # LegList
@@ -3197,6 +3243,7 @@ class Process(PhysicsObject):
         else:
             mystr = ""
         prevleg = None
+        onia = []
         for leg in self['legs']:
             mypart = self['model'].get('particle_dict')[leg['id']]
             if prevleg and prevleg['state'] == False \
@@ -3212,22 +3259,27 @@ class Process(PhysicsObject):
                                     for id_list in self['required_s_channels']])
                     mystr = mystr + ' > '
 
-            mystr = mystr + mypart.get_name()
-            if leg.get('polarization'):
-                if leg.get('polarization') in [[-1,1],[1,-1]]:
-                    mystr = mystr + '{T}'
-                elif leg.get('polarization') == [-1]:
-                    mystr = mystr + '{L}'
-                elif leg.get('polarization') == [1]:
-                    mystr = mystr + '{R}'
-                else:
-                    mystr = mystr + '{%s}' % polarization_to_string(leg.get('polarization')) 
+            if leg.get('onium'):
+                if leg.get('onium').get('index') not in onia:
+                    mystr = mystr + leg.get('onium').get('name') + ' '
+                    onia += [leg.get('onium').get('index')]
+            else:
+                mystr = mystr + mypart.get_name()
+                if leg.get('polarization'):
+                    if leg.get('polarization') in [[-1,1],[1,-1]]:
+                        mystr = mystr + '{T}'
+                    elif leg.get('polarization') == [-1]:
+                        mystr = mystr + '{L}'
+                    elif leg.get('polarization') == [1]:
+                        mystr = mystr + '{R}'
+                    else:
+                        mystr = mystr + '{%s}' % polarization_to_string(leg.get('polarization')) 
 
-            if leg.get('offshell'):
-                mystr = mystr + '*'
+                if leg.get('offshell'):
+                    mystr = mystr + '*'
 
-            mystr = mystr + ' '
-            #mystr = mystr + '(%i) ' % leg['number']
+                mystr = mystr + ' '
+                #mystr = mystr + '(%i) ' % leg['number']
             prevleg = leg
 
         # Add orders
@@ -3498,7 +3550,12 @@ class Process(PhysicsObject):
                                                 for req_id in id_list]) \
                                     for id_list in self['required_s_channels']])
                     mystr = mystr + '_'
-            if mypart['is_part']:
+            if leg.get('onium'):
+                if prevleg.get('onium'):
+                    if prevleg.get('onium').get('index') == leg.get('onium').get('index'):
+                        mystr = mystr + leg.get('onium').get('name')
+                        mystr = mystr.replace('|','').replace('(','').replace(')','')
+            elif mypart['is_part']:
                 mystr = mystr + mypart['name']
             else:
                 mystr = mystr + mypart['antiname']
@@ -3780,10 +3837,17 @@ class Process(PhysicsObject):
         final_legs = [leg for leg in self.get_legs_with_decays() if leg.get('state') == True]
 
         identical_indices = collections.defaultdict(int)
+        onia = []
         for leg in final_legs:
-            key = (leg.get('id'), tuple(leg.get('polarization')))
+            if leg.get('onium'):
+                key = (leg.get('onium').get('id'), tuple(leg.get('polarization')))
+                if leg.get('onium').get('index') in onia:
+                    identical_indices[key] -= 1
+                else:
+                    onia.append(leg.get('onium').get('index'))
+            else:
+                key = (leg.get('id'), tuple(leg.get('polarization')))
             identical_indices[key] += 1
-
 
         return reduce(lambda x, y: x * y, [ math.factorial(val) for val in \
                         identical_indices.values() ], 1)

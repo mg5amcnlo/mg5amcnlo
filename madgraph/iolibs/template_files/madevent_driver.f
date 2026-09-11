@@ -53,6 +53,7 @@ c
 c     c
       include 'vector.inc'
       include 'run.inc'
+      include 'ldme.inc'
       
       integer           mincfig, maxcfig
       common/to_configs/mincfig, maxcfig
@@ -123,6 +124,7 @@ c      open (unit=lun+1,file='results.dat',status='unknown',err=13)
       call setrun                !Sets up run parameters
       call setpara(param_card_name %(secondparam)s)   !Sets up couplings and masses
       include 'pmass.inc'        !Sets up particle masses
+      %(load_onia_card)s         !Sets up ldmes and masses for bound states
       call setcuts               !Sets up cuts 
       call printout              !Prints out a summary of paramaters
       call run_printout          !Prints out a summary of the run settings
