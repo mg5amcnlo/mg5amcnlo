@@ -71,6 +71,18 @@
 # pdlabel: lhapdf = LHAPDF (installation needed) [1412.7420]           *
 #          edff = EDFF in gamma-UPC            [eq.(11) in 2207.03012] *
 #          chff = ChFF in gamma-UPC            [eq.(13) in 2207.03012] *
+#          edf<y>n<z>n and chf<y>n<z>n for forward neutron tagging in  *
+#          gamma-UPC, where <y>,<z> should be i (inclusive,0n+Xn),     *
+#          x (Xn with X>=1), 0 (0n), 1 (1n), 2 (2n), 3 (3n), 4 (4n)    *
+#          The neutron tagging only works for the following nuclei:    *
+#              Pb208, Au197, O16 (3n and 4n not allowed for O16)       *
+#          Note: For proton beam(s), neutron tagging parameter(s) will *
+#                be ignored !                                          *
+#          Note: If one is interested in estimating neutron tagging    *
+#                uncertainty, one has to rerun with                    *
+#                edp<y>n<z>n and edm<y>n<z>n (for EDFF) OR             *
+#                chp<y>n<z>n and chm<y>n<z>n (for ChFF) for error      *
+#                estimate none=No PDF, same as lhapdf with lppx=0      *
 #***********************************************************************
  %(pdlabel)s = pdlabel ! PDF set
  %(lhaid)s  = lhaid   ! If pdlabel=lhapdf, this is the lhapdf number. Only 

@@ -5718,8 +5718,14 @@ class RunCardNLO(RunCard):
         self.add_param('mass_ion2', -1.0, hidden=True, fortran_name="mass_ion(2)",
                        allowed=[-1,0, 0.938, 207.9766521*0.938, 0.000511, 0.105, '*'],
                        comment='For heavy ion physics mass in GeV of the ion (of beam 2)')
-        self.add_param('pdlabel', 'nn23nlo', allowed=['lhapdf', 'emela', 'cteq6_m','cteq6_d','cteq6_l','cteq6l1', 'nn23lo','nn23lo1','nn23nlo','ct14q00','ct14q07','ct14q14','ct14q21','edff','chff'] +\
-             sum(self.allowed_lep_densities.values(),[]) )                
+        valid_pdf = ['lhapdf', 'emela', 'cteq6_m','cteq6_d','cteq6_l','cteq6l1', 'nn23lo','nn23lo1','nn23nlo','ct14q00','ct14q07','ct14q14','ct14q21','edff','chff'] +\
+             sum(self.allowed_lep_densities.values(),[])
+        for nerr in ['f','p','m']:
+            for y in ['i','x','0','1','2','3','4']:
+                for z in ['i','x','0','1','2','3','4']:
+                    valid_pdf.append('ed'+nerr+y+'n'+z+'n')
+                    valid_pdf.append('ch'+nerr+y+'n'+z+'n')
+        self.add_param('pdlabel', 'nn23nlo', allowed=valid_pdf )
         self.add_param('lhaid', [244600],fortran_name='lhaPDFid')
         self.add_param('pdfscheme', 0)
         # whether to include or not photon-initiated processes in lepton collisions
