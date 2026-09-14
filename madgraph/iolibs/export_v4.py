@@ -1252,12 +1252,12 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
         rows in chunks of size n."""
 
         if not matrix_element.get('color_matrix'):
-            return ["DATA Denom/1/", "DATA CF/1/"]
+            return ["DATA %(proc_prefix)sDenom/1/", "DATA %(proc_prefix)sCF/1/"]
 
         ret_list = []
         my_cs = color.ColorString()
         denominator = max(matrix_element.get('color_matrix').get_line_denominators())
-        ret_list.append("DATA Denom/%i/" % denominator)
+        ret_list.append("DATA %%(proc_prefix)sDenom/%(denom)i/" % {'denom':denominator})
 
         cf_index = 0
         col_basis = matrix_element.get('color_matrix')._col_basis1
@@ -1272,11 +1272,11 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
             for k in range(min_k, len(num_list), n):
                 chunk = num_list[k:k+n]
                 if is_asym:
-                    ret_list.append("DATA (CF(i,%3r),i=%3r,%3r) /%s/" % \
+                    ret_list.append("DATA (%%(proc_prefix)sCF(i,%3r),i=%3r,%3r) /%s/" % \
                                     (index+1, k + 1, k+len(chunk),
                                      ','.join([("%i" % (int(i))) for i in chunk])))  
                 else: 
-                    ret_list.append("DATA (CF(i),i=%3r,%3r) /%s/" % \
+                    ret_list.append("DATA (%%(proc_prefix)sCF(i),i=%3r,%3r) /%s/" % \
                                     (cf_index+1, cf_index + len(chunk),
                                      ','.join([("%i" % ((1 if (k==index and pos==0) else 2)*int(i))) for pos,i in enumerate(chunk)])))
                 cf_index += len(chunk)
@@ -1288,7 +1288,6 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
 
     def get_den_factor_line(self, matrix_element):
         """Return the denominator factor line for this matrix element"""
-
         return "DATA IDEN/%2r/" % \
                matrix_element.get_denominator_factor()
 
@@ -1687,10 +1686,11 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                     return "%id0/%id0" % (frac.numerator, frac.denominator)
             elif frac.real == frac:
                 #misc.sprint(frac.real, frac)
-                return ('%.15e' % frac.real).replace('e','d')
+                # +0.0 drops the sign of negative zeros, which depends on the python version
+                return ('%.15e' % (frac.real + 0.0)).replace('e','d')
                 #str(float(frac.real)).replace('e','d')
             else:
-                return ('(%.15e,%.15e)' % (frac.real, frac.imag)).replace('e','d')
+                return ('(%.15e,%.15e)' % (frac.real + 0.0, frac.imag + 0.0)).replace('e','d')
                 #str(frac).replace('e','d').replace('j','*imag1')
                 
         
@@ -2415,9 +2415,18 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
         try:
             common_run_interface.CommonRunCmd.update_make_opts_full(
                             make_opts, for_update)
-        except IOError:
+        except (IOError, OSError) as error:
             if root_dir == self.dir_path:
-                logger.info('Fail to set compiler. Trying to continue anyway.')            
+                # Do NOT continue: without DEFAULT_F_COMPILER make falls back to
+                # its builtin $(FC) (f77) and drops $(libext) and
+                # -ffixed-line-length-132 as well, so the build fails much later
+                # with column-72 errors in unrelated Fortran files.
+                raise MadGraph5Error(
+                    'Fail to set the fortran compiler in %s: %s' % (make_opts, error))
+            # For MG5DIR/Template this is only an optimisation, and a shared
+            # install is legitimately read-only.
+            logger.info('Fail to set compiler in %s. Trying to continue anyway.'
+                        % make_opts)
 
     def replace_make_opt_c_compiler(self, compiler, root_dir = ""):
         """Set CXX=compiler in Source/make_opts.
@@ -2454,9 +2463,14 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
         try:
             common_run_interface.CommonRunCmd.update_make_opts_full(
                             make_opts, for_update)
-        except IOError:
+        except (IOError, OSError) as error:
             if root_dir == self.dir_path:
-                logger.info('Fail to set compiler. Trying to continue anyway.')  
+                # see replace_make_opt_f_compiler: silently keeping make's
+                # defaults only moves the failure somewhere unrecognisable.
+                raise MadGraph5Error(
+                    'Fail to set the c++ compiler in %s: %s' % (make_opts, error))
+            logger.info('Fail to set compiler in %s. Trying to continue anyway.'
+                        % make_opts)
     
         return
 
@@ -2539,13 +2553,19 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
             shutil.copy(pjoin(self.mgme_dir, 'madgraph', 'iolibs', 'template_files', 'makefile_sa_f_sp'), 
                     pjoin(self.dir_path, 'SubProcesses', 'makefileP'))
         
-        if self.format == 'standalone':
-            shutil.copy(pjoin(self.mgme_dir, 'madgraph', 'iolibs', 'template_files', 'check_sa.f'), 
-                    pjoin(self.dir_path, 'SubProcesses', 'check_sa.f'))
+
                         
         # Add file in Source
-        shutil.copy(pjoin(temp_dir, 'Source', 'make_opts'), 
-                    pjoin(self.dir_path, 'Source'))   
+        # atomic_copy, not shutil.copy: the source is MG5DIR/Template/LO's
+        # make_opts, a file shared by every MG5aMC process using this
+        # installation and rewritten in place by each of them
+        # (set_fortran_compiler / set_cpp_compiler), so a plain read of it can
+        # come back empty. The destination is then compiled against. This is how
+        # a MadSpin decay-ME directory ends up with an empty
+        # madspin_me/Source/make_opts and a build that silently falls back to
+        # make's builtins.
+        misc.atomic_copy(pjoin(temp_dir, 'Source', 'make_opts'), 
+                         pjoin(self.dir_path, 'Source'))   
 
         # add the makefile 
         filename = pjoin(self.dir_path,'Source','makefile')
@@ -2624,9 +2644,30 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
         logger.info("Running make for Source directory")
         try:
             misc.compile(cwd=source_dir, mode='fortran')
-        except:
-            misc.compile(arg=['../lib/libdhelas.a'], cwd=source_dir, mode='fortran')
-            misc.compile(arg=['../lib/libmodel.a'], cwd=source_dir, mode='fortran')
+        except Exception as error:
+            logger.warning(
+                "Running 'make' in %s failed; falling back to building "
+                "libdhelas and libmodel individually. This normally indicates "
+                "a problem in Source/makefile and should be reported. The "
+                "failure was:\n%s", source_dir, error)
+            try:
+                misc.compile(arg=['../lib/libdhelas.a'], cwd=source_dir, mode='fortran')
+                misc.compile(arg=['../lib/libmodel.a'], cwd=source_dir, mode='fortran')
+            except Exception as fallback_error:
+                # '../lib/libXXX.a' is only a valid target when the makefile was
+                # configured with the default static libext. When 'dynamic' is
+                # set (make_opts), libext is 'so'/'dylib', the makefile only
+                # knows about '../lib/libdhelas.$(libext)' and these two targets
+                # do not exist at all -- make then stops with
+                #     No rule to make target `../lib/libdhelas.a'
+                # Retry through the libext-agnostic phony targets that both
+                # Source/makefile templates provide before giving up, and
+                # re-raise the original error if that does not help either.
+                try:
+                    misc.compile(arg=['libdhelas'], cwd=source_dir, mode='fortran')
+                    misc.compile(arg=['libmodel'], cwd=source_dir, mode='fortran')
+                except Exception:
+                    raise fallback_error
 
     #===========================================================================
     # Create proc_card_mg5.dat for Standalone directory
@@ -2680,11 +2721,10 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
             ff = open(pjoin(self.dir_path, 'SubProcesses', 'makefile'),'a')
             ff.write(text)
             ff.close()
-    
+
 
     def write_f2py_splitter(self):
         """write a function to call the correct matrix element"""
-
 
         template = open(pjoin(MG5DIR, 'madgraph', 'iolibs', 'template_files', self.f2py_matrix_splitter)).read()
         template2 = open(pjoin(MG5DIR, 'madgraph', 'iolibs', 'template_files', self.f2py_wrapper_all)).read()
@@ -2692,15 +2732,17 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
         allids = list(self.prefix_info.keys())
         allprefix = [self.prefix_info[key][0] for key in allids]
         allncomb = [self.prefix_info[key][2] for key in allids]
+        alliden = [self.prefix_info[key][3] for key in allids] 
         min_nexternal = min([len(ids[0]) for ids in allids])
         max_nexternal = max([len(ids[0]) for ids in allids])
 
         info = []
-        for (key, pid), (prefix, tag, ncomb) in self.prefix_info.items():
+        for (key, pid), (prefix, tag, ncomb, iden) in self.prefix_info.items():
             info.append('#PY %s : %s # %s %s' % (tag, key, prefix, pid))
             
 
         text = []
+        
         for n_ext in range(min_nexternal, max_nexternal+1):
             current_id = [ids[0] for ids in allids if len(ids[0])==n_ext]
             current_pid = [ids[1] for ids in allids if len(ids[0])==n_ext]
@@ -2718,7 +2760,7 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
                     text.append( ' if(%s.and.(procid.le.0.or.procid.eq.%d)) then ! %i' % (condition, pid, ii))
                 else:
                     text.append( ' else if(%s.and.(procid.le.0.or.procid.eq.%d)) then ! %i' % (condition,pid,ii))
-                text.append(' call %ssmatrixhel(p, nhel, ans)' % self.prefix_info[(pdgs,pid)][0])
+                text.append(' call %s%%(fct_name)s' % self.prefix_info[(pdgs,pid)][0])
             text.append(' endif')
         #close the function
         if min_nexternal != max_nexternal:
@@ -2727,6 +2769,8 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
         params = self.get_model_parameter(self.model)
         parameter_setup =[]
         for key, var in params.items():
+            if not key or not var:
+                continue
             parameter_setup.append('        CASE ("%s")\n          %s = value' 
                                    % (key, var))
 
@@ -2740,6 +2784,7 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
         #nhel
         all_nhel_f2py = ' '
         all_nhel = ''
+        all_iden = ''
         nhel_template_f2py = """
         subroutine %(f2py_prefix)s%(prefix)sget_nhel_entry()
         integer %(prefix)snhel(%(next)s,%(ncombs)s)
@@ -2762,29 +2807,43 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
             f2py_prefix = 'f%s_' % self.opt['output_options']['prefixf2py']
 
         done_prefix = set()
-        for prefix, ids, ncomb in zip(allprefix, allids, allncomb):
+        for prefix, ids, ncomb, iden in zip(allprefix, allids, allncomb, alliden):
             if prefix in done_prefix:
                 continue
             done_prefix.add(prefix)
-            all_nhel += nhel_template % {'prefix': prefix, 'next': len(ids[0]), 'ncombs': ncomb,
-                                          'f2py_prefix': f2py_prefix}
-            all_nhel_f2py += nhel_template_f2py % {'prefix': prefix, 'next': len(ids[0]), 
-                                                   'ncombs': ncomb, 'f2py_prefix': f2py_prefix}
+            all_nhel += nhel_template % {'prefix': prefix, 
+                                         'next': len(ids[0]), 
+                                         'ncombs': ncomb,
+                                         'f2py_prefix': f2py_prefix}
+            all_nhel_f2py += nhel_template_f2py % {'prefix': prefix, 
+                                                   'next': len(ids[0]), 
+                                                   'ncombs': ncomb, 
+                                                   'f2py_prefix': f2py_prefix}
+        # Build IDENS entries ONCE per ME slot (must align 1-to-1 with get_pdg_order / allids).
+        all_iden = ''
+        for i, iden in enumerate(alliden, start=1):
+            all_iden += ' idens(%s) = %s \n' % (i, iden)
+        #misc.sprint(all_iden)
 
         formatting = {'python_information':'\n'.join(info), 
-                          'smatrixhel': '\n'.join(text),
+                          'smatrixhel': '\n'.join(text) % {'fct_name': 'smatrixhel(p, nhel, ans)'},
                           'maxpart': max_nexternal,
                           'nb_me': len(allids),
                           'pdgs': ','.join(str(pdg[i]) if i<len(pdg) else '0' 
                                            for i in range(max_nexternal) for (pdg,pid) in allids),
                           'prefix':'\',\''.join(allprefix),
                           'pids': ','.join(str(pid) for (pdg,pid) in allids),
+                          'inter_splitter': '\n'.join(text) % {'fct_name': 'GET_ALL_INTER(P, POS, N_CHANGING, ALLOW_HEL, N_COMB, INTER)'},
                           'parameter_setup': '\n'.join(parameter_setup),
                           'helreset_def' : '\n'.join(helreset_def),
                           'helreset_setup' : '\n'.join(helreset_setup),
                           'nhel': all_nhel,
-                          'f2py_prefix': f2py_prefix
+                          'f2py_prefix': f2py_prefix,
+                          'idens_value': all_iden,
+                          'density_splitter': '\n'.join(text) % {'fct_name': 'GET_DENSITY(P, POS, N_CHANGING, ALLOW_HEL, N_COMB, ALPHAS, SCALE2, INTER)'},
+                          
                           }
+
         formatting['lenprefix'] = len(formatting['prefix'])
         text = template % formatting
         fsock = writers.FortranWriter(pjoin(self.dir_path, 'SubProcesses', 'all_matrix.f'),'w')
@@ -2868,6 +2927,30 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
         """Generate the Pxxxxx directory for a subprocess in MG4 standalone,
         including the necessary matrix.f and nexternal.inc files"""
 
+        # Helper
+        def compute_iden_from_pdgs(ids, ninitial, model):
+            """
+            Helper function to compute denominator factor
+            """
+            def nhel_from_particle(p):
+                spin = int(p.get('spin'))
+                # for massless vectors use 2 helicities not 3
+                mass = p.get('mass')
+                if spin == 3 and (mass == 'ZERO' or str(mass).upper() == 'ZERO'):
+                    return 2
+                return spin
+
+            def color_dim_from_particle(p):
+                # In UFO, color is typically 1, 3, -3, 8, ...
+                return abs(int(p.get('color')))
+
+            incoming = ids[:ninitial]
+            iden = 1
+            for pid in incoming:
+                p = model.get_particle(pid)
+                iden *= nhel_from_particle(p) * color_dim_from_particle(p)
+            return int(iden)
+        
         cwd = os.getcwd()
         # Create the directory PN_xx_xxxxx in the specified path
         dirpath = pjoin(self.dir_path, 'SubProcesses', \
@@ -2928,9 +3011,11 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
             else:
                 raise Exception('--prefix options supports only \'int\' and \'proc\'')
             ncomb = matrix_element.get_helicity_combinations()
+            #iden = matrix_element.get_denominator_factor() 
             for proc in matrix_element.get('processes'):
                 ids = [l.get('id') for l in proc.get('legs_with_decays')]
-                self.prefix_info[(tuple(ids), proc.get('id'))] = [proc_prefix, proc.get_tag(), ncomb]
+                iden = compute_iden_from_pdgs(ids, ninitial, self.model)
+                self.prefix_info[(tuple(ids), proc.get('id'))] = [proc_prefix, proc.get_tag(), ncomb, iden]
                 
         replace_dict = self.write_matrix_element_v4(
             writers.FortranWriter(filename),
@@ -2991,16 +3076,14 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
                          matrix_element.get('processes')[0].nice_string())
             plot.draw()
 
-        linkfiles = ['check_sa.f', 'coupl.inc']
 
-        if proc_prefix and os.path.exists(pjoin(dirpath, '..', 'check_sa.f')):
-            text = open(pjoin(dirpath, '..', 'check_sa.f')).read()
-            pat = re.compile('smatrix', re.I)
-            new_text, n  = re.subn(pat, '%ssmatrix' % proc_prefix, text)
-            with open(pjoin(dirpath, 'check_sa.f'),'w') as f:
-                f.write(new_text)
-            linkfiles.pop(0)
+        filename = pjoin(dirpath, 'check_sa.f')
+        self.write_check_sa(writers.FortranWriter(filename),
+                           matrix_element,
+                           proc_prefix=proc_prefix)        
 
+
+        linkfiles = ['coupl.inc']
         for file in linkfiles:
             ln('../%s' % file, cwd=dirpath)
         ln('../makefileP', name='makefile', cwd=dirpath)
@@ -3113,6 +3196,7 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
         # Extract ncolor
         ncolor = max(1, len(matrix_element.get('color_basis')))
         replace_dict['ncolor'] = ncolor
+        replace_dict['ncolortriang'] = ncolor * (ncolor + 1) // 2
 
         replace_dict['hel_avg_factor'] = matrix_element.get_hel_avg_factor()
         replace_dict['beamone_helavgfactor'], replace_dict['beamtwo_helavgfactor'] =\
@@ -3120,7 +3204,7 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
 
         # Extract color data lines
         color_data_lines = self.get_color_data_lines(matrix_element)
-        replace_dict['color_data_lines'] = "\n".join(color_data_lines)
+        replace_dict['color_data_lines'] = "\n".join(color_data_lines) % {'proc_prefix': replace_dict['proc_prefix']}
 
         if self.opt['export_format']=='standalone_msP':
         # For MadSpin need to return the AMP2
@@ -3229,6 +3313,51 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
             replace_dict['return_value'] = len([call for call in helas_calls if call.find('#') != 0])
             return replace_dict # for subclass update
 
+    #===========================================================================
+    # write_check_sa   
+    #===========================================================================
+    def write_check_sa(self, writer, matrix_element, proc_prefix=''):
+        
+        # set replace_dict like if no density matrix
+        replace_dict = {'prefix': proc_prefix,
+                        'use_density': '.false.',
+                        'dens_nchanging': 1,
+                        'dens_ncomb': 2,
+                    'dens_pos': 'if(nincoming.eq.2) then \n       POS(1) = 3 \n        else \n       POS(1) =1 \n        endif',
+                        'dens_allow_hel': 'ALLOW_HEL(1) = +1 \n       ALLOW_HEL(2) = -1'}
+
+        if 'density' in self.cmd_options:
+            replace_dict['use_density'] = '.true.'
+            changing = [int(i) for i in self.cmd_options['density'].split(',')]
+            replace_dict['dens_nchanging'] = len(changing)
+            replace_dict['dens_pos'] = '\n        '.join(
+                   ['POS(%s) = %i' % (i+1, pos) for i,pos in enumerate(changing)])
+            get_helicity_per_particle = matrix_element.get_helicity_per_particle()
+            changing_hels = [get_helicity_per_particle[pos-1] for pos in changing]
+            replace_dict['dens_ncomb'] = math.prod([len(hel) for hel in changing_hels])
+
+
+
+            i = 0 
+            replace_dict['dens_allow_hel'] = ''
+            for comb in  itertools.product(*changing_hels):
+                for h in comb:
+                    i += 1
+                    replace_dict['dens_allow_hel'] += ' ALLOW_HEL(%i) = %i\n       ' % (i, h)
+
+
+        fsock =  open(pjoin(self.mgme_dir, 'madgraph', 'iolibs', 'template_files', 'check_sa.f'), 'r')
+        text = fsock.read()
+        fsock.close()
+        text = text % replace_dict
+        writer.write(text)
+        writer.close()
+
+
+
+    #===========================================================================
+    # write_check_sa_splitOrders
+    #===========================================================================
     def write_check_sa_splitOrders(self,squared_orders, split_orders, nexternal,
                                                 nincoming, proc_prefix, writer):
         """ Write out a more advanced version of the check_sa drivers that
@@ -3850,6 +3979,7 @@ class ProcessExporterFortranMW(ProcessExporterFortran):
         # Extract number of external particles
         (nexternal, ninitial) = matrix_element.get_nexternal_ninitial()
         replace_dict['nexternal'] = nexternal
+        replace_dict['nincoming'] = ninitial
 
         # Extract ncomb
         ncomb = matrix_element.get_helicity_combinations()
@@ -3875,10 +4005,11 @@ class ProcessExporterFortranMW(ProcessExporterFortran):
         # Extract ncolor
         ncolor = max(1, len(matrix_element.get('color_basis')))
         replace_dict['ncolor'] = ncolor
+        replace_dict['proc_prefix'] = '' # Not used in MW
 
         # Extract color data lines
         color_data_lines = self.get_color_data_lines(matrix_element)
-        replace_dict['color_data_lines'] = "\n".join(color_data_lines)
+        replace_dict['color_data_lines'] = "\n".join(color_data_lines) % {'proc_prefix': replace_dict['proc_prefix']}
 
         # Extract helas calls
         helas_calls = fortran_model.get_matrix_element_calls(\
@@ -4228,7 +4359,6 @@ class ProcessExporterFortranME(ProcessExporterFortran):
 
         if opt and isinstance(opt['output_options'], dict) and \
                                        'vector_size' in opt['output_options']:
-            misc.sprint(opt['output_options']['vector_size'])
             self.opt['vector_size'] = banner_mod.ConfigFile.format_variable(
                   opt['output_options']['vector_size'], int, 'vector_size')
         else:
@@ -4897,7 +5027,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
 
         # Extract color data lines
         color_data_lines = self.get_color_data_lines(matrix_element)
-        replace_dict['color_data_lines'] = "\n".join(color_data_lines)
+        replace_dict['color_data_lines'] = "\n".join(color_data_lines) % {'proc_prefix': replace_dict['proc_prefix']}
 
 
         # Set the size of Wavefunction
@@ -4953,10 +5083,12 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         if self.beam_polarization == [True, True]:
             replace_dict['beam_polarization'] = """
                          DO JJ=1,nincoming
+c NB_SPIN_STATE_IN/2 avoids a double counting
+c of an explicit polarisation in the process
                IF(POL(JJ).NE.1d0.AND.NHEL(JJ,I).EQ.INT(SIGN(1d0,POL(JJ)))) THEN
-                 T=T*ABS(POL(JJ))
+                 T=T*ABS(POL(JJ))*NB_SPIN_STATE_IN(JJ)/2d0
                ELSE IF(POL(JJ).NE.1d0)THEN
-                 T=T*(2d0-ABS(POL(JJ)))
+                 T=T*(2d0-ABS(POL(JJ)))*NB_SPIN_STATE_IN(JJ)/2d0
                ENDIF
              ENDDO
             """
@@ -4966,10 +5098,12 @@ class ProcessExporterFortranME(ProcessExporterFortran):
                 if self.beam_polarization[i]:
                     replace_dict['beam_polarization'] = """
                                    ! handling only one beam polarization here. Second beam can be handle via the pdf.
+c NB_SPIN_STATE_IN/2 avoids a double counting
+c of an explicit polarisation in the process
                                    IF(POL(%(bid)i).NE.1d0.AND.NHEL(%(bid)i,I).EQ.INT(SIGN(1d0,POL(%(bid)i)))) THEN
-                 T=T*ABS(POL(%(bid)i))
+                 T=T*ABS(POL(%(bid)i))*NB_SPIN_STATE_IN(%(bid)i)/2d0
                ELSE IF(POL(%(bid)i).NE.1d0)THEN
-                 T=T*(2d0-ABS(POL(%(bid)i)))
+                 T=T*(2d0-ABS(POL(%(bid)i)))*NB_SPIN_STATE_IN(%(bid)i)/2d0
                ENDIF """ % {'bid': i+1}
 
 
@@ -6921,7 +7055,6 @@ class UFO_model_to_mg4(object):
             vector_size = self.opt['output_options']['vector_size']
             self.vector_size = banner_mod.ConfigFile.format_variable(vector_size, int, 'vector_size')
         except KeyError as error:
-            misc.sprint(error)
             self.vector_size = 0
 
         try:

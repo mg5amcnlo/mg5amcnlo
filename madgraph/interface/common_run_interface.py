@@ -92,6 +92,18 @@ else:
     from madgraph import InvalidCmd, MadGraph5Error, MG5DIR
     MADEVENT=False
 
+
+def render_HwU_plot(path, stdout=None, stderr=None):
+    """Render an extensionless HwU plot path with its preferred backend."""
+
+    if MADEVENT:
+        import internal.histograms as histograms
+    else:
+        import madgraph.various.histograms as histograms
+    return histograms.render_histogram_output(path, stdout=stdout,
+                                               stderr=stderr)
+
+
 #===============================================================================
 # HelpToCmd
 #===============================================================================
@@ -382,10 +394,11 @@ class CheckValidForCmd(object):
                     filepath = p % {'tag': prev_tag}
                     break
             else:
-                a = input("NO INPUT")          
                 if nodefault:
                     return False
                 else:
+                    if self._has_py8_parallel_splits(prev_tag):
+                        return 'RECOVER_PY8_SPLITS'
                     self.help_pgs()
                     raise self.InvalidCmd('''No file file pythia_events.* currently available
             Please specify a valid run_name''')
@@ -400,7 +413,9 @@ class CheckValidForCmd(object):
                 filepath = pjoin(self.me_dir,'Events',self.run_name, '%s_pythia_events.hep.gz' % prev_tag)
             elif os.path.exists(pjoin(self.me_dir,'Events',self.run_name, '%s_pythia8_events.hepmc' % prev_tag)):
                 filepath = pjoin(self.me_dir,'Events',self.run_name, '%s_pythia8_events.hepmc.gz' % prev_tag)
-            else:                
+            else:
+                if self._has_py8_parallel_splits(prev_tag):
+                    return 'RECOVER_PY8_SPLITS'
                 raise self.InvalidCmd('No events file corresponding to %s run with tag %s.:%s '\
                     % (self.run_name, prev_tag, 
                        pjoin(self.me_dir,'Events',self.run_name, '%s_pythia_events.hep.gz' % prev_tag)))
@@ -1227,6 +1242,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                     r'@MG5aMC\s*reconstruction_name', # MA5 hadronique
                     '@MG5aMC', # MA5 hadronique
                     'run_rivet_later', # Rivet
+                    'change particle_in_density_matrix' # density mode of reweight
                     ]
         
         
@@ -1276,6 +1292,8 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             return 'pythia8_card.dat'
         elif 'run_rivet_later' in text:
             return 'rivet_card.dat'
+        elif 'change particle_in_density_matrix' in text:
+            return 'reweight_card.dat'
         elif 'launch' in text:
             # need to separate madspin/reweight.
             # decay/set can be in both...
@@ -1487,32 +1505,36 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                         return True
         if mode == 'Pythia8':
             plot_files = glob.glob(pjoin(PY8_plots_root_path,'*.gnuplot'))
-            if not misc.which('gnuplot'):
-                logger.warning("Install gnuplot to be able to view the plots"+\
-                               " generated at :\n   "+\
-                               '\n   '.join('%s.gnuplot'%p for p in plot_files))
-                return True
             for plot in plot_files:
-                command = ['gnuplot',plot]
                 try:
-                    fsock = open(os.devnull, 'w')
-                    subprocess.call(command,cwd=PY8_plots_root_path,stderr=fsock)
-                    fsock.close()
+                    with open(os.devnull, 'w') as fsock:
+                        backend, return_code = render_HwU_plot(
+                            plot[:-len('.gnuplot')], stderr=fsock)
                 except Exception as e:
                     logger.warning("Automatic processing of the Pythia8 "+\
-                            "merging plots with gnuplot failed. Try the"+\
-                            " following command by hand:\n   %s"%(' '.join(command))+\
-                            "\nException was: %s"%str(e))
+                            "merging plots failed for '%s'.\nException was: %s"%
+                            (plot, str(e)))
+                    return False
+                if backend is None:
+                    continue
+                if return_code != 0:
+                    script = plot if backend == 'gnuplot' else \
+                                                    plot[:-len('.gnuplot')]+'.py'
+                    logger.warning("Automatic processing of the Pythia8 "+\
+                            "merging plots with %s failed. Try the following "
+                            "file by hand:\n   %s"%(backend, script))
                     return False
 
-            plot_files = glob.glob(pjoin(PY8_plots_root_path,'*.pdf'))
+            plot_files = [path for path in
+                glob.glob(pjoin(PY8_plots_root_path,'*.html'))
+                if os.path.basename(path) != 'index.html']
             if len(plot_files)>0:
                 # Add an html page
                 html = "<html>\n<head>\n<TITLE>PLOT FOR PYTHIA8</TITLE>"
                 html+= '<link rel=stylesheet href="../../mgstyle.css" type="text/css">\n</head>\n<body>\n'
                 html += "<h2> Plot for Pythia8 </h2>\n"
                 html += '<a href=../../../crossx.html>return to summary</a><br>'
-                html += "<table>\n<tr> <td> <b>Obs.</b> </td> <td> <b>Type of plot</b> </td> <td><b> PDF</b> </td> <td><b> input file</b> </td> </tr>\n"
+                html += "<table>\n<tr> <td> <b>Obs.</b> </td> <td> <b>Type of plot</b> </td> <td><b>Plots</b> </td> <td><b>Input files</b> </td> </tr>\n"
                 def sorted_plots(elem):
                     name = os.path.basename(elem[1])
                     if 'central' in name:
@@ -1536,7 +1558,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                         # Add a line between observables
                         html += "<tr><td></td></tr>"
                         last_obs = obs
-                    name = os.path.basename(one_plot).replace('.pdf','')
+                    name = os.path.basename(one_plot).replace('.html','')
                     short_name = name
                     for dummy in ['_plots','_djr','_pt']:
                         short_name = short_name.replace(dummy,'')
@@ -1545,13 +1567,17 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                         short_name = "%s comparison with min/max merging scale"%obs
                     if 'central' in short_name:
                         short_name = "Merging uncertainty band around central scale"
-                    html += "<tr><td>%(obs)s</td><td>%(sn)s</td><td> <a href=./%(n)s.pdf>PDF</a> </td><td> <a href=./%(n)s.HwU>HwU</a> <a href=./%(n)s.gnuplot>GNUPLOT</a> </td></tr>\n" %\
-                                        {'obs':obs, 'sn': short_name, 'n': name}
+                    pdf_link = ' <a href=./%s.pdf>PDF</a>'%name if \
+                        os.path.exists(pjoin(PY8_plots_root_path,
+                                             name+'.pdf')) else ''
+                    html += "<tr><td>%(obs)s</td><td>%(sn)s</td><td> <a href=./%(n)s.html>HTML</a>%(pdf)s </td><td> <a href=./%(n)s.HwU>HwU</a> <a href=./%(n)s.gnuplot>GNUPLOT</a> <a href=./%(n)s.py>PYTHON</a> </td></tr>\n" %\
+                         {'obs':obs, 'sn': short_name, 'n': name,
+                          'pdf':pdf_link}
                 html += '</table>\n'
                 html += '<a href=../../../bin/internal/plot_djrs.py> Example of code to plot the above with matplotlib </a><br><br>'
                 html+='</body>\n</html>'
-                ff=open(pjoin(PY8_plots_root_path, 'index.html'),'w')
-                ff.write(html)
+                with open(pjoin(PY8_plots_root_path, 'index.html'),'w') as ff:
+                    ff.write(html)
             return True
 
         if not event_path:
@@ -1776,6 +1802,70 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         
          
     ############################################################################
+    def get_split_unweighted_files(self, nominal):
+        """The files written by the unweighting when ``nb_unweight_output`` > 1,
+        provided they are really there and were not merged back already."""
+        if 'nb_unweight_output' not in self.run_card:
+            return []
+        nb_output = self.run_card['nb_unweight_output']
+        if nb_output <= 1:
+            return []
+        if os.path.exists(nominal) or os.path.exists('%s.gz' % nominal):
+            return []
+        paths = lhe_parser.EventFile.unweight_output_paths(nominal, nb_output)
+        for candidates in (paths, ['%s.gz' % p for p in paths]):
+            if all(os.path.exists(p) for p in candidates):
+                return candidates
+        return []
+
+    def split_unweighted_consumed(self, split_inputs):
+        """The split files have been merged back: drop them and undo the
+        settings we picked ourselves to produce them, so that the merged file is
+        gzipped as usual. A value the user asked for explicitly (user_set) is
+        left alone."""
+        for path in split_inputs:
+            try:
+                os.remove(path)
+            except OSError:
+                pass
+        if 'zip_unweighted_events' not in self.run_card.user_set:
+            self.run_card['zip_unweighted_events'] = True
+        if 'nb_unweight_output' not in self.run_card.user_set:
+            self.run_card['nb_unweight_output'] = 1
+
+    def merge_split_unweighted_files(self, split_inputs, nominal):
+        """Put the split unweighted files back into the single file the rest of
+        the chain expects."""
+        lhe_parser.EventFile.merge_unweight_output(split_inputs, nominal)
+        self.split_unweighted_consumed(split_inputs)
+        return nominal
+
+    def finalize_split_unweighted_output(self):
+        """Leave the run with exactly the events it would have had if we had
+        never split: a single, gzipped unweighted_events.lhe.
+
+        Splitting is only ever our own doing, to feed systematics one file per
+        job. systematics normally consumes the files and merges them back, but
+        it may also be bypassed or fail outright (it aborts the whole command
+        when it does), so this has to hold whatever happened. Idempotent, and a
+        no-op when the user asked for the split themselves."""
+        if 'nb_unweight_output' not in self.run_card or \
+                'nb_unweight_output' in self.run_card.user_set:
+            return
+        nominal = pjoin(self.me_dir, 'Events', self.run_name,
+                        'unweighted_events.lhe')
+        orphans = self.get_split_unweighted_files(nominal)
+        if orphans:
+            logger.debug('merging back the %s split event files', len(orphans))
+            self.merge_split_unweighted_files(orphans, nominal)
+        # zip_unweighted_events was switched off only because systematics was
+        # about to read the files straight back; the user did not ask for it, so
+        # the events must end up gzipped like any other run.
+        if 'zip_unweighted_events' not in self.run_card.user_set and \
+                os.path.exists(nominal) and \
+                not os.path.exists('%s.gz' % nominal):
+            misc.gzip(nominal)
+
     def do_systematics(self, line):
         """ syntax is 'systematics [INPUT [OUTPUT]] OPTIONS'
             --mur=0.5,1,2
@@ -1831,25 +1921,29 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
           
         # always pass to a path + get the event size
         result_file= sys.stdout
+        split_inputs = []
         if not os.path.isfile(args[0]) and not os.path.sep in args[0]:
-            path = [pjoin(self.me_dir, 'Events', args[0], 'unweighted_events.lhe.gz'),
-                    pjoin(self.me_dir, 'Events', args[0], 'unweighted_events.lhe'),
-                    pjoin(self.me_dir, 'Events', args[0], 'events.lhe.gz'),
-                    pjoin(self.me_dir, 'Events', args[0], 'events.lhe')]
-            
-            for p in path:
-                if os.path.exists(p):
-                    nb_event = self.results[args[0]].get_current_info()['nb_event']
-                    
-                    
-                    if self.run_name != args[0]:
-                        tag = self.results[args[0]].tags[0]
-                        self.set_run_name(args[0], tag,'parton', False)
-                    result_file = open(pjoin(self.me_dir,'Events', self.run_name, 'parton_systematics.log'),'w')
-                    args[0] = p
-                    break
-            else:
+            run = args[0]
+            nominal = pjoin(self.me_dir, 'Events', run, 'unweighted_events.lhe')
+            # the unweighting may have written one file per job instead of a
+            # single one: those are the input, and get merged into the nominal
+            # file (which does not exist yet in that case).
+            split_inputs = self.get_split_unweighted_files(nominal)
+            path = [nominal + '.gz', nominal,
+                    pjoin(self.me_dir, 'Events', run, 'events.lhe.gz'),
+                    pjoin(self.me_dir, 'Events', run, 'events.lhe')]
+
+            found = nominal if split_inputs else \
+                    next((p for p in path if os.path.exists(p)), None)
+            if found is None:
                 raise self.InvalidCmd('Invalid run name. Please retry')
+
+            nb_event = self.results[run].get_current_info()['nb_event']
+            if self.run_name != run:
+                tag = self.results[run].tags[0]
+                self.set_run_name(run, tag,'parton', False)
+            result_file = open(pjoin(self.me_dir,'Events', self.run_name, 'parton_systematics.log'),'w')
+            args[0] = found
         elif self.options['nb_core'] != 1:
             lhe = lhe_parser.EventFile(args[0])
             nb_event = len(lhe)
@@ -1916,7 +2010,16 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             logger.warning('impossible to download all the pdfsets. Bypass systematics')
             return
         
-        if self.options['run_mode'] ==2 and self.options['nb_core'] != 1:
+        if split_inputs and self.options['run_mode'] in [1,2]:
+            # one job per file: each reads its own instead of scanning the
+            # shared file up to its own range.
+            nb_submit = len(split_inputs)
+        elif split_inputs:
+            # nothing to distribute: put the events back together and proceed
+            self.merge_split_unweighted_files(split_inputs, input)
+            split_inputs = []
+            nb_submit = 1
+        elif self.options['run_mode'] ==2 and self.options['nb_core'] != 1:
             nb_submit = min(int(self.options['nb_core']), nb_event//2500)
         elif self.options['run_mode'] ==1:
             try:
@@ -1952,17 +2055,25 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 stop_event = start_event + event_requested
                     
                 prog = sys.executable
-                input_files = [os.path.basename(input)]
+                if split_inputs:
+                    # this job owns a full file: no range to seek to. The
+                    # outputs are concatenated below, so only the first may
+                    # write the banner and only the last the closing tag.
+                    input_files = [os.path.basename(split_inputs[i])]
+                    range_opts = ['--no_banner=%s' % (i != 0),
+                                  '--no_closing_tag=%s' % (i != nb_submit-1)]
+                else:
+                    input_files = [os.path.basename(input)]
+                    range_opts = ['--start_event=%i' % start_event,
+                                  '--stop_event=%i' % stop_event]
                 output_files = ['./tmp_%s_%s' % (i, os.path.basename(output)),
                                 './log_sys_%s.txt' % (i)]
                 argument = []
                 if not __debug__:
                     argument.append('-O')
                 argument +=  [pjoin(self.me_dir, 'bin', 'internal', 'systematics.py'),
-                             input_files[0], output_files[0]] + opts +\
-                             ['--start_event=%i' % start_event,
-                              '--stop_event=%i' %stop_event,
-                              '--result=./log_sys_%s.txt' %i,
+                             input_files[0], output_files[0]] + opts + range_opts +\
+                             ['--result=./log_sys_%s.txt' %i,
                               '--lhapdf_config=%s' % self.options['lhapdf']]
                 required_output = output_files            
                 self.cluster.cluster_submit(prog, argument, 
@@ -2017,7 +2128,10 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 all_cross= [cross/nb_event for cross in all_cross]
 
 
-            sys_obj = systematics.call_systematics([input, None] + opts,
+            # the nominal file does not exist yet when the input was split: read
+            # the banner/run_card information from one of the parts instead.
+            sys_obj = systematics.call_systematics(
+                                        [split_inputs[0] if split_inputs else input, None] + opts,
                                         log=lambda x: logger.info(str(x)),
                                         result=result_file,
                                         running=False
@@ -2036,6 +2150,10 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             for i in range(nb_submit):
                 os.remove('%s/tmp_%s_%s' %(os.path.dirname(output),i,os.path.basename(output)))
             #    os.remove('%s/log_sys_%s.txt' % (os.path.dirname(output),i))
+
+            if split_inputs:
+                # their (reweighted) events are in the concatenated file now
+                self.split_unweighted_consumed(split_inputs)
                                                   
 
             
@@ -2089,23 +2207,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         
         if '-from_cards' in line and not os.path.exists(pjoin(self.me_dir, 'Cards', 'reweight_card.dat')):
             return
-        # option for multicore to avoid that all of them create the same directory
-        if '--multicore=create' in line:
-            multicore='create'
-        elif '--multicore=wait' in line:
-            multicore='wait'
-        else:
-            multicore=False
-            
-        # plugin option
-        plugin = False
-        if '--plugin=' in line:
-            plugin = [l.split('=',1)[1] for l in line.split() if '--plugin=' in l][0]
-        elif hasattr(self, 'switch') and self.switch['reweight'] not in ['ON','OFF']:
-            plugin=self.switch['reweight']
-            
-
-            
+        
         # Check that MG5 directory is present .
         if MADEVENT and not self.options['mg5_path']:
             raise self.InvalidCmd('''The module reweight requires that MG5 is installed on the system.
@@ -2117,7 +2219,52 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         except ImportError:
             raise self.ConfigurationError('''Can\'t load Reweight module.
             The variable mg5_path might not be correctly configured.''')
+
+        # plugin option
+        plugin = False
+        reweight_mode = None
+        if '--mode=density' in line:
+            reweight_mode = 'density'
+            line = line.replace('--mode=density', '')
+        elif '--mode=ON' in line:
+            reweight_mode = 'ON'
+            line = line.replace('--mode=ON', '')
+        elif '--mode=OFF' in line:
+            return
+
+        if '--plugin=' in line:
+            plugin = [l.split('=',1)[1] for l in line.split() if '--plugin=' in l][0]
+        elif hasattr(self, 'switch') and self.switch['reweight'] not in ['ON','OFF', 'density']:
+            plugin=self.switch['reweight']
         
+        # option for multicore to avoid that all of them create the same directory
+        if '--multicore=create' in line:
+            multicore='create'
+        elif '--multicore=wait' in line:
+            multicore='wait'
+        else:
+            multicore=False
+            
+        #We are checking if the reweight card exists and is in density mode
+        density_card_flag = False #flag is False if the reweight card is not in mode density
+        reweight_card_present = True
+        try:
+            with open(pjoin(self.me_dir,"Cards", "reweight_card.dat"), 'r') as reweight_card_data:
+                text =reweight_card_data.readlines()
+                for elem in text:
+                    if 'change particle_in_density_matrix' in elem:
+                        density_card_flag = True
+                        break
+        except:
+            reweight_card_present = False
+
+
+        if reweight_mode == 'density' and not density_card_flag: #we are in density mode but the reweight card does not exist or does not contain the correct information
+            shutil.copyfile(pjoin(self.me_dir, "Cards", "density_card_default.dat"), pjoin(self.me_dir, "Cards", "reweight_card.dat"))
+        elif reweight_mode == 'ON' and (density_card_flag or not reweight_card_present): #we are in reweight mode but the reweight card is in mode density
+            shutil.copyfile(pjoin(self.me_dir, "Cards", "reweight_card_default.dat"), pjoin(self.me_dir, "Cards", "reweight_card.dat"))
+
+
         if not '-from_cards' in line:
             self.keep_cards(['reweight_card.dat'], ignore=['*'])
             self.ask_edit_cards(['reweight_card.dat'], 'fixed', plot=False)        
@@ -2166,6 +2313,8 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                     command += args
                 if '-from_cards' not in command:
                     command.append('-from_cards')
+                if reweight_mode == 'density':
+                    command.append('--mode=density')
                 p = misc.Popen(command, stdout = subprocess.PIPE, stderr = subprocess.STDOUT, cwd=os.getcwd())
                 while p.poll() is None:
                     line = p.stdout.readline().decode(errors='ignore')
@@ -2243,6 +2392,9 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                         new_command.append('-from_cards')
                     if plugin:
                         new_command.append('--plugin=%s' % plugin)
+                    if reweight_mode == 'density':
+                        new_command.append('--mode=density')
+                    
                     if i==0:
                         if __debug__:
                             stdout = None
@@ -2259,7 +2411,10 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 devnull.close()
                 logger.info("Collect and combine the various output file.")
 
-                lhe = lhe_parser.MultiEventFile(all_lhe, parse=False)
+                if reweight_mode == 'density':
+                    lhe = lhe_parser.MultiEventFile(all_lhe, parse=False, parse_LHE=False)
+                else:
+                    lhe = lhe_parser.MultiEventFile(all_lhe, parse=False, parse_LHE=True)
                 nb_event, cross_sections = lhe.write(new_args[0], get_info=True)
                 if any(os.path.exists('%s_%s_debug.log' % (f, self.run_tag)) for f in all_lhe):
                     for f in all_lhe:
@@ -2285,18 +2440,29 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
 
         self.check_decay_events(args) 
         # args now alway content the path to the valid files
-        rwgt_interface = reweight_interface.ReweightInterface 
-        if plugin:
+
+        #According to the reweight mode chosen by the user, we instantiate the correct reweight interface
+        #could improve it with a __new__ in ReweightInterface so we would always call ReweightInterface instead of DensityInterface ?
+        if reweight_mode == 'density':
+            rwgt_interface = reweight_interface.DensityInterface
+        else:
+            rwgt_interface = reweight_interface.ReweightInterface
+        
+    
+        if plugin: 
             rwgt_interface = misc.from_plugin_import(self.plugin_path, 'new_reweight', 
                                         plugin, warning=False, 
-                                        info="Will use re-weighting from pluging %(plug)s")    
-        
+                                        info="Will use re-weighting from pluging %(plug)s")
+                
+
         reweight_cmd = rwgt_interface(args[0], mother=self)
         #reweight_cmd.use_rawinput = False
         #reweight_cmd.mother = self
         wgt_names = reweight_cmd.get_weight_names()
         if wgt_names == [''] and reweight_cmd.has_nlo:
             self.update_status('Running Reweighting (LO approximate)', level='madspin')
+        elif wgt_names == [''] and reweight_mode == 'density':
+            self.update_status('Running Reweighting Density mode', level='madspin')
         else:
             self.update_status('Running Reweighting', level='madspin')
         
@@ -3366,7 +3532,36 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
     ############################################################################
     # End of MadAnalysis5 related function
     ############################################################################
-    
+
+    def _has_py8_parallel_splits(self, tag):
+        """Return the PY8_parallelization directory path if leftover Pythia8
+        split HEPMC files are present for the given run tag, otherwise False.
+        Used by the delphes command recovery path so that a crashed
+        parallel run can still be processed with parallel Delphes on the
+        split HEPMC files instead of requiring a full re-run."""
+
+        parallelization_dir = pjoin(self.me_dir, 'Events', self.run_name,
+                                    'PY8_parallelization')
+        if not os.path.isdir(parallelization_dir):
+            return False
+        split_dirs = sorted(glob.glob(pjoin(parallelization_dir, 'split_*')))
+        split_dirs = [d for d in split_dirs if os.path.isdir(d) and
+                      os.path.isfile(pjoin(d, 'events.hepmc'))]
+        if not split_dirs:
+            return False
+        return parallelization_dir
+
+    def _try_run_delphes_on_splits_recovery(self, tag):
+        """Child-class hook for recovering a crashed parallel Delphes run.
+        When leftover split HEPMC files exist (see _has_py8_parallel_splits)
+        this should run Delphes on them, merge the ROOT outputs with hadd
+        and (when the pythia8 card asked for it) clean up the split HEPMC
+        files afterwards.
+
+        Returns True on success, False if recovery is not possible. Base
+        class default returns False."""
+        return False
+
     def do_delphes(self, line):
         """ run delphes and make associate root file/plot """
 
@@ -3386,7 +3581,36 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         filepath = self.check_delphes(args, nodefault=no_default)
         if no_default and not filepath:
             return # no output file but nothing to do either.
-        
+
+        tag = self.run_tag
+
+        # Recovery path: no merged HEPMC file exists, but leftover Pythia8
+        # split HEPMC files do (PY8_parallelization/split_*/events.hepmc).
+        # Let the child class run Delphes on the splits in parallel and
+        # merge the ROOT outputs with hadd.
+        if filepath == 'RECOVER_PY8_SPLITS':
+            logger.info('No merged HEPMC output found for run %s (tag %s); '
+                        'detected leftover Pythia8 parallelization splits. '
+                        'Running Delphes on the split HEPMC files in parallel...'
+                        % (self.run_name, tag))
+            if not self._try_run_delphes_on_splits_recovery(tag):
+                raise self.InvalidCmd(
+                    'Parallel Delphes recovery on the split HEPMC files '
+                    'failed. Either re-run Pythia8 (to regenerate the merged '
+                    'HEPMC) or run Delphes manually on the individual split '
+                    'files under Events/%s/PY8_parallelization/split_*/'
+                    % self.run_name)
+            # The recovery method has already produced the final ROOT and
+            # the 'delphes done' status. Skip the standard single-file run.
+            madir = self.options['madanalysis_path']
+            td = self.options['td_path']
+            if os.path.exists(pjoin(self.me_dir, 'Events', self.run_name,
+                                    '%s_delphes_events.lhco' % tag)):
+                self.create_plot('Delphes')
+                misc.gzip(pjoin(self.me_dir, 'Events', self.run_name,
+                                '%s_delphes_events.lhco' % tag))
+            return
+
         self.update_status('prepare delphes run', level=None)
 
         if os.path.exists(pjoin(self.options['delphes_path'], 'data')):
@@ -4568,7 +4792,29 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         content = []
         variables = dict(def_variables)
         need_keys = list(variables.keys())
-        for line in open(make_opts):
+
+        # Read the whole file in one go: this used to iterate over the open file
+        # handle while another process could be truncating it, and a partial read
+        # is then written straight back (see below), making the damage permanent.
+        with open(make_opts) as fsock:
+            original = fsock.read()
+
+        # Refuse to work on a make_opts that is not one. Everything that gives
+        # the build its compiler and its flags -- FC=$(DEFAULT_F_COMPILER),
+        # $(libext), -ffixed-line-length-132 -- lives *after* the tag, so
+        # rewriting a file that has lost it would silently drop all of it and
+        # leave make on its builtin defaults ($(FC)=f77 ...). That does not fail
+        # here, it fails much later as column-72 errors in unrelated Fortran.
+        if not original.strip():
+            raise MadGraph5Error('%s is empty. It is likely that a concurrent '
+                'MG5aMC process truncated it while writing. Remove it and '
+                'regenerate the output directory.' % make_opts)
+        if tag.strip() not in original:
+            raise MadGraph5Error('%s does not contain the %s marker: the file '
+                'is truncated or corrupted. Remove it and regenerate the output '
+                'directory.' % (make_opts, tag.strip()))
+
+        for line in original.splitlines():
             line = line.strip()
             if make_opts_variable: 
                 if line.startswith('#') or not line:
@@ -4592,12 +4838,39 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         if need_keys:
             diff=True #This means that new definition are added to the file. 
 
+        if 'DEFAULT_F_COMPILER' not in variables:
+            raise MadGraph5Error('%s defines no DEFAULT_F_COMPILER. Without it '
+                'make keeps its builtin $(FC) (f77) and the compilation fails '
+                'later with unrelated errors. Remove the file and regenerate '
+                'the output directory.' % make_opts)
+
+        # The marker being present is not enough: a truncation landing just
+        # after it leaves a file that parses, keeps its variables, and has lost
+        # every definition the build actually needs -- which is then written
+        # back here, permanently. So check that the body still carries the two
+        # whose absence produced the failure this validation exists for:
+        # FC=$(DEFAULT_F_COMPILER) (else make compiles with f77) and libext
+        # (else the libraries are linked as 'libdhelas.', with no extension).
+        # Both are unconditionally present in every make_opts MG5aMC ships,
+        # Template/LO/Source/.make_opts and Template/NLO/Source/make_opts.inc.
+        body = '\n'.join(content)
+        missing = [key for key in ('FC=$(DEFAULT_F_COMPILER)', 'libext=')
+                   if key not in body]
+        if missing:
+            raise MadGraph5Error('%s has lost %s from the section after %s. The '
+                'file is truncated or was edited into an unusable state; make '
+                'would silently fall back to its own defaults. Remove it and '
+                'regenerate the output directory.'
+                % (make_opts, ' and '.join(missing), tag.strip()))
+
         content_variables = '\n'.join('%s=%s' % (k,v) for k, v in variables.items() if v is not None)
         content_variables += '\n%s' % tag
 
         if diff:
-            with open(make_opts, 'w') as fsock: 
-                fsock.write(content_variables + '\n'.join(content))
+            # Atomic: a reader (or the make that is about to parse this) must
+            # never observe the file in the truncated state that open(...,'w')
+            # would leave it in.
+            misc.atomic_write(make_opts, content_variables + '\n'.join(content))
         return       
 
 
@@ -4691,7 +4964,11 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                         f.write('\n')
                     f.write('\n'.join(extra) + '\n')
             except (OSError, IOError) as e:
-                logger.debug('Could not patch %s: %s', path, e)
+                logger.warning('Could not add %s to %s (%s). '
+                    'Recent LHAPDF versions can refuse to load this set '
+                    '(MetadataError). If this happens, add those keys to that '
+                    'file manually.',
+                    ', '.join(e2.split(':')[0] for e2 in extra), path, e)
 
 
     def copy_lhapdf_set(self, lhaid_list, pdfsets_dir, require_local=True):
@@ -4761,6 +5038,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
     
                 os.environ["LHAPATH"] = [d for d in lhapdf_cluster_possibilities if os.path.exists(pjoin(d, pdfset))][0]
                 os.environ["CLUSTER_LHAPATH"] = os.environ["LHAPATH"]
+                self.patch_lhapdf_info_file(pjoin(os.environ["LHAPATH"], pdfset))
                 # no need to copy it
                 if os.path.exists(pjoin(pdfsets_dir, pdfset)):
                     try:
@@ -4772,6 +5050,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                         logger.debug('%s', error)
             if not require_local and (os.path.exists(pjoin(pdfsets_dir, pdfset)) or \
                                     os.path.isdir(pjoin(pdfsets_dir, pdfset))):
+                self.patch_lhapdf_info_file(pjoin(pdfsets_dir, pdfset))
                 continue
             if not require_local:
                 if 'LHAPDF_DATA_PATH' in os.environ:
@@ -4782,19 +5061,27 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                             found =True
                             break
                     if found:
+                        self.patch_lhapdf_info_file(pjoin(path, pdfset))
                         continue
-                    
-                    
+
+            # ensure that the set used at run time has the metadata required
+            # by recent LHAPDF versions: the code can read the global copy
+            # (in particular if the local one is not picked up), and the
+            # local copy is created from it.
+            self.patch_lhapdf_info_file(pjoin(pdfsets_dir, pdfset))
+
             #check that the pdfset is not already there
             if not os.path.exists(pjoin(self.me_dir, 'lib', 'PDFsets', pdfset)) and \
                not os.path.isdir(pjoin(self.me_dir, 'lib', 'PDFsets', pdfset)):
-    
+
                 if pdfset and not os.path.exists(pjoin(pdfsets_dir, pdfset)):
                     self.install_lhapdf_pdfset(pdfsets_dir, pdfset)
-    
+                    self.patch_lhapdf_info_file(pjoin(pdfsets_dir, pdfset))
+
                 if os.path.exists(pjoin(pdfsets_dir, pdfset)):
                     files.cp(pjoin(pdfsets_dir, pdfset), pjoin(self.me_dir, 'lib', 'PDFsets'))
                 elif os.path.exists(pjoin(os.path.dirname(pdfsets_dir), pdfset)):
+                    self.patch_lhapdf_info_file(pjoin(os.path.dirname(pdfsets_dir), pdfset))
                     files.cp(pjoin(os.path.dirname(pdfsets_dir), pdfset), pjoin(self.me_dir, 'lib', 'PDFsets'))
 
             self.patch_lhapdf_info_file(pjoin(self.me_dir, 'lib', 'PDFsets', pdfset))
@@ -5098,9 +5385,9 @@ class AskforEditCard(cmd.OneLinePathCompletion):
     """
 
     all_card_name = ['param_card', 'run_card', 'pythia_card', 'pythia8_card', 'fo_analysis_card'
-                     'madweight_card', 'MadLoopParams', 'shower_card', 'rivet_card']
+                     'madweight_card', 'MadLoopParams', 'shower_card', 'rivet_card', 'reweight_card']
     to_init_card = ['param', 'run', 'madweight', 'madloop', 'fo_analysis',
-                    'shower', 'pythia8','delphes','madspin', 'rivet']
+                    'shower', 'pythia8','delphes','madspin', 'rivet', 'reweight']
     special_shortcut = {}
     special_shortcut_help = {}
     
@@ -5130,6 +5417,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         self.has_delphes = False
         self.has_rivet = False
         self.has_fo_card = False
+        self.has_density = False
         self.paths = {}
         self.update_block = []
 
@@ -5172,6 +5460,9 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         self.paths['madanalysis5_parton_default'] = pjoin(self.me_dir,'Cards','madanalysis5_parton_card_default.dat')
         self.paths['madanalysis5_hadron_default'] = pjoin(self.me_dir,'Cards','madanalysis5_hadron_card_default.dat')
         self.paths['FO_analyse'] = pjoin(self.me_dir,'Cards', 'FO_analyse_card.dat')
+        self.paths['reweight_default'] = pjoin(self.me_dir, 'Cards', 'density_card_default.dat')
+        self.paths['reweight'] = pjoin(self.me_dir, 'Cards', 'reweight_card.dat')
+        #
 
 
      
@@ -5510,11 +5801,14 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         
         self.special_shortcut.update({
             'spinmode':([str], ['add madspin_card --before_line="launch" set spinmode %(0)s']),
-            'nodecay':([], ['edit madspin_card --comment_line="decay"'])
+            'nodecay':([], ['edit madspin_card --comment_line="decay"'],),
+            'no_madspin_options':([], ['edit madspin_card --comment_line="set"'],),
             })
+        
         self.special_shortcut_help.update({
-            'spinmode' : 'full|none|onshell. Choose the mode of madspin.\n   - full: spin-correlation and off-shell effect\n  - onshell: only spin-correlation,]\n  - none: no spin-correlation and not offshell effects.',
+            'spinmode' : 'PA|madspin|onshell|none|full|madspin_v1|onshell_v1. Choose the MadSpin spinmode.\n   - PA: spin correlation and off-shell effects with a pure Breit-Wigner\n  - madspin: spin correlation and off-shell effects with off-shell matrix elements\n  - onshell: spin correlation without off-shell effects\n  - none: no spin correlation and no off-shell effects\n  - full: same as madspin',
             'nodecay': 'remove all decay previously defined in madspin',
+            'no_madspin_options': 'remove all options previously defined in madspin',
              })
         return []
     
@@ -5535,6 +5829,18 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         self.fo_card_def = FO_analyse_card.FOAnalyseCard(self.paths['FO_analyse_default'])
         return list(self.fo_card.string_vars)
 
+    def init_reweight(self, cards):
+        self.has_density = False
+        is_valid_path = self.get_path('reweight', cards)
+        if not is_valid_path:
+            return []
+        self.has_density = True
+        self.reweight_card = banner_mod.DensityCard(self.paths['reweight'])
+        self.reweight_card_default = banner_mod.DensityCard(self.paths['reweight_default'])
+
+        self.reweight_vars = [k.lower() for k in self.reweight_card.keys()]
+        #we define here the reweight_card for the density mode as a dictionnary. And we read it off the default cards
+        return []
 
     def set_CM_velocity(self, line):
         """compute sqrts from the velocity in the center of mass frame"""
@@ -5797,6 +6103,8 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 allowed['rivet_card'] = ''
             if self.has_fo_card:
                 allowed['fo_card'] = ''
+            if self.has_density:
+                allowed['reweight_card'] = ''
         
         elif len(args) == 2:
             if args[1] == 'run_card':
@@ -5823,6 +6131,8 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 allowed = {'rivet_card':'default'}
             elif args[1] == 'fo_card':
                 allowed = {'fo_card':'default'} 
+            elif args[1] == 'reweight_card':
+                allowed = {'reweight_card': 'default'}
             else:
                 allowed = {'value':''}
 
@@ -5830,8 +6140,8 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             start = 1
             if args[1] in  ['run_card', 'param_card', 'MadWeight_card', 'shower_card', 
                             'MadLoop_card','pythia8_card','delphes_card','plot_card',
-                            'fo_card',
-                            'madanalysis5_parton_card','madanalysis5_hadron_card', 'rivet_card']:
+                            'fo_card', 'madanalysis5_parton_card','madanalysis5_hadron_card',
+                            'rivet_card', 'reweight_card']:
                 start = 2
 
             if args[-1] in list(self.pname2block.keys()):
@@ -5870,6 +6180,8 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 categories.append('rivet_card')
             if self.has_fo_card:
                 categories.append('fo_card')
+            if self.has_density:
+                categories.append('reweight_card')
 
             possibilities['category of parameter (optional)'] = \
                           self.list_completion(text, categories)
@@ -5914,6 +6226,14 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             if allowed['rivet_card'] == 'default':
                 opts.append('default')
             possibilities['Rivet Card'] = self.list_completion(text, opts)
+        
+        if 'reweight_card' in list(allowed.keys()):
+            opts = self.reweight_vars
+            if allowed['reweight_card'] == 'default':
+                opts.append('default')
+            possibilities['Reweight Card'] = self.list_completion(text, opts)
+                
+
 
         if 'shower_card' in list(allowed.keys()):
             opts = self.shower_vars + [k for k in self.shower_card.keys() if k !='comment']
@@ -5951,7 +6271,9 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 if args[-1].lower() in self.run_card.shortcut_values:
                     allowed_for_run += self.run_card.shortcut_values[args[-1].lower()]
                 opts += [str(i) for i in  allowed_for_run]
-                
+            if args[-1] in ['symmetrise_initial_state', 'matrix_normalisation']:
+                opts = ["True", "False"]
+            # the other options are too complicated because they depend on the pdgs in the model. We do not make autocompletion for these
 
             possibilities['Special Value'] = self.list_completion(text, opts)
 
@@ -6014,7 +6336,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
          
     def do_set(self, line):
         """ edit the value of one parameter in the card"""
-        
+
 
         args = self.split_arg(line)
         
@@ -6150,6 +6472,12 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 return
             args[0] = 'rivet_card'
 
+        if args[0] == 'reweight_card':
+            if not self.has_density:
+                logger.warning('Invalid Command: No Reweight card defined')
+                return
+            args[0] = 'reweight_card'
+
         if args[0] == 'delphes_card':
             if not self.has_delphes:
                 logger.warning('Invalid Command: No Delphes card defined.')
@@ -6166,7 +6494,8 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 return
 
         if args[0] in ['run_card', 'param_card', 'MadWeight_card', 'shower_card', 'fo_card',
-                       'delphes_card','madanalysis5_hadron_card','madanalysis5_parton_card','rivet_card']:
+                       'delphes_card','madanalysis5_hadron_card','madanalysis5_parton_card',
+                       'rivet_card', 'reweight_card']:
 
             if args[1] == 'default':
                 logger.info('replace %s by the default card' % args[0],'$MG:BOLD')
@@ -6177,6 +6506,8 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                     self.run_card = banner_mod.RunCard(self.paths['run'])
                 elif args[0] == 'shower_card':
                     self.shower_card = shower_card_mod.ShowerCard(self.paths['shower'])
+                elif args[0] == 'reweight_card':
+                    self.reweight_card = banner_mod.DensityCard(self.paths['reweight_default'])
                 return
             else:
                 card = args[0]
@@ -6499,7 +6830,26 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 value = args[start+1]
                 default = False 
             self.fo_card[args[start]] = value
-            self.modified_card.add('fo_card') 
+            self.modified_card.add('fo_card')
+
+        # Density Parameter -----------------------------------------------------
+        elif self.has_density and (card in ['', 'reweight_card'])\
+             and args[start].lower() in [k.lower() for k in self.reweight_card.keys()]:
+
+            if args[start] in self.conflict and card == '':
+                text = 'ambiguous name (present in more than one card). Please specify which card to edit'
+                logger.warning(text)
+                return
+            if args[start+1] == 'default':
+                value = self.reweight_card_default[args[start]]
+                default = True
+            else:
+                value = args[start +1:]
+                value = ' '.join(value)
+                default = False
+            
+            self.setReweight(args[start], value, default=default)
+            self.reweight_card.write(self.paths['reweight']) #we write over the reweight_card with the new information
 
         #INVALID --------------------------------------------------------------
         else:      
@@ -6586,6 +6936,16 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         logger.info('modify parameter %s of the rivet_card.dat to %s' % (name, value), '$MG:BOLD')
         if default and name.lower() in self.rivet_card.user_set:
             self.rivet_card.user_set.remove(name.lower())
+    
+    def setReweight(self, name, value, default):
+        try:
+            self.reweight_card.set(name, value, user=True)
+        except Exception as error:
+            logger.warning("Fail to change parameter. Please Retry. Reason: %s." % error)
+            return
+        logger.info('modify parameter %s of the reweight_card.dat to %s' % (name, value), '$MG:BOLD')
+        if default and name.lower() in self.reweight_card.user_set:
+            self.reweight_card.user_set.remove(name.lower())
 
     def setP(self, block, lhaid, value):
         if isinstance(value, str):
@@ -7351,7 +7711,6 @@ class AskforEditCard(cmd.OneLinePathCompletion):
 
         # check if the line need to be modified by a trigger
         line = self.trigger(line)
-        
         # splitting the line
         line = line.strip()
         args = line.split()
@@ -7384,9 +7743,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                     os.write(fsock, line)
                 os.close(fsock)
                 self.copy_file(path, pathname=url)
-                os.remove(path)
-                
-                
+                os.remove(path)   
         else:
             self.value = line
 
@@ -7434,7 +7791,20 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             fsock.write(text) 
         self.reload_card(path)
 
-    
+    def do_set_madspin(self, line):
+        """edit the madspin_card to define the decay of the associate particle"""
+        signal.alarm(0) # avoid timer if any
+        path = self.paths['madspin']
+        args = line.split()
+        if '=' == args[1]:
+            del args[1]
+        opt = args[0]
+        value = ' '.join(args[1:])
+
+        cmd = f'madspin --replace_line="set {opt}.*" --after_line=banner set {opt} {value}'
+        self.do_edit(cmd)
+
+         
 
     def do_compute_widths(self, line):
         signal.alarm(0) # avoid timer if any
@@ -7680,9 +8050,19 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 # found the line position "posline"
                 # need to check if the a fail savety is present
                 new_line = re.split(search_pattern,line)[-1].strip()
-                if new_line.startswith(('--before_line=','--after_line')):
-                    search_pattern=r'''(?:before|after)_line=(?P<quote>["']?)(?:(?=(\\?))\2.)*?\1'''
-                    new_line = re.split(search_pattern,new_line)[-1]
+                # Matches (optional leading ws) + --before_line=VALUE or --after_line=VALUE + (trailing ws)
+                drop_first_before_after = re.compile(r'''
+                    ^\s*                               # optional leading whitespace
+                    --                                # optional single dash or literal double dash (usually "--")
+                    (?:before|after)_line=             # the option name
+                    (                                  # VALUE:
+                    "(?:\\.|[^"])*"                #   double-quoted value, with escapes
+                  | '(?:\\.|[^'])*'                #   single-quoted value, with escapes
+                  | [^ \t\r\n'"#]+                 #   unquoted value until whitespace or delimiter
+                    )
+                    \s*                                # optional whitespace after the argument
+                ''', re.VERBOSE)
+                new_line = drop_first_before_after.sub('', new_line, count=1)
                 # overwrite the previous line
                 old_line = split[posline]
                 split[posline] = new_line
@@ -7980,7 +8360,9 @@ You can also copy/paste, your event file here.''')
                 import internal.madweight.Cards as mwcards
             self.mw_card = mwcards.Card(path)
         elif path == self.paths['FO_analyse']:
-            self.fo_card = FO_analyse_card.FOAnalyseCard(self.paths['FO_analyse']) 
+            self.fo_card = FO_analyse_card.FOAnalyseCard(self.paths['FO_analyse'])
+        elif path == self.paths['reweight']:
+            self.reweight_card = banner_mod.DensityCard(self.paths['reweight'])
         else:
             logger.debug('not keep in sync: %s', path)
         return path
@@ -8169,6 +8551,5 @@ def scanparamcardhandling(input_path=lambda obj: pjoin(obj.me_dir, 'Cards', 'par
 
         return new_fct
     return decorator    
-
 
 

@@ -498,14 +498,14 @@ class HelasModelTest(HelasModelTestSetup):
 
         wavefunctions = {}
         # IXXXXXX.Key: (spin, state)
-        key1 = ((-2, 0, tuple(),None), ('',))
+        key1 = ((-2, 0, tuple(),False,None), ('',))
         wavefunctions[key1] = \
                           lambda wf: 'CALL IXXXXX(P(0,%d),%s,NHEL(%d),%d*IC(%d),W(1,%d))' % \
                           (wf.get('number_external'), wf.get('mass'),
                            wf.get('number_external'), -(-1) ** wf.get_with_flow('is_part'),
                            wf.get('number_external'), wf.get('number'))
         # OXXXXXX.Key: (spin, state)
-        key2 = ((2, 0, tuple(),None), ('',))
+        key2 = ((2, 0, tuple(),False,None), ('',))
         wavefunctions[key2] = \
                           lambda wf: 'CALL OXXXXX(P(0,%d),%s,NHEL(%d),%d*IC(%d),W(1,%d))' % \
                           (wf.get('number_external'), wf.get('mass'),
@@ -537,6 +537,47 @@ class HelasModelTest(HelasModelTestSetup):
         del wavefunctions[key1]
         del wavefunctions[key2]
         
+        # IXXXXXX.Key: (spin, state)
+        key1 = ((-2, 0, tuple(),True, None), ('',))
+        wavefunctions[key1] = \
+                          lambda wf: 'CALL IXXXXX(P(0,%d),%s,NHEL(%d),%d*IC(%d),W(1,%d))' % \
+                          (wf.get('number_external'), wf.get('mass'),
+                           wf.get('number_external'), -(-1) ** wf.get_with_flow('is_part'),
+                           wf.get('number_external'), wf.get('number'))
+        # OXXXXXX.Key: (spin, state)
+        key2 = ((2, 0, tuple(), True, None ), ('',))
+        wavefunctions[key2] = \
+                          lambda wf: 'CALL OXXXXX(P(0,%d),%s,NHEL(%d),%d*IC(%d),W(1,%d))' % \
+                          (wf.get('number_external'), wf.get('mass'),
+                           wf.get('number_external'), 1 ** wf.get_with_flow('is_part'),
+                           wf.get('number_external'), wf.get('number'))
+
+        self.assertTrue(self.mymodel.set('wavefunctions', wavefunctions))
+
+        wf = helas_objects.HelasWavefunction()
+        wf.set('particle', -2, self.mybasemodel)
+        wf.set('state', 'incoming')
+        wf.set('interaction_id', 0)
+        wf.set('number_external', 1)
+        wf.set('lorentz', [''])
+        wf.set('number', 40)
+        wf.set('offshell', True)
+
+        self.assertEqual(wf.get_call_key(), key1)
+
+        # not real goal since offshell not implemented in the lambda above
+        goal = 'CALL IXXXXX(P(0,1),mu,NHEL(1),-1*IC(1),W(1,40))'
+        self.assertEqual(self.mymodel.get_wavefunction_call(wf), goal)
+
+        wf.set('fermionflow', -1)
+
+        self.assertEqual(wf.get_call_key(), key2)
+
+        goal = 'CALL OXXXXX(P(0,1),mu,NHEL(1),1*IC(1),W(1,40))'
+        self.assertEqual(self.mymodel.get_wavefunction_call(wf), goal)
+
+        del wavefunctions[key1]
+        del wavefunctions[key2]
 
 #===============================================================================
 # FortranHelasCallWriterTest

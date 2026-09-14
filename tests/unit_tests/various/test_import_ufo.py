@@ -92,8 +92,11 @@ class TestImportUFO(unittest.TestCase):
         self.assertEqual(new_lor.structure, 'Metric(1,2)')
 
         # here flip Scalar and Vector
+        # the exact index is not checked: the UFO module is global to the
+        # process, so an equivalent SSVV lorentz can already exist (and be
+        # returned) if another test did convert the sm model before this one
         new_lor = ufo2mg5_converter.get_symmetric_lorentz('VVSS1', {0: 3, 1:2,2: 1, 3:0}, change_number=True)
-        self.assertEqual(new_lor.name, 'SSVV2')
+        self.assertRegex(new_lor.name, r'^SSVV\d+$')
         self.assertEqual(new_lor.structure, 'Metric(4,3)')
 
     def test_get_symmetric_color(self):

@@ -19,13 +19,20 @@ runs:
       run: echo "CACHE_KEY=root-$ImageOS" >> $GITHUB_ENV
       shell: bash
 
+    # Generation-suffixed keys (see warm_cache.yml / restore_heptools): the
+    # exact key never matches outside the run that wrote the cache, the
+    # restore-keys prefix serves the newest generation. The bare prefix on the
+    # last line is transitional, for the unversioned entries that predate this.
     - name: Restore ROOT cache
       id: cache
       if: ${{ inputs.setup_only != 'true' }}
       uses: actions/cache/restore@v5
       with:
         path: ~/.cache/Delphes
-        key: ${{ env.CACHE_KEY }}
+        key: ${{ env.CACHE_KEY }}-${{ github.run_id }}
+        restore-keys: |
+          ${{ env.CACHE_KEY }}-
+          ${{ env.CACHE_KEY }}
 
     # ROOT (6.40 binaries) links against Intel TBB at build- and run-time. The
     # apt packages are not part of the cache, so install the runtime dependency
@@ -45,8 +52,10 @@ runs:
     # (setup_only != true) and the cache was not found, install ROOT inline,
     # exactly like the root_cache warm job. Keep ROOT_VERSION / the tarball
     # names in sync with the root_cache job in warm_cache.yml.
+    # cache-hit is exact-match only; cache-matched-key is what tells us whether
+    # anything (exact or via restore-keys) was actually restored.
     - name: Install ROOT (cache miss fallback)
-      if: ${{ inputs.setup_only != 'true' && steps.cache.outputs.cache-hit != 'true' }}
+      if: ${{ inputs.setup_only != 'true' && steps.cache.outputs.cache-matched-key == '' }}
       run: |
         echo "::warning::ROOT cache miss for ${CACHE_KEY}; installing ROOT inline."
         ROOT_VERSION=6.40.02

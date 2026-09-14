@@ -647,20 +647,20 @@ class MECmdShell(IOTests.IOTestManager):
         #self.do('generate_events LO -f')        
         
         # test the lhe event file exists
-        self.assertTrue(os.path.exists('%s/Events/run_01_LO/events.lhe.gz' % self.path))
-        self.assertTrue(os.path.exists('%s/Events/run_01_LO/summary.txt' % self.path))
-        self.assertTrue(os.path.exists('%s/Events/run_01_LO/run_01_LO_tag_1_banner.txt' % self.path))
-        self.assertTrue(os.path.exists('%s/Events/run_01_LO/res_0.txt' % self.path))
-        self.assertTrue(os.path.exists('%s/Events/run_01_LO/res_1.txt' % self.path))
-        self.assertTrue(os.path.exists('%s/Events/run_01_LO/alllogs_0.html' % self.path))
-        self.assertTrue(os.path.exists('%s/Events/run_01_LO/alllogs_1.html' % self.path))
-        self.assertTrue(os.path.exists('%s/Events/run_01_LO/alllogs_2.html' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_01/events.lhe.gz' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_01/summary.txt' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_01/run_01_tag_1_banner.txt' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_01/res_0.txt' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_01/res_1.txt' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_01/alllogs_0.html' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_01/alllogs_1.html' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_01/alllogs_2.html' % self.path))
         # test the hep event file exists
-        self.assertTrue(os.path.exists('%s/Events/run_01_LO/events_HERWIG6_0.hep.gz' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_01/events_HERWIG6_0.hep.gz' % self.path))
         # sanity check on the size
         self.assertGreater(
-            os.path.getsize('%s/Events/run_01_LO/events_HERWIG6_0.hep.gz' % self.path),
-            os.path.getsize('%s/Events/run_01_LO/events.lhe.gz' % self.path)
+            os.path.getsize('%s/Events/run_01/events_HERWIG6_0.hep.gz' % self.path),
+            os.path.getsize('%s/Events/run_01/events.lhe.gz' % self.path)
         )
         
 
@@ -676,20 +676,20 @@ class MECmdShell(IOTests.IOTestManager):
         self.do('generate_events aMC@LO -f')        
         
         # test the lhe event file exists
-        self.assertTrue(os.path.exists('%s/Events/run_01_LO/events.lhe.gz' % self.path))
-        self.assertTrue(os.path.exists('%s/Events/run_01_LO/summary.txt' % self.path))
-        self.assertTrue(os.path.exists('%s/Events/run_01_LO/run_01_LO_tag_1_banner.txt' % self.path))
-        self.assertTrue(os.path.exists('%s/Events/run_01_LO/res_0.txt' % self.path))
-        self.assertTrue(os.path.exists('%s/Events/run_01_LO/res_1.txt' % self.path))
-        self.assertTrue(os.path.exists('%s/Events/run_01_LO/alllogs_0.html' % self.path))
-        self.assertTrue(os.path.exists('%s/Events/run_01_LO/alllogs_1.html' % self.path))
-        self.assertTrue(os.path.exists('%s/Events/run_01_LO/alllogs_2.html' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_01/events.lhe.gz' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_01/summary.txt' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_01/run_01_tag_1_banner.txt' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_01/res_0.txt' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_01/res_1.txt' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_01/alllogs_0.html' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_01/alllogs_1.html' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_01/alllogs_2.html' % self.path))
         # test the hep event file exists
-        self.assertTrue(os.path.exists('%s/Events/run_01_LO/events_PYTHIA6Q_0.hep.gz' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_01/events_PYTHIA6Q_0.hep.gz' % self.path))
         # sanity check on the size
         self.assertGreater(
-            os.path.getsize('%s/Events/run_01_LO/events_PYTHIA6Q_0.hep.gz' % self.path),
-            os.path.getsize('%s/Events/run_01_LO/events.lhe.gz' % self.path)
+            os.path.getsize('%s/Events/run_01/events_PYTHIA6Q_0.hep.gz' % self.path),
+            os.path.getsize('%s/Events/run_01/events.lhe.gz' % self.path)
         )
 
 

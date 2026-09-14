@@ -48,22 +48,6 @@ jobs:
             cd $GITHUB_WORKSPACE
             ./tests/test_manager.py -v2 -t0 testIO_modification_to_cuts -e .github/workflows/unittest.yml 
 
-#  test_excluded2:
-#    # excluded due to side effect
-#    # The type of runner that the job will run on
-#    runs-on: ubuntu-latest#
-
-    # Steps represent a sequence of tasks that will be executed as part of the job
-#    steps:
-#      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-#      - uses: actions/checkout@v5#
-#
-#      # Runs a set of commands using the runners shell
-#      - name: test one of the test test_short_mssm_subset_creation
-#        run: |
-#            cd $GITHUB_WORKSPACE
-#            ./tests/test_manager.py -t0  test_write_model    #excluded from fast unittest
-
 
   unittest_0:
     # The type of runner that the job will run on
@@ -76,10 +60,10 @@ jobs:
       - uses: actions/checkout@v5
 
       # Runs a set of commands using the runners shell
-      - name: test one of the test testIO_modification_to_cuts test_ungrouping_lepton test_all_permutation test_permutation_from_id test_v31_syntax_crash test_the_exit_from_child_cmd test_the_exit_from_child_cmd2 test_get_final_part test_InvalidCmd test_check_generate test_cleaning_history test_generate_polarised test_help_category test_output_default test_shell_and_continuation_line test_simple_generate test_card_type_recognition test_help_category test_autocompletion test_modif_ML_card test_modif_madweight_card test_modif_param_card test_modif_pythia8_card test_modif_run_card test_modif_shower_card
+      - name: test one of the test testIO_modification_to_cuts test_ungrouping_lepton test_all_permutation test_permutation_from_id test_v31_syntax_crash test_the_exit_from_child_cmd test_the_exit_from_child_cmd2 test_get_final_part test_InvalidCmd test_check_generate test_cleaning_history test_generate_polarised test_help_category test_output_default test_shell_and_continuation_line test_simple_generate test_card_type_recognition test_help_category test_autocompletion test_modif_ML_card test_modif_madweight_card test_modif_param_card test_modif_pythia8_card test_modif_run_card test_modif_shower_card test_modif_reweight_card
         run: |
             cd $GITHUB_WORKSPACE
-            ./tests/test_manager.py testIO_modification_to_cuts test_ungrouping_lepton test_all_permutation test_permutation_from_id test_v31_syntax_crash test_the_exit_from_child_cmd test_the_exit_from_child_cmd2 test_get_final_part test_InvalidCmd test_check_generate test_cleaning_history test_generate_polarised test_help_category test_output_default test_shell_and_continuation_line test_simple_generate test_card_type_recognition test_help_category test_autocompletion test_modif_ML_card test_modif_madweight_card test_modif_param_card test_modif_pythia8_card test_modif_run_card test_modif_shower_card -t0
+            ./tests/test_manager.py testIO_modification_to_cuts test_ungrouping_lepton test_all_permutation test_permutation_from_id test_v31_syntax_crash test_the_exit_from_child_cmd test_the_exit_from_child_cmd2 test_get_final_part test_InvalidCmd test_check_generate test_cleaning_history test_generate_polarised test_help_category test_output_default test_shell_and_continuation_line test_simple_generate test_card_type_recognition test_help_category test_autocompletion test_modif_ML_card test_modif_madweight_card test_modif_param_card test_modif_pythia8_card test_modif_run_card test_modif_shower_card test_modif_reweight_card -t0
 
 
 
@@ -622,6 +606,27 @@ jobs:
             ./tests/test_manager.py test_level_with_flipping_triangle test_loop_convert_diagram testIO_UnitProcOutputIOTests test_loadingLoopToyModel test_get_aloha_input test_get_analytic_info test_helas_diagrams_ddx_uux test_helas_diagrams_dxd_gz test_helas_diagrams_gd_gd test_helas_diagrams_gd_ggd test_helas_diagrams_gg_gg test_helas_diagrams_gg_ggg test_helas_diagrams_gg_wpwmttx test_helas_diagrams_ud_ggdu  test_startfromalpha0_attribute -t0
 
 
+
+  unittest_29:
+    # The type of runner that the job will run on
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/restore-pip-cache
+
+      # Runs a set of commands using the runners shell
+      - name: test one of the test test_utilities test_DensityMatrixObservables test_DensityMatrixObservables22 test_DensityMatrixObservables23 test_DensityMatrixObservables33
+        run: |
+            cd $GITHUB_WORKSPACE
+            sudo pip install scipy
+            ./tests/test_manager.py test_DensityMatrixObservables test_DensityMatrixObservables22 test_DensityMatrixObservables23 test_DensityMatrixObservables33 test_utilities -t0
+
+
+
   unittest_new_coverage:
     # New unit tests added in 3.7.1: q_polynomial and hepmc_parser
     runs-on: ubuntu-latest
@@ -638,3 +643,50 @@ jobs:
             ./tests/test_manager.py test_q_polynomial test_hepmc_parser -t0
 
 
+
+
+  unittest_madspin_sequential:
+    # MadSpin density primitives and decay/mass drawing (sequential accept/reject),
+    # plus the lhe_parser split/merge of the unweighted output. These modules were
+    # not covered by any workflow.
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
+
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/restore-pip-cache
+
+      - name: test the madspin and lhe_parser unit tests
+        run: |
+            cd $GITHUB_WORKSPACE
+            sudo pip install numpy
+            ./tests/test_manager.py test_madspin test_lhe_parser -t0
+
+
+  unittest_uncovered:
+    # unit tests that were not listed in any workflow (CI coverage audit).
+    # test_fks_ppzz_in_RS is left out: the RS UFO model is still python2 only.
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: run the previously untriggered unit tests
+        run: |
+            cd $GITHUB_WORKSPACE
+            ./tests/test_manager.py test_CF_simple test_cf_computation test_generate_ewsud_ttbar test_generate_ewsud_ww test_generate_ewsud_zz testIO_test_pptt_ewsudakovSA testIO_test_ppzz_ewsudakov testIO_test_ppw_fksall testIO_Loop_sqso_uux_ddx test_check_import_model test_schedular test_dummy_fcts test_UFO_Python_helas_call_writer_fd test_get_symmetric_color test_get_symmetric_lorentz test_remove_interactions2 test_remove_interactions3 test_fd_python_value_matches_unitary_fixed_point test_shower_card_write -t0
+
+
+  unittest_write_model:
+    # runs alone: excluded from the shared unittest jobs due to side effects
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: run test_write_model (usermod)
+        run: |
+            cd $GITHUB_WORKSPACE
+            ./tests/test_manager.py test_write_model -t0

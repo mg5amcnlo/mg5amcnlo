@@ -18,9 +18,9 @@ C
 
 C integer nexternal C number particles (incoming+outgoing) in the me 
       INTEGER NEXTERNAL, NINCOMING
-	  PARAMETER (NEXTERNAL=%(nexternal)d,NINCOMING=%(nincoming)d)
+      PARAMETER (NEXTERNAL=%(nexternal)d,NINCOMING=%(nincoming)d)
 
-	  character(512) MadLoopResourcePath
+      character(512) MadLoopResourcePath
 
 C     
 C     INCLUDE FILES
@@ -32,27 +32,48 @@ C particle masses
       REAL*8 PMASS(NEXTERNAL)      
 C integer    n_max_cg
       INCLUDE "ngraphs.inc" 
-	  include "nsquaredSO.inc"
+      include "nsquaredSO.inc"
+
+      include 'MadLoopParams.inc'
 
 C     
 C     LOCAL
 C     
-      INTEGER I,J,K
+      INTEGER I,J,K,L
 C four momenta. Energy is the zeroth component.
       REAL*8 P(0:3,NEXTERNAL)
-	  INTEGER MATELEM_ARRAY_DIM
-	  REAL*8 , allocatable :: MATELEM(:,:)
+      INTEGER MATELEM_ARRAY_DIM
+      REAL*8 , allocatable :: MATELEM(:,:)
       REAL*8 SQRTS,AO2PI,TOTMASS
 C sqrt(s)= center of mass energy 
       REAL*8 PIN(0:3), POUT(0:3)
       CHARACTER*120 BUFF(NEXTERNAL)
-	  INTEGER RETURNCODE, UNITS, TENS, HUNDREDS
-	  INTEGER NSQUAREDSO_LOOP
-	  REAL*8 , allocatable :: PREC_FOUND(:)
-
-	  LOGICAL INIT
+      INTEGER RETURNCODE, UNITS, TENS, HUNDREDS
+      INTEGER NSQUAREDSO_LOOP
+      REAL*8 , allocatable :: PREC_FOUND(:)
+      INTEGER NB_INTER
+      LOGICAL INIT
       DATA INIT/.TRUE./
-	  COMMON/INITCHECKSA/INIT
+      COMMON/INITCHECKSA/INIT
+
+      INTEGER NLOOPFLOWS
+      PARAMETER (NLOOPFLOWS=1)
+      INTEGER NCOMB
+      PARAMETER (NCOMB=%(ncomb)d)
+      INTEGER N_CHANGING
+      PARAMETER (N_CHANGING=2)
+      INTEGER N_COMB_RHO
+      PARAMETER (N_COMB_RHO=%(dens_ncomb)i)
+      INTEGER H
+      INTEGER HELC(NEXTERNAL,NCOMB)
+      DOUBLE PRECISION ALPHAS, MU_R2
+
+      double complex INTER_DENS(0:3,0:NSQUAREDSO)
+      DOUBLE COMPLEX RMATRIX((N_COMB_RHO*(N_COMB_RHO+1))/2, 0:NSQUAREDSO)
+      double precision RES(0:3,0:NSQUAREDSO), SUM_INT
+      integer HEL_MULT
+      parameter (HEL_MULT = 1)
+      integer H1, H2
 
 C
 C     GLOBAL VARIABLES
@@ -62,7 +83,7 @@ c     the process definition
 c
       integer NLoopChosen
       character*20 chosen_loop_so_indices(NSQUAREDSO)
-	  LOGICAL CHOSEN_LOOP_SO_CONFIGS(NSQUAREDSO)
+      LOGICAL CHOSEN_LOOP_SO_CONFIGS(NSQUAREDSO)
       COMMON/%(proc_prefix)sCHOSEN_LOOP_SQSO/CHOSEN_LOOP_SO_CONFIGS
 
 C     
@@ -71,15 +92,21 @@ C
       REAL*8 DOT
       EXTERNAL DOT
       
+      INTEGER NHEL(NEXTERNAL)
+      INTEGER, allocatable :: POS(:)
+      INTEGER, allocatable :: allow_hel(:) 
+      double complex, allocatable :: INTER(:)
+      integer sol
+
 C 
 C     BEGIN CODE
 C
       IF (INIT) THEN
-	    INIT=.FALSE.
-	    CALL %(proc_prefix)sGET_ANSWER_DIMENSION(MATELEM_ARRAY_DIM)
-	  	ALLOCATE(MATELEM(0:3,0:MATELEM_ARRAY_DIM))
-		CALL %(proc_prefix)sGET_NSQSO_LOOP(NSQUAREDSO_LOOP)
-	  	ALLOCATE(PREC_FOUND(0:NSQUAREDSO_LOOP))
+        INIT=.FALSE.
+        CALL %(proc_prefix)sGET_ANSWER_DIMENSION(MATELEM_ARRAY_DIM)
+        ALLOCATE(MATELEM(0:3,0:MATELEM_ARRAY_DIM))
+        CALL %(proc_prefix)sGET_NSQSO_LOOP(NSQUAREDSO_LOOP)
+        ALLOCATE(PREC_FOUND(0:NSQUAREDSO_LOOP))
 C     
 C     INITIALIZATION CALLS
 C     
@@ -92,8 +119,8 @@ C first call to setup the paramaters
       call setpara('param_card.dat')
 C set up masses
       include "pmass.inc"             
-		
-	  ENDIF
+        
+      ENDIF
 
 c     Start by initializing what is the squared split orders indices chosen
       NLoopChosen=0
@@ -115,10 +142,10 @@ C
       IF(nincoming.EQ.1) THEN
          SQRTS=PMASS(1)
       ELSE
-	     TOTMASS = 0.0d0
-	     DO I=1,NEXTERNAL
-		   TOTMASS = TOTMASS + PMASS(I)
-		 ENDDO
+         TOTMASS = 0.0d0
+         DO I=1,NEXTERNAL
+           TOTMASS = TOTMASS + PMASS(I)
+         ENDDO
 C CMS energy in GEV
          SQRTS=max(1000d0,2.0d0*TOTMASS)
       ENDIF
@@ -196,9 +223,11 @@ C
 C     Now we can call the matrix element
 C
       CALL %(proc_prefix)sSLOOPMATRIX_THRES(P,MATELEM,-1.0d0,PREC_FOUND,RETURNCODE)
-C
-C        write the information on the four momenta 
-C
+
+C      CALL %(proc_prefix)sCOMPUTE_RES_FROM_JAMP(RES,HEL_MULT)
+C      WRITE(*,*) "%(proc_prefix)sCOMPUTE_RES_FROM_JAMP", RES(1:3,0)
+
+
       if (K.eq.NPSPOINTS) then
       write (*,*)
       write (*,*) " Phase space point:"
@@ -210,8 +239,8 @@ C
       enddo
       write (*,*) "---------------------------------"
       write (*,*) "Detailed result for each coupling orders combination."
-	  %(print_so_born_results)s
-	  %(print_so_loop_results)s
+      %(print_so_born_results)s
+      %(print_so_loop_results)s
       UNITS=MOD(RETURNCODE,10)
       TENS=(MOD(RETURNCODE,100)-UNITS)/10
       HUNDREDS=(RETURNCODE-TENS*10-UNITS)/100
@@ -242,7 +271,7 @@ C
           write(*,*) 'Estimated accuracy could not be computed for an unknown reason.'
         endif
       endif
-	  Write (*,'(1x,a23,3x,i3)') 'MadLoop return code   =',RETURNCODE
+      Write (*,'(1x,a23,3x,i3)') 'MadLoop return code   =',RETURNCODE
       write (*,*) "---------------------------------"
       IF (NLOOPCHOSEN.ne.NSQUAREDSO) THEN
         write (*,*) "Selected squared coupling orders combination for the loop summed result below:"
@@ -250,14 +279,20 @@ C
       endif
       write (*,*) "---------------------------------"
       write (*,*) " This is a loop induced process, so only the "
-	  write (*,*) " unnormalized finite part is output here. Be aware "
+      write (*,*) " unnormalized finite part is output here. Be aware "
       write (*,*) " that all loops are expected to beUV-finite as no "
       write (*,*) " renormalization prescription is considered. "
       write (*,*) "---------------------------------"
       write (*,*) "Matrix element finite = ", MATELEM(1,0), " GeV^",-(2*nexternal-8)
       write (*,*) "---------------------------------"
-
-
+## if(UseDensity) {
+      IF ((HelicityFilterLevel.eq.0).OR.(HelicityFilterLevel.eq.1)) THEN
+        write (*,*) "Spin-density matrix (non normalised)."
+        write (*,*) "Only the independent coefficients are calculated."
+        write (*,*) "---------------------------------"
+      call get_density_matrix(P, RMATRIX)
+      ENDIF
+## }
       open(69, file="result.dat", err=976, action='WRITE')
       do i=1,nexternal      
           write (69,'(a2,1x,5ES30.15E3)') 'PS',P(0,i),P(1,i),P(2,i),P(3,i)
@@ -269,12 +304,19 @@ C
       write (69,'(a4,1x,1ES30.15E3)') '2EPS',MATELEM(3,0)
       write (69,'(a6,1x,1ES30.15E3)') 'ASO2PI',AO2PI
       write (69,*) 'Export_Format LoopInduced'
-	  write (69,'(a7,1x,i3)') 'RETCODE',RETURNCODE
-	  write (69,'(a3,1x,1e10.4)') 'ACC',PREC_FOUND(0)
-	  write (69,*) 'Born_kept F'
-	  write (69,*) 'Loop_kept',(CHOSEN_LOOP_SO_CONFIGS(I),I=1,NSQUAREDSO)
-	  %(write_so_born_results)s
-	  %(write_so_loop_results)s	  
+      write (69,'(a7,1x,i3)') 'RETCODE',RETURNCODE
+      write (69,'(a3,1x,1e10.4)') 'ACC',PREC_FOUND(0)
+      write (69,*) 'Born_kept F'
+      write (69,*) 'Loop_kept',(CHOSEN_LOOP_SO_CONFIGS(I),I=1,NSQUAREDSO)
+      %(write_so_born_results)s
+      %(write_so_loop_results)s
+
+## if(UseDensity) {
+c      write(*,*) "RHO written", RMATRIX(:, 0)
+      IF ((HelicityFilterLevel.eq.0).OR.(HelicityFilterLevel.eq.1)) THEN
+        write (69,*) "RHO", RMATRIX(:, 0)
+      ENDIF
+## }
       close(69)
       else
           write (*,*) "PS Point #",K," done."
@@ -314,9 +356,91 @@ C      &-(2*nexternal-8)
 C      write (*,*) "-------------------------------------------------"
 
       end
+
+## if(UseDensity) {
+
+      SUBROUTINE get_density_trace(TRACE, RHO)
+C     This subrouitne allows to compute the trace of a density matrix to
+C     check that is is equal to the matrix element
+      implicit none
+      include "nsquaredSO.inc"
+
+      INTEGER N_COMB_RHO
+      PARAMETER (N_COMB_RHO=%(dens_ncomb)i)
+
+
+      DOUBLE COMPLEX RHO((N_COMB_RHO*(N_COMB_RHO+1))/2)
+      DOUBLE PRECISION TRACE
+
+      INTEGER COUNTER, IDIAG, I
+      INTEGER DIAG_INDICES(N_COMB_RHO)
+
+      COUNTER = 0
+      DO IDIAG = 1, N_COMB_RHO
+        DIAG_INDICES(IDIAG) = (IDIAG-1) * N_COMB_RHO - COUNTER + 1
+        COUNTER = COUNTER + (IDIAG-1)
+      ENDDO
+
+      TRACE = 0
+      DO I = 1, N_COMB_RHO
+        TRACE = TRACE + DREAL(RHO(DIAG_INDICES(I)))
+      ENDDO
+      END
       
+      SUBROUTINE get_density_matrix(P, RMATRIX)
+      implicit none
+
+      %(include_vector)s
+      INCLUDE "coupl.inc"
+      include "nsquaredSO.inc"
+
+      INTEGER N_CHANGING
+      PARAMETER (N_CHANGING=%(dens_nchanging)i)
+      INTEGER N_COMB_RHO
+      PARAMETER (N_COMB_RHO=%(dens_ncomb)i) ! total number of different helicity combination to consider
+      INTEGER NEXTERNAL
+      PARAMETER (NEXTERNAL=%(nexternal)d)
+
+      INTEGER POS(N_CHANGING)
+      INTEGER ALLOW_HEL(N_CHANGING*N_COMB_RHO)
+      DOUBLE COMPLEX RMATRIX((N_COMB_RHO*(N_COMB_RHO+1))/2)
+      REAL*8 P(0:3,NEXTERNAL)   ! four momenta. Energy is the zeroth component.
+
+      INTEGER I,J,K,SOL
+      DOUBLE PRECISION ALPHAS, MU_R2
+      DOUBLE PRECISION TRACE
+
+      %(dens_pos)s
+
+c      density matrix helicity index value for particle
+      %(dens_allow_hel)s
+
+C     We take the values of alpha_s and mu_r from the param card
+      ALPHAS = (G/2)**2/3.14159265358979323846d0
+      MU_R2 = MU_R**2
+
+      CALL %(proc_prefix)sGET_DENSITY(P, POS, N_CHANGING, ALLOW_HEL, N_COMB_RHO, ALPHAS, MU_R2, RMATRIX)
+
+      CALL get_density_trace(TRACE, RMATRIX)
+
+      write(*,*) "Trace of the non-normalised spin-density matrix =", TRACE
+      write(*,*) "It should be equal to the matrix element"
+      write (*,*) "---------------------------------"
+
+      SOL=0
+      DO I=1, N_COMB_RHO
+         DO J = I, N_COMB_RHO
+            SOL= SOL + 1
+            DO K =1, N_CHANGING
+               WRITE (*,*) 'particle', POS(K), 'has helicity', ALLOW_HEL((I-1)*N_CHANGING+K), ALLOW_HEL((J-1)*N_CHANGING+K)
+           ENDDO
+            write(*,*) 'value is ',SOL , RMATRIX(SOL)
+         ENDDO
+      ENDDO
+      return
+      END
         
-        
+## }        
         
          double precision function dot(p1,p2)
 C *************************************************************
@@ -333,7 +457,7 @@ C       auxiliary function to change convention between madgraph and rambo
 c       four momenta.         
         IMPLICIT NONE
         INTEGER NEXTERNAL, NINCOMING
-	    PARAMETER (NEXTERNAL=%(nexternal)d,NINCOMING=%(nincoming)d)
+        PARAMETER (NEXTERNAL=%(nexternal)d,NINCOMING=%(nincoming)d)
 C        ARGUMENTS
         REAL*8 ENERGY,PMASS(NEXTERNAL),P(0:3,NEXTERNAL),PRAMBO(4,10),WGT
 C         LOCAL
@@ -407,7 +531,7 @@ C    WT = WEIGHT OF THE EVENT                                         *
 C **********************************************************************
       IMPLICIT REAL*8(A-H,O-Z)
       INTEGER NEXTERNAL, NINCOMING
-	  PARAMETER (NEXTERNAL=%(nexternal)d,NINCOMING=%(nincoming)d)
+      PARAMETER (NEXTERNAL=%(nexternal)d,NINCOMING=%(nincoming)d)
       DIMENSION XM(*),P(4,*)
       DIMENSION Q(4,NEXTERNAL-NINCOMING),Z(NEXTERNAL-NINCOMING),R(4),B(3),P2(NEXTERNAL-NINCOMING),XM2(NEXTERNAL-NINCOMING),E(NEXTERNAL-NINCOMING),V(NEXTERNAL-NINCOMING),IWARN(5)
       SAVE ACC,ITMAX,IBEGIN,IWARN,TWOPI, Z, PO2LOG

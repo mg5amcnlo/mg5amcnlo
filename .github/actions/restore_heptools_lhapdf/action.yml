@@ -13,11 +13,23 @@ runs:
       run: echo "CACHE_KEY=lhapdf-$ImageOS" >> $GITHUB_ENV
       shell: bash
 
+    # Cache keys are generation-suffixed by warm_cache.yml, as
+    # "<name>-<ImageOS>-<run_id>", so that refreshing a cache *adds* an entry
+    # instead of having to delete the previous one first (GitHub caches are
+    # immutable). The exact key below therefore only matches inside the
+    # warm_cache run that built this sub-cache; every other run falls through to
+    # restore-keys, which serves the newest entry with that prefix. The bare
+    # prefix on the last line is transitional: it picks up the unversioned
+    # entries that predate this change, and can be dropped once warm_cache has
+    # run one full cycle.
     - uses: actions/cache/restore@v5
       if: ${{ inputs.setup_only != 'true' }}
       with:
         path: ~/.cache/HEPtools
-        key: ${{ env.CACHE_KEY }}
+        key: ${{ env.CACHE_KEY }}-${{ github.run_id }}
+        restore-keys: |
+          ${{ env.CACHE_KEY }}-
+          ${{ env.CACHE_KEY }}
 
     - run: |
         cd $GITHUB_WORKSPACE

@@ -401,7 +401,13 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info("   Example: display particles e+.",'$MG:color:GREEN')
         logger.info(" > For \"checks\", can specify only to see failed checks.")
         logger.info(" > For \"diagrams\", you can specify where the file will be written.")
+        logger.info("   Add --no_open to save without opening the files (directory required).")
+        logger.info("   Add --merge to merge all .eps files into a single PDF via ghostscript (directory required).")
         logger.info("   Example: display diagrams ./",'$MG:color:GREEN')
+        logger.info("   Example: display diagrams ./ --merge --no_open",'$MG:color:GREEN')
+        logger.info(" > For \"diagrams_text\", you can also specify a directory, --no_open, and --merge.")
+        logger.info("   Add --merge to merge all .txt files into all_diagrams_text.txt (directory required).")
+        logger.info("   Example: display diagrams_text ./ --merge --no_open",'$MG:color:GREEN')
 
 
     def help_launch(self):
@@ -766,6 +772,8 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info(" > Example: generate t{L} > w+{T} b{R}, w+ > ta+ vt",'$MG:color:GREEN')
         logger.info(" > Example: generate p p > z{T} z{A}, z > e+ e-",'$MG:color:GREEN')
         logger.info(" > Example: generate p p > z{0} z{T}, z > e+ e-, z > mu+ mu-",'$MG:color:GREEN')
+        logger.info(" > '{G}','{H}','{Q}','{W}','{S}' select a piece of the *propagator* of a massive vector")
+        logger.info("   and are only valid on a particle that is decayed further (an internal line).")
         logger.info(" > Users need to set 'group_subprocesses False', 'nhel=1' (run_card), and 'me_frame' (run_card)")
         logger.info(" > For the proces 'p p > w+ z j j, w+ > l+ vl, z > l+ l-', the WZ rest frame is given by me_frame = [3,4,5,6]")
         logger.info(" > For further details, see appendices of [arXiv:1912.01725] and [arXiv:2512.10015],")
@@ -972,7 +980,7 @@ class CheckValidForCmd(cmd.CheckCmd):
             raise self.InvalidCmd("No model currently active, please import a model!")
 
 # check that either _curr_amps or _fks_multi_proc exists
-        if (args[0] in ['processes', 'diagrams'] and not self._curr_amps and not self._fks_multi_proc):
+        if (args[0] in ['processes', 'diagrams', 'diagrams_text'] and not self._curr_amps and not self._fks_multi_proc):
            raise self.InvalidCmd("No process generated, please generate a process!")
         if args[0] == 'checks' and not self._comparisons and not self._cms_checks:
             raise self.InvalidCmd("No check results to display.")
@@ -983,17 +991,17 @@ class CheckValidForCmd(cmd.CheckCmd):
 
     def check_draw(self, args):
         """check the validity of line
-        syntax: draw DIRPATH [option=value]
+        syntax: draw DIRPATH
+        the options have already been removed from args by _draw_parser
         """
 
         if len(args) < 1:
             args.append(tempdir.name)
+        elif not os.path.isdir(args[0]):
+            raise self.InvalidCmd( "%s is not a valid directory for export file" % args[0])
 
         if not self._curr_amps:
             raise self.InvalidCmd("No process generated, please generate a process!")
-
-        if not os.path.isdir(args[0]):
-            raise self.InvalidCmd( "%s is not a valid directory for export file" % args[0])
 
     def check_check(self, args):
         """check the validity of args"""
@@ -1211,10 +1219,13 @@ class CheckValidForCmd(cmd.CheckCmd):
 #                raise self.InvalidCmd('Polarization restriction can not be used for generic NLO computations')
 
             def check(p):
-                if p.get('color') != 1:
-                    raise self.InvalidCmd('Polarization restriction can not be used for color charged particles')
-                elif p.get('mass') != 'ZERO':
-                    raise self.InvalidCmd('Polarization restriction can not be used for massive particles') 
+                # Polarisation restriction can now be used for color charged
+                # particles, so there is no longer a color check here. The mass
+                # restriction is independent of the color one and must stay
+                # outside it -- keeping it in an "elif" would have silently
+                # exempted massive color-charged particles.
+                if p.get('mass') != 'ZERO':
+                    raise self.InvalidCmd('Polarization restriction can not be used for massive particles')
  
 
 
@@ -2608,6 +2619,9 @@ class CompleteForCmd(cmd.CompleteCmd):
                     return self.aloha_complete_output(text, line, begidx, endidx)
                 except Exception as error:
                     print(error)
+            if 'standalone' in args:
+                possible_options_full = list(possible_options_full) + ['--prefix=int', '--prefix=proc', '--density=']
+
             # Directory continuation
             if args[-1].endswith(os.path.sep):
                 return [name for name in self.path_completion(text,
@@ -3169,12 +3183,19 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 self._mgme_dir = MG4DIR
 
         # check that make_opts exists
+        # This file is shared by every MG5aMC process running from this
+        # installation: it is copied verbatim into each new output directory and
+        # rewritten in place by set_fortran_compiler/set_cpp_compiler. Replacing
+        # it by rename (atomic_copy) rather than by shutil.copy is what keeps a
+        # concurrent reader from copying out a half-written make_opts -- which
+        # parses fine, drops FC/$(libext)/-ffixed-line-length-132, and surfaces
+        # only as column-72 Fortran errors in a completely unrelated build.
         make_opts = pjoin(MG5DIR, 'Template','LO','Source','make_opts')
         make_opts_source = pjoin(MG5DIR, 'Template','LO','Source','.make_opts')
         if not os.path.exists(make_opts):
-            shutil.copy(make_opts_source, make_opts)
+            misc.atomic_copy(make_opts_source, make_opts)
         elif  os.path.getmtime(make_opts) <  os.path.getmtime(make_opts_source):
-            shutil.copy(make_opts_source, make_opts)
+            misc.atomic_copy(make_opts_source, make_opts)
             
         # Variables to store state information
         self._multiparticles = {}
@@ -3320,7 +3341,12 @@ This implies that with decay chains:
             # existing processes
             if self._curr_amps and self._curr_amps[0].get_ninitial() != \
                myprocdef.get_ninitial() and not standalone_only:
-                raise self.InvalidCmd("Can not mix processes with different number of initial states.")               
+                raise self.InvalidCmd("Can not mix processes with different number of initial states.")
+
+            # Check the propagator-only polarization braces: {G},{H},{Q},{W}
+            # and {S} name a piece of a propagator numerator and are valid on
+            # an internal line only.
+            self.validate_propagator_polarization(myprocdef)
 
             #Check that we do not have situation like z{T} z
             if not myprocdef.check_polarization():
@@ -3512,6 +3538,8 @@ This implies that with decay chains:
         # __init__.py check that function_library and object_library are imported
         text = open(pjoin(model_dir, '__init__.py')).read()
         mod = False
+        # import function_library 
+        # from . import function_library
         to_check =  ['object_library', 'function_library']
         for lib in to_check:
             if 'import %s' % lib in text:
@@ -3707,8 +3735,17 @@ This implies that with decay chains:
                 print(amp.nice_string_processes())
 
         elif args[0] == 'diagrams_text':
+            dirpath, no_open, merge = self._parse_display_output_args(args[1:])
             text = "\n".join([amp.nice_string() for amp in self._curr_amps])
-            pydoc.pager(text)
+            if dirpath:
+                self._write_diagrams_text_files(dirpath, merge=merge)
+            else:
+                if no_open:
+                    raise self.InvalidCmd('--no_open requires an explicit directory path, e.g. display diagrams_text ./ --no_open')
+                if merge:
+                    raise self.InvalidCmd('--merge requires an explicit directory path, e.g. display diagrams_text ./ --merge')
+            if not no_open:
+                pydoc.pager(text)
 
         elif args[0] == 'multiparticles':
             print('Multiparticle labels:')
@@ -4003,6 +4040,31 @@ This implies that with decay chains:
         Dtype refers to born, real or loop"""
 
         args = self.split_arg(line)
+        # accept the single dash form of the flags. This has to be done before
+        # optparse sees them, since it would read '-no_open' as short options.
+        alias = {'-no_open': '--no_open', '-merge': '--merge'}
+        args = [alias.get(a, a) for a in args]
+
+        # Let the parser consume the options first, so that args only contains
+        # the (optional) output directory afterwards.
+        (parsed_opts, args) = _draw_parser.parse_args(args)
+        no_open = parsed_opts.no_open
+        merge = parsed_opts.merge
+
+        if not args:
+            if no_open:
+                raise self.InvalidCmd('--no_open requires an explicit directory path, e.g. display diagrams ./ --no_open')
+            if merge:
+                raise self.InvalidCmd('--merge requires an explicit directory path, e.g. display diagrams ./ --merge')
+        elif not os.path.isdir(args[0]):
+            # Create the output directory if an explicit path was given and
+            # doesn't exist yet, so check_draw sees it as a valid directory.
+            try:
+                os.makedirs(args[0], exist_ok=True)
+            except OSError as e:
+                raise self.InvalidCmd(
+                    "Cannot create output directory %s: %s" % (args[0], str(e)))
+
         # Check the validity of the arguments
         self.check_draw(args)
 
@@ -4013,17 +4075,14 @@ This implies that with decay chains:
             warn += '\t  The decay processes will be drawn separately'
             logger.warning(warn)
 
-        (options, args) = _draw_parser.parse_args(args)
         if madgraph.iolibs.drawing_eps.EpsDiagramDrawer.april_fool:
-            options.horizontal = True
-            options.external = True  
-            options.max_size = 0.3 
-            options.add_gap = 0.5  
-        options = draw_lib.DrawOption(options)
+            parsed_opts.horizontal = True
+            parsed_opts.external = True  
+            parsed_opts.max_size = 0.3 
+            parsed_opts.add_gap = 0.5  
+        options = draw_lib.DrawOption(parsed_opts)
         start = time.time()
 
-
-            
 
         # Collect amplitudes
         amplitudes = diagram_generation.AmplitudeList()
@@ -4031,9 +4090,11 @@ This implies that with decay chains:
         for amp in self._curr_amps:
             amplitudes.extend(amp.get_amplitudes())
 
+        eps_files = []
         for amp in amplitudes:
             filename = pjoin(args[0], 'diagrams_' + \
                                     amp.get('process').shell_string() + ".eps")
+            eps_files.append(filename)
 
             if selection=='all' and Dtype != 'loop':
                 diags=amp.get('diagrams')
@@ -4058,10 +4119,76 @@ This implies that with decay chains:
                          amp.get('process').nice_string())
             plot.draw(opt=options)
             logger.info("Wrote file " + filename)
-            self.exec_cmd('open %s' % filename)
+            if not no_open:
+                self.exec_cmd('open %s' % filename)
+
+        if merge and eps_files:
+            output_pdf = pjoin(args[0], 'all_diagrams.pdf')
+            output_pdf_abs = os.path.abspath(output_pdf)
+            eps_files_sorted_abs = sorted(os.path.abspath(f) for f in eps_files)
+            gs_cmd = ['gs', '-dBATCH', '-dNOPAUSE', '-q', '-sDEVICE=pdfwrite',
+                      '-sOutputFile=' + output_pdf_abs] + eps_files_sorted_abs
+            try:
+                subprocess.check_call(gs_cmd, shell=False)
+            except (subprocess.CalledProcessError, OSError) as e:
+                logger.warning("Failed to merge diagrams into PDF with ghostscript: %s" % str(e))
+                logger.warning("Make sure 'gs' (ghostscript) is installed and available in PATH.")
+            else:
+                logger.info("Merged diagrams into " + output_pdf)
+                if not no_open:
+                    self.exec_cmd('open %s' % output_pdf)
 
         stop = time.time()
         logger.info('time to draw %s' % (stop - start))
+
+    def _parse_display_output_args(self, line_args):
+        """Extract the optional output directory, --no_open and --merge flags.
+        The directory is created if it does not exist yet, like for 'draw'."""
+
+        # accept the single dash form of the flags. This has to be done before
+        # optparse sees them, since it would read '-no_open' as short options.
+        alias = {'-no_open': '--no_open', '-merge': '--merge'}
+        (options, args) = _display_text_parser.parse_args(
+                                          [alias.get(a, a) for a in line_args])
+
+        if len(args) > 1:
+            raise self.InvalidCmd('Too many arguments: %s' % ' '.join(args))
+        if not args:
+            return None, options.no_open, options.merge
+
+        if not os.path.isdir(args[0]):
+            try:
+                os.makedirs(args[0], exist_ok=True)
+            except OSError as e:
+                raise self.InvalidCmd(
+                    "Cannot create output directory %s: %s" % (args[0], str(e)))
+        return args[0], options.no_open, options.merge
+
+    def _write_diagrams_text_files(self, dirpath, merge=False):
+        """Write one text file per process diagram. If merge=True, also concatenate all into all_diagrams_text.txt."""
+        amplitudes = diagram_generation.AmplitudeList()
+        for amp in self._curr_amps:
+            amplitudes.extend(amp.get_amplitudes())
+
+        txt_files = []
+        for amp in amplitudes:
+            filename = pjoin(dirpath, 'diagrams_' + amp.get('process').shell_string() + '.txt')
+            with open(filename, 'w') as fs:
+                fs.write(amp.nice_string())
+            logger.info('Wrote file ' + filename)
+            txt_files.append(filename)
+
+        if merge and txt_files:
+            merged_file = pjoin(dirpath, 'all_diagrams_text.txt')
+            try:
+                with open(merged_file, 'w') as out_fs:
+                    for f in sorted(txt_files):
+                        with open(f, 'r') as in_fs:
+                            out_fs.write(in_fs.read())
+                            out_fs.write('\n\n')
+                logger.info("Merged diagrams text into " + merged_file)
+            except IOError as e:
+                logger.warning("Failed to merge text files: %s" % str(e))
 
     # Perform checks
     def do_check(self, line):
@@ -4850,6 +4977,73 @@ This implies that with decay chains:
         args.insert(0, 'process')
         self.do_add(" ".join(args))
 
+    # The braces that name a piece of the *propagator* numerator of a massive
+    # vector and nothing else: they have no external-wavefunction counterpart
+    # (there is no VXXXXX helicity for them), so on a genuine external leg the
+    # integer would be written straight into the NHEL table and VXXXXX would
+    # quietly return a meaningless vector. See aloha/create_aloha.py for the
+    # numerators ("1G", "1H", ...) and [arXiv:2512.10015] for the definitions.
+    # '{A}' (99) is deliberately absent: it is already refused on an external
+    # leg by HelasWavefunction and keeps that behaviour unchanged here.
+    PROPAGATOR_ONLY_POLARIZATIONS = {4: ('G', 'the metric piece -g^{mu nu}'),
+                                     5: ('H', 'the Theta projector'),
+                                     6: ('Q', 'the q^mu q^nu / q^2 tensor'),
+                                     7: ('W', 'the Ward-protected full '
+                                              'propagator'),
+                                     9: ('S', 'the scalar piece '
+                                              '(axial + finite width)'),
+                                     }
+
+    def validate_propagator_polarization(self, procdef):
+        """Validate the propagator-only polarization braces of a
+        ProcessDefinition and of its decay chains.
+
+        '{G}', '{H}', '{Q}', '{W}' and '{S}' (pol=4,5,6,7,9) each name a
+        rank-two piece of the propagator numerator of a massive vector,
+        complete with its 1/(q^2-M^2+iM*Gamma) pole; none of them is a
+        polarisation vector, and no external wavefunction for them exists
+        (VXXXXX only knows nhel = -1,0,+1).
+
+        They are therefore allowed on a leg that is handed over to a decay
+        chain -- the propagator use, 't > w+{G} b, w+ > ta+ vt' -- and refused
+        on a genuine external leg of the process, initial or final. There is
+        no option to enable them on an external leg: there is nothing to
+        enable. Without this check the raw integer reached the NHEL table and
+        the generated code silently returned a wrong number.
+
+        Raises InvalidCmd; returns None.
+        """
+        if procdef is None:
+            return
+        # pdgs that this level hands over to a decay chain: those legs become
+        # internal propagators, which is the case these braces were written for.
+        decayed_ids = set()
+        for decay in procdef.get('decay_chains'):
+            for leg in decay.get('legs'):
+                if not leg.get('state'):
+                    decayed_ids.update(leg.get('ids'))
+
+        for leg in procdef.get('legs'):
+            if decayed_ids.intersection(leg.get('ids')):
+                # propagator: the leg is replaced by the decay chain
+                continue
+            for value in leg.get('polarization'):
+                if value not in self.PROPAGATOR_ONLY_POLARIZATIONS:
+                    continue
+                tag, what = self.PROPAGATOR_ONLY_POLARIZATIONS[value]
+                raise self.InvalidCmd(
+                    'The polarization {%s} is %s of a massive vector '
+                    'propagator, not a polarization vector: it exists '
+                    'only for an internal line. It is allowed on a '
+                    'particle that is decayed further (write '
+                    '"t > w+{%s} b, w+ > ta+ vt"), and is not allowed on '
+                    '%s-state particle of the process.'
+                    % (tag, what, tag,
+                       'a final' if leg.get('state') else 'an initial'))
+
+        for decay in procdef.get('decay_chains'):
+            self.validate_propagator_polarization(decay)
+
     def extract_process(self, line, proc_number = 0, overall_orders = {},
                         avoid_squared_orders=False):
         """Extract a process definition from a string. Returns
@@ -5090,6 +5284,12 @@ This implies that with decay chains:
                 state = True
                 continue
 
+            if part_name.endswith('*'):
+                part_name = part_name[:-1]
+                offshell = True
+            else:
+                offshell = False
+
             # check if the particle is tagged (!PART!)
             if part_name.startswith('!') and part_name.endswith('!'):
                 part_name = part_name[1:-1]
@@ -5263,7 +5463,8 @@ This implies that with decay chains:
 
                         myleglist.append(base_objects.MultiLeg({'ids':mylegids,
                                                             'state':state,
-                                                            'polarization': polarization}))
+                                                            'polarization': polarization,
+                                                            'offshell':offshell}))
                     else:
                         myleglist.append(fks_tag.MultiTagLeg({'ids':mylegids,
                                                           'state':state,
@@ -7195,13 +7396,13 @@ os.system('%s  -O -W ignore::DeprecationWarning %s %s --mode={0}' %(sys.executab
         if mode == 'mg5_start':
             timeout = 2
             default = 'n'
-            update_delay = self.options['auto_update'] * 24 * 3600
+            update_delay = float(self.options['auto_update']) * 24 * 3600
             if update_delay == 0:
                 return
         elif mode == 'mg5_end':
             timeout = 5
             default = 'n'
-            update_delay = self.options['auto_update'] * 24 * 3600
+            update_delay = float(self.options['auto_update']) * 24 * 3600
             if update_delay == 0:
                 return
             options.remove('on_exit')
@@ -7355,9 +7556,8 @@ os.system('%s  -O -W ignore::DeprecationWarning %s %s --mode={0}' %(sys.executab
                                                                   cwd=MG5DIR)            
             print('new version installed, please relaunch mg5')
             try:
-                os.remove(pjoin(MG5DIR, 'Template','LO','Source','make_opts'))
-                shutil.copy(pjoin(MG5DIR, 'Template','LO','Source','.make_opts'),
-                            pjoin(MG5DIR, 'Template','LO','Source','make_opts'))
+                misc.atomic_copy(pjoin(MG5DIR, 'Template','LO','Source','.make_opts'),
+                                 pjoin(MG5DIR, 'Template','LO','Source','make_opts'))
             except:
                 pass
             sys.exit(0)
@@ -8832,7 +9032,11 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
         """Set the number of core to be used for parallelized tasks.
         Example: set nb_core 4
         """
-        return self.set_default('nb_core', args, log=log)
+        if args[0] in ['None', None, '0', 0]:
+            import multiprocessing
+            self.options['nb_core'] = multiprocessing.cpu_count()
+        else:
+            self.options['nb_core'] = int(args[0])
 
     def set2_nb_core_pythia8(self, args, log=True):
         """Set the number of cores/jobs used by the Pythia8 step only.
@@ -10314,6 +10518,24 @@ _draw_parser.add_option("", "--non_propagating", default=True, \
                           help="avoid contractions of non propagating lines")
 _draw_parser.add_option("", "--add_gap", default=0, type='float', \
                           help="set the x-distance between external particles")
+_draw_parser.add_option("", "--no_open", default=False,
+                          action='store_true',
+                          help="save diagrams without opening them (requires an explicit directory)")
+_draw_parser.add_option("", "--merge", default=False,
+                          action='store_true',
+                          help="merge all diagram .eps files into a single PDF file using ghostscript (requires an explicit directory)")
+
+_display_text_usage = "display diagrams_text [DIRPATH] [options]\n" + \
+         "-- write the diagrams in text format\n" + \
+         "   Files will be DIRPATH/diagrams_\"process_string\".txt \n" + \
+         "   Example: display diagrams_text . \n"
+_display_text_parser = misc.OptionParser(usage=_display_text_usage)
+_display_text_parser.add_option("", "--no_open", default=False,
+                          action='store_true',
+                          help="save the diagrams without opening the pager (requires an explicit directory)")
+_display_text_parser.add_option("", "--merge", default=False,
+                          action='store_true',
+                          help="merge all diagram .txt files into all_diagrams_text.txt (requires an explicit directory)")
 
 # LAUNCH PROGRAM
 _launch_usage = "launch [DIRPATH] [options]\n" + \

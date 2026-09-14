@@ -641,6 +641,9 @@ class HelasWavefunction(base_objects.PhysicsObject):
         # should be onshell (True), as well as for forbidden s-channels (False).
         # Default is None
         self['onshell'] = None
+        # the offshell flag is used for external particles where momenta are not
+        # computed onshell (Standalone only for the moment). Used for madspin
+        self['offshell'] = False
         # conjugate_indices is a list [1,2,...] with fermion lines
         # that need conjugates. Default is "None"
         self['conjugate_indices'] = None
@@ -675,6 +678,8 @@ class HelasWavefunction(base_objects.PhysicsObject):
                 if leg.get('onshell') == False:
                     # Denotes forbidden s-channel
                     self.set('onshell', leg.get('onshell'))
+                if leg.get('offshell'):
+                    self.set('offshell', True)
                 self.set('leg_state', leg.get('state'))
                 # Need to set 'decay' to True for particles which will be
                 # decayed later, in order to not combine such processes
@@ -683,6 +688,24 @@ class HelasWavefunction(base_objects.PhysicsObject):
                 if self['state'] == 'final' and self.get('pdg_code') in decay_ids:
                     self.set('decay', True)
                 else:
+                    # Braces that name a piece of the propagator numerator of a
+                    # massive vector have no external wavefunction: the integer
+                    # would end up in the NHEL table and VXXXXX would silently
+                    # return a meaningless vector. The command interface
+                    # already refuses them (validate_propagator_polarization);
+                    # this catches the direct-API path as well.
+                    propagator_only = \
+                        base_objects.Leg.propagator_only_polarizations
+                    for value in leg.get('polarization'):
+                        # 99 ('{A}') keeps its own, pre-existing message below
+                        if value == 99 or value not in propagator_only:
+                            continue
+                        raise InvalidCmd(
+                            "The polarization {%s} is a piece of a massive "
+                            "vector propagator, not a polarization vector: "
+                            "it is only valid on a particle that is decayed "
+                            "further (an internal line), not on an external "
+                            "leg of the process." % propagator_only[value])
                     if 99 in leg.get('polarization'):
                         raise Exception("polarization A only valid for propagator.")
                 # Set fermion flow state. Initial particle and final
@@ -1364,7 +1387,28 @@ class HelasWavefunction(base_objects.PhysicsObject):
                 # Use the copy in wavefunctions instead.
                 # Remove this copy from diagram_wavefunctions
                 new_wf_number = new_wf.get('number')
-                new_wf = wavefunctions[wavefunctions.index(new_wf)]
+                # HelasWavefunction.__eq__ ignores the pdg code, so for a loop
+                # wavefunction whose particle and antiparticle differ in nothing
+                # else -- a colour singlet, i.e. a lepton -- index() can return
+                # the wrong sign. Match the pdg code explicitly for every loop
+                # wavefunction. See appendix A of arXiv:2108.11404, which
+                # reported this for leptoquark pair production at NLO; the
+                # workaround given there guards only pdg < 0, but nothing makes
+                # the other sign safe, so the check is applied symmetrically.
+                if not new_wf.get('is_loop'):
+                    index_wf = wavefunctions.index(new_wf)
+                else:
+                    for i_wf, wf in enumerate(wavefunctions):
+                        if new_wf == wf and \
+                           wf.get('pdg_code') == new_wf.get('pdg_code'):
+                            index_wf = i_wf
+                            break
+                    else:
+                        # No pdg-matching candidate: same outcome as index()
+                        # finding nothing, i.e. keep the local copy. Caught by
+                        # the 'except ValueError' closing this try block.
+                        raise ValueError
+                new_wf = wavefunctions[index_wf]
                 diagram_wf_numbers = [w.get('number') for w in \
                                                           diagram_wavefunctions]
                 index = diagram_wf_numbers.index(new_wf_number)
@@ -1392,9 +1436,14 @@ class HelasWavefunction(base_objects.PhysicsObject):
                     # have this replaced wavefunction in their mothers. This
                     # plays the role of the 'number_to_wavefunction' dictionary
                     # used for tree level.
+                    # Match on object identity rather than on the 'number'
+                    # attribute: numbers are reshuffled by the insertions above
+                    # (and by the renumbering just performed), so an unrelated
+                    # wavefunction can transiently carry new_wf_number and get
+                    # its mother silently overwritten.
                     for wf in diagram_wavefunctions:
                         for i,mother_wf in enumerate(wf.get('mothers')):
-                            if mother_wf.get('number')==new_wf_number:
+                            if mother_wf is self:
                                 wf.get('mothers')[i]=new_wf
 
             except ValueError:
@@ -1643,13 +1692,19 @@ class HelasWavefunction(base_objects.PhysicsObject):
                 output['propa'] = 'P1S'
 
             elif self.get('polarization') == [1]:
-                if self.get('spin') != 2:
+                if self.get('spin') == 2:
+                    output['propa'] = 'P1P'
+                elif self.get('spin') == 3:
+                    output['propa'] = 'P1TR'
+                else:
                     raise InvalidCmd( 'polarization not supported for decay particle')
-                output['propa'] = 'P1P'
             elif self.get('polarization') == [-1]:
-                if self.get('spin') != 2:
-                    raise InvalidCmd( 'Left polarization not supported for decay particle for spin (2s+1=%s) particles' % self.get('spin')) 
-                output['propa'] = 'P1M'
+                if self.get('spin') == 2:
+                    output['propa'] = 'P1M'
+                elif self.get('spin') == 3:
+                    output['propa'] = 'P1TL'
+                else:
+                    raise InvalidCmd( 'Left polarization not supported for decay particle for spin (2s+1=%s) particles' % self.get('spin'))
             else:            
                 raise InvalidCmd( 'polarization not supported for decay particle')
             
@@ -1736,6 +1791,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
                 res.append(self.get('is_part'))
 
         res.append(tuple(self.get('polarization')) )
+        res.append(self.get('offshell'))
         res.append(self.get('onshell'))
 
         # Check if we need to append a charge conjugation flag
@@ -1875,9 +1931,11 @@ class HelasWavefunction(base_objects.PhysicsObject):
             elif self.get('polarization') == [99]:
                 tags.append('P1A')
             elif self.get('polarization') == [1]:
-                tags.append('P1P')
+                # helicity +1: transverse projector for a vector, u-spinor for a fermion
+                tags.append('P1TR' if self.get('spin') == 3 else 'P1P')
             elif self.get('polarization') == [-1]:
-                tags.append('P1M')
+                # helicity -1: transverse projector for a vector, v-spinor for a fermion
+                tags.append('P1TL' if self.get('spin') == 3 else 'P1M')
             elif sorted(self.get('polarization')) == [0,9]: # = 0+9
                 tags.append('P1LS')
             elif self.get('polarization') == [4]: # = T-5
@@ -4844,6 +4902,20 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                                   wf.get('pdg_code')].get_helicity_states(allow_reverse)
             for wf in self.get_external_wavefunctions()]
         return itertools.product(*hel_per_part)
+    
+    def get_helicity_per_particle(self):
+        """give the allowed helicity for each external particle"""
+        
+        if not self.get('processes'):
+            return None
+
+        process = self.get('processes')[0]
+        model = process.get('model')
+        hel_per_part = [ wf.get('polarization') if wf.get('polarization') 
+                        else model.get('particle_dict')[\
+                                  wf.get('pdg_code')].get_helicity_states()
+            for wf in self.get_external_wavefunctions()]
+        return hel_per_part
 
 
 

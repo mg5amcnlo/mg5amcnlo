@@ -27,10 +27,17 @@ runs:
         cd "$GITHUB_WORKSPACE/models"
         for f in *.tgz; do tar -xzf "$f"; done
 
+    # Generation-suffixed keys: see the comment in restore_heptools. This one
+    # is not per-image (the UFO models are pure python), so the prefix is just
+    # "ufomodel-"; the bare "ufomodel" line is transitional, for the
+    # unversioned entry that predates this change.
     - uses: actions/cache/restore@v5
       with:
         path: ~/.cache/UFOMODEL
-        key: ufomodel 
+        key: ufomodel-${{ github.run_id }}
+        restore-keys: |
+          ufomodel-
+          ufomodel
 
     - run: |
         echo "PYTHONPATH=$PYTHONPATH:$HOME/.cache/UFOMODEL" >> $GITHUB_ENV

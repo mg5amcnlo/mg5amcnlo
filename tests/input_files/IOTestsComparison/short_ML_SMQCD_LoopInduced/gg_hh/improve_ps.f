@@ -1,4 +1,5 @@
-      SUBROUTINE ML5_0_IMPROVE_PS_POINT_PRECISION(P)
+      SUBROUTINE ML5_0_IMPROVE_PS_POINT_PRECISION(KEEP_OFFSHELL_MASS,
+     $  P)
       IMPLICIT NONE
 C     
 C     CONSTANTS
@@ -10,6 +11,7 @@ C     ARGUMENTS
 C     
       DOUBLE PRECISION P(0:3,NEXTERNAL)
       REAL*16 QP_P(0:3,NEXTERNAL)
+      LOGICAL KEEP_OFFSHELL_MASS(NEXTERNAL)
 C     
 C     LOCAL VARIABLES 
 C     
@@ -25,7 +27,8 @@ C     ----------
         ENDDO
       ENDDO
 
-      CALL ML5_0_MP_IMPROVE_PS_POINT_PRECISION(QP_P)
+      CALL ML5_0_MP_IMPROVE_PS_POINT_PRECISION(KEEP_OFFSHELL_MASS,
+     $  QP_P)
 
       DO I=1,NEXTERNAL
         DO J=0,3
@@ -36,7 +39,8 @@ C     ----------
       END
 
 
-      SUBROUTINE ML5_0_MP_IMPROVE_PS_POINT_PRECISION(P)
+      SUBROUTINE ML5_0_MP_IMPROVE_PS_POINT_PRECISION(KEEP_OFFSHELL_MASS
+     $ , P)
       IMPLICIT NONE
 C     
 C     CONSTANTS
@@ -47,6 +51,7 @@ C
 C     ARGUMENTS 
 C     
       REAL*16 P(0:3,NEXTERNAL)
+      LOGICAL KEEP_OFFSHELL_MASS(NEXTERNAL)
 C     
 C     LOCAL VARIABLES 
 C     
@@ -236,10 +241,12 @@ C
 
       INCLUDE 'mp_coupl.inc'
 
+
       MASSES(1)=MP__ZERO
       MASSES(2)=MP__ZERO
       MASSES(3)=MP__MDL_MH
       MASSES(4)=MP__MDL_MH
+
 
 C     ----------
 C     BEGIN CODE
@@ -546,10 +553,12 @@ C
 
       INCLUDE 'mp_coupl.inc'
 
+
       MASSES(1)=MP__ZERO
       MASSES(2)=MP__ZERO
       MASSES(3)=MP__MDL_MH
       MASSES(4)=MP__MDL_MH
+
 
 C     ----------
 C     BEGIN CODE
@@ -720,10 +729,12 @@ C     ----------
 C     BEGIN CODE
 C     ----------
 
+
       MASSES(1)=MP__ZERO
       MASSES(2)=MP__ZERO
       MASSES(3)=MP__MDL_MH
       MASSES(4)=MP__MDL_MH
+
 
       ERRCODE = 0
       XSCALE = ONE
@@ -874,10 +885,25 @@ C
       INTEGER I,J,ERR
       REAL*16 PVECSQ(NEXTERNAL)
       REAL*16 XN, XNP1,FVAL,DVAL
+      REAL*16 MASSES(NEXTERNAL)
+C     
+C     GLOBAL VARIABLES
+C     
+
+      INCLUDE 'mp_coupl.inc'
 
 C     ----------
 C     BEGIN CODE
 C     ----------
+C     To manage off-shell momenta, we need to transmit MASSES(I) to
+C      the subroutine FUNCT (that does not have P)
+
+      MASSES(1)=MP__ZERO
+      MASSES(2)=MP__ZERO
+      MASSES(3)=MP__MDL_MH
+      MASSES(4)=MP__MDL_MH
+
+
 
       ERROR = 0
       XSCALE = SEED
@@ -889,12 +915,12 @@ C     ----------
       ENDDO
 
       DO I=1,MAXITERATIONS
-        CALL ML5_0_FUNCT(PVECSQ(1),XN,.FALSE.,ERR, FVAL)
+        CALL ML5_0_FUNCT(MASSES,PVECSQ(1),XN,.FALSE.,ERR, FVAL)
         IF (ERR.NE.0) THEN
           ERROR=ERR
           GOTO 710
         ENDIF
-        CALL ML5_0_FUNCT(PVECSQ(1),XN,.TRUE.,ERR, DVAL)
+        CALL ML5_0_FUNCT(MASSES,PVECSQ(1),XN,.TRUE.,ERR, DVAL)
         IF (ERR.NE.0) THEN
           ERROR=ERR
           GOTO 710
@@ -911,12 +937,12 @@ C     ----------
 
  700  CONTINUE
 C     For good measure, we iterate one last time
-      CALL ML5_0_FUNCT(PVECSQ(1),XN,.FALSE.,ERR, FVAL)
+      CALL ML5_0_FUNCT(MASSES,PVECSQ(1),XN,.FALSE.,ERR, FVAL)
       IF (ERR.NE.0) THEN
         ERROR=ERR
         GOTO 710
       ENDIF
-      CALL ML5_0_FUNCT(PVECSQ(1),XN,.TRUE.,ERR, DVAL)
+      CALL ML5_0_FUNCT(MASSES,PVECSQ(1),XN,.TRUE.,ERR, DVAL)
       IF (ERR.NE.0) THEN
         ERROR=ERR
         GOTO 710
@@ -928,7 +954,7 @@ C     For good measure, we iterate one last time
 
       END
 
-      SUBROUTINE ML5_0_FUNCT(PVECSQ,X,DERIVATIVE,ERROR,RES)
+      SUBROUTINE ML5_0_FUNCT(MASSES,PVECSQ,X,DERIVATIVE,ERROR,RES)
       IMPLICIT NONE
 C     
 C     CONSTANTS 
@@ -951,12 +977,12 @@ C
       REAL*16 PVECSQ(NEXTERNAL),X,RES
       INTEGER ERROR
       LOGICAL DERIVATIVE
+      REAL*16 MASSES(NEXTERNAL)
 C     
 C     LOCAL VARIABLES 
 C     
       INTEGER I,J
       REAL*16 BUFF,FACTOR
-      REAL*16 MASSES(NEXTERNAL)
 C     
 C     GLOBAL VARIABLES
 C     
@@ -967,10 +993,8 @@ C     ----------
 C     BEGIN CODE
 C     ----------
 
-      MASSES(1)=MP__ZERO
-      MASSES(2)=MP__ZERO
-      MASSES(3)=MP__MDL_MH
-      MASSES(4)=MP__MDL_MH
+C     MASSES is now an argument of the function to deal with off-shell
+C      particles
 
       ERROR=0
       RES=ZERO

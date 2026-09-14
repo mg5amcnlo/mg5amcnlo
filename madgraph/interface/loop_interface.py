@@ -57,13 +57,17 @@ class CheckLoop(mg_interface.CheckValidForCmd):
         of the Loop interface."""
         
         mg_interface.MadGraphCmd.check_display(self,args)
-        
+
+        # 'display diagrams' also accepts options (--no_open, --merge, ...) which
+        # must not be mistaken for a diagram type or for the output directory
+        positional = [a for a in args[1:] if not a.startswith('-')]
+
         if all([not amp['process']['has_born'] for amp in self._curr_amps]):
-            if args[0]=='diagrams' and len(args)>=2 and args[1]=='born':
+            if args[0]=='diagrams' and positional and positional[0]=='born':
                 raise self.InvalidCmd("Processes generated do not have born diagrams.")
-        
-        if args[0]=='diagrams' and len(args)>=3 and args[1] not in ['born','loop']:
-            raise self.InvalidCmd("Can only display born or loop diagrams, not %s."%args[1])
+
+        if args[0]=='diagrams' and len(positional)>=2 and positional[0] not in ['born','loop']:
+            raise self.InvalidCmd("Can only display born or loop diagrams, not %s."%positional[0])
 
     def check_tutorial(self, args):
         """check the validity of the line"""

@@ -2088,6 +2088,21 @@ class ParamCardVariable(ModelVariable):
 #===============================================================================
 # Leg
 #===============================================================================
+def polarization_to_string(polarization):
+    """Render a leg 'polarization' list as the brace content of a process
+    string. The propagator-only entries (4,5,6,7,9,99) are printed as the
+    letters the parser understands ('G','H','Q','W','S','A') rather than as
+    their raw integers, which the parser rejects ("polarization are between
+    -3 and 3"). This is what makes nice_string()/input_string() round-trip."""
+
+    # no separator: the process parser reads the brace character by character
+    # (and a ',' inside a brace additionally confuses the decay-chain split on
+    # ','), so '{0S}' round-trips where '{0,S}' does not.
+    return ''.join([Leg.propagator_only_polarizations.get(p, str(p))
+                    for p in polarization])
+
+
+#===============================================================================
 class Leg(PhysicsObject):
     """Leg object: id (Particle), number, I/F state, flag from_group
     """
@@ -2096,6 +2111,18 @@ class Leg(PhysicsObject):
     # See [arXiv:1912.01725] for definitions (fermions,vectors) and
     # [arXiv:2512.10015] for extensions (vectors)
     list_of_allowed_polarizations = [-1, 1, 2,-2, 3,-3, 0, 4, 5, 6, 7, 9, 99]
+
+    # Polarizations that only exist as a piece of the *propagator* numerator
+    # of a massive vector (see aloha/create_aloha.py, the "1X" forms) and that
+    # therefore have no external-wavefunction counterpart. Values are the
+    # brace letters accepted by the process parser.
+    propagator_only_polarizations = {4: 'G',   # -metric
+                                     5: 'H',   # Theta
+                                     6: 'Q',   # q^mu q^nu / q^2
+                                     7: 'W',   # -metric + qq/(M^2-iM*W)
+                                     9: 'S',   # scalar = axial + width
+                                     99: 'A',  # axial/auxiliary
+                                     }
 
     def default_setup(self):
         """Default values for all properties"""
@@ -2110,6 +2137,7 @@ class Leg(PhysicsObject):
         self['from_group'] = True
         # onshell: decaying leg (True), forbidden s-channel (False), none (None)
         self['onshell'] = None
+        self['offshell'] = False # set on True for "*" mode 
         # filter on the helicty
         self['polarization'] = []
 
@@ -2316,6 +2344,7 @@ class MultiLeg(PhysicsObject):
         self['ids'] = []
         self['state'] = True
         self['polarization'] = []
+        self['offshell'] = False
 
     def filter(self, name, value):
         """Filter for valid multileg property values."""
@@ -2346,7 +2375,7 @@ class MultiLeg(PhysicsObject):
     def get_sorted_keys(self):
         """Return particle property names as a nicely sorted list."""
 
-        return ['ids', 'state','polarization']
+        return ['ids', 'state','polarization', 'offshell']
 
 #===============================================================================
 # LegList
@@ -3186,15 +3215,18 @@ class Process(PhysicsObject):
             mystr = mystr + mypart.get_name()
             if leg.get('polarization'):
                 if leg.get('polarization') in [[-1,1],[1,-1]]:
-                    mystr = mystr + '{T} '
+                    mystr = mystr + '{T}'
                 elif leg.get('polarization') == [-1]:
-                    mystr = mystr + '{L} '
+                    mystr = mystr + '{L}'
                 elif leg.get('polarization') == [1]:
-                    mystr = mystr + '{R} '
+                    mystr = mystr + '{R}'
                 else:
-                    mystr = mystr + '{%s} ' %','.join([str(p) for p in leg.get('polarization')])   
-            else:
-                mystr = mystr + ' '
+                    mystr = mystr + '{%s}' % polarization_to_string(leg.get('polarization')) 
+
+            if leg.get('offshell'):
+                mystr = mystr + '*'
+
+            mystr = mystr + ' '
             #mystr = mystr + '(%i) ' % leg['number']
             prevleg = leg
 
@@ -3321,16 +3353,16 @@ class Process(PhysicsObject):
             mystr = mystr + mypart.get_name()
             if leg.get('polarization'):
                 if leg.get('polarization') in [[-1,1],[1,-1]]:
-                    mystr = mystr + '{T} '
+                    mystr = mystr + '{T}'
                 elif leg.get('polarization') == [-1]:
-                    mystr = mystr + '{L} '
+                    mystr = mystr + '{L}'
                 elif leg.get('polarization') == [1]:
-                    mystr = mystr + '{R} '
+                    mystr = mystr + '{R}'
                 else:
-                    mystr = mystr + '{%s} ' %','.join([str(p) for p in leg.get('polarization')])   
-            else:
-                mystr = mystr + ' '
-             
+                    mystr = mystr + '{%s}' % polarization_to_string(leg.get('polarization'))   
+            if leg.get('offshell'):
+                mystr = mystr + '*'
+            mystr = mystr + ' ' 
             #mystr = mystr + '(%i) ' % leg['number']
             prevleg = leg
 
@@ -3416,15 +3448,17 @@ class Process(PhysicsObject):
             mystr = mystr + mypart.get_name() 
             if leg.get('polarization'):
                 if leg.get('polarization') in [[-1,1],[1,-1]]:
-                    mystr = mystr + '{T} '
+                    mystr = mystr + '{T}'
                 elif leg.get('polarization') == [-1]:
-                    mystr = mystr + '{L} '
+                    mystr = mystr + '{L}'
                 elif leg.get('polarization') == [1]:
-                    mystr = mystr + '{R} '
+                    mystr = mystr + '{R}'
                 else:
-                    mystr = mystr + '{%s} ' %','.join([str(p) for p in leg.get('polarization')])   
-            else:
-                mystr = mystr + ' '
+                    mystr = mystr + '{%s}' % polarization_to_string(leg.get('polarization'))   
+            if leg.get('offshell'):
+                mystr = mystr + '*'
+            mystr = mystr + ' ' 
+
             prevleg = leg
 
         # Remove last space
@@ -4040,9 +4074,10 @@ class ProcessDefinition(Process):
                 elif leg.get('polarization') == [1]:
                     mystr = mystr + '{R}'
                 else:
-                    mystr = mystr + '{%s} ' %''.join([str(p) for p in leg.get('polarization')])   
-            else:
-             mystr = mystr + ' '
+                    mystr = mystr + '{%s}' % polarization_to_string(leg.get('polarization'))
+            if leg.get('offshell'):
+                mystr += '*'
+            mystr = mystr + ' '
             #mystr = mystr + '(%i) ' % leg['number']
             prevleg = leg
 

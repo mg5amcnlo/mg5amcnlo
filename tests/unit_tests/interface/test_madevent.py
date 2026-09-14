@@ -260,3 +260,87 @@ class TestDelphesFusion(unittest.TestCase):
         self.assertFalse(ok)
         final = pjoin(stub.me_dir, 'Events', 'run_01', 'tag_1_delphes_events.root')
         self.assertFalse(os.path.isfile(final))
+
+
+class TestLhapdfInfoPatch(unittest.TestCase):
+    """check that missing AlphaS_* metadata is added to the .info file of a
+    PDF set everywhere the run time can read it (global dir and local copy)"""
+
+    INFO_MISSING = """SetDesc: test set
+Format: lhagrid1
+FlavorScheme: variable
+NumFlavors: 5
+AlphaS_Type: ipol
+"""
+
+    def setUp(self):
+        import madgraph.interface.common_run_interface as common_run
+        self.common_run = common_run
+        self.tmpdir = tempfile.mkdtemp(prefix='mg5_lhapdf_test')
+        # a fake global lhapdf data directory with one set
+        self.pdfsets_dir = pjoin(self.tmpdir, 'share', 'LHAPDF')
+        os.makedirs(pjoin(self.pdfsets_dir, 'MYSET'))
+        with open(pjoin(self.pdfsets_dir, 'MYSET', 'MYSET.info'), 'w') as f:
+            f.write(self.INFO_MISSING)
+        # a fake process directory
+        self.me_dir = pjoin(self.tmpdir, 'PROC')
+        os.makedirs(pjoin(self.me_dir, 'lib', 'PDFsets'))
+        self.saved_datapath = os.environ.pop('LHAPDF_DATA_PATH', None)
+
+    def tearDown(self):
+        shutil.rmtree(self.tmpdir, ignore_errors=True)
+        if self.saved_datapath is not None:
+            os.environ['LHAPDF_DATA_PATH'] = self.saved_datapath
+
+    def get_fake_cmd(self):
+        common_run = self.common_run
+        class FakeRunCmd(object):
+            patch_lhapdf_info_file = staticmethod(
+                          common_run.CommonRunCmd.patch_lhapdf_info_file)
+            copy_lhapdf_set = common_run.CommonRunCmd.copy_lhapdf_set
+        cmd = FakeRunCmd()
+        cmd.me_dir = self.me_dir
+        cmd.options = {'cluster_local_path': None, 'run_mode': 2}
+        cmd.lhapdf_pdfsets = {}
+        return cmd
+
+    def test_patch_lhapdf_info_file(self):
+        """missing AlphaS_* keys are mirrored from their base counterpart,
+        and the patching is idempotent"""
+
+        setdir = pjoin(self.pdfsets_dir, 'MYSET')
+        self.common_run.CommonRunCmd.patch_lhapdf_info_file(setdir)
+        content = open(pjoin(setdir, 'MYSET.info')).read()
+        self.assertIn('AlphaS_FlavorScheme: variable', content)
+        self.assertIn('AlphaS_NumFlavors: 5', content)
+        # calling it again should not duplicate the keys
+        self.common_run.CommonRunCmd.patch_lhapdf_info_file(setdir)
+        content = open(pjoin(setdir, 'MYSET.info')).read()
+        self.assertEqual(content.count('AlphaS_FlavorScheme'), 1)
+        self.assertEqual(content.count('AlphaS_NumFlavors'), 1)
+        # a non existing directory should simply be ignored
+        self.common_run.CommonRunCmd.patch_lhapdf_info_file(
+                                             pjoin(self.tmpdir, 'DOESNOTEXIST'))
+
+    def test_copy_lhapdf_set_patches_global_and_local(self):
+        """with require_local, both the global set and the local copy end up
+        with the required metadata"""
+
+        cmd = self.get_fake_cmd()
+        cmd.copy_lhapdf_set(['MYSET'], self.pdfsets_dir)
+        local_info = pjoin(self.me_dir, 'lib', 'PDFsets', 'MYSET', 'MYSET.info')
+        global_info = pjoin(self.pdfsets_dir, 'MYSET', 'MYSET.info')
+        self.assertTrue(os.path.isfile(local_info))
+        self.assertIn('AlphaS_FlavorScheme: variable', open(local_info).read())
+        self.assertIn('AlphaS_FlavorScheme: variable', open(global_info).read())
+
+    def test_copy_lhapdf_set_patches_global_without_local(self):
+        """without require_local the set stays global but is still patched"""
+
+        cmd = self.get_fake_cmd()
+        cmd.copy_lhapdf_set(['MYSET'], self.pdfsets_dir, require_local=False)
+        local_set = pjoin(self.me_dir, 'lib', 'PDFsets', 'MYSET')
+        global_info = pjoin(self.pdfsets_dir, 'MYSET', 'MYSET.info')
+        self.assertFalse(os.path.exists(local_set))
+        self.assertIn('AlphaS_FlavorScheme: variable', open(global_info).read())
+        self.assertIn('AlphaS_NumFlavors: 5', open(global_info).read())

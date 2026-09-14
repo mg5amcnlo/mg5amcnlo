@@ -362,9 +362,17 @@ C     consider. POLARIZATIONS(0,0) is -1 if there is not such requirement.
       INTEGER POLARIZATIONS(0:NEXTERNAL,0:5)
       COMMON/%(proc_prefix)sBEAM_POL/POLARIZATIONS
 
+C     This array specifies which external particles' mass should be kept offshell according to the 'generate' command
+      LOGICAL KEEP_OFFSHELL_MASS(NEXTERNAL)
+
+
 C ----------
 C BEGIN CODE
 C ----------
+
+C     If KEEP_OFFSHELL_MASS is .true., then its mass is computed as m**2 = p**2
+C     If KEEP_OFFSHELL_MASS is .false., then its mass is taken from pmass.inc
+%(keep_offshell_mass)s
 
 IF(ML_INIT) THEN
   CALL PRINT_MADLOOP_BANNER()
@@ -600,7 +608,7 @@ ENDDO
 
 IF (ImprovePSPoint.ge.0) THEN
 C Make the input PS more precise (exact onshell and energy-momentum conservation)
-  CALL %(proc_prefix)sIMPROVE_PS_POINT_PRECISION(PS)
+  CALL %(proc_prefix)sIMPROVE_PS_POINT_PRECISION(KEEP_OFFSHELL_MASS, PS)
 ENDIF
 
 DO I=1,NEXTERNAL
@@ -1043,13 +1051,17 @@ C THIS SUBROUTINE SIMPLY SET THE GLOBAL PS CONFIGURATION GLOBAL VARIABLES FROM A
 	    %(real_mp_format)s MP_PS(0:3,NEXTERNAL),MP_P(0:3,NEXTERNAL)
 	    common/%(proc_prefix)sMP_PSPOINT/MP_PS,MP_P
   	    %(real_dp_format)s P(0:3,NEXTERNAL)
+      LOGICAL KEEP_OFFSHELL_MASS(NEXTERNAL)
+
+      %(keep_offshell_mass)s
+
 
 	    DO I=1,NEXTERNAL
 	      DO J=0,3
     	    MP_PS(J,I)=P(J,I) 
     	  ENDDO
   	    ENDDO
-  	    CALL %(proc_prefix)sMP_IMPROVE_PS_POINT_PRECISION(MP_PS)
+  	    CALL %(proc_prefix)sMP_IMPROVE_PS_POINT_PRECISION(KEEP_OFFSHELL_MASS,MP_PS)
   	    DO I=1,NEXTERNAL
     	  DO J=0,3
       	  	MP_P(J,I)=MP_PS(J,I) 

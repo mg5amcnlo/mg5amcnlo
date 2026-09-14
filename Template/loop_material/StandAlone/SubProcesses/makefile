@@ -119,14 +119,23 @@ $(OLP)_static: $(OLP_PROCESS)
 	mv libMadLoop.$(libext) $(MADLOOP_LIB)
 
 ../$(OLP):
-	rm -f libMadLoop.$(dylibext)
-	ln -s ../libMadLoop.$(dylibext)
+	ln -sf ../libMadLoop.$(dylibext) libMadLoop.$(dylibext)
 	cd $(ROOT)/SubProcesses; make $(OLP)
 
 ../$(OLP)_static:
 	cd $(ROOT)/SubProcesses; make $(OLP)_static
 
+# ROOT is .. only when this makefile runs from SubProcesses itself; from a
+# P<i>_* subdirectory it is ../.. . The ../$(OLP) route symlinks to the
+# SubProcesses-level library and recurses into $(ROOT)/SubProcesses, which
+# from SubProcesses is this very directory: that second make rebuilds the
+# same objects as the local $(OLP) rule, so under -j the two collide (torn
+# .o files, or "ln: File exists"). Build libMadLoop here directly instead.
+ifeq ($(ROOT),..)
+libMadLoop.$(dylibext): $(OLP)
+else
 libMadLoop.$(dylibext): ../$(OLP)
+endif
 
 WRAPPER_SRCS := $(wildcard */f2py_wrapper.f)
 WRAPPER_OBJS := $(patsubst %.f,%.o,$(wildcard */f2py_wrapper.f))

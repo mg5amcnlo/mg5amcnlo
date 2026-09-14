@@ -541,6 +541,7 @@ Beams:LHEF='events_ouaf.lhe.gz'
 
 
 
+import re
 import shutil
 class TestRunCard(unittest.TestCase):
     """ A class to test the TestConfig functionality """
@@ -1002,6 +1003,168 @@ c
         self.assertNotIn('CHECK1', new_text)
         self.assertNotIn('CHECK2', new_text)
 
+
+    def test_custom_fcts_uppercase(self):
+        """fortran is case insensitive: a custom_fcts file written in upper case
+           (which is the idiomatic f77 style) has to be accepted, has to be
+           written in the correct file and has to replace --not duplicate--
+           the original routine."""
+
+        custom_contents = """
+      LOGICAL FUNCTION DUMMY_CUTS(P)
+      IMPLICIT NONE
+      INCLUDE 'nexternal.inc'
+      DOUBLE PRECISION P(0:3,NEXTERNAL)
+      DUMMY_CUTS = .TRUE.
+      CHECKUP
+      RETURN
+      END
+
+      SUBROUTINE USER_UPPER_FCT()
+      IMPLICIT NONE
+      CHECKUSER
+      RETURN
+      END
+        """
+
+        # prepare simplify setup
+        os.mkdir(pjoin(self.tmpdir,'SubProcesses'))
+        import madgraph.iolibs.files as files
+        files.cp(pjoin(MG5DIR,'Template','LO','SubProcesses','dummy_fct.f'), pjoin(self.tmpdir,'SubProcesses'))
+        open(pjoin(self.tmpdir, 'custom'),'w').write(custom_contents)
+
+        LO = bannermod.RunCardLO()
+        # this used to raise InvalidRunCard since the lookup was case sensitive
+        LO.edit_dummy_fct_from_file([pjoin(self.tmpdir, 'custom')], self.tmpdir)
+
+        # the correct file is the one which has been patched
+        self.assertTrue(os.path.exists(pjoin(self.tmpdir,'SubProcesses','dummy_fct.f.orig')))
+        new_text = open(pjoin(self.tmpdir,'SubProcesses','dummy_fct.f')).read()
+        self.assertIn('CHECKUP', new_text)
+        self.assertIn('CHECKUSER', new_text)
+
+        # the original dummy_cuts has to be removed, not duplicated
+        # (otherwise the fortran compiler complains about a duplicated symbol)
+        self.assertEqual(1, len(re.findall(r'FUNCTION\s+DUMMY_CUTS', new_text, re.I)))
+        # the routine we did not overwrite is still there
+        self.assertIn('GET_DUMMY_X1', new_text)
+
+        # and cleaning still works
+        LO.edit_dummy_fct_from_file([], self.tmpdir)
+        self.assertFalse(os.path.exists(pjoin(self.tmpdir,'SubProcesses','dummy_fct.f.orig')))
+        new_text = open(pjoin(self.tmpdir,'SubProcesses','dummy_fct.f')).read()
+        self.assertNotIn('CHECKUP', new_text)
+        self.assertNotIn('CHECKUSER', new_text)
+
+    def test_custom_fcts_unknown_fct(self):
+        """a function which is not allowed to be overwritten has to raise an
+           error which actually names that function"""
+
+        custom_contents = """
+      LOGICAL FUNCTION NOT_A_DUMMY_FCT(P)
+      IMPLICIT NONE
+      NOT_A_DUMMY_FCT = .TRUE.
+      RETURN
+      END
+        """
+
+        os.mkdir(pjoin(self.tmpdir,'SubProcesses'))
+        import madgraph.iolibs.files as files
+        files.cp(pjoin(MG5DIR,'Template','LO','SubProcesses','dummy_fct.f'), pjoin(self.tmpdir,'SubProcesses'))
+        open(pjoin(self.tmpdir, 'custom'),'w').write(custom_contents)
+
+        for card in [bannermod.RunCardLO(), bannermod.RunCardNLO()]:
+            try:
+                card.edit_dummy_fct_from_file([pjoin(self.tmpdir, 'custom')], self.tmpdir)
+            except bannermod.InvalidRunCard as error:
+                # the name of the offending function has to be in the message
+                self.assertIn('NOT_A_DUMMY_FCT', str(error))
+                self.assertNotIn('%s', str(error))
+            else:
+                self.fail('InvalidRunCard should have been raised')
+
+
+    # the custom dynamical scale advertised in the FAQ (answers.launchpad.net/mg5amcnlo/+faq/3325)
+    custom_scale = """
+      double precision function user_dynamical_scale(P)
+      implicit none
+      include 'nexternal.inc'
+      double precision P(0:3, nexternal)
+      include 'run.inc'
+      character*80 temp_scale_id
+      common/ctemp_scale_id/temp_scale_id
+      double precision dot, pt
+      double precision xm2
+      xm2 = dot(P(0,3),P(0,3))
+      user_dynamical_scale = sqrt(xm2 + 0.5d0*(pt(P(0,3))**2 + pt(P(0,4))**2))
+      temp_scale_id = 'CHECKSCALE'
+      return
+      end
+        """
+
+    def test_custom_fcts_vector_inc_lo(self):
+        """a (pre 3.6) LO custom function including run.inc needs vector.inc to
+           be added since run.inc dimensions arrays with VECSIZE_MEMMAX"""
+
+        os.mkdir(pjoin(self.tmpdir,'SubProcesses'))
+        import madgraph.iolibs.files as files
+        files.cp(pjoin(MG5DIR,'Template','LO','SubProcesses','dummy_fct.f'), pjoin(self.tmpdir,'SubProcesses'))
+        open(pjoin(self.tmpdir, 'custom'),'w').write(self.custom_scale)
+
+        LO = bannermod.RunCardLO()
+        LO.edit_dummy_fct_from_file([pjoin(self.tmpdir, 'custom')], self.tmpdir)
+
+        new_text = open(pjoin(self.tmpdir,'SubProcesses','dummy_fct.f')).read()
+        self.assertIn('CHECKSCALE', new_text)
+        fct = new_text[new_text.index('USER_DYNAMICAL_SCALE'):]
+        self.assertIn("INCLUDE 'vector.inc'", fct)
+        # and it has to be included *before* run.inc
+        self.assertLess(fct.index("INCLUDE 'vector.inc'"), fct.index("INCLUDE 'run.inc'"))
+
+    def test_custom_fcts_no_vector_inc_nlo(self):
+        """vector.inc does not exist in a NLO output (and run.inc does not need
+           it there): it must not be added to the user function.
+           see bug #2147417"""
+
+        os.mkdir(pjoin(self.tmpdir,'SubProcesses'))
+        import madgraph.iolibs.files as files
+        files.cp(pjoin(MG5DIR,'Template','NLO','SubProcesses','dummy_fct.f'), pjoin(self.tmpdir,'SubProcesses'))
+        open(pjoin(self.tmpdir, 'custom'),'w').write(self.custom_scale)
+
+        NLO = bannermod.RunCardNLO()
+        NLO.edit_dummy_fct_from_file([pjoin(self.tmpdir, 'custom')], self.tmpdir)
+
+        new_text = open(pjoin(self.tmpdir,'SubProcesses','dummy_fct.f')).read()
+        # the function is correctly written ...
+        self.assertIn('CHECKSCALE', new_text)
+        self.assertIn('USER_DYNAMICAL_SCALE', new_text)
+        # ... but without any include of vector.inc (which does not exist at NLO)
+        self.assertNotIn('vector.inc', new_text.lower())
+
+        # cleaning still works
+        NLO.edit_dummy_fct_from_file([], self.tmpdir)
+        self.assertFalse(os.path.exists(pjoin(self.tmpdir,'SubProcesses','dummy_fct.f.orig')))
+        new_text = open(pjoin(self.tmpdir,'SubProcesses','dummy_fct.f')).read()
+        self.assertNotIn('CHECKSCALE', new_text)
+
+    def test_retro_compatible_mode_selection(self):
+        """the guard on the shipped file: a fix is only applied if the original
+           file does use the corresponding include itself"""
+
+        # the static method itself is unchanged when explicitly asked for the fix
+        lines = ["      double precision function user_dynamical_scale(P)",
+                 "      implicit none",
+                 "      include 'run.inc'",
+                 "      end"]
+        self.assertIn("       include 'vector.inc'",
+                      bannermod.RunCard.retro_compatible_custom_fct(lines, mode=['vector.inc']))
+        # but an empty mode disables every fix
+        self.assertEqual(lines,
+                      bannermod.RunCard.retro_compatible_custom_fct(lines, mode=[]))
+
+        # LO opts-in for the vector.inc fix, NLO does not
+        self.assertIn('vector.inc', bannermod.RunCardLO.retro_compatible_modes)
+        self.assertNotIn('vector.inc', bannermod.RunCardNLO.retro_compatible_modes)
 
     def test_pdlabel_block(self):
         """ check that pdlabel handling is done correctly
