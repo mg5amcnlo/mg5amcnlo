@@ -8274,7 +8274,8 @@ class UFO_model_to_mg4(object):
             lha_read_filename='lha_read.f'
             updateloop_default = '.false.'
 
-        cp( MG5DIR + '/models/template_files/fortran/rw_onia.f', \
+        if self.opt['onia']:
+            cp( MG5DIR + '/models/template_files/fortran/rw_onia.f', \
                                        os.path.join(self.dir_path,'rw_onia.f'))
             
         cp( MG5DIR + '/models/template_files/fortran/' + lha_read_filename, \
