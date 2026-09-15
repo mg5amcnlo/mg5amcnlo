@@ -1394,6 +1394,30 @@ class Model(PhysicsObject):
                 p ['color'] != 1 and p['mass'].lower() == 'zero'])
 
 
+    def get_flavour_scheme(self):
+        """Return the number of light quark flavours of the flavour-number
+        scheme this model corresponds to: the largest n in (3, 4, 5) such that
+        the quarks with PDG code 1..n are all massless.
+
+        This single number drives both the default 'p'/'j' multiparticles and
+        the run_card default for maxjetflavor, so the two always agree.
+        Returns None when the model does not define all of d, u, s, c, b or
+        when one of d, u, s is massive: no scheme is imposed in that case."""
+
+        quarks = [self.get_particle(pdg) for pdg in range(1, 6)]
+        if not all(quarks):
+            return None
+        massless = [q.get('mass').lower() == 'zero' for q in quarks]
+        if not all(massless[:3]):
+            return None
+        nflav = 3
+        for pdg in (4, 5):
+            if not massless[pdg - 1]:
+                break
+            nflav = pdg
+        return nflav
+
+
     def get_quark_pdgs(self):
         """returns the PDG codes of the light quarks and antiquarks"""
         pdg_list = [p['pdg_code'] for p in self.get('particles') \

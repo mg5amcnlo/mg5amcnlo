@@ -6310,39 +6310,27 @@ This implies that with decay chains:
 
         scheme = "old"
         photon = False
+        # The flavour scheme is a property of the model: the heaviest quark
+        # that is still massless (Model.get_flavour_scheme). The run_card
+        # default for maxjetflavor is derived from the very same number, so
+        # the jet definition and maxjetflavor always agree.
+        nflav = self._curr_model.get_flavour_scheme()
         for qcd_container in ['p', 'j']:
             if qcd_container not in self._multiparticles:
                 continue
             multi = self._multiparticles[qcd_container]
-            b = self._curr_model.get_particle(5)
-            c = self._curr_model.get_particle(4)
-            if not b:
-                break
-            if not c:
+            if nflav is None:
                 break
 
-            if 4 in multi:
-                if c['mass'] != 'ZERO':
-                    if 'onia' in self._curr_model.get('name'):
-                        multi.remove(4)
-                        multi.remove(-4)
-                        scheme = 3
-            elif c['mass'] == 'ZERO':
-                multi.append(4)
-                multi.append(-4)
-                scheme = 4
-            if 5 in multi:
-                if b['mass'] != 'ZERO':
-                    multi.remove(5)
-                    multi.remove(-5)
-                    if c['mass'] != 'ZERO':
-                        scheme = 3
-                    else:
-                        scheme = 4
-            elif b['mass'] == 'ZERO':
-                multi.append(5)
-                multi.append(-5)
-                scheme = 5
+            for pdg in (4, 5):
+                if pdg <= nflav and pdg not in multi:
+                    multi.extend([pdg, -pdg])
+                    scheme = nflav
+                elif pdg > nflav and pdg in multi:
+                    multi.remove(pdg)
+                    if -pdg in multi:
+                        multi.remove(-pdg)
+                    scheme = nflav
 
             # check if the photon has to be added to j and p
             if 'perturbation_couplings' in list(self._curr_model.keys()) and \
