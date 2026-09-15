@@ -22,6 +22,14 @@ ANNOUNCEMENT:
             (ebeam1 != ebeam2)
         BF+JT: Fix two independent loop-wavefunction bugs in 
             check_majorana_and_flip_flow for models with sextet/Majorana
+        OM: MadSpin onshell_v1: wrong identical-particle factor between decay-chain
+            and production ME
+        OM: MadSpin v1: two beam-polarisation fixes (wrong polbeam convention, 
+            reweighting applied after the helicity sum), both since 3.6.3
+        OM: Beam polarisation applied twice when a beam helicity is fixed in the process
+        OM: Long run_card lines (e.g. systematics_arguments) were truncated 
+            in the LHE banner
+        OM: Make Source/make_opts writes atomic to avoid corrupted files
 
 
 3.7.3 (01/09/26):
