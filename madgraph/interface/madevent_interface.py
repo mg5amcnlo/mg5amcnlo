@@ -5416,6 +5416,16 @@ tar -czf split_$1.tar.gz split_$1
                          '%s_delphes.log' % tag)
         nb = self.resolve_nb_core('delphes')
         with open(hadd_log, 'w') as fsock:
+            for i, (split_dir, _hepmc) in enumerate(split_hepmc):
+                log_file = pjoin(split_dir, 'delphes.log')
+                fsock.write('=' * 35 + '\n')
+                fsock.write(' -> Delphes log file for run %d <-\n' % i)
+                fsock.write('=' * 35 + '\n')
+                if os.path.isfile(log_file):
+                    with open(log_file, 'r') as split_log:
+                        fsock.write(split_log.read())
+                fsock.write('\n')
+        with open(hadd_log, 'a') as fsock:
             ret = misc.call([hadd_exe, '-f', '-j', str(nb), final_root] + produced,
                             stdout=fsock, stderr=subprocess.STDOUT)
             if ret != 0:
