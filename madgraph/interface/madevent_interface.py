@@ -5572,12 +5572,27 @@ tar -czf split_$1.tar.gz split_$1
                          '%s_delphes.log' % tag)
         nb = self.resolve_nb_core('delphes')
         with open(hadd_log, 'w') as fsock:
+            for i, (split_dir, _hepmc) in enumerate(split_hepmc):
+                log_file = pjoin(split_dir, 'delphes.log')
+                fsock.write('=' * 35 + '\n')
+                fsock.write(' -> Delphes log file for run %d <-\n' % i)
+                fsock.write('=' * 35 + '\n')
+                if os.path.isfile(log_file):
+                    with open(log_file, 'r') as split_log:
+                        fsock.write(split_log.read())
+                fsock.write('\n')
+        with open(hadd_log, 'a') as fsock:
+            fsock.write('=' * 35 + '\n')
+            fsock.write(' -> hadd log file ' + '\n')
+            fsock.write('=' * 35 + '\n')
+            fsock.flush()
             ret = misc.call([hadd_exe, '-f', '-j', str(nb), final_root] + produced,
                             stdout=fsock, stderr=subprocess.STDOUT)
             if ret != 0:
                 # The -j (parallel) option may be unsupported by older ROOT;
                 # retry the merge serially before giving up.
                 fsock.write('\nhadd -j failed, retrying without -j\n')
+                fsock.flush()
                 ret = misc.call([hadd_exe, '-f', final_root] + produced,
                                 stdout=fsock, stderr=subprocess.STDOUT)
         if ret != 0 or not os.path.isfile(final_root):
