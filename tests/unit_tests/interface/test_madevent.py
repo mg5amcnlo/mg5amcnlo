@@ -119,6 +119,14 @@ class TestMadEventCmd(unittest.TestCase):
         card_dir= pjoin(root_path,'..','Template', 'LO', 'Cards')
         self.assertEqual(detect(pjoin(card_dir, 'rivet_card_default.dat')),
                          'rivet_card.dat')        
+
+        # Onia card
+        self.assertEqual(detect(pjoin(root_path, 'input_files',
+                                      'onia_card_quarkonium.dat')),
+                         'onia_card.dat')
+        self.assertEqual(detect(pjoin(root_path, 'input_files',
+                                      'onia_card_leptonium.dat')),
+                         'onia_card.dat')
         
         
     def test_help_category(self):

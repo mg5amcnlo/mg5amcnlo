@@ -126,6 +126,7 @@ else
   llhapdf=
 endif
 
+
 # Helper function to check MG5 version
 define CHECK_MG5AMC_VERSION
 python -c 'import re; from distutils.version import StrictVersion; print StrictVersion("$(MG5AMC_VERSION)") >= StrictVersion("$(1)") if re.match("^[\d\.]+$$","$(MG5AMC_VERSION)") else True;'

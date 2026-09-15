@@ -48,6 +48,13 @@ clean:
 
 couplings.o: ../maxparticles.inc ../run.inc ../vector.inc
 couplings2.o: ../vector.inc
+rw_onia.o: ldme.inc onia_read.inc
+
+ldme.inc:
+	touch ldme.inc
+
+onia_read.inc:
+	touch onia_read.inc
 
 ../run.inc:
 	touch ../run.inc
