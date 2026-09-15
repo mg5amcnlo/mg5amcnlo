@@ -697,6 +697,8 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info("   --output=  : Specify the name of the directory where the merge is done.")
         logger.info("                This allow to do \"import NAME\" to load that merge.")
         logger.info("   --recreate : Force to recreated the merge model even if the merge model directory already exists.")
+        logger.info("   --fock_states_only : only add the Fock states (bound states) of MODELNAME to the current model,")
+        logger.info("                        e.g. 'import model heft' then 'add model sm_onia --fock_states_only'.")
         
     def help_convert(self):
         logger.info("syntax: convert model FULLPATH")
@@ -2303,7 +2305,7 @@ class CompleteForCmd(cmd.CompleteCmd):
         elif args[1] == 'model':
             completion_categories = self.complete_import(text, line, begidx, endidx, 
                                                          allow_restrict=False, formatting=False)
-            completion_categories['options'] = self.list_completion(text,['--modelname=','--recreate'])
+            completion_categories['options'] = self.list_completion(text,['--modelname=','--recreate','--fock_states_only'])
             return self.deal_multiple_categories(completion_categories, formatting) 
             
     def complete_customize_model(self, text, line, begidx, endidx):
@@ -3417,6 +3419,10 @@ This implies that with decay chains:
                 
     def add_model(self, args):
         """merge two model"""
+
+        if '--fock_states_only' in args:
+            args.remove('--fock_states_only')
+            return self.add_fock_states(args[0])
         
         model_path = args[0]
         recreate = ('--recreate' in args)
@@ -3489,6 +3495,52 @@ This implies that with decay chains:
                               printcmd=False, precmd=True, postcmd=True)         
         
     
+    def add_fock_states(self, model_name):
+        """Import only the Fock states (bound states) of another UFO model on top
+        of the current one, without merging particles or interactions, e.g.
+            import model heft
+            add model sm_onia --fock_states_only
+        A Fock state is only kept if its constituents exist in the current model."""
+
+        import models.import_ufo as import_ufo
+        import models.import_boundstates as ufo_boundstates
+
+        if os.path.isdir(model_name):
+            path = model_name
+        else:
+            try:
+                path = import_ufo.find_ufo_path(model_name)
+            except import_ufo.UFOImportError:
+                # accept a restricted name such as sm_onia-c_mass
+                path = import_ufo.find_ufo_path(model_name.rsplit('-', 1)[0])
+
+        fockstates = ufo_boundstates.get_boundstates_ufo(path)
+        if not fockstates:
+            raise self.InvalidCmd('Model %s does not define any Fock state.' % model_name)
+
+        known = set(f.get('name') for f in self._fockstates)
+        particles = self._curr_model['particles']
+        added, skipped = [], []
+        for fock in fockstates:
+            if not all(particles.get_copy(p) for p in fock.get('particles')):
+                skipped.append(fock.get('name'))
+            elif fock.get('name') not in known:
+                self._fockstates.append(fock)
+                known.add(fock.get('name'))
+                added.append(fock.get('name'))
+
+        if skipped:
+            logger.warning('%i Fock states of %s skipped: their constituents are not in the current model.'
+                           % (len(skipped), model_name))
+        if not added:
+            logger.info('No new Fock state added from %s.' % model_name)
+            return
+
+        logger.info('Added %i Fock states from %s.' % (len(added), model_name))
+        logger.warning('The model contains non-relativistic bound states. Please consider citing arXiv:2510.26773 and arXiv:2607.26739 if relevant.')
+        if not self._boundstates:
+            self.add_default_boundstates()
+
     def do_convert(self, line):
         """convert model FULLPATH
            modify (in place) the UFO model to make it compatible with both python2 and python3
@@ -6231,6 +6283,10 @@ This implies that with decay chains:
                                         self._curr_model.get('interactions')], []))
 
         self.add_default_multiparticles()
+        # A new model starts without any Fock state: those of a previously
+        # imported model must not leak in. Use 'add model X --fock_states_only'
+        # to put the bound states of one model on top of another.
+        self._boundstates = {}
         self.add_default_fockstates()
         if self._fockstates:
             logger.warning('The model contains non-relativistic bound states. Please consider citing arXiv:2510.26773 and arXiv:2607.26739 if relevant.')
@@ -6416,7 +6472,8 @@ This implies that with decay chains:
                 logger.info(f"Defined boundstate {boundstate_label} = {bound_state}")
 
     def add_default_fockstates(self):
-        """Add default Fock states from file fockstates_default.txt in the input folder"""
+        """Load the Fock states shipped by the current model (its boundstates.py),
+        replacing any Fock state of a previously imported model."""
         import models.import_boundstates as ufo_boundstates
         self._fockstates = ufo_boundstates.get_boundstates_ufo(self._curr_model)
 
