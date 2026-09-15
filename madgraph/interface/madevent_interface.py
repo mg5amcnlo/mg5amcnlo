@@ -5426,6 +5426,9 @@ tar -czf split_$1.tar.gz split_$1
                         fsock.write(split_log.read())
                 fsock.write('\n')
         with open(hadd_log, 'a') as fsock:
+            fsock.write('=' * 35 + '\n')
+            fsock.write(' -> hadd log file ' + '\n')
+            fsock.write('=' * 35 + '\n')
             ret = misc.call([hadd_exe, '-f', '-j', str(nb), final_root] + produced,
                             stdout=fsock, stderr=subprocess.STDOUT)
             if ret != 0:
