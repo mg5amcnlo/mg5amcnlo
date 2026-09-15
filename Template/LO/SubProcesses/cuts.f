@@ -24,6 +24,84 @@ C
       LOGICAL FUNCTION PASSCUTS(P, VECSIZE_USED)
 C**************************************************************************
 C     INPUT:
+C            P(0:3,NEXTERNAL)   MOMENTA IN THE PARTONIC REST FRAME
+C            VECSIZE_USED (used only on 1st call) #events in parallel
+C     OUTPUT:
+C            TRUE IF THE EVENT PASSES ALL CUTS IN ONE OF THE TWO BEAM
+C            ORIENTATIONS, WITH THE RESULT OF EACH IN CUTS_ORIENT:
+C            CUTS_ORIENT(1): EVENT AS GENERATED
+C            CUTS_ORIENT(2): MIRRORED EVENT (IMIRROR=2 IN DSIGPROC:
+C                            Z-AXIS FLIPPED, X1 AND X2 SWAPPED)
+C     With asymmetric beam energies the lab frame is not symmetric under
+C     that flip, so rapidity cuts can differ between the two orientations.
+C     MIRROR_CUTS is set by DSIG when the group has mirror processes.
+C**************************************************************************
+      IMPLICIT NONE
+      include 'genps.inc'
+      include 'nexternal.inc'
+      REAL*8 P(0:3,nexternal)
+      INTEGER VECSIZE_USED
+      include '../../Source/vector.inc'
+      include 'run.inc'
+      LOGICAL CUTSDONE,CUTSPASSED
+      COMMON/TO_CUTSDONE/CUTSDONE,CUTSPASSED
+      LOGICAL MIRROR_CUTS, CUTS_ORIENT(2)
+      COMMON/TO_MIRROR_CUTS/MIRROR_CUTS, CUTS_ORIENT
+      DATA MIRROR_CUTS/.FALSE./
+      DOUBLE PRECISION CM_RAP
+      LOGICAL SET_CM_RAP
+      COMMON/TO_CM_RAP/SET_CM_RAP,CM_RAP
+      LOGICAL PASSCUTS_ONE_FRAME
+      EXTERNAL PASSCUTS_ONE_FRAME
+      REAL*8 PMIR(0:3,nexternal), XDUM, CM_RAP_SAVE
+      LOGICAL PASSED_ON_ENTRY
+      INTEGER I
+
+      IF (CUTSDONE) THEN
+         PASSCUTS=CUTSPASSED
+         RETURN
+      ENDIF
+      PASSED_ON_ENTRY=CUTSPASSED
+      IF (MIRROR_CUTS.AND.EBEAM(1).NE.EBEAM(2)) THEN
+C        Mirrored event, as built in DSIGPROC for IMIRROR=2
+         DO I=1,NEXTERNAL
+            PMIR(0,I)=P(0,I)
+            PMIR(1,I)=P(1,I)
+            PMIR(2,I)=-P(2,I)
+            PMIR(3,I)=-P(3,I)
+         ENDDO
+         XDUM=XBK(1)
+         XBK(1)=XBK(2)
+         XBK(2)=XDUM
+         CM_RAP_SAVE=CM_RAP
+         CM_RAP=DLOG(EBEAM(1)/EBEAM(2))-CM_RAP
+         CUTSDONE=.FALSE.
+         CUTSPASSED=PASSED_ON_ENTRY
+         CUTS_ORIENT(2)=PASSCUTS_ONE_FRAME(PMIR,VECSIZE_USED)
+         XDUM=XBK(1)
+         XBK(1)=XBK(2)
+         XBK(2)=XDUM
+         CM_RAP=CM_RAP_SAVE
+C        Event as generated last, so that its side effects (scales) win
+         CUTSDONE=.FALSE.
+         CUTSPASSED=PASSED_ON_ENTRY
+         CUTS_ORIENT(1)=PASSCUTS_ONE_FRAME(P,VECSIZE_USED)
+         PASSCUTS=CUTS_ORIENT(1).OR.CUTS_ORIENT(2)
+         CUTSPASSED=PASSCUTS
+      ELSE
+         PASSCUTS=PASSCUTS_ONE_FRAME(P,VECSIZE_USED)
+         CUTS_ORIENT(1)=PASSCUTS
+         CUTS_ORIENT(2)=PASSCUTS
+      ENDIF
+      CUTSDONE=.TRUE.
+      RETURN
+      END
+
+C
+      LOGICAL FUNCTION PASSCUTS_ONE_FRAME(P, VECSIZE_USED)
+     &     RESULT(PASSCUTS)
+C**************************************************************************
+C     INPUT:
 C            P(0:3,1)           MOMENTUM OF INCOMING PARTON
 C            P(0:3,2)           MOMENTUM OF INCOMING PARTON
 C            P(0:3,3)           MOMENTUM OF ...
