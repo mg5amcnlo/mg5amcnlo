@@ -5137,10 +5137,10 @@ tar -czf split_$1.tar.gz split_$1
                 # Now merge logs
                 pythia_log_file = open(pythia_log,'w')
                 n_added = 0
-                for split_dir in split_dirs:
+                for split_index, split_dir in enumerate(split_dirs):
                     log_file = pjoin(split_dir,'PY8_log.txt')
                     pythia_log_file.write('='*35+'\n')
-                    pythia_log_file.write(' -> Pythia8 log file for run %d <-'%i+'\n')
+                    pythia_log_file.write(' -> Pythia8 log file for run %d <-'%split_index+'\n')
                     pythia_log_file.write('='*35+'\n')
                     pythia_log_file.write(open(log_file,'r').read()+'\n')
                     if run_type in merged_run_types:
