@@ -4122,6 +4122,23 @@ frame_block = RunBlock('frame', template_on=template_on, template_off=template_o
 
 
 
+# Momentum reshuffling ------------------------------------------------------------------------------------
+template_on = \
+"""#*********************************************************************
+# Type of momentum-reshuffling algorithm                             *
+# This algorithm is currently implemented only for onium states      *
+# mom_resh_type:                                                     *
+#  0=initial-state reshuffling                                       *
+#  1=smooth final-state reshuffling        [eq.(3.40) in 2607.26739] *
+#  2=step-function final-state reshuffling [eq.(3.41) in 2607.26739] *
+#*********************************************************************
+  %(mom_resh_type)s  = mom_resh_type  ! momentum-reshuffling strategy
+"""
+template_off = ""
+mom_resh_block = RunBlock('mom_resh', template_on=template_on, template_off=template_off)
+
+
+
 # EVA PDF PRECISION ------------------------------------------------------------------------------------
 template_on = \
 """     %(evaorder)s = evaorder         ! 0=EVA@LLA, 1=full LP, 2=NLP [2502.07878]
@@ -4387,12 +4404,39 @@ fixedfacscale = FixedfacscaleBlock('fixed_fact_scale', template_on=template_on, 
 
 
 
+def get_model_flavour_scheme(proc_def):
+    """Return the flavour scheme (number of massless quark flavours) of the
+    model the processes in proc_def were generated with, or None.
+
+    The LO run card receives a list of process lists and the NLO one a flat
+    list of processes, so look through the nesting for the first object that
+    carries a model. The value comes from Model.get_flavour_scheme, which also
+    decides the default 'p'/'j' multiparticles, so maxjetflavor and the jet
+    definition always agree."""
+
+    todo = list(proc_def) if proc_def else []
+    while todo:
+        item = todo.pop(0)
+        try:
+            model = item.get('model')
+        except Exception:
+            model = None
+        if model:
+            try:
+                return model.get_flavour_scheme()
+            except Exception:
+                return None
+        if isinstance(item, (list, tuple)):
+            todo = list(item) + todo
+    return None
+
+
 class RunCardLO(RunCard):
     """an object to handle in a nice way the run_card information"""
     
     blocks = [heavy_ion_block, beam_pol_block, syscalc_block, ecut_block,
              frame_block, eva_pdf_block, mlm_block, ckkw_block, psoptim_block,
-              pdlabel_block, fixedfacscale, running_block]
+              pdlabel_block, fixedfacscale, running_block, mom_resh_block]
 
     dummy_fct_file = {"dummy_cuts": pjoin("SubProcesses","dummy_fct.f"),
                       "get_dummy_x1": pjoin("SubProcesses","dummy_fct.f"),
@@ -4518,6 +4562,8 @@ class RunCardLO(RunCard):
         self.add_param("keep_log", "normal", include=False, hidden=True,
                        comment="none: all log send to /dev/null.\n minimal: keep only log for survey of the last run.\n normal: keep only log for survey of all run. \n debug: keep all log (survey and refine)",
                        allowed=['none', 'minimal', 'normal', 'debug'])
+        #momentum reshuffling
+        self.add_param("mom_resh_type", 1, hidden=True)
         #cut
         self.add_param("auto_ptj_mjj", True, hidden=True)
         self.add_param("bwcutoff", 15.0)
@@ -5035,7 +5081,10 @@ class RunCardLO(RunCard):
                     self.display_block.append('pdlabel')
 
             if any(i in beam_id for i in [1,-1,2,-2,3,-3,4,-4,5,-5,21,22]):
-                maxjetflavor = max([4]+[abs(i) for i in beam_id if  -7< i < 7])
+                # the default follows the flavour scheme of the model, the same
+                # number that defines the default 'p'/'j' multiparticles
+                nflav = get_model_flavour_scheme(proc_def) or 4
+                maxjetflavor = max([nflav]+[abs(i) for i in beam_id if  -7< i < 7])
                 self['maxjetflavor'] = maxjetflavor
                 self['asrwgtflavor'] = maxjetflavor
             
@@ -5150,6 +5199,7 @@ class RunCardLO(RunCard):
                     self['polbeam2'] = 100
                     if not all(id  in [-12,-14,-16] for id in beam_id_split[1]):
                         logger.warning('Issue with default beam setup of neutrino in the run_card. Please check it up [polbeam2].')
+            
             
         # Check if need matching
         min_particle = 99
@@ -5332,6 +5382,8 @@ class RunCardLO(RunCard):
         if model['running_elements']:
             self.display_block.append('RUNNING') 
 
+        if model['dual_mass_scheme']:
+          self.display_block.append('mom_resh')
 
         # Read file input/default_run_card_lo.dat
         # This has to be LAST !!
@@ -6280,7 +6332,10 @@ class RunCardNLO(RunCard):
                 if not leg['state']:
                     beam_id.add(leg['id'])
         if any(i in beam_id for i in [1,-1,2,-2,3,-3,4,-4,5,-5,21,22]):
-            maxjetflavor = max([4]+[abs(i) for i in beam_id if  -7< i < 7])
+            # the default follows the flavour scheme of the model, the same
+            # number that defines the default 'p'/'j' multiparticles
+            nflav = get_model_flavour_scheme(proc_def) or 4
+            maxjetflavor = max([nflav]+[abs(i) for i in beam_id if  -7< i < 7])
             self['maxjetflavor'] = maxjetflavor
             pass
         elif any(id in beam_id for id in [11,-11,13,-13]):

@@ -334,8 +334,10 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                 pjoin(self.dir_path,'bin','internal',os.path.basename(cp_file)))
 
     def convert_model(self, model, wanted_lorentz = [], 
-                                                         wanted_couplings = []):
+                                            wanted_couplings = [], **opts):
 
+        # npwave (if any) is deliberately not forwarded: the FKS output has no
+        # dual-number HELAS library.
         super(ProcessExporterFortranFKS,self).convert_model(model, 
                                                wanted_lorentz, wanted_couplings)
         

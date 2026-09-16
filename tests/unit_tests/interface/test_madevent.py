@@ -119,6 +119,14 @@ class TestMadEventCmd(unittest.TestCase):
         card_dir= pjoin(root_path,'..','Template', 'LO', 'Cards')
         self.assertEqual(detect(pjoin(card_dir, 'rivet_card_default.dat')),
                          'rivet_card.dat')        
+
+        # Onia card
+        self.assertEqual(detect(pjoin(root_path, 'input_files',
+                                      'onia_card_quarkonium.dat')),
+                         'onia_card.dat')
+        self.assertEqual(detect(pjoin(root_path, 'input_files',
+                                      'onia_card_leptonium.dat')),
+                         'onia_card.dat')
         
         
     def test_help_category(self):
@@ -207,7 +215,7 @@ class TestDelphesFusion(unittest.TestCase):
         exe = pjoin(ddir, 'DelphesHepMC2')
         fail = ('[[ "$3" == *%s* ]] && exit 0' % fail_split) if fail_split else 'false'
         with open(exe, 'w') as f:
-            f.write('#!/bin/bash\n%s\ncp "$3" "$2"\n' % fail)
+            f.write('#!/bin/bash\n%s\necho "DELPHES_OUTPUT_$3"\ncp "$3" "$2"\n' % fail)
         os.chmod(exe, os.stat(exe).st_mode | stat.S_IEXEC)
 
         # fake hadd (ROOTSYS/bin/hadd): concatenate the input ROOTs into output.
@@ -217,6 +225,8 @@ class TestDelphesFusion(unittest.TestCase):
         with open(hadd, 'w') as f:
             f.write('#!/bin/bash\n'
                     'out=""; skip=0; ins=()\n'
+                    'echo "HADD_STDOUT"\n'
+                    'echo "HADD_STDERR" >&2\n'
                     'for a in "$@"; do\n'
                     '  if [ "$skip" = 1 ]; then skip=0; continue; fi\n'
                     '  case "$a" in -f) ;; -j) skip=1;;\n'
@@ -250,6 +260,21 @@ class TestDelphesFusion(unittest.TestCase):
         # hadd concatenated every split's Delphes output, in order.
         self.assertEqual(open(final).read(),
                          'CONTENT_0\nCONTENT_1\nCONTENT_2\n')
+        log = pjoin(stub.me_dir, 'Events', 'run_01', 'tag_1_delphes.log')
+        log_content = open(log).read()
+        split_sections = []
+        for i in range(3):
+            section = ('=' * 35 + '\n'
+                       ' -> Delphes log file for run %d <-\n' % i
+                       + '=' * 35 + '\n'
+                       'DELPHES_OUTPUT_' + pjoin(split_dirs[i], 'events.hepmc') + '\n\n')
+            split_sections.append(section)
+        self.assertEqual(log_content[:sum(map(len, split_sections))],
+                         ''.join(split_sections))
+        self.assertEqual(log_content.count('DELPHES_OUTPUT_'), 3)
+        self.assertGreater(log_content.index('HADD_STDOUT'),
+                   log_content.index('DELPHES_OUTPUT_' + pjoin(split_dirs[-1], 'events.hepmc')))
+        self.assertIn('HADD_STDERR', log_content)
 
     def test_run_delphes_on_splits_partial_failure(self):
         # split_1's Delphes produces no ROOT (but exits 0): the fused path must
