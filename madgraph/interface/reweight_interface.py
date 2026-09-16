@@ -1043,6 +1043,15 @@ class ReweightInterface(extended_cmd.Cmd):
                             name = "mdl__%s__scale" % block.upper()
                             module.change_para(name, param_card[block].scale)
 
+                    # the $-syntax propagators veto |m-M| < bwcutoff*Gamma: use
+                    # the window the events were generated with rather than
+                    # the standalone default of 15
+                    if hasattr(module, 'set_bwcutoff') and 'mgruncard' in self.banner:
+                        try:
+                            module.set_bwcutoff(float(self.banner.get_detail('run_card', 'bwcutoff')))
+                        except Exception as error:
+                            logger.debug('bwcutoff not passed to %s: %s', path, error)
+
                     #check for running attribute
                     update_running_info = False
                     if tag == 2:

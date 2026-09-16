@@ -485,7 +485,10 @@ class MadSpinOptions(banner.ConfigFile):
                 if not hasattr(self, 'run_card'):
                     self.run_card =  banner.RunCardLO()
                     self.run_card.remove_all_cut()
-                self.run_card[args[0]] = ' '.join(args[1:])
+                # user_set: an explicit "set run_card bwcutoff X" must survive
+                # _decay_run_card_bwcutoff, which otherwise imposes BW_cut
+                self.run_card.__setitem__(args[0], ' '.join(args[1:]),
+                                          change_userdefine=True)
             else:
                 raise Exception("wrong syntax for \"set run_card %s\"" % value)
             
@@ -2963,7 +2966,8 @@ class MadSpinInterface(extended_cmd.Cmd):
                     if self.options["run_card"]:
                         run_card = self.run_card
                     else:
-                        run_card = banner.RunCard(pjoin(decay_dir, "Cards", "run_card.dat"))                        
+                        run_card = banner.RunCard(pjoin(decay_dir, "Cards", "run_card.dat"))
+                    self._decay_run_card_bwcutoff(run_card)
                     run_card["iseed"] = self.options['seed']
                     run_card['gridpack'] = True
                     run_card['systematics_program'] = 'False'
@@ -3033,6 +3037,7 @@ class MadSpinInterface(extended_cmd.Cmd):
                         run_card = self.run_card 
                 else:
                     run_card = banner.RunCard(pjoin(decay_dir, "Cards", "run_card.dat"))
+                self._decay_run_card_bwcutoff(run_card)
                 run_card["nevents"] = int(0.8*nb_event)
                 run_card.__setitem__('allow_overshoot_events', True, change_userdefine=True)
                 run_card.__setitem__('refine_evt_by_job', 5000, change_userdefine=True)
@@ -7803,11 +7808,25 @@ class MadSpinInterface(extended_cmd.Cmd):
         # Allowed helicities per spin
         hel_dict = {1: [0], 2: [1, -1], 3: [-1, 0, 1]}
 
-        # Decaying-particle positions (+1 for Fortran), spins, helicities
-        position = [i + 1 for pdg in decays_key
-                    for i in range(len(production))
-                    if production[i].pid == pdg and production[i].status == 1]
-        decaying_pdg = [int(production[i - 1].pid) for i in position]
+        # Decaying-particle positions (+1 for Fortran), spins, helicities.
+        # The positions index the legs of the *matrix element* (orig_order),
+        # which is how get_momenta lays out the momenta GET_DENSITY receives --
+        # not the LHE record. The record also carries the status-2 resonances
+        # MadEvent writes (p p > z z j j with an s-channel Z/W -> j j) and may
+        # list the final state in another order; indexing it put the open
+        # helicity indices on the wrong leg (a quark instead of the second Z),
+        # so Tr(rho_prod) came out up to 20x |M_prod|^2 for those events.
+        # get_momenta fills the n-th status-1 particle of a pdg into the n-th
+        # slot of that pdg, which is also the order of init_part above.
+        _, orig_order, _, _, _ = self.get_pdir(production)
+        nb_init = len(orig_order[0])
+        position = [nb_init + k + 1 for pdg in decays_key
+                    for k, pid in enumerate(orig_order[1]) if pid == pdg]
+        if len(position) != nchanging:
+            raise Exception("MadSpin: the matrix element order %s does not hold "
+                            "the %d decaying particle(s) %s of the production "
+                            "event" % (orig_order, nchanging, list(decays_key)))
+        decaying_pdg = [int(orig_order[1][i - nb_init - 1]) for i in position]
         decaying_spins = [self.model.get_particle(i).get('spin') for i in decaying_pdg]
         helicities = [hel_dict[i] for i in decaying_spins]
 
@@ -9040,6 +9059,21 @@ class MadSpinInterface(extended_cmd.Cmd):
         if self.options['BW_cut'] < 0:
             return 15
         return self.options['BW_cut']
+
+    def _decay_run_card_bwcutoff(self, run_card):
+        """Give the decay generation (decay_*_* directories) the same
+        Breit-Wigner window as the rest of MadSpin.
+
+        The virtuality of every resonance *inside* a decay chain (the W of
+        ``t > w+ b, w+ > l+ vl``) is the one MG5 generated there, so its window
+        is that run_card's ``bwcutoff``. The card is otherwise rebuilt from the
+        decay directory's template, which would silently keep 15 whatever the
+        production (or ``set BW_cut``) asked for. An explicit bwcutoff from
+        ``set run_card`` still wins.
+        """
+        if self.options['run_card'] and 'bwcutoff' in run_card.user_set:
+            return
+        run_card['bwcutoff'] = self._resolved_bw_cut()
 
     def _spinmode_draws_virtuality(self):
         """Whether *this* spinmode samples a resonance virtuality at all, i.e.
@@ -10747,6 +10781,8 @@ class MadSpinInterface(extended_cmd.Cmd):
         # the beam polarisation is constant over a run, so it is pushed into
         # the library once per module rather than passed on every call
         self._set_f2py_beampol(mymod)
+        # same for the window of the $-syntax propagators
+        self._set_f2py_bwcutoff(mymod, prod_or_decay)
 
 
     def create_f2py_module(self, sp_path, prod_or_decay, all_prefix, all_pdg, all_procid):
@@ -11152,6 +11188,60 @@ class MadSpinInterface(extended_cmd.Cmd):
             return
         mymod.py_set_beampol(pol[0], pol[1])
 
+    def _production_bwcutoff(self):
+        """The run_card ``bwcutoff`` the production events were generated with,
+        or None when the event file carries no run_card."""
+        if 'mgruncard' not in self.banner:
+            return None
+        try:
+            return float(self.banner.get_detail('run_card', 'bwcutoff'))
+        except Exception:
+            return None
+
+    def _decay_generation_bwcutoff(self):
+        """The ``bwcutoff`` the decay events are generated with, i.e. what
+        ``_decay_run_card_bwcutoff`` leaves in the decay_*_* run_card: an
+        explicit ``set run_card bwcutoff`` or else the resolved ``BW_cut``."""
+        card = getattr(self.options, 'run_card', None) \
+            if self.options['run_card'] else None
+        if card is not None and 'bwcutoff' in card.user_set:
+            return float(card['bwcutoff'])
+        return float(self._resolved_bw_cut())
+
+    def _set_f2py_bwcutoff(self, mymod, prod_or_decay):
+        """Push the window of the ``$``-syntax propagators into the
+        matrix-element library.
+
+        ``p p > z z j j $h`` vetoes the on-shell h through ALOHA's D-type
+        propagators, which zero it for |m - M| < bwcutoff*Gamma. MadEvent takes
+        bwcutoff from the run_card, but the standalone output hardcoded 15:
+        with ``bwcutoff = 5`` an event with m(Z s s~) 7.3 Gamma_H above the
+        pole had the h in its generation weight and not in MadSpin's
+        |M_prod|^2, and a Z reshuffle pushing that invariant past 15 widths
+        switched the 4 MeV resonance back on in the numerator (weights up to
+        1e5 times the on-shell value). The window has to be the one the events
+        -- production or decay -- were generated with.
+        """
+        if prod_or_decay == 'prod':
+            value = self._production_bwcutoff()
+        else:
+            value = self._decay_generation_bwcutoff()
+        if value is None or not value > 0:
+            return
+        if not hasattr(mymod, 'set_bwcutoff'):
+            proc_card = self.banner['mg5proccard'] \
+                if 'mg5proccard' in self.banner else ''
+            if '$' in proc_card and \
+                    not getattr(self, '_warned_f2py_bwcutoff', False):
+                self._warned_f2py_bwcutoff = True
+                logger.warning('The matrix elements of this MadSpin run predate '
+                               'SET_BWCUTOFF: their $-syntax propagators keep '
+                               'the default window of 15 widths instead of '
+                               'bwcutoff = %s. Regenerate them (do not reuse '
+                               'old MadSpin directories).', value)
+            return
+        mymod.set_bwcutoff(value)
+
     def _frame_boost(self, event):
         """The 4-momentum whose rest frame ``frame_id`` selects for ``event``,
         or None when the frame machinery cannot change anything.
@@ -11500,6 +11590,7 @@ class MadSpinInterface(extended_cmd.Cmd):
                         # which path_me points at under MadEvent and which can
                         # disagree with the events (see me_param_card).
                         mymod.initialise(self.me_param_card(self.ms_me_subdir))
+                        self._set_f2py_bwcutoff(mymod, 'prod')
             mymod = self.f2py_module
 
             #if Rpath linking is not working the below code can be an alternative:

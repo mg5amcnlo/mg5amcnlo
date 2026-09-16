@@ -393,6 +393,8 @@ C
       COMPLEX*16 DUM0,DUM1
       DATA DUM0, DUM1/(0D0, 0D0), (1D0, 0D0)/
       DOUBLE PRECISION BWCUTOFF
+      DOUBLE PRECISION STANDALONE_BWCUTOFF
+      COMMON/TO_STANDALONE_BWCUTOFF/STANDALONE_BWCUTOFF
 C     
 C     GLOBAL VARIABLES
 C     
@@ -400,7 +402,17 @@ C
 
 C     
 C     
-      BWCUTOFF=15  ! use if $ syntax is defined in the process
+C     $-syntax propagators veto |m-M| < bwcutoff*Gamma. That has to be
+C      the
+C     window the events were generated with (run_card bwcutoff); a
+C      caller
+C     such as MadSpin or the reweighting sets it through SET_BWCUTOFF.
+C     Zero (nothing set it) keeps the historical default of 15.
+      IF (STANDALONE_BWCUTOFF.GT.0D0) THEN
+        BWCUTOFF = STANDALONE_BWCUTOFF
+      ELSE
+        BWCUTOFF = 15D0
+      ENDIF
       CALL OXXXXX(P(0,1),ZERO,NHEL(1),-1*IC(1),W(1,1))
       CALL IXXXXX(P(0,2),ZERO,NHEL(2),+1*IC(2),W(1,2))
       CALL VXXXXX(P(0,3),ZERO,NHEL(3),+1*IC(3),W(1,3))
