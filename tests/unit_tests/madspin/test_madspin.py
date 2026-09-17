@@ -1650,6 +1650,74 @@ class TestDrawOffshellMass(unittest.TestCase):
         self.assertAlmostEqual(max_mass, 173.0 + 2 * 1.5)
 
 
+class TestDecayRunCardBwcutoff(unittest.TestCase):
+    """_decay_run_card_bwcutoff: the decay_*_* generation must use MadSpin's
+    BW_cut as its bwcutoff, since that run_card sets the window of every
+    sub-resonance (the W of t > w+ b, w+ > l+ vl). Before, the card was rebuilt
+    from the decay directory template and kept 15 even for a production run
+    with bwcutoff = 5."""
+
+    class _Stub(object):
+        _resolved_bw_cut = interface_madspin.MadSpinInterface._resolved_bw_cut
+        _decay_run_card_bwcutoff = \
+            interface_madspin.MadSpinInterface._decay_run_card_bwcutoff
+        def __init__(self, bw_cut, run_card_option=None):
+            self.options = {'BW_cut': bw_cut, 'run_card': run_card_option}
+
+    def _written_card(self):
+        """A decay directory card as it is re-read from disk: RunCard.read marks
+        every entry, bwcutoff = 15 included, as user_set."""
+        path = os.path.join(self.tmpdir, 'run_card.dat')
+        banner.RunCardLO().write(path)
+        card = banner.RunCard(path)
+        self.assertIn('bwcutoff', card.user_set)
+        self.assertEqual(card['bwcutoff'], 15)
+        return card
+
+    def setUp(self):
+        import tempfile
+        self.tmpdir = tempfile.mkdtemp()
+
+    def tearDown(self):
+        shutil.rmtree(self.tmpdir, ignore_errors=True)
+
+    def test_template_card_takes_bw_cut(self):
+        """No user run_card: BW_cut (resolved from the production bwcutoff)
+        replaces the template's 15, even though reading marked it user_set."""
+        card = self._written_card()
+        self._Stub(5.0)._decay_run_card_bwcutoff(card)
+        self.assertEqual(card['bwcutoff'], 5.0)
+
+    def test_unset_bw_cut_falls_back_to_15(self):
+        card = self._written_card()
+        card['bwcutoff'] = 7
+        self._Stub(-1)._decay_run_card_bwcutoff(card)
+        self.assertEqual(card['bwcutoff'], 15)
+
+    def test_set_run_card_other_entry_still_takes_bw_cut(self):
+        """"set run_card nevents 100" does not pin bwcutoff."""
+        opts = interface_madspin.MadSpinOptions()
+        opts['run_card'] = 'nevents 100'
+        stub = self._Stub(5.0, run_card_option=opts['run_card'])
+        stub._decay_run_card_bwcutoff(opts.run_card)
+        self.assertEqual(opts.run_card['bwcutoff'], 5.0)
+
+    def test_explicit_set_run_card_bwcutoff_wins(self):
+        """"set run_card bwcutoff 8" beats BW_cut."""
+        opts = interface_madspin.MadSpinOptions()
+        opts['run_card'] = 'bwcutoff 8'
+        stub = self._Stub(5.0, run_card_option=opts['run_card'])
+        stub._decay_run_card_bwcutoff(opts.run_card)
+        self.assertEqual(opts.run_card['bwcutoff'], 8)
+
+    def test_user_run_card_file_keeps_its_bwcutoff(self):
+        card = self._written_card()
+        card['bwcutoff'] = 12
+        stub = self._Stub(5.0, run_card_option='/some/run_card.dat')
+        stub._decay_run_card_bwcutoff(card)
+        self.assertEqual(card['bwcutoff'], 12)
+
+
 class TestPartialDensityContraction(unittest.TestCase):
     """_partial_density_contraction: N_k, the production density matrix
     contracted with the decays drawn so far, the rest replaced by I/n.
@@ -5426,6 +5494,195 @@ class TestSequentialSlots(unittest.TestCase):
         particles, slots = interface._sequential_slots(production, decays_key)
         self.assertEqual(slots, [0, 2, 1])
         self.assertEqual([p.pid for p in particles], [6, -6, 6, 21])
+
+
+class TestDensityBasisPosition(unittest.TestCase):
+    """_density_basis' ``position``: the Fortran legs GET_DENSITY opens the
+    helicity indices on. They must index the matrix element's leg order (the
+    order get_momenta lays the momenta out in), not the LHE record.
+
+    The record index used to be taken, which is wrong as soon as MadEvent writes
+    an s-channel resonance: for ``d d~ > z z d d~`` with a Z -> d d~ in the
+    window the record is ``d d~ Z(2) Z Z d d~``, positions came out [4, 5] --
+    the second Z and the outgoing d -- and Tr(rho_prod) was 20x |M_prod|^2
+    (SMEFTsim p p > z z j j, 28% of the production events).
+    """
+
+    class _Model(object):
+        class _P(dict):
+            pass
+        def get_particle(self, pid):
+            p = self._P()
+            p['spin'] = 3 if abs(pid) in (23, 24) else 2
+            return p
+
+    class _Stub(object):
+        _density_basis = interface_madspin.MadSpinInterface._density_basis
+        get_allowed_hel = interface_madspin.MadSpinInterface.get_allowed_hel
+        def __init__(self, orig_order):
+            self.orig_order = orig_order
+            self.model = TestDensityBasisPosition._Model()
+        def get_iden(self, event):
+            return 36
+        def get_pdir(self, event):
+            tag, _ = event.get_tag_and_order()
+            return 'P1_ddx_zzddx', self.orig_order, 'M0_', 0, tag
+        def _apply_production_polarization(self, decaying_pdg, helicities):
+            return helicities, None
+        def _apply_pure_interference(self, decaying_pdg, helicities, restriction):
+            return restriction, None
+        def _pure_interference_pdgs(self, decays_key):
+            return []
+
+    # id status mother1 mother2 : distinct energies so every leg is recognisable
+    RESONANT = [(1, -1, 0, 0, 400.), (-1, -1, 0, 0, 300.),
+                (23, 2, 1, 2, 150.), (23, 1, 1, 2, 210.), (23, 1, 1, 2, 190.),
+                (1, 1, 3, 3, 80.), (-1, 1, 3, 3, 70.)]
+    REORDERED = [(1, -1, 0, 0, 400.), (-1, -1, 0, 0, 300.),
+                 (1, 1, 1, 2, 80.), (23, 1, 1, 2, 210.), (-1, 1, 1, 2, 70.),
+                 (23, 1, 1, 2, 340.)]
+
+    @staticmethod
+    def _event(lines):
+        text = '<event>\n %d 1 +1.0e+00 1.0e+02 7.5e-03 1.1e-01\n' % len(lines)
+        for pid, status, m1, m2, energy in lines:
+            text += (' %d %d %d %d 0 0 +1.0e+00 +2.0e+00 +3.0e+00 %.6e 0.0e+00 0.0e+00 9.0e+00\n'
+                     % (pid, status, m1, m2, energy))
+        text += '</event>\n'
+        return lhe_parser.Event(text)
+
+    def _check_slots(self, event, orig_order, decays_key):
+        static = self._Stub(orig_order)._density_basis(event, decays_key)
+        momenta = event.get_momenta(orig_order)
+        self.assertEqual(len(static['position']), len(static['init_part']))
+        for pos, part in zip(static['position'], static['init_part']):
+            # the momentum GET_DENSITY sees at that leg is the slot's particle
+            self.assertEqual(momenta[pos - 1][0], part.E)
+            self.assertEqual(orig_order[0 if pos <= len(orig_order[0]) else 1]
+                             [pos - 1 - (0 if pos <= len(orig_order[0]) else len(orig_order[0]))],
+                             part.pid)
+        self.assertEqual(static['decaying_pdg'], [p.pid for p in static['init_part']])
+        return static
+
+    def test_status2_resonance_does_not_shift_the_positions(self):
+        order = [[1, -1], [23, 23, 1, -1]]
+        static = self._check_slots(self._event(self.RESONANT), order, (23,))
+        self.assertEqual(static['position'], [3, 4])
+        self.assertEqual(static['helicities'], [[-1, 0, 1], [-1, 0, 1]])
+
+    def test_positions_follow_the_matrix_element_order(self):
+        """Final state written d Z d~ Z in the record, Z Z d d~ in the ME."""
+        order = [[1, -1], [23, 23, 1, -1]]
+        static = self._check_slots(self._event(self.REORDERED), order, (23,))
+        self.assertEqual(static['position'], [3, 4])
+
+    def test_slots_grouped_by_pdg_in_decays_key_order(self):
+        order = [[1, -1], [23, 23, 1, -1]]
+        static = self._check_slots(self._event(self.RESONANT), order, (-1, 23))
+        self.assertEqual(static['position'], [6, 3, 4])
+        self.assertEqual(static['decaying_pdg'], [-1, 23, 23])
+
+    def test_order_missing_a_decaying_particle_is_an_error(self):
+        stub = self._Stub([[1, -1], [23, 1, -1]])
+        self.assertRaises(Exception, stub._density_basis,
+                          self._event(self.RESONANT), (23,))
+
+
+class TestF2pyBwcutoff(unittest.TestCase):
+    """_set_f2py_bwcutoff: the window of the $-syntax propagators pushed into
+    the standalone library must be the bwcutoff the events were generated with.
+    The standalone output used to hardcode 15; with a production at
+    bwcutoff = 5, `p p > z z j j $h` events 5-15 Gamma_H from the h pole had the
+    h in MadEvent's weight but not in MadSpin's |M_prod|^2, and a reshuffle
+    across the 15-width edge turned the resonance back on (weights ~1e5)."""
+
+    class _Banner(dict):
+        def get_detail(self, card, name):
+            assert (card, name) == ('run_card', 'bwcutoff')
+            return self['bwcutoff']
+
+    class _Module(object):
+        def __init__(self):
+            self.calls = []
+        def set_bwcutoff(self, value):
+            self.calls.append(value)
+
+    class _OldModule(object):
+        pass
+
+    class _RunCard(dict):
+        def __init__(self, bwcutoff, user_set):
+            dict.__init__(self, bwcutoff=bwcutoff)
+            self.user_set = set(['bwcutoff']) if user_set else set()
+
+    class _Options(dict):
+        pass
+
+    class _Stub(object):
+        MI = interface_madspin.MadSpinInterface
+        _resolved_bw_cut = MI._resolved_bw_cut
+        _production_bwcutoff = MI._production_bwcutoff
+        _decay_generation_bwcutoff = MI._decay_generation_bwcutoff
+        _set_f2py_bwcutoff = MI._set_f2py_bwcutoff
+        def __init__(self, bwcutoff=5.0, bw_cut=-1, run_card=None,
+                     proc='generate p p > z z j j $h'):
+            self.banner = TestF2pyBwcutoff._Banner(mg5proccard=proc)
+            if bwcutoff is not None:
+                self.banner['mgruncard'] = '...'
+                self.banner['bwcutoff'] = bwcutoff
+            self.options = TestF2pyBwcutoff._Options(
+                BW_cut=bw_cut, run_card='bwcutoff 8' if run_card else '')
+            if run_card is not None:
+                self.options.run_card = run_card
+
+    def test_production_module_gets_the_production_run_card_value(self):
+        mod = self._Module()
+        self._Stub(bwcutoff=5.0, bw_cut=10)._set_f2py_bwcutoff(mod, 'prod')
+        self.assertEqual(mod.calls, [5.0])
+
+    def test_decay_module_gets_the_decay_generation_value(self):
+        mod = self._Module()
+        self._Stub(bwcutoff=5.0, bw_cut=10)._set_f2py_bwcutoff(mod, 'decay')
+        self.assertEqual(mod.calls, [10.0])
+        mod = self._Module()
+        self._Stub(bwcutoff=5.0, bw_cut=-1)._set_f2py_bwcutoff(mod, 'decay')
+        self.assertEqual(mod.calls, [15.0])
+
+    def test_explicit_run_card_bwcutoff_wins_for_the_decays(self):
+        mod = self._Module()
+        stub = self._Stub(bw_cut=10, run_card=self._RunCard(8, user_set=True))
+        stub._set_f2py_bwcutoff(mod, 'decay')
+        self.assertEqual(mod.calls, [8.0])
+        mod = self._Module()
+        stub = self._Stub(bw_cut=10, run_card=self._RunCard(8, user_set=False))
+        stub._set_f2py_bwcutoff(mod, 'decay')
+        self.assertEqual(mod.calls, [10.0])
+
+    def test_no_run_card_leaves_the_library_default(self):
+        mod = self._Module()
+        self._Stub(bwcutoff=None)._set_f2py_bwcutoff(mod, 'prod')
+        self.assertEqual(mod.calls, [])
+
+    def test_old_library_without_the_setter_warns_only_for_dollar_processes(self):
+        # capture on the module's logger object itself: the test harness may
+        # raise the level of 'decay.stdout', which would filter a handler
+        records = []
+        class _Log(object):
+            def warning(self, msg, *args):
+                records.append(msg % args)
+        saved = interface_madspin.logger
+        interface_madspin.logger = _Log()
+        try:
+            self._Stub(proc='generate p p > z z j j')._set_f2py_bwcutoff(
+                                                    self._OldModule(), 'prod')
+            self.assertEqual(records, [])
+            stub = self._Stub()
+            stub._set_f2py_bwcutoff(self._OldModule(), 'prod')
+            stub._set_f2py_bwcutoff(self._OldModule(), 'decay')
+            self.assertEqual(len(records), 1)
+            self.assertIn('bwcutoff = 5', records[0])
+        finally:
+            interface_madspin.logger = saved
 
 
 class TestProductionJacobianForSlots(unittest.TestCase):
@@ -10671,6 +10928,9 @@ class TestMatrixElementParamCard(unittest.TestCase):
 
             def _set_f2py_beampol(self, mymod):
                 pass  # beam polarisation is not what is under test here
+
+            def _set_f2py_bwcutoff(self, mymod, prod_or_decay):
+                pass  # nor is the $-propagator window
         stub = Stub()
         stub.path_me = self.tmpdir
         stub.ms_me_subdir = 'madspin_me'

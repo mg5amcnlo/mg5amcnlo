@@ -125,6 +125,20 @@ C     aliases them. See PY_SET_BEAMPOL for the convention.
       BEAMPOL(2) = POL2
       RETURN
       END
+
+
+      SUBROUTINE %(f2py_prefix)sf77_set_bwcutoff(NEW_VALUE)
+C     Window of the $-syntax propagators (see the MATRIX routines). Filled on
+C     this side of the shared-library boundary, like /to_beampol/: a common
+C     block written from the f2py wrapper is not the one the matrix elements
+C     read.
+      IMPLICIT NONE
+      DOUBLE PRECISION NEW_VALUE
+      DOUBLE PRECISION STANDALONE_BWCUTOFF
+      COMMON/TO_STANDALONE_BWCUTOFF/STANDALONE_BWCUTOFF
+      STANDALONE_BWCUTOFF = NEW_VALUE
+      RETURN
+      END
       
       
       subroutine %(f2py_prefix)sf77_CHANGE_PARA(name, value)

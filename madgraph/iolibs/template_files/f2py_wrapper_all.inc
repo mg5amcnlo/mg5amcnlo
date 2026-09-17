@@ -196,6 +196,16 @@ CF2PY integer, intent(in) :: new_value
       RETURN
       END
 
+      SUBROUTINE %(f2py_prefix)sSET_BWCUTOFF(NEW_VALUE)
+C     window of the $-syntax propagators (see the MATRIX routines): the
+C     run_card bwcutoff the events were generated with
+      IMPLICIT NONE
+CF2PY double precision, intent(in) :: new_value
+      DOUBLE PRECISION NEW_VALUE
+      CALL %(f2py_prefix)sf77_set_bwcutoff(NEW_VALUE)
+      RETURN
+      END
+
 
       %(nhel)s
       
