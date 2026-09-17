@@ -1050,7 +1050,10 @@ class ReweightInterface(extended_cmd.Cmd):
                         try:
                             module.set_bwcutoff(float(self.banner.get_detail('run_card', 'bwcutoff')))
                         except Exception as error:
-                            logger.debug('bwcutoff not passed to %s: %s', path, error)
+                            logger.warning('bwcutoff not passed to %s: %s. The '
+                                           '$-syntax propagators keep the '
+                                           'default window of 15 widths.',
+                                           path, error)
 
                     #check for running attribute
                     update_running_info = False
