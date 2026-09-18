@@ -842,7 +842,7 @@ c$$$  include 'madfks_mcatnlo.inc'
      $     ,sevmc_Sev,z_shower(nexternal),xmcxsec(nexternal),g22,wgt1
      $     ,xlum_mc_fact,fks_Hij,amp_split_xmcxsec(amp_split_size,2),xi
      $     ,y,z(2),p_cms(0:3,nexternal),p_lab(0:3,nexternal),jac,jacPS
-     $     ,xx(ndimmax),factor ,p_cms_flipped(0:3,nexternal)
+     $     ,xx(ndimmax),p_cms_flipped(0:3,nexternal)
      $     ,p_lab_flipped(0:3,nexternal) ,p_flipped(0:3,nexternal),xi_ij
      $     ,y_ij,bogus_probne_fun
       external fks_Sij,fks_Hij,bogus_probne_fun
@@ -852,6 +852,15 @@ c$$$  include 'madfks_mcatnlo.inc'
       common/fksvariables/xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt
       double precision p_born(0:3,nexternal-1)
       common /pborn/   p_born
+      double precision p_born_save(0:3,nexternal-1),xbjrk_alt(2)
+      double precision xbjrk_ev(2),xbjrk_cnt(2,-2:2)
+      common/cbjorkenx/xbjrk_ev,xbjrk_cnt
+      double complex xij_aor,xij_aor_save
+      common/cxij_aor/xij_aor
+      double precision veckn_ev,veckbarn_ev,xp0jfks,genps_save(3)
+      common/cgenps_fks/veckn_ev,veckbarn_ev,xp0jfks
+      double precision pmass(nexternal)
+      common /to_mass/pmass
       INTEGER              NFKSPROCESS
       COMMON/C_NFKSPROCESS/NFKSPROCESS
       integer            i_fks,j_fks
@@ -870,13 +879,14 @@ c$$$  include 'madfks_mcatnlo.inc'
       common/counter_subt_diverge/n_MC_subt_diverge
       logical                calculatedBorn
       common/ccalculatedBorn/calculatedBorn
-      double precision  xinorm_ev
+      double precision xinorm_ev,xinorm_save
       common /cxinormev/xinorm_ev
       logical include_gfun
 !     If .true., multiplies MC subtraction terms by S_ev
       logical UseSfun
       parameter (UseSfun=.false.)
       call cpu_time(tBefore)
+      probne=1d0
       if (p(0,1).le.0d0) return
       sevmc_Hev = fks_Sij(p,i_fks,j_fks,xi_i_fks_ev,y_ij_fks_ev)
       sevmc_Sev = fks_Hij(p,i_fks,j_fks)
@@ -884,14 +894,13 @@ c$$$  include 'madfks_mcatnlo.inc'
 
       xi=get_xi_from_p(i_fks,j_fks,p_cms)
       y=get_yij_from_p(i_fks,j_fks,p_cms)
+      include_gfun=.true.
       call compute_MCsubtraction_kl(i_fks,j_fks,xi,y,p
      $     ,p_cms,p_born,include_gfun,z,n_connect
      $     ,amp_split_xmcxsec)
       xi_ij=xi
       y_ij=y
-      xinorm_ij=xnorm_ev
 
-      probne=1d0
       if (mcatnlo_delta_mod) then
 !     include Delta
          call compute_delta(p,probne)
@@ -902,9 +911,10 @@ c$$$  include 'madfks_mcatnlo.inc'
       
       do iconnect=1,n_connect
          if (all(amp_split_xmcxsec(:,iconnect).eq.0d0)) cycle
-         call get_mc_lum(j_fks,z(iconnect),xi,xlum_mc_fact)
+         call get_mc_lum(j_fks,z(iconnect),xi,xlum_mc_fact
+     $        ,xbjrk_cnt(1,0))
 !     Re-remove the 1/xi^2 and 1/(1-y) factors; they depend on 'ij', not 'kl'.
-!     Also, include the difference in phase-space Jacobian factors.
+!     The outer prefactor already supplies the phase-space measure.
          do iamp=1, amp_split_size
             if (amp_split_xmcxsec(iamp,iconnect).eq.0d0) cycle
             amp_split_xmcxsec(iamp,iconnect)=amp_split_xmcxsec(iamp
@@ -925,14 +935,14 @@ c$$$  include 'madfks_mcatnlo.inc'
          enddo
       enddo
 
-      factor=xi_ij**2*(1d0-y_ij)*probne
-      if (include_gfun) then
-         call compute_MCsubtraction_from_gfun(xi,y,sevmc_Hev
-     $        ,sevmc_Sev,factor)
-      endif
+!     The driver adds the G-function replacement once, using probne.
       include_gfun=.false.
 
       nFKSprocess_save=nFKSprocess
+      p_born_save=p_born
+      xij_aor_save=xij_aor
+      xinorm_save=xinorm_ev
+      genps_save=[veckn_ev,veckbarn_ev,xp0jfks]
 
       do iFKS=1,fks_configs
          call update_fks_dir(iFKS)
@@ -971,16 +981,14 @@ c$$$         call fks_inc_chooser()
                xi=get_xi_from_p(i_fks,j_fks,p_cms_flipped)
                y=get_yij_from_p(i_fks,j_fks,p_cms_flipped)
                
-! call the inverse phase-space. This will update the Born
-! momenta, and the corresponding phase-space jacobian for the
-! n+1-body. Note: if the random numbers are not generated flat
-! (they are flat here), also the jacobian from importance
-! sampling should be included.
+! Reconstruct the alternative FKS Born point and its Bjorken x's.
+! The returned Jacobian is used only to check that inversion succeeded;
+! the outer phase-space and importance-sampling weights stay unchanged.
                jac=1d0
 !     inputs are: ndim,iconfig,p
-!     outputs are: xx,jac (also updates pborn common block)
+!     outputs are: xx,jac,xbjrk_alt (also updates pborn common block)
                call generate_lab_momenta_inverse(ndim,iconfig,jac,xx
-     $              ,p_lab_flipped)
+     $              ,p_lab_flipped,xbjrk_alt)
                if (jac.le.0d0) cycle
                CalculatedBorn=.false.
                ! include_gfun must be .false., because we do not want to
@@ -990,16 +998,15 @@ c$$$         call fks_inc_chooser()
      $              ,amp_split_xmcxsec)
                do iconnect=1,n_connect
                   if (all(amp_split_xmcxsec(:,iconnect).eq.0d0)) cycle
-                  call get_mc_lum(j_fks,z(iconnect),xi,xlum_mc_fact)
+                  call get_mc_lum(j_fks,z(iconnect),xi,xlum_mc_fact
+     $                 ,xbjrk_alt)
 !     Re-remove the 1/xi^2 and 1/(1-y) factors; they depend on 'ij', not 'kl'.
-!     Also, include the difference in phase-space Jacobian factors.
+!     Use the same damping as the outer real and G-replacement terms.
                   do iamp=1, amp_split_size
                      if (amp_split_xmcxsec(iamp,iconnect).eq.0d0) cycle
                      amp_split_xmcxsec(iamp,iconnect)
      $                    =amp_split_xmcxsec(iamp,iconnect)*xi_ij**2
-     $                    *(1d0-y_ij)*jac/jacPS
-!     codex extra factor (eq.9 of audit)
-     $                    *(xinorm_ij*xi_ij)/(xinorm_ev*xi)
+     $                    *(1d0-y_ij)*probne
                      call amp_split_pos_to_orders(iamp, orders)
                      QCD_power=orders(qcd_pos)
                      wgtcpower=0d0
@@ -1022,10 +1029,19 @@ c$$$                     endif
       enddo
       
       iFKS=nFKSprocess_save
-      xinorm_ev=xnorm_ij
       call update_fks_dir(iFKS)
 c$$$      call fks_inc_chooser()
       call update_coltype_and_charge(iFKS,i_fks,j_fks)
+      p_born=p_born_save
+      xij_aor=xij_aor_save
+      xinorm_ev=xinorm_save
+      veckn_ev=genps_save(1)
+      veckbarn_ev=genps_save(2)
+      xp0jfks=genps_save(3)
+      call fill_kinematics_module(p_cms,i_fks,j_fks,xi_ij,y_ij
+     $     ,pmass(j_fks),.false.)
+!     Alternative Born evaluations overwrote the cached amplitudes.
+      CalculatedBorn=.false.
       call cpu_time(tAfter)
       t_MC_subt=t_MC_subt+(tAfter-tBefore)
       return
@@ -1084,7 +1100,7 @@ c$$$      call fks_inc_chooser()
       do i=0,2   ! soft, collinear, and soft-collinear
          if (f_MC_H_con(i).eq.0d0 .and. f_MC_S_con(i).eq.0d0) cycle
          call set_cms_stuff(i)
-         amp_split(iamp)=0d0
+         amp_split(1:amp_split_size)=0d0
          call sreal(p1_cnt(0,1,i),xi_con(i),y_con(i),dum)
          do iamp=1, amp_split_size
             if (amp_split(iamp).eq.0d0) cycle
@@ -5620,25 +5636,24 @@ c do the same as above for the counterevents
       return
       end
 
-      subroutine get_mc_lum(j_fks,z_shower,xi_i_fks,xlum_mc_fact)
+      subroutine get_mc_lum(j_fks,z_shower,xi_i_fks,xlum_mc_fact
+     $     ,xbjrk_born)
       implicit none
       include "run.inc"
       include "nexternal.inc"
       integer j_fks
-      double precision z_shower,xi_i_fks,xlum_mc_fact
-      double precision xbjrk_ev(2),xbjrk_cnt(2,-2:2)
-      common/cbjorkenx/xbjrk_ev,xbjrk_cnt
+      double precision z_shower,xi_i_fks,xlum_mc_fact,xbjrk_born(2)
       if(z_shower.lt.0.d0.or.z_shower.gt.1.d0)then
         write(*,*)'Error #1 in get_mc_lum',z_shower
         stop
       endif
       if(j_fks.gt.nincoming)then
-        xbk(1)=xbjrk_cnt(1,0)
-        xbk(2)=xbjrk_cnt(2,0)
+        xbk(1)=xbjrk_born(1)
+        xbk(2)=xbjrk_born(2)
         xlum_mc_fact=1.d0
       elseif(j_fks.eq.1)then
-        xbk(1)=xbjrk_cnt(1,0)/z_shower
-        xbk(2)=xbjrk_cnt(2,0)
+        xbk(1)=xbjrk_born(1)/z_shower
+        xbk(2)=xbjrk_born(2)
 c Note that this is true for Pythia since, due to event projection and to
 c the definition of the shower variable x = z_shower, the Bjorken x's for
 c the event (to be used in H events) are the ones for the counterevent
@@ -5649,8 +5664,8 @@ c multiplied by 1/x (by 1) for the emitting (non emitting) leg
           xlum_mc_fact = (1-xi_i_fks)/z_shower
         endif
       elseif(j_fks.eq.2)then
-        xbk(1)=xbjrk_cnt(1,0)
-        xbk(2)=xbjrk_cnt(2,0)/z_shower
+        xbk(1)=xbjrk_born(1)
+        xbk(2)=xbjrk_born(2)/z_shower
         if(xbk(2).gt.1.d0)then
           xlum_mc_fact = 0.d0
         else

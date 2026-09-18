@@ -457,7 +457,7 @@ c dump momenta in a fort.80 file
      $     ,amp_split_xmcxsec(amp_split_size,2),p_cms(0:3,nexternal)
      $     ,p_lab(0:3,nexternal) ,xx(99),wgt,jac,mass,p_cms_flipped(0:3
      $     ,nexternal),p_lab_flipped(0:3,nexternal),p_flipped(0:3
-     $     ,nexternal)
+     $     ,nexternal),xbjrk_alt(2)
       integer            i_fks,j_fks
       common/fks_indices/i_fks,j_fks
       double precision amp_split_mc(1:amp_split_size)
@@ -539,7 +539,7 @@ c dump momenta in a fort.80 file
 !     inputs are: ndim,iconfig,p
 !     outputs are: xx,jac (also updates pborn common block)
                call generate_lab_momenta_inverse(ndim,iconfig,jac,xx
-     $              ,p_lab_flipped)
+     $              ,p_lab_flipped,xbjrk_alt)
                if (jac.le.0d0) cycle
                CalculatedBorn=.false.
                ! include_gfun must be .false., because we do not want to

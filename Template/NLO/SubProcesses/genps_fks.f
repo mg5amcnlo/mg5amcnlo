@@ -2951,6 +2951,7 @@ c$$$      xjac=xjac*(y_ij_fks_upp-y_ij_fks_low)*x(2)*2d0
          y_ij_fks=dble(sign(1,icountevts))
          if (.not.colltest) then
             xjac=xjac*(y_ij_fks_upp-y_ij_fks_low)*x(2)*2d0
+     $           *(1d0-cctiny)
          else
             continue ! do not include jacobian for y in tests
          endif
@@ -2962,6 +2963,7 @@ c$$$     &        (y_ij_fks_upp-y_ij_fks_low))*2d0 ! compute x(2) from y
          y_ij_fks = y_ij_fks_upp -
      &        (y_ij_fks_upp-y_ij_fks_low)*(cctiny+(1-cctiny)*x(2)**2)
          xjac=xjac*(y_ij_fks_upp-y_ij_fks_low)*x(2)*2d0
+     $        *(1d0-cctiny)
       endif
       if ( y_ij_fks.gt.y_ij_fks_upp .or.
      &     y_ij_fks.lt.y_ij_fks_low) then
@@ -3138,7 +3140,7 @@ c$$$      xjac=xjac*2d0*x(1)
       if(abs(icountevts).eq.2.or.icountevts.eq.0)then
          xi_i_fks=0d0
          if (.not.softtest) then
-            xjac=xjac*2d0*x(1)
+            xjac=xjac*2d0*x(1)*(1d0-sstiny)
          else
             continue ! no jacobian for xi in tests
          endif
@@ -3148,7 +3150,7 @@ c$$$         xjac=xjac*2d0*sqrt((xi_i_fks-xiimin)/(xiimax-xiimin)) ! compute x(1
       else
          xi_i_hat=sstiny+(1-sstiny)*x(1)**2
          xi_i_fks=xiimin+(xiimax-xiimin)*xi_i_hat
-         xjac=xjac*2d0*x(1)
+         xjac=xjac*2d0*x(1)*(1d0-sstiny)
       endif
       if(xi_i_fks.gt.xiimax)then
          ! xi_i_fks is not in the allowed range: no need to generate
@@ -4550,14 +4552,15 @@ C dressed lepton stuff
 
 
 
-      subroutine generate_lab_momenta_inverse(ndim,iconfig,wgt,x,p)
+      subroutine generate_lab_momenta_inverse(ndim,iconfig,wgt,x,p
+     $     ,xbjrk_born)
       ! Momenta to invert should be in the lab frame !
       implicit none
       include 'genps.inc'
       include 'nexternal.inc'
       include 'nFKSconfigs.inc'
       integer ndim,iconfig
-      double precision wgt,x(99),p(0:3,nexternal)
+      double precision wgt,x(99),p(0:3,nexternal),xbjrk_born(2)
       double precision pmass(-nexternal:0,lmaxconfigs,0:fks_configs)
       double precision pwidth(-nexternal:0,lmaxconfigs,0:fks_configs)
       integer iforest(2,-max_branch:-1,lmaxconfigs,0:fks_configs)
@@ -4580,18 +4583,18 @@ C dressed lepton stuff
          qwidth(i)=pwidth(i,iconfig,0)
       enddo
       call generate_momenta_conf_wrapper_inverse(ndim,jac,x,itree,qmass
-     $     ,qwidth,p)
+     $     ,qwidth,p,xbjrk_born)
       wgt=wgt*jac
       end
 
       subroutine generate_momenta_conf_wrapper_inverse(ndim,jac,x,itree
-     $     ,qmass,qwidth,p)
+     $     ,qmass,qwidth,p,xbjrk_born)
       implicit none
       include 'genps.inc'
       include 'nexternal.inc'
       integer ndim,itree(2,-max_branch:-1)
       double precision jac,x(99),p(0:3,nexternal),qmass(-nexternal:0)
-     $     ,qwidth(-nexternal:0)
+     $     ,qwidth(-nexternal:0),xbjrk_born(2)
       logical granny_is_res
       integer igranny,iaunt
       logical granny_chain(-nexternal:nexternal)
@@ -4617,12 +4620,12 @@ C dressed lepton stuff
          only_event_phsp =.false.
          input_granny_m2=.false.
          call generate_momenta_conf_inverse(input_granny_m2,ndim,jac,x
-     $        ,granny_m2_red,rat_xi,itree,qmass,qwidth,p)
+     $        ,granny_m2_red,rat_xi,itree,qmass,qwidth,p,xbjrk_born)
       endif
       end
       
       subroutine generate_momenta_conf_inverse(input_granny_m2,ndim,jac
-     $     ,x,granny_m2_red,rat_xi,itree,qmass,qwidth,p)
+     $     ,x,granny_m2_red,rat_xi,itree,qmass,qwidth,p,xbjrk_born)
       implicit none
       include 'genps.inc'
       include 'nexternal.inc'
@@ -4631,6 +4634,7 @@ C dressed lepton stuff
       integer ndim,itree(2,-max_branch:-1)
       double precision jac,x(99),p(0:3,nexternal),qmass(-nexternal:0)
      $     ,qwidth(-nexternal:0),granny_m2_red(-1:1),rat_xi
+     $     ,xbjrk_born(2)
       double precision pmass(nexternal)
       common /to_mass/pmass
       integer i_fks,j_fks
@@ -4647,7 +4651,7 @@ C dressed lepton stuff
       double precision m(-max_branch:max_particles),stot,totmassin
      $     ,totmass,fksmass,tau_born,ycm_born,ycmhat,xjac0,xpswgt0
      $     ,shat_born,sqrtshat_born,pb(0:3,-max_branch:nexternal-1)
-     $     ,xbjrk_born(2),s(-max_branch:max_particles),shat,sqrtshat
+     $     ,s(-max_branch:max_particles),shat,sqrtshat
       double precision sumdot,dot
       external sumdot,dot
       integer i,iconfigsave
@@ -4693,6 +4697,7 @@ C dressed lepton stuff
 
       call generate_FKS_kinematics_inverse(x,ndim,xjac0,xpswgt0,
      $     stot,tau_born,ycm_born,xbjrk_born,p,pb)
+      if (xjac0.lt.0d0) goto 222
 
 ! given Born momenta, return x's and jac corresponding to tau_born and y_born.
       call generate_tau_y_wrapper_inverse(j_fks,qmass,qwidth,totmass,stot,pb(0,1)
@@ -4977,7 +4982,7 @@ c     Jacobian due to delta() of tau_born
      $     ,em2ycm_born,yij_upp,yij_low ,y_ij_fks_upp ,y_ij_fks_low
      $     ,x1bar2,omx1bar2,x2bar2,omx2bar2 ,yij_sol ,ximaxtmp,xi1,xi2
      $     ,xiimax,xiimin,xinorm,bstfact ,shy_bst ,chy_bst,chy_bstmo
-     $     ,cosphi_i_fks,sinphi_i_fks ,xdir_t(1:3),ybst
+     $     ,cosphi_i_fks,sinphi_i_fks ,xdir_t(1:3),ybst,sstiny,cctiny
       double precision xinorm_ev
       common /cxinormev/xinorm_ev
       integer idir,i
@@ -4991,6 +4996,12 @@ c     Jacobian due to delta() of tau_born
       common/sctests/softtest,colltest
       double complex xij_aor
       common/cxij_aor/xij_aor
+      sstiny=stiny
+      cctiny=ctiny
+      if (softtest.or.colltest) then
+         sstiny=0d0
+         cctiny=0d0
+      endif
       idir=0
       if(.not.fks_as_is)then
          if(j_fks.eq.1)then
@@ -5059,7 +5070,17 @@ c     Jacobian due to delta() of tau_born
          y_ij_fks_upp=-yij_low
          y_ij_fks_low=-yij_upp
       endif
-      x(2)=sqrt((y_ij_fks_upp-y_ij_fks)/(y_ij_fks_upp-y_ij_fks_low))
+      if (y_ij_fks_upp.le.y_ij_fks_low) then
+         xjac=-33d0
+         return
+      endif
+      x(2)=((y_ij_fks_upp-y_ij_fks)/
+     $     (y_ij_fks_upp-y_ij_fks_low)-cctiny)/(1d0-cctiny)
+      if (x(2).lt.-1d-12.or.x(2).gt.1d0+1d-12) then
+         xjac=-33d0
+         return
+      endif
+      x(2)=sqrt(max(0d0,min(1d0,x(2))))
 
       if (colltest) then
          if ( y_ij_fks_fix.gt.y_ij_fks_upp .or.
@@ -5068,7 +5089,8 @@ c     Jacobian due to delta() of tau_born
             return
          endif
       endif
-      xjac=xjac*(y_ij_fks_upp-y_ij_fks_low)*x(2)*2d0
+      if (.not.colltest) xjac=xjac*
+     $     (y_ij_fks_upp-y_ij_fks_low)*x(2)*2d0*(1d0-cctiny)
 
       x1bar2 = xbjrk_born(1)**2
       omx1bar2 = 1d0-x1bar2
@@ -5148,7 +5170,7 @@ c Lower bound on xi_i_fks
       else
          xiimin=0d0
       endif
-      if (xiimax.lt.xiimin) then
+      if (xiimax.le.xiimin) then
          write (*,*) 'WARNING #10 in genps_fks.f (inverse)'
      $        ,xiimax,xiimin
          xjac=-342d0
@@ -5157,14 +5179,19 @@ c Lower bound on xi_i_fks
 
       xinorm=xiimax-xiimin
       xinorm_ev=xinorm
-      x(1)=sqrt((xi_i_fks-xiimin)/(xiimax-xiimin))
+      x(1)=((xi_i_fks-xiimin)/xinorm-sstiny)/(1d0-sstiny)
+      if (x(1).lt.-1d-12.or.x(1).gt.1d0+1d-12) then
+         xjac=-102d0
+         return
+      endif
+      x(1)=sqrt(max(0d0,min(1d0,x(1))))
       if (softtest) then
          if(xi_i_fks/xiimax .gt. 1d0+stiny)then
             xjac=-102
             return
          endif
       endif
-      xjac=xjac*2d0*x(1)
+      if (.not.softtest) xjac=xjac*2d0*x(1)*(1d0-sstiny)
 
       x(3)=phi_i_fks/(2d0*pi)
       xjac=xjac*2d0*pi
@@ -5274,7 +5301,7 @@ c     Use xp in the reduced frame (a.k.a. tilde frame) to get the Born momenta.
       rat_xi=xiimax/xinorm
       x1_1=sqrt(xi_i_fks*rat_xi/xinorm)
       x1_2=(2*xiimax-xi_i_fks)/xinorm
-      xinorm_ev=xnorm
+      xinorm_ev=xinorm
 
       valid1=x1_1.gt.0d0 .and. x1_1.lt.rat_xi
       valid2=x1_2.gt.rat_xi .and. x1_2.lt.1d0

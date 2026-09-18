@@ -639,6 +639,9 @@ c$$$
       common/sctests/softtest,colltest
       double precision alsf,besf
       common/cgfunsfp/alsf,besf
+      amp_split_xmcxsec=0d0
+      z=0d0
+      lzone=.false.
       mass=pmass(l_fks)
       veckn_ev=rho(p_cm(0,l_fks))
       veckbarn_ev=rho(p_born(0,min(k_fks,l_fks)))
@@ -1209,8 +1212,7 @@ c$$$      end
       double precision xkern(1:2),xkernazi(1:2),z,xi,xjac
       double precision tiny
       parameter (tiny=1d-6)
-      logical limit,non_limit
-      common /MCcnt_limit/limit,non_limit
+      logical needs_shower_jacobian
       double precision       ch_i,ch_j,ch_m
       integer                i_type,j_type,m_type,j_pdg
       common/cparticle_types/ch_i,ch_j,ch_m,
@@ -1226,10 +1228,12 @@ c$$$      end
      $     (j_type.eq.8.or.(j_type.eq.1.and.dabs(ch_j).lt.tiny))) )then
          if(i_type.eq.8)then
 c g->gg, go->gog (icode=1)
-            call compute_splitting_kernel_icode1(xkern,xkernazi,z,xi)
+            call compute_splitting_kernel_icode1(xkern,xkernazi,z,xi
+     $           ,needs_shower_jacobian)
          elseif(abs(i_type).eq.3.or.(i_type.eq.1.and.dabs(ch_i).gt.tiny))then
 c g->qq, a->qq, a->ee (icode=2)
-            call compute_splitting_kernel_icode2(xkern,xkernazi,z,xi)
+            call compute_splitting_kernel_icode2(xkern,xkernazi,z,xi
+     $           ,needs_shower_jacobian)
          else
             write(*,*)'Error 1 in xmcsubt: unknown particle type'
             write(*,*)i_type
@@ -1242,10 +1246,12 @@ c g->qq, a->qq, a->ee (icode=2)
      $        then
          if(abs(i_type).eq.3.or.(i_type.eq.1.and.dabs(ch_i).gt.tiny))then
 c q->gq, q->aq, e->ae (icode=3)
-            call compute_splitting_kernel_icode3(xkern,xkernazi,z,xi)
+            call compute_splitting_kernel_icode3(xkern,xkernazi,z,xi
+     $           ,needs_shower_jacobian)
          elseif(i_type.eq.8.or.(i_type.eq.1.and.dabs(ch_i).lt.tiny))then
 c q->qg, q->qa, sq->sqg, sq->sqa, e->ea (icode=4)
-            call compute_splitting_kernel_icode4(xkern,xkernazi,z,xi)
+            call compute_splitting_kernel_icode4(xkern,xkernazi,z,xi
+     $           ,needs_shower_jacobian)
          else
             write(*,*)'Error 2 in xmcsubt: unknown particle type'
             write(*,*)i_type
@@ -1256,9 +1262,8 @@ c q->qg, q->qa, sq->sqg, sq->sqa, e->ea (icode=4)
          write(*,*)j_type,i_type
          stop
       endif
-      if (non_limit) then
-         ! If limit, the jacobian is already included in the kernel
-         ! (through the subroutines 'compute_splitting_kernel_icode)
+      if (needs_shower_jacobian) then
+!     Analytic limits include xjac; generic massive kernels still need it.
          xkern(1:2)    = xkern(1:2)*xjac
          xkernazi(1:2) = xkernazi(1:2)*xjac
       endif
@@ -1277,7 +1282,7 @@ c one can remove any reference to xi_i_fks
       tiny = 1d-6
       if (softtest.or.colltest)tiny = 1d-12
       limit = 1-y_ij_fks.lt.tiny .and. xi_i_fks.ge.tiny ! collinear (and not soft)
-      non_limit = xi_i_fks.ge.tiny  ! not collinear (and not soft)
+      non_limit = xi_i_fks.ge.tiny  ! non-soft; may also be collinear
       ! (Note, if soft, we should use the G-functions and not the MC subtraction terms)
       end
       
@@ -1307,7 +1312,8 @@ c one can remove any reference to xi_i_fks
      &     xij*(1d0-xm12/shat_n1)*(1d0-x)*(1d0-yij) * 2d0/(shat_n1*N_p)
       end
 
-      subroutine compute_splitting_kernel_icode1(xkern,xkernazi,z,xi)
+      subroutine compute_splitting_kernel_icode1(xkern,xkernazi,z,xi
+     $     ,needs_shower_jacobian)
       use process_module
       use kinematics_module
       implicit none
@@ -1327,6 +1333,8 @@ c Particle types (=color) of i_fks, j_fks and fks_mother
      &                       i_type,j_type,m_type,j_pdg
       logical limit,non_limit
       common /MCcnt_limit/limit,non_limit
+      logical needs_shower_jacobian
+      needs_shower_jacobian=.false.
       s=shat_n1
 c g->gg, go->gog (icode=1)
       if(ileg.le.2)then
@@ -1337,6 +1345,7 @@ c g->gg, go->gog (icode=1)
             xkern(2)=0d0
             xkernazi(2)=0d0
          elseif(non_limit)then
+            needs_shower_jacobian=.true.
             xfact=xfact_ileg12(N_p)
             call AP_reduced(m_type,i_type,ch_m,ch_i,one,z,ap)
             xkern(1:2)=xfact*ap(1:2)/(xi*(1-z))
@@ -1357,6 +1366,7 @@ c
       elseif(ileg.eq.3)then
          N_p=2
          if(non_limit)then
+            needs_shower_jacobian=.true.
             xfact=xfact_ileg3(N_p)
             call AP_reduced_SUSY(j_type,i_type,ch_m,ch_i,one,z,ap)
             xkern(1:2)=xfact*ap(1:2)/(xi*(1-z))
@@ -1372,6 +1382,7 @@ c
             xkern(2)=0d0
             xkernazi(2)=0d0
          elseif(non_limit)then
+            needs_shower_jacobian=.true.
             xfact=xfact_ileg4(N_p)
             call AP_reduced(j_type,i_type,ch_m,ch_i,one,z,ap)
             xkern(1:2)=xfact*ap(1:2)/(xi*(1-z))
@@ -1391,7 +1402,8 @@ c
       endif
       end
       
-      subroutine compute_splitting_kernel_icode2(xkern,xkernazi,z,xi)
+      subroutine compute_splitting_kernel_icode2(xkern,xkernazi,z,xi
+     $     ,needs_shower_jacobian)
       use process_module
       use kinematics_module
       implicit none
@@ -1411,6 +1423,8 @@ c Particle types (=color) of i_fks, j_fks and fks_mother
      &                       i_type,j_type,m_type,j_pdg
       logical limit,non_limit
       common /MCcnt_limit/limit,non_limit
+      logical needs_shower_jacobian
+      needs_shower_jacobian=.false.
       s=shat_n1
 c g->qq, a->qq, a->ee (icode=2)
       if(ileg.le.2)then
@@ -1420,6 +1434,7 @@ c g->qq, a->qq, a->ee (icode=2)
             xkern(2)=xkern(1) * dble(gal(1))**2 / g**2 * 
      &           ch_i**2 * abs(i_type) / vtf
          elseif(non_limit)then
+            needs_shower_jacobian=.true.
             xfact=xfact_ileg12(N_p)
             call AP_reduced(m_type,i_type,ch_m,ch_i,one,z,ap)
             xkern(1:2)=xfact*ap(1:2)/(xi*(1-z))
@@ -1437,6 +1452,7 @@ c
             xkernazi(2)=xkernazi(1) * dble(gal(1))**2 / g**2 *
      &           ch_i**2 * abs(i_type) / vtf
          elseif(non_limit)then
+            needs_shower_jacobian=.true.
             xfact=xfact_ileg4(N_p)
             call AP_reduced(j_type,i_type,ch_m,ch_i,one,z,ap)
             xkern(1:2)=xfact*ap(1:2)/(xi*(1-z))
@@ -1447,7 +1463,8 @@ c
       endif
       end
       
-      subroutine compute_splitting_kernel_icode3(xkern,xkernazi,z,xi)
+      subroutine compute_splitting_kernel_icode3(xkern,xkernazi,z,xi
+     $     ,needs_shower_jacobian)
       use process_module
       use kinematics_module
       implicit none
@@ -1467,6 +1484,8 @@ c Particle types (=color) of i_fks, j_fks and fks_mother
      &                       i_type,j_type,m_type,j_pdg
       logical limit,non_limit
       common /MCcnt_limit/limit,non_limit
+      logical needs_shower_jacobian
+      needs_shower_jacobian=.false.
       s=shat_n1
 c q->gq, q->aq, e->ae (icode=3)
       if(ileg.le.2)then
@@ -1479,6 +1498,7 @@ c q->gq, q->aq, e->ae (icode=3)
             xkernazi(2)=xkernazi(1) * (dble(gal(1))**2 / g**2) *
      &           (ch_i**2 / vcf)
          elseif(non_limit)then
+            needs_shower_jacobian=.true.
             xfact=xfact_ileg12(N_p)
             call AP_reduced(m_type,i_type,ch_m,ch_i,one,z,ap)
             xkern(1:2)=xfact*ap(1:2)/(xi*(1-z))
@@ -1490,6 +1510,7 @@ c
       elseif(ileg.eq.3)then
          N_p=1
          if(non_limit)then
+            needs_shower_jacobian=.true.
             xfact=xfact_ileg3(N_p)
             call AP_reduced(j_type,i_type,ch_m,ch_i,one,z,ap)
             xkern(1:2)=xfact*ap(1:2)/(xi*(1-z))
@@ -1504,6 +1525,7 @@ c
             xkern(2)=xkern(1) * (dble(gal(1))**2 / g**2) * 
      &           (ch_i**2 / vcf)
          elseif(non_limit)then
+            needs_shower_jacobian=.true.
             xfact=xfact_ileg4(N_p)
             call AP_reduced(j_type,i_type,ch_m,ch_i,one,z,ap)
             xkern(1:2)=xfact*ap(1:2)/(xi*(1-z))
@@ -1511,7 +1533,8 @@ c
       endif
       end
 
-      subroutine compute_splitting_kernel_icode4(xkern,xkernazi,z,xi)
+      subroutine compute_splitting_kernel_icode4(xkern,xkernazi,z,xi
+     $     ,needs_shower_jacobian)
       use process_module
       use kinematics_module
       implicit none
@@ -1535,6 +1558,8 @@ c Particle types (=color) of i_fks, j_fks and fks_mother
       common /c_fks_inc/fks_j_from_i,particle_type,pdg_type
       logical limit,non_limit
       common /MCcnt_limit/limit,non_limit
+      logical needs_shower_jacobian
+      needs_shower_jacobian=.false.
       s=shat_n1
 c q->qg, q->qa, sq->sqg, sq->sqa, e->ea (icode=4)
       if(ileg.le.2)then
@@ -1544,6 +1569,7 @@ c q->qg, q->qa, sq->sqg, sq->sqa, e->ea (icode=4)
             xkern(2)=xkern(1) * (dble(gal(1))**2 / g**2) * 
      &           (ch_m**2 / vcf)
          elseif(non_limit)then
+            needs_shower_jacobian=.true.
             xfact=xfact_ileg12(N_p)
             call AP_reduced(m_type,i_type,ch_m,ch_i,one,z,ap)
             xkern(1:2)=xfact*ap(1:2)/(xi*(1-z))
@@ -1552,6 +1578,7 @@ c
       elseif(ileg.eq.3)then
          N_p=1
          if(non_limit)then
+            needs_shower_jacobian=.true.
             xfact=xfact_ileg3(N_p)
             if(abs(j_pdg).le.6)then
                if(shower_mc_mod(1:8).ne.'HERWIGPP')
@@ -1574,6 +1601,7 @@ c
             xkern(2)=xkern(1) * (dble(gal(1))**2 / g**2) * 
      &           (ch_j**2 / vcf)
          elseif(non_limit)then
+            needs_shower_jacobian=.true.
             xfact=xfact_ileg4(N_p)
             call AP_reduced(j_type,i_type,ch_m,ch_i,one,z,ap)
             xkern(1:2)=xfact*ap(1:2)/(xi*(1-z))
@@ -2662,6 +2690,10 @@ c
       common/c_leading_cflows/is_leading_cflow,num_leading_cflows
 c
 c BORN/BORNTILDE
+      born=0d0
+      borntilde=czero
+      amp_split_born=0d0
+      amp_split_borntilde=czero
 C check if momenta have to be rotated
       if ((ileg.eq.1.or.ileg.eq.2) .and.
      &    (j_fks.eq.2 .and. nexternal-1.ne.3)) then
