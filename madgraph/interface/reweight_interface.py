@@ -1688,32 +1688,52 @@ class ReweightInterface(extended_cmd.Cmd):
             return me_value
 
 
+    @staticmethod
+    def boost_momenta_to_rest_frame(momenta, pboost, rest_leg=None):
+        """``momenta`` -- (E, px, py, pz) in the matrix element's leg order --
+        boosted into the rest frame of ``pboost``; the convention of
+        ``Event.boost``. ``rest_leg`` (0-based) is forced to exactly zero
+        three-momentum: HELAS picks the frame's z axis as quantisation axis
+        only for a momentum that is exactly at rest, and the boost arithmetic
+        leaves ~1e-14 (see boost_to_frame in Template/LO/SubProcesses/genps.f).
+        """
+        neg = lhe_parser.FourMomentum(pboost.E, -pboost.px, -pboost.py,
+                                      -pboost.pz)
+        out = []
+        for mom in momenta:
+            new = lhe_parser.FourMomentum(mom).boost(neg)
+            out.append((new.E, new.px, new.py, new.pz))
+        if rest_leg is not None:
+            out[rest_leg] = (out[rest_leg][0], 0., 0., 0.)
+        return out
+
     def method_boost_event(self, event, all_p, orig_order, hypp_id):
         # For 2>N pass in the center of mass frame
         #   - required for helicity by helicity re-weighitng
         #   - Speed-up loop computation 
         
         if (hypp_id == 0 and ('frame_id' in self.banner.run_card and self.banner.run_card['frame_id'] !=6)):
-            import copy
-            new_event = copy.deepcopy(event)
-            pboost = FourMomenta()
-            to_inc = bin(self.banner.run_card['frame_id'])[2:]
-            to_inc.reverse()
-            nb_ext = 0
-            for p in new_event:
-                if p.status in [-1,1]:
-                    nb_ext += 1
-                    if to_inc[nb_ext]:
-                        pboost += p                    
-            new_event.boost(pboost)
-            if self.keep_ordering:
-                new_all_p = [new_event.get_momenta(orig_order)]
-            else:
-                new_all_p = new_event.get_all_momenta(orig_order)
-            if len(new_all_p) > 1:
+            # frame_id = sum(2**n for n in me_frame): bit n selects leg n,
+            # counted from 1 in the *matrix element's* order -- the order all_p
+            # is already in. Walking the event's own lines instead, as this
+            # did, picks whatever particle the LHE wrote at that place; it
+            # never got that far, since it also died on FourMomenta (no such
+            # name) and on str.reverse. The momenta are boosted directly, like
+            # the zboost below, rather than re-read from a boosted copy of the
+            # event.
+            frame_id = int(self.banner.run_card['frame_id'])
+            selected = [n for n in range(1, len(all_p[0]) + 1)
+                        if frame_id >> n & 1]
+            if not selected:
+                return all_p
+            if len(all_p) > 1:
                 logger.critical("due to ordering ambiguity, the boost used might not be consistent. please ensure that this is not an issue")
-                
-            return new_all_p
+            pboost = lhe_parser.FourMomentum()
+            for n in selected:
+                pboost += lhe_parser.FourMomentum(all_p[0][n - 1])
+            rest_leg = selected[0] - 1 if len(selected) == 1 else None
+            return [self.boost_momenta_to_rest_frame(p, pboost, rest_leg)
+                    for p in all_p]
 
         elif (hypp_id == 1 and self.boost_event):
             if self.boost_event is not True:
@@ -3073,10 +3093,14 @@ class DensityInterface(ReweightInterface):
         list_properties = [p for p in dir(lhe_parser.FourMomentum) if isinstance(getattr(lhe_parser.FourMomentum,p),property)]
         
         
-        boost_corrected = self.chose_particle_user_input(event, pdg, list_properties, orig_order, self.momenta_boost, 'momenta_boost', fortran_format = False)
+        # the particles are chosen -- and ranked, for an observable -- on the
+        # lab-frame momenta, laid out in the matrix element's order like pdg
+        # and all_p, so that a returned position is a leg for all three
+        lab_p = event.get_momenta(orig_order)
+        boost_corrected = self.chose_particle_user_input(lab_p, pdg, list_properties, orig_order, self.momenta_boost, 'momenta_boost', fortran_format = False)
         all_p = self.method_boost_event(event, all_p, orig_order, hypp_id, boost_corrected)
         
-        refChoice_corrected = self.chose_particle_user_input(event, pdg, list_properties, orig_order, self.helicity_direction, 'helicity_direction', fortran_format = True)
+        refChoice_corrected = self.chose_particle_user_input(lab_p, pdg, list_properties, orig_order, self.helicity_direction, 'helicity_direction', fortran_format = True)
         phi, theta = self.calculate_angles_rotation(refChoice_corrected, all_p, module)
         
         for i in range(len(all_p)):
@@ -3105,7 +3129,8 @@ class DensityInterface(ReweightInterface):
                 raise Exception("Ambiguous particle in production and decay. crash as requested by \'identical_particle_in_prod_and_decay\'")
 
 
-        pos_corrected = self.chose_particle_user_input(event, pdg, list_properties, orig_order, self.particle_in_density_matrix, 'particle_in_density_matrix', fortran_format = True)
+        # POS of py_get_density: a leg of the matrix element, like pdg and all_p
+        pos_corrected = self.chose_particle_user_input(lab_p, pdg, list_properties, orig_order, self.particle_in_density_matrix, 'particle_in_density_matrix', fortran_format = True)
 
         status = []
         for particle in event:
@@ -3180,16 +3205,17 @@ class DensityInterface(ReweightInterface):
 
         if 0 in self.momenta_boost[0]: #if we don't want to boost the system
             return all_p
-        
-        import copy
-        new_event = copy.deepcopy(event)
-        nb_ext = 0
+        if -1 in boost_corrected:
+            return all_p
+
+        # boost_corrected holds legs of the matrix element (0-based), the
+        # order all_p is in. This used to count the event's own lines,
+        # status-2 ones included, against them -- another particle whenever
+        # the LHE order is not the matrix element's, or a resonance line sits
+        # before the chosen leg.
         pboost = lhe_parser.FourMomentum()
-        for p in new_event: 
-            for j in range(len(boost_corrected)):
-                if nb_ext == boost_corrected[j]:
-                    pboost += p
-            nb_ext += 1
+        for position in boost_corrected:
+            pboost += lhe_parser.FourMomentum(all_p[0][position])
 
 
         if abs(pboost.px/pboost.E) < 1e-10 and abs(pboost.py/pboost.E) < 1e-10 and abs(pboost.pz/pboost.E) < 1e-10:
@@ -3203,24 +3229,27 @@ class DensityInterface(ReweightInterface):
         if abs(pboost.pz/pboost.E) < 1e-10:
             pboost.pz = 0.
 
-        new_event.boost(pboost)
-        if self.keep_ordering:
-            new_all_p = [new_event.get_momenta(orig_order)]
-        else:
-            new_all_p = new_event.get_all_momenta(orig_order)
-        if len(new_all_p) > 1:
+        if len(all_p) > 1:
             logger.critical("due to ordering ambiguity, the boost used might not be consistent. please ensure that this is not an issue")
+        # boosted directly, like the base class's frame and zboost branches,
+        # rather than re-read from a boosted copy of the event
+        return [self.boost_momenta_to_rest_frame(p, pboost) for p in all_p]
 
-        return new_all_p
 
 
-
-    def chose_particle_user_input(self, event, pdg, list_properties, orig_order, user_input, name_input, fortran_format = False):
+    def chose_particle_user_input(self, momenta, pdg, list_properties, orig_order, user_input, name_input, fortran_format = False):
         """
         This function transforms the user_input for a given name_input into the position of particles in the original order.
         The position of the particles can then be used to boost, rotate the event, etc.
         fortran_format = True, means that we use the Fortran format for indices, so lists begin at 1, else we use Python format.
         Output: position_particles
+
+        ``momenta`` are the event's momenta in the matrix element's order,
+        i.e. aligned with ``pdg``: every position returned is a leg of the
+        matrix element. They used to be the event's own lines, which ranked
+        pdg[i] (a leg) together with event[i] (an LHE line, status-2 ones
+        included) -- a different particle whenever the LHE order is not the
+        matrix element's.
         """
         if 0 in user_input[0]: # if the user does not want to user this input
             return [-1]
@@ -3235,8 +3264,8 @@ class DensityInterface(ReweightInterface):
                 if prop == user_input[1]:
                     found_property = True
                     observable_values = []
-                    original_order = [i for i in range(len(event))]
-                    for i, p in enumerate(event):
+                    original_order = [i for i in range(len(momenta))]
+                    for i, p in enumerate(momenta):
                         if pdg[i] in user_input[0]:
                             correct_p_rot = lhe_parser.FourMomentum(p)
                             observable_values.append(getattr(correct_p_rot, prop))
@@ -3250,7 +3279,20 @@ class DensityInterface(ReweightInterface):
                         position_particles = self.find_position_particles_default_order(orig_order, user_input, name_input, fortran_format)
                         return position_particles
                     
-                    observable_values_sorted, new_order = zip(*sorted(zip(observable_values, original_order), reverse=True)) #ranking the particles via the observable's value
+                    # ranking the particles via the observable's value. The
+                    # particles that are not candidates carry NaN, and NaN
+                    # compares False with everything, so sorting them in with
+                    # the rest left the candidates in whatever order the NaNs
+                    # happened to split them into -- i.e. it depended on the
+                    # leg order again ('the hardest top' could be the softer
+                    # one). Candidates first, by decreasing value (ties: the
+                    # later leg first, as before); the NaNs after them.
+                    ranked = sorted(zip(observable_values, original_order),
+                                    key=lambda vo: (vo[0] == vo[0],
+                                                    vo[0] if vo[0] == vo[0] else 0.,
+                                                    vo[1]),
+                                    reverse=True)
+                    observable_values_sorted, new_order = zip(*ranked)
 
                     if len(user_input[2]) > 0: # if the user gives a ranking to use for the observable, use it
                         position_particles = self.find_position_particles_with_observable(pdg, observable_values_sorted, new_order, original_order, user_input, name_input, fortran_format)

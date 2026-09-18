@@ -78,7 +78,10 @@ def _borrow_decision_helpers(namespace):
                  # that borrows the resolver needs them -- and _weighted_decay
                  # is built on the decay_output resolver
                  '_pure_interference', '_weighted_decay', '_decay_output',
-                 '_announce_decay_output'):
+                 '_announce_decay_output',
+                 # sequential_accept_reject deals identical parents their
+                 # channels once per production event, before any draw
+                 '_positional_deal', '_dealt_rank'):
         namespace[name] = inspect.getattr_static(
             interface_madspin.MadSpinInterface, name)
 
@@ -1345,6 +1348,7 @@ class TestDrawOneDecay(unittest.TestCase):
         get_decay_from_file = interface_madspin.MadSpinInterface.get_decay_from_file
         _draw_all_decays = interface_madspin.MadSpinInterface._draw_all_decays
         _draw_one_decay = interface_madspin.MadSpinInterface._draw_one_decay
+        _dealt_rank = staticmethod(interface_madspin.MadSpinInterface._dealt_rank)
         _draw_decay_group = interface_madspin.MadSpinInterface._draw_decay_group
         efficiency = 0.5
 
@@ -1379,14 +1383,20 @@ class TestDrawOneDecay(unittest.TestCase):
         self.assertEqual(got, [(0, 6), (1, -6), (2, 6)])
 
     def test_identical_parents_read_their_own_file(self):
-        """Two tops with two decay files: one file each, in order."""
-        production, evt_decayfile = self._setup()
-        out = self._Stub().get_decay_from_file(production, evt_decayfile, 10)
-        self.assertEqual(out[6], ['t0:0', 't1:0'])
+        """Two tops with two decay files: one file each -- which top gets
+        which is dealt at random (_dealt_rank)."""
+        import random
+        for seed in range(20):
+            random.seed(seed)
+            production, evt_decayfile = self._setup()
+            out = self._Stub().get_decay_from_file(production, evt_decayfile, 10)
+            self.assertEqual(sorted(out[6]), ['t0:0', 't1:0'])
 
     def test_joint_path_is_unchanged(self):
-        """get_decay_from_file must still consume the RNG in the same order and
-        return the same draws as before the refactor."""
+        """get_decay_from_file must consume the RNG in the same order and return
+        the same draws as the reference below -- the pre-refactor
+        implementation, plus the one deliberate change since: identical parents
+        dealt their channels by a shuffle drawn at the first of them."""
         import random
         for seed in range(50):
             random.seed(seed)
@@ -1399,11 +1409,13 @@ class TestDrawOneDecay(unittest.TestCase):
 
     @staticmethod
     def _reference(production, evt_decayfile):
-        """The implementation as it was before _draw_one_decay was extracted."""
+        """The implementation as it was before _draw_one_decay was extracted,
+        with the positional deal randomised (_dealt_rank)."""
         import random
         out = collections.defaultdict(list)
         particles = [p for p in production if int(p.status) == 1.0]
         ids = [particle.pid for particle in particles]
+        deal = {}
         for i, particle in enumerate(particles):
             if particle.pdg not in evt_decayfile:
                 continue
@@ -1413,7 +1425,11 @@ class TestDrawOneDecay(unittest.TestCase):
             if nb_decay == 1:
                 decay_file = evt_decayfile[particle.pdg][0]
             elif ids.count(particle.pdg) == nb_decay:
-                decay_file = evt_decayfile[particle.pdg][ids[:i].count(particle.pdg)]
+                if particle.pdg not in deal:
+                    deal[particle.pdg] = list(range(nb_decay))
+                    random.shuffle(deal[particle.pdg])
+                rank = deal[particle.pdg][ids[:i].count(particle.pdg)]
+                decay_file = evt_decayfile[particle.pdg][rank]
             else:
                 r = random.random()
                 tot = sum(evt_decayfile[particle.pdg][k].cross
@@ -1473,6 +1489,7 @@ class TestDecaySymmetryFactor(unittest.TestCase):
         get_decay_from_file = interface_madspin.MadSpinInterface.get_decay_from_file
         _draw_all_decays = interface_madspin.MadSpinInterface._draw_all_decays
         _draw_one_decay = interface_madspin.MadSpinInterface._draw_one_decay
+        _dealt_rank = staticmethod(interface_madspin.MadSpinInterface._dealt_rank)
         _draw_decay_group = interface_madspin.MadSpinInterface._draw_decay_group
         efficiency = 0.5
 
@@ -1494,16 +1511,16 @@ class TestDecaySymmetryFactor(unittest.TestCase):
         self.assertEqual(self.factor(decays), 1.0)
 
     def test_two_dealt_channels_for_two_parents_take_one_half(self):
-        """`decay z > e+ e-` + `decay z > mu+ mu-`: parent i is dealt channel i,
-        so only one of the two assignments is ever generated."""
+        """`decay z > e+ e-` + `decay z > mu+ mu-`: each parent is dealt one
+        channel, so one of the two assignments is generated per event."""
         decays = self._draw(2, 2)
-        self.assertEqual([d.ms_channel for d in decays[23]], [0, 1])
+        self.assertEqual(sorted(d.ms_channel for d in decays[23]), [0, 1])
         self.assertEqual([d.ms_positional for d in decays[23]], [True, True])
         self.assertEqual(self.factor(decays), 0.5)
 
     def test_three_dealt_channels_for_three_parents(self):
         decays = self._draw(3, 3)
-        self.assertEqual([d.ms_channel for d in decays[23]], [0, 1, 2])
+        self.assertEqual(sorted(d.ms_channel for d in decays[23]), [0, 1, 2])
         self.assertEqual(self.factor(decays), 1 / 6.)
 
     def test_a_single_parent_never_takes_a_factor(self):
@@ -6301,7 +6318,8 @@ class TestSequentialAcceptReject(unittest.TestCase):
                 pass
             def get_density(self, *args, **opts):
                 return rho
-            def _draw_one_decay(self, particle, index, ids, evt_decayfile, nb_remain):
+            def _draw_one_decay(self, particle, index, ids, evt_decayfile, nb_remain,
+                                deal=None):
                 import random
                 return ('cand', self._slot_of[index], random.randrange(pool))
             def _slot_density(self, decay, parent, hel, frame_boost=None):
@@ -6568,7 +6586,7 @@ class TestPAUpFrontMass(unittest.TestCase):
                 return outer._f(decay[0].new_mass) * outer._g(decay.index)
 
             def _draw_one_decay(self, particle, index, ids, evt_decayfile,
-                                nb_remain):
+                                nb_remain, deal=None):
                 import random
                 return TestPAUpFrontMass._Decay(self._slot_of[index],
                                                 random.randrange(outer.POOL))
@@ -7908,6 +7926,7 @@ class TestDecayGroupDraw(unittest.TestCase):
             interface_madspin.MadSpinInterface._resolve_group_rates
         _draw_decay_group = interface_madspin.MadSpinInterface._draw_decay_group
         _draw_one_decay = interface_madspin.MadSpinInterface._draw_one_decay
+        _dealt_rank = staticmethod(interface_madspin.MadSpinInterface._dealt_rank)
         _draw_all_decays = interface_madspin.MadSpinInterface._draw_all_decays
         get_decay_from_file = \
             interface_madspin.MadSpinInterface.get_decay_from_file
@@ -8003,7 +8022,7 @@ class TestDecayGroupDraw(unittest.TestCase):
 
     def test_identical_parents_inside_a_group_are_positional(self):
         """p p > t t t~ t~: the group's two lines for a pdg go to its two
-        particles in order."""
+        particles, one each (which one gets which is dealt at random)."""
         stub = self._Stub()
         stub.model = self._Model()
         stub.list_branches = {'t': ['a @1', 'b @1', 'c @2', 'd @2']}
@@ -8013,12 +8032,12 @@ class TestDecayGroupDraw(unittest.TestCase):
         production = [self._Part(6), self._Part(6)]
         evt_decayfile = {6: dict((i, self._Pool('c%d' % i)) for i in range(4))}
         out = stub.get_decay_from_file(production, evt_decayfile, 10)
-        self.assertEqual([d.split(':')[0] for d in out[6]], ['c0', 'c1'])
+        self.assertEqual(sorted(d.split(':')[0] for d in out[6]), ['c0', 'c1'])
 
         stub._decay_groups['prob'] = [0.0, 1.0]
         evt_decayfile = {6: dict((i, self._Pool('c%d' % i)) for i in range(4))}
         out = stub.get_decay_from_file(production, evt_decayfile, 10)
-        self.assertEqual([d.split(':')[0] for d in out[6]], ['c2', 'c3'])
+        self.assertEqual(sorted(d.split(':')[0] for d in out[6]), ['c2', 'c3'])
 
 
 class TestUnweightingDecisionTable(unittest.TestCase):
@@ -11536,3 +11555,406 @@ class TestDecayChainIdenticalFactor(unittest.TestCase):
         decays = {23: [self._decay(23, -11, 11), self._decay(23, -13, 13)],
                   24: [self._decay(24, -11, 12), self._decay(24, -13, 14)]}
         self.assertEqual(self.factor(production, decays), 0.25)
+
+
+class _DensityBasisModelStub(object):
+    """The two things _density_basis asks the model for: a particle's spin, and
+    name2pdg (through _pure_interference)."""
+
+    SPIN = {6: 2, -6: 2, 23: 3, 24: 3, -24: 3, 21: 3}
+
+    def get_particle(self, pdg):
+        return {'spin': self.SPIN[pdg]}
+
+    def get(self, key):
+        assert key == 'name2pdg'
+        return {'t': 6, 't~': -6, 'z': 23, 'w+': 24, 'w-': -24}
+
+
+class _DensityBasisStub(object):
+    """Just enough of MadSpinInterface to run the real _density_basis: the
+    matrix element's leg order (get_pdir) and the model's spins. Everything
+    that decides where the density matrix' legs sit is the real code."""
+
+    def __init__(self, orig_order, prodpol=None):
+        self.options = interface_madspin.MadSpinOptions()
+        self.options['pure_interference'] = ''
+        self.model = _DensityBasisModelStub()
+        self._revert_merged = None
+        self._orig_order = orig_order
+        self._prodpol = prodpol or {}
+
+    def get_pdir(self, event):
+        return None, self._orig_order, None, None, None
+
+    def get_iden(self, event):
+        return 1
+
+    def _production_polarization(self):
+        return self._prodpol
+
+    _density_basis = interface_madspin.MadSpinInterface._density_basis
+    _apply_production_polarization = \
+        interface_madspin.MadSpinInterface._apply_production_polarization
+    _apply_pure_interference = \
+        interface_madspin.MadSpinInterface._apply_pure_interference
+    _pure_interference = interface_madspin.MadSpinInterface._pure_interference
+    _pure_interference_pdgs = interface_madspin.MadSpinInterface._pure_interference_pdgs
+    _parse_pol_side = interface_madspin.MadSpinInterface._parse_pol_side
+    _POL_TOKENS = interface_madspin.MadSpinInterface._POL_TOKENS
+    _format_polarization_sequence = \
+        interface_madspin.MadSpinInterface._format_polarization_sequence
+    get_allowed_hel = interface_madspin.MadSpinInterface.get_allowed_hel
+    InvalidCmd = interface_madspin.MadSpinInterface.InvalidCmd
+
+
+class TestDensityLegPositions(unittest.TestCase):
+    """``position`` must name the leg of the density matrix element, not the
+    place the LHE happens to write the particle in.
+
+    ``GET_DENSITY``'s ``POS`` indexes ``THISNHEL``/``P``, which ``get_density``
+    fills through ``Event.get_momenta(orig_order)`` -- the matrix element's own
+    leg order.  Two different things make the LHE record disagree with it:
+
+    * the status-2 resonances MadEvent writes (``p p > z z j j`` with an
+      s-channel Z/W -> j j), which shift every later index.  That one is loud:
+      the open helicity indices land on a quark leg and Tr(rho_prod) comes out
+      up to 20x |M_prod|^2;
+
+    * a final state written in another order.  For several **identical**
+      resonances that is silent and total: MadSpin generates the four-top
+      density as ``t t~ t t~`` while aMC@NLO writes ``t t t~ t~``, so every
+      top's density block gets contracted with an anti-top's decay.  |M|^2,
+      the cross section and every single-particle spectrum are untouched --
+      the particles are identical -- and only the spin correlations die.
+      Measured on p p > t t~ t t~ at 13.6 TeV: <cos phi> of the same-sign
+      di-lepton pair went from +0.019 to -0.005 (4.6 sigma) purely from
+      permuting the four top lines of the LHE.
+
+    A single resonance pair cannot expose the second one (``t t~`` and ``z z``
+    orderings cannot disagree), which is why the ZZ validation passed.  Hence
+    the four resonances here.
+    """
+
+    # the density matrix element MadSpin generates for p p > t t~ t t~
+    TTTT_ORDER = [(21, 21), (6, -6, 6, -6)]
+
+    @staticmethod
+    def _event(final_pdgs, with_resonance=False):
+        """A production event with ``final_pdgs`` in that order, every particle
+        carrying a momentum that identifies it uniquely."""
+        nb = 2 + len(final_pdgs) + (1 if with_resonance else 0)
+        lines = ['<event>', ' %d 1 1.0 100.0 0.0078 0.118' % nb,
+                 ' 21 -1 0 0 501 502 0.0 0.0  500.0 500.0 0.0 0. 1.',
+                 ' 21 -1 0 0 503 501 0.0 0.0 -500.0 500.0 0.0 0. 1.']
+        if with_resonance:
+            lines.append(' 25 2 1 2 0 0 0.0 0.0 0.0 600.0 125.0 0. 1.')
+        for k, pid in enumerate(final_pdgs):
+            lines.append(' %d 1 1 2 0 0 %s %s %s %s 173.0 0. 1.'
+                         % (pid, 11. * (k + 1), 22. * (k + 1),
+                            33. * (k + 1), 250. + k))
+        lines.append('</event>')
+        return lhe_parser.Event('\n'.join(lines))
+
+    @staticmethod
+    def _mom(part):
+        return (part.E, part.px, part.py, part.pz)
+
+    def _check(self, event, orig_order, decays_key):
+        """The contract the density contraction relies on: the momentum the
+        matrix element sees at leg ``position[k]`` is ``init_part[k]``.
+
+        ``init_part[k]`` is the k-th factor of the decay tensor product and
+        ``position[k]`` is the leg whose helicity that factor is summed
+        against, so this is exactly the production-block <-> decay pairing.
+        """
+        static = _DensityBasisStub(orig_order)._density_basis(event, decays_key)
+        momenta = event.get_momenta(orig_order)
+        me_pdgs = list(orig_order[0]) + list(orig_order[1])
+        for k, part in enumerate(static['init_part']):
+            leg = static['position'][k]
+            self.assertEqual(momenta[leg - 1], self._mom(part),
+                             'density leg %d does not carry init_part[%d]'
+                             % (leg, k))
+            self.assertEqual(me_pdgs[leg - 1], part.pid)
+        self.assertEqual(static['decaying_pdg'],
+                         [p.pid for p in static['init_part']])
+        return static
+
+    def test_leg_order_and_event_order_agree(self):
+        """MadEvent writes t t~ t t~, the order the density is generated in."""
+        static = self._check(self._event([6, -6, 6, -6]), self.TTTT_ORDER,
+                             (6, -6))
+        self.assertEqual(static['position'], [3, 5, 4, 6])
+        self.assertEqual(static['dimension'], 16)
+
+    def test_amcatnlo_leg_order(self):
+        """aMC@NLO writes t t t~ t~ for the very same process. Indexing the
+        record would give [3, 4, 5, 6] and hand leg 4 -- an anti-top of the
+        matrix element -- to the second top's decay."""
+        static = self._check(self._event([6, 6, -6, -6]), self.TTTT_ORDER,
+                             (6, -6))
+        self.assertEqual(static['position'], [3, 5, 4, 6])
+        record_index = [i + 1 for pdg in (6, -6)
+                        for i in range(len(self._event([6, 6, -6, -6])))
+                        if self._event([6, 6, -6, -6])[i].pid == pdg
+                        and self._event([6, 6, -6, -6])[i].status == 1]
+        self.assertEqual(record_index, [3, 4, 5, 6])
+        self.assertNotEqual(static['position'], record_index)
+
+    def test_every_permutation_pairs_each_top_with_its_own_decay(self):
+        for final in ([6, -6, 6, -6], [6, 6, -6, -6], [-6, 6, -6, 6],
+                      [6, -6, -6, 6], [-6, -6, 6, 6]):
+            static = self._check(self._event(final), self.TTTT_ORDER, (6, -6))
+            self.assertEqual(sorted(static['position']), [3, 4, 5, 6])
+
+    def test_a_status_two_line_does_not_shift_the_legs(self):
+        """The MadEvent s-channel resonance of p p > z z j j: it is in the
+        record and not in the matrix element."""
+        event = self._event([6, -6, 6, -6], with_resonance=True)
+        static = self._check(event, self.TTTT_ORDER, (6, -6))
+        self.assertEqual(static['position'], [3, 5, 4, 6])
+
+    def test_two_resonances_cannot_expose_it(self):
+        """Why this went unnoticed for so long."""
+        for order, final in ([[(21, 21), (6, -6)], [6, -6]],
+                             [[(21, 21), (23, 23)], [23, 23]]):
+            event = self._event(final)
+            decays_key = tuple(sorted(set(final), reverse=True))
+            static = self._check(event, order, decays_key)
+            record_index = [i + 1 for pdg in decays_key
+                            for i in range(len(event))
+                            if event[i].pid == pdg and event[i].status == 1]
+            self.assertEqual(static['position'], record_index)
+
+class TestDecayChannelDeal(unittest.TestCase):
+    """When the card gives a pdg as many channels as the event has identical
+    parents (``decay t > w+ b, w+ > l+ vl`` and ``decay t > w+ b, w+ > j j`` on
+    a four-top event), each parent is dealt one channel. Which parent gets
+    which must not depend on the order the LHE writes them in.
+
+    Dealing in production order used to make it depend on the generator's
+    ordering of identical particles. That is exchangeable for a LO sample
+    (|M|^2 is symmetric under the swap) but not for aMC@NLO's: FKS keeps one
+    leg of each pair of identical emitters, and when the emitter is a top the
+    two tops of ``p p > t t~ t t~ [QCD]`` differ by ~130 GeV in pT depending on
+    their position -- the leptonic decay went to the softer one.
+    """
+
+    class _Part(object):
+        def __init__(self, pid):
+            self.pid = pid
+            self.pdg = pid
+            self.status = 1
+
+    class _Decay(object):
+        def __init__(self, tag):
+            self.tag = tag
+
+    class _Pool(object):
+        def __init__(self, tag):
+            self.tag = tag
+            self.cross = 1.0
+        def __next__(self):
+            return TestDecayChannelDeal._Decay(self.tag)
+
+    class _Stub(object):
+        get_decay_from_file = interface_madspin.MadSpinInterface.get_decay_from_file
+        _draw_all_decays = interface_madspin.MadSpinInterface._draw_all_decays
+        _draw_one_decay = interface_madspin.MadSpinInterface._draw_one_decay
+        _dealt_rank = staticmethod(interface_madspin.MadSpinInterface._dealt_rank)
+        _positional_deal = interface_madspin.MadSpinInterface._positional_deal
+        _draw_decay_group = interface_madspin.MadSpinInterface._draw_decay_group
+        efficiency = 0.5
+
+    def _pools(self):
+        return {6: {0: self._Pool('lep'), 1: self._Pool('had')},
+                -6: {0: self._Pool('tx')}}
+
+    def test_the_first_parent_is_not_always_dealt_the_first_channel(self):
+        """Over many production events the first top in the record takes the
+        leptonic channel half of the time -- not every time."""
+        import random
+        production = [self._Part(6), self._Part(6),
+                      self._Part(-6), self._Part(-6)]
+        n, first_lep = 2000, 0
+        for seed in range(n):
+            random.seed(seed)
+            out = self._Stub().get_decay_from_file(production, self._pools(), 10)
+            self.assertEqual(sorted(d.tag for d in out[6]), ['had', 'lep'])
+            first_lep += out[6][0].tag == 'lep'
+        # binomial(2000, 1/2): sigma = 22; the old deal gave exactly 2000
+        self.assertLess(abs(first_lep - n / 2.), 5 * math.sqrt(n / 4.))
+
+    def test_the_answer_does_not_depend_on_where_the_parents_sit(self):
+        """t t t~ t~ (aMC@NLO) and t t~ t t~ (madevent): same statistics."""
+        import random
+        fractions = []
+        for layout in ([6, 6, -6, -6], [6, -6, 6, -6]):
+            production = [self._Part(p) for p in layout]
+            hits = 0
+            for seed in range(1000):
+                random.seed(seed)
+                out = self._Stub().get_decay_from_file(production,
+                                                       self._pools(), 10)
+                hits += out[6][0].tag == 'lep'
+            fractions.append(hits / 1000.)
+        for f in fractions:
+            self.assertLess(abs(f - 0.5), 5 * math.sqrt(0.25 / 1000))
+
+    def test_a_deal_is_held_across_redraws(self):
+        """The sequential accept/reject redraws one slot at a time: a slot
+        must keep its channel however often it is redrawn, or two parents could
+        end up with the same one."""
+        import random
+        random.seed(3)
+        production = [self._Part(6), self._Part(-6), self._Part(6)]
+        ids = [p.pid for p in production]
+        stub = self._Stub()
+        deal = stub._positional_deal(ids, self._pools())
+        first = None
+        for trial in range(20):
+            got = [stub._draw_one_decay(production[i], i, ids, self._pools(),
+                                        10, deal=deal).tag for i in (0, 2)]
+            self.assertEqual(sorted(got), ['had', 'lep'])
+            first = first or got
+            self.assertEqual(got, first)
+
+    def test_dealt_rank_is_a_permutation(self):
+        import random
+        for n in range(1, 6):
+            for seed in range(20):
+                random.seed(seed)
+                deal = {}
+                ranks = [interface_madspin.MadSpinInterface._dealt_rank(
+                            23, k, n, deal) for k in range(n)]
+                self.assertEqual(sorted(ranks), list(range(n)))
+        # no deal: the old production-order rank
+        self.assertEqual(interface_madspin.MadSpinInterface._dealt_rank(
+                            23, 2, 3, None), 2)
+
+    def test_positional_deal_covers_exactly_the_positional_rule(self):
+        """Only the pdgs whose parents are dealt: as many channels as parents,
+        and more than one."""
+        stub = self._Stub()
+        pools = {6: {0: self._Pool('a'), 1: self._Pool('b')},     # 2 t, 2 lines
+                 -6: {0: self._Pool('c')},                        # 1 line
+                 23: {0: self._Pool('d'), 1: self._Pool('e')},    # 1 z, 2 lines
+                 24: {0: self._Pool('f'), 1: self._Pool('g')}}    # 3 W, 2 lines
+        deal = stub._positional_deal([6, -6, 6, -6, 23, 24, 24, 24], pools)
+        self.assertEqual(set(deal), {6})
+
+
+class TestSlotOrderAgreement(unittest.TestCase):
+    """Five pieces of MadSpin count the decaying particles of a production
+    event, and slot k has to mean the same particle -- and the same channel --
+    to all of them:
+
+    * ``_density_basis``' ``init_part``/``position`` (the density contraction),
+    * ``_sequential_slots`` (which particle the sequential scheme redraws),
+    * ``add_decays`` (which parent a decay is attached to in the written event),
+    * ``_z_slot_keys`` (which rate-factor table a slot is normalised with),
+    * ``_draw_one_decay`` (which channel a slot actually draws).
+
+    Each is correct on its own; these tests pin that they agree, on the
+    production ordering where it once went wrong (aMC@NLO's ``t t t~ t~``
+    against a density generated as ``t t~ t t~``).
+    """
+
+    TTTT_ORDER = [(21, 21), (6, -6, 6, -6)]
+    DECAYS_KEY = (6, -6)
+
+    @staticmethod
+    def _production(final):
+        lines = ['<event>', ' %d 1 1.0 100.0 0.0078 0.118' % (2 + len(final)),
+                 ' 21 -1 0 0 501 502 0.0 0.0  900.0 900.0 0.0 0. 9',
+                 ' 21 -1 0 0 503 501 0.0 0.0 -900.0 900.0 0.0 0. 9']
+        for k, pid in enumerate(final):
+            px, py, pz = 11. * (k + 1), 22. * (k + 1), 33. * (k + 1)
+            e = math.sqrt(173. ** 2 + px ** 2 + py ** 2 + pz ** 2)
+            lines.append(' %d 1 1 2 0 0 %r %r %r %r 173.0 0. 9'
+                         % (pid, px, py, pz, e))
+        lines.append('</event>')
+        return lhe_parser.Event('\n'.join(lines))
+
+    @staticmethod
+    def _decay_at_rest(parent, quark):
+        """``parent > w b``-like decay at rest, the quark flavour tagging it."""
+        w = 24 if parent > 0 else -24
+        text = '\n'.join([
+            '<event>', ' 3 1 1.0 100.0 0.0078 0.118',
+            ' %d -1 0 0 0 0 0.0 0.0 0.0 173.0 173.0 0. 9' % parent,
+            ' %d 1 1 1 0 0 0.0 0.0 %r %r 80.4 0. 9'
+            % (w, 67.9, math.sqrt(80.4 ** 2 + 67.9 ** 2)),
+            ' %d 1 1 1 0 0 0.0 0.0 %r %r 0.0 0. 9' % (quark, -67.9, 67.9),
+            '</event>'])
+        return lhe_parser.Event(text)
+
+    def test_sequential_slots_are_the_density_slots(self):
+        for final in ([6, 6, -6, -6], [6, -6, 6, -6], [-6, 6, 6, -6]):
+            production = self._production(final)
+            stub = _DensityBasisStub(self.TTTT_ORDER)
+            init_part = stub._density_basis(production,
+                                            self.DECAYS_KEY)['init_part']
+            particles, slot_to_index = \
+                interface_madspin.MadSpinInterface._sequential_slots(
+                    production, self.DECAYS_KEY)
+            self.assertEqual([particles[i] for i in slot_to_index], init_part)
+
+    def test_add_decays_attaches_slot_k_to_init_part_k(self):
+        """The weight is computed with decays[pdg][k] against init_part (the
+        k-th parent of that pdg in production order); the written event must
+        attach it to that same parent, or the decay written out is not the one
+        the density matrix was contracted with."""
+        for final in ([6, 6, -6, -6], [6, -6, 6, -6], [-6, -6, 6, 6]):
+            production = self._production(final)
+            init_part = _DensityBasisStub(self.TTTT_ORDER)\
+                ._density_basis(production, self.DECAYS_KEY)['init_part']
+            parents = [(p.pid, _mom(p)) for p in init_part]
+            decays = {6: [self._decay_at_rest(6, 5), self._decay_at_rest(6, 3)],
+                      -6: [self._decay_at_rest(-6, -5),
+                           self._decay_at_rest(-6, -3)]}
+            tag_of_slot = [5, 3, -5, -3]
+            full = production.add_decays(decays)
+            for (pid, mom), tag in zip(parents, tag_of_slot):
+                parent = [p for p in full if p.status == 2 and p.pid == pid
+                          and _mom(p) == mom]
+                self.assertEqual(len(parent), 1)
+                children = [p.pid for p in full
+                            if getattr(p, 'mother1', None) is parent[0]]
+                self.assertIn(tag, children,
+                              '%s: slot of %s got %s' % (final, pid, children))
+
+    def test_z_tables_follow_the_channel_each_slot_draws(self):
+        """A slot's rate-factor table is keyed by the channel it is dealt, and
+        _draw_one_decay then draws exactly that channel for it."""
+        import random
+        pools = {6: {0: TestDecayChannelDeal._Pool('c0'),
+                     1: TestDecayChannelDeal._Pool('c1')},
+                 -6: {0: TestDecayChannelDeal._Pool('x0'),
+                      1: TestDecayChannelDeal._Pool('x1')}}
+        stub = TestDecayChannelDeal._Stub()
+        for seed in range(30):
+            random.seed(seed)
+            production = self._production([6, 6, -6, -6])
+            particles, slot_to_index = \
+                interface_madspin.MadSpinInterface._sequential_slots(
+                    production, self.DECAYS_KEY)
+            ids = [p.pid for p in particles]
+            deal = stub._positional_deal(ids, pools)
+            keys = interface_madspin.MadSpinInterface._z_slot_keys(
+                        particles, slot_to_index, deal)
+            for key, index in zip(keys, slot_to_index):
+                drawn = stub._draw_one_decay(particles[index], index, ids,
+                                             pools, 10, deal=deal)
+                self.assertEqual(int(key.split('_')[1]), int(drawn.tag[1]),
+                                 'slot keyed %s drew %s' % (key, drawn.tag))
+
+    def test_without_a_deal_the_z_keys_are_the_occurrences(self):
+        particles = [TestDecayChannelDeal._Part(p) for p in (6, -6, 6)]
+        self.assertEqual(interface_madspin.MadSpinInterface._z_slot_keys(
+                            particles, [0, 2, 1]), ['6_0', '6_1', '-6_0'])
+
+
+def _mom(part):
+    return (part.E, part.px, part.py, part.pz)
