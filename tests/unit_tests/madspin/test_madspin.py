@@ -11536,3 +11536,174 @@ class TestDecayChainIdenticalFactor(unittest.TestCase):
         decays = {23: [self._decay(23, -11, 11), self._decay(23, -13, 13)],
                   24: [self._decay(24, -11, 12), self._decay(24, -13, 14)]}
         self.assertEqual(self.factor(production, decays), 0.25)
+
+
+class _DensityBasisModelStub(object):
+    """The two things _density_basis asks the model for: a particle's spin, and
+    name2pdg (through _pure_interference)."""
+
+    SPIN = {6: 2, -6: 2, 23: 3, 24: 3, -24: 3, 21: 3}
+
+    def get_particle(self, pdg):
+        return {'spin': self.SPIN[pdg]}
+
+    def get(self, key):
+        assert key == 'name2pdg'
+        return {'t': 6, 't~': -6, 'z': 23, 'w+': 24, 'w-': -24}
+
+
+class _DensityBasisStub(object):
+    """Just enough of MadSpinInterface to run the real _density_basis: the
+    matrix element's leg order (get_pdir) and the model's spins. Everything
+    that decides where the density matrix' legs sit is the real code."""
+
+    def __init__(self, orig_order, prodpol=None):
+        self.options = interface_madspin.MadSpinOptions()
+        self.options['pure_interference'] = ''
+        self.model = _DensityBasisModelStub()
+        self._revert_merged = None
+        self._orig_order = orig_order
+        self._prodpol = prodpol or {}
+
+    def get_pdir(self, event):
+        return None, self._orig_order, None, None, None
+
+    def get_iden(self, event):
+        return 1
+
+    def _production_polarization(self):
+        return self._prodpol
+
+    _density_basis = interface_madspin.MadSpinInterface._density_basis
+    _apply_production_polarization = \
+        interface_madspin.MadSpinInterface._apply_production_polarization
+    _apply_pure_interference = \
+        interface_madspin.MadSpinInterface._apply_pure_interference
+    _pure_interference = interface_madspin.MadSpinInterface._pure_interference
+    _pure_interference_pdgs = interface_madspin.MadSpinInterface._pure_interference_pdgs
+    _parse_pol_side = interface_madspin.MadSpinInterface._parse_pol_side
+    _POL_TOKENS = interface_madspin.MadSpinInterface._POL_TOKENS
+    _format_polarization_sequence = \
+        interface_madspin.MadSpinInterface._format_polarization_sequence
+    get_allowed_hel = interface_madspin.MadSpinInterface.get_allowed_hel
+    InvalidCmd = interface_madspin.MadSpinInterface.InvalidCmd
+
+
+class TestDensityLegPositions(unittest.TestCase):
+    """``position`` must name the leg of the density matrix element, not the
+    place the LHE happens to write the particle in.
+
+    ``GET_DENSITY``'s ``POS`` indexes ``THISNHEL``/``P``, which ``get_density``
+    fills through ``Event.get_momenta(orig_order)`` -- the matrix element's own
+    leg order.  Two different things make the LHE record disagree with it:
+
+    * the status-2 resonances MadEvent writes (``p p > z z j j`` with an
+      s-channel Z/W -> j j), which shift every later index.  That one is loud:
+      the open helicity indices land on a quark leg and Tr(rho_prod) comes out
+      up to 20x |M_prod|^2;
+
+    * a final state written in another order.  For several **identical**
+      resonances that is silent and total: MadSpin generates the four-top
+      density as ``t t~ t t~`` while aMC@NLO writes ``t t t~ t~``, so every
+      top's density block gets contracted with an anti-top's decay.  |M|^2,
+      the cross section and every single-particle spectrum are untouched --
+      the particles are identical -- and only the spin correlations die.
+      Measured on p p > t t~ t t~ at 13.6 TeV: <cos phi> of the same-sign
+      di-lepton pair went from +0.019 to -0.005 (4.6 sigma) purely from
+      permuting the four top lines of the LHE.
+
+    A single resonance pair cannot expose the second one (``t t~`` and ``z z``
+    orderings cannot disagree), which is why the ZZ validation passed.  Hence
+    the four resonances here.
+    """
+
+    # the density matrix element MadSpin generates for p p > t t~ t t~
+    TTTT_ORDER = [(21, 21), (6, -6, 6, -6)]
+
+    @staticmethod
+    def _event(final_pdgs, with_resonance=False):
+        """A production event with ``final_pdgs`` in that order, every particle
+        carrying a momentum that identifies it uniquely."""
+        nb = 2 + len(final_pdgs) + (1 if with_resonance else 0)
+        lines = ['<event>', ' %d 1 1.0 100.0 0.0078 0.118' % nb,
+                 ' 21 -1 0 0 501 502 0.0 0.0  500.0 500.0 0.0 0. 1.',
+                 ' 21 -1 0 0 503 501 0.0 0.0 -500.0 500.0 0.0 0. 1.']
+        if with_resonance:
+            lines.append(' 25 2 1 2 0 0 0.0 0.0 0.0 600.0 125.0 0. 1.')
+        for k, pid in enumerate(final_pdgs):
+            lines.append(' %d 1 1 2 0 0 %s %s %s %s 173.0 0. 1.'
+                         % (pid, 11. * (k + 1), 22. * (k + 1),
+                            33. * (k + 1), 250. + k))
+        lines.append('</event>')
+        return lhe_parser.Event('\n'.join(lines))
+
+    @staticmethod
+    def _mom(part):
+        return (part.E, part.px, part.py, part.pz)
+
+    def _check(self, event, orig_order, decays_key):
+        """The contract the density contraction relies on: the momentum the
+        matrix element sees at leg ``position[k]`` is ``init_part[k]``.
+
+        ``init_part[k]`` is the k-th factor of the decay tensor product and
+        ``position[k]`` is the leg whose helicity that factor is summed
+        against, so this is exactly the production-block <-> decay pairing.
+        """
+        static = _DensityBasisStub(orig_order)._density_basis(event, decays_key)
+        momenta = event.get_momenta(orig_order)
+        me_pdgs = list(orig_order[0]) + list(orig_order[1])
+        for k, part in enumerate(static['init_part']):
+            leg = static['position'][k]
+            self.assertEqual(momenta[leg - 1], self._mom(part),
+                             'density leg %d does not carry init_part[%d]'
+                             % (leg, k))
+            self.assertEqual(me_pdgs[leg - 1], part.pid)
+        self.assertEqual(static['decaying_pdg'],
+                         [p.pid for p in static['init_part']])
+        return static
+
+    def test_leg_order_and_event_order_agree(self):
+        """MadEvent writes t t~ t t~, the order the density is generated in."""
+        static = self._check(self._event([6, -6, 6, -6]), self.TTTT_ORDER,
+                             (6, -6))
+        self.assertEqual(static['position'], [3, 5, 4, 6])
+        self.assertEqual(static['dimension'], 16)
+
+    def test_amcatnlo_leg_order(self):
+        """aMC@NLO writes t t t~ t~ for the very same process. Indexing the
+        record would give [3, 4, 5, 6] and hand leg 4 -- an anti-top of the
+        matrix element -- to the second top's decay."""
+        static = self._check(self._event([6, 6, -6, -6]), self.TTTT_ORDER,
+                             (6, -6))
+        self.assertEqual(static['position'], [3, 5, 4, 6])
+        record_index = [i + 1 for pdg in (6, -6)
+                        for i in range(len(self._event([6, 6, -6, -6])))
+                        if self._event([6, 6, -6, -6])[i].pid == pdg
+                        and self._event([6, 6, -6, -6])[i].status == 1]
+        self.assertEqual(record_index, [3, 4, 5, 6])
+        self.assertNotEqual(static['position'], record_index)
+
+    def test_every_permutation_pairs_each_top_with_its_own_decay(self):
+        for final in ([6, -6, 6, -6], [6, 6, -6, -6], [-6, 6, -6, 6],
+                      [6, -6, -6, 6], [-6, -6, 6, 6]):
+            static = self._check(self._event(final), self.TTTT_ORDER, (6, -6))
+            self.assertEqual(sorted(static['position']), [3, 4, 5, 6])
+
+    def test_a_status_two_line_does_not_shift_the_legs(self):
+        """The MadEvent s-channel resonance of p p > z z j j: it is in the
+        record and not in the matrix element."""
+        event = self._event([6, -6, 6, -6], with_resonance=True)
+        static = self._check(event, self.TTTT_ORDER, (6, -6))
+        self.assertEqual(static['position'], [3, 5, 4, 6])
+
+    def test_two_resonances_cannot_expose_it(self):
+        """Why this went unnoticed for so long."""
+        for order, final in ([[(21, 21), (6, -6)], [6, -6]],
+                             [[(21, 21), (23, 23)], [23, 23]]):
+            event = self._event(final)
+            decays_key = tuple(sorted(set(final), reverse=True))
+            static = self._check(event, order, decays_key)
+            record_index = [i + 1 for pdg in decays_key
+                            for i in range(len(event))
+                            if event[i].pid == pdg and event[i].status == 1]
+            self.assertEqual(static['position'], record_index)
