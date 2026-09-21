@@ -21,7 +21,7 @@ def fortran_routine(path, name):
     """Select a standalone fixed-form routine and its original dependencies."""
     source = path.read_text()
     start = re.search(
-        r"^      (?:subroutine|double precision function) " + name + r"\b",
+        r"^      (?:subroutine|(?:double precision )?function) " + name + r"\b",
         source, re.MULTILINE | re.IGNORECASE)
     if start is None:
         raise ValueError("Missing Fortran routine: " + name)

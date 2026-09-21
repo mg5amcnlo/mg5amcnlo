@@ -636,8 +636,7 @@ c$$$
       logical include_gfun
       logical softtest,colltest
       common/sctests/softtest,colltest
-      double precision alsf,besf
-      common/cgfunsfp/alsf,besf
+      double precision g_damping,compute_damping_weight
       amp_split_xmcxsec=0d0
       z=0d0
       lzone=.false.
@@ -661,18 +660,19 @@ c$$$
      $        ,include_gfun,lzone(iconnect),z(iconnect)
      $        ,amp_split_xmcxsec(1,iconnect))
       enddo
-      if (.not.any(lzone(1:n_connect)) .and. include_gfun) then
-! A complete native history includes its own G-functions. If we are in the
-! deadzone, we do not want to include the MC counter terms (and
-! therefore also not the gfun contributions).
-! Exception: we are in a soft-wide-angle configuration, there the shower
-! might be 'incorrect', and the g-function should be included.
-         if (xi.gt.abs(besf)/2d0) then ! besf=0.1 by default
-            include_gfun=.false.
-            gfactsf=1d0
-            gfactcl=1d0
-            gfactazi=0d0
-         endif
+      if (include_gfun) then
+! The G replacement must vanish smoothly at the shower-scale boundary.
+! Average over the equally probable colour connections, including those
+! outside angular support: G must still supply the soft wide-angle limit.
+! Apply this only after the raw kernels have used the original G factors.
+! The returned (1-gfactsf) multiplies the same replacement in S and H.
+         g_damping=0d0
+         do iconnect=1,n_connect
+            g_damping=g_damping+compute_damping_weight(
+     $           i_connect(iconnect),xi,y)
+         enddo
+         g_damping=g_damping/dble(n_connect)
+         gfactsf=1d0-(1d0-gfactsf)*g_damping
       endif
 
 !     TODO: "check_positivity_MCxsec" at some point?
@@ -3942,7 +3942,9 @@ c Definition and initialisation of variables
             xmr2=xm12           ! global-recoiler mass squared
          endif
          Q2=sumdot(pfather,ppartner,1d0) ! parent dipole mass squared (Born level)
-         xmp2=dot(ppartner,ppartner)     ! mass squared of the partner
+! Use the on-shell mass: reconstructing a massless partner's invariant
+! can give a small negative value and silently lose the PYTHIA8 bound.
+         xmp2=mass_n(ipartner)**2        ! mass squared of the partner
          if (shower_mc_mod(1:8).eq.'HERWIGPP')
      &        lambda=sqrt((Q2+xmm2-xmp2)**2-4*Q2*xmm2)
          if (shower_mc_mod(1:8).eq.'PYTHIA6Q') then
