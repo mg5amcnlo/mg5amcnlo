@@ -7222,6 +7222,7 @@ c
       include 'nexternal.inc'
       include 'fks_powers.inc'
       include 'nFKSconfigs.inc'
+      include 'fks_symmetry.inc'
       double precision iden_comp,iden_comp_FKS(fks_configs)
       common /c_iden_comp/iden_comp,iden_comp_FKS
       integer fks_j_from_i(nexternal,0:nexternal)
@@ -7262,18 +7263,17 @@ c
       integer i_fks,j_fks
       double precision dfac1
       common/fks_indices/i_fks,j_fks
-      integer fac_i,fac_j,i_fks_pdg,j_fks_pdg,iden(nexternal)
+      integer fac_i,fac_j,i_fks_pdg,j_fks_pdg
 
       integer fac_i_FKS(fks_configs),fac_j_FKS(fks_configs)
      &     ,i_type_FKS(fks_configs),j_type_FKS(fks_configs)
      &     ,m_type_FKS(fks_configs),ngluons_FKS(fks_configs)
-     &     ,nphotons_FKS(fks_configs),iden_real_FKS(fks_configs)
-     &     ,iden_born_FKS(fks_configs),j_pdg_FKS(fks_configs)
+     &     ,nphotons_FKS(fks_configs),j_pdg_FKS(fks_configs)
       double precision ch_i_FKS(fks_configs),ch_j_FKS(fks_configs)
      &     ,ch_m_FKS(fks_configs)
       save fac_i_FKS,fac_j_FKS,i_type_FKS,j_type_FKS,m_type_FKS
      &     ,ngluons_FKS,ch_i_FKS,ch_j_FKS,ch_m_FKS,nphotons_FKS
-     &     ,iden_real_FKS,iden_born_FKS,j_pdg_FKS
+     &     ,j_pdg_FKS
 
       character*13 filename
 
@@ -7343,6 +7343,10 @@ c ren_group_coeff defined accordingly
       
       if (firsttime) then
          nFKSprocess_save=nFKSprocess
+c FxFx can use the scratch PDG slot before the first add_wgt call.
+c Keep its allocation here, independently of the statistical factors.
+         call weight_lines_allocated(nexternal,max_contr,max_wgt
+     $        ,max_iproc)
          do nFKSprocess=1,fks_configs
             call leshouche_inc_chooser()
             call fks_inc_chooser()
@@ -7384,20 +7388,18 @@ c
          i_fks_pdg=pdg_type(i_fks)
          j_fks_pdg=pdg_type(j_fks)
       
-         fac_i_FKS(nFKSprocess)=0
-         fac_j_FKS(nFKSprocess)=0
-         do i=nincoming+1,nexternal
-            if (i_fks_pdg.eq.pdg_type(i)) fac_i_FKS(nFKSprocess) =
-     $           fac_i_FKS(nFKSprocess) + 1
-            if (j_fks_pdg.eq.pdg_type(i)) fac_j_FKS(nFKSprocess) =
-     $           fac_j_FKS(nFKSprocess) + 1
-         enddo
-c Overwrite if initial state singularity
-         if(j_fks.le.nincoming) fac_j_FKS(nFKSprocess)=1
-
-c i_fks and j_fks of the same type? -> subtract 1 to avoid double counting
-         if (j_fks.gt.nincoming .and. i_fks_pdg.eq.j_fks_pdg)
-     $        fac_j_FKS(nFKSprocess)=fac_j_FKS(nFKSprocess)-1
+c The exporter uses complete external-state identities (including tags
+c and helicities) and checks these counts against the ordered MC table.
+c These are OUTER orbit factors, not multiplicities of explicit histories.
+         fac_i_FKS(nFKSprocess)=FKS_FAC_I_D(nFKSprocess)
+         fac_j_FKS(nFKSprocess)=FKS_FAC_J_D(nFKSprocess)
+         if (fac_i_FKS(nFKSprocess).le.0 .or.
+     $        fac_j_FKS(nFKSprocess).le.0 .or.
+     $        FKS_IDEN_BORN_D(nFKSprocess).le.0d0 .or.
+     $        FKS_IDEN_REAL_D(nFKSprocess).le.0d0) then
+            write (*,*) 'Invalid exported FKS factors',nFKSprocess
+            stop 1
+         endif
 
 c THESE TESTS WORK ONLY FOR FINAL STATE SINGULARITIES
 C MZ the test may be removed sooner or later
@@ -7461,43 +7463,11 @@ c Set color types of i_fks, j_fks and fks_mother.
          ch_m_FKS(nFKSprocess)=ch_m
          j_pdg_FKS(nFKSprocess)=pdg_type(j_fks)
 
-c Compute the identical particle symmetry factor that is in the
-c real-emission matrix elements.
-         iden_real_FKS(nFKSprocess)=1
-         do i=1,nexternal
-            iden(i)=1
-         enddo
-         do i=nincoming+2,nexternal
-            do j=nincoming+1,i-1
-               if (pdg_type(j).eq.pdg_type(i)) then
-                  iden(j)=iden(j)+1
-                  iden_real_FKS(nFKSprocess)=
-     &                 iden_real_FKS(nFKSprocess)*iden(j)
-                  exit
-               endif
-            enddo
-         enddo
-c Compute the identical particle symmetry factor that is in the
-c Born matrix elements.
-         iden_born_FKS(nFKSprocess)=1
-         call weight_lines_allocated(nexternal,max_contr,max_wgt
-     $        ,max_iproc)
-         call set_pdg(0,nFKSprocess)
-         do i=1,nexternal
-            iden(i)=1
-         enddo
-         do i=nincoming+2,nexternal-1
-            do j=nincoming+1,i-1
-               if (pdg_uborn(j,0).eq.pdg_uborn(i,0)) then
-                  iden(j)=iden(j)+1
-                  iden_born_FKS(nFKSprocess)=
-     &                 iden_born_FKS(nFKSprocess)*iden(j)
-                  exit
-               endif
-            enddo
-         enddo
-         iden_comp_FKS(nFKSprocess)=dble(iden_born_FKS(nFKSprocess))/
-     $        dble(iden_real_FKS(nFKSprocess))
+c Use precisely the generated ME statistical convention, not a PDG-only
+c factorial reconstruction or a ratio of spin/colour-averaged IDENs.
+c get_mbar applies this once to BOTH Born and Born-tilde MC kernels.
+         iden_comp_FKS(nFKSprocess)=FKS_IDEN_BORN_D(nFKSprocess)/
+     $        FKS_IDEN_REAL_D(nFKSprocess)
       enddo
          nFKSprocess=nFKSprocess_save
          call leshouche_inc_chooser()

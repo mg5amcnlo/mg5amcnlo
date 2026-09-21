@@ -11,7 +11,8 @@ module kinematics_module
 
   public :: get_qMC, fill_kinematics_module,dot,rho,sumdot,pt,deltaR,boost_n1_to_its_cms&
        &,delta_phi,delta_y,HTo2,HT,get_xi_from_p,get_yij_from_p&
-       &,get_phi_from_p,fill_father_and_ileg,boost_n1_to_lab,flip_momenta
+       &,get_phi_from_p,fill_father_and_ileg,boost_n1_to_lab,flip_momenta &
+       &,apply_momentum_permutation
   private
 
 contains
@@ -735,6 +736,10 @@ contains
     implicit none
     integer :: i,ii,j,jj,k,pos,tmp,perm(next_n1)
     double precision :: p(0:3,next_n1),p_flipped(0:3,next_n1)
+    if (min(i,ii,j,jj).lt.1.or.max(i,ii,j,jj).gt.next_n1.or.i.eq.j.or.ii.eq.jj) then
+       write (*,*) 'Invalid FKS labels in flip_momenta',i,ii,j,jj
+       stop 1
+    endif
     ! Build a bijection, including overlapping swaps: original ii and jj
     ! must end up in the native FKS slots i and j, respectively.
     perm=[(k,k=1,next_n1)]
@@ -747,7 +752,47 @@ contains
     tmp=perm(j)
     perm(j)=perm(pos)
     perm(pos)=tmp
-    p_flipped=p(:,perm)
+    call apply_momentum_permutation(perm,p,p_flipped)
   end subroutine flip_momenta
+
+  subroutine apply_momentum_permutation(perm,p,p_permuted)
+    implicit none
+    integer,intent(in) :: perm(next_n1)
+    double precision,intent(in) :: p(0:3,next_n1)
+    double precision,intent(out) :: p_permuted(0:3,next_n1)
+    integer :: k
+    double precision :: tolerance
+    ! Check the integer map BEFORE using it as a vector subscript.
+    if (any(perm.lt.1).or.any(perm.gt.next_n1)) then
+       write (*,*) 'Out-of-range MC momentum permutation',perm
+       stop 1
+    endif
+    do k=1,next_n1
+       if (count(perm.eq.k).ne.1) then
+          write (*,*) 'Non-bijective MC momentum permutation',perm
+          stop 1
+       endif
+       if (k.le.nincoming_mod.and.perm(k).ne.k) then
+          write (*,*) 'MC momentum permutation exchanges an incoming leg',perm
+          stop 1
+       endif
+    enddo
+    p_permuted=p(:,perm)
+    tolerance=1d-12*max(1d0,sum(abs(p)))
+    if (maxval(abs(sum(p_permuted(:,nincoming_mod+1:),dim=2) &
+                 -sum(p(:,nincoming_mod+1:),dim=2))).gt.tolerance) then
+       write (*,*) 'MC momentum permutation changes total four-momentum'
+       stop 1
+    endif
+    ! The export-time identity check forbids exchanges of unlike species.
+    ! Also check their on-shell invariants at the actual phase-space point.
+    tolerance=1d-10*max(1d0,maxval(abs(p))**2)
+    do k=nincoming_mod+1,next_n1
+       if (abs(dot(p_permuted(:,k),p_permuted(:,k))-dot(p(:,k),p(:,k))).gt.tolerance) then
+          write (*,*) 'MC momentum permutation changes a leg mass',k,perm(k)
+          stop 1
+       endif
+    enddo
+  end subroutine apply_momentum_permutation
 
 end module kinematics_module

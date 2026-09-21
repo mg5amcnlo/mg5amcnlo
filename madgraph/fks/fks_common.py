@@ -40,6 +40,49 @@ class FKSProcessError(Exception):
     pass
 
 
+def external_leg_identity(leg):
+    """Identity for an allowed FKS relabelling, not an ME denominator.
+
+    In particular, tagged or differently polarised particles must not be
+    exchanged just because their PDGs agree. Ignore number and the i/j flag.
+    Statistical factors still come from the generated matrix elements.
+    """
+    return (leg['id'], leg['state'], tuple(leg['polarization']),
+            dict.get(leg, 'is_tagged', False), leg['onshell'])
+
+
+def external_process_identity(process, particle_tags=None):
+    """Ordered real-state/cache identity, including amplitude restrictions.
+
+    HELAS can strip the FKSLeg tag; the exporter supplies its saved tag array.
+    Initial legs stay ordered. Resonance constraints must not be inferred from
+    a list of external PDGs.
+    """
+    def freeze(value):
+        if isinstance(value, dict):
+            return tuple((key, freeze(val)) for key, val in sorted(value.items()))
+        if isinstance(value, (list, tuple)):
+            return tuple(freeze(val) for val in value)
+        return value
+
+    legs = process.get_legs_with_decays()
+    if particle_tags is not None and len(particle_tags) != len(legs):
+        raise FKSProcessError('Inconsistent external particle tags')
+    states = []
+    for index, leg in enumerate(legs):
+        state = list(external_leg_identity(leg))
+        if particle_tags is not None:
+            state[3] = particle_tags[index]
+        states.append(tuple(state))
+    constraints = tuple(freeze(process[key]) for key in (
+        'id', 'orders', 'overall_orders', 'squared_orders', 'sqorders_types',
+        'constrained_orders', 'split_orders', 'required_s_channels',
+        'forbidden_onsh_s_channels', 'forbidden_s_channels',
+        'forbidden_particles', 'is_decay_chain'))
+    decays = tuple(external_process_identity(decay) for decay in process['decay_chains'])
+    return (constraints, decays), tuple(states)
+
+
 class FKSDiagramTag(diagram_generation.DiagramTag): #test written
     """Modified diagram tags to be used to link born and real configurations.
     """
@@ -888,4 +931,3 @@ class FKSLeg(MG.Leg):
         return super(FKSLeg,self).filter(name, value)
     
      
-

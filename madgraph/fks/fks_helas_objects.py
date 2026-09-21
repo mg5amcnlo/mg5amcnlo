@@ -101,7 +101,7 @@ def async_generate_born(args):
     born = args[1]
     born_pdg_list = args[2]
     loop_orders = args[3]
-    pdg_list = args[4]
+    real_keys = args[4]
     loop_optimized = args[5]
     OLP = args[6]
     realmapout = args[7]
@@ -112,10 +112,10 @@ def async_generate_born(args):
     helasreal_list = []
     amp_to_remove = []
     for amp in born.real_amps:
-        # if the pdg_list is not there, it has been removed
+        # If the complete state identity is absent, it has been removed
         # because there are no diagrams
         try:
-            idx = pdg_list.index(amp.pdgs)
+            idx = real_keys.index(fks_common.external_process_identity(amp.process))
             infilename = realmapout[idx]
             infile = open(infilename,'rb')
             realdata = cPickle.load(infile)
@@ -301,12 +301,13 @@ class FKSHelasMultiProcess(helas_objects.HelasMultiProcess):
                         loop_orders[coup] = max([loop_orders[coup], val])
                     except KeyError:
                         loop_orders[coup] = val        
-            pdg_list = []        
+            real_keys = []
             real_amp_list = []
             for born in born_procs:
                 for amp in born.real_amps:
-                    if not pdg_list.count(amp.pdgs):
-                        pdg_list.append(amp.pdgs)
+                    identity = fks_common.external_process_identity(amp.process)
+                    if identity not in real_keys:
+                        real_keys.append(identity)
                         real_amp_list.append(amp)
                         
             #generating and store in tmp files all output corresponding to each real_amplitude
@@ -342,11 +343,11 @@ class FKSHelasMultiProcess(helas_objects.HelasMultiProcess):
 
             # sometimes empty output from map_async can be there if the amplitude has no diagrams
             # these empty entries need to be discarded
-            for rout, ramp, rpdg  in zip(list(realmapout), list(real_amp_list), list(pdg_list)):
+            for rout, ramp, key in zip(list(realmapout), list(real_amp_list), list(real_keys)):
                 if not rout:
                     realmapout.remove(rout)
                     real_amp_list.remove(ramp)
-                    pdg_list.remove(rpdg)
+                    real_keys.remove(key)
             realmapout = [r for r in realmapout if r]
             
             realmapfiles = []
@@ -358,7 +359,7 @@ class FKSHelasMultiProcess(helas_objects.HelasMultiProcess):
             bornmapin = []
             OLP=fksmulti['OLP']
             for i,born in enumerate(born_procs):
-                bornmapin.append([i,born,born_pdg_list,loop_orders,pdg_list,loop_optimized,OLP,realmapfiles])
+                bornmapin.append([i,born,born_pdg_list,loop_orders,real_keys,loop_optimized,OLP,realmapfiles])
 
             try:
                 bornmapout = pool.map_async(async_generate_born,bornmapin).get(9999999)
@@ -995,5 +996,4 @@ class FKSHelasRealProcess(object): #test written
         """Inequality operator:
         compare two FKSHelasRealProcesses by comparing their dictionaries"""
         return not self.__eq__(other)
-
 

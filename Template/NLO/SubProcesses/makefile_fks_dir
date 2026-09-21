@@ -138,8 +138,8 @@ mint_module.o : FKSParams.o
 BinothLHA_OLP.o: FKSParams.o
 BinothLHA.o: FKSParams.o
 reweight_xsec_events.o: weight_lines.o
-fks_singular.o: weight_lines.o mint_module.o
-driver_mintMC.o: weight_lines.o mint_module.o pythia8_control.inc pythia8_control_setup.inc
+fks_singular.o: weight_lines.o mint_module.o fks_symmetry.inc
+driver_mintMC.o: weight_lines.o mint_module.o kinematics_module.o fks_symmetry.inc mc_histories.inc pythia8_control.inc pythia8_control_setup.inc
 driver_mintFO.o: weight_lines.o mint_module.o FKSParams.o
 pythia8_wrapper.o: pythia8_fortran.o LHAFortran_aMCatNLO.h
 chooser_functions.o: weight_lines.o
@@ -155,4 +155,3 @@ clean:
 	@rm -f *.o write_ajob_basic reweight_xsec_events madevent_* check_poles\
 	    test_M* gensym
 	for dir in `ls -d V*`; do cd $$dir; make clean; cd ../; done
-

@@ -1033,9 +1033,9 @@ c Sum the contributions that can be summed before taking the ABS value
       include 'nFKSconfigs.inc'
       include 'genps.inc'
       include 'run.inc'
-      include 'fks_info.inc'
-      include 'leshouche_decl.inc'
-      integer first_native,last_native,first_alt,owner,iFKS,ii,jj,
+      include 'fks_symmetry.inc'
+      include 'mc_histories.inc'
+      integer first_native,last_native,first_alt,owner,iFKS,ii,jj,ihist,
      $     ict,flow_save,called_save,owner_match(nexternal)
       double precision x_outer(99),p(0:3,nexternal),
      $     p_lab(0:3,nexternal),p_cms(0:3,nexternal),jacPS,vegas_wgt,
@@ -1047,10 +1047,7 @@ c Sum the contributions that can be summed before taking the ABS value
       double precision nbody_scales_save(nexternal-1,nexternal-1,3),
      $     n1body_scales_save(nexternal,nexternal),
      $     emsca_save(fks_configs,ndelH,ndelH)
-      logical seen(nexternal,nexternal),cuts_born,cuts_real,passcuts,
-     $     firsttime
-      data firsttime/.true./
-      save idup_d,mothup_d,icolup_d,niprocs_d
+      logical cuts_born,cuts_real,passcuts
       double precision fks_Sij
       external fks_Sij,passcuts
       double complex born_weight(2)
@@ -1089,8 +1086,15 @@ c Sum the contributions that can be summed before taking the ABS value
       common/ccalculatedBorn/calculatedBorn
 
       if (p(0,1).le.0d0 .or. jacPS.le.0d0) return
+      if (MC_HIST_COUNT.eq.0) return
       call set_cms_stuff(-100)
       owner=nFKSprocess
+      if (.not.MC_HIST_COMPLETE(owner)) then
+         write (*,*) 'Incomplete MC history sum for FKS sector',owner
+         write (*,*) 'Some native Born histories are unavailable in',
+     $        ' this subprocess; see mc_histories.inc'
+         stop 1
+      endif
       outer_boost=ybst_til_tolab
       owner_match=need_matching_H
       sector_weight=fks_Sij(p,i_fks,j_fks,xi_i_fks_ev,y_ij_fks_ev)
@@ -1105,9 +1109,15 @@ c Sum the contributions that can be summed before taking the ABS value
       outer_measure=xinorm_ev*xi_i_fks_ev*jacPS*vegas_wgt*
      $     sampling_wgt*fkssymmetryfactor
       if (outer_measure.le.0d0) return
-      if (firsttime) then
-         call read_leshouche_info(idup_d,mothup_d,icolup_d,niprocs_d)
-         firsttime=.false.
+      if (fkssymmetryfactor.ne.
+     $     dble(FKS_FAC_I_D(owner)*FKS_FAC_J_D(owner))) then
+         write (*,*) 'Incorrect outer MC H orbit factor',owner
+         stop 1
+      endif
+      if (MC_HIST_OWN(owner).lt.MC_HIST_FIRST(owner) .or.
+     $     MC_HIST_OWN(owner).gt.MC_HIST_LAST(owner)) then
+         write (*,*) 'Missing native entry in MC history table',owner
+         stop 1
       endif
       gfun_save=[gfactsf,gfactcl,gfactazi]
       flow_save=born_flow_picked
@@ -1119,143 +1129,121 @@ c Sum the contributions that can be summed before taking the ABS value
       nbody_scales_save(:,:,3)=shower_scale_nbody_max
       n1body_scales_save=shower_scale_n1body
       emsca_save=emsca_H(:,ifold_counter,:,:)
-      seen=.false.
-      seen(i_fks,j_fks)=.true.
       mc_H_only=.true.
 
-      do iFKS=1,fks_configs
-         if (any(pdg_type_d(iFKS,:).ne.pdg_type_d(owner,:))) cycle
-         if (any(particle_tag_d(iFKS,:).neqv.
-     $        particle_tag_d(owner,:))) cycle
-! Event ownership may differ from the PDF history, but their ordered
-! lists of real subprocesses must agree, not just their first PDG list.
-         if (niprocs_d(iFKS).ne.niprocs_d(owner)) then
-            write (*,*) 'Incompatible subprocess groups in MC H sum'
-            stop 1
-         endif
-         if (any(idup_d(iFKS,:,1:niprocs_d(iFKS)).ne.
-     $        idup_d(owner,:,1:niprocs_d(owner)))) then
-            write (*,*) 'Incompatible subprocess order in MC H sum'
-            stop 1
-         endif
+! The exporter supplies unique ordered histories, including both gg
+! orientations, with native Born/order identities and checked label maps.
+! Every row has unit multiplicity. The original native row is already
+! in first_native:last_native, and must not be included a second time.
+      do ihist=MC_HIST_FIRST(owner),MC_HIST_LAST(owner)
+         if (ihist.eq.MC_HIST_OWN(owner)) cycle
+         iFKS=MC_HIST_NATIVE(ihist)
+         ii=MC_HIST_I(ihist)
+         jj=MC_HIST_J(ihist)
          call update_fks_dir(iFKS)
          call update_coltype_and_charge(iFKS,i_fks,j_fks)
-         do ii=nincoming+1,nexternal
-            if (pdg_type_d(owner,ii).ne.pdg_type_d(iFKS,i_fks)) cycle
-            if (particle_tag_d(owner,ii).neqv.
-     $           particle_tag_d(iFKS,i_fks)) cycle
-            do jj=1,nexternal
-               if (ii.eq.jj .or. seen(ii,jj)) cycle
-               if (j_fks.le.nincoming .and. jj.ne.j_fks) cycle
-               if (jj.le.nincoming .and. jj.ne.j_fks) cycle
-               if (pdg_type_d(owner,jj).ne.pdg_type_d(iFKS,j_fks))
-     $              cycle
-               if (particle_tag_d(owner,jj).neqv.
-     $              particle_tag_d(iFKS,j_fks)) cycle
-! A labelled permutation must preserve every combined subprocess,
-! not just the representative flavours in pdg_type_d.
-               if (any(idup_d(iFKS,ii,1:niprocs_d(iFKS)).ne.
-     $              idup_d(iFKS,i_fks,1:niprocs_d(iFKS))) .or.
-     $             any(idup_d(iFKS,jj,1:niprocs_d(iFKS)).ne.
-     $              idup_d(iFKS,j_fks,1:niprocs_d(iFKS)))) then
-                  write (*,*) 'Incompatible flavour permutation',
-     $                 owner,iFKS,ii,jj
-                  stop 1
-               endif
-               seen(ii,jj)=.true.
-! Keep both ordered gg histories: the native fks_Hij partitions them.
-               call flip_momenta(i_fks,ii,j_fks,jj,p_lab,p_flipped)
-               xx=0d0
-               jac_native=1d0
-               call generate_lab_momenta_inverse(ndim,iconfig,
-     $              jac_native,xx,p_flipped,xbjrk_born)
-               if (jac_native.le.0d0) then
-                  write (*,*) 'Cannot invert native MC H history',
-     $                 owner,iFKS,ii,jj
-                  stop 1
-               endif
+         if (fkssymmetryfactor.ne.
+     $        dble(FKS_FAC_I_D(iFKS)*FKS_FAC_J_D(iFKS)) .or.
+     $        MC_HIST_PERM(i_fks,ihist).ne.ii .or.
+     $        MC_HIST_PERM(j_fks,ihist).ne.jj) then
+            write (*,*) 'Incorrect native MC H orbit',owner,ihist
+            stop 1
+         endif
+         call apply_momentum_permutation(MC_HIST_PERM(:,ihist),
+     $        p_lab,p_flipped)
+         xx=0d0
+         jac_native=1d0
+         call generate_lab_momenta_inverse(ndim,iconfig,
+     $        jac_native,xx,p_flipped,xbjrk_born)
+         if (jac_native.le.0d0) then
+            write (*,*) 'Cannot invert native MC H history',
+     $           owner,iFKS,ii,jj
+            stop 1
+         endif
 
 ! Inversion alone does not fill the native FKS counterevents. Replay
 ! the forward map to obtain those points AND their limit measures.
-               calculatedBorn=.false.
-               jac_native=1d0
-               call generate_momenta(ndim,iconfig,jac_native,xx,
-     $              pn,pn_lab,pn_cms)
-               if (jac_native.le.0d0 .or. pn(0,1).le.0d0 .or.
-     $              p_born(0,1).le.0d0) then
-                  write (*,*) 'Cannot replay native MC H history',
-     $                 owner,iFKS,ii,jj
-                  stop 1
-               endif
-               if (maxval(abs(pn_lab-p_flipped)).gt.
-     $              1d-7*max(1d0,maxval(abs(p_flipped)))) then
-                  write (*,*) 'MC H inverse/forward point mismatch',
-     $                 owner,iFKS,ii,jj
-                  stop 1
-               endif
-               native_measure=xinorm_ev*xi_i_fks_ev*jac_native*
-     $              fkssymmetryfactor
-               if (native_measure.le.0d0) then
-                  write (*,*) 'Invalid native MC H measure',
-     $                 owner,iFKS,ii,jj,native_measure
-                  stop 1
-               endif
+         calculatedBorn=.false.
+         jac_native=1d0
+         call generate_momenta(ndim,iconfig,jac_native,xx,
+     $        pn,pn_lab,pn_cms)
+         if (jac_native.le.0d0 .or. pn(0,1).le.0d0 .or.
+     $        p_born(0,1).le.0d0) then
+            write (*,*) 'Cannot replay native MC H history',
+     $           owner,iFKS,ii,jj
+            stop 1
+         endif
+         if (maxval(abs(pn_lab-p_flipped)).gt.
+     $        1d-7*max(1d0,maxval(abs(p_flipped)))) then
+            write (*,*) 'MC H inverse/forward point mismatch',
+     $           owner,iFKS,ii,jj
+            stop 1
+         endif
+         native_measure=xinorm_ev*xi_i_fks_ev*jac_native*
+     $        fkssymmetryfactor
+         if (native_measure.le.0d0) then
+            write (*,*) 'Invalid native MC H measure',
+     $           owner,iFKS,ii,jj,native_measure
+            stop 1
+         endif
 
 ! Divide out the native real measure of the COMPLETE generated H weight
 ! and insert K_a. This is not an extra Jacobian on a raw MC density:
 ! its native K_b cancels exactly. The counter/real measure ratios inside
 ! the G replacement, however, must be retained. The inner orbit factor
 ! cancels too, since the labelled histories are explicitly enumerated.
-               factor=sector_weight*outer_measure/native_measure
-               MCcntcalled=0
-               call fill_kinematics_module(pn_cms,i_fks,j_fks,
-     $              xi_i_fks_ev,y_ij_fks_ev,pmass(j_fks),.false.)
-               call compute_prefactors_n1body(1d0,jac_native)
-               if (ickkw.eq.3) then
-                  call set_FxFx_scale(0,pn)
-                  call set_cms_stuff(0)
-                  call set_FxFx_scale(2,p1_cnt(0,1,0))
-                  call set_cms_stuff(-100)
-                  call set_FxFx_scale(3,pn)
-               endif
-               call set_cms_stuff(0)
-               if (ickkw.eq.3) call set_FxFx_scale(-2,p1_cnt(0,1,0))
+         factor=sector_weight*outer_measure/native_measure
+         MCcntcalled=0
+         call fill_kinematics_module(pn_cms,i_fks,j_fks,
+     $        xi_i_fks_ev,y_ij_fks_ev,pmass(j_fks),.false.)
+         call compute_prefactors_n1body(1d0,jac_native)
+         if (ickkw.eq.3) then
+            call set_FxFx_scale(0,pn)
+            call set_cms_stuff(0)
+            call set_FxFx_scale(2,p1_cnt(0,1,0))
+            call set_cms_stuff(-100)
+            call set_FxFx_scale(3,pn)
+         endif
+         call set_cms_stuff(0)
+         if (ickkw.eq.3) call set_FxFx_scale(-2,p1_cnt(0,1,0))
 ! Sample in this history's own Born basis. Reusing the outer label
 ! would require a flow map and support at a different Born point.
 ! q_b,c=p_b,c here; no additional outer 1/q_a,c belongs on this term.
-               call set_alphaS(p1_cnt(0,1,0))
-               calculatedBorn=.false.
-               call sborn(p_born,born_weight)
-               call get_born_flow(born_flow_picked,flow_factor_native)
-               calculatedBorn=.false.
-               call include_born_flow_weight(flow_factor_native,
-     $              flow_factor_native)
-               call init_process_module_n1body_wrapper(born_flow_picked)
-               call compute_shower_scale_nbody(p_born,-fksfather)
-               call compute_shower_scale_n1body(pn,i_fks,j_fks)
-               cuts_born=passcuts(p1_cnt(0,1,0),rwgt)
-               call set_cms_stuff(-100)
-               if (ickkw.eq.3) call set_FxFx_scale(-3,pn)
-               cuts_real=passcuts(pn,rwgt)
-               first_alt=icontr+1
-               call compute_native_NLOPS_weights(pn,pn_lab,pn_cms,
-     $              jac_native,cuts_born,cuts_real,probne_native)
-               do ict=first_alt,icontr
-                  wgt(:,ict)=wgt(:,ict)*factor
+         call set_alphaS(p1_cnt(0,1,0))
+         calculatedBorn=.false.
+         call sborn(p_born,born_weight)
+         call get_born_flow(born_flow_picked,flow_factor_native)
+         calculatedBorn=.false.
+         call include_born_flow_weight(flow_factor_native,
+     $        flow_factor_native)
+         call init_process_module_n1body_wrapper(born_flow_picked)
+         call compute_shower_scale_nbody(p_born,-fksfather)
+         call compute_shower_scale_n1body(pn,i_fks,j_fks)
+         cuts_born=passcuts(p1_cnt(0,1,0),rwgt)
+         call set_cms_stuff(-100)
+         if (ickkw.eq.3) call set_FxFx_scale(-3,pn)
+         cuts_real=passcuts(pn,rwgt)
+         first_alt=icontr+1
+         call compute_native_NLOPS_weights(pn,pn_lab,pn_cms,
+     $        jac_native,cuts_born,cuts_real,probne_native)
+         do ict=first_alt,icontr
+            if (.not.H_event(ict)) then
+               write (*,*) 'S event entered the inner MC H sum',ihist
+               stop 1
+            endif
+            wgt(:,ict)=wgt(:,ict)*factor
 ! Keep BOTH native momentum sets for ME reweighting, expressed in the
 ! outer frame. Only event kinematics and shower ownership are outer.
-                  event_nFKS(ict)=owner
-                  call boost_n1_to_lab(momenta_m(:,:,1,ict),pn_cms,
-     $                 y_bst(ict)-outer_boost)
-                  momenta_m(:,:,1,ict)=pn_cms
-                  call boost_n1_to_lab(momenta_m(:,:,2,ict),pn_cms,
-     $                 y_bst(ict)-outer_boost)
-                  momenta_m(:,:,2,ict)=pn_cms
-                  momenta(:,:,ict)=p
-                  y_bst(ict)=outer_boost
-                  need_match(:,ict)=owner_match
-               enddo
-            enddo
+            event_nFKS(ict)=owner
+            call boost_n1_to_lab(momenta_m(:,:,1,ict),pn_cms,
+     $           y_bst(ict)-outer_boost)
+            momenta_m(:,:,1,ict)=pn_cms
+            call boost_n1_to_lab(momenta_m(:,:,2,ict),pn_cms,
+     $           y_bst(ict)-outer_boost)
+            momenta_m(:,:,2,ict)=pn_cms
+            momenta(:,:,ict)=p
+            y_bst(ict)=outer_boost
+            need_match(:,ict)=owner_match
          enddo
       enddo
 ! Replaying the saved OUTER random numbers restores all FKS event and
@@ -1768,4 +1756,3 @@ c     if there are no soft singularities at all, just do something trivial
       endif
       return
       end
-

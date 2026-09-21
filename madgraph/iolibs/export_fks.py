@@ -546,6 +546,8 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                                  matrix_element, 
                                  fortran_model)
 
+        self.write_mc_history_files(matrix_element)
+
         # update the splitting types
         self.proc_characteristic['splitting_types'] = list(\
                 set(self.proc_characteristic['splitting_types']).union(\
@@ -3107,6 +3109,190 @@ Parameters              %(params)s\n\
         writer.writelines(content)
     
         return split_types_return
+
+
+    def write_mc_history_files(self, fksborn):
+        """Export the statistical ledger and the full ordered MC history sum.
+
+        FKS_INFO remains the reduced outer integration list. Each row here has
+        unit multiplicity and refers back to its native FKS_INFO entry for the
+        Born/extra-counterterm, splitting orders and native colour basis. No
+        outer-to-inner colour-flow identification is made: flows are sampled
+        independently at each native Born point.
+        """
+        infos = fksborn.get_fks_info_list()
+        nexternal, nincoming = fksborn.born_me.get_nexternal_ninitial()
+        nexternal += 1
+        born_iden = fksborn.born_me['identical_particle_factor']
+        symmetry = []
+        groups = []
+        allowed_pairs = []
+        group_keys = []
+        sector_groups = []
+        native_rows = [0] * len(infos)
+
+        def process_identity(proc, tags):
+            # Decay-chain NLO generation is not supported by the FKS exporter.
+            # Do not silently erase resonance ancestry if that ever changes.
+            if proc['decay_chains']:
+                raise MadGraph5Error('MC histories require explicit resonance ancestry '
+                                     'for decay-chain processes')
+            legs = proc.get_legs_with_decays()
+            if len(legs) != nexternal or len(tags) != nexternal:
+                raise MadGraph5Error('Inconsistent external states in MC history export')
+            return fks_common.external_process_identity(proc, tags)
+
+        for sector, info in enumerate(infos, 1):
+            real = fksborn.real_processes[info['n_me']-1]
+            real_iden = real.matrix_element['identical_particle_factor']
+            if born_iden <= 0 or real_iden <= 0:
+                raise MadGraph5Error('Non-positive MC statistical denominator')
+            # Preserve the entire ordered subprocess list: the inner PDF index
+            # is subsequently interpreted in the outer event's flavour list.
+            processes = tuple(process_identity(proc, real.particle_tags)
+                              for proc in real.matrix_element['processes'])
+            key = (processes, real_iden)
+            if key not in group_keys:
+                if any(any(proc in old_processes for proc in processes)
+                       for old_processes, _ in group_keys):
+                    raise MadGraph5Error('Incompatible ordered subprocess lists in MC '
+                                         'history export; separate these process groups')
+                group_keys.append(key)
+                groups.append([])
+                allowed_pairs.append(set())
+            group = group_keys.index(key)
+            allowed_pairs[group].update((i, j) for i, js in real.fks_j_from_i.items()
+                                        for j in js if i > nincoming and i != j)
+            sector_groups.append(group)
+            states = tuple(tuple(proc[1][leg] for proc in processes)
+                           for leg in range(nexternal))
+            fks_info = info['fks_info']
+            i, j = fks_info['i'], fks_info['j']
+            if not (nincoming < i <= nexternal and 1 <= j <= nexternal and i != j):
+                raise MadGraph5Error('Invalid ordered MC history in FKS sector %d' % sector)
+            ii_list = [k for k in range(nincoming+1, nexternal+1)
+                       if states[k-1] == states[i-1]]
+            jj_list = ([j] if j <= nincoming else
+                       [k for k in range(nincoming+1, nexternal+1)
+                        if states[k-1] == states[j-1]])
+            fac_i = len(ii_list)
+            fac_j = len(jj_list) - int(i in jj_list)
+            # A common matrix element/PDF list must have one common orbit.
+            # Otherwise split the process group instead of losing histories.
+            for _, proc_states in processes:
+                if (ii_list != [k for k in range(nincoming+1, nexternal+1)
+                                if proc_states[k-1] == proc_states[i-1]] or
+                    (j > nincoming and jj_list !=
+                     [k for k in range(nincoming+1, nexternal+1)
+                      if proc_states[k-1] == proc_states[j-1]])):
+                    raise MadGraph5Error('Different FKS orbits in grouped subprocesses '
+                                         'of sector %d; separate these processes' % sector)
+            symmetry.append((fac_i, fac_j, born_iden, real_iden))
+            orbit = []
+            for ii in ii_list:
+                for jj in jj_list:
+                    if ii == jj:
+                        continue
+                    # p_native(:,leg) = p_outer(:,perm(leg)). Locate jj
+                    # AFTER the first swap so overlapping swaps remain bijective.
+                    perm = list(range(1, nexternal+1))
+                    perm[i-1], perm[ii-1] = perm[ii-1], perm[i-1]
+                    pos = perm.index(jj)
+                    perm[j-1], perm[pos] = perm[pos], perm[j-1]
+                    if (sorted(perm) != list(range(1, nexternal+1)) or
+                        perm[:nincoming] != list(range(1, nincoming+1)) or
+                        any(states[k] != states[label-1] for k, label in enumerate(perm)) or
+                        perm[i-1] != ii or perm[j-1] != jj):
+                        raise MadGraph5Error('Invalid MC permutation in FKS sector %d' % sector)
+                    # The existing native evaluator already handles the full
+                    # splitting-order/extra-Born content of a fixed pair. Two
+                    # retained representatives covering that same ordered pair
+                    # would double its real term; never resolve this with seen().
+                    if any(row[1:3] == (ii, jj) for row in groups[group]):
+                        raise MadGraph5Error('Overlapping MC history (%d,%d) in FKS '
+                                             'sector %d; ambiguous Born/splitting identity' %
+                                             (ii, jj, sector))
+                    row = (sector, ii, jj, perm)
+                    groups[group].append(row)
+                    orbit.append(row)
+            if len(orbit) != fac_i * fac_j or not orbit:
+                raise MadGraph5Error('Incorrect MC orbit size in FKS sector %d' % sector)
+
+        # No real correction: retain the fake LO-only sector, but no MC histories.
+        if not infos:
+            symmetry = [(1, 1, born_iden, born_iden)]
+        lines = ['C Generated statistical factors: no initial spin/colour averages.',
+                 'INTEGER FKS_FAC_I_D(%d),FKS_FAC_J_D(%d)' %
+                 (len(symmetry), len(symmetry)),
+                 'DOUBLE PRECISION FKS_IDEN_BORN_D(%d),FKS_IDEN_REAL_D(%d)' %
+                 (len(symmetry), len(symmetry))]
+        for column, name in enumerate(('FKS_FAC_I_D', 'FKS_FAC_J_D',
+                                       'FKS_IDEN_BORN_D', 'FKS_IDEN_REAL_D')):
+            fmt = '%d' if column < 2 else '%dd0'
+            lines.append('DATA %s / %s /' %
+                         (name, ', '.join(fmt % row[column] for row in symmetry)))
+        # Extra Born counterterms use the primary Born statistical convention;
+        # see get_den_factor_lines(). Do not substitute their raw denominators.
+        lines.append('C I_B follows get_den_factor_lines, including extra Borns.')
+        writers.FortranWriter('fks_symmetry.inc').writelines(lines)
+
+        # fks_j_from_i can refer to a Born in ANOTHER P* directory. Such a
+        # history cannot be evaluated by this directory's sborn. Flag this
+        # explicitly for the hatted-H driver; fixed-order export still works.
+        missing_pairs = [allowed - set(row[1:3] for row in group)
+                         for allowed, group in zip(allowed_pairs, groups)]
+        rows = []
+        starts, ends = [], []
+        for group in groups:
+            starts.append(len(rows)+1)
+            rows.extend(group)
+            ends.append(len(rows))
+        for index, (sector, ii, jj, perm) in enumerate(rows, 1):
+            fks_info = infos[sector-1]['fks_info']
+            if (ii, jj) == (fks_info['i'], fks_info['j']):
+                native_rows[sector-1] = index
+        if any(index == 0 for index in native_rows):
+            raise MadGraph5Error('Missing native MC history')
+        size = max(len(rows), 1)
+        lines = ['C Ordered MC histories; each row has UNIT multiplicity.',
+                 'C NATIVE points to fks_info.inc: Born, orders and colour basis.',
+                 'C Both gg orientations are kept; native fks_Hij supplies eta.',
+                 'INTEGER MC_HIST_COUNT,MC_HIST_POS',
+                 'PARAMETER (MC_HIST_COUNT=%d)' % len(rows),
+                 'INTEGER MC_HIST_FIRST(%d),MC_HIST_LAST(%d),MC_HIST_OWN(%d)' %
+                 (len(symmetry), len(symmetry), len(symmetry)),
+                 'LOGICAL MC_HIST_COMPLETE(%d)' % len(symmetry),
+                 'INTEGER MC_HIST_NATIVE(%d),MC_HIST_I(%d),MC_HIST_J(%d)' %
+                 (size, size, size),
+                 'INTEGER MC_HIST_PERM(NEXTERNAL,%d)' % size]
+        for name, values in (
+                ('MC_HIST_FIRST', [starts[g] for g in sector_groups] or [1]),
+                ('MC_HIST_LAST', [ends[g] for g in sector_groups] or [0]),
+                ('MC_HIST_OWN', native_rows or [0])):
+            lines.append('DATA %s / %s /' % (name, ', '.join(str(v) for v in values)))
+        for column, name in enumerate(('MC_HIST_NATIVE', 'MC_HIST_I', 'MC_HIST_J')):
+            lines.append('DATA %s / %s /' %
+                         (name, ', '.join(str(row[column]) for row in rows) or '0'))
+        lines.append('DATA MC_HIST_COMPLETE / %s /' %
+                     (', '.join('.false.' if missing_pairs[g] else '.true.'
+                                for g in sector_groups) or '.true.'))
+        for sector, group in enumerate(sector_groups, 1):
+            if missing_pairs[group]:
+                lines.append('C Sector %d needs histories from another Born context: %s' %
+                             (sector, ', '.join('(%d,%d)' % pair
+                                               for pair in sorted(missing_pairs[group]))))
+        for index, (sector, ii, jj, perm) in enumerate(rows, 1):
+            info = infos[sector-1]
+            native = info['fks_info']
+            lines.append('C History %d: native %d, real ME %d, father %d (PDG %d),' %
+                         (index, sector, info['n_me'], native['ij'], native['ij_id']))
+            lines.append('C primary Born 0, extra Born %d, splitting %s.' %
+                         (native['extra_cnt_index']+1, '/'.join(native['splitting_type'])))
+            lines.append('DATA (MC_HIST_PERM(MC_HIST_POS,%d),MC_HIST_POS=1,NEXTERNAL) / %s /' %
+                         (index, ', '.join(str(label) for label in perm)))
+        if not rows:
+            lines.append('DATA MC_HIST_PERM / %d*0 /' % nexternal)
+        writers.FortranWriter('mc_histories.inc').writelines(lines)
 
  
     #===============================================================================
