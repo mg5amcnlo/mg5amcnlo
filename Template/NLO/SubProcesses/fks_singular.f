@@ -5874,7 +5874,8 @@ c the results are written onto fort.77; set iwrite=0 to prevent the writing
      $     iwrite,i,k,l,imin,icount
       real*8 xsecvc(imax),xseclvc,wgt(imax),wgtl,lxp(0:3,nexternal+1)
      $     ,xp(0:3,nexternal+1,imax)
-      real*8 ckc(imax),rckc(imax),rat
+      real*8 ckc(imax),rckc(imax),rat,roundoff
+      parameter (roundoff=100d0*epsilon(1d0))
       parameter (ithrs=3)
       parameter (istop=0)
       parameter (iwrite=1)
@@ -5884,6 +5885,9 @@ c
             ckc(i)=abs(xsecvc(i))
          else
             ckc(i)=abs(xsecvc(i)/xseclvc-1.d0)
+c G replacements can equal their analytic limit already at the first
+c few points. Do not demand geometric improvement of round-off noise.
+            if (ckc(i).le.roundoff) ckc(i)=0d0
          endif
       enddo
       if(iflag.eq.0)then

@@ -20,7 +20,7 @@
             colltest=.false.
             ntests=nsofttests
             call test_limits(ilim,ntests,xi_i_fks_fix_input
-     $           ,y_ij_fks_fix_input,nstep,mass_jfks)
+     $           ,y_ij_fks_fix_input,nstep)
             if (mass_jfks.gt.0d0) then
                write (*,*) 'No collinear test for massive j_fks'
                cycle
@@ -29,34 +29,31 @@
             colltest=.true.
             ntests=ncolltests
             call test_limits(ilim,ntests,xi_i_fks_fix_input
-     $           ,y_ij_fks_fix_input,nstep,mass_jfks)
+     $           ,y_ij_fks_fix_input,nstep)
          enddo
       enddo
       end
 
       subroutine test_limits(ilim,ntests,xi_i_fks_fix_input
-     $     ,y_ij_fks_fix_input,nstep,mass_jfks)
+     $     ,y_ij_fks_fix_input,nstep)
       use mint_module
-      use scale_module
-      use kinematics_module
       implicit none
       include 'nexternal.inc'
       include 'orders.inc'
-      integer nstep,ntests,i,ilim,jtest,partner_picked
+      integer nstep,ntests,i,ilim,jtest
       double precision xi_i_fks_fix_input,y_ij_fks_fix_input,wgt,xx(99)
      $     ,p(0:3,nexternal),towards_amp_split(1:amp_split_size,1:nstep)
      $     ,towards_wgt_PS(1:nstep),towards_p(0:3,nexternal+1,1:nstep)
      $     ,limit_amp_split(1:amp_split_size),limit_wgt_PS,limit_p(0:3
-     $     ,nexternal+1),born_flow_factor,mass_jfks
-      double complex wgt1(2)
+     $     ,nexternal+1)
       double precision xi_i_fks_fix,y_ij_fks_fix
       common /cxiyfix/ xi_i_fks_fix,y_ij_fks_fix
       logical        softtest,colltest
       common/sctests/softtest,colltest
-      double precision p_born(0:3,nexternal-1)
-      common /pborn/   p_born
-      integer            i_fks,j_fks
-      common/fks_indices/i_fks,j_fks
+      integer nerr(0:amp_split_size)
+      common /c_nerr/nerr
+c Each soft/collinear sample has its own failure count.
+      nerr=0
       do jtest=1,ntests
          if (colltest) then
             xi_i_fks_fix=xi_i_fks_fix_input
@@ -67,19 +64,10 @@
          endif
          call generate_valid_momenta(wgt,xx,p)
 
-         if (ilim.eq.1) then
-            call sborn(p_born,wgt1)
-            call fill_father_and_ileg(i_fks,j_fks,mass_jfks)
-            call get_born_flow(born_flow_picked,born_flow_factor)
-            call determine_partner(born_flow_picked,partner_picked)
-            call init_process_module_n1body_wrapper(born_flow_picked)
-            call compute_shower_scale_nbody(p_born,born_flow_picked)
-         endif
-         
          do i=1,nstep
             if (softtest) xi_i_fks_fix=0.1d0**i
             if (colltest) y_ij_fks_fix=1-0.1d0**i
-            call compute_towards_limit(ilim,xx,born_flow_factor
+            call compute_towards_limit(ilim,xx
      $           ,towards_amp_split(1,i),towards_wgt_PS(i),towards_p(0,1
      $           ,i))
          enddo
@@ -91,7 +79,7 @@
             xi_i_fks_fix=0.0d0
             y_ij_fks_fix=y_ij_fks_fix_input
          endif
-         call compute_in_the_limit(ilim,xx,born_flow_factor
+         call compute_in_the_limit(ilim,xx
      $        ,limit_amp_split,limit_wgt_PS,limit_p(0,1))
          call check_limit_and_print_result(nstep,towards_amp_split
      $        ,towards_wgt_PS,towards_p,limit_amp_split,limit_wgt_PS
@@ -281,16 +269,14 @@ c dump momenta in a fort.80 file
       enddo
       end
       
-      subroutine compute_towards_limit(ilim,x,born_flow_factor,amp
+      subroutine compute_towards_limit(ilim,x,amp
      $     ,wgt_PS,xp)
       use mint_module
       implicit none
       include 'nexternal.inc'
       include 'orders.inc'
-      include 'nFKSconfigs.inc'
-      include 'fks_info.inc'
-      integer ilim,iamp,idum,nFKSprocess_save,iFKS
-      double precision wgt,x(99),born_flow_factor,p(0:3,nexternal),fx
+      integer ilim
+      double precision wgt,x(99),p(0:3,nexternal),fx
      $     ,amp(amp_split_size),wgt_PS,xp(0:3,nexternal+1),p_lab(0:3
      $     ,nexternal) ,p_cms(0:3,nexternal)
       logical                calculatedBorn
@@ -302,14 +288,6 @@ c dump momenta in a fort.80 file
       common/fks_indices/i_fks,j_fks
       integer              nFKSprocess
       common/c_nFKSprocess/nFKSprocess
-      double precision xbjrk_ev(2),xbjrk_cnt(2,-2:2)
-      common/cbjorkenx/xbjrk_ev,xbjrk_cnt
-      logical soft_limit_is_zero
-      common /c_soft_limit_is_zero/soft_limit_is_zero
-      logical        softtest,colltest
-      common/sctests/softtest,colltest
-
-      integer i
       wgt=1d0
       call generate_momenta(ndim,iconfig,wgt,x,p,p_lab,p_cms)
       
@@ -318,28 +296,9 @@ c dump momenta in a fort.80 file
       if (ilim.eq.2) then
          call sreal(p,xi_i_fks_ev,y_ij_fks_ev,fx)
       elseif (ilim.eq.1) then
-         amp=0d0
          call fks_inc_chooser()
          call update_coltype_and_charge(nFKSprocess,i_fks,j_fks)
-         call sreal(p,xi_i_fks_ev,y_ij_fks_ev,fx)
-         do iamp=1,amp_split_size
-            amp(iamp) = amp(iamp)+amp_split(iamp)*born_flow_factor
-         enddo
-         call fks_inc_chooser()
-         call update_coltype_and_charge(nFKSprocess,i_fks,j_fks)
-         call compute_MC_subt_term_test(p,p_cms,p_lab,wgt
-     $        ,born_flow_factor)
-         do iamp=1,amp_split_size
-            if (.not.(soft_limit_is_zero .and. softtest)) then
-               if (amp_split(iamp).ne.0d0) then
-                  amp(iamp) = amp(iamp)/amp_split(iamp)
-               else
-                  amp(iamp) = 1d0
-               endif
-            else
-               amp(iamp)=amp_split(iamp)
-            endif
-         enddo
+         call compute_MC_subt_term_test(p,p_cms,wgt)
       else
          write (*,*) 'to implement (MC/MC)'
       endif
@@ -347,11 +306,7 @@ c dump momenta in a fort.80 file
       wgt_PS = wgt
 
       ! save amplitudes (and PS weight) towards limit
-      if (ilim.eq.2) then
-         do iamp=1,amp_split_size
-            amp(iamp) = amp_split(iamp)*wgt
-         enddo
-      endif
+      amp=amp_split*wgt
       ! save momenta
       xp(0:3,1:nexternal)=p(0:3,1:nexternal)
       xp(0:3,nexternal+1)=p_i_fks_ev(0:3)
@@ -360,7 +315,7 @@ c dump momenta in a fort.80 file
       
       
       
-      subroutine compute_in_the_limit(ilim,x,born_flow_factor
+      subroutine compute_in_the_limit(ilim,x
      $     ,limit_split,limit_PS_wgt,lxp)
       use mint_module
       implicit none
@@ -368,8 +323,8 @@ c dump momenta in a fort.80 file
       include 'orders.inc'
       double precision zero,    one
       parameter       (zero=0d0,one=1d0)
-      integer ilim,iamp,idum
-      double precision wgt,x(99),p(0:3,nexternal),fx,born_flow_factor
+      integer ilim
+      double precision wgt,x(99),p(0:3,nexternal),fx,sector,fks_Sij
      $     ,limit_split(amp_split_size),limit_PS_wgt,lxp(0:3,nexternal
      $     +1),p_lab(0:3,nexternal) ,p_cms(0:3,nexternal)
       logical                calculatedBorn
@@ -386,24 +341,23 @@ c dump momenta in a fort.80 file
       common/fksvariables/xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt
       double precision   xi_i_fks_cnt(-2:2)
       common /cxiifkscnt/xi_i_fks_cnt
-      double precision p_born(0:3,nexternal-1)
-      common /pborn/   p_born
-      logical soft_limit_is_zero
-      common /c_soft_limit_is_zero/soft_limit_is_zero
+      integer i_fks,j_fks
+      common/fks_indices/i_fks,j_fks
+      external fks_Sij
       wgt=1d0
       call generate_momenta(ndim,iconfig,wgt,x,p,p_lab,p_cms)
       
       calculatedBorn=.false.
       if (softtest) then
          call set_cms_stuff(0)
-         if (ilim.eq.2) then
-            call sreal(p1_cnt(0,1,0),zero,y_ij_fks_ev,fx)
-         endif
+         call sreal(p1_cnt(0,1,0),zero,y_ij_fks_ev,fx)
+         if (ilim.eq.1) sector=fks_Sij(p1_cnt(0,1,0),i_fks,j_fks,zero,
+     $        y_ij_fks_ev)
       elseif(colltest) then
          call set_cms_stuff(1)
-         if (ilim.eq.2) then
-            call sreal(p1_cnt(0,1,1),xi_i_fks_cnt(1),one,fx)
-         endif
+         call sreal(p1_cnt(0,1,1),xi_i_fks_cnt(1),one,fx)
+         if (ilim.eq.1) sector=fks_Sij(p1_cnt(0,1,1),i_fks,j_fks,
+     $        xi_i_fks_cnt(1),one)
       endif
       
       if (softtest) then
@@ -413,19 +367,10 @@ c dump momenta in a fort.80 file
       endif
       
 ! save amplitudes (and PS weight) in the limit
-      if (ilim.eq.2) then
-         do iamp=1,amp_split_size
-            limit_split(iamp) = amp_split(iamp)*limit_PS_wgt
-         enddo
-      elseif (ilim.eq.1) then
-         do iamp=1,amp_split_size
-            if (.not.(soft_limit_is_zero .and. softtest)) then
-               limit_split(iamp) = 1d0
-            else
-               limit_split(iamp) = 0d0
-            endif
-         enddo
-      endif
+      limit_split=amp_split*limit_PS_wgt
+c Native H weights subtract M_b from S_b*R. The common no-emission
+c probability multiplies both terms and is not part of this limit test.
+      if (ilim.eq.1) limit_split=limit_split*sector
       
 ! save momenta
       if (softtest) then
@@ -440,166 +385,112 @@ c dump momenta in a fort.80 file
 
 
 
-      subroutine compute_MC_subt_term_test(p,p_cms,p_lab,wgt
-     $     ,born_flow_factor)
+      subroutine compute_MC_subt_term_test(p,p_cms,wgt)
+c Test one complete native history, as used by compute_native_NLOPS_weights.
+c Its raw kernel carries H_ij; each G replacement carries its own limiting
+c S_ij and counterevent/real measure ratio. Repartitioning complete H weights
+c over other histories is an integration operation, not a native limit test.
       use mint_module
       use kinematics_module
+      use scale_module
       implicit none
       include 'nexternal.inc'
       include 'orders.inc'
-      include 'nFKSconfigs.inc'
-      include 'fks_info.inc'
-      logical include_gfun
-      integer iFKS,k_fks,l_fks,n_connect,iconnect,iamp,nFKSprocess_save
-     $     ,ii,jj,i
-      double precision p(0:3,nexternal),xi,y,z(2),born_flow_factor
-     $     ,amp_split_gfunc(amp_split_size),dummy
-     $     ,amp_split_xmcxsec(amp_split_size,2),p_cms(0:3,nexternal)
-     $     ,p_lab(0:3,nexternal) ,xx(99),wgt,jac,mass,p_cms_flipped(0:3
-     $     ,nexternal),p_lab_flipped(0:3,nexternal),p_flipped(0:3
-     $     ,nexternal),xbjrk_alt(2)
-      integer            i_fks,j_fks
+      include 'genps.inc'
+      include 'born_nhel.inc'
+      double precision p(0:3,nexternal),p_cms(0:3,nexternal),wgt
+     $     ,xi,y,z(2),hij,fks_Hij,flow_fraction,sumborn
+     $     ,amp_split_mc(amp_split_size),amp_split_gfunc(amp_split_size)
+     $     ,amp_split_xmcxsec(amp_split_size,2)
+      double precision amp2(ngraphs),jamp2(0:ncolor)
+      common/to_amps/amp2,jamp2
+      logical is_leading_cflow(max_bcol)
+      integer num_leading_cflows
+      common/c_leading_cflows/is_leading_cflow,num_leading_cflows
+      integer i_fks,j_fks,iflow,n_connect
       common/fks_indices/i_fks,j_fks
-      double precision amp_split_mc(1:amp_split_size)
-      integer              nFKSprocess
-      common/c_nFKSprocess/nFKSprocess
       double precision p_born(0:3,nexternal-1)
-      common /pborn/   p_born
-      logical                calculatedBorn
+      common/pborn/p_born
+      logical calculatedBorn,include_gfun
       common/ccalculatedBorn/calculatedBorn
-      ! use local amp_split_mc, since, compute_MCsubtraction_kl will overwrite amp_split:
-      amp_split_mc(1:amp_split_size)=0d0
-      include_gfun=.true. ! to set gfactsf. 
+      double precision pmass(nexternal)
+      common/to_mass/pmass
+      external fks_Hij
+
       xi=get_xi_from_p(i_fks,j_fks,p_cms)
       y=get_yij_from_p(i_fks,j_fks,p_cms)
-      call compute_MCsubtraction_kl(i_fks,j_fks,xi,y,p
-     $     ,p_cms,p_born,include_gfun,z,n_connect
-     $     ,amp_split_xmcxsec)
-      
-      ! include_gfun will be false here if in dead zone.
-      do iconnect=1,n_connect
-         amp_split_mc(1:amp_split_size) =
-     $        amp_split_mc(1:amp_split_size) +
-     $        amp_split_xmcxsec(1:amp_split_size,iconnect)
+      call compute_prefactors_n1body(1d0,wgt)
+      call set_cms_stuff(-100)
+      hij=fks_Hij(p,i_fks,j_fks)
+      call fill_father_and_ileg(i_fks,j_fks,pmass(j_fks))
+      call compute_shower_scale_nbody(p_born,-fksfather)
+      amp_split_mc=0d0
+c Sum colour flows explicitly, so the ME and MC sides have the same colour
+c sum without a randomly selected flow or a stale Born-flow probability.
+      do iflow=1,max_bcol
+         if (.not.is_leading_cflow(iflow)) cycle
+         born_flow_picked=iflow
+         call init_process_module_n1body_wrapper(born_flow_picked)
+         calculatedBorn=.false.
+         call set_cms_stuff(-100)
+         include_gfun=.true.
+         call compute_MCsubtraction_kl(i_fks,j_fks,xi,y,p,p_cms,
+     $        p_born,include_gfun,z,n_connect,amp_split_xmcxsec)
+         amp_split_mc=amp_split_mc+
+     $        hij*sum(amp_split_xmcxsec(:,1:n_connect),dim=2)
+     $        *xi**2*(1d0-y)
+         if (include_gfun) then
+            sumborn=sum(jamp2(1:max_bcol),mask=is_leading_cflow)
+            if (sumborn.le.0d0) then
+               write(*,*) 'FAILED: invalid Born colour sum in MC test'
+               stop 1
+            endif
+            flow_fraction=jamp2(iflow)/sumborn
+            call compute_MCsubtraction_from_gfun_test(amp_split_gfunc)
+            amp_split_mc=amp_split_mc+flow_fraction*amp_split_gfunc
+         endif
       enddo
-      amp_split_gfunc=0d0
-      if (include_gfun) then
-         call compute_MCsubtraction_from_gfun_test(xi,y,amp_split_gfunc)
-         amp_split_mc(1:amp_split_size) = amp_split_mc(1:amp_split_size)
-     $        + amp_split_gfunc(1:amp_split_size) * born_flow_factor
-      endif
-      include_gfun=.false.
-
-      
-      nFKSprocess_save=nFKSprocess
-
-      
-      do iFKS=1,fks_configs
-         nFKSprocess=iFKS
-         ! only include the ones compatible with the real-emission process
-         if (any(pdg_type_d(iFKS,:).ne.pdg_type_d(nFKSprocess_save,:)))
-     $        cycle
-         ! This sets i_fks and j_fks to correspond to the ones in
-         ! nFKSprocess (which here is iFKS).
-         call fks_inc_chooser()
-         call update_coltype_and_charge(nFKSprocess,i_fks,j_fks)
-         
-!     1. include do-loop over identical particless for i-fks and j-fks
-!     2. flip all momenta (p, p_lab and p_cms) among the possible i-fks and j-fks
-!     3. do NOT update i-fks and j-fks.
-         do ii=3,nexternal
-            if (pdg_type_d(nFKSprocess_save,ii).ne.
-     &           pdg_type_d(nFKSprocess_save,i_fks)) cycle
-            do jj=1,nexternal
-               if (ii.eq.jj) cycle
-               if (j_fks.le.nincoming .and. j_fks.ne.jj) cycle
-               if (jj.le.nincoming .and. j_fks.ne.jj) cycle
-               if (pdg_type_d(nFKSprocess_save,jj).ne.
-     &              pdg_type_d(nFKSprocess_save,j_fks)) cycle
-               if (pdg_type_d(nFKSprocess_save,ii).eq.
-     $              pdg_type_d(nFKSprocess_save,jj) .and.
-     $              ii.lt.jj) cycle
-               if ( nFKSprocess.eq.nFKSprocess_save .and. 
-     &              ii.eq.i_fks .and. jj.eq.j_fks) cycle ! this is already included above
-
-               call flip_momenta(i_fks,ii,j_fks,jj,p,p_flipped)
-               call flip_momenta(i_fks,ii,j_fks,jj,p_cms,p_cms_flipped)
-               call flip_momenta(i_fks,ii,j_fks,jj,p_lab,p_lab_flipped)
-               
-!     compute kinematic variables
-               xi=get_xi_from_p(i_fks,j_fks,p_cms_flipped)
-               y=get_yij_from_p(i_fks,j_fks,p_cms_flipped)
-               
-! call the inverse phase-space. This will update the Born
-! momenta, and the corresponding phase-space jacobian for the
-! n+1-body. Note: if the random numbers are not generated flat
-! (they are flat here), also the jacobian from importance
-! sampling should be included.
-               jac=1d0
-!     inputs are: ndim,iconfig,p
-!     outputs are: xx,jac (also updates pborn common block)
-               call generate_lab_momenta_inverse(ndim,iconfig,jac,xx
-     $              ,p_lab_flipped,xbjrk_alt)
-               if (jac.le.0d0) cycle
-               CalculatedBorn=.false.
-               ! include_gfun must be .false., because we do not want to
-               ! update gfactsf
-               call compute_MCsubtraction_kl(i_fks,j_fks,xi,y,p_flipped
-     $              ,p_cms_flipped,p_born,include_gfun,z,n_connect
-     $              ,amp_split_xmcxsec)
-               do iconnect=1,n_connect
-                  amp_split_mc(1:amp_split_size) =
-     $                 amp_split_mc(1:amp_split_size) +
-     $                 amp_split_xmcxsec(1:amp_split_size,iconnect) *
-     $                 jac/wgt
-               enddo
-            enddo
-         enddo
-      enddo
-      nFKSprocess=nFKSprocess_save
-      call fks_inc_chooser()
-      call update_coltype_and_charge(nFKSprocess,i_fks,j_fks)
-      xi=get_xi_from_p(i_fks,j_fks,p_cms) ! these correspond to ij, not kl
-      y=get_yij_from_p(i_fks,j_fks,p_cms)
-      amp_split=amp_split_mc*xi**2*(1d0-y) ! re-remove the 1/xi^2 and 1/(1-y) factors; they depend on 'ij', not 'kl'
+      call set_cms_stuff(-100)
+      amp_split=amp_split_mc
       end
 
-      subroutine compute_MCsubtraction_from_gfun_test(xi,y,amp_split_gfunc)
-      use kinematics_module
+      subroutine compute_MCsubtraction_from_gfun_test(amp_gfun)
+      use kinematics_module, only: gfactsf,gfactcl
       implicit none
-      include "nexternal.inc"
+      include 'nexternal.inc'
       include 'orders.inc'
-      double precision zero,one
-      parameter (zero=0d0,one=1d0)
-      integer izero,ione,itwo
-      parameter (izero=0,ione=1,itwo=2)
-      double precision xi,y
-      integer iFKS
-      double precision amp_split_gfunc(amp_split_size)
-      double precision p1_cnt(0:3,nexternal,-2:2)
-      double precision wgt_cnt(-2:2)
-      double precision pswgt_cnt(-2:2)
-      double precision jac_cnt(-2:2)
+      double precision amp_gfun(amp_split_size),coeff(0:2)
+     $     ,xis(0:2),ys(0:2),sector,fks_Sij,dummy
+      integer icnt,i_fks,j_fks
+      common/fks_indices/i_fks,j_fks
+      double precision p1_cnt(0:3,nexternal,-2:2),wgt_cnt(-2:2)
+     $     ,pswgt_cnt(-2:2),jac_cnt(-2:2)
       common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
-      double precision dum,amp_split_s(amp_split_size),
-     $     amp_split_c(amp_split_size),amp_split_sc(amp_split_size)
-      amp_split_gfunc(1:amp_split_size) = 0d0
-      call set_cms_stuff(izero)
-      call sreal(p1_cnt(0,1,0),zero,y,dum)
-      amp_split_s(1:amp_split_size) = amp_split(1:amp_split_size)
-      call set_cms_stuff(ione)
-      call sreal(p1_cnt(0,1,1),xi,one,dum)
-      amp_split_c(1:amp_split_size) = amp_split(1:amp_split_size)
-      call set_cms_stuff(itwo)
-      call sreal(p1_cnt(0,1,2),zero,one,dum)
-      amp_split_sc(1:amp_split_size) = amp_split(1:amp_split_size)
-      amp_split_gfunc(1:amp_split_size) = (1d0-gfactsf)
-     $     *( amp_split_s(1:amp_split_size) + (1d0-gfactcl)
-     $      *(amp_split_c(1:amp_split_size)
-     $        -amp_split_sc(1:amp_split_size)) )
-     $     /(xi**2*(1d0-y)) ! re-instate 1/xi^2 and 1/(1-y); they should
-                            ! not depend on 'kl', but rather on 'ij'
-      return
+      double precision xi_i_fks_cnt(-2:2)
+      common/cxiifkscnt/xi_i_fks_cnt
+      double precision xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev(0:3)
+     $     ,p_i_fks_cnt(0:3,-2:2)
+      common/fksvariables/xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt
+      double precision f_s_MC_S,f_s_MC_H,f_c_MC_S,f_c_MC_H
+     $     ,f_sc_MC_S,f_sc_MC_H,f_MC_S,f_MC_H
+      common/factor_n1body_NLOPS/f_s_MC_S,f_s_MC_H,f_c_MC_S,f_c_MC_H
+     $     ,f_sc_MC_S,f_sc_MC_H,f_MC_S,f_MC_H
+      external fks_Sij
+      amp_gfun=0d0
+      coeff=(1d0-gfactsf)*[f_s_MC_H,
+     $     (1d0-gfactcl)*f_c_MC_H,-(1d0-gfactcl)*f_sc_MC_H]/f_MC_H
+      xis=[0d0,xi_i_fks_cnt(1),0d0]
+      ys=[y_ij_fks_ev,1d0,1d0]
+      do icnt=0,2
+         if (coeff(icnt).eq.0d0) cycle
+         call set_cms_stuff(icnt)
+         sector=fks_Sij(p1_cnt(0,1,icnt),i_fks,j_fks,
+     $        xis(icnt),ys(icnt))
+         if (sector.le.0d0) cycle
+         amp_split=0d0
+         call sreal(p1_cnt(0,1,icnt),xis(icnt),ys(icnt),dummy)
+         amp_gfun=amp_gfun+coeff(icnt)*sector*amp_split
+      enddo
       end
 
       subroutine generate_valid_momenta(wgt,x,p)
@@ -615,6 +506,7 @@ c dump momenta in a fort.80 file
       common/ccalculatedBorn/calculatedBorn
       double precision p_born(0:3,nexternal-1)
       common /pborn/   p_born
+      ntry=0
       do jj=1,ndim
          x(jj)=ran2()
       enddo
@@ -645,7 +537,6 @@ c dump momenta in a fort.80 file
       use mint_module
       implicit none
       include 'nexternal.inc'
-      include 'orders.inc'
       integer ilim
       double precision x(99),wgt,p(0:3,nexternal)
       double complex wgt1(2)
@@ -653,8 +544,6 @@ c dump momenta in a fort.80 file
       common/sctests/softtest,colltest
       double precision p_born(0:3,nexternal-1)
       common /pborn/   p_born
-      integer nerr(0:amp_split_size)
-      common /c_nerr/nerr
       ichan=1
       iconfigs(1)=iconfig
       if (ilim.eq.2) then
@@ -673,7 +562,6 @@ c dump momenta in a fort.80 file
       write (*,*) ''
       write (*,*) ''
       write (*,*) ''
-      nerr(0:amp_split_size)=0
       end
 
       subroutine init_new_loop(fks_loop,bs_min,bs_max,mass_jfks)
@@ -703,8 +591,6 @@ c dump momenta in a fort.80 file
       common/fks_indices/i_fks,j_fks
       integer              nFKSprocess
       common/c_nFKSprocess/nFKSprocess
-      logical soft_limit_is_zero
-      common /c_soft_limit_is_zero/soft_limit_is_zero
       nFKSprocess=fks_loop
       call fks_inc_chooser()
       call leshouche_inc_chooser()
@@ -750,13 +636,6 @@ c
          bs_max=iconfig_in
       endif
 
-      ! Check if soft-limit diverges
-      if (need_color_links_D(nFKSprocess) .or.
-     $     need_charge_links_D(nFKSprocess)) then
-         soft_limit_is_zero=.False.
-      else
-         soft_limit_is_zero=.True.
-      endif
       end
 
       subroutine set_ebeam()
@@ -769,6 +648,10 @@ c
       parameter       (ZERO=0d0,one=1d0)
       integer i,k
       double precision totmass,pmass(nexternal)
+      double precision beam_energy(2)
+      logical firsttime
+      data firsttime/.true./
+      save firsttime,beam_energy
       LOGICAL IS_A_J(NEXTERNAL),IS_A_LP(NEXTERNAL),IS_A_LM(NEXTERNAL)
       LOGICAL IS_A_PH(NEXTERNAL)
       COMMON /TO_SPECISA/IS_A_J,IS_A_LP,IS_A_LM,IS_A_PH
@@ -776,6 +659,10 @@ c
       double precision etmax(nincoming+1:nexternal-1)
       double precision mxxmin(nincoming+1:nexternal-1,nincoming+1:nexternal-1)
       common /to_cuts/etmin,etmax, mxxmin
+      if (firsttime) then
+         beam_energy=ebeam
+         firsttime=.false.
+      endif
       call setcuts              !Sets up cuts 
 c When doing hadron-hadron collision reduce the effect collision energy.
 c Note that tests are always performed at fixed energy with Bjorken x=1.
@@ -802,8 +689,8 @@ c Note that tests are always performed at fixed energy with Bjorken x=1.
            endif
          endif
       enddo
-      if (lpp(1).ne.0) ebeam(1)=max(ebeam(1)/20d0,totmass*2d0)
-      if (lpp(2).ne.0) ebeam(2)=max(ebeam(2)/20d0,totmass*2d0)
+      if (lpp(1).ne.0) ebeam(1)=max(beam_energy(1)/20d0,totmass*2d0)
+      if (lpp(2).ne.0) ebeam(2)=max(beam_energy(2)/20d0,totmass*2d0)
       end
 
       
