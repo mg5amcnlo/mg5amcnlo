@@ -22,46 +22,15 @@ contains
     double precision,parameter :: pi=3.1415926535897932d0
     integer :: i_fks,j_fks
     double precision,dimension(0:3,next_n1) :: p
-    integer :: i
-    double precision,dimension(0:3) :: p_born_imother,p_rot,qq,p_mother,krec,krec_bst
-    double precision,dimension(3) :: xdir
+    double precision,dimension(0:3) :: p_rot,p_mother
     double precision :: th_mother_fks,costh_mother_fks&
          &,sinth_mother_fks, phi_mother_fks,cosphi_mother_fks &
-         &,sinphi_mother_fks,kbarrec,q2,beta,shybst,chybst,chybstmo&
-         &,sqrtshat,xmrec2,sumrec,xmj,xmj2,xmjhat,xmhat,cffC2,expybst
+         &,sinphi_mother_fks
     if (j_fks.gt.nincoming_mod) then
-       qq(0:3)=p(0:3,1)+p(0:3,2)
        p_mother(0:3)=p(0:3,i_fks)+p(0:3,j_fks)
-       krec(0:3)=qq(0:3)-p_mother(0:3)
-       kbarrec=rho(krec)
-       q2=dot(qq,qq)
-       xdir(1:3)=p_mother(1:3)/rho(p_mother)
-       if (jmass.eq.0d0) then
-          beta=(q2-(krec(0)+kbarrec)**2)/(q2+(krec(0)+kbarrec)**2)
-          shybst=beta/sqrt(1-beta**2)
-          chybst=sqrt(1+shybst**2)
-          chybstmo=sqrt(1+shybst**2)-1d0
-       elseif (jmass.gt.0d0) then
-          sqrtshat=sqrt(q2)
-          xmrec2=dot(krec,krec)
-          sumrec=krec(0)+kbarrec
-          xmj=jmass
-          xmj2=xmj**2
-          xmjhat=xmj/sqrtshat
-          xmhat=sqrt(xmrec2)/sqrtshat
-          cffC2=(1-(xmhat-xmjhat)**2)*(1-(xmhat+xmjhat)**2)
-          if(xmrec2.lt.1.d-16*q2)then
-             expybst=sqrtshat*sumrec/(q2-xmj2)*(1+xmj2*xmrec2/(q2-xmj2)**2)
-          else
-             expybst=sumrec/(2*sqrtshat*xmrec2)*(q2+xmrec2-xmj2-q2*sqrt(cffC2))
-          endif
-          shybst=(expybst-1/expybst)/2.d0
-          chybst=(expybst+1/expybst)/2.d0
-          chybstmo=chybst-1.d0
-       endif
-       call boostwdir2(chybst,shybst,chybstmo,xdir,krec,krec_bst)
-       p_born_imother(0:3)=qq(0:3)-krec_bst(0:3)
-       call getangles(p_born_imother, & 
+       ! The forward FSR map preserves the mother's direction. Recover
+       ! the rotation directly, without a recoil boost that can flip it.
+       call getangles(p_mother, &
             th_mother_fks,costh_mother_fks,sinth_mother_fks, &
             phi_mother_fks,cosphi_mother_fks,sinphi_mother_fks)
        call rotate_invar_inverse(p(0,i_fks),p_rot(0), &
@@ -87,7 +56,10 @@ contains
     double precision,dimension(0:3,next_n1),intent(out) :: p_cm
     double precision,intent(out) :: y
     integer :: i
-    y=log((p(0,1)+p(0,2)+p(3,1)+p(3,2))/(p(0,1)+p(0,2)-p(3,1)-p(3,2)))/2d0
+    ! Add each beam's light-cone components before adding the beams;
+    ! subtracting their total E and pz loses the smaller beam at large y.
+    y=log(((p(0,1)+p(3,1))+(p(0,2)+p(3,2)))/ &
+          ((p(0,1)-p(3,1))+(p(0,2)-p(3,2))))/2d0
     do i=1,next_n1
        call boostz(p(0,i),y,p_cm(0,i))
     enddo
@@ -108,7 +80,8 @@ contains
     double precision,dimension(0:3),intent(in) :: p1
     double precision,dimension(0:3),intent(out) :: p_cm
     double precision :: y
-    y=log((p(0,1)+p(0,2)+p(3,1)+p(3,2))/(p(0,1)+p(0,2)-p(3,1)-p(3,2)))/2d0
+    y=log(((p(0,1)+p(3,1))+(p(0,2)+p(3,2)))/ &
+          ((p(0,1)-p(3,1))+(p(0,2)-p(3,2))))/2d0
     call boostz(p1(0),y,p_cm(0))
   end subroutine boost_1_to_its_cms
   double precision function get_yij_from_p(i_fks,j_fks,p_cms)
@@ -149,10 +122,13 @@ contains
     ! boost in the z-direction with rapidity yb
     implicit none
     real(kind=8),dimension(0:3) :: p,pb
-    real(kind=8) :: yb
-    pb(0)=p(0)*cosh(yb)-p(3)*sinh(yb)
+    real(kind=8) :: yb,pplus,pminus
+    ! Scale light-cone components instead of subtracting boosted E/pz.
+    pplus=(p(0)+p(3))*exp(-yb)
+    pminus=(p(0)-p(3))*exp(yb)
+    pb(0)=0.5d0*(pplus+pminus)
     pb(1:2)=p(1:2)
-    pb(3)=p(3)*cosh(yb)-p(0)*sinh(yb)
+    pb(3)=0.5d0*(pplus-pminus)
   end subroutine boostz
   
   !TODO: modify qMC to be the shower variable???

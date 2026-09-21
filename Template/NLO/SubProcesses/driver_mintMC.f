@@ -927,7 +927,7 @@ c counter-event momenta do not exist).
      $                 shower_scale_nbody(fks_father
      $                 ,partner_picked(iFKS)))
                else
-vv! in the case of MC@NLO-delta, an H-event contribution is by definition
+! in the case of MC@NLO-delta, an H-event contribution is by definition
 ! 'hard', and we should use the corresponding dipole scale for
 ! subsequent showering.
                   emsca_H(iFKS,ifold_counter,1:ndelH,1:ndelH)

@@ -1837,6 +1837,9 @@ c Fill common blocks
       if (icountevts.eq.-100) then
          tau_ev=tau
          ycm_ev=ycm
+c The second massive-FSR solution has no counterevents. Its lab boost
+c still needs the current Born rapidity, not the previous event's value.
+         ycm_cnt(0)=ycm_born
          shat_ev=shat
          sqrtshat_ev=sqrtshat
          xbjrk_ev(1)=xbjrk(1)
@@ -5255,18 +5258,28 @@ c     Use xp in the reduced frame (a.k.a. tilde frame) to get the Born momenta.
       integer i_fks,j_fks
       double precision recoil(0:3),xp_mother(0:3),sumrec,sumrec2,xmj
      $     ,xmj2,xmjhat,xmhat,xim,cffA2,cffB2,cffC2,cffDEL2,xiBm,ximax
-     $     ,xirplus,xirminus,xiimax,xinorm,rat_xi,x1_1,x1_2,expybst
+     $     ,xirplus,xirminus,xiimax,xinorm,rat_xi,expybst
      $     ,shybst,chybst,chybstmo,veckn,veckbarn,xdir(3),xmrec2
       double precision xinorm_ev
       common /cxinormev/xinorm_ev
       integer i
-      logical valid1,valid2
-      double precision rho,dot,ran2
-      external rho,dot,ran2
+      double precision rho,dot,sstiny,cctiny,branch_sign
+      external rho,dot
       logical        softtest,colltest
       common/sctests/softtest,colltest
+      sstiny=1d-6
+      cctiny=5d-7
+      if (softtest.or.colltest) then
+         sstiny=0d0
+         cctiny=0d0
+      endif
       ! y_ij_fks
-      x(2)=sqrt((1d0-y_ij_fks)/2d0)
+      x(2)=((1d0-y_ij_fks)/2d0-cctiny)/(1d0-cctiny)
+      if (x(2).lt.-1d-12.or.x(2).gt.1d0+1d-12) then
+         xjac=-33d0
+         return
+      endif
+      x(2)=sqrt(max(0d0,min(1d0,x(2))))
       xjac=xjac*2d0*x(2)*2d0
 
       ! x_i_fks
@@ -5299,29 +5312,29 @@ c     Use xp in the reduced frame (a.k.a. tilde frame) to get the Born momenta.
       xiimax=xirplus
       xinorm=xirplus+xirminus
       rat_xi=xiimax/xinorm
-      x1_1=sqrt(xi_i_fks*rat_xi/xinorm)
-      x1_2=(2*xiimax-xi_i_fks)/xinorm
       xinorm_ev=xinorm
 
-      valid1=x1_1.gt.0d0 .and. x1_1.lt.rat_xi
-      valid2=x1_2.gt.rat_xi .and. x1_2.lt.1d0
-      if (valid1.and. (.not.valid2)) then
-         x(1)=x1_1
-         xjac=xjac*2*x(1)/rat_xi
-      elseif((.not.valid1).and.valid2) then
-         x(1)=x1_2
-      elseif(valid1.and.valid2) then
-         if (ran2().gt.0.5d0) then
-            x(1)=x1_1
-            xjac=xjac*2*x(1)/rat_xi
-         else
-            x(1)=x1_2
+c Recover the sign of the square root in the forward expression for
+c |p_j|. At fixed xi and y both solutions can exist, but the supplied
+c momentum selects one of them; choosing randomly changes the event.
+      branch_sign=rho(xp(0,j_fks))/sqrtshat*
+     $     (2-xi_i_fks*(1-y_ij_fks))*(2-xi_i_fks*(1+y_ij_fks))
+     $     +xi_i_fks*y_ij_fks*(1-xmhat**2+xmjhat**2-xi_i_fks)
+      if (branch_sign.ge.0d0) then
+         x(1)=(xi_i_fks*rat_xi/xinorm-sstiny)/(1d0-sstiny)
+         if (x(1).lt.-1d-12.or.x(1).gt.rat_xi**2+1d-12) then
+            xjac=-102d0
+            return
          endif
-         xjac=xjac*2d0 ! TODO: check this factor 2 (due to taking only one of the two solutions and not both)
+         x(1)=sqrt(max(0d0,min(rat_xi**2,x(1))))
+         xjac=xjac*2*x(1)/rat_xi
       else
-         write (*,*) 'No valid xi_i_fks in inverse '/
-     $        /'massive final phase-space.'
-         stop 1
+         x(1)=((2*xiimax-xi_i_fks)/xinorm-sstiny)/(1d0-sstiny)
+         if (x(1).lt.rat_xi-1d-12.or.x(1).gt.1d0+1d-12) then
+            xjac=-102d0
+            return
+         endif
+         x(1)=max(rat_xi,min(1d0,x(1)))
       endif
 
       ! phi_i_fks
@@ -5397,9 +5410,15 @@ c Phase-space factor for (xii,yij,phii)
       common/cxij_aor/xij_aor
       logical pass
       integer i
-      double precision rho
+      double precision rho,sstiny,cctiny
       external rho
-      
+      sstiny=1d-6
+      cctiny=5d-7
+      if (softtest.or.colltest) then
+         sstiny=0d0
+         cctiny=0d0
+      endif
+
       xp_mother(0:3)=xp(0:3,i_fks)+xp(0:3,j_fks)
       if (nincoming.eq.2) then
          recoil(0:3)=xp(0:3,1)+xp(0:3,2)-xp_mother(0:3)
@@ -5446,11 +5465,21 @@ c     Phase-space factor for (xii,yij,phii)
       call get_recoil(p_born(0,1),j_fks,shat,xmrec2,pass)
       xiimax=1d0-xmrec2/shat
       xinorm_ev=xiimax
-      x(1)=sqrt(xi_i_fks/xiimax)
+      x(1)=(xi_i_fks/xiimax-sstiny)/(1d0-sstiny)
+      if (x(1).lt.-1d-12.or.x(1).gt.1d0+1d-12) then
+         xjac=-102d0
+         return
+      endif
+      x(1)=sqrt(max(0d0,min(1d0,x(1))))
       xjac=xjac*2d0*x(1)
 
 !     random number associated with y_ij_fks
-      x(2)=sqrt((1d0-y_ij_fks)/2d0)
+      x(2)=((1d0-y_ij_fks)/2d0-cctiny)/(1d0-cctiny)
+      if (x(2).lt.-1d-12.or.x(2).gt.1d0+1d-12) then
+         xjac=-33d0
+         return
+      endif
+      x(2)=sqrt(max(0d0,min(1d0,x(2))))
       xjac=xjac*2d0*x(2)*2d0
 
 !     random number associated with phi_i_fks
