@@ -605,11 +605,10 @@ c$$$
 !     3. Compute value of MC subtraction, given those kinematic
 !     variables
 !      
-!     4. For H-event: take sum of all of them and use that to subtract
-!     from Real emission, so that it can be multiplied by an overall
-!     S-function relevant to the original i_fks and j_fks configuration
-!     (i.e., the same that multiplies the real emission).
-!     --> \sum_ij S_ij ( R - \sum_kl MC_kl )
+!     4. For H-events, repartition complete native H contributions:
+!     Hhat_ij = S_ij sum_kl P_kl (S_kl R - M_kl). Each M_kl includes
+!     its own G damping AND FKS replacement. The sum is performed by
+!     repartition_MC_H, after computing these native terms.
 !      
 !     5. For S-event: Take only the one relevant for the original i_fks
 !     and j_fks configuration. (Same as original code).
@@ -659,11 +658,11 @@ c$$$
 !     fks-father.
       do iconnect=1,n_connect
          call xmcsubt_connection(p,xi,y,p_born,i_connect(iconnect)
-     $        ,lzone(iconnect),z(iconnect),amp_split_xmcxsec(1
-     $        ,iconnect))
+     $        ,include_gfun,lzone(iconnect),z(iconnect)
+     $        ,amp_split_xmcxsec(1,iconnect))
       enddo
       if (.not.any(lzone(1:n_connect)) .and. include_gfun) then
-! include_gfun is only .true. if kl==ij. If we are in the
+! A complete native history includes its own G-functions. If we are in the
 ! deadzone, we do not want to include the MC counter terms (and
 ! therefore also not the gfun contributions).
 ! Exception: we are in a soft-wide-angle configuration, there the shower
@@ -911,7 +910,7 @@ c     positivity check
 c Main routine for MC counterterms. Now to be called inside a loop
 c over colour partners
       subroutine xmcsubt_connection(pp,xi_i_fks,y_ij_fks,p_born
-     $     ,i_connect,lzone,z,amp_split_xmcxsec)
+     $     ,i_connect,include_gfun,lzone,z,amp_split_xmcxsec)
       use process_module
       use kinematics_module
       use scale_module
@@ -923,18 +922,18 @@ c over colour partners
       include 'coupl.inc'
 !     arguments:
       double precision pp(0:3,nexternal),xi_i_fks,y_ij_fks,p_born(0:3
-     $     ,nexternal-1) ,probne ,z,xkern(2),xkernazi(2)
+     $     ,nexternal-1) ,z,xkern(2),xkernazi(2)
      $     ,bornbars(max_bcol ,nsplitorders),bornbarstilde(max_bcol
      $     ,nsplitorders),amp_split_xmcxsec(1:amp_split_size)
       integer i_connect,ione,iord,iord_val
-      logical lzone
+      logical lzone,include_gfun
 !     local
       double precision ztmp,xitmp,xjactmp,qMC,delta,E0sq
      $     ,PY6PTweight,pmass(nexternal),xi,xjac
 !     external
-      double precision bogus_probne_fun,gfunction,zHW6,xiHW6
+      double precision gfunction,zHW6,xiHW6
      $     ,xjacHW6,compute_damping_weight
-      external bogus_probne_fun,gfunction,zHW6,xiHW6,xjacHW6
+      external gfunction,zHW6,xiHW6,xjacHW6
      $     ,compute_damping_weight
 !     parameters      
       double precision ymin,zero
@@ -972,9 +971,6 @@ c     Initialise if first time
       xjactmp  = 0d0
 
       qMC=get_qMC(xi_i_fks,y_ij_fks)
-
-c     New or standard MC@NLO formulation
-      probne=bogus_probne_fun(qMC)
 
 c     Call barred Born and assign shower scale
       call get_mbar(pp,xi_i_fks,y_ij_fks,p_born,ileg,bornbars
@@ -1022,12 +1018,12 @@ c
          xkernazi(1:2)=xkernazi(1:2)*PY6PTweight
       endif
 
-      ! For ij-fks, we include gfactazi to remove power corrections (due
-      ! to gluon-correlations) away from the limit---for another sectors
-      ! we can do whatever, since kinematic configurations for which
-      ! that is relevant are damped by the S-function.
-      xkern(1:2)=xkern(1:2)*gfactsf
-      xkernazi(1:2)=xkernazi(1:2)*gfactazi*gfactsf
+!     Apply this history's G-functions. Complete native H weights, not
+!     bare kernels, are subsequently repartitioned over outer sectors.
+      if (include_gfun) then
+         xkern(1:2)=xkern(1:2)*gfactsf
+         xkernazi(1:2)=xkernazi(1:2)*gfactazi*gfactsf
+      endif
          
       ione=0
       amp_split_xmcxsec(1:amp_split_size)=0d0
@@ -3751,6 +3747,11 @@ c
       double precision bogus_probne_fun,qMC
       double precision x,tmp,emscafun
       integer itype
+! Artificial no-emission factor for the non-Delta debugging path.
+! Mode 2 is smooth: P=0 below 0.5 GeV and P=1 above 10 GeV.
+! Mode 3 disables it. The native-history evaluator applies P once to
+! the real, MC and G-replacement terms, retaining (1-P)*R in S.
+! Physical Delta uses compute_delta instead, not a product with this P.
       data itype/2/
 c
       if(itype.eq.1)then
@@ -4052,4 +4053,3 @@ c
 
       return
       end
-

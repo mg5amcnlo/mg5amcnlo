@@ -644,6 +644,7 @@ contains
     ! See for details on how the limits work out e.g. Paolo's PhD thesis
     gfactsf=gfunction(x,alsf,besf,2d0) ! x=1-xi_i_fks, so gfactsf is zero in the soft limit
     gfactcl=gfunction(yij,alsf,-(1d0-ymin),1d0) ! yij=y_ij_fks, so gfactcl is zero in the collinear limit
+    gfactazi=0d0
     if(alazi.lt.0d0)gfactazi=1-gfunction(yij,-alazi,beazi,delta)
   end subroutine compute_gfun
 
@@ -732,17 +733,21 @@ contains
 
   subroutine flip_momenta(i,ii,j,jj,p,p_flipped)
     implicit none
-    integer :: i,ii,j,jj
+    integer :: i,ii,j,jj,k,pos,tmp,perm(next_n1)
     double precision :: p(0:3,next_n1),p_flipped(0:3,next_n1)
-    p_flipped=p
-    if (ii.ne.i) then
-       p_flipped(0:3,ii)=p(0:3,i)
-       p_flipped(0:3,i)=p(0:3,ii)
-    endif
-    if (jj.ne.j) then
-       p_flipped(0:3,jj)=p(0:3,j)
-       p_flipped(0:3,j)=p(0:3,jj)
-    endif
+    ! Build a bijection, including overlapping swaps: original ii and jj
+    ! must end up in the native FKS slots i and j, respectively.
+    perm=[(k,k=1,next_n1)]
+    tmp=perm(i)
+    perm(i)=perm(ii)
+    perm(ii)=tmp
+    do pos=1,next_n1
+       if (perm(pos).eq.jj) exit
+    enddo
+    tmp=perm(j)
+    perm(j)=perm(pos)
+    perm(pos)=tmp
+    p_flipped=p(:,perm)
   end subroutine flip_momenta
 
 end module kinematics_module

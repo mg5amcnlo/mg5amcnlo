@@ -836,6 +836,9 @@ c      include 'fks.inc'
       logical split_type(nsplitorders) 
       common /c_split_type/split_type
 c
+! Draw even for a non-gg history: another history at the same real point
+! may need this variate. Re-evaluations use pick_new_rnd=.false.
+      if (pick_new_rnd) rrnd=ran2()
       call fill_icolor_S(iflow,jpart,lc)
 c
       j_part = particle_type(j_fks)
@@ -943,7 +946,6 @@ c The following works only if i_fks is always greater than j_fks.
      &              jpart(4,imother),jpart(5,imother)
                stop
             endif
-            if (pick_new_rnd) rrnd=ran2()
             if (rrnd.gt.0.5d0) then 
                jpart(4,i_fks)=lc+1
                jpart(5,i_fks)=jpart(5,imother)
@@ -1073,7 +1075,6 @@ c The following works only if i_fks is always greater than j_fks.
      &              jpart(4,imother),jpart(5,imother)
                stop
             endif
-            if (pick_new_rnd) rrnd=ran2()
             if (rrnd.gt.0.5d0) then 
                jpart(4,i_fks)=lc+1
                jpart(5,i_fks)=jpart(4,imother)

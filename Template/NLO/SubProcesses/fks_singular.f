@@ -817,57 +817,100 @@ c value to the list of weights using the add_wgt subroutine
       return
       end
 
+      subroutine compute_native_NLOPS_weights(p,p_lab,p_cms,jacPS,
+     $     passcuts_nbody,passcuts_n1body,probne)
+! Evaluate one ordinary FKS history, including its real term and its
+! G replacement. During H repartitioning add_wgt discards S records.
+      use kinematics_module, only: gfactsf,gfactcl,gfactazi
+      use mint_module, only: pass_cuts_check
+      implicit none
+      include 'nexternal.inc'
+      include 'run.inc'
+      double precision p(0:3,nexternal),p_lab(0:3,nexternal),
+     $     p_cms(0:3,nexternal),jacPS,probne,replace_MC_subt
+      logical passcuts_nbody,passcuts_n1body
+      character*4 abrv
+      common /to_abrv/ abrv
+      double precision p1_cnt(0:3,nexternal,-2:2),wgt_cnt(-2:2),
+     $     pswgt_cnt(-2:2),jac_cnt(-2:2)
+      common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
+
+      probne=1d0
+      gfactsf=1d0
+      gfactcl=1d0
+      gfactazi=0d0
+      if (passcuts_nbody .and. abrv.ne.'real') then
+         pass_cuts_check=.true.
+         if (ickkw.ne.4) then
+            call set_cms_stuff(-100)
+            if (ickkw.eq.3) call set_FxFx_scale(-3,p)
+            call set_alphaS(p)
+            call include_multichannel_enhance(4)
+            call compute_MC_subt_term(p,p_lab,p_cms,jacPS,
+     $           passcuts_nbody,probne)
+         else
+! UNLOPS transfers the real contribution to S and has no MC subtraction.
+            probne=0d0
+         endif
+
+! Exactly one G replacement for this native history, with the same P
+! used for its raw MC term and its real-emission H/S split.
+! This also applies to bogus P: H_b=P_b*(S_b*R-M_b), while S keeps
+! P_b*M_b+(1-P_b)*S_b*R. Repartition H only after forming H_b.
+         call set_cms_stuff(0)
+         if (ickkw.eq.3) call set_FxFx_scale(-2,p1_cnt(0,1,0))
+         call set_alphaS(p1_cnt(0,1,0))
+         call include_multichannel_enhance(3)
+         replace_MC_subt=(1d0-gfactsf)*probne
+         call compute_soft_counter_term(replace_MC_subt)
+         call set_cms_stuff(1)
+         replace_MC_subt=(1d0-gfactcl)*(1d0-gfactsf)*probne
+         call compute_collinear_counter_term(replace_MC_subt)
+         call set_cms_stuff(2)
+         call compute_soft_collinear_counter_term(replace_MC_subt)
+      endif
+      if (passcuts_n1body) then
+         pass_cuts_check=.true.
+         call set_cms_stuff(-100)
+         if (ickkw.eq.3) call set_FxFx_scale(-3,p)
+         call set_alphaS(p)
+         call include_multichannel_enhance(2)
+         call compute_real_emission(p,probne)
+      endif
+      end
+
       subroutine compute_MC_subt_term(p,p_lab,p_cms,jacPS,passcuts,probne)
       use extra_weights
       use kinematics_module
-      use mint_module
+      use process_module, only: mcatnlo_delta_mod
       implicit none
-c     This subroutine computes the MonteCarlo subtraction terms and adds
-c     their values to the list of weights using the add_wgt subroutine. It
-c     returns the values for the gfactsf, gfactcl and probne to check if we
+c     Compute the ordinary, complete native-history MC contribution. The
+c     driver repartitions H only after adding its real and G terms. It
+c     returns gfactsf, gfactcl and probne to check if we
 c     need to include the FKS subtraction terms as replacements in the soft
 c     and collinear limits and the Sudakov damping for the real-emission,
 c     respectively.
       include 'nexternal.inc'
-c$$$  include 'madfks_mcatnlo.inc'
       include 'timing_variables.inc'
       include 'coupl.inc'
       include 'orders.inc'
-      include 'run.inc'
-      include 'born_nhel.inc'
-      include 'nFKSconfigs.inc'
-      include 'fks_info.inc'
-      integer nofpartners,i,iconnect,n_connect,nFKSprocess_save,iFKS,ii,jj
-      double precision p(0:3,nexternal),probne,fks_Sij ,sevmc_Hev
-     $     ,sevmc_Sev,z_shower(nexternal),xmcxsec(nexternal),g22,wgt1
+      integer iconnect,n_connect
+      double precision p(0:3,nexternal),probne,fks_Sij,sevmc_Hev
+     $     ,sevmc_Sev,g22,wgt1
      $     ,xlum_mc_fact,fks_Hij,amp_split_xmcxsec(amp_split_size,2),xi
-     $     ,y,z(2),p_cms(0:3,nexternal),p_lab(0:3,nexternal),jac,jacPS
-     $     ,xx(ndimmax),p_cms_flipped(0:3,nexternal)
-     $     ,p_lab_flipped(0:3,nexternal) ,p_flipped(0:3,nexternal),xi_ij
-     $     ,y_ij,bogus_probne_fun
+     $     ,y,z(2),p_cms(0:3,nexternal),p_lab(0:3,nexternal),jacPS
+     $     ,bogus_probne_fun
       external fks_Sij,fks_Hij,bogus_probne_fun
-      logical lzone(nexternal),flagmc,passcuts
+      logical passcuts
       double precision    xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev(0:3)
-     $     ,p_i_fks_cnt(0:3,-2:2),ybst
+     $     ,p_i_fks_cnt(0:3,-2:2)
       common/fksvariables/xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt
       double precision p_born(0:3,nexternal-1)
       common /pborn/   p_born
-      double precision p_born_save(0:3,nexternal-1),xbjrk_alt(2)
       double precision xbjrk_ev(2),xbjrk_cnt(2,-2:2)
       common/cbjorkenx/xbjrk_ev,xbjrk_cnt
-      double complex xij_aor,xij_aor_save
-      common/cxij_aor/xij_aor
-      double precision veckn_ev,veckbarn_ev,xp0jfks,genps_save(3)
-      common/cgenps_fks/veckn_ev,veckbarn_ev,xp0jfks
-      double precision pmass(nexternal)
-      common /to_mass/pmass
-      INTEGER              NFKSPROCESS
-      COMMON/C_NFKSPROCESS/NFKSPROCESS
       integer            i_fks,j_fks
       common/fks_indices/i_fks,j_fks
-      integer           fks_j_from_i(nexternal,0:nexternal)
-     &     ,particle_type(nexternal),pdg_type(nexternal)
-      common /c_fks_inc/fks_j_from_i,particle_type,pdg_type
       double precision           f_s_MC_S,f_s_MC_H,f_c_MC_S,f_c_MC_H
      $     ,f_sc_MC_S,f_sc_MC_H,f_MC_S,f_MC_H
       common/factor_n1body_NLOPS/f_s_MC_S,f_s_MC_H,f_c_MC_S,f_c_MC_H
@@ -875,16 +918,7 @@ c$$$  include 'madfks_mcatnlo.inc'
       integer iamp
       integer orders(nsplitorders)
       integer get_orders_tag
-      integer                     n_MC_subt_diverge
-      common/counter_subt_diverge/n_MC_subt_diverge
-      logical                calculatedBorn
-      common/ccalculatedBorn/calculatedBorn
-      double precision xinorm_ev,xinorm_save
-      common /cxinormev/xinorm_ev
       logical include_gfun
-!     If .true., multiplies MC subtraction terms by S_ev
-      logical UseSfun
-      parameter (UseSfun=.false.)
       call cpu_time(tBefore)
       probne=1d0
       if (p(0,1).le.0d0) return
@@ -894,18 +928,18 @@ c$$$  include 'madfks_mcatnlo.inc'
 
       xi=get_xi_from_p(i_fks,j_fks,p_cms)
       y=get_yij_from_p(i_fks,j_fks,p_cms)
+!     This history keeps its own G-functions and no-emission probability.
       include_gfun=.true.
       call compute_MCsubtraction_kl(i_fks,j_fks,xi,y,p
      $     ,p_cms,p_born,include_gfun,z,n_connect
      $     ,amp_split_xmcxsec)
-      xi_ij=xi
-      y_ij=y
-
       if (mcatnlo_delta_mod) then
 !     include Delta
          call compute_delta(p,probne)
       else
-!     include bogus no-emission
+!     Compute the artificial P_b from THIS history's kinematics, once.
+!     It also returns to the driver for its G terms and real H/S split;
+!     never reuse an outer P_a on the other histories in the H sum.
          probne=bogus_probne_fun(get_qMC(xi,y))
       endif
       
@@ -913,12 +947,12 @@ c$$$  include 'madfks_mcatnlo.inc'
          if (all(amp_split_xmcxsec(:,iconnect).eq.0d0)) cycle
          call get_mc_lum(j_fks,z(iconnect),xi,xlum_mc_fact
      $        ,xbjrk_cnt(1,0))
-!     Re-remove the 1/xi^2 and 1/(1-y) factors; they depend on 'ij', not 'kl'.
-!     The outer prefactor already supplies the phase-space measure.
+!     Restore the regulated factors for this native FKS chart. Its phase
+!     space measure is included in the prefactors, not in the kernel.
          do iamp=1, amp_split_size
             if (amp_split_xmcxsec(iamp,iconnect).eq.0d0) cycle
             amp_split_xmcxsec(iamp,iconnect)=amp_split_xmcxsec(iamp
-     $           ,iconnect)*xi_ij**2*(1d0-y_ij)*probne
+     $           ,iconnect)*xi**2*(1d0-y)*probne
             call amp_split_pos_to_orders(iamp, orders)
             QCD_power=orders(qcd_pos)
             wgtcpower=0d0
@@ -929,119 +963,15 @@ c$$$  include 'madfks_mcatnlo.inc'
             wgt1=sevmc_Sev*f_MC_S*xlum_mc_fact*
      &           amp_split_xmcxsec(iamp,iconnect)/g22
             call add_wgt(12,orders,wgt1,0d0,0d0)
-            wgt1=sevmc_Hev*f_MC_H*xlum_mc_fact*
+! fks_Hij belongs to M_b in BOTH native contributions. The outer S_a
+! is applied later to the whole H weight, including R and G terms.
+            wgt1=sevmc_Sev*f_MC_H*xlum_mc_fact*
      &           amp_split_xmcxsec(iamp,iconnect)/g22
             call add_wgt(13,orders,-wgt1,0d0,0d0)
          enddo
       enddo
 
-!     The driver adds the G-function replacement once, using probne.
-      include_gfun=.false.
-
-      nFKSprocess_save=nFKSprocess
-      p_born_save=p_born
-      xij_aor_save=xij_aor
-      xinorm_save=xinorm_ev
-      genps_save=[veckn_ev,veckbarn_ev,xp0jfks]
-
-      do iFKS=1,fks_configs
-         call update_fks_dir(iFKS)
-         ! only include the ones compatible with the real-emission process
-         if (any(pdg_type_d(iFKS,:).ne.pdg_type_d(nFKSprocess_save,:)))
-     $        cycle
-         ! This sets i_fks and j_fks to correspond to the ones in
-         ! nFKSprocess (which here is iFKS).
-c$$$         call fks_inc_chooser()
-         ! TODO: check that this is indeed too general:
-         call update_coltype_and_charge(iFKS,i_fks,j_fks)
-         
-!     1. include do-loop over identical particless for i-fks and j-fks
-!     2. flip all momenta (p, p_lab and p_cms) among the possible i-fks and j-fks
-!     3. do NOT update i-fks and j-fks.
-         do ii=3,nexternal
-            if (pdg_type_d(nFKSprocess_save,ii).ne.
-     &           pdg_type_d(nFKSprocess_save,i_fks)) cycle
-            do jj=1,nexternal
-               if (ii.eq.jj) cycle
-               if (j_fks.le.nincoming .and. j_fks.ne.jj) cycle
-               if (jj.le.nincoming .and. j_fks.ne.jj) cycle
-               if (pdg_type_d(nFKSprocess_save,jj).ne.
-     &              pdg_type_d(nFKSprocess_save,j_fks)) cycle
-               if (pdg_type_d(nFKSprocess_save,ii).eq.
-     $              pdg_type_d(nFKSprocess_save,jj) .and.
-     $              ii.lt.jj) cycle
-               if ( iFKS.eq.nFKSprocess_save .and. 
-     &              ii.eq.i_fks .and. jj.eq.j_fks) cycle ! this is already included above
-
-               call flip_momenta(i_fks,ii,j_fks,jj,p,p_flipped)
-               call flip_momenta(i_fks,ii,j_fks,jj,p_cms,p_cms_flipped)
-               call flip_momenta(i_fks,ii,j_fks,jj,p_lab,p_lab_flipped)
-               
-!     compute kinematic variables
-               xi=get_xi_from_p(i_fks,j_fks,p_cms_flipped)
-               y=get_yij_from_p(i_fks,j_fks,p_cms_flipped)
-               
-! Reconstruct the alternative FKS Born point and its Bjorken x's.
-! The returned Jacobian is used only to check that inversion succeeded;
-! the outer phase-space and importance-sampling weights stay unchanged.
-               jac=1d0
-!     inputs are: ndim,iconfig,p
-!     outputs are: xx,jac,xbjrk_alt (also updates pborn common block)
-               call generate_lab_momenta_inverse(ndim,iconfig,jac,xx
-     $              ,p_lab_flipped,xbjrk_alt)
-               if (jac.le.0d0) cycle
-               CalculatedBorn=.false.
-               ! include_gfun must be .false., because we do not want to
-               ! update gfactsf
-               call compute_MCsubtraction_kl(i_fks,j_fks,xi,y,p_flipped
-     $              ,p_cms_flipped,p_born,include_gfun,z,n_connect
-     $              ,amp_split_xmcxsec)
-               do iconnect=1,n_connect
-                  if (all(amp_split_xmcxsec(:,iconnect).eq.0d0)) cycle
-                  call get_mc_lum(j_fks,z(iconnect),xi,xlum_mc_fact
-     $                 ,xbjrk_alt)
-!     Re-remove the 1/xi^2 and 1/(1-y) factors; they depend on 'ij', not 'kl'.
-!     Use the same damping as the outer real and G-replacement terms.
-                  do iamp=1, amp_split_size
-                     if (amp_split_xmcxsec(iamp,iconnect).eq.0d0) cycle
-                     amp_split_xmcxsec(iamp,iconnect)
-     $                    =amp_split_xmcxsec(iamp,iconnect)*xi_ij**2
-     $                    *(1d0-y_ij)*probne
-                     call amp_split_pos_to_orders(iamp, orders)
-                     QCD_power=orders(qcd_pos)
-                     wgtcpower=0d0
-                     if (cpower_pos.gt.0) wgtcpower=dble(orders(cpower_pos))
-                     orders_tag=get_orders_tag(orders)
-                     amp_pos=iamp
-                     g22=g**(QCD_power)
-c$$$                     if (iFKS.eq.nFKSprocess_save) then
-c$$$                        wgt1=sevmc_Sev*f_MC_S*xlum_mc_fact*
-c$$$     &                       amp_split_xmcxsec(iamp,iconnect)/g22
-c$$$                        call add_wgt(12,orders,wgt1,0d0,0d0)
-c$$$                     endif
-                     wgt1=sevmc_Hev*f_MC_H*xlum_mc_fact*
-     &                    amp_split_xmcxsec(iamp,iconnect)/g22
-                     call add_wgt(13,orders,-wgt1,0d0,0d0)
-                  enddo
-               enddo
-            enddo
-         enddo
-      enddo
-      
-      iFKS=nFKSprocess_save
-      call update_fks_dir(iFKS)
-c$$$      call fks_inc_chooser()
-      call update_coltype_and_charge(iFKS,i_fks,j_fks)
-      p_born=p_born_save
-      xij_aor=xij_aor_save
-      xinorm_ev=xinorm_save
-      veckn_ev=genps_save(1)
-      veckbarn_ev=genps_save(2)
-      xp0jfks=genps_save(3)
-      call fill_kinematics_module(p_cms,i_fks,j_fks,xi_ij,y_ij
-     $     ,pmass(j_fks),.false.)
-!     Alternative Born evaluations overwrote the cached amplitudes.
-      CalculatedBorn=.false.
+!     The native driver adds the corresponding G replacement exactly once.
       call cpu_time(tAfter)
       t_MC_subt=t_MC_subt+(tAfter-tBefore)
       return
@@ -2013,6 +1943,12 @@ c        contribution
       double precision get_rescale_alpha_factor
       external get_n_tagged_photons get_rescale_alpha_factor
 
+! Repartitioning re-evaluates complete native histories, but their S
+! contributions have already been included by the ordinary outer driver.
+      if (mc_H_only) then
+         if (type.ne.1 .and. type.ne.13 .and.
+     $        (type.lt.8 .or. type.gt.10)) return
+      endif
       if (wgt1.eq.0d0 .and. wgt2.eq.0d0 .and. wgt3.eq.0d0) return
 c Check for NaN's and INF's. Simply skip the contribution
       if (wgt1.ne.wgt1) return
@@ -2106,6 +2042,7 @@ C schemes; it is needed when there are tagged photons around
       scales2(3,icontr)=q2fact(1)
       g_strong(icontr)=g
       nFKS(icontr)=nFKSprocess
+      event_nFKS(icontr)=nFKSprocess
       y_bst(icontr)=ybst_til_tolab
       shower_scale(icontr)=-99d9
       ifold_cnt(icontr)=ifold_counter
@@ -2447,6 +2384,7 @@ c update the event weight to be written in the file
          enddo
          g_strong(ict_new)=g_strong(ict)
          nFKS(ict_new)=nFKS(ict)
+         event_nFKS(ict_new)=event_nFKS(ict)
          y_bst(ict_new)=y_bst(ict)
          QCDpower(ict_new)=QCDpower(ict)
          cpower(ict_new)=cpower(ict)
@@ -3274,8 +3212,9 @@ c while for the S-events we can sum it to the 'i_soft' one.
 c H-event. If PDG codes, shower starting scale and momenta are equal, we
 c can sum them before taking ABS value.
                if (niproc(ii).ne.niproc(i)) cycle
-               if (any(emsca_H(nFKS(ii),ifold_cnt(ii),1:ndelH,1:ndelH)
-     $              .ne. emsca_H(nFKS(i),ifold_cnt(i),1:ndelH,1:ndelH)))
+               if (any(emsca_H(event_owner(ii),ifold_cnt(ii),
+     $              1:ndelH,1:ndelH).ne.emsca_H(event_owner(i),
+     $              ifold_cnt(i),1:ndelH,1:ndelH)))
      $              cycle
                equal=.true.
                do j=1,niproc(ii)
@@ -3619,7 +3558,7 @@ c found the contribution that should be written:
       if (H_event(icontr_picked)) then
          Hevents=.true.
          i_process_addwrite=iproc_picked
-         iFKS_picked=nFKS(icontr_picked)
+         iFKS_picked=event_owner(icontr_picked)
          ifold_picked=ifold_cnt(icontr_picked)
          showerscaleH(1:ndelH,1:ndelH)=emsca_H(iFKS_picked,ifold_picked
      $        ,1:ndelH,1:ndelH)
@@ -7994,6 +7933,28 @@ c     reset the default dynamical_scale_choice
       return
       end
 
+
+      subroutine get_born_flow_weight(flow_picked,born_flow_factor)
+! Weight of an already chosen flow at the current Born point. Do not
+! draw another event colour when evaluating an alternative H history.
+! This retains the existing flow sampling; it is not a 1/p_flow fix.
+      implicit none
+      include 'genps.inc'
+      include 'born_nhel.inc'
+      integer flow_picked,i,num_leading_cflows
+      double precision born_flow_factor,sumborn,amp2(ngraphs),
+     $     jamp2(0:ncolor)
+      common/to_amps/amp2,jamp2
+      logical is_leading_cflow(max_bcol)
+      common/c_leading_cflows/is_leading_cflow,num_leading_cflows
+      sumborn=0d0
+      do i=1,max_bcol
+         if (is_leading_cflow(i)) sumborn=sumborn+jamp2(i)
+      enddo
+      born_flow_factor=0d0
+      if (sumborn.gt.0d0 .and. is_leading_cflow(flow_picked))
+     $     born_flow_factor=jamp2(flow_picked)/sumborn
+      end
 
       subroutine get_born_flow(flow_picked,born_flow_factor)
 ! This assumes that the Born matrix elements are called. This is

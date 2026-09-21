@@ -4,18 +4,28 @@
          implicit none
          integer max_contr,max_wgt,max_iproc,icontr,iwgt,icontr_picked
      $        ,iproc_picked
+! Only complete native H weights are retained during repartitioning.
+         logical :: mc_H_only=.false.
          logical, allocatable :: H_event(:)
          integer, allocatable :: itype(:),nFKS(:),QCDpower(:),pdg(:,:)
      $        ,pdg_uborn(:,:),parton_pdg_uborn(:,:,:),parton_pdg(:,:,:)
      $        ,plot_id(:),niproc(:),ipr(:),parton_pdf(:,:,:)
      $        ,icontr_sum(:,:),ifold_cnt(:)
      $        ,orderstag(:),amppos(:),need_match(:,:)
+! Keep the event/shower owner separate from the native PDF/ME history.
+         integer, allocatable :: event_nFKS(:)
          double precision, allocatable :: momenta(:,:,:),momenta_m(:,:,:
      $        ,:),wgt(:,:),wgt_ME_tree(:,:),bjx(:,:),scales2(:,:)
      $        ,g_strong(:),wgts(:,:),parton_iproc(:,:),y_bst(:)
      $        ,cpower(:),plot_wgts(:,:),shower_scale(:),unwgt(:,:)
      $        ,bias_wgt(:),shower_scale_a(:,:,:)
          save
+      contains
+         integer function event_owner(ict)
+         integer, intent(in) :: ict
+         event_owner=nFKS(ict)
+         if (event_nFKS(ict).gt.0) event_owner=event_nFKS(ict)
+         end function event_owner
       end module weight_lines
 
 
@@ -84,6 +94,11 @@ c nFKS
          allocate(itemp1(n_contr))
          itemp1(1:max_contr)=nFKS
          call move_alloc(itemp1,nFKS)
+c event_nFKS
+         allocate(itemp1(n_contr))
+         itemp1=0
+         itemp1(1:max_contr)=event_nFKS
+         call move_alloc(itemp1,event_nFKS)
 c QCDpower         
          allocate(itemp1(n_contr))
          itemp1(1:max_contr)=QCDpower
@@ -217,6 +232,8 @@ c update maximum
       allocate(H_event(1))
       allocate(itype(1))
       allocate(nFKS(1))
+      allocate(event_nFKS(1))
+      event_nFKS=0
       allocate(QCDpower(1))
       allocate(pdg(nexternal,0:1))
       allocate(pdg_uborn(nexternal,0:1))
@@ -262,6 +279,7 @@ c update maximum
       if (allocated(H_event)) deallocate(H_event)
       if (allocated(itype)) deallocate(itype)
       if (allocated(nFKS)) deallocate(nFKS)
+      if (allocated(event_nFKS)) deallocate(event_nFKS)
       if (allocated(QCDpower)) deallocate(QCDpower)
       if (allocated(pdg)) deallocate(pdg)
       if (allocated(pdg_uborn)) deallocate(pdg_uborn)
