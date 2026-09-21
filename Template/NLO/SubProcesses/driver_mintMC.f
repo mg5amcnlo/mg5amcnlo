@@ -732,6 +732,8 @@ c
       common/fks_indices/i_fks,j_fks
       double complex wgt1(2)
       double precision born_flow_factor
+! The same flow is used throughout the folds, so keep its draw probability.
+      save born_flow_factor
 c
       if (new_point .and. ifl.ne.2) then
          pass_cuts_check=.false.
@@ -943,7 +945,9 @@ vv! in the case of MC@NLO-delta, an H-event contribution is by definition
             endif
 c Compute the n1-body prefactors
             call compute_prefactors_n1body(vegas_wgt,jac)
-            call include_born_flow_weight(born_flow_factor)
+! This flow was drawn with q_c=p_c at the common outer Born point.
+            call include_born_flow_weight(born_flow_factor,
+     $           born_flow_factor)
 c Include the FxFx Sudakovs into the prefactors
             if (ickkw.eq.3) then
                call set_FxFx_scale(0,p) ! reset the FxFx scales
@@ -1014,6 +1018,10 @@ c Sum the contributions that can be summed before taking the ABS value
 ! At a fixed real point form Hhat_a = S_a sum_b P_b (S_b R - M_b).
 ! The ordinary S records have already been made and are not changed.
 ! Each M_b includes its native G replacement, luminosities and Born map.
+! Each inner history samples its OWN colour flow and includes 1/q_b,c.
+! The outer event colour is only the event owner, not an inner proposal.
+! Thus the colour-sampled summand is
+! P_b,c*(p_b,c*S_b*R-M_b,c)/q_b,c, with M_b,c already flow-weighted.
       use weight_lines, only: icontr,H_event,wgt,event_nFKS,momenta,
      $     momenta_m,y_bst,need_match,mc_H_only
       use mint_module, only: ndim,iconfig
@@ -1200,19 +1208,9 @@ c Sum the contributions that can be summed before taking the ABS value
 ! cancels too, since the labelled histories are explicitly enumerated.
                factor=sector_weight*outer_measure/native_measure
                MCcntcalled=0
-               born_flow_picked=abs(flow_save)
                call fill_kinematics_module(pn_cms,i_fks,j_fks,
      $              xi_i_fks_ev,y_ij_fks_ev,pmass(j_fks),.false.)
-               call init_process_module_n1body_wrapper(born_flow_picked)
-               call compute_shower_scale_nbody(p_born,-fksfather)
-               call compute_shower_scale_n1body(pn,i_fks,j_fks)
-               call set_cms_stuff(0)
-               call sborn(p_born,born_weight)
-               call get_born_flow_weight(born_flow_picked,
-     $              flow_factor_native)
-               calculatedBorn=.false.
                call compute_prefactors_n1body(1d0,jac_native)
-               call include_born_flow_weight(flow_factor_native)
                if (ickkw.eq.3) then
                   call set_FxFx_scale(0,pn)
                   call set_cms_stuff(0)
@@ -1222,6 +1220,19 @@ c Sum the contributions that can be summed before taking the ABS value
                endif
                call set_cms_stuff(0)
                if (ickkw.eq.3) call set_FxFx_scale(-2,p1_cnt(0,1,0))
+! Sample in this history's own Born basis. Reusing the outer label
+! would require a flow map and support at a different Born point.
+! q_b,c=p_b,c here; no additional outer 1/q_a,c belongs on this term.
+               call set_alphaS(p1_cnt(0,1,0))
+               calculatedBorn=.false.
+               call sborn(p_born,born_weight)
+               call get_born_flow(born_flow_picked,flow_factor_native)
+               calculatedBorn=.false.
+               call include_born_flow_weight(flow_factor_native,
+     $              flow_factor_native)
+               call init_process_module_n1body_wrapper(born_flow_picked)
+               call compute_shower_scale_nbody(p_born,-fksfather)
+               call compute_shower_scale_n1body(pn,i_fks,j_fks)
                cuts_born=passcuts(p1_cnt(0,1,0),rwgt)
                call set_cms_stuff(-100)
                if (ickkw.eq.3) call set_FxFx_scale(-3,pn)
@@ -1275,7 +1286,7 @@ c Sum the contributions that can be summed before taking the ABS value
       gfactcl=gfun_save(2)
       gfactazi=gfun_save(3)
       call compute_prefactors_n1body(vegas_wgt,jac_native)
-      call include_born_flow_weight(born_flow_factor)
+      call include_born_flow_weight(born_flow_factor,born_flow_factor)
       if (ickkw.eq.3) then
          call set_FxFx_scale(0,p)
          call set_cms_stuff(0)

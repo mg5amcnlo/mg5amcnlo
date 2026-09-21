@@ -1422,11 +1422,10 @@ c f_* multiplication factors for Born and nbody
       end
 
 
-      subroutine include_born_flow_weight(born_flow_factor)
+      subroutine include_born_flow_weight(born_flow_factor,
+     $     flow_sampling_prob)
       implicit none
-      double precision born_flow_factor
-      double precision      f_b,f_nb
-      common /factor_nbody/ f_b,f_nb
+      double precision born_flow_factor,flow_sampling_prob,flow_weight
       double precision     f_r,f_s,f_c,f_dc,f_sc,f_dsc(4)
       common/factor_n1body/f_r,f_s,f_c,f_dc,f_sc,f_dsc
       double precision           f_s_MC_S,f_s_MC_H,f_c_MC_S,f_c_MC_H
@@ -1435,32 +1434,44 @@ c f_* multiplication factors for Born and nbody
      $     ,f_sc_MC_S,f_sc_MC_H,f_MC_S,f_MC_H
       double precision f_pdfsch_d,f_pdfsch_p,f_pdfsch_l
       common/factor_pdfsch/f_pdfsch_d,f_pdfsch_p,f_pdfsch_l
-      ! the f_b and f_nb do not require the factor, since we can include
-      ! them for all flows. That is, they do not play any role in the
-      ! subtraction.
-c$$$      f_b=      f_b      *born_flow_factor
-c$$$      f_nb=     f_nb     *born_flow_factor
-      f_r=      f_r      *born_flow_factor
-      ! the f_MC_S and f_MC_H already include this factor by construction
-c$$$      f_MC_S=   f_MC_S   *born_flow_factor
-c$$$      f_MC_H=   f_MC_H   *born_flow_factor
-      f_s=      f_s      *born_flow_factor
-      f_s_MC_S= f_s_MC_S *born_flow_factor
-      f_S_MC_H= f_S_MC_H *born_flow_factor
-      f_c=      f_c      *born_flow_factor
-      f_c_MC_S= f_c_MC_S *born_flow_factor
-      f_c_MC_H= f_c_MC_H *born_flow_factor
-      f_dc=     f_dc     *born_flow_factor
-      f_sc=     f_sc     *born_flow_factor
-      f_sc_MC_S=f_sc_MC_S*born_flow_factor
-      f_sc_MC_H=f_sc_MC_H*born_flow_factor
-      f_dsc(1)= f_dsc(1) *born_flow_factor
-      f_dsc(2)= f_dsc(2) *born_flow_factor
-      f_dsc(3)= f_dsc(3) *born_flow_factor
-      f_dsc(4)= f_dsc(4) *born_flow_factor
-      f_pdfsch_d=  f_pdfsch_d  *born_flow_factor
-      f_pdfsch_p=  f_pdfsch_p  *born_flow_factor
-      f_pdfsch_l=  f_pdfsch_l  *born_flow_factor
+! p_c is the physical flow fraction; q_c is the probability used to
+! sample this flow. They are conceptually different, even when q_c=p_c.
+      if (.not.(flow_sampling_prob.gt.0d0 .and.
+     $          flow_sampling_prob.le.1d0)) then
+         write (*,*) 'Invalid Born-flow sampling probability',
+     $        flow_sampling_prob
+         stop 1
+      endif
+      if (.not.(born_flow_factor.ge.0d0 .and.
+     $          born_flow_factor.le.1d0)) then
+         write (*,*) 'Invalid Born-flow fraction',born_flow_factor
+         stop 1
+      endif
+      flow_weight=born_flow_factor/flow_sampling_prob
+! Born/virtual f_b and f_nb are colour-summed and included once. The
+! current q_c=p_c sampler needs no correction on those contributions.
+      f_r=      f_r      *flow_weight
+! The raw MC Born and Born-tilde already contain p_c from get_mbar.
+! Only divide by q_c here: do not multiply by p_c for a second time.
+      f_MC_S=   f_MC_S   /flow_sampling_prob
+      f_MC_H=   f_MC_H   /flow_sampling_prob
+      f_s=      f_s      *flow_weight
+      f_s_MC_S= f_s_MC_S *flow_weight
+      f_s_MC_H= f_s_MC_H *flow_weight
+      f_c=      f_c      *flow_weight
+      f_c_MC_S= f_c_MC_S *flow_weight
+      f_c_MC_H= f_c_MC_H *flow_weight
+      f_dc=     f_dc     *flow_weight
+      f_sc=     f_sc     *flow_weight
+      f_sc_MC_S=f_sc_MC_S*flow_weight
+      f_sc_MC_H=f_sc_MC_H*flow_weight
+      f_dsc(1)= f_dsc(1) *flow_weight
+      f_dsc(2)= f_dsc(2) *flow_weight
+      f_dsc(3)= f_dsc(3) *flow_weight
+      f_dsc(4)= f_dsc(4) *flow_weight
+      f_pdfsch_d=  f_pdfsch_d  *flow_weight
+      f_pdfsch_p=  f_pdfsch_p  *flow_weight
+      f_pdfsch_l=  f_pdfsch_l  *flow_weight
       end
 
       subroutine include_multichannel_enhance(imode)
@@ -7934,32 +7945,13 @@ c     reset the default dynamical_scale_choice
       end
 
 
-      subroutine get_born_flow_weight(flow_picked,born_flow_factor)
-! Weight of an already chosen flow at the current Born point. Do not
-! draw another event colour when evaluating an alternative H history.
-! This retains the existing flow sampling; it is not a 1/p_flow fix.
-      implicit none
-      include 'genps.inc'
-      include 'born_nhel.inc'
-      integer flow_picked,i,num_leading_cflows
-      double precision born_flow_factor,sumborn,amp2(ngraphs),
-     $     jamp2(0:ncolor)
-      common/to_amps/amp2,jamp2
-      logical is_leading_cflow(max_bcol)
-      common/c_leading_cflows/is_leading_cflow,num_leading_cflows
-      sumborn=0d0
-      do i=1,max_bcol
-         if (is_leading_cflow(i)) sumborn=sumborn+jamp2(i)
-      enddo
-      born_flow_factor=0d0
-      if (sumborn.gt.0d0 .and. is_leading_cflow(flow_picked))
-     $     born_flow_factor=jamp2(flow_picked)/sumborn
-      end
-
       subroutine get_born_flow(flow_picked,born_flow_factor)
 ! This assumes that the Born matrix elements are called. This is
 ! always the case if either the compute_born or the virtual
 ! (through bornsoftvirtual) are evaluated.
+! Return the probability actually used for this draw, q_c=p_c. Keep
+! this value with the sampled flow: do not recompute its denominator
+! at another Born point or after changing the couplings.
       implicit none
       include 'genps.inc'
       include "born_nhel.inc"
