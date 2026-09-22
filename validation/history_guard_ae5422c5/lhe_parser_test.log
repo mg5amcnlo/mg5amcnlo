@@ -1,7 +1,0 @@
-test_parse_event_nlo (tests.unit_tests.various.test_lhe_parser.TESTLHEParserNLO.test_parse_event_nlo)
-test that the parsing of event is working ... ok
-
-----------------------------------------------------------------------
-Ran 1 test in 0.002s
-
-OK
