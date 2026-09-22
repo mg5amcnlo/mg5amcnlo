@@ -51,6 +51,7 @@ c Set Bjorken x's to some random value before calling the dlum() function
 c 1. First map the IPROC's for this nFKSprocess to the underlying Born
 c to get the unique IPROC's
          iproc_save(nFKSprocess)=iproc
+         if(nFKSprocess.gt.fks_integrated)cycle
          do j=1,iproc
             do i=1,nexternal-1
                if (i.eq.min(j_fks,i_fks)) then
@@ -195,9 +196,12 @@ c Print the map to the screen
             write (*,'(i4)', advance="no") etoi(j,nFKSprocess)
          enddo
          write (*,'(a)') ''
-         if (nFKSprocess.eq.fks_configs) 
+         if (nFKSprocess.eq.fks_integrated)
      &        write (*,*) '================================'
       enddo
+      nFKSprocess=1
+      call fks_inc_chooser()
+      call leshouche_inc_chooser()
       return
       end
 

@@ -1,0 +1,972 @@
+WARNING:root:[91mpython3.12 support is still experimental. For the moment re-weighting is NOT working and do expect a LOT of syntax warning. We do not advise python3.12 for production for the moment.[0m
+[1;31mNote that this is a development version.
+This version is intended for development/beta testing and NOT for production.
+This version has not been fully tested (if at all) and might have limited user support (if at all)[0m
+Running MG5 in debug mode
+************************************************************
+*                                                          *
+*                     W E L C O M E to                     *
+*              M A D G R A P H 5 _ a M C @ N L O           *
+*                                                          *
+*                                                          *
+*                 *                       *                *
+*                   *        * *        *                  *
+*                     * * * * 5 * * * *                    *
+*                   *        * *        *                  *
+*                 *                       *                *
+*                                                          *
+*         VERSION 3.5.3                 2023-12-23         *
+[1;31m*                                                          *[1;0m
+[1;31m*          WARNING: UNKNOWN DEVELOPMENT VERSION.           *[1;0m
+[1;31m*            WARNING: DO NOT USE FOR PRODUCTION            *[1;0m
+[1;31m*                                                          *[1;0m
+*                                                          *
+*    The MadGraph5_aMC@NLO Development Team - Find us at   *
+*              http://madgraph.phys.ucl.ac.be/             *
+*                            and                           *
+*            http://amcatnlo.web.cern.ch/amcatnlo/         *
+*                                                          *
+*               Type 'help' for in-line help.              *
+*           Type 'tutorial' to learn how MG5 works         *
+*    Type 'tutorial aMCatNLO' to learn how aMC@NLO works   *
+*    Type 'tutorial MadLoop' to learn how MadLoop works    *
+*                                                          *
+************************************************************
+load MG5 configuration from /nfs/home/rikkert/.mg5/mg5_configuration.txt 
+load MG5 configuration from input/mg5_configuration.txt 
+fastjet-config does not seem to correspond to a valid fastjet-config executable (v3+). We will use fjcore instead.
+ Please set the 'fastjet'variable to the full (absolute) /PATH/TO/fastjet-config (including fastjet-config).
+ MG5_aMC> set fastjet /PATH/TO/fastjet-config
+
+eMELA-config does not seem to correspond to a valid eMELA-config executable.
+ Please set the 'fastjet'variable to the full (absolute) /PATH/TO/eMELA-config (including eMELA-config).
+ MG5_aMC> set eMELA /PATH/TO/eMELA-config
+
+set ninja to /export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun/HEPTools/lib
+set collier to /export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun/HEPTools/lib
+set lhapdf to lhapdf-config
+None does not seem to correspond to a valid lhapdf-config executable. 
+Please set the 'lhapdf' variable to the (absolute) /PATH/TO/lhapdf-config (including lhapdf-config).
+Note that you can still compile and run aMC@NLO with the built-in PDFs
+ MG5_aMC> set lhapdf /PATH/TO/lhapdf-config
+
+Using default eps viewer "evince". Set another one in ./input/mg5_configuration.txt
+Using default web browser "firefox". Set another one in ./input/mg5_configuration.txt
+import /tmp/mg5_born_support_physics.cmd
+The import format was not given, so we guess it as command
+set automatic_html_opening False --no_save
+set low_mem_multicore_nlo_generation True --no_save
+set nb_core 3 --no_save
+set fastjet /export/tmp/rikkert/FastJet/bin/fastjet-config --no_save
+set fastjet to /export/tmp/rikkert/FastJet/bin/fastjet-config
+import model loop_sm-no_b_mass
+INFO: Restrict model loop_sm-no_b_mass with file models/loop_sm/restrict_no_b_mass.dat . 
+[1;32mDEBUG: Simplifying conditional expressions [0m
+[1;32mDEBUG: remove interactions: s u w+ at order: QED=1 [0m
+[1;32mDEBUG: remove interactions: b u w+ at order: QED=1 [0m
+[1;32mDEBUG: remove interactions: d c w+ at order: QED=1 [0m
+[1;32mDEBUG: remove interactions: b c w+ at order: QED=1 [0m
+[1;32mDEBUG: remove interactions: d t w+ at order: QED=1 [0m
+[1;32mDEBUG: remove interactions: s t w+ at order: QED=1 [0m
+[1;32mDEBUG: remove interactions: b b h at order: QED=1 [0m
+[1;32mDEBUG: remove interactions: c c h at order: QED=1 [0m
+[1;32mDEBUG: remove interactions: e- e- h at order: QED=1 [0m
+[1;32mDEBUG: remove interactions: m- m- h at order: QED=1 [0m
+[1;32mDEBUG: remove interactions: u s w+ at order: QED=1 [0m
+[1;32mDEBUG: remove interactions: u b w+ at order: QED=1 [0m
+[1;32mDEBUG: remove interactions: c d w+ at order: QED=1 [0m
+[1;32mDEBUG: remove interactions: c b w+ at order: QED=1 [0m
+[1;32mDEBUG: remove interactions: t d w+ at order: QED=1 [0m
+[1;32mDEBUG: remove interactions: t s w+ at order: QED=1 [0m
+[1;32mDEBUG: remove interactions: g g h h at order: QCD=2, QED=2 [0m
+[1;32mDEBUG: remove interactions: g g h h at order: QCD=2, QED=2 [0m
+[1;32mDEBUG: remove interactions: g g h at order: QCD=2, QED=1 [0m
+[1;32mDEBUG: remove interactions: g g h at order: QCD=2, QED=1 [0m
+[1;32mDEBUG: remove interactions: g g w+ w+ at order: QCD=2, QED=2 [0m
+[1;32mDEBUG: remove interactions: g g w+ w+ at order: QCD=2, QED=2 [0m
+[1;32mDEBUG: remove interactions: g g w+ w+ at order: QCD=2, QED=2 [0m
+[1;32mDEBUG: remove interactions: g g w+ w+ at order: QCD=2, QED=2 [0m
+[1;32mDEBUG: remove interactions: g g w+ w+ at order: QCD=2, QED=2 [0m
+[1;32mDEBUG: remove interactions: g g w+ w+ at order: QCD=2, QED=2 [0m
+[1;32mDEBUG: modify interactions: g g at order: QCD=2 [0m
+[1;32mDEBUG: modify interactions: g g at order: QCD=2 [0m
+[1;32mDEBUG: modify interactions: b b at order: QCD=2 [0m
+[1;32mDEBUG: modify interactions: c c at order: QCD=2 [0m
+[1;32mDEBUG: remove interactions: b b h at order: QCD=2, QED=1 [0m
+[1;32mDEBUG: remove interactions: b c w+ at order: QCD=2, QED=1 [0m
+[1;32mDEBUG: remove interactions: b u w+ at order: QCD=2, QED=1 [0m
+[1;32mDEBUG: remove interactions: c c h at order: QCD=2, QED=1 [0m
+[1;32mDEBUG: remove interactions: c b w+ at order: QCD=2, QED=1 [0m
+[1;32mDEBUG: remove interactions: c d w+ at order: QCD=2, QED=1 [0m
+[1;32mDEBUG: remove interactions: d c w+ at order: QCD=2, QED=1 [0m
+[1;32mDEBUG: remove interactions: d t w+ at order: QCD=2, QED=1 [0m
+[1;32mDEBUG: remove interactions: s t w+ at order: QCD=2, QED=1 [0m
+[1;32mDEBUG: remove interactions: s u w+ at order: QCD=2, QED=1 [0m
+[1;32mDEBUG: remove interactions: t d w+ at order: QCD=2, QED=1 [0m
+[1;32mDEBUG: remove interactions: t s w+ at order: QCD=2, QED=1 [0m
+[1;32mDEBUG: remove interactions: u b w+ at order: QCD=2, QED=1 [0m
+[1;32mDEBUG: remove interactions: u s w+ at order: QCD=2, QED=1 [0m
+[1;32mDEBUG: remove interactions: g g g at order: QCD=3 [0m
+[1;32mDEBUG: remove interactions: g g g at order: QCD=3 [0m
+[1;32mDEBUG: remove interactions: g g g g at order: QCD=4 [0m
+[1;32mDEBUG: remove interactions: g g g g at order: QCD=4 [0m
+[1;32mDEBUG: remove interactions: d d g at order: QCD=3 [0m
+[1;32mDEBUG: remove interactions: u u g at order: QCD=3 [0m
+[1;32mDEBUG: remove interactions: c c g at order: QCD=3 [0m
+[1;32mDEBUG: remove interactions: s s g at order: QCD=3 [0m
+[1;32mDEBUG: remove interactions: b b g at order: QCD=3 [0m
+[1;32mDEBUG: remove interactions: t t g at order: QCD=3 [0m
+[1;32mDEBUG: remove interactions: d d g at order: QCD=3 [0m
+[1;32mDEBUG: remove interactions: u u g at order: QCD=3 [0m
+[1;32mDEBUG: remove interactions: c c g at order: QCD=3 [0m
+[1;32mDEBUG: remove interactions: s s g at order: QCD=3 [0m
+[1;32mDEBUG: remove interactions: b b g at order: QCD=3 [0m
+[1;32mDEBUG: remove interactions: t t g at order: QCD=3 [0m
+[1;32mDEBUG: remove interactions: b b h at order: QED=1, QCD=2 [0m
+[1;32mDEBUG: remove interactions: b b h at order: QED=1, QCD=2 [0m
+[1;32mDEBUG: remove interactions: c c h at order: QED=1, QCD=2 [0m
+[1;32mDEBUG: remove interactions: c c h at order: QED=1, QCD=2 [0m
+[1;32mDEBUG: remove interactions: b b at order: QCD=2 [0m
+[1;32mDEBUG: remove interactions: b b at order: QCD=2 [0m
+[1;32mDEBUG: remove interactions: c c at order: QCD=2 [0m
+[1;32mDEBUG: remove interactions: c c at order: QCD=2 [0m
+[1;32mDEBUG: remove counterterm of particle g with loop particles ((c)) perturbing order QCD [0m
+[1;32mDEBUG: remove counterterm of particle g with loop particles ((b)) perturbing order QCD [0m
+[1;32mDEBUG: remove counterterm of particle b with loop particles ((b,g)) perturbing order QCD [0m
+[1;32mDEBUG: remove counterterm of particle c with loop particles ((c,g)) perturbing order QCD [0m
+[1;32mDEBUG:  Fuse the Following coupling (they have the same value): ('GC_1007', 1), ('GC_1009', -1)  [0m
+[1;32mDEBUG:  Fuse the Following coupling (they have the same value): ('GC_1021', 1), ('GC_1027', -1)  [0m
+[1;32mDEBUG:  Fuse the Following coupling (they have the same value): ('GC_1038', 1), ('GC_1039', -1)  [0m
+[1;32mDEBUG:  Fuse the Following coupling (they have the same value): ('GC_1054', 1), ('GC_1056', -1)  [0m
+[1;32mDEBUG:  Fuse the Following coupling (they have the same value): ('GC_1066', 1), ('GC_1067', -1)  [0m
+[1;32mDEBUG:  Fuse the Following coupling (they have the same value): ('GC_1074', 1), ('GC_1075', -1)  [0m
+[1;32mDEBUG:  Fuse the Following coupling (they have the same value): ('GC_1096', 1), ('GC_1097', -1)  [0m
+[1;32mDEBUG:  Fuse the Following coupling (they have the same value): ('GC_11', 1), ('GC_12', 1), ('GC_16', 1), ('GC_20', 1), ('GC_39', 1), ('GC_43', 1), ('GC_47', 1)  [0m
+[1;32mDEBUG:  Fuse the Following coupling (they have the same value): ('GC_21', 1), ('GC_22', -1)  [0m
+[1;32mDEBUG:  Fuse the Following coupling (they have the same value): ('GC_25', 1), ('GC_3', -1)  [0m
+[1;32mDEBUG:  Fuse the Following coupling (they have the same value): ('GC_R2_1021', 1), ('GC_R2_1027', -1)  [0m
+[1;32mDEBUG:  Fuse the Following coupling (they have the same value): ('GC_UV_1021', 1), ('GC_UV_1027', -1)  [0m
+[1;32mDEBUG:  Fuse the Following coupling (they have the same value): ('GC_UV_1021_1eps', 1), ('GC_UV_1027_1eps', -1)  [0m
+[1;32mDEBUG:  Fuse the Following coupling (they have the same value): ('R2GC_137_43', 1), ('R2GC_138_45', -1)  [0m
+[1;32mDEBUG:  Fuse the Following coupling (they have the same value): ('R2GC_137_44', 1), ('R2GC_138_46', -1)  [0m
+[1;32mDEBUG:  Fuse the Following coupling (they have the same value): ('R2GC_141_50', 1), ('R2GC_142_52', -1)  [0m
+[1;32mDEBUG:  Fuse the Following coupling (they have the same value): ('R2GC_141_51', 1), ('R2GC_142_53', -1)  [0m
+[1;32mDEBUG:  Fuse the Following coupling (they have the same value): ('R2_GGGZaxialDown', 1), ('R2_GGGZaxialUp', -1)  [0m
+[1;32mDEBUG:  Fuse the Following coupling (they have the same value): ('R2_GGWWcs', 1), ('R2_GGWWtb', 1), ('R2_GGWWud', 1)  [0m
+[1;32mDEBUG:  Fuse the Following coupling (they have the same value): ('R2_GGZdown', 1), ('R2_GGZup', -1)  [0m
+[1;32mDEBUG:  Fuse the Following coupling (they have the same value): ('R2_DDZ_V2', 1), ('R2_UUZ_V2', -1)  [0m
+[1;32mDEBUG:  Fuse the Following coupling (they have the same value): ('R2_DDZ_V3', 1), ('R2_UUZ_V5', 1)  [0m
+[1;32mDEBUG:  Fuse the Following coupling (they have the same value): ('R2_bxtW', 1), ('R2_cxsW', 1), ('R2_dxuW', 1), ('R2_sxcW', 1), ('R2_txbW', 1), ('R2_uxdW', 1)  [0m
+[1;32mDEBUG:  Fuse the Following coupling (they have the same value): ('UV_3Gb_1eps', 1), ('UV_3Gc_1eps', 1), ('UV_3Gq_1eps', 1), ('UV_3Gt_1eps', 1)  [0m
+[1;32mDEBUG:  Fuse the Following coupling (they have the same value): ('UV_4Gb_1eps', 1), ('UV_4Gc_1eps', 1), ('UV_4Ggt_1eps', 1), ('UV_4Gq_1eps', 1)  [0m
+[1;32mDEBUG:  Fuse the Following coupling (they have the same value): ('UV_GQQb_1eps', 1), ('UV_GQQc_1eps', 1), ('UV_GQQq_1eps', 1), ('UV_GQQt_1eps', 1)  [0m
+[1;32mDEBUG: remove parameters: mdl_lamWS [0m
+[1;32mDEBUG: remove parameters: mdl_AWS [0m
+[1;32mDEBUG: remove parameters: mdl_rhoWS [0m
+[1;32mDEBUG: remove parameters: mdl_etaWS [0m
+[1;32mDEBUG: remove parameters: mdl_ymc [0m
+[1;32mDEBUG: remove parameters: mdl_ymb [0m
+[1;32mDEBUG: remove parameters: mdl_yme [0m
+[1;32mDEBUG: remove parameters: mdl_ymm [0m
+[1;32mDEBUG: remove parameters: mdl_MC [0m
+[1;32mDEBUG: remove parameters: mdl_MB [0m
+[1;32mDEBUG: remove parameters: mdl_Me [0m
+[1;32mDEBUG: remove parameters: mdl_MM [0m
+[1;32mDEBUG: remove parameters: mdl_WTau [0m
+[1;32mDEBUG: remove parameters: mdl_lamWS__exp__2 [0m
+[1;32mDEBUG: remove parameters: mdl_CKM12 [0m
+[1;32mDEBUG: remove parameters: mdl_lamWS__exp__3 [0m
+[1;32mDEBUG: remove parameters: mdl_CKM13 [0m
+[1;32mDEBUG: remove parameters: mdl_CKM21 [0m
+[1;32mDEBUG: remove parameters: mdl_CKM23 [0m
+[1;32mDEBUG: remove parameters: mdl_CKM31 [0m
+[1;32mDEBUG: remove parameters: mdl_CKM32 [0m
+[1;32mDEBUG: remove parameters: mdl_CKM1x2 [0m
+[1;32mDEBUG: remove parameters: mdl_CKM1x3 [0m
+[1;32mDEBUG: remove parameters: mdl_CKM2x1 [0m
+[1;32mDEBUG: remove parameters: mdl_CKM2x3 [0m
+[1;32mDEBUG: remove parameters: mdl_CKM3x1 [0m
+[1;32mDEBUG: remove parameters: mdl_CKM3x2 [0m
+[1;32mDEBUG: remove parameters: mdl_conjg__CKM1x3 [0m
+[1;32mDEBUG: remove parameters: mdl_conjg__CKM2x3 [0m
+[1;32mDEBUG: remove parameters: mdl_conjg__CKM2x1 [0m
+[1;32mDEBUG: remove parameters: mdl_conjg__CKM3x1 [0m
+[1;32mDEBUG: remove parameters: mdl_conjg__CKM3x2 [0m
+[1;32mDEBUG: remove parameters: mdl_MC__exp__2 [0m
+[1;32mDEBUG: remove parameters: mdl_MB__exp__2 [0m
+[1;32mDEBUG: remove parameters: mdl_conjg__CKM12 [0m
+[1;32mDEBUG: remove parameters: mdl_conjg__CKM13 [0m
+[1;32mDEBUG: remove parameters: mdl_conjg__CKM21 [0m
+[1;32mDEBUG: remove parameters: mdl_conjg__CKM23 [0m
+[1;32mDEBUG: remove parameters: mdl_conjg__CKM31 [0m
+[1;32mDEBUG: remove parameters: mdl_conjg__CKM32 [0m
+[1;32mDEBUG: remove parameters: mdl_yb [0m
+[1;32mDEBUG: remove parameters: mdl_yc [0m
+[1;32mDEBUG: remove parameters: mdl_ye [0m
+[1;32mDEBUG: remove parameters: mdl_ym [0m
+[1;32mDEBUG: remove parameters: mdl_I1x31 [0m
+[1;32mDEBUG: remove parameters: mdl_I1x32 [0m
+[1;32mDEBUG: fix parameter value: mdl_I1x33 [0m
+[1;32mDEBUG: remove parameters: mdl_I2x12 [0m
+[1;32mDEBUG: remove parameters: mdl_I2x13 [0m
+[1;32mDEBUG: remove parameters: mdl_I2x22 [0m
+[1;32mDEBUG: remove parameters: mdl_I2x23 [0m
+[1;32mDEBUG: remove parameters: mdl_I2x32 [0m
+[1;32mDEBUG: remove parameters: mdl_I3x21 [0m
+[1;32mDEBUG: remove parameters: mdl_I3x22 [0m
+[1;32mDEBUG: remove parameters: mdl_I3x23 [0m
+[1;32mDEBUG: remove parameters: mdl_I3x31 [0m
+[1;32mDEBUG: remove parameters: mdl_I3x32 [0m
+[1;32mDEBUG: remove parameters: mdl_I4x13 [0m
+[1;32mDEBUG: remove parameters: mdl_I4x23 [0m
+[1;32mDEBUG: fix parameter value: mdl_I4x33 [0m
+[1;32mDEBUG: remove parameters: mdl_Vector_ubGp [0m
+[1;32mDEBUG: remove parameters: mdl_Vector_cdGp [0m
+[1;32mDEBUG: remove parameters: mdl_Vector_csGp [0m
+[1;32mDEBUG: remove parameters: mdl_Vector_cbGp [0m
+[1;32mDEBUG: remove parameters: mdl_Vector_tdGp [0m
+[1;32mDEBUG: remove parameters: mdl_Vector_tsGp [0m
+[1;32mDEBUG: remove parameters: mdl_Axial_ubGp [0m
+[1;32mDEBUG: remove parameters: mdl_Axial_cdGp [0m
+[1;32mDEBUG: remove parameters: mdl_Axial_csGp [0m
+[1;32mDEBUG: remove parameters: mdl_Axial_cbGp [0m
+[1;32mDEBUG: remove parameters: mdl_Axial_tdGp [0m
+[1;32mDEBUG: remove parameters: mdl_Axial_tsGp [0m
+[1;32mDEBUG: remove parameters: mdl_Vector_ubGm [0m
+[1;32mDEBUG: remove parameters: mdl_Vector_cdGm [0m
+[1;32mDEBUG: remove parameters: mdl_Vector_csGm [0m
+[1;32mDEBUG: remove parameters: mdl_Vector_cbGm [0m
+[1;32mDEBUG: remove parameters: mdl_Vector_tdGm [0m
+[1;32mDEBUG: remove parameters: mdl_Vector_tsGm [0m
+[1;32mDEBUG: remove parameters: mdl_Axial_ubGm [0m
+[1;32mDEBUG: remove parameters: mdl_Axial_cdGm [0m
+[1;32mDEBUG: remove parameters: mdl_Axial_csGm [0m
+[1;32mDEBUG: remove parameters: mdl_Axial_cbGm [0m
+[1;32mDEBUG: remove parameters: mdl_Axial_tdGm [0m
+[1;32mDEBUG: remove parameters: mdl_Axial_tsGm [0m
+[1;32mDEBUG: remove parameters: mdl_yc__exp__2 [0m
+[1;32mDEBUG: remove parameters: mdl_yb__exp__2 [0m
+[1;32mDEBUG: remove parameters: mdl_GWcft_UV_c_1EPS_ [0m
+[1;32mDEBUG: remove parameters: mdl_GWcft_UV_b_1EPS_ [0m
+[1;32mDEBUG: remove parameters: mdl_cWcft_UV_1EPS_ [0m
+[1;32mDEBUG: remove parameters: mdl_bWcft_UV_1EPS_ [0m
+[1;32mDEBUG: remove parameters: mdl_bMass_UV_1EPS_ [0m
+[1;32mDEBUG: remove parameters: mdl_cMass_UV_1EPS_ [0m
+[1;32mDEBUG: remove parameters: mdl_G_UVc_FIN_ [0m
+[1;32mDEBUG: remove parameters: mdl_G_UVb_FIN_ [0m
+[1;32mDEBUG: remove parameters: mdl_GWcft_UV_c_FIN_ [0m
+[1;32mDEBUG: remove parameters: mdl_GWcft_UV_b_FIN_ [0m
+[1;32mDEBUG: remove parameters: mdl_cWcft_UV_FIN_ [0m
+[1;32mDEBUG: remove parameters: mdl_bWcft_UV_FIN_ [0m
+[1;32mDEBUG: remove parameters: mdl_bMass_UV_FIN_ [0m
+[1;32mDEBUG: remove parameters: mdl_cMass_UV_FIN_ [0m
+[1;32mDEBUG: remove parameters: mdl_UV_yuk_c_FIN_ [0m
+[1;32mDEBUG: remove parameters: mdl_UV_yuk_b_FIN_ [0m
+[1;32mDEBUG: fix parameter value: mdl_lhv [0m
+[1;32mDEBUG: remove parameters: mdl_CKM11 [0m
+[1;32mDEBUG: fix parameter value: mdl_CKM22 [0m
+[1;32mDEBUG: fix parameter value: mdl_CKM33 [0m
+[1;32mDEBUG: remove parameters: mdl_CKM1x1 [0m
+[1;32mDEBUG: remove parameters: mdl_CKM2x2 [0m
+[1;32mDEBUG: fix parameter value: mdl_CKM3x3 [0m
+[1;32mDEBUG: fix parameter value: mdl_conjg__CKM3x3 [0m
+[1;32mDEBUG: remove parameters: mdl_conjg__CKM2x2 [0m
+[1;32mDEBUG: remove parameters: mdl_conjg__CKM11 [0m
+[1;32mDEBUG: fix parameter value: mdl_conjg__CKM22 [0m
+[1;32mDEBUG: remove parameters: mdl_conjg__CKM33 [0m
+INFO: Change particles name to pass to MG5 convention 
+Defined multiparticle p = g u c d s u~ c~ d~ s~
+Defined multiparticle j = g u c d s u~ c~ d~ s~
+Defined multiparticle l+ = e+ mu+
+Defined multiparticle l- = e- mu-
+Defined multiparticle vl = ve vm vt
+Defined multiparticle vl~ = ve~ vm~ vt~
+[1;34mPass the definition of 'j' and 'p' to 5 flavour scheme.[0m
+Defined multiparticle all = g gh gh~ d u s c b d~ u~ s~ c~ b~ a ve vm vt e- mu- ve~ vm~ vt~ e+ mu+ t t~ z w+ h w- ta- ta+
+define p = g u c d s b u~ c~ d~ s~ b~
+Defined multiparticle p = g u c d s b u~ c~ d~ s~ b~
+define j = p
+Defined multiparticle j = g u c d s b u~ c~ d~ s~ b~
+generate p p > e+ e- [QCD]
+INFO: Checking for minimal orders which gives processes. 
+INFO: Please specify coupling orders to bypass this step. 
+INFO: Trying coupling order WEIGHTED<=4: WEIGTHED IS QCD+2*QED 
+[1mSetting the born squared orders automatically in the process definition to QED^2<=4 QCD=0.
+If this is not what you need, please regenerate with the correct orders.[0m
+[1;34mWARNING: Use of multiparticles is non-trivial for NLO process generation and depends on the orders included, the process considered, as well as the PDF set chosen. See appendix D of arXiv:1804.10017 [hep-ph] for some guidance. [0m
+INFO: Generating FKS-subtracted matrix elements for born process: u u~ > e+ e- QCD^2=2 QED^2=4 (1 / 10) 
+INFO: Generating FKS-subtracted matrix elements for born process: c c~ > e+ e- QCD^2=2 QED^2=4 (2 / 10) 
+INFO: Generating FKS-subtracted matrix elements for born process: d d~ > e+ e- QCD^2=2 QED^2=4 (3 / 10) 
+INFO: Generating FKS-subtracted matrix elements for born process: s s~ > e+ e- QCD^2=2 QED^2=4 (4 / 10) 
+INFO: Generating FKS-subtracted matrix elements for born process: b b~ > e+ e- QCD^2=2 QED^2=4 (5 / 10) 
+INFO: Generating FKS-subtracted matrix elements for born process: u~ u > e+ e- QCD^2=2 QED^2=4 (6 / 10) 
+INFO: Generating FKS-subtracted matrix elements for born process: c~ c > e+ e- QCD^2=2 QED^2=4 (7 / 10) 
+INFO: Generating FKS-subtracted matrix elements for born process: d~ d > e+ e- QCD^2=2 QED^2=4 (8 / 10) 
+INFO: Generating FKS-subtracted matrix elements for born process: s~ s > e+ e- QCD^2=2 QED^2=4 (9 / 10) 
+INFO: Generating FKS-subtracted matrix elements for born process: b~ b > e+ e- QCD^2=2 QED^2=4 (10 / 10) 
+output /tmp/mg5_born_support_physics/dy -f -nojpeg
+INFO: Writing out the aMC@NLO code, using optimized Loops 
+INFO: initialize a new directory: dy 
+INFO: remove old information in dy 
+INFO: Generating real matrix elements... 
+[1;32mDEBUG: Discarding amplitude with no diagramsProcess: u a > e- e+ u [ all = QCD QED ] QCD^2=2 QED^2=4 [0m
+INFO: Generating real process: u u~ > e- e+ g [ all = QCD QED ] QCD^2=2 QED^2=4 
+INFO: Generating real process: c g > e- e+ c [ all = QCD QED ] QCD^2=2 QED^2=4 
+INFO: Generating real process: c c~ > e- e+ g [ all = QCD QED ] QCD^2=2 QED^2=4 
+INFO: Generating real process: g u~ > e- e+ u~ [ all = QCD QED ] QCD^2=2 QED^2=4 
+[1;32mDEBUG: Discarding amplitude with no diagramsProcess: c a > e- e+ c [ all = QCD QED ] QCD^2=2 QED^2=4 [0m
+INFO: Generating real process: g c~ > e- e+ c~ [ all = QCD QED ] QCD^2=2 QED^2=4 
+[1;32mDEBUG: Discarding amplitude with no diagramsProcess: u u~ > e- e+ a [ all = QCD QED ] QCD^2=2 QED^2=4 [0m
+INFO: Generating real process: d d~ > e- e+ g [ all = QCD QED ] QCD^2=2 QED^2=4 
+[1;32mDEBUG: Discarding amplitude with no diagramsProcess: a u~ > e- e+ u~ [ all = QCD QED ] QCD^2=2 QED^2=4 [0m
+[1;32mDEBUG: Discarding amplitude with no diagramsProcess: c c~ > e- e+ a [ all = QCD QED ] QCD^2=2 QED^2=4 [0m
+[1;32mDEBUG: Discarding amplitude with no diagramsProcess: a c~ > e- e+ c~ [ all = QCD QED ] QCD^2=2 QED^2=4 [0m
+INFO: Generating real process: u g > e- e+ u [ all = QCD QED ] QCD^2=2 QED^2=4 
+INFO: Generating real process: g d~ > e- e+ d~ [ all = QCD QED ] QCD^2=2 QED^2=4 
+[1;32mDEBUG: Discarding amplitude with no diagramsProcess: d d~ > e- e+ a [ all = QCD QED ] QCD^2=2 QED^2=4 [0m
+[1;32mDEBUG: Discarding amplitude with no diagramsProcess: a d~ > e- e+ d~ [ all = QCD QED ] QCD^2=2 QED^2=4 [0m
+[1;32mDEBUG: Discarding amplitude with no diagramsProcess: s s~ > e- e+ a [ all = QCD QED ] QCD^2=2 QED^2=4 [0m
+INFO: Generating real process: d g > e- e+ d [ all = QCD QED ] QCD^2=2 QED^2=4 
+[1;32mDEBUG: Discarding amplitude with no diagramsProcess: a s~ > e- e+ s~ [ all = QCD QED ] QCD^2=2 QED^2=4 [0m
+[1;32mDEBUG: Discarding amplitude with no diagramsProcess: d a > e- e+ d [ all = QCD QED ] QCD^2=2 QED^2=4 [0m
+INFO: Generating real process: g b~ > e- e+ b~ [ all = QCD QED ] QCD^2=2 QED^2=4 
+INFO: Generating real process: s g > e- e+ s [ all = QCD QED ] QCD^2=2 QED^2=4 
+INFO: Generating real process: s s~ > e- e+ g [ all = QCD QED ] QCD^2=2 QED^2=4 
+[1;32mDEBUG: Discarding amplitude with no diagramsProcess: b b~ > e- e+ a [ all = QCD QED ] QCD^2=2 QED^2=4 [0m
+[1;32mDEBUG: Discarding amplitude with no diagramsProcess: s a > e- e+ s [ all = QCD QED ] QCD^2=2 QED^2=4 [0m
+[1;32mDEBUG: Discarding amplitude with no diagramsProcess: a b~ > e- e+ b~ [ all = QCD QED ] QCD^2=2 QED^2=4 [0m
+INFO: Generating real process: b b~ > e- e+ g [ all = QCD QED ] QCD^2=2 QED^2=4 
+INFO: Generating real process: g s~ > e- e+ s~ [ all = QCD QED ] QCD^2=2 QED^2=4 
+INFO: Generating real process: b g > e- e+ b [ all = QCD QED ] QCD^2=2 QED^2=4 
+[1;32mDEBUG: Discarding amplitude with no diagramsProcess: b a > e- e+ b [ all = QCD QED ] QCD^2=2 QED^2=4 [0m
+INFO: Generating real process: u~ u > e- e+ g [ all = QCD QED ] QCD^2=2 QED^2=4 
+[1;32mDEBUG: Discarding amplitude with no diagramsProcess: u~ a > e- e+ u~ [ all = QCD QED ] QCD^2=2 QED^2=4 [0m
+INFO: Generating real process: c~ c > e- e+ g [ all = QCD QED ] QCD^2=2 QED^2=4 
+INFO: Generating real process: c~ g > e- e+ c~ [ all = QCD QED ] QCD^2=2 QED^2=4 
+INFO: Generating real process: g u > e- e+ u [ all = QCD QED ] QCD^2=2 QED^2=4 
+[1;32mDEBUG: Discarding amplitude with no diagramsProcess: c~ a > e- e+ c~ [ all = QCD QED ] QCD^2=2 QED^2=4 [0m
+[1;32mDEBUG: Discarding amplitude with no diagramsProcess: u~ u > e- e+ a [ all = QCD QED ] QCD^2=2 QED^2=4 [0m
+INFO: Generating real process: g c > e- e+ c [ all = QCD QED ] QCD^2=2 QED^2=4 
+[1;32mDEBUG: Discarding amplitude with no diagramsProcess: a u > e- e+ u [ all = QCD QED ] QCD^2=2 QED^2=4 [0m
+INFO: Generating real process: d~ d > e- e+ g [ all = QCD QED ] QCD^2=2 QED^2=4 
+[1;32mDEBUG: Discarding amplitude with no diagramsProcess: c~ c > e- e+ a [ all = QCD QED ] QCD^2=2 QED^2=4 [0m
+INFO: Generating real process: u~ g > e- e+ u~ [ all = QCD QED ] QCD^2=2 QED^2=4 
+[1;32mDEBUG: Discarding amplitude with no diagramsProcess: a c > e- e+ c [ all = QCD QED ] QCD^2=2 QED^2=4 [0m
+INFO: Generating real process: g d > e- e+ d [ all = QCD QED ] QCD^2=2 QED^2=4 
+[1;32mDEBUG: Discarding amplitude with no diagramsProcess: d~ d > e- e+ a [ all = QCD QED ] QCD^2=2 QED^2=4 [0m
+[1;32mDEBUG: Discarding amplitude with no diagramsProcess: a d > e- e+ d [ all = QCD QED ] QCD^2=2 QED^2=4 [0m
+[1;32mDEBUG: Discarding amplitude with no diagramsProcess: s~ s > e- e+ a [ all = QCD QED ] QCD^2=2 QED^2=4 [0m
+INFO: Generating real process: d~ g > e- e+ d~ [ all = QCD QED ] QCD^2=2 QED^2=4 
+[1;32mDEBUG: Discarding amplitude with no diagramsProcess: a s > e- e+ s [ all = QCD QED ] QCD^2=2 QED^2=4 [0m
+INFO: Generating real process: g b > e- e+ b [ all = QCD QED ] QCD^2=2 QED^2=4 
+INFO: Generating real process: s~ g > e- e+ s~ [ all = QCD QED ] QCD^2=2 QED^2=4 
+[1;32mDEBUG: Discarding amplitude with no diagramsProcess: d~ a > e- e+ d~ [ all = QCD QED ] QCD^2=2 QED^2=4 [0m
+INFO: Generating real process: s~ s > e- e+ g [ all = QCD QED ] QCD^2=2 QED^2=4 
+[1;32mDEBUG: Discarding amplitude with no diagramsProcess: b~ b > e- e+ a [ all = QCD QED ] QCD^2=2 QED^2=4 [0m
+[1;32mDEBUG: Discarding amplitude with no diagramsProcess: s~ a > e- e+ s~ [ all = QCD QED ] QCD^2=2 QED^2=4 [0m
+[1;32mDEBUG: Discarding amplitude with no diagramsProcess: a b > e- e+ b [ all = QCD QED ] QCD^2=2 QED^2=4 [0m
+INFO: Generating real process: b~ b > e- e+ g [ all = QCD QED ] QCD^2=2 QED^2=4 
+INFO: Generating real process: g s > e- e+ s [ all = QCD QED ] QCD^2=2 QED^2=4 
+INFO: Generating real process: b~ g > e- e+ b~ [ all = QCD QED ] QCD^2=2 QED^2=4 
+[1;32mDEBUG: Discarding amplitude with no diagramsProcess: b~ a > e- e+ b~ [ all = QCD QED ] QCD^2=2 QED^2=4 [0m
+INFO: Generating born and virtual matrix elements... 
+INFO: Generating born process: u u~ > e- e+ [ all = QCD QED ] QCD^2=2 QED^2=4 
+INFO: Generating born process: c c~ > e- e+ [ all = QCD QED ] QCD^2=2 QED^2=4 
+INFO: Generating born process: d d~ > e- e+ [ all = QCD QED ] QCD^2=2 QED^2=4 
+[1;32mDEBUG: Removing amplitude: Process: u u~ > e- e+ a [ all = QCD QED ] QCD^2=2 QED^2=4 [0m
+[1;32mDEBUG: Removing amplitude: Process: a u~ > e- e+ u~ [ all = QCD QED ] QCD^2=2 QED^2=4 [0m
+[1;32mDEBUG: Removing amplitude: Process: u a > e- e+ u [ all = QCD QED ] QCD^2=2 QED^2=4 [0m
+[1;32mDEBUG: Removing amplitude: Process: c c~ > e- e+ a [ all = QCD QED ] QCD^2=2 QED^2=4 [0m
+[1;32mDEBUG: Removing amplitude: Process: a c~ > e- e+ c~ [ all = QCD QED ] QCD^2=2 QED^2=4 [0m
+[1;32mDEBUG: Removing amplitude: Process: d d~ > e- e+ a [ all = QCD QED ] QCD^2=2 QED^2=4 [0m
+[1;32mDEBUG: Removing amplitude: Process: a d~ > e- e+ d~ [ all = QCD QED ] QCD^2=2 QED^2=4 [0m
+[1;32mDEBUG: Removing amplitude: Process: c a > e- e+ c [ all = QCD QED ] QCD^2=2 QED^2=4 [0m
+[1;32mDEBUG: Removing amplitude: Process: d a > e- e+ d [ all = QCD QED ] QCD^2=2 QED^2=4 [0m
+INFO: Generating born process: s s~ > e- e+ [ all = QCD QED ] QCD^2=2 QED^2=4 
+[1;32mDEBUG: Removing amplitude: Process: s s~ > e- e+ a [ all = QCD QED ] QCD^2=2 QED^2=4 [0m
+[1;32mDEBUG: Removing amplitude: Process: a s~ > e- e+ s~ [ all = QCD QED ] QCD^2=2 QED^2=4 [0m
+INFO: Generating born process: b b~ > e- e+ [ all = QCD QED ] QCD^2=2 QED^2=4 
+[1;32mDEBUG: Removing amplitude: Process: s a > e- e+ s [ all = QCD QED ] QCD^2=2 QED^2=4 [0m
+INFO: Generating born process: u~ u > e- e+ [ all = QCD QED ] QCD^2=2 QED^2=4 
+[1;32mDEBUG: Removing amplitude: Process: b b~ > e- e+ a [ all = QCD QED ] QCD^2=2 QED^2=4 [0m
+[1;32mDEBUG: Removing amplitude: Process: a b~ > e- e+ b~ [ all = QCD QED ] QCD^2=2 QED^2=4 [0m
+[1;32mDEBUG: Removing amplitude: Process: b a > e- e+ b [ all = QCD QED ] QCD^2=2 QED^2=4 [0m
+[1;32mDEBUG: Removing amplitude: Process: u~ u > e- e+ a [ all = QCD QED ] QCD^2=2 QED^2=4 [0m
+[1;32mDEBUG: Removing amplitude: Process: a u > e- e+ u [ all = QCD QED ] QCD^2=2 QED^2=4 [0m
+[1;32mDEBUG: Removing amplitude: Process: u~ a > e- e+ u~ [ all = QCD QED ] QCD^2=2 QED^2=4 [0m
+INFO: Generating born process: c~ c > e- e+ [ all = QCD QED ] QCD^2=2 QED^2=4 
+[1;32mDEBUG: Removing amplitude: Process: c~ c > e- e+ a [ all = QCD QED ] QCD^2=2 QED^2=4 [0m
+[1;32mDEBUG: Removing amplitude: Process: a c > e- e+ c [ all = QCD QED ] QCD^2=2 QED^2=4 [0m
+[1;32mDEBUG: Removing amplitude: Process: c~ a > e- e+ c~ [ all = QCD QED ] QCD^2=2 QED^2=4 [0m
+INFO: Generating born process: d~ d > e- e+ [ all = QCD QED ] QCD^2=2 QED^2=4 
+[1;32mDEBUG: Removing amplitude: Process: d~ d > e- e+ a [ all = QCD QED ] QCD^2=2 QED^2=4 [0m
+[1;32mDEBUG: Removing amplitude: Process: a d > e- e+ d [ all = QCD QED ] QCD^2=2 QED^2=4 [0m
+[1;32mDEBUG: Removing amplitude: Process: d~ a > e- e+ d~ [ all = QCD QED ] QCD^2=2 QED^2=4 [0m
+INFO: Generating born process: s~ s > e- e+ [ all = QCD QED ] QCD^2=2 QED^2=4 
+[1;32mDEBUG: Removing amplitude: Process: s~ s > e- e+ a [ all = QCD QED ] QCD^2=2 QED^2=4 [0m
+[1;32mDEBUG: Removing amplitude: Process: a s > e- e+ s [ all = QCD QED ] QCD^2=2 QED^2=4 [0m
+[1;32mDEBUG: Removing amplitude: Process: s~ a > e- e+ s~ [ all = QCD QED ] QCD^2=2 QED^2=4 [0m
+INFO: Generating born process: b~ b > e- e+ [ all = QCD QED ] QCD^2=2 QED^2=4 
+[1;32mDEBUG: Removing amplitude: Process: b~ b > e- e+ a [ all = QCD QED ] QCD^2=2 QED^2=4 [0m
+[1;32mDEBUG: Removing amplitude: Process: a b > e- e+ b [ all = QCD QED ] QCD^2=2 QED^2=4 [0m
+[1;32mDEBUG: Removing amplitude: Process: b~ a > e- e+ b~ [ all = QCD QED ] QCD^2=2 QED^2=4 [0m
+INFO: Collecting infos and finalizing matrix elements, 10 left... 
+INFO: ... Done 
+Writing directories...
+INFO: Writing files in P0_uxu_emep (3 / 4) 
+INFO: Writing files in P0_uux_emep (1 / 4) 
+INFO: Writing files in P0_ddx_emep (2 / 4) 
+INFO: Creating files in directory V0_uxu_emep 
+INFO: Creating files in directory V0_uux_emep 
+[1;32mDEBUG: adding in aloha model 2 lorentz struct [0m
+[1;32mDEBUG: adding in aloha model 2 lorentz struct [0m
+ALOHA: aloha creates FFV1 set of routines with options: L1,P0[0m
+ALOHA: aloha creates FFV1 set of routines with options: L2,P0[0m
+INFO: Creating files in directory V0_ddx_emep 
+[1;32mDEBUG: adding in aloha model 2 lorentz struct [0m
+ALOHA: aloha creates FFV1 set of routines with options: L2,P0[0m
+ALOHA: aloha creates FFV1 set of routines with options: L3[0m
+ALOHA: aloha creates FFV1 set of routines with options: L3[0m
+ALOHA: aloha creates FFV1 set of routines with options: L3[0m
+ALOHA: aloha creates FFV1 set of routines with options: L1[0m
+ALOHA: aloha creates FFV1 set of routines with options: L2[0m
+ALOHA: aloha creates FFV2 set of routines with options: L1[0m
+ALOHA: aloha creates FFV2 set of routines with options: L2[0m
+ALOHA: aloha creates FFV1 set of routines with options: L2[0m
+ALOHA: aloha creates FFV5 set of routines with options: L1[0m
+ALOHA: aloha creates FFV5 set of routines with options: L2[0m
+ALOHA: aloha creates FFV2 set of routines with options: L2[0m
+ALOHA: aloha creates FFV3 set of routines with options: L2[0m
+INFO: Computing diagram color coefficients 
+INFO: Computing diagram color coefficients 
+INFO: Computing diagram color coefficients 
+INFO: Drawing loop Feynman diagrams for Process: u u~ > e- e+ [ all = QCD QED ] QCD^2=2 QED^2=4 
+INFO: Drawing loop Feynman diagrams for Process: u~ u > e- e+ [ all = QCD QED ] QCD^2=2 QED^2=4 
+INFO: Generating born Feynman diagrams for Process: u u~ > e- e+ [ all = QCD QED ] QCD^2=2 QED^2=4 
+INFO: Generating born Feynman diagrams for Process: u~ u > e- e+ [ all = QCD QED ] QCD^2=2 QED^2=4 
+INFO: Drawing loop Feynman diagrams for Process: d d~ > e- e+ [ all = QCD QED ] QCD^2=2 QED^2=4 
+INFO: Generating born Feynman diagrams for Process: d d~ > e- e+ [ all = QCD QED ] QCD^2=2 QED^2=4 
+INFO: Writing files in P0_dxd_emep (4 / 4) 
+INFO: Creating files in directory V0_dxd_emep 
+[1;32mDEBUG: adding in aloha model 2 lorentz struct [0m
+ALOHA: aloha creates FFV1 set of routines with options: L1,P0[0m
+ALOHA: aloha creates FFV1 set of routines with options: L3[0m
+ALOHA: aloha creates FFV1 set of routines with options: L1[0m
+ALOHA: aloha creates FFV2 set of routines with options: L1[0m
+ALOHA: aloha creates FFV3 set of routines with options: L1[0m
+INFO: Computing diagram color coefficients 
+INFO: Drawing loop Feynman diagrams for Process: d~ d > e- e+ [ all = QCD QED ] QCD^2=2 QED^2=4 
+INFO: Generating born Feynman diagrams for Process: d~ d > e- e+ [ all = QCD QED ] QCD^2=2 QED^2=4 
+History written to /tmp/mg5_born_support_physics/dy/Cards/proc_card_mg5.dat
+[1;32mDEBUG: adding in aloha model 2 lorentz struct [0m
+ALOHA: aloha starts to compute helicity amplitudes
+ALOHA: aloha creates FFV1 routines[0m
+ALOHA: aloha creates FFV2 routines[0m
+ALOHA: aloha creates FFV5 routines[0m
+ALOHA: aloha creates FFV4 routines[0m
+ALOHA: aloha creates FFV3 routines[0m
+ALOHA: aloha creates FFV2_5 routines[0m
+ALOHA: aloha creates FFV2_4 routines[0m
+ALOHA: aloha creates FFV2_3 routines[0m
+ALOHA: aloha creates 8 routines in  0.402 s
+The option low_mem_multicore_nlo_generation is modified [False] but will not be written in the configuration files.
+If you want to make this value the default for future session, you can run 'save options --all'
+save configuration file to /tmp/mg5_born_support_physics/dy/Cards/amcatnlo_configuration.txt
+INFO: Use Fortran compiler gfortran 
+INFO: Use c++ compiler g++ 
+INFO: Generate web pages 
+Type "launch" to generate events from this process, or see
+/tmp/mg5_born_support_physics/dy/README
+Run "open index.html" to see more information about this process.
+generate p p > t t~ [QCD]
+[1mSetting the born squared orders automatically in the process definition to QED=0 QCD^2<=4.
+If this is not what you need, please regenerate with the correct orders.[0m
+[1;34mWARNING: Use of multiparticles is non-trivial for NLO process generation and depends on the orders included, the process considered, as well as the PDF set chosen. See appendix D of arXiv:1804.10017 [hep-ph] for some guidance. [0m
+INFO: Generating FKS-subtracted matrix elements for born process: g g > t t~ QCD^2=6 QED^2=0 (1 / 11) 
+INFO: Generating FKS-subtracted matrix elements for born process: u u~ > t t~ QCD^2=6 QED^2=0 (2 / 11) 
+INFO: Generating FKS-subtracted matrix elements for born process: c c~ > t t~ QCD^2=6 QED^2=0 (3 / 11) 
+INFO: Generating FKS-subtracted matrix elements for born process: d d~ > t t~ QCD^2=6 QED^2=0 (4 / 11) 
+INFO: Generating FKS-subtracted matrix elements for born process: s s~ > t t~ QCD^2=6 QED^2=0 (5 / 11) 
+INFO: Generating FKS-subtracted matrix elements for born process: b b~ > t t~ QCD^2=6 QED^2=0 (6 / 11) 
+INFO: Generating FKS-subtracted matrix elements for born process: u~ u > t t~ QCD^2=6 QED^2=0 (7 / 11) 
+INFO: Generating FKS-subtracted matrix elements for born process: c~ c > t t~ QCD^2=6 QED^2=0 (8 / 11) 
+INFO: Generating FKS-subtracted matrix elements for born process: d~ d > t t~ QCD^2=6 QED^2=0 (9 / 11) 
+INFO: Generating FKS-subtracted matrix elements for born process: s~ s > t t~ QCD^2=6 QED^2=0 (10 / 11) 
+INFO: Generating FKS-subtracted matrix elements for born process: b~ b > t t~ QCD^2=6 QED^2=0 (11 / 11) 
+output /tmp/mg5_born_support_physics/ttbar -f -nojpeg
+INFO: Writing out the aMC@NLO code, using optimized Loops 
+INFO: initialize a new directory: ttbar 
+INFO: remove old information in ttbar 
+INFO: Generating real matrix elements... 
+INFO: Generating real process: s g > t t~ s [ all = QCD QED ] QCD^2=6 QED^2=0 
+INFO: Generating real process: g d > t t~ d [ all = QCD QED ] QCD^2=6 QED^2=0 
+INFO: Generating real process: g g > t t~ g [ all = QCD QED ] QCD^2=6 QED^2=0 
+INFO: Generating real process: c~ g > t t~ c~ [ all = QCD QED ] QCD^2=6 QED^2=0 
+INFO: Generating real process: g u~ > t t~ u~ [ all = QCD QED ] QCD^2=6 QED^2=0 
+INFO: Generating real process: c g > t t~ c [ all = QCD QED ] QCD^2=6 QED^2=0 
+INFO: Generating real process: d~ g > t t~ d~ [ all = QCD QED ] QCD^2=6 QED^2=0 
+INFO: Generating real process: g u > t t~ u [ all = QCD QED ] QCD^2=6 QED^2=0 
+INFO: Generating real process: b~ g > t t~ b~ [ all = QCD QED ] QCD^2=6 QED^2=0 
+INFO: Generating real process: d g > t t~ d [ all = QCD QED ] QCD^2=6 QED^2=0 
+INFO: Generating real process: g s~ > t t~ s~ [ all = QCD QED ] QCD^2=6 QED^2=0 
+INFO: Generating real process: u~ g > t t~ u~ [ all = QCD QED ] QCD^2=6 QED^2=0 
+INFO: Generating real process: b g > t t~ b [ all = QCD QED ] QCD^2=6 QED^2=0 
+INFO: Generating real process: g s > t t~ s [ all = QCD QED ] QCD^2=6 QED^2=0 
+INFO: Generating real process: u g > t t~ u [ all = QCD QED ] QCD^2=6 QED^2=0 
+INFO: Generating real process: g d~ > t t~ d~ [ all = QCD QED ] QCD^2=6 QED^2=0 
+INFO: Generating real process: g c~ > t t~ c~ [ all = QCD QED ] QCD^2=6 QED^2=0 
+INFO: Generating real process: s~ g > t t~ s~ [ all = QCD QED ] QCD^2=6 QED^2=0 
+[1;32mDEBUG: Discarding amplitude with no diagramsProcess: a u~ > t t~ u~ [ all = QCD QED ] QCD^2=6 QED^2=0 [0m
+INFO: Generating real process: g c > t t~ c [ all = QCD QED ] QCD^2=6 QED^2=0 
+[1;32mDEBUG: Discarding amplitude with no diagramsProcess: u a > t t~ u [ all = QCD QED ] QCD^2=6 QED^2=0 [0m
+INFO: Generating real process: d d~ > t t~ g [ all = QCD QED ] QCD^2=6 QED^2=0 
+INFO: Generating real process: c c~ > t t~ g [ all = QCD QED ] QCD^2=6 QED^2=0 
+INFO: Generating real process: g b~ > t t~ b~ [ all = QCD QED ] QCD^2=6 QED^2=0 
+[1;32mDEBUG: Discarding amplitude with no diagramsProcess: d d~ > t t~ a [ all = QCD QED ] QCD^2=6 QED^2=0 [0m
+[1;32mDEBUG: Discarding amplitude with no diagramsProcess: c c~ > t t~ a [ all = QCD QED ] QCD^2=6 QED^2=0 [0m
+[1;32mDEBUG: Discarding amplitude with no diagramsProcess: a d~ > t t~ d~ [ all = QCD QED ] QCD^2=6 QED^2=0 [0m
+[1;32mDEBUG: Discarding amplitude with no diagramsProcess: a c~ > t t~ c~ [ all = QCD QED ] QCD^2=6 QED^2=0 [0m
+INFO: Generating real process: g b > t t~ b [ all = QCD QED ] QCD^2=6 QED^2=0 
+[1;32mDEBUG: Discarding amplitude with no diagramsProcess: d a > t t~ d [ all = QCD QED ] QCD^2=6 QED^2=0 [0m
+[1;32mDEBUG: Discarding amplitude with no diagramsProcess: c a > t t~ c [ all = QCD QED ] QCD^2=6 QED^2=0 [0m
+[1;32mDEBUG: Discarding amplitude with no diagramsProcess: g g > t t~ a [ all = QCD QED ] QCD^2=6 QED^2=0 [0m
+INFO: Generating real process: s s~ > t t~ g [ all = QCD QED ] QCD^2=6 QED^2=0 
+[1;32mDEBUG: Discarding amplitude with no diagramsProcess: a s~ > t t~ s~ [ all = QCD QED ] QCD^2=6 QED^2=0 [0m
+INFO: Generating real process: u u~ > t t~ g [ all = QCD QED ] QCD^2=6 QED^2=0 
+[1;32mDEBUG: Discarding amplitude with no diagramsProcess: s a > t t~ s [ all = QCD QED ] QCD^2=6 QED^2=0 [0m
+[1;32mDEBUG: Discarding amplitude with no diagramsProcess: s s~ > t t~ a [ all = QCD QED ] QCD^2=6 QED^2=0 [0m
+[1;32mDEBUG: Discarding amplitude with no diagramsProcess: u u~ > t t~ a [ all = QCD QED ] QCD^2=6 QED^2=0 [0m
+INFO: Generating real process: b b~ > t t~ g [ all = QCD QED ] QCD^2=6 QED^2=0 
+INFO: Generating real process: u~ u > t t~ g [ all = QCD QED ] QCD^2=6 QED^2=0 
+[1;32mDEBUG: Discarding amplitude with no diagramsProcess: a c > t t~ c [ all = QCD QED ] QCD^2=6 QED^2=0 [0m
+[1;32mDEBUG: Discarding amplitude with no diagramsProcess: b b~ > t t~ a [ all = QCD QED ] QCD^2=6 QED^2=0 [0m
+[1;32mDEBUG: Discarding amplitude with no diagramsProcess: c~ a > t t~ c~ [ all = QCD QED ] QCD^2=6 QED^2=0 [0m
+[1;32mDEBUG: Discarding amplitude with no diagramsProcess: u~ u > t t~ a [ all = QCD QED ] QCD^2=6 QED^2=0 [0m
+[1;32mDEBUG: Discarding amplitude with no diagramsProcess: a b~ > t t~ b~ [ all = QCD QED ] QCD^2=6 QED^2=0 [0m
+[1;32mDEBUG: Discarding amplitude with no diagramsProcess: a u > t t~ u [ all = QCD QED ] QCD^2=6 QED^2=0 [0m
+[1;32mDEBUG: Discarding amplitude with no diagramsProcess: b a > t t~ b [ all = QCD QED ] QCD^2=6 QED^2=0 [0m
+INFO: Generating real process: d~ d > t t~ g [ all = QCD QED ] QCD^2=6 QED^2=0 
+[1;32mDEBUG: Discarding amplitude with no diagramsProcess: u~ a > t t~ u~ [ all = QCD QED ] QCD^2=6 QED^2=0 [0m
+[1;32mDEBUG: Discarding amplitude with no diagramsProcess: d~ d > t t~ a [ all = QCD QED ] QCD^2=6 QED^2=0 [0m
+INFO: Generating real process: c~ c > t t~ g [ all = QCD QED ] QCD^2=6 QED^2=0 
+[1;32mDEBUG: Discarding amplitude with no diagramsProcess: a d > t t~ d [ all = QCD QED ] QCD^2=6 QED^2=0 [0m
+[1;32mDEBUG: Discarding amplitude with no diagramsProcess: d~ a > t t~ d~ [ all = QCD QED ] QCD^2=6 QED^2=0 [0m
+INFO: Generating real process: s~ s > t t~ g [ all = QCD QED ] QCD^2=6 QED^2=0 
+[1;32mDEBUG: Discarding amplitude with no diagramsProcess: c~ c > t t~ a [ all = QCD QED ] QCD^2=6 QED^2=0 [0m
+[1;32mDEBUG: Discarding amplitude with no diagramsProcess: s~ s > t t~ a [ all = QCD QED ] QCD^2=6 QED^2=0 [0m
+[1;32mDEBUG: Discarding amplitude with no diagramsProcess: a b > t t~ b [ all = QCD QED ] QCD^2=6 QED^2=0 [0m
+[1;32mDEBUG: Discarding amplitude with no diagramsProcess: a s > t t~ s [ all = QCD QED ] QCD^2=6 QED^2=0 [0m
+[1;32mDEBUG: Discarding amplitude with no diagramsProcess: b~ a > t t~ b~ [ all = QCD QED ] QCD^2=6 QED^2=0 [0m
+[1;32mDEBUG: Discarding amplitude with no diagramsProcess: s~ a > t t~ s~ [ all = QCD QED ] QCD^2=6 QED^2=0 [0m
+INFO: Generating real process: b~ b > t t~ g [ all = QCD QED ] QCD^2=6 QED^2=0 
+[1;32mDEBUG: Discarding amplitude with no diagramsProcess: b~ b > t t~ a [ all = QCD QED ] QCD^2=6 QED^2=0 [0m
+INFO: Generating born and virtual matrix elements... 
+INFO: Generating born process: g g > t t~ [ all = QCD QED ] QCD^2=6 QED^2=0 
+INFO: Generating born process: u u~ > t t~ [ all = QCD QED ] QCD^2=6 QED^2=0 
+INFO: Generating born process: c c~ > t t~ [ all = QCD QED ] QCD^2=6 QED^2=0 
+[1;32mDEBUG: Removing amplitude: Process: u u~ > t t~ a [ all = QCD QED ] QCD^2=6 QED^2=0 [0m
+[1;32mDEBUG: Removing amplitude: Process: a u~ > t t~ u~ [ all = QCD QED ] QCD^2=6 QED^2=0 [0m
+[1;32mDEBUG: Removing amplitude: Process: c c~ > t t~ a [ all = QCD QED ] QCD^2=6 QED^2=0 [0m
+[1;32mDEBUG: Removing amplitude: Process: a c~ > t t~ c~ [ all = QCD QED ] QCD^2=6 QED^2=0 [0m
+[1;32mDEBUG: Removing amplitude: Process: u a > t t~ u [ all = QCD QED ] QCD^2=6 QED^2=0 [0m
+[1;32mDEBUG: Removing amplitude: Process: c a > t t~ c [ all = QCD QED ] QCD^2=6 QED^2=0 [0m
+[1;32mDEBUG: Removing amplitude: Process: g g > t t~ a [ all = QCD QED ] QCD^2=6 QED^2=0 [0m
+INFO: Generating born process: d d~ > t t~ [ all = QCD QED ] QCD^2=6 QED^2=0 
+INFO: Generating born process: s s~ > t t~ [ all = QCD QED ] QCD^2=6 QED^2=0 
+[1;32mDEBUG: Removing amplitude: Process: d d~ > t t~ a [ all = QCD QED ] QCD^2=6 QED^2=0 [0m
+[1;32mDEBUG: Removing amplitude: Process: a d~ > t t~ d~ [ all = QCD QED ] QCD^2=6 QED^2=0 [0m
+[1;32mDEBUG: Removing amplitude: Process: d a > t t~ d [ all = QCD QED ] QCD^2=6 QED^2=0 [0m
+[1;32mDEBUG: Removing amplitude: Process: s s~ > t t~ a [ all = QCD QED ] QCD^2=6 QED^2=0 [0m
+[1;32mDEBUG: Removing amplitude: Process: a s~ > t t~ s~ [ all = QCD QED ] QCD^2=6 QED^2=0 [0m
+[1;32mDEBUG: Removing amplitude: Process: s a > t t~ s [ all = QCD QED ] QCD^2=6 QED^2=0 [0m
+INFO: Generating born process: b b~ > t t~ [ all = QCD QED ] QCD^2=6 QED^2=0 
+[1;32mDEBUG: Removing amplitude: Process: b b~ > t t~ a [ all = QCD QED ] QCD^2=6 QED^2=0 [0m
+[1;32mDEBUG: Removing amplitude: Process: a b~ > t t~ b~ [ all = QCD QED ] QCD^2=6 QED^2=0 [0m
+[1;32mDEBUG: Removing amplitude: Process: b a > t t~ b [ all = QCD QED ] QCD^2=6 QED^2=0 [0m
+INFO: Generating born process: u~ u > t t~ [ all = QCD QED ] QCD^2=6 QED^2=0 
+[1;32mDEBUG: Removing amplitude: Process: u~ u > t t~ a [ all = QCD QED ] QCD^2=6 QED^2=0 [0m
+[1;32mDEBUG: Removing amplitude: Process: a u > t t~ u [ all = QCD QED ] QCD^2=6 QED^2=0 [0m
+[1;32mDEBUG: Removing amplitude: Process: u~ a > t t~ u~ [ all = QCD QED ] QCD^2=6 QED^2=0 [0m
+INFO: Generating born process: c~ c > t t~ [ all = QCD QED ] QCD^2=6 QED^2=0 
+[1;32mDEBUG: Removing amplitude: Process: c~ c > t t~ a [ all = QCD QED ] QCD^2=6 QED^2=0 [0m
+[1;32mDEBUG: Removing amplitude: Process: a c > t t~ c [ all = QCD QED ] QCD^2=6 QED^2=0 [0m
+INFO: Generating born process: d~ d > t t~ [ all = QCD QED ] QCD^2=6 QED^2=0 
+[1;32mDEBUG: Removing amplitude: Process: c~ a > t t~ c~ [ all = QCD QED ] QCD^2=6 QED^2=0 [0m
+[1;32mDEBUG: Removing amplitude: Process: d~ d > t t~ a [ all = QCD QED ] QCD^2=6 QED^2=0 [0m
+[1;32mDEBUG: Removing amplitude: Process: a d > t t~ d [ all = QCD QED ] QCD^2=6 QED^2=0 [0m
+[1;32mDEBUG: Removing amplitude: Process: d~ a > t t~ d~ [ all = QCD QED ] QCD^2=6 QED^2=0 [0m
+INFO: Generating born process: s~ s > t t~ [ all = QCD QED ] QCD^2=6 QED^2=0 
+[1;32mDEBUG: Removing amplitude: Process: s~ s > t t~ a [ all = QCD QED ] QCD^2=6 QED^2=0 [0m
+[1;32mDEBUG: Removing amplitude: Process: a s > t t~ s [ all = QCD QED ] QCD^2=6 QED^2=0 [0m
+[1;32mDEBUG: Removing amplitude: Process: s~ a > t t~ s~ [ all = QCD QED ] QCD^2=6 QED^2=0 [0m
+INFO: Generating born process: b~ b > t t~ [ all = QCD QED ] QCD^2=6 QED^2=0 
+[1;32mDEBUG: Removing amplitude: Process: b~ b > t t~ a [ all = QCD QED ] QCD^2=6 QED^2=0 [0m
+[1;32mDEBUG: Removing amplitude: Process: a b > t t~ b [ all = QCD QED ] QCD^2=6 QED^2=0 [0m
+[1;32mDEBUG: Removing amplitude: Process: b~ a > t t~ b~ [ all = QCD QED ] QCD^2=6 QED^2=0 [0m
+INFO: Collecting infos and finalizing matrix elements, 11 left... 
+INFO: ... Done 
+Writing directories...
+INFO: Writing files in P0_uux_ttx (2 / 3) 
+INFO: Writing files in P0_uxu_ttx (3 / 3) 
+INFO: Writing files in P0_gg_ttx (1 / 3) 
+INFO: Creating files in directory V0_uux_ttx 
+INFO: Creating files in directory V0_uxu_ttx 
+ALOHA: aloha creates VVV1 set of routines with options: L2,P0[0m
+ALOHA: aloha creates VVV1 set of routines with options: L2,P0[0m
+ALOHA: aloha creates FFV1 set of routines with options: L3[0m
+ALOHA: aloha creates FFV1 set of routines with options: L3[0m
+INFO: Creating files in directory V0_gg_ttx 
+ALOHA: aloha creates VVV1 set of routines with options: L2,P0[0m
+ALOHA: aloha creates FFV1 set of routines with options: L2,P0[0m
+ALOHA: aloha creates FFV1 set of routines with options: L2,P0[0m
+ALOHA: aloha creates FFV1 set of routines with options: L3[0m
+ALOHA: aloha creates FFV1 set of routines with options: L1,P0[0m
+ALOHA: aloha creates FFV1 set of routines with options: L1,P0[0m
+ALOHA: aloha creates FFV1 set of routines with options: L2,P0[0m
+ALOHA: aloha creates FFV1 set of routines with options: L3[0m
+ALOHA: aloha creates FFV1 set of routines with options: L3[0m
+ALOHA: aloha creates FFV1 set of routines with options: L1,P0[0m
+ALOHA: aloha creates FFV1 set of routines with options: L1[0m
+ALOHA: aloha creates FFV1 set of routines with options: L1[0m
+ALOHA: aloha creates FFV1 set of routines with options: L3[0m
+ALOHA: aloha creates FFV1 set of routines with options: L2[0m
+ALOHA: aloha creates GHGHG set of routines with options: L2[0m
+ALOHA: aloha creates FFV1 set of routines with options: L1[0m
+ALOHA: aloha creates FFV1 set of routines with options: L2[0m
+ALOHA: aloha creates GHGHG set of routines with options: L2[0m
+ALOHA: aloha creates FFV1 set of routines with options: L2[0m
+INFO: Computing diagram color coefficients 
+INFO: Computing diagram color coefficients 
+ALOHA: aloha creates VVVV1 set of routines with options: L2,P0[0m
+ALOHA: aloha creates VVVV3 set of routines with options: L2,P0[0m
+ALOHA: aloha creates VVVV4 set of routines with options: L2,P0[0m
+ALOHA: aloha creates GHGHG set of routines with options: L2[0m
+ALOHA: aloha creates GHGHG set of routines with options: L1[0m
+INFO: Computing diagram color coefficients 
+INFO: Drawing loop Feynman diagrams for Process: u u~ > t t~ [ all = QCD QED ] QCD^2=6 QED^2=0 
+INFO: Generating born Feynman diagrams for Process: u u~ > t t~ [ all = QCD QED ] QCD^2=6 QED^2=0 
+INFO: Drawing loop Feynman diagrams for Process: u~ u > t t~ [ all = QCD QED ] QCD^2=6 QED^2=0 
+INFO: Generating born Feynman diagrams for Process: u~ u > t t~ [ all = QCD QED ] QCD^2=6 QED^2=0 
+INFO: Drawing loop Feynman diagrams for Process: g g > t t~ [ all = QCD QED ] QCD^2=6 QED^2=0 
+INFO: Generating born Feynman diagrams for Process: g g > t t~ [ all = QCD QED ] QCD^2=6 QED^2=0 
+History written to /tmp/mg5_born_support_physics/ttbar/Cards/proc_card_mg5.dat
+ALOHA: aloha starts to compute helicity amplitudes
+ALOHA: aloha creates VVV1 routines[0m
+ALOHA: aloha creates FFV1 routines[0m
+ALOHA: aloha creates VVVV1 set of routines with options: P0[0m
+ALOHA: aloha creates VVVV3 set of routines with options: P0[0m
+ALOHA: aloha creates VVVV4 set of routines with options: P0[0m
+ALOHA: aloha creates GHGHG set of routines with options: L2[0m
+ALOHA: aloha creates R2_GG_1 routines[0m
+ALOHA: aloha creates R2_GG_2 routines[0m
+ALOHA: aloha creates R2_QQ_1 routines[0m
+ALOHA: aloha creates R2_QQ_2 routines[0m
+ALOHA: aloha creates R2_GG_3 routines[0m
+ALOHA: aloha creates R2_GG_1_R2_GG_2 routines[0m
+ALOHA: aloha creates R2_QQ_1_R2_QQ_2 routines[0m
+ALOHA: aloha creates R2_GG_1_R2_GG_3 routines[0m
+ALOHA: aloha creates 22 routines in  0.442 s
+The option low_mem_multicore_nlo_generation is modified [False] but will not be written in the configuration files.
+If you want to make this value the default for future session, you can run 'save options --all'
+save configuration file to /tmp/mg5_born_support_physics/ttbar/Cards/amcatnlo_configuration.txt
+INFO: Use Fortran compiler gfortran 
+INFO: Use c++ compiler g++ 
+INFO: Generate web pages 
+Type "launch" to generate events from this process, or see
+/tmp/mg5_born_support_physics/ttbar/README
+Run "open index.html" to see more information about this process.
+generate p p > w+ j [QCD]
+[1mSetting the born squared orders automatically in the process definition to QED^2<=2 QCD^2<=2.
+If this is not what you need, please regenerate with the correct orders.[0m
+[1;34mWARNING: Use of multiparticles is non-trivial for NLO process generation and depends on the orders included, the process considered, as well as the PDF set chosen. See appendix D of arXiv:1804.10017 [hep-ph] for some guidance. [0m
+INFO: Generating FKS-subtracted matrix elements for born process: g u > w+ d QCD^2=4 QED^2=2 (1 / 12) 
+INFO: Generating FKS-subtracted matrix elements for born process: g c > w+ s QCD^2=4 QED^2=2 (2 / 12) 
+INFO: Generating FKS-subtracted matrix elements for born process: g d~ > w+ u~ QCD^2=4 QED^2=2 (3 / 12) 
+INFO: Generating FKS-subtracted matrix elements for born process: g s~ > w+ c~ QCD^2=4 QED^2=2 (4 / 12) 
+INFO: Generating FKS-subtracted matrix elements for born process: u g > w+ d QCD^2=4 QED^2=2 (5 / 12) 
+INFO: Generating FKS-subtracted matrix elements for born process: u d~ > w+ g QCD^2=4 QED^2=2 (6 / 12) 
+INFO: Generating FKS-subtracted matrix elements for born process: c g > w+ s QCD^2=4 QED^2=2 (7 / 12) 
+INFO: Generating FKS-subtracted matrix elements for born process: c s~ > w+ g QCD^2=4 QED^2=2 (8 / 12) 
+INFO: Generating FKS-subtracted matrix elements for born process: d~ g > w+ u~ QCD^2=4 QED^2=2 (9 / 12) 
+INFO: Generating FKS-subtracted matrix elements for born process: d~ u > w+ g QCD^2=4 QED^2=2 (10 / 12) 
+INFO: Generating FKS-subtracted matrix elements for born process: s~ g > w+ c~ QCD^2=4 QED^2=2 (11 / 12) 
+INFO: Generating FKS-subtracted matrix elements for born process: s~ c > w+ g QCD^2=4 QED^2=2 (12 / 12) 
+output /tmp/mg5_born_support_physics/wjet -f -nojpeg
+INFO: Writing out the aMC@NLO code, using optimized Loops 
+INFO: initialize a new directory: wjet 
+INFO: remove old information in wjet 
+INFO: Generating real matrix elements... 
+INFO: Generating real process: g u > w+ d g [ all = QCD QED ] QCD^2=4 QED^2=2 
+INFO: Generating real process: g g > w+ d u~ [ all = QCD QED ] QCD^2=4 QED^2=2 
+INFO: Generating real process: c c > w+ s c [ all = QCD QED ] QCD^2=4 QED^2=2 
+INFO: Generating real process: b~ c > w+ s b~ [ all = QCD QED ] QCD^2=4 QED^2=2 
+[1;32mDEBUG: Discarding amplitude with no diagramsProcess: g u > w+ d a [ all = QCD QED ] QCD^2=4 QED^2=2 [0m
+INFO: Generating real process: d~ u > w+ d d~ [ all = QCD QED ] QCD^2=4 QED^2=2 
+[1;32mDEBUG: Discarding amplitude with no diagramsProcess: g a > w+ d u~ [ all = QCD QED ] QCD^2=4 QED^2=2 [0m
+INFO: Generating real process: b c > w+ s b [ all = QCD QED ] QCD^2=4 QED^2=2 
+INFO: Generating real process: g c > w+ s g [ all = QCD QED ] QCD^2=4 QED^2=2 
+INFO: Generating real process: d u > w+ d d [ all = QCD QED ] QCD^2=4 QED^2=2 
+INFO: Generating real process: g g > w+ s c~ [ all = QCD QED ] QCD^2=4 QED^2=2 
+INFO: Generating real process: d~ c > w+ s d~ [ all = QCD QED ] QCD^2=4 QED^2=2 
+INFO: Generating real process: u~ u > w+ d u~ [ all = QCD QED ] QCD^2=4 QED^2=2 
+[1;32mDEBUG: Discarding amplitude with no diagramsProcess: g c > w+ s a [ all = QCD QED ] QCD^2=4 QED^2=2 [0m
+INFO: Generating real process: d c > w+ s d [ all = QCD QED ] QCD^2=4 QED^2=2 
+[1;32mDEBUG: Discarding amplitude with no diagramsProcess: g a > w+ s c~ [ all = QCD QED ] QCD^2=4 QED^2=2 [0m
+INFO: Generating real process: u~ c > w+ s u~ [ all = QCD QED ] QCD^2=4 QED^2=2 
+INFO: Generating real process: u u > w+ d u [ all = QCD QED ] QCD^2=4 QED^2=2 
+INFO: Generating real process: g d~ > w+ u~ g [ all = QCD QED ] QCD^2=4 QED^2=2 
+INFO: Generating real process: u c > w+ s u [ all = QCD QED ] QCD^2=4 QED^2=2 
+INFO: Generating real process: s~ u > w+ d s~ [ all = QCD QED ] QCD^2=4 QED^2=2 
+INFO: Generating real process: s u > w+ d s [ all = QCD QED ] QCD^2=4 QED^2=2 
+INFO: Generating real process: d~ d~ > w+ u~ d~ [ all = QCD QED ] QCD^2=4 QED^2=2 
+INFO: Generating real process: s~ c > w+ s s~ [ all = QCD QED ] QCD^2=4 QED^2=2 
+INFO: Generating real process: c~ u > w+ d c~ [ all = QCD QED ] QCD^2=4 QED^2=2 
+INFO: Generating real process: d d~ > w+ d u~ [ all = QCD QED ] QCD^2=4 QED^2=2 
+INFO: Generating real process: s c > w+ s s [ all = QCD QED ] QCD^2=4 QED^2=2 
+INFO: Generating real process: c u > w+ d c [ all = QCD QED ] QCD^2=4 QED^2=2 
+INFO: Generating real process: b~ u > w+ d b~ [ all = QCD QED ] QCD^2=4 QED^2=2 
+INFO: Generating real process: u~ d~ > w+ u~ u~ [ all = QCD QED ] QCD^2=4 QED^2=2 
+INFO: Generating real process: c~ c > w+ s c~ [ all = QCD QED ] QCD^2=4 QED^2=2 
+INFO: Generating real process: b u > w+ d b [ all = QCD QED ] QCD^2=4 QED^2=2 
+INFO: Generating real process: u d~ > w+ u u~ [ all = QCD QED ] QCD^2=4 QED^2=2 
+INFO: Generating real process: s~ d~ > w+ u~ s~ [ all = QCD QED ] QCD^2=4 QED^2=2 
+INFO: Generating real process: u~ s~ > w+ c~ u~ [ all = QCD QED ] QCD^2=4 QED^2=2 
+INFO: Generating real process: s d~ > w+ s u~ [ all = QCD QED ] QCD^2=4 QED^2=2 
+[1;32mDEBUG: Discarding amplitude with no diagramsProcess: u g > w+ d a [ all = QCD QED ] QCD^2=4 QED^2=2 [0m
+[1;32mDEBUG: Discarding amplitude with no diagramsProcess: a g > w+ d u~ [ all = QCD QED ] QCD^2=4 QED^2=2 [0m
+INFO: Generating real process: u s~ > w+ u c~ [ all = QCD QED ] QCD^2=4 QED^2=2 
+INFO: Generating real process: c~ d~ > w+ u~ c~ [ all = QCD QED ] QCD^2=4 QED^2=2 
+INFO: Generating real process: u d~ > w+ d d~ [ all = QCD QED ] QCD^2=4 QED^2=2 
+INFO: Generating real process: c d~ > w+ c u~ [ all = QCD QED ] QCD^2=4 QED^2=2 
+INFO: Generating real process: s~ s~ > w+ c~ s~ [ all = QCD QED ] QCD^2=4 QED^2=2 
+INFO: Generating real process: b~ d~ > w+ u~ b~ [ all = QCD QED ] QCD^2=4 QED^2=2 
+INFO: Generating real process: u d > w+ d d [ all = QCD QED ] QCD^2=4 QED^2=2 
+INFO: Generating real process: s s~ > w+ s c~ [ all = QCD QED ] QCD^2=4 QED^2=2 
+INFO: Generating real process: b d~ > w+ b u~ [ all = QCD QED ] QCD^2=4 QED^2=2 
+[1;32mDEBUG: Discarding amplitude with no diagramsProcess: g d~ > w+ u~ a [ all = QCD QED ] QCD^2=4 QED^2=2 [0m
+INFO: Generating real process: u u~ > w+ d u~ [ all = QCD QED ] QCD^2=4 QED^2=2 
+[1;32mDEBUG: Discarding amplitude with no diagramsProcess: g a > w+ u~ d [ all = QCD QED ] QCD^2=4 QED^2=2 [0m
+INFO: Generating real process: c~ s~ > w+ c~ c~ [ all = QCD QED ] QCD^2=4 QED^2=2 
+INFO: Generating real process: u s~ > w+ d s~ [ all = QCD QED ] QCD^2=4 QED^2=2 
+INFO: Generating real process: g s~ > w+ c~ g [ all = QCD QED ] QCD^2=4 QED^2=2 
+INFO: Generating real process: c s~ > w+ c c~ [ all = QCD QED ] QCD^2=4 QED^2=2 
+INFO: Generating real process: u s > w+ d s [ all = QCD QED ] QCD^2=4 QED^2=2 
+INFO: Generating real process: d~ s~ > w+ c~ d~ [ all = QCD QED ] QCD^2=4 QED^2=2 
+INFO: Generating real process: b~ s~ > w+ c~ b~ [ all = QCD QED ] QCD^2=4 QED^2=2 
+INFO: Generating real process: u c~ > w+ d c~ [ all = QCD QED ] QCD^2=4 QED^2=2 
+INFO: Generating real process: d s~ > w+ d c~ [ all = QCD QED ] QCD^2=4 QED^2=2 
+INFO: Generating real process: b s~ > w+ b c~ [ all = QCD QED ] QCD^2=4 QED^2=2 
+INFO: Generating real process: u c > w+ d c [ all = QCD QED ] QCD^2=4 QED^2=2 
+[1;32mDEBUG: Discarding amplitude with no diagramsProcess: g s~ > w+ c~ a [ all = QCD QED ] QCD^2=4 QED^2=2 [0m
+INFO: Generating real process: u b~ > w+ d b~ [ all = QCD QED ] QCD^2=4 QED^2=2 
+[1;32mDEBUG: Discarding amplitude with no diagramsProcess: g a > w+ c~ s [ all = QCD QED ] QCD^2=4 QED^2=2 [0m
+INFO: Generating real process: u b > w+ d b [ all = QCD QED ] QCD^2=4 QED^2=2 
+INFO: Generating real process: u g > w+ d g [ all = QCD QED ] QCD^2=4 QED^2=2 
+INFO: Generating real process: u d~ > w+ g g [ all = QCD QED ] QCD^2=4 QED^2=2 
+[1;32mDEBUG: Discarding amplitude with no diagramsProcess: u d~ > w+ g a [ all = QCD QED ] QCD^2=4 QED^2=2 [0m
+INFO: Generating real process: c d > w+ s d [ all = QCD QED ] QCD^2=4 QED^2=2 
+[1;32mDEBUG: Discarding amplitude with no diagramsProcess: a d~ > w+ g u~ [ all = QCD QED ] QCD^2=4 QED^2=2 [0m
+[1;32mDEBUG: Discarding amplitude with no diagramsProcess: c a > w+ g s [ all = QCD QED ] QCD^2=4 QED^2=2 [0m
+[1;32mDEBUG: Discarding amplitude with no diagramsProcess: u a > w+ g d [ all = QCD QED ] QCD^2=4 QED^2=2 [0m
+INFO: Generating real process: c u~ > w+ s u~ [ all = QCD QED ] QCD^2=4 QED^2=2 
+INFO: Generating real process: c s~ > w+ d d~ [ all = QCD QED ] QCD^2=4 QED^2=2 
+INFO: Generating real process: u d~ > w+ s s~ [ all = QCD QED ] QCD^2=4 QED^2=2 
+INFO: Generating real process: c u > w+ s u [ all = QCD QED ] QCD^2=4 QED^2=2 
+INFO: Generating real process: u d~ > w+ c c~ [ all = QCD QED ] QCD^2=4 QED^2=2 
+INFO: Generating real process: c s~ > w+ u u~ [ all = QCD QED ] QCD^2=4 QED^2=2 
+INFO: Generating real process: u d~ > w+ b b~ [ all = QCD QED ] QCD^2=4 QED^2=2 
+INFO: Generating real process: c s~ > w+ b b~ [ all = QCD QED ] QCD^2=4 QED^2=2 
+INFO: Generating real process: c s~ > w+ s s~ [ all = QCD QED ] QCD^2=4 QED^2=2 
+INFO: Generating real process: c g > w+ s g [ all = QCD QED ] QCD^2=4 QED^2=2 
+INFO: Generating real process: d~ g > w+ u~ g [ all = QCD QED ] QCD^2=4 QED^2=2 
+INFO: Generating real process: c s > w+ s s [ all = QCD QED ] QCD^2=4 QED^2=2 
+[1;32mDEBUG: Discarding amplitude with no diagramsProcess: c g > w+ s a [ all = QCD QED ] QCD^2=4 QED^2=2 [0m
+[1;32mDEBUG: Discarding amplitude with no diagramsProcess: d~ g > w+ u~ a [ all = QCD QED ] QCD^2=4 QED^2=2 [0m
+[1;32mDEBUG: Discarding amplitude with no diagramsProcess: a g > w+ s c~ [ all = QCD QED ] QCD^2=4 QED^2=2 [0m
+[1;32mDEBUG: Discarding amplitude with no diagramsProcess: a g > w+ u~ d [ all = QCD QED ] QCD^2=4 QED^2=2 [0m
+INFO: Generating real process: c c~ > w+ s c~ [ all = QCD QED ] QCD^2=4 QED^2=2 
+INFO: Generating real process: c d~ > w+ s d~ [ all = QCD QED ] QCD^2=4 QED^2=2 
+INFO: Generating real process: d~ d > w+ d u~ [ all = QCD QED ] QCD^2=4 QED^2=2 
+INFO: Generating real process: c b~ > w+ s b~ [ all = QCD QED ] QCD^2=4 QED^2=2 
+INFO: Generating real process: c b > w+ s b [ all = QCD QED ] QCD^2=4 QED^2=2 
+INFO: Generating real process: d~ u~ > w+ u~ u~ [ all = QCD QED ] QCD^2=4 QED^2=2 
+INFO: Generating real process: d~ s > w+ s u~ [ all = QCD QED ] QCD^2=4 QED^2=2 
+INFO: Generating real process: c s~ > w+ g g [ all = QCD QED ] QCD^2=4 QED^2=2 
+INFO: Generating real process: d~ c~ > w+ u~ c~ [ all = QCD QED ] QCD^2=4 QED^2=2 
+INFO: Generating real process: d~ u > w+ u u~ [ all = QCD QED ] QCD^2=4 QED^2=2 
+INFO: Generating real process: d~ c > w+ c u~ [ all = QCD QED ] QCD^2=4 QED^2=2 
+[1;32mDEBUG: Discarding amplitude with no diagramsProcess: c s~ > w+ g a [ all = QCD QED ] QCD^2=4 QED^2=2 [0m
+INFO: Generating real process: d~ s~ > w+ u~ s~ [ all = QCD QED ] QCD^2=4 QED^2=2 
+[1;32mDEBUG: Discarding amplitude with no diagramsProcess: a s~ > w+ g c~ [ all = QCD QED ] QCD^2=4 QED^2=2 [0m
+INFO: Generating real process: d~ b~ > w+ u~ b~ [ all = QCD QED ] QCD^2=4 QED^2=2 
+INFO: Generating real process: d~ b > w+ b u~ [ all = QCD QED ] QCD^2=4 QED^2=2 
+INFO: Generating real process: d~ u > w+ b b~ [ all = QCD QED ] QCD^2=4 QED^2=2 
+INFO: Generating real process: s~ b~ > w+ c~ b~ [ all = QCD QED ] QCD^2=4 QED^2=2 
+INFO: Generating real process: d~ u > w+ g g [ all = QCD QED ] QCD^2=4 QED^2=2 
+INFO: Generating real process: s~ b > w+ b c~ [ all = QCD QED ] QCD^2=4 QED^2=2 
+INFO: Generating real process: s~ g > w+ c~ g [ all = QCD QED ] QCD^2=4 QED^2=2 
+[1;32mDEBUG: Discarding amplitude with no diagramsProcess: d~ u > w+ g a [ all = QCD QED ] QCD^2=4 QED^2=2 [0m
+[1;32mDEBUG: Discarding amplitude with no diagramsProcess: a u > w+ g d [ all = QCD QED ] QCD^2=4 QED^2=2 [0m
+[1;32mDEBUG: Discarding amplitude with no diagramsProcess: s~ g > w+ c~ a [ all = QCD QED ] QCD^2=4 QED^2=2 [0m
+[1;32mDEBUG: Discarding amplitude with no diagramsProcess: d~ a > w+ g u~ [ all = QCD QED ] QCD^2=4 QED^2=2 [0m
+[1;32mDEBUG: Discarding amplitude with no diagramsProcess: a g > w+ c~ s [ all = QCD QED ] QCD^2=4 QED^2=2 [0m
+INFO: Generating real process: s~ c > w+ g g [ all = QCD QED ] QCD^2=4 QED^2=2 
+INFO: Generating real process: d~ u > w+ s s~ [ all = QCD QED ] QCD^2=4 QED^2=2 
+INFO: Generating real process: s~ d~ > w+ c~ d~ [ all = QCD QED ] QCD^2=4 QED^2=2 
+[1;32mDEBUG: Discarding amplitude with no diagramsProcess: s~ c > w+ g a [ all = QCD QED ] QCD^2=4 QED^2=2 [0m
+INFO: Generating real process: d~ u > w+ c c~ [ all = QCD QED ] QCD^2=4 QED^2=2 
+INFO: Generating real process: s~ d > w+ d c~ [ all = QCD QED ] QCD^2=4 QED^2=2 
+[1;32mDEBUG: Discarding amplitude with no diagramsProcess: a c > w+ g s [ all = QCD QED ] QCD^2=4 QED^2=2 [0m
+[1;32mDEBUG: Discarding amplitude with no diagramsProcess: s~ a > w+ g c~ [ all = QCD QED ] QCD^2=4 QED^2=2 [0m
+INFO: Generating real process: s~ u~ > w+ c~ u~ [ all = QCD QED ] QCD^2=4 QED^2=2 
+INFO: Generating real process: s~ c > w+ d d~ [ all = QCD QED ] QCD^2=4 QED^2=2 
+INFO: Generating real process: s~ u > w+ u c~ [ all = QCD QED ] QCD^2=4 QED^2=2 
+INFO: Generating real process: s~ c > w+ u u~ [ all = QCD QED ] QCD^2=4 QED^2=2 
+INFO: Generating real process: s~ c > w+ b b~ [ all = QCD QED ] QCD^2=4 QED^2=2 
+INFO: Generating real process: s~ s > w+ s c~ [ all = QCD QED ] QCD^2=4 QED^2=2 
+INFO: Generating real process: s~ c~ > w+ c~ c~ [ all = QCD QED ] QCD^2=4 QED^2=2 
+INFO: Generating real process: s~ c > w+ c c~ [ all = QCD QED ] QCD^2=4 QED^2=2 
+INFO: Generating born and virtual matrix elements... 
+INFO: Generating born process: g u > w+ d [ all = QCD QED ] QCD^2=4 QED^2=2 
+INFO: Generating born process: g c > w+ s [ all = QCD QED ] QCD^2=4 QED^2=2 
+INFO: Generating born process: g d~ > w+ u~ [ all = QCD QED ] QCD^2=4 QED^2=2 
+[1;32mDEBUG: Removing amplitude: Process: g u > w+ d a [ all = QCD QED ] QCD^2=4 QED^2=2 [0m
+[1;32mDEBUG: Removing amplitude: Process: g a > w+ d u~ [ all = QCD QED ] QCD^2=4 QED^2=2 [0m
+[1;32mDEBUG: Removing amplitude: Process: g c > w+ s a [ all = QCD QED ] QCD^2=4 QED^2=2 [0m
+[1;32mDEBUG: Removing amplitude: Process: g a > w+ s c~ [ all = QCD QED ] QCD^2=4 QED^2=2 [0m
+[1;32mDEBUG: Removing amplitude: Process: g d~ > w+ u~ a [ all = QCD QED ] QCD^2=4 QED^2=2 [0m
+[1;32mDEBUG: Removing amplitude: Process: g a > w+ u~ d [ all = QCD QED ] QCD^2=4 QED^2=2 [0m
+INFO: Generating born process: g s~ > w+ c~ [ all = QCD QED ] QCD^2=4 QED^2=2 
+INFO: Generating born process: u g > w+ d [ all = QCD QED ] QCD^2=4 QED^2=2 
+[1;32mDEBUG: Removing amplitude: Process: u g > w+ d a [ all = QCD QED ] QCD^2=4 QED^2=2 [0m
+[1;32mDEBUG: Removing amplitude: Process: a g > w+ d u~ [ all = QCD QED ] QCD^2=4 QED^2=2 [0m
+INFO: Generating born process: u d~ > w+ g [ all = QCD QED ] QCD^2=4 QED^2=2 
+[1;32mDEBUG: Removing amplitude: Process: u d~ > w+ g a [ all = QCD QED ] QCD^2=4 QED^2=2 [0m
+[1;32mDEBUG: Removing amplitude: Process: a d~ > w+ g u~ [ all = QCD QED ] QCD^2=4 QED^2=2 [0m
+[1;32mDEBUG: Removing amplitude: Process: u a > w+ g d [ all = QCD QED ] QCD^2=4 QED^2=2 [0m
+[1;32mDEBUG: Removing amplitude: Process: g s~ > w+ c~ a [ all = QCD QED ] QCD^2=4 QED^2=2 [0m
+[1;32mDEBUG: Removing amplitude: Process: g a > w+ c~ s [ all = QCD QED ] QCD^2=4 QED^2=2 [0m
+INFO: Generating born process: c g > w+ s [ all = QCD QED ] QCD^2=4 QED^2=2 
+[1;32mDEBUG: Removing amplitude: Process: c g > w+ s a [ all = QCD QED ] QCD^2=4 QED^2=2 [0m
+[1;32mDEBUG: Removing amplitude: Process: a g > w+ s c~ [ all = QCD QED ] QCD^2=4 QED^2=2 [0m
+INFO: Generating born process: c s~ > w+ g [ all = QCD QED ] QCD^2=4 QED^2=2 
+[1;32mDEBUG: Removing amplitude: Process: c s~ > w+ g a [ all = QCD QED ] QCD^2=4 QED^2=2 [0m
+[1;32mDEBUG: Removing amplitude: Process: a s~ > w+ g c~ [ all = QCD QED ] QCD^2=4 QED^2=2 [0m
+[1;32mDEBUG: Removing amplitude: Process: c a > w+ g s [ all = QCD QED ] QCD^2=4 QED^2=2 [0m
+INFO: Generating born process: d~ g > w+ u~ [ all = QCD QED ] QCD^2=4 QED^2=2 
+[1;32mDEBUG: Removing amplitude: Process: d~ g > w+ u~ a [ all = QCD QED ] QCD^2=4 QED^2=2 [0m
+[1;32mDEBUG: Removing amplitude: Process: a g > w+ u~ d [ all = QCD QED ] QCD^2=4 QED^2=2 [0m
+INFO: Generating born process: d~ u > w+ g [ all = QCD QED ] QCD^2=4 QED^2=2 
+[1;32mDEBUG: Removing amplitude: Process: d~ u > w+ g a [ all = QCD QED ] QCD^2=4 QED^2=2 [0m
+[1;32mDEBUG: Removing amplitude: Process: a u > w+ g d [ all = QCD QED ] QCD^2=4 QED^2=2 [0m
+[1;32mDEBUG: Removing amplitude: Process: d~ a > w+ g u~ [ all = QCD QED ] QCD^2=4 QED^2=2 [0m
+INFO: Generating born process: s~ g > w+ c~ [ all = QCD QED ] QCD^2=4 QED^2=2 
+[1;32mDEBUG: Removing amplitude: Process: s~ g > w+ c~ a [ all = QCD QED ] QCD^2=4 QED^2=2 [0m
+[1;32mDEBUG: Removing amplitude: Process: a g > w+ c~ s [ all = QCD QED ] QCD^2=4 QED^2=2 [0m
+INFO: Generating born process: s~ c > w+ g [ all = QCD QED ] QCD^2=4 QED^2=2 
+[1;32mDEBUG: Removing amplitude: Process: s~ c > w+ g a [ all = QCD QED ] QCD^2=4 QED^2=2 [0m
+[1;32mDEBUG: Removing amplitude: Process: a c > w+ g s [ all = QCD QED ] QCD^2=4 QED^2=2 [0m
+[1;32mDEBUG: Removing amplitude: Process: s~ a > w+ g c~ [ all = QCD QED ] QCD^2=4 QED^2=2 [0m
+INFO: Collecting infos and finalizing matrix elements, 12 left... 
+INFO: ... Done 
+Writing directories...
+INFO: Writing files in P0_ug_wpd (3 / 6) 
+INFO: Writing files in P0_gdx_wpux (2 / 6) 
+INFO: Writing files in P0_gu_wpd (1 / 6) 
+INFO: Creating files in directory V0_gdx_wpux 
+INFO: Creating files in directory V0_ug_wpd 
+INFO: Creating files in directory V0_gu_wpd 
+ALOHA: aloha creates FFV1 set of routines with options: L1,P0[0m
+ALOHA: aloha creates FFV1 set of routines with options: L2,P0[0m
+ALOHA: aloha creates FFV1 set of routines with options: L2,P0[0m
+ALOHA: aloha creates FFV1 set of routines with options: L3[0m
+ALOHA: aloha creates FFV1 set of routines with options: L3[0m
+ALOHA: aloha creates FFV1 set of routines with options: L3[0m
+ALOHA: aloha creates FFV2 set of routines with options: L2[0m
+ALOHA: aloha creates FFV2 set of routines with options: L1[0m
+ALOHA: aloha creates FFV2 set of routines with options: L1[0m
+ALOHA: aloha creates FFV1 set of routines with options: L2,P0[0m
+ALOHA: aloha creates FFV1 set of routines with options: L1,P0[0m
+ALOHA: aloha creates FFV1 set of routines with options: L1,P0[0m
+ALOHA: aloha creates FFV1 set of routines with options: L3[0m
+ALOHA: aloha creates FFV1 set of routines with options: L3[0m
+ALOHA: aloha creates FFV1 set of routines with options: L3[0m
+ALOHA: aloha creates VVV1 set of routines with options: L2,P0[0m
+ALOHA: aloha creates VVV1 set of routines with options: L2,P0[0m
+ALOHA: aloha creates VVV1 set of routines with options: L2,P0[0m
+ALOHA: aloha creates FFV1 set of routines with options: L1[0m
+ALOHA: aloha creates FFV1 set of routines with options: L2[0m
+ALOHA: aloha creates FFV1 set of routines with options: L1[0m
+ALOHA: aloha creates FFV1 set of routines with options: L1[0m
+ALOHA: aloha creates FFV1 set of routines with options: L2[0m
+ALOHA: aloha creates FFV2 set of routines with options: L2[0m
+ALOHA: aloha creates FFV2 set of routines with options: L1[0m
+ALOHA: aloha creates FFV2 set of routines with options: L2[0m
+INFO: Computing diagram color coefficients 
+INFO: Computing diagram color coefficients 
+INFO: Computing diagram color coefficients 
+INFO: Drawing loop Feynman diagrams for Process: u g > w+ d [ all = QCD QED ] QCD^2=4 QED^2=2 
+INFO: Generating born Feynman diagrams for Process: u g > w+ d [ all = QCD QED ] QCD^2=4 QED^2=2 
+INFO: Drawing loop Feynman diagrams for Process: g d~ > w+ u~ [ all = QCD QED ] QCD^2=4 QED^2=2 
+INFO: Drawing loop Feynman diagrams for Process: g u > w+ d [ all = QCD QED ] QCD^2=4 QED^2=2 
+INFO: Generating born Feynman diagrams for Process: g d~ > w+ u~ [ all = QCD QED ] QCD^2=4 QED^2=2 
+INFO: Generating born Feynman diagrams for Process: g u > w+ d [ all = QCD QED ] QCD^2=4 QED^2=2 
+INFO: Writing files in P0_udx_wpg (4 / 6) 
+INFO: Writing files in P0_dxu_wpg (6 / 6) 
+INFO: Creating files in directory V0_udx_wpg 
+ALOHA: aloha creates FFV1 set of routines with options: L2,P0[0m
+INFO: Writing files in P0_dxg_wpux (5 / 6) 
+ALOHA: aloha creates FFV1 set of routines with options: L3[0m
+INFO: Creating files in directory V0_dxu_wpg 
+ALOHA: aloha creates FFV1 set of routines with options: L1,P0[0m
+ALOHA: aloha creates FFV1 set of routines with options: L2[0m
+INFO: Creating files in directory V0_dxg_wpux 
+ALOHA: aloha creates FFV1 set of routines with options: L1,P0[0m
+ALOHA: aloha creates FFV1 set of routines with options: L3[0m
+ALOHA: aloha creates FFV1 set of routines with options: L3[0m
+ALOHA: aloha creates FFV1 set of routines with options: L1,P0[0m
+ALOHA: aloha creates FFV1 set of routines with options: L1[0m
+ALOHA: aloha creates VVV1 set of routines with options: L2,P0[0m
+ALOHA: aloha creates FFV2 set of routines with options: L2[0m
+ALOHA: aloha creates FFV1 set of routines with options: L2,P0[0m
+ALOHA: aloha creates FFV1 set of routines with options: L3[0m
+ALOHA: aloha creates FFV1 set of routines with options: L2,P0[0m
+ALOHA: aloha creates VVV1 set of routines with options: L2,P0[0m
+ALOHA: aloha creates FFV1 set of routines with options: L3[0m
+ALOHA: aloha creates FFV2 set of routines with options: L2[0m
+ALOHA: aloha creates FFV1 set of routines with options: L3[0m
+ALOHA: aloha creates FFV1 set of routines with options: L1[0m
+ALOHA: aloha creates FFV2 set of routines with options: L1[0m
+ALOHA: aloha creates FFV2 set of routines with options: L1[0m
+ALOHA: aloha creates FFV1 set of routines with options: L2[0m
+ALOHA: aloha creates VVV1 set of routines with options: L2,P0[0m
+INFO: Computing diagram color coefficients 
+ALOHA: aloha creates FFV2 set of routines with options: L2[0m
+ALOHA: aloha creates FFV1 set of routines with options: L2[0m
+ALOHA: aloha creates FFV2 set of routines with options: L1[0m
+INFO: Computing diagram color coefficients 
+INFO: Computing diagram color coefficients 
+INFO: Drawing loop Feynman diagrams for Process: u d~ > w+ g [ all = QCD QED ] QCD^2=4 QED^2=2 
+INFO: Generating born Feynman diagrams for Process: u d~ > w+ g [ all = QCD QED ] QCD^2=4 QED^2=2 
+INFO: Drawing loop Feynman diagrams for Process: d~ u > w+ g [ all = QCD QED ] QCD^2=4 QED^2=2 
+INFO: Generating born Feynman diagrams for Process: d~ u > w+ g [ all = QCD QED ] QCD^2=4 QED^2=2 
+INFO: Drawing loop Feynman diagrams for Process: d~ g > w+ u~ [ all = QCD QED ] QCD^2=4 QED^2=2 
+INFO: Generating born Feynman diagrams for Process: d~ g > w+ u~ [ all = QCD QED ] QCD^2=4 QED^2=2 
+History written to /tmp/mg5_born_support_physics/wjet/Cards/proc_card_mg5.dat
+ALOHA: aloha starts to compute helicity amplitudes
+ALOHA: aloha creates FFV1 routines[0m
+ALOHA: aloha creates FFV2 routines[0m
+ALOHA: aloha creates VVV1 set of routines with options: P0[0m
+ALOHA: aloha creates R2_QQ_1 routines[0m
+ALOHA: aloha creates 26 routines in  0.175 s
+The option low_mem_multicore_nlo_generation is modified [False] but will not be written in the configuration files.
+If you want to make this value the default for future session, you can run 'save options --all'
+save configuration file to /tmp/mg5_born_support_physics/wjet/Cards/amcatnlo_configuration.txt
+INFO: Use Fortran compiler gfortran 
+INFO: Use c++ compiler g++ 
+INFO: Generate web pages 
+Type "launch" to generate events from this process, or see
+/tmp/mg5_born_support_physics/wjet/README
+Run "open index.html" to see more information about this process.
+quit
+quit

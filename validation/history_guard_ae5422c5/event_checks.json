@@ -1,0 +1,25 @@
+{
+  "colour_closure": true,
+  "events": 50,
+  "final_states": {
+    "-6,1,6": 1,
+    "-6,2,6": 2,
+    "-6,6": 37,
+    "-6,6,21": 10
+  },
+  "finite_weights": true,
+  "foreign_context_records": 3,
+  "max_central_reweight_relative_error": 4.5601800230721246e-05,
+  "momentum_conservation": true,
+  "native_history_records": 106,
+  "provenance_round_trip": true,
+  "records": 1199,
+  "reweights_per_event": [
+    128
+  ],
+  "shower_scale_range_GeV": [
+    32.789619,
+    270.71218
+  ],
+  "unique_outer_ownership": true
+}

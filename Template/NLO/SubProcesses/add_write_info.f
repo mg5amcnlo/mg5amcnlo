@@ -170,7 +170,7 @@ c
          if (firsttime2) then
 c     For the S-events
             save_nFKSprocess=nFKSprocess
-            do nFKSprocess=1,FKS_configs
+            do nFKSprocess=1,FKS_INTEGRATED
                call fks_inc_chooser()
                call set_itree(iconfig,.false.,itree_S_t,sprop_tree_S_t
      $              ,pmass_tree_S_t,pwidth_tree_S_t)
@@ -189,7 +189,7 @@ c     For the S-events
          if (Hevents) then
 c     For the H-events
             save_nFKSprocess=nFKSprocess
-            do nFKSprocess=1,FKS_configs
+            do nFKSprocess=1,FKS_INTEGRATED
                call fks_inc_chooser()
                call set_itree(iconfig,.true.,itree_H_t,sprop_tree_H_t
      $              ,pmass_tree_H_t,pwidth_tree_H_t)
@@ -1100,10 +1100,11 @@ c
       implicit none
       include 'genps.inc'
       include 'nexternal.inc'
+      include 'born_nhel.inc'
       integer i
-      integer idup(nexternal,maxproc)
-      integer mothup(2,nexternal,maxproc)
-      integer icolup(2,nexternal,maxflow)
+      integer idup(nexternal-1,maxproc)
+      integer mothup(2,nexternal-1,maxproc)
+      integer icolup(2,nexternal-1,max_bcol)
       include "born_leshouche.inc"
       integer jpart(7,-nexternal+3:2*nexternal-3),lc,iflow
 c

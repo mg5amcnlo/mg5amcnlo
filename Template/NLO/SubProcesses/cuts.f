@@ -1234,9 +1234,10 @@ c
       implicit none
       include "genps.inc"
       include 'nexternal.inc'
-      integer idup(nexternal,maxproc)
-      integer mothup(2,nexternal,maxproc)
-      integer icolup(2,nexternal,maxflow)
+      include 'born_nhel.inc'
+      integer idup(nexternal-1,maxproc)
+      integer mothup(2,nexternal-1,maxproc)
+      integer icolup(2,nexternal-1,max_bcol)
       include 'born_leshouche.inc'
       integer IDUP_tmp(nexternal),i
 c

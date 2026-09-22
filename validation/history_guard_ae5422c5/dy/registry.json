@@ -1,0 +1,4835 @@
+{
+  "contexts": [
+    {
+      "amp_orders": [
+        [
+          0,
+          4
+        ],
+        [
+          2,
+          4
+        ]
+      ],
+      "born_identity": 1,
+      "born_orders": [
+        [
+          0,
+          4
+        ]
+      ],
+      "context": 1,
+      "directory": "P0_ddx_emep",
+      "extra": 0,
+      "links": [
+        [
+          1,
+          2
+        ]
+      ],
+      "namps": 1,
+      "ncolor": 1,
+      "nexternal": 5,
+      "ngraphs": 2,
+      "nhelicity": 16,
+      "nincoming": 2,
+      "nprocesses": 3,
+      "nsqamps": 1,
+      "orders": [
+        "QCD",
+        "QED"
+      ],
+      "provider": 1,
+      "sectors": [
+        {
+          "allowed": [
+            [
+              5,
+              1
+            ],
+            [
+              5,
+              2
+            ]
+          ],
+          "fks": {
+            "extra_cnt_index": -1,
+            "i": 5,
+            "ij": 1,
+            "ij_id": 1,
+            "j": 1,
+            "need_charge_links": false,
+            "need_color_links": true,
+            "rb_links": [
+              {
+                "born_conf": 0,
+                "real_conf": 0
+              },
+              {
+                "born_conf": 1,
+                "real_conf": 1
+              }
+            ],
+            "splitting_type": [
+              "QCD"
+            ],
+            "underlying_born": [
+              [
+                1,
+                -1,
+                11,
+                -11
+              ]
+            ]
+          },
+          "processes": [
+            [
+              [
+                [
+                  0,
+                  [],
+                  [],
+                  [
+                    [
+                      "QCD",
+                      2
+                    ],
+                    [
+                      "QED",
+                      4
+                    ]
+                  ],
+                  [
+                    [
+                      "QCD",
+                      "="
+                    ],
+                    [
+                      "QED",
+                      "="
+                    ]
+                  ],
+                  [],
+                  [
+                    "QCD",
+                    "QED"
+                  ],
+                  [],
+                  [],
+                  [],
+                  [],
+                  false
+                ],
+                []
+              ],
+              [
+                [
+                  1,
+                  false,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  -1,
+                  false,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  11,
+                  true,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  -11,
+                  true,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  21,
+                  true,
+                  [],
+                  false,
+                  null
+                ]
+              ]
+            ],
+            [
+              [
+                [
+                  0,
+                  [],
+                  [],
+                  [
+                    [
+                      "QCD",
+                      2
+                    ],
+                    [
+                      "QED",
+                      4
+                    ]
+                  ],
+                  [
+                    [
+                      "QCD",
+                      "="
+                    ],
+                    [
+                      "QED",
+                      "="
+                    ]
+                  ],
+                  [],
+                  [
+                    "QCD",
+                    "QED"
+                  ],
+                  [],
+                  [],
+                  [],
+                  [],
+                  false
+                ],
+                []
+              ],
+              [
+                [
+                  3,
+                  false,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  -3,
+                  false,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  11,
+                  true,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  -11,
+                  true,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  21,
+                  true,
+                  [],
+                  false,
+                  null
+                ]
+              ]
+            ],
+            [
+              [
+                [
+                  0,
+                  [],
+                  [],
+                  [
+                    [
+                      "QCD",
+                      2
+                    ],
+                    [
+                      "QED",
+                      4
+                    ]
+                  ],
+                  [
+                    [
+                      "QCD",
+                      "="
+                    ],
+                    [
+                      "QED",
+                      "="
+                    ]
+                  ],
+                  [],
+                  [
+                    "QCD",
+                    "QED"
+                  ],
+                  [],
+                  [],
+                  [],
+                  [],
+                  false
+                ],
+                []
+              ],
+              [
+                [
+                  5,
+                  false,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  -5,
+                  false,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  11,
+                  true,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  -11,
+                  true,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  21,
+                  true,
+                  [],
+                  false,
+                  null
+                ]
+              ]
+            ]
+          ],
+          "real": 1,
+          "real_identity": 1,
+          "sector": 1
+        },
+        {
+          "allowed": [
+            [
+              5,
+              1
+            ],
+            [
+              5,
+              2
+            ]
+          ],
+          "fks": {
+            "extra_cnt_index": -1,
+            "i": 5,
+            "ij": 2,
+            "ij_id": -1,
+            "j": 2,
+            "need_charge_links": false,
+            "need_color_links": true,
+            "rb_links": [
+              {
+                "born_conf": 0,
+                "real_conf": 2
+              },
+              {
+                "born_conf": 1,
+                "real_conf": 3
+              }
+            ],
+            "splitting_type": [
+              "QCD"
+            ],
+            "underlying_born": [
+              [
+                1,
+                -1,
+                11,
+                -11
+              ]
+            ]
+          },
+          "processes": [
+            [
+              [
+                [
+                  0,
+                  [],
+                  [],
+                  [
+                    [
+                      "QCD",
+                      2
+                    ],
+                    [
+                      "QED",
+                      4
+                    ]
+                  ],
+                  [
+                    [
+                      "QCD",
+                      "="
+                    ],
+                    [
+                      "QED",
+                      "="
+                    ]
+                  ],
+                  [],
+                  [
+                    "QCD",
+                    "QED"
+                  ],
+                  [],
+                  [],
+                  [],
+                  [],
+                  false
+                ],
+                []
+              ],
+              [
+                [
+                  1,
+                  false,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  -1,
+                  false,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  11,
+                  true,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  -11,
+                  true,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  21,
+                  true,
+                  [],
+                  false,
+                  null
+                ]
+              ]
+            ],
+            [
+              [
+                [
+                  0,
+                  [],
+                  [],
+                  [
+                    [
+                      "QCD",
+                      2
+                    ],
+                    [
+                      "QED",
+                      4
+                    ]
+                  ],
+                  [
+                    [
+                      "QCD",
+                      "="
+                    ],
+                    [
+                      "QED",
+                      "="
+                    ]
+                  ],
+                  [],
+                  [
+                    "QCD",
+                    "QED"
+                  ],
+                  [],
+                  [],
+                  [],
+                  [],
+                  false
+                ],
+                []
+              ],
+              [
+                [
+                  3,
+                  false,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  -3,
+                  false,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  11,
+                  true,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  -11,
+                  true,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  21,
+                  true,
+                  [],
+                  false,
+                  null
+                ]
+              ]
+            ],
+            [
+              [
+                [
+                  0,
+                  [],
+                  [],
+                  [
+                    [
+                      "QCD",
+                      2
+                    ],
+                    [
+                      "QED",
+                      4
+                    ]
+                  ],
+                  [
+                    [
+                      "QCD",
+                      "="
+                    ],
+                    [
+                      "QED",
+                      "="
+                    ]
+                  ],
+                  [],
+                  [
+                    "QCD",
+                    "QED"
+                  ],
+                  [],
+                  [],
+                  [],
+                  [],
+                  false
+                ],
+                []
+              ],
+              [
+                [
+                  5,
+                  false,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  -5,
+                  false,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  11,
+                  true,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  -11,
+                  true,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  21,
+                  true,
+                  [],
+                  false,
+                  null
+                ]
+              ]
+            ]
+          ],
+          "real": 1,
+          "real_identity": 1,
+          "sector": 2
+        },
+        {
+          "allowed": [
+            [
+              5,
+              1
+            ]
+          ],
+          "fks": {
+            "extra_cnt_index": -1,
+            "i": 5,
+            "ij": 1,
+            "ij_id": 1,
+            "j": 1,
+            "need_charge_links": false,
+            "need_color_links": false,
+            "rb_links": [
+              {
+                "born_conf": 0,
+                "real_conf": 2
+              },
+              {
+                "born_conf": 1,
+                "real_conf": 3
+              }
+            ],
+            "splitting_type": [
+              "QCD"
+            ],
+            "underlying_born": [
+              [
+                1,
+                -1,
+                11,
+                -11
+              ]
+            ]
+          },
+          "processes": [
+            [
+              [
+                [
+                  0,
+                  [],
+                  [],
+                  [
+                    [
+                      "QCD",
+                      2
+                    ],
+                    [
+                      "QED",
+                      4
+                    ]
+                  ],
+                  [
+                    [
+                      "QCD",
+                      "="
+                    ],
+                    [
+                      "QED",
+                      "="
+                    ]
+                  ],
+                  [],
+                  [
+                    "QCD",
+                    "QED"
+                  ],
+                  [],
+                  [],
+                  [],
+                  [],
+                  false
+                ],
+                []
+              ],
+              [
+                [
+                  21,
+                  false,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  -1,
+                  false,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  11,
+                  true,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  -11,
+                  true,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  -1,
+                  true,
+                  [],
+                  false,
+                  null
+                ]
+              ]
+            ],
+            [
+              [
+                [
+                  0,
+                  [],
+                  [],
+                  [
+                    [
+                      "QCD",
+                      2
+                    ],
+                    [
+                      "QED",
+                      4
+                    ]
+                  ],
+                  [
+                    [
+                      "QCD",
+                      "="
+                    ],
+                    [
+                      "QED",
+                      "="
+                    ]
+                  ],
+                  [],
+                  [
+                    "QCD",
+                    "QED"
+                  ],
+                  [],
+                  [],
+                  [],
+                  [],
+                  false
+                ],
+                []
+              ],
+              [
+                [
+                  21,
+                  false,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  -3,
+                  false,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  11,
+                  true,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  -11,
+                  true,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  -3,
+                  true,
+                  [],
+                  false,
+                  null
+                ]
+              ]
+            ],
+            [
+              [
+                [
+                  0,
+                  [],
+                  [],
+                  [
+                    [
+                      "QCD",
+                      2
+                    ],
+                    [
+                      "QED",
+                      4
+                    ]
+                  ],
+                  [
+                    [
+                      "QCD",
+                      "="
+                    ],
+                    [
+                      "QED",
+                      "="
+                    ]
+                  ],
+                  [],
+                  [
+                    "QCD",
+                    "QED"
+                  ],
+                  [],
+                  [],
+                  [],
+                  [],
+                  false
+                ],
+                []
+              ],
+              [
+                [
+                  21,
+                  false,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  -5,
+                  false,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  11,
+                  true,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  -11,
+                  true,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  -5,
+                  true,
+                  [],
+                  false,
+                  null
+                ]
+              ]
+            ]
+          ],
+          "real": 2,
+          "real_identity": 1,
+          "sector": 3
+        },
+        {
+          "allowed": [
+            [
+              5,
+              2
+            ]
+          ],
+          "fks": {
+            "extra_cnt_index": -1,
+            "i": 5,
+            "ij": 2,
+            "ij_id": -1,
+            "j": 2,
+            "need_charge_links": false,
+            "need_color_links": false,
+            "rb_links": [
+              {
+                "born_conf": 0,
+                "real_conf": 2
+              },
+              {
+                "born_conf": 1,
+                "real_conf": 3
+              }
+            ],
+            "splitting_type": [
+              "QCD"
+            ],
+            "underlying_born": [
+              [
+                1,
+                -1,
+                11,
+                -11
+              ]
+            ]
+          },
+          "processes": [
+            [
+              [
+                [
+                  0,
+                  [],
+                  [],
+                  [
+                    [
+                      "QCD",
+                      2
+                    ],
+                    [
+                      "QED",
+                      4
+                    ]
+                  ],
+                  [
+                    [
+                      "QCD",
+                      "="
+                    ],
+                    [
+                      "QED",
+                      "="
+                    ]
+                  ],
+                  [],
+                  [
+                    "QCD",
+                    "QED"
+                  ],
+                  [],
+                  [],
+                  [],
+                  [],
+                  false
+                ],
+                []
+              ],
+              [
+                [
+                  1,
+                  false,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  21,
+                  false,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  11,
+                  true,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  -11,
+                  true,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  1,
+                  true,
+                  [],
+                  false,
+                  null
+                ]
+              ]
+            ],
+            [
+              [
+                [
+                  0,
+                  [],
+                  [],
+                  [
+                    [
+                      "QCD",
+                      2
+                    ],
+                    [
+                      "QED",
+                      4
+                    ]
+                  ],
+                  [
+                    [
+                      "QCD",
+                      "="
+                    ],
+                    [
+                      "QED",
+                      "="
+                    ]
+                  ],
+                  [],
+                  [
+                    "QCD",
+                    "QED"
+                  ],
+                  [],
+                  [],
+                  [],
+                  [],
+                  false
+                ],
+                []
+              ],
+              [
+                [
+                  3,
+                  false,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  21,
+                  false,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  11,
+                  true,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  -11,
+                  true,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  3,
+                  true,
+                  [],
+                  false,
+                  null
+                ]
+              ]
+            ],
+            [
+              [
+                [
+                  0,
+                  [],
+                  [],
+                  [
+                    [
+                      "QCD",
+                      2
+                    ],
+                    [
+                      "QED",
+                      4
+                    ]
+                  ],
+                  [
+                    [
+                      "QCD",
+                      "="
+                    ],
+                    [
+                      "QED",
+                      "="
+                    ]
+                  ],
+                  [],
+                  [
+                    "QCD",
+                    "QED"
+                  ],
+                  [],
+                  [],
+                  [],
+                  [],
+                  false
+                ],
+                []
+              ],
+              [
+                [
+                  5,
+                  false,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  21,
+                  false,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  11,
+                  true,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  -11,
+                  true,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  5,
+                  true,
+                  [],
+                  false,
+                  null
+                ]
+              ]
+            ]
+          ],
+          "real": 3,
+          "real_identity": 1,
+          "sector": 4
+        }
+      ],
+      "source": "P0_ddx_emep"
+    },
+    {
+      "amp_orders": [
+        [
+          0,
+          4
+        ],
+        [
+          2,
+          4
+        ]
+      ],
+      "born_identity": 1,
+      "born_orders": [
+        [
+          0,
+          4
+        ]
+      ],
+      "context": 2,
+      "directory": "P0_dxd_emep",
+      "extra": 0,
+      "links": [
+        [
+          1,
+          2
+        ]
+      ],
+      "namps": 1,
+      "ncolor": 1,
+      "nexternal": 5,
+      "ngraphs": 2,
+      "nhelicity": 16,
+      "nincoming": 2,
+      "nprocesses": 3,
+      "nsqamps": 1,
+      "orders": [
+        "QCD",
+        "QED"
+      ],
+      "provider": 2,
+      "sectors": [
+        {
+          "allowed": [
+            [
+              5,
+              1
+            ],
+            [
+              5,
+              2
+            ]
+          ],
+          "fks": {
+            "extra_cnt_index": -1,
+            "i": 5,
+            "ij": 1,
+            "ij_id": -1,
+            "j": 1,
+            "need_charge_links": false,
+            "need_color_links": true,
+            "rb_links": [
+              {
+                "born_conf": 0,
+                "real_conf": 0
+              },
+              {
+                "born_conf": 1,
+                "real_conf": 1
+              }
+            ],
+            "splitting_type": [
+              "QCD"
+            ],
+            "underlying_born": [
+              [
+                -1,
+                1,
+                11,
+                -11
+              ]
+            ]
+          },
+          "processes": [
+            [
+              [
+                [
+                  0,
+                  [],
+                  [],
+                  [
+                    [
+                      "QCD",
+                      2
+                    ],
+                    [
+                      "QED",
+                      4
+                    ]
+                  ],
+                  [
+                    [
+                      "QCD",
+                      "="
+                    ],
+                    [
+                      "QED",
+                      "="
+                    ]
+                  ],
+                  [],
+                  [
+                    "QCD",
+                    "QED"
+                  ],
+                  [],
+                  [],
+                  [],
+                  [],
+                  false
+                ],
+                []
+              ],
+              [
+                [
+                  -1,
+                  false,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  1,
+                  false,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  11,
+                  true,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  -11,
+                  true,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  21,
+                  true,
+                  [],
+                  false,
+                  null
+                ]
+              ]
+            ],
+            [
+              [
+                [
+                  0,
+                  [],
+                  [],
+                  [
+                    [
+                      "QCD",
+                      2
+                    ],
+                    [
+                      "QED",
+                      4
+                    ]
+                  ],
+                  [
+                    [
+                      "QCD",
+                      "="
+                    ],
+                    [
+                      "QED",
+                      "="
+                    ]
+                  ],
+                  [],
+                  [
+                    "QCD",
+                    "QED"
+                  ],
+                  [],
+                  [],
+                  [],
+                  [],
+                  false
+                ],
+                []
+              ],
+              [
+                [
+                  -3,
+                  false,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  3,
+                  false,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  11,
+                  true,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  -11,
+                  true,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  21,
+                  true,
+                  [],
+                  false,
+                  null
+                ]
+              ]
+            ],
+            [
+              [
+                [
+                  0,
+                  [],
+                  [],
+                  [
+                    [
+                      "QCD",
+                      2
+                    ],
+                    [
+                      "QED",
+                      4
+                    ]
+                  ],
+                  [
+                    [
+                      "QCD",
+                      "="
+                    ],
+                    [
+                      "QED",
+                      "="
+                    ]
+                  ],
+                  [],
+                  [
+                    "QCD",
+                    "QED"
+                  ],
+                  [],
+                  [],
+                  [],
+                  [],
+                  false
+                ],
+                []
+              ],
+              [
+                [
+                  -5,
+                  false,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  5,
+                  false,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  11,
+                  true,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  -11,
+                  true,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  21,
+                  true,
+                  [],
+                  false,
+                  null
+                ]
+              ]
+            ]
+          ],
+          "real": 1,
+          "real_identity": 1,
+          "sector": 1
+        },
+        {
+          "allowed": [
+            [
+              5,
+              1
+            ],
+            [
+              5,
+              2
+            ]
+          ],
+          "fks": {
+            "extra_cnt_index": -1,
+            "i": 5,
+            "ij": 2,
+            "ij_id": 1,
+            "j": 2,
+            "need_charge_links": false,
+            "need_color_links": true,
+            "rb_links": [
+              {
+                "born_conf": 0,
+                "real_conf": 2
+              },
+              {
+                "born_conf": 1,
+                "real_conf": 3
+              }
+            ],
+            "splitting_type": [
+              "QCD"
+            ],
+            "underlying_born": [
+              [
+                -1,
+                1,
+                11,
+                -11
+              ]
+            ]
+          },
+          "processes": [
+            [
+              [
+                [
+                  0,
+                  [],
+                  [],
+                  [
+                    [
+                      "QCD",
+                      2
+                    ],
+                    [
+                      "QED",
+                      4
+                    ]
+                  ],
+                  [
+                    [
+                      "QCD",
+                      "="
+                    ],
+                    [
+                      "QED",
+                      "="
+                    ]
+                  ],
+                  [],
+                  [
+                    "QCD",
+                    "QED"
+                  ],
+                  [],
+                  [],
+                  [],
+                  [],
+                  false
+                ],
+                []
+              ],
+              [
+                [
+                  -1,
+                  false,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  1,
+                  false,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  11,
+                  true,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  -11,
+                  true,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  21,
+                  true,
+                  [],
+                  false,
+                  null
+                ]
+              ]
+            ],
+            [
+              [
+                [
+                  0,
+                  [],
+                  [],
+                  [
+                    [
+                      "QCD",
+                      2
+                    ],
+                    [
+                      "QED",
+                      4
+                    ]
+                  ],
+                  [
+                    [
+                      "QCD",
+                      "="
+                    ],
+                    [
+                      "QED",
+                      "="
+                    ]
+                  ],
+                  [],
+                  [
+                    "QCD",
+                    "QED"
+                  ],
+                  [],
+                  [],
+                  [],
+                  [],
+                  false
+                ],
+                []
+              ],
+              [
+                [
+                  -3,
+                  false,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  3,
+                  false,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  11,
+                  true,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  -11,
+                  true,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  21,
+                  true,
+                  [],
+                  false,
+                  null
+                ]
+              ]
+            ],
+            [
+              [
+                [
+                  0,
+                  [],
+                  [],
+                  [
+                    [
+                      "QCD",
+                      2
+                    ],
+                    [
+                      "QED",
+                      4
+                    ]
+                  ],
+                  [
+                    [
+                      "QCD",
+                      "="
+                    ],
+                    [
+                      "QED",
+                      "="
+                    ]
+                  ],
+                  [],
+                  [
+                    "QCD",
+                    "QED"
+                  ],
+                  [],
+                  [],
+                  [],
+                  [],
+                  false
+                ],
+                []
+              ],
+              [
+                [
+                  -5,
+                  false,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  5,
+                  false,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  11,
+                  true,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  -11,
+                  true,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  21,
+                  true,
+                  [],
+                  false,
+                  null
+                ]
+              ]
+            ]
+          ],
+          "real": 1,
+          "real_identity": 1,
+          "sector": 2
+        },
+        {
+          "allowed": [
+            [
+              5,
+              1
+            ]
+          ],
+          "fks": {
+            "extra_cnt_index": -1,
+            "i": 5,
+            "ij": 1,
+            "ij_id": -1,
+            "j": 1,
+            "need_charge_links": false,
+            "need_color_links": false,
+            "rb_links": [
+              {
+                "born_conf": 0,
+                "real_conf": 2
+              },
+              {
+                "born_conf": 1,
+                "real_conf": 3
+              }
+            ],
+            "splitting_type": [
+              "QCD"
+            ],
+            "underlying_born": [
+              [
+                -1,
+                1,
+                11,
+                -11
+              ]
+            ]
+          },
+          "processes": [
+            [
+              [
+                [
+                  0,
+                  [],
+                  [],
+                  [
+                    [
+                      "QCD",
+                      2
+                    ],
+                    [
+                      "QED",
+                      4
+                    ]
+                  ],
+                  [
+                    [
+                      "QCD",
+                      "="
+                    ],
+                    [
+                      "QED",
+                      "="
+                    ]
+                  ],
+                  [],
+                  [
+                    "QCD",
+                    "QED"
+                  ],
+                  [],
+                  [],
+                  [],
+                  [],
+                  false
+                ],
+                []
+              ],
+              [
+                [
+                  21,
+                  false,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  1,
+                  false,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  11,
+                  true,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  -11,
+                  true,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  1,
+                  true,
+                  [],
+                  false,
+                  null
+                ]
+              ]
+            ],
+            [
+              [
+                [
+                  0,
+                  [],
+                  [],
+                  [
+                    [
+                      "QCD",
+                      2
+                    ],
+                    [
+                      "QED",
+                      4
+                    ]
+                  ],
+                  [
+                    [
+                      "QCD",
+                      "="
+                    ],
+                    [
+                      "QED",
+                      "="
+                    ]
+                  ],
+                  [],
+                  [
+                    "QCD",
+                    "QED"
+                  ],
+                  [],
+                  [],
+                  [],
+                  [],
+                  false
+                ],
+                []
+              ],
+              [
+                [
+                  21,
+                  false,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  3,
+                  false,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  11,
+                  true,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  -11,
+                  true,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  3,
+                  true,
+                  [],
+                  false,
+                  null
+                ]
+              ]
+            ],
+            [
+              [
+                [
+                  0,
+                  [],
+                  [],
+                  [
+                    [
+                      "QCD",
+                      2
+                    ],
+                    [
+                      "QED",
+                      4
+                    ]
+                  ],
+                  [
+                    [
+                      "QCD",
+                      "="
+                    ],
+                    [
+                      "QED",
+                      "="
+                    ]
+                  ],
+                  [],
+                  [
+                    "QCD",
+                    "QED"
+                  ],
+                  [],
+                  [],
+                  [],
+                  [],
+                  false
+                ],
+                []
+              ],
+              [
+                [
+                  21,
+                  false,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  5,
+                  false,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  11,
+                  true,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  -11,
+                  true,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  5,
+                  true,
+                  [],
+                  false,
+                  null
+                ]
+              ]
+            ]
+          ],
+          "real": 2,
+          "real_identity": 1,
+          "sector": 3
+        },
+        {
+          "allowed": [
+            [
+              5,
+              2
+            ]
+          ],
+          "fks": {
+            "extra_cnt_index": -1,
+            "i": 5,
+            "ij": 2,
+            "ij_id": 1,
+            "j": 2,
+            "need_charge_links": false,
+            "need_color_links": false,
+            "rb_links": [
+              {
+                "born_conf": 0,
+                "real_conf": 2
+              },
+              {
+                "born_conf": 1,
+                "real_conf": 3
+              }
+            ],
+            "splitting_type": [
+              "QCD"
+            ],
+            "underlying_born": [
+              [
+                -1,
+                1,
+                11,
+                -11
+              ]
+            ]
+          },
+          "processes": [
+            [
+              [
+                [
+                  0,
+                  [],
+                  [],
+                  [
+                    [
+                      "QCD",
+                      2
+                    ],
+                    [
+                      "QED",
+                      4
+                    ]
+                  ],
+                  [
+                    [
+                      "QCD",
+                      "="
+                    ],
+                    [
+                      "QED",
+                      "="
+                    ]
+                  ],
+                  [],
+                  [
+                    "QCD",
+                    "QED"
+                  ],
+                  [],
+                  [],
+                  [],
+                  [],
+                  false
+                ],
+                []
+              ],
+              [
+                [
+                  -1,
+                  false,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  21,
+                  false,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  11,
+                  true,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  -11,
+                  true,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  -1,
+                  true,
+                  [],
+                  false,
+                  null
+                ]
+              ]
+            ],
+            [
+              [
+                [
+                  0,
+                  [],
+                  [],
+                  [
+                    [
+                      "QCD",
+                      2
+                    ],
+                    [
+                      "QED",
+                      4
+                    ]
+                  ],
+                  [
+                    [
+                      "QCD",
+                      "="
+                    ],
+                    [
+                      "QED",
+                      "="
+                    ]
+                  ],
+                  [],
+                  [
+                    "QCD",
+                    "QED"
+                  ],
+                  [],
+                  [],
+                  [],
+                  [],
+                  false
+                ],
+                []
+              ],
+              [
+                [
+                  -3,
+                  false,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  21,
+                  false,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  11,
+                  true,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  -11,
+                  true,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  -3,
+                  true,
+                  [],
+                  false,
+                  null
+                ]
+              ]
+            ],
+            [
+              [
+                [
+                  0,
+                  [],
+                  [],
+                  [
+                    [
+                      "QCD",
+                      2
+                    ],
+                    [
+                      "QED",
+                      4
+                    ]
+                  ],
+                  [
+                    [
+                      "QCD",
+                      "="
+                    ],
+                    [
+                      "QED",
+                      "="
+                    ]
+                  ],
+                  [],
+                  [
+                    "QCD",
+                    "QED"
+                  ],
+                  [],
+                  [],
+                  [],
+                  [],
+                  false
+                ],
+                []
+              ],
+              [
+                [
+                  -5,
+                  false,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  21,
+                  false,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  11,
+                  true,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  -11,
+                  true,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  -5,
+                  true,
+                  [],
+                  false,
+                  null
+                ]
+              ]
+            ]
+          ],
+          "real": 3,
+          "real_identity": 1,
+          "sector": 4
+        }
+      ],
+      "source": "P0_dxd_emep"
+    },
+    {
+      "amp_orders": [
+        [
+          0,
+          4
+        ],
+        [
+          2,
+          4
+        ]
+      ],
+      "born_identity": 1,
+      "born_orders": [
+        [
+          0,
+          4
+        ]
+      ],
+      "context": 3,
+      "directory": "P0_uux_emep",
+      "extra": 0,
+      "links": [
+        [
+          1,
+          2
+        ]
+      ],
+      "namps": 1,
+      "ncolor": 1,
+      "nexternal": 5,
+      "ngraphs": 2,
+      "nhelicity": 16,
+      "nincoming": 2,
+      "nprocesses": 2,
+      "nsqamps": 1,
+      "orders": [
+        "QCD",
+        "QED"
+      ],
+      "provider": 3,
+      "sectors": [
+        {
+          "allowed": [
+            [
+              5,
+              1
+            ],
+            [
+              5,
+              2
+            ]
+          ],
+          "fks": {
+            "extra_cnt_index": -1,
+            "i": 5,
+            "ij": 1,
+            "ij_id": 2,
+            "j": 1,
+            "need_charge_links": false,
+            "need_color_links": true,
+            "rb_links": [
+              {
+                "born_conf": 0,
+                "real_conf": 0
+              },
+              {
+                "born_conf": 1,
+                "real_conf": 1
+              }
+            ],
+            "splitting_type": [
+              "QCD"
+            ],
+            "underlying_born": [
+              [
+                2,
+                -2,
+                11,
+                -11
+              ]
+            ]
+          },
+          "processes": [
+            [
+              [
+                [
+                  0,
+                  [],
+                  [],
+                  [
+                    [
+                      "QCD",
+                      2
+                    ],
+                    [
+                      "QED",
+                      4
+                    ]
+                  ],
+                  [
+                    [
+                      "QCD",
+                      "="
+                    ],
+                    [
+                      "QED",
+                      "="
+                    ]
+                  ],
+                  [],
+                  [
+                    "QCD",
+                    "QED"
+                  ],
+                  [],
+                  [],
+                  [],
+                  [],
+                  false
+                ],
+                []
+              ],
+              [
+                [
+                  2,
+                  false,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  -2,
+                  false,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  11,
+                  true,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  -11,
+                  true,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  21,
+                  true,
+                  [],
+                  false,
+                  null
+                ]
+              ]
+            ],
+            [
+              [
+                [
+                  0,
+                  [],
+                  [],
+                  [
+                    [
+                      "QCD",
+                      2
+                    ],
+                    [
+                      "QED",
+                      4
+                    ]
+                  ],
+                  [
+                    [
+                      "QCD",
+                      "="
+                    ],
+                    [
+                      "QED",
+                      "="
+                    ]
+                  ],
+                  [],
+                  [
+                    "QCD",
+                    "QED"
+                  ],
+                  [],
+                  [],
+                  [],
+                  [],
+                  false
+                ],
+                []
+              ],
+              [
+                [
+                  4,
+                  false,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  -4,
+                  false,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  11,
+                  true,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  -11,
+                  true,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  21,
+                  true,
+                  [],
+                  false,
+                  null
+                ]
+              ]
+            ]
+          ],
+          "real": 1,
+          "real_identity": 1,
+          "sector": 1
+        },
+        {
+          "allowed": [
+            [
+              5,
+              1
+            ],
+            [
+              5,
+              2
+            ]
+          ],
+          "fks": {
+            "extra_cnt_index": -1,
+            "i": 5,
+            "ij": 2,
+            "ij_id": -2,
+            "j": 2,
+            "need_charge_links": false,
+            "need_color_links": true,
+            "rb_links": [
+              {
+                "born_conf": 0,
+                "real_conf": 2
+              },
+              {
+                "born_conf": 1,
+                "real_conf": 3
+              }
+            ],
+            "splitting_type": [
+              "QCD"
+            ],
+            "underlying_born": [
+              [
+                2,
+                -2,
+                11,
+                -11
+              ]
+            ]
+          },
+          "processes": [
+            [
+              [
+                [
+                  0,
+                  [],
+                  [],
+                  [
+                    [
+                      "QCD",
+                      2
+                    ],
+                    [
+                      "QED",
+                      4
+                    ]
+                  ],
+                  [
+                    [
+                      "QCD",
+                      "="
+                    ],
+                    [
+                      "QED",
+                      "="
+                    ]
+                  ],
+                  [],
+                  [
+                    "QCD",
+                    "QED"
+                  ],
+                  [],
+                  [],
+                  [],
+                  [],
+                  false
+                ],
+                []
+              ],
+              [
+                [
+                  2,
+                  false,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  -2,
+                  false,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  11,
+                  true,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  -11,
+                  true,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  21,
+                  true,
+                  [],
+                  false,
+                  null
+                ]
+              ]
+            ],
+            [
+              [
+                [
+                  0,
+                  [],
+                  [],
+                  [
+                    [
+                      "QCD",
+                      2
+                    ],
+                    [
+                      "QED",
+                      4
+                    ]
+                  ],
+                  [
+                    [
+                      "QCD",
+                      "="
+                    ],
+                    [
+                      "QED",
+                      "="
+                    ]
+                  ],
+                  [],
+                  [
+                    "QCD",
+                    "QED"
+                  ],
+                  [],
+                  [],
+                  [],
+                  [],
+                  false
+                ],
+                []
+              ],
+              [
+                [
+                  4,
+                  false,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  -4,
+                  false,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  11,
+                  true,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  -11,
+                  true,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  21,
+                  true,
+                  [],
+                  false,
+                  null
+                ]
+              ]
+            ]
+          ],
+          "real": 1,
+          "real_identity": 1,
+          "sector": 2
+        },
+        {
+          "allowed": [
+            [
+              5,
+              1
+            ]
+          ],
+          "fks": {
+            "extra_cnt_index": -1,
+            "i": 5,
+            "ij": 1,
+            "ij_id": 2,
+            "j": 1,
+            "need_charge_links": false,
+            "need_color_links": false,
+            "rb_links": [
+              {
+                "born_conf": 0,
+                "real_conf": 2
+              },
+              {
+                "born_conf": 1,
+                "real_conf": 3
+              }
+            ],
+            "splitting_type": [
+              "QCD"
+            ],
+            "underlying_born": [
+              [
+                2,
+                -2,
+                11,
+                -11
+              ]
+            ]
+          },
+          "processes": [
+            [
+              [
+                [
+                  0,
+                  [],
+                  [],
+                  [
+                    [
+                      "QCD",
+                      2
+                    ],
+                    [
+                      "QED",
+                      4
+                    ]
+                  ],
+                  [
+                    [
+                      "QCD",
+                      "="
+                    ],
+                    [
+                      "QED",
+                      "="
+                    ]
+                  ],
+                  [],
+                  [
+                    "QCD",
+                    "QED"
+                  ],
+                  [],
+                  [],
+                  [],
+                  [],
+                  false
+                ],
+                []
+              ],
+              [
+                [
+                  21,
+                  false,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  -2,
+                  false,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  11,
+                  true,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  -11,
+                  true,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  -2,
+                  true,
+                  [],
+                  false,
+                  null
+                ]
+              ]
+            ],
+            [
+              [
+                [
+                  0,
+                  [],
+                  [],
+                  [
+                    [
+                      "QCD",
+                      2
+                    ],
+                    [
+                      "QED",
+                      4
+                    ]
+                  ],
+                  [
+                    [
+                      "QCD",
+                      "="
+                    ],
+                    [
+                      "QED",
+                      "="
+                    ]
+                  ],
+                  [],
+                  [
+                    "QCD",
+                    "QED"
+                  ],
+                  [],
+                  [],
+                  [],
+                  [],
+                  false
+                ],
+                []
+              ],
+              [
+                [
+                  21,
+                  false,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  -4,
+                  false,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  11,
+                  true,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  -11,
+                  true,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  -4,
+                  true,
+                  [],
+                  false,
+                  null
+                ]
+              ]
+            ]
+          ],
+          "real": 2,
+          "real_identity": 1,
+          "sector": 3
+        },
+        {
+          "allowed": [
+            [
+              5,
+              2
+            ]
+          ],
+          "fks": {
+            "extra_cnt_index": -1,
+            "i": 5,
+            "ij": 2,
+            "ij_id": -2,
+            "j": 2,
+            "need_charge_links": false,
+            "need_color_links": false,
+            "rb_links": [
+              {
+                "born_conf": 0,
+                "real_conf": 2
+              },
+              {
+                "born_conf": 1,
+                "real_conf": 3
+              }
+            ],
+            "splitting_type": [
+              "QCD"
+            ],
+            "underlying_born": [
+              [
+                2,
+                -2,
+                11,
+                -11
+              ]
+            ]
+          },
+          "processes": [
+            [
+              [
+                [
+                  0,
+                  [],
+                  [],
+                  [
+                    [
+                      "QCD",
+                      2
+                    ],
+                    [
+                      "QED",
+                      4
+                    ]
+                  ],
+                  [
+                    [
+                      "QCD",
+                      "="
+                    ],
+                    [
+                      "QED",
+                      "="
+                    ]
+                  ],
+                  [],
+                  [
+                    "QCD",
+                    "QED"
+                  ],
+                  [],
+                  [],
+                  [],
+                  [],
+                  false
+                ],
+                []
+              ],
+              [
+                [
+                  2,
+                  false,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  21,
+                  false,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  11,
+                  true,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  -11,
+                  true,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  2,
+                  true,
+                  [],
+                  false,
+                  null
+                ]
+              ]
+            ],
+            [
+              [
+                [
+                  0,
+                  [],
+                  [],
+                  [
+                    [
+                      "QCD",
+                      2
+                    ],
+                    [
+                      "QED",
+                      4
+                    ]
+                  ],
+                  [
+                    [
+                      "QCD",
+                      "="
+                    ],
+                    [
+                      "QED",
+                      "="
+                    ]
+                  ],
+                  [],
+                  [
+                    "QCD",
+                    "QED"
+                  ],
+                  [],
+                  [],
+                  [],
+                  [],
+                  false
+                ],
+                []
+              ],
+              [
+                [
+                  4,
+                  false,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  21,
+                  false,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  11,
+                  true,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  -11,
+                  true,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  4,
+                  true,
+                  [],
+                  false,
+                  null
+                ]
+              ]
+            ]
+          ],
+          "real": 3,
+          "real_identity": 1,
+          "sector": 4
+        }
+      ],
+      "source": "P0_uux_emep"
+    },
+    {
+      "amp_orders": [
+        [
+          0,
+          4
+        ],
+        [
+          2,
+          4
+        ]
+      ],
+      "born_identity": 1,
+      "born_orders": [
+        [
+          0,
+          4
+        ]
+      ],
+      "context": 4,
+      "directory": "P0_uxu_emep",
+      "extra": 0,
+      "links": [
+        [
+          1,
+          2
+        ]
+      ],
+      "namps": 1,
+      "ncolor": 1,
+      "nexternal": 5,
+      "ngraphs": 2,
+      "nhelicity": 16,
+      "nincoming": 2,
+      "nprocesses": 2,
+      "nsqamps": 1,
+      "orders": [
+        "QCD",
+        "QED"
+      ],
+      "provider": 4,
+      "sectors": [
+        {
+          "allowed": [
+            [
+              5,
+              1
+            ],
+            [
+              5,
+              2
+            ]
+          ],
+          "fks": {
+            "extra_cnt_index": -1,
+            "i": 5,
+            "ij": 1,
+            "ij_id": -2,
+            "j": 1,
+            "need_charge_links": false,
+            "need_color_links": true,
+            "rb_links": [
+              {
+                "born_conf": 0,
+                "real_conf": 0
+              },
+              {
+                "born_conf": 1,
+                "real_conf": 1
+              }
+            ],
+            "splitting_type": [
+              "QCD"
+            ],
+            "underlying_born": [
+              [
+                -2,
+                2,
+                11,
+                -11
+              ]
+            ]
+          },
+          "processes": [
+            [
+              [
+                [
+                  0,
+                  [],
+                  [],
+                  [
+                    [
+                      "QCD",
+                      2
+                    ],
+                    [
+                      "QED",
+                      4
+                    ]
+                  ],
+                  [
+                    [
+                      "QCD",
+                      "="
+                    ],
+                    [
+                      "QED",
+                      "="
+                    ]
+                  ],
+                  [],
+                  [
+                    "QCD",
+                    "QED"
+                  ],
+                  [],
+                  [],
+                  [],
+                  [],
+                  false
+                ],
+                []
+              ],
+              [
+                [
+                  -2,
+                  false,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  2,
+                  false,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  11,
+                  true,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  -11,
+                  true,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  21,
+                  true,
+                  [],
+                  false,
+                  null
+                ]
+              ]
+            ],
+            [
+              [
+                [
+                  0,
+                  [],
+                  [],
+                  [
+                    [
+                      "QCD",
+                      2
+                    ],
+                    [
+                      "QED",
+                      4
+                    ]
+                  ],
+                  [
+                    [
+                      "QCD",
+                      "="
+                    ],
+                    [
+                      "QED",
+                      "="
+                    ]
+                  ],
+                  [],
+                  [
+                    "QCD",
+                    "QED"
+                  ],
+                  [],
+                  [],
+                  [],
+                  [],
+                  false
+                ],
+                []
+              ],
+              [
+                [
+                  -4,
+                  false,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  4,
+                  false,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  11,
+                  true,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  -11,
+                  true,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  21,
+                  true,
+                  [],
+                  false,
+                  null
+                ]
+              ]
+            ]
+          ],
+          "real": 1,
+          "real_identity": 1,
+          "sector": 1
+        },
+        {
+          "allowed": [
+            [
+              5,
+              1
+            ],
+            [
+              5,
+              2
+            ]
+          ],
+          "fks": {
+            "extra_cnt_index": -1,
+            "i": 5,
+            "ij": 2,
+            "ij_id": 2,
+            "j": 2,
+            "need_charge_links": false,
+            "need_color_links": true,
+            "rb_links": [
+              {
+                "born_conf": 0,
+                "real_conf": 2
+              },
+              {
+                "born_conf": 1,
+                "real_conf": 3
+              }
+            ],
+            "splitting_type": [
+              "QCD"
+            ],
+            "underlying_born": [
+              [
+                -2,
+                2,
+                11,
+                -11
+              ]
+            ]
+          },
+          "processes": [
+            [
+              [
+                [
+                  0,
+                  [],
+                  [],
+                  [
+                    [
+                      "QCD",
+                      2
+                    ],
+                    [
+                      "QED",
+                      4
+                    ]
+                  ],
+                  [
+                    [
+                      "QCD",
+                      "="
+                    ],
+                    [
+                      "QED",
+                      "="
+                    ]
+                  ],
+                  [],
+                  [
+                    "QCD",
+                    "QED"
+                  ],
+                  [],
+                  [],
+                  [],
+                  [],
+                  false
+                ],
+                []
+              ],
+              [
+                [
+                  -2,
+                  false,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  2,
+                  false,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  11,
+                  true,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  -11,
+                  true,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  21,
+                  true,
+                  [],
+                  false,
+                  null
+                ]
+              ]
+            ],
+            [
+              [
+                [
+                  0,
+                  [],
+                  [],
+                  [
+                    [
+                      "QCD",
+                      2
+                    ],
+                    [
+                      "QED",
+                      4
+                    ]
+                  ],
+                  [
+                    [
+                      "QCD",
+                      "="
+                    ],
+                    [
+                      "QED",
+                      "="
+                    ]
+                  ],
+                  [],
+                  [
+                    "QCD",
+                    "QED"
+                  ],
+                  [],
+                  [],
+                  [],
+                  [],
+                  false
+                ],
+                []
+              ],
+              [
+                [
+                  -4,
+                  false,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  4,
+                  false,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  11,
+                  true,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  -11,
+                  true,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  21,
+                  true,
+                  [],
+                  false,
+                  null
+                ]
+              ]
+            ]
+          ],
+          "real": 1,
+          "real_identity": 1,
+          "sector": 2
+        },
+        {
+          "allowed": [
+            [
+              5,
+              1
+            ]
+          ],
+          "fks": {
+            "extra_cnt_index": -1,
+            "i": 5,
+            "ij": 1,
+            "ij_id": -2,
+            "j": 1,
+            "need_charge_links": false,
+            "need_color_links": false,
+            "rb_links": [
+              {
+                "born_conf": 0,
+                "real_conf": 2
+              },
+              {
+                "born_conf": 1,
+                "real_conf": 3
+              }
+            ],
+            "splitting_type": [
+              "QCD"
+            ],
+            "underlying_born": [
+              [
+                -2,
+                2,
+                11,
+                -11
+              ]
+            ]
+          },
+          "processes": [
+            [
+              [
+                [
+                  0,
+                  [],
+                  [],
+                  [
+                    [
+                      "QCD",
+                      2
+                    ],
+                    [
+                      "QED",
+                      4
+                    ]
+                  ],
+                  [
+                    [
+                      "QCD",
+                      "="
+                    ],
+                    [
+                      "QED",
+                      "="
+                    ]
+                  ],
+                  [],
+                  [
+                    "QCD",
+                    "QED"
+                  ],
+                  [],
+                  [],
+                  [],
+                  [],
+                  false
+                ],
+                []
+              ],
+              [
+                [
+                  21,
+                  false,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  2,
+                  false,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  11,
+                  true,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  -11,
+                  true,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  2,
+                  true,
+                  [],
+                  false,
+                  null
+                ]
+              ]
+            ],
+            [
+              [
+                [
+                  0,
+                  [],
+                  [],
+                  [
+                    [
+                      "QCD",
+                      2
+                    ],
+                    [
+                      "QED",
+                      4
+                    ]
+                  ],
+                  [
+                    [
+                      "QCD",
+                      "="
+                    ],
+                    [
+                      "QED",
+                      "="
+                    ]
+                  ],
+                  [],
+                  [
+                    "QCD",
+                    "QED"
+                  ],
+                  [],
+                  [],
+                  [],
+                  [],
+                  false
+                ],
+                []
+              ],
+              [
+                [
+                  21,
+                  false,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  4,
+                  false,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  11,
+                  true,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  -11,
+                  true,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  4,
+                  true,
+                  [],
+                  false,
+                  null
+                ]
+              ]
+            ]
+          ],
+          "real": 2,
+          "real_identity": 1,
+          "sector": 3
+        },
+        {
+          "allowed": [
+            [
+              5,
+              2
+            ]
+          ],
+          "fks": {
+            "extra_cnt_index": -1,
+            "i": 5,
+            "ij": 2,
+            "ij_id": 2,
+            "j": 2,
+            "need_charge_links": false,
+            "need_color_links": false,
+            "rb_links": [
+              {
+                "born_conf": 0,
+                "real_conf": 2
+              },
+              {
+                "born_conf": 1,
+                "real_conf": 3
+              }
+            ],
+            "splitting_type": [
+              "QCD"
+            ],
+            "underlying_born": [
+              [
+                -2,
+                2,
+                11,
+                -11
+              ]
+            ]
+          },
+          "processes": [
+            [
+              [
+                [
+                  0,
+                  [],
+                  [],
+                  [
+                    [
+                      "QCD",
+                      2
+                    ],
+                    [
+                      "QED",
+                      4
+                    ]
+                  ],
+                  [
+                    [
+                      "QCD",
+                      "="
+                    ],
+                    [
+                      "QED",
+                      "="
+                    ]
+                  ],
+                  [],
+                  [
+                    "QCD",
+                    "QED"
+                  ],
+                  [],
+                  [],
+                  [],
+                  [],
+                  false
+                ],
+                []
+              ],
+              [
+                [
+                  -2,
+                  false,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  21,
+                  false,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  11,
+                  true,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  -11,
+                  true,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  -2,
+                  true,
+                  [],
+                  false,
+                  null
+                ]
+              ]
+            ],
+            [
+              [
+                [
+                  0,
+                  [],
+                  [],
+                  [
+                    [
+                      "QCD",
+                      2
+                    ],
+                    [
+                      "QED",
+                      4
+                    ]
+                  ],
+                  [
+                    [
+                      "QCD",
+                      "="
+                    ],
+                    [
+                      "QED",
+                      "="
+                    ]
+                  ],
+                  [],
+                  [
+                    "QCD",
+                    "QED"
+                  ],
+                  [],
+                  [],
+                  [],
+                  [],
+                  false
+                ],
+                []
+              ],
+              [
+                [
+                  -4,
+                  false,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  21,
+                  false,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  11,
+                  true,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  -11,
+                  true,
+                  [],
+                  false,
+                  null
+                ],
+                [
+                  -4,
+                  true,
+                  [],
+                  false,
+                  null
+                ]
+              ]
+            ]
+          ],
+          "real": 3,
+          "real_identity": 1,
+          "sector": 4
+        }
+      ],
+      "source": "P0_uxu_emep"
+    }
+  ],
+  "histories": {
+    "P0_ddx_emep": [
+      {
+        "ambiguous": [],
+        "histories": [
+          {
+            "amplitudes": [
+              1,
+              2
+            ],
+            "context": 1,
+            "extra": 0,
+            "flavours": [
+              1,
+              2,
+              3
+            ],
+            "i": 5,
+            "j": 1,
+            "orders": [
+              1,
+              2
+            ],
+            "permutation": [
+              1,
+              2,
+              3,
+              4,
+              5
+            ],
+            "provider": 1,
+            "sector": 1,
+            "splitting": [
+              "QCD"
+            ]
+          },
+          {
+            "amplitudes": [
+              1,
+              2
+            ],
+            "context": 1,
+            "extra": 0,
+            "flavours": [
+              1,
+              2,
+              3
+            ],
+            "i": 5,
+            "j": 2,
+            "orders": [
+              1,
+              2
+            ],
+            "permutation": [
+              1,
+              2,
+              3,
+              4,
+              5
+            ],
+            "provider": 1,
+            "sector": 2,
+            "splitting": [
+              "QCD"
+            ]
+          }
+        ],
+        "sector": 1,
+        "unresolved": []
+      },
+      {
+        "ambiguous": [],
+        "histories": [
+          {
+            "amplitudes": [
+              1,
+              2
+            ],
+            "context": 1,
+            "extra": 0,
+            "flavours": [
+              1,
+              2,
+              3
+            ],
+            "i": 5,
+            "j": 1,
+            "orders": [
+              1,
+              2
+            ],
+            "permutation": [
+              1,
+              2,
+              3,
+              4,
+              5
+            ],
+            "provider": 1,
+            "sector": 1,
+            "splitting": [
+              "QCD"
+            ]
+          },
+          {
+            "amplitudes": [
+              1,
+              2
+            ],
+            "context": 1,
+            "extra": 0,
+            "flavours": [
+              1,
+              2,
+              3
+            ],
+            "i": 5,
+            "j": 2,
+            "orders": [
+              1,
+              2
+            ],
+            "permutation": [
+              1,
+              2,
+              3,
+              4,
+              5
+            ],
+            "provider": 1,
+            "sector": 2,
+            "splitting": [
+              "QCD"
+            ]
+          }
+        ],
+        "sector": 2,
+        "unresolved": []
+      },
+      {
+        "ambiguous": [],
+        "histories": [
+          {
+            "amplitudes": [
+              1,
+              2
+            ],
+            "context": 1,
+            "extra": 0,
+            "flavours": [
+              1,
+              2,
+              3
+            ],
+            "i": 5,
+            "j": 1,
+            "orders": [
+              1,
+              2
+            ],
+            "permutation": [
+              1,
+              2,
+              3,
+              4,
+              5
+            ],
+            "provider": 1,
+            "sector": 3,
+            "splitting": [
+              "QCD"
+            ]
+          }
+        ],
+        "sector": 3,
+        "unresolved": []
+      },
+      {
+        "ambiguous": [],
+        "histories": [
+          {
+            "amplitudes": [
+              1,
+              2
+            ],
+            "context": 1,
+            "extra": 0,
+            "flavours": [
+              1,
+              2,
+              3
+            ],
+            "i": 5,
+            "j": 2,
+            "orders": [
+              1,
+              2
+            ],
+            "permutation": [
+              1,
+              2,
+              3,
+              4,
+              5
+            ],
+            "provider": 1,
+            "sector": 4,
+            "splitting": [
+              "QCD"
+            ]
+          }
+        ],
+        "sector": 4,
+        "unresolved": []
+      }
+    ],
+    "P0_dxd_emep": [
+      {
+        "ambiguous": [],
+        "histories": [
+          {
+            "amplitudes": [
+              1,
+              2
+            ],
+            "context": 2,
+            "extra": 0,
+            "flavours": [
+              1,
+              2,
+              3
+            ],
+            "i": 5,
+            "j": 1,
+            "orders": [
+              1,
+              2
+            ],
+            "permutation": [
+              1,
+              2,
+              3,
+              4,
+              5
+            ],
+            "provider": 2,
+            "sector": 1,
+            "splitting": [
+              "QCD"
+            ]
+          },
+          {
+            "amplitudes": [
+              1,
+              2
+            ],
+            "context": 2,
+            "extra": 0,
+            "flavours": [
+              1,
+              2,
+              3
+            ],
+            "i": 5,
+            "j": 2,
+            "orders": [
+              1,
+              2
+            ],
+            "permutation": [
+              1,
+              2,
+              3,
+              4,
+              5
+            ],
+            "provider": 2,
+            "sector": 2,
+            "splitting": [
+              "QCD"
+            ]
+          }
+        ],
+        "sector": 1,
+        "unresolved": []
+      },
+      {
+        "ambiguous": [],
+        "histories": [
+          {
+            "amplitudes": [
+              1,
+              2
+            ],
+            "context": 2,
+            "extra": 0,
+            "flavours": [
+              1,
+              2,
+              3
+            ],
+            "i": 5,
+            "j": 1,
+            "orders": [
+              1,
+              2
+            ],
+            "permutation": [
+              1,
+              2,
+              3,
+              4,
+              5
+            ],
+            "provider": 2,
+            "sector": 1,
+            "splitting": [
+              "QCD"
+            ]
+          },
+          {
+            "amplitudes": [
+              1,
+              2
+            ],
+            "context": 2,
+            "extra": 0,
+            "flavours": [
+              1,
+              2,
+              3
+            ],
+            "i": 5,
+            "j": 2,
+            "orders": [
+              1,
+              2
+            ],
+            "permutation": [
+              1,
+              2,
+              3,
+              4,
+              5
+            ],
+            "provider": 2,
+            "sector": 2,
+            "splitting": [
+              "QCD"
+            ]
+          }
+        ],
+        "sector": 2,
+        "unresolved": []
+      },
+      {
+        "ambiguous": [],
+        "histories": [
+          {
+            "amplitudes": [
+              1,
+              2
+            ],
+            "context": 2,
+            "extra": 0,
+            "flavours": [
+              1,
+              2,
+              3
+            ],
+            "i": 5,
+            "j": 1,
+            "orders": [
+              1,
+              2
+            ],
+            "permutation": [
+              1,
+              2,
+              3,
+              4,
+              5
+            ],
+            "provider": 2,
+            "sector": 3,
+            "splitting": [
+              "QCD"
+            ]
+          }
+        ],
+        "sector": 3,
+        "unresolved": []
+      },
+      {
+        "ambiguous": [],
+        "histories": [
+          {
+            "amplitudes": [
+              1,
+              2
+            ],
+            "context": 2,
+            "extra": 0,
+            "flavours": [
+              1,
+              2,
+              3
+            ],
+            "i": 5,
+            "j": 2,
+            "orders": [
+              1,
+              2
+            ],
+            "permutation": [
+              1,
+              2,
+              3,
+              4,
+              5
+            ],
+            "provider": 2,
+            "sector": 4,
+            "splitting": [
+              "QCD"
+            ]
+          }
+        ],
+        "sector": 4,
+        "unresolved": []
+      }
+    ],
+    "P0_uux_emep": [
+      {
+        "ambiguous": [],
+        "histories": [
+          {
+            "amplitudes": [
+              1,
+              2
+            ],
+            "context": 3,
+            "extra": 0,
+            "flavours": [
+              1,
+              2
+            ],
+            "i": 5,
+            "j": 1,
+            "orders": [
+              1,
+              2
+            ],
+            "permutation": [
+              1,
+              2,
+              3,
+              4,
+              5
+            ],
+            "provider": 3,
+            "sector": 1,
+            "splitting": [
+              "QCD"
+            ]
+          },
+          {
+            "amplitudes": [
+              1,
+              2
+            ],
+            "context": 3,
+            "extra": 0,
+            "flavours": [
+              1,
+              2
+            ],
+            "i": 5,
+            "j": 2,
+            "orders": [
+              1,
+              2
+            ],
+            "permutation": [
+              1,
+              2,
+              3,
+              4,
+              5
+            ],
+            "provider": 3,
+            "sector": 2,
+            "splitting": [
+              "QCD"
+            ]
+          }
+        ],
+        "sector": 1,
+        "unresolved": []
+      },
+      {
+        "ambiguous": [],
+        "histories": [
+          {
+            "amplitudes": [
+              1,
+              2
+            ],
+            "context": 3,
+            "extra": 0,
+            "flavours": [
+              1,
+              2
+            ],
+            "i": 5,
+            "j": 1,
+            "orders": [
+              1,
+              2
+            ],
+            "permutation": [
+              1,
+              2,
+              3,
+              4,
+              5
+            ],
+            "provider": 3,
+            "sector": 1,
+            "splitting": [
+              "QCD"
+            ]
+          },
+          {
+            "amplitudes": [
+              1,
+              2
+            ],
+            "context": 3,
+            "extra": 0,
+            "flavours": [
+              1,
+              2
+            ],
+            "i": 5,
+            "j": 2,
+            "orders": [
+              1,
+              2
+            ],
+            "permutation": [
+              1,
+              2,
+              3,
+              4,
+              5
+            ],
+            "provider": 3,
+            "sector": 2,
+            "splitting": [
+              "QCD"
+            ]
+          }
+        ],
+        "sector": 2,
+        "unresolved": []
+      },
+      {
+        "ambiguous": [],
+        "histories": [
+          {
+            "amplitudes": [
+              1,
+              2
+            ],
+            "context": 3,
+            "extra": 0,
+            "flavours": [
+              1,
+              2
+            ],
+            "i": 5,
+            "j": 1,
+            "orders": [
+              1,
+              2
+            ],
+            "permutation": [
+              1,
+              2,
+              3,
+              4,
+              5
+            ],
+            "provider": 3,
+            "sector": 3,
+            "splitting": [
+              "QCD"
+            ]
+          }
+        ],
+        "sector": 3,
+        "unresolved": []
+      },
+      {
+        "ambiguous": [],
+        "histories": [
+          {
+            "amplitudes": [
+              1,
+              2
+            ],
+            "context": 3,
+            "extra": 0,
+            "flavours": [
+              1,
+              2
+            ],
+            "i": 5,
+            "j": 2,
+            "orders": [
+              1,
+              2
+            ],
+            "permutation": [
+              1,
+              2,
+              3,
+              4,
+              5
+            ],
+            "provider": 3,
+            "sector": 4,
+            "splitting": [
+              "QCD"
+            ]
+          }
+        ],
+        "sector": 4,
+        "unresolved": []
+      }
+    ],
+    "P0_uxu_emep": [
+      {
+        "ambiguous": [],
+        "histories": [
+          {
+            "amplitudes": [
+              1,
+              2
+            ],
+            "context": 4,
+            "extra": 0,
+            "flavours": [
+              1,
+              2
+            ],
+            "i": 5,
+            "j": 1,
+            "orders": [
+              1,
+              2
+            ],
+            "permutation": [
+              1,
+              2,
+              3,
+              4,
+              5
+            ],
+            "provider": 4,
+            "sector": 1,
+            "splitting": [
+              "QCD"
+            ]
+          },
+          {
+            "amplitudes": [
+              1,
+              2
+            ],
+            "context": 4,
+            "extra": 0,
+            "flavours": [
+              1,
+              2
+            ],
+            "i": 5,
+            "j": 2,
+            "orders": [
+              1,
+              2
+            ],
+            "permutation": [
+              1,
+              2,
+              3,
+              4,
+              5
+            ],
+            "provider": 4,
+            "sector": 2,
+            "splitting": [
+              "QCD"
+            ]
+          }
+        ],
+        "sector": 1,
+        "unresolved": []
+      },
+      {
+        "ambiguous": [],
+        "histories": [
+          {
+            "amplitudes": [
+              1,
+              2
+            ],
+            "context": 4,
+            "extra": 0,
+            "flavours": [
+              1,
+              2
+            ],
+            "i": 5,
+            "j": 1,
+            "orders": [
+              1,
+              2
+            ],
+            "permutation": [
+              1,
+              2,
+              3,
+              4,
+              5
+            ],
+            "provider": 4,
+            "sector": 1,
+            "splitting": [
+              "QCD"
+            ]
+          },
+          {
+            "amplitudes": [
+              1,
+              2
+            ],
+            "context": 4,
+            "extra": 0,
+            "flavours": [
+              1,
+              2
+            ],
+            "i": 5,
+            "j": 2,
+            "orders": [
+              1,
+              2
+            ],
+            "permutation": [
+              1,
+              2,
+              3,
+              4,
+              5
+            ],
+            "provider": 4,
+            "sector": 2,
+            "splitting": [
+              "QCD"
+            ]
+          }
+        ],
+        "sector": 2,
+        "unresolved": []
+      },
+      {
+        "ambiguous": [],
+        "histories": [
+          {
+            "amplitudes": [
+              1,
+              2
+            ],
+            "context": 4,
+            "extra": 0,
+            "flavours": [
+              1,
+              2
+            ],
+            "i": 5,
+            "j": 1,
+            "orders": [
+              1,
+              2
+            ],
+            "permutation": [
+              1,
+              2,
+              3,
+              4,
+              5
+            ],
+            "provider": 4,
+            "sector": 3,
+            "splitting": [
+              "QCD"
+            ]
+          }
+        ],
+        "sector": 3,
+        "unresolved": []
+      },
+      {
+        "ambiguous": [],
+        "histories": [
+          {
+            "amplitudes": [
+              1,
+              2
+            ],
+            "context": 4,
+            "extra": 0,
+            "flavours": [
+              1,
+              2
+            ],
+            "i": 5,
+            "j": 2,
+            "orders": [
+              1,
+              2
+            ],
+            "permutation": [
+              1,
+              2,
+              3,
+              4,
+              5
+            ],
+            "provider": 4,
+            "sector": 4,
+            "splitting": [
+              "QCD"
+            ]
+          }
+        ],
+        "sector": 4,
+        "unresolved": []
+      }
+    ]
+  },
+  "version": 1
+}

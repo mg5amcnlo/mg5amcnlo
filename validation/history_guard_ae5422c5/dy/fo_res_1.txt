@@ -1,0 +1,41 @@
+
+
+Cross section per integration channel:
+         P0_ddx_emep                1   2.54380085e+02    1.8230e+00       0.7166%  
+         P0_dxd_emep                1   2.52686863e+02    1.8229e+00       0.7214%  
+         P0_ddx_emep                1   2.49695916e+02    1.8260e+00       0.7313%  
+         P0_dxd_emep                1   2.46056308e+02    1.8173e+00       0.7386%  
+         P0_uxu_emep                1   2.23560129e+02    1.4494e+00       0.6483%  
+         P0_uxu_emep                1   2.27296600e+02    1.4393e+00       0.6332%  
+         P0_uux_emep                1   2.25200433e+02    1.4475e+00       0.6428%  
+         P0_uux_emep                1   2.27604751e+02    1.4158e+00       0.6220%  
+
+
+ABS cross section per integration channel:
+         P0_ddx_emep                1   3.53234519e+02    1.2655e+00       0.3583%  
+         P0_dxd_emep                1   3.52974800e+02    1.2570e+00       0.3561%  
+         P0_ddx_emep                1   3.52717115e+02    1.2497e+00       0.3543%  
+         P0_dxd_emep                1   3.50384458e+02    1.2334e+00       0.3520%  
+         P0_uxu_emep                1   3.04375127e+02    1.0638e+00       0.3495%  
+         P0_uxu_emep                1   3.05167430e+02    1.0564e+00       0.3462%  
+         P0_uux_emep                1   3.05727918e+02    1.0561e+00       0.3454%  
+         P0_uux_emep                1   3.04868065e+02    1.0317e+00       0.3384%  
+
+
+ABS cross section per dir
+         P0_ddx_emep   7.05951635e+02    1.7785e+00 
+         P0_dxd_emep   7.03359257e+02    1.7611e+00 
+         P0_uxu_emep   6.09542556e+02    1.4993e+00 
+         P0_uux_emep   6.10595983e+02    1.4764e+00 
+
+
+Cross section per dir
+         P0_ddx_emep   5.04076000e+02    2.5803e+00 
+         P0_dxd_emep   4.98743172e+02    2.5740e+00 
+         P0_uxu_emep   4.50856729e+02    2.0426e+00 
+         P0_uux_emep   4.52805185e+02    2.0248e+00 
+
+Total ABS and 
+Total: 
+                      2.62944943e+03 +- 3.2699e+00  (1.2436e-01%)
+                      1.90648109e+03 +- 4.6428e+00  (2.4353e-01%) 

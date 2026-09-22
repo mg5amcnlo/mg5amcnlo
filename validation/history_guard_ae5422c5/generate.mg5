@@ -1,0 +1,12 @@
+set automatic_html_opening False --no_save
+set low_mem_multicore_nlo_generation False --no_save
+set fastjet /export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun/validation/mcatnlo_xsections_f81ea6917/fastjet-config --no_save
+import model loop_sm-no_b_mass
+define p = g u c d s b u~ c~ d~ s~ b~
+define j = p
+generate p p > t t~ [QCD]
+output /tmp/mg5_history_guard_final/ttbar -f -nojpeg
+generate p p > w+ j [QCD]
+output /tmp/mg5_history_guard_final/wjet -f -nojpeg
+generate p p > e+ e- [QCD]
+output /tmp/mg5_history_guard_final/dy -f -nojpeg

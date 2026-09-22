@@ -41,6 +41,7 @@ import madgraph.iolibs.file_writers as writers
 import madgraph.iolibs.template_files as template_files
 import madgraph.iolibs.ufo_expression_parsers as parsers
 import madgraph.iolibs.export_v4 as export_v4
+import madgraph.iolibs.born_support as born_support
 import madgraph.loop.loop_exporters as loop_exporters
 import madgraph.various.q_polynomial as q_polynomial
 import madgraph.various.banner as banner_mod
@@ -514,6 +515,9 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                                      matrix_element.extra_cnt_me_list, 
                                      fortran_model)
         for i, extra_cnt_me in enumerate(matrix_element.extra_cnt_me_list):
+            if (hasattr(self, 'born_support_registry') and
+                    self.born_support_registry[borndir]['source'] != borndir):
+                continue
             replace_dict = {}
 
             den_factor_lines = self.get_den_factor_lines(matrix_element,
@@ -700,6 +704,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                      'splitorders_stuff.f',
                      'orderstags_glob.f',
                      'chooser_functions.f',
+                     'mc_native_runtime.f',
                      'veto_xsec.f',
                      'veto_xsec.inc',
                      'weight_lines.f',
@@ -769,6 +774,9 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         else:
             os.system("ln -s ../BinothLHA_user.f ./BinothLHA.f")
 
+        if hasattr(self, 'born_support_registry'):
+            born_support.worker_record(self, matrix_element, amp_split_orders)
+
         # Return to SubProcesses dir
         os.chdir(os.path.pardir)
         # Add subprocess to subproc.mg
@@ -783,6 +791,9 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
 
 
         return calls, amp_split_orders
+
+    def prepare_born_support(self, matrix_elements):
+        born_support.prepare(self, matrix_elements)
 
     #===========================================================================
     #  create the run_card 
@@ -888,6 +899,8 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         filename = os.path.join(self.dir_path,'Source','MODEL','get_mass_width_fcts.f')
         makeinc = os.path.join(self.dir_path,'Source','MODEL','makeinc.inc')
         self.write_get_mass_width_file(writers.FortranWriter(filename), makeinc, self.model)
+
+        born_support.finalize(self)
         
         # Touch "done" file
         os.system('touch %s/done' % os.path.join(self.dir_path,'SubProcesses'))
@@ -2136,6 +2149,18 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
         filename = 'born_coloramps.inc'
         self.write_coloramps_file(writers.FortranWriter(filename),
                                   mapconfigs, born_me, fortran_model)
+
+        # Equivalent contexts keep their own immutable mapping data, but only
+        # the preassigned provider worker emits the evaluator implementations.
+        borndir = os.path.basename(pathdir)
+        if (hasattr(self, 'born_support_registry') and
+                self.born_support_registry[borndir]['source'] != borndir):
+            self.write_maxamps_file(writers.FortranWriter('born_maxamps.inc'),
+                                    len(matrix_element.get('diagrams')),
+                                    max(1, len(born_me['color_basis'])),
+                                    len(born_me['processes']), 1)
+            self.color_link_files = []
+            return
         
         # the born ME's and color/charge links
         sqsorders_list = []

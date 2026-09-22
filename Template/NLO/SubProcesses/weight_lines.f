@@ -13,7 +13,7 @@
      $        ,icontr_sum(:,:),ifold_cnt(:)
      $        ,orderstag(:),amppos(:),need_match(:,:)
 ! Keep the event/shower owner separate from the native PDF/ME history.
-         integer, allocatable :: event_nFKS(:)
+         integer, allocatable :: event_nFKS(:),native_ids(:,:)
          double precision, allocatable :: momenta(:,:,:),momenta_m(:,:,:
      $        ,:),wgt(:,:),wgt_ME_tree(:,:),bjx(:,:),scales2(:,:)
      $        ,g_strong(:),wgts(:,:),parton_iproc(:,:),y_bst(:)
@@ -99,6 +99,11 @@ c event_nFKS
          itemp1=0
          itemp1(1:max_contr)=event_nFKS
          call move_alloc(itemp1,event_nFKS)
+c native provenance
+         allocate(itemp2(3,n_contr))
+         itemp2=0
+         itemp2(:,1:max_contr)=native_ids
+         call move_alloc(itemp2,native_ids)
 c QCDpower         
          allocate(itemp1(n_contr))
          itemp1(1:max_contr)=QCDpower
@@ -234,6 +239,8 @@ c update maximum
       allocate(nFKS(1))
       allocate(event_nFKS(1))
       event_nFKS=0
+      allocate(native_ids(3,1))
+      native_ids=0
       allocate(QCDpower(1))
       allocate(pdg(nexternal,0:1))
       allocate(pdg_uborn(nexternal,0:1))
@@ -280,6 +287,7 @@ c update maximum
       if (allocated(itype)) deallocate(itype)
       if (allocated(nFKS)) deallocate(nFKS)
       if (allocated(event_nFKS)) deallocate(event_nFKS)
+      if (allocated(native_ids)) deallocate(native_ids)
       if (allocated(QCDpower)) deallocate(QCDpower)
       if (allocated(pdg)) deallocate(pdg)
       if (allocated(pdg_uborn)) deallocate(pdg_uborn)

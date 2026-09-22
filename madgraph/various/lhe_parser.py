@@ -2834,6 +2834,8 @@ class OneNLOWeight(object):
             to_add('%i', self.merge_new_pdg)
             to_add('%.10e', self.ref_wgt*self.bias_wgt)
             to_add('%.10e', self.bias_wgt)
+            if getattr(self, 'native_provenance', None) is not None:
+                to_add('%i', list(self.native_provenance))
             return ' '.join(format_var) % tuple(variable)
             
         
@@ -2954,6 +2956,11 @@ class OneNLOWeight(object):
         except IndexError:
             self.bias_wgt = 1.0
             
+        # New outputs append provider, context, history and event-owner IDs.
+        # The preceding fields retain their native PDF/ME interpretation.
+        suffix = data[flag+16:flag+20]
+        self.native_provenance = tuple(map(int, suffix)) if len(suffix) == 4 else None
+
         if not keep_bias:
             self.ref_wgt /= self.bias_wgt
             self.pwgt = [p/self.bias_wgt for p in self.pwgt]

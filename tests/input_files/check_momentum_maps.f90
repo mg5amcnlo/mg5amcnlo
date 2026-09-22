@@ -1,6 +1,7 @@
 ! Test the production phase-space routines without matrix elements or PDFs.
 program check_momentum_maps
   use, intrinsic :: ieee_arithmetic, only: ieee_is_finite
+  use mc_native_context, only: native_mapping
   use process_module, only: next_n1,nincoming_mod
   use kinematics_module, only: boost_n1_to_its_cms,boost_n1_to_lab, &
        get_xi_from_p,get_yij_from_p,get_phi_from_p,fill_father_and_ileg
@@ -19,6 +20,7 @@ program check_momentum_maps
   logical :: softtest,colltest,pass
   common /sctests/softtest,colltest
   integer :: isign,i,j,k,nplus,nminus,nchecked
+  integer :: nratios=0
   double precision, parameter :: xs(7)=[1d-4,0.01d0,0.25d0,0.6d0,0.9d0,0.97d0,0.999d0]
   double precision, parameter :: ys(4)=[0.2d0,0.7d0,0.9d0,0.999d0]
   double precision, parameter :: energies(3)=[400d0,1000d0,4000d0]
@@ -49,10 +51,64 @@ program check_momentum_maps
      stop
   endif
 
-  if (mode.eq.'massive') then
+  if (mode.eq.'massive_recoil'.or.mode.eq.'massive_branch') then
+     ! A ttbar real point with an almost stationary spectator. Replaying
+     ! another history used to lose precision in |p_i+p_j| and its angle.
+     native_mapping=.true.
+     mass=173d0
+     call fill_father_and_ileg(5,4,mass)
+     plab(:,1)=[322.68530330568893d0,0d0,0d0,322.68530330568893d0]
+     plab(:,2)=[214.20779879452144d0,0d0,0d0,-214.20779879452144d0]
+     plab(:,3)=[176.64351850683025d0,-2.4450242582330782d-3, &
+          -1.3603843060490267d-3,35.692192740767325d0]
+     plab(:,4)=[214.43585363999250d0,27.680095453052886d0, &
+          123.64130031556655d0,0.61359457138139817d0]
+     plab(:,5)=[145.81372995338756d0,-27.677650428794667d0, &
+          -123.63993993126064d0,72.171717199018786d0]
+     if(mode.eq.'massive_branch')then
+        plab(:,1)=[5894.5874484213145d0,0d0,0d0,5894.5874484213145d0]
+        plab(:,2)=[4791.5059074978099d0,0d0,0d0,-4791.5059074978099d0]
+        plab(:,3)=[3311.3888974023553d0,-812.64805238353540d0, &
+             1532.9301421210912d0,2815.1546586597055d0]
+        plab(:,4)=[2483.2449406725818d0,-635.73005954441101d0, &
+             1240.3339852491772d0,2047.9246401670955d0]
+        plab(:,5)=[4891.4595178441878d0,1448.3781119279461d0, &
+             -2773.2641273702679d0,-3759.9977579032957d0]
+     endif
+     call boost_n1_to_its_cms(plab,pcm,rapidity)
+     shat=4d0*pcm(0,1)*pcm(0,2)
+     sqrtshat=sqrt(shat)
+     xi=get_xi_from_p(5,4,pcm)
+     yij=get_yij_from_p(5,4,pcm)
+     phi=get_phi_from_p(5,4,pcm)
+     jacinv=1d0
+     pswgtinv=1d0
+     call generate_momenta_massive_final_inverse(pcm,xi,yij,phi, &
+          invborn,inv,jacinv,pswgtinv,shat,sqrtshat,5,4,mass)
+     if(jacinv.le.0d0)error stop 'could not invert stationary recoil'
+     p(:,1:4)=invborn(:,1:4)
+     jac=2d0*pi
+     pswgt=1d0
+     rat_xi=0d0
+     isign=1
+     call generate_momenta_massive_final(-100,isign,.false.,rat_xi, &
+          5,4,invborn(:,4),shat,sqrtshat,mass,inv,mass**2,p,phi, &
+          xiimax,xinorm,xi,yij,xihat,pifks,jac,pswgt,pass)
+     call boost_n1_to_lab(p,out,-rapidity)
+     error=maxval(abs(out-plab))/maxval(abs(plab))
+     if(.not.pass.or.error.gt.1d-7)then
+        write(*,*)'stationary recoil error',error
+        error stop 'stationary recoil round trip'
+     endif
+     write(*,*)'PASS ',trim(mode)
+     stop
+  endif
+
+  native_mapping=index(mode,'native_').eq.1
+  if (mode.eq.'massive'.or.mode.eq.'native_massive') then
      mass=173d0
      mrec=173d0
-  elseif (mode.eq.'massless') then
+  elseif (mode.eq.'massless'.or.mode.eq.'native_massless') then
      mass=0d0
      mrec=80.419d0
   else
@@ -138,10 +194,62 @@ program check_momentum_maps
                 error stop 'inverse Born recoil'
            if (abs(jacinv/jac-1d0).gt.1d-6) &
                 error stop 'inverse Jacobian or spurious branch multiplicity'
+           if(abs(pswgtinv/pswgt-1d0).gt.1d-6) &
+                error stop 'inverse phase-space measure'
+           if(native_mapping.and.mass.gt.0d0.and.isign.eq.1) &
+                call check_counter_ratio(pcm,born,rnd,jac*pswgt,nratios)
            nchecked=nchecked+1
         enddo
      enddo
   enddo
   if (mode.eq.'massive'.and.nminus.eq.0) error stop 'minus solution not covered'
+  if(mode.eq.'native_massive'.and.nratios.eq.0)error stop 'no counterevent ratios tested'
   write(*,*) 'PASS ',trim(mode),nchecked,nplus,nminus
+contains
+  subroutine check_counter_ratio(real_p,born_p,native_x,native_measure,checked)
+    ! Compare the physical soft-counterevent/real measure ratio with the
+    ! original xi parameterization, independently of either sampling Jacobian.
+    double precision,intent(in) :: real_p(0:3,5),born_p(0:3,4),native_x(3),native_measure
+    integer,intent(inout) :: checked
+    double precision :: legacy_x(3),pb(0:3,-max_branch:4),q(0:3,5),scaled(0:3)
+    double precision :: cj,cp,lj,lp,ratio,oldratio,local_xi,local_y,local_phi
+    double precision :: xmax,xnorm,xhat,rat
+    integer :: sign_branch
+    logical :: good
+    local_xi=get_xi_from_p(5,3,real_p)
+    local_y=get_yij_from_p(5,3,real_p)
+    local_phi=get_phi_from_p(5,3,real_p)
+    native_mapping=.false.
+    lj=1d0
+    lp=1d0
+    call generate_momenta_massive_final_inverse(real_p,local_xi,local_y,local_phi, &
+         pb,legacy_x,lj,lp,shat,sqrtshat,5,3,mass)
+    native_mapping=.true.
+    if(lj.le.0d0)return ! The legacy sampling cutoff excludes some native points.
+    q(:,1:4)=born_p
+    cj=2d0*pi
+    cp=1d0
+    rat=0d0
+    sign_branch=1
+    call generate_momenta_massive_final(0,sign_branch,.false.,rat,5,3,born_p(:,3), &
+         shat,sqrtshat,mass,native_x,mrec**2,q,local_phi,xmax,xnorm,local_xi,local_y, &
+         xhat,scaled,cj,cp,good)
+    if(.not.good)error stop 'invalid native soft counterevent'
+    ratio=cj*cp/native_measure
+    native_mapping=.false.
+    q(:,1:4)=born_p
+    cj=2d0*pi
+    cp=1d0
+    call generate_momenta_massive_final(0,sign_branch,.false.,rat,5,3,born_p(:,3), &
+         shat,sqrtshat,mass,legacy_x,mrec**2,q,local_phi,xmax,xnorm,local_xi,local_y, &
+         xhat,scaled,cj,cp,good)
+    native_mapping=.true.
+    if(.not.good)error stop 'invalid reference soft counterevent'
+    oldratio=cj*cp/(lj*lp)
+    if(abs(ratio-oldratio).gt.1d-6*max(abs(ratio),abs(oldratio)))then
+       write(*,*)'counterevent ratios',ratio,oldratio
+       error stop 'native counterevent measure conversion'
+    endif
+    checked=checked+1
+  end subroutine
 end program check_momentum_maps

@@ -89,6 +89,7 @@ contains
     integer :: i_fks,j_fks
     double precision,dimension(0:3,next_n1) :: p_cms
     double precision,dimension(0:3) :: pi,pj
+    double precision,dimension(3) :: ui,uj
     double precision :: xi_i_fks_ev,y_ij_fks_ev
     double precision :: p_i_fks_ev(0:3),p_i_fks_cnt(0:3,-2:2)
     common/fksvariables/xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt
@@ -106,7 +107,15 @@ contains
     else
        pj(0:3)=p_cms(0:3,j_fks)
     endif
-    get_yij_from_p=dot3(pi(0),pj(0))/(rho(pi(0))*rho(pj(0)))
+    ui=pi(1:3)/rho(pi)
+    uj=pj(1:3)/rho(pj)
+    ! Preserve the small opening angle also for antiparallel daughters.
+    ! A dot product of large momenta can lose several ulps near |y|=1.
+    if (sum(ui*uj).ge.0d0) then
+       get_yij_from_p=1d0-0.5d0*sum((ui-uj)**2)
+    else
+       get_yij_from_p=-1d0+0.5d0*sum((ui+uj)**2)
+    endif
   end function get_yij_from_p
   double precision function dot3(p1,p2)
     implicit none

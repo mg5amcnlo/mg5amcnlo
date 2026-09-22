@@ -2606,6 +2606,8 @@ c to Odagiri's prescription (hep-ph/9806531).
 c Computes barred azimuthal amplitudes (bornbarstilde) with
 c the same method 
       implicit none
+      double precision mc_born_flow_weight
+      external mc_born_flow_weight
 
       include "genps.inc"
       include "nexternal.inc"
@@ -2705,12 +2707,12 @@ c might flip when rotating the momenta.
             p_born_rot(3,i)=-p_born(3,i)
          enddo
          calculatedBorn=.false.
-         call sborn(p_born_rot,wgt_born)
-         if (iextra_cnt.gt.0) call extra_cnt(p_born_rot, iextra_cnt, ans_extra_cnt)
+         call sborn_native(p_born_rot,wgt_born)
+         if (iextra_cnt.gt.0) call extra_cnt_native(p_born_rot, iextra_cnt, ans_extra_cnt)
          calculatedBorn=.false.
       else
-         call sborn(p_born,wgt_born)
-         if (iextra_cnt.gt.0) call extra_cnt(p_born, iextra_cnt, ans_extra_cnt)
+         call sborn_native(p_born,wgt_born)
+         if (iextra_cnt.gt.0) call extra_cnt_native(p_born, iextra_cnt, ans_extra_cnt)
       endif
 
       do iord = 1, nsplitorders
@@ -2860,7 +2862,7 @@ CMZ! this has to be all changed according to the correct jamps
 c born is the total born amplitude squared
       sumborn=0.d0
       do i=1,max_bcol
-         if(is_leading_cflow(i))sumborn=sumborn+jamp2(i)
+         if(is_leading_cflow(i))sumborn=sumborn+mc_born_flow_weight(i)
 c sumborn is the sum of the leading-color amplitudes squared
       enddo
 
@@ -2868,12 +2870,12 @@ c BARRED AMPLITUDES
       do i=1,max_bcol
         do iord=1,nsplitorders
           if (sumborn.ne.0d0.and.is_leading_cflow(i)) then
-            bornbars(i,iord)=jamp2(i)/sumborn * born(iord) *iden_comp
+            bornbars(i,iord)=mc_born_flow_weight(i)/sumborn * born(iord) *iden_comp
             do iamp=1,amp_split_size
-              amp_split_bornbars(iamp,i,iord)=jamp2(i)/sumborn * 
+              amp_split_bornbars(iamp,i,iord)=mc_born_flow_weight(i)/sumborn *
      &                              amp_split_born(iamp,iord) *iden_comp
             enddo
-          elseif (born(iord).eq.0d0 .or. jamp2(i).eq.0d0
+          elseif (born(iord).eq.0d0 .or. mc_born_flow_weight(i).eq.0d0
      &           .or..not.is_leading_cflow(i)) then
             bornbars(i,iord)=0d0
             do iamp=1,amp_split_size
@@ -2884,12 +2886,12 @@ c BARRED AMPLITUDES
             stop
           endif
           if (sumborn.ne.0d0.and.is_leading_cflow(i)) then
-            bornbarstilde(i,iord)=jamp2(i)/sumborn * dble(borntilde(iord)) *iden_comp
+            bornbarstilde(i,iord)=mc_born_flow_weight(i)/sumborn * dble(borntilde(iord)) *iden_comp
             do iamp=1,amp_split_size
-              amp_split_bornbarstilde(iamp,i,iord)=jamp2(i)/sumborn * 
+              amp_split_bornbarstilde(iamp,i,iord)=mc_born_flow_weight(i)/sumborn *
      &                      dble(amp_split_borntilde(iamp,iord)) *iden_comp
             enddo
-          elseif (borntilde(iord).eq.0d0 .or. jamp2(i).eq.0d0
+          elseif (borntilde(iord).eq.0d0 .or. mc_born_flow_weight(i).eq.0d0
      &           .or..not.is_leading_cflow(i)) then
             bornbarstilde(i,iord)=0d0
             do iamp=1,amp_split_size

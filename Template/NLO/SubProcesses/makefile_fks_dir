@@ -26,6 +26,21 @@ LINKLIBS = -L$(LIBDIR) -ldhelas -lgeneric -lmodel -lpdf -lcernlib $(llhapdf)
 LIBS = $(LIBDIR)libdhelas.a $(LIBDIR)libgeneric.a $(LIBDIR)libmodel.a	\
 $(LIBDIR)libpdf.a $(LIBDIR)libcernlib.a
 
+# Search beside a scratch-staged executable and relative to an output P* dir.
+# These flags apply only to the support DSO; executables remain ordinary links.
+ifneq ("$(wildcard born_support.f)","")
+    ifeq ($(shell uname -s),Darwin)
+        BORN_SUPPORT_LIB = $(LIBDIR)libmc_born_support.dylib
+        BORN_SUPPORT_RPATH = -Wl,-rpath,@loader_path -Wl,-rpath,@loader_path/../../lib
+    else
+        BORN_SUPPORT_LIB = $(LIBDIR)libmc_born_support.so
+        BORN_SUPPORT_RPATH = -Wl,-rpath,'$$ORIGIN' -Wl,-rpath,'$$ORIGIN/../../lib'
+    endif
+    LINKLIBS += -lmc_born_support $(BORN_SUPPORT_RPATH)
+    LIBS += $(BORN_SUPPORT_LIB)
+    BORN_SUPPORT_OBJECTS = born_support.o mc_native_context.o mc_native_runtime.o mc_native_props.o
+endif
+
 ifneq ("$(wildcard ../../Source/RUNNING)","")
     LINKLIBS += -lrunning
     LIBS += $(LIBDIR)librunning.$(libext) 
@@ -40,7 +55,7 @@ FILES= $(patsubst %.f,%.o,$(wildcard parton_lum_*.f)) 			\
 	 FKSParams.o real_me_chooser.o chooser_functions.o recmom.o	\
 	 genps_fks.o setcuts.o setscales.o veto_xsec.o			\
 	 $(patsubst %.f,%.o,$(wildcard b_sf_???.f)) 			\
-	 born.o sborn_sf.o extra_cnt_wrapper.o				\
+	 born.o sborn_sf.o extra_cnt_wrapper.o $(BORN_SUPPORT_OBJECTS) \
 	 $(patsubst %.f,%.o,$(wildcard born_cnt_*.f))			\
 	 rescale_alpha_tagged.o						\
 	 fks_Sij.o $(fastjetfortran_madfks) fks_singular.o		\
@@ -77,7 +92,7 @@ RWGFILES=reweight_xsec_events.o handling_lhe_events.o recmom.o 		\
 	$(reweight_xsec_events_pdf_dummy) fill_MC_mshell.o cluster.o	\
 	get_color.o iproc_map.o chooser_functions.o 		\
 	pythia_unlops.o recluster.o splitorders_stuff.o reweight_xsec.o \
-	weight_lines.o orderstags_glob.o
+	weight_lines.o orderstags_glob.o $(BORN_SUPPORT_OBJECTS) born.o sborn_sf.o extra_cnt_wrapper.o
 
 %.o: %.f
 	$(FC) $(FFLAGS) -c -I. -I$(LIBDIR) $<
@@ -155,3 +170,20 @@ clean:
 	@rm -f *.o write_ajob_basic reweight_xsec_events madevent_* check_poles\
 	    test_M* gensym
 	for dir in `ls -d V*`; do cd $$dir; make clean; cd ../; done
+
+ifneq ("$(wildcard born_support.f)","")
+born.o born_hel.o sborn_sf.o extra_cnt_wrapper.o born_support.o: $(LIBDIR)mc_born_types.mod $(LIBDIR)mc_born_support.mod
+born.o born_hel.o sborn_sf.o extra_cnt_wrapper.o born_support.o: FFLAGS += -ffixed-line-length-none
+gensym test_soft_col_limits check_poles: $(BORN_SUPPORT_LIB)
+endif
+
+ifneq ("$(wildcard mc_native_context.f90)","")
+mc_native_context.o: $(LIBDIR)mc_born_types.mod $(LIBDIR)mc_born_support.mod
+mc_native_context.o: FFLAGS += -ffree-line-length-none
+mc_native_runtime.o mc_native_props.o chooser_functions.o genps_fks.o setcuts.o fks_singular.o driver_mintMC.o weight_lines.o iproc_map.o cluster.o: mc_native_context.o
+mc_native_runtime.o: FFLAGS += -ffixed-line-length-none
+endif
+
+# Native metadata dimensions are shared by all runtime COMMON declarations.
+# Regenerating a table must rebuild every Fortran consumer of that layout.
+$(filter %.o,$(FILES) $(RUN) $(MINTFO) $(MINTMC) $(POLES) $(TEST) $(SYM) $(RWGFILES)): genps.inc nFKSconfigs.inc maxconfigs.inc maxparticles.inc born_nhel.inc born_conf.inc born_coloramps.inc born_leshouche.inc fks_info.inc fks_symmetry.inc mc_histories.inc leshouche_decl.inc configs_and_props_decl.inc real_from_born_configs.inc

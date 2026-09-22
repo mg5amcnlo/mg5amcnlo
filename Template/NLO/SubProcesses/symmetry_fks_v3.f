@@ -87,7 +87,7 @@ c other things-- in a wrong shower starting scale.
       multi_channel=.true.
       nbody=.true.
 c Pick a process that is BORN+1GLUON (where the gluon is i_fks).
-      do nFKSprocess=1,fks_configs
+      do nFKSprocess=1,fks_integrated
          call fks_inc_chooser()
          if (is_aorg(i_fks)) exit
       enddo
@@ -96,7 +96,7 @@ c (this might happen in case of initial state leptons with
 c include_lepton_initiated_processes=False) the Born and virtuals do not
 c need to be included, but we still need to set the symmetry
 c factors. Hence, simply use the first fks_configuration.
-      if (nFKSprocess.gt.fks_configs) nFKSprocess=1
+      if (nFKSprocess.gt.fks_integrated) nFKSprocess=1
       call leshouche_inc_chooser()
       call setrun                !Sets up run parameters
       call setpara('param_card.dat')   !Sets up couplings and masses
@@ -321,7 +321,7 @@ c***************************************************************************
       
       j_fks_ini=.false.
       j_fks_fin=.false.
-      do i=1,fks_configs
+      do i=1,fks_integrated
          if (fks_j_d(i).le.nincoming) j_fks_ini=.true.
          if (fks_j_d(i).gt.nincoming) j_fks_fin=.true.
       enddo

@@ -397,7 +397,7 @@ c do the same as above for the counterevents
       use extra_weights
       implicit none
       include 'nexternal.inc'
-      integer i,idum,j,k,momenta_conf(2),ii,n_proc
+      integer i,idum,j,k,momenta_conf(2),ii,n_proc,ios
       icontr=n_ctr_found
       iwgt=1
       n_proc=1
@@ -407,6 +407,16 @@ c do the same as above for the counterevents
      &        ,idum,(pdg(j,i),j=1,nexternal),orderstag(i),QCDpower(i),(bjx(j,i),j=1
      &        ,2),(scales2(j,i),j=1,3),g_strong(i),(momenta_conf(j),j=1
      &        ,2),itype(i),nFKS(i),idum,idum,idum,wgts(1,i),bias_wgt(i)
+c The optional suffix preserves native provenance through offline reweighting.
+         native_ids(:,i)=0
+         event_nFKS(i)=nFKS(i)
+         read(n_ctr_str(i),*,iostat=ios)(wgt(j,i),j=1,3),
+     $        (wgt_ME_tree(j,i),j=1,2),idum,(pdg(j,i),j=1,nexternal),
+     $        orderstag(i),QCDpower(i),(bjx(j,i),j=1,2),
+     $        (scales2(j,i),j=1,3),g_strong(i),(momenta_conf(j),j=1,2),
+     $        itype(i),nFKS(i),idum,idum,idum,wgts(1,i),bias_wgt(i),
+     $        native_ids(:,i),event_nFKS(i)
+         if(ios.gt.0)stop 'Malformed native reweight provenance'
          do ii=1,2
             do j=1,nexternal
                do k=0,3

@@ -10,6 +10,7 @@ C common block has already been filled with the iforest
 C etc. information, the momenta are given in the pborn and pev common
 C blocks and the current integration channel is given by the to_mconfigs
 C common block.
+      use mc_native_context, only: native_epoch
       use weight_lines
       implicit none
       include 'nexternal.inc'
@@ -31,7 +32,9 @@ C common block.
       common/pev/      p_ev
       integer            this_config
       common/to_mconfigs/this_config
-      integer nfks1,iproc,iproc_input
+      integer nfks1,iproc,iproc_input,nFKSprocess
+      common/c_nFKSprocess/nFKSprocess
+      integer,save::epoch_save=-1
       parameter (nfks1=fks_configs+1)
       integer i,j,il_list,il_pdg,next,nbr,ipdg(nexternal,0:fks_configs)
      $     ,cluster_list(2*max_branch*lmaxconfigs*(fks_configs+1))
@@ -45,6 +48,10 @@ C common block.
       logical firsttime(0:fks_configs),skip_first,for_mcatnlo_scale
       data (firsttime(i),i=0,fks_configs) /nfks1*.true./
       save ipdg,cluster_list,cluster_pdg,cluster_type,firsttime
+      if(epoch_save.ne.native_epoch)then
+         firsttime=.true.
+         epoch_save=native_epoch
+      endif
       if (iproc_input.le.0) then      ! n-body contribution
          iproc=0
          next=nexternal-1
@@ -65,7 +72,11 @@ C common block.
       nbr=next-3 ! number of clusterings to get to a 2->1 process
       if (firsttime(iproc)) then
          cluster_type(1:maskr(nexternal),iproc)=0 ! set to zero
-         call set_pdg(0,max(1,abs(iproc_input))) ! use max() here to get something for iproc=0
+         if (iproc_input.eq.0) then
+            call set_pdg(0,nFKSprocess)
+         else
+            call set_pdg(0,abs(iproc_input))
+         endif
          if (iproc.le.0) then
             do i=1,next
                ipdg(i,iproc)=pdg_uborn(i,0)

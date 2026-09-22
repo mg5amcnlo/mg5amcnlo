@@ -78,6 +78,7 @@ c
 
 
       subroutine fks_inc_chooser()
+      use mc_native_context, only: activate_native_context
 c For a given nFKSprocess, it fills the c_fks_inc common block with the
 c fks.inc information
       implicit none
@@ -117,6 +118,7 @@ c fks.inc information
       double precision iden_comp,iden_comp_FKS(fks_configs)
       common /c_iden_comp/iden_comp,iden_comp_FKS
 c
+      call activate_native_context(nFKSprocess)
       i_fks=fks_i_D(nFKSprocess)
       j_fks=fks_j_D(nFKSprocess)
       extra_cnt = extra_cnt_D(nFKSprocess)
@@ -315,16 +317,17 @@ C read the various information from the configs_and_props_info.dat file
 C read the various information from the configs_and_props_info.dat file
       implicit none
       include "nexternal.inc"
+      include 'born_nhel.inc'
       integer itmp_array(nexternal)
       integer i,j,k,l
       character *200 buff
       include 'leshouche_decl.inc'
       include 'nFKSconfigs.inc'
       include 'fks_info.inc'
-      include 'born_maxamps.inc'
-      integer idup(nexternal,maxproc)
-      integer mothup(2,nexternal,maxproc)
-      integer icolup(2,nexternal,maxflow)
+      include 'genps.inc'
+      integer idup(nexternal-1,maxproc)
+      integer mothup(2,nexternal-1,maxproc)
+      integer icolup(2,nexternal-1,max_bcol)
       include 'born_leshouche.inc'
       if (fks_configs.eq.1) then
          if (pdg_type_d(1,fks_i_d(1)).eq.-21) then

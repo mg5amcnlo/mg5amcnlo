@@ -1,0 +1,545 @@
+/tmp/mg5_history_guard_final/wjet/bin/internal/amcatnlo_run_interface.py:3490: SyntaxWarning: invalid escape sequence '\d'
+  "-?(?P<v_frac>[\d\+-Eed\.]*)\s*")
+/tmp/mg5_history_guard_final/wjet/bin/internal/amcatnlo_run_interface.py:3655: SyntaxWarning: invalid escape sequence '\d'
+  "(?P<time>[\d\+-Eed\.]*)\s*")
+/tmp/mg5_history_guard_final/wjet/bin/internal/amcatnlo_run_interface.py:4297: SyntaxWarning: invalid escape sequence '\s'
+  pythiare = re.compile("\s*Les Houches User Process\(es\)\s+9999\s*\|\s*(?P<generated>\d+)\s+(?P<tried>\d+)\s+(?P<accepted>\d+)\s*\|\s*(?P<xsec>[\d\.DeE\-+]+)\s+(?P<xerr>[\d\.DeE\-+]+)\s*\|")
+/tmp/mg5_history_guard_final/wjet/bin/internal/amcatnlo_run_interface.py:4934: SyntaxWarning: invalid escape sequence '\d'
+  pattern = re.compile('for i in (\d+) ; do')
+/tmp/mg5_history_guard_final/wjet/bin/internal/extended_cmd.py:627: SyntaxWarning: invalid escape sequence '\ '
+  if line and begidx > 2 and line[begidx-2:begidx] == '\ ':
+/tmp/mg5_history_guard_final/wjet/bin/internal/extended_cmd.py:629: SyntaxWarning: invalid escape sequence '\ '
+  self.completion_prefix = Ntext.rsplit('\ ', 1)[0] + '\ '
+/tmp/mg5_history_guard_final/wjet/bin/internal/extended_cmd.py:629: SyntaxWarning: invalid escape sequence '\ '
+  self.completion_prefix = Ntext.rsplit('\ ', 1)[0] + '\ '
+/tmp/mg5_history_guard_final/wjet/bin/internal/extended_cmd.py:632: SyntaxWarning: invalid escape sequence '\ '
+  data = compfunc(Ntext.replace('\ ', ' '), line, Nbegidx, endidx)
+/tmp/mg5_history_guard_final/wjet/bin/internal/extended_cmd.py:745: SyntaxWarning: invalid escape sequence '\ '
+  completion = [a.replace(' ','\ ') for a in completion]
+/tmp/mg5_history_guard_final/wjet/bin/internal/extended_cmd.py:1256: SyntaxWarning: invalid escape sequence '\s'
+  line,n = re.subn('\s*=\s*','=', line)
+/tmp/mg5_history_guard_final/wjet/bin/internal/extended_cmd.py:1314: SyntaxWarning: invalid escape sequence '\ '
+  super(Cmd,self).onecmd('history %s' % self.debug_output.replace(' ', '\ '))
+/tmp/mg5_history_guard_final/wjet/bin/internal/extended_cmd.py:2193: SyntaxWarning: invalid escape sequence '\['
+  pat = re.compile('\[(\d*)s to answer\]')
+/tmp/mg5_history_guard_final/wjet/bin/internal/extended_cmd.py:2994: SyntaxWarning: invalid escape sequence '\ '
+  """should return four lines:
+/tmp/mg5_history_guard_final/wjet/bin/internal/extended_cmd.py:3242: SyntaxWarning: invalid escape sequence '\('
+  f2 = re.sub('%(\((?:name|descrip|add_info)\)-?)(\d+)s',
+/tmp/mg5_history_guard_final/wjet/bin/internal/extended_cmd.py:3248: SyntaxWarning: invalid escape sequence '\('
+  f3 = re.sub('%(\((?:name|descrip|add_info)\)-?)(\d+)s',
+/tmp/mg5_history_guard_final/wjet/bin/internal/misc.py:70: SyntaxWarning: invalid escape sequence '\w'
+  pattern = re.compile("(?P<name>\w*)\s*=\s*(?P<value>.*)",
+/tmp/mg5_history_guard_final/wjet/bin/internal/misc.py:87: SyntaxWarning: invalid escape sequence '\?'
+  path = re.sub('(?P<name>\?|\*|\[|\])', '[\g<name>]', path)
+/tmp/mg5_history_guard_final/wjet/bin/internal/misc.py:87: SyntaxWarning: invalid escape sequence '\g'
+  path = re.sub('(?P<name>\?|\*|\[|\])', '[\g<name>]', path)
+/tmp/mg5_history_guard_final/wjet/bin/internal/misc.py:617: SyntaxWarning: invalid escape sequence '\s'
+  comp_re = re.compile('^(\s*)FC\s*=\s*(.+)\s*$')
+/tmp/mg5_history_guard_final/wjet/bin/internal/misc.py:620: SyntaxWarning: invalid escape sequence '\s'
+  comp_re = re.compile('^(\s*)CXX\s*=\s*(.+)\s*$')
+/tmp/mg5_history_guard_final/wjet/bin/internal/misc.py:864: SyntaxWarning: invalid escape sequence '\s'
+  comp = re.compile("^\s*FC\s*=\s*([\w\/\\.\-]+)\s*")
+/tmp/mg5_history_guard_final/wjet/bin/internal/misc.py:866: SyntaxWarning: invalid escape sequence '\s'
+  comp = re.compile("^\s*CXX\s*=\s*([\w\/\\.\-]+)\s*")
+/tmp/mg5_history_guard_final/wjet/bin/internal/misc.py:1898: SyntaxWarning: invalid escape sequence '\ '
+  "*          *         / .^   ^.         \         *         *\n" + \
+/tmp/mg5_history_guard_final/wjet/bin/internal/misc.py:1903: SyntaxWarning: invalid escape sequence '\ '
+  "*            *       \                 /       *           *\n" + \
+/tmp/mg5_history_guard_final/wjet/bin/internal/misc.py:1912: SyntaxWarning: invalid escape sequence '\_'
+  "* M::::::M M::::M M::::M M::::::M   | \__ \                *\n" + \
+/tmp/mg5_history_guard_final/wjet/bin/internal/misc.py:1916: SyntaxWarning: invalid escape sequence '\|'
+  "* M::::::M     MMMMM     M::::::M   | |_ / _ \| '__|       *\n" + \
+/tmp/mg5_history_guard_final/wjet/bin/internal/misc.py:1918: SyntaxWarning: invalid escape sequence '\/'
+  "* M::::::M               M::::::M   |_/\/\___/|_|          *\n" + \
+/tmp/mg5_history_guard_final/wjet/bin/internal/common_run_interface.py:730: SyntaxWarning: invalid escape sequence '\s'
+  found = re.search("PARAMETER\s*\(NINCOMING=(\d)\)", nexternal)
+/tmp/mg5_history_guard_final/wjet/bin/internal/common_run_interface.py:1169: SyntaxWarning: invalid escape sequence '\s'
+  'block\s+mw_run',
+/tmp/mg5_history_guard_final/wjet/bin/internal/common_run_interface.py:1174: SyntaxWarning: invalid escape sequence '\.'
+  'transfer_card\.dat',
+/tmp/mg5_history_guard_final/wjet/bin/internal/common_run_interface.py:1178: SyntaxWarning: invalid escape sequence '\s'
+  '@MG5aMC\s*inputs\s*=\s*\*\.(?:hepmc|lhe)', #MA5 --both--
+/tmp/mg5_history_guard_final/wjet/bin/internal/common_run_interface.py:1179: SyntaxWarning: invalid escape sequence '\s'
+  '@MG5aMC\s*reconstruction_name', # MA5 hadronique
+/tmp/mg5_history_guard_final/wjet/bin/internal/common_run_interface.py:1238: SyntaxWarning: invalid escape sequence '\s'
+  if re.search("(^|;)\s*decay", fulltext, re.M):
+/tmp/mg5_history_guard_final/wjet/bin/internal/common_run_interface.py:4314: SyntaxWarning: invalid escape sequence '\$'
+  ['--path=', '--output=', '--min_br=0.\$', '--nlo',
+/tmp/mg5_history_guard_final/wjet/bin/internal/common_run_interface.py:4315: SyntaxWarning: invalid escape sequence '\$'
+  '--precision_channel=0.\$', '--body_decay='])
+/tmp/mg5_history_guard_final/wjet/bin/internal/common_run_interface.py:5790: SyntaxWarning: invalid escape sequence '\s'
+  p_card, n = re.subn('''^\s*QCUT\s*=\s*[\de\+\-\.]*\s*$''',
+/tmp/mg5_history_guard_final/wjet/bin/internal/common_run_interface.py:5804: SyntaxWarning: invalid escape sequence '\s'
+  p_card, n = re.subn('''^\s*SHOWERKT\s*=\s*[default\de\+\-\.]*\s*$''',
+/tmp/mg5_history_guard_final/wjet/bin/internal/common_run_interface.py:7075: SyntaxWarning: invalid escape sequence '\+'
+  particle = particle.replace('+','\+').replace('-','\-')
+/tmp/mg5_history_guard_final/wjet/bin/internal/common_run_interface.py:7075: SyntaxWarning: invalid escape sequence '\-'
+  particle = particle.replace('+','\+').replace('-','\-')
+/tmp/mg5_history_guard_final/wjet/bin/internal/common_run_interface.py:7192: SyntaxWarning: invalid escape sequence '\s'
+  logger.info('    Note: all regular-expression will be prefixed by ^\s*')
+/tmp/mg5_history_guard_final/wjet/bin/internal/common_run_interface.py:7313: SyntaxWarning: invalid escape sequence '\s'
+  pattern = '^\s*' + re.search(search_pattern, line).group()[14:-1]
+/tmp/mg5_history_guard_final/wjet/bin/internal/common_run_interface.py:7343: SyntaxWarning: invalid escape sequence '\s'
+  pattern = '^\s*' + re.search(search_pattern, line).group()[14:-1]
+/tmp/mg5_history_guard_final/wjet/bin/internal/common_run_interface.py:7365: SyntaxWarning: invalid escape sequence '\s'
+  pattern = '^\s*' + re.search(search_pattern, line).group()[13:-1]
+/tmp/mg5_history_guard_final/wjet/bin/internal/common_run_interface.py:7382: SyntaxWarning: invalid escape sequence '\s'
+  pattern = '^\s*' + re.search(search_pattern, line).group()[12:-1]
+/tmp/mg5_history_guard_final/wjet/bin/internal/banner.py:119: SyntaxWarning: invalid escape sequence '\w'
+  pat_begin=re.compile('<(?P<name>\w*)>')
+/tmp/mg5_history_guard_final/wjet/bin/internal/banner.py:120: SyntaxWarning: invalid escape sequence '\w'
+  pat_end=re.compile('</(?P<name>\w*)>')
+/tmp/mg5_history_guard_final/wjet/bin/internal/banner.py:1443: SyntaxWarning: invalid escape sequence '\*'
+  split = re.split('(\*|/)',value)
+/tmp/mg5_history_guard_final/wjet/bin/internal/banner.py:1481: SyntaxWarning: invalid escape sequence '\*'
+  split = re.split('(\*|/)',value)
+/tmp/mg5_history_guard_final/wjet/bin/internal/banner.py:3034: SyntaxWarning: invalid escape sequence '\%'
+  written = written.union(set(re.findall('\%\((\w*)\)s', open(template,'r').read(), re.M)))
+/tmp/mg5_history_guard_final/wjet/bin/internal/banner.py:3122: SyntaxWarning: invalid escape sequence '\s'
+  pattern = re.compile('^\s+(?:SUBROUTINE|(?:%(type)s)\s+function)\s+([a-zA-Z]\w*)' \
+/tmp/mg5_history_guard_final/wjet/bin/internal/banner.py:3209: SyntaxWarning: invalid escape sequence '\<'
+  for key,val in re.findall("\<(?P<key>[_\-\w]+)\=(?P<value>[^>]*)\>", str(name)):
+/tmp/mg5_history_guard_final/wjet/bin/internal/file_writers.py:39: SyntaxWarning: invalid escape sequence '\s'
+  "\s*(?P<command>%s)\s*\(\s*(?P<body>.*)\s*\)\s*{\s*"\
+/tmp/mg5_history_guard_final/wjet/bin/internal/file_writers.py:42: SyntaxWarning: invalid escape sequence '\s'
+  "\s*}\s*(?P<endif>else)?\s*(\((?P<body>.*)\))?\s*(?P<new_block>{)?\s*")
+/tmp/mg5_history_guard_final/wjet/bin/internal/file_writers.py:194: SyntaxWarning: invalid escape sequence '\s'
+  keyword_pairs = {'^if.+then\s*$': ('^endif', 2),
+/tmp/mg5_history_guard_final/wjet/bin/internal/file_writers.py:195: SyntaxWarning: invalid escape sequence '\s'
+  '^type(?!\s*\()\s*.+\s*$': ('^endtype', 2),
+/tmp/mg5_history_guard_final/wjet/bin/internal/file_writers.py:196: SyntaxWarning: invalid escape sequence '\s'
+  '^do(?!\s+\d+)\s+': ('^enddo\s*$', 2),
+/tmp/mg5_history_guard_final/wjet/bin/internal/file_writers.py:196: SyntaxWarning: invalid escape sequence '\s'
+  '^do(?!\s+\d+)\s+': ('^enddo\s*$', 2),
+/tmp/mg5_history_guard_final/wjet/bin/internal/file_writers.py:197: SyntaxWarning: invalid escape sequence '\s'
+  '^subroutine': ('^end\s*$', 0),
+/tmp/mg5_history_guard_final/wjet/bin/internal/file_writers.py:198: SyntaxWarning: invalid escape sequence '\s'
+  '^module': ('^end\s*$', 0),
+/tmp/mg5_history_guard_final/wjet/bin/internal/file_writers.py:199: SyntaxWarning: invalid escape sequence '\s'
+  'function': ('^end\s*$', 0)}
+/tmp/mg5_history_guard_final/wjet/bin/internal/file_writers.py:200: SyntaxWarning: invalid escape sequence '\s'
+  single_indents = {'^else\s*$':-2,
+/tmp/mg5_history_guard_final/wjet/bin/internal/file_writers.py:201: SyntaxWarning: invalid escape sequence '\s'
+  '^else\s*if.+then\s*$':-2}
+/tmp/mg5_history_guard_final/wjet/bin/internal/file_writers.py:202: SyntaxWarning: invalid escape sequence '\d'
+  number_re = re.compile('^(?P<num>\d+)\s+(?P<rest>.*)')
+/tmp/mg5_history_guard_final/wjet/bin/internal/file_writers.py:430: SyntaxWarning: invalid escape sequence '\s'
+  pattern = re.compile('^\s+(?:SUBROUTINE|(?:%(type)s)\s+function)\s+([a-zA-Z]\w*)' \
+/tmp/mg5_history_guard_final/wjet/bin/internal/file_writers.py:496: SyntaxWarning: invalid escape sequence '\s'
+  spacing_patterns = [('\s*\"\s*}', '\"'),
+/tmp/mg5_history_guard_final/wjet/bin/internal/file_writers.py:497: SyntaxWarning: invalid escape sequence '\s'
+  ('\s*,\s*', ', '),
+/tmp/mg5_history_guard_final/wjet/bin/internal/file_writers.py:498: SyntaxWarning: invalid escape sequence '\s'
+  ('\s*-\s*', ' - '),
+/tmp/mg5_history_guard_final/wjet/bin/internal/file_writers.py:499: SyntaxWarning: invalid escape sequence '\s'
+  ('([{(,=])\s*-\s*', '\g<1> -'),
+/tmp/mg5_history_guard_final/wjet/bin/internal/file_writers.py:499: SyntaxWarning: invalid escape sequence '\g'
+  ('([{(,=])\s*-\s*', '\g<1> -'),
+/tmp/mg5_history_guard_final/wjet/bin/internal/file_writers.py:500: SyntaxWarning: invalid escape sequence '\s'
+  ('(return)\s*-\s*', '\g<1> -'),
+/tmp/mg5_history_guard_final/wjet/bin/internal/file_writers.py:500: SyntaxWarning: invalid escape sequence '\g'
+  ('(return)\s*-\s*', '\g<1> -'),
+/tmp/mg5_history_guard_final/wjet/bin/internal/file_writers.py:501: SyntaxWarning: invalid escape sequence '\s'
+  ('\s*\+\s*', ' + '),
+/tmp/mg5_history_guard_final/wjet/bin/internal/file_writers.py:502: SyntaxWarning: invalid escape sequence '\s'
+  ('([{(,=])\s*\+\s*', '\g<1> +'),
+/tmp/mg5_history_guard_final/wjet/bin/internal/file_writers.py:502: SyntaxWarning: invalid escape sequence '\g'
+  ('([{(,=])\s*\+\s*', '\g<1> +'),
+/tmp/mg5_history_guard_final/wjet/bin/internal/file_writers.py:503: SyntaxWarning: invalid escape sequence '\('
+  ('\(\s*', '('),
+/tmp/mg5_history_guard_final/wjet/bin/internal/file_writers.py:504: SyntaxWarning: invalid escape sequence '\s'
+  ('\s*\)', ')'),
+/tmp/mg5_history_guard_final/wjet/bin/internal/file_writers.py:505: SyntaxWarning: invalid escape sequence '\{'
+  ('\{\s*', '{'),
+/tmp/mg5_history_guard_final/wjet/bin/internal/file_writers.py:506: SyntaxWarning: invalid escape sequence '\s'
+  ('\s*\}', '}'),
+/tmp/mg5_history_guard_final/wjet/bin/internal/file_writers.py:507: SyntaxWarning: invalid escape sequence '\s'
+  ('\s*=\s*', ' = '),
+/tmp/mg5_history_guard_final/wjet/bin/internal/file_writers.py:508: SyntaxWarning: invalid escape sequence '\s'
+  ('\s*>\s*', ' > '),
+/tmp/mg5_history_guard_final/wjet/bin/internal/file_writers.py:509: SyntaxWarning: invalid escape sequence '\s'
+  ('\s*<\s*', ' < '),
+/tmp/mg5_history_guard_final/wjet/bin/internal/file_writers.py:510: SyntaxWarning: invalid escape sequence '\s'
+  ('\s*!\s*', ' !'),
+/tmp/mg5_history_guard_final/wjet/bin/internal/file_writers.py:511: SyntaxWarning: invalid escape sequence '\s'
+  ('\s*/\s*', '/'),
+/tmp/mg5_history_guard_final/wjet/bin/internal/file_writers.py:512: SyntaxWarning: invalid escape sequence '\s'
+  ('\s*\*\s*', ' * '),
+/tmp/mg5_history_guard_final/wjet/bin/internal/file_writers.py:513: SyntaxWarning: invalid escape sequence '\s'
+  ('\s*-\s+-\s*', '-- '),
+/tmp/mg5_history_guard_final/wjet/bin/internal/file_writers.py:514: SyntaxWarning: invalid escape sequence '\s'
+  ('\s*\+\s+\+\s*', '++ '),
+/tmp/mg5_history_guard_final/wjet/bin/internal/file_writers.py:515: SyntaxWarning: invalid escape sequence '\s'
+  ('\s*-\s+=\s*', ' -= '),
+/tmp/mg5_history_guard_final/wjet/bin/internal/file_writers.py:516: SyntaxWarning: invalid escape sequence '\s'
+  ('\s*\+\s+=\s*', ' += '),
+/tmp/mg5_history_guard_final/wjet/bin/internal/file_writers.py:517: SyntaxWarning: invalid escape sequence '\s'
+  ('\s*\*\s+=\s*', ' *= '),
+/tmp/mg5_history_guard_final/wjet/bin/internal/file_writers.py:518: SyntaxWarning: invalid escape sequence '\s'
+  ('\s*/=\s*', ' /= '),
+/tmp/mg5_history_guard_final/wjet/bin/internal/file_writers.py:519: SyntaxWarning: invalid escape sequence '\s'
+  ('\s*>\s+>\s*', ' >> '),
+/tmp/mg5_history_guard_final/wjet/bin/internal/file_writers.py:520: SyntaxWarning: invalid escape sequence '\s'
+  ('<\s*double\s*>>\s*', '<double> > '),
+/tmp/mg5_history_guard_final/wjet/bin/internal/file_writers.py:521: SyntaxWarning: invalid escape sequence '\s'
+  ('\s*<\s+<\s*', ' << '),
+/tmp/mg5_history_guard_final/wjet/bin/internal/file_writers.py:522: SyntaxWarning: invalid escape sequence '\s'
+  ('\s*-\s+>\s*', '->'),
+/tmp/mg5_history_guard_final/wjet/bin/internal/file_writers.py:523: SyntaxWarning: invalid escape sequence '\s'
+  ('\s*=\s+=\s*', ' == '),
+/tmp/mg5_history_guard_final/wjet/bin/internal/file_writers.py:524: SyntaxWarning: invalid escape sequence '\s'
+  ('\s*!\s+=\s*', ' != '),
+/tmp/mg5_history_guard_final/wjet/bin/internal/file_writers.py:525: SyntaxWarning: invalid escape sequence '\s'
+  ('\s*>\s+=\s*', ' >= '),
+/tmp/mg5_history_guard_final/wjet/bin/internal/file_writers.py:526: SyntaxWarning: invalid escape sequence '\s'
+  ('\s*<\s+=\s*', ' <= '),
+/tmp/mg5_history_guard_final/wjet/bin/internal/file_writers.py:527: SyntaxWarning: invalid escape sequence '\s'
+  ('\s*&&\s*', ' && '),
+/tmp/mg5_history_guard_final/wjet/bin/internal/file_writers.py:528: SyntaxWarning: invalid escape sequence '\s'
+  ('\s*\|\|\s*', ' || '),
+/tmp/mg5_history_guard_final/wjet/bin/internal/file_writers.py:529: SyntaxWarning: invalid escape sequence '\s'
+  ('\s*{\s*}', ' {}'),
+/tmp/mg5_history_guard_final/wjet/bin/internal/file_writers.py:530: SyntaxWarning: invalid escape sequence '\s'
+  ('\s*;\s*', '; '),
+/tmp/mg5_history_guard_final/wjet/bin/internal/file_writers.py:531: SyntaxWarning: invalid escape sequence '\s'
+  (';\s*\}', ';}'),
+/tmp/mg5_history_guard_final/wjet/bin/internal/file_writers.py:532: SyntaxWarning: invalid escape sequence '\s'
+  (';\s*$}', ';'),
+/tmp/mg5_history_guard_final/wjet/bin/internal/file_writers.py:533: SyntaxWarning: invalid escape sequence '\s'
+  ('\s*<\s*([a-zA-Z0-9]+?)\s*>', '<\g<1>>'),
+/tmp/mg5_history_guard_final/wjet/bin/internal/file_writers.py:533: SyntaxWarning: invalid escape sequence '\g'
+  ('\s*<\s*([a-zA-Z0-9]+?)\s*>', '<\g<1>>'),
+/tmp/mg5_history_guard_final/wjet/bin/internal/file_writers.py:534: SyntaxWarning: invalid escape sequence '\s'
+  ('^#include\s*<\s*(.*?)\s*>', '#include <\g<1>>'),
+/tmp/mg5_history_guard_final/wjet/bin/internal/file_writers.py:534: SyntaxWarning: invalid escape sequence '\g'
+  ('^#include\s*<\s*(.*?)\s*>', '#include <\g<1>>'),
+/tmp/mg5_history_guard_final/wjet/bin/internal/file_writers.py:535: SyntaxWarning: invalid escape sequence '\d'
+  ('(\d+\.{0,1}\d*|\.\d+)\s*[eE]\s*([+-]{0,1})\s*(\d+)',
+/tmp/mg5_history_guard_final/wjet/bin/internal/file_writers.py:536: SyntaxWarning: invalid escape sequence '\g'
+  '\g<1>e\g<2>\g<3>'),
+/tmp/mg5_history_guard_final/wjet/bin/internal/file_writers.py:537: SyntaxWarning: invalid escape sequence '\s'
+  ('\s+',' ')]
+/tmp/mg5_history_guard_final/wjet/bin/internal/check_param_card.py:652: SyntaxWarning: invalid escape sequence '\w'
+  scales = list(set(re.findall('mdl__(\w*)__scale', text, re.I)))
+/tmp/mg5_history_guard_final/wjet/bin/internal/shower_card.py:291: SyntaxWarning: invalid escape sequence '\s'
+  key_re = re.compile('^(\s*)([\S^#]+)(\s*)=(\s*)([^#]*?)(\s*)(\#.*|$)')
+/tmp/mg5_history_guard_final/wjet/bin/internal/cluster.py:938: SyntaxWarning: invalid escape sequence '\d'
+  pat = re.compile("submitted to cluster (\d*)",re.MULTILINE)
+/tmp/mg5_history_guard_final/wjet/bin/internal/cluster.py:1027: SyntaxWarning: invalid escape sequence '\d'
+  pat = re.compile("submitted to cluster (\d*)",re.MULTILINE)
+/tmp/mg5_history_guard_final/wjet/bin/internal/cluster.py:1590: SyntaxWarning: invalid escape sequence '\d'
+  pat = re.compile("Your job (\d*) \(",re.MULTILINE)
+/tmp/mg5_history_guard_final/wjet/bin/internal/cluster.py:1608: SyntaxWarning: invalid escape sequence '\d'
+  pat = re.compile("^(\d+)\s+[\d\.]+\s+[\w\d\.]+\s+[\w\d\.]+\s+(\w+)\s")
+/tmp/mg5_history_guard_final/wjet/bin/internal/cluster.py:1638: SyntaxWarning: invalid escape sequence '\d'
+  pat = re.compile("^(\d+)")
+/tmp/mg5_history_guard_final/wjet/bin/internal/cluster.py:1738: SyntaxWarning: invalid escape sequence '\d'
+  id = re.findall('Submitted batch job ([\d\.]+)', ' '.join(output_arr))
+/tmp/mg5_history_guard_final/wjet/bin/internal/gen_crossxhtml.py:651: SyntaxWarning: invalid escape sequence '\s'
+  pythiare = re.compile("\s*I\s+0 All included subprocesses\s+I\s+(?P<generated>\d+)\s+(?P<tried>\d+)\s+I\s+(?P<xsec>[\d\.D\-+]+)\s+I")
+/tmp/mg5_history_guard_final/wjet/bin/internal/gen_crossxhtml.py:1626: SyntaxWarning: invalid escape sequence '\S'
+  pat = re.compile('(http[\S]*)')
+/tmp/mg5_history_guard_final/wjet/bin/internal/lhe_parser.py:1544: SyntaxWarning: invalid escape sequence '\s'
+  Event.loweight_pattern = re.compile('''<rscale>\s*(?P<nqcd>\d+)\s+(?P<ren_scale>[\d.e+-]+)\s*</rscale>\s*\n\s*
+/tmp/mg5_history_guard_final/wjet/bin/internal/lhe_parser.py:1601: SyntaxWarning: invalid escape sequence '\s'
+  pattern  = re.compile("<scales\s|</scales>")
+/tmp/mg5_history_guard_final/wjet/bin/internal/lhe_parser.py:1609: SyntaxWarning: invalid escape sequence '\d'
+  pattern = re.compile("pt_clust_(\d*)=\"([\de+-.]*)\"")
+/tmp/mg5_history_guard_final/wjet/bin/internal/lhe_parser.py:1633: SyntaxWarning: invalid escape sequence '\w'
+  pattern2 = re.compile("<(?P<tag>[\w]*)(?:\s*(\w*)=[\"'](.*)[\"']\s*|\s*)>(.*)</(?P=tag)>")
+INFO: ************************************************************
+*                                                          *
+*           W E L C O M E  to  M A D G R A P H 5           *
+*                       a M C @ N L O                      *
+*                                                          *
+*                 *                       *                *
+*                   *        * *        *                  *
+*                     * * * * 5 * * * *                    *
+*                   *        * *        *                  *
+*                 *                       *                *
+*                                                          *
+*         VERSION 5.3.5.3                                  *
+*                                                          *
+*    The MadGraph5_aMC@NLO Development Team - Find us at   *
+*                 http://amcatnlo.cern.ch                  *
+*                                                          *
+*               Type 'help' for in-line help.              *
+*                                                          *
+************************************************************ 
+INFO: load configuration from /nfs/home/rikkert/.mg5/mg5_configuration.txt  
+INFO: load configuration from /tmp/mg5_history_guard_final/wjet/Cards/amcatnlo_configuration.txt  
+INFO: load configuration from /export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun/input/mg5_configuration.txt  
+INFO: load configuration from /tmp/mg5_history_guard_final/wjet/Cards/amcatnlo_configuration.txt  
+Using default eps viewer "evince". Set another one in ./input/mg5_configuration.txt
+Using default web browser "firefox". Set another one in ./input/mg5_configuration.txt
+import command verify.cmd
+set automatic_html_opening False --no_save
+set notification_center False --no_save
+set run_mode 2 --no_save
+set nb_core 3 --no_save
+set fastjet /export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun/validation/mcatnlo_xsections_f81ea6917/fastjet-config --no_save
+launch NLO -f --name=history_guard_fo
+stty: 'standard input': Inappropriate ioctl for device
+stty: 'standard input': Inappropriate ioctl for device
+INFO: will run in mode: NLO 
+INFO: Starting run 
+INFO: Compiling the code 
+INFO: Using built-in libraries for PDFs 
+/tmp/mg5_history_guard_final/wjet/bin/internal/ufomodel/parameters.py:22: SyntaxWarning: invalid escape sequence '\l'
+  texname = '\lambda_{HV}')
+/tmp/mg5_history_guard_final/wjet/bin/internal/ufomodel/CT_parameters.py:42: SyntaxWarning: invalid escape sequence '\d'
+  texname = '\delta Gg')
+/tmp/mg5_history_guard_final/wjet/bin/internal/ufomodel/CT_parameters.py:47: SyntaxWarning: invalid escape sequence '\d'
+  texname = '\delta Gq')
+/tmp/mg5_history_guard_final/wjet/bin/internal/ufomodel/CT_parameters.py:53: SyntaxWarning: invalid escape sequence '\d'
+  texname = '\delta Gc')
+/tmp/mg5_history_guard_final/wjet/bin/internal/ufomodel/CT_parameters.py:59: SyntaxWarning: invalid escape sequence '\d'
+  texname = '\delta Gb')
+/tmp/mg5_history_guard_final/wjet/bin/internal/ufomodel/CT_parameters.py:65: SyntaxWarning: invalid escape sequence '\d'
+  texname = '\delta Gt')
+/tmp/mg5_history_guard_final/wjet/bin/internal/ufomodel/CT_parameters.py:72: SyntaxWarning: invalid escape sequence '\d'
+  texname = '\delta G_{wfct\_c}')
+/tmp/mg5_history_guard_final/wjet/bin/internal/ufomodel/CT_parameters.py:79: SyntaxWarning: invalid escape sequence '\d'
+  texname = '\delta G_{wfct\_b}')
+/tmp/mg5_history_guard_final/wjet/bin/internal/ufomodel/CT_parameters.py:86: SyntaxWarning: invalid escape sequence '\d'
+  texname = '\delta G_{wfct\_t}')
+/tmp/mg5_history_guard_final/wjet/bin/internal/ufomodel/CT_parameters.py:93: SyntaxWarning: invalid escape sequence '\d'
+  texname = '\delta Z_c')
+/tmp/mg5_history_guard_final/wjet/bin/internal/ufomodel/CT_parameters.py:100: SyntaxWarning: invalid escape sequence '\d'
+  texname = '\delta Z_b')
+/tmp/mg5_history_guard_final/wjet/bin/internal/ufomodel/CT_parameters.py:107: SyntaxWarning: invalid escape sequence '\d'
+  texname = '\delta Z_t')
+/tmp/mg5_history_guard_final/wjet/bin/internal/ufomodel/CT_parameters.py:114: SyntaxWarning: invalid escape sequence '\d'
+  texname = '\delta m_b')
+/tmp/mg5_history_guard_final/wjet/bin/internal/ufomodel/CT_parameters.py:121: SyntaxWarning: invalid escape sequence '\d'
+  texname = '\delta m_c')
+/tmp/mg5_history_guard_final/wjet/bin/internal/ufomodel/CT_parameters.py:128: SyntaxWarning: invalid escape sequence '\d'
+  texname = '\delta m_t')
+/tmp/mg5_history_guard_final/wjet/bin/internal/ufomodel/CT_parameters.py:139: SyntaxWarning: invalid escape sequence '\d'
+  texname = '\delta y_c')
+/tmp/mg5_history_guard_final/wjet/bin/internal/ufomodel/CT_parameters.py:146: SyntaxWarning: invalid escape sequence '\d'
+  texname = '\delta y_b')
+/tmp/mg5_history_guard_final/wjet/bin/internal/ufomodel/CT_parameters.py:153: SyntaxWarning: invalid escape sequence '\d'
+  texname = '\delta y_t')
+INFO: Compiling source... 
+INFO:           ...done, continuing with P* directories 
+INFO: Compiling directories... 
+INFO: Compiling on 3 cores 
+INFO:  Compiling P0_gu_wpd... 
+INFO:  Compiling P0_gdx_wpux... 
+INFO:  Compiling P0_ug_wpd... 
+INFO:     P0_gu_wpd done. 
+INFO:  Compiling P0_udx_wpg... 
+INFO:     P0_gdx_wpux done. 
+INFO:  Compiling P0_dxg_wpux... 
+INFO:     P0_ug_wpd done. 
+INFO:  Compiling P0_dxu_wpg... 
+INFO:     P0_udx_wpg done. 
+INFO:     P0_dxu_wpg done. 
+INFO:     P0_dxg_wpux done. 
+INFO: Checking test output: 
+INFO: P0_gu_wpd 
+INFO:  Result for test_ME: 
+INFO:    Passed. 
+INFO:  Result for check_poles: 
+INFO:    Poles successfully cancel for 20 points over 20 (tolerance=1.0e-05) 
+INFO: P0_gdx_wpux 
+INFO:  Result for test_ME: 
+INFO:    Passed. 
+INFO:  Result for check_poles: 
+INFO:    Poles successfully cancel for 20 points over 20 (tolerance=1.0e-05) 
+INFO: P0_ug_wpd 
+INFO:  Result for test_ME: 
+INFO:    Passed. 
+INFO:  Result for check_poles: 
+INFO:    Poles successfully cancel for 20 points over 20 (tolerance=1.0e-05) 
+INFO: P0_udx_wpg 
+INFO:  Result for test_ME: 
+INFO:    Passed. 
+INFO:  Result for check_poles: 
+INFO:    Poles successfully cancel for 20 points over 20 (tolerance=1.0e-05) 
+INFO: P0_dxg_wpux 
+INFO:  Result for test_ME: 
+INFO:    Passed. 
+INFO:  Result for check_poles: 
+INFO:    Poles successfully cancel for 20 points over 20 (tolerance=1.0e-05) 
+INFO: P0_dxu_wpg 
+INFO:  Result for test_ME: 
+INFO:    Passed. 
+INFO:  Result for check_poles: 
+INFO:    Poles successfully cancel for 20 points over 20 (tolerance=1.0e-05) 
+INFO: Starting run 
+INFO: Using 3 cores 
+INFO: Cleaning previous results 
+INFO: Doing fixed order NLO 
+INFO: Setting up grids 
+INFO:  Idle: 3,  Running: 3,  Completed: 0 [ current time: 10h11 ] 
+INFO:  Idle: 2,  Running: 3,  Completed: 1 [  6.6s  ] 
+INFO:  Idle: 1,  Running: 3,  Completed: 2 [  7.5s  ] 
+INFO:  Idle: 0,  Running: 3,  Completed: 3 [  7.9s  ] 
+INFO:  Idle: 0,  Running: 2,  Completed: 4 [  11.1s  ] 
+INFO:  Idle: 0,  Running: 1,  Completed: 5 [  15.5s  ] 
+INFO:  Idle: 0,  Running: 0,  Completed: 6 [  16.2s  ] 
+sum of cpu time of last step: 0 second
+INFO: 
+      Results after grid setup:
+      Total cross section:      1.676e+04 +- 2.0e+02 pb
+ 
+INFO: Refining results, step 1 
+INFO:  Idle: 9,  Running: 3,  Completed: 0 [ current time: 10h11 ] 
+INFO:  Idle: 8,  Running: 3,  Completed: 1 [  53.6s  ] 
+INFO:  Idle: 7,  Running: 3,  Completed: 2 [  1m 16s  ] 
+INFO:  Idle: 6,  Running: 3,  Completed: 3 [  1m 21s  ] 
+INFO:  Idle: 5,  Running: 3,  Completed: 4 [  1m 50s  ] 
+INFO:  Idle: 4,  Running: 3,  Completed: 5 [  2m 7s  ] 
+INFO:  Idle: 3,  Running: 3,  Completed: 6 [  2m 24s  ] 
+INFO:  Idle: 2,  Running: 3,  Completed: 7 [  2m 37s  ] 
+INFO:  Idle: 1,  Running: 3,  Completed: 8 [  2m 53s  ] 
+INFO:  Idle: 0,  Running: 3,  Completed: 9 [  3m 5s  ] 
+INFO:  Idle: 0,  Running: 2,  Completed: 10 [  3m 18s  ] 
+INFO:  Idle: 0,  Running: 1,  Completed: 11 [  3m 25s  ] 
+INFO:  Idle: 0,  Running: 0,  Completed: 12 [  3m 37s  ] 
+sum of cpu time of last step: 0 second
+INFO: 
+   --------------------------------------------------------------
+      Final results and run summary:
+      Process p p > w+ j [QCD]
+      Run at p-p collider (6500.0 + 6500.0 GeV)
+      Total cross section: 1.674e+04 +- 4.5e+01 pb
+   --------------------------------------------------------------
+ 
+INFO: The results of this run and the HwU and GnuPlot files with the plots have been saved in /tmp/mg5_history_guard_final/wjet/Events/history_guard_fo 
+INFO: Run complete 
+INFO:  
+launch aMC@NLO -f -p --name=history_guard_mc
+stty: 'standard input': Inappropriate ioctl for device
+stty: 'standard input': Inappropriate ioctl for device
+INFO: will run in mode: aMC@NLO 
+INFO: Starting run 
+INFO: Compiling the code 
+INFO: Using built-in libraries for PDFs 
+INFO: Compiling source... 
+INFO:           ...done, continuing with P* directories 
+INFO: Compiling directories... 
+INFO: Compiling on 3 cores 
+INFO:  Compiling P0_gu_wpd... 
+INFO:  Compiling P0_gdx_wpux... 
+INFO:  Compiling P0_ug_wpd... 
+INFO:     P0_gu_wpd done. 
+INFO:  Compiling P0_udx_wpg... 
+INFO:     P0_ug_wpd done. 
+INFO:  Compiling P0_dxg_wpux... 
+INFO:     P0_gdx_wpux done. 
+INFO:  Compiling P0_dxu_wpg... 
+INFO:     P0_udx_wpg done. 
+INFO:     P0_dxu_wpg done. 
+INFO:     P0_dxg_wpux done. 
+INFO: Checking test output: 
+INFO: P0_gu_wpd 
+INFO:  Result for test_ME: 
+INFO:    Passed. 
+INFO:  Result for test_MC: 
+INFO:    Passed. 
+INFO:  Result for check_poles: 
+INFO:    Poles successfully cancel for 20 points over 20 (tolerance=1.0e-05) 
+INFO: P0_gdx_wpux 
+INFO:  Result for test_ME: 
+INFO:    Passed. 
+INFO:  Result for test_MC: 
+INFO:    Passed. 
+INFO:  Result for check_poles: 
+INFO:    Poles successfully cancel for 20 points over 20 (tolerance=1.0e-05) 
+INFO: P0_ug_wpd 
+INFO:  Result for test_ME: 
+INFO:    Passed. 
+INFO:  Result for test_MC: 
+INFO:    Passed. 
+INFO:  Result for check_poles: 
+INFO:    Poles successfully cancel for 20 points over 20 (tolerance=1.0e-05) 
+INFO: P0_udx_wpg 
+INFO:  Result for test_ME: 
+INFO:    Passed. 
+INFO:  Result for test_MC: 
+INFO:    Passed. 
+INFO:  Result for check_poles: 
+INFO:    Poles successfully cancel for 20 points over 20 (tolerance=1.0e-05) 
+INFO: P0_dxg_wpux 
+INFO:  Result for test_ME: 
+INFO:    Passed. 
+INFO:  Result for test_MC: 
+INFO:    Passed. 
+INFO:  Result for check_poles: 
+INFO:    Poles successfully cancel for 20 points over 20 (tolerance=1.0e-05) 
+INFO: P0_dxu_wpg 
+INFO:  Result for test_ME: 
+INFO:    Passed. 
+INFO:  Result for test_MC: 
+INFO:    Passed. 
+INFO:  Result for check_poles: 
+INFO:    Poles successfully cancel for 20 points over 20 (tolerance=1.0e-05) 
+INFO: Starting run 
+INFO: Using 3 cores 
+INFO: Cleaning previous results 
+INFO: Doing NLO matched to parton shower 
+INFO: Setting up grids 
+INFO:  Idle: 9,  Running: 3,  Completed: 0 [ current time: 10h15 ] 
+INFO:  Idle: 8,  Running: 3,  Completed: 1 [  16.6s  ] 
+INFO:  Idle: 7,  Running: 3,  Completed: 2 [  17.7s  ] 
+INFO:  Idle: 6,  Running: 3,  Completed: 3 [  18.2s  ] 
+INFO:  Idle: 5,  Running: 3,  Completed: 4 [  34.6s  ] 
+INFO:  Idle: 4,  Running: 3,  Completed: 5 [  35.8s  ] 
+INFO:  Idle: 3,  Running: 3,  Completed: 6 [  36.1s  ] 
+INFO:  Idle: 2,  Running: 3,  Completed: 7 [  50.1s  ] 
+INFO:  Idle: 1,  Running: 3,  Completed: 8 [  51.1s  ] 
+INFO:  Idle: 0,  Running: 3,  Completed: 9 [  53.7s  ] 
+INFO:  Idle: 0,  Running: 2,  Completed: 10 [  1m 6s  ] 
+INFO:  Idle: 0,  Running: 1,  Completed: 11 [  1m 7s  ] 
+INFO:  Idle: 0,  Running: 0,  Completed: 12 [  1m 9s  ] 
+sum of cpu time of last step: 0 second
+INFO: Determining the number of unweighted events per channel
+
+      Intermediate results:
+      Random seed: 62231
+      Total cross section:      1.665e+04 +- 2.5e+02 pb
+      Total abs(cross section): 3.396e+04 +- 2.9e+02 pb 
+
+ 
+INFO: Computing upper envelope 
+INFO:  Idle: 9,  Running: 3,  Completed: 0 [ current time: 10h16 ] 
+INFO:  Idle: 8,  Running: 3,  Completed: 1 [  39.8s  ] 
+INFO:  Idle: 7,  Running: 3,  Completed: 2 [  40.2s  ] 
+INFO:  Idle: 6,  Running: 3,  Completed: 3 [  1m 21s  ] 
+INFO:  Idle: 5,  Running: 3,  Completed: 4 [  1m 56s  ] 
+INFO:  Idle: 4,  Running: 3,  Completed: 5 [  2m 29s  ] 
+INFO:  Idle: 3,  Running: 3,  Completed: 6 [  3m 35s  ] 
+INFO:  Idle: 2,  Running: 3,  Completed: 7 [  4m 14s  ] 
+INFO:  Idle: 1,  Running: 3,  Completed: 8 [  5m 32s  ] 
+INFO:  Idle: 0,  Running: 3,  Completed: 9 [  6m 39s  ] 
+INFO:  Idle: 0,  Running: 2,  Completed: 10 [  6m 42s  ] 
+INFO:  Idle: 0,  Running: 1,  Completed: 11 [  7m 45s  ] 
+INFO:  Idle: 0,  Running: 0,  Completed: 12 [  8m 11s  ] 
+sum of cpu time of last step: 0 second
+INFO: Updating the number of unweighted events per channel
+
+      Intermediate results:
+      Random seed: 62231
+      Total cross section:      1.668e+04 +- 8.1e+01 pb
+      Total abs(cross section): 3.410e+04 +- 8.6e+01 pb 
+
+ 
+INFO: 
+   --------------------------------------------------------------
+      Summary:
+      Process p p > w+ j [QCD]
+      Run at p-p collider (6500.0 + 6500.0 GeV)
+      Number of events generated: 0
+      Total cross section: 1.668e+04 +- 8.1e+01 pb
+   --------------------------------------------------------------
+ 
+INFO: No event file generated: grids have been set-up with a relative precision of 0.003 
+quit
+INFO:  
+quit
+INFO:  
+launch in debug mode

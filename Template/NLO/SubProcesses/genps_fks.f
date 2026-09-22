@@ -882,7 +882,9 @@ c x(ndim-2) --> xi_i_fks
 c x(ndim-1) --> y_ij_fks
 c x(ndim) --> phi_i
 c
+      use mc_native_context, only: native_epoch
       implicit none
+      integer,save::epoch_save=-1
       include 'genps.inc'
       include 'nexternal.inc'
       include 'run.inc'
@@ -954,7 +956,8 @@ c saves
             m(i)=pmass(i+1)
          endif
       enddo
-      if( firsttime .or. iconfig0.ne.iconfigsave ) then
+      if(firsttime.or.iconfig0.ne.iconfigsave.or.
+     $     epoch_save.ne.native_epoch)then
          if (nincoming.eq.2) then
             stot = 4d0*ebeam(1)*ebeam(2)
          else
@@ -976,11 +979,12 @@ c Make sure have enough mass for external particles
             stop
          endif
 
-         call fill_genmom_born_commons(itree,m)
 
          firsttime=.false.
          iconfigsave=iconfig0
+         epoch_save=native_epoch
       endif                     ! firsttime
+      call fill_genmom_born_commons(itree,m)
 c
       xjac0=1d0
       xpswgt0=1d0
@@ -1898,6 +1902,7 @@ c so give some non-physical values
      &     xbjrk_born,tau_born,ycm_born,ycmhat,shat_born,phi_i_fks ,xp,x
      &     , shat,stot,sqrtshat,tau,ycm,xbjrk ,p_i_fks,xiimax,xinorm
      &     ,xi_i_fks,y_ij_fks,xi_i_hat,xpswgt ,xjac ,srec, pass)
+      use mc_native_context, only: native_mapping
       implicit none
       include 'nexternal.inc'
 c arguments
@@ -1948,7 +1953,7 @@ c parameters
       parameter (ctiny=5d-7)
 c
       pass=.true.
-      if(softtest .or. colltest)then
+      if(softtest.or.colltest.or.native_mapping)then
          sstiny=0.d0
          cctiny=0.d0
       else
@@ -2111,6 +2116,7 @@ c
      &     ,p_born_imother,shat,sqrtshat,x,xmrec2,xp,phi_i_fks,xiimax
      &     ,xinorm,xi_i_fks,y_ij_fks,xi_i_hat,p_i_fks,xjac,xpswgt
      &     ,pass)
+      use mc_native_context, only: native_mapping
       implicit none
       include 'nexternal.inc'
 c arguments
@@ -2158,7 +2164,7 @@ c parameters
       parameter (ximag=(0d0,1d0))
 c
       pass=.true.
-      if(softtest .or. colltest)then
+      if(softtest.or.colltest.or.native_mapping)then
         sstiny=0.d0
         cctiny=0.d0
       else
@@ -2292,6 +2298,16 @@ c
      &             (2*(sqrtshat-x3len_i_fks*(1-y_ij_fks)))
       x3len_fks_mother=sqrt( x3len_i_fks**2+x3len_j_fks**2+
      &                       2*x3len_i_fks*x3len_j_fks*y_ij_fks )
+      if(native_mapping)then
+c Resolve the daughter parallel and transverse to the emitted momentum.
+c This avoids subtracting squared momenta when the recoil is nearly at rest.
+         costh_i_fks=x3len_i_fks+x3len_j_fks*y_ij_fks
+         sinth_i_fks=x3len_j_fks*sqrt(max(0d0,
+     $        (1d0-y_ij_fks)*(1d0+y_ij_fks)))
+         x3len_fks_mother=sqrt(costh_i_fks**2+sinth_i_fks**2)
+         costh_i_fks=costh_i_fks/x3len_fks_mother
+         sinth_i_fks=sinth_i_fks/x3len_fks_mother
+      else
       if(xi_i_fks.lt.qtiny)then
          costh_i_fks=y_ij_fks+shat*(1-y_ij_fks**2)*xi_i_fks/
      &                                          (shat-xmrec2)
@@ -2314,6 +2330,7 @@ c
          endif
       endif
       sinth_i_fks=sqrt(1-costh_i_fks**2)
+      endif
       cosphi_i_fks=cos(phi_i_fks)
       sinphi_i_fks=sin(phi_i_fks)
       xpifksred(1)=sinth_i_fks*cosphi_i_fks
@@ -2407,6 +2424,7 @@ c
      &     ,input_granny_m2,rat_xi,i_fks,j_fks,p_born_imother,shat
      &     ,sqrtshat,m_j_fks,x,xmrec2,xp,phi_i_fks,xiimax,xinorm
      &     ,xi_i_fks,y_ij_fks,xi_i_hat,p_i_fks,xjac,xpswgt,pass)
+      use mc_native_context, only: native_mapping
       implicit none
       include 'nexternal.inc'
 c arguments
@@ -2433,6 +2451,8 @@ c local
      $     ,sinphi_i_fks,cosphi_mother_fks,costh_mother_fks
      $     ,phi_mother_fks,sinphi_mother_fks,th_mother_fks,xitmp2
      $     ,sinth_mother_fks,x1
+      double precision native_u,native_uborn,native_eborn,native_ej,
+     $     native_denom,native_radial,native_ps,native_sign
       save xjactmp
       common /virtgranny_boost/shybst,chybst,chybstmo
 c external
@@ -2459,7 +2479,7 @@ c
       endif
 c
       pass=.true.
-      if(softtest .or. colltest)then
+      if(softtest.or.colltest.or.native_mapping)then
          sstiny=0.d0
          cctiny=0.d0
       else
@@ -2498,6 +2518,11 @@ c$$$      xjac=xjac*2d0*x(2)*2d0
          write (*,*) 'Massive j_fks: should not do collinear tests'
          stop 1
          ! do not care about jacobian
+      elseif (native_mapping) then
+c An angle coordinate retains the small transverse component at y=-1.
+c Encoding it only in 1-y loses precision for nearly stationary recoils.
+         y_ij_fks=cos(pi*x(2))
+         xjac=xjac*pi*sin(pi*min(x(2),1d0-x(2)))
       else
          y_ij_fks = -2d0*(cctiny+(1-cctiny)*x(2)**2)+1d0
          xjac=xjac*2d0*x(2)*2d0
@@ -2605,7 +2630,39 @@ c
       
       
 
-      if(icountevts.eq.0)then
+      if(native_mapping)then
+c Parameterize the radiator momentum, u=uBorn*(1-x**2), instead of
+c solving the quadratic for u at fixed xi. This covers both solutions
+c continuously and avoids loss of precision where they coalesce.
+         native_uborn=sqrtshat*sqrt(cffC2)/2d0
+         native_eborn=sqrt(native_uborn**2+m_j_fks**2)
+         native_u=native_uborn*(1d0-x(1)**2)
+         native_ej=sqrt(native_u**2+m_j_fks**2)
+         native_denom=sqrtshat-native_ej+native_u*y_ij_fks
+         xi_i_fks=2d0*(native_uborn-native_u)*
+     $        (native_uborn+native_u)/
+     $        ((native_eborn+native_ej)*native_denom)
+         native_sign=(2d0-xi_i_fks)*native_u+
+     $        xi_i_fks*native_ej*y_ij_fks
+         native_radial=native_uborn*abs(native_sign)/
+     $        (native_ej*native_denom)
+         xinorm=1d0
+         xjac=xjac*2d0*x(1)
+         if(icountevts.eq.0)then
+            xi_i_fks=0d0
+            isolsign=1
+            x3len_j_fks=native_uborn
+            native_ps=shat/(4d0*pi)**3*native_radial
+         else
+            isolsign=int(sign(1d0,native_sign))
+            x3len_j_fks=native_u
+c Combine du/dxi with the real phase-space factor analytically: each
+c separately becomes singular at the boundary between the two solutions.
+            native_ps=2d0*shat/(4d0*pi)**3*native_u**2/
+     $           (native_ej*native_denom)
+         endif
+         xi_i_hat=xi_i_fks
+      elseif(icountevts.eq.0)then
          xi_i_fks=0d0
          isolsign=1
          if (x(1).le.rat_xi .and. (.not.softtest)) xjac=xjac*2d0*x(1)/rat_xi
@@ -2645,6 +2702,7 @@ c Compute costh_i_fks
 c
       E_i_fks=xi_i_fks*sqrtshat/2d0
       x3len_i_fks=E_i_fks
+      if(.not.native_mapping)then
       b2m4ac=xi_i_fks**2*cffA2 + xi_i_fks*cffB2 + cffC2
       if(b2m4ac.le.0.d0)then
          if(abs(b2m4ac).lt.1.d-3)then
@@ -2669,8 +2727,17 @@ c
          pass=.false.
          return
       endif
+      endif
       x3len_fks_mother=sqrt( x3len_i_fks**2+x3len_j_fks**2+
      &                       2*x3len_i_fks*x3len_j_fks*y_ij_fks )
+      if(native_mapping)then
+c Keep both angular components when the two daughters nearly cancel.
+         costh_i_fks=x3len_i_fks+x3len_j_fks*y_ij_fks
+         sinth_i_fks=x3len_j_fks*sin(pi*min(x(2),1d0-x(2)))
+         x3len_fks_mother=sqrt(costh_i_fks**2+sinth_i_fks**2)
+         costh_i_fks=costh_i_fks/x3len_fks_mother
+         sinth_i_fks=sinth_i_fks/x3len_fks_mother
+      else
       if(xi_i_fks.lt.qtiny)then
          costh_i_fks=y_ij_fks+(1-y_ij_fks**2)*xi_i_fks/sqrt(cffC2)
          if(abs(costh_i_fks).gt.1.d0)costh_i_fks=y_ij_fks
@@ -2686,6 +2753,7 @@ c
          endif
       endif
       sinth_i_fks=sqrt(1-costh_i_fks**2)
+      endif
       cosphi_i_fks=cos(phi_i_fks)
       sinphi_i_fks=sin(phi_i_fks)
       xpifksred(1)=sinth_i_fks*cosphi_i_fks
@@ -2766,8 +2834,12 @@ c Qunatities to be passed to montecarlocounter (event kinematics)
          xp0jfks=xp(0,j_fks)
       endif 
 c
+      if(native_mapping)then
+         xpswgt=xpswgt*native_ps
+      else
       xpswgt=xpswgt*2*shat/(4*pi)**3*veckn/veckbarn/
      &     ( 2-xi_i_fks*(1-xp(0,j_fks)/veckn*y_ij_fks) )
+      endif
       xpswgt=abs(xpswgt)
       return
       end
@@ -2777,6 +2849,7 @@ c
      &     xbjrk_born,tau_born,ycm_born,ycmhat,shat_born,phi_i_fks ,xp,x
      &     , shat,stot,sqrtshat,tau,ycm,xbjrk ,p_i_fks,xiimax,xinorm
      &     ,xi_i_fks,y_ij_fks,xi_i_hat,xpswgt ,xjac ,pass)
+      use mc_native_context, only: native_mapping
       implicit none
       include 'nexternal.inc'
 c arguments
@@ -2834,7 +2907,7 @@ c parameters
       parameter (ctiny=5d-7)
 c
       pass=.true.
-      if(softtest .or. colltest)then
+      if(softtest.or.colltest.or.native_mapping)then
          sstiny=0.d0
          cctiny=0.d0
       else
@@ -3473,6 +3546,7 @@ c Jacobian due to delta() of tau_born
 
 
       subroutine generate_tau(stot,idim,x,tau,jac)
+      use mc_native_context, only: native_mapping
       implicit none
       integer idim
       double precision x,tau,jac,smin,smax,s_mass,s,tiny,dum,dum3(-1:1)
@@ -3482,6 +3556,11 @@ c Jacobian due to delta() of tau_born
      $     ,tau_lower_bound
       common/ctau_lower_bound/tau_Born_lower_bound
      $     ,tau_lower_bound_resonance,tau_lower_bound
+! A flat auxiliary map is finite also when the physical threshold is zero.
+      if(native_mapping)then
+         tau=x
+         return
+      endif
       smin=tau_born_lower_bound*stot
       smax=stot
       s_mass=tau_lower_bound_resonance*stot
@@ -4579,8 +4658,14 @@ C dressed lepton stuff
       double precision pswgt_cnt(-2:2)
       double precision jac_cnt(-2:2)
       common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
-      integer i
+      integer i,iconfig0,this_config
+      common/ciconfig0/iconfig0
+      common/to_mconfigs/this_config
       double precision qmass(-nexternal:0),qwidth(-nexternal:0),jac
+      iconfig0=iconfig
+      this_config=iconfig
+      iconf=iconfig
+      itree=iforest(:,:,iconfig,0)
       do i=-nexternal,0
          qmass(i)=pmass(i,iconfig,0)
          qwidth(i)=pwidth(i,iconfig,0)
@@ -4629,7 +4714,9 @@ C dressed lepton stuff
       
       subroutine generate_momenta_conf_inverse(input_granny_m2,ndim,jac
      $     ,x,granny_m2_red,rat_xi,itree,qmass,qwidth,p,xbjrk_born)
+      use mc_native_context, only: native_epoch
       implicit none
+      integer,save::epoch_save=-1
       include 'genps.inc'
       include 'nexternal.inc'
       include 'run.inc'
@@ -4660,6 +4747,7 @@ C dressed lepton stuff
       integer i,iconfigsave
       double precision p_born(0:3,nexternal-1)
       common /pborn/   p_born
+      save iconfigsave
       save m,stot,totmassin,totmass,fksmass
       pass=.true.
       do i=1,nexternal-1
@@ -4669,7 +4757,8 @@ C dressed lepton stuff
             m(i)=pmass(i+1)
          endif
       enddo
-      if(firsttime) then
+      if(firsttime.or.iconfig0.ne.iconfigsave.or.
+     $     epoch_save.ne.native_epoch)then
          if (nincoming.eq.2) then
             stot = 4d0*ebeam(1)*ebeam(2)
          else
@@ -4689,10 +4778,11 @@ C dressed lepton stuff
      &           /'insufficient collider energy'
             stop
          endif
-         call fill_genmom_born_commons(itree,m)
          firsttime=.false.
          iconfigsave=iconfig0
+         epoch_save=native_epoch
       endif                     ! firsttime
+      call fill_genmom_born_commons(itree,m)
       xjac0=1d0
       xpswgt0=1d0
       
@@ -4827,6 +4917,7 @@ c     For e+e- collisions, set tau to one and y to zero
       end
       
       subroutine generate_tau_inverse(stot,idim,x,tau,jac)
+      use mc_native_context, only: native_mapping
       implicit none
       integer idim
       double precision x,tau,jac,smin,smax,s_mass,s,tiny,dum,dum3(-1:1)
@@ -4836,6 +4927,11 @@ c     For e+e- collisions, set tau to one and y to zero
      $     ,tau_lower_bound
       common/ctau_lower_bound/tau_Born_lower_bound
      $     ,tau_lower_bound_resonance,tau_lower_bound
+! A flat auxiliary map is finite also when the physical threshold is zero.
+      if(native_mapping)then
+         x=tau
+         return
+      endif
       smin=tau_born_lower_bound*stot
       smax=stot
       s_mass=tau_lower_bound_resonance*stot
@@ -4966,6 +5062,7 @@ c     Jacobian due to delta() of tau_born
       subroutine generate_momenta_initial_inverse(xp,xi_i_fks ,y_ij_fks
      $     ,phi_i_fks,p_born,x,xjac,xpswgt,shat,sqrtshat,i_fks,j_fks,stot
      $     ,tau,ycm,xbjrk,tau_born,ycm_born,xbjrk_born,y_lab_to_cms)
+      use mc_native_context, only: native_mapping
       implicit none
       double precision pi,stiny,qtiny,zero,ctiny
       parameter (pi=3.1415926535897932d0,stiny=1d-6,qtiny=1d-7,zero=0d0
@@ -5001,7 +5098,7 @@ c     Jacobian due to delta() of tau_born
       common/cxij_aor/xij_aor
       sstiny=stiny
       cctiny=ctiny
-      if (softtest.or.colltest) then
+      if(softtest.or.colltest.or.native_mapping)then
          sstiny=0d0
          cctiny=0d0
       endif
@@ -5247,6 +5344,7 @@ c     Use xp in the reduced frame (a.k.a. tilde frame) to get the Born momenta.
       subroutine generate_momenta_massive_final_inverse(xp,xi_i_fks
      $           ,y_ij_fks,phi_i_fks,p_born,x,xjac,xpswgt,shat,sqrtshat
      $           ,i_fks,j_fks,m_j_fks)
+      use mc_native_context, only: native_mapping
       implicit none
       real*8 pi
       parameter (pi=3.1415926535897932d0)
@@ -5263,17 +5361,23 @@ c     Use xp in the reduced frame (a.k.a. tilde frame) to get the Born momenta.
       double precision xinorm_ev
       common /cxinormev/xinorm_ev
       integer i
-      double precision rho,dot,sstiny,cctiny,branch_sign
-      external rho,dot
+      double precision native_uborn,native_u,native_denom
+      double precision rho,dot,sstiny,cctiny,branch_sign,
+     $     native_fsr_angle
+      external rho,dot,native_fsr_angle
       logical        softtest,colltest
       common/sctests/softtest,colltest
       sstiny=1d-6
       cctiny=5d-7
-      if (softtest.or.colltest) then
+      if(softtest.or.colltest.or.native_mapping)then
          sstiny=0d0
          cctiny=0d0
       endif
       ! y_ij_fks
+      if(native_mapping)then
+         x(2)=native_fsr_angle(xp(:,i_fks),xp(:,j_fks))
+         xjac=xjac*pi*sin(pi*min(x(2),1d0-x(2)))
+      else
       x(2)=((1d0-y_ij_fks)/2d0-cctiny)/(1d0-cctiny)
       if (x(2).lt.-1d-12.or.x(2).gt.1d0+1d-12) then
          xjac=-33d0
@@ -5281,6 +5385,7 @@ c     Use xp in the reduced frame (a.k.a. tilde frame) to get the Born momenta.
       endif
       x(2)=sqrt(max(0d0,min(1d0,x(2))))
       xjac=xjac*2d0*x(2)*2d0
+      endif
 
       ! x_i_fks
       xp_mother(0:3)=xp(0:3,i_fks)+xp(0:3,j_fks)
@@ -5317,6 +5422,19 @@ c     Use xp in the reduced frame (a.k.a. tilde frame) to get the Born momenta.
 c Recover the sign of the square root in the forward expression for
 c |p_j|. At fixed xi and y both solutions can exist, but the supplied
 c momentum selects one of them; choosing randomly changes the event.
+      if(native_mapping)then
+         native_uborn=sqrtshat*sqrt(cffC2)/2d0
+         native_u=rho(xp(:,j_fks))
+         native_denom=sqrtshat-xp(0,j_fks)+native_u*y_ij_fks
+         x(1)=(native_uborn-native_u)/native_uborn
+         if(x(1).lt.-1d-12.or.x(1).gt.1d0+1d-12)then
+            xjac=-102d0
+            return
+         endif
+         x(1)=sqrt(max(0d0,min(1d0,x(1))))
+         xjac=xjac*2d0*x(1)
+         xinorm_ev=1d0
+      else
       branch_sign=rho(xp(0,j_fks))/sqrtshat*
      $     (2-xi_i_fks*(1-y_ij_fks))*(2-xi_i_fks*(1+y_ij_fks))
      $     +xi_i_fks*y_ij_fks*(1-xmhat**2+xmjhat**2-xi_i_fks)
@@ -5335,6 +5453,8 @@ c momentum selects one of them; choosing randomly changes the event.
             return
          endif
          x(1)=max(rat_xi,min(1d0,x(1)))
+      endif
+
       endif
 
       ! phi_i_fks
@@ -5377,16 +5497,39 @@ c
 c Phase-space factor for (xii,yij,phii)
       veckn=rho(xp(0,j_fks))
       veckbarn=rho(p_born(0,j_fks))
+      if(native_mapping)then
+         xpswgt=xpswgt*2d0*shat/(4d0*pi)**3*native_u**2/
+     $        (xp(0,j_fks)*native_denom)
+      else
       xpswgt=xpswgt*2*shat/(4*pi)**3*veckn/veckbarn/
      &     ( 2-xi_i_fks*(1-xp(0,j_fks)/veckn*y_ij_fks) )
+      endif
       xpswgt=abs(xpswgt)
       end
       
+
+      double precision function native_fsr_angle(p1,p2)
+c Return theta/pi using half-angle vectors, retaining pi-theta for
+c nearly antiparallel daughters without subtracting their cosines.
+      implicit none
+      double precision p1(0:3),p2(0:3),u(3),v(3),shalf,chalf,pi
+      parameter(pi=3.1415926535897932d0)
+      u=p1(1:3)/sqrt(sum(p1(1:3)**2))
+      v=p2(1:3)/sqrt(sum(p2(1:3)**2))
+      shalf=sqrt(sum((u-v)**2))
+      chalf=sqrt(sum((u+v)**2))
+      if(shalf.gt.chalf)then
+         native_fsr_angle=1d0-2d0/pi*atan2(chalf,shalf)
+      else
+         native_fsr_angle=2d0/pi*atan2(shalf,chalf)
+      endif
+      end
 
       subroutine generate_momenta_massless_final_inverse(xp,xi_i_fks
      $     ,y_ij_fks,phi_i_fks,p_born,x,xjac,xpswgt,shat,sqrtshat,i_fks
      $     ,j_fks)
       ! TODO: probably need xiimax as argument, to update the prefactors.
+      use mc_native_context, only: native_mapping
       implicit none
       real*8 pi
       parameter (pi=3.1415926535897932d0)
@@ -5414,7 +5557,7 @@ c Phase-space factor for (xii,yij,phii)
       external rho
       sstiny=1d-6
       cctiny=5d-7
-      if (softtest.or.colltest) then
+      if(softtest.or.colltest.or.native_mapping)then
          sstiny=0d0
          cctiny=0d0
       endif

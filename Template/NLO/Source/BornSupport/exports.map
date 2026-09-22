@@ -1,0 +1,4 @@
+{
+  global: __mc_born_support_MOD_*; __mc_born_types_MOD_*;
+  local: *;
+};

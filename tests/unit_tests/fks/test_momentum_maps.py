@@ -47,11 +47,15 @@ class TestMomentumMaps(unittest.TestCase):
             "      integer max_branch,max_particles\n"
             "      parameter (max_branch=8,max_particles=8)\n")
         shutil.copyfile(TEMPLATE / "fks_powers.inc", work / "fks_powers.inc")
+        (work / "native_context.f90").write_text(
+            "module mc_native_context\n"
+            "logical :: native_mapping=.false.\nend module\n")
         routines = []
         for name in ("generate_momenta_massive_final",
                      "generate_momenta_massless_final",
                      "generate_momenta_massive_final_inverse",
                      "generate_momenta_massless_final_inverse",
+                     "native_fsr_angle",
                      "fill_FKS_commons", "getangles", "get_recoil"):
             routines.append(fortran_routine(TEMPLATE / "genps_fks.f", name))
         routines.append(fortran_routine(TEMPLATE / "fks_singular.f", "rotate_invar"))
@@ -65,6 +69,7 @@ class TestMomentumMaps(unittest.TestCase):
                    "-fdata-sections", "-Wl,--gc-sections", "-I", str(work),
                    str(TEMPLATE / "process_module.f90"),
                    str(TEMPLATE / "kinematics_module.f90"),
+                   str(work / "native_context.f90"),
                    str(work / "maps.f"), str(TEMPLATE / "boostwdir2.f"),
                    str(ROOT / "tests/input_files/check_momentum_maps.f90"),
                    "-o", str(cls.executable)]
@@ -87,3 +92,13 @@ class TestMomentumMaps(unittest.TestCase):
 
     def test_massive_final_inverse_both_solutions(self):
         self.check_map("massive")
+
+    def test_native_maps_below_outer_sampling_cutoffs(self):
+        self.check_map("native_massless")
+        self.check_map("native_massive")
+
+    def test_massive_history_with_stationary_recoil(self):
+        self.check_map("massive_recoil")
+
+    def test_massive_history_near_branch_boundary(self):
+        self.check_map("massive_branch")

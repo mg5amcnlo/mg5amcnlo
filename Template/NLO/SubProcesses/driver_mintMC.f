@@ -644,7 +644,7 @@ c These should be ignored (but kept for 'historical reasons')
         nbody=.false.
       endif
       abrv=abrvinput(1:4)
-      if (fks_configs.eq.1) then
+      if (fks_integrated.eq.1) then
          if (pdg_type_d(1,fks_i_d(1)).eq.-21) then
             write (*,*) 'Process generated with [LOonly=QCD]. '/
      $           /'Setting abrv to "born".'
@@ -730,7 +730,7 @@ c
       integer fks_father
       integer i_fks,j_fks
       common/fks_indices/i_fks,j_fks
-      double complex wgt1(2)
+      double precision wgt1
       double precision born_flow_factor
 ! The same flow is used throughout the folds, so keep its draw probability.
       save born_flow_factor
@@ -850,7 +850,7 @@ c 1/proc_map(0,0)*vol1)
      $              =get_random_shower_dipole_scale()
             endif
          elseif (ifl.eq.0) then
-            call sborn(p_born,wgt1)
+            call sborn_native(p_born,wgt1)
             call get_born_flow(born_flow_picked,born_flow_factor)
 ! give it a negative value so that we can keep track of the fact that
 ! this was obtained with momenta that do not pass the cuts.
@@ -1022,6 +1022,8 @@ c Sum the contributions that can be summed before taking the ABS value
 ! The outer event colour is only the event owner, not an inner proposal.
 ! Thus the colour-sampled summand is
 ! P_b,c*(p_b,c*S_b*R-M_b,c)/q_b,c, with M_b,c already flow-weighted.
+      use mc_native_context, only: native_metadata,set_native_history,
+     $     native_mapping
       use weight_lines, only: icontr,H_event,wgt,event_nFKS,momenta,
      $     momenta_m,y_bst,need_match,mc_H_only
       use mint_module, only: ndim,iconfig
@@ -1036,21 +1038,24 @@ c Sum the contributions that can be summed before taking the ABS value
       include 'fks_symmetry.inc'
       include 'mc_histories.inc'
       integer first_native,last_native,first_alt,owner,iFKS,ii,jj,ihist,
-     $     ict,flow_save,called_save,owner_match(nexternal)
+     $     ict,flow_save,called_save,owner_match(nexternal),
+     $     outer_config,native_config
       double precision x_outer(99),p(0:3,nexternal),
      $     p_lab(0:3,nexternal),p_cms(0:3,nexternal),jacPS,vegas_wgt,
      $     sampling_wgt,born_flow_factor,outer_measure,native_measure,
      $     sector_weight,factor,xx(99),jac_native,xbjrk_born(2),
      $     p_flipped(0:3,nexternal),pn(0:3,nexternal),
      $     pn_lab(0:3,nexternal),pn_cms(0:3,nexternal),probne_native,
-     $     flow_factor_native,rwgt,outer_boost,gfun_save(3)
+     $     flow_factor_native,rwgt,outer_boost,gfun_save(3),
+     $     outer_channel,mc_outer_channel_weight
       double precision nbody_scales_save(nexternal-1,nexternal-1,3),
      $     n1body_scales_save(nexternal,nexternal),
      $     emsca_save(fks_configs,ndelH,ndelH)
-      logical cuts_born,cuts_real,passcuts
+      logical cuts_born,cuts_real,passcuts,native_valid
       double precision fks_Sij
       external fks_Sij,passcuts
-      double complex born_weight(2)
+      double precision born_weight
+      external mc_outer_channel_weight
       integer nFKSprocess,i_fks,j_fks
       common/c_nFKSprocess/nFKSprocess
       common/fks_indices/i_fks,j_fks
@@ -1091,23 +1096,25 @@ c Sum the contributions that can be summed before taking the ABS value
       owner=nFKSprocess
       if (.not.MC_HIST_COMPLETE(owner)) then
          write (*,*) 'Incomplete MC history sum for FKS sector',owner
-         write (*,*) 'Some native Born histories are unavailable in',
-     $        ' this subprocess; see mc_histories.inc'
+         write (*,*) 'Required global histories are unresolved or',
+     $        ' ambiguous; see Source/BornSupport/registry.json'
          stop 1
       endif
+      outer_config=iconfig
+      outer_channel=mc_outer_channel_weight()
       outer_boost=ybst_til_tolab
       owner_match=need_matching_H
       sector_weight=fks_Sij(p,i_fks,j_fks,xi_i_fks_ev,y_ij_fks_ev)
       last_native=icontr
       do ict=first_native,last_native
-         if (H_event(ict)) wgt(:,ict)=wgt(:,ict)*sector_weight
+         if (H_event(ict)) wgt(:,ict)=0d0
       enddo
       if (sector_weight.eq.0d0) return
 
 ! K_a is the full outer real measure, including its sampling probability
-! and orbit multiplicity, but not a matrix-element channel weight.
+! and orbit multiplicity, and the outer matrix-element channel weight.
       outer_measure=xinorm_ev*xi_i_fks_ev*jacPS*vegas_wgt*
-     $     sampling_wgt*fkssymmetryfactor
+     $     sampling_wgt*fkssymmetryfactor*outer_channel
       if (outer_measure.le.0d0) return
       if (fkssymmetryfactor.ne.
      $     dble(FKS_FAC_I_D(owner)*FKS_FAC_J_D(owner))) then
@@ -1130,17 +1137,20 @@ c Sum the contributions that can be summed before taking the ABS value
       n1body_scales_save=shower_scale_n1body
       emsca_save=emsca_H(:,ifold_counter,:,:)
       mc_H_only=.true.
+      native_mapping=.true.
 
 ! The exporter supplies unique ordered histories, including both gg
 ! orientations, with native Born/order identities and checked label maps.
-! Every row has unit multiplicity. The original native row is already
-! in first_native:last_native, and must not be included a second time.
+! Every row has unit multiplicity. Recompute the owner too, using the
+! same measure conversion and channel-free density as all other rows.
       do ihist=MC_HIST_FIRST(owner),MC_HIST_LAST(owner)
-         if (ihist.eq.MC_HIST_OWN(owner)) cycle
          iFKS=MC_HIST_NATIVE(ihist)
          ii=MC_HIST_I(ihist)
          jj=MC_HIST_J(ihist)
+         iconfig=1
          call update_fks_dir(iFKS)
+         call set_native_history(ihist)
+         call init_process_module_nbody_wrapper()
          call update_coltype_and_charge(iFKS,i_fks,j_fks)
          if (fkssymmetryfactor.ne.
      $        dble(FKS_FAC_I_D(iFKS)*FKS_FAC_J_D(iFKS)) .or.
@@ -1151,31 +1161,33 @@ c Sum the contributions that can be summed before taking the ABS value
          endif
          call apply_momentum_permutation(MC_HIST_PERM(:,ihist),
      $        p_lab,p_flipped)
-         xx=0d0
-         jac_native=1d0
-         call generate_lab_momenta_inverse(ndim,iconfig,
-     $        jac_native,xx,p_flipped,xbjrk_born)
-         if (jac_native.le.0d0) then
-            write (*,*) 'Cannot invert native MC H history',
-     $           owner,iFKS,ii,jj
-            stop 1
-         endif
+! Select the first native mapping with an invertible physical point.
+! The outer channel index has no meaning in a different Born topology.
+         native_valid=.false.
+         do native_config=1,native_metadata%configurations(0)
+            iconfig=native_config
+            xx=0d0
+            jac_native=1d0
+            call generate_lab_momenta_inverse(ndim,iconfig,
+     $           jac_native,xx,p_flipped,xbjrk_born)
+            if(jac_native.le.0d0)cycle
 
 ! Inversion alone does not fill the native FKS counterevents. Replay
 ! the forward map to obtain those points AND their limit measures.
-         calculatedBorn=.false.
-         jac_native=1d0
-         call generate_momenta(ndim,iconfig,jac_native,xx,
-     $        pn,pn_lab,pn_cms)
-         if (jac_native.le.0d0 .or. pn(0,1).le.0d0 .or.
-     $        p_born(0,1).le.0d0) then
-            write (*,*) 'Cannot replay native MC H history',
-     $           owner,iFKS,ii,jj
-            stop 1
-         endif
-         if (maxval(abs(pn_lab-p_flipped)).gt.
-     $        1d-7*max(1d0,maxval(abs(p_flipped)))) then
-            write (*,*) 'MC H inverse/forward point mismatch',
+            calculatedBorn=.false.
+            jac_native=1d0
+            call generate_momenta(ndim,iconfig,jac_native,xx,
+     $           pn,pn_lab,pn_cms)
+            if (jac_native.le.0d0 .or. pn(0,1).le.0d0 .or.
+     $           p_born(0,1).le.0d0)cycle
+            if (maxval(abs(pn_lab-p_flipped)).gt.
+     $           1d-7*max(1d0,maxval(abs(p_flipped))))cycle
+            native_valid=.true.
+            exit
+         enddo
+         if (.not.native_valid) then
+            write (*,*) 'No native MC H mapping passes inversion',
+     $           ' and forward momentum checks',
      $           owner,iFKS,ii,jj
             stop 1
          endif
@@ -1211,7 +1223,7 @@ c Sum the contributions that can be summed before taking the ABS value
 ! q_b,c=p_b,c here; no additional outer 1/q_a,c belongs on this term.
          call set_alphaS(p1_cnt(0,1,0))
          calculatedBorn=.false.
-         call sborn(p_born,born_weight)
+         call sborn_native(p_born,born_weight)
          call get_born_flow(born_flow_picked,flow_factor_native)
          calculatedBorn=.false.
          call include_born_flow_weight(flow_factor_native,
@@ -1248,7 +1260,11 @@ c Sum the contributions that can be summed before taking the ABS value
       enddo
 ! Replaying the saved OUTER random numbers restores all FKS event and
 ! counterevent COMMON blocks, including Born/spin and Bjorken data.
+      call set_native_history(0)
+      native_mapping=.false.
+      iconfig=outer_config
       call update_fks_dir(owner)
+      call init_process_module_nbody_wrapper()
       call update_coltype_and_charge(owner,i_fks,j_fks)
       calculatedBorn=.false.
       jac_native=sampling_wgt
@@ -1301,9 +1317,9 @@ c Sum the contributions that can be summed before taking the ABS value
       logical valid_dipole(1:nexternal-1,1:nexternal-1,1:max_bcol)
       double precision p_born(0:3,nexternal-1)
       common /pborn/   p_born
-      integer idup(nexternal,maxproc)
-      integer mothup(2,nexternal,maxproc)
-      integer icolup(2,nexternal,max_bcol)
+      integer idup(nexternal-1,maxproc)
+      integer mothup(2,nexternal-1,maxproc)
+      integer icolup(2,nexternal-1,max_bcol)
       include 'born_leshouche.inc'
 
       do i=1,nexternal-1
@@ -1420,7 +1436,7 @@ c summed explicitly and which by MC-ing.
          write (*,*)'Using ickkw=4, include only 1 FKS dir per'/
      $        /' Born PS point (sum=0)'
       endif
-      do nFKSprocess=1,fks_configs
+      do nFKSprocess=1,fks_integrated
          call fks_inc_chooser()
 c Set Bjorken x's to some random value before calling the dlum() function
          xbk(1)=0.5d0
@@ -1432,7 +1448,7 @@ c For sum over identical FKS pairs, need to find the identical structures
       if (sum.eq.3) then
 c MC over FKS pairs that have soft singularity
          proc_map(0,0)=0
-         do i=1,fks_configs
+         do i=1,fks_integrated
             proc_map(i,0)=0
             i_fks_pdg_proc(i)=0
             j_fks_pdg_proc(i)=0
@@ -1440,7 +1456,7 @@ c MC over FKS pairs that have soft singularity
          enddo
 c First find all the nFKSprocesses that have a soft singularity and put
 c them in the process map
-         do nFKSprocess=1,fks_configs
+         do nFKSprocess=1,fks_integrated
             call fks_inc_chooser()
             if (ini_fin_fks.eq.1 .and. j_fks.le.nincoming) cycle
             if (ini_fin_fks.eq.2 .and. j_fks.gt.nincoming) cycle
@@ -1501,7 +1517,7 @@ c state all gluon
 c Loop again, and identify the nFKSprocesses that do not have a soft
 c singularity and put them together with the corresponding gluon to
 c gluons splitting
-         do nFKSprocess=1,fks_configs
+         do nFKSprocess=1,fks_integrated
             call fks_inc_chooser()
             if (ini_fin_fks.eq.1 .and. j_fks.le.nincoming) cycle
             if (ini_fin_fks.eq.2 .and. j_fks.gt.nincoming) cycle
@@ -1551,8 +1567,8 @@ c gluons splitting
          enddo
       elseif (sum.eq.0 .and. ickkw.eq.4) then
 c MC over FKS directories (1 FKS directory per nbody PS point)
-         proc_map(0,0)=fks_configs
-         do i=1,fks_configs
+         proc_map(0,0)=fks_integrated
+         do i=1,fks_integrated
             proc_map(i,0)=1
             proc_map(i,1)=i
          enddo
@@ -1663,7 +1679,7 @@ c     include all quarks (except top quark) and the gluon.
 c
       if (firsttime) then
          firsttime=.false.
-         do iFKS=1,fks_configs
+         do iFKS=1,fks_integrated
             nFKSprocessBorn(iFKS)=0
             if ( need_color_links_D(iFKS) .or. 
      &           need_charge_links_D(iFKS) )then
@@ -1672,7 +1688,7 @@ c
             if (nFKSprocessBorn(iFKS).eq.0) then
 c     try to find the process that has the same j_fks but with i_fks a
 c     gluon
-               do iiFKS=1,fks_configs
+               do iiFKS=1,fks_integrated
                   if ( (need_color_links_D(iiFKS) .or.
      &                  need_charge_links_D(iiFKS)) .and.
      &                 fks_j_D(iFKS).eq.fks_j_D(iiFKS) ) then
@@ -1684,7 +1700,7 @@ c     gluon
 c     try to find the process that has the j_fks initial state if
 c     current j_fks is initial state (and similar for final state j_fks)
             if (nFKSprocessBorn(iFKS).eq.0) then
-               do iiFKS=1,fks_configs
+               do iiFKS=1,fks_integrated
                   if ( need_color_links_D(iiFKS) .or.
      &                 need_charge_links_D(iiFKS) ) then
                      if ( fks_j_D(iiFKS).le.nincoming .and.
@@ -1701,7 +1717,7 @@ c     current j_fks is initial state (and similar for final state j_fks)
             endif
 c     If still not found, just pick any one that has a soft singularity
             if (nFKSprocessBorn(iFKS).eq.0) then
-               do iiFKS=1,fks_configs
+               do iiFKS=1,fks_integrated
                   if ( need_color_links_D(iiFKS) .or.
      &                 need_charge_links_D(iiFKS) ) then
                      nFKSprocessBorn(iFKS)=iiFKS

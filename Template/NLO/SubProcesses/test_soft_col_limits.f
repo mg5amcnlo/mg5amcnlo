@@ -402,12 +402,11 @@ c over other histories is an integration operation, not a native limit test.
      $     ,xi,y,z(2),hij,fks_Hij,flow_fraction,sumborn
      $     ,amp_split_mc(amp_split_size),amp_split_gfunc(amp_split_size)
      $     ,amp_split_xmcxsec(amp_split_size,2)
-      double precision amp2(ngraphs),jamp2(0:ncolor)
-      common/to_amps/amp2,jamp2
+      double precision mc_born_flow_weight
       logical is_leading_cflow(max_bcol)
       integer num_leading_cflows
       common/c_leading_cflows/is_leading_cflow,num_leading_cflows
-      integer i_fks,j_fks,iflow,n_connect
+      integer i_fks,j_fks,iflow,n_connect,ibornflow
       common/fks_indices/i_fks,j_fks
       double precision p_born(0:3,nexternal-1)
       common/pborn/p_born
@@ -415,7 +414,7 @@ c over other histories is an integration operation, not a native limit test.
       common/ccalculatedBorn/calculatedBorn
       double precision pmass(nexternal)
       common/to_mass/pmass
-      external fks_Hij
+      external fks_Hij,mc_born_flow_weight
 
       xi=get_xi_from_p(i_fks,j_fks,p_cms)
       y=get_yij_from_p(i_fks,j_fks,p_cms)
@@ -440,12 +439,17 @@ c sum without a randomly selected flow or a stale Born-flow probability.
      $        hij*sum(amp_split_xmcxsec(:,1:n_connect),dim=2)
      $        *xi**2*(1d0-y)
          if (include_gfun) then
-            sumborn=sum(jamp2(1:max_bcol),mask=is_leading_cflow)
+            sumborn=0d0
+            do ibornflow=1,max_bcol
+               if (is_leading_cflow(ibornflow)) then
+                  sumborn=sumborn+mc_born_flow_weight(ibornflow)
+               endif
+            enddo
             if (sumborn.le.0d0) then
                write(*,*) 'FAILED: invalid Born colour sum in MC test'
                stop 1
             endif
-            flow_fraction=jamp2(iflow)/sumborn
+            flow_fraction=mc_born_flow_weight(iflow)/sumborn
             call compute_MCsubtraction_from_gfun_test(amp_split_gfunc)
             amp_split_mc=amp_split_mc+flow_fraction*amp_split_gfunc
          endif
@@ -539,7 +543,7 @@ c sum without a randomly selected flow or a stale Born-flow probability.
       include 'nexternal.inc'
       integer ilim
       double precision x(99),wgt,p(0:3,nexternal)
-      double complex wgt1(2)
+      double precision wgt1(2)
       logical        softtest,colltest
       common/sctests/softtest,colltest
       double precision p_born(0:3,nexternal-1)
@@ -558,7 +562,7 @@ c sum without a randomly selected flow or a stale Born-flow probability.
 
       call generate_valid_momenta(wgt,x,p)
       
-      call sborn(p_born,wgt1)
+      call sborn_native(p_born,wgt1)
       write (*,*) ''
       write (*,*) ''
       write (*,*) ''
@@ -572,7 +576,7 @@ c sum without a randomly selected flow or a stale Born-flow probability.
       include 'nFKSconfigs.inc'
       include 'run.inc'
       include 'born_nhel.inc'
-      include 'born_maxamps.inc'
+      include 'genps.inc'
       include 'born_conf.inc'
       include 'coupl.inc'
       include 'leshouche_decl.inc'
@@ -618,6 +622,7 @@ c
       call init_process_module_global(shower_mc,'all ',nexternal
      $     ,nincoming,mcatnlo_delta,ebeam(1)+ebeam(2),max_bcol
      $     ,maxflow_used,ickkw)
+      call init_process_module_nbody_wrapper()
       
       write(*,*)'  '
       write(*,*)'  '
@@ -710,7 +715,7 @@ c Note that tests are always performed at fixed energy with Bjorken x=1.
       logical         Hevents
       common/SHevents/Hevents
 c-----
-      if (fks_configs.eq.1) then
+      if (fks_integrated.eq.1) then
          if (pdg_type_d(1,fks_i_d(1)).eq.-21) then
             write (*,*) 'Process generated with [LOonly=QCD]. '/
      $           /'No tests to do.'
@@ -806,7 +811,7 @@ c$$$         endif
 
       if (fks_conf_number.eq.0) then
          fks_loop_min=1
-         fks_loop_max=fks_configs
+         fks_loop_max=fks_integrated
       else
          fks_loop_min=fks_conf_number
          fks_loop_max=fks_conf_number
@@ -829,9 +834,9 @@ c$$$         endif
       logical valid_dipole(1:nexternal-1,1:nexternal-1,1:max_bcol)
       double precision p_born(0:3,nexternal-1)
       common /pborn/   p_born
-      integer idup(nexternal,maxproc)
-      integer mothup(2,nexternal,maxproc)
-      integer icolup(2,nexternal,max_bcol)
+      integer idup(nexternal-1,maxproc)
+      integer mothup(2,nexternal-1,maxproc)
+      integer icolup(2,nexternal-1,max_bcol)
       include 'born_leshouche.inc'
 
       do i=1,nexternal-1

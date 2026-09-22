@@ -4983,6 +4983,8 @@ RESTART = %(mint_mode)s
             input_files.append(pjoin(cwd, os.path.pardir, 'leshouche_info.dat'))
             input_files.append(pjoin(cwd, os.path.pardir, 'orderstags_glob.dat'))
             input_files.append(args[0])
+            input_files.extend(sorted(glob.glob(pjoin(self.me_dir, 'lib',
+                                                      'libmc_born_support.*'))))
             output_files.append('%s.rwgt' % os.path.basename(args[0]))
             output_files.append('reweight_xsec_events.output')
             output_files.append('scale_pdf_dependence.dat')
@@ -5082,6 +5084,9 @@ RESTART = %(mint_mode)s
                      pjoin(cwd, 'configs_and_props_info.dat'),
                      pjoin(cwd, 'leshouche_info.dat'),
                      pjoin(cwd, 'FKS_params.dat')]
+
+        input_files.extend(sorted(glob.glob(pjoin(self.me_dir, 'lib',
+                                                  'libmc_born_support.*'))))
 
         # For GoSam interface, we must copy the SLHA card as well
         if os.path.exists(pjoin(self.me_dir,'OLP_virtuals','gosam.rc')):

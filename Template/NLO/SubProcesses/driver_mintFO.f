@@ -585,7 +585,7 @@ c$$$      end
       ini_fin_FKS_map(0,0)=0
       ini_fin_FKS_map(1,0)=0
       ini_fin_FKS_map(2,0)=0
-      do iFKS=1,fks_configs
+      do iFKS=1,fks_integrated
          ini_fin_FKS_map(0,0)=ini_fin_FKS_map(0,0)+1
          ini_fin_FKS_map(0,ini_fin_FKS_map(0,0))=iFKS
          if (fks_j_d(iFKS).le.nincoming .and.
@@ -617,7 +617,7 @@ c$$$      end
 c
       if (firsttime) then
          firsttime=.false.
-         do iFKS=1,fks_configs
+         do iFKS=1,fks_integrated
             nFKSprocessBorn(iFKS)=0
             if ( need_color_links_D(iFKS) .or. 
      &           need_charge_links_D(iFKS) )then
@@ -626,7 +626,7 @@ c
             if (nFKSprocessBorn(iFKS).eq.0) then
 c     try to find the process that has the same j_fks but with i_fks a
 c     gluon
-               do iiFKS=1,fks_configs
+               do iiFKS=1,fks_integrated
                   if ( (need_color_links_D(iiFKS) .or.
      &                  need_charge_links_D(iiFKS)) .and.
      &                 fks_j_D(iFKS).eq.fks_j_D(iiFKS) ) then
@@ -638,7 +638,7 @@ c     gluon
 c     try to find the process that has the j_fks initial state if
 c     current j_fks is initial state (and similar for final state j_fks)
             if (nFKSprocessBorn(iFKS).eq.0) then
-               do iiFKS=1,fks_configs
+               do iiFKS=1,fks_integrated
                   if ( need_color_links_D(iiFKS) .or.
      &                 need_charge_links_D(iiFKS) ) then
                      if ( fks_j_D(iiFKS).le.nincoming .and.
@@ -655,7 +655,7 @@ c     current j_fks is initial state (and similar for final state j_fks)
             endif
 c     If still not found, just pick any one that has a soft singularity
             if (nFKSprocessBorn(iFKS).eq.0) then
-               do iiFKS=1,fks_configs
+               do iiFKS=1,fks_integrated
                   if ( need_color_links_D(iiFKS) .or.
      &                 need_charge_links_D(iiFKS) ) then
                      nFKSprocessBorn(iFKS)=iiFKS
@@ -912,7 +912,7 @@ c-----
       enddo
       close(83)
 
-      if (fks_configs.eq.1) then
+      if (fks_integrated.eq.1) then
          if (pdg_type_d(1,fks_i_d(1)).eq.-21.and.abrv.ne.'born') then
 C Two cases can occur
 C   1) the process has been generated with the LOonly flav
@@ -954,9 +954,9 @@ c
       logical valid_dipole(1:nexternal-1,1:nexternal-1,1:max_bcol)
       double precision p_born(0:3,nexternal-1)
       common /pborn/   p_born
-      integer idup(nexternal,maxproc)
-      integer mothup(2,nexternal,maxproc)
-      integer icolup(2,nexternal,max_bcol)
+      integer idup(nexternal-1,maxproc)
+      integer mothup(2,nexternal-1,maxproc)
+      integer icolup(2,nexternal-1,max_bcol)
       include 'born_leshouche.inc'
       do i=1,nexternal-1
          mass(i)=get_mass_from_id(idup(i,1))

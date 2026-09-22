@@ -153,6 +153,8 @@ c     fully ensure that this is not a jet/lepton/photon
 c Sets the lower bound for tau=x1*x2, using information on particle
 c masses and on the jet minimum pt, as entered in run_card.dat, 
 c variable ptj
+      use mc_native_context, only: native_epoch,active_context,
+     $     native_context_ids,native_mapping
       use mint_module
       implicit none
       double precision zero,vtiny
@@ -223,9 +225,22 @@ c     block for the (simple) cut bsed on the pdg
       double precision smin_update , mxx
       integer nb_iden_pdg
 c
+      integer,save::epoch_save=-1,config_save=-1
+      logical,save::mapping_save=.false.
+      integer nprint
+      parameter(nprint=fks_configs*maxchannels)
+      logical printed(fks_configs,maxchannels)
+      data printed/nprint*.false./
       logical firsttime,firsttime_chans(maxchannels)
       data firsttime /.true./
       data firsttime_chans/maxchannels*.true./
+      if(epoch_save.ne.native_epoch.or.config_save.ne.iconfig.or.
+     $     (mapping_save.neqv.native_mapping))then
+         firsttime_chans=.true.
+         epoch_save=native_epoch
+         config_save=iconfig
+         mapping_save=native_mapping
+      endif
       if (firsttime) then
          do i = 1,lmaxconfigs
             do j = -nexternal,0
@@ -255,6 +270,7 @@ c event could.
          end do
          firsttime_chans(ichan)=.false.
          do iFKS=1,fks_configs
+            if(native_context_ids(iFKS).ne.active_context)cycle
             j_fks=FKS_J_D(iFKS)
             i_fks=FKS_I_D(iFKS)
             taumin(iFKS,ichan)=0.d0
@@ -263,6 +279,16 @@ c event could.
             do i=nincoming+1,nexternal
 C Skip i_fks
                if (i.eq.i_fks) cycle
+! Auxiliary native maps cover physical phase space. Analysis cuts remain
+! in passcuts; they must not restrict the inverse map of an H event.
+               if(native_mapping)then
+                  taumin(iFKS,ichan)=taumin(iFKS,ichan)+emass(i)
+                  taumin_s(iFKS,ichan)=taumin_s(iFKS,ichan)+emass(i)
+                  taumin_j(iFKS,ichan)=taumin_j(iFKS,ichan)+emass(i)
+                  xm(i)=emass(i)
+                  xw(i)=0d0
+                  cycle
+               endif
 c Add the minimal jet pTs to tau
                if(IS_A_J(i)) then
                   if  (j_fks.gt.nincoming .and. j_fks.lt.nexternal) then
@@ -597,6 +623,8 @@ c
 c For the bound, we have to square and divide by stot.
             tau_lower_bound_resonance=taumin_s(iFKS,ichan)**2/stot
 c
+            if(.not.printed(iFKS,ichan).and..not.native_mapping)then
+            printed(iFKS,ichan)=.true.
             if (j_fks.gt.nincoming) then
                write (*,'(a7,x,i3,x,i5,x,a1,3(e12.5,x))') 'tau_min'
      $              ,iFKS,ichan,':',taumin(iFKS,ichan),taumin_j(iFKS
@@ -605,6 +633,7 @@ c
                write (*,'(a7,x,i3,x,i5,x,a1,e12.5,x,a13,e12.5,x)')
      $              'tau_min',iFKS,ichan,':',taumin(iFKS,ichan)
      $              ,'     --      ',taumin_s(iFKS,ichan)
+            endif
             endif
          enddo
       endif

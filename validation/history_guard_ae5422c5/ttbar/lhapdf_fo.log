@@ -1,0 +1,114 @@
+INFO: ************************************************************
+*                                                          *
+*           W E L C O M E  to  M A D G R A P H 5           *
+*                       a M C @ N L O                      *
+*                                                          *
+*                 *                       *                *
+*                   *        * *        *                  *
+*                     * * * * 5 * * * *                    *
+*                   *        * *        *                  *
+*                 *                       *                *
+*                                                          *
+*         VERSION 5.3.5.3                                  *
+*                                                          *
+*    The MadGraph5_aMC@NLO Development Team - Find us at   *
+*                 http://amcatnlo.cern.ch                  *
+*                                                          *
+*               Type 'help' for in-line help.              *
+*                                                          *
+************************************************************ 
+INFO: load configuration from /nfs/home/rikkert/.mg5/mg5_configuration.txt  
+INFO: load configuration from /tmp/mg5_history_guard_final/ttbar/Cards/amcatnlo_configuration.txt  
+INFO: load configuration from /export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun/input/mg5_configuration.txt  
+INFO: load configuration from /tmp/mg5_history_guard_final/ttbar/Cards/amcatnlo_configuration.txt  
+Using default eps viewer "evince". Set another one in ./input/mg5_configuration.txt
+Using default web browser "firefox". Set another one in ./input/mg5_configuration.txt
+import command lhapdf_fo.cmd
+set automatic_html_opening False --no_save
+set notification_center False --no_save
+set run_mode 2 --no_save
+set nb_core 3 --no_save
+set fastjet /export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun/validation/mcatnlo_xsections_f81ea6917/fastjet-config --no_save
+set lhapdf /nfs/home/rikkert/LHAPDF/bin/lhapdf-config --no_save
+launch NLO -f --name=history_guard_lhapdf_fo
+stty: 'standard input': Inappropriate ioctl for device
+stty: 'standard input': Inappropriate ioctl for device
+INFO: will run in mode: NLO 
+INFO: Starting run 
+INFO: Compiling the code 
+INFO: Using LHAPDF v6.5.5 interface for PDFs 
+INFO: Compiling source... 
+INFO:           ...done, continuing with P* directories 
+INFO: Compiling directories... 
+INFO: Compiling on 3 cores 
+INFO:  Compiling P0_gg_ttx... 
+INFO:  Compiling P0_uux_ttx... 
+INFO:  Compiling P0_uxu_ttx... 
+INFO:     P0_uxu_ttx done. 
+INFO:     P0_uux_ttx done. 
+INFO:     P0_gg_ttx done. 
+INFO: Checking test output: 
+INFO: P0_gg_ttx 
+INFO:  Result for test_ME: 
+INFO:    Passed. 
+INFO:  Result for check_poles: 
+INFO:    Poles successfully cancel for 20 points over 20 (tolerance=1.0e-05) 
+INFO: P0_uux_ttx 
+INFO:  Result for test_ME: 
+INFO:    Passed. 
+INFO:  Result for check_poles: 
+INFO:    Poles successfully cancel for 20 points over 20 (tolerance=1.0e-05) 
+INFO: P0_uxu_ttx 
+INFO:  Result for test_ME: 
+INFO:    Passed. 
+INFO:  Result for check_poles: 
+INFO:    Poles successfully cancel for 20 points over 20 (tolerance=1.0e-05) 
+INFO: Starting run 
+INFO: Using 3 cores 
+INFO: Cleaning previous results 
+INFO: Doing fixed order NLO 
+INFO: Setting up grids 
+INFO:  Idle: 0,  Running: 3,  Completed: 0 [ current time: 10h41 ] 
+INFO:  Idle: 0,  Running: 2,  Completed: 1 [  0.22s  ] 
+INFO:  Idle: 0,  Running: 1,  Completed: 2 [  0.27s  ] 
+INFO:  Idle: 0,  Running: 0,  Completed: 3 [  6.1s  ] 
+sum of cpu time of last step: 0 second
+INFO: 
+      Results after grid setup:
+      Total cross section:      7.443e+02 +- 5.8e+00 pb
+ 
+INFO: Refining results, step 1 
+INFO:  Idle: 2,  Running: 3,  Completed: 0 [ current time: 10h41 ] 
+INFO:  Idle: 1,  Running: 3,  Completed: 1 [  2m 24s  ] 
+INFO:  Idle: 0,  Running: 3,  Completed: 2 [  2m 25s  ] 
+INFO:  Idle: 0,  Running: 2,  Completed: 3 [  2m 25s  ] 
+INFO:  Idle: 0,  Running: 1,  Completed: 4 [  2m 53s  ] 
+INFO:  Idle: 0,  Running: 0,  Completed: 5 [  2m 53s  ] 
+sum of cpu time of last step: 0 second
+fail
+[1;34mFailed to access python version of LHAPDF: If the python interface to LHAPDF is available on your system, try adding its location to the PYTHONPATH environment variable and theLHAPDF library location to LD_LIBRARY_PATH (linux) or DYLD_LIBRARY_PATH (mac os x).The required LD_LIBRARY_PATH is /nfs/home/rikkert/LHAPDF/lib[0m
+[1;34mWARNING: Failed to access python version of LHAPDF: cannot compute PDF uncertainty from the weights in the events. The weights in the LHE event files will still cover all PDF set members, but there will be no PDF uncertainty printed in the run summary. 
+ If the python interface to LHAPDF is available on your system, try adding its location to the PYTHONPATH environment variable and theLHAPDF library location to LD_LIBRARY_PATH (linux) or DYLD_LIBRARY_PATH (mac os x). [0m
+INFO: 
+   --------------------------------------------------------------
+      Final results and run summary:
+      Process p p > t t~ [QCD]
+      Run at p-p collider (6500.0 + 6500.0 GeV)
+      Total cross section: 7.449e+02 +- 1.5e+00 pb
+   --------------------------------------------------------------
+      Scale variation (computed from histogram information):
+          Dynamical_scale_choice -2 (envelope of 9 values): 
+              7.451e+02 pb  +11.9% -11.5%
+      PDF variation (computed from histogram information):
+          244600 (101 members; combination method unknown): 
+              7.451e+02 pb
+   --------------------------------------------------------------
+ 
+INFO: The results of this run and the HwU and GnuPlot files with the plots have been saved in /tmp/mg5_history_guard_final/ttbar/Events/history_guard_lhapdf_fo 
+INFO: Run complete 
+INFO:  
+quit
+INFO:  
+quit
+INFO:  
+launch in debug mode

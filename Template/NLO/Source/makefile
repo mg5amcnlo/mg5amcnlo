@@ -22,8 +22,12 @@ endif
 .f90.o: ; $(FC) $(FFLAGS) -c $*.f90
 
 all: $(LIBDIR)libdhelas.a $(LIBDIR)libgeneric.a $(LIBDIR)libpdf.a	\
-    $(LIBDIR)libmodel.a $(LIBDIR)libcernlib.a param_card.inc $(LIBS)
+    $(LIBDIR)libmodel.a $(LIBDIR)libcernlib.a param_card.inc $(LIBS) born_support
 	rm -f PDF/*.o
+
+.PHONY: born_support
+born_support: param_card.inc
+	if [ -f BornSupport/providers.mk ]; then $(MAKE) -C BornSupport; fi
 
 
 $(LIBDIR)librunning.$(libext): RUNNING
@@ -103,6 +107,7 @@ libmodel: $(LIBDIR)libmodel.a
 libdhelas: $(LIBDIR)libdhelas.a
 
 clean:
+	if [ -f BornSupport/providers.mk ]; then $(MAKE) -C BornSupport clean; fi
 	rm -f *.o
 	rm -f param_card.inc run_card.inc
 	cd MODEL; make clean; cd ..

@@ -13,7 +13,7 @@ C some functions which deal with the splitorders
       do j = 1, nsplitorders
         split_type_used(j)=.false.
       enddo
-      do i = 1, fks_configs
+      do i = 1, fks_integrated
         do j = 1, nsplitorders
           split_type_used(j)=split_type_used(j).or.
      %      split_type_d(i,j)
