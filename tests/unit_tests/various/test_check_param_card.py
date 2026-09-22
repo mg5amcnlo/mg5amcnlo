@@ -15,8 +15,7 @@
 from __future__ import division
 from __future__ import absolute_import
 import random
-import six
-StringIO = six
+import io
 import os
 import sys
 import tests.unit_tests as unittest
@@ -271,7 +270,7 @@ class TestParamCardRule(unittest.TestCase):
         self.main.add_zero('mass',[2])
         self.main.add_one('mass',[3,2])
         self.main.add_identical('mass',[1],[2])
-        fsock = StringIO.StringIO()
+        fsock = io.StringIO()
         self.main.write_file(fsock)
         out = fsock.getvalue()
         
@@ -333,7 +332,7 @@ class TestParamCardRule(unittest.TestCase):
                 self.assertEqual(value, float(dict[key].get(eval(key2)).value))
        
 
-        fsock = StringIO.StringIO()
+        fsock = io.StringIO()
         self.main.write_param_card(fsock, dict)
         output = fsock.getvalue()
 
@@ -443,7 +442,7 @@ DECAY 25 2.441404e+00 # wh
         self.assertEqual(base_model.rule_card.rule, target_rule)
         
         # test that the rule_card is what we expect
-        fsock = StringIO.StringIO()
+        fsock = io.StringIO()
         base_model.rule_card.write_file(fsock)
         out = fsock.getvalue()
         target ="""<file>######################################################################
@@ -531,7 +530,7 @@ DECAY 25 2.441404e+00 # wh
 <constraint>
 </constraint>
 </file>""" 
-        fsock = StringIO.StringIO()
+        fsock = io.StringIO()
         writter.make_valid_param_card(full_card, restriction, outputpath=fsock)
         output = fsock.getvalue()
         target = """######################################################################
@@ -1414,7 +1413,7 @@ BLOCK MSD2 #
 
 
 
-        fsock = StringIO.StringIO()
+        fsock = io.StringIO()
         writter.convert_to_mg5card(self.sps1a, fsock)
         output = fsock.getvalue()
         self.assertEqual(output.split('\n'), target.split('\n'))

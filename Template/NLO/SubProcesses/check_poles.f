@@ -98,6 +98,9 @@ c     Set the energy to be characteristic of the run
       enddo
       if (abs(lpp(1)).eq.1.and.abs(lpp(2)).eq.1) then
           energy = max((ebeam(1)+ebeam(2))/20.0d0,2.0d0*totmass)
+      else if (lpp(1).eq.2.and.lpp(2).eq.2) then
+          energy = max((ebeam(1)/(nb_proton(1)+nb_neutron(1))+ebeam(2)/
+     .       (nb_proton(2)+nb_neutron(2)))/200.0d0,2.0d0*totmass)
       else
           energy = ebeam(1) + ebeam(2)
       endif

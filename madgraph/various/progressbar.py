@@ -40,8 +40,6 @@ automatically supports features like auto-resizing when available.
 """
 
 from __future__ import absolute_import
-import six
-from six.moves import range
 __author__ = "Nilton Volpato"
 __author_email__ = "first-name dot last-name @ gmail.com"
 __date__ = "2006-05-07"
@@ -158,7 +156,7 @@ class Bar(ProgressBarWidgetHFill):
         self.left = left
         self.right = right
     def _format_marker(self, pbar):
-        if isinstance(self.marker, (str, six.text_type)):
+        if isinstance(self.marker, str):
             return self.marker
         else:
             return self.marker.update(pbar)
@@ -252,7 +250,7 @@ class ProgressBar(object):
                 r.append(w)
                 hfill_inds.append(i)
                 num_hfill += 1
-            elif isinstance(w, (str, six.text_type)):
+            elif isinstance(w, str):
                 r.append(w)
                 currwidth += len(w)
             else:

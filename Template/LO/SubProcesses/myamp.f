@@ -12,6 +12,7 @@ c
       include 'nexternal.inc'
       double precision   zero
       parameter (zero = 0d0)
+      include 'vector.inc'
       include 'run.inc'
 c
 c     Arguments
@@ -52,7 +53,8 @@ c
       logical             OnBW(-nexternal:0)     !Set if event is on B.W.
       common/to_BWEvents/ OnBW
       
-      include 'coupl.inc'
+c      include 'vector.inc' ! defines VECSIZE_MEMMAX
+      include 'coupl.inc' ! needs VECSIZE_MEMMAX (defined in vector.inc)
 
       integer idup(nexternal,maxproc,maxsproc)
       integer mothup(2,nexternal)
@@ -137,7 +139,7 @@ c
      $            gForceBW(i,iconfig).eq.1))
             if(onshell)then
 c     Remove on-shell forbidden s-channels (gForceBW=2) (JA 2/10/11)
-              if(gForceBW(i,iconfig).eq.2) then
+              if(gForceBW(i,iconfig).eq.2.and.sde_strat.eq.1) then
                  cut_bw = .true.
                  return               
               endif
@@ -229,6 +231,7 @@ c
       double precision x1,x2,xk(nexternal)
       double precision dr,mtot,etot,xqfact
       double precision spmass
+      double precision stot ! technically the min with dsqrt_shatmax**2 with the physical one
       integer i, iconfig, l1, l2, j, nt, nbw, iproc, k
       integer iden_part(-nexternal+1:nexternal)
 
@@ -265,6 +268,7 @@ c
       real*8         emass(nexternal)
       common/to_mass/emass
 
+      include 'vector.inc'
       include 'run.inc'
 
       double precision etmin(nincoming+1:nexternal),etamax(nincoming+1:nexternal)
@@ -282,10 +286,10 @@ c
       integer        lbw(0:nexternal)  !Use of B.W.
       common /to_BW/ lbw
 
-      double precision stot,m1,m2
-      common/to_stot/stot,m1,m2
+      double precision real_stot,m1,m2
+      common/to_stot/real_stot,m1,m2
 
-      include 'coupl.inc'
+      include 'coupl.inc' ! needs VECSIZE_MEMMAX (defined in vector.inc)
       include 'cuts.inc'
 C
 C     SPECIAL CUTS
@@ -296,7 +300,7 @@ C
       COMMON /TO_SPECISA/IS_A_J,IS_A_A,IS_A_L,IS_A_B,IS_A_NU,IS_HEAVY,
      . IS_A_ONIUM,DO_CUTS
       integer njet
-
+      logical dynscale_cut
 
 
 c
@@ -306,6 +310,12 @@ c
 c-----
 c  Begin Code
 c-----     
+      if (dsqrt_shatmax.ne.-1)then
+        stot = min(real_stot, dsqrt_shatmax**2)
+      else
+        stot = real_stot
+      endif
+
       iconfig = this_config
 c     needs to be initialise to avoid segfault
       do i = -nexternal,-1
@@ -532,6 +542,18 @@ c     Perform setting for shat (PDF BW or 1/s)
 c     Set minimum based on: 1) required energy 2) resonances 3) 1/10000 of sqrt(s)
          i = max(1,3*(nexternal-2) - 4 + 1)
          xo = max(min(etot**2/stot, 1d0-1d-8),1d0/stot)
+         if (xo.eq.1d0/stot) then
+             dynscale_cut =  (dynamical_scale_choice.eq.-1.and.
+     $        .not.(FIXED_REN_SCALE.and.FIXED_FAC_SCALE1.and.FIXED_FAC_SCALE2))
+             if (dynscale_cut.and.Smin.gt.0)then
+                 xo = max(4d0/stot, Smin/stot)
+             elseif (dynscale_cut)then
+                 xo = 4d0/stot
+             elseif (Smin.gt.0) then
+                xo = .5*min(Smin/stot,xo)
+             endif
+         endif
+
 c        Take into account special cuts
 c        already done in smin
 c     Include mass scale from BWs

@@ -2,9 +2,6 @@ from __future__ import absolute_import
 import array
 import copy
 import math
-from six.moves import map
-from six.moves import range
-from six.moves import zip
 from functools import reduce
 
 import madgraph.various.misc as misc
@@ -809,7 +806,7 @@ class FromGolem95FortranCodeGenerator():
 
     @classmethod
     def generate_mapping(cls, R, k):
-        """
+        r"""
             Generates a mapping from tensor components \hat{C}(a_1, ..., a_k)
             into a one dimensional array.
     

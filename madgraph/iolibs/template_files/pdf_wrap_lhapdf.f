@@ -5,6 +5,9 @@ C     INCLUDE
 C
       include 'pdf.inc'
       include '../alfas.inc'
+## if(LO) {
+      include '../vector.inc'
+## }
       include '../coupl.inc'
       real*8 zmass
       data zmass/91.188d0/
@@ -21,7 +24,9 @@ c-------------------
 
 c     initialize the pdf set
       call FindPDFPath(LHAPath)
-      CALL SetPDFPath(LHAPath)
+c     pass the path without its blank padding: some versions of the
+c     lhaglue interface keep the padding, making the path unusable
+      CALL SetPDFPath(trim(LHAPath))
       value(1)=lhaid
       parm(1)='DEFAULT'
       if (pdlabel.eq.'lhapdf') then

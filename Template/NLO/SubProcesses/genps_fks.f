@@ -305,8 +305,8 @@ c
      &     ,del2,del3,del30,der,derivative,errder,random,ran2,virtgranny
      &     ,virtgranny_red,MC_sum_factor,xmbe2hatlow,xmbe2hatupp
      &     ,xmbe2inv,xmbe2inv_temp,xinv_redvirtgranny,xinv_virtgranny
-      external derivative,ran2,virtgranny,xinv_redvirtgranny
-     &     ,xinv_virtgranny
+      external derivative,ran2,virtgranny,virtgranny_red
+     &     ,xinv_redvirtgranny,xinv_virtgranny
 c     granny stuff
       double precision tiny,granny_m2(-1:1),step,granny_m2_red_local(
      &     -1:1)
@@ -1014,6 +1014,7 @@ c Trivial, but prevents loss of accuracy
       !(note that in e+e- collisions, if tau is generated with a BW
       ! then use_evpr is set to true)
       if ((lpp(1).eq.1.and.lpp(2).eq.1).or.
+     $   (lpp(1).eq.2.and.lpp(2).eq.2).or.
      $   (lpp(1).eq.0.and.lpp(2).eq.0)) then
           use_evpr = .true.
       else if ((abs(lpp(1)).eq.3.and.abs(lpp(2)).eq.3).or.
@@ -1518,16 +1519,21 @@ c
      &        ,shat,stot,sqrtshat,tau,ycm,xbjrk,p_i_fks,xiimax,xinorm
      &        ,xi_i_fks,y_ij_fks,xi_i_hat,xpswgt,xjac,srec,pass)
 
-      if (.not.pass) return
-
       ! here we should call generate_momenta_born
       call generate_momenta_born(x,srec,dsqrt(srec),totmass,
      $      m,s,
      $      qmass,qwidth,granny_m2_red,input_granny_m2,m_born,xpswgt,xjac)
 
-      if (xjac.lt.0d0) then
-        pass = .false.
-        return
+      ! if anything goes wrong with the generation of this 
+      ! specific icountevts configuration, just set the corresponding 
+      ! Born momenta to -100 so that they will be filtered out
+      ! by setcuts. Do not return (this allows e.g. configurations
+      ! to have the Born/soft counterevents but not the real-emission)
+      if (.not.pass.or.xjac.lt.0d0) then
+          p_born(0,1) = -100d0
+          p_born_l(0,1) = -100d0
+          p_born_ev(0,1) = -100d0
+          goto 112
       endif
 
 C If we are not doing event projection, we need to boost the 

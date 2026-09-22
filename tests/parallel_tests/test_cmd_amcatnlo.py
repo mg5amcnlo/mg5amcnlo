@@ -126,7 +126,7 @@ class MECmdShell(IOTests.IOTestManager):
     def join_path(*path):
         """join path and treat spaces"""     
         combine = os.path.join(*path)
-        return combine.replace(' ','\ ')        
+        return combine.replace(' ','\\ ')        
     
     def do(self, line):
         """ exec a line in the cmd under test """        
@@ -203,7 +203,7 @@ class MECmdShell(IOTests.IOTestManager):
         # check the result
         res = open('%s/Events/run_01_LO/res_1.txt' % self.path).read()
 
-        pat = re.compile('''\s*(\d+\.\d+e[+-]\d+) \+\- (\d+\.\d+e[+-]\d+)  \((\d+\.\d+e[+-]\d+)\%\)
+        pat = re.compile(r'''\s*(\d+\.\d+e[+-]\d+) \+\- (\d+\.\d+e[+-]\d+)  \((\d+\.\d+e[+-]\d+)\%\)
         \s*(\-?\d+\.\d+e[+-]\d+) \+\- (\d+\.\d+e[+-]\d+)  \((\-?\d+\.\d+e[+-]\d+)\%\)''')
 
         match = re.search(pat, res)
@@ -344,6 +344,35 @@ class MECmdShell(IOTests.IOTestManager):
         self.assertTrue(os.path.exists('%s/Events/run_02/alllogs_1.html' % self.path))
         self.assertTrue(os.path.exists('%s/Events/run_02/alllogs_2.html' % self.path))
 
+
+
+    @set_global()
+    def test_short_amcatnlo_int_nlo(self):
+        """tests soft/collinear for  g b~ > t t~ t~ w+ g """
+        start= time.time()
+        self.generate(['g b~ > t t~ t~ w+ g QED^2=4 QCD^2=4 [real=QCD QED]'], model='loop_sm')
+
+        ####NLO
+        card = open('%s/Cards/run_card_default.dat' % self.path).read()
+        self.assertIn('10000  = npoints_FO', card)
+        card = card.replace('10000  = npoints_FO', '100  = npoints_FO')
+        self.assertIn('5000   = npoints_FO_grid', card)
+        card = card.replace('5000   = npoints_FO_grid', '100  = npoints_FO_grid')
+        self.assertIn('0.01   = req_acc_FO', card)
+        card = card.replace('0.01   = req_acc_FO', '-1   = req_acc_FO')
+        open('%s/Cards/run_card.dat' % self.path, 'w').write(card)
+
+        start = time.time()
+        self.do('compile -f')
+
+        #with misc.chdir(pjoin(self.path,'SubProcesses','P0_gb~_tt~tg')):
+        #    misc.call(, 
+        #              stdout = open(os.devnull, 'w'))   
+
+
+        #start = time.time()
+        #self.do('launch aMC@NLO -fp')
+        # test the lhe event file exists
 
     
 

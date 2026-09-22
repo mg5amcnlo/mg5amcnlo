@@ -4,9 +4,6 @@ from __future__ import absolute_import
 import re
 import sys
 import string
-from six.moves import range
-
-
 try: 
     from . import Cards
     import madgraph.various.misc as misc

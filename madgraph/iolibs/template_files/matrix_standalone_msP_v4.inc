@@ -16,6 +16,8 @@ C CONSTANTS
 C  
       INTEGER    NEXTERNAL
       PARAMETER (NEXTERNAL=%(nexternal)d)
+      INTEGER    NINCOMING
+      PARAMETER (NINCOMING=%(nincoming)d)
       INTEGER                 NCOMB         
       PARAMETER (             NCOMB=%(ncomb)d)
 C  
@@ -28,11 +30,13 @@ C
       INTEGER NHEL(NEXTERNAL,NCOMB),NTRY
       REAL*8 T
       REAL*8 MATRIX_PROD
-      INTEGER IHEL,IDEN, I
+      INTEGER IHEL,IDEN, I,JJ
       INTEGER JC(NEXTERNAL)
       LOGICAL GOODHEL(NCOMB)
       DATA NTRY/0/
       DATA GOODHEL/NCOMB*.FALSE./
+      double precision beampol(2)
+      common /to_beampol/ beampol
 %(helicity_lines)s
 %(den_factor_line)s
 C ----------
@@ -45,7 +49,16 @@ C ----------
       ANS = 0D0
           DO IHEL=1,NCOMB
              IF (GOODHEL(IHEL) .OR. NTRY .LT. 100) THEN
-                 T=MATRIX_PROD(P ,NHEL(1,IHEL),JC(1))            
+                 T=MATRIX_PROD(P ,NHEL(1,IHEL),JC(1))
+C Support for polarised beam                 
+                 DO JJ=1,NINCOMING
+                   IF(BEAMPOL(JJ).NE.1D0.AND.NHEL(JJ,IHEL).EQ.INT(SIGN(1D0,BEAMPOL(JJ)))) THEN
+                     T=T*ABS(BEAMPOL(JJ))
+                   ELSE IF(BEAMPOL(JJ).NE.1D0)THEN
+                     T=T*(2D0-ABS(BEAMPOL(JJ)))
+                   ENDIF
+                 ENDDO
+
                ANS=ANS+T
                IF (T .NE. 0D0) THEN
                    GOODHEL(IHEL)=.TRUE.
@@ -89,7 +102,8 @@ C LOCAL VARIABLES
 C  
       INTEGER I,J
       COMPLEX*16 ZTEMP
-      REAL*8 CF(NCOLOR,NCOLOR)
+      INTEGER CF(NCOLOR*(NCOLOR+1))
+      INTEGER DENOM,CF_INDEX
       COMPLEX*16 AMP(NGRAPHS), JAMP(NCOLOR)
       COMPLEX*16 TMP_JAMP(%(nb_temp_jamp)i)
       COMPLEX*16 W(18,NWAVEFUNCS)
@@ -112,12 +126,15 @@ C ----------
 %(jamp_lines)s
 
       MATRIX_PROD = 0.D0 
+      CF_INDEX = 0
       DO I = 1, NCOLOR
           ZTEMP = (0.D0,0.D0)
-          DO J = 1, NCOLOR
-              ZTEMP = ZTEMP + CF(J,I)*JAMP(J)
+          DO J = I, NCOLOR
+              CF_INDEX = CF_INDEX +1
+              ZTEMP = ZTEMP + CF(CF_INDEX)*JAMP(J)
           ENDDO
           MATRIX_PROD = MATRIX_PROD+ZTEMP*DCONJG(JAMP(I))   
       ENDDO
+      MATRIX_PROD = MATRIX_PROD/DENOM
 %(amp2_lines)s
       END

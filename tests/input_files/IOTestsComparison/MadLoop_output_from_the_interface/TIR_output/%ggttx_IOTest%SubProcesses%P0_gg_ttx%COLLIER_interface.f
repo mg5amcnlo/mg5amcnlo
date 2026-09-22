@@ -95,6 +95,7 @@ C     These quantities are for the pole evaluation
 C     
 C     GLOBAL VARIABLES
 C     
+
       INCLUDE 'coupl.inc'
       INCLUDE 'MadLoopParams.inc'
       INCLUDE 'unique_id.inc'
@@ -488,7 +489,8 @@ C             The expression below is like taking the absolute value
 C              when summing errors linearly
 C             TIRCOEFSERRORS(I,K)=(TNtenerr(CURR_RANK)/MaxCoefForRank(C
 C             URR_RANK))*DCMPLX(
-C              ABS(DBLE(TIRCOEFS(I,K))),ABS(DIMAG(TIRCOEFS(I,K))) )			
+C              ABS(DBLE(TIRCOEFS(I,K))),ABS(DIMAG(TIRCOEFS(I,K))) )   
+C                    
 C             But empirically, I observed that retaining the original
 C              complex phase leads to slightly more accurate estimates
               TIRCOEFSERRORS(I,K)=(TNTENERR(CURR_RANK)
@@ -651,7 +653,7 @@ C     Handle the request of turning off the caching
           COLLIER_CACHE_ACTIVE = 0
         ENDIF
 C       If we were asked to turn the cache off but it was already so,
-C        then do nothing		  
+C        then do nothing       
         RETURN
       ENDIF
 

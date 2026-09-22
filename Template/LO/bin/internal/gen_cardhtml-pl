@@ -137,7 +137,7 @@ until($listpos>$#incard){
   print PAGE "<tr> <td> <b> Model:         <td> <b> $model </tr> \n";
   print PAGE "</b> \n </table> \n <center> \n";
   print PAGE "<td VALIGN=\"TOP\" WIDTH=\"50%\" BGCOLOR=\"#F0FFFF\" > \n";
-  print PAGE "<img SRC=\"HTML/card.jpg\"  ALT=\"\" BORDER=0  align=CENTER> \n";
+  print PAGE "<img SRC=\"HTML/card.png\"  ALT=\"\" BORDER=0  align=CENTER> \n";
   print PAGE "</center> \n";
   print PAGE "</td> \n </tr> \n <tr> \n";
   print PAGE "<td COLSPAN=2 ALIGN=CENTER > \n";

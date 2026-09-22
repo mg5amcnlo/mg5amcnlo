@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # usage:
 #    condor_sub queue nmasses command cmd-arguments
 # Important note:
@@ -76,7 +76,7 @@ function write_masses {
 
 function write_submit {
     if ! [ -f $fnsubmit ] ; then
-    echo "#!/bin/bash
+    echo "#!/usr/bin/env bash
 ARGUMENTS='\$(argument)'
 EXECUTABLE=$2
 LOGDIR=logs

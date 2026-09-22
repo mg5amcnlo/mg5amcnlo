@@ -14,6 +14,7 @@ c********************************************************************
       implicit none
       include 'maxparticles.inc'
       include 'run_config.inc'
+      include 'vector.inc'
       include 'run.inc'
       double precision pi
       parameter (pi = 3.1415926d0)

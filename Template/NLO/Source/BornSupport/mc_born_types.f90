@@ -30,11 +30,15 @@ module mc_born_types
   end type
   type BornRequest
     integer :: sector=1, m=0, n=0, extra=0
+    integer :: single_helicity=0
+    integer, allocatable :: helicity(:)
     logical :: helicities=.false., colour=.false., charge=.false.
     real(8), allocatable :: charges(:)
   end type
   type BornResult
     real(8) :: born=0d0, correlation=0d0
+    real(8) :: single_helicity=0d0
+    complex(8), allocatable :: ewsudakov(:), ewsudakov_lo2(:)
     real(8), allocatable :: amplitudes(:), diagrams(:), flows(:), flow_orders(:,:)
     real(8), allocatable :: helicities(:), helicity_orders(:,:), soft(:)
     complex(8), allocatable :: counterterms(:,:), split_counterterms(:,:,:), extra(:,:)

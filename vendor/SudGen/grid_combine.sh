@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # loop over itype
 for (( itype=1; itype<=4; itype++ ))

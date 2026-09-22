@@ -124,7 +124,8 @@ c
 
       integer sprop(maxsproc,-max_branch:-1,lmaxconfigs)
       integer tprid(-max_branch:-1,lmaxconfigs)
-      common/to_sprop/sprop,tprid
+      integer fake_id
+      common/to_sprop/sprop,tprid,fake_id
       logical firsttime
 
       double precision xprop(3,nexternal),tprop(3,nexternal)
@@ -171,7 +172,8 @@ c      COMMON/TO_PDF/LHAID,PDLABEL,EPA_LABEL, pdsublabel
       integer mothup(2,nexternal)
       integer icolup(2,nexternal,maxflow,maxsproc)
       include 'leshouche.inc'
-      
+
+      include 'vector.inc'
       include 'run.inc'
 
 
@@ -605,6 +607,7 @@ c**************************************************************************
       include 'maxconfigs.inc'
       include 'nexternal.inc'
       include 'maxamps.inc'
+      include 'vector.inc'
       include 'run.inc'
 
 c     local
@@ -755,6 +758,7 @@ c
       double precision stot,m1,m2
       common/to_stot/stot,m1,m2
 
+      include 'vector.inc'
       include 'run.inc'
 
 c-----
@@ -1370,6 +1374,10 @@ c
       double precision smin,smax,spole,swidth,s,jac
       double precision x
       logical pass
+      include 'maxparticles.inc'
+      include '../../Source/vector.inc'
+      include 'run.inc'
+      include 'cuts.inc'
 c
 c     Local
 c     
@@ -1381,6 +1389,10 @@ c
 c-----
 c  Begin Code
 c-----
+      if (dsqrt_shatmax.ne.-1d0)then
+          smax = min(smax, dsqrt_shatmax**2)
+      endif 
+
       pass=.true.
       if (jac .eq. 0 .and. .not. warned0) then
          print*,'Input jacobian 0 in genps'
@@ -1625,7 +1637,10 @@ C     LOCAL
       DOUBLE PRECISION ETA,ETAMIN,ETAMAX
       logical warned
       data warned/.false./
-
+      include 'maxparticles.inc'
+      include '../../Source/vector.inc'
+      include 'run.inc'
+      include 'cuts.inc'
 C------------
 C  BEGIN CODE
 C------------
@@ -1642,7 +1657,11 @@ C     &     X(1),TAU,SJACOBI)
 C     IF THERE IS NO S CHANNEL POLE USE BELOW:
 
       TAUMIN = 0d0 !SMIN/S !keep scale fix
-      TAUMAX = 1D0
+      if (dsqrt_shatmax.ne.-1d0)then
+          TAUMAX=dsqrt_shatmax**2/S
+      else
+        TAUMAX = 1D0
+      endif
       TAU    = (TAUMAX-TAUMIN)*X(1)+TAUMIN
       SJACOBI=  sjacobi*(TAUMAX-TAUMIN)
 
@@ -1750,11 +1769,35 @@ C     -----------------------------------------
 
       integer ids(nexternal)
       integer i,j
+      integer nsel, isel
+      logical trivial_boost
 
 c     uncompress
       call mapid(frame_id, ids)
       pboost(:) = 0d0
       p2(:,:) = 0d0
+c     avoid trivial boost (check only for  0 0 1 1 1... so sum of the
+c     final state. 1 1 0 0 0 .... should not go within this function   
+      trivial_boost=.true.
+      do i=1,nexternal
+        if (i.le.nincoming)then
+            if (ids(i).ne.0)then
+                trivial_boost=.false.
+                EXIT ! stop do loop
+            endif
+        else
+            if (ids(i).ne.1)then
+                  trivial_boost=.false.
+                  EXIT ! stop do loop
+              endif
+        endif
+        enddo
+
+        if (trivial_boost)then
+            p2(:,:) = p1(:,:)
+            return
+        endif
+
 c     find the boost momenta --sum of particles--
       do i=1,nexternal
        if (ids(i).eq.1)then
@@ -1768,7 +1811,38 @@ c     find the boost momenta --sum of particles--
       enddo	    
       do i=1, nexternal
          call boostx(p1(0,i), pboost, p2(0,i))
-      enddo   
+      enddo
+
+c     If a single particle defines the frame, that particle must be
+c     exactly at rest after the boost. boostx only gets there up to the
+c     rounding of the boost factor, leaving a residual 3-momentum of a
+c     few 1d-14 whose direction is pure noise. That is not harmless:
+c     vxxxxx (aloha_functions.f) branches on pp.eq.rZero, and for a
+c     massive vector at exactly zero 3-momentum it takes the frame z
+c     axis as quantisation axis (longitudinal polarisation vector
+c     (0,0,0,1)); otherwise it builds the polarisation vectors from the
+c     momentum direction, i.e. from the rounding noise, giving an O(1)
+c     wrong polarisation state on the events that fail to round to zero.
+c     So impose the defining property of the frame explicitly.
+c     Only nsel==1 needs this: with two or more selected particles it is
+c     their sum that is at rest, and no individual leg sits on the
+c     pp.eq.rZero branch point. The energy is left untouched -- zeroing
+c     the 3-momentum shifts the invariant mass by O(1d-28) relative, and
+c     HELAS takes the mass as a separate argument anyway.
+      nsel = 0
+      isel = 0
+      do i=1, nexternal
+         if (ids(i).eq.1) then
+            nsel = nsel + 1
+            isel = i
+         endif
+      enddo
+      if (nsel.eq.1) then
+         p2(1,isel) = 0d0
+         p2(2,isel) = 0d0
+         p2(3,isel) = 0d0
+      endif
+
       return
       end
 
@@ -1779,7 +1853,8 @@ c     find the boost momenta --sum of particles--
       include 'nexternal.inc'
       include 'genps.inc'
       include 'maxamps.inc'
-      include 'coupl.inc'
+      include 'vector.inc' ! defines VECSIZE_MEMMAX
+      include 'coupl.inc' ! needs VECSIZE_MEMMAX (defined in vector.inc)
 c     include 'run.inc'
 
       double precision p(0:3, nexternal)
@@ -1791,8 +1866,8 @@ c     include 'run.inc'
       common/to_forest/ iforest, tstrategy
 
       integer sprop(maxsproc,-max_branch:-1,lmaxconfigs)
-      integer tprid(-max_branch:-1,lmaxconfigs)
-      common/to_sprop/sprop,tprid
+      integer tprid(-max_branch:-1,lmaxconfigs), fake_id
+      common/to_sprop/sprop,tprid,fake_id
 
       double precision stot,m1,m2
       common/to_stot/stot,m1,m2
@@ -1888,7 +1963,7 @@ c      write(*,*) 'T-channel found: ',nb_tchannel
             if(sde_strat.eq.2)then
                t = dot(ptemp(0,-i), ptemp(0,-i))
                Mass  = prmass(-i, config)
-               get_channel_cut = get_channel_cut / ((t-Mass)*(t+Mass)+stot*1d-10)**2
+               get_channel_cut = get_channel_cut / (t-Mass**2+stot*1d-10)**2
             endif
 c            write(*,*) i, "t, Mass, fact", t, Mass, ((t-Mass)*(t+Mass))**2,get_channel_cut
             t = t/stot 
@@ -1903,9 +1978,9 @@ c               get_channel_cut = get_channel_cut * (2*tmin_for_channel-t)/tmin_
                t = dot(ptemp(0,-i), ptemp(0,-i))
                Mass  = prmass(-i, config)
                Width = prwidth(-i, config)
-               tmp = (t-Mass)*(t+Mass)
+               tmp = (t-Mass**2)
                tmp2 = Mass*Width
-               get_channel_cut = get_channel_cut* (tmp**2 - tmp2**2)/(tmp**2 + tmp2**2)**2 
+               get_channel_cut = get_channel_cut/(tmp**2 + tmp2**2) 
             endif
 c            write(*,*) i, "s, Mass, Width, fact", t, Mass, Width, (((t-Mass)*(t+Mass) )**2 + Width**2*Mass**2), get_channel_cut
          endif

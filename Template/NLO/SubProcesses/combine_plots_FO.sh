@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # $? is the value of last executed command. A call to this function
 # after a failure will cause the program to quit the script

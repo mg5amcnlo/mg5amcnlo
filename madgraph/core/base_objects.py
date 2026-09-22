@@ -23,16 +23,12 @@ import math
 import numbers
 import os
 import re
-import six
-StringIO = six
-
+import io
 import madgraph
 import madgraph.core.color_algebra as color
 import collections
 from madgraph import MadGraph5Error, MG5DIR, InvalidCmd
 import madgraph.various.misc as misc 
-from six.moves import range
-from six.moves import zip
 from functools import reduce
 
 
@@ -274,13 +270,39 @@ class Particle(PhysicsObject):
                     return True
         return super(Particle, self).set(name, value,force=force)
         
+    def nice_string(self):
+        """String representation of the object. Outputs valid Python 
+        with improved format."""
 
+        mystr = '{\n'
+        for prop in self.get_sorted_keys():
+            if prop == 'spin':
+               spin_name ={1: 'scalar', 2: 'fermion', 3: 'vector', 4: 'spin 3/2', 5: 'spin 2'} 
+               if self[prop] in spin_name:
+                   spin_name = spin_name[self[prop]]
+               else:
+                   spin_name = 'unknown'
+               mystr = mystr + '    \'' + prop + '(2s+1 format)\': %d (%s),\n' % \
+                (self[prop], spin_name)
+            elif isinstance(self[prop], str):
+                mystr = mystr + '    \'' + prop + '\': \'' + \
+                        self[prop] + '\',\n'
+            elif isinstance(self[prop], float):
+                mystr = mystr + '    \'' + prop + '\': %.2f,\n' % self[prop]
+            else:
+                mystr = mystr + '    \'' + prop + '\': ' + \
+                        repr(self[prop]) + ',\n'
+        mystr = mystr.rstrip(',\n')
+        mystr = mystr + '\n}'
+
+        return mystr
+    
     def filter(self, name, value):
         """Filter for valid particle property values."""
 
         if name in ['name', 'antiname']:
             # Forbid special character but +-~_
-            p=re.compile('''^[\w\-\+~_]+$''')
+            p=re.compile(r'''^[\w\-\+~_]+$''')
             if not p.match(value):
                 raise self.PhysicsObjectError("%s is not a valid particle name" % value)
 
@@ -327,7 +349,7 @@ class Particle(PhysicsObject):
 
         if name in ['mass', 'width']:
             # Must start with a letter, followed by letters, digits or _
-            p = re.compile('\A[a-zA-Z]+[\w\_]*\Z')
+            p = re.compile(r'\A[a-zA-Z]+[\w\_]*\Z')
             if not p.match(value):
                 raise self.PhysicsObjectError("%s is not a valid name for mass/width variable" % \
                         value)
@@ -946,6 +968,7 @@ class Interaction(PhysicsObject):
         '%s_%s_%s'%(self['color'][k[0]],self['lorentz'][k[1]],self['couplings'][k]))
 
 
+
 #===============================================================================
 # InteractionList
 #===============================================================================
@@ -1076,6 +1099,8 @@ class Model(PhysicsObject):
         self['allow_pickle'] = True
         self['limitations'] = [] # MLM means that the model can sometimes have issue with MLM/default scale. 
                                  # fix_scale means that the model should use fix_scale computation.
+        self['startfromalpha0'] = False
+        self['dual_mass_scheme'] = False
         # attribute which might be define if needed
         #self['name2pdg'] = {'name': pdg}
         
@@ -1136,7 +1161,7 @@ class Model(PhysicsObject):
             if not (isinstance(value, list)):
                 raise self.PhysicsObjectError("Object of type %s is not a list" % type(value))
 
-        elif name == 'case_sensitive':
+        elif name in ['case_sensitive', 'startfromalpha0', 'dual_mass_scheme']:
             if not value in [True ,False]:
                 raise self.PhysicsObjectError("Object of type %s is not a boolean" % type(value))
             
@@ -1192,29 +1217,36 @@ class Model(PhysicsObject):
             if self['interactions']:
                 self['interaction_dict'] = self['interactions'].generate_dict()
 
-        if (name == 'got_majoranas') and self[name] == None:
+        elif (name == 'got_majoranas') and self[name] == None:
             if self['particles']:
                 self['got_majoranas'] = self.check_majoranas()
 
-        if (name == 'coupling_orders') and self[name] == None:
+        elif (name == 'coupling_orders') and self[name] == None:
             if self['interactions']:
                 self['coupling_orders'] = self.get_coupling_orders()
 
-        if (name == 'order_hierarchy') and not self[name]:
+        elif (name == 'order_hierarchy') and not self[name]:
             if self['interactions']:
                 self['order_hierarchy'] = self.get_order_hierarchy()    
 
-        if (name == 'expansion_order') and self[name] == None:
+        elif (name == 'expansion_order') and self[name] == None:
             if self['interactions']:
                 self['expansion_order'] = \
                    dict([(order, -1) for order in self.get('coupling_orders')])
                    
-        if (name == 'name2pdg') and 'name2pdg' not in self:
+        elif (name == 'name2pdg') and 'name2pdg' not in self:
             self['name2pdg'] = {}
             for p in self.get('particles'):
                 self['name2pdg'][p.get('antiname')] = -1*p.get('pdg_code')
                 self['name2pdg'][p.get('name')] =  p.get('pdg_code')
-                
+        
+        elif (name == 'coupling_dep' and 'coupling_dep' not in self):
+            self['coupling_dep'] = {}
+            if self.get('couplings'):
+                for key, couplings in self.get('couplings').items():
+                    for coup in couplings:
+                        self['coupling_dep'][coup.name] = key
+
         return Model.__bases__[0].get(self, name) # call the mother routine
 
     def set(self, name, value, force = False):
@@ -1362,6 +1394,30 @@ class Model(PhysicsObject):
                 p ['color'] != 1 and p['mass'].lower() == 'zero'])
 
 
+    def get_flavour_scheme(self):
+        """Return the number of light quark flavours of the flavour-number
+        scheme this model corresponds to: the largest n in (3, 4, 5) such that
+        the quarks with PDG code 1..n are all massless.
+
+        This single number drives both the default 'p'/'j' multiparticles and
+        the run_card default for maxjetflavor, so the two always agree.
+        Returns None when the model does not define all of d, u, s, c, b or
+        when one of d, u, s is massive: no scheme is imposed in that case."""
+
+        quarks = [self.get_particle(pdg) for pdg in range(1, 6)]
+        if not all(quarks):
+            return None
+        massless = [q.get('mass').lower() == 'zero' for q in quarks]
+        if not all(massless[:3]):
+            return None
+        nflav = 3
+        for pdg in (4, 5):
+            if not massless[pdg - 1]:
+                break
+            nflav = pdg
+        return nflav
+
+
     def get_quark_pdgs(self):
         """returns the PDG codes of the light quarks and antiquarks"""
         pdg_list = [p['pdg_code'] for p in self.get('particles') \
@@ -1485,7 +1541,28 @@ class Model(PhysicsObject):
         
         return correlated   
 
+    def get_all_running_coupling(self):
+        """ return the list of all coupling which are running for this model """
+
+        all_running_coupling = []
+        all_running_type = ['aS'] + self.get_running()
+        not_running_index = [] # to allow to add at the end of the list the non running one
+        for type_coup, coup_list in self.get('couplings').items():
+            if any([c in all_running_type for c in type_coup]):
+                all_running_coupling += coup_list
+        return all_running_coupling
+    
+    def is_running_coupling(self, name, reset_cache=False):
+        """check if a coupling runs or not"""
+
+        if reset_cache or not hasattr(self, 'cache_running_coupling'):
+            self.cache_running_coupling = self.get_all_running_coupling()
         
+        if name.startswith('-'):
+            name = name[1:]
+        return name in self.cache_running_coupling
+
+
 
     def check_majoranas(self):
         """Return True if there is fermion flow violation, False otherwise"""
@@ -1695,7 +1772,7 @@ class Model(PhysicsObject):
         
         import models.write_param_card as writer
         if not filepath:
-            out = StringIO.StringIO() # it's suppose to be written in a file
+            out = io.StringIO() # it's suppose to be written in a file
         else:
             out = filepath
         param = writer.ParamCardWriter(self, filepath=out)
@@ -2036,9 +2113,41 @@ class ParamCardVariable(ModelVariable):
 #===============================================================================
 # Leg
 #===============================================================================
+def polarization_to_string(polarization):
+    """Render a leg 'polarization' list as the brace content of a process
+    string. The propagator-only entries (4,5,6,7,9,99) are printed as the
+    letters the parser understands ('G','H','Q','W','S','A') rather than as
+    their raw integers, which the parser rejects ("polarization are between
+    -3 and 3"). This is what makes nice_string()/input_string() round-trip."""
+
+    # no separator: the process parser reads the brace character by character
+    # (and a ',' inside a brace additionally confuses the decay-chain split on
+    # ','), so '{0S}' round-trips where '{0,S}' does not.
+    return ''.join([Leg.propagator_only_polarizations.get(p, str(p))
+                    for p in polarization])
+
+
+#===============================================================================
 class Leg(PhysicsObject):
     """Leg object: id (Particle), number, I/F state, flag from_group
     """
+
+    # List of allowed helicity polarizations for a fermion or vector boson.
+    # See [arXiv:1912.01725] for definitions (fermions,vectors) and
+    # [arXiv:2512.10015] for extensions (vectors)
+    list_of_allowed_polarizations = [-1, 1, 2,-2, 3,-3, 0, 4, 5, 6, 7, 9, 99]
+
+    # Polarizations that only exist as a piece of the *propagator* numerator
+    # of a massive vector (see aloha/create_aloha.py, the "1X" forms) and that
+    # therefore have no external-wavefunction counterpart. Values are the
+    # brace letters accepted by the process parser.
+    propagator_only_polarizations = {4: 'G',   # -metric
+                                     5: 'H',   # Theta
+                                     6: 'Q',   # q^mu q^nu / q^2
+                                     7: 'W',   # -metric + qq/(M^2-iM*W)
+                                     9: 'S',   # scalar = axial + width
+                                     99: 'A',  # axial/auxiliary
+                                     }
 
     def default_setup(self):
         """Default values for all properties"""
@@ -2053,8 +2162,11 @@ class Leg(PhysicsObject):
         self['from_group'] = True
         # onshell: decaying leg (True), forbidden s-channel (False), none (None)
         self['onshell'] = None
+        self['offshell'] = False # set on True for "*" mode 
         # filter on the helicty
         self['polarization'] = []
+        # propteries of bound state
+        self['onium'] = {}
 
     def filter(self, name, value):
         """Filter for valid leg property values."""
@@ -2088,16 +2200,37 @@ class Leg(PhysicsObject):
                 raise self.PhysicsObjectError( \
                         "%s is not a valid list" % str(value))
             for i in value:
-                if i not in [-1, 1, 2,-2, 3,-3, 0, 99]:
+                if i not in self.list_of_allowed_polarizations:
                     raise self.PhysicsObjectError( \
                           "%s is not a valid polarization" % str(value))
+                                                                    
+        elif name == 'onium':
+            if not isinstance(value, dict):
+                raise self.PhysicsObjectError( \
+                        "%s is not a valid dictionary" % str(value))
+            if value:
+                if not value['N'] > 0:
+                    raise self.PhysicsObjectError( \
+                      " %s is not a valid principal quantum number" % str(value['N']))
+                if value['S'] not in [0, 1, 99]:
+                    raise self.PhysicsObjectError( \
+                      " %s is not a valid spin type" % str(2*value['S']+1))
+                if value['L'] not in [0, 1, 99]:
+                    raise self.PhysicsObjectError( \
+                      " %s is not a valid orbital angular momentum" % str(value['L']))
+                if value['J'] not in range(abs(value['L']-value['S']),value['L']+value['S']+1):
+                    raise self.PhysicsObjectError( \
+                      " %s is not a valid total angular momentum" % str(value['J']))
+                if value['C'] not in [1, 8]:
+                    raise self.PhysicsObjectError( \
+                      " %s is not a valid color configuartion" % str(value['C']))
                                                                     
         return True
 
     def get_sorted_keys(self):
         """Return particle property names as a nicely sorted list."""
 
-        return ['id', 'number', 'state', 'from_group', 'loop_line', 'onshell', 'polarization']
+        return ['id', 'number', 'state', 'from_group', 'loop_line', 'onshell', 'polarization', 'onium']
 
     def is_fermion(self, model):
         """Returns True if the particle corresponding to the leg is a
@@ -2259,6 +2392,8 @@ class MultiLeg(PhysicsObject):
         self['ids'] = []
         self['state'] = True
         self['polarization'] = []
+        self['onium'] = {}
+        self['offshell'] = False
 
     def filter(self, name, value):
         """Filter for valid multileg property values."""
@@ -2275,9 +2410,30 @@ class MultiLeg(PhysicsObject):
                 raise self.PhysicsObjectError( \
                         "%s is not a valid list" % str(value))
             for i in value:
-                if i not in [-1, 1,  2, -2, 3, -3, 0, 99]:
+                if i not in Leg.list_of_allowed_polarizations:
                     raise self.PhysicsObjectError( \
                           "%s is not a valid polarization" % str(value))
+
+        if name == 'onium':
+            if not isinstance(value, dict):
+                raise self.PhysicsObjectError( \
+                        "%s is not a valid list" % str(value))
+            if value:
+                if not value['N'] > 0:
+                    raise self.PhysicsObjectError( \
+                      " %s is not a valid principal quantum number" % str(value['N']))
+                if value['S'] not in [0, 1, 99]:
+                    raise self.PhysicsObjectError( \
+                      " %s is not a valid spin type" % str(2*value['S']+1))
+                if value['L'] not in [0, 1, 99]:
+                    raise self.PhysicsObjectError( \
+                      " %s is not a valid orbital angular momentum" % str(value['L']))
+                if value['J'] not in range(abs(value['L']-value['S']),value['L']+value['S']+1):
+                    raise self.PhysicsObjectError( \
+                      " %s is not a valid total angular momentum" % str(value['J']))
+                if value['C'] not in [1, 8]:
+                    raise self.PhysicsObjectError( \
+                      " %s is not a valid color configuartion" % str(value['C']))
 
         if name == 'state':
             if not isinstance(value, bool):
@@ -2289,7 +2445,7 @@ class MultiLeg(PhysicsObject):
     def get_sorted_keys(self):
         """Return particle property names as a nicely sorted list."""
 
-        return ['ids', 'state','polarization']
+        return ['ids', 'state','polarization','onium', 'offshell']
 
 #===============================================================================
 # LegList
@@ -3111,6 +3267,7 @@ class Process(PhysicsObject):
         else:
             mystr = ""
         prevleg = None
+        onia = []
         for leg in self['legs']:
             mypart = self['model'].get('particle_dict')[leg['id']]
             if prevleg and prevleg['state'] == False \
@@ -3126,19 +3283,27 @@ class Process(PhysicsObject):
                                     for id_list in self['required_s_channels']])
                     mystr = mystr + ' > '
 
-            mystr = mystr + mypart.get_name()
-            if leg.get('polarization'):
-                if leg.get('polarization') in [[-1,1],[1,-1]]:
-                    mystr = mystr + '{T} '
-                elif leg.get('polarization') == [-1]:
-                    mystr = mystr + '{L} '
-                elif leg.get('polarization') == [1]:
-                    mystr = mystr + '{R} '
-                else:
-                    mystr = mystr + '{%s} ' %','.join([str(p) for p in leg.get('polarization')])   
+            if leg.get('onium'):
+                if leg.get('onium').get('index') not in onia:
+                    mystr = mystr + leg.get('onium').get('name') + ' '
+                    onia += [leg.get('onium').get('index')]
             else:
+                mystr = mystr + mypart.get_name()
+                if leg.get('polarization'):
+                    if leg.get('polarization') in [[-1,1],[1,-1]]:
+                        mystr = mystr + '{T}'
+                    elif leg.get('polarization') == [-1]:
+                        mystr = mystr + '{L}'
+                    elif leg.get('polarization') == [1]:
+                        mystr = mystr + '{R}'
+                    else:
+                        mystr = mystr + '{%s}' % polarization_to_string(leg.get('polarization')) 
+
+                if leg.get('offshell'):
+                    mystr = mystr + '*'
+
                 mystr = mystr + ' '
-            #mystr = mystr + '(%i) ' % leg['number']
+                #mystr = mystr + '(%i) ' % leg['number']
             prevleg = leg
 
         # Add orders
@@ -3264,16 +3429,16 @@ class Process(PhysicsObject):
             mystr = mystr + mypart.get_name()
             if leg.get('polarization'):
                 if leg.get('polarization') in [[-1,1],[1,-1]]:
-                    mystr = mystr + '{T} '
+                    mystr = mystr + '{T}'
                 elif leg.get('polarization') == [-1]:
-                    mystr = mystr + '{L} '
+                    mystr = mystr + '{L}'
                 elif leg.get('polarization') == [1]:
-                    mystr = mystr + '{R} '
+                    mystr = mystr + '{R}'
                 else:
-                    mystr = mystr + '{%s} ' %','.join([str(p) for p in leg.get('polarization')])   
-            else:
-                mystr = mystr + ' '
-             
+                    mystr = mystr + '{%s}' % polarization_to_string(leg.get('polarization'))   
+            if leg.get('offshell'):
+                mystr = mystr + '*'
+            mystr = mystr + ' ' 
             #mystr = mystr + '(%i) ' % leg['number']
             prevleg = leg
 
@@ -3359,15 +3524,17 @@ class Process(PhysicsObject):
             mystr = mystr + mypart.get_name() 
             if leg.get('polarization'):
                 if leg.get('polarization') in [[-1,1],[1,-1]]:
-                    mystr = mystr + '{T} '
+                    mystr = mystr + '{T}'
                 elif leg.get('polarization') == [-1]:
-                    mystr = mystr + '{L} '
+                    mystr = mystr + '{L}'
                 elif leg.get('polarization') == [1]:
-                    mystr = mystr + '{R} '
+                    mystr = mystr + '{R}'
                 else:
-                    mystr = mystr + '{%s} ' %','.join([str(p) for p in leg.get('polarization')])   
-            else:
-                mystr = mystr + ' '
+                    mystr = mystr + '{%s}' % polarization_to_string(leg.get('polarization'))   
+            if leg.get('offshell'):
+                mystr = mystr + '*'
+            mystr = mystr + ' ' 
+
             prevleg = leg
 
         # Remove last space
@@ -3407,7 +3574,12 @@ class Process(PhysicsObject):
                                                 for req_id in id_list]) \
                                     for id_list in self['required_s_channels']])
                     mystr = mystr + '_'
-            if mypart['is_part']:
+            if leg.get('onium'):
+                if prevleg.get('onium'):
+                    if prevleg.get('onium').get('index') == leg.get('onium').get('index'):
+                        mystr = mystr + leg.get('onium').get('name')
+                        mystr = mystr.replace('|','').replace('(','').replace(')','')
+            elif mypart['is_part']:
                 mystr = mystr + mypart['name']
             else:
                 mystr = mystr + mypart['antiname']
@@ -3689,10 +3861,17 @@ class Process(PhysicsObject):
         final_legs = [leg for leg in self.get_legs_with_decays() if leg.get('state') == True]
 
         identical_indices = collections.defaultdict(int)
+        onia = []
         for leg in final_legs:
-            key = (leg.get('id'), tuple(leg.get('polarization')))
+            if leg.get('onium'):
+                key = (leg.get('onium').get('id'), tuple(leg.get('polarization')))
+                if leg.get('onium').get('index') in onia:
+                    identical_indices[key] -= 1
+                else:
+                    onia.append(leg.get('onium').get('index'))
+            else:
+                key = (leg.get('id'), tuple(leg.get('polarization')))
             identical_indices[key] += 1
-
 
         return reduce(lambda x, y: x * y, [ math.factorial(val) for val in \
                         identical_indices.values() ], 1)
@@ -3983,9 +4162,10 @@ class ProcessDefinition(Process):
                 elif leg.get('polarization') == [1]:
                     mystr = mystr + '{R}'
                 else:
-                    mystr = mystr + '{%s} ' %''.join([str(p) for p in leg.get('polarization')])   
-            else:
-             mystr = mystr + ' '
+                    mystr = mystr + '{%s}' % polarization_to_string(leg.get('polarization'))
+            if leg.get('offshell'):
+                mystr += '*'
+            mystr = mystr + ' '
             #mystr = mystr + '(%i) ' % leg['number']
             prevleg = leg
 

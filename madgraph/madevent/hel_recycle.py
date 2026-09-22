@@ -383,7 +383,7 @@ class Amplitude(MathsObject):
 class HelicityRecycler():
     '''Class for recycling helicity'''
 
-    def __init__(self, good_elements, bad_amps=[], bad_amps_perhel=[]):
+    def __init__(self, good_elements, bad_amps=[], bad_amps_perhel=[], gauge='U'):
 
         External.good_hel = []
         External.nhel_lines = ''
@@ -427,6 +427,7 @@ class HelicityRecycler():
 
         self.all_hel = []
         self.hel_filt = True
+        self.gauge = gauge
 
     def set_input(self, file):
         if 'born_matrix' in file:
@@ -549,7 +550,7 @@ class HelicityRecycler():
     def get_amp2_lines(self, line):
         if line.startswith('      DO I = 1, NCOLOR'):
             self.in_amp2 = False
-        elif not line.isspace():
+        elif not line.isspace() and 'DENOM' not in line:
             self.template_dict['amp2_lines'] += f'{line[0:6]}  {self.add_indices(line[6:])}'
 
     def prepare_bools(self):
@@ -612,7 +613,7 @@ class HelicityRecycler():
 
     def apply_amps(self, line, new_objs):
         if self.amp_splt:
-            return split_amps(line, new_objs)  
+            return split_amps(line, new_objs, gauge=self.gauge)  
         else: 
 
             return apply_args(line, [i.args for i in new_objs])
@@ -638,12 +639,12 @@ class HelicityRecycler():
             self.nhel_started = False
             
             if self.hel_filt:
-                External.good_hel = [ self.all_hel[int(i)-1] for i in self.good_elements ]
+                External.good_hel = dict([ (self.all_hel[int(i)-1],int(i)) for i in self.good_elements ])
             else:
-                External.good_hel = self.all_hel
+                External.good_hel = dict([(v,i) for i,v in enumerate(self.all_hel)])
 
             External.map_hel=dict([(hel,i) for i,hel in  enumerate(External.good_hel)])
-            External.hel_ranges = [set() for hel in External.good_hel[0]]
+            External.hel_ranges = [set() for hel in next(iter(External.good_hel))]
             for comb in External.good_hel:
                 for i, hel in enumerate(comb):
                     External.hel_ranges[i].add(hel)
@@ -657,10 +658,11 @@ class HelicityRecycler():
             self.template_dict['ncomb'] = len(External.good_hel)
 
     def nhel_string(self, hel_comb):
+        old_id = External.good_hel[hel_comb]
         self.counter += 1
         formatted_hel = [f'{hel}' if hel < 0 else f' {hel}' for hel in hel_comb]
         nexternal = len(hel_comb)
-        return (f'      DATA (NHEL(I,{self.counter}),I=1,{nexternal}) /{",".join(formatted_hel)}/')
+        return (f'      DATA (NHEL(I,{self.counter}),I=0,{nexternal}) /{old_id},{",".join(formatted_hel)}/')
 
     def read_orig(self):
 
@@ -783,7 +785,7 @@ def apply_args(old_line, all_the_args):
     
     return ''.join(new_lines)
 
-def split_amps(line, new_amps):
+def split_amps(line, new_amps, gauge):
     if not new_amps:
         return ''
     fct = line.split('(',1)[0].split('_0')[0]
@@ -839,34 +841,31 @@ def split_amps(line, new_amps):
                 spin = fct.split(None,1)[1][to_remove]
                 lines.append('%sP1N_%s(%s)' % (fct, to_remove+1, ', '.join(args)))
 
-            hel, iamp = re.findall('AMP\((\d+),(\d+)\)', amp_result)[0]
+            hel, iamp = re.findall(r'AMP\((\d+),(\d+)\)', amp_result)[0]
             hel_calculated.append(hel)
             #lines.append(' %(result)s = TMP(3) * W(3,%(w)s) + TMP(4) * W(4,%(w)s)+'
             #             % {'result': amp_result, 'w':  windex}) 
             #lines.append('     &             TMP(5) * W(5,%(w)s)+TMP(6) * W(6,%(w)s)'
             #             % {'result': amp_result, 'w':  windex})
-        if spin in "VF":
-            lines.append("""      call CombineAmp(%(nb)i,
+        if spin == "F" or ( spin == "V" and gauge !='FD'):
+            suffix = ''
+        elif spin == "S":
+            suffix = 'S'
+        elif spin == "V" and  gauge == "FD":
+            suffix = "FD"
+        else:
+            raise Exception("split amp not supported for spin2, 3/2")
+
+        lines.append("""      call CombineAmp%(suffix)s(%(nb)i,
      & (/%(hel_list)s/), 
      & (/%(w_list)s/),
-     & TMP, W, AMP(1,%(iamp)s))""" %
-                               {'nb': len(sub_amps),
-                                'hel_list': ','.join(hel_calculated),
-                                'w_list': ','.join(windices),
-                                'iamp': iamp
-                               })
-        elif spin == "S":
-            lines.append("""      call CombineAmpS(%(nb)i, 
-     &(/%(hel_list)s/), 
-     & (/%(w_list)s/), 
-     & TMP, W, AMP(1,%(iamp)s))""" %
-                               {'nb': len(sub_amps),
-                                'hel_list': ','.join(hel_calculated),
-                                'w_list': ','.join(windices),
-                                'iamp': iamp
-                               })            
-        else:
-            raise Exception("split amp are not supported for spin2 and 3/2")
+     & TMP, W, AMP(1,%(iamp)s))""" % {'suffix':suffix,
+                                      'nb': len(sub_amps),
+                                      'hel_list': ','.join(hel_calculated),
+                                      'w_list': ','.join(windices),
+                                      'iamp': iamp
+                                     })
+
             
     #lines.append('')
     return '\n'.join(lines)

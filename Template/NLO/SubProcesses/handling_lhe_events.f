@@ -13,7 +13,7 @@ c Utility routines for LHEF. Originally taken from collect_events.f
       use extra_weights
       implicit none 
       include 'run.inc'
-      integer idwgt,kk,ii,jj,nn,n
+      integer idwgt,kk,ii,jj,nn,n,i
       integer ifile,nevents
       character*10 MonteCarlo
       character*13 temp
@@ -24,6 +24,7 @@ c Scales
       integer n_orderstags,oo,tag
       integer orderstags_glob(maxorders)
       common /c_orderstags_glob/n_orderstags, orderstags_glob
+      double precision mcmass(-16:21)
 c
       write(ifile,'(a)')
      #     '<LesHouchesEvents version="3.0">'
@@ -102,6 +103,17 @@ c
       write(ifile,'(a)')muF2_id_str(1:len_trim(muF2_id_str))
       write(ifile,'(a)')QES_id_str(1:len_trim(QES_id_str))
       write(ifile,'(a)')'  </scalesfunctionalform>'
+c MonteCarlo Masses
+      write(ifile,'(a)') '  <MonteCarloMasses>'
+      call fill_MC_mshell_wrap(MonteCarlo,mcmass)
+      do i=1,5
+         write (ifile,'(2x,i6,3x,e12.6)')i,mcmass(i)
+      enddo
+      write (ifile,'(2x,i6,3x,e12.6)')11,mcmass(11)
+      write (ifile,'(2x,i6,3x,e12.6)')13,mcmass(13)
+      write (ifile,'(2x,i6,3x,e12.6)')15,mcmass(15)
+      write (ifile,'(2x,i6,3x,e12.6)')21,mcmass(21)
+      write(ifile,'(a)') '  </MonteCarloMasses>'
       write(ifile,'(a)')
      #     MonteCarlo
       write(ifile,'(a)')
@@ -136,7 +148,9 @@ c     other parameter
      #                         muF2_id_str,QES_id_str
       character*10 MonteCarlo
       character*100 path
-      character*150 buffer,buffer_lc,buffer2
+      character*250 buffer,buffer_lc,buffer2
+      integer nread
+      logical complete,eof
       integer event_id
       common /c_event_id/ event_id
       integer n_orderstags,oo,tag
@@ -153,20 +167,14 @@ c
       write(ifile,'(a)') '  <MG5ProcCard>'
       open (unit=92,file=path(1:index(path," ")-1)//'proc_card_mg5.dat'
      &     ,err=99)
-      do
-         read(92,'(a)',err=89,end=89) buffer
-         write(ifile,'(a)') buffer
-      enddo
- 89   close(92)
+      call copy_open_file(92,ifile)
+      close(92)
       write(ifile,'(a)') '  </MG5ProcCard>'
       write(ifile,'(a)') '  <slha>'
       open (unit=92,file=path(1:index(path," ")-1)//'param_card.dat'
      &     ,err=98)
-      do
-         read(92,'(a)',err=88,end=88) buffer
-         write(ifile,'(a)') buffer
-      enddo
- 88   close(92)
+      call copy_open_file(92,ifile)
+      close(92)
       write(ifile,'(a)') '  </slha>'
       write(ifile,'(a)') '  <MGRunCard>'
 c     import the parameter from the run_card 
@@ -190,23 +198,29 @@ c     copy the run_card as part of the banner.
       open (unit=92,file=path(1:index(path," ")-1)//'run_card.dat'
      &     ,err=97)
       do
-         read(92,'(a)',err=87,end=87) buffer
+         call read_record_head(92,buffer,nread,complete,eof)
+         if (eof) exit
          buffer_lc=buffer
          call case_trap3(72,buffer_lc)
+c A record that does not fit in buffer cannot be the iseed or the
+c nevents entry (those are short): it is simply copied over.
 c Replace the random number seed with the one used...
-         if(index(buffer_lc,'iseed').ne.0 .and. buffer(1:1).ne.'#')then
+         if(complete .and. index(buffer_lc,'iseed').ne.0 .and.
+     &        buffer(1:1).ne.'#')then
             write(buffer,'(i11,a)')iseed,' =  iseed'
+            nread=len_trim(buffer)
 c Update the number of events
-         elseif (index(buffer_lc,'nevents').ne.0 .and.
+         elseif (complete .and. index(buffer_lc,'nevents').ne.0 .and.
      &           buffer(1:1).ne.'#' .and.
      &           ( index(buffer_lc,'!').eq.0 .or.
      &             index(buffer_lc,'!').gt.index(buffer_lc,'nevents')
      &           )) then
             write(buffer,'(i11,a)')nevents,' = nevents'
+            nread=len_trim(buffer)
          endif
-         write(ifile,'(a)') buffer
+         call write_record(ifile,92,buffer,nread,complete)
       enddo
- 87   close(92)
+      close(92)
       write(ifile,'(a)') '  </MGRunCard>'
 c Functional form of the scales
       write(ifile,'(a)') '  <scalesfunctionalform>'
@@ -320,7 +334,7 @@ c Write here the reweight information if need be
       integer ifile,nevents,i,ii,ii2,iistr,itemp
       double precision temp
       character*10 MonteCarlo
-      character*80 string,string0
+      character*180 string,string0
       character*3 event_norm
       common/cevtnorm/event_norm
       character*80 muR_id_str,muF1_id_str,muF2_id_str,QES_id_str
@@ -457,7 +471,7 @@ c Avoid overloading read_lhef_header, meant to be used in utilities
       logical already_found
       integer ifile,nevents,i,ii,ii2,iistr,ipart,itempsc,itempPDF
       character*10 MonteCarlo
-      character*80 string,string0
+      character*180 string,string0
       character*3 event_norm
       common/cevtnorm/event_norm
       double precision temp,remcmass(-16:21)
@@ -466,6 +480,10 @@ c Scales
       character*80 muR_id_str,muF1_id_str,muF2_id_str,QES_id_str
       common/cscales_id_string/muR_id_str,muF1_id_str,
      #                         muF2_id_str,QES_id_str
+      integer mg_rwgt_count
+      common/rwgt_count/mg_rwgt_count
+      mg_rwgt_count=0
+        
       ipart=-1000000
       nevents = -1
       MonteCarlo = ''
@@ -588,6 +606,15 @@ c     find the start of a weightgroup
                  else
                     lpdfvar(lhaPDFid(0))=.false.
                  endif
+              elseif (index(string,"name='mg_reweighting").ne.0) then
+                      do
+                        read(ifile,'(a)')string
+                        if (index(string,'<weight id').ne.0) then
+                                 mg_rwgt_count=mg_rwgt_count+1
+                        endif
+                        if (index(string,'</weightgroup>').ne.0) exit
+                      enddo
+
               elseif (index(string,'</initrwgt').ne.0) then
                  exit
               endif
@@ -620,23 +647,19 @@ c if the file is a partial file the header is non-standard
      #  IDBMUP,EBMUP,PDFGUP,PDFSUP,IDWTUP,NPRUP,
      #  XSECUP,XERRUP,XMAXUP,LPRUP)
       implicit none
-      integer ifile,i,IDBMUP(2),PDFGUP(2),PDFSUP(2),IDWTUP,NPRUP,LPRUP
-      double precision EBMUP(2),XSECUP,XERRUP,XMAXUP
+      integer ifile,i,IDBMUP(2),PDFGUP(2),PDFSUP(2),IDWTUP,NPRUP
+     $     ,LPRUP(100)
+      double precision EBMUP(2),XSECUP(100),XERRUP(100),XMAXUP(100)
       double precision XSECUP2(100),XERRUP2(100),XMAXUP2(100)
-      integer LPRUP2(100)
-      common /lhef_init/XSECUP2,XERRUP2,XMAXUP2,LPRUP2
 c
       write(ifile,'(a)')
      # '  <init>'
       write(ifile,501)IDBMUP(1),IDBMUP(2),EBMUP(1),EBMUP(2),
      #                PDFGUP(1),PDFGUP(2),PDFSUP(1),PDFSUP(2),
      #                IDWTUP,NPRUP
-      write(ifile,502)XSECUP,XERRUP,XMAXUP,LPRUP
-      if (NPRUP.gt.1) then
-         do i=2,NPRUP
-            write(ifile,502)XSECUP2(i),XERRUP2(i),XMAXUP2(i),LPRUP2(i)
-         enddo
-      endif
+      do i=1,NPRUP
+         write(ifile,502) XSECUP(i),XERRUP(i),XMAXUP(i),LPRUP(i)
+      enddo
       write(ifile,'(a)')
      # '  </init>'
  501  format(2(1x,i6),2(1x,e14.8),2(1x,i2),2(1x,i8),1x,i2,1x,i3)
@@ -650,27 +673,18 @@ c
      #  IDBMUP,EBMUP,PDFGUP,PDFSUP,IDWTUP,NPRUP,
      #  XSECUP,XERRUP,XMAXUP,LPRUP)
       implicit none
-      integer ifile,i,IDBMUP(2),PDFGUP(2),PDFSUP(2),IDWTUP,NPRUP,LPRUP
-      double precision EBMUP(2),XSECUP,XERRUP,XMAXUP
-      double precision XSECUP2(100),XERRUP2(100),XMAXUP2(100)
-      integer LPRUP2(100)
-      common /lhef_init/XSECUP2,XERRUP2,XMAXUP2,LPRUP2
+      integer ifile,i,IDBMUP(2),PDFGUP(2),PDFSUP(2),IDWTUP,NPRUP
+     $     ,LPRUP(100)
+      double precision EBMUP(2),XSECUP(100),XERRUP(100),XMAXUP(100)
       character*80 string
 c
       read(ifile,'(a)')string
       read(ifile,*)IDBMUP(1),IDBMUP(2),EBMUP(1),EBMUP(2),
      #                PDFGUP(1),PDFGUP(2),PDFSUP(1),PDFSUP(2),
      #                IDWTUP,NPRUP
-      read(ifile,*)XSECUP,XERRUP,XMAXUP,LPRUP
-      XSECUP2(1)=XSECUP
-      XERRUP2(1)=XERRUP
-      XMAXUP2(1)=XMAXUP
-      LPRUP2(1)=LPRUP
-      if (NPRUP.gt.1) then
-         do i=2,NPRUP
-            read(ifile,*)XSECUP2(i),XERRUP2(i),XMAXUP2(i),LPRUP2(i)
-         enddo
-      endif
+      do i=1,NPRUP
+         read(ifile,*) XSECUP(i),XERRUP(i),XMAXUP(i),LPRUP(i)
+      enddo
       read(ifile,'(a)')string
 c
       return
@@ -768,8 +782,11 @@ c
      #                  PUP(1,I),PUP(2,I),PUP(3,I),PUP(4,I),PUP(5,I),
      #                  VTIMUP(I),SPINUP(I)
       enddo
-      if(buff(1:1).eq.'#' .and. (do_rwgt .or.
-     &     jwgtinfo.lt.0)) then
+      !! TV: changed this line below to output commented line in events
+      !when no scale or pdf variation is performed
+      !if(buff(1:1).eq.'#' .and. (do_rwgt .or.
+!     &     jwgtinfo.lt.0)) then
+      if(buff(1:1).eq.'#') then
          write(ifile,'(a)') buff(1:len_trim(buff))
          read(buff,*)ch1,iSorH_lhe,ifks_lhe,jfks_lhe,
      #                    fksfather_lhe,ipartner_lhe,
@@ -919,6 +936,8 @@ c
       include 'unlops.inc'
       include 'run.inc'
       DOUBLE PRECISION SCALUP_a(MAXNUP,MAXNUP)
+      integer mg_rwgt_count
+      common/rwgt_count/mg_rwgt_count
 c
       read(ifile,'(a)')string
       nattr=0
@@ -946,7 +965,6 @@ c
      #                    scale1_lhe,scale2_lhe,
      #                    jwgtinfo,mexternal,iwgtnumpartn,
      #         wgtcentral,wgtmumin,wgtmumax,wgtpdfmin,wgtpdfmax
-        
          if(jwgtinfo.eq.-5 .or. jwgtinfo.eq.-9) then
             read(ifile,'(a)')string
             read(ifile,*) wgtref,n_ctr_found,n_mom_conf,wgtcpower
@@ -1020,13 +1038,36 @@ c
                      endif
                   enddo
                endif
-               read(ifile,'(a)')string
+               if(mg_rwgt_count.ne.0) then
+                   do i=1,mg_rwgt_count
+                      read(ifile,'(a)')string
+                   enddo
+                   read(ifile,'(a)')string
+               else
+                  read(ifile,'(a)')string ! this is for closing <\rwgt>
+               endif
+            else
+               if(mg_rwgt_count.ne.0) then
+                  read(ifile,'(a)')string ! this is for beginning <rwgt>
+                  do i=1,mg_rwgt_count
+                     read(ifile,'(a)')string
+                  enddo
+                  read(ifile,'(a)')string ! this is for closing <\rwgt>
+               endif
             endif
          endif
+
          if (ickkw.eq.3) then
             read(ifile,'(a)') ptclusstring
          endif
       else
+         if(mg_rwgt_count.ne.0) then
+             read(ifile,'(a)')string ! this is for beginning <rwgt>
+             do i=1,mg_rwgt_count
+                read(ifile,'(a)')string
+             enddo
+             read(ifile,'(a)')string ! this is for closing <\rwgt>
+         endif
          if (ickkw.eq.3) then
             ptclusstring=buff
             read(ifile,'(a)')buff
@@ -1284,28 +1325,136 @@ c
 
 
       subroutine copy_header(infile,outfile,nevts)
+c Copy the header (banner) of the LHE file open on unit infile to the
+c one open on unit outfile, updating the number of events. Records
+c longer than buff2 are copied in several chunks, so that long entries
+c of the run_card (e.g. systematics_arguments) are not truncated: the
+c length of buff2 only sets how much of a record is inspected for the
+c 'nevents' and 'ickkw' entries (both are short).
       implicit none
       include 'run.inc'
-      character*200 buff2
-      integer nevts,infile,outfile
+      character*250 buff2
+      integer nevts,infile,outfile,nread
+      logical complete,eof
 c
       buff2=' '
       do while(.true.)
-         read(infile,'(a)')buff2
-         if(index(buff2,'= nevents').eq.0)
-     &        write(outfile,'(a)') trim(buff2)
+         call read_record_head(infile,buff2,nread,complete,eof)
+         if(eof) exit
+         if(index(buff2,'= nevents').eq.0)then
+            call write_record(outfile,infile,buff2,nread,complete)
+         elseif(.not.complete)then
+            call skip_rest_of_record(infile)
+         endif
          if(index(buff2,'= nevents').ne.0) exit
          if(index(buff2,'= ickkw').ne.0) read(buff2,*) ickkw
       enddo
       write(outfile,*)
      &     nevts,' = nevents    ! Number of unweighted events requested'
       do while(index(buff2,'</header>').eq.0)
-         read(infile,'(a)')buff2
+         call read_record_head(infile,buff2,nread,complete,eof)
+         if(eof) exit
          if(index(buff2,'= ickkw').ne.0) read(buff2,*) ickkw
-         write(outfile,'(a)')trim(buff2)
+         call write_record(outfile,infile,buff2,nread,complete)
       enddo
 c
       return
+      end
+
+
+      subroutine read_record_head(iunit,buff,nread,complete,eof)
+c Read into buff (at most len(buff) characters of) the next record of
+c the file open on unit iunit. len(buff) is not a limit on the record
+c length, it only sets how much of it is read at a time.
+c nread is the number of characters
+c actually read and buff is blank-padded beyond that. complete is
+c .true. if the whole record has been read; when it is .false. the
+c remaining part of the record is still to be read from iunit (use
+c copy_rest_of_record or skip_rest_of_record for that). eof is .true.
+c if the end of the file has been reached, in which case buff is blank.
+      implicit none
+      integer iunit,nread
+      character*(*) buff
+      logical complete,eof
+c
+      buff=' '
+      nread=0
+      complete=.false.
+      eof=.false.
+      read(iunit,'(a)',advance='no',size=nread,eor=10,end=20) buff
+      return
+ 10   complete=.true.
+      return
+ 20   eof=.true.
+      return
+      end
+
+
+      subroutine copy_rest_of_record(iunit,ofile)
+c Copy to ofile whatever is left of the record being read on unit
+c iunit, and terminate the record on ofile.
+      implicit none
+      integer iunit,ofile,nread
+      character*250 chunk
+      logical complete,eof
+c
+      do
+         call read_record_head(iunit,chunk,nread,complete,eof)
+         if(complete.or.eof)then
+            write(ofile,'(a)') chunk(1:nread)
+            return
+         endif
+         write(ofile,'(a)',advance='no') chunk(1:nread)
+      enddo
+      end
+
+
+      subroutine skip_rest_of_record(iunit)
+c Discard whatever is left of the record being read on unit iunit.
+      implicit none
+      integer iunit,nread
+      character*250 chunk
+      logical complete,eof
+c
+      do
+         call read_record_head(iunit,chunk,nread,complete,eof)
+         if(complete.or.eof) return
+      enddo
+      end
+
+
+      subroutine write_record(ofile,iunit,buff,nread,complete)
+c Write buff(1:nread) to ofile as a complete record. If the record read
+c from unit iunit did not fit in buff (complete=.false.), the rest of
+c it is copied from iunit to ofile before terminating the record.
+      implicit none
+      integer ofile,iunit,nread
+      character*(*) buff
+      logical complete
+c
+      if(complete)then
+         write(ofile,'(a)') buff(1:nread)
+      else
+         write(ofile,'(a)',advance='no') buff(1:nread)
+         call copy_rest_of_record(iunit,ofile)
+      endif
+      return
+      end
+
+
+      subroutine copy_open_file(iunit,ofile)
+c Copy the whole content of the file open on unit iunit to ofile,
+c preserving records of arbitrary length.
+      implicit none
+      integer iunit,ofile,nread
+      character*250 buff
+      logical complete,eof
+c
+      do
+         call read_record_head(iunit,buff,nread,complete,eof)
+         if(eof) return
+         call write_record(ofile,iunit,buff,nread,complete)
+      enddo
       end
 
 

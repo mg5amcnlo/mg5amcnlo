@@ -344,13 +344,13 @@ c***************************************************************************
             endif
  100        continue
             if (mapconfig(i) .lt. 10) then
-               write(26,'(x,i1,a2$)') mapconfig(i),postfix
+               write(26,'(x,i1,a2,$)') mapconfig(i),postfix
             elseif (mapconfig(i) .lt. 100) then
-               write(26,'(x,i2,a2$)') mapconfig(i),postfix
+               write(26,'(x,i2,a2,$)') mapconfig(i),postfix
             elseif (mapconfig(i) .lt. 1000) then
-               write(26,'(x,i3,a2$)') mapconfig(i),postfix
+               write(26,'(x,i3,a2,$)') mapconfig(i),postfix
             elseif (mapconfig(i) .lt. 10000) then
-               write(26,'(x,i4,a2$)') mapconfig(i),postfix
+               write(26,'(x,i4,a2,$)') mapconfig(i),postfix
             endif
             if (postfix.eq.'.1') then
                postfix='.2'
@@ -396,8 +396,4 @@ c Dummy routines
 c
 c
 
-      subroutine write_lhef_event(ifile,
-     # NUP,IDPRUP,XWGTUP,SCALUP,AQEDUP,AQCDUP,
-     # IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,buff,SCALUP_a)
-      end
       

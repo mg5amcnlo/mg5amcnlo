@@ -28,9 +28,6 @@ import madgraph.core.base_objects as base_objects
 import madgraph.core.diagram_generation as diagram_generation
 import models.import_ufo as import_ufo
 from madgraph import MadGraph5Error, InvalidCmd
-from six.moves import range
-from six.moves import zip
-
 #===============================================================================
 # AmplitudeTest
 #===============================================================================
@@ -208,8 +205,8 @@ class DiagramGenerationTest(unittest.TestCase):
                       'color':1,
                       'mass':'zero',
                       'width':'zero',
-                      'texname':'\gamma',
-                      'antitexname':'\gamma',
+                      'texname':r'\gamma',
+                      'antitexname':r'\gamma',
                       'line':'wavy',
                       'charge':0.,
                       'pdg_code':22,
@@ -2011,8 +2008,8 @@ class MultiparticleTest(unittest.TestCase):
                       'color':1,
                       'mass':'zero',
                       'width':'zero',
-                      'texname':'\gamma',
-                      'antitexname':'\gamma',
+                      'texname':r'\gamma',
+                      'antitexname':r'\gamma',
                       'line':'wavy',
                       'charge':0.,
                       'pdg_code':22,
@@ -2195,8 +2192,8 @@ class DecayChainAmplitudeTest(unittest.TestCase):
                       'color':1,
                       'mass':'zero',
                       'width':'zero',
-                      'texname':'\gamma',
-                      'antitexname':'\gamma',
+                      'texname':r'\gamma',
+                      'antitexname':r'\gamma',
                       'line':'wavy',
                       'charge':0.,
                       'pdg_code':22,
@@ -2582,8 +2579,8 @@ class MultiProcessTest(unittest.TestCase):
                       'color':1,
                       'mass':'zero',
                       'width':'zero',
-                      'texname':'\gamma',
-                      'antitexname':'\gamma',
+                      'texname':r'\gamma',
+                      'antitexname':r'\gamma',
                       'line':'wavy',
                       'charge':0.,
                       'pdg_code':22,
@@ -3132,8 +3129,8 @@ class MultiProcessTest(unittest.TestCase):
                       'color':1,
                       'mass':'zero',
                       'width':'zero',
-                      'texname':'\gamma',
-                      'antitexname':'\gamma',
+                      'texname':r'\gamma',
+                      'antitexname':r'\gamma',
                       'line':'wavy',
                       'charge':0.,
                       'pdg_code':22,

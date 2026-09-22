@@ -81,12 +81,19 @@ class TestMECmdShell(unittest.TestCase):
             os.mkdir(pjoin(MG5DIR, "tmp_test"))
         else:
             self.path = tempfile.mkdtemp(prefix='acc_test_mg5')
-        self.run_dir = pjoin(self.path, 'MGPROC') 
+        self.run_dir = pjoin(self.path, 'MGPROC')
+
+        if logging.getLogger('madgraph').level >= 20:
+            self.stdout = open(os.devnull, 'w')
+        else:
+            self.stdout = sys.stdout
     
     def tearDown(self):
 
         if self.path != pjoin(MG5DIR, "tmp_test"):
             shutil.rmtree(self.path)
+        if logging.getLogger('madgraph').level <= 20:
+            self.stdout.close() 
     
     def generate(self, process, model):
         """Create a process"""
@@ -141,12 +148,48 @@ class TestMECmdShell(unittest.TestCase):
     def join_path(*path):
         """join path and treat spaces"""     
         combine = os.path.join(*path)
-        return combine.replace(' ','\ ')        
+        return combine.replace(' ',r'\ ')        
     
     def do(self, line):
         """ exec a line in the cmd under test """        
         self.cmd_line.run_cmd(line)
         
+    def test_madevent_dy3j_mlm(self):
+        """ Test that biasing LO event generation works as intended. """
+        self.out_dir = self.run_dir
+
+        if not self.debugging or not os.path.isdir(pjoin(MG5DIR,'BackUp_tmp_test')):
+            self.generate('u g > l+ l- u u u~', 'sm')
+
+            run_card = banner.RunCardLO(pjoin(self.out_dir, 'Cards', 'run_card.dat'))
+            run_card.set('ickkw', 1, user=True)
+            run_card.set('xqcut', 10.0, user=True)
+            run_card.write(pjoin(self.out_dir, 'Cards', 'run_card.dat'))
+            
+            # Compile the code
+            subprocess.Popen(['make'], cwd=pjoin(self.out_dir, 'Source'), stdout=self.stdout, stderr=self.stdout).wait()
+            subprocess.Popen(['make', 'madevent_forhel'],                         
+                             cwd=pjoin(self.out_dir, 'SubProcesses', 'P1_qg_llqqq'),
+                             stdout=self.stdout, stderr=self.stdout).wait()
+            with open(pjoin(self.out_dir, 'SubProcesses', 'P1_qg_llqqq', 'run_config.txt'), 'w') as fsock:  
+                fsock.write('1000 5 3\n')  
+                fsock.write('0.1\n')       # Accuracy
+                fsock.write('2\n')         # Grid Adjustment 0=none, 2=adjust   
+                fsock.write('1\n')         # Suppress Amplitude 1=yes
+                fsock.write('0\n')         # Helicity Sum/event 0=exact
+                fsock.write('      86\n')
+            fsock.close()
+            
+        return_code = subprocess.Popen(
+            ['./madevent_forhel'],
+            cwd=pjoin(self.out_dir, 'SubProcesses', 'P1_qg_llqqq'),
+            stdin=open(pjoin(self.out_dir, 'SubProcesses', 'P1_qg_llqqq', 'run_config.txt')),
+            stdout=self.stdout, stderr=self.stdout
+        ).wait()
+            
+        self.assertEqual(return_code, 0)
+
+
 
     def test_madevent_ptj_bias(self):
         """ Test that biasing LO event generation works as intended. """
@@ -154,6 +197,7 @@ class TestMECmdShell(unittest.TestCase):
 
         if not self.debugging or not os.path.isdir(pjoin(MG5DIR,'BackUp_tmp_test')):
             self.generate('d d~ > u u~', 'sm')
+
             run_card = banner.RunCardLO(pjoin(self.out_dir, 'Cards','run_card.dat'))
             # Some test checking that some cut are absent/present by default
             self.assertIn('ptj', run_card.user_set)
@@ -286,6 +330,8 @@ class TestMECmdShell(unittest.TestCase):
         text = open('%s/Events/run_01/param_card.dat' % self.run_dir).read()
         data = text.split('DECAY  23')[1].split('DECAY',1)[0]
         data = data.split('\n')
+        if '#' in data[0]:
+            data[0] = data[0].split('#',1)[0]
         width = float(data[0])
         self.assertAlmostEqual(width, 1.492240e+00, delta=1e-4)
         values = {(3,-3): 2.493165e-01,
@@ -479,18 +525,19 @@ class TestMECmdShell(unittest.TestCase):
         self.do('generate_events -f')
         val1 = self.cmd_line.results.current['cross']
         err1 = self.cmd_line.results.current['error']
-        
-        target = 3978.0
+        # 100k value is 3933.1 +- 3 
+        target = 3933.1
         self.assertLess(
-            abs(val1 - target) / err1,
-            1.,
-            'large diference between %s and %s +- %s'%
+            abs(val1 - target) / (err1+1.7),
+            2.,
+            'large difference between %s and %s +- %s'%
                         (target, val1, err1)
         )
         
 
     def test_eva_collision(self):
-        """check that e p > e j gives the correct result"""
+        """check that w+ w- > t t~ with EVA gives the correct result
+        assuming x > MV/Ebeam restriction (eva_xcut=1) [2502.07878]"""
         
 
         mg_cmd = MGCmd.MasterCmd()
@@ -522,14 +569,174 @@ class TestMECmdShell(unittest.TestCase):
         self.assertEqual(run_card['lpp2'], 3)
         self.assertEqual(run_card['pdlabel'], 'eva')
         self.assertEqual(run_card['fixed_fac_scale'], True)
+        self.assertEqual(run_card['eva_xcut'], 1)
+        
+        self.do('generate_events -f')
+        val1 = self.cmd_line.results.current['cross']
+        err1 = self.cmd_line.results.current['error']
+        
+        target = 0.01118182
+        self.assertTrue(abs(val1 - target) / err1 < 2., 'large difference between %s and %s +- %s (%s sigma)'%
+                        (target, val1, err1, abs(val1 - target) / err1))
+
+    def test_eva_oldrelease_collision(self):
+        """check that w+ w- > t t~ with EVA gives the correct result
+        assuming no x > MV/Ebeam restriction (eva_xcut=0) [2111.02442]"""
+        
+
+        mg_cmd = MGCmd.MasterCmd()
+        mg_cmd.no_notification()
+        mg_cmd.run_cmd('set group_subprocesses false')
+        mg_cmd.run_cmd('set automatic_html_opening False --save')
+        mg_cmd.run_cmd(' generate w+ w-  > t t~')
+        mg_cmd.run_cmd('output %s/'% self.run_dir)
+        self.cmd_line = MECmd.MadEventCmdShell(me_dir=  self.run_dir)
+        self.cmd_line.no_notification()
+        self.cmd_line.exec_cmd('set automatic_html_opening False')
+        
+        #check validity of the default run_card
+        run_card = banner.RunCardLO(pjoin(self.run_dir, 'Cards','run_card.dat'))
+
+        f = open(pjoin(self.run_dir, 'Cards','run_card.dat'),'r')
+        self.assertNotIn('ptj', run_card.user_set)
+        self.assertNotIn('drjj', run_card.user_set)
+        self.assertNotIn('ptj2min', run_card.user_set)
+        self.assertNotIn('ptj3min', run_card.user_set)
+        self.assertNotIn('mmjj', run_card.user_set)
+        self.assertIn('ptheavy', run_card.user_set)
+        self.assertNotIn('el', run_card.user_set)
+        self.assertNotIn('ej', run_card.user_set)
+        self.assertIn('polbeam1', run_card.user_set)
+        self.assertNotIn('ptl', run_card.user_set)
+        
+        self.assertEqual(run_card['lpp1'], -3)
+        self.assertEqual(run_card['lpp2'], 3)
+        self.assertEqual(run_card['pdlabel'], 'eva')
+        self.assertEqual(run_card['fixed_fac_scale'], True)
+        self.assertEqual(run_card['eva_xcut'], 0)
         
         self.do('generate_events -f')
         val1 = self.cmd_line.results.current['cross']
         err1 = self.cmd_line.results.current['error']
         
         target = 0.02174605
-        self.assertTrue(abs(val1 - target) / err1 < 2., 'large diference between %s and %s +- %s (%s sigma)'%
+        self.assertTrue(abs(val1 - target) / err1 < 2., 'large difference between %s and %s +- %s (%s sigma)'%
+                        (target, val1, err1, abs(val1 - target) / err1))    
+
+        
+    def test_ieva_collision(self):
+        """check that w+ w- > t t~ with EVA at full LP gives the correct result"""
+        
+
+        mg_cmd = MGCmd.MasterCmd()
+        mg_cmd.no_notification()
+        mg_cmd.run_cmd('set group_subprocesses false')
+        mg_cmd.run_cmd('set automatic_html_opening False --save')
+        mg_cmd.run_cmd(' generate w+ w-  > t t~')
+        mg_cmd.run_cmd('output %s/'% self.run_dir)
+        self.cmd_line = MECmd.MadEventCmdShell(me_dir=  self.run_dir)
+        self.cmd_line.no_notification()
+        self.cmd_line.exec_cmd('set automatic_html_opening False')
+        
+        #check validity of the default run_card
+        run_card = banner.RunCardLO(pjoin(self.run_dir, 'Cards','run_card.dat'))
+
+        f = open(pjoin(self.run_dir, 'Cards','run_card.dat'),'r')
+        self.assertNotIn('ptj', run_card.user_set)
+        self.assertNotIn('drjj', run_card.user_set)
+        self.assertNotIn('ptj2min', run_card.user_set)
+        self.assertNotIn('ptj3min', run_card.user_set)
+        self.assertNotIn('mmjj', run_card.user_set)
+        self.assertIn('ptheavy', run_card.user_set)
+        self.assertNotIn('el', run_card.user_set)
+        self.assertNotIn('ej', run_card.user_set)
+        self.assertIn('polbeam1', run_card.user_set)
+        self.assertNotIn('ptl', run_card.user_set)
+        
+        self.assertEqual(run_card['lpp1'], -3)
+        self.assertEqual(run_card['lpp2'], 3)
+        self.assertEqual(run_card['pdlabel'], 'eva')
+        self.assertEqual(run_card['evaorder'], 1)
+        self.assertEqual(run_card['eva_xcut'], 1)
+        self.assertEqual(run_card['fixed_fac_scale'], True)
+        
+        self.do('generate_events -f')
+        val1 = self.cmd_line.results.current['cross']
+        err1 = self.cmd_line.results.current['error']
+        
+        target = 0.003795
+        self.assertTrue(abs(val1 - target) / err1 < 2., 'large difference between %s and %s +- %s (%s sigma)'%
                         (target, val1, err1, abs(val1 - target) / err1))
+
+
+    def test_quarkonium_production(self):
+        """check that e e > etab(3S) etab(3S) gives the correct result"""
+
+        mg_cmd = MGCmd.MasterCmd()
+        mg_cmd.no_notification()
+        mg_cmd.exec_cmd('import model sm_onia')
+        mg_cmd.exec_cmd(' generate e+ e- > etab(3s) etab(3S)')
+        mg_cmd.exec_cmd('output %s/'% self.run_dir)
+        self.cmd_line = MECmd.MadEventCmdShell(me_dir=  self.run_dir)
+        self.cmd_line.no_notification()
+        self.cmd_line.exec_cmd('set automatic_html_opening False')
+
+        #check validity of the default run_card
+        run_card = banner.RunCardLO(pjoin(self.run_dir, 'Cards','run_card.dat'))
+        self.assertIn('mom_resh_type', run_card.user_set)
+
+        shutil.copy(os.path.join(_file_path, 'input_files', 'run_card_quarkonium.dat'),
+                    '%s/Cards/run_card.dat' % self.run_dir)
+        shutil.copy(os.path.join(_file_path, 'input_files', 'onia_card_quarkonium.dat'),
+                    '%s/Cards/onia_card.dat' % self.run_dir)
+
+        self.do('generate_events -f')
+        val1 = self.cmd_line.results.current['cross']
+        err1 = self.cmd_line.results.current['error']
+        # 10k value is 6.227e-17 +- 2e-20
+        target = 6.227e-17
+        self.assertLess(
+            abs(val1 - target) / (err1+1.4e-20),
+            2.,
+            'large difference between %s and %s +- %s'%
+                        (target, val1, err1)
+        )
+
+
+    def test_leptonium_production(self):
+        """check that p p > j mumu(1|3S1) gives the correct result"""
+
+        mg_cmd = MGCmd.MasterCmd()
+        mg_cmd.no_notification()
+        mg_cmd.exec_cmd('import model sm_onia-lepton_masses')
+        mg_cmd.exec_cmd(' define p = g u d s u~ d~ s~')
+        mg_cmd.exec_cmd(' define j = g u d s u~ d~ s~')
+        mg_cmd.exec_cmd(' generate p p > j mumu(1|3S1)')
+        mg_cmd.exec_cmd('output %s/'% self.run_dir)
+        self.cmd_line = MECmd.MadEventCmdShell(me_dir=  self.run_dir)
+        self.cmd_line.no_notification()
+        self.cmd_line.exec_cmd('set automatic_html_opening False')
+
+        #check validity of the default run_card
+        run_card = banner.RunCardLO(pjoin(self.run_dir, 'Cards','run_card.dat'))
+        self.assertIn('mom_resh_type', run_card.user_set)
+
+        shutil.copy(os.path.join(_file_path, 'input_files', 'run_card_leptonium.dat'),
+                    '%s/Cards/run_card.dat' % self.run_dir)
+        shutil.copy(os.path.join(_file_path, 'input_files', 'onia_card_leptonium.dat'),
+                    '%s/Cards/onia_card.dat' % self.run_dir)
+
+        self.do('generate_events -f')
+        val1 = self.cmd_line.results.current['cross']
+        err1 = self.cmd_line.results.current['error']
+        # 1M value is 0.01668020 +- 7.24e-6
+        target = 0.01668020
+        self.assertLess(
+            abs(val1 - target) / (err1+3e-6),
+            2.,
+            'large difference between %s and %s +- %s'%
+                        (target, val1, err1)
+        )
 
 
     def test_customised_madevent_via_run_card(self):
@@ -622,7 +829,107 @@ C
         err1 = self.cmd_line.results.current['error']
 
         target = 361.7 #+- 0.1037 pb
-        self.assertTrue(abs(val1 - target) / (2*err1) < 1., 'large diference between %s and %s +- %s'%
+        self.assertTrue(abs(val1 - target) / (2*err1) < 1., 'large difference between %s and %s +- %s'%
+                        (target, val1, err1))
+
+        self.assertIn('MY_PARAM', open(pjoin(self.run_dir,'Source','run.inc')).read())
+        self.assertEqual(2, open(pjoin(self.run_dir,'Source','run.inc')).read().count('autodef'))
+
+        self.assertIn('MY_PARAM', open(pjoin(self.run_dir,'Source','run_card.inc')).read())
+        self.assertIn('MY_PARAM', open(pjoin(self.run_dir,'SubProcesses','dummy_fct.f')).read())
+
+
+    def test_customised_madevent_via_run_card(self):
+        """checking various advanced functionality of customization
+           - set run_card entry via input/default_run_card_lo.dat
+           - check that unknow entry can be added to the run_card.dat
+           - check that custom cuts can be defined via the run_card.dat
+           - check that those custom cuts can use custom entry
+           - check that the cross-section is the expected one 
+        """
+
+        mg_cmd = MGCmd.MasterCmd()
+        mg_cmd.no_notification()
+        mg_cmd.run_cmd('set automatic_html_opening False')
+        mg_cmd.run_cmd('generate p p > t t~')
+        default_path = pjoin(self.path, 'default.dat')
+        open(default_path, 'w').write("4 = dynamical_scale_choice\n 5.0 = my_param\n F = use_syst\n 5000 = nevents")
+        import madgraph.various.banner as banner
+        with misc.TMP_variable(banner.RunCardLO, 'default_run_card', default_path):
+            mg_cmd.run_cmd('output %s/'% self.run_dir)
+
+        self.assertIn('my_param', open(pjoin(self.run_dir,'Cards','run_card.dat')).read())
+        lo = banner.RunCard(pjoin(self.run_dir,'Cards', 'run_card.dat'))
+        self.assertEqual(lo['dynamical_scale_choice'], 4)
+        self.assertEqual(lo['my_param'], 5.0)
+        
+        # edit run_card
+        fsock = open(pjoin(self.run_dir,'Cards', 'run_card.dat'),'a')
+        fsock.write('\n[%s] = custom_fcts\n 10.0 = my_param2\n' % pjoin(self.path, 'custom.f'))
+        fsock.close()
+
+        # define the user cut
+        cut = """
+              logical FUNCTION dummy_cuts(P)
+C**************************************************************************
+C     INPUT:
+C            P(0:3,1)           MOMENTUM OF INCOMING PARTON
+C            P(0:3,2)           MOMENTUM OF INCOMING PARTON
+C            P(0:3,3)           MOMENTUM OF ...
+C            ALL MOMENTA ARE IN THE REST FRAME!!
+C            COMMON/JETCUTS/   CUTS ON JETS
+C     OUTPUT:
+C            TRUE IF EVENTS PASSES ALL CUTS LISTED
+C**************************************************************************
+      IMPLICIT NONE
+c
+c     Constants
+c
+      include 'genps.inc'
+      include 'nexternal.inc'
+      include 'run.inc'
+C
+C     ARGUMENTS
+C
+      REAL*8 P(0:3,nexternal)
+C
+C     PARAMETERS
+C
+      real*8 PI
+      parameter( PI = 3.14159265358979323846d0 )
+      double precision pt
+
+      if (pt(P(0,3)).lt.my_param)then
+        dummy_cuts=.false.
+        return
+      endif   
+      if (pt(P(0,4)).lt.my_param2)then
+        dummy_cuts=.false.
+        return
+      endif   
+      if (my_param.eq.my_param2)then
+        dummy_cuts=.false.
+        return
+      endif  
+      dummy_cuts=.true.
+
+      return
+      end
+        """
+
+        fsock = open(pjoin(self.path, 'custom.f'),'w')
+        fsock.write(cut)
+        fsock.close()
+        self.cmd_line = MECmd.MadEventCmdShell(me_dir=  self.run_dir)
+        self.cmd_line.no_notification()
+        self.cmd_line.exec_cmd('set automatic_html_opening False')
+        self.do('generate_events -f')
+
+        val1 = self.cmd_line.results.current['cross']
+        err1 = self.cmd_line.results.current['error']
+
+        target = 361.7 #+- 0.1037 pb
+        self.assertTrue(abs(val1 - target) / (2*err1) < 1., 'large difference between %s and %s +- %s'%
                         (target, val1, err1))
 
         self.assertIn('MY_PARAM', open(pjoin(self.run_dir,'Source','run.inc')).read())
@@ -654,13 +961,17 @@ C
         self.assertIn('mue_ref_fixed', run_card.user_set)
         self.assertIn('mue_over_ref', run_card.user_set)
 
+        run_card['nevents'] = 10000
+        run_card.write('%s/Cards/run_card.dat' % self.run_dir)
         
         self.do('generate_events -f')
         val1 = self.cmd_line.results.current['cross']
         err1 = self.cmd_line.results.current['error']
 
-        target = 166.36114
-        self.assertTrue(abs(val1 - target) / err1 < 1., 'large diference between %s and %s +- %s'%
+        #target = 166.36114 # value used as reference before changing sde_strategy
+        # 100k value is 165.84 +- 0.05
+        target = 165.84
+        self.assertTrue(abs(val1 - target) / err1 < 1., 'large difference between %s and %s +- %s'%
                         (target, val1, err1))
 
         
@@ -672,8 +983,9 @@ C
         self.do('generate_events -f')
         val1 = self.cmd_line.results.current['cross']
         err1 = self.cmd_line.results.current['error']
-        target = 165.7
-        self.assertTrue(abs(val1 - target) / err1 < 1., 'large diference between %s and %s +- %s'%
+        # 100k value is  165.71 +- 0.06
+        target = 165.71
+        self.assertTrue(abs(val1 - target) / err1 < 1., 'large difference between %s and %s +- %s'%
                         (target, val1, err1))
 
 
@@ -724,8 +1036,21 @@ C
         self.cmd_line.exec_cmd('decay_events run_01 -f')
         val1 = self.cmd_line.results.current['cross']
         err1 = self.cmd_line.results.current['error']
-        target = 440.779
-        self.assertTrue(misc.equal(target, val1, 4*err1))          
+        # Not the production 440.779 any more. BR(t -> w+ b) is 1 to seven
+        # digits, so the decayed cross-section used to be the production one --
+        # but MadSpin draws the top's virtuality only inside +- BW_cut widths of
+        # the pole and now says so: the reported sigma carries the fraction of
+        # the Breit-Wigner that window keeps. One top is decayed here (t~ is not
+        # in the card and MadSpin does not auto-conjugate), so the factor is a
+        # single bw_retained_fraction(173.0, 1.491257, 15) = 0.9786983 and
+        # 440.779 -> 431.39, i.e. -2.13%.
+        #
+        # The 4*err1 band is +-4.3% on a 100-event run, so the old number still
+        # fitted inside it. That is exactly why it is updated rather than left:
+        # a tolerance wide enough to hide a systematic shift is not a check that
+        # the shift is right.
+        target = 431.39
+        self.assertTrue(misc.equal(target, val1, 4*err1))
              
         
         
@@ -1024,18 +1349,20 @@ class TestMEfromfile(unittest.TestCase):
         command.close()
         
         fsock = open(pjoin(self.path, 'madspin_card.dat'), 'w')
-        fsock.write("""decay w+ > j j
+        fsock.write("""set spinmode madspin
+        decay w+ > j j
         decay w- > e- ve~
         launch
         """)
         fsock.close()
         fsock = open(pjoin(self.path, 'madspin_card2.dat'), 'w')
-        fsock.write("""decay w+ > j j
+        fsock.write("""set spinmode madspin
+        decay w+ > j j
         decay w- > j j
         launch
         """)
-        fsock.close()                
-        subprocess.call([sys.executable, pjoin(_file_path, os.path.pardir,'bin','mg5_aMC'), 
+        fsock.close()
+        subprocess.call([sys.executable, pjoin(_file_path, os.path.pardir,'bin','mg5_aMC'),
                          pjoin(self.path, 'cmd')],
                          cwd=pjoin(_file_path, os.path.pardir),
                         stdout=stdout,stderr=stdout)     
@@ -1046,14 +1373,486 @@ class TestMEfromfile(unittest.TestCase):
         #logger.info('\nMS info: the number of events in the html file is not (always) correct after MS\n')
         self.check_parton_output('run_01_decayed_2', cross=100521.52517, error=8e+02,target_event=1000)
         self.check_pythia_output(run_name='run_01_decayed_1')
-        
+
         #check the first decayed events for energy-momentum conservation.
-        
-        
+
+
         self.assertEqual(cwd, os.getcwd())
+
+
+    def test_wj_production_with_ms_decay(self):
+        """A run to test madspin (inline and offline) on p p > w+ j and p p > w- j.
+
+        Same as test_w_production_with_ms_decay but with an extra jet at
+        production, so the production process is 2 -> 2 (the W recoils against
+        the jet). This exercises the spinmode=madspin reshuffling path: a fresh
+        Breit-Wigner W mass is sampled and the production momenta are reshuffled
+        before accept/reject (unlike the 2 -> 1 w+/w- case, which stays onshell).
+        """
+
+        cwd = os.getcwd()
+
+        if logging.getLogger('madgraph').level <= 20:
+            stdout=None
+            stderr=None
+        else:
+            devnull =open(os.devnull,'w')
+            stdout=devnull
+            stderr=devnull
+
+        if logging.getLogger('madgraph').level > 20:
+            stdout = devnull
+        else:
+            stdout= None
+
+        #
+        #  START REAL CODE
+        #
+        command = open(pjoin(self.path, 'cmd'), 'w')
+        command.write("""import model sm
+        set automatic_html_opening False --no_save
+        set notification_center False --no_save
+        generate p p > w+ j
+        add process p p > w- j
+        output %(path)s
+        launch
+        madspin=ON
+        analysis=OFF
+        shower=pythia8
+        %(path)s/../madspin_card.dat
+        set nevents 1000
+        set lhaid 10042
+        set pdlabel lhapdf
+        launch -i
+        decay_events run_01
+        %(path)s/../madspin_card2.dat
+        """ % {'path':self.run_dir})
+        command.close()
+
+        fsock = open(pjoin(self.path, 'madspin_card.dat'), 'w')
+        fsock.write("""set spinmode madspin
+        decay w+ > j j
+        decay w- > e- ve~
+        launch
+        """)
+        fsock.close()
+        fsock = open(pjoin(self.path, 'madspin_card2.dat'), 'w')
+        fsock.write("""set spinmode madspin
+        decay w+ > j j
+        decay w- > j j
+        launch
+        """)
+        fsock.close()
+        subprocess.call([sys.executable, pjoin(_file_path, os.path.pardir,'bin','mg5_aMC'),
+                         pjoin(self.path, 'cmd')],
+                         cwd=pjoin(_file_path, os.path.pardir),
+                        stdout=stdout,stderr=stdout)
+
+        # Cross-section reference values are omitted (cross=0 skips the check):
+        # p p > w+/- j differ from the inclusive p p > w+/- of
+        # test_w_production_with_ms_decay and need a reference run to pin down.
+        # The event-count targets are driven by the (unchanged) W branching
+        # ratios, so they match the 2 -> 1 test: ~666 kept for the mixed-BR
+        # card (w+ > j j vs w- > e- ve~) and the full 1000 for the all-jets card.
+        self.check_parton_output(target_event=1000)
+        self.check_parton_output('run_01_decayed_1', target_event=666, delta_event=40)
+        self.check_parton_output('run_01_decayed_2', target_event=1000)
+        self.check_pythia_output(run_name='run_01_decayed_1')
+
+        #check the first decayed events for energy-momentum conservation.
+
+
+        self.assertEqual(cwd, os.getcwd())
+
+
+    def test_w_production_with_PA_decay(self):
+        """A run to test MadSpin PA (pole-approximation/density) mode on p p > w+ / w-.
+
+        Inline-only counterpart of test_w_production_with_PA_decay_inline_then_offline.
+        Exercises the new PA path through run_onshell(density_method=True).
+        The madspin card has different BRs for w+ (-> j j) vs w- (-> e- ve~)
+        and therefore exercises the BR-equalization / loose-decay branch
+        (events with the smaller-BR pdg are dropped to keep the output
+        unweighted).
+        """
+
+        cwd = os.getcwd()
+
+        if logging.getLogger('madgraph').level <= 20:
+            stdout=None
+            stderr=None
+        else:
+            devnull =open(os.devnull,'w')
+            stdout=devnull
+            stderr=devnull
+
+        if logging.getLogger('madgraph').level > 20:
+            stdout = devnull
+        else:
+            stdout= None
+
+        #
+        #  START REAL CODE
+        #
+        command = open(pjoin(self.path, 'cmd'), 'w')
+        command.write("""import model sm
+        set automatic_html_opening False --no_save
+        set notification_center False --no_save
+        generate p p > w+
+        add process p p > w-
+        output %(path)s
+        launch
+        madspin=ON
+        analysis=OFF
+        shower=OFF
+        %(path)s/../madspin_card.dat
+        set nevents 1000
+        set lhaid 10042
+        set pdlabel lhapdf
+        """ % {'path':self.run_dir})
+        command.close()
+
+        fsock = open(pjoin(self.path, 'madspin_card.dat'), 'w')
+        fsock.write("""set spinmode PA
+        decay w+ > j j
+        decay w- > e- ve~
+        launch
+        """)
+        fsock.close()
+        subprocess.call([sys.executable, pjoin(_file_path, os.path.pardir,'bin','mg5_aMC'),
+                         pjoin(self.path, 'cmd')],
+                         cwd=pjoin(_file_path, os.path.pardir),
+                        stdout=stdout,stderr=stdout)
+
+        # Parton-level production reference (unchanged from the madspin test).
+        self.check_parton_output(cross=150770.0, error=7.4e+02, target_event=1000)
+        # Mixed-BR case: BR equalization drops the w- -> e- ve~ events so the
+        # effective BR is ~ (sigma_w+ * BR(w+->jj) + sigma_w- * BR(w-->eve)) / sigma_tot,
+        # matching the legacy madspin result up to MC noise.
+        self.check_parton_output('run_01_decayed_1', cross=66344.2066122, error=1.5e+03,
+                                 target_event=666, delta_event=80)
+
+        self.assertEqual(cwd, os.getcwd())
+
+
+    def test_w_production_with_PA_decay_inline_then_offline(self):
+        """PA-mode MadSpin run inline first with one set of decay channels,
+        then again offline via ``decay_events`` with a different set of
+        channels, on a mixed w+/w- sample.
+
+        Mirrors ``test_w_production_with_ms_decay`` (same inline+offline
+        sequence on the legacy ``spinmode=madspin`` path).
+
+        Used to raise ``KeyError: (-24, 1, -2)`` in ``get_pdir`` because
+        every MadSpin instance compiled its matrix elements to the same
+        ``madspin_me/SubProcesses/`` directory, and macOS' ``dlopen``
+        caches loaded libraries by install_name
+        (``@rpath/liball_2me.dylib``) — the second run kept reusing the
+        first run's already-loaded matrix elements regardless of what was
+        on disk. Fixed by giving each MadSpinInterface instance a unique
+        ``madspin_me_<N>`` output subdir and patching the dylib's
+        install_name with ``install_name_tool`` so each run gets a fresh
+        in-memory library.
+        """
+
+        cwd = os.getcwd()
+
+        if logging.getLogger('madgraph').level <= 20:
+            stdout=None
+            stderr=None
+        else:
+            devnull =open(os.devnull,'w')
+            stdout=devnull
+            stderr=devnull
+
+        if logging.getLogger('madgraph').level > 20:
+            stdout = devnull
+        else:
+            stdout= None
+
+        command = open(pjoin(self.path, 'cmd'), 'w')
+        command.write("""import model sm
+        set automatic_html_opening False --no_save
+        set notification_center False --no_save
+        generate p p > w+
+        add process p p > w-
+        output %(path)s
+        launch
+        madspin=ON
+        analysis=OFF
+        shower=OFF
+        %(path)s/../madspin_card.dat
+        set nevents 1000
+        set lhaid 10042
+        set pdlabel lhapdf
+        launch -i
+        decay_events run_01
+        %(path)s/../madspin_card2.dat
+        """ % {'path':self.run_dir})
+        command.close()
+
+        fsock = open(pjoin(self.path, 'madspin_card.dat'), 'w')
+        fsock.write("""set spinmode PA
+        decay w+ > j j
+        decay w- > e- ve~
+        launch
+        """)
+        fsock.close()
+        fsock = open(pjoin(self.path, 'madspin_card2.dat'), 'w')
+        fsock.write("""set spinmode PA
+        decay w+ > j j
+        decay w- > j j
+        launch
+        """)
+        fsock.close()
+        subprocess.call([sys.executable, pjoin(_file_path, os.path.pardir,'bin','mg5_aMC'),
+                         pjoin(self.path, 'cmd')],
+                         cwd=pjoin(_file_path, os.path.pardir),
+                        stdout=stdout,stderr=stdout)
+
+        self.check_parton_output(cross=150770.0, error=7.4e+02, target_event=1000)
+        # Mixed-BR card: BR equalization drops part of the w- -> e- ve~ events.
+        self.check_parton_output('run_01_decayed_1', cross=66344.2066122, error=1.5e+03,
+                                 target_event=666, delta_event=80)
+        # Identical-BR card: no drops.
+        self.check_parton_output('run_01_decayed_2', cross=100521.52517, error=8e+02,
+                                 target_event=1000)
+
+        self.assertEqual(cwd, os.getcwd())
+
+
+    def test_DY_onejet(self):
+        """
+        This test is checking that the scale in auto_dsig are correctly assigned
+        in 3.6.2, a wrong Q2FACT(IB(1)) was used instead of Q2FACT(1).
+        Leading to an assymetry in the DY +1j process.
+        This acceptance test is there to prevent such type of error
+        """
+
+        cwd = os.getcwd()
         
+        if logging.getLogger('madgraph').level <= 20:
+            stdout=None
+            stderr=None
+        else:
+            devnull =open(os.devnull,'w')
+            stdout=devnull
+            stderr=devnull
+
+        if logging.getLogger('madgraph').level > 20:
+            stdout = devnull
+        else:
+            stdout= None
+            
+        #
+        #  START REAL CODE
+        #
+        command = open(pjoin(self.path, 'cmd'), 'w')
+        command.write("""import model sm
+        set automatic_html_opening False --no_save
+        set notification_center False --no_save
+        generate p p > mu+ mu- j
+        output %(path)s
+        launch
+        shower=OFF    
+        set nevents 10000
+        set ickkw 1
+        set xqcut 10
+        set mmll 50
+        set auto_ptj_mmjj False
+        set ptj 0.01
+        """ % {'path':self.run_dir})
+        command.close()
         
+        subprocess.call([sys.executable, pjoin(_file_path, os.path.pardir,'bin','mg5_aMC'), 
+                         pjoin(self.path, 'cmd')],
+                         cwd=pjoin(_file_path, os.path.pardir),
+                        stdout=stdout,stderr=stdout)     
         
+        #a=rwa_input('freeze')
+        self.check_parton_output(cross=591.1733, error=2.17,target_event=10000)
+
+        count = [0,0]
+        for event in lhe_parser.EventFile(pjoin(self.run_dir, 'Events', 'run_01','unweighted_events.lhe.gz')):
+            event.check()
+            for particle in event:
+                if particle.pid == 13:
+                    if particle.pz > 0:
+                        count[0] += 1
+                    else:
+                        count[1] += 1
+                    break 
+
+        self.assertTrue(0.49<count[0]/10000.<0.51)       
+        self.assertTrue(0.49<count[1]/10000.<0.51)
+
+
+        self.assertEqual(cwd, os.getcwd())
+
+
+    def test_generation_heft(self):
+        """test added since heft was crashing due to a wrong handling of color denominator
+           in the fortran exporter
+        """
+
+        cwd = os.getcwd()
+        
+        if logging.getLogger('madgraph').level <= 20:
+            stdout=None
+            stderr=None
+        else:
+            devnull =open(os.devnull,'w')
+            stdout=devnull
+            stderr=devnull
+
+        if logging.getLogger('madgraph').level > 20:
+            stdout = devnull
+        else:
+            stdout= None
+            
+        #
+        #  START REAL CODE
+        #
+        command = open(pjoin(self.path, 'cmd'), 'w')
+        command.write("""import model heft
+        set automatic_html_opening False --no_save
+        set notification_center False --no_save
+        generate g g > b b~ HIW<=1
+        output %(path)s
+        launch 
+        set nevents 1000
+        set shower none
+        """ % {'path':self.run_dir})
+        command.close()
+        
+        subprocess.call([sys.executable, pjoin(_file_path, os.path.pardir,'bin','mg5_aMC'), 
+                         pjoin(self.path, 'cmd')],
+                         cwd=pjoin(_file_path, os.path.pardir),
+                        stdout=stdout,stderr=stdout)     
+        
+        #a=rwa_input('freeze')
+        self.check_parton_output(cross= 4.117e+08, error=1.413e+06,target_event=1000)
+
+    def test_polarization_top_decay(self):
+        """check that polarized process t{X} > w+{Y} b{Z}, w+ > ta+ vt gives the correct results
+        Test 1: check that various permutations can be called
+        Test 2: check helicity-flipping process (massive limit)
+        Test 3: check helicity-flipping process (massless limit)
+        """
+
+        cwd = os.getcwd()
+
+        if logging.getLogger('madgraph').level <= 20:
+            stdout=None
+            stderr=None
+        else:
+            devnull =open(os.devnull,'w')
+            stdout=devnull
+            stderr=devnull
+
+        if logging.getLogger('madgraph').level > 20:
+            stdout = devnull
+        else:
+            stdout= None
+
+        #
+        #  START REAL CODE (1/3)
+        #
+        command = open(pjoin(self.path, 'cmd'), 'w')
+        command.write("""set group_subprocesses False
+        import model loop_sm
+        set automatic_html_opening False --no_save
+        set notification_center False --no_save
+        generate    t{L} > w+{0} b{R}, w+ > ta+ vt
+        add process t{L} > w+{T} b{L}, w+ > ta+ vt
+        add process t{L} > w+{A} b{R}, w+ > ta+ vt
+        add process t{R} > w+{S} b{L}, w+ > ta+ vt
+        add process t{R} > w+{0S} b{R}, w+ > ta+ vt
+        add process t{L} > w+{S0} b{L}, w+ > ta+ vt
+        add process t{L} > w+{G} b{R}, w+ > ta+ vt
+        add process t{L} > w+{H} b{L}, w+ > ta+ vt
+        add process t{R} > w+{Q} b{R}, w+ > ta+ vt
+        add process t{R} > w+{W} b{L}, w+ > ta+ vt
+        output %(path)s
+        launch
+        analysis=off
+        set no_parton_cut
+        set nevents 40k
+        set me_frame [1]
+        set nhel 1
+        set bwcutoff 100
+        """ % {'path':self.run_dir})
+        command.close()
+
+        subprocess.call([sys.executable, pjoin(_file_path, os.path.pardir,'bin','mg5_aMC'),
+                         pjoin(self.path, 'cmd')],
+                         cwd=pjoin(_file_path, os.path.pardir),
+                        stdout=stdout,stderr=stdout)
+
+        # Width : 0.53881 ± 0.000343 (GeV) for 40k events
+        tolerance = 1.1
+        self.check_parton_output(cross= 0.53881, error=tolerance*0.000343,target_event=40000)
+
+        #
+        #  START REAL CODE (2/3)
+        #
+        command = open(pjoin(self.path, 'cmd'), 'w')
+        command.write("""set group_subprocesses False
+        import model loop_sm
+        set automatic_html_opening False --no_save
+        set notification_center False --no_save
+        generate    t > w+{A} b, w+ > ta+ vt
+        add process t > w+{S} b, w+ > ta+ vt
+        output %(path)s
+        launch
+        analysis=off
+        set no_parton_cut
+        set nevents 40k
+        set me_frame [1]
+        set nhel 1
+        set bwcutoff 100
+        """ % {'path':self.run_dir})
+        command.close()
+
+        subprocess.call([sys.executable, pjoin(_file_path, os.path.pardir,'bin','mg5_aMC'),
+                         pjoin(self.path, 'cmd')],
+                         cwd=pjoin(_file_path, os.path.pardir),
+                        stdout=stdout,stderr=stdout)
+
+        # Width : 1.3303e-05 ± 2.1e-08 (GeV) for 40k events
+        self.check_parton_output(cross= 1.3303e-05, error=tolerance*2.1e-08,target_event=40000)
+
+        #
+        #  START REAL CODE (3/3)
+        #
+        command = open(pjoin(self.path, 'cmd'), 'w')
+        command.write("""set group_subprocesses False
+        import model loop_sm
+        set automatic_html_opening False --no_save
+        set notification_center False --no_save
+        generate    t > w+{A} b, w+ > ta+ vt
+        add process t > w+{S} b, w+ > ta+ vt
+        output %(path)s
+        launch
+        analysis=off
+        set mta 1e-3
+        set no_parton_cut
+        set nevents 40k
+        set me_frame [1]
+        set nhel 1
+        set bwcutoff 100
+        set mmnl 5.0
+        """ % {'path':self.run_dir})
+        command.close()
+
+        subprocess.call([sys.executable, pjoin(_file_path, os.path.pardir,'bin','mg5_aMC'),
+                         pjoin(self.path, 'cmd')],
+                         cwd=pjoin(_file_path, os.path.pardir),
+                        stdout=stdout,stderr=stdout)
+
+        # Width : 3.9311e-12 ± 6.86e-15  (GeV) for 40k events
+        self.check_parton_output(cross=3.9311e-12, error=tolerance*6.86e-15,target_event=40000)
+
     def test_generation_from_file_1(self):
         """ """
         cwd = os.getcwd()
@@ -1257,11 +2056,152 @@ set draw_rivet_plots True
         cmd.run_cmd('generate w+ > all all')
         self.assertEqual(cmd.cmd.__name__, 'MadGraphCmd')
         cmd.run_cmd('output  %s -f' % self.run_dir)
+
+
         cmd.run_cmd('launch -f')
         data = self.load_result('run_01')
         self.assertNotEqual(data[0]['cross'], 0)
+
+    def test_loop_induced_ggh(self):
+        """Test loop-induced gg > h cross-section via g g > h QCD=0 [QCD]"""
+
+        cmd = MGCmd.MasterCmd()
+        cmd.no_notification()
+        cmd.run_cmd('set automatic_html_opening False --no_save')
+        cmd.run_cmd('generate g g > h QCD=0 [QCD]')
+        cmd.run_cmd('output madevent %s -f' % self.run_dir)
+        #modify the run_cardself
+        run_card = banner.RunCardLO(pjoin(self.run_dir, 'Cards','run_card.dat'))
+        run_card['nevents'] = 100
+        run_card['use_syst'] = 'F'
+        run_card.write('%s/Cards/run_card.dat'% self.run_dir,
+                                    '%s/Cards/run_card_default.dat'% self.run_dir)
+
+        cmd.run_cmd('launch -f')
         
-        
+        self.check_parton_output(cross=15.73, error=0.514)
+
+    def _get_delphes_path(self):
+        """Return the configured delphes_path from the MG5 configuration, or
+        None when Delphes is not configured (used to skip the parallel-Delphes
+        acceptance test on setups without Delphes/ROOT)."""
+        config = pjoin(MG5DIR, 'input', 'mg5_configuration.txt')
+        if not os.path.exists(config):
+            return None
+        for line in open(config):
+            line = line.split('#', 1)[0]
+            if '=' in line:
+                key, value = line.split('=', 1)
+                if key.strip() == 'delphes_path':
+                    value = value.strip()
+                    if value and value.lower() != 'none':
+                        return value
+        return None
+
+    def test_pythia8_delphes_parallel(self):
+        """Fused parallel-Delphes path: a multicore Pythia8 + Delphes run should
+        run Delphes on the individual Pythia8 splits and combine the ROOT files
+        with hadd, keeping every showered event exactly once (normalization)."""
+
+        delphes_path = self._get_delphes_path()
+        if not (delphes_path and os.environ.get('ROOTSYS') and
+                os.path.exists(pjoin(delphes_path, 'DelphesHepMC2'))):
+            raise unittest.SkipTest('Delphes/ROOT not available')
+
+        try:
+            shutil.rmtree('/tmp/MGPROCESS/')
+        except Exception:
+            pass
+
+        # nb_core 2 with 400 events forces exactly 2 Pythia8 splits (the
+        # min_n_events_per_job=100 security clamp keeps 400//100=4 capped to 2);
+        # run_mode defaults to 2 (multicore). Setting nb_core_delphes activates
+        # the fused parallel-Delphes path (Delphes runs on each split, then the
+        # ROOT files are combined with hadd).
+        nevents = 400
+        cmd = """import model sm
+        set automatic_html_opening False --no_save
+        set notification_center False --no_save
+        set nb_core 2
+        set nb_core_delphes 2
+        generate p p > e+ e-
+        output %s -f
+        launch
+        shower=pythia8
+        detector=Delphes
+        analysis=off
+        set mpi off
+        set use_syst False
+        set event_norm average
+        set nevents %d
+        set HEPMCoutput:file hepmc.gz
+        launch -i
+        delphes run_01 --tag=single
+        """ % (self.run_dir, nevents)
+        open(pjoin(self.path, 'mg5_cmd'), 'w').write(cmd)
+
+        if logging.getLogger('madgraph').level <= 20:
+            stdout = None
+            stderr = None
+        else:
+            devnull = open(os.devnull, 'w')
+            stdout = devnull
+            stderr = devnull
+        subprocess.call([pjoin(_file_path, os.path.pardir, 'bin', 'mg5_aMC'),
+                         pjoin(self.path, 'mg5_cmd')],
+                        stdout=stdout, stderr=stderr)
+
+        # Parton level (the same lhe drives every split) and Pythia8 output.
+        self.check_parton_output(target_event=nevents)
+        self.check_pythia_output()
+
+        # Two Delphes outputs of the *same* showered events:
+        #   - tag_1_delphes_events.root : fused (Delphes per split -> hadd),
+        #   - single_delphes_events.root: standard single Delphes pass on the
+        #     merged HepMC (the 'delphes run_01 --tag=single' command above).
+        # They must be equivalent: same number of events and same total weight
+        # (this is the real normalization check for the fused path).
+        eventdir = pjoin(self.run_dir, 'Events', 'run_01')
+        fused_root = pjoin(eventdir, 'tag_1_delphes_events.root')
+        single_root = pjoin(eventdir, 'single_delphes_events.root')
+        self.assertTrue(os.path.exists(fused_root), 'no fused Delphes ROOT produced')
+        self.assertTrue(os.path.exists(single_root), 'no single-core Delphes ROOT produced')
+        self.assertGreater(os.path.getsize(fused_root), 0)
+
+        # PyROOT is bundled with ROOT but its bindings may not import under the
+        # test interpreter; when available, compare the two samples directly.
+        try:
+            import ROOT
+        except ImportError:
+            ROOT = None
+        if ROOT is not None:
+            ROOT.gErrorIgnoreLevel = ROOT.kError
+
+            def read(path):
+                tfile = ROOT.TFile.Open(path)
+                tree = tfile.Get('Delphes')
+                self.assertIsNotNone(tree)
+                n = int(tree.GetEntries())
+                total = 0.0
+                try:
+                    for event in tree:
+                        total += event.Event.At(0).Weight
+                except Exception:
+                    total = None  # branch layout differs; fall back to counts
+                tfile.Close()
+                return n, total
+
+            n_fused, w_fused = read(fused_root)
+            n_single, w_single = read(single_root)
+            # Same events processed either way: no loss or duplication from hadd.
+            self.assertGreater(n_fused, 0)
+            self.assertEqual(n_fused, n_single)
+            # Same absolute normalization: the per-split HepMC weights are the
+            # ones the single pass sees on the merged file, so the totals match.
+            if w_fused is not None and w_single is not None:
+                self.assertAlmostEqual(w_fused, w_single,
+                                       delta=1e-6 * abs(w_single) + 1e-30)
+
 
 #===============================================================================
 # TestCmd

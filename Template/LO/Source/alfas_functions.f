@@ -188,6 +188,10 @@ C---     DEL=SQRT(4*C2-C1**2)
            
       A_OUT=A_IN/(1D0+A_IN*B0(NF)*T)
       IF (NLOOP .EQ. 1) RETURN
+      if (1D0+A_IN*B0(NF)*T.le.0d0)THEN
+          A_OUT = 9d98
+          RETURN
+      ENDIF
       A_OUT=A_IN/(1D0+B0(NF)*A_IN*T+C1(NF)*A_IN*LOG(1D0+A_IN*B0(NF)*T))
       IF (A_OUT .LT. 0D0) AS=0.3D0
  30   AS=A_OUT

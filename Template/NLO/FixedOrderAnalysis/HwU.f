@@ -473,12 +473,12 @@ c output by 'xnorm'
      &     allocate(character(len=(nwgts+3)*17) :: buffer)
 c     column info: x_min, x_max, y (central value), dy, {extra
 c     weights}.
-      write (unit,'(a$)') '##& xmin'
-      write (unit,'(a$)') ' & xmax'
-      write (unit,'(a$)') ' & '//trim(adjustl(wgts_info(1)))
-      write (unit,'(a$)') ' & dy'
+      write (unit,'(a)', advance='no') '##& xmin'
+      write (unit,'(a)', advance='no') ' & xmax'
+      write (unit,'(a)', advance='no') ' & '//trim(adjustl(wgts_info(1)))
+      write (unit,'(a)', advance='no') ' & dy'
       do j=2,nwgts
-         write (unit,'(a$)') ' & '//trim(adjustl(wgts_info(j)))
+         write (unit,'(a)', advance='no') ' & '//trim(adjustl(wgts_info(j)))
       enddo
       write (unit,'(a)') ''
       write (unit,'(a)') ''
@@ -489,19 +489,18 @@ c        For some weird reason, it is no possible to include directly
 c        the integer in two line below with the format '(12a,i4.4,3a,a,2a)'
 c        this is why I have to do it in two steps instead.
          write (str_nbin,'(i4.4)') nbin(label)
-         write (unit,'(12a,4a,3a,a,2a)') '<histogram> ',str_nbin,
-     &                                       ' " ',title(label),' "'
+         write (unit, '(12a,4a,3a,a,2a)') '<histogram> ',str_nbin,' " ',trim(title(label)), ' "'
+c         write (*, '(12a,4a,3a,a,2a)') '<histogram> ',str_nbin,' " ',trim(title(label)), ' "'
 c     data
          do i=1,nbin(label)
-           write (buffer( 1:16),'(2x,e14.7)') histxl(label,i)
-           write (buffer(17:32),'(2x,e14.7)') histxm(label,i)
-           write (buffer(33:48),'(2x,e14.7)') histy_acc(1,label,i)*xnorm
-           write (buffer(49:64),'(2x,e14.7)') histy_err(label,i)*xnorm
+           write (unit,'(2x,e14.7)', advance='no') histxl(label,i)
+           write (unit,'(2x,e14.7)', advance='no') histxm(label,i)
+           write (unit,'(2x,e14.7)', advance='no') histy_acc(1,label,i)*xnorm
+           write (unit,'(2x,e14.7)', advance='no') histy_err(label,i)*xnorm
            do j=2,nwgts
-              write (buffer((j+2)*16+1:(j+3)*16),'(2x,e14.7)')
-     $             histy_acc(j,label,i)*xnorm
+              write (unit, '(2x,e14.7)', advance='no') histy_acc(j,label,i)*xnorm
            enddo
-           write (unit,'(a)') buffer(1:(nwgts+3)*16)
+	   write(unit, *) ''
          enddo
 c     2 empty lines after each plot
          write (unit,'(12a)') '<\histogram>'

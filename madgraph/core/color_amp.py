@@ -18,20 +18,18 @@ for a diagram and build a color basis, and to square a QCD color string for
 squared diagrams and interference terms."""
 
 from __future__ import absolute_import
+import collections
 import copy
 import fractions
 import operator
 import re
 import array
 import math
-import six
-
 import madgraph
 import madgraph.core.color_algebra as color_algebra
 import madgraph.core.diagram_generation as diagram_generation
 import madgraph.core.base_objects as base_objects
 import madgraph.various.misc as misc
-from six.moves import range
 from functools import reduce
 
 if madgraph.ordering:
@@ -307,6 +305,39 @@ class ColorBasis(dict):
                 except KeyError:
                     self[immutable_col_str] = [basis_entry]
 
+    def OniumColorString(self, pid_charges, pid_numbers, charge, offset=10000):
+        """Do the color projection for a given onium"""
+        if len(pid_numbers) != 2 or len(pid_charges) != 2:
+            raise ColorBasis.ColorBasisError("Only the projection of two particles is supported")
+        if pid_charges==(1,-1):
+            if charge != 1:
+                raise ColorBasis.ColorBasisError("Only color singlet is possible when charges=%d,%d"%pid_charges)
+            projector_str = color_algebra.ColorString([color_algebra.ColorOne()])
+        elif pid_charges==(3,-3) or pid_charges==(-3,3):
+            if pid_charges==(-3,3):
+                pidnums=(pid_numbers[1],pid_numbers[0])
+            else:
+                pidnums=(pid_numbers[0],pid_numbers[1])
+            if charge == 1:
+                # color singlet
+                projector_str = color_algebra.ColorString([color_algebra.T(pidnums[1], pidnums[0])])
+            elif charge == 8:
+                # color octet
+                projector_str = color_algebra.ColorString([color_algebra.T(pidnums[0],pidnums[1],pidnums[0])])
+            else:
+                raise ColorBasis.ColorBasisError("Only color singlet/octet is possible when charges=%d,%d"%pid_charges)
+        else:
+            raise ColorBasis.ColorBasisError("Unknown charges=%d,%d for color projection of onium"%pid_charges)
+
+        return projector_str
+
+    def OniaColorProjection(self, colorize_dict, pid_color_numbers):
+        """Color projection for onia"""
+        for (pid_charges,pid_numbers,charge) in pid_color_numbers:
+            OniumCS=self.OniumColorString(pid_charges, pid_numbers, charge)
+            for col_str in colorize_dict.values():
+                col_str.product(OniumCS)
+
     def create_color_dict_list(self, amplitude):
         """Returns a list of colorize dict for all diagrams in amplitude. Also
         update the _list_color_dict object accordingly """
@@ -316,6 +347,27 @@ class ColorBasis(dict):
         for diagram in amplitude.get('diagrams'):
             colorize_dict = self.colorize(diagram,
                                           amplitude.get('process').get('model'))
+
+            onium = False
+            pid_color_numbers = []
+            for l in amplitude.get('process').get('legs'):
+                if l.get('onium'):
+                    if not onium:
+                        onium = True
+                        for part in amplitude.get('process').get('model').get('particles'):
+                            if part.get('pdg_code') == l.get('id'): color = part.get('color')
+                            if part.get('pdg_code') == -l.get('id'): color = -part.get('color')
+                        onium_color = color
+                        onium_number = l.get('number')
+                    else:
+                        onium = False
+                        for part in amplitude.get('process').get('model').get('particles'):
+                            if part.get('pdg_code') == l.get('id'): color = part.get('color')
+                            if part.get('pdg_code') == -l.get('id'): color = -part.get('color')
+                        pid_color_numbers.append([(onium_color,color),(onium_number,l.get('number')),l.get('onium').get('C')])
+
+            if pid_color_numbers: self.OniaColorProjection(colorize_dict, pid_color_numbers)
+
             list_color_dict.append(colorize_dict)
 
         self._list_color_dict = list_color_dict
@@ -408,7 +460,8 @@ class ColorBasis(dict):
                                                 indices[2],
                                                 indices[3]))
         # Simplify the whole thing
-        my_cf = my_cf.full_simplify()
+        with misc.TMP_variable(color_algebra.Epsilon, 'rule_eps_aeps_nosum', False):
+            my_cf = my_cf.full_simplify()
 
         # If the result is empty, just return
         if not my_cf:
@@ -467,7 +520,6 @@ class ColorBasis(dict):
             for (leg_num, leg_repr) in repr_dict.items():
                 # By default, assign a (0,0) color flow
                 res_dict[leg_num] = [0, 0]
-
                 # Raise an error if external legs contain non supported repr
                 if abs(leg_repr) not in [1, 3, 6, 8]:
                     raise ColorBasis.ColorBasisError("Particle ID=%i has an unsupported color representation" % leg_repr)
@@ -646,6 +698,16 @@ class ColorMatrix(dict):
 
         # Complex conjugate the second one and multiply the two
         col_str.product(col_str2.complex_conjugate())
+        if __debug__:
+            #check that no index is repeating more than twice
+            nb_indices = collections.defaultdict(int)
+            for col_obj in col_str:
+                for index in col_obj[:]:
+                    nb_indices[index] += 1
+            assert all([nb <= 2 for nb in nb_indices.values()]), \
+                        "Color string %s has indices appearing more than twice: %s" % \
+                        (str(col_str), nb_indices)
+
 
         # Create a color factor to store the result and simplify it
         # taking into account the limit on Nc
@@ -690,6 +752,7 @@ class ColorMatrix(dict):
             den_list.append(self.lcmm(*[\
                         self.col_matrix_fixed_Nc[(i1, i2)][0].denominator for \
                                         i2 in range(len(self._col_basis2))]))
+            
         return den_list
 
     def get_line_numerators(self, line_index, den):
@@ -702,19 +765,19 @@ class ColorMatrix(dict):
 
     @classmethod
     def fix_summed_indices(self, struct1, struct2):
-        """Returns a copy of the immutable Color String representation struct2 
+        """Returns a copy of the immutable Color String representation struct2
         where summed indices are modified to avoid duplicates with those
         appearing in struct1. Assumes internal summed indices are negative."""
 
         # First, determines what is the smallest index appearing in struct1
-        #list2 = reduce(operator.add,[list(elem[1]) for elem in struct1])
-        list2 = sum((list(elem[1]) for elem in struct1),[])
-        if not list2: 
+        list1 = sum((list(elem[1]) for elem in struct1),[])
+        list2 = sum((list(elem[1]) for elem in struct2),[])
+        if not list1:
             min_index = -1
         else:
-           min_index = min(list2) - 1
+           min_index = min(list1) - 1
 
-        # Second, determines the summed indices in struct2 and create a 
+        # Second, determines the summed indices in struct2 and create a
         # replacement dictionary
         repl_dict = {}
         #list2 = reduce(operator.add,
@@ -740,10 +803,8 @@ class ColorMatrix(dict):
     @staticmethod
     def lcm(a, b):
         """Return lowest common multiple."""
-        if six.PY2:
-            return a * b // fractions.gcd(a, b)
-        else:
-            return a * b // math.gcd(a, b)
+        return a * b // math.gcd(a, b)
+        
     @staticmethod
     def lcmm(*args):
         """Return lcm of args."""
@@ -751,4 +812,3 @@ class ColorMatrix(dict):
             return reduce(ColorMatrix.lcm, args)
         else:
             return 1
-

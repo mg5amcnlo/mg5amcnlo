@@ -20,9 +20,12 @@ from __future__ import division
 from __future__ import absolute_import
 import math
 import os
+import shutil
 import re
 import logging
-from six.moves import range
+import random
+import time
+
 
 try:
     import madgraph
@@ -61,20 +64,29 @@ def get_inc_file(path):
 
 class CombineRuns(object):
     
-    def __init__(self, me_dir, subproc=None):
-        
+    def __init__(self, me_dir, subproc=None, readonly=False):
+
         self.me_dir = me_dir
-        
+        # Read-only (concurrent) gridpack: metadata (subproc.mg, maxparticles.inc)
+        # is read from the shared read-only gridpack (me_dir), but the per-channel
+        # P dirs to combine live directly in the worker's cwd (no SubProcesses
+        # layer -- see GridPackCmd.prepare_local_dir), and their events/results
+        # are written there.
+        self.readonly = readonly
+
         if not subproc:
-            subproc = [l.strip() for l in open(pjoin(self.me_dir,'SubProcesses', 
+            subproc = [l.strip() for l in open(pjoin(self.me_dir,'SubProcesses',
                                                                  'subproc.mg'))]
         self.subproc = subproc
         maxpart = get_inc_file(pjoin(me_dir, 'Source', 'maxparticles.inc'))
         self.maxparticles = maxpart['max_particles']
-    
-    
+
+
         for procname in self.subproc:
-            path = pjoin(self.me_dir,'SubProcesses', procname)
+            if readonly:
+                path = procname
+            else:
+                path = pjoin(self.me_dir,'SubProcesses', procname)
             channels = self.get_channels(path)
             for channel in channels:
                 self.sum_multichannel(channel)
@@ -83,6 +95,7 @@ class CombineRuns(object):
         """Looks in channel to see if there are multiple runs that
         need to be combined. If so combines them into single run"""
        
+        start = time.time()
         alphabet = "abcdefghijklmnopqrstuvwxyz"
 
         if os.path.exists(pjoin(channel, 'multijob.dat')):
@@ -112,25 +125,40 @@ class CombineRuns(object):
         fsock.write('--------------------- Multi run with %s jobs. ---------------------\n'
                     % njobs)
         for r in results:
+            
             fsock.write('job %s : %s %s +- %s %s\n' % (r.name, r.xsec, r.axsec,\
                                                        r.xerru, r.nunwgt))  
             
         #Now read in all of the events and write them
         #back out with the appropriate scaled weight
+        to_clean = []
         fsock = open(pjoin(channel, 'events.lhe'), 'w')
-        wgt = results.axsec / results.nunwgt
+        #wgt = results.axsec / results.nunwgt
+        maxwgt = results.axsec / results.nunwgt 
         tot_nevents, nb_file = 0, 0
         for result in results:  
+            #misc.sprint('target:', result.axsec/result.nunwgt)
+            #misc.sprint('job %s : %s %s +- %s: %s' % (result.name, result.xsec, result.axsec,\
+            #                                           result.xerru, result.nunwgt))
+            
+
+            ratio = result.nunwgt/results.nunwgt
             i = result.name
             if channel.endswith(os.path.pathsep):
                 path = channel[:-1] + i 
             else:
                 path = channel + i
-            nw = self.copy_events(fsock, pjoin(path,'events.lhe'), wgt)
+            nw = self.copy_events(fsock, pjoin(path,'events.lhe'), ratio, maxwgt)
             tot_nevents += nw
             nb_file += 1
-        logger.debug("Combined %s file generating %s events for %s " , nb_file, tot_nevents, channel)
-
+            to_clean.append(path)
+        logger.debug("Combined %s file generating %s events for %s (%.1f%%): (%fs) " , nb_file, tot_nevents, channel, 100*tot_nevents/results.nunwgt, time.time()-start)
+        for path in to_clean:
+            try:
+                shutil.rmtree(path)
+            except Exception as error:
+                pass
+            
     @staticmethod
     def get_fortran_str(nb):
         data = '%E' % nb
@@ -140,28 +168,59 @@ class CombineRuns(object):
         return '%.7fE%+03i' %(nb,power)    
 
 
-    def copy_events(self, fsock, input, new_wgt):
+    def copy_events(self, fsock, input, scale_wgt, max_wgt):
         """ Copy events from separate runs into one file w/ appropriate wgts"""
-        
 
-        new_wgt = self.get_fortran_str(new_wgt)
-        old_line = ""
-        nb_evt =0 
-        for line in open(input):
-            if old_line.startswith("<event>"):
-                nb_evt+=1
-                data = line.split()
-                if not len(data) == 6:
-                    raise MadGraph5Error("Line after <event> should have 6 entries")
-                if float(data[2]) > 0:
-                    sign = ''
-                else:
-                    sign = '-'  
-                line= ' %s  %s%s  %s\n' % ('   '.join(data[:2]), sign,
-                                           new_wgt, '  '.join(data[3:]))
-            fsock.write(line)
-            old_line = line
+        nb_evt = 0
+        # skip=True suppresses payload lines for a rejected event until next <event>.
+        skip = False
+        pending_event = False
+        # Local bindings to reduce lookups in this per-event hot loop
+        rand = random.random
+        get_fortran = self.get_fortran_str
+        write = fsock.write
+        max_wgt_fortran = get_fortran(max_wgt)
+        scale = scale_wgt
+
+        with open(input) as fin:
+            for line in fin:
+                # The line immediately after <event> contains the event header and raw weight
+                if pending_event:
+                    data = line.split(None, 5)
+                    if len(data) != 6:
+                        raise MadGraph5Error("Line after <event> should have 6 entries")
+
+                    scaled_wgt = float(data[2]) * scale
+                    if scaled_wgt < 0:
+                        sign = '-'
+                        abs_wgt = -scaled_wgt
+                    else:
+                        sign = ''
+                        abs_wgt = scaled_wgt
+                    skip = False
+                    if abs_wgt < rand() * max_wgt:
+                        skip = True
+                    else:
+                        nb_evt += 1
+                        if abs_wgt < max_wgt:
+                            new_wgt = max_wgt_fortran
+                        else:
+                            new_wgt = get_fortran(abs_wgt)
+                        write("<event>\n")
+                        write(' %s  %s%s  %s\n' % ('   '.join(data[:2]),
+                                                   sign, new_wgt, '  '.join(data[3:])))
+                    pending_event = False
+                    continue
+                
+                # Defer writing "<event>" until after accept/reject
+                if line.startswith("<event>"):
+                    pending_event = True
+                    continue
+
+                if not skip:
+                    write(line)
         return nb_evt
+    
     def get_channels(self, proc_path):
         """Opens file symfact.dat to determine all channels"""
         sympath = os.path.join(proc_path, 'symfact.dat')

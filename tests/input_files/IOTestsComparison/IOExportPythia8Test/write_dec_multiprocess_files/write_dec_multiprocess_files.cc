@@ -43,7 +43,7 @@
 void Sigma_sm_gd_ddxd::initProc() {
 // Instantiate the model class and set parameters that stay fixed during run
     pars = Parameters_sm::getInstance();
-    pars->setIndependentParameters(particleDataPtr, couplingsPtr, slhaPtr);
+    pars->setIndependentParameters(particleDataPtr, coupSUSYPtr, slhaPtr);
     pars->setIndependentCouplings();
     // Set massive/massless matrix elements for c/b/mu/tau
 mcME = 0.;
@@ -67,7 +67,7 @@ jamp2[9] = new double[1];
 
 void Sigma_sm_gd_ddxd::sigmaKin() { 
     // Set the parameters which change event by event
-    pars->setDependentParameters(particleDataPtr, couplingsPtr, slhaPtr, alpS);
+    pars->setDependentParameters(particleDataPtr, coupSUSYPtr, slhaPtr, alpS);
     pars->setDependentCouplings();
     // Reset color flows
     for(int i=0;i < 1; i++)
@@ -694,300 +694,330 @@ FFV1_2_0(w[10],w[12],w[8],pars->GUZ1,pars->GUZ2,amp[17]);
 
 }
 double Sigma_sm_gd_ddxd::matrix_gd_zd_z_ddx() { 
-int i, j;
+
 // Local variables
 const int ngraphs = 2;
 const int ncolor = 1;
 std::complex<double> ztemp;
 std::complex<double> jamp[ncolor];
 // The color matrix;
-static const double denom[ncolor] = {1};
-static const double cf[ncolor][ncolor] = {{12}};
+static const int denom = 1;
+static const int cf[ncolor*(ncolor+1)/2] = {12};
 
 // Calculate color flows
 jamp[0]=-amp[0]-amp[1];
 
 // Sum and square the color flows to get the matrix element
 double matrix = 0;
-for(i=0;i < ncolor; i++){
+int cf_index = 0;
+for(int i=0;i < ncolor; i++){
   ztemp = 0.;
-  for(j = 0; j < ncolor; j++)
-    ztemp = ztemp + cf[i][j]*jamp[j];
-  matrix = matrix+real(ztemp*conj(jamp[i]))/denom[i];
+  for(int j = i; j < ncolor; j++, cf_index++){
+    ztemp = ztemp + static_cast<double>(cf[cf_index])*jamp[j];
+   }
+  matrix = matrix+real(ztemp*conj(jamp[i]));
 }
+ matrix = matrix/denom;
 
 // Store the leading color flows for choice of color
-for(i=0;i < ncolor; i++)
+for(int i=0;i < ncolor; i++)
     jamp2[0][i] += real(jamp[i]*conj(jamp[i]));
     
 return matrix;
 }
 
 double Sigma_sm_gd_ddxd::matrix_gd_zd_z_uux() { 
-int i, j;
+
 // Local variables
 const int ngraphs = 2;
 const int ncolor = 1;
 std::complex<double> ztemp;
 std::complex<double> jamp[ncolor];
 // The color matrix;
-static const double denom[ncolor] = {1};
-static const double cf[ncolor][ncolor] = {{12}};
+static const int denom = 1;
+static const int cf[ncolor*(ncolor+1)/2] = {12};
 
 // Calculate color flows
 jamp[0]=-amp[2]-amp[3];
 
 // Sum and square the color flows to get the matrix element
 double matrix = 0;
-for(i=0;i < ncolor; i++){
+int cf_index = 0;
+for(int i=0;i < ncolor; i++){
   ztemp = 0.;
-  for(j = 0; j < ncolor; j++)
-    ztemp = ztemp + cf[i][j]*jamp[j];
-  matrix = matrix+real(ztemp*conj(jamp[i]))/denom[i];
+  for(int j = i; j < ncolor; j++, cf_index++){
+    ztemp = ztemp + static_cast<double>(cf[cf_index])*jamp[j];
+   }
+  matrix = matrix+real(ztemp*conj(jamp[i]));
 }
+ matrix = matrix/denom;
 
 // Store the leading color flows for choice of color
-for(i=0;i < ncolor; i++)
+for(int i=0;i < ncolor; i++)
     jamp2[1][i] += real(jamp[i]*conj(jamp[i]));
     
 return matrix;
 }
 
 double Sigma_sm_gd_ddxd::matrix_gd_zd_z_ssx() { 
-int i, j;
+
 // Local variables
 const int ngraphs = 2;
 const int ncolor = 1;
 std::complex<double> ztemp;
 std::complex<double> jamp[ncolor];
 // The color matrix;
-static const double denom[ncolor] = {1};
-static const double cf[ncolor][ncolor] = {{12}};
+static const int denom = 1;
+static const int cf[ncolor*(ncolor+1)/2] = {12};
 
 // Calculate color flows
 jamp[0]=-amp[0]-amp[1];
 
 // Sum and square the color flows to get the matrix element
 double matrix = 0;
-for(i=0;i < ncolor; i++){
+int cf_index = 0;
+for(int i=0;i < ncolor; i++){
   ztemp = 0.;
-  for(j = 0; j < ncolor; j++)
-    ztemp = ztemp + cf[i][j]*jamp[j];
-  matrix = matrix+real(ztemp*conj(jamp[i]))/denom[i];
+  for(int j = i; j < ncolor; j++, cf_index++){
+    ztemp = ztemp + static_cast<double>(cf[cf_index])*jamp[j];
+   }
+  matrix = matrix+real(ztemp*conj(jamp[i]));
 }
+ matrix = matrix/denom;
 
 // Store the leading color flows for choice of color
-for(i=0;i < ncolor; i++)
+for(int i=0;i < ncolor; i++)
     jamp2[2][i] += real(jamp[i]*conj(jamp[i]));
     
 return matrix;
 }
 
 double Sigma_sm_gd_ddxd::matrix_gu_zu_z_ddx() { 
-int i, j;
+
 // Local variables
 const int ngraphs = 2;
 const int ncolor = 1;
 std::complex<double> ztemp;
 std::complex<double> jamp[ncolor];
 // The color matrix;
-static const double denom[ncolor] = {1};
-static const double cf[ncolor][ncolor] = {{12}};
+static const int denom = 1;
+static const int cf[ncolor*(ncolor+1)/2] = {12};
 
 // Calculate color flows
 jamp[0]=-amp[4]-amp[5];
 
 // Sum and square the color flows to get the matrix element
 double matrix = 0;
-for(i=0;i < ncolor; i++){
+int cf_index = 0;
+for(int i=0;i < ncolor; i++){
   ztemp = 0.;
-  for(j = 0; j < ncolor; j++)
-    ztemp = ztemp + cf[i][j]*jamp[j];
-  matrix = matrix+real(ztemp*conj(jamp[i]))/denom[i];
+  for(int j = i; j < ncolor; j++, cf_index++){
+    ztemp = ztemp + static_cast<double>(cf[cf_index])*jamp[j];
+   }
+  matrix = matrix+real(ztemp*conj(jamp[i]));
 }
+ matrix = matrix/denom;
 
 // Store the leading color flows for choice of color
-for(i=0;i < ncolor; i++)
+for(int i=0;i < ncolor; i++)
     jamp2[3][i] += real(jamp[i]*conj(jamp[i]));
     
 return matrix;
 }
 
 double Sigma_sm_gd_ddxd::matrix_gu_zu_z_uux() { 
-int i, j;
+
 // Local variables
 const int ngraphs = 2;
 const int ncolor = 1;
 std::complex<double> ztemp;
 std::complex<double> jamp[ncolor];
 // The color matrix;
-static const double denom[ncolor] = {1};
-static const double cf[ncolor][ncolor] = {{12}};
+static const int denom = 1;
+static const int cf[ncolor*(ncolor+1)/2] = {12};
 
 // Calculate color flows
 jamp[0]=-amp[6]-amp[7];
 
 // Sum and square the color flows to get the matrix element
 double matrix = 0;
-for(i=0;i < ncolor; i++){
+int cf_index = 0;
+for(int i=0;i < ncolor; i++){
   ztemp = 0.;
-  for(j = 0; j < ncolor; j++)
-    ztemp = ztemp + cf[i][j]*jamp[j];
-  matrix = matrix+real(ztemp*conj(jamp[i]))/denom[i];
+  for(int j = i; j < ncolor; j++, cf_index++){
+    ztemp = ztemp + static_cast<double>(cf[cf_index])*jamp[j];
+   }
+  matrix = matrix+real(ztemp*conj(jamp[i]));
 }
+ matrix = matrix/denom;
 
 // Store the leading color flows for choice of color
-for(i=0;i < ncolor; i++)
+for(int i=0;i < ncolor; i++)
     jamp2[4][i] += real(jamp[i]*conj(jamp[i]));
     
 return matrix;
 }
 
 double Sigma_sm_gd_ddxd::matrix_gdx_zdx_z_ddx() { 
-int i, j;
+
 // Local variables
 const int ngraphs = 2;
 const int ncolor = 1;
 std::complex<double> ztemp;
 std::complex<double> jamp[ncolor];
 // The color matrix;
-static const double denom[ncolor] = {1};
-static const double cf[ncolor][ncolor] = {{12}};
+static const int denom = 1;
+static const int cf[ncolor*(ncolor+1)/2] = {12};
 
 // Calculate color flows
 jamp[0]=+amp[8]+amp[9];
 
 // Sum and square the color flows to get the matrix element
 double matrix = 0;
-for(i=0;i < ncolor; i++){
+int cf_index = 0;
+for(int i=0;i < ncolor; i++){
   ztemp = 0.;
-  for(j = 0; j < ncolor; j++)
-    ztemp = ztemp + cf[i][j]*jamp[j];
-  matrix = matrix+real(ztemp*conj(jamp[i]))/denom[i];
+  for(int j = i; j < ncolor; j++, cf_index++){
+    ztemp = ztemp + static_cast<double>(cf[cf_index])*jamp[j];
+   }
+  matrix = matrix+real(ztemp*conj(jamp[i]));
 }
+ matrix = matrix/denom;
 
 // Store the leading color flows for choice of color
-for(i=0;i < ncolor; i++)
+for(int i=0;i < ncolor; i++)
     jamp2[5][i] += real(jamp[i]*conj(jamp[i]));
     
 return matrix;
 }
 
 double Sigma_sm_gd_ddxd::matrix_gdx_zdx_z_uux() { 
-int i, j;
+
 // Local variables
 const int ngraphs = 2;
 const int ncolor = 1;
 std::complex<double> ztemp;
 std::complex<double> jamp[ncolor];
 // The color matrix;
-static const double denom[ncolor] = {1};
-static const double cf[ncolor][ncolor] = {{12}};
+static const int denom = 1;
+static const int cf[ncolor*(ncolor+1)/2] = {12};
 
 // Calculate color flows
 jamp[0]=+amp[10]+amp[11];
 
 // Sum and square the color flows to get the matrix element
 double matrix = 0;
-for(i=0;i < ncolor; i++){
+int cf_index = 0;
+for(int i=0;i < ncolor; i++){
   ztemp = 0.;
-  for(j = 0; j < ncolor; j++)
-    ztemp = ztemp + cf[i][j]*jamp[j];
-  matrix = matrix+real(ztemp*conj(jamp[i]))/denom[i];
+  for(int j = i; j < ncolor; j++, cf_index++){
+    ztemp = ztemp + static_cast<double>(cf[cf_index])*jamp[j];
+   }
+  matrix = matrix+real(ztemp*conj(jamp[i]));
 }
+ matrix = matrix/denom;
 
 // Store the leading color flows for choice of color
-for(i=0;i < ncolor; i++)
+for(int i=0;i < ncolor; i++)
     jamp2[6][i] += real(jamp[i]*conj(jamp[i]));
     
 return matrix;
 }
 
 double Sigma_sm_gd_ddxd::matrix_gdx_zdx_z_ssx() { 
-int i, j;
+
 // Local variables
 const int ngraphs = 2;
 const int ncolor = 1;
 std::complex<double> ztemp;
 std::complex<double> jamp[ncolor];
 // The color matrix;
-static const double denom[ncolor] = {1};
-static const double cf[ncolor][ncolor] = {{12}};
+static const int denom = 1;
+static const int cf[ncolor*(ncolor+1)/2] = {12};
 
 // Calculate color flows
 jamp[0]=+amp[12]+amp[13];
 
 // Sum and square the color flows to get the matrix element
 double matrix = 0;
-for(i=0;i < ncolor; i++){
+int cf_index = 0;
+for(int i=0;i < ncolor; i++){
   ztemp = 0.;
-  for(j = 0; j < ncolor; j++)
-    ztemp = ztemp + cf[i][j]*jamp[j];
-  matrix = matrix+real(ztemp*conj(jamp[i]))/denom[i];
+  for(int j = i; j < ncolor; j++, cf_index++){
+    ztemp = ztemp + static_cast<double>(cf[cf_index])*jamp[j];
+   }
+  matrix = matrix+real(ztemp*conj(jamp[i]));
 }
+ matrix = matrix/denom;
 
 // Store the leading color flows for choice of color
-for(i=0;i < ncolor; i++)
+for(int i=0;i < ncolor; i++)
     jamp2[7][i] += real(jamp[i]*conj(jamp[i]));
     
 return matrix;
 }
 
 double Sigma_sm_gd_ddxd::matrix_gux_zux_z_ddx() { 
-int i, j;
+
 // Local variables
 const int ngraphs = 2;
 const int ncolor = 1;
 std::complex<double> ztemp;
 std::complex<double> jamp[ncolor];
 // The color matrix;
-static const double denom[ncolor] = {1};
-static const double cf[ncolor][ncolor] = {{12}};
+static const int denom = 1;
+static const int cf[ncolor*(ncolor+1)/2] = {12};
 
 // Calculate color flows
 jamp[0]=+amp[14]+amp[15];
 
 // Sum and square the color flows to get the matrix element
 double matrix = 0;
-for(i=0;i < ncolor; i++){
+int cf_index = 0;
+for(int i=0;i < ncolor; i++){
   ztemp = 0.;
-  for(j = 0; j < ncolor; j++)
-    ztemp = ztemp + cf[i][j]*jamp[j];
-  matrix = matrix+real(ztemp*conj(jamp[i]))/denom[i];
+  for(int j = i; j < ncolor; j++, cf_index++){
+    ztemp = ztemp + static_cast<double>(cf[cf_index])*jamp[j];
+   }
+  matrix = matrix+real(ztemp*conj(jamp[i]));
 }
+ matrix = matrix/denom;
 
 // Store the leading color flows for choice of color
-for(i=0;i < ncolor; i++)
+for(int i=0;i < ncolor; i++)
     jamp2[8][i] += real(jamp[i]*conj(jamp[i]));
     
 return matrix;
 }
 
 double Sigma_sm_gd_ddxd::matrix_gux_zux_z_uux() { 
-int i, j;
+
 // Local variables
 const int ngraphs = 2;
 const int ncolor = 1;
 std::complex<double> ztemp;
 std::complex<double> jamp[ncolor];
 // The color matrix;
-static const double denom[ncolor] = {1};
-static const double cf[ncolor][ncolor] = {{12}};
+static const int denom = 1;
+static const int cf[ncolor*(ncolor+1)/2] = {12};
 
 // Calculate color flows
 jamp[0]=+amp[16]+amp[17];
 
 // Sum and square the color flows to get the matrix element
 double matrix = 0;
-for(i=0;i < ncolor; i++){
+int cf_index = 0;
+for(int i=0;i < ncolor; i++){
   ztemp = 0.;
-  for(j = 0; j < ncolor; j++)
-    ztemp = ztemp + cf[i][j]*jamp[j];
-  matrix = matrix+real(ztemp*conj(jamp[i]))/denom[i];
+  for(int j = i; j < ncolor; j++, cf_index++){
+    ztemp = ztemp + static_cast<double>(cf[cf_index])*jamp[j];
+   }
+  matrix = matrix+real(ztemp*conj(jamp[i]));
 }
+ matrix = matrix/denom;
 
 // Store the leading color flows for choice of color
-for(i=0;i < ncolor; i++)
+for(int i=0;i < ncolor; i++)
     jamp2[9][i] += real(jamp[i]*conj(jamp[i]));
     
 return matrix;

@@ -22,7 +22,8 @@ endif
 .f90.o: ; $(FC) $(FFLAGS) -c $*.f90
 
 all: $(LIBDIR)libdhelas.a $(LIBDIR)libgeneric.a $(LIBDIR)libpdf.a	\
-    $(LIBDIR)libmodel.a $(LIBDIR)libcernlib.a param_card.inc $(LIBS) born_support
+    $(LIBDIR)libgammaUPC.a $(LIBDIR)libmodel.a $(LIBDIR)libcernlib.a \
+    param_card.inc $(LIBS) born_support
 	rm -f PDF/*.o
 
 .PHONY: born_support
@@ -52,6 +53,14 @@ setrun.o: run_card.inc extra_weights.o
 $(LIBDIR)libpdf.a: PDF
 	rm -f $(LIBDIR)libpdf.a
 	cd PDF; make	
+
+ifneq (,$(filter edff chff, $(pdlabel)))
+$(LIBDIR)libgammaUPC.$(libext): PDF/gammaUPC
+	cd PDF/gammaUPC; make ; cd ../../
+else
+$(LIBDIR)libgammaUPC.$(libext): PDF/gammaUPC
+	cd PDF/gammaUPC; make -f makefile_dummy; cd ../../
+endif
 
 $(LIBDIR)libcernlib.a: CERNLIB
 	rm -f $(LIBDIR)libcernlib.a
@@ -92,6 +101,7 @@ $(MCATNLOLIBDIR)libstdhep.a: $(STDHEPDIR)
 clean4pdf:
 	rm -f ../lib/libpdf.a
 	rm -f ../lib/libgeneric.a
+	rm -f ../lib/libgammaUPC.a
 
 cleanCT:
 	cd $(CUTTOOLSDIR); make clean; cd ..
@@ -113,6 +123,7 @@ clean:
 	cd MODEL; make clean; cd ..
 	cd CERNLIB; make clean; cd ..
 	cd PDF; make clean; cd ..
+	cd PDF/gammaUPC; make clean; cd ../..
 	cd DHELAS; make clean; cd ..
 	if [ -d $(CUTTOOLSDIR) ]; then cd $(CUTTOOLSDIR); make clean; cd ..; fi
 	if [ -d $(IREGIDIR) ]; then cd $(IREGIDIR); make clean; cd ..; fi

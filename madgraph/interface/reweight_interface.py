@@ -17,6 +17,7 @@ from __future__ import division
 from __future__ import absolute_import
 import difflib
 import logging
+import copy
 import math
 import os
 import re
@@ -26,12 +27,6 @@ import tempfile
 import time
 import subprocess
 from subprocess import Popen, PIPE, STDOUT
-from six.moves import map
-from six.moves import range
-from six.moves import zip
-import six
-
-
 pjoin = os.path.join
 
 import madgraph
@@ -62,16 +57,18 @@ cmd_logger = logging.getLogger('cmdprint2') # -> print
 # global to check which f2py module have been already loaded. (to avoid border effect)
 dir_to_f2py_free_mod = {}
 nb_f2py_module = 0 # each time the process/model is changed this number is modified to 
-                   # forced the python module to re-create an executable
+               # forced the python module to re-create an executable
 
 #lhapdf = None
 
 
 class ReweightInterface(extended_cmd.Cmd):
     """Basic interface for reweighting operation"""
-    
+
     prompt = 'Reweight>'
     debug_output = 'Reweight_debug'
+    sa_class = 'standalone_rw'
+    nb_rw=0
     
     @misc.mute_logger()
     def __init__(self, event_path=None, allow_madspin=False, mother=None, *completekey, **stdin):
@@ -119,6 +116,9 @@ class ReweightInterface(extended_cmd.Cmd):
         self.exitted = False # Flag to know if do_quit was already called.
         self.keep_ordering = False
         self.use_eventid = False
+        self.inc_sudakov = False
+        self.event_path = event_path
+        self.path2prefix = {} # store the f2pyprefix associated to a library 
         if event_path:
             logger.info("Extracting the banner ...")
             self.do_import(event_path, allow_madspin=allow_madspin)
@@ -129,6 +129,9 @@ class ReweightInterface(extended_cmd.Cmd):
         
         #all the cross-section for convenience
         self.all_cross_section = {}
+
+        #If we are using the DensityInterface
+        self.flag_density_matrix = False
             
     def do_import(self, inputfile, allow_madspin=False):
         """import the event file"""
@@ -141,7 +144,7 @@ class ReweightInterface(extended_cmd.Cmd):
         self.options['curr_dir'] = os.path.realpath(os.path.dirname(inputfile))
         if os.path.basename(os.path.dirname(os.path.dirname(inputfile))) == 'Events':
             self.options['curr_dir'] = pjoin(self.options['curr_dir'], 
-                                                      os.path.pardir, os.pardir)
+                                                    os.path.pardir, os.pardir)
             
         
         if not os.path.exists(inputfile):
@@ -221,11 +224,11 @@ class ReweightInterface(extended_cmd.Cmd):
         logger.info("options: %s" % option)
 
     @staticmethod
-    def get_LO_definition_from_NLO(proc, model, real_only=False):
+    def get_LO_definition_from_NLO(proc, model, real_only=False, ewsudakov=False):
         """return the LO definitions of the process corresponding to the born/real"""
         
         # split the line definition with the part before and after the NLO tag
-        process, order, final = re.split('\[\s*(.*)\s*\]', proc)
+        process, order, final = re.split(r'\[\s*(.*)\s*\]', proc)
         if process.strip().startswith(('generate', 'add process')):
             process = process.replace('generate', '')
             process = process.replace('add process','')
@@ -246,7 +249,7 @@ class ReweightInterface(extended_cmd.Cmd):
 
             # define the list of particles that are needed for the radiation
             pert = fks_common.find_pert_particles_interactions(model,
-                                           pert_order = order)['soft_particles']
+                                        pert_order = order)['soft_particles']
             commandline += "define pert_%s = %s;" % (order.replace(' ',''), ' '.join(map(str,pert)) )
             
             # check if we have to increase by one the born order
@@ -263,12 +266,18 @@ class ReweightInterface(extended_cmd.Cmd):
                         r='QCD<=%i' % (int(ior[1])+1)
                     process=process+r+' '
             #handle special tag $ | / @
-            result = re.split('([/$@]|\w+(?:^2)?(?:=|<=|>)+\w+)', process, 1)                    
+            result = re.split(r'([/$@]|\w+(?:^2)?(?:=|<=|>)+\w+)', process, 1)                    
             if len(result) ==3:
                 process, split, rest = result
                 commandline+="add process %s pert_%s %s%s %s --no_warning=duplicate;" % (process, order.replace(' ','') ,split, rest, final)
             else:
                 commandline +='add process %s pert_%s %s --no_warning=duplicate;' % (process,order.replace(' ',''), final)
+            if ewsudakov:
+                # EW sudakov reweight
+                # this is a NLO-type generation, so [LOonly=QCD] must be added, toghether
+                # with the proper flag for the EW sudakov.
+                # Also, --no_warning=duplicate can be removed
+                commandline = commandline.replace("--no_warning=duplicate", "[LOonly=QCD] --ewsudakov")
         elif order.startswith(('noborn')):
             # pass in sqrvirt=
             return "add process %s [%s] %s;" % (process, order.replace('noborn', 'sqrvirt'), final)
@@ -292,6 +301,7 @@ class ReweightInterface(extended_cmd.Cmd):
         negative_event = 0
         positive_event = 0
         
+        bannerfile = banner.Banner(self.lhe_input.banner)
         start = time.time()
         for event_nb,event in enumerate(self.lhe_input):
             #control logger
@@ -305,6 +315,16 @@ class ReweightInterface(extended_cmd.Cmd):
             except Exception as error:
                 print(event)
                 raise error
+            
+            # check that event does not have more energy than the beam
+            if event[1].status == -1:
+                if event[0].E > bannerfile.get('run_card', 'ebeam1'):
+                    print(event)
+                    raise Exception("Event %s has more energy than the beam" % event_nb)
+                if event[1].E > bannerfile.get('run_card', 'ebeam2'):
+                    print(event)
+                    raise Exception("Event %s has more energy than the beam" % event_nb)
+
             sum_of_weight += event.wgt
             sum_of_abs_weight += abs(event.wgt)
             if event.wgt < 0 :
@@ -338,17 +358,17 @@ class ReweightInterface(extended_cmd.Cmd):
         if os.path.sep in args[-1] + text:
             return self.path_completion(text,
                                     pjoin(*[a for a in args if \
-                                                      a.endswith(os.path.sep)]))
-    
+                                                    a.endswith(os.path.sep)]))
+
     def help_change(self):
         """help for change command"""
-    
+
         print("change model X :use model X for the reweighting")
         print("change process p p > e+ e-: use a new process for the reweighting")
         print("change process p p > mu+ mu- --add : add one new process to existing ones")
         print("change output [default|2.0|unweight]:")
         print("               default: add weight(s) to the current file")    
-    
+
     def do_change(self, line):
         """allow to define a second model/processes"""
         
@@ -426,10 +446,14 @@ class ReweightInterface(extended_cmd.Cmd):
             if args[1].lower() not in ['average', 'max', 'crash']:
                 raise Exception("option identical_particle_in_prod_and_decay can only be one of the following ['average', 'max', 'crash']")
             self.options[args[0]] = args[1].lower()
+        elif args[0] == 'include_sudakov':
+            if args[1] == 'True':
+                self.inc_sudakov = True
+                self.rwgt_mode = 'LO'
         else:
             logger.critical("unknown option! %s.  Discard line." % args[0])
         
-             
+            
     def check_launch(self, args):
         """check the validity of the launch command"""
         
@@ -478,11 +502,13 @@ class ReweightInterface(extended_cmd.Cmd):
         """end of the configuration launched the code"""
         args = self.split_arg(line)
         opts = self.check_launch(args)
+        mgcmd = self.mg5cmd
         if opts['rwgt_name']:
             self.options['rwgt_name'] = opts['rwgt_name']
         if opts['rwgt_info']:
             self.options['rwgt_info'] = opts['rwgt_info']
         model_line = self.banner.get('proc_card', 'full_model_line')
+
 
         if not self.has_standalone_dir:                           
             if self.rwgt_dir and os.path.exists(pjoin(self.rwgt_dir,'rw_me','rwgt.pkl')):
@@ -502,7 +528,7 @@ class ReweightInterface(extended_cmd.Cmd):
                 self.load_from_pickle(keep_name=True)
                 self.load_module()
             else:
-                self.create_standalone_directory()
+                self.create_standalone_directory() 
                 self.compile()
                 self.load_module()  
                 if self.multicore == 'create':
@@ -510,22 +536,67 @@ class ReweightInterface(extended_cmd.Cmd):
                     if not self.rwgt_dir:
                         self.rwgt_dir = self.me_dir
                     self.save_to_pickle()      
-
-        # get the mode of reweighting #LO/NLO/NLO_tree/...
-        type_rwgt = self.get_weight_names()
-        # get iterator over param_card and the name associated to the current reweighting.
-        param_card_iterator, tag_name = self.handle_param_card(model_line, args, type_rwgt)
         
+        # get the mode of reweighting #LO/NLO/NLO_tree/...
+        type_rwgt = self.get_weight_names() 
+
         if self.rwgt_dir:
             path_me =self.rwgt_dir
         else:
             path_me = self.me_dir 
+        
+        scale_rwgt_info=[]
+        if 'initrwgt' in self.banner and self.output_type == 'default': 
+            for i in self.banner['initrwgt'].split('\n'):
+                if "weight id" in i:
+                    start = i.find('weight')
+                    scale_rwgt_info.append(i[start+11:start+15])
+                    
+        if self.inc_sudakov:
+            type_rwgt=[]
+            for tag in scale_rwgt_info:
+                tag_strip=tag[1:]
+                type_rwgt.append('2'+tag_strip)
+
+
             
+        # get iterator over param_card and the name associated to the current reweighting.
+        param_card_iterator, tag_name = self.handle_param_card(model_line, args, type_rwgt)
+
+        return self.launch_actual_reweighting(param_card_iterator, 
+                                              tag_name,
+                                              type_rwgt,
+                                              path_me)
+
+
+
+    def launch_actual_reweighting(self, param_card_iterator, 
+                                              tag_name,
+                                              type_rwgt,
+                                              path_me):
+       
+        if self.inc_sudakov:
+            tag_name = ''
+            import importlib
+            import numpy as np
+            rwgt_dir_possibility =   ['rw_me','rw_me_%s' % self.nb_library,'rw_mevirt','rw_mevirt_%s' % self.nb_library]
+            for onedir in rwgt_dir_possibility:
+                if not os.path.exists(pjoin(path_me,onedir)):
+                    continue 
+
+                sys.path.insert(0, path_me)
+                sud_mod = importlib.import_module('%s.bin.internal.ewsud_pydispatcher' % onedir)
+            logger.info('EW Sudakov reweight module imported')
+
+        if type_rwgt==[]:
+            type_rwgt=['2001']
+
         if self.second_model or self.second_process or self.dedicated_path:
             rw_dir = pjoin(path_me, 'rw_me_%s' % self.nb_library)
         else:
             rw_dir = pjoin(path_me, 'rw_me')
-                
+
+         
         start = time.time()
         # initialize the collector for the various re-weighting
         cross, ratio, ratio_square,error = {},{},{}, {}
@@ -548,11 +619,13 @@ class ReweightInterface(extended_cmd.Cmd):
                 output[(name_tag,rwgttype)] = lhe_parser.EventFile(pjoin(base,'rwgt_events%s_%s.lhe.gz' %(rwgttype,tag_name)), 'w')
                 #write the banner to the output file
                 self.banner.write(output[(name_tag,rwgttype)], close_tag=False)
-                
+
         if self.lhe_input.closed:
             self.lhe_input = lhe_parser.EventFile(self.lhe_input.name)
 
+
         self.lhe_input.seek(0)
+        count_errors = 0
         for event_nb,event in enumerate(self.lhe_input):
             #control logger
             if (event_nb % max(int(10**int(math.log10(float(event_nb)+1))),10)==0): 
@@ -561,12 +634,14 @@ class ReweightInterface(extended_cmd.Cmd):
             if (event_nb==10001): logger.info('reducing number of print status. Next status update in 10000 events')
             if (event_nb==100001): logger.info('reducing number of print status. Next status update in 100000 events')
 
+            if self.inc_sudakov:
+                weight = self.calculate_weight(event, sud_mod)
+            else:
+                weight = self.calculate_weight(event)
 
-                
-            weight = self.calculate_weight(event)
             if not isinstance(weight, dict):
                 weight = {'':weight}
-            
+
             for name in weight:
                 cross[name] += weight[name]
                 ratio[name] += weight[name]/event.wgt
@@ -575,16 +650,19 @@ class ReweightInterface(extended_cmd.Cmd):
             # ensure to have a consistent order of the weights. new one are put 
             # at the back, remove old position if already defines
             for tag in type_rwgt:
+                if tag in event.reweight_order:
+                    logger.critical('This is a reweighted event file! Do not reweight with ewsudakov twice')
+                    return
                 try:
                     event.reweight_order.remove('%s%s'  % (tag_name,tag))
                 except ValueError:
                     continue
-            
+
             event.reweight_order += ['%s%s' % (tag_name,name) for name in type_rwgt]  
             if self.output_type == "default":
                 for name in weight:
                     if 'orig' in name:
-                        continue             
+                        continue          
                     event.reweight_data['%s%s' % (tag_name,name)] = weight[name]
                     #write this event with weight
                 output.write(str(event))
@@ -607,8 +685,9 @@ class ReweightInterface(extended_cmd.Cmd):
                     cross[key] = value / (event_nb+1)
                 
         running_time = misc.format_timer(time.time()-start)
-        logger.info('All event done  (nb_event: %s) %s' % (event_nb+1, running_time))        
-        
+        logger.info('All event done  (nb_event: %s) %s' % (event_nb+1, running_time))     
+        if self.inc_sudakov:
+            logger.info('Number of events thrown away due to large Sudakov: %s' % str(count_errors))   
         
         if self.output_type == "default":
             output.write('</LesHouchesEvents>\n')
@@ -629,7 +708,7 @@ class ReweightInterface(extended_cmd.Cmd):
                         if self.mother and self.mother.options['lhapdf']:
                             args.append('--lhapdf_config=%s' % self.mother.options['lhapdf'])
                         syst.call_systematics(args, result=open('rwg_syst_%s.result' % key[0],'w'),
-                                              log=logger.info)
+                                            log=logger.info)
                     except Exception:
                         logger.error('fail to add systematics')
                         raise
@@ -708,6 +787,39 @@ class ReweightInterface(extended_cmd.Cmd):
         
         self.options['rwgt_name'] = None
 
+    def setup_f2py_interface(self):
+        """ ensure that all f2py interface are ready/loaded/compiled
+            if this function does not return None then nothing is executed after this
+            usefull for some plugin
+        """
+
+        if self.rwgt_dir and os.path.exists(pjoin(self.rwgt_dir,'rw_me','rwgt.pkl')):
+            self.load_from_pickle()
+            if opts['rwgt_name']:
+                self.options['rwgt_name'] = opts['rwgt_name']
+            if not self.rwgt_dir:
+                self.me_dir = self.rwgt_dir
+            self.load_module()       # load the fortran information from the f2py module
+        elif self.multicore == 'wait':
+            i=0
+            while not os.path.exists(pjoin(self.me_dir,'rw_me','rwgt.pkl')):
+                time.sleep(10+i)
+                i+=5
+            if not self.rwgt_dir:
+                self.rwgt_dir = self.me_dir
+            self.load_from_pickle(keep_name=True)
+            self.load_module()
+        else:
+            self.create_standalone_directory()
+            self.compile()
+            self.load_module()  
+            if self.multicore == 'create':
+                self.load_module()
+                if not self.rwgt_dir:
+                    self.rwgt_dir = self.me_dir
+                self.save_to_pickle()  
+
+
 
     def handle_param_card(self, model_line, args, type_rwgt):
         
@@ -721,16 +833,15 @@ class ReweightInterface(extended_cmd.Cmd):
             rw_dir = pjoin(path_me, 'rw_me_%s' % self.nb_library)
         else:
             rw_dir = pjoin(path_me, 'rw_me')
-        
         if not '--keep_card' in args:
             if self.has_nlo and self.rwgt_mode != "LO":
                 rwdir_virt = rw_dir.replace('rw_me', 'rw_mevirt')
             with open(pjoin(rw_dir, 'Cards', 'param_card.dat'), 'w') as fsock:
                 fsock.write(self.banner['slha']) 
             out, cmd = common_run_interface.CommonRunCmd.ask_edit_card_static(cards=['param_card.dat'],
-                                   ask=self.ask, pwd=rw_dir, first_cmd=self.stored_line,
-                                   write_file=False, return_instance=True
-                                   )
+                                ask=self.ask, pwd=rw_dir, first_cmd=self.stored_line,
+                                write_file=False, return_instance=True
+                                )
             self.stored_line = None
             card = cmd.param_card
             new_card = card.write()
@@ -777,14 +888,13 @@ class ReweightInterface(extended_cmd.Cmd):
             self.mother.check_param_card(pjoin(rw_dir, 'Cards', 'param_card.dat'))
             new_card = open(pjoin(rw_dir, 'Cards', 'param_card.dat')).read()
 
-
         # Find new tag in the banner and add information if needed
-        if 'initrwgt' in self.banner and self.output_type == 'default': 
+        if 'initrwgt' in self.banner and self.output_type == 'default':
             if 'name=\'mg_reweighting\'' in self.banner['initrwgt']:
                 blockpat = re.compile(r'''<weightgroup name=\'mg_reweighting\'\s*weight_name_strategy=\'includeIdInWeightName\'>(?P<text>.*?)</weightgroup>''', re.I+re.M+re.S)
                 before, content, after = blockpat.split(self.banner['initrwgt'])
                 header_rwgt_other = before + after
-                pattern = re.compile('<weight id=\'(?:rwgt_(?P<id>\d+)|(?P<id2>[_\w\-\.]+))(?P<rwgttype>\s*|_\w+)\'>(?P<info>.*?)</weight>', re.S+re.I+re.M)
+                pattern = re.compile('<weight id=\'(?:rwgt_(?P<id>\\d+)|(?P<id2>[_\\w\\-\\.]+))(?P<rwgttype>\\s*|_\\w+)\'>(?P<info>.*?)</weight>', re.S+re.I+re.M)
                 mg_rwgt_info = pattern.findall(content)
                 maxid = 0
                 for k,(i, fulltag, nlotype, diff) in enumerate(mg_rwgt_info):
@@ -794,7 +904,7 @@ class ReweightInterface(extended_cmd.Cmd):
                         mg_rwgt_info[k] = (i, nlotype, diff) # remove the pointless fulltag tag
                     else:
                         mg_rwgt_info[k] = (fulltag, nlotype, diff) # remove the pointless id tag
-                         
+                        
                 maxid += 1
                 rewgtid = maxid
                 if self.options['rwgt_name']:
@@ -821,8 +931,10 @@ class ReweightInterface(extended_cmd.Cmd):
         s_orig = self.banner['slha']
         self.orig_param_card_text = s_orig
         s_new = new_card
-        self.new_param_card = check_param_card.ParamCard(s_new.splitlines())
-        
+        if self.flag_density_matrix: #for the density mode we don't use rw_me/Cards/param_card.dat
+            self.new_param_card = check_param_card.ParamCard(s_orig.splitlines())
+        else:
+            self.new_param_card = check_param_card.ParamCard(s_new.splitlines())
         #define tag for the run
         if self.options['rwgt_name']:
             tag = self.options['rwgt_name']
@@ -837,7 +949,7 @@ class ReweightInterface(extended_cmd.Cmd):
             old_param = check_param_card.ParamCard(s_orig.splitlines())
             new_param =  self.new_param_card
             card_diff = old_param.create_diff(new_param)
-            if card_diff == '' and not self.second_process:
+            if card_diff == '' and not self.second_process and not self.flag_density_matrix: #if we are in the density mode, the param_card are not modified, warning useless
                     logger.warning(' REWEIGHTING: original card and new card are identical.')
             try:
                 if old_param['sminputs'].get(3)- new_param['sminputs'].get(3) > 1e-3 * new_param['sminputs'].get(3):
@@ -866,6 +978,7 @@ class ReweightInterface(extended_cmd.Cmd):
             str_info += '\n' + s_new
             for name in type_rwgt:
                 mg_rwgt_info.append((tag, name, str_info))
+
         # re-create the banner.
         self.banner['initrwgt'] = header_rwgt_other
         if self.output_type == 'default':
@@ -873,18 +986,30 @@ class ReweightInterface(extended_cmd.Cmd):
         else:
             self.banner['initrwgt'] += '\n<weightgroup name=\'main\'>\n'
         for tag, rwgttype, diff in mg_rwgt_info:
-            if tag.isdigit():
-                self.banner['initrwgt'] += '<weight id=\'rwgt_%s%s\'>%s</weight>\n' % \
-                                       (tag, rwgttype, diff)
+            if self.inc_sudakov:
+                try:
+                    sud_order = int(rwgttype[-1]) -1
+                    sud_order = '10' +rwgttype[-2:]
+                    self.banner['initrwgt'] += '<weight id=\'%s\'>%sscale_%s_sud</weight>\n' % \
+                            (rwgttype, diff, sud_order)
+                except IndexError:
+                    logger.critical('This is a reweighted event file! Do not reweight with ewsudakov twice')
+                    sys.exit(1)
             else:
-                self.banner['initrwgt'] += '<weight id=\'%s%s\'>%s</weight>\n' % \
-                                       (tag, rwgttype, diff)
+                if tag.isdigit():
+                    self.banner['initrwgt'] += '<weight id=\'rwgt_%s%s\'>%s</weight>\n' % \
+                                    (tag, rwgttype, diff)
+                else:
+                    self.banner['initrwgt'] += '<weight id=\'%s%s\'>%s</weight>\n' % \
+                                    (tag, rwgttype, diff)
         self.banner['initrwgt'] += '\n</weightgroup>\n'
         self.banner['initrwgt'] = self.banner['initrwgt'].replace('\n\n', '\n')
 
-
-        logger.info('starts to compute weight for events with the following modification to the param_card:')
-        logger.info(card_diff.replace('\n','\nKEEP:'))
+        if self.flag_density_matrix:
+            logger.info('starts to compute density matrices for events with the inputs from the reweight_card:')
+        else:
+            logger.info('starts to compute weight for events with the following modification to the param_card:')
+            logger.info(card_diff.replace('\n','\nKEEP:'))
         try:
             self.run_card = banner.Banner(self.banner).charge_card('run_card')
         except Exception:
@@ -896,9 +1021,9 @@ class ReweightInterface(extended_cmd.Cmd):
         else:
             tag_name = 'rwgt_%s' % rewgtid
 
-                
         #initialise module.
         for (path,tag), module in self.f2pylib.items():
+
             with misc.chdir(pjoin(os.path.dirname(rw_dir), path)):
                 with misc.stdchannel_redirected(sys.stdout, os.devnull):                    
                     if 'rw_me_' in path or tag == 3:
@@ -945,7 +1070,6 @@ class ReweightInterface(extended_cmd.Cmd):
                             if self.model:
                                 raise
                     module.update_all_coup()
-                        
         return param_card_iterator, tag_name
 
         
@@ -955,7 +1079,7 @@ class ReweightInterface(extended_cmd.Cmd):
         logger.warning("Invalid Syntax. The command 'set' should be placed after the 'launch' one. Continuing by adding automatically 'launch'")
         self.stored_line = "set %s" % line
         return self.exec_cmd("launch")
-    
+
     def default(self, line, log=True):
         """Default action if line is not recognized"""
 
@@ -966,7 +1090,7 @@ class ReweightInterface(extended_cmd.Cmd):
             return self.exec_cmd("launch")
         else:
             return super(ReweightInterface,self).default(line, log=log)
-    
+
     def write_reweighted_event(self, event, tag_name, **opt):
         """a function for running in multicore"""
         
@@ -998,14 +1122,14 @@ class ReweightInterface(extended_cmd.Cmd):
                 opt['thread_space'].output.write(str(event))
         
         return 0
-    
+
     def do_compute_widths(self, line):
         return self.mother.do_compute_widths(line)
-    
-    
+
+
     dynamical_scale_warning=True
     def change_kinematics(self, event):
- 
+
         if isinstance(self.run_card, banner.RunCardLO):
             jac = event.change_ext_mass(self.new_param_card)
             new_event = event
@@ -1024,57 +1148,255 @@ class ReweightInterface(extended_cmd.Cmd):
                 mode = 3
             new_event.scale = event.get_scale(mode)
             new_event.aqcd = self.lhe_input.get_alphas(new_event.scale, lhapdf_config=self.mother.options['lhapdf'])
-         
+        
         return jac, new_event
-    
-    
-    def calculate_weight(self, event):
+
+
+    def calculate_weight(self, event, sud_mod=None):
         """space defines where to find the calculator (in multicore)"""
         
-
-        if self.has_nlo and self.rwgt_mode != "LO":
-            if not hasattr(self,'pdf'):
-                lhapdf = misc.import_python_lhapdf(self.mg5cmd.options['lhapdf'])
-                self.pdf = lhapdf.mkPDF(self.banner.run_card.get_lhapdf_id())
+        if not self.inc_sudakov:
+            if self.has_nlo and self.rwgt_mode != "LO":
+                if not hasattr(self,'pdf'):
+                    lhapdf = misc.import_python_lhapdf(self.mg5cmd.options['lhapdf'])
+                    self.pdf = lhapdf.mkPDF(self.banner.run_card.get_lhapdf_id())
                 
-            return self.calculate_nlo_weight(event)
+                return self.calculate_nlo_weight(event)
         
-        event.parse_reweight()                    
-        orig_wgt = event.wgt
-        # LO reweighting    
-        w_orig = self.calculate_matrix_element(event, 0)
+            event.parse_reweight()                    
+            orig_wgt = event.wgt
+            # LO reweighting    
+            w_orig = self.calculate_matrix_element(event, 0)
+            # reshuffle event for mass effect # external mass only
+            # carefull that new_event can sometimes be = to event 
+            # (i.e. change can be in place)
+            jac, new_event = self.change_kinematics(event)
         
-        # reshuffle event for mass effect # external mass only
-        # carefull that new_event can sometimes be = to event 
-        # (i.e. change can be in place)
-        jac, new_event = self.change_kinematics(event)
         
-        
-        if event.wgt != 0: # impossible reshuffling
-            w_new =  self.calculate_matrix_element(new_event, 1)
-        else:
-            w_new = 0
-
-        if w_orig == 0:
-            tag, order = event.get_tag_and_order()
-            orig_order, Pdir, hel_dict = self.id_to_path[tag]
-            misc.sprint(w_orig, w_new)
-            misc.sprint(event)
-            misc.sprint(self.invert_momenta(event.get_momenta(orig_order)))
-            misc.sprint(event.get_momenta(orig_order))
-            misc.sprint(event.aqcd)
-            hel_order = event.get_helicity(orig_order)
-            if self.helicity_reweighting and 9 not in hel_order:
-                nhel = hel_dict[tuple(hel_order)]
+            if event.wgt != 0: # impossible reshuffling
+                w_new =  self.calculate_matrix_element(new_event, 1)
             else:
-                nhel = 0
-            misc.sprint(nhel, Pdir, hel_dict)                        
-            raise Exception("Invalid matrix element for original computation (weight=0)")
+                w_new = 0
 
-        return {'orig': orig_wgt, '': w_new/w_orig*orig_wgt*jac}
-     
+            if w_orig == 0:
+                tag, order = event.get_tag_and_order()
+                orig_order, Pdir, hel_dict = self.id_to_path[tag]
+                misc.sprint(w_orig, w_new)
+                misc.sprint(event)
+                misc.sprint(self.invert_momenta(event.get_momenta(orig_order)))
+                misc.sprint(event.get_momenta(orig_order))
+                misc.sprint(event.aqcd)
+                hel_order = event.get_helicity(orig_order)
+                if self.helicity_reweighting and 9 not in hel_order:
+                    nhel = hel_dict[tuple(hel_order)]
+                else:
+                    nhel = 0
+                misc.sprint(nhel, Pdir, hel_dict)                        
+                raise Exception("Invalid matrix element for original computation (weight=0)")
+
+            return {'orig': orig_wgt, '': w_new/w_orig*orig_wgt*jac}
+        else:
+            buff_event=copy.deepcopy(event)
+            orig_wgt = event.wgt
+            w_orig= event.wgt
+            pi=3.141592653589
+            mW = 80.3
+
+            mgcmd = self.mg5cmd
+            import importlib
+            import numpy as np
+
+            # identify the process
+            try:
+                process = self.banner.get_detail('proc_card', 'generate')
+            except KeyError:
+                process = self.banner.get_detail('proc_card', 'add process')
+            process, opts = mg_interface.MadGraphCmd.split_process_line(process)
+            nexternal = len([p for p in process.split() if p != '>'])
+
+            # Remove all propagator particles from the event to be passed to Sud module
+            for ip,part in enumerate(list(buff_event)):
+                if (abs(part.status) != 1):
+                    buff_event.pop(ip)
+
+            x = 1.0
+            sud_cut= x*(mW**2)
+            min_inv=1000000000.0   # dummy variable, used to start the loop of min_inv finding
+            inv_dict={}
+
+            if (len(buff_event) == nexternal +1): # is an H-event
+                for ievt,evt in enumerate(buff_event):
+                    # Find the smallest abs(inv) and the corresponding pair
+                    if (ievt <= 1):
+                        sign1 = 1.0
+                    else:
+                        sign1 = -1.0
+                    for ievt2,evt2 in enumerate(buff_event):
+                        if (ievt2 <= 1):
+                            sign2 = 1.0
+                        else:
+                            sign2 = -1.0
+                        if (ievt2 > ievt):
+                            inv = (sign1*evt.E+sign2*evt2.E)**2-(sign1*evt.px+sign2*evt2.px)**2\
+                                            - (sign1*evt.py+sign2*evt2.py)**2-(sign1*evt.pz+sign2*evt2.pz)**2
+                            inv_dict[(ievt,ievt2)] = abs(inv)
+                            if (abs(inv) < min_inv):
+                                min_inv=abs(inv)
+                                min_i=ievt
+                                min_j=ievt2
+                            
+                # Below finds the current process tag and tries to recombine the min_i and min_j
+                tag, order = buff_event.get_tag_and_order()
+                matrix_elements = mgcmd._curr_matrix_elements.get_matrix_elements()
+
+                ij_comb= []
+                if min_i <= 1:
+                    state = False
+                else:
+                    state = True
+                comb_i = fks_common.FKSLeg({'id': buff_event[min_i].pid,'number': min_i+1,'state': state})
+                if min_j<= 1:
+                    state = False
+                else:
+                    state = True
+                comb_j = fks_common.FKSLeg({'id': buff_event[min_j].pid,'number': min_j+1,'state': state})
+                ij_comb =fks_common.combine_ij(comb_i,comb_j, self.model, dict={},pert='QCD')
+                if ij_comb == []:
+                    ij_comb =fks_common.combine_ij(comb_j,comb_i, self.model, dict={},pert='QCD')
+        
+                # For n+1-body reweighting
+                if min_inv > sud_cut:
+                    event_to_sud = buff_event
+                    n_part = nexternal+1
+                    mapped_tag, mapped_order = event_to_sud.get_tag_and_order()
+                    type = 1  #### H1 type
+
+                # For n-body reweighting
+                else:
+                    # If no reasonable recbination found, still use the n+1-body kinematics for sudakov
+                    if ij_comb == []:
+                        event_to_sud = buff_event
+                        n_part = nexternal+1
+                        mapped_tag, mapped_order = event_to_sud.get_tag_and_order()
+                        #### H1 type
+                        type = 1
+                    else:
+                        buff_event.merge_particles_kinematics(min_i,min_j,ij_comb)
+                        event_to_sud = buff_event
+                        n_part = nexternal 
+                        mapped_tag, mapped_order = event_to_sud.get_tag_and_order()
+                        # map to n+1 body if recoil does not exist at Born level among processes
+                        if mapped_tag not in sud_mod.pdg2ewsud_dict.keys():
+                            event_to_sud = buff_event
+                            n_part = nexternal+1
+                            mapped_tag, mapped_order = event_to_sud.get_tag_and_order()
+                            type = 1   #### H1 type
+                        else:
+                            type = 2    #### H2 type                 
+            elif (len(buff_event) == nexternal): # is an S-event
+                    event_to_sud = buff_event
+                    n_part = nexternal 
+                    mapped_tag, mapped_order = event_to_sud.get_tag_and_order()
+                    type = 0   ### S type
+            else:
+                logger.critical('ERROR: neither H nor S event!')
+                logger.critical(buff_event)
+                sys.exit(2)
+                
+            # Boost to partonic CM frame if not already in one for the momentum reshuffling 
+            p = lhe_parser.FourMomentum()
+            for i,particle in enumerate(event_to_sud):
+                    if particle.status == -1:
+                        p += particle
+            in_part_mom = p
+            if not ((abs(p.px) < 1e-6 * p.E) and (abs(p.py) < 1e-6 * p.E) and (abs(p.pz) < 1e-6 * p.E)):
+                event_to_sud.boost(in_part_mom)
+
+            # Rotate system to a partonic CM along z-axis
+            initial = copy.deepcopy(event_to_sud[0])
+            if not ((abs(initial.px) < 1e-6 * initial.E) and (abs(initial.py) < 1e-6 * initial.E)):
+                for p in event_to_sud:
+                    p.set_momentum(lhe_parser.FourMomentum(p).rotate_to_z(prot=lhe_parser.FourMomentum(initial)))
+            
+            # Set all light quarks and lepton masses to zero in event file
+            #self.set_final_jet_mass_to_zero(event_to_sud)
+            event_to_sud.set_final_jet_mass_to_zero()
+            # Set finally all initial masses to zero rather than the masses in the event files
+            event_to_sud.set_initial_mass_to_zero()
+            event_to_sud.check_kinematics_only()
+
+            gstr = math.sqrt(4*pi*event.aqcd)
+            sorted_tag = (tuple(mapped_order[0]),tuple(sorted(mapped_order[1])))
+
+            # Read in the event momenta into np array in the order which is defined in the process directory
+            perm = []
+            i = 1
+            for r in mapped_order[1]:
+                if not list(sud_mod.original_pdg_list_dict[sorted_tag][1]).index(r) in perm:
+                    perm.append(list(sud_mod.original_pdg_list_dict[sorted_tag][1]).index(r))
+                else:
+                    perm.append(list(sud_mod.original_pdg_list_dict[sorted_tag][1]).index(r)+i)
+                    i += 1
+            order = dict((i,j) for i,j in enumerate(perm))
+            event_to_sud_order = copy.deepcopy(event_to_sud)
+            event_to_sud_order[:len(mapped_tag[0])] =  event_to_sud[:len(mapped_tag[0])]
+            for r in order.keys():
+                event_to_sud_order[r+len(mapped_tag[0])] = event_to_sud[order[r]+len(mapped_tag[0])]
+            p_in = np.zeros(shape=(n_part, 4))
+            for i,el in enumerate(event_to_sud_order):
+                p_in[i] = [float(el.E),float(el.px),float(el.py),float(el.pz)]
+            mapped_tag, mapped_order = event_to_sud_order.get_tag_and_order()
+            if list(sud_mod.original_pdg_list_dict[sorted_tag][1]) != mapped_order[1]:
+                logger.critical('ERROR: order in particle momenta does not match MG convention!')
+                sys.exit(3)
+
+            # compute the actual Sudakov weight
+            res = sud_mod.ewsudakov(sorted_tag, p_in, gstr)
+
+            # Do the reewightings
+            sudrat0 = 1. + res[1]/res[0] # SUD0            s_to_rij ON  rij_ge_mw ON
+            sudrat1 = 1. + res[2]/res[0] # SUD1 (SKD_weak) s_to_rij ON  rij_ge_mw ON
+            sudrat2 = 1. + res[3]/res[0] # SUD1 (SKD_weak) s_to_rij OFF  rij_ge_mw ON
+            sudrat3 = 1. + res[4]/res[0] # SUD1 (SKD_weak) s_to_rij OFF  rij_ge_mw OFF
+            sudrat4 = 1. + res[5]/res[0] # SUD1 (SKD_weak) s_to_rij ON  rij_ge_mw OFF
+
+            # Damp when the Sudakov weights are too large (in abs value)
+            large_sud_error=False
+            if abs(sudrat1) > 200:
+                logger.info('ERROR: event will not be reweighted because Sudakov ratio is too large: %s ' %sudrat1)
+                logger.info(buff_event)
+                sudrat0 = 1. 
+                sudrat1 = 1.
+                sudrat2 = 1.
+                sudrat3 = 1. 
+                sudrat4 = 1.
+                large_sud_error = True
+
+            # Dummy step: needed to read in the parse_reweight function
+            event.rescale_weights(1.)
+
+            rwgt_dict = copy.deepcopy(event.parse_reweight())
+            if rwgt_dict=={}:
+                rwgt_dict['1001'] =  orig_wgt
+            rwgt_dict_new = {}
+            rwgt_dict_new['orig'] = orig_wgt
+
+            for el in rwgt_dict:
+                ending = el[-2:]
+                tag = '20' + ending
+                rwgt_dict_new[tag] = rwgt_dict[el]*sudrat1  # use SDK_weak! 
+            
+            return rwgt_dict_new
+    
+    def get_pdg_tuple(self, pdgs, nincoming):
+        """write a tuple of 2 tuple, with the incoming particles unsorted
+        and the outgoing ones sorted
+        """
+        incoming = pdgs[:nincoming]
+        outgoing = pdgs[nincoming:]
+        return (tuple(incoming), tuple(sorted(outgoing)))
+
     def calculate_nlo_weight(self, event):
-
 
         type_nlo = self.get_weight_names()
         final_weight = {'orig': event.wgt}
@@ -1140,14 +1462,14 @@ class ReweightInterface(extended_cmd.Cmd):
                         R = ratio_T
                     
                     new_wgt = [c_wgt.pwgt[0] * R,
-                               c_wgt.pwgt[1] * ratio_T,
-                               c_wgt.pwgt[2] * ratio_T]
+                            c_wgt.pwgt[1] * ratio_T,
+                            c_wgt.pwgt[2] * ratio_T]
                     wgt_virt.append(new_wgt)
 
                 if '_tree' in type_nlo:
                     new_wgt = [c_wgt.pwgt[0] * ratio_T,
-                               c_wgt.pwgt[1] * ratio_T,
-                               c_wgt.pwgt[2] * ratio_T]
+                            c_wgt.pwgt[1] * ratio_T,
+                            c_wgt.pwgt[2] * ratio_T]
                     wgt_tree.append(new_wgt)
                     
                 base_wgt.append(c_wgt.pwgt[:3])
@@ -1169,7 +1491,7 @@ class ReweightInterface(extended_cmd.Cmd):
             # try to correct for precision issue
             avg = [partial_check[i]/ref_wgts[i] for i in range(len(ref_wgts))]
             out = sum(partial[i]/avg[i] if 0.85<avg[i]<1.15 else 0 \
-                          for i in range(len(avg)))
+                        for i in range(len(avg)))
             final_weight['_nlo'] = out/orig_wgt*event.wgt
 
             
@@ -1180,20 +1502,20 @@ class ReweightInterface(extended_cmd.Cmd):
             # try to correct for precision issue
             avg = [partial_check[i]/ref_wgts[i] for i in range(len(ref_wgts))]
             new_out = sum(partial[i]/avg[i] if 0.85<avg[i]<1.15 else partial[i] \
-                          for i in range(len(avg)))
+                        for i in range(len(avg)))
             final_weight['_tree'] = new_out/orig_wgt*event.wgt    
-                  
-             
+                
+            
         if '_lo' in type_nlo:
             w_orig = self.calculate_matrix_element(event, 0)
-            w_new =  self.calculate_matrix_element(event, 1)            
+            w_new =  self.calculate_matrix_element(event, 1)      
             final_weight['_lo'] = w_new/w_orig*event.wgt
             
             
         if self.output_type != 'default' and len(type_nlo)==1 and '_lo' not in type_nlo:
             to_write = [partial[i]/ref_wgts[i]*partial_check[i]
-                             if 0.85<avg[i]<1.15 else 0
-                              for i in range(len(ref_wgts))]
+                            if 0.85<avg[i]<1.15 else 0
+                            for i in range(len(ref_wgts))]
             for cevent in event.nloweight.cevents:
                 for c_wgt in cevent.wgts:
                         c_wgt.ref_wgt = to_write.pop(0)
@@ -1203,6 +1525,7 @@ class ReweightInterface(extended_cmd.Cmd):
                             c_wgt.pwgt = wgt_virt.pop(0)
             assert not to_write
             assert not wgt_tree
+
         return final_weight 
 
 
@@ -1222,8 +1545,8 @@ class ReweightInterface(extended_cmd.Cmd):
             wgts.append(tmp)
         return wgt, wgts
         
+
     
-     
     @staticmethod   
     def invert_momenta(p):
         """ fortran/C-python do not order table in the same order"""
@@ -1233,7 +1556,7 @@ class ReweightInterface(extended_cmd.Cmd):
             for j, x in enumerate(onep):
                 new_p[j][i] = x
         return new_p
-    
+
     @staticmethod
     def rename_f2py_lib(Pdir, tag):
         if tag == 2:
@@ -1243,7 +1566,7 @@ class ReweightInterface(extended_cmd.Cmd):
         else:
             open(pjoin(Pdir, 'matrix%spy.so' % tag),'w').write(open(pjoin(Pdir, 'matrix2py.so')
                                         ).read().replace('matrix2py', 'matrix%spy' % tag))
-    
+
     def calculate_matrix_element(self, event, hypp_id, scale2=0):
         """routine to return the matrix element"""
         
@@ -1253,9 +1576,11 @@ class ReweightInterface(extended_cmd.Cmd):
             nb_retry, sleep = 5, 20 
         
         tag, order = event.get_tag_and_order()
+
         if self.keep_ordering:
             old_tag = tuple(tag)
             tag = (tag[0], tuple(order[1])) 
+        
         if isinstance(hypp_id, str) and hypp_id.startswith('V'):
             tag = (tag,'V')
             hypp_id = int(hypp_id[1:])
@@ -1297,50 +1622,13 @@ class ReweightInterface(extended_cmd.Cmd):
         hel_order = event.get_helicity(orig_order)
         if self.helicity_reweighting and 9 not in hel_order:
             nhel = hel_dict[tuple(hel_order)]                
+
         else:
             nhel = -1
             
-        # For 2>N pass in the center of mass frame
-        #   - required for helicity by helicity re-weighitng
-        #   - Speed-up loop computation 
-        if (hypp_id == 0 and ('frame_id' in self.banner.run_card and self.banner.run_card['frame_id'] !=6)):
-            import copy
-            new_event = copy.deepcopy(event)
-            pboost = FourMomenta()
-            to_inc = bin(self.banner.run_card['frame_id'])[2:]
-            to_inc.reverse()
-            nb_ext = 0
-            for p in new_event:
-                if p.status in [-1,1]:
-                    nb_ext += 1
-                    if to_inc[nb_ext]:
-                        pboost += p                    
-            new_event.boost(pboost)
-            if self.keep_ordering:
-                all_p = [new_event.get_momenta(orig_order)]
-            else:
-                all_p = new_event.get_all_momenta(orig_order)
-            if len(all_p) > 1:
-                logger.critical("due to ordering ambiguity, the boost used might not be consistent. please ensure that this is not an issue")
-        elif (hypp_id == 1 and self.boost_event):
-            if self.boost_event is not True:
-                import copy
-                new_event = copy.deepcopy(event)
-                new_event.boost(self.boost_event)
-                if self.keep_ordering:
-                    all_p = [new_event.get_momenta(orig_order)]
-                else:     
-                    all_p = new_event.get_all_momenta(orig_order)        
-        elif (hasattr(event[1], 'status') and event[1].status == -1) or \
-           (event[1].px == event[1].py == 0.):
-            p = all_p[0]
-            pboost = lhe_parser.FourMomentum(p[0]) + lhe_parser.FourMomentum(p[1])
-            for p in all_p:
-                for i,thisp in enumerate(p):
-                    p[i] = lhe_parser.FourMomentum(thisp).zboost(pboost).get_tuple()
-                assert p[0][1] == p[0][2] == 0 == p[1][2] == p[1][2] == 0 
+        #boosting the event
+        all_p = self.method_boost_event(event, all_p, orig_order, hypp_id)
         
-
         if self.options['identical_particle_in_prod_and_decay'] == 'crash':
             if len(all_p) > 1:
                 raise Exception("Ambiguous particle in production and decay. crash as requested by \'identical_particle_in_prod_and_decay\'")
@@ -1386,7 +1674,62 @@ class ReweightInterface(extended_cmd.Cmd):
             return me_value / len(all_p)        
         else:
             return me_value
-    
+
+
+    def method_boost_event(self, event, all_p, orig_order, hypp_id):
+        # For 2>N pass in the center of mass frame
+        #   - required for helicity by helicity re-weighitng
+        #   - Speed-up loop computation 
+        
+        if (hypp_id == 0 and ('frame_id' in self.banner.run_card and self.banner.run_card['frame_id'] !=6)):
+            import copy
+            new_event = copy.deepcopy(event)
+            pboost = FourMomenta()
+            to_inc = bin(self.banner.run_card['frame_id'])[2:]
+            to_inc.reverse()
+            nb_ext = 0
+            for p in new_event:
+                if p.status in [-1,1]:
+                    nb_ext += 1
+                    if to_inc[nb_ext]:
+                        pboost += p                    
+            new_event.boost(pboost)
+            if self.keep_ordering:
+                new_all_p = [new_event.get_momenta(orig_order)]
+            else:
+                new_all_p = new_event.get_all_momenta(orig_order)
+            if len(new_all_p) > 1:
+                logger.critical("due to ordering ambiguity, the boost used might not be consistent. please ensure that this is not an issue")
+                
+            return new_all_p
+
+        elif (hypp_id == 1 and self.boost_event):
+            if self.boost_event is not True:
+                new_event = copy.deepcopy(event)
+                new_event.boost(self.boost_event)
+                if self.keep_ordering:
+                    new_all_p = [new_event.get_momenta(orig_order)]
+                else:     
+                    new_all_p = new_event.get_all_momenta(orig_order)
+
+                return new_all_p
+            return all_p #if we arrive here, we should return the input no ?
+
+        elif (hasattr(event[1], 'status') and event[1].status == -1) or \
+        (event[1].px == event[1].py == 0.):
+            p = all_p[0]
+            pboost = lhe_parser.FourMomentum(p[0]) + lhe_parser.FourMomentum(p[1])
+            for p in all_p:
+                for i,thisp in enumerate(p):
+                    p[i] = lhe_parser.FourMomentum(thisp).zboost(pboost).get_tuple()
+                assert p[0][1] == p[0][2] == 0 == p[1][2] == p[1][2] == 0 
+            
+            return all_p
+        
+        else:
+            return all_p
+
+
     def terminate_fortran_executables(self, new_card_only=False):
         """routine to terminate all fortran executables"""
 
@@ -1395,7 +1738,7 @@ class ReweightInterface(extended_cmd.Cmd):
             if new_card_only and production == 0:
                 continue            
             del self.calculator[(mode, production)]
-    
+
     def do_quit(self, line):
         if self.exitted:
             return
@@ -1411,20 +1754,25 @@ class ReweightInterface(extended_cmd.Cmd):
                     
         if not self.multicore == 'create':
             # No print of results for the multicore mode for the one printed on screen
-            if 'orig' not in self.all_cross_section:
-                logger.info('Original cross-section: %s +- %s pb' % (cross, error))
-            else: 
-                logger.info('Original cross-section: %s +- %s pb (cross-section from sum of weights: %s)' % (cross, error, self.all_cross_section['orig'][0]))
-            logger.info('Computed cross-section:')
-            keys = list(self.all_cross_section.keys())
-            keys.sort(key=lambda x: str(x))
-            for key in keys:
-                if key == 'orig':
-                    continue
-                logger.info('%s : %s +- %s pb' % (key[0] if not key[1] else '%s%s' % key,
-                    self.all_cross_section[key][0],self.all_cross_section[key][1] ))  
+            if self.flag_density_matrix:
+                import madgraph.various.Density_functions as dens
+                logger.info("Cross-section: %s +- %s pb" % (cross, error))
+            else:
+                if 'orig' not in self.all_cross_section:
+                    logger.info('Original cross-section: %s +- %s pb' % (cross, error))
+                else: 
+                    logger.info('Original cross-section: %s +- %s pb (cross-section from sum of weights: %s)' % (cross, error, self.all_cross_section['orig'][0]))
+                logger.info('Computed cross-section:')
+                keys = list(self.all_cross_section.keys())
+                keys.sort(key=lambda x: str(x))
+                for key in keys:
+                    if key == 'orig':
+                        continue
+                    logger.info('%s : %s +- %s pb' % (key[0] if not key[1] else '%s%s' % key,
+                        self.all_cross_section[key][0],self.all_cross_section[key][1] ))  
+
         self.terminate_fortran_executables()
-    
+
         if self.rwgt_dir and self.multicore == False:
             self.save_to_pickle()
         
@@ -1437,7 +1785,7 @@ class ReweightInterface(extended_cmd.Cmd):
     def __del__(self):
         self.do_quit('')
 
-    
+
     def adding_me(self, matrix_elements, path):
         """Adding one element to the list based on the matrix element"""
         
@@ -1465,12 +1813,12 @@ class ReweightInterface(extended_cmd.Cmd):
                 has_nlo = True
                 if self.banner.get('run_card','ickkw') == 3:
                     if len(proc) == min([len(p.strip()) for p in data['processes']]):
-                        commandline += self.get_LO_definition_from_NLO(proc, self.model)
+                        commandline += self.get_LO_definition_from_NLO(proc, self.model, ewsudakov=self.inc_sudakov)
                     else:
                         commandline += self.get_LO_definition_from_NLO(proc,
-                                                     self.model, real_only=True)
+                                                    self.model, real_only=True, ewsudakov=self.inc_sudakov)
                 else:
-                    commandline += self.get_LO_definition_from_NLO(proc, self.model)
+                    commandline += self.get_LO_definition_from_NLO(proc, self.model, ewsudakov=self.inc_sudakov)
         
         commandline = commandline.replace('add process', 'generate',1)
         logger.info(commandline)
@@ -1498,8 +1846,15 @@ class ReweightInterface(extended_cmd.Cmd):
             misc.sprint(type(error))
             raise
         
-        commandline = 'output standalone_rw %s --prefix=int' % pjoin(path_me,data['paths'][0])
-        mgcmd.exec_cmd(commandline, precmd=True)        
+        commandline = 'output %s %s --prefix=int --prefixf2py=%s' % (self.sa_class, pjoin(path_me,data['paths'][0]), self.nb_rw)
+        self.path2prefix[pjoin(path_me,data['paths'][0])] = self.nb_rw
+        self.nb_rw += 1
+        commandline = 'output %s %s --prefix=int --density=1' % (self.sa_class, pjoin(path_me,data['paths'][0]))
+        if self.inc_sudakov:
+            # in this case, the sudakov output format has to be changed
+            commandline = 'output ewsudakovsa %s --prefix=int' % pjoin(path_me,data['paths'][0])
+        mgcmd.exec_cmd(commandline, precmd=True)
+
         logger.info('Done %.4g' % (time.time()-start))
         self.has_standalone_dir = True
         
@@ -1514,18 +1869,18 @@ class ReweightInterface(extended_cmd.Cmd):
                 for proc in me.get('processes'):
                     initial = []    #filled in the next line
                     final = [l.get('id') for l in proc.get('legs')\
-                          if l.get('state') or initial.append(l.get('id'))]
+                        if l.get('state') or initial.append(l.get('id'))]
                     order = (initial, final)
                     tag = proc.get_initial_final_ids()
                     decay_finals = proc.get_final_ids_after_decay()
-    
+
                     if tag[1] != decay_finals:
                         order = (initial, list(decay_finals))
                         decay_finals.sort()
                         tag = (tag[0], tuple(decay_finals))
                     Pdir = pjoin(path_me, data['paths'][0], 'SubProcesses', 
-                                      'P%s' % me.get('processes')[0].shell_string())
-    
+                                    'P%s' % me.get('processes')[0].shell_string())
+
                     if not os.path.exists(Pdir):
                         to_check.append(tag)
                         continue                        
@@ -1541,9 +1896,9 @@ class ReweightInterface(extended_cmd.Cmd):
                     for helicities in me.get_helicity_matrix():
                         hel_nb +=1 #fortran starts at 1
                         hel_dict[tuple(helicities)] = hel_nb
-    
+
                     data['id2path'][tag] = [order, Pdir, hel_dict]        
-     
+    
             for tag in to_check:
                 if tag not in self.id_to_path:
                     logger.warning("no valid path for %s" % (tag,))
@@ -1557,8 +1912,8 @@ class ReweightInterface(extended_cmd.Cmd):
             MLCard.set("DoubleCheckHelicityFilter", False)
             MLCard.set("HelicityFilterLevel", 0)
             MLCard.write(pjoin(path_me, data['paths'][0], 'SubProcesses', 'MadLoopParams.dat'),
-                         pjoin(path_me, data['paths'][0], 'Cards', 'MadLoopParams.dat'), 
-                         commentdefault=False)
+                        pjoin(path_me, data['paths'][0], 'Cards', 'MadLoopParams.dat'), 
+                        commentdefault=False)
             
             #if self.multicore == 'create':
             #    print "compile OLP", data['paths'][0]
@@ -1572,7 +1927,7 @@ class ReweightInterface(extended_cmd.Cmd):
                 # n_cores = self.mother.options['nb_core']
                 n_cores = 1
                 misc.compile(['OLP_static'], cwd=pjoin(path_me, data['paths'][1],'SubProcesses'),
-                             nb_core=self.mother.options['nb_core'])
+                            nb_core=self.mother.options['nb_core'])
                 
         return has_nlo
 
@@ -1592,7 +1947,7 @@ class ReweightInterface(extended_cmd.Cmd):
             else:
                 proc = proc.replace('[', '[ virt=')
                 commandline += "add process %s ;" % proc
-        commandline = re.sub('@\s*\d+', '', commandline)
+        commandline = re.sub(r'@\s*\d+', '', commandline)
         # deactivate golem since it creates troubles
         old_options = dict(mgcmd.options)
         if mgcmd.options['golem']:
@@ -1601,7 +1956,9 @@ class ReweightInterface(extended_cmd.Cmd):
         commandline = commandline.replace('add process', 'generate',1)
         logger.info(commandline)
         mgcmd.exec_cmd(commandline, precmd=True)
-        commandline = 'output standalone_rw %s --prefix=int -f' % pjoin(path_me, data['paths'][1])
+        commandline = 'output standalone_rw %s --prefix=int -f --prefixf2py=%i ' % (pjoin(path_me, data['paths'][1]), self.nb_rw)
+        self.path2prefix[pjoin(path_me,data['paths'][1])] = self.nb_rw
+        self.nb_rw += 1
         mgcmd.exec_cmd(commandline, precmd=True) 
         
         #put back golem to original value
@@ -1623,17 +1980,17 @@ class ReweightInterface(extended_cmd.Cmd):
                 for proc in me.get('processes'):
                     initial = []    #filled in the next line
                     final = [l.get('id') for l in proc.get('legs')\
-                          if l.get('state') or initial.append(l.get('id'))]
+                        if l.get('state') or initial.append(l.get('id'))]
                     order = (initial, final)
                     tag = proc.get_initial_final_ids()
                     decay_finals = proc.get_final_ids_after_decay()
-    
+
                     if tag[1] != decay_finals:
                         order = (initial, list(decay_finals))
                         decay_finals.sort()
                         tag = (tag[0], tuple(decay_finals))
                     Pdir = pjoin(path_me, data['paths'][1], 'SubProcesses', 
-                                      'P%s' % me.get('processes')[0].shell_string())
+                                    'P%s' % me.get('processes')[0].shell_string())
                     assert os.path.exists(Pdir), "Pdir %s do not exists" % Pdir                        
                     if (tag,'V') in data['id2path']:
                         if not Pdir == data['id2path'][(tag,'V')][1]:
@@ -1647,14 +2004,10 @@ class ReweightInterface(extended_cmd.Cmd):
                     for helicities in me.get_helicity_matrix():
                         hel_nb +=1 #fortran starts at 1
                         hel_dict[tuple(helicities)] = hel_nb
-    
+
                     data['id2path'][(tag,'V')] = [order, Pdir, hel_dict]
 
-
-    @misc.mute_logger()
-    def create_standalone_directory(self, second=False):
-        """generate the various directory for the weight evaluation"""
-                
+    def load_interface_model(self, second=False):
         data={}
         if not second:
             data['paths'] = ['rw_me', 'rw_mevirt']
@@ -1667,9 +2020,9 @@ class ReweightInterface(extended_cmd.Cmd):
             data['model_name'] = self.banner.get('proc_card', 'model')
             #processes
             data['processes'] = [line[9:].strip() for line in self.banner.proc_card
-                     if line.startswith('generate')]
+                    if line.startswith('generate')]
             data['processes'] += [' '.join(line.split()[2:]) for line in self.banner.proc_card
-                      if re.search('^\s*add\s+process', line)]  
+                        if re.search(r'^\s*add\s+process', line)]  
             #object_collector
             #self.id_to_path = {}
             #data['id2path'] = self.id_to_path
@@ -1699,10 +2052,10 @@ class ReweightInterface(extended_cmd.Cmd):
                 data['processes'] = self.second_process
             else:
                 data['processes'] = [line[9:].strip() for line in self.banner.proc_card
-                                 if line.startswith('generate')]
+                                if line.startswith('generate')]
                 data['processes'] += [' '.join(line.split()[2:]) 
-                                      for line in self.banner.proc_card
-                                      if re.search('^\s*add\s+process', line)]
+                                        for line in self.banner.proc_card
+                                        if re.search(r'^\s*add\s+process', line)]
             #object_collector
             #self.id_to_path_second = {}   
             #data['id2path'] = self.id_to_path_second 
@@ -1725,24 +2078,28 @@ class ReweightInterface(extended_cmd.Cmd):
 
         # 1. prepare the interface----------------------------------------------
         mgcmd = self.mg5cmd
-        complex_mass = False   
+        complex_mass = False  
+        ew_scheme = None 
         has_cms = re.compile(r'''set\s+complex_mass_scheme\s*(True|T|1|true|$|;)''')
+        has_ew = re.compile(r'''set\s+EWscheme\s*(\w*)''')
         for line in self.banner.proc_card:
             if line.startswith('set'):
                 mgcmd.exec_cmd(line, printcmd=False, precmd=False, postcmd=False)
                 if has_cms.search(line):
                     complex_mass = True
+                if has_ew.search(line, re.I):
+                    ew_scheme = has_ew.search(line).group(1)
             elif line.startswith('define'):
                 try:
                     mgcmd.exec_cmd(line, printcmd=False, precmd=False, postcmd=False)
                 except madgraph.InvalidCmd:
                     pass 
-                          
+                        
         # 1. Load model---------------------------------------------------------  
         if  not data['model_name'] and not second:
             raise self.InvalidCmd('Only UFO model can be loaded in this module.')
         elif data['model_name']:
-            self.load_model(data['model_name'], data['mg_names'], complex_mass)
+            self.load_model(data['model_name'], data['mg_names'], complex_mass, ew_scheme)
             modelpath = self.model.get('modelpath')
             if os.path.basename(modelpath) != mgcmd._curr_model['name']:
                 name, restrict = mgcmd._curr_model['name'].rsplit('-',1)
@@ -1760,7 +2117,13 @@ class ReweightInterface(extended_cmd.Cmd):
                     mgcmd.exec_cmd("define %s = %s" % (name, content))
                 except madgraph.InvalidCmd:
                     pass
-                    
+        return path_me, data, mgcmd
+
+    @misc.mute_logger()
+    def create_standalone_directory(self, second=False):
+        """generate the various directory for the weight evaluation"""
+    ############################## def load_interface            
+        path_me, data, mgcmd = self.load_interface_model(second)
         if  second and 'tree_path' in self.dedicated_path:
             files.ln(self.dedicated_path['tree_path'], path_me,name=data['paths'][0])
             if 'virtual_path' in self.dedicated_path:
@@ -1780,13 +2143,12 @@ class ReweightInterface(extended_cmd.Cmd):
             self.create_standalone_virt_directory(data, second)
             
             if self.multicore == 'create':
-                print("compile OLP", data['paths'][1])
                 try:
                     misc.compile(['OLP_static'], cwd=pjoin(path_me, data['paths'][1],'SubProcesses'),
-                             nb_core=self.mother.options['nb_core'])
+                            nb_core=self.mother.options['nb_core'])
                 except:
                     misc.compile(['OLP_static'], cwd=pjoin(path_me, data['paths'][1],'SubProcesses'),
-                             nb_core=1)
+                            nb_core=1)
         elif has_nlo and not second and self.rwgt_mode == ['NLO_tree']:
             # We do not have any virtual reweighting to do but we still have to
             #combine the weights.
@@ -1799,7 +2161,9 @@ class ReweightInterface(extended_cmd.Cmd):
             commandline = commandline.replace('add process', 'generate',1)
             logger.info(commandline)
             mgcmd.exec_cmd(commandline, precmd=True)
-            commandline = 'output standalone_rw %s --prefix=int -f' % pjoin(path_me, data['paths'][1])
+            commandline = 'output standalone_rw %s --prefix=int -f --prefixf2py=%i' % (pjoin(path_me, data['paths'][1]), self.nb_rw)
+            self.path2prefix[pjoin(path_me,data['paths'][1])] = self.nb_rw
+            self.nb_rw+=1
             mgcmd.exec_cmd(commandline, precmd=True)    
             #put back golem to original value
             mgcmd.options['golem'] = old_options['golem']
@@ -1812,7 +2176,7 @@ class ReweightInterface(extended_cmd.Cmd):
                 mgcmd.options['lhapdf'], None, self.banner.run_card.get_lhapdf_id())
             
                 
-             
+            
         # 6. If we need a new model/process-------------------------------------
         if (self.second_model or self.second_process or self.dedicated_path) and not second :
             self.create_standalone_directory(second=True)    
@@ -1820,8 +2184,8 @@ class ReweightInterface(extended_cmd.Cmd):
         if not second:
             self.has_nlo = has_nlo
             
-        
-        
+
+
     def compile(self):
         """compile the code"""
         
@@ -1833,20 +2197,79 @@ class ReweightInterface(extended_cmd.Cmd):
         else:
             path_me = self.rwgt_dir
         
-        rwgt_dir_possibility =   ['rw_me','rw_me_%s' % self.nb_library,'rw_mevirt','rw_mevirt_%s' % self.nb_library]
-        for onedir in rwgt_dir_possibility:
-            if not os.path.isdir(pjoin(path_me,onedir)):
-                continue
-            pdir = pjoin(path_me, onedir, 'SubProcesses')
-            if self.mother:
-                nb_core = self.mother.options['nb_core'] if self.mother.options['run_mode'] !=0 else 1
-            else:
+        if self.inc_sudakov:
+            # The case of EW sudakov is a bit different
+            # first, copy the run/param cards in the reweight process folder
+            sarw_path = pjoin(path_me, 'rw_me')
+            logger.info('Splitting the banner in %s' % os.path.join(sarw_path, 'Cards'))
+            self.banner.split(sarw_path)
+
+            logger.info('Compiling reweight Source dir')
+            sourcedir = pjoin(sarw_path, 'Source') 
+            # set the environmental variable ewsudsa in make_opts
+            common_run_interface.CommonRunCmd.update_make_opts_full(pjoin(sourcedir, 'make_opts'), {'ewsudsa': 'True'})
+            misc.compile(cwd=sourcedir)
+            logger.info('Compiling reweight P* dirs')
+            p_dirs = [d for d in \
+                open(pjoin(sarw_path, 'SubProcesses', 'subproc.mg')).read().split('\n') if d]
+            # determine the number of core to use for compilation
+            try:
+                import multiprocessing
+                try:
+                    nb_core = int(self.options['nb_core'])
+                except (TypeError, KeyError):
+                    nb_core = multiprocessing.cpu_count()
+            except ImportError: 
                 nb_core = 1
-            os.environ['MENUM'] = '2'
-            misc.compile(['allmatrix2py.so'], cwd=pdir, nb_core=nb_core)
-            if not (self.second_model or self.second_process or self.dedicated_path):
-                os.environ['MENUM'] = '3'
-                misc.compile(['allmatrix3py.so'], cwd=pdir, nb_core=nb_core)
+
+            compile_options = copy.copy(self.options)
+            compile_options['nb_core'] = nb_core
+            compile_cluster = cluster.MultiCore(**compile_options)
+            logger.info('Compiling on %d cores...' % nb_core)
+
+            update_status = lambda i, r, f: (i,r,f) 
+            for p_dir in p_dirs:
+                compile_cluster.submit(prog = misc.compile, 
+                               argument = [['libsudpy'], pjoin(sarw_path, 'SubProcesses', p_dir) ])
+            try:
+                compile_cluster.wait(self.me_dir, update_status)
+            except Exception as  error:
+                logger.warning("Compilation of the Subprocesses failed")
+                if __debug__:
+                    raise
+                compile_cluster.remove()
+                self.do_quit('')
+            logger.info('...done')
+
+        else:
+            rwgt_dir_possibility =   ['rw_me','rw_me_%s' % self.nb_library,'rw_mevirt','rw_mevirt_%s' % self.nb_library]
+            for onedir in rwgt_dir_possibility:
+                if not os.path.isdir(pjoin(path_me,onedir)):
+                    continue
+                pdir = pjoin(path_me, onedir, 'SubProcesses')
+                self.compile_SubProcess_dir(pdir)
+
+
+    def compile_SubProcess_dir(self, Sdir):
+        """compile a full Subprocess directory"""
+
+        if self.mother:
+            nb_core = self.mother.options['nb_core'] if self.mother.options['run_mode'] !=0 else 1
+        else:
+            nb_core = 1
+        os.environ['MENUM'] = '2'
+        try: 
+            misc.compile(['all_matrix2py.so'], cwd=Sdir, nb_core=nb_core)
+        except Exception as e:
+            misc.compile(['all_matrix2py.so'], cwd=Sdir, nb_core=1)
+
+        if not (self.second_model or self.second_process or self.dedicated_path):
+            os.environ['MENUM'] = '3'
+            try:
+                misc.compile(['all_matrix3py.so'], cwd=Sdir, nb_core=nb_core)
+            except Exception as e:
+                misc.compile(['all_matrix3py.so'], cwd=Sdir, nb_core=1)
+                
 
     def load_module(self, metag=1):
         """load the various module and load the associate information"""
@@ -1854,17 +2277,37 @@ class ReweightInterface(extended_cmd.Cmd):
         if not self.rwgt_dir:
             path_me = self.me_dir
         else:
-            path_me = self.rwgt_dir        
+            path_me = self.rwgt_dir       
+
         self.id_to_path = {}
         self.id_to_path_second = {}
         rwgt_dir_possibility =   ['rw_me','rw_me_%s' % self.nb_library,'rw_mevirt','rw_mevirt_%s' % self.nb_library]
+        fprefix = ''
         for onedir in rwgt_dir_possibility:
+            if pjoin(path_me,onedir) in self.path2prefix:
+                fprefix = self.path2prefix[pjoin(path_me,onedir)]
             if not os.path.exists(pjoin(path_me,onedir)):
                 continue 
+            if self.inc_sudakov:
+                return
             pdir = pjoin(path_me, onedir, 'SubProcesses')
             for tag in [2*metag,2*metag+1]:
-                with misc.TMP_variable(sys, 'path', [pjoin(path_me), pjoin(path_me,'onedir', 'SubProcesses')]+sys.path):      
-                    mod_name = '%s.SubProcesses.allmatrix%spy' % (onedir, tag)
+                with misc.TMP_variable(sys, 'path', [pjoin(path_me), pjoin(path_me,onedir, 'SubProcesses')]+sys.path): 
+                    tmp = sys.path[0]
+                    import ctypes
+                    alllib = pjoin(sys.path[0], ('liball%s_%sme.so' % (onedir, tag)))
+                    if os.path.exists(alllib):
+                            #os.environ['LD_PRELOAD'] = pjoin(pdir, 'liballme%s' % ext) + os.pathsep + os.environ.get('LD_PRELOAD','')
+                            #if ext == '.dylib':
+                            #    mode=os.RTLD_LOCAL
+                            #else:
+                            mode=os.RTLD_GLOBAL | os.RTLD_DEEPBIND
+                            try:
+                                ctypes.CDLL(alllib, mode=mode)
+                            except Exception as err:
+                                logger.debug('ctypes trick fail for module')
+                            break
+                    mod_name = '%s.SubProcesses.all_matrix%spy' % (onedir, tag)
                     #mymod = __import__('%s.SubProcesses.allmatrix%spy' % (onedir, tag), globals(), locals(), [],-1)
                     if mod_name in list(sys.modules.keys()):
                         del sys.modules[mod_name]
@@ -1872,61 +2315,71 @@ class ReweightInterface(extended_cmd.Cmd):
                         while '.' in tmp_mod_name:
                             tmp_mod_name = tmp_mod_name.rsplit('.',1)[0]
                             del sys.modules[tmp_mod_name]
-                        if six.PY3:
-                            import importlib
-                            mymod = importlib.import_module(mod_name,)
-                            mymod = importlib.reload(mymod)
-                            #mymod = __import__(mod_name, globals(), locals(), [])
-                        else:
-                            mymod = __import__(mod_name, globals(), locals(), [],-1) 
-                            S = mymod.SubProcesses
-                            mymod = getattr(S, 'allmatrix%spy' % tag)
-                            reload(mymod) 
+                        import importlib
+                        mymod = importlib.import_module(mod_name,)
+                        mymod = importlib.reload(mymod)
+                        #mymod = __import__(mod_name, globals(), locals(), [])
                     else:
-                        if six.PY3:
-                            import importlib
-                            mymod = importlib.import_module(mod_name,)
-                            #mymod = __import__(mod_name, globals(), locals(), [])    
-                        else:
-                            mymod = __import__(mod_name, globals(), locals(), [],-1)
-                            S = mymod.SubProcesses
-                            mymod = getattr(S, 'allmatrix%spy' % tag) 
+                        import importlib
+                        mymod = importlib.import_module(mod_name,)
+                        #mymod = __import__(mod_name, globals(), locals(), [])
                     
-                
+                if fprefix != '':
+                    fprefix = 'f%i_' % fprefix
+                    for attr in dir(mymod):
+                        if attr.startswith(fprefix):
+                            setattr(mymod, attr[len(fprefix):], getattr(mymod, attr)    )
+                elif any(attr.startswith('f') and attr[1:].split('_')[0].isdigit() for attr in dir(mymod)):
+                    fprefix = [attr for attr in dir(mymod) if attr.startswith('f') and attr[1:].split('_')[0].isdigit()][0].split('_')[0] + '_'
+                    for attr in dir(mymod):
+                        if attr.startswith(fprefix):
+                            setattr(mymod, attr[len(fprefix):], getattr(mymod, attr))
+                else:
+                    logger.debug("Could not find the fortran prefix in module %s", mod_name)
+                fprefix = ''
                 # Param card not available -> no initialisation
                 self.f2pylib[(onedir,tag)] = mymod
                 if hasattr(mymod, 'set_madloop_path'):
                     mymod.set_madloop_path(pjoin(path_me,onedir,'SubProcesses','MadLoop5_resources'))
                 if (self.second_model or self.second_process or self.dedicated_path):
                     break
+
+
+
             data = self.id_to_path
             if onedir not in ["rw_me",  "rw_mevirt"]:
                 data = self.id_to_path_second
 
             # get all the information
-            allids, all_pids = mymod.get_pdg_order()
+
+            allids, all_pids = getattr(mymod, 'get_pdg_order')()
             all_pdgs = [[pdg for pdg in pdgs if pdg!=0] for pdgs in  allids]
             all_prefix = [bytes(j).decode(errors="ignore").strip().lower() for j in mymod.get_prefix()]
             prefix_set = set(all_prefix)
 
             hel_dict={}
             for prefix in prefix_set:
-                if hasattr(mymod,'%sprocess_nhel' % prefix):
-                    nhel = getattr(mymod, '%sprocess_nhel' % prefix).nhel    
+                if hasattr(mymod,'%s%sprocess_nhel' % (fprefix,prefix)):
+                    #transer nhel information from fortran to wrapper
+                    getattr(mymod, '%sget_nhel_entry' % prefix)()
+                    #transer now to python dictionary
+                    nhel = getattr(getattr(mymod, '%sprocess_nhel' % prefix), '%snhel' %prefix)
                     hel_dict[prefix] = {}
                     for i, onehel in enumerate(zip(*nhel)):
                         hel_dict[prefix][tuple(onehel)] = i+1
-                elif hasattr(mymod, 'set_madloop_path') and \
+                elif hasattr(mymod, '%sset_madloop_path' % fprefix) or  hasattr(mymod, 'set_madloop_path') and \
                      os.path.exists(pjoin(path_me,onedir,'SubProcesses','MadLoop5_resources', '%sHelConfigs.dat' % prefix.upper())):
                     hel_dict[prefix] = {}
                     for i,line in enumerate(open(pjoin(path_me,onedir,'SubProcesses','MadLoop5_resources', '%sHelConfigs.dat' % prefix.upper()))):
                         onehel = [int(h) for h in line.split()]
                         hel_dict[prefix][tuple(onehel)] = i+1
                 else:
-                    misc.sprint(pjoin(path_me,onedir,'SubProcesses','MadLoop5_resources', '%sHelConfigs.dat' % prefix.upper() ))
-                    misc.sprint(os.path.exists(pjoin(path_me,onedir,'SubProcesses','MadLoop5_resources', '%sHelConfigs.dat' % prefix.upper())))
+                    misc.sprint(pjoin(path_me,onedir,'SubProcesses','MadLoop5_resources', '%sHelConfigs.dat' % prefix.upper()))
+                    misc.sprint(dir(mymod))
+                    raise Exception
                     continue
-
+            if not hel_dict:
+                raise Exception("No helicity information found for reweighting ME in %s" % pdir)    
             for i,(pdg,pid) in enumerate(zip(all_pdgs,all_pids)):
                 if self.is_decay:
                     incoming = [pdg[0]]
@@ -1971,7 +2424,7 @@ class ReweightInterface(extended_cmd.Cmd):
                 data[tag] = order, pdir, hel
              
              
-    def load_model(self, name, use_mg_default, complex_mass=False):
+    def load_model(self, name, use_mg_default, complex_mass=False, ew_scheme=None):
         """load the model"""
         
         loop = False
@@ -1988,6 +2441,8 @@ class ReweightInterface(extended_cmd.Cmd):
         
         self.model = base_model
         self.mg5cmd._curr_model = self.model
+        if ew_scheme:
+            self.model.change_electroweak_mode(ew_scheme)
         self.mg5cmd.process_model()
         
 
@@ -2085,3 +2540,895 @@ class ReweightInterface(extended_cmd.Cmd):
 
 
         
+class DensityInterface(ReweightInterface):
+    """Basic interface for computing density matrix"""
+
+    def __init__(self, *args, **opts):
+        """init the class"""
+
+        logger.info('Using density mode for reweighting')
+        
+        self.flag_particle_in_density_matrix = False
+
+        self.helicity_direction = [[0], '', []] #pid of the particle chosen as reference for the helicity frame
+        self.particle_in_density_matrix = None #pid of the particles selected for the study
+        self.momenta_boost = [[0], '', []] #pid of the particles in whose center of mass frame the system will be boosted
+        self.allowed_helicities = [0] #basis of helicities
+        self.axis_referential = [0]
+        self.symmetrise_initial_state = False
+        self.matrix_normalisation = True
+        self.spins = None 
+        self.number_changing_helicities = None
+        self.number_combinations = None
+        self.new_param_card = False #Needed to not call ask_edit_card_static
+        self.average_rho = 0
+        self.total_wgt = 0
+        self.nevents = 0
+        
+        ReweightInterface.__init__(self, *args, **opts)
+        self.flag_density_matrix = True
+        self.has_run = False
+
+        #This block imports the model, because I need it before do_launch() starts
+        mgcmd = self.mg5cmd
+        complex_mass = False   
+        has_cms = re.compile(r'''set\s+complex_mass_scheme\s*(True|T|1|true|$|;)''')
+        for line in self.banner.proc_card:
+            if line.startswith('set'):
+                mgcmd.exec_cmd(line, printcmd=False, precmd=False, postcmd=False)
+                if has_cms.search(line):
+                    complex_mass = True
+        data = {}
+        data['model_name'] = self.banner.get('proc_card', 'model')
+
+        info = self.banner.get('proc_card', 'full_model_line')
+        if '-modelname' in info:
+            data['mg_names'] = False
+        else:
+            data['mg_names'] = True
+        super().load_model(data['model_name'], data['mg_names'], complex_mass)
+
+
+    def do_change(self, line):
+        """Method called to read the reweight card, redirects to the correct do_change_ method"""
+        keyword = line.split()[0]
+
+        if hasattr(self, 'do_change_%s' % keyword):
+            return getattr(self, 'do_change_%s' % keyword)(line.split()[1:])
+        
+        return super().do_change(line)
+        
+
+    def find_arrays(self, input_text):
+        pattern = re.compile(r"\[[^\]]*\]", re.IGNORECASE)
+        return pattern.findall(input_text)
+
+    def find_observable(self, input_text): #we accepect input as "observable" or "observable_name"
+        # pattern = re.compile(r"lambda p: p\.[A-Za-z0-9]+", re.IGNORECASE)
+        # output = pattern.findall(input_text)
+        # if output == []:
+        pattern = re.compile(r"[A-Za-z]+", re.IGNORECASE)
+        output = pattern.findall(input_text)
+        if len(output) > 1:
+            pattern = re.compile(r"[A-Za-z]+_[A-Za-z]+", re.IGNORECASE)
+            output = pattern.findall(input_text)
+        return pattern.findall(input_text)
+
+    def do_change_helicity_direction(self, line):
+        """Change the reference particle for the helicity frame, returns a list of pdg-codes.
+        The structure accepted is change helicitty_direction [list of pdg-codes] observable [order of observable values]
+        """
+        
+        pdg_codes = []
+        lambda_function = ''
+        order_particles = []
+        reconstructed_line = ''
+
+        for i in range(len(line)): #we reconstruct the line to use regex on the line
+            reconstructed_line += str(line[i]) + ' '
+
+        observable = self.find_observable(reconstructed_line)
+        Arrays = self.find_arrays(reconstructed_line)
+
+        for i in range(len(Arrays)):
+            Arrays[i]  = [int(y) for y in Arrays[i].strip("[]").split(',') if y.strip()]
+        
+        pdg_codes = Arrays[0]
+        if len(Arrays) > 1:
+            order_particles = Arrays[1]
+        else:
+            order_particles = []
+        if len(observable) > 0:
+            lambda_function = observable[0]
+        else:
+            lambda_function = ''
+
+        #check if the number of ordering parameters is the same as the number of particles selected
+        if lambda_function == '' and len(order_particles) > 0:
+            logger.error("An order option is given when no observable is selected (helicity referential direction option), the order can not be computed. Please ensure to select an observable among the one defined in the class lhe_parser.FourMomentum")
+        if len(order_particles) > 0 and len(order_particles) != len(pdg_codes):
+            logger.error("The number of ordering parameters is not the same as the number of particles selected for the helicity referential direction. Please ensure you give the same number of parameters")
+
+        # We don't check what values are put in the arrays, if it is not correct, it will return an error later.
+
+        self.helicity_direction = (pdg_codes, lambda_function, order_particles)
+
+
+    def do_change_boost_choice(self, line):
+        """change the momenta reference for the boost, returns a list of pdg-codes"""
+        
+        pdg_codes = []
+        lambda_function = ''
+        order_particles = []
+        reconstructed_line = ''
+
+        for i in range(len(line)): #we reconstruct the line to use regex on the line
+            reconstructed_line += str(line[i]) + ' '
+
+        observable = self.find_observable(reconstructed_line)
+        Arrays = self.find_arrays(reconstructed_line)
+        for i in range(len(Arrays)):
+            Arrays[i]  = [int(y) for y in Arrays[i].strip("[]").split(',') if y.strip()]
+        
+        pdg_codes = Arrays[0]
+        if len(Arrays) > 1:
+            order_particles = Arrays[1]
+        else:
+            order_particles = []
+        if len(observable) > 0:
+            lambda_function = observable[0]
+        else:
+            lambda_function = ''
+
+        #check if the number of ordering parameters is the same as the number of particles selected
+        if lambda_function == '' and len(order_particles) > 0:
+            logger.error("An order option is given when no observable is selected (boost option), the order can not be computed. Please ensure to select an observable among the one defined in the class lhe_parser.FourMomentum")
+        if len(order_particles) > 0 and len(order_particles) != len(pdg_codes): #The code should work even if the two length are different but it is more clear like that for the user too
+            logger.error("The number of ordering parameters is not the same as the number of particles selected for the boost. Please ensure you give the same number of parameters")
+
+        # We don't check what values are put in the arrays, if it is not correct, it will return an error later.
+        
+        self.momenta_boost = (pdg_codes, lambda_function, order_particles)
+
+
+
+    def do_change_order_helicities(self, line):
+        """Change the order of the basis of helicities. It accepts inputs for density matrices full and partial"""
+
+        if len(line) == 1 and line[0] == '[0]': # if order_helicitites [0], we take the default value
+            return
+        
+        for i in range(len(line)):
+            aux = line[i].strip("[],()")
+            if aux != 'None':
+                line[i] = int(aux)
+            else:
+                return #if "change order_helicities None" is the option, we do not change the default value 
+
+        #Let the user enter the allowed_helicities in the complex form ie. [+1, +1, +1, -1, -1, +1, -1, -1] for 2 qubits for instance
+        if len(line) == self.number_changing_helicities * self.number_combinations:
+            self.allowed_helicities = line
+        else: #this part deals with input of the form [basis for particle1] [basis for particle2] 
+            cutted_line = []
+            counter = 0
+            for i in range(len(self.spins)):
+                cutted_line.append(line[counter: counter + self.spins[i]])
+                counter += self.spins[i]
+            
+            allowed_hel = []
+            for i in range(len(cutted_line[0])):
+                for j in range(len(cutted_line[1])):
+                    allowed_hel.append(cutted_line[0][i])
+                    allowed_hel.append(cutted_line[1][j])
+                self.allowed_helicities = allowed_hel
+    
+    def do_change_symmetrise_initial_state(self, line):
+        """
+        Chooses whether the initial state should be symmetrised according to 2307.09675. For each event the production matrix calculated is
+        R = R(theta) + R(theta + pi)
+        """
+        for i in range(len(line)): 
+            line[i] = line[i].strip("[],()") 
+        if line[0] == 'True':
+            self.symmetrise_initial_state = True
+        elif line[0] == 'False':
+            self.symmetrise_initial_state = False
+        else:
+            logger.warning('Option symmetrise_initial_state not understood, set it to False. Please use the syntax: change symmetrise_initial_state True if you want to enable it.')
+            self.symmetrise_initial_state = False
+        
+
+    def do_change_axis_referential(self, line):
+        """
+        Choses a particle in the initial state that is used as referential to define the production angle theta
+        It can be useful for non-symetric initial states like u u~.
+        It does accept only one pdg-code
+        """
+        for i in range(len(line)):
+            aux = line[i].strip("[],()")
+            if aux != 'None':
+                line[i] = int(aux)
+            else:
+                return #if "change axis_referential None" is the option, we do not change the default value 
+        self.axis_referential = line
+    
+    def do_change_matrix_normalisation(self,line):
+        """
+        Choses if the production matrix should be normalised by its trace or not.
+        Default = True
+        """
+        for i in range(len(line)): 
+            line[i] = line[i].strip("[],()") 
+        if line[0] == 'True':
+            self.matrix_normalisation = True
+        elif line[0] == 'False':
+            self.matrix_normalisation = False
+        else:
+            logger.warning('Option matrix_normalisation not understood, set it to True. Please use the syntax: change matrix_normalisation True if you want to enable it.')
+            self.matrix_normalisation = False
+
+
+    def do_change_particle_in_density_matrix(self, line):
+        """change the particle in the density matrix, calculates the number of particles changes,
+           their spins and the number of combinations"""
+        import itertools
+
+        pdg_codes = []
+        lambda_function = ''
+        order_particles = []
+        reconstructed_line = ''
+
+        for i in range(len(line)): #we reconstruct the line to use regex on the line
+            reconstructed_line += str(line[i]) + ' '
+
+        observable = self.find_observable(reconstructed_line)
+        Arrays = self.find_arrays(reconstructed_line)
+        for i in range(len(Arrays)):
+            Arrays[i]  = [int(y) for y in Arrays[i].strip("[]").split(',') if y.strip()]
+        
+        pdg_codes = Arrays[0]
+        if len(Arrays) > 1:
+            order_particles = Arrays[1]
+        else:
+            order_particles = []
+        if len(observable) > 0:
+            lambda_function = observable[0]
+        else:
+            lambda_function = ''
+
+        #check if the number of ordering parameters is the same as the number of particles selected
+        if lambda_function == '' and len(order_particles) > 0:
+            logger.error("An order option is given when no observable is selected (particle in density matrix option), the order can not be computed. Please ensure to select an observable among the one defined in the class lhe_parser.FourMomentum")
+        if len(order_particles) > 0 and len(order_particles) != len(pdg_codes):
+            logger.error("The number of ordering parameters is not the same as the number of particles selected for the particles in density matrix. Please ensure you give the same number of parameters")
+
+        # We don't check what values are put in the arrays, if it is not correct, it will return an error later.
+
+        self.particle_in_density_matrix = (pdg_codes, lambda_function, order_particles) 
+
+        self.number_changing_helicities = len(pdg_codes)
+
+        particles = self.model['particles']
+
+        self.spins = [] #list of spins degrees of freedom for each particle studied
+        for particle_id in pdg_codes: #list on the pdg-code of the particles that we study
+            for n_particles_model in range(len(particles)):
+                if particles[n_particles_model]['pdg_code'] == particle_id or particles[n_particles_model]['pdg_code'] == -particle_id:
+                    if particles[n_particles_model]['spin'] == 3 and particles[n_particles_model]['mass'] == 'ZERO': #if the particle is a massless boson, we set the spin d.o.f. to 2. Can it be problemtaic for some gauges ?
+                        self.spins.append(particles[n_particles_model]['spin'] - 1)
+                    else: #if the boson has a mass, we keep the 3 spin d.o.f.
+                        self.spins.append(particles[n_particles_model]['spin'])
+
+        #Calculation of the number of helicity combinations
+        n_comb = 1
+        for i in range(len(self.spins)):
+            n_comb *= self.spins[i]
+        self.number_combinations = n_comb
+
+        #if the user didn't use the option or if it has not been read yet, fill it automatically here
+        if self.allowed_helicities == None or self.allowed_helicities == [0]:
+            base = {"2": [1, -1], "3": [1, 0, -1]} #if you want to have particles with higher spin, you need to add it here
+            list_base = []
+            for spin in self.spins:
+                list_base.append(base[str(spin)])
+                        
+            new_combination = list_base[0]
+            for i in range(1, len(list_base)):
+                new_combination = list(itertools.product(new_combination, list_base[i]))
+            aux = str(new_combination)
+            new_combination_corrected = aux[1:-1].replace("(", "").replace(")", "").split(",")
+            self.allowed_helicities = [int(elem) for elem in new_combination_corrected]
+
+        # the default values for allowed_helicities are:
+        # [+1, +1, +1, -1, -1, +1, -1, -1]
+        # [+1, +1, +1, 0, +1, -1, 0, +1, 0, 0, 0, -1, -1, +1, -1, 0, -1, -1]
+        # ....
+
+        self.flag_particle_in_density_matrix = True
+
+
+    def do_quit(self, line):
+        """exit the reweighting module"""
+        if self.has_run:
+            return super().do_quit(line)
+        
+        if self.particle_in_density_matrix == None:
+            logger.error("You have not chosen which particle to put in the density matrix, the density matrix computation can not be done. The command to specify the particles to take is 'change particle_in_density_matrix'.")
+
+        logger.info("helicity_direction = \t" + str(self.helicity_direction))
+        logger.info("particle_in_density_matrix = \t" + str(self.particle_in_density_matrix))
+        logger.info("momenta_boost = \t" + str(self.momenta_boost))
+        logger.info("allowed_helicities = \t" + str(self.allowed_helicities))
+        logger.info("spins = \t" + str(self.spins))
+        logger.info("number_changing_helicities = \t" + str(self.number_changing_helicities))
+        logger.info("number_combinations = \t" + str(self.number_combinations))
+        logger.info("axis_referential = \t" + str(self.axis_referential))
+        logger.info("symmetrise_initial_state = \t" + str(self.symmetrise_initial_state))
+        logger.info("matrix_normalisation = \t" + str(self.matrix_normalisation))
+
+        if self.flag_particle_in_density_matrix == False:
+            logger.error("Error: the reweight_card contains no option for the density mode")
+
+        self.has_run = True
+        self.run_cmd('launch --keep_card') #calls the function do_launch()
+
+
+
+    def launch_actual_reweighting(self, param_card_iterator, 
+                                              tag_name,
+                                              type_rwgt,
+                                              path_me):
+        """
+            This method overwrites the one in the parent class ReweightInterface when we want to do density matrix computation.
+            It launches the computation of the density matrix for each event and computes the average density matrix.
+        """
+       
+        import madgraph.various.Density_functions as dens
+         
+        start = time.time()
+        # initialize the collector for the various re-weighting
+        cross, ratio, ratio_square,error = {},{},{}, {}
+        for name in type_rwgt + ['orig']:
+            cross[name], error[name] = 0.,0.
+            ratio[name],ratio_square[name] = 0., 0.# to compute the variance and associate error
+        
+        self.banner['MGDensity'] = 'helicity_direction = ' + str(self.helicity_direction) + '\n' + \
+                                    'particle_in_density_matrix = ' + str(self.particle_in_density_matrix) + '\n' + \
+                                    'momenta_boost = ' + str(self.momenta_boost) + '\n' + \
+                                    'allowed_helicities = ' + str(self.allowed_helicities) + '\n' + \
+                                    'number_changing_helicities = ' + str(self.number_changing_helicities) + '\n' + \
+                                    'number_combinations = ' + str(self.number_combinations) + '\n' + \
+                                    'axis_referential = ' + str(self.axis_referential) + '\n' + \
+                                    'symmetrise_initial_state = ' + str(self.symmetrise_initial_state) + '\n' + \
+                                    'matrix_normalisation = ' + str(self.matrix_normalisation)
+        self.banner.pop('initrwgt') #we remove the reweight header because it does not correspond to the operations done
+        output = open( self.lhe_input.path +'rw', 'w')
+        #write the banner to the output file
+        self.banner.write(output, close_tag=False)
+            
+        if self.lhe_input.closed:
+            self.lhe_input = lhe_parser.EventFile(self.lhe_input.name)
+
+        self.lhe_input.seek(0)
+        count_errors = 0
+        for event_nb,event in enumerate(self.lhe_input):
+            #control logger
+            if (event_nb % max(int(10**int(math.log10(float(event_nb)+1))),10)==0): 
+                    running_time = misc.format_timer(time.time()-start)
+                    logger.info('Event nb %s %s' % (event_nb, running_time))
+            if (event_nb==10001): logger.info('reducing number of print status. Next status update in 10000 events')
+            if (event_nb==100001): logger.info('reducing number of print status. Next status update in 100000 events')
+            
+            weight = self.calculate_weight(event)
+            rho_temp = dens.DensityMatrixObservables(weight['orig'])
+
+            if self.matrix_normalisation:
+                event.density = rho_temp.get_rho_normalised().tolist()
+                self.average_rho += rho_temp.get_rho_normalised() * event.wgt # weighted sum of the density matrices for the total density matrix
+                self.total_wgt += event.wgt
+            else:
+                event.density = weight['orig']
+                self.average_rho += rho_temp.density_array() # direct sum of non-normalised density matrices
+                self.nevents +=1
+
+            output.write(str(event))
+                
+        running_time = misc.format_timer(time.time()-start)
+        logger.info('All event done  (nb_event: %s) %s' % (event_nb+1, running_time))     
+        
+        # Compute the average density matrix on write it on a .txt file
+        rho_avg = [0 for i in range(len(self.average_rho))]
+        if self.matrix_normalisation:
+            for i in range(len(rho_avg)):
+                rho_avg[i] = self.average_rho[i] / self.total_wgt
+        else:
+            for i in range(len(rho_avg)):
+                rho_avg[i] = self.average_rho[i] / self.nevents
+
+        rho_avg_instance = dens.DensityMatrixObservables(rho_avg)
+        rho_avg_square = rho_avg_instance.square_matrix()
+
+        logger.info("Average density matrix:")
+        for i in range(len(rho_avg_square)):
+            print("\t",list(rho_avg_square[i]))
+        file_density = open(pjoin(os.path.dirname(self.event_path), f"Average_density_matrix_{os.path.basename(self.lhe_input.name)[:-4]}.txt"), 'w')
+        file_density.write(f'Average density matrix of LHE file {os.path.basename(self.lhe_input.name)[:-4]}:\n')
+        for i in range(len(rho_avg_square)):
+                file_density.write('\t' + str(list(rho_avg_square[i])) + '\n')
+        file_density.close()
+
+
+        if self.output_type == "default":
+            output.write('</LesHouchesEvents>\n')
+            output.close()
+        else:
+            for key in output:
+                output[key].write('</LesHouchesEvents>\n')
+                output[key].close()
+                if self.systematics and len(output) ==1:
+                    try:
+                        logger.info('running systematics computation')
+                        import madgraph.various.systematics as syst
+                        
+                        if not isinstance(self.systematics, bool):
+                            args = [output[key].name, output[key].name] + self.systematics
+                        else:
+                            args = [output[key].name, output[key].name]
+                        if self.mother and self.mother.options['lhapdf']:
+                            args.append('--lhapdf_config=%s' % self.mother.options['lhapdf'])
+                        syst.call_systematics(args, result=open('rwg_syst_%s.result' % key[0],'w'),
+                                            log=logger.info)
+                    except Exception:
+                        logger.error('fail to add systematics')
+                        raise
+
+        self.lhe_input.close()
+        
+
+        if not self.mother:
+            name, ext = self.lhe_input.name.rsplit('.',1)
+            target = '%s_out.%s' % (name, ext)            
+        elif self.output_type != "default" :
+            target = pjoin(self.mother.me_dir, 'Events', run_name, 'events.lhe')
+        else:
+            target = self.lhe_input.name
+        
+        if self.output_type == "default":
+            files.mv(output.name, target)
+            logger.info('Event %s have now the additional weight' % self.lhe_input.name)
+        else:
+            raise ValueError("Only the 'default' output_type is available for the density mode.")
+        
+
+        self.terminate_fortran_executables(new_card_only=True)
+
+        #store result
+        for name in cross:
+            if name == 'orig':
+                self.all_cross_section[name] = (cross[name], error[name])
+            else:
+                self.all_cross_section[(tag_name,name)] = (cross[name], error[name])
+
+
+    def calculate_matrix_element(self, event, hypp_id, scale2=0):
+        """ This method overwrites the method of the same name in the class ReweightInterface.
+            It computes the production matrix R given the user's inputs.
+            Output: new_value (the production matrix R for a single event)
+        """
+        import madgraph.various.Density_functions as dens
+
+        tag, order = event.get_tag_and_order()
+        if self.keep_ordering:
+            old_tag = tuple(tag)
+            tag = (tag[0], tuple(order[1])) 
+        
+        try:
+            orig_order, Pdir, hel_dict = self.id_to_path[tag]
+        except KeyError:
+            misc.sprint(tag)
+            misc.sprint(self.id_to_path)
+            raise KeyError('This issue is caused because two different processes were used in the same terminal session with the density mode. Please retry in a new terminal.')
+
+        base = os.path.basename(os.path.dirname(Pdir))
+
+        if base == 'rw_me':
+            moduletag = (base, 2+hypp_id)
+        else:
+            moduletag = (base, 2)
+
+        module = self.f2pylib[moduletag]
+
+        if self.keep_ordering:
+            all_p = [event.get_momenta(orig_order)]
+        else:
+            all_p = event.get_all_momenta(orig_order)
+
+            if len(all_p) >1:
+                if self.helicity_reweighting:
+                    logger.warning("due to ordering ambiguity, we flip off helicity per helicity reweighting.")
+                self.helicity_reweighting = False
+
+        # add helicity information
+        hel_order = event.get_helicity(orig_order)
+        if self.helicity_reweighting and 9 not in hel_order:
+            nhel = hel_dict[tuple(hel_order)]
+        else:
+            nhel = -1
+
+        pdg = list(orig_order[0])+list(orig_order[1])
+
+        #list_properties is the list of properties of the class FourMomentum that we can use to rank particles
+        list_properties = [p for p in dir(lhe_parser.FourMomentum) if isinstance(getattr(lhe_parser.FourMomentum,p),property)]
+        
+        
+        boost_corrected = self.chose_particle_user_input(event, pdg, list_properties, orig_order, self.momenta_boost, 'momenta_boost', fortran_format = False)
+        all_p = self.method_boost_event(event, all_p, orig_order, hypp_id, boost_corrected)
+        
+        refChoice_corrected = self.chose_particle_user_input(event, pdg, list_properties, orig_order, self.helicity_direction, 'helicity_direction', fortran_format = True)
+        phi, theta = self.calculate_angles_rotation(refChoice_corrected, all_p, module)
+        
+        for i in range(len(all_p)):
+            #This block allows to choose which initial state particle is chosen as reference to define theta.
+            #If its pz is > 0 the default definition is correct, if it is < 0, then we need to add pi
+            if 0 not in self.axis_referential:
+                for k in range(len(self.axis_referential)):
+                    if self.axis_referential[k] in orig_order[0]: #check whether the pdg is in the initial state
+                        for j in range(len(orig_order[0])):
+                            if self.axis_referential[k] == orig_order[0][j]:
+                                pz_axis_referential = all_p[i][j][3]
+                                break #we quit the loop once we found which particle in the initial state is in axis_referential
+                        if pz_axis_referential < 0:
+                            theta[i] += math.pi
+
+            if self.symmetrise_initial_state: # if we want to calculate R(theta) + R(theta + pi)
+                import copy
+                theta_bis = [elem + math.pi for elem in theta]
+                all_p_bis = copy.deepcopy(all_p)
+                all_p_bis = self.rotation_density(module, all_p_bis, phi, theta_bis)
+
+        all_p = self.rotation_density(module, all_p, phi, theta)
+
+        if self.options['identical_particle_in_prod_and_decay'] == 'crash':
+            if len(all_p) > 1:
+                raise Exception("Ambiguous particle in production and decay. crash as requested by \'identical_particle_in_prod_and_decay\'")
+
+
+        pos_corrected = self.chose_particle_user_input(event, pdg, list_properties, orig_order, self.particle_in_density_matrix, 'particle_in_density_matrix', fortran_format = True)
+
+        status = []
+        for particle in event:
+            status.append(int(particle.status))
+
+        PDGs, _ = module.get_pdg_order()
+        PREFIX = module.get_prefix()
+        prefix_cor = []
+        All_PDGs = []
+        prefix_unique = []
+            
+        #Bloc to determine which sets of pdg-codes corresponds to which prefix
+        for i in range(len(PREFIX)):
+            prefix_cor.append(PREFIX[i].decode('UTF-8').strip().lower())
+            if prefix_cor[i] not in prefix_unique:
+                prefix_unique.append(prefix_cor[i])
+        for i in range(len(PDGs)):
+            All_PDGs.append(self.permutations_PGD(PDGs[i], status))
+
+        #We take the card in the general folder, not in the reweight folder
+        Card_dir = os.path.join(self.me_dir, "Cards", "param_card.dat")
+
+        # Initialisation of the Fortran scripts with param_card.dat
+        Initialise_allmatrix = getattr(module, 'initialise')
+        Initialise_allmatrix(Card_dir)
+        #for i in range(len(prefix_unique)):
+        #    InitialiseMatrix = getattr(module, prefix_unique[i] + 'initialisemodel')
+        #    InitialiseMatrix(Card_dir)   
+
+        #The prefix is defined for a given event
+        for k in range(len(All_PDGs)):
+                if pdg in All_PDGs[k]:
+                    prefix = prefix_cor[k]
+
+        get_density = lambda *args: module.py_get_density(orig_order[0]+orig_order[1], *args)
+        for i in range(len(all_p)):
+            pinv = self.invert_momenta(all_p[i])
+            # npdg = len(all_p[i]) #number of particles in the event
+            # the argument event.scale**2 is a dummy argument for LO processes, else it is taken as the value given in the LHE file
+            production_matrix = get_density(-1, pinv, pos_corrected, #self.number_changing_helicities,
+                                            self.allowed_helicities, event.aqcd, event.scale**2)
+
+            if self.symmetrise_initial_state:
+                pinv_bis = self.invert_momenta(all_p_bis[i])
+                production_matrix_bis = get_density(-1, pinv_bis, pos_corrected, #self.number_changing_helicities,
+                                            self.allowed_helicities, event.aqcd, event.scale**2)
+                
+            if self.symmetrise_initial_state:
+                rho_instance = dens.DensityMatrixObservables(production_matrix + production_matrix_bis, self.number_combinations * (self.number_combinations + 1) / 2)
+                new_value = rho_instance.density_matrix
+            else:
+                rho_instance = dens.DensityMatrixObservables(production_matrix, self.number_combinations * (self.number_combinations + 1) / 2)
+                new_value = rho_instance.density_matrix
+
+        return new_value
+
+
+
+    def calculate_weight(self, event, sud_mod=None):
+        """ This method overwrites the method of the same name in the class ReweightInterface.
+            For this mode, it does not do a lot.
+            Output: {'orig': w_orig} (dictionnary with the production matrix as value)
+        """
+        w_orig = self.calculate_matrix_element(event, 0)
+        return {'orig': w_orig}
+
+
+    def method_boost_event(self, event, all_p, orig_order, hypp_id, boost_corrected):
+        """ This method overwrites the method of the same name in the class ReweightInterface.
+            Output: new_all_p (all the boosted momenta of a given event)
+        """
+
+        if 0 in self.momenta_boost[0]: #if we don't want to boost the system
+            return all_p
+        
+        import copy
+        new_event = copy.deepcopy(event)
+        nb_ext = 0
+        pboost = lhe_parser.FourMomentum()
+        for p in new_event: 
+            for j in range(len(boost_corrected)):
+                if nb_ext == boost_corrected[j]:
+                    pboost += p
+            nb_ext += 1
+
+
+        if abs(pboost.px/pboost.E) < 1e-10 and abs(pboost.py/pboost.E) < 1e-10 and abs(pboost.pz/pboost.E) < 1e-10:
+            #if we try to boost with with a 4-momentum like [M, 0, 0, 0], we return the momenta without any boost
+            return all_p
+                
+        if abs(pboost.px/pboost.E) < 1e-10:
+            pboost.px = 0.
+        if abs(pboost.py/pboost.E) < 1e-10:
+            pboost.py = 0.
+        if abs(pboost.pz/pboost.E) < 1e-10:
+            pboost.pz = 0.
+
+        new_event.boost(pboost)
+        if self.keep_ordering:
+            new_all_p = [new_event.get_momenta(orig_order)]
+        else:
+            new_all_p = new_event.get_all_momenta(orig_order)
+        if len(new_all_p) > 1:
+            logger.critical("due to ordering ambiguity, the boost used might not be consistent. please ensure that this is not an issue")
+
+        return new_all_p
+
+
+
+    def chose_particle_user_input(self, event, pdg, list_properties, orig_order, user_input, name_input, fortran_format = False):
+        """
+        This function transforms the user_input for a given name_input into the position of particles in the original order.
+        The position of the particles can then be used to boost, rotate the event, etc.
+        fortran_format = True, means that we use the Fortran format for indices, so lists begin at 1, else we use Python format.
+        Output: position_particles
+        """
+        if 0 in user_input[0]: # if the user does not want to user this input
+            return [-1]
+        
+        if user_input[1] == '':
+            position_particles = self.find_position_particles_default_order(orig_order, user_input, name_input, fortran_format) #if the user does not give an observable to rank the particles
+            return position_particles
+
+        else:
+            found_property = False
+            for prop in list_properties: #finding the observable given by the user
+                if prop == user_input[1]:
+                    found_property = True
+                    observable_values = []
+                    original_order = [i for i in range(len(event))]
+                    for i, p in enumerate(event):
+                        if pdg[i] in user_input[0]:
+                            correct_p_rot = lhe_parser.FourMomentum(p)
+                            observable_values.append(getattr(correct_p_rot, prop))
+                        else:
+                            observable_values.append(float('NaN'))
+
+                    # if several particles of same pdg have the same value of the observable, we can not rank them so we use the default order.
+                    # we do not crash the code because it can happen randomly for an event, even if the user_input is correct
+                    if len(set(observable_values)) != len(observable_values) and len(set(user_input[0])) != len(user_input[0]):
+                        logger.warning(f"Some particles in {name_input} have the same value for the observable given. For this event the order of the observable is not taken into account.")                        
+                        position_particles = self.find_position_particles_default_order(orig_order, user_input, name_input, fortran_format)
+                        return position_particles
+                    
+                    observable_values_sorted, new_order = zip(*sorted(zip(observable_values, original_order), reverse=True)) #ranking the particles via the observable's value
+
+                    if len(user_input[2]) > 0: # if the user gives a ranking to use for the observable, use it
+                        position_particles = self.find_position_particles_with_observable(pdg, observable_values_sorted, new_order, original_order, user_input, name_input, fortran_format)
+                        return position_particles
+
+                    else: #else they are ranked in decreasing order
+                        position_particles = self.find_position_particles_new_order(pdg, user_input, new_order, fortran_format)
+                        return position_particles
+
+            if not found_property:
+                raise ValueError(f'The observable {user_input[1]} is not recognised. Observables are defined in the class FourMomentum of lhe_parser.')
+
+
+    def find_position_particles_with_observable(self, pdg, observable_values_sorted, new_order, original_order, user_input, name_input, fortran_format):
+        """
+        This function transforms the user_input for a given name_input into the position of particles in the original order specifically if the user gives an observable.
+        The position of the particles can then be used to boost, rotate the event, etc.
+        fortran_format = True, means that we use the Fortran format for indices, so lists begin at 1, else we use Python format.
+        Output: position_particles
+        """
+        if len(user_input[0]) != len(user_input[2]):
+            raise ValueError(f'The number of particle in {name_input}[0] and the number of ranks in {name_input}[2] do not match.')
+
+        pdg_new = [0] * len(pdg)
+        new_order_corrected = [0] * len(pdg)
+        for i in range(len(pdg)):
+            if observable_values_sorted[i] == observable_values_sorted[i]: #if the value of observable is not a NaN (it is in the density matrix)
+                pdg_new[i] = pdg[new_order[i]]
+                new_order_corrected[i] = new_order[i]
+            else: #if it is a NaN we keep them in the original order
+                pdg_new[i] = pdg[i]
+                new_order_corrected[i] = original_order[i]
+
+        # dic_rank_particles keys are the particles chosen by the user and the values are their wanted rank in the observable's order
+        dic_rank_particles = {}
+        for i in range(len(user_input[0])):
+            if user_input[0][i] not in dic_rank_particles.keys():
+                dic_rank_particles[user_input[0][i]] = []
+
+        for i in range(len(user_input[0])):
+            if user_input[0][i] in dic_rank_particles.keys():
+                dic_rank_particles[user_input[0][i]].append(user_input[2][i])
+
+        # dic_values_observable keys are the particles chosen by the user and is filled with their value in the chosen observable
+        # dic_postion_new_order keys are the particles chosen by the user and is filled with their position in new_order
+        dic_values_observable, dic_postion_new_order = {}, {}
+        for key in user_input[0]:
+            dic_values_observable[key], dic_postion_new_order[key] = [], []
+
+        for key in dic_rank_particles.keys():
+            for j in range(len(pdg_new)):
+                if pdg_new[j] == int(key):
+                    dic_values_observable[key].append(observable_values_sorted[j])
+            for k in range(len(dic_rank_particles[key])):
+                for l in range(len(observable_values_sorted)):
+                    try:
+                        #this if statement represents which index of dic_values_observable[key] we want to keep
+                        if observable_values_sorted[l] == dic_values_observable[key][dic_rank_particles[key][k]] and pdg[new_order[l]] == key:
+                            dic_postion_new_order[key].append(l)
+                    except:
+                        raise ValueError(f'There are not enough identical particles for the rank you chose in {name_input}. Please change your input')
+
+        position_particles = []
+        for key in dic_postion_new_order.keys(): # here we convert the position in new_order to the position in the original order
+            for j in range(len(dic_postion_new_order[key])):
+                if fortran_format:
+                    position_particles.append(new_order[dic_postion_new_order[key][j]] + 1) #python format begins integers at 0 so we do not need to add +1
+                else:
+                    position_particles.append(new_order[dic_postion_new_order[key][j]]) #python format begins integers at 0 so we do not need to add +1
+        return position_particles
+
+    def find_position_particles_default_order(self, orig_order, user_input, name_input, fortran_format):
+        """
+        This function transforms the user_input for a given name_input into the position of particles in the original order specifically if the user does not give any additional information.
+        The position of the particles can then be used to boost, rotate the event, etc.
+        fortran_format = True, means that we use the Fortran format for indices, so lists begin at 1, else we use Python format.
+        Output: position_particles
+        """
+        pdg_to_chose = user_input[0]
+        position_particles = []
+        orig_order_concatenated = orig_order[0] + orig_order[1]
+        particle_in_process_already_chosen = [False for i in range(len(orig_order_concatenated))]
+        particle_in_user_input_already_found = [False for i in range(len(pdg_to_chose))]
+        
+        if 0 in pdg_to_chose:
+            return [-1]
+        else:
+            for i in range(len(orig_order_concatenated)):
+                if len(position_particles) != len(user_input[0]):
+                    for j in range(len(pdg_to_chose)):
+                        if pdg_to_chose[j] == orig_order_concatenated[i] and not particle_in_process_already_chosen[i] and not particle_in_user_input_already_found[j]: # if the particles is still available and that its pdg code corresponds to the user input
+                            if fortran_format:
+                                position_particles.append(i + 1) #if fortran_format = True, we add +1 because Fortran indices begin at 1 instead of 0 as in Python
+                            else:
+                                position_particles.append(i) # position of the particle in the original order
+                            particle_in_process_already_chosen[i] = True
+                            particle_in_user_input_already_found[j] = True
+
+                            break
+
+            if len(position_particles) != len(user_input[0]):
+                logger.error(f'The pdg inputs for {name_input} are not correct. At least one pdg is not present in the process.')
+
+            return position_particles
+
+
+    def find_position_particles_new_order(self, pdg, user_input, new_order, fortran_format):
+        """
+        This function transforms the user_input for a given name_input into the position of particles in the original order specifically if the user gives 
+        an observable but does not specify the rank in which to order them. In this case, they are ranked in decreasing order.
+        The position of the particles can then be used to boost, rotate the event, etc.
+        fortran_format = True, means that we use the Fortran format for indices, so lists begin at 1, else we use Python format.
+        Output: position_particles
+        """
+        if -1 not in user_input[0]:
+            position_particles = [0] * len(user_input[0])
+            is_particle_taken = [0] * len(pdg)
+            compteur = 0
+            for i in range(len(position_particles)):
+                for j in range(len(pdg)):
+                    if pdg[new_order[j]] == user_input[0][i] and is_particle_taken[j] == 0:
+                        if fortran_format:
+                            position_particles[compteur] = new_order[j] + 1 #if fortran_format = True, we add +1 because Fortran indices begin at 1 instead of 0 as in Python
+                        else:
+                            position_particles[compteur] = new_order[j]
+                        is_particle_taken[j] = 1
+                        compteur += 1
+                        break                    
+        else:
+            position_particles = [-1]
+        
+        return position_particles
+
+    def calculate_angles_rotation(self, position_particles, all_p, module):
+        """ Compute the angles theta and phi given the user's inputs.
+            Output: phi and theta for each element of all_p
+        """
+        if -1 not in position_particles:
+            pref = [0, 0, 0, 0]
+            phi, theta = [0] * len(all_p), [0] * len(all_p)
+            for i in range(len(all_p)):
+                for j in range(len(position_particles)):
+                    for k in range(len(pref)):
+                        pref[k] += all_p[i][position_particles[j] - 1][k]
+                phi[i], theta[i] = module.refchoicep(pref)
+        else:
+            phi, theta = [0] * len(all_p), [0] * len(all_p)
+
+        return phi, theta
+    
+    def rotation_density(self, module, all_p, phi, theta):
+        nexternal = len(all_p[0])
+        for i in range(len(all_p)):
+                all_p[i] = self.invert_momenta(all_p[i]) #put in fortran format
+                all_p[i] = module.rotationp(all_p[i], phi[i], theta[i], nexternal)
+                all_p[i] = self.invert_momenta(all_p[i]) #put back into python format
+
+                for j in range(len(all_p[i])):
+                    all_p[i][j] = tuple(all_p[i][j])
+        return all_p
+    
+    def permutations_PGD(self, PDG: list[int], status: list[int])-> list[list[int]]:
+        """
+        Input: a list of PDGs + a list of status
+        Output: all the possible PDGs permutations keeping incoming and outcoming particles separate
+        """
+        from itertools import permutations
+        nincoming, noutcoming = 0, 0
+        End = []
+
+        for i in range(len(status)):
+            if status[i] == -1:
+                nincoming += 1
+            elif status[i] == +1:
+                noutcoming += 1
+            elif status[i] == 2 or status[i] == -2: #if the particle is an intermediate particle, we keep them in the final state, it is to the user to not put them in the density matrix
+                noutcoming += 1
+            else:
+                raise ValueError("Status not recognised.")
+
+        InitialState = PDG[0:nincoming]
+        FinalState = PDG[nincoming:]
+        All_InitialState = list(set(list(permutations(InitialState))))
+        All_FinalState = list(set(list(permutations(FinalState))))
+        
+        list_initial_states = [list(All_InitialState[i]) for i in range(len(All_InitialState))]
+        list_final_states = [list(All_FinalState[i]) for i in range(len(All_FinalState))]
+        
+        for i in range(len(list_initial_states)):
+                for j in range(len(list_final_states)):
+                        End.append(list_initial_states[i] + list_final_states[j])
+
+        return End

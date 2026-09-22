@@ -4,6 +4,7 @@ import copy
 import json
 import os
 from pathlib import Path
+import re
 import shutil
 import subprocess
 import tempfile
@@ -134,7 +135,8 @@ class TestBornLibrary(unittest.TestCase):
                 target = reference/sub.name
                 target.mkdir()
                 for pattern in ('*.inc','born.f','born_hel.f','sborn_sf.f',
-                                'b_sf_*.f','born_cnt_*.f','extra_cnt_wrapper.f','splitorders_stuff.f'):
+                                'b_sf_*.f','born_cnt_*.f','extra_cnt_wrapper.f',
+                                'splitorders_stuff.f','ewsudakov_functions*.f'):
                     for source in sub.glob(pattern):
                         if source.exists():
                             shutil.copyfile(source,target/source.name)
@@ -189,10 +191,14 @@ class TestBornLibrary(unittest.TestCase):
                 # Extract only pure order helpers; their other routines depend
                 # on event bookkeeping which is not part of this test.
                 helpers = (source/'splitorders_stuff.f').read_text()
+                helpers += '\n' + next(source.glob('ewsudakov_functions*.f')).read_text()
                 support.write_fortran(source/'helpers.f',sum((support.routine(helpers,n)
-                    for n in ('orders_to_amp_split_pos','amp_split_pos_to_orders')),[]))
+                    for n in ('orders_to_amp_split_pos','amp_split_pos_to_orders',
+                              'orders_equal','get_lo2_orders')),[]))
+                helicity_data = [line for line in support.statements((source/'born.f').read_text())
+                                 if re.match(r'(?i)data\s*\(nhel\(', line)]
                 support.write_fortran(source/'check.f',self.driver(record,members,sizes,model_lines,
-                    registry['contexts']))
+                    registry['contexts'], helicity_data))
                 paths = [source/n for n in ('born.f','born_hel.f','sborn_sf.f',
                                            'extra_cnt_wrapper.f','helpers.f','check.f')]
                 paths += sorted(source.glob('b_sf_*.f'))+sorted(source.glob('born_cnt_*.f'))
@@ -215,13 +221,18 @@ class TestBornLibrary(unittest.TestCase):
                 self.assertIn('PASS Born provider',self.run_command(['./check'],scratch))
 
     @staticmethod
-    def driver(r, members, sizes, model_lines, contexts):
+    def driver(r, members, sizes, model_lines, contexts, helicity_data=()):
         n,ng,nc,nh,ns = r['nexternal']-1,r['ngraphs'],r['ncolor'],r['nhelicity'],r['nsqamps']
         lines = ['program check', 'use mc_born_support', 'use mc_born_types', 'implicit none']
         lines += ["include 'orders.inc'"]+model_lines+[
             'type(BornModelState) state', 'type(BornRequest) request',
             'type(BornResult) result,other', 'type(BornMetadata) metadata',
-            'integer nfksprocess,status,sector,iteration,i,j,k', 'common/c_nfksprocess/nfksprocess',
+            'integer nfksprocess,status,sector,iteration,i,j,k,ihel',
+            'integer nhel(%d,%d)' % (n,nh),
+            *helicity_data, 'common/c_nfksprocess/nfksprocess',
+            'complex(8) ewsud(amp_split_size),ewsud_lo2(amp_split_size)',
+            'common/to_amp_split_ewsud/ewsud',
+            'common/to_amp_split_ewsud_lo2/ewsud_lo2',
             'logical calculatedBorn', 'common/ccalculatedBorn/calculatedBorn',
             'logical need_color_links,need_charge_links', 'common/c_need_links/need_color_links,need_charge_links',
             'logical split_type_used(nsplitorders)', 'common/to_split_type_used/split_type_used',
@@ -283,6 +294,15 @@ class TestBornLibrary(unittest.TestCase):
             'do i=1,%d' % nh, 'call close_real(hel(i),result%helicities(i))','enddo',
             'do i=1,%d' % nh,'do j=1,%d' % ns,
             'call close_real(helorders(j,i),result%helicity_orders(j,i))','enddo','enddo',
+            'do ihel=1,%d' % nh,
+            'call sborn_onehel(p,nhel(:,ihel),ihel,ans)',
+            'request%single_helicity=ihel', 'request%helicity=nhel(:,ihel)',
+            'call born_evaluate(%d,%d,p,state,request,other,status)' % (r['provider'],r['context']),
+            'if(status.ne.0)stop 28', 'call close_real(ans,other%single_helicity)',
+            'do i=1,amp_split_size',
+            'call close_complex(ewsud(i),other%ewsudakov(i))',
+            'call close_complex(ewsud_lo2(i),other%ewsudakov_lo2(i))',
+            'enddo', 'enddo', 'request%single_helicity=0',
             'pother=p*1.13d0']
         for other in contexts:
             lines += ['request%sector=1',

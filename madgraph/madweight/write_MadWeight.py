@@ -4,10 +4,6 @@
 #Extension
 from __future__ import absolute_import
 import os
-import six
-from six.moves import map
-from six.moves import range
-
 try:
     from madgraph.madweight.MW_fct import *
     import madgraph.madweight.diagram_class as diagram_class
@@ -231,7 +227,7 @@ class MG_diagram(diagram_class.MG_diagram):
                 continue
             i+=1        
             text+=' double precision local_%s \n' % (i)
-            if isinstance(unaligned, six.string_types):
+            if isinstance(unaligned, str):
                 name = 'tf_E_for_part\n'
             elif unaligned.external:
                 name= 'tf_E_for_%s \n'% (unaligned.MG)
@@ -256,7 +252,7 @@ class MG_diagram(diagram_class.MG_diagram):
         def write_call_for_peak(obj,peak):
             """ return the text on how to return the weight associted to this peak """
             
-            if isinstance(peak, six.string_types):
+            if isinstance(peak, str):
                 text = 'tf_E_for_part(%s)' % ( peak )
             elif peak.external:
                 text = 'tf_E_for_%s() '% (peak.MG)
@@ -411,7 +407,7 @@ class MG_diagram(diagram_class.MG_diagram):
                         break
                     if type(particle.MG) == int:
                         line += str(particle.MG) + ','
-                    elif isinstance(particle.MG, six.string_types):
+                    elif isinstance(particle.MG, str):
                         if particle.MG in self.fuse_dict:
                             line += str(self.fuse_dict[particle.MG]) + ','
                             del self.fuse_dict[particle.MG]
@@ -448,7 +444,7 @@ class MG_diagram(diagram_class.MG_diagram):
                     if particle.MG < 0:
                         self.use_propa.add(particle.MG)                    
                     line += str(particle.MG) + ','
-                elif isinstance(particle.MG, six.string_types):
+                elif isinstance(particle.MG, str):
                     if particle.MG in self.fuse_dict:
                         line += str(self.fuse_dict[particle.MG]) + ','
                         del self.fuse_dict[particle.MG]
@@ -1265,7 +1261,7 @@ c       choose the permutation (point by point in the ps)
         for one_sol in list_local:
             local_mg={}
             for peak, value in one_sol.items():
-                if isinstance(peak,six.string_types):
+                if isinstance(peak,str):
                     value2=peak.split('_')[-2:]
                     list_d.append(value2)
                 else:
@@ -1278,7 +1274,7 @@ c       choose the permutation (point by point in the ps)
         nb_sol = len(list_local)
         for peak, value in dict_all.items():
             if value == nb_sol:
-                if isinstance(peak,six.string_types):
+                if isinstance(peak,str):
                     print('WARNING a peak associated to a visible particle is never '+ \
                           'aligned. This will slow down the integration')
                 elif peak.MG<0 and peak.external == 0 and peak.channel.startswith('S'):

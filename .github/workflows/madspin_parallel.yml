@@ -1,0 +1,82 @@
+name: MadSpin parallel factory
+
+# Gated workflow: only fires on the literal "3.x" branch push, on pull requests,
+# and on manual dispatch. Unlike the existing parralel.yml (which runs on every
+# push) this one is intentionally restricted because the matrix is heavy.
+
+on:
+  push:
+    branches:
+      - '3.x'
+    paths-ignore:
+      - 'docs/**'
+  pull_request:
+    paths-ignore:
+      - 'docs/**'
+  workflow_dispatch:
+    inputs:
+      nevents:
+        description: 'Events per production sample (default 10000)'
+        required: false
+        default: '10000'
+      eff_tol:
+        description: 'Relative tolerance for the efficiency-pair checks'
+        required: false
+        default: '0.15'
+      nb_core:
+        description: 'Cores for test_short_madspin_multicore (parallel unweighting)'
+        required: false
+        default: '8'
+      identity_nevents:
+        description: 'Events for the unweighting identity / mode-resolution tests'
+        required: false
+        default: '800'
+
+env:
+  MADSPIN_TEST_NEVENTS: ${{ github.event.inputs.nevents || '10000' }}
+  MADSPIN_TEST_EFF_TOL: ${{ github.event.inputs.eff_tol || '0.15' }}
+  MADSPIN_TEST_NB_CORE: ${{ github.event.inputs.nb_core || '8' }}
+  MADSPIN_IDENTITY_NEVENTS: ${{ github.event.inputs.identity_nevents || '800' }}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  madspin_factory:
+    runs-on: ubuntu-22.04
+    strategy:
+      fail-fast: false
+      matrix:
+        test:
+          - test_short_madspin_ttbar
+          - test_short_madspin_singletop
+          - test_short_madspin_zz
+          - test_short_madspin_multicore
+          # `set unweighting`: the four accept/reject schemes. The first two are
+          # deterministic (a per-chain weight identity, and the mode each run
+          # resolved to) and run on a few hundred events; the third is the
+          # statistical lineshape comparison and carries the real event count.
+          - test_short_madspin_unweighting_identity
+          - test_short_madspin_unweighting_resolution
+          - test_long_madspin_unweighting_consistency
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/checkout_mg5
+      - uses: ./.github/actions/restore-pip-cache
+
+
+      - name: Run ${{ matrix.test }}
+        run: |
+          cd "$GITHUB_WORKSPACE"
+          ./tests/test_manager.py ${{ matrix.test }} -pP -t0 -l INFO
+
+      - name: Upload logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: madspin-logs-${{ matrix.test }}
+          path: |
+            /tmp/msfactory_*/**/*.log
+            /tmp/msfactory_*/**/madspin_card.dat
+          if-no-files-found: ignore

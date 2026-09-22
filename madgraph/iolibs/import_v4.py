@@ -14,7 +14,6 @@
 ################################################################################
 from __future__ import absolute_import
 from madgraph.core import base_objects
-from six.moves import range
 """Methods and classes to import v4 format model files."""
 
 import fractions

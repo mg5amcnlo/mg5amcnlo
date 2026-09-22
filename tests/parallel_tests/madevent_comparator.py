@@ -28,9 +28,6 @@ import shutil
 import subprocess
 import sys
 import time
-import six
-from six.moves import range
-
 pjoin = os.path.join
 # Get the grand parent directory (mg5 root) of the module real path 
 # (tests/acceptance_tests) and add it to the current PYTHONPATH to allow
@@ -55,7 +52,7 @@ class MadEventComparator(me_comparator.MEComparator):
     def run_comparison(self, proc_list, model='sm', orders={}):
         """Run the codes and store results."""
 
-        if isinstance(model, six.string_types):
+        if isinstance(model, str):
             model= [model] * len(self.me_runners)
 
         self.results = []
@@ -566,7 +563,7 @@ class MG5Runner(MadEventRunner):
         text = open(filepath).read()    
         
         #id="#P1_qq_ll" href=#P1_qq_ll onClick="check_link('#P1_qq_ll','#P1_qq_ll','#P1_qq_ll')"> 842.9
-        info = re.findall('id="\#(?P<a1>\w*)" href=\#(?P=a1) onClick="check_link\(\'\#(?P=a1)\',\'\#(?P=a1)\',\'\#(?P=a1)\'\)">\s* ([\d.e+-]*)', text)
+        info = re.findall(r'id="\#(?P<a1>\w*)" href=\#(?P=a1) onClick="check_link\(\'\#(?P=a1)\',\'\#(?P=a1)\',\'\#(?P=a1)\'\)">\s* ([\d.e+-]*)', text)
         for name,value in info:
             output['cross_'+name] = value
             

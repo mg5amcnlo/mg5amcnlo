@@ -43,13 +43,17 @@ c
       DOUBLE PRECISION CUMULATED_TIMING
       COMMON/GENERAL_STATS/CUMULATED_TIMING
 
+      logical init_mode
+      common /to_determine_zero_hel/init_mode
 c
 c     PARAM_CARD
 c
       character*30 param_card_name
       common/to_param_card_name/param_card_name
-cc
+c     c
+      include 'vector.inc'
       include 'run.inc'
+      include 'ldme.inc'
       
       integer           mincfig, maxcfig
       common/to_configs/mincfig, maxcfig
@@ -71,13 +75,16 @@ c      double precision xsec,xerr
 c      integer ncols,ncolflow(maxamps),ncolalt(maxamps),ic
 c      common/to_colstats/ncols,ncolflow,ncolalt,ic
 
-      include 'coupl.inc'
-
+      include 'coupl.inc' ! needs VECSIZE_MEMMAX (defined in vector.inc)
+      INTEGER VECSIZE_USED
+      DATA VECSIZE_USED/VECSIZE_MEMMAX/ ! can be changed at runtime
+%(DRIVER_EXTRA_HEADER)s
 C-----
 C  BEGIN CODE
 C----- 
       call cpu_time(t_before)
       CUMULATED_TIMING = t_before
+%(DRIVER_EXTRA_INITIALISE)s
 c
 c     Read process number
 c
@@ -91,6 +98,7 @@ c      open (unit=lun+1,file='../dname.mg',status='unknown',err=11)
       l2=index(buf,'_')
       if(l1.ne.0.and.l2.ne.0.and.l1.lt.l2-1)
      $     read(buf(l1+1:l2-1),*,err=11) ngroup
+      close (lun+1)
  11   print *,'Process in group number ',ngroup
 
 c     Read weight from results.dat if present, to allow event generation
@@ -116,6 +124,7 @@ c      open (unit=lun+1,file='results.dat',status='unknown',err=13)
       call setrun                !Sets up run parameters
       call setpara(param_card_name %(secondparam)s)   !Sets up couplings and masses
       include 'pmass.inc'        !Sets up particle masses
+      %(load_onia_card)s         !Sets up ldmes and masses for bound states
       call setcuts               !Sets up cuts 
       call printout              !Prints out a summary of paramaters
       call run_printout          !Prints out a summary of the run settings
@@ -158,6 +167,12 @@ c
       call init_good_hel()
       call get_user_params(ncall,itmax,itmin,mincfig)
       maxcfig=mincfig
+      if (init_mode) then
+          fixed_ren_scale = .true.
+          fixed_fac_scale1 = .true.
+          fixed_fac_scale2 = .true.
+          ickkw = 0
+      endif 
       minvar(1,1) = 0              !This tells it to map things invarients
       write(*,*) 'Attempting mappinvarients',nconfigs,nexternal
       if (mincfig.lt.0)then
@@ -186,7 +201,7 @@ c         itmin = itmin + 1
       endif
 
       write(*,*) "about to integrate ", ndim,ncall,itmax,itmin,ninvar,nconfigs
-      call sample_full(ndim,ncall,itmax,itmin,dsig,ninvar,nconfigs)
+      call sample_full(ndim,ncall,itmax,itmin,dsig,ninvar,nconfigs,VECSIZE_USED)
 
 c
 c     Now write out events to permanent file
@@ -206,6 +221,7 @@ c      write(*,*) 'Final xsec: ',xsec
       rewind(lun)
 
       close(lun)
+%(DRIVER_EXTRA_FINALISE)s
       end
 
 c     $B$ get_user_params $B$ ! tag for MadWeight
@@ -245,9 +261,11 @@ c
       common /to_accuracy/accur
       integer           use_cut
       common /to_weight/use_cut
+
       logical init_mode
       common /to_determine_zero_hel/init_mode
-
+      include 'vector.inc'
+      include 'run.inc'
 
       integer        lbw(0:nexternal)  !Use of B.W.
       common /to_BW/ lbw
@@ -295,6 +313,9 @@ c-----
          isum_hel = 0
          multi_channel = .false.
          init_mode = .true.
+         fixed_ren_scale = .true.
+         fixed_fac_scale1 = .true.
+         fixed_fac_scale2 = .true.
          write(*,*) 'Determining zero helicities'
       else
          isum_hel= i
@@ -383,7 +404,6 @@ c
       fopened=.false.
       tempname=filename 	 
       fine=index(tempname,' ') 	 
-      fine2=index(path,' ')-1	 
       if(fine.eq.0) fine=len(tempname)
       open(unit=lun,file=tempname,status='old',ERR=20)
       fopened=.true.

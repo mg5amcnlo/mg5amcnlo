@@ -57,9 +57,6 @@ import models.model_reader as model_reader
 import aloha.template_files.wavefunctions as wavefunctions
 from aloha.template_files.wavefunctions import \
      ixxxxx, oxxxxx, vxxxxx, sxxxxx
-from six.moves import range
-from six.moves import zip
-
 #===============================================================================
 # Logger for process_checks
 #===============================================================================
@@ -343,7 +340,7 @@ class IdentifySGConfigTag(diagram_generation.DiagramTag):
         
         return [((state, part.get('spin'), part.get('color'), charge,
                   part.get('mass'), part.get('width')),
-                 leg.get('number'))]
+                 leg.get('number'), leg.get('onium'))]
         
     @staticmethod
     def vertex_id_from_vertex(vertex, last_vertex, model, ninitial):
@@ -388,6 +385,7 @@ def find_symmetry_subproc_group(subproc_group):
     symmetry = []
     permutations = []
     diagrams = subproc_group.get('mapping_diagrams')
+    nonia = subproc_group.get('matrix_elements')[0].get_nonia()
     nexternal, ninitial = \
                subproc_group.get('matrix_elements')[0].get_nexternal_ninitial()
     model = subproc_group.get('matrix_elements')[0].get('processes')[0].\
@@ -402,6 +400,9 @@ def find_symmetry_subproc_group(subproc_group):
         if diag.get_vertex_leg_numbers()!=[] and \
                                   max(diag.get_vertex_leg_numbers()) > min_vert:
             # Ignore any diagrams with 4-particle vertices
+            symmetry.append(0)
+        elif nonia > 0:
+            # Ignore any diagrams with onia states
             symmetry.append(0)
         else:
             symmetry.append(1)
@@ -419,6 +420,9 @@ def find_symmetry_subproc_group(subproc_group):
         if diag.get_vertex_leg_numbers()!=[] and \
                                   max(diag.get_vertex_leg_numbers()) > min_vert:
             # Only include vertices up to min_vert
+            continue
+        elif nonia > 0:
+            # Ignore any diagrams with onia states
             continue
         tag = IdentifySGConfigTag(diag, model)
         try:
@@ -442,6 +446,8 @@ def find_symmetry_subproc_group(subproc_group):
         # Order permutations according to how to reach the first perm
         permutations[inum] = diagram_generation.DiagramTag.reorder_permutation(perms[idx1][idx2],
                                                             perms[idx1][0])
+    if nonia > 0:
+        symmetry = [x+1 for x in symmetry]
     return (symmetry, permutations, [permutations[0]])
     
 

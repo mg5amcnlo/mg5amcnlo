@@ -20,7 +20,6 @@ based on relevant properties.
 """
 
 from __future__ import absolute_import
-from six.moves import filter
 #force filter to be a generator # like in py3
 
 import array
@@ -33,10 +32,6 @@ import madgraph.core.base_objects as base_objects
 import madgraph.various.misc as misc
 import madgraph.fks.fks_tag as fks_tag
 from madgraph import InvalidCmd, MadGraph5Error
-from six.moves import range
-from six.moves import zip
-from six.moves import filter
-
 logger = logging.getLogger('madgraph.diagram_generation')
 
 if madgraph.ordering:
@@ -49,7 +44,7 @@ class NoDiagramException(InvalidCmd): pass
 #===============================================================================
 
 class DiagramTag(object):
-    """Class to tag diagrams based on objects with some __lt__ measure, e.g.
+    r"""Class to tag diagrams based on objects with some __lt__ measure, e.g.
     PDG code/interaction id (for comparing diagrams from the same amplitude),
     or Lorentz/coupling/mass/width (for comparing AMPs from different MEs).
     Algorithm: Create chains starting from external particles:
@@ -246,6 +241,7 @@ class DiagramTag(object):
             return base_objects.Leg({'number':link.links[0][1],
                                      'id':link.links[0][0][0],
                                      'state':(link.links[0][0][1] == 0),
+                                     'onium': {},
                                      'onshell':False})
 
         # This shouldn't happen
@@ -277,7 +273,7 @@ class DiagramTag(object):
 
     @staticmethod
     def link_from_leg(leg, model):
-        """Returns the default end link for a leg: ((id, state), number).
+        """Returns the default end link for a leg: ((id, state, onium), number).
         Note that the number is not taken into account if tag comparison,
         but is used only to extract leg permutations."""
         if leg.get('state'):
@@ -285,7 +281,7 @@ class DiagramTag(object):
             return [((leg.get('id'), 0), leg.get('number'))]
         else:
             # Distinguish identical initial state particles
-            return [((leg.get('id'), leg.get('number')), leg.get('number'))]
+            return [((leg.get('id'), leg.get('number'), leg.get('onium')), leg.get('number'))]
 
     @staticmethod
     def vertex_id_from_vertex(vertex, last_vertex, model, ninitial):
@@ -1730,11 +1726,31 @@ class MultiProcess(base_objects.PhysicsObject):
         except KeyError:
             fstags = []
 
+        try:
+            istags = [leg['is_tagged'] for leg in process_definition['legs'] \
+                 if 'is_tagged' in leg.keys() and leg['state'] == False]
+
+        except KeyError:
+            istags = []
+
         # Generate all combinations for the initial state
         for prod in itertools.product(*isids):
-            islegs = [\
-                    base_objects.Leg({'id':id, 'state': False, 
-                                      'polarization': islegs_orig[i]['polarization']})
+            if any(istags):
+                if not all(istags):
+                    raise MadGraph5Error("Tagging only one initial-state particle is not allowed")
+                islegs = [\
+                        fks_tag.TagLeg({'id':id, 'state': False, 
+                                        'polarization': isleg['polarization'],
+                                        'onium': isleg['onium'],
+                                        'offshell': isleg['offshell'], 
+                                        'is_tagged': tag}) \
+                        for id, isleg, tag in zip(prod, islegs_orig, istags)]
+            else:
+                islegs = [\
+                        base_objects.Leg({'id':id, 'state': False, 
+                                          'polarization': islegs_orig[i]['polarization'],
+                                          'onium': islegs_orig[i]['onium'],
+                                          'offshell': islegs_orig[i]['offshell']}) \
                     for i,id in enumerate(prod)]
 
             # check for longitudinal photon
@@ -1766,11 +1782,14 @@ class MultiProcess(base_objects.PhysicsObject):
                 
                 if not fstags:   
                     leg_list.extend([\
-                            base_objects.Leg({'id':id, 'state': True, 'polarization': fsleg['polarization']}) \
+                            base_objects.Leg({'id':id, 'state': True, 
+                                              'polarization': fsleg['polarization'],
+                                              'onium': fsleg['onium'],
+                                              'offshell': fsleg['offshell']}) \
                             for id, fsleg in zip(prod, fslegs)])
                 else:
                     leg_list.extend([\
-                            fks_tag.TagLeg({'id':id, 'state': True, 'polarization': fsleg['polarization'], 'is_tagged': tag}) \
+                            fks_tag.TagLeg({'id':id, 'state': True, 'polarization': fsleg['polarization'], 'onium': fsleg['onium'], 'is_tagged': tag}) \
                             for id, fsleg, tag in zip(prod, fslegs, fstags)])
 
 
@@ -1780,7 +1799,7 @@ class MultiProcess(base_objects.PhysicsObject):
                 # check for longitudinal photon
                 invalid = False
                 for l in legs[len(islegs):]:
-                    if 0 in l['polarization'] and  masses[l['id']] == "ZERO":
+                    if 0 in l['polarization'] and  masses[l['id']] == "ZERO" and not l['offshell']:
                         l['polarization'] =list(l['polarization'])
                         l['polarization'].remove(0)
                         if len(l['polarization']) == 0:

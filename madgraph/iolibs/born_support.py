@@ -63,6 +63,7 @@ def prepare(exporter, elements):
             tuple(t.get_external_numbers() for t in tag[-1]),
             freeze(proc['split_orders']), freeze(proc['born_sq_orders']),
             freeze(proc['squared_orders']),
+            me.ewsudakov,
             tuple(exporter.get_den_factor_lines(me)),
             tuple(exporter.get_ij_lines(me)),
             freeze([i['fks_info'] for i in me.get_fks_info_list()]),
@@ -383,16 +384,27 @@ def write_provider(root, support, record, model_members, model_commons):
     directory.mkdir(exist_ok=True)
     write_fortran(directory/'helicity_sampler.f',
                   routine((source/'born_hel.f').read_text(), 'pickhelicitymc'))
+    # EW interference routines query these immutable Born order tables in the
+    # executable. They contain no amplitudes, mutable state or model functions.
+    born_source = (source/'born.f').read_text()
+    write_fortran(directory/'order_queries.f', sum((routine(born_source, name)
+        for name in ('sqsoindexb', 'sqsoindexb_from_orders',
+                     'getordpowfromindex_b', 'get_nsqso_b')), []))
     paths = [source/n for n in ('born.f', 'born_hel.f', 'sborn_sf.f', 'extra_cnt_wrapper.f')]
     paths += sorted(source.glob('b_sf_*.f')) + sorted(source.glob('born_cnt_*.f'))
     lines = []
     for path in paths:
         lines += expand(path)
     lines = without_routine(lines, 'pickhelicitymc')
-    # Only these two helpers are needed by Born evaluators. The remaining
-    # split-order bookkeeping belongs to the executable.
+    # Pure order helpers used by the Born and EW-Sudakov Born-order buffers.
+    # The remaining event bookkeeping belongs to the executable.
     helper = (source/'splitorders_stuff.f').read_text()
-    for name in ('orders_to_amp_split_pos', 'amp_split_pos_to_orders'):
+    ew_helper = next(path for path in (source/'ewsudakov_functions.f',
+                                      source/'ewsudakov_functions_dummy.f')
+                     if path.exists())
+    helper += '\n' + ew_helper.read_text()
+    for name in ('orders_to_amp_split_pos', 'amp_split_pos_to_orders',
+                 'orders_equal', 'get_lo2_orders'):
         temp = directory/'helper.f'
         write_fortran(temp, routine(helper, name))
         for include in ('orders.inc', 'amp_split_orders.inc'):
@@ -494,7 +506,11 @@ def provider_adapter(r, source, members):
               'logical need_color_links,need_charge_links',
               'common/c_need_links/need_color_links,need_charge_links',
               'double precision charges(%d)' % n,
-              'common/c_charges_born/charges']
+              'common/c_charges_born/charges',
+              'double complex amp_split_ewsud(amp_split_size)',
+              'common/to_amp_split_ewsud/amp_split_ewsud',
+              'double complex amp_split_ewsud_lo2(amp_split_size)',
+              'common/to_amp_split_ewsud_lo2/amp_split_ewsud_lo2']
     lines += ['status=0', 'nfksprocess=request%sector',
               'if(nfksprocess.lt.1.or.nfksprocess.gt.%d) then' % max(1,len(r['sectors'])),
               'status=2', 'return', 'endif']
@@ -536,6 +552,13 @@ def provider_adapter(r, source, members):
               'if(request%extra.gt.0) then',
               'call extra_cnt(p,request%extra,extra)',
               'result%extra=extra', 'result%split_counterterms=amp_split_cnt', 'endif',
+              # SBORN above initializes the provider's order selection. Keep
+              # the one-helicity EW buffers separate from the summed result.
+              'if(request%single_helicity.gt.0)then',
+              'call sborn_onehel(p,request%helicity,request%single_helicity,ans)',
+              'result%single_helicity=ans',
+              'result%ewsudakov=amp_split_ewsud',
+              'result%ewsudakov_lo2=amp_split_ewsud_lo2', 'endif',
               'end']
     return lines
 
@@ -617,6 +640,11 @@ def write_api(support, records, providers, sizes, histories):
               'if(.not.allocated(request%charges))return',
               'if(size(request%charges).ne.metadata%nexternal-1)return',
               'if(request%extra.lt.0.or.request%extra.gt.metadata%extra)return',
+              'if(request%single_helicity.lt.0.or.request%single_helicity.gt.metadata%nhelicity)return',
+              'if(request%single_helicity.gt.0)then',
+              'if(.not.allocated(request%helicity))return',
+              'if(size(request%helicity).ne.metadata%nexternal-1)return',
+              'endif',
               'if(request%colour.and.request%charge)return',
               'if(request%colour.or.request%charge)then',
               'if(min(request%m,request%n).lt.1.or.max(request%m,request%n).ge.metadata%nexternal)return',
@@ -672,6 +700,18 @@ def write_wrappers(root, r, members):
         'amp_split_cnt=result%split_counterterms', 'ans_cnt=result%counterterms',
         'amp2=result%diagrams', 'jamp2(0)=%dd0' % r['ncolor'],
         'jamp2(1:%d)=result%%flows' % r['ncolor'], 'calculatedBorn=.true.', 'end']
+    lines += ['subroutine sborn_onehel(p,nhel,hell,ans)']+declarations+[
+        'integer nhel(nexternal-1),hell',
+        'double complex amp_split_ewsud(amp_split_size)',
+        'common/to_amp_split_ewsud/amp_split_ewsud',
+        'double complex amp_split_ewsud_lo2(amp_split_size)',
+        'common/to_amp_split_ewsud_lo2/amp_split_ewsud_lo2',
+        'request%single_helicity=hell', 'request%helicity=nhel',
+        'call mc_born_local(p,request,result)', 'ans=result%single_helicity',
+        'amp_split_ewsud=result%ewsudakov',
+        'amp_split_ewsud_lo2=result%ewsudakov_lo2', 'end']
+    lines += list(statements((root/'Source/BornSupport'/('p%d' % r['provider'])/
+                              'order_queries.f').read_text()))
     write_fortran(directory/'born.f', lines)
     lines = ['subroutine sborn_hel(p,ans)']+declarations+[
         'double precision helicities(%d)' % r['nhelicity'],

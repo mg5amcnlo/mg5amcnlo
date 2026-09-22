@@ -939,6 +939,63 @@ c
       return
       end
 
+      subroutine onia_proj(p1, m1, nhel1, p2, m2, nhel2, p3, m3, nhel3,
+     $       spin, proj)
+c
+c This subroutine computes the spin projector for an onium states.
+c
+c input:
+c       real    p1(0:3)        : four-momentum of constituent particle
+c       real    p2(0:3)        : four-momentum of constituent anti-particle
+c       real    p3(0:3)        : four-momentum of onium state
+c       real    m1(0:3)        : mass          of constituent particle
+c       real    m2(0:3)        : mass          of constituent anti-particle
+c       real    m3(0:3)        : mass          of onium state
+c       integer nhel1          : helicity      of constituent particle
+c       integer nhel2          : helicity      of constituent anti-particle
+c       integer nhel3          : helicity      of onium state
+c       integer spin           : spin          of onium state
+c
+c output:
+c       complex proj           : value of the projector
+c
+      implicit none
+      double precision p1(0:3), p2(0:3), p3(0:3)
+      double precision m1, m2, m3
+      integer nhel1, nhel2, nhel3
+      integer spin
+      double complex proj
+
+      double complex fi(6),fo(6),vc(6)
+      double complex ci, tmp
+      parameter( ci = dcmplx(0.0d0,1.0d0) )
+
+      call ixxxxx(p1,m1,nhel1,+1,fi)
+      call oxxxxx(p2,m2,nhel2,-1,fo)
+      
+      if (spin.eq.0) then
+c     spin singlet    
+
+         tmp = -fi(3)*fo(3)-fi(4)*fo(4)+fi(5)*fo(5)+fi(6)*fo(6)
+
+      elseif (spin.eq.1) then
+c     spin triplet
+         call vxxxxx(p3,m3,nhel3,+1,vc)
+
+         tmp = (fi(3)*fo(6)-fi(5)*fo(4))*(vc(4)+ci*vc(5))+
+     &         (fi(4)*fo(5)-fi(6)*fo(3))*(vc(4)-ci*vc(5))+
+     &         (fi(3)*fo(5)+fi(6)*fo(4))*(vc(3)+vc(6))+
+     &         (fi(4)*fo(6)+fi(5)*fo(3))*(vc(3)-vc(6))
+      else
+         print *,"spin projector not yet implemented"
+         stop
+      endif
+
+      proj = 0.5d0/SQRT(2d0*m1*m2)*tmp
+
+      return
+      end
+
       subroutine boostx(p,q , pboost)
 c
 c This subroutine performs the Lorentz boost of a four-momentum.  The
@@ -1201,7 +1258,7 @@ c       real    prot(0:3)      : four-momentum p in the rotated frame
 c
       implicit none
       double precision p(0:3),q(0:3),prot(0:3),qt2,qt,psgn,qq,p1
-
+      volatile qt, p1, qq ! prevent optimizations with -O3 (workaround for SIGFPE crashes in rotxxx: madgraph5/madgraph4gpu#855)
       double precision rZero, rOne
       parameter( rZero = 0.0d0, rOne = 1.0d0 )
 
@@ -2022,6 +2079,21 @@ c spin-3/2 fermion wavefunction
       end
 
 
+      complex*16 function THETA_FUNCTIONR(cond, out_true, out_false)
+
+      double precision cond
+      double precision  out_true, out_false
+
+      if (cond.ge.0d0) then
+        THETA_FUNCTIONR = out_true
+      else
+        THETA_FUNCTIONR = out_false
+      endif
+
+      return
+
+
+      end
       complex*16 function THETA_FUNCTION(cond, out_true, out_false)
 
       double precision cond
@@ -2054,7 +2126,7 @@ c     local variable
       enddo
       return
       end
-      
+     
       subroutine CombineAmpS(nb, ihels, iwfcts, W1, Wall, Amp)
 
       integer nb ! size of the vectors

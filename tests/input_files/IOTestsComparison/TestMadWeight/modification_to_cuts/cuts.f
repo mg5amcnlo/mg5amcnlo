@@ -21,13 +21,92 @@ c-----
 c      pass_point = passcuts(p)
       end
 C 
-      LOGICAL FUNCTION PASSCUTS(P)
+      LOGICAL FUNCTION PASSCUTS(P, VECSIZE_USED)
+C**************************************************************************
+C     INPUT:
+C            P(0:3,NEXTERNAL)   MOMENTA IN THE PARTONIC REST FRAME
+C            VECSIZE_USED (used only on 1st call) #events in parallel
+C     OUTPUT:
+C            TRUE IF THE EVENT PASSES ALL CUTS IN ONE OF THE TWO BEAM
+C            ORIENTATIONS, WITH THE RESULT OF EACH IN CUTS_ORIENT:
+C            CUTS_ORIENT(1): EVENT AS GENERATED
+C            CUTS_ORIENT(2): MIRRORED EVENT (IMIRROR=2 IN DSIGPROC:
+C                            Z-AXIS FLIPPED, X1 AND X2 SWAPPED)
+C     With asymmetric beam energies the lab frame is not symmetric under
+C     that flip, so rapidity cuts can differ between the two orientations.
+C     MIRROR_CUTS is set by DSIG when the group has mirror processes.
+C**************************************************************************
+      IMPLICIT NONE
+      include 'maxparticles.inc'
+      include 'nexternal.inc'
+      REAL*8 P(0:3,nexternal)
+      INTEGER VECSIZE_USED
+      include '../../Source/vector.inc'
+      include 'run.inc'
+      LOGICAL CUTSDONE,CUTSPASSED
+      COMMON/TO_CUTSDONE/CUTSDONE,CUTSPASSED
+      LOGICAL MIRROR_CUTS, CUTS_ORIENT(2)
+      COMMON/TO_MIRROR_CUTS/MIRROR_CUTS, CUTS_ORIENT
+      DATA MIRROR_CUTS/.FALSE./
+      DOUBLE PRECISION CM_RAP
+      LOGICAL SET_CM_RAP
+      COMMON/TO_CM_RAP/SET_CM_RAP,CM_RAP
+      LOGICAL PASSCUTS_ONE_FRAME
+      EXTERNAL PASSCUTS_ONE_FRAME
+      REAL*8 PMIR(0:3,nexternal), XDUM, CM_RAP_SAVE
+      LOGICAL PASSED_ON_ENTRY
+      INTEGER I
+
+      IF (CUTSDONE) THEN
+         PASSCUTS=CUTSPASSED
+         RETURN
+      ENDIF
+      PASSED_ON_ENTRY=CUTSPASSED
+      IF (MIRROR_CUTS.AND.EBEAM(1).NE.EBEAM(2)) THEN
+C        Mirrored event, as built in DSIGPROC for IMIRROR=2
+         DO I=1,NEXTERNAL
+            PMIR(0,I)=P(0,I)
+            PMIR(1,I)=P(1,I)
+            PMIR(2,I)=-P(2,I)
+            PMIR(3,I)=-P(3,I)
+         ENDDO
+         XDUM=XBK(1)
+         XBK(1)=XBK(2)
+         XBK(2)=XDUM
+         CM_RAP_SAVE=CM_RAP
+         CM_RAP=DLOG(EBEAM(1)/EBEAM(2))-CM_RAP
+         CUTSDONE=.FALSE.
+         CUTSPASSED=PASSED_ON_ENTRY
+         CUTS_ORIENT(2)=PASSCUTS_ONE_FRAME(PMIR,VECSIZE_USED)
+         XDUM=XBK(1)
+         XBK(1)=XBK(2)
+         XBK(2)=XDUM
+         CM_RAP=CM_RAP_SAVE
+C        Event as generated last, so that its side effects (scales) win
+         CUTSDONE=.FALSE.
+         CUTSPASSED=PASSED_ON_ENTRY
+         CUTS_ORIENT(1)=PASSCUTS_ONE_FRAME(P,VECSIZE_USED)
+         PASSCUTS=CUTS_ORIENT(1).OR.CUTS_ORIENT(2)
+         CUTSPASSED=PASSCUTS
+      ELSE
+         PASSCUTS=PASSCUTS_ONE_FRAME(P,VECSIZE_USED)
+         CUTS_ORIENT(1)=PASSCUTS
+         CUTS_ORIENT(2)=PASSCUTS
+      ENDIF
+      CUTSDONE=.TRUE.
+      RETURN
+      END
+
+C
+      LOGICAL FUNCTION PASSCUTS_ONE_FRAME(P, VECSIZE_USED)
+     &     RESULT(PASSCUTS)
 C**************************************************************************
 C     INPUT:
 C            P(0:3,1)           MOMENTUM OF INCOMING PARTON
 C            P(0:3,2)           MOMENTUM OF INCOMING PARTON
 C            P(0:3,3)           MOMENTUM OF ...
 C            ALL MOMENTA ARE IN THE REST FRAME!!
+C            VECSIZE_USED (used only on 1st call) #events in parallel
 C            COMMON/JETCUTS/   CUTS ON JETS
 C     OUTPUT:
 C            TRUE IF EVENTS PASSES ALL CUTS LISTED
@@ -42,6 +121,7 @@ C
 C     ARGUMENTS
 C
       REAL*8 P(0:3,nexternal)
+      INTEGER VECSIZE_USED
 
 C
 C     LOCAL
@@ -67,9 +147,11 @@ C
 C
 C     GLOBAL
 C
+      include '../../Source/vector.inc' ! defines VECSIZE_MEMMAX
       include 'run.inc'
       include 'cuts.inc'
 
+      
       double precision ptjet(nexternal)
       double precision ptheavyjet(nexternal)
       double precision ptlepton(nexternal)
@@ -180,7 +262,7 @@ C     Sort array of results: ismode>0 for real, isway=0 for ascending order
       parameter (isway=0)
       parameter (izero=0)
 
-      include 'coupl.inc'
+      include 'coupl.inc' ! needs VECSIZE_MEMMAX (defined in vector.inc)
 
 C
 C
@@ -255,11 +337,15 @@ c               fixed_ren_scale=.true.
 c               call set_ren_scale(P,scale)
 c            endif
 c         endif
-         
+
+c     If scale is fixed, update G-dependent couplings for VECSIZE_USED events
+c     This is called only once in the application (FIRSTTIME=.true.)
 
          if(fixed_ren_scale) then
             G = SQRT(4d0*PI*ALPHAS(scale))
-            call update_as_param()
+            do i =1, VECSIZE_USED
+               call update_as_param(i)
+            enddo
          endif
 
 c     Put momenta in the common block to zero to start
@@ -299,12 +385,18 @@ c     Also make sure there's no INF or NAN
 c
 c     Limit S_hat
 c
-      if (dsqrt_shat.ne.0d0)then
-         if (nincoming.eq.2.and.sumdot(p(0,1),p(0,2),1d0) .lt. dsqrt_shat**2) then
-            passcuts=.false.
-            return
-         endif
-      endif
+      if(nincoming.eq.2) then
+        if (dsqrt_shat.ne.0d0.or.dsqrt_shatmax.ne.-1d0)then
+            xvar = sumdot(p(0,1),p(0,2),1d0)
+            if (xvar .lt. dsqrt_shat**2)then
+                passcuts=.false.
+                return
+            else if  (dsqrt_shatmax.ne.-1d0 .and. xvar .gt. dsqrt_shatmax**2)then
+                passcuts = .false.
+                return
+            endif
+        endif
+      endif      
 C $B$ DESACTIVATE_CUT $E$ !This is a tag for MadWeight
 
       if(debug) write (*,*) '============================='
@@ -1230,12 +1322,6 @@ c
 c     Here we cluster event and reset factorization and renormalization
 c     scales on an event-by-event basis, as well as check xqcut for jets
 c
-c     Note the following condition is the first line of setclscales
-
-      IF (FIRSTTIME2) THEN
-        FIRSTTIME2=.FALSE.
-        write(6,*) 'alpha_s for scale ',scale,' is ', G**2/(16d0*atan(1d0))
-      ENDIF
 
       if(debug) write (*,*) '============================='
       if(debug) write (*,*) ' EVENT PASSED THE CUTS       '

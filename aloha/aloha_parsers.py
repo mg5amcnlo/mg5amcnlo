@@ -25,10 +25,6 @@ import numbers
 import os
 import re
 import sys
-from six.moves import input
-from six.moves import range
-
-
 root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
 sys.path.append(os.path.join(root_path))
 
@@ -118,7 +114,7 @@ class UFOExpressionParser(object):
 
     t_ignore = " \t"
 
-    re_cmath_function = re.compile("cmath\.(?P<name>[0-9a-zA-Z_]+)")
+    re_cmath_function = re.compile(r"cmath\.(?P<name>[0-9a-zA-Z_]+)")
 
     def t_newline(self, t):
         r'\n+'

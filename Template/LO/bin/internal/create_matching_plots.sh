@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 if [[ "$2" == "" ]];then
     echo "Error: Need run prefix and path to MadAnalysis"

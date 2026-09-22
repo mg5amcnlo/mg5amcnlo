@@ -40,7 +40,8 @@ C
 	  %(complex_mp_format)s COEFS(MAXLWFSIZE,0:VERTEXMAXCOEFS-1,MAXLWFSIZE)	  
 C  
 C GLOBAL VARIABLES
-C  
+C 
+      %(include_vector)s
       include 'mp_coupl_same_name.inc'
 
 	  INTEGER GOODHEL(NCOMB)

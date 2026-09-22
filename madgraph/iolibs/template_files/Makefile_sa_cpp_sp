@@ -3,7 +3,7 @@ INCDIR=../../src
 MODELLIB=model_%(model)s
 CXXFLAGS= -Ofast -I$(INCDIR) -I.
 LIBFLAGS= -L$(LIBDIR) -l$(MODELLIB)
-
+CXX=%(cpp_compiler)s
 main=check
 
 all: $(main)

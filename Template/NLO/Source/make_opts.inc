@@ -9,7 +9,7 @@ DEFAULT_CPP_COMPILER = g++
 # Rest of the makefile
 ifeq ($(origin FFLAGS),undefined)
   #FFLAGS= -O -w
-  FFLAGS = -O -fno-automatic
+  FFLAGS = -O 
   #FFLAGS+= -g -fbounds-check -ffpe-trap=invalid,zero,overflow,underflow,denormal -Wall
 endif
 
@@ -19,6 +19,11 @@ ifneq ($(UNAME), Darwin)
     MACFLAG=  
 endif
 
+
+# add -fPIC for EW sudakov Standalone
+ifdef ewsudsa
+  FFLAGS+= -fPIC
+endif
 
 ifeq ($(origin CXXFLAGS),undefined)
   #CXXFLAGS= -g 
@@ -35,8 +40,21 @@ ifdef f2pymode
     MACFLAG= 
 endif
 
+# set the flag for dynamical library
+ifeq ($(UNAME), Darwin)
+DYNLIBFLAG=-dynamiclib
+RPATHFLAG=-install_name @rpath/
+dylibext=dylib
+else
+DYNLIBFLAG=-shared -fPIC
+RPATHFLAG=-Wl,-soname,
+dylibext=so
+endif
+
 # Increase the number of allowed charcters in a Fortran line
 FFLAGS+= -ffixed-line-length-132
+# ensure that no-automatic is done
+FFLAGS+= -fno-automatic
 
 # Set FC unless it's defined by an environment variable
 ifeq ($(origin FC),default)

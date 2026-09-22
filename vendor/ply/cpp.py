@@ -16,8 +16,6 @@ from __future__ import generators
 
 from __future__ import absolute_import
 from __future__ import print_function
-import six
-from six.moves import range
 tokens = (
    'CPP_ID','CPP_INTEGER', 'CPP_FLOAT', 'CPP_STRING', 'CPP_CHAR', 'CPP_WS', 'CPP_COMMENT', 'CPP_POUND','CPP_DPOUND'
 )
@@ -775,7 +773,7 @@ class Preprocessor(object):
     # ----------------------------------------------------------------------
 
     def define(self,tokens):
-        if isinstance(tokens,(str,six.text_type)):
+        if isinstance(tokens,str):
             tokens = self.tokenize(tokens)
 
         linetok = tokens

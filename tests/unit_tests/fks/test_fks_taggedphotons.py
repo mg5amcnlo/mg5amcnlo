@@ -14,7 +14,6 @@
 ################################################################################
 from __future__ import absolute_import
 from cmd import Cmd
-from six.moves import zip
 """ Basic test of the command interface """
 
 import unittest

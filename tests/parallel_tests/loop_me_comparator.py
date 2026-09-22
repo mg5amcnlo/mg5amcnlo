@@ -31,10 +31,6 @@ import time
 import re
 import operator
 import math
-import six
-from six.moves import map
-from six.moves import range
-
 pjoin = os.path.join
 # Get the grand parent directory (mg5 root) of the module real path 
 # (tests/acceptance_tests) and add it to the current PYTHONPATH to allow
@@ -1337,7 +1333,7 @@ class GoSamRunner(me_comparator.MERunner):
         file.close()
 
         file = open(os.path.join(dir_name,'test.f90'), 'w')
-        file.write(re.sub("5.0E\+02","%i.0E+00"% int(energy), test))
+        file.write(re.sub(r"5.0E\+02","%i.0E+00"% int(energy), test))
         file.close()
 
     def fix_common_file(self, dir_name):
@@ -1369,7 +1365,7 @@ class LoopMEComparator(me_comparator.MEComparator):
         Notice that the proc list is a list of tuples formated like this:
         (process,born_orders,perturbation_orders,squared_orders)"""
 
-        if isinstance(model, six.string_types):
+        if isinstance(model, str):
             model= [model] * len(self.me_runners)
 
         self.results = []

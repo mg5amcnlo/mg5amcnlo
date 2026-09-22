@@ -694,8 +694,10 @@ c Note that tests are always performed at fixed energy with Bjorken x=1.
            endif
          endif
       enddo
-      if (lpp(1).ne.0) ebeam(1)=max(beam_energy(1)/20d0,totmass*2d0)
-      if (lpp(2).ne.0) ebeam(2)=max(beam_energy(2)/20d0,totmass*2d0)
+      if (lpp(1).ne.0) ebeam(1)=max(beam_energy(1)
+     $     /(nb_proton(1)+nb_neutron(1))/20d0,totmass*2d0)
+      if (lpp(2).ne.0) ebeam(2)=max(beam_energy(2)
+     $     /(nb_proton(2)+nb_neutron(2))/20d0,totmass*2d0)
       end
 
       

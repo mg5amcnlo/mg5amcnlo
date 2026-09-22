@@ -23,9 +23,6 @@ import pickle
 import re
 import glob
 import logging
-import six
-from six.moves import range
-
 try:
     import madgraph
 except ImportError:
@@ -133,7 +130,7 @@ class AllResults(dict):
     
     web = False 
     
-    _run_entries = ['cross', 'error','nb_event_pythia','run_mode','run_statistics',
+    _run_entries = ['cross', 'error','axsec','nb_event_pythia','run_mode','run_statistics',
                     'nb_event','cross_pythia','error_pythia',
                     'nb_event_pythia8','cross_pythia8','error_pythia8', 'shower_dir']
 
@@ -648,7 +645,7 @@ class RunResults(list):
             if run_card['ickkw'] != 0:
                 #parse the file to have back the information
                 pythia_log = misc.BackRead(pjoin(path, '%s_pythia.log' % tag))
-                pythiare = re.compile("\s*I\s+0 All included subprocesses\s+I\s+(?P<generated>\d+)\s+(?P<tried>\d+)\s+I\s+(?P<xsec>[\d\.D\-+]+)\s+I")            
+                pythiare = re.compile(r"\s*I\s+0 All included subprocesses\s+I\s+(?P<generated>\d+)\s+(?P<tried>\d+)\s+I\s+(?P<xsec>[\d\.D\-+]+)\s+I")            
                 for line in pythia_log:
                     info = pythiare.search(line)
                     if not info:
@@ -1075,6 +1072,10 @@ class OneTagResults(dict):
                     out += " <a href=\"%s\">%s</a> " % (f, 'HwU data')
                     out += " <a href=\"%s\">%s</a> " % \
                                            (f.replace('.HwU','.gnuplot'), 'GnuPlot')
+                    out += " <a href=\"%s\">%s</a> " % \
+                                           (f.replace('.HwU','.py'), 'Matplotlib')
+                    out += " <a href=\"%s\">%s</a> " % \
+                                           (f.replace('.HwU','.html'), 'HTML')
             if 'summary.txt' in self.parton:
                 out += ' <a href="./Events/%(run_name)s/summary.txt">summary</a>'
 
@@ -1207,6 +1208,8 @@ class OneTagResults(dict):
                         if kind == 'HwU':
                             out += " <a href=\"%s\">%s</a> " % (f, 'HwU data')
                             out += " <a href=\"%s\">%s</a> " % (f.replace('.HwU','.gnuplot'), 'GnuPlot')
+                            out += " <a href=\"%s\">%s</a> " % (f.replace('.HwU','.py'), 'Matplotlib')
+                            out += " <a href=\"%s\">%s</a> " % (f.replace('.HwU','.html'), 'HTML')
                         else:
                             out += " <a href=\"%s\">%s</a> " % (f, kind.upper())
 
@@ -1613,7 +1616,7 @@ class OneTagResults(dict):
                                   
         if self.debug is KeyboardInterrupt:
             debug = '<br><font color=red>Interrupted</font>'
-        elif isinstance(self.debug, six.string_types):
+        elif isinstance(self.debug, str):
             if not os.path.isabs(self.debug) and not self.debug.startswith('./'):
                 self.debug = './' + self.debug
             elif os.path.isabs(self.debug):
@@ -1623,7 +1626,7 @@ class OneTagResults(dict):
         elif self.debug:
             text = str(self.debug).replace('. ','.<br>')
             if 'http' in text:
-                pat = re.compile('(http[\S]*)')
+                pat = re.compile(r'(http[\S]*)')
                 text = pat.sub(r'<a href=\1> here </a>', text)
             debug = '<br><font color=red>%s<BR>%s</font>' % \
                                            (self.debug.__class__.__name__, text)
@@ -1661,7 +1664,5 @@ class OneTagResults(dict):
 
 
         return  + '<br>'
-
-
 
 

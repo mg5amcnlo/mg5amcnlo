@@ -39,6 +39,7 @@ C
 C     
 C     GLOBAL VARIABLES
 C     
+
       INCLUDE 'mp_coupl_same_name.inc'
 
       INTEGER GOODHEL(NCOMB)

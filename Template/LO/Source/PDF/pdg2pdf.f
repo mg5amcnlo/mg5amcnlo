@@ -56,8 +56,6 @@ c     effective w/z/a approximation (leading log fixed order, not resummed)
       double precision eva_get_pdf_by_PID
       external eva_get_pdf_by_PID
       integer ppid
-      integer ievo,ievo_eva
-      common/to_eva/ievo_eva
       integer hel,helMulti,hel_picked
       double precision hel_jacobian
       common/hel_picked/hel_picked,hel_jacobian
@@ -108,7 +106,7 @@ c       change e/mu/tau = 8/9/10 to 11/13/15
         else if (abs(ipart).eq.10) then
           ipart = sign(1,ipart) * 15
         endif
-	pdg2pdf = 0d0
+        pdg2pdf = 0d0
 
         if (beamid.lt.0) then
            ih_local = ipart
@@ -122,7 +120,7 @@ c       change e/mu/tau = 8/9/10 to 11/13/15
         endif
         do i_ee = 1, n_ee
           ee_components(i_ee) = compute_eepdf(x,omx_ee(iabs(beamid)),xmu,i_ee,ipart,ih_local)
-	enddo
+        enddo
         pdg2pdf =  ee_components(1) ! temporary to test pdf load
 c        write(*,*), x, beamid ,omx_ee(iabs(beamid)),xmu,1,ipart,ih_local,pdg2pdf
         return
@@ -248,10 +246,10 @@ c         write(*,*) 'running eva'
             ppid  = ppid * ih/iabs(ih) ! get sign of parent
             fLPol = pol(iabs(beamid))        ! see setrun.f for treatment of polbeam*
             q2max = xmu*xmu
-            ievo = ievo_eva
             hel      = GET_NHEL(HEL_PICKED, beamid) ! helicity of v
             helMulti = GET_NHEL(0, beamid)          ! helicity multiplicity of v to undo spin averaging
-            pdg2pdf  = helMulti*eva_get_pdf_by_PID(ipart,ppid,hel,fLpol,x,q2max,ievo)
+            pdg2pdf  = eva_get_pdf_by_PID(ipart,ppid,hel,fLpol,x,q2max,ebeam(beamid))
+            pdg2pdf  = helMulti*pdg2pdf
             return
          endif
       else ! this ensure backwards compatibility

@@ -14,8 +14,6 @@
 ################################################################################
 """Classes for writing Helas calls. HelasCallWriter is the base class."""
 from __future__ import absolute_import
-
-
 import re
 import madgraph
 import madgraph.core.base_objects as base_objects
@@ -26,7 +24,6 @@ import aloha.aloha_writers as aloha_writers
 import aloha
 from madgraph import MadGraph5Error
 import madgraph.various.misc as misc
-from six.moves import range
 if madgraph.ordering:
     set	= misc.OrderedSet
 
@@ -281,14 +278,15 @@ class HelasCallWriter(base_objects.PhysicsObject):
         corresponding to the key"""
 
         try:
-            #misc.sprint(wavefunction['number_external'])
-            call = self["wavefunctions"][wavefunction.get_call_key()](\
-                                                                   wavefunction)
+            fct =  self["wavefunctions"][wavefunction.get_call_key()]
         except KeyError as error:
             return ""
+        else:
+           call = fct(wavefunction) 
+
         
         if  self.options['zerowidth_tchannel'] and wavefunction.is_t_channel():
-            call, n = re.subn(',\s*fk_(?!ZERO)\w*\s*,', ', ZERO,', str(call), flags=re.I)
+            call, n = re.subn(r',\s*fk_(?!ZERO)\w*\s*,', ', ZERO,', str(call), flags=re.I)
             if n:
                 self.width_tchannel_set_tozero = True
         return call
@@ -382,7 +380,7 @@ class FortranHelasCallWriter(HelasCallWriter):
 
         # Gluon 4-vertex division tensor calls ggT for the FR sm and mssm
 
-        key = ((3, 3, 5, 3,tuple()), ('A',))
+        key = ((3, 3, 5, 3,tuple(),False), ('A',))
         call = lambda wf: \
                "CALL UVVAXX(W(1,%d),W(1,%d),%s,zero,zero,zero,W(1,%d))" % \
                (FortranHelasCallWriter.sorted_mothers(wf)[0].get('me_id'),
@@ -391,7 +389,7 @@ class FortranHelasCallWriter(HelasCallWriter):
                 wf.get('me_id'))
         self.add_wavefunction(key, call)
 
-        key = ((3, 5, 3, 1,tuple()), ('A',))
+        key = ((3, 5, 3, 1,tuple(), False), ('A',))
         call = lambda wf: \
                "CALL JVTAXX(W(1,%d),W(1,%d),%s,zero,zero,W(1,%d))" % \
                (FortranHelasCallWriter.sorted_mothers(wf)[0].get('me_id'),
@@ -412,7 +410,7 @@ class FortranHelasCallWriter(HelasCallWriter):
 
         # SM gluon 4-vertex components
 
-        key = ((3, 3, 3, 3, 1,tuple()), ('gggg3',))
+        key = ((3, 3, 3, 3, 1,tuple(),False), ('gggg3',))
         call = lambda wf: \
                "CALL JGGGXX(W(1,%d),W(1,%d),W(1,%d),%s,W(1,%d))" % \
                (FortranHelasCallWriter.sorted_mothers(wf)[1].get('me_id'),
@@ -431,7 +429,7 @@ class FortranHelasCallWriter(HelasCallWriter):
                 amp.get('coupling')[0],
                 amp.get('number'))
         self.add_amplitude(key, call)
-        key = ((3, 3, 3, 3, 1 ,tuple()), ('gggg2',))
+        key = ((3, 3, 3, 3, 1 ,tuple(),False), ('gggg2',))
         call = lambda wf: \
                "CALL JGGGXX(W(1,%d),W(1,%d),W(1,%d),%s,W(1,%d))" % \
                (FortranHelasCallWriter.sorted_mothers(wf)[0].get('me_id'),
@@ -450,7 +448,7 @@ class FortranHelasCallWriter(HelasCallWriter):
                 amp.get('coupling')[0],
                 amp.get('number'))
         self.add_amplitude(key, call)
-        key = ((3, 3, 3, 3, 1,tuple()), ('gggg1',))
+        key = ((3, 3, 3, 3, 1,tuple(), False), ('gggg1',))
         call = lambda wf: \
                "CALL JGGGXX(W(1,%d),W(1,%d),W(1,%d),%s,W(1,%d))" % \
                (FortranHelasCallWriter.sorted_mothers(wf)[2].get('me_id'),
@@ -472,7 +470,7 @@ class FortranHelasCallWriter(HelasCallWriter):
 
         # HEFT VVVS calls
 
-        key = ((1, 3, 3, 3, 3,tuple()), ('',))
+        key = ((1, 3, 3, 3, 3,tuple(), False), ('',))
         call = lambda wf: \
                "CALL JVVSXX(W(1,%d),W(1,%d),W(1,%d),DUM1,%s,%s,%s,W(1,%d))" % \
                (wf.get('mothers')[0].get('me_id'),
@@ -484,7 +482,7 @@ class FortranHelasCallWriter(HelasCallWriter):
                 wf.get('me_id'))
         self.add_wavefunction(key, call)
 
-        key = ((3, 3, 3, 1, 4,tuple()), ('',))
+        key = ((3, 3, 3, 1, 4,tuple(), False), ('',))
         call = lambda wf: \
                "CALL HVVVXX(W(1,%d),W(1,%d),W(1,%d),DUM1,%s,%s,%s,W(1,%d))" % \
                (wf.get('mothers')[0].get('me_id'),
@@ -509,7 +507,7 @@ class FortranHelasCallWriter(HelasCallWriter):
 
         # HEFT VVVS calls
 
-        key = ((1, 3, 3, 3, 1,tuple()), ('',))
+        key = ((1, 3, 3, 3, 1,tuple(), False), ('',))
         call = lambda wf: \
                "CALL JVVSXX(W(1,%d),W(1,%d),W(1,%d),DUM1,%s,%s,%s,W(1,%d))" % \
                (wf.get('mothers')[0].get('me_id'),
@@ -521,7 +519,7 @@ class FortranHelasCallWriter(HelasCallWriter):
                 wf.get('me_id'))
         self.add_wavefunction(key, call)
 
-        key = ((3, 3, 3, 1, 4,tuple()), ('',))
+        key = ((3, 3, 3, 1, 4,tuple(), False), ('',))
         call = lambda wf: \
                "CALL HVVVXX(W(1,%d),W(1,%d),W(1,%d),DUM1,%s,%s,%s,W(1,%d))" % \
                (wf.get('mothers')[0].get('me_id'),
@@ -556,7 +554,7 @@ class FortranHelasCallWriter(HelasCallWriter):
                 amp.get('number'))
         self.add_amplitude(key, call)
         
-        key = ((-2, 2, 5, 3,tuple()), ('',))
+        key = ((-2, 2, 5, 3,tuple(), False), ('',))
         call = lambda wf: \
                "CALL UIOXXX(W(1,%d),W(1,%d),%s,%s,%s,%s,W(1,%d))" % \
                (wf.get('mothers')[0].get('me_id'),
@@ -609,6 +607,18 @@ class FortranHelasCallWriter(HelasCallWriter):
 
         if val:
             return val
+        
+        #fallback to case without offshell/onshell distinction
+        if isinstance(wavefunction, helas_objects.HelasWavefunction):
+            key = wavefunction.get_call_key()
+
+            if key[0][-1] in [None,True]:
+                #misc.sprint(key)
+                new_key = (key[0][:-1], key[1])
+                if new_key in self['wavefunctions']:
+                    return self['wavefunctions'][new_key](wavefunction)
+            #else:
+            #    misc.sprint(key)
 
         # If function not already existing, try to generate it.
 
@@ -721,7 +731,6 @@ class FortranHelasCallWriter(HelasCallWriter):
                 argument.get_spin_state_number()]
 
             mother_letters = FortranHelasCallWriter.sorted_letters(argument)
-
             # If Lorentz structure is given, by default add this
             # to call name
             lor_name = argument.get('lorentz')[0]
@@ -1126,7 +1135,7 @@ class FortranUFOHelasCallWriter(UFOHelasCallWriter):
 
     def generate_external_wavefunction(self,argument):
         """ Generate an external wavefunction """
-        
+
         call="CALL "
         call_function = None
         if argument.get('is_loop'):
@@ -1140,7 +1149,11 @@ class FortranUFOHelasCallWriter(UFOHelasCallWriter):
             call = call + "(P(0,%(number_external)d),"
             if argument.get('spin') != 1:
                 # For non-scalars, need mass and helicity
-                call = call + "%(mass)s,NHEL(%(number_external)d),"
+                if argument.get('offshell'):
+                    call = call + "SQRT(P(0,%(number_external)d)**2-P(1,%(number_external)d)**2-P(2,%(number_external)d)**2-P(3,%(number_external)d)**2),"
+                else:
+                    call = call + "%(mass)s,"
+                call = call + "NHEL(%(number_external)d),"
             call = call + "%(state_id)+d*IC(%(number_external)d),{0})".format(\
                                     self.format_helas_object('W(1,','%(me_id)d'))
 
@@ -1171,8 +1184,10 @@ class FortranUFOHelasCallWriter(UFOHelasCallWriter):
            argument.get('type')=='loop')):
             flag.insert(0,"L")
 
+        if isinstance(argument, helas_objects.HelasWavefunction) and argument.get('onshell') is False:
+            flag.append('P1D') # D is for $ syntax -> offshell propagator only
         # Creating line formatting:
-        call = 'CALL %(routine_name)s(%(wf)s%(coup)s%(mass)s%(out)s)'
+        call = 'CALL %(routine_name)s(%(wf)s%(coup)s%(mass)s%(extra)s%(out)s)'
 
         arg = {'routine_name': aloha_writers.combine_name(\
                                         '%s' % l[0], l[1:], outgoing, flag, True),
@@ -1229,6 +1244,7 @@ class FortranUFOHelasCallWriter(UFOHelasCallWriter):
                  # add a second line to take into account the multiplicative factor                 
                  call += "\n %(second_line)s "
                  arg['second_line'] = ampl+"="+ampl+"*(%(uvct)s)"           
+        arg['extra'] = '%(bwcutoff)s'
 
         # ALL ARGUMENT FORMATTED ###############################################
         call, arg = HelasCallWriter.customize_argument_for_all_other_helas_object(call, arg)
@@ -1683,7 +1699,9 @@ class CPPUFOHelasCallWriter(UFOHelasCallWriter):
             flag = [] 
             if argument.needs_hermitian_conjugate():
                 flag = ['C%d' % i for i in argument.get_conjugate_index()]
-                
+            
+            if isinstance(argument, helas_objects.HelasWavefunction) and argument.get('onshell') is False:
+                flag.append('P1D') # D is for $ syntax -> offshell propagator only
                 
             # Creating line formatting:
             call = '%(routine_name)s(%(wf)s%(coup)s%(mass)s%(out)s);'
@@ -1698,9 +1716,9 @@ class CPPUFOHelasCallWriter(UFOHelasCallWriter):
             if isinstance(argument, helas_objects.HelasWavefunction):
                 arg['out'] = 'w[%(out)d]'
                 if aloha.complex_mass:
-                    arg['mass'] = "pars->%(CM)s,"
+                    arg['mass'] = "pars->%(CM)s,%(bwcutoff)s"
                 else:
-                    arg['mass'] = "pars->%(M)s,pars->%(W)s,"
+                    arg['mass'] = "pars->%(M)s,pars->%(W)s,%(bwcutoff)s"
             else:        
                 arg['out'] = 'amp[%(out)d]'
                 arg['mass'] = ''
@@ -1722,6 +1740,298 @@ class CPPUFOHelasCallWriter(UFOHelasCallWriter):
 
         return call.replace('pars->-', '-pars->')
         
+
+
+class GPUFOHelasCallWriter(CPPUFOHelasCallWriter):
+
+
+    findcoupling = re.compile(r'pars->([-]*[\d\w_]+)\s*,')
+    usepointerforvertex = True
+
+    def format_coupling(self, call):
+        """Format the coupling so any minus signs are put in front"""
+
+        model = self.get('model')
+        if not hasattr(self, 'couplings2order'):
+            self.couplings2order = {}
+            self.params2order = {}
+            
+        for coup in re.findall(self.findcoupling, call):
+            if coup == 'ZERO':
+                call = call.replace('pars->ZERO', '0.')
+                continue
+            sign = '' 
+            if coup.startswith('-'):
+                sign = '-'
+                coup = coup[1:]
+            
+            try:
+                param = model.get_parameter(coup)
+            except KeyError:
+                param = False
+            
+            if param:   
+                alias = self.params2order
+                name = "cIPD"
+            else: 
+                alias = self.couplings2order
+                name = "cIPC"
+            if coup not in alias:
+                alias[coup] = len(alias)
+            if name == "cIPD":
+                call = call.replace('pars->%s%s' % (sign, coup), 
+                                    '%s%s[%s]' % (sign, name, alias[coup]))
+            else:
+                call = call.replace('pars->%s%s' % (sign, coup), 
+                                    '%scxtype(cIPC[%s],cIPC[%s])' % 
+                                    (sign, 2*alias[coup],2*alias[coup]+1))
+
+        return call
+            
+    
+    def get_external(self,wf, argument):
+    
+        text = """
+#ifdef __CUDACC__
+    %s    
+#else
+    %s
+#endif 
+"""
+        line =  self.get_external_line(wf, argument)
+        split_line = line.split(',')
+        split_line.insert(-1, ' ievt')
+        return text % (line, ','.join(split_line))
+    
+    def get_external_line(self, wf, argument):
+
+        call = ''
+        call = call + HelasCallWriter.mother_dict[\
+                argument.get_spin_state_number()].lower() 
+        if wf.get('mass').lower() != 'zero' or argument.get('spin') != 2: 
+            # Fill out with X up to 6 positions
+            call = call + 'x' * (6 - len(call))
+            # Specify namespace for Helas calls
+            ##call = call + "((double *)(dps + %d * dpt),"
+            call = call + "(allmomenta,"
+            if argument.get('spin') != 1:
+                # For non-scalars, need mass and helicity
+                call = call + "pars->%s, cHel[ihel][%d],"
+            else:
+                call = call + "pars->%s,"
+            call = call + "%+d,w[%d], %d);"
+            if argument.get('spin') == 1:
+                return call % \
+                                (wf.get('mass'),
+                                 # For boson, need initial/final here
+                                 (-1) ** (wf.get('state') == 'initial'),
+                                 wf.get('me_id')-1,
+                                 wf.get('number_external')-1)
+            elif argument.is_boson():
+                return  self.format_coupling(call % \
+                                (wf.get('mass'),
+                                 wf.get('number_external')-1,
+                                 # For boson, need initial/final here
+                                 (-1) ** (wf.get('state') == 'initial'),
+                                 wf.get('me_id')-1,
+                                 wf.get('number_external')-1))
+            else:
+                return self.format_coupling(call % \
+                                (wf.get('mass'),
+                                 wf.get('number_external')-1,
+                                 # For fermions, need particle/antiparticle
+                                 - (-1) ** wf.get_with_flow('is_part'),
+                                 wf.get('me_id')-1,
+                                 wf.get('number_external')-1))
+        else:
+            if wf.get('number_external') == 1:
+                call += 'pz'
+            elif wf.get('number_external') == 2:
+                call += 'mz'
+            else:
+                call += 'xz'
+            call = call + 'x' * (6 - len(call))
+            # Specify namespace for Helas calls
+            ##call = call + "((double *)(dps + %d * dpt),"
+            call = call + "(allmomenta, cHel[ihel][%d],%+d,w[%d],%d);"
+            
+            return self.format_coupling(call % \
+                                (wf.get('number_external')-1,
+                                 # For fermions, need particle/antiparticle
+                                 - (-1) ** wf.get_with_flow('is_part'),
+                                 wf.get('me_id')-1,
+                                 wf.get('number_external')-1))
+                
+                
+        
+        
+
+    def generate_helas_call(self, argument):
+        """Routine for automatic generation of C++ Helas calls
+        according to just the spin structure of the interaction.
+
+        First the call string is generated, using a dictionary to go
+        from the spin state of the calling wavefunction and its
+        mothers, or the mothers of the amplitude, to difenrentiate wich call is
+        done.
+
+        Then the call function is generated, as a lambda which fills
+        the call string with the information of the calling
+        wavefunction or amplitude. The call has different structure,
+        depending on the spin of the wavefunction and the number of
+        mothers (multiplicity of the vertex). The mother
+        wavefunctions, when entering the call, must be sorted in the
+        correct way - this is done by the sorted_mothers routine.
+
+        Finally the call function is stored in the relevant
+        dictionary, in order to be able to reuse the function the next
+        time a wavefunction with the same Lorentz structure is needed.
+        """
+
+        if not isinstance(argument, helas_objects.HelasWavefunction) and \
+           not isinstance(argument, helas_objects.HelasAmplitude):
+            raise self.PhysicsObjectError("get_helas_call must be called with wavefunction or amplitude")
+
+
+        
+        call = ""
+
+        call_function = None
+
+        if isinstance(argument, helas_objects.HelasAmplitude) and \
+           argument.get('interaction_id') == 0:
+            call = "#"
+            call_function = lambda amp: call
+            self.add_amplitude(argument.get_call_key(), call_function)
+            return
+
+        if isinstance(argument, helas_objects.HelasWavefunction) and \
+               not argument.get('mothers'):
+            # String is just ixxxxx, oxxxxx, vxxxxx or sxxxxx
+            call_function = lambda wf: self.get_external(wf, argument)
+        else:
+            if isinstance(argument, helas_objects.HelasWavefunction):
+                outgoing = argument.find_outgoing_number()
+            else:
+                outgoing = 0
+                
+            # Check if we need to append a charge conjugation flag
+            l = [str(l) for l in argument.get('lorentz')]
+            flag = [] 
+            if argument.needs_hermitian_conjugate():
+                flag = ['C%d' % i for i in argument.get_conjugate_index()]
+                
+                
+            # Creating line formatting:
+            if isinstance(argument, helas_objects.HelasWavefunction):
+                call = '%(routine_name)s(%(wf)s%(coup)s%(mass)s%(out)s);'
+            else:
+                call = '%(routine_name)s(%(wf)s%(coup)s%(mass)s%(out)s); printf(" %(out)s %%%%f %%%%f\\n", %(out2)s.real(), %(out2)s.imag());'
+                call = '%(routine_name)s(%(wf)s%(coup)s%(mass)s%(out)s);'
+            # compute wf
+            arg = {'routine_name': aloha_writers.combine_name(\
+                                            '%s' % l[0], l[1:], outgoing, flag,True),
+                   'wf': ("w[%%(%d)d]," * len(argument.get('mothers'))) % \
+                                      tuple(range(len(argument.get('mothers')))),
+                    'coup': ("pars->%%(coup%d)s," * len(argument.get('coupling'))) % \
+                                     tuple(range(len(argument.get('coupling'))))           
+                   } 
+            if isinstance(argument, helas_objects.HelasWavefunction):
+                arg['out'] = 'w[%(out)d]'
+                if aloha.complex_mass:
+                    arg['mass'] = "pars->%(CM)s,"
+                else:
+                    arg['mass'] = "pars->%(M)s,pars->%(W)s,"
+            else:    
+                if self.usepointerforvertex:    
+                    arg['out'] = '&amp[%(out)d]'
+                    arg['out2'] = 'amp[%(out)d]'
+                    arg['mass'] = ''
+                else:
+                    arg['out'] = '&amp[%(out)d]'
+                    arg['out2'] = 'amp[%(out)d]'
+                    arg['mass'] = ''
+                
+            call = call % arg
+            # Now we have a line correctly formatted
+            call_function = lambda wf: self.format_coupling(
+                                         call % wf.get_helas_call_dict(index=0))
+            
+        
+        # Add the constructed function to wavefunction or amplitude dictionary
+        if isinstance(argument, helas_objects.HelasWavefunction):
+            self.add_wavefunction(argument.get_call_key(), call_function)
+        else:
+            self.add_amplitude(argument.get_call_key(), call_function)
+
+
+    pass
+
+    def get_matrix_element_calls(self, matrix_element, color_amplitudes, multi_channel_map=False):
+        """Return a list of strings, corresponding to the Helas calls
+        for the matrix element"""
+
+        assert isinstance(matrix_element, helas_objects.HelasMatrixElement), \
+                  "%s not valid argument for get_matrix_element_calls" % \
+                  type(matrix_element)
+        
+        import madgraph.iolibs.export_cpp as export_cpp
+        # Do not reuse the wavefunctions for loop matrix elements
+        if isinstance(matrix_element, loop_helas_objects.LoopHelasMatrixElement):
+            return self.get_loop_matrix_element_calls(matrix_element)
+
+        #restructure data for easier handling
+        color = {}
+        for njamp, coeff_list in enumerate(color_amplitudes):
+            for coeff, namp in coeff_list:
+                if namp not in color:
+                    color[namp] = {}
+                color[namp][njamp] = coeff
+
+        
+        
+        me = matrix_element.get('diagrams')
+
+
+        matrix_element.reuse_outdated_wavefunctions(me)
+
+
+        res = []
+        # reset jamp:
+        res.append('for(int i=0;i<%s;i++){jamp[i] = cxtype(0.,0.);}'
+                   % len(color_amplitudes))
+        diagrams = matrix_element.get('diagrams')
+        diag_to_config = {}
+        if multi_channel_map:
+            for config in sorted(multi_channel_map.keys()):
+                amp = [a.get('number') for a in \
+                                  sum([diagrams[idiag].get('amplitudes') for \
+                                       idiag in multi_channel_map[config]], [])]
+                diag_to_config[amp[0]] = config
+        id_amp = 0
+        for diagram in matrix_element.get('diagrams'):
+             
+            res.extend([ self.get_wavefunction_call(wf) for \
+                         wf in diagram.get('wavefunctions') ])
+            res.append("# Amplitude(s) for diagram number %d" % 
+                       diagram.get('number'))
+            for amplitude in diagram.get('amplitudes'):
+                id_amp +=1
+                namp = amplitude.get('number')
+                amplitude.set('number', 1)
+                res.append(self.get_amplitude_call(amplitude))
+                # amp2
+                if id_amp in diag_to_config:
+                    res.append("if(channel_id == %i){multi_chanel_num += conj(amp[0])*amp[0];};" % diag_to_config[id_amp])
+                    res.append(" multi_chanel_denom += conj(amp[0])*amp[0];")
+                # jamp
+                for njamp, coeff in color[namp].items():
+                    res.append("jamp[%s] += %samp[0];" % 
+                         (njamp, export_cpp.OneProcessExporterGPU.coeff(*coeff)))
+
+        return res
+
+
 
 #===============================================================================
 # PythonUFOHelasCallWriter
@@ -1790,10 +2100,20 @@ class PythonUFOHelasCallWriter(UFOHelasCallWriter):
             # String is just IXXXXX, OXXXXX, VXXXXX or SXXXXX
             call = "w[%d] = "
 
-            call = call + HelasCallWriter.mother_dict[\
+            wf_name = HelasCallWriter.mother_dict[\
                 argument.get_spin_state_number()].lower()
-            # Fill out with X up to 6 positions
-            call = call + 'x' * (14 - len(call))
+            fixed_wf_name = None
+            if aloha.unitary_gauge == 3:
+                if argument.get('spin') == 1:
+                    wf_name = 'sfd'
+                elif argument.get('spin') == 3:
+                    fixed_wf_name = 'vfdxxxx'
+            if fixed_wf_name is None:
+                call = call + wf_name
+                # Fill out with X up to 6 positions
+                call = call + 'x' * (14 - len(call))
+            else:
+                call = call + fixed_wf_name
             call = call + "(p[%d],"
             if argument.get('spin') != 1:
                 # For non-scalars, need mass and helicity

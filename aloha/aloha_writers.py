@@ -1,5 +1,4 @@
 from __future__ import absolute_import
-from six.moves import range
 try:
     import madgraph.iolibs.file_writers as writers 
     import madgraph.various.q_polynomial as q_polynomial
@@ -18,7 +17,7 @@ from numbers import Number
 from collections import defaultdict
 from fractions import Fraction
 # fast way to deal with string
-from six import StringIO
+from io import StringIO
 # Look at http://www.skymind.com/~ocrow/python_string/ 
 # For knowing how to deal with long strings efficiently.
 import itertools
@@ -35,13 +34,20 @@ class WriteALOHA:
     type_to_variable = {2:'F',3:'V',5:'T',1:'S',4:'R', -1:'S'}
     type_to_size = {'S':3, 'T':18, 'V':6, 'F':6,'R':18}
 
+
             
-    def __init__(self, abstract_routine, dirpath):
-        if aloha.loop_mode:
+    def __init__(self, abstract_routine, dirpath, options=None):
+        if (aloha.loop_mode or aloha.dual_mode):
             self.momentum_size = 4
         else:
             self.momentum_size = 2
-            
+
+        if aloha.unitary_gauge == 3: #FD gauge
+            # need to check for non goldstone scalar
+            self.type_to_size = {'S':7, 'T':18, 'V':7, 'F':6,'R':18}
+        else:
+            self.type_to_size = {'S':3, 'T':18, 'V':6, 'F':6,'R':18}
+
         self.has_model_parameter = False
         
         name = get_routine_name(abstract = abstract_routine)
@@ -69,6 +75,7 @@ class WriteALOHA:
                                                                self.outgoing)
         #initialize global helper routine
         self.declaration = Declaration_list()
+        self.options = options if options else {}
                                    
                                        
     def pass_to_HELAS(self, indices, start=0):
@@ -99,7 +106,7 @@ class WriteALOHA:
                                  
     def get_header_txt(self,mode=''): 
         """ Prototype for language specific header""" 
-        raise Exception('THis function should be overwritten')
+        raise Exception('This function should be overwritten')
         return ''
     
     def get_declaration_txt(self):
@@ -231,6 +238,9 @@ class WriteALOHA:
                 self.declaration.add(('double','M%s' % self.outgoing))                
                 call_arg.append(('double','W%s' % self.outgoing))              
                 self.declaration.add(('double','W%s' % self.outgoing))
+                if 'P1D' in self.tag:
+                    call_arg.append(('double','BWCUTOFF'))              
+                    self.declaration.add(('double','BWCUTOFF'))
         
         assert len(call_arg) == len(set([a[1] for a in call_arg]))
         assert len(self.declaration) == len(set([a[1] for a in self.declaration])), self.declaration
@@ -450,8 +460,8 @@ class ALOHAWriterForFortran(WriteALOHA):
     else:
         type2def['double'] = 'real*8'
         type2def['complex'] = 'complex*16'
-        
         format = 'd0'
+    type2def['dual'] = 'type(dual)'
     
     def get_fct_format(self, fct):
         """Put the function in the correct format"""
@@ -498,7 +508,10 @@ class ALOHAWriterForFortran(WriteALOHA):
         arguments = [arg for format, arg in self.define_argument_list(couplings)]
         if not self.offshell:
             output = 'vertex'
-            self.declaration.add(('complex','vertex'))
+            if aloha.dual_mode:
+                self.declaration.add(('dual','vertex'))
+            else:
+                self.declaration.add(('complex','vertex'))
         else:
             output = '%(spin)s%(id)d' % {
                      'spin': self.particles[self.outgoing -1],
@@ -516,9 +529,13 @@ class ALOHAWriterForFortran(WriteALOHA):
         """
         
         out = StringIO()
+        if aloha.dual_mode:
+            out.write('use dual_variables\n')
         out.write('implicit none\n')
         # Check if we are in formfactor mode
         if self.has_model_parameter:
+            if self.options.get('vector.inc', False):
+                out.write(' include "../vector.inc"\n') 
             out.write(' include "../MODEL/input.inc"\n')
             out.write(' include "../MODEL/coupl.inc"\n')
         argument_var = [name for type,name in self.call_arg]
@@ -536,27 +553,40 @@ class ALOHAWriterForFortran(WriteALOHA):
         if KERNEL.has_pi:
             out.write(' parameter (PI=%s)\n' % self.change_number_format(cmath.pi))
         
-        
+        if aloha.unitary_gauge == 3: # FG gauge 
+            self.declaration.add(('int','i'))
+            out.write(" COMPLEX*16 CZERO\n")
+            out.write("PARAMETER (CZERO=(0D0,0D0)) \n")
+
         for type, name in self.declaration.tolist():
             if type.startswith('list'):
                 type = type[5:]
+                if aloha.dual_mode and type=='complex':
+                    type = 'dual'
                 #determine the size of the list
                 if name in argument_var:
                     size ='*'
                 elif name.startswith('P'):
                     size='0:3'
+                    if aloha.dual_mode:
+                        type = 'dual'
                 elif name[0] in ['F','V']:
-                    if aloha.loop_mode:
+                    if (aloha.loop_mode or aloha.dual_mode):
                         size = 8
+                    elif aloha.unitary_gauge == 3 and name[0] in 'V':
+                        size = 7
                     else:
                         size = 6
                 elif name[0] == 'S':
-                    if aloha.loop_mode:
+                    if (aloha.loop_mode or aloha.dual_mode):
                         size = 5
+                    elif aloha.unitary_gauge == 3: # FD gauge 
+                        # Need to fix since this need to be dependent if S is a goldstone or not
+                        size = 7
                     else:
                         size = 3
                 elif name[0] in ['R','T']: 
-                    if aloha.loop_mode:
+                    if (aloha.loop_mode or aloha.dual_mode):
                         size = 20
                     else:
                         size = 18
@@ -570,6 +600,8 @@ class ALOHAWriterForFortran(WriteALOHA):
                 out.write(' %s %s\n' % (self.type2def['complex'], name))
                 out.write(' external %s\n' % (name))
             else:
+                if aloha.dual_mode and (name[0] == 'T' or name[0] == 't' or name == 'denom'):
+                    type = 'dual'
                 out.write(' %s %s\n' % (self.type2def[type], name))
                 
         # Add the lines corresponding to the symmetry
@@ -633,7 +665,7 @@ class ALOHAWriterForFortran(WriteALOHA):
             if self.declaration.is_used('P%s' % self.outgoing):
                 self.get_one_momenta_def(self.outgoing, out)
 
-            if "P1T" in self.tag or "P1L" in self.tag:
+            if any(t in self.tag for t in ("P1T","P1TR","P1TL","P1L")):
                 for i in range(1,4):
                     P = "P%s" % (self.outgoing)
                     value = ["1d-30", "0d0", "1d-15"]
@@ -655,6 +687,13 @@ class ALOHAWriterForFortran(WriteALOHA):
                           .format(i+1))
                 #out.write("     FWM{0} = M{0}/FWP{0}\n".format(i+1))
         
+        if self.offshell and aloha.unitary_gauge == 3: # FD gauge
+            type = self.particles[self.outgoing-1]
+            if type in ["S","V"]: 
+                out.write("      DO I = 3, 7\n")
+                out.write(" %(type)s%(out)s(I) = CZERO \n" % {'type': type, 'out':self.outgoing}) 
+                out.write(" ENDDO\n")      
+
         # Returning result
         return out.getvalue()
 
@@ -662,14 +701,14 @@ class ALOHAWriterForFortran(WriteALOHA):
         
         type = self.particles[i-1]
         
-        if aloha.loop_mode:
+        if (aloha.loop_mode or aloha.dual_mode):
             template ='P%(i)d(%(j)d) = %(sign)s%(type)s%(i)d(%(nb)d)\n'
         else:
             template ='P%(i)d(%(j)d) = %(sign)s%(operator)s(%(type)s%(i)d(%(nb2)d))\n'
 
         nb2 = 1
         for j in range(4):
-            if not aloha.loop_mode:
+            if (not aloha.loop_mode and not aloha.dual_mode):
                 nb = j + 1
                 if j == 0: 
                     assert not aloha.mp_precision 
@@ -695,6 +734,8 @@ class ALOHAWriterForFortran(WriteALOHA):
             shift = 0
         else:
             shift =  self.momentum_size 
+            if aloha.unitary_gauge ==3 and match.group('var').startswith('S'):
+                shift += 4
         return '%s(%s)' % (match.group('var'), int(match.group('num')) + shift)
               
     def change_var_format(self, name): 
@@ -703,7 +744,7 @@ class ALOHAWriterForFortran(WriteALOHA):
         if isinstance(name, aloha_lib.ExtVariable):
             # external parameter nothing to do but handling model prefix
             self.has_model_parameter = True
-            if name.lower() in ['pi', 'as', 'mu_r', 'aewm1','g']:
+            if name.lower() in ['pi', 'as', 'mu_r', 'aewm1','g','bwcutoff']:
                 return name
             if name.startswith(aloha.aloha_prefix):
                 return name
@@ -715,7 +756,7 @@ class ALOHAWriterForFortran(WriteALOHA):
             self.declaration.add(('list_%s' % vtype, decla))
         else:
             self.declaration.add((name.type, name))
-        name = re.sub('(?P<var>\w*)_(?P<num>\d+)$', self.shift_indices , name)
+        name = re.sub(r'(?P<var>\w*)_(?P<num>\d+)$', self.shift_indices , name)
         return name
   
     def change_number_format(self, number):
@@ -799,8 +840,6 @@ class ALOHAWriterForFortran(WriteALOHA):
         else:
             coup_name = '%s' % self.change_number_format(1)
 
-        
-        misc.sprint(self.name, coup_name, cond="VVS11_14P1N" in self.name)
         if not self.offshell:
             if coup_name == 'COUP':
                 formatted = self.write_obj(numerator.get_rep([0]))
@@ -863,14 +902,42 @@ class ALOHAWriterForFortran(WriteALOHA):
                             formatted = formatted[1:]
                         else:
                             formatted = '(-1)*%s' % formatted[1:]
+                shift = 1
+                if aloha.unitary_gauge == 3 and self.outname[0] == "S":
+                    shift = 5
                 to_order[self.pass_to_HELAS(ind)] = \
-                        '    %s(%d)= %s%s\n' % (self.outname, self.pass_to_HELAS(ind)+1, 
+                        '    %s(%d)= %s%s\n' % (self.outname, self.pass_to_HELAS(ind)+shift, 
                         coeff, formatted)
             key = list(to_order.keys())
             key.sort()
             for i in key:
                 out.write(to_order[i])
-        return out.getvalue()
+
+        txt = out.getvalue() 
+        # in rare case FCT/TMP might not be needed (multiply by zero)
+        # This is detected here and in such case we remove those FCT/TMP
+        # from the routine block are recall this routine
+        found=False
+        # detection for FCT
+        keys = list(self.routine.fct.keys())        
+        keys.sort(key=misc.cmp_to_key(sort_fct))
+        for name in keys:
+            if txt.count(name) == 1:
+                del self.routine.fct[name]
+                found = True
+        #detection for TMP variable
+        all_keys = list(self.routine.contracted.keys())
+        all_keys.sort()
+        for name in all_keys:
+            if txt.count(name) == 1:
+                del self.routine.contracted[name]
+                self.declaration.discard(('complex', name))
+                found = True
+        if found:
+            # retry when removing the useless part.
+            return self.define_expression()
+
+        return txt
 
     def define_symmetry(self, new_nb, couplings=None):
         return ''
@@ -880,8 +947,20 @@ class ALOHAWriterForFortran(WriteALOHA):
         #return '%s\n    call %s(%s)' % \
         #    (self.get_header_txt(new_name, couplings), self.name, ','.join(arguments))
 
-    def get_foot_txt(self):
-        return 'end\n\n' 
+    def get_foot_txt(self, combine=False):
+        text = ' ' 
+    
+        if not combine and aloha.unitary_gauge == 3: # FD gauge
+            if self.outgoing and 'P1N' not in self.tag:
+                name = self.particles[self.outgoing-1]
+                if name.startswith(('V','S')):
+                    # need to be smarter for Higgs
+                    text += 'CALL MULTIPLY_PROPAGATOR_FACTOR(%(name)s%(i)s,%(mass)s%(i)s, %(name)s%(i)s)\n' %\
+                    {'name':name, 'mass': 'M%s' % name[1:], 'i': self.outgoing }
+
+
+        text += 'end\n\n' 
+        return text
 
     def write_combined(self, lor_names, mode='self', offshell=None):
         """Write routine for combine ALOHA call (more than one coupling)"""
@@ -956,7 +1035,7 @@ class ALOHAWriterForFortran(WriteALOHA):
         
         text.write(self.get_declaration_txt())
         text.write(routine.getvalue())
-        text.write(self.get_foot_txt())
+        text.write(self.get_foot_txt(combine=True))
 
 
         text = text.getvalue()
@@ -981,17 +1060,16 @@ class QP(object):
     
 class ALOHAWriterForFortranQP(QP, ALOHAWriterForFortran):
     
-    def __init__(self, *arg):
-        return ALOHAWriterForFortran.__init__(self, *arg)
+    def __init__(self, *arg, **opt):
+        return ALOHAWriterForFortran.__init__(self, *arg, **opt)
     
-class ALOHAWriterForFortranLoop(ALOHAWriterForFortran): 
+class ALOHAWriterForFortranLoop(ALOHAWriterForFortran):
     """routines for writing out Fortran"""
 
-    def __init__(self, abstract_routine, dirpath):
-        
-        ALOHAWriterForFortran.__init__(self, abstract_routine, dirpath)
-        # position of the outgoing in particle list        
-        self.l_id = [int(c[1:]) for c in abstract_routine.tag if c[0] == 'L'][0] 
+    def __init__(self, abstract_routine, dirpath, options=None):
+        ALOHAWriterForFortran.__init__(self, abstract_routine, dirpath, options=options)
+        # position of the outgoing in particle list
+        self.l_id = [int(c[1:]) for c in abstract_routine.tag if c[0] == 'L'][0]
         self.l_helas_id = self.l_id   # expected position for the argument list
         if 'C%s' %((self.l_id + 1) // 2) in abstract_routine.tag:
             #flip the outgoing tag if in conjugate
@@ -1013,6 +1091,31 @@ class ALOHAWriterForFortranLoop(ALOHAWriterForFortran):
         else:
             coup = False
 
+        def sort_fct(a, b):
+            if len(a) < len(b):
+                return -1
+            elif len(a) > len(b):
+                return 1
+            elif a < b:
+                return -1
+            else:
+                return +1
+            
+        keys = list(self.routine.fct.keys())        
+        keys.sort(key=misc.cmp_to_key(sort_fct))
+        for name in keys:
+            fct, objs = self.routine.fct[name]
+            format = ' %s = %s\n' % (name, self.get_fct_format(fct))
+            try:
+                text = format % ','.join([self.write_obj(obj) for obj in objs])
+            except TypeError:
+                text = format % tuple([self.write_obj(obj) for obj in objs])
+            finally:
+                out.write(text)
+
+
+
+        
         rank = self.routine.expr.get_max_rank()
         poly_object = q_polynomial.Polynomial(rank)
         nb_coeff = q_polynomial.get_number_of_coefs_for_rank(rank)
@@ -1040,7 +1143,6 @@ class ALOHAWriterForFortranLoop(ALOHAWriterForFortran):
                                     self.pass_to_HELAS(ind)+1-self.momentum_size,
                                     J, K+1, self.write_obj(data)))
 
-
         return out.getvalue()
     
     def get_declaration_txt(self):
@@ -1065,17 +1167,17 @@ class ALOHAWriterForFortranLoop(ALOHAWriterForFortran):
                 elif name in argument_var:
                     size ='*'
                 elif name[0] in ['F','V']:
-                    if aloha.loop_mode:
+                    if (aloha.loop_mode or aloha.dual_mode):
                         size = 8
                     else:
                         size = 6
                 elif name[0] == 'S':
-                    if aloha.loop_mode:
+                    if (aloha.loop_mode or aloha.dual_mode):
                         size = 5
                     else:
                         size = 3
                 elif name[0] in ['R','T']: 
-                    if aloha.loop_mode:
+                    if (aloha.loop_mode or aloha.dual_mode):
                         size = 20
                     else:
                         size = 18
@@ -1175,7 +1277,7 @@ class ALOHAWriterForFortranLoop(ALOHAWriterForFortran):
                 
         # define the resulting momenta
         if self.offshell:
-            if aloha.loop_mode:
+            if (aloha.loop_mode or aloha.dual_mode):
                 size_p = 4
             else:
                 size_p = 2
@@ -1225,10 +1327,10 @@ class ALOHAWriterForFortranLoop(ALOHAWriterForFortran):
         return out.getvalue() 
 
 class ALOHAWriterForFortranLoopQP(QP, ALOHAWriterForFortranLoop): 
-    """routines for writing out Fortran"""     
-    
-    def __init__(self, *arg):
-        return ALOHAWriterForFortranLoop.__init__(self, *arg)   
+    """routines for writing out Fortran"""
+
+    def __init__(self, *arg, options=None):
+        return ALOHAWriterForFortranLoop.__init__(self, *arg, options=options)
 
 def get_routine_name(name=None, outgoing=None, tag=None, abstract=None):
     """ build the name of the aloha function """
@@ -1281,7 +1383,7 @@ def combine_name(name, other_names, outgoing, tag=None, unknown_propa=False):
 
     # Two possible scheme FFV1C1_2_X or FFV1__FFV2C1_X
     # If they are all in FFVX scheme then use the first
-    p=re.compile('^(?P<type>[RFSVT]{2,})(?P<id>\d+)$')
+    p=re.compile(r'^(?P<type>[RFSVT]{2,})(?P<id>\d+)$')
     routine = ''
     if p.search(name):
         base, id = p.search(name).groups()
@@ -1339,13 +1441,15 @@ class ALOHAWriterForCPP(WriteALOHA):
     """Routines for writing out helicity amplitudes as C++ .h and .cc files."""
     
     extension = '.c'
+    prefix =''
     writer = writers.CPPWriter
 
     type2def = {}    
     type2def['int'] = 'int '
     type2def['double'] = 'double '
     type2def['complex'] = 'std::complex<double> '
-    
+    type2def['pointer_vertex'] = '&' # using complex<double> & vertex)
+    type2def['pointer_coup'] = ''
     #variable overwritten by gpu
     realoperator = '.real()'
     imagoperator = '.imag()'
@@ -1393,6 +1497,8 @@ class ALOHAWriterForCPP(WriteALOHA):
             shift = 0
         else:
             shift =  self.momentum_size - 1
+            if aloha.unitary_gauge == 3 and match.group('var').startswith('S'):
+                shift += 4 #to match Fortran
         return '%s[%s]' % (match.group('var'), int(match.group('num')) + shift)
               
     
@@ -1405,7 +1511,7 @@ class ALOHAWriterForCPP(WriteALOHA):
             self.declaration.add(('list_%s' % type, decla))
         else:
             self.declaration.add((name.type, name.split('_',1)[0]))
-        name = re.sub('(?P<var>\w*)_(?P<num>\d+)$', self.shift_indices , name)
+        name = re.sub(r'(?P<var>\w*)_(?P<num>\d+)$', self.shift_indices , name)
         return name
             
     def get_fct_format(self, fct):
@@ -1459,19 +1565,27 @@ class ALOHAWriterForCPP(WriteALOHA):
             else:
                 type = self.type2def[format]
                 list_arg = ''
-            args.append('%s%s%s'% (type, argname, list_arg))
+            if argname.startswith('COUP'):
+                point = self.type2def['pointer_coup']
+                args.append('%s%s%s%s'% (type,point, argname, list_arg))
+            else:
+                args.append('%s%s%s'% (type, argname, list_arg))
                 
         if not self.offshell:
-            output = 'std::complex<double> & vertex'
+            output = '%(doublec)s %(pointer_vertex)s vertex' % {
+                'doublec':self.type2def['complex'],
+                'pointer_vertex': self.type2def['pointer_vertex']}
             #self.declaration.add(('complex','vertex'))
         else:
-            output = 'std::complex<double> %(spin)s%(id)d[]' % {
+            output = '%(doublec)s %(spin)s%(id)d[]' % {
+                     'doublec': self.type2def['complex'],
                      'spin': self.particles[self.outgoing -1],
                      'id': self.outgoing}
             self.declaration.add(('list_complex', output))
         
-        out.write('void %(name)s(%(args)s,%(output)s)' % \
-                  {'output':output, 'name': name, 'args': ', '.join(args)})
+        out.write('%(prefix)s void %(name)s(%(args)s,%(output)s)' % \
+                  {'prefix': self.prefix,
+                      'output':output, 'name': name, 'args': ', '.join(args)})
         if 'is_h' in mode:
             out.write(';\n')
         else:
@@ -1499,24 +1613,31 @@ class ALOHAWriterForCPP(WriteALOHA):
                     continue
                     #should be define in the header
                 elif name[0] in ['F','V']:
-                    if aloha.loop_mode:
+                    if (aloha.loop_mode or aloha.dual_mode):
                         size = 8
                     else:
                         size = 6
                 elif name[0] == 'S':
-                    if aloha.loop_mode:
+                    if (aloha.loop_mode or aloha.dual_mode):
                         size = 5
                     else:
                         size = 3
                 elif name[0] in ['R','T']: 
-                    if aloha.loop_mode:
+                    if (aloha.loop_mode or aloha.dual_mode):
                         size = 20
                     else:
                         size = 18
     
                 out.write(' %s %s[%s];\n' % (self.type2def[type], name, size))
             elif (type, name) not in self.call_arg:
-                out.write(' %s %s;\n' % (self.type2def[type], name))               
+                if type == 'parameter':
+                    model_name =self.routine.model.__name__ 
+                    if '.' in model_name:
+                        model_name = model_name.split('.')[-1]
+                    out.write('std::complex<double> %s = Parameters_%s::getInstance()->mdl_%s;' % (name,self.routine.model.__name__,name))
+                    out.write('std::complex<double> mdl_%s = %s;' % (name,name))
+                elif type != 'fct':
+                    out.write(' %s %s;\n' % (self.type2def[type], name))               
 
         return out.getvalue()
 
@@ -1555,7 +1676,7 @@ class ALOHAWriterForCPP(WriteALOHA):
         if self.offshell:
             energy_pos = out_size -2
             type = self.particles[self.outgoing-1]
-            if aloha.loop_mode:
+            if (aloha.loop_mode or aloha.dual_mode):
                 size_p = 4
             else:
                 size_p = 2
@@ -1575,14 +1696,14 @@ class ALOHAWriterForCPP(WriteALOHA):
         
         type = self.particles[i-1]
         
-        if aloha.loop_mode:
+        if (aloha.loop_mode or aloha.dual_mode):
             template ='P%(i)d[%(j)d] = %(sign)s%(type)s%(i)d[%(nb)d];\n'
         else:
             template ='P%(i)d[%(j)d] = %(sign)s%(type)s%(i)d[%(nb2)d]%(operator)s;\n'
 
         nb2 = 0
         for j in range(4):
-            if not aloha.loop_mode:
+            if (not aloha.loop_mode and not aloha.dual_mode):
                 nb = j 
                 if j == 0: 
                     assert not aloha.mp_precision 
@@ -1615,7 +1736,20 @@ class ALOHAWriterForCPP(WriteALOHA):
                 out.write(' %s = %s;\n' % (name, self.write_obj(obj)))
                 self.declaration.add(('complex', name))
         
-        for name, (fct, objs) in self.routine.fct.items():
+        def sort_fct(a, b):
+            if len(a) < len(b):
+                return -1
+            elif len(a) > len(b):
+                return 1
+            elif a < b:
+                return -1
+            else:
+                return +1
+            
+        keys = list(self.routine.fct.keys())        
+        keys.sort(key=misc.cmp_to_key(sort_fct))
+        for name in keys:
+            fct, objs = self.routine.fct[name]
             format = ' %s = %s;\n' % (name, self.get_fct_format(fct))
             out.write(format % ','.join([self.write_obj(obj) for obj in objs]))
             
@@ -1628,27 +1762,59 @@ class ALOHAWriterForCPP(WriteALOHA):
             coup_name = '%s' % self.change_number_format(1)
         if not self.offshell:
             if coup_name == 'COUP':
-                out.write(' vertex = COUP*%s;\n' % self.write_obj(numerator.get_rep([0])))
+                mydict = {'num': self.write_obj(numerator.get_rep([0]))}
+                for c in ['coup', 'vertex']:
+                    if self.type2def['pointer_%s' %c] in ['*']:
+                        mydict['pre_%s' %c] = '(*'
+                        mydict['post_%s' %c] = ')'
+                    else:
+                        mydict['pre_%s' %c] = ''
+                        mydict['post_%s'%c] = ''
+                out.write(' %(pre_vertex)svertex%(post_vertex)s = %(pre_coup)sCOUP%(post_coup)s*%(num)s;\n' %\
+                            mydict)
             else:
-                out.write(' vertex = %s;\n' % self.write_obj(numerator.get_rep([0])))
+                mydict= {}
+                if self.type2def['pointer_vertex'] in ['*']:
+                    mydict['pre_vertex'] = '(*'
+                    mydict['post_vertex'] = ')'
+                else:
+                    mydict['pre_vertex'] = ''
+                    mydict['post_vertex'] = ''                 
+                mydict['data'] = self.write_obj(numerator.get_rep([0]))
+                out.write(' %(pre_vertex)svertex%(post_vertex)s = %(data)s;\n' % 
+                          mydict)
         else:
             OffShellParticle = '%s%d' % (self.particles[self.offshell-1],\
                                                                   self.offshell)
             if 'L' not in self.tag:
                 coeff = 'denom'
+                mydict = {}
+                if self.type2def['pointer_coup'] in ['*']:
+                    mydict['pre_coup'] = '(*'
+                    mydict['post_coup'] = ')'
+                else:
+                    mydict['pre_coup'] = ''
+                    mydict['post_coup'] = ''
+                mydict['coup'] = coup_name
+                mydict['i'] = self.outgoing
                 if not aloha.complex_mass:
                     if self.routine.denominator:
-                        out.write('    denom = %(COUP)s/(%(denom)s)\n' % {'COUP': coup_name,\
-                                'denom':self.write_obj(self.routine.denominator)}) 
+                        if self.routine.denominator == "1":
+                            out.write('    denom = %(pre_coup)s%(coup)s%(post_coup)s;\n' % \
+                                  mydict) 
+                        else:
+                            mydict['denom'] = self.write_obj(self.routine.denominator)
+                            out.write('    denom = %(pre_coup)s%(coup)s%(post_coup)s/(%(denom)s);\n' % \
+                                  mydict) 
                     else:
-                        out.write('    denom = %(coup)s/((P%(i)s[0]*P%(i)s[0])-(P%(i)s[1]*P%(i)s[1])-(P%(i)s[2]*P%(i)s[2])-(P%(i)s[3]*P%(i)s[3]) - M%(i)s * (M%(i)s -cI* W%(i)s));\n' % \
-                      {'i': self.outgoing, 'coup': coup_name})
+                        out.write('    denom = %(pre_coup)s%(coup)s%(post_coup)s/((P%(i)s[0]*P%(i)s[0])-(P%(i)s[1]*P%(i)s[1])-(P%(i)s[2]*P%(i)s[2])-(P%(i)s[3]*P%(i)s[3]) - M%(i)s * (M%(i)s -cI* W%(i)s));\n' % \
+                                  mydict)
                 else:
                     if self.routine.denominator:
                         raise Exception('modify denominator are not compatible with complex mass scheme')                
 
-                    out.write('    denom = %(coup)s/((P%(i)s[0]*P%(i)s[0])-(P%(i)s[1]*P%(i)s[1])-(P%(i)s[2]*P%(i)s[2])-(P%(i)s[3]*P%(i)s[3]) - (M%(i)s*M%(i)s));\n' % \
-                      {'i': self.outgoing, 'coup': coup_name})
+                    out.write('    denom = %(pre_coup)s%(coup)s%(post_coup)s/((P%(i)s[0]*P%(i)s[0])-(P%(i)s[1]*P%(i)s[1])-(P%(i)s[2]*P%(i)s[2])-(P%(i)s[3]*P%(i)s[3]) - (M%(i)s*M%(i)s));\n' % \
+                              mydict)
 
                 self.declaration.add(('complex','denom'))
                 if aloha.loop_mode:
@@ -1665,7 +1831,7 @@ class ALOHAWriterForCPP(WriteALOHA):
                                         self.write_obj(numerator.get_rep(ind))))
         return out.getvalue()
         
-    remove_double = re.compile('std::complex<double> (?P<name>[\w]+)\[\]')
+    remove_double = re.compile(r'std::complex<double> (?P<name>[\w]+)\[\]')
     def define_symmetry(self, new_nb, couplings=None):
         """Write the call for symmetric routines"""
         number = self.offshell
@@ -1849,9 +2015,17 @@ class ALOHAWriterForCPP(WriteALOHA):
 class ALOHAWriterForGPU(ALOHAWriterForCPP):
     
     extension = '.cu'
-    realoperator = '.re'
-    imagoperator = '.im'
-    ci_definition = 'complex<double> cI = mkcmplx(0., 1.);\n'
+    prefix ='__device__'
+    realoperator = '.real()'
+    imagoperator = '.imag()'
+    ci_definition = 'cxtype cI = cxtype(0., 1.);\n'
+    
+    type2def = {}    
+    type2def['int'] = 'int '
+    type2def['double'] = 'fptype '
+    type2def['complex'] = 'cxtype '
+    type2def['pointer_vertex'] = '*' # using complex<double> * vertex)
+    type2def['pointer_coup'] = ''
     
     def get_header_txt(self, name=None, couplings=None, mode=''):
         """Define the Header of the fortran file. This include
@@ -1859,8 +2033,8 @@ class ALOHAWriterForGPU(ALOHAWriterForCPP):
             - definition of variable
         """
         text = StringIO()
-        if not 'is_h' in mode:
-            text.write('__device__=__forceinclude__\n')
+        #if not 'is_h' in mode:
+        #    text.write('__device__=__forceinclude__\n')
         text.write(ALOHAWriterForCPP.get_header_txt(self, name, couplings, mode))
         return text.getvalue()
         
@@ -1871,7 +2045,7 @@ class ALOHAWriterForGPU(ALOHAWriterForCPP):
         if not self.mode == 'no_include':
             h_string.write('#ifndef '+ self.name + '_guard\n')
             h_string.write('#define ' + self.name + '_guard\n')
-            h_string.write('#include "cmplx.h"\n')
+            h_string.write('#include "mgOnGpuTypes.h"\n')
             h_string.write('using namespace std;\n\n')
 
         h_header = self.get_header_txt(mode='no_include__is_h', couplings=couplings)
@@ -1885,8 +2059,133 @@ class ALOHAWriterForGPU(ALOHAWriterForCPP):
         if not self.mode == 'no_include':
             h_string.write('#endif\n\n')
 
+        
         return h_string.getvalue()
     
+    
+    def write_obj_Add_test(self, obj, prefactor=True):
+        """Turns addvariable into a string"""
+
+        data = defaultdict(list)
+        number = []
+        [data[p.prefactor].append(p) if hasattr(p, 'prefactor') else number.append(p)
+             for p in obj]
+
+        file_str = StringIO()
+        
+        if prefactor and obj.prefactor != 1:
+            formatted = self.change_number_format(obj.prefactor)
+            if formatted.startswith(('+','-')):
+                file_str.write('(%s)' % formatted)
+            else:
+                file_str.write(formatted)
+            file_str.write('*(')
+        else:
+            file_str.write('(')
+        first=True
+        for value, obj_list in data.items():
+            add= '+'
+            if value not in  [-1,1]:
+                nb_str = self.change_number_format(value)
+                if nb_str[0] in ['+','-']:
+                    file_str.write(nb_str)
+                else:
+                    file_str.write('+')
+                    file_str.write(nb_str)
+                file_str.write('*(')
+            elif value == -1:
+                add = '-' 
+                file_str.write('-')
+            elif not first:
+                file_str.write('+')
+            else:
+                file_str.write('')
+            first = False
+            file_str.write(add.join([self.write_obj(obj, prefactor=False) 
+                                                          for obj in obj_list]))
+            if value not in [1,-1]:
+                file_str.write(')')
+        if number:
+            total = sum(number)
+            file_str.write('+ %s' % self.change_number_format(total))
+
+        file_str.write(')')
+        return file_str.getvalue()    
+    
+    def write_MultVariable_test(self, obj, prefactor=True):
+        """Turn a multvariable into a string"""
+        
+        mult_list = [self.write_variable_id(id) for id in obj]
+        
+        tmp = mult_list[0]
+        for obj in mult_list[1:]:
+            tmp = 'cuCmul(%s,%s)' % (obj, tmp)
+        
+        
+        data = {'factors': tmp}
+        if prefactor and obj.prefactor != 1:
+            if obj.prefactor != -1:
+                text = '%(prefactor)s * %(factors)s'
+                data['prefactor'] = self.change_number_format(obj.prefactor)
+            else:
+                text = '-%(factors)s'
+        else:
+            text = '%(factors)s'
+        return text % data
+    
+    
+    def get_header_txt(self, name=None, couplings=None,mode=''):
+        """Define the Header of the fortran file. This include
+            - function tag
+            - definition of variable
+        """
+        if name is None:
+            name = self.name
+           
+        if mode=='':
+            mode = self.mode
+        
+        
+        
+        out = StringIO()
+        # define the type of function and argument
+        if not 'no_include' in mode:
+            out.write('#include \"%s.h\"\n\n' % self.name)
+        args = []
+        for format, argname in self.define_argument_list(couplings):
+            if format.startswith('list'):
+                type = self.type2def[format[5:]]
+                list_arg = '[]'
+            else:
+                type = self.type2def[format]
+                list_arg = ''
+            if argname.startswith('COUP'):
+                point = self.type2def['pointer_coup']
+                args.append('%s%s%s%s'% (type,point, argname, list_arg))
+            else:
+                args.append('%s%s%s'% (type, argname, list_arg))
+                
+        if not self.offshell:
+            output = '%(doublec)s %(pointer_vertex)s vertex' % {
+                'doublec':self.type2def['complex'],
+                'pointer_vertex': self.type2def['pointer_vertex']}
+            #self.declaration.add(('complex','vertex'))
+        else:
+            output = '%(doublec)s %(spin)s%(id)d[]' % {
+                     'doublec': self.type2def['complex'],
+                     'spin': self.particles[self.outgoing -1],
+                     'id': self.outgoing}
+            self.declaration.add(('list_complex', output))
+        
+        out.write('%(prefix)s void %(name)s(const %(args)s, %(output)s)' % \
+                  {'prefix': self.prefix,
+                      'output':output, 'name': name, 'args': ', const '.join(args)})
+        if 'is_h' in mode:
+            out.write(';\n')
+        else:
+            out.write('\n{\n')
+
+        return out.getvalue() 
 
 class ALOHAWriterForPython(WriteALOHA):
     """ A class for returning a file/a string for python evaluation """
@@ -1926,7 +2225,9 @@ class ALOHAWriterForPython(WriteALOHA):
             shift = 0
         else:
             shift = -1 + self.momentum_size
-            
+            if aloha.unitary_gauge == 3 and match.group('var').startswith('S'):
+                shift += 4
+             
         return '%s[%s]' % (match.group('var'), int(match.group('num')) + shift)
 
     def change_var_format(self, name): 
@@ -1940,7 +2241,7 @@ class ALOHAWriterForPython(WriteALOHA):
             self.declaration.add((name.type, name))
         else:
             self.declaration.add(('', name.split('_',1)[0]))
-        name = re.sub('(?P<var>\w*)_(?P<num>\d+)$', self.shift_indices , name)
+        name = re.sub(r'(?P<var>\w*)_(?P<num>\d+)$', self.shift_indices , name)
         
         return name
 
@@ -2041,14 +2342,22 @@ class ALOHAWriterForPython(WriteALOHA):
                 coeff = 'COUP'
                 
             for ind in numerator.listindices():
+                shift = 0
+                if aloha.unitary_gauge == 3 and self.outname.startswith('S'):
+                    shift = 4
                 out.write('    %s[%d]= %s*%s\n' % (self.outname, 
-                                        self.pass_to_HELAS(ind), coeff, 
+                                        self.pass_to_HELAS(ind) + shift, coeff, 
                                         self.write_obj(numerator.get_rep(ind))))
         return out.getvalue()
     
-    def get_foot_txt(self):
+    def get_foot_txt(self, combine=False):
         if not self.offshell:
             return '    return vertex\n\n'
+        elif not combine and aloha.unitary_gauge == 3 and \
+             self.outname.startswith(('V','S')) and \
+             'P1N' not in self.tag:
+            return '    %(out)s = wavefunctions.multiply_propagator_factor(%(out)s, M%(num)s)\n    return %(out)s\n\n' % \
+                   {'out': self.outname, 'num': self.outgoing}
         else:
             return '    return %s\n\n' % (self.outname)
             
@@ -2103,10 +2412,14 @@ class ALOHAWriterForPython(WriteALOHA):
                 self.get_one_momenta_def(i+1, out)             
              
         # define the resulting momenta
-        if self.offshell:
+        bypass = False
+        if 'P1N' in self.tag and self.offshell and \
+           not self.declaration.is_used('P%s' % (self.outgoing)):
+            bypass = True
+        if self.offshell and not bypass:
             type = self.particles[self.outgoing-1]
             out.write('    %s%s = wavefunctions.WaveFunction(size=%s)\n' % (type, self.outgoing, out_size))
-            if aloha.loop_mode:
+            if (aloha.loop_mode or aloha.dual_mode):
                 size_p = 4
             else:
                 size_p = 2
@@ -2117,8 +2430,21 @@ class ALOHAWriterForPython(WriteALOHA):
                                              ''.join(p) % dict_energy))
             
             self.get_one_momenta_def(self.outgoing, out)
+            if any(t in self.tag for t in ("P1T","P1TR","P1TL","P1L")):
+                for i, value in zip(range(1,4), ("1e-30", "0.0", "1e-15")):
+                    out.write("    if abs(P%(P)s[0])*1e-10 > abs(P%(P)s[%(i)s]): P%(P)s[%(i)s] = %(val)s\n"
+                              % {"P": self.outgoing, "i": i, "val": value})
 
-               
+            i = self.outgoing
+            if self.declaration.is_used('Tnorm%s' % i):
+                out.write("    Tnorm{0} = (P{0}[1]*P{0}[1]+P{0}[2]*P{0}[2]+P{0}[3]*P{0}[3])**0.5\n".format(i))
+            if self.declaration.is_used('TnormZ%s' % i):
+                out.write("    TnormZ{0} = Tnorm{0} - P{0}[3]\n".format(i))
+            if self.declaration.is_used('FWP%s' % i):
+                out.write("    FWP{0} = (-P{0}[0] + Tnorm{0})**0.5\n".format(i))
+            if self.declaration.is_used('FWM%s' % i):
+                out.write("    FWM{0} = (-P{0}[0] - Tnorm{0})**0.5\n".format(i))
+
         # Returning result
         return out.getvalue()
 
@@ -2128,7 +2454,7 @@ class ALOHAWriterForPython(WriteALOHA):
         type = self.particles[i-1]
         
         main = '    P%d = [' % i
-        if aloha.loop_mode:
+        if (aloha.loop_mode or aloha.dual_mode):
             template ='%(sign)s%(type)s%(i)d[%(nb)d]'
         else:
             template ='%(sign)scomplex(%(type)s%(i)d[%(nb2)d])%(operator)s'
@@ -2137,7 +2463,7 @@ class ALOHAWriterForPython(WriteALOHA):
         strfile.write(main)
         data = []
         for j in range(4):
-            if not aloha.loop_mode:
+            if (not aloha.loop_mode and not aloha.dual_mode):
                 nb = j
                 if j == 0: 
                     assert not aloha.mp_precision 
@@ -2220,7 +2546,7 @@ class ALOHAWriterForPython(WriteALOHA):
                     text.write("    for i in range(%s,%s):\n" % (self.momentum_size, self.momentum_size+size))
                     text.write("        %(main)s[i] += tmp[i]\n" %{'main': main})
         
-        text.write(self.get_foot_txt())
+        text.write(self.get_foot_txt(combine=True))
 
         #ADD SYMETRY
         if sym:
@@ -2249,6 +2575,10 @@ class Declaration_list(set):
         return var in self.var_name
     
     def add(self,obj):
+        type, name = obj
+        if name == 'BWCUTOFF':
+            type = 'double'
+            obj = (type, name)
         if __debug__:
             type, name = obj
             samename = [t for t,n in self if n ==name]
@@ -2267,26 +2597,32 @@ class Declaration_list(set):
         
 
 class WriterFactory(object):
-    
-    def __new__(cls, data, language, outputdir, tags):
-        language = language.lower()
+
+    def __new__(cls, data, language, outputdir, tags, options=None):
+        try:
+            language = language.lower()
+        except AttributeError:
+            pass
+
         if isinstance(data.expr, aloha_lib.SplitCoefficient):
             assert language == 'fortran'
             if 'MP' in tags:
-                return ALOHAWriterForFortranLoopQP(data, outputdir)
+                return ALOHAWriterForFortranLoopQP(data, outputdir, options=options)
             else:
-                return ALOHAWriterForFortranLoop(data, outputdir)
+                return ALOHAWriterForFortranLoop(data, outputdir, options=options)
         if language == 'fortran':
             if 'MP' in tags:
-                return ALOHAWriterForFortranQP(data, outputdir)
+                return ALOHAWriterForFortranQP(data, outputdir, options=options)
             else:
-                return ALOHAWriterForFortran(data, outputdir)
+                return ALOHAWriterForFortran(data, outputdir, options=options)
         elif language == 'python':
-            return ALOHAWriterForPython(data, outputdir)
+            return ALOHAWriterForPython(data, outputdir, options=options)
         elif language == 'cpp':
-            return ALOHAWriterForCPP(data, outputdir)
-        elif language == 'gpu':
-            return ALOHAWriterForGPU(data, outputdir)
+            return ALOHAWriterForCPP(data, outputdir, options=options)
+        elif language in ['gpu','cudac']:
+            return ALOHAWriterForGPU(data, outputdir, options=options)
+        elif issubclass(language, WriteALOHA):
+            return language(data, outputdir, options=options)
         else:
             raise Exception('Unknown output format')
 
@@ -2322,4 +2658,3 @@ class WriterFactory(object):
 #        ff = open(pjoin(output_dir, 'additional_aloha_function.f'), 'a')
 #        ff.write(unknow_fct_template % dico)
 #        ff.close()
-

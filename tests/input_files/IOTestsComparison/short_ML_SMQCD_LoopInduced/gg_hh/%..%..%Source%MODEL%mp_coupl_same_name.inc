@@ -22,8 +22,9 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       COMMON/MP_WIDTHS/ MDL_WH,MDL_WT,MDL_WW,MDL_WZ
 
 
-      COMPLEX*32 GC_5,R2_GGHB,R2_GGHT,R2_GGHHB,R2_GGHHT,GC_30,GC_33
-     $ ,GC_37
+      COMPLEX*32 GC_30,GC_33,GC_37
+
+      COMPLEX*32 GC_5,R2_GGHB,R2_GGHT,R2_GGHHB,R2_GGHHT
 
       COMMON/MP_COUPLINGS/ GC_5,R2_GGHB,R2_GGHT,R2_GGHHB,R2_GGHHT
      $ ,GC_30,GC_33,GC_37

@@ -102,7 +102,8 @@ C
 C LOCAL VARIABLES 
 C  
       INTEGER I,J
-      REAL*8 CF(NCOLOR,NCOLOR)
+      INTEGER CF(NCOLOR*(NCOLOR+1)/2)
+      INTEGER DENOM, CF_INDEX
       COMPLEX*16 ZTEMP, AMP(NGRAPHS), JAMP(NCOLOR)
       COMPLEX*16 TMP_JAMP(%(nb_temp_jamp)i)
 C  
@@ -129,11 +130,14 @@ C ----------
       endif
   %(jamp_lines)s
       born_hel = 0.D0 
+      CF_INDEX=0
       DO I = 1, NCOLOR
           ZTEMP = (0.D0,0.D0)
-          DO J = 1, NCOLOR
-              ZTEMP = ZTEMP + CF(j,i)*JAMP(J)
+          DO J = I, NCOLOR
+              CF_INDEX = CF_INDEX + 1
+              ZTEMP = ZTEMP + CF(CF_INDEX)*JAMP(J)
           ENDDO
           born_hel =born_hel+ZTEMP*DCONJG(JAMP(I))
       ENDDO
+      born_hel = born_hel/DENOM
       END

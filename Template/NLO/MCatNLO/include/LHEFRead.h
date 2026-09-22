@@ -95,7 +95,10 @@ class MyReader {
       // Reweighting
       std::string s;
       int iww = 1;
-      if (jwgtinfo != 9) {
+      // TV: change the line below to read the rwgt block even if the
+      // the jwgtinfo is 0 (when no scale or PDF variation is done)
+      //if (jwgtinfo != 9) {
+      if (jwgtinfo != 9 && jwgtinfo != 0) {
 	std::exit;
       }
       else {
