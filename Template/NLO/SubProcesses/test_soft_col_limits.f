@@ -721,7 +721,7 @@ c-----
          if (pdg_type_d(1,fks_i_d(1)).eq.-21) then
             write (*,*) 'Process generated with [LOonly=QCD]. '/
      $           /'No tests to do.'
-            return
+            stop
          endif
       endif
       if (ilim.eq.2) then

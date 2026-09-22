@@ -199,6 +199,9 @@ kinematics_module.o : process_module.o
 scale_module.o : process_module.o kinematics_module.o
 montecarlocounter.o : scale_module.o kinematics_module.o process_module.o
 fks_singular.o : scale_module.o kinematics_module.o process_module.o
+add_write_info.o write_event.o test_soft_col_limits.o driver_mintMC.o: scale_module.o
+genps_fks.o: kinematics_module.o
+driver_mintFO.o: process_module.o
 mint_module.o : FKSParams.o
 BinothLHA_OLP.o: FKSParams.o
 BinothLHA.o: FKSParams.o

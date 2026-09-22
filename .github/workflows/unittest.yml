@@ -663,6 +663,15 @@ jobs:
             ./tests/test_manager.py test_madspin test_lhe_parser -t0
 
 
+  unittest_native_born:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
+    steps:
+      - uses: actions/checkout@v5
+      - name: Check shared Born providers and native subtraction
+        run: |
+          ./tests/test_manager.py test_born_support test_soft_col_limits test_momentum_maps test_mc_dead_zones -t0
+
   unittest_uncovered:
     # unit tests that were not listed in any workflow (CI coverage audit).
     # test_fks_ppzz_in_RS is left out: the RS UFO model is still python2 only.

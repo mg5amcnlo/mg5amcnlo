@@ -2458,7 +2458,8 @@ c local
      $     ,phi_mother_fks,sinphi_mother_fks,th_mother_fks,xitmp2
      $     ,sinth_mother_fks,x1
       double precision native_u,native_uborn,native_eborn,native_ej,
-     $     native_denom,native_radial,native_ps,native_sign
+     $     native_denom,native_radial,native_ps,native_sign,
+     $     native_delta,native_onepy
       save xjactmp
       common /virtgranny_boost/shybst,chybst,chybstmo
 c external
@@ -2642,10 +2643,17 @@ c solving the quadratic for u at fixed xi. This covers both solutions
 c continuously and avoids loss of precision where they coalesce.
          native_uborn=sqrtshat*sqrt(cffC2)/2d0
          native_eborn=sqrt(native_uborn**2+m_j_fks**2)
-         native_u=native_uborn*(1d0-x(1)**2)
+         native_delta=native_uborn*x(1)**2
+         native_u=native_uborn-native_delta
          native_ej=sqrt(native_u**2+m_j_fks**2)
-         native_denom=sqrtshat-native_ej+native_u*y_ij_fks
-         xi_i_fks=2d0*(native_uborn-native_u)*
+c Rationalize W-E_j+u*y. Its terms nearly cancel for a soft
+c massless recoil and antiparallel daughters. Keep 1+y through the
+c half angle, and uBorn-u through the sampled radial coordinate.
+         native_onepy=2d0*sin(pi*(1d0-x(2))/2d0)**2
+         native_denom=xmrec2/(sqrtshat-native_eborn+native_uborn)
+     $        +native_delta*(1d0+(native_uborn+native_u)/
+     $        (native_eborn+native_ej))+native_u*native_onepy
+         xi_i_fks=2d0*native_delta*
      $        (native_uborn+native_u)/
      $        ((native_eborn+native_ej)*native_denom)
          native_sign=(2d0-xi_i_fks)*native_u+
@@ -2819,9 +2827,17 @@ c
       chybst=(expybst+1/expybst)/2.d0
       chybstmo=chybst-1.d0
 c
-      do j=1,3
-         xdir(j)=xp_mother(j)/x3len_fks_mother
-      enddo
+      if(native_mapping)then
+c Use the original mother direction. Adding nearly opposite hard
+c daughters corrupts its norm, which a large recoil boost amplifies.
+         xdir(1)=sinth_mother_fks*cosphi_mother_fks
+         xdir(2)=sinth_mother_fks*sinphi_mother_fks
+         xdir(3)=costh_mother_fks
+      else
+         do j=1,3
+            xdir(j)=xp_mother(j)/x3len_fks_mother
+         enddo
+      endif
       
 c Boost the momenta
       do i=nincoming+1,nexternal
@@ -5367,7 +5383,9 @@ c     Use xp in the reduced frame (a.k.a. tilde frame) to get the Born momenta.
       double precision xinorm_ev
       common /cxinormev/xinorm_ev
       integer i
-      double precision native_uborn,native_u,native_denom
+      double precision native_uborn,native_u,native_denom,
+     $     native_eborn,native_delta,native_onepy,native_ratio,
+     $     native_recoil,native_inverse_denom
       double precision rho,dot,sstiny,cctiny,branch_sign,
      $     native_fsr_angle
       external rho,dot,native_fsr_angle
@@ -5395,7 +5413,15 @@ c     Use xp in the reduced frame (a.k.a. tilde frame) to get the Born momenta.
 
       ! x_i_fks
       xp_mother(0:3)=xp(0:3,i_fks)+xp(0:3,j_fks)
-      if (nincoming.eq.2) then
+      if(native_mapping)then
+c Summing the spectators retains a soft recoil and its invariant mass;
+c subtracting the hard daughters from the beams loses that precision.
+         recoil=0d0
+         do i=nincoming+1,nexternal
+            if(i.eq.i_fks.or.i.eq.j_fks)cycle
+            recoil=recoil+xp(:,i)
+         enddo
+      elseif (nincoming.eq.2) then
          recoil(0:3)=xp(0:3,1)+xp(0:3,2)-xp_mother(0:3)
       else
          recoil(0:3)=xp(0:3,1)-xp_mother(0:3)
@@ -5430,9 +5456,27 @@ c |p_j|. At fixed xi and y both solutions can exist, but the supplied
 c momentum selects one of them; choosing randomly changes the event.
       if(native_mapping)then
          native_uborn=sqrtshat*sqrt(cffC2)/2d0
+         native_eborn=sqrt(native_uborn**2+xmj2)
          native_u=rho(xp(:,j_fks))
-         native_denom=sqrtshat-xp(0,j_fks)+native_u*y_ij_fks
-         x(1)=(native_uborn-native_u)/native_uborn
+         native_delta=native_uborn-native_u
+         native_onepy=2d0*sin(pi*(1d0-x(2))/2d0)**2
+         native_ratio=(native_uborn+native_u)/
+     $        (native_eborn+xp(0,j_fks))
+         native_recoil=xmrec2/(sqrtshat-native_eborn+native_uborn)
+c Close to uBorn, infer the small radial difference from the emitted
+c energy and angle. Subtracting the two momenta amplifies their mass-shell
+c roundoff when the recoil is soft, spoiling the forward reconstruction.
+         native_inverse_denom=sqrtshat*native_ratio-
+     $        xp(0,i_fks)*(1d0+native_ratio)
+         if(abs(native_delta).lt.1d-4*native_uborn.and.
+     $        native_inverse_denom.gt.0d0)then
+            native_delta=xp(0,i_fks)*
+     $           (native_recoil+native_u*native_onepy)/
+     $           native_inverse_denom
+         endif
+         native_denom=native_recoil+native_delta*(1d0+native_ratio)
+     $        +native_u*native_onepy
+         x(1)=native_delta/native_uborn
          if(x(1).lt.-1d-12.or.x(1).gt.1d0+1d-12)then
             xjac=-102d0
             return
@@ -5481,7 +5525,11 @@ c momentum selects one of them; choosing randomly changes the event.
       shybst=(expybst-1/expybst)/2.d0
       chybst=(expybst+1/expybst)/2.d0
       chybstmo=chybst-1.d0
-      xdir(1:3)=-xp_mother(1:3)/rho(xp_mother)
+      if(native_mapping)then
+         xdir(1:3)=recoil(1:3)/rho(recoil)
+      else
+         xdir(1:3)=-xp_mother(1:3)/rho(xp_mother)
+      endif
 c Boost the momenta
       do i=nincoming+1,nexternal
          if(i.eq.j_fks) cycle

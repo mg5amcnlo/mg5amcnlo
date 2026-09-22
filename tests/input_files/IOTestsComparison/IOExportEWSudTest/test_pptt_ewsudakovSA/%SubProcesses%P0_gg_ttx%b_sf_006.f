@@ -25,7 +25,7 @@ C
 C     
 C     ARGUMENTS 
 C     
-      REAL*8 P(0:3,NEXTERNAL), ANS_SUMMED
+      REAL*8 P(0:3,NEXTERNAL-1), ANS_SUMMED
 C     
 C     VARIABLES
 C     

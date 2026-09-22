@@ -3692,17 +3692,33 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
     ############################################################################
     def get_pid_final_initial_states(self):
         """Find the pid of all particles in the final and initial states"""
+        import json
+
         pids = set()
         subproc = [l.strip() for l in open(pjoin(self.me_dir,'SubProcesses',
                                                                  'subproc.mg'))]
-        nb_init = self.ninitial
-        pat = re.compile(r'''DATA \(IDUP\(ILH|I,\d+\),ILH|I=1,\d+\)/([\+\-\d,\s]*)/''', re.I)
+        pat = re.compile(r'DATA\s*\(IDUP\((?:ILH|I),\d+\),'
+                         r'\s*(?:ILH|I)=1,\d+\)\s*/([+\-\d,\s]*)/', re.I)
         for Pdir in subproc:
-            text = open(pjoin(self.me_dir, 'SubProcesses', Pdir, 'born_leshouche.inc')).read()
+            directory = pjoin(self.me_dir, 'SubProcesses', Pdir)
+            metadata_path = pjoin(directory, 'born_support.json')
+            source = pjoin(directory, 'born_leshouche.inc')
+            if os.path.isfile(metadata_path):
+                with open(metadata_path) as stream:
+                    metadata = json.load(stream)
+                if 'born_pdgs' in metadata:
+                    pids.update(str(pdg) for process in metadata['born_pdgs']
+                                for pdg in process)
+                    continue
+                # Earlier shared-provider outputs keep the immutable IDUP
+                # table in the context metadata rather than in this include.
+                source = pjoin(self.me_dir, 'Source', 'BornSupport',
+                               'c%d' % metadata['context'], 'metadata.f')
+            with open(source) as stream:
+                text = stream.read()
             group = pat.findall(text)
             for particles in group:
-                particles = particles.split(',')
-                pids.update(set(particles))
+                pids.update(str(int(pdg)) for pdg in particles.split(','))
 
         return pids
 

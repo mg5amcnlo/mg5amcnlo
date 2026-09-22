@@ -5744,7 +5744,7 @@ PYTHIA8LINKLIBS=%(pythia8_prefix)s/lib/libpythia8.a -lz -ldl"""%{'pythia8_prefix
         """read and parse the test_ME/MC.log file"""
         content = open(log).read()
         if 'FAILED' in content:
-            logger.info('Output of the failing test:\n'+content[:-1],'$MG:BOLD')
+            logger.info('Output of the failing test:\n%s', content.rstrip())
             raise aMCatNLOError('Some tests failed, run cannot continue. Please search on https://answers.launchpad.net/mg5amcnlo for more information, and in case there is none, report the problem there.')
         else:
             lines = [l for l in content.split('\n') if 'PASSED' in l]

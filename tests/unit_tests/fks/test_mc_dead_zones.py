@@ -8,6 +8,7 @@ the final-state dipole boundary uses the actual support check throughout.
 from pathlib import Path
 import shutil
 import subprocess
+import sys
 import tempfile
 import unittest
 
@@ -43,7 +44,8 @@ class TestMCDeadZones(unittest.TestCase):
         cls.executable = work / "check_dead_zones"
         command = [shutil.which("gfortran"), "-O2", "-std=legacy",
                    "-ffixed-line-length-none", "-fcheck=bounds",
-                   "-ffunction-sections", "-fdata-sections", "-Wl,--gc-sections",
+                   "-ffunction-sections", "-fdata-sections",
+                   "-Wl,-dead_strip" if sys.platform == "darwin" else "-Wl,--gc-sections",
                    "-I", str(work), str(TEMPLATE / "process_module.f90"),
                    str(TEMPLATE / "kinematics_module.f90"),
                    str(TEMPLATE / "scale_module.f90"), str(work / "counter.f"),

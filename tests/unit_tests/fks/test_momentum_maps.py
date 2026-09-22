@@ -9,6 +9,7 @@ from pathlib import Path
 import re
 import shutil
 import subprocess
+import sys
 import tempfile
 import unittest
 
@@ -66,7 +67,9 @@ class TestMomentumMaps(unittest.TestCase):
         cls.executable = work / "check_maps"
         command = [shutil.which("gfortran"), "-O2", "-std=legacy",
                    "-ffixed-line-length-none", "-ffunction-sections",
-                   "-fdata-sections", "-Wl,--gc-sections", "-I", str(work),
+                   "-fdata-sections",
+                   "-Wl,-dead_strip" if sys.platform == "darwin" else "-Wl,--gc-sections",
+                   "-I", str(work),
                    str(TEMPLATE / "process_module.f90"),
                    str(TEMPLATE / "kinematics_module.f90"),
                    str(work / "native_context.f90"),
@@ -102,3 +105,7 @@ class TestMomentumMaps(unittest.TestCase):
 
     def test_massive_history_near_branch_boundary(self):
         self.check_map("massive_branch")
+
+    def test_massive_history_with_soft_massless_recoil(self):
+        self.check_map("massless_recoil")
+        self.check_map("massless_recoil2")

@@ -1,0 +1,52 @@
+      SUBROUTINE MC_NATIVE_PROPS(PMASS,PWIDTH,POW)
+      USE MC_NATIVE_CONTEXT, ONLY: ACTIVE_CONTEXT,ENSURE_NATIVE_CONTEXT
+      IMPLICIT NONE
+      INCLUDE 'nexternal.inc'
+      INCLUDE 'maxconfigs.inc'
+      INCLUDE 'coupl.inc'
+      DOUBLE PRECISION ZERO
+      PARAMETER(ZERO=0D0)
+      DOUBLE PRECISION PMASS(-NEXTERNAL:0,LMAXCONFIGS),PWIDTH(
+     $ -NEXTERNAL:0,LMAXCONFIGS)
+      INTEGER POW(-NEXTERNAL:0,LMAXCONFIGS)
+      CALL ENSURE_NATIVE_CONTEXT()
+      PMASS=0D0
+      PWIDTH=0D0
+      POW=0
+      SELECT CASE(ACTIVE_CONTEXT)
+      CASE(1)
+      PMASS( -1,   1)  = ABS(MDL_MT)
+      PWIDTH( -1,   1) = ABS(MDL_WT)
+      POW( -1,   1) = 1
+      PMASS( -1,   2)  = ABS(MDL_MT)
+      PWIDTH( -1,   2) = ABS(MDL_WT)
+      POW( -1,   2) = 1
+      CASE(4)
+      PMASS( -1,   1)  = ABS(MDL_MT)
+      PWIDTH( -1,   1) = ABS(MDL_WT)
+      POW( -1,   1) = 1
+      PMASS( -1,   2)  = ABS(MDL_MT)
+      PWIDTH( -1,   2) = ABS(MDL_WT)
+      POW( -1,   2) = 1
+      CASE(5)
+      PMASS( -1,   1)  = ZERO
+      PWIDTH( -1,   1) = ZERO
+      POW( -1,   1) = 2
+      PMASS( -1,   2)  = ABS(MDL_MT)
+      PWIDTH( -1,   2) = ABS(MDL_WT)
+      POW( -1,   2) = 1
+      PMASS( -1,   3)  = ABS(MDL_MT)
+      PWIDTH( -1,   3) = ABS(MDL_WT)
+      POW( -1,   3) = 1
+      CASE(7)
+      PMASS( -1,   1)  = ZERO
+      PWIDTH( -1,   1) = ZERO
+      POW( -1,   1) = 2
+      PMASS( -1,   2)  = ZERO
+      PWIDTH( -1,   2) = ZERO
+      POW( -1,   2) = 2
+      PMASS( -1,   3)  = ABS(MDL_MZ)
+      PWIDTH( -1,   3) = ABS(MDL_WZ)
+      POW( -1,   3) = 2
+      END SELECT
+      END

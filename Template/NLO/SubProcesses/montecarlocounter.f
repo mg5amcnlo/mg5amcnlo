@@ -114,9 +114,8 @@ c if the father is a gluon, and another gluon will be found which is
 c connected to it by both colour and anticolour
       isspecial=.false.
 c
-      if (split_type(qcd_pos)) then
-        ! identify the color partners 
-c consider only leading colour flows
+c Born colour sampling is also needed for LO-only and QED sectors.
+c Refresh the allowed flows even when no QCD splitting is active.
         num_leading_cflows=0
         do i=1,max_bcol
           is_leading_cflow(i)=.false.
@@ -128,7 +127,9 @@ c consider only leading colour flows
             endif
           enddo
         enddo
-c
+
+      if (split_type(qcd_pos)) then
+        ! identify the color partners
         do i=1,max_bcol
           if(.not.is_leading_cflow(i))cycle
 c Loop over Born-level colour flows

@@ -92,6 +92,8 @@ def worker_record(exporter, me, amp_orders):
     sq, amps = born.get_split_orders_mapping()
     entry.update(directory=name, nexternal=me.get_nexternal_ninitial()[0],
                  nincoming=born.get_nexternal_ninitial()[1],
+                 born_pdgs=[[leg['id'] for leg in process.get_legs_with_decays()]
+                            for process in born['processes']],
                  nprocesses=len(born['processes']),
                  ngraphs=born.get_number_of_amplitudes(),
                  ncolor=max(1, len(born['color_basis'])),

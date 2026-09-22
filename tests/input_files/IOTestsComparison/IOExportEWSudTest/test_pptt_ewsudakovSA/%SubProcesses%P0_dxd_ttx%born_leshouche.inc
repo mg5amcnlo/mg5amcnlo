@@ -5,3 +5,5 @@
       DATA (ICOLUP(2,I,  1),I=1, 4)/501,  0,  0,502/
       DATA (ICOLUP(1,I,  2),I=1, 4)/  0,502,502,  0/
       DATA (ICOLUP(2,I,  2),I=1, 4)/501,  0,  0,501/
+      INTEGER IPROC_BORN
+      PARAMETER (IPROC_BORN=1)

@@ -19,7 +19,7 @@ program check_momentum_maps
   common /cbjrk12_cnt/tau_cnt,ycm_cnt
   logical :: softtest,colltest,pass
   common /sctests/softtest,colltest
-  integer :: isign,i,j,k,nplus,nminus,nchecked
+  integer :: isign,i,j,k,nplus,nminus,nchecked,father
   integer :: nratios=0
   double precision, parameter :: xs(7)=[1d-4,0.01d0,0.25d0,0.6d0,0.9d0,0.97d0,0.999d0]
   double precision, parameter :: ys(4)=[0.2d0,0.7d0,0.9d0,0.999d0]
@@ -51,12 +51,13 @@ program check_momentum_maps
      stop
   endif
 
-  if (mode.eq.'massive_recoil'.or.mode.eq.'massive_branch') then
+  if (mode.eq.'massive_recoil'.or.mode.eq.'massive_branch'.or.index(mode,'massless_recoil').eq.1) then
      ! A ttbar real point with an almost stationary spectator. Replaying
      ! another history used to lose precision in |p_i+p_j| and its angle.
      native_mapping=.true.
      mass=173d0
-     call fill_father_and_ileg(5,4,mass)
+     mrec=mass
+     father=4
      plab(:,1)=[322.68530330568893d0,0d0,0d0,322.68530330568893d0]
      plab(:,2)=[214.20779879452144d0,0d0,0d0,-214.20779879452144d0]
      plab(:,3)=[176.64351850683025d0,-2.4450242582330782d-3, &
@@ -75,28 +76,56 @@ program check_momentum_maps
         plab(:,5)=[4891.4595178441878d0,1448.3781119279461d0, &
              -2773.2641273702679d0,-3759.9977579032957d0]
      endif
+     if(mode.eq.'massless_recoil')then
+        ! Single-top integration point with a very soft massless spectator.
+        father=3
+        mrec=0d0
+        plab(:,1)=[2.0109761849155021d2,0d0,0d0,2.0109761849155021d2]
+        plab(:,2)=[9.9166854874691154d1,0d0,0d0,-9.9166854874691154d1]
+        plab(:,3)=[1.9313968527374286d2,6.7680639002317534d1, &
+             -4.2916875719676455d1,3.0844949511066687d1]
+        plab(:,4)=[4.2885354705666972d-3,-2.6739189613040220d-3, &
+             1.7834986716283069d-3,2.8391597063659743d-3]
+        plab(:,5)=[1.0712049955702797d2,-6.7677965083356256d1, &
+             4.2915092221004826d1,7.1082974946086026d1]
+     endif
+     if(mode.eq.'massless_recoil2')then
+        ! A second point exposes amplification of the boost-direction error.
+        father=3
+        mrec=0d0
+        plab(:,1)=[2.07429859882268346d2,0d0,0d0,2.07429859882268346d2]
+        plab(:,2)=[7.94418779006372375d1,0d0,0d0,-7.94418779006372375d1]
+        plab(:,3)=[1.86992207498333840d2,1.51729011936139528d1, &
+             5.29980240994808440d1,4.46998677405158844d1]
+        plab(:,4)=[9.10000786468497642d-4,2.39940238696784245d-5, &
+             -5.24617190079674773d-4,7.43171621713114845d-4]
+        plab(:,5)=[9.98786202837852954d1,-1.51729251876378264d1, &
+             -5.29974994822907561d1,8.32873710694935028d1]
+     endif
+     call fill_father_and_ileg(5,father,mass)
      call boost_n1_to_its_cms(plab,pcm,rapidity)
      shat=4d0*pcm(0,1)*pcm(0,2)
      sqrtshat=sqrt(shat)
-     xi=get_xi_from_p(5,4,pcm)
-     yij=get_yij_from_p(5,4,pcm)
-     phi=get_phi_from_p(5,4,pcm)
+     xi=get_xi_from_p(5,father,pcm)
+     yij=get_yij_from_p(5,father,pcm)
+     phi=get_phi_from_p(5,father,pcm)
      jacinv=1d0
      pswgtinv=1d0
      call generate_momenta_massive_final_inverse(pcm,xi,yij,phi, &
-          invborn,inv,jacinv,pswgtinv,shat,sqrtshat,5,4,mass)
-     if(jacinv.le.0d0)error stop 'could not invert stationary recoil'
+          invborn,inv,jacinv,pswgtinv,shat,sqrtshat,5,father,mass)
+     if(.not.ieee_is_finite(jacinv).or.jacinv.le.0d0) &
+          error stop 'could not invert stationary recoil'
      p(:,1:4)=invborn(:,1:4)
      jac=2d0*pi
      pswgt=1d0
      rat_xi=0d0
      isign=1
      call generate_momenta_massive_final(-100,isign,.false.,rat_xi, &
-          5,4,invborn(:,4),shat,sqrtshat,mass,inv,mass**2,p,phi, &
+          5,father,invborn(:,father),shat,sqrtshat,mass,inv,mrec**2,p,phi, &
           xiimax,xinorm,xi,yij,xihat,pifks,jac,pswgt,pass)
      call boost_n1_to_lab(p,out,-rapidity)
      error=maxval(abs(out-plab))/maxval(abs(plab))
-     if(.not.pass.or.error.gt.1d-7)then
+     if(.not.pass.or..not.all(ieee_is_finite(out)).or.error.gt.1d-7)then
         write(*,*)'stationary recoil error',error
         error stop 'stationary recoil round trip'
      endif

@@ -1,26 +1,37 @@
-      SUBROUTINE SMATRIX_REAL(P, WGT)
+      SUBROUTINE SMATRIX_REAL(P,WGT)
       IMPLICIT NONE
       INCLUDE 'nexternal.inc'
-      DOUBLE PRECISION P(0:3, NEXTERNAL)
-      DOUBLE PRECISION WGT
+      DOUBLE PRECISION P(0:3,NEXTERNAL),Q(0:3,NEXTERNAL),WGT
       INTEGER NFKSPROCESS
       COMMON/C_NFKSPROCESS/NFKSPROCESS
-      IF (NFKSPROCESS.EQ.1) THEN
-        CALL SMATRIX1(P, WGT)
-      ELSEIF (NFKSPROCESS.EQ.2) THEN
-        CALL SMATRIX1(P, WGT)
-      ELSEIF (NFKSPROCESS.EQ.3) THEN
-        CALL SMATRIX1(P, WGT)
-      ELSEIF (NFKSPROCESS.EQ.4) THEN
-        CALL SMATRIX1(P, WGT)
-      ELSEIF (NFKSPROCESS.EQ.5) THEN
-        CALL SMATRIX2(P, WGT)
-      ELSEIF (NFKSPROCESS.EQ.6) THEN
-        CALL SMATRIX3(P, WGT)
-      ELSE
-        WRITE(*,*) 'ERROR: invalid n in real_matrix :', NFKSPROCESS
-        STOP
-      ENDIF
-      RETURN
+      SELECT CASE(NFKSPROCESS)
+      CASE(1)
+      CALL SMATRIX1(P,WGT)
+      CASE(2)
+      CALL SMATRIX1(P,WGT)
+      CASE(3)
+      CALL SMATRIX1(P,WGT)
+      CASE(4)
+      CALL SMATRIX1(P,WGT)
+      CASE(5)
+      CALL SMATRIX2(P,WGT)
+      CASE(6)
+      CALL SMATRIX3(P,WGT)
+      CASE(7)
+      Q(:,1)=P(:,1)
+      Q(:,2)=P(:,2)
+      Q(:,3)=P(:,3)
+      Q(:,4)=P(:,4)
+      Q(:,5)=P(:,5)
+      CALL SMATRIX3(Q,WGT)
+      CASE(8)
+      Q(:,1)=P(:,1)
+      Q(:,2)=P(:,2)
+      Q(:,3)=P(:,3)
+      Q(:,4)=P(:,4)
+      Q(:,5)=P(:,5)
+      CALL SMATRIX2(Q,WGT)
+      CASE DEFAULT
+      STOP 'Invalid native real sector'
+      END SELECT
       END
-

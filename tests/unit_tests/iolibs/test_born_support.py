@@ -7,12 +7,15 @@ from pathlib import Path
 import re
 import shutil
 import subprocess
+import sys
 import tempfile
 import unittest
 from unittest import mock
 
 from madgraph import MadGraph5Error
 from madgraph.iolibs import born_support as support
+from madgraph.interface.common_run_interface import CommonRunCmd
+from tests.unit_tests.fks.test_momentum_maps import fortran_routine
 
 
 def physical(ids, tags=None):
@@ -30,6 +33,31 @@ def context(number, processes, i, j, allowed, orders=('QCD','QED')):
 
 
 class TestBornRegistry(unittest.TestCase):
+    def test_external_width_particles_from_born_metadata(self):
+        """Width removal must survive the replacement of static Born tables."""
+        with tempfile.TemporaryDirectory(prefix='mg5_born_pids_') as tmp:
+            root = Path(tmp)
+            sub = root/'SubProcesses'/'P0_epem_ttx'
+            sub.mkdir(parents=True)
+            (root/'SubProcesses'/'subproc.mg').write_text(sub.name+'\n')
+            table = '      DATA (IDUP(I,1),I=1,4)/ -11, 11, 6, -6 /\n'
+            (sub/'born_leshouche.inc').write_text(table)
+            run = mock.Mock(me_dir=tmp)
+            expected = {'-11', '11', '6', '-6'}
+            self.assertEqual(CommonRunCmd.get_pid_final_initial_states(run), expected)
+            (sub/'born_leshouche.inc').write_text(
+                '      common/mc_native_born_lh/idup,mothup,icolup\n')
+            (sub/'born_support.json').write_text(json.dumps(
+                dict(context=1, born_pdgs=[[-11,11,6,-6],[-13,13,6,-6]])))
+            self.assertEqual(CommonRunCmd.get_pid_final_initial_states(run),
+                             expected | {'-13', '13'})
+            # Outputs generated before born_pdgs was recorded remain usable.
+            metadata = root/'Source'/'BornSupport'/'c1'
+            metadata.mkdir(parents=True)
+            (metadata/'metadata.f').write_text(table)
+            (sub/'born_support.json').write_text(json.dumps(dict(context=1)))
+            self.assertEqual(CommonRunCmd.get_pid_final_initial_states(run), expected)
+
     def test_foreign_flavours_and_group_order(self):
         u, d = physical((2,21,23,2)), physical((1,21,23,1))
         a = context(1,[u,d],4,1,[(4,1),(4,2)])
@@ -106,6 +134,8 @@ class TestBornRegistry(unittest.TestCase):
 @unittest.skipUnless(shutil.which('gfortran'), 'requires gfortran')
 class TestBornLibrary(unittest.TestCase):
     """Use actual exports and independently compiled pre-wrapper evaluators."""
+
+    origin = '@loader_path' if sys.platform == 'darwin' else '$ORIGIN'
 
     @classmethod
     def setUpClass(cls):
@@ -209,7 +239,7 @@ class TestBornLibrary(unittest.TestCase):
                 self.run_command(['gfortran','-O0','-g','-fcheck=all','-ffixed-line-length-none',
                     '-I'+str(source),'-I'+str(output/'lib'),*map(str,paths),
                     '-L'+str(output/'lib'),'-lmc_born_support',
-                    '-Wl,-rpath,$ORIGIN/../../lib','-Wl,-rpath,$ORIGIN',
+                    '-Wl,-rpath,'+self.origin+'/../../lib','-Wl,-rpath,'+self.origin,
                     '-o','check'],source)
                 self.assertIn('PASS Born provider',self.run_command(['./check'],source))
                 # A worker only needs the executable and the DSO beside it.
@@ -379,7 +409,7 @@ class TestBornLibrary(unittest.TestCase):
 
     def test_native_context_switching(self):
         """Bounds-checked native aliases reproduce explicit provider requests."""
-        for name in ('dy','ttbar','wjet'):
+        for name in ('dy','ttbar','wjet','loonly'):
             output = self.outputs[name]
             records = json.loads((output/'Source/BornSupport/registry.json').read_text())['contexts']
             model = support.expand(output/'Source/MODEL/coupl.inc')
@@ -399,6 +429,10 @@ class TestBornLibrary(unittest.TestCase):
                     'common/to_amp_split_soft/soft',
                     'logical need_color_links,need_charge_links',
                     'common/c_need_links/need_color_links,need_charge_links',
+                    'logical split_type(nsplitorders),is_leading_cflow(max_bcol)',
+                    'integer num_leading_cflows',
+                    'common/c_split_type/split_type',
+                    'common/c_leading_cflows/is_leading_cflow,num_leading_cflows',
                     'type(BornModelState) state','type(BornRequest) request',
                     'type(BornResult) reference']+model+[
                     'allocate(state%%real_values(%d),state%%complex_values(%d))' %
@@ -422,6 +456,10 @@ class TestBornLibrary(unittest.TestCase):
                     'if(status.ne.0)stop 11','call close_real(ans,reference%born)',
                     'if(mapconfig(0).ne.native_metadata%configurations(0))stop 12',
                     'if(any(idup(:,1:iproc_born).ne.native_metadata%born_ids))stop 13',
+                    'split_type=.false.', 'is_leading_cflow=.false.',
+                    'call set_QCD_flows',
+                    'if(num_leading_cflows.le.0)stop 16',
+                    'if(.not.any(is_leading_cflow))stop 17',
                     'do i=1,native_metadata%ncolor',
                     'call close_real(mc_born_flow_weight(i),reference%flows(i))','enddo',
                     'do i=1,native_metadata%namplitudes',
@@ -429,6 +467,7 @@ class TestBornLibrary(unittest.TestCase):
                     'call close_real(amp_split(j),reference%amplitudes(i))','enddo',
                     # A correlated call must not overwrite the caller's accumulated
                     # soft amplitude. This is distinct from the provider's cache.
+                    'if(%s)then' % ('.true.' if record['sectors'] else '.false.'),
                     'amp_split=123d0','call sborn_sf_native(p,1,2,ans)',
                     'if(any(amp_split.ne.123d0))stop 14',
                     'request%colour=.true.','request%m=1','request%n=2',
@@ -436,7 +475,7 @@ class TestBornLibrary(unittest.TestCase):
                     'if(status.ne.0)stop 15','call close_real(ans,reference%correlation)',
                     'do i=1,native_metadata%namplitudes',
                     'j=native_amplitude_map(i,c)','if(j.eq.0)cycle',
-                    'call close_real(soft(j),reference%soft(i))','enddo',
+                    'call close_real(soft(j),reference%soft(i))','enddo','endif',
                     'enddo','call activate_native_context(1)','enddo',
                     "write(*,*)'PASS native contexts'",'end']
                 checks = self.driver(record,members,sizes,model,records)
@@ -446,13 +485,18 @@ class TestBornLibrary(unittest.TestCase):
                 support.write_fortran(directory/'native_helpers.f',sum((support.routine(
                     (directory/'splitorders_stuff.f').read_text(),n) for n in
                     ('orders_to_amp_split_pos','amp_split_pos_to_orders')),[]))
+                counter = Path(support.__file__).resolve().parents[2]/'Template/NLO/SubProcesses/montecarlocounter.f'
+                (directory/'native_flows.f').write_text('\n'.join(
+                    fortran_routine(counter, name) for name in
+                    ('set_QCD_flows', 'check_QCD_flows')))
                 paths = ['mc_native_context.f90','mc_native_runtime.f','mc_native_props.f',
                          'born_support.f','born.f','sborn_sf.f','extra_cnt_wrapper.f',
-                         'native_helpers.f','check_native.f']
+                         'native_helpers.f','native_flows.f','check_native.f']
                 self.run_command(['gfortran','-O0','-g','-fcheck=all',
                     '-ffixed-line-length-none','-ffree-line-length-none','-ffunction-sections',
-                    '-I'+str(output/'lib'),*paths,'-Wl,--gc-sections',
-                    '-L'+str(output/'lib'),'-lmc_born_support','-Wl,-rpath,$ORIGIN/../../lib',
+                    '-I'+str(output/'lib'),*paths,
+                    '-Wl,-dead_strip' if sys.platform == 'darwin' else '-Wl,--gc-sections',
+                    '-L'+str(output/'lib'),'-lmc_born_support','-Wl,-rpath,'+self.origin+'/../../lib',
                     '-o','check_native'],directory)
                 self.assertIn('PASS native contexts',self.run_command(['./check_native'],directory))
 

@@ -1,4 +1,1 @@
-      PMASS(1)=ZERO
-      PMASS(2)=ZERO
-      PMASS(3)=ABS(MDL_MW)
-      PMASS(4)=ZERO
+      CALL MC_NATIVE_MASSES(PMASS)

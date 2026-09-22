@@ -1,34 +1,87 @@
-      SUBROUTINE SMATRIX_REAL(P, WGT)
+      SUBROUTINE SMATRIX_REAL(P,WGT)
       IMPLICIT NONE
       INCLUDE 'nexternal.inc'
-      DOUBLE PRECISION P(0:3, NEXTERNAL)
-      DOUBLE PRECISION WGT
+      DOUBLE PRECISION P(0:3,NEXTERNAL),Q(0:3,NEXTERNAL),WGT
       INTEGER NFKSPROCESS
       COMMON/C_NFKSPROCESS/NFKSPROCESS
-      IF (NFKSPROCESS.EQ.1) THEN
-        CALL SMATRIX1(P, WGT)
-      ELSEIF (NFKSPROCESS.EQ.2) THEN
-        CALL SMATRIX2(P, WGT)
-      ELSEIF (NFKSPROCESS.EQ.3) THEN
-        CALL SMATRIX3(P, WGT)
-      ELSEIF (NFKSPROCESS.EQ.4) THEN
-        CALL SMATRIX4(P, WGT)
-      ELSEIF (NFKSPROCESS.EQ.5) THEN
-        CALL SMATRIX5(P, WGT)
-      ELSEIF (NFKSPROCESS.EQ.6) THEN
-        CALL SMATRIX6(P, WGT)
-      ELSEIF (NFKSPROCESS.EQ.7) THEN
-        CALL SMATRIX7(P, WGT)
-      ELSEIF (NFKSPROCESS.EQ.8) THEN
-        CALL SMATRIX8(P, WGT)
-      ELSEIF (NFKSPROCESS.EQ.9) THEN
-        CALL SMATRIX9(P, WGT)
-      ELSEIF (NFKSPROCESS.EQ.10) THEN
-        CALL SMATRIX9(P, WGT)
-      ELSE
-        WRITE(*,*) 'ERROR: invalid n in real_matrix :', NFKSPROCESS
-        STOP
-      ENDIF
-      RETURN
+      SELECT CASE(NFKSPROCESS)
+      CASE(1)
+      CALL SMATRIX1(P,WGT)
+      CASE(2)
+      CALL SMATRIX2(P,WGT)
+      CASE(3)
+      CALL SMATRIX3(P,WGT)
+      CASE(4)
+      CALL SMATRIX4(P,WGT)
+      CASE(5)
+      CALL SMATRIX5(P,WGT)
+      CASE(6)
+      CALL SMATRIX6(P,WGT)
+      CASE(7)
+      CALL SMATRIX7(P,WGT)
+      CASE(8)
+      CALL SMATRIX8(P,WGT)
+      CASE(9)
+      CALL SMATRIX9(P,WGT)
+      CASE(10)
+      CALL SMATRIX9(P,WGT)
+      CASE(11)
+      Q(:,1)=P(:,1)
+      Q(:,2)=P(:,2)
+      Q(:,3)=P(:,3)
+      Q(:,4)=P(:,4)
+      Q(:,5)=P(:,5)
+      CALL SMATRIX5(Q,WGT)
+      CASE(12)
+      Q(:,1)=P(:,1)
+      Q(:,2)=P(:,2)
+      Q(:,3)=P(:,3)
+      Q(:,4)=P(:,4)
+      Q(:,5)=P(:,5)
+      CALL SMATRIX2(Q,WGT)
+      CASE(13)
+      Q(:,1)=P(:,1)
+      Q(:,2)=P(:,2)
+      Q(:,3)=P(:,3)
+      Q(:,4)=P(:,4)
+      Q(:,5)=P(:,5)
+      CALL SMATRIX6(Q,WGT)
+      CASE(14)
+      Q(:,1)=P(:,1)
+      Q(:,2)=P(:,2)
+      Q(:,3)=P(:,3)
+      Q(:,4)=P(:,4)
+      Q(:,5)=P(:,5)
+      CALL SMATRIX1(Q,WGT)
+      CASE(15)
+      Q(:,1)=P(:,1)
+      Q(:,2)=P(:,2)
+      Q(:,3)=P(:,3)
+      Q(:,4)=P(:,4)
+      Q(:,5)=P(:,5)
+      CALL SMATRIX7(Q,WGT)
+      CASE(16)
+      Q(:,1)=P(:,1)
+      Q(:,2)=P(:,2)
+      Q(:,3)=P(:,3)
+      Q(:,4)=P(:,4)
+      Q(:,5)=P(:,5)
+      CALL SMATRIX4(Q,WGT)
+      CASE(17)
+      Q(:,1)=P(:,1)
+      Q(:,2)=P(:,2)
+      Q(:,3)=P(:,3)
+      Q(:,4)=P(:,4)
+      Q(:,5)=P(:,5)
+      CALL SMATRIX8(Q,WGT)
+      CASE(18)
+      Q(:,1)=P(:,1)
+      Q(:,2)=P(:,2)
+      Q(:,3)=P(:,3)
+      Q(:,4)=P(:,4)
+      Q(:,5)=P(:,5)
+      CALL SMATRIX3(Q,WGT)
+      CASE DEFAULT
+      STOP 'Invalid native real sector'
+      END SELECT
       END
-

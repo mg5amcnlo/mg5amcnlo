@@ -593,6 +593,10 @@ C     ----------
 C     BEGIN CODE
 C     ----------
       JAMP(:,:) = (0D0,0D0)
+C     For a massive father (glu_ij=0), only one JAMPH row is filled.
+C     Its unused spin interference must not retain another sector's
+C      values.
+      JAMPH(:,:,:) = (0D0,0D0)
       BORNS(:,:) =0D0
       ANS(:,:) = (0D0, 0D0)
 

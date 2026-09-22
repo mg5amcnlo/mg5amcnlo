@@ -84,7 +84,7 @@ def export(root, records, histories):
         names = ['fks_info.inc','fks_symmetry.inc','leshouche_decl.inc',
                  'leshouche_info.dat','configs_and_props_decl.inc',
                  'configs_and_props_info.dat','born_props.inc','born_nhel.inc',
-                 'genps.inc','pmass.inc','real_from_born_configs.inc']
+                 'genps.inc','pmass.inc','real_from_born_configs.inc','born_conf.inc']
         names += [p.name for p in directory.glob('parton_lum_*.f')]
         sources[r['context']] = {name:(directory/name).read_text() for name in names}
     for outer in records:
@@ -105,7 +105,12 @@ def write_context(root, outer, records, tables, sources):
     maxproc = max(parameter(born.statements(sources[c]['genps.inc']),'maxproc') for c in reachable)
     maxflow = max(parameter(born.statements(sources[c]['leshouche_decl.inc']),'maxflow_used') for c in reachable)
     maxbcol = max(by_id[c]['ncolor'] for c in reachable)
-    maxconfigs = max(parameter(born.statements(sources[c]['configs_and_props_decl.inc']),'lmaxconfigs_used') for c in reachable)
+    # Born tables also use these buffers. In particular LO-only contexts have
+    # no real configurations, but still need space for their Born topologies.
+    maxconfigs = max(max(
+        parameter(born.statements(sources[c]['configs_and_props_decl.inc']),'lmaxconfigs_used'),
+        parameter(born.statements(sources[c]['born_conf.inc']),'lmaxconfigsb_used'))
+        for c in reachable)
     maxbranch = max(parameter(born.statements(sources[c]['configs_and_props_decl.inc']),'max_branch_used') for c in reachable)
     write(directory/'nFKSconfigs.inc', ['integer FKS_CONFIGS,FKS_INTEGRATED',
         'parameter(FKS_CONFIGS=%d,FKS_INTEGRATED=%d)' % (count,integrated)])

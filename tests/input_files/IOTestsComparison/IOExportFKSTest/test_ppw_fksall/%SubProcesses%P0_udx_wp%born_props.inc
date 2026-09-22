@@ -1,2 +1,1 @@
-
-C     Here are the propagators
+      CALL MC_NATIVE_PROPS(PMASS,PWIDTH,POW)
