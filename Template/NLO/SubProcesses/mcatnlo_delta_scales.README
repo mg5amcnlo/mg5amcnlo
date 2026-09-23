@@ -1,0 +1,87 @@
+Native MC@NLO-Delta stopping scales
+=================================
+
+mcatnlo_delta_scales.f90 reconstructs stopping scales, dipole masses and
+dead-zone flags from real momenta and the selected FKS Born colour flow.
+It needs no shower library, initialization, PDFs or random numbers.
+MG5 supplies the starting scales and retains the scale vetoes, Sudakov
+tables, PDF factors and H-event scale assignment. Creating new Sudakov
+tables and showering the generated events independently use Pythia.
+
+Provenance and license
+----------------------
+
+The module was supplied in /export/tmp/rikkert/git/mcatnlo_delta_scale.
+It translates the default QCD formulas in Pythia 8.313 History::pTLund
+and Merging::clusterAndStore/getDipoles (Stefan Prestel, Pythia authors).
+It is distributed under GPL-2.0-or-later; the license text accompanies
+this file as mcatnlo_delta_scales.COPYING. The supplied module's SHA-256
+before the MG5 integration is:
+78002a413eadb46a092b6db20783853f32259f9887f0794c09ee53574ed7d9de
+
+The supplied SOURCE_VERSIONS.txt identifies these reference source hashes:
+Pythia 8.313 src/History.cc:
+edc9d7bad85bac0654fc86eb3fdc1c079a5a37f75091d787dd809f7035d1d879
+Pythia 8.313 src/Merging.cc:
+9ab73cdd1eac54cdcd234e2693b7b56c9079edec2f047e6150b82883c0a52158
+MG5 Template/NLO/SubProcesses/pythia8_fortran.cc (removed by this integration):
+6899e9a87b67bd4556153c69d19922ad8aa09c6d041254604673a63256c28b08
+
+Scope and interface
+-------------------
+
+The module implements the default QCD calculation for exactly two incoming
+legs, ordinary quark/gluon colour lines and a valid selected FKS Born flow.
+It does not search shower histories, rearrange resonance records or handle
+colour junctions and general electroweak/BSM shower histories. Unlike the
+former runtime interface, it does not test history admissibility in Pythia.
+
+  use mcatnlo_delta_scales, only: dp, delta_scale_matrices, delta_ok
+  ! real(dp) p(0:3,nreal), scales(0:nreal,0:nreal), masses(0:nreal,0:nreal)
+  ! integer id_real(nreal), born_col(2,nreal-1), status
+  ! logical dead(0:nreal,0:nreal)
+  call delta_scale_matrices(nreal, emitted, p, id_real, born_col, &
+                           charm_mass, bottom_mass, scales, masses, dead, status)
+
+Momenta have components (E,px,py,pz), with positive incoming energies.
+Incoming legs occupy positions 1 and 2. Born labels are real labels with
+the emitted leg deleted. Output indices use the original real labels;
+index 0, diagonal entries, the emitted row/column and absent dipoles have
+scale/mass -1 and dead=true. Scales are pT in GeV, not squared pT. Both
+directions of a dipole are evaluated separately. Double gluon connections
+occupy one matrix cell per direction; MG5 handles their multiplicity.
+
+Use default-kind logical arrays, not logical*1. Status 0 (delta_ok) means
+success, 1 (delta_bad_input) invalid input/unsupported colour structure,
+and 2 (delta_numerical) an undefined numerical expression. MG5 stops with
+the FKS configuration on a nonzero status; there is no runtime fallback.
+
+charm_mass and bottom_mass are shower particle-data masses in the original
+formulas. MG5 supplies get_mass_from_id(4) and get_mass_from_id(5), so both
+follow the model restriction. In a five-flavour model with massless charm
+and bottom, both lookups return zero even when the corresponding mass
+parameters have been removed. Massive-charm models now use their charm
+mass; the former runtime wrapper always passed zero for charm. The
+bottom-mass prescription is unchanged. The old wrapper serialized masses
+using C++ default stream precision;
+unusually precise model masses can therefore yield small differences.
+The separate masses supplied to MG5's Sudakov tables are unchanged.
+
+Initial-state scales use the opposite incoming beam as kinematic recoiler,
+also for initial-final colour connections. The sentinel values are kept:
+raw 1e-6 is live, raw 1e-5 is dead, raw 1e10 is stored as 0 and dead, and
+zero is dead. MG5 then imposes its starting-scale veto and table bounds.
+The low-level pythia_pt_lund routine exposes the raw scalar calculation.
+
+Supplied reference validation
+-----------------------------
+
+The independent tests recorded on 2026-09-14 used GNU Fortran/C++ 13.3.0
+with Fortran runtime checks, Pythia 8.313 and the old MG5 runtime wrapper.
+56,000 finite scalar comparisons agreed exactly in that build. 3,500 full
+interface comparisons covered seven processes and 11,000 populated dipole
+ends, including 1,253 dead ends. All flags and populated/absent entries
+agreed; the largest abs(Fortran-Pythia)/max(1,abs(Pythia)) difference was
+4.28e-11. These are scale/interface comparisons, not integrated event or
+cross-section validation. See docs/mcatnlo_delta_validation.md in the MG5
+source distribution for the integration context and validation history.

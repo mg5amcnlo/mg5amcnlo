@@ -670,7 +670,7 @@ jobs:
       - uses: actions/checkout@v5
       - name: Check shared Born providers and native subtraction
         run: |
-          ./tests/test_manager.py test_born_support test_real_helicity_filter test_soft_col_limits test_momentum_maps test_mc_dead_zones test_mc_kernels test_mc_event_colours test_mc_history_weights test_pdf_luminosity_cache test_cluster test_pythia8 -t0
+          ./tests/test_manager.py test_born_support test_real_helicity_filter test_mcatnlo_delta_scales test_soft_col_limits test_momentum_maps test_mc_dead_zones test_mc_kernels test_mc_event_colours test_mc_history_weights test_pdf_luminosity_cache test_cluster test_pythia8 -t0
 
   unittest_uncovered:
     # unit tests that were not listed in any workflow (CI coverage audit).
