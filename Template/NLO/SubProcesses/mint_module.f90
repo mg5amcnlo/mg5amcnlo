@@ -236,7 +236,11 @@ contains
        enddo
        call get_amount_of_points(enough_points)
        if (.not.enough_points) goto 2
-       if (imode.eq.0 .and. nit.eq.1 .and. double_events) then
+       ! The special first-iteration loop requires the unit channel markers
+       ! from reset_mint_grids. After calibration we retain the adapted
+       ! channel weights, so use normal averaging on the restart instead.
+       if (imode.eq.0 .and. nit.eq.1 .and. double_events .and. &
+            .not.born_spread_ready) then
           call check_for_special_channels_loop(channel_loop_done)
           if (.not.channel_loop_done) goto 2
           call combine_results_channels_special_loop

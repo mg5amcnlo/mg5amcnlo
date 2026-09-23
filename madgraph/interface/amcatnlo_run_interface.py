@@ -2205,7 +2205,8 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
             if not fixed_order:
                 if job['split'] != 0:
                     files_to_link = ['grid.MC_integer','mint_grids','res_1']
-                    if self.run_card.get('born_spreading',False):
+                    if ('born_spreading' in self.run_card and
+                            self.run_card['born_spreading']):
                         files_to_link.append('born_spreading.dat')
                     for f in files_to_link:
                         if not os.path.isfile(pjoin(job['dirname'],f)):
@@ -5228,7 +5229,8 @@ RESTART = %(mint_mode)s
             if args[3] == '1':
                 output_files.append('%s/results.dat' % current)
             if args[1] == 'F' and args[3] == '0' and \
-                    self.run_card.get('born_spreading',False):
+                    'born_spreading' in self.run_card and \
+                    self.run_card['born_spreading']:
                 required_output.append('%s/born_spreading.dat' % current)
 
         else:
