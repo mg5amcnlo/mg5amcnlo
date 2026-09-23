@@ -464,6 +464,46 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
         else:
             mg_interface.MadGraphCmd.do_display(self,line,output)
 
+    @staticmethod
+    def find_unstable_s_channels(fksproc):
+        """Return the names of the particles with a non-zero width that
+        appear as s-channel propagators in the Born diagrams of fksproc."""
+
+        resonances = set()
+        for born in fksproc['born_processes']:
+            model = born.born_amp['process']['model']
+            for diagram in born.born_amp['diagrams']:
+                # the last vertex has no propagator; the other vertices
+                # produce one leg, which is an s-channel propagator if it is
+                # built from final-state particles only (state=True)
+                for vertex in diagram['vertices'][:-1]:
+                    leg = vertex['legs'][-1]
+                    if not leg['state']:
+                        continue
+                    part = model.get_particle(leg['id'])
+                    if part and str(part.get('width')).upper() != 'ZERO':
+                        resonances.add(part.get_name())
+        return sorted(resonances)
+
+    def warn_ew_resonances_without_cms(self, fksproc):
+        """NLO EW virtual corrections to a process with a resonant
+        propagator are not gauge invariant and are dominated by the resonant
+        self-energy near the pole unless the complex-mass scheme is used.
+        The result can then be wrong by O(100%) (e.g. -90% for
+        p p > e+ e- [QED] with m_ll > 30 GeV), without any other sign than
+        IR-pole miscancellations during the run."""
+
+        resonances = self.find_unstable_s_channels(fksproc)
+        if not resonances:
+            return
+        logger.warning(
+"""NLO EW corrections are requested for a process with s-channel
+propagator(s) of unstable particle(s): %s, while the complex-mass scheme is
+not used. Close to the resonance the virtual corrections are then not gauge
+invariant and are dominated by the resonant self-energy: the NLO cross
+section can be wrong by O(100%%). Use 'set complex_mass_scheme True' before
+generating the process (see arXiv:1804.10017).""" % ', '.join(resonances))
+
     def do_add(self, line, *args,**opt):
         
         args = self.split_arg(line)
@@ -728,6 +768,10 @@ Please also cite ref. 'arXiv:1804.10017' when using results from this code.
         except AttributeError: 
             self._fks_multi_proc = fksproc
             self._fks_multi_proc['loop_filter'] = fks_options['loop_filter']
+
+        if 'QED' in proc_type[2] and proc_type[1] in ['all', 'virt'] and \
+                                  not self.options['complex_mass_scheme']:
+            self.warn_ew_resonances_without_cms(fksproc)
 
         if not aMCatNLOInterface.display_expansion and  self.options['nlo_mixed_expansion']:
             base = {}

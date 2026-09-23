@@ -1306,3 +1306,25 @@ class TestAMCatNLOEW(unittest.TestCase):
         self.assertTrue(any([leptons[0] in [abs(l['id']) for l in real['leglist']] for real in reals[1]]))
         # avoid border effects
         self.interface.do_set('include_lepton_initiated_processes False')
+
+
+    def test_ew_resonances_without_cms(self):
+        """NLO EW corrections to processes with an unstable s-channel
+        propagator need the complex-mass scheme: check that the resonances
+        are found in the Born diagrams, and that the user is warned"""
+        cmd = amcatnlocmd.aMCatNLOInterface
+
+        # Drell-Yan: s-channel Z (the photon has no width)
+        self.interface.do_generate('u u~ > e+ e- QED^2=4 QCD^2=0 [real=QED]')
+        fksproc = self.interface._fks_multi_proc
+        self.assertEqual(cmd.find_unstable_s_channels(fksproc), ['z'])
+        with self.assertLogs('cmdprint', level='WARNING') as log:
+            cmd.warn_ew_resonances_without_cms(cmd, fksproc)
+        self.assertEqual(len(log.output), 1)
+        self.assertIn('complex_mass_scheme', log.output[0])
+        self.assertIn(': z,', log.output[0])
+
+        # t-channel propagators only: nothing to warn about
+        self.interface.do_generate('u u~ > a a QED^2=4 QCD^2=0 [real=QED]')
+        fksproc = self.interface._fks_multi_proc
+        self.assertEqual(cmd.find_unstable_s_channels(fksproc), [])
