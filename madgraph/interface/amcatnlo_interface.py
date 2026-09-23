@@ -465,9 +465,10 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
             mg_interface.MadGraphCmd.do_display(self,line,output)
 
     @staticmethod
-    def find_unstable_s_channels(fksproc):
+    def find_unstable_s_channels(fksproc, coloured_only=False):
         """Return the names of the particles with a non-zero width that
-        appear as s-channel propagators in the Born diagrams of fksproc."""
+        appear as s-channel propagators in the Born diagrams of fksproc.
+        If coloured_only, only the colour-charged ones are returned."""
 
         resonances = set()
         for born in fksproc['born_processes']:
@@ -481,28 +482,43 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
                     if not leg['state']:
                         continue
                     part = model.get_particle(leg['id'])
-                    if part and str(part.get('width')).upper() != 'ZERO':
-                        resonances.add(part.get_name())
+                    if not part or str(part.get('width')).upper() == 'ZERO':
+                        continue
+                    if coloured_only and part.get('color') == 1:
+                        continue
+                    resonances.add(part.get('name'))
         return sorted(resonances)
 
-    def warn_ew_resonances_without_cms(self, fksproc):
-        """NLO EW virtual corrections to a process with a resonant
-        propagator are not gauge invariant and are dominated by the resonant
+    def warn_resonances_without_cms(self, fksproc, orders):
+        """NLO virtual corrections to a process with a resonant propagator
+        are not gauge invariant and are dominated by the resonant
         self-energy near the pole unless the complex-mass scheme is used.
         The result can then be wrong by O(100%) (e.g. -90% for
         p p > e+ e- [QED] with m_ll > 30 GeV), without any other sign than
-        IR-pole miscancellations during the run."""
+        IR-pole miscancellations during the run.
+        With EW corrections (QED in orders) every unstable s-channel
+        propagator is concerned; with QCD corrections only the
+        colour-charged ones (e.g. an intermediate top quark) receive a
+        self-energy correction."""
 
-        resonances = self.find_unstable_s_channels(fksproc)
+        if 'QED' in orders:
+            resonances = self.find_unstable_s_channels(fksproc)
+            corr = 'EW'
+        elif 'QCD' in orders:
+            resonances = self.find_unstable_s_channels(fksproc,
+                                                       coloured_only=True)
+            corr = 'QCD'
+        else:
+            return
         if not resonances:
             return
         logger.warning(
-"""NLO EW corrections are requested for a process with s-channel
+"""NLO %s corrections are requested for a process with s-channel
 propagator(s) of unstable particle(s): %s, while the complex-mass scheme is
 not used. Close to the resonance the virtual corrections are then not gauge
 invariant and are dominated by the resonant self-energy: the NLO cross
 section can be wrong by O(100%%). Use 'set complex_mass_scheme True' before
-generating the process (see arXiv:1804.10017).""" % ', '.join(resonances))
+generating the process (see arXiv:1804.10017).""" % (corr, ', '.join(resonances)))
 
     def do_add(self, line, *args,**opt):
         
@@ -769,9 +785,9 @@ Please also cite ref. 'arXiv:1804.10017' when using results from this code.
             self._fks_multi_proc = fksproc
             self._fks_multi_proc['loop_filter'] = fks_options['loop_filter']
 
-        if 'QED' in proc_type[2] and proc_type[1] in ['all', 'virt'] and \
+        if proc_type[1] in ['all', 'virt'] and \
                                   not self.options['complex_mass_scheme']:
-            self.warn_ew_resonances_without_cms(fksproc)
+            self.warn_resonances_without_cms(fksproc, proc_type[2])
 
         if not aMCatNLOInterface.display_expansion and  self.options['nlo_mixed_expansion']:
             base = {}
