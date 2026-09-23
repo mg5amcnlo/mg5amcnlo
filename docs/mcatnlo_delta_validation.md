@@ -1,5 +1,95 @@
 # MC@NLO-Delta with complete native histories
 
+## Native stopping scales
+
+MC@NLO-Delta now calculates its stopping scales, dipole masses and
+dead-zone flags with `Template/NLO/SubProcesses/mcatnlo_delta_scales.f90`.
+The hard-process executable uses the real momenta and the already sampled
+Born colour flow directly, without initializing or linking Pythia. The
+Fortran module was supplied in `/export/tmp/rikkert/git/mcatnlo_delta_scale`;
+its formulas come from Pythia 8.313 `History::pTLund` and
+`Merging::clusterAndStore/getDipoles`, and retain their GPL-2.0-or-later
+license and attribution. The original supplied module has SHA-256
+`78002a413eadb46a092b6db20783853f32259f9887f0794c09ee53574ed7d9de`.
+
+This replaces the default QCD scale reconstruction for two incoming legs
+and ordinary quark/gluon colour lines. It assumes a valid selected FKS
+Born flow, and preserves the real/Born ordering and directed-dipole
+conventions. Unsupported colour structures and undefined numerical
+expressions report an error. The module does not generate alternative
+histories, resonance-record rearrangements, colour junctions, or general
+electroweak/BSM shower histories. MG5 still supplies starting scales,
+applies the stopping-scale vetoes and table bounds, and evaluates the
+Sudakov and PDF factors. Pythia remains independently needed for
+generating new Sudakov tables and for subsequently showering events.
+
+Charm and bottom masses in the stopping-scale formulas are obtained with
+`get_mass_from_id(4)` and `get_mass_from_id(5)`. Massless flavours return
+zero, including when a five-flavour model restriction removes the mass
+parameter entirely. The charm lookup also supports massive-charm models;
+this extends the former runtime wrapper, which always passed zero for
+charm. The separate masses used for the Sudakov tables are unchanged.
+
+The supplied module's reference validation, recorded on 14 September
+2026 before this integration, compared 56,000 scalar evaluations and
+3,500 complete interface calls against Pythia 8.313. The complete calls
+covered seven processes, including massive top pairs, gluon splitting,
+double gluon connections, displaced emitted-leg labels and longitudinal
+boosts. All dead-zone flags and populated/absent entries agreed. The
+largest scale-or-mass difference was `4.28e-11` under the metric
+`abs(Fortran-Pythia)/max(1,abs(Pythia))`, with values in GeV. These
+reference comparisons test scale reconstruction; the integrated results
+in the later historical sections predate removal of the runtime interface.
+
+### Validation of the runtime removal
+
+On 23 September 2026, the independent Pythia comparisons were rebuilt in
+a temporary directory using the production module from this source tree
+and the original wrapper from the unchanged `3.x` checkout. All 56,000
+scalar comparisons agreed exactly. All 3,500 complete interface calls,
+covering 11,000 populated dipole ends, agreed on flags and matrix coverage;
+the largest scaled scale-or-mass difference was `4.27898e-11`.
+
+The new Fortran-only regression suite compiles the production module with
+runtime checks and tests its physical scales, Lorentz invariance, real/Born
+label mapping, massive thresholds, double gluon connections, sentinels and
+invalid-input handling:
+
+```
+python3 -m unittest tests.unit_tests.fks.test_mcatnlo_delta_scales -v
+```
+
+All eleven tests pass without a Pythia installation or library. Two compile
+the production `compute_delta` routine with controlled Sudakov and
+H-event-assignment stubs. They verify the resulting Delta product,
+transfer of native stopping scales into the H-event scale assignment,
+the dipole-mass table ceiling, unchanged Sudakov mass inputs, the
+starting-scale veto and fatal handling of reconstruction errors.
+
+Three tests compile the actual exported mass lookup for `loop_sm-no_b_mass`,
+`loop_sm` and `loop_sm-c_mass`, and pass its results to the stopping-scale
+module. They verify the charm/bottom masses `(0,0)`, `(0,4.7)` and
+`(1.55,4.7)` GeV for particles and antiparticles, together with the resulting
+massless or massive threshold corrections. The `compute_delta` regression
+also checks that both flavour masses are looked up on each invocation.
+
+A fresh `u u~ > e+ e- [QCD]` export using `loop_sm-no_b_mass` completed
+hard-event generation with `mcatnlo_delta=True`, `parton_shower=PYTHIA8`
+and the Pythia path explicitly unset. The run used 6.5 TeV beams, the
+built-in `nn23nlo` PDF, `mll_sf=60`, seed 92324, requested accuracy 0.1
+and 20 events. Matrix-element and MC soft/collinear checks passed, as did
+all 20 pole checks at tolerance `1e-5`. It returned `377.7 +/- 2.0 pb`;
+the 20 LHE events had finite weights and complete directed colour-dipole
+coverage, with all 44 dipole scales finite and positive. The executable
+links no Pythia library, and the MC counterterm object references the
+native module without the
+removed runtime symbols. This is an export/build/generation smoke check,
+not a cross-section accuracy comparison. The local run log and event file
+are `/tmp/mg5_delta_native_7vdd1yfq/run.log` and
+`/tmp/mg5_delta_native_7vdd1yfq/DY/Events/delta_native/events.lhe.gz`.
+
+## Earlier integrated validation
+
 Validation on 23 September 2026 started from `628f316e2`, using fresh NLO
 exports and Pythia 8.313. The fixes described below were then applied to
 the export templates and those generated outputs. Physical Delta matching

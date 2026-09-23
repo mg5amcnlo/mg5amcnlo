@@ -1646,6 +1646,7 @@ c fills arrays relevant to shower scales, and computes Delta
       subroutine compute_delta(p,probne)
       use process_module
       use scale_module
+      use mcatnlo_delta_scales, only: delta_scale_matrices,delta_ok
       implicit none
       include "born_nhel.inc"
       include 'nFKSconfigs.inc'
@@ -1695,18 +1696,10 @@ c$$$  double precision emscav_tmp_a2(nexternal,nexternal)
 c$$$  common/cemscav_tmp_a/emscav_tmp_a,emscav_tmp_a2
 
       double precision probne
-     $     ,dummy_wgt
 
       integer i,j,k,i1,i2
 
       double precision p(0:3,nexternal)
-c     For the boost to the lab frame
-      double precision ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
-      common/parton_cms_stuff/ybst_til_tolab,ybst_til_tocm,
-     #sqrtshat,shat
-      double precision chy,shy,chymo,xdir(3),p_lab(0:3,nexternal)
-      data (xdir(i),i=1,3) /0d0,0d0,1d0/
-
       double precision xkern(2),xkernazi(2),factor
       include "genps.inc"
       integer idup(nexternal-1,maxproc)
@@ -1715,25 +1708,16 @@ c     For the boost to the lab frame
       integer idup_s(nexternal-1)
       integer icolup_s(2,nexternal-1)
       integer idup_h(nexternal)
-      integer mothup_h(2,nexternal)
       integer icolup_h(2,nexternal)
-      integer spinup_local(nexternal)
-      integer istup_local(nexternal)
       double precision wgt_sudakov
-      double precision scales(0:99)
       common /colour_connections/ icolup_s,icolup_h
 
-c     To access Pythia8 control variables
-      include 'pythia8_control.inc'
       include "born_leshouche.inc"
       integer jpart(7,-nexternal+3:2*nexternal-3),lc,iflow
       logical firsttime1
       data firsttime1 /.true./
       include 'leshouche_decl.inc'
       save idup_d, mothup_d, icolup_d, niprocs_d
-
-C     To allow retrieval of S-event from Pythia
-      include 'hep_event_streams.inc'
 
       logical         Hevents
       common/SHevents/Hevents
@@ -1757,8 +1741,10 @@ c     cstlow <= smallptupp
       parameter (smallptupp=1.01d0)
 
       integer iii,jjj,LP
-      double precision xscales_PY(0:99,0:99),xmasses_PY(0:99,0:99)
-      logical*1 dzones_PY(0:99,0:99)
+      double precision xscales(0:nexternal,0:nexternal)
+     $     ,xmasses(0:nexternal,0:nexternal)
+      logical dzones(0:nexternal,0:nexternal)
+      integer delta_status
       double precision Sevent_stopping_scales(1:nexternal-1,1:nexternal-1)
      $     ,xmasses_nbody(1:nexternal-1,1:nexternal-1)
       logical*1 dzones_nbody(1:nexternal-1,1:nexternal-1)
@@ -1793,24 +1779,14 @@ c
       double precision pdg2pdf,pdffnum(2),pdffden(2)
       external pdg2pdf
 c     
-      LOGICAL  IS_A_J(NEXTERNAL),IS_A_LP(NEXTERNAL),IS_A_LM(NEXTERNAL)
-      LOGICAL  IS_A_PH(NEXTERNAL)
-      COMMON /TO_SPECISA/IS_A_J,IS_A_LP,IS_A_LM,IS_A_PH
-      integer idIn1, idIn2
-      integer idOut(0:9)
-      double precision tBefore,tAfter
-      double precision masses_to_MC(0:25)
       double precision pi
       parameter(pi=3.1415926535897932384626433d0)
-      logical are_col_conn_S(nexternal-1,nexternal-1)
-      logical are_col_conn_H(nexternal,nexternal)
       double precision get_mass_from_id
       external get_mass_from_id
       logical isspecial(max_bcol)
       common/cisspecial/isspecial
       double precision qMC_a2(nexternal-1,nexternal-1)
       common /to_complete/qMC_a2
-      double precision scales_for_HEPEUP(nexternal,nexternal)
 
       double precision gl(2),pdfnum,pdfden,PIk,Fk(2)
       double precision pysudakov_safe,gl_safe
@@ -1824,20 +1800,8 @@ c
       parameter       (tiny=1d-10)
 c     
       mcmass=0d0
-      masses_to_MC=0d0
       include 'MCmasses_PYTHIA8.inc'
 c     
-      do i=1,2
-         istup_local(i) = -1
-      enddo
-      do i=3,nexternal
-         istup_local(i) = 1
-      enddo
-      do i=1,nexternal
-         spinup_local(i) = -9
-      enddo
-      pythia_cmd_file=''
-      
       if (born_flow_picked.le.0) then
          write (*,*) 'born_flow_picked <= 0 in compute_delta'
      $        ,born_flow_picked
@@ -1861,8 +1825,7 @@ c     meaningful values; the others are set equal to -1.
       Sevent_starting_scales(1:nexternal-1,1:nexternal-1)=
      &     shower_scale_nbody(1:nexternal-1,1:nexternal-1)
 
-c     H-event information.
-c     First write ids, mothers and all colours.
+c     H-event information: real-state IDs and the selected colours.
       if (firsttime1)then
          firsttime1=.false.
          call read_leshouche_info(idup_d,mothup_d,icolup_d,niprocs_d)
@@ -1876,8 +1839,6 @@ c     Fake call for initialisation
       endif
       do i=1,nexternal
          IDUP_H(i)=IDUP_D(nFKSprocess,i,1)
-         MOTHUP_H(1,i)=MOTHUP_D(nFKSprocess,1,i,1)
-         MOTHUP_H(2,i)=MOTHUP_D(nFKSprocess,2,i,1)
       enddo
 c     Fill selected color configuration into jpart array. 
       call fill_icolor_H(born_flow_picked,jpart,.false.)
@@ -1885,103 +1846,40 @@ c     Fill selected color configuration into jpart array.
          ICOLUP_H(1,i)=jpart(4,i)
          ICOLUP_H(2,i)=jpart(5,i)
       enddo
-c     
-      call clear_HEPEUP_event()
-      
-c     Boost H-event momenta to lab frame before passing to pythia
-      chy=cosh(ybst_til_tolab)
-      shy=sinh(ybst_til_tolab)
-      chymo=chy-1d0
-      do i=1,nexternal
-         call boostwdir2(chy,shy,chymo,xdir,p(0,i),p_lab(0,i))
-      enddo
-c     
-      dummy_wgt=1d0
-      call fill_HEPEUP_event(p_lab, dummy_wgt, nexternal, idup_h,
-     &     istup_local, mothup_h, icolup_h, spinup_local)
-      xscales_PY=-1d0
-      xmasses_PY=-1d0
-      dzones_PY=.true.
-      if (is_pythia_active.eq.0) then
-c     Fill masses
-         do i=7,20
-            if(i.le.10.or.i.ge.17)masses_to_MC(i)=-1d0
-         enddo
-         masses_to_MC(5) =get_mass_from_id(5)
-         masses_to_MC(6) =get_mass_from_id(6)
-         masses_to_MC(15)=get_mass_from_id(15)
-         masses_to_MC(23)=get_mass_from_id(23)
-         masses_to_MC(24)=get_mass_from_id(24)
-         masses_to_MC(25)=get_mass_from_id(25)
-c     
-         idOut=0
-         do i=3,nexternal-1
-            idOut(i-3) = IDUP_S(i)
-            if ( is_a_j(i) ) idOut(i-3)=2212
-         enddo
-         idIn1 = idup_s(1)
-         idIn2 = idup_s(2)
-         if ( abs(idIn1) .lt. 10 .or. idIn1 .eq. 21) idIn1=2212
-         if ( abs(idIn2) .lt. 10 .or. idIn2 .eq. 21) idIn2=2212
-         call pythia_init_default(idIn1, idIn2, idOut, masses_to_MC)
-      endif
-      call pythia_setevent()
-      call pythia_next()
-      call pythia_get_stopping_info(xscales_PY,xmasses_PY)
-      call pythia_get_dead_zones(dzones_PY)
-      call pythia_clear()
-
-c     Check if the S-event state (as created from the H-event by Pythia)
-c     is consistent with the MG_aMC S-event state.
-      if (NUP_in .ne. nexternal-1) then
-         write (*,*) 'montecarlocounter.f: States not compatible #1'
-     $        ,nup_in,nexternal-1
+c     Reconstruct the PYTHIA stopping-scale prescription from the real
+c     momenta and the selected Born colour flow. These expressions are
+c     Lorentz invariant, so no boost to the lab frame is needed. Use model
+c     charm and bottom masses; get_mass_from_id returns zero for flavours
+c     made massless by the model restriction. The mcmass array above is
+c     the separate mass input to the Sudakov tables.
+      if (nincoming.ne.2) then
+         write(*,*) 'MC@NLO-Delta scales require two incoming legs'
          stop 1
       endif
-      do i=1,nup_in
-         do j=1,nexternal-1
-            if (i.le.nincoming) then
-c     incoming momenta should always be particle 1 and 2.
-               if (j.ne.i) cycle
-            elseif (j.le.nincoming) then
-               cycle
-            endif
-            if (idup_in(i).eq.idup_s(j)) then
-c     found the same particle ID. Check that colour is okay. 
-               if (all(icolup_in(1:2,i).eq.icolup_s(1:2,j))) then
-                  exit          ! Agreement found.
-               endif
-            endif
-         enddo
-         if (j.gt.nexternal-1) then
-c     went all the way through the 2nd do-loop without finding the corresponding particle.
-            write (*,*) 'montecarlocounter.f: States not compatible #2'
-            write (*,*) 'returned by Pythia:'
-            write (*,*) idup_in(1:nup_in)
-            write (*,*) icolup_in(1,1:nup_in)
-            write (*,*) icolup_in(2,1:nup_in)
-            write (*,*) 'available in MG5_aMC:'
-            write (*,*) idup_s(1:nup_in)
-            write (*,*) icolup_s(1,1:nup_in)
-            write (*,*) icolup_s(2,1:nup_in)
-            stop 1
-         endif
-      enddo
+      call delta_scale_matrices(nexternal,i_fks,p,idup_h,icolup_s,
+     $     get_mass_from_id(4),get_mass_from_id(5),xscales,xmasses,
+     $     dzones,delta_status)
+      if (delta_status.ne.delta_ok) then
+         write(*,*) 'MC@NLO-Delta scale reconstruction failed: ',
+     $        delta_status,'; FKS configuration ',nFKSprocess,
+     $        '; emitted/radiator ',i_fks,j_fks
+         stop 1
+      endif
 
-c     After the calls above, we have
-c     xscales_PY(i,j)=t_ij
+c     After the reconstruction above, we have
+c     xscales(i,j)=t_ij
 c     with t_ij == scale(Pythia)_{emitter,recoiler}, and the particle being
 c     emitted equal to the FKS parton. Although both emitter and recoiler
 c     are Born-level quantities, their labellings follow the real-process
-c     conventions. Thus, in the matrix xscales_PY(i,j) one has 1<=i,j<=nexternal, 
-c     with xscales_PY(i_fks,*)=xscales_PY(*,i_fks)=-1.
-c     The same labelling conventions apply to xmasses_PY(i,j) (which is the
+c     conventions. Thus, in the matrix xscales(i,j) one has 1<=i,j<=nexternal,
+c     with xscales(i_fks,*)=xscales(*,i_fks)=-1.
+c     The same labelling conventions apply to xmasses(i,j) (which is the
 c     dipole mass associated with the colour line that connects i and j)
-c     and dzones_PY(i,j) (which is the dead zone relevant to the emission from
+c     and dzones(i,j) (which is the dead zone relevant to the emission from
 c     parton i colour-connected with recoiler j).
 c     
 c     Since any the pair of indices (i,j) associated with sensible entries
-c     in the arrays returned by Pythia is in one-to-one correspondence with
+c     in the reconstructed arrays is in one-to-one correspondence with
 c     Born-level quantities, it is convenient to define relabelled copies of
 c     such arrays (which we call Sevent_stopping_scales, xmasses_nbody, and
 c     dzones_nbody), for which 1<=i,j<=nexternal-1
@@ -1991,13 +1889,11 @@ c
          if(i.eq.i_fks)cycle
          do j=1,nexternal
             if(j.eq.i_fks)cycle
-            Sevent_stopping_scales(iRtoB(i),iRtoB(j))=xscales_PY(i,j)
-c     In pythia the dipole masses can be arbitary large since the clustering
-c     does not know exactly all the phase-space boundaries. Use min() to put
-c     a cap on this (i.e., equal to the largest allowed value in pysudakov()
-c     tables).
-            xmasses_nbody(iRtoB(i),iRtoB(j))=min(xmasses_PY(i,j),cxmupp)
-            dzones_nbody(iRtoB(i),iRtoB(j))=dzones_PY(i,j)
+            Sevent_stopping_scales(iRtoB(i),iRtoB(j))=xscales(i,j)
+c     The reconstructed dipole masses can exceed the Sudakov table range.
+c     Cap them at the largest allowed value in the pysudakov() tables.
+            xmasses_nbody(iRtoB(i),iRtoB(j))=min(xmasses(i,j),cxmupp)
+            dzones_nbody(iRtoB(i),iRtoB(j))=dzones(i,j)
          enddo
       enddo
 c     Checks
@@ -2012,10 +1908,8 @@ c     Checks
          stop
       endif
 
-!     Since pythia simply does a one-branch cluster, it does not check if
-!     the stopping scale (in Sevent_stopping_scales) is smaller than the
-!     starting scale (as determined by MG5_aMC in Sevent_starting_scales). If this
-!     is the case, put the event in the dead-zone.
+!     Apply the MG5 starting-scale veto after the reconstruction: a dipole
+!     is in the dead zone when its stopping scale exceeds its starting scale.
       do i=1,nexternal-1
          do j=1,nexternal-1
             if (i.eq.j) cycle
