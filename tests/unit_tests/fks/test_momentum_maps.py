@@ -102,6 +102,20 @@ class TestMomentumMaps(unittest.TestCase):
     def test_outer_massless_map_with_soft_daughter(self):
         self.check_map("soft_daughter")
 
+    def test_outer_massive_map_with_soft_sister(self):
+        self.check_map("outer_angles")
+
+    def test_outer_massive_map_with_small_recoil(self):
+        self.check_map("outer_massive_recoil")
+        self.check_map("outer_massless_recoil")
+        self.check_map("outer_massless_recoil2")
+
+    def test_massless_inverse_with_soft_recoil_in_both_maps(self):
+        self.check_map("soft_recoil_inverse")
+
+    def test_massive_soft_counterevents_and_supplied_granny_mass(self):
+        self.check_map("soft_counterevent")
+
     def test_massive_final_inverse_both_solutions(self):
         self.check_map("massive")
 

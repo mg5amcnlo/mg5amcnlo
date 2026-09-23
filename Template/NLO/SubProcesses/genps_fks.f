@@ -2363,9 +2363,10 @@ c mother four momenta
       chybst=(shat+sumrec2)/(2*sumrec*sqrtshat)
 c cosh(y) is very often close to one, so define cosh(y)-1 as well
       chybstmo=(sqrtshat-sumrec)**2/(2*sumrec*sqrtshat)
-      do j=1,3
-         xdir(j)=xp_mother(j)/x3len_fks_mother
-      enddo
+c Use the Born mother direction also when the daughters nearly cancel.
+      xdir(1)=sinth_mother_fks*cosphi_mother_fks
+      xdir(2)=sinth_mother_fks*sinphi_mother_fks
+      xdir(3)=costh_mother_fks
 c     Perform the boost here
       do i=nincoming+1,nexternal
          if(i.ne.i_fks.and.i.ne.j_fks.and.shybst.ne.0.d0)
@@ -2432,7 +2433,7 @@ c local
      $     ,shybst,chybst,chybstmo,xdir(3),veckn,veckbarn ,cosphi_i_fks
      $     ,sinphi_i_fks,cosphi_mother_fks,costh_mother_fks
      $     ,phi_mother_fks,sinphi_mother_fks,th_mother_fks,xitmp2
-     $     ,sinth_mother_fks,x1
+     $     ,sinth_mother_fks,x1,sin_ij_fks
       double precision native_u,native_uborn,native_eborn,native_ej,
      $     native_denom,native_radial,native_ps,native_sign,
      $     native_delta,native_onepy
@@ -2448,9 +2449,8 @@ c parameters
       data xi_i_fks_matrix/0.d0,-1.d8,0.d0,-1.d8,0.d0/
       double precision y_ij_fks_matrix(-2:2)
       data y_ij_fks_matrix/-1.d0,-1.d0,-1.d8,1.d0,1.d0/
-      double precision stiny,sstiny,qtiny,ctiny,cctiny
+      double precision stiny,sstiny,ctiny,cctiny
       parameter (stiny=1d-6)
-      parameter (qtiny=1d-7)
       parameter (ctiny=5d-7)
 c
       if(colltest .or.
@@ -2505,9 +2505,15 @@ c$$$      xjac=xjac*2d0*x(2)*2d0
 c An angle coordinate retains the small transverse component at y=-1.
 c Encoding it only in 1-y loses precision for nearly stationary recoils.
          y_ij_fks=cos(pi*x(2))
-         xjac=xjac*pi*sin(pi*min(x(2),1d0-x(2)))
+         sin_ij_fks=sin(pi*min(x(2),1d0-x(2)))
+         xjac=xjac*pi*sin_ij_fks
       else
          y_ij_fks = -2d0*(cctiny+(1-cctiny)*x(2)**2)+1d0
+c Here y=1-2*q. Factor 1-q=(1-cctiny)*(1-x)*(1+x)
+c to retain the transverse component near the antiparallel endpoint.
+         sin_ij_fks=2d0*sqrt(max(0d0,
+     $        (cctiny+(1d0-cctiny)*x(2)**2)*(1d0-cctiny)*
+     $        (1d0-x(2))*(1d0+x(2))))
          xjac=xjac*2d0*x(2)*2d0
       endif
       
@@ -2718,32 +2724,13 @@ c
          return
       endif
       endif
-      x3len_fks_mother=sqrt( x3len_i_fks**2+x3len_j_fks**2+
-     &                       2*x3len_i_fks*x3len_j_fks*y_ij_fks )
-      if(native_mapping)then
 c Keep both angular components when the two daughters nearly cancel.
-         costh_i_fks=x3len_i_fks+x3len_j_fks*y_ij_fks
-         sinth_i_fks=x3len_j_fks*sin(pi*min(x(2),1d0-x(2)))
-         x3len_fks_mother=sqrt(costh_i_fks**2+sinth_i_fks**2)
-         costh_i_fks=costh_i_fks/x3len_fks_mother
-         sinth_i_fks=sinth_i_fks/x3len_fks_mother
-      else
-      if(xi_i_fks.lt.qtiny)then
-         costh_i_fks=y_ij_fks+(1-y_ij_fks**2)*xi_i_fks/sqrt(cffC2)
-         if(abs(costh_i_fks).gt.1.d0)costh_i_fks=y_ij_fks
-      else
-         costh_i_fks=(x3len_fks_mother**2-x3len_j_fks**2+x3len_i_fks**2)
-     $        /(2*x3len_fks_mother*x3len_i_fks)
-         if(abs(costh_i_fks).gt.1.d0+qtiny)then
-            write(*,*)'Fatal error #8 in one_tree',
-     &           costh_i_fks,xi_i_fks,y_ij_fks,xmrec2
-            stop
-         elseif(abs(costh_i_fks).gt.1.d0)then
-            costh_i_fks = sign(1d0,costh_i_fks)
-         endif
-      endif
-      sinth_i_fks=sqrt(1-costh_i_fks**2)
-      endif
+c Each map supplies the sine from its own sampling coordinate above.
+      costh_i_fks=x3len_i_fks+x3len_j_fks*y_ij_fks
+      sinth_i_fks=x3len_j_fks*sin_ij_fks
+      x3len_fks_mother=sqrt(costh_i_fks**2+sinth_i_fks**2)
+      costh_i_fks=costh_i_fks/x3len_fks_mother
+      sinth_i_fks=sinth_i_fks/x3len_fks_mother
       cosphi_i_fks=cos(phi_i_fks)
       sinphi_i_fks=sin(phi_i_fks)
       xpifksred(1)=sinth_i_fks*cosphi_i_fks
@@ -2803,17 +2790,11 @@ c
       chybst=(expybst+1/expybst)/2.d0
       chybstmo=chybst-1.d0
 c
-      if(native_mapping)then
 c Use the original mother direction. Adding nearly opposite hard
 c daughters corrupts its norm, which a large recoil boost amplifies.
-         xdir(1)=sinth_mother_fks*cosphi_mother_fks
-         xdir(2)=sinth_mother_fks*sinphi_mother_fks
-         xdir(3)=costh_mother_fks
-      else
-         do j=1,3
-            xdir(j)=xp_mother(j)/x3len_fks_mother
-         enddo
-      endif
+      xdir(1)=sinth_mother_fks*cosphi_mother_fks
+      xdir(2)=sinth_mother_fks*sinphi_mother_fks
+      xdir(3)=costh_mother_fks
       
 c Boost the momenta
       do i=nincoming+1,nexternal
@@ -5362,7 +5343,7 @@ c     Use xp in the reduced frame (a.k.a. tilde frame) to get the Born momenta.
      $     ,phi_i_fks,p_born(0:3,-max_branch:nexternal-1),shat,sqrtshat
      $     ,xpswgt,m_j_fks
       integer i_fks,j_fks
-      double precision recoil(0:3),xp_mother(0:3),sumrec,sumrec2,xmj
+      double precision recoil(0:3),sumrec,sumrec2,xmj
      $     ,xmj2,xmjhat,xmhat,xim,cffA2,cffB2,cffC2,cffDEL2,xiBm,ximax
      $     ,xirplus,xirminus,xiimax,xinorm,rat_xi,expybst
      $     ,shybst,chybst,chybstmo,veckn,veckbarn,xdir(3),xmrec2
@@ -5398,20 +5379,13 @@ c     Use xp in the reduced frame (a.k.a. tilde frame) to get the Born momenta.
       endif
 
       ! x_i_fks
-      xp_mother(0:3)=xp(0:3,i_fks)+xp(0:3,j_fks)
-      if(native_mapping)then
 c Summing the spectators retains a soft recoil and its invariant mass;
 c subtracting the hard daughters from the beams loses that precision.
-         recoil=0d0
-         do i=nincoming+1,nexternal
-            if(i.eq.i_fks.or.i.eq.j_fks)cycle
-            recoil=recoil+xp(:,i)
-         enddo
-      elseif (nincoming.eq.2) then
-         recoil(0:3)=xp(0:3,1)+xp(0:3,2)-xp_mother(0:3)
-      else
-         recoil(0:3)=xp(0:3,1)-xp_mother(0:3)
-      endif
+      recoil=0d0
+      do i=nincoming+1,nexternal
+         if(i.eq.i_fks.or.i.eq.j_fks)cycle
+         recoil=recoil+xp(:,i)
+      enddo
       sumrec=recoil(0)+rho(recoil)
       xmrec2=dot(recoil,recoil)
       xmj=m_j_fks
@@ -5511,11 +5485,7 @@ c roundoff when the recoil is soft, spoiling the forward reconstruction.
       shybst=(expybst-1/expybst)/2.d0
       chybst=(expybst+1/expybst)/2.d0
       chybstmo=chybst-1.d0
-      if(native_mapping)then
-         xdir(1:3)=recoil(1:3)/rho(recoil)
-      else
-         xdir(1:3)=-xp_mother(1:3)/rho(xp_mother)
-      endif
+      xdir(1:3)=recoil(1:3)/rho(recoil)
 c Boost the momenta
       do i=nincoming+1,nexternal
          if(i.eq.j_fks) cycle
@@ -5582,7 +5552,7 @@ c nearly antiparallel daughters without subtracting their cosines.
      $     ,xpswgt,th_mother_fks,costh_mother_fks,sinth_mother_fks
      $     ,phi_mother_fks,cosphi_mother_fks,sinphi_mother_fks
       integer i_fks,j_fks
-      double precision xp_mother(0:3),recoil(0:3),sumrec,sumrec2,betabst
+      double precision recoil(0:3),sumrec,sumrec2,betabst
      $     ,gammabst,shybst,chybst,chybstmo,xdir(1:3),veckn,veckbarn
      $     ,xiimax,xmrec2
       double precision xinorm_ev
@@ -5602,12 +5572,12 @@ c nearly antiparallel daughters without subtracting their cosines.
          cctiny=0d0
       endif
 
-      xp_mother(0:3)=xp(0:3,i_fks)+xp(0:3,j_fks)
-      if (nincoming.eq.2) then
-         recoil(0:3)=xp(0:3,1)+xp(0:3,2)-xp_mother(0:3)
-      else
-         recoil(0:3)=xp(0:3,1)-xp_mother(0:3)
-      endif
+c Retain the recoil directly instead of subtracting the hard daughters.
+      recoil=0d0
+      do i=nincoming+1,nexternal
+         if(i.eq.i_fks.or.i.eq.j_fks)cycle
+         recoil=recoil+xp(:,i)
+      enddo
       sumrec=recoil(0)+rho(recoil)
       sumrec2=sumrec**2
 ! shat_born=shat for final state j_fks.
@@ -5617,7 +5587,7 @@ c nearly antiparallel daughters without subtracting their cosines.
       chybst=(shat+sumrec2)/(2*sumrec*sqrtshat)
 c     cosh(y) is very often close to one, so define cosh(y)-1 as well
       chybstmo=(sqrtshat-sumrec)**2/(2*sumrec*sqrtshat)
-      xdir(1:3)=-xp_mother(1:3)/rho(xp_mother)
+      xdir(1:3)=recoil(1:3)/rho(recoil)
 c     Perform the boost here
       do i=nincoming+1,nexternal
 !         if(i.eq.j_fks.or.shybst.eq.0.d0) cycle

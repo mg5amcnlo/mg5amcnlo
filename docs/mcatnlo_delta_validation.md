@@ -75,14 +75,16 @@ sectors must not reconstruct `C_{a,f}` using a different random draw.
 
 ## Numerical mapping guards
 
-This change does not modify `genps_fks.f`. Its `native_mapping` branches
-have two distinct purposes:
+The Delta fixes above initially left `genps_fks.f` unchanged. A subsequent
+stability change now shares the algebraically equivalent constructions
+between the outer and native maps. The coordinate-dependent branches
+remain separate:
 
-| Operation | Recommendation |
+| Operation | Implementation after the stability change |
 | --- | --- |
-| Construct daughter angles from longitudinal and transverse components | Use the stable vector arithmetic for both maps, evaluating the transverse component from the appropriate map's coordinate. The massless forward map already does this at `628f316e2`. |
-| Use the original Born mother direction in the massive forward boost | Share this algebraically equivalent, more stable construction. |
-| Sum spectator momenta for the inverse recoil and its direction | Share this construction where the assumed frame and momentum conservation apply. |
+| Construct daughter angles from longitudinal and transverse components | The massive forward map now uses this arithmetic in both modes, evaluating the sine from each map's own coordinate. The massless forward map already does this at `628f316e2`. |
+| Use the original Born mother direction in the forward boost | Both massive and massless forward maps now use the direction returned by `getangles` for the Born mother. |
+| Sum spectator momenta for the inverse recoil and its direction | Both massive and massless inverse maps now sum the outgoing spectators. Forward spectators still carry Born momenta before their boost, so they cannot supply the new real recoil at that stage. |
 | Disable the small soft/collinear sampling cutoffs | Keep the native-only exception. An auxiliary inverse must accept a physical point close to another history's singular boundary; changing the outer cutoffs is a separate integration change. |
 | Use `tau = x` | Keep the flat auxiliary map native-only; the outer map uses threshold/resonance importance sampling. |
 | Use `u = uBorn*(1-x_r**2)` and `y = cos(pi*x_theta)` for massive radiation | Keep the complete native parameterization together with its inverse and Jacobians. Promoting it to the outer map requires a separate change and validation of sampling, counterevents and supported resonance mappings. |
@@ -91,6 +93,21 @@ In particular, `sin(pi*x_theta)` is the correct stable sine for the native
 angle coordinate. It cannot simply replace the outer sine while keeping
 the outer definition of `x_theta`. Removing all guards would change more
 than numerical arithmetic.
+
+For the outer massive angle coordinate, writing
+`q = cctiny + (1-cctiny)*x_theta**2`, the implementation uses
+
+\[
+ y=1-2q,\qquad
+ \sin\theta=2\sqrt{q(1-\mathrm{cctiny})(1-x_\theta)(1+x_\theta)}.
+\]
+
+The factorization preserves the small transverse component near the
+antiparallel endpoint. Both modes normalize the vector components
+`L = E_i + |p_j|*y` and `T = |p_j|*sin(theta)` to obtain the emitted
+parton's direction relative to the mother. The cutoffs, sampling
+coordinates, radial branches and Jacobians retain their previous values.
+The event and integration results below predate this stability change.
 
 ## Validation configuration
 
@@ -187,3 +204,41 @@ Run cards, generation and shower logs, LHE files, HwU rate histograms,
 and `verified_lhe_audit.json` are retained locally under
 `/export/tmp/rikkert/mg5_delta_628f316e2`. Final Delta samples use the run
 name `delta_verified`; fixed-order samples use `delta_fo_check`.
+
+## Stability follow-up checks
+
+The shared forward/inverse arithmetic passes all 13 momentum-map tests
+and 36 Born-support, soft/collinear, MC-kernel, dead-zone and colour-owner
+regressions:
+
+```
+python tests/test_manager.py test_momentum_maps -t0
+python tests/test_manager.py test_born_support test_soft_col_limits \
+  test_mc_dead_zones test_mc_kernels test_mc_event_colours -t0
+```
+
+Three new cases fail on the pre-change `741431161` source and pass with
+the shared arithmetic, using the same tolerances on both versions:
+
+| Check | Error before the change | Required tolerance |
+| --- | ---: | ---: |
+| Outer massive map, nearly stationary sister: opening-angle cosine | 1.10e-6 | 1e-7 |
+| Outer massive map, nearly stationary spectator: relative momentum round trip | 1.19e-7 | 1e-7 |
+| Massless inverse with a soft spectator: relative Born momentum | 1.48e-8 | 1e-9 |
+
+The additional soft-counterevent tests cover both mapping modes and verify
+finite scaled emission vectors, the original Born momenta, and the sampled
+opening angle. Supplying the existing `rat_xi` through `input_granny_m2`
+reproduces the real momenta, Jacobian and measure. Existing tests continue
+to check both massive branches and native/outer counterevent measure ratios.
+
+The top-pair output was recompiled with the updated `genps_fks.f` and used
+to generate 100 events each with ordinary MC@NLO (`stable_outer`, seed
+92601) and physical Delta (`stable_delta`, seed 92602). The integral
+estimates are 758.1 +/- 5.7 pb and 756.9 +/- 4.2 pb respectively. Both
+runs pass the existing matrix-element, MC soft/collinear and pole checks
+(20/20 pole points at tolerance `1e-5`). The 200 events have conserved
+colour and valid shower scales; the largest relative four-momentum
+residual is `2.56e-15`. Their cards and logs are saved alongside the
+earlier Delta validation outputs. Pythia 8.313 tried, selected and accepted
+all 100 events in each run, with no reported shower errors.
