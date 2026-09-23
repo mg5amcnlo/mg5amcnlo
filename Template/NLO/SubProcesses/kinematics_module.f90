@@ -93,16 +93,18 @@ contains
     double precision :: xi_i_fks_ev,y_ij_fks_ev
     double precision :: p_i_fks_ev(0:3),p_i_fks_cnt(0:3,-2:2)
     common/fksvariables/xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt
-    double precision,parameter :: tiny=1d-6
     ! Note that p_i_fks_cnt are defined in the "reduced frame" (where
     ! the Born is in its center-of-mass). Here, we only use it in the
     ! soft limit, where it coincides with the n+1-body cms frame.
-    if (p_cms(0,i_fks).lt.tiny) then ! In soft limit, we use momenta with energy divided out
+    ! Finite real momenta retain their own directions, however small.
+    ! A cached soft direction can belong to another FKS history during
+    ! native inversion, and cannot represent a different soft sister.
+    if (p_cms(0,i_fks).le.0d0) then ! Exactly soft: use momenta with energy divided out
        pi(0:3)=p_i_fks_cnt(0:3,0)
     else
        pi(0:3)=p_cms(0:3,i_fks)
     endif
-    if (p_cms(0,j_fks).lt.tiny) then ! In soft limit, we use momenta with energy divided out
+    if (p_cms(0,j_fks).le.0d0) then ! Exactly soft: use momenta with energy divided out
        pj(0:3)=p_i_fks_cnt(0:3,0)
     else
        pj(0:3)=p_cms(0:3,j_fks)

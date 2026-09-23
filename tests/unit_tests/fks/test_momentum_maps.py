@@ -102,6 +102,12 @@ class TestMomentumMaps(unittest.TestCase):
     def test_outer_massless_map_with_soft_daughter(self):
         self.check_map("soft_daughter")
 
+    def test_finite_soft_momenta_keep_their_own_directions(self):
+        self.check_map("soft_direction")
+
+    def test_wjet_native_history_with_soft_gluon(self):
+        self.check_map("wjet_soft_history")
+
     def test_outer_massive_map_with_soft_sister(self):
         self.check_map("outer_angles")
 

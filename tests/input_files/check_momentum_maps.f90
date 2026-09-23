@@ -17,6 +17,8 @@ program check_momentum_maps
   double precision :: xiimax,xinorm,xihat,rat_xi,pifks(0:3),rapidity,error
   double precision :: tau_cnt(-2:2),ycm_cnt(-2:2)
   double precision :: transfer,tmin,tmax,remainder(0:3)
+  double precision :: saved_xi,saved_y,saved_pi(0:3),saved_pi_cnt(0:3,-2:2)
+  common /fksvariables/saved_xi,saved_y,saved_pi,saved_pi_cnt
   common /cbjrk12_cnt/tau_cnt,ycm_cnt
   logical :: softtest,colltest,pass
   common /sctests/softtest,colltest
@@ -31,6 +33,79 @@ program check_momentum_maps
   nincoming_mod=2
   softtest=.false.
   colltest=.false.
+  if (mode.eq.'soft_direction') then
+     ! Finite real legs cannot borrow the cached direction of another
+     ! history, including when the soft leg is the sister rather than i.
+     native_mapping=.true.
+     do k=5,10
+        p=0d0
+        p(:,4)=[10d0**(-k),0d0,10d0**(-k),0d0]
+        p(:,5)=[20d0,20d0,0d0,0d0]
+        saved_pi_cnt=0d0
+        saved_pi_cnt(:,0)=[1d0,1d0,0d0,0d0]
+        if(abs(get_yij_from_p(5,4,p)).gt.1d-12.or. &
+             abs(get_yij_from_p(4,5,p)).gt.1d-12) &
+             error stop 'finite soft momentum replaced by cached direction'
+     enddo
+     ! Exactly soft counterevents still need their scaled direction.
+     p(:,5)=0d0
+     if(abs(get_yij_from_p(5,4,p)).gt.1d-12) &
+          error stop 'zero-energy soft direction lost'
+     write(*,*)'PASS ',trim(mode)
+     stop
+  endif
+  if (mode.eq.'wjet_soft_history') then
+     ! W+jet, seed 12004: after an ISR history, the cached soft direction
+     ! was parallel to leg 4. Reusing it for the physical soft gluon 5
+     ! made the next FSR inverse collinear, with a zero Jacobian.
+     native_mapping=.true.
+     plab(:,1)=[6493.4774065510182d0,0d0,0d0,6493.4774065510182d0]
+     plab(:,2)=[0.53658527893563424d0,0d0,0d0,-0.53658527893563424d0]
+     plab(:,3)=[4139.1636210648694d0,27.817799808130822d0, &
+          10.112078278955879d0,4138.2764747995252d0]
+     plab(:,4)=[2354.8503602114188d0,-27.817800038912463d0, &
+          -10.112078140338355d0,2354.6643359223262d0]
+     plab(:,5)=[1.0553665566093150d-5,2.3078164005879552d-7, &
+          -1.3861752450787524d-7,1.0550231367010456d-5]
+     call boost_n1_to_its_cms(plab,pcm,rapidity)
+     sqrtshat=pcm(0,1)+pcm(0,2)
+     shat=sqrtshat**2
+     mrec=sqrt(pcm(0,3)**2-sum(pcm(1:3,3)**2))
+     do k=1,2
+        p=pcm
+        if(k.eq.2)then
+           p(:,4)=pcm(:,5)
+           p(:,5)=pcm(:,4)
+        endif
+        ! Make the stale direction parallel to the hard daughter in
+        ! both orderings. Neither finite physical leg may use it.
+        saved_pi_cnt=0d0
+        saved_pi_cnt(:,0)=pcm(:,4)
+        xi=get_xi_from_p(5,4,p)
+        yij=get_yij_from_p(5,4,p)
+        phi=get_phi_from_p(5,4,p)
+        if(abs(yij).gt.0.99d0)error stop 'soft history became collinear'
+        jacinv=1d0
+        pswgtinv=1d0
+        call generate_momenta_massless_final_inverse(p,xi,yij,phi, &
+             invborn,inv,jacinv,pswgtinv,shat,sqrtshat,5,4)
+        if(.not.ieee_is_finite(jacinv).or.jacinv.le.0d0) &
+             error stop 'soft history has no finite native inverse'
+        out(:,1:4)=invborn(:,1:4)
+        jac=2d0*pi
+        pswgt=1d0
+        call generate_momenta_massless_final(-100,5,4,invborn(:,4), &
+             shat,sqrtshat,inv,mrec**2,out,phi,xiimax,xinorm,xi,yij,xihat,pifks,jac,pswgt,pass)
+        if(.not.pass.or..not.ieee_is_finite(jac).or.jac.le.0d0.or. &
+             .not.all(ieee_is_finite(out)))error stop 'invalid soft history replay'
+        call boost_n1_to_lab(out,plab,-rapidity)
+        call boost_n1_to_lab(p,out,-rapidity)
+        error=maxval(abs(plab-out))/maxval(abs(out))
+        if(error.gt.1d-7)error stop 'soft history lab momentum round trip'
+     enddo
+     write(*,*)'PASS ',trim(mode)
+     stop
+  endif
   if (mode.eq.'soft_counterevent') then
      mass=173d0
      mrec=mass
