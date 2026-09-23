@@ -239,6 +239,11 @@ def write_module(directory,outer,by_id,keys,reachable,rows,maxproc):
              'integer,save::history_flavours(%d,%d)=0,history_permutations(%d,%d)=0' %
              (maxproc,max(1,len(rows)),outer['nexternal'],max(1,len(rows))),
              'logical,save::history_initialized=.false.',
+             # Only the complete real amplitude is shared. Counterevents and
+             # analytic limits continue to use each history's native mapping.
+             'logical,save::shared_real_active=.false.',
+             'integer,save::shared_real_epoch=0',
+             'real(8),save::shared_real_point(0:3,%d)' % outer['nexternal'],
              'contains','subroutine ensure_native_context()',
              'if(active_context.eq.0)call activate_native_context(1)','end subroutine',
              'subroutine activate_native_context(sector)', 'integer,intent(in)::sector', 'integer context,status',
@@ -266,7 +271,13 @@ def write_module(directory,outer,by_id,keys,reachable,rows,maxproc):
     for i,h in enumerate(rows,1):
         lines += ['history_flavours(1:%d,%d)=[%s]' % (len(h['flavours']),i,','.join(map(str,h['flavours']))),
                   'history_permutations(:,%d)=[%s]' % (i,','.join(map(str,h['permutation'])))]
-    lines += ['history_initialized=.true.','end subroutine','end module']
+    lines += ['history_initialized=.true.','end subroutine',
+              'subroutine mc_begin_real_point(p)',
+              'real(8),intent(in)::p(0:3,%d)' % outer['nexternal'],
+              'shared_real_point=p', 'shared_real_active=p(0,1).gt.0d0',
+              'shared_real_epoch=shared_real_epoch+1', 'end subroutine',
+              'subroutine mc_end_real_point()',
+              'shared_real_active=.false.', 'end subroutine', 'end module']
     (directory/'mc_native_context.f90').write_text('\n'.join(lines)+'\n')
 
 
@@ -285,9 +296,41 @@ def write_born_tables(directory):
 
 
 def write_dispatchers(directory,outer,by_id,keys,sources):
-    real = ['subroutine smatrix_real(p,wgt)','implicit none',"include 'nexternal.inc'",
-            'double precision p(0:3,nexternal),q(0:3,nexternal),wgt','integer nfksprocess',
-            'common/c_nfksprocess/nfksprocess','select case(nfksprocess)']
+    # A restricted massive helicity state depends on its quantization frame.
+    # Conservatively keep all polarization-restricted MEs in the caller frame;
+    # they can still use exact momentum/model cache hits there.
+    share_frame = [not any(leg[2] for process in by_id[c]['sectors'][s-1]['processes']
+                           for leg in process[1]) if by_id[c]['sectors'] else False
+                   for c,s in keys]
+    real = ['subroutine smatrix_real(p,wgt)',
+            'use mc_native_context, only: shared_real_active,shared_real_epoch,shared_real_point,active_history,history_permutations',
+            'use mc_born_types, only: BornModelState,born_model_state_equal',
+            'implicit none',"include 'nexternal.inc'", "include 'orders.inc'",
+            # A small bounded cache needs no allocation on the hot path. Its
+            # model vectors keep their allocated storage between real points.
+            'integer,parameter::cache_size=16',
+            'logical,parameter::share_real_frame(%d)=[%s]' %
+            (len(keys),','.join('.true.' if allowed else '.false.' for allowed in share_frame)),
+            'type RealCacheEntry', 'integer::evaluator=0',
+            'real(8) momenta(0:3,nexternal),weight,amplitudes(amp_split_size)',
+            'type(BornModelState) model', 'end type',
+            'type(RealCacheEntry),save::cache(cache_size)',
+            'type(BornModelState),save::state',
+            'integer,save::epoch=-1,next_entry=1',
+            'double precision p(0:3,nexternal),q(0:3,nexternal),r(0:3,nexternal),wgt',
+            'double precision wgt_me_born,wgt_me_real',
+            'common/c_wgt_me_tree/wgt_me_born,wgt_me_real',
+            'integer nfksprocess,evaluator,i,j',
+            'common/c_nfksprocess/nfksprocess',
+            'if(nfksprocess.lt.1.or.nfksprocess.gt.%d)stop "Invalid native real sector"' % len(keys),
+            'r=p', 'if(shared_real_active.and.share_real_frame(nfksprocess))then',
+            # The checked inverse/forward replay supplies native counterevents;
+            # its roundoff must not define a different physical real point.
+            # Summed real MEs are invariant under the native longitudinal boost.
+            'r=shared_real_point', 'if(active_history.gt.0)then',
+            'do i=1,nexternal',
+            'r(:,i)=shared_real_point(:,history_permutations(i,active_history))',
+            'enddo', 'endif', 'endif', 'select case(nfksprocess)']
     lumi = ['double precision function dlum()','implicit none','integer nfksprocess',
             'common/c_nfksprocess/nfksprocess','select case(nfksprocess)']
     copied = set()
@@ -296,7 +339,7 @@ def write_dispatchers(directory,outer,by_id,keys,sources):
         sector = native['sectors'][s-1] if native['sectors'] else dict(real=0)
         lumi += ['case(%d)' % alias]
         if c == outer['context']:
-            real += ['case(%d)' % alias, 'call smatrix%d(p,wgt)' % sector['real']] if native['sectors'] else []
+            real += ['case(%d)' % alias, 'q=r', 'evaluator=%d' % sector['real']] if native['sectors'] else []
             lumi += ['call dlum_%d(dlum)' % sector['real']]
             continue
         # A native real amplitude is already present in the owner directory.
@@ -307,8 +350,8 @@ def write_dispatchers(directory,outer,by_id,keys,sources):
         if match is None:
             raise MadGraph5Error('No local real evaluator for native history %s' % ((c,s),))
         os,perm = match
-        real += ['case(%d)' % alias]+['q(:,%d)=p(:,%d)' % (target,i) for i,target in enumerate(perm,1)]
-        real += ['call smatrix%d(q,wgt)' % os['real']]
+        real += ['case(%d)' % alias]+['q(:,%d)=r(:,%d)' % (target,i) for i,target in enumerate(perm,1)]
+        real += ['evaluator=%d' % os['real']]
         name = 'dlum_native_%d_%d' % (c,sector['real'])
         lumi += ['call %s(dlum)' % name]
         if name not in copied:
@@ -316,7 +359,28 @@ def write_dispatchers(directory,outer,by_id,keys,sources):
             lines = [born.rename(line,{'dlum_%d' % sector['real']:name})
                      for line in born.statements(sources[c]['parton_lum_%d.f' % sector['real']])]
             write(directory/('parton_lum_native_%d_%d.f' % (c,sector['real'])),lines)
-    real += ['case default','stop "Invalid native real sector"','end select','end']
+    real += ['case default','stop "Invalid native real sector"','end select',
+             'if(shared_real_active)then',
+             'if(epoch.ne.shared_real_epoch)then',
+             'cache%evaluator=0','next_entry=1','epoch=shared_real_epoch','endif',
+             'call mc_capture_model_state(state)',
+             'do j=1,cache_size',
+             'if(cache(j)%evaluator.ne.evaluator)cycle',
+             'if(any(cache(j)%momenta.ne.q))cycle',
+             'if(.not.born_model_state_equal(cache(j)%model,state))cycle',
+             'wgt=cache(j)%weight','amp_split=cache(j)%amplitudes',
+             'wgt_me_real=wgt','return','enddo','endif',
+             'select case(evaluator)']
+    for evaluator in sorted({s['real'] for s in outer['sectors']}):
+        real += ['case(%d)' % evaluator, 'call smatrix%d(q,wgt)' % evaluator]
+    real += ['case default','stop "Invalid local real evaluator"','end select',
+             'if(shared_real_active)then', 'j=next_entry',
+             'cache(j)%evaluator=evaluator','cache(j)%momenta=q',
+             'cache(j)%model%real_values=state%real_values',
+             'cache(j)%model%complex_values=state%complex_values',
+             'cache(j)%weight=wgt',
+             'cache(j)%amplitudes=amp_split',
+             'next_entry=mod(next_entry,cache_size)+1','endif','end']
     lumi += ['case default','stop "Invalid native PDF sector"','end select','call mc_filter_native_lum(dlum)','end']
     write(directory/'real_me_chooser.f',real)
     write(directory/'parton_lum_chooser.f',lumi)

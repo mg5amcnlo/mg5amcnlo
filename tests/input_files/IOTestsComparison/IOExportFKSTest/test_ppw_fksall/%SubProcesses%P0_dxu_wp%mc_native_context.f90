@@ -16,6 +16,9 @@ type(BornResult),save::native_result
 integer,parameter::history_count=6
 integer,save::history_flavours(2,6)=0,history_permutations(4,6)=0
 logical,save::history_initialized=.false.
+logical,save::shared_real_active=.false.
+integer,save::shared_real_epoch=0
+real(8),save::shared_real_point(0:3,4)
 contains
 subroutine ensure_native_context()
 if(active_context.eq.0)call activate_native_context(1)
@@ -59,5 +62,14 @@ history_permutations(:,5)=[1,2,3,4]
 history_flavours(1:2,6)=[1,2]
 history_permutations(:,6)=[1,2,3,4]
 history_initialized=.true.
+end subroutine
+subroutine mc_begin_real_point(p)
+real(8),intent(in)::p(0:3,4)
+shared_real_point=p
+shared_real_active=p(0,1).gt.0d0
+shared_real_epoch=shared_real_epoch+1
+end subroutine
+subroutine mc_end_real_point()
+shared_real_active=.false.
 end subroutine
 end module

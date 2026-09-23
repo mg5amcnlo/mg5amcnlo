@@ -16,6 +16,9 @@ type(BornResult),save::native_result
 integer,parameter::history_count=0
 integer,save::history_flavours(4,1)=0,history_permutations(5,1)=0
 logical,save::history_initialized=.false.
+logical,save::shared_real_active=.false.
+integer,save::shared_real_epoch=0
+real(8),save::shared_real_point(0:3,5)
 contains
 subroutine ensure_native_context()
 if(active_context.eq.0)call activate_native_context(1)
@@ -47,5 +50,14 @@ if(history.lt.0.or.history.gt.history_count)stop "Invalid native history"
 active_history=history
 if(history_initialized)return
 history_initialized=.true.
+end subroutine
+subroutine mc_begin_real_point(p)
+real(8),intent(in)::p(0:3,5)
+shared_real_point=p
+shared_real_active=p(0,1).gt.0d0
+shared_real_epoch=shared_real_epoch+1
+end subroutine
+subroutine mc_end_real_point()
+shared_real_active=.false.
 end subroutine
 end module

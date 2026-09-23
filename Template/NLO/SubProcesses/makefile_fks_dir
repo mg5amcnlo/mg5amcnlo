@@ -225,7 +225,7 @@ clean:
 	for dir in `ls -d V*`; do cd $$dir; make clean; cd ../; done
 
 ifneq ("$(wildcard born_support.f)","")
-born.o born_hel.o sborn_sf.o extra_cnt_wrapper.o born_support.o: $(LIBDIR)mc_born_types.mod $(LIBDIR)mc_born_support.mod
+born.o born_hel.o sborn_sf.o extra_cnt_wrapper.o born_support.o $(patsubst %.f,%.o,$(wildcard matrix_*.f)): $(LIBDIR)mc_born_types.mod $(LIBDIR)mc_born_support.mod
 born.o born_hel.o sborn_sf.o extra_cnt_wrapper.o born_support.o: FFLAGS += -ffixed-line-length-none
 gensym test_soft_col_limits check_poles: $(BORN_SUPPORT_LIB)
 endif
@@ -233,7 +233,7 @@ endif
 ifneq ("$(wildcard mc_native_context.f90)","")
 mc_native_context.o: $(LIBDIR)mc_born_types.mod $(LIBDIR)mc_born_support.mod
 mc_native_context.o: FFLAGS += -ffree-line-length-none
-mc_native_runtime.o mc_native_props.o chooser_functions.o genps_fks.o setcuts.o fks_singular.o driver_mintMC.o weight_lines.o iproc_map.o cluster.o: mc_native_context.o
+mc_native_runtime.o mc_native_props.o real_me_chooser.o chooser_functions.o genps_fks.o setcuts.o fks_singular.o driver_mintMC.o weight_lines.o iproc_map.o cluster.o: mc_native_context.o
 mc_native_runtime.o: FFLAGS += -ffixed-line-length-none
 
 # Native metadata dimensions are shared by all runtime COMMON declarations.

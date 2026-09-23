@@ -7,7 +7,7 @@
       double precision p(0:3,nexternal-1)
       type(BornRequest) request
       type(BornResult) result
-      type(BornModelState) state
+      type(BornModelState),save::state
       integer nr,nc,status,nfksprocess
       common/c_nfksprocess/nfksprocess
       double precision charges(nexternal-1)
@@ -17,7 +17,7 @@
       DOUBLE COMPLEX MDL_COMPLEXI,MDL_I233,MDL_I333,MDL_VECTORHUP3  ,MDL_VECTORGPUX3D3,MDL_AXIALGPUX3D3,MDL_VECTORGMDX3U3  ,MDL_AXIALGMDX3U3
       COMMON/PARAMS_C/ MDL_COMPLEXI,MDL_I233,MDL_I333,MDL_VECTORHUP3  ,MDL_VECTORGPUX3D3,MDL_AXIALGPUX3D3,MDL_VECTORGMDX3U3  ,MDL_AXIALGMDX3U3
       call born_model_dimensions(nr,nc)
-      allocate(state%%real_values(nr),state%%complex_values(nc))
+      call born_resize_model_state(state,nr,nc)
       state%%real_values(1)=g
       state%%real_values(2)=all_g
       state%%complex_values(1:2)=gal
@@ -180,7 +180,6 @@
       request%%sector=nfksprocess
       request%%charges=charges
       call born_evaluate(4,10,p,state,request,result,status)
-      deallocate(state%%real_values,state%%complex_values)
       if(status.ne.0)then
       write(*,*)'Born support evaluation failed',status
       stop 1
@@ -198,9 +197,7 @@
       DOUBLE COMPLEX MDL_COMPLEXI,MDL_I233,MDL_I333,MDL_VECTORHUP3  ,MDL_VECTORGPUX3D3,MDL_AXIALGPUX3D3,MDL_VECTORGMDX3U3  ,MDL_AXIALGMDX3U3
       COMMON/PARAMS_C/ MDL_COMPLEXI,MDL_I233,MDL_I333,MDL_VECTORHUP3  ,MDL_VECTORGPUX3D3,MDL_AXIALGPUX3D3,MDL_VECTORGMDX3U3  ,MDL_AXIALGMDX3U3
       call born_model_dimensions(nr,nc)
-      if(allocated(state%%real_values))deallocate(state%%real_values)
-      if(allocated(state%%complex_values))deallocate(state%%complex_values)
-      allocate(state%%real_values(nr),state%%complex_values(nc))
+      call born_resize_model_state(state,nr,nc)
       state%%real_values(1)=g
       state%%real_values(2)=all_g
       state%%complex_values(1:2)=gal

@@ -38,9 +38,61 @@ module mc_born_types
   type BornResult
     real(8) :: born=0d0, correlation=0d0
     real(8) :: single_helicity=0d0
+    ! Storage can survive a request; these flags describe the current result.
+    logical :: has_helicities=.false., has_soft=.false.
+    logical :: has_extra=.false., has_single_helicity=.false.
     complex(8), allocatable :: ewsudakov(:), ewsudakov_lo2(:)
     real(8), allocatable :: amplitudes(:), diagrams(:), flows(:), flow_orders(:,:)
     real(8), allocatable :: helicities(:), helicity_orders(:,:), soft(:)
     complex(8), allocatable :: counterterms(:,:), split_counterterms(:,:,:), extra(:,:)
   end type
+contains
+  logical function born_model_state_equal(a,b)
+    type(BornModelState),intent(in) :: a,b
+    born_model_state_equal=.false.
+    if (.not.allocated(a%real_values).or..not.allocated(b%real_values)) return
+    if (.not.allocated(a%complex_values).or..not.allocated(b%complex_values)) return
+    if (size(a%real_values).ne.size(b%real_values)) return
+    if (size(a%complex_values).ne.size(b%complex_values)) return
+    born_model_state_equal=all(a%real_values.eq.b%real_values).and. &
+                          all(a%complex_values.eq.b%complex_values)
+  end function
+
+  logical function born_helicity_state_equal(a,b)
+    type(BornModelState),intent(in) :: a,b
+    ! Finalization replaces this conservative default only after proving
+    ! homogeneous G scaling in every used tree squared-order component.
+    born_helicity_state_equal=born_model_state_equal(a,b)
+  end function
+
+  subroutine born_resize_model_state(state,nreal,ncomplex)
+    type(BornModelState),intent(inout) :: state
+    integer,intent(in) :: nreal,ncomplex
+    if (allocated(state%real_values)) then
+      if (size(state%real_values).ne.nreal) deallocate(state%real_values)
+    endif
+    if (allocated(state%complex_values)) then
+      if (size(state%complex_values).ne.ncomplex) deallocate(state%complex_values)
+    endif
+    if (.not.allocated(state%real_values)) allocate(state%real_values(nreal))
+    if (.not.allocated(state%complex_values)) allocate(state%complex_values(ncomplex))
+  end subroutine
+
+  subroutine born_reset_result(result)
+    type(BornResult),intent(inout) :: result
+    result%born=0d0
+    result%correlation=0d0
+    result%single_helicity=0d0
+    result%has_helicities=.false.
+    result%has_soft=.false.
+    result%has_extra=.false.
+    result%has_single_helicity=.false.
+    ! Leave buffers allocated, but never expose stale optional values.
+    if (allocated(result%helicities)) result%helicities=0d0
+    if (allocated(result%helicity_orders)) result%helicity_orders=0d0
+    if (allocated(result%soft)) result%soft=0d0
+    if (allocated(result%extra)) result%extra=(0d0,0d0)
+    if (allocated(result%ewsudakov)) result%ewsudakov=(0d0,0d0)
+    if (allocated(result%ewsudakov_lo2)) result%ewsudakov_lo2=(0d0,0d0)
+  end subroutine
 end module

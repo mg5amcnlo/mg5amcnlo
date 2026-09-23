@@ -706,6 +706,7 @@ c
 
 
       function sigintF(xx,vegas_wgt,ifl,f)
+      use mc_native_context, only: mc_begin_real_point,mc_end_real_point
       use weight_lines
       use mint_module
       use kinematics_module
@@ -717,6 +718,7 @@ c
       include 'run.inc'
       include 'orders.inc'
       include 'fks_info.inc'
+      include 'mc_histories.inc'
       logical firsttime,passcuts,passcuts_nbody,passcuts_n1body
       integer i,j,ifl,proc_map(0:fks_configs,0:fks_configs)
      $     ,nFKS_picked_nbody,nFKS_in,nFKS_out,izero,ione,itwo,mohdr
@@ -1007,12 +1009,21 @@ c check if event or counter-event passes cuts
             if (.not.(passcuts_nbody.or.passcuts_n1body) .and.
      $           (ickkw.eq.4 .or. abrv.eq.'real')) cycle
             first_native_H=icontr+1
+! Share only full real amplitudes at this physical point. Each native
+! history retains its own counterevents, scales and regulated factors.
+            call mc_begin_real_point(p)
+! The complete H sum below replaces the outer H records. Suppress them
+! here, preserving the original path if no real point can be repartitioned.
+            mc_S_only=ickkw.ne.4.and.abrv.ne.'real'.and.
+     $           p(0,1).gt.0d0.and.jacPS.gt.0d0.and.MC_HIST_COUNT.gt.0
             call compute_native_NLOPS_weights(p,p_lab,p_cms,jacPS,
      $           passcuts_nbody,passcuts_n1body,probne)
+            mc_S_only=.false.
             if (ickkw.ne.4 .and. abrv.ne.'real') then
                call repartition_MC_H(first_native_H,x_local,p,p_lab,
      $              p_cms,jacPS,vegas_wgt,1d0/vol1,born_flow_factor)
             endif
+            call mc_end_real_point()
          enddo
  12      continue
       elseif(ifl.eq.2) then

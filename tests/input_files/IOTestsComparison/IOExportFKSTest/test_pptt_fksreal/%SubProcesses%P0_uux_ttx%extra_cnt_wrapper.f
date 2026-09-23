@@ -4,8 +4,8 @@
       include 'nexternal.inc'
       include 'orders.inc'
       double precision p(0:3,nexternal-1),ans
-      type(BornRequest) request
-      type(BornResult) result
+      type(BornRequest),save::request
+      type(BornResult),save::result
       integer icnt
       double complex cnts(2,nsplitorders)
       cnts=(0d0,0d0)

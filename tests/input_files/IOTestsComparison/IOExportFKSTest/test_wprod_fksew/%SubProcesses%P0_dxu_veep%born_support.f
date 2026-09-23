@@ -7,7 +7,7 @@
       double precision p(0:3,nexternal-1)
       type(BornRequest) request
       type(BornResult) result
-      type(BornModelState) state
+      type(BornModelState),save::state
       integer nr,nc,status,nfksprocess
       common/c_nfksprocess/nfksprocess
       double precision charges(nexternal-1)
@@ -17,7 +17,7 @@
       DOUBLE COMPLEX MDL_WMASS2_UV_EW_FIN_,MDL_CWCFT_UV_EW_L_FIN_  ,MDL_EWCFT_UV_EW_L_FIN_,MDL_SWCFT_BAR_UV_EW_L_FIN_  ,MDL_VEWCFT_BAR_UV_EW_L_FIN_,MDL_WWCFT_UV_EW_FIN_  ,MDL_ECOUP_UV_EW_FIN_,MDL_SWCOUP_UV_EW_FIN_,MDL_COMPLEXI,MDL_GF  ,MDL_I233,MDL_I333,MDL_VECTORHUP3,MDL_VECTORGPUX3D3  ,MDL_AXIALGPUX3D3,MDL_VECTORGMDX3U3,MDL_AXIALGMDX3U3  ,MDL_WMASS2_UV_EW_1EPS_,MDL_CWCFT_UV_EW_L_1EPS_  ,MDL_EWCFT_UV_EW_L_1EPS_,MDL_SWCFT_BAR_UV_EW_L_1EPS_  ,MDL_VEWCFT_BAR_UV_EW_L_1EPS_,MDL_WWCFT_UV_EW_1EPS_  ,MDL_ECOUP_UV_EW_1EPS_,MDL_SWCOUP_UV_EW_1EPS_
       COMMON/PARAMS_C/ MDL_WMASS2_UV_EW_FIN_,MDL_CWCFT_UV_EW_L_FIN_  ,MDL_EWCFT_UV_EW_L_FIN_,MDL_SWCFT_BAR_UV_EW_L_FIN_  ,MDL_VEWCFT_BAR_UV_EW_L_FIN_,MDL_WWCFT_UV_EW_FIN_  ,MDL_ECOUP_UV_EW_FIN_,MDL_SWCOUP_UV_EW_FIN_,MDL_COMPLEXI,MDL_GF  ,MDL_I233,MDL_I333,MDL_VECTORHUP3,MDL_VECTORGPUX3D3  ,MDL_AXIALGPUX3D3,MDL_VECTORGMDX3U3,MDL_AXIALGMDX3U3  ,MDL_WMASS2_UV_EW_1EPS_,MDL_CWCFT_UV_EW_L_1EPS_  ,MDL_EWCFT_UV_EW_L_1EPS_,MDL_SWCFT_BAR_UV_EW_L_1EPS_  ,MDL_VEWCFT_BAR_UV_EW_L_1EPS_,MDL_WWCFT_UV_EW_1EPS_  ,MDL_ECOUP_UV_EW_1EPS_,MDL_SWCOUP_UV_EW_1EPS_
       call born_model_dimensions(nr,nc)
-      allocate(state%%real_values(nr),state%%complex_values(nc))
+      call born_resize_model_state(state,nr,nc)
       state%%real_values(1)=g
       state%%real_values(2)=all_g
       state%%complex_values(1:2)=gal
@@ -216,7 +216,6 @@
       request%%sector=nfksprocess
       request%%charges=charges
       call born_evaluate(1,1,p,state,request,result,status)
-      deallocate(state%%real_values,state%%complex_values)
       if(status.ne.0)then
       write(*,*)'Born support evaluation failed',status
       stop 1
@@ -234,9 +233,7 @@
       DOUBLE COMPLEX MDL_WMASS2_UV_EW_FIN_,MDL_CWCFT_UV_EW_L_FIN_  ,MDL_EWCFT_UV_EW_L_FIN_,MDL_SWCFT_BAR_UV_EW_L_FIN_  ,MDL_VEWCFT_BAR_UV_EW_L_FIN_,MDL_WWCFT_UV_EW_FIN_  ,MDL_ECOUP_UV_EW_FIN_,MDL_SWCOUP_UV_EW_FIN_,MDL_COMPLEXI,MDL_GF  ,MDL_I233,MDL_I333,MDL_VECTORHUP3,MDL_VECTORGPUX3D3  ,MDL_AXIALGPUX3D3,MDL_VECTORGMDX3U3,MDL_AXIALGMDX3U3  ,MDL_WMASS2_UV_EW_1EPS_,MDL_CWCFT_UV_EW_L_1EPS_  ,MDL_EWCFT_UV_EW_L_1EPS_,MDL_SWCFT_BAR_UV_EW_L_1EPS_  ,MDL_VEWCFT_BAR_UV_EW_L_1EPS_,MDL_WWCFT_UV_EW_1EPS_  ,MDL_ECOUP_UV_EW_1EPS_,MDL_SWCOUP_UV_EW_1EPS_
       COMMON/PARAMS_C/ MDL_WMASS2_UV_EW_FIN_,MDL_CWCFT_UV_EW_L_FIN_  ,MDL_EWCFT_UV_EW_L_FIN_,MDL_SWCFT_BAR_UV_EW_L_FIN_  ,MDL_VEWCFT_BAR_UV_EW_L_FIN_,MDL_WWCFT_UV_EW_FIN_  ,MDL_ECOUP_UV_EW_FIN_,MDL_SWCOUP_UV_EW_FIN_,MDL_COMPLEXI,MDL_GF  ,MDL_I233,MDL_I333,MDL_VECTORHUP3,MDL_VECTORGPUX3D3  ,MDL_AXIALGPUX3D3,MDL_VECTORGMDX3U3,MDL_AXIALGMDX3U3  ,MDL_WMASS2_UV_EW_1EPS_,MDL_CWCFT_UV_EW_L_1EPS_  ,MDL_EWCFT_UV_EW_L_1EPS_,MDL_SWCFT_BAR_UV_EW_L_1EPS_  ,MDL_VEWCFT_BAR_UV_EW_L_1EPS_,MDL_WWCFT_UV_EW_1EPS_  ,MDL_ECOUP_UV_EW_1EPS_,MDL_SWCOUP_UV_EW_1EPS_
       call born_model_dimensions(nr,nc)
-      if(allocated(state%%real_values))deallocate(state%%real_values)
-      if(allocated(state%%complex_values))deallocate(state%%complex_values)
-      allocate(state%%real_values(nr),state%%complex_values(nc))
+      call born_resize_model_state(state,nr,nc)
       state%%real_values(1)=g
       state%%real_values(2)=all_g
       state%%complex_values(1:2)=gal

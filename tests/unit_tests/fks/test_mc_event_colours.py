@@ -12,6 +12,20 @@ from tests.unit_tests.fks.test_momentum_maps import ROOT, TEMPLATE, fortran_rout
 
 @unittest.skipUnless(shutil.which('gfortran'), 'requires gfortran')
 class TestMCEventColours(unittest.TestCase):
+    def test_contribution_storage_growth_and_reuse(self):
+        with tempfile.TemporaryDirectory(prefix='mg5_weight_lines_') as tmp:
+            work = Path(tmp)
+            executable = work / 'check_weight_lines'
+            result = subprocess.run([
+                shutil.which('gfortran'), '-O2', '-std=legacy', '-fcheck=all',
+                '-ffixed-line-length-none', str(TEMPLATE / 'weight_lines.f'),
+                str(ROOT / 'tests/input_files/check_weight_lines.f90'),
+                '-o', str(executable)], cwd=work, capture_output=True, text=True)
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            result = subprocess.run([str(executable)], capture_output=True, text=True)
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            self.assertIn('PASS contribution storage', result.stdout)
+
     def test_sector_fold_and_native_colour_ownership(self):
         with tempfile.TemporaryDirectory(prefix='mg5_mc_colours_') as tmp:
             work = Path(tmp)
@@ -25,7 +39,9 @@ class TestMCEventColours(unittest.TestCase):
                               'parameter(nsplitorders=2,qcd_pos=1,qed_pos=2)',
                 'nFKSconfigs.inc': 'integer fks_configs\nparameter(fks_configs=2)',
                 'fks_info.inc': 'integer pdg_type_d(2,5),fks_i_d(2)\n'
-                                'logical need_color_links_d(2),need_charge_links_d(2)',
+                                'logical need_color_links_d(2),need_charge_links_d(2)\n'
+                                'common/test_fks_info/pdg_type_d,fks_i_d,'
+                                'need_color_links_d,need_charge_links_d',
             }
             for name, text in includes.items():
                 (work / name).write_text(''.join('      '+s+'\n' for s in text.splitlines()))

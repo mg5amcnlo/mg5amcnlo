@@ -4,8 +4,8 @@
       include 'nexternal.inc'
       include 'orders.inc'
       double precision p(0:3,nexternal-1),ans
-      type(BornRequest) request
-      type(BornResult) result
+      type(BornRequest),save::request
+      type(BornResult),save::result
       double precision helicities(16)
       common/c_born_hel/helicities
       double precision helicity_orders(1,16)

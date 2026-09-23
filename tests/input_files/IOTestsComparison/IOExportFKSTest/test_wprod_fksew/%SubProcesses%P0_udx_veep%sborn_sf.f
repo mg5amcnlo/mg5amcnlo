@@ -4,8 +4,8 @@
       include 'nexternal.inc'
       include 'orders.inc'
       double precision p(0:3,nexternal-1),ans
-      type(BornRequest) request
-      type(BornResult) result
+      type(BornRequest),save::request
+      type(BornResult),save::result
       integer m,n
       logical need_color_links,need_charge_links
       common/c_need_links/need_color_links,need_charge_links

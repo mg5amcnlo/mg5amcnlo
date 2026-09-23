@@ -4,8 +4,8 @@
       include 'nexternal.inc'
       include 'orders.inc'
       double precision p(0:3,nexternal-1),ans
-      type(BornRequest) request
-      type(BornResult) result
+      type(BornRequest),save::request
+      type(BornResult),save::result
       double precision amp2(3),jamp2(0:2)
       common/to_amps/amp2,jamp2
       double complex ans_cnt(2,nsplitorders)
@@ -31,8 +31,8 @@
       include 'nexternal.inc'
       include 'orders.inc'
       double precision p(0:3,nexternal-1),ans
-      type(BornRequest) request
-      type(BornResult) result
+      type(BornRequest),save::request
+      type(BornResult),save::result
       integer nhel(nexternal-1),hell
       double complex amp_split_ewsud(amp_split_size)
       common/to_amp_split_ewsud/amp_split_ewsud

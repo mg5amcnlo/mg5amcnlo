@@ -161,6 +161,88 @@ class TestBornRegistry(unittest.TestCase):
         self.assertEqual(support.rename(text,{'born':'mcb1_born'}),
                          "call mcb1_born(p,result%born) ! 'born'")
 
+    @unittest.skipUnless(shutil.which('gfortran'), 'requires gfortran')
+    def test_extra_helicity_filter_tracks_sector_and_model(self):
+        # The extra-counterterm template has one NTRY/SKIP, unlike the main
+        # Born's per-sector arrays. Its mother may change between sectors.
+        routine = ['subroutine extra_filter(skip_out,tries)', 'implicit none',
+            'integer skip_out,tries,ntry,nfksprocess,skip,glu_ij',
+            'integer nhel(2,4),ij_values(2)',
+            'common/c_nfksprocess/nfksprocess', 'logical goodhel(4)',
+            'save ntry,skip,goodhel', 'data ntry/0/',
+            'data nhel/-1,-1,1,-1,-1,1,1,1/', 'data ij_values/1,2/',
+            'glu_ij=ij_values(nfksprocess)', 'NTRY=NTRY+1',
+            'if(ntry.lt.2)then', 'skip=1',
+            'do while(nhel(glu_ij,skip).ne.1)', 'skip=skip+1', 'enddo',
+            'skip=skip-1', 'endif', 'skip_out=skip', 'tries=ntry', 'end']
+        program = ['program check', 'implicit none',
+            'integer nfksprocess,born_model_epoch,skip,tries',
+            'common/c_nfksprocess/nfksprocess',
+            'common/c_born_model_epoch/born_model_epoch',
+            'born_model_epoch=1', 'nfksprocess=1', 'call extra_filter(skip,tries)',
+            'if(skip.ne.1.or.tries.ne.1)stop 1', 'call extra_filter(skip,tries)',
+            'if(skip.ne.1.or.tries.ne.2)stop 2',
+            'nfksprocess=2', 'call extra_filter(skip,tries)',
+            'if(skip.ne.2.or.tries.ne.1)stop 3',
+            'born_model_epoch=2', 'call extra_filter(skip,tries)',
+            'if(skip.ne.2.or.tries.ne.1)stop 4', 'end']
+        with tempfile.TemporaryDirectory() as tmp:
+            source = Path(tmp)/'check.f'
+            support.write_fortran(source,program+support.model_aware_helicity_filter(routine))
+            TestBornLibrary.run_command(['gfortran','-fcheck=all','-ffixed-line-length-none',
+                                         'check.f','-o','check'],tmp)
+            TestBornLibrary.run_command(['./check'],tmp)
+
+    @unittest.skipUnless(shutil.which('gfortran'), 'requires gfortran')
+    def test_polarized_real_cache_preserves_caller_frame(self):
+        from madgraph.iolibs import native_histories
+        identity = physical((21,21,6))
+        restricted = copy.deepcopy(identity)
+        restricted = (restricted[0],restricted[1][:-1]+((6,True,(1,),False,None),))
+        record = dict(context=1,sectors=[dict(real=1,processes=[restricted]),
+                                        dict(real=2,processes=[identity])])
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            support.write_fortran(root/'nexternal.inc', ['integer,parameter::nexternal=3'])
+            support.write_fortran(root/'orders.inc', ['integer,parameter::amp_split_size=1',
+                'real(8) amp_split(1)', 'common/to_amp_split/amp_split'])
+            native_histories.write_dispatchers(root,record,{1:record},[(1,1),(1,2)],{})
+            (root/'mc_native_context.f90').write_text('''module mc_native_context
+implicit none
+logical,save::shared_real_active=.true.
+integer,save::shared_real_epoch=1,active_history=0
+real(8),save::shared_real_point(0:3,3)
+integer,save::history_permutations(3,1)=0
+end module
+''')
+            program = ['program check', 'use mc_native_context', 'implicit none',
+                'integer nfksprocess,calls', 'common/c_nfksprocess/nfksprocess',
+                'common/test_calls/calls', 'real(8) p(0:3,3),wgt',
+                'calls=0', 'shared_real_point=1d0', 'p=2d0', 'nfksprocess=1',
+                'call smatrix_real(p,wgt)', 'if(wgt.ne.4d0.or.calls.ne.1)stop 1',
+                'p(0,1)=3d0', 'call smatrix_real(p,wgt)',
+                'if(wgt.ne.5d0.or.calls.ne.2)stop 2', 'call smatrix_real(p,wgt)',
+                'if(wgt.ne.5d0.or.calls.ne.2)stop 3', 'nfksprocess=2',
+                'call smatrix_real(p,wgt)', 'if(wgt.ne.2d0.or.calls.ne.3)stop 4',
+                'p(0,1)=4d0', 'call smatrix_real(p,wgt)',
+                'if(wgt.ne.2d0.or.calls.ne.3)stop 5', 'end',
+                'subroutine mc_capture_model_state(state)', 'use mc_born_types',
+                'implicit none', 'type(BornModelState) state',
+                'state%real_values=[1d0]', 'state%complex_values=[(1d0,0d0)]', 'end']
+            for number in (1,2):
+                program += ['subroutine smatrix%d(p,wgt)' % number, 'implicit none',
+                    "include 'orders.inc'", 'real(8) p(0:3,3),wgt,wgt_me_born,wgt_me_real',
+                    'integer calls', 'common/test_calls/calls',
+                    'common/c_wgt_me_tree/wgt_me_born,wgt_me_real',
+                    'calls=calls+1', 'wgt=p(0,1)+p(0,3)',
+                    'amp_split=wgt', 'wgt_me_real=wgt', 'end']
+            support.write_fortran(root/'check.f',program)
+            types = Path(support.__file__).resolve().parents[2]/'Template/NLO/Source/BornSupport/mc_born_types.f90'
+            TestBornLibrary.run_command(['gfortran','-fcheck=all','-ffixed-line-length-none',
+                '-ffree-line-length-none',str(types),'mc_native_context.f90',
+                'real_me_chooser.f','check.f','-o','check'],tmp)
+            TestBornLibrary.run_command(['./check'],tmp)
+
 
 @unittest.skipUnless(shutil.which('gfortran'), 'requires gfortran')
 class TestBornLibrary(unittest.TestCase):
@@ -175,6 +257,7 @@ class TestBornLibrary(unittest.TestCase):
         cls.addClassCleanup(cls.temp.cleanup)
         cls.work = Path(cls.temp.name)
         cls.outputs = {}
+        cls.cache_metrics = {}
         interface = master_interface.MasterCmd()
         def command(text):
             interface.exec_cmd(text,errorhandling=False,printcmd=False,
@@ -229,9 +312,30 @@ class TestBornLibrary(unittest.TestCase):
             output = cls.work/name
             with mock.patch.object(support,'finalize',capture):
                 command('output %s -f -nojpeg' % output)
+            cls.instrument_provider_calls(output)
             cls.run_command(['make','-j2','FFLAGS=-O0 -g -fcheck=all -fbacktrace'],
                             output/'Source/BornSupport')
             cls.outputs[name] = output
+
+    @staticmethod
+    def instrument_provider_calls(output):
+        """Count actual HELAS calls in test exports, without production counters."""
+        directory = output/'Source/BornSupport'
+        providers = sorted(directory.glob('p[0-9]*/matrix.f'))
+        types = directory/'mc_born_types.f90'
+        types.write_text(types.read_text().replace('  implicit none',
+            '  implicit none\n  integer(8),save :: born_test_helas_calls(%d)=0' % len(providers), 1))
+        for path in providers:
+            provider = int(path.parent.name[1:])
+            lines = []
+            for line in support.statements(path.read_text()):
+                if re.match(r'(?i)\s*call\s+(?!mcb\d+_)\w+\s*\(', line):
+                    lines.append('born_test_helas_calls(%d)=born_test_helas_calls(%d)+1' %
+                                 (provider,provider))
+                lines.append(line)
+                if re.match(r'(?i)\s*(?:[\w*]+\s+)*?(?:subroutine|function)\s+\w+', line):
+                    lines.append('use mc_born_types,only:born_test_helas_calls')
+            support.write_fortran(path,lines)
 
     @staticmethod
     def run_command(command, cwd):
@@ -246,6 +350,8 @@ class TestBornLibrary(unittest.TestCase):
         model_lines = support.expand(output/'Source/MODEL/coupl.inc')
         model_lines += support.expand(output/'Source/MODEL/input.inc')
         members,sizes = support.common_members(model_lines)
+        signature = json.loads((output/'Source/BornSupport/helicity_signature.json').read_text())
+        self.assertEqual(signature['mode'], 'homogeneous_G')
         for record in registry['contexts']:
             with self.subTest(process=output.name, provider=record['provider']):
                 source = output/'reference'/record['directory']
@@ -259,7 +365,7 @@ class TestBornLibrary(unittest.TestCase):
                 helicity_data = [line for line in support.statements((source/'born.f').read_text())
                                  if re.match(r'(?i)data\s*\(nhel\(', line)]
                 support.write_fortran(source/'check.f',self.driver(record,members,sizes,model_lines,
-                    registry['contexts'], helicity_data))
+                    registry['contexts'], helicity_data, signature['signature']))
                 paths = [source/n for n in ('born.f','born_hel.f','sborn_sf.f',
                                            'extra_cnt_wrapper.f','helpers.f','check.f')]
                 paths += sorted(source.glob('b_sf_*.f'))+sorted(source.glob('born_cnt_*.f'))
@@ -272,7 +378,14 @@ class TestBornLibrary(unittest.TestCase):
                     '-L'+str(output/'lib'),'-lmc_born_support',
                     '-Wl,-rpath,'+self.origin+'/../../lib','-Wl,-rpath,'+self.origin,
                     '-o','check'],source)
-                self.assertIn('PASS Born provider',self.run_command(['./check'],source))
+                checked = self.run_command(['./check'],source)
+                self.assertIn('PASS Born provider',checked)
+                discovery,pruned = map(int,re.search(
+                    r'HELAS discovery/pruned\s+(\d+)\s+(\d+)',checked).groups())
+                self.cache_metrics[output.name,record['provider']] = (discovery,pruned)
+                if output.name == 'dy':
+                    self.assertLess(pruned,discovery,
+                        'fixed-model helicity filtering must eliminate zero-helicity HELAS calls')
                 # A worker only needs the executable and the DSO beside it.
                 scratch = output/('scratch_'+str(record['context']))
                 scratch.mkdir()
@@ -282,13 +395,14 @@ class TestBornLibrary(unittest.TestCase):
                 self.assertIn('PASS Born provider',self.run_command(['./check'],scratch))
 
     @staticmethod
-    def driver(r, members, sizes, model_lines, contexts, helicity_data=()):
+    def driver(r, members, sizes, model_lines, contexts, helicity_data=(), signature=None):
         n,ng,nc,nh,ns = r['nexternal']-1,r['ngraphs'],r['ncolor'],r['nhelicity'],r['nsqamps']
         lines = ['program check', 'use mc_born_support', 'use mc_born_types', 'implicit none']
         lines += ["include 'orders.inc'"]+model_lines+[
-            'type(BornModelState) state', 'type(BornRequest) request',
+            'type(BornModelState) state,alternate', 'type(BornRequest) request',
             'type(BornResult) result,other', 'type(BornMetadata) metadata',
             'integer nfksprocess,status,sector,iteration,i,j,k,ihel',
+            'integer(8) calls_before,calls_first,calls_pruned',
             'integer nhel(%d,%d)' % (n,nh),
             *helicity_data, 'common/c_nfksprocess/nfksprocess',
             'complex(8) ewsud(amp_split_size),ewsud_lo2(amp_split_size)',
@@ -340,6 +454,11 @@ class TestBornLibrary(unittest.TestCase):
             'calculatedBorn=.false.', 'call sborn(p,ans)',
             'call born_evaluate(%d,%d,p,state,request,result,status)' % (r['provider'],r['context']),
             'if(status.ne.0)stop 11',
+            'calls_before=born_test_helas_calls(%d)' % r['provider'],
+            'call born_evaluate(%d,%d,p,state,request,other,status)' % (r['provider'],r['context']),
+            'if(status.ne.0)stop 29',
+            'if(born_test_helas_calls(%d).ne.calls_before)stop 30' % r['provider'],
+            'call close_real(result%born,other%born)',
             'call close_real(ans,result%born)',
             'do i=1,amp_split_size', 'call close_real(amp_split(i),result%amplitudes(i))','enddo',
             'do i=1,%d' % ng, 'call close_real(amp2(i),result%diagrams(i))','enddo',
@@ -377,8 +496,10 @@ class TestBornLibrary(unittest.TestCase):
                 'need_color_links=.true.', 'need_charge_links=.false.',
                 'call sborn_sf(p,%d,%d,corr)' % (m,n_),
                 'request%colour=.true.', 'request%m='+str(m), 'request%n='+str(n_),
+                'calls_before=born_test_helas_calls(%d)' % r['provider'],
                 'call born_evaluate(%d,%d,p,state,request,other,status)' % (r['provider'],r['context']),
                 'if(status.ne.0)stop 13', 'call close_real(corr,other%correlation)',
+                'if(born_test_helas_calls(%d).ne.calls_before)stop 31' % r['provider'],
                 'do i=1,amp_split_size','call close_real(soft(i),other%soft(i))','enddo']
         # QED uses the Born charge correlator even for a colourless process.
         # Interleave it with colour/Born calls to check the request flags and
@@ -392,6 +513,13 @@ class TestBornLibrary(unittest.TestCase):
                 'call born_evaluate(%d,%d,p,state,request,other,status)' % (r['provider'],r['context']),
                 'if(status.ne.0)stop 26', 'call close_real(corr,other%correlation)',
                 'do i=1,amp_split_size','call close_real(soft(i),other%soft(i))','enddo',
+                'charges=0.7d0', 'request%charges=charges',
+                'call sborn_sf(p,j,k,corr)',
+                'calls_before=born_test_helas_calls(%d)' % r['provider'],
+                'call born_evaluate(%d,%d,p,state,request,other,status)' % (r['provider'],r['context']),
+                'if(status.ne.0)stop 40', 'call close_real(corr,other%correlation)',
+                'if(born_test_helas_calls(%d).ne.calls_before)stop 41' % r['provider'],
+                'charges=0.5d0', 'request%charges=charges',
                 'enddo','enddo','request%charge=.false.', 'need_charge_links=.false.']
         if not r['sectors']:
             lines += ['request%charge=.true.', 'request%m=1', 'request%n=2',
@@ -410,7 +538,59 @@ class TestBornLibrary(unittest.TestCase):
                     'do i=1,amp_split_size',
                     'call close_complex(amp_split_cnt(i,k,j),other%split_counterterms(i,k,j))',
                     'enddo','enddo','enddo','endif']
-        lines += ['enddo','enddo',"write(*,*)'PASS Born provider'",'end',
+        lines += ['enddo','enddo',
+            'request%sector=1', 'request%colour=.false.', 'request%charge=.false.',
+            'request%extra=0', 'request%helicities=.false.',
+            'call born_evaluate(%d,%d,p,state,request,result,status)' % (r['provider'],r['context']),
+            'if(result%has_soft.or.result%has_helicities.or.result%has_extra.or.result%has_single_helicity)stop 42',
+            'alternate=state', 'state%complex_values=(0d0,0d0)',
+            'call born_evaluate(%d,%d,p,state,request,other,status)' % (r['provider'],r['context']),
+            'if(status.ne.0)stop 32', 'call close_real(other%born,0d0)',
+            'calls_before=born_test_helas_calls(%d)' % r['provider'],
+            'state=alternate',
+            'call born_evaluate(%d,%d,p,state,request,other,status)' % (r['provider'],r['context']),
+            'if(status.ne.0)stop 33', 'call close_real(result%born,other%born)',
+            'if(born_test_helas_calls(%d).le.calls_before)stop 34' % r['provider'],
+            'calls_first=born_test_helas_calls(%d)-calls_before' % r['provider'],
+            # Transverse components alone must invalidate SAVEAMP; keep model,
+            # E and pz identical, then compare with the standalone calculation.
+            'pother=p', 'pother(1,:)=p(2,:)', 'pother(2,:)=p(1,:)',
+            'calls_before=born_test_helas_calls(%d)' % r['provider'],
+            'call born_evaluate(%d,%d,pother,state,request,other,status)' % (r['provider'],r['context']),
+            'if(status.ne.0)stop 35',
+            'calls_pruned=born_test_helas_calls(%d)-calls_before' % r['provider'],
+            'if(calls_pruned.le.0.or.calls_pruned.gt.calls_first)stop 36',
+            'nfksprocess=1', 'calculatedBorn=.false.', 'call sborn(pother,ans)',
+            'call close_real(ans,other%born)',
+            'call born_evaluate(%d,%d,p,state,request,result,status)' % (r['provider'],r['context'])]
+        for other in contexts:
+            if other['provider'] == r['provider']:
+                continue
+            lines += [
+                'alternate%real_values=state%real_values*1.19d0',
+                'alternate%complex_values=state%complex_values*(0.4d0,0.3d0)',
+                'call born_evaluate(%d,%d,pother,alternate,request,other,status)' % (other['provider'],other['context']),
+                'if(status.ne.0)stop 37',
+                'calls_before=born_test_helas_calls(%d)' % r['provider'],
+                'call born_evaluate(%d,%d,p,state,request,other,status)' % (r['provider'],r['context']),
+                'if(status.ne.0)stop 38', 'call close_real(result%born,other%born)',
+                'if(born_test_helas_calls(%d).ne.calls_before)stop 39' % r['provider']]
+        if signature:
+            lines += ['alternate=state',
+                'state%%real_values(%d)=2d0*state%%real_values(%d)' % (signature['g'],signature['g'])]
+            for kind, index, degree in signature['couplings']:
+                lines += ['state%%%s_values(%d)=state%%%s_values(%d)*2d0**(%d)' %
+                          (kind,index,kind,index,degree)]
+            lines += ['if(.not.born_helicity_state_equal(state,alternate))stop 43',
+                'if(born_model_state_equal(state,alternate))stop 44',
+                'calls_before=born_test_helas_calls(%d)' % r['provider'],
+                'call born_evaluate(%d,%d,pother,state,request,other,status)' % (r['provider'],r['context']),
+                'if(status.ne.0)stop 45',
+                'if(born_test_helas_calls(%d)-calls_before.ne.calls_pruned)stop 46' % r['provider']]
+            lines += ['%s=state%%%s_values(%s)' % v for v in members]
+            lines += ['calculatedBorn=.false.', 'nfksprocess=1', 'call sborn(pother,ans)',
+                      'call close_real(ans,other%born)']
+        lines += ["write(*,*)'PASS Born provider; HELAS discovery/pruned',calls_first,calls_pruned",'end',
             'subroutine close_complex(a,b)','implicit none','complex(8) a,b',
             'call close_real(real(a,8),real(b,8))','call close_real(aimag(a),aimag(b))','end',
             'subroutine close_real(a,b)','use, intrinsic :: ieee_arithmetic','implicit none','real(8) a,b',
@@ -437,6 +617,12 @@ class TestBornLibrary(unittest.TestCase):
 
     def test_loonly(self):
         self.compare(self.outputs['loonly'])
+
+    def test_real_history_cache(self):
+        from tests.unit_tests.iolibs.native_cache_checks import check_real_cache
+        for name in ('dy','ttbar','wjet'):
+            with self.subTest(process=name):
+                check_real_cache(self.outputs[name],self.run_command)
 
     def test_native_context_switching(self):
         """Bounds-checked native aliases reproduce explicit provider requests."""

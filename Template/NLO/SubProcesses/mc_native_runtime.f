@@ -112,10 +112,11 @@
       common/c_wgt_ME_tree/wgt_me_born,wgt_me_real
       logical calculatedBorn
       common/ccalculatedBorn/calculatedBorn
-      type(BornRequest) request
-      type(BornModelState) state
+      type(BornRequest),save::request
+      type(BornModelState),save::state
       call ensure_native_context()
-      request=BornRequest()
+      request%colour=.false.
+      request%charge=.false.
       request%sector=active_sector
       request%charges=charges
       request%m=m
@@ -154,7 +155,7 @@
             k=native_order_map(j,active_context)
             amp_split_cnt(b,:,k)=native_result%split_counterterms(a,:,j)
          enddo
-         if(allocated(native_result%soft))
+         if(native_result%has_soft)
      $        amp_split_soft(b)=native_result%soft(a)
       enddo
       wgt_me_born=native_result%born

@@ -617,6 +617,7 @@ C wrt the hard matrix element. Relevant for lepton collisions.
 c This subroutine computes the real-emission matrix elements and adds
 c its value to the list of weights using the add_wgt subroutine
       use extra_weights
+      use weight_lines, only: mc_H_only,mc_S_only
       implicit none
       include 'nexternal.inc'
       include 'coupl.inc'
@@ -637,6 +638,9 @@ c its value to the list of weights using the add_wgt subroutine
       integer get_orders_tag
       call cpu_time(tBefore)
       if (f_r.eq.0d0) return
+! Do not evaluate a real matrix element whose only records are discarded.
+      if (mc_H_only.and.sudakov_damp.le.0d0) return
+      if (mc_S_only.and.sudakov_damp.ge.1d0) return
       s_ev = fks_Sij(p,i_fks,j_fks,xi_i_fks_ev,y_ij_fks_ev)
       if (s_ev.le.0.d0) return
       call sreal(p,xi_i_fks_ev,y_ij_fks_ev,fx_ev)
@@ -665,6 +669,7 @@ c its value to the list of weights using the add_wgt subroutine
 c This subroutine computes the soft counter term and adds its value to
 c the list of weights using the add_wgt subroutine
       use extra_weights
+      use weight_lines, only: mc_H_only
       implicit none
       include 'nexternal.inc'
       include 'coupl.inc'
@@ -697,6 +702,9 @@ c the list of weights using the add_wgt subroutine
      $     ,f_sc_MC_S,f_sc_MC_H,f_MC_S,f_MC_H
       integer get_orders_tag
       call cpu_time(tBefore)
+! Inner histories need only the G replacement, never the ordinary S term.
+      if (mc_H_only.and.(replace_MC_subt.le.0d0.or.
+     $     f_s_MC_H.eq.0d0)) return
       if (f_s.eq.0d0 .and. f_s_MC_S.eq.0d0 .and. f_s_MC_H.eq.0d0) return
       if (xi_i_hat_ev*xiimax_cnt(0).gt.xiScut_used .and. replace_MC_subt.eq.0d0)
      $     return
@@ -716,6 +724,7 @@ c the list of weights using the add_wgt subroutine
         if (replace_MC_subt.gt.0d0) then
           wgt1=amp_split(iamp)*s_s/g22*replace_MC_subt
           call add_wgt(8,orders,-wgt1*f_s_MC_H,0d0,0d0)
+          if (mc_H_only) cycle
           wgt1=wgt1*f_s_MC_S
         else
           wgt1=0d0
@@ -735,6 +744,7 @@ c the list of weights using the add_wgt subroutine
 c This subroutine computes the collinear counter term and adds its value
 c to the list of weights using the add_wgt subroutine
       use extra_weights
+      use weight_lines, only: mc_H_only
       implicit none
       include 'nexternal.inc'
       include 'coupl.inc'
@@ -780,6 +790,8 @@ c to the list of weights using the add_wgt subroutine
       integer get_orders_tag
       call cpu_time(tBefore)
       include 'pmass.inc'
+      if (mc_H_only.and.(replace_MC_subt.le.0d0.or.
+     $     f_c_MC_H.eq.0d0)) return
       if (f_c.eq.0d0 .and. f_dc.eq.0d0 .and. f_c_MC_S.eq.0d0 .and.
      $     f_c_MC_H.eq.0d0)return
       if ( (y_ij_fks_ev.le.1d0-deltaS .and. replace_MC_subt.eq.0d0) .or.
@@ -788,17 +800,23 @@ c to the list of weights using the add_wgt subroutine
       if (s_c.le.0d0) return
       ! sreal_deg should be called **BEFORE** sreal 
       ! in order not to overwrtie the amp_split array
-      call sreal_deg(p1_cnt(0,1,1),xi_i_fks_cnt(1),one,deg_xi_c
-     $     ,deg_lxi_c)
+! Degenerate remnants and PDF-scheme terms contribute only to S events.
+      if (.not.mc_H_only)
+     $     call sreal_deg(p1_cnt(0,1,1),xi_i_fks_cnt(1),one,deg_xi_c,
+     $     deg_lxi_c)
       call sreal(p1_cnt(0,1,1),xi_i_fks_cnt(1),one,fx_c)
 
       do iamp=1, amp_split_size
-        if (amp_split(iamp).eq.0d0.and.
+        if (mc_H_only) then
+          if (amp_split(iamp).eq.0d0) cycle
+        elseif (amp_split(iamp).eq.0d0.and.
      $      amp_split_wgtdegrem_xi(iamp).eq.0d0.and.
      $      amp_split_wgtdegrem_lxi(iamp).eq.0d0.and.
      $      amp_split_wgtpsch_p(iamp).eq.0d0.and.
      $      amp_split_wgtpsch_l(iamp).eq.0d0.and.
-     $      amp_split_wgtpsch_d(iamp).eq.0d0) cycle
+     $      amp_split_wgtpsch_d(iamp).eq.0d0) then
+          cycle
+        endif
 
         call amp_split_pos_to_orders(iamp, orders)
         QCD_power=orders(qcd_pos)
@@ -810,6 +828,7 @@ c to the list of weights using the add_wgt subroutine
         if (replace_MC_subt.gt.0d0) then
           wgt1=amp_split(iamp)*s_c/g22*replace_MC_subt
           call add_wgt(9,orders,-wgt1*f_c_MC_H,0d0,0d0)
+          if (mc_H_only) cycle
           wgt1=wgt1*f_c_MC_S
         else
           wgt1=0d0
@@ -836,6 +855,7 @@ c to the list of weights using the add_wgt subroutine
 c This subroutine computes the soft-collinear counter term and adds its
 c value to the list of weights using the add_wgt subroutine
       use extra_weights
+      use weight_lines, only: mc_H_only
       implicit none
       include 'nexternal.inc'
       include 'coupl.inc'
@@ -890,6 +910,8 @@ c value to the list of weights using the add_wgt subroutine
       integer get_orders_tag
       include 'pmass.inc'
       call cpu_time(tBefore)
+      if (mc_H_only.and.(replace_MC_subt.le.0d0.or.
+     $     f_sc_MC_H.eq.0d0)) return
       if (f_sc.eq.0d0 .and. f_dsc(1).eq.0d0 .and. f_dsc(2).eq.0d0 .and.
      $     f_dsc(3).eq.0d0 .and. f_dsc(4).eq.0d0 .and. f_sc_MC_S.eq.0d0
      $     .and. f_sc_MC_H.eq.0d0) return
@@ -900,16 +922,21 @@ c value to the list of weights using the add_wgt subroutine
       if (s_sc.le.0d0) return
       ! sreal_deg should be called **BEFORE** sreal 
       ! in order not to overwrtie the amp_split array
-      call sreal_deg(p1_cnt(0,1,2),zero,one, deg_xi_sc,deg_lxi_sc)
+      if (.not.mc_H_only)
+     $     call sreal_deg(p1_cnt(0,1,2),zero,one,deg_xi_sc,deg_lxi_sc)
       call sreal(p1_cnt(0,1,2),zero,one,fx_sc)
 
       do iamp=1, amp_split_size
-        if (amp_split(iamp).eq.0d0.and.
+        if (mc_H_only) then
+          if (amp_split(iamp).eq.0d0) cycle
+        elseif (amp_split(iamp).eq.0d0.and.
      $      amp_split_wgtdegrem_xi(iamp).eq.0d0.and.
      $      amp_split_wgtdegrem_lxi(iamp).eq.0d0.and.
      $      amp_split_wgtpsch_p(iamp).eq.0d0.and.
      $      amp_split_wgtpsch_l(iamp).eq.0d0.and.
-     $      amp_split_wgtpsch_d(iamp).eq.0d0) cycle
+     $      amp_split_wgtpsch_d(iamp).eq.0d0) then
+          cycle
+        endif
         call amp_split_pos_to_orders(iamp, orders)
         QCD_power=orders(qcd_pos)
         wgtcpower=0d0
@@ -920,6 +947,7 @@ c value to the list of weights using the add_wgt subroutine
         if (replace_MC_subt.gt.0d0) then
           wgt1=-amp_split(iamp)*s_sc/g22*replace_MC_subt
           call add_wgt(10,orders,-wgt1*f_sc_MC_H,0d0,0d0)
+          if (mc_H_only) cycle
           wgt1=wgt1*f_sc_MC_S
         else
           wgt1=0d0
@@ -2106,6 +2134,11 @@ c        contribution
          if (type.ne.1 .and. type.ne.13 .and.
      $        (type.lt.8 .or. type.gt.10)) return
       endif
+! The initial outer evaluation supplies S; its H is rebuilt globally.
+      if (mc_S_only) then
+         if (type.eq.1 .or. type.eq.13 .or.
+     $        (type.ge.8 .and. type.le.10)) return
+      endif
       if (wgt1.eq.0d0 .and. wgt2.eq.0d0 .and. wgt3.eq.0d0) return
 c Check for NaN's and INF's. Simply skip the contribution
       if (wgt1.ne.wgt1) return
@@ -2324,10 +2357,25 @@ c or to fill histograms.
       INTEGER              IPROC
       DOUBLE PRECISION PD(0:MAXPROC)
       COMMON /SUBPROC/ PD, IPROC
+      integer, parameter :: lum_cache_size=16
+      integer lum_count,lum_next,lum_hit,lum_slot,lum_test
+      integer lum_fks(lum_cache_size),lum_history(lum_cache_size)
+     $     ,lum_iproc(lum_cache_size)
+      double precision lum_x(2,lum_cache_size)
+     $     ,lum_q2(2,lum_cache_size),lum_value(lum_cache_size)
+     $     ,lum_pd(0:maxproc,lum_cache_size)
+      logical lum_cache_allowed
+      save lum_fks,lum_history,lum_iproc,lum_x,lum_q2,lum_value,lum_pd
       parameter (conv=389379660d0) ! conversion to picobarns
       call cpu_time(tBefore)
       if (icontr.eq.0) return
       virt_found=.false.
+c Cache only within this call: PDF set/member and run/model inputs stay
+c fixed, while every contribution still activates its native history.
+c UPC and dressed-lepton PDFs have additional side effects; bypass them.
+      lum_count=0
+      lum_next=0
+      lum_cache_allowed=all(abs(lpp(1:2)).le.1)
 c number of contributions before they are (possibly) increased through a
 c call to separate_flavour_config().
       icontr_orig=icontr
@@ -2348,8 +2396,38 @@ c for UPC processes set scale to Ellis-Sexton scale
             q2fact(1)=QES2
             q2fact(2)=QES2
          endif
-c call the PDFs
-         xlum = dlum()
+c Reuse the complete active luminosity result, including subprocess
+c flavours. Equal scalar luminosities alone do not determine PD/IPROC.
+         lum_hit=0
+         if(lum_cache_allowed)then
+            do lum_test=1,lum_count
+               lum_slot=modulo(lum_next-lum_test,lum_cache_size)+1
+               if(lum_fks(lum_slot).ne.nFKSprocess)cycle
+               if(lum_history(lum_slot).ne.native_ids(3,i))cycle
+               if(any(lum_x(:,lum_slot).ne.xbk(1:2)))cycle
+               if(any(lum_q2(:,lum_slot).ne.q2fact(1:2)))cycle
+               lum_hit=lum_slot
+               exit
+            enddo
+         endif
+         if(lum_hit.gt.0)then
+            iproc=lum_iproc(lum_hit)
+            pd(0:iproc)=lum_pd(0:iproc,lum_hit)
+            xlum=lum_value(lum_hit)
+         else
+            xlum=dlum()
+            if(lum_cache_allowed)then
+               lum_next=mod(lum_next,lum_cache_size)+1
+               lum_count=min(lum_count+1,lum_cache_size)
+               lum_fks(lum_next)=nFKSprocess
+               lum_history(lum_next)=native_ids(3,i)
+               lum_x(:,lum_next)=xbk(1:2)
+               lum_q2(:,lum_next)=q2fact(1:2)
+               lum_iproc(lum_next)=iproc
+               lum_pd(0:iproc,lum_next)=pd(0:iproc)
+               lum_value(lum_next)=xlum
+            endif
+         endif
 c iwgt=1 is the central value (i.e. no scale/PDF reweighting).
          iwgt=1
          call weight_lines_allocated(nexternal,max_contr,iwgt,iproc)
@@ -2540,8 +2618,8 @@ c the rwgt_lines is NOT updated.
       wgt_num=0d0
       wgt_denom=0d0
       flavour_bias_consistency=0
-      do i=1,icontr_sum(0,icontr_picked)
-         ict=icontr_sum(i,icontr_picked)
+      do i=1,group_size(icontr_picked)
+         ict=group_member(i,icontr_picked)
          if (bias_wgt(ict).eq.0d0) then
             write (*,*) "ERROR in include_inverse_bias_wgt: "/
      $           /"bias_wgt is equal to zero",ict,bias_wgt
@@ -2610,8 +2688,8 @@ c update the event weight to be written in the file
       inv_bias=wgt_num/wgt_denom
       if (flavour_bias_consistency.eq.1) then
          inv_bias=inv_bias/dble(Flavour_Bias(2))
-         do i=1,icontr_sum(0,icontr_picked)
-            ict=icontr_sum(i,icontr_picked)
+         do i=1,group_size(icontr_picked)
+            ict=group_member(i,icontr_picked)
             wgt(1:3,ict)=wgt(1:3,ict)*dble(Flavour_Bias(2))
             bias_wgt(ict)=bias_wgt(ict)*dble(Flavour_Bias(2))
          enddo
@@ -3489,7 +3567,7 @@ c while for the S-events we can sum it to the 'i_soft' one.
             unwgt(j,i)=0d0
          enddo
       enddo
-      icontr_sum(0,1:icontr)=0
+      group_size(1:icontr)=0
       do i=1,icontr
          if (H_event(i)) then
             do ii=1,i
@@ -3516,8 +3594,7 @@ c summed before taking the ABS value.
                if (.not. momenta_equal(momenta(0,1,ii),
      &                                 momenta(0,1,i))) cycle
 c     Identical contributions found: sum the contribution "i" to "ii"
-               icontr_sum(0,ii)=icontr_sum(0,ii)+1
-               icontr_sum(icontr_sum(0,ii),ii)=i
+               call add_group_member(ii,i)
                do j=1,niproc(ii)
                   unwgt(j,ii)=unwgt(j,ii)+parton_iproc(j,i)
                enddo
@@ -3527,8 +3604,7 @@ c     Identical contributions found: sum the contribution "i" to "ii"
 c S-event: we can sum everything to 'i_soft': all the contributions to
 c the S-events can be summed together. Ignore the shower_scale: this
 c will be updated later
-            icontr_sum(0,i_soft)=icontr_sum(0,i_soft)+1
-            icontr_sum(icontr_sum(0,i_soft),i_soft)=i
+            call add_group_member(i_soft,i)
             do j=1,niproc(i_soft)
                do jj=1,iproc_save(nFKS(i))
                   if (eto(jj,nFKS(i)).eq.j) then
@@ -3543,6 +3619,7 @@ c include it here!
             enddo
          endif
       enddo
+      call pack_contribution_groups
       call cpu_time(tAfter)
       t_isum=t_isum+(tAfter-tBefore)
       return
@@ -3599,9 +3676,9 @@ c Collect the weights that contribute to a given Fold and FKS
 c configuration.
       do i=1,icontr
          if (H_event(i)) cycle
-         if (icontr_sum(0,i).eq.0) cycle
-         do j=1,icontr_sum(0,i)
-            ict=icontr_sum(j,i)
+         if (group_size(i).eq.0) cycle
+         do j=1,group_size(i)
+            ict=group_member(j,i)
             ifl=ifold_cnt(ict)
             if ( itype(ict).ne.2 .and. itype(ict).ne.3 .and.
      $           itype(ict).ne.7 .and. itype(ict).ne.14 .and.
@@ -3708,7 +3785,7 @@ c on the imode we should or should not include the virtual corrections.
          do i=1,icontr
             sigint=sigint+wgts(1,i)
             max_weight=max(max_weight,abs(wgts(1,i)))
-            if (icontr_sum(0,i).eq.0) cycle
+            if (group_size(i).eq.0) cycle
             do j=1,niproc(i)
                sigint_ABS=sigint_ABS+abs(unwgt(j,i))
                sigint1=sigint1+unwgt(j,i) ! for consistency check
@@ -3721,9 +3798,9 @@ c check the consistency of the results up to machine precision (10^-10 here)
                write (*,*) 'ERROR: inconsistent integrals #0',sigint
      $              ,sigint1,max_weight,abs((sigint-sigint1)/max_weight)
                do i=1, icontr
-                  write (*,*) i,icontr_sum(0,i),niproc(i),wgts(1,i)
+                  write (*,*) i,group_size(i),niproc(i),wgts(1,i)
      $                 ,H_event(i),itype(i),nFKS(i)
-                  if (icontr_sum(0,i).eq.0) cycle
+                  if (group_size(i).eq.0) cycle
                   do j=1,niproc(i)
                      write (*,*) j,unwgt(j,i)
                   enddo
@@ -3737,8 +3814,8 @@ c check the consistency of the results up to machine precision (10^-10 here)
      $              ,sigint1,max_weight,abs((sigint-sigint1)/max_weight)
      $              ,virt_wgt_mint
                do i=1, icontr
-                  write (*,*) i,icontr_sum(0,i),niproc(i),wgts(1,i)
-                  if (icontr_sum(0,i).eq.0) cycle
+                  write (*,*) i,group_size(i),niproc(i),wgts(1,i)
+                  if (group_size(i).eq.0) cycle
                   do j=1,niproc(i)
                      write (*,*) j,unwgt(j,i)
                   enddo
@@ -3748,10 +3825,10 @@ c check the consistency of the results up to machine precision (10^-10 here)
          endif
 c n1body_wgt is used for the importance sampling over FKS directories
          do i=1,icontr
-            if (icontr_sum(0,i).eq.0) cycle
+            if (group_size(i).eq.0) cycle
             tmp_wgt=0d0
-            do j=1,icontr_sum(0,i)
-               ict=icontr_sum(j,i)
+            do j=1,group_size(i)
+               ict=group_member(j,i)
                if ( itype(ict).ne.2  .and. itype(ict).ne.3 .and.
      $              itype(ict).ne.14 .and. itype(ict).ne.15)
      $                              tmp_wgt=tmp_wgt+wgts(1,ict)
@@ -3871,14 +3948,14 @@ c Update the shower starting scale for the S-events after we have
 c determined which contributions are identical.
          call update_shower_scale_Sevents(ifold_picked)
          
-         do k=1,icontr_sum(0,icontr_picked)
-            ict=icontr_sum(k,icontr_picked)
+         do k=1,group_size(icontr_picked)
+            ict=group_member(k,icontr_picked)
             !MZif (particle_type_d(nFKS(ict),fks_i_d(nFKS(ict))).eq.8) then
             if (need_color_links_d(nFKS(ict)).or.need_charge_links_d(nFKS(ict))) then
                iFKS_picked=nFKS(ict)
                exit
             endif
-            if (k.eq.icontr_sum(0,icontr_picked)) then
+            if (k.eq.group_size(icontr_picked)) then
                write (*,*) 'ERROR: no configuration with i_fks a gluon'
                stop 1
             endif
@@ -3891,8 +3968,8 @@ c that are summed together in a single S-event.
             tmp_wgt(i)=0d0
          enddo
 c fill tmp_wgt with the sum of weights per FKS configuration
-         do k=1,icontr_sum(0,icontr_picked)
-            ict=icontr_sum(k,icontr_picked)
+         do k=1,group_size(icontr_picked)
+            ict=group_member(k,icontr_picked)
             tmp_wgt(nFKS(ict))=tmp_wgt(nFKS(ict))+wgts(1,ict)
          enddo
 c Randomly select an FKS configuration
@@ -3955,8 +4032,8 @@ c momenta in the momenta_str() array.
       n_mom_conf=0
 c Loop over all the contributions in the picked contribution (the latter
 c is chosen in the pick_unweight_contr() subroutine)
-      do i=1,icontr_sum(0,icontr_picked)
-         ict=icontr_sum(i,icontr_picked)
+      do i=1,group_size(icontr_picked)
+         ict=group_member(i,icontr_picked)
 c Check if the current set of momenta are already available in the
 c momenta_str array. If not, add it.
          found=.false.
