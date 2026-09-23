@@ -452,7 +452,8 @@ c In case of FxFx merging, use the lowest clustering scale to apply the cut
       integer nQCD
       double precision pQCD(0:3,nexternal)
       integer NJET,JET(nexternal)
-      double precision rfj,sycut,palg,amcatnlo_fastjetdmerge,etaj_max
+      double precision rfj,sycut,palg,amcatnlo_fastjetdmergemax
+      external amcatnlo_fastjetdmergemax
       double precision PJET(0:3,nexternal)
       integer nFxFx_ren_scales
       double precision FxFx_ren_scales(0:nexternal),
@@ -460,19 +461,21 @@ c In case of FxFx merging, use the lowest clustering scale to apply the cut
       common/c_FxFx_scales/FxFx_ren_scales,nFxFx_ren_scales,
      $                     FxFx_fac_scale
       passcuts_fxfx=.true.
-c First apply a numerical stability cut
-c Define jet clustering parameters with a pTmin=1 GeV
-      palg=1d0                  ! jet algorithm: 1.0=kt, 0.0=C/A, -1.0 = anti-kt
-      rfj=1d0                   ! the radius parameter
-      sycut=ptj                 ! minimum transverse momentum
-      etaj_max=1000d0
-c     call FASTJET to get all the jets
-      call amcatnlo_fastjetppgenkt_etamax_timed(
-     $     pQCD,nQCD,rfj,sycut,etaj_max,palg,pjet,njet,jet)
-c     Apply the jet cut
-      if (njet .ne. nQCD .and. njet .ne. nQCD-1) then
-         passcuts_fxfx=.false.
-         return
+c Require at least nQCD-1 jets resolved at the generation kT scale.
+c nQCD includes the zero-momentum FKS slot for Born/counterevents.
+c Use the exclusive resolution, as in the Pythia FxFx veto: counting
+c inclusive R=1 jets removes hard collinear configurations even when
+c their kT separation is above the merging scale.
+      if (nQCD.gt.1 .and. ptj.gt.0d0) then
+         palg=1d0
+         rfj=1d0
+         sycut=0d0
+         call amcatnlo_fastjetppgenkt_timed(
+     $        pQCD,nQCD,rfj,sycut,palg,pjet,njet,jet)
+         if (amcatnlo_fastjetdmergemax(nQCD-2).lt.ptj**2) then
+            passcuts_fxfx=.false.
+            return
+         endif
       endif
 c Second apply the actual ptj cut on the minimum FxFx_ren_scales(i)
       if (minval(FxFx_ren_scales(0:nFxFx_ren_scales)).lt.ptj) then
