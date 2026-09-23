@@ -7,6 +7,8 @@ module scale_module
        &,shower_scale_n1body,showerscaleS,showerscaleH
   double precision,public,allocatable,dimension(:,:,:,:) :: emsca_S&
        &,emsca_H
+  ! The H colour assignment and its dipole scales must have the same owner.
+  integer,public,allocatable :: event_colour_H(:,:,:,:)
 !  double precision,public :: SCALUP
   double precision,private :: global_ref_scale,shower_scale_factor
   double precision,private,parameter :: frac_low=0.1d0,frac_upp=1.0d0
@@ -36,6 +38,8 @@ contains
          allocate(emsca_S(nfks,nfold,ndelS,ndelS))
     if (.not.allocated(emsca_H)) &
          allocate(emsca_H(nfks,nfold,ndelH,ndelH))
+    if (.not.allocated(event_colour_H)) &
+         allocate(event_colour_H(2,nexternal,nfks,nfold))
     if (.not.allocated(showerscaleS)) &
          allocate(showerscaleS(ndelS,ndelS))
     if (.not.allocated(showerscaleH)) &

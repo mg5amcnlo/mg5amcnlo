@@ -275,7 +275,9 @@ c$$$   read(hel_buf,'(15i5)') (jpart(7,i),i=1,nexternal)
       endif
       iflow=abs(born_flow_picked)
       if (Hevents) then
-         call fill_icolor_H(iflow,jpart,.false.)
+! Use the selected owner's colours, saved with its dipole scales.
+! A later sector or fold can have changed the colour-insertion variate.
+         jpart(4:5,1:nexternal)=colour_connections
       else
          call fill_icolor_S(iflow,jpart,idum)
       endif

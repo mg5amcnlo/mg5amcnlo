@@ -40,14 +40,12 @@ class MyReader {
     format_str <<"%"<<wgts_info_len_used<<"s";
     sprintf(cwgtinfo_weights_info[0],format_str.str().c_str(),"central value");
     cwgtinfo_nn=1;
-    while (true){
-      hss << reader.headerBlock;
-      std::getline(hss,hs,'\n');
+    hss << reader.headerBlock;
+    while (std::getline(hss,hs,'\n')) {
       if (hs.find("</header>") != std::string::npos) break;
       // Read the wgt information
       if (hs.find("<initrwgt>") != std::string::npos) {
-	while (true) {
-	  std::getline(hss,hs,'\n');
+	while (std::getline(hss,hs,'\n')) {
 	  if (hs.find("</initrwgt>") != std::string::npos) break;
 	  if (hs.find("<weightgroup") != std::string::npos) continue;
 	  if (hs.find("</weightgroup>") != std::string::npos) continue;
@@ -99,13 +97,12 @@ class MyReader {
       // the jwgtinfo is 0 (when no scale or PDF variation is done)
       //if (jwgtinfo != 9) {
       if (jwgtinfo != 9 && jwgtinfo != 0) {
-	std::exit;
+	return;
       }
       else {
-	ss << reader.headerBlock;
-	while (true) {
-	  ss << reader.headerBlock;
-	  std::getline(ss,s,'\n');
+	// The optional rwgt block belongs to this event. In particular,
+	// jwgtinfo == 0 also permits events without any reweighting block.
+	while (std::getline(ss,s,'\n')) {
 	  if (s.find("</rwgt>") != std::string::npos) break;
 	  if (s.find("id=") != std::string::npos) {
 	    int ioffs=s.find("'>")+2;

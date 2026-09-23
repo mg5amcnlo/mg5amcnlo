@@ -1391,6 +1391,7 @@ c Sum the contributions that can be summed before taking the ABS value
       subroutine init_process_module_n1body_wrapper(bornflow)
       use process_module
       use weight_lines, only: mc_H_only
+      use scale_module, only: event_colour_H
       implicit none
       include 'nexternal.inc'
       include 'genps.inc'
@@ -1404,6 +1405,9 @@ c Sum the contributions that can be summed before taking the ABS value
       integer idup(nexternal,maxproc),mothup(2,nexternal,maxproc),
      &     dummy(2,nexternal,maxflow),niprocs
       common /c_leshouche_inc/idup,mothup,dummy,niprocs
+      integer nFKSprocess,fold,ifold_counter
+      common/c_nFKSprocess/nFKSprocess
+      common/cfl/fold,ifold_counter
 
       if (bornflow.ne.0) then
          ! take ABS because bornflow is negative if n-body did not pass the cuts
@@ -1418,6 +1422,11 @@ c Sum the contributions that can be summed before taking the ABS value
          ICOLUP(1,i)=jpart(4,i)
          ICOLUP(2,i)=jpart(5,i)
       enddo
+! Keep the outer colour assignment with its sector and fold. Inner
+! histories and their restoration must not overwrite event ownership.
+      if (.not.mc_H_only) then
+         event_colour_H(:,:,nFKSprocess,ifold_counter)=ICOLUP
+      endif
       
       do i=1,nexternal
          mass(i)=get_mass_from_id(idup(i,1))

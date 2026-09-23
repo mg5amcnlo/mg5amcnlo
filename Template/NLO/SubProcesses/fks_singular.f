@@ -3494,13 +3494,16 @@ c while for the S-events we can sum it to the 'i_soft' one.
          if (H_event(i)) then
             do ii=1,i
                if (.not.H_event(ii)) cycle
-c H-event. If PDG codes, shower starting scale and momenta are equal, we
-c can sum them before taking ABS value.
+c H-event. Equal flavours, colours, shower scales and momenta can be
+c summed before taking the ABS value.
                if (niproc(ii).ne.niproc(i)) cycle
                if (any(emsca_H(event_owner(ii),ifold_cnt(ii),
      $              1:ndelH,1:ndelH).ne.emsca_H(event_owner(i),
      $              ifold_cnt(i),1:ndelH,1:ndelH)))
      $              cycle
+               if (any(event_colour_H(:,:,event_owner(ii),
+     $              ifold_cnt(ii)).ne.event_colour_H(:,:,event_owner(i),
+     $              ifold_cnt(i)))) cycle
                equal=.true.
                do j=1,niproc(ii)
                   if (.not.pdg_equal(parton_pdg(1,j,ii),
@@ -3859,6 +3862,7 @@ c found the contribution that should be written:
          ifold_picked=ifold_cnt(icontr_picked)
          showerscaleH(1:ndelH,1:ndelH)=emsca_H(iFKS_picked,ifold_picked
      $        ,1:ndelH,1:ndelH)
+         colour_connections=event_colour_H(:,:,iFKS_picked,ifold_picked)
       else
          Hevents=.false.
          i_process_addwrite=etoi(iproc_picked,nFKS(icontr_picked))

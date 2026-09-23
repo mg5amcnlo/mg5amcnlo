@@ -879,6 +879,12 @@ c Write the <scales> block only for scales related to valid colour lines
      &             (ICOLUP(2,i).ne.0.and.ICOLUP(2,i).eq.ICOLUP(1,j)).or.
      &             (ICOLUP(2,i).ne.0.and.ICOLUP(2,i).eq.ICOLUP(2,j))
                if(are_col_conn)then
+                  if (.not.(SCALUP_a(i,j).ge.0d0.and.
+     &                 SCALUP_a(i,j).le.huge(1d0))) then
+                     write(*,*) 'Invalid MC@NLO-Delta dipole scale',
+     &                    i,j,SCALUP_a(i,j)
+                     stop 1
+                  endif
                   write(str_tmp,701)
      &                 " scalup_",i,"_",j,"='",SCALUP_a(i,j),"'"
                   scale_str=trim(scale_str)//trim(str_tmp)
