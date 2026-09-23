@@ -476,6 +476,7 @@ c their kT separation is above the merging scale.
             passcuts_fxfx=.false.
             return
          endif
+      endif
 c Second apply the actual ptj cut on the minimum FxFx_ren_scales(i)
       if (minval(FxFx_ren_scales(0:nFxFx_ren_scales)).lt.ptj) then
          passcuts_fxfx=.false.
