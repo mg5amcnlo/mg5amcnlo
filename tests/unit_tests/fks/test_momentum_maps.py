@@ -99,6 +99,9 @@ class TestMomentumMaps(unittest.TestCase):
     def test_massless_final_inverse(self):
         self.check_map("massless")
 
+    def test_outer_massless_map_with_soft_daughter(self):
+        self.check_map("soft_daughter")
+
     def test_massive_final_inverse_both_solutions(self):
         self.check_map("massive")
 

@@ -2302,41 +2302,17 @@ c
       x3len_i_fks=E_i_fks
       x3len_j_fks=(shat-xmrec2-2*sqrtshat*x3len_i_fks)/
      &             (2*(sqrtshat-x3len_i_fks*(1-y_ij_fks)))
-      x3len_fks_mother=sqrt( x3len_i_fks**2+x3len_j_fks**2+
-     &                       2*x3len_i_fks*x3len_j_fks*y_ij_fks )
-      if(native_mapping)then
 c Resolve the daughter parallel and transverse to the emitted momentum.
 c This avoids subtracting squared momenta when the recoil is nearly at rest.
-         costh_i_fks=x3len_i_fks+x3len_j_fks*y_ij_fks
-         sinth_i_fks=x3len_j_fks*sqrt(max(0d0,
-     $        (1d0-y_ij_fks)*(1d0+y_ij_fks)))
-         x3len_fks_mother=sqrt(costh_i_fks**2+sinth_i_fks**2)
-         costh_i_fks=costh_i_fks/x3len_fks_mother
-         sinth_i_fks=sinth_i_fks/x3len_fks_mother
-      else
-      if(xi_i_fks.lt.qtiny)then
-         costh_i_fks=y_ij_fks+shat*(1-y_ij_fks**2)*xi_i_fks/
-     &                                          (shat-xmrec2)
-         if(abs(costh_i_fks).gt.1.d0)costh_i_fks=y_ij_fks
-      elseif(1-y_ij_fks.lt.qtiny)then
-         costh_i_fks=1-(shat*(1-xi_i_fks)-xmrec2)**2*(1-y_ij_fks)/
-     &                                          (shat-xmrec2)**2
-         if(abs(costh_i_fks).gt.1.d0)costh_i_fks=1.d0
-      else
-         costh_i_fks=(x3len_fks_mother**2-x3len_j_fks**2+x3len_i_fks**2)
-     &               /(2*x3len_fks_mother*x3len_i_fks)
-         if(abs(costh_i_fks).gt.1.d0)then
-            if(abs(costh_i_fks).le.(1.d0+1.d-5))then
-               costh_i_fks=sign(1.d0,costh_i_fks)
-            else
-               write(*,*)'Fatal error #5 in one_tree',
-     &              costh_i_fks,xi_i_fks,y_ij_fks,xmrec2
-               stop
-            endif
-         endif
-      endif
-      sinth_i_fks=sqrt(1-costh_i_fks**2)
-      endif
+c Use this also in the outer map: if j is soft, computing sin(theta) from
+c a rounded cos(theta)=1 makes the daughters spuriously collinear/off shell
+c and the native inverse map cannot recover a positive Jacobian.
+      costh_i_fks=x3len_i_fks+x3len_j_fks*y_ij_fks
+      sinth_i_fks=x3len_j_fks*sqrt(max(0d0,
+     $     (1d0-y_ij_fks)*(1d0+y_ij_fks)))
+      x3len_fks_mother=sqrt(costh_i_fks**2+sinth_i_fks**2)
+      costh_i_fks=costh_i_fks/x3len_fks_mother
+      sinth_i_fks=sinth_i_fks/x3len_fks_mother
       cosphi_i_fks=cos(phi_i_fks)
       sinphi_i_fks=sin(phi_i_fks)
       xpifksred(1)=sinth_i_fks*cosphi_i_fks

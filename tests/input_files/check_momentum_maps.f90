@@ -31,6 +31,55 @@ program check_momentum_maps
   nincoming_mod=2
   softtest=.false.
   colltest=.false.
+  if (mode.eq.'soft_daughter') then
+     ! W+jet production (seed 12004) exposed a soft sister of a hard FKS
+     ! parton: recovering sin(theta) from 1-cos(theta)**2 rounded both
+     ! directions onto each other and made the native inverse Jacobian zero.
+     native_mapping=.false.
+     mass=0d0
+     mrec=80.419002445756163d0
+     sqrtshat=105.09663678328764d0
+     shat=sqrtshat**2
+     momentum=(shat-mrec**2)/(2d0*sqrtshat)
+     born=0d0
+     born(:,1)=[sqrtshat/2d0,0d0,0d0,sqrtshat/2d0]
+     born(:,2)=[sqrtshat/2d0,0d0,0d0,-sqrtshat/2d0]
+     born(:,3)=[momentum,momentum*0.3d0,momentum*0.4d0,momentum*sqrt(0.75d0)]
+     born(:,4)=born(:,1)+born(:,2)-born(:,3)
+     rnd=[0.99999976678858993d0,9.1845446031599692d-3,0.27934974545675351d0]
+     phi=2d0*pi*rnd(3)
+     jac=2d0*pi
+     pswgt=1d0
+     p(:,1:4)=born
+     call generate_momenta_massless_final(-100,5,3,born(:,3), &
+          shat,sqrtshat,rnd,mrec**2,p,phi,xiimax,xinorm,xi,yij,xihat,pifks,jac,pswgt,pass)
+     if(.not.pass) error stop 'invalid soft-daughter point'
+     error=abs(p(0,3)**2-sum(p(1:3,3)**2))/p(0,3)**2
+     if(error.gt.1d-8) then
+        write(*,*) 'soft daughter relative mass-shell error',error
+        error stop 'soft daughter is off shell'
+     endif
+     native_mapping=.true.
+     xi=get_xi_from_p(5,3,p)
+     yij=get_yij_from_p(5,3,p)
+     phi=get_phi_from_p(5,3,p)
+     jacinv=1d0
+     pswgtinv=1d0
+     call generate_momenta_massless_final_inverse(p,xi,yij,phi, &
+          invborn,inv,jacinv,pswgtinv,shat,sqrtshat,5,3)
+     if(.not.ieee_is_finite(jacinv).or.jacinv.le.0d0) &
+          error stop 'soft daughter has no native inverse'
+     out(:,1:4)=invborn(:,1:4)
+     jac=2d0*pi
+     pswgt=1d0
+     call generate_momenta_massless_final(-100,5,3,invborn(:,3), &
+          shat,sqrtshat,inv,mrec**2,out,phi,xiimax,xinorm,xi,yij,xihat,pifks,jac,pswgt,pass)
+     error=maxval(abs(out-p))/maxval(abs(p))
+     if(.not.pass.or..not.all(ieee_is_finite(out)).or.error.gt.1d-7) &
+          error stop 'soft daughter native round trip'
+     write(*,*) 'PASS soft_daughter'
+     stop
+  endif
   if (mode.eq.'born_threshold') then
      ! Native single-top histories can project onto a Born configuration
      ! with a soft massless spectator. The expanded Kallen polynomial
