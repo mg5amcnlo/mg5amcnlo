@@ -170,6 +170,11 @@ c Only do the reweighting when actually generating the events
       if (abs(lpp(1)) .ge. 1) ndim=ndim+1
       if (abs(lpp(2)) .ge. 1) ndim=ndim+1
       nndim=ndim
+      call born_spread_configure(born_spreading.and..not.only_virt
+     $     .and.(abrv.eq.'all'.or.abrv.eq.'novi'),nexternal,
+     $     nincoming,fks_configs,ndim)
+      if (born_spread_active.and.imode.gt.0)
+     $     call born_spread_load_table
 c Don't proceed if muF1#muF2 (we need to work out the relevant formulae
 c at the NLO)
       if( ( fixed_fac_scale .and.
@@ -808,6 +813,8 @@ c "npNLO".
          do i=1,nndim
             x_save(i,ifold_counter)=x_local(i)
          enddo
+         call born_spread_set_point(x_local(ndim-2)**2,
+     $        x_local(ndim-1)**2)
          if (ifl.eq.0)
      &        call get_MC_integer(1,proc_map(0,0),proc_map(0,1),vol1)
 
@@ -1020,6 +1027,7 @@ c check if event or counter-event passes cuts
             endif
             call mc_end_real_point()
          enddo
+         call apply_born_spread_weight(ifold_counter)
  12      continue
       elseif(ifl.eq.2) then
          if (ifold_counter .ne.

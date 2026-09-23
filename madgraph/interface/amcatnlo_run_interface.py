@@ -2204,7 +2204,10 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
             # link or copy the grids from the base directory to the split directory:
             if not fixed_order:
                 if job['split'] != 0:
-                    for f in ['grid.MC_integer','mint_grids','res_1']:
+                    files_to_link = ['grid.MC_integer','mint_grids','res_1']
+                    if self.run_card.get('born_spreading',False):
+                        files_to_link.append('born_spreading.dat')
+                    for f in files_to_link:
                         if not os.path.isfile(pjoin(job['dirname'],f)):
                             files.ln(pjoin(job['dirname'].rsplit("_",1)[0],f),job['dirname'])
             else:
@@ -5224,6 +5227,9 @@ RESTART = %(mint_mode)s
                 required_output.append('%s/results.dat' % current)
             if args[3] == '1':
                 output_files.append('%s/results.dat' % current)
+            if args[1] == 'F' and args[3] == '0' and \
+                    self.run_card.get('born_spreading',False):
+                required_output.append('%s/born_spreading.dat' % current)
 
         else:
             raise aMCatNLOError('not valid arguments: %s' %(', '.join(args)))

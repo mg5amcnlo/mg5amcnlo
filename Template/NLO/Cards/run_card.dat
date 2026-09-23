@@ -217,5 +217,6 @@ $ion_pdf
 # three variables. Typically, folding in xi_i or y_ij results in the   *
 # largest reduction of negatively weighted events. (arXiv:2002.12716)  *
 #***********************************************************************
+ %(born_spreading)s = born_spreading ! Fit a normalized 40x40 table in step 0 (adds 1M calibration points)
  %(folding)s = folding ! correspond to folding in xi_i, y_ij, and phi_i
 #***********************************************************************

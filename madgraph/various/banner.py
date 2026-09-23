@@ -5919,6 +5919,9 @@ class RunCardNLO(RunCard):
 
         #technical
         self.add_param('folding', [1,1,1], include=False)
+        self.add_param('born_spreading', True, fortran_name='born_spreading',
+            comment="Redistribute the Born contribution across the FKS energy and angle bins. "
+                    "The normalized table is fitted during integration step 0.")
 
         #bias
         self.add_param('flavour_bias',[5,1], hidden=True, comment="Example: '5,100' means that the probability to generate an event with a bottom (or anti-bottom) quark is increased by a factor 100, but the weight of those events is reduced by a factor 100. Requires that the 'event_norm' is set to 'bias'.")

@@ -3527,13 +3527,20 @@ c various FKS configurations can be summed together.
       include 'nFKSconfigs.inc'
       include 'fks_info.inc'
       include 'timing_variables.inc'
-      integer i,j,ii,jj,i_soft
+      integer i,j,ii,jj,i_soft,nfolds,ifold_sample
       logical momenta_equal,pdg_equal,equal,found_S,colour_con_equal
+      logical collect_born_spread
       external momenta_equal,pdg_equal,colour_con_equal
       integer iproc_save(fks_configs),eto(maxproc,fks_configs),
      &     etoi(maxproc,fks_configs),maxproc_found
       common/cproc_combination/iproc_save,eto,etoi,maxproc_found
       call cpu_time(tBefore)
+      collect_born_spread=(born_spread_phase.eq.1.or.
+     $                     born_spread_phase.eq.2)
+      if (collect_born_spread) then
+         nfolds=product(ifold(1:ndim))
+         call allocate_born_spread_lines(nfolds)
+      endif
       if (icontr.eq.0) return
 c Find the contribution to sum all the S-event ones. This should be one
 c that has a soft singularity. We set it to 'i_soft'.
@@ -3614,6 +3621,21 @@ c include it here!
                      if (itype(i).eq.14 .and. imode.eq.1 .and. .not.
      $                    only_virt) exit
                      unwgt(j,i_soft)=unwgt(j,i_soft)+parton_iproc(jj,i)
+                     if (itype(i).eq.2) then
+                        if (collect_born_spread) then
+                           ifold_sample=ifold_cnt(i)
+                           unwgt_B(j,ifold_sample)=
+     $                          unwgt_B(j,ifold_sample)+
+     $                          parton_iproc(jj,i)
+                        endif
+                     else
+                        if (collect_born_spread) then
+                           ifold_sample=ifold_cnt(i)
+                           unwgt_noB(j,ifold_sample)=
+     $                          unwgt_noB(j,ifold_sample)+
+     $                          parton_iproc(jj,i)
+                        endif
+                     endif
                   endif
                enddo
             enddo
@@ -3622,6 +3644,26 @@ c include it here!
       call pack_contribution_groups
       call cpu_time(tAfter)
       t_isum=t_isum+(tAfter-tBefore)
+      return
+      end
+
+
+      subroutine apply_born_spread_weight(ifl)
+c Apply the fitted factor before PDF/scale variations and event grouping.
+      use weight_lines
+      use mint_module, only: born_spread_active,born_spread_ready,
+     $     born_spread_get_factor
+      implicit none
+      integer ifl,i
+      double precision factor
+      if (.not.born_spread_active.or..not.born_spread_ready) return
+      factor=born_spread_get_factor()
+      do i=1,icontr
+         if (.not.H_event(i).and.itype(i).eq.2.and.
+     $        ifold_cnt(i).eq.ifl) then
+            wgt(1:3,i)=wgt(1:3,i)*factor
+         endif
+      enddo
       return
       end
 
@@ -3768,10 +3810,15 @@ c on the imode we should or should not include the virtual corrections.
       include 'nexternal.inc'
       include 'orders.inc'
       integer i,j,ict,iamp,ithree,isix
+      integer ifold_sample,nfolds,n_sproc
+      logical found_s_sample
       double precision f(nintegrals),sigint,sigint1,sigint_ABS
      $     ,n1body_wgt,tmp_wgt,max_weight
       double precision virtual_over_born
       common /c_vob/   virtual_over_born
+      integer ifold_picked
+      double precision x_save(ndimmax,max_fold)
+      common /c_vegas_x_fold/x_save,ifold_picked
       sigint=0d0
       sigint1=0d0
       sigint_ABS=0d0
@@ -3834,6 +3881,26 @@ c n1body_wgt is used for the importance sampling over FKS directories
      $                              tmp_wgt=tmp_wgt+wgts(1,ict)
             enddo
             n1body_wgt=n1body_wgt+abs(tmp_wgt)
+         enddo
+      endif
+      if (born_spread_phase.eq.1.or.born_spread_phase.eq.2) then
+         found_s_sample=.false.
+         do i=1,icontr
+            if (H_event(i).or.group_size(i).eq.0) cycle
+            n_sproc=niproc(i)
+            found_s_sample=.true.
+            exit
+         enddo
+         nfolds=product(ifold(1:ndim))
+         if (.not.found_s_sample) n_sproc=0
+         do ifold_sample=1,nfolds
+            call born_spread_set_point(
+     $           x_save(ndim-2,ifold_sample)**2,
+     $           x_save(ndim-1,ifold_sample)**2)
+            call born_spread_observe_sample(
+     $           unwgt_B(1:max(1,n_sproc),ifold_sample),
+     $           unwgt_noB(1:max(1,n_sproc),ifold_sample),n_sproc,
+     $           ifold_sample.eq.nfolds)
          enddo
       endif
       f(1)=sigint_ABS

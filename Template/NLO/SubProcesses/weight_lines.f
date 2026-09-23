@@ -4,6 +4,7 @@
          implicit none
          integer max_contr,max_wgt,max_iproc,icontr,iwgt,icontr_picked
      $        ,iproc_picked
+         integer :: born_spread_fold_capacity=0
 ! Only complete native H weights are retained during repartitioning.
          logical :: mc_H_only=.false.
          logical :: mc_S_only=.false.
@@ -22,6 +23,7 @@
      $        ,:),wgt(:,:),wgt_ME_tree(:,:),bjx(:,:),scales2(:,:)
      $        ,g_strong(:),wgts(:,:),parton_iproc(:,:),y_bst(:)
      $        ,cpower(:),plot_wgts(:,:),shower_scale(:),unwgt(:,:)
+     $        ,unwgt_B(:,:),unwgt_noB(:,:)
      $        ,bias_wgt(:),shower_scale_a(:,:,:)
          save
       contains
@@ -58,7 +60,40 @@
          integer, intent(in) :: imember,igroup
          group_member=group_members(group_start(igroup)+imember-1)
          end function group_member
+
+         subroutine allocate_born_spread_lines(nfolds)
+         integer, intent(in) :: nfolds
+         double precision, allocatable :: temp(:,:)
+         if (.not.allocated(unwgt_B)) then
+            allocate(unwgt_B(max_iproc,nfolds))
+            allocate(unwgt_noB(max_iproc,nfolds))
+            born_spread_fold_capacity=nfolds
+         elseif (nfolds.gt.born_spread_fold_capacity) then
+            allocate(temp(max_iproc,nfolds))
+            temp(:,1:born_spread_fold_capacity)=unwgt_B
+            call move_alloc(temp,unwgt_B)
+            allocate(temp(max_iproc,nfolds))
+            temp(:,1:born_spread_fold_capacity)=unwgt_noB
+            call move_alloc(temp,unwgt_noB)
+            born_spread_fold_capacity=nfolds
+         endif
+         unwgt_B=0d0
+         unwgt_noB=0d0
+         end subroutine allocate_born_spread_lines
+
+         subroutine release_born_spread_lines
+         if (allocated(unwgt_B)) deallocate(unwgt_B)
+         if (allocated(unwgt_noB)) deallocate(unwgt_noB)
+         born_spread_fold_capacity=0
+         end subroutine release_born_spread_lines
       end module weight_lines
+
+      subroutine deallocate_born_spread_lines
+      use weight_lines, only: release_born_spread_lines
+      implicit none
+      call release_born_spread_lines
+      return
+      end
 
 
       subroutine weight_lines_allocated(nexternal,n_contr,n_wgt,n_proc)
@@ -96,6 +131,17 @@ c unwgt
          allocate(temp2(n_proc,max_contr))
          temp2(1:max_iproc,1:max_contr)=unwgt
          call move_alloc(temp2,unwgt)
+c Born-spreading decomposition is allocated only during calibration.
+         if (allocated(unwgt_B)) then
+            allocate(temp2(n_proc,born_spread_fold_capacity))
+            temp2(1:max_iproc,1:born_spread_fold_capacity)=unwgt_B
+            call move_alloc(temp2,unwgt_B)
+         endif
+         if (allocated(unwgt_noB)) then
+            allocate(temp2(n_proc,born_spread_fold_capacity))
+            temp2(1:max_iproc,1:born_spread_fold_capacity)=unwgt_noB
+            call move_alloc(temp2,unwgt_noB)
+         endif
 c update maximum
          max_iproc=n_proc
       endif
@@ -387,6 +433,7 @@ c update maximum
       if (allocated(shower_scale)) deallocate(shower_scale)
       if (allocated(shower_scale_a)) deallocate(shower_scale_a)
       if (allocated(unwgt)) deallocate(unwgt)
+      call release_born_spread_lines
       if (allocated(need_match)) deallocate(need_match)
       return
       end
