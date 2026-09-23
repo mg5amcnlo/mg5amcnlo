@@ -829,6 +829,9 @@ class MultiCore(Cluster):
         self.stoprequest.set()
         if error and not self.fail_msg:
             self.fail_msg = error
+        # A failed worker can leave queued jobs with nobody left to run them.
+        # Wake wait() so it reports the failure instead of waiting for the queue.
+        self.lock.set()
             
         # cleaning the queue done_pid_queue and move them to done_pid        
         while not self.done_pid_queue.empty():
@@ -858,10 +861,17 @@ class MultiCore(Cluster):
 
         try: # to catch KeyBoardInterupt to see which kind of error to display 
             last_status = (0, 0, 0)
+            Idle, Running, Done = last_status
             sleep_time = 1
             use_lock = True
             first = True
             while True:
+                if self.fail_msg is not None:
+                    # The failed worker is already cleaning up the pool.
+                    # Do not drain its queues concurrently or wait for jobs
+                    # that no worker will run.
+                    self.stoprequest.set()
+                    break
                 force_one_more_loop = False # some security
                             
                 # Loop over the job tagged as done to check if some packet of jobs

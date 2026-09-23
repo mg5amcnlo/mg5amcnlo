@@ -5280,6 +5280,15 @@ class ProcessExporterEWSudakovSA(ProcessOptimizedExporterFortranFKS):
     """
     dirstopdg = []
 
+    def prepare_born_support(self, matrix_elements):
+        """Keep Born evaluators in each standalone Sudakov library.
+
+        This exporter builds libsudpy instead of the FKS runtime and does not
+        finalize a shared Born registry. Deduplicating here would remove the
+        Born sources needed by equivalent subprocesses such as u u~ and u~ u.
+        """
+        pass
+
     def finalize(self, *args, **opts):
         """do the usual finalize, then call the function that writes
         the python module with all the calls

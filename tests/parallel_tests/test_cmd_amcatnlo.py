@@ -350,7 +350,11 @@ class MECmdShell(IOTests.IOTestManager):
     def test_short_amcatnlo_int_nlo(self):
         """tests soft/collinear for  g b~ > t t~ t~ w+ g """
         start= time.time()
-        self.generate(['g b~ > t t~ t~ w+ g QED^2=4 QCD^2=4 [real=QCD QED]'], model='loop_sm')
+        # Incoming bottom partons require the massless-bottom restriction:
+        # the ISR mapping uses massless incoming momenta. A finite bottom
+        # mass makes the real and projected Born points inconsistent, so
+        # the soft limit fails even with standalone Born matrix elements.
+        self.generate(['g b~ > t t~ t~ w+ g QED^2=4 QCD^2=4 [real=QCD QED]'], model='loop_sm-no_b_mass')
 
         ####NLO
         card = open('%s/Cards/run_card_default.dat' % self.path).read()
@@ -363,18 +367,26 @@ class MECmdShell(IOTests.IOTestManager):
         open('%s/Cards/run_card.dat' % self.path, 'w').write(card)
 
         start = time.time()
-        self.do('compile -f')
+        # This mixed QCD/QED interference test checks fixed-order limits;
+        # matching its extra-Born counterterms to a shower is unsupported.
+        self.do('compile FO -f')
 
-        #with misc.chdir(pjoin(self.path,'SubProcesses','P0_gb~_tt~tg')):
-        #    misc.call(, 
-        #              stdout = open(os.devnull, 'w'))   
+        # A Fortran STOP can leave a truncated log without a FAILED line.
+        # Require the limit driver to reach every generated FKS sector.
+        sub = pjoin(self.path, 'SubProcesses', 'P0_gbx_ttxtxwpg')
+        with open(pjoin(sub, 'nFKSconfigs.inc')) as stream:
+            nsectors = int(re.search(r'FKS_CONFIGS\s*=\s*(\d+)',
+                                     stream.read()).group(1))
+        with open(pjoin(sub, 'test_ME.log')) as stream:
+            limits = stream.read()
+        self.assertNotIn('FAILED', limits)
+        soft = re.findall(r'Sum of all orders:\s+Softtest\s+(\d+) PASSED', limits)
+        self.assertEqual(set(map(int, soft)), set(range(1, nsectors + 1)))
+        collinear = re.findall(
+            r'Sum of all orders:\s+Collineartest\s+(\d+) PASSED', limits)
+        self.assertEqual(len(collinear) + limits.count(
+            'No collinear test for massive j_fks'), nsectors)
 
-
-        #start = time.time()
-        #self.do('launch aMC@NLO -fp')
-        # test the lhe event file exists
-
-    
 
     def test_short_launch_amcatnlo_name(self):
         """tests if the p p > e+ ve process works specifying the run name.

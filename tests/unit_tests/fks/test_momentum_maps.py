@@ -57,6 +57,8 @@ class TestMomentumMaps(unittest.TestCase):
                      "generate_momenta_massive_final_inverse",
                      "generate_momenta_massless_final_inverse",
                      "native_fsr_angle",
+                     "lambda", "yminmax", "gentcms", "gentcms_inverse",
+                     "rotxxx_inv",
                      "fill_FKS_commons", "getangles", "get_recoil"):
             routines.append(fortran_routine(TEMPLATE / "genps_fks.f", name))
         routines.append(fortran_routine(TEMPLATE / "fks_singular.f", "rotate_invar"))
@@ -74,6 +76,7 @@ class TestMomentumMaps(unittest.TestCase):
                    str(TEMPLATE / "kinematics_module.f90"),
                    str(work / "native_context.f90"),
                    str(work / "maps.f"), str(TEMPLATE / "boostwdir2.f"),
+                   str(ROOT / "HELAS/boostx.F"), str(ROOT / "HELAS/rotxxx.F"),
                    str(ROOT / "tests/input_files/check_momentum_maps.f90"),
                    "-o", str(cls.executable)]
         result = subprocess.run(command, cwd=work, text=True,
@@ -89,6 +92,9 @@ class TestMomentumMaps(unittest.TestCase):
 
     def test_asymmetric_beam_boost(self):
         self.check_map("boost")
+
+    def test_t_channel_inverse_with_soft_massless_recoil(self):
+        self.check_map("born_threshold")
 
     def test_massless_final_inverse(self):
         self.check_map("massless")

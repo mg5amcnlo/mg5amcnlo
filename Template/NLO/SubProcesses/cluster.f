@@ -306,6 +306,11 @@ c massive, except when they are external particles (ie., ext=.true.).
       elseif (abs(ico).eq.3 .and. mass.ne.0d0 ) then
          if (.not.btest(itype,2)) 
      $        itype = itype+4
+      elseif (ico.eq.8 .and. mass.ne.0d0) then
+c Keep massive octets distinct from gluons and massive triplets.
+c Their clustering kinematics follows the same massive branches.
+         if (.not.btest(itype,5))
+     $        itype = itype+32
       elseif (abs(ico).eq.1 .and. mass.eq.0d0 .and. ext) then
          if (.not.btest(itype,3)) 
      $        itype = itype+8
@@ -318,7 +323,7 @@ c massive, except when they are external particles (ie., ext=.true.).
      $        itype = itype+16
       else
 c Stop if a particle type not implemented
-         write (*,*) 'Unknown particle in update_type, mass='
+         write (*,*) 'Unknown particle in set_particle_type, mass='
      $        ,mass,', color=',ico
          stop 1
       endif
@@ -1240,37 +1245,49 @@ c Different scale depending on itype:
      $     (btest(cl(2),0).or.btest(cl(2),1).or.btest(cl(2),3))) then 
          ! three massless particles
          itype=1
-      elseif ((btest(cl(0),2).or.btest(cl(0),4)) .and.
+      elseif ((btest(cl(0),2).or.btest(cl(0),4).or.
+     $         btest(cl(0),5)) .and.
      $        (btest(cl(1),0).or.btest(cl(1),1).or.btest(cl(1),3)) .and.
-     $        (btest(cl(2),2).or.btest(cl(2),4))) then
+     $        (btest(cl(2),2).or.btest(cl(2),4).or.
+     $         btest(cl(2),5))) then
          ! massive emitting a massless particle 1
          itype=2
-      elseif ((btest(cl(0),2).or.btest(cl(0),4)) .and.
-     $        (btest(cl(1),2).or.btest(cl(1),4)) .and.
+      elseif ((btest(cl(0),2).or.btest(cl(0),4).or.
+     $         btest(cl(0),5)) .and.
+     $        (btest(cl(1),2).or.btest(cl(1),4).or.
+     $         btest(cl(1),5)) .and.
      $        (btest(cl(2),0).or.btest(cl(2),1).or.btest(cl(2),3))) then
          ! massive emitting a massless particle 2
          itype=3
       elseif ((btest(cl(0),0).or.btest(cl(0),1).or.btest(cl(0),3)) .and.
-     $        (btest(cl(1),2).or.btest(cl(1),4)) .and.
+     $        (btest(cl(1),2).or.btest(cl(1),4).or.
+     $         btest(cl(1),5)) .and.
      $        (btest(cl(2),0).or.btest(cl(2),1).or.btest(cl(2),3))) then
          ! massless emitting a massive particle 1
          itype=4
       elseif ((btest(cl(0),0).or.btest(cl(0),1).or.btest(cl(0),3)) .and.
      $        (btest(cl(1),0).or.btest(cl(1),1).or.btest(cl(1),3)) .and.
-     $        (btest(cl(2),2).or.btest(cl(2),4))) then
+     $        (btest(cl(2),2).or.btest(cl(2),4).or.
+     $         btest(cl(2),5))) then
          ! massless emitting a massive particle 2
          itype=5
       elseif ((btest(cl(0),0).or.btest(cl(0),1).or.btest(cl(0),3)) .and.
-     $        (btest(cl(1),2).or.btest(cl(1),4)) .and.
-     $        (btest(cl(2),2).or.btest(cl(2),4))) then
+     $        (btest(cl(1),2).or.btest(cl(1),4).or.
+     $         btest(cl(1),5)) .and.
+     $        (btest(cl(2),2).or.btest(cl(2),4).or.
+     $         btest(cl(2),5))) then
          ! massless to two massive particles
          itype=6
-      elseif ((btest(cl(0),2).or.btest(cl(0),4)) .and.
-     $        (btest(cl(1),2).or.btest(cl(1),4)) .and.
-     $        (btest(cl(2),2).or.btest(cl(2),4))) then
+      elseif ((btest(cl(0),2).or.btest(cl(0),4).or.
+     $         btest(cl(0),5)) .and.
+     $        (btest(cl(1),2).or.btest(cl(1),4).or.
+     $         btest(cl(1),5)) .and.
+     $        (btest(cl(2),2).or.btest(cl(2),4).or.
+     $         btest(cl(2),5))) then
          ! Three massive particles
          itype=7
-      elseif ((btest(cl(0),2).or.btest(cl(0),4)) .and.
+      elseif ((btest(cl(0),2).or.btest(cl(0),4).or.
+     $         btest(cl(0),5)) .and.
      $        (btest(cl(1),0).or.btest(cl(1),1).or.btest(cl(1),3)) .and.
      $        (btest(cl(2),0).or.btest(cl(2),1).or.btest(cl(2),3))) then
          ! massive decaying into two massless

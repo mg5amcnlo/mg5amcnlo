@@ -32,6 +32,37 @@ def context(number, processes, i, j, allowed, orders=('QCD','QED')):
                     fks=dict(i=i, j=j, splitting_type=['QCD'], extra_cnt_index=-1))])
 
 
+@unittest.skipUnless(shutil.which('gfortran'), 'requires gfortran')
+class TestStandaloneSudakov(unittest.TestCase):
+    def test_equivalent_subprocesses_keep_standalone_born_sources(self):
+        from madgraph.interface.master_interface import MasterCmd
+        with tempfile.TemporaryDirectory(prefix='mg5_sudakov_export_') as tmp:
+            output = Path(tmp)/'output'
+            interface = MasterCmd()
+            for command in (
+                    'set automatic_html_opening False --no_save',
+                    'set low_mem_multicore_nlo_generation False --no_save',
+                    'import model sm',
+                    'generate u u~ > t t~ QED^2=0 QCD^2=4 [LOonly=QCD] --ewsudakov',
+                    'add process u~ u > t t~ QED^2=0 QCD^2=4 [LOonly=QCD] --ewsudakov',
+                    'output ewsudakovsa %s -f -nojpeg' % output):
+                interface.exec_cmd(command, errorhandling=False, printcmd=False,
+                                   precmd=True, postcmd=True)
+            subprocesses = sorted((output/'SubProcesses').glob('P*'))
+            self.assertEqual(len(subprocesses), 2)
+            for sub in subprocesses:
+                with self.subTest(subprocess=sub.name):
+                    self.assertTrue((sub/'born.f').is_file())
+                    # This standalone export has no native FKS tables. Both
+                    # Born sources and Sudakov object dependencies must work
+                    # without FKS runtime initialization or an f2py install.
+                    result = subprocess.run(
+                        ['make', 'born.o', 'ewsudakov_functions.o'], cwd=sub,
+                        capture_output=True, text=True)
+                    self.assertEqual(result.returncode, 0,
+                                     result.stdout + result.stderr)
+
+
 class TestBornRegistry(unittest.TestCase):
     def test_external_width_particles_from_born_metadata(self):
         """Width removal must survive the replacement of static Born tables."""

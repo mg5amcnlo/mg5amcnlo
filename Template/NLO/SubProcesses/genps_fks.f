@@ -3464,7 +3464,17 @@ C****************************************************************************
       DOUBLE PRECISION MA2,MB2,S,tiny,tmp,rat
       parameter (tiny=1.d-8)
 c
-      tmp=S**2+MA2**2+MB2**2-2d0*S*MA2-2d0*MA2*MB2-2d0*S*MB2
+c Keep the small recoil momentum when S approaches a massive threshold.
+c The expanded polynomial loses (S-MA2)**2 for a soft massless recoil,
+c collapsing the t-channel bounds used by native history inversions.
+      if (MA2.eq.0d0.or.MB2.eq.0d0) then
+         tmp=(S-MA2-MB2)**2
+      elseif (MA2.gt.0d0.and.MB2.gt.0d0) then
+         tmp=(S-(sqrt(MA2)+sqrt(MB2))**2)*
+     $       (S-(sqrt(MA2)-sqrt(MB2))**2)
+      else
+         tmp=(S-MA2-MB2)**2-4d0*MA2*MB2
+      endif
       if(tmp.le.0.d0)then
         if(ma2.lt.0.d0.or.mb2.lt.0.d0)then
           write(6,*)'Error #1 in function Lambda:',s,ma2,mb2

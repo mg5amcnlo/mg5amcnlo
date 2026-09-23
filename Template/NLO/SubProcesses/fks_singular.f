@@ -5355,9 +5355,8 @@ c part2==colour(i_fks)
       parameter (CA=3d0,TR=1d0/2d0,CF=4d0/3d0)
 
       include "coupl.inc"
-      write(*,*) 'FIX AP REDUCED SUSY'
-      stop 1
-      
+c The SUSY kernels use the same (1-z)*g^2/t convention as AP_reduced.
+
       if (col2.ne.8.and.ch2.ne.0d0)then
          write (*,*) 'Fatal error #0 in AP_reduced_SUSY',col1,col2,ch1,ch2
          stop

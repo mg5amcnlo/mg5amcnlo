@@ -16,6 +16,7 @@ program check_momentum_maps
   double precision :: shat,sqrtshat,mass,mrec,energy,momentum,phi,xi,yij
   double precision :: xiimax,xinorm,xihat,rat_xi,pifks(0:3),rapidity,error
   double precision :: tau_cnt(-2:2),ycm_cnt(-2:2)
+  double precision :: transfer,tmin,tmax,remainder(0:3)
   common /cbjrk12_cnt/tau_cnt,ycm_cnt
   logical :: softtest,colltest,pass
   common /sctests/softtest,colltest
@@ -30,6 +31,33 @@ program check_momentum_maps
   nincoming_mod=2
   softtest=.false.
   colltest=.false.
+  if (mode.eq.'born_threshold') then
+     ! Native single-top histories can project onto a Born configuration
+     ! with a soft massless spectator. The expanded Kallen polynomial
+     ! rounded to zero here, so inversion rejected physical t values.
+     mass=173d0
+     do i=-7,1
+        momentum=10d0**i
+        energy=(sqrt(mass**2+momentum**2)+momentum)/2d0
+        born(:,1)=[energy,0d0,0d0,energy]
+        born(:,2)=[energy,0d0,0d0,-energy]
+        born(:,3)=[sqrt(mass**2+momentum**2), &
+             momentum*0.3d0,momentum*0.4d0,momentum*sqrt(0.75d0)]
+        born(:,4)=[momentum,-born(1:3,3)]
+        jac=1d0
+        call gentcms_inverse(born(:,1),born(:,2),transfer,phi,mass,0d0, &
+             born(:,3),remainder,jac)
+        call yminmax((2d0*energy)**2,transfer,mass**2,0d0,0d0,0d0,tmin,tmax)
+        if (tmin.ge.tmax.or.transfer.lt.tmin.or.transfer.gt.tmax) &
+             error stop 'physical Born momentum outside t-channel bounds'
+        call gentcms(born(:,1),born(:,2),transfer,phi,mass,0d0, &
+             out(:,3),remainder,jac)
+        if (jac.le.0d0.or.maxval(abs(out(:,3)-born(:,3))).gt.1d-10) &
+             error stop 'near-threshold Born round trip'
+     enddo
+     write(*,*) 'PASS born_threshold'
+     stop
+  endif
   if (mode.eq.'boost') then
      do i=-12,12,3
         p=0d0
