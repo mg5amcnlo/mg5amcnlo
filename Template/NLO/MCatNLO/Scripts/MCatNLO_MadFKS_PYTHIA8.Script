@@ -430,8 +430,19 @@ EOF
 if [ $DELTA = "ON" ]
 then
 cat<<EOF >>$ifile
-Beams:setProductionScalesFromLHEF = on ! use separate scalup for each dipole
+Beams:setProductionScalesFromLHEF = on ! read the radiator starting scales
 EOF
+# Recent Pythia versions use a separate switch for scalup_radiator_recoiler.
+# Keep the production-scale switch as well: it sets the incoming scales and
+# provides the positive particle scales required by the final-state shower.
+# Older Pythia versions do not recognise the additional setting.
+if grep -q 'name="Beams:setDipoleShowerStartingScalesFromLHEF"' \
+    "$thisdir/xmldoc/BeamParameters.xml"
+then
+cat<<EOF >>$ifile
+Beams:setDipoleShowerStartingScalesFromLHEF = on ! retain separate dipole scales
+EOF
+fi
 fi
 if [ $UsedPdfLib = "LHAPDF" ]
 then
