@@ -17,6 +17,7 @@ from cmd import Cmd
 """ Basic test of the command interface """
 
 import unittest
+import unittest.mock as mock
 import madgraph
 import madgraph.interface.master_interface as mgcmd
 import madgraph.interface.extended_cmd as ext_cmd
@@ -1306,3 +1307,65 @@ class TestAMCatNLOEW(unittest.TestCase):
         self.assertTrue(any([leptons[0] in [abs(l['id']) for l in real['leglist']] for real in reals[1]]))
         # avoid border effects
         self.interface.do_set('include_lepton_initiated_processes False')
+
+
+    def test_ew_resonances_without_cms(self):
+        """NLO EW corrections to processes with an unstable s-channel
+        propagator need the complex-mass scheme: check that the resonances
+        are found in the Born diagrams, and that the user is warned"""
+        cmd = amcatnlocmd.aMCatNLOInterface
+
+        # Drell-Yan: s-channel Z (the photon has no width)
+        self.interface.do_generate('u u~ > e+ e- QED^2=4 QCD^2=0 [real=QED]')
+        fksproc = self.interface._fks_multi_proc
+        self.assertEqual(cmd.find_unstable_s_channels(fksproc), ['z'])
+        with self.assertLogs('cmdprint', level='WARNING') as log:
+            cmd.warn_resonances_without_cms(cmd, fksproc, ['QED'])
+        self.assertEqual(len(log.output), 1)
+        self.assertIn('NLO EW corrections', log.output[0])
+        self.assertIn('complex_mass_scheme', log.output[0])
+        self.assertIn(': z,', log.output[0])
+
+        # t-channel propagators only: nothing to warn about
+        self.interface.do_generate('u u~ > a a QED^2=4 QCD^2=0 [real=QED]')
+        fksproc = self.interface._fks_multi_proc
+        self.assertEqual(cmd.find_unstable_s_channels(fksproc), [])
+
+
+    def test_qcd_resonances_without_cms(self):
+        """NLO QCD corrections to processes with a colour-charged unstable
+        s-channel propagator (e.g. an intermediate top quark) need the
+        complex-mass scheme as well: check that only the coloured
+        resonances are considered, and that the user is warned"""
+        cmd = amcatnlocmd.aMCatNLOInterface
+
+        # single-top-like EW Born: s-channel top (and colourless h, w+, z)
+        self.interface.do_generate('u d~ > w+ b b~ QCD=0 [QCD]')
+        fksproc = self.interface._fks_multi_proc
+        self.assertEqual(cmd.find_unstable_s_channels(fksproc),
+                         ['h', 't', 'w+', 'z'])
+        self.assertEqual(
+            cmd.find_unstable_s_channels(fksproc, coloured_only=True), ['t'])
+        with self.assertLogs('cmdprint', level='WARNING') as log:
+            cmd.warn_resonances_without_cms(cmd, fksproc, ['QCD'])
+        self.assertEqual(len(log.output), 1)
+        self.assertIn('NLO QCD corrections', log.output[0])
+        self.assertIn('complex_mass_scheme', log.output[0])
+        self.assertIn(': t,', log.output[0])
+
+        # Drell-Yan: the Z is not coloured, no warning for QCD corrections
+        # (but there is one for EW corrections)
+        self.interface.do_generate('u u~ > e+ e- QCD=0 [QCD]')
+        fksproc = self.interface._fks_multi_proc
+        self.assertEqual(
+            cmd.find_unstable_s_channels(fksproc, coloured_only=True), [])
+        with mock.patch.object(amcatnlocmd.logger, 'warning') as warning:
+            cmd.warn_resonances_without_cms(cmd, fksproc, ['QCD'])
+            self.assertFalse(warning.called)
+            cmd.warn_resonances_without_cms(cmd, fksproc, ['QCD', 'QED'])
+            self.assertEqual(warning.call_count, 1)
+
+        # on-shell tops: no s-channel top
+        self.interface.do_generate('u u~ > t t~ QED=0 [QCD]')
+        fksproc = self.interface._fks_multi_proc
+        self.assertEqual(cmd.find_unstable_s_channels(fksproc), [])
