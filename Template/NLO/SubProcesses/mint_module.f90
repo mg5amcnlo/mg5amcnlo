@@ -105,20 +105,24 @@ module mint_module
   logical, private :: born_spread_calibrating=.false.
   integer, public :: born_spread_phase=0,born_spread_current_bin=1
   integer, public :: born_spread_bin_fold(max_fold)=1
+  integer, public :: born_spread_current_sector=1
+  integer, public :: born_spread_sector_fold(max_fold)=1
   integer, private :: born_spread_nexternal=0,born_spread_nincoming=0
   integer, private :: born_spread_nfks=0,born_spread_ndim=0
   integer, private :: born_spread_restart_ncalls=0
   integer, private :: born_spread_training_count=0
   integer, private :: born_spread_validation_count=0
   double precision, public :: born_spread_x=0d0,born_spread_y=0d0
-  double precision, public :: born_spread_factor(born_spread_nxi,born_spread_ny)
+  ! Each sampled Born FKS sector carries its own unit normalization.
+  double precision, allocatable, public :: born_spread_factor(:,:,:)
   double precision, private :: born_spread_mean_delta=0d0
   double precision, private :: born_spread_m2_delta=0d0
   double precision, private :: born_spread_base_total=0d0
   double precision, private :: born_spread_spread_total=0d0
   double precision, private :: born_spread_point_base=0d0
   double precision, private :: born_spread_point_spread=0d0
-  double precision, dimension(born_spread_nbins), private :: born_spread_deriv0=0d0
+  double precision, allocatable, private :: born_spread_deriv0(:,:)
+  ! Flatten (bin,sector) here so one sort groups all sector fits.
   integer, dimension(:), allocatable, private :: born_spread_break_bin
   double precision, dimension(:), allocatable, private :: born_spread_break
   double precision, dimension(:), allocatable, private :: born_spread_jump
@@ -318,32 +322,55 @@ contains
 
   subroutine solve_born_spreading_table
     implicit none
+    integer :: isector,first,last
+    if (born_spread_nbreak.gt.1) &
+         call born_spread_sort_breaks(1,born_spread_nbreak)
+    first=1
+    do isector=1,born_spread_nfks
+       last=first-1
+       do while (last.lt.born_spread_nbreak)
+          if (born_spread_break_bin(last+1).gt.isector*born_spread_nbins) exit
+          last=last+1
+       enddo
+       call solve_born_spreading_sector(isector,first,last)
+       first=last+1
+    enddo
+  end subroutine solve_born_spreading_table
+
+  subroutine solve_born_spreading_sector(isector,first_break,last_break)
+    implicit none
+    integer, intent(in) :: isector,first_break,last_break
     integer, allocatable :: seg_bin(:)
     double precision, allocatable :: seg_slope(:),seg_length(:)
     double precision, dimension(born_spread_nbins) :: caps,bin_area
     double precision :: deriv,prev,turn,jump_total,length,remaining
     double precision :: group_slope,cap_total,low,high,mid,trial,total_add
-    double precision :: max_factor,weighted_norm
-    integer :: ibin,k,j,nseg,iseg,first,last,pass
-    if (born_spread_nbreak.gt.1) &
-         call born_spread_sort_breaks(1,born_spread_nbreak)
-    allocate(seg_bin(born_spread_nbreak+born_spread_nbins))
-    allocate(seg_slope(born_spread_nbreak+born_spread_nbins))
-    allocate(seg_length(born_spread_nbreak+born_spread_nbins))
+    double precision :: max_factor,weighted_norm,slope_scale
+    integer :: ibin,k,j,nseg,iseg,first,last,pass,global_bin,capacity
+    capacity=last_break-first_break+1+born_spread_nbins
+    allocate(seg_bin(capacity),seg_slope(capacity),seg_length(capacity))
     nseg=0
-    k=1
+    k=first_break
     do ibin=1,born_spread_nbins
+       global_bin=(isector-1)*born_spread_nbins+ibin
        bin_area(ibin)=born_spread_bin_area(ibin)
        max_factor=1d0/bin_area(ibin)
-       deriv=born_spread_deriv0(ibin)
+       deriv=born_spread_deriv0(ibin,isector)
+       slope_scale=abs(deriv)
+       j=k
+       do while (j.le.last_break)
+          if (born_spread_break_bin(j).ne.global_bin) exit
+          slope_scale=slope_scale+born_spread_jump(j)
+          j=j+1
+       enddo
        prev=0d0
-       do while (k.le.born_spread_nbreak)
-          if (born_spread_break_bin(k).ne.ibin) exit
+       do while (k.le.last_break)
+          if (born_spread_break_bin(k).ne.global_bin) exit
           turn=born_spread_break(k)
           jump_total=0d0
           j=k
-          do while (j.le.born_spread_nbreak)
-             if (born_spread_break_bin(j).ne.ibin) exit
+          do while (j.le.last_break)
+             if (born_spread_break_bin(j).ne.global_bin) exit
              if (.not.born_spread_same_break(turn, &
                   born_spread_break(j))) exit
              jump_total=jump_total+born_spread_jump(j)
@@ -355,6 +382,7 @@ contains
                 nseg=nseg+1
                 seg_bin(nseg)=ibin
                 seg_slope(nseg)=deriv/bin_area(ibin)
+                if (abs(deriv).le.1d-13*slope_scale) seg_slope(nseg)=0d0
                 seg_length(nseg)=length
              endif
           endif
@@ -366,17 +394,21 @@ contains
           nseg=nseg+1
           seg_bin(nseg)=ibin
           seg_slope(nseg)=deriv/bin_area(ibin)
+          ! Cancelling the initial slope against its jumps can leave a tiny
+          ! residual. A truly flat tail must participate in the closest-to-
+          ! one tie break, rather than attract an entire sector's mass.
+          if (abs(deriv).le.1d-13*slope_scale) seg_slope(nseg)=0d0
           seg_length(nseg)=max_factor-prev
        endif
     enddo
     if (nseg.le.0) then
-       born_spread_factor=1d0
+       born_spread_factor(:,:,isector)=1d0
        deallocate(seg_bin,seg_slope,seg_length)
        return
     endif
     if (nseg.gt.1) call born_spread_sort_segments( &
          seg_slope,seg_bin,seg_length,1,nseg)
-    born_spread_factor=0d0
+    born_spread_factor(:,:,isector)=0d0
     remaining=1d0
     iseg=1
     do while (iseg.le.nseg.and.remaining.gt.1d-12)
@@ -398,7 +430,7 @@ contains
              if (caps(ibin).gt.0d0) then
                 j=(ibin-1)/born_spread_nxi+1
                 k=ibin-(j-1)*born_spread_nxi
-                born_spread_factor(k,j)=born_spread_factor(k,j)+caps(ibin)
+                born_spread_factor(k,j,isector)=born_spread_factor(k,j,isector)+caps(ibin)
              endif
           enddo
           remaining=max(0d0,remaining-cap_total)
@@ -412,10 +444,10 @@ contains
                 if (caps(ibin).le.0d0) cycle
                 j=(ibin-1)/born_spread_nxi+1
                 k=ibin-(j-1)*born_spread_nxi
-                trial=max(born_spread_factor(k,j), &
-                     min(born_spread_factor(k,j)+caps(ibin),1d0+mid))
+                trial=max(born_spread_factor(k,j,isector), &
+                     min(born_spread_factor(k,j,isector)+caps(ibin),1d0+mid))
                 total_add=total_add+bin_area(ibin)* &
-                     (trial-born_spread_factor(k,j))
+                     (trial-born_spread_factor(k,j,isector))
              enddo
              if (total_add.lt.remaining) then
                 low=mid
@@ -428,9 +460,9 @@ contains
              if (caps(ibin).le.0d0) cycle
              j=(ibin-1)/born_spread_nxi+1
              k=ibin-(j-1)*born_spread_nxi
-             trial=max(born_spread_factor(k,j), &
-                  min(born_spread_factor(k,j)+caps(ibin),1d0+mid))
-             born_spread_factor(k,j)=trial
+             trial=max(born_spread_factor(k,j,isector), &
+                  min(born_spread_factor(k,j,isector)+caps(ibin),1d0+mid))
+             born_spread_factor(k,j,isector)=trial
           enddo
           remaining=0d0
        endif
@@ -445,16 +477,16 @@ contains
        j=(ibin-1)/born_spread_nxi+1
        k=ibin-(j-1)*born_spread_nxi
        weighted_norm=weighted_norm+bin_area(ibin)* &
-            born_spread_factor(k,j)
+            born_spread_factor(k,j,isector)
     enddo
     if (weighted_norm.le.0d0.or.abs(weighted_norm-1d0).gt.1d-7) then
        write(*,*) 'ERROR: born-spreading optimizer produced invalid ', &
             'normalization',weighted_norm
        stop 1
     endif
-    born_spread_factor=born_spread_factor/weighted_norm
+    born_spread_factor(:,:,isector)=born_spread_factor(:,:,isector)/weighted_norm
     deallocate(seg_bin,seg_slope,seg_length)
-  end subroutine solve_born_spreading_table
+  end subroutine solve_born_spreading_sector
 
   double precision function born_spread_bin_area(ibin)
     implicit none
@@ -490,7 +522,7 @@ contains
        ix=ibin-(iy-1)*born_spread_nxi
        expected=0d0
        if (ix.le.born_spread_nxi/2) expected=2d0
-       if (abs(born_spread_factor(ix,iy)-expected).gt.1d-10) then
+       if (abs(born_spread_factor(ix,iy,1)-expected).gt.1d-10) then
           write(*,*) 'ERROR: born-spreading optimizer self-test failed'
           stop 1
        endif
@@ -632,12 +664,19 @@ contains
     born_spread_ready=.false.
     born_spread_calibrating=.false.
     born_spread_phase=0
+    if (allocated(born_spread_factor)) deallocate(born_spread_factor)
+    if (allocated(born_spread_deriv0)) deallocate(born_spread_deriv0)
+    if (nfks.lt.1) call born_spread_table_error('Invalid Born-spreading sector count')
+    allocate(born_spread_factor(born_spread_nxi,born_spread_ny,nfks))
+    allocate(born_spread_deriv0(born_spread_nbins,nfks))
     born_spread_factor=1d0
     born_spread_x=0d0
     born_spread_y=0d0
     born_spread_current_bin=1
+    born_spread_current_sector=1
     born_spread_nexternal=nexternal
     born_spread_bin_fold=1
+    born_spread_sector_fold=1
     born_spread_nincoming=nincoming
     born_spread_nfks=nfks
     born_spread_ndim=ndim_in
@@ -675,7 +714,7 @@ contains
     integer :: ix,iy
     iy=(born_spread_current_bin-1)/born_spread_nxi+1
     ix=born_spread_current_bin-(iy-1)*born_spread_nxi
-    born_spread_get_factor=born_spread_factor(ix,iy)
+    born_spread_get_factor=born_spread_factor(ix,iy,born_spread_current_sector)
   end function born_spread_get_factor
 
   subroutine born_spread_observe_sample(bvals,cvals,nvals,point_complete)
@@ -683,7 +722,7 @@ contains
     integer, intent(in) :: nvals
     double precision, intent(in) :: bvals(*),cvals(*)
     logical, intent(in), optional :: point_complete
-    integer :: j,ibin
+    integer :: j,ibin,isector
     double precision :: b,c,turn,base_neg,spread_neg,delta,old_mean
     if (born_spread_phase.eq.1) then
        if (.not.present(point_complete)) then
@@ -692,20 +731,21 @@ contains
           born_spread_training_count=born_spread_training_count+1
        endif
        ibin=born_spread_current_bin
+       isector=born_spread_current_sector
        do j=1,nvals
           b=bvals(j)
           c=cvals(j)
           if (.not.ieee_is_finite(b) .or. .not.ieee_is_finite(c)) cycle
           if (b.eq.0d0) cycle
           if (c.lt.0d0.or.(c.eq.0d0.and.b.lt.0d0)) &
-               born_spread_deriv0(ibin)=born_spread_deriv0(ibin)-b
+               born_spread_deriv0(ibin,isector)=born_spread_deriv0(ibin,isector)-b
           turn=-c/b
           if (.not.ieee_is_finite(turn)) cycle
           if (turn.eq.0d0.and.c.lt.0d0.and.b.gt.0d0) &
-               born_spread_deriv0(ibin)=born_spread_deriv0(ibin)+b
+               born_spread_deriv0(ibin,isector)=born_spread_deriv0(ibin,isector)+b
           if (turn.gt.0d0.and.turn.lt. &
                1d0/born_spread_bin_area(ibin)) &
-               call born_spread_append(ibin,turn,abs(b))
+               call born_spread_append((isector-1)*born_spread_nbins+ibin,turn,abs(b))
        enddo
     elseif (born_spread_phase.eq.2) then
        base_neg=0d0
@@ -786,7 +826,7 @@ contains
   subroutine born_spread_load_table
     implicit none
     integer :: ios,version,nxi,ny,nexternal,nincoming,nfks,ndim_in
-    integer :: i,j
+    integer :: i,j,isector
     character(len=32) :: tag
     integer, parameter :: lun=71
     open(unit=lun,file='born_spreading.dat',status='old',iostat=ios)
@@ -795,7 +835,7 @@ contains
     read(lun,*,iostat=ios) tag,version
     if (ios.ne.0) &
          call born_spread_table_error('Unsupported born_spreading.dat format')
-    if (trim(tag).ne.'BORN_SPREAD'.or.version.ne.2) &
+    if (trim(tag).ne.'BORN_SPREAD'.or.version.ne.3) &
          call born_spread_table_error('Unsupported born_spreading.dat format; rerun integration step 0')
     read(lun,*,iostat=ios) nxi,ny,nexternal,nincoming,nfks,ndim_in
     if (ios.ne.0) call born_spread_table_error('Corrupt born_spreading.dat signature')
@@ -811,52 +851,59 @@ contains
     read(lun,*,iostat=ios) born_spread_base_total, &
          born_spread_spread_total,born_spread_mean_delta,born_spread_m2_delta
     if (ios.ne.0) call born_spread_table_error('Corrupt born_spreading.dat statistics')
-    do j=1,born_spread_ny
-       read(lun,*,iostat=ios) (born_spread_factor(i,j),i=1,born_spread_nxi)
-       if (ios.ne.0) call born_spread_table_error('Corrupt born_spreading.dat table')
+    do isector=1,born_spread_nfks
+       do j=1,born_spread_ny
+          read(lun,*,iostat=ios) (born_spread_factor(i,j,isector),i=1,born_spread_nxi)
+          if (ios.ne.0) call born_spread_table_error('Corrupt born_spreading.dat table')
+       enddo
     enddo
     close(lun)
     if (any(.not.ieee_is_finite(born_spread_factor)).or. &
          any(born_spread_factor.lt.0d0)) &
          call born_spread_table_error('born_spreading.dat contains invalid factors')
-    if (abs(born_spread_normalization()-1d0).gt.1d-7) &
-         call born_spread_table_error('born_spreading.dat violates the normalization constraint')
+    do isector=1,born_spread_nfks
+       if (abs(born_spread_normalization(isector)-1d0).gt.1d-7) &
+            call born_spread_table_error('born_spreading.dat violates a sector normalization constraint')
+    enddo
     born_spread_ready=.true.
     born_spread_phase=3
     write(*,*) 'Loaded normalized born-spreading table from born_spreading.dat'
   end subroutine born_spread_load_table
 
-  double precision function born_spread_normalization()
+  double precision function born_spread_normalization(isector)
     implicit none
+    integer, intent(in) :: isector
     integer :: ix,iy,ibin
     born_spread_normalization=0d0
     do iy=1,born_spread_ny
        do ix=1,born_spread_nxi
           ibin=(iy-1)*born_spread_nxi+ix
           born_spread_normalization=born_spread_normalization+ &
-               born_spread_bin_area(ibin)*born_spread_factor(ix,iy)
+               born_spread_bin_area(ibin)*born_spread_factor(ix,iy,isector)
        enddo
     enddo
   end function born_spread_normalization
 
   subroutine born_spread_write_table
     implicit none
-    integer :: ios,i,j
+    integer :: ios,i,j,isector
     integer, parameter :: lun=72
     open(unit=lun,file='born_spreading.dat',status='replace',iostat=ios)
     if (ios.ne.0) then
        write(*,*) 'ERROR: cannot write born_spreading.dat'
        stop 1
     endif
-    write(lun,*) 'BORN_SPREAD',2
+    write(lun,*) 'BORN_SPREAD',3
     write(lun,*) born_spread_nxi,born_spread_ny,born_spread_nexternal, &
          born_spread_nincoming,born_spread_nfks,born_spread_ndim
     write(lun,*) born_spread_training_count,born_spread_validation_count
     write(lun,'(4(1x,es24.16))') born_spread_base_total, &
          born_spread_spread_total,born_spread_mean_delta,born_spread_m2_delta
-    do j=1,born_spread_ny
-       write(lun,'(40(1x,es24.16))') &
-            (born_spread_factor(i,j),i=1,born_spread_nxi)
+    do isector=1,born_spread_nfks
+       do j=1,born_spread_ny
+          write(lun,'(40(1x,es24.16))') &
+               (born_spread_factor(i,j,isector),i=1,born_spread_nxi)
+       enddo
     enddo
     close(lun)
   end subroutine born_spread_write_table

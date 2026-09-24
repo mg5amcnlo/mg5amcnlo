@@ -816,6 +816,7 @@ c "npNLO".
          call born_spread_set_point(x_local(ndim-2)**2,
      $        x_local(ndim-1)**2)
          born_spread_bin_fold(ifold_counter)=born_spread_current_bin
+         born_spread_sector_fold(ifold_counter)=1
          if (ifl.eq.0)
      &        call get_MC_integer(1,proc_map(0,0),proc_map(0,1),vol1)
 
@@ -832,6 +833,8 @@ c For sum=0, determine nFKSprocess so that the soft limit gives a non-zero Born
             nFKS_picked_nbody=nFKS_out
          endif
          call update_fks_dir(nFKS_picked_nbody)
+c Keep the Born sector even when later real-emission maps change nFKS.
+         born_spread_sector_fold(ifold_counter)=nFKS_picked_nbody
          if (ini_fin_fks.eq.0) then
             jac=1d0
          else

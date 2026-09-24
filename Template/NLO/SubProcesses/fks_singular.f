@@ -3631,7 +3631,9 @@ c include it here!
      $                          unwgt_B(j,ifold_sample)+
      $                          parton_iproc(jj,i)
                         endif
-                     else
+                     elseif (itype(i).ne.14) then
+c Residual virtual S events are unweighted separately. They are constant
+c in the spreading factor and must not cancel the fitted nonvirtual row.
                         if (collect_born_spread) then
                            ifold_sample=ifold_cnt(i)
                            unwgt_noB(j,ifold_sample)=
@@ -3682,12 +3684,14 @@ c Apply the fitted factor before PDF/scale variations and event grouping.
       use weight_lines
       use mint_module, only: born_spread_active,born_spread_ready,
      $     born_spread_get_factor,born_spread_current_bin,
-     $     born_spread_bin_fold
+     $     born_spread_bin_fold,born_spread_current_sector,
+     $     born_spread_sector_fold
       implicit none
       integer ifl,i
       double precision factor
       if (.not.born_spread_active.or..not.born_spread_ready) return
       born_spread_current_bin=born_spread_bin_fold(ifl)
+      born_spread_current_sector=born_spread_sector_fold(ifl)
       factor=born_spread_get_factor()
       do i=1,icontr
          if (.not.H_event(i).and.itype(i).eq.2.and.
@@ -3923,6 +3927,8 @@ c n1body_wgt is used for the importance sampling over FKS directories
          if (.not.found_s_sample) n_sproc=0
          do ifold_sample=1,nfolds
             born_spread_current_bin=born_spread_bin_fold(ifold_sample)
+            born_spread_current_sector=
+     $           born_spread_sector_fold(ifold_sample)
             call born_spread_observe_sample(
      $           unwgt_B(1:max(1,n_sproc),ifold_sample),
      $           unwgt_noB(1:max(1,n_sproc),ifold_sample),n_sproc,
