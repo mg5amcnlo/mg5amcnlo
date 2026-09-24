@@ -3499,50 +3499,27 @@ class Event(list):
         
     
     def get_helicity(self, get_order=None, allow_reversed=True):
-        """return a list with the helicities in the order asked for"""
+        """return a list with the helicities in the order asked for
+
+        The helicity at slot i has to belong to the particle whose momentum
+        get_momenta puts at slot i -- the reweighting looks the pair up
+        together -- so both take their slots from the same get_mapping.
+        """
         
         if get_order is None:
             init = [part.pid for part in self if part.status == -1]
             final = [part.pid for part in self if part.status == 1] 
             get_order = [init, final]
 
-        #avoid to modify the input
-        order = [list(get_order[0]), list(get_order[1])] 
-        out = [9] *(len(order[0])+len(order[1]))
-        for i, part in enumerate(self):
-            if part.status == 1: #final
-                try:
-                    ind = order[1].index(part.pid)
-                except ValueError as error:
-                    if not allow_reversed:
-                        raise error
-                    else:
-                        order = [[-i for i in get_order[0]],[-i for i in get_order[1]]]
-                        try:
-                            return self.get_helicity(order, False)
-                        except ValueError:
-                            raise error     
-                position = len(order[0]) + ind
-                order[1][ind] = 0   
-            elif part.status == -1:
-                try:
-                    ind = order[0].index(part.pid)
-                except ValueError as error:
-                    if not allow_reversed:
-                        raise error
-                    else:
-                        order = [[-i for i in get_order[0]],[-i for i in get_order[1]]]
-                        try:
-                            return self.get_helicity(order, False)
-                        except ValueError:
-                            raise error
-                 
-                position =  ind
-                order[0][ind] = 0
-            else: #intermediate
+        event_pos2order, _ = self.get_mapping(get_order, allow_reversed)
+        out = [9] * (len(get_order[0]) + len(get_order[1]))
+        curr_pos = -1
+        for part in self:
+            if abs(part.status) != 1: #intermediate
                 continue
-            out[position] = int(part.helicity)
-        return out  
+            curr_pos += 1
+            out[event_pos2order[curr_pos]] = int(part.helicity)
+        return out
 
     
     def check_color_structure(self):
@@ -3755,47 +3732,61 @@ class Event(list):
         
         return re.sub('[\n]+', '\n', out)
 
+    def get_mapping(self, get_order, allow_reversed=True):
+        """Which slot of the order asked for each particle of the event takes.
+
+        Returns two dictionaries: from the position among the event's external
+        (|status| == 1) particles to the slot in get_order (initial state
+        first), and back. The k-th particle of a pdg in the event takes the
+        k-th slot of that pdg. With allow_reversed, an event that only matches
+        the charge-conjugated order is mapped onto that one.
+
+        get_momenta, get_helicity and get_all_momenta all take their slots from
+        here, so they cannot disagree on which particle sits where. They used
+        to carry a copy of this walk each, and the copies had drifted:
+        get_momenta's charge-reversed retry went through get_momenta_str and
+        handed back a Fortran-formatted *string* instead of the momenta, and
+        get_all_momenta could not map a charge-reversed order at all.
+        """
+
+        #avoid to modify the input
+        order = [list(get_order[0]), list(get_order[1])]
+        out1 = {}
+        out2 = {}
+        curr_pos = -1
+        for part in self:
+            if abs(part.status) != 1: #intermediate
+                continue
+            curr_pos += 1
+            block = order[0] if part.status == -1 else order[1]
+            try:
+                ind = block.index(part.pid)
+            except ValueError as error:
+                if not allow_reversed:
+                    raise error
+                order = [[-i for i in get_order[0]], [-i for i in get_order[1]]]
+                try:
+                    return self.get_mapping(order, False)
+                except ValueError:
+                    raise error
+            position = ind if part.status == -1 else len(order[0]) + ind
+            # empty the slot, for the next identical particle
+            block[ind] = 0
+            out1[curr_pos] = position
+            out2[position] = curr_pos
+        return out1, out2
+
     def get_momenta(self, get_order, allow_reversed=True):
         """return the momenta vector in the order asked for"""
-        
-        #avoid to modify the input
-        order = [list(get_order[0]), list(get_order[1])] 
-        out = [''] *(len(order[0])+len(order[1]))
-        for i, part in enumerate(self):
-            if part.status == 1: #final
-                try:
-                    ind = order[1].index(part.pid)
-                except ValueError as error:
-                    if not allow_reversed:
-                        raise error
-                    else:
-                        order = [[-i for i in get_order[0]],[-i for i in get_order[1]]]
-                        try:
-                            return self.get_momenta_str(order, False)
-                        except ValueError:
-                            raise error     
-                position = len(order[0]) + ind
-                order[1][ind] = 0   
-            elif part.status == -1:
-                try:
-                    ind = order[0].index(part.pid)
-                except ValueError as error:
-                    if not allow_reversed:
-                        raise error
-                    else:
-                        order = [[-i for i in get_order[0]],[-i for i in get_order[1]]]
-                        try:
-                            return self.get_momenta_str(order, False)
-                        except ValueError:
-                            raise error
-                 
-                position =  ind
-                order[0][ind] = 0
-            else: #intermediate
-                continue
 
-            out[position] = (part.E, part.px, part.py, part.pz)
-            
+        event_pos2order, _ = self.get_mapping(get_order, allow_reversed)
+        out = [''] * (len(get_order[0]) + len(get_order[1]))
+        curr_pos = -1
+        for part in self:
+            if abs(part.status) != 1: #intermediate
+                continue
+            curr_pos += 1
+            out[event_pos2order[curr_pos]] = (part.E, part.px, part.py, part.pz)
         return out
 
 
@@ -3809,12 +3800,19 @@ class Event(list):
         p = self.get_momenta(get_order, allow_reversed)
 
         nbin = len(get_order[0])
-        final = get_order[1]
         data = {} # dict will be {pdg: {(m1,m2): [position1, position2]}} position are position in p
-        for i, part in enumerate(self):
-            pdg = part.pid
+        # each particle's slot in p is the one get_momenta put it in: take it
+        # from the same mapping (re-deriving it with final.index(pdg), as this
+        # did, failed on a charge-reversed order)
+        event_pos2order, _ = self.get_mapping(get_order, allow_reversed)
+        curr_pos = -1
+        for part in self:
+            if abs(part.status) != 1:
+                continue
+            curr_pos += 1
             if part.status != 1:
                 continue
+            pdg = part.pid
             try:
                 m1 = part.mother1.event_id
             except AttributeError:
@@ -3824,14 +3822,8 @@ class Event(list):
             except AttributeError:
                 m2 = 0
             M = (m1,m2)
-            if pdg in data:
-                max_prev = max(k+1  for N in data[pdg] for k in data[pdg][N] ) - nbin
-                if M in data[pdg]:
-                    data[pdg][M].append(nbin+final.index(pdg,max_prev))
-                else:
-                    data[pdg][M] = [nbin+final.index(pdg, max_prev)]
-            else:
-                data[pdg] = {M:[nbin+final.index(pdg)]}
+            data.setdefault(pdg, {}).setdefault(M, []).append(
+                                                    event_pos2order[curr_pos])
 
         # for unnittest 
         if debug_output == 1:
