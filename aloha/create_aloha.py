@@ -260,6 +260,12 @@ in presence of majorana particle/flow violation"""
             expr = self.lorentz_expr
         
         if need_P_sign:
+            # Write P(...)**2 as P(...)*P(...) first: the sign is added as a
+            # bare '-', which binds looser than '**', so -P(-1,id)**2 would be
+            # -(P^2) instead of (-P)^2 = P^2. That flipped the sign of p^2 in
+            # the $ veto (P1D) of every outgoing fermion propagator and
+            # switched the veto off.
+            expr = re.sub(r'\b(P|PSlash)\(([^()]*)\)\*\*2\b', r'\1(\2)*\1(\2)', expr)
             expr = re.sub(r'\b(P|PSlash)\(', r'-\1(', expr)
 
         calc = aloha_parsers.ALOHAExpressionParser()
