@@ -1106,7 +1106,7 @@ c Sum the contributions that can be summed before taking the ABS value
       logical cuts_born,cuts_real,passcuts,native_valid
       double precision fks_Sij
       external fks_Sij,passcuts
-      double precision born_weight
+      double precision born_weight,replay_tolerance
       external mc_outer_channel_weight
       integer nFKSprocess,i_fks,j_fks
       common/c_nFKSprocess/nFKSprocess
@@ -1237,8 +1237,15 @@ c Sum the contributions that can be summed before taking the ABS value
      $           pn,pn_lab,pn_cms)
             if (jac_native.le.0d0 .or. pn(0,1).le.0d0 .or.
      $           p_born(0,1).le.0d0)cycle
+! The inverse azimuth is ill conditioned when the two FKS daughters
+! are antipodal. Roundoff can then shift the replay by a few parts in
+! 10**6 even though both maps describe the same physical point.
+            replay_tolerance=1d-7
+            if (xx(ndim-1).gt.1d0-1d-10)
+     $           replay_tolerance=1d-5
             if (maxval(abs(pn_lab-p_flipped)).gt.
-     $           1d-7*max(1d0,maxval(abs(p_flipped))))cycle
+     $           replay_tolerance*max(1d0,
+     $           maxval(abs(p_flipped))))cycle
             native_valid=.true.
             exit
          enddo
