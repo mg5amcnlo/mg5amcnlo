@@ -7,7 +7,7 @@ program check_born_sectors
   integer :: iproc_save(3),eto(2,3),etoi(2,3),maxproc_found
   common/cproc_combination/iproc_save,eto,etoi,maxproc_found
   integer :: ix,iy,sector
-  double precision :: b(2),c(2),v(2),expected,mult
+  double precision :: b(2),c(2),v(2),avv(2),expected,mult
   character(len=16) :: arg
 
   call born_spread_configure(.true.,5,2,3,7)
@@ -21,11 +21,11 @@ program check_born_sectors
   imode=0
   only_virt=.false.
   call weight_lines_allocated(5,5,1,2)
-  icontr=3
+  icontr=4
   niproc=2
   H_event=.false.
   ifold_cnt=1
-  itype(1:3)=[2,3,14]
+  itype(1:4)=[2,3,14,15]
   iproc_save=2
   eto(1,:)=1
   eto(2,:)=2
@@ -45,9 +45,11 @@ program check_born_sectors
            c=0d0
            if ((ix.le.born_spread_nxi/2).eqv.(sector.eq.1)) c=-2d0*b
            v=mult*[100d0,-50d0]
+           avv=0.15d0*b
            parton_iproc(1:2,1)=b
-           parton_iproc(1:2,2)=c
+           parton_iproc(1:2,2)=c-avv
            parton_iproc(1:2,3)=v
+           parton_iproc(1:2,4)=avv
            call sum_identical_contributions
            if (any(unwgt_B(1:2,1).ne.b)) stop 1
            if (any(unwgt_noB(1:2,1).ne.c)) stop 2

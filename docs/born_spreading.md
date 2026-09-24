@@ -80,11 +80,13 @@ tail could attract a large artificial spike. Sectors without training
 information retain a unit table.
 
 Step 0 first adapts the ordinary MINT grid, then uses 800,000 MINT points to
-fit the factors and 200,000 separate points to validate them. Contributions
-from every fold retain their own radiation bin; the validation uncertainty is
-computed across each complete folded MINT point. For larger folding factors,
-fitting and validation use the unfolded negative mass as a proxy, while
-generation takes signs after folding. The tables are used only when
+fit the factors and 200,000 separate points to validate them. These extra
+points skip the exact one-loop residual virtual calculation. The Born-based
+average virtual remains in the nonvirtual S weights used by the fit.
+Contributions from every fold retain their own radiation bin; the validation
+uncertainty is computed across each complete folded MINT point. For larger
+folding factors, fitting and validation use the unfolded negative mass as a
+proxy, while generation takes signs after folding. The tables are used only when
 validation shows a reduction exceeding two estimated standard errors;
 otherwise they are set to unit tables. Later MINT steps load the versioned
 `born_spreading.dat` sidecar and check its process dimensions and every

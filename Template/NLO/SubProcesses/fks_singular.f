@@ -7021,8 +7021,11 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
       enddo
 
       if (fold.eq.0) then
-         if ((ran2().le.virtual_fraction(ichan) .and.
-     $        abrv(1:3).ne.'nov').or.abrv(1:4).eq.'virt') then
+         ! Training and validation keep the Born-based approximate
+         ! virtual below, but exclude the one-loop residual from the fit.
+         if (born_spread_phase.ne.1.and.born_spread_phase.ne.2) then
+          if ((ran2().le.virtual_fraction(ichan) .and.
+     $         abrv(1:3).ne.'nov').or.abrv(1:4).eq.'virt') then
             call cpu_time(tBefore)
             Call BinothLHA(p_born,born_wgt,virt_wgt)
             do iamp=1,amp_split_size
@@ -7054,6 +7057,7 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
             endif
             call cpu_time(tAfter)
             tOLP=tOLP+(tAfter-tBefore)
+          endif
          endif
          virt_wgt_save=virt_wgt
          amp_split_virt_save(1:amp_split_size)=
