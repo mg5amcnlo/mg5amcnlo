@@ -3392,6 +3392,9 @@ c Fills the function that is returned to the MINT integrator
       double precision f(nintegrals),sigint
       double precision virtual_over_born
       common /c_vob/   virtual_over_born
+      integer ifold_picked
+      double precision x_save(ndimmax,max_fold)
+      common /c_vegas_x_fold/x_save,ifold_picked
       sigint=0d0
       do i=1,icontr
          sigint=sigint+wgts(1,i)
@@ -3648,15 +3651,43 @@ c include it here!
       end
 
 
+      subroutine set_born_spread_point(xxi,xy,ifl)
+c Use coordinates uniform in the Born radiation measure. For a massive
+c final-state emitter only the first solution, 0 < xxi < rat_xi, carries
+c a Born term. Its prefactor contains 2*xxi/rat_xi**2, not 2*xxi.
+c Save this bin before the real-emission maps overwrite the FKS commons.
+      use mint_module, only: born_spread_active,born_spread_set_point,
+     $     born_spread_current_bin,born_spread_bin_fold
+      implicit none
+      include 'nexternal.inc'
+      double precision xxi,xy,xi_range
+      integer ifl,i_fks,j_fks
+      common /fks_indices/i_fks,j_fks
+      double precision pmass(nexternal)
+      common /to_mass/pmass
+      double precision xinorm_ev,xiimax_ev
+      common /cxinormev/xinorm_ev
+      common /cxiimaxev/xiimax_ev
+      if (.not.born_spread_active) return
+      xi_range=1d0
+      if (j_fks.gt.nincoming.and.pmass(j_fks).gt.0d0)
+     $     xi_range=xiimax_ev/xinorm_ev
+      call born_spread_set_point((xxi/xi_range)**2,xy**2)
+      born_spread_bin_fold(ifl)=born_spread_current_bin
+      end
+
+
       subroutine apply_born_spread_weight(ifl)
 c Apply the fitted factor before PDF/scale variations and event grouping.
       use weight_lines
       use mint_module, only: born_spread_active,born_spread_ready,
-     $     born_spread_get_factor
+     $     born_spread_get_factor,born_spread_current_bin,
+     $     born_spread_bin_fold
       implicit none
       integer ifl,i
       double precision factor
       if (.not.born_spread_active.or..not.born_spread_ready) return
+      born_spread_current_bin=born_spread_bin_fold(ifl)
       factor=born_spread_get_factor()
       do i=1,icontr
          if (.not.H_event(i).and.itype(i).eq.2.and.
@@ -3816,9 +3847,6 @@ c on the imode we should or should not include the virtual corrections.
      $     ,n1body_wgt,tmp_wgt,max_weight
       double precision virtual_over_born
       common /c_vob/   virtual_over_born
-      integer ifold_picked
-      double precision x_save(ndimmax,max_fold)
-      common /c_vegas_x_fold/x_save,ifold_picked
       sigint=0d0
       sigint1=0d0
       sigint_ABS=0d0
@@ -3894,9 +3922,7 @@ c n1body_wgt is used for the importance sampling over FKS directories
          nfolds=product(ifold(1:ndim))
          if (.not.found_s_sample) n_sproc=0
          do ifold_sample=1,nfolds
-            call born_spread_set_point(
-     $           x_save(ndim-2,ifold_sample)**2,
-     $           x_save(ndim-1,ifold_sample)**2)
+            born_spread_current_bin=born_spread_bin_fold(ifold_sample)
             call born_spread_observe_sample(
      $           unwgt_B(1:max(1,n_sproc),ifold_sample),
      $           unwgt_noB(1:max(1,n_sproc),ifold_sample),n_sproc,

@@ -815,6 +815,7 @@ c "npNLO".
          enddo
          call born_spread_set_point(x_local(ndim-2)**2,
      $        x_local(ndim-1)**2)
+         born_spread_bin_fold(ifold_counter)=born_spread_current_bin
          if (ifl.eq.0)
      &        call get_MC_integer(1,proc_map(0,0),proc_map(0,1),vol1)
 
@@ -849,6 +850,8 @@ c 1/proc_map(0,0)*vol1)
             
          if (passcuts_nbody) then
             pass_cuts_check=.true.
+            call set_born_spread_point(x_local(ndim-2),
+     $           x_local(ndim-1),ifold_counter)
             call set_alphaS(p1_cnt(0,1,0))
             call include_multichannel_enhance(1)
             if (abrv.eq.'born') then

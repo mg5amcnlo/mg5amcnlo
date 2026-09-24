@@ -104,6 +104,7 @@ module mint_module
   logical, public :: born_spread_active=.false.,born_spread_ready=.false.
   logical, private :: born_spread_calibrating=.false.
   integer, public :: born_spread_phase=0,born_spread_current_bin=1
+  integer, public :: born_spread_bin_fold(max_fold)=1
   integer, private :: born_spread_nexternal=0,born_spread_nincoming=0
   integer, private :: born_spread_nfks=0,born_spread_ndim=0
   integer, private :: born_spread_restart_ncalls=0
@@ -458,15 +459,9 @@ contains
   double precision function born_spread_bin_area(ibin)
     implicit none
     integer, intent(in) :: ibin
-    integer :: ix,iy
-    double precision :: xlow,xhigh,ylow,yhigh
-    iy=(ibin-1)/born_spread_nxi+1
-    ix=ibin-(iy-1)*born_spread_nxi
-    xlow=sqrt(dble(ix-1)/born_spread_nxi)
-    xhigh=sqrt(dble(ix)/born_spread_nxi)
-    ylow=sqrt(dble(iy-1)/born_spread_ny)
-    yhigh=sqrt(dble(iy)/born_spread_ny)
-    born_spread_bin_area=(xhigh-xlow)*(yhigh-ylow)
+    ! The Born prefactor contains the radiation Jacobians. The table
+    ! coordinates are uniform in that measure, not in the raw MINT x's.
+    born_spread_bin_area=1d0/born_spread_nbins
   end function born_spread_bin_area
 
   subroutine born_spread_solver_self_test
@@ -482,7 +477,7 @@ contains
        ix=mod(ibin-1,born_spread_nxi)+1
        bval(1)=area
        cval(1)=-2d0*area
-       if (ix.gt.born_spread_nxi/4) then
+       if (ix.gt.born_spread_nxi/2) then
           bval(1)=-area
           cval(1)=-area
        endif
@@ -494,7 +489,7 @@ contains
        iy=(ibin-1)/born_spread_nxi+1
        ix=ibin-(iy-1)*born_spread_nxi
        expected=0d0
-       if (ix.le.born_spread_nxi/4) expected=2d0
+       if (ix.le.born_spread_nxi/2) expected=2d0
        if (abs(born_spread_factor(ix,iy)-expected).gt.1d-10) then
           write(*,*) 'ERROR: born-spreading optimizer self-test failed'
           stop 1
@@ -642,6 +637,7 @@ contains
     born_spread_y=0d0
     born_spread_current_bin=1
     born_spread_nexternal=nexternal
+    born_spread_bin_fold=1
     born_spread_nincoming=nincoming
     born_spread_nfks=nfks
     born_spread_ndim=ndim_in
@@ -799,8 +795,8 @@ contains
     read(lun,*,iostat=ios) tag,version
     if (ios.ne.0) &
          call born_spread_table_error('Unsupported born_spreading.dat format')
-    if (trim(tag).ne.'BORN_SPREAD'.or.version.ne.1) &
-         call born_spread_table_error('Unsupported born_spreading.dat format')
+    if (trim(tag).ne.'BORN_SPREAD'.or.version.ne.2) &
+         call born_spread_table_error('Unsupported born_spreading.dat format; rerun integration step 0')
     read(lun,*,iostat=ios) nxi,ny,nexternal,nincoming,nfks,ndim_in
     if (ios.ne.0) call born_spread_table_error('Corrupt born_spreading.dat signature')
     if (nxi.ne.born_spread_nxi.or.ny.ne.born_spread_ny.or. &
@@ -852,7 +848,7 @@ contains
        write(*,*) 'ERROR: cannot write born_spreading.dat'
        stop 1
     endif
-    write(lun,*) 'BORN_SPREAD',1
+    write(lun,*) 'BORN_SPREAD',2
     write(lun,*) born_spread_nxi,born_spread_ny,born_spread_nexternal, &
          born_spread_nincoming,born_spread_nfks,born_spread_ndim
     write(lun,*) born_spread_training_count,born_spread_validation_count
