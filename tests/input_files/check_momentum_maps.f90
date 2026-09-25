@@ -33,6 +33,11 @@ program check_momentum_maps
   nincoming_mod=2
   softtest=.false.
   colltest=.false.
+  if (mode.eq.'native_projection') then
+     call check_native_projection()
+     write(*,*) 'PASS native_projection'
+     stop
+  endif
   if (mode.eq.'soft_direction') then
      ! Finite real legs cannot borrow the cached direction of another
      ! history, including when the soft leg is the sister rather than i.
@@ -299,7 +304,7 @@ program check_momentum_maps
   if (mode.eq.'born_threshold') then
      ! Native single-top histories can project onto a Born configuration
      ! with a soft massless spectator. The expanded Kallen polynomial
-     ! rounded to zero here, so inversion rejected physical t values.
+     ! rounded to zero here, excluding physical t values.
      mass=173d0
      do i=-7,1
         momentum=10d0**i
@@ -310,8 +315,8 @@ program check_momentum_maps
              momentum*0.3d0,momentum*0.4d0,momentum*sqrt(0.75d0)]
         born(:,4)=[momentum,-born(1:3,3)]
         jac=1d0
-        call gentcms_inverse(born(:,1),born(:,2),transfer,phi,mass,0d0, &
-             born(:,3),remainder,jac)
+        transfer=(born(0,1)-born(0,3))**2-sum((born(1:3,1)-born(1:3,3))**2)
+        phi=atan2(born(2,3),born(1,3))
         call yminmax((2d0*energy)**2,transfer,mass**2,0d0,0d0,0d0,tmin,tmax)
         if (tmin.ge.tmax.or.transfer.lt.tmin.or.transfer.gt.tmax) &
              error stop 'physical Born momentum outside t-channel bounds'

@@ -1060,7 +1060,7 @@ c Sum the contributions that can be summed before taking the ABS value
 ! The outer event colour is only the event owner, not an inner proposal.
 ! Thus the colour-sampled summand is
 ! P_b,c*(p_b,c*S_b*R-M_b,c)/q_b,c, with M_b,c already flow-weighted.
-      use mc_native_context, only: native_metadata,set_native_history,
+      use mc_native_context, only: set_native_history,
      $     native_mapping
       use weight_lines, only: icontr,H_event,wgt,event_nFKS,momenta,
      $     momenta_m,y_bst,need_match,mc_H_only
@@ -1077,11 +1077,11 @@ c Sum the contributions that can be summed before taking the ABS value
       include 'mc_histories.inc'
       integer first_native,last_native,first_alt,owner,iFKS,ii,jj,ihist,
      $     ict,flow_save,called_save,owner_match(nexternal),
-     $     outer_config,native_config
+     $     outer_config
       double precision x_outer(99),p(0:3,nexternal),
      $     p_lab(0:3,nexternal),p_cms(0:3,nexternal),jacPS,vegas_wgt,
      $     sampling_wgt,born_flow_factor,outer_measure,native_measure,
-     $     sector_weight,factor,xx(99),jac_native,xbjrk_born(2),
+     $     sector_weight,factor,jac_native,
      $     p_flipped(0:3,nexternal),pn(0:3,nexternal),
      $     pn_lab(0:3,nexternal),pn_cms(0:3,nexternal),probne_native,
      $     flow_factor_native,rwgt,outer_boost,gfun_save(3),
@@ -1089,6 +1089,10 @@ c Sum the contributions that can be summed before taking the ABS value
       double precision nbody_scales_save(nexternal-1,nexternal-1,3),
      $     n1body_scales_save(nexternal,nexternal),
      $     emsca_save(fks_configs,ndelH,ndelH)
+      double precision fks_mom_info(3),granny_boost(3),
+     $     fks_mom_save(3),granny_boost_save(3)
+      common/cgenps_fks/fks_mom_info
+      common/virtgranny_boost/granny_boost
       logical cuts_born,cuts_real,passcuts,native_valid
       double precision fks_Sij
       external fks_Sij,passcuts
@@ -1179,6 +1183,10 @@ c Sum the contributions that can be summed before taking the ABS value
       nbody_scales_save(:,:,3)=shower_scale_nbody_max
       n1body_scales_save=shower_scale_n1body
       emsca_save=emsca_H(:,ifold_counter,:,:)
+! ISR does not write these FSR-only COMMONs during the outer replay.
+! Preserve them explicitly so history order cannot leak into the owner.
+      fks_mom_save=fks_mom_info
+      granny_boost_save=granny_boost
       mc_H_only=.true.
       native_mapping=.true.
 
@@ -1204,33 +1212,13 @@ c Sum the contributions that can be summed before taking the ABS value
          endif
          call apply_momentum_permutation(MC_HIST_PERM(:,ihist),
      $        p_lab,p_flipped)
-! Select the first native mapping with an invertible physical point.
-! The outer channel index has no meaning in a different Born topology.
-         native_valid=.false.
-         do native_config=1,native_metadata%configurations(0)
-            iconfig=native_config
-            xx=0d0
-            jac_native=1d0
-            call generate_lab_momenta_inverse(ndim,iconfig,
-     $           jac_native,xx,p_flipped,xbjrk_born)
-            if(jac_native.le.0d0)cycle
-
-! Inversion alone does not fill the native FKS counterevents. Replay
-! the forward map to obtain those points AND their limit measures.
-            calculatedBorn=.false.
-            jac_native=1d0
-            call generate_momenta(ndim,iconfig,jac_native,xx,
-     $           pn,pn_lab,pn_cms)
-            if (jac_native.le.0d0 .or. pn(0,1).le.0d0 .or.
-     $           p_born(0,1).le.0d0)cycle
-            if (maxval(abs(pn_lab-p_flipped)).gt.
-     $           1d-7*max(1d0,maxval(abs(p_flipped))))cycle
-            native_valid=.true.
-            exit
-         enddo
+! Only the radiation projection and counter/real measure ratios are
+! needed here. The common Born sampling factor cancels from the H density.
+         calculatedBorn=.false.
+         call generate_native_momenta(p_flipped,pn,pn_lab,pn_cms,
+     $        jac_native,native_valid)
          if (.not.native_valid) then
-            write (*,*) 'No native MC H mapping passes inversion',
-     $           ' and forward momentum checks',
+            write (*,*) 'Invalid native MC H radiation projection',
      $           owner,iFKS,ii,jj
             stop 1
          endif
@@ -1317,6 +1305,8 @@ c Sum the contributions that can be summed before taking the ABS value
          write (*,*) 'Could not restore outer FKS point after MC H sum'
          stop 1
       endif
+      fks_mom_info=fks_mom_save
+      granny_boost=granny_boost_save
       born_flow_picked=flow_save
       call init_process_module_n1body_wrapper(born_flow_picked)
       shower_scale_nbody=nbody_scales_save(:,:,1)

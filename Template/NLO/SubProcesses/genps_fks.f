@@ -2148,8 +2148,7 @@ c local
      &     ,cosphi_mother_fks,sinphi_mother_fks,recoil(0:3),sumrec
      &     ,sumrec2,betabst,gammabst,shybst,chybst,chybstmo,xdir(3)
      &     ,veckn,veckbarn,xp_mother(0:3),cosphi_i_fks
-     &     ,sinphi_i_fks,xiimax_save
-      save xiimax_save
+     &     ,sinphi_i_fks
       double complex resAoR0
       common /virtgranny_boost/shybst,chybst,chybstmo
 c external
@@ -2426,7 +2425,7 @@ c common blocks
 c local
       integer i,j
       double precision xmj,xmj2,xmjhat,xmhat,xim,cffA2,cffB2,cffC2
-     $     ,cffDEL2,xiBm,ximax,xirplus,xirminus,rat_xi,xjactmp,xitmp1
+     $     ,cffDEL2,xiBm,ximax,xirplus,xirminus,rat_xi,xitmp1
      $     ,E_i_fks,x3len_i_fks,b2m4ac,x3len_j_fks_num,x3len_j_fks_den
      $     ,x3len_j_fks,x3len_fks_mother,costh_i_fks,sinth_i_fks
      $     ,xpifksred(0:3),recoil(0:3),xp_mother(0:3),sumrec,expybst
@@ -2437,7 +2436,6 @@ c local
       double precision native_u,native_uborn,native_eborn,native_ej,
      $     native_denom,native_radial,native_ps,native_sign,
      $     native_delta,native_onepy
-      save xjactmp
       common /virtgranny_boost/shybst,chybst,chybstmo
 c external
       double precision rho
@@ -4623,395 +4621,160 @@ C dressed lepton stuff
 
 
 
-      subroutine generate_lab_momenta_inverse(ndim,iconfig,wgt,x,p
-     $     ,xbjrk_born)
-      ! Momenta to invert should be in the lab frame !
-      implicit none
-      include 'genps.inc'
-      include 'nexternal.inc'
-      include 'nFKSconfigs.inc'
-      integer ndim,iconfig
-      double precision wgt,x(99),p(0:3,nexternal),xbjrk_born(2)
-      double precision pmass(-nexternal:0,lmaxconfigs,0:fks_configs)
-      double precision pwidth(-nexternal:0,lmaxconfigs,0:fks_configs)
-      integer iforest(2,-max_branch:-1,lmaxconfigs,0:fks_configs)
-      integer sprop(-max_branch:-1,lmaxconfigs,0:fks_configs)
-      integer tprid(-max_branch:-1,lmaxconfigs,0:fks_configs)
-      integer mapconfig(0:lmaxconfigs,0:fks_configs)
-      common /c_configurations/pmass,pwidth,iforest,sprop,tprid
-     $     ,mapconfig
-      integer itree(2,-max_branch:-1),iconf
-      common /to_itree/itree,iconf
-      double precision p1_cnt(0:3,nexternal,-2:2)
-      double precision wgt_cnt(-2:2)
-      double precision pswgt_cnt(-2:2)
-      double precision jac_cnt(-2:2)
-      common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
-      integer i,iconfig0,this_config
-      common/ciconfig0/iconfig0
-      common/to_mconfigs/this_config
-      double precision qmass(-nexternal:0),qwidth(-nexternal:0),jac
-      iconfig0=iconfig
-      this_config=iconfig
-      iconf=iconfig
-      itree=iforest(:,:,iconfig,0)
-      do i=-nexternal,0
-         qmass(i)=pmass(i,iconfig,0)
-         qwidth(i)=pwidth(i,iconfig,0)
-      enddo
-      call generate_momenta_conf_wrapper_inverse(ndim,jac,x,itree,qmass
-     $     ,qwidth,p,xbjrk_born)
-      wgt=wgt*jac
-      end
-
-      subroutine generate_momenta_conf_wrapper_inverse(ndim,jac,x,itree
-     $     ,qmass,qwidth,p,xbjrk_born)
-      implicit none
-      include 'genps.inc'
-      include 'nexternal.inc'
-      integer ndim,itree(2,-max_branch:-1)
-      double precision jac,x(99),p(0:3,nexternal),qmass(-nexternal:0)
-     $     ,qwidth(-nexternal:0),xbjrk_born(2)
-      logical granny_is_res
-      integer igranny,iaunt
-      logical granny_chain(-nexternal:nexternal)
-     &     ,granny_chain_real_final(-nexternal:nexternal)
-      common /c_granny_res/igranny,iaunt,granny_is_res,granny_chain
-     &     ,granny_chain_real_final
-      logical only_event_phsp,skip_event_phsp
-      common /c_skip_only_event_phsp/only_event_phsp,skip_event_phsp
-      logical input_granny_m2
-      integer i
-      double precision granny_m2_red(-1:1),rat_xi
-      do i=-1,1
-         granny_m2_red(i)=-99d99
-      enddo
-      rat_xi=-99d99
-      call set_tau_min()
-      if (granny_is_res) then
-         write (*,*) 'Phase-space inversion not available for '/
-     $        /'granny_is_res equal to true.'
-         stop 1
-      else
-         skip_event_phsp=.false.
-         only_event_phsp =.false.
-         input_granny_m2=.false.
-         call generate_momenta_conf_inverse(input_granny_m2,ndim,jac,x
-     $        ,granny_m2_red,rat_xi,itree,qmass,qwidth,p,xbjrk_born)
-      endif
-      end
-      
-      subroutine generate_momenta_conf_inverse(input_granny_m2,ndim,jac
-     $     ,x,granny_m2_red,rat_xi,itree,qmass,qwidth,p,xbjrk_born)
-      use mc_native_context, only: native_epoch
-      implicit none
-      integer,save::epoch_save=-1
-      include 'genps.inc'
-      include 'nexternal.inc'
-      include 'run.inc'
-      logical input_granny_m2
-      integer ndim,itree(2,-max_branch:-1)
-      double precision jac,x(99),p(0:3,nexternal),qmass(-nexternal:0)
-     $     ,qwidth(-nexternal:0),granny_m2_red(-1:1),rat_xi
-     $     ,xbjrk_born(2)
-      double precision pmass(nexternal)
-      common /to_mass/pmass
-      integer i_fks,j_fks
-      common/fks_indices/i_fks,j_fks
-      integer iconfig0
-      common/ciconfig0/iconfig0
-      logical firsttime
-      integer itree_c(2,-max_branch:-1)
-      integer ns_channel, nt_channel, ionebody, nbranch
-      logical one_body
-      common/born_trees/itree_c,ns_channel,nt_channel,ionebody,nbranch,one_body
-      data firsttime/.true./
-      logical pass,use_evpr
-      double precision m(-max_branch:max_particles),stot,totmassin
-     $     ,totmass,fksmass,tau_born,ycm_born,ycmhat,xjac0,xpswgt0
-     $     ,shat_born,sqrtshat_born,pb(0:3,-max_branch:nexternal-1)
-     $     ,s(-max_branch:max_particles),shat,sqrtshat
-      double precision sumdot,dot
-      external sumdot,dot
-      integer i,iconfigsave
-      double precision p_born(0:3,nexternal-1)
-      common /pborn/   p_born
-      save iconfigsave
-      save m,stot,totmassin,totmass,fksmass
-      pass=.true.
-      do i=1,nexternal-1
-         if (i.lt.i_fks) then
-            m(i)=pmass(i)
-         else
-            m(i)=pmass(i+1)
-         endif
-      enddo
-      if(firsttime.or.iconfig0.ne.iconfigsave.or.
-     $     epoch_save.ne.native_epoch)then
-         if (nincoming.eq.2) then
-            stot = 4d0*ebeam(1)*ebeam(2)
-         else
-            stot=pmass(1)**2
-         endif
-         totmassin=0d0
-         do i=1,nincoming
-            totmassin=totmassin+m(i)
-         enddo
-         totmass=0d0
-         do i=nincoming+1,nexternal-1
-            totmass=totmass+m(i)
-         enddo
-         fksmass=totmass
-         if (stot .lt. max(totmass,totmassin)**2) then
-            write (*,*) 'Fatal error #0 in one_tree:'/
-     &           /'insufficient collider energy'
-            stop
-         endif
-         firsttime=.false.
-         iconfigsave=iconfig0
-         epoch_save=native_epoch
-      endif                     ! firsttime
-      call fill_genmom_born_commons(itree,m)
-      xjac0=1d0
-      xpswgt0=1d0
-      
-!     given real-momenta, return Born momenta and x's and jac corresponding to xi,y,phi
-
-      call generate_FKS_kinematics_inverse(x,ndim,xjac0,xpswgt0,
-     $     stot,tau_born,ycm_born,xbjrk_born,p,pb)
-      if (xjac0.lt.0d0) goto 222
-
-! given Born momenta, return x's and jac corresponding to tau_born and y_born.
-      call generate_tau_y_wrapper_inverse(j_fks,qmass,qwidth,totmass,stot,pb(0,1)
-     $     ,x(ndim-4:ndim-3),tau_born,ycm_born,ycmhat,xjac0)
-
-      if (xjac0.lt.0d0) goto 222
-      if(.not.one_body)then
-         shat_born=tau_born*stot
-         sqrtshat_born=sqrt(shat_born)
-      else
-         shat_born=totmass**2
-         sqrtshat_born=totmass
-      endif
-      if ((lpp(1).eq.1.and.lpp(2).eq.1).or.
-     $     (lpp(1).eq.0.and.lpp(2).eq.0)) then
-         use_evpr = .true.
-      else if ((abs(lpp(1)).eq.3.and.abs(lpp(2)).eq.3).or.
-     $        (abs(lpp(1)).eq.4.and.abs(lpp(2)).eq.4)) then
-         use_evpr = use_evpr.or.j_fks.gt.nincoming 
-      endif
-      if (.not. use_evpr) then
-         write (*,*) 'Inverse phase-space only available'/
-     $        /' with event projection'
-         stop 1
-      endif
-
-
-      call fill_intermediate_momenta_inverse(ns_channel,nt_channel
-     $     ,nbranch,pb,itree,m,s)
-      
-! given Born momenta, return all other x's and jac
-      call generate_momenta_born_inverse(x,shat_born,sqrtshat_born
-     $     ,totmass,m,s,qmass,qwidth,xpswgt0,xjac0,pb)
-      if(.not.pass.or.xjac0.lt.0d0)goto 222
-
-
-      ! fill the pborn common block:
-      p_born(0:3,1:nexternal-1)=pb(0:3,1:nexternal-1)
-      
-      shat=sumdot(p(0,1),p(0,2),1d0)
-      sqrtshat=sqrt(shat)
-      call compute_flux(shat,sqrtshat,m(1),m(2),xpswgt0,xjac0)
-      jac=xjac0
-      return
- 222  continue
-c$$$      write (*,*) 'WARNING in inverse phase-space:'/
-c$$$     $     /' point could not be inverted'
-c$$$      write (*,*) pass,xjac0
-      jac=-222
-      return
-      end
-
-      subroutine generate_tau_y_wrapper_inverse(j_fks,qmass,qwidth
-     $     ,totmass,stot,pb,rndx,tau_born,ycm_born,ycmhat,xjac)
-      implicit none
-      include 'nexternal.inc'
-      include 'genps.inc'
-      include 'run.inc'
-      double precision qmass(-nexternal:0),qwidth(-nexternal:0),totmass
-     $     ,stot,rndx(2),tau_born,ycm_born,ycmhat,xjac,pb(0:3,nexternal
-     $     -1)
-      integer itree_c(2,-max_branch:-1),j_fks
-      integer ns_channel, nt_channel, ionebody, nbranch
-      logical one_body
-      common/born_trees/itree_c,ns_channel,nt_channel,ionebody,nbranch,one_body
-      integer cBW_level_max,cBW(-nexternal:-1),cBW_level(-nexternal:-1)
-      double precision cBW_mass(-1:1,-nexternal:-1),
-     &     cBW_width(-1:1,-nexternal:-1)
-      common/c_conflictingBW/cBW_mass,cBW_width,cBW_level_max,cBW
-     $     ,cBW_level
-      integer ndim_dummy
-      logical softtest,colltest
-      common/sctests/softtest,colltest
-      ndim_dummy=1
-      if (abs(lpp(1)).ge.1 .and. abs(lpp(2)).ge.1 .and.
-     &     .not.(softtest.or.colltest)) then
-         if (abs(lpp(1)).ne.4.and.abs(lpp(1)).ne.3) then ! this is for pp collision      if (abs(lpp(1)).eq.1 .and. abs(lpp(2)).eq.1) then
-            if (one_body) then
-c     tau is fixed by the mass of the final state particle
-               call compute_tau_one_body_inverse(totmass,stot,xjac)
-            else
-               if(nt_channel.eq.0 .and. qwidth(-ns_channel-1).ne.0.d0 .and.
-     $              cBW(-ns_channel-1).ne.2)then
-c     Generate tau according to a Breit-Wiger function
-                  call generate_tau_BW_inverse(stot,ndim_dummy,rndx(1)
-     $                 ,qmass(-ns_channel-1),qwidth(-ns_channel-1),cBW(
-     $                 -ns_channel-1),cBW_mass(-1, -ns_channel-1)
-     $                 ,cBW_width(-1,-ns_channel-1),tau_born,xjac)
-               else 
-c     not a Breit Wigner
-                  call generate_tau_inverse(stot,ndim_dummy,rndx(1)
-     $                 ,tau_born,xjac)
-               endif
-            endif
-            call generate_y_inverse(tau_born,rndx(2),ycm_born,ycmhat,xjac)
-         else
-            write (*,*) 'Inverse phase-space not '/
-     $           /'implemented for e+e- with PDF'
-         endif
-c     Generate the rapditity of the Born system (tau and ycm input)
-      else
-         call compute_tau_y_epem_inverse(j_fks,one_body,totmass,pb,stot,
-     &        tau_born)
-      endif
-      end
-
-      subroutine compute_tau_y_epem_inverse(j_fks,one_body,fksmass,pb
-     $     ,stot,tau)
-      implicit none
-      include 'nexternal.inc'
-      integer j_fks
-      logical one_body
-      double precision fksmass,stot,tau,ycm,ycmhat,pb(0:3,nexternal-1),dot
-      if (j_fks.le.nincoming) then
-         if(one_body)then
-            tau=fksmass**2/stot
-         else
-            tau=2d0*dot(pb(0:3,1),pb(0:3,2))/stot
-         endif
-      else
-c     For e+e- collisions, set tau to one and y to zero
-         tau=1.d0
-      endif
-      end
-      
-      subroutine generate_tau_inverse(stot,idim,x,tau,jac)
+      subroutine generate_native_momenta(p_input,p,p_lab,p_cms,
+     $     jac,pass)
+! Project a fixed real point onto its native Born and invert ONLY the
+! three radiation coordinates. The Born sampling measure is common to
+! the real and counterevents and cancels in repartition_MC_H. Generate
+! their radiation/flux measures with a unit Born measure instead.
+      use, intrinsic :: ieee_arithmetic, only: ieee_is_finite
+      use kinematics_module, only: boost_n1_to_its_cms,boost_n1_to_lab
       use mc_native_context, only: native_mapping
       implicit none
-      integer idim
-      double precision x,tau,jac,smin,smax,s_mass,s,tiny,dum,dum3(-1:1)
-     $     ,stot
-      parameter (tiny=1d-8)
-      double precision tau_Born_lower_bound,tau_lower_bound_resonance
-     $     ,tau_lower_bound
-      common/ctau_lower_bound/tau_Born_lower_bound
-     $     ,tau_lower_bound_resonance,tau_lower_bound
-! A flat auxiliary map is finite also when the physical threshold is zero.
-      if(native_mapping)then
-         x=tau
-         return
+      include 'genps.inc'
+      include 'nexternal.inc'
+      include 'run.inc'
+      double precision p_input(0:3,nexternal),p(0:3,nexternal),
+     $     p_lab(0:3,nexternal),p_cms(0:3,nexternal),jac
+      logical pass
+      double precision pmass(nexternal)
+      common/to_mass/pmass
+      integer i_fks,j_fks
+      common/fks_indices/i_fks,j_fks
+      double precision p_born(0:3,nexternal-1),
+     $     p_born_l(0:3,nexternal-1),p_born_ev(0:3,nexternal-1)
+      common/pborn/p_born
+      common/pborn_l/p_born_l
+      common/pborn_ev/p_born_ev
+      double precision bounds(3),omx_ee(2)
+      common/ctau_lower_bound/bounds
+      common/to_ee_omx1/omx_ee
+      logical nbody,only_event_phsp,skip_event_phsp,use_evpr
+      common/cnbody/nbody
+      common/c_skip_only_event_phsp/only_event_phsp,skip_event_phsp
+      common/to_use_evpr/use_evpr
+      double precision kn,knbar,kn0
+      common/cgenps_fks/kn,knbar,kn0
+      integer this_config
+      common/to_mconfigs/this_config
+      double precision p1_cnt(0:3,nexternal,-2:2),wgt_cnt(-2:2),
+     $     pswgt_cnt(-2:2),jac_cnt(-2:2)
+      common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
+      double precision x(99),pb(0:3,-max_branch:nexternal-1),
+     $     m(-max_branch:max_particles),m_born(nexternal-1),
+     $     stot,tau_born,ycm_born,xbjrk_born(2),shat_born,
+     $     sqrtshat_born,ycmhat,xjac0,xpswgt0,dummy,
+     $     bounds_save(3),omx_save(2)
+      logical nbody_save,only_save,skip_save
+      integer i
+
+      pass=.false.
+      jac=-1d0
+      p=0d0
+      p(0,1)=-1d0
+      p_lab=p
+      p_cms=p
+! Dressed lepton beams require their separate endpoint parametrisation.
+! This path has the same two-beam event-projection scope as the old one.
+      if (.not.native_mapping.or.nincoming.ne.2.or.
+     $     any(abs(lpp).gt.2)) then
+         write(*,*) 'Unsupported beams/map in generate_native_momenta'
+         stop 1
       endif
-      smin=tau_born_lower_bound*stot
-      smax=stot
-      s_mass=tau_lower_bound_resonance*stot
-      s=tau*stot
-      if (s_mass.gt.smin*(1d0+tiny)) then
-         call trans_x_inverse(2,idim,x,smin,smax,s_mass,dum,dum
-     $        ,dum3,dum3,jac,s)
-      elseif(abs(s_mass-smin).lt.tiny*smin) then
-         call trans_x_inverse(7,idim,x,smin,smax,s_mass,dum,dum
-     $        ,dum3,dum3,jac,s)
-      else
-         write (*,*) 'ERROR #39 in genps_fks.f',s_mass,smin,smax
-         jac=-1d0
-      endif
-      jac=jac/stot
-      return
+      if (.not.all(ieee_is_finite(p_input)).or.
+     $     any(p_input(0,1:2).le.0d0))return
+      stot=4d0*ebeam(1)*ebeam(2)
+      do i=1,nexternal-1
+         if(i.lt.i_fks)then
+            m_born(i)=pmass(i)
+         else
+            m_born(i)=pmass(i+1)
+         endif
+      enddo
+! These are inputs to the radiation maps, not persistent native outputs.
+! In particular a stale lepton endpoint must not change an ISR history.
+      bounds_save=bounds
+      omx_save=omx_ee
+      nbody_save=nbody
+      only_save=only_event_phsp
+      skip_save=skip_event_phsp
+      bounds=sum(m_born(nincoming+1:nexternal-1))**2/stot
+      omx_ee=0d0
+      nbody=.false.
+      only_event_phsp=.false.
+      skip_event_phsp=.false.
+      x=0d0
+      pb=0d0
+      xjac0=1d0
+      xpswgt0=1d0
+      call invert_fks_radiation(x(1:3),xjac0,xpswgt0,stot,
+     $     tau_born,ycm_born,xbjrk_born,p_input,pb)
+      if (.not.ieee_is_finite(xjac0).or.xjac0.le.0d0.or.
+     $     .not.all(ieee_is_finite(x(1:3))))goto 900
+      if (.not.all(ieee_is_finite(pb(:,1:nexternal-1))).or.
+     $     any(pb(0,1:2).le.0d0).or.
+     $     .not.ieee_is_finite(tau_born).or.tau_born.le.0d0)
+     $     goto 900
+      p_born=pb(:,1:nexternal-1)
+      p_born_l=p_born
+      p_born_ev=p_born
+      shat_born=tau_born*stot
+      sqrtshat_born=sqrt(shat_born)
+      ycmhat=0d0
+      if(tau_born.lt.1d0)ycmhat=ycm_born/(-0.5d0*log(tau_born))
+! No Born topology is sampled. A valid native index is still needed by
+! clustering; the outer replay restores its integration-channel index.
+      this_config=1
+      use_evpr=.true.
+! Inactive counterevents must not retain another history's momenta.
+      kn=0d0
+      knbar=0d0
+      kn0=0d0
+      p1_cnt=0d0
+      p1_cnt(0,1,:)=-1d0
+      wgt_cnt=-1d99
+      pswgt_cnt=-1d99
+      jac_cnt=-1d0
+      xjac0=1d0
+      xpswgt0=1d0
+      m=0d0
+      call generate_FKS_kinematics(x,3,xjac0,xpswgt0,stot,
+     $     shat_born,sqrtshat_born,tau_born,ycm_born,ycmhat,
+     $     xbjrk_born,.false.,m,m_born,jac,p,pass)
+      pass=ieee_is_finite(jac).and.jac.gt.0d0.and.p(0,1).gt.0d0
+      if(.not.pass)goto 900
+      call boost_n1_to_its_cms(p,p_cms,dummy)
+      call boost_n1_to_lab(p,p_lab,-ycm_born)
+      pass=all(ieee_is_finite(p_lab)).and.
+     $     maxval(abs(p_lab-p_input)).le.
+     $     1d-7*max(1d0,maxval(abs(p_input)))
+ 900  continue
+      bounds=bounds_save
+      omx_ee=omx_save
+      nbody=nbody_save
+      only_event_phsp=only_save
+      skip_event_phsp=skip_save
+      if(.not.pass)jac=-1d0
       end
 
-
-      subroutine generate_y_inverse(tau,x,ycm,ycmhat,jac)
-      implicit none
-      double precision tau,x,ycm,jac
-      double precision ylim,ycmhat
-      ylim=-0.5d0*log(tau)
-      ycmhat=ycm/ylim
-      x=(ycmhat+1d0)/2d0
-      jac=jac*ylim*2
-      return
-      end
-
-      subroutine generate_tau_BW_inverse(stot,idim,x,mass,width,cBW
-     $     ,BWmass,BWwidth,tau,jac)
-      implicit none
-      integer cBW,idim
-      double precision stot,x,tau,jac,mass,width,BWmass(-1:1),BWwidth(
-     $     -1:1),s_mass,s
-      double precision smax,smin
-      double precision tau_Born_lower_bound,tau_lower_bound_resonance
-     &     ,tau_lower_bound
-      common/ctau_lower_bound/tau_Born_lower_bound
-     &     ,tau_lower_bound_resonance,tau_lower_bound
-      if (cBW.eq.1 .and. width.gt.0d0 .and. BWwidth(1).gt.0d0) then
-         smin=tau_Born_lower_bound*stot
-         smax=stot
-         s_mass=smin
-         s=tau*stot
-         call trans_x_inverse(5,idim,x,smin,smax,s_mass,mass,width
-     $        ,BWmass(-1),BWwidth(-1),jac,s)
-         jac=jac/stot
-      else
-         smin=tau_Born_lower_bound*stot
-         smax=stot
-         s_mass=smin
-         s=tau*stot
-         call trans_x_inverse(3,idim,x,smin,smax,s_mass,mass,width
-     $        ,BWmass(-1),BWwidth(-1),jac,s)
-         jac=jac/stot
-      endif
-      return
-      end
-
-      subroutine compute_tau_one_body_inverse(totmass,stot,jac)
-      implicit none
-      double precision totmass,stot,jac
-c     Jacobian due to delta() of tau_born
-      jac=jac*2*totmass/stot
-      return
-      end
-
-      
-      subroutine generate_FKS_kinematics_inverse(xx,ndim,xjac0,xpswgt0,
+      subroutine invert_fks_radiation(xx,xjac0,xpswgt0,
      $     stot,tau_born,ycm_born,xbjrk_born,p_lab,pb)
-      use kinematics_module
+! Input momenta are in the symmetric hadron frame used by generate_momenta.
+! No Born integration-channel coordinates or Jacobians are recovered.
+      use kinematics_module, only: boost_n1_to_its_cms,
+     $     get_xi_from_p,get_yij_from_p,get_phi_from_p
       implicit none
       include 'genps.inc'
       include 'nexternal.inc'
-      include "run.inc"
-      double precision xjac0,xpswgt0,xx(99),p_cms(0:3,nexternal),stot
+      double precision xjac0,xpswgt0,xx(3),p_cms(0:3,nexternal),stot
      $     ,tau_born,ycm_born,xbjrk_born(2),pb(0:3,
      $     -max_branch:nexternal-1),p_lab(0:3,nexternal)
-      integer ndim
-      logical input_granny_m2,pass
       integer i_fks,j_fks
       common/fks_indices/i_fks,j_fks
       double precision pmass(nexternal)
       common /to_mass/pmass
-      integer ixEi,ixyij,ixpi,imother
-      integer i
       double precision m_j_fks,xi_i_fks,y_ij_fks,phi_i_fks,xbjrk(2),shat
-     $     ,sqrtshat,tau,ycm,x1,x2,chy_bst,shy_bst,chy_bstmo,y_lab_to_cms
-      imother=min(j_fks,i_fks)
+     $     ,sqrtshat,tau,ycm,y_lab_to_cms
       m_j_fks=pmass(j_fks)
 
       xbjrk(1:2)=p_lab(0,1:2)/(sqrt(stot)/2d0)
@@ -5022,7 +4785,6 @@ c     Jacobian due to delta() of tau_born
       y_ij_fks=get_yij_from_p(i_fks,j_fks,p_cms)
       phi_i_fks=get_phi_from_p(i_fks,j_fks,p_cms)
       
-      call set_cms_stuff(-100)
       ycm=log(xbjrk(1)/xbjrk(2))/2d0
       tau=xbjrk(1)*xbjrk(2)
       shat=tau*stot
@@ -5030,11 +4792,11 @@ c     Jacobian due to delta() of tau_born
       if (j_fks.gt.nincoming) then
          if (m_j_fks.eq.0d0) then
             call generate_momenta_massless_final_inverse(p_cms,xi_i_fks
-     $           ,y_ij_fks,phi_i_fks,pb,xx(ndim-2:ndim),xjac0,xpswgt0
+     $           ,y_ij_fks,phi_i_fks,pb,xx,xjac0,xpswgt0
      $           ,shat,sqrtshat,i_fks,j_fks)
          else
             call generate_momenta_massive_final_inverse(p_cms,xi_i_fks
-     $           ,y_ij_fks,phi_i_fks,pb,xx(ndim-2:ndim),xjac0,xpswgt0
+     $           ,y_ij_fks,phi_i_fks,pb,xx,xjac0,xpswgt0
      $           ,shat,sqrtshat,i_fks,j_fks,m_j_fks)
          endif
          tau_born=tau
@@ -5042,7 +4804,7 @@ c     Jacobian due to delta() of tau_born
          xbjrk_born(1:2)=xbjrk(1:2)
       else
          call generate_momenta_initial_inverse(p_lab,xi_i_fks,y_ij_fks
-     $        ,phi_i_fks,pb,xx(ndim-2:ndim),xjac0,xpswgt0,shat,sqrtshat
+     $        ,phi_i_fks,pb,xx,xjac0,xpswgt0,shat,sqrtshat
      $        ,i_fks,j_fks,stot,tau,ycm,xbjrk,tau_born,ycm_born
      $        ,xbjrk_born,y_lab_to_cms)
       endif
@@ -5645,555 +5407,3 @@ c Collinear limit of <ij>/[ij]. See innerpin.m.
      &     phi_mother_fks,cosphi_mother_fks,sinphi_mother_fks)
       xij_aor=-exp( 2*ximag*(phi_mother_fks+phi_i_fks) )
       end
-      
-      
-      subroutine generate_momenta_born_inverse(x,shat_born,sqrtshat_born
-     $     ,totmass,m,s,qmass,qwidth,xpswgt0,xjac0,pb)
-      implicit none
-      include 'nexternal.inc'
-      include 'genps.inc'
-      double precision x(99),shat_born,sqrtshat_born,totmass,m(
-     $     -max_branch:max_particles),qmass(-nexternal:0),qwidth(
-     $     -nexternal:0),xpswgt0, xjac0,s(-max_branch:max_particles)
-      integer itree(2,-max_branch:-1)
-      integer ns_channel, nt_channel, ionebody, nbranch
-      logical one_body
-      common/born_trees/itree,ns_channel,nt_channel,ionebody,nbranch
-     $     ,one_body
-      integer cBW_level_max,cBW(-nexternal:-1),cBW_level(-nexternal:-1)
-      double precision cBW_mass(-1:1,-nexternal:-1),
-     &     cBW_width(-1:1,-nexternal:-1)
-      common/c_conflictingBW/cBW_mass,cBW_width,cBW_level_max,cBW
-     $     ,cBW_level
-      logical pass
-      double precision pb(0:3,-max_branch:nexternal-1)
-      pass = .true.
-      call generate_inv_mass_sch_inverse(ns_channel,itree,m
-     $     ,sqrtshat_born,totmass,qwidth,qmass,cBW,cBW_mass,cBW_width,s
-     $     ,x,xjac0,pb,pass)
-      if (.not.pass) then
-         xjac0=-139
-         return
-      endif
-      if (nt_channel.ne.0) then
-         call generate_t_channel_branchings_inverse(ns_channel,nbranch
-     $        ,itree,m,s,x,pb,xjac0,xpswgt0,pass)
-         if (.not.pass) then
-            xjac0=-140
-            return
-         endif
-      endif
-      call fill_born_momenta_inverse(nbranch,nt_channel,one_body
-     $     ,ionebody,x,itree,m,s,pb,xjac0,xpswgt0,pass)
-      if (.not.pass) then
-         xjac0=-141
-         return
-      endif
-      end
-
-      subroutine fill_intermediate_momenta_inverse(ns_channel,nt_channel
-     $     ,nbranch,pb,itree,m,s)
-      implicit none
-      include 'nexternal.inc'
-      include 'genps.inc'
-      double precision pb(0:3,-max_branch:nexternal-1),m(
-     $     -max_branch:max_particles),s(-max_branch:max_particles)
-      integer itree(2,-max_branch:-1),ns_channel,nbranch,nt_channel
-      integer i
-      double precision dot
-      external dot
-      pb(0:3,-nbranch)=pb(0:3,1)+pb(0:3,2)
-      s(-nbranch)=dot(pb(0,-nbranch),pb(0,-nbranch))
-      m(-nbranch)=sqrt(s(-nbranch))
-      if (nt_channel.eq.0d0) then
-         pb(0:3,-nbranch+1)=pb(0:3,-nbranch)
-         s(-nbranch+1)=s(-nbranch)
-         m(-nbranch+1)=m(-nbranch)
-      endif
-      do i=-1,-ns_channel,-1
-         pb(0:3,i)=pb(0:3,itree(1,i))+pb(0:3,itree(2,i))
-         s(i)=dot(pb(0,i),pb(0,i))
-         m(i)=sqrt(s(i))
-      enddo
-      if (nt_channel.ne.0) then
-         do i=-ns_channel-1,-nbranch+1,-1
-            pb(0:3,i)=pb(0:3,itree(1,i))-pb(0:3,itree(2,i))
-            s(i)=dot(pb(0,i),pb(0,i))
-            m(i)=sqrt(abs(s(i)))
-         enddo
-      endif
-      end
-      
-      subroutine generate_inv_mass_sch_inverse(ns_channel,itree,m
-     $     ,sqrtshat_born,totmass,qwidth,qmass,cBW,cBW_mass,cBW_width,s
-     $     ,x,xjac0,pb,pass)
-      implicit none
-      include 'genps.inc'
-      include 'nexternal.inc'
-      double precision qmass(-nexternal:0),qwidth(-nexternal:0),m(
-     $     -max_branch:max_particles),x(99),s(-max_branch:max_particles)
-     $     ,sqrtshat_born,totmass,xjac0,cBW_mass(-1:1,-nexternal:-1)
-     $     ,cBW_width(-1:1, -nexternal:-1),pb(0:3,-max_branch:nexternal
-     $     -1)
-      integer ns_channel,itree(2,-max_branch:-1),cBW(-nexternal:-1)
-      logical pass
-      double precision s_mass(-nexternal:nexternal)
-      common/to_phase_space_s_channel/s_mass
-      integer i,j,ii,order(-nexternal:0)
-      double precision smin,smax,totalmass
-      pass=.true.
-      totalmass=totmass
-      do ii = -1,-ns_channel,-1
-c     Randomize the order with which to generate the s-channel masses:
-         ! since new_point will be false in this subroutine, it uses the
-         ! same as previous order.
-         call sChan_order(ns_channel,order)
-         i=order(ii)
-c     Generate invariant masses for all s-channel branchings of the Born
-         smin = (m(itree(1,i))+m(itree(2,i)))**2
-         smax = (sqrtshat_born-totalmass+sqrt(smin))**2
-         if(smax.lt.smin.or.smax.lt.0.d0.or.smin.lt.0.d0)then
-            write(*,*)'Error #13 in genps_fks.f (inverse)'
-            write(*,*)smin,smax,i
-            stop
-         endif
-         s(i) = pb(0,i)**2-pb(1,i)**2-pb(2,i)**2-pb(3,i)**2
-         if (s(i) .lt. smin) then
-            write (*,*) 'WARNING #32 in genps_fks.f (inverse)',i,s(i)
-     $           ,smin,smax,x(-i)
-            xjac0=-5
-            pass=.false.
-            return
-         endif
-         call generate_si_inverse(i,smin,smax,s,cBW,cBW_width,cBW_mass
-     $        ,qmass,qwidth,x,xjac0,s_mass)
-c     If numerical inaccuracy, quit loop
-         if (xjac0 .lt. 0d0) then
-            if ((xjac0.gt.-400d0 .or. xjac0.le.-500d0) .and.
-     $           xjac0.ne.0d0)then
-               write (*,*) 'WARNING #31 in genps_fks.f (inverse)',i,s(i)
-     $              ,smin,smax,xjac0
-            endif
-            xjac0 = -6
-            pass=.false.
-            return
-         endif
-c     
-c     fill masses, update totalmass
-c     
-         m(i) = sqrt(s(i))
-         totalmass=totalmass+m(i)-
-     &        m(itree(1,i))-m(itree(2,i))
-         if ( totalmass.gt.sqrtshat_born )then
-            write (*,*) 'WARNING #33 in genps_fks.f (inverse)',i
-     $           ,totalmass,sqrtshat_born,s(i)
-
-            
-            do j=1,nexternal-1
-               write (*,*) j,pb(0:3,j)
-            enddo
-            write (*,*) sum(pb(0:3,1:2),dim=2)
-            write (*,*) sum(pb(0:3,3:nexternal-1),dim=2)
-            stop 1
-            
-            
-            xjac0 = -4
-            pass=.false.
-            return
-         endif
-      enddo
-      return
-      end
-
-      subroutine generate_t_channel_branchings_inverse(ns_channel
-     $     ,nbranch,itree,m,s,x,pb,xjac0,xpswgt0,pass)
-      implicit none
-      real*8 pi,tiny
-      parameter (pi=3.1415926535897932d0,tiny=1d-8)
-      include 'genps.inc'
-      include 'nexternal.inc'
-      double precision xjac0,xpswgt0,m(-max_branch:max_particles),x(99)
-     $     ,s(-max_branch:max_particles),pb(0:3,-max_branch:nexternal-1)
-     $     ,pr(0:3)
-      integer itree(2,-max_branch:-1),ns_channel,nbranch,i
-      logical pass
-      double precision s_mass(-nexternal:nexternal)
-      common/to_phase_space_s_channel/s_mass
-      double precision totalmass,s_m,smin,smax,s1,dum,dum3(-1:1),ma2,mbq
-     $     ,m12,mnq,tmin,tmax,tm,t,phi
-      integer ibranch,idim
-      double precision lambda,dot
-      external lambda,dot
-      pass=.true.
-      totalmass=0d0
-      s_m=0d0
-      do ibranch = -ns_channel-1,-nbranch,-1
-         totalmass=totalmass+m(itree(2,ibranch))
-         s_m=s_m+sqrt(s_mass(itree(2,ibranch)))
-      enddo
-      m(-ns_channel-1) = dsqrt(s(-nbranch))
-      do ibranch = -ns_channel-1,-nbranch+2,-1
-         totalmass=totalmass-m(itree(2,ibranch))
-         smin = totalmass**2                    
-         smax = (m(ibranch) - m(itree(2,ibranch)))**2
-         if (smin .gt. smax) then
-            xjac0=-3d0
-            pass=.false.
-            return
-         endif
-         idim=(nbranch-1+(-ibranch)*2)
-         s_m=s_m-sqrt(s_mass(itree(2,ibranch)))
-         pr(0:3)=pb(0:3,itree(1,ibranch))+pb(0:3,2)-pb(0:3,itree(2
-     $        ,ibranch))
-         s1=dot(pr,pr)
-         if (abs(smin-s_m**2).lt.tiny) then
-            call trans_x_inverse(1,idim,x(idim),smin,smax,s_m**2,dum
-     $           ,dum,dum3(-1),dum3(-1),xjac0,s1)
-         else
-            call trans_x_inverse(1,idim,x(idim),smin,smax,s_m**2,dum
-     $           ,dum,dum3(-1),dum3(-1),xjac0,s1)
-         endif
-         if (xjac0.le.0d0) then
-            if ((xjac0.gt.-400d0 .or. xjac0.le.-500d0) .and.
-     $           xjac0.ne.0d0)then
-               write (*,*) 'WARNING #31a in genps_fks.f',ibranch,s1
-     $              ,smin,smax,s_m**2,xjac0
-            endif
-            xjac0 = -6
-            pass=.false.
-            return
-         endif
-         m(ibranch-1)=sqrt(s1)
-         if (m(ibranch-1)**2.lt.smin.or.m(ibranch-1)**2.gt.smax
-     &        .or.m(ibranch-1).ne.m(ibranch-1)) then
-            xjac0=-1d0
-            pass=.false.
-            return
-         endif
-      enddo
-      m(-nbranch) = m(itree(2,-nbranch))
-      do ibranch=-ns_channel-1,-nbranch+1,-1
-         s1  = m(ibranch)**2
-         ma2 = m(2)**2
-         mbq = dot(pb(0,itree(1,ibranch)),pb(0,itree(1,ibranch)))
-         m12 = m(itree(2,ibranch))**2
-         mnq = m(ibranch-1)**2
-         call yminmax(s1,t,m12,ma2,mbq,mnq,tmin,tmax)
-!     get t and phi from momenta
-         call gentcms_inverse(pb(0,itree(1,ibranch)),pb(0,2),t,phi,
-     &        m(itree(2,ibranch)),m(ibranch-1),pb(0,itree(2,ibranch)),
-     &        pb(0,ibranch),xjac0)
-c
-         if (t .lt. tmin .or. t .gt. tmax) then
-c$$$            write (*,*) "WARNING #35 in genps_fks.f (inverse)",t,tmin
-c$$$     $           ,tmax
-            xjac0=-3d0
-            pass=.false.
-            return
-         endif
-         tm=-t
-         call trans_x_inverse(1,-ibranch,x(-ibranch),-tmax,-tmin
-     $        ,s_mass(ibranch),dum,dum,dum3(-1),dum3(-1),xjac0,tm)
-
-         x(nbranch+(-ibranch-1)*2) = phi/(2d0*pi)
-         xjac0 = xjac0*2d0*pi
-
-         if (xjac0.le.0d0) then
-            if ((xjac0.gt.-400d0 .or. xjac0.le.-500d0) .and.
-     $           xjac0.ne.0d0)then
-               write (*,*) 'WARNING #31b in genps_fks.f (inverse)'
-     $              ,ibranch,tm,-tmax,-tmin,xjac0
-            endif
-            xjac0 = -6
-            pass=.false.
-            return
-         endif
-         xpswgt0 = xpswgt0/(4d0*dsqrt(lambda(s1,ma2,mbq)))
-      enddo
-      return
-      end
-      
-
-      subroutine gentcms_inverse(pa,pb,t,phi,m1,m2,p1,pr,jac)
-c*************************************************************************
-c     Generates 4 momentum for particle 1, and remainder pr
-c     given the values t, and phi
-c     Assuming incoming particles with momenta pa, pb
-c     And outgoing particles with mass m1,m2
-c     s = (pa+pb)^2  t=(pa-p1)^2
-c*************************************************************************
-      implicit none
-      double precision pi
-      parameter (pi=3.1415926535897932d0)
-c     Arguments
-c     
-      double precision t,phi,m1,m2 !inputs
-      double precision pa(0:3),pb(0:3),jac
-      double precision p1(0:3),pr(0:3) !outputs
-c     
-c     local
-c     
-      double precision ptot(0:3),E_acms,p_acms,pa_cms(0:3),p1b(0:3)
-     $     ,p1b_rot(0:3)
-      double precision esum,ed,pp,md2,ma2,pt,ptotm(0:3)
-      integer i
-c     
-c     External
-c     
-      double precision dot
-      external dot
-c-----
-c     Begin Code
-c-----
-      t=(pa(0)-p1(0))**2-(pa(1)-p1(1))**2-(pa(2)-p1(2))**2-(pa(3)-p1(3))
-     $     **2
-      do i=0,3
-         ptot(i)  = pa(i)+pb(i)
-         if (i .gt. 0) then
-            ptotm(i) = -ptot(i)
-         else
-            ptotm(i) = ptot(i)
-         endif
-      enddo
-      call boostx(pa,ptotm,pa_cms)
-      call boostx(p1,ptotm,p1b)
-      call rotxxx_inv(p1b,pa_cms,p1b_rot)
-      phi=atan2(p1b_rot(2),p1b_rot(1))
-      if (phi.lt.0d0) phi=phi+2*pi
-      end
-
-      subroutine rotxxx_inv(p,q,prot)
-! Same as rotxxx, but inverse. That is, first doing
-! rotxxx(p,q,prot) and then rotxxx_inv(prot,q,p) should give you
-! back the original p.
-      implicit none
-      real(kind=8),parameter :: vtiny=1d-12
-      real(kind=8),dimension(0:3),intent(in) :: p,q
-      real(kind=8),dimension(0:3),intent(out) :: prot
-      real(kind=8) :: qt2,qt,psgn,qq
-      prot(0) = p(0)
-      qt2 = q(1)**2 + q(2)**2
-      if ( qt2.lt.vtiny ) then
-         if ( q(3).eq.0d0 ) then
-            prot(1:3)=p(1:3)
-         else
-            psgn = sign(1d0,q(3))
-            prot(1:3)=p(1:3)*psgn
-         endif
-      else
-         qq = sqrt(qt2+q(3)**2)
-         qt = sqrt(qt2)
-         prot(1) = q(1)*q(3)/qq/qt*p(1) +q(2)*q(3)/qq/qt*p(2) -  qt/qq*p(3)
-         prot(2) =        -q(2)/qt*p(1) +        q(1)/qt*p(2)
-         prot(3) =   qt*q(1)/qq/qt*p(1) +        q(2)/qq*p(2) +q(3)/qq*p(3)
-      endif
-      end subroutine rotxxx_inv
-
-      subroutine fill_born_momenta_inverse(nbranch,nt_channel,one_body
-     $     ,ionebody,x,itree,m,s,pb,xjac0,xpswgt0,pass)
-      implicit none
-      real*8 pi,one,vtiny
-      parameter (pi=3.1415926535897932d0,one=1d0,vtiny=1d-12)
-      include 'genps.inc'
-      include 'nexternal.inc'
-      integer nbranch,nt_channel,ionebody,itree(2,-max_branch:-1)
-      double precision m(-max_branch:max_particles),x(99),s(
-     $     -max_branch:max_particles),pb(0:3,-max_branch:nexternal-1)
-     $     ,xjac0,xpswgt0
-      logical pass,one_body
-      double precision pboost(0:3),xa2,xb2,costh,phi,pb1(0:3),pb2(0:3)
-      integer i,ix
-      double precision lambda,dot
-      external lambda,dot
-      pass=.true.
-      do i = -nbranch+nt_channel+(nincoming-1),-1
-         ix = nbranch+(-i-1)*2+(2-nincoming)
-         if (nt_channel .eq. 0) ix=ix-1
-         pboost(0:3)=pb(0:3,i)
-         pboost(1:3)=-pboost(1:3)
-         call boostm(pb(0,itree(1,i)),pboost,m(i),pb1(0))
-         call boostm(pb(0,itree(2,i)),pboost,m(i),pb2(0))
-         call mom2cx_inverse(m(i),m(itree(1,i)),m(itree(2,i)),costh,phi,
-     &        pb1(0),pb2(0))
-         x(ix)=(costh+1d0)/2d0
-         x(ix+1)=phi/(2d0*pi)
-         xjac0 = xjac0 * 4d0*pi
-         xa2 = m(itree(1,i))*m(itree(1,i))/s(i)
-         xb2 = m(itree(2,i))*m(itree(2,i))/s(i)
-         if (m(itree(1,i))+m(itree(2,i)) .ge. m(i)) then
-            xjac0=-8
-            pass=.false.
-            return
-         endif
-         xpswgt0 = xpswgt0*.5D0*PI*SQRT(LAMBDA(ONE,XA2,XB2))/(4.D0*PI)
-         if (dsqrt(abs(dot(pb(0,i),pb(0,i))))/pb(0,i) 
-     &        .lt.vtiny) then
-            xjac0=-81
-            pass=.false.
-            return
-         endif
-      enddo
-      if (one_body) then
-         xpswgt0=xpswgt0*pi/m(ionebody)
-         xpswgt0=xpswgt0/(2*pi)
-      endif
-      return
-      end
-
-      subroutine mom2cx_inverse(esum,mass1,mass2,costh1,phi1 , p1,p2)
-      implicit none
-      double precision rZero, rHalf, rOne, rTwo, pi
-      parameter( rZero = 0.0d0, rHalf = 0.5d0, pi=3.1415926535897932d0,
-     $     rOne = 1.0d0, rTwo = 2.0d0 )
-      double precision p1(0:3),p2(0:3),
-     &     esum,mass1,mass2,costh1,phi1,md2,ed,pp,sinth1
-      md2 = (mass1-mass2)*(mass1+mass2)
-      ed = md2/esum
-      if ( mass1*mass2.eq.rZero ) then
-         pp = (esum-abs(ed))*rHalf
-      else
-         pp = sqrt((md2/esum)**2-rTwo*(mass1**2+mass2**2)+esum**2)*rHalf
-      endif
-      costh1=p1(3)/pp
-      phi1=atan2(p1(2),p1(1))
-      if (phi1.lt.0d0) phi1=phi1+2d0*pi
-      return
-      end
-
-
-      subroutine generate_si_inverse(i,smin,smax,s,cBW,cBW_width
-     $     ,cBW_mass,qmass,qwidth,x,xjac0,s_mass)
-      implicit none 
-      include 'genps.inc'
-      include 'nexternal.inc'
-      integer i
-      double precision smin,smax,s(-max_branch:max_particles),qwidth(
-     &     -nexternal:0),qmass(-nexternal:0),cBW_width(-1:1,-nexternal:
-     &     -1),cBW_mass(-1:1,-nexternal:-1),xjac0,x(99),s_mass(
-     &     -nexternal:nexternal)
-      integer cBW(-nexternal:-1)
-c Choose the appropriate s given our constraints smin,smax
-      if(qwidth(i).ne.0.d0 .and. cBW(i).ne.2)then
-c Breit Wigner
-         if (cBW(i).eq.1 .and.
-     &        cBW_width(1,i).gt.0d0 .and. cBW_width(-1,i).gt.0d0) then
-c     conflicting BW on both sides
-            call trans_x_inverse(6,-i,x(-i),smin,smax,s_mass(i),qmass(i)
-     &           ,qwidth(i),cBW_mass(-1,i),cBW_width(-1,i),xjac0,s(i))
-         elseif (cBW(i).eq.1.and.cBW_width(1,i).gt.0d0) then
-c     conflicting BW with alternative mass larger
-            call trans_x_inverse(5,-i,x(-i),smin,smax,s_mass(i),qmass(i)
-     &           ,qwidth(i),cBW_mass(-1,i),cBW_width(-1,i),xjac0,s(i))
-         elseif (cBW(i).eq.1.and.cBW_width(-1,i).gt.0d0) then
-c     conflicting BW with alternative mass smaller
-            call trans_x_inverse(4,-i,x(-i),smin,smax,s_mass(i),qmass(i)
-     &           ,qwidth(i),cBW_mass(-1,i),cBW_width(-1,i),xjac0,s(i))
-         else
-c     normal BW
-            call trans_x_inverse(3,-i,x(-i),smin,smax,s_mass(i),qmass(i)
-     &           ,qwidth(i),cBW_mass(-1,i),cBW_width(-1,i),xjac0,s(i))
-         endif
-      else
-c not a Breit Wigner
-         if (smin.eq.0d0 .and. s_mass(i).eq.0d0) then
-c     no lower limit on invariant mass from cuts or final state masses:
-c     use flat distribution
-            call trans_x_inverse(1,-i,x(-i),smin,smax,s_mass(i),qmass(i)
-     &           ,qwidth(i),cBW_mass(-1,i),cBW_width(-1,i),xjac0,s(i))
-         elseif (smin.ge.s_mass(i) .and. smin.gt.0d0) then
-c     A lower limit on smin, which is larger than lower limit from cuts
-c     or masses. Use 1/x importance sampling
-            call trans_x_inverse(7,-i,x(-i),smin,smax,s_mass(i),qmass(i)
-     &           ,qwidth(i),cBW_mass(-1,i),cBW_width(-1,i),xjac0,s(i))
-         elseif (smin.lt.s_mass(i) .and. s_mass(i).gt.0d0) then
-c     Use flat grid between smin and s_mass(i), and 1/x^nsamp above
-c     s_mass(i)
-            call trans_x_inverse(2,-i,x(-i),smin,smax,s_mass(i),qmass(i)
-     &           ,qwidth(i),cBW_mass(-1,i),cBW_width(-1,i),xjac0,s(i))
-         else
-            write (*,*) "ERROR in genps_fks.f:"/
-     $           /" cannot set s-channel without BW",i,smin,s_mass(i)
-            stop 1
-         endif
-      endif
-      return
-      end
-      
-      subroutine trans_x_inverse(itype,idim,x,smin,smax,s_mass,qmass
-     $     ,qwidth,cBW_mass,cBW_width,jac,s)
-      implicit none
-      integer itype,idim
-      double precision x,smin,smax,s_mass,qmass,qwidth,cBW_mass(-1:1)
-     $     ,cBW_width(-1:1),jac,s
-      double precision fract,A,B,C,bs(-1:1),maxi,mini
-c
-      if (itype.eq.1) then
-c     flat transformation:
-         A=smax-smin
-         B=smin
-c$$$         s=A*x+B
-         x=(s-B)/A
-         jac=jac*A
-      elseif (itype.eq.2) then
-         fract=0.25d0
-         if (s_mass.eq.0d0) then
-            write (*,*) 's_mass is zero',itype,idim
-         endif
-         if (s.lt.s_mass) then
-            maxi=min(s_mass,smax)
-c     flat transformation:
-            A=(maxi-smin)/fract
-            B=smin
-c$$$            s=A*x+B
-            x=(s-B)/A
-            if (x.lt.0d0 .or. x.gt.fract) then
-               jac=-421d0
-               return
-            endif
-            jac=jac*A
-         else
-c     S=A/(B-x) transformation:
-            mini=max(s_mass,smin)
-            A=mini*smax*(1d0-fract)/(smax-mini)
-            B=(smax-fract*mini)/(smax-mini)
-c$$$            s=A/(B-x)
-            x=B-A/s
-            if (x.gt.1d0 .or. x.lt.fract) then
-               jac=-422d0
-               return
-            endif
-            jac=jac*s**2/A
-         endif
-      elseif(itype.eq.3) then
-c     Normal Breit-Wigner, i.e.
-c        \int_smin^smax ds g(s)/((s-qmass^2)^2-qmass^2*qwidth^2) =
-c        \int_0^1 dx g(s(x))
-         A=atan((qmass-smin/qmass)/qwidth)
-         B=atan((qmass-smax/qmass)/qwidth)
-c$$$         s=qmass*(qmass-qwidth*tan(A-(A-B)*x))
-         x=(atan((qmass-s/qmass)/qwidth)-A)/(B-A)
-         jac=jac*qmass*qwidth*(A-B)/(cos(A-(A-B)*x))**2
-      elseif(itype.eq.4) then
-         write (*,*) 'itype 4 not implemented in inverse phase-space'
-         stop 1
-      elseif(itype.eq.5) then
-         write (*,*) 'itype 5 not implemented in inverse phase-space'
-         stop 1
-      elseif(itype.eq.6) then
-         write (*,*) 'itype 6 not implemented in inverse phase-space'
-         stop 1
-      elseif (itype.eq.7) then
-c     S=A/(B-x) transformation:
-         if (smin.le.0d0) then
-            jac=-471d0
-            return
-         endif
-         A=smin*smax/(smax-smin)
-         B=smax/(smax-smin)
-c$$$         s=A/(B-x)
-         x=B-A/s
-         jac=jac*s**2/A
-      endif
-      return
-      end
-      

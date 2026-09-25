@@ -324,7 +324,7 @@ def write_dispatchers(directory,outer,by_id,keys,sources):
             'common/c_nfksprocess/nfksprocess',
             'if(nfksprocess.lt.1.or.nfksprocess.gt.%d)stop "Invalid native real sector"' % len(keys),
             'r=p', 'if(shared_real_active.and.share_real_frame(nfksprocess))then',
-            # The checked inverse/forward replay supplies native counterevents;
+            # The checked radiation projection supplies native counterevents;
             # its roundoff must not define a different physical real point.
             # Summed real MEs are invariant under the native longitudinal boost.
             'r=shared_real_point', 'if(active_history.gt.0)then',
