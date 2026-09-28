@@ -71,12 +71,6 @@ c timing statistics
 c PineAPPL
       logical pineappl
       common /for_pineappl/ pineappl
-c stats for granny_is_res
-      double precision deravg,derstd,dermax,xi_i_fks_ev_der_max
-     &     ,y_ij_fks_ev_der_max
-      integer ntot_granny,derntot,ncase(0:6)
-      common /c_granny_counters/ deravg,derstd,dermax,xi_i_fks_ev_der_max
-     &     ,y_ij_fks_ev_der_max,ntot_granny,derntot,ncase
 
       logical useitmax
       common/cuseitmax/useitmax
@@ -111,11 +105,6 @@ c
 c
 c     Read process number
 c
-      ntot_granny=0
-      derntot=0
-      do i=0,6
-         ncase(i)=0
-      enddo
       ntot=0
       nsun=0
       nsps=0
@@ -262,18 +251,6 @@ c
          enddo
       endif
 
-      write (*,*) 'counters for the granny resonances'
-      write (*,*) 'ntot     ',ntot_granny
-      if (ntot_granny.gt.0) then
-         do i=0,6
-            write (*,*) '% icase ',i,' : ',ncase(i)/dble(ntot_granny)
-         enddo
-         write (*,*) 'average,std dev. and max of derivative:',deravg
-     &        ,sqrt(abs(derstd-deravg**2)),dermax
-         write (*,*)
-     &        'and xi_i_fks and y_ij_fks corresponding to max of der.',
-     &        xi_i_fks_ev_der_max,y_ij_fks_ev_der_max
-      endif
       call cpu_time(tAfter)
       tTot = tAfter-tBefore
       tOther = tTot - (tBorn+tGenPS+tReal+tCount+tIS+tFxFx+tf_nb+tf_all

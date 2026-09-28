@@ -235,8 +235,10 @@
       include 'nexternal.inc'
       include 'genps.inc'
       include 'born_conf.inc'
-      double precision p_born(0:3,nexternal-1),ans,total
-      common/pborn/p_born
+      double precision p_born_ev(0:3,nexternal-1),ans,total,
+     $     pas(0:3,nexternal),p_ev(0:3,nexternal)
+      common/pborn_ev/p_born_ev
+      common/pev/p_ev
       double precision amp2(ngraphs),jamp2(0:ncolor)
       common/to_amps/amp2,jamp2
       double precision diagramsymmetryfactor
@@ -246,13 +248,18 @@
       logical calculatedBorn
       common/ccalculatedBorn/calculatedBorn
       mc_outer_channel_weight=0d0
-      if(p_born(0,1).le.0d0)return
+      if(p_born_ev(0,1).le.0d0)return
+      pas=0d0
+      pas(:,1:nexternal-1)=p_born_ev
+      call set_alphas(pas)
       calculatedBorn=.false.
-      call sborn(p_born,ans)
+      call sborn(p_born_ev,ans)
       total=0d0
       do i=1,mapconfig(0)
          total=total+amp2(mapconfig(i))
       enddo
       if(total.gt.0d0)mc_outer_channel_weight=
      $     amp2(mapconfig(this_config))/total*diagramsymmetryfactor
+      call set_alphas(p_ev)
+      calculatedBorn=.false.
       end

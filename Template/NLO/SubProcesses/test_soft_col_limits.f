@@ -414,10 +414,15 @@ c over other histories is an integration operation, not a native limit test.
       common/ccalculatedBorn/calculatedBorn
       double precision pmass(nexternal)
       common/to_mass/pmass
+      double precision xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev(0:3),
+     $     p_i_fks_cnt(0:3,-2:2)
+      common/fksvariables/xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,
+     $     p_i_fks_cnt
       external fks_Hij,mc_born_flow_weight
 
-      xi=get_xi_from_p(i_fks,j_fks,p_cms)
-      y=get_yij_from_p(i_fks,j_fks,p_cms)
+c Use the coordinates of the active map, including the resonance frame.
+      xi=xi_i_fks_ev
+      y=y_ij_fks_ev
       call compute_prefactors_n1body(1d0,wgt)
       call set_cms_stuff(-100)
       hij=fks_Hij(p,i_fks,j_fks)

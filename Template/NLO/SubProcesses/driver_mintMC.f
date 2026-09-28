@@ -80,11 +80,6 @@ c general MadFKS parameters
       integer ifold_picked
       double precision x_save(ndimmax,max_fold)
       common /c_vegas_x_fold/x_save,ifold_picked
-      double precision deravg,derstd,dermax,xi_i_fks_ev_der_max
-     &     ,y_ij_fks_ev_der_max
-      integer ntot_granny,derntot,ncase(0:6)
-      common /c_granny_counters/ deravg,derstd,dermax,xi_i_fks_ev_der_max
-     &     ,y_ij_fks_ev_der_max,ntot_granny,derntot,ncase
       integer                     n_MC_subt_diverge
       common/counter_subt_diverge/n_MC_subt_diverge
       include 'leshouche_decl.inc'
@@ -114,11 +109,6 @@ c
       virtual_fraction(1)=virt_fraction
       n_ord_virt=amp_split_size
       n_MC_subt_diverge=0
-      ntot_granny=0
-      derntot=0
-      do i=0,6
-         ncase(i)=0
-      enddo
       
       ntot=0
       nsun=0
@@ -352,18 +342,6 @@ c Randomly pick the contribution that will be written in the event file
          enddo
       endif
 
-      write (*,*) 'counters for the granny resonances'
-      write (*,*) 'ntot     ',ntot_granny
-      if (ntot_granny.gt.0) then
-         do i=0,6
-            write (*,*) '% icase ',i,' : ',ncase(i)/dble(ntot_granny)
-         enddo
-         write (*,*) 'average,std dev. and max of derivative:',deravg
-     &        ,sqrt(abs(derstd-deravg**2)),dermax
-         write (*,*)
-     &        'and xi_i_fks and y_ij_fks corresponding to max of der.',
-     &        xi_i_fks_ev_der_max,y_ij_fks_ev_der_max
-      endif
       write (*,*) 'counter for the diverging MC subtraction',n_MC_subt_diverge
       call cpu_time(tAfter)
       tTot = tAfter-tBefore
@@ -1072,6 +1050,10 @@ c Sum the contributions that can be summed before taking the ABS value
       integer first_native,last_native,first_alt,owner,iFKS,ii,jj,ihist,
      $     ict,flow_save,called_save,owner_match(nexternal),
      $     outer_config
+      integer n_recoil_groups,recoil_group,
+     $     recoil_configs(lmaxconfigs),recoil_group_of(lmaxconfigs)
+      integer this_config
+      common /to_mconfigs/this_config
       double precision x_outer(99),p(0:3,nexternal),
      $     p_lab(0:3,nexternal),p_cms(0:3,nexternal),jacPS,vegas_wgt,
      $     sampling_wgt,born_flow_factor,outer_measure,native_measure,
@@ -1083,10 +1065,8 @@ c Sum the contributions that can be summed before taking the ABS value
       double precision nbody_scales_save(nexternal-1,nexternal-1,3),
      $     n1body_scales_save(nexternal,nexternal),
      $     emsca_save(fks_configs,ndelH,ndelH),hard_scale_save
-      double precision fks_mom_info(3),granny_boost(3),
-     $     fks_mom_save(3),granny_boost_save(3)
+      double precision fks_mom_info(3),fks_mom_save(3)
       common/cgenps_fks/fks_mom_info
-      common/virtgranny_boost/granny_boost
       logical cuts_born,cuts_real,passcuts,native_valid
       double precision fks_Sij
       external fks_Sij,passcuts
@@ -1181,7 +1161,6 @@ c Sum the contributions that can be summed before taking the ABS value
 ! ISR does not write these FSR-only COMMONs during the outer replay.
 ! Preserve them explicitly so history order cannot leak into the owner.
       fks_mom_save=fks_mom_info
-      granny_boost_save=granny_boost
       mc_H_only=.true.
       native_mapping=.true.
 
@@ -1207,81 +1186,94 @@ c Sum the contributions that can be summed before taking the ABS value
          endif
          call apply_momentum_permutation(MC_HIST_PERM(:,ihist),
      $        p_lab,p_flipped)
+! Sum the recoil histories as well as the FKS histories. A native FKS
+! sector may have both production and decay Born diagrams; its own
+! diagram partition supplies their weights at their Born projections.
+         call native_recoil_groups(n_recoil_groups,recoil_configs,
+     $        recoil_group_of)
+         do recoil_group=1,n_recoil_groups
+            iconfig=recoil_configs(recoil_group)
+            call select_native_recoil(iconfig)
 ! Only the radiation projection and counter/real measure ratios are
 ! needed here. The common Born sampling factor cancels from the H density.
-         calculatedBorn=.false.
-         call generate_native_momenta(p_flipped,pn,pn_lab,pn_cms,
-     $        jac_native,native_valid)
-         if (.not.native_valid) then
-            write (*,*) 'Invalid native MC H radiation projection',
-     $           owner,iFKS,ii,jj
-            stop 1
-         endif
-         native_measure=xinorm_ev*xi_i_fks_ev*jac_native*
-     $        fkssymmetryfactor
-         if (native_measure.le.0d0) then
-            write (*,*) 'Invalid native MC H measure',
-     $           owner,iFKS,ii,jj,native_measure
-            stop 1
-         endif
+            calculatedBorn=.false.
+            call generate_native_momenta(p_flipped,pn,pn_lab,pn_cms,
+     $           jac_native,native_valid)
+            this_config=iconfig
+            if (.not.native_valid) then
+               write (*,*) 'Invalid native MC H radiation projection',
+     $              owner,iFKS,ii,jj
+               stop 1
+            endif
+            native_measure=xinorm_ev*xi_i_fks_ev*jac_native*
+     $           fkssymmetryfactor
+            if (native_measure.le.0d0) then
+               write (*,*) 'Invalid native MC H measure',
+     $              owner,iFKS,ii,jj,native_measure
+               stop 1
+            endif
 
 ! Divide out the native real measure of the COMPLETE generated H weight
 ! and insert K_a. This is not an extra Jacobian on a raw MC density:
 ! its native K_b cancels exactly. The counter/real measure ratios inside
 ! the G replacement, however, must be retained. The inner orbit factor
 ! cancels too, since the labelled histories are explicitly enumerated.
-         factor=sector_weight*outer_measure/native_measure
-         MCcntcalled=0
-         call fill_kinematics_module(pn_cms,i_fks,j_fks,
-     $        xi_i_fks_ev,y_ij_fks_ev,pmass(j_fks),.false.)
-         call compute_prefactors_n1body(1d0,jac_native)
-         if (ickkw.eq.3) then
-            call set_FxFx_scale(0,pn)
+            factor=sector_weight*outer_measure/native_measure
+            MCcntcalled=0
+            call fill_kinematics_module(pn_cms,i_fks,j_fks,
+     $           xi_i_fks_ev,y_ij_fks_ev,pmass(j_fks),.false.)
+            call compute_prefactors_n1body(1d0,jac_native)
+            if(n_recoil_groups.gt.1)
+     $           call include_native_recoil_weights(recoil_group,
+     $           recoil_group_of)
+            if (ickkw.eq.3) then
+               call set_FxFx_scale(0,pn)
+               call set_cms_stuff(0)
+               call set_FxFx_scale(2,p1_cnt(0,1,0))
+               call set_cms_stuff(-100)
+               call set_FxFx_scale(3,pn)
+            endif
             call set_cms_stuff(0)
-            call set_FxFx_scale(2,p1_cnt(0,1,0))
-            call set_cms_stuff(-100)
-            call set_FxFx_scale(3,pn)
-         endif
-         call set_cms_stuff(0)
-         if (ickkw.eq.3) call set_FxFx_scale(-2,p1_cnt(0,1,0))
+            if (ickkw.eq.3) call set_FxFx_scale(-2,p1_cnt(0,1,0))
 ! Sample in this history's own Born basis. Reusing the outer label
 ! would require a flow map and support at a different Born point.
 ! q_b,c=p_b,c here; no additional outer 1/q_a,c belongs on this term.
-         call set_alphaS(p1_cnt(0,1,0))
-         calculatedBorn=.false.
-         call sborn_native(p_born,born_weight)
-         call get_born_flow(born_flow_picked,flow_factor_native)
-         calculatedBorn=.false.
-         call include_born_flow_weight(flow_factor_native,
-     $        flow_factor_native)
-         call init_process_module_n1body_wrapper(born_flow_picked)
-         call compute_shower_scale_nbody(p_born,-fksfather)
-         call compute_shower_scale_n1body(pn,i_fks,j_fks)
-         cuts_born=passcuts(p1_cnt(0,1,0),rwgt)
-         call set_cms_stuff(-100)
-         if (ickkw.eq.3) call set_FxFx_scale(-3,pn)
-         cuts_real=passcuts(pn,rwgt)
-         first_alt=icontr+1
-         call compute_native_NLOPS_weights(pn,pn_lab,pn_cms,
-     $        jac_native,cuts_born,cuts_real,probne_native)
-         do ict=first_alt,icontr
-            if (.not.H_event(ict)) then
-               write (*,*) 'S event entered the inner MC H sum',ihist
-               stop 1
-            endif
-            wgt(:,ict)=wgt(:,ict)*factor
+            call set_alphaS(p1_cnt(0,1,0))
+            calculatedBorn=.false.
+            call sborn_native(p_born,born_weight)
+            call get_born_flow(born_flow_picked,flow_factor_native)
+            calculatedBorn=.false.
+            call include_born_flow_weight(flow_factor_native,
+     $           flow_factor_native)
+            call init_process_module_n1body_wrapper(born_flow_picked)
+            call compute_shower_scale_nbody(p_born,-fksfather)
+            call compute_shower_scale_n1body(pn,i_fks,j_fks)
+            cuts_born=passcuts(p1_cnt(0,1,0),rwgt)
+            call set_cms_stuff(-100)
+            if (ickkw.eq.3) call set_FxFx_scale(-3,pn)
+            cuts_real=passcuts(pn,rwgt)
+            first_alt=icontr+1
+            call compute_native_NLOPS_weights(pn,pn_lab,pn_cms,
+     $           jac_native,cuts_born,cuts_real,probne_native)
+            do ict=first_alt,icontr
+               if (.not.H_event(ict)) then
+                  write (*,*) 'S event entered the inner MC H sum',ihist
+                  stop 1
+               endif
+               wgt(:,ict)=wgt(:,ict)*factor
 ! Keep BOTH native momentum sets for ME reweighting, expressed in the
 ! outer frame. Only event kinematics and shower ownership are outer.
-            event_nFKS(ict)=owner
-            call boost_n1_to_lab(momenta_m(:,:,1,ict),pn_cms,
-     $           y_bst(ict)-outer_boost)
-            momenta_m(:,:,1,ict)=pn_cms
-            call boost_n1_to_lab(momenta_m(:,:,2,ict),pn_cms,
-     $           y_bst(ict)-outer_boost)
-            momenta_m(:,:,2,ict)=pn_cms
-            momenta(:,:,ict)=p
-            y_bst(ict)=outer_boost
-            need_match(:,ict)=owner_match
+               event_nFKS(ict)=owner
+               call boost_n1_to_lab(momenta_m(:,:,1,ict),pn_cms,
+     $              y_bst(ict)-outer_boost)
+               momenta_m(:,:,1,ict)=pn_cms
+               call boost_n1_to_lab(momenta_m(:,:,2,ict),pn_cms,
+     $              y_bst(ict)-outer_boost)
+               momenta_m(:,:,2,ict)=pn_cms
+               momenta(:,:,ict)=p
+               y_bst(ict)=outer_boost
+               need_match(:,ict)=owner_match
+            enddo
          enddo
       enddo
 ! Replaying the saved OUTER random numbers restores all FKS event and
@@ -1301,7 +1293,6 @@ c Sum the contributions that can be summed before taking the ABS value
          stop 1
       endif
       fks_mom_info=fks_mom_save
-      granny_boost=granny_boost_save
       born_flow_picked=flow_save
       call init_process_module_n1body_wrapper(born_flow_picked)
       shower_scale_hard=hard_scale_save

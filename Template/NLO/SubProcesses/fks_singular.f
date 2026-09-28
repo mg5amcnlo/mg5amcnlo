@@ -1085,8 +1085,9 @@ c     respectively.
       sevmc_Sev = fks_Hij(p,i_fks,j_fks)
       if (sevmc_Hev.eq.0d0 .and. sevmc_Sev.eq.0d0) return
 
-      xi=get_xi_from_p(i_fks,j_fks,p_cms)
-      y=get_yij_from_p(i_fks,j_fks,p_cms)
+c Use the coordinates of the active map, including the resonance frame.
+      xi=xi_i_fks_ev
+      y=y_ij_fks_ev
 !     This history keeps its own G-functions and no-emission probability.
       include_gfun=.true.
       call compute_MCsubtraction_kl(i_fks,j_fks,xi,y,p
@@ -1518,10 +1519,11 @@ c bpower.
       use mint_module
       implicit none
       include 'nexternal.inc'
+      include 'resonance_recoil.inc'
       include 'run.inc'
       include 'genps.inc'
       include 'timing_variables.inc'
-      double precision pi,vegas_wgt
+      double precision pi,vegas_wgt,radiation_mass2
       integer i,j
       logical firsttime
       data firsttime /.true./
@@ -1579,7 +1581,9 @@ c Initialize hiostograms for fixed order runs
       endif
       call set_cms_stuff(0)
 c f_* multiplication factors for Born and nbody
-      f_b=jac_cnt(0)*xinorm_ev/(min(xiimax_ev,xiBSVcut_used)*shat/(16
+      radiation_mass2=shat
+      if(resonance_recoil)radiation_mass2=resonance_mass2
+      f_b=jac_cnt(0)*xinorm_ev/(min(xiimax_ev,xiBSVcut_used)*radiation_mass2/(16
      $     *pi**2))*fkssymmetryfactorBorn*vegas_wgt
       f_nb=f_b
       call cpu_time(tAfter)
@@ -1639,6 +1643,42 @@ c f_* multiplication factors for Born and nbody
       f_pdfsch_p=  f_pdfsch_p  *flow_weight
       f_pdfsch_l=  f_pdfsch_l  *flow_weight
       end
+
+      subroutine include_native_recoil_weights(group,group_of)
+c At fixed real momenta the real weights use one common projection;
+c MC and G counterterms use the Born of this recoil group. Both are
+c partitions of unity at their respective phase-space points.
+      implicit none
+      include 'genps.inc'
+      include 'nexternal.inc'
+      integer group,group_of(lmaxconfigs)
+      double precision native_recoil_weight,wb,wr,
+     $     p_born(0:3,nexternal-1),p_born_ev(0:3,nexternal-1)
+      common /pborn/p_born
+      common /pborn_ev/p_born_ev
+      external native_recoil_weight
+      double precision f_r,f_s,f_c,f_dc,f_sc,f_dsc(4)
+      common /factor_n1body/f_r,f_s,f_c,f_dc,f_sc,f_dsc
+      double precision f_s_MC_S,f_s_MC_H,f_c_MC_S,f_c_MC_H,
+     $     f_sc_MC_S,f_sc_MC_H,f_MC_S,f_MC_H
+      common /factor_n1body_NLOPS/f_s_MC_S,f_s_MC_H,f_c_MC_S,
+     $     f_c_MC_H,f_sc_MC_S,f_sc_MC_H,f_MC_S,f_MC_H
+      wb=native_recoil_weight(p_born,group,group_of)
+      wr=native_recoil_weight(p_born_ev,group,group_of)
+      f_r=f_r*wr
+      f_s=f_s*wb
+      f_c=f_c*wb
+      f_sc=f_sc*wb
+      f_MC_S=f_MC_S*wb
+      f_MC_H=f_MC_H*wb
+      f_s_MC_S=f_s_MC_S*wb
+      f_s_MC_H=f_s_MC_H*wb
+      f_c_MC_S=f_c_MC_S*wb
+      f_c_MC_H=f_c_MC_H*wb
+      f_sc_MC_S=f_sc_MC_S*wb
+      f_sc_MC_H=f_sc_MC_H*wb
+      end
+
 
       subroutine include_multichannel_enhance(imode)
       use weight_lines, only: mc_H_only
@@ -1708,7 +1748,17 @@ c f_* multiplication factors for Born and nbody
 c Compute the multi-channel enhancement factor 'enhance'.
       enhance=1.d0
       if (p_born(0,1).gt.0d0) then
+         if(imode.eq.4)then
+            pas=0d0
+            pas(:,1:nexternal-1)=p_born
+            call set_alphas(pas)
+            calculatedBorn=.false.
+         endif
          call sborn_native(p_born,wgt_c)
+         if(imode.eq.4)then
+            call set_alphas(p_ev)
+            calculatedBorn=.false.
+         endif
       elseif(p_born(0,1).lt.0d0)then
          enhance=0d0
       endif
@@ -1739,12 +1789,11 @@ c Compute the multi-channel enhancement factor 'enhance'.
          endif
       endif
 
-c In the case there is the special phase-space mapping for resonances,
-C or when not doing event projection
-c use the Born computed with those as the mapping.
+c All real charts use the same Born projection and coupling scale.
+c This also keeps the partition normalized for mixed Born orders.
       enhance_real=1.d0
-      if ((granny_is_res .or. .not.use_evpr).and. imode.eq.2) then
-         if (granny_is_res) p_born_used(:,:) = p_born_ev(:,:) 
+      if (imode.eq.2) then
+         p_born_used(:,:) = p_born_ev(:,:)
          if (.not.use_evpr) p_born_used(:,:) = p_born_norad(:,:) 
          if (p_born_ev(0,1).gt.0d0) then
             calculatedBorn=.false.
@@ -1831,6 +1880,7 @@ c Compute all relevant prefactors for the real emission and counter
 c terms.
       implicit none
       include 'nexternal.inc'
+      include 'resonance_recoil.inc'
       include 'run.inc'
       include 'genps.inc'
       include 'fks_powers.inc'
@@ -1840,6 +1890,9 @@ c terms.
      $     ,prefact_c,prefact_coll,jac_ev,pi,prefact_cnt_ssc_c
      $     ,prefact_coll_c,prefact_deg_slxi,prefact_deg_sxi,zero
       integer i
+      double precision soft_cut,coll_cut,angle_cut,soft_scale,
+     $     coll_scale,angular_scale,mismatch_log,total(0:3)
+      logical scale_pass
       parameter (pi=3.1415926535897932385d0, ZERO=0d0)
       double precision    p1_cnt(0:3,nexternal,-2:2),wgt_cnt(-2:2)
      $                    ,pswgt_cnt(-2:2),jac_cnt(-2:2)
@@ -1895,8 +1948,30 @@ c f_* multiplication factors for real-emission, soft counter, ... etc.
       f_MC_S=f_r
       f_MC_H=f_r
       if (.not.nocntevents) then
+         soft_cut=xicut_used
+         coll_cut=xicut_used
+         angle_cut=delta_used
+         if(resonance_recoil)then
+            total=sum(p1_cnt(:,1:nincoming,0),dim=2)
+            call resonance_subtraction_scales(total,resonance_momentum,
+     $           p1_cnt(:,j_fks,0),p_i_fks_cnt(:,0),soft_scale,
+     $           coll_scale,angular_scale,mismatch_log,scale_pass)
+            if(.not.scale_pass)then
+               write(*,*) 'Invalid resonance subtraction scales'
+               stop 1
+            endif
+c The local soft reference a_j*xicut gives the global integrated
+c collinear term when delta is divided by D_j^2. The finite mismatch
+c adds log(a_j/a(k)) times the soft density: combine it with the
+c negative endpoint counterterm by using a(k)*xicut here. This uses
+c the existing angular sample once per Born point. MC G replacement
+c factors below contain no endpoint or finite mismatch terms.
+            soft_cut=xicut_used*soft_scale
+            coll_cut=xicut_used*coll_scale
+            angle_cut=delta_used*angular_scale
+         endif
          prefact_cnt_ssc=xinorm_ev/min(xiimax_ev,xiScut_used)*
-     $        log(xicut_used/min(xiimax_ev,xiScut_used))/(1
+     $        log(soft_cut/min(xiimax_ev,xiScut_used))/(1
      $        -y_ij_fks_ev)
          f_s=(prefact+prefact_cnt_ssc)*jac_cnt(0)
      $        *fkssymmetryfactor*vegas_wgt
@@ -1908,7 +1983,7 @@ c f_* multiplication factors for real-emission, soft counter, ... etc.
 c For the soft-collinear, these should be itwo. But they are always
 c equal to ione, so no need to define separate factors.
             prefact_c=xinorm_cnt(1)/xi_i_fks_cnt(1)/(1-y_ij_fks_ev)
-            prefact_coll=xinorm_cnt(1)/xi_i_fks_cnt(1)*log(delta_used
+            prefact_coll=xinorm_cnt(1)/xi_i_fks_cnt(1)*log(angle_cut
      $           /deltaS)/deltaS
             f_c=(prefact_c+prefact_coll)*jac_cnt(1)
      $           *fkssymmetryfactor*vegas_wgt
@@ -1919,11 +1994,11 @@ c equal to ione, so no need to define separate factors.
             call set_cms_stuff(1)
             prefact_deg=xinorm_cnt(1)/xi_i_fks_cnt(1)/deltaS
             prefact_cnt_ssc_c=xinorm_cnt(1)/min(xiimax_cnt(1)
-     &           ,xiScut_used)*log(xicut_used/min(xiimax_cnt(1)
+     &           ,xiScut_used)*log(coll_cut/min(xiimax_cnt(1)
      &           ,xiScut_used))*1/(1-y_ij_fks_ev)
             prefact_coll_c=xinorm_cnt(1)/min(xiimax_cnt(1),xiScut_used)
-     $           *log(xicut_used/min(xiimax_cnt(1),xiScut_used))
-     $           *log(delta_used/deltaS)/deltaS
+     $           *log(coll_cut/min(xiimax_cnt(1),xiScut_used))
+     $           *log(angle_cut/deltaS)/deltaS
             f_dc=jac_cnt(1)*prefact_deg/(shat/(32*pi**2))
      $           *fkssymmetryfactorDeg*vegas_wgt
             f_sc=(prefact_c+prefact_coll+prefact_cnt_ssc_c
@@ -1935,7 +2010,7 @@ c equal to ione, so no need to define separate factors.
 
             call set_cms_stuff(2)
             prefact_deg_sxi=xinorm_cnt(1)/min(xiimax_cnt(1),xiScut_used)
-     &           *log(xicut_used/min(xiimax_cnt(1),xiScut_used))*1
+     &           *log(coll_cut/min(xiimax_cnt(1),xiScut_used))*1
      &           /deltaS
             prefact_deg_slxi=xinorm_cnt(1)/min(xiimax_cnt(1)
      &           ,xiScut_used)*( log(xicut_used)**2
@@ -4520,6 +4595,7 @@ c has soft singularities
       subroutine sborncol_fsr(p,xi_i_fks,y_ij_fks,wgt)
       implicit none
       include "nexternal.inc"
+      include 'resonance_recoil.inc'
       include "nFKSconfigs.inc"
       double precision p(0:3,nexternal),wgt
       double precision xi_i_fks,y_ij_fks
@@ -4549,6 +4625,8 @@ C
 
       integer i,j,imother_fks,iord
 C ap and Q contain the QCD(1) and QED(2) Altarelli-Parisi kernel
+      double precision dot,radiation_mass2
+      external dot
       double precision t,z,ap(2),E_j_fks,E_i_fks,Q(2),cphi_mother,
      # sphi_mother,pi(0:3),pj(0:3),wgt_born
       double complex W1(6),W2(6),W3(6),W4(6),Wij_angle,Wij_recta
@@ -4593,8 +4671,16 @@ c Unphysical kinematics: set matrix elements equal to zero
 
       E_j_fks = p(0,j_fks)
       E_i_fks = p(0,i_fks)
+      radiation_mass2=shat
+      if(resonance_recoil)then
+         radiation_mass2=resonance_mass2
+         E_j_fks=dot(resonance_momentum,p(:,j_fks))
+     $        /sqrt(resonance_mass2)
+         E_i_fks=dot(resonance_momentum,p(:,i_fks))
+     $        /sqrt(resonance_mass2)
+      endif
       z = 1d0 - E_i_fks/(E_i_fks+E_j_fks)
-      t = z * shat/4d0
+      t = z * radiation_mass2/4d0
       call sborn_native(p_born,wgt_born)
       if (iextra_cnt.gt.0)
      1    call extra_cnt_native(p_born, iextra_cnt, ans_extra_cnt)
@@ -5607,6 +5693,7 @@ c     Returns the eikonal factor
       implicit none
 
       include "nexternal.inc"
+      include 'resonance_recoil.inc'
       double precision eik,pp(0:3,nexternal),xi_i_fks,y_ij_fks
       double precision dot,dotnm,dotni,dotmi,fact
       integer n,m,i_fks,j_fks,i
@@ -5664,10 +5751,14 @@ c Calculate the eikonal factor
      &        pmass(j_fks).eq.ZERO) then
          dotni=dot(pp(0,n),phat_i_fks)
          dotmi=sqrtshat/2d0 * pp(0,j_fks)
+         if(resonance_recoil)
+     $        dotmi=dot(resonance_momentum,pp(:,j_fks))/2d0
          fact= 1d0
       elseif (m.ne.j_fks .and. n.eq.j_fks .and.
      &        pmass(j_fks).eq.ZERO) then
          dotni=sqrtshat/2d0 * pp(0,j_fks)
+         if(resonance_recoil)
+     $        dotni=dot(resonance_momentum,pp(:,j_fks))/2d0
          dotmi=dot(pp(0,m),phat_i_fks)
          fact= 1d0
       else
@@ -7990,6 +8081,7 @@ c the grandmother corresponds (igranny) as well as the aunt (iaunt).
 c This information can be used to improve the phase-space
 c parametrisation.
       use mint_module
+      use mc_native_context, only: native_epoch
       implicit none
       include 'genps.inc'
       include 'nexternal.inc'
@@ -8010,6 +8102,8 @@ c other common blocks
 c     local
       integer size
       parameter (size=fks_configs*maxchannels)
+      integer epoch_saved(fks_configs,maxchannels)
+      data epoch_saved/size*-1/
       integer config_saved(fks_configs,maxchannels)
       data config_saved/size*0/
       logical firsttime_fks(fks_configs,maxchannels)
@@ -8037,7 +8131,9 @@ c If it's the firsttime going into this subroutine for this nFKSprocess,
 c save all the relevant information so that for later calls a simple
 c copy will do.
       if (firsttime_fks(nFKSprocess,ichan).or.
+     $     epoch_saved(nFKSprocess,ichan).ne.native_epoch.or.
      $     config_saved(nFKSprocess,ichan).ne.iconf)then
+         epoch_saved(nFKSprocess,ichan)=native_epoch
          config_saved(nFKSprocess,ichan)=iconf
          firsttime_fks(nFKSprocess,ichan)=.false.
 c need to have at least 2->3 (or 1->3) process to have non-trivial

@@ -19,9 +19,8 @@ subroutine check_native_projection()
   double precision :: bounds(3),omx(2)
   common/ctau_lower_bound/bounds
   common/to_ee_omx1/omx
-  logical :: nbody,only_event,skip_event,evpr,nocnt,fixed_order,nlo_ps
+  logical :: nbody,evpr,nocnt,fixed_order,nlo_ps
   common/cnbody/nbody
-  common/c_skip_only_event_phsp/only_event,skip_event
   common/to_use_evpr/evpr
   common/cnocntevents/nocnt
   common/c_fnlo_nlops/fixed_order,nlo_ps
@@ -94,8 +93,6 @@ subroutine check_native_projection()
           bounds=sum(mb(3:4))**2/stot
           omx=0d0
           nbody=.false.
-          only_event=.false.
-          skip_event=.false.
           evpr=.true.
           pb=born
           pbl=born
@@ -110,7 +107,7 @@ subroutine check_native_projection()
           ps0=3d0
           m=0d0
           call generate_FKS_kinematics(x,3,j0,ps0,stot,sborn,sqrtborn,taub,yb,yhat, &
-               xbb,.false.,m,mb,jac,p,pass)
+               xbb,m,mb,jac,p,pass)
           if(jac.le.0d0)error stop 'invalid reference radiation point'
           call boost_n1_to_lab(p,lab,-yb)
           valid=jc.gt.0d0
@@ -126,8 +123,6 @@ subroutine check_native_projection()
           bounds=bounds_poison
           omx=omx_poison
           nbody=.true.
-          only_event=.true.
-          skip_event=.true.
           evpr=.false.
           pb=-999d0
           pbl=-998d0
@@ -144,7 +139,7 @@ subroutine check_native_projection()
           if(maxval(abs(pb-born)).gt.1d-8.or.any(pb.ne.pbl).or.any(pb.ne.pbe)) &
                error stop 'Born COMMON arrays not populated'
           if(any(bounds.ne.bounds_poison).or.any(omx.ne.omx_poison).or. &
-               .not.nbody.or..not.only_event.or..not.skip_event)error stop 'input controls leaked'
+               .not.nbody)error stop 'input controls leaked'
           if(.not.evpr.or.config.ne.1)error stop 'native evaluator controls not installed'
           if(any(valid.neqv.(jc.gt.0d0)).or.(nocnt.neqv.nocnt_ref).or.isign.ne.isign_ref) &
                error stop 'counterevent validity changed'
@@ -170,7 +165,7 @@ subroutine check_native_projection()
   call generate_native_momenta(lab,out,outlab,cms,jnew,pass)
   if(pass.or.jnew.ge.0d0.or.out(0,1).ge.0d0)error stop 'invalid input accepted'
   if(any(bounds.ne.bounds_poison).or.any(omx.ne.omx_poison).or. &
-       .not.nbody.or..not.only_event.or..not.skip_event)error stop 'invalid input changed controls'
+       .not.nbody)error stop 'invalid input changed controls'
 contains
   subroutine snapshot(v,n)
     double precision,intent(out) :: v(256)

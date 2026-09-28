@@ -254,9 +254,9 @@ contains
     integer :: i_fks,j_fks
     double precision :: veckn_ev,veckbarn_ev,xp0jfks
     common/cgenps_fks/veckn_ev,veckbarn_ev,xp0jfks
+    double precision :: pshower(0:3,next_n1)
 
     call fill_father_and_ileg(i_fks,j_fks,mass)
-    shat_n1=2d0*dot(pp(0,1),pp(0,2))
 
     xm12=0d0
     xm22=0d0
@@ -265,10 +265,12 @@ contains
     kn=veckn_ev
     knbar=veckbarn_ev
     kn0=xp0jfks
+    call resonance_shower_frame(pp,i_fks,j_fks,pshower, &
+         kn,knbar,kn0,shat_n1)
 
 
     ! fill the momenta for the recoilers and emitters and emitted.
-    call get_momenta_emitter_recoiler(pp,i_fks,j_fks)
+    call get_momenta_emitter_recoiler(pshower,i_fks,j_fks)
 
     ! Determine the Mandelstam invariants needed in the MC functions in terms
     ! of FKS variables: the argument of MC functions are (p+k)^2, NOT 2 p.k

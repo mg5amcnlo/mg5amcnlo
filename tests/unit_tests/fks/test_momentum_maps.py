@@ -48,6 +48,7 @@ class TestMomentumMaps(unittest.TestCase):
             "      integer max_branch,max_particles\n"
             "      parameter (max_branch=8,max_particles=8)\n")
         shutil.copyfile(TEMPLATE / "fks_powers.inc", work / "fks_powers.inc")
+        shutil.copyfile(TEMPLATE / "resonance_recoil.inc", work / "resonance_recoil.inc")
         (work / "native_context.f90").write_text(
             "module mc_native_context\n"
             "logical :: native_mapping=.false.\nend module\n")
@@ -70,7 +71,7 @@ class TestMomentumMaps(unittest.TestCase):
                      "generate_momenta_initial_inverse",
                      "fill_FKS_commons", "getangles", "get_recoil"):
             routines.append(fortran_routine(TEMPLATE / "genps_fks.f", name))
-        for name in ("rotate_invar", "phspncheck_nocms", "xlen4",
+        for name in ("rotate_invar", "trp_rotate_invar", "phspncheck_nocms", "xlen4",
                      "xmom_compare", "xmcompare", "xprintout"):
             routines.append(fortran_routine(TEMPLATE / "fks_singular.f", name))
         for name in ("dot", "rho", "threedot"):
@@ -87,6 +88,7 @@ class TestMomentumMaps(unittest.TestCase):
                    str(TEMPLATE / "kinematics_module.f90"),
                    str(work / "native_context.f90"),
                    str(work / "maps.f"), str(TEMPLATE / "boostwdir2.f"),
+                   str(TEMPLATE / "resonance_recoil.f"),
                    str(ROOT / "HELAS/boostx.F"), str(ROOT / "HELAS/rotxxx.F"),
                    str(ROOT / "tests/input_files/check_native_projection.f90"),
                    str(ROOT / "tests/input_files/check_momentum_maps.f90"),
@@ -134,7 +136,7 @@ class TestMomentumMaps(unittest.TestCase):
     def test_massless_inverse_with_soft_recoil_in_both_maps(self):
         self.check_map("soft_recoil_inverse")
 
-    def test_massive_soft_counterevents_and_supplied_granny_mass(self):
+    def test_massive_soft_counterevents(self):
         self.check_map("soft_counterevent")
 
     def test_massive_final_inverse_both_solutions(self):

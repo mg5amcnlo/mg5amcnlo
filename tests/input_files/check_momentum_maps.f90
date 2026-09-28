@@ -14,7 +14,7 @@ program check_momentum_maps
   double precision :: born(0:3,4),invborn(0:3,-max_branch:4)
   double precision :: rnd(3),inv(3),jac,jacinv,pswgt,pswgtinv,jacout
   double precision :: shat,sqrtshat,mass,mrec,energy,momentum,phi,xi,yij
-  double precision :: xiimax,xinorm,xihat,rat_xi,pifks(0:3),rapidity,error
+  double precision :: xiimax,xinorm,xihat,pifks(0:3),rapidity,error
   double precision :: tau_cnt(-2:2),ycm_cnt(-2:2)
   double precision :: transfer,tmin,tmax,remainder(0:3)
   double precision :: saved_xi,saved_y,saved_pi(0:3),saved_pi_cnt(0:3,-2:2)
@@ -131,27 +131,15 @@ program check_momentum_maps
               phi=2d0*pi*rnd(3)
               jac=2d0*pi
               pswgt=1d0
-              rat_xi=0d0
               isign=1
-              call generate_momenta_massive_final(-100,isign,.false.,rat_xi, &
+              call generate_momenta_massive_final(-100,isign, &
                    5,3,born(:,3),shat,sqrtshat,mass,rnd,mrec**2,p,phi, &
                    xiimax,xinorm,xi,yij,xihat,pifks,jac,pswgt,pass)
               if(.not.pass)error stop 'invalid real point before counterevent'
-              ! A supplied granny mass keeps the existing branch partition.
-              ! Reusing its physical rat_xi must reproduce the same event.
-              out(:,1:4)=born
-              jacout=2d0*pi
-              pswgtinv=1d0
-              call generate_momenta_massive_final(-100,isign,.true.,rat_xi, &
-                   5,3,born(:,3),shat,sqrtshat,mass,rnd,mrec**2,out,phi, &
-                   xiimax,xinorm,xi,yij,xihat,pifks,jacout,pswgtinv,pass)
-              if(.not.pass.or.maxval(abs(out-p))/sqrtshat.gt.1d-12.or. &
-                   abs(jacout/jac-1d0).gt.1d-12.or.abs(pswgtinv/pswgt-1d0).gt.1d-12) &
-                   error stop 'supplied granny mass changed physical map'
               p(:,1:4)=born
               jac=2d0*pi
               pswgt=1d0
-              call generate_momenta_massive_final(0,isign,.false.,rat_xi, &
+              call generate_momenta_massive_final(0,isign, &
                    5,3,born(:,3),shat,sqrtshat,mass,rnd,mrec**2,p,phi, &
                    xiimax,xinorm,xi,yij,xihat,pifks,jac,pswgt,pass)
               if(.not.pass.or..not.all(ieee_is_finite(p)).or. &
@@ -233,9 +221,8 @@ program check_momentum_maps
               phi=2d0*pi*rnd(3)
               jac=2d0*pi
               pswgt=1d0
-              rat_xi=0d0
               isign=1
-              call generate_momenta_massive_final(-100,isign,.false.,rat_xi, &
+              call generate_momenta_massive_final(-100,isign, &
                    5,3,born(:,3),shat,sqrtshat,mass,rnd,mrec**2,p,phi, &
                    xiimax,xinorm,xi,yij,xihat,pifks,jac,pswgt,pass)
               if (.not.pass.or..not.all(ieee_is_finite(p))) &
@@ -433,9 +420,8 @@ program check_momentum_maps
      p(:,1:4)=invborn(:,1:4)
      jac=2d0*pi
      pswgt=1d0
-     rat_xi=0d0
      isign=1
-     call generate_momenta_massive_final(-100,isign,.false.,rat_xi, &
+     call generate_momenta_massive_final(-100,isign, &
           5,father,invborn(:,father),shat,sqrtshat,mass,inv,mrec**2,p,phi, &
           xiimax,xinorm,xi,yij,xihat,pifks,jac,pswgt,pass)
      call boost_n1_to_lab(p,out,-rapidity)
@@ -482,10 +468,9 @@ program check_momentum_maps
            phi=2d0*pi*rnd(3)
            jac=2d0*pi
            pswgt=1d0
-           rat_xi=0d0
            isign=1
            if (mass.gt.0d0) then
-              call generate_momenta_massive_final(-100,isign,.false.,rat_xi, &
+              call generate_momenta_massive_final(-100,isign, &
                    5,3,born(:,3),shat,sqrtshat,mass,rnd,mrec**2,p,phi,xiimax, &
                    xinorm,xi,yij,xihat,pifks,jac,pswgt,pass)
            else
@@ -575,7 +560,7 @@ contains
     cp=1d0
     rat=0d0
     sign_branch=1
-    call generate_momenta_massive_final(0,sign_branch,.false.,rat,5,3,born_p(:,3), &
+    call generate_momenta_massive_final(0,sign_branch,5,3,born_p(:,3), &
          shat,sqrtshat,mass,native_x,mrec**2,q,local_phi,xmax,xnorm,local_xi,local_y, &
          xhat,scaled,cj,cp,good)
     if(.not.good)error stop 'invalid native soft counterevent'
@@ -584,7 +569,7 @@ contains
     q(:,1:4)=born_p
     cj=2d0*pi
     cp=1d0
-    call generate_momenta_massive_final(0,sign_branch,.false.,rat,5,3,born_p(:,3), &
+    call generate_momenta_massive_final(0,sign_branch,5,3,born_p(:,3), &
          shat,sqrtshat,mass,legacy_x,mrec**2,q,local_phi,xmax,xnorm,local_xi,local_y, &
          xhat,scaled,cj,cp,good)
     native_mapping=.true.

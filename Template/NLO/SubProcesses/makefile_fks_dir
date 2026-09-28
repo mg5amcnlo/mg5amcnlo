@@ -58,7 +58,7 @@ FILES= $(patsubst %.f,%.o,$(wildcard parton_lum_*.f)) 			\
 	 process_module.o kinematics_module.o scale_module.o		\
 	 $(patsubst %.f,%.o,$(wildcard matrix_*.f)) 			\
 	 FKSParams.o real_me_chooser.o chooser_functions.o recmom.o	\
-	 genps_fks.o setcuts.o setscales.o veto_xsec.o			\
+	 genps_fks.o resonance_recoil.o resonance_histories.o setcuts.o setscales.o veto_xsec.o	\
 	 $(patsubst %.f,%.o,$(wildcard b_sf_???.f)) 			\
 	 born.o sborn_sf.o extra_cnt_wrapper.o $(BORN_SUPPORT_OBJECTS) \
 	 $(patsubst %.f,%.o,$(wildcard born_cnt_*.f))			\
@@ -212,6 +212,9 @@ chooser_functions.o: weight_lines.o
 cluster.o: weight_lines.o
 setcuts.o: mint_module.o
 genps_fks.o: mint_module.o FKSParams.o
+genps_fks.o resonance_recoil.o fks_singular.o mc_native_runtime.o: resonance_recoil.inc
+resonance_recoil.o: mc_native_context.o
+resonance_histories.o: mc_native_context.o mint_module.o resonance_recoil.inc
 symmetry_fks_v3.o: mint_module.o
 test_soft_col_limits.o: mint_module.o
 madfks_plot.o: mint_module.o
