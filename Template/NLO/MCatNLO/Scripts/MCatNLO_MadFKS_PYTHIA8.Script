@@ -571,6 +571,7 @@ TimeShower:QEDshowerByL = $QEDSHOWER      ! Prevent leptons from radiating photo
 TimeShower:QEDshowerByGamma = $QEDSHOWER  ! Prevent photons from branching
 TimeShower:alphaSuseCMW = false    ! Use the CMW prescription in FSR
 TimeShower:weightGluonToQuark = 1  ! Use normal Altarelli-Parisi kernels for g -> q qbar
+TimeShower:recoilDeadCone = on     ! Gluon recoil weight included in the MC subtraction
 
 ! 6) Initial-state shower.
 EOF
