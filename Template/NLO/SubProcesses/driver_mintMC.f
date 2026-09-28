@@ -850,8 +850,8 @@ c 1/proc_map(0,0)*vol1)
                if (ifl.eq.0) call get_born_flow(born_flow_picked
      $              ,born_flow_factor)
                call Bornonly_shower_scale(p_born,born_flow_picked)
-               emsca_S(nFKS_picked_nbody,ifold_counter,1:ndelS,1:ndelS)
-     $              =get_random_shower_dipole_scale()
+               call save_shower_scale_nbody(nFKS_picked_nbody,
+     $              ifold_counter)
             elseif (abrv(1:2).eq.'vi') then
                ! Doing only the Virtual contribution (could be because
                ! we are generating a virtual event).
@@ -859,8 +859,8 @@ c 1/proc_map(0,0)*vol1)
                if (ifl.eq.0) call get_born_flow(born_flow_picked
      $              ,born_flow_factor)
                call compute_shower_scale_nbody(p_born,born_flow_picked)
-               emsca_S(nFKS_picked_nbody,ifold_counter,1:ndelS,1:ndelS)
-     $              =get_random_shower_dipole_scale()
+               call save_shower_scale_nbody(nFKS_picked_nbody,
+     $              ifold_counter)
             else
                ! Normal: all contributions included. Determine the
                ! shower scale when looping over FKS configurations.
@@ -875,8 +875,8 @@ c 1/proc_map(0,0)*vol1)
                ! in the dead-zone, this will not be used (or
                ! overwritten).
                call compute_shower_scale_nbody(p_born,born_flow_picked)
-               emsca_S(nFKS_picked_nbody,ifold_counter,1:ndelS,1:ndelS)
-     $              =get_random_shower_dipole_scale()
+               call save_shower_scale_nbody(nFKS_picked_nbody,
+     $              ifold_counter)
             endif
          elseif (ifl.eq.0) then
             call sborn_native(p_born,wgt1)
@@ -914,14 +914,8 @@ c for different nFKSprocess.
      $              ,partner_picked(iFKS))
 !     The shower scale to be used in the event file (if it's an S-event and
 !     fks_picked will be iFKS):
-               if (.not.mcatnlo_delta) then
-                  emsca_S(iFKS,ifold_counter,1:ndelS,1:ndelS)
-     $                 =shower_scale_nbody(fks_father
-     $                 ,partner_picked(iFKS))
-               else
-                  emsca_S(iFKS,ifold_counter,1:ndelS,1:ndelS)
-     $                 =shower_scale_nbody(1:ndelS,1:ndelS)
-               endif
+               call save_shower_scale_nbody(iFKS,ifold_counter,
+     $              partner_picked(iFKS))
             endif
                
             probne=1d0
@@ -1088,7 +1082,7 @@ c Sum the contributions that can be summed before taking the ABS value
      $     outer_channel,mc_outer_channel_weight
       double precision nbody_scales_save(nexternal-1,nexternal-1,3),
      $     n1body_scales_save(nexternal,nexternal),
-     $     emsca_save(fks_configs,ndelH,ndelH)
+     $     emsca_save(fks_configs,ndelH,ndelH),hard_scale_save
       double precision fks_mom_info(3),granny_boost(3),
      $     fks_mom_save(3),granny_boost_save(3)
       common/cgenps_fks/fks_mom_info
@@ -1178,6 +1172,7 @@ c Sum the contributions that can be summed before taking the ABS value
       called_save=MCcntcalled
       colours_s_save=icolup_s
       colours_h_save=icolup_h
+      hard_scale_save=shower_scale_hard
       nbody_scales_save(:,:,1)=shower_scale_nbody
       nbody_scales_save(:,:,2)=shower_scale_nbody_min
       nbody_scales_save(:,:,3)=shower_scale_nbody_max
@@ -1309,6 +1304,7 @@ c Sum the contributions that can be summed before taking the ABS value
       granny_boost=granny_boost_save
       born_flow_picked=flow_save
       call init_process_module_n1body_wrapper(born_flow_picked)
+      shower_scale_hard=hard_scale_save
       shower_scale_nbody=nbody_scales_save(:,:,1)
       shower_scale_nbody_min=nbody_scales_save(:,:,2)
       shower_scale_nbody_max=nbody_scales_save(:,:,3)

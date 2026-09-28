@@ -113,8 +113,8 @@ program check_mc_dead_zones
     ! First connection has D=0; the angular-dead second has D=1.
     shower_scale_nbody_min=2d0*q
     shower_scale_nbody_max=3d0*q
-    shower_scale_nbody_min(2,1)=0.1d0*q
-    shower_scale_nbody_max(2,1)=q
+    shower_scale_nbody_min(1,2)=0.1d0*q
+    shower_scale_nbody_max(1,2)=q
     call evaluate(0.075d0,-0.5d0,.true.)
     call require(abs((1d0-gfactsf)-0.05d0).lt.1d-14,'equal partner probabilities')
     call require(all(raw.eq.0d0),'no raw term from dead connections')
@@ -190,7 +190,7 @@ subroutine xmcsubt_connection(p,xi,y,p_born,i_connect,include_gfun,live,z,amp)
   logical :: include_gfun,live
   j=i_connect-1
   kernel_g(j)=gfactsf
-  live=angular_live(j).and.get_qMC(xi,y).le.shower_scale_nbody_max(i_connect,fksfather)
+  live=angular_live(j).and.get_qMC(xi,y).le.shower_scale_nbody_max(fksfather,i_connect)
   z=0.5d0
   amp=0d0
   g=1d0

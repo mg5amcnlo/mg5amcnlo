@@ -1,6 +1,7 @@
-! Deterministic scale reconstruction for the default MC@NLO-Delta interface.
-! Formulae ported from PYTHIA 8.313, History::pTLund and
-! Merging::clusterAndStore/getDipoles (Stefan Prestel, PYTHIA authors).
+! Deterministic PYTHIA8 starting scales and MC@NLO-Delta stopping scales.
+! Formulae ported from PYTHIA 8.313, History::pTLund,
+! Merging::clusterAndStore/getDipoles and SimpleTimeShower::pTnext
+! (Stefan Prestel, PYTHIA authors).
 ! SPDX-License-Identifier: GPL-2.0-or-later
 !
 ! This module needs neither PYTHIA nor a random number generator.
@@ -12,9 +13,69 @@ module mcatnlo_delta_scales
   private
   integer, parameter, public :: dp = selected_real_kind(15,307)
   integer, parameter, public :: delta_ok = 0, delta_bad_input = 1, delta_numerical = 2
-  public :: delta_scale_matrices, pythia_pt_lund
+  public :: delta_scale_matrices, pythia_pt_lund, pythia8_starting_scales
 
 contains
+
+  ! Effective S-event scales in Born order, with the emitter in the first
+  ! index. The caller supplies the colour connections (possibly their union
+  ! over Born flows) and the on-shell masses, not masses inferred from p**2.
+  ! For the standard aMC@NLO global-recoil settings, limitPTmaxGlobal=on
+  ! retains the local, mass-corrected FSR dipole bound. ISR has no such
+  ! bound: its collider-energy upper limit is replaced by hard_scale.
+  ! Supply the sampled, damped hard scale to reproduce a shower with scalar
+  ! SCALUP, or the undamped hard scale to obtain reference upper bounds.
+  ! Unconnected entries, including the diagonal, are -1. Scales are in GeV.
+  subroutine pythia8_starting_scales(nborn, p, mass, connected, hard_scale, &
+                                    scales, status)
+    integer, intent(in) :: nborn
+    real(dp), intent(in) :: p(0:3,nborn), mass(nborn), hard_scale
+    logical, intent(in) :: connected(nborn,nborn)
+    real(dp), intent(out) :: scales(nborn,nborn)
+    integer, intent(out) :: status
+    real(dp) :: mdip2, mdip, bound2, bound, tolerance, total(0:3)
+    integer :: i, j
+
+    scales = -1._dp
+    status = delta_bad_input
+    if (nborn < 3) return
+    if (.not.(hard_scale > 0._dp .and. hard_scale <= huge(1._dp))) return
+    if (.not.all(abs(p) <= huge(1._dp)) .or. any(p(0,:) <= 0._dp)) return
+    if (.not.all(mass >= 0._dp .and. mass <= sqrt(huge(1._dp)))) return
+    do i=1,nborn
+      if (connected(i,i)) return
+    end do
+
+    do i=1,nborn
+      do j=1,nborn
+        if (.not.connected(i,j)) cycle
+        bound = huge(1._dp)
+        if (i > 2) then
+          ! PYTHIA uses the positive-energy sum also for an incoming
+          ! colour partner. Do not use the signed stopping-scale invariant.
+          total = p(:,i) + p(:,j)
+          mdip2 = dot4(total,total)
+          if (.not.(mdip2 >= 0._dp .and. mdip2 <= huge(1._dp))) then
+            status = delta_numerical
+            return
+          end if
+          mdip = sqrt(mdip2)
+          ! Factorization avoids subtracting two almost equal squares at
+          ! threshold. Reject unphysical masses, allowing roundoff only.
+          bound2 = (mdip-mass(j)-mass(i))*(mdip-mass(j)+mass(i))
+          tolerance = 64._dp*epsilon(1._dp)*max(mdip2, mass(i)**2, mass(j)**2)
+          if (mdip < mass(i)+mass(j)-sqrt(epsilon(1._dp))*max(1._dp,mdip) &
+              .or. .not.(bound2 >= -tolerance .and. bound2 <= huge(1._dp))) then
+            status = delta_numerical
+            return
+          end if
+          bound = 0.5_dp*sqrt(max(0._dp,bound2))
+        end if
+        scales(i,j) = min(hard_scale,bound)
+      end do
+    end do
+    status = delta_ok
+  end subroutine pythia8_starting_scales
 
   real(dp) function dot4(a,b)
     real(dp), intent(in) :: a(0:3), b(0:3)

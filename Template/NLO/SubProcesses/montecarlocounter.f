@@ -865,8 +865,8 @@ c$$$      end
       integer :: cur_part
       double precision :: xi_i_fks,y_ij_fks,emscafun,smin,smax,qMC
      $     ,ptresc
-      smin=shower_scale_nbody_min(cur_part,fksfather)
-      smax=shower_scale_nbody_max(cur_part,fksfather)
+      smin=shower_scale_nbody_min(fksfather,cur_part)
+      smax=shower_scale_nbody_max(fksfather,cur_part)
       qMC=get_qMC(xi_i_fks,y_ij_fks)
       ptresc=(qMC-smin)/(smax-smin)
       compute_damping_weight=1d0-emscafun(ptresc,1d0)
@@ -3820,8 +3820,7 @@ c Skip if unphysical shower variables
 c Definition and initialisation of variables
       lzone=.true.
       PY6PTweight=-1d0
-      max_scale=shower_scale_nbody_max(ipartner,fksfather)
-      ! TODO: fix max_scale for tests. maybe ipartner?
+      max_scale=shower_scale_nbody_max(fksfather,ipartner)
       do i=0,3
          pfather(i)=p_born(i,fksfather) ! father momentum (Born level)
          ppartner(i)=p_born(i,ipartner) ! partner momentum (Born level)

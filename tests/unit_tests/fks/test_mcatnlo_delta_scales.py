@@ -1,4 +1,4 @@
-"""Numerical regressions for Delta matching without a shower runtime library."""
+"""Native PYTHIA8 starting scales and Delta matching without a shower runtime."""
 
 from pathlib import Path
 import math
@@ -57,6 +57,12 @@ class TestMCatNLODeltaScales(unittest.TestCase):
     def test_invalid_colours_arguments_and_pair_threshold(self):
         self.check_case('invalid')
 
+    def test_pythia_starting_limits_and_lorentz_invariance(self):
+        self.check_case('starting')
+
+    def test_starting_threshold_and_invalid_input(self):
+        self.check_case('starting_invalid')
+
 
 @unittest.skipUnless(shutil.which('gfortran'), 'requires gfortran')
 class TestMCatNLODeltaMatching(unittest.TestCase):
@@ -94,8 +100,8 @@ class TestMCatNLODeltaMatching(unittest.TestCase):
             '-Wl,-dead_strip' if sys.platform == 'darwin' else '-Wl,--gc-sections',
             '-I', str(work), str(TEMPLATE / 'process_module.f90'),
             str(TEMPLATE / 'kinematics_module.f90'),
-            str(TEMPLATE / 'scale_module.f90'),
             str(TEMPLATE / 'mcatnlo_delta_scales.f90'),
+            str(TEMPLATE / 'scale_module.f90'),
             str(work / 'delta_matching.f'),
             str(ROOT / 'tests/input_files/check_mcatnlo_delta_matching.f90'),
             '-o', str(cls.executable)], cwd=work, capture_output=True, text=True)
@@ -113,6 +119,50 @@ class TestMCatNLODeltaMatching(unittest.TestCase):
                                 capture_output=True, text=True)
         self.assertNotEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertIn('MC@NLO-Delta scale reconstruction failed', result.stdout)
+
+
+@unittest.skipUnless(shutil.which('gfortran'), 'requires gfortran')
+class TestPythia8StartingScaleIntegration(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.tempdir = tempfile.TemporaryDirectory(prefix='mg5_s_scales_')
+        cls.addClassCleanup(cls.tempdir.cleanup)
+        work = Path(cls.tempdir.name)
+        (work / 'nexternal.inc').write_text(
+            '      integer nexternal,nincoming\n'
+            '      parameter(nexternal=5,nincoming=2)\n')
+        (work / 'nFKSconfigs.inc').write_text(
+            '      integer fks_configs\n      parameter(fks_configs=2)\n')
+        (work / 'run.inc').write_text('')
+        (work / 'routines.f').write_text('\n'.join([
+            fortran_routine(TEMPLATE / 'montecarlocounter.f', 'compute_damping_weight'),
+            fortran_routine(TEMPLATE / 'montecarlocounter.f', 'emscafun'),
+            fortran_routine(TEMPLATE / 'fks_singular.f', 'update_shower_scale_Sevents_v2')]))
+        cls.executable = work / 'check_s_scales'
+        result = subprocess.run([
+            shutil.which('gfortran'), '-O2', '-std=legacy', '-fcheck=all',
+            '-ffixed-line-length-none', '-ffunction-sections', '-fdata-sections',
+            '-Wl,-dead_strip' if sys.platform == 'darwin' else '-Wl,--gc-sections',
+            '-I', str(work), str(TEMPLATE / 'process_module.f90'),
+            str(TEMPLATE / 'kinematics_module.f90'),
+            str(TEMPLATE / 'mcatnlo_delta_scales.f90'),
+            str(TEMPLATE / 'scale_module.f90'), str(TEMPLATE / 'weight_lines.f'),
+            str(work / 'routines.f'),
+            str(ROOT / 'tests/input_files/check_pythia8_s_scales.f90'),
+            '-o', str(cls.executable)], cwd=work, capture_output=True, text=True)
+        if result.returncode:
+            raise RuntimeError(result.stdout + result.stderr)
+
+    def check_case(self, name):
+        result = subprocess.run([str(self.executable), name], capture_output=True, text=True)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn('PASS ' + name, result.stdout)
+
+    def test_ordinary_scalar_matches_effective_dipoles_and_subtractions(self):
+        self.check_case('ordinary')
+
+    def test_delta_scales_and_fold_selection_use_same_hard_scale(self):
+        self.check_case('delta')
 
 
 @unittest.skipUnless(shutil.which('gfortran'), 'requires gfortran')

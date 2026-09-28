@@ -1,12 +1,15 @@
 module scale_module
   use process_module
   use kinematics_module
+  use mcatnlo_delta_scales, only: pythia8_starting_scales, delta_ok
   implicit none
   double precision,public,allocatable,dimension(:,:) :: shower_scale_nbody, &
        shower_scale_nbody_max,shower_scale_nbody_min&
        &,shower_scale_n1body,showerscaleS,showerscaleH
   double precision,public,allocatable,dimension(:,:,:,:) :: emsca_S&
        &,emsca_H
+  double precision,public,allocatable :: emsca_S_hard(:,:)
+  double precision,public :: shower_scale_hard,showerscaleS_hard
   ! The H colour assignment and its dipole scales must have the same owner.
   integer,public,allocatable :: event_colour_H(:,:,:,:)
 !  double precision,public :: SCALUP
@@ -18,7 +21,7 @@ module scale_module
   logical,public,parameter :: force_II_connection=.true.
   public :: compute_shower_scale_nbody,compute_shower_scale_n1body, &
        init_scale_module,Bornonly_shower_scale,get_random_shower_dipole_scale, &
-       determine_partner
+       determine_partner,save_shower_scale_nbody,pythia8_S_scales
   private
 contains
   
@@ -36,6 +39,7 @@ contains
          allocate(shower_scale_n1body(nexternal,nexternal))
     if (.not.allocated(emsca_S)) &
          allocate(emsca_S(nfks,nfold,ndelS,ndelS))
+    if (.not.allocated(emsca_S_hard)) allocate(emsca_S_hard(nfks,nfold))
     if (.not.allocated(emsca_H)) &
          allocate(emsca_H(nfks,nfold,ndelH,ndelH))
     if (.not.allocated(event_colour_H)) &
@@ -46,10 +50,16 @@ contains
          allocate(showerscaleH(ndelH,ndelH))
     shower_scale_factor=shower_scale_factor_in
   end subroutine init_scale_module
+
+  logical function pythia8_S_scales()
+    ! FxFx has its own clustering-scale prescription.
+    pythia8_S_scales=shower_mc_mod.eq.'PYTHIA8' .and. &
+         nincoming_mod.eq.2 .and. ickkw_mod.ne.3
+  end function pythia8_S_scales
     
   subroutine compute_shower_scale_nbody(p,flow_picked)
     implicit none
-    integer :: i,j,flow_picked,iflow_min,iflow_max,iflow
+    integer :: i,j,flow_picked,iflow_min,iflow_max,iflow,status
     double precision,dimension(0:3,next_n) :: p
     double precision :: ref_scale,scalemin,scalemax,rrnd
     double precision, external :: ran2
@@ -57,6 +67,7 @@ contains
     shower_scale_nbody_min=-1d0
     shower_scale_nbody_max=-1d0
     call get_global_ref_scale(next_n,p)
+    shower_scale_hard=shower_scale_factor*global_ref_scale
     if (ickkw_mod.eq.3) then
        ! For FxFx, the scale should be the smallest clustering scale as
        ! returned by the clustering routine. This is the global_ref_scale
@@ -73,6 +84,31 @@ contains
        ! check valid_dipole for any possible flow
        iflow_min=1
        iflow_max=max_flows_n
+    endif
+    if (pythia8_S_scales()) then
+       ! One damping draw sets SCALUP. Pythia then limits each directed
+       ! dipole by its kinematics. Damping a capped dipole independently
+       ! would not reproduce the shower driven by the scalar SCALUP.
+       call get_scaleminmax(global_ref_scale,scalemin,scalemax)
+       scalemin=max(scalemin,scaleMCcut)
+       scalemax=max(scalemax,scalemin+scaleMCdelta)
+       rrnd=damping_inv(ran2(),1d0)
+       shower_scale_hard=scalemin+rrnd*(scalemax-scalemin)
+       call pythia8_starting_scales(next_n,p,mass_n, &
+            any(valid_dipole_n(:,:,iflow_min:iflow_max),dim=3), &
+            shower_scale_hard,shower_scale_nbody,status)
+       if (status.ne.delta_ok) then
+          write (*,*) 'PYTHIA8 S-event starting scales failed',status
+          stop 1
+       endif
+       ! These are the bounds of the HARD-scale damping distribution.
+       ! The physical dipole ceiling is a separate veto in get_dead_zone;
+       ! clipping these bounds would change the subtraction below it.
+       where (shower_scale_nbody.ge.0d0)
+          shower_scale_nbody_min=scalemin
+          shower_scale_nbody_max=scalemax
+       endwhere
+       return
     endif
     do i=1,next_n-1
        do j=i+1,next_n
@@ -105,6 +141,21 @@ contains
       enddo
     endif
   end subroutine compute_shower_scale_nbody
+
+  subroutine save_shower_scale_nbody(ifks,ifold,partner)
+    integer, intent(in) :: ifks,ifold
+    integer, intent(in), optional :: partner
+    emsca_S_hard(ifks,ifold)=shower_scale_hard
+    if (mcatnlo_delta_mod) then
+       emsca_S(ifks,ifold,:,:)=shower_scale_nbody
+    elseif (pythia8_S_scales()) then
+       emsca_S(ifks,ifold,:,:)=shower_scale_hard
+    elseif (present(partner)) then
+       emsca_S(ifks,ifold,:,:)=shower_scale_nbody(fksfather,partner)
+    else
+       emsca_S(ifks,ifold,:,:)=get_random_shower_dipole_scale()
+    endif
+  end subroutine save_shower_scale_nbody
 
   subroutine compute_shower_scale_n1body(p,i_fks,j_fks)
     implicit none
@@ -141,9 +192,23 @@ contains
   
   subroutine Bornonly_shower_scale(p,flow_picked)
     implicit none
-    integer :: i,j,flow_picked
+    integer :: i,j,flow_picked,status
     double precision,dimension(0:3,next_n) :: p
     call get_global_ref_scale(next_n,p)
+    shower_scale_hard=shower_scale_factor*global_ref_scale
+    if (pythia8_S_scales()) then
+       shower_scale_hard=max(shower_scale_hard,scaleMCcut)
+       call pythia8_starting_scales(next_n,p,mass_n, &
+            valid_dipole_n(:,:,flow_picked),shower_scale_hard, &
+            shower_scale_nbody,status)
+       if (status.ne.delta_ok) then
+          write (*,*) 'PYTHIA8 Born starting scales failed',status
+          stop 1
+       endif
+       shower_scale_nbody_min=-1d0
+       shower_scale_nbody_max=-1d0
+       return
+    endif
     if (ickkw_mod.eq.3) then
        ! For FxFx, the scale should be the smallest clustering scale as
        ! returned by the clustering routine. This is the global_ref_scale

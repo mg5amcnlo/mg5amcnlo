@@ -48,6 +48,7 @@ class TestMCDeadZones(unittest.TestCase):
                    "-Wl,-dead_strip" if sys.platform == "darwin" else "-Wl,--gc-sections",
                    "-I", str(work), str(TEMPLATE / "process_module.f90"),
                    str(TEMPLATE / "kinematics_module.f90"),
+                   str(TEMPLATE / "mcatnlo_delta_scales.f90"),
                    str(TEMPLATE / "scale_module.f90"), str(work / "counter.f"),
                    str(ROOT / "tests/input_files/check_mc_dead_zones.f90"),
                    "-o", str(cls.executable)]

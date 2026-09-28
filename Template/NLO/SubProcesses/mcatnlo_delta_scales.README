@@ -1,11 +1,12 @@
-Native MC@NLO-Delta stopping scales
-=================================
+Native PYTHIA8 starting and MC@NLO-Delta stopping scales
+======================================================
 
 mcatnlo_delta_scales.f90 reconstructs stopping scales, dipole masses and
 dead-zone flags from real momenta and the selected FKS Born colour flow.
 It needs no shower library, initialization, PDFs or random numbers.
-MG5 supplies the starting scales and retains the scale vetoes, Sudakov
-tables, PDF factors and H-event scale assignment. Creating new Sudakov
+It also returns effective S-event starting scales for PYTHIA8 in ordinary
+MC@NLO and MC@NLO-Delta. MG5 samples the damped hard scale and retains the
+scale vetoes, Sudakov tables, PDF factors and H-event scale assignment. Creating new Sudakov
 tables and showering the generated events independently use Pythia.
 
 Provenance and license
@@ -72,6 +73,49 @@ also for initial-final colour connections. The sentinel values are kept:
 raw 1e-6 is live, raw 1e-5 is dead, raw 1e10 is stored as 0 and dead, and
 zero is dead. MG5 then imposes its starting-scale veto and table bounds.
 The low-level pythia_pt_lund routine exposes the raw scalar calculation.
+
+S-event starting scales
+-----------------------
+
+  call pythia8_starting_scales(nborn, p, mass, connected, hard_scale, &
+                               scales, status)
+
+This interface takes Born-order momenta p(0:3,nborn), nonnegative on-shell
+masses mass(nborn), and a logical connected(nborn,nborn) matrix. It also
+accepts the union of connections over several colour flows. The emitter
+is the first index; absent entries and the diagonal are -1. Unlike the
+stopping-scale interface, this matrix has indices 1:nborn with no padding
+or removed emission.
+
+With Q=hard_scale and M_ij=sqrt((p_i+p_j)**2), the effective scales are
+
+  Q_ij = Q                                           (incoming emitter)
+  Q_ij = min(Q, sqrt((M_ij-m_j)**2-m_i**2)/2)         (outgoing emitter).
+
+The positive-energy sum is used also for a final-initial connection.
+Masses come from the on-shell particle data, avoiding negative mass
+squares from floating-point reconstruction. A closed threshold gives
+zero; unphysical masses or nonfinite inputs give a nonzero status.
+
+These bounds follow PYTHIA 8.313 SimpleTimeShower::pTnext (including its
+limitPTmaxGlobal branch) and SimpleSpaceShower::prepare/pTnext. Reference
+SHA-256 hashes of those source files are, respectively:
+6925aa2d2a6b86e8a3037a3554f5dbb399d2259d167f8b935ec0cfab947fc4ca
+fe74d843e7725497558fec97a6f1a7394b51ea1d853e4f0ea6dc1fcb238f2d73
+
+scale_module samples ONE damped hard scale Q from the existing clustering
+reference and damping distribution, then passes it to this routine.
+Thus both matching modes write SCALUP=Q. Ordinary MC@NLO needs no dipole
+tags: PYTHIA itself imposes the smaller kinematic limits. Delta retains
+its directed tags and uses these same effective scales in its Sudakovs.
+The scalar and matrix are saved and selected together by sector and fold.
+
+The subtraction damping still uses the hard-scale distribution, with
+the existing physical dipole dead-zone veto applied separately. This is
+essential: damping min(Q_hard,Q_kin) independently would give a different
+distribution from min(damped(Q_hard),Q_kin), and would not match the shower
+with scalar SCALUP. In particular the latter has finite probability at
+the kinematic endpoint. FxFx retains its own clustering-scale prescription.
 
 Supplied reference validation
 -----------------------------

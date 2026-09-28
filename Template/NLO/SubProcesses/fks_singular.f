@@ -3754,6 +3754,7 @@ c instead.
          endif
       endif
       showerscaleS(1:ndelS,1:ndelS)=emsca_S(iFKS,ifl,1:ndelS,1:ndelS)
+      showerscaleS_hard=emsca_S_hard(iFKS,ifl)
       ifold_picked=ifl
       return
       end

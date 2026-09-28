@@ -1,5 +1,79 @@
 # MC@NLO-Delta with complete native histories
 
+## Pythia8 S-event starting scales
+
+Both ordinary MC@NLO and MC@NLO-Delta now sample the S-event scalar
+`SCALUP` from the damped hard-process scale. The hard reference is the
+existing minimum clustering scale returned by `cluster_and_reweight`.
+The shower-scale factor, damping inverse, infrared floor and minimum
+damping-interval width retain their existing definitions.
+
+The new `pythia8_starting_scales` subroutine in
+`Template/NLO/SubProcesses/mcatnlo_delta_scales.f90` returns a directed
+matrix in Born order. With the emitter in the first index, its entries are
+
+\[
+ Q_{ij}=\begin{cases}
+ Q, & i\text{ incoming},\\
+ \min\!\left(Q,\frac12\sqrt{(M_{ij}-m_j)^2-m_i^2}\right),
+       & i\text{ outgoing},
+ \end{cases}
+ \qquad M_{ij}^2=(p_i+p_j)^2,\qquad Q=\mathrm{SCALUP}.
+\]
+
+These are Pythia 8.313's local mass-corrected FSR limits, also retained by
+the standard aMC@NLO global-recoil setting `limitPTmaxGlobal=on`.
+The sum uses positive-energy momenta even for incoming colour partners.
+ISR has no corresponding local dipole limit and uses the hard scale.
+The formulas were checked against `SimpleTimeShower::pTnext` and
+`SimpleSpaceShower::prepare/pTnext`; their source hashes are recorded in
+the module README. Pythia's
+[aMC@NLO matching documentation](https://pythia.org/latest-manual/aMCatNLOMatching.html)
+also requires the shower to use the scale employed in the subtractions.
+
+The ordering of damping and the physical cap matters. A scalar SCALUP
+produces `min(damped hard scale, dipole limit)` in the shower. Independently
+damping an already capped dipole would produce a different distribution.
+The implementation therefore draws one hard scale, applies the physical
+limits, and keeps the subtraction damping interval tied to the hard
+scale. Existing physical dead-zone vetoes remain separate. This preserves
+the finite endpoint probability when the hard-scale draw exceeds a
+dipole limit. The subtraction matrix lookups now use emitter-first order.
+
+Ordinary MC@NLO still writes only a scalar: Pythia imposes its dipole limits
+itself. Delta retains its dipole tags and uses the same effective scales
+in its Sudakov calculation. The saved scalar and matrix follow the same
+sector and fold, including the Born-only/virtual fallback; native-history
+evaluation restores the outer hard scale. FxFx keeps its own prescription.
+
+Validation on 28 September 2026:
+
+* All 79 focused starting/stopping-scale, subtraction, colour ownership,
+  native-history, Born-support, helicity and momentum-map tests pass.
+  Another 18 shower-interface, shower-card and cluster tests pass.
+* The new compiled tests cover II/IF/FI/FF limits, unequal masses,
+  longitudinal boosts, thresholds, invalid input, scale variations and
+  fold selection. Sampling 1,000 fixed quantiles reproduces the production
+  subtraction damping probability below a finite dipole ceiling, in both
+  matching modes. The module needs no Pythia runtime library.
+* A fresh `p p > t t~ [QCD]` export with `loop_sm-no_b_mass`, 6.5 TeV beams,
+  fixed 173 GeV renormalization/factorization scales, `nn23nlo` and requested
+  accuracy 0.1 generated 40 events in each mode. All subprocesses pass the
+  matrix-element/MC tests and 20/20 pole checks at `1e-5`.
+* The Delta sample has 31 S-events, including 18 directed dipoles limited
+  by their kinematics. Their written scales reproduce the formula above
+  within `3.50e-8` relative error, consistent with LHE precision. Ordinary
+  MC@NLO has 33 S-events and no dipole tags. Both samples have positive
+  S-event SCALUP, conserved colour/momentum and 27 finite scale reweights
+  per event.
+* Pythia 8.313 tried, selected and accepted all 40 events in each mode,
+  using the generated shower steering, with no reported shower errors.
+
+Cards, logs, events and `starting_scale_lhe_audit.json` are retained under
+`/export/tmp/rikkert/mg5_s_scales_cxaicy7a`. These small samples check the
+export/build, event-scale contract and execution, rather than precision
+cross sections.
+
 ## Native stopping scales
 
 MC@NLO-Delta now calculates its stopping scales, dipole masses and
@@ -18,7 +92,7 @@ Born flow, and preserves the real/Born ordering and directed-dipole
 conventions. Unsupported colour structures and undefined numerical
 expressions report an error. The module does not generate alternative
 histories, resonance-record rearrangements, colour junctions, or general
-electroweak/BSM shower histories. MG5 still supplies starting scales,
+electroweak/BSM shower histories. MG5 samples the hard starting scale,
 applies the stopping-scale vetoes and table bounds, and evaluates the
 Sudakov and PDF factors. Pythia remains independently needed for
 generating new Sudakov tables and for subsequently showering events.

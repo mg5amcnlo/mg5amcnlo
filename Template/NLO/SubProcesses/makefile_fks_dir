@@ -195,7 +195,7 @@ libMadLoop.a:
 	for dir in `ls -d V*`; do cd $$dir; make; cd ../; done
 
 kinematics_module.o : process_module.o
-scale_module.o : process_module.o kinematics_module.o
+scale_module.o : process_module.o kinematics_module.o mcatnlo_delta_scales.o
 montecarlocounter.o : scale_module.o kinematics_module.o process_module.o mcatnlo_delta_scales.o
 fks_singular.o : scale_module.o kinematics_module.o process_module.o
 add_write_info.o write_event.o test_soft_col_limits.o driver_mintMC.o: scale_module.o
