@@ -12,14 +12,22 @@ program check_pythia8_s_scales
   use weight_lines
   implicit none
   character(len=32) :: mode
-  double precision :: p(0:3,4),saved(4,4),saved_hard,q,expected,observed
+  double precision :: p(0:3,4),saved(4,4),saved_hard,q,expected,observed,ff_cap,fi_cap
   double precision, external :: compute_damping_weight
   integer :: i,nabove,selected_fold
-  logical :: delta
+  logical :: delta,herwig
 
   call get_command_argument(1,mode)
   delta=trim(mode).eq.'delta'
+  herwig=trim(mode).eq.'herwig'
   call init_process_module_global('PYTHIA8   ','all ',5,2,delta,13000d0,2,1,0)
+  if (herwig) shower_mc_mod='HERWIGPP'
+  ff_cap=500d0
+  fi_cap=sqrt(50000d0)
+  if (herwig) then
+    ff_cap=250d0
+    fi_cap=sqrt(200000d0)/4d0
+  endif
   call init_scale_module(5,1d0,2,2)
   next_n=4
   mass_n=0d0
@@ -40,7 +48,7 @@ program check_pythia8_s_scales
   call compute_shower_scale_nbody(p,1)
   call close(shower_scale_hard,550d0,'damped hard scale')
   call close(shower_scale_nbody(1,2),550d0,'ISR uses SCALUP')
-  call close(shower_scale_nbody(3,4),500d0,'FSR cap applied after hard-scale damping')
+  call close(shower_scale_nbody(3,4),ff_cap,'FSR cap applied after hard-scale damping')
   call require(shower_scale_nbody(1,3).eq.-1d0,'selected flow mask')
   call require(random_calls.eq.1,'one damping draw per event')
   call save_shower_scale_nbody(1,1)
@@ -54,8 +62,8 @@ program check_pythia8_s_scales
   call compute_shower_scale_nbody(p,-3)
   call close(shower_scale_hard,400d0,'second damping draw')
   call close(shower_scale_nbody(1,3),400d0,'IF hard scale')
-  call close(shower_scale_nbody(3,1),sqrt(50000d0),'FI kinematic limit')
-  call close(shower_scale_nbody(3,4),400d0,'FF respects hard scale')
+  call close(shower_scale_nbody(3,1),fi_cap,'FI kinematic limit')
+  call close(shower_scale_nbody(3,4),min(400d0,ff_cap),'FF respects hard scale')
   call save_shower_scale_nbody(2,2,4)
   saved=shower_scale_nbody
   saved_hard=shower_scale_hard
@@ -64,20 +72,27 @@ program check_pythia8_s_scales
   ! draw. A physical dipole cap truncates this distribution, creating an
   ! endpoint probability; it must not rescale the damping interval.
   q=400d0
+  if (herwig) q=200d0
   ileg=1
-  xtk=-q*q
-  expected=compute_damping_weight(4,1d0,0d0)
-  call close(expected,0.8d0,'hard-scale damping in subtraction')
+  shat_n1=1000d0**2
+  xtk=-500d0*q
+  expected=compute_damping_weight(4,q/500d0,0d0)
+  if (herwig) then
+    call close(expected,64d0/65d0,'Herwig hard-scale damping in subtraction')
+  else
+    call close(expected,0.8d0,'hard-scale damping in subtraction')
+  endif
   nabove=0
   do i=1,1000
     random_value=(dble(i)-0.5d0)/1000d0
     call compute_shower_scale_nbody(p,-3)
     if (shower_scale_nbody(3,4).gt.q) nabove=nabove+1
-    call require(shower_scale_nbody(3,4).le.500d0,'FSR endpoint')
+    call require(shower_scale_nbody(3,4).le.ff_cap,'FSR endpoint')
     call require(shower_scale_nbody(3,4).le.shower_scale_hard,'global shower ordering')
   enddo
   observed=dble(nabove)/1000d0
-  call close(observed,expected,'sampled shower and subtraction damping agree')
+  call require(abs(observed-expected).le.0.5d0/1000d0, &
+       'sampled shower and subtraction damping agree within quantile spacing')
 
   ! Later native/history calculations must not replace the chosen saved
   ! scale. Exercise the production fold/sector selection with one owner.
@@ -116,7 +131,25 @@ program check_pythia8_s_scales
   call init_scale_module(5,2d0,2,2)
   call compute_shower_scale_nbody(p,-3)
   call close(shower_scale_hard,1100d0,'hard-scale variation')
-  call close(shower_scale_nbody(3,4),500d0,'variation cannot exceed FF phase space')
+  call close(shower_scale_nbody(3,4),ff_cap,'variation cannot exceed FF phase space')
+  if (herwig) then
+    call close(shower_scale_nbody(1,2),1000d0,'Herwig II angular ceiling')
+    call close(shower_scale_nbody(1,3),sqrt(200000d0),'Herwig IF angular ceiling')
+    ! A standalone Born event uses the undamped hard scale and its caps.
+    call Bornonly_shower_scale(p,1)
+    call close(shower_scale_hard,2000d0,'Herwig Born hard scale')
+    call close(shower_scale_nbody(3,4),ff_cap,'Herwig Born FF ceiling')
+    call require(all(shower_scale_nbody_max.eq.-1d0),'Born has no damping interval')
+    mcatnlo_delta_mod=.true.
+    call require(.not.herwig7_S_scales(),'Herwig prescription excludes Delta')
+    mcatnlo_delta_mod=.false.
+    nincoming_mod=1
+    call require(.not.herwig7_S_scales(),'Herwig prescription excludes decays')
+    nincoming_mod=2
+    shower_mc_mod='HERWIG6'
+    call require(.not.scalar_S_scales(),'HERWIG6 retains its prescription')
+    shower_mc_mod='HERWIGPP'
+  endif
   hard_reference=0.01d0
   call compute_shower_scale_nbody(p,-3)
   call close(shower_scale_hard,4.5d0,'existing infrared floor and width')

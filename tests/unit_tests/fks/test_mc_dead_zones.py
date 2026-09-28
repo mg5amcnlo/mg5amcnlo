@@ -49,6 +49,7 @@ class TestMCDeadZones(unittest.TestCase):
                    "-I", str(work), str(TEMPLATE / "process_module.f90"),
                    str(TEMPLATE / "kinematics_module.f90"),
                    str(TEMPLATE / "mcatnlo_delta_scales.f90"),
+                   str(TEMPLATE / "herwig7_scales.f90"),
                    str(TEMPLATE / "scale_module.f90"), str(work / "counter.f"),
                    str(ROOT / "tests/input_files/check_mc_dead_zones.f90"),
                    "-o", str(cls.executable)]
@@ -68,6 +69,9 @@ class TestMCDeadZones(unittest.TestCase):
 
     def test_massive_partner_boundary(self):
         self.check_case("massive")
+
+    def test_herwig_angular_boundaries_and_independent_pt_veto(self):
+        self.check_case("herwig")
 
     def test_soft_wide_angle_transition(self):
         self.check_case("soft_transition")

@@ -101,6 +101,7 @@ class TestMCatNLODeltaMatching(unittest.TestCase):
             '-I', str(work), str(TEMPLATE / 'process_module.f90'),
             str(TEMPLATE / 'kinematics_module.f90'),
             str(TEMPLATE / 'mcatnlo_delta_scales.f90'),
+            str(TEMPLATE / 'herwig7_scales.f90'),
             str(TEMPLATE / 'scale_module.f90'),
             str(work / 'delta_matching.f'),
             str(ROOT / 'tests/input_files/check_mcatnlo_delta_matching.f90'),
@@ -122,7 +123,7 @@ class TestMCatNLODeltaMatching(unittest.TestCase):
 
 
 @unittest.skipUnless(shutil.which('gfortran'), 'requires gfortran')
-class TestPythia8StartingScaleIntegration(unittest.TestCase):
+class TestStartingScaleIntegration(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.tempdir = tempfile.TemporaryDirectory(prefix='mg5_s_scales_')
@@ -146,6 +147,7 @@ class TestPythia8StartingScaleIntegration(unittest.TestCase):
             '-I', str(work), str(TEMPLATE / 'process_module.f90'),
             str(TEMPLATE / 'kinematics_module.f90'),
             str(TEMPLATE / 'mcatnlo_delta_scales.f90'),
+            str(TEMPLATE / 'herwig7_scales.f90'),
             str(TEMPLATE / 'scale_module.f90'), str(TEMPLATE / 'weight_lines.f'),
             str(work / 'routines.f'),
             str(ROOT / 'tests/input_files/check_pythia8_s_scales.f90'),
@@ -163,6 +165,9 @@ class TestPythia8StartingScaleIntegration(unittest.TestCase):
 
     def test_delta_scales_and_fold_selection_use_same_hard_scale(self):
         self.check_case('delta')
+
+    def test_herwig_scalar_matches_effective_dipoles_and_subtractions(self):
+        self.check_case('herwig')
 
 
 @unittest.skipUnless(shutil.which('gfortran'), 'requires gfortran')

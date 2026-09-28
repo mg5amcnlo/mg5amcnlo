@@ -735,6 +735,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                      'mint.inc',
                      'montecarlocounter.f',
                      'mcatnlo_delta_scales.f90',
+                     'herwig7_scales.f90',
                      'q_es.inc',
                      'recluster.cc',
                      'Boosts.h',

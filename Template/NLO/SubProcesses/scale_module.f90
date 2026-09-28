@@ -2,6 +2,7 @@ module scale_module
   use process_module
   use kinematics_module
   use mcatnlo_delta_scales, only: pythia8_starting_scales, delta_ok
+  use herwig7_scales, only: herwig7_starting_scales, hw7_ok
   implicit none
   double precision,public,allocatable,dimension(:,:) :: shower_scale_nbody, &
        shower_scale_nbody_max,shower_scale_nbody_min&
@@ -21,7 +22,8 @@ module scale_module
   logical,public,parameter :: force_II_connection=.true.
   public :: compute_shower_scale_nbody,compute_shower_scale_n1body, &
        init_scale_module,Bornonly_shower_scale,get_random_shower_dipole_scale, &
-       determine_partner,save_shower_scale_nbody,pythia8_S_scales
+       determine_partner,save_shower_scale_nbody,pythia8_S_scales, &
+       herwig7_S_scales,scalar_S_scales
   private
 contains
   
@@ -56,10 +58,40 @@ contains
     pythia8_S_scales=shower_mc_mod.eq.'PYTHIA8' .and. &
          nincoming_mod.eq.2 .and. ickkw_mod.ne.3
   end function pythia8_S_scales
+
+  logical function herwig7_S_scales()
+    ! HERWIGPP selects the angular shower in both Herwig++ and Herwig7.
+    ! Delta is supported only by Pythia8; FxFx has its own prescription.
+    herwig7_S_scales=shower_mc_mod.eq.'HERWIGPP' .and. &
+         nincoming_mod.eq.2 .and. ickkw_mod.ne.3 .and. .not.mcatnlo_delta_mod
+  end function herwig7_S_scales
+
+  logical function scalar_S_scales()
+    scalar_S_scales=pythia8_S_scales().or.herwig7_S_scales()
+  end function scalar_S_scales
+
+  subroutine native_S_scales(p,connected)
+    double precision, intent(in) :: p(0:3,next_n)
+    logical, intent(in) :: connected(next_n,next_n)
+    integer :: status
+    if (pythia8_S_scales()) then
+       call pythia8_starting_scales(next_n,p,mass_n,connected, &
+            shower_scale_hard,shower_scale_nbody,status)
+       if (status.eq.delta_ok) return
+    elseif (herwig7_S_scales()) then
+       call herwig7_starting_scales(next_n,p,mass_n,connected, &
+            shower_scale_hard,shower_scale_nbody,status)
+       if (status.eq.hw7_ok) return
+    else
+       status=-1
+    endif
+    write (*,*) trim(shower_mc_mod),' S-event starting scales failed',status
+    stop 1
+  end subroutine native_S_scales
     
   subroutine compute_shower_scale_nbody(p,flow_picked)
     implicit none
-    integer :: i,j,flow_picked,iflow_min,iflow_max,iflow,status
+    integer :: i,j,flow_picked,iflow_min,iflow_max,iflow
     double precision,dimension(0:3,next_n) :: p
     double precision :: ref_scale,scalemin,scalemax,rrnd
     double precision, external :: ran2
@@ -85,8 +117,8 @@ contains
        iflow_min=1
        iflow_max=max_flows_n
     endif
-    if (pythia8_S_scales()) then
-       ! One damping draw sets SCALUP. Pythia then limits each directed
+    if (scalar_S_scales()) then
+       ! One damping draw sets SCALUP. The shower limits each directed
        ! dipole by its kinematics. Damping a capped dipole independently
        ! would not reproduce the shower driven by the scalar SCALUP.
        call get_scaleminmax(global_ref_scale,scalemin,scalemax)
@@ -94,13 +126,7 @@ contains
        scalemax=max(scalemax,scalemin+scaleMCdelta)
        rrnd=damping_inv(ran2(),1d0)
        shower_scale_hard=scalemin+rrnd*(scalemax-scalemin)
-       call pythia8_starting_scales(next_n,p,mass_n, &
-            any(valid_dipole_n(:,:,iflow_min:iflow_max),dim=3), &
-            shower_scale_hard,shower_scale_nbody,status)
-       if (status.ne.delta_ok) then
-          write (*,*) 'PYTHIA8 S-event starting scales failed',status
-          stop 1
-       endif
+       call native_S_scales(p,any(valid_dipole_n(:,:,iflow_min:iflow_max),dim=3))
        ! These are the bounds of the HARD-scale damping distribution.
        ! The physical dipole ceiling is a separate veto in get_dead_zone;
        ! clipping these bounds would change the subtraction below it.
@@ -148,7 +174,7 @@ contains
     emsca_S_hard(ifks,ifold)=shower_scale_hard
     if (mcatnlo_delta_mod) then
        emsca_S(ifks,ifold,:,:)=shower_scale_nbody
-    elseif (pythia8_S_scales()) then
+    elseif (scalar_S_scales()) then
        emsca_S(ifks,ifold,:,:)=shower_scale_hard
     elseif (present(partner)) then
        emsca_S(ifks,ifold,:,:)=shower_scale_nbody(fksfather,partner)
@@ -192,19 +218,13 @@ contains
   
   subroutine Bornonly_shower_scale(p,flow_picked)
     implicit none
-    integer :: i,j,flow_picked,status
+    integer :: i,j,flow_picked
     double precision,dimension(0:3,next_n) :: p
     call get_global_ref_scale(next_n,p)
     shower_scale_hard=shower_scale_factor*global_ref_scale
-    if (pythia8_S_scales()) then
+    if (scalar_S_scales()) then
        shower_scale_hard=max(shower_scale_hard,scaleMCcut)
-       call pythia8_starting_scales(next_n,p,mass_n, &
-            valid_dipole_n(:,:,flow_picked),shower_scale_hard, &
-            shower_scale_nbody,status)
-       if (status.ne.delta_ok) then
-          write (*,*) 'PYTHIA8 Born starting scales failed',status
-          stop 1
-       endif
+       call native_S_scales(p,valid_dipole_n(:,:,flow_picked))
        shower_scale_nbody_min=-1d0
        shower_scale_nbody_max=-1d0
        return

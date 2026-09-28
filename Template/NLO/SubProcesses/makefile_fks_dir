@@ -67,7 +67,7 @@ FILES= $(patsubst %.f,%.o,$(wildcard parton_lum_*.f)) 			\
 	 momentum_reshuffling.o						\
 	 rescale_alpha_tagged.o						\
 	 fks_Sij.o $(fastjetfortran_madfks) fks_singular.o		\
-	 montecarlocounter.o mcatnlo_delta_scales.o			\
+	 montecarlocounter.o mcatnlo_delta_scales.o herwig7_scales.o		\
 	 boostwdir2.o cluster.o splitorders_stuff.o reweight_xsec.o	\
 	 get_color.o iproc_map.o sudakov.o  				\
 	 MC_integer.o $(reweight_xsec_events_pdf_dummy)			\
@@ -195,7 +195,7 @@ libMadLoop.a:
 	for dir in `ls -d V*`; do cd $$dir; make; cd ../; done
 
 kinematics_module.o : process_module.o
-scale_module.o : process_module.o kinematics_module.o mcatnlo_delta_scales.o
+scale_module.o : process_module.o kinematics_module.o mcatnlo_delta_scales.o herwig7_scales.o
 montecarlocounter.o : scale_module.o kinematics_module.o process_module.o mcatnlo_delta_scales.o
 fks_singular.o : scale_module.o kinematics_module.o process_module.o
 add_write_info.o write_event.o test_soft_col_limits.o driver_mintMC.o: scale_module.o

@@ -9,6 +9,7 @@ program check_mc_dead_zones
   use process_module
   use kinematics_module
   use scale_module
+  use herwig7_scales
   use controlled_connections
   use, intrinsic :: ieee_arithmetic
   use, intrinsic :: ieee_exceptions
@@ -16,8 +17,9 @@ program check_mc_dead_zones
   double precision :: pb(0:3,5), p(0:3,6), pmass(6), raw(1,2), zout(2)
   double precision :: alsf,besf,alazi,beazi,xi,y,q,cap,z,xis,weight
   double precision :: shifts(3),coeff(3),a(3),gs(3),partner_mass,basepx
-  integer :: k,j,ncon
-  logical :: include_gfun,live,invalid,divzero
+  double precision :: angular(5,5),effective(5,5)
+  integer :: k,j,ncon,i,status,imass
+  logical :: include_gfun,live,invalid,divzero,connected(5,5)
   character(32) :: name
   common /to_mass/pmass
   common /cgfunsfp/alsf,besf
@@ -41,6 +43,52 @@ program check_mc_dead_zones
   pb=0d0
 
   select case (trim(name))
+  case ('herwig')
+    shower_mc_mod='HERWIGPP'
+    connected=.true.
+    do i=1,5
+      connected(i,i)=.false.
+    enddo
+    do imass=1,2
+      if (imass.eq.2) mass_n(3:4)=[173d0,80d0]
+      pb(:,1)=[500d0,0d0,0d0,500d0]
+      pb(:,2)=[500d0,0d0,0d0,-500d0]
+      pb(:,3)=[sqrt(300d0**2+mass_n(3)**2),300d0,0d0,0d0]
+      pb(:,4)=[sqrt(300d0**2+mass_n(4)**2),-300d0,0d0,0d0]
+      pb(:,5)=[10d0,0d0,10d0,0d0]
+      call herwig7_starting_scales(5,pb,mass_n,connected,10000d0,effective,status,angular)
+      call require(status.eq.hw7_ok,'Herwig scale status')
+      shower_scale_nbody_max=10000d0
+      do i=1,4
+        fksfather=i
+        ileg=i
+        xm12=mass_n(i)**2
+        xm22=0d0
+        if (i.gt.2) ileg=merge(3,4,mass_n(i).gt.0d0)
+        do j=1,4
+          if (i.eq.j) cycle
+          do k=1,2
+            xis=angular(i,j)**2*merge(1d0-1d-8,1d0+1d-8,k.eq.1)
+            call get_dead_zone(0.5d0,xis,pb,0d0,j,live,weight)
+            call require(live.eqv.(k.eq.1),'Herwig module agrees with production angular boundary')
+          enddo
+        enddo
+      enddo
+      ! Soft wide-angle radiation may have qtilde > SCALUP and pT < SCALUP.
+      fksfather=3
+      ileg=merge(3,4,mass_n(3).gt.0d0)
+      xm12=mass_n(3)**2
+      xis=0.9d0*angular(3,4)**2
+      z=0.99d0
+      q=(1d0-z)*sqrt(z*z*xis-xm12)
+      shower_scale_nbody_max=2d0*q
+      call get_dead_zone(z,xis,pb,q,4,live,weight)
+      call require(live,'Herwig keeps soft wide-angle radiation above scalar angular scale')
+      shower_scale_nbody_max=q/2d0
+      call get_dead_zone(z,xis,pb,q,4,live,weight)
+      call require(.not.live,'Herwig enforces independent scalar pT veto')
+    enddo
+
   case ('massless','massive')
     partner_mass=0d0
     if (name.eq.'massive') partner_mass=173d0
