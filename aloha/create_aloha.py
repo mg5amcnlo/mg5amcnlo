@@ -260,13 +260,19 @@ in presence of majorana particle/flow violation"""
             expr = self.lorentz_expr
         
         if need_P_sign:
-            # Write P(...)**2 as P(...)*P(...) first: the sign is added as a
-            # bare '-', which binds looser than '**', so -P(-1,id)**2 would be
-            # -(P^2) instead of (-P)^2 = P^2. That flipped the sign of p^2 in
-            # the $ veto (P1D) of every outgoing fermion propagator and
-            # switched the veto off.
-            expr = re.sub(r'\b(P|PSlash)\(([^()]*)\)\*\*2\b', r'\1(\2)*\1(\2)', expr)
-            expr = re.sub(r'\b(P|PSlash)\(', r'-\1(', expr)
+            # (-P)**n = (-1)**n * P**n. The sign is added as a bare '-', which
+            # binds looser than '**' (-P(-1,id)**2 is -(P^2)), so a momentum
+            # raised to an even integer power is left unsigned. Before this,
+            # p^2 changed sign in the $ veto (P1D) of every outgoing fermion
+            # propagator, which switched the veto off.
+            def flip_sign(match):
+                power = match.group(3)
+                if power is not None and float(power).is_integer() \
+                                     and int(float(power)) % 2 == 0:
+                    return match.group(0)
+                return '-' + match.group(0)
+            expr = re.sub(r'\b(P|PSlash)\(([^()]*)\)(?:\s*\*\*\s*(\d+(?:\.\d*)?)(?![\w.]))?',
+                          flip_sign, expr)
 
         calc = aloha_parsers.ALOHAExpressionParser()
         lorentz_expr = calc.parse(expr)
