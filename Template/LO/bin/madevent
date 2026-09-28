@@ -154,16 +154,17 @@ try:
 except:
     pass
 import internal.madevent_interface as cmd_interface
+import internal.misc as misc
 
 # check for plugin customization of the launch command
 launch_interface = cmd_interface.MadEventCmdShell
-if os.path.exists(pjoin(root_path, 'bin','internal', 'launch_plugin.py')):
+if os.path.exists(pjoin(root_path, 'internal', 'launch_plugin.py')):
     with  misc.TMP_variable(sys, 'path', sys.path + [pjoin(root_path, 'bin', 'internal')]):
         from importlib import reload
         try:
-            reload('launch_plugin')
+            reload('internal.launch_plugin')
         except Exception as error:
-            import launch_plugin
+            import internal.launch_plugin as launch_plugin
     launch_interface =  launch_plugin.MEINTERFACE
 
 
@@ -228,7 +229,7 @@ try:
                 cmd_line = cmd_interface.MadEventCmd(force_run=True)
                 cmd_line.cmdloop()
             else:
-                cmd_line = cmd_interface.MadEventCmdShell(force_run=True)
+                cmd_line = launch_interface(force_run=True)
                 cmd_line.cmdloop()
 except KeyboardInterrupt:
     print( 'writting history and directory and quit on KeyboardInterrupt' )

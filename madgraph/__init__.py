@@ -25,6 +25,8 @@ class aMCatNLOError(MadGraph5Error):
 
 import os
 import logging
+import shutil
+import tempfile
 import time
 pjoin = os.path.join
 
@@ -39,15 +41,44 @@ if ' ' in MG5DIR:
 MG4DIR = MG5DIR
 ReadWrite = os.access(MG5DIR, os.W_OK) # W_OK is for writing
 
+def atomic_copy(src, dst):
+    """Copy src onto dst by rename, so that a concurrent reader of dst always
+    sees a whole file (the old one or the new one) and never a truncated one.
+
+    Duplicated from madgraph.various.misc.atomic_copy, which is the version to
+    use everywhere else: misc imports this package, so this package cannot
+    import misc.
+    """
+    fd, tmp = tempfile.mkstemp(dir=os.path.dirname(os.path.abspath(dst)),
+                               prefix='.%s.' % os.path.basename(dst),
+                               suffix='.tmp')
+    os.close(fd)
+    try:
+        shutil.copy(src, tmp)
+        os.chmod(tmp, 0o644)
+        os.replace(tmp, dst)
+    except Exception:
+        try:
+            os.remove(tmp)
+        except OSError:
+            pass
+        raise
+
+
 if ReadWrite:
     # Temporary fix for problem with auto-update
     try:
         tmp_path = pjoin(MG5DIR, 'Template','LO','Source','make_opts')
         #1480375724 is 29/11/16
         if os.path.exists(tmp_path) and os.path.getmtime(tmp_path) < 1480375724:
-            os.remove(tmp_path)
-            shutil.copy(pjoin(MG5DIR, 'Template','LO','Source','.make_opts'),
-                    pjoin(MG5DIR, 'Template','LO','Source','make_opts'))
+            # Rename into place rather than remove-then-copy: this file is shared
+            # by every MG5aMC process using this installation and is copied into
+            # each new output directory (and parsed by make); it must never be
+            # observed missing or half-written. NB the old code also referenced
+            # shutil without importing it, so the copy raised NameError into the
+            # except below and only the os.remove ever took effect.
+            atomic_copy(pjoin(MG5DIR, 'Template','LO','Source','.make_opts'),
+                        tmp_path)
     except Exception as error:
         pass
   

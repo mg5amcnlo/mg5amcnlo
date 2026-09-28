@@ -1900,10 +1900,12 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
 
 
     def update_random_seed(self):
-        """Update random number seed with the value from the run_card. 
+        """Update random number seed with the value from the run_card.
         If this is 0, update the number according to a fresh one.
-        If a specific seed is set, reset it to 0 in the run_card after use
-        to ensure that subsequent runs will be statistically independent."""
+        If a positive seed is set, reset it to 0 in the run_card after use
+        to ensure that subsequent runs will be statistically independent.
+        A negative seed is preserved in the run_card across runs and its
+        absolute value is used as the actual seed for the Fortran code."""
         iseed = self.run_card['iseed']
         if iseed == 0:
             randinit = open(pjoin(self.me_dir, 'SubProcesses', 'randinit'))
@@ -1911,6 +1913,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
             randinit.close()
         else:
             self.reset_iseed_in_run_card()
+            iseed = abs(iseed)
         randinit = open(pjoin(self.me_dir, 'SubProcesses', 'randinit'), 'w')
         randinit.write('r=%d' % iseed)
         randinit.close()
@@ -2948,12 +2951,10 @@ RESTART = %(mint_mode)s
             out=pjoin(self.me_dir,'Events',self.run_name,'MADatNLO')
             self.combine_plots_HwU(jobs,out)
             try:
-                misc.call(['gnuplot','MADatNLO.gnuplot'],\
-                          stdout=devnull,stderr=devnull,\
-                          cwd=pjoin(self.me_dir, 'Events', self.run_name))
+                common_run.render_HwU_plot(out, stdout=devnull, stderr=devnull)
             except Exception:
                 pass
-            logger.info('The results of this run and the HwU and GnuPlot files with the plots' + \
+            logger.info('The results of this run and the HwU data with GnuPlot, Matplotlib, and HTML plotting output' + \
                         ' have been saved in %s' % pjoin(self.me_dir, 'Events', self.run_name))
         elif self.analyse_card['fo_analysis_format'].lower() == 'root':
             rootfiles = []
@@ -4250,7 +4251,7 @@ RESTART = %(mint_mode)s
             if out_id=='TOP':
                 hist_format='TopDrawer format'
             elif out_id=='HWU':
-                hist_format='HwU and GnuPlot formats'
+                hist_format='HwU format, with GnuPlot, Matplotlib, and HTML output'
 
             if not topfiles:
                 # if no topfiles are found just warn the user
@@ -4271,10 +4272,9 @@ RESTART = %(mint_mode)s
                         histos=[{'dirname':pjoin(rundir,file)}]
                         self.combine_plots_HwU(histos,out)
                         try:
-                            misc.call(['gnuplot','%s%d.gnuplot' % (filename,i)],\
-                                      stdout=os.open(os.devnull, os.O_RDWR),\
-                                      stderr=os.open(os.devnull, os.O_RDWR),\
-                                      cwd=pjoin(self.me_dir, 'Events', self.run_name))
+                            common_run.render_HwU_plot(
+                                out, stdout=subprocess.DEVNULL,
+                                stderr=subprocess.DEVNULL)
                         except Exception:
                             pass
                         plotfile=pjoin(self.me_dir,'Events',self.run_name,
@@ -4338,10 +4338,9 @@ RESTART = %(mint_mode)s
                                 norms.append(norm)
                             self.combine_plots_HwU(histos,out,normalisation=norms)
                             try:
-                                misc.call(['gnuplot','%s%d.gnuplot' % (filename, i)],\
-                                          stdout=os.open(os.devnull, os.O_RDWR),\
-                                          stderr=os.open(os.devnull, os.O_RDWR),\
-                                          cwd=pjoin(self.me_dir, 'Events',self.run_name))
+                                common_run.render_HwU_plot(
+                                    out, stdout=subprocess.DEVNULL,
+                                    stderr=subprocess.DEVNULL)
                             except Exception:
                                 pass
 
@@ -5542,8 +5541,35 @@ PYTHIA8LINKLIBS=%(pythia8_prefix)s/lib/libpythia8.a -lz -ldl"""%{'pythia8_prefix
         else:
             self.make_opts_var['pineappl'] = ""
 
+        # Setting fastjet_config makes makefile_fks_dir build
+        # fastjetfortran_madfks_full.cc, which #includes
+        # "fastjet/ClusterSequence.hh" and asks fastjet-config for its cxxflags
+        # and libs.  A path that does not answer therefore turns the documented
+        # fjcore fallback (the else branch of that makefile) into a hard
+        # compilation error for every P* directory.  The option is read
+        # verbatim out of Cards/me5_configuration.txt and, unlike
+        # MadGraphCmd.set2_fastjet, was never re-validated here, so a stale or
+        # broken entry took the whole run down with an unrelated-looking
+        # "A compilation Error occurs when trying to compile .../P0_...".
+        # Check it the same way the shower setup above already does, and fall
+        # back to fjcore when it does not run.
         if 'fastjet' in list(self.options.keys()) and self.options['fastjet']:
-            self.make_opts_var['fastjet_config'] = self.options['fastjet']
+            try:
+                p = subprocess.Popen([self.options['fastjet'], '--version'],
+                                     stdout=subprocess.PIPE,
+                                     stderr=subprocess.PIPE)
+                p.communicate()
+                valid_fastjet = (p.returncode == 0)
+            except Exception:
+                valid_fastjet = False
+            if valid_fastjet:
+                self.make_opts_var['fastjet_config'] = self.options['fastjet']
+            else:
+                logger.warning('%s does not run: it is not a valid ' % \
+                    self.options['fastjet'] + 'fastjet-config. Compiling the ' +
+                    'Subprocesses with fjcore instead.\n Set the correct path ' +
+                    'with "set fastjet /PATH/TO/fastjet-config" if you need ' +
+                    'the full FastJet.')
 
         # add the make_opts_var to make_opts
         self.update_make_opts()

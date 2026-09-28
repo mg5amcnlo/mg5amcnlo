@@ -117,6 +117,10 @@ C     data for vectorization
       
       LOGICAL CUTSDONE,CUTSPASSED
       COMMON/TO_CUTSDONE/CUTSDONE,CUTSPASSED
+C     cuts result for both beam orientations (set in passcuts)
+      LOGICAL MIRROR_CUTS, CUTS_ORIENT(2)
+      COMMON/TO_MIRROR_CUTS/MIRROR_CUTS, CUTS_ORIENT
+      logical all_cuts_orient(2, VECSIZE_MEMMAX)
       
 c
 c     External
@@ -192,6 +196,7 @@ c              write(*,*) 'pass_point ivec is ', ivec
                all_xbk(:, ivec) = xbk(:)
                all_q2fact(:, ivec) = q2fact(:)
                all_cm_rap(ivec) = cm_rap
+               all_cuts_orient(:, ivec) = cuts_orient(:)
                all_lastbin(:, ivec) = lastbin(:)
 c               i = ivec
 c               fx = dsig(all_p(1,i),all_wgt(i),0)
@@ -217,9 +222,16 @@ c                 need to restore common block
                   q2fact(:) = all_q2fact(:,i)
                   CUTSDONE=.TRUE.
                   CUTSPASSED=.TRUE.
+                  cuts_orient(:) = all_cuts_orient(:, i)
                   call prepare_grouping_choice(all_p(1,i), all_wgt(i),i.eq.(iwarp-1)*WARP_SIZE+1)
                enddo
                call select_grouping(imirror_vec(iwarp), iproc, iconf_vec(iwarp), all_wgt, iwarp)
+c              events failing the cuts in the selected beam orientation do not contribute
+               if (imirror_vec(iwarp).eq.1.or.imirror_vec(iwarp).eq.2) then
+                  do i=(iwarp-1)*WARP_SIZE+1, iwarp*warp_size
+                     if (.not.all_cuts_orient(imirror_vec(iwarp),i)) all_wgt(i)=0d0
+                  enddo
+               endif
                if (ivec.lt.VECSIZE_USED)then
                   cycle
                endif

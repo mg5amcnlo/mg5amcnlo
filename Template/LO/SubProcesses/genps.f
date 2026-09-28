@@ -1769,7 +1769,8 @@ C     -----------------------------------------
 
       integer ids(nexternal)
       integer i,j
-      logical trivial_boost 
+      integer nsel, isel
+      logical trivial_boost
 
 c     uncompress
       call mapid(frame_id, ids)
@@ -1810,7 +1811,38 @@ c     find the boost momenta --sum of particles--
       enddo	    
       do i=1, nexternal
          call boostx(p1(0,i), pboost, p2(0,i))
-      enddo   
+      enddo
+
+c     If a single particle defines the frame, that particle must be
+c     exactly at rest after the boost. boostx only gets there up to the
+c     rounding of the boost factor, leaving a residual 3-momentum of a
+c     few 1d-14 whose direction is pure noise. That is not harmless:
+c     vxxxxx (aloha_functions.f) branches on pp.eq.rZero, and for a
+c     massive vector at exactly zero 3-momentum it takes the frame z
+c     axis as quantisation axis (longitudinal polarisation vector
+c     (0,0,0,1)); otherwise it builds the polarisation vectors from the
+c     momentum direction, i.e. from the rounding noise, giving an O(1)
+c     wrong polarisation state on the events that fail to round to zero.
+c     So impose the defining property of the frame explicitly.
+c     Only nsel==1 needs this: with two or more selected particles it is
+c     their sum that is at rest, and no individual leg sits on the
+c     pp.eq.rZero branch point. The energy is left untouched -- zeroing
+c     the 3-momentum shifts the invariant mass by O(1d-28) relative, and
+c     HELAS takes the mass as a separate argument anyway.
+      nsel = 0
+      isel = 0
+      do i=1, nexternal
+         if (ids(i).eq.1) then
+            nsel = nsel + 1
+            isel = i
+         endif
+      enddo
+      if (nsel.eq.1) then
+         p2(1,isel) = 0d0
+         p2(2,isel) = 0d0
+         p2(3,isel) = 0d0
+      endif
+
       return
       end
 

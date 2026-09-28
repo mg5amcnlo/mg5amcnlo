@@ -24,6 +24,20 @@
 #         - none : no spin correlation and no finite width effect
 #         legacy modes:
 #         - madspin_v1 and onshell_v1
+# set keep_weight_for_polarization_vector  [0, T] # + and - are possible choice too
+# set keep_weight_for_polarization_fermion [+, -]
+#         density spin modes only. Each decaying particle draws from the list of
+#         its own spin, and one EXTRA weight is added to the LHEF v3 <rwgt>
+#         section of every event for each COMBINATION 
+#
+# Polarisation of the PRODUCTION process ('generate p p > w+{0} w-'):
+#         the density spin modes restrict the production/decay convolution to
+#         the polarisation each brace asks for, so the decay products follow
+#         that polarisation. The same particle may appear several times with
+#         different braces -- 'p p > z{0} z{T}' -- in which case the n-th
+#         particle of that pdg in the event follows the n-th brace of the
+#         process line. Braces on a 'decay' line are refused instead (they
+#         would restrict the branching ratio, not the correlation); 
  set max_weight_ps_point 400  # number of PS to estimate the maximum for each event
 
 define light = 1 2 3 4 5 -1 -2 -3 -4 -5 11 12 13 14 15 16 -11 -12 -13 -14 -15 -16

@@ -140,7 +140,10 @@ C     LOCAL VARIABLES
 C     
       INTEGER NTRY
       REAL*8 T(NSQAMPSO), BUFF
-      INTEGER IHEL,IDEN, I, J
+      INTEGER IHEL,IDEN, I, J, JJ
+C     beam polarisation, see the same block in matrix_standalone_v4.inc
+      DOUBLE PRECISION BEAMPOL(2)
+      COMMON/TO_BEAMPOL/BEAMPOL
 C     For a 1>N process, them BEAMTWO_HELAVGFACTOR would be set to 1.
       INTEGER BEAMS_HELAVGFACTOR(2)
       DATA (BEAMS_HELAVGFACTOR(I),I=1,2)/2,2/
@@ -280,6 +283,21 @@ C      only three external particles.
               CYCLE
             ENDIF
             CALL MATRIX(P ,NHEL(1,IHEL),JC(1), T)
+C           Support for polarised beam, see matrix_standalone_v4.inc
+            IF (NINITIAL.EQ.2) THEN
+              DO JJ=1,NINITIAL
+                IF (ABS(BEAMPOL(JJ)).LE.1D0) CYCLE
+                IF (NHEL(JJ,IHEL).EQ.INT(SIGN(1D0,BEAMPOL(JJ)))) THEN
+                  DO I=1,NSQAMPSO
+                    T(I)=T(I)*ABS(BEAMPOL(JJ))
+                  ENDDO
+                ELSE
+                  DO I=1,NSQAMPSO
+                    T(I)=T(I)*(2D0-ABS(BEAMPOL(JJ)))
+                  ENDDO
+                ENDIF
+              ENDDO
+            ENDIF
             BUFF=0D0
             DO I=1,NSQAMPSO
               IF(POLARIZATIONS(0,0).EQ.-1.OR.IS_BORN_HEL_SELECTED(IHEL)
@@ -922,15 +940,23 @@ C
       DOUBLE COMPLEX, ALLOCATABLE :: TMP_INTER(:,:)
       DOUBLE PRECISION ALPHAS, MU_R2
       DOUBLE COMPLEX INTER_SUM(*)
+      INTEGER    NINITIAL
+      PARAMETER (NINITIAL=2)
 C     LOCAL
-      INTEGER I,IHEL,IPART
+      INTEGER I,IHEL,IPART,JJ
       INTEGER J
       DOUBLE PRECISION PI
+      DOUBLE PRECISION POLFACT
 C     
 C     GLOBAL
 C     
       LOGICAL CHOSEN_SO_CONFIGS(NSQAMPSO)
       COMMON/CHOSEN_BORN_SQSO/CHOSEN_SO_CONFIGS
+C     beam polarisation, filled from python through PY_SET_BEAMPOL.
+C     Same common block and convention as the v1 MadSpin path
+C     (matrix_standalone_msP_v4.inc / msF).
+      DOUBLE PRECISION BEAMPOL(2)
+      COMMON/TO_BEAMPOL/BEAMPOL
 
       INTEGER NHEL(NEXTERNAL,NB_NHEL),NTRY
 C     put in common block to expose this variable to python interface
@@ -962,10 +988,31 @@ C
         TMP_INTER(:,:) = 0
         CALL  GET_ALL_INTER(P, THISNHEL, POS, N_CHANGING, ALLOW_HEL,
      $    N_COMB, TMP_INTER)
+C       Support for polarised beam: reweight the initial-state helicity
+C       sum exactly as SMATRIX_PROD does in the v1 path. Skipped unless
+C       the process has two incoming legs -- the same shared library
+C       also holds the 1 -> N decay matrix elements, whose leg 1 is the
+C       decaying resonance and not a beam.
+        POLFACT = 1D0
+        IF (NINITIAL.EQ.2) THEN
+          DO JJ=1,NINITIAL
+C           |BEAMPOL| runs from 1 (unpolarised) to 2 (fully
+C           polarised), so anything at or below 1 means "no
+C           polarisation" -- including the zero-filled common
+C           block of an output whose link line does not pull
+C           in BLOCK DATA BEAMPOL_DEFAULT.
+            IF (ABS(BEAMPOL(JJ)).LE.1D0) CYCLE
+            IF (THISNHEL(JJ).EQ.INT(SIGN(1D0,BEAMPOL(JJ)))) THEN
+              POLFACT = POLFACT*ABS(BEAMPOL(JJ))
+            ELSE
+              POLFACT = POLFACT*(2D0-ABS(BEAMPOL(JJ)))
+            ENDIF
+          ENDDO
+        ENDIF
         DO J =1, NSQAMPSO
           IF (CHOSEN_SO_CONFIGS(J)) THEN
             DO I = 1, N_COMB*(N_COMB+1)/2
-              INTER_SUM(I) = INTER_SUM(I) + TMP_INTER(J,I)
+              INTER_SUM(I) = INTER_SUM(I) + POLFACT*TMP_INTER(J,I)
             ENDDO
           ENDIF
         ENDDO

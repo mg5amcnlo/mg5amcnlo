@@ -14,11 +14,15 @@ runs:
       run: echo "CACHE_KEY=looptools-$ImageOS" >> $GITHUB_ENV
       shell: bash
 
+    # Generation-suffixed keys: see the comment in restore_heptools_lhapdf.
     - uses: actions/cache/restore@v5
       if: ${{ inputs.setup_only != 'true' }}
       with:
         path: ~/.cache/HEPtools
-        key: ${{ env.CACHE_KEY }}
+        key: ${{ env.CACHE_KEY }}-${{ github.run_id }}
+        restore-keys: |
+          ${{ env.CACHE_KEY }}-
+          ${{ env.CACHE_KEY }}
 
     # this ignore cuttools/iregi cache ... ok but we should try to fix that
     - run: |

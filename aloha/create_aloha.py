@@ -469,6 +469,16 @@ in presence of majorana particle/flow violation"""
         elif propa == "1T": # (pol=-1,1) transverse = -metric + -Theta
             numerator = "-1*PVec(-2,id)*PVec(-2,id) * EPST2(1,id)*EPST2(2,id) + EPST1(1,id)*EPST1(2,id)"
             denominator = "PVec(-2,id)*PVec(-2,id) * PT(-3,id)*PT(-3,id) * " + basicPole
+        elif propa == "1TR": # (pol=1) transverse helicity +1 = eps(+1) x eps(+1)*
+            # P1T = P1TR + P1TL ; the two circular helicities differ by the
+            # antisymmetric (imaginary) piece i*|p|*(EPST2 x EPST1 - EPST1 x EPST2)
+            numerator = "0.5*(-1*PVec(-2,id)*PVec(-2,id) * EPST2(1,id)*EPST2(2,id) + EPST1(1,id)*EPST1(2,id)" \
+            " + complex(0,1)*Tnorm(id)*(EPST2(1,id)*EPST1(2,id) - EPST1(1,id)*EPST2(2,id)))"
+            denominator = "PVec(-2,id)*PVec(-2,id) * PT(-3,id)*PT(-3,id) * " + basicPole
+        elif propa == "1TL": # (pol=-1) transverse helicity -1 = eps(-1) x eps(-1)*
+            numerator = "0.5*(-1*PVec(-2,id)*PVec(-2,id) * EPST2(1,id)*EPST2(2,id) + EPST1(1,id)*EPST1(2,id)" \
+            " - complex(0,1)*Tnorm(id)*(EPST2(1,id)*EPST1(2,id) - EPST1(1,id)*EPST2(2,id)))"
+            denominator = "PVec(-2,id)*PVec(-2,id) * PT(-3,id)*PT(-3,id) * " + basicPole
         elif propa == "1A": # (pol=99) auxiliary
             numerator = "(P(-2,id)*P(-2,id) - Mass(id)**2) * P(1,id) * P(2,id)"
             denominator = "P(-2,id)*P(-2,id) * Mass(id)**2 * " + basicPole
@@ -920,7 +930,7 @@ class AbstractALOHAModel(dict):
                                 new_props.append(['P0']) 
                             # routine for polarised production
                             if part.spin == 3: # vector
-                                new_props += [['P1L'], ['P1T'], ['P1A']]
+                                new_props += [['P1L'], ['P1T'], ['P1TR'], ['P1TL'], ['P1A']]
                                 if part.mass.name.lower() == 'zero':
                                     new_props.append(['P1PS']) # phase-space gauge 
                             elif part.spin == 2: #fermion

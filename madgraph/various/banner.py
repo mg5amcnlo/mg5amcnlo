@@ -2827,6 +2827,10 @@ class RunCard(ConfigFile):
     default_autodef_file = 'run.inc'
     donewarning = []
     include_as_parameter = []
+    # list of the retro-compatibility fixes to apply on the user provided
+    # functions (see retro_compatible_custom_fct). Empty by default: each
+    # RunCard class opts-in for the fixes which make sense for its output.
+    retro_compatible_modes = []
 
     @classmethod
     def fill_post_set_from_blocks(cls):
@@ -3442,6 +3446,12 @@ class RunCard(ConfigFile):
         else:
             return value
 
+    def mod_inc_iseed(self, value):
+        """A negative iseed in the run_card is preserved across runs (so the
+        same seed can be reused), but the Fortran code expects a non-negative
+        seed, so export the absolute value to the include file."""
+        return abs(value)
+
     def edit_dummy_fct_from_file(self, filelist, outdir):
         """
         filelist is a list of input files (given by the user)
@@ -3479,17 +3489,24 @@ class RunCard(ConfigFile):
                     fsock = file_writers.FortranWriter(tmp,'w')
                     function_text = fsock.remove_routine(text, fct)
                     fsock.close()
-                    test = open(tmp,'r').read()                        
-                    if fct not in self.dummy_fct_file:
-                        if fct.startswith('user_'):
-                            self.dummy_fct_file[fct] = self.dummy_fct_file['user_']
+                    test = open(tmp,'r').read()
+                    # fortran is case insensitive (and upper case is idiomatic),
+                    # while dummy_fct_file --and the routines of the template
+                    # files-- are written in lower case. So normalise the name
+                    # extracted from the user file before any comparison.
+                    # (the removal above has to use the original case since it
+                    #  operates on the user file itself)
+                    lfct = fct.lower()
+                    if lfct not in self.dummy_fct_file:
+                        if lfct.startswith('user_'):
+                            self.dummy_fct_file[lfct] = self.dummy_fct_file['user_']
                         else:
-                            raise InvalidRunCard("function %s is not designed for overwritting")
-                    writein = self.dummy_fct_file[fct]
+                            raise InvalidRunCard("function %s is not designed for overwriting" % fct)
+                    writein = self.dummy_fct_file[lfct]
                     if writein not in to_mod:
-                        to_mod[writein]=[[fct], [function_text]]
+                        to_mod[writein]=[[lfct], [function_text]]
                     else:
-                        to_mod[writein][0].append(fct)
+                        to_mod[writein][0].append(lfct)
                         to_mod[writein][1].append(function_text)
 
         # step 2: write the new files
@@ -3499,9 +3516,13 @@ class RunCard(ConfigFile):
             #avoid to systematically rewrite the file. -> write in tmp place
             fsock = file_writers.FortranWriter(pjoin(outdir, path+'.tmp'),'w')
             starttext = open(pjoin(outdir, path+'.orig')).read()
+            # only apply a retro-compatibility fix if the shipped version of the
+            # file does use the associated include itself. This prevents adding
+            # an include to a file where it is not available (and not needed).
+            mode = [m for m in self.retro_compatible_modes if m in starttext]
             fsock.remove_routine(starttext, to_mod[path][0])
             for text in to_mod[path][1]:
-                text = self.retro_compatible_custom_fct(text)
+                text = self.retro_compatible_custom_fct(text, mode=mode)
                 fsock.writelines(text)
             fsock.close()
             if not filecmp.cmp(pjoin(outdir, path), pjoin(outdir, path+'.tmp')):
@@ -3520,6 +3541,13 @@ class RunCard(ConfigFile):
 
     @staticmethod
     def retro_compatible_custom_fct(lines, mode=None):
+        """update a user provided routine (list of lines) to make it compatible
+           with the current version of the code.
+           mode is the list of fixes to apply, None means "all of them".
+           supported fixes:
+            - 'vector.inc': add the include of vector.inc (needed since 3.6 to
+              be able to include run.inc) if the routine does not have it.
+        """
 
         f77_type = ['real*8', 'integer', 'double precision', 'logical']
         function_pat = re.compile(r'^\s+(?:SUBROUTINE|(?:%(type)s)\s+function)\s+([a-zA-Z]\w*)' \
@@ -3527,9 +3555,9 @@ class RunCard(ConfigFile):
         include_pat = re.compile(r"\s+include\s+[\'\"]([\w\./]*)") 
         
         assert isinstance(lines, list)
-        sol = []
 
         if mode is None or 'vector.inc' in mode:
+            sol = []
             search = True
             for i,line in enumerate(lines[:]):
                 if search and re.search(include_pat, line):
@@ -3542,7 +3570,8 @@ class RunCard(ConfigFile):
                 sol.append(line)
                 if re.search(function_pat, line):
                     search = True
-        return sol
+            lines = sol
+        return lines
 
     def guess_entry_fromname(self, name, value):
         """
@@ -4092,6 +4121,23 @@ frame_block = RunBlock('frame', template_on=template_on, template_off=template_o
 
 
 
+# Momentum reshuffling ------------------------------------------------------------------------------------
+template_on = \
+"""#*********************************************************************
+# Type of momentum-reshuffling algorithm                             *
+# This algorithm is currently implemented only for onium states      *
+# mom_resh_type:                                                     *
+#  0=initial-state reshuffling                                       *
+#  1=smooth final-state reshuffling        [eq.(3.40) in 2607.26739] *
+#  2=step-function final-state reshuffling [eq.(3.41) in 2607.26739] *
+#*********************************************************************
+  %(mom_resh_type)s  = mom_resh_type  ! momentum-reshuffling strategy
+"""
+template_off = ""
+mom_resh_block = RunBlock('mom_resh', template_on=template_on, template_off=template_off)
+
+
+
 # EVA PDF PRECISION ------------------------------------------------------------------------------------
 template_on = \
 """     %(evaorder)s = evaorder         ! 0=EVA@LLA, 1=full LP, 2=NLP [2502.07878]
@@ -4309,12 +4355,39 @@ fixedfacscale = FixedfacscaleBlock('fixed_fact_scale', template_on=template_on, 
 
 
 
+def get_model_flavour_scheme(proc_def):
+    """Return the flavour scheme (number of massless quark flavours) of the
+    model the processes in proc_def were generated with, or None.
+
+    The LO run card receives a list of process lists and the NLO one a flat
+    list of processes, so look through the nesting for the first object that
+    carries a model. The value comes from Model.get_flavour_scheme, which also
+    decides the default 'p'/'j' multiparticles, so maxjetflavor and the jet
+    definition always agree."""
+
+    todo = list(proc_def) if proc_def else []
+    while todo:
+        item = todo.pop(0)
+        try:
+            model = item.get('model')
+        except Exception:
+            model = None
+        if model:
+            try:
+                return model.get_flavour_scheme()
+            except Exception:
+                return None
+        if isinstance(item, (list, tuple)):
+            todo = list(item) + todo
+    return None
+
+
 class RunCardLO(RunCard):
     """an object to handle in a nice way the run_card information"""
     
     blocks = [heavy_ion_block, beam_pol_block, syscalc_block, ecut_block,
              frame_block, eva_pdf_block, mlm_block, ckkw_block, psoptim_block,
-              pdlabel_block, fixedfacscale, running_block]
+              pdlabel_block, fixedfacscale, running_block, mom_resh_block]
 
     dummy_fct_file = {"dummy_cuts": pjoin("SubProcesses","dummy_fct.f"),
                       "get_dummy_x1": pjoin("SubProcesses","dummy_fct.f"),
@@ -4326,6 +4399,10 @@ class RunCardLO(RunCard):
                       }
     
     include_as_parameter = ['vector.inc']
+    # since 3.6, run.inc dimensions arrays with VECSIZE_MEMMAX which is defined
+    # in vector.inc -> older (<3.6) user functions need that include to be added.
+    # This is meaningless for NLO where vector.inc does not exist at all.
+    retro_compatible_modes = ['vector.inc']
 
     if MG5DIR:
         default_run_card = pjoin(MG5DIR, "internal", "default_run_card_lo.dat")
@@ -4430,12 +4507,14 @@ class RunCardLO(RunCard):
         self.add_param("keep_log", "normal", include=False, hidden=True,
                        comment="none: all log send to /dev/null.\n minimal: keep only log for survey of the last run.\n normal: keep only log for survey of all run. \n debug: keep all log (survey and refine)",
                        allowed=['none', 'minimal', 'normal', 'debug'])
+        #momentum reshuffling
+        self.add_param("mom_resh_type", 1, hidden=True)
         #cut
         self.add_param("auto_ptj_mjj", True, hidden=True)
         self.add_param("bwcutoff", 15.0)
         self.add_param("cut_decays", False, cut='d')
         self.add_param('dsqrt_shat',0., cut=True)
-        self.add_param('dsqrt_shatmax', -1, cut=True) 
+        self.add_param('dsqrt_shatmax', -1.0, cut=True) 
         self.add_param("nhel", 0, include=False)
         self.add_param("limhel", 1e-8, hidden=True, comment="threshold to determine if an helicity contributes when not MC over helicity.")
         #pt cut
@@ -4935,7 +5014,10 @@ class RunCardLO(RunCard):
                     self.display_block.append('pdlabel')
 
             if any(i in beam_id for i in [1,-1,2,-2,3,-3,4,-4,5,-5,21,22]):
-                maxjetflavor = max([4]+[abs(i) for i in beam_id if  -7< i < 7])
+                # the default follows the flavour scheme of the model, the same
+                # number that defines the default 'p'/'j' multiparticles
+                nflav = get_model_flavour_scheme(proc_def) or 4
+                maxjetflavor = max([nflav]+[abs(i) for i in beam_id if  -7< i < 7])
                 self['maxjetflavor'] = maxjetflavor
                 self['asrwgtflavor'] = maxjetflavor
             
@@ -4957,7 +5039,7 @@ class RunCardLO(RunCard):
                 # UPC for p p collision
                 elif beam_id == [[22],[22]]:
                     self['lpp1'] = 2
-                    self['lpp1'] = 2
+                    self['lpp2'] = 2
                     self['ebeam1'] = '6500'
                     self['ebeam2'] = '6500'
                     self['pdlabel'] = 'edff'
@@ -5050,6 +5132,7 @@ class RunCardLO(RunCard):
                     self['polbeam2'] = 100
                     if not all(id  in [-12,-14,-16] for id in beam_id_split[1]):
                         logger.warning('Issue with default beam setup of neutrino in the run_card. Please check it up [polbeam2].')
+            
             
         # Check if need matching
         min_particle = 99
@@ -5232,6 +5315,8 @@ class RunCardLO(RunCard):
         if model['running_elements']:
             self.display_block.append('RUNNING') 
 
+        if model['dual_mass_scheme']:
+          self.display_block.append('mom_resh')
 
         # Read file input/default_run_card_lo.dat
         # This has to be LAST !!
@@ -6174,7 +6259,10 @@ class RunCardNLO(RunCard):
                 if not leg['state']:
                     beam_id.add(leg['id'])
         if any(i in beam_id for i in [1,-1,2,-2,3,-3,4,-4,5,-5,21,22]):
-            maxjetflavor = max([4]+[abs(i) for i in beam_id if  -7< i < 7])
+            # the default follows the flavour scheme of the model, the same
+            # number that defines the default 'p'/'j' multiparticles
+            nflav = get_model_flavour_scheme(proc_def) or 4
+            maxjetflavor = max([nflav]+[abs(i) for i in beam_id if  -7< i < 7])
             self['maxjetflavor'] = maxjetflavor
             pass
         elif any(id in beam_id for id in [11,-11,13,-13]):

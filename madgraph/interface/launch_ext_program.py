@@ -435,6 +435,8 @@ class SALauncher(ExtLauncher):
         
         ExtLauncher.__init__(self, cmd_int, running_dir, './Cards', **options)
         self.cards = ['param_card.dat']
+        if os.path.isfile(running_dir+'/Cards/onia_card.dat'):
+            self.cards += ['onia_card.dat']
 
     
     def launch_program(self):

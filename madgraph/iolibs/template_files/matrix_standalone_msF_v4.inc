@@ -53,9 +53,14 @@ C ----------
       ANS = 0D0
           DO IHEL=1,NCOMB
              IF (GOODHEL(IHEL) .OR. NTRY .LT. 100) THEN
-                 T=MATRIX(P ,NHEL(1,IHEL),JC(1))            
-               ANS=ANS+T
-C HANDLE POLARISED BEAM               
+                 T=MATRIX(P ,NHEL(1,IHEL),JC(1))
+C HANDLE POLARISED BEAM
+C The reweighting has to come *before* the sum: ANS is the full matrix
+C element MadSpin divides by the production one to get the decay weight,
+C so it is the only place the polarisation can reach the decay angles.
+C Weighting HELAMP alone (as this did) left the decay distribution of the
+C v1 path exactly unpolarised while SMATRIX_PROD, which weights in the
+C right order, polarised the denominator.
               DO JJ=1,NINCOMING
                 IF(BEAMPOL(JJ).NE.1D0.AND.NHEL(JJ,IHEL).EQ.INT(SIGN(1D0,BEAMPOL(JJ)))) THEN
                   T=T*ABS(BEAMPOL(JJ))
@@ -63,6 +68,7 @@ C HANDLE POLARISED BEAM
                   T=T*(2D0-ABS(BEAMPOL(JJ)))
                 ENDIF
               ENDDO
+               ANS=ANS+T
 
                  HELAMP(IHEL)=T
                IF (T .NE. 0D0) THEN

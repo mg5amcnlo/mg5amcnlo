@@ -137,12 +137,12 @@ class TestCmdShell1(unittest.TestCase):
         self.do('set group_subprocesses False')
         self.do('import model_v4 sm')
         self.do('generate e+ e- > e+ e-')
-        self.do('display diagrams .')
+        self.do('display diagrams . --no_open')
         self.assertTrue(os.path.exists('./diagrams_0_epem_epem.eps'))
         os.remove('./diagrams_0_epem_epem.eps')
         
         self.do('generate g g > g g')
-        self.do('display diagrams .')
+        self.do('display diagrams . --no_open')
         self.assertTrue(os.path.exists('diagrams_0_gg_gg.eps'))
         os.remove('diagrams_0_gg_gg.eps')
         self.do('set group_subprocesses True')
@@ -236,6 +236,8 @@ class TestCmdShell1(unittest.TestCase):
                     'cluster_vacatetime': '120',
                     'enforce_shared_disk': False,
                     'heptools_install_dir': './HEPTools',
+                    'nb_core_pythia8': None,
+                    'nb_core_delphes': None,
                         }
 
         self.assertEqual(config, expected)
@@ -700,6 +702,76 @@ class TestCmdShell2(unittest.TestCase,
         
         for i,_ in enumerate(original):
             self.assertEqual(original[i], new[i])
+
+
+
+    def test_quarkonium_standalone(self):
+        """Standalone test for various quarkonium production matrix elements"""
+
+        import os
+        import re
+        import subprocess
+        import glob
+        import madgraph.interface.master_interface as MGCmd
+
+        # --------------------------------------------------
+        # Create MG5 interface
+        # --------------------------------------------------
+        mg_cmd = MGCmd.MasterCmd()
+        mg_cmd.no_notification()
+
+        mg_cmd.exec_cmd('import model sm_onia-c_mass')
+
+        process_list = [
+            ['g g > chic1(1|3P11) chib0(1|3P01)', 3.132275172481691e-16],
+            ['g g > hc(1|1P11) g', 2.3637208371566567e-12],
+            ['u u~ > a Jpsi(1|3P08) QCD=99 QED=99', 3.6650612158421924e-11],
+            ['u a > Upsilon(1|3S11) u chib2(1|3P21) QCD=99 QED=99', 1.819597262304262e-20],
+        ]
+        for process in process_list:
+            mg_cmd.exec_cmd('generate %s ' % process[0])
+
+            # --------------------------------------------------
+            # Generate process
+            # --------------------------------------------------
+            mg_cmd.exec_cmd('output standalone %s -f' % (self.out_dir))
+
+            self.assertTrue(os.path.isdir(self.out_dir))
+
+            # --------------------------------------------------
+            # Find subprocess directory
+            # --------------------------------------------------
+            proc_dirs = glob.glob(os.path.join(self.out_dir,
+                                            "SubProcesses",
+                                            "P*"))
+
+            self.assertTrue(proc_dirs, "No P* subprocess found")
+
+            # --------------------------------------------------
+            # Compile inside subprocess
+            # --------------------------------------------------
+            proc_dir = proc_dirs[0]
+            subprocess.check_call(['make'], cwd=proc_dir)
+
+            # --------------------------------------------------
+            # Run check
+            # --------------------------------------------------
+            output = subprocess.check_output(
+                ['./check'],
+                cwd=proc_dir
+            ).decode()
+
+            # --------------------------------------------------
+            # Extract matrix element
+            # --------------------------------------------------
+            match = re.search(r'Matrix element\s*=\s*([0-9Ee\+\-\.]+)', output)
+            self.assertIsNotNone(match)
+
+            val1 = float(match.group(1))
+            target =  process[1]  # value to comapre to
+            passed = abs(val1-target)/(val1+target) < 1e-08
+
+            self.assertTrue(passed)
 
          
     def test_standalone_density(self):

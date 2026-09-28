@@ -1227,10 +1227,19 @@ C
       COMMON/%(proc_prefix)sHELCONFIGS/HELC
       REAL*8 AUX(0:3,0:AUX_DIMENSION)
 
-C     
+C     beam polarisation, filled from python through PY_SET_BEAMPOL.
+C     Same common block and convention as the v1 MadSpin path
+C     (matrix_standalone_msP_v4.inc / msF).
+      INTEGER    NINITIAL
+      PARAMETER (NINITIAL=%(nincoming)d)
+      DOUBLE PRECISION BEAMPOL(2)
+      COMMON/TO_BEAMPOL/BEAMPOL
+
+C
 C     local
-C     
-      INTEGER I, IHEL, IPART
+C
+      INTEGER I, IHEL, IPART, JJ
+      DOUBLE PRECISION POLFACT
 
 c     Maybe should be a .or. ?
       IF ((ALPHAS.ne.0D0).and.(SCALE2.ne.0D0)) THEN
@@ -1249,9 +1258,30 @@ c     Maybe should be a .or. ?
             if(THISNHEL(POS(IPART)).NE.ALLOW_HEL(IPART)) GOTO 10 !BYPASS COMPUTATION FOR HELICITY
         ENDDO
         call %(proc_prefix)sGET_ALL_INTER(JAMPL_ALL, THISNHEL, POS, N_CHANGING, ALLOW_HEL, N_COMB, TMP_INTER)
+C       Support for polarised beam: reweight the initial-state helicity
+C       sum exactly as SMATRIX_PROD does in the v1 path. Skipped unless
+C       the process has two incoming legs -- the same shared library
+C       also holds the 1 -> N decay matrix elements, whose leg 1 is the
+C       decaying resonance and not a beam.
+        POLFACT = 1D0
+        IF (NINITIAL.EQ.2) THEN
+          DO JJ=1,NINITIAL
+C           |BEAMPOL| runs from 1 (unpolarised) to 2 (fully
+C           polarised), so anything at or below 1 means "no
+C           polarisation" -- including the zero-filled common
+C           block of an output whose link line does not pull
+C           in BLOCK DATA BEAMPOL_DEFAULT.
+            IF (ABS(BEAMPOL(JJ)).LE.1D0) CYCLE
+            IF (THISNHEL(JJ).EQ.INT(SIGN(1D0,BEAMPOL(JJ)))) THEN
+              POLFACT = POLFACT*ABS(BEAMPOL(JJ))
+            ELSE
+              POLFACT = POLFACT*(2D0-ABS(BEAMPOL(JJ)))
+            ENDIF
+          ENDDO
+        ENDIF
         do I = 1, N_COMB*(N_COMB+1)/2
-          INTER(I) = INTER(I) + TMP_INTER(I, 0)
-        enddo 
+          INTER(I) = INTER(I) + POLFACT*TMP_INTER(I, 0)
+        enddo
  10   enddo
         
 c      CALL %(proc_prefix)sNORMALISE_RHO(INTER, N_COMB, RHO_NORM)

@@ -106,7 +106,22 @@ class CheckFKS(mg_interface.CheckValidForCmd):
         of the Loop interface."""
         
         mg_interface.MadGraphCmd.check_display(self,args)
-        
+
+        # The output options of the LO 'display diagrams' are not supported here:
+        # the born, real and loop amplitudes are handled by separate calls, so
+        # --merge would have each diagram type overwrite the previous one, and
+        # 'diagrams_text' has its own (pager only) implementation which would
+        # silently ignore both the directory and the flags.
+        forbidden = [a for a in args[1:] \
+                     if a in ['--no_open','-no_open','--merge','-merge']]
+        if forbidden and args[0] in ['diagrams', 'diagrams_text']:
+            raise self.InvalidCmd("%s: option not supported for NLO processes."%\
+                                                          ' '.join(forbidden))
+
+        if args[0] == 'diagrams_text' and len(args)>=2 \
+                and args[1] not in ['born','loop','virt','real']:
+            raise self.InvalidCmd("Can only display born, loop (virt) or real diagrams, not %s."%args[1])
+
         if args[0] in ['diagrams', 'processes'] and len(args)>=3 \
                 and args[1] not in ['born','loop','virt','real']:
             raise self.InvalidCmd("Can only display born, loop (virt) or real diagrams, not %s."%args[1])

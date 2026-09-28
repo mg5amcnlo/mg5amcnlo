@@ -72,6 +72,9 @@ C     CM_RAP has parton-parton system rapidity -> need to check if track correct
       DOUBLE PRECISION CM_RAP
       LOGICAL SET_CM_RAP
       COMMON/TO_CM_RAP/SET_CM_RAP,CM_RAP
+C     Cuts result for both beam orientations (set in passcuts)
+      LOGICAL MIRROR_CUTS, CUTS_ORIENT(2)
+      COMMON/TO_MIRROR_CUTS/MIRROR_CUTS, CUTS_ORIENT
       
 C     Select among the subprocesses based on PDF weight
       if(init)then
@@ -87,6 +90,8 @@ C     Turn caching on in dsigproc to avoid too many calls to switchmom
               IF(IMIRROR.EQ.1.OR.MIRRORPROCS(IPROC))THEN
 C               Calculate PDF weight for all subprocesses
 		XSDUM =  DSIGPROC(PP,J,IPROC,IMIRROR,SYMCONF,CONFSUB,DUM,4)
+C               An orientation failing the cuts cannot be selected
+                IF(.NOT.CUTS_ORIENT(IMIRROR)) XSDUM=0D0
                  SELPROC(IMIRROR,IPROC,J)= SELPROC(IMIRROR,IPROC,J) + XSDUM
                 IF(MC_GROUPED_SUBPROC) THEN
                   CALL MAP_3_TO_1(J,IPROC,IMIRROR,MAXSPROC,2,LMAPPED)
@@ -99,7 +104,7 @@ C                 Need to flip back x values
                   XDUM=XBK(1)
                   XBK(1)=XBK(2)
                   XBK(2)=XDUM
-                  CM_RAP=-CM_RAP
+                  CM_RAP=DLOG(EBEAM(1)/EBEAM(2))-CM_RAP
                 ENDIF
               ENDIF
             ENDDO
@@ -452,6 +457,9 @@ C     CM_RAP has parton-parton system rapidity
 C     Keep track of whether cuts already calculated for this event
       LOGICAL CUTSDONE,CUTSPASSED
       COMMON/TO_CUTSDONE/CUTSDONE,CUTSPASSED
+C     Cuts result for both beam orientations (set in passcuts)
+      LOGICAL MIRROR_CUTS, CUTS_ORIENT(2)
+      COMMON/TO_MIRROR_CUTS/MIRROR_CUTS, CUTS_ORIENT
 C     To be able to control when the matrix<i> subroutine can add entries to the grid for the MC over helicity configuration
       LOGICAL ALLOW_HELICITY_GRID_ENTRIES
 	  DATA ALLOW_HELICITY_GRID_ENTRIES/.True./
@@ -486,6 +494,8 @@ c		  ! set both mode 1: resonances, 2: no resonances to 50-50
 
 
       IF(IMODE.EQ.1)THEN
+C       With mirror processes passcuts checks both beam orientations
+        MIRROR_CUTS=ANY(MIRRORPROCS)
 C       Set up process information from file symfact
         LUN=NEXTUNOPEN()
         IPROC=1
@@ -586,6 +596,7 @@ C     Turn caching on in dsigproc to avoid too many calls to switchmom
                   IF(IMIRROR.EQ.1.OR.MIRRORPROCS(IPROC))THEN
 C                 Calculate PDF weight for all subprocesses
                      SELPROC(IMIRROR,IPROC,J)=DSIGPROC(PP,J,IPROC,IMIRROR,SYMCONF,CONFSUB,DUM,4)
+                     IF(.NOT.CUTS_ORIENT(IMIRROR)) SELPROC(IMIRROR,IPROC,J)=0D0
                      IF(MC_grouped_subproc) then
 					   call map_3_to_1(J,IPROC,IMIRROR,MAXSPROC,2,Lmapped)
 					   call DS_add_entry('PDF_convolution',Lmapped,SELPROC(IMIRROR,IPROC,J),.True.)
@@ -596,7 +607,7 @@ C                 Need to flip back x values
                         XDUM=XBK(1)
                         XBK(1)=XBK(2)
                         XBK(2)=XDUM
-                        CM_RAP=-CM_RAP
+                        CM_RAP=DLOG(EBEAM(1)/EBEAM(2))-CM_RAP
                      ENDIF
                   ENDIF
                ENDDO
@@ -643,7 +654,7 @@ C                   Need to flip back x values
                     XDUM=XBK(1)
                     XBK(1)=XBK(2)
                     XBK(2)=XDUM
-                    CM_RAP=-CM_RAP
+                    CM_RAP=DLOG(EBEAM(1)/EBEAM(2))-CM_RAP
                   ENDIF
 		  if(init_mode) then
 		    SELPROC(K,I,J) = 1d0
@@ -702,6 +713,9 @@ C       We are using the grouped_processes grid and it is initialized.
 		WGT=WGT*MC_grouped_proc_jacobian
 		call map_1_to_3(Lmapped,MAXSPROC,2,ICONF,IPROC,IMIRROR)
 	  ENDIF
+
+C     The selected orientation must pass the cuts
+      IF(.NOT.CUTS_ORIENT(IMIRROR)) RETURN
 
 C     Redo clustering to ensure consistent with final IPROC
       CUTSDONE=.FALSE.
@@ -826,7 +840,7 @@ C       Flip x values (to get boost right)
         XBK(1)=XBK(2)
         XBK(2)=XDUM
 C       Flip CM_RAP (to get rapidity right)
-        CM_RAP=-CM_RAP
+        CM_RAP=DLOG(EBEAM(1)/EBEAM(2))-CM_RAP
       ENDIF
 
       DSIGPROC=0D0
@@ -986,7 +1000,7 @@ C       Flip momenta (rotate around x axis)
                 XDUM=ALL_XBK(1, ivec)
 	        ALL_XBK(1, ivec) = ALL_XBK(2, ivec)
 	        ALL_XBK(2, ivec) = XDUM
-	        all_cm_rap(ivec) = - all_cm_rap(ivec)
+	        all_cm_rap(ivec) = DLOG(EBEAM(1)/EBEAM(2)) - all_cm_rap(ivec)
 		IB(1) = 0
 		IB(2) = 0
 C       Flip beam identity -> moved to auto_dsigX (since depend of the warp)

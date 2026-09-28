@@ -76,6 +76,58 @@ import madgraph.various.misc as misc
 class MadSpinError(MadGraph5Error):
     pass
 
+
+def bw_retained_fraction(pole, width, bw_cut):
+    """The fraction of a resonance's Breit-Wigner that a ``+- bw_cut * width``
+    mass window keeps.
+
+    MadSpin samples a virtuality only inside that window but normalises the
+    sample with the *full* width -- ``sigma_prod * BR`` on the density side, the
+    param-card BR of the whole chain on the v1 side. The events it writes
+    therefore hold only the part of the Breit-Wigner that fits inside the
+    window, while the number it reports is the whole rate; without this factor
+    ``sigma`` comes out identical for every value of ``BW_cut``, which is wrong
+    and measurable (see ``MadSpin/validation/mtt_threshold/RESULTS.md``).
+
+    This is *the sampler's own normalisation*, not an approximation of it. Both
+    generators draw m^2 flat in ``R = atan((m^2 - M^2)/(M.Gamma))``, whose full
+    range is pi -- ``MadSpinInterface._mass_window`` returns exactly this
+    quantity as its ``gap/pi`` jacobian, and ``generate_inv_mass_sch`` in
+    ``src/driver.f`` computes it as ``bwdelf``. Integrating the sampled density
+    over the sampled window is therefore closed-form and exact, so there is no
+    reason to fall back on the linearised ``2/pi * atan(2N)`` that the
+    ``m^2 - M^2 ~ 2M(m-M)`` substitution gives (0.97879 against the 0.97869 here,
+    for a top at ``N = 15``): the difference is the m -> m^2 mapping at the
+    window edges, and this form tracks it.
+
+    What no self-consistent calculation can supply is the *numerator*. The rate
+    integrand is BW(m^2) times the decay matrix element and its phase space, and
+    the retained fraction of the product needs the numerator's integral over the
+    part of the Breit-Wigner that was never sampled. ``m.Gamma(m)/(m_t.Gamma_t)``
+    alone runs 0.52 to 1.71 across a +-15 Gamma window for a top, and putting it
+    in moves the t t~ pair factor from the 0.95785 this returns to 0.96249. (The
+    validation study evaluated the same integral four ways; this form reproduces
+    its fixed-width-relativistic row to the digit, which is the one that matches
+    what the samplers draw.) So this correction
+    carries a residual of a few tenths of a percent -- measured against a truth
+    sample, +0.4 % to +1.0 % for a t t~ pair at ``BW_cut = 15``
+    (``RESULTS.md`` section 1a). It is the propagator part, which is the
+    dominant and the ``BW_cut``-dependent part.
+
+    A stable particle (``width == 0``) has no window and no truncation, so the
+    fraction is 1; ``bw_cut <= 0`` means the caller is not cutting at all.
+    """
+    if not width or width <= 0 or pole <= 0 or bw_cut <= 0:
+        return 1.0
+    # the window is linear in m in both samplers, floored at 0 (a resonance
+    # broad enough that M - N.Gamma goes negative is cut only from above)
+    min_mass = max(pole - bw_cut * width, 0.0)
+    max_mass = pole + bw_cut * width
+    gap = math.atan((pole ** 2 - min_mass ** 2) / pole / width)
+    gap += math.atan((max_mass ** 2 - pole ** 2) / pole / width)
+    return gap / math.pi
+
+
 class Event:
     """ class to read an event, record the information, write down the event in the lhe format.
             This class is used both for production and decayed events"""
@@ -1054,7 +1106,15 @@ class AllMatrixElement(dict):
             pid =  leg.get('id')
             nb = leg.get('number')
             if pid in to_decay and leg.get('state'):
-                i, proc = to_decay[pid].pop()
+                # FIFO: pair the n-th leg of a given pid with the n-th decay
+                # branch written for that pid. pop() (LIFO) reverses that
+                # pairing whenever two or more final-state particles share a
+                # pid and carry *different* branches (p p > z z with
+                # 'decay z > e+ e-' / 'decay z > u u~'), so the branch used to
+                # build the spin-correlated weight is not the one whose decay
+                # products get attached to that leg. Single-branch pids (t/t~,
+                # w+/w-) are unaffected: the list holds one entry either way.
+                i, proc = to_decay[pid].pop(0)
                 decay_struct[nb] = dc_branch_from_me(proc)
                 identical = [me.get('decay_chains')[i] for me in me_list[1:]]
                 decay_struct[nb].add_decay_ids(identical)
@@ -2153,6 +2213,42 @@ class decay_all_events(object):
     
         self.ending_run()
         
+    # Name of the intermediate LHE file the legacy (madspin_v1) decay writes and
+    # that MadSpinInterface then gzips into <events>_decayed.lhe.gz.
+    DECAYED_EVENTS_NAME = 'decayed_events.lhe'
+
+    @property
+    def decayed_events_path(self):
+        """The one place that decides where the decayed events are written.
+
+        Both ends of the write/read pair must go through this property --
+        ``decaying_events`` opens it, ``MadSpinInterface.do_launch`` and
+        ``run_from_pickle`` gzip it -- because they used to compute it
+        separately and disagreed (see tests/unit_tests/madspin, class
+        TestDecayedEventsPath).
+
+        It is ``curr_dir``, the run's output directory, and deliberately *not*
+        ``path_me``:
+
+        * ``path_me`` means "where the matrix-element directories live"
+          everywhere else it is used (production_me/full_me/decay_me,
+          decay_<pdg>_<i>, ms_wstatus_*, param_card.dat). Under ``ms_dir`` it is
+          a directory that is built once and reused -- and possibly shared --
+          by later runs, so per-run event output has no business there.
+        * without ``ms_dir`` the two coincide (``path_me`` is *defined* as
+          ``realpath(curr_dir)``), which is why the mismatch stayed hidden: it
+          only bites when ``ms_dir`` is set *and* ``curr_dir`` is not the
+          ms_dir, i.e. whenever the event file is imported after ``set ms_dir``
+          (``post_set_ms_dir`` points ``curr_dir`` at the ms_dir, and
+          ``do_import`` points it back at the event file's directory).
+
+        The value is read off the *live* interface rather than ``self.options``
+        on purpose: under ``ms_dir`` this object is restored from
+        ``madspin.pkl``, so its own ``options`` -- pickled with the gridpack --
+        still describe the run that *built* it, ``curr_dir`` included.
+        """
+        return pjoin(self.mscmd.options['curr_dir'], self.DECAYED_EVENTS_NAME)
+
     def ending_run(self):
         """launch the unweighting and deal with final information"""    
         # launch the decay and reweighting
@@ -2310,10 +2406,18 @@ class decay_all_events(object):
 
         logger.info(' ' )
         logger.info('Decaying the events... ')
-        self.outputfile = open(pjoin(self.path_me,'decayed_events.lhe'), 'w')
+        self.outputfile = open(self.decayed_events_path, 'w')
         self.write_banner_information()
-        
-        
+
+        # Same reasoning as the run_onshell guard (see
+        # MadSpinInterface._check_branching_ratio): this number multiplies every
+        # weight written below, so a zero one would produce a complete LHE file
+        # of +/-0.0 and report success. Skipped in 'onlyhelicity' mode, which
+        # writes the events back without applying any branching ratio.
+        if not self.options['onlyhelicity']:
+            self.mscmd._check_branching_ratio(self.branching_ratio)
+
+
         event_nb, fail_nb = 0, 0
         nb_skip = 0 
         trial_nb_all_events=0
@@ -2362,7 +2466,7 @@ class decay_all_events(object):
             nb_mc_masses=len(indices_for_mc_masses)
 
             p, p_str=self.curr_event.give_momenta(event_map)
-            stdin_text=' %s %s %s %s %s %s %s \n' % ('2', self.options['BW_cut'], self.Ecollider, decay_me['max_weight'], self.options['frame_id'], self.options['beampol'][0], self.options['beampol'][1]) 
+            stdin_text=' %s %s %s %s %s %s %s \n' % ('2', self.options['BW_cut'], self.Ecollider, decay_me['max_weight'], self.options['frame_id'], self.options.beampol_me()[0], self.options.beampol_me()[1]) 
             stdin_text+=p_str
             # here I also need to specify the Monte Carlo Masses
             stdin_text+=" %s \n" % nb_mc_masses
@@ -2399,14 +2503,36 @@ class decay_all_events(object):
                 logger.debug('Got a production event with %s failures for the phase-space generation generation ' % failed)
 
             # Treat the case that we ge too many overweight.
+            # ``carry``: the overweight safety net (section 14 of
+            # doc/madspin_sequential_plan.md). The Fortran
+            # accept/reject (MadSpin/src/driver.f, "weight.gt.x*maxweight")
+            # stops on a trial with probability min(1, weight/max_weight), so a
+            # weight above the bound is accepted with probability 1 and the
+            # excess used to be dropped. Writing that event with weight
+            # max(1, weight/max_weight) restores the sampled density exactly,
+            # since min(1,x)*max(1,x) = x. Left as the literal 1.0 when nothing
+            # overflowed, so the written weights are bit-identical to before.
+            # ``weight`` is the matrix-element weight the Fortran tested, not
+            # the event's LHE weight, so ``carry`` is always > 1 and unsigned: a
+            # negative production weight (an MC@NLO counter-event) keeps its
+            # sign and only grows in magnitude.
+            carry = 1.0
             if weight > decay_me['max_weight']:
+                carry = weight / decay_me['max_weight']
                 report['over_weight'] += 1
+                # the accounting is on the WEIGHT, not on a count: a
+                # counter-event whose trial overflowed makes the cross-section
+                # more negative, so its excess subtracts. w_nom is what this
+                # event would have been written with under clipping.
+                w_nom = decayed_event.wgt * self.branching_ratio
+                report['over_weight_dw'] += w_nom * (carry - 1.0)
+                report['over_weight_dabs'] += abs(w_nom) * (carry - 1.0)
                 report['%s_f' % (decay['decay_tag'],)] +=1
                 if __debug__:               
                     misc.sprint('''over_weight: %s %s, occurence: %s%%, occurence_channel: %s%%
                     production_tag:%s [%s], decay:%s [%s], BW_cut: %1g\n
                     ''' %\
-                    (weight/decay['max_weight'], decay['decay_tag'], 
+                    (weight/decay_me['max_weight'], decay['decay_tag'], 
                     100 * report['over_weight']/event_nb,
                     100 * report['%s_f' % (decay['decay_tag'],)] / report[decay['decay_tag']],
                     os.path.basename(self.all_ME[production_tag]['path']),
@@ -2415,12 +2541,12 @@ class decay_all_events(object):
                     decay['decay_tag'],BWvalue))
                         
                 
-                if weight > 10.0 * decay['max_weight']:
+                if weight > 10.0 * decay_me['max_weight']:
                     error = """Found a weight MUCH larger than the computed max_weight (ratio: %s). 
     This usually means that the Narrow width approximation reaches it's limit on part of the Phase-Space.
     Do not trust too much the tale of the distribution and/or relaunch the code with smaller BW_cut.
     This is for channel %s with current BW_value at : %g'""" \
-                    % (weight/decay['max_weight'], decay['decay_tag'], BWvalue)  
+                    % (weight/decay_me['max_weight'], decay['decay_tag'], BWvalue)  
                     logger.error(error)
                 elif report['over_weight'] > max(0.005*event_nb,3):
                     error = """Found too many weight larger than the computed max_weight (%s/%s = %s%%). 
@@ -2428,8 +2554,6 @@ class decay_all_events(object):
     computation of the maximum_weight.
                     """ % (report['over_weight'], event_nb, 100 * report['over_weight']/event_nb )  
                     raise MadSpinError(error)
-                        
-                    error = True
                 elif report['%s_f' % (decay['decay_tag'],)] > max(0.01*report[decay['decay_tag']],3):
                     error = """Found too many weight larger than the computed max_weight (%s/%s = %s%%),
     for channel %s. Please relaunch MS with more events/PS point by event in the
@@ -2441,9 +2565,20 @@ class decay_all_events(object):
                     raise MadSpinError(error)
                     
              
-            decayed_event.change_wgt(factor= self.branching_ratio) 
+            # the carried overweight rides the branching ratio, so it reaches
+            # both the event weight and every <rwgt> entry through the single
+            # multiplication change_wgt already does
+            decayed_event.change_wgt(factor= self.branching_ratio if carry == 1.0
+                                     else self.branching_ratio * carry)
             #decayed_event.wgt = decayed_event.wgt * self.branching_ratio
-                    
+            # the file as clipping would have written it: needed as the
+            # denominator of the overweight report, and as the scale that says
+            # whether that denominator is distinguishable from zero at all
+            w_nom = decayed_event.wgt if carry == 1.0 else decayed_event.wgt / carry
+            report['sum_nom'] += w_nom
+            report['sum_abs_nom'] += abs(w_nom)
+            report['sum_sq_nom'] += w_nom * w_nom
+
             self.outputfile.write(decayed_event.string_event())
                 #print "number of trials: "+str(trial_nb)
             trial_nb_all_events+=trial_nb
@@ -2475,6 +2610,56 @@ class decay_all_events(object):
             +str(float(trial_nb_all_events)/float(event_nb)))
         logger.info('Branching ratio to allowed decays: %g' % self.branching_ratio)
         logger.info('Number of events with weights larger than max_weight: %s' % report['over_weight'])
+        # The overweight safety net's measurement, the same convention as the
+        # density path's _report_overweight: how many events carry a non-unit
+        # weight, and what the carried excess is worth as a fraction of the
+        # sample's cross-section (IDWTUP = -4: sigma is the MEAN of the
+        # weights, and carrying changes no event count, so d(sum w)/sum w is
+        # the relative shift). The excess is summed WEIGHTED, so a
+        # counter-event's overflow subtracts instead of adding; and sum w is
+        # only used as a denominator when it is not itself ~0.
+        if event_nb:
+            if report['over_weight']:
+                d_w = report['over_weight_dw']
+                d_abs = report['over_weight_dabs']
+                sum_w = report['sum_nom']
+                sum_abs = report['sum_abs_nom']
+                delta = math.sqrt(report['sum_sq_nom'])
+                z = (abs(sum_w) / delta) if delta else 0.0
+                # built with % here, not handed to the logger as a format
+                # string: the head already contains literal per-cent signs
+                msg = ("MadSpin overweight safety net: %d/%d written events "
+                       "(%.3g%%) carried a non-unit weight because a trial "
+                       "weight exceeded max_weight. "
+                       % (report['over_weight'], event_nb,
+                          100.0 * report['over_weight'] / event_nb))
+                # sum w is only a denominator when it is distinguishable
+                # from zero -- 5 of its own Monte Carlo errors, the same test
+                # the density path uses (_OVERWEIGHT_MIN_Z)
+                if z >= 5.0:
+                    msg += ("Carrying it added %+.6g to the summed event "
+                            "weight, i.e. %+.3g%% of the sample's "
+                            "cross-section. " % (d_w, 100.0 * d_w / sum_w))
+                else:
+                    msg += ("Carrying it added %+.6g to the summed event "
+                            "weight and %+.6g to the summed |weight|; the "
+                            "summed weight is %+.4g against a Monte Carlo "
+                            "error of %.4g (z = %.2f), i.e. consistent with "
+                            "zero, so it is not a usable denominator and the "
+                            "shift is quoted against sum|w| = %.4g instead: "
+                            "%+.3g%%. "
+                            % (d_w, d_abs, sum_w, delta, z, sum_abs,
+                               100.0 * d_abs / sum_abs if sum_abs
+                               else float('nan')))
+                msg += ("Clipping it -- what MadSpin did before -- would have "
+                        "discarded that silently.")
+                logger.warning(msg)
+            else:
+                logger.info(
+                    "MadSpin overweight safety net: 0/%d written events "
+                    "carried a non-unit weight -- max_weight was never "
+                    "exceeded, so nothing was clipped and nothing is biased "
+                    "by it.", event_nb)
         logger.info('Number of subprocesses '+str(len(self.calculator)))
         logger.info('Number of failures when restoring the Monte Carlo masses: %s ' % nb_fail_mc_mass)
         if fail_nb:
@@ -2495,9 +2680,9 @@ class decay_all_events(object):
         except KeyError:
             frameid = 6
         try:
-            beampol = self.options['beampol']
+            beampol = self.options.beampol_me()
         except KeyError:
-            beampol = (0.5,0.5)
+            beampol = (1.0,1.0)
 
         stdin_text=' %s %s %s %s %s %s %s\n' % ('2', self.options['BW_cut'], self.Ecollider, 1.0, frameid, beampol[0], beampol[1])
         stdin_text+=p_str
@@ -3439,7 +3624,7 @@ class decay_all_events(object):
         """return the max. weight associated with me decay['path']"""
 
         p, p_str=self.curr_event.give_momenta(event_map)
-        std_in=" %s  %s %s %s %s %s %s \n" % ("1",BWcut, self.Ecollider, nbpoints, self.options['frame_id'], self.options['beampol'][0], self.options['beampol'][1])
+        std_in=" %s  %s %s %s %s %s %s \n" % ("1",BWcut, self.Ecollider, nbpoints, self.options['frame_id'], self.options.beampol_me()[0], self.options.beampol_me()[1])
         std_in+=p_str
         max_weight = self.loadfortran('maxweight',
                                path, std_in)
@@ -4057,12 +4242,46 @@ class decay_all_events(object):
 
 
 
+    def bw_truncation_factor(self, decay):
+        """The Breit-Wigner truncation of one decay channel of the v1 path.
+
+        Unlike the density path, the v1 driver regenerates the *whole* decay
+        chain's phase space: ``merge_itree`` marks every decay-side s-channel
+        invariant free (``keep_inv(i) = .FALSE.``, only the production ones are
+        frozen) and ``generate_inv_mass_sch`` then draws each of them inside
+        ``+- BW_cut`` widths. So the product runs over every resonance of the
+        chain -- the decaying particle itself *and* every nested one, the W of
+        ``t > w+ b, w+ > l+ vl`` included.
+
+        Correcting all of them is right here and would be double-counting on the
+        density side, because the two paths normalise differently: v1 uses the
+        param-card branching ratio of the full chain (``AllMatrixElement.get_br``,
+        recursive, untruncated), while the density path divides MG5-measured
+        partial widths that already carry the nested resonance's truncation.
+        """
+        bw_cut = self.options['BW_cut']
+        if bw_cut is None or bw_cut < 0:
+            bw_cut = 15
+        factor = 1.0
+        for branch in (decay.get('decay_struct') or {}).values():
+            for res in branch['tree'].values():
+                pdg = abs(res['label'])
+                factor *= bw_retained_fraction(self.pid2mass(pdg),
+                                               self.pid2width(pdg), bw_cut)
+        return factor
+
     def write_banner_information(self, eff=1):
-        
+
         ms_banner = ""
         cross_section = True # tell if possible to write the cross-section in advance
         total_br = []
         self.br_per_id = {}
+        # Breit-Wigner truncation, averaged over the decay channels weighted by
+        # their own branching ratio -- exact whenever the channels share a
+        # resonance content (they normally do: only the final states differ).
+        # The "loose" channels of add_loose_decay are not in the average: they
+        # stand for an event that is dropped, and the drop is already in ``eff``.
+        bw_trunc_num, bw_trunc_den = 0.0, 0.0
         for production in self.all_ME.values():
             one_br = 0
             partial_br = 0
@@ -4072,20 +4291,45 @@ class decay_all_events(object):
                     one_br += decay['br']
                     continue
                 partial_br += decay['br']
+                bw_trunc_num += decay['br'] * self.bw_truncation_factor(decay)
+                bw_trunc_den += decay['br']
                 ms_banner += "# %s\n" % ','.join(decay['decay_tag']).replace('\n',' ')
                 ms_banner += "# BR: %s\n# max_weight: %s\n" % (decay['br'], decay['max_weight'])
                 one_br += decay['br']
-            
+
             if production['Pid'] not in self.br_per_id:
                 self.br_per_id[production['Pid']] = partial_br
             elif self.br_per_id[production['Pid']] != partial_br:
                 self.br_per_id[production['Pid']] = -1
             total_br.append(one_br)
-        
+
         if __debug__:
             for production in self.all_ME.values():
                 assert production['total_br'] - min(total_br) < 1e-4
-        
+
+        # MadSpin samples each virtuality only inside the BW_cut window but
+        # normalises with the full width, so without this the reported cross
+        # section is the same number whatever BW_cut is. Applied to
+        # ``branching_ratio`` and to ``br_per_id``, i.e. to both users of the
+        # rate: the per-subprocess <init> rows below and every event weight
+        # (``change_wgt(factor=self.branching_ratio ...)``), which is what keeps
+        # sigma = mean(w) true under IDWTUP = -4.
+        #
+        # 'onlyhelicity' writes the production events back undecayed -- nothing
+        # is sampled from a truncated window, so nothing is corrected.
+        bw_trunc = 1.0
+        if bw_trunc_den and not self.options['onlyhelicity']:
+            bw_trunc = bw_trunc_num / bw_trunc_den
+        if bw_trunc != 1.0:
+            logger.info(
+                "Breit-Wigner truncation at BW_cut = %g keeps %.5g of the "
+                "cross-section; the reported sigma is scaled by it.",
+                self.options['BW_cut'], bw_trunc)
+            for pid in self.br_per_id:
+                if self.br_per_id[pid] != -1:
+                    self.br_per_id[pid] *= bw_trunc
+            total_br = [br * bw_trunc for br in total_br]
+
         self.branching_ratio = max(total_br) * eff
         #self.banner['madspin'] += ms_banner
         # Update cross-section in the banner
@@ -4432,6 +4676,8 @@ class decay_all_events_onshell(decay_all_events):
         decay_text = []
         for decays in self.mscmd.list_branches.values():
             for decay in  decays:
+                # MadSpin's own '@' grouping tag, not something MG5 should see
+                decay = self.mscmd._split_group_tag(decay)[0]
                 if '=' not in decay:
                     decay += ' QCD=99'
                 if ',' in decay:
@@ -4451,6 +4697,8 @@ class decay_all_events_onshell(decay_all_events):
         decay_text = []
         for decays in self.mscmd.list_branches.values():
             for decay in  decays:
+                # MadSpin's own '@' grouping tag, not something MG5 should see
+                decay = self.mscmd._split_group_tag(decay)[0]
                 if '=' not in decay:
                     decay += ' QCD=99'
                 if ',' in decay:
@@ -4459,7 +4707,7 @@ class decay_all_events_onshell(decay_all_events):
                     decay_text.append(decay)
         decay_text = ', '.join(decay_text)
 #        commandline = ''
-        
+
         for proc in processes:
             if not proc.strip().startswith(('add','generate')):
                 proc = 'add process %s' % proc
@@ -4474,14 +4722,63 @@ class decay_all_events_onshell(decay_all_events):
         i=0
         for processes in self.list_branches.values():
             for proc in processes:
+                # Drop MadSpin's own '@' grouping tag first: this line appends a
+                # process number of its own, MG5 binds that at the top level and
+                # would absorb the user's as the process number of the
+                # *sub-decay*. Nothing would fail -- the amplitude is the same --
+                # but the tag is MadSpin bookkeeping and has no business
+                # reaching MG5. (madspin_v1 strips it the same way, decay.py
+                # get_all_ME step 6.)
+                proc = self.mscmd._split_group_tag(proc)[0]
                 newproc = "add process %s @%i --no_warning=duplicate --standalone;" % (proc,i)
-                commandline += self.adapt_decay(newproc) 
+                commandline += self.adapt_decay(newproc)
                 #commandline+="add process %s @%i --no_warning=duplicate --standalone;" % (proc,i)
-                i+=1 
+                i+=1
         return commandline
+
+    def refresh_me_param_cards(self):
+        """Put MadSpin's parameters inside every matrix-element directory.
+
+        ``output standalone`` writes ``Cards/param_card.dat`` from the *model*,
+        i.e. from the model's default/restriction values -- it knows nothing
+        about the event file. But ``initialise_f2py_module`` hands exactly that
+        file to the compiled matrix element, so without this the production and
+        decay density matrices are evaluated with the model defaults and every
+        parameter the user actually generated the events with (a mass, a width,
+        a Wilson coefficient) is silently ignored.
+
+        ``path_me/param_card.dat`` is the single source of truth: it is written
+        from ``banner['slha']`` on every run (decay_all_events.__init__), so it
+        already carries the parameters of the input events, including the
+        ``import model <MODEL> <CARD>`` override -- the one supported way to
+        ask MadSpin for different parameters, which rewrites ``banner['slha']``
+        after checking it against the banner.
+
+        A *copy*, not a symlink: these trees are compiled in place, tarred into
+        gridpacks and (under ``ms_dir``) moved to other machines, none of which
+        survives a link pointing outside the tree; and the copy left behind is
+        the record of what the run used, which a link -- repointed by the next
+        run -- would destroy. Freshness costs nothing here because this runs on
+        every run, reuse included. Same idiom as the legacy
+        ``compile_fortran`` (production_me/full_me/decay_me).
+        """
+        source = pjoin(self.path_me, 'param_card.dat')
+        if not os.path.exists(source):
+            return
+        ms_me_subdir = getattr(self.mscmd, 'ms_me_subdir', 'madspin_me')
+        ms_me_decay_subdir = getattr(self.mscmd, 'ms_me_decay_subdir', 'madspin_decay')
+        for subdir in (ms_me_subdir, ms_me_decay_subdir):
+            cards = pjoin(self.path_me, subdir, 'Cards')
+            if not os.path.isdir(cards):
+                continue
+            shutil.copyfile(source, pjoin(cards, 'param_card.dat'))
 
     def compile(self):
         logger.info('Compiling code')
+        # Before anything is compiled or loaded: the matrix elements read their
+        # parameters from these cards at initialise() time, and what
+        # ``output standalone`` left there is the model default.
+        self.refresh_me_param_cards()
         ms_me_subdir = getattr(self.mscmd, 'ms_me_subdir', 'madspin_me')
         ms_me_decay_subdir = getattr(self.mscmd, 'ms_me_decay_subdir', 'madspin_decay')
         # Per-instance suffix for the f2py-linked shared library: with the
@@ -4593,7 +4890,11 @@ class decay_all_events_density(decay_all_events_onshell):
             particle, final = final[:end], final[end:]
             new_particle = []
             for p in particle.split():
-                if p in to_decay:
+                # a polarised leg is written "t{L}"; the label MadSpin decays is
+                # the part before the brace, and MG5 parses the off-shell star
+                # after it ("t{L}*"), so strip the brace for the lookup only.
+                name = p.split('{', 1)[0]
+                if name in to_decay:
                     new_particle.append('%s*' % p)
                 else:
                     new_particle.append(p)
@@ -4675,6 +4976,18 @@ class DensityMatrix:
     # Cache tensor-product helicity tables by basis_id
     _tp_hel_cache = {}
 
+    # Cache helicity-restriction row selections.
+    # Key: (basis_id, normalised restriction key)
+    # Value: (mask[bool], rows[int64], diag_rows[int64]) -- see _restriction_rows
+    _restriction_cache = {}
+
+    # Same, but for the sorted-alignment path: the surviving positions *within*
+    # the cached sort permutation. Filled lazily, since the map-built fast path
+    # never needs a sort order at all.
+    # Key: (basis_id, normalised restriction key)
+    # Value: (keep[int64], sorted_rows[int64])
+    _restriction_sort_cache = {}
+
     def __init__(self, array, nchanging, all_helicity_combinations, dimension):
         """
         Parameters
@@ -4710,6 +5023,12 @@ class DensityMatrix:
         # Basis identifier (stable across events) for caching sort permutations and diag masks.
         # For "map-built" matrices, this is fully determined by (allowed_hel, n_changing).
         self._basis_id = ("map", tuple(all_helicity_combinations), self.nchanging)
+
+        # Per-particle helicity restriction (see set_hel_restriction). None = full sum.
+        self.hel_restriction = None
+        # Restriction used by trace()/normalized() when hel_restriction is a
+        # *cross* one (see set_hel_restriction_trace). None = untraced.
+        self.hel_restriction_trace = None
 
         # Lazy per-instance cache
         self._sort_order = None
@@ -4848,6 +5167,8 @@ class DensityMatrix:
         obj.values = values.astype(np.complex64, copy=False)
 
         obj._basis_id = basis_id
+        obj.hel_restriction = None
+        obj.hel_restriction_trace = None
         obj._sort_order = None
 
         # Diagonal mask is cached per basis_id
@@ -4873,6 +5194,232 @@ class DensityMatrix:
         mask = np.all(h[:, 0::2] == h[:, 1::2], axis=1)
         DensityMatrix._diag_cache[self._basis_id] = mask
         return mask
+
+    # -------------------------------------------------------------------------
+    # Helicity restriction (production polarisation)
+    # -------------------------------------------------------------------------
+
+    @staticmethod
+    def _is_cross_restriction(entry):
+        """Whether a *normalised* per-particle entry is a cross (interference)
+        one, i.e. a ``(bra_allowed, ket_allowed)`` pair rather than a flat
+        tuple of helicity values."""
+        return (isinstance(entry, tuple) and len(entry) == 2
+                and isinstance(entry[0], tuple))
+
+    @staticmethod
+    def normalize_hel_restriction(restriction):
+        """Canonical, hashable form of a per-particle helicity restriction.
+
+        ``restriction`` is a sequence with one entry per *changing* helicity
+        (i.e. per decaying particle, in the order the density matrix' helicity
+        columns are laid out). Each entry is either
+
+          - ``None`` (or an empty container): that index is summed over its
+            whole basis -- the historical behaviour,
+
+          - a container of the helicity values that index is allowed to take
+            (the *symmetric* form: both the bra and the ket index of that
+            particle must lie in the set), or
+
+          - a pair ``(bra_allowed, ket_allowed)`` of two such containers (the
+            *cross*, or pure-interference, form: see ``set_hel_restriction``).
+            ``(S, S)`` normalises back to the symmetric ``S``.
+
+        Returns ``None`` when nothing is restricted, so that the unrestricted
+        code paths stay bit-for-bit identical.
+        """
+        if restriction is None:
+            return None
+
+        def _flat(values):
+            return tuple(sorted(set(int(h) for h in values)))
+
+        key = []
+        for allowed in restriction:
+            if allowed is None:
+                key.append(None)
+                continue
+            allowed = list(allowed)
+            if allowed and all(isinstance(x, (list, tuple, set, frozenset))
+                               for x in allowed):
+                if len(allowed) != 2:
+                    raise ValueError(
+                        "A cross helicity restriction must be a "
+                        "(bra_allowed, ket_allowed) pair, got %s" % (allowed,))
+                bra, ket = _flat(allowed[0]), _flat(allowed[1])
+                if not bra or not ket:
+                    # an empty side would kill the whole contraction; treat it
+                    # like the unrestricted historical spelling instead
+                    key.append(None)
+                elif bra == ket:
+                    key.append(bra)
+                else:
+                    key.append((bra, ket))
+                continue
+            allowed = _flat(allowed)
+            key.append(allowed if allowed else None)
+        if all(a is None for a in key):
+            return None
+        return tuple(key)
+
+    def set_hel_restriction(self, restriction):
+        """Attach a per-particle helicity restriction to this matrix.
+
+        The restriction travels with the matrix rather than with the call, so
+        that ``scalar_multiplication`` / ``trace`` pick it up wherever the
+        production density matrix is contracted -- including the sequential
+        accept/reject, which contracts it against partially filled decay
+        tensors. Returns self so it can be chained onto ``get_density``.
+
+        A restricted index is one whose production process carries a
+        polarisation brace: ``{0}``/``{+}``/``{-}`` select a single helicity X
+        and so keep only the diagonal ``rho_prod(X,X) rho_dec(X,X)`` term,
+        ``{T}`` keeps the whole ``-1/+1`` block and drops the ``0`` row and
+        column. The rule is uniform: a matrix element (i,j) of particle k
+        survives iff *both* i and j are allowed for k.
+
+        A per-particle entry may instead be a *cross* pair ``(P, D)``, which
+        keeps the (i,j) entries with ``i in P and j in D`` **together with**
+        their transposes ``i in D and j in P``. With ``P`` and ``D`` disjoint
+        this is the pure-interference block between the two polarisations: it
+        has no diagonal entry, so the restricted ``trace()`` is exactly zero
+        (the interference term carries no cross-section), and it is closed
+        under (i,j) -> (j,i). That closure is what makes the contraction real:
+        rho_prod and rho_dec are both hermitian, so the (j,i) term is the
+        complex conjugate of the (i,j) one and the pair adds up to
+        ``2 Re[rho_prod(i,j) rho_dec(i,j)]``. Summing ``P x D`` *alone* would
+        give a complex number and is not a physical weight -- see
+        doc/madspin_sequential_plan.md section 13.
+        """
+        self.hel_restriction = DensityMatrix.normalize_hel_restriction(restriction)
+        return self
+
+    def set_hel_restriction_trace(self, restriction):
+        """Attach the restriction ``trace()`` / ``normalized()`` must use when
+        ``hel_restriction`` is a *cross* (pure-interference) one.
+
+        For a symmetric restriction the two are the same object and this is
+        never consulted: the polarised cross-section is normalised by the
+        polarised trace, which is exactly the restriction the contraction uses,
+        and that is what keeps the accept/reject weight averaging to 1/n.
+
+        A cross restriction has no diagonal entry, so its restricted trace is
+        identically zero -- it is the statement that the interference term
+        carries no cross-section. Using it to normalise would divide the weight
+        by zero, so the two restrictions have to part company here: the
+        contraction stays on the interference block while the normalisation
+        keeps using the *production* trace, i.e. the symmetric restriction the
+        production process' own braces impose (``None``, the full trace, for the
+        unpolarised production this mode requires). See
+        doc/madspin_sequential_plan.md section 13.4.
+        """
+        self.hel_restriction_trace = \
+            DensityMatrix.normalize_hel_restriction(restriction)
+        return self
+
+    def _trace_restriction(self):
+        """The restriction in force for ``trace()``.
+
+        Symmetric restrictions are returned untouched, so nothing that existed
+        before the interference mode can move; only a cross restriction defers
+        to ``hel_restriction_trace``.
+        """
+        restriction = self.hel_restriction
+        if restriction is None:
+            return None
+        if any(DensityMatrix._is_cross_restriction(entry)
+               for entry in restriction):
+            return self.hel_restriction_trace
+        return restriction
+
+    def _restriction_rows(self, restriction):
+        """(mask, rows, diag_rows) implementing ``restriction`` on this matrix.
+
+        ``mask`` is the boolean row mask, ``rows`` the indices of the surviving
+        rows and ``diag_rows`` the indices surviving *and* diagonal (what the
+        restricted trace sums). All three depend only on the helicity labels, so
+        they are cached per (basis_id, restriction) and never recomputed per
+        event.
+
+        The contractions use ``rows``/``diag_rows`` rather than ``mask``: a
+        restriction typically keeps a handful of rows out of hundreds, and
+        gathering with a short index array is markedly cheaper than boolean
+        indexing, which has to scan (and count) the full-length array. The rows
+        come out in increasing index order, i.e. exactly the order boolean
+        indexing would have produced, so the sums are bit-for-bit identical.
+        """
+        if restriction is None:
+            return None, None, None
+        cache_key = (self._basis_id, restriction)
+        cached = DensityMatrix._restriction_cache.get(cache_key)
+        if cached is not None:
+            return cached
+
+        h = self.helicities
+        mask = np.ones(h.shape[0], dtype=np.bool_)
+        for k, allowed in enumerate(restriction):
+            if allowed is None:
+                continue
+            # column 2k is the row (bra) helicity of particle k, 2k+1 the column
+            # (ket) one -- see get_map_density_matrix
+            bra, ket = h[:, 2 * k], h[:, 2 * k + 1]
+            if DensityMatrix._is_cross_restriction(allowed):
+                # pure interference: (bra in P and ket in D) or its transpose.
+                # Keeping both orderings is not optional -- it is what makes the
+                # contraction real (see set_hel_restriction).
+                left = np.asarray(allowed[0], dtype=np.int32)
+                right = np.asarray(allowed[1], dtype=np.int32)
+                mask &= ((np.isin(bra, left) & np.isin(ket, right)) |
+                         (np.isin(bra, right) & np.isin(ket, left)))
+                continue
+            allowed = np.asarray(allowed, dtype=np.int32)
+            mask &= np.isin(bra, allowed)
+            mask &= np.isin(ket, allowed)
+
+        out = (mask, np.flatnonzero(mask), np.flatnonzero(self._diag_mask & mask))
+        DensityMatrix._restriction_cache[cache_key] = out
+        return out
+
+    def _restriction_row_mask(self, restriction):
+        """Boolean row mask implementing ``restriction`` on this matrix' labels."""
+        return self._restriction_rows(restriction)[0]
+
+    def _restriction_sorted_rows(self, restriction):
+        """(keep, sorted_rows) for the sorted-alignment path.
+
+        ``keep`` are the positions inside the cached sort permutation whose row
+        survives, and ``sorted_rows`` the rows themselves (``sort_order[keep]``).
+        Contracting ``self.values[sorted_rows]`` against
+        ``other.values[other_sort_order[keep]]`` visits exactly the entries, in
+        exactly the order, that masking the two sorted views would have.
+
+        Requires ``_ensure_sorted_view`` to have run.
+        """
+        cache_key = (self._basis_id, restriction)
+        cached = DensityMatrix._restriction_sort_cache.get(cache_key)
+        if cached is not None:
+            return cached
+        order = self._sort_order
+        keep = np.flatnonzero(self._restriction_rows(restriction)[0][order])
+        out = (keep, order[keep])
+        DensityMatrix._restriction_sort_cache[cache_key] = out
+        return out
+
+    @staticmethod
+    def _combine_restrictions(a, b):
+        """The restriction in force for a contraction between two matrices.
+
+        Only one side ever carries one (the production density matrix knows the
+        polarisation, the decay side does not), so this is really "whichever is
+        set", with a guard against two contradicting ones.
+        """
+        if a is None:
+            return b
+        if b is None or a == b:
+            return a
+        raise ValueError("Contradicting helicity restrictions between the "
+                         "production and decay spin-density matrices")
 
     # -------------------------------------------------------------------------
     # Cached permutation for alignment by helicity labels
@@ -4905,7 +5452,7 @@ class DensityMatrix:
     # Operations
     # -------------------------------------------------------------------------
 
-    def scalar_multiplication(self, other):
+    def scalar_multiplication(self, other, hel_restriction=None):
         """
         Scalar contraction between two density matrices.
 
@@ -4916,14 +5463,26 @@ class DensityMatrix:
         General path:
         - Align by cached helicity-sort permutations (one per basis_id), then
           dot-product on aligned values.
+
+        ``hel_restriction`` (or, when omitted, the one either operand carries --
+        see ``set_hel_restriction``) drops the (i,j) terms the production
+        polarisation forbids before summing.
         """
         if len(self.values) != len(other.values):
             raise TypeError("Non-compatible dimensions of production and decay spin-density matrices")
 
+        restriction = DensityMatrix._combine_restrictions(
+            self.hel_restriction, other.hel_restriction)
+        if hel_restriction is not None:
+            restriction = DensityMatrix._combine_restrictions(
+                restriction, DensityMatrix.normalize_hel_restriction(hel_restriction))
         # Fastest correct path for map-built matrices
         if (self.map_density_matrix_ind is not None and
                 self.map_density_matrix_ind is other.map_density_matrix_ind):
-            return np.sum(self.values * other.values)
+            if restriction is None:
+                return np.sum(self.values * other.values)
+            rows = self._restriction_rows(restriction)[1]
+            return np.sum(self.values[rows] * other.values[rows])
 
         # Align by cached ordering for each basis
         self._ensure_sorted_view()
@@ -4931,7 +5490,13 @@ class DensityMatrix:
 
         a = self._sort_order
         b = other._sort_order
-        return np.sum(self.values[a] * other.values[b])
+        if restriction is None:
+            return np.sum(self.values[a] * other.values[b])
+        # the restriction lives on self's rows; the surviving positions inside
+        # the sort permutation are the same on both sides, so one cached gather
+        # does the masking and the alignment at once
+        keep, rows = self._restriction_sorted_rows(restriction)
+        return np.sum(self.values[rows] * other.values[b[keep]])
 
     def tensor_product(self, other):
         """
@@ -4968,14 +5533,28 @@ class DensityMatrix:
         # Often faster than np.kron
         vals = (v1[:, None] * v2[None, :]).ravel().astype(np.complex64, copy=False)
 
-        return DensityMatrix.from_components(
+        out = DensityMatrix.from_components(
             hel,
             vals,
             self.nchanging + other.nchanging,
-            self.all_helicity_combinations,  
+            self.all_helicity_combinations,
             self.dimension,
             basis_id=basis_id,
         )
+        # a restriction is per-index, so the tensor product simply concatenates
+        # the two (the decay side normally carries none, and this stays None)
+        if self.hel_restriction is not None or other.hel_restriction is not None:
+            left = self.hel_restriction or (None,) * self.nchanging
+            right = other.hel_restriction or (None,) * other.nchanging
+            out.set_hel_restriction(tuple(left) + tuple(right))
+            # the trace restriction is per-index too, and concatenates the same
+            # way; it only differs from the above for a cross restriction
+            if (self.hel_restriction_trace is not None
+                    or other.hel_restriction_trace is not None):
+                left = self.hel_restriction_trace or (None,) * self.nchanging
+                right = other.hel_restriction_trace or (None,) * other.nchanging
+                out.set_hel_restriction_trace(tuple(left) + tuple(right))
+        return out
 
     @classmethod
     def identity(cls, nchanging, all_helicity_combinations, dimension):
@@ -4987,7 +5566,7 @@ class DensityMatrix:
         parent rest frame, and leaves the diagonal flat. So a particle whose
         decay has not been drawn yet contributes exactly this to the production
         contraction -- which is what lets the accept/reject be done one particle
-        at a time (see MADSPIN_SEQUENTIAL_PLAN.md).
+        at a time (see doc/madspin_sequential_plan.md).
 
         Built through the normal constructor, so it shares the cached helicity
         map with the real density matrices of the same basis and keeps the
@@ -5021,14 +5600,29 @@ class DensityMatrix:
             self.dimension,
             basis_id=self._basis_id,
         )
+        out.hel_restriction = self.hel_restriction
+        out.hel_restriction_trace = self.hel_restriction_trace
         self._normalized_cache = out
         return out
 
-    def trace(self):
+    def trace(self, hel_restriction=None):
         """
         Order-independent trace.
+
+        With a helicity restriction in force (production polarisation) this is
+        the *restricted* trace, sum_{h in allowed} rho(h,h): that is the
+        normalisation the polarised production cross-section actually uses, and
+        keeping it consistent with ``scalar_multiplication`` is what leaves the
+        accept/reject weight averaging to 1/n exactly as in the unrestricted
+        case.
         """
-        return np.sum(self.values[self._diag_mask])
+        restriction = self._trace_restriction()
+        if hel_restriction is not None:
+            restriction = DensityMatrix._combine_restrictions(
+                restriction, DensityMatrix.normalize_hel_restriction(hel_restriction))
+        if restriction is None:
+            return np.sum(self.values[self._diag_mask])
+        return np.sum(self.values[self._restriction_rows(restriction)[2]])
 
 
     def print_full_matrix(self, precision=6):

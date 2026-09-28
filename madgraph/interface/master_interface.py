@@ -271,7 +271,7 @@ class Switcher(object):
                 elif nlo_mode in ['all', 'real', 'LOonly']:
                     self._fks_multi_proc = fks_base.FKSMultiProcess()
                     self.change_principal_cmd('aMC@NLO')
-                elif nlo_mode == 'virt' or nlo_mode == 'virtsqr':
+                elif nlo_mode == 'virt' or nlo_mode == 'sqrvirt':
                     self.change_principal_cmd('MadLoop')
             else:
                 self.change_principal_cmd('MadGraph')        

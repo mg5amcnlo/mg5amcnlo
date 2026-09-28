@@ -169,11 +169,13 @@ C      where in initialization mode as well for the helicity.
             T=MATRIX1(P ,NHEL(1,I),JC(1),I,AMP2, JAMP2, IVEC)
 
             DO JJ=1,NINCOMING
+C             NB_SPIN_STATE_IN/2 avoids a double counting
+C             of an explicit polarisation in the process
               IF(POL(JJ).NE.1D0.AND.NHEL(JJ,I).EQ.INT(SIGN(1D0,POL(JJ))
      $         )) THEN
-                T=T*ABS(POL(JJ))
+                T=T*ABS(POL(JJ))*NB_SPIN_STATE_IN(JJ)/2D0
               ELSE IF(POL(JJ).NE.1D0)THEN
-                T=T*(2D0-ABS(POL(JJ)))
+                T=T*(2D0-ABS(POL(JJ)))*NB_SPIN_STATE_IN(JJ)/2D0
               ENDIF
             ENDDO
 
@@ -244,11 +246,13 @@ C        in a common block defined in genps.inc.
 
 
         DO JJ=1,NINCOMING
+C         NB_SPIN_STATE_IN/2 avoids a double counting
+C         of an explicit polarisation in the process
           IF(POL(JJ).NE.1D0.AND.NHEL(JJ,I).EQ.INT(SIGN(1D0,POL(JJ))))
      $      THEN
-            T=T*ABS(POL(JJ))
+            T=T*ABS(POL(JJ))*NB_SPIN_STATE_IN(JJ)/2D0
           ELSE IF(POL(JJ).NE.1D0)THEN
-            T=T*(2D0-ABS(POL(JJ)))
+            T=T*(2D0-ABS(POL(JJ)))*NB_SPIN_STATE_IN(JJ)/2D0
           ENDIF
         ENDDO
 

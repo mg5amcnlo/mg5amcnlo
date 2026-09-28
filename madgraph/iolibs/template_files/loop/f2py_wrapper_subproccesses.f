@@ -30,6 +30,21 @@ CF2PY intent(in) :: value
       END
 
 
+      SUBROUTINE PY_SET_BEAMPOL(POL1, POL2)
+C     ROUTINE FOR F2PY to set the beam polarisation of the density
+C     matrix evaluation. POL1/POL2 follow the convention of the
+C     /to_polarization/ common block of madevent (and of the v1 MadSpin
+C     driver): 1 is an unpolarised beam and |POL| grows to 2 for a fully
+C     polarised one, the sign of POL giving the favoured helicity.
+      IMPLICIT NONE
+CF2PY DOUBLE PRECISION, INTENT(IN) :: POL1
+CF2PY DOUBLE PRECISION, INTENT(IN) :: POL2
+      DOUBLE PRECISION POL1, POL2
+      CALL F77_SET_BEAMPOL(POL1, POL2)
+      RETURN
+      END
+
+
       SUBROUTINE SET_MADLOOP_PATH(PATH)
 C     Routine to set the path of the folder 'MadLoop5_resources' to
 C      MadLoop
