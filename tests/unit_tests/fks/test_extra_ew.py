@@ -1331,6 +1331,19 @@ class TestAMCatNLOEW(unittest.TestCase):
         fksproc = self.interface._fks_multi_proc
         self.assertEqual(cmd.find_unstable_s_channels(fksproc), [])
 
+        # s-channel Z which cannot go on shell (m_Z < 2 m_t, m_Z < 2 m_W)
+        for proc in ['u u~ > t t~ QED^2=4 QCD^2=0 [real=QED]',
+                     'u u~ > w+ w- QED^2=4 QCD^2=0 [real=QED]']:
+            self.interface.do_generate(proc)
+            fksproc = self.interface._fks_multi_proc
+            self.assertEqual(cmd.find_unstable_s_channels(fksproc), [])
+
+        # W and Z resonances in four-lepton production
+        self.interface.do_generate(
+                       'u u~ > e+ ve e- ve~ QED^2=8 QCD^2=0 [real=QED]')
+        fksproc = self.interface._fks_multi_proc
+        self.assertEqual(cmd.find_unstable_s_channels(fksproc), ['w+', 'z'])
+
 
     def test_qcd_resonances_without_cms(self):
         """NLO QCD corrections to processes with a colour-charged unstable
@@ -1339,11 +1352,12 @@ class TestAMCatNLOEW(unittest.TestCase):
         resonances are considered, and that the user is warned"""
         cmd = amcatnlocmd.aMCatNLOInterface
 
-        # single-top-like EW Born: s-channel top (and colourless h, w+, z)
+        # single-top-like EW Born: s-channel top (and colourless h, z).
+        # The s-channel w+ carries at least m_W + 2 m_b: not resonant
         self.interface.do_generate('u d~ > w+ b b~ QCD=0 [QCD]')
         fksproc = self.interface._fks_multi_proc
         self.assertEqual(cmd.find_unstable_s_channels(fksproc),
-                         ['h', 't', 'w+', 'z'])
+                         ['h', 't', 'z'])
         self.assertEqual(
             cmd.find_unstable_s_channels(fksproc, coloured_only=True), ['t'])
         with self.assertLogs('cmdprint', level='WARNING') as log:
@@ -1367,5 +1381,10 @@ class TestAMCatNLOEW(unittest.TestCase):
 
         # on-shell tops: no s-channel top
         self.interface.do_generate('u u~ > t t~ QED=0 [QCD]')
+        fksproc = self.interface._fks_multi_proc
+        self.assertEqual(cmd.find_unstable_s_channels(fksproc), [])
+
+        # top propagator t* > t g, which cannot go on shell
+        self.interface.do_generate('u u~ > t t~ g QED=0 [real=QCD]')
         fksproc = self.interface._fks_multi_proc
         self.assertEqual(cmd.find_unstable_s_channels(fksproc), [])

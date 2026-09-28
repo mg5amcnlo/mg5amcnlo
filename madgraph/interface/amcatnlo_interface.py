@@ -58,6 +58,7 @@ import madgraph.core.helas_objects as helas_objects
 import madgraph.various.cluster as cluster
 import madgraph.various.misc as misc
 import madgraph.various.banner as banner_mod
+import models.model_reader as model_reader
 #usefull shortcut
 pjoin = os.path.join
 
@@ -465,26 +466,86 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
             mg_interface.MadGraphCmd.do_display(self,line,output)
 
     @staticmethod
+    def get_parameter_values(model):
+        """Return the numerical values of the parameters of model (for the
+        default param_card of the model), or None if they cannot be
+        evaluated"""
+
+        if isinstance(model, model_reader.ModelReader) and \
+                                                  model.get('parameter_dict'):
+            return model.get('parameter_dict')
+        try:
+            reader = model_reader.ModelReader(model)
+            reader.set_parameters_and_couplings()
+        except Exception as error:
+            logger.debug('Cannot evaluate the model parameters: %s' % error)
+            return None
+        return reader.get('parameter_dict')
+
+    @staticmethod
     def find_unstable_s_channels(fksproc, coloured_only=False):
         """Return the names of the particles with a non-zero width that
-        appear as s-channel propagators in the Born diagrams of fksproc.
+        appear as s-channel propagators in the Born diagrams of fksproc
+        and can go on shell, i.e. that are heavier than the final-state
+        particles they are built from. This excludes e.g. the Z in
+        u u~ > t t~, or the top propagator in t* > t g for u u~ > t t~ g.
         If coloured_only, only the colour-charged ones are returned."""
 
         resonances = set()
-        for born in fksproc['born_processes']:
-            model = born.born_amp['process']['model']
-            for diagram in born.born_amp['diagrams']:
+        values = {}
+        for amp in fksproc.get_born_amplitudes():
+            model = amp['process']['model']
+            if id(model) not in values:
+                values[id(model)] = \
+                      aMCatNLOInterface.get_parameter_values(model)
+            parameters = values[id(model)]
+
+            def get_value(name):
+                """abs of the value of a mass/width, None if unknown"""
+                if name.upper() == 'ZERO':
+                    return 0.
+                if parameters is None or name not in parameters:
+                    return None
+                return abs(parameters[name].real)
+
+            external = amp['process']['legs']
+            final_masses = dict((l['number'],
+                                 get_value(model.get_particle(l['id'])['mass']))
+                                for l in external if l['state'])
+
+            for diagram in amp['diagrams']:
+                # for each leg, the final-state legs it is built from and the
+                # number of initial-state legs in it
+                content = dict((l['number'],
+                                (set([l['number']]) if l['state'] else set(),
+                                 0 if l['state'] else 1)) for l in external)
                 # the last vertex has no propagator; the other vertices
-                # produce one leg, which is an s-channel propagator if it is
-                # built from final-state particles only (state=True)
+                # produce one leg, which is an s-channel propagator if it
+                # does not contain exactly one initial-state leg (state=True)
                 for vertex in diagram['vertices'][:-1]:
+                    finals, ninitial = set(), 0
+                    for leg in vertex['legs'][:-1]:
+                        finals |= content[leg['number']][0]
+                        ninitial += content[leg['number']][1]
                     leg = vertex['legs'][-1]
+                    content[leg['number']] = (finals, ninitial)
                     if not leg['state']:
                         continue
                     part = model.get_particle(leg['id'])
-                    if not part or str(part.get('width')).upper() == 'ZERO':
+                    # fake propagators of multi-leg vertices, stable particles
+                    if not part or get_value(part.get('width')) == 0.:
                         continue
                     if coloured_only and part.get('color') == 1:
+                        continue
+                    # the propagator momentum is the sum of the momenta of
+                    # these final-state particles: it can only be resonant if
+                    # it is heavier than their masses
+                    if ninitial:
+                        finals = set(final_masses.keys()) - finals
+                    mass = get_value(part.get('mass'))
+                    threshold = [final_masses[n] for n in finals]
+                    if mass is not None and None not in threshold and \
+                              mass <= sum(threshold) * (1. + 1e-10):
                         continue
                     resonances.add(part.get('name'))
         return sorted(resonances)
