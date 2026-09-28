@@ -29,7 +29,7 @@ program check_pythia8_matching
   common /cgfunazi/ alazi, beazi
   double precision p(0:3,6), pb(0:3,-8:5), m, mr, rad, delta, k
   double precision rt(3), jac, ps, tau, yb, xb(2), z, t, jz, f, hij
-  double precision kernel(2), azimuth(2), damping(2), qmc, weight, max1, max2
+  double precision kernel(2), azimuth(2), damping(2), qmc, weight, max1, max2, e0sq
   double precision zpy8, xipy8, xjacpy8, xfact_ileg12, xfact_ileg3, xfact_ileg4
   double precision fks_hij, compute_damping_weight, py8_gluon_recoil_weight
   external zpy8, xipy8, xjacpy8, xfact_ileg12, xfact_ileg3, xfact_ileg4, fks_hij
@@ -108,7 +108,7 @@ program check_pythia8_matching
       endif
       write(*,'(5ES25.16)') z,t,jz,f,get_qmc(rad,yij)**2
       cycle
-    elseif (mode.ne.'event') then
+    elseif (mode.ne.'event'.and.mode.ne.'measure') then
       stop 1
     endif
 
@@ -132,6 +132,19 @@ program check_pythia8_matching
     vkb=rho(pb(:,3))
     ve=p(0,3)
     call fill_kinematics_module(p,6,3,rad,delta,m,.true.)
+    if (mode.eq.'measure') then
+      shower_scale_nbody_max=1000d0
+      qmc=get_qmc(rad,delta)
+      f=xfact_ileg3(1)
+      do i=1,5
+        if (i.eq.3) cycle
+        e0sq=dot(pb(:,3),pb(:,i))
+        call get_shower_variables(e0sq,z,t,jz)
+        call get_dead_zone(z,t,pb(:,1:5),qmc,i,zone(1),weight)
+        write(*,'(9ES25.16)') z,t,jz,f,rad,delta,e0sq,qmc,merge(1d0,0d0,zone(1))
+      enddo
+      cycle
+    endif
     ch_i=0d0
     ch_j=0d0
     ch_m=0d0

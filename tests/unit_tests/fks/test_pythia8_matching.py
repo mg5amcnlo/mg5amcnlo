@@ -1,4 +1,4 @@
-"""Production regressions for PYTHIA's massive measure and gluon recoil.
+"""Production regressions for the shared massive measure and PYTHIA gluon recoil.
 
 The forward FSR momenta follow SimpleTimeShower::branch. The independent
 measure uses phase-space factorization, and endpoint references solve energy
@@ -112,6 +112,46 @@ def endpoint_reference(m, recoil_mass, rad, delta, branch=1):
         return float(k), float(z), float(t), float(jac)
 
 
+def massive_shower_reference(shower, m, recoil_mass, rad, y, e0sq, branch):
+    """Independent finite-difference determinant of the shower-variable map."""
+    with localcontext() as context:
+        context.prec = 80
+        s, root = Decimal(1000000), Decimal(1000)
+        m2, mr2 = (Decimal.from_float(float(mass*mass))
+                    for mass in (m, recoil_mass))
+        rad, y, e0sq = map(Decimal.from_float, (rad, y, e0sq))
+
+        def variables(xi, cosine):
+            a, b = 2-xi, xi*cosine
+            c = (s*(1-xi)+m2-mr2)/root
+            k = (-b*c+branch*a*(c*c-(a*a-b*b)*m2).sqrt())/(a*a-b*b)
+            energy = (k*k+m2).sqrt()
+            w1 = root*xi*(energy-cosine*k)
+            w2 = s*xi-w1
+            if shower in ('PYTHIA8', 'PYTHIA6Q'):
+                z = 1-s*xi*(m2+w1)/(w1*(s+m2+w1-mr2))
+                return z, z*(1-z)*w1 if shower == 'PYTHIA8' else w1
+            eps = 1-(m2-mr2)/(s-w1)
+            beta = (eps*eps-4*s*mr2/(s-w1)**2).sqrt()
+            zeta = ((2*s-(s-w1)*eps)*w2 +
+                    (s-w1)*((w1+w2)*beta-eps*w1)) / (
+                    (s-w1)*beta*(2*s-(s-w1)*eps+(s-w1)*beta))
+            if shower == 'HERWIG7':
+                z = 1-zeta
+                return z, w1/(z*(1-z))
+            tbeta = (1-(w1+m2)/e0sq).sqrt()
+            z = 1-tbeta*zeta-w1/(2*(1+tbeta)*e0sq)
+            return z, w1/(2*z*(1-z)*e0sq)
+
+        z, t = variables(rad, y)
+        h = Decimal('1e-25')
+        xp, xm = variables(rad+h, y), variables(rad-h, y)
+        yp, ym = variables(rad, y+h), variables(rad, y-h)
+        jac = abs(((xp[0]-xm[0])*(yp[1]-ym[1]) -
+                   (yp[0]-ym[0])*(xp[1]-xm[1]))/(4*h*h))
+        return float(z), float(t), float(jac)
+
+
 @unittest.skipUnless(shutil.which('gfortran'), 'requires gfortran')
 class TestPythia8Matching(unittest.TestCase):
     @classmethod
@@ -142,6 +182,9 @@ class TestPythia8Matching(unittest.TestCase):
                            'native_fsr_angle', 'get_recoil', 'getangles'),
             'montecarlocounter.f': (
                 'zPY8', 'xiPY8', 'xjacPY8',
+                'get_shower_variables', 'get_zeta',
+                'zHW6', 'xiHW6', 'xjacHW6', 'zHW7', 'xiHW7', 'xjacHW7',
+                'zPY6Q', 'xiPY6Q', 'xjacPY6Q', 'zPY6PT', 'xiPY6PT', 'xjacPY6PT',
                 'dinvariants_dFKS', 'xfact_ileg12',
                 'xfact_ileg3', 'xfact_ileg4', 'compute_splitting_kernels',
                 'compute_splitting_kernel_icode1', 'compute_splitting_kernel_icode2',
@@ -201,9 +244,57 @@ class TestPythia8Matching(unittest.TestCase):
             self.assertRelative(coefficient, 1/(16*math.pi**3*np*measure))
             self.assertGreater(pythia[6], 0)
             self.assertEqual(pythia[12], 1)  # Accepted by the local dipole check.
-            self.assertRelative(pythia[3], -herwig[3])
+            self.assertRelative(pythia[3], herwig[3])
         self.assertRelative(rows[0][3]*rows[0][2]/(rows[0][4]**2*(1-rows[0][5])),
                             .3139879195061142)
+
+    def test_shared_massive_measure_across_showers(self):
+        showers = ('PYTHIA8', 'HERWIG6', 'HERWIG7', 'PYTHIA6Q')
+        cases = []
+        for z, t in ((.8, 5000.), (.23921928965797884, 41764.76709871376)):
+            p, measure = fsr(173., 173., z, t)
+            cases.extend((shower, p, measure) for shower in showers)
+        data = ''.join(event_input(p, 173., 2, shower) for shower, p, _ in cases)
+        reference_rows = self.run_driver('measure', data)
+        self.assertEqual(len(reference_rows), 4*len(cases))
+        accepted = {shower: 0 for shower in showers}
+        accepted_second = dict(accepted)
+        for (shower, p, measure), start in zip(cases, range(0, len(reference_rows), 4)):
+            for row in reference_rows[start:start+4]:
+                with self.subTest(shower=shower, emitted=p[5], e0sq=row[6]):
+                    z, t, jac, prefactor, rad, y, e0sq, _, zone = row
+                    k = math.sqrt(sum(v*v for v in p[2][1:]))
+                    geometry = (2-rad)*k+rad*y*p[2][0]
+                    branch = 1 if geometry > 0 else -1
+                    self.assertGreater(prefactor, 0)
+                    self.assertGreaterEqual(jac, 0)
+                    accepted[shower] += int(zone)
+                    if branch == -1:
+                        accepted_second[shower] += int(zone)
+                    if z < 0:
+                        self.assertEqual(jac, 0)
+                        self.assertEqual(zone, 0)
+                        continue
+                    expected = massive_shower_reference(
+                        shower, 173., 173., rad, y, e0sq, branch)
+                    for actual, wanted in zip((z, t, jac), expected):
+                        self.assertRelative(actual, wanted)
+                    _, _, _, py8jac = endpoint_reference(173., 173., rad, 1-y, branch)
+                    actual = prefactor*jac/(rad*rad*(1-y))
+                    self.assertRelative(actual, expected[2]/(16*math.pi**3*measure*py8jac))
+        self.assertTrue(all(accepted.values()), accepted)
+        self.assertGreater(accepted_second['PYTHIA8'], 0)
+        # At this fixture the other showers veto the second solution.
+        # Correcting the common measure must preserve that support decision.
+        for shower in ('HERWIG6', 'HERWIG7', 'PYTHIA6Q'):
+            self.assertEqual(accepted_second[shower], 0)
+        for variant in ('poisoned', 'checked'):
+            rows = self.run_driver('measure', data, variant)
+            self.assertEqual(len(rows), len(reference_rows))
+            for row, expected in zip(rows, reference_rows):
+                for actual, wanted in zip(row, expected):
+                    self.assertAlmostEqual(actual, wanted,
+                                           delta=1e-12*max(abs(wanted), 1e-20))
 
     def test_full_measure_on_both_massive_branches(self):
         rng = random.Random(8318)

@@ -15,8 +15,11 @@ singularities.
 Package A uses exact massive fractions and an implicit energy-conservation
 derivative instead of activating the old nonuniform massive soft expansion.
 The shared helper in `kinematics_module.f90` keeps the support/damping scale
-consistent. Only PYTHIA8 receives the absolute massive geometric prefactor;
-massive squark/gluino controls and the unchanged HERWIG6 prefactor are tested.
+consistent. The absolute massive geometric prefactor is shared by all
+showers, since it converts the FKS phase-space measure and each shower's
+radiation Jacobian already takes its magnitude. Massive squark/gluino
+controls and HERWIG6, HERWIG7, PYTHIA6Q and PYTHIA8 measure regressions are
+tested on both branches with independent finite-difference determinants.
 The 1,800-point reproducer now checks positive signed measures, with maximum
 relative error `8.8e-14`. New endpoint tests cover both sides of `1d-5`,
 small masses, near-threshold recoil, branch coalescence and small radiator

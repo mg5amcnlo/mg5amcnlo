@@ -1338,17 +1338,12 @@ c one can remove any reference to xi_i_fks
       integer N_p
       double precision geometry
 !     Both massive FKS solutions have positive phase-space measures.
-!     PYTHIA8's xjac already takes the absolute radiation determinant.
-      if (shower_mc_mod.eq.'PYTHIA8') then
-!     Match xjacPY8's geometry before dividing by a small momentum.
-         geometry=(1d0+x)*kn+(1d0-x)*yij*kn0
-         xfact_ileg3=abs(geometry)/kn**2*knbar*(1d0-x)*
-     &        (1d0-yij)*2d0/(shat_n1*N_p)
-      else
-         geometry=2d0-(1d0-x)*(1d0-(kn0/kn)*yij)
-         xfact_ileg3=geometry/
-     &        kn*knbar*(1d0-x)*(1d0-yij)*2d0/(shat_n1*N_p)
-      endif
+!     Every shower xjac takes an absolute radiation determinant, so
+!     the shared FKS radial factor must also use its magnitude.
+!     Form the geometry before dividing by a small momentum.
+      geometry=(1d0+x)*kn+(1d0-x)*yij*kn0
+      xfact_ileg3=abs(geometry)/kn**2*knbar*(1d0-x)*
+     &     (1d0-yij)*2d0/(shat_n1*N_p)
       end
 
       double precision function xfact_ileg4(N_p)

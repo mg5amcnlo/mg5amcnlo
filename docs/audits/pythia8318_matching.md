@@ -12,7 +12,13 @@ describe the original audit revision. The new compiled regressions are in
 - The PYTHIA8 massive geometric factor uses an absolute determinant on
   both physical FKS branches, with a common stable geometry in the
   prefactor and radiation Jacobian. The quoted negative fixture now gives
-  `+0.313987919506...`. Other showers retain their previous prefactor.
+  `+0.313987919506...`. The absolute geometric prefactor is shared by all
+  showers: it converts the FKS phase-space measure, and every shower's
+  radiation Jacobian already takes its magnitude. Cross-shower regressions
+  check HERWIG6, HERWIG7, PYTHIA6Q and PYTHIA8 on both massive branches,
+  including accepted points and independent finite-difference determinants.
+  At the quoted negative fixture, HERWIG6, HERWIG7 and PYTHIA6Q veto the
+  second solution; those support decisions are preserved by the shared fix.
 - The scalar `g -> gg` term includes the guarded global-recoil dead-cone
   factor, and the launch script explicitly supplies `recoilDeadCone=on`.
   Its two guarded denominators exchange under `z -> 1-z`, making the
@@ -41,7 +47,7 @@ These scalar regressions do not establish full process-level S/H matching.
 The ISR projection finding and the deliberately retained angular, infrared,
 mass-scheme and G-prescription differences still require their separate work.
 
-The eight new matching tests and 50 existing FKS regressions pass. The full
+The nine matching tests and 49 selected existing FKS regressions pass. The full
 production counter and its module dependencies also compile against fresh
 W-process export includes. The broader Born/export/shower-card command
 reports 47 tests: 36 pass, seven fail and four raise errors. A diagnostic
