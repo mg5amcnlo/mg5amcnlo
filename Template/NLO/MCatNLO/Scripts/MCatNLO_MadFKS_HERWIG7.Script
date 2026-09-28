@@ -287,14 +287,14 @@ then
   HW7UTIMAKE="HW7UTI="$HW7UTI
   FORFILEMAKE="FORFILE="$HW7UTI
   HEPMCF=HepMCFortran7.h
-  cp $thisdir/Herwig7Analyzer/$HEPMCF $thisdir/Herwig7Analyzer/HepMCFortran.h
+  cp $thisdir/HW7Analyzer/$HEPMCF $thisdir/HW7Analyzer/HepMCFortran.h
   HW7ANALYZER=HepMCFortran
-  if ! make -C $thisdir/Herwig7Analyzer $HW7UTI $HW7ANALYZER.so $HW7MAKE "$LIBSMAKE" "$LIBSMAKEP" "$INCLMAKE" "$FORFILEMAKE"
+  if ! make -C $thisdir/HW7Analyzer $HW7UTI $HW7ANALYZER.so $HW7MAKE "$LIBSMAKE" "$LIBSMAKEP" "$INCLMAKE" "$FORFILEMAKE"
   then
     echo $HW7ANALYZER compilation did not succeed, exiting.
     exit -1 
   fi
-  ln -sf $thisdir/Herwig7Analyzer/$HW7ANALYZER.so $thisdir
+  ln -sf $thisdir/HW7Analyzer/$HW7ANALYZER.so $thisdir
 fi
   # link the HW7 executable into the EXE directoy
   # ln -sf $HERWIG7PATH/bin/$HWEXE $thisdir
