@@ -1,4 +1,4 @@
-! Herwig++/Herwig7 angular-shower starting scales for ordinary MC@NLO.
+! Herwig7 angular-shower starting scales for ordinary MC@NLO.
 ! Independent implementation of the kinematics in Gieseke, Stephens and
 ! Webber, JHEP 12 (2003) 045, hep-ph/0310083. See herwig7_scales.README.
 ! No Herwig library or random-number generator is required.

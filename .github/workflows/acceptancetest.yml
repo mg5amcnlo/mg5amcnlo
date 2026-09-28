@@ -1719,10 +1719,10 @@ jobs:
       - uses: ./.github/actions/restore_all
 
       # Runs a set of commands using the runners shell
-      - name: test one of the test test_raise_invalid_path_hwpp
+      - name: test one of the test test_raise_invalid_path_hw7
         run: |
             cd $GITHUB_WORKSPACE
-            ./tests/test_manager.py test_raise_invalid_path_hwpp -pA -t0 -l INFO
+            ./tests/test_manager.py test_raise_invalid_path_hw7 -pA -t0 -l INFO
 
 
 

@@ -168,7 +168,7 @@ contains
     implicit none
     double precision :: xi_i_fks,y_ij_fks
     if(shower_mc_mod.eq.'HERWIG6'  .or. &
-         shower_mc_mod.eq.'HERWIGPP') qMC_ileg1=xi_i_fks/2d0*sqrt(shat_n1*(1-y_ij_fks**2))
+         shower_mc_mod.eq.'HERWIG7') qMC_ileg1=xi_i_fks/2d0*sqrt(shat_n1*(1-y_ij_fks**2))
     if(shower_mc_mod.eq.'PYTHIA6Q') qMC_ileg1=sqrt(-xtk)
     if(shower_mc_mod.eq.'PYTHIA6PT'.or. &
          shower_mc_mod.eq.'PYTHIA8') qMC_ileg1=sqrt(-xtk*xi_i_fks)
@@ -178,7 +178,7 @@ contains
     implicit none
     double precision :: xi_i_fks,y_ij_fks
     if(shower_mc_mod.eq.'HERWIG6'  .or. &
-         shower_mc_mod.eq.'HERWIGPP') qMC_ileg2=xi_i_fks/2d0*sqrt(shat_n1*(1-y_ij_fks**2))
+         shower_mc_mod.eq.'HERWIG7') qMC_ileg2=xi_i_fks/2d0*sqrt(shat_n1*(1-y_ij_fks**2))
     if(shower_mc_mod.eq.'PYTHIA6Q') qMC_ileg2=sqrt(-xuk)
     if(shower_mc_mod.eq.'PYTHIA6PT'.or. &
          shower_mc_mod.eq.'PYTHIA8') qMC_ileg2=sqrt(-xuk*xi_i_fks)
@@ -188,7 +188,7 @@ contains
     implicit none
     double precision :: xi_i_fks,y_ij_fks,zeta1,qMCarg,z
     if(shower_mc_mod.eq.'HERWIG6'.or. &
-         shower_mc_mod.eq.'HERWIGPP')then
+         shower_mc_mod.eq.'HERWIG7')then
        zeta1=get_zeta(shat_n1,w1,w2,xm12,xm22)
        qMCarg=zeta1*((1-zeta1)*w1-zeta1*xm12)
        if(qMCarg.lt.0d0.and.qMCarg.ge.-tiny) qMCarg=0d0
@@ -212,7 +212,7 @@ contains
   double precision function qMC_ileg4(xi_i_fks,y_ij_fks)
     implicit none
     double precision :: xi_i_fks,y_ij_fks,zeta2,qMCarg,z
-    if(shower_mc_mod.eq.'HERWIG6'.or.shower_mc_mod.eq.'HERWIGPP')then
+    if(shower_mc_mod.eq.'HERWIG6'.or.shower_mc_mod.eq.'HERWIG7')then
        zeta2=get_zeta(shat_n1,w2,w1,xm22,xm12)
        qMCarg=zeta2*(1d0-zeta2)*w2
        if(qMCarg.lt.0d0.and.qMCarg.ge.-tiny) qMCarg=0d0

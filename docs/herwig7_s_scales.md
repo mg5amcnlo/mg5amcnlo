@@ -1,6 +1,6 @@
-# Herwig++/Herwig7 S-event scales
+# Herwig7 S-event scales
 
-Ordinary MC@NLO with `parton_shower = HERWIGPP` now draws one damped
+Ordinary MC@NLO with `parton_shower = HERWIG7` now draws one damped
 hard-process scale for S-event `SCALUP`. The hard reference, damping
 function, scale factor and infrared floor are the same as in the Pythia8
 prescription. `Template/NLO/SubProcesses/herwig7_scales.f90` calculates
@@ -9,9 +9,14 @@ angular starting scales. It has no dependency on Herwig or ThePEG.
 The detailed formulas and interface are in
 [herwig7_scales.README](../Template/NLO/SubProcesses/herwig7_scales.README).
 
+The shower selector is `HERWIG7` and its installation setting is
+`herwig7_path`. Legacy run cards selecting `HERWIGPP` or `HERWIG++`
+(case insensitive) are automatically converted to `HERWIG7` when read.
+The same conversion applies when editing `parton_shower` with `set`.
+
 Herwig evolves in an angular variable, while `SCALUP` sets a transverse-
 momentum veto. The existing MG5 steering already configures this with
-`MaxPtIsMuF Yes` and `RestrictPhasespace Yes` (or the older Herwig++
+`MaxPtIsMuF Yes` and `RestrictPhasespace Yes` (or the Herwig 7.0
 `HardVetoMode`/`HardVetoScaleSource` switches). The angular limits remain
 independent of the scalar veto. For example, a massless outgoing emitter
 has an envelope `pT_max = qtilde_max/4`. The module also handles massive
@@ -64,6 +69,32 @@ comparison. Cards, logs, comparison wrappers, JSON results, LHE and
 HepMC files are retained in
 `/export/tmp/rikkert/mg5_herwig_scales_s3ej165h`.
 
+## Interface rename validation
+
+After renaming the selectors, configuration, scripts, Fortran routines
+and analysis files to Herwig7:
+
+* All 139 focused unit tests and the configuration acceptance test passed.
+  The compatibility test covers legacy run-card values, including mixed
+  case and quotes, and checks both card and Fortran output.
+* A fresh `p p > e+ e- [QCD]` export with `herwigpp` in the run card
+  generated `SHOWER_MC = 'HERWIG7'` and 40 events (31 S, 9 H). All
+  matrix-element, matching and pole checks passed. Herwig 7.3.0 showered
+  and hadronized all 40 events with no exceptions, producing
+  `events_HERWIG7_0.hepmc.gz` with 40 entries.
+* A Fortran counting analysis loaded through `Herwig7Analyzer` processed
+  all 40 events and produced a nonzero HwU histogram. The C++ interface
+  now explicitly includes ThePEG's `HepMCConverter.h`, and the Makefile
+  links libraries after the objects so `--as-needed` retains HepMCfio.
+* The existing rates example assumes the first two HEPEVT entries are
+  the incoming partons. That assumption fails for this Herwig7 sample,
+  causing it to reject all events with `WARNING 111 IN HWANAL`. Its
+  analysis logic was not changed as part of the rename; the counting
+  analysis used for interface validation does not make that assumption.
+
+The cards, logs and validation analysis are retained in
+`/export/tmp/rikkert/mg5_herwig7_rename_lsdjmd8_`.
+
 ## Local shower installation
 
 Herwig 7.3.0 and ThePEG 2.3.0 are installed together under
@@ -78,7 +109,7 @@ Herwig --version
 MG5 configuration paths for this installation are:
 
 ```text
-hwpp_path = /export/tmp/rikkert/Herwig
+herwig7_path = /export/tmp/rikkert/Herwig
 thepeg_path = /export/tmp/rikkert/Herwig
 hepmc_path = /export/tmp/rikkert/HepMC
 ```

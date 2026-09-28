@@ -1578,9 +1578,9 @@ c
             needs_shower_jacobian=.true.
             xfact=xfact_ileg3(N_p)
             if(abs(j_pdg).le.6)then
-               if(shower_mc_mod(1:8).ne.'HERWIGPP')
+               if(shower_mc_mod(1:7).ne.'HERWIG7')
      &              call AP_reduced(j_type,i_type,ch_m,ch_i,one,z,ap)
-               if(shower_mc_mod(1:8).eq.'HERWIGPP')
+               if(shower_mc_mod(1:7).eq.'HERWIG7')
      &              call AP_reduced_massive(j_type,i_type,ch_m,ch_i,one,
      &              z,xi,xm12,ap)
             else
@@ -1614,18 +1614,18 @@ c
       use kinematics_module
       implicit none
       double precision E0sq,z,xi,xjac
-      double precision zHW6,xiHW6,xjacHW6,zHWPP,xiHWPP,xjacHWPP,zPY6Q
+      double precision zHW6,xiHW6,xjacHW6,zHW7,xiHW7,xjacHW7,zPY6Q
      $     ,xiPY6Q,xjacPY6Q,zPY6PT,xiPY6PT,xjacPY6PT,zPY8,xiPY8,xjacPY8
-      external zHW6,xiHW6,xjacHW6,zHWPP,xiHWPP,xjacHWPP,zPY6Q,xiPY6Q
+      external zHW6,xiHW6,xjacHW6,zHW7,xiHW7,xjacHW7,zPY6Q,xiPY6Q
      $     ,xjacPY6Q,zPY6PT,xiPY6PT,xjacPY6PT,zPY8,xiPY8,xjacPY8
       if(shower_mc_mod(1:7).eq.'HERWIG6')then
          z=zHW6(E0sq)
          xi=xiHW6(E0sq,z)
          xjac=xjacHW6(E0sq,xi,z)
-      elseif(shower_mc_mod(1:8).eq.'HERWIGPP')then
-         z=zHWPP()
-         xi=xiHWPP(z)
-         xjac=xjacHWPP(z)
+      elseif(shower_mc_mod(1:7).eq.'HERWIG7')then
+         z=zHW7()
+         xi=xiHW7(z)
+         xjac=xjacHW7(z)
       elseif(shower_mc_mod(1:8).eq.'PYTHIA6Q')then
          z=zPY6Q()
          xi=xiPY6Q()
@@ -3040,9 +3040,9 @@ c
 
 
 
-c Hewrig++
+c Herwig7
 
-      double precision function zHWPP()
+      double precision function zHW7()
 c     Shower energy variable
       use process_module
       use kinematics_module
@@ -3051,100 +3051,100 @@ c     Shower energy variable
       parameter (tiny=1d-5)
 c
       if(ileg.eq.1)then
-         zHWPP=1-(1-x)*(1+yij)/2d0
+         zHW7=1-(1-x)*(1+yij)/2d0
 c
       elseif(ileg.eq.2)then
-         zHWPP=1-(1-x)*(1+yij)/2d0
+         zHW7=1-(1-x)*(1+yij)/2d0
 c
       elseif(ileg.eq.3)then
          if(1-x.lt.tiny)then
-            zHWPP=1-(1-x)*(1+yij)/(betad+betas)
+            zHW7=1-(1-x)*(1+yij)/(betad+betas)
          else
             zeta1=get_zeta(shat_n1,w1,w2,xm12,xm22)
-            zHWPP=1-zeta1
+            zHW7=1-zeta1
          endif
 c
       elseif(ileg.eq.4)then
          if(1-x.lt.tiny)then
-            zHWPP=1-(1-x)*(1+yij)*shat_n1/(2*(shat_n1-xm12))
+            zHW7=1-(1-x)*(1+yij)*shat_n1/(2*(shat_n1-xm12))
          elseif(1-yij.lt.tiny)then
-            zHWPP=(shat_n1*x-xm12)/(shat_n1-xm12)+(1-yij)*(1-x)*shat_n1
+            zHW7=(shat_n1*x-xm12)/(shat_n1-xm12)+(1-yij)*(1-x)*shat_n1
      $           *(shat_n1*x+xm12*(x-2))*(shat_n1*x-xm12)/(2*(shat_n1
      $           -xm12)**3)
          else
             zeta2=get_zeta(shat_n1,w2,w1,xm22,xm12)
-            zHWPP=1-zeta2 
+            zHW7=1-zeta2
          endif
 c
       else
-         write(*,*)'zHWPP: unknown ileg'
+         write(*,*)'zHW7: unknown ileg'
          stop
       endif
 
-      if(zHWPP.lt.0d0.or.zHWPP.gt.1d0)goto 999
+      if(zHW7.lt.0d0.or.zHW7.gt.1d0)goto 999
 
       return
  999  continue
-      zHWPP=-1d0
+      zHW7=-1d0
       return
       end
 
 
 
-      double precision function xiHWPP(z)
+      double precision function xiHW7(z)
 c     Shower evolution variable
       use process_module
       use kinematics_module
       implicit none
-      double precision z,zHWPP,tiny
+      double precision z,zHW7,tiny
       parameter (tiny=1d-5)
 
       if(z.lt.0d0)goto 999
 c 
       if(ileg.eq.1)then
-         xiHWPP=shat_n1*(1-yij)/(1+yij)
+         xiHW7=shat_n1*(1-yij)/(1+yij)
 c
       elseif(ileg.eq.2)then
-         xiHWPP=shat_n1*(1-yij)/(1+yij)
+         xiHW7=shat_n1*(1-yij)/(1+yij)
 c
       elseif(ileg.eq.3)then
          if(1-x.lt.tiny)then
-            xiHWPP=-shat_n1*(betad+betas)*(yij*betad-betas)/(2*(1+yij))
+            xiHW7=-shat_n1*(betad+betas)*(yij*betad-betas)/(2*(1+yij))
          else
-            xiHWPP=w1/(z*(1-z))
+            xiHW7=w1/(z*(1-z))
          endif
 c
       elseif(ileg.eq.4)then
          if(1-x.lt.tiny)then
-            xiHWPP=(1-yij)*(shat_n1-xm12)**2/(shat_n1*(1+yij))
+            xiHW7=(1-yij)*(shat_n1-xm12)**2/(shat_n1*(1+yij))
          elseif(1-yij.lt.tiny)then
-            xiHWPP=(1-yij)*(shat_n1-xm12)**2/(2*shat_n1)
+            xiHW7=(1-yij)*(shat_n1-xm12)**2/(2*shat_n1)
          else
-            xiHWPP=w2/(z*(1-z))
+            xiHW7=w2/(z*(1-z))
          endif
 c
       else
-         write(*,*)'xiHWPP: unknown ileg'
+         write(*,*)'xiHW7: unknown ileg'
          stop
       endif
 
-      if(xiHWPP.lt.0d0)goto 999
+      if(xiHW7.lt.0d0)goto 999
 
       return
  999  continue
-      xiHWPP=-1d0
+      xiHW7=-1d0
       return
       end
 
 
 
-      double precision function xjacHWPP(z)
+      double precision function xjacHW7(z)
 c Returns the jacobian d(z,xi)/d(x,y), where z and xi are the shower 
 c variables, and x and y are FKS variables
       use process_module
       use kinematics_module
       implicit none
-      double precision z,zHWPP,tmp,eps,beta,dw1dx,dw2dx,dw1dy,dw2dy,tiny
+      double precision z,zHW7,tmp,eps,beta,dw1dx,dw2dx,dw1dy,dw2dy,tiny
       parameter (tiny=1d-5)
 
       tmp=0d0
@@ -3179,14 +3179,14 @@ c
          endif
 c
       else
-         write(*,*)'xjacHWPP: unknown ileg'
+         write(*,*)'xjacHW7: unknown ileg'
          stop
       endif
-      xjacHWPP=abs(tmp)
+      xjacHW7=abs(tmp)
 
       return
  999  continue
-      xjacHWPP=0d0
+      xjacHW7=0d0
       return
       end
 
@@ -3841,7 +3841,7 @@ c Definition and initialisation of variables
 ! Use the on-shell mass: reconstructing a massless partner's invariant
 ! can give a small negative value and silently lose the PYTHIA8 bound.
          xmp2=mass_n(ipartner)**2        ! mass squared of the partner
-         if (shower_mc_mod(1:8).eq.'HERWIGPP')
+         if (shower_mc_mod(1:7).eq.'HERWIG7')
      &        lambda=sqrt((Q2+xmm2-xmp2)**2-4*Q2*xmm2)
          if (shower_mc_mod(1:8).eq.'PYTHIA6Q') then
             beta=sqrt(1-4*shat_n1*(xmm2+ww)/(shat_n1-xmr2+xmm2+ww)**2)
@@ -3872,7 +3872,7 @@ c IMPLEMENT QED DZ's!
      &               .and.xi.le.1d0)lzone=.true.
          if(e0sq.eq.0d0)lzone=.false.
 c
-      elseif(shower_mc_mod(1:8).eq.'HERWIGPP')then
+      elseif(shower_mc_mod(1:7).eq.'HERWIG7')then
          lzone=.false.
          if(ileg.le.2)upscale2=2*e0sq
          if(ileg.gt.2)then

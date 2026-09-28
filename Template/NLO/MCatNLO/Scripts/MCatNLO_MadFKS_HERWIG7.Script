@@ -145,9 +145,8 @@ architecture
 
 EVTDIR=`pwd`"/../Events"
 
-HWEXE=Herwig++
-if [ -f $HWPPPATH/bin/Herwig ]; then HWEXE=Herwig ; fi
-HWVER=`$HWPPPATH/bin/$HWEXE --version`
+HWEXE=Herwig
+HWVER=`$HERWIG7PATH/bin/$HWEXE --version`
 HWVER=($(echo "$HWVER" | sed 's/ / /g'))
 HWVER1=($(echo ${HWVER[1]} | tr "." "\n"))
 HWVER2=($(echo ${HWVER1[1]} | tr "." "\n"))
@@ -155,7 +154,10 @@ HWVER=$(echo "$HWVER1$HWVER2" | bc)
 if [ "$HWVER" -ge 72 ]; then HWNEW=3 ; HWEXE=Herwig   ; fi
 if [ "$HWVER" -eq 71 ]; then HWNEW=2 ; HWEXE=Herwig   ; fi
 if [ "$HWVER" -eq 70 ]; then HWNEW=1 ; HWEXE=Herwig   ; fi
-if [ "$HWVER" -le 69 ]; then HWNEW=0 ; HWEXE=Herwig++ ; fi
+if [ "$HWVER" -lt 70 ]; then
+  echo "HERWIG7 matching requires Herwig version 7 or later"
+  exit 1
+fi
 
 if [[ "$PDFCODE" -ne 0 && "$HWNEW" -eq 0 ]] || [ "$HWNEW" -ge 1 ]
 then
@@ -233,7 +235,7 @@ pathextraincl "$INCLUDEPATHS"
 EXEC_NAME=
 EXEC_NAMEF=
 EXEC_NAMEFF=
-if [ "$HWPPUTI" != "" ]; then HWPPUTIMAKE="HWPPUTI="$HWPPUTI; fi
+if [ "$HW7UTI" != "" ]; then HW7UTIMAKE="HW7UTI="$HW7UTI; fi
 HERWGMAKE="HERWIGVER="$HERWIGVER
 LIBSMAKE="EXTRALIBS="$ExtraLibs
 LIBSMAKEP="EXTRAPATHS="$ExtraPaths
@@ -255,13 +257,13 @@ case $1 in
 NLO) echo "NLO must be computed with MadFKS"; exit 1 ;;
 MC) if [ $UsedPdfLib = "PDFLIB" ]
      then
-       EXEC_NAMEF="HWPP_EXE_DEFAULT"
+       EXEC_NAMEF="HW7_EXE_DEFAULT"
      elif [ $UsedPdfLib = "THISLIB" ]
      then
-       EXEC_NAMEF="HWPP_EXE_DEFAULT"
+       EXEC_NAMEF="HW7_EXE_DEFAULT"
      elif [ $UsedPdfLib = "LHAPDF" ]
      then
-       EXEC_NAMEF="HWPP_EXE_LHAPDF"
+       EXEC_NAMEF="HW7_EXE_LHAPDF"
      else
        echo "fatal error in compile"; exit 1
      fi ;;
@@ -279,24 +281,23 @@ fi
 EXEC_NAMEFF="$EXEPREFIX""$EXEC_NAMEF"
 rm -f $thisdir/$EXEC_NAMEFF
 
-HWPPMAKE="HWPPPATH="$HWPPPATH" HEPMC="$HEPMCPATH
-if [ "$HWPPUTI" != "" ]
+HW7MAKE="HERWIG7PATH="$HERWIG7PATH" HEPMC="$HEPMCPATH
+if [ "$HW7UTI" != "" ]
 then
-  HWPPUTIMAKE="HWPPUTI="$HWPPUTI
-  FORFILEMAKE="FORFILE="$HWPPUTI
+  HW7UTIMAKE="HW7UTI="$HW7UTI
+  FORFILEMAKE="FORFILE="$HW7UTI
   HEPMCF=HepMCFortran7.h
-  if [ "$HWVER" -le 69 ]; then HEPMCF=HepMCFortran2.h; fi
-  cp $thisdir/HWPPAnalyzer/$HEPMCF $thisdir/HWPPAnalyzer/HepMCFortran.h
-  HWPPANALYZER=HepMCFortran
-  if ! make -C $thisdir/HWPPAnalyzer $HWPPUTI $HWPPANALYZER.so $HWPPMAKE "$LIBSMAKE" "$LIBSMAKEP" "$INCLMAKE" "$FORFILEMAKE"
+  cp $thisdir/Herwig7Analyzer/$HEPMCF $thisdir/Herwig7Analyzer/HepMCFortran.h
+  HW7ANALYZER=HepMCFortran
+  if ! make -C $thisdir/Herwig7Analyzer $HW7UTI $HW7ANALYZER.so $HW7MAKE "$LIBSMAKE" "$LIBSMAKEP" "$INCLMAKE" "$FORFILEMAKE"
   then
-    echo $HWPPANALYZER compilation did not succeed, exiting.
+    echo $HW7ANALYZER compilation did not succeed, exiting.
     exit -1 
   fi
-  ln -sf $thisdir/HWPPAnalyzer/$HWPPANALYZER.so $thisdir
+  ln -sf $thisdir/Herwig7Analyzer/$HW7ANALYZER.so $thisdir
 fi
-  # link the HW++ executable into the EXE directoy
-  # ln -sf $HWPPPATH/bin/$HWEXE $thisdir
+  # link the HW7 executable into the EXE directoy
+  # ln -sf $HERWIG7PATH/bin/$HWEXE $thisdir
   # link the stupid LHAPDF index, if necessary
   whichherpdf $HERPDF
   if [ $pdftype = 1 ]
@@ -326,9 +327,9 @@ compile MC
 #put MCMODE to upper case
 MCMODE=`echo $MCMODE | tr '[a-z]' '[A-Z]' `
 # Check correspondence between MCMODE and what written in the event file
-if [ $MCMODE != "HERWIGPP" ]
+if [ $MCMODE != "HERWIG7" ]
 then
-  echo "Error! HERWIGPP Script called with MCMODE not equal to HERWIGPP"
+  echo "Error! HERWIG7 Script called with MCMODE not equal to HERWIG7"
   exit 1
 fi
 
@@ -366,9 +367,9 @@ then
     linklhapdf
   fi
 fi
-ERR_NUM_HWPP=$(echo "$ERR_FR_HWPP * $NEVENTS" | bc)
-ERR_NUM_HWPP=${ERR_NUM_HWPP/.*}
-let "ERR_NUM_HWPP += 1"
+ERR_NUM_HW7=$(echo "$ERR_FR_HW7 * $NEVENTS" | bc)
+ERR_NUM_HW7=${ERR_NUM_HW7/.*}
+let "ERR_NUM_HW7 += 1"
 
 echo " "
 echo "*****   Now ready for showering" $NEVENTS "events with $MCMODE "
@@ -441,9 +442,9 @@ set /Herwig/EventHandlers/LHEHandler:HadronizationHandler /Herwig/Hadronization/
 set /Herwig/EventHandlers/LHEHandler:DecayHandler /Herwig/Decays/DecayHandler
 set /Herwig/Generators/$GENERATOR:EventHandler /Herwig/EventHandlers/LHEHandler
 set /Herwig/Generators/$GENERATOR:NumberOfEvents $NEVENTS
-set /Herwig/Generators/$GENERATOR:RandomNumberGenerator:Seed $RNDEVSEED_HWPP
-set /Herwig/Generators/$GENERATOR:PrintEvent $MAXPR_HWPP
-set /Herwig/Generators/$GENERATOR:MaxErrors $ERR_NUM_HWPP 
+set /Herwig/Generators/$GENERATOR:RandomNumberGenerator:Seed $RNDEVSEED_HW7
+set /Herwig/Generators/$GENERATOR:PrintEvent $MAXPR_HW7
+set /Herwig/Generators/$GENERATOR:MaxErrors $ERR_NUM_HW7
 set /Herwig/Generators/$GENERATOR:DebugLevel 1
 EOF
 
@@ -484,7 +485,7 @@ EOF
 elif  [[ "$pdftype" -eq 0 && "$HWNEW" -eq 0 ]]
 then
 cat <<EOF >> ./$ifile
-# Use internal HW++ defualt PDF sets
+# Use internal HW7 defualt PDF sets
 set /Herwig/EventHandlers/LHEReader:PDFA /Herwig/Partons/MRST-NLO
 set /Herwig/EventHandlers/LHEReader:PDFB /Herwig/Partons/MRST-NLO
 set /Herwig/Particles/p+:PDF /Herwig/Partons/MRST-NLO
@@ -596,7 +597,7 @@ create ThePEG::Cuts /Herwig/Cuts/NoCuts
 set /Herwig/EventHandlers/LHEReader:Cuts /Herwig/Cuts/NoCuts
 EOF
 
-if [ $UE_HWPP = ".FALSE." ]
+if [ $UE_HW7 = ".FALSE." ]
 then
 cat <<EOF >> ./$ifile
 # Switching off MPI
@@ -606,7 +607,7 @@ EOF
 fi
 
 
-if [ $HADRONIZE_HWPP = ".FALSE." ]
+if [ $HADRONIZE_HW7 = ".FALSE." ]
 then
 cat <<EOF >> ./$ifile
 # Hadronization off 
@@ -674,13 +675,13 @@ EOF
 done
 
 
-if [ $B_STABLE_HWPP = ".TRUE." ]
+if [ $B_STABLE_HW7 = ".TRUE." ]
 then
 cat <<EOF >> ./$ifile
 
 #
 # Prevent particles from decaying
-# Particle names can be found in Herwig++/src/default/mesons.in or similar
+# Particle names can be found in Herwig/src/defaults/mesons.in or similar
 #
 
 #511
@@ -723,13 +724,13 @@ set /Herwig/Particles/eta_b:Stable Stable
 EOF
 fi
 
-if [ $PI_STABLE_HWPP = ".TRUE." ]
+if [ $PI_STABLE_HW7 = ".TRUE." ]
 then
 cat <<EOF >> ./$ifile
 
 #
 # Prevent particles from decaying
-# Particle names can be found in Herwig++/src/default/mesons.in or similar
+# Particle names can be found in Herwig/src/defaults/mesons.in or similar
 #
 
 # pi0 
@@ -738,13 +739,13 @@ set /Herwig/Particles/pi0:Stable Stable
 EOF
 fi
 
-if [ $WP_STABLE_HWPP = ".TRUE." ]
+if [ $WP_STABLE_HW7 = ".TRUE." ]
 then
 cat <<EOF >> ./$ifile
 
 #
 # Prevent particles from decaying
-# Particle names can be found in Herwig++/src/default/mesons.in or similar
+# Particle names can be found in Herwig/src/defaults/mesons.in or similar
 #
 
 # W+ 
@@ -753,13 +754,13 @@ set /Herwig/Particles/W+:Stable Stable
 EOF
 fi
 
-if [ $WM_STABLE_HWPP = ".TRUE." ]
+if [ $WM_STABLE_HW7 = ".TRUE." ]
 then
 cat <<EOF >> ./$ifile
 
 #
 # Prevent particles from decaying
-# Particle names can be found in Herwig++/src/default/mesons.in or similar
+# Particle names can be found in Herwig/src/defaults/mesons.in or similar
 #
 
 # W- 
@@ -768,13 +769,13 @@ set /Herwig/Particles/W-:Stable Stable
 EOF
 fi
 
-if [ $Z_STABLE_HWPP = ".TRUE." ]
+if [ $Z_STABLE_HW7 = ".TRUE." ]
 then
 cat <<EOF >> ./$ifile
 
 #
 # Prevent particles from decaying
-# Particle names can be found in Herwig++/src/default/mesons.in or similar
+# Particle names can be found in Herwig/src/defaults/mesons.in or similar
 #
 
 # Z0 
@@ -783,13 +784,13 @@ set /Herwig/Particles/Z0:Stable Stable
 EOF
 fi
 
-if [ $MUP_STABLE_HWPP = ".TRUE." ]
+if [ $MUP_STABLE_HW7 = ".TRUE." ]
 then
 cat <<EOF >> ./$ifile
 
 #
 # Prevent particles from decaying
-# Particle names can be found in Herwig++/src/default/mesons.in or similar
+# Particle names can be found in Herwig/src/defaults/mesons.in or similar
 #
 
 # mu+ 
@@ -798,13 +799,13 @@ set /Herwig/Particles/mu+:Stable Stable
 EOF
 fi
 
-if [ $MUM_STABLE_HWPP = ".TRUE." ]
+if [ $MUM_STABLE_HW7 = ".TRUE." ]
 then
 cat <<EOF >> ./$ifile
 
 #
 # Prevent particles from decaying
-# Particle names can be found in Herwig++/src/default/mesons.in or similar
+# Particle names can be found in Herwig/src/defaults/mesons.in or similar
 #
 
 # mu- 
@@ -813,13 +814,13 @@ set /Herwig/Particles/mu-:Stable Stable
 EOF
 fi
 
-if [ $TAUP_STABLE_HWPP = ".TRUE." ]
+if [ $TAUP_STABLE_HW7 = ".TRUE." ]
 then
 cat <<EOF >> ./$ifile
 
 #
 # Prevent particles from decaying
-# Particle names can be found in Herwig++/src/default/mesons.in or similar
+# Particle names can be found in Herwig/src/defaults/mesons.in or similar
 #
 
 # tau+ 
@@ -828,13 +829,13 @@ set /Herwig/Particles/tau+:Stable Stable
 EOF
 fi
 
-if [ $TAUM_STABLE_HWPP = ".TRUE." ]
+if [ $TAUM_STABLE_HW7 = ".TRUE." ]
 then
 cat <<EOF >> ./$ifile
 
 #
 # Prevent particles from decaying
-# Particle names can be found in Herwig++/src/default/mesons.in or similar
+# Particle names can be found in Herwig/src/defaults/mesons.in or similar
 #
 
 # tau- 
@@ -843,7 +844,7 @@ set /Herwig/Particles/tau-:Stable Stable
 EOF
 fi
 
-if [ $H_STABLE_HWPP = ".TRUE." ]
+if [ $H_STABLE_HW7 = ".TRUE." ]
 then
 cat <<EOF >> ./$ifile
 
@@ -859,7 +860,7 @@ EOF
 fi
 
 cat <<EOF >> ./$ifile
-# 4.) HW++ SETTINGS THAT ARE NOT ALLOWED TO BE TOUCHED BY THE USER
+# 4.) HW7 SETTINGS THAT ARE NOT ALLOWED TO BE TOUCHED BY THE USER
 
 #Boost and reconstruction stuff
 EOF
@@ -887,11 +888,11 @@ set /Herwig/Shower/KinematicsReconstructor:InitialInitialBoostOption LongTransBo
 # 5.) CREATE THE ANALYZER AND SAVE THE RUN (DO NOT MODIFY)
 EOF
 
-if [ "$HWPPUTI" != "" ]
+if [ "$HW7UTI" != "" ]
 then
 cat <<EOF >> ./$ifile
-create MCatNLO::$HWPPANALYZER $HWPPANALYZER $HWPPANALYZER.so
-insert /Herwig/Generators/$GENERATOR:AnalysisHandlers 0 $HWPPANALYZER
+create MCatNLO::$HW7ANALYZER $HW7ANALYZER $HW7ANALYZER.so
+insert /Herwig/Generators/$GENERATOR:AnalysisHandlers 0 $HW7ANALYZER
 
 EOF
 else
@@ -903,8 +904,8 @@ cat <<EOF >> ./$ifile
 ##################################################
 # Schematic overview of an event (requires --with-hepmc to be set at configure time
 # and the graphviz program 'dot' to produce a plot)
-#create MCatNLO::$HWPPANALYZER $HWPPANALYZER $HWPPANALYZER.so
-#insert /Herwig/Generators/$GENERATOR:AnalysisHandlers 0 $HWPPANALYZER
+#create MCatNLO::$HW7ANALYZER $HW7ANALYZER $HW7ANALYZER.so
+#insert /Herwig/Generators/$GENERATOR:AnalysisHandlers 0 $HW7ANALYZER
 # insert $GENERATOR:AnalysisHandlers 0 /Herwig/Analysis/Plot
 # A HepMC dump file (requires --with-hepmc to be set at configure time)
 # insert $GENERATOR:AnalysisHandlers 0 /Herwig/Analysis/HepMCFile
@@ -924,7 +925,7 @@ EOF
 ( cd . ;\
      $exefile )
 
-mv $thisdir/MCATNLO_HERWIGPP.hepmc $thisdir/"$EVT_NAMEF".hepmc
+mv $thisdir/MCATNLO_HERWIG7.hepmc $thisdir/"$EVT_NAMEF".hepmc
 }
 
 # this function set the parameter pdftype according to the value 

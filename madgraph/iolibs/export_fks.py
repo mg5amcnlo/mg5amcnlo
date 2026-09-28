@@ -686,7 +686,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                      'check_sudakov_angle2.f',
                      'momentum_reshuffling.f',
                      'MCmasses_HERWIG6.inc',
-                     'MCmasses_HERWIGPP.inc',
+                     'MCmasses_HERWIG7.inc',
                      'MCmasses_PYTHIA6Q.inc',
                      'MCmasses_PYTHIA6PT.inc',
                      'MCmasses_PYTHIA8.inc',

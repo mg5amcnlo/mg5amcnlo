@@ -9,7 +9,7 @@ NFILE=$4
 
 export %(ld_library_path)s=$%(ld_library_path)s:%(extralibs)s
 
-if [ $SHOWER == "HERWIGPP" ] ; then
+if [ $SHOWER == "HERWIG7" ] ; then
     export PYTHIA8DATA=""
 else
     export PYTHIA8DATA=`pwd`/xmldoc
@@ -24,7 +24,7 @@ if [[ "$NFILE" != "" ]]; then
         cp ../Pythia8.exe ../Pythia8.cmd .
         if [ -f ../config.sh ] ; then cp ../config.sh . ; fi
     else
-        if [ $SHOWER == "HERWIGPP" ] ; then
+        if [ $SHOWER == "HERWIG7" ] ; then
             cp ../Herwig* ../HepMCFortran.so .
         fi
         cp ../MCATNLO_$SHOWER\_EXE ../MCATNLO_$SHOWER\_input .
@@ -35,7 +35,7 @@ if [ -e events.lhe.gz ] ; then
     gunzip $RUN_NAME/events.lhe.gz
 fi
 
-if [ "$SHOWER" == "HERWIG6" ] || [ "$SHOWER" == "PYTHIA6Q" ] || [ "$SHOWER" == "PYTHIA6PT" ] || [ "$SHOWER" == "HERWIGPP" ] ; then
+if [ "$SHOWER" == "HERWIG6" ] || [ "$SHOWER" == "PYTHIA6Q" ] || [ "$SHOWER" == "PYTHIA6PT" ] || [ "$SHOWER" == "HERWIG7" ] ; then
     ./MCATNLO_$SHOWER\_EXE < MCATNLO_$SHOWER\_input > mcatnlo_run.log 2>&1
 
 elif [ "$SHOWER" == "PYTHIA8" ] ; then
@@ -55,8 +55,8 @@ if [ "$OUTPUT" == "HEP" ] ; then
     if [ "$SHOWER" == "HERWIG6" ] || [ "$SHOWER" == "PYTHIA6Q" ] || [ "$SHOWER" == "PYTHIA6PT" ] ; then
         mv events.lhe.hep $NAME.hep
         gzip $NAME.hep
-    elif [ "$SHOWER" == "HERWIGPP" ] ; then
-        mv MCATNLO_HERWIGPP.hepmc $NAME.hepmc
+    elif [ "$SHOWER" == "HERWIG7" ] ; then
+        mv MCATNLO_HERWIG7.hepmc $NAME.hepmc
         gzip $NAME.hepmc
     elif [ "$SHOWER" == "PYTHIA8" ] ; then
         mv Pythia8.hep $NAME.hepmc

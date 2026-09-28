@@ -21,7 +21,7 @@ program check_pythia8_s_scales
   delta=trim(mode).eq.'delta'
   herwig=trim(mode).eq.'herwig'
   call init_process_module_global('PYTHIA8   ','all ',5,2,delta,13000d0,2,1,0)
-  if (herwig) shower_mc_mod='HERWIGPP'
+  if (herwig) shower_mc_mod='HERWIG7'
   ff_cap=500d0
   fi_cap=sqrt(50000d0)
   if (herwig) then
@@ -148,7 +148,7 @@ program check_pythia8_s_scales
     nincoming_mod=2
     shower_mc_mod='HERWIG6'
     call require(.not.scalar_S_scales(),'HERWIG6 retains its prescription')
-    shower_mc_mod='HERWIGPP'
+    shower_mc_mod='HERWIG7'
   endif
   hard_reference=0.01d0
   call compute_shower_scale_nbody(p,-3)

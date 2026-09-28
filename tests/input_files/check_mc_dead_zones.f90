@@ -44,7 +44,7 @@ program check_mc_dead_zones
 
   select case (trim(name))
   case ('herwig')
-    shower_mc_mod='HERWIGPP'
+    shower_mc_mod='HERWIG7'
     connected=.true.
     do i=1,5
       connected(i,i)=.false.

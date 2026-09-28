@@ -1647,7 +1647,7 @@ c "npNLO".
       common /c_leshouche_inc/idup,mothup,icolup,niprocs
       character*4      abrv
       common /to_abrv/ abrv
-      if ((shower_mc.eq.'PYTHIA8' .or. shower_mc.eq.'HERWIGPP') .and.
+      if ((shower_mc.eq.'PYTHIA8' .or. shower_mc.eq.'HERWIG7') .and.
      $     (ickkw.eq.3.or.ickkw.eq.4))then
          nattr=2
          nFKSprocess=1          ! just pick one

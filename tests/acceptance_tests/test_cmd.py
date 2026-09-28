@@ -209,7 +209,7 @@ class TestCmdShell1(unittest.TestCase):
                     'syscalc_path':'./SysCalc',
                     'collier':'./HEPTools/lib',
                     'hepmc_path': './hepmc',
-                    'hwpp_path': './herwigPP',
+                    'herwig7_path': './herwig7',
                     'thepeg_path': './thepeg',
                     #'applgrid': 'applgrid-config',
                     'pineappl': 'pineappl',

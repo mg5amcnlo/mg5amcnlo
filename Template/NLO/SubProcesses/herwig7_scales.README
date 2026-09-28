@@ -1,5 +1,5 @@
-Herwig++/Herwig7 S-event starting scales
-======================================
+Herwig7 S-event starting scales
+===============================
 
 herwig7_scales.f90 implements the angular-shower kinematics of
 S. Gieseke, P. Stephens and B. Webber, JHEP 12 (2003) 045,
@@ -14,9 +14,9 @@ Reference shower settings and implementation
 The reference is Herwig 7.3.0, using the angular shower, with
 PartnerFinder:PartnerMethod Random and PartnerFinder:ScaleChoice Partner.
 The symmetric final-final angular partition is used. These are the
-settings in Herwig's src/LHE-MCatNLO.in and MG5's HERWIGPP steering.
-The same angular formulae appear in Herwig++ and in MG5's existing
-get_dead_zone routine. Reference source locations in Herwig 7.3.0:
+settings in Herwig's src/LHE-MCatNLO.in and MG5's HERWIG7 steering.
+The same angular formulae appear in MG5's existing get_dead_zone routine.
+Reference source locations in Herwig 7.3.0:
 
 * Shower/QTilde/Base/PartnerFinder.cc:
   calculateInitialInitialScales, calculateInitialFinalScales,
@@ -27,7 +27,7 @@ get_dead_zone routine. Reference source locations in Herwig 7.3.0:
 
 ShowerHandler:MaxPtIsMuF Yes and RestrictPhasespace Yes make SCALUP a
 transverse-momentum veto. They DO NOT cap the angular starting scale.
-Older Herwig++ uses the corresponding HardVetoMode/HardVetoScaleSource
+Herwig 7.0 uses the corresponding HardVetoMode/HardVetoScaleSource
 settings, already supplied by MG5. No per-dipole LHE tags are needed.
 
 Interface and conventions
@@ -71,7 +71,7 @@ Decay showers and the Herwig dipole shower are outside this interface.
 Matching integration
 --------------------
 
-For parton_shower=HERWIGPP, two incoming legs, ordinary MC@NLO and no FxFx,
+For parton_shower=HERWIG7, two incoming legs, ordinary MC@NLO and no FxFx,
 scale_module draws ONE damped hard scale from the existing clustering
 reference and passes it to this module. The saved scalar becomes S-event
 SCALUP. All valid dipoles use the same hard-scale damping interval in the

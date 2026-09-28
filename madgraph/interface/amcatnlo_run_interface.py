@@ -953,9 +953,6 @@ class AskRunNLO(cmd.ControlSwitch):
     def answer(self):
         
         out = super(AskRunNLO, self).answer
-        if out['shower'] == 'HERWIG7':
-            out['shower'] = 'HERWIGPP'
-        
         if out['shower'] not in self.get_allowed('shower') or out['shower'] =='OFF':
             out['runshower'] = False
         else:
@@ -978,7 +975,7 @@ class AskRunNLO(cmd.ControlSwitch):
                 self.available_module.add('reweight')
         if options['pythia8_path']:
             self.available_module.add('PY8')
-        if options['hwpp_path'] and options['thepeg_path'] and options['hepmc_path']:
+        if options['herwig7_path'] and options['thepeg_path'] and options['hepmc_path']:
             self.available_module.add('HW7')
             
         MCatNLO_libdir = pjoin(self.me_dir, 'MCatNLO', 'lib')
@@ -1212,7 +1209,7 @@ class AskRunNLO(cmd.ControlSwitch):
             if 'PY8' in self.available_module:
                 allowed.append('PYTHIA8')
             if 'HW7' in self.available_module:
-                allowed.append('HERWIGPP')
+                allowed.append('HERWIG7')
             
             
             self.allowed_shower = allowed
@@ -1224,7 +1221,7 @@ class AskRunNLO(cmd.ControlSwitch):
         
         if value.upper() in self.get_allowed_shower():
             return True
-        if value.upper() in ['PYTHIA8', 'HERWIGPP']:
+        if value.upper() in ['PYTHIA8', 'HERWIG7']:
             return True
         if value.upper() == 'ON':
             return self.run_card['parton_shower']
@@ -1234,10 +1231,8 @@ class AskRunNLO(cmd.ControlSwitch):
             return 'PYTHIA6PT'
         if value.upper() in ['PY6Q', 'PYTHIA_6Q','PYTHIA6Q', 'PYTHIA6_Q']:
             return 'PYTHIA6Q'
-        if value.upper() in ['HW7', 'HERWIG7']:
+        if value.upper() in ['HW7', 'HERWIG_7', 'HERWIGPP', 'HERWIG++', 'HWPP', 'HW++']:
             return 'HERWIG7'
-        if value.upper() in ['HW++', 'HWPP', 'HERWIG++']:
-            return 'HERWIGPP'
         if value.upper() in ['HW6', 'HERWIG_6']:
             return 'HERWIG6'
     
@@ -1999,7 +1994,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
             elif req_acc < 0 and nevents > 1000000 :
                 req_acc=0.001
 
-            shower_list = ['HERWIG6', 'HERWIGPP', 'PYTHIA6Q', 'PYTHIA6PT', 'PYTHIA8']
+            shower_list = ['HERWIG6', 'HERWIG7', 'PYTHIA6Q', 'PYTHIA6PT', 'PYTHIA8']
 
             if not shower in shower_list:
                 raise aMCatNLOError('%s is not a valid parton shower. '\
@@ -3985,18 +3980,18 @@ RESTART = %(mint_mode)s
 
         extrapaths = self.shower_card['extrapaths'].split()
 
-        # check that the path needed by HW++ and PY8 are set if one uses these shower
-        if shower in ['HERWIGPP', 'PYTHIA8']:
-            path_dict = {'HERWIGPP': ['hepmc_path',
+        # check that the path needed by HW7 and PY8 are set if one uses these shower
+        if shower in ['HERWIG7', 'PYTHIA8']:
+            path_dict = {'HERWIG7': ['hepmc_path',
                                       'thepeg_path',
-                                      'hwpp_path'],
+                                      'herwig7_path'],
                          'PYTHIA8': ['pythia8_path']}
 
             if not all([self.options[ppath] and os.path.exists(self.options[ppath]) for ppath in path_dict[shower]]):
                 raise aMCatNLOError('Some paths are missing or invalid in the configuration file.\n' + \
                         ('Please make sure you have set these variables: %s' % ', '.join(path_dict[shower])))
 
-        if shower == 'HERWIGPP':
+        if shower == 'HERWIG7':
             extrapaths.append(pjoin(self.options['hepmc_path'], 'lib'))
             self.shower_card['extrapaths'] += ' %s' % pjoin(self.options['hepmc_path'], 'lib')
 
@@ -4118,18 +4113,16 @@ RESTART = %(mint_mode)s
                 files.ln(pjoin(self.options['pythia8_path'], 'share/Pythia8/xmldoc'), rundir)
                 files.ln(pjoin(self.options['pythia8_path'], 'share/Pythia8/tunes'), rundir)
 
-        #link the hwpp exe in the rundir
-        if shower == 'HERWIGPP':
+        #link the hw7 exe in the rundir
+        if shower == 'HERWIG7':
             try:
-                if os.path.exists(pjoin(self.options['hwpp_path'], 'bin', 'Herwig++')):
-                    files.ln(pjoin(self.options['hwpp_path'], 'bin', 'Herwig++'), rundir)
-                if os.path.exists(pjoin(self.options['hwpp_path'], 'bin', 'Herwig')):
-                    files.ln(pjoin(self.options['hwpp_path'], 'bin', 'Herwig'), rundir)
+                if os.path.exists(pjoin(self.options['herwig7_path'], 'bin', 'Herwig')):
+                    files.ln(pjoin(self.options['herwig7_path'], 'bin', 'Herwig'), rundir)
             except Exception:
-                raise aMCatNLOError('The Herwig++ path set in the configuration file is not valid.')
+                raise aMCatNLOError('The Herwig7 path set in the configuration file is not valid.')
 
-            if os.path.exists(pjoin(self.me_dir, 'MCatNLO', 'HWPPAnalyzer', 'HepMCFortran.so')):
-                files.cp(pjoin(self.me_dir, 'MCatNLO', 'HWPPAnalyzer', 'HepMCFortran.so'), rundir)
+            if os.path.exists(pjoin(self.me_dir, 'MCatNLO', 'Herwig7Analyzer', 'HepMCFortran.so')):
+                files.cp(pjoin(self.me_dir, 'MCatNLO', 'Herwig7Analyzer', 'HepMCFortran.so'), rundir)
 
         files.ln(evt_file, rundir, 'events.lhe')
         for i, f in enumerate(event_files):
@@ -4173,7 +4166,7 @@ RESTART = %(mint_mode)s
         to_gzip = [evt_file]
         if out_id == 'HEP':
             #copy the showered stdhep/hepmc file back in events
-            if shower in ['PYTHIA8', 'HERWIGPP']:
+            if shower in ['PYTHIA8', 'HERWIG7']:
                 hep_format = 'HEPMC'
                 ext = 'hepmc'
             else:
@@ -4725,7 +4718,7 @@ RESTART = %(mint_mode)s
         # check if need to link lhapdf
         if int(self.shower_card['pdfcode']) > 1 or \
             (pdlabel=='lhapdf' and int(self.shower_card['pdfcode'])==1) or \
-            shower=='HERWIGPP' : 
+            shower=='HERWIG7' :
             # Use LHAPDF (should be correctly installed, because
             # either events were already generated with them, or the
             # user explicitly gives an LHAPDF number in the
@@ -4780,14 +4773,14 @@ RESTART = %(mint_mode)s
         else:
             content += 'DELTA=OFF\n'
         content += 'PTJCUT=%s\n' % self.banner.get_detail('run_card', 'ptj')
-        # add the pythia8/hwpp path(s)
+        # add the pythia8/hw7 path(s)
         if self.options['pythia8_path']:
             content+='PY8PATH=%s\n' % self.options['pythia8_path']
-        if self.options['hwpp_path']:
-            content+='HWPPPATH=%s\n' % self.options['hwpp_path']
-        if self.options['thepeg_path'] and self.options['thepeg_path'] != self.options['hwpp_path']:
+        if self.options['herwig7_path']:
+            content+='HERWIG7PATH=%s\n' % self.options['herwig7_path']
+        if self.options['thepeg_path'] and self.options['thepeg_path'] != self.options['herwig7_path']:
             content+='THEPEGPATH=%s\n' % self.options['thepeg_path']
-        if self.options['hepmc_path'] and self.options['hepmc_path'] != self.options['hwpp_path']:
+        if self.options['hepmc_path'] and self.options['hepmc_path'] != self.options['herwig7_path']:
             content+='HEPMCPATH=%s\n' % self.options['hepmc_path']
         
         output = open(pjoin(self.me_dir, 'MCatNLO', 'banner.dat'), 'w')
@@ -5099,10 +5092,8 @@ RESTART = %(mint_mode)s
             else:
                 input_files.append(pjoin(cwd, 'MCATNLO_%s_EXE' % shower))
                 input_files.append(pjoin(cwd, 'MCATNLO_%s_input' % shower))
-            if shower == 'HERWIGPP':
-                if os.path.exists(pjoin(self.options['hwpp_path'], 'bin', 'Herwig++')):
-                    input_files.append(pjoin(cwd, 'Herwig++'))
-                if os.path.exists(pjoin(self.options['hwpp_path'], 'bin', 'Herwig')):
+            if shower == 'HERWIG7':
+                if os.path.exists(pjoin(self.options['herwig7_path'], 'bin', 'Herwig')):
                     input_files.append(pjoin(cwd, 'Herwig'))
                 input_files.append(pjoin(cwd, 'HepMCFortran.so'))
             if len(args) == 3:
@@ -5125,7 +5116,7 @@ RESTART = %(mint_mode)s
                     fname = 'events'
                 else:
                     fname = 'events_%s' % args[3]
-                if shower in ['PYTHIA8', 'HERWIGPP']:
+                if shower in ['PYTHIA8', 'HERWIG7']:
                     output_files.append(fname + '.hepmc.gz')
                 else:
                     output_files.append(fname + '.hep.gz')
@@ -5893,7 +5884,7 @@ RESTART = %(mint_mode)s
 
                 if self.run_card['parton_shower'].upper() == 'PYTHIA6Q':
                     raise self.InvalidCmd("""FxFx merging does not work with Pythia6's Q-squared ordered showers.""")
-                elif self.run_card['parton_shower'].upper() != 'HERWIG6' and self.run_card['parton_shower'].upper() != 'PYTHIA8' and self.run_card['parton_shower'].upper() != 'HERWIGPP':
+                elif self.run_card['parton_shower'].upper() != 'HERWIG6' and self.run_card['parton_shower'].upper() != 'PYTHIA8' and self.run_card['parton_shower'].upper() != 'HERWIG7':
                     question="FxFx merging not tested for %s shower. Do you want to continue?\n"  % self.run_card['parton_shower'] + \
                         "Type \'n\' to stop or \'y\' to continue"
                     answers = ['n','y']

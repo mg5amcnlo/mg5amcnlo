@@ -88,7 +88,7 @@ $ion_pdf
                               ! lepton ISR
 #***********************************************************************
 # Include the NLO Monte Carlo subtr. terms for the following parton    *
-# shower (HERWIG6 | HERWIGPP | PYTHIA6Q | PYTHIA6PT | PYTHIA8)         *
+# shower (HERWIG6 | HERWIG7 | PYTHIA6Q | PYTHIA6PT | PYTHIA8)          *
 # WARNING: PYTHIA6PT works only for processes without FSR!!!!          *
 #***********************************************************************
   %(parton_shower)s   = parton_shower

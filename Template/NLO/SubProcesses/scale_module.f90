@@ -60,9 +60,9 @@ contains
   end function pythia8_S_scales
 
   logical function herwig7_S_scales()
-    ! HERWIGPP selects the angular shower in both Herwig++ and Herwig7.
+    ! HERWIG7 selects the angular shower.
     ! Delta is supported only by Pythia8; FxFx has its own prescription.
-    herwig7_S_scales=shower_mc_mod.eq.'HERWIGPP' .and. &
+    herwig7_S_scales=shower_mc_mod.eq.'HERWIG7' .and. &
          nincoming_mod.eq.2 .and. ickkw_mod.ne.3 .and. .not.mcatnlo_delta_mod
   end function herwig7_S_scales
 
