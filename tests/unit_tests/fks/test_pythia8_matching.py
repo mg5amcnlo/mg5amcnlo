@@ -169,6 +169,7 @@ class TestPythia8Matching(unittest.TestCase):
             '      double precision g\n      double complex gal(2)\n'
             '      common/test_couplings/g,gal\n')
         shutil.copyfile(TEMPLATE / 'fks_powers.inc', work / 'fks_powers.inc')
+        shutil.copyfile(TEMPLATE / 'resonance_recoil.inc', work / 'resonance_recoil.inc')
         (work / 'native.f90').write_text(
             'module mc_native_context\nlogical :: native_mapping=.true.\nend module\n')
         (work / 'scale.f90').write_text(
@@ -192,7 +193,8 @@ class TestPythia8Matching(unittest.TestCase):
                 'py8_gluon_recoil_weight', 'limits', 'get_dead_zone', 'get_angle',
                 'compute_damping_weight', 'emscafun'),
             'fks_singular.f': ('AP_reduced', 'AP_reduced_SUSY', 'AP_reduced_massive',
-                              'Qterms_reduced_timelike', 'Qterms_reduced_spacelike'),
+                              'Qterms_reduced_timelike', 'Qterms_reduced_spacelike',
+                              'rotate_invar', 'trp_rotate_invar'),
             'fks_Sij.f': ('fks_Hij', 'h_damp'),
         }
         routines = [fortran_routine(TEMPLATE / filename, name)
@@ -216,6 +218,8 @@ class TestPythia8Matching(unittest.TestCase):
                        '-I', str(work), str(TEMPLATE / 'process_module.f90'),
                        str(TEMPLATE / 'kinematics_module.f90'), 'native.f90', 'scale.f90',
                        'routines.f', str(TEMPLATE / 'boostwdir2.f'),
+                       str(TEMPLATE / 'resonance_recoil.f'),
+                       str(ROOT / 'HELAS/boostx.F'),
                        str(ROOT / 'tests/input_files/check_pythia8_matching.f90'),
                        '-o', str(executable)]
             result = subprocess.run(command, cwd=work, capture_output=True, text=True)
