@@ -5919,7 +5919,7 @@ class RunCardNLO(RunCard):
 
         #technical
         self.add_param('folding', [1,1,1], include=False)
-        self.add_param('born_spreading', True, fortran_name='born_spreading',
+        self.add_param('born_spreading', False, fortran_name='born_spreading',
             comment="Redistribute the Born contribution across the FKS energy and angle bins. "
                     "The normalized table is fitted during integration step 0.")
 
