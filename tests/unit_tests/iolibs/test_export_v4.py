@@ -20,6 +20,7 @@ import copy
 import fractions
 import os 
 import sys
+import tempfile
 root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
 sys.path.append(os.path.join(root_path, os.path.pardir, os.path.pardir))
 
@@ -910,7 +911,75 @@ class ExportV4IOTest(unittest.TestCase,
 
     tearDown = test_file_writers.CheckFileCreate.clean_files
     
-     
+    def test_standalone_auxiliary_file_paths(self):
+        """Auxiliary files follow the matrix writer, without a parent copy."""
+        for split_orders in ([], ['QED']):
+            for path_type in ('absolute', 'relative', 'basename'):
+                with self.subTest(split_orders=split_orders, path_type=path_type):
+                    self.mymatrixelement.get('processes')[0].set(
+                        'split_orders', split_orders)
+                    with tempfile.TemporaryDirectory() as tmpdir:
+                        launch_dir = pjoin(tmpdir, 'launch')
+                        output_dir = pjoin(tmpdir, 'output')
+                        os.mkdir(launch_dir)
+                        os.mkdir(output_dir)
+                        parent_include = pjoin(tmpdir, 'nsqso_born.inc')
+                        with open(parent_include, 'w') as stream:
+                            stream.write('existing parent include\n')
+                        if path_type == 'basename':
+                            output_dir = launch_dir
+                            filename = 'matrix.f'
+                        elif path_type == 'relative':
+                            filename = pjoin('..', 'output', 'matrix.f')
+                        else:
+                            filename = pjoin(output_dir, 'matrix.f')
+                        with misc.chdir(launch_dir):
+                            exporter = export_v4.ProcessExporterFortranSA()
+                            with writers.FortranWriter(filename) as writer:
+                                exporter.write_matrix_element_v4(
+                                    writer, self.mymatrixelement,
+                                    self.myfortranmodel)
+                        with open(pjoin(output_dir, 'nsqso_born.inc')) as stream:
+                            self.assertIn('PARAMETER (NSQSO_BORN=1)', stream.read())
+                        self.assertEqual(os.path.isfile(pjoin(output_dir,
+                            'check_sa_born_splitOrders.f')), bool(split_orders))
+                        if launch_dir != output_dir:
+                            self.assertEqual(os.listdir(launch_dir), [])
+                        with open(parent_include) as stream:
+                            self.assertEqual(stream.read(), 'existing parent include\n')
+
+    def test_standalone_replace_dict_does_not_write_auxiliary_files(self):
+        """Returning matrix metadata leaves the filesystem untouched."""
+        for split_orders in ([], ['QED']):
+            for use_writer, write in ((False, True), (False, False), (True, False)):
+                with self.subTest(split_orders=split_orders,
+                                  use_writer=use_writer, write=write):
+                    self.mymatrixelement.get('processes')[0].set(
+                        'split_orders', split_orders)
+                    with tempfile.TemporaryDirectory() as tmpdir:
+                        launch_dir = pjoin(tmpdir, 'launch')
+                        output_dir = pjoin(tmpdir, 'output')
+                        os.mkdir(launch_dir)
+                        os.mkdir(output_dir)
+                        with misc.chdir(launch_dir):
+                            exporter = export_v4.ProcessExporterFortranSA()
+                            writer = writers.FortranWriter(pjoin(output_dir,
+                                'matrix.f')) if use_writer else None
+                            try:
+                                replace_dict = exporter.write_matrix_element_v4(
+                                    writer, self.mymatrixelement,
+                                    self.myfortranmodel, write=write)
+                            finally:
+                                if writer:
+                                    writer.close()
+                        self.assertEqual(replace_dict['nSqAmpSplitOrders'], 1)
+                        self.assertEqual(os.listdir(launch_dir), [])
+                        self.assertEqual(os.listdir(output_dir),
+                                         ['matrix.f'] if use_writer else [])
+                        self.assertEqual(sorted(os.listdir(tmpdir)), ['launch', 'output'])
+                        if use_writer:
+                            self.assertEqual(os.path.getsize(pjoin(output_dir, 'matrix.f')), 0)
+
     def test_coeff_string(self):
         """Test the coeff string for JAMP lines"""
 

@@ -2471,6 +2471,9 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
             matrix_element,
             fortran_model)
 
+        # Sudakov checks in the enclosing Born directory use this include.
+        files.cp('nsqso_born.inc', os.path.pardir)
+
         filename = 'nexternal.inc'
         self.write_nexternal_file(writers.FortranWriter(filename),
                              nexternal, ninitial)
@@ -4954,6 +4957,9 @@ class ProcessOptimizedExporterFortranFKS(loop_exporters.LoopProcessOptimizedExpo
             writers.FortranWriter(filename),
             matrix_element,
             fortran_model)
+
+        # Sudakov checks in the enclosing Born directory use this include.
+        files.cp('nsqso_born.inc', os.path.pardir)
 
         filename = 'nexternal.inc'
         self.write_nexternal_file(writers.FortranWriter(filename),
