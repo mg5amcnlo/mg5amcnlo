@@ -5517,7 +5517,14 @@ PYTHIA8LINKLIBS=%(pythia8_prefix)s/lib/libpythia8.a -lz -ldl"""%{'pythia8_prefix
                 logger.info('Using built-in libraries for PDFs')
 
             elif self.run_card['lpp1'] == 2 == self.run_card['lpp2']:
-                if self.run_card['pdlabel'] in ['edff', 'chff']:
+                upclabels=['edff','chff','edpf','edmf','chpf','chmf']
+                # for forward neutron tagging
+                for nerr in ['f','p','m']:
+                    for y in ['i','x','0','1','2','3','4']:
+                        for z in ['i','x','0','1','2','3','4']:
+                            upclabels.append('ed'+nerr+y+'n'+z+'n')
+                            upclabels.append('ch'+nerr+y+'n'+z+'n')
+                if self.run_card['pdlabel'] in upclabels:
                     logger.info('Using '+self.run_card['pdlabel'].upper()+' in gamma-UPC')
                     self.make_opts_var['pdlabel'] = self.run_card['pdlabel']
 
