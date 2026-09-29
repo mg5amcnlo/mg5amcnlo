@@ -3166,6 +3166,43 @@ class test_aloha_creation(unittest.TestCase):
         self.assertAlmostEqual(val_V, val_N2)
         self.assertAlmostEqual(val_V, val_N3)
 
+    def test_short_aloha_propagator_momentum_flip(self):
+        """ Check that flipping the momentum of an outgoing fermion propagator
+            keeps the sign of even powers of P (the $ veto P1D was always
+            passing for outgoing fermions since P**2 was turned into -P**2)"""
+
+        builder = create_aloha.AbstractRoutineBuilder.__new__(
+                                              create_aloha.AbstractRoutineBuilder)
+        namespace = vars(create_aloha)
+        def evaluate(expr, flip):
+            out = eval(builder.parse_expression(expr, flip), namespace)
+            return str(out.expand().simplify().get_rep((0,)))
+
+        for expr in ['P(-1,3)**2', 'P(-1,3) ** 2', 'P(-1,3)**2.0',
+                     'P(-1,3)*P(-1,3)', 'Mass(3)**2/P(-1,3)**2',
+                     '2*P(-1,3)**2 - Mass(3)**2', 'P(0,3)**4']:
+            aloha_lib.KERNEL.clean()
+            self.assertEqual(evaluate(expr, True), evaluate(expr, False), expr)
+
+        for expr in ['P(0,3)', 'P(0,3)**3']:
+            aloha_lib.KERNEL.clean()
+            self.assertEqual(evaluate(expr, True),
+                             evaluate('-1*(%s)' % expr, False), expr)
+
+        # the $ veto should be the same for an incoming and an outgoing fermion
+        FFV = self.Lorentz(name = 'FFV',
+                 spins = [ 2, 2, 3 ],
+                 structure = 'Gamma(3,1,2)')
+        veto = []
+        for outgoing in [1, 2]:
+            aloha_lib.KERNEL.clean()
+            create_aloha.AbstractRoutineBuilder(FFV).compute_routine(outgoing,
+                                                  tag=['P1D'], factorize=False)
+            veto.append([str(v) for v in aloha_lib.KERNEL.reduced_expr2.values()
+                                        if str(v).startswith("('theta_functionr'")])
+        self.assertEqual(len(veto[0]), 1)
+        self.assertEqual(veto[0], veto[1])
+
 
 
 
