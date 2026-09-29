@@ -1320,7 +1320,7 @@ class TestAMCatNLOEW(unittest.TestCase):
         fksproc = self.interface._fks_multi_proc
         self.assertEqual(cmd.find_unstable_s_channels(fksproc), ['z'])
         with self.assertLogs('cmdprint', level='WARNING') as log:
-            cmd.warn_resonances_without_cms(cmd, fksproc, ['QED'])
+            cmd.warn_resonances_without_cms(self.interface, fksproc, ['QED'])
         self.assertEqual(len(log.output), 1)
         self.assertIn('NLO EW corrections', log.output[0])
         self.assertIn('complex_mass_scheme', log.output[0])
@@ -1361,7 +1361,7 @@ class TestAMCatNLOEW(unittest.TestCase):
         self.assertEqual(
             cmd.find_unstable_s_channels(fksproc, coloured_only=True), ['t'])
         with self.assertLogs('cmdprint', level='WARNING') as log:
-            cmd.warn_resonances_without_cms(cmd, fksproc, ['QCD'])
+            cmd.warn_resonances_without_cms(self.interface, fksproc, ['QCD'])
         self.assertEqual(len(log.output), 1)
         self.assertIn('NLO QCD corrections', log.output[0])
         self.assertIn('complex_mass_scheme', log.output[0])
@@ -1374,9 +1374,9 @@ class TestAMCatNLOEW(unittest.TestCase):
         self.assertEqual(
             cmd.find_unstable_s_channels(fksproc, coloured_only=True), [])
         with mock.patch.object(amcatnlocmd.logger, 'warning') as warning:
-            cmd.warn_resonances_without_cms(cmd, fksproc, ['QCD'])
+            cmd.warn_resonances_without_cms(self.interface, fksproc, ['QCD'])
             self.assertFalse(warning.called)
-            cmd.warn_resonances_without_cms(cmd, fksproc, ['QCD', 'QED'])
+            cmd.warn_resonances_without_cms(self.interface, fksproc, ['QCD', 'QED'])
             self.assertEqual(warning.call_count, 1)
 
         # on-shell tops: no s-channel top
@@ -1388,3 +1388,32 @@ class TestAMCatNLOEW(unittest.TestCase):
         self.interface.do_generate('u u~ > t t~ g QED=0 [real=QCD]')
         fksproc = self.interface._fks_multi_proc
         self.assertEqual(cmd.find_unstable_s_channels(fksproc), [])
+
+
+    def test_resonance_warning_from_generate(self):
+        """the no-CMS resonance warning is emitted by generate only when the
+        virtual corrections are included and the complex-mass scheme is off"""
+
+        def warned(line):
+            # spy on the warnings rather than using assertLogs: generate
+            # emits other warnings, some with MG-specific formatting tags
+            logger = amcatnlocmd.logger
+            with mock.patch.object(logger, 'warning',
+                                   wraps=logger.warning) as warning:
+                self.interface.do_generate(line)
+            return any('complex_mass_scheme True' in str(call.args[0])
+                       for call in warning.call_args_list)
+
+        dy = 'u u~ > e+ e- QED^2=4 QCD^2=0 %s'
+        # virtual corrections, CMS off: warning
+        self.assertTrue(warned(dy % '[QED]'))
+        # real emission only: no virtual corrections, no warning
+        self.assertFalse(warned(dy % '[real=QED]'))
+        # no resonance which can go on shell: no warning
+        self.assertFalse(warned('u u~ > t t~ QED^2=4 QCD^2=0 [QED]'))
+        # CMS on: no warning
+        self.interface.do_set('complex_mass_scheme True')
+        try:
+            self.assertFalse(warned(dy % '[QED]'))
+        finally:
+            self.interface.do_set('complex_mass_scheme False')
