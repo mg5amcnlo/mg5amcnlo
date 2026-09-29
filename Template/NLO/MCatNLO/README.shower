@@ -4,8 +4,8 @@ specify the analysis procedure to adopt. There are three main options.
 
 Select HERWIG7 in the run card and configure its installation with
 herwig7_path. Legacy HERWIGPP and HERWIG++ run-card selections are read
-as HERWIG7 automatically. Herwig7 analysis files are in Herwig7Analyzer;
-the HwU examples use the herwig7an_ filename prefix.
+as HERWIG7 automatically. Herwig7 analysis files are in HW7Analyzer;
+the HwU examples use the hw7an_ filename prefix.
 
 1) StdHep/HepMC output (default).
 StdHep/HepMC n-tuples are stored at the end of the run in the file

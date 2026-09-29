@@ -12,7 +12,7 @@ module kinematics_module
   public :: get_qMC, fill_kinematics_module,dot,rho,sumdot,pt,deltaR,boost_n1_to_its_cms&
        &,delta_phi,delta_y,HTo2,HT,get_xi_from_p,get_yij_from_p&
        &,get_phi_from_p,fill_father_and_ileg,boost_n1_to_lab,flip_momenta &
-       &,apply_momentum_permutation
+       &,apply_momentum_permutation,py8_massive_fsr_fractions
   private
 
 contains
@@ -186,7 +186,7 @@ contains
 
   double precision function qMC_ileg3(xi_i_fks,y_ij_fks)
     implicit none
-    double precision :: xi_i_fks,y_ij_fks,zeta1,qMCarg,z
+    double precision :: xi_i_fks,y_ij_fks,zeta1,qMCarg,z,omz,gap
     if(shower_mc_mod.eq.'HERWIG6'.or. &
          shower_mc_mod.eq.'HERWIG7')then
        zeta1=get_zeta(shat_n1,w1,w2,xm12,xm22)
@@ -204,14 +204,30 @@ contains
        write(*,*)'PYTHIA6PT not available for FSR'
        stop
     elseif(shower_mc_mod.eq.'PYTHIA8')then
-       z=1d0-shat_n1*xi_i_fks*(xm12+w1)/w1/(shat_n1+w1+xm12-xm22)
-       qMC_ileg3=sqrt(z*(1-z)*w1)
+       call py8_massive_fsr_fractions(xi_i_fks,y_ij_fks,z,omz)
+       gap=xm12/(kn0+kn)+(1d0-y_ij_fks)*kn
+       qMC_ileg3=sqrt(z*omz*sqrt(shat_n1)*xi_i_fks*gap)
     endif
   end function qMC_ileg3
 
+  subroutine py8_massive_fsr_fractions(xi_i_fks,y_ij_fks,z,omz)
+    implicit none
+    double precision :: xi_i_fks,y_ij_fks,z,omz,eminus,gap,emitted
+    ! Undo PYTHIA's massive daughter rescaling using the real radiator.
+    ! E-k=m^2/(E+k) avoids cancellation for a small radiator mass.
+    ! Keep the exact finite-xi terms even when xi is comparable to m^2/shat.
+    ! Share the fractions with zPY8, xiPY8 and xjacPY8 so the damping and
+    ! support scale stays consistent with the radiation variable at endpoints.
+    eminus=xm12/(kn0+kn)
+    gap=eminus+(1d0-y_ij_fks)*kn
+    emitted=sqrt(shat_n1)*xi_i_fks/2d0
+    z=(eminus**2+2d0*kn0*kn*(1d0-y_ij_fks))/(2d0*gap*(kn0+emitted))
+    omz=(xm12/(2d0*gap)+emitted)/(kn0+emitted)
+  end subroutine py8_massive_fsr_fractions
+
   double precision function qMC_ileg4(xi_i_fks,y_ij_fks)
     implicit none
-    double precision :: xi_i_fks,y_ij_fks,zeta2,qMCarg,z
+    double precision :: xi_i_fks,y_ij_fks,zeta2,qMCarg,z,omz
     if(shower_mc_mod.eq.'HERWIG6'.or.shower_mc_mod.eq.'HERWIG7')then
        zeta2=get_zeta(shat_n1,w2,w1,xm22,xm12)
        qMCarg=zeta2*(1d0-zeta2)*w2
@@ -228,8 +244,9 @@ contains
        write(*,*)'PYTHIA6PT not available for FSR'
        stop
     elseif(shower_mc_mod.eq.'PYTHIA8')then
-       z=1d0-shat_n1*xi_i_fks/(shat_n1+w2-xm12)
-       qMC_ileg4=sqrt(z*(1-z)*w2)
+       omz=shat_n1*xi_i_fks/(shat_n1+w2-xm12)
+       z=1d0-omz
+       qMC_ileg4=sqrt(z*omz*w2)
     endif
   end function qMC_ileg4
 

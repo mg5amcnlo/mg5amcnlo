@@ -82,7 +82,7 @@ and analysis files to Herwig7:
   matrix-element, matching and pole checks passed. Herwig 7.3.0 showered
   and hadronized all 40 events with no exceptions, producing
   `events_HERWIG7_0.hepmc.gz` with 40 entries.
-* A Fortran counting analysis loaded through `Herwig7Analyzer` processed
+* A Fortran counting analysis loaded through `HW7Analyzer` processed
   all 40 events and produced a nonzero HwU histogram. The C++ interface
   now explicitly includes ThePEG's `HepMCConverter.h`, and the Makefile
   links libraries after the objects so `--as-needed` retains HepMCfio.

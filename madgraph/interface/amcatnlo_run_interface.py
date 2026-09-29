@@ -4121,8 +4121,8 @@ RESTART = %(mint_mode)s
             except Exception:
                 raise aMCatNLOError('The Herwig7 path set in the configuration file is not valid.')
 
-            if os.path.exists(pjoin(self.me_dir, 'MCatNLO', 'Herwig7Analyzer', 'HepMCFortran.so')):
-                files.cp(pjoin(self.me_dir, 'MCatNLO', 'Herwig7Analyzer', 'HepMCFortran.so'), rundir)
+            if os.path.exists(pjoin(self.me_dir, 'MCatNLO', 'HW7Analyzer', 'HepMCFortran.so')):
+                files.cp(pjoin(self.me_dir, 'MCatNLO', 'HW7Analyzer', 'HepMCFortran.so'), rundir)
 
         files.ln(evt_file, rundir, 'events.lhe')
         for i, f in enumerate(event_files):
