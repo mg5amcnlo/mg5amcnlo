@@ -6624,14 +6624,66 @@ class MadSpinInterface(extended_cmd.Cmd):
         ids = [particle.pid for particle in particles]
         if group is None:
             group = self._draw_decay_group()
+        # which channel each identical parent is dealt -- see _dealt_rank.
+        # One deal per call: every slot of a joint trial is drawn here together.
+        deal = {}
         for i, particle in enumerate(particles):
             decay = self._draw_one_decay(particle, i, ids, evt_decayfile,
-                                         nb_remain, group)
+                                         nb_remain, group, deal=deal)
             if decay is not None:
                 yield i, particle, decay
 
+    @staticmethod
+    def _dealt_rank(pdg, occurrence, count, deal):
+        """The channel the positional rule deals to the ``occurrence``-th of
+        ``count`` identical parents of ``pdg``: a uniformly random assignment,
+        drawn once per ``deal`` and then held.
+
+        When the card gives a pdg exactly as many channels as the event has
+        parents of it (``decay t > w+ b, w+ > l+ vl`` and ``decay t > w+ b,
+        w+ > j j`` on a four-top event), one of the ``N!/prod n_k!``
+        assignments is dealt and ``_decay_symmetry_factor`` pays for the rest.
+        That is only unbiased if the assignment is independent of the
+        kinematics. Dealing by production order made it depend on however the
+        generator orders identical particles -- harmless where that order is
+        exchangeable (a LO sample: |M|^2 is symmetric under the swap), biased
+        where it is not. aMC@NLO's is not: FKS keeps one leg of each pair of
+        identical emitters, so when the emitter is a top the two tops of
+        ``p p > t t~ t t~ [QCD]`` differ by ~130 GeV in pT depending on their
+        position (24 sigma in a 100k-event sample, 5.5 sigma overall), and
+        the positional deal handed the leptonic decay to the softer top. The
+        ``spinmode = none`` path shuffles its particles for this very reason;
+        the density modes had lost it.
+
+        Held for the whole ``deal``, not redrawn per particle: a slot that is
+        redrawn (the sequential accept/reject) must keep its channel, or two
+        parents could end up with the same one. ``deal is None`` keeps the old
+        production-order rank.
+        """
+        if deal is None:
+            return occurrence
+        perm = deal.get(pdg)
+        if perm is None:
+            perm = list(range(count))
+            random.shuffle(perm)
+            deal[pdg] = perm
+        return perm[occurrence]
+
+    def _positional_deal(self, ids, evt_decayfile):
+        """The deal of a whole production event, drawn up front: what the
+        sequential accept/reject needs, because its per-slot Z tables are keyed
+        by the channel each slot will draw (``_z_slot_keys``) before anything
+        is drawn. Same rule as ``_draw_one_decay`` without a decay group, which
+        the sequential scheme never has."""
+        deal = {}
+        for pdg in sorted(set(ids)):
+            nb_decay = len(evt_decayfile.get(pdg) or ())
+            if nb_decay > 1 and ids.count(pdg) == nb_decay:
+                self._dealt_rank(pdg, 0, nb_decay, deal)
+        return deal
+
     def _draw_one_decay(self, particle, i, ids, evt_decayfile, nb_remain,
-                        group=None):
+                        group=None, deal=None):
         """Draw one decay event for ``particle`` -- the i-th final-state particle
         of the production event, ``ids`` being the pdgs of all of them -- and
         refill its pool if it runs out. Returns None when that particle does not
@@ -6645,6 +6697,12 @@ class MadSpinInterface(extended_cmd.Cmd):
         whole of the grouping at run time -- a group supplies exactly one channel
         per particle (or one per identical parent, which the positional rule then
         deals out), so restricting the candidates is all it takes.
+
+        ``deal`` holds, per pdg, the random assignment of channels to identical
+        parents (see ``_dealt_rank``). Every production caller passes one, kept
+        for as long as the slots it deals must stay consistent; ``None`` falls
+        back to production order, which is only safe on input whose ordering
+        of identical particles is exchangeable.
         """
         # check if we need to decay the particle
         if particle.pdg not in evt_decayfile:
@@ -6676,7 +6734,8 @@ class MadSpinInterface(extended_cmd.Cmd):
             decay_file_nb = keys[0]
             decay_file = channels[decay_file_nb]
         elif ids.count(particle.pdg) == nb_decay:
-            decay_file_nb = keys[ids[:i].count(particle.pdg)]
+            decay_file_nb = keys[self._dealt_rank(
+                particle.pdg, ids[:i].count(particle.pdg), nb_decay, deal)]
             decay_file = channels[decay_file_nb]
             positional = True
         else:
@@ -7405,7 +7464,11 @@ class MadSpinInterface(extended_cmd.Cmd):
                     self._z_tables = cached['z_tables']
                     return cached['maxwgts']
             else:
-                cache = pjoin(self.options['ms_dir'], 'max_wgt_sequential')
+                # '_v2': the bounds are per slot, and a slot's channel is dealt
+                # at random since _dealt_rank -- a file measured when slot k
+                # always drew channel k must not be read back (see
+                # _UPFRONT_CACHE_FORMAT 3). This plain format has no tag to bump.
+                cache = pjoin(self.options['ms_dir'], 'max_wgt_sequential_v2')
                 if os.path.exists(cache):
                     return [float(x) for x in open(cache).read().split()]
 
@@ -7490,7 +7553,11 @@ class MadSpinInterface(extended_cmd.Cmd):
     #  mass draw stopped being offshell-only, is *not* such a change: the
     #  payload is the same, so the tag stays at 2 and caches already written
     #  keep being accepted.)
-    _UPFRONT_CACHE_FORMAT = 2
+    # 3: identical parents are dealt their channels at random (_dealt_rank),
+    #    not in production order, so a slot's bound now covers every channel
+    #    it can be dealt. A bound measured when slot k always drew channel k
+    #    can undershoot the others.
+    _UPFRONT_CACHE_FORMAT = 3
 
     def _read_upfront_cache(self, path):
         """The cached up-front-mass bounds and Z_k tables, or None if there is
@@ -9327,16 +9394,27 @@ class MadSpinInterface(extended_cmd.Cmd):
     # all, and then Z_hat cancels identically and only sets the efficiency.
 
     @staticmethod
-    def _z_slot_keys(particles, slot_to_index):
-        """Table key of each slot: its pdg and which occurrence of that pdg it
-        is. Slots of one pdg are consecutive and in production order, which is
-        also how _draw_one_decay picks a decay file when there is one file per
-        identical parent -- so the two agree on which slot draws from what."""
+    def _z_slot_keys(particles, slot_to_index, deal=None):
+        """Table key of each slot: its pdg and which channel it draws from.
+
+        Z_k is a property of the decay *channel* -- (m/M) Gamma_k(m)/Gamma_k(M)
+        for the offshell modes -- and a table applied to the wrong channel
+        biases the virtuality by Z_hat/Z. When there is one file per identical
+        parent the channel is the one ``deal`` gives that parent
+        (``_dealt_rank``), so the key follows the deal, and table ``6_0`` is
+        channel 0 whichever top draws it. Otherwise it is the occurrence: every
+        parent of that pdg draws from the same channels and the table is their
+        common mixture, as before. Slots of one pdg are consecutive and in
+        production order."""
+        deal = deal or {}
         keys = []
         seen = collections.defaultdict(int)
         for index in slot_to_index:
             pdg = particles[index].pid
-            keys.append('%s_%s' % (pdg, seen[pdg]))
+            occurrence = seen[pdg]
+            if pdg in deal:
+                occurrence = deal[pdg][occurrence]
+            keys.append('%s_%s' % (pdg, occurrence))
             seen[pdg] += 1
         return keys
 
@@ -9918,6 +9996,9 @@ class MadSpinInterface(extended_cmd.Cmd):
         order = self._decay_slot_order(prod_static['decaying_spins'])
         particles, slot_to_index = self._sequential_slots(production, decays_key)
         ids = [p.pid for p in particles]
+        # one deal for the whole production event: slots are redrawn one at a
+        # time here, and each must keep the channel it was dealt
+        deal = self._positional_deal(ids, evt_decayfile)
 
         # madspin/full evaluate the production density at reshuffled (offshell)
         # momenta that couple all decay masses, so rho is drawn per chain (after
@@ -9940,7 +10021,8 @@ class MadSpinInterface(extended_cmd.Cmd):
         upfront = self._is_upfront_scheme(mode)
         joint_angles = upfront and mode == 'two_stage'
         exact = upfront and mode == 'sequential_global_retry'
-        zkeys = self._z_slot_keys(particles, slot_to_index) if upfront else None
+        zkeys = (self._z_slot_keys(particles, slot_to_index, deal)
+                 if upfront else None)
         # |M_prod|^2 on shell: the denominator the joint offshell weight divides
         # by (calculate_matrix_element_from_density evaluates it *before*
         # reshuffle_production and returns it as prod_diag). It depends on the
@@ -10230,7 +10312,8 @@ class MadSpinInterface(extended_cmd.Cmd):
                     while True:
                         stats['nb_try_%d' % position] += 1
                         decay = self._draw_one_decay(particle, index, ids,
-                                                     evt_decayfile, nb_remain)
+                                                     evt_decayfile, nb_remain,
+                                                     deal=deal)
 
                         if upfront:
                             mass = slot_mass.get(slot)
@@ -11250,10 +11333,11 @@ class MadSpinInterface(extended_cmd.Cmd):
         ``sum(2**n for n in me_frame)``, so external leg n (counted from 1, in
         the matrix element's own ordering) is selected by bit n -- the same
         convention ``mapid`` uncompresses with ``btest(id, i)``. The returned
-        momentum is the sum of the selected legs, ready to be handed to
-        ``Event.boost`` / ``_boost_momenta``, which negate the spatial part
-        themselves (HELAS ``boostx``, exactly what ``boost_to_frame`` does in
-        driver.f).
+        momentum is the sum of the selected legs (in the lab), ready to be
+        handed to ``_boost_momenta``, which negates the spatial part itself
+        (HELAS ``boostx``, exactly what ``boost_to_frame`` does in driver.f);
+        its ``initial`` attribute is the initial state's total momentum, the
+        partonic CM that ``_boost_momenta`` goes through first.
 
         Three things switch it on -- the three clauses of ``_needs_frame_axis``
         -- and all of them are cases where the frame is *observable*:
@@ -11307,6 +11391,25 @@ class MadSpinInterface(extended_cmd.Cmd):
         pboost = lhe_parser.FourMomentum()
         for n in selected:
             pboost += lhe_parser.FourMomentum(momenta[n - 1])
+        if pboost.mass_sqr <= 1e-10 * pboost.E ** 2:
+            # a light-like system (e.g. a single massless leg) has no rest
+            # frame: FourMomentum.boost would divide by its zero mass
+            raise self.InvalidCmd(
+                "frame_id = %s selects legs %s, a massless system (m^2 = %g "
+                "GeV^2): it has no rest frame. Select massive legs, or several "
+                "legs." % (frame_id, selected, pboost.mass_sqr))
+        # madevent's boost_to_frame acts on momenta in the partonic CM frame
+        # (genps.f builds them there, unwgt.f boosts them to the lab only when
+        # it writes the event), so _boost_momenta first takes the lab momenta
+        # back to the rest frame of the initial state. Going to the selected
+        # legs straight from the lab is not the same frame: two boosts along
+        # different directions compose to a boost and a (Wigner) rotation, and
+        # the quantisation axis of a leg at rest turns with it -- 25 degrees
+        # for a W of pT = 100 GeV in a partonic CM at rapidity 1.
+        nb_initial = len(orig_order[0]) if orig_order else 2
+        pboost.initial = lhe_parser.FourMomentum()
+        for i in range(nb_initial):
+            pboost.initial += lhe_parser.FourMomentum(momenta[i])
         # A single selected leg has to end up exactly at rest: vxxxxx branches
         # on pp.eq.rZero and takes the frame z axis as quantisation axis there,
         # so a residual 1d-14 three-momentum left by the boost arithmetic would
@@ -11342,13 +11445,20 @@ class MadSpinInterface(extended_cmd.Cmd):
         take it from ``pboost``) is the leg the frame is built from when it is a
         single one, forced exactly at rest.
         """
-        neg = lhe_parser.FourMomentum(pboost.E, -pboost.px, -pboost.py, -pboost.pz)
-        out = []
-        for mom in momenta:
-            new = lhe_parser.FourMomentum(mom).boost(neg)
-            out.append((new.E, new.px, new.py, new.pz))
+        def to_rest(momenta, frame):
+            neg = lhe_parser.FourMomentum(frame.E, -frame.px, -frame.py,
+                                          -frame.pz)
+            return [lhe_parser.FourMomentum(mom).boost(neg) for mom in momenta]
+
         if rest_leg == -1:
             rest_leg = getattr(pboost, 'rest_leg', None)
+        initial = getattr(pboost, 'initial', None)
+        if initial is not None:
+            # through the partonic CM first, as madevent (see _frame_boost)
+            momenta = to_rest(momenta, initial)
+            pboost = to_rest([pboost], initial)[0]
+        out = [(new.E, new.px, new.py, new.pz)
+               for new in to_rest(momenta, pboost)]
         if rest_leg is not None and rest_leg <= len(out):
             out[rest_leg - 1] = (out[rest_leg - 1][0], 0., 0., 0.)
         return out
