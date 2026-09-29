@@ -51,17 +51,28 @@ class TestMomentumMaps(unittest.TestCase):
         (work / "native_context.f90").write_text(
             "module mc_native_context\n"
             "logical :: native_mapping=.false.\nend module\n")
+        (work / "run.inc").write_text(
+            "      double precision ebeam(2)\n"
+            "      integer lpp(2)\n"
+            "      common/test_run/ebeam,lpp\n")
+        (work / "coupl.inc").write_text("")
+        (work / "pmass.inc").write_text("      common/to_mass/pmass\n")
         routines = []
         for name in ("generate_momenta_massive_final",
                      "generate_momenta_massless_final",
                      "generate_momenta_massive_final_inverse",
                      "generate_momenta_massless_final_inverse",
                      "native_fsr_angle",
-                     "lambda", "yminmax", "gentcms", "gentcms_inverse",
-                     "rotxxx_inv",
+                     "lambda", "yminmax", "gentcms",
+                     "generate_native_momenta", "invert_fks_radiation",
+                     "generate_FKS_kinematics", "compute_flux",
+                     "generate_momenta_initial",
+                     "generate_momenta_initial_inverse",
                      "fill_FKS_commons", "getangles", "get_recoil"):
             routines.append(fortran_routine(TEMPLATE / "genps_fks.f", name))
-        routines.append(fortran_routine(TEMPLATE / "fks_singular.f", "rotate_invar"))
+        for name in ("rotate_invar", "phspncheck_nocms", "xlen4",
+                     "xmom_compare", "xmcompare", "xprintout"):
+            routines.append(fortran_routine(TEMPLATE / "fks_singular.f", name))
         for name in ("dot", "rho", "threedot"):
             routines.append(fortran_routine(
                 ROOT / "Template/NLO/Source/kin_functions.f", name))
@@ -69,7 +80,7 @@ class TestMomentumMaps(unittest.TestCase):
         cls.executable = work / "check_maps"
         command = [shutil.which("gfortran"), "-O2", "-std=legacy",
                    "-ffixed-line-length-none", "-ffunction-sections",
-                   "-fdata-sections",
+                   "-fdata-sections", "-fcheck=all", "-fno-automatic",
                    "-Wl,-dead_strip" if sys.platform == "darwin" else "-Wl,--gc-sections",
                    "-I", str(work),
                    str(TEMPLATE / "process_module.f90"),
@@ -77,6 +88,7 @@ class TestMomentumMaps(unittest.TestCase):
                    str(work / "native_context.f90"),
                    str(work / "maps.f"), str(TEMPLATE / "boostwdir2.f"),
                    str(ROOT / "HELAS/boostx.F"), str(ROOT / "HELAS/rotxxx.F"),
+                   str(ROOT / "tests/input_files/check_native_projection.f90"),
                    str(ROOT / "tests/input_files/check_momentum_maps.f90"),
                    "-o", str(cls.executable)]
         result = subprocess.run(command, cwd=work, text=True,
@@ -90,10 +102,13 @@ class TestMomentumMaps(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stdout)
         self.assertIn("PASS " + name, result.stdout)
 
+    def test_native_projection_and_shared_state(self):
+        self.check_map("native_projection")
+
     def test_asymmetric_beam_boost(self):
         self.check_map("boost")
 
-    def test_t_channel_inverse_with_soft_massless_recoil(self):
+    def test_t_channel_bounds_with_soft_massless_recoil(self):
         self.check_map("born_threshold")
 
     def test_massless_final_inverse(self):

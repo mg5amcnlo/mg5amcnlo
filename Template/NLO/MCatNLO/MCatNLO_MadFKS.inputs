@@ -22,8 +22,8 @@ runMC
 #### CLEAN UP
 rm -f `pwd`/*.o
 rm -f `pwd`/*.so
-rm -f `pwd`/HWPPAnalyzer/*.o
-rm -f `pwd`/HWPPAnalyzer/*.so
+rm -f `pwd`/HW7Analyzer/*.o
+rm -f `pwd`/HW7Analyzer/*.so
 rm -f `pwd`/Pythia8.cc
 rm -f `pwd`/Makefile
 rm -f `pwd`/MCATNLO_PYTHIA8_*

@@ -7,7 +7,7 @@ DEBUG=
 FF=$(FC)   $(FFLAGS)   $(DEBUG)
 CPP=$(CXX) $(CXXFLAGS) $(DEBUG)
 CC=$(CXX)  $(CFLAGS)   $(DEBUG)
-CXXFLAGS += $(shell $(HWPPPATH)/bin/herwig-config --cppflags )
+CXXFLAGS += $(shell $(HERWIG7PATH)/bin/herwig-config --cppflags )
 
 all : HepMCFortran.so
 
@@ -22,8 +22,8 @@ all : HepMCFortran.so
 	$(CPP) -c $< -fPIC $(INCLOPTION) -I$(INCDIR) -o $@
 
 HepMCFortran.so : HepMCFortran.cc HepMCFortran.h $(FORFILE)
-	$(CPP) -shared -fPIC $(CXXFLAGS) $(LDFLAGS) $(EXTRAPATHS) $(EXTRALIBS) \
-	-I$(HEPMC)/include -L$(HEPMC)/lib -lHepMC -lHepMCfio $< -o $@ $(FORFILE)
+	$(CPP) -shared -fPIC $(CXXFLAGS) $(LDFLAGS) $(EXTRAPATHS) \
+	-I$(HEPMC)/include -L$(HEPMC)/lib $< -o $@ $(FORFILE) $(EXTRALIBS) -lHepMCfio -lHepMC
 
 clean:
 	rm -f *.o *.so

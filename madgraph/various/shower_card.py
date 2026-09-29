@@ -54,8 +54,8 @@ class ShowerCard(banner.RunCard):
     float_vars = ['maxerrs', 'lambda_5', 'b_mass', 'qcut']
 
     # names_dict has the following structure:
-    # var : {PYTHIA6: varpy6, HERWIG6: varhw6, HERWIGPP: varhwpp, PYTHIA8: varpy8}
-    # where varpy, varhw6 and varhwpp are mc_dependent names
+    # var : {PYTHIA6: varpy6, HERWIG6: varhw6, HERWIG7: varhw7, PYTHIA8: varpy8}
+    # where varpy, varhw6 and varhw7 are mc_dependent names
     # if a mc is not there, that variable is not supposed to be
     # used / written for thar mc
     names_dict = {}
@@ -75,7 +75,7 @@ class ShowerCard(banner.RunCard):
         
 
     def add_param(self, name, *args, 
-                  py8='', py6='', hw6='', hwpp='',
+                  py8='', py6='', hw6='', hw7='',
                   all_sh=None, sh_postfix=False,**opts):
         
         if all_sh:
@@ -91,10 +91,10 @@ class ShowerCard(banner.RunCard):
                 hw6 = all_sh
                 if sh_postfix:
                     hw6 = hw6 + "_hw"
-            if hwpp is not None and not hwpp:
-                hwpp = all_sh
+            if hw7 is not None and not hw7:
+                hw7 = all_sh
                 if sh_postfix:
-                    hwpp = hwpp + "_hwpp"
+                    hw7 = hw7 + "_hw7"
 
         name = name.lower()
         self.names_dict[name] = {}
@@ -104,8 +104,8 @@ class ShowerCard(banner.RunCard):
             self.names_dict[name]['PYTHIA6'] = py6
         if hw6:
             self.names_dict[name]['HERWIG6'] = hw6
-        if hwpp:
-            self.names_dict[name]['HERWIGPP'] = hwpp
+        if hw7:
+            self.names_dict[name]['HERWIG7'] = hw7
 
         super().add_param(name,*args, **opts)
 
@@ -135,11 +135,11 @@ class ShowerCard(banner.RunCard):
         self.add_param("pdfcode", 1, comment="0 = internal, 1 = same as NLO, other = lhaglue",
                        all_sh='pdfcode')
         self.add_param("ue_enabled", False, comment="underlying event",
-                       hw6='lhsoft', py6='mstp_81', hwpp='ue_hwpp', py8='ue_py8')
+                       hw6='lhsoft', py6='mstp_81', hw7='ue_hw7', py8='ue_py8')
         self.add_param("hadronize", True, comment=" hadronisation on/off        !IGNORED BY HERWIG6!",
-                       py6='mstp_111', hwpp='hadronize_hwpp', py8='hadronize_py8')
+                       py6='mstp_111', hw7='hadronize_hw7', py8='hadronize_py8')
         self.add_param("lambda_5", -1., comment="Lambda_5 (< 0 = default)    !IGNORED BY PYTHIA8!",
-                       hw6='lambdaherw', hwpp='lambdaherw',
+                       hw6='lambdaherw', hw7='lambdaherw',
                        py6='lambdapyth', py8='lambdapyth')
 
 
@@ -190,7 +190,7 @@ class ShowerCard(banner.RunCard):
         self.add_param("EXTRAPATHS", "../lib", comment="Path to the extra-libraries")
         self.add_param("INCLUDEPATHS", "", comment="Path to header files needed by c++. Dir names separated by white spaces")
         self.add_param("ANALYSE", "", comment="User's analysis and histogramming routines; HwU.o should be linked first",
-                       hw6='hwuti', hwpp='hwpputi',py6='pyuti', py8='py8uti')
+                       hw6='hwuti', hw7='hw7uti',py6='pyuti', py8='py8uti')
 
         # Pythia8 specific
         self.add_param("qed_shower", True, comment="T = enable QED shower for Q and L !ONLY FOR PYTHIA8!",

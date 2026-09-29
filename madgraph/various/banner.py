@@ -5975,7 +5975,12 @@ class RunCardNLO(RunCard):
         self.add_param('ptmax4pdg',[-1.], hidden=True, system=True)
         self.add_param('mxxmin4pdg',[0.], hidden=True, system=True)
         self.add_param('mxxpart_antipart', [False], hidden=True, system=True)
-        
+
+    def post_set_parton_shower(self, value, change_userdefine, raiseerror, **opt):
+        """Use the current shower name when reading or editing legacy cards."""
+        if value.upper() in ('HERWIGPP', 'HERWIG++'):
+            dict.__setitem__(self, 'parton_shower', 'HERWIG7')
+
     def check_validity(self):
         """check the validity of the various input"""
         

@@ -3057,7 +3057,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
     # The three options categories are treated on a different footage when a
     # set/save configuration occur. current value are kept in self.options
     options_configuration = {'pythia8_path': './HEPTools/pythia8',
-                       'hwpp_path': './herwigPP',
+                       'herwig7_path': './herwig7',
                        'thepeg_path': './thepeg',
                        'hepmc_path': './hepmc',
                        'madanalysis_path': './MadAnalysis',
@@ -7893,10 +7893,10 @@ os.system('%s  -O -W ignore::DeprecationWarning %s %s --mode={0}' %(sys.executab
             return self.options # the return is usefull for unittest
 
         # Treat each expected input
-        # 1: Pythia8_path and hewrig++ paths
+        # 1: Pythia8_path and herwig7 paths
         # try absolute and relative path
         for key in self.options:
-            if key in ['pythia8_path', 'hwpp_path', 'thepeg_path', 'hepmc_path',
+            if key in ['pythia8_path', 'herwig7_path', 'thepeg_path', 'hepmc_path',
                        'mg5amc_py8_interface_path','madanalysis5_path']:
                 if self.options[key] in ['None', None]:
                     self.options[key] = None 
@@ -7926,10 +7926,10 @@ os.system('%s  -O -W ignore::DeprecationWarning %s %s --mode={0}' %(sys.executab
                             logger.warning(message)
                             continue
  
-                #this is for hw++
-                if key == 'hwpp_path' and not os.path.isfile(pjoin(MG5DIR, path, 'include', 'Herwig++', 'Analysis', 'BasicConsistency.hh')):
-                    if not os.path.isfile(pjoin(path, 'include', 'Herwig++', 'Analysis', 'BasicConsistency.hh')):
-                        self.options['hwpp_path'] = None
+                #this is for hw7
+                if key == 'herwig7_path' and not os.path.isfile(pjoin(MG5DIR, path, 'include', 'Herwig', 'Analysis', 'BasicConsistency.h')):
+                    if not os.path.isfile(pjoin(path, 'include', 'Herwig', 'Analysis', 'BasicConsistency.h')):
+                        self.options['herwig7_path'] = None
                     else:
                         continue
                 # this is for thepeg
@@ -9415,7 +9415,7 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
 # not documented options:
 #   	            	contur_path         
 #delphes_path             	eps_viewer               	exrootanalysis_path
-#hepmc_path               	hwpp_path                	
+#hepmc_path               	herwig7_path
 #madanalysis_path         	mg5amc_py8_interface_path
 #pineappl                 	pythia-pgs_path          	pythia8_path
 #rivet_path               	                 	syscalc_path
@@ -10245,7 +10245,7 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
             ## write fj_lhapdf_opts file            
             # Create configuration file [path to executable] for amcatnlo
             filename = os.path.join(self._export_dir, 'Cards', 'amcatnlo_configuration.txt')
-            opts_to_keep = ['lhapdf', 'fastjet', 'pythia8_path', 'hwpp_path', 'thepeg_path', 
+            opts_to_keep = ['lhapdf', 'fastjet', 'pythia8_path', 'herwig7_path', 'thepeg_path',
                                                                     'hepmc_path', 'eMELA']
             to_keep = {}
             for opt in opts_to_keep:

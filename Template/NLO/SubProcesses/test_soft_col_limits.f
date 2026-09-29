@@ -776,10 +776,10 @@ c$$$      common/cMonteCarloType/MonteCarlo
       endif
       if (ilim.eq.1) then
 c$$$         write(*,*) 'Enter the Monte Carlo name: possible choices are'
-c$$$         write(*,*) 'HERWIG6, HERWIGPP, PYTHIA6Q, PYTHIA6PT, PYTHIA8'
+c$$$         write(*,*) 'HERWIG6, HERWIG7, PYTHIA6Q, PYTHIA6PT, PYTHIA8'
 c$$$         read (*,*) MonteCarlo
 c$$$         if ( MonteCarlo(1:7).ne.'HERWIG6'.and.
-c$$$     &        MonteCarlo(1:8).ne.'HERWIGPP'.and.
+c$$$     &        MonteCarlo(1:7).ne.'HERWIG7'.and.
 c$$$     $        MonteCarlo(1:8).ne.'PYTHIA6Q'.and.
 c$$$     &        MonteCarlo(1:9).ne.'PYTHIA6PT'.and.
 c$$$     $        MonteCarlo(1:7).ne.'PYTHIA8' )then

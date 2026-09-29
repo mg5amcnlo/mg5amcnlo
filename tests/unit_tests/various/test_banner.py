@@ -601,19 +601,43 @@ class TestRunCard(unittest.TestCase):
         self.assertTrue(hasattr(run_card2, 'cuts_parameter'))   
 
     def test_born_spreading_option(self):
-        """Born spreading is on by default and can be disabled."""
+        """Born spreading is off by default and can be enabled."""
         run_card = bannermod.RunCardNLO()
-        self.assertTrue(run_card['born_spreading'])
+        self.assertFalse(run_card['born_spreading'])
         self.assertEqual(run_card.fortran_name.get('born_spreading'),
                          'born_spreading')
-        run_card['born_spreading'] = False
-        self.assertFalse(run_card['born_spreading'])
+        run_card['born_spreading'] = True
+        self.assertTrue(run_card['born_spreading'])
         card_path = pjoin(self.tmpdir, 'born_spreading_run_card.dat')
         with open(card_path, 'w') as output:
             run_card.write(output)
         saved_card = bannermod.RunCard(card_path, consistency=False)
-        self.assertFalse(saved_card['born_spreading'])
+        self.assertTrue(saved_card['born_spreading'])
 
+
+    def test_herwig7_legacy_run_card(self):
+        """Legacy shower selections reach both the run card and Fortran as HERWIG7."""
+        for value in ('HERWIGPP', 'herwigpp', 'HeRwIgPp', "'HERWIGPP'",
+                      '"herwigpp"', 'HERWIG++'):
+            with self.subTest(value=value):
+                run_card = bannermod.RunCardNLO(
+                    '%s = parton_shower\n' % value, consistency=False)
+                self.assertEqual(run_card['parton_shower'], 'HERWIG7')
+                self.assertIn('parton_shower', run_card.user_set)
+
+                output = io.StringIO()
+                run_card.write(output)
+                self.assertRegex(output.getvalue(), r'HERWIG7\s*=\s*parton_shower')
+
+                include = io.StringIO()
+                run_card.write_include_file(None, output_file=include)
+                self.assertIn("shower_mc = 'HERWIG7'", include.getvalue())
+
+        run_card.set('parton_shower', 'herwigpp', user=True)
+        self.assertEqual(run_card['parton_shower'], 'HERWIG7')
+        for value in ('HERWIG6', 'PYTHIA8', 'PYTHIA6Q', 'PYTHIA6PT'):
+            run_card['parton_shower'] = value
+            self.assertEqual(run_card['parton_shower'], value)
 
     def test_default(self):
       

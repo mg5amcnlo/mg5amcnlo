@@ -863,8 +863,8 @@ c 1/proc_map(0,0)*vol1)
                if (ifl.eq.0) call get_born_flow(born_flow_picked
      $              ,born_flow_factor)
                call Bornonly_shower_scale(p_born,born_flow_picked)
-               emsca_S(nFKS_picked_nbody,ifold_counter,1:ndelS,1:ndelS)
-     $              =get_random_shower_dipole_scale()
+               call save_shower_scale_nbody(nFKS_picked_nbody,
+     $              ifold_counter)
             elseif (abrv(1:2).eq.'vi') then
                ! Doing only the Virtual contribution (could be because
                ! we are generating a virtual event).
@@ -872,8 +872,8 @@ c 1/proc_map(0,0)*vol1)
                if (ifl.eq.0) call get_born_flow(born_flow_picked
      $              ,born_flow_factor)
                call compute_shower_scale_nbody(p_born,born_flow_picked)
-               emsca_S(nFKS_picked_nbody,ifold_counter,1:ndelS,1:ndelS)
-     $              =get_random_shower_dipole_scale()
+               call save_shower_scale_nbody(nFKS_picked_nbody,
+     $              ifold_counter)
             else
                ! Normal: all contributions included. Determine the
                ! shower scale when looping over FKS configurations.
@@ -888,8 +888,8 @@ c 1/proc_map(0,0)*vol1)
                ! in the dead-zone, this will not be used (or
                ! overwritten).
                call compute_shower_scale_nbody(p_born,born_flow_picked)
-               emsca_S(nFKS_picked_nbody,ifold_counter,1:ndelS,1:ndelS)
-     $              =get_random_shower_dipole_scale()
+               call save_shower_scale_nbody(nFKS_picked_nbody,
+     $              ifold_counter)
             endif
          elseif (ifl.eq.0) then
             call sborn_native(p_born,wgt1)
@@ -927,14 +927,8 @@ c for different nFKSprocess.
      $              ,partner_picked(iFKS))
 !     The shower scale to be used in the event file (if it's an S-event and
 !     fks_picked will be iFKS):
-               if (.not.mcatnlo_delta) then
-                  emsca_S(iFKS,ifold_counter,1:ndelS,1:ndelS)
-     $                 =shower_scale_nbody(fks_father
-     $                 ,partner_picked(iFKS))
-               else
-                  emsca_S(iFKS,ifold_counter,1:ndelS,1:ndelS)
-     $                 =shower_scale_nbody(1:ndelS,1:ndelS)
-               endif
+               call save_shower_scale_nbody(iFKS,ifold_counter,
+     $              partner_picked(iFKS))
             endif
                
             probne=1d0
@@ -1074,7 +1068,7 @@ c Sum the contributions that can be summed before taking the ABS value
 ! The outer event colour is only the event owner, not an inner proposal.
 ! Thus the colour-sampled summand is
 ! P_b,c*(p_b,c*S_b*R-M_b,c)/q_b,c, with M_b,c already flow-weighted.
-      use mc_native_context, only: native_metadata,set_native_history,
+      use mc_native_context, only: set_native_history,
      $     native_mapping
       use weight_lines, only: icontr,H_event,wgt,event_nFKS,momenta,
      $     momenta_m,y_bst,need_match,mc_H_only
@@ -1091,22 +1085,26 @@ c Sum the contributions that can be summed before taking the ABS value
       include 'mc_histories.inc'
       integer first_native,last_native,first_alt,owner,iFKS,ii,jj,ihist,
      $     ict,flow_save,called_save,owner_match(nexternal),
-     $     outer_config,native_config
+     $     outer_config
       double precision x_outer(99),p(0:3,nexternal),
      $     p_lab(0:3,nexternal),p_cms(0:3,nexternal),jacPS,vegas_wgt,
      $     sampling_wgt,born_flow_factor,outer_measure,native_measure,
-     $     sector_weight,factor,xx(99),jac_native,xbjrk_born(2),
+     $     sector_weight,factor,jac_native,
      $     p_flipped(0:3,nexternal),pn(0:3,nexternal),
      $     pn_lab(0:3,nexternal),pn_cms(0:3,nexternal),probne_native,
      $     flow_factor_native,rwgt,outer_boost,gfun_save(3),
      $     outer_channel,mc_outer_channel_weight
       double precision nbody_scales_save(nexternal-1,nexternal-1,3),
      $     n1body_scales_save(nexternal,nexternal),
-     $     emsca_save(fks_configs,ndelH,ndelH)
+     $     emsca_save(fks_configs,ndelH,ndelH),hard_scale_save
+      double precision fks_mom_info(3),granny_boost(3),
+     $     fks_mom_save(3),granny_boost_save(3)
+      common/cgenps_fks/fks_mom_info
+      common/virtgranny_boost/granny_boost
       logical cuts_born,cuts_real,passcuts,native_valid
       double precision fks_Sij
       external fks_Sij,passcuts
-      double precision born_weight,replay_tolerance
+      double precision born_weight
       external mc_outer_channel_weight
       integer nFKSprocess,i_fks,j_fks
       common/c_nFKSprocess/nFKSprocess
@@ -1188,11 +1186,16 @@ c Sum the contributions that can be summed before taking the ABS value
       called_save=MCcntcalled
       colours_s_save=icolup_s
       colours_h_save=icolup_h
+      hard_scale_save=shower_scale_hard
       nbody_scales_save(:,:,1)=shower_scale_nbody
       nbody_scales_save(:,:,2)=shower_scale_nbody_min
       nbody_scales_save(:,:,3)=shower_scale_nbody_max
       n1body_scales_save=shower_scale_n1body
       emsca_save=emsca_H(:,ifold_counter,:,:)
+! ISR does not write these FSR-only COMMONs during the outer replay.
+! Preserve them explicitly so history order cannot leak into the owner.
+      fks_mom_save=fks_mom_info
+      granny_boost_save=granny_boost
       mc_H_only=.true.
       native_mapping=.true.
 
@@ -1218,40 +1221,13 @@ c Sum the contributions that can be summed before taking the ABS value
          endif
          call apply_momentum_permutation(MC_HIST_PERM(:,ihist),
      $        p_lab,p_flipped)
-! Select the first native mapping with an invertible physical point.
-! The outer channel index has no meaning in a different Born topology.
-         native_valid=.false.
-         do native_config=1,native_metadata%configurations(0)
-            iconfig=native_config
-            xx=0d0
-            jac_native=1d0
-            call generate_lab_momenta_inverse(ndim,iconfig,
-     $           jac_native,xx,p_flipped,xbjrk_born)
-            if(jac_native.le.0d0)cycle
-
-! Inversion alone does not fill the native FKS counterevents. Replay
-! the forward map to obtain those points AND their limit measures.
-            calculatedBorn=.false.
-            jac_native=1d0
-            call generate_momenta(ndim,iconfig,jac_native,xx,
-     $           pn,pn_lab,pn_cms)
-            if (jac_native.le.0d0 .or. pn(0,1).le.0d0 .or.
-     $           p_born(0,1).le.0d0)cycle
-! The inverse azimuth is ill conditioned when the two FKS daughters
-! are antipodal. Roundoff can then shift the replay by a few parts in
-! 10**6 even though both maps describe the same physical point.
-            replay_tolerance=1d-7
-            if (xx(ndim-1).gt.1d0-1d-10)
-     $           replay_tolerance=1d-5
-            if (maxval(abs(pn_lab-p_flipped)).gt.
-     $           replay_tolerance*max(1d0,
-     $           maxval(abs(p_flipped))))cycle
-            native_valid=.true.
-            exit
-         enddo
+! Only the radiation projection and counter/real measure ratios are
+! needed here. The common Born sampling factor cancels from the H density.
+         calculatedBorn=.false.
+         call generate_native_momenta(p_flipped,pn,pn_lab,pn_cms,
+     $        jac_native,native_valid)
          if (.not.native_valid) then
-            write (*,*) 'No native MC H mapping passes inversion',
-     $           ' and forward momentum checks',
+            write (*,*) 'Invalid native MC H radiation projection',
      $           owner,iFKS,ii,jj
             stop 1
          endif
@@ -1338,8 +1314,11 @@ c Sum the contributions that can be summed before taking the ABS value
          write (*,*) 'Could not restore outer FKS point after MC H sum'
          stop 1
       endif
+      fks_mom_info=fks_mom_save
+      granny_boost=granny_boost_save
       born_flow_picked=flow_save
       call init_process_module_n1body_wrapper(born_flow_picked)
+      shower_scale_hard=hard_scale_save
       shower_scale_nbody=nbody_scales_save(:,:,1)
       shower_scale_nbody_min=nbody_scales_save(:,:,2)
       shower_scale_nbody_max=nbody_scales_save(:,:,3)
@@ -1682,7 +1661,7 @@ c "npNLO".
       common /c_leshouche_inc/idup,mothup,icolup,niprocs
       character*4      abrv
       common /to_abrv/ abrv
-      if ((shower_mc.eq.'PYTHIA8' .or. shower_mc.eq.'HERWIGPP') .and.
+      if ((shower_mc.eq.'PYTHIA8' .or. shower_mc.eq.'HERWIG7') .and.
      $     (ickkw.eq.3.or.ickkw.eq.4))then
          nattr=2
          nFKSprocess=1          ! just pick one

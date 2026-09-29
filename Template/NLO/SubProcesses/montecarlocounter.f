@@ -865,8 +865,8 @@ c$$$      end
       integer :: cur_part
       double precision :: xi_i_fks,y_ij_fks,emscafun,smin,smax,qMC
      $     ,ptresc
-      smin=shower_scale_nbody_min(cur_part,fksfather)
-      smax=shower_scale_nbody_max(cur_part,fksfather)
+      smin=shower_scale_nbody_min(fksfather,cur_part)
+      smax=shower_scale_nbody_max(fksfather,cur_part)
       qMC=get_qMC(xi_i_fks,y_ij_fks)
       ptresc=(qMC-smin)/(smax-smin)
       compute_damping_weight=1d0-emscafun(ptresc,1d0)
@@ -1204,12 +1204,17 @@ c$$$      end
 
 
       subroutine compute_splitting_kernels(xkern,xkernazi,z,xi,xjac)
+      use process_module
       use kinematics_module
       implicit none
       double precision xkern(1:2),xkernazi(1:2),z,xi,xjac
+      double precision py8_gluon_recoil_weight
+      external py8_gluon_recoil_weight
       double precision tiny
       parameter (tiny=1d-6)
       logical needs_shower_jacobian
+      logical limit,non_limit
+      common /MCcnt_limit/limit,non_limit
       double precision       ch_i,ch_j,ch_m
       integer                i_type,j_type,m_type,j_pdg
       common/cparticle_types/ch_i,ch_j,ch_m,
@@ -1264,6 +1269,41 @@ c q->qg, q->qa, sq->sqg, sq->sqa, e->ea (icode=4)
          xkern(1:2)    = xkern(1:2)*xjac
          xkernazi(1:2) = xkernazi(1:2)*xjac
       endif
+!     The configured PYTHIA8 first hard FSR uses global recoil and
+!     recoilDeadCone=on, without a hard-system MEC. Only its scalar
+!     g->gg kernel receives this factor; retain the helicity/G terms.
+!     Keep the exact analytic collinear coefficient: PYTHIA's guarded
+!     numerator has a numerical floor, not a perturbative mass term.
+      if (shower_mc_mod.eq.'PYTHIA8'.and.nincoming_mod.eq.2.and.
+     &    ileg.eq.4.and..not.limit.and.
+     &    m_type.eq.8.and.i_type.eq.8.and.j_type.eq.8) then
+         xkern(1)=xkern(1)*
+     &        py8_gluon_recoil_weight(z,shat_n1,xm12,w2)
+      endif
+      return
+      end
+
+      double precision function py8_gluon_recoil_weight(z,s,mrec2,
+     &     mpair2)
+      implicit none
+      double precision z,s,mrec2,mpair2,r,v,d1,d2,xmargin
+      parameter (xmargin=1d-12)
+!     SimpleTimeShower::pT2nextQCD (PYTHIA 8.318). The recoiler is
+!     the sum of all hard spectators, including massless ones.
+      py8_gluon_recoil_weight=1d0
+      if (mrec2.le.0d0) return
+      r=mrec2/s
+      v=mpair2/s
+!     x1+x2-1-r and 1-r-x1, written without subtracting unit terms.
+!     z <-> 1-z exchanges d1,d2: D_rec is symmetric even with guards.
+!     Thus the existing symmetric AP kernel and complementary fks_Hij
+!     partitions give P_end(z)*D_rec(z)+P_end(1-z)*D_rec(1-z).
+      d1=(1d0-r)*z-v*(1d0-z)
+      d2=(1d0-r)*(1d0-z)-v*z
+!     PYTHIA rejects a negative trial weight. Reproduce that zero
+!     probability, retaining its XMARGIN guards on each denominator.
+      py8_gluon_recoil_weight=max(0d0,1d0-
+     &     r*max(xmargin,v)/(max(xmargin,d1)*max(xmargin,d2)))
       return
       end
 
@@ -1296,8 +1336,14 @@ c one can remove any reference to xi_i_fks
       use kinematics_module
       implicit none
       integer N_p
-      xfact_ileg3=(2d0-(1d0-x)*(1d0-(kn0/kn)*yij))/
-     &     kn*knbar*(1d0-x)*(1d0-yij) * 2d0/(shat_n1*N_p)
+      double precision geometry
+!     Both massive FKS solutions have positive phase-space measures.
+!     Every shower xjac takes an absolute radiation determinant, so
+!     the shared FKS radial factor must also use its magnitude.
+!     Form the geometry before dividing by a small momentum.
+      geometry=(1d0+x)*kn+(1d0-x)*yij*kn0
+      xfact_ileg3=abs(geometry)/kn**2*knbar*(1d0-x)*
+     &     (1d0-yij)*2d0/(shat_n1*N_p)
       end
 
       double precision function xfact_ileg4(N_p)
@@ -1578,9 +1624,9 @@ c
             needs_shower_jacobian=.true.
             xfact=xfact_ileg3(N_p)
             if(abs(j_pdg).le.6)then
-               if(shower_mc_mod(1:8).ne.'HERWIGPP')
+               if(shower_mc_mod(1:7).ne.'HERWIG7')
      &              call AP_reduced(j_type,i_type,ch_m,ch_i,one,z,ap)
-               if(shower_mc_mod(1:8).eq.'HERWIGPP')
+               if(shower_mc_mod(1:7).eq.'HERWIG7')
      &              call AP_reduced_massive(j_type,i_type,ch_m,ch_i,one,
      &              z,xi,xm12,ap)
             else
@@ -1614,18 +1660,18 @@ c
       use kinematics_module
       implicit none
       double precision E0sq,z,xi,xjac
-      double precision zHW6,xiHW6,xjacHW6,zHWPP,xiHWPP,xjacHWPP,zPY6Q
+      double precision zHW6,xiHW6,xjacHW6,zHW7,xiHW7,xjacHW7,zPY6Q
      $     ,xiPY6Q,xjacPY6Q,zPY6PT,xiPY6PT,xjacPY6PT,zPY8,xiPY8,xjacPY8
-      external zHW6,xiHW6,xjacHW6,zHWPP,xiHWPP,xjacHWPP,zPY6Q,xiPY6Q
+      external zHW6,xiHW6,xjacHW6,zHW7,xiHW7,xjacHW7,zPY6Q,xiPY6Q
      $     ,xjacPY6Q,zPY6PT,xiPY6PT,xjacPY6PT,zPY8,xiPY8,xjacPY8
       if(shower_mc_mod(1:7).eq.'HERWIG6')then
          z=zHW6(E0sq)
          xi=xiHW6(E0sq,z)
          xjac=xjacHW6(E0sq,xi,z)
-      elseif(shower_mc_mod(1:8).eq.'HERWIGPP')then
-         z=zHWPP()
-         xi=xiHWPP(z)
-         xjac=xjacHWPP(z)
+      elseif(shower_mc_mod(1:7).eq.'HERWIG7')then
+         z=zHW7()
+         xi=xiHW7(z)
+         xjac=xjacHW7(z)
       elseif(shower_mc_mod(1:8).eq.'PYTHIA6Q')then
          z=zPY6Q()
          xi=xiPY6Q()
@@ -3040,9 +3086,9 @@ c
 
 
 
-c Hewrig++
+c Herwig7
 
-      double precision function zHWPP()
+      double precision function zHW7()
 c     Shower energy variable
       use process_module
       use kinematics_module
@@ -3051,100 +3097,100 @@ c     Shower energy variable
       parameter (tiny=1d-5)
 c
       if(ileg.eq.1)then
-         zHWPP=1-(1-x)*(1+yij)/2d0
+         zHW7=1-(1-x)*(1+yij)/2d0
 c
       elseif(ileg.eq.2)then
-         zHWPP=1-(1-x)*(1+yij)/2d0
+         zHW7=1-(1-x)*(1+yij)/2d0
 c
       elseif(ileg.eq.3)then
          if(1-x.lt.tiny)then
-            zHWPP=1-(1-x)*(1+yij)/(betad+betas)
+            zHW7=1-(1-x)*(1+yij)/(betad+betas)
          else
             zeta1=get_zeta(shat_n1,w1,w2,xm12,xm22)
-            zHWPP=1-zeta1
+            zHW7=1-zeta1
          endif
 c
       elseif(ileg.eq.4)then
          if(1-x.lt.tiny)then
-            zHWPP=1-(1-x)*(1+yij)*shat_n1/(2*(shat_n1-xm12))
+            zHW7=1-(1-x)*(1+yij)*shat_n1/(2*(shat_n1-xm12))
          elseif(1-yij.lt.tiny)then
-            zHWPP=(shat_n1*x-xm12)/(shat_n1-xm12)+(1-yij)*(1-x)*shat_n1
+            zHW7=(shat_n1*x-xm12)/(shat_n1-xm12)+(1-yij)*(1-x)*shat_n1
      $           *(shat_n1*x+xm12*(x-2))*(shat_n1*x-xm12)/(2*(shat_n1
      $           -xm12)**3)
          else
             zeta2=get_zeta(shat_n1,w2,w1,xm22,xm12)
-            zHWPP=1-zeta2 
+            zHW7=1-zeta2
          endif
 c
       else
-         write(*,*)'zHWPP: unknown ileg'
+         write(*,*)'zHW7: unknown ileg'
          stop
       endif
 
-      if(zHWPP.lt.0d0.or.zHWPP.gt.1d0)goto 999
+      if(zHW7.lt.0d0.or.zHW7.gt.1d0)goto 999
 
       return
  999  continue
-      zHWPP=-1d0
+      zHW7=-1d0
       return
       end
 
 
 
-      double precision function xiHWPP(z)
+      double precision function xiHW7(z)
 c     Shower evolution variable
       use process_module
       use kinematics_module
       implicit none
-      double precision z,zHWPP,tiny
+      double precision z,zHW7,tiny
       parameter (tiny=1d-5)
 
       if(z.lt.0d0)goto 999
 c 
       if(ileg.eq.1)then
-         xiHWPP=shat_n1*(1-yij)/(1+yij)
+         xiHW7=shat_n1*(1-yij)/(1+yij)
 c
       elseif(ileg.eq.2)then
-         xiHWPP=shat_n1*(1-yij)/(1+yij)
+         xiHW7=shat_n1*(1-yij)/(1+yij)
 c
       elseif(ileg.eq.3)then
          if(1-x.lt.tiny)then
-            xiHWPP=-shat_n1*(betad+betas)*(yij*betad-betas)/(2*(1+yij))
+            xiHW7=-shat_n1*(betad+betas)*(yij*betad-betas)/(2*(1+yij))
          else
-            xiHWPP=w1/(z*(1-z))
+            xiHW7=w1/(z*(1-z))
          endif
 c
       elseif(ileg.eq.4)then
          if(1-x.lt.tiny)then
-            xiHWPP=(1-yij)*(shat_n1-xm12)**2/(shat_n1*(1+yij))
+            xiHW7=(1-yij)*(shat_n1-xm12)**2/(shat_n1*(1+yij))
          elseif(1-yij.lt.tiny)then
-            xiHWPP=(1-yij)*(shat_n1-xm12)**2/(2*shat_n1)
+            xiHW7=(1-yij)*(shat_n1-xm12)**2/(2*shat_n1)
          else
-            xiHWPP=w2/(z*(1-z))
+            xiHW7=w2/(z*(1-z))
          endif
 c
       else
-         write(*,*)'xiHWPP: unknown ileg'
+         write(*,*)'xiHW7: unknown ileg'
          stop
       endif
 
-      if(xiHWPP.lt.0d0)goto 999
+      if(xiHW7.lt.0d0)goto 999
 
       return
  999  continue
-      xiHWPP=-1d0
+      xiHW7=-1d0
       return
       end
 
 
 
-      double precision function xjacHWPP(z)
+      double precision function xjacHW7(z)
 c Returns the jacobian d(z,xi)/d(x,y), where z and xi are the shower 
 c variables, and x and y are FKS variables
       use process_module
       use kinematics_module
       implicit none
-      double precision z,zHWPP,tmp,eps,beta,dw1dx,dw2dx,dw1dy,dw2dy,tiny
+      double precision z,zHW7,tmp,eps,beta,dw1dx,dw2dx,dw1dy,dw2dy,tiny
       parameter (tiny=1d-5)
 
       tmp=0d0
@@ -3179,14 +3225,14 @@ c
          endif
 c
       else
-         write(*,*)'xjacHWPP: unknown ileg'
+         write(*,*)'xjacHW7: unknown ileg'
          stop
       endif
-      xjacHWPP=abs(tmp)
+      xjacHW7=abs(tmp)
 
       return
  999  continue
-      xjacHWPP=0d0
+      xjacHW7=0d0
       return
       end
 
@@ -3449,7 +3495,7 @@ c Shower energy variable
       use process_module
       use kinematics_module
       implicit none
-      double precision tiny
+      double precision tiny,omz
       parameter(tiny=1d-5)
 c
       if(ileg.eq.1)then
@@ -3459,14 +3505,10 @@ c
          zPY8=x
 c
       elseif(ileg.eq.3)then
-         if(1-x.lt.tiny)then
-            zPY8=1-(2*xm12)/(shat_n1*betas*(betas-betad*yij))
-         else
-            zPY8=1-shat_n1*(1-x)*(xm12+w1)/w1/(shat_n1+w1+xm12-xm22)
+         call py8_massive_fsr_fractions(1d0-x,yij,zPY8,omz)
 c This is equation (3.10) of hep-ph/1102.3795. In the partonic
 c CM frame it is equal to (xk1(0)+xk3(0)*f)/(xk1(0)+xk3(0)),
 c where f = xm12/( s+xm12-xm22-2*sqrt(s)*(xk1(0)+xk3(0)) )
-         endif
 c
       elseif(ileg.eq.4)then
          if(1-x.lt.tiny)then
@@ -3498,7 +3540,7 @@ c Shower evolution variable
       use process_module
       use kinematics_module
       implicit none
-      double precision tiny,z,zPY8,z0
+      double precision tiny,z,zPY8,z0,omz,gap
       parameter(tiny=1d-5)
 
       if(z.lt.0d0)goto 999
@@ -3510,12 +3552,9 @@ c
          xiPY8=shat_n1*(1-x)**2*(1-yij)/2
 c
       elseif(ileg.eq.3)then
-         if(1-x.lt.tiny)then
-            z0=1-(2*xm12)/(shat_n1*betas*(betas-betad*yij))
-            xiPY8=shat_n1*(1-x)*(betas-betad*yij)*z0*(1-z0)/2
-         else
-            xiPY8=z*(1-z)*w1
-         endif
+         call py8_massive_fsr_fractions(1d0-x,yij,z0,omz)
+         gap=xm12/(kn0+kn)+(1d0-yij)*kn
+         xiPY8=z*omz*sqrt(shat_n1)*(1d0-x)*gap
 c
       elseif(ileg.eq.4)then
          if(1-x.lt.tiny)then
@@ -3549,6 +3588,9 @@ c variables, and x and y are FKS variables
       use kinematics_module
       implicit none
       double precision tiny,z,z0,zPY8,dw1dx,dw1dy,dw2dx,dw2dy,tmp
+     &     ,omz,geometry
+!     Use the same endpoint expansion threshold as zPY8 and xiPY8.
+      parameter(tiny=1d-5)
 
       if(z.lt.0d0)goto 999
 c
@@ -3559,13 +3601,12 @@ c
          tmp=-shat_n1*(1-x)**2/2
 c
       elseif(ileg.eq.3)then
-         if(1-x.lt.tiny)then
-            z0=1-(2*xm12)/(shat_n1*betas*(betas-betad*yij))
-            tmp=xm12*betad/betas/(betas-betad*yij)*z0*(1-z0)
-         else
-            call dinvariants_dFKS(dw1dx,dw1dy,dw2dx,dw2dy)
-            tmp=shat_n1*(xm12+w1)/w1/(shat_n1+w1+xm12-xm22)*dw1dy*z*(1-z)
-         endif
+         call py8_massive_fsr_fractions(1d0-x,yij,z0,omz)
+!     Differentiate (2-xi)*E+xi*y*k at fixed recoil mass.
+!     dw1/dy=-2*sqrt(shat)*xi*k^2/geometry on either FKS branch.
+!     Cancel xi analytically and retain the absolute determinant below.
+         geometry=(1d0+x)*kn+(1d0-x)*yij*kn0
+         tmp=2d0*sqrt(shat_n1)*kn**2/geometry*z*omz**2
 c
       elseif(ileg.eq.4)then
          if(1-x.lt.tiny)then
@@ -3820,8 +3861,7 @@ c Skip if unphysical shower variables
 c Definition and initialisation of variables
       lzone=.true.
       PY6PTweight=-1d0
-      max_scale=shower_scale_nbody_max(ipartner,fksfather)
-      ! TODO: fix max_scale for tests. maybe ipartner?
+      max_scale=shower_scale_nbody_max(fksfather,ipartner)
       do i=0,3
          pfather(i)=p_born(i,fksfather) ! father momentum (Born level)
          ppartner(i)=p_born(i,ipartner) ! partner momentum (Born level)
@@ -3842,7 +3882,7 @@ c Definition and initialisation of variables
 ! Use the on-shell mass: reconstructing a massless partner's invariant
 ! can give a small negative value and silently lose the PYTHIA8 bound.
          xmp2=mass_n(ipartner)**2        ! mass squared of the partner
-         if (shower_mc_mod(1:8).eq.'HERWIGPP')
+         if (shower_mc_mod(1:7).eq.'HERWIG7')
      &        lambda=sqrt((Q2+xmm2-xmp2)**2-4*Q2*xmm2)
          if (shower_mc_mod(1:8).eq.'PYTHIA6Q') then
             beta=sqrt(1-4*shat_n1*(xmm2+ww)/(shat_n1-xmr2+xmm2+ww)**2)
@@ -3873,7 +3913,7 @@ c IMPLEMENT QED DZ's!
      &               .and.xi.le.1d0)lzone=.true.
          if(e0sq.eq.0d0)lzone=.false.
 c
-      elseif(shower_mc_mod(1:8).eq.'HERWIGPP')then
+      elseif(shower_mc_mod(1:7).eq.'HERWIG7')then
          lzone=.false.
          if(ileg.le.2)upscale2=2*e0sq
          if(ileg.gt.2)then

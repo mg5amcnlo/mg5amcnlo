@@ -10,6 +10,7 @@
 #include "ThePEG/EventRecord/Event.h"
 #include "ThePEG/Interface/ClassDocumentation.h"
 #include "ThePEG/Config/HepMCHelper.h"
+#include "ThePEG/Vectors/HepMCConverter.h"
 
 #include "HepMC/IO_HEPEVT.h"
 #include "HepMC/HEPEVT_Wrapper.h"
@@ -43,7 +44,7 @@ void HepMCFortran::analyze(tEventPtr event, long ieve, int loop, int state) {
   Energy eUnit; Length lUnit;
   eUnit = GeV; lUnit = millimeter;
  
-  //convert the event from the Herwig++ format to the HepMC format and write it to the common block
+  //convert the event from the Herwig7 format to the HepMC format and write it to the common block
   HepMC::GenEvent * hepevtf = HepMCConverter<HepMC::GenEvent>::convert(*event, false,eUnit, lUnit);
   _hepevtio->write_event(hepevtf); 
   //event weight

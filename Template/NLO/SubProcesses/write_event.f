@@ -191,7 +191,13 @@ c
             enddo
          enddo
       else
-         if (.not.mcatnlo_delta_mod) then
+         if (iSorH_lhe.eq.1.and.scalar_S_scales()) then
+c The scalar is the damped hard scale. The shower applies its dipole
+c limits; Delta additionally records the effective directed scales.
+            SCALUP=showerscaleS_hard
+            if (mcatnlo_delta_mod) scalup_a(1:npart,1:npart)=
+     $           shower_scale_a(1:npart,1:npart)
+         elseif (.not.mcatnlo_delta_mod) then
             if (iSorH_lhe.eq.1) then ! S-event
                SCALUP=showerscaleS(1,1)
             else

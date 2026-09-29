@@ -1,0 +1,101 @@
+Herwig7 S-event starting scales
+===============================
+
+herwig7_scales.f90 implements the angular-shower kinematics of
+S. Gieseke, P. Stephens and B. Webber, JHEP 12 (2003) 045,
+https://arxiv.org/abs/hep-ph/0310083, for ordinary MC@NLO matching.
+This is an independent implementation of the published formulae, with
+an analytic maximization of the branching transverse momentum.
+It needs no Herwig or ThePEG library, initialization, PDFs or RNG.
+
+Reference shower settings and implementation
+-------------------------------------------
+
+The reference is Herwig 7.3.0, using the angular shower, with
+PartnerFinder:PartnerMethod Random and PartnerFinder:ScaleChoice Partner.
+The symmetric final-final angular partition is used. These are the
+settings in Herwig's src/LHE-MCatNLO.in and MG5's HERWIG7 steering.
+The same angular formulae appear in MG5's existing get_dead_zone routine.
+Reference source locations in Herwig 7.3.0:
+
+* Shower/QTilde/Base/PartnerFinder.cc:
+  calculateInitialInitialScales, calculateInitialFinalScales,
+  calculateFinalFinalScales (key=0).
+* Shower/QTilde/Kinematics/KinematicHelpers.h: pT2_ISR, pT2_FSR.
+* Shower/QTilde/QTildeShowerHandler.cc: setupMaximumScales and the
+  space-like/time-like shower vetoes.
+
+ShowerHandler:MaxPtIsMuF Yes and RestrictPhasespace Yes make SCALUP a
+transverse-momentum veto. They DO NOT cap the angular starting scale.
+Herwig 7.0 uses the corresponding HardVetoMode/HardVetoScaleSource
+settings, already supplied by MG5. No per-dipole LHE tags are needed.
+
+Interface and conventions
+-------------------------
+
+  use herwig7_scales, only: herwig7_starting_scales, hw7_ok
+  call herwig7_starting_scales(nborn,p,mass,connected,hard_scale, &
+                              scales,status,angular_scales)
+
+Momenta p(0:3,nborn) are (E,px,py,pz) with positive incoming energies.
+The first two particles are massless incoming legs. mass(nborn) contains
+the on-shell model masses, and connected(nborn,nborn) is a directed
+logical mask supplied by the caller. Scales are in GeV, emitter first.
+Absent and diagonal entries are -1. angular_scales is optional and gives
+the uncapped angular starting scales. Status codes are hw7_ok=0,
+hw7_bad_input=1 and hw7_numerical=2. Roundoff at thresholds is tolerated;
+unphysical inputs are rejected.
+
+Writing a = qtilde_max^2 and M^2 = (p_i+p_j)^2, the angular limits are
+
+  II, IF: a = 2 p_i.p_j
+  FI:     a = 2 p_i.p_j + m_i^2
+  FF:     a = (M^2 + m_i^2 - m_j^2 + sqrt(lambda))/2
+
+where lambda = [M^2-(m_i+m_j)^2]*[M^2-(m_i-m_j)^2].
+
+For initial-state emission pT=(1-z)*qtilde, giving the envelope sqrt(a).
+For final-state gluon emission pT^2=(1-z)^2*(z^2*a-m_i^2). Its maximum
+occurs at z_star=(1+sqrt(1+8*m_i^2/a))/4 and is
+
+  pT_max = sqrt(a * z_star * (1-z_star)^3), if a > m_i^2, and zero otherwise.
+
+For a massless final-state emitter this is sqrt(a)/4. The output is
+scales(i,j)=min(hard_scale,pT_max). These are envelopes of first-branching
+phase space, not a replacement for its z-dependent angular boundary.
+Bjorken-x bounds, shower infrared masses/cutoffs, flavour thresholds and
+event reconstruction may reduce the actual radiation phase space further.
+Massive gluon splitting is bounded by the massless gluon envelope.
+Decay showers and the Herwig dipole shower are outside this interface.
+
+Matching integration
+--------------------
+
+For parton_shower=HERWIG7, two incoming legs, ordinary MC@NLO and no FxFx,
+scale_module draws ONE damped hard scale from the existing clustering
+reference and passes it to this module. The saved scalar becomes S-event
+SCALUP. All valid dipoles use the same hard-scale damping interval in the
+subtraction; their existing angular dead-zone tests remain in force.
+Damping each angular/pT limit separately would describe a different
+shower from the one driven by this scalar SCALUP.
+
+Born-only scales use the undamped hard reference with the existing
+infrared floor. Sector/fold selection keeps the saved hard scalar with
+the corresponding S event. HERWIG6, FxFx and decay matching retain their
+previous prescription. MC@NLO-Delta remains supported only with Pythia8.
+
+H-event formulas are unchanged. The ordinary H scale already takes the
+maximum of its real-event reference and an underlying Born dipole scale;
+that second input now uses this module's effective pT envelope. Thus H
+scales can change indirectly, as with the Pythia8 S-event prescription.
+
+Tests
+-----
+
+test_herwig7_scales compiles the standalone module and checks all four
+connection types, unequal masses, a numerical pT maximization, boosts,
+thresholds, directed masks and invalid input. test_mcatnlo_delta_scales
+checks hard-scale sampling, damping, variations, Born fallback and fold
+selection for both showers. test_mc_dead_zones compares the angular
+limits against the production Herwig support check and verifies that
+soft wide-angle radiation survives the independent pT veto.

@@ -659,7 +659,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
     # The three options categories are treated on a different footage when a
     # set/save configuration occur. current value are kept in self.options
     options_configuration = {'pythia8_path': './pythia8',
-                       'hwpp_path': './herwigPP',
+                       'herwig7_path': './herwig7',
                        'thepeg_path': './thepeg',
                        'hepmc_path': './hepmc',
                        'madanalysis_path': './MadAnalysis',
@@ -7338,7 +7338,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             extralibs = self.shower_card['extralibs'].split()
             extrapaths = self.shower_card['extrapaths'].split()
             # remove default stdhep/Fmcfio for recent shower
-            if self.run_card['parton_shower'] in ['PYTHIA8', 'HERWIGPP', 'HW7']:
+            if self.run_card['parton_shower'] in ['PYTHIA8', 'HERWIG7', 'HW7']:
                 if 'stdhep' in self.shower_card['extralibs']:
                     extralibs.remove('stdhep')
                     modify_extralibs = True

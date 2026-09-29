@@ -2,11 +2,14 @@
 ! SPDX-License-Identifier: GPL-2.0-or-later
 program check_mcatnlo_delta_scales
   use mcatnlo_delta_scales
+  use, intrinsic :: ieee_arithmetic
   implicit none
   real(dp) :: p(0:3,5), moved(0:3,5), t(0:99,0:99), m(0:99,0:99)
   real(dp) :: tm(0:99,0:99), mm(0:99,0:99), raw, ch, sh
   integer :: ids(5), moved_ids(5), col(2,4), status, i, j, map(5)
   logical :: d(0:99,0:99), dm(0:99,0:99)
+  real(dp) :: starts(4,4), mass(4), starts_moved(4,4)
+  logical :: connected(4,4)
   character(len=32) :: mode
 
   call get_command_argument(1,mode)
@@ -138,6 +141,69 @@ program check_mcatnlo_delta_scales
       (/5._dp,0._dp,0._dp,0._dp/),(/10._dp,10._dp,0._dp,0._dp/), &
       5,-5,.true.,.true.,0._dp,4.7_dp,raw,status)
     call require(status == delta_numerical,'exact pair threshold is undefined')
+
+  case('starting')
+    connected=.true.
+    do i=1,4
+      connected(i,i)=.false.
+    enddo
+    mass=0._dp
+    call pythia8_starting_scales(4,p(:,:4),mass,connected,2000._dp,starts,status)
+    call require(status == delta_ok,'starting status')
+    call close(starts(1,2),2000._dp,'II uses hard scale, not half shat')
+    call close(starts(1,3),2000._dp,'IF uses hard scale')
+    call close(starts(3,1),sqrt(80000._dp)/2._dp,'FI positive-energy dipole')
+    call close(starts(3,4),sqrt(560000._dp)/2._dp,'FF half dipole mass')
+    call require(count(starts == -1._dp) == 4,'starting diagonal absent')
+    call pythia8_starting_scales(4,p(:,:4),mass,connected,100._dp,starts,status)
+    call require(all(pack(starts,connected) == 100._dp),'large finite limits capped by hard scale')
+
+    ! Unequal masses make even the two FF directions different.
+    p(:,3)=[500._dp,400._dp,0._dp,0._dp]
+    p(:,4)=[500._dp,-300._dp,0._dp,400._dp]
+    mass(3)=300._dp
+    connected(1,2)=.false.
+    connected(2,1)=.false.
+    call pythia8_starting_scales(4,p(:,:4),mass,connected,2000._dp,starts,status)
+    call require(status == delta_ok,'massive starting status')
+    call close(starts(3,4),sqrt(740000._dp)/2._dp,'massive emitter')
+    call close(starts(4,3),(sqrt(830000._dp)-300._dp)/2._dp,'massive recoiler')
+    call require(starts(1,2) == -1._dp,'absent starting dipole')
+    ch=cosh(0.7_dp)
+    sh=sinh(0.7_dp)
+    moved=p
+    do i=1,4
+      moved(0,i)=ch*p(0,i)+sh*p(3,i)
+      moved(3,i)=sh*p(0,i)+ch*p(3,i)
+    enddo
+    call pythia8_starting_scales(4,moved(:,:4),mass,connected,2000._dp,starts_moved,status)
+    call require(status == delta_ok,'boosted starting status')
+    call require(maxval(abs(starts-starts_moved)) < 1.e-9_dp,'starting Lorentz invariance')
+
+  case('starting_invalid')
+    connected=.false.
+    connected(3,4)=.true.
+    mass=0._dp
+    mass(3:4)=[100._dp,200._dp]
+    p(:,3)=[100._dp,0._dp,0._dp,0._dp]
+    p(:,4)=[200._dp,0._dp,0._dp,0._dp]
+    call pythia8_starting_scales(4,p(:,:4),mass,connected,500._dp,starts,status)
+    call require(status == delta_ok .and. starts(3,4) == 0._dp,'closed threshold has zero scale')
+    mass(4)=201._dp
+    call pythia8_starting_scales(4,p(:,:4),mass,connected,500._dp,starts,status)
+    call require(status == delta_numerical,'unphysical threshold rejected')
+    mass(4)=-1._dp
+    call pythia8_starting_scales(4,p(:,:4),mass,connected,500._dp,starts,status)
+    call require(status == delta_bad_input,'negative starting mass rejected')
+    mass=0._dp
+    raw=ieee_value(0._dp,ieee_quiet_nan)
+    call pythia8_starting_scales(4,p(:,:4),mass,connected,raw,starts,status)
+    call require(status == delta_bad_input,'nonfinite hard scale rejected')
+    call pythia8_starting_scales(4,p(:,:4),mass,connected,0._dp,starts,status)
+    call require(status == delta_bad_input,'zero hard scale rejected')
+    p(0,3)=ieee_value(0._dp,ieee_positive_inf)
+    call pythia8_starting_scales(4,p(:,:4),mass,connected,500._dp,starts,status)
+    call require(status == delta_bad_input,'nonfinite starting momentum rejected')
 
   case default
     call require(.false.,'unknown mode')

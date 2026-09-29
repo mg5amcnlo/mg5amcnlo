@@ -194,14 +194,14 @@ class MECmdShell(IOTests.IOTestManager):
         self.assertEqual(info_html_this.count('<TR class=second>'), 8)
 
 
-    def test_raise_invalid_path_hwpp(self):
-        """test that an exception is raised when trying to shower with hwpp without
+    def test_raise_invalid_path_hw7(self):
+        """test that an exception is raised when trying to shower with hw7 without
         having set the corresponding pahts"""
         cmd = os.getcwd()
         self.generate(['p p > e+ ve QED^2=4 QCD^2=0 [QCD] '], 'sm')
         card = open('%s/Cards/run_card_default.dat' % self.path).read()
         self.assertIn('HERWIG6   = parton_shower', card)
-        card = card.replace('HERWIG6   = parton_shower', 'HERWIGPP   = parton_shower')
+        card = card.replace('HERWIG6   = parton_shower', 'HERWIG7   = parton_shower')
         open('%s/Cards/run_card.dat' % self.path, 'w').write(card)
         self.cmd_line.exec_cmd('set  cluster_temp_path /tmp/ --no_save')
         self.do('generate_events -pf')

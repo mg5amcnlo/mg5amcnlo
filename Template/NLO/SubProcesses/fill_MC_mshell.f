@@ -14,8 +14,8 @@ c
       enddo
       if (MonteCarlo(1:7).eq.'HERWIG6') then
          include "MCmasses_HERWIG6.inc"
-      elseif(MonteCarlo(1:8).eq.'HERWIGPP')then
-         include "MCmasses_HERWIGPP.inc"
+      elseif(MonteCarlo(1:7).eq.'HERWIG7')then
+         include "MCmasses_HERWIG7.inc"
       elseif(MonteCarlo(1:8).eq.'PYTHIA6Q')then
          include "MCmasses_PYTHIA6Q.inc"
       elseif(MonteCarlo(1:9).eq.'PYTHIA6PT')then
