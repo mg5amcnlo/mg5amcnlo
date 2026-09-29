@@ -2,9 +2,11 @@
 
 The production generator uses local recoil in channels previously handled by
 the numerical Granny mass inversion. FKS subtraction, its finite soft mismatch,
-and native MC subtraction use the same resonance frame. Fixed-order comparisons,
-technical-cut variation, subtraction limits and matched event checks are listed
-below. Full shower evolution has not been tested.
+and native MC subtraction use the same resonance frame. Map, subtraction-limit
+and matched event checks are listed below. The earlier fixed-order rates used
+insufficient cuts and are withdrawn as finite benchmarks; see the
+[precision validation](resonance_recoil_precision.md) for the corrected cuts
+and differential analysis. Full shower evolution has not been tested.
 
 The target is the complete replacement of the numerical mass inversion and
 finite-difference Jacobian, for every applicable final-state resonance channel.
@@ -72,9 +74,10 @@ mismatch.
 The mismatch is combined with the existing FKS cut-based endpoint prefactors.
 `resonance_subtraction_scales` supplies the factors below. Tests cover their
 covariance, collinear limit, radial integral and algebraic Q-term conversion.
-Matrix-element limit tests pass. The generated fixed-order comparison and
-technical-cut variation below agree within approximately one-percent statistical
-uncertainties; they are numerical checks, not a precision prediction.
+Matrix-element limit tests pass. The earlier coarse fixed-order comparison and
+technical-cut variation agreed within their quoted one-percent uncertainties,
+but later probes found additional unsubtracted collinear limits admitted by
+those cuts. Those rates do not validate the finite mismatch.
 
 Let `Q` be the total incoming momentum, `s=Q^2`, and `K` the resonance momentum.
 For a null soft momentum `k`, define the ratio of energy fractions
@@ -169,32 +172,37 @@ The external-W variant with zero W width is unsuitable: its crossed real
 largest sampled weights approach `m(d,u~)=m_W`. Resolving jets does not regulate
 this pole. Those earlier integrations were stopped and are not baselines.
 
-Use anti-kt jets with R=0.4 and pT above 20 GeV, and require at least two jets,
-including one with nonzero net bottom flavour. The validation-only
-`tests/input_files/resonance_recoil_cuts.f` supplies that requirement. It removes
-beam-collinear bottom spectators that otherwise survive with two hard light
-jets, and rejects a collinear photon-to-bottom-pair jet with net flavour zero.
-It is intended for this explicitly flavour-labelled subprocess, not generic
-processes that group bottom and light flavours. Direct FastJet checks accept
-resolved bottom jets and reject beam-collinear bottom and merged bottom-pair
-configurations. Cuts are applied to events and counterevents through the same
-`dummy_cuts` hook. Lepton cuts can be added independently.
+Use anti-kt jets with R=0.4 and pT above 20 GeV. Require separate jets with
+positive net bottom and positive net down flavour. The validation-only
+`tests/input_files/resonance_recoil_cuts.f` supplies that requirement.
+
+The earlier requirement of two jets and any nonzero bottom tag was insufficient.
+In this restricted Born process, `g b > d b e+ ve u~` has an unsubtracted limit
+with beam-collinear d, while `u g > d b e+ ve b~` has one with beam-collinear b.
+Their other underlying Born flavours are not part of the generated process.
+Direct matrix-element probes find `Sij=1` and a nonzero limit of `pT^2 |M|^2`
+in both cases while the old cuts accept the events. The corrected flavour-jet
+requirements reject both limits, as well as a collinear photon-to-bottom-pair
+jet with zero net bottom flavour.
+
+These cuts are intended for this explicitly flavour-labelled subprocess, not
+generic processes that group bottom and light flavours. FastJet checks cover
+resolved jets, collinear QCD radiation and all three rejected configurations.
+Cuts are applied to events and counterevents through the same `dummy_cuts` hook.
 
 ### Generated results
 
-For 13 TeV beams, built-in nn23nlo PDFs and fixed renormalization/factorization
-scales of 173 GeV, the same finite observable gives:
-
-| Implementation | Cross section (pb) |
-| --- | ---: |
-| Previous Granny implementation | 5.148 +/- 0.053 |
-| Local recoil, default FKS cutoffs | 5.137 +/- 0.055 |
-| Local recoil, varied FKS cutoffs | 5.160 +/- 0.050 |
+The previously reported rates `5.148 +/- 0.053`, `5.137 +/- 0.055` and
+`5.160 +/- 0.050` pb are **not finite benchmarks**: their cuts admit the extra
+collinear limits described above. Their apparent agreement is insufficient.
+The [0.1% repeat](resonance_recoil_precision.md) uses the corrected cuts for
+both implementations and the FKS-cutoff variation, with differential histograms.
 
 The variation changes `(xicut, deltaO, xiScut, deltaS)` from
 `(0.5, 1, 0.5, 1)` to `(0.1, 0.2, 0.2, 0.3)` in `fks_powers.inc`, followed by
-recompilation. All three runs finish, and their matrix-element and virtual-pole
-checks pass (20/20 poles at tolerance 1e-5).
+recompilation. The earlier runs finished and passed their matrix-element and
+virtual-pole checks (20/20 poles at tolerance 1e-5); these tests did not probe
+the extra limits outside the selected Born flavour channel.
 
 The leptonic process also passes 359 nonzero Pythia8 subtraction-limit checks
 across all Born configurations and FKS sectors. The earlier external-W test
@@ -208,8 +216,9 @@ check contains 367 S and 133 H events, including 11 gluons assigned to top decay
 Stored resonance four-momenta equal the sums of their direct daughters within
 1.2e-13 GeV. The matched and reweighting executables compile and link.
 
-These event-generation checks use short integration grids and are not a matched
-cross-section measurement. The longer all-channel matched integration was
+These event-generation checks use short integration grids and the older cuts;
+they test event structure, not a finite matched cross section or the corrected
+observable. The longer all-channel matched integration was
 stopped after the focused checks; it was still setting up its first two grids.
 Full shower evolution and high-statistics matched distributions remain outside
 this validation.
