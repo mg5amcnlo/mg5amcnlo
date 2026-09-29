@@ -39,6 +39,7 @@ tie-breaking, that breaks the agreement fails here whichever order it breaks.
 """
 
 from __future__ import absolute_import
+import inspect
 import itertools
 import unittest
 
@@ -302,6 +303,22 @@ class TestDecayChainLayout(unittest.TestCase):
             event = _chain_event(layout)
             self.assertEqual(event.get_momenta(order, decay_chain=True),
                              event.get_momenta(order), layout)
+
+
+class TestBasicEventAccessors(unittest.TestCase):
+    """The NLO reweighting hands calculate_matrix_element an
+    NLO_PARTIALWEIGHT.BasicEvent where the LO one hands it an Event, and asks
+    both the same way. An option added to Event's accessors alone (decay_chain
+    once) is a TypeError on the NLO path only, which no unit test reached."""
+
+    def test_every_event_keyword_is_accepted(self):
+        basic = lhe_parser.NLO_PARTIALWEIGHT.BasicEvent
+        for name in ('get_momenta', 'get_all_momenta', 'get_helicity'):
+            wanted = inspect.signature(getattr(lhe_parser.Event, name))
+            got = inspect.signature(getattr(basic, name)).parameters
+            for param in wanted.parameters:
+                self.assertIn(param, got, '%s.%s lacks %s' % (basic.__name__,
+                                                               name, param))
 
 
 if __name__ == '__main__':

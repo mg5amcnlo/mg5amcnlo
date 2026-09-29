@@ -4992,8 +4992,13 @@ class NLO_PARTIALWEIGHT(object):
             out.sort()
             return (tuple(initial), tuple(out)), order
         
-        def get_momenta(self, get_order, allow_reversed=True):
-            """return the momenta vector in the order asked for"""
+        def get_momenta(self, get_order, allow_reversed=True, decay_chain=False):
+            """return the momenta vector in the order asked for
+
+            decay_chain is accepted for the reweighting, which asks Event and
+            BasicEvent alike, and ignored: a BasicEvent carries momenta and
+            pdgs only -- no resonance lines, no mothers -- so its line order is
+            all there is to go on."""
              
             #avoid to modify the input
             order = [list(get_order[0]), list(get_order[1])] 
@@ -5035,17 +5040,20 @@ class NLO_PARTIALWEIGHT(object):
                 
             return out
 
-        def get_all_momenta(self, get_order, allow_reversed=True, debug_output=None):
+        def get_all_momenta(self, get_order, allow_reversed=True, debug_output=None,
+                            permutate_two_decay=False, decay_chain=False):
             """ same as get_momenta but return all valid permutation of the final state 
                     where identical particle does NOT have the same parent
                     for easier development debug output allow to return internal variable for the unittest to check
+                    permutate_two_decay/decay_chain: accepted like Event's, ignored (no mothers here)
             """  
 
 
             return [self.get_momenta(get_order, allow_reversed)]
             
             
-        def get_helicity(self, *args):
+        def get_helicity(self, get_order=None, allow_reversed=True,
+                         decay_chain=False):
             return [9] * len(self)
         
         @property
