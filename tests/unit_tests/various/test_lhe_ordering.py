@@ -219,5 +219,90 @@ class TestGetAllMomenta(unittest.TestCase):
                 self.assertEqual(flat[base.index(mom)], flat[slot])
 
 
+def _chain_event(layout):
+    """u d~ > w+ z, w+ > e+ ve, z > e+ e-, written with its lines in
+    ``layout`` (names below). Each particle's momentum identifies it, and the
+    mothers follow the lines wherever they are written."""
+    parts = {'u': (2, -1, None, (0., 0., 223.), 0.),
+             'dx': (-1, -1, None, (0., 0., -133.), 0.),
+             'W': (24, 2, 'ini', (25., 37., 200.), 80.4),
+             'Z': (23, 2, 'ini', (-25., -37., -110.), 91.19),
+             'e+W': (-11, 1, 'W', (35., 12., 140.), 0.),
+             've': (12, 1, 'W', (-10., 25., 60.), 0.),
+             'e+Z': (-11, 1, 'Z', (-40., -30., -20.), 0.),
+             'e-': (11, 1, 'Z', (15., -7., -90.), 0.)}
+    idx = dict((name, k + 1) for k, name in enumerate(layout))
+    lines = [' %d 1 1.0 100.0 0.0078 0.118' % len(layout)]
+    for name in layout:
+        pid, status, mother, (px, py, pz), mass = parts[name]
+        if mother is None:
+            m1 = m2 = 0
+        elif mother == 'ini':
+            m1, m2 = idx['u'], idx['dx']
+        else:
+            m1 = m2 = idx[mother]
+        e = (mass ** 2 + px ** 2 + py ** 2 + pz ** 2) ** 0.5
+        hel = -1 if name == 'e+Z' else 1
+        lines.append(' %d %d %d %d 0 0 %r %r %r %r %r 0. %d'
+                     % (pid, status, m1, m2, px, py, pz, e, mass, hel))
+    return lhe_parser.Event('<event>\n' + '\n'.join(lines) + '\n</event>')
+
+
+class TestDecayChainLayout(unittest.TestCase):
+    """decay_chain=True: identical particles from different resonances are put
+    where a decay-chain matrix element expects them -- the products of each
+    resonance on consecutive legs -- whatever order the event writes them in.
+
+    u d~ > w+ z, w+ > e+ ve, z > e+ e- has legs u d~ e+ ve e+ e-: leg 3 is
+    the W's e+. Dealt in line order, an event writing the Z's e+ first put it
+    on leg 3, so the matrix element (and me_frame = [3, 4], "the W rest frame")
+    got an e+ ve pair that is not a W."""
+
+    ORDER = [(2, -1), (-11, 12, -11, 11)]
+    E_W = (35., 12., 140.)
+    LAYOUTS = [['u', 'dx', 'W', 'Z', 'e+W', 've', 'e+Z', 'e-'],
+               ['dx', 'u', 'Z', 'e-', 'e+Z', 'W', 've', 'e+W'],
+               ['u', 'dx', 'e+Z', 'Z', 'e-', 've', 'W', 'e+W'],
+               ['u', 'Z', 'dx', 'W', 'e+Z', 'e+W', 'e-', 've']]
+
+    def test_the_w_products_take_legs_3_and_4(self):
+        for layout in self.LAYOUTS:
+            event = _chain_event(layout)
+            p = event.get_momenta(self.ORDER, decay_chain=True)
+            self.assertEqual(p[2][1:], self.E_W, layout)
+            all_p = event.get_all_momenta(self.ORDER, decay_chain=True)
+            self.assertEqual(len(all_p), 1)
+            self.assertEqual(all_p[0], p)
+            # legs 3+4 rebuild the W line
+            w = lhe_parser.FourMomentum(p[2]) + lhe_parser.FourMomentum(p[3])
+            self.assertEqual((w.px, w.py, w.pz), (25., 37., 200.))
+
+    def test_the_helicity_follows_the_momentum(self):
+        """get_helicity is dealt with the same mapping (the Z's e+ carries
+        helicity -1, every other particle +1)"""
+        for layout in self.LAYOUTS:
+            event = _chain_event(layout)
+            hel = event.get_helicity(self.ORDER, decay_chain=True)
+            self.assertEqual(hel[2], 1, layout)
+            self.assertEqual(hel[4], -1, layout)
+
+    def test_the_default_keeps_the_line_order(self):
+        """MadSpin relies on the k-th e+ taking the k-th e+ slot; without the
+        option nothing changes"""
+        event = _chain_event(self.LAYOUTS[1])
+        p = event.get_momenta(self.ORDER)
+        self.assertEqual(p[2][1:], (-40., -30., -20.))
+
+    def test_a_process_not_written_as_a_chain_keeps_the_line_order(self):
+        """u d~ > e+ e+ ve e-: no assignment puts both resonances on
+        consecutive legs, and the two e+ are exchangeable in that matrix
+        element, so the line order stays"""
+        order = [(2, -1), (-11, -11, 12, 11)]
+        for layout in self.LAYOUTS:
+            event = _chain_event(layout)
+            self.assertEqual(event.get_momenta(order, decay_chain=True),
+                             event.get_momenta(order), layout)
+
+
 if __name__ == '__main__':
     unittest.main()

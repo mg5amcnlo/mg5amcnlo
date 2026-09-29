@@ -672,6 +672,39 @@ class TestFrameBoost(unittest.TestCase):
         boost = self._stub(6)._frame_boost(_MomentaEvent(self.MOMENTA))
         self.assertIsNone(boost.rest_leg)
 
+    def test_single_leg_frame_goes_through_the_partonic_cms(self):
+        """madevent's boost_to_frame acts on partonic-CM momenta (genps.f;
+        unwgt.f boosts to the lab only when it writes the event). The beams of
+        MOMENTA are unequal, so boosting to leg 3 straight from the lab lands
+        in a frame rotated from madevent's (Wigner rotation), and the
+        quantisation axis of the leg at rest turns with it."""
+        stub = self._stub(8)
+        boost = stub._frame_boost(_MomentaEvent(self.MOMENTA))
+        out = stub._boost_momenta(self.MOMENTA, boost)
+        # madevent's route, written out: z boost to the partonic CM, then to leg 3
+        pcm = lhe_parser.FourMomentum(700., 0., 0., 300.)
+        cm = [lhe_parser.FourMomentum(p).zboost(pcm) for p in self.MOMENTA]
+        neg = lhe_parser.FourMomentum(cm[2].E, -cm[2].px, -cm[2].py, -cm[2].pz)
+        ref = [p.boost(neg) for p in cm]
+        for new, want in zip(out, ref):
+            for x, y in zip(new, (want.E, want.px, want.py, want.pz)):
+                self.assertAlmostEqual(x, y, places=8)
+        # which is not the frame reached from the lab
+        lab3 = lhe_parser.FourMomentum(*self.MOMENTA[2])
+        neg = lhe_parser.FourMomentum(lab3.E, -lab3.px, -lab3.py, -lab3.pz)
+        direct = lhe_parser.FourMomentum(*self.MOMENTA[0]).boost(neg)
+        self.assertGreater(abs(direct.px - out[0][1]), 1.)
+
+    def test_massless_frame_is_refused(self):
+        """a single massless leg has no rest frame: this used to be a
+        ZeroDivisionError deep inside FourMomentum.boost"""
+        momenta = [(500., 0., 0., 500.), (200., 0., 0., -200.),
+                   (300., 100., 50., -80.), (400., -100., -50., 380.),
+                   (math.sqrt(10.**2 + 20.**2 + 30.**2), 10., 20., 30.)]
+        stub = self._stub(2 ** 5)
+        self.assertRaises(stub.InvalidCmd, stub._frame_boost,
+                          _MomentaEvent(momenta))
+
     def test_boost_of_a_system_already_at_rest(self):
         """A lepton-collider event arrives in the partonic CMS, so frame_id = 6
         asks for a boost with no spatial part. That is the identity, not an

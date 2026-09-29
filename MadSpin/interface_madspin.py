@@ -11333,10 +11333,11 @@ class MadSpinInterface(extended_cmd.Cmd):
         ``sum(2**n for n in me_frame)``, so external leg n (counted from 1, in
         the matrix element's own ordering) is selected by bit n -- the same
         convention ``mapid`` uncompresses with ``btest(id, i)``. The returned
-        momentum is the sum of the selected legs, ready to be handed to
-        ``Event.boost`` / ``_boost_momenta``, which negate the spatial part
-        themselves (HELAS ``boostx``, exactly what ``boost_to_frame`` does in
-        driver.f).
+        momentum is the sum of the selected legs (in the lab), ready to be
+        handed to ``_boost_momenta``, which negates the spatial part itself
+        (HELAS ``boostx``, exactly what ``boost_to_frame`` does in driver.f);
+        its ``initial`` attribute is the initial state's total momentum, the
+        partonic CM that ``_boost_momenta`` goes through first.
 
         Three things switch it on -- the three clauses of ``_needs_frame_axis``
         -- and all of them are cases where the frame is *observable*:
@@ -11390,6 +11391,25 @@ class MadSpinInterface(extended_cmd.Cmd):
         pboost = lhe_parser.FourMomentum()
         for n in selected:
             pboost += lhe_parser.FourMomentum(momenta[n - 1])
+        if pboost.mass_sqr <= 1e-10 * pboost.E ** 2:
+            # a light-like system (e.g. a single massless leg) has no rest
+            # frame: FourMomentum.boost would divide by its zero mass
+            raise self.InvalidCmd(
+                "frame_id = %s selects legs %s, a massless system (m^2 = %g "
+                "GeV^2): it has no rest frame. Select massive legs, or several "
+                "legs." % (frame_id, selected, pboost.mass_sqr))
+        # madevent's boost_to_frame acts on momenta in the partonic CM frame
+        # (genps.f builds them there, unwgt.f boosts them to the lab only when
+        # it writes the event), so _boost_momenta first takes the lab momenta
+        # back to the rest frame of the initial state. Going to the selected
+        # legs straight from the lab is not the same frame: two boosts along
+        # different directions compose to a boost and a (Wigner) rotation, and
+        # the quantisation axis of a leg at rest turns with it -- 25 degrees
+        # for a W of pT = 100 GeV in a partonic CM at rapidity 1.
+        nb_initial = len(orig_order[0]) if orig_order else 2
+        pboost.initial = lhe_parser.FourMomentum()
+        for i in range(nb_initial):
+            pboost.initial += lhe_parser.FourMomentum(momenta[i])
         # A single selected leg has to end up exactly at rest: vxxxxx branches
         # on pp.eq.rZero and takes the frame z axis as quantisation axis there,
         # so a residual 1d-14 three-momentum left by the boost arithmetic would
@@ -11425,13 +11445,20 @@ class MadSpinInterface(extended_cmd.Cmd):
         take it from ``pboost``) is the leg the frame is built from when it is a
         single one, forced exactly at rest.
         """
-        neg = lhe_parser.FourMomentum(pboost.E, -pboost.px, -pboost.py, -pboost.pz)
-        out = []
-        for mom in momenta:
-            new = lhe_parser.FourMomentum(mom).boost(neg)
-            out.append((new.E, new.px, new.py, new.pz))
+        def to_rest(momenta, frame):
+            neg = lhe_parser.FourMomentum(frame.E, -frame.px, -frame.py,
+                                          -frame.pz)
+            return [lhe_parser.FourMomentum(mom).boost(neg) for mom in momenta]
+
         if rest_leg == -1:
             rest_leg = getattr(pboost, 'rest_leg', None)
+        initial = getattr(pboost, 'initial', None)
+        if initial is not None:
+            # through the partonic CM first, as madevent (see _frame_boost)
+            momenta = to_rest(momenta, initial)
+            pboost = to_rest([pboost], initial)[0]
+        out = [(new.E, new.px, new.py, new.pz)
+               for new in to_rest(momenta, pboost)]
         if rest_leg is not None and rest_leg <= len(out):
             out[rest_leg - 1] = (out[rest_leg - 1][0], 0., 0., 0.)
         return out

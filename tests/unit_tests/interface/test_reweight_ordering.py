@@ -36,6 +36,7 @@ from __future__ import absolute_import
 import math
 import unittest
 
+import madgraph
 import madgraph.various.lhe_parser as lhe_parser
 import madgraph.interface.reweight_interface as reweight_interface
 
@@ -85,6 +86,8 @@ class _BaseStub(object):
     method_boost_event = reweight_interface.ReweightInterface.method_boost_event
     boost_momenta_to_rest_frame = staticmethod(
         reweight_interface.ReweightInterface.boost_momenta_to_rest_frame)
+    boost_momenta_to_me_frame = classmethod(
+        reweight_interface.ReweightInterface.boost_momenta_to_me_frame.__func__)
 
 
 class TestFrameIdBoost(unittest.TestCase):
@@ -147,6 +150,7 @@ class _DensityStub(object):
         reweight_interface.DensityInterface.find_position_particles_new_order
     find_position_particles_with_observable = \
         reweight_interface.DensityInterface.find_position_particles_with_observable
+    _boost_to_chosen_legs = reweight_interface.DensityInterface._boost_to_chosen_legs
     boost_momenta_to_rest_frame = staticmethod(
         reweight_interface.ReweightInterface.boost_momenta_to_rest_frame)
 
@@ -212,6 +216,142 @@ class TestDensityInterfaceLegs(unittest.TestCase):
         self.assertEqual(len(out), 1)
         for comp in _rest(out[0], positions):
             self.assertAlmostEqual(comp, 0., places=8)
+
+
+# u d~ > w+ z with unequal parton energies: the partonic CM moves along z
+# (rapidity 0.26), so the lab and the partonic CM are different frames
+_W = (35. - 10., 12. + 25., 140. + 60.)
+_Z = (-40. + 15. - 25., -30. - 7. - 37., -20. - 90.)
+
+
+def _wz_event(layout):
+    """``layout``: the order of 'u', 'dx', 'W', 'Z' in the event"""
+    mom = {'W': (24, 1, _W, 80.4), 'Z': (23, 1, _Z, 91.19)}
+    e_w = math.sqrt(80.4 ** 2 + sum(x * x for x in _W))
+    e_z = math.sqrt(91.19 ** 2 + sum(x * x for x in _Z))
+    etot, pztot = e_w + e_z, _W[2] + _Z[2]
+    mom['u'] = (2, -1, (0., 0., (etot + pztot) / 2), 0.)
+    mom['dx'] = (-1, -1, (0., 0., -(etot - pztot) / 2), 0.)
+    idx = dict((name, k + 1) for k, name in enumerate(layout))
+    lines = [' 4 1 1.0 100.0 0.0078 0.118']
+    for name in layout:
+        pid, status, (px, py, pz), mass = mom[name]
+        m1, m2 = (idx['u'], idx['dx']) if status == 1 else (0, 0)
+        e = math.sqrt(mass ** 2 + px ** 2 + py ** 2 + pz ** 2)
+        lines.append(' %d %d %d %d 0 0 %r %r %r %r %r 0. 9'
+                     % (pid, status, m1, m2, px, py, pz, e, mass))
+    return lhe_parser.Event('<event>\n' + '\n'.join(lines) + '\n</event>')
+
+
+WZ_ORDER = [(2, -1), (24, 23)]
+WZ_LAYOUTS = [['u', 'dx', 'W', 'Z'], ['dx', 'u', 'Z', 'W'],
+              ['u', 'Z', 'dx', 'W']]
+
+
+def _madevent_frame(lab, legs):
+    """What madevent hands the matrix element: the momenta in the partonic
+    CM (genps.f), then boost_to_frame on the legs selected, a single one set
+    exactly at rest -- written out independently of the code under test."""
+    pcm = lhe_parser.FourMomentum(lab[0]) + lhe_parser.FourMomentum(lab[1])
+    cm = [lhe_parser.FourMomentum(p).zboost(pcm) for p in lab]
+    pboost = lhe_parser.FourMomentum()
+    for n in legs:
+        pboost += cm[n - 1]
+    neg = lhe_parser.FourMomentum(pboost.E, -pboost.px, -pboost.py, -pboost.pz)
+    out = [p.boost(neg) for p in cm]
+    out = [(p.E, p.px, p.py, p.pz) for p in out]
+    if len(legs) == 1:
+        out[legs[0] - 1] = (out[legs[0] - 1][0], 0., 0., 0.)
+    return out
+
+
+class TestMeFrameConvention(unittest.TestCase):
+    """me_frame has to be madevent's frame, for both matrix elements of the
+    weight.
+
+    The four-top events above have back-to-back beams of equal energy, so their
+    lab *is* the partonic CM and none of this can show there."""
+
+    def _boosted(self, me_frame, layout=WZ_LAYOUTS[0], hypp_id=0, stub=None):
+        event = _wz_event(layout)
+        all_p = [event.get_momenta(WZ_ORDER)]
+        stub = stub or _BaseStub(sum(2 ** n for n in me_frame))
+        return stub.method_boost_event(event, all_p, WZ_ORDER, hypp_id)[0]
+
+    def assertMomentaEqual(self, first, second, places=8):
+        for a, b in zip(first, second):
+            for x, y in zip(a, b):
+                self.assertAlmostEqual(x, y, places=places)
+
+    def test_the_frame_goes_through_the_partonic_cm(self):
+        """madevent boosts to the frame from the partonic CM. Straight from
+        the lab is another frame -- a Wigner rotation, 2.8 degrees here -- and
+        turns the quantisation axis of a leg at rest with it."""
+        for me_frame in ([3], [4], [3, 4]):
+            lab = _wz_event(WZ_LAYOUTS[0]).get_momenta(WZ_ORDER)
+            ref = _madevent_frame(lab, me_frame)
+            for layout in WZ_LAYOUTS:
+                self.assertMomentaEqual(self._boosted(me_frame, layout), ref)
+        # the test can tell: from the lab, the beam is not where madevent has it
+        lab = _wz_event(WZ_LAYOUTS[0]).get_momenta(WZ_ORDER)
+        direct = _BaseStub(8).boost_momenta_to_rest_frame(
+                                lab, lhe_parser.FourMomentum(lab[2]), 2)
+        ref = _madevent_frame(lab, [3])
+        self.assertGreater(max(abs(x - y) for a, b in zip(direct, ref)
+                               for x, y in zip(a, b)), 10.)
+
+    def test_a_single_leg_is_exactly_at_rest(self):
+        for leg in (3, 4):
+            out = self._boosted([leg])
+            self.assertEqual(out[leg - 1][1:], (0., 0., 0.))
+
+    def test_both_matrix_elements_are_in_the_frame(self):
+        """the weight is w_new / w_orig: the new matrix element (hypp_id 1)
+        was left in the partonic CM while the original one was in me_frame"""
+        for me_frame in ([3], [3, 4]):
+            self.assertMomentaEqual(self._boosted(me_frame, hypp_id=1),
+                                    self._boosted(me_frame, hypp_id=0))
+
+    def test_a_boost_set_for_the_new_matrix_element_wins(self):
+        """'change boost' (boost_event) is the user's explicit choice for the
+        new matrix element; True means: leave the momenta as they are"""
+        stub = _BaseStub(8)
+        stub.boost_event = True
+        event = _wz_event(WZ_LAYOUTS[0])
+        all_p = [event.get_momenta(WZ_ORDER)]
+        self.assertIs(stub.method_boost_event(event, all_p, WZ_ORDER, 1), all_p)
+
+    def test_a_massless_frame_is_refused(self):
+        """a single massless leg has no rest frame: this used to be a
+        ZeroDivisionError deep inside FourMomentum.boost"""
+        event = _event(LAYOUTS[0])
+        all_p = [event.get_momenta(ORDER)]
+        # leg 1, a gluon
+        self.assertRaises(madgraph.InvalidCmd, _BaseStub(2).method_boost_event,
+                          event, all_p, ORDER, 0)
+        self.assertRaises(madgraph.InvalidCmd,
+                          _BaseStub(2).boost_momenta_to_rest_frame,
+                          all_p[0], lhe_parser.FourMomentum(all_p[0][0]))
+
+    def test_each_assignment_gets_its_own_frame(self):
+        """with identical particles all_p holds one assignment per guess of
+        which particle is which leg; each is boosted to the rest frame of *its*
+        leg -- one boost from all_p[0] left the other guesses' leg moving"""
+        event = _event(LAYOUTS[0])
+        first = event.get_momenta(ORDER)
+        swapped = list(first)
+        swapped[2], swapped[4] = swapped[4], swapped[2]
+        for stub, hypp_id in ((_BaseStub(2 ** 3), 0), (_BaseStub(2 ** 3), 1)):
+            out = stub.method_boost_event(event, [first, swapped], ORDER,
+                                          hypp_id)
+            for p in out:
+                self.assertEqual(p[2][1:], (0., 0., 0.))
+        # and the same in DensityInterface's boost, legs given 0-based
+        density = _DensityStub([[6], '', []])
+        out = density.method_boost_event(event, [first, swapped], ORDER, 0, [2])
+        for p in out:
+            for comp in _rest(p, [2]):
+                self.assertAlmostEqual(comp, 0., places=8)
 
 
 if __name__ == '__main__':
