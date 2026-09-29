@@ -65,6 +65,10 @@ c
       logical                 mcatnlo_delta
       common /cMCatNLO_Delta/ mcatnlo_delta
 
+c Born spreading of the Born contribution in S events
+      logical                 born_spreading
+      common /cBornSpreading/ born_spreading
+
 c
 c     Reweight info
 c

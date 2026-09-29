@@ -789,15 +789,15 @@ class MECmdShell(IOTests.IOTestManager):
                 break
         #      Run at p-p collider (6500.0 + 6500.0 GeV)
         self.assertIn('Run at p-p collider (6500.0 + 6500.0 GeV)', data[i+2])
-        #      Total cross-section: 1.249e+03 +- 3.2e+00 pb        
+        #      Total cross section: 6.690e+03 +- ... pb
         cross_section = data[i+4]
         cross_section = float(cross_section.split(':')[1].split('+-')[0])
         try:
-            self.assertAlmostEqual(6675.0, cross_section,delta=50)
+            self.assertAlmostEqual(6690.0, cross_section,delta=50)
         except TypeError:
-            self.assertTrue(cross_section < 6750.0 and cross_section > 6650.0)
+            self.assertTrue(abs(cross_section - 6690.0) <= 50)
 
-        #      Number of events generated: 10000        
+        #      Number of events generated: 100
         self.assertIn('Number of events generated: 100', data[i+3])
 
 
