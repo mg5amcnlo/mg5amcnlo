@@ -12,6 +12,121 @@ The target is the complete replacement of the numerical mass inversion and
 finite-difference Jacobian, for every applicable final-state resonance channel.
 The reference is [Ježo and Nason, arXiv:1509.09071, section 3](https://arxiv.org/html/1509.09071#S3).
 
+## Selecting a final-state or incoming recoiler
+
+Fixed-order FKS calculations can choose the recoiler for final-state emitters
+with `Cards/FKS_params.dat`:
+
+```
+#FKSFinalRecoil
+1
+```
+
+`0` (the default) retains automatic resonance recoil, with global final-state
+recoil when no resonance subsystem is selected. `1` and `2` select the
+corresponding incoming leg. Incoming recoil requires two incoming particles and
+a massless parton with a hadronic PDF on the selected beam. Initial-state
+emitters continue to use their existing ISR map. Fixed beams and dressed lepton
+beams cannot supply the required variable momentum fraction. MC@NLO runs reject
+the incoming recoil option: adapting the shower counterterms is separate work.
+Regenerate an existing process output to install the updated Fortran sources.
+
+Callers can instead provide a logical mask in real-emission external-leg labels:
+
+```fortran
+      recoilers=.false.
+      recoilers(1)=.true.
+      call set_fks_recoilers(recoilers,pass)
+```
+
+Select exactly one incoming leg, or one or more final-state legs; exclude the
+emitter and emitted leg. A final-state mask receives a common recoil boost,
+preserving the invariant masses within that system and leaving every other
+physical spectator fixed. Set the mask after initializing the current process,
+FKS indices, masses and beams. It overrides the card until
+`clear_fks_recoilers()` is called and is checked again for each active sector;
+callers changing external-leg labels must replace or clear their mask.
+An invalid request returns `pass=.false.` without replacing the previous one.
+The low-level forward/inverse routines also accept the mask (FF) or incoming
+leg and momentum fraction (FI) explicitly.
+
+### Incoming recoil map and measure
+
+Let `pbar_a = xbar_a P_a` be the incoming Born parton and `pbar_j` the
+final-state Born emitter. Introduce the auxiliary massless momentum
+`Rbar = (1-xbar_a) P_a` and the timelike radiation frame `K=pbar_j+Rbar`.
+The ordinary final-state map splits the emitter inside this system, leaving
+`R=lambda Rbar` on the beam axis. The physical incoming parton becomes
+
+```
+p_a = P_a - R
+x_a = 1 - lambda (1-xbar_a).
+```
+
+Only this incoming leg and the two daughters change. This has the local FI
+recoil structure described in the [Pythia 8.3 manual, equation (117)](https://pythia.org/download/pdf/pythia8300.pdf):
+the incoming fraction grows while its direction stays fixed. The radiation
+coordinates and sampling remain FKS coordinates. A positive reservoir enforces
+`x_a <= 1`, including configurations with `x_a/xbar_a > 2`. The massive map
+retains both kinematic solutions. The inverse reconstructs the Born fraction
+and recovers its azimuth in the Born CM frame.
+
+Including the integration over the incoming fraction changes the radiation
+measure to the ordinary FF measure divided by `lambda`. The real flux and PDF
+arguments use the new physical incoming momenta; counterevents use their own
+incoming fractions. This extra Jacobian is essential even though the auxiliary
+momentum construction uses the existing FF kernels.
+
+`lambda=1` at the soft and massless-collinear endpoints. Consequently the local
+soft eikonal, spin-correlated collinear term and Born/virtual normalization use
+the existing resonance-frame formulas with `K` as their reference momentum.
+The soft endpoint includes the finite angular mismatch below, and the
+collinear and soft-collinear endpoints use their corresponding rescaled
+cutoffs. The integrated Born/virtual expression is unchanged. In
+`d=4-2 epsilon`, the reservoir correction is `lambda^(-1+2 epsilon)`;
+`log(lambda)` removes both singular limits, so its epsilon-dependent factor
+leaves no additional finite integrated term. Choosing an incoming spectator
+for a final-state emitter introduces no PDF factorization counterterm.
+
+### Checks for incoming recoil
+
+```
+python3 -m unittest tests.unit_tests.fks.test_recoil_selection \
+  tests.unit_tests.fks.test_initial_recoil \
+  tests.unit_tests.fks.test_resonance_recoil \
+  tests.unit_tests.fks.test_momentum_maps \
+  tests.unit_tests.fks.test_pythia8_matching
+```
+
+The incoming-recoil tests compile the production routines with runtime checks.
+They cover both beams, swapped emitter/emission labels, massive and massless
+emitters, both massive solutions, the inverse and spin phase, soft and collinear
+counterevents, invalid selections, and the actual endpoint prefactors. The
+production generator is checked for its real/counterevent fluxes, momentum
+fractions, Born projection and asymmetric longitudinal boost. A massive
+one-particle Born final state checks that no spare final-state slot is needed
+for the auxiliary reservoir.
+
+An independent integral over the emitted momentum and incoming fraction checks
+the entire radiation measure against
+`K^2 [1-r+r log(r)]/(16 pi^2)`, with `r=m_j^2/K^2` and `r log(r)=0` at zero
+mass. This check includes the extra reservoir Jacobian and both massive
+branches. The endpoint tests compare the local and global integrated collinear
+expressions and exercise the finite soft correction through the production
+prefactors.
+
+The generated process `u d > u d [QCD]` builds both the matrix-element limit
+tester and the full fixed-order executable. For each incoming-recoil choice,
+all six sectors pass their soft/collinear test summaries. Across the two runs,
+239 of 240 nonzero individual samples satisfy the stricter convergence test;
+one beam-2 sample becomes numerically unstable at simultaneous very soft and
+collinear kinematics. Its daughter-pair invariant approaches external-leg
+mass-shell roundoff, while its phase-space weight converges to the endpoint.
+The same-seed default-recoil baseline has no failed samples. No test tolerance
+was changed. Logs and source hashes are in
+`/tmp/mg5_initial_recoil_generated_1t4ke8e2/validation_manifest.json`.
+These checks do not constitute an integrated cross-section comparison.
+
 ## Radiation map
 
 `SubProcesses/resonance_recoil.f` takes an explicit mask of the resonance's

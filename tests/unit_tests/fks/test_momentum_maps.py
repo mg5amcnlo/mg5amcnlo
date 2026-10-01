@@ -89,6 +89,7 @@ class TestMomentumMaps(unittest.TestCase):
                    str(work / "native_context.f90"),
                    str(work / "maps.f"), str(TEMPLATE / "boostwdir2.f"),
                    str(TEMPLATE / "resonance_recoil.f"),
+                   str(TEMPLATE / "initial_recoil.f"),
                    str(ROOT / "HELAS/boostx.F"), str(ROOT / "HELAS/rotxxx.F"),
                    str(ROOT / "tests/input_files/check_native_projection.f90"),
                    str(ROOT / "tests/input_files/check_momentum_maps.f90"),

@@ -82,8 +82,8 @@ c
 
       subroutine generate_momenta_conf_wrapper(nndim,jac,x,itree,qmass
      $     ,qwidth,p)
-c The Born resonance mass is sampled once. Radiation recoils only
-c against its aunt, so event and counterevents keep the same four-vector.
+c Select the recoil policy after the Born channel has identified its
+c resonance descendants. The explicit API and card may override it.
       implicit none
       include 'genps.inc'
       include 'nexternal.inc'
@@ -108,10 +108,11 @@ c against its aunt, so event and counterevents keep the same four-vector.
       resonance_members=.false.
       resonance_momentum=0d0
       resonance_mass2=0d0
+      initial_recoil_leg=0
       call set_tau_min()
-      resonance_recoil=granny_is_res.and.abrv.ne.'born'
-      if(resonance_recoil)
+      if(granny_is_res)
      $     resonance_members=granny_chain_real_final(1:nexternal)
+      call select_fks_recoil(resonance_members,abrv.ne.'born')
       write_granny(nFKSprocess)=.true.
       which_is_granny(nFKSprocess)=igranny
       call generate_momenta_conf(nndim,jac,x,itree,qmass,qwidth,p)
@@ -125,6 +126,7 @@ c against its aunt, so event and counterevents keep the same four-vector.
       implicit none
 
       include 'nexternal.inc'
+      include 'resonance_recoil.inc'
       double precision qmass(-nexternal:0),qwidth(-nexternal:0)
       double precision totmass, stot
       double precision rndx(2)
@@ -204,6 +206,16 @@ c Generate the rapditity of the Born system
 c No PDFs (also use fixed energy when performing tests)
          call compute_tau_y_epem(j_fks,one_body,totmass,stot,
      &        tau_born,ycm_born,ycmhat)
+c FI limit tests need nonzero beam momentum available for recoil. Keep
+c their Born energy fixed, with xbar=1/2 instead of the usual xbar=1.
+c A one-body Born fixes tau from its physical mass.
+         if((softtest.or.colltest).and.initial_recoil_leg.gt.0)then
+            if(one_body)then
+               tau_born=totmass**2/stot
+            else
+               tau_born=0.25d0
+            endif
+         endif
          if (j_fks.le.nincoming .and. .not.(softtest.or.colltest)) then
             write (*,*) 'Process has incoming j_fks, but fixed shat: '/
      &           /'not allowed for processes generated at NLO.'
@@ -471,8 +483,8 @@ c Trivial, but prevents loss of accuracy
       ! event-projection if use_evpr is set to false
       !(note that in e+e- collisions, if tau is generated with a BW
       ! then use_evpr is set to true)
-      if ((lpp(1).eq.1.and.lpp(2).eq.1).or.
-     $   (lpp(1).eq.2.and.lpp(2).eq.2).or.
+      if ((abs(lpp(1)).eq.1.and.abs(lpp(2)).eq.1).or.
+     $   (abs(lpp(1)).eq.2.and.abs(lpp(2)).eq.2).or.
      $   (lpp(1).eq.0.and.lpp(2).eq.0)) then
           use_evpr = .true.
       else if ((abs(lpp(1)).eq.3.and.abs(lpp(2)).eq.3).or.
@@ -540,7 +552,7 @@ c Set all to negative values and exit
       integer ixEi,ixyij,ixpi,imother
       double precision xmrec2,m_j_fks,phi_i_fks,tau,
      $   xi_i_fks,y_ij_fks,xi_i_hat,xiimax,xinorm,xjac,xpswgt,
-     $   ycm,xp(0:3,nexternal),xbjrk(2),p_i_fks(0:3)
+     $   ycm,xp(0:3,nexternal),xbjrk(2),p_i_fks(0:3),beam_ratio
       integer i,j
 
       real*8 pi
@@ -694,7 +706,24 @@ c case 3: j_fks is initial state
          ycm=ycm_born
          xbjrk(1)=xbjrk_born(1)
          xbjrk(2)=xbjrk_born(2)
-         if (resonance_recoil) then
+         if (initial_recoil_leg.gt.0) then
+            call generate_momenta_initial_recoil(icountevts,
+     $           isolsign,i_fks,j_fks,m_j_fks,initial_recoil_leg,
+     $           xbjrk_born(initial_recoil_leg),x(ixEi),phi_i_fks,
+     $           xp,xiimax,xinorm,xi_i_fks,y_ij_fks,xi_i_hat,
+     $           p_i_fks,xjac,xpswgt,resonance_momentum,
+     $           resonance_mass2,beam_ratio,pass)
+            if (.not.pass) goto 112
+c The radiation routines leave all momenta in the Born CM. Only the
+c selected physical incoming momentum (and its PDF argument) changes.
+            xbjrk(initial_recoil_leg)=
+     $           xbjrk_born(initial_recoil_leg)*beam_ratio
+            tau=tau_born*beam_ratio
+            shat=shat_born*beam_ratio
+            sqrtshat=sqrt(shat)
+            ycm=ycm_born+sign(0.5d0,1.5d0-initial_recoil_leg)
+     $           *log(beam_ratio)
+         elseif (resonance_recoil) then
             call generate_momenta_resonance_final(icountevts,
      $           isolsign,i_fks,j_fks,m_j_fks,resonance_members,
      $           x(ixEi),phi_i_fks,xp,xiimax,xinorm,xi_i_fks,
@@ -743,7 +772,11 @@ c All done, so check four-momentum conservation
 
 c All real channels use the same reference projection for their
 c partition of unity, even when their subtraction maps differ.
-      if(resonance_recoil.and.icountevts.eq.-100.and.xjac.gt.0d0)then
+c The selected FI beam is independent of the Born diagram, so its
+c projection already supplies a common point. A global FF projection
+c does not exist for a one-particle Born final state.
+      if(resonance_recoil.and.initial_recoil_leg.eq.0.and.
+     $     icountevts.eq.-100.and.xjac.gt.0d0)then
          if(xi_i_fks.eq.0d0.or.
      $        (m_j_fks.eq.0d0.and.y_ij_fks.eq.1d0))then
             p_born_ev=p_born_l
@@ -1871,6 +1904,7 @@ c local
       double precision native_u,native_uborn,native_eborn,native_ej,
      $     native_denom,native_radial,native_ps,native_sign,
      $     native_delta,native_onepy
+      double precision zero_recoil_delta,root_conjugate
 c external
       double precision rho
       external rho
@@ -1959,6 +1993,20 @@ c
       xmj2=xmj**2
       xmjhat=xmj/sqrtshat
       xmhat=sqrt(xmrec2)/sqrtshat
+      if(xmrec2.eq.0d0)then
+c A beam-recoil reservoir can be arbitrarily soft. In that limit the
+c massive two-body threshold makes the generic discriminant a severe
+c cancellation. These are its exact massless-recoil factorizations.
+         zero_recoil_delta=(shat-xmj2)/shat
+         xim=(sqrtshat-xmj)/sqrtshat
+         cffA2=zero_recoil_delta+xmjhat**2*y_ij_fks**2
+         cffB2=-2d0*zero_recoil_delta
+         cffC2=zero_recoil_delta**2
+         cffDEL2=4d0*xmjhat**2*cffC2*(1d0-y_ij_fks**2)
+         xiBm=zero_recoil_delta/(1d0+xmjhat*
+     $        sqrt(max(0d0,1d0-y_ij_fks**2)))
+         ximax=zero_recoil_delta
+      else
       xim=(1-xmhat**2-2*xmjhat+xmjhat**2)/(1-xmjhat)
       cffA2=1-xmjhat**2*(1-y_ij_fks**2)
       cffB2=-2*(1-xmhat**2-xmjhat**2)
@@ -1966,6 +2014,7 @@ c
       cffDEL2=cffB2**2-4*cffA2*cffC2
       xiBm=(-cffB2-sqrt(cffDEL2))/(2*cffA2)
       ximax=1-(xmhat+xmjhat)**2
+      endif
       if(xiBm.lt.(xim-1.d-8).or.xim.lt.0.d0.or.xiBm.lt.0.d0.or.
      &     xiBm.gt.(ximax+1.d-8).or.ximax.gt.1.or.ximax.lt.0.d0)then
          write(*,*)'WARNING #4 in one_tree',xim,xiBm,ximax
@@ -2128,6 +2177,8 @@ c
       x3len_i_fks=E_i_fks
       if(.not.native_mapping)then
       b2m4ac=xi_i_fks**2*cffA2 + xi_i_fks*cffB2 + cffC2
+      if(xmrec2.eq.0d0)b2m4ac=(zero_recoil_delta-xi_i_fks)**2
+     $     -xmjhat**2*xi_i_fks**2*(1d0-y_ij_fks**2)
       if(b2m4ac.le.0.d0)then
          if(abs(b2m4ac).lt.1.d-3)then
             b2m4ac=0.d0
@@ -2144,6 +2195,16 @@ c
       x3len_j_fks_den=(2-xi_i_fks*(1-y_ij_fks))*
      &                (2-xi_i_fks*(1+y_ij_fks))
       x3len_j_fks=sqrtshat*x3len_j_fks_num/x3len_j_fks_den
+      if(xmrec2.eq.0d0)then
+         root_conjugate=xi_i_fks*y_ij_fks*
+     $        (1d0+xmjhat**2-xi_i_fks)+
+     $        (2d0-xi_i_fks)*sqrt(b2m4ac)*isolsign
+         if(abs(x3len_j_fks_num).lt.0.01d0*
+     $        abs(root_conjugate))
+     $        x3len_j_fks=sqrtshat*zero_recoil_delta*
+     $        (xim-xi_i_fks)*(1d0+xmjhat-xi_i_fks)/
+     $        root_conjugate
+      endif
       if(x3len_j_fks.lt.0.d0)then
          write(*,*)'WARNING #7 in one_tree',
      &        x3len_j_fks_num,x3len_j_fks_den,xi_i_fks,y_ij_fks
@@ -4015,7 +4076,7 @@ C dressed lepton stuff
 ! Input momenta are in the symmetric hadron frame used by generate_momenta.
 ! No Born integration-channel coordinates or Jacobians are recovered.
       use kinematics_module, only: boost_n1_to_its_cms,
-     $     get_xi_from_p,get_yij_from_p,get_phi_from_p
+     $     boost_n1_to_lab,get_xi_from_p,get_yij_from_p,get_phi_from_p
       implicit none
       include 'genps.inc'
       include 'nexternal.inc'
@@ -4028,11 +4089,38 @@ C dressed lepton stuff
       double precision pmass(nexternal)
       common /to_mass/pmass
       double precision m_j_fks,xi_i_fks,y_ij_fks,phi_i_fks,xbjrk(2),shat
-     $     ,sqrtshat,tau,ycm,y_lab_to_cms
+     $     ,sqrtshat,tau,ycm,y_lab_to_cms,xbar,trial_jac,trial_ps
       logical pass
       m_j_fks=pmass(j_fks)
 
       xbjrk(1:2)=p_lab(0,1:2)/(sqrt(stot)/2d0)
+
+      if(initial_recoil_leg.gt.0.and.j_fks.gt.nincoming)then
+c First find the covariant Born projection and its incoming fractions.
+c Recover azimuth only after returning the real point to that Born CM:
+c a direct inversion in the lab would use a different transverse basis.
+         trial_jac=1d0
+         trial_ps=1d0
+         call invert_momenta_initial_recoil(p_lab,initial_recoil_leg,
+     $        xbjrk(initial_recoil_leg),i_fks,j_fks,m_j_fks,
+     $        pb(:,1:nexternal-1),xx,trial_jac,trial_ps,
+     $        resonance_momentum,resonance_mass2,xbar,pass)
+         if(.not.pass)then
+            xjac0=-148d0
+            return
+         endif
+         xbjrk_born=xbjrk
+         xbjrk_born(initial_recoil_leg)=xbar
+         tau_born=xbjrk_born(1)*xbjrk_born(2)
+         ycm_born=log(xbjrk_born(1)/xbjrk_born(2))/2d0
+         call boost_n1_to_lab(p_lab,p_cms,ycm_born)
+         call invert_momenta_initial_recoil(p_cms,initial_recoil_leg,
+     $        xbjrk(initial_recoil_leg),i_fks,j_fks,m_j_fks,
+     $        pb(:,1:nexternal-1),xx,xjac0,xpswgt0,
+     $        resonance_momentum,resonance_mass2,xbar,pass)
+         if(.not.pass)xjac0=-148d0
+         return
+      endif
 
       call boost_n1_to_its_cms(p_lab,p_cms,y_lab_to_cms)
       
@@ -4377,7 +4465,7 @@ c     Use xp in the reduced frame (a.k.a. tilde frame) to get the Born momenta.
      $     native_eborn,native_delta,native_onepy,native_ratio,
      $     native_recoil,native_inverse_denom
       double precision rho,dot,sstiny,cctiny,branch_sign,
-     $     native_fsr_angle
+     $     native_fsr_angle,zero_recoil_delta
       external rho,dot,native_fsr_angle
       logical        softtest,colltest
       common/sctests/softtest,colltest
@@ -4415,6 +4503,17 @@ c subtracting the hard daughters from the beams loses that precision.
       xmj2=xmj**2
       xmjhat=xmj/sqrtshat
       xmhat=sqrt(xmrec2)/sqrtshat
+      if(xmrec2.eq.0d0)then
+         zero_recoil_delta=(shat-xmj2)/shat
+         xim=(sqrtshat-xmj)/sqrtshat
+         cffA2=zero_recoil_delta+xmjhat**2*y_ij_fks**2
+         cffB2=-2d0*zero_recoil_delta
+         cffC2=zero_recoil_delta**2
+         cffDEL2=4d0*xmjhat**2*cffC2*(1d0-y_ij_fks**2)
+         xiBm=zero_recoil_delta/(1d0+xmjhat*
+     $        sqrt(max(0d0,1d0-y_ij_fks**2)))
+         ximax=zero_recoil_delta
+      else
       xim=(1-xmhat**2-2*xmjhat+xmjhat**2)/(1-xmjhat)
       cffA2=1-xmjhat**2*(1-y_ij_fks**2)
       cffB2=-2*(1-xmhat**2-xmjhat**2)
@@ -4422,6 +4521,7 @@ c subtracting the hard daughters from the beams loses that precision.
       cffDEL2=cffB2**2-4*cffA2*cffC2
       xiBm=(-cffB2-sqrt(cffDEL2))/(2*cffA2)
       ximax=1-(xmhat+xmjhat)**2
+      endif
       if(y_ij_fks.ge.0.d0)then
          xirplus=xim
          xirminus=0.d0

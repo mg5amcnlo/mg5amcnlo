@@ -13,7 +13,8 @@ c still covers the full physical real phase space.
       common /to_mconfigs/this_config
       integer igranny,iaunt
       logical granny_is_res,granny_chain(-nexternal:nexternal),
-     $     granny_chain_real_final(-nexternal:nexternal),mapping_save
+     $     granny_chain_real_final(-nexternal:nexternal),mapping_save,
+     $     default_members(nexternal)
       common /c_granny_res/igranny,iaunt,granny_is_res,granny_chain,
      $     granny_chain_real_final
       this_config=iconfig_native
@@ -23,17 +24,15 @@ c still covers the full physical real phase space.
       native_mapping=.false.
       call set_tau_min()
       native_mapping=mapping_save
-      resonance_recoil=granny_is_res
-      resonance_members=.false.
-      if(resonance_recoil)
-     $     resonance_members=granny_chain_real_final(1:nexternal)
-      resonance_momentum=0d0
-      resonance_mass2=0d0
+      default_members=.false.
+      if(granny_is_res)
+     $     default_members=granny_chain_real_final(1:nexternal)
+      call select_fks_recoil(default_members,.true.)
       end
 
 
       subroutine native_recoil_groups(ngroups,group_config,group_of)
-c Diagrams with the same recoil mask share a native projection. Their
+c Diagrams with the same recoil mask and beam share a native projection.
 c Born-channel weights are added, so no extra chart sampling or Jacobian
 c enters the native H density. With no resonances this is one group.
       use mint_module, only: iconfig
@@ -43,7 +42,7 @@ c enters the native H density. With no resonances this is one group.
       include 'born_conf.inc'
       include 'resonance_recoil.inc'
       integer ngroups,group_config(lmaxconfigs),group_of(lmaxconfigs),
-     $     i,g
+     $     i,g,recoil_beams(lmaxconfigs)
       logical masks(nexternal,lmaxconfigs)
       ngroups=0
       group_of=0
@@ -51,11 +50,13 @@ c enters the native H density. With no resonances this is one group.
          iconfig=i
          call select_native_recoil(i)
          do g=1,ngroups
-            if(all(masks(:,g).eqv.resonance_members))exit
+            if(all(masks(:,g).eqv.resonance_members).and.
+     $           recoil_beams(g).eq.initial_recoil_leg)exit
          enddo
          if(g.gt.ngroups)then
             ngroups=g
             masks(:,g)=resonance_members
+            recoil_beams(g)=initial_recoil_leg
             group_config(g)=i
          endif
          group_of(i)=g

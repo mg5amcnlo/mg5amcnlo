@@ -16,6 +16,7 @@ module FKSParams
               SelectedCouplingOrders(maxCouplingTypes,0:maxCouplingsSelected), &
               QCD_squared_selected
   logical :: separate_flavour_configs,IncludeBornContributions,use_poly_virtual
+  integer :: FKSFinalRecoil=0
 
 contains
 
@@ -77,6 +78,12 @@ contains
              endif
           else if (buff .eq. '#SeparateFlavourConfigurations') then
              read(68,*,end=999) separate_flavour_configs
+          else if (buff .eq. '#FKSFinalRecoil') then
+             read(68,*,end=999) FKSFinalRecoil
+             if (FKSFinalRecoil.lt.0.or.FKSFinalRecoil.gt.2) then
+                write(*,*) 'FKSFinalRecoil must be 0, 1 or 2.'
+                stop 1
+             endif
           else if (buff .eq. '#UsePolyVirtual') then
              read(68,*,end=999) use_poly_virtual
           else if (buff .eq. '#VetoedContributionTypes') then
@@ -205,6 +212,7 @@ contains
        write(*,*) ' > MinVirtualFraction        = ',Min_virt_fraction
        write(*,*) ' > SeparateFlavourConfigs    = ',separate_flavour_configs
        write(*,*) ' > UsePolyVirtual            = ',use_poly_virtual
+       write(*,*) ' > FKSFinalRecoil            = ',FKSFinalRecoil
        write(*,*) &
             '==============================================================='
        paramPrinted=.TRUE.
@@ -228,6 +236,7 @@ contains
     Min_virt_fraction=0.005d0
     separate_flavour_configs=.false.
     use_poly_virtual=.true.
+    FKSFinalRecoil=0
     IncludeBornContributions=.true.
     SelectedContributionTypes(0)=0
     VetoedContributionTypes(0)=0

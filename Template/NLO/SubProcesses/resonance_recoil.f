@@ -344,4 +344,5 @@ c their physical momenta outside this auxiliary decay frame.
       include 'nexternal.inc'
       include 'resonance_recoil.inc'
       data resonance_recoil/.false./
+      data initial_recoil_leg/0/
       end

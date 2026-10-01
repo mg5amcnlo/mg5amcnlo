@@ -180,5 +180,22 @@
 ! Default :: .false.
 !
 ! ==========================================================================
+! Recoil choice for final-state FKS emitters
+! ==========================================================================
+!
+! 0: use the resonance's final-state decay system when available, or
+!    the complete final-state recoil system otherwise (default).
+! 1: use incoming particle 1 as the local recoiler.
+! 2: use incoming particle 2 as the local recoiler.
+! Initial-state recoil requires two incoming particles and a massless
+! selected parton from a hadron beam (abs(lpp)=1 or 2). Its Bjorken x
+! increases during radiation; the other final-state spectators keep
+! their momenta. This option is supported for fixed-order calculations.
+! Initial-state emitters keep their ordinary FKS map.
+#FKSFinalRecoil
+0
+! Default :: 0
+!
+! ==========================================================================
 ! End of FKS_params.dat file
 ! ==========================================================================

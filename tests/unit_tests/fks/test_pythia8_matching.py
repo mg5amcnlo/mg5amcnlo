@@ -178,6 +178,8 @@ class TestPythia8Matching(unittest.TestCase):
             'shower_scale_nbody_max(5,5)\nend module\n')
         selections = {
             'genps_fks.f': ('invert_fks_radiation', 'generate_momenta_initial_inverse',
+                           'generate_momenta_massive_final',
+                           'generate_momenta_massless_final',
                            'generate_momenta_massive_final_inverse',
                            'generate_momenta_massless_final_inverse',
                            'native_fsr_angle', 'get_recoil', 'getangles'),
@@ -219,6 +221,7 @@ class TestPythia8Matching(unittest.TestCase):
                        str(TEMPLATE / 'kinematics_module.f90'), 'native.f90', 'scale.f90',
                        'routines.f', str(TEMPLATE / 'boostwdir2.f'),
                        str(TEMPLATE / 'resonance_recoil.f'),
+                       str(TEMPLATE / 'initial_recoil.f'),
                        str(ROOT / 'HELAS/boostx.F'),
                        str(ROOT / 'tests/input_files/check_pythia8_matching.f90'),
                        '-o', str(executable)]

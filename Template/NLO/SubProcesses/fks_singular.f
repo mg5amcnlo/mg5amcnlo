@@ -1581,6 +1581,9 @@ c Initialize hiostograms for fixed order runs
       endif
       call set_cms_stuff(0)
 c f_* multiplication factors for Born and nbody
+c For FI recoil the local frame includes the unused beam momentum.
+c The additional hadronic measure factor is one in the soft limit,
+c so the same local radiation normalization also removes that map.
       radiation_mass2=shat
       if(resonance_recoil)radiation_mass2=resonance_mass2
       f_b=jac_cnt(0)*xinorm_ev/(min(xiimax_ev,xiBSVcut_used)*radiation_mass2/(16
@@ -1966,6 +1969,12 @@ c adds log(a_j/a(k)) times the soft density: combine it with the
 c negative endpoint counterterm by using a(k)*xicut here. This uses
 c the existing angular sample once per Born point. MC G replacement
 c factors below contain no endpoint or finite mismatch terms.
+c This also applies to an incoming recoiler represented by a beam
+c reservoir. Its measure correction tends to one in every singular
+c limit. In d=4-2*epsilon the omitted factor lambda**(2*epsilon)
+c cannot leave a finite remnant: log(lambda) removes both soft and
+c final-state collinear poles. No initial-state PDF counterterm is
+c induced by changing the recoiler of a final-state emitter.
             soft_cut=xicut_used*soft_scale
             coll_cut=xicut_used*coll_scale
             angle_cut=delta_used*angular_scale

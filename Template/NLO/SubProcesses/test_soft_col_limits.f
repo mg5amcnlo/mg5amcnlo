@@ -708,6 +708,7 @@ c Note that tests are always performed at fixed energy with Bjorken x=1.
       
 
       subroutine init_test_limits(ilim,nstep)
+      use FKSParams, only: FKSParamReader,paramFileName
       use mint_module
       use process_module
       use scale_module
@@ -737,6 +738,7 @@ c-----
          fixed_order=.false.
       endif
       call setrun               !Sets up run parameters
+      call FKSParamReader(paramFileName,.true.,.false.)
       call setpara('param_card.dat') !Sets up couplings and masses
       call fill_configurations_common
       ! initialise the global, but process dependent, information in the process module.

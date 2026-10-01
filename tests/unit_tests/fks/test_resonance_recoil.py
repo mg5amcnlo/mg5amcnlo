@@ -69,6 +69,7 @@ class TestResonanceRecoil(unittest.TestCase):
                        str(TEMPLATE / "process_module.f90"),
                        str(TEMPLATE / "kinematics_module.f90"), str(work / "maps.f"),
                        str(TEMPLATE / "resonance_recoil.f"),
+                       str(TEMPLATE / "initial_recoil.f"),
                        str(TEMPLATE / "boostwdir2.f"),
                        str(ROOT / "HELAS/boostx.F"),
                        str(ROOT / "HELAS/rotxxx.F"),
