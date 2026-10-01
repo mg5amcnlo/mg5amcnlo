@@ -46,9 +46,9 @@ class TestResonanceRecoil(unittest.TestCase):
                          "generate_momenta_massive_final",
                          "generate_momenta_massless_final_inverse",
                          "generate_momenta_massive_final_inverse",
-                         "native_fsr_angle", "getangles", "get_recoil",
+                         "native_fsr_angle", "get_massive_fsr_bounds", "getangles", "get_recoil",
                          "generate_native_momenta", "invert_fks_radiation",
-                         "generate_FKS_kinematics", "compute_flux",
+                         "generate_FKS_kinematics", "reset_fks_kinematics", "compute_flux",
                          "generate_momenta_initial", "generate_momenta_initial_inverse",
                          "fill_FKS_commons", "lambda", "yminmax", "gentcms"):
                 routines.append(fortran_routine(TEMPLATE / "genps_fks.f", name))

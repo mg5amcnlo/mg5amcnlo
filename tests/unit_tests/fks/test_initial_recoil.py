@@ -47,8 +47,9 @@ class TestInitialRecoil(unittest.TestCase):
         routines = []
         for name in ("generate_momenta_massless_final", "generate_momenta_massive_final",
                      "generate_momenta_massless_final_inverse", "generate_momenta_massive_final_inverse",
-                     "native_fsr_angle", "getangles", "get_recoil",
-                     "generate_FKS_kinematics", "generate_native_momenta", "invert_fks_radiation",
+                     "native_fsr_angle", "get_massive_fsr_bounds", "getangles", "get_recoil",
+                     "generate_FKS_kinematics", "reset_fks_kinematics",
+                     "generate_native_momenta", "invert_fks_radiation",
                      "generate_momenta_initial", "generate_momenta_initial_inverse",
                      "compute_flux", "fill_FKS_commons", "lambda", "yminmax", "gentcms"):
             routines.append(fortran_routine(TEMPLATE / "genps_fks.f", name))

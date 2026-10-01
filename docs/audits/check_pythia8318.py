@@ -22,9 +22,21 @@ atexit.register(shutil.rmtree, WORK)
 SRC = ROOT / 'Template/NLO/SubProcesses'
 
 def routine(file, name):
-    source = file.read_text()
-    start = re.search(r'^      (?:subroutine|(?:(?:double precision|logical|integer) )?function) '+name+r'\b', source, re.M|re.I)
+    files = sorted(file.parent.glob('genps_fks*.f')) if file.name == 'genps_fks.f' else [file]
+    pattern = re.compile(
+        r'^      (?:subroutine|(?:(?:double precision|logical|integer) )?function) '
+        + re.escape(name) + r'\b', re.M|re.I)
+    matches = []
+    for candidate in files:
+        source = candidate.read_text()
+        matches.extend((candidate, source, start) for start in pattern.finditer(source))
+    if len(matches) != 1:
+        raise ValueError('Expected one Fortran routine {}, found {} in {}'.format(
+            name, len(matches), ', '.join(str(candidate) for candidate, _, _ in matches)))
+    _, source, start = matches[0]
     end = re.search(r'^      end[ \t]*$',source[start.start():],re.M|re.I)
+    if end is None:
+        raise ValueError('Missing end of Fortran routine: ' + name)
     return source[start.start():start.start()+end.end()]+'\n'
 
 for name, data in {
@@ -34,11 +46,15 @@ for name, data in {
     'scale.f90':'module scale_module\ndouble precision :: shower_scale_nbody_max(4,4)=1000d0\nend module\n',
 }.items():
     (WORK/name).write_text(data)
+for name in ('fks_powers.inc', 'resonance_recoil.inc'):
+    shutil.copyfile(SRC/name, WORK/name)
 
 routines = [routine(SRC/'genps_fks.f', n) for n in (
     'invert_fks_radiation', 'generate_momenta_initial_inverse',
     'generate_momenta_massive_final_inverse', 'generate_momenta_massless_final_inverse',
-    'native_fsr_angle','get_recoil','getangles')]
+    'generate_momenta_massive_final', 'generate_momenta_massless_final',
+    'native_fsr_angle','get_massive_fsr_bounds','get_recoil','getangles')]
+routines += [routine(SRC/'fks_singular.f', n) for n in ('rotate_invar', 'trp_rotate_invar')]
 routines += [routine(SRC/'montecarlocounter.f',n) for n in
              ('zPY8','xiPY8','xjacPY8','dinvariants_dFKS','xfact_ileg12','xfact_ileg3','xfact_ileg4','get_dead_zone','get_angle')]
 routines += [routine(ROOT/'Template/NLO/Source/kin_functions.f',n) for n in ('dot','rho','threedot')]
@@ -139,7 +155,9 @@ cmd=['gfortran','-O2','-std=legacy','-ffixed-line-length-none','-ffree-line-leng
      '-fno-automatic','-ffunction-sections','-fdata-sections',
      '-Wl,-dead_strip' if sys.platform=='darwin' else '-Wl,--gc-sections',
      '-I',str(WORK),str(SRC/'process_module.f90'),str(SRC/'kinematics_module.f90'),
-     'native.f90','scale.f90','routines.f',str(SRC/'boostwdir2.f'),'driver.f90','-o','audit']
+     'native.f90','scale.f90','routines.f',str(SRC/'boostwdir2.f'),
+     str(SRC/'resonance_recoil.f'),str(SRC/'initial_recoil.f'),
+     str(ROOT/'HELAS/boostx.F'),'driver.f90','-o','audit']
 subprocess.run(cmd,cwd=WORK,check=True,capture_output=True,text=True)
 
 def plus(a,b):return [x+y for x,y in zip(a,b)]

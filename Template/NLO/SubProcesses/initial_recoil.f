@@ -131,8 +131,8 @@ c for the measure, including the massive second solution/native map.
      $     unchanged(0:3),reservoir(0:3),born_ratio,
      $     work(0:3,nexternal),uv(3),vv(3),mass,denom,
      $     xi,y,phi,th,cth,sth,ph,cph,sph,
-     $     xmjhat,xim,xibm,xiplus,
-     $     ximinus,rat,branch_sign,sstiny,cctiny,
+     $     xmjhat,xim,xibm,ximax,cffa2,cffb2,cffc2,cffdel2,
+     $     rat,branch_sign,sstiny,cctiny,
      $     xiimax,xinorm,xihat,phat(0:3),beam_ratio,
      $     uborn,eborn,u,ej,native_delta,native_onepy,
      $     native_ratio,native_denom,native_fsr_angle,
@@ -237,17 +237,10 @@ c momentum loses all Born precision for a large borrowed energy.
          x(1)=sqrt(max(0d0,min(1d0,x(1))))
       else
          xmjhat=m_j_fks/mass
-         xim=(mass-m_j_fks)/mass
-         xibm=((mass2-m_j_fks**2)/mass2)/
-     $        (1d0+xmjhat*sqrt(max(0d0,1d0-y**2)))
-         xiplus=xim
-         ximinus=0d0
-         if(y.lt.0d0)then
-            xiplus=xibm
-            ximinus=xibm-xim
-         endif
-         xinorm=xiplus+ximinus
-         rat=xiplus/xinorm
+         call get_massive_fsr_bounds(mass2,mass,m_j_fks,0d0,
+     $        y,xim,xibm,ximax,cffa2,cffb2,cffc2,cffdel2,
+     $        xiimax,xinorm)
+         rat=xiimax/xinorm
          branch_sign=u/mass*(2d0-xi*(1d0-y))*
      $        (2d0-xi*(1d0+y))+xi*y*(1d0+xmjhat**2-xi)
          if(branch_sign.ge.0d0)then
@@ -255,7 +248,7 @@ c momentum loses all Born precision for a large borrowed energy.
             if(x(1).lt.-1d-12.or.x(1).gt.rat**2+1d-12)goto 900
             x(1)=sqrt(max(0d0,min(rat**2,x(1))))
          else
-            x(1)=((2d0*xiplus-xi)/xinorm-sstiny)/(1d0-sstiny)
+            x(1)=((2d0*xiimax-xi)/xinorm-sstiny)/(1d0-sstiny)
             if(x(1).lt.rat-1d-12.or.x(1).gt.1d0+1d-12)goto 900
             x(1)=max(rat,min(1d0,x(1)))
          endif

@@ -182,7 +182,8 @@ class TestPythia8Matching(unittest.TestCase):
                            'generate_momenta_massless_final',
                            'generate_momenta_massive_final_inverse',
                            'generate_momenta_massless_final_inverse',
-                           'native_fsr_angle', 'get_recoil', 'getangles'),
+                           'native_fsr_angle', 'get_massive_fsr_bounds',
+                           'get_recoil', 'getangles'),
             'montecarlocounter.f': (
                 'zPY8', 'xiPY8', 'xjacPY8',
                 'get_shower_variables', 'get_zeta',

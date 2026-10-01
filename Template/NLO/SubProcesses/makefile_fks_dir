@@ -53,12 +53,18 @@ endif
 
 
 
+# Phase-space entry points, sampling, radiation maps and shared kernels.
+GENPS_OBJECTS = genps_fks.o genps_fks_born.o genps_fks_beams.o \
+                genps_fks_fsr.o genps_fks_isr.o genps_fks_native.o \
+                genps_fks_helpers.o
+
 # Files for all executables
 FILES= $(patsubst %.f,%.o,$(wildcard parton_lum_*.f)) 			\
 	 process_module.o kinematics_module.o scale_module.o		\
 	 $(patsubst %.f,%.o,$(wildcard matrix_*.f)) 			\
 	 FKSParams.o real_me_chooser.o chooser_functions.o recmom.o	\
-	 genps_fks.o resonance_recoil.o initial_recoil.o recoil_selection.o resonance_histories.o setcuts.o setscales.o veto_xsec.o	\
+	 $(GENPS_OBJECTS) resonance_recoil.o initial_recoil.o		\
+	 recoil_selection.o resonance_histories.o setcuts.o setscales.o veto_xsec.o	\
 	 $(patsubst %.f,%.o,$(wildcard b_sf_???.f)) 			\
 	 born.o sborn_sf.o extra_cnt_wrapper.o $(BORN_SUPPORT_OBJECTS) \
 	 $(patsubst %.f,%.o,$(wildcard born_cnt_*.f))			\
@@ -199,7 +205,7 @@ scale_module.o : process_module.o kinematics_module.o mcatnlo_delta_scales.o her
 montecarlocounter.o : scale_module.o kinematics_module.o process_module.o mcatnlo_delta_scales.o
 fks_singular.o : scale_module.o kinematics_module.o process_module.o
 add_write_info.o write_event.o test_soft_col_limits.o driver_mintMC.o: scale_module.o
-genps_fks.o: kinematics_module.o
+genps_fks.o genps_fks_native.o: kinematics_module.o
 driver_mintFO.o: process_module.o
 mint_module.o : FKSParams.o
 BinothLHA_OLP.o: FKSParams.o
@@ -211,8 +217,9 @@ driver_mintFO.o: weight_lines.o mint_module.o FKSParams.o
 chooser_functions.o: weight_lines.o
 cluster.o: weight_lines.o
 setcuts.o: mint_module.o
-genps_fks.o: mint_module.o FKSParams.o
-genps_fks.o resonance_recoil.o fks_singular.o mc_native_runtime.o: resonance_recoil.inc
+genps_fks.o genps_fks_beams.o genps_fks_native.o resonance_recoil.o fks_singular.o mc_native_runtime.o: resonance_recoil.inc
+$(GENPS_OBJECTS): genps.inc nexternal.inc
+genps_fks.o genps_fks_beams.o genps_fks_fsr.o genps_fks_isr.o genps_fks_native.o: mc_native_context.o
 resonance_recoil.o: mc_native_context.o
 initial_recoil.o: mc_native_context.o resonance_recoil.inc
 recoil_selection.o: FKSParams.o recoil_selection.inc resonance_recoil.inc

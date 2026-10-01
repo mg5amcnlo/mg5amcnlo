@@ -19,13 +19,22 @@ TEMPLATE = ROOT / "Template/NLO/SubProcesses"
 
 
 def fortran_routine(path, name):
-    """Select a standalone fixed-form routine and its original dependencies."""
-    source = path.read_text()
-    start = re.search(
-        r"^      (?:subroutine|(?:(?:double precision|logical|integer) )?function) " + name + r"\b",
-        source, re.MULTILINE | re.IGNORECASE)
-    if start is None:
+    """Select a fixed-form routine, including the split FKS source files."""
+    paths = (sorted(path.parent.glob("genps_fks*.f"))
+             if path.name == "genps_fks.f" else [path])
+    pattern = re.compile(
+        r"^      (?:subroutine|(?:(?:double precision|logical|integer) )?function) "
+        + re.escape(name) + r"\b", re.MULTILINE | re.IGNORECASE)
+    matches = []
+    for candidate in paths:
+        source = candidate.read_text()
+        matches.extend((candidate, source, start) for start in pattern.finditer(source))
+    if not matches:
         raise ValueError("Missing Fortran routine: " + name)
+    if len(matches) != 1:
+        raise ValueError("Ambiguous Fortran routine {} in {}".format(
+            name, ", ".join(str(candidate) for candidate, _, _ in matches)))
+    _, source, start = matches[0]
     end = re.search(r"^      end[ \t]*$", source[start.start():],
                     re.MULTILINE | re.IGNORECASE)
     if end is None:
@@ -63,10 +72,10 @@ class TestMomentumMaps(unittest.TestCase):
                      "generate_momenta_massless_final",
                      "generate_momenta_massive_final_inverse",
                      "generate_momenta_massless_final_inverse",
-                     "native_fsr_angle",
+                     "native_fsr_angle", "get_massive_fsr_bounds",
                      "lambda", "yminmax", "gentcms",
                      "generate_native_momenta", "invert_fks_radiation",
-                     "generate_FKS_kinematics", "compute_flux",
+                     "generate_FKS_kinematics", "reset_fks_kinematics", "compute_flux",
                      "generate_momenta_initial",
                      "generate_momenta_initial_inverse",
                      "fill_FKS_commons", "getangles", "get_recoil"):

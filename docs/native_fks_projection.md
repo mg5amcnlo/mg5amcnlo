@@ -4,6 +4,31 @@
 fixed real point. It does not need the random numbers that could have generated
 the projected Born point in a particular integration channel.
 
+## Phase-space source layout
+
+The routines retain their external interfaces and COMMON layouts. Sources in
+`Template/NLO/SubProcesses` are grouped as follows:
+
+| Source | Responsibility |
+| --- | --- |
+| `genps_fks.f` | Generation entry points, radiation dispatch, flux and event/counterevent bookkeeping. |
+| `genps_fks_born.f` | Born trees, invariant masses and t-channel sampling. |
+| `genps_fks_beams.f` | Incoming momentum fractions, rapidities and lepton-beam sampling. |
+| `genps_fks_fsr.f` | Final-state forward and inverse radiation maps. |
+| `genps_fks_isr.f` | Initial-state forward and inverse radiation maps, including generation without event projection. |
+| `genps_fks_native.f` | `generate_native_momenta` and `invert_fks_radiation`. |
+| `genps_fks_helpers.f` | Shared kinematic functions and massive final-state radiation bounds. |
+
+`reset_fks_kinematics` applies the same invalid-state sentinels before both
+radiation-generation paths. `get_massive_fsr_bounds` supplies the common bounds
+and normalization for the massive forward map and its final/initial-recoil
+inverses, including the stable massless-recoil expressions. Local recoil
+wrappers remain in `resonance_recoil.f` and `initial_recoil.f`.
+
+The exporter links all these sources into each subprocess and
+`makefile_fks_dir` builds them through `GENPS_OBJECTS`. Regenerate existing
+process outputs to use this source layout.
+
 ## Measure cancellation
 
 For a fixed native Born point, write the generated real measure as
