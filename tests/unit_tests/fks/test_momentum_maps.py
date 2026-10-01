@@ -111,6 +111,9 @@ class TestMomentumMaps(unittest.TestCase):
     def test_native_projection_and_shared_state(self):
         self.check_map("native_projection")
 
+    def test_single_top_native_massless_recoil(self):
+        self.check_map("singletop_recoil")
+
     def test_initial_state_recoil_and_endpoints(self):
         self.check_map("isr")
 

@@ -43,6 +43,11 @@ program check_momentum_maps
      write(*,*) 'PASS native_projection'
      stop
   endif
+  if (mode.eq.'singletop_recoil') then
+     call check_singletop_projection()
+     write(*,*) 'PASS singletop_recoil'
+     stop
+  endif
   if (mode.eq.'soft_direction') then
      ! Finite real legs cannot borrow the cached direction of another
      ! history, including when the soft leg is the sister rather than i.

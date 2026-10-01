@@ -2749,13 +2749,10 @@ c mother four momenta
       enddo
 c
       sumrec=recoil(0)+rho(recoil)
-      if(xmrec2.lt.1.d-16*shat)then
-         expybst=sqrtshat*sumrec/(shat-xmj2)*
-     &           (1+xmj2*xmrec2/(shat-xmj2)**2)
-      else
-         expybst=sumrec/(2*sqrtshat*xmrec2)*
-     &           (shat+xmrec2-xmj2-shat*sqrt(cffC2))
-      endif
+c Rationalise the boost expression so a nearly massless recoil does
+c not subtract two quantities of order shat and then divide by its mass.
+      expybst=2d0*sqrtshat*sumrec/
+     &     (shat+xmrec2-xmj2+shat*sqrt(cffC2))
       if(expybst.le.0.d0)then
          write(*,*)'Fatal error #10 in one_tree',expybst
          stop
@@ -3812,6 +3809,11 @@ c Kajantie's normalization of phase space (compensated below in flux)
          endif
       enddo
       xmrec2=dot(recoilbar,recoilbar)
+c Boost roundoff grows with the event energy. The absolute threshold
+c in dot alone cannot protect a massless recoil at large shat. Retain
+c the rejection below for negative masses beyond this relative bound.
+      if(xmrec2.lt.0d0.and.xmrec2.ge.-1d-12*shat_born)
+     &     xmrec2=0d0
       if(xmrec2.lt.0.d0)then
          if(abs(xmrec2).gt.(1.d-4*shat_born))then
             write(*,*)'Fatal error #14 in genps_fks.f',xmrec2,imother
@@ -4639,6 +4641,9 @@ c subtracting the hard daughters from the beams loses that precision.
       enddo
       sumrec=recoil(0)+rho(recoil)
       xmrec2=dot(recoil,recoil)
+c Apply the same massless-recoil roundoff bound as get_recoil before
+c taking a square root in the inverse map.
+      if(xmrec2.lt.0d0.and.xmrec2.ge.-1d-12*shat)xmrec2=0d0
       xmj=m_j_fks
       xmj2=xmj**2
       xmjhat=xmj/sqrtshat
@@ -4722,13 +4727,9 @@ c roundoff when the recoil is soft, spoiling the forward reconstruction.
       x(3)=phi_i_fks/(2d0*pi)
       xjac=xjac*2d0*pi
       
-      if(xmrec2.lt.1.d-16*shat)then
-         expybst=sqrtshat*sumrec/(shat-xmj2)*
-     &           (1+xmj2*xmrec2/(shat-xmj2)**2)
-      else
-         expybst=sumrec/(2*sqrtshat*xmrec2)*
-     &           (shat+xmrec2-xmj2-shat*sqrt(cffC2))
-      endif
+c This conjugate form is also regular at zero recoil mass.
+      expybst=2d0*sqrtshat*sumrec/
+     &     (shat+xmrec2-xmj2+shat*sqrt(cffC2))
       if(expybst.le.0.d0)then
          write(*,*)'Fatal error #10 in one_tree',expybst
          stop
