@@ -1,6 +1,9 @@
 program check_resonance_recoil
+  use fks_phase_space_data, only: spin => xij_aor
   use, intrinsic :: ieee_arithmetic, only: ieee_is_finite
   use mc_native_context, only: native_mapping
+  use fks_phase_space, only: generate_FKS_kinematics,generate_native_momenta
+  use fks_phase_space_helpers, only: getangles
   implicit none
   include 'nexternal.inc'
   double precision, parameter :: pi=3.1415926535897932d0, mr=200d0
@@ -15,8 +18,7 @@ program check_resonance_recoil
   double precision :: gx(128),gw(128),sx(512),sw(512),upper
   double precision :: soft_scale,coll_scale,angular_scale,mismatch_log,scale0(4),scale1(4)
   double precision :: total(0:3),testboost(0:3),totalb(0:3),qb(0:3),pjb(0:3),phatb(0:3)
-  complex*16 :: spin,spin_save,expected,z
-  common/cxij_aor/spin
+  complex*16 :: spin_save,expected,z
   logical :: mask(nexternal),aunts(nexternal),pass,softtest,colltest
   common/sctests/softtest,colltest
   double precision :: xifix,yfix
@@ -233,32 +235,28 @@ program check_resonance_recoil
   write(*,*)'PASS '//trim(mode)
 contains
   subroutine production_roundtrip()
+  use fks_phase_space_data,only: resq => resonance_momentum,resmass2 => resonance_mass2, &
+       active => resonance_recoil,members => resonance_members,nocnt => nocntevents,pb => p_born, &
+       pbl => p_born_l,pbe => p_born_ev,branch => isolsign,pc => p1_cnt,&
+       jc => jac_cnt,bound_born => tau_Born_lower_bound,bound_res => tau_lower_bound_resonance, &
+       bound_tau => tau_lower_bound
     use process_module, only: next_n1,nincoming_mod
     use kinematics_module, only: boost_n1_to_lab
     implicit none
     include 'genps.inc'
     include 'run.inc'
-    logical :: active,members(nexternal),nbody,nocnt,evpr
-    double precision :: resq(0:3),resmass2
-    common/c_resonance_recoil/resq,resmass2,active,members
+  logical :: nbody,evpr
     common/cnbody/nbody
-    common/cnocntevents/nocnt
     common/to_use_evpr/evpr
-    double precision :: pmass(nexternal),pb(0:3,nexternal-1),pbl(0:3,nexternal-1),pbe(0:3,nexternal-1)
+  double precision :: pmass(nexternal)
     common/to_mass/pmass
-    common/pborn/pb
-    common/pborn_l/pbl
-    common/pborn_ev/pbe
-    integer :: ifks_active,jfks_active,config,branch
+  integer :: ifks_active,jfks_active,config
     common/fks_indices/ifks_active,jfks_active
     common/to_mconfigs/config
-    common/c_isolsign/branch
-    double precision :: pc(0:3,nexternal,-2:2),wc(-2:2),psc(-2:2),jc(-2:2),jc_save(-2:2)
-    common/counterevnts/pc,wc,psc,jc
-    double precision :: bounds(3),omx(2)
-    common/ctau_lower_bound/bounds
+  double precision :: jc_save(-2:2)
+  double precision :: omx(2)
     common/to_ee_omx1/omx
-    double precision :: xgen(99),massarr(-max_branch:max_particles),mb(nexternal-1), &
+    double precision :: xgen(99),mb(nexternal-1), &
          out(0:3,nexternal),lab(0:3,nexternal),outlab(0:3,nexternal),outcms(0:3,nexternal), &
          born_save(0:3,nexternal-1),sqrts,s,stot,taub,yb,yhat,xb(2),j0,ps0,jout,jnew,flux,jexpected
     double precision :: shower(0:3,nexternal),kn,knbar,kn0,smass2,born_energy,shower_total(0:3)
@@ -295,15 +293,16 @@ contains
     xb=sqrt(taub)
     nbody=.false.
     evpr=.true.
-    bounds=0d0
+    bound_born=0d0
+    bound_res=0d0
+    bound_tau=0d0
     omx=0d0
     xgen=0d0
     xgen(1:3)=rnd
     j0=7d0
     ps0=3d0
-    massarr=0d0
-    call generate_FKS_kinematics(xgen,3,j0,ps0,stot,s,sqrts,taub,yb,yhat, &
-         xb,massarr,mb,jout,out,valid)
+    call generate_FKS_kinematics(xgen(1:3),nbody,j0,ps0,stot,s,sqrts,taub,yb,yhat, &
+         xb,mb,jout,out,valid)
     if(.not.valid.or.jout.le.0d0)error stop 'production map rejected'
     if(maxval(abs(out-p)).gt.2d-7*mr)error stop 'production map differs from local map'
     flux=1d0/(2d0*s)

@@ -679,6 +679,9 @@ c
 
 
       function sigintF(xx,vegas_wgt,ifl,f)
+      use fks_phase_space_data, only: p_born,p1_cnt,jac_cnt
+      use fks_phase_space, only: fks_phase_space_point,
+     $     generate_born_contribution,generate_real_phase_space
       use mc_native_context, only: mc_begin_real_point,mc_end_real_point
       use weight_lines
       use mint_module
@@ -707,8 +710,6 @@ c
       external passcuts
       parameter (izero=0,ione=1,itwo=2,mohdr=-100)
       data firsttime/.true./
-      double precision p_born(0:3,nexternal-1)
-      common /pborn/   p_born
       integer     fold,ifold_counter
       common /cfl/fold,ifold_counter
       logical calculatedBorn
@@ -723,9 +724,6 @@ c
       common/tosigint/nndim
       character*4      abrv
       common /to_abrv/ abrv
-      double precision p1_cnt(0:3,nexternal,-2:2),wgt_cnt(-2:2)
-     $     ,pswgt_cnt(-2:2),jac_cnt(-2:2)
-      common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
       double precision       wgt_ME_born,wgt_ME_real
       common /c_wgt_ME_tree/ wgt_ME_born,wgt_ME_real
       integer ifold_picked
@@ -740,7 +738,22 @@ c
       double precision born_flow_factor
 ! The same flow is used throughout the folds, so keep its draw probability.
       save born_flow_factor
+      type(fks_phase_space_point) phase_space
+      interface
+         subroutine repartition_MC_H(first_native,p,p_lab,
+     $        p_cms,jacPS,vegas_wgt,sampling_wgt,born_flow_factor,
+     $        outer_point)
+            import fks_phase_space_point,nexternal
+            integer first_native
+            double precision p(0:3,nexternal),
+     $           p_lab(0:3,nexternal),p_cms(0:3,nexternal),jacPS,
+     $           vegas_wgt,sampling_wgt,born_flow_factor
+            type(fks_phase_space_point),intent(in) :: outer_point
+         end subroutine
+      end interface
 c
+c Each fold owns its Born sample; compatible sectors can reuse it.
+      phase_space%born%valid=.false.
       if (new_point .and. ifl.ne.2) then
          pass_cuts_check=.false.
       endif
@@ -811,7 +824,11 @@ c Also the Born needs to be included in the Importance Sampling over the
 c FKS configurations (for the shower scale) (multiply by
 c 1/proc_map(0,0)*vol1)
          jac=jac/(proc_map(0,0)*vol1)
-         call generate_momenta(nndim,iconfig,jac,x_local,p,p_lab,p_cms)
+         call generate_born_contribution(nndim,iconfig,jac,x_local,
+     $        phase_space)
+         p=phase_space%p
+         p_lab=phase_space%p_lab
+         p_cms=phase_space%p_cms
          if (p_born(0,1).lt.0d0) goto 12
          call compute_prefactors_nbody(vegas_wgt)
          call set_cms_stuff(izero)
@@ -903,8 +920,11 @@ c for different nFKSprocess.
             icolup_s(1,1)=-1    ! set colour connection to -1: i.e., complete_xmcsubt has not been called
 ! Apply the outer-sector sampling weight to the counterevents as well.
             jacPS=1d0/vol1
-            call generate_momenta(nndim,iconfig,jacPS,x_local,p,p_lab
-     $           ,p_cms)
+            call generate_real_phase_space(nndim,iconfig,jacPS,
+     $           x_local,phase_space)
+            p=phase_space%p
+            p_lab=phase_space%p_lab
+            p_cms=phase_space%p_cms
             jac=jacPS
             jacPS=jacPS*vol1
 c Every contribution has to have a viable set of Born momenta (even if
@@ -987,8 +1007,9 @@ c check if event or counter-event passes cuts
      $           passcuts_nbody,passcuts_n1body,probne)
             mc_S_only=.false.
             if (ickkw.ne.4 .and. abrv.ne.'real') then
-               call repartition_MC_H(first_native_H,x_local,p,p_lab,
-     $              p_cms,jacPS,vegas_wgt,1d0/vol1,born_flow_factor)
+               call repartition_MC_H(first_native_H,p,p_lab,
+     $              p_cms,jacPS,vegas_wgt,1d0/vol1,born_flow_factor,
+     $              phase_space)
             endif
             call mc_end_real_point()
          enddo
@@ -1023,8 +1044,10 @@ c Sum the contributions that can be summed before taking the ABS value
       return
       end
 
-      subroutine repartition_MC_H(first_native,x_outer,p,p_lab,p_cms,
-     $     jacPS,vegas_wgt,sampling_wgt,born_flow_factor)
+      subroutine repartition_MC_H(first_native,p,p_lab,p_cms,
+     $     jacPS,vegas_wgt,sampling_wgt,born_flow_factor,outer_point)
+      use fks_phase_space_data,only: p_born,xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt,xinorm_ev,
+     $     p1_cnt,jac_cnt,ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
 ! At a fixed real point form Hhat_a = S_a sum_b P_b (S_b R - M_b).
 ! The ordinary S records have already been made and are not changed.
 ! Each M_b includes its native G replacement, luminosities and Born map.
@@ -1032,11 +1055,14 @@ c Sum the contributions that can be summed before taking the ABS value
 ! The outer event colour is only the event owner, not an inner proposal.
 ! Thus the colour-sampled summand is
 ! P_b,c*(p_b,c*S_b*R-M_b,c)/q_b,c, with M_b,c already flow-weighted.
+      use fks_phase_space, only: fks_phase_space_point,
+     $     initialize_fks_phase_space,capture_fks_phase_space,
+     $     restore_fks_phase_space,generate_native_momenta
       use mc_native_context, only: set_native_history,
      $     native_mapping
       use weight_lines, only: icontr,H_event,wgt,event_nFKS,momenta,
      $     momenta_m,y_bst,need_match,mc_H_only
-      use mint_module, only: ndim,iconfig
+      use mint_module, only: iconfig
       use process_module, only: ndelH
       use kinematics_module
       use scale_module
@@ -1047,6 +1073,8 @@ c Sum the contributions that can be summed before taking the ABS value
       include 'run.inc'
       include 'fks_symmetry.inc'
       include 'mc_histories.inc'
+      type(fks_phase_space_point),intent(in) :: outer_point
+      type(fks_phase_space_point) saved_point
       integer first_native,last_native,first_alt,owner,iFKS,ii,jj,ihist,
      $     ict,flow_save,called_save,owner_match(nexternal),
      $     outer_config
@@ -1054,7 +1082,7 @@ c Sum the contributions that can be summed before taking the ABS value
      $     recoil_configs(lmaxconfigs),recoil_group_of(lmaxconfigs)
       integer this_config
       common /to_mconfigs/this_config
-      double precision x_outer(99),p(0:3,nexternal),
+      double precision p(0:3,nexternal),
      $     p_lab(0:3,nexternal),p_cms(0:3,nexternal),jacPS,vegas_wgt,
      $     sampling_wgt,born_flow_factor,outer_measure,native_measure,
      $     sector_weight,factor,jac_native,
@@ -1065,8 +1093,6 @@ c Sum the contributions that can be summed before taking the ABS value
       double precision nbody_scales_save(nexternal-1,nexternal-1,3),
      $     n1body_scales_save(nexternal,nexternal),
      $     emsca_save(fks_configs,ndelH,ndelH),hard_scale_save
-      double precision fks_mom_info(3),fks_mom_save(3)
-      common/cgenps_fks/fks_mom_info
       logical cuts_born,cuts_real,passcuts,native_valid
       double precision fks_Sij
       external fks_Sij,passcuts
@@ -1075,26 +1101,13 @@ c Sum the contributions that can be summed before taking the ABS value
       integer nFKSprocess,i_fks,j_fks
       common/c_nFKSprocess/nFKSprocess
       common/fks_indices/i_fks,j_fks
-      double precision p_born(0:3,nexternal-1)
-      common/pborn/p_born
       double precision pmass(nexternal)
       common/to_mass/pmass
-      double precision xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev(0:3),
-     $     p_i_fks_cnt(0:3,-2:2)
-      common/fksvariables/xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt
-      double precision xinorm_ev
-      common/cxinormev/xinorm_ev
       double precision fkssymmetryfactor,fkssymmetryfactorBorn,
      $     fkssymmetryfactorDeg
       integer ngluons,nquarks(-6:6),nphotons
       common/numberofparticles/fkssymmetryfactor,fkssymmetryfactorBorn,
      $     fkssymmetryfactorDeg,ngluons,nquarks,nphotons
-      double precision p1_cnt(0:3,nexternal,-2:2),wgt_cnt(-2:2),
-     $     pswgt_cnt(-2:2),jac_cnt(-2:2)
-      common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
-      double precision ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
-      common/parton_cms_stuff/ybst_til_tolab,ybst_til_tocm,
-     $     sqrtshat,shat
       integer fold,ifold_counter,MCcntcalled
       common/cfl/fold,ifold_counter
       common/c_MCcntcalled/MCcntcalled
@@ -1158,9 +1171,11 @@ c Sum the contributions that can be summed before taking the ABS value
       nbody_scales_save(:,:,3)=shower_scale_nbody_max
       n1body_scales_save=shower_scale_n1body
       emsca_save=emsca_H(:,ifold_counter,:,:)
-! ISR does not write these FSR-only COMMONs during the outer replay.
-! Preserve them explicitly so history order cannot leak into the owner.
-      fks_mom_save=fks_mom_info
+! Matching refreshes some active phase-space data, including the FSR
+! momentum factors. Preserve their current values with the original
+! generated momenta and measure before visiting the native histories.
+      saved_point=outer_point
+      call capture_fks_phase_space(saved_point)
       mc_H_only=.true.
       native_mapping=.true.
 
@@ -1276,8 +1291,9 @@ c Sum the contributions that can be summed before taking the ABS value
             enddo
          enddo
       enddo
-! Replaying the saved OUTER random numbers restores all FKS event and
-! counterevent COMMON blocks, including Born/spin and Bjorken data.
+! Restore the outer channel and its generated phase-space point.
+! The snapshot includes all endpoint and recoil data, so native
+! histories need not be followed by another radiation generation.
       call set_native_history(0)
       native_mapping=.false.
       iconfig=outer_config
@@ -1285,14 +1301,13 @@ c Sum the contributions that can be summed before taking the ABS value
       call init_process_module_nbody_wrapper()
       call update_coltype_and_charge(owner,i_fks,j_fks)
       calculatedBorn=.false.
-      jac_native=sampling_wgt
-      call generate_momenta(ndim,iconfig,jac_native,x_outer,
-     $     pn,pn_lab,pn_cms)
+      call initialize_fks_phase_space(iconfig)
+      call restore_fks_phase_space(saved_point)
+      jac_native=saved_point%weight
       if (jac_native.le.0d0 .or. p_born(0,1).le.0d0) then
          write (*,*) 'Could not restore outer FKS point after MC H sum'
          stop 1
       endif
-      fks_mom_info=fks_mom_save
       born_flow_picked=flow_save
       call init_process_module_n1body_wrapper(born_flow_picked)
       shower_scale_hard=hard_scale_save
@@ -1328,6 +1343,7 @@ c Sum the contributions that can be summed before taking the ABS value
       end
 
       subroutine init_process_module_nbody_wrapper()
+      use fks_phase_space_data, only: p_born
       use process_module
       implicit none
       include 'nexternal.inc'
@@ -1338,8 +1354,6 @@ c Sum the contributions that can be summed before taking the ABS value
       double precision mass(1:nexternal-1),get_mass_from_id
       external get_mass_from_id
       logical valid_dipole(1:nexternal-1,1:nexternal-1,1:max_bcol)
-      double precision p_born(0:3,nexternal-1)
-      common /pborn/   p_born
       integer idup(nexternal-1,maxproc)
       integer mothup(2,nexternal-1,maxproc)
       integer icolup(2,nexternal-1,max_bcol)

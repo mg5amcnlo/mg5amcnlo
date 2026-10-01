@@ -2,6 +2,7 @@
      $     isolsign,i_fks,j_fks,m_j_fks,irec,xbar,x,phi_i_fks,
      $     xp,xiimax,xinorm,xi_i_fks,y_ij_fks,xi_i_hat,p_i_fks,
      $     xjac,xpswgt,q,mass2,beam_ratio,pass)
+      use fks_phase_space_data, only: xij_aor
 c Final-state radiation with a massless incoming spectator. Regard the
 c unused beam momentum Rbar=(1/xbar-1)*pbar_a as a massless final-state
 c recoil reservoir and apply the ordinary FSR map to K=pbar_j+Rbar.
@@ -12,6 +13,8 @@ c The hadronic measure is NOT the ordinary FSR measure: the beam-fraction
 c change supplies 1/alpha. Equivalently it is dPhi(k)*(P_a.pbar_j)/
 c (P_a.p_j) before changing the Born-axis angle to the FKS opening angle.
 c The flux, PDFs and full-process incoming invariant are caller-owned.
+      use fks_radiation_maps, only: generate_momenta_massless_final,
+     $     generate_momenta_massive_final
       use, intrinsic :: ieee_arithmetic, only: ieee_is_finite
       use mc_native_context, only: native_mapping
       implicit none
@@ -24,8 +27,6 @@ c The flux, PDFs and full-process incoming invariant are caller-owned.
      $     mother(0:3),reservoir(0:3),phat(0:3),mass,
      $     uborn,u,ej,ei,delta,alpha,sintheta,dot,rho,pi
       parameter(pi=3.1415926535897932d0)
-      double complex xij_aor
-      common/cxij_aor/xij_aor
       logical pass
       external dot,rho
 
@@ -114,34 +115,30 @@ c spatial norm, keeping the native antiparallel angular coordinate.
       subroutine invert_momenta_initial_recoil(p,irec,xreal,
      $     i_fks,j_fks,m_j_fks,pborn,x,xjac,xpswgt,q,mass2,
      $     xbar,pass)
+      use fks_phase_space_data, only: xinorm_ev
 c Invert at fixed physical beam momentum P_a=p_a/xreal. K=p_j+k+
 c P_a-p_a is invariant under this map. The Born momentum follows from
 c pbar_a=p_a*(1-p_j.k/(p_a.(p_j+k))) and pbar_j=p_j+k+pbar_a-p_a.
 c Recover the ordinary FSR coordinates, then replay its forward kernel
 c for the measure, including the massive second solution/native map.
+      use fks_radiation_maps, only: native_fsr_angle
+      use fks_phase_space_helpers, only: getangles,
+     $     get_massive_fsr_bounds
       use, intrinsic :: ieee_arithmetic, only: ieee_is_finite
       use mc_native_context, only: native_mapping
       implicit none
       include 'nexternal.inc'
       integer irec,i_fks,j_fks,i,ib,isolsign
-      double precision p(0:3,nexternal),xreal,m_j_fks,
-     $     pborn(0:3,nexternal-1),x(3),xjac,xpswgt,q(0:3),
-     $     mass2,xbar,qrest(0:3),pi4(0:3),pj4(0:3),
-     $     mother(0:3),mrest(0:3),rot(0:3),pb(0:3,nexternal),
-     $     unchanged(0:3),reservoir(0:3),born_ratio,
-     $     work(0:3,nexternal),uv(3),vv(3),mass,denom,
-     $     xi,y,phi,th,cth,sth,ph,cph,sph,
-     $     xmjhat,xim,xibm,ximax,cffa2,cffb2,cffc2,cffdel2,
-     $     rat,branch_sign,sstiny,cctiny,
-     $     xiimax,xinorm,xihat,phat(0:3),beam_ratio,
-     $     uborn,eborn,u,ej,native_delta,native_onepy,
-     $     native_ratio,native_denom,native_fsr_angle,
-     $     xinorm_ev,dot,rho,pi
+      double precision p(0:3,nexternal),xreal,m_j_fks,pborn(0:3,nexternal-1),x(3),xjac,xpswgt,q(0:3),
+     $     mass2,xbar,qrest(0:3),pi4(0:3),pj4(0:3),mother(0:3),mrest(0:3),rot(0:3),pb(0:3,nexternal),
+     $     unchanged(0:3),reservoir(0:3),born_ratio,work(0:3,nexternal),uv(3),vv(3),mass,denom,xi,y,phi,th,
+     $     cth,sth,ph,cph,sph,xmjhat,xim,xibm,ximax,cffa2,cffb2,cffc2,cffdel2,rat,branch_sign,sstiny,cctiny,
+     $     xiimax,xinorm,xihat,phat(0:3),beam_ratio,uborn,eborn,u,ej,native_delta,native_onepy,native_ratio,
+     $     native_denom,dot,rho,pi
       parameter(pi=3.1415926535897932d0)
-      common/cxinormev/xinorm_ev
       logical pass,softtest,colltest
       common/sctests/softtest,colltest
-      external dot,rho,native_fsr_angle
+      external dot,rho
 
       pass=.false.
       pborn=0d0
@@ -281,6 +278,7 @@ c momentum loses all Born precision for a large borrowed energy.
      $     phi,phase)
 c As for a resonance frame, transport the transverse helicity axis.
 c Supply the invariant mass explicitly: K is very boosted for small x.
+      use fks_phase_space_helpers, only: getangles
       implicit none
       double precision mother(0:3),q(0:3),mass,phi,r(0:3),
      $     rrot(0:3),rlab(0:3),mlab(0:3),th,cth,sth,ph,cph,

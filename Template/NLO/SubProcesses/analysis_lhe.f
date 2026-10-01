@@ -46,6 +46,7 @@ c event (event with lower weights will be un-weighted)
       end
 
       subroutine analysis_fill(p,istatus,ipdg,wgts,ibody)
+      use fks_phase_space_data, only: xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt
       use extra_weights
       implicit none
       include 'nexternal.inc'
@@ -80,9 +81,6 @@ c
       common/cto_LHE2/scale1_lhe,scale2_lhe
 c
 c     forbid unweighting close to the fks pole (should not happen but better safe than sorry)
-      double precision p_i_fks_ev(0:3),p_i_fks_cnt(0:3,-2:2)
-      double precision xi_i_fks_ev,y_ij_fks_ev
-      common/fksvariables/xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt
       integer n_orderstags,oo,tag
       integer orderstags_glob(maxorders)
       common /c_orderstags_glob/n_orderstags, orderstags_glob

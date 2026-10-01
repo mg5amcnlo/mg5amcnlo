@@ -49,6 +49,7 @@ c the physical incoming momenta and all non-descendants remain untouched.
      $     isolsign,i_fks,j_fks,m_j_fks,in_resonance,x,phi_i_fks,
      $     xp,xiimax,xinorm,xi_i_fks,y_ij_fks,xi_i_hat,p_i_fks,
      $     xjac,xpswgt,q,mass2,pass)
+      use fks_phase_space_data, only: xij_aor
 c Resonance-preserving FKS map, as in sec. 3 of arXiv:1509.09071.
 c Apply the ordinary FSR map to the resonance decay, with the aunt as
 c its entire recoil. Boosting the aunt's descendants together also
@@ -56,6 +57,8 @@ c preserves every invariant mass within that subtree. No mass inversion
 c or numerical derivative is needed. xi and y are in the resonance frame;
 c xp and p_i_fks are returned in the original frame. The flux remains
 c that of the full process and must be supplied by the caller.
+      use fks_radiation_maps, only: generate_momenta_massless_final,
+     $     generate_momenta_massive_final
       implicit none
       include 'nexternal.inc'
       integer icountevts,isolsign,i_fks,j_fks,i
@@ -65,8 +68,6 @@ c that of the full process and must be supplied by the caller.
      $     xjac,xpswgt,q(0:3),mass2,plocal(0:3,nexternal),
      $     qrest(0:3),mother(0:3),recoil(0:3),phat(0:3),
      $     xmrec2,mass,dot
-      double complex xij_aor
-      common/cxij_aor/xij_aor
       external dot
 
       pass=.false.
@@ -118,6 +119,7 @@ c helicity phase must follow the boosted transverse direction as well.
       subroutine resonance_collinear_phase(mother,q,phi,phase)
 c Transport a unit transverse vector instead of using the resonance-
 c frame azimuth with a Born helicity amplitude in another frame.
+      use fks_phase_space_helpers, only: getangles
       implicit none
       double precision mother(0:3),q(0:3),phi,r(0:3),rrot(0:3),
      $     rlab(0:3),mlab(0:3),th,cth,sth,ph,cph,sph,norm2
@@ -137,10 +139,15 @@ c frame azimuth with a Born helicity amplitude in another frame.
 
       subroutine invert_momenta_resonance_final(p,in_resonance,
      $     i_fks,j_fks,m_j_fks,pborn,x,xjac,xpswgt,q,mass2,pass)
+      use fks_phase_space_data, only: xij_aor
 c Project a fixed real point onto the same local Born map. Remove the
 c emitted leg before returning pborn. Internally put radiation last,
 c as required by the ordinary inverse maps. The mask is supplied by
 c the caller's resonance history, never inherited from a previous one.
+      use fks_radiation_maps,
+     $     only: generate_momenta_massless_final_inverse,
+     $     generate_momenta_massive_final_inverse
+      use fks_phase_space_helpers, only: getangles
       use, intrinsic :: ieee_arithmetic, only: ieee_is_finite
       implicit none
       include 'nexternal.inc'
@@ -154,8 +161,6 @@ c the caller's resonance history, never inherited from a previous one.
       parameter(pi=3.1415926535897932d0)
       logical in_resonance(nexternal),pass
       integer i_fks,j_fks,i,ib,jborn
-      double complex xij_aor
-      common/cxij_aor/xij_aor
       external rho
 
       pass=.false.
@@ -276,17 +281,15 @@ c the collinear limit. A short series avoids rounding 1+delta to 1.
 
       subroutine project_global_fsr_partition(p,i_fks,j_fks,m_j_fks,
      $     pborn,pass)
+      use fks_phase_space_data, only: xinorm_ev,xij_aor
 c A common reference point for the real-channel partition of unity.
 c This projection supplies channel weights only. The subtraction Born
 c and the physical recoil are still those of the local resonance map.
       use mc_native_context, only: native_mapping
       implicit none
       include 'nexternal.inc'
-      double precision p(0:3,nexternal),pborn(0:3,nexternal-1),
-     $     m_j_fks,x(3),jac,pswgt,q(0:3),mass2,xinorm_save,xinorm_ev
-      common /cxinormev/xinorm_ev
-      double complex xij_aor,phase_save
-      common /cxij_aor/xij_aor
+      double precision p(0:3,nexternal),pborn(0:3,nexternal-1),m_j_fks,x(3),jac,pswgt,q(0:3),mass2,xinorm_save
+      double complex phase_save
       integer i_fks,j_fks
       logical pass,members(nexternal),native_save
       members=.true.
@@ -307,17 +310,16 @@ c and the physical recoil are still those of the local resonance map.
 
       subroutine resonance_shower_frame(p,i_fks,j_fks,plocal,
      $     kn,knbar,kn0,mass2)
+      use fks_phase_space_data,only: resonance_momentum,resonance_mass2,resonance_recoil,
+     $     resonance_members,initial_recoil_leg,p_born
 c The shower kernels use the same emission variables and recoil system
 c as the FKS map. Born matrix elements, colour connections and PDFs keep
 c their physical momenta outside this auxiliary decay frame.
       implicit none
       include 'nexternal.inc'
-      include 'resonance_recoil.inc'
       integer i_fks,j_fks,jborn
       double precision p(0:3,nexternal),plocal(0:3,nexternal),
      $     kn,knbar,kn0,mass2,q(0:3),qrest(0:3),mother(0:3),dot,rho
-      double precision p_born(0:3,nexternal-1)
-      common /pborn/p_born
       logical pass
       external dot,rho
       plocal=p
@@ -336,13 +338,4 @@ c their physical momenta outside this auxiliary decay frame.
       kn=rho(plocal(:,j_fks))
       knbar=rho(mother)
       kn0=plocal(0,j_fks)
-      end
-
-
-      block data resonance_recoil_init
-      implicit none
-      include 'nexternal.inc'
-      include 'resonance_recoil.inc'
-      data resonance_recoil/.false./
-      data initial_recoil_leg/0/
       end

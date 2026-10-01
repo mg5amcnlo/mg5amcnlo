@@ -230,15 +230,13 @@
       end
 
       double precision function mc_outer_channel_weight()
+      use fks_phase_space_data, only: p_born_ev,p_ev
 ! The only integration-channel weight on the complete native H sum.
       implicit none
       include 'nexternal.inc'
       include 'genps.inc'
       include 'born_conf.inc'
-      double precision p_born_ev(0:3,nexternal-1),ans,total,
-     $     pas(0:3,nexternal),p_ev(0:3,nexternal)
-      common/pborn_ev/p_born_ev
-      common/pev/p_ev
+      double precision ans,total,pas(0:3,nexternal)
       double precision amp2(ngraphs),jamp2(0:ncolor)
       common/to_amps/amp2,jamp2
       double precision diagramsymmetryfactor

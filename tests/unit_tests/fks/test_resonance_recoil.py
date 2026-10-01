@@ -7,7 +7,7 @@ import sys
 import tempfile
 import unittest
 
-from tests.unit_tests.fks.test_momentum_maps import fortran_routine
+from tests.unit_tests.fks.test_momentum_maps import fortran_routine, fks_test_module
 
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -24,7 +24,6 @@ class TestResonanceRecoil(unittest.TestCase):
         for nincoming in (1, 2):
             work = Path(cls.tempdir.name) / str(nincoming)
             work.mkdir()
-            shutil.copy(TEMPLATE / "resonance_recoil.inc", work)
             shutil.copy(TEMPLATE / "fks_powers.inc", work)
             (work / "coupl.inc").write_text("")
             (work / "pmass.inc").write_text("      common/to_mass/pmass\n")
@@ -41,17 +40,8 @@ class TestResonanceRecoil(unittest.TestCase):
             (work / "native_context.f90").write_text(
                 "module mc_native_context\n"
                 "logical :: native_mapping=.false.\nend module\n")
+            (work / "fks_phase_space.f").write_text(fks_test_module())
             routines = []
-            for name in ("generate_momenta_massless_final",
-                         "generate_momenta_massive_final",
-                         "generate_momenta_massless_final_inverse",
-                         "generate_momenta_massive_final_inverse",
-                         "native_fsr_angle", "get_massive_fsr_bounds", "getangles", "get_recoil",
-                         "generate_native_momenta", "invert_fks_radiation",
-                         "generate_FKS_kinematics", "reset_fks_kinematics", "compute_flux",
-                         "generate_momenta_initial", "generate_momenta_initial_inverse",
-                         "fill_FKS_commons", "lambda", "yminmax", "gentcms"):
-                routines.append(fortran_routine(TEMPLATE / "genps_fks.f", name))
             for name in ("rotate_invar", "trp_rotate_invar", "phspncheck_nocms",
                          "xlen4", "xmom_compare", "xmcompare", "xprintout"):
                 routines.append(fortran_routine(TEMPLATE / "fks_singular.f", name))
@@ -67,7 +57,11 @@ class TestResonanceRecoil(unittest.TestCase):
                        "-fno-automatic", "-I", str(work),
                        str(work / "native_context.f90"),
                        str(TEMPLATE / "process_module.f90"),
-                       str(TEMPLATE / "kinematics_module.f90"), str(work / "maps.f"),
+                       str(TEMPLATE / "fks_phase_space_data.f"),
+                       str(TEMPLATE / "kinematics_module.f90"),
+                       str(TEMPLATE / "genps_fks_helpers.f"),
+                       str(TEMPLATE / "genps_fks_radiation.f"),
+                       str(work / "fks_phase_space.f"), str(work / "maps.f"),
                        str(TEMPLATE / "resonance_recoil.f"),
                        str(TEMPLATE / "initial_recoil.f"),
                        str(TEMPLATE / "boostwdir2.f"),
@@ -141,6 +135,7 @@ class TestResonancePartition(unittest.TestCase):
             result = subprocess.run([
                 shutil.which("gfortran"), "-O2", "-std=legacy", "-fcheck=all",
                 "-ffixed-line-length-none", "-I", str(work),
+                str(TEMPLATE / "fks_phase_space_data.f"),
                 str(ROOT / "tests/input_files/check_resonance_partition.f90"),
                 str(work / "partitions.f"), "-o", str(executable)],
                 cwd=work, capture_output=True, text=True)

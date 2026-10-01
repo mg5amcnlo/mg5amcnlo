@@ -1,8 +1,10 @@
       program symmetry
+      use fks_phase_space_data, only: p_born
 c*****************************************************************************
 c     Given identical particles, and the configurations. This program identifies
 c     identical configurations and specifies which ones can be skipped
 c*****************************************************************************
+      use fks_phase_space, only: generate_momenta
       use mint_module
       implicit none
 c
@@ -27,8 +29,6 @@ c
       common/tosigint/nndim
       Double Precision amp2(ngraphs), jamp2(0:ncolor)
       common/to_amps/  amp2,          jamp2
-      double precision p_born(0:3,nexternal-1)
-      common /pborn/   p_born
       integer            i_fks,j_fks
       common/fks_indices/i_fks,j_fks
       integer              nFKSprocess

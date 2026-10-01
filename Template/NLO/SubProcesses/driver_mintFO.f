@@ -322,6 +322,9 @@ c timing statistics
 
       
       double precision function sigint(xx,vegas_wgt,ifl,f)
+      use fks_phase_space_data, only: p1_cnt,jac_cnt,p_born
+      use fks_phase_space, only: fks_phase_space_point,
+     $     generate_born_contribution,generate_real_phase_space
       use weight_lines
       use extra_weights
       use mint_module
@@ -332,8 +335,7 @@ c timing statistics
       include 'orders.inc'
       include 'fks_info.inc'
       double precision xx(ndimmax),vegas_wgt,f(nintegrals),jac,p(0:3
-     $     ,nexternal),rwgt,vol,sig,x(99),MC_int_wgt,p_lab(0:3
-     $     ,nexternal) ,p_cms(0:3,nexternal)
+     $     ,nexternal),rwgt,vol,sig,x(99),MC_int_wgt
       integer ifl,nFKS_born,nFKS_picked,iFKS,nFKS_min,iamp
      $     ,nFKS_max,izero,ione,itwo,mohdr,i,iran_picked,dum
       parameter (izero=0,ione=1,itwo=2,mohdr=-100)
@@ -347,11 +349,6 @@ c timing statistics
       common/tosigint/nndim
       logical       nbody
       common/cnbody/nbody
-      double precision p1_cnt(0:3,nexternal,-2:2),wgt_cnt(-2:2)
-     $     ,pswgt_cnt(-2:2),jac_cnt(-2:2)
-      common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
-      double precision p_born(0:3,nexternal-1)
-      common /pborn/   p_born
       double precision virtual_over_born
       common/c_vob/virtual_over_born
       logical                calculatedBorn
@@ -371,7 +368,10 @@ c PineAPPL
 
       logical use_evpr, passcuts_coll
       common /to_use_evpr/use_evpr
+      type(fks_phase_space_point) phase_space
 
+c Share the sampled Born within this evaluation when sectors permit it.
+      phase_space%born%valid=.false.
       if (new_point .and. ifl.ne.2) then
          pass_cuts_check=.false.
       endif
@@ -421,7 +421,9 @@ c The nbody contributions
       else
          jac=0.5d0
       endif
-      call generate_momenta(nndim,iconfig,jac,x,p,p_lab,p_cms)
+      call generate_born_contribution(nndim,iconfig,jac,x,
+     $     phase_space)
+      p=phase_space%p
       if (p_born(0,1).lt.0d0) goto 12
       call compute_prefactors_nbody(vegas_wgt)
       call set_cms_stuff(izero)
@@ -467,7 +469,9 @@ c The n+1-body contributions (including counter terms)
          wgt_me_real=0d0
          jac=MC_int_wgt
          call update_fks_dir(iFKS)
-         call generate_momenta(nndim,iconfig,jac,x,p,p_lab,p_cms)
+         call generate_real_phase_space(nndim,iconfig,jac,x,
+     $        phase_space)
+         p=phase_space%p
          if (p_born(0,1).lt.0d0) cycle
          call init_process_module_n1body_wrapper(dum)
          call compute_prefactors_n1body(vegas_wgt,jac)
@@ -931,6 +935,7 @@ c
       end
 c
       subroutine init_process_module_nbody_wrapper()
+      use fks_phase_space_data, only: p_born
       use process_module
       implicit none
       include 'nexternal.inc'
@@ -941,8 +946,6 @@ c
       double precision mass(1:nexternal-1),get_mass_from_id
       external get_mass_from_id
       logical valid_dipole(1:nexternal-1,1:nexternal-1,1:max_bcol)
-      double precision p_born(0:3,nexternal-1)
-      common /pborn/   p_born
       integer idup(nexternal-1,maxproc)
       integer mothup(2,nexternal-1,maxproc)
       integer icolup(2,nexternal-1,max_bcol)

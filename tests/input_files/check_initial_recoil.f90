@@ -1,6 +1,9 @@
 program check_initial_recoil
+  use fks_phase_space_data, only: spin => xij_aor
   use, intrinsic :: ieee_arithmetic, only: ieee_is_finite
   use mc_native_context, only: native_mapping
+  use fks_phase_space, only: generate_FKS_kinematics,generate_native_momenta, &
+       invert_fks_radiation
   implicit none
   include 'nexternal.inc'
   double precision, parameter :: pi=3.1415926535897932d0
@@ -14,8 +17,7 @@ program check_initial_recoil
   double precision :: gx(160),gw(160),volume,reference,r,ss,cs,angs,mlog,t
   double precision :: xifix,yfix
   common/cxiyfix/xifix,yfix
-  complex*16 :: spin,spinsave
-  common/cxij_aor/spin
+  complex*16 :: spinsave
   logical :: pass,softtest,colltest
   common/sctests/softtest,colltest
   character(len=32) :: mode
@@ -218,41 +220,30 @@ program check_initial_recoil
 contains
 
   subroutine production_roundtrip()
+  use fks_phase_space_data,only: resq => resonance_momentum,resmass2 => resonance_mass2, &
+       active => resonance_recoil,members => resonance_members,nocnt => nocntevents, &
+       recoil_leg => initial_recoil_leg,pb => p_born,pbl => p_born_l,pbe => p_born_ev,branch => isolsign, &
+       pc => p1_cnt,jc => jac_cnt,xev => xbjrk_ev,xcnt => xbjrk_cnt, &
+       rootsev => sqrtshat_ev,sev => shat_ev,rootscnt => sqrtshat_cnt,scnt => shat_cnt,tauev => tau_ev, &
+       yev => ycm_ev,taucnt => tau_cnt,ycnt => ycm_cnt,bound_born => tau_Born_lower_bound, &
+       bound_res => tau_lower_bound_resonance,bound_tau => tau_lower_bound
     use process_module, only: next_n1,nincoming_mod
     use kinematics_module, only: boost_n1_to_lab
     implicit none
     include 'genps.inc'
     include 'run.inc'
-    logical :: active,members(nexternal),nbody,nocnt,evpr,valid
-    double precision :: resq(0:3),resmass2
-    common/c_resonance_recoil/resq,resmass2,active,members
+  logical :: nbody,evpr,valid
     common/cnbody/nbody
-    common/cnocntevents/nocnt
     common/to_use_evpr/evpr
-    integer :: recoil_leg
-    common/c_initial_recoil/recoil_leg
-    double precision :: pmass(nexternal),pb(0:3,nexternal-1),pbl(0:3,nexternal-1),pbe(0:3,nexternal-1)
+  double precision :: pmass(nexternal)
     common/to_mass/pmass
-    common/pborn/pb
-    common/pborn_l/pbl
-    common/pborn_ev/pbe
-    integer :: ifks_active,jfks_active,config,branch
+  integer :: ifks_active,jfks_active,config
     common/fks_indices/ifks_active,jfks_active
     common/to_mconfigs/config
-    common/c_isolsign/branch
-    double precision :: pc(0:3,nexternal,-2:2),wc(-2:2),psc(-2:2),jc(-2:2),jc_save(-2:2)
-    common/counterevnts/pc,wc,psc,jc
-    double precision :: xev(2),xcnt(2,-2:2),sev,rootsev,scnt(-2:2),rootscnt(-2:2)
-    common/cbjorkenx/xev,xcnt
-    common/parton_cms_ev/rootsev,sev
-    common/parton_cms_cnt/rootscnt,scnt
-    double precision :: tauev,yev,taucnt(-2:2),ycnt(-2:2)
-    common/cbjrk12_ev/tauev,yev
-    common/cbjrk12_cnt/taucnt,ycnt
-    double precision :: bounds(3),omx(2)
-    common/ctau_lower_bound/bounds
+  double precision :: jc_save(-2:2)
+  double precision :: omx(2)
     common/to_ee_omx1/omx
-    double precision :: xgen(99),massarr(-max_branch:max_particles),mb(nexternal-1), &
+    double precision :: xgen(99),mb(nexternal-1), &
          out(0:3,nexternal),lab(0:3,nexternal),outlab(0:3,nexternal),outcms(0:3,nexternal), &
          born_save(0:3,nexternal-1),sqrts,s,stot,taub,yb,yhat,xb(2),j0,ps0,jout,jnew,flux,jexpected, &
          jb,psb,ratio_save,xx(3),jinv0,psinv0,pbinv(0:3,-max_branch:nexternal-1),xbback(2),tauback,yback
@@ -290,16 +281,17 @@ contains
     yhat=yb/(-0.5d0*log(taub))
     nbody=.false.
     evpr=.true.
-    bounds=0d0
+    bound_born=0d0
+    bound_res=0d0
+    bound_tau=0d0
     omx=0d0
     xgen=0d0
     xgen(1:3)=rnd
     j0=7d0
     ps0=3d0
-    massarr=0d0
     ratio_save=ratio
-    call generate_FKS_kinematics(xgen,3,j0,ps0,stot,s,sqrts,taub,yb,yhat, &
-         xb,massarr,mb,jout,out,valid)
+    call generate_FKS_kinematics(xgen(1:3),nbody,j0,ps0,stot,s,sqrts,taub,yb,yhat, &
+         xb,mb,jout,out,valid)
     if(.not.valid.or.jout.le.0d0)error stop 'production FI map rejected'
     if(maxval(abs(out-p)).gt.3d-5)error stop 'production FI map differs from direct map'
     if(maxval(abs(pbe-born_save)).gt.3d-5)error stop 'FI real partition projection differs from common Born'
@@ -412,36 +404,26 @@ contains
   end subroutine
 
   subroutine endpoint_prefactors()
-    double precision :: cmq(0:3),cmm2
-    logical :: local,mask(nexternal)
-    common/c_resonance_recoil/cmq,cmm2,local,mask
-    double precision :: cnt(0:3,nexternal,-2:2),unused(-2:2),pscnt(-2:2),jcnt(-2:2)
-    common/counterevnts/cnt,unused,pscnt,jcnt
-    double precision :: xiev,yev,pev(0:3),pcnt(0:3,-2:2),xicnt(-2:2),normev,maxev
-    common/fksvariables/xiev,yev,pev,pcnt
-    common/cxiifkscnt/xicnt
-    common/cxinormev/normev
-    common/cxiimaxev/maxev
-    double precision :: maxcnt(-2:2),normcnt(-2:2)
-    common/cxiimaxcnt/maxcnt
-    common/cxinormcnt/normcnt
-    double precision :: delta,cut,scut,bsvcut,boostlab,boostcm,sqrts,s
+  use fks_phase_space_data,only: cmq => resonance_momentum,cmm2 => resonance_mass2, &
+       local => resonance_recoil,mask => resonance_members,cnt => p1_cnt,&
+       jcnt => jac_cnt,xiev => xi_i_fks_ev,yev => y_ij_fks_ev,pev => p_i_fks_ev, &
+       pcnt => p_i_fks_cnt,xicnt => xi_i_fks_cnt,normev => xinorm_ev,maxev => xiimax_ev, &
+       maxcnt => xiimax_cnt,normcnt => xinorm_cnt,boostlab => ybst_til_tolab,boostcm => ybst_til_tocm, &
+       sqrts => sqrtshat,s => shat,nocounter => nocntevents
+  double precision :: delta,cut,scut,bsvcut
     common/cdelta_used/delta
     common/cxicut_used/cut
     common/cxiScut_used/scut,bsvcut
-    common/parton_cms_stuff/boostlab,boostcm,sqrts,s
     double precision :: sym,symborn,symdeg
     integer :: ng,nquarks(-6:6),ngamma,ci,cj
     common/numberofparticles/sym,symborn,symdeg,ng,nquarks,ngamma
     common/fks_indices/ci,cj
-    logical :: nocounter
-    common/cnocntevents/nocounter
     double precision :: fr,fs,fc,fdc,fsc,fdsc(4),masses(nexternal)
     common/factor_n1body/fr,fs,fc,fdc,fsc,fdsc
     common/to_mass/masses
     double precision :: mcs,mch,mccs,mcch,mcscs,mcsch,mcrs,mcrh
     common/factor_n1body_NLOPS/mcs,mch,mccs,mcch,mcscs,mcsch,mcrs,mcrh
-    double precision :: before(3),mcbefore(6),expect,cap,a,vegas,je,pe,logs,logc,loga
+    double precision :: before(3),mcbefore(6),expect,cap,a,vegas,je,pe,logs,logc,loga,endpoint_ps
     integer :: ic
     ci=ifks
     cj=jfks
@@ -466,8 +448,8 @@ contains
     pev=phat
     do ic=0,2
       if(mj.ne.0d0.and.ic.ne.0)cycle
-      call forward(ic,cnt(:,:,ic),jcnt(ic),pscnt(ic))
-      jcnt(ic)=jcnt(ic)*pscnt(ic)
+      call forward(ic,cnt(:,:,ic),jcnt(ic),endpoint_ps)
+      jcnt(ic)=jcnt(ic)*endpoint_ps
       normcnt(ic)=xnorm
       maxcnt(ic)=xmax
       xicnt(ic)=xi

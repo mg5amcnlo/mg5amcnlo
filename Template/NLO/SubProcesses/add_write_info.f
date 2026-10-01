@@ -1,7 +1,10 @@
       subroutine add_write_info(p_born,pp,ybst_til_tolab,iconfig,Hevents
      &     ,putonshell,ndim,x,jpart,npart,pb,shower_scale_a)
+      use fks_phase_space_data, only: p1_cnt,jac_cnt
 c Computes all the info needed to write out the events including the
 c intermediate resonances. It also boosts the events to the lab frame
+      use fks_phase_space, only: fks_phase_space_point,generate_born_event,
+     $     generate_momenta
       use process_module
       use scale_module
       implicit none
@@ -103,11 +106,6 @@ c For shifting QCD partons from zero to their mass-shell
       double precision x(99),p(0:3,99)
       integer mfail
       double precision xmi,xmj,xm1,xm2,emsum,tmpecm,dot,wgt
-      double precision p1_cnt(0:3,nexternal,-2:2)
-      double precision wgt_cnt(-2:2)
-      double precision pswgt_cnt(-2:2)
-      double precision jac_cnt(-2:2)
-      common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
       double precision xmcmass(nexternal)
       common/cxmcmass/xmcmass
       integer mohdr,izero
@@ -140,6 +138,7 @@ c pt_clust string
       common /c_is_aorg/is_aorg
       logical split_type(nsplitorders) 
       common /c_split_type/split_type
+      type(fks_phase_space_point) phase_space
 c
 c Set the leshouche info and fks info
 c
@@ -306,8 +305,8 @@ c the cm energy is smaller than sum of masses - keep massless partons
          endif
          wgt=1d0
 c generate a phase-space point with the MC masses
-         call generate_momenta(ndim,iconfig,wgt,x,p,p_lab,p_cms)
          if(Hevents)then
+            call generate_momenta(ndim,iconfig,wgt,x,p,p_lab,p_cms)
             call set_cms_stuff(mohdr)
 c special treament here for i_fks and j_fks masses
             call put_on_MC_mshell_Hev(p,xmi,xmj,xm1,xm2,mfail)
@@ -315,6 +314,12 @@ c include initial state masses
             if(j_fks.gt.nincoming.and.mfail.eq.0)
      &           call put_on_MC_mshell_in(p,xm1,xm2,mfail)
          else
+c Regenerate only the Born when shifting an S event's masses.
+            call generate_born_event(ndim,iconfig,wgt,x,
+     $           phase_space)
+            p(:,1:nexternal)=phase_space%p
+            p_lab=phase_space%p_lab
+            p_cms=phase_space%p_cms
 c include initial state masses
             call set_cms_stuff(izero)
             call put_on_MC_mshell_in(p1_cnt(0,1,0),xm1,xm2,mfail)
@@ -337,12 +342,17 @@ c all went fine and we can copy the new momenta onto the old ones.
             enddo
          elseif(mfail.eq.1)then
 c Probably not needed, but just to make sure: fill the momenta common
-c blocks again by call generate momenta again.
+c blocks again using the original MG masses.
             wgt=1d0
-            call generate_momenta(ndim,iconfig,wgt,x,p,p_lab,p_cms)
             if(Hevents)then
+              call generate_momenta(ndim,iconfig,wgt,x,p,p_lab,p_cms)
               call set_cms_stuff(mohdr)
             else
+              call generate_born_event(ndim,iconfig,wgt,x,
+     $             phase_space)
+              p(:,1:nexternal)=phase_space%p
+              p_lab=phase_space%p_lab
+              p_cms=phase_space%p_cms
               call set_cms_stuff(izero)
             endif
 c Also, set the masses that need to written in the event file to the MG
@@ -1358,15 +1368,13 @@ c
 
 
       subroutine put_on_MC_mshell_in(p,xm1,xm2,mfail)
+      use fks_phase_space_data, only: ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
       implicit none
       include 'nexternal.inc'
       double precision p(0:3,nexternal),xm1,xm2
       integer mfail
       double precision xm1_r,xm2_r
 
-      double precision ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
-      common/parton_cms_stuff/ybst_til_tolab,ybst_til_tocm,
-     #                        sqrtshat,shat
       double precision xmcmass(nexternal)
       common/cxmcmass/xmcmass
 c
@@ -1510,6 +1518,7 @@ c and let the Monte Carlo deal with it
 
 
       subroutine put_on_MC_mshell_Hevout(p,xmi,xmj,mfail)
+      use fks_phase_space_helpers, only: getangles
       implicit none
       double precision p(0:3,99),xmi,xmj
       integer mfail
@@ -1688,6 +1697,7 @@ c
 
 
       subroutine put_on_MC_mshell_Hevin(p,xmi,xm1,xm2,mfail)
+      use fks_phase_space_data, only: ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
       implicit none
       double precision p(0:3,99),xmi,xm1,xm2
       integer mfail
@@ -1701,9 +1711,6 @@ c
       integer i_fks,j_fks
       common/fks_indices/i_fks,j_fks
 
-      double precision ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
-      common/parton_cms_stuff/ybst_til_tolab,ybst_til_tocm,
-     #                        sqrtshat,shat
 
       double precision xmcmass(nexternal)
       common/cxmcmass/xmcmass

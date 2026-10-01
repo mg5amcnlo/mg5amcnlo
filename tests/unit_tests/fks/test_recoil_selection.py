@@ -13,14 +13,14 @@ TEMPLATE = ROOT / "Template/NLO/SubProcesses"
 
 DRIVER = """
 program check_recoil_selection
+  use fks_phase_space_data,only: momentum => resonance_momentum,mass2 => resonance_mass2, &
+       local => resonance_recoil,members => resonance_members,beam => initial_recoil_leg
   use FKSParams
   implicit none
   include 'nexternal.inc'
-  logical :: local, members(nexternal), mask(nexternal), defaults(nexternal), pass
-  double precision :: momentum(0:3), mass2, pmass(nexternal)
-  common /c_resonance_recoil/ momentum, mass2, local, members
-  integer :: beam, ifks, jfks
-  common /c_initial_recoil/ beam
+  logical :: mask(nexternal),defaults(nexternal),pass
+  double precision :: pmass(nexternal)
+  integer :: ifks,jfks
   common /fks_indices/ ifks, jfks
   common /to_mass/ pmass
   integer :: lpp(2)
@@ -189,6 +189,7 @@ class TestRecoilSelection(unittest.TestCase):
             result = subprocess.run([
                 shutil.which("gfortran"), "-O2", "-std=legacy",
                 "-ffixed-line-length-none", "-fcheck=all", "-I", str(work),
+                str(TEMPLATE / "fks_phase_space_data.f"),
                 str(TEMPLATE / "FKSParams.f90"),
                 str(TEMPLATE / "recoil_selection.f"),
                 str(work / "driver.f90"), "-o", str(work / "check")],

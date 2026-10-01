@@ -1,18 +1,21 @@
 ! Exercise production radiation functions, kernels and support. Input momenta
 ! and phase-space references are constructed independently by the Python test.
 program check_pythia8_matching
+  use fks_phase_space_data,only: bound_born => tau_Born_lower_bound, &
+       bound_res => tau_lower_bound_resonance,bound_tau => tau_lower_bound,vk => veckn_ev, &
+       vkb => veckbarn_ev,ve => xp0jfks,ylab => ybst_til_tolab,ycms => ybst_til_tocm,roots => sqrtshat, &
+       shat
   use process_module, only: next_n1, nincoming_mod, mass_n, shower_mc_mod
   use kinematics_module
   use scale_module
+  use fks_phase_space, only: invert_fks_radiation
   implicit none
   character(len=16) mode, shower
   integer ios, i, kind, np, ifks, jfks
   common /fks_indices/ ifks, jfks
-  double precision pmass(6), bounds(3), omx(2), vk, vkb, ve
+  double precision pmass(6),omx(2)
   common /to_mass/ pmass
-  common /ctau_lower_bound/ bounds
   common /to_ee_omx1/ omx
-  common /cgenps_fks/ vk, vkb, ve
   logical softtest, colltest, zone(2)
   common /sctests/ softtest, colltest
   double precision ch_i, ch_j, ch_m
@@ -20,8 +23,6 @@ program check_pythia8_matching
   common /cparticle_types/ ch_i, ch_j, ch_m, i_type, j_type, m_type, j_pdg
   integer fks_j_from_i(6,0:6), particle_type(6), pdg_type(6)
   common /c_fks_inc/ fks_j_from_i, particle_type, pdg_type
-  double precision ylab, ycms, roots, shat
-  common /parton_cms_stuff/ ylab, ycms, roots, shat
   double precision g, alsf, besf, alazi, beazi
   double complex gal(2)
   common /test_couplings/ g, gal
@@ -40,7 +41,9 @@ program check_pythia8_matching
   nincoming_mod=2
   allocate(mass_n(5))
   mass_n=0d0
-  bounds=1d-12
+  bound_born=1d-12
+  bound_res=1d-12
+  bound_tau=1d-12
   omx=0d0
   pmass=0d0
   softtest=.false.

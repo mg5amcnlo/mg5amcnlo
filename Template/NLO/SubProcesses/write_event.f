@@ -1,4 +1,7 @@
       subroutine finalize_event(xx,weight,lunlhe,putonshell,p_label)
+      use fks_phase_space_data, only: ybst_til_tolab,ybst_til_tocm,sqrtshat,shat,p_born
+      use fks_phase_space, only: fks_phase_space_point,generate_born_event,
+     $     generate_momenta
       use mint_module
       use process_module
       use scale_module
@@ -21,14 +24,10 @@
       logical unwgt
       double precision evtsgn
       common /c_unwgt/evtsgn,unwgt
-      double precision ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
-      common/parton_cms_stuff/ybst_til_tolab,ybst_til_tocm,
-     #                        sqrtshat,shat
       integer npart
       double precision shower_scale_a(-nexternal+3:2
      $     *nexternal-3,-nexternal+3:2*nexternal-3)
-      double precision p_born(0:3,nexternal-1)
-      common/pborn/p_born
+      type(fks_phase_space_point) phase_space
       call cpu_time(tBefore)
 
       do i=1,99
@@ -41,7 +40,17 @@
       
       wgt=1d0
       evnt_wgt=evtsgn*weight
-      call generate_momenta(ndim,iconfig,wgt,x,p,p_lab,p_cms)
+      if(.not.Hevents.and.ickkw.ne.4)then
+c S events need the Born momenta and their beam frame only.
+         call generate_born_event(ndim,iconfig,wgt,x,
+     $        phase_space)
+         p=phase_space%p
+         p_lab=phase_space%p_lab
+         p_cms=phase_space%p_cms
+      else
+c H events and the additional ickkw=4 record need real momenta.
+         call generate_momenta(ndim,iconfig,wgt,x,p,p_lab,p_cms)
+      endif
 c
 c Get all the info we need for writing the events.
 c      

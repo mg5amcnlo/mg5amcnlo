@@ -1,6 +1,7 @@
       subroutine cluster_and_reweight(iproc_input,sudakov
      $     ,expanded_sudakov,nqcdrenscale,qcd_ren_scale,qcd_fac_scale
      $     ,need_matching,for_mcatnlo_scale)
+      use fks_phase_space_data, only: p_born,p_ev
 C main wrapper routine for the FxFx clustering, Sudakov inclusion and
 C renormalisation scale setting (to be used to somewhere else to
 C reweight alphaS). Should be called with iproc_input=-nFKSprocess (or
@@ -26,10 +27,6 @@ C common block.
       integer mapconfig(0:lmaxconfigs,0:fks_configs)
       common /c_configurations/pmass,pwidth,iforest,sprop,tprid
      $     ,mapconfig
-      double precision p_born(0:3,nexternal-1)
-      common/pborn/p_born
-      double precision p_ev(0:3,nexternal)
-      common/pev/      p_ev
       integer            this_config
       common/to_mconfigs/this_config
       integer nfks1,iproc,iproc_input,nFKSprocess

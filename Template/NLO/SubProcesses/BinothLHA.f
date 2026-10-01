@@ -566,14 +566,13 @@ c weight, screwing up the complete integration afterward.
 
 
       subroutine BinothLHAInit(filename)
+      use fks_phase_space_data, only: p_born
       implicit none
       include "nexternal.inc"
       include "coupl.inc"
       integer status,procnum
       double precision s,mu,sumdot
       external sumdot
-      double precision p_born(0:3,nexternal-1)
-      common/pborn/p_born
       character*13 filename
       common /LH_procnum /procnum
 

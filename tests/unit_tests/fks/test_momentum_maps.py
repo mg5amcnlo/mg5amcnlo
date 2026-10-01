@@ -19,8 +19,10 @@ TEMPLATE = ROOT / "Template/NLO/SubProcesses"
 
 
 def fortran_routine(path, name):
-    """Select a fixed-form routine, including the split FKS source files."""
-    paths = (sorted(path.parent.glob("genps_fks*.f"))
+    """Select a fixed-form routine, including contained FKS procedures."""
+    paths = ([path.parent / source for source in (
+                  "genps_fks.f", "genps_fks_sampling.f",
+                  "genps_fks_radiation.f", "genps_fks_helpers.f")]
              if path.name == "genps_fks.f" else [path])
     pattern = re.compile(
         r"^      (?:subroutine|(?:(?:double precision|logical|integer) )?function) "
@@ -35,11 +37,37 @@ def fortran_routine(path, name):
         raise ValueError("Ambiguous Fortran routine {} in {}".format(
             name, ", ".join(str(candidate) for candidate, _, _ in matches)))
     _, source, start = matches[0]
-    end = re.search(r"^      end[ \t]*$", source[start.start():],
+    end = re.search(r"^      end(?:[ \t]+(?:subroutine|function)"
+                    r"(?:[ \t]+" + re.escape(name) + r")?)?[ \t]*$",
+                    source[start.start():],
                     re.MULTILINE | re.IGNORECASE)
     if end is None:
         raise ValueError("Missing end of Fortran routine: " + name)
     return source[start.start():start.start() + end.end()] + "\n"
+
+
+FKS_MAIN_ROUTINES = (
+    "generate_native_momenta", "invert_fks_radiation",
+    "generate_fks_radiation", "reject_fks_phase_space",
+    "record_fks_phase_space", "capture_fks_phase_space",
+    "generate_FKS_kinematics", "reset_fks_kinematics",
+    "compute_flux", "fill_fks_point_data")
+
+
+def fks_test_module(names=FKS_MAIN_ROUTINES, template=TEMPLATE):
+    """Retain production types and data imports around selected high-level routines."""
+    source = (template / "genps_fks.f").read_text()
+    header, _ = re.split(r"^      contains[ \t]*$", source, maxsplit=1,
+                         flags=re.MULTILINE | re.IGNORECASE)
+    # Born sampling needs generated topology tables. These radiation fixtures
+    # use actual helper/radiation modules and expose selected orchestration
+    # internals without copying their interfaces or host declarations.
+    header = re.sub(r"^      (?:use fks_born_sampling\b|private\b|public\b)"
+                    r"[^\n]*(?:\n     [^ 0\s][^\n]*)*\n?", "", header,
+                    flags=re.MULTILINE | re.IGNORECASE)
+    return (header + "      contains\n" + "\n".join(
+        fortran_routine(template / "genps_fks.f", name) for name in names)
+        + "      end module fks_phase_space\n")
 
 
 @unittest.skipUnless(shutil.which("gfortran"), "requires gfortran")
@@ -57,7 +85,6 @@ class TestMomentumMaps(unittest.TestCase):
             "      integer max_branch,max_particles\n"
             "      parameter (max_branch=8,max_particles=8)\n")
         shutil.copyfile(TEMPLATE / "fks_powers.inc", work / "fks_powers.inc")
-        shutil.copyfile(TEMPLATE / "resonance_recoil.inc", work / "resonance_recoil.inc")
         (work / "native_context.f90").write_text(
             "module mc_native_context\n"
             "logical :: native_mapping=.false.\nend module\n")
@@ -67,19 +94,8 @@ class TestMomentumMaps(unittest.TestCase):
             "      common/test_run/ebeam,lpp\n")
         (work / "coupl.inc").write_text("")
         (work / "pmass.inc").write_text("      common/to_mass/pmass\n")
+        (work / "fks_phase_space.f").write_text(fks_test_module())
         routines = []
-        for name in ("generate_momenta_massive_final",
-                     "generate_momenta_massless_final",
-                     "generate_momenta_massive_final_inverse",
-                     "generate_momenta_massless_final_inverse",
-                     "native_fsr_angle", "get_massive_fsr_bounds",
-                     "lambda", "yminmax", "gentcms",
-                     "generate_native_momenta", "invert_fks_radiation",
-                     "generate_FKS_kinematics", "reset_fks_kinematics", "compute_flux",
-                     "generate_momenta_initial",
-                     "generate_momenta_initial_inverse",
-                     "fill_FKS_commons", "getangles", "get_recoil"):
-            routines.append(fortran_routine(TEMPLATE / "genps_fks.f", name))
         for name in ("rotate_invar", "trp_rotate_invar", "phspncheck_nocms", "xlen4",
                      "xmom_compare", "xmcompare", "xprintout"):
             routines.append(fortran_routine(TEMPLATE / "fks_singular.f", name))
@@ -94,8 +110,12 @@ class TestMomentumMaps(unittest.TestCase):
                    "-Wl,-dead_strip" if sys.platform == "darwin" else "-Wl,--gc-sections",
                    "-I", str(work),
                    str(TEMPLATE / "process_module.f90"),
+                   str(TEMPLATE / "fks_phase_space_data.f"),
                    str(TEMPLATE / "kinematics_module.f90"),
                    str(work / "native_context.f90"),
+                   str(TEMPLATE / "genps_fks_helpers.f"),
+                   str(TEMPLATE / "genps_fks_radiation.f"),
+                   str(work / "fks_phase_space.f"),
                    str(work / "maps.f"), str(TEMPLATE / "boostwdir2.f"),
                    str(TEMPLATE / "resonance_recoil.f"),
                    str(TEMPLATE / "initial_recoil.f"),

@@ -11,13 +11,11 @@ module mc_native_context
 end module
 
 program check_resonance_partition
+  use fks_phase_space_data, only: pb => p_born,pbe => p_born_ev,pe => p_ev
   use mc_native_context
   implicit none
   integer,parameter :: nexternal=5,lmaxconfigs=3,max_branch=3,fks_configs=1
-  double precision :: pb(0:3,4),pbe(0:3,4),pe(0:3,5),g,total,outer,native,mc,soft
-  common/pborn/pb
-  common/pborn_ev/pbe
-  common/pev/pe
+  double precision :: g,total,outer,native,mc,soft
   common/test_coupling/g
   double precision :: masses(-5:0,3,0:1),widths(-5:0,3,0:1)
   integer :: forests(2,-3:-1,3,0:1),sprops(-3:-1,3,0:1),tprids(-3:-1,3,0:1),maps(0:3,0:1)

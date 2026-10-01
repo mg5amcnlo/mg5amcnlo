@@ -53,13 +53,14 @@ c Resume the card's recoil policy at the next phase-space selection.
 
 
       subroutine select_fks_recoil(default_members,enable)
+      use fks_phase_space_data,only: resonance_momentum,resonance_mass2,resonance_recoil,
+     $     resonance_members,initial_recoil_leg
 c Install the active radiation frame policy. default_members is the
 c automatic resonance subsystem, INCLUDING emitter and emission. Explicit
 c requests instead contain recoilers only and survive point generation.
       use FKSParams, only: FKSFinalRecoil
       implicit none
       include 'nexternal.inc'
-      include 'resonance_recoil.inc'
       include 'recoil_selection.inc'
       logical default_members(nexternal),enable,
      $     recoilers(nexternal),pass,defaults(nexternal)

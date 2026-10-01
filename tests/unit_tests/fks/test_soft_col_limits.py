@@ -45,8 +45,10 @@ class TestSoftColLimits(unittest.TestCase):
         cls.executable = cls.work / "check_limits"
         command = [shutil.which("gfortran"), "-O2", "-std=legacy",
                    "-ffixed-line-length-none", "-fcheck=bounds", "-I", str(cls.work),
-                   str(cls.work / "mint_module.f90"), str(cls.work / "limits.f"),
+                   str(TEMPLATE / "fks_phase_space_data.f"),
+                   str(cls.work / "mint_module.f90"),
                    str(ROOT / "tests/input_files/check_soft_col_limits.f90"),
+                   str(cls.work / "limits.f"),
                    "-o", str(cls.executable)]
         result = subprocess.run(command, cwd=cls.work, text=True,
                                 stdout=subprocess.PIPE, stderr=subprocess.STDOUT)

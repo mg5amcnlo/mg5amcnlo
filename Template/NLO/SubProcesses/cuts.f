@@ -763,6 +763,7 @@ C NO NEED TO CHANGE ANY OF THE FUNCTIONS BELOW
 C***************************************************************
 C***************************************************************
       logical function passcuts(p,rwgt)
+      use fks_phase_space_data, only: ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
       implicit none
       include "nexternal.inc"
       include 'run.inc'
@@ -772,9 +773,6 @@ C***************************************************************
       REAL*8 P(0:3,nexternal),rwgt
       integer i,j,istatus(nexternal),iPDG(nexternal)
 c For boosts
-      double precision ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
-      common/parton_cms_stuff/ybst_til_tolab,ybst_til_tocm,
-     #                        sqrtshat,shat
       double precision chybst,shybst,chybstmo
       double precision xd(1:3)
       data (xd(i),i=1,3)/0,0,1/

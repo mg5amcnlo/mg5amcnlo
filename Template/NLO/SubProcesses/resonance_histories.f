@@ -1,4 +1,6 @@
       subroutine select_native_recoil(iconfig_native)
+      use fks_phase_space_data,only: resonance_momentum,resonance_mass2,resonance_recoil,
+     $     resonance_members,initial_recoil_leg
 c Select the chart's own decay tree. Evaluate its resonance criterion
 c with the ordinary generation cuts; native radiation projection itself
 c still covers the full physical real phase space.
@@ -7,7 +9,6 @@ c still covers the full physical real phase space.
       include 'genps.inc'
       include 'nexternal.inc'
       include 'born_conf.inc'
-      include 'resonance_recoil.inc'
       integer iconfig_native,itree(2,-max_branch:-1),iconf,this_config
       common /to_itree/itree,iconf
       common /to_mconfigs/this_config
@@ -32,6 +33,8 @@ c still covers the full physical real phase space.
 
 
       subroutine native_recoil_groups(ngroups,group_config,group_of)
+      use fks_phase_space_data,only: resonance_momentum,resonance_mass2,resonance_recoil,
+     $     resonance_members,initial_recoil_leg
 c Diagrams with the same recoil mask and beam share a native projection.
 c Born-channel weights are added, so no extra chart sampling or Jacobian
 c enters the native H density. With no resonances this is one group.
@@ -40,7 +43,6 @@ c enters the native H density. With no resonances this is one group.
       include 'genps.inc'
       include 'nexternal.inc'
       include 'born_conf.inc'
-      include 'resonance_recoil.inc'
       integer ngroups,group_config(lmaxconfigs),group_of(lmaxconfigs),
      $     i,g,recoil_beams(lmaxconfigs)
       logical masks(nexternal,lmaxconfigs)
@@ -65,6 +67,7 @@ c enters the native H density. With no resonances this is one group.
 
 
       double precision function native_recoil_weight(p,group,group_of)
+      use fks_phase_space_data, only: p_ev
 c Sum the diagram partition at this projection. Native providers may
 c have more diagrams than the local Born routine's to_amps COMMON.
       use mc_native_context, only: active_context,local_context,
@@ -74,11 +77,9 @@ c have more diagrams than the local Born routine's to_amps COMMON.
       include 'nexternal.inc'
       include 'born_conf.inc'
       integer group,group_of(lmaxconfigs),i,d
-      double precision p(0:3,nexternal-1),ans,total,numerator,diagram,
-     $     amp2(ngraphs),jamp2(0:ncolor),pas(0:3,nexternal),
-     $     p_ev(0:3,nexternal)
+      double precision p(0:3,nexternal-1),ans,total,numerator,diagram,amp2(ngraphs),jamp2(0:ncolor),
+     $     pas(0:3,nexternal)
       common /to_amps/amp2,jamp2
-      common /pev/p_ev
       logical calculatedBorn
       common /ccalculatedBorn/calculatedBorn
       pas=0d0

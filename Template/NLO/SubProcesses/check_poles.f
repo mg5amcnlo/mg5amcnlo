@@ -1,4 +1,5 @@
       Program DRIVER
+      use fks_phase_space_data, only: p_born
 c**************************************************************************
 c     This is the driver for the whole calulation
 c**************************************************************************
@@ -21,8 +22,6 @@ C
       include 'nexternal.inc'
       include 'nFKSconfigs.inc'
       double precision p(0:3, nexternal), prambo(0:3,100)
-      double precision p_born(0:3,nexternal-1)
-      common/pborn/p_born
       double precision pswgt
       double precision fks_double, fks_single
       double precision, allocatable :: virt_wgts(:,:)

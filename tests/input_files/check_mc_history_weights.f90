@@ -1,23 +1,13 @@
 module history_test_state
+  use fks_phase_space_data,only: p1_cnt,jac_cnt,p_born,p_ev,ybst_til_tolab, &
+       ybst_til_tocm,sqrtshat,shat,xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt,xi_i_fks_cnt,xiimax_cnt, &
+       xi_i_hat_ev,xi_i_hat_cnt
   implicit none
   include 'nexternal.inc'
   include 'orders.inc'
   include 'coupl.inc'
   include 'run.inc'
   include 'q_es.inc'
-  double precision :: p1_cnt(0:3,nexternal,-2:2),wgt_cnt(-2:2),pswgt_cnt(-2:2),jac_cnt(-2:2)
-  common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
-  double precision :: p_born(0:3,nexternal-1),p_ev(0:3,nexternal)
-  common/pborn/p_born
-  common/pev/p_ev
-  double precision :: ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
-  common/parton_cms_stuff/ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
-  double precision :: xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev(0:3),p_i_fks_cnt(0:3,-2:2)
-  common/fksvariables/xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt
-  double precision :: xi_i_fks_cnt(-2:2),xiimax_cnt(-2:2),xi_i_hat_ev,xi_i_hat_cnt(-2:2)
-  common/cxiifkscnt/xi_i_fks_cnt
-  common/cxiimaxcnt/xiimax_cnt
-  common/cxi_i_hat/xi_i_hat_ev,xi_i_hat_cnt
   double precision :: xiScut_used,xiBSVcut_used
   common/cxiScut_used/xiScut_used,xiBSVcut_used
   integer :: i_fks,j_fks,nFKSprocess,fold,ifold_counter

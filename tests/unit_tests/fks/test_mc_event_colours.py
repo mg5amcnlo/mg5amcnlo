@@ -66,6 +66,7 @@ class TestMCEventColours(unittest.TestCase):
                 '-Wl,-dead_strip' if sys.platform == 'darwin' else '-Wl,--gc-sections',
                 '-I', str(work), str(work / 'contexts.f90'),
                 str(TEMPLATE / 'process_module.f90'),
+                str(TEMPLATE / 'fks_phase_space_data.f'),
                 str(TEMPLATE / 'kinematics_module.f90'),
                 str(TEMPLATE / 'mcatnlo_delta_scales.f90'),
                 str(TEMPLATE / 'herwig7_scales.f90'),

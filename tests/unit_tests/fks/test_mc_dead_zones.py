@@ -35,7 +35,6 @@ class TestMCDeadZones(unittest.TestCase):
             "      parameter (amp_split_size=1)\n")
         (work / "fks_info.inc").write_text("")
         shutil.copyfile(TEMPLATE / "fks_powers.inc", work / "fks_powers.inc")
-        shutil.copyfile(TEMPLATE / "resonance_recoil.inc", work / "resonance_recoil.inc")
         routines = [fortran_routine(COUNTER, name) for name in
                     ("compute_MCsubtraction_kl", "compute_damping_weight",
                      "emscafun", "get_dead_zone", "get_angle")]
@@ -44,8 +43,6 @@ class TestMCDeadZones(unittest.TestCase):
                         for name in ("dot", "rho", "threedot"))
         routines.extend(fortran_routine(TEMPLATE / "resonance_recoil.f", name)
                         for name in ("prepare_resonance_frame", "resonance_shower_frame"))
-        init = "      block data resonance_recoil_init"
-        routines.append(init + (TEMPLATE / "resonance_recoil.f").read_text().split(init, 1)[1])
         (work / "counter.f").write_text("\n".join(routines))
         cls.executable = work / "check_dead_zones"
         command = [shutil.which("gfortran"), "-O2", "-std=legacy",
@@ -53,6 +50,7 @@ class TestMCDeadZones(unittest.TestCase):
                    "-ffunction-sections", "-fdata-sections",
                    "-Wl,-dead_strip" if sys.platform == "darwin" else "-Wl,--gc-sections",
                    "-I", str(work), str(TEMPLATE / "process_module.f90"),
+                   str(TEMPLATE / "fks_phase_space_data.f"),
                    str(TEMPLATE / "kinematics_module.f90"),
                    str(TEMPLATE / "mcatnlo_delta_scales.f90"),
                    str(TEMPLATE / "herwig7_scales.f90"),

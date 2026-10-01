@@ -8,7 +8,6 @@ Only the Python standard library and gfortran are needed.
 """
 import math
 import random
-import re
 import subprocess
 import sys
 import atexit
@@ -17,27 +16,12 @@ import tempfile
 from pathlib import Path
 
 ROOT = Path(sys.argv[1]).resolve() if len(sys.argv)>1 else Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT))
+from tests.unit_tests.fks.test_momentum_maps import fortran_routine as routine, fks_test_module
+
 WORK = Path(tempfile.mkdtemp(prefix='pythia8318-matching-audit-'))
 atexit.register(shutil.rmtree, WORK)
 SRC = ROOT / 'Template/NLO/SubProcesses'
-
-def routine(file, name):
-    files = sorted(file.parent.glob('genps_fks*.f')) if file.name == 'genps_fks.f' else [file]
-    pattern = re.compile(
-        r'^      (?:subroutine|(?:(?:double precision|logical|integer) )?function) '
-        + re.escape(name) + r'\b', re.M|re.I)
-    matches = []
-    for candidate in files:
-        source = candidate.read_text()
-        matches.extend((candidate, source, start) for start in pattern.finditer(source))
-    if len(matches) != 1:
-        raise ValueError('Expected one Fortran routine {}, found {} in {}'.format(
-            name, len(matches), ', '.join(str(candidate) for candidate, _, _ in matches)))
-    _, source, start = matches[0]
-    end = re.search(r'^      end[ \t]*$',source[start.start():],re.M|re.I)
-    if end is None:
-        raise ValueError('Missing end of Fortran routine: ' + name)
-    return source[start.start():start.start()+end.end()]+'\n'
 
 for name, data in {
     'nexternal.inc':'      integer nexternal,nincoming\n      parameter(nexternal=5,nincoming=2)\n',
@@ -46,30 +30,28 @@ for name, data in {
     'scale.f90':'module scale_module\ndouble precision :: shower_scale_nbody_max(4,4)=1000d0\nend module\n',
 }.items():
     (WORK/name).write_text(data)
-for name in ('fks_powers.inc', 'resonance_recoil.inc'):
+for name in ('fks_powers.inc',):
     shutil.copyfile(SRC/name, WORK/name)
 
-routines = [routine(SRC/'genps_fks.f', n) for n in (
-    'invert_fks_radiation', 'generate_momenta_initial_inverse',
-    'generate_momenta_massive_final_inverse', 'generate_momenta_massless_final_inverse',
-    'generate_momenta_massive_final', 'generate_momenta_massless_final',
-    'native_fsr_angle','get_massive_fsr_bounds','get_recoil','getangles')]
-routines += [routine(SRC/'fks_singular.f', n) for n in ('rotate_invar', 'trp_rotate_invar')]
+(WORK/'phase_space.f').write_text(fks_test_module(('invert_fks_radiation',), SRC))
+routines = [routine(SRC/'fks_singular.f', n) for n in ('rotate_invar', 'trp_rotate_invar')]
 routines += [routine(SRC/'montecarlocounter.f',n) for n in
              ('zPY8','xiPY8','xjacPY8','dinvariants_dFKS','xfact_ileg12','xfact_ileg3','xfact_ileg4','get_dead_zone','get_angle')]
 routines += [routine(ROOT/'Template/NLO/Source/kin_functions.f',n) for n in ('dot','rho','threedot')]
 (WORK/'routines.f').write_text('\n'.join(routines))
 (WORK/'driver.f90').write_text('''program audit
+  use fks_phase_space_data,only: bound_born => tau_Born_lower_bound, &
+       bound_res => tau_lower_bound_resonance,bound_tau => tau_lower_bound,vkn => veckn_ev, &
+       vknbar => veckbarn_ev,ve => xp0jfks
   use process_module, only: next_n1,nincoming_mod,mass_n,shower_mc_mod
   use kinematics_module
+  use fks_phase_space, only: invert_fks_radiation
   implicit none
   integer i,jf,ios,ifks,jfks
   common/fks_indices/ifks,jfks
-  double precision pmass(5),bounds(3),omx(2),vkn,vknbar,ve
+  double precision pmass(5),omx(2)
   common/to_mass/pmass
-  common/ctau_lower_bound/bounds
   common/to_ee_omx1/omx
-  common/cgenps_fks/vkn,vknbar,ve
   logical soft,coll,zone
   common/sctests/soft,coll
   double precision p(0:3,5),pc(0:3,5),pb(0:3,-8:4),m,mb2,mk2,rt(3),jac,ps,tau,yb,xb(2),rap
@@ -79,7 +61,9 @@ routines += [routine(ROOT/'Template/NLO/Source/kin_functions.f',n) for n in ('do
   nincoming_mod=2
   shower_mc_mod='PYTHIA8'
   allocate(mass_n(4))
-  bounds=1d-12
+  bound_born=1d-12
+  bound_res=1d-12
+  bound_tau=1d-12
   omx=0d0
   soft=.false.
   coll=.false.
@@ -154,8 +138,10 @@ end program
 cmd=['gfortran','-O2','-std=legacy','-ffixed-line-length-none','-ffree-line-length-none',
      '-fno-automatic','-ffunction-sections','-fdata-sections',
      '-Wl,-dead_strip' if sys.platform=='darwin' else '-Wl,--gc-sections',
-     '-I',str(WORK),str(SRC/'process_module.f90'),str(SRC/'kinematics_module.f90'),
-     'native.f90','scale.f90','routines.f',str(SRC/'boostwdir2.f'),
+     '-I',str(WORK),str(SRC/'process_module.f90'),str(SRC/'fks_phase_space_data.f'),
+     str(SRC/'kinematics_module.f90'),
+     'native.f90','scale.f90',str(SRC/'genps_fks_helpers.f'),
+     str(SRC/'genps_fks_radiation.f'),'phase_space.f','routines.f',str(SRC/'boostwdir2.f'),
      str(SRC/'resonance_recoil.f'),str(SRC/'initial_recoil.f'),
      str(ROOT/'HELAS/boostx.F'),'driver.f90','-o','audit']
 subprocess.run(cmd,cwd=WORK,check=True,capture_output=True,text=True)

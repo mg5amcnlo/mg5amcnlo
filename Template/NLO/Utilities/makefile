@@ -5,7 +5,7 @@ INCLUDE=-I../SubProcesses/$(P01)
 EXTRAW=-I../Source
 FF=gfortran -g -fno-automatic -ffixed-line-length-132 -std=legacy $(INCLUDE) $(EXTRAW) 
 FILES=handling_lhe_events.o fill_MC_mshell.o extra_weights.o
-FILES2=madfks_plot.o setcuts.o open_output_files.o pineappl_interface_dummy.o
+FILES2=fks_phase_space_data.o madfks_plot.o setcuts.o open_output_files.o pineappl_interface_dummy.o
 TDFILES=dbook.o open_output_files_dummy_td.o 
 HWUFILES=HwU.o open_output_files_dummy_HwU.o 
 
@@ -17,6 +17,11 @@ HWUFILES=HwU.o open_output_files_dummy_HwU.o
 
 all: check_events combine_plots compare_events merge_events plot_events \
 	plot_events_lhef select_events split_events sum_plots uncertainties
+
+fks_phase_space_data.o: ../SubProcesses/fks_phase_space_data.f ../SubProcesses/$(P01)/nexternal.inc
+	$(FF) -c $<
+
+setcuts.o: fks_phase_space_data.o
 
 check_events : $(FILES) check_events.o dbook.o pineappl_interface_dummy.o orderstags_glob.o
 	$(FF) $^ -o $@

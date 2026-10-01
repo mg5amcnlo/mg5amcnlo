@@ -53,10 +53,9 @@ endif
 
 
 
-# Phase-space entry points, sampling, radiation maps and shared kernels.
-GENPS_OBJECTS = genps_fks.o genps_fks_born.o genps_fks_beams.o \
-                genps_fks_fsr.o genps_fks_isr.o genps_fks_native.o \
-                genps_fks_helpers.o
+# Active point data, entry points, sampling, radiation maps and kernels.
+GENPS_OBJECTS = fks_phase_space_data.o genps_fks_helpers.o genps_fks_sampling.o \
+                genps_fks_radiation.o genps_fks.o
 
 # Files for all executables
 FILES= $(patsubst %.f,%.o,$(wildcard parton_lum_*.f)) 			\
@@ -79,7 +78,7 @@ FILES= $(patsubst %.f,%.o,$(wildcard parton_lum_*.f)) 			\
 	 MC_integer.o $(reweight_xsec_events_pdf_dummy)			\
 	 $(pineappl_interface) weight_lines.o mint_module.o polfit.o
 
-FILESSUD= \
+FILESSUD= fks_phase_space_data.o \
          $(patsubst %.f,%.o,$(wildcard  ewsudakov*.f)) 			\
          $(patsubst %.f,%.o,$(wildcard  numder*.f)) 			\
 	 born.o born_hel.o momentum_reshuffling.o			\
@@ -116,7 +115,7 @@ TEST= $(RUN) test_soft_col_limits.o BinothLHADummy.o write_event.o handling_lhe_
 SYM= $(RUN) BinothLHADummy.o symmetry_fks_v3.o write_ajob.o write_event.o handling_lhe_events.o
 
 # Files for event reweighting to get e.g. scale and PDF uncertainties
-RWGFILES=reweight_xsec_events.o handling_lhe_events.o recmom.o 		\
+RWGFILES=fks_phase_space_data.o reweight_xsec_events.o handling_lhe_events.o recmom.o \
 	$(patsubst %.f,%.o,$(wildcard parton_lum_*.f)) setscales.o	\
 	cuts.o dummy_fct.o $(fastjetfortran_madfks) boostwdir2.o veto_xsec.o	\
 	$(reweight_xsec_events_pdf_dummy) fill_MC_mshell.o cluster.o	\
@@ -200,12 +199,28 @@ reweight_xsec_events: $(RWGFILES) makefile $(LIBS)
 libMadLoop.a:
 	for dir in `ls -d V*`; do cd $$dir; make; cd ../; done
 
+# Each reader and writer of the active point needs the module interface.
+# Keep this below executable targets so it does not change the default goal.
+add_write_info.o analysis_lhe.o BinothLHA.o BinothLHA_user.o \
+    check_poles.o check_sudakov.o check_sudakov_angle2.o cluster.o cuts.o \
+    driver_mintFO.o driver_mintMC.o ewsudakov_functions_dummy.o \
+    fks_Sij.o fks_singular.o genps_fks.o genps_fks_sampling.o \
+    genps_fks_radiation.o initial_recoil.o kinematics_module.o \
+    mc_native_runtime.o montecarlocounter.o pythia_unlops.o \
+    recoil_selection.o resonance_histories.o resonance_recoil.o \
+    reweight_xsec_events.o sa_ewsudakov_dummyfcts.o setcuts.o \
+    symmetry_fks_v3.o test_soft_col_limits.o veto_xsec.o write_event.o: fks_phase_space_data.o
+
 kinematics_module.o : process_module.o
 scale_module.o : process_module.o kinematics_module.o mcatnlo_delta_scales.o herwig7_scales.o
 montecarlocounter.o : scale_module.o kinematics_module.o process_module.o mcatnlo_delta_scales.o
 fks_singular.o : scale_module.o kinematics_module.o process_module.o
 add_write_info.o write_event.o test_soft_col_limits.o driver_mintMC.o: scale_module.o
-genps_fks.o genps_fks_native.o: kinematics_module.o
+genps_fks.o: genps_fks_sampling.o genps_fks_radiation.o \
+    genps_fks_helpers.o kinematics_module.o mc_native_context.o
+genps_fks_sampling.o genps_fks_radiation.o: genps_fks_helpers.o mc_native_context.o
+driver_mintFO.o driver_mintMC.o write_event.o add_write_info.o \
+    test_soft_col_limits.o symmetry_fks_v3.o: genps_fks.o
 driver_mintFO.o: process_module.o
 mint_module.o : FKSParams.o
 BinothLHA_OLP.o: FKSParams.o
@@ -217,13 +232,12 @@ driver_mintFO.o: weight_lines.o mint_module.o FKSParams.o
 chooser_functions.o: weight_lines.o
 cluster.o: weight_lines.o
 setcuts.o: mint_module.o
-genps_fks.o genps_fks_beams.o genps_fks_native.o resonance_recoil.o fks_singular.o mc_native_runtime.o: resonance_recoil.inc
-$(GENPS_OBJECTS): genps.inc nexternal.inc
-genps_fks.o genps_fks_beams.o genps_fks_fsr.o genps_fks_isr.o genps_fks_native.o: mc_native_context.o
-resonance_recoil.o: mc_native_context.o
-initial_recoil.o: mc_native_context.o resonance_recoil.inc
-recoil_selection.o: FKSParams.o recoil_selection.inc resonance_recoil.inc
-resonance_histories.o: mc_native_context.o mint_module.o resonance_recoil.inc
+genps_fks.o genps_fks_sampling.o genps_fks_radiation.o: genps.inc nexternal.inc
+fks_phase_space_data.o: nexternal.inc
+genps_fks_helpers.o: nexternal.inc
+resonance_recoil.o initial_recoil.o: genps_fks_helpers.o genps_fks_radiation.o mc_native_context.o
+recoil_selection.o: FKSParams.o recoil_selection.inc
+resonance_histories.o: mc_native_context.o mint_module.o
 symmetry_fks_v3.o: mint_module.o
 test_soft_col_limits.o: mint_module.o
 madfks_plot.o: mint_module.o

@@ -16,7 +16,8 @@ import sys
 import tempfile
 import unittest
 
-from tests.unit_tests.fks.test_momentum_maps import ROOT, TEMPLATE, fortran_routine
+from tests.unit_tests.fks.test_momentum_maps import (
+    ROOT, TEMPLATE, fortran_routine, fks_test_module)
 
 
 def dot(a, b):
@@ -169,21 +170,15 @@ class TestPythia8Matching(unittest.TestCase):
             '      double precision g\n      double complex gal(2)\n'
             '      common/test_couplings/g,gal\n')
         shutil.copyfile(TEMPLATE / 'fks_powers.inc', work / 'fks_powers.inc')
-        shutil.copyfile(TEMPLATE / 'resonance_recoil.inc', work / 'resonance_recoil.inc')
         (work / 'native.f90').write_text(
             'module mc_native_context\nlogical :: native_mapping=.true.\nend module\n')
         (work / 'scale.f90').write_text(
             'module scale_module\n'
             'double precision :: shower_scale_nbody_min(5,5),'
             'shower_scale_nbody_max(5,5)\nend module\n')
+        (work / 'fks_phase_space.f').write_text(
+            fks_test_module(('invert_fks_radiation',)))
         selections = {
-            'genps_fks.f': ('invert_fks_radiation', 'generate_momenta_initial_inverse',
-                           'generate_momenta_massive_final',
-                           'generate_momenta_massless_final',
-                           'generate_momenta_massive_final_inverse',
-                           'generate_momenta_massless_final_inverse',
-                           'native_fsr_angle', 'get_massive_fsr_bounds',
-                           'get_recoil', 'getangles'),
             'montecarlocounter.f': (
                 'zPY8', 'xiPY8', 'xjacPY8',
                 'get_shower_variables', 'get_zeta',
@@ -219,7 +214,10 @@ class TestPythia8Matching(unittest.TestCase):
                        '-ffunction-sections', '-fdata-sections',
                        '-Wl,-dead_strip' if sys.platform == 'darwin' else '-Wl,--gc-sections',
                        '-I', str(work), str(TEMPLATE / 'process_module.f90'),
+                       str(TEMPLATE / 'fks_phase_space_data.f'),
                        str(TEMPLATE / 'kinematics_module.f90'), 'native.f90', 'scale.f90',
+                       str(TEMPLATE / 'genps_fks_helpers.f'),
+                       str(TEMPLATE / 'genps_fks_radiation.f'), 'fks_phase_space.f',
                        'routines.f', str(TEMPLATE / 'boostwdir2.f'),
                        str(TEMPLATE / 'resonance_recoil.f'),
                        str(TEMPLATE / 'initial_recoil.f'),

@@ -85,14 +85,12 @@ contains
     call boostz(p1(0),y,p_cm(0))
   end subroutine boost_1_to_its_cms
   double precision function get_yij_from_p(i_fks,j_fks,p_cms)
+    use fks_phase_space_data, only: xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt
     implicit none
     integer :: i_fks,j_fks
     double precision,dimension(0:3,next_n1) :: p_cms
     double precision,dimension(0:3) :: pi,pj
     double precision,dimension(3) :: ui,uj
-    double precision :: xi_i_fks_ev,y_ij_fks_ev
-    double precision :: p_i_fks_ev(0:3),p_i_fks_cnt(0:3,-2:2)
-    common/fksvariables/xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt
     ! Note that p_i_fks_cnt are defined in the "reduced frame" (where
     ! the Born is in its center-of-mass). Here, we only use it in the
     ! soft limit, where it coincides with the n+1-body cms frame.
@@ -261,6 +259,7 @@ contains
   end subroutine fill_father_and_ileg
   
   subroutine fill_kinematics_module(pp,i_fks,j_fks,xi_i_fks,y_ij_fks,mass,include_gfun)
+    use fks_phase_space_data, only: veckn_ev,veckbarn_ev,xp0jfks
     ! takes an n+1-body phase-space point, and fills invariants relevant for
     ! computation of shower subtraction terms
     implicit none
@@ -269,8 +268,6 @@ contains
     double precision,external :: dot
     logical :: include_gfun
     integer :: i_fks,j_fks
-    double precision :: veckn_ev,veckbarn_ev,xp0jfks
-    common/cgenps_fks/veckn_ev,veckbarn_ev,xp0jfks
     double precision :: pshower(0:3,next_n1)
 
     call fill_father_and_ileg(i_fks,j_fks,mass)

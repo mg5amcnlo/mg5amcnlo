@@ -58,6 +58,7 @@ class TestMCHistoryWeights(unittest.TestCase):
             result = subprocess.run([
                 shutil.which('gfortran'), '-O2', '-std=legacy', '-fcheck=all',
                 '-ffixed-line-length-none', '-I', str(work),
+                str(TEMPLATE / 'fks_phase_space_data.f'),
                 str(work / 'contexts.f90'), str(TEMPLATE / 'weight_lines.f'),
                 str(work / 'weights.f'),
                 str(ROOT / 'tests/input_files/check_mc_history_weights.f90'),

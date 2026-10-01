@@ -336,29 +336,13 @@ c     Dummy subroutine (normally used with vegas/mint when resuming plots)
 
 
       subroutine set_cms_stuff(icountevts)
+      use fks_phase_space_data,only: ybst_til_tolab,ybst_til_tocm,sqrtshat,shat,sqrtshat_ev,shat_ev,
+     $     sqrtshat_cnt,shat_cnt,tau_ev,ycm_ev,tau_cnt,ycm_cnt,xbjrk_ev,xbjrk_cnt
       implicit none
       include "run.inc"
 
       integer icountevts
 
-      double precision ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
-      common/parton_cms_stuff/ybst_til_tolab,ybst_til_tocm,
-     #sqrtshat,shat
-
-      double precision sqrtshat_ev,shat_ev
-      common/parton_cms_ev/sqrtshat_ev,shat_ev
-
-      double precision sqrtshat_cnt(-2:2),shat_cnt(-2:2)
-      common/parton_cms_cnt/sqrtshat_cnt,shat_cnt
-
-      double precision tau_ev,ycm_ev
-      common/cbjrk12_ev/tau_ev,ycm_ev
-
-      double precision tau_cnt(-2:2),ycm_cnt(-2:2)
-      common/cbjrk12_cnt/tau_cnt,ycm_cnt
-
-      double precision xbjrk_ev(2),xbjrk_cnt(2,-2:2)
-      common/cbjorkenx/xbjrk_ev,xbjrk_cnt
 
 c     rapidity of boost from \tilde{k}_1+\tilde{k}_2 c.m. frame to lab frame --
 c     same for event and counterevents

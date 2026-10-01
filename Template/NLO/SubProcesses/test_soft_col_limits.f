@@ -271,6 +271,8 @@ c dump momenta in a fort.80 file
       
       subroutine compute_towards_limit(ilim,x,amp
      $     ,wgt_PS,xp)
+      use fks_phase_space_data, only: xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt
+      use fks_phase_space, only: generate_momenta
       use mint_module
       implicit none
       include 'nexternal.inc'
@@ -281,9 +283,6 @@ c dump momenta in a fort.80 file
      $     ,nexternal) ,p_cms(0:3,nexternal)
       logical                calculatedBorn
       common/ccalculatedBorn/calculatedBorn
-      double precision xi_i_fks_ev,y_ij_fks_ev
-      double precision p_i_fks_ev(0:3),p_i_fks_cnt(0:3,-2:2)
-      common/fksvariables/xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt
       integer            i_fks,j_fks
       common/fks_indices/i_fks,j_fks
       integer              nFKSprocess
@@ -317,6 +316,9 @@ c dump momenta in a fort.80 file
       
       subroutine compute_in_the_limit(ilim,x
      $     ,limit_split,limit_PS_wgt,lxp)
+      use fks_phase_space_data,only: p1_cnt,jac_cnt,xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,
+     $     p_i_fks_cnt,xi_i_fks_cnt
+      use fks_phase_space, only: generate_momenta
       use mint_module
       implicit none
       include 'nexternal.inc'
@@ -331,16 +333,6 @@ c dump momenta in a fort.80 file
       common/ccalculatedBorn/calculatedBorn
       logical        softtest,colltest
       common/sctests/softtest,colltest
-      double precision p1_cnt(0:3,nexternal,-2:2)
-      double precision wgt_cnt(-2:2)
-      double precision pswgt_cnt(-2:2)
-      double precision jac_cnt(-2:2)
-      common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
-      double precision xi_i_fks_ev,y_ij_fks_ev
-      double precision p_i_fks_ev(0:3),p_i_fks_cnt(0:3,-2:2)
-      common/fksvariables/xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt
-      double precision   xi_i_fks_cnt(-2:2)
-      common /cxiifkscnt/xi_i_fks_cnt
       integer i_fks,j_fks
       common/fks_indices/i_fks,j_fks
       external fks_Sij
@@ -386,6 +378,7 @@ c probability multiplies both terms and is not part of this limit test.
 
 
       subroutine compute_MC_subt_term_test(p,p_cms,wgt)
+      use fks_phase_space_data, only: p_born,xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt
 c Test one complete native history, as used by compute_native_NLOPS_weights.
 c Its raw kernel carries H_ij; each G replacement carries its own limiting
 c S_ij and counterevent/real measure ratio. Repartitioning complete H weights
@@ -408,16 +401,10 @@ c over other histories is an integration operation, not a native limit test.
       common/c_leading_cflows/is_leading_cflow,num_leading_cflows
       integer i_fks,j_fks,iflow,n_connect,ibornflow
       common/fks_indices/i_fks,j_fks
-      double precision p_born(0:3,nexternal-1)
-      common/pborn/p_born
       logical calculatedBorn,include_gfun
       common/ccalculatedBorn/calculatedBorn
       double precision pmass(nexternal)
       common/to_mass/pmass
-      double precision xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev(0:3),
-     $     p_i_fks_cnt(0:3,-2:2)
-      common/fksvariables/xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,
-     $     p_i_fks_cnt
       external fks_Hij,mc_born_flow_weight
 
 c Use the coordinates of the active map, including the resonance frame.
@@ -464,6 +451,8 @@ c sum without a randomly selected flow or a stale Born-flow probability.
       end
 
       subroutine compute_MCsubtraction_from_gfun_test(amp_gfun)
+      use fks_phase_space_data,only: p1_cnt,jac_cnt,xi_i_fks_cnt,xi_i_fks_ev,
+     $     y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt
       use kinematics_module, only: gfactsf,gfactcl
       implicit none
       include 'nexternal.inc'
@@ -472,14 +461,6 @@ c sum without a randomly selected flow or a stale Born-flow probability.
      $     ,xis(0:2),ys(0:2),sector,fks_Sij,dummy
       integer icnt,i_fks,j_fks
       common/fks_indices/i_fks,j_fks
-      double precision p1_cnt(0:3,nexternal,-2:2),wgt_cnt(-2:2)
-     $     ,pswgt_cnt(-2:2),jac_cnt(-2:2)
-      common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
-      double precision xi_i_fks_cnt(-2:2)
-      common/cxiifkscnt/xi_i_fks_cnt
-      double precision xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev(0:3)
-     $     ,p_i_fks_cnt(0:3,-2:2)
-      common/fksvariables/xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt
       double precision f_s_MC_S,f_s_MC_H,f_c_MC_S,f_c_MC_H
      $     ,f_sc_MC_S,f_sc_MC_H,f_MC_S,f_MC_H
       common/factor_n1body_NLOPS/f_s_MC_S,f_s_MC_H,f_c_MC_S,f_c_MC_H
@@ -503,6 +484,8 @@ c sum without a randomly selected flow or a stale Born-flow probability.
       end
 
       subroutine generate_valid_momenta(wgt,x,p)
+      use fks_phase_space_data, only: p_born
+      use fks_phase_space, only: generate_momenta
       use mint_module
       implicit none
       include 'nexternal.inc'
@@ -513,8 +496,6 @@ c sum without a randomly selected flow or a stale Born-flow probability.
       external ran2
       logical                calculatedBorn
       common/ccalculatedBorn/calculatedBorn
-      double precision p_born(0:3,nexternal-1)
-      common /pborn/   p_born
       ntry=0
       do jj=1,ndim
          x(jj)=ran2()
@@ -543,6 +524,7 @@ c sum without a randomly selected flow or a stale Born-flow probability.
       end
       
       subroutine init_iconfig_loop(ilim)
+      use fks_phase_space_data, only: p_born
       use mint_module
       implicit none
       include 'nexternal.inc'
@@ -551,8 +533,6 @@ c sum without a randomly selected flow or a stale Born-flow probability.
       double precision wgt1(2)
       logical        softtest,colltest
       common/sctests/softtest,colltest
-      double precision p_born(0:3,nexternal-1)
-      common /pborn/   p_born
       ichan=1
       iconfigs(1)=iconfig
       if (ilim.eq.2) then
@@ -831,6 +811,7 @@ c$$$         endif
 
 
       subroutine init_process_module_nbody_wrapper()
+      use fks_phase_space_data, only: p_born
       use process_module
       implicit none
       include 'nexternal.inc'
@@ -841,8 +822,6 @@ c$$$         endif
       double precision mass(1:nexternal-1),get_mass_from_id
       external get_mass_from_id
       logical valid_dipole(1:nexternal-1,1:nexternal-1,1:max_bcol)
-      double precision p_born(0:3,nexternal-1)
-      common /pborn/   p_born
       integer idup(nexternal-1,maxproc)
       integer mothup(2,nexternal-1,maxproc)
       integer icolup(2,nexternal-1,max_bcol)

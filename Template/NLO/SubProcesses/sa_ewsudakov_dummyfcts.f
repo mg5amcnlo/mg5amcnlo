@@ -20,6 +20,7 @@
       end
       
       subroutine ewsudakov_f77(p_born_in, gstr_in, results)
+      use fks_phase_space_data, only: p_born
 c**************************************************************************
 c     This is the driver for the whole calulation
 c**************************************************************************
@@ -30,8 +31,6 @@ C arguments
       double precision p_born_in(0:3,nexternal-1)
       double precision gstr_in, results(6)
       ! results contain (born, sud0, sud1)
-      double precision p_born(0:3,nexternal-1)
-      common/pborn/p_born
 cc
       include 'coupl.inc'
       include 'orders.inc'

@@ -1,6 +1,8 @@
 ! Controlled matrix elements for the actual limit-test routines. Inactive
 ! coupling orders must stay zero; each active order has a distinct amplitude.
 module limit_fixture
+  use fks_phase_space_data,only: p1_cnt,jac_cnt,xi_ev => xi_i_fks_ev, &
+       y_ev => y_ij_fks_ev,p_i_ev => p_i_fks_ev,p_i_cnt => p_i_fks_cnt,xi_cnt => xi_i_fks_cnt
   implicit none
   integer, parameter :: nexternal=5, nstep=10, namp=3
   real(8) :: mc_amplitudes(namp), amp_split(namp)
@@ -10,14 +12,32 @@ module limit_fixture
   integer :: i_fks, j_fks, nerr(0:namp)
   common /fks_indices/ i_fks, j_fks
   common /c_nerr/ nerr
-  real(8) :: p1_cnt(0:3,nexternal,-2:2), wgt_cnt(-2:2), &
-       pswgt_cnt(-2:2), jac_cnt(-2:2)
-  common /counterevnts/ p1_cnt, wgt_cnt, pswgt_cnt, jac_cnt
-  real(8) :: xi_ev, y_ev, p_i_ev(0:3), p_i_cnt(0:3,-2:2)
-  common /fksvariables/ xi_ev, y_ev, p_i_ev, p_i_cnt
-  real(8) :: xi_cnt(-2:2)
-  common /cxiifkscnt/ xi_cnt
 end module limit_fixture
+
+! Match the production phase-space module while retaining controlled weights.
+module fks_phase_space
+  implicit none
+  private
+  public :: generate_momenta
+contains
+subroutine generate_momenta(ndim,iconfig,wgt,x,p,p_lab,p_cms)
+  use limit_fixture
+  implicit none
+  integer :: ndim, iconfig
+  real(8) :: wgt, x(99), p(0:3,nexternal), p_lab(0:3,nexternal), p_cms(0:3,nexternal)
+  wgt=2d0
+  jac_cnt=3d0
+  p=0d0
+  p_lab=0d0
+  p_cms=0d0
+  p1_cnt=0d0
+  p_i_ev=0d0
+  p_i_cnt=0d0
+  xi_ev=0.2d0
+  xi_cnt=0.2d0
+  y_ev=0.4d0
+end subroutine generate_momenta
+end module fks_phase_space
 
 program check_soft_col_limits
   use limit_fixture
@@ -119,26 +139,6 @@ contains
     endif
   end subroutine expect_convergence
 end program check_soft_col_limits
-
-subroutine generate_momenta(ndim,iconfig,wgt,x,p,p_lab,p_cms)
-  use limit_fixture
-  implicit none
-  integer :: ndim, iconfig
-  real(8) :: wgt, x(99), p(0:3,nexternal), p_lab(0:3,nexternal), p_cms(0:3,nexternal)
-  wgt=2d0
-  jac_cnt=3d0
-  wgt_cnt=1d0
-  pswgt_cnt=1d0
-  p=0d0
-  p_lab=0d0
-  p_cms=0d0
-  p1_cnt=0d0
-  p_i_ev=0d0
-  p_i_cnt=0d0
-  xi_ev=0.2d0
-  xi_cnt=0.2d0
-  y_ev=0.4d0
-end subroutine generate_momenta
 
 subroutine sreal(p,xi,y,fx)
   use limit_fixture

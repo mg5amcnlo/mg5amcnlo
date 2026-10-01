@@ -85,6 +85,7 @@ C-----
       
       subroutine compute_veto_compensating_factor(H1_factor_virt,
      $     born_wgt,muSoft,muHard,veto_compensating_factor)
+      use fks_phase_space_data, only: ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
 c 2nd term on 3rd line of eq.(20) of arXiv:1412.8408
       implicit none
       include 'q_es.inc'
@@ -95,9 +96,6 @@ c 2nd term on 3rd line of eq.(20) of arXiv:1412.8408
       double precision Q2,ptjmax,mu,alpha,E1,H1_factor,muMad,alphah
      $     ,Q,muh,Efull,H1_comp,alphas
       external alphas
-      double precision ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
-      common/parton_cms_stuff/ybst_til_tolab,ybst_til_tocm,
-     #                        sqrtshat,shat
       integer izero
       parameter (izero=0)
       double precision pi
@@ -127,6 +125,7 @@ c compensating factor for difference between muMad and the soft scale mu
 
       subroutine compute_veto_multiplier(H1_factor_virt,muSoft,muHard
      &     ,veto_multiplier)
+      use fks_phase_space_data,only: ybst_til_tolab,ybst_til_tocm,sqrtshat,shat,p1_cnt,jac_cnt
 c 2nd line of eq.(20) of arXiv:1412.8408
       implicit none
       include 'nexternal.inc'
@@ -137,14 +136,6 @@ c 2nd line of eq.(20) of arXiv:1412.8408
       double precision Q2,ptjmax,mu,alpha,E1,H1_factor,muMad,alphah
      $     ,Q,muh,Efull,H1_comp,alphas
       external alphas
-      double precision ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
-      common/parton_cms_stuff/ybst_til_tolab,ybst_til_tocm,
-     #                        sqrtshat,shat
-      double precision p1_cnt(0:3,nexternal,-2:2)
-      double precision wgt_cnt(-2:2)
-      double precision pswgt_cnt(-2:2)
-      double precision jac_cnt(-2:2)
-      common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
       integer izero
       parameter (izero=0)
       double precision pi

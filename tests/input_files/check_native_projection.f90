@@ -1,51 +1,34 @@
 ! Check the production native projection independently of Born chart sampling.
 subroutine check_native_projection()
+  use fks_phase_space_data,only: pb => p_born,pbl => p_born_l,pbe => p_born_ev,isign => isolsign, &
+       bound_born => tau_Born_lower_bound,bound_res => tau_lower_bound_resonance, &
+       bound_tau => tau_lower_bound,nocnt => nocntevents,pc => p1_cnt,&
+       jc => jac_cnt,xi => xi_i_fks_ev,y => y_ij_fks_ev,pi_ev => p_i_fks_ev,pi_cnt => p_i_fks_cnt, &
+       xi_cnt => xi_i_fks_cnt,xih => xi_i_hat_ev,xih_cnt => xi_i_hat_cnt,xb => xbjrk_ev,xbc => xbjrk_cnt, &
+       tau => tau_ev,ycm => ycm_ev,tauc => tau_cnt,ycmc => ycm_cnt,sqrts_ev => sqrtshat_ev, &
+       s_ev => shat_ev,sqrts_cnt => sqrtshat_cnt,s_cnt => shat_cnt,xmax => xiimax_ev,xmaxc => xiimax_cnt, &
+       xnorm => xinorm_ev,xnormc => xinorm_cnt,kn => veckn_ev,knbar => veckbarn_ev,kn0 => xp0jfks, &
+       spin => xij_aor
   use, intrinsic :: ieee_arithmetic, only: ieee_is_finite
   use mc_native_context, only: native_mapping
+  use fks_phase_space, only: generate_FKS_kinematics,generate_native_momenta
   use kinematics_module, only: boost_n1_to_lab
   implicit none
   include 'genps.inc'
   include 'nexternal.inc'
   include 'run.inc'
-  double precision :: pmass(nexternal),pb(0:3,nexternal-1),pbl(0:3,nexternal-1),pbe(0:3,nexternal-1)
+  double precision :: pmass(nexternal)
   common/to_mass/pmass
-  common/pborn/pb
-  common/pborn_l/pbl
-  common/pborn_ev/pbe
-  integer :: ifks,jfks,config,isign
+  integer :: ifks,jfks,config
   common/fks_indices/ifks,jfks
   common/to_mconfigs/config
-  common/c_isolsign/isign
-  double precision :: bounds(3),omx(2)
-  common/ctau_lower_bound/bounds
+  double precision :: omx(2)
   common/to_ee_omx1/omx
-  logical :: nbody,evpr,nocnt,fixed_order,nlo_ps
+  logical :: nbody,evpr,fixed_order,nlo_ps
   common/cnbody/nbody
   common/to_use_evpr/evpr
-  common/cnocntevents/nocnt
   common/c_fnlo_nlops/fixed_order,nlo_ps
-  double precision :: pc(0:3,nexternal,-2:2),wc(-2:2),psc(-2:2),jc(-2:2)
-  common/counterevnts/pc,wc,psc,jc
-  double precision :: xi,y,pi_ev(0:3),pi_cnt(0:3,-2:2),xi_cnt(-2:2),xih,xih_cnt(-2:2)
-  common/fksvariables/xi,y,pi_ev,pi_cnt
-  common/cxiifkscnt/xi_cnt
-  common/cxi_i_hat/xih,xih_cnt
-  double precision :: xb(2),xbc(2,-2:2),tau,ycm,tauc(-2:2),ycmc(-2:2)
-  common/cbjorkenx/xb,xbc
-  common/cbjrk12_ev/tau,ycm
-  common/cbjrk12_cnt/tauc,ycmc
-  double precision :: sqrts_ev,s_ev,sqrts_cnt(-2:2),s_cnt(-2:2)
-  common/parton_cms_ev/sqrts_ev,s_ev
-  common/parton_cms_cnt/sqrts_cnt,s_cnt
-  double precision :: xmax,xmaxc(-2:2),xnorm,xnormc(-2:2),kn,knbar,kn0
-  common/cxiimaxev/xmax
-  common/cxiimaxcnt/xmaxc
-  common/cxinormev/xnorm
-  common/cxinormcnt/xnormc
-  common/cgenps_fks/kn,knbar,kn0
-  double complex :: spin
-  common/cxij_aor/spin
-  double precision :: x(99),m(-max_branch:max_particles),mb(nexternal-1),born(0:3,nexternal-1)
+  double precision :: x(99),mb(nexternal-1),born(0:3,nexternal-1)
   double precision :: p(0:3,nexternal),lab(0:3,nexternal),out(0:3,nexternal),outlab(0:3,nexternal),cms(0:3,nexternal)
   double precision :: stot,sborn,sqrtborn,taub,yb,yhat,xbb(2),j0,ps0,jac,jnew,u,e3,e4
   double precision :: reference(256),actual(256),ratio(-2:2),cntref(0:3,nexternal,-2:2)
@@ -90,7 +73,9 @@ subroutine check_native_projection()
         do ia=1,size(angles)
           x=0d0
           x(1:3)=[radii(ir),angles(ia),0.31d0]
-          bounds=sum(mb(3:4))**2/stot
+          bound_born=sum(mb(3:4))**2/stot
+          bound_res=sum(mb(3:4))**2/stot
+          bound_tau=sum(mb(3:4))**2/stot
           omx=0d0
           nbody=.false.
           evpr=.true.
@@ -105,9 +90,8 @@ subroutine check_native_projection()
           ! Arbitrary nonunit Born factors must cancel from all ratios.
           j0=7d0
           ps0=3d0
-          m=0d0
-          call generate_FKS_kinematics(x,3,j0,ps0,stot,sborn,sqrtborn,taub,yb,yhat, &
-               xbb,m,mb,jac,p,pass)
+          call generate_FKS_kinematics(x(1:3),nbody,j0,ps0,stot,sborn,sqrtborn,taub,yb,yhat, &
+               xbb,mb,jac,p,pass)
           if(jac.le.0d0)error stop 'invalid reference radiation point'
           call boost_n1_to_lab(p,lab,-yb)
           valid=jc.gt.0d0
@@ -120,7 +104,9 @@ subroutine check_native_projection()
           ! Deliberately poison state left by a different history/fold.
           bounds_poison=[0.8d0,0.9d0,0.95d0]
           omx_poison=[0.2d0,0.3d0]
-          bounds=bounds_poison
+          bound_born=bounds_poison(1)
+          bound_res=bounds_poison(2)
+          bound_tau=bounds_poison(3)
           omx=omx_poison
           nbody=.true.
           evpr=.false.
@@ -137,8 +123,8 @@ subroutine check_native_projection()
           if(abs(jnew*21d0/jac-1d0).gt.1d-8)error stop 'Born measure did not cancel'
           if(maxval(abs(outlab-lab)).gt.1d-7)error stop 'real point changed'
           if(maxval(abs(pb-born)).gt.1d-8.or.any(pb.ne.pbl).or.any(pb.ne.pbe)) &
-               error stop 'Born COMMON arrays not populated'
-          if(any(bounds.ne.bounds_poison).or.any(omx.ne.omx_poison).or. &
+               error stop 'Born arrays not populated'
+          if(any([bound_born,bound_res,bound_tau].ne.bounds_poison).or.any(omx.ne.omx_poison).or. &
                .not.nbody)error stop 'input controls leaked'
           if(.not.evpr.or.config.ne.1)error stop 'native evaluator controls not installed'
           if(any(valid.neqv.(jc.gt.0d0)).or.(nocnt.neqv.nocnt_ref).or.isign.ne.isign_ref) &
@@ -153,9 +139,9 @@ subroutine check_native_projection()
             endif
           enddo
           call snapshot(actual,n)
-          if(.not.all(ieee_is_finite(actual(1:n))))error stop 'nonfinite native COMMON state'
+          if(.not.all(ieee_is_finite(actual(1:n))))error stop 'nonfinite native phase-space state'
           if(any(abs(actual(1:n)-reference(1:n)).gt.1d-8*max(1d0,abs(reference(1:n))))) &
-               error stop 'native COMMON state differs'
+               error stop 'native phase-space state differs'
         enddo
       enddo
     enddo
@@ -164,7 +150,7 @@ subroutine check_native_projection()
   lab(0,1)=-1d0
   call generate_native_momenta(lab,out,outlab,cms,jnew,pass)
   if(pass.or.jnew.ge.0d0.or.out(0,1).ge.0d0)error stop 'invalid input accepted'
-  if(any(bounds.ne.bounds_poison).or.any(omx.ne.omx_poison).or. &
+  if(any([bound_born,bound_res,bound_tau].ne.bounds_poison).or.any(omx.ne.omx_poison).or. &
        .not.nbody)error stop 'invalid input changed controls'
 contains
   subroutine snapshot(v,n)

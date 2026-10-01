@@ -1,6 +1,12 @@
-c Shared kinematic functions and radiation-boundary calculations.
-c External routine interfaces and COMMON layouts are shared with
-c genps_fks.f; keep coordinate and counterevent conventions consistent.
+      module fks_phase_space_helpers
+c Shared numerical kernels, independent of the phase-space driver and
+c of kinematics_module, so recoil wrappers can import them directly.
+      implicit none
+      include 'nexternal.inc'
+      private
+      public get_massive_fsr_bounds,getangles,gentcms,lambda,yminmax,
+     $     get_recoil
+      contains
 
       subroutine get_massive_fsr_bounds(shat,sqrtshat,m_j_fks,
      $     xmrec2,y,xim,xibm,ximax,cffa2,cffb2,cffc2,cffdel2,
@@ -46,7 +52,7 @@ c threshold the generic discriminant loses precision by cancellation.
       endif
       xiimax=xirplus
       xinorm=xirplus+xirminus
-      end
+      end subroutine get_massive_fsr_bounds
 
 
       subroutine getangles(pin,th,cth,sth,phi,cphi,sphi)
@@ -78,7 +84,7 @@ c
         endif
       endif
       return
-      end
+      end subroutine getangles
 
 
       subroutine gentcms(pa,pb,t,phi,m1,m2,p1,pr,jac)
@@ -159,7 +165,7 @@ c
       do i=0,3
          pr(i)=pa(i)-p1(i)               !Return remainder of momentum
       enddo
-      end
+      end subroutine gentcms
 
 
       DOUBLE PRECISION FUNCTION LAMBDA(S,MA2,MB2)
@@ -197,7 +203,7 @@ c collapsing the t-channel bounds used by native history inversions.
       endif
       LAMBDA=tmp
       RETURN
-      END
+      end function LAMBDA
 
 
       SUBROUTINE YMINMAX(X,Y,Z,U,V,W,YMIN,YMAX)
@@ -224,7 +230,6 @@ c
 c
 c     External
 c
-      double precision lambda
 c-----
 c  Begin Code
 c-----
@@ -239,12 +244,11 @@ c-----
       y2 = u+w -.5d0* ((x+u-v)*(x+w-z) + yr)/(x+tiny)
       ymin = min(y1,y2)
       ymax = max(y1,y2)
-      end
+      end subroutine YMINMAX
 
 
       subroutine get_recoil(p_born,imother,shat_born,xmrec2,pass)
       implicit none
-      include 'nexternal.inc'
       double precision p_born(0:3,nexternal-1),xmrec2,shat_born
       logical pass
       integer imother,i
@@ -276,4 +280,5 @@ c-----
          return
       endif
       return
-      end
+      end subroutine get_recoil
+      end module fks_phase_space_helpers

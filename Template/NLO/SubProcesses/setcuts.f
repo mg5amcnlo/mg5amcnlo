@@ -150,6 +150,7 @@ c     fully ensure that this is not a jet/lepton/photon
 
 
       subroutine set_tau_min()
+      use fks_phase_space_data, only: tau_Born_lower_bound,tau_lower_bound_resonance,tau_lower_bound
 c Sets the lower bound for tau=x1*x2, using information on particle
 c masses and on the jet minimum pt, as entered in run_card.dat, 
 c variable ptj
@@ -185,10 +186,6 @@ c
       double precision xm(-nexternal:nexternal),xm1,xm2,xmi
       double precision xw(-nexternal:nexternal),xw1,xw2,xwi
       integer tsign,i_fks,j_fks
-      double precision tau_Born_lower_bound,tau_lower_bound_resonance
-     &     ,tau_lower_bound
-      common/ctau_lower_bound/tau_Born_lower_bound
-     &     ,tau_lower_bound_resonance,tau_lower_bound
 c BW stuff
       double precision mass_min(-nexternal:nexternal,maxchannels)
      $     ,masslow(-nexternal:-1),widthlow(-nexternal:-1),sum_all_s

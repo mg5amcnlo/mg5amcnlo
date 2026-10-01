@@ -1,5 +1,6 @@
 
       subroutine pythia_UNLOPS(p,passUNLOPScuts)
+      use fks_phase_space_data, only: p1_cnt,jac_cnt
 c Cut to apply are the following theta functions:
 c    [ B + V + int R \theta(ptj - d(\phi_R)) ] \theta(d(\phi_B)-ptj)
 c where ptj is the input merging scale and d(\phi) is the scale of the
@@ -24,11 +25,6 @@ c arguments
       double precision pin(5,nexternal)
       integer id(nexternal),ist(nexternal)
 c Born momenta
-      double precision p1_cnt(0:3,nexternal,-2:2)
-      double precision wgt_cnt(-2:2)
-      double precision pswgt_cnt(-2:2)
-      double precision jac_cnt(-2:2)
-      common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
       integer i_fks,j_fks
       common/fks_indices/i_fks,j_fks
 c cut

@@ -1,7 +1,14 @@
 ! Test the production phase-space routines without matrix elements or PDFs.
 program check_momentum_maps
+  use fks_phase_space_data,only: saved_xi => xi_i_fks_ev,saved_y => y_ij_fks_ev, &
+       saved_pi => p_i_fks_ev,saved_pi_cnt => p_i_fks_cnt,tau_cnt,ycm_cnt
   use, intrinsic :: ieee_arithmetic, only: ieee_is_finite
   use mc_native_context, only: native_mapping
+  use fks_phase_space, only: fill_fks_point_data
+  use fks_phase_space_helpers, only: yminmax,gentcms
+  use fks_radiation_maps, only: generate_momenta_massless_final, &
+       generate_momenta_massless_final_inverse,generate_momenta_massive_final, &
+       generate_momenta_massive_final_inverse
   use process_module, only: next_n1,nincoming_mod
   use kinematics_module, only: boost_n1_to_its_cms,boost_n1_to_lab, &
        get_xi_from_p,get_yij_from_p,get_phi_from_p,fill_father_and_ileg
@@ -15,11 +22,7 @@ program check_momentum_maps
   double precision :: rnd(3),inv(3),jac,jacinv,pswgt,pswgtinv,jacout
   double precision :: shat,sqrtshat,mass,mrec,energy,momentum,phi,xi,yij
   double precision :: xiimax,xinorm,xihat,pifks(0:3),rapidity,error
-  double precision :: tau_cnt(-2:2),ycm_cnt(-2:2)
   double precision :: transfer,tmin,tmax,remainder(0:3)
-  double precision :: saved_xi,saved_y,saved_pi(0:3),saved_pi_cnt(0:3,-2:2)
-  common /fksvariables/saved_xi,saved_y,saved_pi,saved_pi_cnt
-  common /cbjrk12_cnt/tau_cnt,ycm_cnt
   logical :: softtest,colltest,pass
   common /sctests/softtest,colltest
   integer :: isign,i,j,k,nplus,nminus,nchecked,father
@@ -486,13 +489,13 @@ program check_momentum_maps
            ! soft counterevent to refresh the Born rapidity used for lab boosts.
            rapidity=0.25d0+0.3d0*mod(i+j,7)
            ycm_cnt(0)=-0.75d0
-           call fill_FKS_commons(-100,1d0,rapidity,rapidity,shat,sqrtshat, &
+           call fill_fks_point_data(-100,1d0,rapidity,rapidity,shat,sqrtshat, &
                 [0.2d0,0.1d0],xiimax,xinorm,xi,xihat,pifks,yij,p,out, &
-                jac,jacout,mass,5,3)
+                jac,jacout)
            if (isign.eq.1) then
-              call fill_FKS_commons(0,1d0,rapidity,rapidity,shat,sqrtshat, &
+              call fill_fks_point_data(0,1d0,rapidity,rapidity,shat,sqrtshat, &
                    [0.2d0,0.1d0],xiimax,xinorm,xi,xihat,pifks,yij,p,out, &
-                   jac,jacout,mass,5,3)
+                   jac,jacout)
            endif
            call boost_n1_to_lab(p,plab,-ycm_cnt(0))
            if (abs(plab(0,1)/(sqrtshat/2d0*exp(rapidity))-1d0).gt.1d-12) &

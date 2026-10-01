@@ -27,6 +27,8 @@ c
 c 
       Double precision function fks_Sij(p,ii_fks,jj_fks,
      #                                  xi_i_fks,y_ij_fks)
+      use fks_phase_space_data,only: ybst_til_tolab,ybst_til_tocm,sqrtshat,shat,xi_i_fks_ev,y_ij_fks_ev,
+     $     p_i_fks_ev,p_i_fks_cnt
       implicit none
 
       include "nexternal.inc"
@@ -50,13 +52,7 @@ c      include "fks.inc"
       integer i_fks,j_fks
       common/fks_indices/i_fks,j_fks
 
-      double precision ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
-      common/parton_cms_stuff/ybst_til_tolab,ybst_til_tocm,
-     #                        sqrtshat,shat
 
-      double precision xi_i_fks_ev,y_ij_fks_ev
-      double precision p_i_fks_ev(0:3),p_i_fks_cnt(0:3,-2:2)
-      common/fksvariables/xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt
 
       logical firsttime
       real*8 hfact,h_damp,z
@@ -292,6 +288,7 @@ c         firsttime=.false.
      #                       i1,itype1,i2,itype2,
      #                       ii_fks,jj_fks,ioneortwo,
      #                       dkl_Sij,setsijzero)
+      use fks_phase_space_data, only: ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
       implicit none
       real*8 p1(0:3),p2(0:3),ka(0:3),kb(0:3),E1resc,dkl_Sij
       integer i1,itype1,i2,itype2,ii_fks,jj_fks,ioneortwo
@@ -301,9 +298,6 @@ c         firsttime=.false.
       include "fks_powers.inc"
       include "coupl.inc"
 
-      double precision ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
-      common/parton_cms_stuff/ybst_til_tolab,ybst_til_tocm,
-     #                        sqrtshat,shat
 
       real*8 energy,E1,E2,beta,beta1,beta2,angle,costhfks,vtiny
       parameter (vtiny=1.d-8)
@@ -391,15 +385,13 @@ c         firsttime=.false.
 
 
       double precision function get_cms_energy(p,ka,kb)
+      use fks_phase_space_data, only: ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
 c Given the momentum p in the \tilde{k}_1+\tilde{k}_2 c.m. frame, returns
 c the energy component of p in the k_1+k_2 c.m. frame. Here,
 c ka=\tilde{k}_1, ,kb=\tilde{k}_2
       implicit none
       real*8 p(0:3),ka(0:3),kb(0:3)
       double precision dot,xden,xnum,tmp
-      double precision ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
-      common/parton_cms_stuff/ybst_til_tolab,ybst_til_tocm,
-     #                        sqrtshat,shat
       external dot
 c
       if(ybst_til_tocm.eq.0.d0)then
@@ -421,6 +413,7 @@ c
 
       subroutine get_cms_costh_fks(p1,p2,ka,kb,E1,E2,xm1,xm2,
      #                             beta1,beta2,costhfks)
+      use fks_phase_space_data, only: ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
 c Given the momenta p1 and p2 in the \tilde{k}_1+\tilde{k}_2 c.m. frame, 
 c returns the velocities beta1 and beta2, and the 3-angle between p1 and p2
 c in the k_1+k_2 c.m. frame. Here, ka=\tilde{k}_1, ,kb=\tilde{k}_2
@@ -428,9 +421,6 @@ c in the k_1+k_2 c.m. frame. Here, ka=\tilde{k}_1, ,kb=\tilde{k}_2
       real*8 p1(0:3),p2(0:3),ka(0:3),kb(0:3)
       real*8 E1,E2,xm1,xm2,beta1,beta2,costhfks
       double precision tmp,costh_fks,get_cms_energy,dot
-      double precision ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
-      common/parton_cms_stuff/ybst_til_tolab,ybst_til_tocm,
-     #                        sqrtshat,shat
       real*8 tiny
       parameter (tiny=1.d-6)
       external dot
@@ -521,6 +511,7 @@ c
 
 
       Double precision function fks_Hij(p,ii_fks,jj_fks)
+      use fks_phase_space_data, only: ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
       implicit none
 
       include "nexternal.inc"
@@ -533,9 +524,6 @@ c      include "fks.inc"
       integer ii_fks,jj_fks
       double precision shattmp,dot,h_damp
       external h_damp
-      double precision ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
-      common/parton_cms_stuff/ybst_til_tolab,ybst_til_tocm,
-     #                        sqrtshat,shat
 
       if(particle_type(jj_fks).ne.8.or.particle_type(ii_fks).ne.8.or.
      &     jj_fks.le.nincoming)then

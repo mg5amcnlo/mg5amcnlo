@@ -5,6 +5,7 @@ c Probe the extra ISR limits with underlying Born flavours not included
 c in u b > d b e+ ve. The real matrix element has a 1/pt**2 pole and
 c Sij=1 in both cases, so these corners must be removed by the cuts.
       program probe_uncovered_limits
+      use fks_phase_space_data, only: ylab => ybst_til_tolab,ycm => ybst_til_tocm,sqrtshat,shat
       use mint_module
       implicit none
       include 'nexternal.inc'
@@ -14,8 +15,6 @@ c Sij=1 in both cases, so these corners must be removed by the cuts.
       integer istatus(nexternal),fks_j_from_i(nexternal,0:nexternal),
      $     particle_type(nexternal),pdg_type(nexternal)
       common /c_fks_inc/fks_j_from_i,particle_type,pdg_type
-      double precision ylab,ycm,sqrtshat,shat
-      common/parton_cms_stuff/ylab,ycm,sqrtshat,shat
       common/cxiyfix/xf,yf
       integer nstep,n,loop,i,spect,bmin,bmax,hard1,hard2
       logical dummy_cuts,accepted

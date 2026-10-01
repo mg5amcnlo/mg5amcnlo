@@ -617,6 +617,7 @@ c$$$
       
       subroutine compute_MCsubtraction_kl(k_fks,l_fks,xi,y,p,p_cm,p_born
      $     ,include_gfun,z,n_connect,amp_split_xmcxsec)
+      use fks_phase_space_data, only: veckn_ev,veckbarn_ev,xp0jfks
       use process_module
       use kinematics_module
       use scale_module
@@ -631,8 +632,6 @@ c$$$
      $     ,p_cm(0:3,nexternal)
       double precision pmass(nexternal)
       common /to_mass/pmass
-      double precision :: veckn_ev,veckbarn_ev,xp0jfks
-      common/cgenps_fks/veckn_ev,veckbarn_ev,xp0jfks
       integer n_connect,i_connect(2),iconnect
       logical include_gfun
       logical softtest,colltest
@@ -1690,6 +1689,7 @@ c
 c Finalises the MC counterterm computations performed in xmcsubt(),
 c fills arrays relevant to shower scales, and computes Delta
       subroutine compute_delta(p,probne)
+      use fks_phase_space_data, only: xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt,xbjrk_ev,xbjrk_cnt
       use process_module
       use scale_module
       use mcatnlo_delta_scales, only: delta_scale_matrices,delta_ok
@@ -1802,9 +1802,6 @@ c     cstlow <= smallptupp
       double precision emscav_a2_tmp,emscav_tmp_a2_tmp,ptresc_a_tmp
       double precision sref,acll1,acll2,dot,sumdot
       external dot,sumdot
-      double precision xi_i_fks_ev,y_ij_fks_ev
-      double precision p_i_fks_ev(0:3),p_i_fks_cnt(0:3,-2:2)
-      common/fksvariables/xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt
 
 c     SF ARE noemProb AND mDipole USEFUL?
       double precision startingScale0,stoppingScale0
@@ -1819,8 +1816,6 @@ c
      &     ,particle_type(nexternal),pdg_type(nexternal)
       common /c_fks_inc/fks_j_from_i,particle_type,pdg_type
 
-      double precision xbjrk_ev(2),xbjrk_cnt(2,-2:2)
-      common/cbjorkenx/xbjrk_ev,xbjrk_cnt
 
       double precision pdg2pdf,pdffnum(2),pdffden(2)
       external pdg2pdf
@@ -2542,6 +2537,7 @@ c
 
       subroutine get_mbar(p,xi_i_fks,y_ij_fks,p_born,ileg,bornbars
      $     ,bornbarstilde)
+      use fks_phase_space_data, only: xij_aor,xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt
 c Computes barred amplitudes (bornbars) squared according
 c to Odagiri's prescription (hep-ph/9806531).
 c Computes barred azimuthal amplitudes (bornbarstilde) with
@@ -2578,8 +2574,6 @@ c the same method
       double complex W1(6),W2(6),W3(6),W4(6),Wij_angle,Wij_recta
       double complex azifact
 
-      double complex xij_aor
-      common/cxij_aor/xij_aor
 
       double precision sumborn
       integer i
@@ -2589,9 +2583,7 @@ c the same method
       double complex ximag
       parameter (ximag=(0.d0,1.d0))
 
-      double precision xi_i_fks_ev,y_ij_fks_ev,t
-      double precision p_i_fks_ev(0:3),p_i_fks_cnt(0:3,-2:2)
-      common/fksvariables/xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt
+      double precision t
 
       double precision cthbe,sthbe,cphibe,sphibe
       common/cbeangles/cthbe,sthbe,cphibe,sphibe
@@ -3744,6 +3736,7 @@ c
 
 
       subroutine dinvariants_dFKS(dw1dx,dw1dy,dw2dx,dw2dy)
+      use fks_phase_space_data, only: veckn_ev,veckbarn_ev,xp0jfks
 c Returns derivatives of Mandelstam invariants with respect to FKS variables
       use process_module
       use kinematics_module
@@ -3753,8 +3746,6 @@ c Returns derivatives of Mandelstam invariants with respect to FKS variables
      &diff_p,diff_m,signfac,dadx,dady,dbdx,dbdy,dcdx,dcdy,mom_fks_sister,
      &dmomfkssisdx,dmomfkssisdy,en_fks,en_fks_sister,dq1cdx,dq2qdx,dq1cdy,
      &dq2qdy
-      double precision veckn_ev,veckbarn_ev,xp0jfks
-      common/cgenps_fks/veckn_ev,veckbarn_ev,xp0jfks
       double precision tiny
       parameter(tiny=1d-5)
 

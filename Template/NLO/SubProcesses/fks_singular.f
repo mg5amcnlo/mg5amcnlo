@@ -1,4 +1,5 @@
       subroutine compute_born
+      use fks_phase_space_data, only: p_born,xiimax_cnt,xi_i_hat_ev,xi_i_hat_cnt
 c This subroutine computes the Born matrix elements and adds its value
 c to the list of weights using the add_wgt subroutine
       use extra_weights
@@ -19,12 +20,6 @@ c to the list of weights using the add_wgt subroutine
 
       double precision wgt_c
       double precision wgt1
-      double precision p_born(0:3,nexternal-1)
-      common /pborn/   p_born
-      double precision   xiimax_cnt(-2:2)
-      common /cxiimaxcnt/xiimax_cnt
-      double precision  xi_i_hat_ev,xi_i_hat_cnt(-2:2)
-      common /cxi_i_hat/xi_i_hat_ev,xi_i_hat_cnt
       double precision      f_b,f_nb
       common /factor_nbody/ f_b,f_nb
       double precision     xiScut_used,xiBSVcut_used
@@ -60,6 +55,7 @@ c     photon-photon initial state
 
 
       subroutine compute_6to5flav_cnt()
+      use fks_phase_space_data, only: p_born
 C This is the counterterm for the 6f->5f scheme change 
 C of parton distributions (e.g. NNPDF2.3). 
 C It is called in this function such that if is included
@@ -70,8 +66,6 @@ C in the LO cross section
       include 'q_es.inc'
       include 'run.inc'
       include 'genps.inc'
-      double precision p_born(0:3,nexternal-1)
-      common /pborn/   p_born
       include 'orders.inc'
       integer orders(nsplitorders)
       integer iamp
@@ -158,6 +152,7 @@ C      gluon in the initial state
 
 
       subroutine compute_ewsudakov
+      use fks_phase_space_data, only: p_born,xiimax_cnt,xi_i_hat_ev,xi_i_hat_cnt
 c This subroutine computes the NLO EW corrections in the Sudakov
 c   approximation
       use extra_weights
@@ -172,12 +167,6 @@ c   approximation
 
       double precision wgt_c
       double precision wgt1
-      double precision p_born(0:3,nexternal-1)
-      common /pborn/   p_born
-      double precision   xiimax_cnt(-2:2)
-      common /cxiimaxcnt/xiimax_cnt
-      double precision  xi_i_hat_ev,xi_i_hat_cnt(-2:2)
-      common /cxi_i_hat/xi_i_hat_ev,xi_i_hat_cnt
       double precision      f_b,f_nb
       common /factor_nbody/ f_b,f_nb
       double precision     xiScut_used,xiBSVcut_used
@@ -277,6 +266,7 @@ c   approximation
 
 
       subroutine compute_alpha_cnt()
+      use fks_phase_space_data, only: p_born
 C This is the counterterm for the change of scheme
 C in the UV renormalisation for alpha in (leptonic) PDFs
 C wrt the hard matrix element. Relevant for lepton collisions. 
@@ -288,8 +278,6 @@ C in the LO cross section
       include 'q_es.inc'
       include 'run.inc'
       include 'genps.inc'
-      double precision p_born(0:3,nexternal-1)
-      common /pborn/   p_born
       include 'orders.inc'
       integer orders(nsplitorders)
       integer iamp
@@ -426,6 +414,7 @@ c     wgt3 : coefficient of the weight multiplying the log[mu_F^2/Q^2]
 
 
       subroutine compute_nbody_noborn
+      use fks_phase_space_data, only: p1_cnt,jac_cnt,xiimax_cnt,xi_i_hat_ev,xi_i_hat_cnt
 c This subroutine computes the soft-virtual matrix elements and adds its
 c value to the list of weights using the add_wgt subroutine
       use extra_weights
@@ -471,13 +460,6 @@ c value to the list of weights using the add_wgt subroutine
       double precision wgt1,wgt2,wgt3,bsv_wgt,virt_wgt,born_wgt,pi,g2
      &     ,g22,wgt4
       parameter (pi=3.1415926535897932385d0)
-      double precision    p1_cnt(0:3,nexternal,-2:2),wgt_cnt(-2:2)
-     $                    ,pswgt_cnt(-2:2),jac_cnt(-2:2)
-      common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
-      double precision   xiimax_cnt(-2:2)
-      common /cxiimaxcnt/xiimax_cnt
-      double precision  xi_i_hat_ev,xi_i_hat_cnt(-2:2)
-      common /cxi_i_hat/xi_i_hat_ev,xi_i_hat_cnt
       double precision      f_b,f_nb
       common /factor_nbody/ f_b,f_nb
       double precision     xiScut_used,xiBSVcut_used
@@ -614,6 +596,7 @@ C wrt the hard matrix element. Relevant for lepton collisions.
       end
 
       subroutine compute_real_emission(p,sudakov_damp)
+      use fks_phase_space_data, only: xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt
 c This subroutine computes the real-emission matrix elements and adds
 c its value to the list of weights using the add_wgt subroutine
       use extra_weights
@@ -630,9 +613,6 @@ c its value to the list of weights using the add_wgt subroutine
       external fks_Sij
       integer            i_fks,j_fks
       common/fks_indices/i_fks,j_fks
-      double precision    xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev(0:3)
-     $                    ,p_i_fks_cnt(0:3,-2:2)
-      common/fksvariables/xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt
       double precision     f_r,f_s,f_c,f_dc,f_sc,f_dsc(4)
       common/factor_n1body/f_r,f_s,f_c,f_dc,f_sc,f_dsc
       integer get_orders_tag
@@ -666,6 +646,8 @@ c its value to the list of weights using the add_wgt subroutine
       end
 
       subroutine compute_soft_counter_term(replace_MC_subt)
+      use fks_phase_space_data,only: p1_cnt,jac_cnt,xiimax_cnt,xi_i_hat_ev,
+     $     xi_i_hat_cnt,xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt
 c This subroutine computes the soft counter term and adds its value to
 c the list of weights using the add_wgt subroutine
       use extra_weights
@@ -680,18 +662,8 @@ c the list of weights using the add_wgt subroutine
       double precision wgt1,s_s,fks_Sij,fx_s,zero,replace_MC_subt,g22
       parameter (zero=0d0)
       external fks_Sij
-      double precision     p1_cnt(0:3,nexternal,-2:2),wgt_cnt(-2:2)
-     $                     ,pswgt_cnt(-2:2),jac_cnt(-2:2)
-      common/counterevnts/ p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
       double precision     xiScut_used,xiBSVcut_used
       common /cxiScut_used/xiScut_used,xiBSVcut_used
-      double precision   xiimax_cnt(-2:2)
-      common /cxiimaxcnt/xiimax_cnt
-      double precision  xi_i_hat_ev,xi_i_hat_cnt(-2:2)
-      common /cxi_i_hat/xi_i_hat_ev,xi_i_hat_cnt
-      double precision    xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev(0:3)
-     $                    ,p_i_fks_cnt(0:3,-2:2)
-      common/fksvariables/xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt
       integer            i_fks,j_fks
       common/fks_indices/i_fks,j_fks
       double precision     f_r,f_s,f_c,f_dc,f_sc,f_dsc(4)
@@ -741,6 +713,8 @@ c the list of weights using the add_wgt subroutine
       end
 
       subroutine compute_collinear_counter_term(replace_MC_subt)
+      use fks_phase_space_data,only: p1_cnt,jac_cnt,xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,
+     $     p_i_fks_cnt,xi_i_fks_cnt
 c This subroutine computes the collinear counter term and adds its value
 c to the list of weights using the add_wgt subroutine
       use extra_weights
@@ -770,16 +744,8 @@ c to the list of weights using the add_wgt subroutine
      &     ,wgt3,g22,replace_MC_subt
       external fks_Sij
       parameter (zero=0d0,one=1d0)
-      double precision    p1_cnt(0:3,nexternal,-2:2),wgt_cnt(-2:2)
-     $                    ,pswgt_cnt(-2:2),jac_cnt(-2:2)
-      common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
       integer            i_fks,j_fks
       common/fks_indices/i_fks,j_fks
-      double precision    xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev(0:3)
-     $                    ,p_i_fks_cnt(0:3,-2:2)
-      common/fksvariables/xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt
-      double precision   xi_i_fks_cnt(-2:2)
-      common /cxiifkscnt/xi_i_fks_cnt
       double precision     f_r,f_s,f_c,f_dc,f_sc,f_dsc(4)
       common/factor_n1body/f_r,f_s,f_c,f_dc,f_sc,f_dsc
       double precision           f_s_MC_S,f_s_MC_H,f_c_MC_S,f_c_MC_H
@@ -852,6 +818,8 @@ c to the list of weights using the add_wgt subroutine
       end
 
       subroutine compute_soft_collinear_counter_term(replace_MC_subt)
+      use fks_phase_space_data,only: p1_cnt,jac_cnt,xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,
+     $     p_i_fks_cnt,xi_i_fks_cnt,xiimax_cnt,xi_i_hat_ev,xi_i_hat_cnt
 c This subroutine computes the soft-collinear counter term and adds its
 c value to the list of weights using the add_wgt subroutine
       use extra_weights
@@ -881,22 +849,10 @@ c value to the list of weights using the add_wgt subroutine
      $     ,deg_lxi_sc,g22,replace_MC_subt
       external fks_Sij
       parameter (zero=0d0,one=1d0)
-      double precision    p1_cnt(0:3,nexternal,-2:2),wgt_cnt(-2:2)
-     $                    ,pswgt_cnt(-2:2),jac_cnt(-2:2)
-      common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
-      double precision    xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev(0:3)
-     $                    ,p_i_fks_cnt(0:3,-2:2)
-      common/fksvariables/xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt
       integer            i_fks,j_fks
       common/fks_indices/i_fks,j_fks
       double precision     xiScut_used,xiBSVcut_used
       common /cxiScut_used/xiScut_used,xiBSVcut_used
-      double precision   xi_i_fks_cnt(-2:2)
-      common /cxiifkscnt/xi_i_fks_cnt
-      double precision   xiimax_cnt(-2:2)
-      common /cxiimaxcnt/xiimax_cnt
-      double precision  xi_i_hat_ev,xi_i_hat_cnt(-2:2)
-      common /cxi_i_hat/xi_i_hat_ev,xi_i_hat_cnt
       double precision     f_r,f_s,f_c,f_dc,f_sc,f_dsc(4)
       common/factor_n1body/f_r,f_s,f_c,f_dc,f_sc,f_dsc
       double precision           f_s_MC_S,f_s_MC_H,f_c_MC_S,f_c_MC_H
@@ -978,6 +934,7 @@ c value to the list of weights using the add_wgt subroutine
 
       subroutine compute_native_NLOPS_weights(p,p_lab,p_cms,jacPS,
      $     passcuts_nbody,passcuts_n1body,probne)
+      use fks_phase_space_data, only: p1_cnt,jac_cnt
 ! Evaluate one ordinary FKS history, including its real term and its
 ! G replacement. During H repartitioning add_wgt discards S records.
       use kinematics_module, only: gfactsf,gfactcl,gfactazi
@@ -990,9 +947,6 @@ c value to the list of weights using the add_wgt subroutine
       logical passcuts_nbody,passcuts_n1body
       character*4 abrv
       common /to_abrv/ abrv
-      double precision p1_cnt(0:3,nexternal,-2:2),wgt_cnt(-2:2),
-     $     pswgt_cnt(-2:2),jac_cnt(-2:2)
-      common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
 
       probne=1d0
       gfactsf=1d0
@@ -1039,6 +993,7 @@ c value to the list of weights using the add_wgt subroutine
       end
 
       subroutine compute_MC_subt_term(p,p_lab,p_cms,jacPS,passcuts,probne)
+      use fks_phase_space_data, only: xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt,p_born,xbjrk_ev,xbjrk_cnt
       use extra_weights
       use kinematics_module
       use process_module, only: mcatnlo_delta_mod
@@ -1061,13 +1016,6 @@ c     respectively.
      $     ,bogus_probne_fun
       external fks_Sij,fks_Hij,bogus_probne_fun
       logical passcuts
-      double precision    xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev(0:3)
-     $     ,p_i_fks_cnt(0:3,-2:2)
-      common/fksvariables/xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt
-      double precision p_born(0:3,nexternal-1)
-      common /pborn/   p_born
-      double precision xbjrk_ev(2),xbjrk_cnt(2,-2:2)
-      common/cbjorkenx/xbjrk_ev,xbjrk_cnt
       integer            i_fks,j_fks
       common/fks_indices/i_fks,j_fks
       double precision           f_s_MC_S,f_s_MC_H,f_c_MC_S,f_c_MC_H
@@ -1163,6 +1111,7 @@ c Use the coordinates of the active map, including the resonance frame.
 
       subroutine compute_MCsubtraction_from_gfun(xi,y,sevmc_Hev
      $     ,sevmc_Sev,jac_ratio)
+      use fks_phase_space_data, only: p1_cnt,jac_cnt
       use extra_weights
       use kinematics_module
       implicit none
@@ -1178,9 +1127,6 @@ c Use the coordinates of the active map, including the resonance frame.
      $     ,f_sc_MC_S,f_sc_MC_H,f_MC_S,f_MC_H
       common/factor_n1body_NLOPS/f_s_MC_S,f_s_MC_H,f_c_MC_S,f_c_MC_H
      $     ,f_sc_MC_S,f_sc_MC_H,f_MC_S,f_MC_H
-      double precision    p1_cnt(0:3,nexternal,-2:2),wgt_cnt(-2:2)
-     $                    ,pswgt_cnt(-2:2),jac_cnt(-2:2)
-      common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
       integer get_orders_tag
       f_MC_H_con(0:2)=[f_s_MC_H,f_c_MC_H,f_sc_MC_H]
       f_MC_S_con(0:2)=[f_s_MC_S,f_c_MC_S,f_sc_MC_S]
@@ -1317,6 +1263,7 @@ c Check if they are equal
       end
       
       subroutine set_FxFx_scale(iterm,p)
+      use fks_phase_space_data, only: p1_cnt,jac_cnt
 c Sets the FxFx cluster scale and multiplies the f_* factors (computed
 c by 'compute_prefactors_nbody' and 'compute_prefactors_n1body') by the
 c Sudakov suppression. If called more than once with the same momenta
@@ -1343,9 +1290,6 @@ c     iterm= -3 : only restore scales for n+1-body w/o recomputing
       logical setclscales,rewgt_izero_calculated,rewgt_mohdr_calculated
      &     ,momenta_equal,already_set
       external setclscales,rewgt,momenta_equal
-      double precision    p1_cnt(0:3,nexternal,-2:2),wgt_cnt(-2:2)
-     $                    ,pswgt_cnt(-2:2),jac_cnt(-2:2)
-      common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
       double precision     f_r,f_s,f_c,f_dc,f_sc,f_dsc(4)
       common/factor_n1body/f_r,f_s,f_c,f_dc,f_sc,f_dsc
       double precision           f_s_MC_S,f_s_MC_H,f_c_MC_S,f_c_MC_H
@@ -1512,6 +1456,9 @@ c Restore scales for the n+1-body FxFx terms
       
       
       subroutine compute_prefactors_nbody(vegas_wgt)
+      use fks_phase_space_data,only: resonance_momentum,resonance_mass2,resonance_recoil,
+     $     resonance_members,initial_recoil_leg,p1_cnt,jac_cnt,xinorm_ev,xiimax_ev,
+     $     ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
 c Compute all the relevant prefactors for the Born and the soft-virtual,
 c i.e. all the nbody contributions. Also initialises the plots and
 c bpower.
@@ -1519,7 +1466,6 @@ c bpower.
       use mint_module
       implicit none
       include 'nexternal.inc'
-      include 'resonance_recoil.inc'
       include 'run.inc'
       include 'genps.inc'
       include 'timing_variables.inc'
@@ -1528,17 +1474,8 @@ c bpower.
       logical firsttime
       data firsttime /.true./
       parameter (pi=3.1415926535897932385d0)
-      double precision    p1_cnt(0:3,nexternal,-2:2),wgt_cnt(-2:2)
-     $                    ,pswgt_cnt(-2:2),jac_cnt(-2:2)
-      common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
-      double precision  xinorm_ev
-      common /cxinormev/xinorm_ev
-      double precision  xiimax_ev
-      common /cxiimaxev/xiimax_ev
       double precision     xiScut_used,xiBSVcut_used
       common /cxiScut_used/xiScut_used,xiBSVcut_used
-      double precision        ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
-      common/parton_cms_stuff/ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
       double precision         fkssymmetryfactor,fkssymmetryfactorBorn,
      $                         fkssymmetryfactorDeg
       integer                  ngluons,nquarks(-6:6),nphotons
@@ -1648,6 +1585,7 @@ c so the same local radiation normalization also removes that map.
       end
 
       subroutine include_native_recoil_weights(group,group_of)
+      use fks_phase_space_data, only: p_born,p_born_ev
 c At fixed real momenta the real weights use one common projection;
 c MC and G counterterms use the Born of this recoil group. Both are
 c partitions of unity at their respective phase-space points.
@@ -1655,10 +1593,7 @@ c partitions of unity at their respective phase-space points.
       include 'genps.inc'
       include 'nexternal.inc'
       integer group,group_of(lmaxconfigs)
-      double precision native_recoil_weight,wb,wr,
-     $     p_born(0:3,nexternal-1),p_born_ev(0:3,nexternal-1)
-      common /pborn/p_born
-      common /pborn_ev/p_born_ev
+      double precision native_recoil_weight,wb,wr
       external native_recoil_weight
       double precision f_r,f_s,f_c,f_dc,f_sc,f_dsc(4)
       common /factor_n1body/f_r,f_s,f_c,f_dc,f_sc,f_dsc
@@ -1684,6 +1619,7 @@ c partitions of unity at their respective phase-space points.
 
 
       subroutine include_multichannel_enhance(imode)
+      use fks_phase_space_data,only: p_born,p_born_ev,p_born_coll,p_born_norad,p_ev,p1_cnt,jac_cnt
       use weight_lines, only: mc_H_only
       implicit none
       include 'nexternal.inc'
@@ -1697,19 +1633,6 @@ c partitions of unity at their respective phase-space points.
       integer inoborn_cnt,i,imode
       data inoborn_cnt /0/
       double precision p_born_used(0:3,nexternal-1)
-      double precision p_born(0:3,nexternal-1)
-      common/pborn/    p_born
-      double precision p_born_ev(0:3,nexternal-1)
-      common/pborn_ev/ p_born_ev
-      double precision p_born_coll(0:3,nexternal-1)
-      common/pborn_coll/p_born_coll
-      double precision p_born_norad(0:3,nexternal-1)
-      common/pborn_norad/p_born_norad
-      double precision p_ev(0:3,nexternal)
-      common/pev/      p_ev
-      double precision    p1_cnt(0:3,nexternal,-2:2),wgt_cnt(-2:2)
-     $                    ,pswgt_cnt(-2:2),jac_cnt(-2:2)
-      common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
       double precision pmass(-nexternal:0,lmaxconfigs,0:fks_configs)
       double precision pwidth(-nexternal:0,lmaxconfigs,0:fks_configs)
       integer iforest(2,-max_branch:-1,lmaxconfigs,0:fks_configs)
@@ -1879,11 +1802,14 @@ c Compute the multi-channel enhancement factor 'enhance_real'.
       
 
       subroutine compute_prefactors_n1body(vegas_wgt,jac_ev)
+      use fks_phase_space_data,only: resonance_momentum,resonance_mass2,resonance_recoil,
+     $     resonance_members,initial_recoil_leg,p1_cnt,jac_cnt,xi_i_fks_ev,y_ij_fks_ev,
+     $     p_i_fks_ev,p_i_fks_cnt,xi_i_fks_cnt,xinorm_ev,xiimax_ev,xiimax_cnt,xinorm_cnt,ybst_til_tolab,
+     $     ybst_til_tocm,sqrtshat,shat,nocntevents
 c Compute all relevant prefactors for the real emission and counter
 c terms.
       implicit none
       include 'nexternal.inc'
-      include 'resonance_recoil.inc'
       include 'run.inc'
       include 'genps.inc'
       include 'fks_powers.inc'
@@ -1897,39 +1823,19 @@ c terms.
      $     coll_scale,angular_scale,mismatch_log,total(0:3)
       logical scale_pass
       parameter (pi=3.1415926535897932385d0, ZERO=0d0)
-      double precision    p1_cnt(0:3,nexternal,-2:2),wgt_cnt(-2:2)
-     $                    ,pswgt_cnt(-2:2),jac_cnt(-2:2)
-      common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
-      double precision    xi_i_fks_ev,y_ij_fks_ev
-      double precision    p_i_fks_ev(0:3),p_i_fks_cnt(0:3,-2:2)
-      common/fksvariables/xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt
       integer            i_fks,j_fks
       common/fks_indices/i_fks,j_fks
-      double precision   xi_i_fks_cnt(-2:2)
-      common /cxiifkscnt/xi_i_fks_cnt
-      double precision  xinorm_ev
-      common /cxinormev/xinorm_ev
-      double precision  xiimax_ev
-      common /cxiimaxev/xiimax_ev
-      double precision   xiimax_cnt(-2:2)
-      common /cxiimaxcnt/xiimax_cnt
-      double precision   xinorm_cnt(-2:2)
-      common /cxinormcnt/xinorm_cnt
       double precision    delta_used
       common /cdelta_used/delta_used
       double precision    xicut_used
       common /cxicut_used/xicut_used
       double precision     xiScut_used,xiBSVcut_used
       common /cxiScut_used/xiScut_used,xiBSVcut_used
-      double precision        ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
-      common/parton_cms_stuff/ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
       double precision         fkssymmetryfactor,fkssymmetryfactorBorn,
      &                         fkssymmetryfactorDeg
       integer ngluons,nquarks(-6:6),nphotons
       common/numberofparticles/fkssymmetryfactor,fkssymmetryfactorBorn,
      &                  fkssymmetryfactorDeg,ngluons,nquarks,nphotons
-      logical nocntevents
-      common/cnocntevents/nocntevents
       double precision     f_r,f_s,f_c,f_dc,f_sc,f_dsc(4)
       common/factor_n1body/f_r,f_s,f_c,f_dc,f_sc,f_dsc
       double precision           f_s_MC_S,f_s_MC_H,f_c_MC_S,f_c_MC_H
@@ -2078,6 +1984,8 @@ c equal to ione, so no need to define separate factors.
 
       
       subroutine add_wgt(type,orders,wgt1,wgt2,wgt3)
+      use fks_phase_space_data,only: p_born,p_ev,ybst_til_tolab,ybst_til_tocm,sqrtshat,shat,p1_cnt,
+     $     jac_cnt
 c Adds a contribution to the list in weight_lines. 'type' sets the type
 c of the contribution and wgt1..wgt3 are the coefficients multiplying
 c the logs. The arguments are:
@@ -2184,15 +2092,6 @@ c        contribution
       integer orders(nsplitorders)
       integer              nFKSprocess
       common/c_nFKSprocess/nFKSprocess
-      double precision p_born(0:3,nexternal-1)
-      common/pborn/    p_born
-      double precision p_ev(0:3,nexternal)
-      common/pev/      p_ev
-      double precision        ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
-      common/parton_cms_stuff/ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
-      double precision    p1_cnt(0:3,nexternal,-2:2),wgt_cnt(-2:2)
-     $                    ,pswgt_cnt(-2:2),jac_cnt(-2:2)
-      common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
       double precision         fkssymmetryfactor,fkssymmetryfactorBorn,
      &                         fkssymmetryfactorDeg
       integer                                      ngluons,nquarks(-6:6)
@@ -4511,6 +4410,7 @@ c
       end
 
       subroutine sreal(pp,xi_i_fks,y_ij_fks,wgt)
+      use fks_phase_space_data, only: ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
 c Wrapper for the n+1 contribution. Returns the n+1 matrix element
 c squared reduced by the FKS damping factor xi**2*(1-y).
 c Close to the soft or collinear limits it calls the corresponding
@@ -4531,9 +4431,6 @@ c Born and multiplies with the AP splitting function or eikonal factors.
       integer i_fks,j_fks
       common/fks_indices/i_fks,j_fks
 
-      double precision ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
-      common/parton_cms_stuff/ybst_til_tolab,ybst_til_tocm,
-     #                        sqrtshat,shat
 
       logical softtest,colltest
       common/sctests/softtest,colltest
@@ -4602,29 +4499,21 @@ c has soft singularities
 
 
       subroutine sborncol_fsr(p,xi_i_fks,y_ij_fks,wgt)
+      use fks_phase_space_data,only: resonance_momentum,resonance_mass2,resonance_recoil,
+     $     resonance_members,initial_recoil_leg,p_born,ybst_til_tolab,ybst_til_tocm,sqrtshat,shat,xi_i_fks_ev,
+     $     y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt,xij_aor
       implicit none
       include "nexternal.inc"
-      include 'resonance_recoil.inc'
       include "nFKSconfigs.inc"
       double precision p(0:3,nexternal),wgt
       double precision xi_i_fks,y_ij_fks
 C  
-      double precision p_born(0:3,nexternal-1)
-      common/pborn/p_born
 
       integer i_fks,j_fks
       common/fks_indices/i_fks,j_fks
 
-      double precision ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
-      common/parton_cms_stuff/ybst_til_tolab,ybst_til_tocm,
-     #                        sqrtshat,shat
 
-      double precision xi_i_fks_ev,y_ij_fks_ev
-      double precision p_i_fks_ev(0:3),p_i_fks_cnt(0:3,-2:2)
-      common/fksvariables/xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt
 
-      double complex xij_aor
-      common/cxij_aor/xij_aor
 
       double precision cthbe,sthbe,cphibe,sphibe
       common/cbeangles/cthbe,sthbe,cphibe,sphibe
@@ -4792,33 +4681,23 @@ c Insert the extra factor due to Madgraph convention for polarization vectors
 
 
       subroutine sborncol_isr(p,xi_i_fks,y_ij_fks,wgt)
+      use fks_phase_space_data,only: p_born_coll,p_born,ybst_til_tolab,ybst_til_tocm,sqrtshat,shat,
+     $     xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt,xij_aor
       implicit none
       include "nexternal.inc"
       include "nFKSconfigs.inc"
       double precision p(0:3,nexternal),wgt
       double precision xi_i_fks,y_ij_fks
 C  
-      double precision p_born_coll(0:3,nexternal-1)
-      common/pborn_coll/p_born_coll
 
-      double precision p_born(0:3,nexternal-1)
-      common/pborn/p_born
 
       double precision p_born_used(0:3,nexternal-1)
 
       integer i_fks,j_fks
       common/fks_indices/i_fks,j_fks
 
-      double precision ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
-      common/parton_cms_stuff/ybst_til_tolab,ybst_til_tocm,
-     #                        sqrtshat,shat
 
-      double precision xi_i_fks_ev,y_ij_fks_ev
-      double precision p_i_fks_ev(0:3),p_i_fks_cnt(0:3,-2:2)
-      common/fksvariables/xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt
 
-      double complex xij_aor
-      common/cxij_aor/xij_aor
 
       logical calculatedBorn
       common/ccalculatedBorn/calculatedBorn
@@ -5617,6 +5496,7 @@ c q->gq splitting
 
 
       subroutine sbornsoft(pp,xi_i_fks,y_ij_fks,wgt)
+      use fks_phase_space_data, only: p_born
       implicit none
 
       include "nexternal.inc"
@@ -5635,8 +5515,6 @@ c      include "fks.inc"
       double precision wgt1
       integer i,j,k 
 
-      double precision p_born(0:3,nexternal-1)
-      common/pborn/p_born
 
       integer i_fks,j_fks
       common/fks_indices/i_fks,j_fks
@@ -5698,11 +5576,13 @@ c Factor two to fix the limits.
 
 
       subroutine eikonal_reduced(pp,m,n,i_fks,j_fks,xi_i_fks,y_ij_fks,eik)
+      use fks_phase_space_data,only: resonance_momentum,resonance_mass2,resonance_recoil,
+     $     resonance_members,initial_recoil_leg,xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt,ybst_til_tolab,
+     $     ybst_til_tocm,sqrtshat,shat
 c     Returns the eikonal factor
       implicit none
 
       include "nexternal.inc"
-      include 'resonance_recoil.inc'
       double precision eik,pp(0:3,nexternal),xi_i_fks,y_ij_fks
       double precision dot,dotnm,dotni,dotmi,fact
       integer n,m,i_fks,j_fks,i
@@ -5711,13 +5591,7 @@ c     Returns the eikonal factor
       include "coupl.inc"
 
       external dot
-      double precision xi_i_fks_ev,y_ij_fks_ev
-      double precision p_i_fks_ev(0:3),p_i_fks_cnt(0:3,-2:2)
-      common/fksvariables/xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt
 
-      double precision ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
-      common/parton_cms_stuff/ybst_til_tolab,ybst_til_tocm,
-     #                        sqrtshat,shat
       real*8 phat_i_fks(0:3)
       double precision zero,pmass(nexternal),tiny
       parameter(zero=0d0)
@@ -5782,6 +5656,7 @@ c Calculate the eikonal factor
 
       subroutine sreal_deg(p,xi_i_fks,y_ij_fks,
      #                     collrem_xi,collrem_lxi)
+      use fks_phase_space_data, only: p_born,p_born_coll,ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
       use extra_weights
       implicit none
       include "genps.inc"
@@ -5797,20 +5672,14 @@ c Calculate the eikonal factor
       double precision xi_i_fks,y_ij_fks
       double precision collrem_xi_tmp, collrem_lxi_tmp
 
-      double precision p_born(0:3,nexternal-1), wgt_born
-      common/pborn/p_born
+      double precision wgt_born
 
-      double precision p_born_coll(0:3,nexternal-1)
-      common/pborn_coll/p_born_coll
 
       double precision p_born_used(0:3,nexternal-1)
 
       integer i_fks,j_fks
       common/fks_indices/i_fks,j_fks
 
-      double precision ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
-      common/parton_cms_stuff/ybst_til_tolab,ybst_til_tocm,
-     #                        sqrtshat,shat
 
       double precision delta_used
       common /cdelta_used/delta_used
@@ -6028,29 +5897,18 @@ c has to be inserted here
 
 
       subroutine set_cms_stuff(icountevts)
+      use fks_phase_space_data,only: ybst_til_tolab,ybst_til_tocm,sqrtshat,shat,sqrtshat_ev,shat_ev,
+     $     sqrtshat_cnt,shat_cnt,tau_ev,ycm_ev,tau_cnt,ycm_cnt,xbjrk_ev,xbjrk_cnt
       implicit none
       include "run.inc"
 
       integer icountevts
 
-      double precision ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
-      common/parton_cms_stuff/ybst_til_tolab,ybst_til_tocm,
-     #                        sqrtshat,shat
 
-      double precision sqrtshat_ev,shat_ev
-      common/parton_cms_ev/sqrtshat_ev,shat_ev
 
-      double precision sqrtshat_cnt(-2:2),shat_cnt(-2:2)
-      common/parton_cms_cnt/sqrtshat_cnt,shat_cnt
 
-      double precision tau_ev,ycm_ev
-      common/cbjrk12_ev/tau_ev,ycm_ev
 
-      double precision tau_cnt(-2:2),ycm_cnt(-2:2)
-      common/cbjrk12_cnt/tau_cnt,ycm_cnt
 
-      double precision xbjrk_ev(2),xbjrk_cnt(2,-2:2)
-      common/cbjorkenx/xbjrk_ev,xbjrk_cnt
 
 c rapidity of boost from \tilde{k}_1+\tilde{k}_2 c.m. frame to lab frame --
 c same for event and counterevents
@@ -6151,6 +6009,7 @@ c multiplied by 1/x (by 1) for the emitting (non emitting) leg
 
 
       subroutine xmom_compare(i_fks,j_fks,jac,jac_cnt,p,p1_cnt,pass)
+      use fks_phase_space_data, only: xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt
       implicit none
       include 'genps.inc'
       include 'nexternal.inc'
@@ -6160,9 +6019,6 @@ c multiplied by 1/x (by 1) for the emitting (non emitting) leg
       double precision jac,jac_cnt(-2:2)
       integer izero,ione,itwo,iunit,isum
       logical verbose,pass,pass0
-      double precision xi_i_fks_ev,y_ij_fks_ev
-      double precision p_i_fks_ev(0:3),p_i_fks_cnt(0:3,-2:2)
-      common/fksvariables/xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt
       parameter (izero=0)
       parameter (ione=1)
       parameter (itwo=2)
@@ -6633,6 +6489,7 @@ c
 
 
       subroutine bornsoftvirtual(p,bsv_wgt,virt_wgt,born_wgt)
+      use fks_phase_space_data, only: ybst_til_tolab,ybst_til_tocm,sqrtshat,shat,p_born
       use extra_weights
       use mint_module
       implicit none
@@ -6664,9 +6521,6 @@ c      include "fks.inc"
       double precision xicut_used
       common /cxicut_used/xicut_used
 
-      double precision ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
-      common/parton_cms_stuff/ybst_til_tolab,ybst_til_tocm,
-     #                        sqrtshat,shat
 
       double precision pi
       parameter (pi=3.1415926535897932385d0)
@@ -6674,8 +6528,6 @@ c      include "fks.inc"
       double precision c(0:1),gamma(0:1),gammap(0:1),gamma_ph,gammap_ph
       common/fks_colors/c,gamma,gammap,gamma_ph,gammap_ph
       double precision c_used, gamma_used, gammap_used
-      double precision p_born(0:3,nexternal-1)
-      common/pborn/p_born
       double precision double,single,xmu2
       logical ComputePoles,fksprefact
       parameter (ComputePoles=.false.)
@@ -7234,6 +7086,7 @@ c         stop
 
 
       subroutine eikonal_Ireg(p,m,n,xicut_used,eikIreg)
+      use fks_phase_space_data, only: ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
       implicit none
       double precision zero,pi,pi2
       parameter (zero=0.d0)
@@ -7245,9 +7098,6 @@ c         stop
       double precision p(0:3,nexternal),xicut_used,eikIreg
       integer m,n
 
-      double precision ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
-      common/parton_cms_stuff/ybst_til_tolab,ybst_til_tocm,
-     #                        sqrtshat,shat
 
       character*4 abrv
       common /to_abrv/ abrv
@@ -7478,6 +7328,7 @@ c
 
 
       subroutine getpoles(p,xmu2,double,single,fksprefact)
+      use fks_phase_space_data, only: p_born
 c Returns the residues of double and single poles according to 
 c eq.(B.1) and eq.(B.2) if fksprefact=.true.. When fksprefact=.false.,
 c the prefactor (mu2/Q2)^ep in eq.(B.1) is expanded, and giving an
@@ -7500,8 +7351,6 @@ c      include "fks.inc"
       logical fksprefact
       double precision c(0:1),gamma(0:1),gammap(0:1),gamma_ph,gammap_ph
       common/fks_colors/c,gamma,gammap,gamma_ph,gammap_ph
-      double precision p_born(0:3,nexternal-1)
-      common/pborn/p_born
       integer i_fks,j_fks
       common/fks_indices/i_fks,j_fks
       double precision wgt1
