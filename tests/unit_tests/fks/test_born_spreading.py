@@ -129,7 +129,8 @@ class TestBornSpreading(unittest.TestCase):
             (work / 'nexternal.inc').write_text(
                 '      integer nexternal,nincoming\n'
                 '      parameter (nexternal=5,nincoming=2)\n')
-            maps = ('generate_momenta_initial', 'generate_momenta_massless_final',
+            maps = ('generate_momenta_initial', 'get_isr_radiation_bounds',
+                    'boost_isr_recoil', 'generate_momenta_massless_final',
                     'generate_momenta_massive_final', 'getangles')
             source = ''.join(routine(TEMPLATE / 'genps_fks.f', name) for name in maps)
             source += routine(TEMPLATE / 'fks_singular.f', 'set_born_spread_point')

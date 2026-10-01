@@ -177,6 +177,7 @@ class TestPythia8Matching(unittest.TestCase):
             'shower_scale_nbody_max(5,5)\nend module\n')
         selections = {
             'genps_fks.f': ('invert_fks_radiation', 'generate_momenta_initial_inverse',
+                           'get_isr_radiation_bounds', 'boost_isr_recoil',
                            'generate_momenta_massive_final_inverse',
                            'generate_momenta_massless_final_inverse',
                            'native_fsr_angle', 'get_recoil', 'getangles'),

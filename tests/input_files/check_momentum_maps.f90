@@ -33,6 +33,11 @@ program check_momentum_maps
   nincoming_mod=2
   softtest=.false.
   colltest=.false.
+  if (mode.eq.'isr'.or.mode.eq.'isr_fks') then
+     call check_isr_mapping(trim(mode))
+     write(*,*) 'PASS ',trim(mode)
+     stop
+  endif
   if (mode.eq.'native_projection') then
      call check_native_projection()
      write(*,*) 'PASS native_projection'

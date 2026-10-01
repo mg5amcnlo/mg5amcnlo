@@ -28,6 +28,88 @@ inverse, Born s/t-channel inverse or full phase-space replay remains in the
 inner history loop. The saved outer coordinates are still replayed once after
 the sum to restore the event owner.
 
+## Global initial-state recoil
+
+The ISR map in `genps_fks.f` is shared by fixed-order integration, all shower
+choices, and native history projection. It uses massless incoming partons. For
+emitter `j`, define `z = 1 - xi`, where `xi = 2 E_rad / sqrt(s)` and `y` is the
+cosine of the radiation angle relative to that emitter in the real partonic CM.
+The Born and real fractions obey
+
+```
+x_j = bar_x_j / z,       x_spectator = bar_x_spectator,
+s = bar_s / z,           xi_max = 1 - bar_x_j,
+ycm = ycm_born - idir * log(z) / 2,       idir = 3 - 2*j.
+```
+
+The angular domain remains `-1 <= y <= 1`; the endpoint no longer depends on
+`y`. A lower bound on the real invariant mass restricts `xi` from below through
+`max(0, 1 - tau_born / tau_lower_bound)`. Forward and inverse generation use
+the same bounds helper, including the separately stored lepton `1-x` near the
+beam endpoint.
+
+All hard final momenta are transformed in the underlying Born CM. With
+`p_plus = E + idir*pz`, `p_minus = E - idir*pz`, and two transverse components,
+the common Lorentz transformation is
+
+```
+A = 1 + xi*(1-y)/(2*z),
+b = -xi*sqrt((1-y)*(1+y))/(2*sqrt(z)) * (cos(phi), sin(phi)),
+
+p_plus'  = A*p_plus,
+p_T'     = p_T + b*p_plus,
+p_minus' = (p_minus + 2*b.p_T + b.b*p_plus)/A.
+```
+
+It preserves each hard mass and the spectator's null direction. It reduces to
+the identity in both the soft and emitter-collinear limits. The incoming
+energies in this frame are `sqrt(bar_s)/(2*z)` for the emitter and
+`sqrt(bar_s)/2` for the spectator. The radiation has
+`k_plus/xi = sqrt(bar_s)*(1+y)/(2*z)`,
+`k_minus/xi = sqrt(bar_s)*(1-y)/2`, and
+`k_T/xi = sqrt(s)*sqrt((1-y)*(1+y))/2 * (cos(phi), sin(phi))`.
+These energy-divided components remain defined at the soft endpoint.
+
+`boost_isr_recoil` implements this transformation and its algebraic inverse.
+This is the massless Pythia initial-initial recoil construction expressed in
+light-cone components, including the orientation of the hard final state.
+The lepton chart without event projection applies the same recoil and then
+boosts to the real CM; it retains its existing sampling of real incoming
+fractions and reduced Born mass.
+
+### Analytically integrated FKS terms
+
+Changing the hard Lorentz transformation adds no phase-space determinant.
+The change of Bjorken variables has determinant `1/z`, so in four dimensions
+the radiation factor multiplying the hadronic Born phase space is
+
+```
+s / (4*pi)^3 * xi/z * dxi dy dphi.
+```
+
+This is the existing ISR measure. The generator omits `xi` because the FKS
+prefactors supply it separately. In `4-2*epsilon` dimensions the same measure
+has the factors `s^(1-epsilon)`, `xi^(1-2*epsilon)` and
+`(1-y*y)^(-epsilon)`; the new hard recoil does not change them. The soft
+momenta and the full collinear map are unchanged, so the existing analytic
+soft, collinear and soft-collinear kernels still apply.
+
+The physical endpoint must nevertheless be propagated to the finite terms.
+For example, at `h = 1 - bar_x_j`,
+
+```
+integral_0^h dxi xi^(-1-2*epsilon)
+  = -1/(2*epsilon) + log(h) - epsilon*log(h)^2 + O(epsilon^2).
+```
+
+`fill_FKS_commons` installs the new `xiimax` and `xinorm` for the real point
+and its counterevents. `compute_prefactors_n1body` already converts the
+numerical subtraction range `min(h, xiScut_used)` to the common analytic
+cutoff `xicut_used`, including its finite logarithms and mixed terms. Thus
+neither an extra recoil Jacobian nor a change to the integrated kernels is
+needed. The common analytic cutoffs are retained; replacing them by `h` only
+in the integrated terms would change the finite cross section.
+
 ## COMMON and saved-state audit
 
 The audit follows the removed inverse/full-generator call chain, the retained
@@ -76,3 +158,29 @@ poisoned COMMON values. It compares Born/real/counterevent momenta, radiation
 variables, Bjorken fractions, spin phases, validity flags and measure ratios.
 A nonunit reference Born factor checks the cancellation directly. Existing
 radiation-map and H-weight regression tests remain in use.
+
+`test_initial_state_recoil_and_endpoints` also compares the production ISR map
+with an independent boost/rotation construction for both emitters, massive
+hard daughters, asymmetric fractions and beam endpoints. It checks the
+inverse, measures, common singular Born projections, real mass thresholds,
+and the lepton recoil chart. `test_initial_state_fks_finite_integrals` integrates
+analytic test functions through the production phase space and FKS
+prefactors, varying both subtraction cutoffs and physical endpoints.
+
+A fixed-order check on 2026-10-01 generated `u u~ > e+ e- [QCD]` with
+`loop_sm`, 6.5 TeV proton beams, built-in `nn23nlo` PDFs, fixed renormalization
+and factorization scales of 91.188 GeV, and the default `mll_sf = 30 GeV`
+cut. Grid setup used 3 iterations of 2,000 points, followed by 3 iterations
+of 15,000 points. Scale/PDF reweighting was disabled.
+
+| Map | `xicut` | `deltaI` | Cross section (pb) |
+| --- | ---: | ---: | ---: |
+| New ISR map | 0.5 | 1.0 | 521.31 +/- 3.93 |
+| Original map at `3fff30cc7` | 0.5 | 1.0 | 519.52 +/- 3.86 |
+| New ISR map, changed analytic cutoffs | 0.1 | 0.2 | 519.35 +/- 4.47 |
+
+The numerical subtraction cutoffs stayed at `xiScut = 0.5`, `deltaS = 1`.
+These results agree within their Monte Carlo uncertainties. The generated
+soft/collinear tests passed in all four FKS sectors, and all 20 virtual-pole
+checks passed at tolerance `1e-5`. This checks fixed-order subtraction;
+consistency with the other shower mappings is deferred.
