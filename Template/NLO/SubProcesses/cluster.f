@@ -87,9 +87,11 @@ c Links the configurations (given in iforest) to the allowed clusterings
 c (in cluster_list) with their corresponding PDG codes (in cluster_pdg)
          do iconf=1,mapconfig(0,iproc)
             call set_array_indices(iproc,iconf,il_list,il_pdg)
+c Empty propagator slices for nbr=0 still need valid base addresses.
             call iforest_to_list(next,nincoming,nbr,iforest(1,-(nbr+1)
-     $           ,iconf,iproc),sprop(-nbr,iconf,iproc),tprid(-nbr,iconf
-     $           ,iproc),pwidth(-nbr,iconf,iproc),ipdg(1,iproc)
+     $           ,iconf,iproc),sprop(-max(nbr,1),iconf,iproc)
+     $           ,tprid(-max(nbr,1),iconf,iproc)
+     $           ,pwidth(-nbr,iconf,iproc),ipdg(1,iproc)
      $           ,cluster_list(il_list),cluster_pdg(il_pdg)
      $           ,cluster_type(1,iproc))
          enddo
@@ -106,7 +108,8 @@ c cluster_ij) with scales (in cluster_scales)
       call cluster(next,pcl,mapconfig(0,iproc),nbr
      $     ,cluster_list(il_list),cluster_pdg(il_pdg),iforest(1,-(nbr+1)
      $     ,iconfig,iproc),ipdg(1,iproc),pmass(-nbr,iconfig,iproc)
-     $     ,pwidth(-nbr,iconfig,iproc),iconfig,sprop(-nbr,iconfig,iproc)
+     $     ,pwidth(-nbr,iconfig,iproc),iconfig
+     $     ,sprop(-max(nbr,1),iconfig,iproc)
      $     ,cluster_conf,cluster_scales,cluster_ij,iord,cluster_type(1
      $     ,iproc))
 c Given the most-likely clustering, it returns the corresponding Sudakov
@@ -409,8 +412,11 @@ c Set the cluster_conf to (one of) the diagram(s) compatible with the
 c clustering found just above
       call set_cluster_conf(nconf,nvalid,valid_conf,iconfig
      $     ,cluster_conf)
-c Set the cluster_scale of the final 2->1 process.      
-      if (.not.(btest(win_id,0).or. btest(win_id,1))) then
+c Set the cluster_scale of the final 2->1 process.
+      if (nbr.eq.0) then
+         ! Already a 2->1 process: there is no last clustering.
+         cluster_scales(0)=sqrt(djb_clus(pcl(0,3)))
+      elseif (.not.(btest(win_id,0).or. btest(win_id,1))) then
          ! s-channel 2->2 process. Use m_T^2 of final state particle in
          ! 2->1 process (which is equal to its invariant mass, since
          ! pT=0)
@@ -426,8 +432,12 @@ c Set the daughter momenta of the 2->1 process (do not need the mother)
       p_inter(:,2,0)=pcl(:,2)
 c Link the cluster_ij values to the ordering used in cluster_pdg (which
 c is similar to the one in iforest)
-      call link_clustering_to_iforest(nbr,cluster_ij,cluster_list(1
-     $     ,cluster_conf),iord)
+      if (nbr.eq.0) then
+         iord(0)=0
+      else
+         call link_clustering_to_iforest(nbr,cluster_ij,cluster_list(1
+     $        ,cluster_conf),iord)
+      endif
 c Fill the cluster_pdg(0:2,0) with the information of the PDG codes for
 c the final, completely clustered 2->1 system
       call set_cluster_pdg_2_1_process(next,nbr,ipdg,cluster_pdg(0,0
@@ -818,7 +828,7 @@ c anything else) cluster).
      $     ,cluster_list(2*nbr,nconf),i,j,iBWlist(2,0:nbr)
      $     ,cluster_type(*),particle_type(next),cl(0:2)
       double precision p(0:4,next),cluster_scale,min_scale,scale
-      logical in_list,valid_conf(nconf),is_bw
+      logical in_list,valid_conf(nconf),is_bw,candidate_is_bw
       external in_list,cluster_scale
       iwin=-1 ! set iwin to -1, so that we can track if a single valid
               ! clustering is found
@@ -835,12 +845,13 @@ c anything else) cluster).
             cl(1)=particle_type(i)
             cl(2)=particle_type(j)
             scale=cluster_scale(iBWlist,nbr,j,id_ij,p(0,i),p(0,j),cl
-     $           ,is_bw)
+     $           ,candidate_is_bw)
             if (scale.lt.min_scale) then
                min_scale=scale
                iwin=i
                jwin=j
                win_id=id_ij
+               is_bw=candidate_is_bw
             endif
          enddo
       enddo
@@ -1040,6 +1051,8 @@ c gluons).
      $                                        ,p_inter(0,iqcd(2),i))))
          endif
       enddo
+c With no branchings only the core scale above needs updating.
+      if (nbr.eq.0) return
 c Treat here the special case where the final 2->2 process is a pure
 c s-channel QCD process. In that case set the last and next-to-last
 c clustering scale to the average transverse masses of the (combined)
@@ -1185,6 +1198,7 @@ c Determines the cluster scale for the clustering of momenta pi and pj
       parameter (one_plus_tiny=1.000001d0)
       logical is_bw
       external sumdot,dj_clus,djb_clus,dot
+      is_bw=.false.
       if (j.le.2) then
 c     initial state clustering
          cluster_scale=sqrt(djb_clus(pi))
@@ -1193,7 +1207,6 @@ c     initial state clustering
      $        cluster_scale=cluster_scale*one_plus_tiny
       else
 c     final state clustering
-         is_bw=.false.
          do i=1,iBWlist(1,0)
             if (iBWlist(1,i).eq.id_ij) then
                is_bw=.true.
