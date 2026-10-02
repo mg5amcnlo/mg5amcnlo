@@ -14,8 +14,8 @@ singularities.
 
 Package A uses exact massive fractions and an implicit energy-conservation
 derivative instead of activating the old nonuniform massive soft expansion.
-The shared helper in `kinematics_module.f90` keeps the support/damping scale
-consistent. The absolute massive geometric prefactor is shared by all
+The shared helper, now in `mc_counterterms` in `montecarlocounter.f`, keeps
+the support/damping scale consistent. The absolute massive geometric prefactor is shared by all
 showers, since it converts the FKS phase-space measure and each shower's
 radiation Jacobian already takes its magnitude. Massive squark/gluino
 controls and HERWIG6, HERWIG7, PYTHIA6Q and PYTHIA8 measure regressions are
@@ -157,9 +157,9 @@ Main implementation sites:
 
 | File | Relevant responsibility |
 |---|---|
-| [`montecarlocounter.f`](../../Template/NLO/SubProcesses/montecarlocounter.f) | `compute_MCsubtraction_kl`, `xmcsubt_connection`, kernels, `get_mbar`, `xfact_ileg*`, PYTHIA radiation variables, support and damping |
+| [`montecarlocounter.f`](../../Template/NLO/SubProcesses/montecarlocounter.f) | `compute_MCsubtraction_kl`, `xmcsubt_connection`, kernels, `get_mbar`, `xfact_ileg*`, shower invariants, `compute_gfun`, PYTHIA radiation variables, support and damping |
 | [`genps_fks.f`](../../Template/NLO/SubProcesses/genps_fks.f) | FKS generation/inversion and counterevents; keep these as FKS maps |
-| [`kinematics_module.f90`](../../Template/NLO/SubProcesses/kinematics_module.f90) | Radiation invariants and `compute_gfun` |
+| [`genps_fks_helpers.f`](../../Template/NLO/SubProcesses/genps_fks_helpers.f) | Shared geometry, momentum utilities and FKS coordinate reconstruction; includes the former kinematics module |
 | [`fks_singular.f`](../../Template/NLO/SubProcesses/fks_singular.f) | Native MC/G/real assembly, luminosities, records, grouping, folding, reweighting and event selection |
 | [`driver_mintMC.f`](../../Template/NLO/SubProcesses/driver_mintMC.f) | Native-history activation, Born-flow sampling, cuts, scales and H redistribution |
 | [`mc_native_runtime.f`](../../Template/NLO/SubProcesses/mc_native_runtime.f) | Native Born evaluators and colour-flow results |

@@ -8,7 +8,7 @@ import sys
 import tempfile
 import unittest
 
-from tests.unit_tests.fks.test_momentum_maps import fortran_routine
+from tests.unit_tests.fks.test_momentum_maps import fortran_routine, mc_counterterm_test_module
 
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -90,9 +90,12 @@ class TestMCatNLODeltaMatching(unittest.TestCase):
         shutil.copyfile(TEMPLATE / 'MCmasses_PYTHIA8.inc',
                         work / 'MCmasses_PYTHIA8.inc')
         shutil.copyfile(TEMPLATE / 'fks_powers.inc', work / 'fks_powers.inc')
-        (work / 'delta_matching.f').write_text('\n'.join(
-            fortran_routine(TEMPLATE / 'montecarlocounter.f', name)
-            for name in ('compute_delta', 'gl_safe', 'get_parton_id', 'setSudType')))
+        (work / 'delta_matching.f').write_text(mc_counterterm_test_module(
+                        ('compute_delta', 'get_delta_stopping_scales',
+                         'get_delta_connections', 'delta_leg_probability',
+                         'gl_safe', 'get_parton_id',
+                         'setSudType'),
+                        external_functions=(('double precision', 'pysudakov_safe'),)))
         cls.executable = work / 'check_delta_matching'
         result = subprocess.run([
             shutil.which('gfortran'), '-O2', '-std=legacy', '-fcheck=all',
@@ -100,7 +103,7 @@ class TestMCatNLODeltaMatching(unittest.TestCase):
             '-Wl,-dead_strip' if sys.platform == 'darwin' else '-Wl,--gc-sections',
             '-I', str(work), str(TEMPLATE / 'process_module.f90'),
             str(TEMPLATE / 'fks_phase_space_data.f'),
-            str(TEMPLATE / 'kinematics_module.f90'),
+            str(TEMPLATE / 'genps_fks_helpers.f'),
             str(TEMPLATE / 'mcatnlo_delta_scales.f90'),
             str(TEMPLATE / 'herwig7_scales.f90'),
             str(TEMPLATE / 'scale_module.f90'),
@@ -135,10 +138,12 @@ class TestStartingScaleIntegration(unittest.TestCase):
             '      parameter(nexternal=5,nincoming=2)\n')
         (work / 'nFKSconfigs.inc').write_text(
             '      integer fks_configs\n      parameter(fks_configs=2)\n')
+        (work / 'born_nhel.inc').write_text(
+            '      integer max_bcol\n      parameter(max_bcol=1)\n')
         (work / 'run.inc').write_text('')
+        shutil.copyfile(TEMPLATE / 'fks_powers.inc', work / 'fks_powers.inc')
         (work / 'routines.f').write_text('\n'.join([
-            fortran_routine(TEMPLATE / 'montecarlocounter.f', 'compute_damping_weight'),
-            fortran_routine(TEMPLATE / 'montecarlocounter.f', 'emscafun'),
+            mc_counterterm_test_module(('compute_damping_weight', 'emscafun')),
             fortran_routine(TEMPLATE / 'fks_singular.f', 'update_shower_scale_Sevents_v2')]))
         cls.executable = work / 'check_s_scales'
         result = subprocess.run([
@@ -147,7 +152,7 @@ class TestStartingScaleIntegration(unittest.TestCase):
             '-Wl,-dead_strip' if sys.platform == 'darwin' else '-Wl,--gc-sections',
             '-I', str(work), str(TEMPLATE / 'process_module.f90'),
             str(TEMPLATE / 'fks_phase_space_data.f'),
-            str(TEMPLATE / 'kinematics_module.f90'),
+            str(TEMPLATE / 'genps_fks_helpers.f'),
             str(TEMPLATE / 'mcatnlo_delta_scales.f90'),
             str(TEMPLATE / 'herwig7_scales.f90'),
             str(TEMPLATE / 'scale_module.f90'), str(TEMPLATE / 'weight_lines.f'),

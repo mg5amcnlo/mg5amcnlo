@@ -1,11 +1,17 @@
       module fks_phase_space_helpers
-c Shared numerical kernels, independent of the phase-space driver and
-c of kinematics_module, so recoil wrappers can import them directly.
+c Shared geometry and numerical kernels for phase-space maps, recoil
+c adapters, shower scales and subtraction. Only generated dimensions
+c are required; active point data and process initialization stay with
+c callers. Soft coordinate recovery takes its endpoint direction explicitly.
       implicit none
       include 'nexternal.inc'
       private
       public get_massive_fsr_bounds,getangles,gentcms,lambda,yminmax,
      $     get_recoil
+      public dot,rho,sumdot,pt,deltaR,delta_phi,delta_y,HTo2,HT,
+     $     boost_n1_to_its_cms,boost_n1_to_lab,get_xi_from_p,
+     $     get_yij_from_p,get_phi_from_p,flip_momenta,
+     $     apply_momentum_permutation
       contains
 
       subroutine get_massive_fsr_bounds(shat,sqrtshat,m_j_fks,
@@ -112,6 +118,7 @@ c
 c     External
 c
       double precision dot
+c Keep the external legacy dot product and its near-zero clipping.
       external dot
 c-----
 c  Begin Code
@@ -253,6 +260,7 @@ c-----
       logical pass
       integer imother,i
       double precision recoilbar(0:3),dot
+c Keep the external legacy dot product and its near-zero clipping.
       external dot
       pass=.true.
       do i=0,3
@@ -281,4 +289,265 @@ c-----
       endif
       return
       end subroutine get_recoil
+c Momentum utilities and FKS coordinate recovery.
+
+      double precision function get_phi_from_p(i_fks,j_fks,p)
+        implicit none
+        double precision,parameter :: pi=3.1415926535897932d0
+        integer :: i_fks,j_fks
+        double precision,dimension(0:3,nexternal) :: p
+        double precision,dimension(0:3) :: p_rot,p_mother
+        double precision :: th_mother_fks,costh_mother_fks
+     $     ,sinth_mother_fks, phi_mother_fks,cosphi_mother_fks
+     $     ,sinphi_mother_fks
+        if (j_fks.gt.nincoming) then
+           p_mother(0:3)=p(0:3,i_fks)+p(0:3,j_fks)
+c The forward FSR map preserves the mother's direction. Recover
+c the rotation directly, without a recoil boost that can flip it.
+           call getangles(p_mother,
+     $     th_mother_fks,costh_mother_fks,sinth_mother_fks,
+     $     phi_mother_fks,cosphi_mother_fks,sinphi_mother_fks)
+           call rotate_invar_inverse(p(0,i_fks),p_rot(0),
+     $     costh_mother_fks,-sinth_mother_fks,
+     $     cosphi_mother_fks,-sinphi_mother_fks)
+c compute phi:
+           get_phi_from_p=atan2(p_rot(2),p_rot(1))
+           if (get_phi_from_p.lt.0d0) get_phi_from_p=get_phi_from_p+2d0*pi
+        else
+           get_phi_from_p=atan2(p(2,i_fks),p(1,i_fks))
+           if (get_phi_from_p.lt.0d0) get_phi_from_p=get_phi_from_p+2d0*pi
+        endif
+      end function get_phi_from_p
+      double precision function get_xi_from_p(i_fks,j_fks,p_cms)
+        implicit none
+        integer :: i_fks,j_fks
+        double precision,dimension(0:3,nexternal) :: p_cms
+        get_xi_from_p=sqrt(2d0)*p_cms(0,i_fks)/sqrt(dot(p_cms(0,1),p_cms(0,2)))
+      end function get_xi_from_p
+      subroutine boost_n1_to_its_cms(p,p_cm,y)
+        implicit none
+        double precision,dimension(0:3,nexternal),intent(in) :: p
+        double precision,dimension(0:3,nexternal),intent(out) :: p_cm
+        double precision,intent(out) :: y
+        integer :: i
+c Add each beam's light-cone components before adding the beams;
+c subtracting their total E and pz loses the smaller beam at large y.
+        y=log(((p(0,1)+p(3,1))+(p(0,2)+p(3,2)))/
+     $     ((p(0,1)-p(3,1))+(p(0,2)-p(3,2))))/2d0
+        do i=1,nexternal
+           call boostz(p(0,i),y,p_cm(0,i))
+        enddo
+      end subroutine boost_n1_to_its_cms
+      subroutine boost_n1_to_lab(p,p_lab,y)
+        implicit none
+        double precision,dimension(0:3,nexternal),intent(in) :: p
+        double precision,dimension(0:3,nexternal),intent(out) :: p_lab
+        double precision,intent(in) :: y
+        integer :: i
+        do i=1,nexternal
+           call boostz(p(0,i),y,p_lab(0,i))
+        enddo
+      end subroutine boost_n1_to_lab
+      double precision function get_yij_from_p(i_fks,j_fks,p_cms,soft_direction)
+        implicit none
+        integer :: i_fks,j_fks
+        double precision,dimension(0:3,nexternal) :: p_cms
+        double precision,dimension(0:3) :: pi,pj
+        double precision,intent(in) :: soft_direction(0:3)
+        double precision,dimension(3) :: ui,uj
+c The supplied soft direction is defined in the "reduced frame" (where
+c the Born is in its center-of-mass). Here, we only use it in the
+c soft limit, where it coincides with the n+1-body cms frame.
+c Finite real momenta retain their own directions, however small.
+c A cached soft direction can belong to another FKS history during
+c native inversion, and cannot represent a different soft sister.
+        if (p_cms(0,i_fks).le.0d0) then ! Exactly soft: use momenta with energy divided out
+           pi(0:3)=soft_direction
+        else
+           pi(0:3)=p_cms(0:3,i_fks)
+        endif
+        if (p_cms(0,j_fks).le.0d0) then ! Exactly soft: use momenta with energy divided out
+           pj(0:3)=soft_direction
+        else
+           pj(0:3)=p_cms(0:3,j_fks)
+        endif
+        ui=pi(1:3)/rho(pi)
+        uj=pj(1:3)/rho(pj)
+c Preserve the small opening angle also for antiparallel daughters.
+c A dot product of large momenta can lose several ulps near |y|=1.
+        if (sum(ui*uj).ge.0d0) then
+           get_yij_from_p=1d0-0.5d0*sum((ui-uj)**2)
+        else
+           get_yij_from_p=-1d0+0.5d0*sum((ui+uj)**2)
+        endif
+      end function get_yij_from_p
+      double precision function dot3(p1,p2)
+        implicit none
+        double precision,dimension(0:3) :: p1,p2
+        dot3=p1(1)*p2(1)+p1(2)*p2(2)+p1(3)*p2(3)
+      end function dot3
+      double precision function rho(p1)
+        implicit none
+        double precision,dimension(0:3) :: p1
+        rho=sqrt(dot3(p1,p1))
+      end function rho
+      subroutine boostz(p,yb,pb)
+c boost in the z-direction with rapidity yb
+        implicit none
+        real(kind=8),dimension(0:3) :: p,pb
+        real(kind=8) :: yb,pplus,pminus
+c Scale light-cone components instead of subtracting boosted E/pz.
+        pplus=(p(0)+p(3))*exp(-yb)
+        pminus=(p(0)-p(3))*exp(yb)
+        pb(0)=0.5d0*(pplus+pminus)
+        pb(1:2)=p(1:2)
+        pb(3)=0.5d0*(pplus-pminus)
+      end subroutine boostz
+
+      double precision function deltaR(p1,p2)
+        implicit none
+        double precision,dimension(0:3) :: p1,p2
+        deltaR = sqrt((delta_phi(p1,p2))**2+(delta_y(p1,p2))**2)
+      end function deltaR
+
+      double precision function delta_phi(p1, p2)
+        implicit none
+        double precision,dimension(0:3) :: p1,p2
+        double precision :: denom, temp
+        double precision,parameter :: tiny=1d-8
+        denom = sqrt(p1(1)**2 + p1(2)**2) * sqrt(p2(1)**2 + p2(2)**2)
+        temp = max(-(1d0-tiny), (p1(1)*p2(1) + p1(2)*p2(2)) / denom)
+        temp = min( (1d0-tiny), temp)
+        delta_phi = acos(temp)
+      end function delta_phi
+
+      double precision  function delta_y(p1,p2)
+        implicit none
+        double precision,dimension(0:3) :: p1,p2
+        delta_y =.5d0*dlog((p1(0)+p1(3))/(p1(0)-p1(3)))-
+     $     .5d0*dlog((p2(0)+p2(3))/(p2(0)-p2(3)))
+      end function delta_y
+
+      double precision function pt(p)
+        implicit none
+        double precision,dimension(0:3) :: p
+        pt = dsqrt(p(1)**2+p(2)**2)
+      end function pt
+
+      double precision function HTo2(n,p)
+        implicit none
+        integer :: n
+        double precision,dimension(0:3,n) :: p
+        HTo2=HT(n,p)/2d0
+      end function HTo2
+
+      double precision function HT(n,p)
+        implicit none
+        integer :: n,j
+        double precision,dimension(0:3,n) :: p
+        HT=0d0
+        do j=3,n
+           HT=HT+sqrt((p(0,j)+p(3,j))*(p(0,j)-p(3,j)))
+        enddo
+      end function HT
+
+      double precision function sumdot(p1,p2,sign)
+        implicit  none
+        double precision,dimension(0:3) :: p1,p2
+        double precision :: sign
+        sumdot=dot(p1+sign*p2,p1+sign*p2)
+      end function sumdot
+
+      double precision function dot(p1,p2)
+        implicit none
+        double precision,dimension(0:3) :: p1,p2
+        dot=p1(0)*p2(0)-p1(1)*p2(1)-p1(2)*p2(2)-p1(3)*p2(3)
+      end function dot
+
+
+      subroutine rotate_invar_inverse(pin,pout,cth,sth,cphi,sphi)
+c Given the four momentum pin, returns the four momentum pout (in the
+c same Lorentz frame) by performing a three-rotation of an angle phi
+c (cos(phi)=cphi) along the z axis, followed by a three-rotation of an
+c angle theta (cos(theta)=cth) around the y axis. The components of pin
+c and pout are given along these axes This is the inverse of
+c rotate_invar(), if the signs of the angles are flipped:
+c     call rotate_invar(pin,pout,cth,sth,cphi,sphi)
+c     call rotate_invar_inverse(pout,pin2,cth,-sth,cphi,-sphi)
+c Then pin==pin2
+        implicit none
+        double precision :: cth,sth,cphi,sphi,pin(0:3),pout(0:3)
+        double precision :: q1,q2,q3
+        q1=pin(1)
+        q2=pin(2)
+        q3=pin(3)
+        pout(1)=(q1*cphi-q2*sphi)*cth+q3*sth
+        pout(2)=q1*sphi+q2*cphi
+        pout(3)=-(q1*cphi-q2*sphi)*sth+q3*cth
+        pout(0)=pin(0)
+      end subroutine rotate_invar_inverse
+
+      subroutine flip_momenta(i,ii,j,jj,p,p_flipped)
+        implicit none
+        integer :: i,ii,j,jj,k,pos,tmp,perm(nexternal)
+        double precision :: p(0:3,nexternal),p_flipped(0:3,nexternal)
+        if (min(i,ii,j,jj).lt.1.or.max(i,ii,j,jj).gt.nexternal.or.i.eq.j.or.ii.eq.jj) then
+           write (*,*) 'Invalid FKS labels in flip_momenta',i,ii,j,jj
+           stop 1
+        endif
+c Build a bijection, including overlapping swaps: original ii and jj
+c must end up in the native FKS slots i and j, respectively.
+        perm=[(k,k=1,nexternal)]
+        tmp=perm(i)
+        perm(i)=perm(ii)
+        perm(ii)=tmp
+        do pos=1,nexternal
+           if (perm(pos).eq.jj) exit
+        enddo
+        tmp=perm(j)
+        perm(j)=perm(pos)
+        perm(pos)=tmp
+        call apply_momentum_permutation(perm,p,p_flipped)
+      end subroutine flip_momenta
+
+      subroutine apply_momentum_permutation(perm,p,p_permuted)
+        implicit none
+        integer,intent(in) :: perm(nexternal)
+        double precision,intent(in) :: p(0:3,nexternal)
+        double precision,intent(out) :: p_permuted(0:3,nexternal)
+        integer :: k
+        double precision :: tolerance
+c Check the integer map BEFORE using it as a vector subscript.
+        if (any(perm.lt.1).or.any(perm.gt.nexternal)) then
+           write (*,*) 'Out-of-range MC momentum permutation',perm
+           stop 1
+        endif
+        do k=1,nexternal
+           if (count(perm.eq.k).ne.1) then
+              write (*,*) 'Non-bijective MC momentum permutation',perm
+              stop 1
+           endif
+           if (k.le.nincoming.and.perm(k).ne.k) then
+              write (*,*) 'MC momentum permutation exchanges an incoming leg',perm
+              stop 1
+           endif
+        enddo
+        p_permuted=p(:,perm)
+        tolerance=1d-12*max(1d0,sum(abs(p)))
+        if (maxval(abs(sum(p_permuted(:,nincoming+1:),dim=2)
+     $     -sum(p(:,nincoming+1:),dim=2))).gt.tolerance) then
+           write (*,*) 'MC momentum permutation changes total four-momentum'
+           stop 1
+        endif
+c The export-time identity check forbids exchanges of unlike species.
+c Also check their on-shell invariants at the actual phase-space point.
+        tolerance=1d-10*max(1d0,maxval(abs(p))**2)
+        do k=nincoming+1,nexternal
+           if (abs(dot(p_permuted(:,k),p_permuted(:,k))-dot(p(:,k),p(:,k))).gt.tolerance) then
+              write (*,*) 'MC momentum permutation changes a leg mass',k,perm(k)
+              stop 1
+           endif
+        enddo
+      end subroutine apply_momentum_permutation
+
       end module fks_phase_space_helpers

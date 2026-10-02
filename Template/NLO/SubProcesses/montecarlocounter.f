@@ -1,33 +1,78 @@
+      module mc_counterterms
+c Explicit interfaces for MC subtraction and Delta matching. Only the
+c history driver and shared history controls are public; numerical helpers
+c and shower invariants stay local.
+      use process_module, only: next_n1,shower_mc_mod
+      use fks_phase_space_helpers, only: dot,rho,sumdot
+      implicit none
+      private
+      public :: set_QCD_flows,compute_MCsubtraction_kl,compute_delta,
+     $     bogus_probne_fun
+      public :: prepare_mc_kinematics,fill_father_and_ileg,get_qMC,
+     $     mc_shower_scale_mass,fksfather,gfactsf,gfactcl,gfactazi
+
+c Shower state for the active FKS history. General momentum utilities
+c remain in fks_phase_space_helpers, independent of subtraction and matching.
+      integer :: ileg,fksfather
+      double precision :: xm12,xm22,xtk,xuk,xq1q,xq2q,w1,w2,yij,x,
+     $     xij,betad,betas,kn,knbar,kn0,shat_n1,gfactsf,gfactcl,gfactazi
+      double precision :: xp1(0:3),xp2(0:3),xk1(0:3),xk2(0:3),
+     $     xk3(0:3),pp_rec(0:3),jmass
+      double precision,parameter :: tiny=1d-5
+
+      include 'nexternal.inc'
+      include 'born_nhel.inc'
+c Flow setup also retains double-gluon flags between evaluations.
+c COMMON blocks retained in the procedures are shared with the surrounding
+c FKS/native-Born machinery or the external Sudakov tables.
+      logical :: isspecial(max_bcol)=.false.
+
+      type mc_kernel_limits
+         logical :: collinear=.false.
+         logical :: nonsoft=.false.
+      end type mc_kernel_limits
+
+c     Complete live colour-connection data for one Born leg in Delta.
+      type :: delta_connections
+         integer :: count=0,partner(2)=0,sudakov_type(2)=0
+         double precision :: start(2)=0d0,stop(2)=0d0,mass(2)=0d0
+      end type delta_connections
+
+      contains
+
+c MC counterterms and matching support.
+c   Flow setup: set_QCD_flows and find_color_connectors.
+c   History evaluation: compute_MCsubtraction_kl prepares Born data,
+c     then xmcsubt_connection evaluates each distinct colour connection.
+c   Delta weights: compute_delta prepares stopping scales and live
+c     connections before evaluating the Sudakov and PDF factors.
+c   Born amplitudes: get_mbar uses mc_born_azimuth_phase for spin terms.
+c   Shower maps and analytic kernels are private module procedures.
+
       subroutine set_QCD_flows
-      ! Fills ipartners, colorflow and isspecial (at the Born level)
+c Refresh leading Born flows and double-gluon flags. Partner lists are
+c scratch data used only to validate these colour connections.
       implicit none
       include "genps.inc"
-      include 'nexternal.inc'
-      include "born_nhel.inc"
       include 'nFKSconfigs.inc'
-c Nexternal is the number of legs (initial and final) al NLO, while max_bcol
+c Nexternal is the number of legs (initial and final) at NLO, while max_bcol
 c is the number of color flows at Born level
       integer i,j,k,l,k0,mothercol(2),i1(2)
+      integer ipartners(0:nexternal-1),colorflow(nexternal-1,0:max_bcol)
       integer idup(nexternal-1,maxproc)
       integer mothup(2,nexternal-1,maxproc)
       integer icolup(2,nexternal-1,max_bcol)
       include 'born_leshouche.inc'
-      integer ipartners(0:nexternal-1),colorflow(nexternal-1,0:max_bcol)
-      common /MC_info/ ipartners,colorflow
       integer i_fks,j_fks
       common/fks_indices/i_fks,j_fks
       integer fksfather
       logical notagluon,found
       integer nglu,nsngl
-      logical isspecial(max_bcol)
-      common/cisspecial/isspecial
       logical spec_case
 
       include 'orders.inc'
-      logical split_type(nsplitorders) 
+      logical split_type(nsplitorders)
       common /c_split_type/split_type
-      double precision particle_charge(nexternal)
-      common /c_charges/particle_charge
 
 c
       logical is_leading_cflow(max_bcol)
@@ -43,22 +88,15 @@ c
      $     ,mapconfig
       include 'born_coloramps.inc'
 c
-      do i=0,nexternal-1
-         ipartners(i)=0
-      enddo
-      do i=1,nexternal-1
-         do j=0,max_bcol
-            colorflow(i,j)=0
-         enddo
-      enddo
+      ipartners=0
+      colorflow=0
+      notagluon=.true.
 
-C What follows is true for QCD-type splittings.
-C For QED-type splittings, ipartner is simply all the charged particles
-C in the event except for FKSfather. In this case, all the born color
-C flows are allowed
+c This prepares QCD partners and the allowed Born colour flows.
+c QED connection selection is not supported by the matching driver.
 
-c ipartners(0): number of particles that can be colour or anticolour partner 
-c   of the father, the Born-level particle to which i_fks and j_fks are 
+c ipartners(0): number of particles that can be colour or anticolour partner
+c   of the father, the Born-level particle to which i_fks and j_fks are
 c   attached. If one given particle is the colour/anticolour partner of
 c   the father in more than one colour flow, it is counted only once
 c   in ipartners(0)
@@ -82,10 +120,10 @@ c
 c and if one fixes for example fksfather=3, then the situation is the following.
 c
 c fksfather = 3
-c  
+c
 c ipartners(0) = 3
 c ipartners(1,2,3) = 1, 4, 2
-c  
+c
 c colorflow(1,0) = 1 = number of flows where ipartners(1) = 1 is connected to 3
 c colorflow(2,0) = 2 = number of flows where ipartners(2) = 4 is connected to 3
 c colorflow(3,0) = 1 = number of flows where ipartners(3) = 2 is connected to 3
@@ -97,11 +135,11 @@ c colorflow(3,1) = 2 = flow where ipartners(3) = 2 is connected to 3
 c colorflow(3,2) = 0 -> no other flow connecting 2 and 3
 c colorflow(4,1) = 0 -> there is no fourth partner of 3
 c colorflow(4,2) = 0 -> there is no fourth partner of 3
-c  
+c
 c Thus
 c
 c ipartners(0..3) = 3, 1, 4, 2
-c  
+c
 c colorflow(1,0..2) = 1, 1, 0
 c colorflow(2,0..2) = 2, 1, 2
 c colorflow(3,0..2) = 1, 2, 0
@@ -133,8 +171,8 @@ c Refresh the allowed flows even when no QCD splitting is active.
         do i=1,max_bcol
           if(.not.is_leading_cflow(i))cycle
 c Loop over Born-level colour flows
-c nglu and nsngl are the number of gluons (except for the father) and of 
-c colour singlets in the Born process, according to the information 
+c nglu and nsngl are the number of gluons (except for the father) and of
+c colour singlets in the Born process, according to the information
 c stored in ICOLUP
           nglu=0
           nsngl=0
@@ -180,7 +218,7 @@ c Safety measure: if this condition is met, it means that there exist
 c k1 and k2 such that ipartners(k1)=ipartners(k2). This is thus a bug,
 c since ipartners() is the list of possible partners of father, where each
 c Born-level particle must appears at most once
-                              write(*,*)'Error #1 in set_matrices'
+                              write(*,*)'Error #1 in set_QCD_flows'
                               write(*,*)i,j,l,k
                               stop
                            endif
@@ -195,13 +233,18 @@ c Born-level particle must appears at most once
                      endif
 c At this point, k0 is the k0^th colour/anticolour partner of father.
 c Therefore, ipartners(k0)=j
-                     if(k0.le.0.or.ipartners(k0).ne.j)then
-                        write(*,*)'Error #2 in set_matrices'
+                     if(k0.le.0.or.k0.gt.nexternal-1)then
+                        write(*,*)'Error #2 in set_QCD_flows'
+                        write(*,*)i,j,l,k0
+                        stop
+                     endif
+                     if(ipartners(k0).ne.j)then
+                        write(*,*)'Error #2 in set_QCD_flows'
                         write(*,*)i,j,l,k0,ipartners(k0)
                         stop
                      endif
                      spec_case=l.eq.2 .and. colorflow(k0,0).ge.1 .and.
-     &                    colorflow(k0,colorflow(k0,0)).eq.i 
+     &                    colorflow(k0,colorflow(k0,0)).eq.i
                      if (.not.spec_case)then
 c Increase by one the number of colour flows in which the father is
 c (anti)colour-connected with its k0^th partner (according to the
@@ -209,18 +252,17 @@ c list defined by ipartners)
                         colorflow(k0,0)=colorflow(k0,0)+1
 c Store the label of the colour flow thus found
                         colorflow(k0,colorflow(k0,0))=i
-                     elseif (spec_case)then
+                     else
 c Special case: father and ipartners(k0) are both gluons, connected
-c by colour AND anticolour: the number of colour flows was overcounted
-c by one unit, so decrease it
+c by colour AND anticolour. Keep its single flow entry and mark it
+c so that the two connections can be restored when evaluating kernels.
                          if( notagluon .or.
      &                       ICOLUP(i1(1),j,i).eq.0 .or.
      &                       ICOLUP(i1(2),j,i).eq.0 )then
-                            write(*,*)'Error #3 in set_matrices'
+                            write(*,*)'Error #3 in set_QCD_flows'
                             write(*,*)i,j,l,k0,i1(1),i1(2)
                             stop
                          endif
-                         colorflow(k0,colorflow(k0,0))=i
                          isspecial(i)=.true.
                      endif
                   endif
@@ -229,43 +271,38 @@ c by one unit, so decrease it
          enddo
          if( ((nglu+nsngl).gt.(nexternal-2)) .or.
      #       (isspecial(i).and.(nglu+nsngl).ne.(nexternal-2)) )then
-           write(*,*)'Error #4 in set_matrices'
+           write(*,*)'Error #4 in set_QCD_flows'
            write(*,*)isspecial(i),nglu,nsngl
            stop
           endif
         enddo
 
       else if (split_type(qed_pos)) then
-        ! do nothing, the partner will be assigned at run-time 
+        ! do nothing, the partner will be assigned at run-time
         ! (it is kinematics-dependent)
         continue
       endif
-      call check_QCD_flows(notagluon)
+      call check_QCD_flows(notagluon,ipartners,colorflow)
       return
-      end
+      end subroutine set_QCD_flows
 
 
-
-      subroutine check_QCD_flows(notagluon)
+      subroutine check_QCD_flows(notagluon,ipartners,colorflow)
       implicit none
-      include "nexternal.inc"
-      include "born_nhel.inc"
-c      include "fks.inc"
+      integer, intent(in) :: ipartners(0:nexternal-1)
+      integer, intent(in) :: colorflow(nexternal-1,0:max_bcol)
       integer fks_j_from_i(nexternal,0:nexternal)
      &     ,particle_type(nexternal),pdg_type(nexternal)
       common /c_fks_inc/fks_j_from_i,particle_type,pdg_type
-      integer ipartners(0:nexternal-1),colorflow(nexternal-1,0:max_bcol)
-      common /MC_info/ ipartners,colorflow
-      integer i,j,ipart,iflow,ntot,ithere(1000)
+      integer i,j,ipart,iflow,ntot,nexpected
+      integer ithere(max(nexternal-1,max_bcol))
       integer i_fks,j_fks
       common/fks_indices/i_fks,j_fks
       integer fksfather
-      logical notagluon
-      logical isspecial(max_bcol)
-      common/cisspecial/isspecial
+      logical, intent(in) :: notagluon
 
       include 'orders.inc'
-      logical split_type(nsplitorders) 
+      logical split_type(nsplitorders)
       common /c_split_type/split_type
 
       logical is_leading_cflow(max_bcol)
@@ -273,7 +310,7 @@ c      include "fks.inc"
       common/c_leading_cflows/is_leading_cflow,num_leading_cflows
 c
       fksfather=min(i_fks,j_fks)
-      if(ipartners(0).gt.nexternal-1)then
+      if(ipartners(0).lt.0.or.ipartners(0).gt.nexternal-1)then
         write(*,*)'Error #1 in check_QCD_flows',ipartners(0)
         stop
       endif
@@ -282,8 +319,11 @@ c
       ! these tests only apply for QCD-type splittings
         do i=1,ipartners(0)
           ipart=ipartners(i)
+          if(ipart.le.0.or.ipart.gt.nexternal-1)then
+            write(*,*)'Invalid partner in check_QCD_flows',i,ipart
+            stop 1
+          endif
           if( ipart.eq.fksfather .or.
-     #        ipart.le.0 .or. ipart.gt.nexternal-1 .or.
      #        ( abs(particle_type(ipart)).ne.3 .and.
      #          particle_type(ipart).ne.8 ) )then
             write(*,*)'Error #2 in check_QCD_flows',i,ipart,
@@ -320,6 +360,10 @@ c
           enddo
           do j=1,colorflow(i,0)
             iflow=colorflow(i,j)
+            if(iflow.le.0.or.iflow.gt.max_bcol)then
+              write(*,*)'Invalid flow in check_QCD_flows',i,j,iflow
+              stop 1
+            endif
             ithere(iflow)=ithere(iflow)-1
             if(ithere(iflow).lt.0)then
               write(*,*)'Error #5 in check_QCD_flows',i,j,iflow
@@ -329,10 +373,16 @@ c
 c
         enddo
 c
-        if( (notagluon.and.ntot.ne.num_leading_cflows) .or.
-     #    ( (.not.notagluon).and.
-     #      ( (.not.isspecial(1)).and.ntot.ne.(2*num_leading_cflows) .or.
-     #        (isspecial(1).and.ntot.ne.num_leading_cflows) ) ) )then
+c Special double gluon connections are stored once in each flow.
+c Count them per allowed flow; the first flow need not be leading.
+        nexpected=0
+        do iflow=1,max_bcol
+          if (.not.is_leading_cflow(iflow)) cycle
+          nexpected=nexpected+1
+          if (.not.notagluon.and..not.isspecial(iflow))
+     #         nexpected=nexpected+1
+        enddo
+        if(ntot.ne.nexpected)then
          write(*,*)'Error #6 in check_QCD_flows',
      #     notagluon,ntot,num_leading_cflows,max_bcol
           stop
@@ -349,283 +399,25 @@ c
         continue
       endif
       return
-      end
+      end subroutine check_QCD_flows
 
 
-      subroutine set_QED_flows(pp)
-      use process_module
-      use kinematics_module
-      implicit none
-      include 'nexternal.inc'
-      double precision pp(0:3, nexternal)
 
-      integer fks_j_from_i(nexternal,0:nexternal)
-     &     ,particle_type(nexternal),pdg_type(nexternal)
-      common /c_fks_inc/fks_j_from_i,particle_type,pdg_type
-      double precision particle_charge(nexternal)
-      common /c_charges/particle_charge
 
-      integer i_fks,j_fks
-      common/fks_indices/i_fks,j_fks
-      double precision pmass(nexternal)
-      double precision zero
-      parameter (zero=0d0)
+c Evaluate one FKS history for the selected Born colour flow. For
+c S events the caller uses the original history. For H events,
+c repartition_MC_H sums complete native contributions, including the
+c G replacement: Hhat_ij = S_ij sum_kl P_kl (S_kl R - M_kl).
 
-      include 'genps.inc'
-      include "born_nhel.inc"
-      integer idup(nexternal-1,maxproc)
-      integer mothup(2,nexternal-1,maxproc)
-      integer icolup(2,nexternal-1,max_bcol)
-      include 'born_leshouche.inc'
-      include 'coupl.inc'
-      integer ipartners(0:nexternal-1),colorflow(nexternal-1,0:max_bcol)
-      common /MC_info/ ipartners,colorflow
-c
-c     Shower MonteCarlo
-c     
 
-      logical found
-      logical same_state
-      double precision ppmin, ppnow
-      integer partner
-      integer i,j
-      double precision chargeprod
-
-      include 'pmass.inc'
-      
-      found=.false.
-      ppmin=1d99
-
-      if (shower_mc_mod(1:7).eq.'PYTHIA8') then
-        ! this should follow what is done in TimeShower::setupQEDdip
-        ! first, look for the lowest-mass same- (opposite-)flavour pair of
-        ! particles in the opposite (same) state of the system
-        do j=1,nexternal
-          if (j.ne.fksfather.and.j.ne.i_fks) then
-            same_state = (j.gt.nincoming.and.fksfather.gt.nincoming).or.
-     $                   (j.le.nincoming.and.fksfather.le.nincoming)
-
-            if ((pdg_type(j).eq.pdg_type(fksfather).and..not.same_state).or. 
-     $          (pdg_type(j).eq.-pdg_type(fksfather).and.same_state)) then
-
-              ppnow=dot(pp(0,fksfather),pp(0,j)) - pmass(fksfather)*pmass(j)
-              if (ppnow.lt.ppmin) then
-                found=.true.
-                partner=j
-              endif
-            endif
-          endif
-        enddo
-        
-        ! if no partner has been found, then look for the
-        ! lowest-mass/chargeprod pair
-        if (.not.found) then
-          do j=1,nexternal
-            if (j.ne.fksfather.and.j.ne.i_fks) then
-              if (particle_charge(fksfather).ne.0d0.and.particle_charge(j).ne.0d0) then
-                ppnow=dot(pp(0,fksfather),pp(0,j)) - pmass(fksfather)*pmass(j) / 
-     $            (particle_charge(fksfather) * particle_charge(j))
-                if (ppnow.lt.ppmin) then
-                  found=.true.
-                  partner=j
-                endif
-              endif
-            endif
-          enddo
-        endif
-
-        ! if no partner has been found, then look for the
-        ! lowest-mass pair
-        if (.not.found) then
-          do j=1,nexternal
-            if (j.ne.fksfather.and.j.ne.i_fks) then
-              ppnow=dot(pp(0,fksfather),pp(0,j)) - pmass(fksfather)*pmass(j) 
-              if (ppnow.lt.ppmin) then
-                found=.true.
-                partner=j
-              endif
-            endif
-          enddo
-        endif
-
-      else
-        ! other showers need to be implemented
-        write(*,*) 'ERROR in set_QED_flows, not implemented', shower_mc_mod
-        stop 1
-      endif
-
-      if (.not.found) then
-        write(*,*) 'ERROR in set_QED_flows, no parthern found'
-        stop 1
-      endif
-
-      ! now, set ipartners
-      ipartners(0) = 1
-      ipartners(ipartners(0)) = partner
-      ! all color flows have to be included here
-      colorflow(ipartners(0),0)= max_bcol
-      do i = 1, max_bcol
-        colorflow(ipartners(0),i)=i
-      enddo
-      return
-      end
-
-c$$$      subroutine compute_xmcsubt_for_checks(pp,xi_i_fks,y_ij_fks,wgt)
-c$$$      use process_module
-c$$$      use kinematics_module
-c$$$      use scale_module
-c$$$      implicit none
-c$$$      include "nexternal.inc"
-c$$$c$$$      include 'madfks_mcatnlo.inc'
-c$$$      include 'run.inc'
-c$$$      include 'born_nhel.inc'
-c$$$      double precision pp(0:3,nexternal),wgt
-c$$$      double precision xi_i_fks,y_ij_fks
-c$$$      double precision xmc,xrealme,probne,sumMCsec
-c$$$      double precision z(nexternal),ddum,dummy
-c$$$      integer nofpartners,idum,ione,iord
-c$$$      logical lzone(nexternal),flagmc
-c$$$
-c$$$      ! amp split stuff
-c$$$      include 'orders.inc'
-c$$$      integer iamp
-c$$$      double precision amp_split_mc(amp_split_size)
-c$$$      common /to_amp_split_mc/amp_split_mc
-c$$$      double precision amp_split_gfunc(amp_split_size)
-c$$$      common /to_amp_split_gfunc/amp_split_gfunc
-c$$$      double precision amp_split_bornbars(amp_split_size,max_bcol,nsplitorders),
-c$$$     $                 amp_split_bornbarstilde(amp_split_size,max_bcol,nsplitorders)
-c$$$      common /to_amp_split_bornbars/amp_split_bornbars,
-c$$$     $                              amp_split_bornbarstilde
-c$$$      logical split_type(nsplitorders) 
-c$$$      common /c_split_type/split_type
-c$$$
-c$$$      integer npartner,cflows
-c$$$      integer ipartners(0:nexternal-1),colorflow(nexternal-1,0:max_bcol)
-c$$$      common /MC_info/ ipartners,colorflow
-c$$$      logical first_MCcnt_call
-c$$$      common/cMCcall/first_MCcnt_call
-c$$$
-c$$$      double precision xkern(2),xkernazi(2),factor,N_p
-c$$$      double precision bornbars(max_bcol,nsplitorders),
-c$$$     $     bornbarstilde(max_bcol,nsplitorders)
-c$$$c$$$      double precision emsca_a(nexternal,nexternal)
-c$$$c$$$     $     ,emsca_bare_a(nexternal,nexternal),emsca_bare_a2(nexternal
-c$$$c$$$     $     ,nexternal) ,scalemin_a(nexternal,nexternal)
-c$$$c$$$     $     ,scalemax_a(nexternal ,nexternal),emscwgt_a(nexternal
-c$$$c$$$     $     ,nexternal)
-c$$$c$$$      common/cemsca_a/emsca_a,emsca_bare_a,emsca_bare_a2
-c$$$c$$$     $     ,scalemin_a,scalemax_a,emscwgt_a
-c$$$      integer i_fks,j_fks
-c$$$      common/fks_indices/i_fks,j_fks
-c$$$      double precision evnt_wgt
-c$$$      integer i, j,iord_val
-c$$$      double precision mu_r
-c$$$      double precision pb(0:4,-nexternal+3:2*nexternal-3)
-c$$$      double precision p_read(0:4,2*nexternal-3), wgt_read
-c$$$      integer npart
-c$$$      double precision MCsec(nexternal,max_bcol)
-c$$$      logical isspecial(max_bcol)
-c$$$      integer              MCcntcalled
-c$$$      common/c_MCcntcalled/MCcntcalled
-c$$$      common/cisspecial/isspecial
-c$$$!     common block used to make the (scalar) reference scale partner
-c$$$!     dependent in case of delta
-c$$$      integer cur_part
-c$$$      common /to_ref_scale/cur_part
-c$$$      double precision smin,smax,ptresc,emscafun,qMC,damping
-c$$$     $     ,compute_damping_weight
-c$$$      first_MCcnt_call=.true.
-c$$$      MCsec(1:nexternal,1:max_bcol)=0d0
-c$$$      sumMCsec=0d0
-c$$$      amp_split_mc(1:amp_split_size)=0d0
-c$$$      do npartner=1,ipartners(0)
-c$$$         cur_part=ipartners(npartner)
-c$$$         call xmcsubt(pp,xi_i_fks,y_ij_fks,gfactsf,gfactcl,probne
-c$$$     $        ,nofpartners,lzone,flagmc,z,xkern,xkernazi
-c$$$     $        ,bornbars,bornbarstilde,npartner)
-c$$$         if(.not.lzone(npartner)) cycle
-c$$$         damping=compute_damping_weight(cur_part,xi_i_fks
-c$$$     $        ,y_ij_fks)
-c$$$         do cflows=1,max_bcol
-c$$$            if (colorflow(npartner,cflows).eq.0) cycle
-c$$$            if (isspecial(cflows)) then
-c$$$               N_p=2d0
-c$$$            else
-c$$$               N_p=1d0
-c$$$            endif
-c$$$            ione=0
-c$$$            do iord = 1, nsplitorders
-c$$$               if (.not.split_type(iord) .or.
-c$$$     $              (iord.ne.qed_pos.and.iord.ne.qcd_pos)) cycle
-c$$$               if (iord.eq.qcd_pos) then
-c$$$                  iord_val=1
-c$$$               elseif(iord.eq.qed_pos) then
-c$$$                  iord_val=2
-c$$$               endif
-c$$$               ione=ione+1
-c$$$               MCsec(npartner,colorflow(npartner,cflows))=damping
-c$$$     $              *(xkern(iord_val)*N_p*bornbars(colorflow(npartner
-c$$$     $              ,cflows),iord)+xkernazi(iord_val)*N_p
-c$$$     $              *bornbarstilde(colorflow(npartner,cflows),iord))
-c$$$               amp_split_mc(1:amp_split_size) =
-c$$$     $              amp_split_mc(1:amp_split_size)+damping
-c$$$     $              *(xkern(iord_val)*N_p
-c$$$     $              *amp_split_bornbars(1:amp_split_size
-c$$$     $              ,colorflow(npartner,cflows),iord)+xkernazi(iord_val)
-c$$$     $              *N_p *amp_split_bornbarstilde(1:amp_split_size
-c$$$     $              ,colorflow(npartner,cflows),iord))
-c$$$            enddo
-c$$$            if (ione.ne.1) then
-c$$$               write (*,*) 'Error: incompatible split orders in '/
-c$$$     $              /'compute_xmcsubt_complete',ione
-c$$$               stop 1
-c$$$            endif
-c$$$            sumMCsec=sumMCsec+MCsec(npartner,colorflow(npartner
-c$$$     $           ,cflows))
-c$$$         enddo
-c$$$      enddo
-c$$$      call xmcsubtME(pp,xi_i_fks,y_ij_fks,gfactsf,gfactcl,xrealme)
-c$$$      wgt=sumMCsec+xrealme
-c$$$      do iamp=1, amp_split_size
-c$$$        amp_split_mc(iamp) = amp_split_mc(iamp) + amp_split_gfunc(iamp)
-c$$$      enddo
-c$$$      return
-c$$$      end
-c$$$
-
-! New structure:
-!
-!     0. Given Born flow (with a MC sum over flows):
-!      
-!     1. Outside loop over FKS configurations
-!      
-!     2. For each configuration, compute relevant kinematic variables
-!     (xi_fks, yij_fks, etc.)
-!      
-!     3. Compute value of MC subtraction, given those kinematic
-!     variables
-!      
-!     4. For H-events, repartition complete native H contributions:
-!     Hhat_ij = S_ij sum_kl P_kl (S_kl R - M_kl). Each M_kl includes
-!     its own G damping AND FKS replacement. The sum is performed by
-!     repartition_MC_H, after computing these native terms.
-!      
-!     5. For S-event: Take only the one relevant for the original i_fks
-!     and j_fks configuration. (Same as original code).
-
-      
       subroutine compute_MCsubtraction_kl(k_fks,l_fks,xi,y,p,p_cm,p_born
      $     ,include_gfun,z,n_connect,amp_split_xmcxsec)
       use fks_phase_space_data, only: veckn_ev,veckbarn_ev,xp0jfks
-      use process_module
-      use kinematics_module
-      use scale_module
+      use scale_module, only: born_flow_picked
       implicit none
-      include 'nexternal.inc'
-      include 'fks_info.inc'
       include 'orders.inc'
-      integer k_fks,l_fks,i
+      integer k_fks,l_fks,kernel_index
+      type(mc_kernel_limits) kernel_limits
       logical lzone(2)
       double precision p(0:3,nexternal),p_born(0:3,nexternal-1),xi,y
      $     ,mass,z(2),amp_split_xmcxsec(1:amp_split_size,2)
@@ -634,31 +426,53 @@ c$$$
       common /to_mass/pmass
       integer n_connect,i_connect(2),iconnect
       logical include_gfun
-      logical softtest,colltest
-      common/sctests/softtest,colltest
-      double precision g_damping,compute_damping_weight
+      double precision g_damping,qMC,connection_damping(2)
+      double precision born_weights(amp_split_size)
+      double precision born_spin_weights(amp_split_size)
+      intent(in) :: k_fks,l_fks,xi,y,p,p_cm,p_born,include_gfun
+      intent(out) :: z,n_connect,amp_split_xmcxsec
       amp_split_xmcxsec=0d0
       z=0d0
       lzone=.false.
+      connection_damping=0d0
       mass=pmass(l_fks)
       veckn_ev=rho(p_cm(0,l_fks))
       veckbarn_ev=rho(p_born(0,min(k_fks,l_fks)))
       xp0jfks=p_cm(0,l_fks)
 
-      call fill_kinematics_module(p_cm,k_fks,l_fks,xi,y,mass
+      call prepare_mc_kinematics(p_cm,k_fks,l_fks,xi,y,mass
      $     ,include_gfun)
 !     compute MC subtraction term for the 'kl' configuration
-      
+
 !     find to which particle(s) fksfather connects in the colour flow
       call find_color_connectors(born_flow_picked,fksfather,n_connect
      $     ,i_connect)
 
-!     given the flow, loop over the (up to two) partners of the
-!     fks-father.
+c Born amplitudes and the splitting order belong to the history and do
+c not depend on its colour connection. Prepare them once per history.
+      call prepare_MCsubtraction_born(p,xi,y,p_born,kernel_index,
+     $     born_weights,born_spin_weights)
+      kernel_limits=classify_mc_kernel_limits(xi,y)
+      qMC=get_qMC(xi,y)
+
+c Evaluate each distinct connection; keep both entries for a gluon
+c connected twice to the same partner, including their multiplicity.
       do iconnect=1,n_connect
-         call xmcsubt_connection(p,xi,y,p_born,i_connect(iconnect)
-     $        ,include_gfun,lzone(iconnect),z(iconnect)
-     $        ,amp_split_xmcxsec(1,iconnect))
+         if (iconnect.eq.2) then
+            if (i_connect(2).eq.i_connect(1)) then
+               lzone(2)=lzone(1)
+               z(2)=z(1)
+               connection_damping(2)=connection_damping(1)
+               amp_split_xmcxsec(:,2)=amp_split_xmcxsec(:,1)
+               cycle
+            endif
+         endif
+         connection_damping(iconnect)=compute_damping_weight(
+     $        i_connect(iconnect),xi,y)
+         call xmcsubt_connection(p_born,i_connect(iconnect),qMC,
+     $        connection_damping(iconnect),include_gfun,kernel_index,
+     $        kernel_limits,born_weights,born_spin_weights,
+     $        lzone(iconnect),z(iconnect),amp_split_xmcxsec(:,iconnect))
       enddo
       if (include_gfun) then
 ! The G replacement must vanish smoothly at the shower-scale boundary.
@@ -668,14 +482,12 @@ c$$$
 ! The returned (1-gfactsf) multiplies the same replacement in S and H.
          g_damping=0d0
          do iconnect=1,n_connect
-            g_damping=g_damping+compute_damping_weight(
-     $           i_connect(iconnect),xi,y)
+            g_damping=g_damping+connection_damping(iconnect)
          enddo
          g_damping=g_damping/dble(n_connect)
          gfactsf=1d0-(1d0-gfactsf)*g_damping
       endif
 
-!     TODO: "check_positivity_MCxsec" at some point?
       if (any(lzone(1:n_connect))) then
          amp_split_xmcxsec(1:amp_split_size,1:2)=amp_split_xmcxsec(
      $        1:amp_split_size,1:2)
@@ -685,23 +497,28 @@ c$$$
       else
          amp_split_xmcxsec(1:amp_split_size,1:2)=0d0
       endif
-      end
-      
+      end subroutine compute_MCsubtraction_kl
+
       subroutine find_color_connectors(iflow,iparticle,n_connect
      $     ,i_connect)
-      use process_module
+      use process_module, only: next_n,valid_dipole_n
       implicit none
-      include 'nexternal.inc'
       include "genps.inc"
-      include "born_nhel.inc"
       integer idup(nexternal-1,maxproc)
       integer mothup(2,nexternal-1,maxproc)
       integer icolup(2,nexternal-1,max_bcol)
       include "born_leshouche.inc"
       integer iflow,iparticle,n_connect,i_connect(2),i
-      logical isspecial(max_bcol)
-      common/cisspecial/isspecial
+      intent(in) :: iflow,iparticle
+      intent(out) :: n_connect,i_connect
       n_connect=0
+      i_connect=0
+      if (iflow.lt.1.or.iflow.gt.max_bcol.or.
+     $    iparticle.lt.1.or.iparticle.gt.nexternal-1) then
+         write(*,*) 'Invalid flow or particle in find_color_connectors',
+     $        iflow,iparticle
+         stop 1
+      endif
       do i=1,next_n
          if (valid_dipole_n(i,iparticle,iflow)) then
             n_connect=n_connect+1
@@ -717,8 +534,6 @@ c$$$
       if (n_connect.eq.1 .and. idup(iparticle,1).eq.21) then
          if (isspecial(iflow)) then
 !     This is the ISSPECIAL case. Add one more (identical) connection.
-            ! TODO: this can be optimised, since now we compute twice
-            ! the same subtraction terms.
             n_connect=n_connect+1
             i_connect(n_connect)=i_connect(n_connect-1)
          endif
@@ -729,491 +544,120 @@ c$$$
          write (*,*) valid_dipole_n(1:next_n,iparticle,iflow)
          stop 1
       endif
-      end
-      
-      
-c$$$      subroutine compute_xmcsubt_complete(p,probne,gfactsf,gfactcl
-c$$$     $     ,flagmc,lzone,z_shower,nofpartners,xmcxsec)
-c$$$      use kinematics_module
-c$$$      use scale_module
-c$$$      implicit none
-c$$$      include 'nexternal.inc'
-c$$$c$$$  include 'madfks_mcatnlo.inc'
-c$$$      include 'born_nhel.inc'
-c$$$      include 'run.inc'
-c$$$      include 'orders.inc'
-c$$$      integer npartner,nofpartners,cflows,idum,ione,iord,iord_val
-c$$$      logical lzone(nexternal),flagmc
-c$$$      double precision bornbars(max_bcol,nsplitorders),
-c$$$     $     bornbarstilde(max_bcol,nsplitorders)
-c$$$      double precision p(0:3,nexternal),probne,z_shower(nexternal)
-c$$$     $     ,xmcxsec(nexternal),xkern(2),xkernazi(2),damping,N_p
-c$$$     $     ,MCsec(nexternal,max_bcol),sumMCsec
-c$$$     $     ,xmcxsec2(max_bcol),gfactsf,gfactcl,ddum
-c$$$      integer i_fks,j_fks
-c$$$      common/fks_indices/i_fks,j_fks
-c$$$      integer              MCcntcalled
-c$$$      common/c_MCcntcalled/MCcntcalled
-c$$$      integer ipartners(0:nexternal-1),colorflow(nexternal-1,0:max_bcol)
-c$$$      common /MC_info/ ipartners,colorflow
-c$$$      logical isspecial(max_bcol)
-c$$$      common/cisspecial/isspecial
-c$$$      logical first_MCcnt_call
-c$$$      common/cMCcall/first_MCcnt_call
-c$$$      double precision    xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev(0:3)
-c$$$     $     ,p_i_fks_cnt(0:3,-2:2)
-c$$$      common/fksvariables/xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt
-c$$$      double precision amp_split_bornbars(amp_split_size,max_bcol,nsplitorders),
-c$$$     $     amp_split_bornbarstilde(amp_split_size,max_bcol,nsplitorders)
-c$$$      common /to_amp_split_bornbars/amp_split_bornbars,
-c$$$     $     amp_split_bornbarstilde
-c$$$      double precision amp_split_xmcxsec(amp_split_size,nexternal)
-c$$$      common /to_amp_split_xmcxsec/amp_split_xmcxsec
-c$$$      double precision amp_split_mc(amp_split_size)
-c$$$      common /to_amp_split_mc/amp_split_mc
-c$$$      logical split_type(nsplitorders) 
-c$$$      common /c_split_type/split_type
-c$$$!     common block used to make the (scalar) reference scale partner
-c$$$!     dependent in case of delta
-c$$$      integer cur_part
-c$$$      common /to_ref_scale/cur_part
-c$$$      double precision smin,smax,ptresc,compute_damping_weight,qMC
-c$$$c     -- call to MC counterterm functions
-c$$$      first_MCcnt_call=.true.
-c$$$      xmcxsec(1:nexternal)=0d0
-c$$$      xmcxsec2(1:max_bcol)=0d0
-c$$$      MCsec(1:nexternal,1:max_bcol)=0d0
-c$$$      sumMCsec=0d0
-c$$$      amp_split_xmcxsec(1:amp_split_size,1:nexternal)=0d0
-c$$$      do npartner=1,ipartners(0)
-c$$$         cur_part=ipartners(npartner)
-c$$$         call xmcsubt(p,xi_i_fks_ev,y_ij_fks_ev,gfactsf,gfactcl,probne
-c$$$     $        ,nofpartners,lzone,flagmc,z_shower,xkern,xkernazi
-c$$$     $        ,bornbars,bornbarstilde,npartner)
-c$$$         if(.not. lzone(npartner)) cycle
-c$$$         damping=compute_damping_weight(cur_part,xi_i_fks_ev
-c$$$     $        ,y_ij_fks_ev)
-c$$$         do cflows=1,max_bcol
-c$$$            if (colorflow(npartner,cflows).eq.0) cycle
-c$$$            if (isspecial(cflows)) then
-c$$$               N_p=2d0
-c$$$            else
-c$$$               N_p=1d0
-c$$$            endif
-c$$$            ione=0
-c$$$            do iord = 1, nsplitorders
-c$$$               if (.not.split_type(iord) .or.
-c$$$     $              (iord.ne.qed_pos.and.iord.ne.qcd_pos)) cycle
-c$$$               if (iord.eq.qcd_pos) then
-c$$$                  iord_val=1
-c$$$               elseif(iord.eq.qed_pos) then
-c$$$                  iord_val=2
-c$$$               endif
-c$$$               ione=ione+1
-c$$$               MCsec(npartner,colorflow(npartner,cflows))=damping
-c$$$     $              *(xkern(iord_val)*N_p*bornbars(colorflow(npartner
-c$$$     $              ,cflows),iord)+xkernazi(iord_val)*N_p
-c$$$     $              *bornbarstilde(colorflow(npartner,cflows),iord))
-c$$$               amp_split_xmcxsec(1:amp_split_size,npartner) =
-c$$$     $              amp_split_xmcxsec(1:amp_split_size,npartner) +
-c$$$     $              damping *(xkern(iord_val)*N_p
-c$$$     $              *amp_split_bornbars(1:amp_split_size
-c$$$     $              ,colorflow(npartner,cflows),iord)+xkernazi(iord_val)
-c$$$     $              *N_p*amp_split_bornbarstilde(1:amp_split_size
-c$$$     $              ,colorflow(npartner,cflows),iord))
-c$$$            enddo
-c$$$            if (ione.ne.1) then
-c$$$               write (*,*) 'Error: incompatible split orders in '/
-c$$$     $              /'compute_xmcsubt_complete',ione
-c$$$               stop 1
-c$$$            endif
-c$$$            xmcxsec(npartner)=xmcxsec(npartner)+MCsec(npartner
-c$$$     $           ,colorflow(npartner,cflows))
-c$$$            xmcxsec2(colorflow(npartner,cflows))=
-c$$$     $           xmcxsec2(colorflow(npartner,cflows))+MCsec(npartner
-c$$$     $           ,colorflow(npartner,cflows))
-c$$$            sumMCsec=sumMCsec+MCsec(npartner,colorflow(npartner
-c$$$     $           ,cflows))
-c$$$         enddo
-c$$$      enddo
-c$$$
-c$$$!     check the MC cross sections are positive:
-c$$$      call check_positivity_MCxsec(sumMCsec,xmcxsec,xmcxsec2)
-c$$$      if (mcatnlo_delta) then
-c$$$!     compute and include the Delta Sudakov:
-c$$$         if(any(lzone(1:ipartners(0)))) call compute_delta(p
-c$$$     $        ,probne)
-c$$$      endif
-c$$$      xmcxsec(1:ipartners(0))=xmcxsec(1:ipartners(0))*probne
-c$$$      amp_split_xmcxsec(1:amp_split_size,1:ipartners(0))=
-c$$$     $     amp_split_xmcxsec(1:amp_split_size,1:ipartners(0))*probne
-c$$$      if (btest(Mccntcalled,4)) then
-c$$$         write (*,*) 'Fifth bit of MCcntcalled should not '/
-c$$$     $        /'have been set yet',MCcntcalled
-c$$$         stop 1
-c$$$      endif
-c$$$      if(any(lzone(1:ipartners(0)))) MCcntcalled=MCcntcalled+16
-c$$$      return
-c$$$      end
+      end subroutine find_color_connectors
+
 
       double precision function compute_damping_weight(cur_part
      $     ,xi_i_fks,y_ij_fks)
-      use kinematics_module
-      use scale_module
+      use scale_module, only: shower_scale_nbody_min,
+     $     shower_scale_nbody_max
       implicit none
       integer :: cur_part
-      double precision :: xi_i_fks,y_ij_fks,emscafun,smin,smax,qMC
-     $     ,ptresc
+      double precision :: xi_i_fks,y_ij_fks,smin,smax,qMC,ptresc
       smin=shower_scale_nbody_min(fksfather,cur_part)
       smax=shower_scale_nbody_max(fksfather,cur_part)
       qMC=get_qMC(xi_i_fks,y_ij_fks)
       ptresc=(qMC-smin)/(smax-smin)
       compute_damping_weight=1d0-emscafun(ptresc,1d0)
-      end
+      end function compute_damping_weight
 
-      subroutine check_positivity_MCxsec(sumMCsec,xmcxsec,xmcxsec2)
-      implicit none
-      include 'nexternal.inc'
-      include "born_nhel.inc"
-      double precision tiny
-      parameter (tiny=1d-7)
-      integer cflows,npartner
-      double precision sumMCsec,xmcxsec2(max_bcol),xmcxsec(nexternal)
-      integer ipartners(0:nexternal-1),colorflow(nexternal-1,0:max_bcol)
-      common /MC_info/ ipartners,colorflow
-c     positivity check
-      if(sumMCsec.lt.0d0)then
-         write(*,*)'Negative sumMCsec',sumMCsec
-         stop 1
-      elseif(sumMCsec.gt.0d0) then
-         do cflows=1,max_bcol
-            do npartner=1,ipartners(0)
-               if(xmcxsec(npartner)/sumMCsec.le.-tiny)then
-                  write(*,*)'Negative xmcxsec',npartner
-     $                 ,xmcxsec(npartner)
-                  stop 1
-               elseif(xmcxsec(npartner).le.0d0)then
-                  xmcxsec(npartner)=0d0
-               endif
-               if(xmcxsec2(cflows)/sumMCsec.le.-tiny)then
-                  write(*,*)'Negative xmcxsec2',cflows,xmcxsec2(cflows)
-                  stop 1
-               elseif(xmcxsec2(cflows).le.0d0)then
-                  xmcxsec2(cflows)=0d0
-               endif
-            enddo
-         enddo
-      endif
-      end
-      
 
-c Main routine for MC counterterms. Now to be called inside a loop
-c over colour partners
-      subroutine xmcsubt_connection(pp,xi_i_fks,y_ij_fks,p_born
-     $     ,i_connect,include_gfun,lzone,z,amp_split_xmcxsec)
-      use process_module
-      use kinematics_module
-      use scale_module
+
+c Prepare the connection-independent Born amplitudes and select the
+c single correction order supported by MC@NLO.
+      subroutine prepare_MCsubtraction_born(p,xi,y,p_born,
+     $     kernel_index,born_weights,born_spin_weights)
+      use scale_module, only: born_flow_picked
       implicit none
-      include 'nexternal.inc'
-      include 'born_nhel.inc'
       include 'orders.inc'
-      include 'fks_powers.inc'
-      include 'coupl.inc'
-!     arguments:
-      double precision pp(0:3,nexternal),xi_i_fks,y_ij_fks,p_born(0:3
-     $     ,nexternal-1) ,z,xkern(2),xkernazi(2)
-     $     ,bornbars(max_bcol ,nsplitorders),bornbarstilde(max_bcol
-     $     ,nsplitorders),amp_split_xmcxsec(1:amp_split_size)
-      integer i_connect,ione,iord,iord_val
-      logical lzone,include_gfun
-!     local
-      double precision ztmp,xitmp,xjactmp,qMC,delta,E0sq
-     $     ,PY6PTweight,pmass(nexternal),xi,xjac
-!     external
-      double precision gfunction,zHW6,xiHW6
-     $     ,xjacHW6,compute_damping_weight
-      external gfunction,zHW6,xiHW6,xjacHW6
-     $     ,compute_damping_weight
-!     parameters      
-      double precision ymin,zero
-      parameter (ymin=0.9d0)
-      parameter(zero=0d0)
-!     common
-      double precision alsf,besf
-      common/cgfunsfp/alsf,besf
-      double precision alazi,beazi
-      common/cgfunazi/alazi,beazi
-      integer              MCcntcalled
-      common/c_MCcntcalled/MCcntcalled
-      double precision       ch_i,ch_j,ch_m
-      integer                i_type,j_type,m_type,j_pdg
-      common/cparticle_types/ch_i,ch_j,ch_m,
-     &                       i_type,j_type,m_type,j_pdg
-      logical split_type(nsplitorders) 
+      double precision, intent(in) :: p(0:3,nexternal),xi,y
+      double precision, intent(in) :: p_born(0:3,nexternal-1)
+      integer, intent(out) :: kernel_index
+      double precision, intent(out) :: born_weights(amp_split_size)
+      double precision, intent(out) :: born_spin_weights(amp_split_size)
+      logical split_type(nsplitorders)
       common /c_split_type/split_type
-      double precision amp_split_bornbars(amp_split_size,max_bcol,nsplitorders),
-     $                 amp_split_bornbarstilde(amp_split_size,max_bcol,nsplitorders)
-      common /to_amp_split_bornbars/amp_split_bornbars,
-     $                              amp_split_bornbarstilde
-      include "pmass.inc"
+      integer order,norders,iord
 
-c     Initialise if first time
-      if (split_type(QED_pos)) then
-!     TODO set QED flows correctly (but not here, rather in
-!     compute_MCsubtraction_kl)
-         write (*,*) 'TODO set QED flows correctly'
+      norders=0
+      iord=0
+      do order=1,nsplitorders
+         if (.not.split_type(order)) cycle
+         if (order.ne.qcd_pos.and.order.ne.qed_pos) cycle
+         norders=norders+1
+         iord=order
+      enddo
+      if (norders.ne.1) then
+         write (*,*) 'Error: MC@NLO requires exactly one QCD or QED ',
+     $        'correction order',norders
          stop 1
-         call set_QED_flows(pp)
       endif
-      ztmp     = 0d0
-      xitmp    = 0d0
-      xjactmp  = 0d0
+      if (iord.eq.qed_pos) then
+         write (*,*) 'QED colour connections are not implemented ',
+     $        'in compute_MCsubtraction_kl'
+         stop 1
+      endif
+      kernel_index=1
+      call get_mbar(p,xi,y,p_born,ileg,born_flow_picked,iord,
+     $     born_weights,born_spin_weights)
+      end subroutine prepare_MCsubtraction_born
 
-      qMC=get_qMC(xi_i_fks,y_ij_fks)
+c Evaluate one connection with this history's Born amplitudes and limit
+c classification. Damping is also retained by the caller for G replacement.
+      subroutine xmcsubt_connection(p_born,i_connect,qMC,damping,
+     $     include_gfun,kernel_index,kernel_limits,born_weights,
+     $     born_spin_weights,lzone,z,amp_split_xmcxsec)
+      use process_module, only: shower_mc_mod
+      implicit none
+      include 'orders.inc'
+      double precision, intent(in) :: p_born(0:3,nexternal-1)
+      double precision, intent(in) :: qMC,damping
+      integer, intent(in) :: i_connect,kernel_index
+      type(mc_kernel_limits), intent(in) :: kernel_limits
+      double precision, intent(in) :: born_weights(amp_split_size)
+      double precision, intent(in) :: born_spin_weights(amp_split_size)
+      logical, intent(in) :: include_gfun
+      logical, intent(out) :: lzone
+      double precision, intent(out) :: z
+      double precision, intent(out) :: amp_split_xmcxsec(amp_split_size)
+      double precision xkern(2),xkernazi(2),E0sq
+      double precision PY6PTweight,xi,xjac
 
-c     Call barred Born and assign shower scale
-      call get_mbar(pp,xi_i_fks,y_ij_fks,p_born,ileg,bornbars
-     $     ,bornbarstilde)
-      
-c$$$  c     Distinguish ISR and FSR
-c$$$  if(ileg.le.2)then
-c$$$  delta=min(1d0,deltaI)
-c$$$  elseif(ileg.ge.3)then
-c$$$  delta=min(1d0,deltaO)
-c$$$  endif
-c$$$  
-c$$$  c     G-function parameters 
-c$$$  gfactsf=gfunction(x,alsf,besf,2d0)
-c$$$  if(abs(i_type).eq.3)gfactsf=1d0 ! if fks parton is quark, soft limit is finite
-c$$$  gfactcl=gfunction(y_ij_fks,alsf,-(1d0-ymin),1d0)
-c$$$  if(alazi.lt.0d0)gfactazi=1-gfunction(y_ij_fks,-alazi,beazi,delta)
-
-c$$$      if (btest(MCcntcalled,2)) then
-c$$$         write (*,*) 'Third bit of MCcntcalled should not be set yet'
-c$$$     $        ,MCcntcalled
-c$$$         stop 1
-c$$$      endif
-c$$$
-c$$$      MCcntcalled=MCcntcalled+4
-      
-c     Shower variables
       E0sq=dot(p_born(0,fksfather),p_born(0,i_connect))
       call get_shower_variables(E0sq,z,xi,xjac)
-      
-c     Compute dead zones
       call get_dead_zone(z,xi,p_born,qMC,i_connect,lzone,PY6PTweight)
-      
-c     Compute MC subtraction terms
+
+      xkern=0d0
+      xkernazi=0d0
       if (lzone) then
-         call limits(xi_i_fks,y_ij_fks)
-         call compute_splitting_kernels(xkern,xkernazi,z,xi,xjac)
-      else
-         xkern(1:2)=0d0
-         xkernazi(1:2)=0d0
+         call compute_splitting_kernels(xkern,xkernazi,z,xi,xjac,
+     $        kernel_limits)
       endif
-c     
       if (shower_mc_mod(1:9).eq.'PYTHIA6PT') then
-         xkern(1:2)=xkern(1:2)*PY6PTweight
-         xkernazi(1:2)=xkernazi(1:2)*PY6PTweight
+         xkern=xkern*PY6PTweight
+         xkernazi=xkernazi*PY6PTweight
       endif
 
-!     Apply this history's G-functions. Complete native H weights, not
-!     bare kernels, are subsequently repartitioned over outer sectors.
+c Apply this history's G-functions before the outer sector performs
+c the G replacement and repartitions complete native H weights.
       if (include_gfun) then
-         xkern(1:2)=xkern(1:2)*gfactsf
-         xkernazi(1:2)=xkernazi(1:2)*gfactazi*gfactsf
+         xkern=xkern*gfactsf
+         xkernazi=xkernazi*gfactazi*gfactsf
       endif
-         
-      ione=0
-      amp_split_xmcxsec(1:amp_split_size)=0d0
-      do iord = 1, nsplitorders
-         if (.not.split_type(iord) .or.
-     $        (iord.ne.qed_pos.and.iord.ne.qcd_pos)) cycle
-         if (iord.eq.qcd_pos) then
-            iord_val=1
-         elseif(iord.eq.qed_pos) then
-            iord_val=2
-         endif
-         ione=ione+1
-         amp_split_xmcxsec(1:amp_split_size)=(xkern(iord_val)*
-     $        amp_split_bornbars(1:amp_split_size,born_flow_picked,iord)
-     $        +xkernazi(iord_val)*
-     $        amp_split_bornbarstilde(1:amp_split_size,born_flow_picked,iord))
-     $        *compute_damping_weight(i_connect,xi_i_fks,y_ij_fks)
-      enddo
-      if (ione.ne.1) then
-         write (*,*) 'Error: incompatible split orders in '/
-     $        /'xmcsubt_connection: there should be exactly'/
-     $        /' one in MC@NLO. You can either do QCD *or* '/
-     $        /'QED corrections',ione
-         stop 1
-      endif
-      return
-      end
-
-      
-c$$$c Main routine for MC counterterms. Now to be called inside a loop
-c$$$c over colour partners
-c$$$      subroutine xmcsubt(pp,xi_i_fks,y_ij_fks,gfactsf,gfactcl,probne,
-c$$$     &     nofpartners,lzone,flagmc,z,xkern,xkernazi,
-c$$$     &     bornbars,bornbarstilde,npartner)
-c$$$      ! TODO cleanup 'flagmc'
-c$$$      use process_module
-c$$$      use kinematics_module
-c$$$      use scale_module
-c$$$      implicit none
-c$$$      include 'nexternal.inc'
-c$$$      include 'born_nhel.inc'
-c$$$      include 'orders.inc'
-c$$$      include 'fks_powers.inc'
-c$$$      include 'coupl.inc'
-c$$$! arguments:
-c$$$      double precision pp(0:3,nexternal),xi_i_fks,y_ij_fks,gfactsf,gfactcl
-c$$$     $     ,probne,z(nexternal),xkern(2),xkernazi(2),bornbars(max_bcol
-c$$$     $     ,nsplitorders),bornbarstilde(max_bcol,nsplitorders)
-c$$$      integer nofpartners,npartner
-c$$$      logical lzone(nexternal),flagmc
-c$$$
-c$$$! local
-c$$$      double precision ztmp,xitmp,xjactmp,gfactazi,qMC,delta,E0sq
-c$$$     $     ,PY6PTweight,pmass(nexternal),xi,xjac
-c$$$! external
-c$$$      double precision bogus_probne_fun,gfunction,zHW6,xiHW6
-c$$$     $     ,xjacHW6
-c$$$      external bogus_probne_fun,gfunction,zHW6,xiHW6,xjacHW6
-c$$$! parameters      
-c$$$      double precision ymin,zero
-c$$$      parameter (ymin=0.9d0)
-c$$$      parameter(zero=0d0)
-c$$$! common
-c$$$      logical first_MCcnt_call
-c$$$      common/cMCcall/first_MCcnt_call
-c$$$      integer ipartners(0:nexternal-1),colorflow(nexternal-1,0:max_bcol)
-c$$$      common /MC_info/ ipartners,colorflow
-c$$$      double precision alsf,besf
-c$$$      common/cgfunsfp/alsf,besf
-c$$$      double precision alazi,beazi
-c$$$      common/cgfunazi/alazi,beazi
-c$$$      integer              MCcntcalled
-c$$$      common/c_MCcntcalled/MCcntcalled
-c$$$      double precision       ch_i,ch_j,ch_m
-c$$$      integer                i_type,j_type,m_type
-c$$$      common/cparticle_types/ch_i,ch_j,ch_m,
-c$$$     &                       i_type,j_type,m_type
-c$$$      logical split_type(nsplitorders) 
-c$$$      common /c_split_type/split_type
-c$$$      double precision p_born(0:3,nexternal-1)
-c$$$      common/pborn/p_born
-c$$$      save
-c$$$
-c$$$      include "pmass.inc"
-c$$$
-c$$$c Initialise if first time
-c$$$      if(.not.first_MCcnt_call)goto 222
-c$$$      if (split_type(QED_pos)) then
-c$$$         ! QED partners are dynamically found
-c$$$         call set_QED_flows(pp)
-c$$$      endif
-c$$$      flagmc   = .false.
-c$$$      ztmp     = 0d0
-c$$$      xitmp    = 0d0
-c$$$      xjactmp  = 0d0
-c$$$      gfactazi = 0d0
-c$$$      nofpartners = ipartners(0)
-c$$$
-c$$$      qMC=get_qMC(xi_i_fks,y_ij_fks)
-c$$$
-c$$$c     New or standard MC@NLO formulation
-c$$$      probne=bogus_probne_fun(qMC)
-c$$$
-c$$$c Call barred Born and assign shower scale
-c$$$      call get_mbar(pp,y_ij_fks,ileg,bornbars,bornbarstilde)
-c$$$
-c$$$c Distinguish ISR and FSR
-c$$$      if(ileg.le.2)then
-c$$$         delta=min(1d0,deltaI)
-c$$$      elseif(ileg.ge.3)then
-c$$$         delta=min(1d0,deltaO)
-c$$$      endif
-c$$$c G-function parameters 
-c$$$      gfactsf=gfunction(x,alsf,besf,2d0)
-c$$$      if(abs(i_type).eq.3)gfactsf=1d0 ! if fks parton is quark, soft limit is finite
-c$$$      gfactcl=gfunction(y_ij_fks,alsf,-(1d0-ymin),1d0)
-c$$$      if(alazi.lt.0d0)gfactazi=1-gfunction(y_ij_fks,-alazi,beazi,delta)
-c$$$
-c$$$      if (btest(MCcntcalled,2)) then
-c$$$         write (*,*) 'Third bit of MCcntcalled should not be set yet'
-c$$$     $        ,MCcntcalled
-c$$$         stop 1
-c$$$      endif
-c$$$
-c$$$      MCcntcalled=MCcntcalled+4
-c$$$      
-c$$$c Shower variables (all except HW6, since that one depends on the
-c$$$c partner)
-c$$$      call get_shower_variables(E0sq,ztmp,xitmp,xjactmp)
-c$$$      
-c$$$      first_MCcnt_call=.false.
-c$$$ 222  continue
-c$$$c Main loop over colour partners used to begin here
-c$$$      E0sq=dot(p_born(0,fksfather),
-c$$$     $                   p_born(0,ipartners(npartner)))
-c$$$      if(E0sq.lt.0d0)then
-c$$$         write(*,*)'Error in xmcsubt: negative E0sq'
-c$$$         write(*,*)E0sq,ileg,npartner
-c$$$         stop
-c$$$      endif
-c$$$      if(shower_mc_mod(1:7).eq.'HERWIG6')then
-c$$$         z(npartner)=zHW6(E0sq)
-c$$$         xi=xiHW6(E0sq,z(npartner))
-c$$$         xjac=xjacHW6(E0sq,xi,z(npartner))
-c$$$      else
-c$$$         z(npartner)=ztmp
-c$$$         xi=xitmp
-c$$$         xjac=xjactmp
-c$$$      endif
-c$$$c Compute dead zones
-c$$$      call get_dead_zone(z(npartner),xi,qMC
-c$$$     $     ,ipartners(npartner),lzone(npartner),PY6PTweight)
-c$$$
-c$$$c Compute MC subtraction terms
-c$$$      if(lzone(npartner))then
-c$$$         if(.not.flagmc)flagmc=.true.
-c$$$         call limits(xi_i_fks,y_ij_fks)
-c$$$         call compute_spitting_kernels(xkern,xkernazi,z(npartner)
-c$$$     $        ,xi,xjac)
-c$$$      else
-c$$$        xkern(1:2)=0d0
-c$$$        xkernazi(1:2)=0d0
-c$$$      endif
-c$$$c
-c$$$      xkern(1:2)=xkern(1:2)*gfactsf
-c$$$      xkernazi(1:2)=xkernazi(1:2)*gfactazi*gfactsf
-c$$$      if (shower_mc_mod(1:9).eq.'PYTHIA6PT') then
-c$$$         xkern(1:2)=xkern(1:2)*PY6PTweight
-c$$$         xkernazi(1:2)=xkernazi(1:2)*PY6PTweight
-c$$$      endif
-c$$$
-c$$$c Main loop over colour partners used to end here
-c$$$      return
-c$$$      end
+      amp_split_xmcxsec=(xkern(kernel_index)*born_weights
+     $     +xkernazi(kernel_index)*born_spin_weights)*damping
+      end subroutine xmcsubt_connection
 
 
-
-
-      subroutine compute_splitting_kernels(xkern,xkernazi,z,xi,xjac)
+      subroutine compute_splitting_kernels(xkern,xkernazi,z,xi,
+     $     xjac,kernel_limits)
       use process_module
-      use kinematics_module
       implicit none
       double precision xkern(1:2),xkernazi(1:2),z,xi,xjac
-      double precision py8_gluon_recoil_weight
-      external py8_gluon_recoil_weight
       double precision tiny
       parameter (tiny=1d-6)
       logical needs_shower_jacobian
-      logical limit,non_limit
-      common /MCcnt_limit/limit,non_limit
+      type(mc_kernel_limits), intent(in) :: kernel_limits
       double precision       ch_i,ch_j,ch_m
       integer                i_type,j_type,m_type,j_pdg
       common/cparticle_types/ch_i,ch_j,ch_m,
@@ -1222,7 +666,7 @@ c$$$      end
       xkernazi(1:2) = 0d0
 
       ! TODO: check m_type, j_type, etc. when looping over k_fks and l_fks
-      
+
       if( (ileg.ge.3 .and.
      $     (m_type.eq.8.or.(m_type.eq.1.and.dabs(ch_m).lt.tiny))) .or.
      $    (ileg.le.2 .and.
@@ -1230,11 +674,11 @@ c$$$      end
          if(i_type.eq.8)then
 c g->gg, go->gog (icode=1)
             call compute_splitting_kernel_icode1(xkern,xkernazi,z,xi
-     $           ,needs_shower_jacobian)
+     $           ,needs_shower_jacobian,kernel_limits)
          elseif(abs(i_type).eq.3.or.(i_type.eq.1.and.dabs(ch_i).gt.tiny))then
 c g->qq, a->qq, a->ee (icode=2)
             call compute_splitting_kernel_icode2(xkern,xkernazi,z,xi
-     $           ,needs_shower_jacobian)
+     $           ,needs_shower_jacobian,kernel_limits)
          else
             write(*,*)'Error 1 in xmcsubt: unknown particle type'
             write(*,*)i_type
@@ -1248,11 +692,11 @@ c g->qq, a->qq, a->ee (icode=2)
          if(abs(i_type).eq.3.or.(i_type.eq.1.and.dabs(ch_i).gt.tiny))then
 c q->gq, q->aq, e->ae (icode=3)
             call compute_splitting_kernel_icode3(xkern,xkernazi,z,xi
-     $           ,needs_shower_jacobian)
+     $           ,needs_shower_jacobian,kernel_limits)
          elseif(i_type.eq.8.or.(i_type.eq.1.and.dabs(ch_i).lt.tiny))then
 c q->qg, q->qa, sq->sqg, sq->sqa, e->ea (icode=4)
             call compute_splitting_kernel_icode4(xkern,xkernazi,z,xi
-     $           ,needs_shower_jacobian)
+     $           ,needs_shower_jacobian,kernel_limits)
          else
             write(*,*)'Error 2 in xmcsubt: unknown particle type'
             write(*,*)i_type
@@ -1274,13 +718,13 @@ c q->qg, q->qa, sq->sqg, sq->sqa, e->ea (icode=4)
 !     Keep the exact analytic collinear coefficient: PYTHIA's guarded
 !     numerator has a numerical floor, not a perturbative mass term.
       if (shower_mc_mod.eq.'PYTHIA8'.and.nincoming_mod.eq.2.and.
-     &    ileg.eq.4.and..not.limit.and.
+     &    ileg.eq.4.and..not.kernel_limits%collinear.and.
      &    m_type.eq.8.and.i_type.eq.8.and.j_type.eq.8) then
          xkern(1)=xkern(1)*
      &        py8_gluon_recoil_weight(z,shat_n1,xm12,w2)
       endif
       return
-      end
+      end subroutine compute_splitting_kernels
 
       double precision function py8_gluon_recoil_weight(z,s,mrec2,
      &     mpair2)
@@ -1304,35 +748,33 @@ c q->qg, q->qa, sq->sqg, sq->sqa, e->ea (icode=4)
       py8_gluon_recoil_weight=max(0d0,1d0-
      &     r*max(xmargin,v)/(max(xmargin,d1)*max(xmargin,d2)))
       return
-      end
+      end function py8_gluon_recoil_weight
 
-      subroutine limits(xi_i_fks,y_ij_fks)
+      function classify_mc_kernel_limits(xi_i_fks,y_ij_fks)
+     $     result(region)
       implicit none
-      double precision tiny,xi_i_fks,y_ij_fks
+      double precision, intent(in) :: xi_i_fks,y_ij_fks
+      double precision tiny
+      type(mc_kernel_limits) :: region
       logical softtest,colltest
       common/sctests/softtest,colltest
-      logical limit,non_limit
-      common /MCcnt_limit/limit,non_limit
-c Logical variables to control the IR limits:
-c one can remove any reference to xi_i_fks
+c Classify once per history; all its colour connections share the same
+c collinear approximation and soft boundary. G-functions cover soft points.
       tiny = 1d-6
       if (softtest.or.colltest)tiny = 1d-12
-      limit = 1-y_ij_fks.lt.tiny .and. xi_i_fks.ge.tiny ! collinear (and not soft)
-      non_limit = xi_i_fks.ge.tiny  ! non-soft; may also be collinear
-      ! (Note, if soft, we should use the G-functions and not the MC subtraction terms)
-      end
-      
+      region%collinear=1-y_ij_fks.lt.tiny .and. xi_i_fks.ge.tiny
+      region%nonsoft=xi_i_fks.ge.tiny
+      end function classify_mc_kernel_limits
+
       double precision function xfact_ileg12(N_p)
       use process_module
-      use kinematics_module
       implicit none
       integer N_p
       xfact_ileg12=(1d0-yij)*(1d0-x)/x * 4d0/(shat_n1*N_p)
-      end
+      end function xfact_ileg12
 
       double precision function xfact_ileg3(N_p)
       use process_module
-      use kinematics_module
       implicit none
       integer N_p
       double precision geometry
@@ -1343,27 +785,23 @@ c one can remove any reference to xi_i_fks
       geometry=(1d0+x)*kn+(1d0-x)*yij*kn0
       xfact_ileg3=abs(geometry)/kn**2*knbar*(1d0-x)*
      &     (1d0-yij)*2d0/(shat_n1*N_p)
-      end
+      end function xfact_ileg3
 
       double precision function xfact_ileg4(N_p)
       use process_module
-      use kinematics_module
       implicit none
       integer N_p
       xfact_ileg4=(2d0-(1d0-x)*(1d0-yij))/
      &     xij*(1d0-xm12/shat_n1)*(1d0-x)*(1d0-yij) * 2d0/(shat_n1*N_p)
-      end
+      end function xfact_ileg4
 
       subroutine compute_splitting_kernel_icode1(xkern,xkernazi,z,xi
-     $     ,needs_shower_jacobian)
+     $     ,needs_shower_jacobian,kernel_limits)
       use process_module
-      use kinematics_module
       implicit none
       include "coupl.inc"
       double precision xkern(1:2),xkernazi(1:2),s,z,xi,xfact
      $     ,ap(1:2),Q(1:2)
-      double precision xfact_ileg12,xfact_ileg3,xfact_ileg4
-      external xfact_ileg12,xfact_ileg3,xfact_ileg4
       integer N_P
       double precision vca,one
       parameter (vca=3d0)
@@ -1373,20 +811,19 @@ c Particle types (=color) of i_fks, j_fks and fks_mother
       integer                i_type,j_type,m_type,j_pdg
       common/cparticle_types/ch_i,ch_j,ch_m,
      &                       i_type,j_type,m_type,j_pdg
-      logical limit,non_limit
-      common /MCcnt_limit/limit,non_limit
       logical needs_shower_jacobian
+      type(mc_kernel_limits), intent(in) :: kernel_limits
       needs_shower_jacobian=.false.
       s=shat_n1
 c g->gg, go->gog (icode=1)
       if(ileg.le.2)then
          N_p=2
-         if(limit)then
+         if(kernel_limits%collinear)then
             xkern(1)=(g**2/N_p)*8*vca*(1-x*(1-x))**2/(s*x**2)
             xkernazi(1)=-(g**2/N_p)*16*vca*(1-x)**2/(s*x**2)
             xkern(2)=0d0
             xkernazi(2)=0d0
-         elseif(non_limit)then
+         elseif(kernel_limits%nonsoft)then
             needs_shower_jacobian=.true.
             xfact=xfact_ileg12(N_p)
             call AP_reduced(m_type,i_type,ch_m,ch_i,one,z,ap)
@@ -1404,26 +841,26 @@ c g->gg, go->gog (icode=1)
 ! We are soft. The G-function will take care of this.
             continue
          endif
-c     
+c
       elseif(ileg.eq.3)then
          N_p=2
-         if(non_limit)then
+         if(kernel_limits%nonsoft)then
             needs_shower_jacobian=.true.
             xfact=xfact_ileg3(N_p)
             call AP_reduced_SUSY(j_type,i_type,ch_m,ch_i,one,z,ap)
             xkern(1:2)=xfact*ap(1:2)/(xi*(1-z))
          endif
-c     
+c
       elseif(ileg.eq.4)then
          N_p=2
-         if(limit)then
+         if(kernel_limits%collinear)then
             xkern(1)=(g**2/N_p)*( 8*vca*
      &           (s**2*(1-(1-x)*x)-s*(1+x)*xm12+xm12**2)**2 )/
      &           ( s*(s-xm12)**2*(s*x-xm12)**2 )
             xkernazi(1)=-(g**2/N_p)*(16*vca*s*(1-x)**2)/((s-xm12)**2)
             xkern(2)=0d0
             xkernazi(2)=0d0
-         elseif(non_limit)then
+         elseif(kernel_limits%nonsoft)then
             needs_shower_jacobian=.true.
             xfact=xfact_ileg4(N_p)
             call AP_reduced(j_type,i_type,ch_m,ch_i,one,z,ap)
@@ -1442,18 +879,15 @@ c
             continue
          endif
       endif
-      end
-      
+      end subroutine compute_splitting_kernel_icode1
+
       subroutine compute_splitting_kernel_icode2(xkern,xkernazi,z,xi
-     $     ,needs_shower_jacobian)
+     $     ,needs_shower_jacobian,kernel_limits)
       use process_module
-      use kinematics_module
       implicit none
       include "coupl.inc"
       double precision xkern(1:2),xkernazi(1:2),s,z,xi,xfact
      $     ,ap(1:2),Q(1:2)
-      double precision xfact_ileg12,xfact_ileg4
-      external xfact_ileg12,xfact_ileg4
       integer N_p
       double precision vtf,one
       parameter (vtf=1d0/2d0)
@@ -1463,28 +897,27 @@ c Particle types (=color) of i_fks, j_fks and fks_mother
       integer                i_type,j_type,m_type,j_pdg
       common/cparticle_types/ch_i,ch_j,ch_m,
      &                       i_type,j_type,m_type,j_pdg
-      logical limit,non_limit
-      common /MCcnt_limit/limit,non_limit
       logical needs_shower_jacobian
+      type(mc_kernel_limits), intent(in) :: kernel_limits
       needs_shower_jacobian=.false.
       s=shat_n1
 c g->qq, a->qq, a->ee (icode=2)
       if(ileg.le.2)then
          N_p=1
-         if(limit)then
+         if(kernel_limits%collinear)then
             xkern(1)=(g**2/N_p)*4*vtf*(1-x)*((1-x)**2+x**2)/(s*x)
-            xkern(2)=xkern(1) * dble(gal(1))**2 / g**2 * 
+            xkern(2)=xkern(1) * dble(gal(1))**2 / g**2 *
      &           ch_i**2 * abs(i_type) / vtf
-         elseif(non_limit)then
+         elseif(kernel_limits%nonsoft)then
             needs_shower_jacobian=.true.
             xfact=xfact_ileg12(N_p)
             call AP_reduced(m_type,i_type,ch_m,ch_i,one,z,ap)
             xkern(1:2)=xfact*ap(1:2)/(xi*(1-z))
          endif
-c     
+c
       elseif(ileg.eq.4)then
          N_p=2
-         if(limit)then
+         if(kernel_limits%collinear)then
             xkern(1)=(g**2/N_p)*( 4*vtf*(1-x)*
      &           (s**2*(1-2*(1-x)*x)-2*s*x*xm12+xm12**2) )/
      &           ( (s-xm12)**2*(s*x-xm12) )
@@ -1493,7 +926,7 @@ c
             xkernazi(1)=(g**2/N_p)*(16*vtf*s*(1-x)**2)/((s-xm12)**2)
             xkernazi(2)=xkernazi(1) * dble(gal(1))**2 / g**2 *
      &           ch_i**2 * abs(i_type) / vtf
-         elseif(non_limit)then
+         elseif(kernel_limits%nonsoft)then
             needs_shower_jacobian=.true.
             xfact=xfact_ileg4(N_p)
             call AP_reduced(j_type,i_type,ch_m,ch_i,one,z,ap)
@@ -1503,18 +936,15 @@ c
             xkernazi(1:2)=xfact*Q(1:2)/(xi*(1-z))
          endif
       endif
-      end
-      
+      end subroutine compute_splitting_kernel_icode2
+
       subroutine compute_splitting_kernel_icode3(xkern,xkernazi,z,xi
-     $     ,needs_shower_jacobian)
+     $     ,needs_shower_jacobian,kernel_limits)
       use process_module
-      use kinematics_module
       implicit none
       include "coupl.inc"
       double precision xkern(1:2),xkernazi(1:2),s,z,xi,xfact
      $     ,ap(1:2),Q(1:2)
-      double precision xfact_ileg12,xfact_ileg3,xfact_ileg4
-      external xfact_ileg12,xfact_ileg3,xfact_ileg4
       integer N_P
       double precision vcf,one
       parameter (vcf=4d0/3d0)
@@ -1524,22 +954,21 @@ c Particle types (=color) of i_fks, j_fks and fks_mother
       integer                i_type,j_type,m_type,j_pdg
       common/cparticle_types/ch_i,ch_j,ch_m,
      &                       i_type,j_type,m_type,j_pdg
-      logical limit,non_limit
-      common /MCcnt_limit/limit,non_limit
       logical needs_shower_jacobian
+      type(mc_kernel_limits), intent(in) :: kernel_limits
       needs_shower_jacobian=.false.
       s=shat_n1
 c q->gq, q->aq, e->ae (icode=3)
       if(ileg.le.2)then
          N_p=2
-         if(limit)then
+         if(kernel_limits%collinear)then
             xkern(1)=(g**2/N_p)*4*vcf*(1-x)*((1-x)**2+1)/(s*x**2)
-            xkern(2)=xkern(1) * (dble(gal(1))**2 / g**2) * 
+            xkern(2)=xkern(1) * (dble(gal(1))**2 / g**2) *
      &           (ch_i**2 / vcf)
             xkernazi(1)=-(g**2/N_p)*16*vcf*(1-x)**2/(s*x**2)
             xkernazi(2)=xkernazi(1) * (dble(gal(1))**2 / g**2) *
      &           (ch_i**2 / vcf)
-         elseif(non_limit)then
+         elseif(kernel_limits%nonsoft)then
             needs_shower_jacobian=.true.
             xfact=xfact_ileg12(N_p)
             call AP_reduced(m_type,i_type,ch_m,ch_i,one,z,ap)
@@ -1548,44 +977,40 @@ c q->gq, q->aq, e->ae (icode=3)
      $           ,Q)
             xkernazi(1:2)=xfact*Q(1:2)/(xi*(1-z))
          endif
-c     
+c
       elseif(ileg.eq.3)then
          N_p=1
-         if(non_limit)then
+         if(kernel_limits%nonsoft)then
             needs_shower_jacobian=.true.
             xfact=xfact_ileg3(N_p)
             call AP_reduced(j_type,i_type,ch_m,ch_i,one,z,ap)
             xkern(1:2)=xfact*ap(1:2)/(xi*(1-z))
          endif
-c     
+c
       elseif(ileg.eq.4)then
          N_p=1
-         if(limit)then
+         if(kernel_limits%collinear)then
             xkern(1)=(g**2/N_p)*
      &           ( 4*vcf*(1-x)*(s**2*(1-x)**2+(s-xm12)**2) )/
      &           ( (s-xm12)*(s*x-xm12)**2 )
-            xkern(2)=xkern(1) * (dble(gal(1))**2 / g**2) * 
+            xkern(2)=xkern(1) * (dble(gal(1))**2 / g**2) *
      &           (ch_i**2 / vcf)
-         elseif(non_limit)then
+         elseif(kernel_limits%nonsoft)then
             needs_shower_jacobian=.true.
             xfact=xfact_ileg4(N_p)
             call AP_reduced(j_type,i_type,ch_m,ch_i,one,z,ap)
             xkern(1:2)=xfact*ap(1:2)/(xi*(1-z))
          endif
       endif
-      end
+      end subroutine compute_splitting_kernel_icode3
 
       subroutine compute_splitting_kernel_icode4(xkern,xkernazi,z,xi
-     $     ,needs_shower_jacobian)
+     $     ,needs_shower_jacobian,kernel_limits)
       use process_module
-      use kinematics_module
       implicit none
-      include "nexternal.inc"
       include "coupl.inc"
       double precision xkern(1:2),xkernazi(1:2),s,z,xi,xfact
-     $     ,ap(1:2),Q(1:2)
-      double precision xfact_ileg12,xfact_ileg3,xfact_ileg4
-      external xfact_ileg12,xfact_ileg3,xfact_ileg4
+     $     ,ap(1:2)
       integer N_P
       double precision vcf,one
       parameter (vcf=4d0/3d0)
@@ -1595,31 +1020,27 @@ c Particle types (=color) of i_fks, j_fks and fks_mother
       integer                i_type,j_type,m_type,j_pdg
       common/cparticle_types/ch_i,ch_j,ch_m,
      &                       i_type,j_type,m_type,j_pdg
-      integer fks_j_from_i(nexternal,0:nexternal)
-     &     ,particle_type(nexternal),pdg_type(nexternal)
-      common /c_fks_inc/fks_j_from_i,particle_type,pdg_type
-      logical limit,non_limit
-      common /MCcnt_limit/limit,non_limit
       logical needs_shower_jacobian
+      type(mc_kernel_limits), intent(in) :: kernel_limits
       needs_shower_jacobian=.false.
       s=shat_n1
 c q->qg, q->qa, sq->sqg, sq->sqa, e->ea (icode=4)
       if(ileg.le.2)then
          N_p=1
-         if(limit)then
+         if(kernel_limits%collinear)then
             xkern(1)=(g**2/N_p)*4*vcf*(1+x**2)/(s*x)
-            xkern(2)=xkern(1) * (dble(gal(1))**2 / g**2) * 
+            xkern(2)=xkern(1) * (dble(gal(1))**2 / g**2) *
      &           (ch_m**2 / vcf)
-         elseif(non_limit)then
+         elseif(kernel_limits%nonsoft)then
             needs_shower_jacobian=.true.
             xfact=xfact_ileg12(N_p)
             call AP_reduced(m_type,i_type,ch_m,ch_i,one,z,ap)
             xkern(1:2)=xfact*ap(1:2)/(xi*(1-z))
          endif
-c     
+c
       elseif(ileg.eq.3)then
          N_p=1
-         if(non_limit)then
+         if(kernel_limits%nonsoft)then
             needs_shower_jacobian=.true.
             xfact=xfact_ileg3(N_p)
             if(abs(j_pdg).le.6)then
@@ -1633,36 +1054,29 @@ c
             endif
             xkern(1:2)=xfact*ap(1:2)/(xi*(1-z))
          endif
-c     
+c
       elseif(ileg.eq.4)then
          N_p=1
-         if(limit)then
+         if(kernel_limits%collinear)then
             xkern(1)=(g**2/N_p)*4*vcf*
      &           ( s**2*(1+x**2)-2*xm12*(s*(1+x)-xm12) )/
      &           ( s*(s-xm12)*(s*x-xm12) )
-            xkern(2)=xkern(1) * (dble(gal(1))**2 / g**2) * 
+            xkern(2)=xkern(1) * (dble(gal(1))**2 / g**2) *
      &           (ch_j**2 / vcf)
-         elseif(non_limit)then
+         elseif(kernel_limits%nonsoft)then
             needs_shower_jacobian=.true.
             xfact=xfact_ileg4(N_p)
             call AP_reduced(j_type,i_type,ch_m,ch_i,one,z,ap)
             xkern(1:2)=xfact*ap(1:2)/(xi*(1-z))
          endif
       endif
-      end
+      end subroutine compute_splitting_kernel_icode4
 
 
-
-      
       subroutine get_shower_variables(E0sq,z,xi,xjac)
-      use process_module
-      use kinematics_module
+      use process_module, only: shower_mc_mod
       implicit none
       double precision E0sq,z,xi,xjac
-      double precision zHW6,xiHW6,xjacHW6,zHW7,xiHW7,xjacHW7,zPY6Q
-     $     ,xiPY6Q,xjacPY6Q,zPY6PT,xiPY6PT,xjacPY6PT,zPY8,xiPY8,xjacPY8
-      external zHW6,xiHW6,xjacHW6,zHW7,xiHW7,xjacHW7,zPY6Q,xiPY6Q
-     $     ,xjacPY6Q,zPY6PT,xiPY6PT,xjacPY6PT,zPY8,xiPY8,xjacPY8
       if(shower_mc_mod(1:7).eq.'HERWIG6')then
          z=zHW6(E0sq)
          xi=xiHW6(E0sq,z)
@@ -1683,175 +1097,69 @@ c
          z=zPY8()
          xi=xiPY8(z)
          xjac=xjacPY8(z)
+      else
+         write(*,*) 'Unknown shower in get_shower_variables: ',
+     $        shower_mc_mod
+         stop 1
       endif
-      end
+      end subroutine get_shower_variables
 
-c Finalises the MC counterterm computations performed in xmcsubt(),
-c fills arrays relevant to shower scales, and computes Delta
+c Delta matching: no-emission probability and H-event scales.
       subroutine compute_delta(p,probne)
-      use fks_phase_space_data, only: xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt,xbjrk_ev,xbjrk_cnt
-      use process_module
-      use scale_module
-      use mcatnlo_delta_scales, only: delta_scale_matrices,delta_ok
+c     Assemble the no-emission probability and the H-event start scales.
+      use fks_phase_space_data, only: xbjrk_cnt
+      use process_module, only: valid_dipole_n1,ndelH
+      use scale_module, only: born_flow_picked,shower_scale_nbody,
+     $     force_II_connection,emsca_H
       implicit none
-      include "born_nhel.inc"
       include 'nFKSconfigs.inc'
-      include 'nexternal.inc'
-c$$$  include 'madfks_mcatnlo.inc'
       include 'run.inc'
-      include 'orders.inc'
+      include 'genps.inc'
 
-      integer i_fks,j_fks
-      common/fks_indices/i_fks,j_fks
-
-      double precision ptresc,ref_scale,emscainv
-c$$$  double precision emscav_a(nexternal,nexternal)
-c$$$  double precision emscav_a2(nexternal,nexternal)
-      integer cflows,jflow
-      common/c_colour_flow/jflow
-
-c$$$  double precision emsca_a(nexternal,nexternal)
-c$$$  $     ,emsca_bare_a(nexternal,nexternal),emsca_bare_a2(nexternal
-c$$$  $     ,nexternal) ,scalemin_a(nexternal,nexternal)
-c$$$  $     ,scalemax_a(nexternal ,nexternal),emscwgt_a(nexternal
-c$$$  $     ,nexternal),emsca
-c$$$  common/cemsca_a/emsca_a,emsca_bare_a,emsca_bare_a2
-c$$$  $     ,scalemin_a,scalemax_a,emscwgt_a
-      integer              MCcntcalled
+      double precision p(0:3,nexternal),probne,wgt_sudakov
+      integer MCcntcalled,nFKSprocess,fold,ifold_counter
       common/c_MCcntcalled/MCcntcalled
-
-      integer ipartners(0:nexternal-1),colorflow(nexternal-1,0:max_bcol)
-      common /MC_info/ ipartners,colorflow
-
-      integer ip
-
-c     Controls assignments of scales in H events in LHE file.
-c     Set iHscale=0 for scale=target_scale
-c     iHscale=1 for scale=dipole_mass
-      integer iHscale,jbar,ifksscl(2)
-      parameter (iHscale=0)
-      double precision dipole_mass,fksscales(3)
-      external dipole_mass
-
-
-      INTEGER NFKSPROCESS
-      COMMON/C_NFKSPROCESS/NFKSPROCESS
-
-c$$$  double precision emscav_tmp_a(nexternal,nexternal)
-c$$$  double precision emscav_tmp_a2(nexternal,nexternal)
-c$$$  common/cemscav_tmp_a/emscav_tmp_a,emscav_tmp_a2
-
-      double precision probne
-
-      integer i,j,k,i1,i2
-
-      double precision p(0:3,nexternal)
-      double precision xkern(2),xkernazi(2),factor
-      include "genps.inc"
+      common/c_NFKSPROCESS/nFKSprocess
+      common/cfl/fold,ifold_counter
       integer idup(nexternal-1,maxproc)
       integer mothup(2,nexternal-1,maxproc)
       integer icolup(2,nexternal-1,max_bcol)
-      integer idup_s(nexternal-1)
-      integer icolup_s(2,nexternal-1)
-      integer idup_h(nexternal)
-      integer icolup_h(2,nexternal)
-      double precision wgt_sudakov
-      common /colour_connections/ icolup_s,icolup_h
-
-      include "born_leshouche.inc"
-      integer jpart(7,-nexternal+3:2*nexternal-3),lc,iflow
-      logical firsttime1
-      data firsttime1 /.true./
+      include 'born_leshouche.inc'
+      integer idup_s(nexternal-1),idup_h(nexternal)
+      integer icolup_s(2,nexternal-1),icolup_h(2,nexternal)
+      common/colour_connections/icolup_s,icolup_h
+      integer jpart(7,-nexternal+3:2*nexternal-3)
       include 'leshouche_decl.inc'
-      save idup_d, mothup_d, icolup_d, niprocs_d
+      save idup_d,mothup_d,icolup_d,niprocs_d
+      logical firsttime1
+      data firsttime1/.true./
 
-      logical         Hevents
-      common/SHevents/Hevents
-c     Sevent_starting_scales = m_ij scales that determine S-event scales written onto LHE
-      double precision Sevent_starting_scales(nexternal-1,nexternal-1)
-c     Hevent_starting_scales = t_ij scales that determine H-event scales written onto LHE
-      double precision Hevent_starting_scales(nexternal,nexternal)
-
-c     Lower and upper limits of fitted st and xm ranges.
-c     Require one prior call to pysudakov() to be set,
-c     here done in the firsttime1 clause
-      real*8 cstlow,cstupp,cxmlow,cxmupp
+c     The first Sudakov call initializes these fitted table bounds.
+      double precision cstlow,cstupp,cxmlow,cxmupp
       common/cstxmbds/cstlow,cstupp,cxmlow,cxmupp
-
-c     Set Delta(pt,..)=0 for pt<smallptlow, and interpolate
-c     between 0 and Delta(smallptupp,..) for smallptlow<pt<smallptupp
-c     For things to work properly, one must have:
-c     cstlow <= smallptupp
-      real*8 smallptlow,smallptupp,get_to_zero
-      parameter (smallptlow=0.5d0)
+      double precision smallptupp
       parameter (smallptupp=1.01d0)
+      double precision Sevent_starting_scales(nexternal-1,nexternal-1)
+      double precision Sevent_stopping_scales(nexternal-1,nexternal-1)
+      double precision xmasses_nbody(nexternal-1,nexternal-1)
+      double precision Hevent_starting_scales(nexternal,nexternal)
+      logical*1 dzones_nbody(nexternal-1,nexternal-1)
+      type(delta_connections) leg_connections(nexternal-1)
+      integer i,j
+      double precision mcmass(21),deltanum,leg_probability
 
-      integer iii,jjj,LP
-      double precision xscales(0:nexternal,0:nexternal)
-     $     ,xmasses(0:nexternal,0:nexternal)
-      logical dzones(0:nexternal,0:nexternal)
-      integer delta_status
-      double precision Sevent_stopping_scales(1:nexternal-1,1:nexternal-1)
-     $     ,xmasses_nbody(1:nexternal-1,1:nexternal-1)
-      logical*1 dzones_nbody(1:nexternal-1,1:nexternal-1)
-
-      integer id,type,icount,jcount,kcount,jindex(2)
-      integer iflip(2)
-      data iflip/2,1/
-
-      double precision emscav_a2_tmp,emscav_tmp_a2_tmp,ptresc_a_tmp
-      double precision sref,acll1,acll2,dot,sumdot
-      external dot,sumdot
-
-c     SF ARE noemProb AND mDipole USEFUL?
-      double precision startingScale0,stoppingScale0
-      double precision noemProb, startingScale(2), stoppingScale(2), mDipole
-      double precision mcmass(21)
-      double precision pysudakov,deltanum,deltaden,delta(2,2)
-      double precision gltmp,xtmp(2),glfact(2),glrat(2)
-      integer nG_S,nQ_S,i_dipole_counter,isudtype
-      integer i_dipole_dead_counter
-c     
-      integer fks_j_from_i(nexternal,0:nexternal)
-     &     ,particle_type(nexternal),pdg_type(nexternal)
-      common /c_fks_inc/fks_j_from_i,particle_type,pdg_type
-
-
-      double precision pdg2pdf,pdffnum(2),pdffden(2)
-      external pdg2pdf
-c     
-      double precision pi
-      parameter(pi=3.1415926535897932384626433d0)
-      double precision get_mass_from_id
-      external get_mass_from_id
-      logical isspecial(max_bcol)
-      common/cisspecial/isspecial
-      double precision qMC_a2(nexternal-1,nexternal-1)
-      common /to_complete/qMC_a2
-
-      double precision gl(2),pdfnum,pdfden,PIk,Fk(2)
-      double precision pysudakov_safe,gl_safe
-      double precision mu_ij(2,nexternal-1),t_ij(2,nexternal-1)
-      integer in_con,out_con,n_connect(nexternal-1)
-      integer i_connect(2,nexternal-1)
-      integer get_parton_id,setSudType
-      integer     fold,ifold_counter
-      common /cfl/fold,ifold_counter
-      double precision tiny
-      parameter       (tiny=1d-10)
-c     
       mcmass=0d0
       include 'MCmasses_PYTHIA8.inc'
-c     
+c
       if (born_flow_picked.le.0) then
          write (*,*) 'born_flow_picked <= 0 in compute_delta'
      $        ,born_flow_picked
          stop 1
       endif
-      
+
 c     S-event information:
 c     id's and mothers read from born_leshouche.inc;
-c     colour configuration read from born_leshouche.inc and born_flow_picked 
+c     colour configuration read from born_leshouche.inc and born_flow_picked
       do i=1,nexternal-1
          IDUP_S(i)=IDUP(i,1)
          ICOLUP_S(1,i)=ICOLUP(1,i,born_flow_picked)
@@ -1859,10 +1167,9 @@ c     colour configuration read from born_leshouche.inc and born_flow_picked
       enddo
 
 c     Sevent_starting_scales* are the m_ij scales, ie the starting scales (as determined
-c     by the D(mu) function) for extra radiation; they are copies of the
-c     emscav_tmp_a* arrays, originally filled by xmcsubt(). Only the (i,j) 
-c     entries associated with a colour line that belongs to born_flow_picked have
-c     meaningful values; the others are set equal to -1.
+c     by the D(mu) function) for extra radiation, copied from the
+c     shower_scale_nbody array. Only entries associated with a colour
+c     line in born_flow_picked have meaningful values; others are -1.
       Sevent_starting_scales(1:nexternal-1,1:nexternal-1)=
      &     shower_scale_nbody(1:nexternal-1,1:nexternal-1)
 
@@ -1881,18 +1188,147 @@ c     Fake call for initialisation
       do i=1,nexternal
          IDUP_H(i)=IDUP_D(nFKSprocess,i,1)
       enddo
-c     Fill selected color configuration into jpart array. 
+c     Fill selected color configuration into jpart array.
       call fill_icolor_H(born_flow_picked,jpart,.false.)
       do i=1,nexternal
          ICOLUP_H(1,i)=jpart(4,i)
          ICOLUP_H(2,i)=jpart(5,i)
       enddo
+      call get_delta_stopping_scales(p,idup_h,icolup_s,
+     $     Sevent_starting_scales,cxmupp,Sevent_stopping_scales,
+     $     xmasses_nbody,dzones_nbody)
+      call get_Hevent_starting_scales(Sevent_stopping_scales
+     $     ,dzones_nbody,p,Hevent_starting_scales)
+
+c
+c     force IF colour connection to have II scale
+c     if a sensible II scale exists
+      if(force_II_connection)then
+         do i=1,2
+            do j=3,nexternal
+               if(valid_dipole_n1(i,j) .and. valid_dipole_n1(i,3-i))then
+                  Hevent_starting_scales(i,j) =
+     $                 Hevent_starting_scales(i,3-i)
+               endif
+            enddo
+         enddo
+      endif
+
+
+ccccccccccccccccccccc
+c
+c     *** WARNING ***
+c
+c     Pythia resets the scale for FI and FF to the min between the scale
+c     t_ij we give it and p_i.p_j/2.  Should we implement this
+c     minimisation here as well? (We do not do this at thee moment. For
+c     H events this implementation should be needed only for i_fks and
+c     j_fks, as only in that case we (over)write their scales ourselves
+c     (in the set_Hevent_starting_scales() above), but could be applied to all
+c     FI and FF connections.
+c
+ccccccccccccccccccccc
+c
+
+!     overwrite the emsca_H() (for this iFKS and ifold_counter) with the
+!     actual stopping-scales defined here.
+      emsca_H(nFKSprocess,ifold_counter,1:ndelH,1:ndelH)=
+     &     Hevent_starting_scales(1:nexternal,1:nexternal)
+
+
+c     Computation of Delta = wgt_sudakov as the product of Sudakovs between
+c     Sevent_starting_scales and Sevent_stopping_scales.  For initial-state legs, Delta
+c     contains a PDF ratio with S-event Bjorken fraction and
+c     Sevent_starting_scales, Sevent_stopping_scales scales, see also formula (5.62) in
+c     Ellis-Stirling-Webber
+
+
+!     Paper: eq.3.14 (times the PDF factor in 3.32) defines what to compute
+!     for each QCD particle in the n-body process. This is updated to
+!     3.31 for quarks, and 3.34 for gluons. (Check the curly brackets in
+!     3.14 & 3.34).  First term in 3.34 is equal to
+!     gl(1)/sum(gl)*delta(1,1)*delta(1,2)*Fk(1) in the notation
+!     of the code below (and equivalently for the 2nd term). 3.37 is
+!     wgt_sudakov.
+!
+
+      call get_delta_connections(Sevent_starting_scales,
+     $     Sevent_stopping_scales,dzones_nbody,xmasses_nbody,idup_s,
+     $     born_flow_picked,isspecial(born_flow_picked),smallptupp,
+     $     cstupp,leg_connections)
+
+      wgt_sudakov=1d0
+c     Each Born leg contributes one probability, including its live
+c     colour connections. Only incoming legs have beam PDF inputs.
+      do i=1,nincoming
+         if (leg_connections(i)%count.eq.0) cycle
+         leg_probability=delta_leg_probability(i,idup_s(i),
+     $        idup(i,1:iproc_born),lpp(i),xbjrk_cnt(i,0),
+     $        leg_connections(i),mcmass)
+         wgt_sudakov=wgt_sudakov*leg_probability
+      enddo
+      do i=nincoming+1,nexternal-1
+         if (leg_connections(i)%count.eq.0) cycle
+         leg_probability=delta_leg_probability(i,idup_s(i),
+     $        idup(i,1:iproc_born),0,0d0,leg_connections(i),mcmass)
+         wgt_sudakov=wgt_sudakov*leg_probability
+      enddo
+
+      if (btest(MCcntcalled,3)) then
+         write (*,*) 'Fourth bit of MCcntcalled should not '/
+     $        /'have been set yet',MCcntcalled
+         stop 1
+      endif
+      MCcntcalled=MCcntcalled+8
+
+      probne = wgt_sudakov
+
+
+      if(probne.lt.0.d0)then
+         write(*,*)'Error in MC@NLO-Delta: Sudakov smaller than 0',probne
+         probne=0.d0
+         stop 1
+      endif
+      if(probne.gt.1.d0)then
+         write(*,*)'Error in MC@NLO-Delta: Sudakov larger than 1',probne
+         probne=1.d0
+         stop 1
+      endif
+c
+
+      return
+      end subroutine compute_delta
+
+      subroutine get_delta_stopping_scales(p,idup_h,icolup_s,
+     $     Sevent_starting_scales,mass_upper,Sevent_stopping_scales,
+     $     xmasses_nbody,dzones_nbody)
+c     Reconstruct real dipoles, relabel to Born legs and apply the veto.
+      use process_module, only: iRtoB
+      use mcatnlo_delta_scales, only: delta_scale_matrices,delta_ok
+      implicit none
+      double precision p(0:3,nexternal),mass_upper
+      integer idup_h(nexternal),icolup_s(2,nexternal-1)
+      double precision Sevent_starting_scales(nexternal-1,nexternal-1)
+      double precision Sevent_stopping_scales(nexternal-1,nexternal-1)
+      double precision xmasses_nbody(nexternal-1,nexternal-1)
+      logical*1 dzones_nbody(nexternal-1,nexternal-1)
+      double precision xscales(0:nexternal,0:nexternal)
+      double precision xmasses(0:nexternal,0:nexternal)
+      logical dzones(0:nexternal,0:nexternal)
+      integer i,j,delta_status,i_fks,j_fks,nFKSprocess
+      common/fks_indices/i_fks,j_fks
+      common/c_NFKSPROCESS/nFKSprocess
+      double precision get_mass_from_id
+      external get_mass_from_id
+      intent(in) :: p,idup_h,icolup_s,Sevent_starting_scales,mass_upper
+      intent(out) :: Sevent_stopping_scales,xmasses_nbody,dzones_nbody
+
 c     Reconstruct the PYTHIA stopping-scale prescription from the real
 c     momenta and the selected Born colour flow. These expressions are
 c     Lorentz invariant, so no boost to the lab frame is needed. Use model
 c     charm and bottom masses; get_mass_from_id returns zero for flavours
-c     made massless by the model restriction. The mcmass array above is
-c     the separate mass input to the Sudakov tables.
+c     made massless by the model restriction. The separate Sudakov-table
+c     mass input is supplied by compute_delta.
       if (nincoming.ne.2) then
          write(*,*) 'MC@NLO-Delta scales require two incoming legs'
          stop 1
@@ -1918,13 +1354,13 @@ c     The same labelling conventions apply to xmasses(i,j) (which is the
 c     dipole mass associated with the colour line that connects i and j)
 c     and dzones(i,j) (which is the dead zone relevant to the emission from
 c     parton i colour-connected with recoiler j).
-c     
+c
 c     Since any the pair of indices (i,j) associated with sensible entries
 c     in the reconstructed arrays is in one-to-one correspondence with
 c     Born-level quantities, it is convenient to define relabelled copies of
 c     such arrays (which we call Sevent_stopping_scales, xmasses_nbody, and
 c     dzones_nbody), for which 1<=i,j<=nexternal-1
-c     
+c
 
       do i=1,nexternal
          if(i.eq.i_fks)cycle
@@ -1933,7 +1369,7 @@ c
             Sevent_stopping_scales(iRtoB(i),iRtoB(j))=xscales(i,j)
 c     The reconstructed dipole masses can exceed the Sudakov table range.
 c     Cap them at the largest allowed value in the pysudakov() tables.
-            xmasses_nbody(iRtoB(i),iRtoB(j))=min(xmasses(i,j),cxmupp)
+            xmasses_nbody(iRtoB(i),iRtoB(j))=min(xmasses(i,j),mass_upper)
             dzones_nbody(iRtoB(i),iRtoB(j))=dzones(i,j)
          enddo
       enddo
@@ -1962,228 +1398,148 @@ c     Checks
             endif
          enddo
       enddo
-      call get_Hevent_starting_scales(Sevent_stopping_scales
-     $     ,dzones_nbody,p,Hevent_starting_scales)
-      
-c     
-c     force IF colour connection to have II scale
-c     if a sensible II scale exists
-      if(force_II_connection)then
-         do i=1,2
-            do j=3,nexternal
-               if(valid_dipole_n1(i,j) .and. valid_dipole_n1(i,3-i))then
-                  Hevent_starting_scales(i,j) =
-     $                 Hevent_starting_scales(i,3-i)
-               else
-                  continue
-c     if no other available colour connection, we keep the IF scale
-c     rather than calculating some new kinematic variable e.g. pT
-               endif
-            enddo
-         enddo
-      endif
+      end subroutine get_delta_stopping_scales
 
-      
-ccccccccccccccccccccc
-c     
-c     *** WARNING ***
-c     
-c     Pythia resets the scale for FI and FF to the min between the scale
-c     t_ij we give it and p_i.p_j/2.  Should we implement this
-c     minimisation here as well? (We do not do this at thee moment. For
-c     H events this implementation should be needed only for i_fks and
-c     j_fks, as only in that case we (over)write their scales ourselves
-c     (in the set_Hevent_starting_scales() above), but could be applied to all
-c     FI and FF connections.
-c     
-ccccccccccccccccccccc
-c     
+      subroutine get_delta_connections(Sevent_starting_scales,
+     $     Sevent_stopping_scales,dzones_nbody,xmasses_nbody,idup_s,
+     $     iflow,special_flow,scale_lower,scale_upper,connections)
+c     Select live connections and bound their Sudakov table scales.
+      use process_module, only: valid_dipole_n
+      implicit none
+      double precision, intent(in) ::
+     $     Sevent_starting_scales(nexternal-1,nexternal-1),
+     $     Sevent_stopping_scales(nexternal-1,nexternal-1),
+     $     xmasses_nbody(nexternal-1,nexternal-1)
+      logical*1, intent(in) :: dzones_nbody(nexternal-1,nexternal-1)
+      integer, intent(in) :: idup_s(nexternal-1),iflow
+      logical, intent(in) :: special_flow
+      double precision, intent(in) :: scale_lower,scale_upper
+      type(delta_connections), intent(out) :: connections(nexternal-1)
+      integer i,j,slot
 
-!     overwrite the emsca_H() (for this iFKS and ifold_counter) with the
-!     actual stopping-scales defined here.
-      emsca_H(nFKSprocess,ifold_counter,1:ndelH,1:ndelH)=
-     &     Hevent_starting_scales(1:nexternal,1:nexternal)
-
-      
-c     Computation of Delta = wgt_sudakov as the product of Sudakovs between
-c     Sevent_starting_scales and Sevent_stopping_scales.  For initial-state legs, Delta
-c     contains a PDF ratio with S-event Bjorken fraction and
-c     Sevent_starting_scales, Sevent_stopping_scales scales, see also formula (5.62) in
-c     Ellis-Stirling-Webber
-
-
-!     we are here
-!     
-!     1. loop over dipoles and find the (up to) 2 contributing. This sets
-!     also the types and everything. Including scales.
-!     2. loop over the (up to) 2 contributing, and compute the sudakovs.
-!     
-!     Paper: eq.3.14 (times the PDF factor in 3.32) defines what to compute
-!     for each QCD particle in the n-body process. This is updated to
-!     3.31 for quarks, and 3.34 for gluons. (Check the curly brackets in
-!     3.14 & 3.34).  First term in 3.34 is equal to
-!     glfact(1)*Deltarat(1,1)*Deltarat(1,2)*pdffactor(1) in the notation
-!     of the code below (and equivalently for the 2nd term). 3.37 is
-!     wgt_sudakov.
-!     
-
-!     loop over particles ('a' in eq.3.14)
+      connections=delta_connections()
+c     Loop over particles and their connections (a and beta in eq.3.14).
       do i=1,nexternal-1
-!     for each particle, find the connections (beta in eq.3.14)
-         n_connect(i)=0
          do j=1,nexternal-1
-            if (.not.valid_dipole_n(i,j,born_flow_picked)) cycle
+            if (.not.valid_dipole_n(i,j,iflow)) cycle
             if (dzones_nbody(i,j)) cycle
-!     found a connection; determine the starting and stopping scales of
-!     this connection (eq.3.31 & 3.34). Check that it is in the
-!     livezone, and overwrite it such that it gives a value that is not
-!     too large or too small (eq.3.33)
-            if (Sevent_starting_scales(i,j).lt.Sevent_stopping_scales(i
-     $           ,j)) cycle
-            n_connect(i)=n_connect(i)+1
-            i_connect(n_connect(i),i)=j
-            mu_ij(n_connect(i),i)=max(min(Sevent_starting_scales(i,j)
-     $           ,cstupp),smallptupp)
-            t_ij(n_connect(i),i)=min(Sevent_stopping_scales(i,j)
-     $           ,cstupp)
-         enddo
-         if (n_connect(i).eq.1 .and. idup_s(i).eq.21) then
-            if (isspecial(born_flow_picked)) then
-!     This is the ISSPECIAL case. Add one more (identical) connection.
-               n_connect(i)=n_connect(i)+1
-               i_connect(n_connect(i),i)=i_connect(n_connect(i)-1,i)
-               mu_ij(n_connect(i),i)=mu_ij(n_connect(i)-1,i)
-               t_ij(n_connect(i),i)=t_ij(n_connect(i)-1,i)
-            else
-!     just continue, since one of the two gluon connections could be in the dead-zone.
-!     TODO : FIXTHIS --> what to do if this happens and isspecial is true???
-!     Also think about the check below in the next do-loop...
-               continue
-c$$$  write (*,*) 'A gluon with only one connection, but '/
-c$$$  $              /'the born_flow_picked is not special.',i
-c$$$  stop 1
+c     Keep live connections and bound their scales as in eq.3.33.
+            if (Sevent_starting_scales(i,j).lt.
+     $           Sevent_stopping_scales(i,j)) cycle
+            if (connections(i)%count.eq.2) then
+               write(*,*) 'Too many Delta colour connections',i,iflow
+               stop 1
             endif
+            slot=connections(i)%count+1
+            connections(i)%count=slot
+            connections(i)%partner(slot)=j
+            connections(i)%start(slot)=max(min(
+     $           Sevent_starting_scales(i,j),scale_upper),scale_lower)
+            connections(i)%stop(slot)=min(
+     $           Sevent_stopping_scales(i,j),scale_upper)
+            connections(i)%mass(slot)=xmasses_nbody(i,j)
+            connections(i)%sudakov_type(slot)=setSudType(i,j)
+         enddo
+         if (connections(i)%count.eq.1.and.idup_s(i).eq.21) then
+            if (special_flow) then
+c     A special flow carries two colour lines to the same partner.
+               connections(i)%count=2
+               connections(i)%partner(2)=connections(i)%partner(1)
+               connections(i)%start(2)=connections(i)%start(1)
+               connections(i)%stop(2)=connections(i)%stop(1)
+               connections(i)%mass(2)=connections(i)%mass(1)
+               connections(i)%sudakov_type(2)=
+     $              connections(i)%sudakov_type(1)
+            endif
+c     A non-special gluon can have only one live connection when the
+c     other connection lies in a dead zone.
          endif
       enddo
-      
-      wgt_sudakov=1d0
-! loop over 'k' in eq.3.31 and 3.34
-      do i=1,nexternal-1
-         if (n_connect(i).eq.0) cycle ! no colour connection for particle 'i'
-c$$$  if(  (n_connect(i).ne.1 .and. abs(idup_s(i)).le.6) .or.
-c$$$  &        (n_connect(i).ne.2 .and. idup_s(i).eq.21)) then
-c$$$  write (*,*) 'n_connect should be 1 for quarks and 2 '/
-c$$$  $           /'for gluons',n_connect(i),i,idup_s(i)
-c$$$  stop 1
-c$$$  endif
+      end subroutine get_delta_connections
 
-         do out_con=1,n_connect(i) ! loop over two lines of 3.34
-!     compute g1 and g2 (FIX FOR SAFETY MEASURES)
-            if (n_connect(i).eq.1) then
-               gl(out_con)=1d0
-            else
-               isudtype=setSudType(i,i_connect(out_con,i))
-               deltanum=pysudakov_safe(t_ij(out_con,i),xmasses_nbody(i
-     $              ,i_connect(out_con,i)),idup_s(i),isudtype,mcmass)
-               deltaden=pysudakov_safe(mu_ij(out_con,i),xmasses_nbody(i
-     $              ,i_connect(out_con,i)),idup_s(i),isudtype,mcmass)
-               gl(out_con)=gl_safe(deltanum,deltaden)
-            endif
-!     compute F_k
-            if(i.le.nincoming)then
-!     The correct thing to do here (if we follow the paper) would be to have
-!     a separate wgt_sudakov for each flavour configuration, since the PDF
-!     ratio would be different for each of them. This is very tricky in the
-!     current code setup, since at this point all flavour configurations are
-!     always summed together. Therefore, we use an approximation, where we
-!     take a (weighted) average of PDF ratios. We take as weights the PDF
-!     used in the Born, which is (roughly) equal to the PDF computed at the
-!     starting scales, which is pdfden. We can write this weighted average
-!     as
-!     Fk(out_con) = weighted_average(ratio_1, ..., ratio_n)
-!     = (ratio_1*pdfden_1+...+ratio_n*pdfden_n)/sum(pdfden_1, ..., pdf_den_n)
-!     = sum(pdfnum_1, ..., pdfnum_n)/sum(pdfden_1, ..., pdfden_n)
-!     
-               LP=SIGN(1,LPP(i))
-               pdfnum=0d0
-               pdfden=0d0
-               do ip=1,iproc_born
-                  id=get_parton_id(idup(i,ip),lp)
-                  pdfnum=pdfnum+pdg2pdf(abs(lpp(i)),id,LP,xbjrk_cnt(i,0)
-     $                 ,t_ij(out_con,i))
-                  pdfden=pdfden+pdg2pdf(abs(lpp(i)),id,LP,xbjrk_cnt(i,0)
-     $                 ,mu_ij(out_con,i))
-               enddo
-            else
-               pdfnum=1d0
-               pdfden=1d0
-            endif
-            if (pdfden.eq.0d0) then
-! this should be extremely rare, but can happen if the
-! scale is just right
-               pdfden=1d-99
-            endif
-            Fk(out_con)=pdfnum/pdfden
-!     compute delta
-            do in_con=1,n_connect(i) ! loop over gamma in 3.34
-               isudtype=setSudType(i,i_connect(in_con,i))
-               deltanum=pysudakov_safe(t_ij(out_con,i)
-     $              ,xmasses_nbody(i,i_connect(in_con,i)),idup_s(i)
-     $              ,isudtype,mcmass)
-               deltaden=pysudakov_safe(mu_ij(in_con,i)
-     $              ,xmasses_nbody(i,i_connect(in_con,i)),idup_s(i)
-     $              ,isudtype,mcmass)
-               if (deltaden.eq.0d0) then
-                  if (deltanum.ne.0d0) then
-                     write (*,*) 'Denominator is zero in Sudakov'
-                     write (*,*) deltanum,deltaden
-                     write (*,*) t_ij(out_con,i),mu_ij(in_con,i),in_con
-     $                    ,i,i_connect(in_con,i),xmasses_nbody(i
-     $                    ,i_connect(in_con,i)),idup_s(i),isudtype
-                     stop 1
-                  endif
-                  delta(out_con,in_con)=0d0
-               else
-                  delta(out_con,in_con)=deltanum/deltaden
-               endif
+      double precision function delta_leg_probability(ipart,pdg,
+     $     flavours,beam_type,bjorken,connections,mcmass)
+c     Evaluate eqs.3.31/3.34 for one Born leg from its live connections.
+c     Keep the PDF flavour average and the order of Sudakov-table calls.
+      implicit none
+      integer, intent(in) :: ipart,pdg,flavours(:),beam_type
+      double precision, intent(in) :: bjorken,mcmass(21)
+      type(delta_connections), intent(in) :: connections
+      integer in_con,out_con,isudtype,ip,lp,id
+      double precision deltanum,deltaden,delta(2,2),gl(2),Fk(2)
+      double precision pdfnum,pdfden,PIk
+      double precision pdg2pdf
+      external pdg2pdf
+
+      delta_leg_probability=1d0
+      if (connections%count.eq.0) return
+      do out_con=1,connections%count
+c     Compute g1 and g2 for the two lines of eq.3.34.
+         if (connections%count.eq.1) then
+            gl(out_con)=1d0
+         else
+            isudtype=connections%sudakov_type(out_con)
+            deltanum=pysudakov_safe(connections%stop(out_con),
+     $           connections%mass(out_con),pdg,isudtype,mcmass)
+            deltaden=pysudakov_safe(connections%start(out_con),
+     $           connections%mass(out_con),pdg,isudtype,mcmass)
+            gl(out_con)=gl_safe(deltanum,deltaden)
+         endif
+c     Flavour configurations are summed in the Born matrix element.
+c     Approximate their separate PDF ratios by the average weighted by
+c     the starting-scale PDFs: sum(pdfnum)/sum(pdfden).
+         if (ipart.le.nincoming) then
+            lp=sign(1,beam_type)
+            pdfnum=0d0
+            pdfden=0d0
+            do ip=1,size(flavours)
+               id=get_parton_id(flavours(ip),lp)
+               pdfnum=pdfnum+pdg2pdf(abs(beam_type),id,lp,bjorken,
+     $              connections%stop(out_con))
+               pdfden=pdfden+pdg2pdf(abs(beam_type),id,lp,bjorken,
+     $              connections%start(out_con))
             enddo
+         else
+            pdfnum=1d0
+            pdfden=1d0
+         endif
+         if (pdfden.eq.0d0) then
+c     This can occur at an isolated PDF scale.
+            pdfden=1d-99
+         endif
+         Fk(out_con)=pdfnum/pdfden
+c     Loop over gamma in eq.3.34.
+         do in_con=1,connections%count
+            isudtype=connections%sudakov_type(in_con)
+            deltanum=pysudakov_safe(connections%stop(out_con),
+     $           connections%mass(in_con),pdg,isudtype,mcmass)
+            deltaden=pysudakov_safe(connections%start(in_con),
+     $           connections%mass(in_con),pdg,isudtype,mcmass)
+            if (deltaden.eq.0d0) then
+               if (deltanum.ne.0d0) then
+                  write (*,*) 'Denominator is zero in Sudakov'
+                  write (*,*) deltanum,deltaden
+                  write (*,*) connections%stop(out_con),
+     $                 connections%start(in_con),in_con,ipart,
+     $                 connections%partner(in_con),
+     $                 connections%mass(in_con),pdg,isudtype
+                  stop 1
+               endif
+               delta(out_con,in_con)=0d0
+            else
+               delta(out_con,in_con)=deltanum/deltaden
+            endif
          enddo
-!     multiply to get 3.34
-         PIk=0d0
-         do out_con=1,n_connect(i) ! loop over two lines of 3.34
-            PIk=PIk + gl(out_con)/sum(gl(1:n_connect(i)))*Fk(out_con)
-     $           *product(delta(out_con,1:n_connect(i)))
-         enddo
-! take min(max()) since it can be set between zero and one at
-! the accuracy we are working, and interpret it as a
-! probability.
-         wgt_sudakov=wgt_sudakov * min(max(PIk,0d0),1d0)
       enddo
-
-      if (btest(MCcntcalled,3)) then
-         write (*,*) 'Fourth bit of MCcntcalled should not '/
-     $        /'have been set yet',MCcntcalled
-         stop 1
-      endif
-      MCcntcalled=MCcntcalled+8
-
-      probne = wgt_sudakov
-
-      
-      if(probne.lt.0.d0)then
-         write(*,*)'Error in MC@NLO-Delta: Sudakov smaller than 0',probne
-         probne=0.d0
-         stop 1
-      endif
-      if(probne.gt.1.d0)then
-         write(*,*)'Error in MC@NLO-Delta: Sudakov larger than 1',probne
-         probne=1.d0
-         stop 1
-      endif
-c     
-
-      return
-      end
+c     Sum the colour-line contributions in eq.3.34 and bound the result
+c     to interpret it as a probability at the accuracy used here.
+      PIk=0d0
+      do out_con=1,connections%count
+         PIk=PIk+gl(out_con)/sum(gl(1:connections%count))*Fk(out_con)
+     $        *product(delta(out_con,1:connections%count))
+      enddo
+      delta_leg_probability=min(max(PIk,0d0),1d0)
+      end function delta_leg_probability
 
       double precision function gl_safe(num,den)
       implicit none
@@ -2201,15 +1557,15 @@ c
       else
          gl_safe=-2d0*log(ratio)
       endif
-      end
-      
+      end function gl_safe
+
       double precision function pysudakov_safe(scale,mass,id,type
      $     ,mcmass)
       implicit none
       double precision scale,mass,pysudakov
       double precision mcmass(21)
       integer id,type
-      real*8 smallptlow,smallptupp,get_to_zero
+      real*8 smallptlow,smallptupp
       parameter (smallptlow=0.5d0)
       parameter (smallptupp=1.01d0)
       if(scale.lt.0d0)then
@@ -2217,45 +1573,42 @@ c
          stop 1
       elseif(scale.le.smallptlow)then
          pysudakov_safe=0.d0
-      elseif( scale.gt.smallptlow .and.
-     $        scale.le.smallptupp )then
+      elseif(scale.le.smallptupp)then
          pysudakov_safe = pysudakov(smallptupp,mass,id,type,mcmass)
      $        *get_to_zero(scale,smallptlow,smallptupp)
       else
          pysudakov_safe=pysudakov(scale,mass,id,type,mcmass)
       endif
-      end
-      
+      end function pysudakov_safe
+
 
       integer function get_parton_id(ipdg,lp)
       implicit none
-      integer ipdg,id,lp
-      if (ipdg.le.6) then       ! (anti-)quark 
-         id=lp*ipdg
+      integer ipdg,lp
+      if (abs(ipdg).ge.1.and.abs(ipdg).le.6) then
+         get_parton_id=lp*ipdg
       elseif (ipdg.eq.21) then  ! gluon
-         id=0
+         get_parton_id=0
       elseif (ipdg.eq.22) then  ! photon
-         id=7
+         get_parton_id=7
       else
          write (*,*) 'unknown PDG for PDF',ipdg
          stop 1
       endif
-      end
+      end function get_parton_id
 
       integer function setSudType(i,j)
       implicit none
       integer i,j
-      if(i.le.2.and.j.le.2)then
+      if(i.le.2)then
+c     For Pythia: IF is identical to II.
          setsudtype=1
-      elseif(i.gt.2.and.j.gt.2)then
+      elseif(j.gt.2)then
          setsudtype=2
-      elseif(i.le.2.and.j.gt.2)then
-c     For Pythia: IF is identical to II
-         setsudtype=1
-      elseif(i.gt.2.and.j.le.2)then
+      else
          setsudtype=4
       endif
-      end
+      end function setSudType
 
       subroutine get_Hevent_starting_scales(Sevent_stopping_scales
      $     ,dzones_nbody,p,Hevent_starting_scales)
@@ -2269,20 +1622,16 @@ c     For Pythia: IF is identical to II
 ! (using H-event kinematics) instead.
 ! WARNING: this subroutine does NOT enforce the scales for the IF
 ! dipoles to be overwritten by the II dipoles.
-      use process_module
-      use scale_module
+      use process_module, only: iRtoB,valid_dipole_n,valid_dipole_n1
+      use scale_module, only: born_flow_picked
       implicit none
-      include 'nexternal.inc'
       logical*1 dzones_nbody(nexternal-1,nexternal-1)
       double precision Sevent_stopping_scales(nexternal-1,nexternal-1)
      $     ,Hevent_starting_scales(nexternal,nexternal),p(0:3,nexternal)
       integer            i_fks,j_fks
       common/fks_indices/i_fks,j_fks
-      integer i1,i2,ip,imother,i1bar,i2bar,i
+      integer i1,i2,imother,i1bar,i2bar,i
       double precision t(nexternal,nexternal),pT,pTparton
-      integer ipbar,ipbar2
-      double precision compute_pTparton
-      external ipbar,ipbar2,comput_pTparton
       logical MCpicture,ptparton_computed
       parameter (MCpicture=.true.) ! Switch between MC- and ME-pictures.
 
@@ -2384,11 +1733,10 @@ c     For Pythia: IF is identical to II
       enddo
       Hevent_starting_scales(1:nexternal,1:nexternal)=t(1:nexternal
      $     ,1:nexternal)
-      end
+      end subroutine get_Hevent_starting_scales
 
       double precision function compute_pTparton(p)
       implicit none
-      include 'nexternal.inc'
       double precision p(0:3,nexternal)
       double precision pQCD(0:3,nexternal-1),palg,sycut,rfj,pjet(0:3
      $     ,nexternal-1)
@@ -2422,18 +1770,16 @@ c     For Pythia: IF is identical to II
      $        /'Must have at least one QCD parton at the NLO level'
          stop 1
       endif
-      end
+      end function compute_pTparton
 
-      
+
       integer function ipbar(imother)
       ! ipbar is the colour connection of i_fks (if it exists and is not
       ! equal to the mother). Otherwise it is the colour connection of
       ! j_fks. The latter only happens when i_fks is a quark and j_fks
       ! is an (incoming gluon).
-      use process_module
-      use scale_module
+      use process_module, only: iRtoB,valid_dipole_n1
       implicit none
-      include 'nexternal.inc'
       integer imother
       integer ip
       integer            i_fks,j_fks
@@ -2462,177 +1808,80 @@ c     For Pythia: IF is identical to II
             endif
          enddo
       endif
-      end
-
+      end function ipbar
 
 
       function get_to_zero(sc,xlow,xupp)
       implicit none
       double precision get_to_zero,xlow,xupp,sc
-      double precision x,emscafun
+      double precision x
       x=(xupp-sc)/(xupp-xlow)
       get_to_zero=1-emscafun(x,2d0)
       return
-      end
+      end function get_to_zero
 
 
-      function dipole_mass(p,i,j)
+
+
+
+
+      subroutine get_mbar(p,xi_i_fks,y_ij_fks,p_born,ileg,iflow,iord,
+     $     born_weights,born_spin_weights)
+c Return the scalar and azimuthal split amplitudes for one selected
+c Born flow and correction order, using Odagiri's prescription.
       implicit none
-      include 'nexternal.inc'
-      double precision dipole_mass,sign,tmp
-      double precision p(0:3,nexternal)
-      integer i,j,k
-c
-      sign=1.d0
-      if(i.le.2)sign=-sign
-      if(j.le.2)sign=-sign
-      tmp=(p(0,i)+sign*p(0,j))**2
-      do k=1,3
-        tmp=tmp-(p(k,i)+sign*p(k,j))**2
-      enddo
-      tmp=sqrt(max(0.d0,tmp))
-      dipole_mass=tmp
-      return
-      end
-
-
-      subroutine assign_ifks_Hscale(ipdg,ifksscl,fksscales)
-      implicit none
-      double precision fksscales(3)
-      integer ipdg,ifksscl(2),i,icount
-      integer i_fks,j_fks
-      common/fks_indices/i_fks,j_fks
-      logical wrong
-c Set itype=0 to set scale according to the colour line to which i_fks belongs
-c     itype=1 to take the minimum of the two scales in the case of mother=gluon
-      integer itype
-      parameter (itype=0)
-c
-      fksscales(3)=1.d10
-      if(itype.eq.0)then
-        wrong=.not.((ifksscl(1).eq.1.and.ifksscl(2).eq.0).or.
-     &              (ifksscl(1).eq.0.and.ifksscl(2).eq.1))
-        if(wrong)then
-          write(*,*)'Something wrong in assign_ifks_Hscale (0):'
-          write(*,*)ipdg,icount,i_fks,j_fks
-          write(*,*)ifksscl(1),ifksscl(2),fksscales(1),fksscales(2)
-          stop
-        endif
-        if(ifksscl(1).ne.0)fksscales(3)=fksscales(1)
-        if(ifksscl(2).ne.0)fksscales(3)=fksscales(2)
-      elseif(itype.eq.1)then
-        do i=1,2
-          if(fksscales(i).gt.0d0)
-     #      fksscales(3)=min(fksscales(3),fksscales(i))
-        enddo
-      endif
-      if(fksscales(3).eq.1.d10)then
-        write(*,*)'Could not assign scale in assign_ifks_Hscale:'
-        write(*,*)ipdg,ifksscl(1),ifksscl(2),fksscales(1),fksscales(2)
-        stop
-      endif
-      return
-      end
-
-
-      subroutine get_mbar(p,xi_i_fks,y_ij_fks,p_born,ileg,bornbars
-     $     ,bornbarstilde)
-      use fks_phase_space_data, only: xij_aor,xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt
-c Computes barred amplitudes (bornbars) squared according
-c to Odagiri's prescription (hep-ph/9806531).
-c Computes barred azimuthal amplitudes (bornbarstilde) with
-c the same method 
-      implicit none
-      double precision mc_born_flow_weight
-      external mc_born_flow_weight
-
-      include "genps.inc"
-      include "nexternal.inc"
-      include "born_nhel.inc"
-      include "orders.inc"
-      include "nFKSconfigs.inc"
-      
-      double precision p(0:3,nexternal),p_born(0:3,nexternal-1)
-      double precision xi_i_fks,y_ij_fks,bornbars(max_bcol,nsplitorders)
-     $     ,bornbarstilde(max_bcol,nsplitorders)
-
-      double precision zero
-      parameter (zero=0.d0)
-      double complex czero
-      parameter (czero=dcmplx(0d0,0d0))
-      double precision p_born_rot(0:3,nexternal-1)
-
-      integer imother_fks,ileg
-
-      double Precision amp2(ngraphs), jamp2(0:ncolor)
-      common/to_amps/  amp2,       jamp2
-
-      integer i_fks,j_fks
-      common/fks_indices/i_fks,j_fks
-
-      double precision wgt_born
-      double complex W1(6),W2(6),W3(6),W4(6),Wij_angle,Wij_recta
+      include 'orders.inc'
+      include 'nFKSconfigs.inc'
+      double precision, intent(in) :: p(0:3,nexternal)
+      double precision, intent(in) :: p_born(0:3,nexternal-1)
+      double precision, intent(in) :: xi_i_fks,y_ij_fks
+      integer, intent(in) :: ileg,iflow,iord
+      double precision, intent(out) :: born_weights(amp_split_size)
+      double precision, intent(out) :: born_spin_weights(amp_split_size)
+      double precision, external :: mc_born_flow_weight
+      double complex czero,ximag
+      parameter (czero=(0d0,0d0),ximag=(0d0,1d0))
+      double precision p_born_rot(0:3,nexternal-1),wgt_born
+      double precision born,amp_split_born(amp_split_size)
+      double complex borntilde,amp_split_borntilde(amp_split_size)
       double complex azifact
-
-
-      double precision sumborn
-      integer i
-
-      double precision vtiny,pi(0:3),pj(0:3),cphi_mother,sphi_mother
-      parameter (vtiny=1d-12)
-      double complex ximag
-      parameter (ximag=(0.d0,1.d0))
-
-      double precision t
-
-      double precision cthbe,sthbe,cphibe,sphibe
-      common/cbeangles/cthbe,sthbe,cphibe,sphibe
-
+      double precision sumborn,flow_weight,flow_fraction
+      double precision cphi_mother,sphi_mother
+      integer i,iamp,imother_fks
+      integer i_fks,j_fks
+      common/fks_indices/i_fks,j_fks
       logical calculatedBorn
       common/ccalculatedBorn/calculatedBorn
       double precision iden_comp,iden_comp_FKS(fks_configs)
       common /c_iden_comp/iden_comp,iden_comp_FKS
-
-c Particle types (=color) of i_fks, j_fks and fks_mother
-      double precision       ch_i,ch_j,ch_m
-      integer                i_type,j_type,m_type,j_pdg
+      double precision ch_i,ch_j,ch_m
+      integer i_type,j_type,m_type,j_pdg
       common/cparticle_types/ch_i,ch_j,ch_m,
-     &                       i_type,j_type,m_type,j_pdg
-      double precision born(nsplitorders)
-      double complex borntilde(nsplitorders)
-      logical split_type(nsplitorders) 
-      common /c_split_type/split_type
-      complex*16 ans_cnt(2, nsplitorders), wgt1(2)
-      common /c_born_cnt/ ans_cnt
-      double complex ans_extra_cnt(2,nsplitorders)
-      integer iord, iextra_cnt, isplitorder_born, isplitorder_cnt
-      common /c_extra_cnt/iextra_cnt, isplitorder_born, isplitorder_cnt
-
-      integer iamp
-      double precision amp_split_born(amp_split_size,nsplitorders) 
-      double complex amp_split_borntilde(amp_split_size,nsplitorders)
-      double precision amp_split_bornbars(amp_split_size,max_bcol,nsplitorders),
-     $                 amp_split_bornbarstilde(amp_split_size,max_bcol,nsplitorders)
-      common /to_amp_split_bornbars/amp_split_bornbars,
-     $                              amp_split_bornbarstilde
-c
+     &     i_type,j_type,m_type,j_pdg
+      double complex ans_cnt(2,nsplitorders)
+      common /c_born_cnt/ans_cnt
+      integer iextra_cnt,isplitorder_born,isplitorder_cnt
+      common /c_extra_cnt/iextra_cnt,isplitorder_born,isplitorder_cnt
       logical is_leading_cflow(max_bcol)
       integer num_leading_cflows
       common/c_leading_cflows/is_leading_cflow,num_leading_cflows
-c
-c BORN/BORNTILDE
-      born=0d0
-      borntilde=czero
-      amp_split_born=0d0
-      amp_split_borntilde=czero
-C check if momenta have to be rotated
-      if ((ileg.eq.1.or.ileg.eq.2) .and.
-     &    (j_fks.eq.2 .and. nexternal-1.ne.3)) then
-c Rotation according to innerpin.m. Use rotate_invar() if a more 
-c general rotation is needed.
-c Exclude 2->1 (at the Born level) processes: matrix elements are
-c independent of the PS point, but non-zero helicity configurations
-c might flip when rotating the momenta.
+
+      if (iflow.lt.1.or.iflow.gt.max_bcol.or.
+     $    iord.lt.1.or.iord.gt.nsplitorders) then
+         write(*,*) 'Invalid Born flow or correction order in get_mbar',
+     $        iflow,iord
+         stop 1
+      endif
+      if (iextra_cnt.gt.0) then
+         write(*,*) 'Extra-counterterm matching is not implemented'
+         stop 1
+      endif
+
+c Rotate the second incoming leg into the matrix-element convention.
+c Exclude 2->1 Born processes, whose nonzero helicity configurations
+c can flip even though their matrix elements have no momentum dependence.
+      if ((ileg.eq.1.or.ileg.eq.2).and.
+     $    (j_fks.eq.2.and.nexternal-1.ne.3)) then
          do i=1,nexternal-1
             p_born_rot(0,i)=p_born(0,i)
             p_born_rot(1,i)=-p_born(1,i)
@@ -2641,215 +1890,152 @@ c might flip when rotating the momenta.
          enddo
          calculatedBorn=.false.
          call sborn_native(p_born_rot,wgt_born)
-         if (iextra_cnt.gt.0) call extra_cnt_native(p_born_rot, iextra_cnt, ans_extra_cnt)
          calculatedBorn=.false.
       else
          call sborn_native(p_born,wgt_born)
-         if (iextra_cnt.gt.0) call extra_cnt_native(p_born, iextra_cnt, ans_extra_cnt)
       endif
 
-      do iord = 1, nsplitorders
-        if (.not.split_type(iord).or.(iord.ne.qed_pos.and.iord.ne.qcd_pos)) cycle
-C check if any extra_cnt is needed
-        if (iextra_cnt.gt.0) then
-            write(*,*) 'FIXEXTRACNTMC'
-            stop
-            if (iord.eq.isplitorder_born) then
-            ! this is the contribution from the born ME
-               wgt1(1) = ans_cnt(1,iord)
-               wgt1(2) = ans_cnt(2,iord)
-            else if (iord.eq.isplitorder_cnt) then
-            ! this is the contribution from the extra cnt
-               wgt1(1) = ans_extra_cnt(1,iord)
-               wgt1(2) = ans_extra_cnt(2,iord)
-            else
-               write(*,*) 'ERROR in get_mbar', iord
-               stop
-            endif
-        else
-           wgt1(1) = ans_cnt(1,iord)
-           wgt1(2) = ans_cnt(2,iord)
-        endif
-        if (abs(m_type).eq.3.or.dabs(ch_m).gt.0d0) wgt1(2) = czero
-        born(iord) = dble(wgt1(1))
-        borntilde(iord) = wgt1(2)
-        do iamp=1, amp_split_size
-          amp_split_born(iamp,iord) = dble(amp_split_cnt(iamp,1,iord))
-          if (abs(m_type).eq.3.or.dabs(ch_m).gt.0d0) then
-            amp_split_borntilde(iamp,iord) = czero
-          else
-            amp_split_borntilde(iamp,iord) = amp_split_cnt(iamp,2,iord)
-          endif
-        enddo
-      enddo
-      
-c BORN TILDE
-      if(ileg.eq.1.or.ileg.eq.2)then
-c Insert <ij>/[ij] which is not included by sborn()
-         if (1d0-y_ij_fks.lt.vtiny)then
-            azifact=xij_aor
+      born=dble(ans_cnt(1,iord))
+      borntilde=ans_cnt(2,iord)
+      amp_split_born=dble(amp_split_cnt(:,1,iord))
+      amp_split_borntilde=amp_split_cnt(:,2,iord)
+      if (abs(m_type).eq.3.or.dabs(ch_m).gt.0d0) then
+         borntilde=czero
+         amp_split_borntilde=czero
+      endif
+
+c Complete the spin-correlated amplitudes with <ij>/[ij] and the
+c polarization-vector phase. Keep the original multiplication order.
+      if (ileg.eq.1.or.ileg.eq.2) then
+         azifact=mc_born_azimuth_phase(p,xi_i_fks,y_ij_fks,
+     $        j_fks.eq.2)
+         if (j_fks.eq.2) then
+            cphi_mother=-1d0
          else
-            do i=0,3
-               if (xi_i_fks.lt.1d-8) then
-                  pi(i)=p_i_fks_ev(i)
-               else
-                  pi(i)=p(i,i_fks)
-               endif
-               pj(i)=p(i,j_fks)
-            enddo
-            if(j_fks.eq.2)then
-c Rotation according to innerpin.m. Use rotate_invar() if a more 
-c general rotation is needed
-               pi(1)=-pi(1)
-               pi(3)=-pi(3)
-               pj(1)=-pj(1)
-               pj(3)=-pj(3)
-            endif
-            CALL IXXXSO(pi ,ZERO ,+1,+1,W1)        
-            CALL OXXXSO(pj ,ZERO ,-1,+1,W2)        
-            CALL IXXXSO(pi ,ZERO ,-1,+1,W3)        
-            CALL OXXXSO(pj ,ZERO ,+1,+1,W4)        
-            Wij_angle=(0d0,0d0)
-            Wij_recta=(0d0,0d0)
-            do i=1,4
-               Wij_angle = Wij_angle + W1(i)*W2(i)
-               Wij_recta = Wij_recta + W3(i)*W4(i)
-            enddo
-            azifact=Wij_angle/Wij_recta
+            cphi_mother=1d0
          endif
-c Insert the extra factor due to Madgraph convention for polarization vectors
-         if(j_fks.eq.2)then
-            cphi_mother=-1.d0
-            sphi_mother=0.d0
-         else
-            cphi_mother=1.d0
-            sphi_mother=0.d0
-         endif
-         do iord=1, nsplitorders
-           borntilde(iord) = -(cphi_mother+ximag*sphi_mother)**2 *
-     #                borntilde(iord) * dconjg(azifact)
-           do iamp=1, amp_split_size
-             amp_split_borntilde(iamp,iord) = -(cphi_mother+ximag*sphi_mother)**2 *
-     #                amp_split_borntilde(iamp,iord) * dconjg(azifact)
-            enddo
+         sphi_mother=0d0
+         borntilde=-(cphi_mother+ximag*sphi_mother)**2*
+     $        borntilde*dconjg(azifact)
+         do iamp=1,amp_split_size
+            amp_split_borntilde(iamp)=
+     $           -(cphi_mother+ximag*sphi_mother)**2*
+     $           amp_split_borntilde(iamp)*dconjg(azifact)
          enddo
-      elseif(ileg.eq.3.or.ileg.eq.4)then
-         if((abs(j_type).eq.3.or.ch_j.ne.0d0).and.
-     &     (i_type.eq.8.or.i_type.eq.1).and.
-     &     ch_i.eq.0d0)then
-            do iord=1, nsplitorders
-               borntilde(iord)=czero
-               do iamp=1, amp_split_size
-                 amp_split_borntilde(iamp,iord) = czero
-               enddo
-            enddo
-         elseif((m_type.eq.8.or.m_type.eq.1).and.ch_m.eq.0d0)then
-c Insert <ij>/[ij] which is not included by sborn()
-            if(1.d0-y_ij_fks.lt.vtiny)then
-               azifact=xij_aor
-            else
-               do i=0,3
-                  if (xi_i_fks.lt.1d-8) then
-                     pi(i)=p_i_fks_ev(i)
-                  else
-                     pi(i)=p(i,i_fks)
-                  endif
-                  pj(i)=p(i,j_fks)
-               enddo
-               CALL IXXXSO(pi ,ZERO ,+1,+1,W1)        
-               CALL OXXXSO(pj ,ZERO ,-1,+1,W2)        
-               CALL IXXXSO(pi ,ZERO ,-1,+1,W3)        
-               CALL OXXXSO(pj ,ZERO ,+1,+1,W4)        
-               Wij_angle=(0d0,0d0)
-               Wij_recta=(0d0,0d0)
-               do i=1,4
-                  Wij_angle = Wij_angle + W1(i)*W2(i)
-                  Wij_recta = Wij_recta + W3(i)*W4(i)
-               enddo
-               azifact=Wij_angle/Wij_recta
-            endif
-c Insert the extra factor due to Madgraph convention for polarization vectors
+      elseif (ileg.eq.3.or.ileg.eq.4) then
+         if ((abs(j_type).eq.3.or.ch_j.ne.0d0).and.
+     $       (i_type.eq.8.or.i_type.eq.1).and.ch_i.eq.0d0) then
+            borntilde=czero
+            amp_split_borntilde=czero
+         elseif ((m_type.eq.8.or.m_type.eq.1).and.ch_m.eq.0d0) then
+            azifact=mc_born_azimuth_phase(p,xi_i_fks,y_ij_fks,.false.)
             imother_fks=min(i_fks,j_fks)
             call getaziangles(p_born(0,imother_fks),
-     #                        cphi_mother,sphi_mother)
-            do iord=1, nsplitorders
-               borntilde(iord) = -(cphi_mother-ximag*sphi_mother)**2 *
-     #                  borntilde(iord) * azifact
-               do iamp=1, amp_split_size
-                 amp_split_borntilde(iamp,iord) = -(cphi_mother-ximag*sphi_mother)**2 *
-     #                amp_split_borntilde(iamp,iord) * azifact
-               enddo
+     $           cphi_mother,sphi_mother)
+            borntilde=-(cphi_mother-ximag*sphi_mother)**2*
+     $           borntilde*azifact
+            do iamp=1,amp_split_size
+               amp_split_borntilde(iamp)=
+     $              -(cphi_mother-ximag*sphi_mother)**2*
+     $              amp_split_borntilde(iamp)*azifact
             enddo
          else
-            write(*,*)'FATAL ERROR in get_mbar',
-     #           i_type,j_type,i_fks,j_fks
+            write(*,*) 'FATAL ERROR in get_mbar',
+     $           i_type,j_type,i_fks,j_fks
             stop
          endif
       else
-         write(*,*)'unknown ileg in get_mbar',ileg
+         write(*,*) 'Unknown ileg in get_mbar',ileg
          stop
       endif
 
-CMZ! this has to be all changed according to the correct jamps
-
-c born is the total born amplitude squared
-      sumborn=0.d0
+c Normalize with all leading flows, summed in their original order.
+      sumborn=0d0
       do i=1,max_bcol
-         if(is_leading_cflow(i))sumborn=sumborn+mc_born_flow_weight(i)
-c sumborn is the sum of the leading-color amplitudes squared
+         if (is_leading_cflow(i))
+     $        sumborn=sumborn+mc_born_flow_weight(i)
       enddo
-
-c BARRED AMPLITUDES
-      do i=1,max_bcol
-        do iord=1,nsplitorders
-          if (sumborn.ne.0d0.and.is_leading_cflow(i)) then
-            bornbars(i,iord)=mc_born_flow_weight(i)/sumborn * born(iord) *iden_comp
-            do iamp=1,amp_split_size
-              amp_split_bornbars(iamp,i,iord)=mc_born_flow_weight(i)/sumborn *
-     &                              amp_split_born(iamp,iord) *iden_comp
-            enddo
-          elseif (born(iord).eq.0d0 .or. mc_born_flow_weight(i).eq.0d0
-     &           .or..not.is_leading_cflow(i)) then
-            bornbars(i,iord)=0d0
-            do iamp=1,amp_split_size
-              amp_split_bornbars(iamp,i,iord)=0d0
-            enddo
-          else
-            write (*,*) 'ERROR #1, dividing by zero'
-            stop
-          endif
-          if (sumborn.ne.0d0.and.is_leading_cflow(i)) then
-            bornbarstilde(i,iord)=mc_born_flow_weight(i)/sumborn * dble(borntilde(iord)) *iden_comp
-            do iamp=1,amp_split_size
-              amp_split_bornbarstilde(iamp,i,iord)=mc_born_flow_weight(i)/sumborn *
-     &                      dble(amp_split_borntilde(iamp,iord)) *iden_comp
-            enddo
-          elseif (borntilde(iord).eq.0d0 .or. mc_born_flow_weight(i).eq.0d0
-     &           .or..not.is_leading_cflow(i)) then
-            bornbarstilde(i,iord)=0d0
-            do iamp=1,amp_split_size
-              amp_split_bornbarstilde(iamp,i,iord)=0d0 
-            enddo
-          else
-            write (*,*) 'ERROR #2, dividing by zero'
-            stop
-          endif      
-c bornbars(i) is the i-th leading-color amplitude squared re-weighted
-c in such a way that the sum of bornbars(i) is born rather than sumborn.
-c the same holds for bornbarstilde(i).
-        enddo
+      born_weights=0d0
+      born_spin_weights=0d0
+      if (sumborn.eq.0d0) then
+c Preserve the zero-sum diagnostics even for a different selected flow.
+         do i=1,max_bcol
+            if (.not.is_leading_cflow(i)) cycle
+            flow_weight=mc_born_flow_weight(i)
+            if (flow_weight.eq.0d0) cycle
+            if (born.ne.0d0) then
+               write(*,*) 'ERROR #1, dividing by zero'
+               stop
+            endif
+            if (borntilde.ne.czero) then
+               write(*,*) 'ERROR #2, dividing by zero'
+               stop
+            endif
+         enddo
+         return
+      endif
+      if (.not.is_leading_cflow(iflow)) return
+      flow_fraction=mc_born_flow_weight(iflow)/sumborn
+      do iamp=1,amp_split_size
+         born_weights(iamp)=flow_fraction*amp_split_born(iamp)*iden_comp
+         born_spin_weights(iamp)=flow_fraction*
+     $        dble(amp_split_borntilde(iamp))*iden_comp
       enddo
-
-      return
-      end
+      end subroutine get_mbar
 
 
+      double complex function mc_born_azimuth_phase(p,xi_i_fks,
+     &     y_ij_fks,rotate_beam)
+c The spinor ratio <ij>/[ij] common to ISR and FSR barred amplitudes.
+c At the collinear endpoint use the phase retained by the FKS map;
+c in the soft region use its rescaled emitted momentum.
+      use fks_phase_space_data, only: xij_aor,p_i_fks_ev
+      implicit none
+      double precision p(0:3,nexternal),xi_i_fks,y_ij_fks
+      logical rotate_beam
+      intent(in) :: p,xi_i_fks,y_ij_fks,rotate_beam
+      integer i,i_fks,j_fks
+      common/fks_indices/i_fks,j_fks
+      double precision pi(0:3),pj(0:3),zero,vtiny
+      parameter (zero=0d0,vtiny=1d-12)
+      double complex w1(6),w2(6),w3(6),w4(6),wij_angle,wij_recta
 
+      if (1d0-y_ij_fks.lt.vtiny) then
+         mc_born_azimuth_phase=xij_aor
+         return
+      endif
+      do i=0,3
+         if (xi_i_fks.lt.1d-8) then
+            pi(i)=p_i_fks_ev(i)
+         else
+            pi(i)=p(i,i_fks)
+         endif
+         pj(i)=p(i,j_fks)
+      enddo
+      if (rotate_beam) then
+c Rotation according to innerpin.m for the second incoming leg.
+         pi(1)=-pi(1)
+         pi(3)=-pi(3)
+         pj(1)=-pj(1)
+         pj(3)=-pj(3)
+      endif
+      call IXXXSO(pi,zero,+1,+1,w1)
+      call OXXXSO(pj,zero,-1,+1,w2)
+      call IXXXSO(pi,zero,-1,+1,w3)
+      call OXXXSO(pj,zero,+1,+1,w4)
+      wij_angle=(0d0,0d0)
+      wij_recta=(0d0,0d0)
+      do i=1,4
+         wij_angle=wij_angle+w1(i)*w2(i)
+         wij_recta=wij_recta+w3(i)*w4(i)
+      enddo
+      mc_born_azimuth_phase=wij_angle/wij_recta
+      end function mc_born_azimuth_phase
 
 c Monte Carlo functions
 c
 c The invariants given in input to these routines follow FNR conventions
-c (i.e., are defined as (p+k)^2, NOT 2 p.k). 
+c (i.e., are defined as (p+k)^2, NOT 2 p.k).
 c The invariants used inside these routines follow MNR conventions
 c (i.e., are defined as -2p.k, NOT (p+k)^2)
 
@@ -2857,10 +2043,8 @@ c Herwig6
 
       double precision function zHW6(e0sq)
 c     Shower energy variable
-      use process_module
-      use kinematics_module
       implicit none
-      double precision tiny,e0sq,ss,betae0,beta,zeta,tbeta,get_zeta
+      double precision tiny,e0sq,ss,betae0,beta,zeta,tbeta
       parameter (tiny=1d-5)
 c
       if(ileg.eq.1)then
@@ -2926,14 +2110,11 @@ c
  999  continue
       zHW6=-1d0
       return
-      end
-
+      end function zHW6
 
 
       double precision function xiHW6(e0sq,z)
 c Shower evolution variable
-      use process_module
-      use kinematics_module
       implicit none
       double precision tiny,e0sq,betae0,beta,z
       parameter (tiny=1d-5)
@@ -2994,15 +2175,12 @@ c
  999  continue
       xiHW6=-1d0
       return
-      end
-
+      end function xiHW6
 
 
       double precision function xjacHW6(e0sq,xi,z)
-c Returns the jacobian d(z,xi)/d(x,y), where z and xi are the shower 
+c Returns the jacobian d(z,xi)/d(x,y), where z and xi are the shower
 c variables, and x and y are FKS variables
-      use process_module
-      use kinematics_module
       implicit none
       double precision tiny,z,xi,tmp,e0sq,beta,betae0,zmo
      $     ,tbeta,eps,dw1dx,dw2dx,dw1dy,dw2dy
@@ -3010,16 +2188,7 @@ c variables, and x and y are FKS variables
 
       if(z.lt.0d0.or.xi.lt.0d0)goto 999
 c
-      if(ileg.eq.1)then
-         if(1-x.lt.tiny)then
-            tmp=-2*shat_n1/(shat_n1*(1-yij)+4*(1+yij)*e0sq)
-         elseif(1-yij.lt.tiny)then
-            tmp=-shat_n1*x**2/(4*e0sq)
-         else
-            tmp=-shat_n1*(1-x)*z**3/(4*e0sq*(1-z)*(xi*(1-z)+z))
-         endif
-c
-      elseif(ileg.eq.2)then
+      if(ileg.eq.1.or.ileg.eq.2)then
          if(1-x.lt.tiny)then
             tmp=-2*shat_n1/(shat_n1*(1-yij)+4*(1+yij)*e0sq)
          elseif(1-yij.lt.tiny)then
@@ -3074,24 +2243,18 @@ c
  999  continue
       xjacHW6=0d0
       return
-      end
-
+      end function xjacHW6
 
 
 c Herwig7
 
       double precision function zHW7()
 c     Shower energy variable
-      use process_module
-      use kinematics_module
       implicit none
-      double precision tiny,get_zeta,zeta1,zeta2
+      double precision tiny,zeta1,zeta2
       parameter (tiny=1d-5)
 c
-      if(ileg.eq.1)then
-         zHW7=1-(1-x)*(1+yij)/2d0
-c
-      elseif(ileg.eq.2)then
+      if(ileg.eq.1.or.ileg.eq.2)then
          zHW7=1-(1-x)*(1+yij)/2d0
 c
       elseif(ileg.eq.3)then
@@ -3125,24 +2288,18 @@ c
  999  continue
       zHW7=-1d0
       return
-      end
-
+      end function zHW7
 
 
       double precision function xiHW7(z)
 c     Shower evolution variable
-      use process_module
-      use kinematics_module
       implicit none
-      double precision z,zHW7,tiny
+      double precision z,tiny
       parameter (tiny=1d-5)
 
       if(z.lt.0d0)goto 999
-c 
-      if(ileg.eq.1)then
-         xiHW7=shat_n1*(1-yij)/(1+yij)
 c
-      elseif(ileg.eq.2)then
+      if(ileg.eq.1.or.ileg.eq.2)then
          xiHW7=shat_n1*(1-yij)/(1+yij)
 c
       elseif(ileg.eq.3)then
@@ -3172,26 +2329,20 @@ c
  999  continue
       xiHW7=-1d0
       return
-      end
-
+      end function xiHW7
 
 
       double precision function xjacHW7(z)
-c Returns the jacobian d(z,xi)/d(x,y), where z and xi are the shower 
+c Returns the jacobian d(z,xi)/d(x,y), where z and xi are the shower
 c variables, and x and y are FKS variables
-      use process_module
-      use kinematics_module
       implicit none
-      double precision z,zHW7,tmp,eps,beta,dw1dx,dw2dx,dw1dy,dw2dy,tiny
+      double precision z,tmp,eps,beta,dw1dx,dw2dx,dw1dy,dw2dy,tiny
       parameter (tiny=1d-5)
 
       tmp=0d0
       if(z.lt.0d0)goto 999
 c
-      if(ileg.eq.1)then
-         tmp=-shat_n1/(1+yij)
-c
-      elseif(ileg.eq.2)then
+      if(ileg.eq.1.or.ileg.eq.2)then
          tmp=-shat_n1/(1+yij)
 c
       elseif(ileg.eq.3)then
@@ -3226,24 +2377,18 @@ c
  999  continue
       xjacHW7=0d0
       return
-      end
-
+      end function xjacHW7
 
 
 c Pythia6Q
 
       double precision function zPY6Q()
 c Shower energy variable
-      use process_module
-      use kinematics_module
       implicit none
       double precision tiny
       parameter(tiny=1d-5)
 c
-      if(ileg.eq.1)then
-         zPY6Q=x
-c
-      elseif(ileg.eq.2)then
+      if(ileg.eq.1.or.ileg.eq.2)then
          zPY6Q=x
 c
       elseif(ileg.eq.3)then
@@ -3277,22 +2422,16 @@ c
  999  continue
       zPY6Q=-1d0
       return
-      end
-
+      end function zPY6Q
 
 
       double precision function xiPY6Q()
 c     Shower evolution variable
-      use process_module
-      use kinematics_module
       implicit none
       double precision tiny
       parameter(tiny=1d-5)
 c
-      if(ileg.eq.1)then
-         xiPY6Q=shat_n1*(1-x)*(1-yij)/2
-c
-      elseif(ileg.eq.2)then
+      if(ileg.eq.1.or.ileg.eq.2)then
          xiPY6Q=shat_n1*(1-x)*(1-yij)/2
 c
       elseif(ileg.eq.3)then
@@ -3322,25 +2461,19 @@ c
  999  continue
       xiPY6Q=-1d0
       return
-      end
-
+      end function xiPY6Q
 
 
       double precision function xjacPY6Q(z)
-c Returns the jacobian d(z,xi)/d(x,y), where z and xi are the shower 
+c Returns the jacobian d(z,xi)/d(x,y), where z and xi are the shower
 c     variables, and x and y are FKS variables
-      use process_module
-      use kinematics_module
       implicit none
-      double precision tiny,zPY6Q,z,tmp,dw1dx,dw1dy,dw2dx,dw2dy
+      double precision tiny,z,tmp,dw1dx,dw1dy,dw2dx,dw2dy
       parameter (tiny=1d-5)
 
       if(z.lt.0d0)goto 999
 c
-      if(ileg.eq.1)then
-         tmp=-shat_n1*(1-x)/2
-c
-      elseif(ileg.eq.2)then
+      if(ileg.eq.1.or.ileg.eq.2)then
          tmp=-shat_n1*(1-x)/2
 c
       elseif(ileg.eq.3)then
@@ -3357,7 +2490,7 @@ c
          elseif(1-yij.lt.tiny)then
             tmp=-shat_n1*(1-x)*(shat_n1*x-xm12)/( 2*(shat_n1-xm12) )
          else
-            call dinvariants_dFKS(dw1dx,dw1dy,dw2dx,dw2dy) 
+            call dinvariants_dFKS(dw1dx,dw1dy,dw2dx,dw2dy)
             tmp=shat_n1/(shat_n1+w2-xm12)*dw2dy
          endif
 c
@@ -3371,27 +2504,18 @@ c
  999  continue
       xjacPY6Q=0d0
       return
-      end
-
+      end function xjacPY6Q
 
 
 c Pythia6PT
 
       double precision function zPY6PT()
 c Shower energy variable
-      use kinematics_module
       implicit none
-      if(ileg.eq.1)then
+      if(ileg.eq.1.or.ileg.eq.2)then
          zPY6PT=x
 c
-      elseif(ileg.eq.2)then
-         zPY6PT=x
-c
-      elseif(ileg.eq.3)then
-         write(*,*)'PYTHIA6PT not available for FSR'
-         stop
-c
-      elseif(ileg.eq.4)then
+      elseif(ileg.eq.3.or.ileg.eq.4)then
          write(*,*)'PYTHIA6PT not available for FSR'
          stop
 c
@@ -3406,27 +2530,17 @@ c
  999  continue
       zPY6PT=-1d0
       return
-      end
-
+      end function zPY6PT
 
 
       double precision function xiPY6PT()
 c Shower evolution variable
-      use process_module
-      use kinematics_module
       implicit none
 
-      if(ileg.eq.1)then
+      if(ileg.eq.1.or.ileg.eq.2)then
          xiPY6PT=shat_n1*(1-x)**2*(1-yij)/2
 c
-      elseif(ileg.eq.2)then
-         xiPY6PT=shat_n1*(1-x)**2*(1-yij)/2
-c
-      elseif(ileg.eq.3)then
-         write(*,*)'PYTHIA6PT not available for FSR'
-         stop
-c
-      elseif(ileg.eq.4)then
+      elseif(ileg.eq.3.or.ileg.eq.4)then
          write(*,*)'PYTHIA6PT not available for FSR'
          stop
 c
@@ -3441,28 +2555,18 @@ c
  999  continue
       xiPY6PT=-1d0
       return
-      end
-
+      end function xiPY6PT
 
 
       double precision function xjacPY6PT()
-c Returns the jacobian d(z,xi)/d(x,y), where z and xi are the shower 
+c Returns the jacobian d(z,xi)/d(x,y), where z and xi are the shower
 c     variables, and x and y are FKS variables
-      use process_module
-      use kinematics_module
       implicit none
       double precision tmp
-      if(ileg.eq.1)then
+      if(ileg.eq.1.or.ileg.eq.2)then
          tmp=-shat_n1*(1-x)**2/2
 c
-      elseif(ileg.eq.2)then
-         tmp=-shat_n1*(1-x)**2/2
-c
-      elseif(ileg.eq.3)then
-         write(*,*)'PYTHIA6PT not available for FSR'
-         stop
-c
-      elseif(ileg.eq.4)then
+      elseif(ileg.eq.3.or.ileg.eq.4)then
          write(*,*)'PYTHIA6PT not available for FSR'
          stop
 c
@@ -3476,24 +2580,18 @@ c
  999  continue
       xjacPY6PT=0d0
       return
-      end
-
+      end function xjacPY6PT
 
 
 c Pythia8
 
       double precision function zPY8()
 c Shower energy variable
-      use process_module
-      use kinematics_module
       implicit none
       double precision tiny,omz
       parameter(tiny=1d-5)
 c
-      if(ileg.eq.1)then
-         zPY8=x
-c
-      elseif(ileg.eq.2)then
+      if(ileg.eq.1.or.ileg.eq.2)then
          zPY8=x
 c
       elseif(ileg.eq.3)then
@@ -3523,24 +2621,18 @@ c
  999  continue
       zPY8=-1d0
       return
-      end
-
+      end function zPY8
 
 
       double precision function xiPY8(z)
 c Shower evolution variable
-      use process_module
-      use kinematics_module
       implicit none
-      double precision tiny,z,zPY8,z0,omz,gap
+      double precision tiny,z,z0,omz,gap
       parameter(tiny=1d-5)
 
       if(z.lt.0d0)goto 999
 c
-      if(ileg.eq.1)then
-         xiPY8=shat_n1*(1-x)**2*(1-yij)/2
-c
-      elseif(ileg.eq.2)then
+      if(ileg.eq.1.or.ileg.eq.2)then
          xiPY8=shat_n1*(1-x)**2*(1-yij)/2
 c
       elseif(ileg.eq.3)then
@@ -3569,27 +2661,21 @@ c
  999  continue
       xiPY8=-1d0
       return
-      end
-
+      end function xiPY8
 
 
       double precision function xjacPY8(z)
-c Returns the jacobian d(z,xi)/d(x,y), where z and xi are the shower 
+c Returns the jacobian d(z,xi)/d(x,y), where z and xi are the shower
 c variables, and x and y are FKS variables
-      use process_module
-      use kinematics_module
       implicit none
-      double precision tiny,z,z0,zPY8,dw1dx,dw1dy,dw2dx,dw2dy,tmp
+      double precision tiny,z,z0,dw1dx,dw1dy,dw2dx,dw2dy,tmp
      &     ,omz,geometry
 !     Use the same endpoint expansion threshold as zPY8 and xiPY8.
       parameter(tiny=1d-5)
 
       if(z.lt.0d0)goto 999
 c
-      if(ileg.eq.1)then
-         tmp=-shat_n1*(1-x)**2/2
-c
-      elseif(ileg.eq.2)then
+      if(ileg.eq.1.or.ileg.eq.2)then
          tmp=-shat_n1*(1-x)**2/2
 c
       elseif(ileg.eq.3)then
@@ -3621,10 +2707,9 @@ c
  999  continue
       xjacPY8=0d0
       return
-      end
+      end function xjacPY8
 
 c End of Monte Carlo functions
-
 
 
       function get_zeta(xs,xw1,xw2,xxm12,xxm22)
@@ -3638,8 +2723,7 @@ c
      &         ( (xs-xw1)*beta*(2*xs-(xs-xw1)*eps+(xs-xw1)*beta) )
 c
       return
-      end
-
+      end function get_zeta
 
 
       function emscafun(x,alpha)
@@ -3653,29 +2737,15 @@ c
          emscafun=x**(2*alpha)/(x**(2*alpha)+(1-x)**(2*alpha))
       endif
       return
-      end
+      end function emscafun
 
-
-
-      function emscainv(r,alpha)
-c Inverse of emscafun, implemented only for alpha=1 for the moment
-      implicit none
-      double precision emscainv,r,alpha
-c
-      if(r.lt.0d0.or.r.gt.1d0.or.alpha.ne.1d0)then
-         write(*,*)'Fatal error in emscafun'
-         stop
-      endif
-      emscainv=sqrt(r)/(sqrt(r)+sqrt(1d0-r))
-      return
-      end
 
 
 
       function bogus_probne_fun(qMC)
       implicit none
       double precision bogus_probne_fun,qMC
-      double precision x,tmp,emscafun
+      double precision x,tmp
       integer itype
 ! Artificial no-emission factor for the non-Delta debugging path.
 ! Mode 2 is smooth: P=0 below 0.5 GeV and P=1 above 10 GeV.
@@ -3701,8 +2771,7 @@ c No (bogus) sudakov factor
       endif
       bogus_probne_fun=tmp
       return
-      end
-
+      end function bogus_probne_fun
 
 
       function get_angle(p1,p2)
@@ -3732,20 +2801,18 @@ c
       get_angle=acos(cosine)
 
       return
-      end
+      end function get_angle
 
 
       subroutine dinvariants_dFKS(dw1dx,dw1dy,dw2dx,dw2dy)
-      use fks_phase_space_data, only: veckn_ev,veckbarn_ev,xp0jfks
+      use fks_phase_space_data, only: veckn_ev
 c Returns derivatives of Mandelstam invariants with respect to FKS variables
       use process_module
-      use kinematics_module
       implicit none
       double precision s,dw1dx,dw2dx,dw1dy,dw2dy
       double precision afun,bfun,cfun,mom_fks_sister_p,mom_fks_sister_m,
      &diff_p,diff_m,signfac,dadx,dady,dbdx,dbdy,dcdx,dcdy,mom_fks_sister,
-     &dmomfkssisdx,dmomfkssisdy,en_fks,en_fks_sister,dq1cdx,dq2qdx,dq1cdy,
-     &dq2qdy
+     &dmomfkssisdx,dmomfkssisdy,en_fks,en_fks_sister
       double precision tiny
       parameter(tiny=1d-5)
 
@@ -3799,14 +2866,8 @@ c Determine correct sign
          dw2dy=-dw1dy
 c
       elseif(ileg.eq.4)then
-c$$$         dq1cdx=-(1-yi)*(s*(1+yj)+xm12*(1-yj))/(1+yj+x*(1-yj))**2
-c$$$         dq2qdx=-(1+yi)*(s*(1+yj)+xm12*(1-yj))/(1+yj+x*(1-yj))**2
-c$$$         dw1dx=dq1cdx+dq2qdx
          dw1dx=-2*(s*(1+yij)+xm12*(1-yij))/(1+yij+x*(1-yij))**2
          dw2dx=(1-yij)*(s*(1+yij-x*(2*(1+yij)+x*(1-yij)))+2*xm12)/(1+yij+x*(1-yij))**2
-c$$$         dq1cdy=(1-x)*(1-yi)*(s*x-xm12)/(1+yj+x*(1-yj))**2
-c$$$         dq2qdy=(1-x)*(1+yi)*(s*x-xm12)/(1+yj+x*(1-yj))**2
-c$$$         dw1dy=dq1cdy+dq2qdy
          dw1dy=(1-x)*2*(s*x-xm12)/(1+yij+x*(1-yij))**2
          dw2dy=-2*(1-x)*(s*x-xm12)/(1+yij+x*(1-yij))**2
 c
@@ -3816,25 +2877,20 @@ c
       endif
 
       return
-      end
-
+      end subroutine dinvariants_dFKS
 
 
       subroutine get_dead_zone(z,xi,p_born,qMC,ipartner,lzone,PY6PTweight)
       use process_module
-      use kinematics_module
       use scale_module
       implicit none
-      include 'nexternal.inc'
       integer ipartner,i
       double precision z,xi,qMC,PY6PTweight
       logical lzone
 
       double precision p_born(0:3,nexternal-1)
-      double precision upscale2,xmp2,xmm2,xmr2,ww,Q2,lambda
-     $     ,e0sq,beta,ycc,mdip,mdip_g,zp1,zm1,zp2,zm2,zp3,zm3,get_angle
-     $     ,theta2p,max_scale
-      external get_angle
+      double precision upscale2,xmp2,xmm2,xmr2,ww,Q2,lambda,e0sq,beta,ycc,mdip,mdip_g,zp1,zm1,zp2,zm2,zp3,zm3,theta2p
+     $     ,max_scale
 
       double precision ppartner(0:3),pfather(0:3)
 
@@ -3843,6 +2899,8 @@ c
       double precision parp67
       parameter (mstj50=2,mstp67=2,parp67=1d0)
 
+c Define the auxiliary weight even for an invalid shower point.
+      PY6PTweight=1d0
 c Skip if unphysical shower variables
       if(z.lt.0d0.or.xi.lt.0d0) then
          lzone=.false.
@@ -3851,14 +2909,14 @@ c Skip if unphysical shower variables
 
 c Definition and initialisation of variables
       lzone=.true.
-      PY6PTweight=-1d0
       max_scale=shower_scale_nbody_max(fksfather,ipartner)
       do i=0,3
          pfather(i)=p_born(i,fksfather) ! father momentum (Born level)
          ppartner(i)=p_born(i,ipartner) ! partner momentum (Born level)
       enddo
       e0sq=dot(ppartner,pfather)
-      theta2p=get_angle(ppartner,pfather)**2
+      if (shower_mc_mod(1:8).eq.'PYTHIA6Q')
+     &     theta2p=get_angle(ppartner,pfather)**2
       if(ileg.eq.3 .or. ileg.eq.4) then
          if (ileg.eq.3) then
             xmm2=xm12           ! emitter mass squared
@@ -3894,7 +2952,7 @@ c Definition and initialisation of variables
             zm3=(1-sqrt(1-4*xi/mdip_g**2))/2 ! for the global recoil
          endif
       endif
-      
+
 c Dead zones
 c IMPLEMENT QED DZ's!
       if(shower_mc_mod(1:7).eq.'HERWIG6')then
@@ -3947,39 +3005,500 @@ c
       if (qMC.gt.max_scale) lzone=.false.
 
       return
-      end
+      end subroutine get_dead_zone
 
 
 
-      function charge(ipdg)
-c computes the electric charge given the pdg code
-      implicit none
-      integer ipdg
-      double precision charge,tmp,dipdg
+c Shower-history preparation, invariants, damping scale and G functions.
+c These helpers share the same active history as the analytic kernels.
 
-      dipdg=dble(ipdg)
-c quarks
-      if(abs(dipdg).eq.1) tmp=-1d0/3d0*sign(1d0,dipdg)
-      if(abs(dipdg).eq.2) tmp= 2d0/3d0*sign(1d0,dipdg)
-      if(abs(dipdg).eq.3) tmp=-1d0/3d0*sign(1d0,dipdg)
-      if(abs(dipdg).eq.4) tmp= 2d0/3d0*sign(1d0,dipdg)
-      if(abs(dipdg).eq.5) tmp=-1d0/3d0*sign(1d0,dipdg)
-      if(abs(dipdg).eq.6) tmp= 2d0/3d0*sign(1d0,dipdg)
-c leptons
-      if(abs(dipdg).eq.11)tmp=-1d0*sign(1d0,dipdg)
-      if(abs(dipdg).eq.12)tmp= 0d0
-      if(abs(dipdg).eq.13)tmp=-1d0*sign(1d0,dipdg)
-      if(abs(dipdg).eq.14)tmp= 0d0
-      if(abs(dipdg).eq.15)tmp=-1d0*sign(1d0,dipdg)
-      if(abs(dipdg).eq.16)tmp= 0d0
-c bosons
-      if(dipdg.eq.21)     tmp= 0d0
-      if(dipdg.eq.22)     tmp= 0d0
-      if(dipdg.eq.23)     tmp= 0d0
-      if(abs(dipdg).eq.24)tmp= 1d0*sign(1d0,dipdg)
-      if(dipdg.eq.25)     tmp= 0d0
+      double precision function get_qMC(xi_i_fks,y_ij_fks)
+c This is the (relative) pT of the splitting. For some showers this is
+c equal to the shower variable, but not for all. This is what is used for
+c the damping.
+        implicit none
+        double precision :: xi_i_fks,y_ij_fks
+        if(ileg.eq.1)then
+           get_qMC=qMC_ileg1(xi_i_fks,y_ij_fks)
+        elseif(ileg.eq.2)then
+           get_qMC=qMC_ileg2(xi_i_fks,y_ij_fks)
+        elseif(ileg.eq.3)then
+           get_qMC=qMC_ileg3(xi_i_fks,y_ij_fks)
+        elseif(ileg.eq.4)then
+           get_qMC=qMC_ileg4(xi_i_fks,y_ij_fks)
+        endif
+        if(get_qMC.lt.0d0)then
+           write(*,*) 'Error in get_qMC: qMC=',get_qMC
+           stop 1
+        endif
+      end function get_qMC
+
+
+      double precision function qMC_ileg1(xi_i_fks,y_ij_fks)
+        implicit none
+        double precision :: xi_i_fks,y_ij_fks
+        if(shower_mc_mod.eq.'HERWIG6'  .or.
+     $     shower_mc_mod.eq.'HERWIG7') qMC_ileg1=xi_i_fks/2d0*sqrt(shat_n1*(1-y_ij_fks**2))
+        if(shower_mc_mod.eq.'PYTHIA6Q') qMC_ileg1=sqrt(-xtk)
+        if(shower_mc_mod.eq.'PYTHIA6PT'.or.
+     $     shower_mc_mod.eq.'PYTHIA8') qMC_ileg1=sqrt(-xtk*xi_i_fks)
+      end function qMC_ileg1
+
+      double precision function qMC_ileg2(xi_i_fks,y_ij_fks)
+        implicit none
+        double precision :: xi_i_fks,y_ij_fks
+        if(shower_mc_mod.eq.'HERWIG6'  .or.
+     $     shower_mc_mod.eq.'HERWIG7') qMC_ileg2=xi_i_fks/2d0*sqrt(shat_n1*(1-y_ij_fks**2))
+        if(shower_mc_mod.eq.'PYTHIA6Q') qMC_ileg2=sqrt(-xuk)
+        if(shower_mc_mod.eq.'PYTHIA6PT'.or.
+     $     shower_mc_mod.eq.'PYTHIA8') qMC_ileg2=sqrt(-xuk*xi_i_fks)
+      end function qMC_ileg2
+
+      double precision function qMC_ileg3(xi_i_fks,y_ij_fks)
+        implicit none
+        double precision :: xi_i_fks,y_ij_fks,zeta1,qMCarg,z,omz,gap
+        if(shower_mc_mod.eq.'HERWIG6'.or.
+     $     shower_mc_mod.eq.'HERWIG7')then
+           zeta1=get_zeta(shat_n1,w1,w2,xm12,xm22)
+           qMCarg=zeta1*((1-zeta1)*w1-zeta1*xm12)
+           if(qMCarg.lt.0d0.and.qMCarg.ge.-tiny) qMCarg=0d0
+           if(qMCarg.lt.-tiny) then
+              write(*,*) 'Error 1 in qMC_ileg3: negtive sqrt'
+              write(*,*) qMCarg
+              stop 1
+           endif
+           qMC_ileg3=sqrt(qMCarg)
+        elseif(shower_mc_mod.eq.'PYTHIA6Q')then
+           qMC_ileg3=sqrt(w1+xm12)
+        elseif(shower_mc_mod.eq.'PYTHIA6PT')then
+           write(*,*)'PYTHIA6PT not available for FSR'
+           stop
+        elseif(shower_mc_mod.eq.'PYTHIA8')then
+           call py8_massive_fsr_fractions(xi_i_fks,y_ij_fks,z,omz)
+           gap=xm12/(kn0+kn)+(1d0-y_ij_fks)*kn
+           qMC_ileg3=sqrt(z*omz*sqrt(shat_n1)*xi_i_fks*gap)
+        endif
+      end function qMC_ileg3
+
+      subroutine py8_massive_fsr_fractions(xi_i_fks,y_ij_fks,z,omz)
+        implicit none
+        double precision :: xi_i_fks,y_ij_fks,z,omz,eminus,gap,emitted
+c Undo PYTHIA's massive daughter rescaling using the real radiator.
+c E-k=m^2/(E+k) avoids cancellation for a small radiator mass.
+c Keep the exact finite-xi terms even when xi is comparable to m^2/shat.
+c Share the fractions with zPY8, xiPY8 and xjacPY8 so the damping and
+c support scale stays consistent with the radiation variable at endpoints.
+        eminus=xm12/(kn0+kn)
+        gap=eminus+(1d0-y_ij_fks)*kn
+        emitted=sqrt(shat_n1)*xi_i_fks/2d0
+        z=(eminus**2+2d0*kn0*kn*(1d0-y_ij_fks))/(2d0*gap*(kn0+emitted))
+        omz=(xm12/(2d0*gap)+emitted)/(kn0+emitted)
+      end subroutine py8_massive_fsr_fractions
+
+      double precision function qMC_ileg4(xi_i_fks,y_ij_fks)
+        implicit none
+        double precision :: xi_i_fks,y_ij_fks,zeta2,qMCarg,z,omz
+        if(shower_mc_mod.eq.'HERWIG6'.or.shower_mc_mod.eq.'HERWIG7')then
+           zeta2=get_zeta(shat_n1,w2,w1,xm22,xm12)
+           qMCarg=zeta2*(1d0-zeta2)*w2
+           if(qMCarg.lt.0d0.and.qMCarg.ge.-tiny) qMCarg=0d0
+           if(qMCarg.lt.-tiny)then
+              write(*,*)'Error 1 in qMC_ileg4: negtive sqrt'
+              write(*,*)qMCarg
+              stop 1
+           endif
+           qMC_ileg4=sqrt(qMCarg)
+        elseif(shower_mc_mod.eq.'PYTHIA6Q')then
+           qMC_ileg4=sqrt(w2)
+        elseif(shower_mc_mod.eq.'PYTHIA6PT')then
+           write(*,*)'PYTHIA6PT not available for FSR'
+           stop
+        elseif(shower_mc_mod.eq.'PYTHIA8')then
+           omz=shat_n1*xi_i_fks/(shat_n1+w2-xm12)
+           z=1d0-omz
+           qMC_ileg4=sqrt(z*omz*w2)
+        endif
+      end function qMC_ileg4
+
+      subroutine fill_father_and_ileg(i_fks,j_fks,mass)
+        implicit none
+        double precision :: mass
+        integer :: i_fks,j_fks
+        fksfather=min(i_fks,j_fks)
+        jmass=mass ! this is the mass of j_fks
+c Determine ileg
+        call fill_ileg()
+      end subroutine fill_father_and_ileg
+
+
+      subroutine prepare_mc_kinematics(pp,i_fks,j_fks,xi_i_fks,y_ij_fks,mass,include_gfun)
+        use fks_phase_space_data, only: veckn_ev,veckbarn_ev,xp0jfks
+c takes an n+1-body phase-space point, and fills invariants relevant for
+c computation of shower subtraction terms
+        implicit none
+        double precision,dimension(0:3,next_n1) :: pp
+        double precision :: xi_i_fks,y_ij_fks,mass
+        logical :: include_gfun
+        integer :: i_fks,j_fks
+        double precision :: pshower(0:3,next_n1)
+
+        call fill_father_and_ileg(i_fks,j_fks,mass)
+
+        xm12=0d0
+        xm22=0d0
+        xq1q=0d0
+        xq2q=0d0
+        kn=veckn_ev
+        knbar=veckbarn_ev
+        kn0=xp0jfks
+        call resonance_shower_frame(pp,i_fks,j_fks,pshower,
+     $     kn,knbar,kn0,shat_n1)
+
+
+c fill the momenta for the recoilers and emitters and emitted.
+        call get_momenta_emitter_recoiler(pshower,i_fks,j_fks)
+
+c Determine the Mandelstam invariants needed in the MC functions in terms
+c of FKS variables: the argument of MC functions are (p+k)^2, NOT 2 p.k
 c
-      charge=tmp
+c Definitions of invariants in terms of momenta
+c
+c xm12 =     xk1 . xk1
+c xm22 =     xk2 . xk2
+c xtk  = - 2 xp1 . xk3
+c xuk  = - 2 xp2 . xk3
+c xq1q = - 2 xp1 . xk1 + xm12
+c xq2q = - 2 xp2 . xk2 + xm22
+c w1   = + 2 xk1 . xk3        = - xq1q + xq2q - xtk
+c w2   = + 2 xk2 . xk3        = - xq2q + xq1q - xuk
+c xq1c = - 2 xp1 . xk2        = - s - xtk - xq1q + xm12
+c xq2c = - 2 xp2 . xk1        = - s - xuk - xq2q + xm22
+c
+c Parametrisation of invariants in terms of FKS variables
+c
+c ileg = 1
+c xp1  =  sqrt(s)/2 * ( 1 , 0 , 0 , 1 )
+c xp2  =  sqrt(s)/2 * ( 1 , 0 , 0 , -1 )
+c xk3  =  B * ( 1 , 0 , sqrt(1-yij**2) , yij )
+c xk1  =  irrelevant
+c xk2  =  irrelevant
+c yij = y_ij_fks
+c x = 1 - xi_i_fks
+c B = sqrt(s)/2*(1-x)
+c
+c ileg = 2
+c xp1  =  sqrt(s)/2 * ( 1 , 0 , 0 , 1 )
+c xp2  =  sqrt(s)/2 * ( 1 , 0 , 0 , -1 )
+c xk3  =  B * ( 1 , 0 , sqrt(1-yij**2) , -yij )
+c xk1  =  irrelevant
+c xk2  =  irrelevant
+c yij = y_ij_fks
+c x = 1 - xi_i_fks
+c B = sqrt(s)/2*(1-x)
+c
+c ileg = 3
+c xp1  =  sqrt(s)/2 * ( 1 , 0 , sqrt(1-yi**2) , yi )
+c xp2  =  sqrt(s)/2 * ( 1 , 0 , -sqrt(1-yi**2) , -yi )
+c xk1  =  ( sqrt(veckn_ev**2+xm12) , 0 , 0 , veckn_ev )
+c xk2  =  xp1 + xp2 - xk1 - xk3
+c xk3  =  B * ( 1 , 0 , sqrt(1-yij**2) , yij )
+c yij = y_ij_fks
+c yi = irrelevant
+c x = 1 - xi_i_fks
+c veckn_ev is such that xk2**2 = xm22
+c B = sqrt(s)/2*(1-x)
+c azimuth = irrelevant (hence set = 0)
+c
+c ileg = 4
+c xp1  =  sqrt(s)/2 * ( 1 , 0 , sqrt(1-yi**2) , yi )
+c xp2  =  sqrt(s)/2 * ( 1 , 0 , -sqrt(1-yi**2) , -yi )
+c xk1  =  xp1 + xp2 - xk2 - xk3
+c xk2  =  A * ( 1 , 0 , 0 , 1 )
+c xk3  =  B * ( 1 , 0 , sqrt(1-yij**2) , yij )
+c yij = y_ij_fks
+c yi = irrelevant
+c x = 1 - xi_i_fks
+c A = (s*x-xm12)/(sqrt(s)*(2-(1-x)*(1-yij)))
+c B = sqrt(s)/2*(1-x)
+c azimuth = irrelevant (hence set = 0)
 
-      return
-      end
+        if(ileg.eq.1)then
+           call fill_invariants_ileg1(xi_i_fks,y_ij_fks)
+           call check_invariants_ileg12
+        elseif(ileg.eq.2)then
+           call fill_invariants_ileg2(xi_i_fks,y_ij_fks)
+           call check_invariants_ileg12
+        elseif(ileg.eq.3)then
+           call fill_invariants_ileg3(xi_i_fks,y_ij_fks)
+           call check_invariants_ileg3
+        elseif(ileg.eq.4)then
+           call fill_invariants_ileg4(xi_i_fks,y_ij_fks)
+           call check_invariants_ileg4
+        else
+           write(*,*)'Error 4 in prepare_mc_kinematics: assigned wrong ileg'
+           stop
+        endif
+        x=1d0-xi_i_fks
+        yij=y_ij_fks
+        betad=sqrt((1d0-(xm12-xm22)/shat_n1)**2-(4d0*xm22/shat_n1))
+        betas=1d0+(xm12-xm22)/shat_n1
+        if (include_gfun) call compute_gfun()
+      end subroutine prepare_mc_kinematics
+
+
+      subroutine fill_invariants_ileg1(xi_i_fks,y_ij_fks)
+        implicit none
+        double precision :: xi_i_fks,y_ij_fks
+        xtk=-shat_n1*xi_i_fks*(1-y_ij_fks)/2d0
+        xuk=-shat_n1*xi_i_fks*(1+y_ij_fks)/2d0
+      end subroutine fill_invariants_ileg1
+
+      subroutine fill_invariants_ileg2(xi_i_fks,y_ij_fks)
+        implicit none
+        double precision :: xi_i_fks,y_ij_fks
+        xtk=-shat_n1*xi_i_fks*(1+y_ij_fks)/2d0
+        xuk=-shat_n1*xi_i_fks*(1-y_ij_fks)/2d0
+      end subroutine fill_invariants_ileg2
+
+      subroutine fill_invariants_ileg3(xi_i_fks,y_ij_fks)
+        implicit none
+        double precision :: xi_i_fks,y_ij_fks
+        xm12=jmass**2
+        xm22=dot(pp_rec,pp_rec)
+        xtk=-2d0*dot(xp1,xk3)
+        xuk=-2d0*dot(xp2,xk3)
+        xq1q=-2d0*dot(xp1,xk1)+xm12
+        xq2q=-2d0*dot(xp2,xk2)+xm22
+        w1=-xq1q+xq2q-xtk
+        w2=-xq2q+xq1q-xuk
+      end subroutine fill_invariants_ileg3
+
+      subroutine fill_invariants_ileg4(xi_i_fks,y_ij_fks)
+        implicit none
+        double precision :: xi_i_fks,y_ij_fks
+        xm12=dot(pp_rec,pp_rec)
+        xm22=0d0
+        xtk=-2d0*dot(xp1,xk3)
+        xuk=-2d0*dot(xp2,xk3)
+        xij=2d0*(1d0-xm12/shat_n1-xi_i_fks)/(2d0-xi_i_fks*(1d0-y_ij_fks))
+        w2=shat_n1*xi_i_fks*xij*(1d0-y_ij_fks)/2d0
+        xq2q=-shat_n1*xij*(2d0-dot(xp1,xk2)*4d0/(shat_n1*xij))/2d0
+        xq1q=xuk+xq2q+w2
+        w1=-xq1q+xq2q-xtk
+      end subroutine fill_invariants_ileg4
+
+
+      subroutine fill_ileg()
+        implicit none
+c ileg = 1 ==> emission from left     incoming parton
+c ileg = 2 ==> emission from right    incoming parton
+c ileg = 3 ==> emission from massive  outgoing parton
+c ileg = 4 ==> emission from massless outgoing parton
+c Instead of jmass, one should use pmass(fksfather), but the
+c kernels where pmass(fksfather) != jmass are non-singular
+        if(fksfather.le.2 .and. fksfather.gt.0)then
+           ileg=fksfather
+        elseif(jmass.ne.0d0)then
+           ileg=3
+        elseif(jmass.eq.0d0)then
+           ileg=4
+        else
+           write(*,*)'Error 1 in get_ileg: unknown ileg'
+           write(*,*)ileg,fksfather,jmass
+           stop
+        endif
+        if(ileg.gt.2 .and. shower_mc_mod.eq.'PYTHIA6PT')then
+           write (*,*) 'FSR not allowed when matching PY6PT'
+           stop 1
+        endif
+      end subroutine fill_ileg
+
+
+
+      subroutine get_momenta_emitter_recoiler(pp,i_fks,j_fks)
+        implicit none
+        double precision,dimension(0:3,next_n1) :: pp
+        integer :: i_fks,j_fks
+c Determine and assign momenta:
+c xp1 = incoming left parton  (emitter (recoiler) if ileg = 1 (2))
+c xp2 = incoming right parton (emitter (recoiler) if ileg = 2 (1))
+c xk1 = outgoing parton       (emitter (recoiler) if ileg = 3 (4))
+c xk2 = outgoing parton       (emitter (recoiler) if ileg = 4 (3))
+c xk3 = extra parton          (FKS parton)
+c (xk1 and xk2 are never used for ISR)
+        xp1(0:3)=pp(0:3,1)
+        xp2(0:3)=pp(0:3,2)
+        xk3(0:3)=pp(0:3,i_fks)
+        if(ileg.gt.2)pp_rec(0:3)=pp(0:3,1)+pp(0:3,2)-pp(0:3,i_fks)-pp(0:3,j_fks)
+        if(ileg.eq.3)then
+           xk1(0:3)=pp(0:3,j_fks)
+           xk2(0:3)=pp_rec(0:3)
+        elseif(ileg.eq.4)then
+           xk1(0:3)=pp_rec(0:3)
+           xk2(0:3)=pp(0:3,j_fks)
+        endif
+      end subroutine get_momenta_emitter_recoiler
+
+
+
+      subroutine check_invariants_ileg12
+        implicit none
+        integer,parameter :: max_imprecision=10
+        integer,save,dimension(7) :: imprecision=0
+        if((abs(xtk+2*dot(xp1,xk3))/shat_n1.ge.tiny).or.
+     $     (abs(xuk+2*dot(xp2,xk3))/shat_n1.ge.tiny))then
+           write(*,*)'Warning: imprecision 1 in check_invariants_ileg12'
+           write(*,*)abs(xtk+2*dot(xp1,xk3))/shat_n1,
+     $     abs(xuk+2*dot(xp2,xk3))/shat_n1
+           imprecision(1)=imprecision(1)+1
+           if (imprecision(1).ge.max_imprecision) then
+              write (*,*) 'Error: ',max_imprecision
+     $     ,' imprecisions. Stopping...'
+              stop
+           endif
+        endif
+      end subroutine check_invariants_ileg12
+
+      subroutine check_invariants_ileg3
+        implicit none
+        integer,parameter :: max_imprecision=10
+        integer,save,dimension(7) :: imprecision=0
+        if(sqrt(w1+xm12).ge.sqrt(shat_n1)-sqrt(xm22))then
+           write(*,*)'Warning: imprecision 2 in check_invariants_ileg3'
+           write(*,*)sqrt(w1),sqrt(shat_n1),xm22
+           imprecision(2)=imprecision(2)+1
+           if (imprecision(2).ge.max_imprecision) then
+              write (*,*) 'Error: ',max_imprecision
+     $     ,' imprecisions. Stopping...'
+              stop
+           endif
+        endif
+        if(((abs(w1-2*dot(xk1,xk3))/shat_n1.ge.tiny)).or.
+     $     ((abs(w2-2*dot(xk2,xk3))/shat_n1.ge.tiny)))then
+           write(*,*)'Warning: imprecision 3 in check_invariants_ileg3'
+           write(*,*)abs(w1-2*dot(xk1,xk3))/shat_n1,
+     $     abs(w2-2*dot(xk2,xk3))/shat_n1
+           imprecision(3)=imprecision(3)+1
+           if (imprecision(3).ge.max_imprecision) then
+              write (*,*) 'Error: ',max_imprecision
+     $     ,' imprecisions. Stopping...'
+              stop
+           endif
+        endif
+        if(xm12.eq.0d0)then
+           write(*,*)'Warning 4 in check_invariants_ileg3'
+           imprecision(4)=imprecision(4)+1
+           if (imprecision(4).ge.max_imprecision) then
+              write (*,*) 'Error: ',max_imprecision
+     $     ,' warnings. Stopping...'
+              stop
+           endif
+        endif
+      end subroutine check_invariants_ileg3
+
+      subroutine check_invariants_ileg4
+        implicit none
+        integer,parameter :: max_imprecision=10
+        integer,save,dimension(7) :: imprecision=0
+        if(sqrt(w2).ge.sqrt(shat_n1)-sqrt(xm12))then
+           write(*,*)'Warning: imprecision 5 in check_invariants_ileg4'
+           write(*,*)sqrt(w2),sqrt(shat_n1),xm12
+           imprecision(5)=imprecision(5)+1
+           if (imprecision(5).ge.max_imprecision) then
+              write (*,*) 'Error: ',max_imprecision
+     $     ,' imprecisions. Stopping...'
+              stop
+           endif
+        endif
+        if(((abs(w2-2*dot(xk2,xk3))/shat_n1.ge.tiny)).or.
+     $     ((abs(xq2q+2*dot(xp2,xk2))/shat_n1.ge.tiny)).or.
+     $     ((abs(xq1q+2*dot(xp1,xk1)-xm12)/shat_n1.ge.tiny)))then
+           write(*,*)'Warning: imprecision 6 in check_invariants_ileg4'
+           write(*,*)abs(w2-2*dot(xk2,xk3))/shat_n1,
+     $     abs(xq2q+2*dot(xp2,xk2))/shat_n1,
+     $     abs(xq1q+2*dot(xp1,xk1)-xm12)/shat_n1
+           imprecision(6)=imprecision(6)+1
+           if (imprecision(6).ge.max_imprecision) then
+              write (*,*) 'Error: ',max_imprecision
+     $     ,' imprecisions. Stopping...'
+              stop
+           endif
+        endif
+        if(xm22.ne.0d0)then
+           write(*,*)'Warning 7 in check_invariants_ileg4'
+           imprecision(7)=imprecision(7)+1
+           if (imprecision(7).ge.max_imprecision) then
+              write (*,*) 'Error: ',max_imprecision
+     $     ,' warnings. Stopping...'
+              stop
+           endif
+        endif
+      end subroutine check_invariants_ileg4
+
+      subroutine compute_gfun()
+        implicit none
+        include 'fks_powers.inc'
+        double precision :: delta
+        double precision,parameter :: ymin=0.9d0
+        double precision alsf,besf
+        common/cgfunsfp/alsf,besf
+        double precision alazi,beazi
+        common/cgfunazi/alazi,beazi
+        if(ileg.le.2)then
+           delta=min(1d0,deltaI)
+        elseif(ileg.ge.3)then
+           delta=min(1d0,deltaO)
+        endif
+c See for details on how the limits work out e.g. Paolo's PhD thesis
+        gfactsf=gfunction(x,alsf,besf,2d0) ! x=1-xi_i_fks, so gfactsf is zero in the soft limit
+        gfactcl=gfunction(yij,alsf,-(1d0-ymin),1d0) ! yij=y_ij_fks, so gfactcl is zero in the collinear limit
+        gfactazi=0d0
+        if(alazi.lt.0d0)gfactazi=1-gfunction(yij,-alazi,beazi,delta)
+      end subroutine compute_gfun
+
+
+      double precision function gfunction(w,alpha,beta,delta)
+c Gets smoothly to 0 as w goes to 1.
+c Call with
+c   alpha > 1, or alpha < 0; if alpha < 0, gfunction = 1;
+c   0 < |beta| <= 1;
+c   0 < delta <= 2.
+        implicit none
+        double precision,parameter :: tiny=1d-5,cutoff=1d0,cutoff2=0.99d0
+        double precision :: alpha,beta,delta,w,wmin,wg,tt,tmp
+        gfunction=1d0
+        if(alpha.gt.0d0)then
+           if(beta.lt.0d0)then
+              wmin=0d0
+           else
+              wmin=max(0d0,1d0-delta)
+           endif
+           wg=min(1d0-(1d0-wmin)*abs(beta),cutoff-tiny)
+           if(abs(w).gt.wg.and.abs(w).lt.cutoff2)then
+              tt=(abs(w)-wg)/(cutoff-wg)
+              if(tt.gt.1d0)then
+                 write(*,*)'Fatal error in gfunction',tt
+                 stop
+              endif
+              gfunction=(1d0-tt)**(2*alpha)/(tt**(2*alpha)+(1d0-tt)**(2*alpha))
+           elseif(abs(w).ge.cutoff2)then
+              gfunction=0d0
+           endif
+        endif
+      end function gfunction
+
+      double precision function mc_shower_scale_mass()
+c Preserve the legacy massive-FSR bound from the prepared shower state.
+c Scale generation receives this value explicitly, avoiding a dependency
+c on the counterterm module. Other showers and Born-only paths do not
+c read the massive invariant, just as in the original scale prescription.
+      use process_module, only: abrv_mod
+      implicit none
+      mc_shower_scale_mass=0d0
+      if (abrv_mod.ne.'born'.and.
+     $    shower_mc_mod(1:7).eq.'PYTHIA6') then
+         if (ileg.eq.3) mc_shower_scale_mass=sqrt(xm12)
+      endif
+      end function mc_shower_scale_mass
+
+      end module mc_counterterms

@@ -17,7 +17,7 @@ import tempfile
 import unittest
 
 from tests.unit_tests.fks.test_momentum_maps import (
-    ROOT, TEMPLATE, fortran_routine, fks_test_module)
+    ROOT, TEMPLATE, fortran_routine, fks_test_module, mc_counterterm_test_module)
 
 
 def dot(a, b):
@@ -166,6 +166,8 @@ class TestPythia8Matching(unittest.TestCase):
         (work / 'genps.inc').write_text(
             '      integer max_branch,max_particles\n'
             '      parameter(max_branch=8,max_particles=8)\n')
+        (work / 'born_nhel.inc').write_text(
+            '      integer max_bcol\n      parameter(max_bcol=1)\n')
         (work / 'coupl.inc').write_text(
             '      double precision g\n      double complex gal(2)\n'
             '      common/test_couplings/g,gal\n')
@@ -188,14 +190,16 @@ class TestPythia8Matching(unittest.TestCase):
                 'xfact_ileg3', 'xfact_ileg4', 'compute_splitting_kernels',
                 'compute_splitting_kernel_icode1', 'compute_splitting_kernel_icode2',
                 'compute_splitting_kernel_icode3', 'compute_splitting_kernel_icode4',
-                'py8_gluon_recoil_weight', 'limits', 'get_dead_zone', 'get_angle',
+                'py8_gluon_recoil_weight', 'classify_mc_kernel_limits',
+                'get_dead_zone', 'get_angle',
                 'compute_damping_weight', 'emscafun'),
             'fks_singular.f': ('AP_reduced', 'AP_reduced_SUSY', 'AP_reduced_massive',
                               'Qterms_reduced_timelike', 'Qterms_reduced_spacelike',
                               'rotate_invar', 'trp_rotate_invar'),
             'fks_Sij.f': ('fks_Hij', 'h_damp'),
         }
-        routines = [fortran_routine(TEMPLATE / filename, name)
+        routines = [mc_counterterm_test_module(selections.pop('montecarlocounter.f'))]
+        routines += [fortran_routine(TEMPLATE / filename, name)
                     for filename, names in selections.items() for name in names]
         routines += [fortran_routine(ROOT / 'Template/NLO/Source/kin_functions.f', name)
                      for name in ('dot', 'rho', 'threedot')]
@@ -215,8 +219,7 @@ class TestPythia8Matching(unittest.TestCase):
                        '-Wl,-dead_strip' if sys.platform == 'darwin' else '-Wl,--gc-sections',
                        '-I', str(work), str(TEMPLATE / 'process_module.f90'),
                        str(TEMPLATE / 'fks_phase_space_data.f'),
-                       str(TEMPLATE / 'kinematics_module.f90'), 'native.f90', 'scale.f90',
-                       str(TEMPLATE / 'genps_fks_helpers.f'),
+                       str(TEMPLATE / 'genps_fks_helpers.f'), 'native.f90', 'scale.f90',
                        str(TEMPLATE / 'genps_fks_radiation.f'), 'fks_phase_space.f',
                        'routines.f', str(TEMPLATE / 'boostwdir2.f'),
                        str(TEMPLATE / 'resonance_recoil.f'),

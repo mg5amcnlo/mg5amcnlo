@@ -1,15 +1,22 @@
 ! Exercise production radiation functions, kernels and support. Input momenta
 ! and phase-space references are constructed independently by the Python test.
 program check_pythia8_matching
+  use mc_counterterms, only: zpy8,xipy8,xjacpy8,xfact_ileg12, &
+       xfact_ileg3,xfact_ileg4,compute_damping_weight,py8_gluon_recoil_weight, &
+       get_shower_variables,get_dead_zone,mc_kernel_limits, &
+       classify_mc_kernel_limits,compute_splitting_kernels, &
+       ileg,xm12,xm22,w1,w2,yij,x,xij,betad,betas,kn,knbar,kn0,shat_n1, &
+       gfactsf,gfactcl,gfactazi,get_qMC,prepare_mc_kinematics
   use fks_phase_space_data,only: bound_born => tau_Born_lower_bound, &
        bound_res => tau_lower_bound_resonance,bound_tau => tau_lower_bound,vk => veckn_ev, &
        vkb => veckbarn_ev,ve => xp0jfks,ylab => ybst_til_tolab,ycms => ybst_til_tocm,roots => sqrtshat, &
-       shat
+       shat,p_i_fks_cnt
   use process_module, only: next_n1, nincoming_mod, mass_n, shower_mc_mod
-  use kinematics_module
+  use fks_phase_space_helpers, only: dot,rho,get_xi_from_p,get_yij_from_p
   use scale_module
   use fks_phase_space, only: invert_fks_radiation
   implicit none
+  type(mc_kernel_limits) :: kernel_limits
   character(len=16) mode, shower
   integer ios, i, kind, np, ifks, jfks
   common /fks_indices/ ifks, jfks
@@ -31,10 +38,7 @@ program check_pythia8_matching
   double precision p(0:3,6), pb(0:3,-8:5), m, mr, rad, delta, k
   double precision rt(3), jac, ps, tau, yb, xb(2), z, t, jz, f, hij
   double precision kernel(2), azimuth(2), damping(2), qmc, weight, max1, max2, e0sq
-  double precision zpy8, xipy8, xjacpy8, xfact_ileg12, xfact_ileg3, xfact_ileg4
-  double precision fks_hij, compute_damping_weight, py8_gluon_recoil_weight
-  external zpy8, xipy8, xjacpy8, xfact_ileg12, xfact_ileg3, xfact_ileg4, fks_hij
-  external compute_damping_weight, py8_gluon_recoil_weight
+  double precision, external :: fks_hij
 
   call get_command_argument(1,mode)
   next_n1=6
@@ -130,11 +134,11 @@ program check_pythia8_matching
     call invert_fks_radiation(rt,jac,ps,4d6,tau,yb,xb,p,pb)
     if (jac.le.0d0) stop 2
     rad=get_xi_from_p(6,3,p)
-    delta=get_yij_from_p(6,3,p)
+    delta=get_yij_from_p(6,3,p,p_i_fks_cnt(:,0))
     vk=rho(p(:,3))
     vkb=rho(pb(:,3))
     ve=p(0,3)
-    call fill_kinematics_module(p,6,3,rad,delta,m,.true.)
+    call prepare_mc_kinematics(p,6,3,rad,delta,m,.true.)
     if (mode.eq.'measure') then
       shower_scale_nbody_max=1000d0
       qmc=get_qmc(rad,delta)
@@ -178,10 +182,10 @@ program check_pythia8_matching
     else
       f=xfact_ileg4(np)
     endif
-    call limits(rad,delta)
+    kernel_limits=classify_mc_kernel_limits(rad,delta)
     ! A one-mother/MEC context is outside the audited hard-system contract.
     if (kind.eq.6) nincoming_mod=1
-    call compute_splitting_kernels(kernel,azimuth,z,t,jz)
+    call compute_splitting_kernels(kernel,azimuth,z,t,jz,kernel_limits)
     nincoming_mod=2
     hij=fks_hij(p,6,3)
     shower_scale_nbody_min=0d0

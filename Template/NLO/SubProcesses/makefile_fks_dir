@@ -59,7 +59,7 @@ GENPS_OBJECTS = fks_phase_space_data.o genps_fks_helpers.o genps_fks_sampling.o 
 
 # Files for all executables
 FILES= $(patsubst %.f,%.o,$(wildcard parton_lum_*.f)) 			\
-	 process_module.o kinematics_module.o scale_module.o		\
+	 process_module.o scale_module.o		\
 	 $(patsubst %.f,%.o,$(wildcard matrix_*.f)) 			\
 	 FKSParams.o real_me_chooser.o chooser_functions.o recmom.o	\
 	 $(GENPS_OBJECTS) resonance_recoil.o initial_recoil.o		\
@@ -205,19 +205,22 @@ add_write_info.o analysis_lhe.o BinothLHA.o BinothLHA_user.o \
     check_poles.o check_sudakov.o check_sudakov_angle2.o cluster.o cuts.o \
     driver_mintFO.o driver_mintMC.o ewsudakov_functions_dummy.o \
     fks_Sij.o fks_singular.o genps_fks.o genps_fks_sampling.o \
-    genps_fks_radiation.o initial_recoil.o kinematics_module.o \
+    genps_fks_radiation.o initial_recoil.o \
     mc_native_runtime.o montecarlocounter.o pythia_unlops.o \
     recoil_selection.o resonance_histories.o resonance_recoil.o \
     reweight_xsec_events.o sa_ewsudakov_dummyfcts.o setcuts.o \
     symmetry_fks_v3.o test_soft_col_limits.o veto_xsec.o write_event.o: fks_phase_space_data.o
 
-kinematics_module.o : process_module.o
-scale_module.o : process_module.o kinematics_module.o mcatnlo_delta_scales.o herwig7_scales.o
-montecarlocounter.o : scale_module.o kinematics_module.o process_module.o mcatnlo_delta_scales.o
-fks_singular.o : scale_module.o kinematics_module.o process_module.o
+scale_module.o : process_module.o genps_fks_helpers.o mcatnlo_delta_scales.o herwig7_scales.o
+montecarlocounter.o : scale_module.o genps_fks_helpers.o process_module.o mcatnlo_delta_scales.o
+montecarlocounter.o : nexternal.inc born_nhel.inc orders.inc
+montecarlocounter.o : fks_powers.inc
+# Build the counterterm module before its callers need mc_counterterms.mod.
+fks_singular.o test_soft_col_limits.o driver_mintMC.o: montecarlocounter.o
+fks_singular.o : scale_module.o process_module.o
 add_write_info.o write_event.o test_soft_col_limits.o driver_mintMC.o: scale_module.o
 genps_fks.o: genps_fks_sampling.o genps_fks_radiation.o \
-    genps_fks_helpers.o kinematics_module.o mc_native_context.o
+    genps_fks_helpers.o mc_native_context.o
 genps_fks_sampling.o genps_fks_radiation.o: genps_fks_helpers.o mc_native_context.o
 driver_mintFO.o driver_mintMC.o write_event.o add_write_info.o \
     test_soft_col_limits.o symmetry_fks_v3.o: genps_fks.o
@@ -227,7 +230,7 @@ BinothLHA_OLP.o: FKSParams.o
 BinothLHA.o: FKSParams.o
 reweight_xsec_events.o: weight_lines.o
 fks_singular.o: weight_lines.o mint_module.o fks_symmetry.inc
-driver_mintMC.o: weight_lines.o mint_module.o kinematics_module.o fks_symmetry.inc mc_histories.inc
+driver_mintMC.o: weight_lines.o mint_module.o genps_fks_helpers.o fks_symmetry.inc mc_histories.inc
 driver_mintFO.o: weight_lines.o mint_module.o FKSParams.o
 chooser_functions.o: weight_lines.o
 cluster.o: weight_lines.o

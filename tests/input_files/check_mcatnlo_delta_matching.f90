@@ -1,6 +1,7 @@
 ! Exercise the production compute_delta routine with controlled Born/real
 ! records and a simple Sudakov table. There is no shower runtime interface.
 program check_mcatnlo_delta_matching
+  use mc_counterterms, only: compute_delta,isspecial
   use process_module
   use scale_module
   implicit none
@@ -12,8 +13,6 @@ program check_mcatnlo_delta_matching
   common /c_MCcntcalled/ mccntcalled
   common /cfl/ fold,ifold_counter
   common /test_lpp/ lpp
-  logical :: isspecial(1)
-  common /cisspecial/ isspecial
   double precision :: seen_scales(4,4)
   logical*1 :: seen_dead(4,4)
   common /test_stopping/ seen_scales,seen_dead

@@ -240,8 +240,7 @@ contains
        pbl => p_born_l,pbe => p_born_ev,branch => isolsign,pc => p1_cnt,&
        jc => jac_cnt,bound_born => tau_Born_lower_bound,bound_res => tau_lower_bound_resonance, &
        bound_tau => tau_lower_bound
-    use process_module, only: next_n1,nincoming_mod
-    use kinematics_module, only: boost_n1_to_lab
+    use fks_phase_space_helpers, only: boost_n1_to_lab
     implicit none
     include 'genps.inc'
     include 'run.inc'
@@ -262,9 +261,6 @@ contains
     double precision :: shower(0:3,nexternal),kn,knbar,kn0,smass2,born_energy,shower_total(0:3)
     integer :: k,b
     logical :: valid
-
-    next_n1=nexternal
-    nincoming_mod=nincoming
     active=.true.
     members=mask
     ifks_active=ifks

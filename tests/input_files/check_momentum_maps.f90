@@ -5,13 +5,11 @@ program check_momentum_maps
   use, intrinsic :: ieee_arithmetic, only: ieee_is_finite
   use mc_native_context, only: native_mapping
   use fks_phase_space, only: fill_fks_point_data
-  use fks_phase_space_helpers, only: yminmax,gentcms
   use fks_radiation_maps, only: generate_momenta_massless_final, &
        generate_momenta_massless_final_inverse,generate_momenta_massive_final, &
        generate_momenta_massive_final_inverse
-  use process_module, only: next_n1,nincoming_mod
-  use kinematics_module, only: boost_n1_to_its_cms,boost_n1_to_lab, &
-       get_xi_from_p,get_yij_from_p,get_phi_from_p,fill_father_and_ileg
+  use fks_phase_space_helpers, only: yminmax,gentcms,boost_n1_to_its_cms,boost_n1_to_lab, &
+       get_xi_from_p,get_yij_from_p,get_phi_from_p
   implicit none
   include 'genps.inc'
   include 'nexternal.inc'
@@ -32,8 +30,6 @@ program check_momentum_maps
   double precision, parameter :: energies(3)=[400d0,1000d0,4000d0]
 
   call get_command_argument(1,mode)
-  next_n1=5
-  nincoming_mod=2
   softtest=.false.
   colltest=.false.
   if (mode.eq.'native_projection') then
@@ -51,13 +47,13 @@ program check_momentum_maps
         p(:,5)=[20d0,20d0,0d0,0d0]
         saved_pi_cnt=0d0
         saved_pi_cnt(:,0)=[1d0,1d0,0d0,0d0]
-        if(abs(get_yij_from_p(5,4,p)).gt.1d-12.or. &
-             abs(get_yij_from_p(4,5,p)).gt.1d-12) &
+        if(abs(get_yij_from_p(5,4,p,saved_pi_cnt(:,0))).gt.1d-12.or. &
+             abs(get_yij_from_p(4,5,p,saved_pi_cnt(:,0))).gt.1d-12) &
              error stop 'finite soft momentum replaced by cached direction'
      enddo
      ! Exactly soft counterevents still need their scaled direction.
      p(:,5)=0d0
-     if(abs(get_yij_from_p(5,4,p)).gt.1d-12) &
+     if(abs(get_yij_from_p(5,4,p,saved_pi_cnt(:,0))).gt.1d-12) &
           error stop 'zero-energy soft direction lost'
      write(*,*)'PASS ',trim(mode)
      stop
@@ -90,7 +86,7 @@ program check_momentum_maps
         saved_pi_cnt=0d0
         saved_pi_cnt(:,0)=pcm(:,4)
         xi=get_xi_from_p(5,4,p)
-        yij=get_yij_from_p(5,4,p)
+        yij=get_yij_from_p(5,4,p,saved_pi_cnt(:,0))
         phi=get_phi_from_p(5,4,p)
         if(abs(yij).gt.0.99d0)error stop 'soft history became collinear'
         jacinv=1d0
@@ -170,7 +166,6 @@ program check_momentum_maps
      mrec=0d0
      sqrtshat=200d0
      shat=sqrtshat**2
-     call fill_father_and_ileg(5,3,mass)
      do k=0,1
         native_mapping=k.eq.1
         do i=3,9
@@ -182,7 +177,7 @@ program check_momentum_maps
            p(:,4)=[momentum,0d0,momentum,0d0]
            p(:,5)=[sqrtshat-momentum-energy,-energy,-momentum,0d0]
            xi=get_xi_from_p(5,3,p)
-           yij=get_yij_from_p(5,3,p)
+           yij=get_yij_from_p(5,3,p,saved_pi_cnt(:,0))
            phi=get_phi_from_p(5,3,p)
            jacinv=1d0
            pswgtinv=1d0
@@ -272,7 +267,7 @@ program check_momentum_maps
      endif
      native_mapping=.true.
      xi=get_xi_from_p(5,3,p)
-     yij=get_yij_from_p(5,3,p)
+     yij=get_yij_from_p(5,3,p,saved_pi_cnt(:,0))
      phi=get_phi_from_p(5,3,p)
      jacinv=1d0
      pswgtinv=1d0
@@ -392,12 +387,11 @@ program check_momentum_maps
         plab(:,5)=[9.98786202837852954d1,-1.51729251876378264d1, &
              -5.29974994822907561d1,8.32873710694935028d1]
      endif
-     call fill_father_and_ileg(5,father,mass)
      call boost_n1_to_its_cms(plab,pcm,rapidity)
      shat=4d0*pcm(0,1)*pcm(0,2)
      sqrtshat=sqrt(shat)
      xi=get_xi_from_p(5,father,pcm)
-     yij=get_yij_from_p(5,father,pcm)
+     yij=get_yij_from_p(5,father,pcm,saved_pi_cnt(:,0))
      phi=get_phi_from_p(5,father,pcm)
      jacinv=1d0
      pswgtinv=1d0
@@ -447,7 +441,6 @@ program check_momentum_maps
   else
      error stop 'unknown test'
   endif
-  call fill_father_and_ileg(5,3,mass)
   nplus=0
   nminus=0
   nchecked=0
@@ -502,7 +495,7 @@ program check_momentum_maps
                 error stop 'stale rapidity without counterevent'
            call boost_n1_to_its_cms(plab,pcm,rapidity)
            xi=get_xi_from_p(5,3,pcm)
-           yij=get_yij_from_p(5,3,pcm)
+           yij=get_yij_from_p(5,3,pcm,saved_pi_cnt(:,0))
            phi=get_phi_from_p(5,3,pcm)
            jacinv=1d0
            pswgtinv=1d0
@@ -549,7 +542,7 @@ contains
     integer :: sign_branch
     logical :: good
     local_xi=get_xi_from_p(5,3,real_p)
-    local_y=get_yij_from_p(5,3,real_p)
+    local_y=get_yij_from_p(5,3,real_p,saved_pi_cnt(:,0))
     local_phi=get_phi_from_p(5,3,real_p)
     native_mapping=.false.
     lj=1d0

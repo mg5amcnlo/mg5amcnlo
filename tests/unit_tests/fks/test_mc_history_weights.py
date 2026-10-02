@@ -47,7 +47,7 @@ class TestMCHistoryWeights(unittest.TestCase):
                 'integer :: SelectedCouplingOrders(2,0:1)=0\n'
                 'integer :: QCD_squared_selected=-1,QED_squared_selected=-1\nend module\n'
                 'module mint_module\nlogical :: pass_cuts_check=.false.\nend module\n'
-                'module kinematics_module\n'
+                'module mc_counterterms\n'
                 'double precision :: gfactsf,gfactcl,gfactazi\nend module\n')
             routines = ('compute_native_NLOPS_weights', 'compute_real_emission',
                         'compute_soft_counter_term', 'compute_collinear_counter_term',

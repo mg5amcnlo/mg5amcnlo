@@ -150,7 +150,7 @@ end program
 subroutine compute_MC_subt_term(p,p_lab,p_cms,jacPS,passcuts,probne)
   use history_test_state
   use extra_weights
-  use kinematics_module
+  use mc_counterterms, only: gfactsf,gfactcl
   implicit none
   double precision :: p(0:3,5),p_lab(0:3,5),p_cms(0:3,5),jacPS,probne
   logical :: passcuts

@@ -1,6 +1,6 @@
 module scale_module
   use process_module
-  use kinematics_module
+  use fks_phase_space_helpers, only: sumdot
   use mcatnlo_delta_scales, only: pythia8_starting_scales, delta_ok
   use herwig7_scales, only: herwig7_starting_scales, hw7_ok
   implicit none
@@ -89,10 +89,11 @@ contains
     stop 1
   end subroutine native_S_scales
     
-  subroutine compute_shower_scale_nbody(p,flow_picked)
+  subroutine compute_shower_scale_nbody(p,flow_picked,emitter_mass)
     implicit none
     integer :: i,j,flow_picked,iflow_min,iflow_max,iflow
     double precision,dimension(0:3,next_n) :: p
+    double precision, intent(in) :: emitter_mass
     double precision :: ref_scale,scalemin,scalemax,rrnd
     double precision, external :: ran2
     shower_scale_nbody=-1d0
@@ -121,7 +122,7 @@ contains
        ! One damping draw sets SCALUP. The shower limits each directed
        ! dipole by its kinematics. Damping a capped dipole independently
        ! would not reproduce the shower driven by the scalar SCALUP.
-       call get_scaleminmax(global_ref_scale,scalemin,scalemax)
+       call get_scaleminmax(global_ref_scale,scalemin,scalemax,emitter_mass)
        scalemin=max(scalemin,scaleMCcut)
        scalemax=max(scalemax,scalemin+scaleMCdelta)
        rrnd=damping_inv(ran2(),1d0)
@@ -140,7 +141,7 @@ contains
        do j=i+1,next_n
           if (.not. any(valid_dipole_n(i,j,iflow_min:iflow_max))) cycle
           ref_scale=get_ref_scale_dipole(next_n,p,i,j)
-          call get_scaleminmax(ref_scale,scalemin,scalemax)
+          call get_scaleminmax(ref_scale,scalemin,scalemax,emitter_mass)
           rrnd=ran2()
           rrnd=damping_inv(rrnd,1d0)
           scalemin=max(scalemin,scaleMCcut)
@@ -168,8 +169,8 @@ contains
     endif
   end subroutine compute_shower_scale_nbody
 
-  subroutine save_shower_scale_nbody(ifks,ifold,partner)
-    integer, intent(in) :: ifks,ifold
+  subroutine save_shower_scale_nbody(ifks,ifold,father,partner)
+    integer, intent(in) :: ifks,ifold,father
     integer, intent(in), optional :: partner
     emsca_S_hard(ifks,ifold)=shower_scale_hard
     if (mcatnlo_delta_mod) then
@@ -177,15 +178,16 @@ contains
     elseif (scalar_S_scales()) then
        emsca_S(ifks,ifold,:,:)=shower_scale_hard
     elseif (present(partner)) then
-       emsca_S(ifks,ifold,:,:)=shower_scale_nbody(fksfather,partner)
+       emsca_S(ifks,ifold,:,:)=shower_scale_nbody(father,partner)
     else
        emsca_S(ifks,ifold,:,:)=get_random_shower_dipole_scale()
     endif
   end subroutine save_shower_scale_nbody
 
-  subroutine compute_shower_scale_n1body(p,i_fks,j_fks)
+  subroutine compute_shower_scale_n1body(p,i_fks,j_fks,emitter_mass)
     implicit none
     double precision,dimension(0:3,next_n1) :: p
+    double precision, intent(in) :: emitter_mass
     integer i,j,ii,i_fks,j_fks
     double precision ref_scale,scalemin,scalemax
     call get_global_ref_scale(next_n1,p)
@@ -193,7 +195,7 @@ contains
        do j=1,next_n1
           if (valid_dipole_n1(i,j)) then
              ref_scale=get_ref_scale_dipole(next_n1,p,i,j)
-             call get_scaleminmax(ref_scale,scalemin,scalemax)
+             call get_scaleminmax(ref_scale,scalemin,scalemax,emitter_mass)
              scalemax=max(scalemax,scaleMCcut)
              shower_scale_n1body(i,j)=scalemax
           elseif ((i.eq.i_fks .and. j.eq.j_fks) .or. (j.eq.i_fks .and. i.eq.j_fks)) then
@@ -206,7 +208,7 @@ contains
                    ref_scale=min(get_ref_scale_dipole(next_n1,p,ii,j_fks),ref_scale)
                 endif
              enddo
-             call get_scaleminmax(ref_scale,scalemin,scalemax)
+             call get_scaleminmax(ref_scale,scalemin,scalemax,emitter_mass)
              scalemax=max(scalemax,scaleMCcut)
              shower_scale_n1body(i,j)=scalemax
           else
@@ -250,33 +252,24 @@ contains
     shower_scale_nbody_max=-1d0
   end subroutine Bornonly_shower_scale
 
-  subroutine get_scaleminmax(ref_scale,scalemin,scalemax)
+  subroutine get_scaleminmax(ref_scale,scalemin,scalemax,emitter_mass)
     implicit none
     double precision :: ref_scale,scalemin,scalemax
+    double precision, intent(in) :: emitter_mass
     scalemin=max(shower_scale_factor*frac_low*ref_scale,scaleMClow)
     scalemax=max(shower_scale_factor*frac_upp*ref_scale, &
          scalemin+scaleMCdelta)
     scalemax=min(scalemax,collider_energy)
     scalemin=min(scalemin,scalemax)
     if(abrv_mod.ne.'born' .and. shower_mc_mod(1:7).eq.'PYTHIA6' .and. &
-         ileg.eq.3)then
-! WARNING: Shower scale depends on xm12: This is the mass^2 of j_fks. Hence,
-! this introduces FKS info into Pythia6 subtraction terms.
-       scalemin=max(scalemin,sqrt(xm12))
+         emitter_mass.gt.0d0)then
+       ! The caller supplies the massive-FSR floor from its active shower
+       ! history; scale generation does not own that kinematics state.
+       scalemin=max(scalemin,emitter_mass)
        scalemax=max(scalemin,scalemax)
     endif
   end subroutine get_scaleminmax
            
-  double precision function damping_fun(x,alpha)
-    implicit none
-    double precision :: x,alpha
-    if(x.lt.0d0.or.x.gt.1d0)then
-       write(*,*)'Fatal error in damping_fun'
-       stop
-    endif
-    damping_fun=x**(2*alpha)/(x**(2*alpha)+(1-x)**(2*alpha))
-  end function damping_fun
-
   double precision function damping_inv(r,alpha)
 ! Inverse of the damping function, implemented only for alpha=1 for the moment
     implicit none
@@ -297,26 +290,6 @@ contains
          ,global_ref_scale)
   end function get_ref_scale_dipole
   
-  integer function colour(n,i)
-    implicit none
-    integer :: n,i
-    if (n.eq.next_n) then
-       colour=colour_n(i)
-    elseif (n.eq.next_n1) then
-       colour=colour_n1(i)
-    endif
-  end function colour
-
-  double precision function mass(n,i)
-    implicit none
-    integer :: n,i
-    if (n.eq.next_n) then
-       mass=mass_n(i)
-    elseif (n.eq.next_n1) then
-       mass=mass_n1(i)
-    endif
-  end function mass
-
   subroutine get_global_ref_scale(n,p)
     ! this is the global reference shower scale (i.e., without damping),
     ! i.e. the smallest scale returned by the clustering routine.
@@ -362,15 +335,14 @@ contains
     get_random_shower_dipole_scale=shower_scale_nbody(dip(iscale,1),dip(iscale,2))
   end function get_random_shower_dipole_scale
       
-  subroutine determine_partner(flow_picked,partner_picked)
-    use process_module
-    use kinematics_module
+  subroutine determine_partner(flow_picked,father,partner_picked)
     implicit none
     integer :: ndip(0:next_n),i,flow_picked,partner_picked
+    integer, intent(in) :: father
     double precision,external :: ran2
     ndip(0)=0
     do i=1,next_n
-       if (valid_dipole_n(i,fksfather,flow_picked)) then
+       if (valid_dipole_n(i,father,flow_picked)) then
           ndip(0)=ndip(0)+1
           ndip(ndip(0))=i
        endif
@@ -385,7 +357,7 @@ contains
        endif
     else
        write (*,*) 'Inconsistent dipoles',ndip
-       write (*,*) fksfather,flow_picked
+       write (*,*) father,flow_picked
        stop 1
     endif
   end subroutine determine_partner

@@ -25,7 +25,7 @@ def fortran_routine(path, name):
                   "genps_fks_radiation.f", "genps_fks_helpers.f")]
              if path.name == "genps_fks.f" else [path])
     pattern = re.compile(
-        r"^      (?:subroutine|(?:(?:double precision|logical|integer) )?function) "
+        r"^      (?:subroutine|(?:(?:double precision|double complex|logical|integer) )?function) "
         + re.escape(name) + r"\b", re.MULTILINE | re.IGNORECASE)
     matches = []
     for candidate in paths:
@@ -70,6 +70,45 @@ def fks_test_module(names=FKS_MAIN_ROUTINES, template=TEMPLATE):
         + "      end module fks_phase_space\n")
 
 
+MC_KINEMATICS_ROUTINES = (
+    "prepare_mc_kinematics", "fill_father_and_ileg", "fill_ileg",
+    "get_momenta_emitter_recoiler", "fill_invariants_ileg1",
+    "fill_invariants_ileg2", "fill_invariants_ileg3", "fill_invariants_ileg4",
+    "check_invariants_ileg12", "check_invariants_ileg3", "check_invariants_ileg4",
+    "get_qMC", "qMC_ileg1", "qMC_ileg2", "qMC_ileg3", "qMC_ileg4",
+    "py8_massive_fsr_fractions", "get_zeta", "compute_gfun", "gfunction",
+    "mc_shower_scale_mass")
+
+
+def mc_counterterm_test_module(names, template=TEMPLATE, external_functions=(),
+                              include_kinematics=True):
+    """Keep the production MC module's state around selected fixture routines.
+
+    Fixtures expose internals for direct calls and may replace omitted
+    functions with controlled external stubs, declared explicitly here.
+    Shower fixtures retain their production kinematics helpers; pure flow
+    fixtures can omit these helpers and their unrelated module dependencies.
+    """
+    names = tuple(names)
+    if include_kinematics:
+        names = tuple(dict.fromkeys(names + MC_KINEMATICS_ROUTINES))
+    source = (template / "montecarlocounter.f").read_text()
+    header, _ = re.split(r"^      contains[ \t]*$", source, maxsplit=1,
+                         flags=re.MULTILINE | re.IGNORECASE)
+    header = re.sub(r"^      (?:private\b|public\b)"
+                    r"[^\n]*(?:\n     [^ 0\s][^\n]*)*\n?", "", header,
+                    flags=re.MULTILINE | re.IGNORECASE)
+    if not include_kinematics:
+        header = re.sub(r"^      use (?:process_module|fks_phase_space_helpers)\b"
+                        r"[^\n]*(?:\n     [^ 0\s][^\n]*)*\n?", "", header,
+                        flags=re.MULTILINE | re.IGNORECASE)
+    header += "".join("      {}, external :: {}\n".format(kind, name)
+                      for kind, name in external_functions)
+    return (header + "      contains\n" + "\n".join(
+        fortran_routine(template / "montecarlocounter.f", name) for name in names)
+        + "      end module mc_counterterms\n")
+
+
 @unittest.skipUnless(shutil.which("gfortran"), "requires gfortran")
 class TestMomentumMaps(unittest.TestCase):
     @classmethod
@@ -109,11 +148,9 @@ class TestMomentumMaps(unittest.TestCase):
                    "-fdata-sections", "-fcheck=all", "-fno-automatic",
                    "-Wl,-dead_strip" if sys.platform == "darwin" else "-Wl,--gc-sections",
                    "-I", str(work),
-                   str(TEMPLATE / "process_module.f90"),
                    str(TEMPLATE / "fks_phase_space_data.f"),
-                   str(TEMPLATE / "kinematics_module.f90"),
-                   str(work / "native_context.f90"),
                    str(TEMPLATE / "genps_fks_helpers.f"),
+                   str(work / "native_context.f90"),
                    str(TEMPLATE / "genps_fks_radiation.f"),
                    str(work / "fks_phase_space.f"),
                    str(work / "maps.f"), str(TEMPLATE / "boostwdir2.f"),

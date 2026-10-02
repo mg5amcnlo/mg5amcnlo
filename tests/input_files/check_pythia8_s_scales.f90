@@ -5,15 +5,15 @@ module controlled_starting_scales
 end module
 
 program check_pythia8_s_scales
+  use mc_counterterms, only: compute_damping_weight,mc_shower_scale_mass, &
+       ileg,fksfather,xtk,shat_n1
   use controlled_starting_scales
   use process_module
-  use kinematics_module
   use scale_module
   use weight_lines
   implicit none
   character(len=32) :: mode
   double precision :: p(0:3,4),saved(4,4),saved_hard,q,expected,observed,ff_cap,fi_cap
-  double precision, external :: compute_damping_weight
   integer :: i,nabove,selected_fold
   logical :: delta,herwig
 
@@ -45,13 +45,13 @@ program check_pythia8_s_scales
   p(:,2)=[500d0,0d0,0d0,-500d0]
   p(:,3)=[500d0,400d0,0d0,300d0]
   p(:,4)=[500d0,-400d0,0d0,-300d0]
-  call compute_shower_scale_nbody(p,1)
+  call compute_shower_scale_nbody(p,1,mc_shower_scale_mass())
   call close(shower_scale_hard,550d0,'damped hard scale')
   call close(shower_scale_nbody(1,2),550d0,'ISR uses SCALUP')
   call close(shower_scale_nbody(3,4),ff_cap,'FSR cap applied after hard-scale damping')
   call require(shower_scale_nbody(1,3).eq.-1d0,'selected flow mask')
   call require(random_calls.eq.1,'one damping draw per event')
-  call save_shower_scale_nbody(1,1)
+  call save_shower_scale_nbody(1,1,fksfather)
   if (delta) then
     call require(all(emsca_S(1,1,:,:).eq.shower_scale_nbody),'Delta Born fallback retains matrix')
   else
@@ -59,12 +59,12 @@ program check_pythia8_s_scales
   endif
 
   random_value=0.2d0
-  call compute_shower_scale_nbody(p,-3)
+  call compute_shower_scale_nbody(p,-3,mc_shower_scale_mass())
   call close(shower_scale_hard,400d0,'second damping draw')
   call close(shower_scale_nbody(1,3),400d0,'IF hard scale')
   call close(shower_scale_nbody(3,1),fi_cap,'FI kinematic limit')
   call close(shower_scale_nbody(3,4),min(400d0,ff_cap),'FF respects hard scale')
-  call save_shower_scale_nbody(2,2,4)
+  call save_shower_scale_nbody(2,2,fksfather,4)
   saved=shower_scale_nbody
   saved_hard=shower_scale_hard
 
@@ -85,7 +85,7 @@ program check_pythia8_s_scales
   nabove=0
   do i=1,1000
     random_value=(dble(i)-0.5d0)/1000d0
-    call compute_shower_scale_nbody(p,-3)
+    call compute_shower_scale_nbody(p,-3,mc_shower_scale_mass())
     if (shower_scale_nbody(3,4).gt.q) nabove=nabove+1
     call require(shower_scale_nbody(3,4).le.ff_cap,'FSR endpoint')
     call require(shower_scale_nbody(3,4).le.shower_scale_hard,'global shower ordering')
@@ -129,7 +129,7 @@ program check_pythia8_s_scales
   ! Shower-scale variations, including upward variations, retain physical
   ! dipole bounds. Very small hard scales retain the existing infrared floor.
   call init_scale_module(5,2d0,2,2)
-  call compute_shower_scale_nbody(p,-3)
+  call compute_shower_scale_nbody(p,-3,mc_shower_scale_mass())
   call close(shower_scale_hard,1100d0,'hard-scale variation')
   call close(shower_scale_nbody(3,4),ff_cap,'variation cannot exceed FF phase space')
   if (herwig) then
@@ -151,7 +151,7 @@ program check_pythia8_s_scales
     shower_mc_mod='HERWIG7'
   endif
   hard_reference=0.01d0
-  call compute_shower_scale_nbody(p,-3)
+  call compute_shower_scale_nbody(p,-3,mc_shower_scale_mass())
   call close(shower_scale_hard,4.5d0,'existing infrared floor and width')
   call require(all(pack(shower_scale_nbody,shower_scale_nbody.ge.0d0).le.shower_scale_hard), &
        'infrared scales respect SCALUP')
@@ -159,7 +159,7 @@ program check_pythia8_s_scales
   ! FxFx continues to use its own undamped clustering prescription.
   hard_reference=1000d0
   ickkw_mod=3
-  call compute_shower_scale_nbody(p,-3)
+  call compute_shower_scale_nbody(p,-3,mc_shower_scale_mass())
   call require(all(shower_scale_nbody.eq.2000d0),'FxFx scale prescription')
   print *, 'PASS '//trim(mode)
 contains

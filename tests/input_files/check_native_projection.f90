@@ -12,7 +12,7 @@ subroutine check_native_projection()
   use, intrinsic :: ieee_arithmetic, only: ieee_is_finite
   use mc_native_context, only: native_mapping
   use fks_phase_space, only: generate_FKS_kinematics,generate_native_momenta
-  use kinematics_module, only: boost_n1_to_lab
+  use fks_phase_space_helpers, only: boost_n1_to_lab
   implicit none
   include 'genps.inc'
   include 'nexternal.inc'

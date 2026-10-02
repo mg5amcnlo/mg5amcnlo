@@ -17,7 +17,8 @@ from pathlib import Path
 
 ROOT = Path(sys.argv[1]).resolve() if len(sys.argv)>1 else Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
-from tests.unit_tests.fks.test_momentum_maps import fortran_routine as routine, fks_test_module
+from tests.unit_tests.fks.test_momentum_maps import (
+    fortran_routine as routine, fks_test_module, mc_counterterm_test_module)
 
 WORK = Path(tempfile.mkdtemp(prefix='pythia8318-matching-audit-'))
 atexit.register(shutil.rmtree, WORK)
@@ -26,6 +27,7 @@ SRC = ROOT / 'Template/NLO/SubProcesses'
 for name, data in {
     'nexternal.inc':'      integer nexternal,nincoming\n      parameter(nexternal=5,nincoming=2)\n',
     'genps.inc':'      integer max_branch,max_particles\n      parameter(max_branch=8,max_particles=8)\n',
+    'born_nhel.inc':'      integer max_bcol\n      parameter(max_bcol=1)\n',
     'native.f90':'module mc_native_context\nlogical :: native_mapping=.true.\nend module\n',
     'scale.f90':'module scale_module\ndouble precision :: shower_scale_nbody_max(4,4)=1000d0\nend module\n',
 }.items():
@@ -35,16 +37,19 @@ for name in ('fks_powers.inc',):
 
 (WORK/'phase_space.f').write_text(fks_test_module(('invert_fks_radiation',), SRC))
 routines = [routine(SRC/'fks_singular.f', n) for n in ('rotate_invar', 'trp_rotate_invar')]
-routines += [routine(SRC/'montecarlocounter.f',n) for n in
-             ('zPY8','xiPY8','xjacPY8','dinvariants_dFKS','xfact_ileg12','xfact_ileg3','xfact_ileg4','get_dead_zone','get_angle')]
+routines += [mc_counterterm_test_module(
+             ('zPY8','xiPY8','xjacPY8','dinvariants_dFKS','xfact_ileg12','xfact_ileg3','xfact_ileg4','get_dead_zone','get_angle'), SRC)]
 routines += [routine(ROOT/'Template/NLO/Source/kin_functions.f',n) for n in ('dot','rho','threedot')]
 (WORK/'routines.f').write_text('\n'.join(routines))
 (WORK/'driver.f90').write_text('''program audit
+  use mc_counterterms, only: zPY8,xiPY8,xjacPY8,xfact_ileg12, &
+       xfact_ileg3,xfact_ileg4,get_dead_zone, &
+       ileg,fksfather,xm12,xm22,w1,w2,yij,x,xij,betad,betas,kn,knbar,kn0,shat_n1
   use fks_phase_space_data,only: bound_born => tau_Born_lower_bound, &
        bound_res => tau_lower_bound_resonance,bound_tau => tau_lower_bound,vkn => veckn_ev, &
-       vknbar => veckbarn_ev,ve => xp0jfks
+       vknbar => veckbarn_ev,ve => xp0jfks,p_i_fks_cnt
   use process_module, only: next_n1,nincoming_mod,mass_n,shower_mc_mod
-  use kinematics_module
+  use fks_phase_space_helpers, only: dot,rho,boost_n1_to_its_cms,get_xi_from_p,get_yij_from_p
   use fks_phase_space, only: invert_fks_radiation
   implicit none
   integer i,jf,ios,ifks,jfks
@@ -56,7 +61,6 @@ routines += [routine(ROOT/'Template/NLO/Source/kin_functions.f',n) for n in ('do
   common/sctests/soft,coll
   double precision p(0:3,5),pc(0:3,5),pb(0:3,-8:4),m,mb2,mk2,rt(3),jac,ps,tau,yb,xb(2),rap
   double precision z,t,jz,f,rf,yy,phi,s,rs,stw,pyweight
-  double precision zPY8,xiPY8,xjacPY8,xfact_ileg12,xfact_ileg3,xfact_ileg4
   next_n1=5
   nincoming_mod=2
   shower_mc_mod='PYTHIA8'
@@ -86,7 +90,7 @@ routines += [routine(ROOT/'Template/NLO/Source/kin_functions.f',n) for n in ('do
     s=2d0*dot(pc(:,1),pc(:,2))
     rs=sqrt(s)
     rf=get_xi_from_p(5,jf,pc)
-    yy=get_yij_from_p(5,jf,pc)
+    yy=get_yij_from_p(5,jf,pc,p_i_fks_cnt(:,0))
     shat_n1=s
     x=1d0-rf
     yij=yy
@@ -139,8 +143,8 @@ cmd=['gfortran','-O2','-std=legacy','-ffixed-line-length-none','-ffree-line-leng
      '-fno-automatic','-ffunction-sections','-fdata-sections',
      '-Wl,-dead_strip' if sys.platform=='darwin' else '-Wl,--gc-sections',
      '-I',str(WORK),str(SRC/'process_module.f90'),str(SRC/'fks_phase_space_data.f'),
-     str(SRC/'kinematics_module.f90'),
-     'native.f90','scale.f90',str(SRC/'genps_fks_helpers.f'),
+     str(SRC/'genps_fks_helpers.f'),
+     'native.f90','scale.f90',
      str(SRC/'genps_fks_radiation.f'),'phase_space.f','routines.f',str(SRC/'boostwdir2.f'),
      str(SRC/'resonance_recoil.f'),str(SRC/'initial_recoil.f'),
      str(ROOT/'HELAS/boostx.F'),'driver.f90','-o','audit']

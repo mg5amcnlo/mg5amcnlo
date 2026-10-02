@@ -15,7 +15,7 @@ from unittest import mock
 from madgraph import MadGraph5Error
 from madgraph.iolibs import born_support as support
 from madgraph.interface.common_run_interface import CommonRunCmd
-from tests.unit_tests.fks.test_momentum_maps import fortran_routine
+from tests.unit_tests.fks.test_momentum_maps import mc_counterterm_test_module
 
 
 def physical(ids, tags=None):
@@ -634,7 +634,8 @@ class TestBornLibrary(unittest.TestCase):
             members, sizes = support.common_members(model)
             for record in records:
                 directory = output/'SubProcesses'/record['directory']
-                lines = ['program check_native','use mc_native_context','implicit none',
+                lines = ['program check_native','use mc_native_context',
+                    'use mc_counterterms, only: set_QCD_flows','implicit none',
                     "include 'nexternal.inc'", "include 'genps.inc'", "include 'orders.inc'",
                     "include 'born_nhel.inc'", "include 'born_conf.inc'",
                     'integer idup(nexternal-1,maxproc),mothup(2,nexternal-1,maxproc)',
@@ -703,9 +704,9 @@ class TestBornLibrary(unittest.TestCase):
                     (directory/'splitorders_stuff.f').read_text(),n) for n in
                     ('orders_to_amp_split_pos','amp_split_pos_to_orders')),[]))
                 counter = Path(support.__file__).resolve().parents[2]/'Template/NLO/SubProcesses/montecarlocounter.f'
-                (directory/'native_flows.f').write_text('\n'.join(
-                    fortran_routine(counter, name) for name in
-                    ('set_QCD_flows', 'check_QCD_flows')))
+                (directory/'native_flows.f').write_text(mc_counterterm_test_module(
+                    ('set_QCD_flows', 'check_QCD_flows'), counter.parent,
+                    include_kinematics=False))
                 paths = ['mc_native_context.f90','mc_native_runtime.f','mc_native_props.f',
                          'born_support.f','born.f','sborn_sf.f','extra_cnt_wrapper.f',
                          'native_helpers.f','native_flows.f','check_native.f']

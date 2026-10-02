@@ -6,8 +6,10 @@ module controlled_connections
 end module controlled_connections
 
 program check_mc_dead_zones
+  use mc_counterterms, only: compute_MCsubtraction_kl,get_dead_zone, &
+       ileg,fksfather,xm12,xm22,w1,w2,shat_n1,gfactsf,gfactcl,gfactazi
   use process_module
-  use kinematics_module
+  use fks_phase_space_helpers, only: dot,sumdot
   use scale_module
   use herwig7_scales
   use controlled_connections
@@ -20,12 +22,16 @@ program check_mc_dead_zones
   double precision :: angular(5,5),effective(5,5)
   integer :: k,j,ncon,i,status,imass
   logical :: include_gfun,live,invalid,divzero,connected(5,5)
+  logical :: softtest,colltest
   character(32) :: name
   common /to_mass/pmass
   common /cgfunsfp/alsf,besf
   common /cgfunazi/alazi,beazi
+  common /sctests/softtest,colltest
 
   call get_command_argument(1,name)
+  softtest=.false.
+  colltest=.false.
   next_n=5
   next_n1=6
   nincoming_mod=2
@@ -227,21 +233,34 @@ subroutine find_color_connectors(iflow,iparticle,n_connect,i_connect)
   i_connect=[2,3]
 end subroutine find_color_connectors
 
-subroutine xmcsubt_connection(p,xi,y,p_born,i_connect,include_gfun,live,z,amp)
+! The support fixture supplies controlled Born amplitudes and connections.
+subroutine prepare_MCsubtraction_born(p,xi,y,p_born,kernel_index,born_weights,born_spin_weights)
+  implicit none
+  double precision :: p(0:3,6),xi,y,p_born(0:3,5)
+  double precision :: born_weights(1),born_spin_weights(1)
+  integer :: kernel_index
+  kernel_index=1
+  born_weights=0d0
+  born_spin_weights=0d0
+end subroutine prepare_MCsubtraction_born
+
+subroutine xmcsubt_connection(p_born,i_connect,qmc,damping,include_gfun,kernel_index, &
+                             kernel_limits,born_weights,born_spin_weights,live,z,amp)
+  use mc_counterterms, only: mc_kernel_limits,fksfather,gfactsf
   use controlled_connections
-  use kinematics_module
   use scale_module
   implicit none
-  double precision :: p(0:3,6),xi,y,p_born(0:3,5),z,amp(1),g
-  double precision, external :: compute_damping_weight
-  integer :: i_connect,j
+  double precision :: p_born(0:3,5),qmc,damping,z,amp(1),g
+  double precision :: born_weights(1),born_spin_weights(1)
+  type(mc_kernel_limits) :: kernel_limits
+  integer :: i_connect,kernel_index,j
   logical :: include_gfun,live
   j=i_connect-1
   kernel_g(j)=gfactsf
-  live=angular_live(j).and.get_qMC(xi,y).le.shower_scale_nbody_max(fksfather,i_connect)
+  live=angular_live(j).and.qmc.le.shower_scale_nbody_max(fksfather,i_connect)
   z=0.5d0
   amp=0d0
   g=1d0
   if (include_gfun) g=gfactsf
-  if (live) amp=g*compute_damping_weight(i_connect,xi,y)
+  if (live) amp=g*damping
 end subroutine xmcsubt_connection

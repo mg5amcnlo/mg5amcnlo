@@ -937,7 +937,7 @@ c value to the list of weights using the add_wgt subroutine
       use fks_phase_space_data, only: p1_cnt,jac_cnt
 ! Evaluate one ordinary FKS history, including its real term and its
 ! G replacement. During H repartitioning add_wgt discards S records.
-      use kinematics_module, only: gfactsf,gfactcl,gfactazi
+      use mc_counterterms, only: gfactsf,gfactcl,gfactazi
       use mint_module, only: pass_cuts_check
       implicit none
       include 'nexternal.inc'
@@ -993,9 +993,10 @@ c value to the list of weights using the add_wgt subroutine
       end
 
       subroutine compute_MC_subt_term(p,p_lab,p_cms,jacPS,passcuts,probne)
+      use mc_counterterms, only: compute_MCsubtraction_kl,compute_delta,
+     $     bogus_probne_fun,get_qMC
       use fks_phase_space_data, only: xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt,p_born,xbjrk_ev,xbjrk_cnt
       use extra_weights
-      use kinematics_module
       use process_module, only: mcatnlo_delta_mod
       implicit none
 c     Compute the ordinary, complete native-history MC contribution. The
@@ -1013,8 +1014,7 @@ c     respectively.
      $     ,sevmc_Sev,g22,wgt1
      $     ,xlum_mc_fact,fks_Hij,amp_split_xmcxsec(amp_split_size,2),xi
      $     ,y,z(2),p_cms(0:3,nexternal),p_lab(0:3,nexternal),jacPS
-     $     ,bogus_probne_fun
-      external fks_Sij,fks_Hij,bogus_probne_fun
+      external fks_Sij,fks_Hij
       logical passcuts
       integer            i_fks,j_fks
       common/fks_indices/i_fks,j_fks
@@ -1087,7 +1087,7 @@ c Use the coordinates of the active map, including the resonance frame.
 
       subroutine update_fks_dir(nFKS)
       use process_module
-      use kinematics_module
+      use mc_counterterms, only: fill_father_and_ileg
       implicit none
       include 'nexternal.inc'
       include 'run.inc'
@@ -1113,7 +1113,7 @@ c Use the coordinates of the active map, including the resonance frame.
      $     ,sevmc_Sev,jac_ratio)
       use fks_phase_space_data, only: p1_cnt,jac_cnt
       use extra_weights
-      use kinematics_module
+      use mc_counterterms, only: gfactsf,gfactcl
       implicit none
       include "nexternal.inc"
       include 'orders.inc'
@@ -7545,6 +7545,7 @@ c
 
 
       subroutine setfksfactor(match_to_shower)
+      use mc_counterterms, only: set_QCD_flows
       use weight_lines
       use extra_weights
       use mint_module

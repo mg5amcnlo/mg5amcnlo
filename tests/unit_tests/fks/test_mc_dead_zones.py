@@ -12,12 +12,11 @@ import sys
 import tempfile
 import unittest
 
-from tests.unit_tests.fks.test_momentum_maps import fortran_routine
+from tests.unit_tests.fks.test_momentum_maps import fortran_routine, mc_counterterm_test_module
 
 
 ROOT = Path(__file__).resolve().parents[3]
 TEMPLATE = ROOT / "Template/NLO/SubProcesses"
-COUNTER = TEMPLATE / "montecarlocounter.f"
 
 
 @unittest.skipUnless(shutil.which("gfortran"), "requires gfortran")
@@ -33,11 +32,14 @@ class TestMCDeadZones(unittest.TestCase):
         (work / "orders.inc").write_text(
             "      integer amp_split_size\n"
             "      parameter (amp_split_size=1)\n")
+        (work / "born_nhel.inc").write_text(
+            "      integer max_bcol\n      parameter(max_bcol=1)\n")
         (work / "fks_info.inc").write_text("")
         shutil.copyfile(TEMPLATE / "fks_powers.inc", work / "fks_powers.inc")
-        routines = [fortran_routine(COUNTER, name) for name in
-                    ("compute_MCsubtraction_kl", "compute_damping_weight",
-                     "emscafun", "get_dead_zone", "get_angle")]
+        routines = [mc_counterterm_test_module(
+                    ("compute_MCsubtraction_kl", "classify_mc_kernel_limits",
+                     "compute_damping_weight",
+                     "emscafun", "get_dead_zone", "get_angle"))]
         routines.extend(fortran_routine(
             ROOT / "Template/NLO/Source/kin_functions.f", name)
                         for name in ("dot", "rho", "threedot"))
@@ -51,7 +53,7 @@ class TestMCDeadZones(unittest.TestCase):
                    "-Wl,-dead_strip" if sys.platform == "darwin" else "-Wl,--gc-sections",
                    "-I", str(work), str(TEMPLATE / "process_module.f90"),
                    str(TEMPLATE / "fks_phase_space_data.f"),
-                   str(TEMPLATE / "kinematics_module.f90"),
+                   str(TEMPLATE / "genps_fks_helpers.f"),
                    str(TEMPLATE / "mcatnlo_delta_scales.f90"),
                    str(TEMPLATE / "herwig7_scales.f90"),
                    str(TEMPLATE / "scale_module.f90"), str(work / "counter.f"),

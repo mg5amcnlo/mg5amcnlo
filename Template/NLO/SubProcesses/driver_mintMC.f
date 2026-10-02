@@ -685,7 +685,8 @@ c
       use mc_native_context, only: mc_begin_real_point,mc_end_real_point
       use weight_lines
       use mint_module
-      use kinematics_module
+      use mc_counterterms, only: fksfather,gfactsf,gfactcl,
+     $     mc_shower_scale_mass
       use process_module
       use scale_module
       implicit none
@@ -846,16 +847,17 @@ c 1/proc_map(0,0)*vol1)
      $              ,born_flow_factor)
                call Bornonly_shower_scale(p_born,born_flow_picked)
                call save_shower_scale_nbody(nFKS_picked_nbody,
-     $              ifold_counter)
+     $              ifold_counter,fksfather)
             elseif (abrv(1:2).eq.'vi') then
                ! Doing only the Virtual contribution (could be because
                ! we are generating a virtual event).
                call compute_nbody_noborn
                if (ifl.eq.0) call get_born_flow(born_flow_picked
      $              ,born_flow_factor)
-               call compute_shower_scale_nbody(p_born,born_flow_picked)
+               call compute_shower_scale_nbody(p_born,born_flow_picked,
+     $              mc_shower_scale_mass())
                call save_shower_scale_nbody(nFKS_picked_nbody,
-     $              ifold_counter)
+     $              ifold_counter,fksfather)
             else
                ! Normal: all contributions included. Determine the
                ! shower scale when looping over FKS configurations.
@@ -869,9 +871,10 @@ c 1/proc_map(0,0)*vol1)
                ! will be used if we are in the dead-zone. If we are not
                ! in the dead-zone, this will not be used (or
                ! overwritten).
-               call compute_shower_scale_nbody(p_born,born_flow_picked)
+               call compute_shower_scale_nbody(p_born,born_flow_picked,
+     $              mc_shower_scale_mass())
                call save_shower_scale_nbody(nFKS_picked_nbody,
-     $              ifold_counter)
+     $              ifold_counter,fksfather)
             endif
          elseif (ifl.eq.0) then
             call sborn_native(p_born,wgt1)
@@ -899,18 +902,19 @@ c for different nFKSprocess.
 !     assignements only needed for the dipoles where the fks-mother is
 !     one end of the dipole line)
                fks_father=min(i_fks,j_fks)
-               call compute_shower_scale_nbody(p_born,-fks_father) 
+               call compute_shower_scale_nbody(p_born,-fks_father,
+     $              mc_shower_scale_mass())
 !     assign emsca_S: we know flow (from driver_mintMC) and the
 !     father. Therefore the partner is fixed (except when father is a gluon
 !     (then there is a two-fold ambiguity)). Determine the partner:
 
 !     Determine the partner of the father (keep it the same for each fold)
                if (ifl.eq.0) call determine_partner(born_flow_picked
-     $              ,partner_picked(iFKS))
+     $              ,fksfather,partner_picked(iFKS))
 !     The shower scale to be used in the event file (if it's an S-event and
 !     fks_picked will be iFKS):
                call save_shower_scale_nbody(iFKS,ifold_counter,
-     $              partner_picked(iFKS))
+     $              fksfather,partner_picked(iFKS))
             endif
                
             probne=1d0
@@ -933,7 +937,8 @@ c counter-event momenta do not exist).
 
 ! fill the valid_dipole array and fill the H-event shower scale array            
             call init_process_module_n1body_wrapper(born_flow_picked)
-            call compute_shower_scale_n1body(p,i_fks,j_fks)
+            call compute_shower_scale_n1body(p,i_fks,j_fks,
+     $           mc_shower_scale_mass())
 ! The shower scale to be used in the event file (if it's an H-event and
 ! fks_picked will be iFKS). If the emission is hard, we take the dipole
 ! scale as upper boundary for the next emissions. On the other hand, to
@@ -1064,7 +1069,10 @@ c Sum the contributions that can be summed before taking the ABS value
      $     momenta_m,y_bst,need_match,mc_H_only
       use mint_module, only: iconfig
       use process_module, only: ndelH
-      use kinematics_module
+      use fks_phase_space_helpers, only: apply_momentum_permutation,
+     $     boost_n1_to_lab
+      use mc_counterterms, only: fksfather,gfactsf,gfactcl,gfactazi,
+     $     prepare_mc_kinematics,mc_shower_scale_mass
       use scale_module
       implicit none
       include 'nexternal.inc'
@@ -1235,7 +1243,7 @@ c Sum the contributions that can be summed before taking the ABS value
 ! cancels too, since the labelled histories are explicitly enumerated.
             factor=sector_weight*outer_measure/native_measure
             MCcntcalled=0
-            call fill_kinematics_module(pn_cms,i_fks,j_fks,
+            call prepare_mc_kinematics(pn_cms,i_fks,j_fks,
      $           xi_i_fks_ev,y_ij_fks_ev,pmass(j_fks),.false.)
             call compute_prefactors_n1body(1d0,jac_native)
             if(n_recoil_groups.gt.1)
@@ -1261,8 +1269,10 @@ c Sum the contributions that can be summed before taking the ABS value
             call include_born_flow_weight(flow_factor_native,
      $           flow_factor_native)
             call init_process_module_n1body_wrapper(born_flow_picked)
-            call compute_shower_scale_nbody(p_born,-fksfather)
-            call compute_shower_scale_n1body(pn,i_fks,j_fks)
+            call compute_shower_scale_nbody(p_born,-fksfather,
+     $           mc_shower_scale_mass())
+            call compute_shower_scale_n1body(pn,i_fks,j_fks,
+     $           mc_shower_scale_mass())
             cuts_born=passcuts(p1_cnt(0,1,0),rwgt)
             call set_cms_stuff(-100)
             if (ickkw.eq.3) call set_FxFx_scale(-3,pn)
@@ -1319,7 +1329,7 @@ c Sum the contributions that can be summed before taking the ABS value
       icolup_s=colours_s_save
       icolup_h=colours_h_save
       MCcntcalled=called_save
-      call fill_kinematics_module(p_cms,i_fks,j_fks,
+      call prepare_mc_kinematics(p_cms,i_fks,j_fks,
      $     xi_i_fks_ev,y_ij_fks_ev,pmass(j_fks),.false.)
       gfactsf=gfun_save(1)
       gfactcl=gfun_save(2)

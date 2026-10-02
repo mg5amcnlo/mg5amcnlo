@@ -67,7 +67,7 @@ class TestMCEventColours(unittest.TestCase):
                 '-I', str(work), str(work / 'contexts.f90'),
                 str(TEMPLATE / 'process_module.f90'),
                 str(TEMPLATE / 'fks_phase_space_data.f'),
-                str(TEMPLATE / 'kinematics_module.f90'),
+                str(TEMPLATE / 'genps_fks_helpers.f'),
                 str(TEMPLATE / 'mcatnlo_delta_scales.f90'),
                 str(TEMPLATE / 'herwig7_scales.f90'),
                 str(TEMPLATE / 'scale_module.f90'), str(TEMPLATE / 'weight_lines.f'),

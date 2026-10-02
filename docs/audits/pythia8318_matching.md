@@ -123,12 +123,52 @@ Primary PYTHIA sources:
 - [Timelike shower settings](https://gitlab.com/Pythia8/releases/-/blob/pythia8318/share/Pythia8/xmldoc/TimelikeShowers.xml)
   and [spacelike shower settings](https://gitlab.com/Pythia8/releases/-/blob/pythia8318/share/Pythia8/xmldoc/SpacelikeShowers.xml).
 
-Production entry points are `compute_MCsubtraction_kl`, `xmcsubt_connection`,
-`compute_splitting_kernels`, `zPY8`, `xiPY8`, `xjacPY8`, and `get_dead_zone` in
-`Template/NLO/SubProcesses/montecarlocounter.f`; the inverses in `genps_fks.f`;
+The `mc_counterterms` module in
+`Template/NLO/SubProcesses/montecarlocounter.f` exports `set_QCD_flows`,
+`compute_MCsubtraction_kl`, `compute_delta`, and `bogus_probne_fun`.
+It also owns the active shower invariants and G functions, previously in
+`kinematics_module`. Its history interface includes `prepare_mc_kinematics`,
+`fill_father_and_ileg`, `get_qMC`, and `mc_shower_scale_mass`; the history driver
+shares the father index and G factors for native-history restoration and FKS
+replacement terms. The invariant formulas, massive fractions and G-function
+helpers are private. The two identical `get_zeta` implementations are unified.
+The former `kinematics_module` has been folded into `fks_phase_space_helpers`
+in `genps_fks_helpers.f`. This lower-level phase-space module provides general
+momentum and radiation-coordinate utilities without process initialization
+or active point state; callers supply the soft direction when recovering
+`y_ij` at an endpoint. `scale_module` retains starting
+scales and event-output state, including Born-only paths. Scale generation,
+storage and partner selection now receive the active emitter mass bound or
+father explicitly, so scale generation does not depend on counterterm internals.
+Production callers use explicit module interfaces and import only their
+required entry points. Born preparation, connection evaluation, splitting
+kernels, shower maps and support checks are private module procedures.
+Flow validation owns its partner/flow scratch tables; only its special-gluon
+flags persist between evaluations. Each history passes an `mc_kernel_limits` value
+to the kernels, so evaluating them no longer depends on a prior call that
+sets global limit flags. COMMON blocks shared with the surrounding FKS code,
+native-Born adapters and Sudakov tables retain their existing layouts.
+The relevant PYTHIA procedures include `zPY8`, `xiPY8`, `xjacPY8`, and
+`get_dead_zone`; the comparison also uses the inverses in `genps_fks.f`
 and `get_mc_lum`, `compute_MC_subt_term`, and `add_wgt` in `fks_singular.f`.
 The archived `docs/pythia8_shower_subtraction.f90` is not called by production
 and was not substituted for these routines in the numerical checks.
+
+The counterterm driver prepares two barred Born vectors for the selected
+flow and correction order once per native history, then passes them to each
+distinct colour connection. This removes `/to_amp_split_bornbars/` and the
+unused arrays for other flows and orders. The normalization still sums all
+leading Born flows in their original order. A double connection
+to the same gluon partner retains both weight entries while reusing the kernel
+evaluation. `get_mbar` shares its ISR/FSR spinor-ratio calculation through
+`mc_born_azimuth_phase`. Delta matching separates stopping-scale reconstruction
+and live-connection selection into `get_delta_stopping_scales` and
+`get_delta_connections`. Each Born leg has a `delta_connections` record holding
+partners, starting/stopping scales, masses and Sudakov types.
+`delta_leg_probability` evaluates its Sudakov and PDF factors from explicit
+inputs; `compute_delta` multiplies those probabilities and updates event scales.
+These structural changes were checked by compilation and linking; the numerical
+comparisons recorded below have not been rerun for this refactor.
 
 The comparison concerns the first QCD emission from the hard Born system,
 with standard Simple showers, global FSR recoil, global II ISR recoil, and no

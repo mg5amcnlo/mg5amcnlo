@@ -227,8 +227,7 @@ contains
        rootsev => sqrtshat_ev,sev => shat_ev,rootscnt => sqrtshat_cnt,scnt => shat_cnt,tauev => tau_ev, &
        yev => ycm_ev,taucnt => tau_cnt,ycnt => ycm_cnt,bound_born => tau_Born_lower_bound, &
        bound_res => tau_lower_bound_resonance,bound_tau => tau_lower_bound
-    use process_module, only: next_n1,nincoming_mod
-    use kinematics_module, only: boost_n1_to_lab
+    use fks_phase_space_helpers, only: boost_n1_to_lab
     implicit none
     include 'genps.inc'
     include 'run.inc'
@@ -248,9 +247,6 @@ contains
          born_save(0:3,nexternal-1),sqrts,s,stot,taub,yb,yhat,xb(2),j0,ps0,jout,jnew,flux,jexpected, &
          jb,psb,ratio_save,xx(3),jinv0,psinv0,pbinv(0:3,-max_branch:nexternal-1),xbback(2),tauback,yback
     integer :: k,b,ic
-
-    next_n1=nexternal
-    nincoming_mod=nincoming
     active=.true.
     members=.false.
     recoil_leg=beam

@@ -774,7 +774,6 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                      'orderstag_base.inc',
                      'orderstags_glob.dat',
                      'polfit.f',
-                     'kinematics_module.f90',
                      'process_module.f90',
                      'scale_module.f90']
 

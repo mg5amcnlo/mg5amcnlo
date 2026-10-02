@@ -163,7 +163,7 @@ c Plain Born kinematics for S-event output and mass reshuffling. Slot
 c zero contains the Born point with a zero emitted momentum. Its weight
 c is the Born measure, not an FKS endpoint measure; integration callers
 c must use generate_born_contribution instead.
-      use kinematics_module, only: boost_n1_to_its_cms,boost_n1_to_lab
+      use fks_phase_space_helpers, only: boost_n1_to_its_cms,boost_n1_to_lab
       implicit none
       include 'timing_variables.inc'
       integer ndim,iconfig,i,iborn,i_fks,j_fks
@@ -471,7 +471,7 @@ c Equal Born flavours alone do not imply equal cuts/BW sampling maps.
 c Compose Born sampling and radiation in a channel already initialized.
 c Only the dressed-lepton map without event projection must generate
 c radiation first and a different reduced Born system for each endpoint.
-      use kinematics_module, only: boost_n1_to_its_cms,boost_n1_to_lab
+      use fks_phase_space_helpers, only: boost_n1_to_its_cms,boost_n1_to_lab
       implicit none
       integer ndim
       logical,intent(in) :: nbody_only
@@ -537,7 +537,7 @@ c Generate radiation from supplied Born CM momenta, without any Born
 c chart, beam sampling or recoil selection. The active sector/recoiler
 c must already be installed. The immutable Born measures never include
 c the caller weight: apply it once to real and counterevent Jacobians.
-      use kinematics_module, only: boost_n1_to_its_cms,boost_n1_to_lab
+      use fks_phase_space_helpers, only: boost_n1_to_its_cms,boost_n1_to_lab
       implicit none
       type(fks_born_point),intent(in) :: born
       type(fks_phase_space_point),intent(out) :: point
@@ -1433,10 +1433,10 @@ c native generation inputs remain separately in generated%born.
       subroutine invert_fks_radiation(xx,xjac0,xpswgt0,
      $     stot,tau_born,ycm_born,xbjrk_born,p_lab,pb)
       use fks_phase_space_data,only: resonance_momentum,resonance_mass2,resonance_recoil,
-     $     resonance_members,initial_recoil_leg
+     $     resonance_members,initial_recoil_leg,p_i_fks_cnt
 ! Input momenta are in the symmetric hadron frame used by generate_momenta.
 ! No Born integration-channel coordinates or Jacobians are recovered.
-      use kinematics_module, only: boost_n1_to_its_cms,
+      use fks_phase_space_helpers, only: boost_n1_to_its_cms,
      $     boost_n1_to_lab,get_xi_from_p,get_yij_from_p,get_phi_from_p
       implicit none
       double precision xjac0,xpswgt0,xx(3),p_cms(0:3,nexternal),stot
@@ -1483,7 +1483,8 @@ c a direct inversion in the lab would use a different transverse basis.
       call boost_n1_to_its_cms(p_lab,p_cms,y_lab_to_cms)
 
       xi_i_fks=get_xi_from_p(i_fks,j_fks,p_cms)
-      y_ij_fks=get_yij_from_p(i_fks,j_fks,p_cms)
+      y_ij_fks=get_yij_from_p(i_fks,j_fks,p_cms,
+     $     p_i_fks_cnt(:,0))
       phi_i_fks=get_phi_from_p(i_fks,j_fks,p_cms)
 
       ycm=log(xbjrk(1)/xbjrk(2))/2d0

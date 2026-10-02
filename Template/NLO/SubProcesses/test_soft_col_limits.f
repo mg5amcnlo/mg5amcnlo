@@ -378,13 +378,14 @@ c probability multiplies both terms and is not part of this limit test.
 
 
       subroutine compute_MC_subt_term_test(p,p_cms,wgt)
+      use mc_counterterms, only: compute_MCsubtraction_kl,
+     $     fill_father_and_ileg,fksfather,mc_shower_scale_mass
       use fks_phase_space_data, only: p_born,xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt
 c Test one complete native history, as used by compute_native_NLOPS_weights.
 c Its raw kernel carries H_ij; each G replacement carries its own limiting
 c S_ij and counterevent/real measure ratio. Repartitioning complete H weights
 c over other histories is an integration operation, not a native limit test.
       use mint_module
-      use kinematics_module
       use scale_module
       implicit none
       include 'nexternal.inc'
@@ -414,7 +415,8 @@ c Use the coordinates of the active map, including the resonance frame.
       call set_cms_stuff(-100)
       hij=fks_Hij(p,i_fks,j_fks)
       call fill_father_and_ileg(i_fks,j_fks,pmass(j_fks))
-      call compute_shower_scale_nbody(p_born,-fksfather)
+      call compute_shower_scale_nbody(p_born,-fksfather,
+     $     mc_shower_scale_mass())
       amp_split_mc=0d0
 c Sum colour flows explicitly, so the ME and MC sides have the same colour
 c sum without a randomly selected flow or a stale Born-flow probability.
@@ -453,7 +455,7 @@ c sum without a randomly selected flow or a stale Born-flow probability.
       subroutine compute_MCsubtraction_from_gfun_test(amp_gfun)
       use fks_phase_space_data,only: p1_cnt,jac_cnt,xi_i_fks_cnt,xi_i_fks_ev,
      $     y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt
-      use kinematics_module, only: gfactsf,gfactcl
+      use mc_counterterms, only: gfactsf,gfactcl
       implicit none
       include 'nexternal.inc'
       include 'orders.inc'
