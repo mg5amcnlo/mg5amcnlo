@@ -121,6 +121,8 @@ class TestMomentumMaps(unittest.TestCase):
         (work / "nexternal.inc").write_text(
             "      integer nexternal,nincoming\n"
             "      parameter (nexternal=5,nincoming=2)\n")
+        (work / "orders.inc").write_text(
+            "      integer nsplitorders\n      parameter(nsplitorders=1)\n")
         (work / "genps.inc").write_text(
             "      integer max_branch,max_particles\n"
             "      parameter (max_branch=8,max_particles=8)\n")
@@ -154,6 +156,7 @@ class TestMomentumMaps(unittest.TestCase):
                    str(TEMPLATE / "fks_phase_space_data.f"),
                    str(TEMPLATE / "genps_fks_helpers.f"),
                    str(work / "native_context.f90"),
+                   str(TEMPLATE / "FKSParams.f90"),
                    str(TEMPLATE / "genps_fks_radiation.f"),
                    str(work / "fks_phase_space.f"),
                    str(work / "maps.f"), str(TEMPLATE / "boostwdir2.f"),
@@ -184,8 +187,20 @@ class TestMomentumMaps(unittest.TestCase):
     def test_initial_state_recoil_and_endpoints(self):
         self.check_map("isr")
 
+    def test_symmetric_initial_state_recoil_inverse_measure_and_endpoints(self):
+        self.check_map("isr_symmetric")
+
+    def test_automatic_fixed_order_mapping_preserves_asymmetric_default(self):
+        self.check_map("isr_automatic")
+
     def test_initial_state_fks_finite_integrals(self):
         self.check_map("isr_fks")
+
+    def test_symmetric_initial_state_fks_finite_integrals(self):
+        self.check_map("isr_symmetric_fks")
+
+    def test_symmetric_initial_state_restricted_and_empty_domains(self):
+        self.check_map("isr_symmetric_bounds")
 
     def test_asymmetric_beam_boost(self):
         self.check_map("boost")

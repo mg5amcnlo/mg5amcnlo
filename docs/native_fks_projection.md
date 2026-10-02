@@ -229,8 +229,27 @@ indices and channel against the saved point.
 
 ## Global initial-state recoil
 
-The default ISR map in `genps_fks_radiation.f` is shared by fixed-order
-integration, all shower choices, and native history projection. It uses massless incoming partons. For
+`FKSISRMapping` in `Cards/FKS_params.dat` selects the ISR map:
+
+| Value | Mapping | Allowed runs |
+| --- | --- | --- |
+| `0` | Automatic; currently asymmetric in every mode (default) | Fixed order and shower matching |
+| `1` | Original symmetric FKS map | Without shower matching |
+| `2` | Asymmetric Pythia-like map | Fixed order and shower matching |
+
+The integration drivers validate the choice after reading both cards. A forced
+symmetric map with shower matching stops with an error naming the shower and
+the supported settings. This preserves the existing matched implementation
+for all showers; it does not claim that the symmetric map is fundamentally
+incompatible with every shower. In particular, the current Pythia ISR
+luminosity and event projection rescale only the emitting beam.
+The shower name left in a fixed-order run card does not enable matching.
+
+Generation, every subtraction endpoint, inverse projection and the lepton
+chart use the same selector. Native mapping does not override it.
+
+The default asymmetric map in `genps_fks_radiation.f` uses massless incoming
+partons. For
 emitter `j`, define `z = 1 - xi`, where `xi = 2 E_rad / sqrt(s)` and `y` is the
 cosine of the radiation angle relative to that emitter in the real partonic CM.
 The Born and real fractions obey
@@ -276,6 +295,41 @@ light-cone components, including the orientation of the hard final state.
 The lepton chart without event projection applies the same recoil and then
 boosts to the real CM; it retains its existing sampling of real incoming
 fractions and reduced Born mass.
+
+### Symmetric fixed-order option
+
+Set the following in `Cards/FKS_params.dat` to recover the original map:
+
+```text
+#FKSISRMapping
+1
+```
+
+With `c = idir*y` and
+`omega = sqrt((2-xi*(1+c))/(2-xi*(1-c)))`, it rescales both beams:
+
+```text
+x_1 = bar_x_1 / (sqrt(z)*omega),
+x_2 = bar_x_2 * omega / sqrt(z),
+ycm = ycm_born - log(omega).
+```
+
+It retains the original transverse recoil boost in the underlying Born CM.
+The radiation endpoint depends on angle because both real fractions must
+remain at most one. The common forward/inverse bounds helper solves those
+constraints with a rationalized quadratic root, retaining the separately
+stored lepton `1-x` near the beam endpoint. A raised real-mass threshold can
+also restrict the angular domain. Empty domains are rejected.
+The lepton chart without event projection retains its original single boost
+along the recoil, including its exact soft copy branch.
+
+The two maps have the same phase-space measure but different fractions,
+hard-momentum orientations and physical endpoints for the same random
+coordinates. Consequently their PDF and acceptance weights, subtraction
+cancellations and adaptation can have different variance. The Jacobian alone
+does not establish which map converges faster. Keep each configuration's own
+endpoint in the finite FKS terms: the symmetric real/soft endpoint generally
+differs from its collinear endpoint, `1-bar_x_j`.
 
 ### Analytically integrated FKS terms
 
@@ -416,3 +470,77 @@ These results agree within their Monte Carlo uncertainties. The generated
 soft/collinear tests passed in all four FKS sectors, and all 20 virtual-pole
 checks passed at tolerance `1e-5`. This checks fixed-order subtraction;
 consistency with the other shower mappings is deferred.
+
+### Fixed-order variance comparison (2026-10-02)
+
+Controlled comparisons did **not establish an efficiency regression** of the
+asymmetric map, so `FKSISRMapping=0` retains it as the default. The symmetric
+option is available explicitly for process-specific comparisons.
+
+The comparison used `loop_sm`, 13 TeV proton beams, built-in `nn23nlo` PDFs,
+fixed scales of 91.188 GeV for Drell–Yan and 173 GeV for top pairs, and no
+scale/PDF reweighting. The processes were `u u~ > e+ e- [QCD]` and
+`g g > t t~ [QCD]`, including their generated real channels, rather than a
+sum over all possible Born flavours. Each map independently adapted a fresh
+grid with the same seed and requested budget: 4 iterations of 5,000 grid
+points, then 3 iterations of 50,000 production points. MINT reported
+49,152 actual points per production iteration, or 147,456 per run.
+
+The symmetric comparison restored only the ISR forward/inverse procedures
+and lepton recoil from `02d4bd2f4` on top of `0651e45f1`; the massive-FSR
+stability changes and other code were held fixed. The final configurable
+implementation was then checked separately against both versions.
+
+| Full NLO calculation | Paired seeds | RMS quoted error, symmetric (pb) | RMS quoted error, asymmetric (pb) | Geometric variance ratio, asymmetric/symmetric | Approximate 95% interval |
+| --- | ---: | ---: | ---: | ---: | --- |
+| Inclusive Drell–Yan, `m_ll > 30 GeV` | 5 | 2.075 | 2.070 | 0.995 | 0.954–1.037 |
+| Drell–Yan, `pT_l > 25 GeV`, `abs(eta_l) < 2.5`, `m_ll > 66 GeV` | 20 | 0.916 | 0.941 | 1.060 | 0.950–1.183 |
+| Inclusive `g g > t t~` | 5 | 4.189 | 3.290 | 0.741 | 0.347–1.583 |
+
+There was no upper dilepton-mass cut. The first five fiducial Drell–Yan seeds
+suggested a roughly 17% geometric variance increase, but the prespecified
+extension to twenty seeds reduced it to 6% with an interval containing one.
+The top-pair result has substantial variation between seeds, including an
+outlying symmetric run; five seeds do not establish a reliable improvement
+there either. A separate real-plus-subtraction diagnostic also found no
+resolved increase: ratios were 1.000 without lepton acceptance cuts and
+1.075 with those cuts, each using five pairs. That subset is a diagnostic,
+not a separately complete physical cross section.
+
+The variance proxy is the squared reported integration error times the
+production point count, not the variance of bare phase-space Jacobians.
+Equal point budgets make the per-seed ratios equal to the error-squared
+ratios. The table averages their logarithms and uses
+`exp(mean(log ratio) +/- 1.96 * standard_error(log ratio))` for its approximate
+intervals. These intervals describe observed run-to-run variability and are
+especially tentative with five seeds and heavy tails. Common seeds do not
+guarantee identical physical points or random-stream consumption. The
+results do not exclude differences for other processes, cuts or observables.
+
+[The recorded comparison](isr_mapping_benchmark_20261002.json) contains all
+80 runs, settings, seeds, quoted cross sections and uncertainties, timing
+data and the statistical calculations. To repeat the complete-calculation
+comparisons with the explicit selector, use:
+
+```sh
+python3 tests/input_files/benchmark_isr_mapping.py \
+  --mg5-root . --work /tmp/isr-comparison \
+  --cases dy dy_fiducial tt \
+  --seeds 271828 314159 161803 141421 173205
+```
+
+`--work` must be a new directory. The script records commands, cards, source
+hashes, per-channel diagnostics and JSON summaries. The additional fifteen
+fiducial seeds are recorded in the JSON report and can be passed using
+`--seeds` with `--cases dy_fiducial`.
+
+Validation of the implementation passed 139 focused regression tests.
+These include independent forward/inverse momentum and measure checks for
+both emitters, singular endpoints, restricted/empty domains, lepton endpoint
+precision, finite subtraction integrals, card parsing and shower rejection.
+An independent 392-point comparison against the old symmetric code agreed
+within `2.1e-13`; 576 further endpoint cases passed with floating-point traps.
+Generated Drell–Yan runs gave identical results for settings `0` and `2`.
+Setting `1` reproduced the old result to `6e-5 pb`, versus a `2.17 pb`
+integration uncertainty. The generated matched executable rejected setting
+`1` with exit status 1 before integration.

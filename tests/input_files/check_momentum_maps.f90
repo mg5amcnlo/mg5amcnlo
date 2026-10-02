@@ -32,7 +32,9 @@ program check_momentum_maps
   call get_command_argument(1,mode)
   softtest=.false.
   colltest=.false.
-  if (mode.eq.'isr'.or.mode.eq.'isr_fks') then
+  if (mode.eq.'isr'.or.mode.eq.'isr_fks'.or. &
+       mode.eq.'isr_symmetric'.or.mode.eq.'isr_automatic'.or.mode.eq.'isr_symmetric_fks'.or. &
+       mode.eq.'isr_symmetric_bounds') then
      call check_isr_mapping(trim(mode))
      write(*,*) 'PASS ',trim(mode)
      stop

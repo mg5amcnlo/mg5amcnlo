@@ -34,6 +34,8 @@ class TestResonanceRecoil(unittest.TestCase):
             (work / "nexternal.inc").write_text(
                 "      integer nexternal,nincoming\n"
                 f"      parameter (nexternal={nincoming + 5},nincoming={nincoming})\n")
+            (work / "orders.inc").write_text(
+                "      integer nsplitorders\n      parameter(nsplitorders=1)\n")
             (work / "genps.inc").write_text(
                 "      integer max_branch,max_particles\n"
                 "      parameter (max_branch=10,max_particles=10)\n")
@@ -58,6 +60,7 @@ class TestResonanceRecoil(unittest.TestCase):
                        str(work / "native_context.f90"),
                        str(TEMPLATE / "fks_phase_space_data.f"),
                        str(TEMPLATE / "genps_fks_helpers.f"),
+                       str(TEMPLATE / "FKSParams.f90"),
                        str(TEMPLATE / "genps_fks_radiation.f"),
                        str(work / "fks_phase_space.f"), str(work / "maps.f"),
                        str(TEMPLATE / "resonance_recoil.f"),

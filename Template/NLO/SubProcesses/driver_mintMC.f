@@ -125,6 +125,7 @@ c
       enddo
 
       call setrun                !Sets up run parameters
+      call print_fks_isr_mapping(fixed_order,nlo_ps,shower_mc)
       call setpara('param_card.dat')   !Sets up couplings and masses
       call setcuts               !Sets up cuts and particle masses
       call printout              !Prints out a summary of paramaters

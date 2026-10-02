@@ -163,6 +163,8 @@ class TestPythia8Matching(unittest.TestCase):
         (work / 'nexternal.inc').write_text(
             '      integer nexternal,nincoming\n'
             '      parameter(nexternal=6,nincoming=2)\n')
+        (work / "orders.inc").write_text(
+            "      integer nsplitorders\n      parameter(nsplitorders=1)\n")
         (work / 'genps.inc').write_text(
             '      integer max_branch,max_particles\n'
             '      parameter(max_branch=8,max_particles=8)\n')
@@ -220,6 +222,7 @@ class TestPythia8Matching(unittest.TestCase):
                        '-I', str(work), str(TEMPLATE / 'process_module.f90'),
                        str(TEMPLATE / 'fks_phase_space_data.f'),
                        str(TEMPLATE / 'genps_fks_helpers.f'), 'native.f90', 'scale.f90',
+                       str(TEMPLATE / "FKSParams.f90"),
                        str(TEMPLATE / 'genps_fks_radiation.f'), 'fks_phase_space.f',
                        'routines.f', str(TEMPLATE / 'boostwdir2.f'),
                        str(TEMPLATE / 'resonance_recoil.f'),

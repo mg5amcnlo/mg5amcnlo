@@ -13,12 +13,12 @@ ROOT = Path(__file__).resolve().parents[3]
 TEMPLATE = ROOT / 'Template/NLO/SubProcesses'
 
 
-def mint_support(work, real_weight_lines=False):
+def mint_support(work, real_weight_lines=False, real_fks_params=False):
     (work / 'params.f90').write_text(
-        'module FKSParams\n'
+        ('' if real_fks_params else 'module FKSParams\n'
         'logical :: use_poly_virtual=.false.\n'
         'double precision :: virt_fraction=1d0,min_virt_fraction=0.01d0\n'
-        'end module\n'
+        'end module\n') +
         'module mc_native_context\n'
         'logical :: native_mapping=.false.\n'
         'end module\n')
@@ -32,7 +32,12 @@ def mint_support(work, real_weight_lines=False):
     (work / 'stubs.f90').write_text(
         ''.join('subroutine %s\nend subroutine\n' % name for name in unused) +
         ''.join('subroutine %s\nstop 99\nend subroutine\n' % name for name in polyfit))
-    return [str(work / 'params.f90'), str(TEMPLATE / 'mint_module.f90'),
+    support = []
+    if real_fks_params:
+        (work / 'orders.inc').write_text(
+            '      integer nsplitorders\n      parameter(nsplitorders=1)\n')
+        support.append(str(TEMPLATE / 'FKSParams.f90'))
+    return support + [str(work / 'params.f90'), str(TEMPLATE / 'mint_module.f90'),
             str(work / 'stubs.f90')]
 
 
@@ -126,7 +131,7 @@ class TestBornSpreading(unittest.TestCase):
         """A fitted factor must preserve ISR and massless/massive FSR Born weights."""
         with tempfile.TemporaryDirectory(prefix='mg5_born_measure_') as tmp:
             work = Path(tmp)
-            support = mint_support(work)
+            support = mint_support(work, real_fks_params=True)
             (work / 'nexternal.inc').write_text(
                 '      integer nexternal,nincoming\n'
                 '      parameter (nexternal=5,nincoming=2)\n')

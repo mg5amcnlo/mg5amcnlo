@@ -1,0 +1,2789 @@
+{
+  "setup": {
+    "date": "2026-10-02",
+    "baseline_commit": "0651e45f1",
+    "symmetric_routines_commit": "02d4bd2f4",
+    "method": "All existing generic Fortran/include/makefile sources overlaid from immutable HEAD. Old case substitutes only generate_momenta_initial and generate_momenta_initial_inverse in genps_fks_radiation.f and boost_born_momenta_noevpr plus corresponding call in genps_fks.f. FSR routines otherwise identical. Each map/run independently adapts fresh grids with the same requested point budget and seed.",
+    "processes": {
+      "dy": "u u~ > e+ e- [QCD]",
+      "tt": "g g > t t~ [QCD]"
+    },
+    "model": "loop_sm",
+    "beam_energy_gev": [
+      6500,
+      6500
+    ],
+    "beam_type": "proton/proton",
+    "pdf": "nn23nlo (built in NNPDF23nlo_as_0119_qed_mem0)",
+    "fixed_scales_gev": {
+      "dy": 91.188,
+      "tt": 173.0
+    },
+    "reweighting": false,
+    "grid": {
+      "points_requested": 5000,
+      "iterations_requested": 4
+    },
+    "production": {
+      "points_requested": 50000,
+      "iterations": 3,
+      "points_reported_per_iteration": 49152,
+      "total_points_reported": 147456
+    },
+    "cuts": {
+      "dy": {
+        "mll_sf_min_gev": 30,
+        "ptl_min_gev": 0,
+        "etal_max": -1
+      },
+      "dyfid": {
+        "mll_sf_min_gev": 66,
+        "ptl_min_gev": 25,
+        "etal_max": 2.5,
+        "mll_max": "none"
+      },
+      "tt": {
+        "ptj_min_gev": 0
+      }
+    },
+    "diagnostic_selected_contribution_types": [
+      1,
+      4,
+      5,
+      6,
+      8,
+      9,
+      10,
+      11
+    ],
+    "diagnostic_note": "Real plus numerical subtraction subset; not a physical separately complete cross section.",
+    "confidence_method": "For paired seed i define L_i=log(error_new_i^2/error_old_i^2). Report exp(mean(L)), median(exp(L)), and exp(mean(L)+/-1.96*sd(L)/sqrt(n)). This is an approximate normal interval, especially tentative for five seeds and heavy-tailed variance estimators. Aggregate ratio is sum(error_new^2)/sum(error_old^2). Reported point budgets are equal, so error-squared ratios equal error-squared-times-N ratios. Common seeds need not yield common physical points or identical random-stream consumption.",
+    "variance_measure": "Monte Carlo reported squared integration error times MINT reported production point count. Adaptive integration; not raw unweighted phase-space variance.",
+    "artifacts": "/tmp/isr_variance_20261002_95pzmr3y",
+    "original_scripts": [
+      "run_benchmarks.py",
+      "run_diagnostics.py",
+      "extend_fiducial.py",
+      "run_fiducial_real.py"
+    ],
+    "portable_script": "benchmark_isr_mapping.py"
+  },
+  "conclusion": "No statistically resolved regression of the asymmetric map in the tested complete fixed-order calculations. Inclusive DY essentially equal; fiducial DY 20-seed geometric variance ratio approximately 1.06 with 95% normal interval containing unity; gg top-pair has noisy tails and does not favor symmetric globally. Evidence does not support changing the automatic default.",
+  "summaries": {
+    "dy": {
+      "label": "Inclusive Drell-Yan",
+      "paired_seeds": [
+        141421,
+        161803,
+        173205,
+        271828,
+        314159
+      ],
+      "pairs": 5,
+      "variance_ratios": [
+        0.9654536052584477,
+        1.0618462497445087,
+        0.9388916912509827,
+        0.9934435423198712,
+        1.017642708359648
+      ],
+      "geometric_variance_ratio": 0.9945563890032464,
+      "median_variance_ratio": 0.9934435423198712,
+      "approximate_95pct_normal_log_ratio_interval": [
+        0.9540235492876558,
+        1.0368113152403244
+      ],
+      "mean_log_ratio": -0.005458481437577824,
+      "standard_error_log_ratio": 0.021228796741345892,
+      "aggregate_variance_ratio": 0.9950130234103227,
+      "mean_paired_xsec_difference_pb": 0.5545818960517636,
+      "standard_error_paired_difference_pb": 0.1446660397800904,
+      "maps": {
+        "old": {
+          "mean_xsec_pb": 518.3735347545355,
+          "rms_error_pb": 2.0748851286025936,
+          "mean_error_squared_times_points": 634819.9472671262,
+          "mean_production_cpu_s": 11.11021138,
+          "cross_seed_xsec_standard_deviation_pb": 1.695257096104485
+        },
+        "new": {
+          "mean_xsec_pb": 518.9281166505873,
+          "rms_error_pb": 2.0697049604048616,
+          "mean_error_squared_times_points": 631654.1150514449,
+          "mean_production_cpu_s": 10.65283794,
+          "cross_seed_xsec_standard_deviation_pb": 1.8720885943277021
+        }
+      }
+    },
+    "tt": {
+      "label": "Inclusive gg top-pair",
+      "paired_seeds": [
+        141421,
+        161803,
+        173205,
+        271828,
+        314159
+      ],
+      "pairs": 5,
+      "variance_ratios": [
+        0.168294631240342,
+        0.9540630475888295,
+        0.9237872211870095,
+        1.6568491832027217,
+        0.9090312810789282
+      ],
+      "geometric_variance_ratio": 0.7409966058854843,
+      "median_variance_ratio": 0.9237872211870095,
+      "approximate_95pct_normal_log_ratio_interval": [
+        0.3468970446146771,
+        1.5828211236094705
+      ],
+      "mean_log_ratio": -0.2997592341479786,
+      "standard_error_log_ratio": 0.3872285766890269,
+      "aggregate_variance_ratio": 0.6168978437186619,
+      "mean_paired_xsec_difference_pb": -1.3771823122857767,
+      "standard_error_paired_difference_pb": 4.895074016810494,
+      "maps": {
+        "old": {
+          "mean_xsec_pb": 714.3569705745679,
+          "rms_error_pb": 4.188614815345552,
+          "mean_error_squared_times_points": 2587040.917782369,
+          "mean_production_cpu_s": 24.33296776,
+          "cross_seed_xsec_standard_deviation_pb": 8.970606016404878
+        },
+        "new": {
+          "mean_xsec_pb": 712.9797882622821,
+          "rms_error_pb": 3.289857225129947,
+          "mean_error_squared_times_points": 1595939.9637918915,
+          "mean_production_cpu_s": 24.41650772,
+          "cross_seed_xsec_standard_deviation_pb": 3.7242202985867277
+        }
+      }
+    },
+    "dyfid": {
+      "label": "Fiducial Drell-Yan",
+      "paired_seeds": [
+        141421,
+        161803,
+        173205,
+        223606,
+        244948,
+        264575,
+        271828,
+        282842,
+        314159,
+        316227,
+        331662,
+        346410,
+        360555,
+        374165,
+        387298,
+        412310,
+        424264,
+        435889,
+        447213,
+        458258
+      ],
+      "pairs": 20,
+      "variance_ratios": [
+        1.4214720463066761,
+        1.3869647382375698,
+        0.8313505417366135,
+        0.9069320906450076,
+        1.4271961499837191,
+        0.9653230306648494,
+        1.1015652019566016,
+        1.3847241417033058,
+        1.199280837472277,
+        1.1374877263747283,
+        0.7478564940789179,
+        0.6642561198591096,
+        0.9104493411487254,
+        0.9486386228592503,
+        1.1210138324029972,
+        0.9424579699032675,
+        1.1425721790066337,
+        0.9187462780197224,
+        1.8335400422179138,
+        0.8620368443461157
+      ],
+      "geometric_variance_ratio": 1.0599660328015104,
+      "median_variance_ratio": 1.0334441163107255,
+      "approximate_95pct_normal_log_ratio_interval": [
+        0.9496951696188404,
+        1.183040649921279
+      ],
+      "mean_log_ratio": 0.058236863083661876,
+      "standard_error_log_ratio": 0.05604647094272859,
+      "aggregate_variance_ratio": 1.0569877560421432,
+      "mean_paired_xsec_difference_pb": -0.15929259552545857,
+      "standard_error_paired_difference_pb": 0.2498735010686767,
+      "maps": {
+        "old": {
+          "mean_xsec_pb": 126.31384329146714,
+          "rms_error_pb": 0.9157014525294279,
+          "mean_error_squared_times_points": 123643.20524665712,
+          "mean_production_cpu_s": 9.8360901365,
+          "cross_seed_xsec_standard_deviation_pb": 0.970935475072613
+        },
+        "new": {
+          "mean_xsec_pb": 126.15455069594168,
+          "rms_error_pb": 0.9414318377095516,
+          "mean_error_squared_times_points": 130689.35406352225,
+          "mean_production_cpu_s": 9.3644542675,
+          "cross_seed_xsec_standard_deviation_pb": 0.9883630999427732
+        }
+      }
+    },
+    "dyreal": {
+      "label": "Inclusive Drell-Yan real plus subtraction diagnostic",
+      "paired_seeds": [
+        141421,
+        161803,
+        173205,
+        271828,
+        314159
+      ],
+      "pairs": 5,
+      "variance_ratios": [
+        1.0429716819464336,
+        1.0161375627450526,
+        0.9844358140662778,
+        0.9925699501403628,
+        0.9662567443533017
+      ],
+      "geometric_variance_ratio": 1.0001225460291494,
+      "median_variance_ratio": 0.9925699501403628,
+      "approximate_95pct_normal_log_ratio_interval": [
+        0.9745013201028235,
+        1.026417395689406
+      ],
+      "mean_log_ratio": 0.00012253852099826674,
+      "standard_error_log_ratio": 0.013240787709251552,
+      "aggregate_variance_ratio": 0.9996283222787549,
+      "mean_paired_xsec_difference_pb": 0.35864207020997296,
+      "standard_error_paired_difference_pb": 0.6089375278047915,
+      "maps": {
+        "old": {
+          "mean_xsec_pb": 53.269583849116266,
+          "rms_error_pb": 1.449024220617681,
+          "mean_error_squared_times_points": 309609.11527821486,
+          "mean_production_cpu_s": 11.15041334,
+          "cross_seed_xsec_standard_deviation_pb": 1.6286859286720847
+        },
+        "new": {
+          "mean_xsec_pb": 53.62822591932624,
+          "rms_error_pb": 1.448754910581046,
+          "mean_error_squared_times_points": 309494.04046777147,
+          "mean_production_cpu_s": 10.83307686,
+          "cross_seed_xsec_standard_deviation_pb": 1.8373595125463758
+        }
+      }
+    },
+    "dyfidreal": {
+      "label": "Fiducial Drell-Yan real plus subtraction diagnostic",
+      "paired_seeds": [
+        141421,
+        161803,
+        173205,
+        271828,
+        314159
+      ],
+      "pairs": 5,
+      "variance_ratios": [
+        0.9802162728766626,
+        1.090069594205076,
+        0.9395115547833973,
+        1.5813731892721068,
+        0.9031433856408889
+      ],
+      "geometric_variance_ratio": 1.074716378124928,
+      "median_variance_ratio": 0.9802162728766626,
+      "approximate_95pct_normal_log_ratio_interval": [
+        0.880778959945132,
+        1.3113565899461483
+      ],
+      "mean_log_ratio": 0.07205679246684119,
+      "standard_error_log_ratio": 0.10153335396082872,
+      "aggregate_variance_ratio": 1.0585563209149174,
+      "mean_paired_xsec_difference_pb": 0.3104856228325342,
+      "standard_error_paired_difference_pb": 0.3465846697905649,
+      "maps": {
+        "old": {
+          "mean_xsec_pb": 9.082447553551972,
+          "rms_error_pb": 0.729947432479563,
+          "mean_error_squared_times_points": 78567.9857688831,
+          "mean_production_cpu_s": 10.034670442,
+          "cross_seed_xsec_standard_deviation_pb": 0.18672557964134298
+        },
+        "new": {
+          "mean_xsec_pb": 9.392933176384506,
+          "rms_error_pb": 0.7510149290436283,
+          "mean_error_squared_times_points": 83168.63795720445,
+          "mean_production_cpu_s": 9.516519164,
+          "cross_seed_xsec_standard_deviation_pb": 0.6958171802599769
+        }
+      }
+    }
+  },
+  "records": [
+    {
+      "case": "dy",
+      "mapping": "old",
+      "seed": 271828,
+      "xsec_pb": 517.5831563828694,
+      "error_pb": 2.173600910610593,
+      "production_points": 147456,
+      "points_per_iteration": [
+        49152,
+        49152,
+        49152
+      ],
+      "integration_cpu_s": 11.1631918,
+      "virtual_error_pb": 0.9152,
+      "error_squared_times_points": 696661.9056941431,
+      "wall_s": 27.34604021300038,
+      "event_logs": "old_dy/Events/fo2_271828",
+      "configuration_xsec_errors_pb": [
+        [
+          1,
+          139.37511948267095,
+          1.701047606270747
+        ],
+        [
+          2,
+          378.20803690019835,
+          1.577767934315868
+        ]
+      ]
+    },
+    {
+      "case": "dy",
+      "mapping": "old",
+      "seed": 314159,
+      "xsec_pb": 516.6305794570052,
+      "error_pb": 2.06411669550482,
+      "production_points": 147456,
+      "points_per_iteration": [
+        49152,
+        49152,
+        49152
+      ],
+      "integration_cpu_s": 11.1865082,
+      "virtual_error_pb": 0.6931,
+      "error_squared_times_points": 628247.7501473691,
+      "wall_s": 19.40401342298719,
+      "event_logs": "old_dy/Events/fo2_314159",
+      "configuration_xsec_errors_pb": [
+        [
+          1,
+          140.85455231519538,
+          1.55765530991507
+        ],
+        [
+          2,
+          375.77602714180983,
+          1.5977574277414144
+        ]
+      ]
+    },
+    {
+      "case": "dy",
+      "mapping": "old",
+      "seed": 161803,
+      "xsec_pb": 517.3663348637378,
+      "error_pb": 2.031808420886785,
+      "production_points": 147456,
+      "points_per_iteration": [
+        49152,
+        49152,
+        49152
+      ],
+      "integration_cpu_s": 11.2580385,
+      "virtual_error_pb": 0.5482,
+      "error_squared_times_points": 608734.5624297973,
+      "wall_s": 19.412689208998927,
+      "event_logs": "old_dy/Events/fo2_161803",
+      "configuration_xsec_errors_pb": [
+        [
+          1,
+          139.79002015819822,
+          1.534404593734889
+        ],
+        [
+          2,
+          377.57631470553963,
+          1.5723198346448837
+        ]
+      ]
+    },
+    {
+      "case": "dy",
+      "mapping": "old",
+      "seed": 141421,
+      "xsec_pb": 519.6189897667343,
+      "error_pb": 2.0090315864239527,
+      "production_points": 147456,
+      "points_per_iteration": [
+        49152,
+        49152,
+        49152
+      ],
+      "integration_cpu_s": 11.1143608,
+      "virtual_error_pb": 0.5851,
+      "error_squared_times_points": 595163.0743509778,
+      "wall_s": 19.15129180699296,
+      "event_logs": "old_dy/Events/fo2_141421",
+      "configuration_xsec_errors_pb": [
+        [
+          1,
+          141.45020488989496,
+          1.523612284544825
+        ],
+        [
+          2,
+          378.1687848768394,
+          1.5549508786807538
+        ]
+      ]
+    },
+    {
+      "case": "dy",
+      "mapping": "old",
+      "seed": 173205,
+      "xsec_pb": 520.6686133023308,
+      "error_pb": 2.0919296017735567,
+      "production_points": 147456,
+      "points_per_iteration": [
+        49152,
+        49152,
+        49152
+      ],
+      "integration_cpu_s": 10.8289576,
+      "virtual_error_pb": 0.6409,
+      "error_squared_times_points": 645292.4437133435,
+      "wall_s": 18.778438666005968,
+      "event_logs": "old_dy/Events/fo2_173205",
+      "configuration_xsec_errors_pb": [
+        [
+          1,
+          143.7237751263619,
+          1.5777529923202882
+        ],
+        [
+          2,
+          376.94483817596887,
+          1.618485898333734
+        ]
+      ]
+    },
+    {
+      "case": "dy",
+      "mapping": "new",
+      "seed": 271828,
+      "xsec_pb": 517.6992623019376,
+      "error_pb": 2.1664636313624825,
+      "production_points": 147456,
+      "points_per_iteration": [
+        49152,
+        49152,
+        49152
+      ],
+      "integration_cpu_s": 10.4947147,
+      "virtual_error_pb": 0.9591,
+      "error_squared_times_points": 692094.2713921017,
+      "wall_s": 26.842168555987882,
+      "event_logs": "new_dy/Events/fo_271828"
+    },
+    {
+      "case": "dy",
+      "mapping": "new",
+      "seed": 314159,
+      "xsec_pb": 516.9498435778438,
+      "error_pb": 2.082245389727805,
+      "production_points": 147456,
+      "points_per_iteration": [
+        49152,
+        49152,
+        49152
+      ],
+      "integration_cpu_s": 10.768362,
+      "virtual_error_pb": 0.7547,
+      "error_squared_times_points": 639331.7419808242,
+      "wall_s": 18.530604731000494,
+      "event_logs": "new_dy/Events/fo_314159"
+    },
+    {
+      "case": "dy",
+      "mapping": "new",
+      "seed": 161803,
+      "xsec_pb": 518.2139696355143,
+      "error_pb": 2.0936957655929693,
+      "production_points": 147456,
+      "points_per_iteration": [
+        49152,
+        49152,
+        49152
+      ],
+      "integration_cpu_s": 10.7512217,
+      "virtual_error_pb": 0.7799,
+      "error_squared_times_points": 646382.5122059447,
+      "wall_s": 18.576126543994178,
+      "event_logs": "new_dy/Events/fo_161803"
+    },
+    {
+      "case": "dy",
+      "mapping": "new",
+      "seed": 141421,
+      "xsec_pb": 520.443213243663,
+      "error_pb": 1.9740241850975304,
+      "production_points": 147456,
+      "points_per_iteration": [
+        49152,
+        49152,
+        49152
+      ],
+      "integration_cpu_s": 10.672431,
+      "virtual_error_pb": 0.5067,
+      "error_squared_times_points": 574602.335848853,
+      "wall_s": 18.599463588994695,
+      "event_logs": "new_dy/Events/fo_141421"
+    },
+    {
+      "case": "dy",
+      "mapping": "new",
+      "seed": 173205,
+      "xsec_pb": 521.3342944939777,
+      "error_pb": 2.027004969000209,
+      "production_points": 147456,
+      "points_per_iteration": [
+        49152,
+        49152,
+        49152
+      ],
+      "integration_cpu_s": 10.5774603,
+      "virtual_error_pb": 0.5769,
+      "error_squared_times_points": 605859.7138295006,
+      "wall_s": 18.60680159300682,
+      "event_logs": "new_dy/Events/fo_173205",
+      "configuration_xsec_errors_pb": [
+        [
+          1,
+          143.84820810932703,
+          1.5399830068315996
+        ],
+        [
+          2,
+          377.4860863846507,
+          1.569900666015902
+        ]
+      ]
+    },
+    {
+      "case": "tt",
+      "mapping": "old",
+      "seed": 271828,
+      "xsec_pb": 707.5327874117602,
+      "error_pb": 2.8803351268126445,
+      "production_points": 147456,
+      "points_per_iteration": [
+        49152,
+        49152,
+        49152
+      ],
+      "integration_cpu_s": 24.8827438,
+      "virtual_error_pb": 1.081,
+      "error_squared_times_points": 1223343.701766264,
+      "wall_s": 45.83729914900323,
+      "event_logs": "old_tt/Events/fo2_271828",
+      "configuration_xsec_errors_pb": [
+        [
+          1,
+          17.163445974220483,
+          0.43579882687524374
+        ],
+        [
+          2,
+          56.48533335835494,
+          0.881427893173058
+        ],
+        [
+          3,
+          81.67303661162232,
+          1.00556892123398
+        ],
+        [
+          4,
+          232.37176543813214,
+          1.7252734939504037
+        ],
+        [
+          5,
+          82.1886324721164,
+          1.0144602044150492
+        ],
+        [
+          6,
+          237.65057355731398,
+          2.1691121627671803
+        ]
+      ]
+    },
+    {
+      "case": "tt",
+      "mapping": "old",
+      "seed": 314159,
+      "xsec_pb": 707.5074636333984,
+      "error_pb": 2.901572812806553,
+      "production_points": 147456,
+      "points_per_iteration": [
+        49152,
+        49152,
+        49152
+      ],
+      "integration_cpu_s": 24.2783413,
+      "virtual_error_pb": 1.105,
+      "error_squared_times_points": 1241450.4647420018,
+      "wall_s": 37.183611832995666,
+      "event_logs": "old_tt/Events/fo2_314159",
+      "configuration_xsec_errors_pb": [
+        [
+          1,
+          18.24209099276214,
+          0.49008501912676294
+        ],
+        [
+          2,
+          54.89099037024503,
+          0.9169481073626111
+        ],
+        [
+          3,
+          83.33173342295352,
+          0.9576728227864105
+        ],
+        [
+          4,
+          235.7481545105499,
+          1.8120916723260967
+        ],
+        [
+          5,
+          81.07565204277883,
+          0.9655481362763323
+        ],
+        [
+          6,
+          234.21884229410887,
+          1.9980332170403619
+        ]
+      ]
+    },
+    {
+      "case": "tt",
+      "mapping": "old",
+      "seed": 161803,
+      "xsec_pb": 717.289083006336,
+      "error_pb": 3.9565503352659914,
+      "production_points": 147456,
+      "points_per_iteration": [
+        49152,
+        49152,
+        49152
+      ],
+      "integration_cpu_s": 24.4256821,
+      "virtual_error_pb": 0.9798,
+      "error_squared_times_points": 2308319.068150839,
+      "wall_s": 37.11066471399681,
+      "event_logs": "old_tt/Events/fo2_161803",
+      "configuration_xsec_errors_pb": [
+        [
+          1,
+          17.36327673582858,
+          0.44867319621459734
+        ],
+        [
+          2,
+          56.46322422886052,
+          1.2076365705008705
+        ],
+        [
+          3,
+          82.83792076140892,
+          0.9314979076267178
+        ],
+        [
+          4,
+          239.51435620097993,
+          2.295549002773611
+        ],
+        [
+          5,
+          82.0417064129291,
+          0.9210403143054414
+        ],
+        [
+          6,
+          239.06859866632908,
+          2.4800736131772876
+        ]
+      ]
+    },
+    {
+      "case": "tt",
+      "mapping": "old",
+      "seed": 141421,
+      "xsec_pb": 728.7309210573658,
+      "error_pb": 6.6443011315547205,
+      "production_points": 147456,
+      "points_per_iteration": [
+        49152,
+        49152,
+        49152
+      ],
+      "integration_cpu_s": 23.9429264,
+      "virtual_error_pb": 1.257,
+      "error_squared_times_points": 6509701.328748775,
+      "wall_s": 36.23903386198799,
+      "event_logs": "old_tt/Events/fo2_141421",
+      "configuration_xsec_errors_pb": [
+        [
+          1,
+          16.938983031703927,
+          0.44917040760647137
+        ],
+        [
+          2,
+          59.32797816429424,
+          1.069683914970651
+        ],
+        [
+          3,
+          83.07620603046772,
+          0.9716717408845359
+        ],
+        [
+          4,
+          241.50312411048242,
+          2.479453418252565
+        ],
+        [
+          5,
+          83.1137503129848,
+          1.045676113457376
+        ],
+        [
+          6,
+          244.77087940743266,
+          2.20920709112344
+        ]
+      ]
+    },
+    {
+      "case": "tt",
+      "mapping": "old",
+      "seed": 173205,
+      "xsec_pb": 710.724597763979,
+      "error_pb": 3.3475344723571645,
+      "production_points": 147456,
+      "points_per_iteration": [
+        49152,
+        49152,
+        49152
+      ],
+      "integration_cpu_s": 24.1351452,
+      "virtual_error_pb": 1.228,
+      "error_squared_times_points": 1652390.0255039658,
+      "wall_s": 36.62364145700121,
+      "event_logs": "old_tt/Events/fo2_173205",
+      "configuration_xsec_errors_pb": [
+        [
+          1,
+          17.518355636106737,
+          0.5811133793314113
+        ],
+        [
+          2,
+          54.641084966227666,
+          0.888650662741208
+        ],
+        [
+          3,
+          80.39379827953344,
+          0.9619001213660757
+        ],
+        [
+          4,
+          239.01802311084657,
+          2.452983278863739
+        ],
+        [
+          5,
+          82.12197299182715,
+          1.080381981802123
+        ],
+        [
+          6,
+          237.0313627794374,
+          1.7399116106728418
+        ]
+      ]
+    },
+    {
+      "case": "tt",
+      "mapping": "new",
+      "seed": 271828,
+      "xsec_pb": 714.0447647796752,
+      "error_pb": 3.7075285997078375,
+      "production_points": 147456,
+      "points_per_iteration": [
+        49152,
+        49152,
+        49152
+      ],
+      "integration_cpu_s": 23.9516811,
+      "virtual_error_pb": 1.439,
+      "error_squared_times_points": 2026896.013047628,
+      "wall_s": 44.88667952999822,
+      "event_logs": "new_tt/Events/fo_271828"
+    },
+    {
+      "case": "tt",
+      "mapping": "new",
+      "seed": 314159,
+      "xsec_pb": 710.2587842195752,
+      "error_pb": 2.766450395654237,
+      "production_points": 147456,
+      "points_per_iteration": [
+        49152,
+        49152,
+        49152
+      ],
+      "integration_cpu_s": 24.499424,
+      "virtual_error_pb": 0.9226,
+      "error_squared_times_points": 1128517.3063604527,
+      "wall_s": 37.106760745999054,
+      "event_logs": "new_tt/Events/fo_314159"
+    },
+    {
+      "case": "tt",
+      "mapping": "new",
+      "seed": 161803,
+      "xsec_pb": 717.5069986260412,
+      "error_pb": 3.864606080212457,
+      "production_points": 147456,
+      "points_per_iteration": [
+        49152,
+        49152,
+        49152
+      ],
+      "integration_cpu_s": 24.5106831,
+      "virtual_error_pb": 1.049,
+      "error_squared_times_points": 2202281.9249673965,
+      "wall_s": 37.38504368899157,
+      "event_logs": "new_tt/Events/fo_161803"
+    },
+    {
+      "case": "tt",
+      "mapping": "new",
+      "seed": 141421,
+      "xsec_pb": 708.2032575871782,
+      "error_pb": 2.725740066942095,
+      "production_points": 147456,
+      "points_per_iteration": [
+        49152,
+        49152,
+        49152
+      ],
+      "integration_cpu_s": 24.5104713,
+      "virtual_error_pb": 1.042,
+      "error_squared_times_points": 1095547.7846065392,
+      "wall_s": 37.54710483600502,
+      "event_logs": "new_tt/Events/fo_141421"
+    },
+    {
+      "case": "tt",
+      "mapping": "new",
+      "seed": 173205,
+      "xsec_pb": 714.8851360989406,
+      "error_pb": 3.2174442701751564,
+      "production_points": 147456,
+      "points_per_iteration": [
+        49152,
+        49152,
+        49152
+      ],
+      "integration_cpu_s": 24.6102791,
+      "virtual_error_pb": 1.027,
+      "error_squared_times_points": 1526456.7899774404,
+      "wall_s": 37.67294845600554,
+      "event_logs": "new_tt/Events/fo_173205",
+      "configuration_xsec_errors_pb": [
+        [
+          1,
+          17.96398714907218,
+          0.49000014751202414
+        ],
+        [
+          2,
+          56.334736647517055,
+          0.8169174812512501
+        ],
+        [
+          3,
+          82.17871788816147,
+          0.974557599055322
+        ],
+        [
+          4,
+          237.32662451347736,
+          2.092963424347822
+        ],
+        [
+          5,
+          80.7021293273373,
+          0.946542611204544
+        ],
+        [
+          6,
+          240.37894057337536,
+          1.8918242509696417
+        ]
+      ]
+    },
+    {
+      "case": "dyfid",
+      "mapping": "old",
+      "seed": 271828,
+      "xsec_pb": 126.7111712316232,
+      "error_pb": 0.961491633929576,
+      "production_points": 147456,
+      "points_per_iteration": [
+        49152,
+        49152,
+        49152
+      ],
+      "integration_cpu_s": 9.63946438,
+      "virtual_error_pb": 0.06133,
+      "error_squared_times_points": 136318.08240106032,
+      "wall_s": 17.675683912006207,
+      "event_logs": "old_dyfid/Events/fo_dyfid_271828",
+      "configuration_xsec_errors_pb": [
+        [
+          1,
+          5.459550541957982,
+          0.2035467446748487
+        ],
+        [
+          2,
+          121.25162068966522,
+          0.9270619101811539
+        ]
+      ]
+    },
+    {
+      "case": "dyfid",
+      "mapping": "old",
+      "seed": 314159,
+      "xsec_pb": 125.59153765800284,
+      "error_pb": 0.89011524163581,
+      "production_points": 147456,
+      "points_per_iteration": [
+        49152,
+        49152,
+        49152
+      ],
+      "integration_cpu_s": 9.82132339,
+      "virtual_error_pb": 0.04641,
+      "error_squared_times_points": 116830.14722406626,
+      "wall_s": 17.752495757013094,
+      "event_logs": "old_dyfid/Events/fo_dyfid_314159",
+      "configuration_xsec_errors_pb": [
+        [
+          1,
+          5.544038091016369,
+          0.18631412678347328
+        ],
+        [
+          2,
+          120.04749956698647,
+          0.8704500562361189
+        ]
+      ]
+    },
+    {
+      "case": "dyfid",
+      "mapping": "old",
+      "seed": 161803,
+      "xsec_pb": 127.47392756540117,
+      "error_pb": 0.8568662727166119,
+      "production_points": 147456,
+      "points_per_iteration": [
+        49152,
+        49152,
+        49152
+      ],
+      "integration_cpu_s": 9.72989178,
+      "virtual_error_pb": 0.05641,
+      "error_squared_times_points": 108265.11620298066,
+      "wall_s": 17.6273403410014,
+      "event_logs": "old_dyfid/Events/fo_dyfid_161803",
+      "configuration_xsec_errors_pb": [
+        [
+          1,
+          5.1947841820110305,
+          0.18801248845873844
+        ],
+        [
+          2,
+          122.27914338339014,
+          0.8166777977256692
+        ]
+      ]
+    },
+    {
+      "case": "dyfid",
+      "mapping": "old",
+      "seed": 141421,
+      "xsec_pb": 127.54214033082808,
+      "error_pb": 0.7585563376502714,
+      "production_points": 147456,
+      "points_per_iteration": [
+        49152,
+        49152,
+        49152
+      ],
+      "integration_cpu_s": 9.79998684,
+      "virtual_error_pb": 0.04538,
+      "error_squared_times_points": 84847.32037537027,
+      "wall_s": 17.642399714997737,
+      "event_logs": "old_dyfid/Events/fo_dyfid_141421",
+      "configuration_xsec_errors_pb": [
+        [
+          1,
+          4.8981333359723385,
+          0.17114099373489117
+        ],
+        [
+          2,
+          122.64400699485574,
+          0.7428731033662872
+        ]
+      ]
+    },
+    {
+      "case": "dyfid",
+      "mapping": "old",
+      "seed": 173205,
+      "xsec_pb": 126.07309115850653,
+      "error_pb": 0.9640956960905567,
+      "production_points": 147456,
+      "points_per_iteration": [
+        49152,
+        49152,
+        49152
+      ],
+      "integration_cpu_s": 9.91694546,
+      "virtual_error_pb": 0.04894,
+      "error_squared_times_points": 137057.47826250573,
+      "wall_s": 17.71330593699531,
+      "event_logs": "old_dyfid/Events/fo_dyfid_173205",
+      "configuration_xsec_errors_pb": [
+        [
+          1,
+          5.0906129692302855,
+          0.17187787238486357
+        ],
+        [
+          2,
+          120.98247818927624,
+          0.9523153028171846
+        ]
+      ]
+    },
+    {
+      "case": "dyfid",
+      "mapping": "old",
+      "seed": 223606,
+      "xsec_pb": 126.25815436894392,
+      "error_pb": 0.9772256760423857,
+      "production_points": 147456,
+      "points_per_iteration": [
+        49152,
+        49152,
+        49152
+      ],
+      "integration_cpu_s": 9.59990883,
+      "virtual_error_pb": 0.048,
+      "error_squared_times_points": 140816.0595517191,
+      "wall_s": 17.261643128003925,
+      "event_logs": "old_dyfid/Events/fo_dyfid_223606",
+      "configuration_xsec_errors_pb": [
+        [
+          1,
+          5.247496104578275,
+          0.17378079609118333
+        ],
+        [
+          2,
+          121.01065826436565,
+          0.9654900219203808
+        ]
+      ]
+    },
+    {
+      "case": "dyfid",
+      "mapping": "old",
+      "seed": 244948,
+      "xsec_pb": 123.92938921773377,
+      "error_pb": 0.8606669002461911,
+      "production_points": 147456,
+      "points_per_iteration": [
+        49152,
+        49152,
+        49152
+      ],
+      "integration_cpu_s": 9.74243164,
+      "virtual_error_pb": 0.05753,
+      "error_squared_times_points": 109227.66530337969,
+      "wall_s": 17.28430206500343,
+      "event_logs": "old_dyfid/Events/fo_dyfid_244948",
+      "configuration_xsec_errors_pb": [
+        [
+          1,
+          4.995741971422468,
+          0.1695810991796103
+        ],
+        [
+          2,
+          118.93364724631128,
+          0.8475103509792501
+        ]
+      ]
+    },
+    {
+      "case": "dyfid",
+      "mapping": "old",
+      "seed": 264575,
+      "xsec_pb": 126.64617996555751,
+      "error_pb": 1.1191785976791726,
+      "production_points": 147456,
+      "points_per_iteration": [
+        49152,
+        49152,
+        49152
+      ],
+      "integration_cpu_s": 9.7756176,
+      "virtual_error_pb": 0.05575,
+      "error_squared_times_points": 184697.59551943594,
+      "wall_s": 17.316971017004107,
+      "event_logs": "old_dyfid/Events/fo_dyfid_264575",
+      "configuration_xsec_errors_pb": [
+        [
+          1,
+          5.053714235743203,
+          0.1784634983540217
+        ],
+        [
+          2,
+          121.59246572981431,
+          1.0874557478873264
+        ]
+      ]
+    },
+    {
+      "case": "dyfid",
+      "mapping": "old",
+      "seed": 282842,
+      "xsec_pb": 126.92934775150603,
+      "error_pb": 0.7875736134282716,
+      "production_points": 147456,
+      "points_per_iteration": [
+        49152,
+        49152,
+        49152
+      ],
+      "integration_cpu_s": 9.6754179,
+      "virtual_error_pb": 0.03863,
+      "error_squared_times_points": 91462.85701719951,
+      "wall_s": 17.28419246399426,
+      "event_logs": "old_dyfid/Events/fo_dyfid_282842",
+      "configuration_xsec_errors_pb": [
+        [
+          1,
+          4.814231715353171,
+          0.19593410202689931
+        ],
+        [
+          2,
+          122.11511603615286,
+          0.7651366879642185
+        ]
+      ]
+    },
+    {
+      "case": "dyfid",
+      "mapping": "old",
+      "seed": 316227,
+      "xsec_pb": 125.40591858285337,
+      "error_pb": 0.8516000801886421,
+      "production_points": 147456,
+      "points_per_iteration": [
+        49152,
+        49152,
+        49152
+      ],
+      "integration_cpu_s": 9.55182934,
+      "virtual_error_pb": 0.04952,
+      "error_squared_times_points": 106938.43794650258,
+      "wall_s": 17.077060722003807,
+      "event_logs": "old_dyfid/Events/fo_dyfid_316227",
+      "configuration_xsec_errors_pb": [
+        [
+          1,
+          5.18914687599443,
+          0.16368011956842982
+        ],
+        [
+          2,
+          120.21677170685895,
+          0.8381538079737301
+        ]
+      ]
+    },
+    {
+      "case": "dyfid",
+      "mapping": "old",
+      "seed": 331662,
+      "xsec_pb": 125.10580230563671,
+      "error_pb": 0.9958617568920528,
+      "production_points": 147456,
+      "points_per_iteration": [
+        49152,
+        49152,
+        49152
+      ],
+      "integration_cpu_s": 9.59895802,
+      "virtual_error_pb": 0.03382,
+      "error_squared_times_points": 146238.10764080964,
+      "wall_s": 17.188121865998255,
+      "event_logs": "old_dyfid/Events/fo_dyfid_331662",
+      "configuration_xsec_errors_pb": [
+        [
+          1,
+          5.200136704532685,
+          0.16378756604197356
+        ],
+        [
+          2,
+          119.90566560110402,
+          0.9861849801876496
+        ]
+      ]
+    },
+    {
+      "case": "dyfid",
+      "mapping": "old",
+      "seed": 346410,
+      "xsec_pb": 125.64372840534817,
+      "error_pb": 0.946478589497399,
+      "production_points": 147456,
+      "points_per_iteration": [
+        49152,
+        49152,
+        49152
+      ],
+      "integration_cpu_s": 10.018281,
+      "virtual_error_pb": 0.04899,
+      "error_squared_times_points": 132094.28759990886,
+      "wall_s": 17.682424436992733,
+      "event_logs": "old_dyfid/Events/fo_dyfid_346410",
+      "configuration_xsec_errors_pb": [
+        [
+          1,
+          4.904727299263056,
+          0.19492230497551108
+        ],
+        [
+          2,
+          120.73900110608508,
+          0.9277891187887283
+        ]
+      ]
+    },
+    {
+      "case": "dyfid",
+      "mapping": "old",
+      "seed": 360555,
+      "xsec_pb": 125.78901323216049,
+      "error_pb": 1.0749137897240786,
+      "production_points": 147456,
+      "points_per_iteration": [
+        49152,
+        49152,
+        49152
+      ],
+      "integration_cpu_s": 9.64162827,
+      "virtual_error_pb": 0.04616,
+      "error_squared_times_points": 170376.50981766472,
+      "wall_s": 17.881044874011423,
+      "event_logs": "old_dyfid/Events/fo_dyfid_360555",
+      "configuration_xsec_errors_pb": [
+        [
+          1,
+          4.6132780715718065,
+          0.20822850278258323
+        ],
+        [
+          2,
+          121.17573516058869,
+          0.899300960361729
+        ]
+      ]
+    },
+    {
+      "case": "dyfid",
+      "mapping": "old",
+      "seed": 374165,
+      "xsec_pb": 127.36027616262292,
+      "error_pb": 0.835694979043293,
+      "production_points": 147456,
+      "points_per_iteration": [
+        49152,
+        49152,
+        49152
+      ],
+      "integration_cpu_s": 10.3414612,
+      "virtual_error_pb": 0.06149,
+      "error_squared_times_points": 102981.22046641815,
+      "wall_s": 18.307776000001468,
+      "event_logs": "old_dyfid/Events/fo_dyfid_374165",
+      "configuration_xsec_errors_pb": [
+        [
+          1,
+          5.545298430623257,
+          0.15500359545704276
+        ],
+        [
+          2,
+          121.81497773199966,
+          0.8266588031636594
+        ]
+      ]
+    },
+    {
+      "case": "dyfid",
+      "mapping": "old",
+      "seed": 387298,
+      "xsec_pb": 126.42905396984207,
+      "error_pb": 0.9100252216186104,
+      "production_points": 147456,
+      "points_per_iteration": [
+        49152,
+        49152,
+        49152
+      ],
+      "integration_cpu_s": 10.3502731,
+      "virtual_error_pb": 0.05656,
+      "error_squared_times_points": 122115.08241756995,
+      "wall_s": 18.347475187998498,
+      "event_logs": "old_dyfid/Events/fo_dyfid_387298",
+      "configuration_xsec_errors_pb": [
+        [
+          1,
+          5.3344977668993625,
+          0.20241902641003096
+        ],
+        [
+          2,
+          121.09455620294273,
+          0.8839042150299347
+        ]
+      ]
+    },
+    {
+      "case": "dyfid",
+      "mapping": "old",
+      "seed": 412310,
+      "xsec_pb": 125.26879189802338,
+      "error_pb": 1.0386834721859064,
+      "production_points": 147456,
+      "points_per_iteration": [
+        49152,
+        49152,
+        49152
+      ],
+      "integration_cpu_s": 9.77303791,
+      "virtual_error_pb": 0.05255,
+      "error_squared_times_points": 159084.8749327079,
+      "wall_s": 17.866348569004913,
+      "event_logs": "old_dyfid/Events/fo_dyfid_412310",
+      "configuration_xsec_errors_pb": [
+        [
+          1,
+          5.07430714291367,
+          0.16506045025334554
+        ],
+        [
+          2,
+          120.1944847551097,
+          1.026213907034839
+        ]
+      ]
+    },
+    {
+      "case": "dyfid",
+      "mapping": "old",
+      "seed": 424264,
+      "xsec_pb": 127.71273487612432,
+      "error_pb": 0.8134626520959883,
+      "production_points": 147456,
+      "points_per_iteration": [
+        49152,
+        49152,
+        49152
+      ],
+      "integration_cpu_s": 9.94080734,
+      "virtual_error_pb": 0.03847,
+      "error_squared_times_points": 97574.80349196862,
+      "wall_s": 17.887573831991176,
+      "event_logs": "old_dyfid/Events/fo_dyfid_424264",
+      "configuration_xsec_errors_pb": [
+        [
+          1,
+          5.374622343716685,
+          0.16707579408051337
+        ],
+        [
+          2,
+          122.33811253240762,
+          0.8017190356890953
+        ]
+      ]
+    },
+    {
+      "case": "dyfid",
+      "mapping": "old",
+      "seed": 435889,
+      "xsec_pb": 127.11067424204931,
+      "error_pb": 0.9248756516473005,
+      "production_points": 147456,
+      "points_per_iteration": [
+        49152,
+        49152,
+        49152
+      ],
+      "integration_cpu_s": 9.69822502,
+      "virtual_error_pb": 0.04484,
+      "error_squared_times_points": 126133.12084525332,
+      "wall_s": 17.304213802999584,
+      "event_logs": "old_dyfid/Events/fo_dyfid_435889",
+      "configuration_xsec_errors_pb": [
+        [
+          1,
+          5.17978615681389,
+          0.2029676979127935
+        ],
+        [
+          2,
+          121.93088808523544,
+          0.9001402327295676
+        ]
+      ]
+    },
+    {
+      "case": "dyfid",
+      "mapping": "old",
+      "seed": 447213,
+      "xsec_pb": 126.89064357741802,
+      "error_pb": 0.802523114547027,
+      "production_points": 147456,
+      "points_per_iteration": [
+        49152,
+        49152,
+        49152
+      ],
+      "integration_cpu_s": 9.93663311,
+      "virtual_error_pb": 0.06338,
+      "error_squared_times_points": 94968.05612651062,
+      "wall_s": 17.42160608699487,
+      "event_logs": "old_dyfid/Events/fo_dyfid_447213",
+      "configuration_xsec_errors_pb": [
+        [
+          1,
+          5.285552259916879,
+          0.1723909554337365
+        ],
+        [
+          2,
+          121.60509131750113,
+          0.7888215109823021
+        ]
+      ]
+    },
+    {
+      "case": "dyfid",
+      "mapping": "old",
+      "seed": 458258,
+      "xsec_pb": 126.405289329161,
+      "error_pb": 0.8431923383378378,
+      "production_points": 147456,
+      "points_per_iteration": [
+        49152,
+        49152,
+        49152
+      ],
+      "integration_cpu_s": 10.1696806,
+      "virtual_error_pb": 0.06177,
+      "error_squared_times_points": 104837.28179011054,
+      "wall_s": 17.86764485599997,
+      "event_logs": "old_dyfid/Events/fo_dyfid_458258",
+      "configuration_xsec_errors_pb": [
+        [
+          1,
+          5.225241180325866,
+          0.1818942814127693
+        ],
+        [
+          2,
+          121.18004814883514,
+          0.8257735219667022
+        ]
+      ]
+    },
+    {
+      "case": "dyfid",
+      "mapping": "new",
+      "seed": 271828,
+      "xsec_pb": 126.04270368133766,
+      "error_pb": 1.0091381246261482,
+      "production_points": 147456,
+      "points_per_iteration": [
+        49152,
+        49152,
+        49152
+      ],
+      "integration_cpu_s": 9.29995728,
+      "virtual_error_pb": 0.06332,
+      "error_squared_times_points": 150163.25597046068,
+      "wall_s": 17.286315584002296,
+      "event_logs": "new_dyfid/Events/fo_dyfid_271828",
+      "configuration_xsec_errors_pb": [
+        [
+          1,
+          5.275364866717987,
+          0.181043959716577
+        ],
+        [
+          2,
+          120.76733881461969,
+          0.9973048402392399
+        ]
+      ]
+    },
+    {
+      "case": "dyfid",
+      "mapping": "new",
+      "seed": 314159,
+      "xsec_pb": 126.19412153244166,
+      "error_pb": 0.9747801679872246,
+      "production_points": 147456,
+      "points_per_iteration": [
+        49152,
+        49152,
+        49152
+      ],
+      "integration_cpu_s": 9.17784786,
+      "virtual_error_pb": 0.04155,
+      "error_squared_times_points": 140112.1568048876,
+      "wall_s": 17.01211772300303,
+      "event_logs": "new_dyfid/Events/fo_dyfid_314159",
+      "configuration_xsec_errors_pb": [
+        [
+          1,
+          5.252870824527067,
+          0.1764965866806228
+        ],
+        [
+          2,
+          120.94125070791459,
+          0.9612381911478016
+        ]
+      ]
+    },
+    {
+      "case": "dyfid",
+      "mapping": "new",
+      "seed": 161803,
+      "xsec_pb": 126.89043837873498,
+      "error_pb": 1.0091268431873788,
+      "production_points": 147456,
+      "points_per_iteration": [
+        49152,
+        49152,
+        49152
+      ],
+      "integration_cpu_s": 9.43601227,
+      "virtual_error_pb": 0.06334,
+      "error_squared_times_points": 150159.89855472714,
+      "wall_s": 17.260710775997723,
+      "event_logs": "new_dyfid/Events/fo_dyfid_161803",
+      "configuration_xsec_errors_pb": [
+        [
+          1,
+          4.465191077275571,
+          0.21667945065182911
+        ],
+        [
+          2,
+          122.4252473014594,
+          0.9578722124291235
+        ]
+      ]
+    },
+    {
+      "case": "dyfid",
+      "mapping": "new",
+      "seed": 141421,
+      "xsec_pb": 125.8392341732612,
+      "error_pb": 0.9043926058400485,
+      "production_points": 147456,
+      "points_per_iteration": [
+        49152,
+        49152,
+        49152
+      ],
+      "integration_cpu_s": 9.41055679,
+      "virtual_error_pb": 0.0494,
+      "error_squared_times_points": 120608.0941176157,
+      "wall_s": 17.1569563929952,
+      "event_logs": "new_dyfid/Events/fo_dyfid_141421",
+      "configuration_xsec_errors_pb": [
+        [
+          1,
+          5.323016073575996,
+          0.18390140939868432
+        ],
+        [
+          2,
+          120.51621809968523,
+          0.8901924201858537
+        ]
+      ]
+    },
+    {
+      "case": "dyfid",
+      "mapping": "new",
+      "seed": 173205,
+      "xsec_pb": 127.59413887798314,
+      "error_pb": 0.8790472834476255,
+      "production_points": 147456,
+      "points_per_iteration": [
+        49152,
+        49152,
+        49152
+      ],
+      "integration_cpu_s": 9.39687538,
+      "virtual_error_pb": 0.04286,
+      "error_squared_times_points": 113942.80880258826,
+      "wall_s": 17.110170742002083,
+      "event_logs": "new_dyfid/Events/fo_dyfid_173205",
+      "configuration_xsec_errors_pb": [
+        [
+          1,
+          5.424101404177245,
+          0.1778055579770369
+        ],
+        [
+          2,
+          122.17003747380592,
+          0.8646321533132515
+        ]
+      ]
+    },
+    {
+      "case": "dyfid",
+      "mapping": "new",
+      "seed": 223606,
+      "xsec_pb": 126.0805915720882,
+      "error_pb": 0.9306411545166258,
+      "production_points": 147456,
+      "points_per_iteration": [
+        49152,
+        49152,
+        49152
+      ],
+      "integration_cpu_s": 9.21993542,
+      "virtual_error_pb": 0.04105,
+      "error_squared_times_points": 127710.6032856325,
+      "wall_s": 16.807844545997796,
+      "event_logs": "new_dyfid/Events/fo_dyfid_223606",
+      "configuration_xsec_errors_pb": [
+        [
+          1,
+          5.086723189619193,
+          0.17575812614612818
+        ],
+        [
+          2,
+          120.99386838246897,
+          0.9158499290056824
+        ]
+      ]
+    },
+    {
+      "case": "dyfid",
+      "mapping": "new",
+      "seed": 244948,
+      "xsec_pb": 124.42870197162716,
+      "error_pb": 1.0281984239044697,
+      "production_points": 147456,
+      "points_per_iteration": [
+        49152,
+        49152,
+        49152
+      ],
+      "integration_cpu_s": 9.12932491,
+      "virtual_error_pb": 0.05379,
+      "error_squared_times_points": 155889.30339269375,
+      "wall_s": 16.626778474994353,
+      "event_logs": "new_dyfid/Events/fo_dyfid_244948",
+      "configuration_xsec_errors_pb": [
+        [
+          1,
+          5.512083455463831,
+          0.18551051934843832
+        ],
+        [
+          2,
+          118.91661851616333,
+          1.0054669069024473
+        ]
+      ]
+    },
+    {
+      "case": "dyfid",
+      "mapping": "new",
+      "seed": 264575,
+      "xsec_pb": 126.52025316633647,
+      "error_pb": 1.0996025297156322,
+      "production_points": 147456,
+      "points_per_iteration": [
+        49152,
+        49152,
+        49152
+      ],
+      "integration_cpu_s": 9.42469978,
+      "virtual_error_pb": 0.06554,
+      "error_squared_times_points": 178292.8426633324,
+      "wall_s": 16.93641600299452,
+      "event_logs": "new_dyfid/Events/fo_dyfid_264575",
+      "configuration_xsec_errors_pb": [
+        [
+          1,
+          5.082723332390731,
+          0.1886759399306433
+        ],
+        [
+          2,
+          121.43752983394572,
+          1.0444527071065086
+        ]
+      ]
+    },
+    {
+      "case": "dyfid",
+      "mapping": "new",
+      "seed": 282842,
+      "xsec_pb": 125.3234692838987,
+      "error_pb": 0.9267717545413711,
+      "production_points": 147456,
+      "points_per_iteration": [
+        49152,
+        49152,
+        49152
+      ],
+      "integration_cpu_s": 9.17305565,
+      "virtual_error_pb": 0.06685,
+      "error_squared_times_points": 126650.82618087377,
+      "wall_s": 16.724895330989966,
+      "event_logs": "new_dyfid/Events/fo_dyfid_282842",
+      "configuration_xsec_errors_pb": [
+        [
+          1,
+          5.339414559441075,
+          0.18261692184333872
+        ],
+        [
+          2,
+          119.98405472445761,
+          0.9077450639953888
+        ]
+      ]
+    },
+    {
+      "case": "dyfid",
+      "mapping": "new",
+      "seed": 316227,
+      "xsec_pb": 124.1711144998801,
+      "error_pb": 0.9082576265823834,
+      "production_points": 147456,
+      "points_per_iteration": [
+        49152,
+        49152,
+        49152
+      ],
+      "integration_cpu_s": 9.3555088,
+      "virtual_error_pb": 0.03942,
+      "error_squared_times_points": 121641.16064183219,
+      "wall_s": 16.907652584995958,
+      "event_logs": "new_dyfid/Events/fo_dyfid_316227",
+      "configuration_xsec_errors_pb": [
+        [
+          1,
+          4.806109490393051,
+          0.1888210858872582
+        ],
+        [
+          2,
+          119.36500500948706,
+          0.8199529654167352
+        ]
+      ]
+    },
+    {
+      "case": "dyfid",
+      "mapping": "new",
+      "seed": 331662,
+      "xsec_pb": 127.19161381656961,
+      "error_pb": 0.8612082658675327,
+      "production_points": 147456,
+      "points_per_iteration": [
+        49152,
+        49152,
+        49152
+      ],
+      "integration_cpu_s": 9.1653862,
+      "virtual_error_pb": 0.07954,
+      "error_squared_times_points": 109365.11848099131,
+      "wall_s": 16.7042435809999,
+      "event_logs": "new_dyfid/Events/fo_dyfid_331662",
+      "configuration_xsec_errors_pb": [
+        [
+          1,
+          5.442779001729851,
+          0.20002968418987058
+        ],
+        [
+          2,
+          121.74883481483975,
+          0.8376410055409665
+        ]
+      ]
+    },
+    {
+      "case": "dyfid",
+      "mapping": "new",
+      "seed": 346410,
+      "xsec_pb": 127.26464238153446,
+      "error_pb": 0.7713981203393803,
+      "production_points": 147456,
+      "points_per_iteration": [
+        49152,
+        49152,
+        49152
+      ],
+      "integration_cpu_s": 9.48885059,
+      "virtual_error_pb": 0.05967,
+      "error_squared_times_points": 87744.43893666875,
+      "wall_s": 17.000341478997143,
+      "event_logs": "new_dyfid/Events/fo_dyfid_346410",
+      "configuration_xsec_errors_pb": [
+        [
+          1,
+          5.033101494531909,
+          0.1916076382563864
+        ],
+        [
+          2,
+          122.23154088700257,
+          0.7500005523305312
+        ]
+      ]
+    },
+    {
+      "case": "dyfid",
+      "mapping": "new",
+      "seed": 360555,
+      "xsec_pb": 124.54940923921578,
+      "error_pb": 1.0256555332763946,
+      "production_points": 147456,
+      "points_per_iteration": [
+        49152,
+        49152,
+        49152
+      ],
+      "integration_cpu_s": 9.4728632,
+      "virtual_error_pb": 0.06242,
+      "error_squared_times_points": 155119.1811107122,
+      "wall_s": 17.51602281900705,
+      "event_logs": "new_dyfid/Events/fo_dyfid_360555",
+      "configuration_xsec_errors_pb": [
+        [
+          1,
+          4.614995228386483,
+          0.23358804341477296
+        ],
+        [
+          2,
+          119.9344140108293,
+          0.9996793399359278
+        ]
+      ]
+    },
+    {
+      "case": "dyfid",
+      "mapping": "new",
+      "seed": 374165,
+      "xsec_pb": 126.4113303104274,
+      "error_pb": 0.8139508745796821,
+      "production_points": 147456,
+      "points_per_iteration": [
+        49152,
+        49152,
+        49152
+      ],
+      "integration_cpu_s": 10.0474815,
+      "virtual_error_pb": 0.05781,
+      "error_squared_times_points": 97691.96316362776,
+      "wall_s": 17.914060366005288,
+      "event_logs": "new_dyfid/Events/fo_dyfid_374165",
+      "configuration_xsec_errors_pb": [
+        [
+          1,
+          5.149130511124861,
+          0.17996520824785264
+        ],
+        [
+          2,
+          121.26219979930254,
+          0.7989457187173076
+        ]
+      ]
+    },
+    {
+      "case": "dyfid",
+      "mapping": "new",
+      "seed": 387298,
+      "xsec_pb": 126.33831251561162,
+      "error_pb": 0.9635159643782284,
+      "production_points": 147456,
+      "points_per_iteration": [
+        49152,
+        49152,
+        49152
+      ],
+      "integration_cpu_s": 9.38265324,
+      "virtual_error_pb": 0.05889,
+      "error_squared_times_points": 136892.69653512794,
+      "wall_s": 17.253389343997696,
+      "event_logs": "new_dyfid/Events/fo_dyfid_387298",
+      "configuration_xsec_errors_pb": [
+        [
+          1,
+          5.3928980975133145,
+          0.18400266755861452
+        ],
+        [
+          2,
+          120.9454144180983,
+          0.9407884007521643
+        ]
+      ]
+    },
+    {
+      "case": "dyfid",
+      "mapping": "new",
+      "seed": 412310,
+      "xsec_pb": 125.94332878444611,
+      "error_pb": 1.008356766093198,
+      "production_points": 147456,
+      "points_per_iteration": [
+        49152,
+        49152,
+        49152
+      ],
+      "integration_cpu_s": 9.46861172,
+      "virtual_error_pb": 0.07314,
+      "error_squared_times_points": 149930.80827139507,
+      "wall_s": 17.828190136991907,
+      "event_logs": "new_dyfid/Events/fo_dyfid_412310",
+      "configuration_xsec_errors_pb": [
+        [
+          1,
+          5.15590473070305,
+          0.18718784436369942
+        ],
+        [
+          2,
+          120.78742405374305,
+          0.9877441095458909
+        ]
+      ]
+    },
+    {
+      "case": "dyfid",
+      "mapping": "new",
+      "seed": 424264,
+      "xsec_pb": 127.36267230508737,
+      "error_pb": 0.8695197298280156,
+      "production_points": 147456,
+      "points_per_iteration": [
+        49152,
+        49152,
+        49152
+      ],
+      "integration_cpu_s": 9.36261559,
+      "virtual_error_pb": 0.04005,
+      "error_squared_times_points": 111486.25584196267,
+      "wall_s": 17.052941963993362,
+      "event_logs": "new_dyfid/Events/fo_dyfid_424264",
+      "configuration_xsec_errors_pb": [
+        [
+          1,
+          5.171394321366903,
+          0.18563860057040282
+        ],
+        [
+          2,
+          122.19127798372047,
+          0.8501926120903718
+        ]
+      ]
+    },
+    {
+      "case": "dyfid",
+      "mapping": "new",
+      "seed": 435889,
+      "xsec_pb": 126.17292994204108,
+      "error_pb": 0.8865049045844264,
+      "production_points": 147456,
+      "points_per_iteration": [
+        49152,
+        49152,
+        49152
+      ],
+      "integration_cpu_s": 9.41266346,
+      "virtual_error_pb": 0.07667,
+      "error_squared_times_points": 115884.33531158835,
+      "wall_s": 17.232836965995375,
+      "event_logs": "new_dyfid/Events/fo_dyfid_435889",
+      "configuration_xsec_errors_pb": [
+        [
+          1,
+          4.920840673122279,
+          0.19303355576560988
+        ],
+        [
+          2,
+          121.25208926891878,
+          0.8664593455348945
+        ]
+      ]
+    },
+    {
+      "case": "dyfid",
+      "mapping": "new",
+      "seed": 447213,
+      "xsec_pb": 125.52147780589382,
+      "error_pb": 1.0866826905847524,
+      "production_points": 147456,
+      "points_per_iteration": [
+        49152,
+        49152,
+        49152
+      ],
+      "integration_cpu_s": 9.15903568,
+      "virtual_error_pb": 0.06539,
+      "error_squared_times_points": 174127.7336395555,
+      "wall_s": 16.731742370000575,
+      "event_logs": "new_dyfid/Events/fo_dyfid_447213",
+      "configuration_xsec_errors_pb": [
+        [
+          1,
+          5.413136356503182,
+          0.1804340391198923
+        ],
+        [
+          2,
+          120.10834144939062,
+          1.0669018464183333
+        ]
+      ]
+    },
+    {
+      "case": "dyfid",
+      "mapping": "new",
+      "seed": 458258,
+      "xsec_pb": 127.25052968041709,
+      "error_pb": 0.7828698465882601,
+      "production_points": 147456,
+      "points_per_iteration": [
+        49152,
+        49152,
+        49152
+      ],
+      "integration_cpu_s": 9.30515003,
+      "virtual_error_pb": 0.05897,
+      "error_squared_times_points": 90373.5995641714,
+      "wall_s": 16.764897464992828,
+      "event_logs": "new_dyfid/Events/fo_dyfid_458258",
+      "configuration_xsec_errors_pb": [
+        [
+          1,
+          5.165114814858413,
+          0.18520698033074912
+        ],
+        [
+          2,
+          122.08541486555868,
+          0.7661722372712783
+        ]
+      ]
+    },
+    {
+      "case": "dyreal",
+      "mapping": "old",
+      "seed": 271828,
+      "xsec_pb": 53.64998157605943,
+      "error_pb": 1.4433331140292487,
+      "production_points": 147456,
+      "points_per_iteration": [
+        49152,
+        49152,
+        49152
+      ],
+      "integration_cpu_s": 11.0979071,
+      "virtual_error_pb": 2.585e-13,
+      "error_squared_times_points": 307181.88425183744,
+      "wall_s": 19.468376702992828,
+      "event_logs": "old_dyreal/Events/fo_dyreal_271828",
+      "configuration_xsec_errors_pb": [
+        [
+          1,
+          3.493047220392784,
+          0.923135902935692
+        ],
+        [
+          2,
+          50.15693435566665,
+          1.1101116693160438
+        ]
+      ]
+    },
+    {
+      "case": "dyreal",
+      "mapping": "old",
+      "seed": 314159,
+      "xsec_pb": 54.022612070012926,
+      "error_pb": 1.4903887834906335,
+      "production_points": 147456,
+      "points_per_iteration": [
+        49152,
+        49152,
+        49152
+      ],
+      "integration_cpu_s": 11.2815161,
+      "virtual_error_pb": 1.326e-13,
+      "error_squared_times_points": 327537.9266943748,
+      "wall_s": 19.499119756001164,
+      "event_logs": "old_dyreal/Events/fo_dyreal_314159",
+      "configuration_xsec_errors_pb": [
+        [
+          1,
+          4.87509565428698,
+          0.9618425242724995
+        ],
+        [
+          2,
+          49.14751641572594,
+          1.1381559675947246
+        ]
+      ]
+    },
+    {
+      "case": "dyreal",
+      "mapping": "old",
+      "seed": 161803,
+      "xsec_pb": 54.83423221011511,
+      "error_pb": 1.4433120804824435,
+      "production_points": 147456,
+      "points_per_iteration": [
+        49152,
+        49152,
+        49152
+      ],
+      "integration_cpu_s": 11.2655725,
+      "virtual_error_pb": 5.533e-14,
+      "error_squared_times_points": 307172.93125630426,
+      "wall_s": 19.483940182995866,
+      "event_logs": "old_dyreal/Events/fo_dyreal_161803",
+      "configuration_xsec_errors_pb": [
+        [
+          1,
+          3.5688840751269173,
+          0.9434234926992754
+        ],
+        [
+          2,
+          51.2653481349882,
+          1.0840028369821701
+        ]
+      ]
+    },
+    {
+      "case": "dyreal",
+      "mapping": "old",
+      "seed": 141421,
+      "xsec_pb": 53.30090724602102,
+      "error_pb": 1.4131285708598096,
+      "production_points": 147456,
+      "points_per_iteration": [
+        49152,
+        49152,
+        49152
+      ],
+      "integration_cpu_s": 11.3066502,
+      "virtual_error_pb": 1.841e-13,
+      "error_squared_times_points": 294459.6577488501,
+      "wall_s": 19.448499263991835,
+      "event_logs": "old_dyreal/Events/fo_dyreal_141421",
+      "configuration_xsec_errors_pb": [
+        [
+          1,
+          3.6685101216476994,
+          0.8903003448688899
+        ],
+        [
+          2,
+          49.63239712437332,
+          1.0976515766523642
+        ]
+      ]
+    },
+    {
+      "case": "dyreal",
+      "mapping": "old",
+      "seed": 173205,
+      "xsec_pb": 50.54018614337284,
+      "error_pb": 1.4538929246091286,
+      "production_points": 147456,
+      "points_per_iteration": [
+        49152,
+        49152,
+        49152
+      ],
+      "integration_cpu_s": 10.8004208,
+      "virtual_error_pb": 2.049e-13,
+      "error_squared_times_points": 311693.1764397075,
+      "wall_s": 18.89899402599258,
+      "event_logs": "old_dyreal/Events/fo_dyreal_173205",
+      "configuration_xsec_errors_pb": [
+        [
+          1,
+          2.0788905927103407,
+          0.9518186474347156
+        ],
+        [
+          2,
+          48.4612955506625,
+          1.0953869937644327
+        ]
+      ]
+    },
+    {
+      "case": "dyreal",
+      "mapping": "new",
+      "seed": 271828,
+      "xsec_pb": 55.08534922873769,
+      "error_pb": 1.4379610983379603,
+      "production_points": 147456,
+      "points_per_iteration": [
+        49152,
+        49152,
+        49152
+      ],
+      "integration_cpu_s": 10.6611757,
+      "virtual_error_pb": 2.497e-13,
+      "error_squared_times_points": 304899.507535869,
+      "wall_s": 18.979098258001613,
+      "event_logs": "new_dyreal/Events/fo_dyreal_271828",
+      "configuration_xsec_errors_pb": [
+        [
+          1,
+          4.452496516640238,
+          0.936514093727016
+        ],
+        [
+          2,
+          50.63285271209744,
+          1.0924674202672355
+        ]
+      ]
+    },
+    {
+      "case": "dyreal",
+      "mapping": "new",
+      "seed": 314159,
+      "xsec_pb": 52.03422580842758,
+      "error_pb": 1.465027721549098,
+      "production_points": 147456,
+      "points_per_iteration": [
+        49152,
+        49152,
+        49152
+      ],
+      "integration_cpu_s": 10.9462795,
+      "virtual_error_pb": 1.346e-13,
+      "error_squared_times_points": 316485.730699937,
+      "wall_s": 19.134997914996347,
+      "event_logs": "new_dyreal/Events/fo_dyreal_314159",
+      "configuration_xsec_errors_pb": [
+        [
+          1,
+          4.290170053516871,
+          0.9799815167167306
+        ],
+        [
+          2,
+          47.74405575491071,
+          1.0888919433776232
+        ]
+      ]
+    },
+    {
+      "case": "dyreal",
+      "mapping": "new",
+      "seed": 161803,
+      "xsec_pb": 55.30281626237983,
+      "error_pb": 1.4549112418470054,
+      "production_points": 147456,
+      "points_per_iteration": [
+        49152,
+        49152,
+        49152
+      ],
+      "integration_cpu_s": 10.9283886,
+      "virtual_error_pb": 6.389e-14,
+      "error_squared_times_points": 312129.9537080346,
+      "wall_s": 19.10338486499677,
+      "event_logs": "new_dyreal/Events/fo_dyreal_161803",
+      "configuration_xsec_errors_pb": [
+        [
+          1,
+          3.5609064049926538,
+          0.9527318130860069
+        ],
+        [
+          2,
+          51.74190985738718,
+          1.0938106658009163
+        ]
+      ]
+    },
+    {
+      "case": "dyreal",
+      "mapping": "new",
+      "seed": 141421,
+      "xsec_pb": 54.41708878570451,
+      "error_pb": 1.4431714728081912,
+      "production_points": 147456,
+      "points_per_iteration": [
+        49152,
+        49152,
+        49152
+      ],
+      "integration_cpu_s": 11.1231499,
+      "virtual_error_pb": 1.895e-13,
+      "error_squared_times_points": 307113.0845076894,
+      "wall_s": 19.25530225499824,
+      "event_logs": "new_dyreal/Events/fo_dyreal_141421",
+      "configuration_xsec_errors_pb": [
+        [
+          1,
+          4.351942715025653,
+          0.9114667229384719
+        ],
+        [
+          2,
+          50.06514607067886,
+          1.119396260597364
+        ]
+      ]
+    },
+    {
+      "case": "dyreal",
+      "mapping": "new",
+      "seed": 173205,
+      "xsec_pb": 51.30164951138159,
+      "error_pb": 1.4425342241495211,
+      "production_points": 147456,
+      "points_per_iteration": [
+        49152,
+        49152,
+        49152
+      ],
+      "integration_cpu_s": 10.5063906,
+      "virtual_error_pb": 1.897e-13,
+      "error_squared_times_points": 306841.9258873274,
+      "wall_s": 18.64101739700709,
+      "event_logs": "new_dyreal/Events/fo_dyreal_173205",
+      "configuration_xsec_errors_pb": [
+        [
+          1,
+          3.579550194932279,
+          0.9373673362391329
+        ],
+        [
+          2,
+          47.72209931644933,
+          1.095606744875646
+        ]
+      ]
+    },
+    {
+      "case": "dyfidreal",
+      "mapping": "old",
+      "seed": 271828,
+      "xsec_pb": 9.193825440077461,
+      "error_pb": 0.6167828585624012,
+      "production_points": 147456,
+      "points_per_iteration": [
+        49152,
+        49152,
+        49152
+      ],
+      "integration_cpu_s": 10.0636024,
+      "virtual_error_pb": 3.781e-14,
+      "error_squared_times_points": 56095.37292775692,
+      "wall_s": 17.939992355997674,
+      "event_logs": "old_dyfidreal/Events/fo_dyfidreal_271828",
+      "configuration_xsec_errors_pb": [
+        [
+          1,
+          0.5367117549674388,
+          0.12400626061134742
+        ],
+        [
+          2,
+          8.657113685110023,
+          0.6036497266919364
+        ]
+      ]
+    },
+    {
+      "case": "dyfidreal",
+      "mapping": "old",
+      "seed": 314159,
+      "xsec_pb": 8.810999395147274,
+      "error_pb": 0.8150975737622218,
+      "production_points": 147456,
+      "points_per_iteration": [
+        49152,
+        49152,
+        49152
+      ],
+      "integration_cpu_s": 9.82610035,
+      "virtual_error_pb": 1.824e-14,
+      "error_squared_times_points": 97967.41517766731,
+      "wall_s": 17.547268151000026,
+      "event_logs": "old_dyfidreal/Events/fo_dyfidreal_314159",
+      "configuration_xsec_errors_pb": [
+        [
+          1,
+          0.1455389082568859,
+          0.11749559024685612
+        ],
+        [
+          2,
+          8.665460486890387,
+          0.8001503171453178
+        ]
+      ]
+    },
+    {
+      "case": "dyfidreal",
+      "mapping": "old",
+      "seed": 161803,
+      "xsec_pb": 9.250480493608592,
+      "error_pb": 0.6524757021487292,
+      "production_points": 147456,
+      "points_per_iteration": [
+        49152,
+        49152,
+        49152
+      ],
+      "integration_cpu_s": 10.069768,
+      "virtual_error_pb": 4.655e-14,
+      "error_squared_times_points": 62775.638049592024,
+      "wall_s": 18.266626682001515,
+      "event_logs": "old_dyfidreal/Events/fo_dyfidreal_161803",
+      "configuration_xsec_errors_pb": [
+        [
+          1,
+          0.10269378254247792,
+          0.11400288418998838
+        ],
+        [
+          2,
+          9.147786711066114,
+          0.6420989017224729
+        ]
+      ]
+    },
+    {
+      "case": "dyfidreal",
+      "mapping": "old",
+      "seed": 141421,
+      "xsec_pb": 8.966417433046207,
+      "error_pb": 0.9009105789301918,
+      "production_points": 147456,
+      "points_per_iteration": [
+        49152,
+        49152,
+        49152
+      ],
+      "integration_cpu_s": 10.3322744,
+      "virtual_error_pb": 1.701e-14,
+      "error_squared_times_points": 119681.16885184511,
+      "wall_s": 18.12828721900587,
+      "event_logs": "old_dyfidreal/Events/fo_dyfidreal_141421",
+      "configuration_xsec_errors_pb": [
+        [
+          1,
+          0.44347646147844594,
+          0.12360618004009699
+        ],
+        [
+          2,
+          8.52294097156776,
+          0.8923418763157255
+        ]
+      ]
+    },
+    {
+      "case": "dyfidreal",
+      "mapping": "old",
+      "seed": 173205,
+      "xsec_pb": 9.190515005880327,
+      "error_pb": 0.6180183722392506,
+      "production_points": 147456,
+      "points_per_iteration": [
+        49152,
+        49152,
+        49152
+      ],
+      "integration_cpu_s": 9.88160706,
+      "virtual_error_pb": 5.515e-14,
+      "error_squared_times_points": 56320.33383755409,
+      "wall_s": 17.68569515499985,
+      "event_logs": "old_dyfidreal/Events/fo_dyfidreal_173205",
+      "configuration_xsec_errors_pb": [
+        [
+          1,
+          0.2491963498344338,
+          0.10571713511635422
+        ],
+        [
+          2,
+          8.941318656045894,
+          0.607367073203753
+        ]
+      ]
+    },
+    {
+      "case": "dyfidreal",
+      "mapping": "new",
+      "seed": 271828,
+      "xsec_pb": 9.492542742764213,
+      "error_pb": 0.7756208607689284,
+      "production_points": 147456,
+      "points_per_iteration": [
+        49152,
+        49152,
+        49152
+      ],
+      "integration_cpu_s": 9.55578518,
+      "virtual_error_pb": 8.308e-14,
+      "error_squared_times_points": 88707.71879017516,
+      "wall_s": 17.372535503993277,
+      "event_logs": "new_dyfidreal/Events/fo_dyfidreal_271828",
+      "configuration_xsec_errors_pb": [
+        [
+          1,
+          0.3439064681554444,
+          0.1543049668078988
+        ],
+        [
+          2,
+          9.148636274608771,
+          0.7345362614132586
+        ]
+      ]
+    },
+    {
+      "case": "dyfidreal",
+      "mapping": "new",
+      "seed": 314159,
+      "xsec_pb": 10.2935312404388,
+      "error_pb": 0.7746186575183307,
+      "production_points": 147456,
+      "points_per_iteration": [
+        49152,
+        49152,
+        49152
+      ],
+      "integration_cpu_s": 9.33534145,
+      "virtual_error_pb": 2.699e-14,
+      "error_squared_times_points": 88478.62302604507,
+      "wall_s": 16.995334628009005,
+      "event_logs": "new_dyfidreal/Events/fo_dyfidreal_314159",
+      "configuration_xsec_errors_pb": [
+        [
+          1,
+          0.4146572176181503,
+          0.11841206502796167
+        ],
+        [
+          2,
+          9.878874022820648,
+          0.7654338051210845
+        ]
+      ]
+    },
+    {
+      "case": "dyfidreal",
+      "mapping": "new",
+      "seed": 161803,
+      "xsec_pb": 8.96961191636994,
+      "error_pb": 0.6812263783985868,
+      "production_points": 147456,
+      "points_per_iteration": [
+        49152,
+        49152,
+        49152
+      ],
+      "integration_cpu_s": 9.26267719,
+      "virtual_error_pb": 3.591e-14,
+      "error_squared_times_points": 68429.8142946835,
+      "wall_s": 17.566951169996173,
+      "event_logs": "new_dyfidreal/Events/fo_dyfidreal_161803",
+      "configuration_xsec_errors_pb": [
+        [
+          1,
+          0.1650611119900861,
+          0.12580951160048412
+        ],
+        [
+          2,
+          8.804550804379852,
+          0.661238257902141
+        ]
+      ]
+    },
+    {
+      "case": "dyfidreal",
+      "mapping": "new",
+      "seed": 141421,
+      "xsec_pb": 8.483987201769732,
+      "error_pb": 0.8919543763520258,
+      "production_points": 147456,
+      "points_per_iteration": [
+        49152,
+        49152,
+        49152
+      ],
+      "integration_cpu_s": 10.085186,
+      "virtual_error_pb": 1.036e-14,
+      "error_squared_times_points": 117313.42926547813,
+      "wall_s": 17.85584476600343,
+      "event_logs": "new_dyfidreal/Events/fo_dyfidreal_141421",
+      "configuration_xsec_errors_pb": [
+        [
+          1,
+          -0.21102721371089325,
+          0.1418928314058999
+        ],
+        [
+          2,
+          8.695014415480626,
+          0.8286542693019164
+        ]
+      ]
+    },
+    {
+      "case": "dyfidreal",
+      "mapping": "new",
+      "seed": 173205,
+      "xsec_pb": 9.724992780579846,
+      "error_pb": 0.5990353460998861,
+      "production_points": 147456,
+      "points_per_iteration": [
+        49152,
+        49152,
+        49152
+      ],
+      "integration_cpu_s": 9.343606,
+      "virtual_error_pb": 3.811e-14,
+      "error_squared_times_points": 52913.60440964043,
+      "wall_s": 17.13607000799675,
+      "event_logs": "new_dyfidreal/Events/fo_dyfidreal_173205",
+      "configuration_xsec_errors_pb": [
+        [
+          1,
+          0.3928293619477216,
+          0.10317771747700938
+        ],
+        [
+          2,
+          9.332163418632122,
+          0.5882688393123505
+        ]
+      ]
+    }
+  ],
+  "production_switch_smoke": [
+    {
+      "mapping": 0,
+      "seed": 271828,
+      "xsec_pb": 517.6992623019376,
+      "error_pb": 2.1664636313624825,
+      "production_points": 147456,
+      "integration_cpu_s": 10.7128592
+    },
+    {
+      "mapping": 1,
+      "seed": 271828,
+      "xsec_pb": 517.5830963152013,
+      "error_pb": 2.1736009213014245,
+      "production_points": 147456,
+      "integration_cpu_s": 11.1122055
+    },
+    {
+      "mapping": 2,
+      "seed": 271828,
+      "xsec_pb": 517.6992623019376,
+      "error_pb": 2.1664636313624825,
+      "production_points": 147456,
+      "integration_cpu_s": 10.6657085
+    }
+  ],
+  "matched_rejection": {
+    "executable": "madevent_mintMC",
+    "mapping": 1,
+    "shower": "PYTHIA8",
+    "exit_status": 1,
+    "log": "switch_smoke/matched_rejection.log",
+    "message": "FKSISRMapping=1 (symmetric) is not supported with PYTHIA8 matching."
+  }
+}

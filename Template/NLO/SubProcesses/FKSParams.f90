@@ -17,6 +17,7 @@ module FKSParams
               QCD_squared_selected
   logical :: separate_flavour_configs,IncludeBornContributions,use_poly_virtual
   integer :: FKSFinalRecoil=0
+  integer :: FKSISRMapping=0
 
 contains
 
@@ -78,6 +79,12 @@ contains
              endif
           else if (buff .eq. '#SeparateFlavourConfigurations') then
              read(68,*,end=999) separate_flavour_configs
+          else if (buff .eq. '#FKSISRMapping') then
+             read(68,*,end=999) FKSISRMapping
+             if (FKSISRMapping.lt.0.or.FKSISRMapping.gt.2) then
+                write(*,*) 'FKSISRMapping must be 0, 1 or 2.'
+                stop 1
+             endif
           else if (buff .eq. '#FKSFinalRecoil') then
              read(68,*,end=999) FKSFinalRecoil
              if (FKSFinalRecoil.lt.0.or.FKSFinalRecoil.gt.2) then
@@ -213,6 +220,7 @@ contains
        write(*,*) ' > SeparateFlavourConfigs    = ',separate_flavour_configs
        write(*,*) ' > UsePolyVirtual            = ',use_poly_virtual
        write(*,*) ' > FKSFinalRecoil            = ',FKSFinalRecoil
+       write(*,*) ' > FKSISRMapping             = ',FKSISRMapping
        write(*,*) &
             '==============================================================='
        paramPrinted=.TRUE.
@@ -237,6 +245,7 @@ contains
     separate_flavour_configs=.false.
     use_poly_virtual=.true.
     FKSFinalRecoil=0
+    FKSISRMapping=0
     IncludeBornContributions=.true.
     SelectedContributionTypes(0)=0
     VetoedContributionTypes(0)=0
@@ -253,5 +262,42 @@ contains
        enddo
     enddo
   end subroutine DefaultFKSParam
+
+  integer function get_fks_isr_mapping(fixed_order,nlo_ps,shower) result(mapping)
+    ! Resolve run settings on every entry so forward/inverse maps agree,
+    ! including diagnostics which read the FKS card after setrun.
+    implicit none
+    logical, intent(in) :: fixed_order,nlo_ps
+    character(*), intent(in) :: shower
+    select case (FKSISRMapping)
+    case (0)
+       ! Preserve the current default: controlled fixed-order comparisons
+       ! do not establish a variance benefit from reverting globally.
+       mapping=2
+    case (1,2)
+       mapping=FKSISRMapping
+    case default
+       write(*,*) 'FKSISRMapping must be 0, 1 or 2.'
+       stop 1
+    end select
+    if (mapping.eq.1.and.nlo_ps) then
+       write(*,*) 'FKSISRMapping=1 (symmetric) is not supported with ',trim(shower),' matching.'
+       write(*,*) 'Use FKSISRMapping=0 (automatic) or 2 (asymmetric), or run at fixed order.'
+       stop 1
+    endif
+  end function get_fks_isr_mapping
+
+  subroutine print_fks_isr_mapping(fixed_order,nlo_ps,shower)
+    implicit none
+    logical, intent(in) :: fixed_order,nlo_ps
+    character(*), intent(in) :: shower
+    integer mapping
+    mapping=get_fks_isr_mapping(fixed_order,nlo_ps,shower)
+    if (mapping.eq.1) then
+       write(*,*) 'FKS ISR mapping: symmetric'
+    else
+       write(*,*) 'FKS ISR mapping: asymmetric'
+    endif
+  end subroutine print_fks_isr_mapping
 
 end module FKSParams

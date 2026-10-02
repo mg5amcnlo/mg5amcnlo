@@ -2,6 +2,7 @@
 subroutine check_isr_mapping(mode)
   use, intrinsic :: ieee_arithmetic, only: ieee_is_finite
   use mc_native_context, only: native_mapping
+  use FKSParams, only: FKSISRMapping
   use fks_phase_space_data, only: pb => p_born,pbl => p_born_l,pbe => p_born_ev, &
        bound_born => tau_Born_lower_bound,bound_res => tau_lower_bound_resonance, &
        bound_tau => tau_lower_bound,pc => p1_cnt,jc => jac_cnt, &
@@ -26,6 +27,8 @@ subroutine check_isr_mapping(mode)
   double precision :: omx(2)
   common/to_ee_omx1/omx
   logical :: nbody,evpr,softtest,colltest
+  logical :: fixed_order,nlo_ps,symmetric_map
+  common/c_fnlo_nlops/fixed_order,nlo_ps
   common/cnbody/nbody
   common/to_use_evpr/evpr
   common/sctests/softtest,colltest
@@ -49,7 +52,7 @@ subroutine check_isr_mapping(mode)
   double precision :: nodes(64),weights(64),split(3),lo,hi,xx,tmp_xmax,tmp_norm,tmp_xi,tmp_y
   double precision :: tmp_hat,tmp_ps,tmp_jac,tmp_s,tmp_sqrt,tmp_tau,tmp_ycm,tmp_xb(2),tmp_pi(0:3)
   double precision :: radii(4),angles(4),fractions(2,4),saved_jac
-  double precision :: max_replay,max_inverse
+  double precision :: max_replay,max_inverse,expected_xb(2),omega,expected_jac
   integer :: which,side,ir,ia,native,k,segment,cut,kind
   logical :: pass
 
@@ -57,6 +60,12 @@ subroutine check_isr_mapping(mode)
   lpp=1
   stot=4d0*product(ebeam)
   nbody=.false.
+  fixed_order=.true.
+  nlo_ps=.false.
+  symmetric_map=mode.eq.'isr_symmetric'.or.mode.eq.'isr_symmetric_fks'.or.mode.eq.'isr_symmetric_bounds'
+  FKSISRMapping=2
+  if(symmetric_map)FKSISRMapping=1
+  if(mode.eq.'isr_automatic')FKSISRMapping=0
   evpr=.true.
   softtest=.false.
   colltest=.false.
@@ -81,7 +90,12 @@ subroutine check_isr_mapping(mode)
   max_replay=0d0
   max_inverse=0d0
 
-  if(mode.eq.'isr_fks')then
+  if(mode.eq.'isr_symmetric_bounds')then
+    call check_symmetric_domains()
+    return
+  endif
+
+  if(mode.eq.'isr_fks'.or.mode.eq.'isr_symmetric_fks')then
     native_mapping=.true. ! no sampling offsets in the analytic integrals
     call gauss_legendre(nodes,weights)
     do side=1,2
@@ -95,6 +109,8 @@ subroutine check_isr_mapping(mode)
           delta_used=deltacuts(cut)
           xiScut_used=.5d0
           do kind=1,2
+            h=1d0-bx(side)
+            if(symmetric_map.and.kind.eq.1)h=symmetric_bound(bx,.5d0,side)
             ! Split at the numerical subtraction cutoff so the quadrature
             ! sees smooth integrands on each interval.
             split=[0d0,sqrt(min(1d0,xiScut_used/h)),1d0]
@@ -125,6 +141,14 @@ subroutine check_isr_mapping(mode)
                   integrand=fr*z*xi*(1d0+eta+eta**2)
                   if(eta.lt.deltaS)integrand=integrand-fc*(1d0-xic(1))*xic(1)
                   normalization=h*2d0*pi*(2d0*x(1))/(2d0*(4d0*pi)**3*(2d0*pi)**2)
+                  if(symmetric_map)then
+                    ! Divide out the smooth angle-dependent energy range
+                    ! in the test function, including its collinear limit.
+                    ! The remaining plus distribution has a known integral.
+                    integrand=fr*z*xi/xmax*(1d0+eta+eta**2)
+                    if(eta.lt.deltaS)integrand=integrand-fc*(1d0-xic(1))*xic(1)/xmaxc(1)
+                    normalization=normalization/h
+                  endif
                 endif
                 total=total+weight*integrand/normalization
               enddo
@@ -141,7 +165,7 @@ subroutine check_isr_mapping(mode)
               error stop 'ISR FKS finite endpoint integral'
             endif
           enddo
-          call check_mixed_integral(h)
+          if(.not.symmetric_map)call check_mixed_integral(h)
         enddo
       enddo
     enddo
@@ -162,12 +186,25 @@ subroutine check_isr_mapping(mode)
             call generate()
             z=1d0-xi
             phi=2d0*pi*x(3)
-            if(abs(xmax-(1d0-bx(side))).gt.1d-14.or. &
-                 maxval(abs(xmaxc(0:2)-xmax)).gt.1d-14)error stop 'ISR endpoint is angle dependent'
-            if(abs(xb(side)*z-bx(side)).gt.1d-13.or. &
-                 xb(3-side).ne.bx(3-side))error stop 'ISR changed spectator fraction'
+            if(symmetric_map)then
+              omega=sqrt((2d0-xi*(1d0+(3-2*side)*y))/(2d0-xi*(1d0-(3-2*side)*y)))
+              expected_xb=bx*[1d0/omega,omega]/sqrt(z)
+              if(maxval(abs(xb-expected_xb)).gt.1d-13)error stop 'symmetric ISR fractions'
+              if(abs(xmax-symmetric_bound(bx,y,side)).gt.5d-13)then
+                write(*,*) 'ISR boundary mismatch',native,side,which,ir,ia,xmax,symmetric_bound(bx,y,side)
+                error stop 'symmetric ISR physical boundary'
+              endif
+              if(abs(xmaxc(1)-(1d0-bx(side))).gt.1d-13) &
+                   error stop 'symmetric ISR collinear boundary'
+              call symmetric_reference(born,xi,y,phi,side,reference)
+            else
+              if(abs(xmax-(1d0-bx(side))).gt.1d-14.or. &
+                   maxval(abs(xmaxc(0:2)-xmax)).gt.1d-14)error stop 'ISR endpoint is angle dependent'
+              if(abs(xb(side)*z-bx(side)).gt.1d-13.or. &
+                   xb(3-side).ne.bx(3-side))error stop 'ISR changed spectator fraction'
+              call reference_map(born,xi,y,phi,side,reference)
+            endif
             if(maxval(abs(xbc(:,0)-bx)).gt.1d-14)error stop 'ISR changed soft fractions'
-            call reference_map(born,xi,y,phi,side,reference)
             max_replay=max(max_replay,maxval(abs(reference-p))/mass)
             if(maxval(abs(reference-p))/mass.gt.5d-10)then
               write(*,*) 'ISR recoil mismatch',native,side,which,ir,ia,xi,y
@@ -181,6 +218,12 @@ subroutine check_isr_mapping(mode)
             if(maxval(abs(pc(:,side,1)-pc(:,ifks,1)-born(:,side))).gt.1d-11*mass) &
                  error stop 'ISR collinear incoming Born momentum'
             saved_jac=jac
+            ! Independent phase-space factorization, including the flux,
+            ! azimuth and sampled energy/angle derivatives. FKS inserts
+            ! the omitted xi and xi-range factors when assembling weights.
+            expected_jac=2d0*pi*8d0*x(1)*x(2)/(2d0*(4d0*pi)**3*(2d0*pi)**2*z)
+            if(native.eq.0)expected_jac=expected_jac*(1d0-1d-6)*(1d0-5d-7)
+            if(abs(jac/expected_jac-1d0).gt.2d-12)error stop 'ISR factorized measure'
             call boost_n1_to_lab(p,plab,-yb)
             jinv=1d0
             psinv=1d0
@@ -198,20 +241,31 @@ subroutine check_isr_mapping(mode)
               if(abs(jinv/saved_jac-1d0).gt.2d-8) &
                    error stop 'ISR inverse measure'
             endif
-            ! The no-event-projection chart must give the same recoil
-            ! when expressed in the real CM, including massive daughters.
+            ! The asymmetric lepton chart shares its event-projection
+            ! recoil. The historical symmetric lepton chart uses a
+            ! single boost along the recoil, with a different orientation.
             bn=born
             call boost_n1_to_its_cms(p,pcm,rapidity)
             pno=pcm
             call boost_born_momenta_noevpr(bn,pno,xi,y,phi,ifks,jfks,sb/z,sb)
-            if(maxval(abs(pno-pcm))/mass.gt.1d-10)error stop 'ISR charts have different recoil'
+            if(symmetric_map)then
+              reference=pcm
+              do k=3,4
+                reference(:,k)=born(:,k)
+                call boost(reference(:,k),-pcm(1:3,ifks)/(sum(pcm(0,1:2))-pcm(0,ifks)))
+              enddo
+              if(maxval(abs(pno-reference))/mass.gt.1d-10)error stop 'symmetric lepton chart recoil'
+            else
+              if(maxval(abs(pno-pcm))/mass.gt.1d-10)error stop 'ISR charts have different recoil'
+            endif
           enddo
         enddo
       enddo
-      ! Above-Born real thresholds now restrict xi, never y. Exercise
+      ! Above-Born real thresholds in the asymmetric map restrict xi, never y. Exercise
       ! both an allowed interval and a genuinely empty physical domain.
       bx=[.2d0,.4d0]
       call set_born()
+      if(.not.symmetric_map)then
       bound_born=tb*1.1d0
       bound_res=bound_born
       bound_tau=bound_born
@@ -229,6 +283,7 @@ subroutine check_isr_mapping(mode)
            tmp_s,stot,tmp_sqrt,tmp_tau,tmp_ycm,tmp_xb,tmp_pi,tmp_xmax,tmp_norm, &
            tmp_xi,tmp_y,tmp_hat,tmp_ps,tmp_jac,pass)
       if(pass.or.tmp_jac.ge.0d0)error stop 'ISR accepted an empty radiation interval'
+      endif
       ! Exactly soft no-event-projection recoil must not divide by xi.
       bound_born=0d0
       bound_res=0d0
@@ -238,17 +293,162 @@ subroutine check_isr_mapping(mode)
       call boost_born_momenta_noevpr(bn,pno,0d0,.2d0,.7d0,ifks,jfks,sb,sb)
       if(.not.all(ieee_is_finite(pno)).or.maxval(abs(pno(:,1:4)-born)).gt.1d-12*mass) &
            error stop 'ISR no-event-projection soft endpoint'
+      ! Both exact singular projections must retain the hard Born momenta.
+      softtest=.true.
+      xi_fix=0d0
+      call generate()
+      if(maxval(abs(p(:,1:4)-born)).gt.1d-12*mass.or.any(p(:,ifks).ne.0d0)) &
+           error stop 'ISR exact soft endpoint'
+      softtest=.false.
+      colltest=.true.
+      y_fix=1d0
+      call generate()
+      if(maxval(abs(p(:,3:4)-born(:,3:4))).gt.1d-12*mass) &
+           error stop 'ISR exact collinear endpoint'
+      if(maxval(abs(p(:,side)-p(:,ifks)-born(:,side))).gt.1d-12*mass) &
+           error stop 'ISR exact collinear beam projection'
+      colltest=.false.
       ! Dressed-lepton sampling can resolve 1-x even when x rounds to 1.
       bx(side)=1d0
       omx(side)=1d-18
       call set_born()
       call generate()
-      if(xmax.ne.omx(side).or.xi.le.0d0)error stop 'ISR lost lepton endpoint precision'
+      if(symmetric_map)then
+        if(abs(xmax/(2d0*omx(side)/(1d0+y))-1d0).gt.1d-10.or.xi.le.0d0) &
+             error stop 'symmetric ISR lost lepton endpoint precision'
+      else
+        if(xmax.ne.omx(side).or.xi.le.0d0)error stop 'ISR lost lepton endpoint precision'
+      endif
       omx=0d0
     enddo
   enddo
   write(*,*) 'ISR recoil and inverse maximum relative errors',max_replay,max_inverse
 contains
+  subroutine check_symmetric_domains()
+    double precision :: selected_angles(3),minimum
+    selected_angles=[1d-4,.5d0,.9999d0]
+    do native=0,1
+      native_mapping=native.eq.1
+      do side=1,2
+        jfks=side
+        bx=[.2d0,.4d0]
+        call set_born()
+        ! Requiring a high real invariant mass restricts both ends of y.
+        ! Neither collinear endpoint is physically accessible here.
+        bound_tau=.8d0
+        minimum=1d0-tb/bound_tau
+        do ia=1,size(selected_angles)
+          x(1:3)=[.6d0,selected_angles(ia),.31d0]
+          pb=born
+          pbl=born
+          pbe=born
+          call generate_FKS_kinematics(x(1:3),nbody,1d0,1d0,stot,sb,mass,tb,yb,0d0, &
+               bx,mb,jac,p,pass)
+          if(.not.pass.or.jac.le.0d0.or..not.all(ieee_is_finite(p))) &
+               error stop 'symmetric restricted angular domain rejected'
+          if(xi.lt.minimum.or.any(xb.gt.1d0).or.abs(y).ge.1d0) &
+               error stop 'symmetric real point outside restricted domain'
+          if(any(jc(1:2).ge.0d0).or.any(pc(0,1,1:2).ge.0d0)) &
+               error stop 'inaccessible symmetric collinear endpoints retained'
+          ! Inversion must use the same restricted angular range and
+          ! nonzero energy minimum as the forward generation.
+          saved_jac=jac
+          sreal=sb/(1d0-xi)
+          call boost_n1_to_lab(p,plab,-yb)
+          jinv=1d0
+          psinv=1d0
+          call invert_fks_radiation(rad,jinv,psinv,stot,tauinv,yinv,bxinv,plab,invborn)
+          if(jinv.le.0d0.or.maxval(abs(rad-x(1:3))).gt.1d-7.or. &
+               maxval(abs(invborn(:,1:4)-born))/mass.gt.1d-10) &
+               error stop 'symmetric restricted-domain inverse'
+          call compute_flux(sreal,sqrt(sreal),0d0,0d0,psinv,jinv)
+          if(abs(jinv/saved_jac-1d0).gt.1d-6)error stop 'restricted-domain inverse measure'
+        enddo
+        ! No real point can satisfy a threshold above the hadronic energy.
+        bound_tau=1.1d0
+        call generate_slot(-100)
+        if(pass.or.tmp_jac.ge.0d0)error stop 'symmetric empty angular domain accepted'
+        ! A saturated emitting fraction has no finite-angle radiation
+        ! support; the completely exhausted two-beam point must reject too.
+        bound_tau=0d0
+        bx(side)=1d0
+        call set_born()
+        x(1:3)=[.6d0,.5d0,.31d0]
+        call generate_slot(-100)
+        if(pass.or.tmp_jac.ge.0d0)error stop 'symmetric zero radiation domain accepted'
+        bx=1d0
+        call set_born()
+        call generate_slot(-100)
+        if(pass.or.tmp_jac.ge.0d0)error stop 'symmetric exhausted beams accepted'
+      enddo
+    enddo
+  end subroutine
+
+  subroutine generate_slot(slot)
+    integer,intent(in) :: slot
+    tmp_jac=1d0
+    tmp_ps=1d0
+    p=0d0
+    p(:,1:4)=born
+    call generate_momenta_initial(slot,ifks,jfks,bx,tb,yb,0d0,sb,2d0*pi*x(3),p,x, &
+         tmp_s,stot,tmp_sqrt,tmp_tau,tmp_ycm,tmp_xb,tmp_pi,tmp_xmax,tmp_norm, &
+         tmp_xi,tmp_y,tmp_hat,tmp_ps,tmp_jac,pass)
+  end subroutine
+
+  double precision function symmetric_bound(bx,y,side) result(bound)
+    ! Locate the physical support directly from the incoming fractions;
+    ! this does not reuse the production analytic quadratic solution.
+    double precision,intent(in) :: bx(2),y
+    integer,intent(in) :: side
+    integer,parameter :: quad=selected_real_kind(30)
+    real(kind=quad) :: lower,upper,trial,omega,fractions(2),qbx(2),qy
+    integer :: iteration
+    qbx=real(bx,quad)
+    qy=real(y,quad)*(3-2*side)
+    lower=0.0_quad
+    upper=1.0_quad
+    do iteration=1,110
+      trial=(lower+upper)/2.0_quad
+      omega=sqrt((2.0_quad-trial*(1.0_quad+qy))/(2.0_quad-trial*(1.0_quad-qy)))
+      fractions=qbx*[1.0_quad/omega,omega]/sqrt(1.0_quad-trial)
+      if(maxval(fractions).gt.1.0_quad)then
+        upper=trial
+      else
+        lower=trial
+      endif
+    enddo
+    bound=real((lower+upper)/2.0_quad,8)
+  end function
+
+  subroutine symmetric_reference(born,xi,y,phi,side,out)
+    ! The historical symmetric map is a transverse boost of the hard
+    ! Born system. Build radiation in the real CM and boost it into the
+    ! frame where the hard system has no longitudinal momentum.
+    double precision,intent(in) :: born(0:3,4),xi,y,phi
+    integer,intent(in) :: side
+    double precision,intent(out) :: out(0:3,5)
+    double precision :: mass,energy,cosine,sine,beta(3),kt,hard_energy
+    integer :: i
+    mass=2d0*born(0,1)
+    energy=mass/(2d0*sqrt(1d0-xi))
+    cosine=(3-2*side)*y
+    sine=sqrt((1d0-cosine)*(1d0+cosine))
+    kt=xi*energy*sine
+    hard_energy=sqrt(mass**2+kt**2)
+    beta=-kt/hard_energy*[cos(phi),sin(phi),0d0]
+    out(:,1:4)=born
+    do i=3,4
+      call boost(out(:,i),beta)
+    enddo
+    out(:,1)=[energy,0d0,0d0,energy]
+    out(:,2)=[energy,0d0,0d0,-energy]
+    out(:,5)=xi*energy*[1d0,sine*cos(phi),sine*sin(phi),cosine]
+    beta=[0d0,0d0,xi*cosine/(2d0-xi)]
+    call boost(out(:,1),beta)
+    call boost(out(:,2),beta)
+    call boost(out(:,5),beta)
+  end subroutine
+
   subroutine check_mixed_integral(h)
     ! Both endpoint distributions act on F(xi,eta)=(1+xi+xi^2)*(1+eta+eta^2).
     ! In particular, test the finite mixed logarithm in f_sc.

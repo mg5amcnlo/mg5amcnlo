@@ -10,7 +10,7 @@ c Sampling and radiation kernels live in their own lower-level modules.
      $     generate_momenta_massless_final_inverse,
      $     generate_momenta_massive_final_inverse,
      $     generate_momenta_initial_inverse,
-     $     generate_momenta_initial_noevpr
+     $     generate_momenta_initial_noevpr,use_symmetric_isr_mapping
       use fks_phase_space_helpers, only: lambda,get_recoil,
      $     boost_isr_recoil
       implicit none
@@ -1154,14 +1154,15 @@ c
 
       subroutine boost_born_momenta_noevpr(pborn,xp,xi_i_fks,
      &     y_ij_fks,phi_i_fks,i_fks,j_fks,shat,srec)
-c The lepton chart samples the real incoming fractions first. Apply
-c the same ISR recoil to its reduced Born, then express the result in
-c the real CM. Only the sampling coordinates/measure differ from the
-c event-projection chart; the finite-angle recoil is common to both.
+c The lepton chart samples the real incoming fractions first. Both
+c choices return the real CM: the symmetric map retains its original
+c single boost, while the asymmetric map uses the event-projection
+c light-cone recoil followed by the boost to the real CM.
       implicit none
       double precision pborn(0:3,nexternal-1),xp(0:3,nexternal)
       double precision xi_i_fks,y_ij_fks,phi_i_fks,shat,srec
       double precision pred(0:3),sqrtz,pplus,pminus
+      double precision chy,shy,chy_minus_one,direction(3)
       integer i_fks,j_fks,idir,i,ireal
       idir=3-2*j_fks
       sqrtz=sqrt(1d0-xi_i_fks)
@@ -1170,6 +1171,26 @@ c event-projection chart; the finite-angle recoil is common to both.
       pborn(3,1)=pborn(0,1)
       pborn(3,2)=-pborn(0,2)
       xp(:,1:2)=pborn(:,1:2)
+      if(use_symmetric_isr_mapping())then
+c The symmetric lepton chart boosts along the recoil direction. Keep
+c its soft copy branch independent of the undefined radiation axis.
+         chy=(1d0-xi_i_fks/2d0)/sqrtz
+         shy=xi_i_fks/(2d0*sqrtz)
+         chy_minus_one=chy-1d0
+         if(shy.ne.0d0)
+     &        direction=xp(1:3,i_fks)/(sqrt(shat)/2d0*xi_i_fks)
+         do i=3,nexternal-1
+            ireal=i
+            if(i.ge.i_fks)ireal=i+1
+            if(shy.ne.0d0)then
+               call boostwdir2(chy,shy,chy_minus_one,direction,
+     &              pborn(0,i),xp(0,ireal))
+            else
+               xp(:,ireal)=pborn(:,i)
+            endif
+         enddo
+         return
+      endif
       do i=3,nexternal-1
          ireal=i
          if(i.ge.i_fks)ireal=i+1

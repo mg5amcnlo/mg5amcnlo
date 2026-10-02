@@ -222,6 +222,7 @@ add_write_info.o write_event.o test_soft_col_limits.o driver_mintMC.o: scale_mod
 genps_fks.o: genps_fks_sampling.o genps_fks_radiation.o \
     genps_fks_helpers.o mc_native_context.o
 genps_fks_sampling.o genps_fks_radiation.o: genps_fks_helpers.o mc_native_context.o
+genps_fks_radiation.o: FKSParams.o
 driver_mintFO.o driver_mintMC.o write_event.o add_write_info.o \
     test_soft_col_limits.o symmetry_fks_v3.o: genps_fks.o
 driver_mintFO.o: process_module.o

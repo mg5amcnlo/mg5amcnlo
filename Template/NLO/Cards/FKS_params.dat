@@ -180,6 +180,20 @@
 ! Default :: .false.
 !
 ! ==========================================================================
+! Mapping for initial-state FKS emitters
+! ==========================================================================
+!
+! 0: automatic (currently the asymmetric mapping in all run modes).
+! 1: the original symmetric mapping, available without shower matching.
+! 2: the asymmetric, Pythia-like mapping (only the emitting Bjorken x changes).
+! A forced symmetric mapping with shower matching is rejected. The same
+! choice is used for the real point, its counterevents, inverse projection,
+! and the lepton recoil chart without event projection.
+#FKSISRMapping
+0
+! Default :: 0
+!
+! ==========================================================================
 ! Recoil choice for final-state FKS emitters
 ! ==========================================================================
 !
