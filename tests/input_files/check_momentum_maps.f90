@@ -32,9 +32,19 @@ program check_momentum_maps
   call get_command_argument(1,mode)
   softtest=.false.
   colltest=.false.
+  if (mode.eq.'isr'.or.mode.eq.'isr_fks') then
+     call check_isr_mapping(trim(mode))
+     write(*,*) 'PASS ',trim(mode)
+     stop
+  endif
   if (mode.eq.'native_projection') then
      call check_native_projection()
      write(*,*) 'PASS native_projection'
+     stop
+  endif
+  if (mode.eq.'singletop_recoil') then
+     call check_singletop_projection()
+     write(*,*) 'PASS singletop_recoil'
      stop
   endif
   if (mode.eq.'soft_direction') then

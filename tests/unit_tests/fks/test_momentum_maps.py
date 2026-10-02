@@ -1,8 +1,9 @@
-"""Numerical regressions for the Fortran maps used by MC H histories.
+"""Numerical regressions for the shared Fortran FKS momentum maps.
 
 Compile the production routines, without generating matrix elements or requiring
 PDF/loop libraries. The driver tests inversion against independently generated
-momenta and checks the lab boost when the massive map has no counterevent.
+momenta, finite ISR subtraction integrals, and the lab boost when the massive
+map has no counterevent.
 """
 
 from pathlib import Path
@@ -51,7 +52,7 @@ FKS_MAIN_ROUTINES = (
     "generate_fks_radiation", "reject_fks_phase_space",
     "record_fks_phase_space", "capture_fks_phase_space",
     "generate_FKS_kinematics", "reset_fks_kinematics",
-    "compute_flux", "fill_fks_point_data")
+    "compute_flux", "fill_fks_point_data", "boost_born_momenta_noevpr")
 
 
 def fks_test_module(names=FKS_MAIN_ROUTINES, template=TEMPLATE):
@@ -124,19 +125,21 @@ class TestMomentumMaps(unittest.TestCase):
             "      integer max_branch,max_particles\n"
             "      parameter (max_branch=8,max_particles=8)\n")
         shutil.copyfile(TEMPLATE / "fks_powers.inc", work / "fks_powers.inc")
+        shutil.copyfile(TEMPLATE / "timing_variables.inc", work / "timing_variables.inc")
         (work / "native_context.f90").write_text(
             "module mc_native_context\n"
             "logical :: native_mapping=.false.\nend module\n")
         (work / "run.inc").write_text(
-            "      double precision ebeam(2)\n"
+            "      double precision ebeam(2),xbk(2)\n"
             "      integer lpp(2)\n"
-            "      common/test_run/ebeam,lpp\n")
+            "      common/test_run/ebeam,xbk,lpp\n")
         (work / "coupl.inc").write_text("")
         (work / "pmass.inc").write_text("      common/to_mass/pmass\n")
         (work / "fks_phase_space.f").write_text(fks_test_module())
         routines = []
         for name in ("rotate_invar", "trp_rotate_invar", "phspncheck_nocms", "xlen4",
-                     "xmom_compare", "xmcompare", "xprintout"):
+                     "xmom_compare", "xmcompare", "xprintout",
+                     "compute_prefactors_n1body", "set_cms_stuff"):
             routines.append(fortran_routine(TEMPLATE / "fks_singular.f", name))
         for name in ("dot", "rho", "threedot"):
             routines.append(fortran_routine(
@@ -158,6 +161,7 @@ class TestMomentumMaps(unittest.TestCase):
                    str(TEMPLATE / "initial_recoil.f"),
                    str(ROOT / "HELAS/boostx.F"), str(ROOT / "HELAS/rotxxx.F"),
                    str(ROOT / "tests/input_files/check_native_projection.f90"),
+                   str(ROOT / "tests/input_files/check_isr_mapping.f90"),
                    str(ROOT / "tests/input_files/check_momentum_maps.f90"),
                    "-o", str(cls.executable)]
         result = subprocess.run(command, cwd=work, text=True,
@@ -173,6 +177,15 @@ class TestMomentumMaps(unittest.TestCase):
 
     def test_native_projection_and_shared_state(self):
         self.check_map("native_projection")
+
+    def test_single_top_native_massless_recoil(self):
+        self.check_map("singletop_recoil")
+
+    def test_initial_state_recoil_and_endpoints(self):
+        self.check_map("isr")
+
+    def test_initial_state_fks_finite_integrals(self):
+        self.check_map("isr_fks")
 
     def test_asymmetric_beam_boost(self):
         self.check_map("boost")

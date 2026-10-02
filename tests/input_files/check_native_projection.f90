@@ -169,3 +169,62 @@ contains
     enddo
   end subroutine
 end subroutine
+
+! Seed 33 of the single-top acceptance test: an ISR event is projected
+! onto the massive top's FSR history. The boosted massless spectator has
+! a mass squared of about -2e-6 GeV^2 at shat=1.17e8 GeV^2 from roundoff.
+subroutine check_singletop_projection()
+  use, intrinsic :: ieee_arithmetic, only: ieee_is_finite,ieee_get_flag,ieee_set_flag,ieee_invalid
+  use mc_native_context, only: native_mapping
+  use fks_phase_space, only: generate_native_momenta
+  use fks_phase_space_helpers, only: get_recoil
+  implicit none
+  include 'nexternal.inc'
+  include 'run.inc'
+  double precision :: pmass(nexternal)
+  common/to_mass/pmass
+  integer :: ifks,jfks
+  common/fks_indices/ifks,jfks
+  logical :: fixed_order,nlo_ps
+  common/c_fnlo_nlops/fixed_order,nlo_ps
+  double precision :: lab(0:3,nexternal),out(0:3,nexternal),outlab(0:3,nexternal),cms(0:3,nexternal),jac
+  double precision :: born(0:3,nexternal-1),recoil_mass2
+  logical :: pass,invalid
+
+  native_mapping=.true.
+  fixed_order=.false.
+  nlo_ps=.true.
+  ebeam=6500d0
+  lpp=1
+  pmass=0d0
+  pmass(3)=173d0
+  ifks=5
+  lab(:,1)=[4.90336305984129922d3,0d0,0d0,4.90336305984129922d3]
+  lab(:,2)=[5.98832878508703834d3,0d0,0d0,-5.98832878508703834d3]
+  lab(:,3)=[1.05213686096379342d3,8.22413110017194981d2,5.03813650535259967d2,3.83238119457055632d2]
+  lab(:,4)=[4.14225519962702037d3,2.91528792504187959d3,2.39945608080732018d3,1.70352134392874473d3]
+  lab(:,5)=[5.69729978433733322d3,-3.73770103505907400d3,-2.90326973134258014d3,-3.17172518863134883d3]
+  do jfks=1,4
+     call ieee_set_flag(ieee_invalid,.false.)
+     call generate_native_momenta(lab,out,outlab,cms,jac,pass)
+     call ieee_get_flag(ieee_invalid,invalid)
+     if(invalid)error stop 'invalid arithmetic in single-top projection'
+     if(.not.pass.or..not.ieee_is_finite(jac).or.jac.le.0d0) &
+          error stop 'single-top native recoil projection failed'
+     if(maxval(abs(outlab-lab)).gt.1d-7*maxval(abs(lab))) &
+          error stop 'single-top native recoil changed real point'
+  enddo
+  ! A small physical timelike recoil must survive, while a spacelike
+  ! recoil larger than boost roundoff must still reject the point.
+  born=0d0
+  born(:,1)=[10000d0,0d0,0d0,10000d0]
+  born(:,2)=[10000d0,0d0,0d0,-10000d0]
+  born(:,3)=[12000d0-5d-10,8000d0,0d0,0d0]
+  born(:,4)=born(:,1)+born(:,2)-born(:,3)
+  call get_recoil(born,3,4d8,recoil_mass2,pass)
+  if(.not.pass.or.recoil_mass2.le.0d0)error stop 'small positive recoil mass lost'
+  born(0,3)=12000d0+1d-4
+  born(:,4)=born(:,1)+born(:,2)-born(:,3)
+  call get_recoil(born,3,4d8,recoil_mass2,pass)
+  if(pass)error stop 'unphysical spacelike recoil accepted'
+end subroutine

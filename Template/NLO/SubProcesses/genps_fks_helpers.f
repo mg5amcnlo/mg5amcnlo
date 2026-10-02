@@ -7,7 +7,7 @@ c callers. Soft coordinate recovery takes its endpoint direction explicitly.
       include 'nexternal.inc'
       private
       public get_massive_fsr_bounds,getangles,gentcms,lambda,yminmax,
-     $     get_recoil
+     $     get_recoil,boost_isr_recoil
       public dot,rho,sumdot,pt,deltaR,delta_phi,delta_y,HTo2,HT,
      $     boost_n1_to_its_cms,boost_n1_to_lab,get_xi_from_p,
      $     get_yij_from_p,get_phi_from_p,flip_momenta,
@@ -271,6 +271,11 @@ c Keep the external legacy dot product and its near-zero clipping.
          endif
       enddo
       xmrec2=dot(recoilbar,recoilbar)
+c Boost roundoff grows with the event energy. The absolute threshold
+c in dot alone cannot protect a massless recoil at large shat. Retain
+c the rejection below for negative masses beyond this relative bound.
+      if(xmrec2.lt.0d0.and.xmrec2.ge.-1d-12*shat_born)
+     &     xmrec2=0d0
       if(xmrec2.lt.0.d0)then
          if(abs(xmrec2).gt.(1.d-4*shat_born))then
             write(*,*)'Fatal error #14 in genps_fks.f',xmrec2,imother
@@ -549,5 +554,39 @@ c Also check their on-shell invariants at the actual phase-space point.
            endif
         enddo
       end subroutine apply_momentum_permutation
+
+      subroutine boost_isr_recoil(pin,pout,xi,y,phi,idir,inverse)
+c A Lorentz transformation preserving the spectator beam's null ray.
+c It maps the Born total momentum to the hard real total in the Born
+c CM. The inverse uses the same radiation variables and frame. Both
+c directions permit pin and pout to alias, as in the FSR boost helpers.
+      implicit none
+      double precision pin(0:3),pout(0:3),xi,y,phi
+      integer idir
+      logical inverse
+      double precision z,a,b(2),pplus,pminus,transverse(2)
+      if(xi.eq.0d0.or.y.eq.1d0)then
+         pout=pin
+         return
+      endif
+      z=1d0-xi
+      a=1d0+xi*(1d0-y)/(2d0*z)
+      b=-xi*sqrt((1d0-y)*(1d0+y))/(2d0*sqrt(z))
+     &     *[cos(phi),sin(phi)]
+      pplus=pin(0)+idir*pin(3)
+      pminus=pin(0)-idir*pin(3)
+      if(inverse)then
+         pplus=pplus/a
+         transverse=pin(1:2)-b*pplus
+         pminus=a*pminus-2d0*sum(b*transverse)-sum(b*b)*pplus
+      else
+         transverse=pin(1:2)+b*pplus
+         pminus=(pminus+2d0*sum(b*pin(1:2))+sum(b*b)*pplus)/a
+         pplus=a*pplus
+      endif
+      pout(0)=(pplus+pminus)/2d0
+      pout(1:2)=transverse
+      pout(3)=idir*(pplus-pminus)/2d0
+      end subroutine boost_isr_recoil
 
       end module fks_phase_space_helpers

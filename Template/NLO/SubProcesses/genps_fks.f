@@ -11,7 +11,8 @@ c Sampling and radiation kernels live in their own lower-level modules.
      $     generate_momenta_massive_final_inverse,
      $     generate_momenta_initial_inverse,
      $     generate_momenta_initial_noevpr
-      use fks_phase_space_helpers, only: lambda,get_recoil
+      use fks_phase_space_helpers, only: lambda,get_recoil,
+     $     boost_isr_recoil
       implicit none
       include 'genps.inc'
       include 'nexternal.inc'
@@ -1053,7 +1054,7 @@ c A rejected radiation map has no reduced Born invariant to sample.
 C If we are not doing event projection, we need to boost the 
 C   born momenta in the partonic com frame 
       call boost_born_momenta_noevpr(p_born_l,xp,xi_i_fks,
-     &                      i_fks,shat)
+     &     y_ij_fks,phi_i_fks,i_fks,j_fks,shat,srec)
 
 C In the case of the event, store the born momenta without the radiation
 C It will be employed to compute the multi-channel enhancement factor
@@ -1151,57 +1152,35 @@ c
       end subroutine generate_noevpr_kinematics
 
 
-      subroutine boost_born_momenta_noevpr(pborn,xp,xi_i_fks,i_fks,shat)
+      subroutine boost_born_momenta_noevpr(pborn,xp,xi_i_fks,
+     &     y_ij_fks,phi_i_fks,i_fks,j_fks,shat,srec)
+c The lepton chart samples the real incoming fractions first. Apply
+c the same ISR recoil to its reduced Born, then express the result in
+c the real CM. Only the sampling coordinates/measure differ from the
+c event-projection chart; the finite-angle recoil is common to both.
       implicit none
       double precision pborn(0:3,nexternal-1),xp(0:3,nexternal)
-      double precision xi_i_fks, shat
-      integer i_fks
-      double precision chy_tbst, shy_tbst, chy_tbstmo, xdir_t(3)
-
-      integer i, skip
-
-      ! pborn are in the recoil center of frame. Must be boosted in the
-      ! partonic center of frame, where p_rec+p_i_fks = (sqrtshat,0,0,0)
-      ! Note that p_rec^2 = srec == (1-xi)*shat
-      ! In the partonic com frame one must have 
-      ! P_rec = sqrtshat/2 * ( 2-xi, -p_i_fks_red(1:3) * xi )
-
-      chy_tbst = (1-xi_i_fks/2d0)/dsqrt(1-xi_i_fks)
-      chy_tbstmo = (1-xi_i_fks/2d0)/dsqrt(1-xi_i_fks)-1d0
-      shy_tbst = (xi_i_fks/2d0)/dsqrt(1-xi_i_fks)
-c The soft endpoint has no boost and no radiation direction. Avoid
-c dividing its zero momentum by xi before taking the copy branch.
-      if(shy_tbst.ne.0d0)
-     $     xdir_t=xp(1:3,i_fks)/(dsqrt(shat)/2d0*xi_i_fks)
-
-      pborn(0,1) = sqrt(shat)/2d0
-      pborn(1,1) = 0d0
-      pborn(2,1) = 0d0
-      pborn(3,1) = sqrt(shat)/2d0
-
-      pborn(0,2) = sqrt(shat)/2d0
-      pborn(1,2) = 0d0
-      pborn(2,2) = 0d0
-      pborn(3,2) =-sqrt(shat)/2d0
-
-c Boost the momenta
-      skip=0
-      do i=1,nexternal-1
-        if (i.le.nincoming) then
-          xp(0:3,i)=pborn(0:3,i) 
-        else
-          if (i.eq.i_fks) skip = skip+1
-          !if(i.ne.i_fks.and.shy_tbst.ne.0.d0)
-          if (shy_tbst.ne.0.d0) then
-            call boostwdir2(chy_tbst,shy_tbst,chy_tbstmo,xdir_t,
-     &                        pborn(0,i),xp(0,i+skip)) 
-          else
-            xp(0:3,i+skip)=pborn(0:3,i)
-          endif
-        endif
+      double precision xi_i_fks,y_ij_fks,phi_i_fks,shat,srec
+      double precision pred(0:3),sqrtz,pplus,pminus
+      integer i_fks,j_fks,idir,i,ireal
+      idir=3-2*j_fks
+      sqrtz=sqrt(1d0-xi_i_fks)
+      pborn(0,1:2)=sqrt(shat)/2d0
+      pborn(1:2,1:2)=0d0
+      pborn(3,1)=pborn(0,1)
+      pborn(3,2)=-pborn(0,2)
+      xp(:,1:2)=pborn(:,1:2)
+      do i=3,nexternal-1
+         ireal=i
+         if(i.ge.i_fks)ireal=i+1
+         call boost_isr_recoil(pborn(0,i),pred,xi_i_fks,
+     &        y_ij_fks,phi_i_fks,idir,.false.)
+         pplus=(pred(0)+idir*pred(3))*sqrtz
+         pminus=(pred(0)-idir*pred(3))/sqrtz
+         xp(0,ireal)=(pplus+pminus)/2d0
+         xp(1:2,ireal)=pred(1:2)
+         xp(3,ireal)=idir*(pplus-pminus)/2d0
       enddo
-        
-      return
       end subroutine boost_born_momenta_noevpr
 
 

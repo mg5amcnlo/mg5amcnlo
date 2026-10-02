@@ -160,6 +160,11 @@ c Only do the reweighting when actually generating the events
       if (abs(lpp(1)) .ge. 1) ndim=ndim+1
       if (abs(lpp(2)) .ge. 1) ndim=ndim+1
       nndim=ndim
+      call born_spread_configure(born_spreading.and..not.only_virt
+     $     .and.(abrv.eq.'all'.or.abrv.eq.'novi'),nexternal,
+     $     nincoming,fks_configs,ndim)
+      if (born_spread_active.and.imode.gt.0)
+     $     call born_spread_load_table
 c Don't proceed if muF1#muF2 (we need to work out the relevant formulae
 c at the NLO)
       if( ( fixed_fac_scale .and.
@@ -800,6 +805,10 @@ c "npNLO".
          do i=1,nndim
             x_save(i,ifold_counter)=x_local(i)
          enddo
+         call born_spread_set_point(x_local(ndim-2)**2,
+     $        x_local(ndim-1)**2)
+         born_spread_bin_fold(ifold_counter)=born_spread_current_bin
+         born_spread_sector_fold(ifold_counter)=1
          if (ifl.eq.0)
      &        call get_MC_integer(1,proc_map(0,0),proc_map(0,1),vol1)
 
@@ -816,6 +825,8 @@ c For sum=0, determine nFKSprocess so that the soft limit gives a non-zero Born
             nFKS_picked_nbody=nFKS_out
          endif
          call update_fks_dir(nFKS_picked_nbody)
+c Keep the Born sector even when later real-emission maps change nFKS.
+         born_spread_sector_fold(ifold_counter)=nFKS_picked_nbody
          if (ini_fin_fks.eq.0) then
             jac=1d0
          else
@@ -838,6 +849,8 @@ c 1/proc_map(0,0)*vol1)
             
          if (passcuts_nbody) then
             pass_cuts_check=.true.
+            call set_born_spread_point(x_local(ndim-2),
+     $           x_local(ndim-1),ifold_counter)
             call set_alphaS(p1_cnt(0,1,0))
             call include_multichannel_enhance(1)
             if (abrv.eq.'born') then
@@ -1018,6 +1031,7 @@ c check if event or counter-event passes cuts
             endif
             call mc_end_real_point()
          enddo
+         call apply_born_spread_weight(ifold_counter)
  12      continue
       elseif(ifl.eq.2) then
          if (ifold_counter .ne.
