@@ -707,7 +707,9 @@ class TestBornLibrary(unittest.TestCase):
                 (directory/'native_flows.f').write_text(mc_counterterm_test_module(
                     ('set_QCD_flows', 'check_QCD_flows'), counter.parent,
                     include_kinematics=False))
-                paths = ['mc_native_context.f90','mc_native_runtime.f','mc_native_props.f',
+                # The runtime's channel-weight helper imports active point data.
+                paths = ['fks_phase_space_data.f','mc_native_context.f90',
+                         'mc_native_runtime.f','mc_native_props.f',
                          'born_support.f','born.f','sborn_sf.f','extra_cnt_wrapper.f',
                          'native_helpers.f','native_flows.f','check_native.f']
                 self.run_command(['gfortran','-O0','-g','-fcheck=all',
