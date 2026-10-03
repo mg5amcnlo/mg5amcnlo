@@ -44,6 +44,11 @@ program check_momentum_maps
      write(*,*) 'PASS native_projection'
      stop
   endif
+  if (mode.eq.'wjet_boundary') then
+     call check_wjet_boundary_projection()
+     write(*,*) 'PASS wjet_boundary'
+     stop
+  endif
   if (mode.eq.'singletop_recoil') then
      call check_singletop_projection()
      write(*,*) 'PASS singletop_recoil'

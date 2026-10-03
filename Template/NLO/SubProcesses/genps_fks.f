@@ -1405,9 +1405,11 @@ c run_card). This fix is needed for set_cms_stuff to work properly.
       p_cms=generated%p_cms
       pass=ieee_is_finite(jac).and.jac.gt.0d0.and.p(0,1).gt.0d0
       if(.not.pass)goto 900
+! Near radiation boundaries, the maps amplify input roundoff.
+! Allow relative reconstruction differences of one part in a million.
       pass=all(ieee_is_finite(p_lab)).and.
      $     maxval(abs(p_lab-p_input)).le.
-     $     1d-7*max(1d0,maxval(abs(p_input)))
+     $     1d-6*max(1d0,maxval(abs(p_input)))
  900  continue
       tau_Born_lower_bound=bounds_save(1)
       tau_lower_bound_resonance=bounds_save(2)

@@ -170,6 +170,47 @@ contains
   end subroutine
 end subroutine
 
+! W+jet FxFx, seed 33: an ISR point projected onto the massless FSR
+! history has xi~0.999996 and y~-0.999999988. Combine the two leptons
+! into one spectator so the captured point fits the five-leg fixture.
+subroutine check_wjet_boundary_projection()
+  use, intrinsic :: ieee_arithmetic, only: ieee_is_finite
+  use mc_native_context, only: native_mapping
+  use fks_phase_space, only: generate_native_momenta
+  implicit none
+  include 'nexternal.inc'
+  include 'run.inc'
+  double precision :: pmass(nexternal)
+  common/to_mass/pmass
+  integer :: ifks,jfks
+  common/fks_indices/ifks,jfks
+  logical :: fixed_order,nlo_ps,pass
+  common/c_fnlo_nlops/fixed_order,nlo_ps
+  double precision :: lab(0:3,nexternal),out(0:3,nexternal),outlab(0:3,nexternal),cms(0:3,nexternal),jac
+
+  native_mapping=.true.
+  fixed_order=.false.
+  nlo_ps=.true.
+  ebeam=6500d0
+  lpp=1
+  ifks=5
+  jfks=4
+  lab(:,1)=[4.97378848813441863d1,0d0,0d0,4.97378848813441863d1]
+  lab(:,2)=[5.78442699296585943d2,0d0,0d0,-5.78442699296585943d2]
+  lab(:,3)=[7.79721787019871271d-1,1.41351812862392456d-1,2.47042628431951433d-2,-7.66404220729106300d-1] &
+       +[3.49521894148706238d1,6.74629986065035858d0,2.77473019055295526d-2,-3.42949298464129342d1]
+  lab(:,4)=[4.89929574265278063d2,9.48042725279744474d1,7.08861844937025976d-1,-4.80668945496875779d2]
+  lab(:,5)=[1.02519098714858615d2,-1.01691924201487225d2,-7.61313409685750675d-1,-1.29745348553210249d1]
+  pmass=0d0
+  pmass(3)=sqrt(lab(0,3)**2-sum(lab(1:3,3)**2))
+  call generate_native_momenta(lab,out,outlab,cms,jac,pass)
+  if(.not.pass.or..not.ieee_is_finite(jac).or.jac.le.0d0) &
+       error stop 'near-boundary W+jet native projection rejected'
+  if(.not.all(ieee_is_finite(outlab)))error stop 'nonfinite W+jet reconstruction'
+  if(maxval(abs(outlab-lab)).gt.2d-7*maxval(abs(lab))) &
+       error stop 'near-boundary W+jet reconstruction changed'
+end subroutine
+
 ! Seed 33 of the single-top acceptance test: an ISR event is projected
 ! onto the massive top's FSR history. The boosted massless spectator has
 ! a mass squared of about -2e-6 GeV^2 at shat=1.17e8 GeV^2 from roundoff.

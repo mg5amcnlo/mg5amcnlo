@@ -181,6 +181,9 @@ class TestMomentumMaps(unittest.TestCase):
     def test_native_projection_and_shared_state(self):
         self.check_map("native_projection")
 
+    def test_wjet_native_projection_near_radiation_boundary(self):
+        self.check_map("wjet_boundary")
+
     def test_single_top_native_massless_recoil(self):
         self.check_map("singletop_recoil")
 
