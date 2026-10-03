@@ -9866,6 +9866,9 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                 self._curr_helas_model = helas_call_writers.FortranHelasCallWriter(self._curr_model)
             else:
                 options = {'zerowidth_tchannel': self.options['zerowidth_tchannel']}
+                if self._export_format == 'standalone_rw':
+                    # reweighting must use the same t-channel propagators as madevent
+                    options['zerowidth_tchannel_plain'] = True
                 if self._curr_amps and self._curr_amps[0].get_ninitial() == 1:
                     options['zerowidth_tchannel'] = False
                 self._curr_helas_model = helas_call_writers.FortranUFOHelasCallWriter(self._curr_model,

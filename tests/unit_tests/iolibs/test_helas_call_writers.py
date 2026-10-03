@@ -948,6 +948,46 @@ class UFOHELASCallWriterTest(unittest.TestCase):
         for i, line in enumerate(solution):
             self.assertEqual(line, result[i])
 
+
+    def test_UFO_fortran_tchannel_plain_width(self):
+        """Test that the plain t-channel width (standalone_rw) is zeroed
+        only when zerowidth_tchannel_plain is set"""
+
+        solution =['CALL VXXXXX(P(0,1),zero,NHEL(1),-1*IC(1),W(1,1))',
+                   'CALL VXXXXX(P(0,2),wmas,NHEL(2),-1*IC(2),W(1,2))',
+                   'CALL VXXXXX(P(0,3),zero,NHEL(3),+1*IC(3),W(1,3))',
+                   'CALL VXXXXX(P(0,4),wmas,NHEL(4),+1*IC(4),W(1,4))',
+                   'CALL VXXXXX(P(0,5),zmas,NHEL(5),+1*IC(5),W(1,5))',
+                   'CALL VVVV1_4(W(1,1),W(1,3),W(1,2),GC_51,wmas,wwid,W(1,6))',
+                   '# Amplitude(s) for diagram number 1',
+                   'CALL VVV1_0(W(1,6),W(1,4),W(1,5),GC_12,AMP(1))',
+                   'CALL VVVV1_3(W(1,1),W(1,3),W(1,4),GC_51,wmas,wwid,W(1,6))',
+                   '# Amplitude(s) for diagram number 2',
+                   'CALL VVV1_0(W(1,2),W(1,6),W(1,5),GC_12,AMP(2))']
+
+        # standalone: plain width is kept
+        fortran_model = helas_call_writers.FortranUFOHelasCallWriter(\
+            self.mybasemodel)
+        result = fortran_model.get_matrix_element_calls(self.mymatrixelement)
+        self.assertEqual(solution, result)
+        self.assertFalse(fortran_model.width_tchannel_set_tozero)
+
+        # standalone_rw: the t-channel W width (diagram 2) becomes ZERO
+        solution[8] = 'CALL VVVV1_3(W(1,1),W(1,3),W(1,4),GC_51,wmas, ZERO,W(1,6))'
+        fortran_model = helas_call_writers.FortranUFOHelasCallWriter(\
+            self.mybasemodel, options={'zerowidth_tchannel_plain': True})
+        result = fortran_model.get_matrix_element_calls(self.mymatrixelement)
+        self.assertEqual(solution, result)
+        self.assertTrue(fortran_model.width_tchannel_set_tozero)
+
+        # zerowidth_tchannel False disables both spellings
+        fortran_model = helas_call_writers.FortranUFOHelasCallWriter(\
+            self.mybasemodel, options={'zerowidth_tchannel': False,
+                                       'zerowidth_tchannel_plain': True})
+        result = fortran_model.get_matrix_element_calls(self.mymatrixelement)
+        self.assertEqual('CALL VVVV1_3(W(1,1),W(1,3),W(1,4),GC_51,wmas,wwid,W(1,6))',
+                         result[8])
+
         
     def test_UFO_CPP_helas_call_writer(self):
         """Test automatic generation of UFO helas calls in C++"""
